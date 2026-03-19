@@ -675,35 +675,7 @@ var currentLevel = (new URLSearchParams(window.location.search).get('n') || '').
 if (!levelLabels[currentLevel]) currentLevel = null;
 
 window.addEventListener('DOMContentLoaded', function() {
-  var restored = restoreSession();
-  if (!currentLevel) {
-    document.getElementById('val-badge').textContent = 'Lien invalide';
-    document.getElementById('val-badge').style.color = 'rgba(255,255,255,0.3)';
-    document.getElementById('val-badge').style.borderColor = 'rgba(255,255,255,0.1)';
-    document.querySelector('.val-label').textContent = 'Utilise le lien fourni par M. Meney.';
-    document.getElementById('val-nom').style.display = 'none';
-    document.getElementById('val-prenom').style.display = 'none';
-    document.getElementById('val-btn').style.display = 'none';
-    document.getElementById('dev-banner').style.display = 'block';
-    return;
-  }
-  // Appliquer la couleur du niveau sur le login
-  var t = levelThemes[currentLevel];
-  if (t) {
-    document.documentElement.style.setProperty('--level-accent', t.accent);
-    document.documentElement.style.setProperty('--level-glow', t.glow);
-  }
-  document.getElementById('val-badge').textContent = levelLabels[currentLevel];
-  document.getElementById('val-badge').style.color = t ? t.accent : '#ffb86c';
-  if (restored && TRACK.eleve && TRACK.eleve.niveau === currentLevel) {
-    document.getElementById('page-validation').classList.remove('active');
-    document.getElementById('page-home').classList.add('active');
-    initHome();
-    return;
-  }
-  document.getElementById('val-nom').focus();
-
-  // Étoiles
+  // Étoiles — toujours générées
   var sc = document.getElementById('stars');
   for (var i = 0; i < 100; i++) {
     var s = document.createElement('span');
@@ -720,7 +692,7 @@ window.addEventListener('DOMContentLoaded', function() {
     sc.appendChild(s);
   }
 
-  // Étoile filante
+  // Étoile filante — toujours active
   var shootEl = document.getElementById('shooting-star');
   function doShoot() {
     shootEl.style.left=(Math.random()*50+15)+'%'; shootEl.style.top=(Math.random()*25+5)+'%';
@@ -730,7 +702,7 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   setTimeout(doShoot, 2000);
 
-  // Particules
+  // Particules — toujours actives
   for (var j = 0; j < 10; j++) {
     var p = document.createElement('div');
     p.className = 'particle';
@@ -744,6 +716,35 @@ window.addEventListener('DOMContentLoaded', function() {
     var pColors = ['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];
     p.style.background = pColors[Math.floor(Math.random()*pColors.length)];
     document.body.appendChild(p);
+  }
+
+  // Session
+  var restored = restoreSession();
+
+  if (!currentLevel) {
+    document.getElementById('val-badge').textContent = 'Lien invalide';
+    document.getElementById('val-badge').style.color = 'rgba(255,255,255,0.3)';
+    document.getElementById('val-badge').style.borderColor = 'rgba(255,255,255,0.1)';
+    document.querySelector('.val-label').textContent = 'Utilise le lien fourni par M. Meney.';
+    document.getElementById('val-nom').style.display = 'none';
+    document.getElementById('val-prenom').style.display = 'none';
+    document.getElementById('val-btn').style.display = 'none';
+    document.getElementById('dev-banner').style.display = 'block';
+  } else {
+    var t = levelThemes[currentLevel];
+    if (t) {
+      document.documentElement.style.setProperty('--level-accent', t.accent);
+      document.documentElement.style.setProperty('--level-glow', t.glow);
+    }
+    document.getElementById('val-badge').textContent = levelLabels[currentLevel];
+    document.getElementById('val-badge').style.color = t ? t.accent : '#ffb86c';
+    if (restored && TRACK.eleve && TRACK.eleve.niveau === currentLevel) {
+      document.getElementById('page-validation').classList.remove('active');
+      document.getElementById('page-home').classList.add('active');
+      initHome();
+    } else {
+      document.getElementById('val-nom').focus();
+    }
   }
 });
 
@@ -858,7 +859,7 @@ function goHome() {
 
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;body.classList.toggle('open');}
 function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';}
-function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}}
+function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}
 
 // ====== TRACKING ======
 function generateSessionId(){return 'ses-'+Date.now().toString(36)+'-'+Math.random().toString(36).substr(2,6);}
