@@ -383,6 +383,16 @@ body {
 .admin-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: rgba(255,184,108,0.9); color: #1a1030; font-family: 'EB Garamond', serif; font-size: 0.9rem; font-weight: 600; padding: 8px 24px; z-index: 9999; text-align: center; backdrop-filter: blur(10px); }
 .admin-mode .admin-banner { display: block; }
 
+/* Bouton supprimer en mode admin */
+.admin-delete { display: none; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(248,113,113,0.8); color: #fff; border: none; font-size: 0.7rem; cursor: pointer; z-index: 10; line-height: 22px; text-align: center; transition: background 0.2s; }
+.admin-delete:hover { background: #ef4444; }
+.admin-mode .doc-item .admin-delete { display: block; }
+
+/* Fiche-cards droppables en mode admin */
+.admin-mode .fiche-card { border: 2px dashed transparent; transition: border-color 0.2s; }
+.admin-mode .fiche-card:hover { border-color: rgba(255,184,108,0.4); }
+.admin-mode .fiche-card.drag-over { border-color: #ffb86c !important; background: rgba(255,184,108,0.08) !important; }
+
 /* Viewer */
 .doc-viewer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; align-items: center; justify-content: center; padding: 24px; }
 .doc-viewer-overlay.visible { display: flex; }
@@ -540,20 +550,20 @@ body {
     <div id="tab-fiches" style="display:none;">
       <div class="section-label">Langue</div>
       <div class="fiches-grid">
-        <div class="fiche-card"><div class="fiche-icon">📐</div><div class="fiche-title">Analyse logique</div><div class="fiche-count">À venir</div></div>
-        <div class="fiche-card"><div class="fiche-icon">📝</div><div class="fiche-title">Fiches grammaire</div><div class="fiche-count">À venir</div></div>
-        <div class="fiche-card"><div class="fiche-icon">📌</div><div class="fiche-title">Fiches notions</div><div class="fiche-count">À venir</div></div>
+        <div class="fiche-card" data-section="analyse-logique"><div class="fiche-icon">📐</div><div class="fiche-title">Analyse logique</div><div class="fiche-count">Glisser un fichier ici</div></div>
+        <div class="fiche-card" data-section="fiches-grammaire"><div class="fiche-icon">📝</div><div class="fiche-title">Fiches grammaire</div><div class="fiche-count">Glisser un fichier ici</div></div>
+        <div class="fiche-card" data-section="fiches-notions"><div class="fiche-icon">📌</div><div class="fiche-title">Fiches notions</div><div class="fiche-count">Glisser un fichier ici</div></div>
       </div>
       <div class="section-label" style="margin-top:28px;">Brevet</div>
       <div class="fiches-grid">
-        <div class="fiche-card"><div class="fiche-icon">🎯</div><div class="fiche-title">Prépa brevet</div><div class="fiche-count">À venir</div></div>
+        <div class="fiche-card" data-section="prepa-brevet"><div class="fiche-icon">🎯</div><div class="fiche-title">Prépa brevet</div><div class="fiche-count">Glisser un fichier ici</div></div>
       </div>
     </div>
 
     <div id="tab-autonomie" style="display:none;">
       <div class="section-label">Aller plus loin</div>
       <div class="fiches-grid">
-        <div class="fiche-card"><div class="fiche-icon">🚀</div><div class="fiche-title">Zone autonomie</div><div class="fiche-count">Contenus à venir</div></div>
+        <div class="fiche-card" data-section="autonomie"><div class="fiche-icon">🚀</div><div class="fiche-title">Zone autonomie</div><div class="fiche-count">Glisser un fichier ici</div></div>
       </div>
     </div>
   </div>
@@ -848,7 +858,7 @@ function goHome() {
 
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;body.classList.toggle('open');}
 function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';}
-function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;var docId=clickedItem?clickedItem.getAttribute('data-docid'):'';var doc=docId?DOCS_CACHE[docId]:null;if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}
+function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}}
 
 // ====== TRACKING ======
 function generateSessionId(){return 'ses-'+Date.now().toString(36)+'-'+Math.random().toString(36).substr(2,6);}
@@ -906,8 +916,26 @@ function loadDocsList_(){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-
 function applyDocsToUI_(){document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){var docId=el.getAttribute('data-docid');var doc=DOCS_CACHE[docId];if(doc&&doc.embed_url){el.classList.add('has-file');var a=el.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}});}
 
 // ====== DRAG & DROP ======
-function initAdminDragDrop_(){document.addEventListener('dragover',function(e){if(!ADMIN_MODE)return;e.preventDefault();var d=e.target.closest('.doc-item[data-docid]');if(d)d.classList.add('drag-over');});document.addEventListener('dragleave',function(e){var d=e.target.closest('.doc-item[data-docid]');if(d)d.classList.remove('drag-over');});document.addEventListener('drop',function(e){if(!ADMIN_MODE)return;e.preventDefault();var d=e.target.closest('.doc-item[data-docid]');if(!d)return;d.classList.remove('drag-over');var files=e.dataTransfer.files;if(!files||files.length===0)return;uploadFile_(files[0],d,d.getAttribute('data-docid'),d.getAttribute('data-chapitre')||'',d.getAttribute('data-seance')||'');});}
-function uploadFile_(file,docItem,docId,chapitre,seance){var ind=docItem.querySelector('.upload-indicator');var prog=docItem.querySelector('.upload-progress');if(ind)ind.textContent='Upload...';if(prog)prog.style.width='30%';docItem.classList.remove('upload-done');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];if(prog)prog.style.width='60%';fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:chapitre,seance:seance,doc_id:docId})}).then(function(r){return r.json();}).then(function(data){if(prog)prog.style.width='100%';if(data.error){if(ind)ind.textContent='❌ '+data.error;return;}DOCS_CACHE[docId]={doc_id:docId,embed_url:data.embed_url,drive_url:data.drive_url,nom_fichier:data.file_name,type_fichier:file.name.split('.').pop()};docItem.classList.add('upload-done','has-file');if(ind)ind.textContent='✓ '+file.name;var a=docItem.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}).catch(function(err){if(ind)ind.textContent='❌ Erreur';console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
+function initAdminDragDrop_(){
+document.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-card[data-section]');document.querySelectorAll('.drag-over').forEach(function(el){if(el!==d)el.classList.remove('drag-over');});if(d)d.classList.add('drag-over');},false);
+document.addEventListener('dragenter',function(e){e.preventDefault();e.stopPropagation();},false);
+document.addEventListener('dragleave',function(e){var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-card[data-section]');if(d&&!d.contains(e.relatedTarget))d.classList.remove('drag-over');},false);
+document.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;document.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});var docItem=e.target.closest('.doc-item[data-docid]');var ficheCard=e.target.closest('.fiche-card[data-section]');var files=e.dataTransfer.files;if(!files||files.length===0)return;if(docItem){uploadFile_(files[0],docItem,docItem.getAttribute('data-docid'),docItem.getAttribute('data-chapitre')||'',docItem.getAttribute('data-seance')||'','');}else if(ficheCard){uploadFileToSection_(files[0],ficheCard,ficheCard.getAttribute('data-section'));}},false);
+// Ajouter les boutons supprimer
+document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){
+  if(!el.querySelector('.admin-delete')){
+    var btn=document.createElement('button');btn.className='admin-delete';btn.textContent='✕';
+    btn.onclick=function(ev){ev.stopPropagation();if(confirm('Supprimer ce document ?'))deleteDoc_(el.getAttribute('data-docid'));};
+    el.appendChild(btn);
+  }
+});
+}
+
+function uploadFile_(file,docItem,docId,chapitre,seance,section){var ind=docItem.querySelector('.upload-indicator');var prog=docItem.querySelector('.upload-progress');if(ind)ind.textContent='Upload...';if(prog)prog.style.width='30%';docItem.classList.remove('upload-done');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];if(prog)prog.style.width='60%';fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:chapitre,seance:seance,section:section,doc_id:docId,doc_title:file.name.replace(/\.[^.]+$/,'')})}).then(function(r){return r.json();}).then(function(data){if(prog)prog.style.width='100%';if(data.error){if(ind)ind.textContent='❌ '+data.error;return;}DOCS_CACHE[data.doc_id||docId]={doc_id:data.doc_id||docId,embed_url:data.embed_url,drive_url:data.drive_url,nom_fichier:data.file_name};docItem.classList.add('upload-done','has-file');if(data.embed_url)docItem.setAttribute('data-embed',data.embed_url);if(ind)ind.textContent='✓ '+file.name;var a=docItem.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}).catch(function(err){if(ind)ind.textContent='❌ Erreur';console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
+
+function uploadFileToSection_(file,ficheCard,section){ficheCard.style.opacity='0.6';var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:'',seance:'',section:section,doc_id:'',doc_title:file.name.replace(/\.[^.]+$/,'')})}).then(function(r){return r.json();}).then(function(data){ficheCard.style.opacity='1';if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+file.name+' uploadé dans '+section+'. Le site se met à jour sur GitHub (~30s).');}).catch(function(err){ficheCard.style.opacity='1';alert('Erreur réseau');console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
+
+function deleteDoc_(docId){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'remove_doc',doc_id:docId})}).then(function(r){return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}var el=document.querySelector('[data-docid="'+docId+'"]');if(el)el.remove();alert('✓ Document supprimé. Le site se met à jour sur GitHub (~30s).');}).catch(function(err){alert('Erreur réseau');console.warn('[Delete]',err);});}
 
 // ====== VIEWER ======
 function openViewer(title,url){document.getElementById('doc-viewer-title').textContent=title;document.getElementById('doc-viewer-frame').src=url;document.getElementById('doc-viewer').classList.add('visible');}
