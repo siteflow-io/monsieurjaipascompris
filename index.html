@@ -602,7 +602,7 @@ body {
   <div class="bigfile-box">
     <h3>📦 Fichier trop lourd pour l'upload direct</h3>
     <ol>
-      <li>Ouvre le <strong><a href="https://drive.google.com/drive/folders/1j58D2GVuJeGbWMD7IwOUB9Zdb81G1q-r" target="_blank">dossier Drive</a></strong></li>
+      <li>Ouvre le dossier <strong><a id="bigfile-folder-link" href="#" target="_blank">Chargement...</a></strong></li>
       <li>Glisse ton fichier <strong id="bigfile-name">—</strong> dedans</li>
       <li>Fais <strong>clic droit > Obtenir le lien</strong> (accès : tout le monde)</li>
       <li>Colle le lien ci-dessous</li>
@@ -996,16 +996,40 @@ var BIGFILE_CTX = { docItem: null, dropZone: null, fileName: '' };
 var BIGFILE_DISMISSED = localStorage.getItem('mjpc_bigfile_dismissed') === '1';
 
 function showBigFileGuide_(file, docItem, dropZone) {
+  var section = dropZone ? dropZone.getAttribute('data-section') : '';
+  var chapitre = docItem ? (docItem.getAttribute('data-chapitre') || '') : '';
+  var folderName = chapitre || section || 'divers';
+  var sizeMB = Math.round(file.size / 1024 / 1024);
+
+  BIGFILE_CTX = { docItem: docItem, dropZone: dropZone, fileName: file.name };
+
   if (BIGFILE_DISMISSED) {
-    // Guide masqué → juste un alert simple
-    var sizeMB = Math.round(file.size / 1024 / 1024);
-    alert('⚠ Fichier trop lourd (' + sizeMB + ' Mo, max 30 Mo).\n\n1. Glisse-le dans le dossier Drive\n2. Copie le lien de partage\n3. Reviens ici et utilise Ctrl+L pour associer');
+    alert('⚠ Fichier trop lourd (' + sizeMB + ' Mo, max 30 Mo).\n\n1. Glisse-le dans le dossier Drive > ' + (currentLevel||'3e') + ' > ' + folderName + '\n2. Copie le lien de partage\n3. Reviens ici et réessaie le drop');
     return;
   }
-  BIGFILE_CTX = { docItem: docItem, dropZone: dropZone, fileName: file.name };
-  document.getElementById('bigfile-name').textContent = file.name;
+
+  // Demander au Apps Script l'URL du bon sous-dossier
+  document.getElementById('bigfile-name').textContent = file.name + ' (' + sizeMB + ' Mo)';
   document.getElementById('bigfile-url').value = '';
+  document.getElementById('bigfile-folder-link').textContent = 'Chargement du dossier...';
+  document.getElementById('bigfile-folder-link').href = '#';
   document.getElementById('bigfile-overlay').classList.add('visible');
+
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'get_folder_url', niveau: currentLevel || '3e', folder_name: folderName })
+  }).then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.folder_url) {
+      document.getElementById('bigfile-folder-link').textContent = 'Drive > ' + data.folder_path;
+      document.getElementById('bigfile-folder-link').href = data.folder_url;
+    } else {
+      document.getElementById('bigfile-folder-link').textContent = 'Dossier Drive (erreur)';
+    }
+  }).catch(function() {
+    document.getElementById('bigfile-folder-link').textContent = 'Dossier Drive (erreur réseau)';
+  });
 }
 
 function closeBigFile() {
