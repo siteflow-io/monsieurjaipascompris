@@ -389,8 +389,8 @@ body {
 .admin-mode .doc-item .admin-delete { display: block; }
 
 /* Fiche drop-zones en mode admin */
-.admin-mode .fiche-drop-zone { min-height: 40px; border: 2px dashed rgba(255,184,108,0.3); border-radius: 10px; margin-top: 8px; transition: border-color 0.2s, background 0.2s; }
-.admin-mode .fiche-drop-zone:empty::after { content: '📁 Glisser un fichier ici'; display: block; text-align: center; padding: 12px; color: rgba(255,184,108,0.5); font-style: italic; font-size: 0.88rem; }
+.admin-mode .fiche-drop-zone { min-height: 40px; border: 2px dashed rgba(255,184,108,0.3); border-radius: 10px; margin-top: 8px; transition: border-color 0.2s, background 0.2s; padding-bottom: 44px; position: relative; }
+.admin-mode .fiche-drop-zone::after { content: '📁 Glisser un fichier ici'; display: block; text-align: center; padding: 10px; color: rgba(255,184,108,0.5); font-style: italic; font-size: 0.85rem; position: absolute; bottom: 0; left: 0; right: 0; }
 .admin-mode .fiche-drop-zone.drag-over { border-color: #ffb86c !important; background: rgba(255,184,108,0.06) !important; }
 
 /* Viewer */
@@ -550,9 +550,7 @@ body {
     <div id="tab-fiches" style="display:none;">
       <div class="section-label">Langue</div>
       <div class="chapters-list">
-        <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📐</div><div class="chapter-info"><div class="chapter-title">Analyse logique</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-analyse-logique">1 fiches</span></div></div></div><div class="chapter-body" data-section="analyse-logique"><div class="doc-list fiche-drop-zone" data-section="analyse-logique">
-              <div class="doc-item" data-docid="3e-analyse-logique-mmyi850j" data-chapitre="" data-seance="" data-embed="https://drive.google.com/file/d/1cnIS84VuXGhZ6ydWgXrQHE3VRt9DcmYe/preview" onclick="openDoc('analyse-logique','FIche grammaire les connecteurs logiques','pdf')"><div class="doc-icon pdf">📄</div><div class="doc-label">FIche grammaire les connecteurs logiques<small>PDF</small></div><div class="doc-action">→ Consulter</div><div class="upload-indicator"></div><div class="upload-progress"></div></div>
-</div></div></div>
+        <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📐</div><div class="chapter-info"><div class="chapter-title">Analyse logique</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-analyse-logique">0 fiches</span></div></div></div><div class="chapter-body" data-section="analyse-logique"><div class="doc-list fiche-drop-zone" data-section="analyse-logique"></div></div></div>
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📝</div><div class="chapter-info"><div class="chapter-title">Fiches grammaire</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-fiches-grammaire">0 fiches</span></div></div></div><div class="chapter-body" data-section="fiches-grammaire"><div class="doc-list fiche-drop-zone" data-section="fiches-grammaire"></div></div></div>
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📌</div><div class="chapter-info"><div class="chapter-title">Fiches notions</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-fiches-notions">0 fiches</span></div></div></div><div class="chapter-body" data-section="fiches-notions"><div class="doc-list fiche-drop-zone" data-section="fiches-notions"></div></div></div>
       </div>
@@ -947,7 +945,8 @@ function uploadFileToSection_(file,dropZone,section){
   placeholder.style.opacity = '0.5';
   placeholder.innerHTML = '<div class="doc-icon pdf">⏳</div><div class="doc-label">Upload de ' + file.name + '...<small>En cours</small></div><div class="doc-action">...</div>';
   dropZone.appendChild(placeholder);
-  var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:'',seance:'',section:section,doc_id:'',doc_title:file.name.replace(/\.[^.]+$/,'')})}).then(function(r){return r.json();}).then(function(data){placeholder.remove();if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+file.name+' uploadé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){placeholder.remove();alert('Erreur réseau');console.warn('[Upload]',err);});};reader.readAsDataURL(file);
+  var cleanTitle = file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');
+  var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:section,seance:'',section:section,doc_id:'',doc_title:cleanTitle})}).then(function(r){return r.json();}).then(function(data){placeholder.remove();if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+file.name+' uploadé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){placeholder.remove();alert('Erreur réseau');console.warn('[Upload]',err);});};reader.readAsDataURL(file);
 }
 
 function deleteDoc_(docId){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'remove_doc',doc_id:docId})}).then(function(r){return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}var el=document.querySelector('[data-docid="'+docId+'"]');if(el)el.remove();alert('✓ Document supprimé. Le site se met à jour sur GitHub (~30s).');}).catch(function(err){alert('Erreur réseau');console.warn('[Delete]',err);});}
