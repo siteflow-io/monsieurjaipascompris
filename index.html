@@ -218,43 +218,6 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .bigfile-dismiss { font-size: 0.8rem; color: rgba(255,255,255,0.3); text-align: center; margin-top: 14px; cursor: pointer; font-style: italic; }
 .bigfile-dismiss:hover { color: rgba(255,255,255,0.5); }
 
-/* ====== BOUTON DICTÉE COÉVALUÉE ====== */
-.dictee-banner {
-  display: flex; align-items: center; gap: 14px;
-  background: linear-gradient(135deg, rgba(255,184,108,0.08), rgba(255,184,108,0.03));
-  border: 1.5px solid rgba(255,184,108,0.2);
-  border-radius: 16px; padding: 16px 22px; margin-bottom: 24px;
-  cursor: pointer; transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
-  text-decoration: none; color: inherit;
-  position: relative; overflow: hidden;
-}
-.dictee-banner:hover {
-  background: rgba(255,184,108,0.12);
-  border-color: rgba(255,184,108,0.4);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(255,184,108,0.15), 0 0 40px rgba(255,184,108,0.06);
-}
-.dictee-banner::before {
-  content: ''; position: absolute; inset: 0; border-radius: 16px;
-  background: linear-gradient(105deg, transparent 30%, rgba(255,220,160,0.06) 45%, rgba(255,255,255,0.1) 50%, rgba(255,220,160,0.06) 55%, transparent 70%);
-  background-size: 300% 100%; opacity: 0; transition: opacity 0.3s;
-}
-.dictee-banner:hover::before { opacity: 1; animation: shimmer 1.8s ease infinite; }
-.dictee-banner-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  background: linear-gradient(135deg, var(--level-accent), color-mix(in srgb, var(--level-accent) 70%, #fff));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.4rem; flex-shrink: 0;
-  box-shadow: 0 4px 15px var(--level-glow);
-}
-.dictee-banner-text { flex: 1; }
-.dictee-banner-title { font-weight: 700; font-size: 1.08rem; color: #fff; margin-bottom: 2px; }
-.dictee-banner-sub { font-size: 0.88rem; color: rgba(255,255,255,0.4); }
-.dictee-banner-arrow {
-  font-size: 1.2rem; color: var(--level-accent);
-  transition: transform 0.3s; text-shadow: 0 0 10px var(--level-glow);
-}
-.dictee-banner:hover .dictee-banner-arrow { transform: translateX(4px); }
 </style>
 </head>
 <body>
@@ -333,20 +296,11 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
   <div class="search-bar"><div class="search-input-wrap"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input class="search-input" type="text" placeholder="Rechercher un cours, une fiche, un exercice…"></div></div>
   <div class="level-content">
 
-    <!-- ====== BOUTON DICTÉE COÉVALUÉE ====== -->
-    <a class="dictee-banner" id="dictee-link" href="dictee_universelle.html">
-      <div class="dictee-banner-icon">📝</div>
-      <div class="dictee-banner-text">
-        <div class="dictee-banner-title">Dictée coévaluée</div>
-        <div class="dictee-banner-sub">Corrige, apprends, progresse</div>
-      </div>
-      <div class="dictee-banner-arrow">→</div>
-    </a>
-
     <div class="tabs">
       <button class="tab active" onclick="switchTab(this,'chapitres')">Chapitres</button>
       <button class="tab" onclick="switchTab(this,'fiches')">Fiches transversales</button>
       <button class="tab" onclick="switchTab(this,'autonomie')">Zone autonomie</button>
+      <button class="tab" id="tab-btn-dictee" onclick="gotoDictee()">📝 Dictée</button>
     </div>
     <div id="tab-chapitres">
       <div class="section-label">Chapitres</div>
@@ -431,6 +385,7 @@ function openLevel(code,label,color){document.documentElement.style.setProperty(
 function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval(timerInterval);timerInterval=null;}document.getElementById('page-level').classList.remove('active');document.getElementById('page-home').classList.add('active');document.getElementById('level-timer').classList.remove('visible');var ht=document.getElementById('hero-timer');ht.classList.remove('visible');setTimeout(function(){ht.style.display='none';},600);showAccueilBg();window.scrollTo(0,0);}
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;body.classList.toggle('open');}
 function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';}
+function gotoDictee(){var level=clickedLevel||currentLevel||'';var url='dictee_universelle.html';if(level)url+='?n='+level;window.location.href=url;}
 function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}
 function generateSessionId(){return 'ses-'+Date.now().toString(36)+'-'+Math.random().toString(36).substr(2,6);}
 function sendToBackend(data){if(data.action==='close'&&navigator.sendBeacon){var blob=new Blob([JSON.stringify(data)],{type:'application/json'});navigator.sendBeacon(APPS_SCRIPT_URL,blob);return Promise.resolve({status:'beacon_sent'});}return fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)}).then(function(){return{status:'sent'};}).catch(function(err){console.warn('[Tracking]',err);return{status:'error'};});}
