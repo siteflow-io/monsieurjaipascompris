@@ -2383,12 +2383,14 @@ function DicteeSelector(p){
       var val=snap.val()||{};
       var list=Object.keys(val).map(function(id){
         var cfg=val[id].config||{};
-        return {id:id,title:cfg.title||id,text:(cfg.text||"").substring(0,80)+"...",nEleves:(cfg.pairs||[]).length,niveau:(cfg.niveau||"").toLowerCase().trim()};
+        return {id:id,title:cfg.title||id,text:(cfg.text||"").substring(0,80)+"...",nEleves:(cfg.pairs||[]).length,niveau:(cfg.niveau||"").toLowerCase().trim(),published:!!cfg.published};
       });
       // Filtrer par niveau si ?n= est présent
       if(urlNiveau){
         list=list.filter(function(d){return d.niveau===urlNiveau});
       }
+      // Masquer les dictées non publiées (sauf mode admin)
+      list=list.filter(function(d){return d.published});
       setDictees(list);
       setLoading(false);
     });
@@ -3250,6 +3252,7 @@ function ProfConfig(p){
   var s18=useState("compare"),transModeInput=s18[0],setTransModeInput=s18[1];
   var s19=useState("300"),timerInput=s19[0],setTimerInput=s19[1];
   var s20=useState(""),niveauInput=s20[0],setNiveauInput=s20[1];
+  var s21=useState(false),publishedInput=s21[0],setPublishedInput=s21[1];
   var s21=useState(""),classeInput=s21[0],setClasseInput=s21[1];
   var s22=useState(""),analyseInput=s22[0],setAnalyseInput=s22[1];
   var s23=useState(false),fluxRunning=s23[0],setFluxRunning=s23[1];
@@ -3262,7 +3265,7 @@ function ProfConfig(p){
       var val=snap.val()||{};
       var list=Object.keys(val).map(function(id){
         var cfg=val[id].config||{};
-        return {id:id,title:cfg.title||id,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length};
+        return {id:id,title:cfg.title||id,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length,published:!!cfg.published};
       });
       setDictees(list);
     });
@@ -3293,6 +3296,7 @@ function ProfConfig(p){
       setTransModeInput(cfg.transcriptionMode||"choice");
       setTimerInput(String(cfg.detectionTimer||300));
       setNiveauInput(cfg.niveau||"");
+      setPublishedInput(!!cfg.published);
       setClasseInput(cfg.classe||"");
       setView("edit");
     });
@@ -3470,6 +3474,7 @@ IMPORTANT :
       detectionTimer:parseInt(timerInput)||300,
       niveau:niveauInput.trim(),
       classe:classeInput.trim(),
+      published:publishedInput,
       wordRules:wordRulesInput.trim()?JSON.parse(wordRulesInput):null,
       analyseGramm:analyseInput.trim()?JSON.parse(analyseInput):null,
       createdAt:Date.now()
@@ -3485,7 +3490,7 @@ IMPORTANT :
         var val=snap.val()||{};
         var list=Object.keys(val).map(function(k){
           var cfg=val[k].config||{};
-          return {id:k,title:cfg.title||k,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length};
+          return {id:k,title:cfg.title||k,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length,published:!!cfg.published};
         });
         setDictees(list);
       });
@@ -3511,7 +3516,7 @@ IMPORTANT :
     return h("div",null,
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
         h("h3",{style:{margin:0}},"Dictées configurées"),
-        h("button",{className:"btn btn-primary",style:{fontSize:13},onClick:function(){setView("edit");setIdInput("");setTitleInput("");setTextInput("");setElevesInput("");setPairsInput("");setAdaptedInput("");setAdaptedStudentsInput("");setPairsMode("");setWordRulesInput("");setTransModeInput("choice");setTimerInput("300");setNiveauInput("");setClasseInput("")}},"+ Nouvelle dictée")
+        h("button",{className:"btn btn-primary",style:{fontSize:13},onClick:function(){setView("edit");setIdInput("");setTitleInput("");setTextInput("");setElevesInput("");setPairsInput("");setAdaptedInput("");setAdaptedStudentsInput("");setPairsMode("");setWordRulesInput("");setTransModeInput("choice");setTimerInput("300");setNiveauInput("");setClasseInput("");setPublishedInput(false)}},"+ Nouvelle dictée")
       ),
       msg&&h("div",{className:"card",style:{background:"rgba(56,161,105,0.08)",marginBottom:8}},h("p",{style:{margin:0,fontSize:13}},msg)),
       dictees&&dictees.map(function(d){
@@ -3519,10 +3524,13 @@ IMPORTANT :
         return h("div",{key:d.id,className:"card",style:{marginBottom:6,border:isCurrent?"2px solid var(--primary)":"1px solid var(--border)"}},
           h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
             h("div",null,
-              h("div",{style:{fontWeight:700}},d.title,isCurrent&&h("span",{style:{fontSize:11,color:"var(--primary)",marginLeft:6}},"(active)")),
+              h("div",{style:{fontWeight:700}},d.title,isCurrent&&h("span",{style:{fontSize:11,color:"var(--primary)",marginLeft:6}},"(active)"),
+                h("span",{style:{fontSize:10,marginLeft:8,padding:"2px 6px",borderRadius:8,background:d.published?"rgba(56,161,105,0.15)":"rgba(255,255,255,0.06)",color:d.published?"var(--green)":"rgba(255,255,255,0.3)"}},d.published?"✅ Publiée":"🔒 Masquée")
+              ),
               h("div",{style:{fontSize:12,color:"var(--text-sub)"}},d.wordCount+" mots · "+d.nPairs+" paires · ID: "+d.id)
             ),
             h("div",{style:{display:"flex",gap:6}},
+              h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px"},onClick:function(){var newPub=!d.published;db.ref("dictees/"+d.id+"/config/published").set(newPub).then(function(){setDictees(function(prev){return prev.map(function(x){return x.id===d.id?Object.assign({},x,{published:newPub}):x})})})}},d.published?"Masquer":"Publier"),
               h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px"},onClick:function(){loadForEdit(d.id)}},"Modifier"),
               h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px",color:"var(--coral)"},onClick:function(){deleteDictee(d.id)}},"Suppr"),
               h("a",{href:"#",onClick:function(e){e.preventDefault();if(p.onPick)p.onPick(d.id);else window.location.search="?dictee="+encodeURIComponent(d.id)},style:{fontSize:12,padding:"4px 8px",color:"var(--primary)"}},"Ouvrir")
@@ -3572,6 +3580,12 @@ IMPORTANT :
       )
     ),
     h("div",{style:field},h("label",{style:lbl},"Classe"),h("input",{style:inp,value:classeInput,onChange:function(e){setClasseInput(e.target.value)},placeholder:"Ex: Hergé, Banksy, Pythagore..."})),
+    h("div",{style:field},h("label",{style:lbl},"Publication"),
+      h("div",{style:{display:"flex",alignItems:"center",gap:10}},
+        h("button",{className:publishedInput?"btn-sm btn-primary":"btn-sm btn-ghost",onClick:function(){setPublishedInput(!publishedInput)},style:{minWidth:120}},publishedInput?"✅ Publiée":"🔒 Non publiée"),
+        h("span",{style:{fontSize:12,color:"rgba(255,255,255,0.4)"}},publishedInput?"Visible par les élèves":"Masquée — en préparation")
+      )
+    ),
     h("div",{style:field},h("label",{style:lbl},"Mode transcription par défaut"),
       h("div",{style:{display:"flex",gap:6}},
         h("button",{className:transModeInput==="choice"?"btn-sm btn-primary":"btn-sm btn-ghost",onClick:function(){setTransModeInput("choice")}},"Au choix"),
