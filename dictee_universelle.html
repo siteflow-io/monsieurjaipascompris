@@ -3265,7 +3265,7 @@ function ProfConfig(p){
       var val=snap.val()||{};
       var list=Object.keys(val).map(function(id){
         var cfg=val[id].config||{};
-        return {id:id,title:cfg.title||id,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length,published:!!cfg.published};
+        return {id:id,title:cfg.title||id,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length,published:!!cfg.published,niveau:cfg.niveau||""};
       });
       setDictees(list);
     });
@@ -3447,6 +3447,7 @@ IMPORTANT :
     var id=idInput.trim()||generateId(titleInput);
     if(!id){setMsg("Identifiant requis");return}
     if(!textInput.trim()){setMsg("Texte de la dictée requis");return}
+    if(!niveauInput.trim()){setMsg("⚠️ Niveau obligatoire (6e/5e/4e/3e)");return}
     var eleves=parseEleves(elevesInput);
     if(eleves.length<2){setMsg("Au moins 2 élèves requis");return}
     var adaptedStudents=parseEleves(adaptedStudentsInput);
@@ -3490,7 +3491,7 @@ IMPORTANT :
         var val=snap.val()||{};
         var list=Object.keys(val).map(function(k){
           var cfg=val[k].config||{};
-          return {id:k,title:cfg.title||k,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length,published:!!cfg.published};
+          return {id:k,title:cfg.title||k,wordCount:cleanTokens(cfg.text||"").length,nPairs:(cfg.pairs||[]).length,published:!!cfg.published,niveau:cfg.niveau||""};
         });
         setDictees(list);
       });
@@ -3527,10 +3528,10 @@ IMPORTANT :
               h("div",{style:{fontWeight:700}},d.title,isCurrent&&h("span",{style:{fontSize:11,color:"var(--primary)",marginLeft:6}},"(active)"),
                 h("span",{style:{fontSize:10,marginLeft:8,padding:"2px 6px",borderRadius:8,background:d.published?"rgba(56,161,105,0.15)":"rgba(255,255,255,0.06)",color:d.published?"var(--green)":"rgba(255,255,255,0.3)"}},d.published?"✅ Publiée":"🔒 Masquée")
               ),
-              h("div",{style:{fontSize:12,color:"var(--text-sub)"}},d.wordCount+" mots · "+d.nPairs+" paires · ID: "+d.id)
+              h("div",{style:{fontSize:12,color:"var(--text-sub)"}},d.wordCount+" mots · "+d.nPairs+" paires · "+(d.niveau?d.niveau.toUpperCase():"⚠️ pas de niveau")+" · ID: "+d.id)
             ),
             h("div",{style:{display:"flex",gap:6}},
-              h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px"},onClick:function(){var newPub=!d.published;db.ref("dictees/"+d.id+"/config/published").set(newPub).then(function(){setDictees(function(prev){return prev.map(function(x){return x.id===d.id?Object.assign({},x,{published:newPub}):x})})})}},d.published?"Masquer":"Publier"),
+              h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px"},onClick:function(){if(!d.published){db.ref("dictees/"+d.id+"/config/niveau").once("value",function(snap){var niv=snap.val();if(!niv||!niv.trim()){setMsg("⚠️ Impossible de publier «"+d.title+"» : aucun niveau défini. Clique Modifier et choisis un niveau.");return;}var newPub=true;db.ref("dictees/"+d.id+"/config/published").set(newPub).then(function(){setDictees(function(prev){return prev.map(function(x){return x.id===d.id?Object.assign({},x,{published:newPub}):x})});setMsg("✅ «"+d.title+"» publiée.")})})}else{db.ref("dictees/"+d.id+"/config/published").set(false).then(function(){setDictees(function(prev){return prev.map(function(x){return x.id===d.id?Object.assign({},x,{published:false}):x})});setMsg("🔒 «"+d.title+"» masquée.")})}}},d.published?"Masquer":"Publier"),
               h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px"},onClick:function(){loadForEdit(d.id)}},"Modifier"),
               h("button",{className:"btn btn-ghost",style:{fontSize:12,padding:"4px 8px",color:"var(--coral)"},onClick:function(){deleteDictee(d.id)}},"Suppr"),
               h("a",{href:"#",onClick:function(e){e.preventDefault();if(p.onPick)p.onPick(d.id);else window.location.search="?dictee="+encodeURIComponent(d.id)},style:{fontSize:12,padding:"4px 8px",color:"var(--primary)"}},"Ouvrir")
