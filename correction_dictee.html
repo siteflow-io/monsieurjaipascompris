@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Correction dictée</title>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#fafaf8;--card:#fff;--card2:#f5f4f0;--text:#1a1a1a;--text-sub:#6b6b6b;--muted:#999;
+  --border:#e5e3de;--primary:#2563eb;--primary-light:rgba(37,99,235,0.08);
+  --coral:#c53030;--coral-light:rgba(197,48,48,0.08);
+  --green:#276749;--green-light:rgba(39,103,73,0.08);
+  --orange:#975a16;--orange-light:rgba(151,90,22,0.08);
+  --lexique:#2B6CB0;--lexique-light:rgba(43,108,203,0.08);
+  --absent:#7c3aed;--absent-light:rgba(124,58,237,0.08);
+  --radius:14px;--shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Literata',Georgia,serif;background:var(--bg);color:var(--text);min-height:100vh}
+.container{max-width:760px;margin:0 auto;padding:20px 16px 80px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:4px}
+h2{font-size:1.2rem;font-weight:700;margin-bottom:8px}
+.subtitle{font-size:.92rem;color:var(--text-sub);margin-bottom:16px}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;font-family:inherit;font-size:1rem;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text-sub)}
+.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+.btn-sm{display:inline-block;width:auto;padding:8px 16px;font-size:.9rem;border-radius:10px}
+.btn-row{display:flex;gap:8px;margin-top:12px}
+.btn-row .btn{flex:1}
+select,input,textarea{font-family:inherit;font-size:1rem;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;width:100%;outline:none;background:var(--card);color:var(--text)}
+select:focus,input:focus,textarea:focus{border-color:var(--primary)}
+textarea{resize:vertical;min-height:120px}
+.fade-up{animation:fadeUp .3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{background:var(--green-light)}50%{background:rgba(39,103,73,.25)}}
+.blink-done{animation:blink 1.2s ease infinite}
+.tooltip-wrap{position:relative;cursor:default}
+.tooltip-wrap .tooltip-content{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px;font-size:.8rem;white-space:pre-line;z-index:100;min-width:140px;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,.3);pointer-events:none;line-height:1.5;margin-bottom:6px}
+.tooltip-wrap:hover .tooltip-content{display:block}
+/* Score bar */
+.score-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card2);border-radius:12px;margin-bottom:14px;position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.score-val{font-size:1.8rem;font-weight:700;min-width:60px;text-align:center}
+.score-info{flex:1;font-size:.88rem;color:var(--text-sub);line-height:1.8}
+.score-eleve{font-size:1rem;font-weight:700;color:var(--text)}
+/* Word grid */
+.word-grid{line-height:2.6;padding:8px 0}
+.word-btn{display:inline-block;padding:4px 6px;margin:3px 1px;border-radius:6px;font-size:1.1rem;line-height:1.5;cursor:pointer;border:2px solid transparent;background:transparent;color:var(--text);font-family:inherit;font-weight:400;transition:all .15s}
+.word-btn:hover{background:rgba(0,0,0,.04)}
+.word-btn.punct{padding:1px 2px;margin:0;font-size:.95rem}
+.word-btn.err-g{border-color:var(--coral);background:var(--coral-light);color:var(--coral);font-weight:600}
+.word-btn.err-l{border-color:var(--lexique);background:var(--lexique-light);color:var(--lexique);font-weight:600}
+.word-btn.err-m{border-color:var(--absent);background:var(--absent-light);color:var(--absent);font-weight:600;text-decoration:line-through}
+.word-btn.err-i{border-color:var(--orange);background:var(--orange-light);color:var(--orange);font-weight:600;font-style:italic}
+.word-btn.last-touched{box-shadow:0 0 0 3px rgba(37,99,235,0.35);transform:scale(1.05)}
+.insert-zone{display:inline-block;width:12px;height:18px;cursor:pointer;vertical-align:middle;position:relative;opacity:0;transition:opacity .15s;margin:0 -1px}
+.insert-zone:hover{opacity:1!important}
+.word-grid:hover .insert-zone{opacity:.25}
+.insert-zone::after{content:'+';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:var(--primary);background:var(--primary-light);border-radius:3px}
+.extra-word{display:inline-flex;align-items:center;gap:2px;padding:3px 7px;margin:3px 1px;border-radius:6px;font-size:.92rem;background:rgba(37,99,235,.08);border:2px dashed var(--primary);color:var(--primary);font-weight:600;cursor:pointer}
+.extra-word:hover{background:rgba(37,99,235,.15);text-decoration:line-through}
+/* Popup */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.popup-box{background:var(--card);border-radius:18px;padding:28px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.18);text-align:center}
+.popup-word{font-size:1.3rem;font-weight:700;margin-bottom:6px}
+.popup-hint{font-size:.88rem;color:var(--muted);margin-bottom:16px}
+.popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.popup-btn{padding:14px 8px;border-radius:14px;border:2.5px solid transparent;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .15s}
+.popup-btn-g{background:var(--coral-light);color:var(--coral);border-color:rgba(197,48,48,.2)}
+.popup-btn-g:hover{background:var(--coral);color:#fff}
+.popup-btn-l{background:var(--lexique-light);color:var(--lexique);border-color:rgba(43,108,203,.2)}
+.popup-btn-l:hover{background:var(--lexique);color:#fff}
+.popup-btn-m{background:var(--absent-light);color:var(--absent);border-color:rgba(124,58,237,.2)}
+.popup-btn-m:hover{background:var(--absent);color:#fff}
+.popup-btn-i{background:var(--orange-light);color:var(--orange);border-color:rgba(151,90,22,.2)}
+.popup-btn-i:hover{background:var(--orange);color:#fff}
+.popup-cancel{margin-top:14px;font-size:.88rem;color:var(--muted);cursor:pointer;border:none;background:none;font-family:inherit}
+.popup-cancel:hover{color:var(--text)}
+/* Eleve grid */
+.eleve-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.eleve-card{padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between}
+.eleve-card:hover{border-color:var(--primary);background:var(--primary-light)}
+.eleve-card.done{border-color:var(--green);background:var(--green-light)}
+.eleve-card.absent{opacity:.45;border-style:dashed;pointer-events:none;cursor:default}
+.eleve-name{font-weight:600;font-size:.92rem}
+.eleve-note{font-size:.85rem;font-weight:700}
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:8px 16px;border-radius:10px;border:none;background:transparent;font-family:inherit;font-size:.92rem;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
+.tab.active{background:var(--primary);color:#fff}
+/* Bilan table */
+.bilan-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.bilan-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text-sub)}
+.bilan-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.bilan-table tr:hover{background:var(--card2)}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:600;margin-right:2px}
+.badge-g{background:var(--coral-light);color:var(--coral)}
+.badge-l{background:var(--lexique-light);color:var(--lexique)}
+.badge-m{background:var(--absent-light);color:var(--absent)}
+.badge-i{background:var(--orange-light);color:var(--orange)}
+.badge-x{background:var(--primary-light);color:var(--primary)}
+.config-field{margin-bottom:14px}
+.config-field label{display:block;font-size:.85rem;font-weight:600;color:var(--text-sub);margin-bottom:4px}
+/* Progress bar */
+.progress-wrap{height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
+.progress-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
+firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDomain:"dictee-5e-ch4.firebaseapp.com",databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"dictee-5e-ch4",storageBucket:"dictee-5e-ch4.appspot.com"});
+var db=firebase.database();
+function san(n){return(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")}
+var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5};
+var CLASSES={
+"4e Banksy":["ALOYEAU Elyse","BAZANTAY Ma\u00e9","BREMEAULT Victor","BUDEL No\u00e9mie","CADIOU-FOURRIER Louann","CHASLES Marcellin","CHEVALIER Flavie","DELPHIN Charly","DENEU Martin","DUVACHER Lou","GROSBOIS CAILLONEAU Margaux","GUERIN Titouan","GUIET Mya","HERMENIER Elea","LE MARC N\u00e9o","L'HOMMELET Louis","MARTIN Cl\u00e9ment","METIVIER JOUVELOT Camille","MISANDEAU Anna","MONTAIS Sacha","MOQUET Mathis","MOREAU In\u00e8s","POUTIER REVAULT Axel","RENAULT Ad\u00e9lie","ROTUREAU Math\u00e9o","ROULLIER UIJTDEHAAGE Kha\u00efs","SAILLANT F\u00e9lix","VETAULT Louisa","VIAU Benjamin"],
+"4e Pythagore":["ALLIGAND Louka","BARTHALAY Emma","BEAUFORT Charlie","BRETAULT Martin","BREUIL Nathan","CAILLET Rosy","CHAUVAT Faustine","COLAS Nathan","DAUNAS L\u00e9onie","DEROUINEAU Louise","DROCHON C\u00e9lia","DUTRUEL Gabin","ETCHEBARNE EMERIT L\u00e9a","GASOYAN Edouard","GAUCHER Julian","GIRARD Alice","LE LAY Manon","LEGUAY Lilou","LUCET Enzo","MALHERRE Paul","MARCHAND Lo\u00e9lie","MAZAN Ma\u00ebva","MERCIER Lola","MIE Manec","ROMARIE Charly","SAUNIER Coralie","TERRIEN Manon","ZNIDI Iyad"]
+};
+function tokenize(text){if(!text)return[];var t=[],re=/(\s+)|([.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+)|([^\s.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+)/g,m;while((m=re.exec(text))!==null){if(!m[1])t.push(m[2]||m[3])}return t}
+function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+$/.test(w)}
+function computeNote(errors,extras,base){
+  errors=errors||[];extras=extras||[];base=base||20;
+  var ded=0;errors.forEach(function(e){ded+=(TYPE_COST[e.type]||0)});extras.forEach(function(){ded+=TYPE_COST.X});
+  var counts={G:0,L:0,M:0,I:0,X:extras.length};errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});
+  return{note:Math.round(Math.max(0,base-ded)*10)/10,deduction:Math.round(ded*10)/10,counts:counts,total:errors.length+extras.length}
+}
+function noteColor(n,base){var p=n/base;return p>=.8?"var(--green)":p>=.5?"var(--orange)":"var(--coral)"}
+function toArr(v){if(!v)return[];if(Array.isArray(v))return v;return Object.values(v)}
+
+// ═══ BANQUE DE QUESTIONS GRAMMAIRE ═══
+var QUESTIONS_G=[
+  {q:"Dans « les enfants joue dehors », quelle est l'erreur ?",choices:["joue → jouent (accord sujet-verbe)","enfants → enfant","dehors → dehor","Pas d'erreur"],answer:0,rule:"Le verbe s'accorde avec son sujet. « Les enfants » est au pluriel → « jouent »."},
+  {q:"Complète : « Il faut qu'il ___ ses devoirs. »",choices:["fait","fais","fasse","fasse"],answer:2,rule:"Après « il faut que », on utilise le subjonctif présent."},
+  {q:"Quel est le bon accord ? « Les fleurs que j'ai ___ »",choices:["cueilli","cueillis","cueillies","cueillir"],answer:2,rule:"Avec l'auxiliaire avoir, le participe passé s'accorde avec le COD s'il est placé avant. « Fleurs » est féminin pluriel."},
+  {q:"« Ils ce sont disputés » — où est l'erreur ?",choices:["ce → se","sont → son","disputés → disputé","Pas d'erreur"],answer:0,rule:"« Se » est le pronom réfléchi (se disputer). « Ce » est un déterminant démonstratif."},
+  {q:"Choisis : « Elle ___ partie hier. »",choices:["a","est","as","ai"],answer:1,rule:"Le verbe partir se conjugue avec l'auxiliaire être aux temps composés."},
+  {q:"« Les livres qu'il à lu » — trouve l'erreur.",choices:["à → a","lu → lus","qu'il → qu'ils","Pas d'erreur"],answer:0,rule:"« A » sans accent est l'auxiliaire avoir. « À » avec accent est une préposition."},
+  {q:"Accorde : « Elles sont ___ ce matin. »",choices:["arrivé","arrivés","arrivées","arriver"],answer:2,rule:"Avec l'auxiliaire être, le participe passé s'accorde avec le sujet. « Elles » = féminin pluriel."},
+  {q:"« Il mangait tranquillement » — quelle correction ?",choices:["mangait → mangeait","tranquillement → tranquiment","Il → Ils","Pas d'erreur"],answer:0,rule:"À l'imparfait, les verbes en -ger gardent le « e » devant « a » : il mangeait."},
+  {q:"Choisis le bon homophone : « ___ va bien. »",choices:["Sa","Ça","Ca","Çà"],answer:1,rule:"« Ça » (= cela) est un pronom démonstratif. « Sa » est un adjectif possessif."},
+  {q:"« Ont a bien travaillé » — l'erreur est :",choices:["Ont → On","a → as","travaillé → travaillés","Pas d'erreur"],answer:0,rule:"« On » est un pronom sujet (= nous/quelqu'un). « Ont » est le verbe avoir conjugué (ils ont)."},
+  {q:"Conjugue : « Il ___ que tu viennes. » (falloir, présent)",choices:["faut","faux","faus","falt"],answer:0,rule:"Falloir au présent de l'indicatif : il faut. Ne pas confondre avec « faux » (= pas vrai)."},
+  {q:"« Ses amis son gentils » — l'erreur :",choices:["son → sont","Ses → Ces","gentils → gentilles","Pas d'erreur"],answer:0,rule:"« Sont » = verbe être conjugué. « Son » = déterminant possessif (son livre)."},
+  {q:"Choisis : « Les élèves ___ attentifs. »",choices:["son","sont","sons","s'ont"],answer:1,rule:"« Sont » est le verbe être au présent, 3e personne du pluriel."},
+  {q:"« Je les est vu partir » — corrige :",choices:["est → ai","vu → vus","partir → partis","Pas d'erreur"],answer:0,rule:"Avec le sujet « je », l'auxiliaire avoir se conjugue « ai » (j'ai), pas « est »."},
+  {q:"Accorde : « La robe qu'elle s'est ___ »",choices:["acheté","achetée","achetés","acheter"],answer:1,rule:"Avec un verbe pronominal, le participe s'accorde avec le COD si celui-ci précède. « La robe » = fém. sing."},
+  {q:"« Quand il pleut, je prend mon parapluie. » Corrige :",choices:["prend → prends","pleut → pleu","je → j'","Pas d'erreur"],answer:0,rule:"À la 1re personne du singulier, les verbes du 3e groupe prennent « -s » : je prends."},
+  {q:"Choisis : « ___ enfants jouent dans la cour. »",choices:["Leurs","Leur","Ses","C'est"],answer:0,rule:"« Leurs » (pluriel) s'accorde avec le nom qu'il détermine : leurs enfants."},
+  {q:"« Il ni a personne » — corrige :",choices:["ni → n'y","a → as","personne → personnes","Pas d'erreur"],answer:0,rule:"« N'y » = ne + y (pronom de lieu). « Ni » = conjonction de coordination (ni... ni...)."},
+  {q:"« Ils voient la mer » — le verbe est-il bien conjugué ?",choices:["Oui, c'est correct","Non, voient → voie","Non, voient → voit","Non, voient → vois"],answer:0,rule:"Voir au présent, 3e personne du pluriel : ils voient. C'est correct."},
+  {q:"Choisis : « Je ne sais pas ___ il est parti. »",choices:["ou","où","oû","oux"],answer:1,rule:"« Où » avec accent indique le lieu ou le temps. « Ou » sans accent = alternative (ou bien)."}
+];
+var QUESTIONS_L=[
+  {q:"Comment écrit-on le contraire de « possible » ?",choices:["impossible","inpossible","impaussible","imposible"],answer:0,rule:"Le préfixe « im- » (devant m, b, p) exprime la négation : impossible."},
+  {q:"Quel mot est correctement orthographié ?",choices:["aparament","apparament","apparemment","apparament"],answer:2,rule:"Apparemment prend deux « p » et se termine par « -emment » (comme évidemment)."},
+  {q:"Choisis la bonne orthographe :",choices:["maintenant","maintenent","mentenant","maintnant"],answer:0,rule:"Main-te-nant : trois syllabes, « ai » au début, « e » au milieu."},
+  {q:"Comment écrit-on ce mot ? « Il a fait un effort considér___ »",choices:["able","ables","abe","abble"],answer:0,rule:"L'adjectif « considérable » s'écrit avec « -able » (un seul « b »)."},
+  {q:"Quelle est la bonne orthographe ?",choices:["exercice","éxercice","exercisse","exersice"],answer:0,rule:"Exercice : « ex- » au début, « -cice » à la fin (comme dentifrice)."},
+  {q:"Complète : « une ___ agréable »",choices:["surprize","surprise","surprisse","suprise"],answer:1,rule:"Surprise s'écrit avec un « s » (pas « z ») et deux « r »."},
+  {q:"Quel mot prend un accent circonflexe ?",choices:["chateau","île","naitre","mur"],answer:1,rule:"Île prend un accent circonflexe sur le « î ». Château aussi, mais il manque ici."},
+  {q:"Comment écrit-on « ___ » (= malgré cela) ?",choices:["quand même","quant même","quand mème","quan même"],answer:0,rule:"« Quand même » : quand (= lorsque/même si) + même."},
+  {q:"Choisis : « Il a ___ son travail. »",choices:["fini","finit","finie","finni"],answer:0,rule:"Le participe passé de finir est « fini » (sans « t » — le « t » c'est le présent : il finit)."},
+  {q:"Quelle orthographe est correcte ?",choices:["dévellopement","développement","developement","dévelopement"],answer:1,rule:"Développement : deux « p », un « e » entre les « p » et le « m », -ment à la fin."},
+  {q:"Choisis : « une ___ de vacances »",choices:["semmaine","semaine","semmene","semenne"],answer:1,rule:"Semaine : un seul « m », « ai » au milieu."},
+  {q:"Quel mot est bien écrit ?",choices:["language","langage","lengache","langache"],answer:1,rule:"Langage s'écrit sans « u » (contrairement à « langue »)."},
+  {q:"Complète avec la bonne orthographe : « c'est ___ »",choices:["nécéssaire","nécessaire","necessaire","nécesaire"],answer:1,rule:"Nécessaire : un « c » puis deux « s », et un accent aigu sur le premier « e »."},
+  {q:"Choisis la bonne écriture :",choices:["enveloppe","enveloppe","envellopée","enveloppé"],answer:0,rule:"Enveloppe : « en- », puis « -veloppe » avec deux « p »."},
+  {q:"Comment écrit-on le bruit que fait le chat ?",choices:["ronroner","ronronner","ronnroner","romronner"],answer:1,rule:"Ronronner : deux « n » au milieu (ron-ron-ner)."},
+  {q:"Quel mot comporte une erreur ?",choices:["tranquille","tranquile","Tous les deux sont corrects","Aucun des deux"],answer:1,rule:"Tranquille prend deux « l ». C'est une erreur fréquente."},
+  {q:"Écris correctement : « il parle ___ »",choices:["courrament","couramment","couranment","courament"],answer:1,rule:"Couramment : deux « m » (comme les adverbes en -amment formés sur -ant)."},
+  {q:"Choisis : « un ___ intéressant »",choices:["artcile","article","artickle","articl"],answer:1,rule:"Article : ar-ti-cle, trois syllabes simples."},
+  {q:"Quelle ponctuation est correcte en français ?",choices:["Bonjour!","Bonjour !","Bonjour  !","!Bonjour"],answer:1,rule:"En français, on met une espace insécable avant les signes doubles ( ! ? ; :)."},
+  {q:"Choisis : « les ___ de la ville »",choices:["habittants","habitants","habitans","habittans"],answer:1,rule:"Habitants : un seul « t », -ants à la fin (participe présent de habiter)."}
+];
+
+// ═══ APP ═══
+var PROF_CODES=[3141,1312];
+function App(){
+  var s0=useState(null),mode=s0[0],setMode=s0[1];
+  var s0b=useState(false),profAuth=s0b[0],setProfAuth=s0b[1];
+  var s0c=useState(""),codeInput=s0c[0],setCodeInput=s0c[1];
+  var s0d=useState(false),showProfLogin=s0d[0],setShowProfLogin=s0d[1];
+  useEffect(function(){
+    var p=new URLSearchParams(window.location.search);
+    if(p.get("mode")==="eleve")setMode("eleve");
+    else if(p.get("mode")==="prof"){setProfAuth(true);setMode("prof")}
+  },[]);
+  function tryProfCode(){
+    if(PROF_CODES.indexOf(parseInt(codeInput))>=0){setProfAuth(true);setMode("prof")}
+    else alert("Code incorrect")
+  }
+  if(!mode) return h("div",{className:"container fade-up",style:{paddingTop:60,textAlign:"center"}},
+    h("h1",{style:{fontSize:"1.8rem",marginBottom:8}},"Correction de dict\u00e9e"),
+    h("p",{className:"subtitle",style:{marginBottom:30}},"Connecte-toi pour corriger tes erreurs."),
+    h("div",{style:{display:"flex",flexDirection:"column",gap:12,maxWidth:320,margin:"0 auto"}},
+      h("button",{className:"btn btn-primary",style:{fontSize:"1.1rem",padding:18},onClick:function(){setMode("eleve")}},"\ud83c\udf93 Mode \u00e9l\u00e8ve"),
+      !showProfLogin?h("button",{className:"btn-sm btn-ghost",style:{fontSize:".85rem",marginTop:16,opacity:.5},onClick:function(){setShowProfLogin(true)}},"Acc\u00e8s professeur"):
+      h("div",{style:{marginTop:16,display:"flex",gap:8,maxWidth:240,margin:"16px auto 0"}},
+        h("input",{type:"password",value:codeInput,onChange:function(e){setCodeInput(e.target.value)},placeholder:"Code",style:{flex:1,textAlign:"center"},onKeyDown:function(e){if(e.key==="Enter")tryProfCode()}}),
+        h("button",{className:"btn-sm btn-primary",onClick:tryProfCode},"\u2192")
+      )
+    )
+  );
+  if(mode==="prof"&&profAuth) return h(AppProf,{onBack:function(){setMode(null);setProfAuth(false);setShowProfLogin(false);setCodeInput("")}});
+  if(mode==="eleve") return h(AppEleve,{onBack:function(){setMode(null)}});
+  return null;
+}
+
+// ═══ APP PROF (ancien App) ═══
+function AppProf(p){
+  var s1=useState("config"),screen=s1[0],setScreen=s1[1];
+  var s2=useState(""),textInput=s2[0],setTextInput=s2[1];
+  var s3=useState(""),classeInput=s3[0],setClasseInput=s3[1];
+  var s4=useState(""),titleInput=s4[0],setTitleInput=s4[1];
+  var s5=useState(20),baseInput=s5[0],setBaseInput=s5[1];
+  var s6=useState(null),dicteeData=s6[0],setDicteeData=s6[1];
+  var s7=useState({}),corrections=s7[0],setCorrections=s7[1];
+  var s9=useState(""),dicteeId=s9[0],setDicteeId=s9[1];
+  var s10=useState([]),saved=s10[0],setSaved=s10[1];
+  var s11=useState({}),absents=s11[0],setAbsents=s11[1];
+
+  useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
+    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};return{id:id,title:d.title||id,classe:d.classe||"",n:(d.eleves||[]).length}}))
+  })},[]);
+
+  function start(){
+    if(!textInput.trim()||!classeInput||!titleInput.trim())return;
+    var tokens=tokenize(textInput.trim()),eleves=CLASSES[classeInput]||[],id=san(titleInput)+"-"+san(classeInput);
+    var data={title:titleInput.trim(),text:textInput.trim(),tokens:tokens,classe:classeInput,eleves:eleves,base:baseInput};
+    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,eleves:eleves,base:baseInput});
+    setDicteeData(data);setDicteeId(id);setCorrections({});setScreen("correct");
+    db.ref("correction_dictee/"+id+"/results").once("value",function(snap){setCorrections(snap.val()||{})});
+    db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
+  }
+  function load(id){db.ref("correction_dictee/"+id).once("value",function(snap){
+    var val=snap.val()||{},cfg=val.config||{};
+    setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:cfg.classe||"",eleves:cfg.eleves||[],base:cfg.base||20});
+    setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
+  })}
+  function save(ek,errors,extras){
+    var c=Object.assign({},corrections),sc=computeNote(errors,extras,dicteeData.base);
+    c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
+    setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
+  }
+
+  if(screen==="config") return h("div",{className:"container fade-up"},
+    h("div",{className:"card"},h("h1",null,"Correction de dict\u00e9e"),h("p",{className:"subtitle"},"Corrige les copies en cliquant sur les mots fautifs.")),
+    saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es en cours"),
+      saved.map(function(d){return h("div",{key:d.id,style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10,cursor:"pointer",marginBottom:6},onClick:function(){load(d.id)}},
+        h("div",null,h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l.")),
+        h("div",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem"}},"Ouvrir \u2192")
+      )})
+    ),
+    h("div",{className:"card"},
+      h("h2",null,"Nouvelle dict\u00e9e"),
+      h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
+      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).map(function(c){return h("option",{key:c,value:c},c+" ("+CLASSES[c].length+")")}))),
+      h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:textInput,onChange:function(e){setTextInput(e.target.value)},placeholder:"Colle le texte correct..."})),
+      h("div",{className:"config-field"},h("label",null,"Note sur"),h("input",{type:"number",value:baseInput,onChange:function(e){setBaseInput(parseInt(e.target.value)||20)},style:{width:80}})),
+      h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()},"Commencer")
+    )
+  );
+  if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){setScreen("config")}});
+  return null;
+}
+
+// ═══ ÉCRAN CORRECTION ═══
+function CorrScreen(p){
+  var data=p.data,s1=useState("correct"),tab=s1[0],setTab=s1[1];
+  var s2=useState(null),cur=s2[0],setCur=s2[1];
+  var s3=useState(null),msg=s3[0],setMsg=s3[1];
+  var nAbs=Object.keys(p.absents||{}).length;
+  var nTotal=data.eleves.length-nAbs;
+  var nDone=data.eleves.filter(function(e){var k=san(e);return!p.absents[k]&&p.corrections[k]}).length;
+  var pct=nTotal?Math.round(nDone/nTotal*100):0;
+
+  if(cur&&tab==="correct") return h(CorrEleve,{key:san(cur),data:data,eleve:cur,
+    existing:p.corrections[san(cur)]||null,
+    onSave:function(err,ext){
+      p.onSave(san(cur),err,ext);
+      var keys=data.eleves.map(san),ci=data.eleves.indexOf(cur),next=null;
+      for(var i=1;i<data.eleves.length;i++){var ni=(ci+i)%data.eleves.length;if(!p.corrections[keys[ni]]&&!p.absents[keys[ni]]){next=data.eleves[ni];break}}
+      setMsg("\u2705 "+cur.split(" ").pop()+(next?" \u2192 "+next.split(" ").pop():" \u2014 termin\u00e9 !"));
+      setTimeout(function(){setMsg(null)},2500);setCur(next);
+    },
+    onReset:function(){
+      var k=san(cur);db.ref("correction_dictee/"+p.dicteeId+"/results/"+k).remove();
+      var c=Object.assign({},p.corrections);delete c[k];p.onResetCorrections(c);
+      setMsg("\u21bb "+cur.split(" ").pop()+" r\u00e9initialis\u00e9");setTimeout(function(){setMsg(null)},2000);
+    },
+    onCancel:function(){setCur(null)}
+  });
+
+  return h("div",{className:"container fade-up"},
+    h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}},
+      h("div",null,h("h1",null,data.title),
+        h("p",{className:"subtitle"},data.classe+" \u00b7 "+nDone+"/"+nTotal+(nAbs?" ("+nAbs+" abs.)":"")+" \u00b7 "+pct+"%"),
+        h("div",{className:"progress-wrap"},h("div",{className:"progress-fill",style:{width:pct+"%"}}))
+      ),
+      h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
+    ),
+    msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
+    h("div",{className:"tabs"},
+      h("button",{className:"tab"+(tab==="correct"?" active":""),onClick:function(){setTab("correct")}},"Correction"),
+      h("button",{className:"tab"+(tab==="bilan"?" active":""),onClick:function(){setTab("bilan")}},"Bilan"),
+      h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
+      h("button",{className:"tab"+(tab==="suivi"?" active":""),onClick:function(){setTab("suivi")}},"Suivi \ud83d\udfe2")
+    ),
+    tab==="correct"&&h("div",null,
+      h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour le marquer absent / pr\u00e9sent."),
+      h("div",{className:"eleve-grid"},data.eleves.map(function(e){
+      var key=san(e),c=p.corrections[key],done=!!c,isAbs=!!p.absents[key];
+      return h("div",{key:key,className:"eleve-card"+(done?" done":"")+(isAbs?" absent":""),
+        onClick:function(){if(!isAbs)setCur(e)},
+        onContextMenu:function(ev){ev.preventDefault();p.onToggleAbsent(key)}},
+        h("span",{className:"eleve-name"},e.split(" ").pop()+" "+e.split(" ")[0].charAt(0)+"."),
+        isAbs?h("span",{style:{fontSize:".78rem",fontWeight:700,color:"var(--muted)"}},"ABS"):
+        done?h("span",{className:"eleve-note",style:{color:noteColor(c.note,data.base)}},c.note+"/"+data.base):h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"—")
+      )
+    }))),
+    tab==="bilan"&&h(Bilan,{data:data,corrections:p.corrections,absents:p.absents}),
+    tab==="fiches"&&h(Fiches,{data:data,corrections:p.corrections,absents:p.absents}),
+    tab==="suivi"&&h(Suivi,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents})
+  );
+}
+
+// ═══ CORRECTION D'UN ÉLÈVE ═══
+function CorrEleve(p){
+  var data=p.data,tokens=data.tokens;
+  var _ee=p.existing&&p.existing.errors?toArr(p.existing.errors):[];
+  var _ex=p.existing&&p.existing.extras?toArr(p.existing.extras):[];
+  var s1=useState(_ee),errors=s1[0],setErrors=s1[1];
+  var s2=useState(_ex),extras=s2[0],setExtras=s2[1];
+  var s3=useState(null),popupIdx=s3[0],setPopupIdx=s3[1];
+  var s4=useState(null),insertIdx=s4[0],setInsertIdx=s4[1];
+  var s5=useState(""),insertWord=s5[0],setInsertWord=s5[1];
+  var s6=useState(-1),lastTouched=s6[0],setLastTouched=s6[1];
+  var inputRef=React.useRef(null);
+  React.useEffect(function(){if(insertIdx!==null&&inputRef.current)inputRef.current.focus()},[insertIdx]);
+
+  function clickWord(idx){
+    var ei=errors.findIndex(function(e){return e.idx===idx});
+    if(ei>=0){var ne=errors.slice();ne.splice(ei,1);setErrors(ne);setLastTouched(idx);return}
+    setPopupIdx(idx);
+  }
+  function selectType(type){setErrors(errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]));setLastTouched(popupIdx);setPopupIdx(null)}
+  function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}setExtras(extras.concat([{afterIdx:insertIdx,word:insertWord.trim()}]));setInsertIdx(null);setInsertWord("")}
+  function removeExtra(i){var ne=extras.slice();ne.splice(i,1);setExtras(ne)}
+
+  var errMap={};errors.forEach(function(e){errMap[e.idx]=e.type});
+  var extraMap={};extras.forEach(function(e,i){var k=e.afterIdx;if(!extraMap[k])extraMap[k]=[];extraMap[k].push({word:e.word,gi:i})});
+  var sc=computeNote(errors,extras,data.base);
+
+  var display=[];
+  for(var i=0;i<tokens.length;i++){
+    display.push({t:"ins",ai:i-1,k:"i"+i});
+    if(extraMap[i-1])extraMap[i-1].forEach(function(ex){display.push({t:"ex",w:ex.word,gi:ex.gi,k:"e"+(i-1)+"_"+ex.gi})});
+    display.push({t:"w",w:tokens[i],idx:i,k:"w"+i});
+  }
+  display.push({t:"ins",ai:tokens.length-1,k:"iend"});
+  if(extraMap[tokens.length-1])extraMap[tokens.length-1].forEach(function(ex){display.push({t:"ex",w:ex.word,gi:ex.gi,k:"eend"+ex.gi})});
+
+  return h("div",{className:"container fade-up"},
+    // Sticky score bar with eleve name
+    h("div",{className:"score-bar"},
+      h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},sc.note),
+      h("div",{style:{flex:1}},
+        h("div",{className:"score-eleve"},p.eleve),
+        h("div",{className:"score-info"},
+          "/"+data.base+" \u00b7 ",
+          sc.counts.G>0&&h("span",{className:"badge badge-g"},sc.counts.G+"G"),
+          sc.counts.L>0&&h("span",{className:"badge badge-l"},sc.counts.L+"L"),
+          sc.counts.M>0&&h("span",{className:"badge badge-m"},sc.counts.M+"\u2205"),
+          sc.counts.I>0&&h("span",{className:"badge badge-i"},sc.counts.I+"?"),
+          sc.counts.X>0&&h("span",{className:"badge badge-x"},sc.counts.X+"+"),
+          " \u00b7 \u2212"+sc.deduction
+        )
+      ),
+      h("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"var(--coral)",borderColor:"rgba(197,48,48,.2)"},onClick:function(){if(confirm("R\u00e9initialiser "+p.eleve+" ?")){setErrors([]);setExtras([]);if(p.onReset)p.onReset()}}},"\u21bb"),
+        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onCancel},"\u2190")
+      )
+    ),
+    // Text
+    h("div",{className:"card"},
+      h("div",{className:"word-grid"},display.map(function(d){
+        if(d.t==="ins")return h("span",{key:d.k,className:"insert-zone",onClick:function(){setInsertIdx(d.ai)}});
+        if(d.t==="ex")return h("span",{key:d.k,className:"extra-word",onClick:function(){removeExtra(d.gi)},title:"Supprimer"},"+"+d.w);
+        var cls="word-btn";if(isPunct(d.w))cls+=" punct";
+        if(errMap[d.idx]==="G")cls+=" err-g";else if(errMap[d.idx]==="L")cls+=" err-l";else if(errMap[d.idx]==="M")cls+=" err-m";else if(errMap[d.idx]==="I")cls+=" err-i";
+        if(d.idx===lastTouched)cls+=" last-touched";
+        return h("button",{key:d.k,className:cls,onClick:function(){clickWord(d.idx)}},d.w,errMap[d.idx]?h("sup",{style:{fontSize:9,marginLeft:2}},errMap[d.idx]):null);
+      }))
+    ),
+    h("button",{className:"btn btn-primary",style:{marginBottom:20},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant"),
+    // Popups
+    popupIdx!==null&&h("div",{className:"popup-overlay",onClick:function(){setPopupIdx(null)}},
+      h("div",{className:"popup-box",onClick:function(e){e.stopPropagation()}},
+        h("div",{className:"popup-word"},"\u00ab "+tokens[popupIdx]+" \u00bb"),
+        h("div",{className:"popup-hint"},"Type d\u2019erreur ?"),
+        h("div",{className:"popup-grid"},
+          h("button",{className:"popup-btn popup-btn-g",onClick:function(){selectType("G")}},h("div",{style:{fontSize:"1.3rem"}},"G"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Grammaire (\u22121)")),
+          h("button",{className:"popup-btn popup-btn-l",onClick:function(){selectType("L")}},h("div",{style:{fontSize:"1.3rem"}},"L"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Lexique (\u22120.5)")),
+          h("button",{className:"popup-btn popup-btn-m",onClick:function(){selectType("M")}},h("div",{style:{fontSize:"1.3rem"}},"\u2205"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Manquant (\u22121)")),
+          h("button",{className:"popup-btn popup-btn-i",onClick:function(){selectType("I")}},h("div",{style:{fontSize:"1.3rem"}},"?"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Illisible (\u22121)"))
+        ),
+        h("button",{className:"popup-cancel",onClick:function(){setPopupIdx(null)}},"Annuler")
+      )
+    ),
+    insertIdx!==null&&h("div",{className:"popup-overlay",onClick:function(){setInsertIdx(null)}},
+      h("div",{className:"popup-box",onClick:function(e){e.stopPropagation()}},
+        h("div",{className:"popup-word"},"Mot en trop"),
+        h("div",{className:"popup-hint"},"Apr\u00e8s \u00ab "+(insertIdx>=0?tokens[insertIdx]:"d\u00e9but")+" \u00bb"),
+        h("input",{ref:inputRef,value:insertWord,onChange:function(e){setInsertWord(e.target.value)},placeholder:"Le mot en trop...",style:{marginBottom:12},onKeyDown:function(e){if(e.key==="Enter")confirmInsert()}}),
+        h("div",{style:{display:"flex",gap:8}},
+          h("button",{className:"btn-sm btn-primary",onClick:confirmInsert,style:{flex:1}},"Ajouter (\u22120.5)"),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){setInsertIdx(null)},style:{flex:1}},"Annuler")
+        )
+      )
+    )
+  );
+}
+
+// ═══ BILAN ═══
+function Bilan(p){
+  var data=p.data,corr=p.corrections,abs=p.absents||{};
+  var entries=data.eleves.filter(function(e){return!abs[san(e)]}).map(function(e){var k=san(e),c=corr[k];return{name:e,done:!!c,note:c?c.note:null,counts:c&&c.counts?c.counts:{G:0,L:0,M:0,I:0,X:0},errors:c?toArr(c.errors):[]}}).sort(function(a,b){if(a.done!==b.done)return a.done?-1:1;return(a.note||0)-(b.note||0)});
+  var done=entries.filter(function(e){return e.done});
+  var avg=done.length?Math.round(done.reduce(function(a,e){return a+e.note},0)/done.length*10)/10:0;
+  var med=done.length?(function(){var s=done.map(function(e){return e.note}).sort(function(a,b){return a-b}),m=Math.floor(s.length/2);return s.length%2?s[m]:Math.round((s[m-1]+s[m])*5)/10})():0;
+  var wf={};done.forEach(function(e){e.errors.forEach(function(err){var w=err.word||"?";if(!wf[w])wf[w]={w:w,n:0,t:{}};wf[w].n++;wf[w].t[err.type]=(wf[w].t[err.type]||0)+1})});
+  var top=Object.values(wf).sort(function(a,b){return b.n-a.n}).slice(0,15);
+  return h("div",{className:"fade-up"},
+    h("div",{className:"card"},h("div",{style:{display:"flex",gap:16,flexWrap:"wrap",textAlign:"center"}},
+      h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Corrig\u00e9es"),h("div",{style:{fontSize:"1.6rem",fontWeight:700}},done.length+"/"+data.eleves.length)),
+      h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Moyenne"),h("div",{style:{fontSize:"1.6rem",fontWeight:700,color:noteColor(avg,data.base)}},avg)),
+      h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"M\u00e9diane"),h("div",{style:{fontSize:"1.6rem",fontWeight:700}},med))
+    )),
+    top.length>0&&h("div",{className:"card"},h("h2",null,"Mots les plus \u00e9chou\u00e9s"),h("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}},
+      top.map(function(w){return h("div",{key:w.w,style:{padding:"5px 10px",borderRadius:8,background:"var(--card2)",border:"1px solid var(--border)",fontSize:".88rem"}},
+        h("b",null,w.w)," ",h("span",{style:{color:"var(--muted)"}},w.n+"\u00d7"),
+        w.t.G?h("span",{className:"badge badge-g"},w.t.G+"G"):null,
+        w.t.L?h("span",{className:"badge badge-l"},w.t.L+"L"):null,
+        w.t.M?h("span",{className:"badge badge-m"},w.t.M+"\u2205"):null
+      )})
+    )),
+    h("div",{className:"card"},h("h2",null,"D\u00e9tail"),h("table",{className:"bilan-table"},
+      h("thead",null,h("tr",null,h("th",null,"\u00c9l\u00e8ve"),h("th",null,"Note"),h("th",null,"G"),h("th",null,"L"),h("th",null,"\u2205"),h("th",null,"?"),h("th",null,"+"))),
+      h("tbody",null,entries.map(function(e){var c=e.counts;return h("tr",{key:e.name},h("td",null,e.name),
+        h("td",{style:{fontWeight:700,color:e.done?noteColor(e.note,data.base):"var(--muted)"}},e.done?e.note+"/"+data.base:"\u2014"),
+        h("td",null,e.done?c.G:"\u2014"),h("td",null,e.done?c.L:"\u2014"),h("td",null,e.done?(c.M||0):"\u2014"),h("td",null,e.done?(c.I||0):"\u2014"),h("td",null,e.done?(c.X||0):"\u2014")
+      )}))
+    ))
+  );
+}
+
+// ═══ SUIVI TEMPS RÉEL ═══
+function Suivi(p){
+  var data=p.data,abs=p.absents||{};
+  var s1=useState({}),autoCorr=s1[0],setAutoCorr=s1[1];
+  var s2=useState(null),selectedEleve=s2[0],setSelectedEleve=s2[1];
+  var s3=useState(0),tick=s3[0],setTick=s3[1];
+  var NOW=Date.now();
+  var RECENT=60*1000;
+
+  // Force re-render every 15s to update statuses
+  useEffect(function(){
+    var t=setInterval(function(){setTick(function(n){return n+1})},15000);
+    return function(){clearInterval(t)};
+  },[]);
+
+  useEffect(function(){
+    var ref=db.ref("correction_dictee/"+p.dicteeId+"/autocorrection");
+    function onData(snap){setAutoCorr(snap.val()||{})}
+    ref.on("value",onData);
+    return function(){ref.off("value",onData)};
+  },[p.dicteeId]);
+
+  var eleves=data.eleves.filter(function(e){return!abs[san(e)]});
+  var classKeys=data.eleves.map(san);
+  Object.keys(autoCorr).forEach(function(k){if(classKeys.indexOf(k)===-1)eleves.push(k.toUpperCase().replace(/_/g," ")+" (TEST)")});
+
+  var rows=eleves.map(function(e){
+    var isTest=e.indexOf("(TEST)")>=0;
+    var k=isTest?san(e.replace(" (TEST)","")):san(e);
+    var c=p.corrections[k],ac=autoCorr[k];
+    var nErr=c?toArr(c.errors).length:0;
+    var totalAtt=0,wrongAtt=0;
+    if(ac&&ac.attempts){
+      var attObj=ac.attempts;
+      Object.keys(attObj).forEach(function(ki){
+        var n=attObj[ki]||0;totalAtt+=n;
+        if(ac.results&&ac.results[ki])wrongAtt+=(n-1);else wrongAtt+=n;
+      });
+    }
+    var solved=ac?ac.solved||0:0;
+    var total=ac?ac.total||nErr:nErr;
+    var finished=total>0&&solved>=total;
+    // Use Firebase status field if available, else fallback to timestamp
+    var fbStatus=ac&&ac.status?ac.status:null;
+    var lastSeen=ac&&ac.lastSeen?ac.lastSeen:ac?ac.timestamp:0;
+    var status;
+    if(fbStatus==="done"&&ac&&ac.bilanSubmitted) status="done";
+    else if(fbStatus==="done"||fbStatus==="bilan"||(finished&&!ac.bilanSubmitted)) status="bilan";
+    else if(fbStatus==="active"&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
+    else if(lastSeen&&(NOW-lastSeen)<5*60*1000) status=fbStatus==="idle"?"idle":"idle";
+    else if(ac&&ac.solved>0) status="offline";
+    else if(!ac) status="waiting";
+    else status="waiting";
+    return{name:e,key:k,isTest:isTest,noteDictee:c?c.note:null,nErrors:nErr,
+      solved:solved,total:total,score:ac?ac.score:null,
+      totalAttempts:totalAtt,wrongAttempts:wrongAtt,
+      status:status,timestamp:ac?ac.timestamp:0,lastSeen:lastSeen};
+  }).sort(function(a,b){
+    var order={active:0,bilan:1,done:2,idle:3,offline:4,waiting:5};
+    if(order[a.status]!==order[b.status])return order[a.status]-order[b.status];
+    if(a.status==="active")return(b.solved/Math.max(1,b.total))-(a.solved/Math.max(1,a.total));
+    return 0;
+  });
+
+  var nActive=rows.filter(function(r){return r.status==="active"}).length;
+  var nDone=rows.filter(function(r){return r.status==="done"}).length;
+  var nStarted=rows.filter(function(r){return r.status!=="waiting"}).length;
+  var nTotal=rows.length;
+  var avgScore=nDone>0?Math.round(rows.filter(function(r){return r.status==="done"}).reduce(function(a,r){return a+r.score},0)/nDone*100)/100:0;
+  var totalWrongAll=rows.reduce(function(a,r){return a+r.wrongAttempts},0);
+  var totalAttAll=rows.reduce(function(a,r){return a+r.totalAttempts},0);
+
+  var statusIcon=function(s){return s==="done"?"\u2705":s==="bilan"?"\ud83d\udcdd":s==="active"?"\ud83d\udfe2":s==="idle"?"\u23f8\ufe0f":s==="offline"?"\u26aa":"\u2b1c"};
+  var statusLabel=function(s){return s==="done"?"Termin\u00e9":s==="bilan"?"Bilan en cours":s==="active"?"En cours":s==="idle"?"Inactif":s==="offline"?"D\u00e9connect\u00e9":"Pas commenc\u00e9"};
+
+  // Helper: extract first name from "NOM Prenom"
+  function prenom(n){var p=n.split(" ");return p.length>1?p[p.length-1]:n}
+  function prenomList(arr){return arr.length?arr.map(function(r){return prenom(r.name)}).join("\n"):"Aucun"}
+
+  var activeRows=rows.filter(function(r){return r.status==="active"});
+  var doneRows=rows.filter(function(r){return r.status==="done"});
+  var startedRows=rows.filter(function(r){return r.status!=="waiting"});
+  var idleRows=rows.filter(function(r){return r.status==="idle"});
+  var waitingRows=rows.filter(function(r){return r.status==="waiting"});
+
+  function statCard(val,label,color,tooltipList){
+    return h("div",{className:"tooltip-wrap card",style:{textAlign:"center",padding:14}},
+      h("div",{style:{fontSize:"1.6rem",fontWeight:700,color:color||"inherit"}},val),
+      h("div",{style:{fontSize:".78rem",color:"var(--muted)"}},label),
+      tooltipList&&tooltipList.length>0&&h("div",{className:"tooltip-content"},prenomList(tooltipList))
+    )
+  }
+
+  return h("div",{className:"fade-up"},
+    // Stats cards
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginBottom:14}},
+      statCard(nActive,"En cours","var(--primary)",activeRows),
+      statCard(nDone,"Termin\u00e9s","var(--green)",doneRows),
+      statCard(nStarted+"/"+nTotal,"Ont commenc\u00e9",null,startedRows),
+      statCard(nDone?avgScore+"/5":"\u2014","Moy. correction",nDone?noteColor(avgScore,5):"var(--muted)",doneRows),
+      statCard(totalAttAll,"Essais total",null,null),
+      statCard(totalWrongAll,"Essais rat\u00e9s",totalWrongAll>0?"var(--coral)":"var(--muted)",null)
+    ),
+    // Progress overview bar
+    h("div",{className:"card",style:{padding:14}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:6}},
+        h("span",{style:{fontSize:".85rem",fontWeight:600}},"Progression classe"),
+        h("span",{style:{fontSize:".85rem",color:"var(--muted)"}},nDone+"/"+nTotal+" termin\u00e9s \u00b7 actualisation auto")
+      ),
+      h("div",{style:{height:10,background:"var(--border)",borderRadius:5,overflow:"hidden"}},
+        h("div",{style:{height:"100%",borderRadius:5,transition:"width .5s",
+          background:"linear-gradient(90deg, var(--primary), var(--green))",
+          width:(nTotal?Math.round(nDone/nTotal*100):0)+"%"}})
+      )
+    ),
+    // Detailed table
+    h("div",{className:"card"},
+      h("h2",{style:{marginBottom:10}},"D\u00e9tail par \u00e9l\u00e8ve"),
+      h("div",{style:{overflowX:"auto"}},
+        h("table",{className:"bilan-table"},
+          h("thead",null,h("tr",null,
+            h("th",null,""),
+            h("th",null,"\u00c9l\u00e8ve"),
+            h("th",null,"Note dict\u00e9e"),
+            h("th",null,"Progression"),
+            h("th",null,"Essais"),
+            h("th",null,"Rat\u00e9s"),
+            h("th",null,"Note corr."),
+            h("th",null,"Statut")
+          )),
+          h("tbody",null,rows.map(function(r){
+            var pct=r.total>0?Math.round(r.solved/r.total*100):0;
+            return h("tr",{key:r.key,className:r.status==="done"?"blink-done":"",onClick:function(){setSelectedEleve(selectedEleve===r.key?null:r.key)},style:{cursor:"pointer",
+              background:r.status==="done"?"var(--green-light)":r.status==="active"?"var(--primary-light)":r.status==="idle"?"rgba(236,201,75,.08)":"transparent",
+              opacity:r.status==="waiting"?0.5:1
+            }},
+              h("td",{style:{fontSize:"1.1rem",textAlign:"center",width:30}},statusIcon(r.status)),
+              h("td",{style:{fontWeight:600}},
+                r.name.split(" ").pop()+" "+r.name.split(" ")[0].charAt(0)+".",
+                r.isTest?h("span",{className:"badge",style:{marginLeft:4,background:"var(--orange-light)",color:"var(--orange)",fontSize:".7rem"}},"TEST"):null
+              ),
+              h("td",null,r.noteDictee!==null?h("span",{style:{color:noteColor(r.noteDictee,data.base),fontWeight:600}},r.noteDictee+"/"+data.base):"\u2014"),
+              h("td",{style:{minWidth:120}},
+                r.status!=="waiting"?h("div",{style:{display:"flex",alignItems:"center",gap:6}},
+                  h("div",{style:{flex:1,height:8,background:"var(--border)",borderRadius:4,overflow:"hidden"}},
+                    h("div",{style:{height:"100%",width:pct+"%",borderRadius:4,transition:"width .5s",
+                      background:r.status==="done"?"var(--green)":"var(--primary)"}})
+                  ),
+                  h("span",{style:{fontSize:".8rem",fontWeight:600,minWidth:42,textAlign:"right"}},r.solved+"/"+r.total)
+                ):"\u2014"
+              ),
+              h("td",{style:{textAlign:"center",fontWeight:500}},r.totalAttempts||"\u2014"),
+              h("td",{style:{textAlign:"center",fontWeight:500,color:r.wrongAttempts>0?"var(--coral)":"var(--muted)"}},r.wrongAttempts||"\u2014"),
+              h("td",{style:{textAlign:"center",fontWeight:700,color:r.score!==null?noteColor(r.score,5):"var(--muted)"}},r.score!==null?r.score+"/5":"\u2014"),
+              h("td",null,h("span",{style:{fontSize:".8rem",color:r.status==="active"?"var(--primary)":r.status==="done"?"var(--green)":"var(--muted)"}},statusLabel(r.status)))
+            );
+          }))
+        )
+      )
+    ),
+    // Detail overlay for selected student
+    selectedEleve&&autoCorr[selectedEleve]&&(function(){
+      var ac=autoCorr[selectedEleve];
+      var corr=p.corrections[selectedEleve];
+      var errs=corr?toArr(corr.errors):ac.errorRefs?toArr(ac.errorRefs):[];
+      var hist=ac.history||{};
+      var tokens=data.tokens||tokenize(data.text||"");
+      var errMapView={};errs.forEach(function(e,i){errMapView[e.idx]={type:e.type,word:e.word,errIdx:i}});
+      var selRow=rows.find(function(x){return x.key===selectedEleve});
+      var sc=ac.score!=null?ac.score:5;
+      var wrongAtt=selRow?selRow.wrongAttempts:0;
+      var nSolved=selRow?selRow.solved:0;
+      var nTotal=selRow?selRow.total:errs.length;
+
+      return h("div",{style:{position:"fixed",inset:0,zIndex:300,display:"flex",flexDirection:"column",background:"#1a1030"}},
+        // Top bar
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px",background:"rgba(255,255,255,.06)",borderBottom:"1px solid rgba(255,255,255,.1)"}},
+          h("div",{style:{color:"#fff"}},
+            h("span",{style:{fontWeight:700,fontSize:"1.05rem"}},selRow?selRow.name:selectedEleve),
+            h("span",{style:{marginLeft:12,fontSize:".85rem",opacity:.6}},
+              "Note : ",h("strong",{style:{color:noteColor(sc,5)==="var(--green)"?"#68d391":noteColor(sc,5)==="var(--orange)"?"#ecc94b":"#fc8181"}},sc+"/5"),
+              " \u00b7 "+nSolved+"/"+nTotal+" corrig\u00e9s \u00b7 "+wrongAtt+" rat\u00e9"+(wrongAtt>1?"s":"")
+            )
+          ),
+          h("div",{style:{display:"flex",gap:8}},
+            h("button",{style:{background:"rgba(255,100,100,.15)",color:"#fc8181",border:"1px solid rgba(255,100,100,.2)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:".85rem",fontWeight:600},onClick:function(){
+              if(confirm("Purger les donn\u00e9es d\u2019autocorrection ?")){
+                db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+selectedEleve).remove();
+                var a2=Object.assign({},autoCorr);delete a2[selectedEleve];setAutoCorr(a2);
+                setSelectedEleve(null);
+              }
+            }},"\u21bb Purger"),
+            h("button",{style:{background:"rgba(255,255,255,.1)",color:"#fff",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:".85rem",fontWeight:600},onClick:function(){setSelectedEleve(null)}},"\u2715 Fermer")
+          )
+        ),
+        // Content area
+        h("div",{style:{flex:1,overflow:"auto",padding:"20px 16px"}},
+          h("div",{style:{maxWidth:800,margin:"0 auto"}},
+            // Vue texte miroir
+            h("div",{style:{background:"#fff",borderRadius:12,padding:20,marginBottom:16,overflow:"hidden"}},
+              h("div",{style:{fontSize:".75rem",color:"#999",marginBottom:8,fontWeight:700,textTransform:"uppercase",letterSpacing:".05em"}},"Vue \u00e9l\u00e8ve \u2014 Texte de la dict\u00e9e"),
+              h("div",{style:{lineHeight:2.6,fontSize:"1.05rem",color:"#1a1a1a",maxWidth:"100%"}},
+                tokens.map(function(w,ti){
+                  var ev=errMapView[ti];
+                  var nextW=tokens[ti+1]||"";
+                  var noSpaceAfter=isPunct(nextW);
+                  var sp=noSpaceAfter?"":" ";
+                  if(!ev) return h("span",{key:"t"+ti},w+sp);
+                  var solved=ac.results&&ac.results[ev.errIdx];
+                  var hasAttempts=hist[ev.errIdx]&&toArr(hist[ev.errIdx]).length>0;
+                  if(solved){
+                    return h("span",{key:"t"+ti},h("span",{style:{color:"#276749",fontWeight:700,borderBottom:"2.5px solid #276749",padding:"2px 6px",background:"rgba(39,103,73,.08)",borderRadius:4,whiteSpace:"nowrap"}},ev.word+" \u2713"),sp);
+                  }
+                  if(hasAttempts){
+                    var lastAttempt=toArr(hist[ev.errIdx]);
+                    var lastTyped=lastAttempt[lastAttempt.length-1].typed;
+                    return h("span",{key:"t"+ti},h("span",{style:{color:"#c53030",fontWeight:600,borderBottom:"2.5px dashed #c53030",padding:"2px 6px",background:"rgba(197,48,48,.06)",borderRadius:4,whiteSpace:"nowrap"}},
+                      "\u00ab "+lastTyped+" \u00bb",h("sup",{style:{fontSize:9,marginLeft:3}},ev.type)
+                    ),sp);
+                  }
+                  return h("span",{key:"t"+ti},h("span",{style:{filter:"blur(4px)",padding:"2px 6px",userSelect:"none",borderRadius:4,whiteSpace:"nowrap"}},w,h("sup",{style:{fontSize:9}},ev.type)),sp);
+                })
+              )
+            ),
+            // Journal des essais
+            h("div",{style:{background:"#fff",borderRadius:12,padding:20}},
+              h("div",{style:{fontSize:".75rem",color:"#999",marginBottom:12,fontWeight:700,textTransform:"uppercase",letterSpacing:".05em"}},"Journal des essais"),
+              !errs.length?h("p",{style:{color:"#999",fontSize:".9rem"}},"Pas de donn\u00e9es disponibles."):
+              errs.map(function(err,i){
+                var attempts=hist[i]?toArr(hist[i]):[];
+                var solved=ac.results&&ac.results[i];
+                return h("div",{key:"err"+i,style:{padding:"10px 0",borderBottom:"1px solid #eee"}},
+                  h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+                    h("span",{style:{width:26,height:26,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".8rem",fontWeight:700,flexShrink:0,
+                      background:solved?"rgba(39,103,73,.1)":attempts.length>0?"rgba(197,48,48,.1)":"#f5f4f0",
+                      color:solved?"#276749":attempts.length>0?"#c53030":"#999"}},i+1),
+                    h("span",{style:{display:"inline-block",padding:"2px 10px",borderRadius:8,fontSize:".78rem",fontWeight:700,
+                      background:err.type==="G"?"rgba(197,48,48,.08)":"rgba(43,108,203,.08)",
+                      color:err.type==="G"?"#c53030":"#2b6cb0"}},err.type),
+                    h("span",{style:{fontWeight:600,fontSize:".95rem"}},"\u00ab "+err.word+" \u00bb"),
+                    h("span",{style:{marginLeft:"auto",fontSize:".82rem",fontWeight:600,
+                      color:solved?"#276749":attempts.length>0?"#c53030":"#999"}},
+                      solved?"\u2705 Trouv\u00e9":attempts.length>0?"\u274c "+attempts.length+" essai"+(attempts.length>1?"s":""):"Pas touch\u00e9"
+                    )
+                  ),
+                  attempts.length>0&&h("div",{style:{marginLeft:34,display:"flex",flexWrap:"wrap",gap:5,marginTop:4}},
+                    attempts.map(function(a,j){
+                      return h("span",{key:"a"+j,style:{fontSize:".85rem",fontWeight:500,padding:"3px 10px",borderRadius:8,
+                        color:a.ok?"#276749":"#c53030",
+                        background:a.ok?"rgba(39,103,73,.08)":"rgba(197,48,48,.06)",
+                        border:"1px solid "+(a.ok?"rgba(39,103,73,.15)":"rgba(197,48,48,.12)")}},
+                        a.typed+(a.ok?" \u2713":" \u2717")
+                      )
+                    })
+                  )
+                )
+              })
+            )
+          ),
+          // Bilan de l'étude de texte
+          ac.bilan&&h("div",{style:{background:"#fff",borderRadius:12,padding:20,marginTop:16}},
+            h("div",{style:{fontSize:".75rem",color:"#999",marginBottom:10,fontWeight:700,textTransform:"uppercase",letterSpacing:".05em"}},
+              ac.bilanSubmitted?"\u2705 Bilan soumis":"Bilan en cours de r\u00e9daction"
+            ),
+            h("div",{style:{marginBottom:8}},
+              h("p",{style:{fontWeight:700,fontSize:".9rem",marginBottom:4}},"Trois choses comprises :"),
+              (ac.bilan.b1||ac.bilan.b2||ac.bilan.b3)?h("div",null,
+                ac.bilan.b1&&h("p",{style:{fontSize:".88rem",margin:"2px 0 2px 12px"}},"1. "+ac.bilan.b1),
+                ac.bilan.b2&&h("p",{style:{fontSize:".88rem",margin:"2px 0 2px 12px"}},"2. "+ac.bilan.b2),
+                ac.bilan.b3&&h("p",{style:{fontSize:".88rem",margin:"2px 0 2px 12px"}},"3. "+ac.bilan.b3)
+              ):h("p",{style:{fontSize:".85rem",color:"#999",marginLeft:12}},"Non rempli")
+            ),
+            h("div",null,
+              h("p",{style:{fontWeight:700,fontSize:".9rem",marginBottom:4}},"Ce que je vais faire diff\u00e9remment :"),
+              ac.bilan.b4?h("p",{style:{fontSize:".88rem",margin:"2px 0 2px 12px"}},ac.bilan.b4):h("p",{style:{fontSize:".85rem",color:"#999",marginLeft:12}},"Non rempli")
+            )
+          )
+        )
+      )
+    })()
+  );
+}
+
+// ═══ FICHES HTML IMPRIMABLES ═══
+function Fiches(p){
+  var data=p.data,corr=p.corrections,abs=p.absents||{};
+  var done=data.eleves.filter(function(e){var k=san(e);return!abs[k]&&!!corr[k]});
+
+  function generateHTML(eleves){
+    var html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Fiches correction</title><style>';
+    html+='@page{size:A4;margin:14mm 16mm}';
+    html+='*{margin:0;padding:0;box-sizing:border-box}';
+    html+='body{font-family:Georgia,"Times New Roman",serif;color:#1a1a1a}';
+    // RECTO styles
+    html+='.fiche{page-break-after:always;padding:0}';
+    html+='.fiche-header{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:8px;margin-bottom:12px;border-bottom:2.5px solid #222}';
+    html+='.fiche-header h1{font-size:15pt;font-weight:700;margin:0}';
+    html+='.fiche-header .eleve{font-size:11pt;color:#444;margin-top:2px}';
+    html+='.fiche-header .note{font-size:22pt;font-weight:800;line-height:1}';
+    html+='.consigne{font-size:8.5pt;font-style:italic;color:#777;margin-bottom:16px;padding:5px 10px;background:#f8f8f5;border-radius:4px}';
+    html+='.texte{font-size:13pt;line-height:3.2;text-align:justify}';
+    html+='.trou{display:inline-flex;flex-direction:column;align-items:center;margin:0 2px;vertical-align:baseline;position:relative;top:-0.15em}';
+    html+='.trou-top{border-bottom:2px solid #bbb;min-width:1.8em;text-align:center;padding:12px 2px 0;line-height:1;color:#ddd;letter-spacing:1px;font-size:12pt}';
+    html+='.trou-label{font-size:7pt;font-weight:800;line-height:1.4;text-align:center}';
+    html+='.trou-label-g{color:#c53030}';
+    html+='.trou-label-l{color:#2b6cb0}';
+    html+='.trou-label-m{color:#7c3aed}';
+    html+='.trou-label-i{color:#975a16}';
+    html+='.manquant-trou{display:inline-flex;flex-direction:column;align-items:center;margin:0 3px;vertical-align:baseline;position:relative;top:-0.15em}';
+    html+='.manquant-top{border-bottom:2px solid #7c3aed;min-width:3em;height:12px}';
+    html+='.manquant-label{font-size:7pt;font-weight:800;color:#7c3aed;line-height:1.4;text-align:center}'
+    html+='.extra-signal{display:inline;font-size:9pt;color:#2563eb;font-style:italic}';
+    html+='.summary{margin-top:14px;padding:7px 12px;border-top:1.5px solid #ccc;font-size:8.5pt;display:flex;justify-content:space-between;color:#666}';
+    html+='.summary strong{color:#222;font-size:10pt}';
+    // VERSO styles
+    html+='.verso{page-break-after:always}';
+    html+='.verso-header{border-bottom:2.5px solid #222;padding-bottom:6px;margin-bottom:16px}';
+    html+='.verso-header h1{font-size:14pt;font-weight:700}';
+    html+='.verso-header .info{font-size:9.5pt;color:#666;margin-top:2px}';
+    html+='.verso-title{font-size:12pt;font-weight:700;margin-bottom:14px;color:#333}';
+    html+='.err-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid #eee}';
+    html+='.err-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10pt;font-weight:700;flex-shrink:0}';
+    html+='.err-num-g{background:#fde8e8;color:#c53030}';
+    html+='.err-num-l{background:#e8f0fe;color:#2b6cb0}';
+    html+='.err-num-m{background:#f3e8ff;color:#7c3aed}';
+    html+='.err-num-i{background:#fef3cd;color:#975a16}';
+    html+='.err-num-x{background:#e8f0fe;color:#2563eb}';
+    html+='.err-body{flex:1}';
+    html+='.err-type{font-size:8.5pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px}';
+    html+='.err-type-g{color:#c53030}';
+    html+='.err-type-l{color:#2b6cb0}';
+    html+='.err-type-m{color:#7c3aed}';
+    html+='.err-type-i{color:#975a16}';
+    html+='.err-type-x{color:#2563eb}';
+    html+='.err-hint{font-size:9pt;color:#999;font-style:italic;margin-bottom:4px}';
+    html+='.err-line{display:block;width:100%;border:none;border-bottom:1.5px solid #ccc;height:24px;margin-top:2px}';
+    html+='.verso-consigne{margin-top:20px;padding:10px 14px;border:1.5px dashed #ccc;border-radius:6px;font-size:9pt;font-style:italic;color:#888}';
+    html+='</style></head><body>';
+
+    eleves.forEach(function(eleve){
+      var k=san(eleve),c=corr[k];if(!c)return;
+      var errors=toArr(c.errors),extras=toArr(c.extras);
+      var errMap={};errors.forEach(function(e){errMap[e.idx]=e});
+      var extraMap={};extras.forEach(function(e){if(!extraMap[e.afterIdx])extraMap[e.afterIdx]=[];extraMap[e.afterIdx].push(e)});
+      var tokens=data.tokens;
+      var co=c.counts||{G:0,L:0,M:0,I:0,X:0};
+      var nc=c.note/data.base>=.8?"#276749":c.note/data.base>=.5?"#975a16":"#c53030";
+
+      // ──── RECTO ────
+      html+='<div class="fiche">';
+      html+='<div class="fiche-header"><div><h1>'+data.title+'</h1><div class="eleve">'+data.classe+' &mdash; '+eleve+'</div></div>';
+      html+='<div class="note" style="color:'+nc+'">'+c.note+'<span style="font-size:12pt;font-weight:400;color:#999">/'+data.base+'</span></div></div>';
+      html+='<div class="consigne">Les mots soulign\u00e9s contiennent une erreur. En bin\u00f4me, retrouve la bonne orthographe et \u00e9cris-la au-dessus.</div>';
+      html+='<div class="texte">';
+
+      for(var i=0;i<tokens.length;i++){
+        // Extras inserted after previous word
+        if(extraMap[i-1]){extraMap[i-1].forEach(function(ex){
+          html+='<span class="extra-signal">&thinsp;[+'+ex.word+']&thinsp;</span>';
+        })}
+
+        var err=errMap[i];
+        var w=tokens[i];
+        var isP=/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+$/.test(w);
+        // Collapse space before punctuation
+        var spaceBefore=(i>0&&!isP)?" ":"";
+
+        if(err){
+          if(err.type==="M"){
+            // Mot manquant = trait violet avec espace vide
+            html+=spaceBefore+'<span class="manquant-trou"><span class="manquant-top"></span><span class="manquant-label">\u2205</span></span>';
+          } else {
+            // Mot masqué = underscores de la longueur du mot + badge type
+            var blanks="";for(var j=0;j<w.length;j++)blanks+="_";
+            var lblCls="trou-label trou-label-"+err.type.toLowerCase();
+            html+=spaceBefore+'<span class="trou"><span class="trou-top">'+blanks+'</span><span class="'+lblCls+'">'+err.type+'</span></span>';
+          }
+        } else {
+          html+=spaceBefore+w;
+        }
+      }
+      // Extras after last word
+      if(extraMap[tokens.length-1]){extraMap[tokens.length-1].forEach(function(ex){
+        html+='<span class="extra-signal">&thinsp;[+'+ex.word+']&thinsp;</span>';
+      })}
+
+      html+='</div>';
+      html+='<div class="summary"><span>'+co.G+' grammaire &middot; '+co.L+' lexique &middot; '+(co.M||0)+' manquant &middot; '+(co.I||0)+' illisible &middot; '+(co.X||0)+' en trop</span>';
+      html+='<strong style="color:'+nc+'">'+c.note+'/'+data.base+'</strong></div>';
+      html+='</div>';
+
+      // ──── VERSO ────
+      html+='<div class="verso">';
+      html+='<div class="verso-header"><h1>'+eleve+' &mdash; Correction</h1><div class="info">'+data.title+' &middot; '+data.classe+'</div></div>';
+      html+='<div class="verso-title">Retrouve la bonne orthographe</div>';
+
+      var n=1;
+      errors.forEach(function(err){
+        var typeLabel=err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":"Illisible";
+        var hint=err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":"Le mot n\u2019\u00e9tait pas lisible";
+        var numCls="err-num err-num-"+err.type.toLowerCase();
+        var typeCls="err-type err-type-"+err.type.toLowerCase();
+        html+='<div class="err-row">';
+        html+='<div class="'+numCls+'">'+n+'</div>';
+        html+='<div class="err-body">';
+        html+='<div class="'+typeCls+'">'+typeLabel+'</div>';
+        html+='<div class="err-hint">'+hint+'</div>';
+        html+='<div class="err-line"></div>';
+        html+='</div></div>';
+        n++;
+      });
+      if(extras.length>0){
+        extras.forEach(function(ex){
+          html+='<div class="err-row">';
+          html+='<div class="err-num err-num-x">'+n+'</div>';
+          html+='<div class="err-body">';
+          html+='<div class="err-type err-type-x">Mot en trop : &laquo;&thinsp;'+ex.word+'&thinsp;&raquo;</div>';
+          html+='<div class="err-hint">Ce mot ne devrait pas \u00eatre l\u00e0</div>';
+          html+='</div></div>';
+          n++;
+        });
+      }
+
+      html+='<div class="verso-consigne">Travail en bin\u00f4me : compl\u00e8te chaque ligne, puis retourne la feuille pour v\u00e9rifier avec le texte.</div>';
+      html+='</div>';
+    });
+
+    html+='</body></html>';
+    var w=window.open('','_blank');
+    w.document.write(html);
+    w.document.close();
+  }
+
+  return h("div",{className:"fade-up"},
+    h("div",{className:"card"},
+      h("h2",null,"Fiches de correction"),
+      h("p",{style:{fontSize:".9rem",color:"var(--text-sub)",marginBottom:16}},"G\u00e9n\u00e8re des fiches HTML imprimables (recto + verso). Ouvre dans un nouvel onglet \u2192 Ctrl+P pour imprimer."),
+      h("div",{className:"btn-row"},
+        h("button",{className:"btn btn-primary",onClick:function(){generateHTML(done)},disabled:!done.length},done.length?"Toutes les fiches ("+done.length+")":"Aucune correction"),
+        done.length>0&&h("button",{className:"btn btn-ghost",onClick:function(){var n=prompt("\u00c9l\u00e8ve (NOM Pr\u00e9nom) :");if(n&&corr[san(n)])generateHTML([n]);else if(n)alert("Non trouv\u00e9.")}},"Une fiche")
+      )
+    ),
+    h("div",{className:"card"},
+      h("h2",null,"Contenu des fiches"),
+      h("div",{style:{fontSize:".9rem",color:"var(--text-sub)",lineHeight:1.8}},
+        h("div",{style:{marginBottom:10}},h("strong",null,"Recto")," \u2014 le texte de la dict\u00e9e :"),
+        h("ul",{style:{paddingLeft:20,marginBottom:14}},
+          h("li",null,"Mots fautifs remplac\u00e9s par des traits (____) avec G ou L en exposant"),
+          h("li",null,"Mots manquants : trait violet avec \u2205"),
+          h("li",null,"Mots en trop signal\u00e9s [+mot]"),
+          h("li",null,"Ponctuation coll\u00e9e aux mots, texte justifi\u00e9")
+        ),
+        h("div",{style:{marginBottom:10}},h("strong",null,"Verso")," \u2014 fiche de correction :"),
+        h("ul",{style:{paddingLeft:20}},
+          h("li",null,"Chaque erreur num\u00e9rot\u00e9e avec pastille color\u00e9e"),
+          h("li",null,"Type + indice pour guider la recherche"),
+          h("li",null,"Ligne pour \u00e9crire la correction")
+        )
+      )
+    ),
+    done.length>0&&h("div",{className:"card"},h("h2",null,"\u00c9l\u00e8ves pr\u00eats ("+done.length+")"),
+      h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},done.map(function(e){var c=corr[san(e)];return h("span",{key:e,style:{padding:"4px 10px",borderRadius:8,fontSize:".85rem",background:"var(--green-light)",color:"var(--green)",fontWeight:500}},e.split(" ").pop()+" "+c.note+"/"+data.base)}))
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+
+// ═══ APP ÉLÈVE ═══
+function AppEleve(p){
+  var s1=useState("login"),screen=s1[0],setScreen=s1[1];
+  var s2=useState([]),dictees=s2[0],setDictees=s2[1];
+  var s3=useState(""),nomInput=s3[0],setNomInput=s3[1];
+  var s4=useState(""),prenomInput=s4[0],setPrenomInput=s4[1];
+  var s5=useState(null),eleveData=s5[0],setEleveData=s5[1];
+  var s6=useState(""),errMsg=s6[0],setErrMsg=s6[1];
+
+  // Load available dictees
+  useEffect(function(){
+    db.ref("correction_dictee").once("value",function(snap){
+      var val=snap.val()||{};
+      var list=Object.keys(val).map(function(id){
+        var cfg=val[id].config||{};
+        return{id:id,title:cfg.title||id,classe:cfg.classe||"",eleves:cfg.eleves||[],tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
+      });
+      setDictees(list);
+    });
+  },[]);
+
+  function doLogin(){
+    var nom=nomInput.trim().toUpperCase();
+    var prenom=prenomInput.trim();
+    if(!nom||!prenom){setErrMsg("Entre ton nom et ton pr\u00e9nom.");return}
+    // Profil test : Monsieur MENEY — génère des erreurs fictives sur la première dictée disponible
+    if(nom==="MENEY"&&prenom.toLowerCase()==="monsieur"){
+      var testDict=null;
+      for(var ti=0;ti<dictees.length;ti++){if(dictees[ti].tokens.length>0){testDict=dictees[ti];break}}
+      if(!testDict){setErrMsg("Aucune dict\u00e9e configur\u00e9e.");return}
+      var testErrors=[];var testTokens=testDict.tokens;
+      // Marquer quelques mots comme erreurs pour le test
+      for(var tw=0;tw<testTokens.length&&testErrors.length<5;tw++){
+        if(!isPunct(testTokens[tw])&&testTokens[tw].length>2){
+          testErrors.push({idx:tw,type:testErrors.length%2===0?"G":"L",word:testTokens[tw]});
+        }
+      }
+      setEleveData({eleve:"MENEY Monsieur",dictee:testDict,key:"meney_monsieur",errors:testErrors,extras:[],note:7.5,base:testDict.base});
+      setScreen("correction");return;
+    }
+    var full=null,dictee=null,key=null;
+    // Search across all dictees
+    for(var i=0;i<dictees.length;i++){
+      var d=dictees[i];
+      for(var j=0;j<d.eleves.length;j++){
+        var e=d.eleves[j];
+        var parts=e.split(" ");
+        var enom=parts.slice(0,-1).join(" ").toUpperCase();
+        var eprenom=parts[parts.length-1];
+        if(enom===nom&&eprenom.toLowerCase()===prenom.toLowerCase()){
+          var k=san(e);
+          if(d.results[k]){
+            full=e;dictee=d;key=k;break;
+          }
+        }
+      }
+      if(full)break;
+    }
+    if(!full){setErrMsg("Aucune dict\u00e9e trouv\u00e9e pour "+nom+" "+prenom+". V\u00e9rifie l\u2019orthographe.");return}
+    var corr=dictee.results[key];
+    var errors=toArr(corr.errors||[]);
+    var extras=toArr(corr.extras||[]);
+    setEleveData({eleve:full,dictee:dictee,key:key,errors:errors,extras:extras,note:corr.note,base:dictee.base});
+    setScreen("correction");
+  }
+
+  if(screen==="login") return h("div",{className:"container fade-up",style:{paddingTop:40}},
+    h("div",{className:"card",style:{textAlign:"center"}},
+      h("h1",null,"Correction de dict\u00e9e"),
+      h("p",{className:"subtitle"},"Connecte-toi pour corriger tes erreurs et gagner des points."),
+      h("div",{style:{maxWidth:340,margin:"0 auto"}},
+        h("div",{className:"config-field"},h("label",null,"Nom"),h("input",{value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",style:{textTransform:"uppercase"}})),
+        h("div",{className:"config-field"},h("label",null,"Pr\u00e9nom"),h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
+        errMsg&&h("p",{style:{color:"var(--coral)",fontSize:".88rem",marginBottom:8}},errMsg),
+        h("button",{className:"btn btn-primary",onClick:doLogin},"Acc\u00e9der \u00e0 ma dict\u00e9e")
+      )
+    ),
+    h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},onClick:p.onBack},"\u2190 Retour")
+  );
+
+  if(screen==="correction") return h(EleveCorrection,{data:eleveData,onBack:function(){setScreen("login");setEleveData(null)}});
+  return null;
+}
+
+// ═══ CORRECTION ÉLÈVE (module numérique) ═══
+function EleveCorrection(p){
+  var d=p.data,tokens=d.dictee.tokens;
+  var errors=d.errors,extras=d.extras;
+  var totalErrors=errors.length; // Only correctable errors, not extras
+  var s1=useState({}),attempts=s1[0],setAttempts=s1[1];
+  var s2=useState({}),results=s2[0],setResults=s2[1];
+  var s3=useState(null),activeErr=s3[0],setActiveErr=s3[1];
+  var s4=useState(""),inputVal=s4[0],setInputVal=s4[1];
+  var s5=useState(null),feedback=s5[0],setFeedback=s5[1];
+  var s6=useState(false),quizShown=s6[0],setQuizShown=s6[1];
+  var s7=useState(false),quizDone=s7[0],setQuizDone=s7[1];
+  var s8=useState(null),quizQ=s8[0],setQuizQ=s8[1];
+  var s9=useState(false),finished=s9[0],setFinished=s9[1];
+  var s10=useState(true),loading=s10[0],setLoading=s10[1];
+  var s12=useState(false),idleWarning=s12[0],setIdleWarning=s12[1];
+  var s13=useState({b1:"",b2:"",b3:"",b4:""}),bilan=s13[0],setBilan=s13[1];
+  var s14=useState(false),bilanSubmitted=s14[0],setBilanSubmitted=s14[1];
+  var inputRef=React.useRef(null);
+  var lastActionRef=React.useRef(Date.now());
+  var acRef="correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key;
+
+  // Heartbeat: write lastSeen every 30s + on mount
+  function sendHeartbeat(status){
+    db.ref(acRef+"/lastSeen").set(Date.now());
+    if(status)db.ref(acRef+"/status").set(status);
+  }
+  function recordAction(){lastActionRef.current=Date.now();if(idleWarning)setIdleWarning(false);sendHeartbeat("active")}
+
+  useEffect(function(){
+    sendHeartbeat("active");
+    var hb=setInterval(function(){sendHeartbeat("active")},30000);
+    // Idle detection: check every 30s
+    var idle=setInterval(function(){
+      if(Date.now()-lastActionRef.current>120000){
+        setIdleWarning(true);
+        sendHeartbeat("idle");
+      }
+    },30000);
+    return function(){clearInterval(hb);clearInterval(idle);db.ref(acRef+"/status").set("offline")};
+  },[]);
+
+  // Load existing progress from Firebase on mount
+  useEffect(function(){
+    db.ref(acRef).once("value",function(snap){
+      var val=snap.val();
+      if(val&&val.attempts&&val.results){
+        setAttempts(val.attempts);
+        setResults(val.results);
+        var nOk=Object.keys(val.results).filter(function(k){return val.results[k]}).length;
+        if(nOk>=totalErrors)setFinished(true);
+      }
+      if(val&&val.bilan){setBilan(val.bilan);setBilanSubmitted(!!val.bilanSubmitted)}
+      setLoading(false);
+    });
+  },[]);
+
+  React.useEffect(function(){if(activeErr!==null&&inputRef.current)inputRef.current.focus()},[activeErr]);
+
+  // Compute score
+  var totalAttempts=0;
+  Object.values(attempts).forEach(function(a){totalAttempts+=a});
+  var wrongAttempts=0;
+  Object.keys(attempts).forEach(function(k){
+    var nAtt=attempts[k]||0;
+    var solved=results[String(k)]||results[Number(k)];
+    if(solved)wrongAttempts+=(nAtt-1);
+    else wrongAttempts+=nAtt;
+  });
+  var score=Math.max(0,5-wrongAttempts*0.25);
+  score=Math.round(score*100)/100;
+  var outOfPoints=score<=0&&!quizDone;
+  var nSolved=Object.keys(results).filter(function(k){return results[k]}).length;
+
+  // Build error map for display
+  var errMap={};errors.forEach(function(e,i){errMap[e.idx]={type:e.type,word:e.word,errIdx:i}});
+
+  // History of all typed attempts: {errIdx: [{typed, ok, time}]}
+  var s11=useState({}),history=s11[0],setHistory=s11[1];
+
+  // Load history from Firebase too
+  useEffect(function(){
+    db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/history").once("value",function(snap){
+      var val=snap.val();
+      if(val)setHistory(val);
+    });
+  },[]);
+
+  function tryAnswer(){
+    recordAction();
+    if(activeErr===null)return;
+    var err=errors[activeErr];
+    if(!err||!err.word){return}
+    var correct=String(err.word);
+    var typed=inputVal.trim();
+    if(!typed)return;
+    var att=Object.assign({},attempts);
+    att[activeErr]=(att[activeErr]||0)+1;
+    setAttempts(att);
+
+    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()};
+    var isCorrect=norm(typed)===norm(correct);
+
+    // Record in history
+    var hist=Object.assign({},history);
+    if(!hist[activeErr])hist[activeErr]=[];
+    else hist[activeErr]=hist[activeErr].slice();
+    hist[activeErr].push({typed:typed,ok:isCorrect,time:Date.now()});
+    setHistory(hist);
+
+    if(isCorrect){
+      var r=Object.assign({},results);r[activeErr]=true;setResults(r);
+      setFeedback({correct:true,answer:correct});
+      setTimeout(function(){setFeedback(null);setActiveErr(null);setInputVal("");
+        saveProgress(att,Object.assign({},r),hist);
+      },1200);
+    } else {
+      setFeedback({correct:false,answer:null});
+      setTimeout(function(){setFeedback(null);setInputVal("")},800);
+      // Save after wrong attempt too
+      saveProgress(att,results,hist);
+    }
+  }
+
+  function saveProgress(att,res,hist){
+    var wrong=0;
+    Object.keys(att).forEach(function(k){var n=att[k]||0;if(res[String(k)]||res[Number(k)])wrong+=(n-1);else wrong+=n});
+    var sc=Math.max(0,5-wrong*0.25);
+    var nOk=Object.keys(res).filter(function(k){return res[k]}).length;
+    var saveData={
+      score:Math.round(sc*100)/100,
+      attempts:att,
+      results:res,
+      solved:nOk,
+      total:totalErrors,
+      timestamp:Date.now(),
+      errorRefs:errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}})
+    };
+    if(hist)saveData.history=hist;
+    db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key).set(saveData);
+  }
+
+  function showQuiz(){
+    // Pick question based on dominant error type
+    var nG=errors.filter(function(e){return e.type==="G"}).length;
+    var nL=errors.filter(function(e){return e.type==="L"||e.type==="I"||e.type==="M"}).length;
+    var bank=nG>=nL?QUESTIONS_G:QUESTIONS_L;
+    var q=bank[Math.floor(Math.random()*bank.length)];
+    setQuizQ(q);
+    setQuizShown(true);
+  }
+
+  function answerQuiz(choiceIdx){
+    setQuizDone(true);
+    // Don't close immediately — show the rule
+  }
+
+  // Check if all solved — show bilan screen but don't send "done" yet
+  React.useEffect(function(){
+    if(nSolved===totalErrors&&totalErrors>0&&!finished){
+      setFinished(true);
+      saveProgress(attempts,results);
+      sendHeartbeat("bilan");
+    }
+  });
+
+  if(loading) return h("div",{className:"container fade-up",style:{paddingTop:60,textAlign:"center"}},
+    h("p",{style:{color:"var(--muted)"}},"Chargement de ta progression..."));
+
+  // Helper: generate grammatical comment for an error
+  function gramComment(err){
+    var w=err.word||"",t=err.type;
+    if(t==="M") return "Mot manquant \u2014 relis la phrase \u00e0 voix haute pour retrouver le mot oubli\u00e9. Pense \u00e0 la logique de la phrase : sujet, verbe, compl\u00e9ment.";
+    if(t==="I") return "Mot illisible \u2014 soigne ton \u00e9criture pour que chaque lettre soit identifiable. Forme bien les boucles (l, b, h) et les jambages (g, j, p).";
+    var wl=w.toLowerCase();
+    var notes=[];
+    if(t==="G"){
+      var homophones={
+        "a":"a (verbe avoir) \u2260 \u00e0 (pr\u00e9position). Remplace par \u00ab avait \u00bb : si \u00e7a fonctionne, c\u2019est \u00ab a \u00bb.",
+        "\u00e0":"\u00e0 (pr\u00e9position) \u2260 a (verbe avoir). Remplace par \u00ab avait \u00bb : si \u00e7a ne fonctionne pas, c\u2019est \u00ab \u00e0 \u00bb.",
+        "est":"est (verbe \u00eatre) \u2260 et (conjonction). Remplace par \u00ab \u00e9tait \u00bb.",
+        "et":"et (conjonction = aussi) \u2260 est (verbe \u00eatre). On ne peut pas dire \u00ab \u00e9tait \u00bb \u00e0 la place.",
+        "ont":"ont (verbe avoir, 3e pers. pl.) \u2260 on (pronom = quelqu\u2019un). Remplace par \u00ab avaient \u00bb.",
+        "on":"on (pronom sujet = quelqu\u2019un) \u2260 ont (verbe avoir). \u00ab On \u00bb est toujours sujet.",
+        "sont":"sont (verbe \u00eatre, 3e pers. pl.) \u2260 son (possessif). Remplace par \u00ab \u00e9taient \u00bb.",
+        "son":"son (possessif = le sien) \u2260 sont (verbe \u00eatre). Remplace par \u00ab mon \u00bb ou \u00ab ton \u00bb.",
+        "ses":"ses (possessif pl. = les siens) \u2260 ces (d\u00e9monstratif). Remplace par \u00ab mes \u00bb.",
+        "ces":"ces (d\u00e9monstratif = ceux-l\u00e0) \u2260 ses (possessif). Remplace par \u00ab mes \u00bb : si \u00e7a fonctionne, c\u2019est \u00ab ses \u00bb.",
+        "ce":"ce (d\u00e9monstratif) \u2260 se (r\u00e9fl\u00e9chi). \u00ab Ce \u00bb accompagne un nom ou \u00ab que/qui \u00bb.",
+        "se":"se (pronom r\u00e9fl\u00e9chi) \u2260 ce (d\u00e9monstratif). \u00ab Se \u00bb pr\u00e9c\u00e8de toujours un verbe pronominal.",
+        "ou":"ou (alternative = ou bien) \u2260 o\u00f9 (lieu/temps). Remplace par \u00ab ou bien \u00bb.",
+        "o\u00f9":"o\u00f9 (lieu ou temps) \u2260 ou (alternative). Si tu peux dire \u00ab \u00e0 quel endroit \u00bb, c\u2019est \u00ab o\u00f9 \u00bb.",
+        "la":"la (article/pronom) \u2260 l\u00e0 (lieu) \u2260 l\u2019a (l\u2019+avoir).",
+        "l\u00e0":"l\u00e0 (lieu = ici) \u2260 la (article/pronom).",
+        "leur":"leur (pronom invariable devant verbe) \u2260 leurs (possessif pl. devant nom).",
+        "leurs":"leurs (possessif pl. devant nom) \u2260 leur (pronom invariable devant verbe).",
+        "ma":"ma (possessif f\u00e9m.) \u2260 m\u2019a (me+avoir). Remplace par \u00ab m\u2019avait \u00bb.",
+        "ta":"ta (possessif f\u00e9m.) \u2260 t\u2019a (te+avoir). Remplace par \u00ab t\u2019avait \u00bb.",
+        "mes":"mes (possessif) \u2260 mais (opposition). Remplace par \u00ab cependant \u00bb.",
+        "mais":"mais (= cependant) \u2260 mes (possessif). Remplace par \u00ab cependant \u00bb.",
+        "peu":"peu (= pas beaucoup) \u2260 peut (pouvoir). Remplace par \u00ab pouvait \u00bb.",
+        "peut":"peut (pouvoir, 3e sg.) \u2260 peu (= pas beaucoup). Remplace par \u00ab pouvait \u00bb.",
+        "ni":"ni (conjonction : ni\u2026 ni\u2026) \u2260 n\u2019y (ne+y, lieu). V\u00e9rifie si c\u2019est une n\u00e9gation de lieu.",
+        "sans":"sans (pr\u00e9position = absence) \u2260 s\u2019en (pronom+en) \u2260 sang \u2260 cent.",
+        "si":"si (condition) \u2260 s\u2019y (se+y). \u00ab S\u2019y \u00bb pr\u00e9c\u00e8de un verbe pronominal.",
+        "quand":"quand (= lorsque) \u2260 quant (\u00e0) (= en ce qui concerne) \u2260 qu\u2019en."
+      };
+      if(homophones[wl]) notes.push(homophones[wl]);
+      if(/(ais|ait|aient|ions|iez)$/.test(wl)) notes.push("Terminaison d\u2019imparfait \u2014 je -ais, tu -ais, il -ait, nous -ions, vous -iez, ils -aient.");
+      else if(/\u00e8rent$/.test(wl)) notes.push("Pass\u00e9 simple (3e pl.) \u2014 ne confonds pas -\u00e8rent (pass\u00e9 simple) et -aient (imparfait).");
+      else if(/ent$/.test(wl)&&!homophones[wl]) notes.push("Terminaison en -ent \u2014 marque du pluriel verbal (3e pl.). V\u00e9rifie le sujet.");
+      if(/(é|ée|és|ées)$/.test(wl)) notes.push("Participe en -\u00e9 \u2014 avec \u00eatre : accord sujet. Avec avoir : accord COD ant\u00e9pos\u00e9. Seul : accord comme adjectif.");
+      else if(/(i|ie|is|ies)$/.test(wl)&&wl.length>3) notes.push("Participe en -i \u2014 m\u00eame r\u00e8gle : \u00eatre \u2192 sujet, avoir \u2192 COD ant\u00e9pos\u00e9.");
+      else if(/(u|ue|us|ues)$/.test(wl)&&wl.length>3) notes.push("Participe en -u \u2014 m\u00eame r\u00e8gle d\u2019accord.");
+      if(/^(les|des|aux|mes|tes|nos|vos|leurs|ces|ses|quelques|plusieurs)$/i.test(wl)) notes.push("D\u00e9terminant pluriel \u2014 le nom et l\u2019adjectif qui suivent doivent \u00eatre au pluriel.");
+      else if(/^(le|la|un|une|du|au|mon|ton|sa|ma|ta|ce|cette)$/i.test(wl)) notes.push("D\u00e9terminant singulier \u2014 v\u00e9rifie le genre et le nombre du nom qui suit.");
+      if(/er$/.test(wl)&&wl.length>3) notes.push("Infinitif en -er \u2014 v\u00e9rifie que ce n\u2019est pas un participe (-\u00e9). Astuce : remplace par \u00ab mordre/mordu \u00bb.");
+      if(notes.length===0) notes.push("Erreur de grammaire \u2014 v\u00e9rifie les accords (sujet-verbe, d\u00e9terminant-nom-adjectif) et la conjugaison.");
+    }
+    if(t==="L"){
+      if(/(mm|nn|ll|ss|tt|pp|ff|rr|cc)/.test(wl)) notes.push("Double consonne dans \u00ab "+w+" \u00bb \u2014 retiens si le mot double cette consonne. Pense \u00e0 la famille de mots.");
+      if(/[\u00e0\u00e2]/.test(wl)) notes.push("Accent sur le \u00ab a \u00bb \u2014 ne confonds pas a/\u00e0/\u00e2. Le circonflexe est souvent un ancien \u00ab s \u00bb (h\u00f4pital \u2192 hospital).");
+      if(/[\u00e9\u00e8]/.test(wl)) notes.push("Accent aigu (\u00e9) ou grave (\u00e8) \u2014 aigu = ferm\u00e9 [\u00e9], grave = ouvert [\u00e8]. En fin de mot : -\u00e9 (pass\u00e9), -\u00e8s (apr\u00e8s).");
+      if(/[\u00ea\u00eb]/.test(wl)) notes.push("Accent circonflexe (\u00ea) ou tr\u00e9ma (\u00eb) \u2014 le tr\u00e9ma s\u00e9pare les voyelles (No\u00ebl).");
+      if(/\u00e7/.test(wl)) notes.push("C\u00e9dille (\u00e7) \u2014 devant a, o, u pour garder le son [s] : fa\u00e7on, re\u00e7u, gar\u00e7on.");
+      if(/(tion|sion|xion)$/.test(wl)) notes.push("Suffixe -tion/-sion/-xion \u2014 noms f\u00e9minins. Famille : connecter \u2192 connexion.");
+      if(/(ment)$/.test(wl)) notes.push("Suffixe -ment (adverbe) \u2014 adjectif f\u00e9minin + -ment : douce \u2192 doucement. Sauf -amment/-emment.");
+      if(/(eur|eux|euse)$/.test(wl)) notes.push("Suffixe -eur/-eux/-euse \u2014 famille de mots : chaleur \u2192 chaleureux.");
+      if(/(ence|ance)$/.test(wl)) notes.push("Suffixe -ence/-ance \u2014 pas de r\u00e8gle simple, \u00e0 m\u00e9moriser : diff\u00e9rence, puissance.");
+      if(/(ph)/.test(wl)) notes.push("Groupe \u00ab ph \u00bb = [f] \u2014 mot d\u2019origine grecque (philosophie, pharmacie).");
+      if(wl.length>7) notes.push("Mot long \u2014 d\u00e9compose en syllabes : "+w.replace(/(.{3})/g,"$1\u00b7").replace(/\u00b7$/,"")+".");
+      if(notes.length===0) notes.push("Orthographe lexicale \u2014 ce mot est \u00e0 m\u00e9moriser. \u00c9cris-le trois fois pour le retenir.");
+    }
+    return notes.join(" | ");
+  }
+
+  if(finished) return h("div",{className:"container fade-up",style:{paddingTop:30}},
+    // Score header
+    h("div",{className:"card",style:{textAlign:"center",marginBottom:14}},
+      h("div",{style:{fontSize:"2rem",marginBottom:4}},"\ud83c\udf89"),
+      h("h1",{style:{marginBottom:4}},"Bravo "+d.eleve.split(" ").pop()+" !"),
+      h("div",{style:{fontSize:"2.2rem",fontWeight:800,color:noteColor(score,5)}},score+"/5"),
+      h("p",{style:{color:"var(--text-sub)",fontSize:".9rem"}},
+        totalErrors+" erreur"+(totalErrors>1?"s":"")+" corrig\u00e9e"+(totalErrors>1?"s":"")+" en "+totalAttempts+" essai"+(totalAttempts>1?"s":"")
+      )
+    ),
+    // Consigne
+    h("div",{style:{padding:"12px 16px",background:"var(--primary-light)",borderRadius:10,marginBottom:14,borderLeft:"4px solid var(--primary)"}},
+      h("p",{style:{fontWeight:700,marginBottom:4,fontSize:".95rem"}},"\u270d\ufe0f Maintenant, corrige sur ta copie au stylo vert."),
+      h("p",{style:{fontSize:".88rem",color:"var(--text-sub)"}},"Pour chaque erreur, \u00e9cris la bonne orthographe et note le type d\u2019erreur (G = grammaire, L = lexique).")
+    ),
+    // Texte corrigé
+    h("div",{className:"card",style:{marginBottom:14}},
+      h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:8,fontWeight:600,textTransform:"uppercase"}},"Ta dict\u00e9e corrig\u00e9e"),
+      h("div",{style:{lineHeight:2.4,fontSize:"1rem"}},
+        tokens.map(function(w,ti){
+          var ev=errMap[ti];
+          var nextW=tokens[ti+1]||"";
+          var noSp=isPunct(nextW);
+          var sp=noSp?"":" ";
+          if(!ev) return h("span",{key:"t"+ti},w+sp);
+          return h("span",{key:"t"+ti},h("span",{style:{fontWeight:700,color:ev.type==="G"?"#c53030":"#2b6cb0",borderBottom:"2px solid "+(ev.type==="G"?"#c53030":"#2b6cb0"),padding:"1px 4px",borderRadius:4,whiteSpace:"nowrap"}},ev.word,h("sup",{style:{fontSize:9,marginLeft:2}},ev.type)),sp);
+        })
+      )
+    ),
+    // Commentaires grammaticaux
+    h("div",{className:"card"},
+      h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:10,fontWeight:600,textTransform:"uppercase"}},"Analyse de tes erreurs"),
+      errors.map(function(err,i){
+        return h("div",{key:"gc"+i,style:{padding:"10px 0",borderBottom:i<errors.length-1?"1px solid var(--border)":"none"}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:4}},
+            h("span",{style:{width:24,height:24,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:".78rem",fontWeight:700,flexShrink:0,
+              background:err.type==="G"?"rgba(197,48,48,.1)":err.type==="L"?"rgba(43,108,203,.1)":"rgba(124,58,237,.1)",
+              color:err.type==="G"?"#c53030":err.type==="L"?"#2b6cb0":"#7c3aed"}},i+1),
+            h("span",{style:{fontWeight:700,fontSize:".95rem"}},"\u00ab "+err.word+" \u00bb"),
+            h("span",{style:{fontSize:".8rem",padding:"2px 8px",borderRadius:6,fontWeight:600,
+              background:err.type==="G"?"rgba(197,48,48,.08)":"rgba(43,108,203,.08)",
+              color:err.type==="G"?"#c53030":"#2b6cb0"}},err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Manquant":"Illisible")
+          ),
+          h("p",{style:{fontSize:".88rem",color:"#555",lineHeight:1.6,marginLeft:32}},gramComment(err))
+        )
+      })
+    ),
+    // Bilan de l'étude de texte
+    h("div",{style:{marginTop:14,padding:"16px 18px",background:bilanSubmitted?"#e8f5e9":"#fff3e0",border:"2px solid "+(bilanSubmitted?"#4caf50":"#d4a017"),borderRadius:10}},
+      h("h2",{style:{fontSize:"1.1rem",color:"#2c3e50",margin:"0 0 6px 0"}},bilanSubmitted?"\u2705 Bilan envoy\u00e9":"Bilan de l\u2019\u00e9tude de texte"),
+      bilanSubmitted?h("p",{style:{fontSize:".88rem",color:"#555",marginBottom:8}},"Ton bilan a \u00e9t\u00e9 envoy\u00e9 au professeur. Tu peux maintenant \u00e9changer ta fiche avec ton voisin."):
+      h("div",null,
+        h("p",{style:{fontSize:".88rem",fontStyle:"italic",color:"#555",marginBottom:12}},"Recopie ici le bilan que tu as \u00e9crit sur ta fiche papier."),
+        h("p",{style:{fontSize:".92rem",fontWeight:700,marginBottom:6}},"Trois choses que j\u2019ai comprises gr\u00e2ce \u00e0 cette correction :"),
+        [["b1","1."],["b2","2."],["b3","3."]].map(function(f){
+          return h("div",{key:f[0],style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
+            h("span",{style:{fontWeight:600,fontSize:".9rem",minWidth:18}},f[1]),
+            h("input",{value:bilan[f[0]],onChange:function(e){var b=Object.assign({},bilan);b[f[0]]=e.target.value;setBilan(b)},
+              placeholder:"...",style:{flex:1,padding:"8px 10px",fontSize:".9rem",borderRadius:8,border:"1px solid #ccc"}})
+          )
+        }),
+        h("p",{style:{fontSize:".92rem",fontWeight:700,margin:"10px 0 6px 0"}},"Une chose que je vais faire diff\u00e9remment au prochain devoir :"),
+        h("input",{value:bilan.b4,onChange:function(e){var b=Object.assign({},bilan);b.b4=e.target.value;setBilan(b)},
+          placeholder:"...",style:{width:"100%",padding:"8px 10px",fontSize:".9rem",borderRadius:8,border:"1px solid #ccc",marginBottom:12}}),
+        h("button",{className:"btn btn-primary",style:{width:"100%"},
+          disabled:!bilan.b1||!bilan.b2||!bilan.b3||!bilan.b4,
+          onClick:function(){
+            recordAction();
+            db.ref(acRef+"/bilan").set(bilan);
+            db.ref(acRef+"/bilanSubmitted").set(true);
+            setBilanSubmitted(true);
+            sendHeartbeat("done");
+          }},!bilan.b1||!bilan.b2||!bilan.b3||!bilan.b4?"Compl\u00e8te les 4 champs pour envoyer":"\u2705 Envoyer le bilan au professeur")
+      )
+    ),
+    // Boutons
+    h("div",{style:{display:"flex",gap:8,marginTop:12,justifyContent:"center",paddingBottom:30}},
+      h("button",{className:"btn btn-ghost",onClick:p.onBack},"\u2190 Retour"),
+      d.key==="meney_monsieur"&&h("button",{className:"btn-sm btn-ghost",style:{color:"var(--coral)",borderColor:"rgba(197,48,48,.2)"},onClick:function(){
+        if(confirm("Recommencer la correction ? Ta progression sera effac\u00e9e.")){
+          db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key).remove();
+          setAttempts({});setResults({});setHistory({});setFinished(false);
+          setQuizShown(false);setQuizDone(false);setQuizQ(null);
+        }
+      }},"\u21bb Recommencer")
+    )
+  );
+
+  // Quiz interstitiel
+  if(outOfPoints&&!quizDone){
+    if(!quizShown) return h("div",{className:"container fade-up",style:{paddingTop:40,textAlign:"center"}},
+      h("div",{className:"card"},
+        h("h2",null,"Tu as utilis\u00e9 tes 5 points"),
+        h("p",{className:"subtitle"},"R\u00e9ponds \u00e0 une question pour continuer la correction."),
+        h("button",{className:"btn btn-primary",onClick:showQuiz},"Voir la question")
+      )
+    );
+    // Show quiz question
+    return h("div",{className:"container fade-up",style:{paddingTop:40}},
+      h("div",{className:"card"},
+        h("h2",null,"Question de grammaire"),
+        h("p",{style:{fontSize:"1.05rem",marginBottom:16,lineHeight:1.6}},quizQ.q),
+        h("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          quizQ.choices.map(function(c,i){return h("button",{key:i,className:"btn btn-ghost",style:{textAlign:"left",padding:"12px 16px"},onClick:function(){answerQuiz(i)}},c)})
+        )
+      )
+    );
+  }
+
+  // After quiz: show rule then continue
+  if(outOfPoints&&quizDone&&quizQ){
+    return h("div",{className:"container fade-up",style:{paddingTop:40}},
+      h("div",{className:"card"},
+        h("h2",null,"R\u00e8gle \u00e0 retenir"),
+        h("p",{style:{fontSize:"1rem",lineHeight:1.7,marginBottom:16,padding:"12px",background:"var(--card2)",borderRadius:10}},quizQ.rule),
+        h("button",{className:"btn btn-primary",onClick:function(){setQuizQ(null);setQuizShown(false)}},
+          "Continuer la correction"+(nSolved<totalErrors?" ("+(totalErrors-nSolved)+" restante"+(totalErrors-nSolved>1?"s":"")+")" :"")
+        )
+      )
+    );
+  }
+
+  return h("div",{className:"container fade-up"},
+    // Idle warning
+    idleWarning&&h("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:400,padding:"14px 20px",background:"#c53030",color:"#fff",textAlign:"center",fontWeight:700,fontSize:"1.1rem",boxShadow:"0 4px 20px rgba(197,48,48,.4)",animation:"fadeUp .3s ease"},onClick:function(){recordAction()}},
+      "\u26a0\ufe0f Reprends le travail ! Clique ici pour continuer."
+    ),
+    // Header sticky
+    h("div",{className:"score-bar"},
+      h("div",{className:"score-val",style:{color:noteColor(score,5)}},score),
+      h("div",{style:{flex:1}},
+        h("div",{className:"score-eleve"},d.eleve),
+        h("div",{className:"score-info"},
+          "/5 \u00b7 ",nSolved+"/"+totalErrors+" corrig\u00e9"+(nSolved>1?"s":""),
+          " \u00b7 ",wrongAttempts+" essai"+(wrongAttempts>1?"s":"")+" rat\u00e9"+(wrongAttempts>1?"s":"")
+        ),
+        h("div",{className:"progress-wrap"},h("div",{className:"progress-fill",style:{width:(totalErrors?Math.round(nSolved/totalErrors*100):0)+"%"}}))
+      ),
+      h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onBack},"\u2190")
+    ),
+    // Text with masked words
+    h("div",{className:"card"},
+      h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clique sur un mot masqu\u00e9 pour le corriger. Note de d\u00e9part : 5 pts, chaque essai rat\u00e9 co\u00fbte 0.25 pt."),
+      h("div",{className:"word-grid"},
+        tokens.map(function(w,i){
+          var err=errMap[i];
+          if(!err){
+            var isP=isPunct(w);
+            return h("span",{key:"w"+i,className:"word-btn"+(isP?" punct":""),style:{cursor:"default"}},w);
+          }
+          var solved=results[err.errIdx];
+          var isActive=activeErr===err.errIdx;
+          if(solved){
+            // Show corrected word in green
+            return h("span",{key:"w"+i,className:"word-btn",style:{color:"var(--green)",fontWeight:700,borderBottom:"2px solid var(--green)"}},err.word," \u2713");
+          }
+          // Masked word — clickable
+          var typeCls=err.type==="G"?"err-g":err.type==="L"?"err-l":err.type==="M"?"err-m":"err-i";
+          var blanks="";for(var j=0;j<w.length;j++)blanks+="\u2022";
+          if(err.type==="M")blanks="____";
+          return h("span",{key:"w"+i,className:"word-btn "+typeCls+(isActive?" last-touched":""),
+            style:{cursor:"pointer",filter:isActive?"none":"blur(3px)",transition:"filter 0.2s"},
+            onClick:function(){recordAction();setActiveErr(err.errIdx);setInputVal("");setFeedback(null)}},
+            blanks,h("sub",{style:{fontSize:8,marginLeft:2}},err.type)
+          );
+        })
+      )
+    ),
+    // Active error input
+    activeErr!==null&&h("div",{className:"popup-overlay",style:{alignItems:"flex-start",paddingTop:"25vh"},onClick:function(){setActiveErr(null);setInputVal("");setFeedback(null)}},
+      h("div",{style:{background:"var(--card)",borderRadius:16,padding:"18px 20px",maxWidth:360,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,.2)",position:"relative"},onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}},
+          h("span",{className:"badge badge-"+(errors[activeErr].type==="G"?"g":"l"),style:{fontSize:".85rem",padding:"3px 10px"}},errors[activeErr].type),
+          h("span",{style:{fontWeight:600,fontSize:".95rem"}},"Erreur n\u00b0"+(activeErr+1)),
+          (attempts[activeErr]||0)>0&&h("span",{style:{fontSize:".78rem",color:"var(--muted)",marginLeft:"auto"}},(attempts[activeErr]||0)+" essai"+(((attempts[activeErr]||0)>1)?"s":""))
+        ),
+        h("div",{style:{display:"flex",gap:8}},
+          h("input",{ref:inputRef,value:inputVal,onChange:function(e){setInputVal(e.target.value)},
+            placeholder:"Tape le mot correct\u2026",
+            style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderColor:feedback?feedback.correct?"var(--green)":"var(--coral)":"var(--border)",background:feedback?feedback.correct?"var(--green-light)":"var(--coral-light)":"var(--card)",borderRadius:10},
+            onKeyDown:function(e){if(e.key==="Enter")tryAnswer()}}),
+          h("button",{className:"btn-sm btn-primary",style:{padding:"10px 16px"},onClick:tryAnswer},"\u2713")
+        ),
+        feedback&&h("div",{style:{marginTop:8,fontSize:".88rem",fontWeight:600,color:feedback.correct?"var(--green)":"var(--coral)",textAlign:"center"}},
+          feedback.correct?"\u2713 Correct ! \u00ab "+feedback.answer+" \u00bb":"\u2717 R\u00e9essaie !"
+        )
+      )
+    ),
+    // Extras section
+    extras.length>0&&h("div",{className:"card"},
+      h("h2",{style:{fontSize:"1rem"}},"Mots en trop dans ta copie"),
+      h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
+        extras.map(function(ex,i){return h("span",{key:"x"+i,className:"badge badge-x",style:{fontSize:".9rem",padding:"4px 10px"}},"\u00ab "+ex.word+" \u00bb (\u22120.5)")})
+      )
+    )
+  );
+}
+</script>
+</body>
+</html>
