@@ -233,6 +233,8 @@ function AppProf(p){
   var s13=useState(false),showClassMgr=s13[0],setShowClassMgr=s13[1];
   var s14=useState(""),newClassName=s14[0],setNewClassName=s14[1];
   var s15=useState(""),newClassEleves=s15[0],setNewClassEleves=s15[1];
+  var s16=useState(""),niveauInput=s16[0],setNiveauInput=s16[1];
+  var s17=useState(true),publishedInput=s17[0],setPublishedInput=s17[1];
 
   // Load classes from Firebase
   useEffect(function(){
@@ -244,17 +246,14 @@ function AppProf(p){
   },[]);
 
   useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
-    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};return{id:id,title:d.title||id,classe:d.classe||"",n:(d.eleves||[]).length}}))
+    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};return{id:id,title:d.title||id,classe:d.classe||"",n:(d.eleves||[]).length,niveau:d.niveau||"",published:d.published!==false}}))
   })},[]);
 
   function start(){
-    if(!textInput.trim()||!classeInput||!titleInput.trim())return;
+    if(!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput)return;
     var tokens=tokenize(textInput.trim()),eleves=CLASSES[classeInput]||[],id=san(titleInput)+"-"+san(classeInput);
-    // Extract niveau from classe name (e.g. "4e Banksy" → "4e")
-    var niveauMatch=classeInput.match(/^(\d+e)/);
-    var niveau=niveauMatch?niveauMatch[1]:"";
     var data={title:titleInput.trim(),text:textInput.trim(),tokens:tokens,classe:classeInput,eleves:eleves,base:baseInput};
-    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,eleves:eleves,base:baseInput,niveau:niveau,published:true});
+    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,eleves:eleves,base:baseInput,niveau:niveauInput,published:publishedInput});
     setDicteeData(data);setDicteeId(id);setCorrections({});setScreen("correct");
     db.ref("correction_dictee/"+id+"/results").once("value",function(snap){setCorrections(snap.val()||{})});
     db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
@@ -274,17 +273,24 @@ function AppProf(p){
     h("div",{className:"card"},h("h1",null,"Correction de dict\u00e9e"),h("p",{className:"subtitle"},"Corrige les copies en cliquant sur les mots fautifs.")),
     saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es en cours"),
       saved.map(function(d){return h("div",{key:d.id,style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10,cursor:"pointer",marginBottom:6},onClick:function(){load(d.id)}},
-        h("div",null,h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l.")),
-        h("div",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem"}},"Ouvrir \u2192")
+        h("div",null,h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l."+(d.niveau?" \u00b7 "+d.niveau:""))),
+        h("div",{style:{display:"flex",alignItems:"center",gap:8}},
+          h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
+          h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem"}},"Ouvrir \u2192")
+        )
       )})
     ),
     h("div",{className:"card"},
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
-      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).map(function(c){return h("option",{key:c,value:c},c+" ("+CLASSES[c].length+")")}))),
+      h("div",{className:"config-field"},h("label",null,"Niveau"),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"— Choisir —"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
+      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).filter(function(c){return !niveauInput||c.toLowerCase().indexOf(niveauInput)===0}).map(function(c){return h("option",{key:c,value:c},c+" ("+CLASSES[c].length+")")}))),
       h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:textInput,onChange:function(e){setTextInput(e.target.value)},placeholder:"Colle le texte correct..."})),
-      h("div",{className:"config-field"},h("label",null,"Note sur"),h("input",{type:"number",value:baseInput,onChange:function(e){setBaseInput(parseInt(e.target.value)||20)},style:{width:80}})),
-      h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()},"Commencer"),
+      h("div",{style:{display:"flex",gap:16,alignItems:"center",marginBottom:12}},
+        h("div",{className:"config-field",style:{flex:1,marginBottom:0}},h("label",null,"Note sur"),h("input",{type:"number",value:baseInput,onChange:function(e){setBaseInput(parseInt(e.target.value)||20)},style:{width:80}})),
+        h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".9rem"}},h("input",{type:"checkbox",checked:publishedInput,onChange:function(e){setPublishedInput(e.target.checked)}}),"Publier pour les \u00e9l\u00e8ves")
+      ),
+      h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput},"Commencer"),
       h("button",{className:"btn-sm btn-ghost",style:{marginTop:8},onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
       showClassMgr&&h("div",{className:"card",style:{marginTop:12}},
         h("h2",null,"Gestion des classes"),
