@@ -121,10 +121,12 @@ firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDom
 var db=firebase.database();
 function san(n){return(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")}
 var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5};
-var CLASSES={
-"4e Banksy":["ALOYEAU Elyse","BAZANTAY Ma\u00e9","BREMEAULT Victor","BUDEL No\u00e9mie","CADIOU-FOURRIER Louann","CHASLES Marcellin","CHEVALIER Flavie","DELPHIN Charly","DENEU Martin","DUVACHER Lou","GROSBOIS CAILLONEAU Margaux","GUERIN Titouan","GUIET Mya","HERMENIER Elea","LE MARC N\u00e9o","L'HOMMELET Louis","MARTIN Cl\u00e9ment","METIVIER JOUVELOT Camille","MISANDEAU Anna","MONTAIS Sacha","MOQUET Mathis","MOREAU In\u00e8s","POUTIER REVAULT Axel","RENAULT Ad\u00e9lie","ROTUREAU Math\u00e9o","ROULLIER UIJTDEHAAGE Kha\u00efs","SAILLANT F\u00e9lix","VETAULT Louisa","VIAU Benjamin"],
-"4e Pythagore":["ALLIGAND Louka","BARTHALAY Emma","BEAUFORT Charlie","BRETAULT Martin","BREUIL Nathan","CAILLET Rosy","CHAUVAT Faustine","COLAS Nathan","DAUNAS L\u00e9onie","DEROUINEAU Louise","DROCHON C\u00e9lia","DUTRUEL Gabin","ETCHEBARNE EMERIT L\u00e9a","GASOYAN Edouard","GAUCHER Julian","GIRARD Alice","LE LAY Manon","LEGUAY Lilou","LUCET Enzo","MALHERRE Paul","MARCHAND Lo\u00e9lie","MAZAN Ma\u00ebva","MERCIER Lola","MIE Manec","ROMARIE Charly","SAUNIER Coralie","TERRIEN Manon","ZNIDI Iyad"]
-};
+var CLASSES={};
+// Load classes from Firebase
+db.ref("classes").once("value",function(snap){
+  var val=snap.val();
+  if(val) CLASSES=val;
+});
 function tokenize(text){if(!text)return[];var t=[],re=/(\s+)|([.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+)|([^\s.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+)/g,m;while((m=re.exec(text))!==null){if(!m[1])t.push(m[2]||m[3])}return t}
 function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+$/.test(w)}
 function computeNote(errors,extras,base){
@@ -227,6 +229,19 @@ function AppProf(p){
   var s9=useState(""),dicteeId=s9[0],setDicteeId=s9[1];
   var s10=useState([]),saved=s10[0],setSaved=s10[1];
   var s11=useState({}),absents=s11[0],setAbsents=s11[1];
+  var s12=useState(null),classesLoaded=s12[0],setClassesLoaded=s12[1];
+  var s13=useState(false),showClassMgr=s13[0],setShowClassMgr=s13[1];
+  var s14=useState(""),newClassName=s14[0],setNewClassName=s14[1];
+  var s15=useState(""),newClassEleves=s15[0],setNewClassEleves=s15[1];
+
+  // Load classes from Firebase
+  useEffect(function(){
+    db.ref("classes").on("value",function(snap){
+      var val=snap.val()||{};
+      CLASSES=val;
+      setClassesLoaded(val);
+    });
+  },[]);
 
   useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
     var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};return{id:id,title:d.title||id,classe:d.classe||"",n:(d.eleves||[]).length}}))
@@ -235,8 +250,11 @@ function AppProf(p){
   function start(){
     if(!textInput.trim()||!classeInput||!titleInput.trim())return;
     var tokens=tokenize(textInput.trim()),eleves=CLASSES[classeInput]||[],id=san(titleInput)+"-"+san(classeInput);
+    // Extract niveau from classe name (e.g. "4e Banksy" → "4e")
+    var niveauMatch=classeInput.match(/^(\d+e)/);
+    var niveau=niveauMatch?niveauMatch[1]:"";
     var data={title:titleInput.trim(),text:textInput.trim(),tokens:tokens,classe:classeInput,eleves:eleves,base:baseInput};
-    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,eleves:eleves,base:baseInput});
+    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,eleves:eleves,base:baseInput,niveau:niveau,published:true});
     setDicteeData(data);setDicteeId(id);setCorrections({});setScreen("correct");
     db.ref("correction_dictee/"+id+"/results").once("value",function(snap){setCorrections(snap.val()||{})});
     db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
@@ -266,7 +284,32 @@ function AppProf(p){
       h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).map(function(c){return h("option",{key:c,value:c},c+" ("+CLASSES[c].length+")")}))),
       h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:textInput,onChange:function(e){setTextInput(e.target.value)},placeholder:"Colle le texte correct..."})),
       h("div",{className:"config-field"},h("label",null,"Note sur"),h("input",{type:"number",value:baseInput,onChange:function(e){setBaseInput(parseInt(e.target.value)||20)},style:{width:80}})),
-      h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()},"Commencer")
+      h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()},"Commencer"),
+      h("button",{className:"btn-sm btn-ghost",style:{marginTop:8},onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
+      showClassMgr&&h("div",{className:"card",style:{marginTop:12}},
+        h("h2",null,"Gestion des classes"),
+        h("p",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:12}},"Ajoute ou modifie tes classes. Les \u00e9l\u00e8ves sont stock\u00e9s dans Firebase, pas dans le code."),
+        Object.keys(CLASSES).length>0&&h("div",{style:{marginBottom:14}},
+          Object.keys(CLASSES).map(function(cn){
+            return h("div",{key:cn,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)"}},
+              h("span",{style:{fontWeight:600}},cn+" ("+CLASSES[cn].length+" \u00e9l\u00e8ves)"),
+              h("button",{className:"btn-sm btn-ghost",style:{color:"var(--coral)",fontSize:".8rem"},onClick:function(){
+                if(confirm("Supprimer la classe "+cn+" ?")){db.ref("classes/"+cn).remove()}
+              }},"\u2715")
+            )
+          })
+        ),
+        h("div",{className:"config-field"},h("label",null,"Nom de la classe (ex: 4e Banksy)"),h("input",{value:newClassName,onChange:function(e){setNewClassName(e.target.value)},placeholder:"4e Banksy"})),
+        h("div",{className:"config-field"},h("label",null,"\u00c9l\u00e8ves (un par ligne, format NOM Pr\u00e9nom)"),h("textarea",{value:newClassEleves,onChange:function(e){setNewClassEleves(e.target.value)},placeholder:"DUPONT Marie\nMARTIN Lucas\n...",style:{minHeight:120}})),
+        h("button",{className:"btn btn-primary",disabled:!newClassName.trim()||!newClassEleves.trim(),onClick:function(){
+          var cn=newClassName.trim();
+          var eleves=newClassEleves.trim().split("\n").map(function(l){return l.trim()}).filter(function(l){return l});
+          if(cn&&eleves.length){
+            db.ref("classes/"+cn).set(eleves);
+            setNewClassName("");setNewClassEleves("");
+          }
+        }},"Ajouter / Mettre \u00e0 jour la classe")
+      )
     )
   );
   if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){setScreen("config")}});
@@ -939,6 +982,15 @@ function AppEleve(p){
   var s4=useState(""),prenomInput=s4[0],setPrenomInput=s4[1];
   var s5=useState(null),eleveData=s5[0],setEleveData=s5[1];
   var s6=useState(""),errMsg=s6[0],setErrMsg=s6[1];
+  var s7=useState(null),forcedDicteeId=s7[0],setForcedDicteeId=s7[1];
+  var s8=useState(""),dicteeTitle=s8[0],setDicteeTitle=s8[1];
+
+  // Check URL param for specific dictee
+  useEffect(function(){
+    var params=new URLSearchParams(window.location.search);
+    var did=params.get("dictee");
+    if(did)setForcedDicteeId(did);
+  },[]);
 
   // Load available dictees
   useEffect(function(){
@@ -949,8 +1001,13 @@ function AppEleve(p){
         return{id:id,title:cfg.title||id,classe:cfg.classe||"",eleves:cfg.eleves||[],tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
       });
       setDictees(list);
+      // If forced dictee, get its title
+      if(forcedDicteeId){
+        var found=list.find(function(d){return d.id===forcedDicteeId});
+        if(found)setDicteeTitle(found.title);
+      }
     });
-  },[]);
+  },[forcedDicteeId]);
 
   function doLogin(){
     var nom=nomInput.trim().toUpperCase();
@@ -972,9 +1029,10 @@ function AppEleve(p){
       setScreen("correction");return;
     }
     var full=null,dictee=null,key=null;
-    // Search across all dictees
-    for(var i=0;i<dictees.length;i++){
-      var d=dictees[i];
+    // Search in forced dictee or all dictees
+    var searchList=forcedDicteeId?dictees.filter(function(d){return d.id===forcedDicteeId}):dictees;
+    for(var i=0;i<searchList.length;i++){
+      var d=searchList[i];
       for(var j=0;j<d.eleves.length;j++){
         var e=d.eleves[j];
         var parts=e.split(" ");
@@ -999,8 +1057,8 @@ function AppEleve(p){
 
   if(screen==="login") return h("div",{className:"container fade-up",style:{paddingTop:40}},
     h("div",{className:"card",style:{textAlign:"center"}},
-      h("h1",null,"Correction de dict\u00e9e"),
-      h("p",{className:"subtitle"},"Connecte-toi pour corriger tes erreurs et gagner des points."),
+      h("h1",null,dicteeTitle?"Correction : "+dicteeTitle:"Correction de dict\u00e9e"),
+      h("p",{className:"subtitle"},dicteeTitle?"Entre ton nom et ton pr\u00e9nom pour acc\u00e9der \u00e0 ta copie.":"Connecte-toi pour corriger tes erreurs et gagner des points."),
       h("div",{style:{maxWidth:340,margin:"0 auto"}},
         h("div",{className:"config-field"},h("label",null,"Nom"),h("input",{value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",style:{textTransform:"uppercase"}})),
         h("div",{className:"config-field"},h("label",null,"Pr\u00e9nom"),h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
