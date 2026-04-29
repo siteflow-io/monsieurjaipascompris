@@ -235,6 +235,8 @@ function AppProf(p){
   var s15=useState(""),newClassEleves=s15[0],setNewClassEleves=s15[1];
   var s16=useState(""),niveauInput=s16[0],setNiveauInput=s16[1];
   var s17=useState(true),publishedInput=s17[0],setPublishedInput=s17[1];
+  var s18=useState(null),editing=s18[0],setEditing=s18[1];
+  var s19=useState({}),editForm=s19[0],setEditForm=s19[1];
 
   // Load classes from Firebase
   useEffect(function(){
@@ -246,21 +248,26 @@ function AppProf(p){
   },[]);
 
   useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
-    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};return{id:id,title:d.title||id,classe:d.classe||"",n:(d.eleves||[]).length,niveau:d.niveau||"",published:d.published!==false}}))
+    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var fbE=CLASSES[cn];var nE=fbE&&fbE.length>0?fbE.length:(d.eleves||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false}}))
   })},[]);
 
   function start(){
     if(!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput)return;
     var tokens=tokenize(textInput.trim()),eleves=CLASSES[classeInput]||[],id=san(titleInput)+"-"+san(classeInput);
     var data={title:titleInput.trim(),text:textInput.trim(),tokens:tokens,classe:classeInput,eleves:eleves,base:baseInput};
-    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,eleves:eleves,base:baseInput,niveau:niveauInput,published:publishedInput});
+    // Store classe name as reference, not a copy of eleves — eleves are in /classes/{name}
+    db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,base:baseInput,niveau:niveauInput,published:publishedInput});
     setDicteeData(data);setDicteeId(id);setCorrections({});setScreen("correct");
     db.ref("correction_dictee/"+id+"/results").once("value",function(snap){setCorrections(snap.val()||{})});
     db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
   }
   function load(id){db.ref("correction_dictee/"+id).once("value",function(snap){
     var val=snap.val()||{},cfg=val.config||{};
-    setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:cfg.classe||"",eleves:cfg.eleves||[],base:cfg.base||20});
+    var classeName=cfg.classe||"";
+    // Dynamic class reference: use /classes/{name} if available, fallback to config/eleves
+    var fbEleves=CLASSES[classeName];
+    var eleves=fbEleves&&fbEleves.length>0?fbEleves:(cfg.eleves||[]);
+    setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:classeName,eleves:eleves,base:cfg.base||20});
     setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
   })}
   function save(ek,errors,extras){
@@ -271,12 +278,34 @@ function AppProf(p){
 
   if(screen==="config") return h("div",{className:"container fade-up"},
     h("div",{className:"card"},h("h1",null,"Correction de dict\u00e9e"),h("p",{className:"subtitle"},"Corrige les copies en cliquant sur les mots fautifs.")),
-    saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es en cours"),
-      saved.map(function(d){return h("div",{key:d.id,style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10,cursor:"pointer",marginBottom:6},onClick:function(){load(d.id)}},
-        h("div",null,h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l."+(d.niveau?" \u00b7 "+d.niveau:""))),
-        h("div",{style:{display:"flex",alignItems:"center",gap:8}},
-          h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
-          h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem"}},"Ouvrir \u2192")
+    saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es existantes"),
+      saved.map(function(d){return h("div",{key:d.id,style:{marginBottom:8}},
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10}},
+          h("div",{style:{flex:1,cursor:"pointer"},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l. \u00b7 "+(d.niveau?d.niveau.toUpperCase():"\u26a0\ufe0f pas de niveau"))),
+          h("div",{style:{display:"flex",alignItems:"center",gap:6}},
+            h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:function(e){e.stopPropagation();if(editing===d.id){setEditing(null)}else{setEditing(d.id);setEditForm({title:d.title,niveau:d.niveau||"",published:d.published})}}},editing===d.id?"\u2715":"\u270f\ufe0f"),
+            h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
+          )
+        ),
+        editing===d.id&&h("div",{style:{padding:"12px 14px",border:"1.5px solid var(--primary)",borderTop:"none",borderRadius:"0 0 10px 10px",background:"var(--primary-light)"}},
+          h("div",{style:{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}},
+            h("div",{className:"config-field",style:{flex:1,minWidth:150,marginBottom:0}},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
+            h("div",{className:"config-field",style:{minWidth:100,marginBottom:0}},h("label",null,"Niveau"),h("select",{value:editForm.niveau||"",onChange:function(e){setEditForm(Object.assign({},editForm,{niveau:e.target.value}))}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem",marginBottom:4}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
+            h("button",{className:"btn-sm btn-primary",style:{marginBottom:4},onClick:function(){
+              var wantPublish=editForm.published!==false;
+              var niv=editForm.niveau||"";
+              if(wantPublish&&!niv){alert("\u26a0\ufe0f Impossible de publier : choisis d\u2019abord un niveau.");return}
+              var updates={};
+              if(editForm.title)updates.title=editForm.title;
+              if(niv)updates.niveau=niv;
+              updates.published=wantPublish;
+              db.ref("correction_dictee/"+d.id+"/config").update(updates);
+              var s2=saved.map(function(x){return x.id===d.id?Object.assign({},x,{title:updates.title||x.title,niveau:updates.niveau||x.niveau,published:updates.published}):x});
+              setSaved(s2);setEditing(null);
+            }},"Enregistrer")
+          )
         )
       )})
     ),
@@ -1004,7 +1033,10 @@ function AppEleve(p){
       var val=snap.val()||{};
       var list=Object.keys(val).map(function(id){
         var cfg=val[id].config||{};
-        return{id:id,title:cfg.title||id,classe:cfg.classe||"",eleves:cfg.eleves||[],tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
+        var classeName=cfg.classe||"";
+        var fbEleves=CLASSES[classeName];
+        var eleves=fbEleves&&fbEleves.length>0?fbEleves:(cfg.eleves||[]);
+        return{id:id,title:cfg.title||id,classe:classeName,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
       });
       setDictees(list);
       // If forced dictee, get its title
