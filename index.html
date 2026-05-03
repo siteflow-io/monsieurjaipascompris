@@ -233,7 +233,8 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .chapter-card.ch-locked .chapter-status { color: rgba(255,255,255,0.25) !important; }
 .ch-publish-btn { padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); font-family: inherit; transition: all 0.15s; }
 .ch-publish-btn:hover { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #34d399; }
-.ch-publish-btn.published { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.25); color: #34d399; pointer-events: none; }
+.ch-publish-btn.published { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.25); color: #34d399; cursor: pointer; }
+.ch-publish-btn.published:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.25); color: #f87171; }
 </style>
 </head>
 <body>
@@ -454,8 +455,12 @@ function applyPublished(level){
       btn.textContent=isPub?'✅ Publié':'Publier pour les élèves';
       btn.onclick=function(e){
         e.stopPropagation();
-        if(isPub)return;
-        var newPub=pub.slice();newPub.push(num);
+        var newPub=pub.slice();
+        if(isPub){
+          newPub=newPub.filter(function(n){return n!==num});
+        } else {
+          newPub.push(num);
+        }
         fetch('https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app/site/'+level+'/published.json',{
           method:'PUT',
           headers:{'Content-Type':'application/json'},
