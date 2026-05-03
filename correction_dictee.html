@@ -38,6 +38,16 @@ textarea{resize:vertical;min-height:120px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes blink{0%,100%{background:var(--green-light)}50%{background:rgba(39,103,73,.25)}}
 .blink-done{animation:blink 1.2s ease infinite}
+.fast-word{font-size:2.2rem;font-weight:800;text-align:center;padding:30px 20px;min-height:120px;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
+.fast-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.fast-btn{padding:18px 10px;border-radius:14px;font-size:1.1rem;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.fast-ok{background:#e8f5e9;color:#276749;font-size:1.3rem}.fast-ok:active{background:#c8e6c9}
+.fast-g{background:rgba(197,48,48,.08);color:#c53030}.fast-g:active{background:rgba(197,48,48,.2)}
+.fast-l{background:rgba(43,108,203,.08);color:#2b6cb0}.fast-l:active{background:rgba(43,108,203,.2)}
+.fast-m{background:rgba(151,90,22,.08);color:#975a16}.fast-m:active{background:rgba(151,90,22,.2)}
+.fast-i{background:rgba(124,58,237,.08);color:#7c3aed}.fast-i:active{background:rgba(124,58,237,.2)}
+.fast-flash{animation:fastFlash .4s ease}
+@keyframes fastFlash{0%{transform:scale(1)}30%{transform:scale(1.1)}100%{transform:scale(1)}}
 .tooltip-wrap{position:relative;cursor:default}
 .tooltip-wrap .tooltip-content{display:none;position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px;font-size:.8rem;white-space:pre-line;z-index:100;min-width:140px;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,.3);pointer-events:none;line-height:1.5;margin-bottom:6px}
 .tooltip-wrap:hover .tooltip-content{display:block}
@@ -185,6 +195,525 @@ var QUESTIONS_L=[
 ];
 
 // ═══ APP ═══
+
+// ═══ MOTEUR GRAMMATICAL ═══
+var GRAMM = {};
+
+// ─────────────────────────────────────────────────────
+// 1. HOMOPHONES GRAMMATICAUX (complet cycle 3-4)
+// ─────────────────────────────────────────────────────
+// Chaque entrée : group, confusions {forme→code}, rule (test de substitution)
+
+GRAMM.HOMOPHONES = {};
+function _h(forms, group, rule) {
+  forms.forEach(function(f) {
+    var confusions = {};
+    forms.forEach(function(f2) { if (f2 !== f) confusions[f2] = "G-HOM"; });
+    GRAMM.HOMOPHONES[f] = {group: group, forms: forms, confusions: confusions, rule: rule};
+  });
+}
+
+// a/à/as
+_h(["a","à","as"], "a/à", "« a/as » = verbe avoir (→ avait/avais). « à » = préposition.");
+// et/est/es/ai
+_h(["et","est","es","ai"], "et/est", "« et » = conjonction (→ et puis). « est/es » = être (→ était/étais). « ai » = avoir 1re pers.");
+// ou/où
+_h(["ou","où"], "ou/où", "« ou » = choix (→ ou bien). « où » = lieu/temps.");
+// son/sont
+_h(["son","sont"], "son/sont", "« son » = possessif (→ mon). « sont » = être (→ étaient).");
+// on/ont/on n'
+_h(["on","ont"], "on/ont", "« on » = pronom sujet (→ il). « ont » = avoir (→ avaient).");
+// ce/se/ceux
+_h(["ce","se"], "ce/se", "« ce » = démonstratif (devant nom ou → cela). « se » = réfléchi (devant verbe pronominal).");
+// c'est/s'est/ces/ses/sais/sait
+_h(["c'est","s'est","ces","ses","sais","sait"], "c'est/s'est/ces/ses",
+  "« c'est » → cela est. « s'est » → s'était. « ces » → cette (dém. pl.). « ses » → sa (poss. pl.). « sais/sait » → savais/savait.");
+// leur/leurs
+_h(["leur","leurs"], "leur/leurs", "« leur » pronom (invariable, devant verbe → lui). « leurs » déterminant possessif pluriel.");
+// mon/m'ont
+_h(["mon","m'ont"], "mon/m'ont", "« mon » = possessif (→ le mien). « m'ont » = me + ont (→ m'avaient).");
+// ton/t'ont
+_h(["ton","t'ont"], "ton/t'ont", "« ton » = possessif (→ le tien). « t'ont » = te + ont (→ t'avaient).");
+// ma/m'a/m'as
+_h(["ma","m'a","m'as"], "ma/m'a", "« ma » = possessif fém. (→ la mienne). « m'a/m'as » = me + a/as (→ m'avait/m'avais).");
+// ta/t'a
+_h(["ta","t'a"], "ta/t'a", "« ta » = possessif fém. (→ la tienne). « t'a » = te + a (→ t'avait).");
+// mes/mais/m'est/met/mets
+_h(["mes","mais","m'est","met","mets"], "mes/mais/m'est/met",
+  "« mes » = possessif pl. « mais » = opposition (→ cependant). « m'est » = me+est (→ m'était). « met/mets » = verbe mettre.");
+// la/là/l'a/l'as
+_h(["la","là","l'a","l'as"], "la/là/l'a", "« la » = article/pronom. « là » = adverbe lieu (→ ici). « l'a/l'as » = le/la+a/as (→ l'avait).");
+// quand/quant/qu'en
+_h(["quand","quant","qu'en"], "quand/quant/qu'en",
+  "« quand » = temps (→ lorsque). « quant à » = en ce qui concerne. « qu'en » = que+en.");
+// quel/quelle/quels/quelles/qu'elle/qu'elles
+_h(["quel","quelle","quels","quelles","qu'elle","qu'elles"], "quel/qu'elle",
+  "« quel(le)(s) » = interrogatif/exclamatif. « qu'elle(s) » = que+elle(s) (→ qu'il).");
+// sans/s'en/sens/sent
+_h(["sans","s'en","sens","sent"], "sans/s'en",
+  "« sans » = préposition privation (→ avec). « s'en » = se+en (→ de cela). « sens/sent » = verbe sentir.");
+// dans/d'en
+_h(["dans","d'en"], "dans/d'en", "« dans » = préposition lieu/temps. « d'en » = de+en.");
+// peu/peux/peut
+_h(["peu","peux","peut"], "peu/peux/peut",
+  "« peu » = adverbe quantité (→ pas beaucoup). « peux » = pouvoir 1re/2e (→ pouvais). « peut » = pouvoir 3e (→ pouvait).");
+// ni/n'y
+_h(["ni","n'y"], "ni/n'y", "« ni » = conjonction négative. « n'y » = ne+y (devant verbe).");
+// si/s'y
+_h(["si","s'y"], "si/s'y", "« si » = condition/intensité. « s'y » = se+y (→ il s'y rend).");
+// ça/sa/çà
+_h(["ça","sa"], "ça/sa", "« ça » = pronom démonstratif (→ cela). « sa » = possessif fém. (→ ma).");
+// tout/tous/toute/toutes
+_h(["tout","tous","toute","toutes"], "tout/tous", "« tout » adverbe = tout à fait. « tous/toute/toutes » = accord selon le contexte.");
+// prêt/près
+_h(["prêt","prêts","près"], "prêt/près", "« prêt(s) » = adjectif (→ terminé). « près » = adverbe/préposition de lieu (→ à côté).");
+// plus tôt/plutôt
+_h(["plutôt"], "plus tôt/plutôt", "« plutôt » = de préférence. « plus tôt » = inverse de plus tard.");
+// or/hors
+_h(["or","hors"], "or/hors", "« or » = conjonction coordination. « hors » = préposition (→ en dehors de).");
+// tant/temps/t'en
+_h(["tant","temps","t'en"], "tant/temps/t'en",
+  "« tant » = adverbe (→ tellement). « temps » = nom commun. « t'en » = te+en (→ m'en).");
+// quoique/quoi que — traité comme paire
+_h(["quoique"], "quoique/quoi que", "« quoique » = conjonction (→ bien que). « quoi que » = quelle que soit la chose.");
+// du/dû
+_h(["du","dû"], "du/dû", "« du » = article contracté (de le). « dû » = participe passé de devoir (accent au masc. sing.).");
+// sur/sûr
+_h(["sur","sûr","sûre","sûrs","sûres"], "sur/sûr",
+  "« sur » = préposition. « sûr(e)(s) » = adjectif (→ certain). « sur » adj. = acide.");
+// mur/mûr
+_h(["mur","mûr","mûre","mûrs","mûres"], "mur/mûr", "« mur » = nom (paroi). « mûr(e)(s) » = adjectif (→ à maturité).");
+// cru/crû
+_h(["cru","crû"], "cru/crû", "« cru » = PP de croire / adj. (pas cuit). « crû » = PP de croître.");
+// voie/voix
+_h(["voie","voix"], "voie/voix", "« voie » = chemin, moyen. « voix » = son produit par les cordes vocales.");
+// compte/conte/comte
+_h(["compte","conte","comte"], "compte/conte/comte",
+  "« compte » = calcul (→ compter). « conte » = récit (→ conter). « comte » = titre noblesse.");
+// ver/vers/verre/vert
+_h(["ver","vers","verre","vert"], "ver/vers/verre/vert",
+  "« ver » = animal. « vers » = direction/poésie. « verre » = matière/récipient. « vert » = couleur.");
+// cour/cours/court/courre
+_h(["cour","cours","court"], "cour/cours/court",
+  "« cour » = espace ouvert. « cours » = enseignement/écoulement. « court » = adj. bref.");
+// père/paire/pair
+_h(["père","paire","pair"], "père/paire/pair",
+  "« père » = papa. « paire » = ensemble de deux. « pair » = nombre divisible par 2.");
+// mère/maire/mer
+_h(["mère","maire","mer"], "mère/maire/mer",
+  "« mère » = maman. « maire » = élu municipal. « mer » = étendue d'eau salée.");
+// maître/mètre/mettre
+_h(["maître","mètre","mettre"], "maître/mètre/mettre",
+  "« maître » = celui qui enseigne. « mètre » = unité de mesure. « mettre » = verbe (placer).");
+// ancre/encre
+_h(["ancre","encre"], "ancre/encre", "« ancre » = marine. « encre » = liquide pour écrire.");
+// tante/tente
+_h(["tante","tente"], "tante/tente", "« tante » = sœur du père/de la mère. « tente » = abri de camping.");
+// salle/sale
+_h(["salle","sale"], "salle/sale", "« salle » = pièce. « sale » = pas propre.");
+// pain/pin/peint
+_h(["pain","pin","peint"], "pain/pin/peint", "« pain » = aliment. « pin » = arbre. « peint » = PP de peindre.");
+// sang/cent/sans/sent
+_h(["sang","cent","sans","sent"], "sang/cent/sans/sent",
+  "« sang » = liquide rouge. « cent » = 100. « sans » = préposition privation. « sent » = verbe sentir.");
+// champ/chant
+_h(["champ","chant"], "champ/chant", "« champ » = terrain cultivé. « chant » = mélodie.");
+// cou/coup/coût
+_h(["cou","coup","coût"], "cou/coup/coût", "« cou » = partie du corps. « coup » = choc. « coût » = prix.");
+// seau/sot/saut/sceau
+_h(["seau","sot","saut","sceau"], "seau/sot/saut", "« seau » = récipient. « sot » = stupide. « saut » = bond. « sceau » = cachet.");
+// date/datte
+_h(["date","datte"], "date/datte", "« date » = jour. « datte » = fruit du palmier.");
+// dessin/dessein
+_h(["dessin","dessein"], "dessin/dessein", "« dessin » = tracé, image. « dessein » = intention, projet.");
+// repère/repaire
+_h(["repère","repaire"], "repaire/repère", "« repère » = point de référence. « repaire » = cachette.");
+// pause/pose
+_h(["pause","pose"], "pause/pose", "« pause » = arrêt. « pose » = installation / action de poser.");
+// poids/pois/poix
+_h(["poids","pois","poix"], "poids/pois", "« poids » = masse. « pois » = légume. « poix » = résine.");
+// foi/foie/fois
+_h(["foi","foie","fois"], "foi/foie/fois", "« foi » = croyance. « foie » = organe. « fois » = occurrence.");
+// raisonner/résonner
+_h(["raisonner","résonner"], "raisonner/résonner", "« raisonner » = réfléchir. « résonner » = produire un écho.");
+// tâche/tache
+_h(["tâche","tache"], "tâche/tache", "« tâche » = travail à faire. « tache » = marque, salissure.");
+// parti/partie
+_h(["parti","partie"], "parti/partie", "« parti » = choix / organisation politique. « partie » = portion / jeu.");
+
+// ─────────────────────────────────────────────────────
+// 2. TERMINAISONS VERBALES CONFONDABLES
+// ─────────────────────────────────────────────────────
+GRAMM.TERMINAISONS = [
+  // -er / -é / -ée / -és / -ées / -ez / -ait / -ais / -aient
+  {src:"er", alts:[
+    {t:"é",code:"G-CONJ",rule:"Infinitif (-er) / participe passé (-é). Test : vendre/vendu."},
+    {t:"ée",code:"G-PP",rule:"Infinitif (-er) / PP féminin (-ée)."},
+    {t:"és",code:"G-PP",rule:"Infinitif (-er) / PP pluriel (-és)."},
+    {t:"ées",code:"G-PP",rule:"Infinitif (-er) / PP fém. pluriel (-ées)."},
+    {t:"ez",code:"G-CONJ",rule:"Infinitif (-er) / 2e pers. pluriel (-ez)."},
+    {t:"ait",code:"G-CONJ",rule:"Infinitif (-er) / imparfait 3e sing. (-ait)."},
+    {t:"ais",code:"G-CONJ",rule:"Infinitif (-er) / imparfait 1re-2e sing. (-ais)."},
+    {t:"aient",code:"G-CONJ",rule:"Infinitif (-er) / imparfait 3e pl. (-aient)."}
+  ]},
+  {src:"é", alts:[
+    {t:"er",code:"G-CONJ",rule:"PP (-é) / infinitif (-er). Test : vendu/vendre."},
+    {t:"ée",code:"G-PP",rule:"Accord PP : féminin (-ée) manquant ou en trop."},
+    {t:"és",code:"G-PP",rule:"Accord PP : pluriel (-és) manquant ou en trop."},
+    {t:"ées",code:"G-PP",rule:"Accord PP : fém. pl. (-ées) manquant ou en trop."},
+    {t:"ez",code:"G-CONJ",rule:"PP (-é) / 2e pers. pl. (-ez)."},
+    {t:"ait",code:"G-CONJ",rule:"PP (-é) / imparfait (-ait)."}
+  ]},
+  {src:"ait", alts:[
+    {t:"ais",code:"G-CONJ",rule:"Imparfait 3e (-ait) / 1re-2e pers. (-ais)."},
+    {t:"er",code:"G-CONJ",rule:"Imparfait (-ait) / infinitif (-er)."},
+    {t:"é",code:"G-CONJ",rule:"Imparfait (-ait) / PP (-é)."},
+    {t:"aient",code:"G-ACC",rule:"Accord sujet-verbe : singulier (-ait) / pluriel (-aient)."}
+  ]},
+  {src:"aient", alts:[
+    {t:"ait",code:"G-ACC",rule:"Accord sujet-verbe : pluriel (-aient) / singulier (-ait)."},
+    {t:"er",code:"G-CONJ",rule:"Imparfait 3e pl. (-aient) / infinitif (-er)."}
+  ]},
+  {src:"ent", alts:[
+    {t:"ant",code:"G-CONJ",rule:"3e pers. pluriel (-ent) / participe présent (-ant)."},
+    {t:"e",code:"G-ACC",rule:"Accord sujet-verbe : pluriel (-ent) / singulier (-e)."}
+  ]},
+  // Passé simple
+  {src:"èrent", alts:[
+    {t:"erent",code:"L-ACC",rule:"Accent manquant sur passé simple (-èrent)."},
+    {t:"ère",code:"G-ACC",rule:"Passé simple pluriel (-èrent) / singulier."}
+  ]},
+  {src:"ut", alts:[
+    {t:"u",code:"G-CONJ",rule:"Passé simple 3e sing. (-ut) / PP (-u). Ex : il aperçut / aperçu."},
+    {t:"ût",code:"L-ACC",rule:"Accent circonflexe : passé simple (-ut) ≠ subjonctif (-ût)."}
+  ]},
+  {src:"it", alts:[
+    {t:"i",code:"G-CONJ",rule:"Passé simple 3e sing. (-it) / PP (-i). Ex : il comprit / compris."},
+    {t:"is",code:"G-CONJ",rule:"Confusion terminaison passé simple (-it / -is)."},
+    {t:"ît",code:"L-ACC",rule:"Accent circonflexe : passé simple (-it) ≠ subjonctif (-ît)."}
+  ]},
+  // Futur / conditionnel
+  {src:"rai", alts:[
+    {t:"rais",code:"G-CONJ",rule:"Futur 1re sing. (-rai) / conditionnel (-rais). Test : demain je… / si je…"}
+  ]},
+  {src:"ra", alts:[
+    {t:"rait",code:"G-CONJ",rule:"Futur 3e sing. (-ra) / conditionnel (-rait)."}
+  ]},
+  {src:"rais", alts:[
+    {t:"rai",code:"G-CONJ",rule:"Conditionnel 1re sing. (-rais) / futur (-rai). Test : si je… / demain je…"}
+  ]},
+  {src:"rait", alts:[
+    {t:"ra",code:"G-CONJ",rule:"Conditionnel 3e sing. (-rait) / futur (-ra)."}
+  ]},
+  {src:"rions", alts:[
+    {t:"rons",code:"G-CONJ",rule:"Conditionnel 1re pl. (-rions) / futur (-rons)."}
+  ]},
+  {src:"riez", alts:[
+    {t:"rez",code:"G-CONJ",rule:"Conditionnel 2e pl. (-riez) / futur (-rez)."}
+  ]},
+  {src:"raient", alts:[
+    {t:"ront",code:"G-CONJ",rule:"Conditionnel 3e pl. (-raient) / futur (-ront)."}
+  ]},
+    {src:"rons", alts:[
+    {t:"rions",code:"G-CONJ",rule:"Futur 1re pl. (-rons) / conditionnel (-rions)."}
+  ]},
+  {src:"rez", alts:[
+    {t:"riez",code:"G-CONJ",rule:"Futur 2e pl. (-rez) / conditionnel (-riez)."}
+  ]},
+  {src:"ront", alts:[
+    {t:"raient",code:"G-CONJ",rule:"Futur 3e pl. (-ront) / conditionnel (-raient)."}
+  ]}
+];
+
+// ─────────────────────────────────────────────────────
+// 3. RÈGLES D'ACCORD
+// ─────────────────────────────────────────────────────
+GRAMM.ACCORDS = [
+  // ── Pluriel régulier -s ──
+  {name:"pl_s", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl===tl+"s")return{code:"G-ACC",rule:"Pluriel manquant : « "+c+" » prend un -s."};
+    if(tl===cl+"s")return{code:"G-ACC",rule:"Marque du pluriel en trop : « "+c+" » est au singulier."};return null}},
+  // ── Pluriel -x ──
+  {name:"pl_x", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl===tl+"x")return{code:"G-ACC",rule:"Pluriel manquant : « "+c+" » prend un -x."};
+    if(tl===cl+"x")return{code:"G-ACC",rule:"Marque du pluriel en trop : « "+c+" » est au singulier."};return null}},
+  // ── Féminin -e ──
+  {name:"fem_e", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl===tl+"e"&&cl.length>3)return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" »."};
+    if(tl===cl+"e"&&tl.length>3)return{code:"G-ACC",rule:"Accord au féminin en trop : « "+c+" » est au masculin."};return null}},
+  // ── Féminin -e + pluriel -s → -es ──
+  {name:"fem_pl_es", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl===tl+"es"&&cl.length>4)return{code:"G-ACC",rule:"Accord fém. pluriel manquant : « "+c+" » → -es."};
+    if(tl===cl+"es"&&tl.length>4)return{code:"G-ACC",rule:"Accord fém. pluriel en trop : « "+c+" »."};
+    // singulier féminin → pluriel féminin
+    if(cl===tl.replace(/e$/,"es"))return{code:"G-ACC",rule:"Pluriel manquant sur le féminin : « "+c+" » → -es."};
+    if(tl===cl.replace(/es$/,"e"))return{code:"G-ACC",rule:"Pluriel en trop : « "+c+" » est au singulier féminin."};
+    return null}},
+  // ── Pluriel -al → -aux ──
+  {name:"pl_aux", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl.match(/aux$/)&&tl===cl.replace(/aux$/,"al"))return{code:"G-ACC",rule:"Pluriel irrégulier manquant : « "+c+" » → -aux (et non -als)."};
+    if(tl.match(/aux$/)&&cl===tl.replace(/aux$/,"al"))return{code:"G-ACC",rule:"Singulier attendu : « "+c+" » → -al."};
+    // Erreur inverse: écrire -als au lieu de -aux
+    if(cl.match(/aux$/)&&tl===cl.replace(/aux$/,"als"))return{code:"G-ACC",rule:"Pluriel irrégulier : « "+c+" » → -aux (pas -als)."};
+    return null}},
+  // ── Exceptions pluriel -al → -als (bals, festivals, carnavals, récitals, régals, chacals) ──
+  {name:"pl_als_exception", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    var exceptions=["bals","festivals","carnavals","récitals","régals","chacals","narvals"];
+    if(exceptions.indexOf(cl)>=0&&tl===cl.replace(/als$/,"aux"))return{code:"G-ACC",rule:"Exception : « "+c+" » fait -als au pluriel (pas -aux)."};
+    return null}},
+  // ── Pluriel -eau → -eaux ──
+  {name:"pl_eaux", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl.match(/eaux$/)&&tl===cl.replace(/eaux$/,"eau"))return{code:"G-ACC",rule:"Pluriel manquant : « "+c+" » → -eaux."};
+    if(tl.match(/eaux$/)&&cl===tl.replace(/eaux$/,"eau"))return{code:"G-ACC",rule:"Pluriel en trop : « "+c+" » → -eau."};return null}},
+  // ── Pluriel -eu → -eux ──
+  {name:"pl_eux", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl.match(/eux$/)&&tl===cl.replace(/eux$/,"eu"))return{code:"G-ACC",rule:"Pluriel manquant : « "+c+" » → -eux."};
+    if(tl.match(/eux$/)&&cl===tl.replace(/eux$/,"eu"))return{code:"G-ACC",rule:"Pluriel en trop : « "+c+" » → -eu."};return null}},
+  // ── Pluriel -ou → -oux (7 exceptions) ──
+  {name:"pl_oux", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    var oux=["bijoux","cailloux","choux","genoux","hiboux","joujoux","poux"];
+    if(oux.indexOf(cl)>=0&&tl===cl.replace(/oux$/,"ou"))return{code:"G-ACC",rule:"Pluriel irrégulier manquant : « "+c+" » → -oux (exception)."};
+    if(oux.indexOf(tl)>=0&&cl===tl.replace(/oux$/,"ou"))return{code:"G-ACC",rule:"Pluriel irrégulier en trop : « "+c+" » → -ou."};
+    // Erreur: écrire -ous au lieu de -oux
+    if(oux.indexOf(cl)>=0&&tl===cl.replace(/oux$/,"ous"))return{code:"G-ACC",rule:"Pluriel irrégulier : « "+c+" » → -oux (pas -ous)."};
+    return null}},
+  // ── Pluriel -ail → -aux (exceptions: travaux, vitraux, coraux, émaux) ──
+  {name:"pl_ail_aux", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    var pairs={"travaux":"travail","vitraux":"vitrail","coraux":"corail","émaux":"émail"};
+    if(pairs[cl]&&tl===pairs[cl])return{code:"G-ACC",rule:"Pluriel irrégulier manquant : « "+c+" » (pluriel de "+pairs[cl]+")."};
+    var inv={};Object.keys(pairs).forEach(function(k){inv[pairs[k]]=k});
+    if(inv[cl]&&tl===inv[cl])return{code:"G-ACC",rule:"Singulier attendu : « "+c+" »."};
+    return null}},
+  // ── Participe passé : -é / -ée / -és / -ées ──
+  {name:"pp_accord", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    var ppForms=[[/é$/,/ée$/,"fém."],[/é$/,/és$/,"masc.pl."],[/é$/,/ées$/,"fém.pl."],
+      [/ée$/,/é$/,"masc.sing."],[/és$/,/é$/,"masc.sing."],[/ées$/,/é$/,"masc.sing."],
+      [/ée$/,/és$/,"masc.pl."],[/és$/,/ée$/,"fém.sing."],[/ée$/,/ées$/,"fém.pl."],
+      [/ées$/,/ée$/,"fém.sing."],[/ées$/,/és$/,"masc.pl."],[/és$/,/ées$/,"fém.pl."],
+      [/i$/,/ie$/,"fém."],[/i$/,/is$/,"masc.pl."],[/i$/,/ies$/,"fém.pl."],
+      [/is$/,/i$/,"masc.sing."],[/ie$/,/i$/,"masc.sing."],
+      [/u$/,/ue$/,"fém."],[/u$/,/us$/,"masc.pl."],[/u$/,/ues$/,"fém.pl."],
+      [/us$/,/u$/,"masc.sing."],[/ue$/,/u$/,"masc.sing."]];
+    for(var i=0;i<ppForms.length;i++){
+      var f=ppForms[i];
+      if(f[0].test(cl)&&f[1].test(tl)){
+        var base1=cl.replace(f[0],""),base2=tl.replace(f[1],"");
+        if(base1===base2&&base1.length>1)return{code:"G-PP",rule:"Accord du participe passé : « "+c+" » attendu ("+f[2]+" incorrect)."};
+      }
+    }return null}},
+  // ── Accord adjectif : détection de différences de marques de genre/nombre ──
+  {name:"adj_accord", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    // -eux/-euse/-euses/-eux
+    if(cl.match(/euse$/)&&tl===cl.replace(/euse$/,"eux"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" » (fém. de "+tl+")."};
+    if(cl.match(/eux$/)&&tl===cl.replace(/eux$/,"euse"))return{code:"G-ACC",rule:"Masculin attendu : « "+c+" »."};
+    // -if/-ive
+    if(cl.match(/ive$/)&&tl===cl.replace(/ive$/,"if"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" » (fém. de "+tl+")."};
+    if(cl.match(/if$/)&&tl===cl.replace(/if$/,"ive"))return{code:"G-ACC",rule:"Masculin attendu : « "+c+" »."};
+    // -eux/-euses
+    if(cl.match(/euses$/)&&tl===cl.replace(/euses$/,"eux"))return{code:"G-ACC",rule:"Accord fém. pluriel manquant : « "+c+" »."};
+    // -el/-elle
+    if(cl.match(/elle$/)&&tl===cl.replace(/elle$/,"el"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" » (doublement de consonne)."};
+    if(cl.match(/el$/)&&tl===cl.replace(/el$/,"elle"))return{code:"G-ACC",rule:"Masculin attendu : « "+c+" »."};
+    // -en/-enne
+    if(cl.match(/enne$/)&&tl===cl.replace(/enne$/,"en"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" » (doublement de consonne)."};
+    // -on/-onne
+    if(cl.match(/onne$/)&&tl===cl.replace(/onne$/,"on"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" » (doublement de consonne)."};
+    // -er/-ère
+    if(cl.match(/ère$/)&&tl===cl.replace(/ère$/,"er"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" »."};
+    if(cl.match(/er$/)&&tl===cl.replace(/er$/,"ère"))return{code:"G-ACC",rule:"Masculin attendu : « "+c+" »."};
+    // -eur/-euse (adjectifs)
+    if(cl.match(/euse$/)&&tl===cl.replace(/euse$/,"eur"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" »."};
+    // -teur/-trice
+    if(cl.match(/trice$/)&&tl===cl.replace(/trice$/,"teur"))return{code:"G-ACC",rule:"Accord au féminin manquant : « "+c+" »."};
+    return null}},
+  // ── Accord sujet-verbe : -e/-es/-ent (présent) ──
+  {name:"sv_present", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    if(cl.match(/ent$/)&&tl===cl.replace(/ent$/,"e")&&cl.length>4)return{code:"G-ACC",rule:"Accord sujet-verbe : 3e pers. pluriel (-ent) attendu."};
+    if(cl.match(/e$/)&&!cl.match(/ent$/)&&tl===cl+"nt"&&cl.length>3)return{code:"G-ACC",rule:"Accord sujet-verbe : singulier (-e) attendu, pas pluriel (-ent)."};
+    return null}},
+  // ── Couleurs invariables ──
+  {name:"couleur_inv", test:function(c,t){var cl=c.toLowerCase(),tl=t.toLowerCase();
+    var inv=["marron","orange","cerise","crème","turquoise","kaki","olive"];
+    if(inv.indexOf(cl)>=0&&(tl===cl+"s"||tl===cl+"e"||tl===cl+"es"))
+      return{code:"G-ACC",rule:"Adjectif de couleur invariable : « "+c+" » ne s'accorde pas."};
+    return null}}
+];
+
+// ─────────────────────────────────────────────────────
+// 4. MOTS INVARIABLES (programme cycle 3 + cycle 4)
+// ─────────────────────────────────────────────────────
+GRAMM.INVARIABLES = [
+  // Conjonctions de coordination
+  "mais","ou","et","donc","or","ni","car",
+  // Conjonctions de subordination
+  "que","comme","quand","lorsque","puisque","si",
+  // Prépositions
+  "à","dans","par","pour","en","vers","avec","de","sans","sous","sur",
+  "devant","derrière","chez","entre","contre","malgré","pendant","durant",
+  "depuis","avant","après","selon","hormis","parmi","sauf",
+  // Adverbes de temps
+  "alors","après","aujourd'hui","aussitôt","autrefois","avant",
+  "bientôt","déjà","demain","depuis","désormais","enfin","ensuite",
+  "hier","jadis","jamais","longtemps","maintenant","naguère",
+  "parfois","puis","quelquefois","soudain","souvent","tantôt",
+  "tard","tôt","toujours",
+  // Adverbes de lieu
+  "ailleurs","autour","dedans","dehors","dessous","dessus",
+  "devant","derrière","ici","là","loin","partout","près",
+  // Adverbes de manière
+  "bien","mal","mieux","vite","ensemble","exprès","volontiers","vraiment",
+  // Adverbes de quantité
+  "assez","aussi","autant","beaucoup","combien","davantage",
+  "encore","environ","guère","moins","peu","plus","presque",
+  "tant","très","trop",
+  // Adverbes de négation/affirmation
+  "non","oui","peut-être","certes",
+  // Adverbes de liaison
+  "cependant","d'abord","d'ailleurs","néanmoins","pourtant",
+  "plutôt","seulement","surtout","toutefois"
+];
+
+// ─────────────────────────────────────────────────────
+// 5. DOUBLES CONSONNES + ORTHOGRAPHE LEXICALE
+// ─────────────────────────────────────────────────────
+GRAMM.DOUBLES_CONSONNES = {
+  // pp
+  "apparaître":"pp","appeler":"pp","apporter":"pp","appréhender":"pp",
+  "approcher":"pp","apprendre":"pp","appuyer":"pp","frapper":"pp",
+  "enveloppe":"pp","opposer":"pp","proposer":"pp","rappeler":"pp",
+  "supplier":"pp","supplément":"pp","supposer":"pp",
+  // rr
+  "arrêter":"rr","arriver":"rr","arracher":"rr","courrier":"rr",
+  "derrière":"rr","erreur":"rr","horrible":"rr","nourrir":"rr",
+  "pierre":"rr","pourrir":"rr","terrible":"rr","terre":"rr",
+  "terreur":"rr","torrent":"rr","verrou":"rr","barrière":"rr",
+  "corriger":"rr","correspondre":"rr","interrompre":"rr","irrégulier":"rr",
+  // tt
+  "attendre":"tt","attraper":"tt","atteindre":"tt","attention":"tt",
+  "battre":"tt","combattre":"tt","flatter":"tt","jeter":"tt",
+  "lettre":"tt","lutter":"tt","mettre":"tt","permettre":"tt",
+  "quitter":"tt","regretter":"tt","transmettre":"tt","nettoyer":"tt",
+  // ll
+  "balle":"ll","belle":"ll","briller":"ll","coller":"ll",
+  "colline":"ll","grille":"ll","illustre":"ll","installer":"ll",
+  "intelligence":"ll","mille":"ll","tranquille":"ll","village":"ll",
+  "allumer":"ll","alliance":"ll","tellement":"ll","étoile":"ll",
+  // mm
+  "comme":"mm","commander":"mm","commencer":"mm","commerce":"mm",
+  "communiquer":"mm","femme":"mm","flamme":"mm","grammaire":"mm",
+  "homme":"mm","immense":"mm","immobile":"mm","mammifère":"mm",
+  "nommer":"mm","programme":"mm","sommet":"mm","mammifère":"mm",
+  // nn
+  "année":"nn","bonne":"nn","colonne":"nn","connaître":"nn",
+  "connecter":"nn","donner":"nn","étonner":"nn","innocent":"nn",
+  "monnaie":"nn","personne":"nn","personnel":"nn","prisonnier":"nn",
+  "raisonner":"nn","résonner":"nn","sonner":"nn","tonne":"nn",
+  // ss
+  "assez":"ss","assassin":"ss","baisser":"ss","blesser":"ss",
+  "boisson":"ss","chasser":"ss","classe":"ss","dessiner":"ss",
+  "essayer":"ss","glisser":"ss","intéresser":"ss","laisser":"ss",
+  "message":"ss","mission":"ss","passer":"ss","passion":"ss",
+  "posséder":"ss","poisson":"ss","pression":"ss","puissant":"ss",
+  "rassurer":"ss","réussir":"ss","tousser":"ss",
+  // ff
+  "affaire":"ff","affiche":"ff","affreux":"ff","différent":"ff",
+  "difficile":"ff","effort":"ff","effet":"ff","offrir":"ff",
+  "officier":"ff","siffler":"ff","souffler":"ff","souffrir":"ff",
+  "suffire":"ff",
+  // cc
+  "accéder":"cc","accepter":"cc","accident":"cc","accord":"cc",
+  "accorder":"cc","accrocher":"cc","accueil":"cc","accueillir":"cc",
+  "occasion":"cc","occuper":"cc","raccourcir":"cc","succès":"cc"
+};
+
+// ─────────────────────────────────────────────────────
+// 6. FONCTIONS
+// ─────────────────────────────────────────────────────
+
+// Analyse un texte et retourne les pièges
+GRAMM.analyseTexte = function(texte) {
+  var mots = texte.split(/\s+/).map(function(m) {
+    return m.replace(/^[.,;:!?"«»()]+/, "").replace(/[.,;:!?"«»()]+$/, "");
+  }).filter(function(m) { return m.length > 0; });
+  var pieges = [];
+  var seen = {};
+  mots.forEach(function(mot, idx) {
+    var low = mot.toLowerCase();
+    if (seen[low]) return;
+    if (GRAMM.HOMOPHONES[low]) {
+      var h = GRAMM.HOMOPHONES[low];
+      pieges.push({mot:mot,index:idx,type:"homophone",group:h.group,code:"G-HOM",
+        rule:h.rule,confusions:Object.keys(h.confusions)});
+      seen[low] = true;
+    }
+    if (!seen[low]) {
+      for (var ti=0;ti<GRAMM.TERMINAISONS.length;ti++) {
+        var term=GRAMM.TERMINAISONS[ti];
+        if (low.length > term.src.length + 1 && low.substring(low.length-term.src.length) === term.src) {
+          pieges.push({mot:mot,index:idx,type:"terminaison",code:term.alts[0].code,
+            rule:term.alts[0].rule,confusions:[]});
+          seen[low] = true;
+          break;
+        }
+      }
+    }
+    if (GRAMM.DOUBLES_CONSONNES[low] && !seen[low]) {
+      pieges.push({mot:mot,index:idx,type:"orthographe",code:"L-ORT",
+        rule:"Double consonne : « "+mot+" » s'écrit avec -"+GRAMM.DOUBLES_CONSONNES[low]+"-.",confusions:[]});
+      seen[low] = true;
+    }
+    if (GRAMM.INVARIABLES.indexOf(low) >= 0 && !seen[low]) {
+      pieges.push({mot:mot,index:idx,type:"invariable",code:"G-INV",
+        rule:"« "+mot+" » est un mot invariable.",confusions:[]});
+      seen[low] = true;
+    }
+  });
+  return pieges;
+};
+
+// Classification enrichie d'une erreur
+GRAMM.classify = function(typed, correct) {
+  var tl = typed.toLowerCase(), cl = correct.toLowerCase();
+  if (tl === cl) return null;
+  // 1) Homophones
+  var hRef = GRAMM.HOMOPHONES[cl];
+  if (hRef && hRef.confusions[tl]) return {code:hRef.confusions[tl], rule:hRef.rule};
+  // Aussi chercher en sens inverse
+  var hTyp = GRAMM.HOMOPHONES[tl];
+  if (hTyp && hTyp.confusions[cl]) return {code:"G-HOM", rule:hTyp.rule};
+  // 2) Terminaisons verbales
+  for (var ti=0;ti<GRAMM.TERMINAISONS.length;ti++) {
+    var term = GRAMM.TERMINAISONS[ti];
+    if (cl.length > term.src.length && cl.substring(cl.length-term.src.length) === term.src) {
+      var base = cl.substring(0, cl.length-term.src.length);
+      for (var ai=0;ai<term.alts.length;ai++) {
+        var alt = term.alts[ai];
+        if (tl === base + alt.t) return {code:alt.code, rule:alt.rule};
+      }
+    }
+  }
+  // 3) Accords
+  for (var i=0;i<GRAMM.ACCORDS.length;i++) {
+    var r = GRAMM.ACCORDS[i].test(correct, typed);
+    if (r) return r;
+  }
+  // 4) Doubles consonnes
+  if (GRAMM.DOUBLES_CONSONNES[cl]) {
+    var dc = GRAMM.DOUBLES_CONSONNES[cl];
+    if (typeof dc==="string"&&dc.length===2) {
+      var single=dc[0];
+      if(cl.replace(dc,single)===tl) return{code:"L-ORT",rule:"Double consonne manquante : « "+correct+" » → -"+dc+"-."};
+      if(tl.replace(single,dc)===cl) return{code:"L-ORT",rule:"Double consonne en trop ou manquante sur « "+correct+" »."};
+    }
+  }
+  // 5) Accent manquant/erroné
+  var clNorm=cl.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  var tlNorm=tl.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(clNorm===tlNorm&&tl!==cl) return{code:"L-ACC",rule:"Accent manquant ou erroné sur « "+correct+" »."};
+  return null;
+};
+
+
 var PROF_CODES=[3141,1312];
 function App(){
   var s0=useState(null),mode=s0[0],setMode=s0[1];
@@ -288,23 +817,32 @@ function AppProf(p){
             h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
           )
         ),
-        editing===d.id&&h("div",{style:{padding:"12px 14px",border:"1.5px solid var(--primary)",borderTop:"none",borderRadius:"0 0 10px 10px",background:"var(--primary-light)"}},
-          h("div",{style:{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}},
-            h("div",{className:"config-field",style:{flex:1,minWidth:150,marginBottom:0}},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
-            h("div",{className:"config-field",style:{minWidth:100,marginBottom:0}},h("label",null,"Niveau"),h("select",{value:editForm.niveau||"",onChange:function(e){setEditForm(Object.assign({},editForm,{niveau:e.target.value}))}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
-            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem",marginBottom:4}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
-            h("button",{className:"btn-sm btn-primary",style:{marginBottom:4},onClick:function(){
+        editing===d.id&&h("div",{style:{padding:"14px",border:"1.5px solid var(--primary)",borderTop:"none",borderRadius:"0 0 10px 10px",background:"var(--primary-light)"}},
+          h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
+          h("div",{style:{display:"flex",gap:10,flexWrap:"wrap"}},
+            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Niveau"),h("select",{value:editForm.niveau||"",onChange:function(e){setEditForm(Object.assign({},editForm,{niveau:e.target.value}))}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
+            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Classe"),h("select",{value:editForm.classe||"",onChange:function(e){setEditForm(Object.assign({},editForm,{classe:e.target.value}))}},h("option",{value:""},"\u2014"),Object.keys(CLASSES).filter(function(c){return !editForm.niveau||c.toLowerCase().indexOf(editForm.niveau)===0}).map(function(c){return h("option",{key:c,value:c},c)}))),
+            h("div",{className:"config-field",style:{minWidth:80}},h("label",null,"Note sur"),h("input",{type:"number",value:editForm.base||20,onChange:function(e){setEditForm(Object.assign({},editForm,{base:parseInt(e.target.value)||20}))},style:{width:70}}))
+          ),
+          h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:editForm.text||"",onChange:function(e){setEditForm(Object.assign({},editForm,{text:e.target.value}))},style:{minHeight:80}})),
+          h("div",{className:"config-field"},h("label",null,"Comp\u00e9tences travaill\u00e9es"),
+            h("div",{style:{display:"flex",flexDirection:"column",gap:4,maxHeight:160,overflowY:"auto",padding:"6px 0"}},
+              h("label",{key:"c0",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.1 Orthographe grammaticale");if(ci>=0)cc.splice(ci,1);else cc.push("D1.1 Orthographe grammaticale");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D1.1 Orthographe grammaticale"),h("label",{key:"c1",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.2 Orthographe lexicale");if(ci>=0)cc.splice(ci,1);else cc.push("D1.2 Orthographe lexicale");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D1.2 Orthographe lexicale"),h("label",{key:"c2",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.3 Conjugaison");if(ci>=0)cc.splice(ci,1);else cc.push("D1.3 Conjugaison");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D1.3 Conjugaison"),h("label",{key:"c3",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)");if(ci>=0)cc.splice(ci,1);else cc.push("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)"),h("label",{key:"c4",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.5 Homophones grammaticaux");if(ci>=0)cc.splice(ci,1);else cc.push("D1.5 Homophones grammaticaux");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D1.5 Homophones grammaticaux"),h("label",{key:"c5",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.6 Ponctuation");if(ci>=0)cc.splice(ci,1);else cc.push("D1.6 Ponctuation");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D1.6 Ponctuation"),h("label",{key:"c6",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe");if(ci>=0)cc.splice(ci,1);else cc.push("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe"),h("label",{key:"c7",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.2 R\u00e9diger un texte correct");if(ci>=0)cc.splice(ci,1);else cc.push("D2.2 R\u00e9diger un texte correct");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D2.2 R\u00e9diger un texte correct"),h("label",{key:"c8",style:{display:"flex",alignItems:"center",gap:4,fontSize:".82rem",cursor:"pointer"}},h("input",{type:"checkbox",checked:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0,onChange:function(e){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.3 Enrichir son vocabulaire");if(ci>=0)cc.splice(ci,1);else cc.push("D2.3 Enrichir son vocabulaire");setEditForm(Object.assign({},editForm,{competences:cc}))}}),"D2.3 Enrichir son vocabulaire")
+            )
+          ),
+          h("div",{style:{display:"flex",gap:8,alignItems:"center",marginTop:8}},
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
+            h("button",{className:"btn-sm btn-primary",onClick:function(){
               var wantPublish=editForm.published!==false;
               var niv=editForm.niveau||"";
-              if(wantPublish&&!niv){alert("\u26a0\ufe0f Impossible de publier : choisis d\u2019abord un niveau.");return}
-              var updates={};
-              if(editForm.title)updates.title=editForm.title;
-              if(niv)updates.niveau=niv;
-              updates.published=wantPublish;
+              if(wantPublish&&!niv){alert("\u26a0\ufe0f Choisis d\u2019abord un niveau.");return}
+              var updates={title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[]};
+              if(editForm.text)updates.text=editForm.text;
               db.ref("correction_dictee/"+d.id+"/config").update(updates);
-              var s2=saved.map(function(x){return x.id===d.id?Object.assign({},x,{title:updates.title||x.title,niveau:updates.niveau||x.niveau,published:updates.published}):x});
-              setSaved(s2);setEditing(null);
-            }},"Enregistrer")
+              setSaved(saved.map(function(x){return x.id===d.id?Object.assign({},x,{title:updates.title||x.title,niveau:updates.niveau||x.niveau,published:updates.published,classe:updates.classe||x.classe}):x}));
+              setEditing(null);
+            }},"Enregistrer"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setEditing(null)}},"Annuler")
           )
         )
       )})
@@ -315,6 +853,35 @@ function AppProf(p){
       h("div",{className:"config-field"},h("label",null,"Niveau"),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"— Choisir —"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
       h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).filter(function(c){return !niveauInput||c.toLowerCase().indexOf(niveauInput)===0}).map(function(c){return h("option",{key:c,value:c},c+" ("+CLASSES[c].length+")")}))),
       h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:textInput,onChange:function(e){setTextInput(e.target.value)},placeholder:"Colle le texte correct..."})),
+      // Analyse automatique des pièges
+      textInput.trim().length>10&&(function(){
+        var pieges=GRAMM.analyseTexte(textInput.trim());
+        var byType={homophone:[],terminaison:[],orthographe:[],invariable:[]};
+        pieges.forEach(function(p2){if(byType[p2.type])byType[p2.type].push(p2)});
+        var autoComp=[];
+        if(byType.homophone.length)autoComp.push("D1.5 Homophones grammaticaux");
+        if(byType.terminaison.length)autoComp.push("D1.3 Conjugaison");
+        if(byType.orthographe.length)autoComp.push("D1.2 Orthographe lexicale");
+        if(byType.invariable.length)autoComp.push("D1.1 Orthographe grammaticale");
+        var colors={homophone:"#c53030",terminaison:"#2b6cb0",orthographe:"#975a16",invariable:"#7c3aed"};
+        var labels={homophone:"\ud83d\udd04 Homophones",terminaison:"\u270d\ufe0f Terminaisons",orthographe:"\ud83d\udcdd Orthographe",invariable:"\ud83d\udd12 Invariables"};
+        return h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginBottom:12,border:"1.5px solid var(--primary)"}},
+          h("div",{style:{fontSize:".82rem",fontWeight:700,color:"var(--primary)",marginBottom:8}},"\ud83d\udd0d "+pieges.length+" pi\u00e8ge"+(pieges.length>1?"s":"")+" d\u00e9tect\u00e9"+(pieges.length>1?"s":"")+" dans le texte"),
+          Object.keys(byType).map(function(type){
+            if(!byType[type].length)return null;
+            return h("div",{key:type,style:{marginBottom:6}},
+              h("div",{style:{fontSize:".78rem",fontWeight:700,color:colors[type],marginBottom:3}},labels[type]+" ("+byType[type].length+")"),
+              h("div",{style:{display:"flex",flexWrap:"wrap",gap:4}},
+                byType[type].map(function(p3,pi){
+                  return h("span",{key:pi,title:p3.rule,style:{fontSize:".8rem",padding:"2px 8px",borderRadius:6,background:"rgba(0,0,0,.04)",border:"1px solid "+colors[type]+"33",cursor:"help"}},
+                    p3.mot+(p3.group?" ("+p3.group+")":""))
+                })
+              )
+            )
+          }),
+          autoComp.length>0&&h("div",{style:{marginTop:8,fontSize:".78rem",color:"var(--text-sub)"}},"Comp\u00e9tences d\u00e9tect\u00e9es : "+autoComp.join(", "))
+        );
+      })(),
       h("div",{style:{display:"flex",gap:16,alignItems:"center",marginBottom:12}},
         h("div",{className:"config-field",style:{flex:1,marginBottom:0}},h("label",null,"Note sur"),h("input",{type:"number",value:baseInput,onChange:function(e){setBaseInput(parseInt(e.target.value)||20)},style:{width:80}})),
         h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".9rem"}},h("input",{type:"checkbox",checked:publishedInput,onChange:function(e){setPublishedInput(e.target.checked)}}),"Publier pour les \u00e9l\u00e8ves")
@@ -384,11 +951,59 @@ function CorrScreen(p){
         h("p",{className:"subtitle"},data.classe+" \u00b7 "+nDone+"/"+nTotal+(nAbs?" ("+nAbs+" abs.)":"")+" \u00b7 "+pct+"%"),
         h("div",{className:"progress-wrap"},h("div",{className:"progress-fill",style:{width:pct+"%"}}))
       ),
-      h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
+      h("div",{style:{display:"flex",gap:8}},
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){
+          // Recalculate all scores with new apostrophe normalization
+          var normC=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
+          var dicteeRef="correction_dictee/"+p.dicteeId;
+          db.ref(dicteeRef).once("value",function(snap){
+            var val=snap.val()||{};
+            var acData=val.autocorrection||{};
+            var nFixed=0;
+            Object.keys(acData).forEach(function(ek){
+              var ac=acData[ek];if(!ac||!ac.history)return;
+              var errs=toArr(ac.errorRefs||[]);
+              if(errs.length===0)return;
+              var changed=false;
+              var newResults=ac.results?JSON.parse(JSON.stringify(ac.results)):{};
+              var newAttempts=ac.attempts?JSON.parse(JSON.stringify(ac.attempts)):{};
+              errs.forEach(function(err,ei){
+                var k=String(ei);
+                var hist=ac.history?ac.history[k]||ac.history[ei]:null;
+                if(!hist)return;
+                var entries=toArr(hist);
+                if(entries.length===0)return;
+                var wasCorrect=newResults[k]||newResults[ei];
+                if(wasCorrect)return;
+                for(var hi=0;hi<entries.length;hi++){
+                  var typed=typeof entries[hi]==="object"?entries[hi].typed:entries[hi];
+                  if(typed&&normC(String(typed))===normC(String(err.word))){
+                    newResults[k]=true;newAttempts[k]=hi+1;changed=true;break;
+                  }
+                }
+              });
+              if(changed){
+                var wrong=0;
+                Object.keys(newAttempts).forEach(function(k2){var n=newAttempts[k2]||0;if(newResults[String(k2)]||newResults[Number(k2)])wrong+=(n-1);else wrong+=n});
+                var sc=Math.max(0,5-wrong*0.25);
+                var nOk=Object.keys(newResults).filter(function(k2){return newResults[k2]}).length;
+                db.ref(dicteeRef+"/autocorrection/"+ek+"/results").set(newResults);
+                db.ref(dicteeRef+"/autocorrection/"+ek+"/attempts").set(newAttempts);
+                db.ref(dicteeRef+"/autocorrection/"+ek+"/score").set(Math.round(sc*100)/100);
+                db.ref(dicteeRef+"/autocorrection/"+ek+"/solved").set(nOk);
+                nFixed++;
+              }
+            });
+            alert(nFixed+" \u00e9l\u00e8ve"+(nFixed>1?"s":"")+" recalcul\u00e9"+(nFixed>1?"s":"")+".");
+          });
+        }},"\ud83d\udd04 Recalculer"),
+        h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
+      )
     ),
     msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
     h("div",{className:"tabs"},
       h("button",{className:"tab"+(tab==="correct"?" active":""),onClick:function(){setTab("correct")}},"Correction"),
+      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")}},"\u26a1 Rapide"),
       h("button",{className:"tab"+(tab==="bilan"?" active":""),onClick:function(){setTab("bilan")}},"Bilan"),
       h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
       h("button",{className:"tab"+(tab==="suivi"?" active":""),onClick:function(){setTab("suivi")}},"Suivi \ud83d\udfe2")
@@ -407,11 +1022,195 @@ function CorrScreen(p){
     }))),
     tab==="bilan"&&h(Bilan,{data:data,corrections:p.corrections,absents:p.absents}),
     tab==="fiches"&&h(Fiches,{data:data,corrections:p.corrections,absents:p.absents}),
-    tab==="suivi"&&h(Suivi,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents})
+    tab==="suivi"&&h(Suivi,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents}),
+    tab==="rapide"&&(function(){
+      // Find first uncorrected student, or use current
+      var rapideEleve=cur;
+      if(!rapideEleve){
+        var uncorr=data.eleves.filter(function(e){return!p.corrections[san(e)]&&!p.absents[san(e)]});
+        rapideEleve=uncorr.length>0?uncorr[0]:data.eleves[0];
+      }
+      if(!rapideEleve)return h("div",{className:"card",style:{textAlign:"center",padding:30}},h("p",null,"\u2705 Aucun \u00e9l\u00e8ve \u00e0 corriger."));
+      return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,
+        existing:p.corrections[san(rapideEleve)]||null,
+        startFast:true,
+        onSave:function(err,ext){
+          p.onSave(san(rapideEleve),err,ext);
+          // Move to next uncorrected
+          var keys=data.eleves.map(san),ci=data.eleves.indexOf(rapideEleve),next=null;
+          for(var i2=1;i2<data.eleves.length;i2++){var ni=(ci+i2)%data.eleves.length;if(!p.corrections[keys[ni]]&&!p.absents[keys[ni]]){next=data.eleves[ni];break}}
+          setMsg("\u2705 "+rapideEleve.split(" ").pop()+(next?" \u2192 "+next.split(" ").pop():" \u2014 termin\u00e9 !"));
+          setTimeout(function(){setMsg(null)},2500);setCur(next);
+        },
+        onBack:function(){setTab("correct")},
+        onPrev:function(){
+          var ci2=data.eleves.indexOf(rapideEleve);
+          if(ci2>0)setCur(data.eleves[ci2-1]);
+        },
+        onNext:function(){
+          var ci3=data.eleves.indexOf(rapideEleve);
+          if(ci3<data.eleves.length-1)setCur(data.eleves[ci3+1]);
+        }
+      });
+    })()
   );
 }
 
 // ═══ CORRECTION D'UN ÉLÈVE ═══
+function RapideGlobal(p){
+  var data=p.data,tokens=data.tokens,corr=p.corrections,abs=p.absents||{};
+  var eleves=(data.eleves||[]).filter(function(e){return!abs[san(e)]});
+  // Find uncorrected students
+  var uncorrected=eleves.filter(function(e){return!corr[san(e)]});
+  var allStudents=eleves.slice();
+
+  var s1=useState(0),studentIdx=s1[0],setStudentIdx=s1[1];
+  var s2=useState(0),wordIdx=s2[0],setWordIdx=s2[1];
+  var s3=useState([]),errors=s3[0],setErrors=s3[1];
+  var s4=useState([]),extras=s4[0],setExtras=s4[1];
+  var s5=useState(null),flashType=s5[0],setFlashType=s5[1];
+  var s6=useState(null),askFautif=s6[0],setAskFautif=s6[1];
+  var s7=useState(""),fautifVal=s7[0],setFautifVal=s7[1];
+  var s8=useState("uncorrected"),listMode=s8[0],setListMode=s8[1];
+  var fautifRef=React.useRef(null);
+  React.useEffect(function(){if(askFautif&&fautifRef.current)fautifRef.current.focus()},[askFautif]);
+
+  var list=listMode==="uncorrected"?uncorrected:allStudents;
+  var curEleve=list[studentIdx];
+  var wordTokens=tokens.map(function(t,i){return{text:t,idx:i}}).filter(function(t){return!isPunct(t.text)});
+  var curWord=wordIdx<wordTokens.length?wordTokens[wordIdx]:null;
+  var pctWord=Math.round(wordIdx/wordTokens.length*100);
+  var sc=computeNote(errors,extras,data.base);
+
+  function markError(type){
+    setAskFautif(type);setFautifVal("");
+  }
+  function confirmFautif(){
+    var wt=wordTokens[wordIdx];if(!wt)return;
+    var ne=errors.filter(function(e){return e.idx!==wt.idx});
+    var errObj={idx:wt.idx,type:askFautif,word:wt.text};
+    if(fautifVal.trim())errObj.fautif=fautifVal.trim();
+    ne.push(errObj);setErrors(ne);
+    setAskFautif(null);setFautifVal("");
+    setFlashType(askFautif);setTimeout(function(){setFlashType(null)},400);
+    setWordIdx(wordIdx+1);
+  }
+  function skipWord(){
+    var wt=wordTokens[wordIdx];if(!wt)return;
+    setErrors(errors.filter(function(e){return e.idx!==wt.idx}));
+    setWordIdx(wordIdx+1);
+  }
+  function goBack(){if(wordIdx>0)setWordIdx(wordIdx-1)}
+  function saveAndNext(){
+    if(!curEleve)return;
+    p.onSave(san(curEleve),errors,extras);
+    setErrors([]);setExtras([]);setWordIdx(0);
+    if(studentIdx<list.length-1)setStudentIdx(studentIdx+1);
+    else setStudentIdx(list.length);
+  }
+
+  React.useEffect(function(){
+    if(askFautif)return;
+    function onKey(e){
+      if(e.key==="g"||e.key==="G"){e.preventDefault();markError("G")}
+      else if(e.key==="l"||e.key==="L"){e.preventDefault();markError("L")}
+      else if(e.key==="m"||e.key==="M"){e.preventDefault();
+        var wt2=wordTokens[wordIdx];if(wt2){
+          var ne2=errors.filter(function(e2){return e2.idx!==wt2.idx});
+          ne2.push({idx:wt2.idx,type:"M",word:wt2.text});setErrors(ne2);
+          setFlashType("M");setTimeout(function(){setFlashType(null)},400);setWordIdx(wordIdx+1);
+        }
+      }
+      else if(e.key==="i"||e.key==="I"){e.preventDefault();
+        var wt3=wordTokens[wordIdx];if(wt3){
+          var ne3=errors.filter(function(e3){return e3.idx!==wt3.idx});
+          ne3.push({idx:wt3.idx,type:"I",word:wt3.text});setErrors(ne3);
+          setFlashType("I");setTimeout(function(){setFlashType(null)},400);setWordIdx(wordIdx+1);
+        }
+      }
+      else if(e.key===" "||e.key==="Enter"){e.preventDefault();skipWord()}
+      else if(e.key==="Backspace"){e.preventDefault();goBack()}
+    }
+    window.addEventListener("keydown",onKey);
+    return function(){window.removeEventListener("keydown",onKey)};
+  });
+
+  if(!list.length) return h("div",{className:"card",style:{textAlign:"center",padding:30}},h("p",null,"\u2705 Tous les \u00e9l\u00e8ves sont corrig\u00e9s."));
+  if(studentIdx>=list.length) return h("div",{className:"card",style:{textAlign:"center",padding:30}},
+    h("div",{style:{fontSize:"2rem",marginBottom:8}},"\u2705"),
+    h("p",{style:{fontWeight:700}},"Correction rapide termin\u00e9e !"),
+    h("p",{style:{color:"var(--text-sub)"}},list.length+" \u00e9l\u00e8ve"+(list.length>1?"s":"")+" corrig\u00e9"+(list.length>1?"s":"")),
+    h("button",{className:"btn btn-ghost",style:{marginTop:12},onClick:function(){setStudentIdx(0);setWordIdx(0);setErrors([]);setExtras([])}},"\u21bb Recommencer")
+  );
+
+  var ctxStart=Math.max(0,wordIdx-3);
+  var ctxEnd=Math.min(wordTokens.length,wordIdx+4);
+  var wordDone=wordIdx>=wordTokens.length;
+
+  return h("div",{style:{maxWidth:480,margin:"0 auto"}},
+    // Header
+    h("div",{className:"score-bar"},
+      h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},sc.note),
+      h("div",{style:{flex:1}},
+        h("div",{className:"score-eleve"},curEleve+" ("+(studentIdx+1)+"/"+list.length+")"),
+        h("div",{style:{fontSize:".82rem",color:"var(--muted)"}},errors.length+" err."),
+        h("div",{style:{height:4,background:"#e5e3dd",borderRadius:2,marginTop:4,overflow:"hidden"}},
+          h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pctWord+"%",transition:"width .3s"}}))
+      )
+    ),
+    h("div",{style:{display:"flex",gap:6,marginBottom:10}},
+      h("button",{className:"btn-sm "+(listMode==="uncorrected"?"btn-primary":"btn-ghost"),onClick:function(){setListMode("uncorrected");setStudentIdx(0);setWordIdx(0);setErrors([])}},"Non corrig\u00e9s ("+uncorrected.length+")"),
+      h("button",{className:"btn-sm "+(listMode==="all"?"btn-primary":"btn-ghost"),onClick:function(){setListMode("all");setStudentIdx(0);setWordIdx(0);setErrors([])}},"Tous ("+allStudents.length+")")
+    ),
+    // Contexte
+    h("div",{style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
+      wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
+        var realI=ctxStart+ci;var isCur=realI===wordIdx;
+        var isErr=errors.find(function(e){return e.idx===wt.idx});
+        return h("span",{key:ci,style:{fontWeight:isCur?800:400,color:isCur?"var(--text)":isErr?"#c53030":"var(--muted)",fontSize:isCur?"1.1rem":".85rem",margin:"0 3px",textDecoration:isErr?"underline":"none"}},wt.text)
+      })
+    ),
+    wordDone?
+      h("div",{className:"card",style:{textAlign:"center",padding:30}},
+        h("div",{style:{fontSize:"1.5rem",marginBottom:8}},"\u2705"),
+        h("div",{style:{fontWeight:700,marginBottom:4}},curEleve+" : "+sc.note+"/"+data.base),
+        h("div",{style:{fontSize:".9rem",color:"var(--text-sub)",marginBottom:14}},errors.length+" erreur"+(errors.length>1?"s":"")),
+        h("div",{style:{display:"flex",gap:8,justifyContent:"center"}},
+          h("button",{className:"btn btn-primary",onClick:saveAndNext},"Enregistrer \u2192 suivant"),
+          h("button",{className:"btn btn-ghost",onClick:function(){setWordIdx(0)}},"\u21bb Relire")
+        )
+      ):
+      h("div",null,
+        h("div",{className:"card",style:{padding:0,overflow:"hidden"}},
+          h("div",{className:"fast-word",style:{color:flashType==="G"?"#c53030":flashType==="L"?"#2b6cb0":flashType==="M"?"#975a16":flashType==="I"?"#7c3aed":"var(--text)"}},curWord?curWord.text:""),
+          h("div",{style:{padding:"8px 16px",fontSize:".78rem",color:"var(--muted)",textAlign:"center",background:"var(--card2)"}},"Mot "+(wordIdx+1)+"/"+wordTokens.length)
+        ),
+        // Popup saisie mot fautif
+        askFautif&&h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginTop:10,border:"1.5px solid var(--primary)"}},
+          h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
+          h("div",{style:{display:"flex",gap:8}},
+            h("input",{ref:fautifRef,value:fautifVal,onChange:function(e){setFautifVal(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautif()}}),
+            h("button",{className:"btn-sm btn-primary",onClick:confirmFautif},"\u2713"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setFautifVal("");confirmFautif()}},"Passer")
+          )
+        ),
+        !askFautif&&h("div",{className:"fast-btns"},
+          h("button",{className:"fast-btn fast-ok",onClick:skipWord},"\u2192 Correct"),
+          h("button",{className:"fast-btn fast-g",onClick:function(){markError("G")}},"G Grammaire"),
+          h("button",{className:"fast-btn fast-l",onClick:function(){markError("L")}},"L Lexique"),
+          h("button",{className:"fast-btn fast-m",onClick:function(){var wt4=wordTokens[wordIdx];if(wt4){setErrors(errors.filter(function(e){return e.idx!==wt4.idx}).concat([{idx:wt4.idx,type:"M",word:wt4.text}]));setFlashType("M");setTimeout(function(){setFlashType(null)},400);setWordIdx(wordIdx+1)}}},"\u2205 Manquant"),
+          h("button",{className:"fast-btn fast-i",onClick:function(){var wt5=wordTokens[wordIdx];if(wt5){setErrors(errors.filter(function(e){return e.idx!==wt5.idx}).concat([{idx:wt5.idx,type:"I",word:wt5.text}]));setFlashType("I");setTimeout(function(){setFlashType(null)},400);setWordIdx(wordIdx+1)}}},"? Illisible")
+        ),
+        h("div",{style:{display:"flex",justifyContent:"space-between",marginTop:12}},
+          h("button",{className:"btn-sm btn-ghost",onClick:goBack,disabled:wordIdx===0},"\u2190 Pr\u00e9c."),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){if(studentIdx>0){setStudentIdx(studentIdx-1);setWordIdx(0);setErrors([])}},disabled:studentIdx===0},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
+          h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setWordIdx(wordTokens.length)}},"Terminer \u2192")
+        ),
+        h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur (+ saisie mot) \u00b7 M / I = direct \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
+      )
+  );
+}
+
 function CorrEleve(p){
   var data=p.data,tokens=data.tokens;
   var _ee=p.existing&&p.existing.errors?toArr(p.existing.errors):[];
@@ -422,6 +1221,9 @@ function CorrEleve(p){
   var s4=useState(null),insertIdx=s4[0],setInsertIdx=s4[1];
   var s5=useState(""),insertWord=s5[0],setInsertWord=s5[1];
   var s6=useState(-1),lastTouched=s6[0],setLastTouched=s6[1];
+  var s7=useState(p.startFast||false),fastMode=s7[0],setFastMode=s7[1];
+  var s8=useState(0),fastIdx=s8[0],setFastIdx=s8[1];
+  var s9=useState(null),fastFlash=s9[0],setFastFlash=s9[1];
   var inputRef=React.useRef(null);
   React.useEffect(function(){if(insertIdx!==null&&inputRef.current)inputRef.current.focus()},[insertIdx]);
 
@@ -446,6 +1248,141 @@ function CorrEleve(p){
   }
   display.push({t:"ins",ai:tokens.length-1,k:"iend"});
   if(extraMap[tokens.length-1])extraMap[tokens.length-1].forEach(function(ex){display.push({t:"ex",w:ex.word,gi:ex.gi,k:"eend"+ex.gi})});
+
+
+  // Mode rapide — balayage mot par mot
+  var wordTokens=tokens.map(function(t,i){return{text:t,idx:i}}).filter(function(t){return!isPunct(t.text)});
+
+  var s10=useState(null),askFautifI=s10[0],setAskFautifI=s10[1];
+  var s11=useState(""),fautifValI=s11[0],setFautifValI=s11[1];
+  var fautifRefI=React.useRef(null);
+  React.useEffect(function(){if(askFautifI&&fautifRefI.current)fautifRefI.current.focus()},[askFautifI]);
+
+  function fastMark(type){
+    if(type==="G"||type==="L"){setAskFautifI(type);setFautifValI("");return}
+    var wt=wordTokens[fastIdx];if(!wt)return;
+    var ne=errors.filter(function(e){return e.idx!==wt.idx});
+    ne.push({idx:wt.idx,type:type,word:wt.text});
+    setErrors(ne);setFastFlash(type);setTimeout(function(){setFastFlash(null)},400);
+    setFastIdx(fastIdx+1);
+  }
+  function confirmFautifI(){
+    var wt=wordTokens[fastIdx];if(!wt)return;
+    var ne=errors.filter(function(e){return e.idx!==wt.idx});
+    var obj={idx:wt.idx,type:askFautifI,word:wt.text};
+    if(fautifValI.trim())obj.fautif=fautifValI.trim();
+    ne.push(obj);setErrors(ne);
+    setAskFautifI(null);setFautifValI("");
+    setFastFlash(obj.type);setTimeout(function(){setFastFlash(null)},400);
+    setFastIdx(fastIdx+1);
+  }
+  function fastSkip(){
+    var wt=wordTokens[fastIdx];if(!wt)return;
+    // Don't remove existing errors — just advance
+    setFastIdx(fastIdx+1);
+  }
+  function fastClear(){
+    var wt=wordTokens[fastIdx];if(!wt)return;
+    setErrors(errors.filter(function(e){return e.idx!==wt.idx}));
+    setFastIdx(fastIdx+1);
+  }
+  function fastBack(){if(fastIdx>0)setFastIdx(fastIdx-1)}
+
+  React.useEffect(function(){
+    if(!fastMode||askFautifI)return;
+    function onKey(e){
+      if(e.key==="g"||e.key==="G"){e.preventDefault();fastMark("G")}
+      else if(e.key==="l"||e.key==="L"){e.preventDefault();fastMark("L")}
+      else if(e.key==="m"||e.key==="M"){e.preventDefault();fastMark("M")}
+      else if(e.key==="i"||e.key==="I"){e.preventDefault();fastMark("I")}
+      else if(e.key===" "||e.key==="Enter"){e.preventDefault();fastSkip()}
+      else if(e.key==="Backspace"){e.preventDefault();fastBack()}
+    }
+    window.addEventListener("keydown",onKey);
+    return function(){window.removeEventListener("keydown",onKey)};
+  });
+
+  if(fastMode){
+    var fastDone=fastIdx>=wordTokens.length;
+    var pct=Math.round(fastIdx/wordTokens.length*100);
+    var curWord=fastDone?null:wordTokens[fastIdx];
+    var ctxStart=Math.max(0,fastIdx-3);
+    var ctxEnd=Math.min(wordTokens.length,fastIdx+4);
+
+    return h("div",{className:"container fade-up",style:{maxWidth:480}},
+      h("div",{className:"score-bar"},
+        h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},sc.note),
+        h("div",{style:{flex:1}},
+          h("div",{className:"score-eleve"},p.eleve),
+          h("div",{style:{fontSize:".82rem",color:"var(--muted)"}},errors.length+" err. \u00b7 "+sc.deduction+" pts"),
+          h("div",{style:{height:4,background:"#e5e3dd",borderRadius:2,marginTop:4,overflow:"hidden"}},
+            h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
+        ),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)}},"\u2190 Texte")
+      ),
+      h("div",{style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
+        wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
+          var realI=ctxStart+ci;var isCur=realI===fastIdx;
+          var isErr=errors.find(function(e){return e.idx===wt.idx});
+          return h("span",{key:ci,style:{fontWeight:isCur?800:400,color:isCur?"var(--text)":isErr?"#c53030":"var(--muted)",fontSize:isCur?"1.1rem":".85rem",margin:"0 3px",textDecoration:isErr?"underline":"none"}},wt.text)
+        })
+      ),
+      fastDone?
+        h("div",{className:"card",style:{textAlign:"center",padding:30}},
+          h("div",{style:{fontSize:"2rem",marginBottom:8}},"\u2705"),
+          h("div",{style:{fontSize:"1.2rem",fontWeight:700,marginBottom:8}},"Termin\u00e9 !"),
+          h("div",{style:{fontSize:".9rem",color:"var(--text-sub)"}},errors.length+" erreur"+(errors.length>1?"s":"")+" trouv\u00e9e"+(errors.length>1?"s":"")),
+          h("div",{style:{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}},
+            h("button",{className:"btn btn-primary",onClick:function(){p.onSave(errors,extras)}},"\u2705 Enregistrer"),
+            h("button",{className:"btn btn-ghost",onClick:function(){setFastIdx(0)}},"\u21bb Relire"),
+            h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(false)}},"\u270f\ufe0f V\u00e9rifier en mode texte")
+          )
+        ):
+        (function(){
+          var existingErr=curWord?errors.find(function(e){return e.idx===curWord.idx}):null;
+          var errColor=existingErr?(existingErr.type==="G"?"#c53030":existingErr.type==="L"?"#2b6cb0":existingErr.type==="M"?"#975a16":"#7c3aed"):null;
+          return h("div",null,
+          h("div",{className:"card",style:{padding:0,overflow:"hidden",borderColor:existingErr?errColor:"var(--border)",borderWidth:existingErr?"2.5px":"1.5px"}},
+            h("div",{className:"fast-word",style:{color:fastFlash?
+              (fastFlash==="G"?"#c53030":fastFlash==="L"?"#2b6cb0":fastFlash==="M"?"#975a16":"#7c3aed"):
+              (existingErr?errColor:"var(--text)")}},
+              curWord?curWord.text:"",
+              existingErr&&h("span",{style:{fontSize:".8rem",marginLeft:8,padding:"2px 8px",borderRadius:6,background:errColor+"18",color:errColor,fontWeight:700}},existingErr.type+(existingErr.fautif?" : "+existingErr.fautif:""))
+            ),
+            h("div",{style:{padding:"8px 16px",fontSize:".78rem",color:existingErr?errColor:"var(--muted)",textAlign:"center",background:existingErr?errColor+"08":"var(--card2)",fontWeight:existingErr?600:400}},
+              existingErr?"D\u00e9j\u00e0 marqu\u00e9 "+existingErr.type+" \u2014 Mot "+(fastIdx+1)+"/"+wordTokens.length:"Mot "+(fastIdx+1)+"/"+wordTokens.length)
+          ),
+          askFautifI&&h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginTop:10,border:"1.5px solid var(--primary)"}},
+            h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
+            h("div",{style:{display:"flex",gap:8}},
+              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautifI()}}),
+              h("button",{className:"btn-sm btn-primary",onClick:confirmFautifI},"\u2713"),
+              h("button",{className:"btn-sm btn-ghost",onClick:function(){setFautifValI("");confirmFautifI()}},"Passer")
+            )
+          ),
+          !askFautifI&&h("div",{className:"fast-btns"},
+            existingErr?
+              h("button",{className:"fast-btn fast-ok",onClick:fastSkip},"\u2713 Garder ("+existingErr.type+")"):
+              h("button",{className:"fast-btn fast-ok",onClick:fastSkip},"\u2192 Correct"),
+            existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear},"\u2715 Annuler l\u2019erreur"),
+            existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")}},"Changer \u2192 G"),
+            existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")}},"Changer \u2192 L"),
+            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")}},"G Grammaire"),
+            !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")}},"L Lexique"),
+            !existingErr&&h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")}},"\u2205 Manquant"),
+            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")}},"? Illisible")
+          ),
+          h("div",{style:{display:"flex",justifyContent:"space-between",marginTop:12}},
+            h("button",{className:"btn-sm btn-ghost",onClick:fastBack,disabled:fastIdx===0},"\u2190 Pr\u00e9c."),
+            p.onPrev&&h("button",{className:"btn-sm btn-ghost",onClick:p.onPrev},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
+            p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext},"\u00c9l\u00e8ve suiv. \u2192"),
+            h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)}},"Terminer \u2192")
+          ),
+          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"Clavier : G / L / M / I \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c\u00e9dent")
+        )
+    })()
+    );
+  }
 
   return h("div",{className:"container fade-up"},
     // Sticky score bar with eleve name
@@ -479,7 +1416,10 @@ function CorrEleve(p){
         return h("button",{key:d.k,className:cls,onClick:function(){clickWord(d.idx)}},d.w,errMap[d.idx]?h("sup",{style:{fontSize:9,marginLeft:2}},errMap[d.idx]):null);
       }))
     ),
-    h("button",{className:"btn btn-primary",style:{marginBottom:20},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant"),
+    h("div",{style:{display:"flex",gap:8,marginBottom:20}},
+      h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant"),
+      h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(true);setFastIdx(0)}},"\u26a1 Rapide")
+    ),
     // Popups
     popupIdx!==null&&h("div",{className:"popup-overlay",onClick:function(){setPopupIdx(null)}},
       h("div",{className:"popup-box",onClick:function(e){e.stopPropagation()}},
@@ -565,11 +1505,14 @@ function Suivi(p){
 
   var eleves=data.eleves.filter(function(e){return!abs[san(e)]});
   var classKeys=data.eleves.map(san);
-  Object.keys(autoCorr).forEach(function(k){if(classKeys.indexOf(k)===-1)eleves.push(k.toUpperCase().replace(/_/g," ")+" (TEST)")});
+  var testKeys=[];
+  Object.keys(autoCorr).forEach(function(k){if(classKeys.indexOf(k)===-1){eleves.push(k.toUpperCase().replace(/_/g," ")+" (TEST)");testKeys.push(k)}});
 
   var rows=eleves.map(function(e){
     var isTest=e.indexOf("(TEST)")>=0;
-    var k=isTest?san(e.replace(" (TEST)","")):san(e);
+    var k;
+    if(isTest){var testIdx=eleves.filter(function(x){return x.indexOf("(TEST)")>=0}).indexOf(e);k=testKeys[testIdx]||san(e.replace(" (TEST)",""))}
+    else{k=san(e)}
     var c=p.corrections[k],ac=autoCorr[k];
     var nErr=c?toArr(c.errors).length:0;
     var totalAtt=0,wrongAtt=0;
@@ -788,11 +1731,60 @@ function Suivi(p){
                   ),
                   attempts.length>0&&h("div",{style:{marginLeft:34,display:"flex",flexWrap:"wrap",gap:5,marginTop:4}},
                     attempts.map(function(a,j){
+                      var isWrong=!a.ok;
                       return h("span",{key:"a"+j,style:{fontSize:".85rem",fontWeight:500,padding:"3px 10px",borderRadius:8,
                         color:a.ok?"#276749":"#c53030",
                         background:a.ok?"rgba(39,103,73,.08)":"rgba(197,48,48,.06)",
-                        border:"1px solid "+(a.ok?"rgba(39,103,73,.15)":"rgba(197,48,48,.12)")}},
-                        a.typed+(a.ok?" \u2713":" \u2717")
+                        border:"1px solid "+(a.ok?"rgba(39,103,73,.15)":"rgba(197,48,48,.12)"),
+                        cursor:isWrong?"pointer":"default"},
+                        onClick:isWrong?function(){
+                          if(!confirm("Valider \u00ab "+a.typed+" \u00bb comme correcte pour \u00ab "+err.word+" \u00bb ?"))return;
+                          var dRef="correction_dictee/"+p.dicteeId+"/autocorrection/"+selectedEleve;
+                          db.ref(dRef+"/results/"+i).set(true);
+                          db.ref(dRef+"/attempts/"+i).set(j+1);
+                          db.ref(dRef+"/history/"+i+"/"+j+"/ok").set(true);
+                          db.ref(dRef).once("value",function(snap2){
+                            var v2=snap2.val()||{};var att2=v2.attempts||{};var res2=v2.results||{};
+                            var wrong=0;
+                            Object.keys(att2).forEach(function(k2){var n=att2[k2]||0;if(res2[String(k2)]||res2[Number(k2)])wrong+=(n-1);else wrong+=n});
+                            var sc=Math.max(0,5-wrong*0.25);
+                            var nOk=Object.keys(res2).filter(function(k2){return res2[k2]}).length;
+                            db.ref(dRef+"/score").set(Math.round(sc*100)/100);
+                            db.ref(dRef+"/solved").set(nOk);
+                          });
+                        }:null},
+                        a.typed+(a.ok?" \u2713":" \u2717"),
+                        isWrong&&h("span",{style:{marginLeft:6,display:"inline-flex",gap:4}},
+                          h("span",{style:{fontSize:".65rem",color:"#2563eb",cursor:"pointer"},title:"Valider cette r\u00e9ponse"},"\u2705"),
+                          h("span",{style:{fontSize:".65rem",color:"#c53030",cursor:"pointer"},title:"Supprimer cet essai",onClick:function(ev){
+                            ev.stopPropagation();
+                            if(!confirm("Supprimer cet essai (\u00ab "+a.typed+" \u00bb) ? Le score sera recalcul\u00e9."))return;
+                            var dRef2="correction_dictee/"+p.dicteeId+"/autocorrection/"+selectedEleve;
+                            // Remove this attempt from history
+                            db.ref(dRef2+"/history/"+i+"/"+j).remove();
+                            // Recalculate attempts count
+                            db.ref(dRef2+"/history/"+i).once("value",function(hSnap){
+                              var remaining=toArr(hSnap.val()||[]).filter(function(x){return x!=null});
+                              db.ref(dRef2+"/history/"+i).set(remaining.length>0?remaining:null);
+                              var newAtt=remaining.length;
+                              if(newAtt===0){db.ref(dRef2+"/attempts/"+i).remove();db.ref(dRef2+"/results/"+i).remove()}
+                              else{
+                                db.ref(dRef2+"/attempts/"+i).set(newAtt);
+                                var lastOk=remaining[remaining.length-1]&&remaining[remaining.length-1].ok;
+                                db.ref(dRef2+"/results/"+i).set(!!lastOk);
+                              }
+                              // Recalc score
+                              db.ref(dRef2).once("value",function(snap3){
+                                var v3=snap3.val()||{};var att3=v3.attempts||{};var res3=v3.results||{};
+                                var wr=0;Object.keys(att3).forEach(function(k3){var n=att3[k3]||0;if(res3[String(k3)]||res3[Number(k3)])wr+=(n-1);else wr+=n});
+                                var sc2=Math.max(0,5-wr*0.25);
+                                var nOk2=Object.keys(res3).filter(function(k3){return res3[k3]}).length;
+                                db.ref(dRef2+"/score").set(Math.round(sc2*100)/100);
+                                db.ref(dRef2+"/solved").set(nOk2);
+                              });
+                            });
+                          }},"\ud83d\uddd1")
+                        )
                       )
                     })
                   )
@@ -1154,16 +2146,69 @@ function EleveCorrection(p){
   },[]);
 
   // Load existing progress from Firebase on mount
+  // Recalculate results with updated normalization (apostrophe fix)
+  var normCompare=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
   useEffect(function(){
     db.ref(acRef).once("value",function(snap){
       var val=snap.val();
-      if(val&&val.attempts&&val.results){
-        setAttempts(val.attempts);
-        setResults(val.results);
-        var nOk=Object.keys(val.results).filter(function(k){return val.results[k]}).length;
-        if(nOk>=totalErrors)setFinished(true);
+      if(val){
+        var loadedAttempts=val.attempts||{};
+        var loadedResults=val.results||{};
+        var loadedHistory=val.history||{};
+        var changed=false;
+
+        // Re-check each error against history with new norm
+        errors.forEach(function(err,errIdx){
+          var k=String(errIdx);
+          var hist=loadedHistory[k]||loadedHistory[errIdx];
+          if(!hist)return;
+          var entries=toArr(hist);
+          if(entries.length===0)return;
+          var wasCorrect=loadedResults[k]||loadedResults[errIdx];
+
+          // Check if last attempt was actually correct with new norm
+          var lastEntry=entries[entries.length-1];
+          var lastTyped=typeof lastEntry==="object"?lastEntry.typed:lastEntry;
+          if(!lastTyped)return;
+          var isNowCorrect=normCompare(String(lastTyped))===normCompare(String(err.word));
+
+          if(isNowCorrect&&!wasCorrect){
+            // Previously wrong, now correct with new norm — fix it
+            loadedResults[k]=true;
+            // Recount attempts: only the ones before the correct one count as wrong
+            var correctIdx=-1;
+            for(var ei=0;ei<entries.length;ei++){
+              var eTyped=typeof entries[ei]==="object"?entries[ei].typed:entries[ei];
+              if(eTyped&&normCompare(String(eTyped))===normCompare(String(err.word))){correctIdx=ei;break}
+            }
+            if(correctIdx>=0)loadedAttempts[k]=correctIdx+1;
+            changed=true;
+          }
+        });
+
+        setAttempts(loadedAttempts);
+        setResults(loadedResults);
+        if(loadedHistory)setHistory(loadedHistory);
+
+        if(changed){
+          // Save corrected results back to Firebase
+          db.ref(acRef+"/results").set(loadedResults);
+          db.ref(acRef+"/attempts").set(loadedAttempts);
+          // Recalculate score
+          var wrong=0;
+          Object.keys(loadedAttempts).forEach(function(k2){
+            var n=loadedAttempts[k2]||0;
+            if(loadedResults[String(k2)]||loadedResults[Number(k2)])wrong+=(n-1);else wrong+=n;
+          });
+          var sc=Math.max(0,5-wrong*0.25);
+          var nOk=Object.keys(loadedResults).filter(function(k2){return loadedResults[k2]}).length;
+          db.ref(acRef+"/score").set(Math.round(sc*100)/100);
+          db.ref(acRef+"/solved").set(nOk);
+        }
+
+        var nOk2=Object.keys(loadedResults).filter(function(k2){return loadedResults[k2]}).length;
+        if(nOk2>=totalErrors)setFinished(true);
       }
-      if(val&&val.bilan){setBilan(val.bilan);setBilanSubmitted(!!val.bilanSubmitted)}
       setLoading(false);
     });
   },[]);
@@ -1211,7 +2256,7 @@ function EleveCorrection(p){
     att[activeErr]=(att[activeErr]||0)+1;
     setAttempts(att);
 
-    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()};
+    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
     var isCorrect=norm(typed)===norm(correct);
 
     // Record in history
@@ -1273,7 +2318,7 @@ function EleveCorrection(p){
     if(nSolved===totalErrors&&totalErrors>0&&!finished){
       setFinished(true);
       saveProgress(attempts,results);
-      sendHeartbeat("bilan");
+      sendHeartbeat("done");
     }
   });
 
@@ -1342,7 +2387,14 @@ function EleveCorrection(p){
       if(/(ence|ance)$/.test(wl)) notes.push("Suffixe -ence/-ance \u2014 pas de r\u00e8gle simple, \u00e0 m\u00e9moriser : diff\u00e9rence, puissance.");
       if(/(ph)/.test(wl)) notes.push("Groupe \u00ab ph \u00bb = [f] \u2014 mot d\u2019origine grecque (philosophie, pharmacie).");
       if(wl.length>7) notes.push("Mot long \u2014 d\u00e9compose en syllabes : "+w.replace(/(.{3})/g,"$1\u00b7").replace(/\u00b7$/,"")+".");
-      if(notes.length===0) notes.push("Orthographe lexicale \u2014 ce mot est \u00e0 m\u00e9moriser. \u00c9cris-le trois fois pour le retenir.");
+      if(notes.length===0){
+        // Fallback: use GRAMM.classify if fautif is available
+        if(err.fautif&&typeof GRAMM!=="undefined"&&GRAMM.classify){
+          var classif=GRAMM.classify(err.fautif,w);
+          if(classif)notes.push(classif.rule);
+        }
+        if(notes.length===0) notes.push("Orthographe lexicale \u2014 ce mot est \u00e0 m\u00e9moriser. \u00c9cris-le trois fois pour le retenir.");
+      }
     }
     return notes.join(" | ");
   }
@@ -1393,34 +2445,6 @@ function EleveCorrection(p){
           h("p",{style:{fontSize:".88rem",color:"#555",lineHeight:1.6,marginLeft:32}},gramComment(err))
         )
       })
-    ),
-    // Bilan de l'étude de texte
-    h("div",{style:{marginTop:14,padding:"16px 18px",background:bilanSubmitted?"#e8f5e9":"#fff3e0",border:"2px solid "+(bilanSubmitted?"#4caf50":"#d4a017"),borderRadius:10}},
-      h("h2",{style:{fontSize:"1.1rem",color:"#2c3e50",margin:"0 0 6px 0"}},bilanSubmitted?"\u2705 Bilan envoy\u00e9":"Bilan de l\u2019\u00e9tude de texte"),
-      bilanSubmitted?h("p",{style:{fontSize:".88rem",color:"#555",marginBottom:8}},"Ton bilan a \u00e9t\u00e9 envoy\u00e9 au professeur. Tu peux maintenant \u00e9changer ta fiche avec ton voisin."):
-      h("div",null,
-        h("p",{style:{fontSize:".88rem",fontStyle:"italic",color:"#555",marginBottom:12}},"Recopie ici le bilan que tu as \u00e9crit sur ta fiche papier."),
-        h("p",{style:{fontSize:".92rem",fontWeight:700,marginBottom:6}},"Trois choses que j\u2019ai comprises gr\u00e2ce \u00e0 cette correction :"),
-        [["b1","1."],["b2","2."],["b3","3."]].map(function(f){
-          return h("div",{key:f[0],style:{display:"flex",alignItems:"center",gap:6,marginBottom:6}},
-            h("span",{style:{fontWeight:600,fontSize:".9rem",minWidth:18}},f[1]),
-            h("input",{value:bilan[f[0]],onChange:function(e){var b=Object.assign({},bilan);b[f[0]]=e.target.value;setBilan(b)},
-              placeholder:"...",style:{flex:1,padding:"8px 10px",fontSize:".9rem",borderRadius:8,border:"1px solid #ccc"}})
-          )
-        }),
-        h("p",{style:{fontSize:".92rem",fontWeight:700,margin:"10px 0 6px 0"}},"Une chose que je vais faire diff\u00e9remment au prochain devoir :"),
-        h("input",{value:bilan.b4,onChange:function(e){var b=Object.assign({},bilan);b.b4=e.target.value;setBilan(b)},
-          placeholder:"...",style:{width:"100%",padding:"8px 10px",fontSize:".9rem",borderRadius:8,border:"1px solid #ccc",marginBottom:12}}),
-        h("button",{className:"btn btn-primary",style:{width:"100%"},
-          disabled:!bilan.b1||!bilan.b2||!bilan.b3||!bilan.b4,
-          onClick:function(){
-            recordAction();
-            db.ref(acRef+"/bilan").set(bilan);
-            db.ref(acRef+"/bilanSubmitted").set(true);
-            setBilanSubmitted(true);
-            sendHeartbeat("done");
-          }},!bilan.b1||!bilan.b2||!bilan.b3||!bilan.b4?"Compl\u00e8te les 4 champs pour envoyer":"\u2705 Envoyer le bilan au professeur")
-      )
     ),
     // Boutons
     h("div",{style:{display:"flex",gap:8,marginTop:12,justifyContent:"center",paddingBottom:30}},
