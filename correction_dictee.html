@@ -1183,7 +1183,6 @@ function RapideGlobal(p){
   }
   function skipWord(){
     var wt=wordTokens[wordIdx];if(!wt)return;
-    setErrors(errors.filter(function(e){return e.idx!==wt.idx}));
     setWordIdx(wordIdx+1);
   }
   function goBack(){if(wordIdx>0)setWordIdx(wordIdx-1)}
@@ -1200,14 +1199,14 @@ function RapideGlobal(p){
     function onKey(e){
       if(e.key==="g"||e.key==="G"){e.preventDefault();markError("G")}
       else if(e.key==="l"||e.key==="L"){e.preventDefault();markError("L")}
-      else if(e.key==="m"||e.key==="M"){e.preventDefault();
+      else if(e.key==="/"||e.key==="M"||e.key==="m"){e.preventDefault();
         var wt2=wordTokens[wordIdx];if(wt2){
           var ne2=errors.filter(function(e2){return e2.idx!==wt2.idx});
           ne2.push({idx:wt2.idx,type:"M",word:wt2.text});setErrors(ne2);
           setFlashType("M");setTimeout(function(){setFlashType(null)},400);setWordIdx(wordIdx+1);
         }
       }
-      else if(e.key==="i"||e.key==="I"){e.preventDefault();
+      else if(e.key==="?"||e.key==="I"||e.key==="i"){e.preventDefault();
         var wt3=wordTokens[wordIdx];if(wt3){
           var ne3=errors.filter(function(e3){return e3.idx!==wt3.idx});
           ne3.push({idx:wt3.idx,type:"I",word:wt3.text});setErrors(ne3);
@@ -1292,7 +1291,7 @@ function RapideGlobal(p){
           h("button",{className:"btn-sm btn-ghost",onClick:function(){if(studentIdx>0){setStudentIdx(studentIdx-1);setWordIdx(0);setErrors([])}},disabled:studentIdx===0},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
           h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setWordIdx(wordTokens.length)}},"Terminer \u2192")
         ),
-        h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur (+ saisie mot) \u00b7 M / I = direct \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
+        h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 / = manquant \u00b7 ? = illisible \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
       )
   );
 }
@@ -1318,7 +1317,21 @@ function CorrEleve(p){
     if(ei>=0){var ne=errors.slice();ne.splice(ei,1);setErrors(ne);setLastTouched(idx);return}
     setPopupIdx(idx);
   }
-  function selectType(type){setErrors(errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]));setLastTouched(popupIdx);setPopupIdx(null)}
+  var s14=useState(null),askFautifTexte=s14[0],setAskFautifTexte=s14[1];
+  var s15=useState(""),fautifTexteVal=s15[0],setFautifTexteVal=s15[1];
+  var fautifTexteRef=React.useRef(null);
+  React.useEffect(function(){if(askFautifTexte&&fautifTexteRef.current)fautifTexteRef.current.focus()},[askFautifTexte]);
+  function selectType(type){
+    if(type==="G"||type==="L"){setAskFautifTexte({type:type,idx:popupIdx});setFautifTexteVal("");setPopupIdx(null);return}
+    setErrors(errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]));setLastTouched(popupIdx);setPopupIdx(null)
+  }
+  function confirmFautifTexte(){
+    var ft=askFautifTexte;if(!ft)return;
+    var errObj={idx:ft.idx,type:ft.type,word:tokens[ft.idx]};
+    if(fautifTexteVal.trim())errObj.fautif=fautifTexteVal.trim();
+    setErrors(errors.concat([errObj]));setLastTouched(ft.idx);
+    setAskFautifTexte(null);setFautifTexteVal("");
+  }
   function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}setExtras(extras.concat([{afterIdx:insertIdx,word:insertWord.trim()}]));setInsertIdx(null);setInsertWord("")}
   function removeExtra(i){var ne=extras.slice();ne.splice(i,1);setExtras(ne)}
 
@@ -1379,8 +1392,8 @@ function CorrEleve(p){
     function onKey(e){
       if(e.key==="g"||e.key==="G"){e.preventDefault();fastMark("G")}
       else if(e.key==="l"||e.key==="L"){e.preventDefault();fastMark("L")}
-      else if(e.key==="m"||e.key==="M"){e.preventDefault();fastMark("M")}
-      else if(e.key==="i"||e.key==="I"){e.preventDefault();fastMark("I")}
+      else if(e.key==="m"||e.key==="M"||e.key==="/"){e.preventDefault();fastMark("M")}
+      else if(e.key==="i"||e.key==="I"||e.key==="?"){e.preventDefault();fastMark("I")}
       else if(e.key===" "||e.key==="Enter"){e.preventDefault();fastSkip()}
       else if(e.key==="Backspace"){e.preventDefault();fastBack()}
     }
@@ -1464,7 +1477,7 @@ function CorrEleve(p){
             p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext},"\u00c9l\u00e8ve suiv. \u2192"),
             h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)}},"Terminer \u2192")
           ),
-          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"Clavier : G / L / M / I \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c\u00e9dent")
+          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 / = manquant \u00b7 ? = illisible \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
         )
     })()
     );
@@ -1506,6 +1519,21 @@ function CorrEleve(p){
     h("div",{style:{display:"flex",gap:8,marginBottom:20}},
       h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant"),
       h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(true);setFastIdx(0)}},"\u26a1 Rapide")
+    ),
+    // Popup saisie mot fautif en mode texte
+    askFautifTexte&&h("div",{className:"popup-overlay",onClick:function(){setAskFautifTexte(null)}},
+      h("div",{style:{background:"var(--card)",borderRadius:16,padding:"18px 20px",maxWidth:360,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,.2)"},onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{marginBottom:8}},
+          h("span",{style:{fontWeight:700}},"« "+tokens[askFautifTexte.idx]+" »"),
+          h("span",{style:{marginLeft:8,padding:"2px 8px",borderRadius:6,fontSize:".85rem",fontWeight:600,background:askFautifTexte.type==="G"?"rgba(197,48,48,.08)":"rgba(43,108,203,.08)",color:askFautifTexte.type==="G"?"#c53030":"#2b6cb0"}},askFautifTexte.type)
+        ),
+        h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
+        h("div",{style:{display:"flex",gap:8}},
+          h("input",{ref:fautifTexteRef,value:fautifTexteVal,onChange:function(e){setFautifTexteVal(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautifTexte()}}),
+          h("button",{className:"btn-sm btn-primary",onClick:confirmFautifTexte},"\u2713"),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){setFautifTexteVal("");confirmFautifTexte()}},"Passer")
+        )
+      )
     ),
     // Popups
     popupIdx!==null&&h("div",{className:"popup-overlay",onClick:function(){setPopupIdx(null)}},
@@ -2199,16 +2227,18 @@ function EleveCorrection(p){
 
   // Listener pour les modifications du prof en temps réel
   useEffect(function(){
+    if(!d||!d.dictee||!d.dictee.id||!d.key)return;
     var corrRef=db.ref("correction_dictee/"+d.dictee.id+"/results/"+d.key);
+    var firstLoad=true;
     function onCorrChange(snap){
       var val=snap.val();
       if(!val)return;
+      if(firstLoad){firstLoad=false;return}// Skip first trigger (already loaded at login)
       var newErrors=toArr(val.errors||[]).filter(function(e){return e!=null});
       var newExtras=toArr(val.extras||[]).filter(function(e){return e!=null});
       setErrors(newErrors);
       setExtras(newExtras);
       if(val.note!=null)setNoteDictee(val.note);
-      // Mettre à jour total dans l'autocorrection pour que le suivi prof soit cohérent
       db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/total").set(newErrors.length);
       db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/errorRefs").set(newErrors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
     }
