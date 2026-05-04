@@ -901,6 +901,22 @@ function AppProf(p){
               var updates={title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[]};
               if(editForm.text)updates.text=editForm.text;
               db.ref("correction_dictee/"+d.id+"/config").update(updates);
+              // Recalculate all notes if base changed
+              var newBase=editForm.base||20;
+              db.ref("correction_dictee/"+d.id+"/results").once("value",function(rSnap){
+                var rVal=rSnap.val()||{};
+                Object.keys(rVal).forEach(function(ek){
+                  var r=rVal[ek];if(!r)return;
+                  var errs=toArr(r.errors||[]).filter(function(e){return e!=null});
+                  var exts=toArr(r.extras||[]).filter(function(e){return e!=null});
+                  var sc=computeNote(errs,exts,newBase);
+                  if(sc.note!==r.note){
+                    db.ref("correction_dictee/"+d.id+"/results/"+ek+"/note").set(sc.note);
+                    db.ref("correction_dictee/"+d.id+"/results/"+ek+"/deduction").set(sc.deduction);
+                    db.ref("correction_dictee/"+d.id+"/results/"+ek+"/counts").set(sc.counts);
+                  }
+                });
+              });
               setSaved(saved.map(function(x){return x.id===d.id?Object.assign({},x,{title:updates.title||x.title,niveau:updates.niveau||x.niveau,published:updates.published,classe:updates.classe||x.classe}):x}));
               setEditing(null);
             }},"Enregistrer"),
@@ -1608,7 +1624,7 @@ function Suivi(p){
     else if(!ac) status="waiting";
     else status="waiting";
     return{name:e,key:k,isTest:isTest,noteDictee:c?c.note:null,nErrors:nErr,
-      solved:solved,total:total,score:ac?ac.score:null,
+      solved:solved,total:total,score:ac&&ac.score!=null?ac.score:null,
       totalAttempts:totalAtt,wrongAttempts:wrongAtt,
       status:status,timestamp:ac?ac.timestamp:0,lastSeen:lastSeen};
   }).sort(function(a,b){
