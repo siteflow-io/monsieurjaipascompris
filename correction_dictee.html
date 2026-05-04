@@ -714,6 +714,65 @@ GRAMM.classify = function(typed, correct) {
 };
 
 
+// ═══ SNAPSHOT TOOL ═══
+// Export: télécharge un JSON avec toutes les données Firebase
+// Import: réinjecte un snapshot dans Firebase
+// Intégrable dans n'importe quelle app via un bouton prof
+
+function snapshotExport(dbRef, filename) {
+  // dbRef = Firebase ref path string, e.g. "correction_dictee" or "reecriture_bb4e"
+  var ref = firebase.database().ref(dbRef);
+  ref.once("value", function(snap) {
+    var data = snap.val();
+    if (!data) { alert("Aucune donnée à exporter."); return; }
+    var payload = {
+      _meta: {
+        source: dbRef,
+        exportedAt: new Date().toISOString(),
+        exportedBy: "snapshot_tool",
+        version: 1
+      },
+      data: data
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = (filename || dbRef.replace(/\//g, "_")) + "_" + new Date().toISOString().slice(0, 10) + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function snapshotImport(dbRef, file, onDone) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var payload = JSON.parse(e.target.result);
+      var data = payload.data || payload; // Support both wrapped and raw
+      if (!confirm("⚠️ Écraser toutes les données de '" + dbRef + "' avec le snapshot du " + (payload._meta ? payload._meta.exportedAt : "?") + " ?")) return;
+      firebase.database().ref(dbRef).set(data, function(err) {
+        if (err) { alert("Erreur: " + err.message); }
+        else { alert("✅ Snapshot importé avec succès."); if (onDone) onDone(); }
+      });
+    } catch (ex) { alert("Fichier invalide: " + ex.message); }
+  };
+  reader.readAsText(file);
+}
+
+// Render a snapshot panel (React h() compatible)
+function renderSnapshotPanel(h, dbRef, label) {
+  var fileInputId = "snapshot-import-" + dbRef.replace(/\//g, "-");
+  return h("div", { style: { display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" } },
+    h("button", { className: "btn-sm btn-ghost", onClick: function() { snapshotExport(dbRef, label); } }, "📥 Exporter snapshot"),
+    h("button", { className: "btn-sm btn-ghost", onClick: function() { document.getElementById(fileInputId).click(); } }, "📤 Importer snapshot"),
+    h("input", { id: fileInputId, type: "file", accept: ".json", style: { display: "none" }, onChange: function(e) {
+      if (e.target.files[0]) snapshotImport(dbRef, e.target.files[0], function() { window.location.reload(); });
+      e.target.value = "";
+    }})
+  );
+}
+
 var PROF_CODES=[3141,1312];
 function App(){
   var s0=useState(null),mode=s0[0],setMode=s0[1];
@@ -803,6 +862,9 @@ function AppProf(p){
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,dicteeData.base);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
     setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
+    // Sync total + errorRefs dans l'autocorrection pour cohérence
+    db.ref("correction_dictee/"+dicteeId+"/autocorrection/"+ek+"/total").set(errors.length);
+    db.ref("correction_dictee/"+dicteeId+"/autocorrection/"+ek+"/errorRefs").set(errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
   }
 
   if(screen==="config") return h("div",{className:"container fade-up"},
@@ -887,7 +949,10 @@ function AppProf(p){
         h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".9rem"}},h("input",{type:"checkbox",checked:publishedInput,onChange:function(e){setPublishedInput(e.target.checked)}}),"Publier pour les \u00e9l\u00e8ves")
       ),
       h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput},"Commencer"),
-      h("button",{className:"btn-sm btn-ghost",style:{marginTop:8},onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
+      h("div",{style:{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}},
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("","firebase_complet")}},"\ud83d\udcf8 Snapshot global Firebase")
+      ),
       showClassMgr&&h("div",{className:"card",style:{marginTop:12}},
         h("h2",null,"Gestion des classes"),
         h("p",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:12}},"Ajoute ou modifie tes classes. Les \u00e9l\u00e8ves sont stock\u00e9s dans Firebase, pas dans le code."),
@@ -997,6 +1062,8 @@ function CorrScreen(p){
             alert(nFixed+" \u00e9l\u00e8ve"+(nFixed>1?"s":"")+" recalcul\u00e9"+(nFixed>1?"s":"")+".");
           });
         }},"\ud83d\udd04 Recalculer"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee/"+p.dicteeId,"dictee_"+p.dicteeId)}},"\ud83d\udcf8 Snapshot"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee/"+p.dicteeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4 Restaurer"),
         h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
       )
     ),
@@ -1526,15 +1593,14 @@ function Suivi(p){
     var solved=ac?ac.solved||0:0;
     var total=ac?ac.total||nErr:nErr;
     var finished=total>0&&solved>=total;
-    // Use Firebase status field if available, else fallback to timestamp
-    var fbStatus=ac&&ac.status?ac.status:null;
     var lastSeen=ac&&ac.lastSeen?ac.lastSeen:ac?ac.timestamp:0;
     var status;
-    if(fbStatus==="done"&&ac&&ac.bilanSubmitted) status="done";
-    else if(fbStatus==="done"||fbStatus==="bilan"||(finished&&!ac.bilanSubmitted)) status="bilan";
-    else if(fbStatus==="active"&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
-    else if(lastSeen&&(NOW-lastSeen)<5*60*1000) status=fbStatus==="idle"?"idle":"idle";
-    else if(ac&&ac.solved>0) status="offline";
+    // Statut basé sur les données, pas sur le champ status Firebase
+    if(finished) status="done";
+    else if(ac&&ac.solved>0&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
+    else if(ac&&ac.solved>0) status="idle";
+    else if(ac&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
+    else if(ac&&lastSeen) status="idle";
     else if(!ac) status="waiting";
     else status="waiting";
     return{name:e,key:k,isTest:isTest,noteDictee:c?c.note:null,nErrors:nErr,
@@ -1556,7 +1622,7 @@ function Suivi(p){
   var totalWrongAll=rows.reduce(function(a,r){return a+r.wrongAttempts},0);
   var totalAttAll=rows.reduce(function(a,r){return a+r.totalAttempts},0);
 
-  var statusIcon=function(s){return s==="done"?"\u2705":s==="bilan"?"\ud83d\udcdd":s==="active"?"\ud83d\udfe2":s==="idle"?"\u23f8\ufe0f":s==="offline"?"\u26aa":"\u2b1c"};
+  var statusIcon=function(s){return s==="done"?"\u2705":s==="active"?"\ud83d\udfe2":s==="idle"?"\u23f8\ufe0f":"\u2b1c"};
   var statusLabel=function(s){return s==="done"?"Termin\u00e9":s==="bilan"?"Bilan en cours":s==="active"?"En cours":s==="idle"?"Inactif":s==="offline"?"D\u00e9connect\u00e9":"Pas commenc\u00e9"};
 
   // Helper: extract first name from "NOM Prenom"
@@ -2106,8 +2172,29 @@ function AppEleve(p){
 // ═══ CORRECTION ÉLÈVE (module numérique) ═══
 function EleveCorrection(p){
   var d=p.data,tokens=d.dictee.tokens;
-  var errors=d.errors,extras=d.extras;
-  var totalErrors=errors.length; // Only correctable errors, not extras
+  var s0e=useState(d.errors),errors=s0e[0],setErrors=s0e[1];
+  var s0x=useState(d.extras),extras=s0x[0],setExtras=s0x[1];
+  var s0n=useState(d.note),noteDictee=s0n[0],setNoteDictee=s0n[1];
+  var totalErrors=errors.length;
+
+  // Listener pour les modifications du prof en temps réel
+  useEffect(function(){
+    var corrRef=db.ref("correction_dictee/"+d.dictee.id+"/results/"+d.key);
+    function onCorrChange(snap){
+      var val=snap.val();
+      if(!val)return;
+      var newErrors=toArr(val.errors||[]).filter(function(e){return e!=null});
+      var newExtras=toArr(val.extras||[]).filter(function(e){return e!=null});
+      setErrors(newErrors);
+      setExtras(newExtras);
+      if(val.note!=null)setNoteDictee(val.note);
+      // Mettre à jour total dans l'autocorrection pour que le suivi prof soit cohérent
+      db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/total").set(newErrors.length);
+      db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/errorRefs").set(newErrors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
+    }
+    corrRef.on("value",onCorrChange);
+    return function(){corrRef.off("value",onCorrChange)};
+  },[]);
   var s1=useState({}),attempts=s1[0],setAttempts=s1[1];
   var s2=useState({}),results=s2[0],setResults=s2[1];
   var s3=useState(null),activeErr=s3[0],setActiveErr=s3[1];
@@ -2142,7 +2229,7 @@ function EleveCorrection(p){
         sendHeartbeat("idle");
       }
     },30000);
-    return function(){clearInterval(hb);clearInterval(idle);db.ref(acRef+"/status").set("offline")};
+    return function(){clearInterval(hb);clearInterval(idle);if(!finished)db.ref(acRef+"/status").set("offline")};
   },[]);
 
   // Load existing progress from Firebase on mount
@@ -2400,13 +2487,25 @@ function EleveCorrection(p){
   }
 
   if(finished) return h("div",{className:"container fade-up",style:{paddingTop:30}},
-    // Score header
+    // Note de dictée du prof
     h("div",{className:"card",style:{textAlign:"center",marginBottom:14}},
       h("div",{style:{fontSize:"2rem",marginBottom:4}},"\ud83c\udf89"),
-      h("h1",{style:{marginBottom:4}},"Bravo "+d.eleve.split(" ").pop()+" !"),
-      h("div",{style:{fontSize:"2.2rem",fontWeight:800,color:noteColor(score,5)}},score+"/5"),
+      h("h1",{style:{marginBottom:10}},"Bravo "+d.eleve.split(" ").pop()+" !"),
+      h("div",{style:{display:"flex",justifyContent:"center",gap:30,marginBottom:10}},
+        h("div",null,
+          h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Note de dict\u00e9e"),
+          h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(noteDictee,d.base)}},noteDictee+"/"+d.base)
+        ),
+        h("div",null,
+          h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Bonus autocorrection"),
+          h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(score,5)}},score+"/5")
+        )
+      ),
       h("p",{style:{color:"var(--text-sub)",fontSize:".9rem"}},
         totalErrors+" erreur"+(totalErrors>1?"s":"")+" corrig\u00e9e"+(totalErrors>1?"s":"")+" en "+totalAttempts+" essai"+(totalAttempts>1?"s":"")
+      ),
+      h("div",{style:{marginTop:10,padding:"10px 14px",background:"var(--primary-light)",borderRadius:8,fontSize:".85rem",lineHeight:1.6}},
+        h("strong",null,"Bar\u00e8me : "),"Note de dict\u00e9e /"+d.base+" (correction du prof) + Bonus autocorrection /5 (tes essais ici). Chaque essai rat\u00e9 co\u00fbte 0,25 point de bonus."
       )
     ),
     // Consigne
@@ -2414,17 +2513,22 @@ function EleveCorrection(p){
       h("p",{style:{fontWeight:700,marginBottom:4,fontSize:".95rem"}},"\u270d\ufe0f Maintenant, corrige sur ta copie au stylo vert."),
       h("p",{style:{fontSize:".88rem",color:"var(--text-sub)"}},"Pour chaque erreur, \u00e9cris la bonne orthographe et note le type d\u2019erreur (G = grammaire, L = lexique).")
     ),
-    // Texte corrigé
+    // Texte corrigé — copie annotée
     h("div",{className:"card",style:{marginBottom:14}},
       h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:8,fontWeight:600,textTransform:"uppercase"}},"Ta dict\u00e9e corrig\u00e9e"),
-      h("div",{style:{lineHeight:2.4,fontSize:"1rem"}},
+      h("div",{style:{lineHeight:3.2,fontSize:"1rem"}},
         tokens.map(function(w,ti){
           var ev=errMap[ti];
           var nextW=tokens[ti+1]||"";
           var noSp=isPunct(nextW);
           var sp=noSp?"":" ";
           if(!ev) return h("span",{key:"t"+ti},w+sp);
-          return h("span",{key:"t"+ti},h("span",{style:{fontWeight:700,color:ev.type==="G"?"#c53030":"#2b6cb0",borderBottom:"2px solid "+(ev.type==="G"?"#c53030":"#2b6cb0"),padding:"1px 4px",borderRadius:4,whiteSpace:"nowrap"}},ev.word,h("sup",{style:{fontSize:9,marginLeft:2}},ev.type)),sp);
+          return h("span",{key:"t"+ti,style:{position:"relative",display:"inline",whiteSpace:"nowrap"}},
+            h("span",{style:{fontWeight:700,color:ev.type==="G"?"#c53030":"#2b6cb0",borderBottom:"2px solid "+(ev.type==="G"?"#c53030":"#2b6cb0"),padding:"1px 4px",borderRadius:4}},ev.word),
+            h("span",{style:{position:"absolute",left:"50%",transform:"translateX(-50%)",top:"100%",fontSize:".65rem",fontWeight:700,color:ev.type==="G"?"#c53030":"#2b6cb0",whiteSpace:"nowrap"}},ev.type),
+            ev.fautif&&h("span",{style:{position:"absolute",left:"50%",transform:"translateX(-50%)",top:"calc(100% + 12px)",fontSize:".6rem",color:"#999",textDecoration:"line-through",whiteSpace:"nowrap"}},ev.fautif),
+            sp
+          );
         })
       )
     ),
@@ -2509,7 +2613,10 @@ function EleveCorrection(p){
         ),
         h("div",{className:"progress-wrap"},h("div",{className:"progress-fill",style:{width:(totalErrors?Math.round(nSolved/totalErrors*100):0)+"%"}}))
       ),
-      h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onBack},"\u2190")
+      h("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onBack},"\u2190"),
+        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".7rem",padding:"3px 8px",color:"var(--primary)"},onClick:function(){window.location.reload()}},"\ud83d\udd04")
+      )
     ),
     // Text with masked words
     h("div",{className:"card"},
