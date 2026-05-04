@@ -2225,26 +2225,8 @@ function EleveCorrection(p){
   var s0n=useState(d.note),noteDictee=s0n[0],setNoteDictee=s0n[1];
   var totalErrors=errors.length;
 
-  // Listener pour les modifications du prof en temps réel
-  useEffect(function(){
-    if(!d||!d.dictee||!d.dictee.id||!d.key)return;
-    var corrRef=db.ref("correction_dictee/"+d.dictee.id+"/results/"+d.key);
-    var firstLoad=true;
-    function onCorrChange(snap){
-      var val=snap.val();
-      if(!val)return;
-      if(firstLoad){firstLoad=false;return}// Skip first trigger (already loaded at login)
-      var newErrors=toArr(val.errors||[]).filter(function(e){return e!=null});
-      var newExtras=toArr(val.extras||[]).filter(function(e){return e!=null});
-      setErrors(newErrors);
-      setExtras(newExtras);
-      if(val.note!=null)setNoteDictee(val.note);
-      db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/total").set(newErrors.length);
-      db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/errorRefs").set(newErrors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
-    }
-    corrRef.on("value",onCorrChange);
-    return function(){corrRef.off("value",onCorrChange)};
-  },[]);
+  // Listener désactivé temporairement
+  useEffect(function(){},[]);
   var s1=useState({}),attempts=s1[0],setAttempts=s1[1];
   var s2=useState({}),results=s2[0],setResults=s2[1];
   var s3=useState(null),activeErr=s3[0],setActiveErr=s3[1];
