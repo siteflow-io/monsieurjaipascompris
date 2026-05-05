@@ -349,7 +349,8 @@ function SuiviBB4E(p){
       else if(d2.verifyResults)status="bilan";
       else if(d2.lastSeen&&(NOW-d2.lastSeen)<60000&&d2.status==="active")status="active";
       else if(d2.edits){
-        var editKeys=Array.isArray(d2.edits)?d2.edits.filter(function(v){return v!=null}).length:Object.keys(d2.edits).length;
+        var editKeys=Array.isArray(d2.edits)?d2.edits.filter(function(v){
+            if(verifyingRef.current)return;verifyingRef.current=true;return v!=null}).length:Object.keys(d2.edits).length;
         if(editKeys>0)status="saisi";else status="idle";
       }
       else if(d2.lastSeen)status="idle";
@@ -875,6 +876,41 @@ function AppEleve(p){
 function EleveSaisie(p){
   var d=p.data,ree=d.reecriture,modifs=ree.modifs;
   var acRef="reecriture_bb4e/"+ree.id+"/autocorrection/"+d.key;
+  var verifyingRef=React.useRef(false);
+
+  var s_cfg2=useState({showNote:true,peerHelp:false}),liveConfig=s_cfg2[0],setLiveConfig=s_cfg2[1];
+  useEffect(function(){
+    var reeId=acRef.split("/")[1];if(!reeId)return;
+    var cfgRef=db.ref("reecriture_bb4e/"+reeId+"/config");
+    function onCfg(snap){var val=snap.val();if(val)setLiveConfig({showNote:val.showNote!==false,peerHelp:!!val.peerHelp})}
+    cfgRef.on("value",onCfg);
+    return function(){cfgRef.off("value",onCfg)};
+  },[]);
+
+  var s_peer2=useState(null),peerTarget=s_peer2[0],setPeerTarget=s_peer2[1];
+  useEffect(function(){
+    if(!liveConfig.peerHelp||!bilanSubmitted)return;
+    db.ref("reecriture_bb4e").once("value",function(snap){
+      var all=snap.val()||{};var reeId=acRef.split("/")[1];
+      var reeData=all[reeId];if(!reeData||!reeData.autocorrection)return;
+      var acAll=reeData.autocorrection;var myKey=acRef.split("/").pop();
+      var maxRemaining=0;var target=null;
+      Object.keys(acAll).forEach(function(ek){
+        if(ek===myKey)return;
+        var a2=acAll[ek];if(!a2||typeof a2!=="object")return;
+        if(a2.bilanSubmitted)return;
+        if(!a2.score&&a2.score!==0){maxRemaining=999;target=ek;return}
+        var remaining=a2.nCorrect!=null?(10-a2.nCorrect):10;
+        if(remaining>maxRemaining){maxRemaining=remaining;target=ek}
+      });
+      if(target){
+        var eleves=reeData.config?reeData.config.eleves||[]:[];
+        var fullName=target;
+        for(var ei=0;ei<eleves.length;ei++){if(san(eleves[ei])===target){fullName=eleves[ei].split(" ").pop();break}}
+        setPeerTarget(fullName);
+      }
+    });
+  },[bilanSubmitted,liveConfig.peerHelp]);
 
   // Tokenize original text
   var origTokens=React.useMemo(function(){
@@ -930,7 +966,7 @@ function EleveSaisie(p){
     sendHeartbeat("active");
     var hb=setInterval(function(){sendHeartbeat("active")},30000);
     var idle=setInterval(function(){if(Date.now()-lastActionRef.current>120000){setIdleWarning(true);sendHeartbeat("idle")}},30000);
-    return function(){clearInterval(hb);clearInterval(idle);if(!bilanSubmitted)if(!bilanSubmitted)db.ref(acRef+"/status").set("offline")}
+    return function(){clearInterval(hb);clearInterval(idle);if(!bilanSubmitted)db.ref(acRef+"/status").set("offline")}
   },[]);
 
   useEffect(function(){
@@ -1238,6 +1274,12 @@ function EleveSaisie(p){
             h("h2",{style:{textAlign:"center",marginBottom:14}},bilanSubmitted?"\u2705 Termin\u00e9 !":"Bilan"),
             bilanSubmitted?h("div",{style:{textAlign:"center"}},
               h("p",{style:{fontSize:".95rem",color:"#555",marginBottom:16}},"Ton bilan a \u00e9t\u00e9 envoy\u00e9 au professeur. Bravo pour ce travail \ud83d\udc4f"),
+              peerTarget&&h("div",{style:{marginTop:12,marginBottom:12,padding:"16px 18px",background:"rgba(124,58,237,.06)",border:"2px solid rgba(124,58,237,.2)",borderRadius:12,fontSize:".95rem",lineHeight:1.8,textAlign:"center"}},
+                h("div",{style:{fontSize:"1.5rem",marginBottom:6}},"\ud83e\udd1d"),
+                h("p",{style:{fontWeight:700,color:"#7c3aed",marginBottom:6}},"Tu as termin\u00e9 avant les autres !"),
+                h("p",null,"L\u00e8ve-toi sans faire de bruit et va aider ",h("strong",null,peerTarget)," \u00e0 corriger ses erreurs."),
+                h("p",{style:{fontSize:".85rem",color:"var(--muted)",marginTop:6}},"Sois discret et respectueux. Si tu ne travailles pas s\u00e9rieusement, tu te verras sanctionn\u00e9.")
+              ),
               h("button",{className:"soc-btn soc-btn-y",style:{maxWidth:320,margin:"0 auto"},onClick:function(){
                 document.getElementById("root").innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px"><div><div style="font-size:4rem">\ud83c\udf89</div><h1 style="margin:10px">Bravo, c\u2019est termin\u00e9 !</h1><p style="font-size:1.1rem;color:#555;line-height:1.8">\ud83d\udce6 Range maintenant ton brevet blanc dans tes affaires.</p><p style="font-size:.9rem;color:#999;margin-top:16px">Tu peux fermer cette page.</p></div></div>';
               }},"\ud83d\udce6 Terminer")
@@ -1280,6 +1322,7 @@ function EleveSaisie(p){
                 return h("div",null,
                   hasInsuffisant&&h("div",{style:{padding:"8px 12px",background:"rgba(248,113,113,.08)",borderRadius:8,marginBottom:8,fontSize:".85rem",color:"#c53030"}},"\u26a0\ufe0f Certaines r\u00e9ponses doivent \u00eatre compl\u00e9t\u00e9es."),
                   h("button",{className:"soc-btn soc-btn-y",style:{width:"100%"},disabled:!allFilled||hasInsuffisant,onClick:function(){
+                if(bilanSubmitted)return;
                     // Save current answers in history before submitting
                     var nb=Object.assign({},bilan);
                     ["b1","b2","b3","b4"].forEach(function(k){
