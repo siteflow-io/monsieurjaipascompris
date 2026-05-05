@@ -880,7 +880,7 @@ function AppProf(p){
           h("div",{style:{flex:1,cursor:"pointer"},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l. \u00b7 "+(d.niveau?d.niveau.toUpperCase():"\u26a0\ufe0f pas de niveau"))),
           h("div",{style:{display:"flex",alignItems:"center",gap:6}},
             h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:function(e){e.stopPropagation();if(editing===d.id){setEditing(null)}else{setEditing(d.id);db.ref("correction_dictee/"+d.id+"/config").once("value",function(cfgSnap){var cfg=cfgSnap.val()||{};setEditForm({title:cfg.title||d.title,niveau:cfg.niveau||d.niveau||"",published:cfg.published!==false,text:cfg.text||"",classe:cfg.classe||d.classe||"",base:cfg.base||20,competences:cfg.competences||[]})})}}},editing===d.id?"\u2715":"\u270f\ufe0f"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:function(e){e.stopPropagation();if(editing===d.id){setEditing(null)}else{setEditing(d.id);db.ref("correction_dictee/"+d.id+"/config").once("value",function(cfgSnap){var cfg=cfgSnap.val()||{};setEditForm({title:cfg.title||d.title,niveau:cfg.niveau||d.niveau||"",published:cfg.published!==false,text:cfg.text||"",classe:cfg.classe||d.classe||"",base:cfg.base||20,competences:cfg.competences||[],showNote:cfg.showNote!==false,peerHelp:!!cfg.peerHelp})})}}},editing===d.id?"\u2715":"\u270f\ufe0f"),
             h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
           )
         ),
@@ -898,12 +898,14 @@ function AppProf(p){
             )
           ),
           h("div",{style:{display:"flex",gap:8,alignItems:"center",marginTop:8}},
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.showNote!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{showNote:e.target.checked}))}}),"Afficher la note \u00e0 l\u2019\u00e9l\u00e8ve"),
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:!!editForm.peerHelp,onChange:function(e){setEditForm(Object.assign({},editForm,{peerHelp:e.target.checked}))}}),"Aide entre pairs (\u00e9l\u00e8ve termin\u00e9 \u2192 aide un camarade)"),
             h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
             h("button",{className:"btn-sm btn-primary",onClick:function(){
               var wantPublish=editForm.published!==false;
               var niv=editForm.niveau||"";
               if(wantPublish&&!niv){alert("\u26a0\ufe0f Choisis d\u2019abord un niveau.");return}
-              var updates={title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[]};
+              var updates={title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[],showNote:editForm.showNote!==false,peerHelp:!!editForm.peerHelp};
               if(editForm.text)updates.text=editForm.text;
               db.ref("correction_dictee/"+d.id+"/config").update(updates);
               // Recalculate all notes if base changed
@@ -1525,6 +1527,46 @@ function CorrEleve(p){
     })()
     );
   }
+
+  var s_cfg=useState({showNote:true,peerHelp:false}),liveConfig=s_cfg[0],setLiveConfig=s_cfg[1];
+  // Listener for live config changes (prof can toggle settings mid-session)
+  useEffect(function(){
+    if(!d||!d.dictee||!d.dictee.id)return;
+    var cfgRef=db.ref("correction_dictee/"+d.dictee.id+"/config");
+    function onCfg(snap){var val=snap.val();if(val)setLiveConfig({showNote:val.showNote!==false,peerHelp:!!val.peerHelp})}
+    cfgRef.on("value",onCfg);
+    return function(){cfgRef.off("value",onCfg)};
+  },[]);
+
+  // Peer help: find the student with most errors remaining
+  var peerHelpTarget=null;
+  if(liveConfig.peerHelp&&finished){
+    // We need autocorrection data of other students — read from Firebase
+    // This is set by a separate useEffect below
+  }
+  var s_peer=useState(null),peerTarget=s_peer[0],setPeerTarget=s_peer[1];
+  useEffect(function(){
+    if(!liveConfig.peerHelp||!finished||!d||!d.dictee)return;
+    db.ref("correction_dictee/"+d.dictee.id+"/autocorrection").once("value",function(snap){
+      var acAll=snap.val()||{};var maxRemaining=0;var target=null;
+      Object.keys(acAll).forEach(function(ek){
+        if(ek===d.key)return;// Skip self
+        var a2=acAll[ek];if(!a2||typeof a2!=="object")return;
+        var total2=a2.total||0;var solved2=a2.solved||0;
+        var remaining=total2-solved2;
+        if(remaining>maxRemaining){maxRemaining=remaining;target=ek}
+      });
+      if(target&&maxRemaining>0){
+        // Find the full name
+        var eleves=d.dictee.eleves||[];
+        var fullName=target;
+        for(var ei=0;ei<eleves.length;ei++){
+          if(san(eleves[ei])===target){fullName=eleves[ei].split(" ").pop();break}
+        }
+        setPeerTarget(fullName);
+      }
+    });
+  },[finished,liveConfig.peerHelp]);
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
   return h("div",{className:"container fade-up"},
@@ -2304,6 +2346,46 @@ function EleveCorrection(p){
   var inputRef=React.useRef(null);
   var lastActionRef=React.useRef(Date.now());
   var acRef="correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key;
+  var s_cfg=useState({showNote:true,peerHelp:false}),liveConfig=s_cfg[0],setLiveConfig=s_cfg[1];
+  // Listener for live config changes (prof can toggle settings mid-session)
+  useEffect(function(){
+    if(!d||!d.dictee||!d.dictee.id)return;
+    var cfgRef=db.ref("correction_dictee/"+d.dictee.id+"/config");
+    function onCfg(snap){var val=snap.val();if(val)setLiveConfig({showNote:val.showNote!==false,peerHelp:!!val.peerHelp})}
+    cfgRef.on("value",onCfg);
+    return function(){cfgRef.off("value",onCfg)};
+  },[]);
+
+  // Peer help: find the student with most errors remaining
+  var peerHelpTarget=null;
+  if(liveConfig.peerHelp&&finished){
+    // We need autocorrection data of other students — read from Firebase
+    // This is set by a separate useEffect below
+  }
+  var s_peer=useState(null),peerTarget=s_peer[0],setPeerTarget=s_peer[1];
+  useEffect(function(){
+    if(!liveConfig.peerHelp||!finished||!d||!d.dictee)return;
+    db.ref("correction_dictee/"+d.dictee.id+"/autocorrection").once("value",function(snap){
+      var acAll=snap.val()||{};var maxRemaining=0;var target=null;
+      Object.keys(acAll).forEach(function(ek){
+        if(ek===d.key)return;// Skip self
+        var a2=acAll[ek];if(!a2||typeof a2!=="object")return;
+        var total2=a2.total||0;var solved2=a2.solved||0;
+        var remaining=total2-solved2;
+        if(remaining>maxRemaining){maxRemaining=remaining;target=ek}
+      });
+      if(target&&maxRemaining>0){
+        // Find the full name
+        var eleves=d.dictee.eleves||[];
+        var fullName=target;
+        for(var ei=0;ei<eleves.length;ei++){
+          if(san(eleves[ei])===target){fullName=eleves[ei].split(" ").pop();break}
+        }
+        setPeerTarget(fullName);
+      }
+    });
+  },[finished,liveConfig.peerHelp]);
+
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
 
   // Heartbeat: write lastSeen every 30s + on mount
@@ -2338,28 +2420,54 @@ function EleveCorrection(p){
         var loadedHistory=val.history||{};
         var changed=false;
 
-        // Migrate old format (array-index keys) to new format (token-idx keys)
-        var needsMigration=false;
-        if(errors.length>0){
-          var firstKey=Object.keys(loadedResults)[0];
-          if(firstKey!==undefined){
-            var firstIdx=errors[0]?errors[0].idx:null;
-            // Old format: keys are "0","1","2"... New format: keys are token indices
-            // Detect: if the first key matches the first error's array index (0) but not its token idx
-            if(firstIdx!==null&&String(firstIdx)!==String(0)&&(loadedResults["0"]!==undefined||loadedResults[0]!==undefined)){
-              needsMigration=true;
+        // Smart migration: match history entries to current errors by word content
+        var newResults={},newAttempts={},newHistory={};
+        var normM=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
+        var migrated=false;
+        errors.forEach(function(err){
+          var tk=String(err.idx);
+          // Check if data already exists with the correct token key
+          if(loadedResults[tk]!==undefined){
+            newResults[tk]=loadedResults[tk];
+            if(loadedAttempts[tk]!==undefined)newAttempts[tk]=loadedAttempts[tk];
+            if(loadedHistory[tk]!==undefined)newHistory[tk]=loadedHistory[tk];
+            return;
+          }
+          // Try to find matching history entry by word content
+          var found=false;
+          var allKeys=Object.keys(loadedHistory);
+          for(var ki=0;ki<allKeys.length;ki++){
+            var hk=allKeys[ki];
+            if(newHistory[hk])continue;// Already claimed
+            var entries=loadedHistory[hk];
+            if(!entries)continue;
+            var arr=Array.isArray(entries)?entries:Object.values(entries);
+            arr=arr.filter(function(e){return e!=null});
+            // Check if any entry matches this error's word
+            var matches=arr.some(function(e){
+              var typed=typeof e==="object"?e.typed:e;
+              return typed&&normM(String(typed))===normM(String(err.word));
+            });
+            if(matches){
+              newResults[tk]=loadedResults[hk]||loadedResults[tk]||true;
+              newAttempts[tk]=loadedAttempts[hk]||loadedAttempts[tk]||arr.length;
+              newHistory[tk]=entries;
+              migrated=true;found=true;break;
             }
           }
-        }
-        if(needsMigration){
-          var newResults={},newAttempts={},newHistory={};
-          errors.forEach(function(err,i){
-            var oldKey=String(i);
-            var newKey=String(err.idx);
-            if(loadedResults[oldKey]!==undefined)newResults[newKey]=loadedResults[oldKey];
-            if(loadedAttempts[oldKey]!==undefined)newAttempts[newKey]=loadedAttempts[oldKey];
-            if(loadedHistory[oldKey]!==undefined)newHistory[newKey]=loadedHistory[oldKey];
-          });
+          // Fallback: try old array index
+          if(!found){
+            var arrIdx=errors.indexOf(err);
+            var oldKey=String(arrIdx);
+            if(loadedResults[oldKey]!==undefined){
+              newResults[tk]=loadedResults[oldKey];
+              if(loadedAttempts[oldKey]!==undefined)newAttempts[tk]=loadedAttempts[oldKey];
+              if(loadedHistory[oldKey]!==undefined)newHistory[tk]=loadedHistory[oldKey];
+              migrated=true;
+            }
+          }
+        });
+        if(migrated){
           loadedResults=newResults;
           loadedAttempts=newAttempts;
           loadedHistory=newHistory;
@@ -2618,9 +2726,12 @@ function EleveCorrection(p){
       h("div",{style:{fontSize:"2rem",marginBottom:4}},"\ud83c\udf89"),
       h("h1",{style:{marginBottom:10}},"Bravo "+d.eleve.split(" ").pop()+" !"),
       h("div",{style:{display:"flex",justifyContent:"center",gap:30,marginBottom:10}},
-        h("div",null,
+        liveConfig.showNote?h("div",null,
           h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Note de dict\u00e9e"),
           h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(noteDictee,d.base)}},noteDictee+"/"+d.base)
+        ):h("div",null,
+          h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Note de dict\u00e9e"),
+          h("div",{style:{fontSize:"1.2rem",fontWeight:600,color:"var(--muted)",padding:"8px 0"}},"Tu iras voir ta note sur \u00c9cole Directe.")
         ),
         h("div",null,
           h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Bonus autocorrection"),
@@ -2629,6 +2740,12 @@ function EleveCorrection(p){
       ),
       h("p",{style:{color:"var(--text-sub)",fontSize:".9rem"}},
         totalErrors+" erreur"+(totalErrors>1?"s":"")+" corrig\u00e9e"+(totalErrors>1?"s":"")+" en "+totalAttempts+" essai"+(totalAttempts>1?"s":"")
+      ),
+      peerTarget&&h("div",{style:{marginTop:12,padding:"16px 18px",background:"rgba(124,58,237,.06)",border:"2px solid rgba(124,58,237,.2)",borderRadius:12,fontSize:".95rem",lineHeight:1.8,textAlign:"center"}},
+        h("div",{style:{fontSize:"1.5rem",marginBottom:6}},"\ud83e\udd1d"),
+        h("p",{style:{fontWeight:700,color:"#7c3aed",marginBottom:6}},"Tu as termin\u00e9 avant les autres !"),
+        h("p",null,"L\u00e8ve-toi sans faire de bruit et va aider ",h("strong",null,peerTarget)," \u00e0 corriger ses erreurs."),
+        h("p",{style:{fontSize:".85rem",color:"var(--muted)",marginTop:6}},"Sois discret et respectueux. Si tu ne travailles pas s\u00e9rieusement, tu te verras sanctionn\u00e9.")
       ),
       h("div",{style:{marginTop:10,padding:"10px 14px",background:"var(--primary-light)",borderRadius:8,fontSize:".85rem",lineHeight:1.6}},
         h("strong",null,"Bar\u00e8me : "),"Note de dict\u00e9e /"+d.base+" (correction du prof) + Bonus autocorrection /5 (tes essais ici). Chaque essai rat\u00e9 co\u00fbte 0,25 point de bonus."
