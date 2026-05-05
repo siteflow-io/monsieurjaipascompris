@@ -61,6 +61,10 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 .bilan-table th{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 .modif-row{padding:10px 0;border-bottom:1px solid var(--border)}
 .modif-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}
+.info-i{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--muted);font-size:.7rem;font-weight:700;cursor:help;margin-left:4px;position:relative;font-style:italic;flex-shrink:0;user-select:none;font-family:Georgia,serif}
+.info-i:hover,.info-i:focus{background:rgba(37,99,235,.1);color:#2563eb}
+.info-i .info-tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px;font-size:.78rem;font-weight:400;font-style:normal;white-space:normal;width:220px;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.3);line-height:1.5;text-align:left;pointer-events:none}
+.info-i:hover .info-tip,.info-i:focus .info-tip{display:block}
 </style>
 </head>
 <body>
@@ -135,6 +139,7 @@ function renderSnapshotPanel(h, dbRef, label) {
   );
 }
 
+function ifo(text){return h("span",{className:"info-i",tabIndex:0},"i",h("span",{className:"info-tip"},text))}
 var PROF_CODES=[3141,1312];
 
 // ═══ DONNÉES BREVET BLANC 4E — VARGAS ═══
@@ -365,8 +370,8 @@ function SuiviBB4E(p){
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
         h("h1",null,data.title),
         h("div",{style:{display:"flex",gap:6}},
-          h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("reecriture_bb4e/"+p.reeId,"ree_"+p.reeId)}},"\ud83d\udcf8"),
-          h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("reecriture_bb4e/"+p.reeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4"),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("reecriture_bb4e/"+p.reeId,"ree_"+p.reeId)}},"\ud83d\udcf8",ifo("T\u00e9l\u00e9charge les donn\u00e9es dans un fichier.")),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("reecriture_bb4e/"+p.reeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4",ifo("Recharge les donn\u00e9es depuis un fichier sauvegard\u00e9.")),
           h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
         )
       ),
@@ -881,7 +886,7 @@ function EleveSaisie(p){
   // Build a map: which token indices correspond to which modification
   var modifMap=React.useMemo(function(){
     var map={};
-    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018'"]/g," ").replace(/[^a-z0-9\s]/g,"").replace(/\s+/g," ").trim()};
+    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"\u0027").replace(/[\u2019\u2018'"]/g," ").replace(/[^a-z0-9\s]/g,"").replace(/\s+/g," ").trim()};
     var fullText=origTokens.map(function(t){return t.text}).join("");
     modifs.forEach(function(m){
       var origNorm=norm(m.original);
@@ -925,7 +930,7 @@ function EleveSaisie(p){
     sendHeartbeat("active");
     var hb=setInterval(function(){sendHeartbeat("active")},30000);
     var idle=setInterval(function(){if(Date.now()-lastActionRef.current>120000){setIdleWarning(true);sendHeartbeat("idle")}},30000);
-    return function(){clearInterval(hb);clearInterval(idle);if(!bilanSubmitted)db.ref(acRef+"/status").set("offline")}
+    return function(){clearInterval(hb);clearInterval(idle);if(!bilanSubmitted)if(!bilanSubmitted)db.ref(acRef+"/status").set("offline")}
   },[]);
 
   useEffect(function(){
@@ -977,7 +982,7 @@ function EleveSaisie(p){
 
   function doVerify(){
     recordAction();
-    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018'"]/g," ").replace(/[^a-z0-9\s]/g,"").replace(/\s+/g," ").trim()};
+    var norm=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"\u0027").replace(/[\u2019\u2018'"]/g," ").replace(/[^a-z0-9\s]/g,"").replace(/\s+/g," ").trim()};
     var res=modifs.map(function(m){
       var attenduNorm=norm(m.attendu);
       var attenduWords=attenduNorm.split(" ");
