@@ -2338,14 +2338,42 @@ function EleveCorrection(p){
         var loadedHistory=val.history||{};
         var changed=false;
 
+        // Migrate old format (array-index keys) to new format (token-idx keys)
+        var needsMigration=false;
+        if(errors.length>0){
+          var firstKey=Object.keys(loadedResults)[0];
+          if(firstKey!==undefined){
+            var firstIdx=errors[0]?errors[0].idx:null;
+            // Old format: keys are "0","1","2"... New format: keys are token indices
+            // Detect: if the first key matches the first error's array index (0) but not its token idx
+            if(firstIdx!==null&&String(firstIdx)!==String(0)&&(loadedResults["0"]!==undefined||loadedResults[0]!==undefined)){
+              needsMigration=true;
+            }
+          }
+        }
+        if(needsMigration){
+          var newResults={},newAttempts={},newHistory={};
+          errors.forEach(function(err,i){
+            var oldKey=String(i);
+            var newKey=String(err.idx);
+            if(loadedResults[oldKey]!==undefined)newResults[newKey]=loadedResults[oldKey];
+            if(loadedAttempts[oldKey]!==undefined)newAttempts[newKey]=loadedAttempts[oldKey];
+            if(loadedHistory[oldKey]!==undefined)newHistory[newKey]=loadedHistory[oldKey];
+          });
+          loadedResults=newResults;
+          loadedAttempts=newAttempts;
+          loadedHistory=newHistory;
+          changed=true;
+        }
+
         // Re-check each error against history with new norm
         errors.forEach(function(err,errIdx){
-          var k=String(errIdx);
-          var hist=loadedHistory[k]||loadedHistory[errIdx];
+          var k=String(err.idx);
+          var hist=loadedHistory[k]||loadedHistory[String(errIdx)];
           if(!hist)return;
           var entries=toArr(hist);
           if(entries.length===0)return;
-          var wasCorrect=loadedResults[k]||loadedResults[errIdx];
+          var wasCorrect=loadedResults[k]||loadedResults[String(errIdx)];
 
           // Check if last attempt was actually correct with new norm
           var lastEntry=entries[entries.length-1];
@@ -2355,14 +2383,14 @@ function EleveCorrection(p){
 
           if(isNowCorrect&&!wasCorrect){
             // Previously wrong, now correct with new norm — fix it
-            loadedResults[k]=true;
+            loadedResults[String(err.idx)]=true;
             // Recount attempts: only the ones before the correct one count as wrong
             var correctIdx=-1;
             for(var ei=0;ei<entries.length;ei++){
               var eTyped=typeof entries[ei]==="object"?entries[ei].typed:entries[ei];
               if(eTyped&&normCompare(String(eTyped))===normCompare(String(err.word))){correctIdx=ei;break}
             }
-            if(correctIdx>=0)loadedAttempts[k]=correctIdx+1;
+            if(correctIdx>=0)loadedAttempts[String(err.idx)]=correctIdx+1;
             changed=true;
           }
         });
@@ -2477,7 +2505,7 @@ function EleveCorrection(p){
       solved:nOk,
       total:totalErrors,
       timestamp:Date.now(),
-      errorRefs:errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}})
+      errorRefs:errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx,fautif:e.fautif||null}})
     };
     if(hist)saveData.history=hist;
     db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key).set(saveData);
