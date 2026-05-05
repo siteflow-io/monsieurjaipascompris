@@ -1007,6 +1007,38 @@ function AppProf(p){
       )})
     ),
     h("div",{className:"card"},
+      h("button",{className:"btn-sm btn-ghost",style:{marginBottom:12},onClick:function(){
+        var testId="dictee_fictive_test";
+        var testText="Le chat noir dormait sur le canap\u00e9. Il r\u00eavait de souris et de poissons. Sa ma\u00eetresse lui caressa la t\u00eate et il ronronna de plaisir.";
+        var testTokens=testText.split(/(\s+|(?=[.,;:!?]))/g).filter(function(t){return t&&t.trim()});
+        var testEleves=["DURAND Alice","MARTIN Lucas","BERNARD Emma","PETIT Thomas","ROBERT Chlo\u00e9"];
+        function findIdx(w){for(var ti=0;ti<testTokens.length;ti++){if(testTokens[ti]===w)return ti}return -1}
+        var testConfig={title:"Dict\u00e9e fictive \u2014 TEST",classe:"CLASSE TEST",niveau:"5e",base:10,published:true,text:testText,tokens:testTokens,eleves:testEleves,showNote:true,peerHelp:true};
+        // Corrections prof only — no autocorrection (created when student connects)
+        var testResults={};
+        testResults[san("DURAND Alice")]={errors:[],extras:[],note:10,deduction:0,counts:{G:0,L:0,M:0,I:0,X:0},timestamp:Date.now()};
+        testResults[san("MARTIN Lucas")]={errors:[
+          {idx:findIdx("dormait"),type:"G",word:"dormait",fautif:"dormer"},
+          {idx:findIdx("r\u00eavait"),type:"L",word:"r\u00eavait",fautif:"r\u00e9vait"},
+          {idx:findIdx("caressa"),type:"G",word:"caressa",fautif:"car\u00e8ssa"}
+        ],extras:[],note:7,deduction:3,counts:{G:2,L:1,M:0,I:0,X:0},timestamp:Date.now()};
+        testResults[san("BERNARD Emma")]={errors:[
+          {idx:findIdx("souris"),type:"L",word:"souris",fautif:"sourit"},
+          {idx:findIdx("poissons"),type:"L",word:"poissons",fautif:"poisons"}
+        ],extras:[],note:8,deduction:2,counts:{G:0,L:2,M:0,I:0,X:0},timestamp:Date.now()};
+        testResults[san("PETIT Thomas")]={errors:[
+          {idx:0,type:"G",word:"Le",fautif:"le"},
+          {idx:findIdx("dormait"),type:"G",word:"dormait",fautif:"dormais"},
+          {idx:findIdx("r\u00eavait"),type:"L",word:"r\u00eavait",fautif:"revait"},
+          {idx:findIdx("caressa"),type:"G",word:"caressa",fautif:"caresssa"},
+          {idx:findIdx("ronronna"),type:"G",word:"ronronna",fautif:"ronrona"}
+        ],extras:[],note:5,deduction:5,counts:{G:4,L:1,M:0,I:0,X:0},timestamp:Date.now()};
+        // Add test class to Firebase classes
+        db.ref("classes/CLASSE TEST").set(testEleves);
+        // Write only config + results (autocorrection will be created when students log in)
+        db.ref("correction_dictee/"+testId).set({config:testConfig,results:testResults});
+        alert("Dict\u00e9e test cr\u00e9\u00e9e ! Recharge la page.");
+      }},"\ud83e\uddea Cr\u00e9er dict\u00e9e test (simul\u00e9e)"),
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
       h("div",{className:"config-field"},h("label",null,"Niveau"),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"— Choisir —"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
@@ -2582,6 +2614,20 @@ function EleveCorrection(p){
   }
 
   function saveProgress(att,res,hist){
+    // Deduplicate history: keep only first correct per error
+    if(hist){
+      Object.keys(hist).forEach(function(ek2){
+        var entries=hist[ek2];
+        if(!Array.isArray(entries))return;
+        var cleaned=[];var foundOk=false;
+        for(var j=0;j<entries.length;j++){
+          if(entries[j]&&entries[j].ok&&foundOk)continue;
+          cleaned.push(entries[j]);
+          if(entries[j]&&entries[j].ok)foundOk=true;
+        }
+        if(cleaned.length<entries.length){hist[ek2]=cleaned;att[ek2]=cleaned.length}
+      });
+    }
     var wrong=0;
     Object.keys(att).forEach(function(k){var n=att[k]||0;if(res[String(k)]||res[Number(k)])wrong+=(n-1);else wrong+=n});
     var sc=Math.max(0,5-wrong*0.25);
