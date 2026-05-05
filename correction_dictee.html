@@ -877,35 +877,61 @@ function AppProf(p){
       // Check if errors changed (different count or different words)
       var needsRemap=oldRefs.length!==newRefs.length;
       if(!needsRemap){for(var ri=0;ri<oldRefs.length;ri++){if(!oldRefs[ri]||!newRefs[ri]||oldRefs[ri].idx!==newRefs[ri].idx){needsRemap=true;break}}}
-      if(needsRemap&&oldRefs.length>0){
-        // Build word→oldIndex map from old errorRefs
-        var normR=function(s){return(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()};
-        var oldResults=acVal.results||{};
-        var oldAttempts=acVal.attempts||{};
-        var oldHistory=acVal.history||{};
-        if(Array.isArray(oldResults)){var tmp={};oldResults.forEach(function(v,i){if(v!=null)tmp[String(i)]=v});oldResults=tmp}
-        if(Array.isArray(oldAttempts)){var tmp2={};oldAttempts.forEach(function(v,i){if(v!=null)tmp2[String(i)]=v});oldAttempts=tmp2}
-        if(Array.isArray(oldHistory)){var tmp3={};oldHistory.forEach(function(v,i){if(v!=null)tmp3[String(i)]=v});oldHistory=tmp3}
+      // Read student data
+      var oldResults=acVal.results||{};
+      var oldAttempts=acVal.attempts||{};
+      var oldHistory=acVal.history||{};
+      if(Array.isArray(oldResults)){var tmp={};oldResults.forEach(function(v,i){if(v!=null)tmp[String(i)]=v});oldResults=tmp}
+      if(Array.isArray(oldAttempts)){var tmp2={};oldAttempts.forEach(function(v,i){if(v!=null)tmp2[String(i)]=v});oldAttempts=tmp2}
+      if(Array.isArray(oldHistory)){var tmp3={};oldHistory.forEach(function(v,i){if(v!=null)tmp3[String(i)]=v});oldHistory=tmp3}
+      // Also detect orphan keys (leftover from bad migration)
+      if(!needsRemap){
+        var maxValidKey=errors.length-1;
+        var resKeys=Object.keys(oldResults);
+        for(var rki=0;rki<resKeys.length;rki++){if(resKeys[rki].match(/^\d+$/)&&parseInt(resKeys[rki])>maxValidKey){needsRemap=true;break}}
+      }
+      if(needsRemap){
+        var normR=function(s){return(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
         var remappedResults={},remappedAttempts={},remappedHistory={};
-        var usedOld={};
+        // For each new error, find the history entry whose TYPED WORD matches
+        var usedHistKeys={};
         newRefs.forEach(function(nr,newIdx){
-          // Find matching old error by idx+word
-          var found=-1;
-          for(var oi=0;oi<oldRefs.length;oi++){
-            if(usedOld[oi])continue;
-            if(oldRefs[oi]&&oldRefs[oi].idx===nr.idx&&normR(oldRefs[oi].word)===normR(nr.word)){found=oi;break}
+          var allHKeys=Object.keys(oldHistory);
+          var bestKey=null;
+          for(var hi=0;hi<allHKeys.length;hi++){
+            var hk=allHKeys[hi];
+            if(usedHistKeys[hk])continue;
+            var entries=oldHistory[hk];
+            if(!entries)continue;
+            var arr=Array.isArray(entries)?entries:Object.values(entries);
+            arr=arr.filter(function(e){return e!=null});
+            var hasMatch=arr.some(function(e){
+              var typed=typeof e==="object"?e.typed:e;
+              return typed&&normR(String(typed))===normR(String(nr.word));
+            });
+            if(hasMatch){bestKey=hk;break}
           }
-          // Fallback: match by word only
-          if(found<0){for(var oi2=0;oi2<oldRefs.length;oi2++){
-            if(usedOld[oi2])continue;
-            if(oldRefs[oi2]&&normR(oldRefs[oi2].word)===normR(nr.word)){found=oi2;break}
-          }}
-          if(found>=0){
-            usedOld[found]=true;
-            var ok=String(found);
-            if(oldResults[ok]!==undefined)remappedResults[String(newIdx)]=oldResults[ok];
-            if(oldAttempts[ok]!==undefined)remappedAttempts[String(newIdx)]=oldAttempts[ok];
-            if(oldHistory[ok]!==undefined)remappedHistory[String(newIdx)]=oldHistory[ok];
+          if(bestKey!==null){
+            usedHistKeys[bestKey]=true;
+            remappedHistory[String(newIdx)]=oldHistory[bestKey];
+            remappedResults[String(newIdx)]=true;
+            // Count attempts from history
+            var hArr=Array.isArray(oldHistory[bestKey])?oldHistory[bestKey]:Object.values(oldHistory[bestKey]);
+            hArr=hArr.filter(function(e){return e!=null});
+            remappedAttempts[String(newIdx)]=hArr.length;
+          } else {
+            // No history match — check if result exists at this index or at token idx
+            var directKey=String(newIdx);
+            var tidxKey2=String(nr.idx);
+            if(oldResults[directKey]!==undefined){
+              remappedResults[directKey]=oldResults[directKey];
+              if(oldAttempts[directKey]!==undefined)remappedAttempts[directKey]=oldAttempts[directKey];
+              if(oldHistory[directKey]!==undefined)remappedHistory[directKey]=oldHistory[directKey];
+            } else if(oldResults[tidxKey2]!==undefined){
+              remappedResults[directKey]=oldResults[tidxKey2];
+              if(oldAttempts[tidxKey2]!==undefined)remappedAttempts[directKey]=oldAttempts[tidxKey2];
+              if(oldHistory[tidxKey2]!==undefined)remappedHistory[directKey]=oldHistory[tidxKey2];
+            }
           }
         });
         var nOk=Object.keys(remappedResults).filter(function(k){return remappedResults[k]}).length;
