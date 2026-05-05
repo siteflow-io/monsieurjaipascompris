@@ -117,6 +117,10 @@ textarea{resize:vertical;min-height:120px}
 /* Progress bar */
 .progress-wrap{height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
 .progress-fill{height:100%;background:var(--green);border-radius:2px;transition:width .3s}
+.info-i{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.06);color:var(--muted);font-size:.7rem;font-weight:700;cursor:help;margin-left:4px;position:relative;font-style:italic;flex-shrink:0;user-select:none;font-family:Georgia,serif}
+.info-i:hover,.info-i:focus{background:rgba(37,99,235,.1);color:#2563eb}
+.info-i .info-tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:8px 12px;border-radius:8px;font-size:.78rem;font-weight:400;font-style:normal;white-space:normal;width:220px;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.3);line-height:1.5;text-align:left;pointer-events:none}
+.info-i:hover .info-tip,.info-i:focus .info-tip{display:block}
 </style>
 </head>
 <body>
@@ -773,6 +777,7 @@ function renderSnapshotPanel(h, dbRef, label) {
   );
 }
 
+function ifo(text){return h("span",{className:"info-i",tabIndex:0},"i",h("span",{className:"info-tip"},text))}
 var PROF_CODES=[3141,1312];
 function App(){
   var s0=useState(null),mode=s0[0],setMode=s0[1];
@@ -967,7 +972,44 @@ function AppProf(p){
       h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput},"Commencer"),
       h("div",{style:{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}},
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("","firebase_complet")}},"\ud83d\udcf8 Snapshot global Firebase")
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee","correction_dictee_complet")}},"\ud83d\udcf8 Snapshot global",ifo("T\u00e9l\u00e9charge toutes les donn\u00e9es de correction dans un fichier. Tu peux me le partager pour que j\u2019analyse les r\u00e9sultats.")),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){
+          db.ref("correction_dictee").once("value",function(snap){
+            var all=snap.val()||{};var nFixed=0;
+            Object.keys(all).forEach(function(dictId){
+              var dictee=all[dictId];if(!dictee||!dictee.autocorrection)return;
+              Object.keys(dictee.autocorrection).forEach(function(ek){
+                var ac2=dictee.autocorrection[ek];if(!ac2||!ac2.history)return;
+                var hist=JSON.parse(JSON.stringify(ac2.history));var res2=ac2.results||{};var changed=false;
+                var newAttempts={};
+                Object.keys(hist).forEach(function(ei){
+                  var entries=hist[ei];if(!entries)return;
+                  var arr=Array.isArray(entries)?entries:Object.keys(entries).sort(function(a,b){return parseInt(a)-parseInt(b)}).map(function(k2){return entries[k2]});
+                  arr=arr.filter(function(e){return e!=null});
+                  var cleaned=[];var foundCorrect=false;
+                  for(var j=0;j<arr.length;j++){
+                    var e2=arr[j];var ok=e2&&e2.ok;
+                    if(ok&&foundCorrect)continue;
+                    cleaned.push(e2);
+                    if(ok)foundCorrect=true;
+                  }
+                  if(cleaned.length<arr.length){changed=true;hist[ei]=cleaned}
+                  newAttempts[ei]=cleaned.length;
+                });
+                if(changed){
+                  var wrong=0;
+                  Object.keys(newAttempts).forEach(function(k2){var n=newAttempts[k2]||0;if(res2[String(k2)]||res2[Number(k2)])wrong+=(n-1);else wrong+=n});
+                  var sc=Math.max(0,5-wrong*0.25);
+                  db.ref("correction_dictee/"+dictId+"/autocorrection/"+ek+"/history").set(hist);
+                  db.ref("correction_dictee/"+dictId+"/autocorrection/"+ek+"/attempts").set(newAttempts);
+                  db.ref("correction_dictee/"+dictId+"/autocorrection/"+ek+"/score").set(Math.round(sc*100)/100);
+                  nFixed++;
+                }
+              });
+            });
+            alert(nFixed+" \u00e9l\u00e8ve"+(nFixed>1?"s":"")+" corrig\u00e9"+(nFixed>1?"s":"")+" sur l\u2019ensemble des dict\u00e9es.");
+          });
+        }},"\ud83e\uddf9 Purger doublons (toutes dict\u00e9es)",ifo("Supprime les essais en double et recalcule les scores pour toutes les dict\u00e9es."))
       ),
       showClassMgr&&h("div",{className:"card",style:{marginTop:12}},
         h("h2",null,"Gestion des classes"),
@@ -1080,16 +1122,17 @@ function CorrScreen(p){
             });
             alert(nFixed+" \u00e9l\u00e8ve"+(nFixed>1?"s":"")+" recalcul\u00e9"+(nFixed>1?"s":"")+".");
           });
-        }},"\ud83d\udd04 Recalculer"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee/"+p.dicteeId,"dictee_"+p.dicteeId)}},"\ud83d\udcf8 Snapshot"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee/"+p.dicteeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4 Restaurer"),
+        }},"\ud83d\udd04 Recalculer",ifo("V\u00e9rifie tous les essais des \u00e9l\u00e8ves et corrige les erreurs de comptage (probl\u00e8mes d\u2019apostrophe par exemple).")),
+        
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee/"+p.dicteeId,"dictee_"+p.dicteeId)}},"\ud83d\udcf8 Snapshot",ifo("T\u00e9l\u00e9charge les donn\u00e9es de cette dict\u00e9e dans un fichier.")),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee/"+p.dicteeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4 Restaurer",ifo("Recharge les donn\u00e9es d\u2019une dict\u00e9e depuis un fichier sauvegard\u00e9.")),
         h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
       )
     ),
     msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
     h("div",{className:"tabs"},
       h("button",{className:"tab"+(tab==="correct"?" active":""),onClick:function(){setTab("correct")}},"Correction"),
-      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")}},"\u26a1 Rapide"),
+      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")}},"\u26a1 Rapide",ifo("Corrige en faisant d\u00e9filer les mots un par un. Tu regardes la copie et tu tapes G, L, / ou ? au clavier.")),
       h("button",{className:"tab"+(tab==="bilan"?" active":""),onClick:function(){setTab("bilan")}},"Bilan"),
       h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
       h("button",{className:"tab"+(tab==="suivi"?" active":""),onClick:function(){setTab("suivi")}},"Suivi \ud83d\udfe2")
@@ -2382,9 +2425,12 @@ function EleveCorrection(p){
     });
   },[]);
 
+  var pendingRef=React.useRef({});
   function tryAnswer(){
     recordAction();
     if(activeErr===null)return;
+    if(results[activeErr])return;
+    if(pendingRef.current[activeErr])return;// Block during feedback timeout
     var err=errors[activeErr];
     if(!err||!err.word){return}
     var correct=String(err.word);
@@ -2405,15 +2451,16 @@ function EleveCorrection(p){
     setHistory(hist);
 
     if(isCorrect){
+      pendingRef.current[activeErr]=true;
       var r=Object.assign({},results);r[activeErr]=true;setResults(r);
       setFeedback({correct:true,answer:correct});
       setTimeout(function(){setFeedback(null);setActiveErr(null);setInputVal("");
         saveProgress(att,Object.assign({},r),hist);
       },1200);
     } else {
+      pendingRef.current[activeErr]=true;
       setFeedback({correct:false,answer:null});
-      setTimeout(function(){setFeedback(null);setInputVal("")},800);
-      // Save after wrong attempt too
+      setTimeout(function(){setFeedback(null);setInputVal("");pendingRef.current[activeErr]=false},800);
       saveProgress(att,results,hist);
     }
   }
@@ -2666,7 +2713,7 @@ function EleveCorrection(p){
       ),
       h("div",{style:{display:"flex",flexDirection:"column",gap:4}},
         h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onBack},"\u2190"),
-        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".7rem",padding:"3px 8px",color:"var(--primary)"},onClick:function(){window.location.reload()}},"\ud83d\udd04")
+        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".7rem",padding:"3px 8px",color:"var(--primary)"},onClick:function(){window.location.reload()}},"\ud83d\udd04",ifo("Recharge la page. Clique ici quand le professeur te le demande."))
       )
     ),
     // Text with masked words
