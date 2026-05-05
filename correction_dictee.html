@@ -867,9 +867,57 @@ function AppProf(p){
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,dicteeData.base);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
     setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
-    // Sync total + errorRefs dans l'autocorrection pour cohérence
-    db.ref("correction_dictee/"+dicteeId+"/autocorrection/"+ek+"/total").set(errors.length);
-    db.ref("correction_dictee/"+dicteeId+"/autocorrection/"+ek+"/errorRefs").set(errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
+    // Remap student autocorrection if errors changed
+    var acPath="correction_dictee/"+dicteeId+"/autocorrection/"+ek;
+    db.ref(acPath).once("value",function(acSnap){
+      var acVal=acSnap.val();
+      if(!acVal)return;
+      var oldRefs=toArr(acVal.errorRefs||[]).filter(function(r){return r!=null});
+      var newRefs=errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}});
+      // Check if errors changed (different count or different words)
+      var needsRemap=oldRefs.length!==newRefs.length;
+      if(!needsRemap){for(var ri=0;ri<oldRefs.length;ri++){if(!oldRefs[ri]||!newRefs[ri]||oldRefs[ri].idx!==newRefs[ri].idx){needsRemap=true;break}}}
+      if(needsRemap&&oldRefs.length>0){
+        // Build word→oldIndex map from old errorRefs
+        var normR=function(s){return(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase()};
+        var oldResults=acVal.results||{};
+        var oldAttempts=acVal.attempts||{};
+        var oldHistory=acVal.history||{};
+        if(Array.isArray(oldResults)){var tmp={};oldResults.forEach(function(v,i){if(v!=null)tmp[String(i)]=v});oldResults=tmp}
+        if(Array.isArray(oldAttempts)){var tmp2={};oldAttempts.forEach(function(v,i){if(v!=null)tmp2[String(i)]=v});oldAttempts=tmp2}
+        if(Array.isArray(oldHistory)){var tmp3={};oldHistory.forEach(function(v,i){if(v!=null)tmp3[String(i)]=v});oldHistory=tmp3}
+        var remappedResults={},remappedAttempts={},remappedHistory={};
+        var usedOld={};
+        newRefs.forEach(function(nr,newIdx){
+          // Find matching old error by idx+word
+          var found=-1;
+          for(var oi=0;oi<oldRefs.length;oi++){
+            if(usedOld[oi])continue;
+            if(oldRefs[oi]&&oldRefs[oi].idx===nr.idx&&normR(oldRefs[oi].word)===normR(nr.word)){found=oi;break}
+          }
+          // Fallback: match by word only
+          if(found<0){for(var oi2=0;oi2<oldRefs.length;oi2++){
+            if(usedOld[oi2])continue;
+            if(oldRefs[oi2]&&normR(oldRefs[oi2].word)===normR(nr.word)){found=oi2;break}
+          }}
+          if(found>=0){
+            usedOld[found]=true;
+            var ok=String(found);
+            if(oldResults[ok]!==undefined)remappedResults[String(newIdx)]=oldResults[ok];
+            if(oldAttempts[ok]!==undefined)remappedAttempts[String(newIdx)]=oldAttempts[ok];
+            if(oldHistory[ok]!==undefined)remappedHistory[String(newIdx)]=oldHistory[ok];
+          }
+        });
+        var nOk=Object.keys(remappedResults).filter(function(k){return remappedResults[k]}).length;
+        var wr=0;Object.keys(remappedAttempts).forEach(function(k){var n=remappedAttempts[k]||0;if(remappedResults[k])wr+=(n-1);else wr+=n});
+        var newScore=Math.max(0,5-wr*0.25);
+        db.ref(acPath).update({results:remappedResults,attempts:remappedAttempts,history:remappedHistory,total:errors.length,solved:nOk,score:Math.round(newScore*100)/100,errorRefs:newRefs});
+      } else {
+        // No remap needed, just sync total and errorRefs
+        db.ref(acPath+"/total").set(errors.length);
+        db.ref(acPath+"/errorRefs").set(newRefs);
+      }
+    });
   }
 
   if(screen==="config") return h("div",{className:"container fade-up"},
@@ -1527,46 +1575,6 @@ function CorrEleve(p){
     })()
     );
   }
-
-  var s_cfg=useState({showNote:true,peerHelp:false}),liveConfig=s_cfg[0],setLiveConfig=s_cfg[1];
-  // Listener for live config changes (prof can toggle settings mid-session)
-  useEffect(function(){
-    if(!d||!d.dictee||!d.dictee.id)return;
-    var cfgRef=db.ref("correction_dictee/"+d.dictee.id+"/config");
-    function onCfg(snap){var val=snap.val();if(val)setLiveConfig({showNote:val.showNote!==false,peerHelp:!!val.peerHelp})}
-    cfgRef.on("value",onCfg);
-    return function(){cfgRef.off("value",onCfg)};
-  },[]);
-
-  // Peer help: find the student with most errors remaining
-  var peerHelpTarget=null;
-  if(liveConfig.peerHelp&&finished){
-    // We need autocorrection data of other students — read from Firebase
-    // This is set by a separate useEffect below
-  }
-  var s_peer=useState(null),peerTarget=s_peer[0],setPeerTarget=s_peer[1];
-  useEffect(function(){
-    if(!liveConfig.peerHelp||!finished||!d||!d.dictee)return;
-    db.ref("correction_dictee/"+d.dictee.id+"/autocorrection").once("value",function(snap){
-      var acAll=snap.val()||{};var maxRemaining=0;var target=null;
-      Object.keys(acAll).forEach(function(ek){
-        if(ek===d.key)return;// Skip self
-        var a2=acAll[ek];if(!a2||typeof a2!=="object")return;
-        var total2=a2.total||0;var solved2=a2.solved||0;
-        var remaining=total2-solved2;
-        if(remaining>maxRemaining){maxRemaining=remaining;target=ek}
-      });
-      if(target&&maxRemaining>0){
-        // Find the full name
-        var eleves=d.dictee.eleves||[];
-        var fullName=target;
-        for(var ei=0;ei<eleves.length;ei++){
-          if(san(eleves[ei])===target){fullName=eleves[ei].split(" ").pop();break}
-        }
-        setPeerTarget(fullName);
-      }
-    });
-  },[finished,liveConfig.peerHelp]);
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
   return h("div",{className:"container fade-up"},
@@ -2420,68 +2428,14 @@ function EleveCorrection(p){
         var loadedHistory=val.history||{};
         var changed=false;
 
-        // Smart migration: match history entries to current errors by word content
-        var newResults={},newAttempts={},newHistory={};
-        var normM=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
-        var migrated=false;
-        errors.forEach(function(err){
-          var tk=String(err.idx);
-          // Check if data already exists with the correct token key
-          if(loadedResults[tk]!==undefined){
-            newResults[tk]=loadedResults[tk];
-            if(loadedAttempts[tk]!==undefined)newAttempts[tk]=loadedAttempts[tk];
-            if(loadedHistory[tk]!==undefined)newHistory[tk]=loadedHistory[tk];
-            return;
-          }
-          // Try to find matching history entry by word content
-          var found=false;
-          var allKeys=Object.keys(loadedHistory);
-          for(var ki=0;ki<allKeys.length;ki++){
-            var hk=allKeys[ki];
-            if(newHistory[hk])continue;// Already claimed
-            var entries=loadedHistory[hk];
-            if(!entries)continue;
-            var arr=Array.isArray(entries)?entries:Object.values(entries);
-            arr=arr.filter(function(e){return e!=null});
-            // Check if any entry matches this error's word
-            var matches=arr.some(function(e){
-              var typed=typeof e==="object"?e.typed:e;
-              return typed&&normM(String(typed))===normM(String(err.word));
-            });
-            if(matches){
-              newResults[tk]=loadedResults[hk]||loadedResults[tk]||true;
-              newAttempts[tk]=loadedAttempts[hk]||loadedAttempts[tk]||arr.length;
-              newHistory[tk]=entries;
-              migrated=true;found=true;break;
-            }
-          }
-          // Fallback: try old array index
-          if(!found){
-            var arrIdx=errors.indexOf(err);
-            var oldKey=String(arrIdx);
-            if(loadedResults[oldKey]!==undefined){
-              newResults[tk]=loadedResults[oldKey];
-              if(loadedAttempts[oldKey]!==undefined)newAttempts[tk]=loadedAttempts[oldKey];
-              if(loadedHistory[oldKey]!==undefined)newHistory[tk]=loadedHistory[oldKey];
-              migrated=true;
-            }
-          }
-        });
-        if(migrated){
-          loadedResults=newResults;
-          loadedAttempts=newAttempts;
-          loadedHistory=newHistory;
-          changed=true;
-        }
-
-        // Re-check each error against history with new norm
+        // Re-check each error against history with new apostrophe norm
         errors.forEach(function(err,errIdx){
-          var k=String(err.idx);
-          var hist=loadedHistory[k]||loadedHistory[String(errIdx)];
+          var k=String(errIdx);
+          var hist=loadedHistory[k];
           if(!hist)return;
           var entries=toArr(hist);
           if(entries.length===0)return;
-          var wasCorrect=loadedResults[k]||loadedResults[String(errIdx)];
+          var wasCorrect=loadedResults[k];
 
           // Check if last attempt was actually correct with new norm
           var lastEntry=entries[entries.length-1];
@@ -2491,14 +2445,14 @@ function EleveCorrection(p){
 
           if(isNowCorrect&&!wasCorrect){
             // Previously wrong, now correct with new norm — fix it
-            loadedResults[String(err.idx)]=true;
+            loadedResults[k]=true;
             // Recount attempts: only the ones before the correct one count as wrong
             var correctIdx=-1;
             for(var ei=0;ei<entries.length;ei++){
               var eTyped=typeof entries[ei]==="object"?entries[ei].typed:entries[ei];
               if(eTyped&&normCompare(String(eTyped))===normCompare(String(err.word))){correctIdx=ei;break}
             }
-            if(correctIdx>=0)loadedAttempts[String(err.idx)]=correctIdx+1;
+            if(correctIdx>=0)loadedAttempts[k]=correctIdx+1;
             changed=true;
           }
         });
@@ -2548,7 +2502,7 @@ function EleveCorrection(p){
   var nSolved=Object.keys(results).filter(function(k){return results[k]}).length;
 
   // Build error map for display
-  var errMap={};errors.forEach(function(e,i){errMap[e.idx]={type:e.type,word:e.word,errIdx:i}});
+  var errMap={};errors.forEach(function(e,i){errMap[e.idx]={type:e.type,word:e.word,errIdx:i,fautif:e.fautif}});
 
   // History of all typed attempts: {errIdx: [{typed, ok, time}]}
   var s11=useState({}),history=s11[0],setHistory=s11[1];
