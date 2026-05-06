@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salle d'attente Plickers</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+<style>
+:root{
+  --turquoise:#00BFA6;--jaune:#FFD23F;--rose:#FF3E7F;--violet:#6A4CE0;
+  --bleu:#2196F3;--noir:#1A1A2E;--blanc:#FFFFFF;--vert:#22C55E;--rouge:#EF4444;
+  --gris:#64748B;--gris-clair:#F1F5F9;--bordure:#E2E8F0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Trebuchet MS','Verdana',sans-serif;color:var(--noir);overflow-x:hidden}
+body{min-height:100vh;background:linear-gradient(135deg,var(--violet) 0%,var(--rose) 50%,var(--turquoise) 100%);background-size:400% 400%;animation:bgShift 15s ease infinite}
+@keyframes bgShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+/* === ACCUEIL === */
+.accueil{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4vh 4vw;text-align:center;color:var(--blanc)}
+.accueil h1{font-size:clamp(2.5rem,6vw,5rem);font-weight:900;margin-bottom:1rem;text-shadow:0 4px 20px rgba(0,0,0,.3)}
+.accueil .sous{font-size:clamp(1rem,1.6vw,1.3rem);margin-bottom:3rem;opacity:.95}
+.btn-accueil{background:var(--blanc);color:var(--violet);border:none;padding:1.5rem 3rem;border-radius:18px;font-size:1.4rem;font-weight:900;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.2);transition:transform .15s}
+.btn-accueil:hover{transform:translateY(-3px)}
+.lien-prof{margin-top:2.5rem;font-size:.85rem;color:rgba(255,255,255,.6);background:none;border:none;cursor:pointer;text-decoration:underline}
+.code-input{margin-top:1rem;display:flex;gap:.5rem;justify-content:center}
+.code-input input{padding:.6rem 1rem;border-radius:10px;border:none;font-size:1rem;width:100px;text-align:center}
+.code-input button{padding:.6rem 1.2rem;border-radius:10px;border:none;background:var(--jaune);color:var(--noir);font-weight:900;cursor:pointer}
+
+/* === PROF === */
+.prof{min-height:100vh;background:var(--gris-clair);color:var(--noir);padding:1rem 1.5rem}
+.prof-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:2px solid var(--bordure)}
+.prof-header h1{font-size:1.5rem;color:var(--violet)}
+.tabs{display:flex;gap:.4rem;margin-bottom:1rem}
+.tab{padding:.6rem 1.2rem;background:var(--blanc);border:2px solid var(--bordure);border-radius:10px 10px 0 0;cursor:pointer;font-weight:600}
+.tab.actif{background:var(--violet);color:var(--blanc);border-color:var(--violet)}
+.card{background:var(--blanc);border-radius:12px;padding:1.2rem;box-shadow:0 2px 10px rgba(0,0,0,.05);margin-bottom:1rem}
+.card h2{font-size:1.15rem;margin-bottom:.8rem;color:var(--violet)}
+.card h3{font-size:1rem;margin:.8rem 0 .5rem;color:var(--noir)}
+.field{margin-bottom:.8rem}
+.field label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.3rem;color:var(--gris)}
+.field input,.field textarea,.field select{width:100%;padding:.6rem;border:1.5px solid var(--bordure);border-radius:8px;font-size:.95rem;font-family:inherit}
+.field textarea{min-height:140px;font-family:'Courier New',monospace;font-size:.85rem}
+.btn{padding:.7rem 1.2rem;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.95rem}
+.btn-primary{background:var(--violet);color:var(--blanc)}
+.btn-vert{background:var(--vert);color:var(--blanc)}
+.btn-rouge{background:var(--rouge);color:var(--blanc)}
+.btn-ghost{background:transparent;color:var(--violet);border:1.5px solid var(--violet)}
+.btn-sm{padding:.4rem .8rem;font-size:.85rem}
+.classe-row{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid var(--bordure)}
+.classe-row:last-child{border-bottom:none}
+.eleves-list{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.eleve-chip{padding:.3rem .7rem;border-radius:20px;background:var(--gris-clair);font-size:.8rem;cursor:pointer;border:1.5px solid transparent}
+.eleve-chip.absent{background:var(--rouge);color:var(--blanc);text-decoration:line-through}
+
+/* === PILOTAGE === */
+.pilotage{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:900px){.pilotage{grid-template-columns:1fr}}
+.chrono-box{display:flex;align-items:center;gap:.8rem;margin:1rem 0}
+.chrono-box input{width:80px;padding:.6rem;border:2px solid var(--violet);border-radius:8px;font-size:1.4rem;text-align:center;font-weight:900}
+.btn-autoriser{width:100%;padding:1.5rem;background:var(--vert);color:var(--blanc);border:none;border-radius:14px;font-size:1.6rem;font-weight:900;cursor:pointer;box-shadow:0 6px 20px rgba(34,197,94,.4)}
+.btn-autoriser:disabled{background:var(--gris);box-shadow:none;cursor:not-allowed}
+.statut-vivant{padding:1rem;border-radius:10px;text-align:center;font-weight:700;font-size:1.1rem}
+.statut-attente{background:var(--gris-clair);color:var(--gris)}
+.statut-actif{background:var(--vert);color:var(--blanc)}
+
+/* === ÉLÈVE === */
+.eleve-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3vh 3vw;position:relative}
+.deco{position:absolute;pointer-events:none;font-size:3rem;opacity:.5;animation:float 6s ease-in-out infinite}
+.deco:nth-child(1){top:8%;left:5%;animation-delay:0s}
+.deco:nth-child(2){top:15%;right:8%;animation-delay:1s}
+.deco:nth-child(3){bottom:12%;left:10%;animation-delay:2s}
+.deco:nth-child(4){bottom:8%;right:6%;animation-delay:3s}
+.deco:nth-child(5){top:50%;left:3%;animation-delay:4s;font-size:2rem}
+.deco:nth-child(6){top:55%;right:4%;animation-delay:2.5s;font-size:2rem}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-20px) rotate(15deg)}}
+
+.eleve-card{background:var(--blanc);color:var(--noir);border-radius:24px;padding:3vh 4vw;max-width:1100px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3),0 0 0 6px var(--jaune),0 0 0 12px var(--rose);position:relative;z-index:2}
+
+.fleche-onglet{position:fixed;top:8px;left:0;z-index:5;display:flex;flex-direction:column;align-items:center;color:var(--blanc);font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.5);animation:balayageFleche 4s ease-in-out infinite;pointer-events:none}
+.fleche-onglet .arrow{font-size:3rem;line-height:1;animation:bounceArrow 1s ease-in-out infinite}
+.fleche-onglet .txt{font-size:.95rem;background:var(--rose);padding:.3rem .7rem;border-radius:20px;margin-top:.2rem;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+@keyframes balayageFleche{0%{left:30px}50%{left:calc(100vw - 320px)}100%{left:30px}}
+@keyframes bounceArrow{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+.badge-classe{display:inline-block;background:var(--jaune);color:var(--noir);font-weight:900;padding:.5rem 1.2rem;border-radius:50px;font-size:clamp(.8rem,1.2vw,1rem);letter-spacing:.15em;margin-bottom:1rem;text-transform:uppercase;transform:rotate(-2deg)}
+.eleve-card h1{font-size:clamp(2rem,5vw,4rem);line-height:1;color:var(--violet);margin-bottom:.4rem;font-weight:900}
+.eleve-card .nom-eleve{font-size:clamp(1.1rem,1.8vw,1.4rem);color:var(--rose);font-weight:700;margin-bottom:1.5rem}
+
+/* Sélecteur élève */
+.eleves-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin-top:1rem}
+.eleve-btn{padding:1rem;background:linear-gradient(135deg,var(--turquoise),var(--bleu));color:var(--blanc);border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;transition:transform .15s}
+.eleve-btn:hover{transform:scale(1.03)}
+.eleve-btn.absent{background:var(--gris-clair);color:var(--gris);cursor:not-allowed;text-decoration:line-through}
+
+/* Consignes */
+.btn-consignes{background:linear-gradient(135deg,var(--rose),var(--violet));color:var(--blanc);border:none;padding:1.5rem 2.5rem;border-radius:18px;font-size:1.4rem;font-weight:900;cursor:pointer;margin:1.5rem 0;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.consigne{background:linear-gradient(135deg,var(--turquoise),var(--bleu));color:var(--blanc);padding:1.5rem;border-radius:18px;margin:1rem 0;display:flex;align-items:center;gap:1rem;animation:slideIn .4s ease-out;text-align:left}
+.consigne:nth-child(2){background:linear-gradient(135deg,var(--rose),var(--violet))}
+.consigne:nth-child(3){background:linear-gradient(135deg,#FF8C42,var(--jaune));color:var(--noir)}
+@keyframes slideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.consigne-num{font-size:2.5rem;font-weight:900;flex-shrink:0}
+.consigne-corps{flex:1}
+.consigne-titre{font-size:clamp(1.2rem,1.8vw,1.6rem);font-weight:900;text-transform:uppercase;margin-bottom:.3rem}
+.consigne-texte{font-size:clamp(1.05rem,1.5vw,1.4rem);line-height:1.4}
+.consigne-coche{display:flex;align-items:center;gap:.5rem;background:rgba(255,255,255,.25);padding:.5rem 1rem;border-radius:10px;cursor:pointer;font-weight:700;font-size:1rem;flex-shrink:0}
+.consigne-coche input{width:24px;height:24px;cursor:pointer}
+
+/* Bandeau résumé */
+.bandeau-consignes{display:flex;gap:.5rem;margin-top:1rem;justify-content:center;flex-wrap:wrap}
+.bandeau-mini{font-size:.8rem;padding:.4rem .8rem;background:var(--gris-clair);border-radius:20px;color:var(--gris)}
+
+/* États interro */
+.etat-attente{padding:3rem 2rem;border-radius:20px;background:var(--gris-clair);font-size:clamp(1.5rem,3vw,2.2rem);font-weight:900;color:var(--gris)}
+.etat-actif{padding:3rem 2rem;border-radius:20px;background:var(--vert);color:var(--blanc);font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:900;animation:pulseVert .6s ease-in-out infinite alternate}
+@keyframes pulseVert{from{box-shadow:0 0 0 0 rgba(34,197,94,.6)}to{box-shadow:0 0 0 20px rgba(34,197,94,0)}}
+.chrono-grand{font-size:clamp(4rem,10vw,7rem);font-weight:900;line-height:1}
+
+/* Score réactivité */
+.score-reactivite{margin-top:1rem;padding:.8rem 1.2rem;background:linear-gradient(135deg,var(--jaune),#FF8C42);color:var(--noir);border-radius:50px;display:inline-block;font-weight:900;font-size:1rem}
+
+/* Pied dissuasif */
+.pied{margin-top:1.5rem;padding-top:1rem;border-top:3px dashed var(--jaune);font-size:clamp(.9rem,1.3vw,1.1rem);font-weight:700;color:var(--violet)}
+.pied .gros{color:var(--rose);font-size:1.15em}
+
+/* OVERLAY PROF (accessible via 1312) */
+.prof-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:2vh 2vw;overflow-y:auto}
+.prof-overlay-inner{background:var(--gris-clair);border-radius:16px;width:100%;max-width:1200px;max-height:96vh;overflow-y:auto;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.prof-overlay-inner .prof{min-height:auto}
+.btn-close-overlay{position:absolute;top:.8rem;right:.8rem;z-index:10;width:40px;height:40px;border-radius:50%;background:var(--rouge);color:var(--blanc);border:none;font-size:1.3rem;font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+
+/* OVERLAY ALERTE rouge */
+#alerte{position:fixed;inset:0;background:var(--rose);z-index:1000;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4vh 4vw;animation:pulseFond .8s ease-in-out infinite alternate}
+#alerte.show{display:flex}
+@keyframes pulseFond{from{background:var(--rose)}to{background:#C62853}}
+#alerte .panneau{background:var(--blanc);color:var(--noir);border-radius:24px;padding:4vh 5vw;max-width:700px;box-shadow:0 0 0 8px var(--jaune),0 30px 80px rgba(0,0,0,.5);animation:shake .4s ease-in-out}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#alerte .icone{font-size:clamp(4rem,10vw,7rem);margin-bottom:1rem}
+#alerte h2{font-size:clamp(2rem,5vw,3.5rem);color:var(--rose);font-weight:900;margin-bottom:1rem;line-height:1}
+#alerte p{font-size:clamp(1.1rem,1.8vw,1.4rem);color:var(--noir);line-height:1.4;font-weight:700}
+
+/* Activation son prof */
+.activate-audio{margin-top:1rem;padding:1rem;background:var(--jaune);border-radius:10px;text-align:center;font-weight:700}
+
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// CONFIGURATION FIREBASE — À REMPLACER PAR LE BLOC DU PROJET PLICKERS
+// ════════════════════════════════════════════════════════════════════
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDvdLJ_9QFvNUWyDKhlqVRVnmYEaqD4pwk",
+  authDomain: "plickers-mjpc.firebaseapp.com",
+  databaseURL: "https://plickers-mjpc-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "plickers-mjpc",
+  storageBucket: "plickers-mjpc.firebasestorage.app",
+  messagingSenderId: "117330218517",
+  appId: "1:117330218517:web:fabd9609b26be153df881c"
+};
+
+if(FIREBASE_CONFIG.apiKey !== "REMPLACER"){
+  firebase.initializeApp(FIREBASE_CONFIG);
+}
+var db = (FIREBASE_CONFIG.apiKey !== "REMPLACER") ? firebase.database() : null;
+
+var PROF_CODES = [3141, 1312];
+var DB_ROOT = "plickers";
+
+// ════════════════════════════════════════════════════════════════════
+// SNAPSHOT EXPORT/IMPORT
+// ════════════════════════════════════════════════════════════════════
+function snapshotExport(filename){
+  if(!db){alert("Firebase non configuré");return}
+  db.ref(DB_ROOT).once("value", function(snap){
+    var data = snap.val();
+    var payload = {
+      _meta:{source:DB_ROOT,exportedAt:new Date().toISOString(),version:1},
+      data:data || {}
+    };
+    var blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = (filename||"plickers")+"_"+new Date().toISOString().slice(0,10)+".json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+function snapshotImport(file, onDone){
+  if(!db){alert("Firebase non configuré");return}
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var payload = JSON.parse(e.target.result);
+      var data = payload.data || payload;
+      if(!confirm("⚠️ Écraser toutes les données Plickers avec le snapshot du "+(payload._meta?payload._meta.exportedAt:"?")+" ?")) return;
+      db.ref(DB_ROOT).set(data, function(err){
+        if(err) alert("Erreur: "+err.message);
+        else { alert("✅ Snapshot importé."); if(onDone) onDone(); }
+      });
+    }catch(ex){ alert("Fichier invalide: "+ex.message); }
+  };
+  reader.readAsText(file);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// PARSING LISTE ÉLÈVES
+// ════════════════════════════════════════════════════════════════════
+function parseListe(texte){
+  var lignes = texte.split("\n").map(function(l){return l.trim()}).filter(function(l){return l});
+  var eleves = [];
+  for(var i=0;i<lignes.length;i++){
+    var m = lignes[i].match(/^(.+?)\s*:\s*(https?:\/\/\S+)\s*$/);
+    if(m){
+      eleves.push({nomComplet:m[1].trim(), lien:m[2].trim()});
+    }
+  }
+  return eleves;
+}
+function eleveToString(e){return e.nomComplet+": "+e.lien}
+
+// ════════════════════════════════════════════════════════════════════
+// SLUG (URL ?classe=banksy)
+// ════════════════════════════════════════════════════════════════════
+function slugify(s){
+  return (s||"").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
+}
+
+// ════════════════════════════════════════════════════════════════════
+// REACT
+// ════════════════════════════════════════════════════════════════════
+var h = React.createElement;
+var useState = React.useState;
+var useEffect = React.useEffect;
+var useRef = React.useRef;
+
+// ────────────────────────────────────────────────────────────────────
+// APP ROOT
+// ────────────────────────────────────────────────────────────────────
+function App(){
+  var s0 = useState(null), mode = s0[0], setMode = s0[1];
+  var s1 = useState(false), profAuth = s1[0], setProfAuth = s1[1];
+  var s2 = useState(""), codeInput = s2[0], setCodeInput = s2[1];
+  var s3 = useState(false), showLogin = s3[0], setShowLogin = s3[1];
+  var s4 = useState(null), classeSlug = s4[0], setClasseSlug = s4[1];
+  var s5 = useState(false), profOverlay = s5[0], setProfOverlay = s5[1];
+  var seqRef = useRef("");
+
+  useEffect(function(){
+    var p = new URLSearchParams(window.location.search);
+    var cl = p.get("classe");
+    var md = p.get("mode");
+    if(cl){ setClasseSlug(cl); setMode("eleve") }
+    else if(md === "prof"){ setProfAuth(true); setMode("prof") }
+    else if(md === "eleve"){ setMode("eleve") }
+  }, []);
+
+  // Détection séquence clavier 1312 (n'importe où dans l'app, sauf dans un input)
+  useEffect(function(){
+    function onKey(e){
+      // Ignorer si on tape dans un champ
+      var t = e.target;
+      if(t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+      // Ne capturer que les chiffres
+      if(!/^[0-9]$/.test(e.key)) {
+        seqRef.current = "";
+        return;
+      }
+      seqRef.current += e.key;
+      // Garder seulement les 4 derniers caractères
+      if(seqRef.current.length > 4) seqRef.current = seqRef.current.slice(-4);
+      if(PROF_CODES.indexOf(parseInt(seqRef.current)) >= 0){
+        seqRef.current = "";
+        setProfOverlay(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return function(){ window.removeEventListener("keydown", onKey) };
+  }, []);
+
+  function tryCode(){
+    if(PROF_CODES.indexOf(parseInt(codeInput)) >= 0){
+      setProfAuth(true); setMode("prof");
+    } else alert("Code incorrect");
+  }
+
+  if(!db){
+    return h("div", {className:"accueil"},
+      h("h1", null, "⚠️ Firebase non configuré"),
+      h("p", {className:"sous"}, "Édite le fichier HTML et remplace le bloc FIREBASE_CONFIG en haut du fichier.")
+    );
+  }
+
+  var contenu;
+  if(!mode){
+    contenu = h("div", {className:"accueil"},
+      h("h1", null, "🎯 Salle d'attente Plickers"),
+      h("p", {className:"sous"}, "Reste concentré, le prof gère le rythme."),
+      h("button", {className:"btn-accueil", onClick:function(){setMode("eleve")}}, "🎓 Mode élève"),
+      !showLogin
+        ? h("button", {className:"lien-prof", onClick:function(){setShowLogin(true)}}, "Accès professeur")
+        : h("div", {className:"code-input"},
+            h("input", {type:"password", value:codeInput, placeholder:"Code", onChange:function(e){setCodeInput(e.target.value)}, onKeyDown:function(e){if(e.key==="Enter")tryCode()}}),
+            h("button", {onClick:tryCode}, "→")
+          )
+    );
+  } else if(mode === "prof" && profAuth){
+    contenu = h(AppProf, {onBack:function(){setMode(null);setProfAuth(false);setShowLogin(false);setCodeInput("")}});
+  } else if(mode === "eleve"){
+    contenu = h(AppEleve, {classeSlug:classeSlug, onBack:function(){setMode(null);setClasseSlug(null)}});
+  }
+
+  return h(React.Fragment, null,
+    contenu,
+    profOverlay && h("div", {className:"prof-overlay"},
+      h("div", {className:"prof-overlay-inner"},
+        h("button", {className:"btn-close-overlay", onClick:function(){setProfOverlay(false)}, title:"Fermer"}, "✕"),
+        h(AppProf, {onBack:function(){setProfOverlay(false)}, embedded:true})
+      )
+    )
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// APP PROF
+// ════════════════════════════════════════════════════════════════════
+function AppProf(p){
+  var s1 = useState("classes"), tab = s1[0], setTab = s1[1];
+  var s2 = useState({}), classes = s2[0], setClasses = s2[1];
+  var s3 = useState(""), nomClasseEdit = s3[0], setNomClasseEdit = s3[1];
+  var s4 = useState(""), texteListe = s4[0], setTexteListe = s4[1];
+  var s5 = useState(""), classeSelEdit = s5[0], setClasseSelEdit = s5[1];
+
+  // Pilotage
+  var s6 = useState(""), classePilot = s6[0], setClassePilot = s6[1];
+  var s7 = useState({}), absents = s7[0], setAbsents = s7[1];
+  var s8 = useState(10), duree = s8[0], setDuree = s8[1];
+  var s9 = useState(null), signalActif = s9[0], setSignalActif = s9[1];
+  var s10 = useState(0), restant = s10[0], setRestant = s10[1];
+  var audioRef = useRef(null);
+  var s11 = useState(false), audioActive = s11[0], setAudioActive = s11[1];
+
+  // Charger classes
+  useEffect(function(){
+    db.ref(DB_ROOT+"/classes").on("value", function(snap){
+      setClasses(snap.val() || {});
+    });
+    // Charger dernière durée mémorisée
+    db.ref(DB_ROOT+"/profPrefs/duree").once("value", function(snap){
+      var v = snap.val();
+      if(v) setDuree(v);
+    });
+  }, []);
+
+  // Charger absents quand classe change
+  useEffect(function(){
+    if(!classePilot) return;
+    db.ref(DB_ROOT+"/etat/"+classePilot+"/absents").on("value", function(snap){
+      setAbsents(snap.val() || {});
+    });
+  }, [classePilot]);
+
+  // Décompte signal
+  useEffect(function(){
+    if(!signalActif) { setRestant(0); return; }
+    var fin = signalActif.fin;
+    function tick(){
+      var r = Math.max(0, Math.ceil((fin - Date.now())/1000));
+      setRestant(r);
+      if(r <= 0){
+        setSignalActif(null);
+        if(audioActive) playBips();
+      } else {
+        requestAnimationFrame(tick);
+      }
+    }
+    tick();
+  }, [signalActif]);
+
+  function activerAudio(){
+    try{
+      var ctx = new (window.AudioContext||window.webkitAudioContext)();
+      audioRef.current = ctx;
+      // Bip de test silencieux pour débloquer
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      g.gain.value = 0;
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.05);
+      setAudioActive(true);
+    }catch(e){alert("Audio non disponible: "+e.message)}
+  }
+
+  function playBips(){
+    if(!audioRef.current) return;
+    var ctx = audioRef.current;
+    [0, 0.15, 0.3].forEach(function(t){
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.frequency.value = 880;
+      o.type = "sine";
+      g.gain.setValueAtTime(0.3, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.12);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + t);
+      o.stop(ctx.currentTime + t + 0.12);
+    });
+  }
+
+  function ajouterClasse(){
+    var nom = nomClasseEdit.trim();
+    var eleves = parseListe(texteListe);
+    if(!nom || !eleves.length){ alert("Nom et liste requis"); return; }
+    var slug = slugify(nom);
+    db.ref(DB_ROOT+"/classes/"+slug).set({nom:nom, eleves:eleves});
+    setNomClasseEdit(""); setTexteListe(""); setClasseSelEdit("");
+  }
+
+  function supprimerClasse(slug){
+    if(!confirm("Supprimer la classe "+classes[slug].nom+" ?")) return;
+    db.ref(DB_ROOT+"/classes/"+slug).remove();
+    db.ref(DB_ROOT+"/etat/"+slug).remove();
+  }
+
+  function chargerPourEdition(slug){
+    var c = classes[slug];
+    if(!c) return;
+    setClasseSelEdit(slug);
+    setNomClasseEdit(c.nom);
+    setTexteListe((c.eleves||[]).map(eleveToString).join("\n"));
+  }
+
+  function toggleAbsent(nomComplet){
+    var k = slugify(nomComplet);
+    var newA = Object.assign({}, absents);
+    if(newA[k]) delete newA[k];
+    else newA[k] = nomComplet;
+    db.ref(DB_ROOT+"/etat/"+classePilot+"/absents").set(newA);
+  }
+
+  function autoriser(){
+    if(!classePilot) return;
+    var d = parseInt(duree) || 10;
+    db.ref(DB_ROOT+"/profPrefs/duree").set(d);
+    var fin = Date.now() + d*1000;
+    var sig = {actif:true, debut:Date.now(), fin:fin, duree:d};
+    db.ref(DB_ROOT+"/etat/"+classePilot+"/signal").set(sig);
+    setSignalActif(sig);
+  }
+
+  // Onglets et UI
+  var classesArr = Object.keys(classes).map(function(k){return Object.assign({slug:k}, classes[k])});
+
+  return h("div", {className:"prof"},
+    h("div", {className:"prof-header"},
+      h("h1", null, "🎓 Mode professeur — Plickers"),
+      !p.embedded && h("button", {className:"btn btn-ghost", onClick:p.onBack}, "← Retour")
+    ),
+    h("div", {className:"tabs"},
+      h("button", {className:"tab "+(tab==="classes"?"actif":""), onClick:function(){setTab("classes")}}, "📋 Classes"),
+      h("button", {className:"tab "+(tab==="pilot"?"actif":""), onClick:function(){setTab("pilot")}}, "🎯 Pilotage interro"),
+      h("button", {className:"tab "+(tab==="snapshot"?"actif":""), onClick:function(){setTab("snapshot")}}, "💾 Sauvegarde")
+    ),
+
+    // ─── ONGLET CLASSES ───
+    tab==="classes" && h("div", null,
+      h("div", {className:"card"},
+        h("h2", null, "Classes existantes"),
+        classesArr.length===0
+          ? h("p", {style:{color:"var(--gris)",fontStyle:"italic"}}, "Aucune classe pour l'instant.")
+          : classesArr.map(function(c){
+              return h("div", {key:c.slug, className:"classe-row"},
+                h("div", null,
+                  h("strong", null, c.nom),
+                  h("span", {style:{color:"var(--gris)",marginLeft:8,fontSize:".85rem"}}, "("+(c.eleves||[]).length+" élèves)"),
+                  h("div", {style:{fontSize:".75rem",color:"var(--gris)",marginTop:4}},
+                    "URL élève : ",
+                    h("code", {style:{background:"var(--gris-clair)",padding:"2px 6px",borderRadius:4}}, "?classe="+c.slug)
+                  )
+                ),
+                h("div", {style:{display:"flex",gap:6}},
+                  h("button", {className:"btn btn-sm btn-ghost", onClick:function(){chargerPourEdition(c.slug)}}, "✏️ Modifier"),
+                  h("button", {className:"btn btn-sm btn-rouge", onClick:function(){supprimerClasse(c.slug)}}, "🗑️")
+                )
+              );
+            })
+      ),
+      h("div", {className:"card"},
+        h("h2", null, classeSelEdit ? "Modifier la classe" : "Ajouter une classe"),
+        h("div", {className:"field"},
+          h("label", null, "Nom de la classe"),
+          h("input", {value:nomClasseEdit, onChange:function(e){setNomClasseEdit(e.target.value)}, placeholder:"4e Banksy"})
+        ),
+        h("div", {className:"field"},
+          h("label", null, "Liste des élèves (un par ligne, format «Prénom NOM: lien»)"),
+          h("textarea", {value:texteListe, onChange:function(e){setTexteListe(e.target.value)}, placeholder:"Adélie RENAULT: https://my.plickers.com/..."})
+        ),
+        h("div", {style:{display:"flex",gap:8}},
+          h("button", {className:"btn btn-primary", onClick:ajouterClasse}, classeSelEdit ? "💾 Enregistrer" : "➕ Ajouter la classe"),
+          classeSelEdit && h("button", {className:"btn btn-ghost", onClick:function(){setClasseSelEdit("");setNomClasseEdit("");setTexteListe("")}}, "Annuler")
+        )
+      )
+    ),
+
+    // ─── ONGLET PILOTAGE ───
+    tab==="pilot" && h("div", null,
+      h("div", {className:"card"},
+        h("h2", null, "🎯 Pilotage en classe"),
+        h("div", {className:"field"},
+          h("label", null, "Classe en cours"),
+          h("select", {value:classePilot, onChange:function(e){setClassePilot(e.target.value)}},
+            h("option", {value:""}, "— Choisir —"),
+            classesArr.map(function(c){return h("option", {key:c.slug, value:c.slug}, c.nom)})
+          )
+        ),
+        !audioActive && h("button", {className:"btn btn-primary", onClick:activerAudio}, "🔊 Activer le son (à faire au début de la séance)"),
+        audioActive && h("div", {className:"activate-audio"}, "✅ Son activé"),
+        classePilot && h("div", null,
+          h("h3", null, "Absents (clique pour basculer)"),
+          h("div", {className:"eleves-list"},
+            (classes[classePilot].eleves||[]).map(function(e){
+              var k = slugify(e.nomComplet);
+              var abs = !!absents[k];
+              return h("button", {
+                key:k,
+                className:"eleve-chip"+(abs?" absent":""),
+                onClick:function(){toggleAbsent(e.nomComplet)}
+              }, e.nomComplet);
+            })
+          ),
+          h("div", {className:"chrono-box"},
+            h("label", {style:{fontWeight:700}}, "Durée (sec) :"),
+            h("input", {type:"number", min:3, max:60, value:duree, onChange:function(e){setDuree(e.target.value)}}),
+            h("span", {style:{color:"var(--gris)",fontSize:".85rem"}}, "(la valeur est mémorisée)")
+          ),
+          h("button", {className:"btn-autoriser", onClick:autoriser, disabled:!classePilot},
+            signalActif
+              ? "🔄 Relancer maintenant ("+restant+"s restantes)"
+              : "🟢 Autoriser la réponse"
+          )
+        )
+      )
+    ),
+
+    // ─── ONGLET SNAPSHOT ───
+    tab==="snapshot" && h("div", null,
+      h("div", {className:"card"},
+        h("h2", null, "💾 Sauvegarde"),
+        h("p", {style:{marginBottom:".8rem",color:"var(--gris)"}}, "Exporte ou importe l'ensemble de la base Plickers (classes, élèves, état)."),
+        h("div", {style:{display:"flex",gap:8,flexWrap:"wrap"}},
+          h("button", {className:"btn btn-primary", onClick:function(){snapshotExport("plickers")}}, "📥 Exporter snapshot"),
+          h("button", {className:"btn btn-ghost", onClick:function(){document.getElementById("imp").click()}}, "📤 Importer snapshot"),
+          h("input", {id:"imp", type:"file", accept:".json", style:{display:"none"}, onChange:function(e){
+            if(e.target.files[0]) snapshotImport(e.target.files[0], function(){window.location.reload()});
+            e.target.value="";
+          }})
+        )
+      )
+    )
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// APP ÉLÈVE
+// ════════════════════════════════════════════════════════════════════
+function AppEleve(p){
+  var s1 = useState(null), classe = s1[0], setClasse = s1[1];
+  var s2 = useState(null), eleve = s2[0], setEleve = s2[1];
+  var s3 = useState({}), absents = s3[0], setAbsents = s3[1];
+  var s4 = useState(false), consignesOuvertes = s4[0], setConsignesOuvertes = s4[1];
+  var s5 = useState([false,false,false]), coches = s5[0], setCoches = s5[1];
+  var s6 = useState(null), signal = s6[0], setSignal = s6[1];
+  var s7 = useState(0), restant = s7[0], setRestant = s7[1];
+  var s8 = useState(0), reactivite = s8[0], setReactivite = s8[1];
+  var s9 = useState(0), totalSignaux = s9[0], setTotalSignaux = s9[1];
+  var s10 = useState(false), alerte = s10[0], setAlerte = s10[1];
+  var clignote = useRef({actif:false, interval:null, titreOrig:document.title});
+  var lastSignalId = useRef(null);
+  var sortieHorsCreneau = useRef(false);
+  var attendaitRetour = useRef(false);
+  var ignorerProchainCycle = useRef(false);
+  var deadline = useRef(0);
+
+  // Charger classe
+  useEffect(function(){
+    if(!p.classeSlug){
+      // Pas de slug → écran de choix de classe
+      db.ref(DB_ROOT+"/classes").once("value", function(snap){
+        var data = snap.val()||{};
+        var arr = Object.keys(data).map(function(k){return Object.assign({slug:k},data[k])});
+        setClasse({_choix:true, liste:arr});
+      });
+      return;
+    }
+    db.ref(DB_ROOT+"/classes/"+p.classeSlug).on("value", function(snap){
+      var c = snap.val();
+      if(c) setClasse(Object.assign({slug:p.classeSlug}, c));
+    });
+    db.ref(DB_ROOT+"/etat/"+p.classeSlug+"/absents").on("value", function(snap){
+      setAbsents(snap.val()||{});
+    });
+    db.ref(DB_ROOT+"/etat/"+p.classeSlug+"/signal").on("value", function(snap){
+      var s = snap.val();
+      if(s && s.fin > Date.now()){
+        // Nouveau signal
+        var sigId = s.debut+"_"+s.fin;
+        if(lastSignalId.current !== sigId){
+          lastSignalId.current = sigId;
+          setSignal(s);
+          deadline.current = s.fin;
+          setTotalSignaux(function(n){return n+1});
+          attendaitRetour.current = true;
+        }
+      } else {
+        setSignal(null);
+      }
+    });
+  }, [p.classeSlug]);
+
+  // Décompte chrono élève
+  useEffect(function(){
+    if(!signal) return;
+    function tick(){
+      var r = Math.max(0, Math.ceil((deadline.current - Date.now())/1000));
+      setRestant(r);
+      // Mettre à jour le titre d'onglet en permanence pendant le chrono
+      if(r > 0){
+        document.title = "⏱ "+r+"s — Plickers";
+        requestAnimationFrame(tick);
+      } else {
+        // Fin chrono → bascule en mode "Reviens"
+        setSignal(null);
+        startClignotement();
+      }
+    }
+    tick();
+  }, [signal]);
+
+  function startClignotement(){
+    if(clignote.current.actif) return;
+    clignote.current.actif = true;
+    var on = false;
+    clignote.current.interval = setInterval(function(){
+      on = !on;
+      document.title = on ? "▶️ Question suivante" : "▶️ ▶️ Question suivante ▶️";
+    }, 600);
+  }
+  function stopClignotement(){
+    if(clignote.current.interval) clearInterval(clignote.current.interval);
+    clignote.current.actif = false;
+    clignote.current.interval = null;
+    document.title = clignote.current.titreOrig;
+  }
+
+  // Détection visibilité
+  useEffect(function(){
+    function onVis(){
+      if(document.hidden){
+        // Sortie : si on est dans un cycle à ignorer (ouverture initiale Plickers), on ne flag rien
+        if(ignorerProchainCycle.current){
+          return;
+        }
+        // Sortie : si pas de signal actif → sortie hors créneau
+        if(!signal && !attendaitRetour.current){
+          sortieHorsCreneau.current = true;
+        }
+      } else {
+        // Retour
+        stopClignotement();
+        // Si on devait ignorer ce cycle (retour de l'ouverture initiale Plickers), on consomme le flag et on ne fait rien
+        if(ignorerProchainCycle.current){
+          ignorerProchainCycle.current = false;
+          return;
+        }
+        if(sortieHorsCreneau.current){
+          sortieHorsCreneau.current = false;
+          // Alerte rouge classique
+          setAlerte(true);
+          setTimeout(function(){setAlerte(false)}, 4000);
+        } else if(attendaitRetour.current){
+          // Retour légitime après signal
+          attendaitRetour.current = false;
+          // A-t-il dépassé le chrono ? Si oui → pas d'incrément réactivité
+          if(Date.now() <= deadline.current + 100){
+            // Il est revenu DANS le chrono ou très proche
+            setReactivite(function(n){return n+1});
+          }
+          // Sinon : pas d'incrément (mais pas d'alerte non plus, formulation positive)
+        }
+      }
+    }
+    document.addEventListener("visibilitychange", onVis);
+    return function(){ document.removeEventListener("visibilitychange", onVis) };
+  }, [signal]);
+
+  // ─── Écrans ───
+  if(!classe) return h("div", {className:"eleve-page"}, h("div", {className:"eleve-card"}, h("h1", null, "Chargement…")));
+
+  // Choix de classe
+  if(classe._choix){
+    return h("div", {className:"eleve-page"},
+      ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
+      h("div", {className:"eleve-card"},
+        h("h1", null, "👋 Choisis ta classe"),
+        h("div", {className:"eleves-grid", style:{marginTop:"2rem"}},
+          classe.liste.map(function(c){
+            return h("button", {key:c.slug, className:"eleve-btn", style:{fontSize:"1.2rem",padding:"1.5rem"}, onClick:function(){
+              window.location.search = "?classe="+c.slug;
+            }}, c.nom);
+          })
+        )
+      )
+    );
+  }
+
+  // Sélection élève
+  if(!eleve){
+    var elevesAffich = (classe.eleves||[]).slice().sort(function(a,b){
+      return a.nomComplet.localeCompare(b.nomComplet,"fr");
+    });
+    return h("div", {className:"eleve-page"},
+      ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
+      h("div", {className:"eleve-card"},
+        h("div", {className:"badge-classe"}, classe.nom),
+        h("h1", null, "Qui es-tu ?"),
+        h("p", {style:{color:"var(--gris)",margin:"1rem 0"}}, "Clique sur ton prénom"),
+        h("div", {className:"eleves-grid"},
+          elevesAffich.map(function(e){
+            var k = slugify(e.nomComplet);
+            var abs = !!absents[k];
+            return h("button", {
+              key:k,
+              className:"eleve-btn"+(abs?" absent":""),
+              disabled:abs,
+              onClick:function(){
+                if(abs) return;
+                ignorerProchainCycle.current = true;
+                setEleve(e);
+                // Ouvrir le lien Plickers de l'élève dans un nouvel onglet
+                window.open(e.lien, "_blank");
+              }
+            }, e.nomComplet);
+          })
+        )
+      )
+    );
+  }
+
+  // ─── Page d'attente (élève sélectionné) ───
+  var toutesCochees = coches[0] && coches[1] && coches[2];
+
+  function cocher(i){
+    var nv = coches.slice();
+    nv[i] = !nv[i];
+    setCoches(nv);
+  }
+
+  return h("div", {className:"eleve-page"},
+    ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
+    h("div", {className:"fleche-onglet"},
+      h("div", {className:"arrow"}, "↑"),
+      h("div", {className:"txt"}, "TES ONGLETS SONT LÀ-HAUT")
+    ),
+    h("div", {className:"eleve-card"},
+      h("div", {className:"badge-classe"}, classe.nom),
+      h("h1", null, "📝 Reste ici"),
+      h("div", {className:"nom-eleve"}, eleve.nomComplet),
+
+      // État actif (signal en cours)
+      signal
+        ? h("div", {className:"etat-actif"},
+            h("div", null, "✅ Tu peux ouvrir Plickers !"),
+            h("div", {className:"chrono-grand"}, restant + "s")
+          )
+        : !consignesOuvertes
+          ? h("div", null,
+              h("button", {className:"btn-consignes", onClick:function(){setConsignesOuvertes(true)}}, "📋 Consignes à lire")
+            )
+          : h("div", null,
+              h("div", {className:"consigne"},
+                h("div", {className:"consigne-num"}, "1"),
+                h("div", {className:"consigne-corps"},
+                  h("div", {className:"consigne-titre"}, "J'écoute"),
+                  h("div", {className:"consigne-texte"}, "Le prof lit la question. Je note ma réponse au stylo, sur ma feuille.")
+                ),
+                h("label", {className:"consigne-coche"},
+                  h("input", {type:"checkbox", checked:coches[0], onChange:function(){cocher(0)}}),
+                  h("span", null, "J'ai lu et compris")
+                )
+              ),
+              coches[0] && h("div", {className:"consigne"},
+                h("div", {className:"consigne-num"}, "2"),
+                h("div", {className:"consigne-corps"},
+                  h("div", {className:"consigne-titre"}, "Je clique"),
+                  h("div", {className:"consigne-texte"}, "Quand le prof le dit, je vais sur l'onglet Plickers et je clique ma réponse.")
+                ),
+                h("label", {className:"consigne-coche"},
+                  h("input", {type:"checkbox", checked:coches[1], onChange:function(){cocher(1)}}),
+                  h("span", null, "J'ai lu et compris")
+                )
+              ),
+              coches[1] && h("div", {className:"consigne"},
+                h("div", {className:"consigne-num"}, "3"),
+                h("div", {className:"consigne-corps"},
+                  h("div", {className:"consigne-titre"}, "Je reviens"),
+                  h("div", {className:"consigne-texte"}, "Tout de suite après, je reviens sur cette page. Et on recommence.")
+                ),
+                h("label", {className:"consigne-coche"},
+                  h("input", {type:"checkbox", checked:coches[2], onChange:function(){cocher(2)}}),
+                  h("span", null, "J'ai lu et compris")
+                )
+              ),
+              toutesCochees && h("div", {className:"etat-attente", style:{marginTop:"1.5rem"}},
+                "⏳ En attente de la prochaine question"
+              )
+            ),
+
+      // Score réactivité
+      toutesCochees && totalSignaux > 0 && h("div", {className:"score-reactivite"},
+        "🎯 Réactivité : " + reactivite + " / " + totalSignaux
+      ),
+
+      // Pied dissuasif
+      h("div", {className:"pied"},
+        h("span", {className:"gros"}, "⚠️ Si tu quittes cette page sans autorisation"),
+        h("br"),
+        "ton écran devient rouge et le prof le voit !"
+      )
+    ),
+
+    // Overlay alerte
+    alerte && h("div", {id:"alerte", className:"show"},
+      h("div", {className:"panneau"},
+        h("div", {className:"icone"}, "🚨"),
+        h("h2", null, "REVIENS SUR TON TRAVAIL !"),
+        h("p", null, "Tu n'as pas le droit de quitter cette page pendant l'interro.")
+      )
+    )
+  );
+}
+
+// Démarrage
+ReactDOM.render(h(App), document.getElementById("root"));
+</script>
+</body>
+</html>
