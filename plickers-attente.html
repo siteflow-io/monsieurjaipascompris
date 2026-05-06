@@ -372,17 +372,16 @@ function AppProf(p){
   useEffect(function(){
     if(!signalActif) { setRestant(0); return; }
     var fin = signalActif.fin;
-    function tick(){
+    var iv = setInterval(function(){
       var r = Math.max(0, Math.ceil((fin - Date.now())/1000));
       setRestant(r);
       if(r <= 0){
+        clearInterval(iv);
         setSignalActif(null);
         if(audioActive) playBips();
-      } else {
-        requestAnimationFrame(tick);
       }
-    }
-    tick();
+    }, 250);
+    return function(){ clearInterval(iv); };
   }, [signalActif]);
 
   function activerAudio(){
@@ -582,7 +581,6 @@ function AppEleve(p){
   var s8 = useState(0), reactivite = s8[0], setReactivite = s8[1];
   var s9 = useState(0), totalSignaux = s9[0], setTotalSignaux = s9[1];
   var s10 = useState(false), alerte = s10[0], setAlerte = s10[1];
-  var clignote = useRef({actif:false, interval:null, titreOrig:document.title});
   var lastSignalId = useRef(null);
   var sortieHorsCreneau = useRef(false);
   var attendaitRetour = useRef(false);
@@ -625,60 +623,77 @@ function AppEleve(p){
     });
   }, [p.classeSlug]);
 
-  // Décompte chrono élève
-  useEffect(function(){
-    if(!signal) return;
-    function tick(){
-      var r = Math.max(0, Math.ceil((deadline.current - Date.now())/1000));
-      setRestant(r);
-      // Mettre à jour le titre d'onglet en permanence pendant le chrono
-      if(r > 0){
-        document.title = "⏱ "+r+"s — Plickers";
-        requestAnimationFrame(tick);
-      } else {
-        // Fin chrono → bascule en mode "Reviens"
-        setSignal(null);
-        startClignotement();
-      }
-    }
-    tick();
-  }, [signal]);
+  // ─── Tick unique 250ms qui pilote chrono + clignotement ───
+  // setInterval continue de tourner même quand l'onglet est caché (contrairement à requestAnimationFrame).
+  // États possibles : "idle" (titre normal), "chrono" (compte à rebours), "reviens" (clignotement après expiration).
+  var tickRef = useRef(null);
+  var titreOrigRef = useRef(document.title);
+  var clignoteState = useRef(false);
 
-  function startClignotement(){
-    if(clignote.current.actif) return;
-    clignote.current.actif = true;
-    var on = false;
-    clignote.current.interval = setInterval(function(){
-      on = !on;
-      document.title = on ? "▶️ Question suivante" : "▶️ ▶️ Question suivante ▶️";
-    }, 600);
-  }
-  function stopClignotement(){
-    if(clignote.current.interval) clearInterval(clignote.current.interval);
-    clignote.current.actif = false;
-    clignote.current.interval = null;
-    document.title = clignote.current.titreOrig;
-  }
+  useEffect(function(){
+    if(tickRef.current) return; // un seul interval pour toute la vie du composant
+    tickRef.current = setInterval(function(){
+      // Cas 1 : signal actif et pas expiré → afficher chrono
+      if(deadline.current > 0){
+        var r = Math.max(0, Math.ceil((deadline.current - Date.now())/1000));
+        if(r > 0){
+          // Phase chrono
+          setRestant(r);
+          document.title = "⏱ "+r+"s — Plickers";
+          return;
+        } else {
+          // Le chrono vient d'expirer
+          deadline.current = 0;
+          setSignal(null);
+          setRestant(0);
+          // Si l'élève est encore loin (onglet caché), on lance le clignotement
+          if(document.hidden){
+            clignoteState.current = !clignoteState.current;
+            document.title = clignoteState.current ? "▶️ Question suivante" : "▶️ ▶️ Question suivante ▶️";
+          } else {
+            // Il est déjà revenu : pas besoin de clignoter
+            document.title = titreOrigRef.current;
+            attendaitRetour.current = false;
+          }
+          return;
+        }
+      }
+      // Cas 2 : pas de chrono actif, mais on attend un retour → clignoter le titre tant qu'il est caché
+      if(attendaitRetour.current && document.hidden){
+        clignoteState.current = !clignoteState.current;
+        document.title = clignoteState.current ? "▶️ Question suivante" : "▶️ ▶️ Question suivante ▶️";
+        return;
+      }
+      // Cas 3 : rien à faire — restaurer titre normal si besoin
+      if(document.title !== titreOrigRef.current){
+        document.title = titreOrigRef.current;
+      }
+    }, 250);
+    return function(){
+      if(tickRef.current){ clearInterval(tickRef.current); tickRef.current = null; }
+      document.title = titreOrigRef.current;
+    };
+  }, []);
 
   // Détection visibilité
   useEffect(function(){
     function onVis(){
       if(document.hidden){
         // Sortie : si on est dans un cycle à ignorer (ouverture initiale Plickers), on ne flag rien
-        if(ignorerProchainCycle.current){
-          return;
-        }
-        // Sortie : si pas de signal actif → sortie hors créneau
-        if(!signal && !attendaitRetour.current){
+        if(ignorerProchainCycle.current) return;
+        // Sortie : si pas de signal actif et pas en attente de retour → sortie hors créneau
+        if(deadline.current === 0 && !attendaitRetour.current){
           sortieHorsCreneau.current = true;
         }
       } else {
-        // Retour
-        stopClignotement();
-        // Si on devait ignorer ce cycle (retour de l'ouverture initiale Plickers), on consomme le flag et on ne fait rien
+        // Retour : on consomme le flag d'ignorance s'il est levé
         if(ignorerProchainCycle.current){
           ignorerProchainCycle.current = false;
           return;
+        }
+        // Restaurer le titre tout de suite (le tick s'occupera du chrono si encore actif)
+        if(deadline.current === 0){
+          document.title = titreOrigRef.current;
         }
         if(sortieHorsCreneau.current){
           sortieHorsCreneau.current = false;
@@ -687,19 +702,17 @@ function AppEleve(p){
           setTimeout(function(){setAlerte(false)}, 4000);
         } else if(attendaitRetour.current){
           // Retour légitime après signal
-          attendaitRetour.current = false;
-          // A-t-il dépassé le chrono ? Si oui → pas d'incrément réactivité
-          if(Date.now() <= deadline.current + 100){
-            // Il est revenu DANS le chrono ou très proche
+          // Réactivité : revenu DANS le chrono (ou avant 1 seconde après son expiration)
+          if(Date.now() <= (deadline.current > 0 ? deadline.current : deadline.current + 1000)){
             setReactivite(function(n){return n+1});
           }
-          // Sinon : pas d'incrément (mais pas d'alerte non plus, formulation positive)
+          attendaitRetour.current = false;
         }
       }
     }
     document.addEventListener("visibilitychange", onVis);
     return function(){ document.removeEventListener("visibilitychange", onVis) };
-  }, [signal]);
+  }, []);
 
   // ─── Écrans ───
   if(!classe) return h("div", {className:"eleve-page"}, h("div", {className:"eleve-card"}, h("h1", null, "Chargement…")));
