@@ -486,6 +486,10 @@ var PUBLISHABLE_TABS=['dictee','reecriture','evalconn','image','etude','redactio
 var TAB_LABELS={dictee:'Dict\u00e9e',reecriture:'R\u00e9\u00e9criture',evalconn:'\u00c9valuation des connaissances',image:'Analyse d\u2019image',etude:'\u00c9tude de texte',redaction:'R\u00e9daction'};
 var chapitresData={};
 var FIREBASE_BASE='https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app';
+// === À REMPLACER : topic ntfy.sh secret pour recevoir les notifs de connexion ===
+// Crée un topic aléatoire genre "mjpc-meney-X9k2L7q4P", abonne-toi via l'app ntfy
+var NTFY_TOPIC='MJPC_NTFY_TOPIC_PLACEHOLDER';
+var PROF_CODES=['1312','3141'];
 function loadPublished(level){
   fetch(FIREBASE_BASE+'/site/'+level+'.json')
     .then(function(r){return r.json()})
@@ -648,6 +652,8 @@ function openItem(level,chnum,snum,itemId){
   if(!data||!data[chnum]||!data[chnum].seances||!data[chnum].seances[snum])return;
   var item=data[chnum].seances[snum].items[itemId];
   if(!item)return;
+  // Maj contexte présence
+  if(window.PRESENCE_CONTEXT){PRESENCE_CONTEXT.chapter=data[chnum].title||chnum;PRESENCE_CONTEXT.seance=data[chnum].seances[snum].title||snum;PRESENCE_CONTEXT.item=item.title||itemId;if(typeof updatePresence==='function')updatePresence();}
   var ref=item.ref;
   var src=item.source;
   if(!ref){alert('Item non li\u00e9. Utilise le bouton \ud83d\udd17 en mode admin pour associer une ressource.');return;}
@@ -1061,12 +1067,92 @@ var TRACK={eleve:null,session:null,isActive:true,activeStart:0,activeTotal:0,scr
 var currentLevel=(new URLSearchParams(window.location.search).get('n')||'').toLowerCase();
 if(!levelLabels[currentLevel])currentLevel=null;
 window.addEventListener('DOMContentLoaded',function(){var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.getElementById('val-btn').style.display='none';document.getElementById('dev-banner').style.display='block';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&TRACK.eleve.niveau===currentLevel){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
-function doLogin(){var nom=document.getElementById('val-nom').value.trim();var prenom=document.getElementById('val-prenom').value.trim();var err=document.getElementById('val-error');var status=document.getElementById('val-status');if(!nom||!prenom){err.textContent='Remplis ton nom et ton prénom.';return;}err.textContent='';
-// Profil test : Monsieur MENEY — bypass serveur, accès tous niveaux
-if(nom.toUpperCase()==='MENEY'&&prenom.toUpperCase()==='MONSIEUR'){TRACK.eleve={nom:'MENEY',prenom:'Monsieur',classe:'TEST',niveau:currentLevel,display:'MENEY Monsieur'};sessionStorage.setItem('mjpc_eleve',JSON.stringify(TRACK.eleve));status.textContent='Bienvenue, Monsieur MENEY ! (test)';status.classList.add('connected');setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();},600);return;}
-status.textContent='Vérification...';status.classList.remove('connected');document.getElementById('val-btn').disabled=true;trackLogin(nom,prenom,currentLevel).then(function(result){document.getElementById('val-btn').disabled=false;if(result.success){status.textContent='Bienvenue, '+result.eleve.display+' !';status.classList.add('connected');setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();},600);}else{status.textContent='';err.textContent=result.error;setTimeout(function(){err.textContent='';},3000);}});}
+function doLogin(){var nom=document.getElementById('val-nom').value.trim();var prenom=document.getElementById('val-prenom').value.trim();var err=document.getElementById('val-error');var status=document.getElementById('val-status');
+// Login prof : code numérique seul dans le champ "Nom" (prénom vide)
+if(/^\d{3,5}$/.test(nom)&&!prenom){err.textContent='';if(PROF_CODES.indexOf(nom)>=0){loginAsProf();return;}else{err.textContent='Code invalide.';return;}}
+if(!nom||!prenom){err.textContent='Remplis ton nom et ton prénom (ou tape ton code prof seul).';return;}err.textContent='';
+status.textContent='Vérification...';status.classList.remove('connected');document.getElementById('val-btn').disabled=true;trackLogin(nom,prenom,currentLevel).then(function(result){document.getElementById('val-btn').disabled=false;if(result.success){ensureEleveUuid(result.eleve).then(function(eleveWithUuid){TRACK.eleve=eleveWithUuid;sessionStorage.setItem('mjpc_eleve',JSON.stringify(eleveWithUuid));notifyConnection(eleveWithUuid);startHeartbeat();status.textContent='Bienvenue, '+eleveWithUuid.display+' !';status.classList.add('connected');setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();},600);});}else{status.textContent='';err.textContent=result.error;setTimeout(function(){err.textContent='';},3000);}});}
+
+function loginAsProf(){
+  TRACK.eleve={is_prof:true,uuid:'prof',nom:'Meney',prenom:'M.',classe:'PROF',niveau:currentLevel||'3e',display:'M. Meney (prof)'};
+  sessionStorage.setItem('mjpc_eleve',JSON.stringify(TRACK.eleve));
+  notifyConnection(TRACK.eleve);
+  startHeartbeat();
+  // Bascule en mode admin
+  DEV_MODE=true;ADMIN_MODE=true;
+  document.body.classList.add('admin-mode');
+  if(!currentLevel)currentLevel='3e';
+  var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}
+  var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\u26a1 ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}
+  document.getElementById('page-validation').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+  ['3e','4e','5e','6e'].forEach(function(lvl){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='1';card.style.pointerEvents='auto';card.style.cursor='pointer';}});
+  initHome();
+  if(typeof initAdminDragDrop_==='function')initAdminDragDrop_();
+  if(typeof loadDocsList_==='function')loadDocsList_();
+}
+
+function ensureEleveUuid(eleve){
+  // Lookup ou création de l'UUID dans /eleves/ + index par slug
+  var slug=(eleve.nom+'_'+eleve.prenom).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  return fetch(FIREBASE_BASE+'/eleves_index/'+slug+'.json').then(function(r){return r.json()}).catch(function(){return null}).then(function(existingUuid){
+    if(existingUuid&&typeof existingUuid==='string'){
+      eleve.uuid=existingUuid;
+      return eleve;
+    }
+    // Création nouveau UUID
+    var newUuid=(crypto&&crypto.randomUUID)?crypto.randomUUID():('u-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
+    var record={uuid:newUuid,nom:eleve.nom||'',prenom:eleve.prenom||'',nom_complet_origine:eleve.display||(eleve.nom+' '+eleve.prenom),inscriptions:[{annee:'2025-2026',niveau:eleve.niveau||'',classe_slug:(eleve.classe||'').toLowerCase().replace(/[^a-z0-9]+/g,'_')}],cree_le:Date.now()};
+    return Promise.all([
+      fetch(FIREBASE_BASE+'/eleves/'+newUuid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)}),
+      fetch(FIREBASE_BASE+'/eleves_index/'+slug+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUuid)})
+    ]).then(function(){eleve.uuid=newUuid;return eleve;}).catch(function(){eleve.uuid=newUuid;return eleve;});
+  });
+}
+
+function notifyConnection(eleve){
+  if(!NTFY_TOPIC||NTFY_TOPIC==='MJPC_NTFY_TOPIC_PLACEHOLDER')return;
+  var body=eleve.is_prof?'Connexion prof (M. Meney)':'Connexion : '+(eleve.display||'?')+' \u2014 '+(eleve.classe||'?');
+  fetch('https://ntfy.sh/'+NTFY_TOPIC,{method:'POST',body:body,headers:{'Title':'MJPC','Priority':eleve.is_prof?'2':'3'}}).catch(function(){});
+}
+
+var HEARTBEAT_INTERVAL=null;
+function startHeartbeat(){
+  if(HEARTBEAT_INTERVAL)return;
+  updatePresence();
+  HEARTBEAT_INTERVAL=setInterval(updatePresence,15000);
+  window.addEventListener('beforeunload',function(){
+    if(TRACK.eleve&&TRACK.eleve.uuid&&navigator.sendBeacon){
+      var key=TRACK.eleve.uuid;
+      var data={last_seen:Date.now(),offline:true};
+      var blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+      navigator.sendBeacon(FIREBASE_BASE+'/presence/'+key+'.json?x-http-method-override=PATCH',blob);
+    }
+  });
+}
+
+function updatePresence(){
+  if(!TRACK.eleve||!TRACK.eleve.uuid)return;
+  var key=TRACK.eleve.uuid;
+  var data={
+    uuid:key,
+    is_prof:!!TRACK.eleve.is_prof,
+    display:TRACK.eleve.display||'',
+    classe:TRACK.eleve.classe||'',
+    niveau:TRACK.eleve.niveau||'',
+    last_seen:Date.now(),
+    current_url:location.href,
+    current_level:currentLevel||'',
+    current_chapter:(window.PRESENCE_CONTEXT&&PRESENCE_CONTEXT.chapter)||'',
+    current_seance:(window.PRESENCE_CONTEXT&&PRESENCE_CONTEXT.seance)||'',
+    current_item:(window.PRESENCE_CONTEXT&&PRESENCE_CONTEXT.item)||''
+  };
+  fetch(FIREBASE_BASE+'/presence/'+key+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){});
+}
+
+var PRESENCE_CONTEXT={chapter:'',seance:'',item:''};
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('page-validation').classList.contains('active'))doLogin();});
-function initHome(){showAccueilBg();var isTest=TRACK.eleve&&TRACK.eleve.classe==='TEST';var accessible=isTest?['3e','4e','5e','6e']:(levelAccess[currentLevel]||[currentLevel]);['3e','4e','5e','6e'].forEach(function(lvl){if(accessible.indexOf(lvl)===-1){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='0.2';card.style.pointerEvents='none';card.style.cursor='default';}}});if(TRACK.eleve){var headerEl=document.querySelector('.home-header');if(headerEl&&!document.getElementById('user-badge')){var badge=document.createElement('div');badge.id='user-badge';badge.style.cssText='font-size:0.85rem; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 12px; border-radius:100px; align-self:center;';badge.textContent=TRACK.eleve.display+' · '+TRACK.eleve.classe;headerEl.appendChild(badge);}}}
+function initHome(){showAccueilBg();var isAllAccess=TRACK.eleve&&(TRACK.eleve.classe==='TEST'||TRACK.eleve.is_prof);var accessible=isAllAccess?['3e','4e','5e','6e']:(levelAccess[currentLevel]||[currentLevel]);['3e','4e','5e','6e'].forEach(function(lvl){if(accessible.indexOf(lvl)===-1){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='0.2';card.style.pointerEvents='none';card.style.cursor='default';}}});if(TRACK.eleve){var headerEl=document.querySelector('.home-header');if(headerEl&&!document.getElementById('user-badge')){var badge=document.createElement('div');badge.id='user-badge';badge.style.cssText='font-size:0.85rem; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 12px; border-radius:100px; align-self:center;';badge.textContent=TRACK.eleve.display+' · '+TRACK.eleve.classe;headerEl.appendChild(badge);}}}
 function computeDiff(target){var now=new Date(),diff=target-now;if(diff<0)diff=0;var totalSec=Math.floor(diff/1000),s=totalSec%60,totalMin=Math.floor(totalSec/60),m=totalMin%60,totalH=Math.floor(totalMin/60),h=totalH%24;var tmp=new Date(now),y=0,mo=0;while(true){var n1=new Date(tmp);n1.setFullYear(n1.getFullYear()+1);if(n1>target)break;y++;tmp=n1;}while(true){var n2=new Date(tmp);n2.setMonth(n2.getMonth()+1);if(n2>target)break;mo++;tmp=n2;}var d=Math.floor((target-tmp)/(1000*60*60*24));return{y:y,mo:mo,d:d,h:h,m:m,s:s};}
 function pad(n){return n<10?'0'+n:String(n);}
 function triggerHeartbeat(el){el.classList.remove('heartbeat');void el.offsetWidth;el.classList.add('heartbeat');setTimeout(function(){el.classList.remove('heartbeat');},400);}
@@ -1118,7 +1204,7 @@ function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDo
 function generateSessionId(){return 'ses-'+Date.now().toString(36)+'-'+Math.random().toString(36).substr(2,6);}
 function sendToBackend(data){if(data.action==='close'&&navigator.sendBeacon){var blob=new Blob([JSON.stringify(data)],{type:'application/json'});navigator.sendBeacon(APPS_SCRIPT_URL,blob);return Promise.resolve({status:'beacon_sent'});}return fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)}).then(function(){return{status:'sent'};}).catch(function(err){console.warn('[Tracking]',err);return{status:'error'};});}
 function trackLogin(nom,prenom,niveau){return fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'login',nom:nom,prenom:prenom,niveau:niveau})}).then(function(r){return r.json();}).then(function(data){if(data.error)return{success:false,error:data.error};TRACK.eleve=data.eleve;sessionStorage.setItem('mjpc_eleve',JSON.stringify(data.eleve));return{success:true,eleve:data.eleve};}).catch(function(err){console.warn('[Login]',err);return{success:false,error:'Erreur réseau. Réessaie.'};});}
-function restoreSession(){var stored=sessionStorage.getItem('mjpc_eleve');if(stored){try{TRACK.eleve=JSON.parse(stored);return true;}catch(e){}}return false;}
+function restoreSession(){var stored=sessionStorage.getItem('mjpc_eleve');if(stored){try{TRACK.eleve=JSON.parse(stored);if(TRACK.eleve&&TRACK.eleve.is_prof){DEV_MODE=true;ADMIN_MODE=true;document.body.classList.add('admin-mode');var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\u26a1 ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}}startHeartbeat();return true;}catch(e){}}return false;}
 function trackOpen(chapitre,doc,type_doc){if(!TRACK.eleve)return;if(TRACK.session)trackClose();var sid=generateSessionId();TRACK.session=sid;TRACK.openTime=Date.now();TRACK.activeStart=Date.now();TRACK.activeTotal=0;TRACK.isActive=true;TRACK.scrollMax=0;TRACK.interactions=0;TRACK.score='';startTracking_();sendToBackend({action:'open',session_id:sid,eleve:TRACK.eleve.display,classe:TRACK.eleve.classe,niveau:TRACK.eleve.niveau,chapitre:chapitre,document:doc,type_doc:type_doc});}
 function trackClose(){if(!TRACK.session)return;if(TRACK.isActive)TRACK.activeTotal+=Date.now()-TRACK.activeStart;sendToBackend({action:'close',session_id:TRACK.session,duree_totale:Math.round((Date.now()-TRACK.openTime)/1000),duree_active:Math.round(TRACK.activeTotal/1000),scroll_max:TRACK.scrollMax,interactions:TRACK.interactions,score:TRACK.score});stopTracking_();TRACK.session=null;}
 function trackScore(s){TRACK.score=String(s);}
