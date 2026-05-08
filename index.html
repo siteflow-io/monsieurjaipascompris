@@ -258,6 +258,12 @@ body.admin-mode .admin-only { display: block; }
 .item-pub-btn.published:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.25); color: #f87171; }
 .item-sub-num { font-size: 0.72rem; color: rgba(255,184,108,0.55); font-weight: 700; margin-right: 6px; flex-shrink: 0; }
 .item-unpublished { opacity: 0.5; }
+.admin-action-btn { padding: 2px 7px; font-size: 0.72rem; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.55); cursor: pointer; font-family: inherit; transition: all 0.15s; margin-left: 4px; }
+.admin-action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.admin-action-btn.danger:hover { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.3); color: #f87171; }
+.admin-action-add { padding: 6px 14px; border-radius: 8px; border: 1px dashed rgba(255,184,108,0.35); background: transparent; color: rgba(255,184,108,0.7); cursor: pointer; font-family: inherit; font-size: 0.82rem; margin-top: 10px; transition: all 0.15s; display: inline-block; }
+.admin-action-add:hover { background: rgba(255,184,108,0.08); color: #ffb86c; }
+.admin-add-row { padding: 10px 14px 4px; }
 </style>
 </head>
 <body>
@@ -463,7 +469,7 @@ function renderChapitres(level){
     var html='';
     if(!data||Object.keys(data).length===0){
       if(isAdmin){
-        html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.92rem">Aucun chapitre en base pour ce niveau.<br><span style="font-size:0.82rem;opacity:0.6">Cr\u00e9ation de chapitres \u00e0 venir dans la prochaine version.</span></div>';
+        html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.92rem">Aucun chapitre en base pour ce niveau.<br><br><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Cr\u00e9er le premier chapitre</button></div>';
       } else {
         html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:0.92rem;font-style:italic">Aucun chapitre publi\u00e9 pour le moment.</div>';
       }
@@ -482,6 +488,9 @@ function renderChapitres(level){
       displayNum++;
       html+=renderChapterCard(level,num,ch,displayNum,isAdmin);
     });
+    if(isAdmin){
+      html+='<div class="admin-add-row" style="text-align:center"><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
+    }
     container.innerHTML=html;
   });
 }
@@ -493,13 +502,15 @@ function resetChapitres(level){
 }
 
 function renderChapterCard(level,num,ch,dispNum,isAdmin){
-  var pubBtn='';
+  var adminBtns='';
   if(isAdmin){
-    pubBtn='<button class="ch-publish-btn'+(ch.published?' published':'')+'" onclick="event.stopPropagation();togglePublishChapter(\''+level+'\',\''+num+'\')">'+(ch.published?'\u2705 Publi\u00e9':'Publier')+'</button>';
+    adminBtns='<button class="ch-publish-btn'+(ch.published?' published':'')+'" onclick="event.stopPropagation();togglePublishChapter(\''+level+'\',\''+num+'\')">'+(ch.published?'\u2705 Publi\u00e9':'Publier')+'</button>';
+    adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+num+'\')">\u270f</button>';
+    adminBtns+='<button class="admin-action-btn danger" title="Supprimer le chapitre" onclick="event.stopPropagation();deleteChapter(\''+level+'\',\''+num+'\')">\u2715</button>';
   }
   var opacityStyle=(isAdmin && !ch.published)?' style="opacity:0.55"':'';
   var html='<div class="chapter-card" data-chapter="'+num+'" data-chapter-id="'+num+'"'+opacityStyle+'>';
-  html+='<div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num">'+dispNum+'</div><div class="chapter-info"><div class="chapter-title">'+escapeHtml(ch.title||'')+'</div></div>'+pubBtn+'</div>';
+  html+='<div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num">'+dispNum+'</div><div class="chapter-info"><div class="chapter-title">'+escapeHtml(ch.title||'')+'</div></div>'+adminBtns+'</div>';
   // Body : séances
   var seances=ch.seances||{};
   var snums=Object.keys(seances).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
@@ -516,6 +527,9 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
     seanceDispNum++;
     bodyHtml+=renderSeance(level,num,snum,sce,seanceDispNum,isAdmin);
   });
+  if(isAdmin){
+    bodyHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addSeance(\''+level+'\',\''+num+'\')">+ Nouvelle s\u00e9ance</button></div>';
+  }
   bodyHtml+='</div>';
   html+='<div class="chapter-body">'+bodyHtml+'</div>';
   html+='</div>';
@@ -523,13 +537,15 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
 }
 
 function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
-  var pubBtn='';
+  var adminBtns='';
   if(isAdmin){
-    pubBtn='<button class="ch-publish-btn'+(sce.published?' published':'')+'" onclick="event.stopPropagation();togglePublishSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">'+(sce.published?'\u2705':'Publier')+'</button>';
+    adminBtns='<button class="ch-publish-btn'+(sce.published?' published':'')+'" onclick="event.stopPropagation();togglePublishSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">'+(sce.published?'\u2705':'Publier')+'</button>';
+    adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u270f</button>';
+    adminBtns+='<button class="admin-action-btn danger" title="Supprimer la s\u00e9ance" onclick="event.stopPropagation();deleteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && !sce.published)?' item-unpublished':'';
   var html='<div class="seance-block'+opacityCls+'" data-seance-num="'+snum+'">';
-  html+='<div class="seance-header"><span class="seance-disp-num">S\u00e9ance '+dispNum+'</span><span class="seance-title-disp">'+escapeHtml(sce.title||'')+'</span>'+pubBtn+'</div>';
+  html+='<div class="seance-header"><span class="seance-disp-num">S\u00e9ance '+dispNum+'</span><span class="seance-title-disp">'+escapeHtml(sce.title||'')+'</span>'+adminBtns+'</div>';
   // Items
   var items=sce.items||{};
   var ikeys=Object.keys(items).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
@@ -546,6 +562,9 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   });
   if(rendered===0){
     if(isAdmin){html+='<div class="seance-empty">(aucun item)</div>';}
+  }
+  if(isAdmin){
+    html+='<div class="admin-add-row"><button class="admin-action-add" onclick="addItem(\''+level+'\',\''+chnum+'\',\''+snum+'\')">+ Nouvel item</button></div>';
   }
   html+='</div>';
   return html;
@@ -564,6 +583,8 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   var pubBtn='';
   if(isAdmin){
     pubBtn='<button class="item-pub-btn'+(it.published?' published':'')+'" onclick="event.stopPropagation();togglePublishItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">'+(it.published?'\u2705':'Publier')+'</button>';
+    pubBtn+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u270f</button>';
+    pubBtn+='<button class="admin-action-btn danger" title="Supprimer l\u2019item" onclick="event.stopPropagation();deleteItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && !it.published)?' item-unpublished':'';
   var clickAttr=canOpen?(' onclick="openItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')" style="cursor:pointer"'):' style="cursor:default"';
@@ -622,6 +643,121 @@ function togglePublishItem(level,chnum,snum,itemId){
   }).then(function(){
     data[chnum].seances[snum].items[itemId].published=newPub;renderChapitres(level);
   });
+}
+
+// =========== CRUD chapitres / séances / items ===========
+function addChapter(level){
+  var title=prompt('Titre du nouveau chapitre :');
+  if(title===null)return;
+  title=title.trim();
+  if(!title)return;
+  var data=chapitresData[level]||{};
+  var nums=Object.keys(data).map(function(n){return parseInt(n)||0});
+  var newNum=(nums.length?Math.max.apply(null,nums):0)+1;
+  var newCh={title:title,ordre:newNum,published:false,seances:{}};
+  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+newNum+'.json',{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newCh)
+  }).then(function(){
+    if(!chapitresData[level])chapitresData[level]={};
+    chapitresData[level][newNum]=newCh;
+    renderChapitres(level);
+  });
+}
+
+function addSeance(level,chnum){
+  var title=prompt('Titre de la nouvelle séance :');
+  if(title===null)return;
+  title=title.trim();
+  if(!title)return;
+  var ch=chapitresData[level][chnum];if(!ch)return;
+  var seances=ch.seances||{};
+  var nums=Object.keys(seances).map(function(n){return parseInt(n)||0});
+  var newNum=(nums.length?Math.max.apply(null,nums):0)+1;
+  var newSce={title:title,type:'autre',ordre:newNum,published:true,items:{}};
+  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+newNum+'.json',{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSce)
+  }).then(function(){
+    if(!ch.seances)ch.seances={};
+    ch.seances[newNum]=newSce;
+    renderChapitres(level);
+  });
+}
+
+function addItem(level,chnum,snum){
+  var title=prompt('Titre du nouvel item :');
+  if(title===null)return;
+  title=title.trim();
+  if(!title)return;
+  var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
+  var items=sce.items||{};
+  var ordres=Object.keys(items).map(function(k){return items[k].ordre||0});
+  var newOrdre=(ordres.length?Math.max.apply(null,ordres):0)+1;
+  // Slug à partir du titre
+  var slug=title.toLowerCase().replace(/[\u00e0-\u00e6]/g,'a').replace(/[\u00e8-\u00eb]/g,'e').replace(/[\u00ec-\u00ef]/g,'i').replace(/[\u00f2-\u00f6]/g,'o').replace(/[\u00f9-\u00fc]/g,'u').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,40)||'item';
+  var itemId=slug;var i=2;
+  while(items[itemId]){itemId=slug+'-'+i;i++;}
+  var newItem={kind:'doc',title:title,subtitle:'',icon:'\ud83d\udcc4',source:'drive',ref:'',ordre:newOrdre,published:false};
+  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)
+  }).then(function(){
+    if(!sce.items)sce.items={};
+    sce.items[itemId]=newItem;
+    renderChapitres(level);
+  });
+}
+
+function editTitle(level,chnum,snum,itemId){
+  var d=chapitresData[level];if(!d||!d[chnum])return;
+  var currentTitle='';
+  if(itemId){currentTitle=d[chnum].seances[snum].items[itemId].title||'';}
+  else if(snum){currentTitle=d[chnum].seances[snum].title||'';}
+  else{currentTitle=d[chnum].title||'';}
+  var newTitle=prompt('Nouveau titre :',currentTitle);
+  if(newTitle===null)return;
+  newTitle=newTitle.trim();
+  if(!newTitle||newTitle===currentTitle)return;
+  var path='/site/'+level+'/chapitres/'+chnum;
+  if(snum)path+='/seances/'+snum;
+  if(itemId)path+='/items/'+itemId;
+  path+='/title.json';
+  fetch(FIREBASE_BASE+path,{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newTitle)
+  }).then(function(){
+    if(itemId)d[chnum].seances[snum].items[itemId].title=newTitle;
+    else if(snum)d[chnum].seances[snum].title=newTitle;
+    else d[chnum].title=newTitle;
+    renderChapitres(level);
+  });
+}
+
+function deleteChapter(level,chnum){
+  var ch=chapitresData[level][chnum];if(!ch)return;
+  if(!confirm('Supprimer le chapitre \u00ab '+ch.title+' \u00bb et tout son contenu ?'))return;
+  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'.json',{method:'DELETE'})
+    .then(function(){
+      delete chapitresData[level][chnum];
+      renderChapitres(level);
+    });
+}
+
+function deleteSeance(level,chnum,snum){
+  var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
+  if(!confirm('Supprimer la s\u00e9ance \u00ab '+sce.title+' \u00bb et tous ses items ?'))return;
+  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json',{method:'DELETE'})
+    .then(function(){
+      delete chapitresData[level][chnum].seances[snum];
+      renderChapitres(level);
+    });
+}
+
+function deleteItem(level,chnum,snum,itemId){
+  var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
+  if(!confirm('Supprimer l\u2019item \u00ab '+item.title+' \u00bb ?'))return;
+  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{method:'DELETE'})
+    .then(function(){
+      delete chapitresData[level][chnum].seances[snum].items[itemId];
+      renderChapitres(level);
+    });
 }
 
 function applyPublished(level){
