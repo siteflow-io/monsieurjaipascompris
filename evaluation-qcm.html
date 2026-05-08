@@ -2417,7 +2417,7 @@ function OverlayQRPhone(p){
 }
 
 // ════════════════════════════════════════════════════════════════════
-// VUE TÉLÉPHONE (phone) — pilotage compact. Sera développée plus tard.
+// VUE TÉLÉPHONE (phone) — pilotage compact mobile
 // ════════════════════════════════════════════════════════════════════
 function VuePhone(p){
   // Au montage : si l'URL contient ?qr=NONCE, écrire dans Firebase pour fermer la modale côté ordi
@@ -2428,10 +2428,86 @@ function VuePhone(p){
       db.ref(DB_ROOT+"/qrScans/"+qr).set(firebase.database.ServerValue.TIMESTAMP);
     }
   }, []);
-  return h("div", {className:"board-attente"},
-    h("div", {className:"board-titre"}, "📱 Vue téléphone"),
-    h("div", {className:"board-msg"}, "Connecté"),
-    h("div", {className:"board-sub"}, "Pilotage compact à venir (1bis-iii suite + 1bis-iv).")
+
+  // Lire toutes les données nécessaires depuis Firebase
+  var s1 = useState({}), classes = s1[0], setClasses = s1[1];
+  var s2 = useState({}), evals = s2[0], setEvals = s2[1];
+  var s3 = useState({}), sessions = s3[0], setSessions = s3[1];
+  var s4 = useState({}), sessionActive = s4[0], setSessionActive = s4[1];
+
+  useEffect(function(){
+    db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}); });
+    db.ref(DB_ROOT+"/evaluations").on("value", function(s){ setEvals(s.val()||{}); });
+    db.ref(DB_ROOT+"/sessions").on("value", function(s){ setSessions(s.val()||{}); });
+    db.ref(DB_ROOT+"/sessionActive").on("value", function(s){ setSessionActive(s.val()||{}); });
+    return function(){
+      db.ref(DB_ROOT+"/classes").off();
+      db.ref(DB_ROOT+"/evaluations").off();
+      db.ref(DB_ROOT+"/sessions").off();
+      db.ref(DB_ROOT+"/sessionActive").off();
+    };
+  }, []);
+
+  // Trouver la session active (la plus récente s'il y en a plusieurs)
+  var activeSession = null;
+  var activeClasseSlug = null;
+  Object.keys(sessionActive).forEach(function(slug){
+    var sid = sessionActive[slug];
+    if(!sid || !sessions[sid]) return;
+    var sess = Object.assign({id:sid}, sessions[sid]);
+    if(sess.lastDisconnect && !sess.repriseConfirmee) return; // ignorer interrompue
+    if(!activeSession || (sess.phaseStart||0) > (activeSession.phaseStart||0)){
+      activeSession = sess; activeClasseSlug = slug;
+    }
+  });
+
+  if(!activeSession){
+    return h("div", {style:{padding:"2rem",color:"#fff",textAlign:"center",minHeight:"100vh"}},
+      h("div", {style:{fontSize:"3rem",marginBottom:"1rem"}}, "📱"),
+      h("h2", {style:{marginBottom:".5rem"}}, "Pilotage mobile"),
+      h("p", {style:{opacity:.9}}, "Aucune session active. Lance une session depuis l'ordinateur.")
+    );
+  }
+
+  var classe = classes[activeClasseSlug] || {nom:"?", eleves:[]};
+  var ev = evals[activeSession.evalId] || {questions:[], titre:"?"};
+  var qIdx = activeSession.qIdx;
+  var question = (qIdx != null && qIdx >= 0 && ev.questions) ? ev.questions[qIdx] : null;
+  var nextQuestion = (qIdx != null && ev.questions) ? ev.questions[qIdx+1] : null;
+  var phase = activeSession.phase || "—";
+  var totalQ = (ev.questions || []).length;
+
+  return h("div", {style:{padding:".7rem .7rem 2rem",color:"#fff",minHeight:"100vh"}},
+    // Bandeau
+    h("div", {style:{background:"rgba(0,0,0,.35)",borderRadius:"10px",padding:".55rem .8rem",marginBottom:".5rem"}},
+      h("div", {style:{fontWeight:"900",fontSize:".95rem"}}, classe.nom),
+      h("div", {style:{fontSize:".75rem",opacity:.85}}, ev.titre),
+      h("div", {style:{marginTop:".3rem",fontSize:".8rem",fontWeight:"bold"}}, "Phase : "+phase+" — Q "+(qIdx != null ? (qIdx+1) : "—")+"/"+totalQ)
+    ),
+    // Q en cours
+    question && h("div", {style:{background:"rgba(255,255,255,.95)",color:"var(--noir)",borderRadius:"10px",padding:".6rem .9rem",marginBottom:".35rem"}},
+      h("div", {style:{fontWeight:"900",fontSize:".7rem",color:"var(--violet)",letterSpacing:".05em",marginBottom:".15rem"}}, "Q"+(qIdx+1)),
+      h("div", {style:{fontSize:".9rem",lineHeight:"1.3"}}, question.enonce || "")
+    ),
+    // Q+1
+    nextQuestion && h("div", {style:{background:"rgba(255,255,255,.4)",color:"var(--noir)",borderRadius:"8px",padding:".35rem .8rem",marginBottom:".55rem",fontSize:".75rem",lineHeight:"1.25"}},
+      h("span", {style:{fontWeight:"900",color:"var(--violet)"}}, "Suiv. "),
+      (nextQuestion.enonce || "").slice(0, 80) + ((nextQuestion.enonce||"").length > 80 ? "…" : "")
+    ),
+    // Liste élèves
+    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem"}},
+      h("div", {style:{fontSize:".7rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".2rem .3rem .3rem"}}, "ÉLÈVES"),
+      (classe.eleves||[]).slice().sort(function(a,b){return (a.nomComplet||"").localeCompare(b.nomComplet||"")}).map(function(el){
+        var slug = slugify(el.nomComplet);
+        var absent = (activeSession.absents||[]).indexOf(slug) >= 0;
+        var hasRep = activeSession.reponses && activeSession.reponses[qIdx] && activeSession.reponses[qIdx][slug];
+        var pastille = absent ? "⚪" : (hasRep ? "✅" : "⏳");
+        return h("div", {key:slug, style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:".28rem .4rem",fontSize:".82rem",borderBottom:"1px solid rgba(255,255,255,.08)",opacity:absent?.5:1}},
+          h("span", {style:{textDecoration:absent?"line-through":"none"}}, el.nomComplet),
+          h("span", {style:{fontSize:".95rem"}}, pastille)
+        );
+      })
+    )
   );
 }
 
