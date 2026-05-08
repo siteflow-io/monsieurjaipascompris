@@ -506,6 +506,8 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
   if(isAdmin){
     adminBtns='<button class="ch-publish-btn'+(ch.published?' published':'')+'" onclick="event.stopPropagation();togglePublishChapter(\''+level+'\',\''+num+'\')">'+(ch.published?'\u2705 Publi\u00e9':'Publier')+'</button>';
     adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+num+'\')">\u270f</button>';
+    adminBtns+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',-1)">\u2191</button>';
+    adminBtns+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',1)">\u2193</button>';
     adminBtns+='<button class="admin-action-btn danger" title="Supprimer le chapitre" onclick="event.stopPropagation();deleteChapter(\''+level+'\',\''+num+'\')">\u2715</button>';
   }
   var opacityStyle=(isAdmin && !ch.published)?' style="opacity:0.55"':'';
@@ -541,6 +543,8 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   if(isAdmin){
     adminBtns='<button class="ch-publish-btn'+(sce.published?' published':'')+'" onclick="event.stopPropagation();togglePublishSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">'+(sce.published?'\u2705':'Publier')+'</button>';
     adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u270f</button>';
+    adminBtns+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',-1)">\u2191</button>';
+    adminBtns+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',1)">\u2193</button>';
     adminBtns+='<button class="admin-action-btn danger" title="Supprimer la s\u00e9ance" onclick="event.stopPropagation();deleteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && !sce.published)?' item-unpublished':'';
@@ -584,6 +588,9 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   if(isAdmin){
     pubBtn='<button class="item-pub-btn'+(it.published?' published':'')+'" onclick="event.stopPropagation();togglePublishItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">'+(it.published?'\u2705':'Publier')+'</button>';
     pubBtn+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u270f</button>';
+    pubBtn+='<button class="admin-action-btn" title="Lier un fichier Drive ou une URL" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
+    pubBtn+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',-1)">\u2191</button>';
+    pubBtn+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',1)">\u2193</button>';
     pubBtn+='<button class="admin-action-btn danger" title="Supprimer l\u2019item" onclick="event.stopPropagation();deleteItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && !it.published)?' item-unpublished':'';
@@ -758,6 +765,86 @@ function deleteItem(level,chnum,snum,itemId){
       delete chapitresData[level][chnum].seances[snum].items[itemId];
       renderChapitres(level);
     });
+}
+
+// Réordonnancement par swap d'ordre avec voisin
+function _swapOrdre(pathA,pathB,oldA,oldB,onDone){
+  Promise.all([
+    fetch(FIREBASE_BASE+pathA+'/ordre.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(oldB)}),
+    fetch(FIREBASE_BASE+pathB+'/ordre.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(oldA)})
+  ]).then(onDone);
+}
+
+function moveChapter(level,chnum,dir){
+  var data=chapitresData[level];if(!data)return;
+  var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+  var idx=nums.indexOf(String(chnum));
+  if(idx<0)return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=nums.length)return;
+  var other=nums[newIdx];
+  var oA=data[chnum].ordre||0;var oB=data[other].ordre||0;
+  _swapOrdre('/site/'+level+'/chapitres/'+chnum,'/site/'+level+'/chapitres/'+other,oA,oB,function(){
+    data[chnum].ordre=oB;data[other].ordre=oA;renderChapitres(level);
+  });
+}
+
+function moveSeance(level,chnum,snum,dir){
+  var ch=chapitresData[level][chnum];if(!ch||!ch.seances)return;
+  var seances=ch.seances;
+  var nums=Object.keys(seances).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
+  var idx=nums.indexOf(String(snum));
+  if(idx<0)return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=nums.length)return;
+  var other=nums[newIdx];
+  var oA=seances[snum].ordre||0;var oB=seances[other].ordre||0;
+  _swapOrdre('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum,'/site/'+level+'/chapitres/'+chnum+'/seances/'+other,oA,oB,function(){
+    seances[snum].ordre=oB;seances[other].ordre=oA;renderChapitres(level);
+  });
+}
+
+function moveItem(level,chnum,snum,itemId,dir){
+  var sce=chapitresData[level][chnum].seances[snum];if(!sce||!sce.items)return;
+  var items=sce.items;
+  var ids=Object.keys(items).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
+  var idx=ids.indexOf(itemId);
+  if(idx<0)return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=ids.length)return;
+  var other=ids[newIdx];
+  var oA=items[itemId].ordre||0;var oB=items[other].ordre||0;
+  _swapOrdre('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId,'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+other,oA,oB,function(){
+    items[itemId].ordre=oB;items[other].ordre=oA;renderChapitres(level);
+  });
+}
+
+// Liaison d'un item à une ressource Drive ou URL externe
+function linkItem(level,chnum,snum,itemId){
+  var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
+  var current=item.ref?(item.source==='drive'?'https://drive.google.com/file/d/'+item.ref+'/view':item.ref):'';
+  var input=prompt('Coller le lien Drive ou l\u2019URL externe.\nLaisser vide ou taper "x" pour d\u00e9lier.\n\nLien actuel : '+(current||'(aucun)'),current);
+  if(input===null)return;
+  input=input.trim();
+  var newSource='',newRef='';
+  if(input===''||input.toLowerCase()==='x'){
+    // Délier
+  } else {
+    var driveMatch=input.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if(!driveMatch)driveMatch=input.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if(driveMatch){newSource='drive';newRef=driveMatch[1];}
+    else if(/^https?:\/\//i.test(input)){newSource='external';newRef=input;}
+    else if(/^[a-zA-Z0-9_-]{20,}$/.test(input)){newSource='drive';newRef=input;}
+    else{alert('Format non reconnu. Colle un lien Drive (https://drive.google.com/file/d/...) ou une URL http(s)://.');return;}
+  }
+  var basePath='/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId;
+  Promise.all([
+    fetch(FIREBASE_BASE+basePath+'/source.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSource)}),
+    fetch(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newRef)})
+  ]).then(function(){
+    item.source=newSource;item.ref=newRef;
+    renderChapitres(level);
+  });
 }
 
 function applyPublished(level){
