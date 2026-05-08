@@ -209,6 +209,28 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .doc-viewer-close { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; padding: 4px 14px; font-family: 'EB Garamond', serif; font-size: 0.9rem; cursor: pointer; }
 .doc-viewer-close:hover { background: rgba(255,255,255,0.15); }
 .doc-viewer-frame { flex: 1; border: none; width: 100%; }
+.link-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 5500; align-items: center; justify-content: center; padding: 24px; }
+.link-modal-overlay.visible { display: flex; }
+.link-modal-box { background: #1a1030; border-radius: 14px; padding: 20px 22px; width: 90vw; max-width: 520px; max-height: 85vh; overflow-y: auto; border: 1px solid rgba(255,184,108,0.25); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+.link-modal-title { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+.link-modal-sub { font-size: 0.82rem; color: rgba(255,255,255,0.5); margin-bottom: 18px; }
+.link-modal-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.link-modal-section:last-of-type { border-bottom: none; }
+.link-modal-section-title { font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,184,108,0.7); font-weight: 700; margin-bottom: 8px; }
+.link-modal-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: #fff; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; }
+.link-modal-input:focus { outline: none; border-color: rgba(255,184,108,0.5); background: rgba(255,255,255,0.08); }
+.link-modal-select { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: #fff; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; cursor: pointer; }
+.link-modal-select:disabled { opacity: 0.5; cursor: wait; }
+.link-modal-row { display: flex; gap: 8px; align-items: center; }
+.link-modal-row .link-modal-input, .link-modal-row .link-modal-select { flex: 1; }
+.link-modal-btn { padding: 7px 14px; border-radius: 7px; border: 1px solid rgba(255,184,108,0.4); background: rgba(255,184,108,0.15); color: #ffb86c; cursor: pointer; font-family: inherit; font-size: 0.84rem; font-weight: 600; flex-shrink: 0; }
+.link-modal-btn:hover { background: rgba(255,184,108,0.25); }
+.link-modal-btn.danger { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.1); color: #f87171; }
+.link-modal-btn.danger:hover { background: rgba(248,113,113,0.2); }
+.link-modal-btn.cancel { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6); }
+.link-modal-btn.cancel:hover { background: rgba(255,255,255,0.1); }
+.link-modal-current { font-size: 0.78rem; color: rgba(255,255,255,0.55); padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 6px; margin-bottom: 14px; word-break: break-all; }
+.link-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
 .bigfile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 6000; align-items: center; justify-content: center; padding: 24px; }
 .bigfile-overlay.visible { display: flex; }
 .bigfile-box { background: #1a1030; border-radius: 20px; padding: 36px; max-width: 520px; width: 100%; border: 1px solid rgba(255,184,108,0.2); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
@@ -402,6 +424,32 @@ body.admin-mode .admin-only { display: block; }
 </div>
 <div class="bigfile-overlay" id="bigfile-overlay"><div class="bigfile-box"><h3>📦 Fichier trop lourd pour l'upload direct</h3><ol><li>Ouvre le dossier <strong><a id="bigfile-folder-link" href="#" target="_blank">Chargement...</a></strong></li><li>Glisse ton fichier <strong id="bigfile-name">—</strong> dedans</li><li>Clic droit sur le fichier > <strong>Partager</strong> > passe en <strong>"Toute personne disposant du lien"</strong> > <strong>Copier le lien</strong></li><li>Colle le lien ci-dessous</li></ol><input class="bigfile-input" id="bigfile-url" type="text" placeholder="Colle le lien Drive ici..."><div class="bigfile-btns"><button class="bigfile-btn-main" onclick="associateBigFile()">Associer</button><button class="bigfile-btn-cancel" onclick="closeBigFile()">Annuler</button></div><div class="bigfile-dismiss" onclick="dismissBigFileGuide()">Ne plus afficher ce guide</div></div></div>
 <div class="doc-viewer-overlay" id="doc-viewer"><div class="doc-viewer-box"><div class="doc-viewer-header"><div class="doc-viewer-title" id="doc-viewer-title">Document</div><button class="doc-viewer-close" onclick="closeViewer()">✕ Fermer</button></div><iframe class="doc-viewer-frame" id="doc-viewer-frame" src="about:blank"></iframe></div></div>
+
+<div class="link-modal-overlay" id="link-modal"><div class="link-modal-box">
+  <div class="link-modal-title" id="link-modal-title">Lier l'item</div>
+  <div class="link-modal-sub" id="link-modal-sub"></div>
+  <div class="link-modal-current" id="link-modal-current"></div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">📎 Fichier Drive ou URL externe</div>
+    <div class="link-modal-row"><input type="text" class="link-modal-input" id="link-modal-url" placeholder="Coller un lien Drive, une URL https://… ou un ID Drive"><button class="link-modal-btn" onclick="linkModalApplyUrl()">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">📝 Dictée existante</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-dictee"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('dictee')">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">✍️ Réécriture existante</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-reecriture"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('reecriture')">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">🗳️ Évaluation QCM existante</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-qcm"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('qcm')">Lier</button></div>
+  </div>
+  <div class="link-modal-footer">
+    <button class="link-modal-btn danger" onclick="linkModalUnlink()">Délier</button>
+    <button class="link-modal-btn cancel" onclick="closeLinkModal()">Annuler</button>
+  </div>
+</div></div>
 <div class="proto-badge" id="proto-badge" onclick="handleBadgeTap()">Prototype</div>
 </body>
 <script>
@@ -613,9 +661,10 @@ function openItem(level,chnum,snum,itemId){
   if(!item)return;
   var ref=item.ref;
   var src=item.source;
-  if(!ref){alert('Item non li\u00e9. Mode admin (\u00e0 venir) pour associer une ressource.');return;}
+  if(!ref){alert('Item non li\u00e9. Utilise le bouton \ud83d\udd17 en mode admin pour associer une ressource.');return;}
   if(item.kind==='dictee' && src==='firebase_app'){if(typeof openDicteeById==='function')openDicteeById(ref);return;}
   if(item.kind==='reecriture' && src==='firebase_app'){if(typeof openReecriture==='function')openReecriture(ref,item.title);return;}
+  if(item.kind==='qcm' && src==='firebase_app'){openViewer(item.title||'\u00c9valuation QCM','evaluation-qcm.html?mode=eleve&eval='+encodeURIComponent(ref));return;}
   if(src==='drive'){openViewer(item.title,'https://drive.google.com/file/d/'+ref+'/preview');return;}
   if(src==='external'){openViewer(item.title,ref);return;}
   if(src==='html'){openViewer(item.title,ref);return;}
@@ -820,30 +869,111 @@ function moveItem(level,chnum,snum,itemId,dir){
 }
 
 // Liaison d'un item à une ressource Drive ou URL externe
+var LINK_MODAL_CONTEXT=null;
+var QCM_FIREBASE_BASE='https://plickers-mjpc-default-rtdb.europe-west1.firebasedatabase.app';
+
 function linkItem(level,chnum,snum,itemId){
+  openLinkModal(level,chnum,snum,itemId);
+}
+
+function openLinkModal(level,chnum,snum,itemId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
-  var current=item.ref?(item.source==='drive'?'https://drive.google.com/file/d/'+item.ref+'/view':item.ref):'';
-  var input=prompt('Coller le lien Drive ou l\u2019URL externe.\nLaisser vide ou taper "x" pour d\u00e9lier.\n\nLien actuel : '+(current||'(aucun)'),current);
-  if(input===null)return;
-  input=input.trim();
-  var newSource='',newRef='';
-  if(input===''||input.toLowerCase()==='x'){
-    // Délier
+  LINK_MODAL_CONTEXT={level:level,chnum:chnum,snum:snum,itemId:itemId};
+  document.getElementById('link-modal-title').textContent='Lier : '+(item.title||'');
+  document.getElementById('link-modal-sub').textContent='Choisis une source dans une des sections. La nouvelle liaison \u00e9crase l\u2019ancienne.';
+  var currentEl=document.getElementById('link-modal-current');
+  if(item.ref){
+    var label='';
+    if(item.source==='drive')label='\ud83d\udcce Drive : '+item.ref;
+    else if(item.source==='external')label='\ud83c\udf10 '+item.ref;
+    else if(item.source==='firebase_app')label=(item.kind||'App')+' : '+item.ref;
+    else label=(item.source||'?')+' : '+item.ref;
+    currentEl.textContent='Liaison actuelle \u2014 '+label;
   } else {
-    var driveMatch=input.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if(!driveMatch)driveMatch=input.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if(driveMatch){newSource='drive';newRef=driveMatch[1];}
-    else if(/^https?:\/\//i.test(input)){newSource='external';newRef=input;}
-    else if(/^[a-zA-Z0-9_-]{20,}$/.test(input)){newSource='drive';newRef=input;}
-    else{alert('Format non reconnu. Colle un lien Drive (https://drive.google.com/file/d/...) ou une URL http(s)://.');return;}
+    currentEl.textContent='Aucune liaison actuelle.';
   }
-  var basePath='/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId;
-  Promise.all([
+  document.getElementById('link-modal-url').value='';
+  loadAppList('dictee');
+  loadAppList('reecriture');
+  loadAppList('qcm');
+  document.getElementById('link-modal').classList.add('visible');
+}
+
+function closeLinkModal(){
+  document.getElementById('link-modal').classList.remove('visible');
+  LINK_MODAL_CONTEXT=null;
+}
+
+function loadAppList(kind){
+  var sel=document.getElementById('link-modal-'+kind);if(!sel)return;
+  sel.disabled=true;
+  sel.innerHTML='<option value="">Chargement\u2026</option>';
+  var url='';
+  if(kind==='dictee')url=FIREBASE_BASE+'/dictees.json';
+  else if(kind==='reecriture')url=FIREBASE_BASE+'/reecritures.json';
+  else if(kind==='qcm')url=QCM_FIREBASE_BASE+'/qcm/evaluations.json';
+  fetch(url).then(function(r){return r.json();}).catch(function(){return null;}).then(function(data){
+    sel.innerHTML='<option value="">\u2014 Choisir \u2014</option>';
+    if(data){
+      Object.keys(data).forEach(function(id){
+        var cfg=(data[id]&&data[id].config)||data[id]||{};
+        var title=cfg.title||cfg.titre||id;
+        var opt=document.createElement('option');
+        opt.value=id;
+        opt.textContent=title;
+        sel.appendChild(opt);
+      });
+    }
+    if(sel.children.length===1){
+      sel.innerHTML='<option value="">(aucun \u00e9l\u00e9ment disponible)</option>';
+    }
+    sel.disabled=false;
+  });
+}
+
+function linkModalApplyUrl(){
+  if(!LINK_MODAL_CONTEXT)return;
+  var input=document.getElementById('link-modal-url').value.trim();
+  if(!input){alert('Colle un lien Drive ou une URL.');return;}
+  var newSource='',newRef='';
+  var driveMatch=input.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if(!driveMatch)driveMatch=input.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if(driveMatch){newSource='drive';newRef=driveMatch[1];}
+  else if(/^https?:\/\//i.test(input)){newSource='external';newRef=input;}
+  else if(/^[a-zA-Z0-9_-]{20,}$/.test(input)){newSource='drive';newRef=input;}
+  else{alert('Format non reconnu. Colle un lien Drive ou une URL http(s)://.');return;}
+  applyLinkChanges(newSource,newRef,null);
+}
+
+function linkModalApplyApp(kind){
+  if(!LINK_MODAL_CONTEXT)return;
+  var sel=document.getElementById('link-modal-'+kind);
+  var ref=sel.value;
+  if(!ref){alert('Choisis un \u00e9l\u00e9ment dans la liste.');return;}
+  applyLinkChanges('firebase_app',ref,kind);
+}
+
+function linkModalUnlink(){
+  if(!LINK_MODAL_CONTEXT)return;
+  if(!confirm('D\u00e9lier cet item ?'))return;
+  applyLinkChanges('','',null);
+}
+
+function applyLinkChanges(newSource,newRef,newKind){
+  var ctx=LINK_MODAL_CONTEXT;if(!ctx)return;
+  var basePath='/site/'+ctx.level+'/chapitres/'+ctx.chnum+'/seances/'+ctx.snum+'/items/'+ctx.itemId;
+  var promises=[
     fetch(FIREBASE_BASE+basePath+'/source.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSource)}),
     fetch(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newRef)})
-  ]).then(function(){
+  ];
+  if(newKind){
+    promises.push(fetch(FIREBASE_BASE+basePath+'/kind.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newKind)}));
+  }
+  Promise.all(promises).then(function(){
+    var item=chapitresData[ctx.level][ctx.chnum].seances[ctx.snum].items[ctx.itemId];
     item.source=newSource;item.ref=newRef;
-    renderChapitres(level);
+    if(newKind)item.kind=newKind;
+    var lvl=ctx.level;closeLinkModal();renderChapitres(lvl);
   });
 }
 
