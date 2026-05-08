@@ -488,7 +488,7 @@ var TAB_LABELS={dictee:'Dict\u00e9e',reecriture:'R\u00e9\u00e9criture',evalconn:
 var chapitresData={};
 var FIREBASE_BASE='https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app';
 function loadPublished(level){
-  fetch('https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app/site/'+level+'.json')
+  fetch(FIREBASE_BASE+'/site/'+level+'.json')
     .then(function(r){return r.json()})
     .catch(function(){return null})
     .then(function(val){
@@ -496,51 +496,41 @@ function loadPublished(level){
       publishedChapters[level]=v.published||[];
       publishedTabs[level]=v.published_tabs||[];
       publishedExtras[level]=v.published_extras||[];
+      chapitresData[level]=v.chapitres||{};
       applyPublished(level);
     });
-}
-
-
-function loadChapitres(level,cb){
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres.json')
-    .then(function(r){return r.json()})
-    .catch(function(){return null})
-    .then(function(val){cb(val);});
 }
 
 function renderChapitres(level){
   var container=document.getElementById('chapters-dynamic');
   if(!container)return;
   var isAdmin=document.body.classList.contains('admin-mode');
-  loadChapitres(level,function(data){
-    chapitresData[level]=data||{};
-    var html='';
-    if(!data||Object.keys(data).length===0){
-      if(isAdmin){
-        html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.92rem">Aucun chapitre en base pour ce niveau.<br><br><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Cr\u00e9er le premier chapitre</button></div>';
-      } else {
-        html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:0.92rem;font-style:italic">Aucun chapitre publi\u00e9 pour le moment.</div>';
-      }
-      container.innerHTML=html;
-      return;
-    }
-    // Bouton réinit en haut, mode admin uniquement
+  var data=chapitresData[level]||{};
+  var html='';
+  if(Object.keys(data).length===0){
     if(isAdmin){
-      html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
-    }
-    var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
-    var displayNum=0;
-    nums.forEach(function(num){
-      var ch=data[num];
-      if(!isAdmin && !ch.published)return;
-      displayNum++;
-      html+=renderChapterCard(level,num,ch,displayNum,isAdmin);
-    });
-    if(isAdmin){
-      html+='<div class="admin-add-row" style="text-align:center"><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
+      html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.92rem">Aucun chapitre en base pour ce niveau.<br><br><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Cr\u00e9er le premier chapitre</button></div>';
+    } else {
+      html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:0.92rem;font-style:italic">Aucun chapitre publi\u00e9 pour le moment.</div>';
     }
     container.innerHTML=html;
+    return;
+  }
+  if(isAdmin){
+    html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
+  }
+  var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+  var displayNum=0;
+  nums.forEach(function(num){
+    var ch=data[num];
+    if(!isAdmin && !ch.published)return;
+    displayNum++;
+    html+=renderChapterCard(level,num,ch,displayNum,isAdmin);
   });
+  if(isAdmin){
+    html+='<div class="admin-add-row" style="text-align:center"><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
+  }
+  container.innerHTML=html;
 }
 
 function resetChapitres(level){
