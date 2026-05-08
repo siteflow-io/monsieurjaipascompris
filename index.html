@@ -129,8 +129,8 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .search-input:focus { border-color: var(--level-accent); box-shadow: 0 0 20px var(--level-glow); }
 .search-input::placeholder { color: rgba(255,255,255,0.25); }
 .level-content { max-width: 900px; margin: 0 auto; padding: 36px 32px 80px; }
-.tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 4px; margin-bottom: 36px; width: fit-content; }
-.tab { font-size: 0.97rem; font-weight: 500; padding: 8px 18px; border-radius: 9px; cursor: pointer; color: rgba(255,255,255,0.4); transition: all 0.2s; border: none; background: transparent; font-family: 'EB Garamond', serif; }
+.tabs { display: flex; gap: 4px; background: rgba(255,255,255,0.06); border-radius: 12px; padding: 4px; margin-bottom: 24px; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.tab { font-size: 0.97rem; font-weight: 500; padding: 8px 18px; border-radius: 9px; cursor: pointer; color: rgba(255,255,255,0.4); transition: all 0.2s; border: none; background: transparent; font-family: 'EB Garamond', serif; white-space: nowrap; flex-shrink: 0; }
 .tab.active { background: rgba(255,255,255,0.1); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); font-weight: 600; }
 .section-label { font-size: 0.8rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.25); margin-bottom: 14px; margin-top: 36px; }
 .section-label:first-child { margin-top: 0; }
@@ -235,10 +235,13 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .ch-publish-btn:hover { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #34d399; }
 .ch-publish-btn.published { background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.25); color: #34d399; cursor: pointer; }
 .ch-publish-btn.published:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.25); color: #f87171; }
-.tab-publish-badge { display: inline-block; margin-left: 6px; font-size: 0.78em; opacity: 0.55; cursor: pointer; transition: opacity 0.15s; }
-.tab-publish-badge:hover { opacity: 1; }
-.tab-publish-badge.published { color: #34d399; opacity: 0.9; }
-.tab-publish-badge.published:hover { color: #f87171; }
+.tab-publish-badge { display: none; }
+.admin-tabs-publish { display: none; margin-bottom: 28px; padding: 14px 16px; background: rgba(255,184,108,0.05); border: 1px dashed rgba(255,184,108,0.22); border-radius: 12px; }
+body.admin-mode .admin-tabs-publish { display: block; }
+.admin-tabs-publish-title { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,184,108,0.75); margin-bottom: 10px; font-weight: 700; }
+.admin-tabs-publish-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.admin-tabs-publish-row:last-child { border-bottom: none; }
+.admin-tabs-publish-label { font-size: 0.95rem; color: rgba(255,255,255,0.75); }
 </style>
 </head>
 <body>
@@ -328,6 +331,7 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
       <button class="tab" id="tab-btn-etude" onclick="gotoEtude()">📖 Étude de texte</button>
       <button class="tab" id="tab-btn-redaction" onclick="gotoRedaction()">✏️ Rédaction</button>
     </div>
+    <div class="admin-tabs-publish" id="admin-tabs-publish"></div>
     <div id="tab-chapitres">
       <div class="section-label">Chapitres</div>
       <div class="chapters-list">
@@ -505,28 +509,32 @@ function applyPublished(level){
     var btn=document.getElementById('tab-btn-'+tabId);
     if(!btn)return;
     var isPubT=pubT.indexOf(tabId)>=0;
-    var existingBadge=btn.querySelector('.tab-publish-badge');
-    if(existingBadge)existingBadge.remove();
     if(isAdmin){
       btn.style.display='';
-      var badge=document.createElement('span');
-      badge.className='tab-publish-badge'+(isPubT?' published':'');
-      badge.textContent=isPubT?'✅':'○';
-      badge.title=isPubT?'Publié — clic pour dépublier':'Non publié — clic pour publier';
-      badge.onclick=function(e){
-        e.stopPropagation();
-        togglePublishTab(level,tabId);
-      };
-      btn.appendChild(badge);
+      btn.style.opacity=isPubT?'':'0.55';
     } else {
       btn.style.display=isPubT?'':'none';
-      // Si l'onglet courant est dépublié, retomber sur Chapitres
+      btn.style.opacity='';
       if(!isPubT&&btn.classList.contains('active')){
         var cBtn=document.querySelector('.tab[onclick*="chapitres"]');
         if(cBtn)switchTab(cBtn,'chapitres');
       }
     }
   });
+  // Panneau admin de publication des onglets
+  var panel=document.getElementById('admin-tabs-publish');
+  if(panel){
+    if(isAdmin){
+      var html='<div class="admin-tabs-publish-title">\ud83d\udee0 Publier les onglets pour les \u00e9l\u00e8ves \u2014 '+level.toUpperCase()+'</div>';
+      PUBLISHABLE_TABS.forEach(function(tabId){
+        var isPubT=pubT.indexOf(tabId)>=0;
+        html+='<div class="admin-tabs-publish-row"><div class="admin-tabs-publish-label">'+TAB_LABELS[tabId]+'</div><button class="ch-publish-btn'+(isPubT?' published':'')+'" onclick="togglePublishTab(\''+level+'\',\''+tabId+'\')">'+(isPubT?'\u2705 Publi\u00e9':'Publier pour les \u00e9l\u00e8ves')+'</button></div>';
+      });
+      panel.innerHTML=html;
+    } else {
+      panel.innerHTML='';
+    }
+  }
   // Si l'onglet Réécriture est ouvert, re-render pour BB4E
   var reeEl=document.getElementById('tab-reecriture');
   if(reeEl&&reeEl.style.display!=='none'&&reeEl.innerHTML)gotoReecriture();
