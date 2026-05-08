@@ -2477,6 +2477,55 @@ function VuePhone(p){
   var phase = activeSession.phase || "—";
   var totalQ = (ev.questions || []).length;
 
+  // ─── Actions (B2) — duplication minimale de SessionLive ───
+  function notifyPhone(msg, type){
+    var nid = "n_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+    db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/notifs/"+nid).set({msg:msg, type:type||"info", ts:Date.now()});
+  }
+  function actLancerQ(){
+    var newIdx = (qIdx == null) ? 0 : qIdx + 1;
+    if(newIdx >= totalQ){ alert("Toutes les questions ont été posées."); return; }
+    db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({
+      qIdx:newIdx, phase:"reflexion", phaseStart:Date.now(), reouverts:null, paused:null
+    });
+  }
+  function actAutoriser(){
+    db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({
+      phase:"reponse", phaseStart:Date.now(), chronoReponse: activeSession.chronoReponse || 5
+    });
+  }
+  function actClore(){
+    db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({phase:"attente"});
+  }
+  function actTogglePause(){
+    if(activeSession.paused){
+      var rest = activeSession.paused.remaining, dur = activeSession.paused.duree;
+      var newStart = Date.now() - (dur - rest)*1000;
+      db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({phaseStart:newStart, paused:null});
+      notifyPhone("Le chrono reprend.", "info");
+    } else {
+      if(phase !== "reflexion" && phase !== "reponse") return;
+      var d = phase === "reflexion"
+        ? (question ? getNiveau(question.niveau).chrono : 10)
+        : (activeSession.chronoReponse || 5);
+      var elapsed = Math.floor((Date.now() - activeSession.phaseStart)/1000);
+      var r = Math.max(0, d - elapsed);
+      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/paused").set({remaining:r, duree:d, at:Date.now()});
+      notifyPhone("⏸️ Pause demandée par le professeur.", "pause");
+    }
+  }
+  function actPlus5(){
+    if(activeSession.paused){
+      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/paused/remaining").set((activeSession.paused.remaining||0) + 5);
+    } else if(phase === "reflexion" || phase === "reponse"){
+      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/phaseStart").set(activeSession.phaseStart + 5*1000);
+    } else { return; }
+    notifyPhone("⏱️ Le professeur a ajouté 5 secondes.", "info");
+  }
+  var lancerLabel = (qIdx == null) ? "🚀 Lancer Q1" : ("🚀 Lancer Q"+(qIdx+2));
+  var lancerDisabled = (qIdx != null && qIdx+1 >= totalQ);
+  var pauseLabel = activeSession.paused ? "▶️ Reprendre" : "⏸️ Pause";
+
   return h("div", {style:{padding:".7rem .7rem 2rem",color:"#fff",minHeight:"100vh"}},
     // Bandeau
     h("div", {style:{background:"rgba(0,0,0,.35)",borderRadius:"10px",padding:".55rem .8rem",marginBottom:".5rem"}},
@@ -2493,6 +2542,18 @@ function VuePhone(p){
     nextQuestion && h("div", {style:{background:"rgba(255,255,255,.4)",color:"var(--noir)",borderRadius:"8px",padding:".35rem .8rem",marginBottom:".55rem",fontSize:".75rem",lineHeight:"1.25"}},
       h("span", {style:{fontWeight:"900",color:"var(--violet)"}}, "Suiv. "),
       (nextQuestion.enonce || "").slice(0, 80) + ((nextQuestion.enonce||"").length > 80 ? "…" : "")
+    ),
+    // Boutons d'action (B2)
+    h("div", {style:{display:"grid",gridTemplateColumns:"1fr",gap:".4rem",marginBottom:".6rem"}},
+      h("button", {onClick:actLancerQ, disabled:lancerDisabled, style:{padding:".8rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--violet),var(--rose))",color:"#fff",fontWeight:"900",fontSize:".95rem",cursor:lancerDisabled?"not-allowed":"pointer",opacity:lancerDisabled?.5:1,fontFamily:"inherit",boxShadow:"0 4px 12px rgba(0,0,0,.2)"}}, lancerLabel),
+      h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
+        h("button", {onClick:actAutoriser, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--turquoise),var(--bleu))",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.18)"}}, "✋ Autoriser"),
+        h("button", {onClick:actClore, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--rouge),#DC2626)",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.18)"}}, "🛑 Clore")
+      ),
+      h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
+        h("button", {onClick:actTogglePause, style:{padding:".55rem",border:"2px solid rgba(255,255,255,.4)",borderRadius:"10px",background:"rgba(255,255,255,.15)",color:"#fff",fontWeight:"900",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit"}}, pauseLabel),
+        h("button", {onClick:actPlus5, style:{padding:".55rem",border:"none",borderRadius:"10px",background:"var(--jaune)",color:"var(--noir)",fontWeight:"900",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.15)"}}, "+5 sec")
+      )
     ),
     // Liste élèves
     h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem"}},
