@@ -65,6 +65,7 @@ textarea{resize:vertical;min-height:120px}
 .word-btn.err-l{border-color:var(--lexique);background:var(--lexique-light);color:var(--lexique);font-weight:600}
 .word-btn.err-m{border-color:var(--absent);background:var(--absent-light);color:var(--absent);font-weight:600;text-decoration:line-through}
 .word-btn.err-i{border-color:var(--orange);background:var(--orange-light);color:var(--orange);font-weight:600;font-style:italic}
+.word-btn.err-p{border-color:var(--lexique);background:var(--lexique-light);color:var(--lexique);font-weight:600;font-style:italic}
 .word-btn.last-touched{box-shadow:0 0 0 3px rgba(37,99,235,0.35);transform:scale(1.05)}
 .insert-zone{display:inline-block;width:12px;height:18px;cursor:pointer;vertical-align:middle;position:relative;opacity:0;transition:opacity .15s;margin:0 -1px}
 .insert-zone:hover{opacity:1!important}
@@ -87,6 +88,8 @@ textarea{resize:vertical;min-height:120px}
 .popup-btn-m:hover{background:var(--absent);color:#fff}
 .popup-btn-i{background:var(--orange-light);color:var(--orange);border-color:rgba(151,90,22,.2)}
 .popup-btn-i:hover{background:var(--orange);color:#fff}
+.popup-btn-p{background:var(--lexique-light);color:var(--lexique);border-color:rgba(43,108,203,.2)}
+.popup-btn-p:hover{background:var(--lexique);color:#fff}
 .popup-cancel{margin-top:14px;font-size:.88rem;color:var(--muted);cursor:pointer;border:none;background:none;font-family:inherit}
 .popup-cancel:hover{color:var(--text)}
 /* Eleve grid */
@@ -111,6 +114,7 @@ textarea{resize:vertical;min-height:120px}
 .badge-l{background:var(--lexique-light);color:var(--lexique)}
 .badge-m{background:var(--absent-light);color:var(--absent)}
 .badge-i{background:var(--orange-light);color:var(--orange)}
+.badge-p{background:var(--lexique-light);color:var(--lexique)}
 .badge-x{background:var(--primary-light);color:var(--primary)}
 .config-field{margin-bottom:14px}
 .config-field label{display:block;font-size:.85rem;font-weight:600;color:var(--text-sub);margin-bottom:4px}
@@ -134,7 +138,7 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
 firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDomain:"dictee-5e-ch4.firebaseapp.com",databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"dictee-5e-ch4",storageBucket:"dictee-5e-ch4.appspot.com"});
 var db=firebase.database();
 function san(n){return(n||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")}
-var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5};
+var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5,P:0.5};
 var CLASSES={};
 // Load classes from Firebase
 db.ref("classes").once("value",function(snap){
@@ -146,7 +150,7 @@ function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\
 function computeNote(errors,extras,base){
   errors=errors||[];extras=extras||[];base=base||20;
   var ded=0;errors.forEach(function(e){ded+=(TYPE_COST[e.type]||0)});extras.forEach(function(){ded+=TYPE_COST.X});
-  var counts={G:0,L:0,M:0,I:0,X:extras.length};errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});
+  var counts={G:0,L:0,M:0,I:0,P:0,X:extras.length};errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});
   return{note:Math.round(Math.max(0,base-ded)*10)/10,deduction:Math.round(ded*10)/10,counts:counts,total:errors.length+extras.length}
 }
 function noteColor(n,base){var p=n/base;return p>=.8?"var(--green)":p>=.5?"var(--orange)":"var(--coral)"}
@@ -1161,6 +1165,35 @@ function CorrScreen(p){
 
   if(cur&&tab==="correct") return h(CorrEleve,{key:san(cur),data:data,eleve:cur,
     existing:p.corrections[san(cur)]||null,
+    corrections:p.corrections,
+    absents:p.absents,
+    onSwitchEleve:function(name){setCur(name)},
+    onTransfer:function(targetName,mode){
+      var sek=san(cur),tek=san(targetName);
+      if(sek===tek)return;
+      var sCorr=p.corrections[sek];
+      var tCorr=p.corrections[tek];
+      if(!sCorr)return;
+      var newCorr=Object.assign({},p.corrections);
+      var dRef="correction_dictee/"+p.dicteeId;
+      if(mode==="swap"&&tCorr){
+        newCorr[tek]=Object.assign({},sCorr,{timestamp:Date.now()});
+        newCorr[sek]=Object.assign({},tCorr,{timestamp:Date.now()});
+        db.ref(dRef+"/results/"+tek).set(newCorr[tek]);
+        db.ref(dRef+"/results/"+sek).set(newCorr[sek]);
+      } else {
+        newCorr[tek]=Object.assign({},sCorr,{timestamp:Date.now()});
+        delete newCorr[sek];
+        db.ref(dRef+"/results/"+tek).set(newCorr[tek]);
+        db.ref(dRef+"/results/"+sek).remove();
+      }
+      db.ref(dRef+"/autocorrection/"+tek).remove();
+      db.ref(dRef+"/autocorrection/"+sek).remove();
+      p.onResetCorrections(newCorr);
+      setCur(null);
+      setMsg("\u21ad "+(mode==="swap"?"\u00c9chang\u00e9 avec ":mode==="replace"?"Remplac\u00e9 sur ":"Transf\u00e9r\u00e9 vers ")+targetName.split(" ").pop());
+      setTimeout(function(){setMsg(null)},3000);
+    },
     onSave:function(err,ext){
       p.onSave(san(cur),err,ext);
       var keys=data.eleves.map(san),ci=data.eleves.indexOf(cur),next=null;
@@ -1232,6 +1265,42 @@ function CorrScreen(p){
           });
         }},"\ud83d\udd04 Recalculer",ifo("V\u00e9rifie tous les essais des \u00e9l\u00e8ves et corrige les erreurs de comptage (probl\u00e8mes d\u2019apostrophe par exemple).")),
         
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){
+          var conversions=[];
+          var newCorr=Object.assign({},p.corrections);
+          Object.keys(p.corrections).forEach(function(ek){
+            var c=p.corrections[ek];if(!c||!c.errors)return;
+            var errs=toArr(c.errors).filter(function(e){return e!=null});
+            var hasConv=false;
+            var newErrs=errs.map(function(e){
+              if(e.type==="M"&&data.tokens[e.idx]&&isPunct(data.tokens[e.idx])){
+                hasConv=true;
+                conversions.push({ek:ek,word:data.tokens[e.idx]});
+                return Object.assign({},e,{type:"P"});
+              }
+              return e;
+            });
+            if(hasConv){
+              var exts=toArr(c.extras||[]).filter(function(e){return e!=null});
+              var sc=computeNote(newErrs,exts,data.base);
+              newCorr[ek]={errors:newErrs,extras:exts,note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
+            }
+          });
+          if(conversions.length===0){alert("Aucune erreur M sur ponctuation \u00e0 reclasser.");return}
+          var copiesCount=Object.keys(newCorr).filter(function(ek){return newCorr[ek]!==p.corrections[ek]}).length;
+          var gain=Math.round(conversions.length*0.5*10)/10;
+          if(!confirm(conversions.length+" erreur"+(conversions.length>1?"s":"")+" M \u00e0 reclasser en P sur "+copiesCount+" copie"+(copiesCount>1?"s":"")+" (gain total +"+gain+" pts). Confirmer ?"))return;
+          Object.keys(newCorr).forEach(function(ek){
+            if(newCorr[ek]===p.corrections[ek])return;
+            db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek).set(newCorr[ek]);
+            var nErrs=newCorr[ek].errors;
+            db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/total").set(nErrs.length);
+            db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/errorRefs").set(nErrs.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
+          });
+          p.onResetCorrections(newCorr);
+          alert(conversions.length+" reclassement"+(conversions.length>1?"s":"")+" effectu\u00e9"+(conversions.length>1?"s":"")+".");
+        }},"\ud83d\udd04 M\u2192P",ifo("Convertit les erreurs M (manquant -1) port\u00e9es sur des signes de ponctuation en erreurs P (-0.5). Les vrais mots manquants ne sont pas touch\u00e9s. \u00c0 utiliser en une fois apr\u00e8s avoir corrig\u00e9 les copies.")),
+
         h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee/"+p.dicteeId,"dictee_"+p.dicteeId)}},"\ud83d\udcf8 Snapshot",ifo("T\u00e9l\u00e9charge les donn\u00e9es de cette dict\u00e9e dans un fichier.")),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee/"+p.dicteeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4 Restaurer",ifo("Recharge les donn\u00e9es d\u2019une dict\u00e9e depuis un fichier sauvegard\u00e9.")),
         h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
@@ -1322,11 +1391,12 @@ function RapideGlobal(p){
   function markError(type){
     setAskFautif(type);setFautifVal("");
   }
-  function confirmFautif(){
+  function confirmFautif(overrideVal){
     var wt=wordTokens[wordIdx];if(!wt)return;
+    var vv=overrideVal!==undefined?overrideVal:fautifVal;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     var errObj={idx:wt.idx,type:askFautif,word:wt.text};
-    if(fautifVal.trim())errObj.fautif=fautifVal.trim();
+    if(vv.trim())errObj.fautif=vv.trim();
     ne.push(errObj);setErrors(ne);
     setAskFautif(null);setFautifVal("");
     setFlashType(askFautif);setTimeout(function(){setFlashType(null)},400);
@@ -1425,9 +1495,9 @@ function RapideGlobal(p){
         askFautif&&h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginTop:10,border:"1.5px solid var(--primary)"}},
           h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
           h("div",{style:{display:"flex",gap:8}},
-            h("input",{ref:fautifRef,value:fautifVal,onChange:function(e){setFautifVal(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautif()}}),
-            h("button",{className:"btn-sm btn-primary",onClick:confirmFautif},"\u2713"),
-            h("button",{className:"btn-sm btn-ghost",onClick:function(){setFautifVal("");confirmFautif()}},"Passer")
+            h("input",{ref:fautifRef,value:fautifVal,onChange:function(e){setFautifVal(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter"){e.preventDefault();e.stopPropagation();confirmFautif()}}}),
+            h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautif()}},"\u2713"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautif("")}},"Passer")
           )
         ),
         !askFautif&&h("div",{className:"fast-btns"},
@@ -1447,6 +1517,61 @@ function RapideGlobal(p){
   );
 }
 
+/* ═════════════════════════════════════════════════════════════════════════
+   CHANTIER À DÉVELOPPER ULTÉRIEUREMENT — Mode "📝 Linéaire" pour CorrEleve
+
+   Objectif : 3ᵉ mode de correction (à côté de "Texte" et "⚡ Rapide") où le
+   prof n'a qu'à taper la transcription du mot mal écrit par l'élève,
+   et l'app trouve seule la cible dans le texte grâce à un curseur de position
+   qui avance linéairement.
+
+   Cas d'usage : "leure" → trouve le prochain "leur" non encore corrigé.
+   La distinction 1er/2e/3e "leur" se fait automatiquement par la position
+   du curseur (Paul corrige dans l'ordre de lecture).
+
+   Algorithme proposé :
+   1. État : cursorIdx (index du prochain token candidat dans data.tokens)
+   2. Champ unique : "Mot écrit par l'élève…"
+   3. À la validation (Entrée) :
+      - Cherche dans tokens[cursorIdx .. cursorIdx+20]
+      - Filtre tokens non-ponctuation, différents du mot tapé (en norm)
+      - Calcule Levenshtein(norm(typed), norm(token))
+      - Seuil : dist ≤ max(2, floor(Math.max(typed.length, token.length) / 2))
+      - Prend le meilleur candidat (dist ASC, puis position ASC)
+   4. Type auto-détecté via GRAMM.classify(typed, candidate.word)
+      → code commence par "G" → type G ; sinon "L" ; ponctuation → P
+   5. Enregistre l'erreur, avance cursor au token suivant la cible.
+
+   Boutons utilitaires :
+   - ⏭ Skip (avance d'un token sans marquer d'erreur)
+   - ↩ Back (recule le curseur)
+   - ∅ Mot manquant (M -1) à la position courante
+   - + Mot en trop (X -0.5) avec saisie
+   - ✕ Quitter → retour mode Texte
+
+   Points de cadrage encore ouverts (à trancher avec Paul) :
+   - Aucun candidat trouvé : élargir, lister, ou demander clic manuel ?
+   - Auto-validation Entrée après détection, ou confirmation visuelle systématique ?
+   - Boutons utilitaires : barre fixe, raccourcis clavier, ou les deux ?
+
+   Réutiliser :
+   - GRAMM.classify(typed, correct) déjà présent (voir ligne ~605)
+   - normCompare(s) utilisé dans EleveCorrection
+   - isPunct(w) pour filtrer
+   - selectType("P") déjà implémenté pour le cas ponctuation
+
+   Code Levenshtein à ajouter (pas présent actuellement dans le fichier) :
+   function levenshtein(a,b){
+     if(a===b)return 0;
+     if(!a.length)return b.length;if(!b.length)return a.length;
+     var m=[];for(var i=0;i<=b.length;i++)m[i]=[i];
+     for(var j=0;j<=a.length;j++)m[0][j]=j;
+     for(var i=1;i<=b.length;i++){for(var j=1;j<=a.length;j++){
+       m[i][j]=b.charAt(i-1)===a.charAt(j-1)?m[i-1][j-1]:Math.min(m[i-1][j-1],m[i][j-1],m[i-1][j])+1;
+     }}
+     return m[b.length][a.length];
+   }
+   ═════════════════════════════════════════════════════════════════════════ */
 function CorrEleve(p){
   var data=p.data,tokens=data.tokens;
   var _ee=p.existing&&p.existing.errors?toArr(p.existing.errors):[];
@@ -1460,8 +1585,30 @@ function CorrEleve(p){
   var s7=useState(p.startFast||false),fastMode=s7[0],setFastMode=s7[1];
   var s8=useState(0),fastIdx=s8[0],setFastIdx=s8[1];
   var s9=useState(null),fastFlash=s9[0],setFastFlash=s9[1];
+  var sSearch=useState(""),searchVal=sSearch[0],setSearchVal=sSearch[1];
+  var sXfer=useState(false),xferOpen=sXfer[0],setXferOpen=sXfer[1];
+  var sXferQ=useState(""),xferQ=sXferQ[0],setXferQ=sXferQ[1];
+  var xferRef=React.useRef(null);
+  React.useEffect(function(){if(xferOpen&&xferRef.current)xferRef.current.focus()},[xferOpen]);
   var inputRef=React.useRef(null);
   React.useEffect(function(){if(insertIdx!==null&&inputRef.current)inputRef.current.focus()},[insertIdx]);
+  function matchInit(eleve,query){
+    if(!query)return false;
+    var parts=eleve.split(/\s+/).filter(function(x){return x});
+    if(parts.length===0)return false;
+    var nomI=parts[0].charAt(0).toUpperCase();
+    var prenomI=parts.length>1?parts[parts.length-1].charAt(0).toUpperCase():"";
+    var q=query.toUpperCase();
+    var init1=nomI+prenomI;
+    var init2=prenomI+nomI;
+    return init1.indexOf(q)===0||init2.indexOf(q)===0;
+  }
+  function jumpToEleve(name){
+    if(!p.onSwitchEleve)return;
+    setSearchVal("");
+    p.onSwitchEleve(name);
+  }
+  var searchMatches=searchVal?(p.data.eleves||[]).filter(function(e){return matchInit(e,searchVal)}):[];
 
   function clickWord(idx){
     var ei=errors.findIndex(function(e){return e.idx===idx});
@@ -1516,11 +1663,12 @@ function CorrEleve(p){
     setErrors(ne);setFastFlash(type);setTimeout(function(){setFastFlash(null)},400);
     setFastIdx(fastIdx+1);
   }
-  function confirmFautifI(){
+  function confirmFautifI(overrideVal){
     var wt=wordTokens[fastIdx];if(!wt)return;
+    var vv=overrideVal!==undefined?overrideVal:fautifValI;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     var obj={idx:wt.idx,type:askFautifI,word:wt.text};
-    if(fautifValI.trim())obj.fautif=fautifValI.trim();
+    if(vv.trim())obj.fautif=vv.trim();
     ne.push(obj);setErrors(ne);
     setAskFautifI(null);setFautifValI("");
     setFastFlash(obj.type);setTimeout(function(){setFastFlash(null)},400);
@@ -1605,9 +1753,9 @@ function CorrEleve(p){
           askFautifI&&h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginTop:10,border:"1.5px solid var(--primary)"}},
             h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
             h("div",{style:{display:"flex",gap:8}},
-              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautifI()}}),
-              h("button",{className:"btn-sm btn-primary",onClick:confirmFautifI},"\u2713"),
-              h("button",{className:"btn-sm btn-ghost",onClick:function(){setFautifValI("");confirmFautifI()}},"Passer")
+              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter"){e.preventDefault();e.stopPropagation();confirmFautifI()}}}),
+              h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()}},"\u2713"),
+              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")}},"Passer")
             )
           ),
           !askFautifI&&h("div",{className:"fast-btns"},
@@ -1637,21 +1785,51 @@ function CorrEleve(p){
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
   return h("div",{className:"container fade-up"},
     // Sticky score bar with eleve name
-    h("div",{className:"score-bar"},
+    h("div",{className:"score-bar",style:{position:"sticky",top:0,zIndex:50}},
       h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},sc.note),
-      h("div",{style:{flex:1}},
+      h("div",{style:{flex:1,minWidth:0}},
         h("div",{className:"score-eleve"},p.eleve),
         h("div",{className:"score-info"},
           "/"+data.base+" \u00b7 ",
           sc.counts.G>0&&h("span",{className:"badge badge-g"},sc.counts.G+"G"),
           sc.counts.L>0&&h("span",{className:"badge badge-l"},sc.counts.L+"L"),
           sc.counts.M>0&&h("span",{className:"badge badge-m"},sc.counts.M+"\u2205"),
+          sc.counts.P>0&&h("span",{className:"badge badge-p"},sc.counts.P+"P"),
           sc.counts.I>0&&h("span",{className:"badge badge-i"},sc.counts.I+"?"),
           sc.counts.X>0&&h("span",{className:"badge badge-x"},sc.counts.X+"+"),
           " \u00b7 \u2212"+sc.deduction
         )
       ),
+      h("div",{style:{position:"relative"}},
+        h("input",{value:searchVal,onChange:function(e){setSearchVal(e.target.value)},placeholder:"DA\u2026",
+          style:{width:70,padding:"6px 8px",fontSize:".85rem",borderRadius:8,border:"1.5px solid var(--border)",textTransform:"uppercase",fontWeight:600,textAlign:"center"},
+          onKeyDown:function(e){
+            if(e.key==="Enter"&&searchMatches.length===1){e.preventDefault();e.stopPropagation();jumpToEleve(searchMatches[0])}
+            else if(e.key==="Escape"){setSearchVal("")}
+          }}),
+        searchVal&&searchMatches.length>0&&h("div",{style:{position:"absolute",top:"calc(100% + 4px)",right:0,minWidth:200,maxWidth:280,background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:100,overflow:"hidden"}},
+          searchMatches.slice(0,8).map(function(name){
+            var ek=san(name);
+            var c=p.corrections?p.corrections[ek]:null;
+            var isAbs=p.absents&&p.absents[ek];
+            var done=!!c;
+            return h("div",{key:ek,onClick:function(){jumpToEleve(name)},
+              style:{padding:"8px 12px",cursor:"pointer",fontSize:".88rem",display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:"1px solid var(--border)",
+                background:name===p.eleve?"var(--primary-light)":"var(--card)",
+                opacity:isAbs?0.5:1}},
+              h("span",{style:{fontWeight:name===p.eleve?700:500}},name),
+              isAbs?h("span",{style:{fontSize:".7rem",color:"var(--muted)"}},"ABS"):
+              done?h("span",{style:{fontSize:".75rem",fontWeight:700,color:noteColor(c.note,data.base)}},c.note+"/"+data.base):
+              h("span",{style:{fontSize:".75rem",color:"var(--muted)"}},"\u2014")
+            );
+          })
+        ),
+        searchVal&&searchMatches.length===0&&h("div",{style:{position:"absolute",top:"calc(100% + 4px)",right:0,minWidth:160,padding:"8px 12px",background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.12)",zIndex:100,fontSize:".82rem",color:"var(--muted)"}},
+          "Aucun \u00e9l\u00e8ve"
+        )
+      ),
       h("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+        p.onTransfer&&h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"Transf\u00e9rer cette correction vers un autre \u00e9l\u00e8ve",onClick:function(){setXferQ("");setXferOpen(true)}},"\ud83d\udd00"),
         h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"var(--coral)",borderColor:"rgba(197,48,48,.2)"},onClick:function(){if(confirm("R\u00e9initialiser "+p.eleve+" ?")){setErrors([]);setExtras([]);if(p.onReset)p.onReset()}}},"\u21bb"),
         h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onCancel},"\u2190")
       )
@@ -1662,7 +1840,7 @@ function CorrEleve(p){
         if(d.t==="ins")return h("span",{key:d.k,className:"insert-zone",onClick:function(){setInsertIdx(d.ai)}});
         if(d.t==="ex")return h("span",{key:d.k,className:"extra-word",onClick:function(){removeExtra(d.gi)},title:"Supprimer"},"+"+d.w);
         var cls="word-btn";if(isPunct(d.w))cls+=" punct";
-        if(errMap[d.idx]==="G")cls+=" err-g";else if(errMap[d.idx]==="L")cls+=" err-l";else if(errMap[d.idx]==="M")cls+=" err-m";else if(errMap[d.idx]==="I")cls+=" err-i";
+        if(errMap[d.idx]==="G")cls+=" err-g";else if(errMap[d.idx]==="L")cls+=" err-l";else if(errMap[d.idx]==="M")cls+=" err-m";else if(errMap[d.idx]==="I")cls+=" err-i";else if(errMap[d.idx]==="P")cls+=" err-p";
         if(d.idx===lastTouched)cls+=" last-touched";
         return h("button",{key:d.k,className:cls,onClick:function(){clickWord(d.idx)}},d.w,errMap[d.idx]?h("sup",{style:{fontSize:9,marginLeft:2}},errMap[d.idx]):null);
       }))
@@ -1671,6 +1849,51 @@ function CorrEleve(p){
       h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant"),
       h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(true);setFastIdx(0)}},"\u26a1 Rapide")
     ),
+    // Popup transfert
+    xferOpen&&(function(){
+      var xferMatches=xferQ?(data.eleves||[]).filter(function(e){return matchInit(e,xferQ)&&e!==p.eleve}):[];
+      return h("div",{className:"popup-overlay",onClick:function(){setXferOpen(false)}},
+        h("div",{style:{background:"var(--card)",borderRadius:16,padding:"20px 22px",maxWidth:420,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,.2)"},onClick:function(e){e.stopPropagation()}},
+          h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4,fontWeight:600,textTransform:"uppercase"}},"\ud83d\udd00 Transf\u00e9rer la correction"),
+          h("div",{style:{fontSize:"1rem",fontWeight:700,marginBottom:14}},"De \u00ab "+p.eleve+" \u00bb vers\u2026"),
+          h("input",{ref:xferRef,value:xferQ,onChange:function(e){setXferQ(e.target.value)},placeholder:"Initiales (ex: DA pour Durand Alice)\u2026",
+            style:{width:"100%",padding:"10px 14px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)",textTransform:"uppercase",fontWeight:600,marginBottom:10},
+            onKeyDown:function(e){if(e.key==="Escape"){e.preventDefault();setXferOpen(false)}}}),
+          xferQ&&xferMatches.length===0&&h("div",{style:{padding:"10px 12px",background:"var(--card2)",borderRadius:8,fontSize:".85rem",color:"var(--muted)"}},"Aucun \u00e9l\u00e8ve correspondant."),
+          xferMatches.slice(0,10).map(function(name){
+            var tek=san(name);
+            var tCorr=p.corrections?p.corrections[tek]:null;
+            var isAbs=p.absents&&p.absents[tek];
+            return h("div",{key:tek,style:{padding:"10px 12px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}},
+              h("div",{style:{flex:1,minWidth:0}},
+                h("div",{style:{fontWeight:600,fontSize:".95rem"}},name),
+                h("div",{style:{fontSize:".78rem",color:"var(--muted)"}},
+                  isAbs?"Absent":tCorr?("D\u00e9j\u00e0 corrig\u00e9 : "+tCorr.note+"/"+data.base):"Non corrig\u00e9"
+                )
+              ),
+              tCorr?
+                h("div",{style:{display:"flex",gap:6,flexShrink:0}},
+                  h("button",{className:"btn-sm btn-ghost",style:{fontSize:".78rem",padding:"5px 10px"},onClick:function(){
+                    if(!confirm("\u00c9changer la correction de "+p.eleve+" et "+name+" ?\n\nLes corrections seront permut\u00e9es. Les autocorrections \u00e9l\u00e8ves seront r\u00e9initialis\u00e9es."))return;
+                    setXferOpen(false);p.onTransfer(name,"swap");
+                  }},"\u21c4 \u00c9changer"),
+                  h("button",{className:"btn-sm btn-ghost",style:{fontSize:".78rem",padding:"5px 10px",color:"var(--coral)",borderColor:"rgba(197,48,48,.2)"},onClick:function(){
+                    if(!confirm("Remplacer la correction de "+name+" ("+tCorr.note+"/"+data.base+") par celle de "+p.eleve+" ?\n\n"+p.eleve+" redeviendra non corrig\u00e9. La correction actuelle de "+name+" sera perdue."))return;
+                    setXferOpen(false);p.onTransfer(name,"replace");
+                  }},"\u26a0\ufe0f Remplacer")
+                ):
+                h("button",{className:"btn-sm btn-primary",style:{fontSize:".82rem",padding:"6px 12px",flexShrink:0},onClick:function(){
+                  if(!confirm("Transf\u00e9rer la correction de "+p.eleve+" vers "+name+" ?\n\n"+p.eleve+" redeviendra non corrig\u00e9."))return;
+                  setXferOpen(false);p.onTransfer(name,"transfer");
+                }},"\u2192 Transf\u00e9rer")
+            )
+          }),
+          h("div",{style:{marginTop:14,display:"flex",justifyContent:"flex-end"}},
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setXferOpen(false)}},"Annuler")
+          )
+        )
+      );
+    })(),
     // Popup saisie mot fautif en mode texte
     askFautifTexte&&h("div",{className:"popup-overlay",onClick:function(){setAskFautifTexte(null)}},
       h("div",{style:{background:"var(--card)",borderRadius:16,padding:"18px 20px",maxWidth:360,width:"100%",boxShadow:"0 12px 40px rgba(0,0,0,.2)"},onClick:function(e){e.stopPropagation()}},
@@ -1694,7 +1917,9 @@ function CorrEleve(p){
         h("div",{className:"popup-grid"},
           h("button",{className:"popup-btn popup-btn-g",onClick:function(){selectType("G")}},h("div",{style:{fontSize:"1.3rem"}},"G"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Grammaire (\u22121)")),
           h("button",{className:"popup-btn popup-btn-l",onClick:function(){selectType("L")}},h("div",{style:{fontSize:"1.3rem"}},"L"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Lexique (\u22120.5)")),
-          h("button",{className:"popup-btn popup-btn-m",onClick:function(){selectType("M")}},h("div",{style:{fontSize:"1.3rem"}},"\u2205"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Manquant (\u22121)")),
+          isPunct(tokens[popupIdx])
+            ?h("button",{className:"popup-btn popup-btn-p",onClick:function(){selectType("P")}},h("div",{style:{fontSize:"1.3rem"}},"\u00b7"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Ponct. manquante (\u22120.5)"))
+            :h("button",{className:"popup-btn popup-btn-m",onClick:function(){selectType("M")}},h("div",{style:{fontSize:"1.3rem"}},"\u2205"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Manquant (\u22121)")),
           h("button",{className:"popup-btn popup-btn-i",onClick:function(){selectType("I")}},h("div",{style:{fontSize:"1.3rem"}},"?"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Illisible (\u22121)"))
         ),
         h("button",{className:"popup-cancel",onClick:function(){setPopupIdx(null)}},"Annuler")
@@ -1734,14 +1959,15 @@ function Bilan(p){
         h("b",null,w.w)," ",h("span",{style:{color:"var(--muted)"}},w.n+"\u00d7"),
         w.t.G?h("span",{className:"badge badge-g"},w.t.G+"G"):null,
         w.t.L?h("span",{className:"badge badge-l"},w.t.L+"L"):null,
-        w.t.M?h("span",{className:"badge badge-m"},w.t.M+"\u2205"):null
+        w.t.M?h("span",{className:"badge badge-m"},w.t.M+"\u2205"):null,
+        w.t.P?h("span",{className:"badge badge-p"},w.t.P+"P"):null
       )})
     )),
     h("div",{className:"card"},h("h2",null,"D\u00e9tail"),h("table",{className:"bilan-table"},
-      h("thead",null,h("tr",null,h("th",null,"\u00c9l\u00e8ve"),h("th",null,"Note"),h("th",null,"G"),h("th",null,"L"),h("th",null,"\u2205"),h("th",null,"?"),h("th",null,"+"))),
+      h("thead",null,h("tr",null,h("th",null,"\u00c9l\u00e8ve"),h("th",null,"Note"),h("th",null,"G"),h("th",null,"L"),h("th",null,"\u2205"),h("th",null,"P"),h("th",null,"?"),h("th",null,"+"))),
       h("tbody",null,entries.map(function(e){var c=e.counts;return h("tr",{key:e.name},h("td",null,e.name),
         h("td",{style:{fontWeight:700,color:e.done?noteColor(e.note,data.base):"var(--muted)"}},e.done?e.note+"/"+data.base:"\u2014"),
-        h("td",null,e.done?c.G:"\u2014"),h("td",null,e.done?c.L:"\u2014"),h("td",null,e.done?(c.M||0):"\u2014"),h("td",null,e.done?(c.I||0):"\u2014"),h("td",null,e.done?(c.X||0):"\u2014")
+        h("td",null,e.done?c.G:"\u2014"),h("td",null,e.done?c.L:"\u2014"),h("td",null,e.done?(c.M||0):"\u2014"),h("td",null,e.done?(c.P||0):"\u2014"),h("td",null,e.done?(c.I||0):"\u2014"),h("td",null,e.done?(c.X||0):"\u2014")
       )}))
     ))
   );
@@ -2106,9 +2332,13 @@ function Fiches(p){
     html+='.trou-label-l{color:#2b6cb0}';
     html+='.trou-label-m{color:#7c3aed}';
     html+='.trou-label-i{color:#975a16}';
+    html+='.trou-label-p{color:#2b6cb0}';
     html+='.manquant-trou{display:inline-flex;flex-direction:column;align-items:center;margin:0 3px;vertical-align:baseline;position:relative;top:-0.15em}';
     html+='.manquant-top{border-bottom:2px solid #7c3aed;min-width:3em;height:12px}';
     html+='.manquant-label{font-size:7pt;font-weight:800;color:#7c3aed;line-height:1.4;text-align:center}'
+    html+='.ponct-trou{display:inline-flex;flex-direction:column;align-items:center;margin:0 2px;vertical-align:baseline;position:relative;top:-0.15em}';
+    html+='.ponct-top{border-bottom:2px solid #2b6cb0;min-width:1.4em;height:12px}';
+    html+='.ponct-label{font-size:7pt;font-weight:800;color:#2b6cb0;line-height:1.4;text-align:center}'
     html+='.extra-signal{display:inline;font-size:9pt;color:#2563eb;font-style:italic}';
     html+='.summary{margin-top:14px;padding:7px 12px;border-top:1.5px solid #ccc;font-size:8.5pt;display:flex;justify-content:space-between;color:#666}';
     html+='.summary strong{color:#222;font-size:10pt}';
@@ -2125,6 +2355,7 @@ function Fiches(p){
     html+='.err-num-m{background:#f3e8ff;color:#7c3aed}';
     html+='.err-num-i{background:#fef3cd;color:#975a16}';
     html+='.err-num-x{background:#e8f0fe;color:#2563eb}';
+    html+='.err-num-p{background:#e8f0fe;color:#2b6cb0}';
     html+='.err-body{flex:1}';
     html+='.err-type{font-size:8.5pt;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px}';
     html+='.err-type-g{color:#c53030}';
@@ -2132,6 +2363,7 @@ function Fiches(p){
     html+='.err-type-m{color:#7c3aed}';
     html+='.err-type-i{color:#975a16}';
     html+='.err-type-x{color:#2563eb}';
+    html+='.err-type-p{color:#2b6cb0}';
     html+='.err-hint{font-size:9pt;color:#999;font-style:italic;margin-bottom:4px}';
     html+='.err-line{display:block;width:100%;border:none;border-bottom:1.5px solid #ccc;height:24px;margin-top:2px}';
     html+='.verso-consigne{margin-top:20px;padding:10px 14px;border:1.5px dashed #ccc;border-radius:6px;font-size:9pt;font-style:italic;color:#888}';
@@ -2169,6 +2401,9 @@ function Fiches(p){
           if(err.type==="M"){
             // Mot manquant = trait violet avec espace vide
             html+=spaceBefore+'<span class="manquant-trou"><span class="manquant-top"></span><span class="manquant-label">\u2205</span></span>';
+          } else if(err.type==="P"){
+            // Ponctuation manquante = petit trou bleu
+            html+=spaceBefore+'<span class="ponct-trou"><span class="ponct-top"></span><span class="ponct-label">P</span></span>';
           } else {
             // Mot masqué = underscores de la longueur du mot + badge type
             var blanks="";for(var j=0;j<w.length;j++)blanks+="_";
@@ -2185,7 +2420,7 @@ function Fiches(p){
       })}
 
       html+='</div>';
-      html+='<div class="summary"><span>'+co.G+' grammaire &middot; '+co.L+' lexique &middot; '+(co.M||0)+' manquant &middot; '+(co.I||0)+' illisible &middot; '+(co.X||0)+' en trop</span>';
+      html+='<div class="summary"><span>'+co.G+' grammaire &middot; '+co.L+' lexique &middot; '+(co.M||0)+' manquant &middot; '+(co.P||0)+' ponct. &middot; '+(co.I||0)+' illisible &middot; '+(co.X||0)+' en trop</span>';
       html+='<strong style="color:'+nc+'">'+c.note+'/'+data.base+'</strong></div>';
       html+='</div>';
 
@@ -2196,8 +2431,8 @@ function Fiches(p){
 
       var n=1;
       errors.forEach(function(err){
-        var typeLabel=err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":"Illisible";
-        var hint=err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":"Le mot n\u2019\u00e9tait pas lisible";
+        var typeLabel=err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":err.type==="P"?"Ponctuation manquante":"Illisible";
+        var hint=err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":err.type==="P"?"Un signe de ponctuation manquait (. , ; : ? !)":"Le mot n\u2019\u00e9tait pas lisible";
         var numCls="err-num err-num-"+err.type.toLowerCase();
         var typeCls="err-type err-type-"+err.type.toLowerCase();
         html+='<div class="err-row">';
@@ -2474,19 +2709,27 @@ function EleveCorrection(p){
     return function(){clearInterval(hb);clearInterval(idle);if(!finished)db.ref(acRef+"/status").set("offline")};
   },[]);
 
-  // Load existing progress from Firebase on mount
-  // Recalculate results with updated normalization (apostrophe fix)
+  // Load existing progress from Firebase on mount + listen for live changes
+  // (so if the prof modifies the autocorrection — recalculer, M→P, transfert, save — the student sees it in real time)
   var normCompare=function(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[\u2019\u2018\u0027\u0060\u00b4]/g,"'")};
+  var isFirstFireRef=React.useRef(true);
+  var savingRef=React.useRef(false);
   useEffect(function(){
-    db.ref(acRef).once("value",function(snap){
+    function onAcChange(snap){
       var val=snap.val();
-      if(val){
-        var loadedAttempts=val.attempts||{};
-        var loadedResults=val.results||{};
-        var loadedHistory=val.history||{};
-        var changed=false;
+      // Ignore the Firebase echo of our own save (avoids stomping on local state mid-typing)
+      if(savingRef.current){savingRef.current=false;if(isFirstFireRef.current){isFirstFireRef.current=false;setLoading(false)}return}
+      if(!val){
+        if(isFirstFireRef.current){isFirstFireRef.current=false;setLoading(false)}
+        return;
+      }
+      var loadedAttempts=val.attempts||{};
+      var loadedResults=val.results||{};
+      var loadedHistory=val.history||{};
 
-        // Re-check each error against history with new apostrophe norm
+      if(isFirstFireRef.current){
+        // First load: apostrophe-norm rescue (old data may have wrongly-marked attempts)
+        var changed=false;
         errors.forEach(function(err,errIdx){
           var k=String(errIdx);
           var hist=loadedHistory[k];
@@ -2494,17 +2737,12 @@ function EleveCorrection(p){
           var entries=toArr(hist);
           if(entries.length===0)return;
           var wasCorrect=loadedResults[k];
-
-          // Check if last attempt was actually correct with new norm
           var lastEntry=entries[entries.length-1];
           var lastTyped=typeof lastEntry==="object"?lastEntry.typed:lastEntry;
           if(!lastTyped)return;
           var isNowCorrect=normCompare(String(lastTyped))===normCompare(String(err.word));
-
           if(isNowCorrect&&!wasCorrect){
-            // Previously wrong, now correct with new norm — fix it
             loadedResults[k]=true;
-            // Recount attempts: only the ones before the correct one count as wrong
             var correctIdx=-1;
             for(var ei=0;ei<entries.length;ei++){
               var eTyped=typeof entries[ei]==="object"?entries[ei].typed:entries[ei];
@@ -2514,16 +2752,9 @@ function EleveCorrection(p){
             changed=true;
           }
         });
-
-        setAttempts(loadedAttempts);
-        setResults(loadedResults);
-        if(loadedHistory)setHistory(loadedHistory);
-
         if(changed){
-          // Save corrected results back to Firebase
           db.ref(acRef+"/results").set(loadedResults);
           db.ref(acRef+"/attempts").set(loadedAttempts);
-          // Recalculate score
           var wrong=0;
           Object.keys(loadedAttempts).forEach(function(k2){
             var n=loadedAttempts[k2]||0;
@@ -2534,12 +2765,19 @@ function EleveCorrection(p){
           db.ref(acRef+"/score").set(Math.round(sc*100)/100);
           db.ref(acRef+"/solved").set(nOk);
         }
-
-        var nOk2=Object.keys(loadedResults).filter(function(k2){return loadedResults[k2]}).length;
-        if(nOk2>=totalErrors)setFinished(true);
+        setLoading(false);
+        isFirstFireRef.current=false;
       }
-      setLoading(false);
-    });
+
+      // Always sync state from Firebase (initial load AND live updates)
+      setAttempts(loadedAttempts);
+      setResults(loadedResults);
+      setHistory(loadedHistory);
+      var nOkFinal=Object.keys(loadedResults).filter(function(k2){return loadedResults[k2]}).length;
+      if(nOkFinal>=totalErrors&&totalErrors>0)setFinished(true);
+    }
+    db.ref(acRef).on("value",onAcChange);
+    return function(){db.ref(acRef).off("value",onAcChange)};
   },[]);
 
   React.useEffect(function(){if(activeErr!==null&&inputRef.current)inputRef.current.focus()},[activeErr]);
@@ -2642,6 +2880,7 @@ function EleveCorrection(p){
       errorRefs:errors.map(function(e){return{word:e.word,type:e.type,idx:e.idx,fautif:e.fautif||null}})
     };
     if(hist)saveData.history=hist;
+    savingRef.current=true;
     db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key).set(saveData);
   }
 
@@ -2676,6 +2915,7 @@ function EleveCorrection(p){
   function gramComment(err){
     var w=err.word||"",t=err.type;
     if(t==="M") return "Mot manquant \u2014 relis la phrase \u00e0 voix haute pour retrouver le mot oubli\u00e9. Pense \u00e0 la logique de la phrase : sujet, verbe, compl\u00e9ment.";
+    if(t==="P") return "Ponctuation manquante \u2014 un signe ( . , ; : ? ! ) a \u00e9t\u00e9 oubli\u00e9. Relis en marquant les pauses : virgule pour une courte pause, point pour une fin de phrase, deux-points pour annoncer.";
     if(t==="I") return "Mot illisible \u2014 soigne ton \u00e9criture pour que chaque lettre soit identifiable. Forme bien les boucles (l, b, h) et les jambages (g, j, p).";
     var wl=w.toLowerCase();
     var notes=[];
@@ -2813,7 +3053,7 @@ function EleveCorrection(p){
             h("span",{style:{fontWeight:700,fontSize:".95rem"}},"\u00ab "+err.word+" \u00bb"),
             h("span",{style:{fontSize:".8rem",padding:"2px 8px",borderRadius:6,fontWeight:600,
               background:err.type==="G"?"rgba(197,48,48,.08)":"rgba(43,108,203,.08)",
-              color:err.type==="G"?"#c53030":"#2b6cb0"}},err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Manquant":"Illisible")
+              color:err.type==="G"?"#c53030":"#2b6cb0"}},err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Manquant":err.type==="P"?"Ponctuation":"Illisible")
           ),
           h("p",{style:{fontSize:".88rem",color:"#555",lineHeight:1.6,marginLeft:32}},gramComment(err))
         )
@@ -2909,9 +3149,10 @@ function EleveCorrection(p){
             return acc;
           }
           // Masked word — clickable
-          var typeCls=err.type==="G"?"err-g":err.type==="L"?"err-l":err.type==="M"?"err-m":"err-i";
+          var typeCls=err.type==="G"?"err-g":err.type==="L"?"err-l":err.type==="M"?"err-m":err.type==="P"?"err-p":"err-i";
           var blanks="";for(var j=0;j<w.length;j++)blanks+="\u2022";
           if(err.type==="M")blanks="____";
+          if(err.type==="P")blanks="\u2022";
           acc.push(h("span",{key:"w"+i,className:"word-btn "+typeCls+(isActive?" last-touched":""),
             style:{cursor:"pointer",filter:isActive?"none":"blur(3px)",transition:"filter 0.2s"},
             onClick:function(){recordAction();setActiveErr(err.errIdx);setInputVal("");setFeedback(null)}},
