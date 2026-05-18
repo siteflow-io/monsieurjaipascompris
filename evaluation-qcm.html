@@ -104,7 +104,8 @@ body{min-height:100vh;background:linear-gradient(135deg,var(--violet) 0%,var(--r
 .classe-row:last-child{border-bottom:none}
 .classe-info{display:flex;flex-direction:column;gap:.15rem}
 .classe-info strong{font-size:1.05rem;color:var(--violet)}
-.classe-niveau-badge{display:inline-block;background:var(--turquoise);color:#fff;font-weight:900;padding:.1rem .5rem;border-radius:50px;font-size:.7rem;letter-spacing:.05em;margin-left:.4rem;cursor:help}
+.classe-niveau-badge{display:inline-block;background:var(--turquoise);color:#fff;font-weight:900;padding:.25rem .8rem;border-radius:50px;font-size:.85rem;letter-spacing:.05em;margin-left:.4rem;cursor:pointer;text-transform:uppercase;text-decoration:none;transition:transform .12s,box-shadow .12s}
+.classe-niveau-badge:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,191,166,.4);color:#fff;text-decoration:none}
 
 /* Vue tableau (board) — affichage projection */
 .board-attente,.board-active{position:fixed;inset:0;background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;font-family:Arial,sans-serif}
@@ -134,9 +135,26 @@ body{min-height:100vh;background:linear-gradient(135deg,var(--violet) 0%,var(--r
 .board-chrono-texte{position:absolute;font-size:2.4rem;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}
 .board-chrono-sub{font-size:.95rem;color:#64748B;font-style:italic;margin-top:.3rem}
 
-/* Animation main qui écrit (✍️) */
-.board-main-anim{display:inline-block;animation:mainEcrit 1.6s ease-in-out infinite;transform-origin:bottom center;font-size:1.5em;margin-right:.4rem}
-@keyframes mainEcrit{0%,100%{transform:translateX(-6px) rotate(-8deg)}50%{transform:translateX(6px) rotate(8deg)}}
+/* Animation main qui écrit (✍️) — vaguelettes horizontales + retour à la ligne */
+.board-main-anim{display:inline-block;animation:mainEcrit 3s ease-in-out infinite;transform-origin:bottom center;font-size:1.5em;margin-right:.4rem}
+@keyframes mainEcrit{
+  /* Vaguelettes de gauche à droite (0-72%) */
+  0%   {transform:translate(-7px,0)    rotate(-6deg);opacity:1}
+  9%   {transform:translate(-5px,-2px) rotate(-3deg)}
+  18%  {transform:translate(-3px,1px)  rotate(-1deg)}
+  27%  {transform:translate(-1px,-2px) rotate(1deg)}
+  36%  {transform:translate(1px,1px)   rotate(3deg)}
+  45%  {transform:translate(3px,-2px)  rotate(5deg)}
+  54%  {transform:translate(5px,1px)   rotate(6deg)}
+  63%  {transform:translate(7px,-2px)  rotate(7deg)}
+  72%  {transform:translate(7px,0)     rotate(6deg);opacity:1}
+  /* Retour à la ligne (78-84%) : descend + revient à gauche */
+  78%  {transform:translate(7px,4px)   rotate(0deg);opacity:.35}
+  84%  {transform:translate(-7px,4px)  rotate(-2deg);opacity:.35}
+  /* Remontée à la nouvelle ligne (90-100%) */
+  90%  {transform:translate(-7px,0)    rotate(-6deg);opacity:1}
+  100% {transform:translate(-7px,0)    rotate(-6deg)}
+}
 
 /* Phase RÉPONSE */
 .board-reponse{justify-content:flex-start;padding:0;display:grid;grid-template-rows:auto auto 1fr auto;align-items:stretch;width:100vw;height:100vh;left:0;right:0;gap:.6rem}
@@ -529,6 +547,192 @@ body.impression-active .deco{display:none !important}
 .correction-consigne .stylo-vert{background:var(--vert);color:#fff;padding:.1rem .5rem;border-radius:6px}
 .correction-consigne .stylo-rouge{background:var(--rouge);color:#fff;padding:.1rem .5rem;border-radius:6px}
 
+/* === Lot 2-B : Reveal animé + banner pédagogique === */
+@keyframes reveal-fade-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes reveal-pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.correction-tag,.correction-resultat.juste,.correction-resultat.faux,.correction-consigne.juste,.correction-consigne.faux{animation:reveal-fade-in .35s ease-out backwards}
+.correction-choix-item{transition:background-color .35s,border-color .35s,color .35s}
+.correction-banner-peda{background:linear-gradient(135deg,rgba(106,76,224,.1),rgba(236,72,153,.1));border:1.5px solid var(--violet);color:var(--violet);padding:.7rem 1rem;border-radius:10px;margin:.6rem 0 1rem;font-size:.92rem;text-align:center;font-weight:700}
+.board-choix-item.choix-bon,.board-choix-item.choix-mauvais{transition:background-color .4s,border-color .4s,opacity .4s}
+.board-choix-coche{animation:reveal-pop .35s ease-out .1s backwards}
+.board-correction-banner-peda{display:inline-block;background:rgba(255,210,63,.95);color:var(--noir);padding:.45rem 1.4rem;border-radius:20px;font-weight:900;font-size:1.05rem;box-shadow:0 4px 12px rgba(0,0,0,.25);margin-bottom:.4rem}
+
+/* === Lot 3 : Compteur progressif élève === */
+.correction-compteur{background:#fff;border:2px solid var(--violet);border-radius:14px;padding:.7rem 1rem;margin-bottom:1rem;display:flex;flex-direction:column;gap:.5rem;align-items:center}
+.correction-compteur-score{font-size:1.1rem;color:var(--noir);font-weight:700}
+.correction-compteur-num{font-size:1.8rem;font-weight:900;color:var(--vert)}
+.correction-compteur-sep{margin:0 .25rem;color:var(--gris);font-weight:900}
+.correction-compteur-sep-text{font-size:.85rem;color:var(--gris);font-weight:600;margin:0 .15rem}
+.correction-compteur-tot{font-size:1.5rem;font-weight:900;color:var(--violet)}
+.correction-compteur-lbl{font-size:.85rem;color:var(--gris);font-weight:600}
+.correction-compteur-pastilles{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:center}
+.correction-compteur-pastille{display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;border-radius:50%;font-size:.95rem;font-weight:700;border:2px solid var(--bordure)}
+.correction-compteur-pastille.vide{background:#fff;color:var(--gris);font-size:.78rem;border-color:var(--gris-clair)}
+.correction-compteur-pastille.juste{background:var(--vert);border-color:var(--vert);color:#fff;animation:reveal-pop .35s ease-out backwards}
+.correction-compteur-pastille.faux{background:var(--rouge);border-color:var(--rouge);color:#fff;animation:reveal-pop .35s ease-out backwards}
+.correction-compteur-pastille.nonrep{background:var(--gris-clair);border-color:var(--gris);color:#fff;animation:reveal-pop .35s ease-out backwards}
+
+/* === Lot 4-A : Autoévaluation === */
+.autoeval-intro{font-size:1.05rem;color:var(--noir);margin:1rem 0;line-height:1.5}
+.autoeval-ponderation{background:var(--gris-clair);border-radius:12px;padding:.8rem 1rem;margin:1rem 0;font-size:.92rem;color:var(--noir);line-height:1.5}
+.autoeval-ponderation strong{color:var(--violet)}
+.autoeval-poids-grid{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.5rem}
+.autoeval-poids-item{padding:.25rem .6rem;border-radius:8px;font-weight:700;font-size:.82rem;color:#fff}
+.autoeval-poids-item.niveau-facile{background:#FFD23F;color:#5C4500}
+.autoeval-poids-item.niveau-standard{background:#FF8C42}
+.autoeval-poids-item.niveau-approfondi{background:#EC4899}
+.autoeval-poids-item.niveau-expert{background:#6A4CE0}
+.autoeval-fourchettes{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:1.2rem 0}
+.autoeval-fourchette{padding:1.2rem;border:none;border-radius:16px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:.3rem;color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:transform .15s,box-shadow .15s}
+.autoeval-fourchette:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.autoeval-fourchette:active{transform:translateY(0)}
+.autoeval-fourchette-emoji{font-size:2.5rem}
+.autoeval-fourchette-label{font-size:1.1rem;font-weight:900}
+.autoeval-fourchette-bornes{font-size:.85rem;opacity:.95}
+.fourchette-vert{background:linear-gradient(135deg,var(--vert),#16A34A)}
+.fourchette-bleu{background:linear-gradient(135deg,var(--bleu),#0EA5E9)}
+.fourchette-orange{background:linear-gradient(135deg,#FF8C42,#EA580C);color:#fff}
+.fourchette-rouge{background:linear-gradient(135deg,var(--rouge),#DC2626)}
+.autoeval-confirme{text-align:center;margin:1.5rem 0}
+.autoeval-confirme-titre{font-size:1rem;color:var(--noir);margin-bottom:.8rem;font-weight:700}
+.autoeval-confirme-choix{display:inline-flex;align-items:center;gap:.7rem;padding:1rem 1.5rem;border-radius:16px;color:#fff;font-weight:900;font-size:1.15rem}
+.autoeval-confirme-attente{margin-top:1.2rem;color:var(--violet);font-weight:700;font-size:1rem}
+.pilot-status.autoeval{background:linear-gradient(135deg,#6A4CE0,#EC4899);color:#fff;padding:.7rem 1rem;border-radius:10px;font-weight:900;margin:.8rem 0;text-align:center}
+.autoeval-prof-distrib{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5rem;margin:1rem 0}
+.autoeval-prof-cell{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.7rem .5rem;border-radius:10px;color:#fff;font-size:.85rem;font-weight:700}
+.autoeval-prof-cell strong{font-size:1.6rem;font-weight:900}
+
+/* === Lot 4-B : Bilan personnel === */
+.bilan-score{display:flex;flex-direction:column;align-items:center;padding:1.5rem;border-radius:20px;color:#fff;margin:1rem 0;text-align:center;animation:reveal-fade-in .5s ease-out}
+.bilan-score-emoji{font-size:3.5rem;line-height:1}
+.bilan-score-num{font-size:1.8rem;font-weight:900;margin-top:.4rem}
+.bilan-score-label{font-size:1.2rem;font-weight:700;margin-top:.2rem;opacity:.95}
+.bilan-score-pct{font-size:1rem;opacity:.85;margin-top:.3rem}
+.bilan-classe,.bilan-calibration,.bilan-bloc{background:#fff;border:2px solid var(--bordure);border-radius:14px;padding:1rem 1.2rem;margin:1rem 0;animation:reveal-fade-in .5s ease-out backwards;animation-delay:.15s}
+.bilan-classe h3,.bilan-calibration h3,.bilan-bloc h3{margin:0 0 .6rem;color:var(--violet);font-size:1.1rem}
+.bilan-classe-pos{margin-top:.5rem;color:var(--noir);font-size:.95rem}
+.bilan-calibration{border-width:3px}
+.bilan-calib-ok{border-color:var(--vert);background:#E8F6EE}
+.bilan-calib-sur{border-color:#FF8C42;background:#FFF4EC}
+.bilan-calib-sous{border-color:var(--bleu);background:#E8F2FE}
+.bilan-calib-msg{font-size:1.15rem;font-weight:900;color:var(--noir);margin-bottom:.4rem}
+.bilan-calib-detail{font-size:.92rem;color:var(--noir);line-height:1.5}
+.bilan-bloc-attention{border-color:var(--rouge);background:#FFF4F4}
+.bilan-bloc-felicitations{border-color:var(--vert);background:#F0F9F3}
+.bilan-bloc-intro{margin:0 0 .8rem;font-size:.92rem;color:var(--noir)}
+.bilan-q-item{padding:.55rem .7rem;border-radius:10px;background:#fff;border:1px solid var(--bordure);margin-bottom:.4rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;font-size:.88rem}
+.bilan-q-niveau{padding:.15rem .55rem;border-radius:8px;font-size:.7rem;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.04em}
+.bilan-q-niveau.niveau-facile{background:#FFD23F;color:#5C4500}
+.bilan-q-niveau.niveau-standard{background:#FF8C42}
+.bilan-q-niveau.niveau-approfondi{background:#EC4899}
+.bilan-q-niveau.niveau-expert{background:#6A4CE0}
+.bilan-q-enonce{flex:1;min-width:200px;color:var(--noir)}
+.bilan-q-taux{font-size:.78rem;color:var(--gris);font-weight:600}
+
+/* === Lot 5 : Bilan classe (prof) === */
+.bilan-classe-synthese{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin:1rem 0;padding:1.2rem;background:linear-gradient(135deg,var(--violet),var(--rose));border-radius:14px;color:#fff}
+.bilan-classe-stat{text-align:center}
+.bilan-classe-stat-label{font-size:.85rem;opacity:.9;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.bilan-classe-stat-num{font-size:1.8rem;font-weight:900}
+.bilan-classe-distrib{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5rem;margin:.7rem 0 1.2rem}
+.bilan-classe-distrib-cell{padding:.8rem .5rem;border-radius:10px;color:#fff;text-align:center;display:flex;flex-direction:column;gap:.2rem;align-items:center}
+.bilan-classe-distrib-cell strong{font-size:1.8rem;font-weight:900;line-height:1}
+.bilan-classe-distrib-cell span{font-size:.78rem;opacity:.95}
+.bilan-classe-calib{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem;margin:.7rem 0 1.2rem}
+.bilan-classe-calib-cell{padding:.7rem;border-radius:10px;text-align:center;display:flex;flex-direction:column;gap:.2rem;border:2px solid var(--bordure);background:#fff;align-items:center}
+.bilan-classe-calib-cell strong{font-size:1.7rem;font-weight:900;color:var(--noir);line-height:1}
+.bilan-classe-calib-cell span{font-size:.78rem;color:var(--gris)}
+.bilan-classe-calib-cell.calib-ok{border-color:var(--vert);background:#E8F6EE}
+.bilan-classe-calib-cell.calib-ok strong{color:var(--vert)}
+.bilan-classe-calib-cell.calib-sous{border-color:var(--bleu);background:#E8F2FE}
+.bilan-classe-calib-cell.calib-sous strong{color:var(--bleu)}
+.bilan-classe-calib-cell.calib-sur{border-color:#FF8C42;background:#FFF4EC}
+.bilan-classe-calib-cell.calib-sur strong{color:#FF8C42}
+.bilan-classe-insights{display:grid;gap:.6rem;margin:.7rem 0 1.2rem}
+.bilan-classe-insight{padding:.8rem 1rem;border-radius:10px;border:2px solid var(--bordure)}
+.bilan-classe-insight.insight-attention{border-color:var(--rouge);background:#FFF4F4}
+.bilan-classe-insight.insight-felicitations{border-color:var(--vert);background:#F0F9F3}
+.bilan-classe-insight-titre{font-weight:900;color:var(--noir);margin-bottom:.3rem;font-size:.95rem}
+.bilan-classe-insight-enonce{color:var(--noir);font-size:.92rem;line-height:1.4}
+.bilan-classe-table-wrap{overflow-x:auto;margin-top:.7rem;border:1px solid var(--bordure);border-radius:12px;background:#fff}
+.bilan-classe-table{border-collapse:collapse;width:100%;font-size:.88rem}
+.bilan-classe-table th,.bilan-classe-table td{padding:.55rem .7rem;border-bottom:1px solid var(--bordure);text-align:left}
+.bilan-classe-table th{background:var(--gris-clair);font-weight:900;color:var(--violet);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.bilan-classe-table td{color:var(--noir)}
+.bilan-classe-table tbody tr:hover{background:rgba(106,76,224,.04)}
+.calib-cell{font-weight:700}
+.calib-cell.calib-ok{color:var(--vert)}
+.calib-cell.calib-sous{color:var(--bleu)}
+.calib-cell.calib-sur{color:#FF8C42}
+.calib-cell.calib-none{color:var(--gris)}
+
+/* === Lot 6 : Historique longitudinal MJPC === */
+.bilan-historique{border-color:var(--violet);background:#F5F2FE}
+.bilan-historique-liste{display:flex;flex-direction:column;gap:.4rem}
+.bilan-historique-item{display:grid;grid-template-columns:auto 1fr auto auto;gap:.5rem;align-items:center;padding:.55rem .7rem;background:#fff;border:1px solid var(--bordure);border-radius:10px;font-size:.88rem}
+.bilan-historique-date{color:var(--gris);font-size:.78rem;font-weight:600}
+.bilan-historique-titre{color:var(--noir);font-weight:600}
+.bilan-historique-score{padding:.2rem .55rem;border-radius:8px;color:#fff;font-weight:900;font-size:.82rem}
+.bilan-historique-calib{font-size:1rem}
+
+/* === Reformulation autoeval en bonnes réponses brutes === */
+.autoeval-fourchette-bornes-big{font-size:1.1rem;font-weight:700;line-height:1.3;text-align:center;padding:0 .5rem}
+.bilan-score-pondere{margin-top:.7rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.25);font-size:.85rem;opacity:.9}
+.bilan-score-pondere strong{font-weight:900}
+.bilan-classe-stat-sub{font-size:.78rem;color:var(--gris);font-style:italic;margin-top:.2rem}
+
+/* === Nouveau chantier : Explication par question === */
+.correction-explication{background:linear-gradient(135deg,#FFF8DC,#FFE5A8);border:2px solid #FFD23F;border-radius:14px;padding:1rem 1.2rem;margin-top:.9rem;animation:reveal-fade-in .4s ease-out .15s backwards}
+.correction-explication-titre{font-weight:900;color:#8B6914;font-size:.92rem;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em}
+.correction-explication-texte{color:var(--noir);font-size:1rem;line-height:1.5}
+.board-explication{margin-top:1rem;padding:1.2rem 1.5rem;background:linear-gradient(135deg,rgba(255,210,63,.95),rgba(255,140,66,.95));border-radius:18px;color:#2C1810;animation:reveal-fade-in .5s ease-out .15s backwards;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.board-explication-titre{font-weight:900;font-size:1.1rem;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em}
+.board-explication-texte{font-size:1.4rem;line-height:1.4;font-weight:600}
+
+/* === Dette technique : VueBoard phases autoeval + finie === */
+.board-autoeval{justify-content:center;padding:2rem 3rem;display:flex;flex-direction:column;align-items:center;text-align:center;gap:1.2rem}
+.board-autoeval-titre{font-size:clamp(2.5rem,5vw,4rem);font-weight:900;color:#fff;text-shadow:0 4px 20px rgba(168,85,247,.5)}
+.board-autoeval-consigne{font-size:clamp(1.4rem,2.5vw,2rem);color:#fff;font-weight:600;max-width:900px;line-height:1.4}
+.board-autoeval-max{font-size:clamp(1.2rem,2vw,1.6rem);color:#FBBF24;font-weight:700}
+.board-autoeval-compteur{font-size:clamp(1.3rem,2.2vw,1.8rem);color:#fff;background:rgba(0,0,0,.3);padding:.6rem 1.5rem;border-radius:20px;font-weight:700}
+.board-autoeval-distrib{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1.2rem;width:100%;max-width:900px;margin-top:.5rem}
+.board-autoeval-cell{padding:1.2rem .8rem;border-radius:18px;color:#fff;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.3rem;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.board-autoeval-emoji{font-size:2.5rem;line-height:1}
+.board-autoeval-cell strong{font-size:2.5rem;font-weight:900;line-height:1}
+.board-autoeval-cell span{font-size:1rem;opacity:.95;font-weight:700}
+.board-finie{justify-content:center;padding:2rem 3rem;display:flex;flex-direction:column;align-items:center;text-align:center;gap:1rem}
+.board-finie-emoji{font-size:clamp(5rem,10vw,8rem);line-height:1}
+.board-finie-titre{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:900;color:#fff;text-shadow:0 4px 20px rgba(168,85,247,.5)}
+.board-finie-sub{font-size:clamp(1.4rem,2.5vw,2rem);color:#FBBF24;font-weight:700}
+.board-finie-msg{font-size:clamp(1.2rem,2vw,1.5rem);color:#fff;opacity:.9;margin-top:.8rem;max-width:800px;line-height:1.4}
+
+/* === Nouveau chantier : Édition in-place PreviewEval === */
+.preview-titre-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.6rem}
+.preview-titre-input{flex:1;min-width:200px;padding:.5rem .7rem;font-size:1.1rem;font-weight:900;color:var(--violet);border:2px solid var(--bordure);border-radius:10px;font-family:inherit;background:#fff}
+.preview-titre-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px rgba(106,76,224,.15)}
+.preview-titre-meta{font-size:.85rem;color:var(--gris);font-weight:600;padding:.3rem .6rem;background:var(--gris-clair);border-radius:8px}
+.preview-q.editable{background:#fff;border:2px solid var(--bordure)}
+.preview-q.editable:focus-within{border-color:var(--violet)}
+.preview-q-titre-row{display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.preview-q-actions{display:flex;gap:.25rem}
+.btn-mini{padding:.2rem .5rem;font-size:.85rem;background:var(--gris-clair);border:1px solid var(--bordure);border-radius:6px;cursor:pointer;color:var(--noir);font-family:inherit;font-weight:700}
+.btn-mini:hover:not(:disabled){background:var(--violet);color:#fff;border-color:var(--violet)}
+.btn-mini:disabled{opacity:.4;cursor:not-allowed}
+.btn-mini-supp:hover:not(:disabled){background:var(--rouge);border-color:var(--rouge);color:#fff}
+.preview-q-enonce-input{width:100%;min-height:60px;padding:.5rem .7rem;font-size:.95rem;border:2px solid var(--bordure);border-radius:8px;font-family:inherit;background:#fff;margin:.5rem 0;resize:vertical;line-height:1.4}
+.preview-q-enonce-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px rgba(106,76,224,.15)}
+.preview-q-choix-edit{display:flex;flex-direction:column;gap:.3rem;margin:.5rem 0}
+.preview-choix-edit{display:flex;align-items:center;gap:.4rem;padding:.35rem .5rem;border:1px solid var(--bordure);border-radius:8px;background:#FAFAFC;transition:background .2s,border-color .2s}
+.preview-choix-edit.bon{background:#E8F6EE;border-color:var(--vert)}
+.preview-choix-edit input[type="checkbox"]{width:1.1rem;height:1.1rem;cursor:pointer;accent-color:var(--vert)}
+.preview-choix-edit .lettre{font-weight:900;color:var(--violet);min-width:1.5rem}
+.preview-choix-input{flex:1;padding:.3rem .5rem;border:1px solid transparent;border-radius:6px;font-family:inherit;font-size:.92rem;background:transparent;color:var(--noir)}
+.preview-choix-input:focus{outline:none;background:#fff;border-color:var(--violet)}
+.preview-q-explication-zone{margin-top:.7rem;padding-top:.7rem;border-top:1px dashed var(--bordure)}
+.preview-q-explication-label{display:block;font-size:.82rem;font-weight:700;color:#8B6914;margin-bottom:.3rem}
+.preview-q-explication-input{width:100%;min-height:55px;padding:.5rem .7rem;font-size:.9rem;border:2px solid #FFD23F;border-radius:8px;font-family:inherit;background:#FFFEF5;resize:vertical;line-height:1.4;color:var(--noir)}
+.preview-q-explication-input:focus{outline:none;border-color:#FF8C42;box-shadow:0 0 0 3px rgba(255,140,66,.15)}
+
 /* === RÉSULTATS PROF (scoresheet) === */
 .scoresheet-wrap{overflow-x:auto;margin-top:1rem;border:1px solid var(--bordure);border-radius:12px;background:#fff}
 .scoresheet{border-collapse:collapse;width:100%;font-size:.82rem}
@@ -698,6 +902,13 @@ var db = firebase.database();
 
 var PROF_CODES = [3141, 1312];
 var DB_ROOT = "qcm"; // Racine dédiée
+
+// URL de base du site monsieurjaipascompris pour le branchement du profil longitudinal.
+// La page /profil-classe n'est pas encore créée — branchement préparé.
+var MJPC_BASE_URL = "https://monsieurjaipascompris.com";
+function urlProfilClasseMJPC(classeSlug){
+  return MJPC_BASE_URL + "/profil-classe/" + encodeURIComponent(classeSlug || "");
+}
 
 // ════════════════════════════════════════════════════════════════════
 // NIVEAUX DE DIFFICULTÉ
@@ -880,27 +1091,37 @@ function parseEvaluation(texte){
 // ════════════════════════════════════════════════════════════════════
 // PROMPT IA À FOURNIR
 // ════════════════════════════════════════════════════════════════════
-var PROMPT_IA = "Tu vas m'aider à créer un QCM pour mon évaluation. Voici les règles à respecter strictement.\n\n"
+var PROMPT_IA_DEFAUT = "Tu vas m'aider à créer un QCM pour mon évaluation. Voici les règles à respecter strictement.\n\n"
++ "AVANT DE COMMENCER : pose-moi systématiquement ces questions et attends mes réponses :\n"
++ "1. Quel est le thème et le niveau scolaire (collège 6e/5e/4e/3e, lycée, etc.) ?\n"
++ "2. Combien de questions au total dois-je créer ?\n"
++ "3. Parmi ces questions, combien doivent être à réponses multiples (plusieurs bonnes réponses) ?\n"
++ "4. Quel équilibre de niveaux souhaites-tu (facile/standard/approfondi/expert) ?\n\n"
 + "FORMAT DE SORTIE OBLIGATOIRE — JSON valide selon ce schéma :\n\n"
 + "{\n"
 + "  \"titre\": \"Titre de l'évaluation\",\n"
 + "  \"questions\": [\n"
 + "    {\n"
-+ "      \"enonce\": \"Texte de la question.\",\n"
++ "      \"enonce\": \"Texte de la question, formulée de façon AUTONOME (l'élève doit pouvoir répondre sans voir les choix).\",\n"
 + "      \"choix\": [\"Choix A\", \"Choix B\", \"Choix C\", \"Choix D\"],\n"
 + "      \"bonnes\": [0],\n"
-+ "      \"niveau\": \"standard\"\n"
++ "      \"niveau\": \"standard\",\n"
++ "      \"explication\": \"Explication pédagogique de la bonne réponse, à afficher aux élèves lors de la correction. 1 à 3 phrases.\"\n"
 + "    }\n"
 + "  ]\n"
 + "}\n\n"
 + "RÈGLES :\n"
-+ "1. Le tableau \"choix\" peut contenir 2 choix ou plus (pas de limite haute).\n"
-+ "2. Le tableau \"bonnes\" liste les index (0=A, 1=B, 2=C...) des bonnes réponses. Plusieurs valeurs autorisées si question à réponses multiples.\n"
-+ "3. \"niveau\" doit être l'une de ces valeurs : \"facile\" (5 secondes de réflexion), \"standard\" (10s), \"approfondi\" (15s), \"expert\" (20s). Choisis selon la difficulté objective de la question.\n"
-+ "4. Pour chaque question, les choix doivent être homogènes en longueur et en construction grammaticale.\n"
-+ "5. Évite les choix piégeux artificiels. Les distracteurs doivent être plausibles mais clairement faux pour qui maîtrise la notion.\n"
-+ "6. Réponds avec UNIQUEMENT le JSON, sans texte avant ni après, sans bloc markdown ```json. Le JSON doit être directement collable dans mon application.\n\n"
-+ "Pour démarrer, réponds-moi simplement \"OK, prêt. Sur quel thème et quel niveau (collège, lycée, etc.) ?\" puis attends ma demande détaillée.";
++ "1. Les énoncés doivent être AUTONOMES : l'élève doit pouvoir répondre de mémoire, sans avoir besoin de voir les choix. Évite donc les formulations du type « Laquelle des propositions suivantes... » ou « Parmi les choix ci-dessous... ». Préfère des questions directes : « Quelle est la capitale de l'Italie ? », « En quelle année... ? », « Quel auteur a écrit... ? ».\n"
++ "2. Le tableau \"choix\" peut contenir 2 choix ou plus (pas de limite haute).\n"
++ "3. Le tableau \"bonnes\" liste les index (0=A, 1=B, 2=C...) des bonnes réponses. Plusieurs valeurs autorisées si question à réponses multiples (selon le nombre que je t'ai indiqué).\n"
++ "4. \"niveau\" doit être l'une de ces valeurs : \"facile\" (5 secondes de réflexion), \"standard\" (10s), \"approfondi\" (15s), \"expert\" (20s). Choisis selon la difficulté objective de la question.\n"
++ "5. \"explication\" est OBLIGATOIRE et destinée aux élèves pendant la correction. Elle doit justifier la bonne réponse de façon pédagogique, claire et concise (1 à 3 phrases). Évite le jargon. Tu peux y mentionner pourquoi les distracteurs sont faux si c'est utile.\n"
++ "6. Pour chaque question, les choix doivent être homogènes en longueur et en construction grammaticale.\n"
++ "7. Évite les choix piégeux artificiels. Les distracteurs doivent être plausibles mais clairement faux pour qui maîtrise la notion.\n"
++ "8. Varie les lettres des bonnes réponses (évite que la bonne réponse soit toujours en A ou toujours en B). Ne mets jamais 3 fois la même lettre d'affilée.\n"
++ "9. Réponds avec UNIQUEMENT le JSON, sans texte avant ni après, sans bloc markdown ```json. Le JSON doit être directement collable dans mon application.";
+
+var PROMPT_IA = PROMPT_IA_DEFAUT; // peut être surchargé depuis Firebase à l'init
 
 // ════════════════════════════════════════════════════════════════════
 // SNAPSHOT
@@ -1168,8 +1389,14 @@ function EleveSession(p){
 
   // Si session active : afficher la session
   if(session && evaluation){
+    if(session.phase === "finie"){
+      return h(EleveBilan, {session:session, evaluation:evaluation, eleve:p.eleve, classe:p.classe});
+    }
     if(session.phase === "correction"){
       return h(EleveCorrection, {session:session, evaluation:evaluation, eleve:p.eleve, classe:p.classe});
+    }
+    if(session.phase === "autoeval"){
+      return h(EleveAutoeval, {session:session, evaluation:evaluation, eleve:p.eleve, classe:p.classe});
     }
     return h(EleveEval, {session:session, evaluation:evaluation, eleve:p.eleve, classe:p.classe, onBack:p.onBack});
   }
@@ -1440,7 +1667,9 @@ function EleveSaisieBeta(p){
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-results"},
       h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
-      h("h2", null, "📝 Saisis tes réponses papier"),
+      h("h2", null, "📝 Saisis tes réponses papier",
+        h(InfoI, null, "Tu as passé cette évaluation sur papier en classe ? Saisis ici les lettres que tu avais cochées question par question. C'est utile pour avoir ton bilan personnel (combien de bonnes réponses, comparaison à la classe) même si l'éval n'a pas été passée sur ton téléphone.")
+      ),
       h("p", {style:{color:"var(--noir)",marginBottom:"1rem",lineHeight:1.5}},
         "Pour chaque question, indique la (ou les) lettre(s) que tu as choisie(s) ",
         h("strong", null, "sur ta copie papier"),
@@ -1660,7 +1889,9 @@ function EleveEval(p){
       histoOpen && h("div", {className:"eleve-notif-back", onClick:function(e){if(e.target.className==="eleve-notif-back")setHistoOpen(false)}},
         h("div", {className:"eleve-notif-modal"},
           h("button", {className:"modal-close", onClick:function(){setHistoOpen(false)}}, "✕"),
-          h("h2", null, "🔔 Messages du professeur"),
+          h("h2", null, "🔔 Messages du professeur",
+            h(InfoI, null, "Le prof peut t'envoyer des messages pendant l'évaluation : il a ajouté du temps, mis en pause, ou rouvert une question. Tu les retrouves ici et au moment de leur arrivée en haut de l'écran.")
+          ),
           notifs.length === 0
             ? h("p", {style:{color:"var(--gris)",fontStyle:"italic"}}, "Aucun message.")
             : h("div", {className:"eleve-notif-liste"},
@@ -1678,17 +1909,509 @@ function EleveEval(p){
 }
 
 // ─────────── Élève — Phase correction ───────────
+// Pondération difficulté (Lot 4) — défaut, écrasable via Firebase settings/poidsNiveau
+var POIDS_NIVEAU = {facile:1, standard:2, approfondi:3, expert:4};
+var POIDS_NIVEAU_DEFAUT = {facile:1, standard:2, approfondi:3, expert:4};
+function calculerMaxPondere(questions){
+  return (questions||[]).reduce(function(acc, q){
+    return acc + (POIDS_NIVEAU[q.niveau] || 1);
+  }, 0);
+}
+
+/*
+ * ════════════════════════════════════════════════════════════════════
+ * API PROFIL LONGITUDINAL MJPC (Lot 6)
+ * ════════════════════════════════════════════════════════════════════
+ *
+ * Cette API est conçue pour être branchée ultérieurement sur le site
+ * monsieurjaipascompris (MJPC). Elle écrit dans une racine Firebase
+ * séparée (`mjpcProfils/`), distincte de `qcm/` (DB_ROOT).
+ *
+ * STRUCTURE :
+ *   mjpcProfils/
+ *     {classeSlug}/
+ *       {eleveSlug}/
+ *         sessions/
+ *           {sessId}/
+ *             date           : timestamp (ms)
+ *             sessId         : id de la session
+ *             evalId         : id de l'éval
+ *             titre          : titre de l'éval
+ *             scoreBrut      : nb questions justes
+ *             totalQ         : nb total de questions
+ *             scorePondere   : score pondéré par niveau (F=1,S=2,A=3,E=4)
+ *             maxP           : score pondéré max possible
+ *             fourchetteEstimee : "vert"|"bleu"|"orange"|"rouge"|null
+ *             fourchetteReelle  : idem
+ *             calibration    : "ok"|"sous"|"sur"|null
+ *             details[]      : {idx, niveau, poids, juste}
+ *
+ * USAGE CÔTÉ MJPC :
+ *   db.ref("mjpcProfils/" + classeSlug + "/" + eleveSlug + "/sessions")
+ *     .on("value", ...)  → renvoie l'historique complet
+ *
+ * DÉCLENCHEMENT : appel automatique de archiverDansProfilsMJPC()
+ * quand la phase de la session passe à "finie" (clic "Question suivante"
+ * en correction sur la dernière Q).
+ */
+function archiverDansProfilsMJPC(sess, ev, classe, reponses){
+  if(!sess || !ev || !classe || !reponses) return;
+  var classeSlug = classe.slug || sess.classeSlug || "_inconnu";
+  // Ne pas archiver les sessions de test pour ne pas polluer le profil longitudinal
+  if(classeSlug === TEST_CLASSE_SLUG) return;
+  var maxP = calculerMaxPondere(ev.questions);
+  var autoevals = sess.autoevals || {};
+  var date = sess.date || Date.now();
+  (classe.eleves || []).forEach(function(e){
+    var slug = e.slug || slugify(e.nomComplet);
+    var scoreBrut = 0, scorePondere = 0;
+    var details = ev.questions.map(function(q, i){
+      var rep = reponses[i] && reponses[i][slug];
+      var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
+      var bonnes = (q.bonnes||[]).slice().sort();
+      var juste = !!(mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes));
+      var poids = POIDS_NIVEAU[q.niveau] || 1;
+      if(juste){ scoreBrut++; scorePondere += poids; }
+      return {idx:i, niveau:q.niveau || "facile", poids:poids, juste:juste};
+    });
+    var fReelleObj = fourchetteDuScore(scoreBrut, ev.questions.length);
+    var fReelle = fReelleObj.key;
+    var fEstimee = autoevals[slug] || null;
+    var calibration = null;
+    if(fEstimee && IDX_FOURCHETTE[fEstimee] && IDX_FOURCHETTE[fReelle]){
+      var iE = IDX_FOURCHETTE[fEstimee], iR = IDX_FOURCHETTE[fReelle];
+      calibration = (iE === iR) ? "ok" : (iE > iR ? "sur" : "sous");
+    }
+    var payload = {
+      date: date,
+      sessId: sess.id,
+      evalId: sess.evalId || null,
+      titre: ev.titre || "Évaluation",
+      scoreBrut: scoreBrut,
+      totalQ: ev.questions.length,
+      scorePondere: scorePondere,
+      maxP: maxP,
+      fourchetteEstimee: fEstimee,
+      fourchetteReelle: fReelle,
+      calibration: calibration,
+      details: details
+    };
+    db.ref("mjpcProfils/"+classeSlug+"/"+slug+"/sessions/"+sess.id).set(payload);
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SESSACTIONS — actions partagées sur une session, utilisées par VuePhone.
+// SessionLive a son propre code équivalent (scope local, paramètres
+// d'instance) qui n'utilise pas ce module pour minimiser le risque sur le
+// pilotage prof. Toute modif ici doit rester cohérente avec SessionLive.
+// ════════════════════════════════════════════════════════════════════
+var sessActions = {
+  notifier: function(sess, msg, type){
+    var nid = "n_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/notifs/"+nid).set({msg:msg, type:type||"info", ts:Date.now()});
+  },
+  lancerQ: function(sess, ev, optIdx){
+    var newIdx = (optIdx != null) ? optIdx : ((sess.qIdx == null) ? 0 : sess.qIdx + 1);
+    if(newIdx >= ev.questions.length){
+      alert("Toutes les questions ont été posées.");
+      return false;
+    }
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
+      qIdx:newIdx, phase:"reflexion", phaseStart:Date.now(), reouverts:null, paused:null
+    });
+    return true;
+  },
+  autoriser: function(sess, optChronoRep){
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
+      phase:"reponse", phaseStart:Date.now(), chronoReponse: (optChronoRep != null) ? optChronoRep : (sess.chronoReponse || 5)
+    });
+  },
+  clore: function(sess, askConfirmReflexion){
+    if(askConfirmReflexion && sess.phase === "reflexion"){
+      if(!confirm("Clore la réflexion ? Les élèves n'auront pas eu le temps de répondre.")) return false;
+    }
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({phase:"attente"});
+    return true;
+  },
+  togglePause: function(sess, ev, question){
+    if(sess.paused){
+      var rest = sess.paused.remaining, dur = sess.paused.duree;
+      var newStart = Date.now() - (dur - rest)*1000;
+      db.ref(DB_ROOT+"/sessions/"+sess.id).update({phaseStart:newStart, paused:null});
+      sessActions.notifier(sess, "Le chrono reprend.", "info");
+    } else {
+      if(sess.phase !== "reflexion" && sess.phase !== "reponse") return;
+      var d = sess.phase === "reflexion"
+        ? (question ? getNiveau(question.niveau).chrono : 10)
+        : (sess.chronoReponse || 5);
+      var elapsed = Math.floor((Date.now() - sess.phaseStart)/1000);
+      var r = Math.max(0, d - elapsed);
+      db.ref(DB_ROOT+"/sessions/"+sess.id+"/paused").set({remaining:r, duree:d, at:Date.now()});
+      sessActions.notifier(sess, "⏸️ Pause demandée par le professeur.", "pause");
+    }
+  },
+  ajouterTemps: function(sess, secondes){
+    if(sess.paused){
+      db.ref(DB_ROOT+"/sessions/"+sess.id+"/paused/remaining").set((sess.paused.remaining||0) + secondes);
+    } else if(sess.phase === "reflexion" || sess.phase === "reponse"){
+      db.ref(DB_ROOT+"/sessions/"+sess.id+"/phaseStart").set(sess.phaseStart + secondes*1000);
+    } else { return; }
+    sessActions.notifier(sess, "⏱️ Le professeur a ajouté "+secondes+" seconde"+(secondes>1?"s":"")+".", "info");
+  },
+  revealer: function(sess){
+    var u = {corrRevealed:true};
+    u["revealedHistory/"+sess.correctionIdx] = true;
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update(u);
+  },
+  lancerCorrection: function(sess, ev){
+    // Calcul de l'ordre : tri par taux d'erreur décroissant
+    var reponses = sess.reponses || {};
+    var ordres = ev.questions.map(function(q, i){
+      var reps = reponses[i] || {};
+      var nbTotal = 0, nbFaux = 0;
+      var bonnes = (q.bonnes||[]).slice().sort();
+      Object.keys(reps).forEach(function(k){
+        nbTotal++;
+        var c = (reps[k].choix||[]).slice().sort();
+        if(JSON.stringify(c) !== JSON.stringify(bonnes)) nbFaux++;
+      });
+      var tx = nbTotal === 0 ? 0 : nbFaux/nbTotal;
+      return {idx:i, taux:tx};
+    });
+    ordres.sort(function(a,b){return b.taux - a.taux});
+    var ordreIdx = ordres.map(function(o){return o.idx});
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
+      phase:"correction",
+      correctionIdx:ordreIdx[0],
+      correctionOrdre:ordreIdx,
+      corrRevealed:false,
+      revealedHistory:null
+    });
+  }
+};
+
+function EleveAutoeval(p){
+  var sess = p.session, ev = p.evaluation;
+  var slug = p.eleve.slug;
+  var s1 = useState(null), monVote = s1[0], setMonVote = s1[1];
+
+  useEffect(function(){
+    var ref = db.ref(DB_ROOT+"/sessions/"+sess.id+"/autoevals/"+slug);
+    ref.once("value", function(snap){ setMonVote(snap.val()); });
+  }, [sess.id, slug]);
+
+  // Fourchettes calculées en NOMBRE DE BONNES RÉPONSES BRUTES (pas en score pondéré)
+  // Les seuils internes restent en % pour cohérence avec FOURCHETTES_DEF
+  var nbTotal = ev.questions.length;
+  function borneInfBrut(pct){ return Math.ceil(nbTotal * pct / 100); }
+  function borneSupBrut(pct){ return Math.floor(nbTotal * pct / 100); }
+  var fourchettes = [
+    {key:"vert",   emoji:"🟢", inf:borneInfBrut(76), sup:nbTotal,          color:"vert"},
+    {key:"bleu",   emoji:"🔵", inf:borneInfBrut(51), sup:borneSupBrut(75), color:"bleu"},
+    {key:"orange", emoji:"🟠", inf:borneInfBrut(26), sup:borneSupBrut(50), color:"orange"},
+    {key:"rouge",  emoji:"🔴", inf:0,                sup:borneSupBrut(25), color:"rouge"}
+  ];
+
+  function voter(key){
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/autoevals/"+slug).set(key);
+    setMonVote(key);
+  }
+
+  function libelle(f){
+    if(f.inf === f.sup) return f.inf + " bonne" + (f.inf>1?"s":"") + " réponse" + (f.inf>1?"s":"") + " sur " + nbTotal;
+    return "Entre " + f.inf + " et " + f.sup + " bonnes réponses sur " + nbTotal;
+  }
+
+  return h("div", {className:"eleve-page"},
+    ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
+    h("div", {className:"eleve-card"},
+      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("h1", null, "🎯 Ton estimation"),
+      h("p", {className:"autoeval-intro"}, "Combien de bonnes réponses penses-tu avoir données ? Choisis la fourchette qui correspond à ton estimation.",
+        h(InfoI, null, "C'est ton estimation, pas ton vrai score. À la fin de la correction, tu compareras ce que tu pensais avec ce que tu as vraiment obtenu. C'est utile pour apprendre à mieux te connaître : sais-tu juger ton propre travail avant de voir la correction ?")
+      ),
+      !monVote && h("div", {className:"autoeval-fourchettes"},
+        fourchettes.map(function(f){
+          return h("button", {key:f.key, className:"autoeval-fourchette fourchette-"+f.color, onClick:function(){voter(f.key)}},
+            h("div", {className:"autoeval-fourchette-emoji"}, f.emoji),
+            h("div", {className:"autoeval-fourchette-bornes-big"}, libelle(f))
+          );
+        })
+      ),
+      monVote && (function(){
+        var sel = fourchettes.find(function(f){return f.key===monVote});
+        return h("div", {className:"autoeval-confirme"},
+          h("div", {className:"autoeval-confirme-titre"}, "Ton estimation est enregistrée"),
+          h("div", {className:"autoeval-confirme-choix fourchette-"+sel.color},
+            h("span", {style:{fontSize:"2rem"}}, sel.emoji),
+            h("span", null, libelle(sel))
+          ),
+          h("div", {className:"autoeval-confirme-attente"}, "⏳ Attends que le professeur lance la correction…")
+        );
+      })()
+    )
+  );
+}
+
+var FOURCHETTES_DEF = [
+  {key:"vert", emoji:"🟢", color:"vert", min:76, max:100},
+  {key:"bleu", emoji:"🔵", color:"bleu", min:51, max:75},
+  {key:"orange", emoji:"🟠", color:"orange", min:26, max:50},
+  {key:"rouge", emoji:"🔴", color:"rouge", min:0, max:25}
+];
+var IDX_FOURCHETTE = {rouge:1, orange:2, bleu:3, vert:4};
+
+// Bornes en NOMBRE DE BONNES RÉPONSES pour une fourchette donnée et un total de questions
+function bornesFourchette(fkey, total){
+  var f = FOURCHETTES_DEF.find(function(x){return x.key===fkey});
+  if(!f) return {inf:0, sup:0};
+  if(fkey === "vert")  return {inf:Math.ceil(total*0.76), sup:total};
+  if(fkey === "bleu")  return {inf:Math.ceil(total*0.51), sup:Math.floor(total*0.75)};
+  if(fkey === "orange")return {inf:Math.ceil(total*0.26), sup:Math.floor(total*0.50)};
+  return {inf:0, sup:Math.floor(total*0.25)};
+}
+function libelleFourchette(fkey, total){
+  var b = bornesFourchette(fkey, total);
+  if(b.inf === b.sup) return b.inf + " bonne" + (b.inf>1?"s":"") + " réponse" + (b.inf>1?"s":"");
+  return "entre " + b.inf + " et " + b.sup + " bonnes réponses";
+}
+
+function fourchetteDuScore(score, max){
+  if(max <= 0) return FOURCHETTES_DEF[3];
+  var pct = (score / max) * 100;
+  if(pct > 75) return FOURCHETTES_DEF[0];
+  if(pct > 50) return FOURCHETTES_DEF[1];
+  if(pct > 25) return FOURCHETTES_DEF[2];
+  return FOURCHETTES_DEF[3];
+}
+
+function EleveBilan(p){
+  var sess = p.session, ev = p.evaluation;
+  var slug = p.eleve.slug;
+  var classeSlug = p.classe.slug;
+  var s1 = useState(null), allReps = s1[0], setAllReps = s1[1];
+  var s2 = useState({}), allAutoevals = s2[0], setAllAutoevals = s2[1];
+  var s3 = useState({}), historique = s3[0], setHistorique = s3[1]; // Lot 6 : profil longitudinal
+
+  useEffect(function(){
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/reponses").once("value", function(snap){
+      setAllReps(snap.val() || {});
+    });
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/autoevals").once("value", function(snap){
+      setAllAutoevals(snap.val() || {});
+    });
+    // Lot 6 : écoute du profil longitudinal MJPC (sessions passées)
+    var refH = db.ref("mjpcProfils/"+classeSlug+"/"+slug+"/sessions");
+    var cb = refH.on("value", function(snap){ setHistorique(snap.val() || {}); });
+    return function(){ refH.off("value", cb); };
+  }, [sess.id, classeSlug, slug]);
+
+  if(allReps === null) return h("div", {className:"eleve-page"}, h("div", {className:"eleve-card"}, h("p", null, "Chargement du bilan…")));
+
+  var maxP = calculerMaxPondere(ev.questions);
+  var nbTotal = ev.questions.length;
+  // Score pondéré + brut de l'élève
+  var monScore = 0; // pondéré
+  var monScoreBrut = 0; // nb de Q justes
+  var mesResultats = ev.questions.map(function(q, i){
+    var rep = allReps[i] && allReps[i][slug];
+    var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
+    var bonnes = (q.bonnes||[]).slice().sort();
+    var juste = mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes);
+    var nonRep = !mine || mine.length === 0;
+    if(juste){ monScore += POIDS_NIVEAU[q.niveau] || 1; monScoreBrut++; }
+    // taux classe
+    var totalClasse = 0, bonClasse = 0;
+    Object.keys(allReps[i] || {}).forEach(function(s){
+      var c = (allReps[i][s].choix||[]).slice().sort();
+      if(c.length > 0){
+        totalClasse++;
+        if(JSON.stringify(c) === JSON.stringify(bonnes)) bonClasse++;
+      }
+    });
+    var tauxClasse = totalClasse > 0 ? (bonClasse / totalClasse) * 100 : 0;
+    return {idx:i, q:q, juste:juste, nonRep:nonRep, tauxClasse:tauxClasse, poids:POIDS_NIVEAU[q.niveau]||1};
+  });
+
+  // Fourchette RÉELLE basée sur le NB BRUT de bonnes réponses (cohérent avec autoeval)
+  var maFourchette = fourchetteDuScore(monScoreBrut, nbTotal);
+
+  // Distribution classe pour comparaison (en brut)
+  var scoresClasse = []; // scores BRUTS de chaque élève
+  var scoresClassePondere = []; // pondérés pour info complémentaire
+  var elevesClasse = new Set();
+  Object.keys(allReps).forEach(function(qi){
+    Object.keys(allReps[qi]).forEach(function(s){ elevesClasse.add(s); });
+  });
+  elevesClasse.forEach(function(s){
+    var scB = 0, scP = 0;
+    ev.questions.forEach(function(q, i){
+      var r = allReps[i] && allReps[i][s];
+      var mn = r && r.choix ? r.choix.slice().sort() : null;
+      var bn = (q.bonnes||[]).slice().sort();
+      if(mn && mn.length > 0 && JSON.stringify(mn) === JSON.stringify(bn)){
+        scB++;
+        scP += POIDS_NIVEAU[q.niveau] || 1;
+      }
+    });
+    scoresClasse.push(scB);
+    scoresClassePondere.push(scP);
+  });
+  scoresClasse.sort(function(a,b){return a-b});
+  scoresClassePondere.sort(function(a,b){return a-b});
+  var mediane = scoresClasse.length === 0 ? 0
+    : (scoresClasse.length % 2 ? scoresClasse[Math.floor(scoresClasse.length/2)]
+       : (scoresClasse[scoresClasse.length/2-1] + scoresClasse[scoresClasse.length/2]) / 2);
+
+  // Position vs médiane
+  var posClasse = monScoreBrut > mediane ? "au-dessus" : (monScoreBrut < mediane ? "en-dessous" : "à la médiane");
+
+  // Calibration autoeval
+  var monAutoeval = allAutoevals[slug];
+  var calibration = null;
+  if(monAutoeval && IDX_FOURCHETTE[monAutoeval]){
+    var idxEstime = IDX_FOURCHETTE[monAutoeval];
+    var idxReel = IDX_FOURCHETTE[maFourchette.key];
+    var fEstime = FOURCHETTES_DEF.find(function(f){return f.key===monAutoeval});
+    var libEstime = libelleFourchette(monAutoeval, nbTotal);
+    var libReel = libelleFourchette(maFourchette.key, nbTotal);
+    if(idxEstime === idxReel) calibration = {type:"ok", msg:"✅ Tu te connais bien !", detail:"Tu pensais avoir "+libEstime+" "+fEstime.emoji+" et tu en as effectivement obtenu "+monScoreBrut+" sur "+nbTotal+". Ton estimation correspond à ton vrai résultat."};
+    else if(idxEstime > idxReel) calibration = {type:"sur", msg:"⚠️ Tu pensais avoir mieux fait", detail:"Tu pensais avoir "+libEstime+" "+fEstime.emoji+" mais tu en as eu "+monScoreBrut+" sur "+nbTotal+" ("+libReel+" "+maFourchette.emoji+"). Tu as un peu surestimé ce que tu avais réussi."};
+    else calibration = {type:"sous", msg:"🌟 Tu te sous-estimais !", detail:"Tu pensais avoir "+libEstime+" "+fEstime.emoji+" mais tu en as eu "+monScoreBrut+" sur "+nbTotal+" ("+libReel+" "+maFourchette.emoji+") ! Tu as fait mieux que ce que tu croyais."};
+  }
+
+  // Q faciles ratées (taux classe ≥ 50% OU niveau facile, et l'élève a faux)
+  var faciles_ratees = mesResultats.filter(function(r){
+    if(r.juste || r.nonRep) return false;
+    return r.tauxClasse >= 50 || r.q.niveau === "facile";
+  });
+  // Q difficiles réussies (niveau approfondi/expert et juste)
+  var difficiles_reussies = mesResultats.filter(function(r){
+    return r.juste && (r.q.niveau === "approfondi" || r.q.niveau === "expert");
+  });
+
+  return h("div", {className:"eleve-page"},
+    ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
+    h("div", {className:"eleve-card"},
+      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("h1", null, "🎯 Bilan personnel"),
+      // Score
+      h("div", {className:"bilan-score fourchette-"+maFourchette.color},
+        h("div", {className:"bilan-score-emoji"}, maFourchette.emoji),
+        h("div", {className:"bilan-score-num"}, monScoreBrut + " / " + nbTotal + " bonnes réponses",
+          h(InfoI, null, "Tu as donné "+monScoreBrut+" bonne(s) réponse(s) sur "+nbTotal+". La couleur dépend de ce nombre : 🟢 si tu en as beaucoup, 🔵 si tu en as un bon nombre, 🟠 si tu en as un peu moins, 🔴 si tu en as peu.")
+        ),
+        h("div", {className:"bilan-score-pct"}, Math.round((monScoreBrut/Math.max(nbTotal,1))*100) + " %"),
+        h("div", {className:"bilan-score-pondere"}, "Points pour la note : ", h("strong", null, monScore + " / " + maxP),
+          h(InfoI, null, "Pour calculer ta note, certaines questions valent plus que d'autres : une question facile rapporte 1 point, une question standard 2 points, une question approfondie 3 points et une question expert 4 points. Si tu as bien répondu à beaucoup de questions difficiles, tu as plus de points pour la note.")
+        )
+      ),
+      // Comparaison classe
+      scoresClasse.length > 1 && h("div", {className:"bilan-classe"},
+        h("h3", null, "📊 Par rapport à la classe",
+          h(InfoI, null, "Te comparer à la classe te dit où tu te situes parmi les autres. Si tu fais mieux que la moitié de la classe, tu peux être fier de toi. Si tu fais moins bien, c'est l'occasion de retravailler.")
+        ),
+        h("div", null, "La moitié de la classe a fait ", h("strong", null, mediane + " bonne" + (mediane>1?"s":"") + " réponse" + (mediane>1?"s":"") + " ou moins"), " sur " + nbTotal + "."),
+        h("div", null, "Le résultat le plus bas dans la classe : ", h("strong", null, scoresClasse[0] + " bonne" + (scoresClasse[0]>1?"s":"") + " réponse" + (scoresClasse[0]>1?"s":""))),
+        h("div", null, "Le résultat le plus haut : ", h("strong", null, scoresClasse[scoresClasse.length-1] + " bonne" + (scoresClasse[scoresClasse.length-1]>1?"s":"") + " réponse" + (scoresClasse[scoresClasse.length-1]>1?"s":""))),
+        h("div", {className:"bilan-classe-pos"},
+          posClasse === "au-dessus" ? h(React.Fragment, null, "👍 Tu fais ", h("strong", null, "mieux que la moitié de la classe"), ".") :
+          posClasse === "en-dessous" ? h(React.Fragment, null, "💪 Tu fais ", h("strong", null, "moins bien que la moitié de la classe"), ". L'occasion de retravailler !") :
+          h(React.Fragment, null, "🎯 Tu es ", h("strong", null, "pile au milieu"), " de la classe.")
+        )
+      ),
+      // Calibration autoeval (= "ton estimation")
+      calibration && h("div", {className:"bilan-calibration bilan-calib-"+calibration.type},
+        h("h3", null, "🎯 Ton estimation",
+          h(InfoI, null, "Avant la correction, tu as estimé combien de bonnes réponses tu pensais avoir données. Ici, tu compares cette estimation avec ton vrai résultat. Apprendre à bien estimer son propre travail est important : ça veut dire que tu sais où tu en es.")
+        ),
+        h("div", {className:"bilan-calib-msg"}, calibration.msg),
+        h("div", {className:"bilan-calib-detail"}, calibration.detail)
+      ),
+      // Q faciles ratées
+      faciles_ratees.length > 0 && h("div", {className:"bilan-bloc bilan-bloc-attention"},
+        h("h3", null, "🔍 À revoir en priorité",
+          h(InfoI, null, "Ces questions, soit elles étaient faciles, soit la plupart des élèves de ta classe y ont bien répondu. Comme tu les as ratées, c'est sans doute là qu'il faut retravailler. Commence par celles-là avant de t'attaquer aux questions plus difficiles.")
+        ),
+        h("p", {className:"bilan-bloc-intro"}, "Tu as raté ces questions alors qu'elles étaient soit faciles, soit majoritairement réussies en classe :"),
+        faciles_ratees.map(function(r){
+          return h("div", {key:r.idx, className:"bilan-q-item"},
+            h("span", {className:"bilan-q-niveau niveau-"+r.q.niveau}, getNiveau(r.q.niveau).label),
+            h("span", {className:"bilan-q-enonce"}, r.q.enonce),
+            h("span", {className:"bilan-q-taux"}, Math.round(r.tauxClasse)+"% de la classe a réussi")
+          );
+        })
+      ),
+      // Q difficiles réussies
+      difficiles_reussies.length > 0 && h("div", {className:"bilan-bloc bilan-bloc-felicitations"},
+        h("h3", null, "🌟 Bravo pour ces questions difficiles"),
+        difficiles_reussies.map(function(r){
+          return h("div", {key:r.idx, className:"bilan-q-item"},
+            h("span", {className:"bilan-q-niveau niveau-"+r.q.niveau}, getNiveau(r.q.niveau).label),
+            h("span", {className:"bilan-q-enonce"}, r.q.enonce)
+          );
+        })
+      ),
+      // Lot 6 : historique des évaluations précédentes
+      (function(){
+        var liste = Object.keys(historique).map(function(k){ return historique[k]; })
+          .filter(function(s){ return s && s.sessId !== sess.id; })
+          .sort(function(a,b){ return (b.date||0) - (a.date||0); });
+        if(liste.length === 0) return null;
+        return h("div", {className:"bilan-bloc bilan-historique"},
+          h("h3", null, "📈 Tes évaluations précédentes",
+            h(InfoI, null, "Tes 5 dernières évaluations enregistrées. Pour chacune, tu vois ta date, ton nombre de bonnes réponses, ta fourchette (couleur) et un emoji qui rappelle si tu t'étais bien évalué (✅), sous-évalué (🌟) ou sur-évalué (⚠️). C'est ton suivi longitudinal : tu peux voir ta progression au fil du temps.")
+          ),
+          h("div", {className:"bilan-historique-liste"},
+            liste.slice(0, 5).map(function(s){
+              var f = FOURCHETTES_DEF.find(function(x){return x.key===s.fourchetteReelle}) || FOURCHETTES_DEF[3];
+              var d = new Date(s.date);
+              var dateFr = d.getDate()+"/"+(d.getMonth()+1)+"/"+d.getFullYear();
+              return h("div", {key:s.sessId, className:"bilan-historique-item"},
+                h("div", {className:"bilan-historique-date"}, dateFr),
+                h("div", {className:"bilan-historique-titre"}, s.titre),
+                h("div", {className:"bilan-historique-score fourchette-"+f.color},
+                  f.emoji+" "+(s.scoreBrut != null ? s.scoreBrut : "?")+"/"+(s.totalQ || "?")
+                ),
+                s.calibration && h("div", {className:"bilan-historique-calib calib-"+s.calibration},
+                  s.calibration === "ok" ? "✅" : s.calibration === "sous" ? "🌟" : "⚠️"
+                )
+              );
+            })
+          )
+        );
+      })()
+    )
+  );
+}
+
 function EleveCorrection(p){
   var sess = p.session, ev = p.evaluation;
   var qIdx = sess.correctionIdx != null ? sess.correctionIdx : 0;
   var question = ev.questions[qIdx];
   var s1 = useState(null), maRep = s1[0], setMaRep = s1[1];
+  var s2 = useState({}), mesReps = s2[0], setMesReps = s2[1]; // toutes mes réponses, pour le compteur (Lot 3)
 
   useEffect(function(){
     db.ref(DB_ROOT+"/sessions/"+sess.id+"/reponses/"+qIdx+"/"+p.eleve.slug).once("value", function(snap){
       setMaRep(snap.val());
     });
   }, [qIdx, sess.id]);
+
+  // Toutes les réponses de l'élève sur la session (Lot 3, compteur)
+  useEffect(function(){
+    var ref = db.ref(DB_ROOT+"/sessions/"+sess.id+"/reponses");
+    var cb = ref.on("value", function(snap){
+      var all = snap.val() || {};
+      var mine = {};
+      Object.keys(all).forEach(function(qi){
+        if(all[qi] && all[qi][p.eleve.slug]) mine[qi] = all[qi][p.eleve.slug];
+      });
+      setMesReps(mine);
+    });
+    return function(){ ref.off("value", cb); };
+  }, [sess.id, p.eleve.slug]);
 
   if(!question){
     return h("div", {className:"eleve-page"},
@@ -1705,41 +2428,78 @@ function EleveCorrection(p){
   var bonnes = (question.bonnes||[]).slice().sort();
   var nonRepondue = !monChoix || monChoix.length === 0;
   var juste = !nonRepondue && JSON.stringify(monChoix) === JSON.stringify(bonnes);
+  var revealed = sess.corrRevealed === true;
+
+  // Compteur progressif (Lot 3)
+  var histo = sess.revealedHistory || {};
+  var pastilles = ev.questions.map(function(q, i){
+    if(!histo[i]) return "—"; // pas encore révélée
+    var mr = mesReps[i];
+    var mch = mr && mr.choix ? mr.choix.slice().sort() : null;
+    var bn = (q.bonnes||[]).slice().sort();
+    if(!mch || mch.length===0) return "⚪";
+    return JSON.stringify(mch) === JSON.stringify(bn) ? "✅" : "❌";
+  });
+  var nbRevealed = pastilles.filter(function(x){return x!=="—"}).length;
+  var nbJustes = pastilles.filter(function(x){return x==="✅"}).length;
 
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
       h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
       h("h1", null, "📝 Correction"),
+      h("div", {className:"correction-banner-peda"}, "💡 On corrige d'abord les questions les plus ratées par la classe."),
+      h("div", {className:"correction-compteur"},
+        h("div", {className:"correction-compteur-score"},
+          h("span", {className:"correction-compteur-num"}, nbJustes),
+          h("span", {className:"correction-compteur-lbl"}, nbJustes>1 ? " bonnes réponses" : " bonne réponse"),
+          h("span", {className:"correction-compteur-sep-text"}, " sur "),
+          h("span", {className:"correction-compteur-tot"}, nbRevealed),
+          h("span", {className:"correction-compteur-lbl"}, nbRevealed>1 ? " questions déjà corrigées" : " question déjà corrigée"),
+          h(InfoI, null, "Ton compteur se complète au fur et à mesure que le prof révèle la correction de chaque question. Chaque pastille correspond à une question : verte ✅ si tu avais juste, rouge ❌ si tu avais faux, grise ⚪ si tu n'avais pas répondu. La pastille reste sur le numéro tant que le prof n'a pas révélé la réponse.")
+        ),
+        h("div", {className:"correction-compteur-pastilles"},
+          pastilles.map(function(em, i){
+            return h("span", {key:i, className:"correction-compteur-pastille "+(em==="—"?"vide":em==="✅"?"juste":em==="❌"?"faux":"nonrep"), title:"Q"+(i+1)},
+              em==="—" ? (i+1) : em
+            );
+          })
+        )
+      ),
       h("div", {className:"eleve-q-zone"},
         h("div", {className:"eleve-q-header"},
           h("span", {className:"eleve-q-num"}, "Question "+(qIdx+1)),
           h("span", {className:"eleve-q-pastille", style:{background:getNiveau(question.niveau).color, color:question.niveau==="facile"?"#5C4500":"#fff"}}, getNiveau(question.niveau).label)
         ),
         h("div", {className:"eleve-q-enonce"}, question.enonce),
-        h("div", {className:"correction-resultat "+(nonRepondue?"non-rep":(juste?"juste":"faux"))},
+        revealed && h("div", {className:"correction-resultat "+(nonRepondue?"non-rep":(juste?"juste":"faux"))},
           nonRepondue ? "⚠️ Tu n'as pas répondu à cette question."
             : (juste ? "✅ Tu avais juste !" : "❌ Tu avais faux.")
         ),
+        !revealed && h("div", {className:"correction-resultat non-rep", style:{background:"rgba(106,76,224,.08)",color:"var(--violet)",borderColor:"var(--violet)"}}, "👀 Écoute le prof — la correction sera révélée."),
         h("div", {className:"correction-choix"},
           question.choix.map(function(c, i){
             var bon = bonnes.indexOf(i) >= 0;
             var moi = monChoix && monChoix.indexOf(i) >= 0;
             var cls = "correction-choix-item";
-            if(bon) cls += " bonne";
-            else if(moi) cls += " eleve-faux";
-            if(moi && bon) cls = "correction-choix-item eleve-juste";
+            if(revealed){
+              if(bon) cls += " bonne";
+              else if(moi) cls += " eleve-faux";
+              if(moi && bon) cls = "correction-choix-item eleve-juste";
+            } else if(moi){
+              cls += " eleve-faux"; // neutre : juste pour marquer son choix
+            }
             return h("div", {key:i, className:cls},
               h("span", {className:"lettre"}, lettreFromIndex(i)+"."),
               h("span", null,
                 c,
-                bon && h("span", {className:"correction-tag tag-bonne"}, "Bonne réponse"),
-                moi && !bon && h("span", {className:"correction-tag tag-tienne"}, "Ta réponse")
+                revealed && bon && h("span", {className:"correction-tag tag-bonne"}, "Bonne réponse"),
+                moi && (!revealed || !bon) && h("span", {className:"correction-tag tag-tienne"}, "Ta réponse")
               )
             );
           })
         ),
-        h("div", {className:"correction-consigne "+(juste?"juste":"faux")},
+        revealed && h("div", {className:"correction-consigne "+(juste?"juste":"faux")},
           juste
             ? h(React.Fragment, null,
                 h("strong", null, "✅ Bravo ! "), "Sur ta feuille, mets simplement un ",
@@ -1759,6 +2519,10 @@ function EleveCorrection(p){
                   h("span", {className:"stylo-vert"}, "vert"),
                   " à côté."
                 )
+        ),
+        revealed && question.explication && h("div", {className:"correction-explication"},
+          h("div", {className:"correction-explication-titre"}, "💡 Explication"),
+          h("div", {className:"correction-explication-texte"}, question.explication)
         )
       )
     )
@@ -1771,6 +2535,7 @@ function AppTest(p){
   var s2 = useState(""), erreur = s2[0], setErreur = s2[1];
   var s3 = useState(null), sessionId = s3[0], setSessionId = s3[1];
   var s4 = useState({}), evalsCache = s4[0], setEvalsCache = s4[1]; // pour simulation des réponses
+  var s5 = useState(false), qrOpen = s5[0], setQrOpen = s5[1];
 
   // Cache des évals pour la simulation
   useEffect(function(){
@@ -1778,19 +2543,32 @@ function AppTest(p){
     return function(){ db.ref(DB_ROOT+"/evaluations").off(); };
   }, []);
 
-  // Au montage : créer classe test + éval test + lancer la session
+  // Au montage : nettoyer les sessions test zombies, créer classe test + éval test + lancer la session
   useEffect(function(){
     var sid = "_sess_test_"+Date.now();
     var classeData = {nom:"_TEST", eleves:TEST_ELEVES};
     var evalData = Object.assign({createdAt:Date.now()}, TEST_EVAL);
     var sessData = {classeSlug:TEST_CLASSE_SLUG, evalId:TEST_EVAL_ID, date:Date.now(), phase:"idle", qIdx:null, etat:"en_cours"};
 
-    // Tout poser en parallèle, puis démarrer
-    Promise.all([
-      db.ref(DB_ROOT+"/classes/"+TEST_CLASSE_SLUG).set(classeData),
-      db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(evalData),
-      db.ref(DB_ROOT+"/sessions/"+sid).set(sessData)
-    ]).then(function(){
+    // 1) Nettoyer toutes les sessions test orphelines accumulées (crashes/reloads précédents)
+    db.ref(DB_ROOT+"/sessions").once("value").then(function(snap){
+      var sessions = snap.val() || {};
+      var cleanups = [];
+      Object.keys(sessions).forEach(function(oldSid){
+        var os = sessions[oldSid];
+        if(os && (os.classeSlug === TEST_CLASSE_SLUG || os.evalId === TEST_EVAL_ID)){
+          cleanups.push(db.ref(DB_ROOT+"/sessions/"+oldSid).remove());
+        }
+      });
+      return Promise.all(cleanups);
+    }).then(function(){
+      // 2) Créer classe + éval + nouvelle session en parallèle
+      return Promise.all([
+        db.ref(DB_ROOT+"/classes/"+TEST_CLASSE_SLUG).set(classeData),
+        db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(evalData),
+        db.ref(DB_ROOT+"/sessions/"+sid).set(sessData)
+      ]);
+    }).then(function(){
       return db.ref(DB_ROOT+"/sessionActive/"+TEST_CLASSE_SLUG).set(sid);
     }).then(function(){
       setSessionId(sid);
@@ -1841,8 +2619,29 @@ function AppTest(p){
       if(!sid){ alert("Aucune session active. Lance d'abord une question."); return; }
       db.ref(DB_ROOT+"/sessions/"+sid).once("value", function(s){
         var sess = s.val();
-        if(!sess || sess.phase !== "reponse"){
-          alert("La phase doit être « réponse » pour simuler. Phase actuelle : "+(sess ? sess.phase : "inconnue"));
+        if(!sess){ alert("Session introuvable."); return; }
+
+        // Phase AUTOEVAL : chaque élève vote aléatoirement pour une fourchette
+        if(sess.phase === "autoeval"){
+          var FOURCH = ["vert","bleu","orange","rouge"];
+          TEST_ELEVES.forEach(function(e){
+            var slug = slugify(e.nomComplet);
+            if(sess.autoevals && sess.autoevals[slug]) return; // déjà voté
+            var delai = 200 + Math.random()*1300;
+            setTimeout(function(){
+              db.ref(DB_ROOT+"/sessions/"+sid+"/phase").once("value", function(p){
+                if(p.val() !== "autoeval") return;
+                var f = FOURCH[Math.floor(Math.random()*FOURCH.length)];
+                db.ref(DB_ROOT+"/sessions/"+sid+"/autoevals/"+slug).set(f);
+              });
+            }, delai);
+          });
+          return;
+        }
+
+        // Phase RÉPONSE : chaque élève répond aléatoirement
+        if(sess.phase !== "reponse"){
+          alert("La phase doit être « réponse » ou « autoeval » pour simuler. Phase actuelle : "+sess.phase);
           return;
         }
         var qIdx = sess.qIdx;
@@ -1901,6 +2700,7 @@ function AppTest(p){
               URL.revokeObjectURL(url);
             });
           }, title:"Exporte un snapshot complet de la base de données (incluant la session de test) au format JSON. Utile pour partager l'état exact en cas de bug à investiguer."}, "📥 Exporter snapshot test"),
+          h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setQrOpen(true)}, title:"Affiche un QR code à scanner avec ton téléphone pour piloter la session de test à distance. Pour vérifier que la VuePhone fonctionne en mode test."}, "📱 QR pilotage"),
           h("button", {className:"btn btn-rouge btn-sm", onClick:purgerEtSortir, title:"Termine le mode test : supprime la classe _TEST, l'éval test et toutes les sessions associées. Aucune donnée réelle n'est affectée."}, "🗑️ Sortir et purger")
         )
       ),
@@ -1923,7 +2723,7 @@ function AppTest(p){
         h("button", {
           className:"btn btn-primary btn-sm",
           onClick:simulerReponses,
-          title:"Simule les réponses de TOUS les élèves restants (qui n'ont pas encore répondu) avec un délai aléatoire entre chaque (200-1500ms), pour reproduire une vraie situation de classe où les élèves ne répondent pas tous en même temps. Choix de réponse aléatoire pour chaque élève. À utiliser pendant la phase « réponse »."
+          title:"Simule les réponses de TOUS les élèves restants (qui n'ont pas encore répondu ou voté) avec un délai aléatoire entre chaque (200-1500ms), pour reproduire une vraie situation de classe. Fonctionne en phase « réponse » (vote aléatoire parmi les choix de la question) ET en phase « autoeval » (vote aléatoire parmi les 4 fourchettes)."
         }, "🎲 Tous les élèves répondent")
       ),
       h("div", {className:"test-eleves-grid"},
@@ -1931,7 +2731,8 @@ function AppTest(p){
           return h(EleveSimule, {key:e.nomComplet, eleve:{nomComplet:e.nomComplet, slug:slugify(e.nomComplet)}});
         })
       )
-    )
+    ),
+    qrOpen && h(OverlayQRPhone, {onClose:function(){setQrOpen(false)}})
   );
 }
 
@@ -2031,9 +2832,13 @@ function EleveSimule(p){
   return h("div", {className:"test-eleve-panel"},
     h("div", {className:"test-eleve-header"}, "👤 "+p.eleve.nomComplet),
     h("div", {className:"test-eleve-content"},
-      session.phase === "correction"
-        ? h(EleveCorrection, {session:session, evaluation:evaluation, eleve:p.eleve, classe:classe})
-        : h(EleveEval, {session:session, evaluation:evaluation, eleve:p.eleve, classe:classe, onBack:function(){}})
+      session.phase === "finie"
+        ? h(EleveBilan, {session:session, evaluation:evaluation, eleve:p.eleve, classe:classe})
+        : session.phase === "correction"
+          ? h(EleveCorrection, {session:session, evaluation:evaluation, eleve:p.eleve, classe:classe})
+          : session.phase === "autoeval"
+            ? h(EleveAutoeval, {session:session, evaluation:evaluation, eleve:p.eleve, classe:classe})
+            : h(EleveEval, {session:session, evaluation:evaluation, eleve:p.eleve, classe:classe, onBack:function(){}})
     )
   );
 }
@@ -2351,26 +3156,77 @@ function VueBoard(p){
     var nivC = getNiveau(question.niveau);
     var nbQuestionsC = evaluation.questions.length;
     var bonnes = (question.bonnes || []);
+    var revealedB = session.corrRevealed === true;
     return withEleves(h("div", {className:"board-active board-correction"},
       h("div", {className:"board-bandeau-haut"},
         h("span", {className:"board-classe-mini"}, classe.nom),
         h("span", {className:"board-niveau-pastille", style:{background:nivC.color}}, nivC.label),
         h("span", {className:"board-q-count"}, "Correction — Q"+(qIdx+1)+" / "+nbQuestionsC)
       ),
+      h("div", {style:{textAlign:"center"}},
+        h("span", {className:"board-correction-banner-peda"}, "💡 On corrige d'abord les questions les plus ratées par la classe")
+      ),
       h("div", {className:"board-reponse-enonce"}, question.enonce),
       h("div", {className:"board-choix-grille"},
         (question.choix || []).map(function(c, i){
           var estBonne = bonnes.indexOf(i) >= 0;
-          return h("div", {key:i, className:"board-choix-item "+(estBonne ? "choix-bon" : "choix-mauvais")},
+          var cls = "board-choix-item";
+          if(revealedB) cls += " " + (estBonne ? "choix-bon" : "choix-mauvais");
+          return h("div", {key:i, className:cls},
             h("span", {className:"board-choix-lettre"}, lettreFromIndex(i)),
             h("span", {className:"board-choix-texte"}, c),
-            estBonne && h("span", {className:"board-choix-coche"}, "✓")
+            revealedB && estBonne && h("span", {className:"board-choix-coche"}, "✓")
           );
         })
       ),
       h("div", {className:"board-correction-bas"},
-        h("span", null, "✅ Bonne"+(bonnes.length>1?"s":"")+" réponse"+(bonnes.length>1?"s":"")+" : "+bonnes.map(function(i){return lettreFromIndex(i)}).join(", "))
+        revealedB
+          ? h("span", null, "✅ Bonne"+(bonnes.length>1?"s":"")+" réponse"+(bonnes.length>1?"s":"")+" : "+bonnes.map(function(i){return lettreFromIndex(i)}).join(", "))
+          : h("span", {style:{color:"#FFD23F"}}, "💡 Écoute l'explication — la réponse va être révélée.")
+      ),
+      revealedB && question.explication && h("div", {className:"board-explication"},
+        h("div", {className:"board-explication-titre"}, "💡 Explication"),
+        h("div", {className:"board-explication-texte"}, question.explication)
       )
+    ));
+  }
+
+  // Phase AUTOEVAL : grand écran de prompt pour les élèves + compteur de votes
+  if(phase === "autoeval"){
+    var aevB = session.autoevals || {};
+    var nbAuto = Object.keys(aevB).length;
+    var nbTotB = evaluation.questions.length;
+    var maxPB = calculerMaxPondere(evaluation.questions);
+    var distribB = {vert:0, bleu:0, orange:0, rouge:0};
+    Object.values(aevB).forEach(function(v){ if(distribB[v]!=null) distribB[v]++; });
+    var bV = bornesFourchette("vert", nbTotB);
+    var bBl = bornesFourchette("bleu", nbTotB);
+    var bOr = bornesFourchette("orange", nbTotB);
+    var bRo = bornesFourchette("rouge", nbTotB);
+    function fmtBornes(b){
+      if(b.inf === b.sup) return b.inf+"";
+      return b.inf+"–"+b.sup;
+    }
+    return withEleves(h("div", {className:"board-active board-autoeval"},
+      h("div", {className:"board-autoeval-titre"}, "🎯 Votre estimation"),
+      h("div", {className:"board-autoeval-consigne"}, "Combien de bonnes réponses pensez-vous avoir données sur "+nbTotB+" ?"),
+      h("div", {className:"board-autoeval-compteur"}, "✋ ", h("strong", null, nbAuto), " élève"+(nbAuto>1?"s ont":" a")+" voté"),
+      h("div", {className:"board-autoeval-distrib"},
+        h("div", {className:"board-autoeval-cell fourchette-vert"}, h("div", {className:"board-autoeval-emoji"}, "🟢"), h("strong", null, distribB.vert), h("span", null, fmtBornes(bV)+" bonnes")),
+        h("div", {className:"board-autoeval-cell fourchette-bleu"}, h("div", {className:"board-autoeval-emoji"}, "🔵"), h("strong", null, distribB.bleu), h("span", null, fmtBornes(bBl)+" bonnes")),
+        h("div", {className:"board-autoeval-cell fourchette-orange"}, h("div", {className:"board-autoeval-emoji"}, "🟠"), h("strong", null, distribB.orange), h("span", null, fmtBornes(bOr)+" bonnes")),
+        h("div", {className:"board-autoeval-cell fourchette-rouge"}, h("div", {className:"board-autoeval-emoji"}, "🔴"), h("strong", null, distribB.rouge), h("span", null, fmtBornes(bRo)+" bonnes"))
+      )
+    ));
+  }
+
+  // Phase FINIE : récap classe pour projection
+  if(phase === "finie"){
+    return withEleves(h("div", {className:"board-active board-finie"},
+      h("div", {className:"board-finie-emoji"}, "🏁"),
+      h("div", {className:"board-finie-titre"}, "Session terminée"),
+      h("div", {className:"board-finie-sub"}, classe.nom + " — " + evaluation.titre),
+      h("div", {className:"board-finie-msg"}, "Les élèves consultent leur bilan personnel sur leur téléphone.")
     ));
   }
 
@@ -2434,6 +3290,7 @@ function VuePhone(p){
   var s2 = useState({}), evals = s2[0], setEvals = s2[1];
   var s3 = useState({}), sessions = s3[0], setSessions = s3[1];
   var s4 = useState({}), sessionActive = s4[0], setSessionActive = s4[1];
+  var st = useState(0), tick = st[0], setTick = st[1]; // tick chrono (B-ii)
 
   useEffect(function(){
     db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}); });
@@ -2446,6 +3303,12 @@ function VuePhone(p){
       db.ref(DB_ROOT+"/sessions").off();
       db.ref(DB_ROOT+"/sessionActive").off();
     };
+  }, []);
+
+  // Tick chaque seconde pour rafraîchir l'affichage du chrono (B-ii)
+  useEffect(function(){
+    var id = setInterval(function(){ setTick(function(t){ return t+1; }); }, 1000);
+    return function(){ clearInterval(id); };
   }, []);
 
   // Trouver la session active (la plus récente s'il y en a plusieurs)
@@ -2477,87 +3340,90 @@ function VuePhone(p){
   var phase = activeSession.phase || "—";
   var totalQ = (ev.questions || []).length;
 
-  // ─── Actions (B2) — duplication minimale de SessionLive ───
-  function notifyPhone(msg, type){
-    var nid = "n_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
-    db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/notifs/"+nid).set({msg:msg, type:type||"info", ts:Date.now()});
-  }
-  function actLancerQ(){
-    var newIdx = (qIdx == null) ? 0 : qIdx + 1;
-    if(newIdx >= totalQ){ alert("Toutes les questions ont été posées."); return; }
-    db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({
-      qIdx:newIdx, phase:"reflexion", phaseStart:Date.now(), reouverts:null, paused:null
-    });
-  }
-  function actAutoriser(){
-    db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({
-      phase:"reponse", phaseStart:Date.now(), chronoReponse: activeSession.chronoReponse || 5
-    });
-  }
-  function actClore(){
-    db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({phase:"attente"});
-  }
-  function actTogglePause(){
-    if(activeSession.paused){
-      var rest = activeSession.paused.remaining, dur = activeSession.paused.duree;
-      var newStart = Date.now() - (dur - rest)*1000;
-      db.ref(DB_ROOT+"/sessions/"+activeSession.id).update({phaseStart:newStart, paused:null});
-      notifyPhone("Le chrono reprend.", "info");
-    } else {
-      if(phase !== "reflexion" && phase !== "reponse") return;
-      var d = phase === "reflexion"
-        ? (question ? getNiveau(question.niveau).chrono : 10)
-        : (activeSession.chronoReponse || 5);
-      var elapsed = Math.floor((Date.now() - activeSession.phaseStart)/1000);
-      var r = Math.max(0, d - elapsed);
-      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/paused").set({remaining:r, duree:d, at:Date.now()});
-      notifyPhone("⏸️ Pause demandée par le professeur.", "pause");
-    }
-  }
-  function actPlus5(){
-    if(activeSession.paused){
-      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/paused/remaining").set((activeSession.paused.remaining||0) + 5);
-    } else if(phase === "reflexion" || phase === "reponse"){
-      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/phaseStart").set(activeSession.phaseStart + 5*1000);
-    } else { return; }
-    notifyPhone("⏱️ Le professeur a ajouté 5 secondes.", "info");
-  }
+  // ─── Actions (B2) — déléguées à sessActions (factorisation dette technique) ───
+  function actLancerQ(){ sessActions.lancerQ(activeSession, ev); }
+  function actAutoriser(){ sessActions.autoriser(activeSession); }
+  function actClore(){ sessActions.clore(activeSession, true); }
+  function actTogglePause(){ sessActions.togglePause(activeSession, ev, question); }
+  function actPlus5(){ sessActions.ajouterTemps(activeSession, 5); }
+  function actRevealer(){ sessActions.revealer(activeSession); }
+  function actLancerCorrection(){ sessActions.lancerCorrection(activeSession, ev); }
   var lancerLabel = (qIdx == null) ? "🚀 Lancer Q1" : ("🚀 Lancer Q"+(qIdx+2));
   var lancerDisabled = (qIdx != null && qIdx+1 >= totalQ);
   var pauseLabel = activeSession.paused ? "▶️ Reprendre" : "⏸️ Pause";
+  // États désactivés selon la phase (B-i)
+  var isReflex = (phase === "reflexion");
+  var isResp = (phase === "reponse");
+  var isActif = isReflex || isResp;
+  var hasPaused = !!activeSession.paused;
+  var disLancer = lancerDisabled || isActif;
+  var disAutor = !isReflex;
+  var disClore = !isActif;
+  var disPause = !(isActif || hasPaused);
+  var disPlus5 = !(isActif || hasPaused);
+  var isCorr = (phase === "correction");
+  var isAutoeval = (phase === "autoeval");
+  var disRevealer = !isCorr || !!activeSession.corrRevealed;
+  // Chrono restant (B-ii)
+  var chronoVisible = isActif || hasPaused;
+  var chronoSec = 0;
+  if(hasPaused){
+    chronoSec = activeSession.paused.remaining || 0;
+  } else if(isActif){
+    var dur = isReflex
+      ? (question ? getNiveau(question.niveau).chrono : 10)
+      : (activeSession.chronoReponse || 5);
+    var elapsed = Math.floor((Date.now() - activeSession.phaseStart)/1000);
+    chronoSec = Math.max(0, dur - elapsed);
+  }
+  var chronoColor = chronoSec <= 3 ? "var(--rouge)" : (chronoSec <= 5 ? "var(--jaune)" : "#fff");
 
-  return h("div", {style:{padding:".7rem .7rem 2rem",color:"#fff",minHeight:"100vh"}},
-    // Bandeau
-    h("div", {style:{background:"rgba(0,0,0,.35)",borderRadius:"10px",padding:".55rem .8rem",marginBottom:".5rem"}},
+  return h("div", {style:{padding:".7rem .7rem 0",color:"#fff",height:"100vh",display:"flex",flexDirection:"column",boxSizing:"border-box"}},
+    // Bandeau (flex-shrink:0)
+    h("div", {style:{background:"rgba(0,0,0,.35)",borderRadius:"10px",padding:".55rem .8rem",marginBottom:".5rem",flexShrink:0}},
       h("div", {style:{fontWeight:"900",fontSize:".95rem"}}, classe.nom),
       h("div", {style:{fontSize:".75rem",opacity:.85}}, ev.titre),
       h("div", {style:{marginTop:".3rem",fontSize:".8rem",fontWeight:"bold"}}, "Phase : "+phase+" — Q "+(qIdx != null ? (qIdx+1) : "—")+"/"+totalQ)
     ),
+    // Chrono restant (B-ii)
+    chronoVisible && h("div", {style:{background:"rgba(0,0,0,.3)",borderRadius:"10px",padding:".35rem",marginBottom:".5rem",textAlign:"center",flexShrink:0}},
+      h("div", {style:{fontSize:"2.4rem",fontWeight:"900",color:chronoColor,lineHeight:"1",fontVariantNumeric:"tabular-nums"}},
+        (hasPaused ? "⏸ " : "") + chronoSec + "s"
+      )
+    ),
     // Q en cours
-    question && h("div", {style:{background:"rgba(255,255,255,.95)",color:"var(--noir)",borderRadius:"10px",padding:".6rem .9rem",marginBottom:".35rem"}},
+    question && h("div", {style:{background:"rgba(255,255,255,.95)",color:"var(--noir)",borderRadius:"10px",padding:".6rem .9rem",marginBottom:".35rem",flexShrink:0}},
       h("div", {style:{fontWeight:"900",fontSize:".7rem",color:"var(--violet)",letterSpacing:".05em",marginBottom:".15rem"}}, "Q"+(qIdx+1)),
       h("div", {style:{fontSize:".9rem",lineHeight:"1.3"}}, question.enonce || "")
     ),
     // Q+1
-    nextQuestion && h("div", {style:{background:"rgba(255,255,255,.4)",color:"var(--noir)",borderRadius:"8px",padding:".35rem .8rem",marginBottom:".55rem",fontSize:".75rem",lineHeight:"1.25"}},
+    nextQuestion && h("div", {style:{background:"rgba(255,255,255,.4)",color:"var(--noir)",borderRadius:"8px",padding:".35rem .8rem",marginBottom:".55rem",fontSize:".75rem",lineHeight:"1.25",flexShrink:0}},
       h("span", {style:{fontWeight:"900",color:"var(--violet)"}}, "Suiv. "),
       (nextQuestion.enonce || "").slice(0, 80) + ((nextQuestion.enonce||"").length > 80 ? "…" : "")
     ),
-    // Boutons d'action (B2)
-    h("div", {style:{display:"grid",gridTemplateColumns:"1fr",gap:".4rem",marginBottom:".6rem"}},
-      h("button", {onClick:actLancerQ, disabled:lancerDisabled, style:{padding:".8rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--violet),var(--rose))",color:"#fff",fontWeight:"900",fontSize:".95rem",cursor:lancerDisabled?"not-allowed":"pointer",opacity:lancerDisabled?.5:1,fontFamily:"inherit",boxShadow:"0 4px 12px rgba(0,0,0,.2)"}}, lancerLabel),
+    // Boutons d'action (B2 + B-i états désactivés)
+    h("div", {style:{display:"grid",gridTemplateColumns:"1fr",gap:".4rem",marginBottom:".6rem",flexShrink:0}},
+      h("button", {onClick:actLancerQ, disabled:disLancer, style:{padding:".8rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--violet),var(--rose))",color:"#fff",fontWeight:"900",fontSize:".95rem",cursor:disLancer?"not-allowed":"pointer",opacity:disLancer?.45:1,fontFamily:"inherit",boxShadow:disLancer?"none":"0 4px 12px rgba(0,0,0,.2)"}}, lancerLabel),
       h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
-        h("button", {onClick:actAutoriser, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--turquoise),var(--bleu))",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.18)"}}, "✋ Autoriser"),
-        h("button", {onClick:actClore, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--rouge),#DC2626)",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.18)"}}, "🛑 Clore")
+        h("button", {onClick:actAutoriser, disabled:disAutor, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--turquoise),var(--bleu))",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:disAutor?"not-allowed":"pointer",opacity:disAutor?.45:1,fontFamily:"inherit",boxShadow:disAutor?"none":"0 3px 10px rgba(0,0,0,.18)"}}, "✋ Autoriser"),
+        h("button", {onClick:actClore, disabled:disClore, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--rouge),#DC2626)",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:disClore?"not-allowed":"pointer",opacity:disClore?.45:1,fontFamily:"inherit",boxShadow:disClore?"none":"0 3px 10px rgba(0,0,0,.18)"}}, "🛑 Clore")
       ),
       h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
-        h("button", {onClick:actTogglePause, style:{padding:".55rem",border:"2px solid rgba(255,255,255,.4)",borderRadius:"10px",background:"rgba(255,255,255,.15)",color:"#fff",fontWeight:"900",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit"}}, pauseLabel),
-        h("button", {onClick:actPlus5, style:{padding:".55rem",border:"none",borderRadius:"10px",background:"var(--jaune)",color:"var(--noir)",fontWeight:"900",fontSize:".82rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.15)"}}, "+5 sec")
+        h("button", {onClick:actTogglePause, disabled:disPause, style:{padding:".55rem",border:"2px solid rgba(255,255,255,.4)",borderRadius:"10px",background:"rgba(255,255,255,.15)",color:"#fff",fontWeight:"900",fontSize:".82rem",cursor:disPause?"not-allowed":"pointer",opacity:disPause?.45:1,fontFamily:"inherit"}}, pauseLabel),
+        h("button", {onClick:actPlus5, disabled:disPlus5, style:{padding:".55rem",border:"none",borderRadius:"10px",background:"var(--jaune)",color:"var(--noir)",fontWeight:"900",fontSize:".82rem",cursor:disPlus5?"not-allowed":"pointer",opacity:disPlus5?.45:1,fontFamily:"inherit",boxShadow:disPlus5?"none":"0 3px 10px rgba(0,0,0,.15)"}}, "+5 sec")
+      ),
+      isCorr && h("button", {onClick:actRevealer, disabled:disRevealer, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--jaune),#FF8C42)",color:"var(--noir)",fontWeight:"900",fontSize:".88rem",cursor:disRevealer?"not-allowed":"pointer",opacity:disRevealer?.45:1,fontFamily:"inherit",boxShadow:disRevealer?"none":"0 3px 10px rgba(0,0,0,.18)"}}, activeSession.corrRevealed?"💡 Révélée":"💡 Révéler la réponse"),
+      // Polish : bouton "Lancer correction" depuis le tel en phase autoeval
+      isAutoeval && h("button", {onClick:actLancerCorrection, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--jaune),#FF8C42)",color:"var(--noir)",fontWeight:"900",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.18)"}, title:"Lance la correction collective. Les élèves verront les questions corrigées dans l'ordre du taux d'erreur décroissant (les plus ratées d'abord)."}, "📝 Lancer la correction"),
+      // Polish : explication visible sur le tel après reveal (en phase correction)
+      isCorr && activeSession.corrRevealed && question && question.explication && h("div", {style:{marginTop:".6rem",padding:".6rem .8rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".85rem",lineHeight:1.4}},
+        h("div", {style:{fontWeight:900,fontSize:".75rem",letterSpacing:".05em",marginBottom:".25rem",color:"#FFD23F"}}, "💡 EXPLICATION"),
+        h("div", null, question.explication)
       )
     ),
-    // Liste élèves
-    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem"}},
-      h("div", {style:{fontSize:".7rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".2rem .3rem .3rem"}}, "ÉLÈVES"),
+    // Liste élèves (flex:1, scrollable)
+    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem",flex:"1 1 auto",overflowY:"auto",minHeight:0,marginBottom:".7rem"}},
+      h("div", {style:{fontSize:".7rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".2rem .3rem .3rem",position:"sticky",top:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)",margin:"-.4rem -.5rem .3rem",borderRadius:"10px 10px 0 0"}}, "ÉLÈVES"),
       (classe.eleves||[]).slice().sort(function(a,b){return (a.nomComplet||"").localeCompare(b.nomComplet||"")}).map(function(el){
         var slug = slugify(el.nomComplet);
         var absent = (activeSession.absents||[]).indexOf(slug) >= 0;
@@ -2881,14 +3747,20 @@ function OngletClasses(){
         h(InfoI, null, "Les classes sont la base de tout. Une classe regroupe les élèves qui passeront ensemble les évaluations. Les noms saisis ici servent à identifier l'élève (par fuzzy matching) quand il se connecte côté élève.")
       ),
       arr.length === 0
-        ? h("p", {style:{color:"var(--muted)",fontStyle:"italic"}}, "Aucune classe pour l'instant.")
+        ? h("p", {style:{color:"var(--gris)",fontStyle:"italic"}}, "Aucune classe pour l'instant.")
         : arr.map(function(c){
             var nbSansSexe = (c.eleves||[]).filter(function(e){return !e.sexe}).length;
             return h("div", {key:c.slug, className:"classe-block"},
               h("div", {className:"classe-row"},
                 h("div", {className:"classe-info"},
                   h("strong", null, c.nom),
-                  c.niveau && h("span", {className:"classe-niveau-badge", title:"Niveau de classe (utilisé pour mémoriser les seuils par niveau et pour l'agrégation MJPC)"}, c.niveau),
+                  c.niveau && h("a", {
+                    className:"classe-niveau-badge",
+                    href:urlProfilClasseMJPC(c.slug),
+                    target:"_blank",
+                    rel:"noopener noreferrer",
+                    title:"Niveau "+c.niveau+". Clique pour ouvrir le profil longitudinal de la classe sur monsieurjaipascompris (suivi des résultats sur toute l'année, agrégation des évaluations QCM passées, comparaison aux autres classes du même niveau). Cette page n'est pas encore créée — le branchement est préparé."
+                  }, c.niveau),
                   h("div", {className:"sub"}, (c.eleves||[]).length+" élèves"+(c.niveau ? "" : " · ⚠️ niveau à définir")+(nbSansSexe>0 ? " · ⚠️ "+nbSansSexe+" sans sexe défini" : ""))
                 ),
                 h("div", {className:"row"},
@@ -3035,13 +3907,13 @@ function OngletEvals(){
         ),
         h("div", {className:"row"},
           h("button", {className:"btn btn-or btn-sm", onClick:function(){setShowPrompt(true)}}, "🤖 Prompt IA",
-            h(InfoI, null, "Ce bouton copie un prompt prêt à coller dans Claude (ou une autre IA). L'IA générera ton QCM dans un format JSON que l'app peut lire automatiquement. Tu travailles avec l'IA jusqu'à obtenir le QCM voulu, puis tu colles le résultat ici.")
+            h(InfoI, null, "Ouvre la modale du prompt IA. Tu peux copier ce prompt (prêt à coller dans Claude ou une autre IA pour qu'elle te génère ton QCM au format JSON attendu) ou modifier le prompt selon tes besoins (tes modifications sont enregistrées et réutilisées). Le prompt par défaut demande à l'IA combien de questions, combien à réponses multiples, des énoncés autonomes et une explication par question.")
           ),
           h("button", {className:"btn btn-primary btn-sm", onClick:function(){setEditId(null);setShowCreate(true)}, title:"Créer une nouvelle évaluation. Tu colles un JSON (généré par l'IA via le bouton Prompt IA) et l'app parse automatiquement les questions, choix, bonnes réponses et niveaux."}, "➕ Nouvelle évaluation")
         )
       ),
       arr.length === 0
-        ? h("p", {style:{color:"var(--muted)",fontStyle:"italic",marginTop:".8rem"}}, "Aucune évaluation pour l'instant.")
+        ? h("p", {style:{color:"var(--gris)",fontStyle:"italic",marginTop:".8rem"}}, "Aucune évaluation pour l'instant.")
         : h("div", {style:{marginTop:".8rem"}},
             arr.map(function(e){
               return h("div", {key:e.id, className:"eval-row"},
@@ -3073,15 +3945,75 @@ function OngletEvals(){
 
 // ─────────── Modal Prompt IA ───────────
 function ModalPromptIA(p){
+  var s1 = useState(PROMPT_IA), prompt = s1[0], setPrompt = s1[1];
+  var s2 = useState(false), editing = s2[0], setEditing = s2[1];
+  var s3 = useState(PROMPT_IA), draft = s3[0], setDraft = s3[1];
+  var s4 = useState(""), msg = s4[0], setMsg = s4[1];
+
+  useEffect(function(){
+    db.ref(DB_ROOT+"/settings/promptIa").once("value", function(snap){
+      var v = snap.val();
+      if(v){ setPrompt(v); setDraft(v); PROMPT_IA = v; }
+    });
+  }, []);
+
+  function copier(){
+    try{
+      navigator.clipboard.writeText(prompt);
+      setMsg("✅ Prompt copié dans le presse-papiers");
+      setTimeout(function(){setMsg("")}, 2500);
+    }catch(e){
+      setMsg("⚠️ Copie automatique impossible. Sélectionne le texte et copie manuellement.");
+    }
+  }
+  function ouvrirEdition(){
+    setDraft(prompt);
+    setEditing(true);
+    setMsg("");
+  }
+  function enregistrer(){
+    db.ref(DB_ROOT+"/settings/promptIa").set(draft, function(err){
+      if(err){ setMsg("❌ Erreur: "+err.message); return; }
+      setPrompt(draft);
+      PROMPT_IA = draft;
+      setEditing(false);
+      setMsg("✅ Prompt enregistré. Il sera réutilisé la prochaine fois.");
+      setTimeout(function(){setMsg("")}, 3000);
+    });
+  }
+  function restaurerDefaut(){
+    if(!confirm("Restaurer le prompt par défaut ? Tes modifications actuelles seront perdues (le prompt enregistré dans Firebase sera écrasé après ton clic sur « Enregistrer »).")) return;
+    setDraft(PROMPT_IA_DEFAUT);
+  }
+  function annuler(){
+    setDraft(prompt);
+    setEditing(false);
+    setMsg("");
+  }
+
   return h("div", {className:"modal-back", onClick:function(e){if(e.target.className==="modal-back")p.onClose()}},
-    h("div", {className:"modal"},
+    h("div", {className:"modal", style:{maxWidth:"720px"}},
       h("button", {className:"modal-close", onClick:p.onClose}, "✕"),
-      h("h2", null, "🤖 Prompt à coller dans une IA"),
-      h("p", {style:{fontSize:".9rem",color:"var(--muted)",marginBottom:".8rem"}},
+      h("h2", null, "🤖 Prompt à coller dans une IA",
+        h(InfoI, null, "Ce prompt guide l'IA pour qu'elle te génère un QCM dans le format attendu par l'app. Tu peux le modifier (bouton « ✏️ Modifier ») pour l'adapter à tes besoins. Tes modifications sont enregistrées dans Firebase et réutilisées à chaque ouverture.")
+      ),
+      h("p", {style:{fontSize:".9rem",color:"var(--gris)",marginBottom:".8rem"}},
         "Copie ce prompt et colle-le dans une nouvelle conversation Claude. L'IA te générera un QCM au format JSON que tu pourras coller directement dans le champ « Nouvelle évaluation »."
       ),
-      h("button", {className:"btn btn-primary", onClick:p.onCopy}, "📋 Copier le prompt"),
-      h("div", {className:"codeblock"}, PROMPT_IA)
+      !editing && h("div", {className:"row", style:{gap:".5rem",flexWrap:"wrap"}},
+        h("button", {className:"btn btn-primary", onClick:copier, title:"Copie le prompt actuel dans le presse-papiers."}, "📋 Copier le prompt"),
+        h("button", {className:"btn btn-ghost", onClick:ouvrirEdition, title:"Ouvre l'éditeur pour modifier le prompt. Les modifications sont enregistrées dans Firebase et réutilisées la prochaine fois."}, "✏️ Modifier le prompt")
+      ),
+      editing && h("div", null,
+        h("textarea", {value:draft, onChange:function(e){setDraft(e.target.value)}, style:{width:"100%",minHeight:"320px",fontFamily:"ui-monospace,monospace",fontSize:".85rem",padding:".7rem",border:"2px solid var(--violet)",borderRadius:"8px"}}),
+        h("div", {className:"row", style:{gap:".5rem",flexWrap:"wrap",marginTop:".7rem"}},
+          h("button", {className:"btn btn-primary", onClick:enregistrer, title:"Enregistre ce prompt dans Firebase. Il sera réutilisé à chaque ouverture du modal, sur tous les appareils."}, "💾 Enregistrer"),
+          h("button", {className:"btn btn-ghost", onClick:annuler, title:"Annule les modifications et revient au prompt enregistré."}, "↩️ Annuler"),
+          h("button", {className:"btn btn-ghost", onClick:restaurerDefaut, title:"Remplace le brouillon par le prompt fourni par défaut avec l'app. Tu pourras ensuite cliquer sur « Enregistrer » pour le rendre actif."}, "🔄 Restaurer le prompt par défaut")
+        )
+      ),
+      msg && h("div", {style:{marginTop:".7rem",padding:".5rem .8rem",borderRadius:"8px",background:msg.startsWith("✅")?"#E8F6EE":msg.startsWith("❌")?"#FFF4F4":"#FFF4EC",color:"var(--noir)",fontSize:".9rem",fontWeight:"600"}}, msg),
+      !editing && h("div", {className:"codeblock", style:{marginTop:".8rem"}}, prompt)
     )
   );
 }
@@ -3110,8 +4042,12 @@ function ModalCreerEval(p){
     copy.questions = copy.questions.slice();
     copy.questions[qIndex] = Object.assign({}, copy.questions[qIndex], {niveau:nivId});
     setParsed(copy);
-    // Mettre à jour le texte JSON aussi
     setTexte(JSON.stringify({titre:copy.titre, questions:copy.questions}, null, 2));
+  }
+  function mettreAJour(newParsed){
+    setParsed(newParsed);
+    setTexte(JSON.stringify({titre:newParsed.titre, questions:newParsed.questions}, null, 2));
+    setParseErr("");
   }
 
   function enregistrer(){
@@ -3141,10 +4077,14 @@ function ModalCreerEval(p){
         h("textarea", {className:"json", value:texte, onChange:function(e){setTexte(e.target.value)}, placeholder:'{\n  "titre": "Mon évaluation",\n  "questions": [\n    {"enonce":"...","choix":[...],"bonnes":[0],"niveau":"standard"}\n  ]\n}'})
       ),
       h("div", {className:"row"},
-        h("button", {className:"btn btn-ghost", onClick:tryParse}, "🔍 Vérifier le format")
+        h("button", {className:"btn btn-ghost", onClick:tryParse, title:"Parse le JSON ci-dessus et l'affiche en mode éditable ci-dessous."}, "🔍 Vérifier le format"),
+        !parsed && h("button", {className:"btn btn-ghost", onClick:function(){
+          var blank = {titre:"Nouvelle évaluation", questions:[{enonce:"", choix:["", ""], bonnes:[], niveau:"standard", explication:""}]};
+          mettreAJour(blank);
+        }, title:"Crée une évaluation vide pour la construire directement dans l'éditeur visuel ci-dessous (sans passer par l'IA)."}, "✨ Démarrer à blanc")
       ),
       parseErr && h("div", {className:"preview-error"}, "❌ "+parseErr),
-      parsed && h(PreviewEval, {parsed:parsed, onChangerNiveau:changerNiveau}),
+      parsed && h(PreviewEval, {parsed:parsed, onChangerNiveau:changerNiveau, onUpdate:mettreAJour}),
       parsed && h("div", {className:"row", style:{marginTop:"1rem"}},
         h("button", {className:"btn btn-primary", onClick:enregistrer}, "💾 Enregistrer l'évaluation")
       )
@@ -3152,20 +4092,103 @@ function ModalCreerEval(p){
   );
 }
 
-// ─────────── Preview évaluation ───────────
+// ─────────── Preview évaluation (éditable in-place) ───────────
 function PreviewEval(p){
   var parsed = p.parsed;
+  function commit(copy){ p.onUpdate ? p.onUpdate(copy) : null; }
+  function modifTitre(v){ commit(Object.assign({}, parsed, {titre:v})); }
+  function modifQ(qi, modif){
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    copy.questions[qi] = Object.assign({}, copy.questions[qi], modif);
+    commit(copy);
+  }
+  function modifChoix(qi, ci, val){
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    var q = Object.assign({}, copy.questions[qi]);
+    q.choix = q.choix.slice();
+    q.choix[ci] = val;
+    copy.questions[qi] = q;
+    commit(copy);
+  }
+  function toggleBonne(qi, ci){
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    var q = Object.assign({}, copy.questions[qi]);
+    var bonnes = (q.bonnes || []).slice();
+    var idx = bonnes.indexOf(ci);
+    if(idx >= 0) bonnes.splice(idx, 1);
+    else bonnes.push(ci);
+    bonnes.sort(function(a,b){return a-b});
+    q.bonnes = bonnes;
+    copy.questions[qi] = q;
+    commit(copy);
+  }
+  function ajouterChoix(qi){
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    var q = Object.assign({}, copy.questions[qi]);
+    q.choix = (q.choix || []).slice();
+    q.choix.push("");
+    copy.questions[qi] = q;
+    commit(copy);
+  }
+  function suppChoix(qi, ci){
+    if((parsed.questions[qi].choix || []).length <= 2){ alert("Au moins 2 choix obligatoires par question."); return; }
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    var q = Object.assign({}, copy.questions[qi]);
+    q.choix = q.choix.slice();
+    q.choix.splice(ci, 1);
+    q.bonnes = (q.bonnes || []).filter(function(x){return x !== ci}).map(function(x){return x > ci ? x-1 : x});
+    copy.questions[qi] = q;
+    commit(copy);
+  }
+  function suppQ(qi){
+    if(!confirm("Supprimer la question Q"+(qi+1)+" ? Cette action ne peut pas être annulée (sauf si tu n'enregistres pas l'évaluation).")) return;
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    copy.questions.splice(qi, 1);
+    commit(copy);
+  }
+  function ajouterQ(){
+    var copy = Object.assign({}, parsed);
+    copy.questions = (copy.questions || []).slice();
+    copy.questions.push({enonce:"", choix:["", ""], bonnes:[], niveau:"standard", explication:""});
+    commit(copy);
+  }
+  function deplacerQ(qi, dir){
+    var nv = qi + dir;
+    if(nv < 0 || nv >= parsed.questions.length) return;
+    var copy = Object.assign({}, parsed);
+    copy.questions = copy.questions.slice();
+    var tmp = copy.questions[nv];
+    copy.questions[nv] = copy.questions[qi];
+    copy.questions[qi] = tmp;
+    commit(copy);
+  }
+
   return h("div", {className:"preview"},
-    h("h3", {style:{margin:"0 0 .8rem 0",color:"var(--violet)"}}, "📋 "+parsed.titre+" — "+parsed.questions.length+" question"+(parsed.questions.length>1?"s":"")),
-    h("p", {style:{fontSize:".85rem",color:"var(--gris)",marginBottom:".8rem"}}, "Clique sur une pastille pour changer le niveau de difficulté de la question.",
-      h(InfoI, null, "Le niveau définit la durée du chrono de réflexion : Facile 5s, Standard 10s, Approfondi 15s, Expert 20s. La pastille colorée s'affiche aussi côté élève pendant la question. Choisis selon la difficulté objective de la question, pas selon ton ressenti."),
-      " ", h("strong", {style:{color:"var(--vert)"}}, "Vert ✓"), " = bonne(s) réponse(s)."
+    h("div", {className:"preview-titre-row"},
+      h("input", {className:"preview-titre-input", value:parsed.titre || "", onChange:function(e){modifTitre(e.target.value)}, placeholder:"Titre de l'évaluation"}),
+      h("span", {className:"preview-titre-meta"}, parsed.questions.length+" question"+(parsed.questions.length>1?"s":""))
+    ),
+    h("p", {style:{fontSize:".85rem",color:"var(--gris)",marginBottom:".8rem"}}, "Édite directement chaque champ. Coche les bonnes réponses. La pastille de niveau définit la durée de réflexion.",
+      h(InfoI, null, "Édition in-place : tu modifies chaque question directement dans cette zone (énoncé, choix, bonnes réponses, niveau, explication). Le JSON ci-dessus est mis à jour automatiquement. Tu peux aussi modifier le JSON directement et cliquer sur « Vérifier le format » pour rebasculer en mode visuel.")
     ),
     parsed.questions.map(function(q, i){
-      var multi = q.bonnes.length > 1;
-      return h("div", {key:i, className:"preview-q"},
+      var multi = (q.bonnes || []).length > 1;
+      return h("div", {key:i, className:"preview-q editable"},
         h("div", {className:"preview-q-header"},
-          h("span", {className:"preview-q-num"}, "Q"+(i+1), multi && h("span", {className:"multi-tag", title:"Plusieurs bonnes réponses définies. L'élève devra cocher exactement les bonnes lettres."}, "RÉPONSES MULTIPLES")),
+          h("div", {className:"preview-q-titre-row"},
+            h("span", {className:"preview-q-num"}, "Q"+(i+1), multi && h("span", {className:"multi-tag", title:"Plusieurs bonnes réponses définies. L'élève devra cocher exactement les bonnes lettres."}, "RÉPONSES MULTIPLES")),
+            h("div", {className:"preview-q-actions"},
+              h("button", {className:"btn-mini", onClick:function(){deplacerQ(i, -1)}, disabled:i===0, title:"Monter cette question d'un cran."}, "↑"),
+              h("button", {className:"btn-mini", onClick:function(){deplacerQ(i, 1)}, disabled:i===parsed.questions.length-1, title:"Descendre cette question d'un cran."}, "↓"),
+              h("button", {className:"btn-mini btn-mini-supp", onClick:function(){suppQ(i)}, title:"Supprimer cette question."}, "🗑")
+            )
+          ),
           h("div", {className:"preview-q-niveau-row"},
             NIVEAUX.map(function(n){
               var actif = q.niveau === n.id;
@@ -3173,23 +4196,35 @@ function PreviewEval(p){
                 key:n.id,
                 className:"niv-pastille niv-"+n.id+(actif?"":" inactif"),
                 onClick:function(){p.onChangerNiveau(i, n.id)},
-                title:n.label+" — "+n.chrono+"s"
+                title:n.label+" — "+n.chrono+"s de réflexion."
               }, n.label, " ", n.chrono+"s");
             })
           )
         ),
-        h("div", {className:"preview-q-enonce"}, q.enonce),
-        h("div", {className:"preview-q-choix"},
-          q.choix.map(function(c, j){
-            var bon = q.bonnes.indexOf(j) >= 0;
-            return h("div", {key:j, className:"preview-choix"+(bon?" bon":"")},
+        h("textarea", {className:"preview-q-enonce-input", value:q.enonce || "", onChange:function(e){modifQ(i, {enonce:e.target.value})}, placeholder:"Énoncé de la question (autonome : l'élève doit pouvoir répondre sans voir les choix)"}),
+        h("div", {className:"preview-q-choix-edit"},
+          (q.choix || []).map(function(c, j){
+            var bon = (q.bonnes || []).indexOf(j) >= 0;
+            return h("div", {key:j, className:"preview-choix-edit"+(bon?" bon":"")},
+              h("input", {type:"checkbox", checked:bon, onChange:function(){toggleBonne(i, j)}, title:"Coche pour marquer ce choix comme bonne réponse."}),
               h("span", {className:"lettre"}, lettreFromIndex(j)+"."),
-              h("span", null, c, bon ? " ✓" : "")
+              h("input", {className:"preview-choix-input", value:c, onChange:function(e){modifChoix(i, j, e.target.value)}, placeholder:"Texte du choix"}),
+              h("button", {className:"btn-mini btn-mini-supp", onClick:function(){suppChoix(i, j)}, title:"Supprimer ce choix (minimum 2 choix par question)."}, "✕")
             );
-          })
+          }),
+          h("button", {className:"btn btn-ghost btn-sm", onClick:function(){ajouterChoix(i)}, title:"Ajouter un nouveau choix à cette question.", style:{marginTop:".4rem"}}, "➕ Ajouter un choix")
+        ),
+        h("div", {className:"preview-q-explication-zone"},
+          h("label", {className:"preview-q-explication-label"}, "💡 Explication (affichée aux élèves lors de la correction)",
+            h(InfoI, null, "Affichée aux élèves quand tu cliques sur « 💡 Révéler » pendant la correction. Sert à justifier la bonne réponse de façon pédagogique. 1 à 3 phrases. Laisse vide si tu ne veux pas afficher d'explication pour cette question.")
+          ),
+          h("textarea", {className:"preview-q-explication-input", value:q.explication || "", onChange:function(e){modifQ(i, {explication:e.target.value})}, placeholder:"Explication de la bonne réponse (1-3 phrases)"})
         )
       );
-    })
+    }),
+    h("div", {style:{marginTop:".8rem"}},
+      h("button", {className:"btn btn-ghost", onClick:ajouterQ, title:"Ajouter une nouvelle question vide à la fin de l'évaluation."}, "➕ Ajouter une question")
+    )
   );
 }
 
@@ -3521,7 +4556,9 @@ function OngletPilotage(){
         })()
       ),
       classeSlug && sessionsClasse.length > 0 && h("div", {className:"card"},
-        h("h2", null, "📚 Sessions précédentes — "+(classes[classeSlug] ? classes[classeSlug].nom : "")),
+        h("h2", null, "📚 Sessions précédentes — "+(classes[classeSlug] ? classes[classeSlug].nom : ""),
+          h(InfoI, null, "Liste de toutes les sessions déjà passées par cette classe. Tu peux relancer une évaluation déjà passée (utile pour faire un rattrapage avec un élève absent, par exemple) ou consulter le bilan classe d'une session terminée.")
+        ),
         h("div", {className:"results-eval-list"},
           sessionsClasse.map(function(s){
             var ev = evals[s.evalId];
@@ -3640,6 +4677,157 @@ function NiveauxEditor(){
 
 
 // ─────────── Session live (pilotage) ───────────
+function BilanClasse(p){
+  var sess = p.sess, ev = p.evaluation, classe = p.classe;
+  var s1 = useState(null), allReps = s1[0], setAllReps = s1[1];
+  var s2 = useState({}), autoevals = s2[0], setAutoevals = s2[1];
+
+  useEffect(function(){
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/reponses").once("value", function(s){ setAllReps(s.val() || {}); });
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/autoevals").once("value", function(s){ setAutoevals(s.val() || {}); });
+  }, [sess.id]);
+
+  if(allReps === null) return h("div", {className:"card"}, h("h2", null, "🏁 Bilan classe"), h("p", null, "Chargement…"));
+
+  var maxP = calculerMaxPondere(ev.questions);
+  var nbTotal = ev.questions.length;
+  var eleves = (classe.eleves || []).map(function(e){
+    var slug = e.slug || slugify(e.nomComplet);
+    var scoreP = 0; // pondéré
+    var scoreB = 0; // brut
+    ev.questions.forEach(function(q, i){
+      var rep = allReps[i] && allReps[i][slug];
+      var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
+      var bonnes = (q.bonnes||[]).slice().sort();
+      if(mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes)){
+        scoreP += POIDS_NIVEAU[q.niveau] || 1;
+        scoreB++;
+      }
+    });
+    var fReelle = fourchetteDuScore(scoreB, nbTotal); // basé sur le brut
+    var auto = autoevals[slug];
+    var fEst = auto ? FOURCHETTES_DEF.find(function(f){return f.key===auto}) : null;
+    var calib = null;
+    if(fEst){
+      var iE = IDX_FOURCHETTE[auto], iR = IDX_FOURCHETTE[fReelle.key];
+      calib = (iE === iR) ? "ok" : (iE > iR ? "sur" : "sous");
+    }
+    return {slug:slug, nom:e.nomComplet, scoreB:scoreB, scoreP:scoreP, fReelle:fReelle, fEst:fEst, calib:calib};
+  });
+
+  // Stats sur le score BRUT (cohérent avec l'autoeval)
+  var scoresB = eleves.map(function(e){return e.scoreB}).sort(function(a,b){return a-b});
+  var scoresP = eleves.map(function(e){return e.scoreP}).sort(function(a,b){return a-b});
+  var mediane = scoresB.length === 0 ? 0
+    : (scoresB.length % 2 ? scoresB[Math.floor(scoresB.length/2)]
+       : (scoresB[scoresB.length/2-1] + scoresB[scoresB.length/2])/2);
+  var moyenne = scoresB.length === 0 ? 0 : scoresB.reduce(function(a,b){return a+b},0) / scoresB.length;
+  var medianeP = scoresP.length === 0 ? 0
+    : (scoresP.length % 2 ? scoresP[Math.floor(scoresP.length/2)]
+       : (scoresP[scoresP.length/2-1] + scoresP[scoresP.length/2])/2);
+  var moyenneP = scoresP.length === 0 ? 0 : scoresP.reduce(function(a,b){return a+b},0) / scoresP.length;
+  var distribC = {vert:0, bleu:0, orange:0, rouge:0};
+  eleves.forEach(function(e){ distribC[e.fReelle.key]++; });
+  var calibStats = {ok:0, sur:0, sous:0, none:0};
+  eleves.forEach(function(e){ calibStats[e.calib || "none"]++; });
+
+  var qStats = ev.questions.map(function(q, i){
+    var totalRep = 0, bonRep = 0;
+    Object.keys(allReps[i] || {}).forEach(function(s){
+      var c = (allReps[i][s].choix || []).slice().sort();
+      if(c.length > 0){
+        totalRep++;
+        var bn = (q.bonnes||[]).slice().sort();
+        if(JSON.stringify(c) === JSON.stringify(bn)) bonRep++;
+      }
+    });
+    return {idx:i, q:q, totalRep:totalRep, bonRep:bonRep, taux:totalRep > 0 ? (bonRep/totalRep)*100 : 0};
+  });
+  var qPlusRatee = qStats.slice().sort(function(a,b){return a.taux - b.taux})[0];
+  var qPlusReussie = qStats.slice().sort(function(a,b){return b.taux - a.taux})[0];
+  var elevesTris = eleves.slice().sort(function(a,b){return b.scoreB - a.scoreB});
+
+  return h("div", null,
+    h("div", {className:"card"},
+      h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
+        h("h2", {style:{margin:0}}, "🏁 Bilan classe — "+ev.titre+" — "+classe.nom,
+          h(InfoI, null, "Synthèse complète à la fin de la session : statistiques agrégées (moyenne, médiane, plage), distribution des élèves dans les 4 fourchettes, calibration des autoévaluations, questions remarquables et détail par élève. Les statistiques principales sont exprimées en nombre de bonnes réponses (comme pour l'autoévaluation). Le score pondéré (Facile×1, Standard×2, Approfondi×3, Expert×4) est affiché en complément.")
+        ),
+        h("button", {className:"btn btn-rouge btn-sm", onClick:p.onTerminer, title:"Termine la session définitivement."}, "🛑 Terminer la session")
+      ),
+      h("div", {className:"bilan-classe-synthese"},
+        h("div", {className:"bilan-classe-stat"}, h("div", {className:"bilan-classe-stat-label"}, "Moyenne"), h("div", {className:"bilan-classe-stat-num"}, moyenne.toFixed(1)+" / "+nbTotal), h("div", {className:"bilan-classe-stat-sub"}, "pondérée : "+moyenneP.toFixed(1)+" / "+maxP)),
+        h("div", {className:"bilan-classe-stat"}, h("div", {className:"bilan-classe-stat-label"}, "Médiane"), h("div", {className:"bilan-classe-stat-num"}, mediane+" / "+nbTotal), h("div", {className:"bilan-classe-stat-sub"}, "pondérée : "+medianeP+" / "+maxP)),
+        h("div", {className:"bilan-classe-stat"}, h("div", {className:"bilan-classe-stat-label"}, "Plage"), h("div", {className:"bilan-classe-stat-num"}, scoresB.length > 0 ? scoresB[0]+"—"+scoresB[scoresB.length-1] : "—"), h("div", {className:"bilan-classe-stat-sub"}, "pondérée : "+(scoresP.length > 0 ? scoresP[0]+"—"+scoresP[scoresP.length-1] : "—")))
+      ),
+      h("h3", {style:{marginTop:"1.2rem"}}, "📊 Distribution",
+        h(InfoI, null, "Nombre d'élèves dans chaque fourchette de résultat. Permet de voir d'un coup si la classe a globalement bien ou mal réussi cette évaluation.")
+      ),
+      h("div", {className:"bilan-classe-distrib"},
+        h("div", {className:"bilan-classe-distrib-cell fourchette-vert"}, h("strong", null, distribC.vert), h("span", null, "🟢 Très bien")),
+        h("div", {className:"bilan-classe-distrib-cell fourchette-bleu"}, h("strong", null, distribC.bleu), h("span", null, "🔵 Bien")),
+        h("div", {className:"bilan-classe-distrib-cell fourchette-orange"}, h("strong", null, distribC.orange), h("span", null, "🟠 Moyen")),
+        h("div", {className:"bilan-classe-distrib-cell fourchette-rouge"}, h("strong", null, distribC.rouge), h("span", null, "🔴 Faible"))
+      ),
+      h("h3", null, "🎯 Calibration de l'autoévaluation",
+        h(InfoI, null, "Comparaison entre l'estimation des élèves et leur résultat réel. Bien évalués = ils se connaissent. Sous-évalués = manque de confiance. Sur-évalués = surestiment leur travail. Donne une indication précieuse sur la métacognition de chaque élève.")
+      ),
+      h("div", {className:"bilan-classe-calib"},
+        h("div", {className:"bilan-classe-calib-cell calib-ok"}, h("strong", null, calibStats.ok), h("span", null, "✅ Bien évalués")),
+        h("div", {className:"bilan-classe-calib-cell calib-sous"}, h("strong", null, calibStats.sous), h("span", null, "🌟 Sous-évalués")),
+        h("div", {className:"bilan-classe-calib-cell calib-sur"}, h("strong", null, calibStats.sur), h("span", null, "⚠️ Sur-évalués")),
+        calibStats.none > 0 && h("div", {className:"bilan-classe-calib-cell calib-none"}, h("strong", null, calibStats.none), h("span", null, "— Pas d'autoeval"))
+      ),
+      h("h3", null, "💡 Questions remarquables",
+        h(InfoI, null, "La plus ratée à retravailler en priorité avec la classe. La mieux réussie à valoriser. Le pourcentage est le taux de réussite parmi les élèves qui ont répondu.")
+      ),
+      h("div", {className:"bilan-classe-insights"},
+        qPlusRatee && h("div", {className:"bilan-classe-insight insight-attention"},
+          h("div", {className:"bilan-classe-insight-titre"}, "🔴 La plus ratée — Q"+(qPlusRatee.idx+1)+" ("+Math.round(qPlusRatee.taux)+"% de réussite)"),
+          h("div", {className:"bilan-classe-insight-enonce"}, qPlusRatee.q.enonce)
+        ),
+        qPlusReussie && qPlusReussie.idx !== qPlusRatee.idx && h("div", {className:"bilan-classe-insight insight-felicitations"},
+          h("div", {className:"bilan-classe-insight-titre"}, "🟢 La mieux réussie — Q"+(qPlusReussie.idx+1)+" ("+Math.round(qPlusReussie.taux)+"% de réussite)"),
+          h("div", {className:"bilan-classe-insight-enonce"}, qPlusReussie.q.enonce)
+        )
+      ),
+      h("h3", null, "👥 Détail par élève (trié par score)",
+        h(InfoI, null, "Trié par nombre de bonnes réponses décroissant. Bonnes = nombre brut sur "+nbTotal+". Pondéré = score pondéré selon le niveau des questions. Estimé = fourchette d'autoévaluation choisie par l'élève. Réel = sa fourchette de score réel (calculée sur le brut). Calibration = comparaison des deux.")
+      ),
+      h("div", {className:"bilan-classe-table-wrap"},
+        h("table", {className:"bilan-classe-table"},
+          h("thead", null,
+            h("tr", null,
+              h("th", null, "Élève"),
+              h("th", null, "Bonnes"),
+              h("th", null, "Pondéré"),
+              h("th", {style:{textAlign:"center"}}, "Estimé"),
+              h("th", {style:{textAlign:"center"}}, "Réel"),
+              h("th", null, "Calibration")
+            )
+          ),
+          h("tbody", null,
+            elevesTris.map(function(e){
+              return h("tr", {key:e.slug},
+                h("td", null, e.nom),
+                h("td", null, e.scoreB+" / "+nbTotal),
+                h("td", null, e.scoreP+" / "+maxP),
+                h("td", {style:{textAlign:"center"}}, e.fEst ? e.fEst.emoji : "—"),
+                h("td", {style:{textAlign:"center"}}, e.fReelle.emoji),
+                h("td", {className:"calib-cell calib-"+(e.calib||"none")},
+                  e.calib === "ok" ? "✅ Juste" :
+                  e.calib === "sous" ? "🌟 Sous-éval." :
+                  e.calib === "sur" ? "⚠️ Sur-éval." : "—"
+                )
+              );
+            })
+          )
+        )
+      )
+    )
+  );
+}
+
 function SessionLive(p){
   var sess = p.session, classe = p.classe, ev = p.evaluation;
   var qIdx = sess.qIdx;
@@ -3751,29 +4939,12 @@ function SessionLive(p){
   }
 
   // Actions prof
-  function lancerQuestion(idx){
-    var newIdx = idx != null ? idx : (qIdx == null ? 0 : qIdx + 1);
-    if(newIdx >= ev.questions.length){
-      alert("Toutes les questions ont été posées. Lance la phase de correction.");
-      return;
-    }
-    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
-      qIdx:newIdx,
-      phase:"reflexion",
-      phaseStart:Date.now(),
-      reouverts:null
-    });
-  }
-  function autoriserReponse(){
-    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
-      phase:"reponse",
-      phaseStart:Date.now(),
-      chronoReponse:chronoRep
-    });
-  }
-  function clore(){
-    db.ref(DB_ROOT+"/sessions/"+sess.id).update({phase:"attente"});
-  }
+  // Actions session — délégation à sessActions (refacto polish). On garde rouvrirPourTous,
+  // marquerDepart et l'action "Suivante/Précédente correction" en local car logique métier
+  // spécifique au pilotage prof.
+  function lancerQuestion(idx){ sessActions.lancerQ(sess, ev, idx); }
+  function autoriserReponse(){ sessActions.autoriser(sess, chronoRep); }
+  function clore(){ sessActions.clore(sess, false); }
   function rouvrirPourTous(){
     // Rebascule en phase "reponse" : les élèves qui n'ont pas encore répondu retrouvent les choix
     // Ceux qui ont déjà répondu ne sont pas affectés (leur réponse reste figée)
@@ -3838,26 +5009,7 @@ function SessionLive(p){
     db.ref(DB_ROOT+"/sessions/"+sess.id).update({phaseStart:Date.now(), paused:null});
     notifierEleves("Le chrono a été relancé.", "info");
   }
-  function basculePause(){
-    if(sess.paused){
-      // Reprise : nouveau phaseStart calculé pour préserver le temps restant
-      var rest = sess.paused.remaining;
-      var duree = sess.paused.duree;
-      var newStart = Date.now() - (duree - rest)*1000;
-      db.ref(DB_ROOT+"/sessions/"+sess.id).update({phaseStart:newStart, paused:null});
-      notifierEleves("Le chrono reprend.", "info");
-    } else {
-      // Pause : enregistrer le temps restant à l'instant T
-      if(sess.phase !== "reflexion" && sess.phase !== "reponse") return;
-      var duree = sess.phase === "reflexion"
-        ? (question ? getNiveau(question.niveau).chrono : 10)
-        : (sess.chronoReponse || 5);
-      var elapsed = Math.floor((Date.now() - sess.phaseStart)/1000);
-      var rest = Math.max(0, duree - elapsed);
-      db.ref(DB_ROOT+"/sessions/"+sess.id+"/paused").set({remaining:rest, duree:duree, at:Date.now()});
-      notifierEleves("⏸️ Pause demandée par le professeur.", "pause");
-    }
-  }
+  function basculePause(){ sessActions.togglePause(sess, ev, question); }
   function notifierEleves(msg, type){
     // Ajoute une notification horodatée à la session
     var nid = "n_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
@@ -3865,16 +5017,7 @@ function SessionLive(p){
       msg:msg, type:type||"info", ts:Date.now()
     });
   }
-  function ajouterTemps(secondes){
-    // Décale le phaseStart en arrière pour ajouter du temps
-    if(sess.paused){
-      // Si en pause, on augmente le remaining
-      db.ref(DB_ROOT+"/sessions/"+sess.id+"/paused/remaining").set(sess.paused.remaining + secondes);
-    } else if(sess.phase === "reflexion" || sess.phase === "reponse"){
-      db.ref(DB_ROOT+"/sessions/"+sess.id+"/phaseStart").set(sess.phaseStart + secondes*1000);
-    }
-    notifierEleves("⏱️ Le professeur a ajouté "+secondes+" seconde"+(secondes>1?"s":"")+".", "info");
-  }
+  function ajouterTemps(secondes){ sessActions.ajouterTemps(sess, secondes); }
   function allerAQuestion(idx){
     if(idx < 0 || idx >= ev.questions.length) return;
     if(idx === qIdx) return;
@@ -3904,47 +5047,30 @@ function SessionLive(p){
       else if(diff < 0) notifierEleves("⏱️ Le temps de réflexion a été réduit.", "info");
     }
   }
-  function lancerCorrection(){
-    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
-      phase:"correction",
-      correctionIdx:0,
-      correctionOrdre:calculerOrdreCorrection()
-    });
+  function lancerAutoeval(){
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({phase:"autoeval"});
   }
-  function calculerOrdreCorrection(){
-    // Tri par taux d'erreur décroissant
-    var ordres = ev.questions.map(function(q, i){
-      var reps = reponses[i] || {};
-      var nbTotal = 0, nbFaux = 0;
-      var bonnes = (q.bonnes||[]).slice().sort();
-      Object.keys(reps).forEach(function(k){
-        nbTotal++;
-        var c = (reps[k].choix||[]).slice().sort();
-        if(JSON.stringify(c) !== JSON.stringify(bonnes)) nbFaux++;
-      });
-      var tx = nbTotal === 0 ? 0 : nbFaux/nbTotal;
-      return {idx:i, taux:tx};
-    });
-    ordres.sort(function(a,b){return b.taux - a.taux});
-    return ordres.map(function(o){return o.idx});
-  }
+  function lancerCorrection(){ sessActions.lancerCorrection(sess, ev); }
   function correctionSuivante(){
     var ordre = sess.correctionOrdre || ev.questions.map(function(_,i){return i});
     var posActuelle = ordre.indexOf(sess.correctionIdx);
     var nextPos = posActuelle + 1;
     if(nextPos >= ordre.length){
+      // Archivage longitudinal MJPC (Lot 6) avant le set phase=finie
+      archiverDansProfilsMJPC(sess, ev, classe, reponses);
       alert("Correction terminée !");
       db.ref(DB_ROOT+"/sessions/"+sess.id).update({phase:"finie"});
       return;
     }
-    db.ref(DB_ROOT+"/sessions/"+sess.id+"/correctionIdx").set(ordre[nextPos]);
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({correctionIdx:ordre[nextPos], corrRevealed:false});
   }
   function correctionPrec(){
     var ordre = sess.correctionOrdre || ev.questions.map(function(_,i){return i});
     var posActuelle = ordre.indexOf(sess.correctionIdx);
     if(posActuelle <= 0) return;
-    db.ref(DB_ROOT+"/sessions/"+sess.id+"/correctionIdx").set(ordre[posActuelle - 1]);
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({correctionIdx:ordre[posActuelle - 1], corrRevealed:false});
   }
+  function actRevealer(){ sessActions.revealer(sess); }
   function toggleReouvert(eleveSlug){
     var path = DB_ROOT+"/sessions/"+sess.id+"/reouverts/"+eleveSlug;
     var dejaOuvert = sess.reouverts && sess.reouverts[eleveSlug] === qIdx;
@@ -3981,6 +5107,48 @@ function SessionLive(p){
     }
   });
 
+  // Si phase finie (Lot 5)
+  if(sess.phase === "finie"){
+    return h(BilanClasse, {sess:sess, evaluation:ev, classe:classe, onTerminer:p.onTerminer});
+  }
+
+  // Si phase autoeval (Lot 4-A)
+  if(sess.phase === "autoeval"){
+    var aev = sess.autoevals || {};
+    var nbActifs = (classe.eleves||[]).filter(function(e){
+      return (sess.absents||[]).indexOf(e.slug || slugify(e.nomComplet)) < 0;
+    }).length;
+    var nbAuto = Object.keys(aev).length;
+    var maxPa = calculerMaxPondere(ev.questions);
+    var distrib = {vert:0, bleu:0, orange:0, rouge:0};
+    Object.values(aev).forEach(function(v){ if(distrib[v]!=null) distrib[v]++; });
+    return h("div", null,
+      h("div", {className:"card"},
+        h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
+          h("h2", {style:{margin:0}}, "📊 Autoévaluation — "+ev.titre+" — "+classe.nom,
+            h(InfoI, null, "Phase intermédiaire avant la correction : chaque élève estime son score (fourchette de couleur). À la fin, tu compareras leur estimation à leur résultat réel — c'est ce qui permet le travail métacognitif (« est-ce que je me connais ? »). Tu peux lancer la correction dès que tu juges suffisant, même si tous n'ont pas répondu.")
+          ),
+          h("button", {className:"btn btn-rouge btn-sm", onClick:p.onTerminer, title:"Termine la session définitivement."}, "🛑 Terminer la session")
+        ),
+        h("div", {className:"pilot-status autoeval"}, "Phase autoévaluation — "+nbAuto+" / "+nbActifs+" élèves"),
+        h("p", {style:{margin:".8rem 0",color:"var(--gris)"}},
+          "Les élèves choisissent dans quelle fourchette ils estiment avoir réussi. Score max pondéré : ",
+          h("strong", null, maxPa+" points"),
+          ". Clique sur ", h("strong", null, "📝 Lancer la correction"), " quand tu es prêt."
+        ),
+        h("div", {className:"autoeval-prof-distrib"},
+          h("div", {className:"autoeval-prof-cell fourchette-vert"}, h("span", null, "🟢 Très bien"), h("strong", null, distrib.vert)),
+          h("div", {className:"autoeval-prof-cell fourchette-bleu"}, h("span", null, "🔵 Bien"), h("strong", null, distrib.bleu)),
+          h("div", {className:"autoeval-prof-cell fourchette-orange"}, h("span", null, "🟠 Moyen"), h("strong", null, distrib.orange)),
+          h("div", {className:"autoeval-prof-cell fourchette-rouge"}, h("span", null, "🔴 Faible"), h("strong", null, distrib.rouge))
+        ),
+        h("div", {className:"row", style:{marginTop:"1rem"}},
+          h("button", {className:"btn btn-or", onClick:lancerCorrection, title:"Termine l'autoévaluation et lance la correction collective."}, "📝 Lancer la correction")
+        )
+      )
+    );
+  }
+
   // Si phase correction
   if(sess.phase === "correction"){
     var ordreCorr = sess.correctionOrdre || ev.questions.map(function(_,i){return i});
@@ -3989,7 +5157,9 @@ function SessionLive(p){
     return h("div", null,
       h("div", {className:"card"},
         h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
-          h("h2", {style:{margin:0}}, "📝 Correction — "+ev.titre+" — "+classe.nom),
+          h("h2", {style:{margin:0}}, "📝 Correction — "+ev.titre+" — "+classe.nom,
+            h(InfoI, null, "Phase de correction collective : les questions sont triées par taux d'erreur décroissant (les plus ratées d'abord). Pour chaque question, tu commentes, puis tu cliques sur « 💡 Révéler » quand tu veux faire apparaître la bonne réponse. Tu passes à la suivante quand c'est prêt.")
+          ),
           h("button", {className:"btn btn-rouge btn-sm", onClick:p.onTerminer, title:"Termine la session définitivement. Les élèves verront un écran de fin. Tu peux toujours consulter les résultats dans l'onglet Résultats."}, "🛑 Terminer la session")
         ),
         h("div", {className:"pilot-status correction", title:"Position dans l'ordre de correction (trié par taux d'erreur décroissant). Q"+(sess.correctionIdx+1)+" est la "+(posCorr+1)+"e question révélée."},
@@ -4015,6 +5185,7 @@ function SessionLive(p){
         ),
         h("div", {className:"row", style:{marginTop:".8rem"}},
           h("button", {className:"btn btn-ghost", onClick:correctionPrec, disabled:posCorr <= 0, title:"Revenir à la question précédente dans l'ordre de correction (utile si tu veux retraiter une question avec la classe)."}, "← Question précédente"),
+          h("button", {className:"btn "+(sess.corrRevealed?"btn-ghost":"btn-or"), onClick:actRevealer, disabled:!!sess.corrRevealed, title:"Révèle la bonne réponse aux élèves. Tant que tu n'as pas cliqué, ils ne voient pas si leur réponse est juste ou fausse. Permet de commenter la question avant la révélation."}, sess.corrRevealed?"💡 Révélée":"💡 Révéler"),
           h("button", {className:"btn btn-primary", onClick:correctionSuivante, title:"Passer à la question suivante dans l'ordre trié par taux d'erreur."}, "Question suivante →")
         )
       )
@@ -4202,7 +5373,8 @@ function SessionLive(p){
             (sess.phase === "reflexion" || sess.phase === "reponse") && h("button", {className:sess.paused ? "btn btn-vert" : "btn btn-or", onClick:basculePause, title:sess.paused ? "Reprend le chrono là où il s'était figé. Les élèves voient un message de reprise." : "Fige tous les chronos immédiatement (utile en cas d'interruption en classe). Les élèves voient un bandeau de pause."}, sess.paused ? "▶️ Reprendre" : "⏸️ Pause"),
             (sess.phase === "reflexion" || sess.phase === "reponse") && h("button", {className:"btn btn-ghost", onClick:relancerMaintenant, title:"Remet le chrono à zéro pour la phase en cours (durée pleine ré-injectée)."}, "🔄 Relancer chrono"),
             sess.phase === "attente" && h("button", {className:"btn btn-ghost", onClick:rouvrirPourTous, title:"Rouvre la phase de réponse pour TOUS les élèves qui n'ont pas encore répondu (utile si beaucoup n'ont pas eu le temps). Les élèves qui ont déjà répondu ne sont pas affectés. Pour rouvrir à un seul élève, clique sur son nom dans la liste."}, "🔓 Rouvrir pour tous"),
-            sess.phase === "attente" && qIdx != null && qIdx + 1 >= ev.questions.length && h("button", {className:"btn btn-or", onClick:lancerCorrection, title:"Termine la phase d'évaluation et lance la correction collective. Les questions seront triées par taux d'erreur décroissant."}, "📝 Lancer la correction")
+            sess.phase === "attente" && qIdx != null && qIdx + 1 >= ev.questions.length && h("button", {className:"btn btn-or", onClick:lancerAutoeval, title:"Lance la phase d'autoévaluation : les élèves estiment leur score avant la correction."}, "📊 Lancer l'autoévaluation"),
+            sess.phase === "autoeval" && h("button", {className:"btn btn-or", onClick:lancerCorrection, title:"Termine l'autoévaluation et lance la correction collective (questions triées par taux d'erreur décroissant)."}, "📝 Lancer la correction")
           ),
 
           // Boutons d'ajustement +temps (toujours visibles si on est en cours)
@@ -4790,8 +5962,83 @@ function StudentReport(p){
   );
 }
 
+// Éditeur de pondération (dette technique)
+function PonderationEditor(){
+  var s1 = useState({facile:POIDS_NIVEAU.facile, standard:POIDS_NIVEAU.standard, approfondi:POIDS_NIVEAU.approfondi, expert:POIDS_NIVEAU.expert}), draft = s1[0], setDraft = s1[1];
+  var s2 = useState(""), msg = s2[0], setMsg = s2[1];
+
+  function modif(niv, val){
+    var v = parseInt(val, 10);
+    if(isNaN(v) || v < 0) v = 0;
+    var copy = Object.assign({}, draft);
+    copy[niv] = v;
+    setDraft(copy);
+  }
+  function enregistrer(){
+    db.ref(DB_ROOT+"/settings/poidsNiveau").set(draft, function(err){
+      if(err){ setMsg("❌ Erreur: "+err.message); return; }
+      POIDS_NIVEAU.facile = draft.facile;
+      POIDS_NIVEAU.standard = draft.standard;
+      POIDS_NIVEAU.approfondi = draft.approfondi;
+      POIDS_NIVEAU.expert = draft.expert;
+      setMsg("✅ Pondération enregistrée. Les nouveaux calculs en tiendront compte.");
+      setTimeout(function(){setMsg("")}, 3000);
+    });
+  }
+  function restaurer(){
+    if(!confirm("Restaurer la pondération par défaut (1, 2, 3, 4) ?")) return;
+    setDraft(Object.assign({}, POIDS_NIVEAU_DEFAUT));
+  }
+
+  return h("div", {style:{padding:".7rem 0"}},
+    h("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:".5rem",marginBottom:".7rem"}},
+      h("div", {className:"autoeval-poids-grid", style:{flexDirection:"column",alignItems:"stretch"}},
+        h("label", {style:{fontSize:".8rem",fontWeight:700,color:"var(--noir)",display:"block",marginBottom:".25rem"}}, "🟡 Facile"),
+        h("input", {type:"number", min:0, value:draft.facile, onChange:function(e){modif("facile", e.target.value)}, style:{width:"100%",padding:".4rem",border:"2px solid #FFD23F",borderRadius:"6px",fontFamily:"inherit",fontSize:".95rem"}, title:"Nombre de points qu'une question de niveau facile rapportera dans le calcul du score pondéré."})
+      ),
+      h("div", null,
+        h("label", {style:{fontSize:".8rem",fontWeight:700,color:"var(--noir)",display:"block",marginBottom:".25rem"}}, "🟠 Standard"),
+        h("input", {type:"number", min:0, value:draft.standard, onChange:function(e){modif("standard", e.target.value)}, style:{width:"100%",padding:".4rem",border:"2px solid #FF8C42",borderRadius:"6px",fontFamily:"inherit",fontSize:".95rem"}, title:"Nombre de points qu'une question de niveau standard rapportera dans le calcul du score pondéré."})
+      ),
+      h("div", null,
+        h("label", {style:{fontSize:".8rem",fontWeight:700,color:"var(--noir)",display:"block",marginBottom:".25rem"}}, "🌸 Approfondi"),
+        h("input", {type:"number", min:0, value:draft.approfondi, onChange:function(e){modif("approfondi", e.target.value)}, style:{width:"100%",padding:".4rem",border:"2px solid #EC4899",borderRadius:"6px",fontFamily:"inherit",fontSize:".95rem"}, title:"Nombre de points qu'une question de niveau approfondi rapportera dans le calcul du score pondéré."})
+      ),
+      h("div", null,
+        h("label", {style:{fontSize:".8rem",fontWeight:700,color:"var(--noir)",display:"block",marginBottom:".25rem"}}, "🟣 Expert"),
+        h("input", {type:"number", min:0, value:draft.expert, onChange:function(e){modif("expert", e.target.value)}, style:{width:"100%",padding:".4rem",border:"2px solid #6A4CE0",borderRadius:"6px",fontFamily:"inherit",fontSize:".95rem"}, title:"Nombre de points qu'une question de niveau expert rapportera dans le calcul du score pondéré."})
+      )
+    ),
+    h("div", {className:"row", style:{gap:".5rem",flexWrap:"wrap"}},
+      h("button", {className:"btn btn-primary btn-sm", onClick:enregistrer, title:"Enregistre la nouvelle pondération dans Firebase. Elle sera utilisée pour tous les futurs calculs de score pondéré."}, "💾 Enregistrer"),
+      h("button", {className:"btn btn-ghost btn-sm", onClick:restaurer, title:"Restaure la pondération par défaut (1, 2, 3, 4)."}, "🔄 Restaurer par défaut")
+    ),
+    msg && h("div", {style:{marginTop:".5rem",padding:".4rem .7rem",borderRadius:"6px",background:msg.startsWith("✅")?"#E8F6EE":"#FFF4F4",fontSize:".85rem",fontWeight:"600"}}, msg)
+  );
+}
+
 // ─────────── Onglet Snapshot ───────────
 function OngletSnapshot(){
+  function purgerClasses(){
+    if(!confirm("⚠️ Tu vas supprimer TOUTES les classes (et les présences). Les évaluations et les sessions ne seront pas touchées.\n\nCette action est IRRÉVERSIBLE.\n\nIl est conseillé d'avoir exporté un snapshot avant. Continuer ?")) return;
+    if(!confirm("Dernière confirmation. Toutes les classes seront supprimées. Continuer ?")) return;
+    Promise.all([
+      db.ref(DB_ROOT+"/classes").remove(),
+      db.ref(DB_ROOT+"/presence").remove()
+    ]).then(function(){
+      alert("✅ Toutes les classes ont été purgées.");
+      window.location.reload();
+    }).catch(function(err){ alert("Erreur : "+err.message); });
+  }
+  function purgerEvaluations(){
+    if(!confirm("⚠️ Tu vas supprimer TOUTES les évaluations. Les classes et les sessions ne seront pas touchées (mais les sessions passées ne pourront plus afficher leur évaluation).\n\nCette action est IRRÉVERSIBLE.\n\nIl est conseillé d'avoir exporté un snapshot avant. Continuer ?")) return;
+    if(!confirm("Dernière confirmation. Toutes les évaluations seront supprimées. Continuer ?")) return;
+    db.ref(DB_ROOT+"/evaluations").remove(function(err){
+      if(err){ alert("Erreur : "+err.message); return; }
+      alert("✅ Toutes les évaluations ont été purgées.");
+      window.location.reload();
+    });
+  }
   function purgerTout(){
     if(!confirm("⚠️ ATTENTION : tu vas supprimer TOUTES les données QCM (classes, évaluations, sessions, réponses, scans, paramètres).\n\nCette action est IRRÉVERSIBLE.\n\nIl est conseillé d'avoir exporté un snapshot avant. Continuer ?")) return;
     if(!confirm("Dernière confirmation. Tout sera supprimé. Continuer ?")) return;
@@ -4919,13 +6166,23 @@ function OngletSnapshot(){
 
     // Zone purge — séparée et visuellement distincte
     h("div", {style:{marginTop:"1.5rem",paddingTop:"1rem",borderTop:"2px dashed var(--bordure)"}},
+      h("h3", {style:{color:"var(--violet)",fontWeight:900,marginBottom:".4rem",fontSize:"1rem"}}, "⚖️ Pondération des niveaux",
+        h(InfoI, null, "Détermine combien de points rapporte une question selon son niveau de difficulté. Utilisé pour le score pondéré (bilan élève + bilan classe + autoévaluation). Par défaut : Facile = 1 pt, Standard = 2 pts, Approfondi = 3 pts, Expert = 4 pts. Tu peux ajuster selon ta progression pédagogique.")
+      ),
+      h(PonderationEditor)
+    ),
+    h("div", {style:{marginTop:"1.5rem",paddingTop:"1rem",borderTop:"2px dashed var(--bordure)"}},
       h("h3", {style:{color:"var(--rouge)",fontWeight:900,marginBottom:".4rem",fontSize:"1rem"}}, "🗑️ Zone dangereuse",
-        h(InfoI, null, "Cette zone permet de tout effacer dans la base de données QCM. À utiliser pour repartir propre (par exemple en début de chantier de tests, ou en début d'année après archivage). Toujours exporter un snapshot avant de purger.")
+        h(InfoI, null, "Cette zone permet d'effacer des données dans la base de données QCM. À utiliser pour repartir propre (par exemple en début de chantier de tests, ou en début d'année après archivage). Toujours exporter un snapshot avant de purger.")
       ),
       h("p", {style:{fontSize:".82rem",color:"var(--gris)",marginBottom:".6rem",fontStyle:"italic"}},
-        "Cette opération supprime définitivement toutes les classes, évaluations, sessions, réponses, scans et paramètres. Pense à exporter un snapshot d'abord si tu veux pouvoir restaurer."
+        "Choisis ce que tu veux purger. Pense à exporter un snapshot d'abord si tu veux pouvoir restaurer."
       ),
-      h("button", {className:"btn btn-rouge btn-sm", onClick:purgerTout, title:"Supprime DÉFINITIVEMENT toutes les données QCM. Une double confirmation te sera demandée."}, "🗑️ Purger toutes les données QCM")
+      h("div", {className:"row", style:{flexWrap:"wrap",gap:".5rem"}},
+        h("button", {className:"btn btn-rouge btn-sm", onClick:purgerClasses, title:"Supprime DÉFINITIVEMENT toutes les classes (et les présences). Les évaluations et sessions ne sont pas touchées. Double confirmation demandée."}, "🗑️ Purger les classes"),
+        h("button", {className:"btn btn-rouge btn-sm", onClick:purgerEvaluations, title:"Supprime DÉFINITIVEMENT toutes les évaluations. Les classes et sessions ne sont pas touchées (mais les sessions passées ne pourront plus afficher leur éval). Double confirmation demandée."}, "🗑️ Purger les évaluations"),
+        h("button", {className:"btn btn-rouge btn-sm", onClick:purgerTout, title:"Supprime DÉFINITIVEMENT toutes les données QCM (classes, évaluations, sessions, réponses, scans, paramètres). Double confirmation demandée."}, "🗑️ Tout purger")
+      )
     )
   );
 }
@@ -4937,6 +6194,17 @@ document.addEventListener("wheel", function(e){
     document.activeElement.blur();
   }
 }, {passive:true});
+
+// Charger les pondérations personnalisées si présentes (avant le rendu pour avoir les bons calculs)
+db.ref(DB_ROOT+"/settings/poidsNiveau").once("value", function(snap){
+  var v = snap.val();
+  if(v && typeof v === "object"){
+    if(typeof v.facile === "number") POIDS_NIVEAU.facile = v.facile;
+    if(typeof v.standard === "number") POIDS_NIVEAU.standard = v.standard;
+    if(typeof v.approfondi === "number") POIDS_NIVEAU.approfondi = v.approfondi;
+    if(typeof v.expert === "number") POIDS_NIVEAU.expert = v.expert;
+  }
+});
 
 // Démarrage
 ReactDOM.render(h(App), document.getElementById("root"));
