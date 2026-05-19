@@ -241,6 +241,34 @@ body{min-height:100vh;background:linear-gradient(135deg,var(--violet) 0%,var(--r
 .sexe-btn.actif-m{background:#3B82F6;color:#fff;border-color:#3B82F6}
 .sexe-btn.actif-f{background:#EC4899;color:#fff;border-color:#EC4899}
 .sexe-warn{color:var(--rouge);font-weight:900;font-size:.95rem;margin-left:.3rem;cursor:help}
+.eleve-supp-btn{width:24px;height:24px;border:1.5px solid transparent;background:transparent;color:var(--gris);font-weight:900;font-size:.85rem;border-radius:5px;cursor:pointer;font-family:inherit;transition:all .12s;margin-left:.25rem;line-height:1;padding:0}
+.eleve-supp-btn:hover{background:var(--rouge);color:#fff;border-color:var(--rouge);transform:scale(1.08)}
+.eleve-ajouter-row{display:flex;gap:.5rem;align-items:center;margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--bordure)}
+.eleve-ajouter-input{flex:1;padding:.4rem .7rem;border:1.5px solid var(--bordure);border-radius:6px;font-family:inherit;font-size:.88rem;background:#fff}
+.eleve-ajouter-input:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 2px rgba(106,76,224,.12)}
+
+/* Badge sessions actives + popover */
+.badge-session-actives{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .8rem;background:linear-gradient(135deg,#FEE2E2,#FECACA);color:#991B1B;font-weight:900;font-size:.82rem;border:2px solid #DC2626;border-radius:50px;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(220,38,38,.25);animation:pulseSession 2s ease-in-out infinite;transition:transform .12s}
+.badge-session-actives:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(220,38,38,.35)}
+.badge-session-dot{font-size:.7rem;display:inline-block;animation:dotPulse 1.5s ease-in-out infinite}
+@keyframes pulseSession{0%,100%{box-shadow:0 2px 8px rgba(220,38,38,.25)}50%{box-shadow:0 2px 14px rgba(220,38,38,.55)}}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.sessions-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:6rem 1rem 1rem}
+.sessions-menu{background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:600px;width:100%;max-height:80vh;overflow-y:auto}
+.sessions-menu-header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.2rem .6rem;border-bottom:1px solid var(--bordure)}
+.sessions-menu-header h3{margin:0;color:var(--violet);font-weight:900}
+.sessions-menu-close{background:transparent;border:none;font-size:1.4rem;cursor:pointer;color:var(--gris);padding:0 .4rem;line-height:1}
+.sessions-menu-close:hover{color:var(--rouge)}
+.sessions-menu-intro{padding:.6rem 1.2rem .3rem;color:var(--gris);font-size:.85rem;margin:0}
+.sessions-menu-liste{padding:.5rem 1.2rem 1.2rem}
+.session-menu-row{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;gap:1rem;border-bottom:1px solid var(--bordure);flex-wrap:wrap}
+.session-menu-row:last-child{border-bottom:none}
+.session-menu-row.est-test{background:linear-gradient(90deg,rgba(255,210,63,.12),transparent);padding-left:.5rem;padding-right:.5rem;border-radius:8px;margin:.3rem -.5rem}
+.session-menu-info{flex:1;min-width:0}
+.session-menu-nom{font-weight:900;color:var(--violet);font-size:1rem}
+.session-menu-meta{font-size:.82rem;color:var(--gris);margin-top:.2rem}
+.session-menu-warn{color:var(--rouge);font-weight:700}
+.session-menu-actions{display:flex;gap:.4rem;flex-wrap:wrap}
 .classe-info .sub{color:var(--gris);font-size:.82rem;margin-top:.2rem}
 
 /* Liste évaluations */
@@ -3694,6 +3722,47 @@ function AppProf(p){
   var s2 = useState(false), helpOpen = s2[0], setHelpOpen = s2[1];
   var s3 = useState(false), testMode = s3[0], setTestMode = s3[1];
   var s4 = useState(false), qrOpen = s4[0], setQrOpen = s4[1];
+  // Sessions actives — surveillance globale pour indicateur en header
+  var s5 = useState({}), sessionActive = s5[0], setSessionActive = s5[1];
+  var s6 = useState({}), sessions = s6[0], setSessions = s6[1];
+  var s7 = useState({}), classesData = s7[0], setClassesData = s7[1];
+  var s8 = useState(false), sessionsMenuOpen = s8[0], setSessionsMenuOpen = s8[1];
+
+  useEffect(function(){
+    var refSA = db.ref(DB_ROOT+"/sessionActive");
+    var refS = db.ref(DB_ROOT+"/sessions");
+    var refC = db.ref(DB_ROOT+"/classes");
+    var hSA = refSA.on("value", function(s){ setSessionActive(s.val() || {}); });
+    var hS = refS.on("value", function(s){ setSessions(s.val() || {}); });
+    var hC = refC.on("value", function(s){ setClassesData(s.val() || {}); });
+    return function(){
+      refSA.off("value", hSA);
+      refS.off("value", hS);
+      refC.off("value", hC);
+    };
+  }, []);
+
+  // Calcul des sessions actives (test + réelles, hors interrompues)
+  var sessionsActives = [];
+  Object.keys(sessionActive).forEach(function(classeSlug){
+    var sid = sessionActive[classeSlug];
+    if(!sid || !sessions[sid]) return;
+    var sess = sessions[sid];
+    if(sess.lastDisconnect && !sess.repriseConfirmee) return;
+    sessionsActives.push({
+      classeSlug:classeSlug,
+      sid:sid,
+      sess:sess,
+      isTest:classeSlug === TEST_CLASSE_SLUG,
+      classeNom:classeSlug === TEST_CLASSE_SLUG ? "🧪 Test" : ((classesData[classeSlug] && classesData[classeSlug].nom) || classeSlug)
+    });
+  });
+
+  function purgerSessionMenu(s){
+    if(!confirm("Terminer la session « "+s.classeNom+" » (phase "+s.sess.phase+") ?\n\nLes élèves verront un écran de fin. Les résultats restent consultables dans l'onglet Résultats.")) return;
+    db.ref(DB_ROOT+"/sessions/"+s.sid+"/etat").set("terminee");
+    db.ref(DB_ROOT+"/sessionActive/"+s.classeSlug).remove();
+  }
 
   if(testMode){
     return h(AppTest, {onExit:function(){setTestMode(false)}});
@@ -3708,6 +3777,14 @@ function AppProf(p){
           h("span", {className:"badge"}, "Mode prof")
         ),
         h("div", {className:"row"},
+          sessionsActives.length > 0 && h("button", {
+            className:"badge-session-actives",
+            onClick:function(){setSessionsMenuOpen(true)},
+            title:"Une ou plusieurs sessions sont actuellement en cours quelque part (réelles ou test). Clique pour voir le détail et choisir où aller, ou terminer une session qui traîne."
+          },
+            h("span", {className:"badge-session-dot"}, "🔴"),
+            sessionsActives.length + " session" + (sessionsActives.length>1?"s":"") + " en cours"
+          ),
           h("button", {className:"btn-help", onClick:function(){setHelpOpen(true)}, title:"Ouvre le mode d'emploi avec toutes les explications de l'app."}, "📖 Mode d'emploi"),
           h("button", {className:"btn btn-ghost btn-sm", onClick:function(){
             // Paramètres de fenêtre pour forcer l'ouverture en NOUVELLE FENÊTRE (pas onglet)
@@ -3738,7 +3815,54 @@ function AppProf(p){
       tab === "snapshot" && h(OngletSnapshot)
     ),
     helpOpen && h(ModeEmploi, {onClose:function(){setHelpOpen(false)}}),
-    qrOpen && h(OverlayQRPhone, {onClose:function(){setQrOpen(false)}})
+    qrOpen && h(OverlayQRPhone, {onClose:function(){setQrOpen(false)}}),
+    sessionsMenuOpen && h("div", {
+      onClick:function(e){if(e.target===e.currentTarget)setSessionsMenuOpen(false)},
+      className:"sessions-menu-overlay"
+    },
+      h("div", {className:"sessions-menu"},
+        h("div", {className:"sessions-menu-header"},
+          h("h3", null, "🔴 Sessions actuellement en cours"),
+          h("button", {onClick:function(){setSessionsMenuOpen(false)}, className:"sessions-menu-close"}, "✕")
+        ),
+        h("p", {className:"sessions-menu-intro"},
+          "Voici toutes les sessions qui sont actuellement actives quelque part. Tu peux aller au pilotage de chacune ou la terminer si elle n'a plus de raison d'être active."
+        ),
+        h("div", {className:"sessions-menu-liste"},
+          sessionsActives.map(function(s){
+            return h("div", {key:s.sid, className:"session-menu-row"+(s.isTest?" est-test":"")},
+              h("div", {className:"session-menu-info"},
+                h("div", {className:"session-menu-nom"}, s.classeNom),
+                h("div", {className:"session-menu-meta"},
+                  "Phase : ", h("strong", null, s.sess.phase || "—"),
+                  s.sess.qIdx != null && h("span", null, " · Q " + (s.sess.qIdx+1)),
+                  s.sess.lastDisconnect && !s.sess.repriseConfirmee && h("span", {className:"session-menu-warn"}, " · ⚠️ interrompue")
+                )
+              ),
+              h("div", {className:"session-menu-actions"},
+                h("button", {
+                  className:"btn btn-sm btn-primary",
+                  onClick:function(){
+                    setSessionsMenuOpen(false);
+                    if(s.isTest){
+                      setTestMode(true);
+                    } else {
+                      setTab("pilot");
+                    }
+                  },
+                  title:s.isTest ? "Rouvre le mode test pour reprendre cette session." : "Va dans l'onglet Pilotage classe pour reprendre cette session."
+                }, s.isTest ? "🧪 Reprendre le test" : "🎯 Aller au pilotage"),
+                h("button", {
+                  className:"btn btn-sm btn-rouge",
+                  onClick:function(){purgerSessionMenu(s)},
+                  title:"Termine définitivement cette session. Les élèves verront un écran de fin. Utile pour purger une session test ou une session abandonnée."
+                }, "🛑 Terminer")
+              )
+            );
+          })
+        )
+      )
+    )
   );
 }
 
@@ -3915,6 +4039,7 @@ function OngletClasses(){
   var s4 = useState(""), classeEdit = s4[0], setClasseEdit = s4[1];
   var s5 = useState(""), niveauClasse = s5[0], setNiveauClasse = s5[1];
   var s6 = useState(""), expandSexe = s6[0], setExpandSexe = s6[1];
+  var s7 = useState({}), nouveauxNoms = s7[0], setNouveauxNoms = s7[1]; // {classeSlug: nomEnCoursDeSaisie}
 
   useEffect(function(){
     db.ref(DB_ROOT+"/classes").on("value", function(snap){
@@ -3947,6 +4072,28 @@ function OngletClasses(){
     } else {
       db.ref(path).set(nouveauSexe);
     }
+  }
+  function supprimerEleve(classeSlug, eleveIdx){
+    var classe = classes[classeSlug];
+    if(!classe || !classe.eleves || !classe.eleves[eleveIdx]) return;
+    var nom = classe.eleves[eleveIdx].nomComplet || "(sans nom)";
+    if(!confirm("Supprimer « "+nom+" » de cette classe ?\n\nAttention : si des résultats sont déjà archivés pour cet élève (sessions passées, profil longitudinal MJPC), ils ne sont PAS supprimés — seulement l'inscription à la classe. L'élève ne pourra plus se connecter à cette classe avec ce nom.")) return;
+    var nouveaux = classe.eleves.filter(function(_, i){return i !== eleveIdx});
+    db.ref(DB_ROOT+"/classes/"+classeSlug+"/eleves").set(nouveaux);
+  }
+  function ajouterEleve(classeSlug, nomComplet, callback){
+    var nom = (nomComplet || "").trim();
+    if(!nom){ alert("Saisis un nom complet (Nom Prénom)."); return; }
+    if(nom.length < 3){ alert("Nom trop court."); return; }
+    var classe = classes[classeSlug];
+    var existants = (classe && classe.eleves) ? classe.eleves : [];
+    var doublon = existants.some(function(e){return (e.nomComplet||"").toLowerCase().trim() === nom.toLowerCase()});
+    if(doublon){ alert("Un élève avec ce nom existe déjà dans cette classe."); return; }
+    var nouveaux = existants.concat([{nomComplet:nom}]);
+    db.ref(DB_ROOT+"/classes/"+classeSlug+"/eleves").set(nouveaux, function(err){
+      if(err){ alert("Erreur : "+err.message); return; }
+      if(callback) callback();
+    });
   }
 
   function ajouterClasse(){
@@ -4019,10 +4166,10 @@ function OngletClasses(){
                   h("button", {className:"btn btn-sm btn-rouge", onClick:function(){supprimer(c.slug)}, title:"Supprimer la classe (les sessions et résultats associés ne sont pas supprimés)."}, "🗑️")
                 )
               ),
-              // Panneau dépliable : liste des élèves avec sélecteur M/F
+              // Panneau dépliable : liste des élèves avec sélecteur M/F + ajout/suppression
               expandSexe===c.slug && h("div", {className:"eleves-sexe-panel"},
                 h("div", {style:{fontSize:".82rem",color:"var(--gris)",marginBottom:".5rem"}},
-                  "Clique sur M ou F pour ajuster. Le sexe sert à adapter les phrases du bilan personnel (par exemple « tu t'es jugé/jugée »)."
+                  "Clique sur M ou F pour ajuster. Le sexe sert à adapter les phrases du bilan personnel (par exemple « tu t'es jugé/jugée »). Le bouton ✕ supprime l'élève de la classe (les résultats archivés ne sont pas effacés)."
                 ),
                 (c.eleves||[]).map(function(e, idx){
                   return h("div", {key:idx, className:"eleve-sexe-row"},
@@ -4040,10 +4187,51 @@ function OngletClasses(){
                         onClick:function(){setSexeEleve(c.slug, idx, "f")},
                         title:"Marquer comme fille"
                       }, "F"),
-                      !e.sexe && h("span", {className:"sexe-warn", title:"Sexe non défini — clique sur M ou F"}, "?")
+                      !e.sexe && h("span", {className:"sexe-warn", title:"Sexe non défini — clique sur M ou F"}, "?"),
+                      h("button", {
+                        type:"button",
+                        className:"eleve-supp-btn",
+                        onClick:function(){supprimerEleve(c.slug, idx)},
+                        title:"Supprimer cet élève de la classe. Les résultats archivés (sessions passées, profil longitudinal MJPC) ne sont pas touchés, seule l'inscription à la classe est retirée."
+                      }, "✕")
                     )
                   );
-                })
+                }),
+                // Champ d'ajout
+                h("div", {className:"eleve-ajouter-row"},
+                  h("input", {
+                    type:"text",
+                    placeholder:"Ajouter un élève (NOM Prénom)",
+                    value:nouveauxNoms[c.slug] || "",
+                    onChange:function(ev){
+                      var copy = Object.assign({}, nouveauxNoms);
+                      copy[c.slug] = ev.target.value;
+                      setNouveauxNoms(copy);
+                    },
+                    onKeyDown:function(ev){
+                      if(ev.key === "Enter"){
+                        ajouterEleve(c.slug, nouveauxNoms[c.slug] || "", function(){
+                          var copy = Object.assign({}, nouveauxNoms);
+                          copy[c.slug] = "";
+                          setNouveauxNoms(copy);
+                        });
+                      }
+                    },
+                    className:"eleve-ajouter-input"
+                  }),
+                  h("button", {
+                    type:"button",
+                    className:"btn btn-primary btn-sm",
+                    onClick:function(){
+                      ajouterEleve(c.slug, nouveauxNoms[c.slug] || "", function(){
+                        var copy = Object.assign({}, nouveauxNoms);
+                        copy[c.slug] = "";
+                        setNouveauxNoms(copy);
+                      });
+                    },
+                    title:"Ajoute cet élève à la classe. La convention est : NOM (en majuscules) puis Prénom (en minuscules avec majuscule au début), par exemple « DUPONT Léa »."
+                  }, "➕ Ajouter")
+                )
               )
             );
           })
