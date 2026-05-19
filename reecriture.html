@@ -722,7 +722,7 @@ function AppProf(p){
       var eleves=fbE&&fbE.length>0?fbE:(cfg.eleves||[]);
       setCurrentRee({title:cfg.title||id,classe:cn,eleves:eleves,original:cfg.original||"",attendu:cfg.attendu||"",modifs:toArr(cfg.modifs||[]),consigne:cfg.consigne||"",baremeTotal:cfg.baremeTotal!=null?cfg.baremeTotal:10,pieges:toArr(cfg.pieges||[])});
       setCurrentId(id);setAbsents(val.absents||{});setCorrections(val.corrections||{});
-      setCorrEleve(null);setPaquetOrder([]);setScreen("suivi");
+      setCorrEleve(null);setPaquetOrder(toArr(val.paquetOrder||[]));setScreen("suivi");
     });
   }
 
@@ -760,7 +760,7 @@ function AppProf(p){
       var eleves=fbE&&fbE.length>0?fbE:(cfg.eleves||[]);
       setCurrentRee({title:cfg.title||id,classe:cn,eleves:eleves,original:cfg.original||"",attendu:cfg.attendu||"",modifs:toArr(cfg.modifs||[]),consigne:cfg.consigne||"",baremeTotal:cfg.baremeTotal!=null?cfg.baremeTotal:10,pieges:toArr(cfg.pieges||[])});
       setCurrentId(id);setAbsents(val.absents||{});setCorrections(val.corrections||{});
-      setCorrEleve(null);setPaquetOrder([]);setScreen("correction");
+      setCorrEleve(null);setPaquetOrder(toArr(val.paquetOrder||[]));setScreen("correction");
     });
   }
 
@@ -1184,7 +1184,12 @@ function AppProf(p){
       corrections:corrections,
       initialOrder:paquetOrder,
       onCancel:function(){setClasserOpen(false)},
-      onSave:function(newOrder){setPaquetOrder(newOrder);setClasserOpen(false)}
+      onSave:function(newOrder){
+        setPaquetOrder(newOrder);
+        // Persister dans Firebase pour retrouver l'ordre au prochain chargement
+        if(currentId)db.ref("reecritures/"+currentId+"/paquetOrder").set(newOrder);
+        setClasserOpen(false);
+      }
     })
   );
   if(screen==="correction"&&currentRee){
