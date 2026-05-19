@@ -3410,7 +3410,6 @@ function VuePhone(p){
   var s3 = useState({}), sessions = s3[0], setSessions = s3[1];
   var s4 = useState({}), sessionActive = s4[0], setSessionActive = s4[1];
   var st = useState(0), tick = st[0], setTick = st[1]; // tick chrono (B-ii)
-  var sP = useState(false), modalPlusOpen = sP[0], setModalPlusOpen = sP[1];
   var sE = useState(null), eleveAction = sE[0], setEleveAction = sE[1]; // {slug, nom}
 
   useEffect(function(){
@@ -3490,9 +3489,7 @@ function VuePhone(p){
   }
   function actCorrPrec(){ sessActions.correctionPrec(activeSession, ev); }
   function actTerminer(){
-    if(sessActions.terminerSession(activeSession, true)){
-      setModalPlusOpen(false);
-    }
+    sessActions.terminerSession(activeSession, true);
   }
   function actRouvrirIndiv(slug){
     sessActions.rouvrirIndividuel(activeSession, slug);
@@ -3574,133 +3571,176 @@ function VuePhone(p){
       h("span", {style:{fontWeight:"900",color:"var(--violet)"}}, "Suiv. "),
       (nextQuestion.enonce || "").slice(0, 80) + ((nextQuestion.enonce||"").length > 80 ? "…" : "")
     ),
-    // Boutons d'action contextuels selon la phase
-    h("div", {style:{display:"flex",flexDirection:"column",gap:".4rem",marginBottom:".6rem",flexShrink:0}},
+    // Boutons d'action contextuels selon la phase (TOUT INLINE, plus de modal "Plus")
+    h("div", {style:{display:"flex",flexDirection:"column",gap:".35rem",marginBottom:".4rem",flexShrink:0}},
       // PHASE idle : Lancer Q1
       (phase === "idle" || !phase) && h("button", {onClick:actLancerQ, style:phoneBtnStyle("primary", "large")}, "🚀 Lancer Q1"),
-      // PHASE réflexion (sans pause) : Autoriser + Pause + Clore
+      // PHASE réflexion (sans pause)
       isReflex && !hasPaused && h(React.Fragment, null,
         h("button", {onClick:actAutoriser, style:phoneBtnStyle("turq", "large")}, "✋ Autoriser la réponse"),
-        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
-          h("button", {onClick:actTogglePause, style:phoneBtnStyle("ghost")}, "⏸️ Pause"),
-          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune")}, "+5 sec")
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actTogglePause, style:phoneBtnStyle("ghost", "small")}, "⏸️ Pause"),
+          h("button", {onClick:actClore, style:phoneBtnStyle("rouge", "small")}, "🛑 Clore"),
+          h("button", {onClick:actRelancerChrono, style:phoneBtnStyle("ghost", "small")}, "🔄 Chrono")
         ),
-        h("button", {onClick:actClore, style:phoneBtnStyle("rouge")}, "🛑 Clore (sans autoriser)")
-      ),
-      // PHASE réponse (sans pause) : Clore + Pause + +5s
-      isResp && !hasPaused && h(React.Fragment, null,
-        h("button", {onClick:actClore, style:phoneBtnStyle("or", "large")}, "🔒 Clore la question"),
-        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
-          h("button", {onClick:actTogglePause, style:phoneBtnStyle("ghost")}, "⏸️ Pause"),
-          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune")}, "+5 sec")
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune", "small")}, "+5s"),
+          h("button", {onClick:actPlus10, style:phoneBtnStyle("jaune", "small")}, "+10s"),
+          h("button", {onClick:actPlus30, style:phoneBtnStyle("jaune", "small")}, "+30s")
         )
       ),
-      // PAUSE (depuis réflexion ou réponse) : Reprendre + +5s
-      hasPaused && h(React.Fragment, null,
-        h("button", {onClick:actTogglePause, style:phoneBtnStyle("vert", "large")}, "▶️ Reprendre le chrono"),
-        h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune")}, "+5 sec")
+      // PHASE réponse (sans pause)
+      isResp && !hasPaused && h(React.Fragment, null,
+        h("button", {onClick:actClore, style:phoneBtnStyle("or", "large")}, "🔒 Clore la question"),
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actTogglePause, style:phoneBtnStyle("ghost", "small")}, "⏸️ Pause"),
+          h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost", "small")}, "🔓 Rouvrir"),
+          h("button", {onClick:actRelancerChrono, style:phoneBtnStyle("ghost", "small")}, "🔄 Chrono")
+        ),
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune", "small")}, "+5s"),
+          h("button", {onClick:actPlus10, style:phoneBtnStyle("jaune", "small")}, "+10s"),
+          h("button", {onClick:actPlus30, style:phoneBtnStyle("jaune", "small")}, "+30s")
+        )
       ),
-      // PHASE attente (Q intermédiaire) : Lancer Q suivante + Rouvrir
+      // PAUSE
+      hasPaused && h(React.Fragment, null,
+        h("button", {onClick:actTogglePause, style:phoneBtnStyle("vert", "large")}, "▶️ Reprendre"),
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune", "small")}, "+5s"),
+          h("button", {onClick:actPlus10, style:phoneBtnStyle("jaune", "small")}, "+10s"),
+          h("button", {onClick:actPlus30, style:phoneBtnStyle("jaune", "small")}, "+30s")
+        )
+      ),
+      // PHASE attente (Q intermédiaire)
       phase === "attente" && qIdx != null && qIdx + 1 < totalQ && h(React.Fragment, null,
         h("button", {onClick:actLancerQ, style:phoneBtnStyle("primary", "large")}, "🚀 Lancer Q"+(qIdx+2)),
-        h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost")}, "🔓 Rouvrir Q"+(qIdx+1)+" pour tous")
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost", "small")}, "🔓 Rouvrir Q"+(qIdx+1)),
+          h("button", {onClick:actQPrec, disabled:qIdx <= 0, style:phoneBtnStyle("ghost", "small")}, "← Q préc.")
+        )
       ),
-      // PHASE attente (dernière Q) : Lancer autoeval + Rouvrir
+      // PHASE attente (dernière Q)
       phase === "attente" && qIdx != null && qIdx + 1 >= totalQ && h(React.Fragment, null,
         h("button", {onClick:actLancerAutoeval, style:phoneBtnStyle("or", "large")}, "📊 Lancer l'autoévaluation"),
-        h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost")}, "🔓 Rouvrir Q"+(qIdx+1)+" pour tous")
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".3rem"}},
+          h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost", "small")}, "🔓 Rouvrir Q"+(qIdx+1)),
+          h("button", {onClick:actQPrec, disabled:qIdx <= 0, style:phoneBtnStyle("ghost", "small")}, "← Q préc.")
+        )
       ),
-      // PHASE autoeval : Lancer correction
+      // PHASE autoeval
       isAutoeval && h("button", {onClick:actLancerCorrection, style:phoneBtnStyle("or", "large")}, "📝 Lancer la correction"),
-      // PHASE correction : Révéler OU Suivante + Précédente
+      // PHASE correction
       isCorr && h(React.Fragment, null,
         !activeSession.corrRevealed
           ? h("button", {onClick:actRevealer, style:phoneBtnStyle("or", "large")}, "💡 Révéler la bonne réponse")
           : h("button", {onClick:actCorrSuiv, style:phoneBtnStyle("primary", "large")}, "Question suivante →"),
-        h("button", {onClick:actCorrPrec, style:phoneBtnStyle("ghost"), disabled:(activeSession.correctionOrdre||[]).indexOf(activeSession.correctionIdx) <= 0}, "← Question précédente")
+        h("button", {onClick:actCorrPrec, style:phoneBtnStyle("ghost", "small"), disabled:(activeSession.correctionOrdre||[]).indexOf(activeSession.correctionIdx) <= 0}, "← Question précédente")
       ),
-      // Explication visible après reveal
-      isCorr && activeSession.corrRevealed && question && question.explication && h("div", {style:{padding:".6rem .8rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".85rem",lineHeight:1.4}},
-        h("div", {style:{fontWeight:900,fontSize:".75rem",letterSpacing:".05em",marginBottom:".25rem",color:"#FFD23F"}}, "💡 EXPLICATION"),
+      isCorr && activeSession.corrRevealed && question && question.explication && h("div", {style:{padding:".5rem .7rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".82rem",lineHeight:1.35}},
+        h("div", {style:{fontWeight:900,fontSize:".72rem",letterSpacing:".05em",marginBottom:".2rem",color:"#FFD23F"}}, "💡 EXPLICATION"),
         h("div", null, question.explication)
       ),
-      // PHASE finie : message
       phase === "finie" && h("div", {style:{padding:"1rem",background:"rgba(0,0,0,.3)",borderRadius:"10px",textAlign:"center"}},
         h("div", {style:{fontSize:"2.5rem",marginBottom:".4rem"}}, "🏁"),
         h("div", {style:{fontWeight:900,fontSize:"1.1rem"}}, "Session terminée"),
         h("div", {style:{fontSize:".82rem",opacity:.85,marginTop:".3rem"}}, "Les élèves consultent leur bilan personnel.")
       )
     ),
-    // Liste élèves (flex:1, scrollable, items cliquables)
-    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem",flex:"1 1 auto",overflowY:"auto",minHeight:0,marginBottom:".5rem"}},
-      h("div", {style:{fontSize:".7rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".2rem .3rem .3rem",position:"sticky",top:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)",margin:"-.4rem -.5rem .3rem",borderRadius:"10px 10px 0 0"}}, "ÉLÈVES — tap pour actions"),
-      (classe.eleves||[]).slice().sort(function(a,b){return (a.nomComplet||"").localeCompare(b.nomComplet||"")}).map(function(el){
-        var slug = slugify(el.nomComplet);
-        var absent = (activeSession.absents||[]).indexOf(slug) >= 0;
-        var hasRep = activeSession.reponses && activeSession.reponses[qIdx] && activeSession.reponses[qIdx][slug];
-        var reouvOuvert = activeSession.reouverts && activeSession.reouverts[slug] === qIdx;
-        var pastille = absent ? "⚪" : (reouvOuvert ? "🔁" : (hasRep ? "✅" : "⏳"));
-        return h("button", {key:slug, onClick:function(){setEleveAction({slug:slug,nom:el.nomComplet,absent:absent,reouvOuvert:reouvOuvert,hasRep:!!hasRep})}, style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:".35rem .4rem",fontSize:".82rem",borderBottom:"1px solid rgba(255,255,255,.08)",opacity:absent?.5:1,background:"transparent",border:"none",borderBottom:"1px solid rgba(255,255,255,.08)",color:"#fff",width:"100%",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}},
-          h("span", {style:{textDecoration:absent?"line-through":"none"}}, el.nomComplet),
-          h("span", {style:{fontSize:".95rem"}}, pastille)
-        );
-      })
-    ),
-    // Footer fixe : Plus + Terminer
-    h("div", {style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:".4rem",flexShrink:0,paddingBottom:".7rem"}},
-      h("button", {onClick:function(){setModalPlusOpen(true)}, style:phoneBtnStyle("ghost")}, "⋯ Plus d'actions"),
-      h("button", {onClick:actTerminer, style:phoneBtnStyle("rouge")}, "🛑 Terminer")
-    ),
-    // Modal "Plus d'actions"
-    modalPlusOpen && h("div", {onClick:function(e){if(e.target===e.currentTarget)setModalPlusOpen(false)}, style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}},
-      h("div", {style:{background:"#2D1B4E",borderRadius:"16px 16px 0 0",padding:"1rem",width:"100%",maxWidth:"500px",maxHeight:"85vh",overflowY:"auto",color:"#fff",boxShadow:"0 -10px 40px rgba(0,0,0,.5)"}},
-        h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:".7rem"}},
-          h("strong", {style:{fontSize:"1rem"}}, "⋯ Plus d'actions"),
-          h("button", {onClick:function(){setModalPlusOpen(false)}, style:{background:"transparent",border:"none",color:"#fff",fontSize:"1.4rem",cursor:"pointer"}}, "✕")
-        ),
-        // Actions sur le chrono (si phase active)
-        (isReflex || isResp || hasPaused) && h("div", {style:{marginBottom:".7rem"}},
-          h("div", {style:{fontSize:".75rem",opacity:.7,letterSpacing:".05em",marginBottom:".3rem"}}, "CHRONO"),
-          h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
-            h("button", {onClick:function(){actPlus5();setModalPlusOpen(false)}, style:phoneBtnStyle("jaune","small")}, "+5s"),
-            h("button", {onClick:function(){actPlus10();setModalPlusOpen(false)}, style:phoneBtnStyle("jaune","small")}, "+10s"),
-            h("button", {onClick:function(){actPlus30();setModalPlusOpen(false)}, style:phoneBtnStyle("jaune","small")}, "+30s")
-          ),
-          (isReflex || isResp) && h("button", {onClick:function(){actRelancerChrono();setModalPlusOpen(false)}, style:Object.assign({},phoneBtnStyle("ghost","small"),{marginTop:".3rem",width:"100%"})}, "🔄 Relancer chrono à zéro")
-        ),
-        // Navigation entre questions (hors correction, hors idle/finie)
-        (phase === "reflexion" || phase === "reponse" || phase === "attente") && h("div", {style:{marginBottom:".7rem"}},
-          h("div", {style:{fontSize:".75rem",opacity:.7,letterSpacing:".05em",marginBottom:".3rem"}}, "QUESTIONS"),
-          h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".3rem"}},
-            h("button", {onClick:function(){actQPrec();setModalPlusOpen(false)}, disabled:qIdx <= 0, style:phoneBtnStyle("ghost","small")}, "← Q précédente"),
-            h("button", {onClick:function(){actQSuiv();setModalPlusOpen(false)}, disabled:qIdx == null || qIdx >= totalQ-1, style:phoneBtnStyle("ghost","small")}, "Q suivante →")
-          )
-        ),
-        // Rouvrir pour tous (en réponse ou attente)
-        (phase === "reponse" || phase === "attente") && h("div", {style:{marginBottom:".7rem"}},
-          h("div", {style:{fontSize:".75rem",opacity:.7,letterSpacing:".05em",marginBottom:".3rem"}}, "RÉOUVERTURE"),
-          h("button", {onClick:function(){actRouvrirTous();setModalPlusOpen(false)}, style:Object.assign({},phoneBtnStyle("ghost"),{width:"100%"})}, "🔓 Rouvrir Q"+(qIdx!=null?(qIdx+1):"")+" pour tous")
-        ),
-        // Info note pédagogique
-        h("div", {style:{padding:".5rem .7rem",background:"rgba(255,255,255,.08)",borderRadius:"8px",fontSize:".75rem",opacity:.85,lineHeight:1.4}},
-          "Pour marquer un élève absent ou rouvrir individuellement : ferme cette fenêtre et tape sur le nom de l'élève dans la liste."
-        )
+    // Stats globales par question (anticipation correction)
+    totalQ > 0 && phase !== "idle" && phase !== "finie" && (function(){
+      var qStats = ev.questions.map(function(qq, qi){
+        var reps = (activeSession.reponses && activeSession.reponses[qi]) || {};
+        var bn = (qq.bonnes||[]).slice().sort();
+        var nbRep = 0, nbBon = 0;
+        Object.keys(reps).forEach(function(slug){
+          nbRep++;
+          var ch = (reps[slug].choix||[]).slice().sort();
+          if(JSON.stringify(ch) === JSON.stringify(bn)) nbBon++;
+        });
+        var tx = nbRep === 0 ? null : Math.round((nbBon/nbRep)*100);
+        return {idx:qi, nbRep:nbRep, nbBon:nbBon, tx:tx};
+      });
+      function couleurQ(s, isCurrent){
+        if(isCurrent) return "linear-gradient(135deg,var(--violet),var(--rose))";
+        if(s.tx === null) return "rgba(255,255,255,.15)";
+        if(s.tx >= 75) return "linear-gradient(135deg,#22C55E,#16A34A)";
+        if(s.tx >= 50) return "linear-gradient(135deg,#3B82F6,#2563EB)";
+        if(s.tx >= 25) return "linear-gradient(135deg,#F97316,#EA580C)";
+        return "linear-gradient(135deg,#EF4444,#DC2626)";
+      }
+      return h("div", {style:{display:"flex",gap:".2rem",marginBottom:".4rem",flexShrink:0,overflowX:"auto"}, title:"Aperçu de la classe par question. Vert = >75% bonnes, Bleu = >50%, Orange = >25%, Rouge = <25%. Les rouges sortiront en premier à la correction."},
+        qStats.map(function(s){
+          var isCurrent = (s.idx === qIdx && !isCorr) || (isCorr && s.idx === activeSession.correctionIdx);
+          return h("div", {key:s.idx, style:{
+            flex:"1 1 0",minWidth:"32px",padding:".25rem 0",
+            background:couleurQ(s, isCurrent),
+            border:isCurrent ? "2px solid #FFD23F" : "1px solid rgba(255,255,255,.2)",
+            borderRadius:"6px",textAlign:"center",fontWeight:900,fontSize:".7rem",color:"#fff",lineHeight:"1.2"
+          }, title:"Q"+(s.idx+1)+(s.tx===null?" — pas de réponse":" — "+s.nbBon+"/"+s.nbRep+" bonnes ("+s.tx+"%)")},
+            h("div", null, "Q"+(s.idx+1)),
+            s.tx !== null && h("div", {style:{fontSize:".62rem",opacity:.9}}, s.tx+"%")
+          );
+        })
+      );
+    })(),
+    // Liste élèves sur 2 colonnes, avec lettre + couleur juste/faux
+    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".35rem .4rem",flex:"1 1 auto",overflowY:"auto",minHeight:0,marginBottom:".4rem"}},
+      h("div", {style:{fontSize:".68rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".15rem .25rem .25rem",position:"sticky",top:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)",margin:"-.35rem -.4rem .25rem",borderRadius:"10px 10px 0 0"}}, "ÉLÈVES — tap pour actions"),
+      h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".2rem"}},
+        (classe.eleves||[]).slice().sort(function(a,b){return (a.nomComplet||"").localeCompare(b.nomComplet||"")}).map(function(el){
+          var slug = slugify(el.nomComplet);
+          var absent = (activeSession.absents||[]).indexOf(slug) >= 0;
+          var qPourPastille = isCorr ? activeSession.correctionIdx : qIdx;
+          var rep = activeSession.reponses && activeSession.reponses[qPourPastille] && activeSession.reponses[qPourPastille][slug];
+          var qCible = (qPourPastille != null && ev.questions) ? ev.questions[qPourPastille] : null;
+          var bn = qCible ? (qCible.bonnes||[]).slice().sort() : null;
+          var choix = (rep && rep.choix) ? rep.choix.slice().sort() : null;
+          var juste = (choix && bn) ? JSON.stringify(choix) === JSON.stringify(bn) : null;
+          var reouvOuvert = activeSession.reouverts && activeSession.reouverts[slug] === qPourPastille;
+          var lettre = choix && choix.length ? choix.map(function(c){return lettreFromIndex(c)}).join("") : null;
+          // Couleur pastille
+          var pastBg = "rgba(255,255,255,.12)";
+          var pastColor = "#fff";
+          if(absent){ pastBg = "rgba(255,255,255,.05)"; pastColor = "rgba(255,255,255,.4)"; }
+          else if(choix === null){ pastBg = "rgba(255,210,63,.18)"; pastColor = "#FFD23F"; }
+          else if(juste === true){ pastBg = "linear-gradient(135deg,#22C55E,#16A34A)"; }
+          else if(juste === false){ pastBg = "linear-gradient(135deg,#EF4444,#DC2626)"; }
+          var pastContent = absent ? "⚪" : (choix === null ? "⏳" : lettre);
+          // Nom court : 12 chars max
+          var nomCourt = (el.nomComplet||"").length > 14 ? (el.nomComplet||"").slice(0,13) + "…" : el.nomComplet;
+          return h("button", {key:slug, onClick:function(){setEleveAction({slug:slug,nom:el.nomComplet,absent:absent,reouvOuvert:reouvOuvert,hasRep:!!rep})}, style:{
+            display:"flex",justifyContent:"space-between",alignItems:"center",
+            padding:".22rem .35rem",fontSize:".72rem",
+            background:reouvOuvert?"rgba(255,210,63,.15)":"transparent",
+            border:"1px solid rgba(255,255,255,.08)",
+            color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"left",
+            borderRadius:"6px",opacity:absent?.55:1
+          }, title:el.nomComplet+(choix?" — a coché "+lettre+(juste===true?" ✓ juste":(juste===false?" ✗ faux":"")):(absent?" — absent":" — pas de réponse"))},
+            h("span", {style:{textDecoration:absent?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:"1 1 auto",minWidth:0}}, nomCourt),
+            h("span", {style:{
+              minWidth:"28px",height:"22px",lineHeight:"22px",textAlign:"center",
+              background:pastBg,color:pastColor,fontWeight:900,fontSize:".7rem",
+              borderRadius:"4px",marginLeft:".25rem",padding:"0 .3rem",display:"inline-block"
+            }}, pastContent)
+          );
+        })
       )
     ),
-    // Modal Action élève
+    // Footer : Terminer seul (compact)
+    h("button", {onClick:actTerminer, style:Object.assign({},phoneBtnStyle("rouge","small"),{width:"100%",flexShrink:0,marginBottom:".6rem"})}, "🛑 Terminer la session"),
+    // Modal Action élève (conservée)
     eleveAction && h("div", {onClick:function(e){if(e.target===e.currentTarget)setEleveAction(null)}, style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1001,display:"flex",alignItems:"flex-end",justifyContent:"center"}},
       h("div", {style:{background:"#2D1B4E",borderRadius:"16px 16px 0 0",padding:"1rem",width:"100%",maxWidth:"500px",color:"#fff",boxShadow:"0 -10px 40px rgba(0,0,0,.5)"}},
         h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:".7rem"}},
           h("strong", {style:{fontSize:"1rem"}}, eleveAction.nom),
           h("button", {onClick:function(){setEleveAction(null)}, style:{background:"transparent",border:"none",color:"#fff",fontSize:"1.4rem",cursor:"pointer"}}, "✕")
         ),
-        // Rouvrir/refermer individuellement (si phase réponse ou attente)
         (phase === "reponse" || phase === "attente") && qIdx != null && h("button", {onClick:function(){actRouvrirIndiv(eleveAction.slug)}, style:Object.assign({},phoneBtnStyle(eleveAction.reouvOuvert?"or":"turq"),{width:"100%",marginBottom:".4rem"})},
           eleveAction.reouvOuvert
             ? "❌ Refermer la réouverture pour cet élève"
             : "🔁 Rouvrir Q"+(qIdx+1)+" pour cet élève uniquement"
         ),
-        // Marquer parti / revenu
         !eleveAction.absent && h("button", {onClick:function(){if(confirm("Marquer "+eleveAction.nom+" comme parti ? Ses réponses déjà données restent enregistrées."))actMarquerDepart(eleveAction.slug)}, style:Object.assign({},phoneBtnStyle("rouge"),{width:"100%",marginBottom:".4rem"})},
           "🚫 Marquer comme parti en cours de séance"
         ),
