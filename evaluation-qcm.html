@@ -2088,6 +2088,97 @@ var sessActions = {
       corrRevealed:false,
       revealedHistory:null
     });
+  },
+  lancerAutoeval: function(sess){
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({phase:"autoeval"});
+  },
+  rouvrirPourTous: function(sess){
+    var updates = {};
+    updates["/sessions/"+sess.id+"/phase"] = "reponse";
+    updates["/sessions/"+sess.id+"/phaseStart"] = Date.now();
+    updates["/sessions/"+sess.id+"/chronoReponse"] = sess.chronoReponse || 5;
+    var qIdx = sess.qIdx;
+    if(sess.reouvertHistorique && qIdx != null){
+      Object.keys(sess.reouvertHistorique).forEach(function(slug){
+        if(sess.reouvertHistorique[slug] && sess.reouvertHistorique[slug][qIdx] != null){
+          updates["/sessions/"+sess.id+"/reouvertHistorique/"+slug+"/"+qIdx] = null;
+        }
+      });
+    }
+    if(sess.reouverts){
+      Object.keys(sess.reouverts).forEach(function(slug){
+        if(sess.reouverts[slug] === qIdx){
+          updates["/sessions/"+sess.id+"/reouverts/"+slug] = null;
+        }
+      });
+    }
+    db.ref(DB_ROOT).update(updates);
+    sessActions.notifier(sess, "La question est rouverte. Tu peux encore répondre.", "info");
+  },
+  relancerChrono: function(sess){
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({phaseStart:Date.now(), paused:null});
+    sessActions.notifier(sess, "Le chrono a été relancé.", "info");
+  },
+  allerAQuestion: function(sess, ev, idx){
+    if(idx < 0 || idx >= ev.questions.length) return;
+    if(idx === sess.qIdx) return;
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
+      qIdx:idx, phase:"reflexion", phaseStart:Date.now(), reouverts:null, paused:null
+    });
+  },
+  correctionSuiv: function(sess, ev){
+    var ordre = sess.correctionOrdre || ev.questions.map(function(_,i){return i});
+    var posActuelle = ordre.indexOf(sess.correctionIdx);
+    var nextPos = posActuelle + 1;
+    if(nextPos >= ordre.length){
+      // Archivage MJPC + passage phase finie (gérée dans SessionLive — on délègue)
+      return false; // Indique qu'il faut appeler la logique de fin
+    }
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
+      correctionIdx:ordre[nextPos], corrRevealed:false
+    });
+    return true;
+  },
+  correctionPrec: function(sess, ev){
+    var ordre = sess.correctionOrdre || ev.questions.map(function(_,i){return i});
+    var posActuelle = ordre.indexOf(sess.correctionIdx);
+    if(posActuelle <= 0) return false;
+    db.ref(DB_ROOT+"/sessions/"+sess.id).update({
+      correctionIdx:ordre[posActuelle - 1], corrRevealed:false
+    });
+    return true;
+  },
+  rouvrirIndividuel: function(sess, eleveSlug){
+    var qIdx = sess.qIdx;
+    if(qIdx == null) return;
+    var path = DB_ROOT+"/sessions/"+sess.id+"/reouverts/"+eleveSlug;
+    var dejaOuvert = sess.reouverts && sess.reouverts[eleveSlug] === qIdx;
+    if(dejaOuvert){
+      db.ref(path).remove();
+    } else {
+      db.ref(path).set(qIdx);
+      var histPath = DB_ROOT+"/sessions/"+sess.id+"/reouvertHistorique/"+eleveSlug+"/"+qIdx;
+      db.ref(histPath).transaction(function(curr){ return (curr || 0) + 1; });
+    }
+  },
+  marquerDepart: function(sess, eleveSlug){
+    var absentsAct = (sess.absents || []).slice();
+    if(absentsAct.indexOf(eleveSlug) < 0) absentsAct.push(eleveSlug);
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/absents").set(absentsAct);
+    sessActions.notifier(sess, "Un élève a été marqué comme parti.", "info");
+  },
+  marquerRetour: function(sess, eleveSlug){
+    var absentsAct = (sess.absents || []).filter(function(s){return s !== eleveSlug});
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/absents").set(absentsAct.length ? absentsAct : null);
+    sessActions.notifier(sess, "Un élève est revenu.", "info");
+  },
+  terminerSession: function(sess, askConfirm){
+    if(askConfirm){
+      if(!confirm("Terminer la session ? Les élèves verront un écran de fin. Tu pourras toujours consulter les résultats dans l'onglet Résultats.")) return false;
+    }
+    db.ref(DB_ROOT+"/sessions/"+sess.id+"/etat").set("terminee");
+    db.ref(DB_ROOT+"/sessionActive/"+sess.classeSlug).remove();
+    return true;
   }
 };
 
@@ -3291,6 +3382,8 @@ function VuePhone(p){
   var s3 = useState({}), sessions = s3[0], setSessions = s3[1];
   var s4 = useState({}), sessionActive = s4[0], setSessionActive = s4[1];
   var st = useState(0), tick = st[0], setTick = st[1]; // tick chrono (B-ii)
+  var sP = useState(false), modalPlusOpen = sP[0], setModalPlusOpen = sP[1];
+  var sE = useState(null), eleveAction = sE[0], setEleveAction = sE[1]; // {slug, nom}
 
   useEffect(function(){
     db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}); });
@@ -3340,7 +3433,7 @@ function VuePhone(p){
   var phase = activeSession.phase || "—";
   var totalQ = (ev.questions || []).length;
 
-  // ─── Actions (B2) — déléguées à sessActions (factorisation dette technique) ───
+  // ─── Actions principales — déléguées à sessActions ───
   function actLancerQ(){ sessActions.lancerQ(activeSession, ev); }
   function actAutoriser(){ sessActions.autoriser(activeSession); }
   function actClore(){ sessActions.clore(activeSession, true); }
@@ -3348,6 +3441,58 @@ function VuePhone(p){
   function actPlus5(){ sessActions.ajouterTemps(activeSession, 5); }
   function actRevealer(){ sessActions.revealer(activeSession); }
   function actLancerCorrection(){ sessActions.lancerCorrection(activeSession, ev); }
+  function actLancerAutoeval(){ sessActions.lancerAutoeval(activeSession); }
+  function actRouvrirTous(){ sessActions.rouvrirPourTous(activeSession); }
+  function actRelancerChrono(){ sessActions.relancerChrono(activeSession); }
+  function actPlus10(){ sessActions.ajouterTemps(activeSession, 10); }
+  function actPlus30(){ sessActions.ajouterTemps(activeSession, 30); }
+  function actQPrec(){ if(qIdx > 0) sessActions.allerAQuestion(activeSession, ev, qIdx-1); }
+  function actQSuiv(){ if(qIdx != null && qIdx < totalQ-1) sessActions.allerAQuestion(activeSession, ev, qIdx+1); }
+  function actCorrSuiv(){
+    var ok = sessActions.correctionSuiv(activeSession, ev);
+    if(!ok){
+      // Dernière Q de correction → phase finie + archivage MJPC
+      var reps = activeSession.reponses || {};
+      // Reconstruction du dict de réponses pour archiverDansProfilsMJPC
+      var reponsesPourArchive = {};
+      Object.keys(reps).forEach(function(qi){ reponsesPourArchive[qi] = reps[qi]; });
+      archiverDansProfilsMJPC(activeSession, ev, classe, reponsesPourArchive);
+      db.ref(DB_ROOT+"/sessions/"+activeSession.id+"/phase").set("finie");
+    }
+  }
+  function actCorrPrec(){ sessActions.correctionPrec(activeSession, ev); }
+  function actTerminer(){
+    if(sessActions.terminerSession(activeSession, true)){
+      setModalPlusOpen(false);
+    }
+  }
+  function actRouvrirIndiv(slug){
+    sessActions.rouvrirIndividuel(activeSession, slug);
+    setEleveAction(null);
+  }
+  function actMarquerDepart(slug){
+    sessActions.marquerDepart(activeSession, slug);
+    setEleveAction(null);
+  }
+  function actMarquerRetour(slug){
+    sessActions.marquerRetour(activeSession, slug);
+    setEleveAction(null);
+  }
+
+  // Helper pour styles boutons mobile cohérents
+  function phoneBtnStyle(variant, size){
+    var pad = size === "large" ? ".85rem" : (size === "small" ? ".5rem" : ".7rem");
+    var fs = size === "large" ? "1rem" : (size === "small" ? ".78rem" : ".88rem");
+    var base = {padding:pad,border:"none",borderRadius:"10px",color:"#fff",fontWeight:"900",fontSize:fs,cursor:"pointer",fontFamily:"inherit",transition:"transform .1s,opacity .2s"};
+    if(variant === "primary") base.background = "linear-gradient(135deg,var(--violet),var(--rose))";
+    else if(variant === "turq") base.background = "linear-gradient(135deg,var(--turquoise),var(--bleu))";
+    else if(variant === "or") { base.background = "linear-gradient(135deg,var(--jaune),#FF8C42)"; base.color = "var(--noir)"; }
+    else if(variant === "rouge") base.background = "linear-gradient(135deg,var(--rouge),#DC2626)";
+    else if(variant === "vert") base.background = "linear-gradient(135deg,#22C55E,#16A34A)";
+    else if(variant === "jaune") { base.background = "var(--jaune)"; base.color = "var(--noir)"; }
+    else { base.background = "rgba(255,255,255,.12)"; base.border = "2px solid rgba(255,255,255,.3)"; }
+    return base;
+  }
   var lancerLabel = (qIdx == null) ? "🚀 Lancer Q1" : ("🚀 Lancer Q"+(qIdx+2));
   var lancerDisabled = (qIdx != null && qIdx+1 >= totalQ);
   var pauseLabel = activeSession.paused ? "▶️ Reprendre" : "⏸️ Pause";
@@ -3401,39 +3546,144 @@ function VuePhone(p){
       h("span", {style:{fontWeight:"900",color:"var(--violet)"}}, "Suiv. "),
       (nextQuestion.enonce || "").slice(0, 80) + ((nextQuestion.enonce||"").length > 80 ? "…" : "")
     ),
-    // Boutons d'action (B2 + B-i états désactivés)
-    h("div", {style:{display:"grid",gridTemplateColumns:"1fr",gap:".4rem",marginBottom:".6rem",flexShrink:0}},
-      h("button", {onClick:actLancerQ, disabled:disLancer, style:{padding:".8rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--violet),var(--rose))",color:"#fff",fontWeight:"900",fontSize:".95rem",cursor:disLancer?"not-allowed":"pointer",opacity:disLancer?.45:1,fontFamily:"inherit",boxShadow:disLancer?"none":"0 4px 12px rgba(0,0,0,.2)"}}, lancerLabel),
-      h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
-        h("button", {onClick:actAutoriser, disabled:disAutor, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--turquoise),var(--bleu))",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:disAutor?"not-allowed":"pointer",opacity:disAutor?.45:1,fontFamily:"inherit",boxShadow:disAutor?"none":"0 3px 10px rgba(0,0,0,.18)"}}, "✋ Autoriser"),
-        h("button", {onClick:actClore, disabled:disClore, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--rouge),#DC2626)",color:"#fff",fontWeight:"900",fontSize:".88rem",cursor:disClore?"not-allowed":"pointer",opacity:disClore?.45:1,fontFamily:"inherit",boxShadow:disClore?"none":"0 3px 10px rgba(0,0,0,.18)"}}, "🛑 Clore")
+    // Boutons d'action contextuels selon la phase
+    h("div", {style:{display:"flex",flexDirection:"column",gap:".4rem",marginBottom:".6rem",flexShrink:0}},
+      // PHASE idle : Lancer Q1
+      (phase === "idle" || !phase) && h("button", {onClick:actLancerQ, style:phoneBtnStyle("primary", "large")}, "🚀 Lancer Q1"),
+      // PHASE réflexion (sans pause) : Autoriser + Pause + Clore
+      isReflex && !hasPaused && h(React.Fragment, null,
+        h("button", {onClick:actAutoriser, style:phoneBtnStyle("turq", "large")}, "✋ Autoriser la réponse"),
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
+          h("button", {onClick:actTogglePause, style:phoneBtnStyle("ghost")}, "⏸️ Pause"),
+          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune")}, "+5 sec")
+        ),
+        h("button", {onClick:actClore, style:phoneBtnStyle("rouge")}, "🛑 Clore (sans autoriser)")
       ),
-      h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
-        h("button", {onClick:actTogglePause, disabled:disPause, style:{padding:".55rem",border:"2px solid rgba(255,255,255,.4)",borderRadius:"10px",background:"rgba(255,255,255,.15)",color:"#fff",fontWeight:"900",fontSize:".82rem",cursor:disPause?"not-allowed":"pointer",opacity:disPause?.45:1,fontFamily:"inherit"}}, pauseLabel),
-        h("button", {onClick:actPlus5, disabled:disPlus5, style:{padding:".55rem",border:"none",borderRadius:"10px",background:"var(--jaune)",color:"var(--noir)",fontWeight:"900",fontSize:".82rem",cursor:disPlus5?"not-allowed":"pointer",opacity:disPlus5?.45:1,fontFamily:"inherit",boxShadow:disPlus5?"none":"0 3px 10px rgba(0,0,0,.15)"}}, "+5 sec")
+      // PHASE réponse (sans pause) : Clore + Pause + +5s
+      isResp && !hasPaused && h(React.Fragment, null,
+        h("button", {onClick:actClore, style:phoneBtnStyle("or", "large")}, "🔒 Clore la question"),
+        h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".4rem"}},
+          h("button", {onClick:actTogglePause, style:phoneBtnStyle("ghost")}, "⏸️ Pause"),
+          h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune")}, "+5 sec")
+        )
       ),
-      isCorr && h("button", {onClick:actRevealer, disabled:disRevealer, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--jaune),#FF8C42)",color:"var(--noir)",fontWeight:"900",fontSize:".88rem",cursor:disRevealer?"not-allowed":"pointer",opacity:disRevealer?.45:1,fontFamily:"inherit",boxShadow:disRevealer?"none":"0 3px 10px rgba(0,0,0,.18)"}}, activeSession.corrRevealed?"💡 Révélée":"💡 Révéler la réponse"),
-      // Polish : bouton "Lancer correction" depuis le tel en phase autoeval
-      isAutoeval && h("button", {onClick:actLancerCorrection, style:{padding:".7rem",border:"none",borderRadius:"10px",background:"linear-gradient(135deg,var(--jaune),#FF8C42)",color:"var(--noir)",fontWeight:"900",fontSize:".88rem",cursor:"pointer",fontFamily:"inherit",boxShadow:"0 3px 10px rgba(0,0,0,.18)"}, title:"Lance la correction collective. Les élèves verront les questions corrigées dans l'ordre du taux d'erreur décroissant (les plus ratées d'abord)."}, "📝 Lancer la correction"),
-      // Polish : explication visible sur le tel après reveal (en phase correction)
-      isCorr && activeSession.corrRevealed && question && question.explication && h("div", {style:{marginTop:".6rem",padding:".6rem .8rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".85rem",lineHeight:1.4}},
+      // PAUSE (depuis réflexion ou réponse) : Reprendre + +5s
+      hasPaused && h(React.Fragment, null,
+        h("button", {onClick:actTogglePause, style:phoneBtnStyle("vert", "large")}, "▶️ Reprendre le chrono"),
+        h("button", {onClick:actPlus5, style:phoneBtnStyle("jaune")}, "+5 sec")
+      ),
+      // PHASE attente (Q intermédiaire) : Lancer Q suivante + Rouvrir
+      phase === "attente" && qIdx != null && qIdx + 1 < totalQ && h(React.Fragment, null,
+        h("button", {onClick:actLancerQ, style:phoneBtnStyle("primary", "large")}, "🚀 Lancer Q"+(qIdx+2)),
+        h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost")}, "🔓 Rouvrir Q"+(qIdx+1)+" pour tous")
+      ),
+      // PHASE attente (dernière Q) : Lancer autoeval + Rouvrir
+      phase === "attente" && qIdx != null && qIdx + 1 >= totalQ && h(React.Fragment, null,
+        h("button", {onClick:actLancerAutoeval, style:phoneBtnStyle("or", "large")}, "📊 Lancer l'autoévaluation"),
+        h("button", {onClick:actRouvrirTous, style:phoneBtnStyle("ghost")}, "🔓 Rouvrir Q"+(qIdx+1)+" pour tous")
+      ),
+      // PHASE autoeval : Lancer correction
+      isAutoeval && h("button", {onClick:actLancerCorrection, style:phoneBtnStyle("or", "large")}, "📝 Lancer la correction"),
+      // PHASE correction : Révéler OU Suivante + Précédente
+      isCorr && h(React.Fragment, null,
+        !activeSession.corrRevealed
+          ? h("button", {onClick:actRevealer, style:phoneBtnStyle("or", "large")}, "💡 Révéler la bonne réponse")
+          : h("button", {onClick:actCorrSuiv, style:phoneBtnStyle("primary", "large")}, "Question suivante →"),
+        h("button", {onClick:actCorrPrec, style:phoneBtnStyle("ghost"), disabled:(activeSession.correctionOrdre||[]).indexOf(activeSession.correctionIdx) <= 0}, "← Question précédente")
+      ),
+      // Explication visible après reveal
+      isCorr && activeSession.corrRevealed && question && question.explication && h("div", {style:{padding:".6rem .8rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".85rem",lineHeight:1.4}},
         h("div", {style:{fontWeight:900,fontSize:".75rem",letterSpacing:".05em",marginBottom:".25rem",color:"#FFD23F"}}, "💡 EXPLICATION"),
         h("div", null, question.explication)
+      ),
+      // PHASE finie : message
+      phase === "finie" && h("div", {style:{padding:"1rem",background:"rgba(0,0,0,.3)",borderRadius:"10px",textAlign:"center"}},
+        h("div", {style:{fontSize:"2.5rem",marginBottom:".4rem"}}, "🏁"),
+        h("div", {style:{fontWeight:900,fontSize:"1.1rem"}}, "Session terminée"),
+        h("div", {style:{fontSize:".82rem",opacity:.85,marginTop:".3rem"}}, "Les élèves consultent leur bilan personnel.")
       )
     ),
-    // Liste élèves (flex:1, scrollable)
-    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem",flex:"1 1 auto",overflowY:"auto",minHeight:0,marginBottom:".7rem"}},
-      h("div", {style:{fontSize:".7rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".2rem .3rem .3rem",position:"sticky",top:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)",margin:"-.4rem -.5rem .3rem",borderRadius:"10px 10px 0 0"}}, "ÉLÈVES"),
+    // Liste élèves (flex:1, scrollable, items cliquables)
+    h("div", {style:{background:"rgba(0,0,0,.25)",borderRadius:"10px",padding:".4rem .5rem",flex:"1 1 auto",overflowY:"auto",minHeight:0,marginBottom:".5rem"}},
+      h("div", {style:{fontSize:".7rem",fontWeight:"900",letterSpacing:".05em",opacity:.85,padding:".2rem .3rem .3rem",position:"sticky",top:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(4px)",margin:"-.4rem -.5rem .3rem",borderRadius:"10px 10px 0 0"}}, "ÉLÈVES — tap pour actions"),
       (classe.eleves||[]).slice().sort(function(a,b){return (a.nomComplet||"").localeCompare(b.nomComplet||"")}).map(function(el){
         var slug = slugify(el.nomComplet);
         var absent = (activeSession.absents||[]).indexOf(slug) >= 0;
         var hasRep = activeSession.reponses && activeSession.reponses[qIdx] && activeSession.reponses[qIdx][slug];
-        var pastille = absent ? "⚪" : (hasRep ? "✅" : "⏳");
-        return h("div", {key:slug, style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:".28rem .4rem",fontSize:".82rem",borderBottom:"1px solid rgba(255,255,255,.08)",opacity:absent?.5:1}},
+        var reouvOuvert = activeSession.reouverts && activeSession.reouverts[slug] === qIdx;
+        var pastille = absent ? "⚪" : (reouvOuvert ? "🔁" : (hasRep ? "✅" : "⏳"));
+        return h("button", {key:slug, onClick:function(){setEleveAction({slug:slug,nom:el.nomComplet,absent:absent,reouvOuvert:reouvOuvert,hasRep:!!hasRep})}, style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:".35rem .4rem",fontSize:".82rem",borderBottom:"1px solid rgba(255,255,255,.08)",opacity:absent?.5:1,background:"transparent",border:"none",borderBottom:"1px solid rgba(255,255,255,.08)",color:"#fff",width:"100%",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}},
           h("span", {style:{textDecoration:absent?"line-through":"none"}}, el.nomComplet),
           h("span", {style:{fontSize:".95rem"}}, pastille)
         );
       })
+    ),
+    // Footer fixe : Plus + Terminer
+    h("div", {style:{display:"grid",gridTemplateColumns:"2fr 1fr",gap:".4rem",flexShrink:0,paddingBottom:".7rem"}},
+      h("button", {onClick:function(){setModalPlusOpen(true)}, style:phoneBtnStyle("ghost")}, "⋯ Plus d'actions"),
+      h("button", {onClick:actTerminer, style:phoneBtnStyle("rouge")}, "🛑 Terminer")
+    ),
+    // Modal "Plus d'actions"
+    modalPlusOpen && h("div", {onClick:function(e){if(e.target===e.currentTarget)setModalPlusOpen(false)}, style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}},
+      h("div", {style:{background:"#2D1B4E",borderRadius:"16px 16px 0 0",padding:"1rem",width:"100%",maxWidth:"500px",maxHeight:"85vh",overflowY:"auto",color:"#fff",boxShadow:"0 -10px 40px rgba(0,0,0,.5)"}},
+        h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:".7rem"}},
+          h("strong", {style:{fontSize:"1rem"}}, "⋯ Plus d'actions"),
+          h("button", {onClick:function(){setModalPlusOpen(false)}, style:{background:"transparent",border:"none",color:"#fff",fontSize:"1.4rem",cursor:"pointer"}}, "✕")
+        ),
+        // Actions sur le chrono (si phase active)
+        (isReflex || isResp || hasPaused) && h("div", {style:{marginBottom:".7rem"}},
+          h("div", {style:{fontSize:".75rem",opacity:.7,letterSpacing:".05em",marginBottom:".3rem"}}, "CHRONO"),
+          h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".3rem"}},
+            h("button", {onClick:function(){actPlus5();setModalPlusOpen(false)}, style:phoneBtnStyle("jaune","small")}, "+5s"),
+            h("button", {onClick:function(){actPlus10();setModalPlusOpen(false)}, style:phoneBtnStyle("jaune","small")}, "+10s"),
+            h("button", {onClick:function(){actPlus30();setModalPlusOpen(false)}, style:phoneBtnStyle("jaune","small")}, "+30s")
+          ),
+          (isReflex || isResp) && h("button", {onClick:function(){actRelancerChrono();setModalPlusOpen(false)}, style:Object.assign({},phoneBtnStyle("ghost","small"),{marginTop:".3rem",width:"100%"})}, "🔄 Relancer chrono à zéro")
+        ),
+        // Navigation entre questions (hors correction, hors idle/finie)
+        (phase === "reflexion" || phase === "reponse" || phase === "attente") && h("div", {style:{marginBottom:".7rem"}},
+          h("div", {style:{fontSize:".75rem",opacity:.7,letterSpacing:".05em",marginBottom:".3rem"}}, "QUESTIONS"),
+          h("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".3rem"}},
+            h("button", {onClick:function(){actQPrec();setModalPlusOpen(false)}, disabled:qIdx <= 0, style:phoneBtnStyle("ghost","small")}, "← Q précédente"),
+            h("button", {onClick:function(){actQSuiv();setModalPlusOpen(false)}, disabled:qIdx == null || qIdx >= totalQ-1, style:phoneBtnStyle("ghost","small")}, "Q suivante →")
+          )
+        ),
+        // Rouvrir pour tous (en réponse ou attente)
+        (phase === "reponse" || phase === "attente") && h("div", {style:{marginBottom:".7rem"}},
+          h("div", {style:{fontSize:".75rem",opacity:.7,letterSpacing:".05em",marginBottom:".3rem"}}, "RÉOUVERTURE"),
+          h("button", {onClick:function(){actRouvrirTous();setModalPlusOpen(false)}, style:Object.assign({},phoneBtnStyle("ghost"),{width:"100%"})}, "🔓 Rouvrir Q"+(qIdx!=null?(qIdx+1):"")+" pour tous")
+        ),
+        // Info note pédagogique
+        h("div", {style:{padding:".5rem .7rem",background:"rgba(255,255,255,.08)",borderRadius:"8px",fontSize:".75rem",opacity:.85,lineHeight:1.4}},
+          "Pour marquer un élève absent ou rouvrir individuellement : ferme cette fenêtre et tape sur le nom de l'élève dans la liste."
+        )
+      )
+    ),
+    // Modal Action élève
+    eleveAction && h("div", {onClick:function(e){if(e.target===e.currentTarget)setEleveAction(null)}, style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1001,display:"flex",alignItems:"flex-end",justifyContent:"center"}},
+      h("div", {style:{background:"#2D1B4E",borderRadius:"16px 16px 0 0",padding:"1rem",width:"100%",maxWidth:"500px",color:"#fff",boxShadow:"0 -10px 40px rgba(0,0,0,.5)"}},
+        h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:".7rem"}},
+          h("strong", {style:{fontSize:"1rem"}}, eleveAction.nom),
+          h("button", {onClick:function(){setEleveAction(null)}, style:{background:"transparent",border:"none",color:"#fff",fontSize:"1.4rem",cursor:"pointer"}}, "✕")
+        ),
+        // Rouvrir/refermer individuellement (si phase réponse ou attente)
+        (phase === "reponse" || phase === "attente") && qIdx != null && h("button", {onClick:function(){actRouvrirIndiv(eleveAction.slug)}, style:Object.assign({},phoneBtnStyle(eleveAction.reouvOuvert?"or":"turq"),{width:"100%",marginBottom:".4rem"})},
+          eleveAction.reouvOuvert
+            ? "❌ Refermer la réouverture pour cet élève"
+            : "🔁 Rouvrir Q"+(qIdx+1)+" pour cet élève uniquement"
+        ),
+        // Marquer parti / revenu
+        !eleveAction.absent && h("button", {onClick:function(){if(confirm("Marquer "+eleveAction.nom+" comme parti ? Ses réponses déjà données restent enregistrées."))actMarquerDepart(eleveAction.slug)}, style:Object.assign({},phoneBtnStyle("rouge"),{width:"100%",marginBottom:".4rem"})},
+          "🚫 Marquer comme parti en cours de séance"
+        ),
+        eleveAction.absent && h("button", {onClick:function(){actMarquerRetour(eleveAction.slug)}, style:Object.assign({},phoneBtnStyle("vert"),{width:"100%",marginBottom:".4rem"})},
+          "↩️ Marquer comme revenu"
+        ),
+        h("div", {style:{padding:".5rem .7rem",background:"rgba(255,255,255,.08)",borderRadius:"8px",fontSize:".75rem",opacity:.85,lineHeight:1.4,marginTop:".4rem"}},
+          "État actuel : ",
+          eleveAction.absent ? "absent" : (eleveAction.reouvOuvert ? "réouverture active" : (eleveAction.hasRep ? "a répondu à la Q en cours" : "n'a pas encore répondu"))
+        )
+      )
     )
   );
 }
