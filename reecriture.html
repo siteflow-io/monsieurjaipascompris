@@ -286,6 +286,67 @@ function matchInit(eleve,query){
 function sortPiegesByPosition(pieges){
   return (pieges||[]).slice().sort(function(a,b){return (a.tokenIdx||0)-(b.tokenIdx||0)});
 }
+
+// === Snapshots (sauvegardes) ===
+// Crée un instantané complet d'une réécriture (config, corrections, absents, paquetOrder).
+// Limite à 5 snapshots par réécriture : les plus anciens sont supprimés automatiquement.
+// label : "manuel" | "auto-quotidien" | "avant-restauration"
+function createSnapshot(reecritureId,label){
+  if(!reecritureId)return Promise.reject(new Error("reecritureId manquant"));
+  return db.ref("reecritures/"+reecritureId).once("value").then(function(snap){
+    var data=snap.val()||{};
+    // Préparer le payload sans inclure les snapshots eux-mêmes
+    var payload={};
+    Object.keys(data).forEach(function(k){if(k!=="snapshots")payload[k]=data[k]});
+    var ts=Date.now();
+    var snapId="snap_"+ts;
+    var snapData={createdAt:ts,label:label||"manuel",payload:payload};
+    // Purger les anciens snapshots pour ne garder que les 4 plus récents (le nouveau fera 5)
+    var existing=data.snapshots||{};
+    var existingList=Object.keys(existing).map(function(k){return Object.assign({id:k},existing[k])});
+    existingList.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+    var toDelete=existingList.slice(4); // garder 4 + ajouter 1 = 5
+    var updates={};
+    updates["snapshots/"+snapId]=snapData;
+    toDelete.forEach(function(s){updates["snapshots/"+s.id]=null});
+    return db.ref("reecritures/"+reecritureId).update(updates).then(function(){return snapId});
+  });
+}
+// Restaure un snapshot : remplace config/corrections/absents/paquetOrder par les valeurs sauvegardées.
+// Crée d'abord un snapshot "avant-restauration" pour pouvoir annuler.
+function restoreSnapshot(reecritureId,snapId){
+  if(!reecritureId||!snapId)return Promise.reject(new Error("Param\u00e8tres manquants"));
+  return db.ref("reecritures/"+reecritureId+"/snapshots/"+snapId).once("value").then(function(snap){
+    var snapData=snap.val();
+    if(!snapData||!snapData.payload)return Promise.reject(new Error("Snapshot introuvable"));
+    var payload=snapData.payload;
+    // 1. Créer une sauvegarde de l'état actuel pour annulation possible
+    return createSnapshot(reecritureId,"avant-restauration").then(function(){
+      // 2. Restaurer les sous-clés une par une (sauf snapshots qui reste intact)
+      var ref=db.ref("reecritures/"+reecritureId);
+      var keys=["config","corrections","absents","paquetOrder"];
+      var promises=keys.map(function(k){
+        var val=payload[k];
+        if(val===undefined)return ref.child(k).remove();
+        return ref.child(k).set(val);
+      });
+      return Promise.all(promises);
+    });
+  });
+}
+// Formate la date d'un snapshot pour affichage
+function formatSnapshotDate(ts){
+  if(!ts)return "?";
+  var d=new Date(ts);
+  var now=new Date();
+  var sameDay=d.toDateString()===now.toDateString();
+  var yest=new Date(now.getTime()-86400000);
+  var isYest=d.toDateString()===yest.toDateString();
+  var hm=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  if(sameDay)return "Aujourd'hui "+hm;
+  if(isYest)return "Hier "+hm;
+  return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()+" "+hm;
+}
 var PROF_CODES=[3141,1312];
 
 // ═══ FICHES HTML IMPRIMABLES ═══
@@ -560,6 +621,16 @@ function AppProf(p){
   // Popup d'ajout d'un piège : null ou {tokenIdx, attendu}
   var sp2=useState(null),piegePopup=sp2[0],setPiegePopup=sp2[1];
   var sp3=useState(""),piegeFautifInput=sp3[0],setPiegeFautifInput=sp3[1];
+  var ssn=useState(false),snapshotsOpen=ssn[0],setSnapshotsOpen=ssn[1];
+  // Présence en direct des élèves (heartbeat) : {ek: {lastSeen, name}}
+  var spr=useState({}),presence=spr[0],setPresence=spr[1];
+  // Tick toutes les 30 s pour rafraîchir l'affichage des badges de présence
+  // (sans dépendre d'un changement Firebase entre deux heartbeats)
+  var stk=useState(0),presTick=stk[0],setPresTick=stk[1];
+  useEffect(function(){
+    var iv=setInterval(function(){setPresTick(function(t){return t+1})},30000);
+    return function(){clearInterval(iv)};
+  },[]);
   // Ref pour bloquer le useEffect de re-détection des modifs juste après loadForEdit
   // (sinon le découpage personnalisé serait écrasé par la détection auto)
   var skipNextDetectRef=React.useRef(false);
@@ -736,6 +807,15 @@ function AppProf(p){
       setCurrentRee({title:cfg.title||id,classe:cn,eleves:eleves,original:cfg.original||"",attendu:cfg.attendu||"",modifs:toArr(cfg.modifs||[]),consigne:cfg.consigne||"",baremeTotal:cfg.baremeTotal!=null?cfg.baremeTotal:10,pieges:toArr(cfg.pieges||[])});
       setCurrentId(id);setAbsents(val.absents||{});setCorrections(val.corrections||{});
       setCorrEleve(null);setPaquetOrder(toArr(val.paquetOrder||[]));setScreen("suivi");
+      // Auto-snapshot quotidien : créer un si le dernier date de plus de 24h (ou aucun)
+      var existingSnapshots=val.snapshots||{};
+      var lastTs=0;
+      Object.keys(existingSnapshots).forEach(function(k){
+        var s=existingSnapshots[k];if(s&&s.createdAt&&s.createdAt>lastTs)lastTs=s.createdAt;
+      });
+      if(Date.now()-lastTs>86400000){
+        createSnapshot(id,"auto-quotidien").catch(function(){/* silencieux */});
+      }
     });
   }
 
@@ -877,6 +957,15 @@ function AppProf(p){
     if(!currentId)return;
     var ref=db.ref("reecritures/"+currentId+"/absents");
     function onData(snap){setAbsents(snap.val()||{})}
+    ref.on("value",onData);
+    return function(){ref.off("value",onData)};
+  },[currentId]);
+
+  // Listener temps réel pour la présence des élèves (heartbeats)
+  useEffect(function(){
+    if(!currentId){setPresence({});return}
+    var ref=db.ref("reecritures/"+currentId+"/presence");
+    function onData(snap){setPresence(snap.val()||{})}
     ref.on("value",onData);
     return function(){ref.off("value",onData)};
   },[currentId]);
@@ -1217,9 +1306,11 @@ function AppProf(p){
   if(screen==="suivi"&&currentRee) return h("div",null,
     h(SuiviRee,{
     data:currentRee,corrections:corrections,absents:absents,
+    presence:presence,presTick:presTick,
     onBack:function(){setScreen("config");setCurrentRee(null);setCurrentId("");setPaquetOrder([])},
     onGoToCorrection:function(){setCorrEleve(null);setChainActive(false);setScreen("correction")},
     onOpenClasser:function(){setClasserOpen(true)},
+    onOpenSnapshots:function(){setSnapshotsOpen(true)},
     paquetOrder:paquetOrder,
     onStartChain:function(){
       // Si un paquet est classé, démarrer dans l'ordre du paquet.
@@ -1278,6 +1369,14 @@ function AppProf(p){
         // Persister dans Firebase pour retrouver l'ordre au prochain chargement
         if(currentId)db.ref("reecritures/"+currentId+"/paquetOrder").set(newOrder);
         setClasserOpen(false);
+      }
+    }),
+    snapshotsOpen&&h(SnapshotsModal,{
+      reecritureId:currentId,
+      onClose:function(){setSnapshotsOpen(false)},
+      onRestored:function(){
+        // Recharger après restauration
+        if(currentId)setTimeout(function(){load(currentId)},800);
       }
     })
   );
@@ -1501,9 +1600,122 @@ function ClasserPaquet(p){
   );
 }
 
+// Modal pour gérer les snapshots (instantanés) d'une réécriture.
+// Permet de créer manuellement, restaurer, ou supprimer un snapshot.
+function SnapshotsModal(p){
+  var ss=useState([]),snapshots=ss[0],setSnapshots=ss[1];
+  var sl=useState(true),loading=sl[0],setLoading=sl[1];
+  var sb=useState(""),busy=sb[0],setBusy=sb[1];
+  var sm=useState(""),message=sm[0],setMessage=sm[1];
+
+  // Charger les snapshots existants
+  function refresh(){
+    setLoading(true);
+    db.ref("reecritures/"+p.reecritureId+"/snapshots").once("value").then(function(snap){
+      var val=snap.val()||{};
+      var arr=Object.keys(val).map(function(k){return Object.assign({id:k},val[k])});
+      arr.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+      setSnapshots(arr);setLoading(false);
+    });
+  }
+  useEffect(refresh,[]);
+
+  function doCreate(){
+    setBusy("create");setMessage("");
+    createSnapshot(p.reecritureId,"manuel").then(function(){
+      setMessage("\u2713 Instantan\u00e9 cr\u00e9\u00e9");setBusy("");refresh();
+      setTimeout(function(){setMessage("")},2500);
+    }).catch(function(err){setMessage("Erreur : "+err.message);setBusy("")});
+  }
+  function doRestore(s){
+    if(!confirm("Restaurer cet instantan\u00e9 du "+formatSnapshotDate(s.createdAt)+" ?\n\nL'\u00e9tat actuel sera automatiquement sauvegard\u00e9 avant restauration."))return;
+    setBusy("restore-"+s.id);setMessage("");
+    restoreSnapshot(p.reecritureId,s.id).then(function(){
+      setMessage("\u2713 Restauration termin\u00e9e. Recharge la r\u00e9\u00e9criture pour voir les changements.");setBusy("");refresh();
+      if(p.onRestored)p.onRestored();
+    }).catch(function(err){setMessage("Erreur : "+err.message);setBusy("")});
+  }
+  function doDelete(s){
+    if(!confirm("Supprimer d\u00e9finitivement l'instantan\u00e9 du "+formatSnapshotDate(s.createdAt)+" ?"))return;
+    setBusy("del-"+s.id);
+    db.ref("reecritures/"+p.reecritureId+"/snapshots/"+s.id).remove().then(function(){
+      setBusy("");refresh();
+    });
+  }
+
+  function labelChip(s){
+    var color={"manuel":"#2563eb","auto-quotidien":"#15803d","avant-restauration":"#c2410c"}[s.label]||"#666";
+    var bg={"manuel":"#dbeafe","auto-quotidien":"#dcfce7","avant-restauration":"#fff7ed"}[s.label]||"#eee";
+    var label={"manuel":"Manuel","auto-quotidien":"Auto-quotidien","avant-restauration":"Avant-restauration"}[s.label]||s.label;
+    return h("span",{style:{fontSize:".72rem",fontWeight:600,padding:"2px 8px",borderRadius:6,background:bg,color:color}},label);
+  }
+  function countCorr(s){
+    if(!s.payload||!s.payload.corrections)return 0;
+    return Object.keys(s.payload.corrections).length;
+  }
+
+  return h("div",{className:"popup-overlay",onClick:p.onClose},
+    h("div",{onClick:function(e){e.stopPropagation()},style:{background:"var(--card)",borderRadius:14,padding:"20px",maxWidth:560,width:"94%",boxShadow:"0 12px 40px rgba(0,0,0,.2)",maxHeight:"90vh",overflow:"auto"}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
+        h("h3",{style:{margin:0,fontSize:"1.05rem"}},"\ud83d\udcbe Sauvegardes",
+          ifo("Chaque instantan\u00e9 contient tout l'\u00e9tat de la r\u00e9\u00e9criture (textes, corrections, absents, pi\u00e8ges, paquet). Maximum 5 par r\u00e9\u00e9criture : les plus anciens sont supprim\u00e9s automatiquement. Un instantan\u00e9 auto-quotidien est cr\u00e9\u00e9 au chargement si le dernier date de plus de 24 h.",{left:true,below:true})),
+        h("button",{onClick:p.onClose,title:"Fermer.",
+          style:{padding:"4px 10px",fontSize:".82rem",borderRadius:6,border:"1.5px solid rgba(0,0,0,.1)",background:"#fff",color:"var(--text-sub)",cursor:"pointer",fontFamily:"inherit"}},"\u2715")
+      ),
+      h("p",{style:{fontSize:".85rem",color:"var(--muted)",lineHeight:1.5,marginBottom:14}},
+        "Les instantan\u00e9s te permettent de revenir \u00e0 un \u00e9tat ant\u00e9rieur en cas d'\u00e9crasement involontaire. Limite : 5 par r\u00e9\u00e9criture (purge automatique des plus anciens)."
+      ),
+      h("button",{onClick:doCreate,disabled:busy==="create",
+        title:"Cr\u00e9er un nouvel instantan\u00e9 imm\u00e9diatement, contenant l'\u00e9tat actuel complet de cette r\u00e9\u00e9criture.",
+        style:{width:"100%",padding:"10px 14px",fontSize:".95rem",fontWeight:700,borderRadius:8,border:"none",background:busy==="create"?"rgba(37,99,235,.5)":"var(--primary)",color:"#fff",cursor:busy==="create"?"wait":"pointer",fontFamily:"inherit",marginBottom:14}},
+        busy==="create"?"\u2026 Cr\u00e9ation":"\u2795 Cr\u00e9er un instantan\u00e9 maintenant"),
+      message&&h("div",{style:{padding:"8px 12px",background:message.indexOf("Erreur")===0?"rgba(197,48,48,.1)":"rgba(39,103,73,.1)",color:message.indexOf("Erreur")===0?"#c53030":"#276749",borderRadius:6,fontSize:".85rem",marginBottom:10}},message),
+      loading?
+        h("div",{style:{textAlign:"center",padding:24,color:"var(--muted)"}},"\u2026 Chargement")
+        :snapshots.length===0?
+          h("div",{style:{padding:"18px",textAlign:"center",color:"var(--muted)",fontSize:".88rem",fontStyle:"italic",background:"var(--card2)",borderRadius:8}},"Aucun instantan\u00e9 pour le moment. Cr\u00e9es-en un avec le bouton ci-dessus.")
+          :
+          snapshots.map(function(s){
+            return h("div",{key:s.id,style:{padding:"12px 14px",border:"1.5px solid var(--border)",borderRadius:8,marginBottom:8,background:"var(--card2)"}},
+              h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:8,flexWrap:"wrap"}},
+                h("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+                  h("strong",{style:{fontSize:".92rem"}},formatSnapshotDate(s.createdAt)),
+                  labelChip(s)
+                ),
+                h("div",{style:{display:"flex",gap:6}},
+                  h("button",{onClick:function(){doRestore(s)},disabled:busy==="restore-"+s.id,
+                    title:"Restaurer cet instantan\u00e9. L'\u00e9tat actuel sera sauvegard\u00e9 automatiquement avant l'\u00e9crasement.",
+                    style:{padding:"5px 10px",fontSize:".78rem",fontWeight:600,borderRadius:6,border:"1.5px solid var(--primary)",background:"transparent",color:"var(--primary)",cursor:"pointer",fontFamily:"inherit"}},
+                    busy==="restore-"+s.id?"\u2026":"\u21bb Restaurer"),
+                  h("button",{onClick:function(){doDelete(s)},disabled:busy==="del-"+s.id,
+                    title:"Supprimer d\u00e9finitivement cet instantan\u00e9.",
+                    style:{padding:"5px 10px",fontSize:".78rem",fontWeight:600,borderRadius:6,border:"1.5px solid var(--coral)",background:"transparent",color:"var(--coral)",cursor:"pointer",fontFamily:"inherit"}},
+                    "\u2715")
+                )
+              ),
+              h("div",{style:{fontSize:".82rem",color:"var(--muted)"}},countCorr(s)+" correction"+(countCorr(s)>1?"s":"")+" sauvegard\u00e9e"+(countCorr(s)>1?"s":""))
+            );
+          })
+    )
+  );
+}
+
 function SuiviRee(p){
   var data=p.data,corr=p.corrections||{},abs=p.absents||{};
+  var presence=p.presence||{};
+  // Le presTick (incrémenté toutes les 30s) force le re-render pour rafraîchir les badges
+  // même si la map presence n'a pas changé entre deux heartbeats.
+  // (cf. p.presTick utilisé implicitement via re-render parent)
   var baremeTotal=data.baremeTotal!=null?data.baremeTotal:10;
+  // Calcule le statut de présence d'un élève à partir de son dernier heartbeat
+  function getPresenceStatus(k){
+    var pr=presence[k];
+    if(!pr||!pr.lastSeen)return null;
+    var age=Date.now()-pr.lastSeen;
+    if(age<60000)return"online";     // < 1 min : connecté actif
+    if(age<300000)return"idle";       // < 5 min : connecté inactif
+    return null;                       // > 5 min : on n'affiche plus
+  }
 
   // Détection desktop/mobile via media query (réactif au resize)
   var sd=useState(typeof window!=="undefined"&&window.matchMedia("(min-width: 768px)").matches);
@@ -1600,6 +1812,15 @@ function SuiviRee(p){
         h("span",{title:"\u00c9l\u00e8ves dont la copie a \u00e9t\u00e9 corrig\u00e9e par le prof."},"\u2705 ",h("strong",null,nb_corrected),"/",nb_active," corrig\u00e9s"),
         nb_autostarted>0&&h("span",{title:"\u00c9l\u00e8ves qui ont commenc\u00e9 \u00e0 corriger leurs erreurs."},"\ud83c\udf00 ",h("strong",null,nb_autostarted)," ont commenc\u00e9 l'autocorrection"),
         nb_autodone>0&&h("span",{title:"\u00c9l\u00e8ves qui ont termin\u00e9 leur autocorrection."},"\ud83c\udfaf ",h("strong",null,nb_autodone)," termin\u00e9e"+(nb_autodone>1?"s":"")),
+        (function(){
+          var nbOnline=rows.filter(function(r){return getPresenceStatus(r.key)==="online"}).length;
+          var nbIdle=rows.filter(function(r){return getPresenceStatus(r.key)==="idle"}).length;
+          if(nbOnline===0&&nbIdle===0)return null;
+          return h("span",{title:"Point vert = \u00e9l\u00e8ve connect\u00e9 actuellement (signal < 1 min). Point orange = connect\u00e9 mais inactif (1-5 min)."},
+            nbOnline>0&&h("span",null,h("span",{style:{display:"inline-block",width:8,height:8,borderRadius:"50%",background:"#15803d",marginRight:4,verticalAlign:"middle"}}),h("strong",null,nbOnline)," connect\u00e9"+(nbOnline>1?"s":"")),
+            nbIdle>0&&h("span",{style:{marginLeft:nbOnline>0?8:0}},h("span",{style:{display:"inline-block",width:8,height:8,borderRadius:"50%",background:"#d97706",marginRight:4,verticalAlign:"middle"}}),h("strong",null,nbIdle)," inactif"+(nbIdle>1?"s":""))
+          );
+        })(),
         avg_note!=null&&h("span",null,"Moyenne : ",h("strong",{style:{color:noteColor(avg_note,baremeTotal)}},avg_note+"/"+baremeTotal))
       )
     ),
@@ -1638,6 +1859,13 @@ function SuiviRee(p){
           style:{padding:"10px 14px",fontSize:".82rem",fontWeight:600,borderRadius:8,border:"1.5px solid var(--coral)",background:"transparent",color:"var(--coral)",cursor:"pointer",fontFamily:"inherit"}},
           "\ud83d\uddd1\ufe0f Reset \u00e9valuation"),
         ifo("Efface toutes les corrections d\u00e9j\u00e0 faites sur cette r\u00e9\u00e9criture. Action irr\u00e9versible : deux confirmations te seront demand\u00e9es. Les absences sont conserv\u00e9es.",{left:true})
+      ),
+      p.onOpenSnapshots&&h("div",{style:{display:"flex",alignItems:"center",gap:4}},
+        h("button",{onClick:p.onOpenSnapshots,
+          title:"G\u00e9rer les instantan\u00e9s de sauvegarde de cette r\u00e9\u00e9criture (cr\u00e9er, restaurer, supprimer).",
+          style:{padding:"10px 14px",fontSize:".82rem",fontWeight:600,borderRadius:8,border:"1.5px solid #15803d",background:"transparent",color:"#15803d",cursor:"pointer",fontFamily:"inherit"}},
+          "\ud83d\udcbe Sauvegardes"),
+        ifo("Cr\u00e9e ou restaure un instantan\u00e9 complet de cette r\u00e9\u00e9criture (tout : textes, corrections, absents, pi\u00e8ges, paquet). Maximum 5 par r\u00e9\u00e9criture. Permet de revenir en arri\u00e8re si tu \u00e9crases quelque chose par erreur.",{left:true})
       )
     ),
     // Liste élèves (tableau sur desktop ≥768px, cards sur mobile)
@@ -1658,8 +1886,13 @@ function SuiviRee(p){
             h("tbody",null,
               rows.map(function(r){
                 var si=statusInfo(r);
+                var pres=getPresenceStatus(r.key);
                 return h("tr",{key:r.key,style:{background:si.bg,borderBottom:"1px solid var(--border)"}},
-                  h("td",{style:{padding:"10px 14px",fontWeight:600,color:si.color}},r.name),
+                  h("td",{style:{padding:"10px 14px",fontWeight:600,color:si.color}},
+                    pres&&h("span",{title:pres==="online"?"\u00c9l\u00e8ve actuellement connect\u00e9 (dernier signal il y a moins d'1 minute).":"\u00c9l\u00e8ve connect\u00e9 mais inactif depuis 1 \u00e0 5 minutes.",
+                      style:{display:"inline-block",width:8,height:8,borderRadius:"50%",background:pres==="online"?"#15803d":"#d97706",marginRight:6,verticalAlign:"middle"}}),
+                    r.name
+                  ),
                   h("td",{style:{padding:"10px 14px",fontSize:".85rem",color:"var(--text-sub)"}},si.label+(si.detail&&r.status==="auto_progress"?" \u2014 "+r.done+"/"+r.total+" trait\u00e9es":"")),
                   h("td",{style:{padding:"10px 14px",fontWeight:700,color:r.note!=null?noteColor(r.note,baremeTotal):"var(--muted)"}},r.note!=null?r.note+"/"+baremeTotal:"\u2014"),
                   h("td",{style:{padding:"10px 14px",textAlign:"right"}},
@@ -1672,9 +1905,14 @@ function SuiviRee(p){
           // ═══ Mode cards (mobile) ═══
           :rows.map(function(r){
             var si=statusInfo(r);
+            var pres=getPresenceStatus(r.key);
             return h("div",{key:r.key,style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",border:"1.5px solid var(--border)",borderRadius:8,marginBottom:6,background:si.bg,gap:8,flexWrap:"wrap"}},
               h("div",{style:{flex:1,minWidth:140}},
-                h("div",{style:{fontWeight:600,color:si.color}},r.name),
+                h("div",{style:{fontWeight:600,color:si.color}},
+                  pres&&h("span",{title:pres==="online"?"\u00c9l\u00e8ve actuellement connect\u00e9 (dernier signal il y a moins d'1 minute).":"\u00c9l\u00e8ve connect\u00e9 mais inactif depuis 1 \u00e0 5 minutes.",
+                    style:{display:"inline-block",width:8,height:8,borderRadius:"50%",background:pres==="online"?"#15803d":"#d97706",marginRight:6,verticalAlign:"middle"}}),
+                  r.name
+                ),
                 h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginTop:2}},si.label+(si.detail?" \u2014 "+si.detail:""))
               ),
               h("div",{style:{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}},actionButtons(r))
@@ -2772,6 +3010,17 @@ function AppEleve(p){
     }
     corrRef.on("value",onCorr);
     return function(){corrRef.off("value",onCorr)};
+  },[eleveData]);
+
+  // Heartbeat : signale au prof que l'élève est connecté (timestamp rafraîchi toutes les 30 s).
+  // Le timestamp reste en Firebase à la fermeture : le prof voit "inactif" puis "absent" naturellement.
+  useEffect(function(){
+    if(!eleveData)return;
+    var presRef=db.ref("reecritures/"+eleveData.reecriture.id+"/presence/"+eleveData.key);
+    function ping(){presRef.set({lastSeen:Date.now(),name:eleveData.eleve})}
+    ping();
+    var iv=setInterval(ping,30000);
+    return function(){clearInterval(iv)};
   },[eleveData]);
 
   function doLogin(){
