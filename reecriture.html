@@ -53,6 +53,7 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes blink{0%,100%{background:var(--green-light)}50%{background:rgba(39,103,73,.25)}}
 @keyframes socFadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes toastFade{0%{opacity:0;transform:translate(-50%,-20px)}10%{opacity:1;transform:translate(-50%,0)}85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-10px)}}
 @keyframes socPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 @keyframes socGlow{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.3)}50%{box-shadow:0 0 20px 4px rgba(37,99,235,.15)}}
 @keyframes socWordPulse{0%,100%{color:#2563eb}50%{color:#c53030}}
@@ -279,6 +280,11 @@ function matchInit(eleve,query){
   var prenomI=parts.length>1?parts[parts.length-1].charAt(0).toUpperCase():"";
   var q=query.toUpperCase();
   return (nomI+prenomI).indexOf(q)===0||(prenomI+nomI).indexOf(q)===0;
+}
+// Trie les pièges par ordre d'apparition dans le texte (tokenIdx croissant).
+// Utilisé partout où on modifie la liste de pièges, pour garder l'ordre logique.
+function sortPiegesByPosition(pieges){
+  return (pieges||[]).slice().sort(function(a,b){return (a.tokenIdx||0)-(b.tokenIdx||0)});
 }
 var PROF_CODES=[3141,1312];
 
@@ -557,6 +563,13 @@ function AppProf(p){
   // Ref pour bloquer le useEffect de re-détection des modifs juste après loadForEdit
   // (sinon le découpage personnalisé serait écrasé par la détection auto)
   var skipNextDetectRef=React.useRef(false);
+  // Toast de notification quand un piège est auto-détecté (chiffre = nb de nouveaux pièges)
+  var satp=useState(null),autoPiegeToast=satp[0],setAutoPiegeToast=satp[1];
+  useEffect(function(){
+    if(autoPiegeToast==null)return;
+    var t=setTimeout(function(){setAutoPiegeToast(null)},3500);
+    return function(){clearTimeout(t)};
+  },[autoPiegeToast]);
   var s23=useState(null),addingModif=s23[0],setAddingModif=s23[1];
   var s24=useState(null),corrEleve=s24[0],setCorrEleve=s24[1];
   var sfc=useState(false),chainActive=sfc[0],setChainActive=sfc[1];
@@ -772,6 +785,82 @@ function AppProf(p){
     db.ref("reecritures/"+currentId+"/corrections/"+ek).update({
       errors:errors,extras:extras,note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()
     });
+    // Auto-détection des pièges : si la même erreur de copie (tokenIdx+fautif) apparaît
+    // chez au moins un autre élève, l'ajouter aux pièges fréquents (silencieusement).
+    autoDetectPieges(ek,errors);
+  }
+
+  // Détection automatique des erreurs récurrentes (sur ≥2 élèves) → ajout aux pièges fréquents.
+  // Couvre les erreurs de copie ET les modifs ratées. Le piège pointe vers un tokenIdx précis :
+  //   - copie : le tokenIdx du mot erroné
+  //   - modif : le 1er token du 1er mot modifié de la modif (représentatif)
+  function autoDetectPieges(currentKey,currentErrors){
+    if(!currentRee||!currentRee.attendu)return;
+    var existingPieges=toArr(currentRee.pieges||[]);
+    var attTokens=tokenizeForCorrection(currentRee.attendu);
+    var wordToTokensMap=mapSplitWordsToTokens(attTokens);
+    var modifs=toArr(currentRee.modifs||[]);
+    var newPieges=[];
+
+    function tryAddPiege(tokenIdx,attendu,fautif){
+      // Existe déjà (existant ou nouveau) ?
+      var pgExists=existingPieges.some(function(p){return p.tokenIdx===tokenIdx&&p.fautif===fautif})
+                 ||newPieges.some(function(p){return p.tokenIdx===tokenIdx&&p.fautif===fautif});
+      if(pgExists)return;
+      newPieges.push({tokenIdx:tokenIdx,attendu:attendu,fautif:fautif});
+    }
+
+    currentErrors.forEach(function(err){
+      var fautif=(err.fautif||"").trim();
+      if(!fautif)return;
+
+      // === Erreur de copie ===
+      if(err.type==="copie"&&err.idx!=null){
+        var tok=attTokens[err.idx];
+        if(!tok||tok.type!=="word")return;
+        // Un autre élève a-t-il la même erreur ?
+        var hasOther=false;
+        Object.keys(corrections||{}).forEach(function(k){
+          if(k===currentKey)return;
+          var corr=corrections[k];
+          if(!corr||!corr.errors)return;
+          toArr(corr.errors).forEach(function(e){
+            if(e.type==="copie"&&e.idx===err.idx&&(e.fautif||"").trim()===fautif)hasOther=true;
+          });
+        });
+        if(hasOther)tryAddPiege(err.idx,tok.text,fautif);
+      }
+
+      // === Modif ratée ===
+      if(err.type==="modif"&&err.modifIdx!=null){
+        var modif=modifs[err.modifIdx];
+        if(!modif||!modif.tokens||modif.tokens.length===0)return;
+        var wordIdx=modif.tokens[0]; // 1er mot modifié
+        var tokenRange=wordToTokensMap[wordIdx];
+        if(!tokenRange)return;
+        var representativeIdx=tokenRange[0]; // 1er token du 1er mot
+        var tokM=attTokens[representativeIdx];
+        if(!tokM||tokM.type!=="word")return;
+        // Un autre élève a-t-il la même modif ratée avec le même fautif ?
+        var hasOtherM=false;
+        Object.keys(corrections||{}).forEach(function(k){
+          if(k===currentKey)return;
+          var corr=corrections[k];
+          if(!corr||!corr.errors)return;
+          toArr(corr.errors).forEach(function(e){
+            if(e.type==="modif"&&e.modifIdx===err.modifIdx&&(e.fautif||"").trim()===fautif)hasOtherM=true;
+          });
+        });
+        if(hasOtherM)tryAddPiege(representativeIdx,tokM.text,fautif);
+      }
+    });
+
+    if(newPieges.length===0)return;
+    var allPieges=sortPiegesByPosition(existingPieges.concat(newPieges));
+    db.ref("reecritures/"+currentId+"/config/pieges").set(allPieges);
+    setCurrentRee(Object.assign({},currentRee,{pieges:allPieges}));
+    // Notification visuelle (toast qui s'estompe)
+    setAutoPiegeToast(newPieges.length);
   }
 
   // Listener temps réel pour corrections (capte aussi autoCorrection imbriqué)
@@ -888,7 +977,7 @@ function AppProf(p){
               if(e.key==="Enter"){e.preventDefault();
                 var f=piegeFautifInput.trim();
                 if(!f)return;
-                setPieges(pieges.concat([{tokenIdx:piegePopup.tokenIdx,attendu:piegePopup.attendu,fautif:f}]));
+                setPieges(sortPiegesByPosition(pieges.concat([{tokenIdx:piegePopup.tokenIdx,attendu:piegePopup.attendu,fautif:f}])));
                 setPiegePopup(null);
               }
             }}),
@@ -897,7 +986,7 @@ function AppProf(p){
               style:{padding:"8px 14px",fontSize:".88rem",fontWeight:600,borderRadius:8,border:"1.5px solid rgba(0,0,0,.1)",background:"#fff",color:"var(--text-sub)",cursor:"pointer",fontFamily:"inherit"}},"Annuler"),
             h("button",{onClick:function(){
               var f=piegeFautifInput.trim();if(!f)return;
-              setPieges(pieges.concat([{tokenIdx:piegePopup.tokenIdx,attendu:piegePopup.attendu,fautif:f}]));
+              setPieges(sortPiegesByPosition(pieges.concat([{tokenIdx:piegePopup.tokenIdx,attendu:piegePopup.attendu,fautif:f}])));
               setPiegePopup(null);
             },disabled:!piegeFautifInput.trim(),title:"Ajouter ce pi\u00e8ge.",
               style:{padding:"8px 14px",fontSize:".88rem",fontWeight:700,borderRadius:8,border:"none",background:piegeFautifInput.trim()?"var(--primary)":"rgba(37,99,235,.3)",color:"#fff",cursor:piegeFautifInput.trim()?"pointer":"not-allowed",fontFamily:"inherit"}},"\u2713 Ajouter")
@@ -1204,12 +1293,22 @@ function AppProf(p){
       });
     }
     // Écran de correction pour un élève
-    var idx=elevesCorr.indexOf(corrEleve);
-    var prevEleve=idx>0?elevesCorr[idx-1]:null;
-    var nextEleve=idx>=0&&idx<elevesCorr.length-1?elevesCorr[idx+1]:null;
+    // Navigation : si un paquet est classé ET l'élève courant en fait partie, suivre l'ordre du paquet ;
+    // sinon retomber sur l'ordre alphabétique de la classe (élevesCorr).
+    var validPaquetNav=paquetOrder.filter(function(e){return elevesCorr.indexOf(e)!==-1});
+    var navList=elevesCorr;
+    var idxInPaq=validPaquetNav.indexOf(corrEleve);
+    if(validPaquetNav.length>0&&idxInPaq!==-1)navList=validPaquetNav;
+    var idx=navList.indexOf(corrEleve);
+    var prevEleve=idx>0?navList[idx-1]:null;
+    var nextEleve=idx>=0&&idx<navList.length-1?navList[idx+1]:null;
     var ek=san(corrEleve);
     var existing=corrections[ek]?{errors:toArr(corrections[ek].errors),extras:toArr(corrections[ek].extras)}:null;
-    return h(CorrEleveReecriture,{
+    return h(React.Fragment,null,
+      autoPiegeToast!=null&&h("div",{key:"toast-"+autoPiegeToast,style:{position:"fixed",top:20,left:"50%",zIndex:500,padding:"12px 20px",background:"#fff7ed",border:"1.5px solid #fb923c",borderRadius:10,boxShadow:"0 8px 24px rgba(0,0,0,.15)",fontWeight:600,color:"#c2410c",fontSize:".95rem",animation:"toastFade 3.5s ease-in-out forwards",pointerEvents:"none"}},
+        "\ud83c\udfaf "+autoPiegeToast+" nouveau pi\u00e8ge"+(autoPiegeToast>1?"s":"")+" auto-d\u00e9tect\u00e9"+(autoPiegeToast>1?"s":"")
+      ),
+      h(CorrEleveReecriture,{
       key:ek,// remount on switch
       data:{reecriture:currentRee},
       eleve:corrEleve,
@@ -1225,7 +1324,7 @@ function AppProf(p){
       onAddPiege:function(newPiege){
         // Ajoute un piège à la config Firebase + au state local (currentRee.pieges)
         var current=toArr(currentRee.pieges||[]);
-        var updated=current.concat([newPiege]);
+        var updated=sortPiegesByPosition(current.concat([newPiege]));
         db.ref("reecritures/"+currentId+"/config/pieges").set(updated);
         setCurrentRee(Object.assign({},currentRee,{pieges:updated}));
       },
@@ -1288,7 +1387,7 @@ function AppProf(p){
         // Aller vers l'élève destinataire pour vérification
         setCorrEleve(targetName);
       }
-    });
+    }));
   }
   return null;
 }
