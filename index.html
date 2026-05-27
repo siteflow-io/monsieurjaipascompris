@@ -495,6 +495,8 @@ var FIREBASE_BASE='https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatab
 // Crée un topic aléatoire genre "mjpc-meney-X9k2L7q4P", abonne-toi via l'app ntfy
 var NTFY_TOPIC='MJPC_NTFY_TOPIC_PLACEHOLDER';
 var PROF_CODES=['1312','3141'];
+// Niveaux désactivés pour les élèves (le prof y a accès normalement)
+var BLOCKED_LEVELS=['5e','6e'];
 function loadPublished(level){
   fetch(FIREBASE_BASE+'/site/'+level+'.json')
     .then(function(r){return r.json()})
@@ -531,6 +533,7 @@ function renderChapitres(level){
   var displayNum=0;
   nums.forEach(function(num){
     var ch=data[num];
+    if(!ch)return;
     if(!isAdmin && !ch.published)return;
     displayNum++;
     html+=renderChapterCard(level,num,ch,displayNum,isAdmin);
@@ -567,11 +570,12 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
   var seanceDispNum=0;
   snums.forEach(function(snum){
     var sce=seances[snum];
+    if(!sce)return;
     if(!isAdmin && !sce.published)return;
     // Compter items publiés
     var items=sce.items||{};
     var itemKeys=Object.keys(items);
-    var visibleItems=itemKeys.filter(function(k){return isAdmin || items[k].published;});
+    var visibleItems=itemKeys.filter(function(k){return items[k] && (isAdmin || items[k].published);});
     if(!isAdmin && visibleItems.length===0)return;
     seanceDispNum++;
     bodyHtml+=renderSeance(level,num,snum,sce,seanceDispNum,isAdmin);
@@ -606,6 +610,7 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   var rendered=0;
   ikeys.forEach(function(itemId){
     var it=items[itemId];
+    if(!it)return;
     if(!isAdmin && !it.published)return;
     subDispNum++;
     rendered++;
@@ -1321,12 +1326,52 @@ function updatePresence(){
 
 var PRESENCE_CONTEXT={chapter:'',seance:'',item:''};
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('page-validation').classList.contains('active'))doLogin();});
-function initHome(){showAccueilBg();var isAllAccess=TRACK.eleve&&(TRACK.eleve.classe==='TEST'||TRACK.eleve.is_prof);var accessible=isAllAccess?['3e','4e','5e','6e']:(levelAccess[currentLevel]||[currentLevel]);['3e','4e','5e','6e'].forEach(function(lvl){if(accessible.indexOf(lvl)===-1){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='0.2';card.style.pointerEvents='none';card.style.cursor='default';}}});if(TRACK.eleve){var headerEl=document.querySelector('.home-header');if(headerEl&&!document.getElementById('user-badge')){var badge=document.createElement('div');badge.id='user-badge';badge.style.cssText='font-size:0.85rem; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 12px; border-radius:100px; align-self:center;';badge.textContent=TRACK.eleve.display+' · '+TRACK.eleve.classe;headerEl.appendChild(badge);}}}
+function initHome(){
+  showAccueilBg();
+  var isAllAccess=TRACK.eleve&&(TRACK.eleve.classe==='TEST'||TRACK.eleve.is_prof);
+  var accessible=isAllAccess?['3e','4e','5e','6e']:(levelAccess[currentLevel]||[currentLevel]);
+  ['3e','4e','5e','6e'].forEach(function(lvl){
+    var card=document.querySelector('[data-level="'+lvl+'"]');
+    if(!card)return;
+    var existingBadge=card.querySelector('.construction-badge');
+    if(existingBadge)existingBadge.remove();
+    var isBlocked=BLOCKED_LEVELS.indexOf(lvl)>=0 && !isAllAccess;
+    var isAccessible=accessible.indexOf(lvl)>=0;
+    if(!isAccessible){
+      card.style.opacity='0.2';card.style.pointerEvents='none';card.style.cursor='default';
+    }else if(isBlocked){
+      card.style.opacity='0.7';card.style.pointerEvents='auto';card.style.cursor='pointer';card.style.position='relative';
+      var b=document.createElement('div');
+      b.className='construction-badge';
+      b.textContent='🚧 En construction';
+      b.style.cssText='position:absolute;top:14px;right:14px;background:rgba(255,184,108,0.9);color:#1a1030;padding:3px 10px;border-radius:6px;font-size:0.7rem;font-weight:700;letter-spacing:0.04em;z-index:2;font-family:EB Garamond,serif;';
+      card.appendChild(b);
+    }else{
+      card.style.opacity='1';card.style.pointerEvents='auto';card.style.cursor='pointer';
+    }
+  });
+  if(TRACK.eleve){var headerEl=document.querySelector('.home-header');if(headerEl&&!document.getElementById('user-badge')){var ub=document.createElement('div');ub.id='user-badge';ub.style.cssText='font-size:0.85rem; color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 12px; border-radius:100px; align-self:center;';ub.textContent=TRACK.eleve.display+' · '+TRACK.eleve.classe;headerEl.appendChild(ub);}}
+}
 function computeDiff(target){var now=new Date(),diff=target-now;if(diff<0)diff=0;var totalSec=Math.floor(diff/1000),s=totalSec%60,totalMin=Math.floor(totalSec/60),m=totalMin%60,totalH=Math.floor(totalMin/60),h=totalH%24;var tmp=new Date(now),y=0,mo=0;while(true){var n1=new Date(tmp);n1.setFullYear(n1.getFullYear()+1);if(n1>target)break;y++;tmp=n1;}while(true){var n2=new Date(tmp);n2.setMonth(n2.getMonth()+1);if(n2>target)break;mo++;tmp=n2;}var d=Math.floor((target-tmp)/(1000*60*60*24));return{y:y,mo:mo,d:d,h:h,m:m,s:s};}
 function pad(n){return n<10?'0'+n:String(n);}
 function triggerHeartbeat(el){el.classList.remove('heartbeat');void el.offsetWidth;el.classList.add('heartbeat');setTimeout(function(){el.classList.remove('heartbeat');},400);}
 function updateTimers(){if(!clickedLevel)return;var v=computeDiff(brevetDates[clickedLevel]);['y','mo','d','h','m'].forEach(function(k){var el=document.getElementById('cd-'+k);if(el)el.textContent=pad(v[k]);var lc=document.getElementById('lc-'+k);if(lc)lc.textContent=pad(v[k]);});var sEl=document.getElementById('cd-s'),lcS=document.getElementById('lc-s');if(sEl)sEl.textContent=pad(v.s);if(lcS)lcS.textContent=pad(v.s);if(v.s!==lastSec){if(sEl)triggerHeartbeat(sEl);if(lcS)triggerHeartbeat(lcS);lastSec=v.s;}}
-function openLevel(code,label,color){document.documentElement.style.setProperty('--level-color',color);document.getElementById('level-header-title').textContent=label;document.getElementById('level-header-badge').textContent=label;document.getElementById('bnav-level').textContent=label;var dl=document.getElementById('dictee-link');if(dl)dl.href='dictee_universelle.html?n='+code;if(clickedLevel===code){document.getElementById('hero-timer').classList.remove('visible');document.getElementById('page-home').classList.remove('active');document.getElementById('page-level').classList.add('active');document.getElementById('level-timer').classList.add('visible');applyLevelTheme(code);loadPublished(code);window.scrollTo(0,0);}else{clickedLevel=code;var t=levelThemes[code];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(timerInterval){clearInterval(timerInterval);timerInterval=null;}lastSec=-1;updateTimers();timerInterval=setInterval(updateTimers,1000);var ht=document.getElementById('hero-timer');ht.style.display='block';requestAnimationFrame(function(){requestAnimationFrame(function(){ht.classList.add('visible');});});}}
+function showLevelBlockedDialog(code){
+  var label=code==='5e'?'Cinqui\u00e8me':code==='6e'?'Sixi\u00e8me':code;
+  var existing=document.getElementById('level-blocked-overlay');if(existing)existing.remove();
+  var overlay=document.createElement('div');
+  overlay.id='level-blocked-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:6000;display:flex;align-items:center;justify-content:center;padding:24px;font-family:\'EB Garamond\',serif;';
+  var box=document.createElement('div');
+  box.style.cssText='background:#1a1030;border-radius:14px;padding:32px;max-width:480px;border:1px solid rgba(255,184,108,0.25);box-shadow:0 12px 40px rgba(0,0,0,0.5);text-align:center;';
+  box.innerHTML='<div style="font-size:2rem;margin-bottom:14px;">\ud83d\udea7</div><div style="font-size:1.15rem;font-weight:600;color:#fff;margin-bottom:10px;">'+label+' \u2014 niveau en construction</div><div style="font-size:0.95rem;color:rgba(255,255,255,0.65);line-height:1.55;margin-bottom:24px;">L\u2019espace du niveau '+label+' n\u2019est pas encore en ligne.<br>Pour r\u00e9viser, reprends tes fiches et tes cours personnels de ce niveau-l\u00e0.</div><button id="lbd-close" style="padding:9px 22px;border-radius:8px;background:rgba(255,184,108,0.2);border:1px solid rgba(255,184,108,0.4);color:#ffb86c;cursor:pointer;font-family:inherit;font-weight:600;font-size:0.95rem;">D\u2019accord</button>';
+  overlay.appendChild(box);
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  document.body.appendChild(overlay);
+  var btn=document.getElementById('lbd-close');if(btn)btn.onclick=function(){overlay.remove();};
+}
+
+function openLevel(code,label,color){if(BLOCKED_LEVELS.indexOf(code)>=0 && !(TRACK.eleve&&TRACK.eleve.is_prof)){showLevelBlockedDialog(code);return;}document.documentElement.style.setProperty('--level-color',color);document.getElementById('level-header-title').textContent=label;document.getElementById('level-header-badge').textContent=label;document.getElementById('bnav-level').textContent=label;var dl=document.getElementById('dictee-link');if(dl)dl.href='dictee_universelle.html?n='+code;if(clickedLevel===code){document.getElementById('hero-timer').classList.remove('visible');document.getElementById('page-home').classList.remove('active');document.getElementById('page-level').classList.add('active');document.getElementById('level-timer').classList.add('visible');applyLevelTheme(code);loadPublished(code);window.scrollTo(0,0);}else{clickedLevel=code;var t=levelThemes[code];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(timerInterval){clearInterval(timerInterval);timerInterval=null;}lastSec=-1;updateTimers();timerInterval=setInterval(updateTimers,1000);var ht=document.getElementById('hero-timer');ht.style.display='block';requestAnimationFrame(function(){requestAnimationFrame(function(){ht.classList.add('visible');});});}}
 function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval(timerInterval);timerInterval=null;}document.getElementById('page-level').classList.remove('active');document.getElementById('page-home').classList.add('active');document.getElementById('level-timer').classList.remove('visible');var ht=document.getElementById('hero-timer');ht.classList.remove('visible');setTimeout(function(){ht.style.display='none';},600);showAccueilBg();window.scrollTo(0,0);}
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;body.classList.toggle('open');}
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
