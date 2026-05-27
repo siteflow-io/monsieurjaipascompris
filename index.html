@@ -231,6 +231,20 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .link-modal-btn.cancel:hover { background: rgba(255,255,255,0.1); }
 .link-modal-current { font-size: 0.78rem; color: rgba(255,255,255,0.55); padding: 8px 12px; background: rgba(255,255,255,0.04); border-radius: 6px; margin-bottom: 14px; word-break: break-all; }
 .link-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.intent-overlay { display: none; position: fixed; inset: 0; background: rgba(10,5,30,0.94); z-index: 6500; align-items: center; justify-content: center; padding: 30px; opacity: 0; transition: opacity 0.4s ease; font-family: 'EB Garamond', serif; }
+.intent-overlay.visible { display: flex; opacity: 1; }
+.intent-box { max-width: 540px; width: 100%; text-align: center; color: #fff; }
+.intent-timer-big { margin-bottom: 32px; }
+.intent-timer-label { font-size: 0.88rem; font-style: italic; color: rgba(255,255,255,0.55); letter-spacing: 0.06em; margin-bottom: 14px; }
+.intent-timer-label strong { font-style: normal; color: var(--level-accent); text-shadow: 0 0 12px var(--level-glow); }
+.intent-timer-val { font-size: 2.4rem; font-weight: 700; color: #fff; line-height: 1.15; text-shadow: 0 0 22px var(--level-glow); }
+.intent-question { font-size: 1.4rem; font-weight: 600; color: #fff; margin: 28px 0 18px; }
+.intent-buttons { display: flex; flex-direction: column; gap: 8px; max-width: 360px; margin: 0 auto; }
+.intent-btn { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; cursor: pointer; font-family: inherit; font-size: 1rem; text-align: left; transition: all 0.15s; }
+.intent-btn:hover { background: rgba(255,184,108,0.15); border-color: rgba(255,184,108,0.4); }
+.intent-emoji { font-size: 1.35rem; flex-shrink: 0; }
+.intent-skip { display: inline-block; margin-top: 20px; font-size: 0.78rem; color: rgba(255,255,255,0.4); cursor: pointer; padding: 4px 10px; border-radius: 5px; }
+.intent-skip:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.05); }
 .bigfile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 6000; align-items: center; justify-content: center; padding: 24px; }
 .bigfile-overlay.visible { display: flex; }
 .bigfile-box { background: #1a1030; border-radius: 20px; padding: 36px; max-width: 520px; width: 100%; border: 1px solid rgba(255,184,108,0.2); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
@@ -454,6 +468,18 @@ body.admin-mode .admin-only { display: block; }
     <button class="link-modal-btn cancel" onclick="closeLinkModal()">Annuler</button>
   </div>
 </div></div>
+
+<div class="intent-overlay" id="intent-overlay">
+  <div class="intent-box">
+    <div class="intent-timer-big">
+      <div class="intent-timer-label">Le brevet, c'est dans — <strong id="intent-timer-name">3ème</strong></div>
+      <div class="intent-timer-val" id="intent-timer-val">—</div>
+    </div>
+    <div class="intent-question">Ce que je viens faire sur le site</div>
+    <div class="intent-buttons" id="intent-buttons"></div>
+    <div class="intent-skip" onclick="closeIntentSurvey(true)">passer</div>
+  </div>
+</div>
 <div class="proto-badge" id="proto-badge" onclick="handleBadgeTap()">Prototype</div>
 </body>
 <script>
@@ -1371,7 +1397,78 @@ function showLevelBlockedDialog(code){
   var btn=document.getElementById('lbd-close');if(btn)btn.onclick=function(){overlay.remove();};
 }
 
-function openLevel(code,label,color){if(BLOCKED_LEVELS.indexOf(code)>=0 && !(TRACK.eleve&&TRACK.eleve.is_prof)){showLevelBlockedDialog(code);return;}document.documentElement.style.setProperty('--level-color',color);document.getElementById('level-header-title').textContent=label;document.getElementById('level-header-badge').textContent=label;document.getElementById('bnav-level').textContent=label;var dl=document.getElementById('dictee-link');if(dl)dl.href='dictee_universelle.html?n='+code;if(clickedLevel===code){document.getElementById('hero-timer').classList.remove('visible');document.getElementById('page-home').classList.remove('active');document.getElementById('page-level').classList.add('active');document.getElementById('level-timer').classList.add('visible');applyLevelTheme(code);loadPublished(code);window.scrollTo(0,0);}else{clickedLevel=code;var t=levelThemes[code];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(timerInterval){clearInterval(timerInterval);timerInterval=null;}lastSec=-1;updateTimers();timerInterval=setInterval(updateTimers,1000);var ht=document.getElementById('hero-timer');ht.style.display='block';requestAnimationFrame(function(){requestAnimationFrame(function(){ht.classList.add('visible');});});}}
+var INTENTS=[
+  {id:'reviser',emoji:'\ud83d\udcd6',label:'R\u00e9viser un chapitre'},
+  {id:'devoir',emoji:'\u270f\ufe0f',label:'Finir un devoir / une activit\u00e9'},
+  {id:'info',emoji:'\ud83d\udd0d',label:'Chercher une info pr\u00e9cise'},
+  {id:'regarder',emoji:'\ud83d\udc40',label:'Regarder ce qu\u2019il y a de nouveau'},
+  {id:'undef',emoji:'\ud83c\udf00',label:'Je ne sais pas encore'}
+];
+
+function computeBrevetSnapshot(levelCode){
+  var target=brevetDates[levelCode];if(!target)return '—';
+  var diff=target-new Date();
+  if(diff<=0)return 'Aujourd\u2019hui';
+  var d=Math.floor(diff/86400000);
+  var h=Math.floor((diff%86400000)/3600000);
+  var m=Math.floor((diff%3600000)/60000);
+  if(d>60){
+    var months=Math.floor(d/30.44);
+    var years=Math.floor(months/12);
+    var remMonths=months%12;
+    if(years>0)return years+' an'+(years>1?'s':'')+(remMonths>0?', '+remMonths+' mois':'');
+    return months+' mois';
+  }
+  if(d>0)return d+' j '+h+' h '+m+' min';
+  return h+' h '+m+' min';
+}
+
+function showIntentSurvey(levelCode,levelLabel){
+  if(TRACK.eleve&&TRACK.eleve.is_prof)return false;
+  if(sessionStorage.getItem('mjpc_intent_asked'))return false;
+  document.getElementById('intent-timer-name').textContent=levelLabel||levelCode;
+  document.getElementById('intent-timer-val').textContent=computeBrevetSnapshot(levelCode);
+  var container=document.getElementById('intent-buttons');
+  container.innerHTML='';
+  INTENTS.forEach(function(it){
+    var btn=document.createElement('button');
+    btn.className='intent-btn';
+    btn.innerHTML='<span class="intent-emoji">'+it.emoji+'</span><span>'+it.label+'</span>';
+    btn.onclick=function(){saveIntent(it.id,it.label,levelCode);};
+    container.appendChild(btn);
+  });
+  var overlay=document.getElementById('intent-overlay');
+  overlay.setAttribute('data-level',levelCode);
+  overlay.classList.add('visible');
+  return true;
+}
+
+function saveIntent(id,label,levelClicked){
+  var ts=Date.now();
+  if(TRACK.eleve&&TRACK.eleve.uuid){
+    fetch(FIREBASE_BASE+'/intent/'+TRACK.eleve.uuid+'/'+ts+'.json',{
+      method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uuid:TRACK.eleve.uuid,display:TRACK.eleve.display||'',classe:TRACK.eleve.classe||'',niveau:TRACK.eleve.niveau||'',level_clicked:levelClicked,intent_id:id,intent_label:label,ts:ts,skipped:false})
+    }).catch(function(){});
+  }
+  sessionStorage.setItem('mjpc_intent_asked','1');
+  document.getElementById('intent-overlay').classList.remove('visible');
+}
+
+function closeIntentSurvey(skipped){
+  if(skipped&&TRACK.eleve&&TRACK.eleve.uuid){
+    var ts=Date.now();
+    var levelClicked=document.getElementById('intent-overlay').getAttribute('data-level')||'';
+    fetch(FIREBASE_BASE+'/intent/'+TRACK.eleve.uuid+'/'+ts+'.json',{
+      method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({uuid:TRACK.eleve.uuid,display:TRACK.eleve.display||'',classe:TRACK.eleve.classe||'',niveau:TRACK.eleve.niveau||'',level_clicked:levelClicked,intent_id:null,intent_label:null,ts:ts,skipped:true})
+    }).catch(function(){});
+  }
+  sessionStorage.setItem('mjpc_intent_asked','1');
+  document.getElementById('intent-overlay').classList.remove('visible');
+}
+
+function openLevel(code,label,color){if(BLOCKED_LEVELS.indexOf(code)>=0 && !(TRACK.eleve&&TRACK.eleve.is_prof)){showLevelBlockedDialog(code);return;}document.documentElement.style.setProperty('--level-color',color);document.getElementById('level-header-title').textContent=label;document.getElementById('level-header-badge').textContent=label;document.getElementById('bnav-level').textContent=label;var dl=document.getElementById('dictee-link');if(dl)dl.href='dictee_universelle.html?n='+code;if(clickedLevel===code){document.getElementById('hero-timer').classList.remove('visible');document.getElementById('page-home').classList.remove('active');document.getElementById('page-level').classList.add('active');document.getElementById('level-timer').classList.add('visible');applyLevelTheme(code);loadPublished(code);window.scrollTo(0,0);}else{clickedLevel=code;var t=levelThemes[code];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(timerInterval){clearInterval(timerInterval);timerInterval=null;}lastSec=-1;updateTimers();timerInterval=setInterval(updateTimers,1000);var ht=document.getElementById('hero-timer');ht.style.display='block';requestAnimationFrame(function(){requestAnimationFrame(function(){ht.classList.add('visible');});});setTimeout(function(){showIntentSurvey(code,label);},420);}}
 function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval(timerInterval);timerInterval=null;}document.getElementById('page-level').classList.remove('active');document.getElementById('page-home').classList.add('active');document.getElementById('level-timer').classList.remove('visible');var ht=document.getElementById('hero-timer');ht.classList.remove('visible');setTimeout(function(){ht.style.display='none';},600);showAccueilBg();window.scrollTo(0,0);}
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;body.classList.toggle('open');}
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
