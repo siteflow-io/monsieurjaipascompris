@@ -280,6 +280,11 @@ body.admin-mode .admin-only { display: block; }
 .item-pub-btn.published:hover { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.25); color: #f87171; }
 .item-sub-num { font-size: 0.72rem; color: rgba(255,184,108,0.55); font-weight: 700; margin-right: 6px; flex-shrink: 0; }
 .item-unpublished { opacity: 0.5; }
+.dnd-over { outline: 2px dashed #ffb86c !important; outline-offset: -2px; background: rgba(255,184,108,0.12) !important; transition: outline 0.1s, background 0.1s; }
+.dnd-over.spring-pending { outline-style: solid; background: rgba(255,184,108,0.22) !important; }
+#mjpc-upload-toast { position: fixed; top: 20px; right: 20px; background: rgba(255,184,108,0.95); color: #1a1030; padding: 10px 18px; border-radius: 8px; font-family: 'EB Garamond', serif; font-weight: 600; font-size: 0.92rem; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+#mjpc-upload-toast.ok { background: rgba(52,211,153,0.95); }
+#mjpc-upload-toast.err { background: rgba(248,113,113,0.95); color: #fff; }
 .admin-action-btn { padding: 2px 7px; font-size: 0.72rem; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.55); cursor: pointer; font-family: inherit; transition: all 0.15s; margin-left: 4px; }
 .admin-action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .admin-action-btn.danger:hover { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.3); color: #f87171; }
@@ -534,6 +539,7 @@ function renderChapitres(level){
     html+='<div class="admin-add-row" style="text-align:center"><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
   }
   container.innerHTML=html;
+  if(typeof initChapterDragDrop==='function')initChapterDragDrop();
 }
 
 function resetChapitres(level){
@@ -586,6 +592,7 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
     adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u270f</button>';
     adminBtns+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',-1)">\u2191</button>';
     adminBtns+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',1)">\u2193</button>';
+    adminBtns+='<button class="admin-action-btn" title="Coller (image du presse-papier \u2192 nouvel item)" onclick="event.stopPropagation();pasteIntoSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\ud83d\udccb</button>';
     adminBtns+='<button class="admin-action-btn danger" title="Supprimer la s\u00e9ance" onclick="event.stopPropagation();deleteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && !sce.published)?' item-unpublished':'';
@@ -632,6 +639,7 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
     pubBtn+='<button class="admin-action-btn" title="Lier un fichier Drive ou une URL" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
     pubBtn+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',-1)">\u2191</button>';
     pubBtn+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',1)">\u2193</button>';
+    pubBtn+='<button class="admin-action-btn" title="Coller (image du presse-papier \u2192 remplace la ressource)" onclick="event.stopPropagation();pasteIntoItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udccb</button>';
     pubBtn+='<button class="admin-action-btn danger" title="Supprimer l\u2019item" onclick="event.stopPropagation();deleteItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && !it.published)?' item-unpublished':'';
@@ -970,6 +978,167 @@ function applyLinkChanges(newSource,newRef,newKind){
     if(newKind)item.kind=newKind;
     var lvl=ctx.level;closeLinkModal();renderChapitres(lvl);
   });
+}
+
+// ============ DRAG-DROP + PASTE pour items dynamiques de chapitres ============
+function showUploadToast(msg,kind){
+  var el=document.getElementById('mjpc-upload-toast');
+  if(!el){el=document.createElement('div');el.id='mjpc-upload-toast';document.body.appendChild(el);}
+  el.textContent=msg;
+  el.className=kind||'';
+  if(kind==='ok'||kind==='err'){setTimeout(function(){if(el&&el.parentNode)el.remove();},2500);}
+}
+
+function _uploadBlobToDrive(blob,fileName,level,chnum,snum){
+  // Retourne une Promise qui résout en {drive_file_id, ext, file_name}
+  return new Promise(function(resolve,reject){
+    if(blob.size>30*1024*1024){reject(new Error('Fichier > 30 Mo. Upload manuel sur Drive + bouton \ud83d\udd17.'));return;}
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var b64=e.target.result.split(',')[1];
+      var targetPath=level+'/ch'+chnum+'/s'+snum;
+      fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
+        action:'upload_drive_only',fileData:b64,fileName:fileName,mimeType:blob.type||'application/octet-stream',target_path:targetPath
+      })}).then(function(r){return r.json();}).then(function(res){
+        if(res.error){reject(new Error(res.error));return;}
+        resolve(res);
+      }).catch(reject);
+    };
+    reader.onerror=function(){reject(new Error('Lecture fichier impossible'));};
+    reader.readAsDataURL(blob);
+  });
+}
+
+function uploadFileForChapterItem(file,level,chnum,snum,itemId){
+  showUploadToast('\u23f3 Upload en cours\u2026');
+  _uploadBlobToDrive(file,file.name||('upload-'+Date.now()),level,chnum,snum).then(function(res){
+    var basePath='/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId;
+    return Promise.all([
+      fetch(FIREBASE_BASE+basePath+'/source.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('drive')}),
+      fetch(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(res.drive_file_id)}),
+      fetch(FIREBASE_BASE+basePath+'/published.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
+    ]).then(function(){
+      var item=chapitresData[level][chnum].seances[snum].items[itemId];
+      item.source='drive';item.ref=res.drive_file_id;item.published=true;
+      showUploadToast('\u2705 Fichier li\u00e9 \u00e0 l\u2019item','ok');
+      renderChapitres(level);
+    });
+  }).catch(function(err){showUploadToast('\u26a0 '+err.message,'err');});
+}
+
+function uploadFileForNewItem(file,level,chnum,snum){
+  showUploadToast('\u23f3 Upload en cours\u2026');
+  var sce=chapitresData[level][chnum].seances[snum];
+  var existingItems=sce.items||{};
+  var fileName=file.name||('upload-'+Date.now());
+  var slug=fileName.toLowerCase().replace(/\.[a-z0-9]+$/,'').replace(/[\u00e0-\u00e6]/g,'a').replace(/[\u00e8-\u00eb]/g,'e').replace(/[\u00ec-\u00ef]/g,'i').replace(/[\u00f2-\u00f6]/g,'o').replace(/[\u00f9-\u00fc]/g,'u').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,40)||'item';
+  var itemId=slug;var i=2;while(existingItems[itemId]){itemId=slug+'-'+i;i++;}
+  var ordres=Object.keys(existingItems).map(function(k){return existingItems[k].ordre||0;});
+  var newOrdre=(ordres.length?Math.max.apply(null,ordres):0)+1;
+  _uploadBlobToDrive(file,fileName,level,chnum,snum).then(function(res){
+    var ext=res.ext||(fileName.split('.').pop()||'').toLowerCase();
+    var iconByExt={pdf:'\ud83d\udcc4',pptx:'\ud83d\udcca',ppt:'\ud83d\udcca',docx:'\ud83d\udcdd',doc:'\ud83d\udcdd',jpg:'\ud83d\uddbc',jpeg:'\ud83d\uddbc',png:'\ud83d\uddbc',gif:'\ud83d\uddbc',webp:'\ud83d\uddbc',html:'\ud83d\udd27',htm:'\ud83d\udd27'};
+    var newItem={kind:'doc',title:fileName.replace(/\.[^.]+$/,''),subtitle:'',icon:iconByExt[ext]||'\ud83d\udcc4',source:'drive',ref:res.drive_file_id,ordre:newOrdre,published:true};
+    return fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
+      method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)
+    }).then(function(){
+      if(!sce.items)sce.items={};
+      sce.items[itemId]=newItem;
+      showUploadToast('\u2705 Nouvel item cr\u00e9\u00e9','ok');
+      renderChapitres(level);
+    });
+  }).catch(function(err){showUploadToast('\u26a0 '+err.message,'err');});
+}
+
+// Drag-drop avec spring loading
+var _dndState={timer:null,target:null,initDone:false};
+function initChapterDragDrop(){
+  if(_dndState.initDone)return;
+  _dndState.initDone=true;
+  var container=document.getElementById('chapters-dynamic');
+  if(!container)return;
+  container.addEventListener('dragover',function(e){
+    if(!document.body.classList.contains('admin-mode'))return;
+    if(!e.dataTransfer||!e.dataTransfer.types||(e.dataTransfer.types.indexOf&&e.dataTransfer.types.indexOf('Files')<0))return;
+    e.preventDefault();e.dataTransfer.dropEffect='copy';
+    var target=e.target.closest('.doc-item[data-item-id], .seance-block[data-seance-num], .chapter-card[data-chapter-id]');
+    if(!target)return;
+    if(target!==_dndState.target){
+      if(_dndState.target){_dndState.target.classList.remove('dnd-over','spring-pending');}
+      target.classList.add('dnd-over');
+      _dndState.target=target;
+      if(_dndState.timer){clearTimeout(_dndState.timer);_dndState.timer=null;}
+      // Spring loading : si chapitre fermé OU séance dans chapitre fermé
+      if(target.classList.contains('chapter-card')){
+        var body=target.querySelector('.chapter-body');
+        if(body&&!body.classList.contains('open')){
+          target.classList.add('spring-pending');
+          _dndState.timer=setTimeout(function(){if(body)body.classList.add('open');if(_dndState.target)_dndState.target.classList.remove('spring-pending');},700);
+        }
+      }
+    }
+  });
+  container.addEventListener('dragleave',function(e){
+    if(e.relatedTarget&&container.contains(e.relatedTarget))return;
+    if(_dndState.target){_dndState.target.classList.remove('dnd-over','spring-pending');_dndState.target=null;}
+    if(_dndState.timer){clearTimeout(_dndState.timer);_dndState.timer=null;}
+  });
+  container.addEventListener('drop',function(e){
+    if(!document.body.classList.contains('admin-mode'))return;
+    e.preventDefault();
+    if(_dndState.timer){clearTimeout(_dndState.timer);_dndState.timer=null;}
+    if(_dndState.target){_dndState.target.classList.remove('dnd-over','spring-pending');}
+    var target=e.target.closest('.doc-item[data-item-id], .seance-block[data-seance-num], .chapter-card[data-chapter-id]');
+    _dndState.target=null;
+    if(!target)return;
+    var files=e.dataTransfer.files;if(!files||files.length===0)return;
+    _routeFileToTarget(target,files[0]);
+  });
+}
+
+function _routeFileToTarget(target,file){
+  var level=clickedLevel||currentLevel;
+  if(!level){showUploadToast('\u26a0 Niveau introuvable','err');return;}
+  var itemEl=target.closest('.doc-item[data-item-id]');
+  if(itemEl){
+    var itemId=itemEl.getAttribute('data-item-id');
+    var sce=itemEl.closest('.seance-block[data-seance-num]');
+    var ch=itemEl.closest('.chapter-card[data-chapter-id]');
+    if(!sce||!ch){showUploadToast('\u26a0 Item incomplet','err');return;}
+    uploadFileForChapterItem(file,level,ch.getAttribute('data-chapter-id'),sce.getAttribute('data-seance-num'),itemId);return;
+  }
+  var sceEl=target.closest('.seance-block[data-seance-num]');
+  if(sceEl){
+    var ch2=sceEl.closest('.chapter-card[data-chapter-id]');
+    if(!ch2){showUploadToast('\u26a0 S\u00e9ance orpheline','err');return;}
+    uploadFileForNewItem(file,level,ch2.getAttribute('data-chapter-id'),sceEl.getAttribute('data-seance-num'));return;
+  }
+  showUploadToast('\u26a0 D\u00e9pose dans une s\u00e9ance ou sur un item pr\u00e9cis','err');
+}
+
+// Paste depuis presse-papier (image capturée)
+function pasteIntoItem(level,chnum,snum,itemId){_pasteCommon(function(file){uploadFileForChapterItem(file,level,chnum,snum,itemId);});}
+function pasteIntoSeance(level,chnum,snum){_pasteCommon(function(file){uploadFileForNewItem(file,level,chnum,snum);});}
+function _pasteCommon(then){
+  if(!navigator.clipboard||!navigator.clipboard.read){showUploadToast('\u26a0 Navigateur sans presse-papier','err');return;}
+  navigator.clipboard.read().then(function(items){
+    for(var i=0;i<items.length;i++){
+      var types=items[i].types;
+      for(var j=0;j<types.length;j++){
+        if(types[j].indexOf('image/')===0){
+          var t=types[j];
+          items[i].getType(t).then(function(blob){
+            var ext=(blob.type.split('/')[1]||'png').replace(/[^a-z0-9]/g,'');
+            var fileName='capture-'+Date.now()+'.'+ext;
+            var file=new File([blob],fileName,{type:blob.type});
+            then(file);
+          });
+          return;
+        }
+      }
+    }
+    showUploadToast('\u26a0 Pas d\u2019image dans le presse-papier','err');
+  }).catch(function(err){showUploadToast('\u26a0 '+err.message,'err');});
 }
 
 function applyPublished(level){
