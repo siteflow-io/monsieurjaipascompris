@@ -556,7 +556,7 @@ function renderChapitres(level){
     if(isAdmin){
       html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
     }
-    var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+    var nums=Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
     var displayNum=0;
     nums.forEach(function(num){
       var ch=data[num];
@@ -601,7 +601,7 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
   html+='<div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num">'+dispNum+'</div><div class="chapter-info"><div class="chapter-title">'+escapeHtml(ch.title||'')+'</div></div>'+adminBtns+'</div>';
   // Body : séances
   var seances=ch.seances||{};
-  var snums=Object.keys(seances).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
+  var snums=Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
   var bodyHtml='<div class="doc-list">';
   var seanceDispNum=0;
   snums.forEach(function(snum){
@@ -640,7 +640,7 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   html+='<div class="seance-header"><span class="seance-disp-num">S\u00e9ance '+dispNum+'</span><span class="seance-title-disp">'+escapeHtml(sce.title||'')+'</span>'+adminBtns+'</div>';
   // Items
   var items=sce.items||{};
-  var ikeys=Object.keys(items).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
+  var ikeys=Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
   var isNotions=(sce.type==='notions');
   var subDispNum=0;
   var rendered=0;
@@ -870,7 +870,7 @@ function _swapOrdre(pathA,pathB,oldA,oldB,onDone){
 
 function moveChapter(level,chnum,dir){
   var data=chapitresData[level];if(!data)return;
-  var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+  var nums=Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
   var idx=nums.indexOf(String(chnum));
   if(idx<0)return;
   var newIdx=idx+dir;
@@ -885,7 +885,7 @@ function moveChapter(level,chnum,dir){
 function moveSeance(level,chnum,snum,dir){
   var ch=chapitresData[level][chnum];if(!ch||!ch.seances)return;
   var seances=ch.seances;
-  var nums=Object.keys(seances).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
+  var nums=Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
   var idx=nums.indexOf(String(snum));
   if(idx<0)return;
   var newIdx=idx+dir;
@@ -900,7 +900,7 @@ function moveSeance(level,chnum,snum,dir){
 function moveItem(level,chnum,snum,itemId,dir){
   var sce=chapitresData[level][chnum].seances[snum];if(!sce||!sce.items)return;
   var items=sce.items;
-  var ids=Object.keys(items).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
+  var ids=Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
   var idx=ids.indexOf(itemId);
   if(idx<0)return;
   var newIdx=idx+dir;
@@ -1486,13 +1486,13 @@ function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t
 function collectChapterItems(level,kind){
   var data=chapitresData[level]||{};
   var result=[];
-  Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);}).forEach(function(chnum){
+  Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);}).forEach(function(chnum){
     var ch=data[chnum];if(!ch.published)return;
     var seances=ch.seances||{};
-    Object.keys(seances).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);}).forEach(function(snum){
+    Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);}).forEach(function(snum){
       var sce=seances[snum];if(!sce.published)return;
       var items=sce.items||{};
-      Object.keys(items).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);}).forEach(function(itemId){
+      Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);}).forEach(function(itemId){
         var it=items[itemId];
         if(!it.published||it.kind!==kind||!it.ref)return;
         result.push({chnum:chnum,chapTitle:ch.title||'',seanceTitle:sce.title||'',itemId:itemId,item:it});
