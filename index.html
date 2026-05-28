@@ -523,6 +523,37 @@ var NTFY_TOPIC='MJPC_NTFY_TOPIC_PLACEHOLDER';
 var PROF_CODES=['1312','3141'];
 // Niveaux désactivés pour les élèves (le prof y a accès normalement)
 var BLOCKED_LEVELS=['5e','6e'];
+function sanitizeChapitres(chapitres){
+  // Retire récursivement toute entrée null/non-objet (chapitres, séances, items)
+  // pour qu'aucun tri ou rendu ne plante sur une clé orpheline en Firebase.
+  if(!chapitres||typeof chapitres!=='object')return {};
+  var clean={};
+  Object.keys(chapitres).forEach(function(chk){
+    var ch=chapitres[chk];
+    if(!ch||typeof ch!=='object')return;
+    if(ch.seances&&typeof ch.seances==='object'){
+      var cleanSeances={};
+      Object.keys(ch.seances).forEach(function(sk){
+        var sce=ch.seances[sk];
+        if(!sce||typeof sce!=='object')return;
+        if(sce.items&&typeof sce.items==='object'){
+          var cleanItems={};
+          Object.keys(sce.items).forEach(function(ik){
+            var it=sce.items[ik];
+            if(!it||typeof it!=='object')return;
+            cleanItems[ik]=it;
+          });
+          sce.items=cleanItems;
+        }
+        cleanSeances[sk]=sce;
+      });
+      ch.seances=cleanSeances;
+    }
+    clean[chk]=ch;
+  });
+  return clean;
+}
+
 function loadPublished(level){
   fetch(FIREBASE_BASE+'/site/'+level+'.json')
     .then(function(r){return r.json()})
@@ -532,7 +563,7 @@ function loadPublished(level){
       publishedChapters[level]=v.published||[];
       publishedTabs[level]=v.published_tabs||[];
       publishedExtras[level]=v.published_extras||[];
-      chapitresData[level]=v.chapitres||{};
+      chapitresData[level]=sanitizeChapitres(v.chapitres||{});
       applyPublished(level);
     });
 }
@@ -542,6 +573,13 @@ function renderChapitres(level){
   if(!container)return;
   var isAdmin=document.body.classList.contains('admin-mode');
   var data=chapitresData[level]||{};
+  // Mémoriser quels chapitres sont dépliés AVANT le re-render (pour rester "dans" le chapitre)
+  var openChapters={};
+  var prevScroll=window.scrollY;
+  container.querySelectorAll('.chapter-card[data-chapter-id]').forEach(function(card){
+    var body=card.querySelector('.chapter-body');
+    if(body&&body.classList.contains('open'))openChapters[card.getAttribute('data-chapter-id')]=true;
+  });
   var html='';
   try{
     if(Object.keys(data).length===0){
@@ -578,6 +616,12 @@ function renderChapitres(level){
     }
   }
   container.innerHTML=html;
+  // Ré-ouvrir les chapitres qui étaient dépliés + restaurer le scroll (rester "dans" le chapitre)
+  Object.keys(openChapters).forEach(function(chId){
+    var card=container.querySelector('.chapter-card[data-chapter-id="'+chId+'"]');
+    if(card){var body=card.querySelector('.chapter-body');if(body)body.classList.add('open');}
+  });
+  if(Object.keys(openChapters).length)window.scrollTo(0,prevScroll);
   if(typeof initChapterDragDrop==='function')initChapterDragDrop();
 }
 
