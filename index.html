@@ -543,29 +543,39 @@ function renderChapitres(level){
   var isAdmin=document.body.classList.contains('admin-mode');
   var data=chapitresData[level]||{};
   var html='';
-  if(Object.keys(data).length===0){
-    if(isAdmin){
-      html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.92rem">Aucun chapitre en base pour ce niveau.<br><br><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Cr\u00e9er le premier chapitre</button></div>';
-    } else {
-      html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:0.92rem;font-style:italic">Aucun chapitre publi\u00e9 pour le moment.</div>';
+  try{
+    if(Object.keys(data).length===0){
+      if(isAdmin){
+        html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.4);font-size:0.92rem">Aucun chapitre en base pour ce niveau.<br><br><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Cr\u00e9er le premier chapitre</button></div>';
+      } else {
+        html='<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:0.92rem;font-style:italic">Aucun chapitre publi\u00e9 pour le moment.</div>';
+      }
+      container.innerHTML=html;
+      return;
     }
-    container.innerHTML=html;
-    return;
-  }
-  if(isAdmin){
-    html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
-  }
-  var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
-  var displayNum=0;
-  nums.forEach(function(num){
-    var ch=data[num];
-    if(!ch)return;
-    if(!isAdmin && !ch.published)return;
-    displayNum++;
-    html+=renderChapterCard(level,num,ch,displayNum,isAdmin);
-  });
-  if(isAdmin){
-    html+='<div class="admin-add-row" style="text-align:center"><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
+    if(isAdmin){
+      html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
+    }
+    var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+    var displayNum=0;
+    nums.forEach(function(num){
+      var ch=data[num];
+      if(!ch)return;
+      if(!isAdmin && !ch.published)return;
+      displayNum++;
+      try{
+        html+=renderChapterCard(level,num,ch,displayNum,isAdmin);
+      }catch(eCard){
+        if(isAdmin)html+='<div style="padding:14px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:8px;margin-bottom:8px;font-size:0.82rem;">\u26a0 Erreur chapitre <strong>'+num+'</strong> : '+(eCard.message||eCard)+'</div>';
+      }
+    });
+    if(isAdmin){
+      html+='<div class="admin-add-row" style="text-align:center"><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
+    }
+  }catch(eGlobal){
+    if(isAdmin){
+      html='<div style="padding:18px;color:#f87171;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:8px;font-size:0.86rem;">\u26a0 Erreur rendu chapitres : '+(eGlobal.message||eGlobal)+'<br><br><button class="admin-action-add" onclick="addChapter(\''+level+'\')">+ Nouveau chapitre</button></div>';
+    }
   }
   container.innerHTML=html;
   if(typeof initChapterDragDrop==='function')initChapterDragDrop();
