@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le triomphe simien — Pilotage du débat</title>
+<style>
+
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Spline+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#1a1712;
+    --panel:#262219; --panel2:#302b20; --panel3:#3b3526;
+    --ink:#f6f1e4; --ink2:#ddd4c0; --muted:#a99e88;
+    --line:#423b2c;
+    --todo:#534c3b; --todo-bg:#2a2619;
+    --wip:#e89a24; --wip-bg:#43320f;
+    --done:#62b07f; --done-bg:#1f3325;
+    --accent:#c0392b; --accent2:#dd6a52;
+    --gold:#dcab55;
+    --shadow:0 20px 55px rgba(0,0,0,0.5);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;
+    color:var(--ink);
+    font-family:'Spline Sans',sans-serif;
+    padding:26px 32px 90px;
+    background-color:#1a1712;
+    position:relative;
+    overflow-x:hidden;
+  }
+  /* Couches mouvantes du fond */
+  body::before, body::after{
+    content:"";position:fixed;inset:-30%;z-index:-2;pointer-events:none;
+  }
+  body::before{
+    background:
+      radial-gradient(48% 44% at 22% 28%, rgba(220,171,85,.30), transparent 60%),
+      radial-gradient(46% 42% at 78% 18%, rgba(192,57,43,.32), transparent 60%),
+      radial-gradient(52% 46% at 60% 80%, rgba(98,176,127,.22), transparent 62%);
+    filter:blur(6px);
+    animation:drift1 18s ease-in-out infinite alternate;
+  }
+  body::after{
+    background:
+      radial-gradient(44% 40% at 70% 40%, rgba(220,171,85,.24), transparent 60%),
+      radial-gradient(50% 46% at 30% 70%, rgba(192,57,43,.22), transparent 60%),
+      radial-gradient(46% 44% at 85% 85%, rgba(98,176,127,.20), transparent 62%);
+    filter:blur(8px);
+    animation:drift2 23s ease-in-out infinite alternate;
+  }
+  /* fond de base fixe sous les couches mouvantes */
+  .bgbase{position:fixed;inset:0;z-index:-3;
+    background:linear-gradient(160deg,#1e1a13 0%,#181510 55%,#1c160f 100%)}
+
+  @keyframes drift1{
+    0%{transform:translate(-8%,-6%) scale(1) rotate(0deg)}
+    50%{transform:translate(10%,-8%) scale(1.25) rotate(8deg)}
+    100%{transform:translate(-6%,10%) scale(1.12) rotate(-6deg)}
+  }
+  @keyframes drift2{
+    0%{transform:translate(8%,4%) scale(1.2) rotate(0deg)}
+    50%{transform:translate(-12%,8%) scale(1) rotate(-9deg)}
+    100%{transform:translate(7%,-10%) scale(1.3) rotate(6deg)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    body::before,body::after{animation:none}
+    *{transition:none!important;animation:none!important}
+  }
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;
+    border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:24px;flex-wrap:wrap}
+  .hero{display:flex;gap:22px;align-items:stretch;flex:1;min-width:300px}
+  .hero-art{position:relative;width:160px;min-width:160px;border-radius:16px;overflow:hidden;
+    border:1px solid var(--line);box-shadow:var(--shadow)}
+  .hero-art svg{display:block;width:100%;height:100%}
+  .hero-glyph{position:absolute;bottom:8px;right:10px;font-size:2.4rem;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+  .hero-text{display:flex;flex-direction:column;justify-content:center;gap:9px}
+  .eyebrow{font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .hero-text h1{font-family:'Fraunces',serif;font-weight:900;font-size:2.7rem;line-height:.95;letter-spacing:-1px;color:var(--gold);
+    background:linear-gradient(92deg,#f4d79a,#dcab55 45%,#c0392b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .objective{font-size:.98rem;color:var(--ink2);line-height:1.45;max-width:600px}
+  .obj-tag{display:inline-block;font-size:.68rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    color:#1a1712;background:var(--gold);padding:3px 9px;border-radius:6px;margin-right:8px;vertical-align:middle}
+  .motion-box{margin-top:4px;border-left:3px solid var(--accent);padding:8px 0 8px 15px;max-width:620px}
+  .motion-label{display:block;font-size:.7rem;letter-spacing:1.2px;text-transform:uppercase;color:var(--accent2);font-weight:700;margin-bottom:4px}
+  .motion-box .motion{font-family:'Fraunces',serif;font-style:italic;font-weight:500;color:var(--gold);font-size:1.08rem;line-height:1.5;margin:0}
+  .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+
+  button{font-family:'Spline Sans',sans-serif;font-weight:600;font-size:.9rem;color:var(--ink);
+    background:rgba(48,43,32,.8);border:1px solid var(--line);border-radius:11px;padding:10px 16px;cursor:pointer;
+    transition:transform .12s ease,background .12s ease,box-shadow .12s ease;backdrop-filter:blur(4px)}
+  button:hover{background:var(--panel3);transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  button:active{transform:translateY(0)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{background:var(--accent2)}
+  button.ghost{background:transparent}
+
+  /* ---------- Légende ---------- */
+  .legend{background:rgba(38,34,25,.7);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 20px;margin-bottom:20px;backdrop-filter:blur(6px);box-shadow:var(--shadow)}
+  .legend h4{font-family:'Fraunces',serif;font-weight:700;font-size:1rem;color:var(--gold);margin-bottom:12px;
+    display:flex;align-items:center;gap:8px}
+  .legend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 26px}
+  .le{display:flex;align-items:flex-start;gap:10px;font-size:.9rem;color:var(--ink2);line-height:1.4}
+  .le .mk{flex-shrink:0;margin-top:1px}
+  .chip{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);display:inline-block}
+  .chip.todo{background:var(--todo-bg);border-color:var(--todo)}
+  .chip.wip{background:var(--wip-bg);border-color:var(--wip);position:relative}
+  .chip.wip::after{content:"\25D0";position:absolute;inset:0;display:grid;place-items:center;color:var(--wip);font-size:.85rem}
+  .chip.done{background:var(--done-bg);border-color:var(--done);position:relative}
+  .chip.done::after{content:"\2713";position:absolute;inset:0;display:grid;place-items:center;color:var(--done);font-size:.85rem}
+  .le b{color:var(--ink)}
+  .tok-demo{display:inline-flex;gap:3px}
+  .tok{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--gold);background:var(--gold);box-shadow:0 0 7px rgba(220,171,85,.55)}
+  .tok.used{background:transparent;box-shadow:none;opacity:.4}
+
+  /* ---------- Tableau ---------- */
+  .tablewrap{border:1px solid var(--line);border-radius:var(--radius);overflow:auto;box-shadow:var(--shadow);
+    background:rgba(38,34,25,.55);backdrop-filter:blur(6px)}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1100px}
+  th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+  th:first-child,td:first-child{border-left:1px solid transparent}
+  thead th{background:rgba(48,43,32,.92);padding:11px 6px;font-weight:700;font-size:.82rem;position:sticky;top:0;z-index:3;backdrop-filter:blur(4px)}
+  th.bn{text-align:left;padding-left:18px;width:200px}
+  th.tk{width:96px;font-size:.78rem}
+  th.doc{width:72px;cursor:pointer;transition:background .12s ease;user-select:none}
+  th.doc:hover{background:var(--panel3)}
+  th.doc .num{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:900;display:block;color:var(--gold)}
+  th.doc .lab{font-size:.66rem;color:var(--muted);font-weight:500;display:block;margin-top:1px;line-height:1.05}
+  th.doc .open{font-size:.58rem;color:var(--gold);opacity:.55;display:block;margin-top:3px}
+  th.pr{width:108px;font-size:.78rem}
+
+  td.bn{padding:10px 14px;vertical-align:middle;background:rgba(48,43,32,.45)}
+  td.bn .names{font-weight:600;font-size:1.02rem;line-height:1.25}
+  td.bn .edit{font-size:.72rem;color:var(--muted);background:none;border:none;padding:3px 0 0;cursor:pointer;display:block}
+  td.bn .edit:hover{color:var(--gold)}
+
+  td.tk{text-align:center;background:rgba(48,43,32,.3);vertical-align:middle}
+  .tkwrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .tkbtn{display:inline-flex;gap:5px;padding:7px 10px;border-radius:20px;border:1px solid var(--line);
+    background:rgba(60,53,38,.6);cursor:pointer;transition:all .12s ease}
+  .tkbtn:hover{border-color:var(--gold);transform:translateY(-1px)}
+  .tkbtn.empty{cursor:default;border-color:transparent;background:transparent}
+  .tkbtn.empty:hover{transform:none}
+  .mute{font-size:.8rem;color:var(--accent2);font-weight:700;display:flex;align-items:center;gap:5px}
+  .aided{font-size:.7rem;color:var(--muted);font-style:italic;margin-top:3px;cursor:help}
+
+  td.st{cursor:pointer;height:50px;text-align:center;font-size:1.3rem;font-weight:700;transition:filter .12s ease}
+  td.st.todo{background:var(--todo-bg)}
+  td.st.wip{background:var(--wip-bg);color:var(--wip)}
+  td.st.done{background:var(--done-bg);color:var(--done)}
+  td.st:hover{filter:brightness(1.45)}
+  td.st.wip::after{content:"\25D0"}
+  td.st.done::after{content:"\2713"}
+
+  td.pr{background:rgba(48,43,32,.45);text-align:center;font-weight:700;font-size:.92rem;padding:7px 9px}
+  .bar{height:7px;background:var(--todo-bg);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-top:5px}
+  .bar>div{height:100%;background:linear-gradient(90deg,var(--done),#7cc794);transition:width .35s ease}
+
+  tfoot td{background:rgba(38,34,25,.6);padding:14px}
+  .addform{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .addform input{background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;
+    padding:10px 13px;font-size:.92rem;font-family:inherit;min-width:175px}
+  .addform input:focus{outline:none;border-color:var(--gold)}
+
+  /* ---------- Overlay ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(10,8,5,.8);backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:30px}
+  .overlay.show{display:flex}
+  .gelcard{background:linear-gradient(160deg,#2a251b,#211d15);border:1px solid var(--line);border-radius:20px;
+    padding:38px 42px;max-width:420px;text-align:center;box-shadow:var(--shadow)}
+  .gelcard .ic{font-size:2.8rem;margin-bottom:12px}
+  .gelcard h2{font-family:'Fraunces',serif;font-weight:700;font-size:1.55rem;margin-bottom:24px}
+  .gelcard .acts{display:flex;gap:11px;justify-content:center}
+
+  /* ---------- Vue document ---------- */
+  .docview{position:fixed;inset:0;z-index:90;display:none;flex-direction:column;
+    background-color:#1a1712;
+    background-image:radial-gradient(900px 500px at 50% -10%, rgba(220,171,85,.08), transparent 55%),linear-gradient(160deg,#1e1a13,#181510)}
+  .docview.show{display:flex}
+  .docbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 24px;
+    border-bottom:1px solid var(--line);background:rgba(38,34,25,.85);backdrop-filter:blur(6px)}
+  .docbar .left{display:flex;align-items:center;gap:16px}
+  .docbar .dt{font-family:'Fraunces',serif;font-weight:700;font-size:1.25rem}
+  .docbar .ctx{font-size:.86rem;color:var(--muted)}
+  .docbar .ctx b{color:var(--gold)}
+  .docscroll{flex:1;overflow:auto;padding:32px 0}
+  .sheet{max-width:840px;margin:0 auto;background:#fbf8f1;color:#1a1a1a;border-radius:12px;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);padding:0 0 32px;overflow:hidden}
+
+  .d-head{display:flex;align-items:stretch}
+  .d-head .past{display:grid;place-items:center;padding:14px 0;width:92px;color:#fff}
+  .d-head .past .l1{font-size:.7rem}
+  .d-head .past .l2{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;line-height:1}
+  .d-head .ttl{flex:1;padding:14px 22px;display:flex;flex-direction:column;justify-content:center}
+  .d-head .ttl h3{font-family:'Fraunces',serif;font-weight:700;font-size:1.45rem;color:#222}
+  .d-head .ttl .s{font-style:italic;color:#555;font-size:.92rem;margin-top:3px}
+
+  .d-box{margin:16px 28px;padding:15px 19px;border-radius:10px;font-size:1rem;line-height:1.5;border:1px solid #e7e0d0}
+  .d-box .lab{font-weight:700;font-size:.78rem;letter-spacing:.4px;margin-bottom:7px;color:#7a6f56}
+  .d-item{margin:9px 28px;padding:12px 17px;border-radius:9px;background:#fff;border:1px solid #e7e0d0;font-size:1rem;line-height:1.45}
+  .d-item .n{font-weight:700;margin-right:7px}
+  .d-sect{margin:24px 28px 8px;font-weight:700;font-size:1.15rem;padding-bottom:6px;border-bottom:2px solid currentColor}
+
+  .zone{position:relative;cursor:pointer;transition:box-shadow .12s ease}
+  .zone:hover{box-shadow:inset 0 0 0 3px rgba(220,171,85,.6)}
+  .zone.flagged{box-shadow:inset 0 0 0 3px var(--accent)!important;background:rgba(192,57,43,.05)}
+  .zone .qmark{position:absolute;top:7px;right:10px;font-size:.68rem;color:var(--accent);font-weight:700;opacity:0;transition:opacity .12s}
+  .zone.flagged .qmark{opacity:1}
+
+  /* ---------- Panneau d'aide (s'adresse au binôme) ---------- */
+  .help{position:fixed;top:0;right:0;height:100%;width:0;z-index:95;overflow:hidden;
+    transition:width .28s cubic-bezier(.4,0,.2,1);box-shadow:-22px 0 55px rgba(0,0,0,.45);
+    background:linear-gradient(165deg,#2a251b,#201c14)}
+  .help.show{width:min(600px,48vw)}
+  .help .inner{width:min(600px,48vw);height:100%;display:flex;flex-direction:column}
+  .help .hh{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .help .hh .t{font-family:'Fraunces',serif;font-weight:700;font-size:1.3rem;color:var(--gold)}
+  .help .hh .for{font-size:.8rem;color:var(--muted);margin-top:2px}
+  .help .hb{flex:1;overflow:auto;padding:24px 26px}
+  .help .seg{margin-bottom:24px}
+  .help .seg .k{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    color:#1a1712;background:var(--gold);padding:4px 11px;border-radius:7px;margin-bottom:11px}
+  .help .seg.didac .k{background:var(--done);color:#0f1e15}
+  .help .seg p{font-size:1.04rem;line-height:1.7;color:var(--ink2)}
+  .help .seg p+p{margin-top:11px}
+  .help .quote{font-style:italic;color:var(--gold);border-left:3px solid var(--gold);padding-left:14px;margin:10px 0;line-height:1.6}
+  .help .foot{margin-top:auto;padding:16px 26px;border-top:1px solid var(--line);font-size:.82rem;color:var(--muted)}
+
+  footer{margin-top:20px;color:var(--muted);font-size:.82rem;text-align:center}
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);
+    background:var(--panel3);border:1px solid var(--line);color:var(--ink);padding:14px 24px;border-radius:13px;
+    box-shadow:var(--shadow);font-size:.92rem;opacity:0;transition:all .3s ease;z-index:120;max-width:80vw;text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+  /* ===== Nouveaux écrans Firebase ===== */
+  .screen{display:none}
+  .screen.show{display:block}
+  .welcome-wrap{min-height:90vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .welcome-card{max-width:560px;width:100%;background:rgba(38,34,25,.88);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-radius:24px;padding:36px 32px;box-shadow:var(--shadow);text-align:center}
+  .welcome-art{margin-bottom:18px;display:flex;justify-content:center}
+  .welcome-art svg{width:180px;height:160px;border-radius:14px;border:1px solid var(--line)}
+  .welcome-card h1{font-family:'Fraunces',serif;font-weight:900;font-size:2.4rem;line-height:1;letter-spacing:-1px;margin-bottom:6px;
+    background:linear-gradient(92deg,#f4d79a,#dcab55 45%,#c0392b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--gold)}
+  .welcome-card .eyebrow{font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:14px}
+  .welcome-card .sub{color:var(--ink2);margin:8px 0 24px;font-size:1rem;line-height:1.5}
+  .welcome-card label{display:block;text-align:left;font-size:.85rem;color:var(--muted);margin-bottom:6px;margin-top:14px;font-weight:600}
+  .welcome-card input{width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);
+    border-radius:12px;padding:14px 16px;font-size:1.05rem;font-family:inherit;outline:none;transition:border-color .15s}
+  .welcome-card input:focus{border-color:var(--gold)}
+  .welcome-card input.code{text-align:center;letter-spacing:4px;font-weight:700;font-size:1.3rem;text-transform:uppercase}
+  .welcome-card .row{display:flex;gap:10px}
+  .welcome-card .row input{flex:1}
+  .welcome-card .actions{margin-top:24px;display:flex;gap:10px;justify-content:space-between;align-items:center}
+  .welcome-card .err{color:var(--accent2);font-size:.88rem;margin-top:10px;min-height:1.2em}
+  .welcome-card .prof-link{color:var(--muted);font-size:.82rem;cursor:pointer;background:none;border:none;font-family:inherit;padding:6px 10px;border-radius:8px}
+  .welcome-card .prof-link:hover{color:var(--gold)}
+
+  /* ===== Code de classe géant (mode prof, projection) ===== */
+  .codebanner{margin:18px 0 12px;padding:18px 22px;background:linear-gradient(135deg,rgba(220,171,85,.12),rgba(192,57,43,.08));
+    border:2px solid var(--gold);border-radius:18px;text-align:center;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .codebanner .lbl{font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .codebanner .code{font-family:'Fraunces',serif;font-weight:900;font-size:2.2rem;color:var(--gold);letter-spacing:6px;line-height:1}
+  .codebanner .url{font-size:.82rem;color:var(--ink2);margin-top:4px}
+  .codebanner .url b{color:var(--gold);font-family:'Spline Sans',sans-serif}
+  .codebanner-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* ===== Élève : pastille pending validation ===== */
+  .st.pending{background:repeating-linear-gradient(45deg,var(--wip-bg),var(--wip-bg) 6px,rgba(232,154,36,.25) 6px,rgba(232,154,36,.25) 12px)!important;cursor:pointer}
+  .st.pending::after{content:"⏳";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.85rem;opacity:.85}
+  .st{position:relative}
+
+  /* ===== Bandeau "j'attends une validation" / "validation à faire" ===== */
+  .validation-strip{margin-bottom:16px;padding:14px 18px;background:rgba(232,154,36,.12);border:1.5px solid var(--wip);
+    border-radius:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .validation-strip .icn{font-size:1.6rem}
+  .validation-strip .txt{flex:1;color:var(--ink);font-size:.95rem}
+  .validation-strip b{color:var(--wip)}
+
+  /* ===== Élève : carte de mon binôme ===== */
+  .mine-card{background:linear-gradient(135deg,rgba(31,111,84,.18),rgba(192,57,43,.06));
+    border:2px solid var(--done);border-radius:18px;padding:18px 22px;margin-bottom:18px}
+  .mine-card .lbl{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .mine-card .names{font-family:'Fraunces',serif;font-weight:700;font-size:1.5rem;color:var(--ink);margin-bottom:8px}
+  .mine-card .stats{display:flex;gap:18px;flex-wrap:wrap;font-size:.9rem;color:var(--ink2)}
+  .mine-card .stats b{color:var(--gold)}
+
+  /* ===== Liste autres binômes (vue élève) ===== */
+  .others-list{margin-top:22px}
+  .others-list h3{font-family:'Fraunces',serif;font-size:1.15rem;color:var(--ink);margin-bottom:10px}
+  .others-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;margin-bottom:6px}
+  .others-row .nm{flex:1;font-weight:600;color:var(--ink)}
+  .others-row .pr{font-size:.88rem;color:var(--muted)}
+  .others-row .bar-mini{width:80px;height:5px;background:var(--line);border-radius:3px;overflow:hidden}
+  .others-row .bar-mini>div{height:100%;background:var(--done);transition:width .3s}
+
+  /* ===== Connectivité ===== */
+  .conn-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .conn-dot.ok{background:var(--done);box-shadow:0 0 6px var(--done)}
+  .conn-dot.bad{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+
+</style>
+</head>
+<body>
+
+<!-- ============ ÉCRAN 1 : ACCUEIL (élève rejoint la session) ============ -->
+<div class="screen" id="screenWelcome">
+  <div class="welcome-wrap">
+    <div class="welcome-card">
+      <div class="welcome-art" aria-hidden="true">
+        <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            <radialGradient id="sun" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f4c869"/><stop offset="55%" stop-color="#d98a1f"/><stop offset="100%" stop-color="#a8480f"/></radialGradient>
+            <radialGradient id="planet" cx="38%" cy="34%" r="70%"><stop offset="0%" stop-color="#caa15a"/><stop offset="60%" stop-color="#7d5a2e"/><stop offset="100%" stop-color="#3c2a16"/></radialGradient>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a1e30"/><stop offset="55%" stop-color="#3a2418"/><stop offset="100%" stop-color="#5a2a16"/></linearGradient>
+          </defs>
+          <rect width="220" height="200" fill="url(#sky)"/>
+          <circle cx="62" cy="58" r="30" fill="url(#sun)" opacity="0.92"/>
+          <circle cx="165" cy="44" r="42" fill="url(#planet)"/>
+          <ellipse cx="165" cy="44" rx="58" ry="13" fill="none" stroke="#caa15a" stroke-width="2" opacity="0.5" transform="rotate(-18 165 44)"/>
+          <path d="M0 150 Q 55 120 110 142 T 220 138 L220 200 L0 200 Z" fill="#1d130c" opacity="0.9"/>
+          <path d="M0 168 Q 70 150 140 166 T 220 160 L220 200 L0 200 Z" fill="#140d07"/>
+          <g stroke="#0d0805" stroke-width="6" opacity="0.55">
+            <line x1="20" y1="92" x2="20" y2="200"/><line x1="55" y1="92" x2="55" y2="200"/>
+            <line x1="90" y1="92" x2="90" y2="200"/><line x1="125" y1="92" x2="125" y2="200"/>
+            <line x1="160" y1="92" x2="160" y2="200"/><line x1="195" y1="92" x2="195" y2="200"/>
+          </g>
+        </svg>
+      </div>
+      <div class="eyebrow">La Planète des singes · 3<sup>e</sup></div>
+      <h1>Le triomphe simien</h1>
+      <p class="sub">Entrez le code de classe affiché au tableau et vos prénoms pour rejoindre le débat.</p>
+      <div id="loginBlock">
+        <label for="loginCode">Code de classe</label>
+        <input id="loginCode" class="code" placeholder="LIMA-4827" maxlength="12" autocomplete="off">
+        <label>Vos prénoms (1, 2 ou 3 élèves)</label>
+        <input id="loginName1" placeholder="Prénom 1" autocomplete="off">
+        <input id="loginName2" placeholder="Prénom 2 (optionnel)" style="margin-top:8px" autocomplete="off">
+        <input id="loginName3" placeholder="Prénom 3 (optionnel)" style="margin-top:8px" autocomplete="off">
+        <div class="err" id="loginErr"></div>
+        <div class="actions">
+          <button class="prof-link" onclick="showProfLogin()">⚙ Accès professeur</button>
+          <button class="primary" onclick="doStudentLogin()" id="loginBtn">Rejoindre →</button>
+        </div>
+      </div>
+      <div id="profLoginBlock" style="display:none">
+        <label for="profPwd">Mot de passe professeur</label>
+        <input id="profPwd" type="password" placeholder="••••" autocomplete="off">
+        <div class="err" id="profErr"></div>
+        <div class="actions">
+          <button class="prof-link" onclick="hideProfLogin()">← Retour</button>
+          <button class="primary" onclick="doProfLogin()">Accéder au pilotage →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ÉCRAN 2 : VUE ÉLÈVE ============ -->
+<div class="screen" id="screenStudent">
+  <header>
+    <div class="hero" style="gap:14px">
+      <div class="hero-art" style="width:90px;min-width:90px" aria-hidden="true">
+        <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid slice">
+          <use href="#sun"/>
+          <rect width="220" height="200" fill="url(#sky)"/>
+          <circle cx="62" cy="58" r="30" fill="url(#sun)" opacity="0.92"/>
+          <circle cx="165" cy="44" r="42" fill="url(#planet)"/>
+          <path d="M0 150 Q 55 120 110 142 T 220 138 L220 200 L0 200 Z" fill="#1d130c" opacity="0.9"/>
+          <g stroke="#0d0805" stroke-width="6" opacity="0.55">
+            <line x1="20" y1="92" x2="20" y2="200"/><line x1="55" y1="92" x2="55" y2="200"/>
+            <line x1="90" y1="92" x2="90" y2="200"/><line x1="125" y1="92" x2="125" y2="200"/>
+            <line x1="160" y1="92" x2="160" y2="200"/><line x1="195" y1="92" x2="195" y2="200"/>
+          </g>
+        </svg>
+      </div>
+      <div class="hero-text">
+        <div class="eyebrow">La Planète des singes · 3<sup>e</sup></div>
+        <h1 style="font-size:1.9rem">Le triomphe simien</h1>
+        <div class="motion-box" style="margin-top:6px;padding-left:12px">
+          <p class="motion" style="font-size:.95rem;margin:0">« L'Homme a traité les animaux comme des choses. Les singes l'ont traité pareil. L'IA nous traitera pareil. »</p>
+        </div>
+      </div>
+    </div>
+    <div class="tools">
+      <span id="studentConn" style="font-size:.82rem;color:var(--muted)"><span class="conn-dot ok"></span>connecté</span>
+      <button class="ghost" onclick="studentLogout()" title="Quitter cette session et revenir à l'écran d'accueil.">⎋ Quitter</button>
+    </div>
+  </header>
+  <div id="studentValidationStrip"></div>
+  <div id="studentMineCard" class="mine-card"></div>
+  <div id="studentTableSection"></div>
+  <div class="others-list">
+    <h3>Les autres binômes</h3>
+    <div id="studentOthersList"></div>
+  </div>
+  <footer>Tablette du binôme. Vos actions sont visibles en direct sur l'écran prof. Le passage à <b>« fait »</b> nécessite la validation du professeur.</footer>
+</div>
+
+<!-- ============ ÉCRAN 3 : VUE PROF (pilotage complet) ============ -->
+<div class="screen" id="screenProf">
+  <header>
+    <div class="hero">
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 220 200" preserveAspectRatio="xMidYMid slice">
+          <rect width="220" height="200" fill="url(#sky)"/>
+          <circle cx="62" cy="58" r="30" fill="url(#sun)" opacity="0.92"/>
+          <circle cx="165" cy="44" r="42" fill="url(#planet)"/>
+          <ellipse cx="165" cy="44" rx="58" ry="13" fill="none" stroke="#caa15a" stroke-width="2" opacity="0.5" transform="rotate(-18 165 44)"/>
+          <path d="M0 150 Q 55 120 110 142 T 220 138 L220 200 L0 200 Z" fill="#1d130c" opacity="0.9"/>
+          <path d="M0 168 Q 70 150 140 166 T 220 160 L220 200 L0 200 Z" fill="#140d07"/>
+          <g stroke="#0d0805" stroke-width="6" opacity="0.55">
+            <line x1="20" y1="92" x2="20" y2="200"/><line x1="55" y1="92" x2="55" y2="200"/>
+            <line x1="90" y1="92" x2="90" y2="200"/><line x1="125" y1="92" x2="125" y2="200"/>
+            <line x1="160" y1="92" x2="160" y2="200"/><line x1="195" y1="92" x2="195" y2="200"/>
+          </g>
+        </svg>
+        <div class="hero-glyph">🦍</div>
+      </div>
+      <div class="hero-text">
+        <div class="eyebrow">La Planète des singes · Pierre Boulle · 3<sup>e</sup></div>
+        <h1>Le triomphe simien</h1>
+        <div class="objective"><span class="obj-tag">Objectif</span> Comprendre la thèse de l'auteur à travers le triomphe de l'intelligence simienne.</div>
+        <div class="motion-box">
+          <span class="motion-label">L'affirmation du débat</span>
+          <p class="motion">« L'Homme a traité les animaux comme des choses. Les singes l'ont traité pareil. L'IA nous traitera pareil. »</p>
+        </div>
+      </div>
+    </div>
+    <div class="tools">
+      <span id="profConn" style="font-size:.82rem;color:var(--muted)" title="État de la connexion à Firebase. Vert : tout est synchronisé. Rouge : vérifie ta connexion réseau."><span class="conn-dot ok"></span>connecté</span>
+      <button class="ghost" onclick="resetStatus()" title="Repasse tous les statuts à 'à faire' pour tous les binômes.">↺ Statuts à zéro</button>
+      <button class="ghost" onclick="resetTokens()" title="Redonne les 2 jetons d'aide à tous les binômes.">⟳ Rendre les aides</button>
+      <button class="ghost" onclick="openProfMenu()" title="Plus d'actions (archiver, changer mot de passe…).">⋯ Plus</button>
+      <button class="ghost" onclick="profLogout()" title="Quitter le mode prof.">⎋ Quitter</button>
+    </div>
+  </header>
+
+  <!-- Bandeau code de classe (pour projection au tableau) -->
+  <div class="codebanner">
+    <div title="Affiche ce bloc en grand au tableau : les élèves saisissent ce code pour rejoindre la session.">
+      <div class="lbl">Code de classe à copier au tableau</div>
+      <div class="code" id="profSessionCode" title="Code de la session active. Les élèves le saisissent pour rejoindre. Si tu changes de session, un nouveau code est généré.">—</div>
+      <div class="url">Adresse : <b id="profSessionUrl" title="URL de l'app à ouvrir sur les tablettes. Donne-la aux élèves (ou affiche-la avec un QR code).">—</b></div>
+    </div>
+    <div class="codebanner-actions">
+      <button class="primary" onclick="newSession()" title="Crée une nouvelle session avec un nouveau code. La session actuelle (binômes, statuts, aides) sera archivée automatiquement.">+ Nouvelle session</button>
+    </div>
+  </div>
+
+  <div id="profValidationStrip"></div>
+
+  <div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:16px">
+    <div style="font-family:'Fraunces',serif;font-weight:700;color:var(--gold);font-size:1.05rem;margin-bottom:8px">📖 Comment lire ce tableau</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;font-size:.88rem;color:var(--ink2);line-height:1.4">
+      <div><span style="display:inline-block;width:14px;height:14px;background:var(--todo-bg);border:1px solid var(--todo);border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>À faire</b> — le binôme n'a pas commencé ce document.</div>
+      <div><span style="display:inline-block;width:14px;height:14px;background:var(--wip-bg);border:1px solid var(--wip);border-radius:3px;vertical-align:middle;margin-right:6px;color:var(--wip);text-align:center;font-size:.8rem">◐</span><b>En cours</b> — le binôme travaille dessus.</div>
+      <div><span style="display:inline-block;width:14px;height:14px;background:var(--done-bg);border:1px solid var(--done);border-radius:3px;vertical-align:middle;margin-right:6px;color:var(--done);text-align:center;font-size:.8rem">✓</span><b>Fait</b> — validé par le prof.</div>
+      <div><span style="display:inline-block;width:14px;height:14px;background:repeating-linear-gradient(45deg,var(--wip-bg),var(--wip-bg) 3px,rgba(232,154,36,.4) 3px,rgba(232,154,36,.4) 6px);border:1px solid var(--wip);border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>En attente</b> — le binôme demande une validation. <i>Clique pour valider.</i></div>
+      <div><span style="display:inline-block;vertical-align:middle;margin-right:6px"><span style="display:inline-block;width:8px;height:8px;background:var(--gold);border-radius:50%"></span><span style="display:inline-block;width:8px;height:8px;background:var(--gold);border-radius:50%;margin-left:3px"></span></span><b>Aides</b> — chaque binôme en a 2. Un jeton se consomme quand une zone est expliquée.</div>
+      <div>🔇 <b>Aides épuisées</b> — le binôme doit se débrouiller.</div>
+    </div>
+  </div>
+
+  <div class="tablewrap" id="tablewrap"><table id="grid"></table></div>
+  <footer>Cet écran sert au pilotage en classe. Les élèves rejoignent via le code de classe sur leur tablette. <span id="autosaveInfo"></span></footer>
+</div>
+
+<!-- ============ Vue document (commune élève + prof) ============ -->
+<div class="docview" id="docview">
+  <div class="dh">
+    <div class="left"><button onclick="closeDoc()" title="Fermer ce document et revenir au tableau.">← Retour</button><span class="dt" id="docTitle">Document</span></div>
+    <div class="dctx" id="docCtx"></div>
+  </div>
+  <div class="dsheet" id="docSheet"></div>
+</div>
+
+<!-- ============ Panneau d'aide latéral ============ -->
+<div class="help" id="help">
+  <div class="inner">
+    <div class="hh"><div><div class="t">Aide</div><div class="for" id="helpFor"></div></div><button onclick="closeHelp()" title="Fermer le panneau d'aide.">✕ Fermer</button></div>
+    <div class="body" id="helpBody"></div>
+    <div class="foot" id="helpFoot"></div>
+  </div>
+</div>
+
+<!-- ============ Overlays ============ -->
+<div class="overlay" id="gelOverlay">
+  <div class="gelcard">
+    <div class="ic">❄️</div>
+    <h2>Mode gel</h2>
+    <div class="acts">
+      <button class="ghost" onclick="cancelGel()" title="Annuler : ne pas afficher l'aide.">Annuler</button>
+      <button class="primary" onclick="confirmGel()" title="Activer : affiche l'aide et consomme un jeton.">Activer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirmOverlay">
+  <div class="gelcard">
+    <h2 id="confirmText" style="margin-bottom:24px">Confirmer ?</h2>
+    <div class="acts">
+      <button class="ghost" onclick="closeConfirm()" title="Annuler l'action.">Annuler</button>
+      <button class="primary" id="confirmYes" title="Confirmer et exécuter l'action.">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="editOverlay">
+  <div class="gelcard" style="text-align:left;max-width:460px">
+    <h2 style="font-size:1.3rem;margin-bottom:18px;text-align:center" id="editTitle">Binôme</h2>
+    <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 1</label>
+    <input id="editA" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 2 (laisser vide si seul)</label>
+    <input id="editB" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 3 (trinôme)</label>
+    <input id="editC" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
+    <div class="acts" style="justify-content:space-between">
+      <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce binôme du tableau (action irréversible).">Supprimer</button>
+      <div style="display:flex;gap:10px">
+        <button class="ghost" onclick="closeEdit()" title="Fermer sans enregistrer.">Annuler</button>
+        <button class="primary" onclick="saveEdit()" title="Enregistrer les nouveaux noms du binôme.">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <div class="gelcard" style="text-align:left;max-width:440px">
+    <h2 style="font-size:1.25rem;margin-bottom:18px;text-align:center">Actions avancées</h2>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="changePassword()" title="Modifier le mot de passe d'accès au mode prof. Stocké dans Firebase, prend effet immédiatement.">🔑 Changer le mot de passe prof</button>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="archiveCurrentSession()" title="Range la session actuelle dans les archives sans en créer une nouvelle. Utile pour faire une pause.">📦 Archiver cette session (sans en créer une nouvelle)</button>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left;color:var(--accent2)" onclick="wipeAll()" title="Supprime toute la session active sans archiver (binômes, statuts, aides). Action irréversible.">🗑 Effacer toute la session active (irréversible)</button>
+    <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeMenu()" title="Fermer ce menu.">Fermer</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Firebase 8.10.1 (cohérent avec ton appli dictée) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+/* ============================================================
+   Le triomphe simien — version Firebase
+   Architecture : un fichier HTML, 3 écrans (welcome / student / prof)
+   Backend : Firebase Realtime Database, branche debat_singes/
+   ============================================================ */
+
+// ─────────── Firebase init ───────────
+firebase.initializeApp({
+  apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",
+  authDomain:"dictee-5e-ch4.firebaseapp.com",
+  databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"dictee-5e-ch4",
+  storageBucket:"dictee-5e-ch4.appspot.com"
+});
+const db = firebase.database();
+const ROOT = "debat_singes";
+const ACTIVE = ROOT + "/active";
+const ARCHIVES = ROOT + "/archives";
+const META = ROOT + "/meta";
+const DEFAULT_PWD = "1312";
+
+// ─────────── Données statiques ───────────
+const DOCS=[
+ {n:1,label:"Plan"},{n:2,label:"Texte"},{n:3,label:"Argument"},{n:4,label:"Banque"},{n:5,label:"Prépa"},
+ {n:6,label:"Machine"},{n:7,label:"Règles"},{n:8,label:"Écoute"},{n:9,label:"Plus loin"},{n:10,label:"Carnet"}];
+const STATUSES=["todo","wip","done"];
+const MAX_TOKENS=2;
+const DOCDATA={
+ 1:{title:"Ton plan de travail",sub:"Le débat — à préparer en binôme",color:"#1F6F54",blocks:[
+   {type:"head",num:1,title:"Ton plan de travail",sub:"Le débat — à préparer en binôme"},
+   {type:"zone",id:"motion",cls:"soft",html:'<div class="lab">LA PHRASE À DÉFENDRE</div><b>« L\'Homme a traité les animaux comme des choses. Les singes l\'ont traité pareil. L\'IA nous traitera pareil. »</b>',
+    help:{titre:"La phrase à défendre",
+      reponse:"Cette phrase, c'est le cœur de votre débat. Elle raconte une histoire en trois temps. D'abord, l'Homme a traité les animaux comme des objets : il les a chassés, mangés, enfermés dans des zoos et des laboratoires. Ensuite, dans le roman, les singes font exactement la même chose à l'Homme : ils l'attrapent à la chasse, le mettent en cage, font des expériences sur lui. Enfin, la phrase imagine l'avenir : si un jour l'intelligence artificielle devient plus forte que nous, elle pourrait nous traiter comme nous avons traité les autres.",
+      didac:"Vous n'avez pas à être d'accord ou pas d'accord tout de suite. Votre travail, c'est de comprendre les trois temps (hier les animaux, le roman les singes, demain l'IA) parce que le jour du débat, vous devrez parfois défendre que cette phrase est vraie (camp POUR), parfois qu'elle est fausse (camp CONTRE). Repérez bien ces trois temps : ils reviendront dans tous les documents."}},
+   {type:"zone",id:"binome",cls:"bord",html:'<div class="lab">VOTRE BINÔME</div>Élève 1 : …<br>Élève 2 : …<br><b>Tout s\'écrit dans le cahier.</b>',
+    help:{titre:"Votre binôme et le cahier",
+      reponse:"Vous travaillez à deux, mais chacun doit écrire. La règle est simple : tout ce que vous trouvez ou rédigez se note dans votre cahier, jamais sur les fiches. Les fiches servent seulement à lire et à réfléchir. Seule exception : le carnet de bord (DOC 10), que vous remplissez directement.",
+      didac:"À chaque réponse que vous écrivez dans le cahier, notez le prénom de celui qui a tenu le stylo. Comme ça, le travail est vraiment partagé : ce n'est pas toujours le même qui écrit pendant que l'autre regarde. Alternez."}},
+   {type:"zone",id:"portes",cls:"soft",html:'<div class="lab">TROIS PORTES D\'ENTRÉE</div>⚔️ J\'aime convaincre → DOC 3, 4, 6<br>📖 J\'aime les textes → DOC 2, 9<br>🔬 J\'aime les preuves → DOC 5, 6<br><b>Tu fais quand même tous les documents.</b>',
+    help:{titre:"Les trois portes d'entrée",
+      reponse:"Les trois portes servent juste à choisir par quel document commencer, selon ce que vous aimez. Si vous aimez débattre, commencez par les documents 3, 4 et 6. Si vous aimez les textes, par les 2 et 9. Si vous aimez les preuves, par les 5 et 6.",
+      didac:"Attention au piège : la porte d'entrée n'est PAS un raccourci. Vous devez quand même faire les dix documents avant le débat. La porte sert juste à démarrer par ce qui vous motive le plus. À la fin, les dix cases doivent être cochées."}},
+   {type:"zone",id:"regle",cls:"bord",html:'<div class="lab">LA RÈGLE DU JEU</div>Vous préparez les <b>DEUX</b> camps (POUR et CONTRE). Le camp est tiré au sort à chaque manche. Des poules d\'abord, puis une finale.',
+    help:{titre:"La règle du jeu",
+      reponse:"Vous ne savez pas à l'avance quel camp vous allez défendre : il est tiré au sort à chaque manche. Vous devez donc préparer les DEUX camps, le POUR et le CONTRE. Le débat se passe en deux temps : d'abord des poules (vous affrontez plusieurs binômes à tour de rôle), puis une finale entre les meilleurs, devant toute la classe.",
+      didac:"Préparer les deux camps n'est pas une perte de temps, au contraire : en préparant le camp adverse, vous découvrez les arguments qu'on va vous opposer. Vous êtes donc prêts à y répondre. C'est le secret pour gagner."}},
+   {type:"zone",id:"etapes",cls:"bord",html:'<div class="lab">LES ÉTAPES</div><b>1 Plan</b> · ta feuille de route<br><b>2 Texte</b> · fouiller le livre pour comprendre comment les singes jugent l\'Homme<br><b>3 Argument</b> · découvrir ce qui fait un vrai argument<br><b>4 Banque</b> · trier les arguments POUR / CONTRE et repérer les faux<br><b>5 Prépa</b> · préparer les deux camps avec des citations expliquées<br><b>6 Machine</b> · construire un raisonnement solide avec des connecteurs<br><b>7 Règles</b> · apprendre comment se passe le débat et son rôle<br><b>8 Écoute</b> · observer les autres pour repérer leurs bons et mauvais coups<br><b>9 Plus loin</b> · piocher des arguments puissants pour faire la différence<br><b>10 Carnet</b> · noter après chaque manche ce qui a marché et ce qu\'on améliore',
+    help:{titre:"Les étapes",
+      reponse:"Voici les dix documents à traiter. Vous pouvez les faire dans l'ordre que vous voulez, mais vous devez tous les faire. Cochez chaque étape au fur et à mesure pour suivre votre avancée.",
+      didac:"Ne sautez aucune étape. Chaque document vous prépare à un moment précis du débat : chercher dans le texte, construire vos arguments, vous entraîner, écouter les autres, progresser. Si vous en sautez un, il vous manquera une arme le jour du débat."}},
+ ]},
+ 2:{title:"Chercher dans le texte",sub:"Tu as le livre — c'est à toi de fouiller",color:"#8A4B9E",blocks:[
+   {type:"head",num:2,title:"Chercher dans le texte",sub:"Tu as le livre — c'est à toi de fouiller"},
+   {type:"zone",id:"note",cls:"soft",html:'<b>Pas de texte recopié ici :</b> cherche toi-même dans ton livre, note au cahier avec les numéros de page. Le « procès » d\'Ulysse, c\'est le grand congrès des savants singes (pas de tribunal à part).',
+    help:{titre:"Où chercher dans le livre",
+      reponse:"Il n'y a pas de scène appelée « procès » dans le roman. Ce qu'on appelle le « procès » d'Ulysse, c'est le grand congrès des savants singes : c'est là qu'Ulysse doit prouver devant toute l'assemblée qu'il est un être qui pense, et pas un simple animal. Cherchez donc la scène du congrès dans votre livre.",
+      didac:"Quand vous cherchez, notez toujours le numéro de page à côté de ce que vous trouvez. Comme ça, le jour du débat, vous pourrez retrouver vos preuves en quelques secondes au lieu de feuilleter tout le livre."}},
+   {type:"sect",text:"Le congrès des singes"},
+   {type:"zone",id:"q1",cls:"item",num:"1",html:"Pour les singes, d'où vient leur espèce ? Et d'où vient l'Homme ? Recopie la phrase du livre qui le dit le mieux.",
+    help:{titre:"Q1 — La thèse officielle des singes",
+      cite:"Zaïus affirme que l'Homme est marqué par « une absence totale de conscience ».",
+      reponse:"Pour les singes, leur espèce est au sommet de la création : ce sont eux les êtres intelligents, civilisés. L'Homme, lui, n'est qu'un animal. C'est la thèse officielle, défendue au congrès par le savant Zaïus, qui répète que l'Homme n'a pas de conscience et qu'il imite des mots sans comprendre, comme un perroquet.",
+      didac:"Pour répondre, cherchez dans le discours de Zaïus au congrès. La bonne réponse cite une phrase précise du livre (avec son numéro de page) et explique avec vos mots : les singes pensent que l'Homme est une bête sans pensée. Ne vous contentez pas de dire « les singes sont les chefs » : citez le texte."}},
+   {type:"zone",id:"q2",cls:"item",num:"2",html:"Quel savant défend cette idée ? Lequel n'est pas d'accord ? Trouves-en un dans chaque camp.",
+    help:{titre:"Q2 — Deux savants opposés",
+      reponse:"Le savant qui défend que l'Homme n'est qu'une bête, c'est Zaïus, l'orang-outan : il est conservateur (il refuse de changer d'avis), il refuse de voir les preuves. Celui qui n'est pas d'accord, c'est Cornélius, un jeune chimpanzé savant : il est curieux, ouvert, et il doute des théories officielles.",
+      didac:"Vous devez trouver DEUX personnages opposés, un dans chaque camp. Zaïus = celui qui refuse. Cornélius = celui qui doute et qui écoute. C'est leur désaccord qui rend le congrès passionnant : sans Cornélius, personne n'écouterait Ulysse."}},
+   {type:"zone",id:"q3",cls:"item",num:"3",html:"Que propose Cornélius ? Pourquoi son idée dérange-t-elle les autres singes ?",
+    help:{titre:"Q3 — L'idée dangereuse de Cornélius",
+      reponse:"Cornélius pense que les singes descendent peut-être des hommes : qu'il y a très longtemps, l'Homme était l'espèce intelligente, et que les singes ont pris sa place. Ulysse, qui parle et pense, serait la preuve vivante de cette théorie. Cette idée dérange parce qu'elle détruit la fierté des singes : si l'Homme a déjà régné, alors les singes ne sont pas une race supérieure « depuis toujours ».",
+      didac:"Pour bien répondre, expliquez pourquoi l'idée fait peur. Ce n'est pas seulement une théorie scientifique : c'est une menace pour tout l'ordre social des singes. Si Cornélius a raison, les singes pourraient un jour être remplacés à leur tour. C'est exactement le thème de votre débat."}},
+   {type:"sect",text:"Ulysse doit prouver son intelligence"},
+   {type:"zone",id:"q4",cls:"item",num:"1",html:"Comment Ulysse montre-t-il qu'il pense vraiment ? Relève deux preuves précises.",
+    help:{titre:"Q4 — Les preuves de l'intelligence d'Ulysse",
+      reponse:"Ulysse prouve qu'il pense de plusieurs façons : il prononce un vrai discours construit devant l'assemblée ; il dessine le système solaire au tableau pour montrer qu'il connaît l'astronomie ; il raconte la civilisation des hommes sur Terre (les villes, les sciences, les arts) ; et il explique son voyage dans l'espace.",
+      didac:"On vous demande DEUX preuves précises. Choisissez-en deux et décrivez-les exactement (par exemple : « il dessine le système solaire » et « il fait un discours »). Évitez de répondre vaguement « il est intelligent » : il faut montrer DES ACTES précis qui le prouvent."}},
+   {type:"zone",id:"q5",cls:"item",num:"2",html:"Comment réagissent les singes ? Recopie une phrase qui montre leur gêne ou leur colère.",
+    help:{titre:"Q5 — La réaction de l'assemblée",
+      cite:"Le congrès éclate en ovation, un véritable « ouragan » d'applaudissements ; Zaïus quitte la salle d'un mouvement rageur.",
+      reponse:"L'assemblée passe par plusieurs émotions : d'abord la moquerie, puis la stupeur quand Ulysse prouve son intelligence, et enfin une immense ovation. Mais tout le monde n'est pas content : Zaïus, vaincu, quitte la salle furieux.",
+      didac:"On vous demande de recopier UNE phrase du livre qui montre une émotion. Vous avez deux choix : soit une phrase qui montre l'enthousiasme de la salle, soit une phrase qui montre la colère de Zaïus. N'oubliez pas le numéro de page."}},
+   {type:"zone",id:"q6",cls:"item",num:"3",html:"Pourquoi l'intelligence d'Ulysse fait-elle peur aux singes, et pas seulement curiosité ?",
+    help:{titre:"Q6 — Pourquoi l'intelligence d'Ulysse fait peur",
+      reponse:"Un homme qui pense, ce n'est pas juste bizarre : c'est dangereux pour les singes. Si l'Homme est vraiment intelligent, alors les singes ne sont plus les seuls maîtres du monde. Leur domination n'est plus garantie. Ulysse menace donc tout leur pouvoir, pas seulement leurs idées.",
+      didac:"Pour bien répondre, dépassez le mot « curiosité ». Expliquez que c'est un danger pour le POUVOIR des singes. C'est exactement le sujet de votre débat : quand une espèce devient intelligente, elle peut prendre la place de celle qui dominait. Reliez votre réponse à la phrase à défendre."}},
+   {type:"sect",text:"L'idée de l'auteur (à trouver toi-même)"},
+   {type:"zone",id:"qf",cls:"soft",html:"À travers cette victoire des singes, qu'est-ce que Pierre Boulle veut nous faire comprendre sur l'Homme ? Écris-le en une phrase.",
+    help:{titre:"L'idée cachée de l'auteur",
+      reponse:"Pierre Boulle nous tend un miroir. En montrant des singes qui dominent et jugent l'Homme, il nous oblige à nous regarder nous-mêmes. Son idée : la place de l'Homme au sommet n'est pas un droit naturel, c'est seulement un rapport de force (une question de force). Et un rapport de force, ça peut s'inverser. Aujourd'hui nous dominons les animaux ; demain, une autre intelligence pourrait nous dominer.",
+      didac:"C'est la question la plus difficile, alors prenez votre temps. L'astuce : le roman ne parle pas vraiment des singes, il parle de NOUS. En une phrase, essayez de dire ce que Boulle nous reproche (notre orgueil, l'idée qu'on serait supérieurs pour toujours). C'est cette idée qui fera la différence dans votre débat."}},
+ ]},
+ 3:{title:"C'est quoi un bon argument ?",sub:"Trouve la règle toi-même",color:"#C0392B",blocks:[
+   {type:"head",num:3,title:"C'est quoi un bon argument ?",sub:"Trouve la règle toi-même"},
+   {type:"zone",id:"intro",cls:"soft",html:"On ne te donne pas la réponse : tu vas la trouver toi-même. Voici trois phrases qui défendent la même idée. Une seule est un vrai argument. Laquelle ? Pourquoi les deux autres n'en sont pas ?",
+    help:{titre:"Le but de l'exercice",
+      reponse:"Cet exercice sert à comprendre ce qui fait la différence entre une vraie raison et une phrase vide. Vous allez comparer trois phrases qui défendent toutes la même idée, mais une seule la défend vraiment. Les deux autres font semblant : elles affirment, mais elles ne prouvent rien.",
+      didac:"Ne cherchez pas une réponse compliquée. Lisez les trois phrases et demandez-vous à chaque fois : « est-ce que cette phrase me donne une RAISON ? ». Si elle dit juste « c'est comme ça » ou « tout le monde le sait », ce n'est pas une raison, c'est une façon de couper court."}},
+   {type:"zone",id:"pA",cls:"item",num:"A",html:"« Les singes ont raison de commander, parce que c'est comme ça. »",
+    help:{titre:"Phrase A",
+      reponse:"La phrase A n'est pas un vrai argument. « Parce que c'est comme ça » ne donne aucune raison : c'est une façon de fermer la discussion sans rien expliquer. On pourrait dire « c'est comme ça » pour défendre n'importe quoi, même le contraire.",
+      didac:"Repérez ce piège : quand quelqu'un dit « c'est comme ça » ou « c'est normal », il n'a pas d'argument. Pendant le débat, si l'équipe adverse dit ça, faites-le remarquer : « ce n'est pas une raison »."}},
+   {type:"zone",id:"pB",cls:"item",num:"B",html:"« Les singes ont raison de commander, parce que dans le livre ce sont eux les plus intelligents : ils maîtrisent la science, contrairement aux hommes. »",
+    help:{titre:"Phrase B — le vrai argument",
+      reponse:"La phrase B est le vrai argument, le seul des trois. Elle a tout ce qu'il faut : une idée (les singes ont raison de commander), une raison (parce qu'ils sont les plus intelligents), et un exemple tiré du livre (ils maîtrisent la science, pas les hommes). C'est ce modèle qu'il faut copier pour tous vos arguments.",
+      didac:"Retenez la recette : IDÉE + RAISON + EXEMPLE. C'est la structure d'un bon argument. À chaque fois que vous en construisez un, vérifiez que les trois morceaux sont là. S'il manque la raison ou l'exemple, l'argument est faible."}},
+   {type:"zone",id:"pC",cls:"item",num:"C",html:"« Les singes ont raison de commander, tout le monde le sait. »",
+    help:{titre:"Phrase C",
+      reponse:"La phrase C n'est pas un vrai argument non plus. « Tout le monde le sait » ne prouve rien : ce n'est pas parce que beaucoup de gens pensent une chose qu'elle est vraie. Avant, tout le monde croyait que la Terre était plate.",
+      didac:"Méfiez-vous de ce piège, très fréquent : « tout le monde sait que… », « c'est évident ». Ça donne l'impression d'avoir raison, mais ça ne prouve rien. Pendant le débat, vous pouvez répondre : « ce n'est pas parce que beaucoup le pensent que c'est vrai »."}},
+   {type:"zone",id:"chal",cls:"soft",html:"À toi : « L'Homme mérite sa cage. » Qu'est-ce qui manque ? Réécris cette phrase en argument complet, avec une raison et un exemple du roman.",
+    help:{titre:"Réparer l'argument bancal",
+      reponse:"La phrase « L'Homme mérite sa cage » est seulement une idée : il lui manque la raison et l'exemple. Une bonne version complète serait : « L'Homme mérite sa cage (idée), parce qu'il a lui-même enfermé les animaux pendant des siècles (raison) ; dans le roman, les singes lui font subir les battues et les expériences qu'il faisait subir aux bêtes (exemple). »",
+      didac:"Pour réparer un argument, ajoutez les morceaux qui manquent. Ici il manquait deux choses : le « parce que » (la raison) et un fait précis du livre (l'exemple). Entraînez-vous à faire ça avec tous vos arguments : c'est exactement ce qu'on attend de vous au débat."}},
+ ]},
+ 4:{title:"La banque d'arguments",sub:"Trie, repère les pièges, complète",color:"#B5651D",blocks:[
+   {type:"head",num:4,title:"La banque d'arguments",sub:"Trie, repère les pièges, complète"},
+   {type:"zone",id:"mission",cls:"soft",html:"Ta mission : dans ton cahier, recopie le numéro de chaque argument et écris à côté POUR ou CONTRE. ATTENTION : plusieurs ne sont pas de vrais arguments (ils ne prouvent rien). Note leur numéro à part et explique pourquoi.",
+    help:{titre:"Comment trier la banque",
+      reponse:"Vous avez deux choses à faire. D'abord, classer chaque argument : est-il POUR la phrase à défendre, ou CONTRE ? Ensuite, repérer les faux arguments, ceux qui ne prouvent rien (jugements gratuits, « c'est comme ça », « tout le monde le sait »…). Notez leur numéro à part.",
+      didac:"Pour chaque phrase, posez-vous deux questions. 1) « Est-ce qu'elle défend la phrase à défendre, ou est-ce qu'elle la combat ? » → POUR ou CONTRE. 2) « Est-ce qu'elle donne une vraie raison ? » → si non, c'est un faux argument. Les faux arguments sont des pièges : il faut les reconnaître pour ne pas les utiliser, et pour les démonter chez l'adversaire."}},
+   {type:"zone",id:"a1",cls:"item",num:"1",html:"L'Homme a enfermé, chassé et mangé les animaux : il n'est pas une victime innocente.",
+    help:{titre:"Argument 1",reponse:"C'est un vrai argument POUR la phrase à défendre. Il donne une raison solide : l'Homme a fait subir aux animaux ce qu'il subit maintenant. On peut l'utiliser pour défendre que l'Homme récolte ce qu'il a semé.",
+      didac:"C'est un de vos meilleurs arguments pour le camp POUR. Pour le rendre encore plus fort, ajoutez un exemple précis du roman (les battues, les cages, les expériences sur Ulysse)."}},
+   {type:"zone",id:"a2",cls:"item",num:"2",html:"Dans le roman, les singes font subir aux hommes ce que les hommes faisaient aux bêtes : battues, cages, expériences.",
+    help:{titre:"Argument 2",reponse:"Vrai argument POUR. Il s'appuie directement sur le livre : le roman met en miroir ce que l'Homme faisait aux animaux et ce que les singes font à l'Homme. C'est une preuve tirée du texte, donc très solide.",
+      didac:"Argument à garder pour le camp POUR. Sa force, c'est qu'il vient du livre. Citez une scène précise (la chasse, le laboratoire) pour le rendre imparable (impossible à contredire)."}},
+   {type:"zone",id:"a3",cls:"item",num:"3",html:"Être plus intelligent ne rend pas plus juste : la force ne crée pas le droit.",
+    help:{titre:"Argument 3",reponse:"Vrai argument CONTRE la phrase à défendre. Il attaque l'idée que l'intelligence donnerait le droit de dominer. Être plus malin ne veut pas dire avoir raison ni avoir tous les droits.",
+      didac:"C'est un argument central pour le camp CONTRE. Il sépare deux choses qu'on confond souvent : être fort/intelligent, et être juste. Le camp CONTRE doit répéter que la force ne crée pas le droit."}},
+   {type:"zone",id:"a4",cls:"item",num:"4",html:"Si l'intelligence justifie la domination, alors demain une IA plus intelligente aurait le droit de nous asservir (nous réduire en esclavage).",
+    help:{titre:"Argument 4",reponse:"Vrai argument CONTRE. Il retourne la logique adverse : si on accepte que le plus intelligent a le droit de dominer, alors on accepte aussi qu'une IA nous domine demain. Comme personne ne veut ça, c'est que la logique était fausse.",
+      didac:"Argument puissant pour le camp CONTRE, car il relie les trois temps de la phrase à défendre (animaux, singes, IA). C'est ce qu'on appelle retourner l'argument de l'adversaire contre lui."}},
+   {type:"zone",id:"a5",cls:"item",num:"5",html:"Aucune créature capable de souffrir ne devrait être traitée comme une chose.",
+    help:{titre:"Argument 5",reponse:"Vrai argument CONTRE. Il déplace le débat (il change le point de vue) : ce qui compte, ce n'est pas l'intelligence, c'est la capacité à souffrir. Un être qui souffre mérite le respect, qu'il soit intelligent ou non.",
+      didac:"Bon argument pour le camp CONTRE, plus profond. Il dit que la dignité (le respect qu'on doit à chacun) ne dépend pas de l'intelligence. Utile pour répondre à l'équipe POUR quand elle parle seulement de force et d'intelligence."}},
+   {type:"zone",id:"a6",cls:"item",num:"6",html:"Zira montre une autre voie : reconnaître l'autre au lieu de l'écraser.",
+    help:{titre:"Argument 6",reponse:"Vrai argument CONTRE, tiré du roman. Zira, la guenon, ne méprise pas Ulysse : elle le reconnaît comme un être qui pense. Elle prouve qu'on peut accueillir l'autre au lieu de le dominer.",
+      didac:"Argument fin pour le camp CONTRE, qui s'appuie sur un personnage. Reliez-le à ce que vous avez vu sur Zira : la vraie supériorité, c'est le regard qui reconnaît l'autre, pas la force."}},
+   {type:"zone",id:"a7",cls:"item",num:"7",html:"Les singes sont méchants, c'est tout.",
+    help:{titre:"Argument 7 — FAUX",reponse:"Faux argument. « Les singes sont méchants, c'est tout » est un jugement gratuit : ça ne donne aucune raison, ça ne s'appuie sur rien. C'est un piège à éviter.",
+      didac:"Type de piège : le jugement gratuit. On colle une étiquette (méchant) sans rien prouver. À reconnaître pour ne jamais l'utiliser, et à démonter si l'adversaire s'en sert."}},
+   {type:"zone",id:"a8",cls:"item",num:"8",html:"C'est la nature, on n'y peut rien.",
+    help:{titre:"Argument 8 — FAUX",reponse:"Faux argument. « C'est la nature, on n'y peut rien » ne prouve rien : c'est une façon de dire qu'il n'y a rien à discuter. C'est un appel à la fatalité (une façon de dire qu'on n'y peut rien).",
+      didac:"Type de piège : la fatalité (« on n'y peut rien »). Ça coupe le débat au lieu d'argumenter. On peut répondre : « justement, on est là pour en discuter »."}},
+   {type:"zone",id:"a9",cls:"item",num:"9",html:"Tout le monde sait bien que l'Homme est supérieur.",
+    help:{titre:"Argument 9 — FAUX",reponse:"Faux argument. « Tout le monde sait » ne prouve rien : la majorité peut se tromper. Ce n'est pas le nombre de gens qui pensent une chose qui la rend vraie.",
+      didac:"Type de piège : l'appel à la majorité. Très fréquent. Réponse possible : « ce n'est pas parce que beaucoup le croient que c'est vrai »."}},
+   {type:"zone",id:"a10",cls:"item",num:"10",html:"De toute façon, c'est un roman, donc ça ne compte pas.",
+    help:{titre:"Argument 10 — FAUX",reponse:"Faux argument. Dire « c'est un roman donc ça ne compte pas » est une façon d'éviter le sujet. Un roman peut très bien nous faire réfléchir sur le monde réel : c'est même le but de celui-ci.",
+      didac:"Type de piège : l'esquive (une façon d'éviter le sujet : on change de sujet pour ne pas répondre). À reconnaître. Le roman est justement là pour nous faire penser à nous."}},
+   {type:"zone",id:"a11",cls:"item",num:"11",html:"Si tu n'es pas d'accord, c'est que tu n'as rien compris.",
+    help:{titre:"Argument 11 — FAUX",reponse:"Faux argument. Attaquer la personne (« tu n'as rien compris ») au lieu de répondre à ses idées, ce n'est pas argumenter, c'est se moquer. Ça ne prouve rien.",
+      didac:"Type de piège : l'attaque de la personne. Pendant le débat, on attaque les idées, jamais les gens. Si l'adversaire vous attaque vous, faites-le remarquer calmement."}},
+   {type:"zone",id:"a12",cls:"item",num:"12",html:"On a toujours fait comme ça.",
+    help:{titre:"Argument 12 — FAUX",reponse:"Faux argument. « On a toujours fait comme ça » ne prouve pas que c'est juste. On a longtemps fait des choses injustes en disant la même phrase.",
+      didac:"Type de piège : l'appel à la tradition. Ce n'est pas parce qu'une chose est ancienne qu'elle est juste. Réponse possible : « ce n'est pas une raison »."}},
+   {type:"zone",id:"a13",cls:"item",num:"13",html:"Soit on domine, soit on est dominé : il n'y a pas d'autre choix.",
+    help:{titre:"Argument 13 — FAUX",reponse:"Faux argument. Dire « soit on domine, soit on est dominé » fait croire qu'il n'y a que deux possibilités, alors qu'il en existe d'autres (le respect, l'entente, comme avec Zira). C'est un faux choix.",
+      didac:"Type de piège : le faux choix (on n'offre que deux options alors qu'il y en a plus). Réponse possible : « il existe une troisième voie : se respecter »."}},
+   {type:"zone",id:"a14",cls:"item",num:"14",html:"Si on libère les hommes, demain il faudra libérer les insectes : c'est ridicule.",
+    help:{titre:"Argument 14 — FAUX",reponse:"Faux argument. Dire que libérer les hommes mènerait forcément à libérer les insectes, c'est exagérer pour faire peur. On peut faire une chose sans tomber dans l'extrême.",
+      didac:"Type de piège : l'exagération (on imagine une suite extrême et absurde pour effrayer). Réponse possible : « rien n'oblige à aller jusque-là »."}},
+ ]},
+ 5:{title:"Ta fiche de préparation",sub:"Prépare les deux camps — avec des citations expliquées",color:"#2C7DA0",blocks:[
+   {type:"head",num:5,title:"Ta fiche de préparation",sub:"Prépare les deux camps — avec des citations expliquées"},
+   {type:"zone",id:"methode",cls:"soft",html:"La bonne méthode : pour chaque argument, ne te contente pas de citer le livre. Cite, puis explique pourquoi cette citation appuie ton idée. C'est ça qui fait la différence.",
+    help:{titre:"La citation expliquée",
+      reponse:"Une citation toute seule ne suffit pas. Il faut faire deux choses : 1) citer une phrase du livre, et 2) expliquer pourquoi cette phrase prouve votre idée. C'est ce qu'on appelle une citation expliquée. C'est la différence entre un bon élève et un excellent.",
+      didac:"À chaque fois que vous citez le livre, ajoutez « cela montre que… » et expliquez le lien avec votre argument. Sans cette explication, le correcteur ne sait pas pourquoi vous avez mis cette citation. C'est l'explication qui prouve que vous avez compris."}},
+   {type:"zone",id:"exPour",cls:"bord",html:"<b>EXEMPLE — camp POUR.</b> Argument : l'Homme récolte ce qu'il a semé. Citation expliquée : Zira reconnaît que les singes font des « battues » pour « réapprovisionner » leur matériel humain. Cela montre que les hommes de Soror sont chassés comme l'Homme chasse les animaux : le roman met les deux situations en miroir.",
+    help:{titre:"Exemple POUR — à imiter",
+      reponse:"Voici un modèle complet pour le camp POUR. L'argument (l'Homme récolte ce qu'il a semé) est appuyé par une citation du livre (les « battues » pour « réapprovisionner ») ET par une explication (les hommes sont chassés comme l'Homme chasse les animaux). C'est exactement la structure attendue.",
+      didac:"Recopiez cette structure dans votre cahier pour vos propres arguments : d'abord l'idée, puis la citation entre guillemets, puis « cela montre que… ». Faites-le pour trois arguments du camp POUR."}},
+   {type:"zone",id:"exContre",cls:"bord",html:"<b>EXEMPLE — camp CONTRE.</b> Argument : l'intelligence ne donne aucun droit. Citation expliquée : Zaïus, le plus savant des orangs-outans, conclut à « une absence totale de conscience » chez Ulysse — et il se trompe. Cela montre qu'être le plus intelligent n'empêche pas l'injustice : l'intelligence ne justifie donc pas la domination.",
+    help:{titre:"Exemple CONTRE — à imiter",
+      reponse:"Voici le modèle pour le camp CONTRE. L'argument (l'intelligence ne donne aucun droit) est prouvé par une citation (Zaïus parle d'« absence totale de conscience » et se trompe) et une explication (le plus intelligent peut être injuste). Même structure que pour le camp POUR.",
+      didac:"Faites pareil pour le camp CONTRE : trois arguments, chacun avec une citation expliquée. N'oubliez pas que vous devez préparer LES DEUX camps, car le vôtre sera tiré au sort."}},
+   {type:"zone",id:"arecopier",cls:"soft",html:"Dans ton cahier, recopie ce plan deux fois (une fois POUR, une fois CONTRE) et complète-le : ta thèse · argument 1 + citation expliquée · argument 2 + citation expliquée · argument 3 + citation expliquée · l'objection adverse la plus dangereuse + ta réponse.",
+    help:{titre:"Le plan à recopier",
+      reponse:"Recopiez ce plan deux fois dans votre cahier : une fois pour défendre le POUR, une fois pour défendre le CONTRE. Pour chaque camp : votre thèse, trois arguments avec citation expliquée, et surtout l'objection adverse la plus dangereuse avec votre réponse.",
+      didac:"Ne sautez pas la dernière ligne (l'objection adverse). C'est la plus importante : si vous avez prévu l'argument le plus fort de l'adversaire ET votre réponse, vous ne serez jamais pris au dépourvu pendant le débat. C'est ça, bien se préparer."}},
+ ]},
+ 6:{title:"La machine à argumenter",sub:"Construis ton raisonnement brique par brique",color:"#1F4E79",blocks:[
+   {type:"head",num:6,title:"La machine à argumenter",sub:"Construis ton raisonnement brique par brique"},
+   {type:"zone",id:"comment",cls:"soft",html:"Comment ça marche : chaque idée est reliée à la suivante par un connecteur logique. Dans chaque encadré pointillé, écris le connecteur que tu choisis, et nomme la relation qu'il exprime (sers-toi de ta fiche de connecteurs).",
+    help:{titre:"Le principe de la machine",
+      reponse:"Un bon raisonnement, ce n'est pas des idées en vrac : chaque idée est reliée à la suivante par un petit mot, le connecteur logique (donc, mais, parce que, en effet…). La machine vous fait construire votre raisonnement brique par brique, en choisissant le bon connecteur entre chaque idée.",
+      didac:"À chaque connecteur, posez-vous la question : « quel lien y a-t-il entre mes deux idées ? ». Est-ce une cause (parce que), une conséquence (donc), une opposition (mais), une concession (certes… mais) ? Nommez la relation. C'est ça qui muscle votre argumentation et la fait monter d'un niveau."}},
+   {type:"zone",id:"exemple",cls:"bord",html:"<b>Exemple (chaîne courte, déjà remplie).</b> ARGUMENT 1 : Les singes traitent les hommes comme du bétail. → CONNECTEUR : « or » (opposition / retournement) → ARGUMENT 2 : c'est exactement ce que les hommes faisaient aux animaux sur Terre.",
+    help:{titre:"L'exemple rempli",
+      reponse:"Voici une chaîne courte déjà remplie. Entre les deux arguments, le connecteur « or » marque une opposition, un retournement : il prépare une surprise. C'est ce qui donne de la force au raisonnement.",
+      didac:"Observez comment le connecteur « or » relie les deux idées et crée un effet. Pour vos chaînes, choisissez le connecteur qui correspond vraiment au lien entre vos idées, et nommez-le. Ne mettez pas « et » partout : variez selon le sens."}},
+   {type:"zone",id:"courte",cls:"bord",html:"<b>À toi — chaîne courte.</b> ARGUMENT 1 : … → CONNECTEUR : … (relation : …) → ARGUMENT 2 : …",
+    help:{titre:"La chaîne courte à compléter",
+      reponse:"À vous de construire une chaîne courte : deux arguments reliés par un connecteur que vous choisissez et que vous nommez. C'est l'entraînement de base avant la chaîne longue.",
+      didac:"Commencez simple : deux idées qui vont ensemble, et le bon mot entre les deux. Demandez-vous si c'est une cause, une conséquence ou une opposition, et écrivez le nom de la relation à côté du connecteur."}},
+   {type:"zone",id:"longue",cls:"bord",html:"<b>Chaîne longue — un vrai paragraphe.</b> MA THÈSE → connecteur → ARGUMENT → connecteur → CITATION DU TEXTE + EXPLICATION → connecteur → CONCLUSION.",
+    help:{titre:"La chaîne longue",
+      reponse:"La chaîne longue, c'est un vrai paragraphe argumentatif complet : votre thèse, puis un argument, puis une citation du texte expliquée, puis une conclusion — le tout relié par des connecteurs bien choisis. C'est le niveau qu'on attend pour briller au débat (et plus tard au lycée).",
+      didac:"Soignez surtout deux connecteurs : celui qui introduit la citation (« par exemple », « en effet ») et celui de la conclusion (« donc », « c'est pourquoi »). Et essayez d'utiliser une concession (« certes… mais ») quelque part : c'est la marque des très bons argumentateurs."}},
+ ]},
+ 7:{title:"Les règles du débat",sub:"Comment se passe le débat",color:"#6A8532",blocks:[
+   {type:"head",num:7,title:"Les règles du débat",sub:"Comment se passe le débat"},
+   {type:"zone",id:"format",cls:"soft",html:"<b>Le format : poules puis finale.</b> D'abord des poules : chaque binôme affronte plusieurs adversaires, à tour de rôle. Puis les meilleurs s'affrontent en finale, devant toute la classe.",
+    help:{titre:"Le format du débat",
+      reponse:"Le débat se passe en deux temps. D'abord les poules : chaque binôme affronte plusieurs autres binômes, l'un après l'autre. Ensuite, les meilleurs se retrouvent en finale devant toute la classe. Tout le monde débat plusieurs fois.",
+      didac:"L'avantage des poules : vous débattez plusieurs fois, donc vous vous améliorez à chaque manche. Servez-vous de votre carnet de bord (DOC 10) entre les manches pour corriger ce qui n'a pas marché."}},
+   {type:"zone",id:"tirage",cls:"bord",html:"<b>Le tirage au sort.</b> Au début de chaque manche, on tire au sort ton camp : POUR ou CONTRE. C'est pour ça que tu as préparé les deux !",
+    help:{titre:"Le tirage au sort",
+      reponse:"Vous ne choisissez pas votre camp : il est tiré au sort au début de chaque manche. Une fois vous défendrez le POUR, une autre fois le CONTRE. C'est pourquoi vous avez préparé les deux camps à l'avance.",
+      didac:"Ne soyez pas surpris si vous devez défendre une idée que vous ne partagez pas : c'est le jeu du débat, et c'est un excellent exercice. L'important est de bien défendre le camp tiré, avec vos arguments préparés."}},
+   {type:"zone",id:"roles",cls:"bord",html:"<b>Vos rôles dans le binôme.</b> L'un ouvre : il présente votre thèse et votre premier argument. L'autre répond : il riposte (il répond) aux arguments adverses. Vous pouvez vous relayer.",
+    help:{titre:"Les rôles dans le binôme",
+      reponse:"À deux, répartissez-vous le travail : l'un ouvre le débat (il annonce votre thèse et le premier argument), l'autre répond aux attaques de l'adversaire. Vous pouvez aussi vous relayer en cours de manche.",
+      didac:"Mettez-vous d'accord avant la manche sur qui fait quoi. Celui qui répond aux objections doit bien connaître la partie « objection adverse » de votre fiche de préparation (DOC 5). C'est là que ça se joue."}},
+   {type:"zone",id:"deroule",cls:"soft",html:"<b>Le déroulé d'une manche.</b> 1. Chaque camp présente sa thèse et ses arguments. 2. Les camps se répondent. 3. Chacun répond aux objections. 4. Mot de la fin de chaque camp.",
+    help:{titre:"Le déroulé d'une manche",
+      reponse:"Une manche se passe en quatre temps : chaque camp présente d'abord ses arguments, puis les deux camps se répondent, puis chacun répond aux objections de l'autre, et enfin chaque camp dit son mot de la fin. Connaître ce déroulé évite d'être perdu.",
+      didac:"Gardez votre meilleur argument pour un moment fort, et préparez un « mot de la fin » qui résume votre position en une phrase percutante (forte, qui marque). C'est souvent la dernière phrase qu'on retient."}},
+   {type:"zone",id:"respect",cls:"bord",html:"<b>Les règles de respect.</b> On ne coupe pas la parole. On attaque l'argument, jamais la personne. On écoute l'adversaire pour mieux lui répondre.",
+    help:{titre:"Les règles de respect",
+      reponse:"Trois règles de respect : on ne coupe pas la parole, on attaque les idées et pas les personnes, et on écoute vraiment l'adversaire. Un débat n'est pas une dispute : c'est un échange où l'on cherche à convaincre par la raison.",
+      didac:"Écouter l'adversaire n'est pas une politesse : c'est une arme. Plus vous écoutez ses arguments, mieux vous pouvez les démonter. Et attaquer la personne (au lieu de ses idées) fait perdre des points : c'est un faux argument (voir DOC 4)."}},
+ ]},
+ 8:{title:"Ta grille d'écoute",sub:"Quand tu regardes les autres débattre",color:"#B03A6E",blocks:[
+   {type:"head",num:8,title:"Ta grille d'écoute",sub:"Quand tu regardes les autres débattre"},
+   {type:"zone",id:"intro",cls:"soft",html:"Pendant que tu regardes une manche, note ces cinq points dans ton cahier :",
+    help:{titre:"À quoi sert la grille d'écoute",
+      reponse:"Quand vous n'êtes pas en train de débattre, vous regardez les autres — mais pas passivement (pas sans rien faire). Vous remplissez une grille pour repérer ce qui marche et ce qui ne marche pas. Ça vous fait progresser sans même débattre.",
+      didac:"Regarder les autres avec une grille, c'est apprendre deux fois plus vite : vous voyez les bons coups à copier et les erreurs à éviter. Notez tout dans votre cahier, ça nourrit votre carnet de bord."}},
+   {type:"zone",id:"g1",cls:"item",num:"1",html:"La thèse de chaque camp.",
+    help:{titre:"Repérer la thèse",reponse:"Notez ce que chaque camp défend exactement. La thèse, c'est l'idée principale, ce que l'équipe essaie de prouver.",
+      didac:"Si vous n'arrivez pas à dire en une phrase ce que défend un camp, c'est que sa thèse n'était pas claire — une faiblesse à ne pas reproduire vous-mêmes."}},
+   {type:"zone",id:"g2",cls:"item",num:"2",html:"Le meilleur argument que tu as entendu.",
+    help:{titre:"Repérer le meilleur argument",reponse:"Notez l'argument qui vous a le plus convaincu, peu importe le camp. Demandez-vous pourquoi il était fort : avait-il une bonne raison ? un bon exemple du livre ?",
+      didac:"Le meilleur argument que vous repérez, vous pouvez le « voler » pour votre prochaine manche. C'est permis et c'est malin. Notez-le dans votre carnet de bord (DOC 10)."}},
+   {type:"zone",id:"g3",cls:"item",num:"3",html:"Un argument faible, ou un faux argument repéré (revois le DOC 4).",
+    help:{titre:"Repérer un argument faible",reponse:"Notez un argument qui ne tenait pas : soit parce qu'il manquait de raison ou d'exemple, soit parce que c'était un faux argument (jugement gratuit, appel à la majorité…).",
+      didac:"Reconnaître les faux arguments des autres vous entraîne à ne pas les faire vous-mêmes, et à les démonter quand l'adversaire les utilise contre vous. Reliez ça à la liste du DOC 4."}},
+   {type:"zone",id:"g4",cls:"item",num:"4",html:"Un exemple du roman bien utilisé.",
+    help:{titre:"Repérer un bon exemple",reponse:"Notez un moment où un camp a bien utilisé le livre : une citation précise, une scène bien choisie qui appuyait son idée.",
+      didac:"Les meilleurs débatteurs s'appuient sur le texte. Repérez quelles scènes du roman reviennent souvent : ce sont les plus utiles, gardez-les pour vous."}},
+   {type:"zone",id:"g5",cls:"item",num:"5",html:"Qui a le mieux répondu aux objections ? Pourquoi ?",
+    help:{titre:"Repérer qui répond le mieux",reponse:"Notez quel camp a le mieux répondu quand on l'a attaqué, et pourquoi. Souvent, le débat se gagne là : non pas sur les arguments de départ, mais sur la capacité à répondre aux objections.",
+      didac:"C'est le point le plus important. Un camp peut avoir de bons arguments mais s'effondrer dès qu'on l'attaque. Observez comment les bons répondent : ils restent calmes, ils ont prévu l'objection (comme dans le DOC 5)."}},
+   {type:"zone",id:"rein",cls:"soft",html:"Le plus important : quel argument adverse vas-tu voler ou contrer à ta prochaine manche ? Note-le dans ton carnet de bord (DOC 10).",
+    help:{titre:"Réinvestir ce que tu as vu",
+      reponse:"Le but final de la grille d'écoute : repérer un argument adverse à récupérer pour votre prochaine manche, ou à apprendre à contrer. Notez-le tout de suite dans votre carnet de bord.",
+      didac:"Ne gardez pas ça dans votre tête, vous l'oublierez. Écrivez-le dans le carnet de bord (DOC 10) avec votre plan : « la prochaine fois, j'utilise cet argument » ou « la prochaine fois, je réponds ça à cet argument »."}},
+ ]},
+ 9:{title:"Pour aller plus loin",sub:"Tes munitions secrètes",color:"#D4860B",blocks:[
+   {type:"head",num:9,title:"Pour aller plus loin",sub:"Tes munitions secrètes"},
+   {type:"zone",id:"pioche",cls:"soft",html:"<b>Pioche là-dedans à fond :</b> ce sont tes munitions. Plus tu en utilises, plus ton argumentation sera forte. C'est ici qu'on joue dans la cour des grands.",
+    help:{titre:"Pourquoi piocher ici",
+      reponse:"Ce document contient les arguments les plus forts, ceux qui font la différence. Ce ne sont pas des arguments obligatoires, ce sont des « munitions » : plus vous en utilisez, plus votre argumentation impressionne. C'est ce qui sépare un bon débat d'un débat excellent.",
+      didac:"N'hésitez pas à utiliser ces idées : elles sont faites pour ça. Elles relient le roman, notre époque et l'avenir. Un binôme qui mobilise (utilise) ces munitions montre qu'il a vraiment réfléchi, pas seulement appris."}},
+   {type:"zone",id:"zira",cls:"bord",html:"<b>Le regard de Zira.</b> La vraie supériorité n'est ni la force ni la beauté. Nova a un corps parfait mais un regard vide ; Zira est une guenon, mais elle reconnaît en Ulysse un être qui pense. La vraie force, c'est de reconnaître l'autre. (Idéal pour le camp CONTRE.)",
+    help:{titre:"La munition « regard de Zira »",
+      reponse:"C'est un argument fort pour le camp CONTRE. Boulle oppose deux personnages : Nova, belle mais sans pensée, et Zira, une guenon qui reconnaît l'intelligence d'Ulysse. La leçon : ce qui compte vraiment, ce n'est pas la force ou la beauté, c'est de savoir reconnaître l'autre. Donc dominer par la force n'est pas une preuve de supériorité.",
+      didac:"Utilisez cet argument pour répondre au camp POUR quand il dit « le plus fort gagne ». Vous répondez : la vraie supériorité, c'est le regard de Zira, celui qui respecte l'autre au lieu de l'écraser."}},
+   {type:"zone",id:"satire",cls:"bord",html:"<b>La satire.</b> Boulle se moque de l'orgueil humain en nous mettant en cage. En nous montrant des singes qui nous jugent, il nous oblige à nous voir de l'extérieur. (Souviens-toi de Swift, vu en début d'année.)",
+    help:{titre:"La munition « satire »",
+      reponse:"Boulle utilise la satire : il se moque de l'orgueil de l'Homme en imaginant des singes qui nous mettent en cage. Ce renversement nous force à nous regarder de l'extérieur et à nous demander si nous méritons vraiment notre place de « roi ».",
+      didac:"Cet argument montre que vous avez compris l'intention de l'auteur. Reliez-le à Swift, vu en début d'année (même procédé : on renverse les rôles pour faire réfléchir). Ça impressionne, car ça relie deux œuvres."}},
+   {type:"zone",id:"avenir",cls:"soft",html:"<b>Hier, aujourd'hui, demain.</b> L'Homme a dominé les animaux. Dans le roman, les singes dominent l'Homme. Et demain, si une IA nous dépasse… serons-nous prêts à être traités comme nous traitons les autres ? Cet argument relie les trois temps : c'est le plus puissant. (Pour les deux camps.)",
+    help:{titre:"La munition « les trois temps »",
+      reponse:"C'est l'argument le plus puissant, parce qu'il relie les trois temps de la phrase à défendre : hier l'Homme dominait les animaux, dans le roman les singes dominent l'Homme, demain l'IA pourrait nous dominer. Il pose une question qui dérange : sommes-nous prêts à être traités comme nous traitons les autres ?",
+      didac:"Cet argument marche pour les DEUX camps. Le camp POUR dit : « c'est une loi, le plus fort gagne, toujours ». Le camp CONTRE dit : « justement, il faut arrêter cette loi avant qu'elle se retourne contre nous ». Utilisez-le : c'est l'argument qui fait réfléchir toute la classe."}},
+ ]},
+ 10:{title:"Ton carnet de bord",sub:"À remplir après chaque manche",color:"#4A5859",blocks:[
+   {type:"head",num:10,title:"Ton carnet de bord",sub:"À remplir après chaque manche"},
+   {type:"zone",id:"intro",cls:"soft",html:"<b>C'est la seule fiche où tu écris directement.</b> Remplis un bloc après chaque manche. C'est ton journal de progrès : plus tu le remplis sérieusement, plus tu montes en niveau.",
+    help:{titre:"À quoi sert le carnet de bord",
+      reponse:"Le carnet de bord, c'est la seule fiche sur laquelle vous écrivez directement. Après chaque manche, vous notez ce qui a marché et ce qu'il faut améliorer. C'est votre journal de progrès : il vous rend meilleurs d'une manche à l'autre.",
+      didac:"Remplissez-le sérieusement, juste après chaque manche, tant que c'est frais. C'est le secret de la progression : les binômes qui notent leurs erreurs et leur plan pour la fois suivante s'améliorent beaucoup plus vite que les autres."}},
+   {type:"zone",id:"m1",cls:"bord",html:"<b>MANCHE 1.</b> Camp défendu (POUR / CONTRE) · l'argument qui a fait mouche (je le garde) · l'argument adverse qui m'a coincé + comment je le contre · un faux argument repéré chez l'adversaire · mon objectif pour la prochaine manche.",
+    help:{titre:"Remplir une manche",
+      reponse:"Pour chaque manche, notez cinq choses : le camp que vous défendiez, l'argument qui a le mieux marché (à garder), l'argument adverse qui vous a posé problème (et comment le contrer la prochaine fois), un faux argument repéré chez l'adversaire, et votre objectif d'amélioration.",
+      didac:"La ligne la plus importante : « l'argument adverse qui m'a coincé + comment je le contre ». C'est en réglant ce qui vous a fait perdre que vous gagnerez la manche suivante. Soyez précis dans votre plan : pas « faire mieux », mais « répondre ça à cet argument »."}},
+   {type:"zone",id:"m2",cls:"bord",html:"<b>MANCHE 2.</b> (mêmes points à remplir)",
+    help:{titre:"Manche 2",reponse:"Même chose pour la deuxième manche. Comparez avec la manche 1 : avez-vous réussi à appliquer votre objectif ? Avez-vous évité l'erreur de la fois précédente ?",
+      didac:"Relisez votre objectif de la manche 1 avant de débattre la manche 2. Le carnet ne sert à rien si vous ne le relisez pas : c'est en le consultant que vous progressez vraiment."}},
+   {type:"zone",id:"m3",cls:"bord",html:"<b>MANCHE 3.</b> (mêmes points à remplir)",
+    help:{titre:"Manche 3",reponse:"Même chose pour la troisième manche. À ce stade, vous devriez voir vos progrès : vos arguments sont plus solides, vous répondez mieux aux objections.",
+      didac:"Pour la finale, relisez tout votre carnet : il contient le meilleur de ce que vous avez appris en trois manches. C'est votre arme secrète, personne d'autre n'a la même."}},
+ ]},
+};
+
+// ─────────── État global ───────────
+let role = null;            // 'student' | 'prof' | null
+let mySessionId = null;     // ID de la session active
+let myBinomeId = null;      // pour les élèves : leur binôme
+let sessionData = null;     // miroir local de la session active (binomes, etc.)
+let currentDoc = null;
+let pendingHelp = null;
+let activeBinomeForDoc = null;  // pour mode prof : question en cours
+let editingId = null;
+let confirmAction = null;
+let sessionListener = null;
+let connListener = null;
+
+// Helpers
+const $ = (id) => document.getElementById(id);
+function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function cycle(s){return STATUSES[(STATUSES.indexOf(s)+1)%3];}
+function progress(b){return Math.round((b.statuses||[]).filter(s=>s==="done").length/10*100);}
+function binomeName(b){if(!b)return "";const ns=(b.names||[]).filter(Boolean);return ns.join(" & ");}
+function findBinome(id){if(!sessionData||!sessionData.binomes)return null;return sessionData.binomes[id]||null;}
+function genCode(){const A="LIMA NOVA SOLO ARES IRIS ELIO ORCA OMNI ECHO".split(" ");const a=A[Math.floor(Math.random()*A.length)];const n=String(Math.floor(1000+Math.random()*9000));return a+"-"+n;}
+
+// ─────────── Toast ───────────
+let toastTimer=null;
+function toast(msg){
+  const t=$("toast");if(!t)return;
+  t.textContent=msg;t.classList.add("show");
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove("show"),3500);
+}
+
+// ─────────── Navigation entre écrans ───────────
+function showScreen(name){
+  ["screenWelcome","screenStudent","screenProf"].forEach(s=>$(s).classList.remove("show"));
+  $("screen"+name).classList.add("show");
+}
+
+// ─────────── Connectivité ───────────
+function watchConnection(){
+  if(connListener)return;
+  connListener = db.ref(".info/connected");
+  connListener.on("value",snap=>{
+    const ok = !!snap.val();
+    ["studentConn","profConn"].forEach(id=>{
+      const el=$(id);if(!el)return;
+      el.innerHTML = ok
+        ? '<span class="conn-dot ok"></span>connecté'
+        : '<span class="conn-dot bad"></span>hors-ligne';
+    });
+  });
+}
+
+// ─────────── Démarrage ───────────
+window.addEventListener("load", async () => {
+  // Afficher l'accueil immédiatement, même avant que Firebase soit prêt
+  showScreen("Welcome");
+  try {
+    watchConnection();
+    await ensureProfPassword();
+  } catch(e) {
+    console.error("Firebase init error:", e);
+    toast("⚠ Impossible de joindre Firebase. Vérifiez votre connexion.");
+    return;
+  }
+  // Si un mode est dans l'URL (?prof=1 par exemple), on respecte
+  const params = new URLSearchParams(window.location.search);
+  // Vérifier si déjà reconnu (localStorage)
+  const savedRole = safeStorage.get("role");
+  const savedSession = safeStorage.get("sessionId");
+  const savedBinome = safeStorage.get("binomeId");
+  if(savedRole==="prof"){
+    await enterProfMode();
+  } else if(savedRole==="student" && savedSession && savedBinome){
+    // tenter de reprendre la session
+    const ok = await rejoinStudent(savedSession, savedBinome);
+    if(!ok){ showScreen("Welcome"); }
+  } else {
+    showScreen("Welcome");
+  }
+});
+
+// ─────────── localStorage sûr ───────────
+const safeStorage = {
+  available: (function(){try{const k="__t__";localStorage.setItem(k,k);localStorage.removeItem(k);return true;}catch(e){return false;}})(),
+  get(k){try{return localStorage.getItem("ts_"+k);}catch(e){return null;}},
+  set(k,v){try{localStorage.setItem("ts_"+k,v);}catch(e){}},
+  del(k){try{localStorage.removeItem("ts_"+k);}catch(e){}}
+};
+
+// ─────────── Mot de passe prof ───────────
+async function ensureProfPassword(){
+  const snap = await db.ref(META+"/profPassword").once("value");
+  if(!snap.exists()){
+    await db.ref(META+"/profPassword").set(DEFAULT_PWD);
+  }
+}
+async function checkProfPassword(pwd){
+  const snap = await db.ref(META+"/profPassword").once("value");
+  return snap.val() === pwd;
+}
+
+// ─────────── Welcome : login étudiant ───────────
+function showProfLogin(){
+  $("loginBlock").style.display="none";
+  $("profLoginBlock").style.display="block";
+  setTimeout(()=>$("profPwd").focus(),50);
+}
+function hideProfLogin(){
+  $("profLoginBlock").style.display="none";
+  $("loginBlock").style.display="block";
+  $("profErr").textContent="";
+}
+async function doProfLogin(){
+  const pwd = $("profPwd").value;
+  const ok = await checkProfPassword(pwd);
+  if(!ok){ $("profErr").textContent="Mot de passe incorrect."; return; }
+  $("profPwd").value="";
+  safeStorage.set("role","prof");
+  await enterProfMode();
+}
+
+async function doStudentLogin(){
+  const code = ($("loginCode").value||"").trim().toUpperCase();
+  const n1 = ($("loginName1").value||"").trim();
+  const n2 = ($("loginName2").value||"").trim();
+  const n3 = ($("loginName3").value||"").trim();
+  const names = [n1,n2,n3].filter(Boolean);
+  if(!code){ $("loginErr").textContent="Entre le code de classe affiché au tableau."; return; }
+  if(names.length===0){ $("loginErr").textContent="Entre au moins un prénom."; return; }
+  if(names.length>3){ $("loginErr").textContent="Maximum 3 élèves par binôme."; return; }
+  $("loginErr").textContent="";
+  $("loginBtn").disabled=true;
+  // Charger la session active et vérifier le code
+  const snap = await db.ref(ACTIVE).once("value");
+  const data = snap.val();
+  if(!data || !data.code || data.code.toUpperCase()!==code){
+    $("loginErr").textContent="Code de classe invalide. Vérifie au tableau.";
+    $("loginBtn").disabled=false;
+    return;
+  }
+  // Vérifier si un binôme avec exactement les mêmes prénoms existe déjà (reprise)
+  let existingId = null;
+  if(data.binomes){
+    const wanted = JSON.stringify([...names].sort().map(s=>s.toLowerCase()));
+    for(const bid of Object.keys(data.binomes)){
+      const b = data.binomes[bid];
+      if(!b.names)continue;
+      const got = JSON.stringify([...b.names].sort().map(s=>s.toLowerCase()));
+      if(got===wanted){ existingId=bid; break; }
+    }
+  }
+  let binomeId;
+  if(existingId){
+    binomeId = existingId;
+    toast("Bienvenue de nouveau, "+names[0]+" !");
+  } else {
+    binomeId = uid();
+    const newB = {
+      names: names,
+      statuses: Array(10).fill("todo"),
+      pendingValidation: Array(10).fill(false),
+      tokens: MAX_TOKENS,
+      flags: {},
+      joinedAt: Date.now()
+    };
+    await db.ref(ACTIVE+"/binomes/"+binomeId).set(newB);
+  }
+  // Mémoriser localement et entrer en mode élève
+  safeStorage.set("role","student");
+  safeStorage.set("sessionId", data.id || "active");
+  safeStorage.set("binomeId", binomeId);
+  myBinomeId = binomeId;
+  mySessionId = data.id || "active";
+  role = "student";
+  startSessionListener();
+  showScreen("Student");
+}
+
+async function rejoinStudent(sessionId, binomeId){
+  const snap = await db.ref(ACTIVE).once("value");
+  const data = snap.val();
+  if(!data){ safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId"); return false; }
+  if(!data.binomes || !data.binomes[binomeId]){ safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId"); return false; }
+  myBinomeId = binomeId;
+  mySessionId = sessionId;
+  role = "student";
+  startSessionListener();
+  showScreen("Student");
+  return true;
+}
+
+function studentLogout(){
+  if(sessionListener){db.ref(ACTIVE).off("value", sessionListener); sessionListener=null;}
+  safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId");
+  myBinomeId=null; role=null; sessionData=null;
+  showScreen("Welcome");
+  $("loginCode").value="";$("loginName1").value="";$("loginName2").value="";$("loginName3").value="";
+}
+
+function profLogout(){
+  if(sessionListener){db.ref(ACTIVE).off("value", sessionListener); sessionListener=null;}
+  safeStorage.del("role");
+  role=null; sessionData=null;
+  showScreen("Welcome");
+}
+
+// ─────────── Mode prof : entrée ───────────
+async function enterProfMode(){
+  role = "prof";
+  // S'assurer qu'une session active existe
+  const snap = await db.ref(ACTIVE).once("value");
+  if(!snap.exists()){
+    await newSessionRaw();
+  } else {
+    mySessionId = snap.val().id || "active";
+  }
+  startSessionListener();
+  showScreen("Prof");
+}
+
+async function newSessionRaw(){
+  const code = genCode();
+  const sid = uid();
+  await db.ref(ACTIVE).set({
+    id: sid,
+    code: code,
+    createdAt: Date.now(),
+    binomes: {}
+  });
+  mySessionId = sid;
+}
+
+async function newSession(){
+  askConfirm("Créer une nouvelle session ? La session actuelle sera archivée.", async ()=>{
+    await archiveCurrentSession(true);
+    await newSessionRaw();
+    toast("Nouvelle session créée.");
+  });
+}
+
+async function archiveCurrentSession(silent){
+  const snap = await db.ref(ACTIVE).once("value");
+  if(snap.exists()){
+    const data = snap.val();
+    const archiveKey = (data.id || "active") + "_" + Date.now();
+    await db.ref(ARCHIVES+"/"+archiveKey).set(data);
+    if(!silent) toast("Session archivée.");
+  }
+  await db.ref(ACTIVE).remove();
+}
+
+// ─────────── Listener temps réel ───────────
+function startSessionListener(){
+  if(sessionListener) db.ref(ACTIVE).off("value", sessionListener);
+  sessionListener = function(snap){
+    sessionData = snap.val() || null;
+    if(role==="student"){
+      // Si plus de session ou si notre binôme a disparu : retour accueil
+      if(!sessionData || !sessionData.binomes || !sessionData.binomes[myBinomeId]){
+        toast("Session terminée par le professeur.");
+        studentLogout();
+        return;
+      }
+      renderStudent();
+    } else if(role==="prof"){
+      renderProf();
+    }
+  };
+  db.ref(ACTIVE).on("value", sessionListener);
+}
+
+// ─────────── Rendu mode élève ───────────
+function renderStudent(){
+  if(!sessionData) return;
+  const me = sessionData.binomes[myBinomeId];
+  if(!me) return;
+  // Carte de mon binôme
+  const tokenStr = me.tokens > 0
+    ? Array(MAX_TOKENS).fill(0).map((_,i)=>`<span class="tok ${i<me.tokens?'':'used'}"></span>`).join("")
+    : '<span class="mute">🔇</span>';
+  const aided = Object.keys(me.flags||{}).length;
+  const pct = progress(me);
+  $("studentMineCard").innerHTML = `
+    <div class="lbl">Votre binôme</div>
+    <div class="names">${esc(binomeName(me))}</div>
+    <div class="stats">
+      <div><b>${pct}%</b> terminé</div>
+      <div>Aides : <span class="tkwrap" style="display:inline-flex;gap:5px;vertical-align:middle">${tokenStr}</span></div>
+      ${aided>0 ? `<div>${aided} zone${aided>1?'s':''} aidée${aided>1?'s':''}</div>` : ''}
+    </div>
+  `;
+  // Bandeau : avez-vous des validations en attente ?
+  const pendCount = (me.pendingValidation||[]).filter(Boolean).length;
+  if(pendCount>0){
+    $("studentValidationStrip").innerHTML = `
+      <div class="validation-strip">
+        <span class="icn">⏳</span>
+        <span class="txt"><b>${pendCount} demande${pendCount>1?'s':''}</b> en attente de validation par le professeur. Continuez à travailler en attendant.</span>
+      </div>`;
+  } else {
+    $("studentValidationStrip").innerHTML = "";
+  }
+  // Tableau du binôme (uniquement la sienne)
+  let html = '<div class="tablewrap"><table id="myGrid"><thead><tr>';
+  html += '<th class="bn" style="min-width:60px">Vous</th>';
+  html += '<th class="tk">Aides</th>';
+  DOCS.forEach(d=>{html += `<th class="doc" onclick="openDoc(${d.n})" title="Ouvrir le DOC ${d.n} — ${esc(d.label)}."><span class="num">${d.n}</span><span class="lab">${esc(d.label)}</span><span class="open">▸ ouvrir</span></th>`;});
+  html += '<th class="pr">Avancement</th></tr></thead><tbody>';
+  html += renderRowHtml(me, myBinomeId, /*isStudent*/true);
+  html += '</tbody></table></div>';
+  $("studentTableSection").innerHTML = html;
+
+  // Liste autres binômes
+  const others = Object.entries(sessionData.binomes||{}).filter(([id])=>id!==myBinomeId);
+  if(others.length===0){
+    $("studentOthersList").innerHTML = '<div style="color:var(--muted);font-style:italic;padding:8px 0">Vous êtes seuls pour le moment.</div>';
+  } else {
+    $("studentOthersList").innerHTML = others.sort((a,b)=>progress(b[1])-progress(a[1])).map(([id,b])=>{
+      const p = progress(b);
+      return `<div class="others-row">
+        <div class="nm">${esc(binomeName(b))}</div>
+        <div class="pr">${p}%</div>
+        <div class="bar-mini"><div style="width:${p}%"></div></div>
+      </div>`;
+    }).join("");
+  }
+}
+
+// ─────────── Rendu mode prof ───────────
+function renderProf(){
+  if(!sessionData){return;}
+  // Code de classe et URL
+  $("profSessionCode").textContent = sessionData.code || "—";
+  $("profSessionUrl").textContent = window.location.origin + window.location.pathname;
+
+  // Bandeau validations à faire
+  const binomes = sessionData.binomes || {};
+  let pendingTotal = 0;
+  Object.values(binomes).forEach(b=>{ (b.pendingValidation||[]).forEach(v=>{if(v)pendingTotal++;}); });
+  if(pendingTotal>0){
+    $("profValidationStrip").innerHTML = `
+      <div class="validation-strip" title="Quand un élève demande à passer un document en « fait », sa case devient hachurée. Clique dessus pour valider. Clic droit pour refuser.">
+        <span class="icn">⏳</span>
+        <span class="txt"><b>${pendingTotal} demande${pendingTotal>1?'s':''} de validation</b> en attente. Clique sur les cases hachurées du tableau pour valider.</span>
+      </div>`;
+  } else {
+    $("profValidationStrip").innerHTML = "";
+  }
+
+  // Tableau
+  const t = $("grid");
+  let h = "<thead><tr><th class='bn' title=\"Nom du binôme. Le bouton ✎ modifier permet de renommer ou supprimer.\">Binôme</th><th class='tk' title=\"Chaque binôme dispose de 2 jetons d'aide.\">Aides</th>";
+  DOCS.forEach(d=>{h += `<th class='doc' onclick="openDoc(${d.n})" title="Ouvrir le DOC ${d.n} — ${esc(d.label)} : reproduit fidèlement la fiche que le binôme a sous les yeux."><span class='num'>${d.n}</span><span class='lab'>${esc(d.label)}</span><span class='open'>▸ ouvrir</span></th>`;});
+  h += "<th class='pr' title=\"Pourcentage de documents au statut « fait ».\">Avancement</th></tr></thead><tbody>";
+  const list = Object.entries(binomes).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
+  if(list.length===0){
+    h += `<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--muted);font-style:italic">Aucun binôme connecté. Affiche le code <b style="color:var(--gold)">${sessionData.code}</b> au tableau et invite les élèves à se connecter.</td></tr>`;
+  } else {
+    list.forEach(([id,b])=>{ h += renderRowHtml(b, id, /*isStudent*/false); });
+  }
+  h += "</tbody></table>";
+  t.innerHTML = h;
+}
+
+// ─────────── Ligne de tableau (commune élève/prof) ───────────
+function renderRowHtml(b, id, isStudent){
+  if(!b) return "";
+  const nm = esc(binomeName(b));
+  let h = "<tr>";
+  // Colonne binôme
+  if(isStudent){
+    h += `<td class='bn'><div class='names' style="font-size:1.05rem">${nm}</div></td>`;
+  } else {
+    h += `<td class='bn'><div class='names'>${nm}</div><button class='edit' onclick="editB('${id}')" title="Renommer ou supprimer ce binôme.">✎ modifier</button></td>`;
+  }
+  // Colonne aides
+  h += "<td class='tk'><div class='tkwrap'>";
+  if((b.tokens||0)>0){
+    if(isStudent){
+      h += `<div class='tkbtn' onclick="startStudentQuestion()" title="Demander de l'aide : ouvre les documents pour que vous puissiez pointer ce qui vous bloque.">`;
+    } else {
+      h += `<div class='tkbtn' onclick="startQuestion('${id}')" title="Lancer une question pour ${esc(binomeName(b))} (consomme un jeton).">`;
+    }
+    for(let i=0;i<MAX_TOKENS;i++) h += `<span class='tok ${i<(b.tokens||0)?'':'used'}'></span>`;
+    h += "</div>";
+  } else {
+    h += `<div class='tkbtn empty' title="Aides épuisées. Le binôme doit se débrouiller seul."><span class='mute'>🔇</span></div>`;
+  }
+  const nbAides = Object.keys(b.flags||{}).length;
+  if(nbAides>0){
+    const docs = [...new Set(Object.keys(b.flags).map(k=>k.split(':')[0]))].sort((a,c)=>+a-+c);
+    h += `<div class="aided" title="Zones aidées : DOC ${docs.join(', DOC ')}">${nbAides} zone${nbAides>1?'s':''} aidée${nbAides>1?'s':''}</div>`;
+  }
+  h += "</div></td>";
+  // Colonnes statuts
+  const statuses = b.statuses || Array(10).fill("todo");
+  const pendings = b.pendingValidation || Array(10).fill(false);
+  const statusLabels = {todo:"À faire — clic pour passer en « en cours »", wip:"En cours — clic pour demander la validation au prof", done:"Fait — clic pour repasser à « à faire »"};
+  statuses.forEach((s,i)=>{
+    const pending = pendings[i];
+    if(pending){
+      // Pending : élève voit "en attente", prof voit "clic pour valider"
+      if(isStudent){
+        h += `<td class='st pending' title="En attente de validation par le professeur."></td>`;
+      } else {
+        h += `<td class='st pending' onclick="validateDone('${id}',${i})" title="DOC ${DOCS[i].n} ${esc(DOCS[i].label)} — Le binôme demande la validation. Clique pour valider en « fait », clic long pour refuser."  oncontextmenu="event.preventDefault();rejectDone('${id}',${i});return false"></td>`;
+      }
+    } else {
+      const cls = s;
+      if(isStudent){
+        h += `<td class='st ${cls}' onclick="studentToggle('${id}',${i})" title="DOC ${DOCS[i].n} ${esc(DOCS[i].label)} — ${statusLabels[s]}"></td>`;
+      } else {
+        h += `<td class='st ${cls}' onclick="profToggle('${id}',${i})" title="DOC ${DOCS[i].n} ${esc(DOCS[i].label)} — ${statusLabels[s]}"></td>`;
+      }
+    }
+  });
+  // Avancement
+  const p = progress(b);
+  h += `<td class='pr' title="${p}% des documents au statut « fait ».">${p}%<div class='bar'><div style='width:${p}%'></div></div></td>`;
+  h += "</tr>";
+  return h;
+}
+
+// ─────────── Actions élève ───────────
+async function studentToggle(id, i){
+  if(id !== myBinomeId) return;
+  const b = findBinome(id);
+  if(!b) return;
+  const s = (b.statuses||[])[i] || "todo";
+  if(s === "todo"){
+    // todo → wip : direct
+    await db.ref(ACTIVE+"/binomes/"+id+"/statuses/"+i).set("wip");
+  } else if(s === "wip"){
+    // wip → demande de validation
+    await db.ref(ACTIVE+"/binomes/"+id+"/pendingValidation/"+i).set(true);
+    toast("Demande de validation envoyée au professeur.");
+  } else if(s === "done"){
+    // done → todo (revenir en arrière, l'élève peut)
+    await db.ref(ACTIVE+"/binomes/"+id+"/statuses/"+i).set("todo");
+  }
+}
+
+function startStudentQuestion(){
+  const me = findBinome(myBinomeId);
+  if(!me) return;
+  if((me.tokens||0) <= 0){ toast("Vous n'avez plus de jeton."); return; }
+  // Pour l'élève, on active automatiquement son propre binôme et on ouvre l'aperçu des docs
+  activeBinomeForDoc = myBinomeId;
+  toast("Cliquez sur la zone du document qui vous bloque pour recevoir l'aide.");
+}
+
+// ─────────── Actions prof ───────────
+async function profToggle(id, i){
+  const b = findBinome(id);
+  if(!b) return;
+  const s = (b.statuses||[])[i] || "todo";
+  const next = cycle(s);
+  await db.ref(ACTIVE+"/binomes/"+id+"/statuses/"+i).set(next);
+  // Si on passe de done à todo, on supprime aussi le pending éventuel
+  if(next === "todo"){
+    await db.ref(ACTIVE+"/binomes/"+id+"/pendingValidation/"+i).set(false);
+  }
+}
+
+async function validateDone(id, i){
+  await db.ref(ACTIVE+"/binomes/"+id+"/statuses/"+i).set("done");
+  await db.ref(ACTIVE+"/binomes/"+id+"/pendingValidation/"+i).set(false);
+  toast("Validé.");
+}
+async function rejectDone(id, i){
+  await db.ref(ACTIVE+"/binomes/"+id+"/pendingValidation/"+i).set(false);
+  toast("Demande refusée — le statut reste « en cours ».");
+}
+
+function resetStatus(){
+  askConfirm("Remettre tous les statuts à zéro pour tous les binômes ?", async ()=>{
+    const binomes = (sessionData||{}).binomes || {};
+    const upd = {};
+    Object.keys(binomes).forEach(id=>{
+      upd[id+"/statuses"] = Array(10).fill("todo");
+      upd[id+"/pendingValidation"] = Array(10).fill(false);
+    });
+    await db.ref(ACTIVE+"/binomes").update(upd);
+    toast("Statuts remis à zéro.");
+  });
+}
+function resetTokens(){
+  askConfirm("Rendre les 2 aides à tous les binômes ?", async ()=>{
+    const binomes = (sessionData||{}).binomes || {};
+    const upd = {};
+    Object.keys(binomes).forEach(id=>{ upd[id+"/tokens"] = MAX_TOKENS; upd[id+"/flags"] = {}; });
+    await db.ref(ACTIVE+"/binomes").update(upd);
+    toast("Aides rendues.");
+  });
+}
+
+// ─────────── Édition / suppression binôme (prof) ───────────
+function editB(id){
+  const b = findBinome(id);
+  if(!b) return;
+  editingId = id;
+  $("editTitle").textContent = "Modifier le binôme";
+  const names = b.names || [];
+  $("editA").value = names[0] || "";
+  $("editB").value = names[1] || "";
+  $("editC").value = names[2] || "";
+  $("editOverlay").classList.add("show");
+  setTimeout(()=>$("editA").focus(),50);
+}
+async function saveEdit(){
+  if(!editingId) { closeEdit(); return; }
+  const ns = [$("editA").value.trim(), $("editB").value.trim(), $("editC").value.trim()].filter(Boolean);
+  if(ns.length === 0){ closeEdit(); return; }
+  await db.ref(ACTIVE+"/binomes/"+editingId+"/names").set(ns);
+  closeEdit();
+}
+async function deleteBinome(){
+  if(!editingId){ closeEdit(); return; }
+  await db.ref(ACTIVE+"/binomes/"+editingId).remove();
+  closeEdit();
+}
+function closeEdit(){ $("editOverlay").classList.remove("show"); editingId = null; }
+
+// ─────────── Confirmation générique ───────────
+function askConfirm(text, action){
+  confirmAction = action;
+  $("confirmText").textContent = text;
+  $("confirmOverlay").classList.add("show");
+}
+function closeConfirm(){ $("confirmOverlay").classList.remove("show"); confirmAction = null; }
+
+// ─────────── Menu avancé prof ───────────
+function openProfMenu(){ $("menuOverlay").classList.add("show"); }
+function closeMenu(){ $("menuOverlay").classList.remove("show"); }
+function changePassword(){
+  closeMenu();
+  const np = prompt("Nouveau mot de passe prof :");
+  if(!np) return;
+  db.ref(META+"/profPassword").set(np).then(()=>toast("Mot de passe mis à jour."));
+}
+function wipeAll(){
+  closeMenu();
+  askConfirm("Effacer toute la session active (binômes, statuts, aides) sans archiver ?", async ()=>{
+    await db.ref(ACTIVE).remove();
+    await newSessionRaw();
+    toast("Session effacée et remplacée.");
+  });
+}
+
+// ─────────── Question prof (mode pilotage) ───────────
+function startQuestion(id){
+  const b = findBinome(id);
+  if(!b) return;
+  if(activeBinomeForDoc === id){
+    activeBinomeForDoc = null;
+    toast("Question annulée.");
+    return;
+  }
+  if((b.tokens||0) <= 0){ toast("Ce binôme n'a plus d'aide."); return; }
+  activeBinomeForDoc = id;
+  toast(`Question en cours : ${binomeName(b)}.`);
+  if(currentDoc){
+    const ctx = $("docCtx");
+    if(ctx) ctx.innerHTML = `Question de <b>${esc(binomeName(b))}</b> · la zone qui le bloque ouvre son aide`;
+  }
+}
+
+// ─────────── Ouverture de documents (commune) ───────────
+function openDoc(n){
+  currentDoc = n;
+  const data = DOCDATA[n];
+  const dv = $("docview"), sheet = $("docSheet"), title = $("docTitle"), ctx = $("docCtx");
+  if(!data){
+    title.textContent = `Document ${n}`;
+    sheet.innerHTML = '<div style="padding:60px;text-align:center;color:#777;font-style:italic">Ce document n\'est pas disponible.</div>';
+    ctx.innerHTML = "";
+    dv.classList.add("show");
+    return;
+  }
+  title.textContent = `DOC ${n} — ${data.title}`;
+  if(role === "student"){
+    ctx.innerHTML = activeBinomeForDoc===myBinomeId
+      ? `Cliquez sur la zone qui vous bloque pour ouvrir l'aide (consomme 1 jeton)`
+      : `Consultation libre`;
+  } else {
+    ctx.innerHTML = activeBinomeForDoc
+      ? `Question de <b>${esc(binomeName(findBinome(activeBinomeForDoc)))}</b> · la zone qui le bloque ouvre son aide`
+      : `Une zone ouvre l'aide correspondante`;
+  }
+  // Construire la fiche
+  const b = activeBinomeForDoc ? findBinome(activeBinomeForDoc) : null;
+  let html = '';
+  data.blocks.forEach(blk=>{
+    if(blk.type==="head"){
+      html += `<div class="doc-head" style="background:${data.color||'#333'};color:#fff;padding:14px 18px;border-radius:12px 12px 0 0;margin:-24px -24px 16px">
+        <div class="num">${blk.num}</div><h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:1.6rem;color:#fff">${esc(blk.title)}</h2>
+        ${blk.sub?`<div class="sub" style="color:rgba(255,255,255,.85);font-style:italic;margin-top:2px">${esc(blk.sub)}</div>`:''}</div>`;
+    } else if(blk.type==="text"){
+      html += `<div class="doc-text" style="margin-bottom:14px">${blk.html}</div>`;
+    } else if(blk.type==="zone"){
+      const key = `${n}:${blk.id}`;
+      const flagged = b && b.flags && b.flags[key];
+      const cls = blk.cls || "";
+      const bg = blk.bg || "";
+      const tip = activeBinomeForDoc===myBinomeId
+        ? "Cliquer pour consommer un jeton et afficher l'aide à votre binôme."
+        : (role==="prof" && activeBinomeForDoc)
+          ? "Cliquer pour consommer un jeton et afficher l'aide à ce binôme."
+          : "Cliquer pour consulter l'aide (aucun jeton consommé).";
+      html += `<div class="${cls} zone ${flagged?'flagged':''}" style="${bg?'background:'+bg:''}" onclick="zoneClick('${blk.id}')" title="${esc(tip)}">${blk.html}<span class="qmark">● question posée</span></div>`;
+    }
+  });
+  sheet.innerHTML = html;
+  dv.classList.add("show");
+}
+
+function closeDoc(){
+  $("docview").classList.remove("show");
+  currentDoc = null;
+  if(activeBinomeForDoc && role==="prof"){
+    const b = findBinome(activeBinomeForDoc);
+    if(b) toast(`Question toujours active pour ${binomeName(b)}. Pour annuler, clique à nouveau sur ses jetons.`);
+  } else if(role==="student"){
+    activeBinomeForDoc = null;
+  }
+}
+
+function zoneClick(zoneId){
+  const data = DOCDATA[currentDoc];
+  if(!data) return;
+  const blk = data.blocks.find(x=>x.id===zoneId);
+  if(!blk || !blk.help) return;
+  if(activeBinomeForDoc){
+    const b = findBinome(activeBinomeForDoc);
+    if(!b){ showHelp(blk,false,null); return; }
+    const key = `${currentDoc}:${zoneId}`;
+    if(b.flags && b.flags[key]){
+      showHelp(blk,false,b);
+      toast("Aide déjà vue pour cette zone. Aucun nouveau jeton consommé.");
+      return;
+    }
+    if((b.tokens||0) <= 0){ showHelp(blk,false,null); return; }
+    pendingHelp = { binomeId: activeBinomeForDoc, docN: currentDoc, zoneId, blk };
+    $("gelOverlay").classList.add("show");
+  } else {
+    showHelp(blk,false,null);
+  }
+}
+
+function cancelGel(){
+  $("gelOverlay").classList.remove("show");
+  pendingHelp = null;
+}
+async function confirmGel(){
+  $("gelOverlay").classList.remove("show");
+  if(!pendingHelp) return;
+  const b = findBinome(pendingHelp.binomeId);
+  let consumed = false;
+  if(b && (b.tokens||0)>0){
+    const newTokens = b.tokens - 1;
+    const flagKey = `${pendingHelp.docN}:${pendingHelp.zoneId}`;
+    await db.ref(ACTIVE+"/binomes/"+pendingHelp.binomeId).update({
+      tokens: newTokens,
+      [`flags/${flagKey}`]: true
+    });
+    consumed = true;
+  }
+  if(consumed){
+    const zoneEl = document.querySelector(`.zone[onclick*="zoneClick('${pendingHelp.zoneId}')"]`);
+    if(zoneEl) zoneEl.classList.add("flagged");
+  }
+  showHelp(pendingHelp.blk, consumed, b);
+  pendingHelp = null;
+}
+
+function showHelp(blk, consumed, b){
+  const hp = $("help");
+  $("helpFor").textContent = (b ? "Pour "+binomeName(b) : (activeBinomeForDoc ? "Pour "+binomeName(findBinome(activeBinomeForDoc)) : "Consultation"));
+  hp.querySelector(".t").textContent = blk.help.titre || "Aide";
+  let h = "";
+  if(blk.help.cite) h += `<div class="seg"><span class="k">Dans le livre</span><div class="quote">${blk.help.cite}</div></div>`;
+  h += `<div class="seg"><span class="k">La réponse</span><p>${blk.help.reponse}</p></div>`;
+  h += `<div class="seg didac"><span class="k">Comment fallait-il s'y prendre</span><p>${blk.help.didac}</p></div>`;
+  $("helpBody").innerHTML = h;
+  let foot;
+  if(consumed) foot = "Une aide vient d'être utilisée. Il en reste "+((b?b.tokens-1:0))+" pour ce binôme.";
+  else if(b) foot = "Aide déjà vue par ce binôme (aucun nouveau jeton consommé). Il en reste "+(b.tokens||0)+".";
+  else foot = "Consultation libre (aucun jeton consommé).";
+  $("helpFoot").textContent = foot;
+  hp.classList.add("show");
+}
+function closeHelp(){ $("help").classList.remove("show"); }
+
+// ─────────── Raccourcis clavier ───────────
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape"){
+    const overs = ["gelOverlay","confirmOverlay","editOverlay","menuOverlay"];
+    for(const id of overs){
+      const o = $(id);
+      if(o && o.classList.contains("show")){
+        if(id==="gelOverlay") cancelGel();
+        else if(id==="confirmOverlay") closeConfirm();
+        else if(id==="editOverlay") closeEdit();
+        else if(id==="menuOverlay") closeMenu();
+        return;
+      }
+    }
+    if($("help").classList.contains("show")){ closeHelp(); return; }
+    if($("docview").classList.contains("show")){ closeDoc(); return; }
+  }
+  if(e.key === "Enter"){
+    if($("editOverlay").classList.contains("show")){ e.preventDefault(); saveEdit(); return; }
+    if($("confirmOverlay").classList.contains("show")){ e.preventDefault(); const cy=$("confirmYes"); if(cy) cy.click(); return; }
+    if($("gelOverlay").classList.contains("show")){ e.preventDefault(); confirmGel(); return; }
+    // Welcome screen : Entrée valide login
+    if($("screenWelcome").classList.contains("show")){
+      const a = document.activeElement;
+      if(a && (a.id==="loginCode" || a.id==="loginName1" || a.id==="loginName2" || a.id==="loginName3")){ e.preventDefault(); doStudentLogin(); return; }
+      if(a && a.id==="profPwd"){ e.preventDefault(); doProfLogin(); return; }
+    }
+  }
+});
+
+// Clic hors overlay
+function closeOnBackdrop(overlayId, closeFn){
+  const o = $(overlayId);
+  if(!o) return;
+  o.addEventListener("click", (e)=>{ if(e.target===o) closeFn(); });
+}
+closeOnBackdrop("gelOverlay", cancelGel);
+closeOnBackdrop("confirmOverlay", closeConfirm);
+closeOnBackdrop("editOverlay", closeEdit);
+closeOnBackdrop("menuOverlay", closeMenu);
+
+$("confirmYes").addEventListener("click", ()=>{
+  if(confirmAction) confirmAction();
+  closeConfirm();
+});
+
+// Info autosave (n'a plus de sens en mode Firebase, mais on garde un footer informatif)
+const info = $("autosaveInfo");
+if(info){
+  info.innerHTML = '<span style="color:var(--done)">●</span> Données synchronisées en temps réel (Firebase).';
+}
+
+</script>
+</body>
+</html>
