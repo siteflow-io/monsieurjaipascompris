@@ -1684,6 +1684,10 @@ function CorrScreen(p){
       setCur(null);
       setMsg("\u21bb "+cur.split(" ").pop()+" r\u00e9initialis\u00e9");setTimeout(function(){setMsg(null)},2000);
     },
+    onAutoSave:function(err,ext){
+      // Sauvegarde silencieuse sans navigation — protège contre la perte en mode rapide
+      p.onSave(curKey,err,ext);
+    },
     onCancel:function(){setCur(null)}
   });
   }
@@ -2190,6 +2194,7 @@ function CorrEleve(p){
     ne.push({idx:wt.idx,type:type,word:wt.text});
     setErrors(ne);setFastFlash(type);setTimeout(function(){setFastFlash(null)},400);
     setFastIdx(fastIdx+1);
+    if(p.onAutoSave)p.onAutoSave(ne,extras);
   }
   function confirmFautifI(overrideVal){
     var wt=wordTokens[fastIdx];if(!wt)return;
@@ -2201,6 +2206,7 @@ function CorrEleve(p){
     setAskFautifI(null);setFautifValI("");
     setFastFlash(obj.type);setTimeout(function(){setFastFlash(null)},400);
     setFastIdx(fastIdx+1);
+    if(p.onAutoSave)p.onAutoSave(ne,extras);
   }
   function fastSkip(){
     var wt=wordTokens[fastIdx];if(!wt)return;
@@ -2209,8 +2215,10 @@ function CorrEleve(p){
   }
   function fastClear(){
     var wt=wordTokens[fastIdx];if(!wt)return;
-    setErrors(errors.filter(function(e){return e.idx!==wt.idx}));
+    var ne=errors.filter(function(e){return e.idx!==wt.idx});
+    setErrors(ne);
     setFastIdx(fastIdx+1);
+    if(p.onAutoSave)p.onAutoSave(ne,extras);
   }
   function fastBack(){if(fastIdx>0)setFastIdx(fastIdx-1)}
 
@@ -2240,7 +2248,17 @@ function CorrEleve(p){
     var ctxStart=Math.max(0,fastIdx-3);
     var ctxEnd=Math.min(wordTokens.length,fastIdx+4);
 
-    return h("div",{className:"container fade-up",style:{maxWidth:480}},
+    return h("div",{
+      style:{position:"fixed",inset:0,zIndex:1000,background:"rgba(35,30,20,.55)",
+             display:"flex",alignItems:"flex-start",justifyContent:"center",
+             padding:"20px 12px",overflowY:"auto",backdropFilter:"blur(2px)",
+             WebkitBackdropFilter:"blur(2px)"},
+      onClick:function(e){if(e.target===e.currentTarget)setFastMode(false)}
+    },h("div",{className:"fade-up",style:{
+      maxWidth:480,width:"100%",background:"var(--bg)",borderRadius:16,
+      padding:"16px 18px",boxShadow:"0 12px 40px rgba(0,0,0,.35)",
+      border:"1.5px solid var(--border)"
+    },onClick:function(e){e.stopPropagation()}},
       h("div",{className:"score-bar"},
         h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},sc.note),
         h("div",{style:{flex:1}},
@@ -2249,7 +2267,8 @@ function CorrEleve(p){
           h("div",{style:{height:4,background:"#e5e3dd",borderRadius:2,marginTop:4,overflow:"hidden"}},
             h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
         ),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)}},"\u2190 Texte")
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
       ),
       h("div",{style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
         wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
@@ -2315,7 +2334,7 @@ function CorrEleve(p){
           h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 / = manquant \u00b7 P = ponct. \u00b7 ? = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
         )
     })()
-    );
+    ));
   }
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
@@ -2477,7 +2496,8 @@ function CorrEleve(p){
           h("button",{className:"btn-sm btn-ghost",onClick:function(){setInsertIdx(null)},style:{flex:1}},"Annuler")
         )
       )
-    )
+    ),
+    fastModalContent
   );
 }
 
