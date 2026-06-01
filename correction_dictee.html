@@ -1223,7 +1223,7 @@ function AppProf(p){
   },[]);
 
   useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
-    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var fbE=CLASSES[cn];var nE=fbE&&fbE.length>0?fbE.length:(d.eleves||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false}}))
+    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var fbE=CLASSES[cn];var nE=fbE&&fbE.length>0?fbE.length:(d.eleves||[]).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac}}))
   })},[]);
 
   function start(){
@@ -1335,8 +1335,9 @@ function AppProf(p){
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10}},
           h("div",{style:{flex:1,cursor:"pointer"},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l. \u00b7 "+(d.niveau?d.niveau.toUpperCase():"\u26a0\ufe0f pas de niveau"))),
           h("div",{style:{display:"flex",alignItems:"center",gap:6}},
+            d.amenEnabled&&h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:"rgba(252,211,77,.18)",color:"#92400e",fontWeight:600},title:"Cette dict\u00e9e a une version am\u00e9nag\u00e9e param\u00e9tr\u00e9e ("+d.nLac+" lacune"+(d.nLac>1?"s":"")+")"},"\ud83d\udcd8 Am\u00e9nag\u00e9e · "+d.nLac),
             h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:function(e){e.stopPropagation();if(editing===d.id){setEditing(null)}else{setEditing(d.id);db.ref("correction_dictee/"+d.id+"/config").once("value",function(cfgSnap){var cfg=cfgSnap.val()||{};setEditForm({title:cfg.title||d.title,niveau:cfg.niveau||d.niveau||"",published:cfg.published!==false,text:cfg.text||"",classe:cfg.classe||d.classe||"",base:cfg.base||20,competences:cfg.competences||[],showNote:cfg.showNote!==false,peerHelp:!!cfg.peerHelp})})}}},editing===d.id?"\u2715":"\u270f\ufe0f"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:function(e){e.stopPropagation();if(editing===d.id){setEditing(null)}else{setEditing(d.id);db.ref("correction_dictee/"+d.id).once("value",function(allSnap){var allVal=allSnap.val()||{};var cfg=allVal.config||{};var dic=allVal.dictee||{};var amen=dic.amenagee||null;setEditForm({title:cfg.title||d.title,niveau:cfg.niveau||d.niveau||"",published:cfg.published!==false,text:cfg.text||"",classe:cfg.classe||d.classe||"",base:cfg.base||20,competences:cfg.competences||[],showNote:cfg.showNote!==false,peerHelp:!!cfg.peerHelp,showAmen:!!(amen&&amen.enabled)})})}}},editing===d.id?"\u2715":"\u270f\ufe0f"),
             h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
           )
         ),
@@ -1387,7 +1388,22 @@ function AppProf(p){
           ),
           h("div",{style:{marginTop:14,padding:"12px 14px",background:"rgba(252,211,77,.08)",borderRadius:8,border:"1.5px solid rgba(180,83,9,.2)"}},
             h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontWeight:600,fontSize:".92rem"}},
-              h("input",{type:"checkbox",checked:!!editForm.showAmen,onChange:function(e){setEditForm(Object.assign({},editForm,{showAmen:e.target.checked}))},style:{width:18,height:18}}),
+              h("input",{type:"checkbox",checked:!!editForm.showAmen,onChange:function(e){
+                var checked=e.target.checked;
+                setEditForm(Object.assign({},editForm,{showAmen:checked}));
+                // Synchronise amenagee.enabled dans Firebase pour persister entre ouvertures
+                db.ref("correction_dictee/"+d.id+"/dictee/amenagee").once("value",function(snap){
+                  var existing=snap.val();
+                  if(checked){
+                    if(!existing)db.ref("correction_dictee/"+d.id+"/dictee/amenagee").set({enabled:true,defaultMode:"A",base:10,lacunes:[],consigne:""});
+                    else db.ref("correction_dictee/"+d.id+"/dictee/amenagee/enabled").set(true);
+                  }else{
+                    if(existing)db.ref("correction_dictee/"+d.id+"/dictee/amenagee/enabled").set(false);
+                  }
+                });
+                // Met à jour le badge dans la liste saved
+                setSaved(saved.map(function(x){return x.id===d.id?Object.assign({},x,{amenEnabled:checked}):x}));
+              },style:{width:18,height:18}}),
               "\ud83d\udcd8 Param\u00e9trer une version am\u00e9nag\u00e9e (PAP/DYS) pour cette dict\u00e9e",
               ifo("Ouvre le panneau de configuration des lacunes (mots \u00e0 trous, modes A/B/C, distracteurs, indices, raisonnements). G\u00e9n\u00e8re aussi le document papier imprimable au design pr\u00e9d\u00e9fini.",{below:true,right:true})
             ),
