@@ -1921,7 +1921,12 @@ function createPouleFromUI(){
   db.ref(DEBAT+"/poules/"+pid).set(poule).then(function(){ toast("Poule créée : "+poule.matches.length+" manche(s) générée(s)."); });
 }
 function deletePoule(pid){
-  askConfirm("Supprimer cette poule et ses manches ?", function(){ db.ref(DEBAT+"/poules/"+pid).remove(); });
+  askConfirm("Supprimer cette poule et ses manches ?", function(){
+    const cm=debatData().currentMatch;
+    const orphan = cm && ((cm.origin && cm.origin.type==="poule" && cm.origin.pouleId===pid) || cm.pouleId===pid);
+    db.ref(DEBAT+"/poules/"+pid).remove();
+    if(orphan) db.ref(DEBAT+"/currentMatch").remove();
+  });
 }
 
 // ─────────── Lancer / annuler une manche ───────────
@@ -2000,6 +2005,7 @@ function ensureDebatClock(){ if(debatClock)return; debatClock=setInterval(debatC
 function debatClockTick(){
   const d=debatData(); if(!d.active) return;
   const cm=d.currentMatch; if(!cm) return;
+  if(role==="prof" && cm.origin && cm.origin.type==="poule" && !((d.poules||{})[cm.origin.pouleId])){ db.ref(DEBAT+"/currentMatch").remove(); return; }
   if(cm.chronoState==="running"){
     const rem=cm.chronoEndsAt-Date.now();
     if(rem<=0 && role==="prof"){ advancePhase(cm); return; }
@@ -2237,8 +2243,9 @@ function renderDebatProf(){
   h+='</div>';
 
   // Colonne droite : manche en cours
+  const cmOrphan = cm && cm.origin && cm.origin.type==="poule" && !poulesObj()[cm.origin.pouleId];
   h+='<div class="dbg-card"><h3>Manche en cours</h3>';
-  if(!cm){
+  if(!cm || cmOrphan){
     h+='<div style="color:var(--muted);font-style:italic;font-size:.88rem;padding:14px 0">Aucune manche chargée. Clique « Lancer » sur une manche d\'une poule.</div>';
   } else {
     const na=esc(binomeName(findBinome(cm.binomeA))||"?"), nb=esc(binomeName(findBinome(cm.binomeB))||"?");
@@ -2247,7 +2254,7 @@ function renderDebatProf(){
     if(!cm.tirageAt){
       h+='<div class="tirage-binome" id="tirageBinome">'+na+' tire son camp…</div>';
       h+='<div class="tirage-camp" id="tirageCamp">?</div>';
-      h+='<button class="dbg-btn" onclick="doTirage()" title="Lance une animation de tirage au sort qui désigne le camp (POUR ou CONTRE) de chaque binôme.">🎲 Tirer POUR / CONTRE</button>';
+      h+='<button class="dbg-btn" onclick="doTirage()" title="Lance une animation de tirage au sort qui désigne le camp (POUR ou CONTRE) de chaque binôme.">🎲 Tirer POUR / CONTRE</button> <button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer cette manche sans la jouer.">✕ Fermer</button>';
     } else {
       h+='<div style="display:flex;gap:10px;justify-content:center;margin-bottom:6px">'
        + '<div style="flex:1"><div style="font-size:.82rem;color:var(--muted)">'+na+'</div><div class="tirage-camp '+cm.campA+'" style="font-size:1.6rem">'+(cm.campA==="pour"?"POUR":"CONTRE")+'</div></div>'
@@ -2545,6 +2552,7 @@ function archiveCurrentTournament(){
   if(!poules || Object.keys(poules).length===0) return false; // rien à archiver
   const code=(sessionData && sessionData.code) || "—";
   const ts=Date.now();
+  const key=ts+"_"+uid();
   const bsnap={};
   Object.entries((sessionData.binomes)||{}).forEach(function(e){ bsnap[e[0]]=(e[1].names||[]); });
   const champ=(d.tournament && d.tournament.champion) || null;
@@ -2555,7 +2563,7 @@ function archiveCurrentTournament(){
     binomes:bsnap,
     tournament:d.tournament||null, poules:poules, scores:d.scores||null, bracket:d.bracket||null
   };
-  db.ref(TARCH+"/"+code+"/"+ts).set(entry);
+  db.ref(TARCH+"/"+code+"/"+key).set(entry);
   return true;
 }
 
