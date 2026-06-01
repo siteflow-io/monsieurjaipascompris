@@ -1143,6 +1143,27 @@ function competencesSubtitle(competences){
   return competences.map(competenceLabel).join(" \u00b7 ");
 }
 
+// Corrige les indices de lacunes après un éventuel changement de tokenisation.
+// Si tokens[lac.tokenIdx] != mot attendu (lac.word ou lac.propositions[0]),
+// cherche la prochaine occurrence du mot non-encore-affectée.
+function fixLacunesIndices(lacunes,tokens){
+  if(!lacunes||!lacunes.length||!tokens)return lacunes||[];
+  // Trier par tokenIdx pour respecter l'ordre original
+  var sorted=lacunes.slice().sort(function(a,b){return (a.tokenIdx||0)-(b.tokenIdx||0)});
+  var used={};
+  return sorted.map(function(l){
+    var expected=l.word||(l.propositions&&l.propositions[0]);
+    if(!expected)return l;
+    // Si l'indice stocké pointe sur le bon mot, on garde
+    if(tokens[l.tokenIdx]===expected&&!used[l.tokenIdx]){used[l.tokenIdx]=true;return l}
+    // Sinon, on cherche la prochaine occurrence non utilisée
+    for(var i=0;i<tokens.length;i++){
+      if(tokens[i]===expected&&!used[i]){used[i]=true;return Object.assign({},l,{tokenIdx:i,word:expected})}
+    }
+    return l; // mot introuvable, on laisse tel quel
+  });
+}
+
 // Génère la consigne par défaut selon les modes présents dans les lacunes
 function generateConsigne(amen){
   if(!amen||!amen.lacunes||!amen.lacunes.length)return "";
@@ -3090,7 +3111,18 @@ function ConfigAmenagee(p){
   useEffect(function(){
     db.ref("correction_dictee/"+dicteeId+"/dictee/amenagee").once("value",function(snap){
       var v=snap.val();
-      if(v){setAmen(v)}else{setAmen({enabled:false,defaultMode:"A",base:10,lacunes:[]})}
+      if(v){
+        // Auto-fix des indices après changement éventuel de tokenisation
+        var fixed=fixLacunesIndices(v.lacunes||[],tokens);
+        var changed=fixed.some(function(f,i){var orig=(v.lacunes||[])[i];return orig&&f.tokenIdx!==orig.tokenIdx});
+        if(changed){
+          var newV=Object.assign({},v,{lacunes:fixed});
+          db.ref("correction_dictee/"+dicteeId+"/dictee/amenagee").set(newV);
+          setAmen(newV);
+        } else {
+          setAmen(v);
+        }
+      } else {setAmen({enabled:false,defaultMode:"A",base:10,lacunes:[]})}
       setLoaded(true);
     });
   },[dicteeId]);
@@ -3103,8 +3135,9 @@ function ConfigAmenagee(p){
   function setDefaultMode(m){saveAmen(Object.assign({},amen,{defaultMode:m}))}
   function setBase(b){saveAmen(Object.assign({},amen,{base:parseInt(b)||10}))}
 
-  function isLacune(idx){return amen&&amen.lacunes&&amen.lacunes.some(function(l){return l.tokenIdx===idx})}
-  function getLacune(idx){return amen&&amen.lacunes&&amen.lacunes.find(function(l){return l.tokenIdx===idx})}
+  function effectiveLacunes(){return amen&&amen.lacunes?fixLacunesIndices(amen.lacunes,tokens):[]}
+  function isLacune(idx){return effectiveLacunes().some(function(l){return l.tokenIdx===idx})}
+  function getLacune(idx){return effectiveLacunes().find(function(l){return l.tokenIdx===idx})}
   function addLacune(idx){
     var w=tokens[idx];if(!w||isPunct(w))return;
     // Détection type par GRAMM
@@ -3112,7 +3145,7 @@ function ConfigAmenagee(p){
     var distr=suggestDistracteurs(w,2);
     var indice=generateIndice(w,type);
     var raison=generateRaisonnement(w,type);
-    var newLac={tokenIdx:idx,mode:null,type:type,propositions:[w,distr[0],distr[1]],indice:indice,raisonnement:raison};
+    var newLac={tokenIdx:idx,word:w,mode:null,type:type,propositions:[w,distr[0],distr[1]],indice:indice,raisonnement:raison};
     var newLacunes=(amen.lacunes||[]).concat([newLac]).sort(function(a,b){return a.tokenIdx-b.tokenIdx});
     saveAmen(Object.assign({},amen,{lacunes:newLacunes}));
     setSelectedTokenIdx(idx);
@@ -3298,7 +3331,7 @@ function ConfigAmenagee(p){
       h("h3",{style:{margin:"0 0 8px 0",fontSize:".95rem"}},"Toutes les lacunes ("+lacunesCount+")",
         ifo("Liste de toutes les lacunes de la dict\u00e9e dans l'ordre du texte. Clique pour s\u00e9lectionner et \u00e9diter.",{below:true})),
       h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
-        (amen.lacunes||[]).map(function(lac,li){
+        effectiveLacunes().map(function(lac,li){
           var w=tokens[lac.tokenIdx]||"?";
           var mode=lac.mode||amen.defaultMode;
           var isSel=selectedTokenIdx===lac.tokenIdx;
@@ -3348,7 +3381,7 @@ function ConfigAmenagee(p){
 function buildAmenageePapierHtml(data,amen,dicteeId){
   var tokens=data.tokens||tokenize(data.text||"");
   var defaultMode=amen.defaultMode||"A";
-  var lacunes=amen.lacunes||[];
+  var lacunes=fixLacunesIndices(amen.lacunes||[],tokens);
   var lacByIdx={};lacunes.forEach(function(l){lacByIdx[l.tokenIdx]=l});
   var consigne=amen.consigne||generateConsigne(amen);
   var subtitle=competencesSubtitle(data.competences||[]);
