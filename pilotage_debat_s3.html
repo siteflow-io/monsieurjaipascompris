@@ -426,6 +426,25 @@
 .dbg-class th{color:var(--muted);font-weight:600}
 .dbg-class td.nm{text-align:left;color:var(--ink)}
 .std-sent{text-align:center;color:var(--done);font-weight:700;padding:14px;background:rgba(98,176,127,.08);border:1px solid var(--done);border-radius:12px;line-height:1.5}
+.carnet-sec{font-weight:800;color:var(--gold);font-size:1rem;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.carnet-empty{color:var(--muted);font-style:italic;font-size:.86rem;margin-bottom:8px}
+.carnet-card{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px}
+.carnet-card.pour{border-left-color:var(--accent)}
+.carnet-card.contre{border-left-color:var(--done)}
+.carnet-when{font-weight:700;font-size:.92rem;color:var(--ink);margin-bottom:3px}
+.carnet-phrase{font-size:.86rem;color:var(--ink2);margin-bottom:6px}
+.carnet-sub{font-size:.8rem;color:var(--muted);margin:6px 0 3px}
+.carnet-eval{margin-top:8px;padding-top:7px;border-top:1px dashed var(--line)}
+.carnet-who{font-size:.85rem;font-weight:600;color:var(--ink2);margin-bottom:4px}
+.crit-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:3px 0}
+.crit-pill{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:2px 9px;font-size:.78rem;color:var(--ink2)}
+.crit-pill b{color:var(--ink)}
+.crit-total{margin-left:auto;background:var(--gold);color:#1a1205;font-weight:800;border-radius:20px;padding:2px 10px;font-size:.8rem}
+.eleve-pill{background:var(--panel);border:1px dashed var(--line);border-radius:20px;padding:2px 9px;font-size:.78rem;color:var(--ink2)}
+.eleve-pill b{color:var(--ink)}
+.camp-pour{color:var(--accent2)}
+.camp-contre{color:var(--done)}
+.carnet-quote{font-style:italic;color:var(--ink2);font-size:.82rem;margin:4px 0 0;padding-left:9px;border-left:2px solid var(--line)}
 .vote-box{margin-top:8px;padding:7px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);font-size:.82rem}
 .vote-head{font-weight:700;color:var(--ink2);margin-bottom:2px}
 .vote-missing{color:var(--accent2);margin-top:2px}
@@ -2818,25 +2837,81 @@ function toggleRetours(){
 // ── Carnet de l'évaluateur — côté élève ──
 function openCarnetEleve(){ renderCarnetEleve(); $("carnetEleveOverlay").classList.add("show"); }
 function closeCarnetEleve(){ $("carnetEleveOverlay").classList.remove("show"); }
+function critPills(o){
+  if(!o) return '';
+  function p(lib,v){ return '<span class="crit-pill">'+lib+' <b>'+(v!=null?v:"–")+'</b></span>'; }
+  return '<div class="crit-row">'+p("Clarté",o.clarte)+p("Args",o.args)+p("Ex.",o.exemples)+p("Répl.",o.replique)+'<span class="crit-total">'+evalTot(o)+'/20</span></div>';
+}
+function elevePills(elevesObj, bid){
+  if(!elevesObj) return '';
+  const mems=binomeMembers(bid); let s='<div class="crit-row">';
+  Object.keys(elevesObj).forEach(function(idx){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; s+='<span class="eleve-pill">👤 '+esc(mem?mem.nom:("él."+idx))+' <b>'+elevesObj[idx]+'/5</b></span>'; });
+  return s+'</div>';
+}
+function carnetRecueCard(mm, grille, n){
+  const myCamp=(mm.binomeA===myBinomeId)?mm.campA:mm.campB;
+  const oppB=(mm.binomeA===myBinomeId)?mm.binomeB:mm.binomeA;
+  const oppName=esc(binomeName(findBinome(oppB))||"?");
+  const campLib=myCamp==="pour"?"POUR":"CONTRE";
+  const score=myCamp==="pour"?mm.scorePour:mm.scoreContre;
+  const es=myCamp==="pour"?mm.eleveScoresPour:mm.eleveScoresContre;
+  let h='<div class="carnet-card '+myCamp+'">';
+  h+='<div class="carnet-when">Manche '+(n||"?")+' · contre '+oppName+'</div>';
+  h+='<div class="carnet-phrase">Vous défendiez le camp <b class="camp-'+myCamp+'">'+campLib+'</b>'+(score!=null?(' et votre camp a obtenu <b>'+score+'/20</b>'):'')+'.</div>';
+  if(es){ h+='<div class="carnet-sub">Vos notes individuelles :</div><div class="crit-row">'; Object.keys(es).forEach(function(idx){ const e=es[idx]; h+='<span class="eleve-pill">👤 '+esc(e.nom||"?")+' <b>'+(e.score!=null?e.score:"–")+'/5</b></span>'; }); h+='</div>'; }
+  const pArr=myCamp==="pour"?mm.profPour:mm.profContre;
+  if(pArr){
+    h+='<div class="carnet-eval"><div class="carnet-who">Le professeur vous a évalués :</div>'+critPills({clarte:pArr[0],args:pArr[1],exemples:pArr[2],replique:pArr[3]});
+    if(mm.comment) h+='<div class="carnet-quote">« '+esc(mm.comment)+' »</div>';
+    const pc=myCamp==="pour"?mm.profEleveCommentPour:mm.profEleveCommentContre;
+    if(pc){ const mems=binomeMembers(myBinomeId); Object.keys(pc).forEach(function(idx){ if(pc[idx]){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; h+='<div class="carnet-quote">👤 '+esc(mem?mem.nom:idx)+' : « '+esc(pc[idx])+' »</div>'; } }); }
+    h+='</div>';
+  }
+  Object.keys(grille).forEach(function(sid){ if(sid===myBinomeId) return; const c=grille[sid]&&grille[sid][myCamp]; if(!c) return;
+    h+='<div class="carnet-eval"><div class="carnet-who">'+esc(binomeName(findBinome(sid))||"?")+' vous a évalués :</div>'+critPills(c);
+    if(c.eleves) h+=elevePills(c.eleves, myBinomeId);
+    if(c.meilleur) h+='<div class="carnet-quote">Coup de cœur : « '+esc(c.meilleur)+' »</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
+function carnetDonneeCard(mm, g, n){
+  const na=esc(binomeName(findBinome(mm.binomeA))||"?"), nb=esc(binomeName(findBinome(mm.binomeB))||"?");
+  let h='<div class="carnet-card">';
+  h+='<div class="carnet-when">'+(n?("Manche "+n+" · "):"")+na+' vs '+nb+'</div>';
+  h+='<div class="carnet-phrase">En tant que juges, voici les notes que vous avez envoyées :</div>';
+  ["pour","contre"].forEach(function(camp){
+    const c=g[camp]; if(!c) return;
+    const bid=(mm.campA===camp)?mm.binomeA:mm.binomeB;
+    const cn=esc(binomeName(findBinome(bid))||"");
+    h+='<div class="carnet-eval"><div class="carnet-who">Camp <b class="camp-'+camp+'">'+(camp==="pour"?"POUR":"CONTRE")+'</b>'+(cn?(' ('+cn+')'):'')+' :</div>'+critPills(c);
+    if(c.eleves) h+=elevePills(c.eleves, bid);
+    if(c.meilleur) h+='<div class="carnet-quote">Votre coup de cœur : « '+esc(c.meilleur)+' »</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  return h;
+}
 function renderCarnetEleve(){
   const body=$("carnetEleveBody"); if(!body)return;
   const GE=debatData().grilleEcoute||{}, M=debatData().matches||{};
-  const mids=Object.keys(GE).filter(function(mid){ return GE[mid] && GE[mid][myBinomeId]; });
-  if(mids.length===0){ body.innerHTML='<div style="color:var(--muted);font-style:italic">Tu n\'as pas encore envoyé d\'évaluation. Elles apparaîtront ici, figées, au fur et à mesure.</div>'; return; }
-  mids.sort(function(a,b){ return (GE[a][myBinomeId].at||0)-(GE[b][myBinomeId].at||0); });
+  const order=Object.keys(M).sort(function(a,b){ return (M[a].terminatedAt||0)-(M[b].terminatedAt||0); });
+  const num={}; order.forEach(function(mid,i){ num[mid]=i+1; });
   let h='';
-  mids.forEach(function(mid){
-    const g=GE[mid][myBinomeId], mm=M[mid]||{};
-    const na=esc(binomeName(findBinome(mm.binomeA))||"?"), nb=esc(binomeName(findBinome(mm.binomeB))||"?");
-    h+='<div class="eval-card"><div class="eval-who">'+na+' vs '+nb+'</div>';
-    ["pour","contre"].forEach(function(camp){
-      const c=g[camp]; if(!c)return;
-      h+='<div class="eval-row"><span class="eval-camp '+camp+'">'+(camp==="pour"?"POUR":"CONTRE")+'</span> '+evalLine(c)+'</div>';
-      if(c.eleves){ const bid=(mm.campA===camp)?mm.binomeA:mm.binomeB; const mems=binomeMembers(bid); Object.keys(c.eleves).forEach(function(idx){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; h+='<div class="eval-cmt" style="margin-left:2px">👤 '+esc(mem?mem.nom:("él. "+idx))+' : <b>'+c.eleves[idx]+'/5</b></div>'; }); }
-      if(c.meilleur){ h+='<div class="eval-cmt">meilleur argument : « '+esc(c.meilleur)+' »</div>'; }
-    });
-    h+='</div>';
-  });
+  h+='<div class="carnet-sec">Ce qu\'on a pensé de vous</div>';
+  if(!retoursVisibles()){
+    h+='<div class="carnet-empty">Le professeur a mis les retours en pause.</div>';
+  } else {
+    const recues=order.filter(function(mid){ return M[mid].binomeA===myBinomeId || M[mid].binomeB===myBinomeId; });
+    if(recues.length===0){ h+='<div class="carnet-empty">Vos manches en tant que débatteurs apparaîtront ici.</div>'; }
+    recues.forEach(function(mid){ h+=carnetRecueCard(M[mid], GE[mid]||{}, num[mid]); });
+  }
+  h+='<div class="carnet-sec">Vos évaluations</div>';
+  const donnees=Object.keys(GE).filter(function(mid){ return GE[mid] && GE[mid][myBinomeId]; })
+    .sort(function(a,b){ return (GE[a][myBinomeId].at||0)-(GE[b][myBinomeId].at||0); });
+  if(donnees.length===0){ h+='<div class="carnet-empty">Tu n\'as pas encore envoyé d\'évaluation. Elles apparaîtront ici, figées, au fur et à mesure.</div>'; }
+  donnees.forEach(function(mid){ h+=carnetDonneeCard(M[mid]||{}, GE[mid][myBinomeId], num[mid]); });
   body.innerHTML=h;
 }
 
