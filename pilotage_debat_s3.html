@@ -313,6 +313,11 @@
   .cost-badge{position:absolute;top:6px;right:8px;background:var(--gold);color:#1a1710;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase;box-shadow:0 1px 4px rgba(0,0,0,.15)}
   .seen-badge{position:absolute;top:6px;right:8px;background:var(--done);color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase}
   .free-badge{position:absolute;top:6px;right:8px;background:var(--done);color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .locked-badge{position:absolute;top:6px;right:8px;background:#7a3a3a;color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  /* Zones verrouillées : bordure rouge atténuée, pas cliquables */
+  .zone.locked{cursor:not-allowed!important;border:2px dashed rgba(192,57,43,.35)!important;background:rgba(192,57,43,.03)!important;opacity:.6}
+  .zone.locked:hover{border-color:rgba(192,57,43,.5)!important;box-shadow:none!important;background:rgba(192,57,43,.05)!important}
+  .zone.locked:hover::before{content:"plus de jeton — verrouillé";background:#7a3a3a;color:#fff}
   /* Zones gratuites : bordure verte au lieu d'or, hover différencié */
   .zone.clickable.free{border:2px dashed rgba(31,111,84,.55)!important}
   .zone.clickable.free:hover{border-color:var(--done)!important;background:rgba(31,111,84,.07)!important;box-shadow:0 4px 14px rgba(31,111,84,.25),inset 0 0 0 1px var(--done)}
@@ -353,6 +358,77 @@
 <body>
 
 <!-- ============ ÉCRAN 1 : ACCUEIL (élève rejoint la session) ============ -->
+<style id="debatCss">
+/* ─────────── Mode débat ─────────── */
+#debatPanel{margin-top:4px}
+.dbg-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px}
+.dbg-bar h2{font-family:'Fraunces',serif;color:var(--gold);font-size:1.15rem;margin:0}
+.dbg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.dbg-grid{grid-template-columns:1fr}}
+.dbg-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.dbg-card h3{font-family:'Fraunces',serif;color:var(--gold);font-size:1.02rem;margin:0 0 10px}
+.dbg-chk{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.dbg-chk label{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:.88rem;cursor:pointer}
+.dbg-chk label:hover{border-color:var(--gold)}
+.dbg-input{width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 12px;font-size:.92rem;font-family:inherit;margin-bottom:8px}
+.dbg-btn{background:var(--gold);color:#2a2113;border:none;border-radius:10px;padding:8px 14px;font-weight:700;font-family:inherit;font-size:.9rem;cursor:pointer}
+.dbg-btn:hover{filter:brightness(1.07)}
+.dbg-btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.dbg-btn.ghost:hover{border-color:var(--gold);color:var(--ink)}
+.dbg-btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.dbg-poule{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--panel2)}
+.dbg-poule .ph{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.dbg-poule .pn{font-weight:700;color:var(--gold)}
+.dbg-match{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:.92rem}
+.dbg-match .vs{color:var(--muted);font-size:.82rem}
+.dbg-match .res{margin-left:auto;display:flex;align-items:center;gap:8px}
+.dbg-played{color:var(--done);font-size:.85rem}
+.tirage-stage{text-align:center;padding:8px 0}
+.tirage-binome{font-family:'Fraunces',serif;font-size:1.05rem;color:var(--ink);margin-bottom:6px}
+.tirage-camp{font-family:'Fraunces',serif;font-weight:800;font-size:2.4rem;letter-spacing:1px;padding:6px 0;border-radius:12px}
+.tirage-camp.pour{color:var(--accent2)}
+.tirage-camp.contre{color:var(--done)}
+.tirage-camp.spin{animation:tspin .12s linear infinite}
+@keyframes tspin{50%{transform:scale(1.05)}}
+.dbg-chrono{text-align:center}
+.dbg-chrono .phase{font-family:'Fraunces',serif;color:var(--gold);font-size:1.02rem;margin-bottom:2px}
+.dbg-chrono .who{font-size:.9rem;margin-bottom:8px;color:var(--ink2)}
+.dbg-count{font-family:'Fraunces',serif;font-weight:800;font-size:4rem;line-height:1;letter-spacing:2px;color:var(--ink)}
+.dbg-count.warn{color:var(--wip)}
+.dbg-count.over{color:var(--accent)}
+.dbg-ctrls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
+.dbg-dur{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin-top:10px}
+.dbg-dur span{font-size:.78rem;color:var(--muted)}
+.dbg-dur input{width:56px;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:4px 6px;font-size:.82rem;font-family:inherit;text-align:center}
+.std-debat{padding:6px 0}
+.std-bigcamp{font-family:'Fraunces',serif;font-weight:800;font-size:2.6rem;text-align:center;padding:18px 0;border-radius:16px;margin-bottom:12px;border:2px solid}
+.std-bigcamp.pour{color:var(--accent2);border-color:var(--accent);background:rgba(192,57,43,.10)}
+.std-bigcamp.contre{color:var(--done);border-color:var(--done);background:rgba(98,176,127,.10)}
+.std-vs{text-align:center;color:var(--ink2);margin-bottom:14px}
+.std-wait{text-align:center;color:var(--muted);font-style:italic;padding:30px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;line-height:1.5}
+.std-phaserow{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
+.std-phasechip{font-size:.76rem;padding:5px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.std-phasechip.on{border-color:var(--gold);color:var(--gold);font-weight:700}
+.std-phasechip.done{color:var(--ink2);opacity:.55}
+.dbg-note{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.dbg-crit{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;margin-bottom:5px;font-size:.85rem}
+.dbg-crit input[type=range]{width:120px;vertical-align:middle}
+.dbg-crit .val{display:inline-block;font-weight:700;color:var(--gold);width:1.4em;text-align:center}
+.dbg-campcol{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.dbg-campcol .ct{font-weight:700;margin-bottom:6px}
+.dbg-campcol.pour .ct{color:var(--accent2)}
+.dbg-campcol.contre .ct{color:var(--done)}
+.dbg-ta{width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:.85rem;resize:vertical;margin-top:6px;min-height:38px}
+.dbg-result{text-align:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);margin-top:10px}
+.dbg-result .win{font-family:'Fraunces',serif;font-size:1.2rem;color:var(--gold);margin:6px 0}
+.dbg-class{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:8px}
+.dbg-class th,.dbg-class td{padding:5px 7px;border-bottom:1px solid var(--line);text-align:center}
+.dbg-class th{color:var(--muted);font-weight:600}
+.dbg-class td.nm{text-align:left;color:var(--ink)}
+.std-sent{text-align:center;color:var(--done);font-weight:700;padding:14px;background:rgba(98,176,127,.08);border:1px solid var(--done);border-radius:12px;line-height:1.5}
+.std-grille .dbg-campcol{margin-bottom:10px}
+</style>
+
 <div class="screen" id="screenWelcome">
   <div class="welcome-wrap">
     <div class="welcome-card">
@@ -440,6 +516,7 @@
     <div class="camp pour"><span class="lbl">Si vous êtes POUR</span>vous défendez que cette affirmation est <b>vraie</b>. L'histoire se répète : qui maltraite finit maltraité. Avec l'IA, ce sera pareil.</div>
     <div class="camp contre"><span class="lbl">Si vous êtes CONTRE</span>vous défendez que cette affirmation est <b>fausse</b>. Les trois situations sont trop différentes. L'IA ne reproduira pas forcément ce schéma.</div>
   </div>
+  <div id="studentPilotageWrap">
   <div id="studentValidationStrip"></div>
   <div id="studentMineCard" class="mine-card"></div>
   <div id="studentTableSection"></div>
@@ -447,6 +524,8 @@
     <h3>Les autres binômes</h3>
     <div id="studentOthersList"></div>
   </div>
+  </div><!-- /studentPilotageWrap -->
+  <div id="studentDebatView" style="display:none"></div>
   <footer>Tablette du binôme. Vos actions sont visibles en direct sur l'écran prof. Le passage à <b>« fait »</b> nécessite la validation du professeur.</footer>
 </div>
 
@@ -494,6 +573,7 @@
     <div class="camp contre" title="Le camp CONTRE conteste la thèse : la comparaison est trop facile, on peut briser le cycle."><span class="lbl">Camp CONTRE</span>défend que cette affirmation est <b>fausse</b>. Les trois situations sont trop différentes. L'IA ne reproduira pas forcément ce schéma.</div>
   </div>
 
+  <div id="profPilotageWrap">
   <!-- Bandeau code de classe (pour projection au tableau) -->
   <div class="codebanner">
     <div title="Affiche ce bloc en grand au tableau : les élèves saisissent ce code pour rejoindre la session.">
@@ -522,6 +602,8 @@
 
   <div class="tablewrap" id="tablewrap"><table id="grid"></table></div>
   <footer>Cet écran sert au pilotage en classe. Les élèves rejoignent via le code de classe sur leur tablette. <span id="autosaveInfo"></span></footer>
+  </div><!-- /profPilotageWrap -->
+  <div id="debatPanel" style="display:none"></div>
 </div>
 
 <!-- ============ Vue document (commune élève + prof) ============ -->
@@ -549,17 +631,6 @@
 </div>
 
 <!-- ============ Overlays ============ -->
-<div class="overlay" id="gelOverlay">
-  <div class="gelcard">
-    <div class="ic">❄️</div>
-    <h2>Mode gel</h2>
-    <div class="acts">
-      <button class="ghost" onclick="cancelGel()" title="Annuler : ne pas afficher l'aide.">Annuler</button>
-      <button class="primary" onclick="confirmGel()" title="Activer : affiche l'aide et consomme un jeton.">Activer</button>
-    </div>
-  </div>
-</div>
-
 <div class="overlay" id="confirmOverlay">
   <div class="gelcard">
     <h2 id="confirmText" style="margin-bottom:24px">Confirmer ?</h2>
@@ -592,6 +663,7 @@
 <div class="overlay" id="menuOverlay">
   <div class="gelcard" style="text-align:left;max-width:440px">
     <h2 style="font-size:1.25rem;margin-bottom:18px;text-align:center">Actions avancées</h2>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="enterDebatMode()" title="Lance le mode débat pour toute la classe : poules, tirage POUR/CONTRE et chronomètre. Les tablettes des élèves basculent automatiquement.">🎙 Mode débat — lancer les joutes</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="changePassword()" title="Modifier le mot de passe d'accès au mode prof. Stocké dans Firebase, prend effet immédiatement.">🔑 Changer le mot de passe prof</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="archiveCurrentSession()" title="Range la session actuelle dans les archives sans en créer une nouvelle. Utile pour faire une pause.">📦 Archiver cette session (sans en créer une nouvelle)</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left;color:var(--accent2)" onclick="wipeAll()" title="Supprime toute la session active sans archiver (binômes, statuts, aides). Action irréversible.">🗑 Effacer toute la session active (irréversible)</button>
@@ -607,6 +679,15 @@
     <input id="pwdConfirm" type="password" placeholder="Confirmer le mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:6px" autocomplete="new-password">
     <div id="pwdErr" style="color:var(--accent2);font-size:.85rem;min-height:1.2em;margin-bottom:12px"></div>
     <div class="acts"><button class="ghost" onclick="closePwdOverlay()" title="Annuler le changement.">Annuler</button><button class="primary" onclick="confirmChangePassword()" title="Enregistrer le nouveau mot de passe dans Firebase.">Enregistrer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="archivesOverlay">
+  <div class="gelcard" style="text-align:left;max-width:580px;max-height:82vh;overflow:auto">
+    <h2 style="font-size:1.2rem;margin-bottom:4px;text-align:center">🗄 Archives des tournois</h2>
+    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:16px">Rangées par code de session.</p>
+    <div id="archivesBody"></div>
+    <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeArchives()" title="Fermer.">Fermer</button></div>
   </div>
 </div>
 
@@ -652,8 +733,19 @@ const DOCS=[
 ];
 const STATUSES=["todo","wip","done"];
 const MAX_TOKENS=2;
-// Documents pour lesquels les aides sont gratuites (méta-pédagogique : règles du jeu, méthodologie, etc.)
-const FREE_DOCS = new Set([1]);
+// Documents entièrement gratuits (méta-pédagogique)
+const FREE_DOCS = new Set([1, 5, 7]);
+// Zones gratuites individuelles (format "docN:zoneId")
+const FREE_ZONES = new Set([
+  "2:note",
+  "3:intro",
+  "4:mission",
+  "6:comment", "6:exemple",
+  "8:intro", "8:rein",
+  "9:pioche",
+  "10:intro"
+]);
+function isFreeZone(docN, zoneId){ return FREE_DOCS.has(docN) || FREE_ZONES.has(docN+":"+zoneId); }
 const DOCDATA={
  1:{title:"Ton plan de travail",sub:"Le débat — à préparer en binôme",color:"#1F6F54",blocks:[
    {type:"head",num:1,title:"Ton plan de travail",sub:"Le débat — à préparer en binôme"},
@@ -921,8 +1013,7 @@ let mySessionId = null;     // ID de la session active
 let myBinomeId = null;      // pour les élèves : leur binôme
 let sessionData = null;     // miroir local de la session active (binomes, etc.)
 let currentDoc = null;
-let pendingHelp = null;
-let activeBinomeForDoc = null;  // pour mode prof : question en cours
+let activeBinomeForDoc = null;  // (legacy, conservé neutre)
 let editingId = null;
 let confirmAction = null;
 let sessionListener = null;
@@ -1160,7 +1251,8 @@ async function newSessionRaw(){
     id: sid,
     code: code,
     createdAt: Date.now(),
-    binomes: {}
+    binomes: {},
+    debat: { active:false }
   });
   mySessionId = sid;
 }
@@ -1216,6 +1308,14 @@ function renderStudent(){
   if(!sessionData) return;
   const me = sessionData.binomes[myBinomeId];
   if(!me) return;
+  // ── Bascule mode débat ──
+  {
+    const _on=!!(sessionData.debat && sessionData.debat.active);
+    const _w=$("studentPilotageWrap"), _v=$("studentDebatView");
+    if(_w)_w.style.display=_on?"none":"";
+    if(_v)_v.style.display=_on?"":"none";
+    if(_on){ studentRendered=true; renderDebatStudent(); return; }
+  }
   // Détecter un refus prof récent (postérieur au dernier vu) — uniquement après le premier render
   if(me.lastRejection && me.lastRejection.at){
     if(studentRendered && (lastSeenRejection === null || me.lastRejection.at > lastSeenRejection)){
@@ -1294,6 +1394,14 @@ function renderStudent(){
 // ─────────── Rendu mode prof ───────────
 function renderProf(){
   if(!sessionData){return;}
+  // ── Bascule mode débat ──
+  {
+    const _on=!!(sessionData.debat && sessionData.debat.active);
+    const _w=$("profPilotageWrap"), _p=$("debatPanel");
+    if(_w)_w.style.display=_on?"none":"";
+    if(_p)_p.style.display=_on?"":"none";
+    if(_on){ renderDebatProf(); return; }
+  }
   // Code de classe et URL
   $("profSessionCode").textContent = sessionData.code || "—";
   $("profSessionUrl").textContent = window.location.origin + window.location.pathname;
@@ -1596,21 +1704,21 @@ function openDoc(n){
   }
   title.textContent = `DOC ${n} — ${data.title}`;
   const isFreeDoc = FREE_DOCS.has(n);
+  const me = role === "student" ? findBinome(myBinomeId) : null;
+  const tokensLeft = me ? (me.tokens||0) : MAX_TOKENS;
   if(role === "student"){
-    const me = findBinome(myBinomeId);
-    const tokens = me ? (me.tokens||0) : 0;
     if(isFreeDoc){
-      ctx.innerHTML = `Aides <b>gratuites</b> pour ce document (règles du jeu). Aucun jeton consommé.`;
-    } else if(tokens>0){
-      ctx.innerHTML = `Les zones bordées d'or sont <b>cliquables</b>. Cliquer une zone consomme <b>1 jeton</b>. Il vous en reste ${tokens}.`;
+      ctx.innerHTML = `Aides <b>gratuites</b> pour ce document. Aucun jeton consommé.`;
+    } else if(tokensLeft > 0){
+      ctx.innerHTML = `Les zones bordées d'or sont <b>cliquables</b> et consomment <b>1 jeton</b>. Les zones bordées de vert sont <b>gratuites</b>. Il vous reste ${tokensLeft} jeton${tokensLeft>1?'s':''}.`;
     } else {
-      ctx.innerHTML = `Vous n'avez plus de jeton. Relisez le document pour vous en sortir.`;
+      ctx.innerHTML = `Vous n'avez <b>plus de jeton</b>. Seules les zones gratuites (vertes) restent accessibles. Relisez le reste pour vous en sortir.`;
     }
   } else {
     ctx.innerHTML = `Vue prof — clique une zone pour consulter son aide (aucun jeton consommé, c'est ta consultation libre).`;
   }
   // Construire la fiche avec les classes CSS d'origine pour rendu fidèle au papier
-  const b = role==="student" ? findBinome(myBinomeId) : null;
+  const b = me;
   let html = '';
   data.blocks.forEach(blk=>{
     if(blk.type === "head"){
@@ -1623,19 +1731,25 @@ function openDoc(n){
     } else if(blk.type === "zone"){
       const key = `${n}:${blk.id}`;
       const flagged = b && b.flags && b.flags[key];
+      const isFree = isFreeZone(n, blk.id);
+      const locked = role === "student" && !isFree && !flagged && tokensLeft <= 0;
       const cls = blk.cls === "item" ? "d-item" : "d-box";
       const bg = blk.cls === "soft" ? hexSoft(data.color) : "";
       const numHtml = blk.num ? `<span class="n" style="color:${data.color}">${blk.num}.</span>` : "";
-      const tip = isFreeDoc
-        ? "Cliquer pour ouvrir l'aide de cette zone (gratuite — document de règles)."
-        : role === "student"
-          ? (flagged ? "Aide déjà consultée — clique pour la revoir (aucun nouveau jeton)." : "Cliquer pour ouvrir l'aide de cette zone (consomme 1 jeton).")
-          : "Cliquer pour consulter l'aide (aucun jeton consommé — vue prof).";
+      let tip;
+      if(isFree) tip = "Cliquer pour ouvrir l'aide (gratuite — aucun jeton consommé).";
+      else if(flagged) tip = "Aide déjà consultée — clique pour la revoir (aucun nouveau jeton).";
+      else if(locked) tip = "Vous n'avez plus de jeton. Cette zone reste verrouillée pour cette séance.";
+      else if(role === "student") tip = "Cliquer pour ouvrir l'aide (consomme 1 jeton).";
+      else tip = "Cliquer pour consulter l'aide (vue prof, aucun jeton consommé).";
       let badge = '';
-      if(isFreeDoc) badge = '<span class="free-badge" title="Aide gratuite pour ce document">gratuit</span>';
-      else if(role === "student" && !flagged) badge = '<span class="cost-badge" title="Consomme 1 jeton">1 jeton</span>';
+      if(isFree) badge = '<span class="free-badge" title="Aide gratuite">gratuit</span>';
       else if(flagged) badge = '<span class="seen-badge" title="Vous avez déjà vu cette aide">✓ déjà vue</span>';
-      html += `<div class="${cls} zone clickable ${flagged?'flagged':''} ${isFreeDoc?'free':''}" style="${bg?'background:'+bg:''}" onclick="zoneClick('${blk.id}')" title="${esc(tip)}">${numHtml}${blk.html}<span class="qmark">● question posée</span>${badge}</div>`;
+      else if(locked) badge = '<span class="locked-badge" title="Plus de jeton disponible">verrouillé</span>';
+      else if(role === "student") badge = '<span class="cost-badge" title="Consomme 1 jeton">1 jeton</span>';
+      const zoneClass = [cls, "zone", "clickable", flagged?"flagged":"", isFree?"free":"", locked?"locked":""].filter(Boolean).join(" ");
+      const onclickAttr = locked ? '' : `onclick="zoneClick('${blk.id}')"`;
+      html += `<div class="${zoneClass}" style="${bg?'background:'+bg:''}" ${onclickAttr} title="${esc(tip)}">${numHtml}${blk.html}<span class="qmark">● question posée</span>${badge}</div>`;
     }
   });
   sheet.innerHTML = html;
@@ -1648,27 +1762,27 @@ function closeDoc(){
   activeBinomeForDoc = null;
 }
 
-function zoneClick(zoneId){
+async function zoneClick(zoneId){
   const data = DOCDATA[currentDoc];
   if(!data) return;
   const blk = data.blocks.find(x=>x.id===zoneId);
   if(!blk || !blk.help) return;
 
-  // ── Documents gratuits (DOC 1 : règles du jeu) : aide directe, pas de jeton consommé
-  if(FREE_DOCS.has(currentDoc)){
+  // ── Zone ou document gratuit : aide directe, pas de jeton consommé
+  if(isFreeZone(currentDoc, zoneId)){
     const b = role==="student" ? findBinome(myBinomeId) : null;
-    showHelp(blk, false, b);
+    showHelp(blk, false, b, /*isFree*/true);
     return;
   }
 
-  // ── Mode élève : toute aide consomme un jeton (pas de consultation libre)
+  // ── Mode élève : consommation directe (plus de gel)
   if(role === "student"){
     const me = findBinome(myBinomeId);
     if(!me) return;
     const key = `${currentDoc}:${zoneId}`;
     // Aide déjà vue : réafficher sans reconsommer
     if(me.flags && me.flags[key]){
-      showHelp(blk, false, me);
+      showHelp(blk, false, me, /*isFree*/false);
       toast("Aide déjà vue. Aucun nouveau jeton consommé.");
       return;
     }
@@ -1677,43 +1791,23 @@ function zoneClick(zoneId){
       toast("Vous n'avez plus de jeton d'aide. Débrouillez-vous en relisant le document.");
       return;
     }
-    // Sinon : ouvrir le gel pour confirmation avant consommation
-    pendingHelp = { binomeId: myBinomeId, docN: currentDoc, zoneId, blk };
-    $("gelOverlay").classList.add("show");
+    // Consommer le jeton et flagger la zone immédiatement
+    const newTokens = (me.tokens||0) - 1;
+    await db.ref(ACTIVE+"/binomes/"+myBinomeId).update({
+      tokens: newTokens,
+      [`flags/${key}`]: true
+    });
+    // Recharger l'état pour showHelp
+    const updatedMe = Object.assign({}, me, {tokens: newTokens, flags: Object.assign({}, me.flags||{}, {[key]: true})});
+    showHelp(blk, true, updatedMe, /*isFree*/false);
     return;
   }
 
   // ── Mode prof : consultation libre (jamais de consommation depuis l'UI prof)
-  showHelp(blk, false, null);
+  showHelp(blk, false, null, /*isFree*/false);
 }
 
-function cancelGel(){
-  $("gelOverlay").classList.remove("show");
-  pendingHelp = null;
-}
-async function confirmGel(){
-  $("gelOverlay").classList.remove("show");
-  if(!pendingHelp) return;
-  const b = findBinome(pendingHelp.binomeId);
-  let consumed = false;
-  if(b && (b.tokens||0)>0){
-    const newTokens = b.tokens - 1;
-    const flagKey = `${pendingHelp.docN}:${pendingHelp.zoneId}`;
-    await db.ref(ACTIVE+"/binomes/"+pendingHelp.binomeId).update({
-      tokens: newTokens,
-      [`flags/${flagKey}`]: true
-    });
-    consumed = true;
-  }
-  if(consumed){
-    const zoneEl = document.querySelector(`.zone[onclick*="zoneClick('${pendingHelp.zoneId}')"]`);
-    if(zoneEl) zoneEl.classList.add("flagged");
-  }
-  showHelp(pendingHelp.blk, consumed, b);
-  pendingHelp = null;
-}
-
-function showHelp(blk, consumed, b){
+function showHelp(blk, consumed, b, isFree){
   const hp = $("help");
   $("helpFor").textContent = (b ? "Pour "+binomeName(b) : "Consultation");
   hp.querySelector(".t").textContent = blk.help.titre || "Aide";
@@ -1723,9 +1817,9 @@ function showHelp(blk, consumed, b){
   h += `<div class="seg didac"><span class="k">Comment fallait-il s'y prendre</span><p>${blk.help.didac}</p></div>`;
   $("helpBody").innerHTML = h;
   let foot;
-  if(FREE_DOCS.has(currentDoc)) foot = "Aide gratuite (document de règles). Aucun jeton consommé.";
-  else if(consumed) foot = "Une aide vient d'être utilisée. Il en reste "+((b?b.tokens-1:0))+" pour ce binôme.";
-  else if(b) foot = "Aide déjà vue par ce binôme (aucun nouveau jeton consommé). Il en reste "+(b.tokens||0)+".";
+  if(isFree) foot = "Aide gratuite. Aucun jeton consommé.";
+  else if(consumed) foot = "Une aide vient d'être utilisée. Il vous en reste "+(b?(b.tokens||0):0)+".";
+  else if(b) foot = "Aide déjà vue (aucun nouveau jeton consommé). Il vous en reste "+(b.tokens||0)+".";
   else foot = "Consultation libre (aucun jeton consommé).";
   $("helpFoot").textContent = foot;
   hp.classList.add("show");
@@ -1735,12 +1829,11 @@ function closeHelp(){ $("help").classList.remove("show"); }
 // ─────────── Raccourcis clavier ───────────
 document.addEventListener("keydown", (e)=>{
   if(e.key === "Escape"){
-    const overs = ["gelOverlay","confirmOverlay","editOverlay","menuOverlay","pwdOverlay"];
+    const overs = ["confirmOverlay","editOverlay","menuOverlay","pwdOverlay"];
     for(const id of overs){
       const o = $(id);
       if(o && o.classList.contains("show")){
-        if(id==="gelOverlay") cancelGel();
-        else if(id==="confirmOverlay") closeConfirm();
+        if(id==="confirmOverlay") closeConfirm();
         else if(id==="editOverlay") closeEdit();
         else if(id==="menuOverlay") closeMenu();
         else if(id==="pwdOverlay") closePwdOverlay();
@@ -1753,7 +1846,6 @@ document.addEventListener("keydown", (e)=>{
   if(e.key === "Enter"){
     if($("editOverlay").classList.contains("show")){ e.preventDefault(); saveEdit(); return; }
     if($("confirmOverlay").classList.contains("show")){ e.preventDefault(); const cy=$("confirmYes"); if(cy) cy.click(); return; }
-    if($("gelOverlay").classList.contains("show")){ e.preventDefault(); confirmGel(); return; }
     if($("pwdOverlay").classList.contains("show")){ e.preventDefault(); confirmChangePassword(); return; }
     // Welcome screen : Entrée valide login
     if($("screenWelcome").classList.contains("show")){
@@ -1765,16 +1857,772 @@ document.addEventListener("keydown", (e)=>{
 });
 
 // Clic hors overlay
+
+// ═══════════════════════════════════════════════════════
+//  MODE DÉBAT — « Le triomphe simien »
+//  Poules · tirage POUR/CONTRE · chrono · grille d'écoute · scores
+// ═══════════════════════════════════════════════════════
+const DEBAT = ACTIVE + "/debat";
+const DBG_PHASES = [
+  {label:"Introduction", camp:"pour"},
+  {label:"Introduction", camp:"contre"},
+  {label:"Réplique",     camp:"pour"},
+  {label:"Réplique",     camp:"contre"},
+  {label:"Conclusion",   camp:"pour"},
+  {label:"Conclusion",   camp:"contre"}
+];
+const DBG_DEFAULT_DUR = [90,90,60,60,30,30];
+const DBG_CRITS = [
+  {k:"clarte",   lib:"Clarté de la thèse"},
+  {k:"args",     lib:"Qualité des arguments"},
+  {k:"exemples", lib:"Qualité des exemples"},
+  {k:"replique", lib:"Qualité de la réplique"}
+];
+
+// ─────────── Activation / sortie ───────────
+function enterDebatMode(){
+  closeMenu();
+  db.ref(DEBAT).update({active:true});
+  toast("Mode débat activé. Les tablettes des élèves basculent automatiquement.");
+}
+function exitDebatMode(){
+  askConfirm("Quitter le mode débat et revenir au pilotage du plan de travail ?", function(){
+    db.ref(DEBAT).update({active:false});
+    toast("Retour au pilotage normal.");
+  });
+}
+
+// ─────────── Helpers données ───────────
+function debatData(){ return (sessionData && sessionData.debat) || {}; }
+function poulesObj(){ return debatData().poules || {}; }
+function scoresObj(){ return debatData().scores || {}; }
+function binomeIdsInPoules(){
+  const set=new Set();
+  Object.values(poulesObj()).forEach(function(p){ (p.binomes||[]).forEach(function(id){ set.add(id); }); });
+  return set;
+}
+function genRoundRobin(ids){
+  const m=[];
+  for(let i=0;i<ids.length;i++) for(let j=i+1;j<ids.length;j++){
+    m.push({id:uid(), a:ids[i], b:ids[j], played:false});
+  }
+  return m;
+}
+function speakerOf(cm, camp){ return (cm.campA===camp)?cm.binomeA:cm.binomeB; }
+
+// ─────────── Création / suppression de poule ───────────
+function createPouleFromUI(){
+  const name=($("dbgPouleName").value||"").trim();
+  const checked=Array.from(document.querySelectorAll(".dbg-pick:checked")).map(function(c){return c.value;});
+  if(checked.length<2){ toast("Sélectionnez au moins 2 binômes pour former une poule."); return; }
+  if(checked.length>4){ toast("Une poule compte 3 ou 4 binômes (2 minimum). Réduisez la sélection."); return; }
+  const pid=uid();
+  const poule={ id:pid, name:name||("Poule "+(Object.keys(poulesObj()).length+1)), binomes:checked, matches:genRoundRobin(checked) };
+  db.ref(DEBAT+"/poules/"+pid).set(poule).then(function(){ toast("Poule créée : "+poule.matches.length+" manche(s) générée(s)."); });
+}
+function deletePoule(pid){
+  askConfirm("Supprimer cette poule et ses manches ?", function(){ db.ref(DEBAT+"/poules/"+pid).remove(); });
+}
+
+// ─────────── Lancer / annuler une manche ───────────
+function startMatch(pid, mid){
+  const p=poulesObj()[pid]; if(!p) return;
+  const m=(p.matches||[]).find(function(x){return x.id===mid;}); if(!m) return;
+  loadMatch({type:"poule",pouleId:pid,matchId:mid}, m.a, m.b);
+}
+function cancelMatch(){
+  askConfirm("Fermer la manche en cours ?", function(){ db.ref(DEBAT+"/currentMatch").remove(); });
+}
+
+// ─────────── Tirage POUR / CONTRE animé ───────────
+let tirageSpinning=false;
+function doTirage(){
+  const cm=debatData().currentMatch; if(!cm||tirageSpinning) return;
+  ensureAudio();
+  tirageSpinning=true;
+  const el=$("tirageCamp");
+  if(!el){ tirageSpinning=false; return; }
+  el.classList.add("spin");
+  let flips=0;
+  const iv=setInterval(function(){
+    flips++;
+    const pour=flips%2===0;
+    el.textContent=pour?"POUR":"CONTRE";
+    el.className="tirage-camp spin "+(pour?"pour":"contre");
+  },120);
+  setTimeout(function(){
+    clearInterval(iv);
+    const aPour=Math.random()<0.5;
+    el.classList.remove("spin");
+    el.textContent=aPour?"POUR":"CONTRE";
+    el.className="tirage-camp "+(aPour?"pour":"contre");
+    beep(880,160);
+    db.ref(DEBAT+"/currentMatch").update({campA:(aPour?"pour":"contre"), campB:(aPour?"contre":"pour"), tirageAt:Date.now()});
+    tirageSpinning=false;
+  },2600);
+}
+
+// ─────────── Chronomètre ───────────
+function chronoStart(){
+  const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Tirez d'abord le camp POUR / CONTRE."); return; }
+  ensureAudio();
+  const dur=(cm.durations||DBG_DEFAULT_DUR)[0]*1000;
+  db.ref(DEBAT+"/currentMatch").update({chronoState:"running", chronoPhase:0, chronoEndsAt:Date.now()+dur});
+}
+function chronoPause(){
+  const cm=debatData().currentMatch; if(!cm||cm.chronoState!=="running")return;
+  db.ref(DEBAT+"/currentMatch").update({chronoState:"paused", chronoRemaining:Math.max(0,cm.chronoEndsAt-Date.now())});
+}
+function chronoResume(){
+  const cm=debatData().currentMatch; if(!cm||cm.chronoState!=="paused")return;
+  db.ref(DEBAT+"/currentMatch").update({chronoState:"running", chronoEndsAt:Date.now()+(cm.chronoRemaining||0)});
+}
+function chronoNext(){ advancePhase(debatData().currentMatch); }
+function advancePhase(cm){
+  cm=cm||debatData().currentMatch; if(!cm) return;
+  const next=(cm.chronoPhase||0)+1;
+  if(next>=DBG_PHASES.length){
+    db.ref(DEBAT+"/currentMatch").update({chronoState:"finished", chronoEndsAt:0, chronoRemaining:0});
+  } else {
+    const dur=(cm.durations||DBG_DEFAULT_DUR)[next]*1000;
+    db.ref(DEBAT+"/currentMatch").update({chronoPhase:next, chronoState:"running", chronoEndsAt:Date.now()+dur, chronoRemaining:0});
+  }
+}
+function setDuration(i,v){
+  const cm=debatData().currentMatch; if(!cm)return;
+  const dur=(cm.durations||DBG_DEFAULT_DUR).slice(); dur[i]=Math.max(5,parseInt(v,10)||DBG_DEFAULT_DUR[i]);
+  db.ref(DEBAT+"/currentMatch/durations").set(dur);
+}
+
+// ─────────── Horloge locale ───────────
+let debatClock=null;
+function ensureDebatClock(){ if(debatClock)return; debatClock=setInterval(debatClockTick,250); }
+function debatClockTick(){
+  const d=debatData(); if(!d.active) return;
+  const cm=d.currentMatch; if(!cm) return;
+  if(cm.chronoState==="running"){
+    const rem=cm.chronoEndsAt-Date.now();
+    if(rem<=0 && role==="prof"){ advancePhase(cm); return; }
+  }
+  paintCountdown(cm);
+}
+function fmt(ms){ if(ms<0)ms=0; const s=Math.ceil(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+function remainingMs(cm){
+  if(cm.chronoState==="running")return Math.max(0,cm.chronoEndsAt-Date.now());
+  if(cm.chronoState==="paused")return Math.max(0,cm.chronoRemaining||0);
+  if(cm.chronoState==="finished")return 0;
+  return ((cm.durations||DBG_DEFAULT_DUR)[cm.chronoPhase||0])*1000;
+}
+function paintCountdown(cm){
+  cm=cm||debatData().currentMatch; if(!cm)return;
+  const rem=remainingMs(cm);
+  const txt=cm.chronoState==="finished"?"Terminé":fmt(rem);
+  ["dbgCount","stdCount"].forEach(function(id){
+    const el=$(id); if(!el)return;
+    el.textContent=txt;
+    el.classList.toggle("warn", cm.chronoState==="running"&&rem<=10000&&rem>3000);
+    el.classList.toggle("over", cm.chronoState==="running"&&rem<=3000);
+  });
+}
+let lastBeepPhase=-1,lastBeepState="",lastBeepMatch=null;
+function maybeBeep(cm){
+  if(!cm){ lastBeepPhase=-1;lastBeepState="";lastBeepMatch=null; return; }
+  if(cm.id!==lastBeepMatch){ lastBeepMatch=cm.id;lastBeepPhase=-1;lastBeepState=""; }
+  const ph=cm.chronoPhase||0, st=cm.chronoState||"";
+  if(st==="running"&&lastBeepPhase!==-1&&ph!==lastBeepPhase){ beep(660,170); }
+  if(st==="finished"&&lastBeepState!=="finished"){ beep(440,430); }
+  lastBeepPhase=ph; lastBeepState=st;
+}
+
+// ─────────── Audio ───────────
+let audioCtx=null;
+function ensureAudio(){ try{ if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended")audioCtx.resume(); }catch(e){} }
+function beep(freq,ms){
+  try{
+    ensureAudio(); if(!audioCtx)return;
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.frequency.value=freq||660; o.type="sine"; o.connect(g); g.connect(audioCtx.destination);
+    const t=audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.25,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+(ms||180)/1000);
+    o.start(t); o.stop(t+(ms||180)/1000+0.03);
+  }catch(e){}
+}
+
+// ═══════════ PHASE 2 — Grille d'écoute, scores ═══════════
+let specDraft=null, grilleSent={};
+function ensureSpecDraft(mid){
+  if(!specDraft||specDraft.matchId!==mid){
+    specDraft={matchId:mid, pour:{clarte:3,args:3,exemples:3,replique:3,meilleur:""}, contre:{clarte:3,args:3,exemples:3,replique:3,meilleur:""}};
+  }
+}
+function specSet(camp,k,v){ ensureSpecDraft(specDraft?specDraft.matchId:null); specDraft[camp][k]=(k==="meilleur")?v:parseInt(v,10); const el=$("sv_"+camp+"_"+k); if(el)el.textContent=v; }
+function submitGrille(){
+  const cm=debatData().currentMatch; if(!cm)return;
+  ensureSpecDraft(cm.id);
+  db.ref(DEBAT+"/grilleEcoute/"+cm.id+"/"+myBinomeId).set({pour:specDraft.pour, contre:specDraft.contre, at:Date.now()})
+   .then(function(){ grilleSent[cm.id]=true; toast("Vos notes ont été envoyées au professeur. Merci !"); lastStudentSig=""; renderDebatStudent(); });
+}
+
+let profDraft=null;
+function ensureProfDraft(mid){
+  if(!profDraft||profDraft.matchId!==mid){
+    profDraft={matchId:mid, pour:[3,3,3,3], contre:[3,3,3,3], comment:""};
+  }
+}
+function profSet(camp,i,v){ ensureProfDraft(profDraft?profDraft.matchId:null); profDraft[camp][i]=parseInt(v,10); const el=$("pv_"+camp+"_"+i); if(el)el.textContent=v; }
+function profComment(v){ ensureProfDraft(profDraft?profDraft.matchId:null); profDraft.comment=v; }
+
+function sum4(a){ return (a||[]).reduce(function(x,y){return x+(parseInt(y,10)||0);},0); }
+function aggregateCamp(mid, camp, profArr){
+  const profNote=sum4(profArr); // /20
+  const grille=(debatData().grilleEcoute||{})[mid]||{};
+  const notes=[];
+  Object.keys(grille).forEach(function(sid){
+    const g=grille[sid]; if(!g||!g[camp])return;
+    const c=g[camp];
+    notes.push((c.clarte||0)+(c.args||0)+(c.exemples||0)+(c.replique||0));
+  });
+  const moy=notes.length?(notes.reduce(function(a,b){return a+b;},0)/notes.length):null;
+  const score=(moy===null)?profNote:Math.round(((profNote*2+moy)/3)*10)/10;
+  return {profNote:profNote, moy:(moy===null?null:Math.round(moy*10)/10), nb:notes.length, score:score};
+}
+function clotureManche(){
+  const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Aucune manche à clôturer."); return; }
+  ensureProfDraft(cm.id);
+  const aggP=aggregateCamp(cm.id,"pour",profDraft.pour);
+  const aggC=aggregateCamp(cm.id,"contre",profDraft.contre);
+  const scorePour=aggP.score, scoreContre=aggC.score;
+  let gagnant=scorePour>scoreContre?"pour":(scoreContre>scorePour?"contre":"nul");
+  const binomePour=speakerOf(cm,"pour"), binomeContre=speakerOf(cm,"contre");
+  let gagnantBinome=gagnant==="pour"?binomePour:(gagnant==="contre"?binomeContre:null);
+  const origin=cm.origin||{type:"poule",pouleId:cm.pouleId,matchId:cm.id};
+  if(origin.type==="final" && gagnant==="nul"){ gagnantBinome=bestSeed(binomePour,binomeContre); gagnant=(gagnantBinome===binomePour?"pour":"contre"); }
+  // matches
+  db.ref(DEBAT+"/matches/"+cm.id).set({
+    binomeA:cm.binomeA, binomeB:cm.binomeB, campA:cm.campA, campB:cm.campB,
+    profPour:profDraft.pour, profContre:profDraft.contre, comment:profDraft.comment||"",
+    scorePour:scorePour, scoreContre:scoreContre, gagnant:gagnant, gagnantBinome:gagnantBinome,
+    nbSpect:aggP.nb, terminatedAt:Date.now()
+  });
+  // scores cumulés
+  const sc=JSON.parse(JSON.stringify(scoresObj()));
+  function upd(bid, score, issue){
+    const s=sc[bid]||{manches:0,victoires:0,defaites:0,cumul:0};
+    s.manches=(s.manches||0)+1; s.cumul=Math.round(((s.cumul||0)+score)*10)/10;
+    if(issue==="V")s.victoires=(s.victoires||0)+1; else if(issue==="D")s.defaites=(s.defaites||0)+1;
+    sc[bid]=s;
+  }
+  upd(binomePour, scorePour, gagnant==="pour"?"V":(gagnant==="contre"?"D":"N"));
+  upd(binomeContre, scoreContre, gagnant==="contre"?"V":(gagnant==="pour"?"D":"N"));
+  db.ref(DEBAT+"/scores").set(sc);
+  // avancement selon l'origine de la manche
+  if(origin.type==="poule"){
+    const p=poulesObj()[origin.pouleId];
+    if(p){
+      const matches=(p.matches||[]).map(function(m){ return m.id===origin.matchId?Object.assign({},m,{played:true,scorePour:scorePour,scoreContre:scoreContre}):m; });
+      db.ref(DEBAT+"/poules/"+origin.pouleId+"/matches").set(matches);
+    }
+  } else if(origin.type==="final"){
+    advanceBracket(origin, gagnantBinome, scorePour, scoreContre);
+  }
+  // résultat affiché
+  db.ref(DEBAT+"/currentMatch").update({chronoState:"finished", result:{scorePour:scorePour, scoreContre:scoreContre, gagnant:gagnant, gagnantBinome:gagnantBinome, nbSpect:aggP.nb}});
+  beep(990,260);
+  toast("Manche clôturée. Le classement est mis à jour.");
+}
+
+// ─────────── Classement d'une poule ───────────
+function classementRows(poule){
+  const sc=scoresObj();
+  const rows=(poule.binomes||[]).map(function(bid){
+    const s=sc[bid]||{manches:0,victoires:0,defaites:0,cumul:0};
+    return {bid:bid, nom:binomeName(findBinome(bid))||"?", v:s.victoires||0, d:s.defaites||0, m:s.manches||0, cumul:s.cumul||0};
+  });
+  rows.sort(function(a,b){ return (b.v-a.v)|| (b.cumul-a.cumul); });
+  return rows;
+}
+
+// ─────────── Rendu prof : pilotage du débat ───────────
+let lastProfSig="";
+function profSignature(d,cm){
+  const sc=scoresObj(); let ssum=0; Object.keys(sc).forEach(function(k){const s=sc[k];ssum+=(s.manches||0)*7+(s.victoires||0)*3+Math.round(s.cumul||0);});
+  const pkey=Object.keys(poulesObj()).map(function(pid){return pid+":"+((poulesObj()[pid].matches||[]).filter(function(m){return m.played;}).length);}).join(",");
+  const cmkey=cm?(cm.id+"|"+(cm.tirageAt?1:0)+"|"+cm.campA+"|"+cm.chronoState+"|"+(cm.chronoPhase||0)+"|"+(cm.result?1:0)):"none";
+  const tt=debatData().tournament||{}; const brr=debatData().bracket;
+  const bsig=brr&&brr.rounds?brr.rounds.map(function(rd){return rd.matches.filter(function(m){return m.played;}).length;}).join("-"):"nb";
+  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig;
+}
+function renderDebatProf(){
+  ensureDebatClock();
+  const d=debatData(); const cm=d.currentMatch||null;
+  maybeBeep(cm);
+  const sig=profSignature(d,cm);
+  if(sig===lastProfSig){ paintCountdown(cm); return; }
+  lastProfSig=sig;
+
+  const poules=poulesObj();
+  const inPoule=binomeIdsInPoules();
+  const allB=Object.entries((sessionData.binomes)||{}).sort(function(a,b){return (a[1].joinedAt||0)-(b[1].joinedAt||0);});
+  const free=allB.filter(function(e){return !inPoule.has(e[0]);});
+
+  let h='';
+  h+='<div class="dbg-bar"><h2>🎙 Pilotage du débat — Le triomphe simien</h2>'
+   + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
+  const tour=d.tournament||{};
+  if(tour.phase==="termine" && tour.champion){
+    h+='<div class="dbg-result" style="margin-bottom:14px"><div class="win" style="font-size:1.5rem">🏆 '+esc(binomeName(findBinome(tour.champion))||"?")+' remporte le tournoi !</div></div>';
+  }
+  h+='<div class="dbg-grid">';
+
+  // Colonne gauche : poules + classement
+  h+='<div class="dbg-card"><h3>Les poules</h3>';
+  h+='<div style="margin-bottom:10px"><button class="dbg-btn" style="width:100%" onclick="generateTournament()" title="Répartit automatiquement tous les binômes connectés en poules équilibrées, génère toutes les manches et charge la première. Tu n\'as plus rien à organiser.">⚡ Générer le tournoi automatiquement</button><div style="font-size:.76rem;color:var(--muted);margin-top:4px">Recommandé. Tu peux aussi composer une poule à la main ci-dessous.</div></div>';
+  h+='<div style="margin-bottom:12px">';
+  h+='<input id="dbgPouleName" class="dbg-input" placeholder="Nom de la poule (ex : Poule A)" title="Donne un nom à la poule. Laisse vide pour une numérotation automatique.">';
+  if(free.length===0){
+    h+='<div style="color:var(--muted);font-size:.85rem;font-style:italic">Tous les binômes connectés sont déjà placés dans une poule. (Pour la finale, crée une poule avec les binômes qualifiés.)</div>';
+  } else {
+    h+='<div class="dbg-chk">';
+    free.forEach(function(e){ h+='<label title="Cocher pour ajouter ce binôme à la nouvelle poule."><input type="checkbox" class="dbg-pick" value="'+e[0]+'"> '+esc(binomeName(e[1])||"(sans nom)")+'</label>'; });
+    h+='</div>';
+    h+='<button class="dbg-btn" onclick="createPouleFromUI()" title="Crée une poule avec les binômes cochés et génère tous les matchs (chacun affronte tous les autres).">+ Créer la poule (round-robin)</button>';
+  }
+  h+='</div>';
+  const pentries=Object.entries(poules);
+  if(pentries.length===0){
+    h+='<div style="color:var(--muted);font-style:italic;font-size:.88rem">Aucune poule pour l\'instant. Sélectionne des binômes ci-dessus et crée ta première poule.</div>';
+  } else {
+    pentries.forEach(function(pe){
+      const pid=pe[0], p=pe[1];
+      h+='<div class="dbg-poule"><div class="ph"><span class="pn">'+esc(p.name||"Poule")+'</span>'
+       + '<button class="dbg-btn ghost" onclick="deletePoule(\''+pid+'\')" title="Supprimer cette poule et toutes ses manches.">Supprimer</button></div>';
+      (p.matches||[]).forEach(function(m){
+        const na=esc(binomeName(findBinome(m.a))||"?"), nb=esc(binomeName(findBinome(m.b))||"?");
+        const isCur=cm&&cm.id===m.id;
+        h+='<div class="dbg-match"><span>'+na+' <span class="vs">vs</span> '+nb+'</span><span class="res">';
+        if(m.played){ h+='<span class="dbg-played">✓ '+(m.scorePour!=null?(m.scorePour+'–'+m.scoreContre):'jouée')+'</span>'; }
+        if(isCur){ h+='<span style="color:var(--gold);font-size:.82rem">● en cours</span>'; }
+        else if(!m.played){ h+='<button class="dbg-btn" onclick="startMatch(\''+pid+'\',\''+m.id+'\')" title="Charger cette manche : tirage du camp puis chronomètre.">Lancer</button>'; }
+        else { h+='<button class="dbg-btn ghost" onclick="startMatch(\''+pid+'\',\''+m.id+'\')" title="Rejouer cette manche.">Rejouer</button>'; }
+        h+='</span></div>';
+      });
+      // classement
+      const rows=classementRows(p);
+      if(rows.some(function(r){return r.m>0;})){
+        h+='<table class="dbg-class"><thead><tr><th class="nm" style="text-align:left">Classement</th><th title="Victoires">V</th><th title="Défaites">D</th><th title="Manches jouées">J</th><th title="Cumul des scores obtenus (sur 20 par manche)">Cumul</th></tr></thead><tbody>';
+        rows.forEach(function(r,i){ h+='<tr><td class="nm">'+(i+1)+'. '+esc(r.nom)+'</td><td>'+r.v+'</td><td>'+r.d+'</td><td>'+r.m+'</td><td>'+r.cumul+'</td></tr>'; });
+        h+='</tbody></table>';
+      }
+      h+='</div>';
+    });
+  }
+  // Tableau de la phase finale
+  const _br=debatData().bracket;
+  if(_br && _br.rounds){
+    h+='<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:10px"><div style="font-weight:700;color:var(--gold);margin-bottom:6px">Phase finale</div>';
+    _br.rounds.forEach(function(rd){
+      h+='<div style="margin-bottom:8px"><div style="font-size:.8rem;color:var(--muted);margin-bottom:3px">'+esc(rd.name)+'</div>';
+      rd.matches.forEach(function(m){
+        const na=m.a?esc(binomeName(findBinome(m.a))||"?"):'<span style="color:var(--muted)">à venir</span>';
+        const nb=m.b?esc(binomeName(findBinome(m.b))||"?"):'<span style="color:var(--muted)">à venir</span>';
+        const w=m.winner?esc(binomeName(findBinome(m.winner))||""):"";
+        h+='<div class="dbg-match" style="padding:3px 0"><span>'+na+' <span class="vs">vs</span> '+nb+'</span><span class="res">'+(m.played?('<span class="dbg-played">🏆 '+w+'</span>'):"")+'</span></div>';
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+
+  // Colonne droite : manche en cours
+  h+='<div class="dbg-card"><h3>Manche en cours</h3>';
+  if(!cm){
+    h+='<div style="color:var(--muted);font-style:italic;font-size:.88rem;padding:14px 0">Aucune manche chargée. Clique « Lancer » sur une manche d\'une poule.</div>';
+  } else {
+    const na=esc(binomeName(findBinome(cm.binomeA))||"?"), nb=esc(binomeName(findBinome(cm.binomeB))||"?");
+    h+='<div style="text-align:center;margin-bottom:10px;color:var(--ink2)">'+na+' &nbsp;<span style="color:var(--muted)">contre</span>&nbsp; '+nb+'</div>';
+    h+='<div class="tirage-stage">';
+    if(!cm.tirageAt){
+      h+='<div class="tirage-binome" id="tirageBinome">'+na+' tire son camp…</div>';
+      h+='<div class="tirage-camp" id="tirageCamp">?</div>';
+      h+='<button class="dbg-btn" onclick="doTirage()" title="Lance une animation de tirage au sort qui désigne le camp (POUR ou CONTRE) de chaque binôme.">🎲 Tirer POUR / CONTRE</button>';
+    } else {
+      h+='<div style="display:flex;gap:10px;justify-content:center;margin-bottom:6px">'
+       + '<div style="flex:1"><div style="font-size:.82rem;color:var(--muted)">'+na+'</div><div class="tirage-camp '+cm.campA+'" style="font-size:1.6rem">'+(cm.campA==="pour"?"POUR":"CONTRE")+'</div></div>'
+       + '<div style="flex:1"><div style="font-size:.82rem;color:var(--muted)">'+nb+'</div><div class="tirage-camp '+cm.campB+'" style="font-size:1.6rem">'+(cm.campB==="pour"?"POUR":"CONTRE")+'</div></div></div>';
+    }
+    h+='</div>';
+    if(cm.tirageAt && !cm.result){
+      const ph=cm.chronoPhase||0, P=DBG_PHASES[ph];
+      const speakerName=esc(binomeName(findBinome(speakerOf(cm,P.camp)))||"?");
+      h+='<div class="dbg-chrono" style="margin-top:8px">';
+      h+='<div class="phase">'+esc(P.label)+' · <span style="color:'+(P.camp==="pour"?"var(--accent2)":"var(--done)")+'">'+(P.camp==="pour"?"POUR":"CONTRE")+'</span></div>';
+      h+='<div class="who">'+speakerName+' parle</div>';
+      h+='<div class="dbg-count" id="dbgCount">'+(cm.chronoState==="finished"?"Terminé":fmt(remainingMs(cm)))+'</div>';
+      h+='<div class="dbg-ctrls">';
+      if(cm.chronoState==="idle"){ h+='<button class="dbg-btn" onclick="chronoStart()" title="Démarrer le chronomètre de la première phase.">▶ Démarrer</button>'; }
+      if(cm.chronoState==="running"){ h+='<button class="dbg-btn ghost" onclick="chronoPause()" title="Mettre le chrono en pause.">⏸ Pause</button>'; }
+      if(cm.chronoState==="paused"){ h+='<button class="dbg-btn" onclick="chronoResume()" title="Reprendre le chrono.">▶ Reprendre</button>'; }
+      if(cm.chronoState!=="finished"){ h+='<button class="dbg-btn ghost" onclick="chronoNext()" title="Passer immédiatement à la phase suivante.">⏭ Phase suivante</button>'; }
+      h+='<button class="dbg-btn ghost" onclick="cancelMatch()" style="color:var(--accent2)" title="Fermer la manche sans la noter.">✕ Fermer</button>';
+      h+='</div>';
+      h+='<div class="std-phaserow">';
+      DBG_PHASES.forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+esc(q.label.slice(0,4))+' '+(q.camp==="pour"?"P":"C")+'</span>'; });
+      h+='</div>';
+      if(cm.chronoState==="idle"){
+        h+='<div class="dbg-dur"><span>Durées (s) :</span>';
+        (cm.durations||DBG_DEFAULT_DUR).forEach(function(d2,i){ h+='<input type="number" min="5" value="'+d2+'" onchange="setDuration('+i+',this.value)" title="Durée en secondes de la phase '+(i+1)+'.">'; });
+        h+='</div>';
+      }
+      // Bloc notation prof à la fin du chrono
+      if(cm.chronoState==="finished"){
+        ensureProfDraft(cm.id);
+        h+='<div class="dbg-note"><div style="font-weight:700;color:var(--gold);margin-bottom:8px">Noter la manche (1 à 5 par critère)</div>';
+        ["pour","contre"].forEach(function(camp){
+          const bn=esc(binomeName(findBinome(speakerOf(cm,camp)))||"?");
+          h+='<div class="dbg-campcol '+camp+'"><div class="ct">'+(camp==="pour"?"POUR":"CONTRE")+' — '+bn+'</div>';
+          DBG_CRITS.forEach(function(cr,i){
+            const v=profDraft[camp][i];
+            h+='<div class="dbg-crit"><span>'+cr.lib+'</span><span><input type="range" min="1" max="5" value="'+v+'" oninput="profSet(\''+camp+'\','+i+',this.value)" title="Note '+cr.lib.toLowerCase()+' de 1 à 5."> <span class="val" id="pv_'+camp+'_'+i+'">'+v+'</span></span></div>';
+          });
+          h+='</div>';
+        });
+        h+='<textarea class="dbg-ta" placeholder="Commentaire (facultatif)" oninput="profComment(this.value)" title="Commentaire libre sur la manche.">'+esc(profDraft.comment||"")+'</textarea>';
+        h+='<div style="text-align:center;margin-top:10px"><button class="dbg-btn" onclick="clotureManche()" title="Calcule le score final (note prof comptée double + moyenne des spectateurs), désigne le gagnant et met à jour le classement.">✓ Clôturer la manche</button></div>';
+        h+='<div style="font-size:.78rem;color:var(--muted);text-align:center;margin-top:6px">Score final par camp = (note prof × 2 + moyenne spectateurs) ÷ 3, sur 20.</div>';
+        h+='</div>';
+      }
+      h+='</div>';
+    }
+    // Résultat
+    if(cm.result){
+      const r=cm.result;
+      const winName = r.gagnantBinome ? esc(binomeName(findBinome(r.gagnantBinome))||"?") : null;
+      h+='<div class="dbg-result"><div style="color:var(--muted);font-size:.85rem">POUR '+r.scorePour+' &nbsp;—&nbsp; '+r.scoreContre+' CONTRE</div>';
+      h+='<div class="win">'+(winName?("🏆 "+winName+" l\'emporte"):"Égalité")+'</div>';
+      h+='<div style="font-size:.8rem;color:var(--muted)">'+r.nbSpect+' spectateur(s) ont voté</div>';
+      h+='<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="dbg-btn" onclick="nextMatchAuto()" title="Charge automatiquement la manche suivante (ou génère la phase finale quand les poules sont finies).">Manche suivante →</button><button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer sans charger la manche suivante.">Fermer</button></div></div>';
+    }
+  }
+  h+='</div></div>';
+  $("debatPanel").innerHTML=h;
+}
+
+// ─────────── Rendu élève ───────────
+let lastStudentSig="";
+function renderDebatStudent(){
+  ensureDebatClock();
+  const d=debatData(); const cm=d.currentMatch||null;
+  maybeBeep(cm);
+  const wrap=$("studentDebatView"); if(!wrap)return;
+  let mode="wait";
+  if(cm){
+    if(cm.binomeA===myBinomeId||cm.binomeB===myBinomeId) mode="debat"; else mode="spec";
+  }
+  // signature : le spectateur ne re-render PAS sur changement de phase (préserve la grille)
+  let sig;
+  if(mode==="debat") sig=cm.id+"|"+(cm.tirageAt?1:0)+"|debat|"+(cm.chronoPhase||0)+"|"+cm.chronoState+"|"+(cm.result?1:0);
+  else if(mode==="spec") sig=cm.id+"|"+(cm.tirageAt?1:0)+"|spec|"+(grilleSent[cm.id]?1:0)+"|"+(cm.result?1:0);
+  else sig="wait";
+  if(sig===lastStudentSig){ paintCountdown(cm); return; }
+  lastStudentSig=sig;
+
+  if(mode==="wait"){
+    wrap.innerHTML='<div class="std-wait">🎙 Le débat va commencer.<br>Écoutez le professeur : il va annoncer les poules et lancer les manches.</div>';
+    return;
+  }
+  const na=esc(binomeName(findBinome(cm.binomeA))||"?"), nb=esc(binomeName(findBinome(cm.binomeB))||"?");
+
+  if(mode==="debat"){
+    const amA=cm.binomeA===myBinomeId;
+    if(!cm.tirageAt){
+      wrap.innerHTML='<div class="std-wait">⚔️ C\'est votre manche !<br>Vous affrontez <b>'+(amA?nb:na)+'</b>.<br><br>Le professeur va tirer votre camp au sort…</div>';
+      return;
+    }
+    const myCamp=amA?cm.campA:cm.campB, oppName=amA?nb:na;
+    if(cm.result){
+      const won = cm.result.gagnantBinome===myBinomeId;
+      const nul = !cm.result.gagnantBinome;
+      wrap.innerHTML='<div class="std-debat"><div class="std-bigcamp '+myCamp+'">'+(nul?"Égalité":(won?"🏆 Vous gagnez cette manche !":"Manche perdue"))+'</div><div class="std-vs">Notez votre manche dans le carnet de bord (DOC 10) : qu\'allez-vous améliorer ?</div></div>';
+      return;
+    }
+    const ph=cm.chronoPhase||0, P=DBG_PHASES[ph], iSpeak=(myCamp===P.camp);
+    let h='<div class="std-debat">';
+    h+='<div class="std-bigcamp '+myCamp+'">Vous êtes '+(myCamp==="pour"?"POUR":"CONTRE")+'</div>';
+    h+='<div class="std-vs">Vous affrontez <b>'+oppName+'</b></div>';
+    h+='<div class="dbg-chrono"><div class="phase">'+esc(P.label)+' · '+(P.camp==="pour"?"POUR":"CONTRE")+'</div>';
+    h+='<div class="who" style="color:'+(iSpeak?"var(--gold)":"var(--muted)")+'">'+(iSpeak?"À vous de parler !":"Écoutez l\'adversaire")+'</div>';
+    h+='<div class="dbg-count" id="stdCount">'+(cm.chronoState==="finished"?"Terminé":fmt(remainingMs(cm)))+'</div>';
+    h+='<div class="std-phaserow">';
+    DBG_PHASES.forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+(q.camp==="pour"?"POUR":"CONTRE")+'</span>'; });
+    h+='</div></div></div>';
+    wrap.innerHTML=h;
+    return;
+  }
+
+  // spectateur
+  let h='<div class="std-debat std-grille">';
+  h+='<div class="std-vs" style="margin-bottom:8px">👀 <b>'+na+'</b> contre <b>'+nb+'</b></div>';
+  h+='<div class="dbg-chrono" style="margin-bottom:8px"><div class="dbg-count" id="stdCount" style="font-size:2.4rem">'+(cm.tirageAt?(cm.chronoState==="finished"?"Terminé":fmt(remainingMs(cm))):"…")+'</div></div>';
+  if(cm.result){
+    h+='<div class="std-sent">Manche terminée. Merci pour vos votes !</div></div>';
+    wrap.innerHTML=h; return;
+  }
+  if(grilleSent[cm.id]){
+    h+='<div class="std-sent">✓ Vos notes ont été envoyées.<br>Continuez d\'observer : repérez le meilleur argument.</div></div>';
+    wrap.innerHTML=h; return;
+  }
+  if(!cm.tirageAt){
+    h+='<div class="std-wait">Tirage du camp en cours…</div></div>';
+    wrap.innerHTML=h; return;
+  }
+  ensureSpecDraft(cm.id);
+  h+='<div style="font-size:.85rem;color:var(--ink2);margin-bottom:8px">Notez chaque camp (1 à 5), puis envoyez à la fin de la manche.</div>';
+  // un bloc par camp (POUR puis CONTRE), avec le binôme qui le défend
+  ["pour","contre"].forEach(function(camp){
+    const bn=esc(binomeName(findBinome(speakerOf(cm,camp)))||"?");
+    h+='<div class="dbg-campcol '+camp+'"><div class="ct">'+(camp==="pour"?"POUR":"CONTRE")+' — '+bn+'</div>';
+    DBG_CRITS.forEach(function(cr){
+      const v=specDraft[camp][cr.k];
+      h+='<div class="dbg-crit"><span>'+cr.lib+'</span><span><input type="range" min="1" max="5" value="'+v+'" oninput="specSet(\''+camp+'\',\''+cr.k+'\',this.value)" title="Note '+cr.lib.toLowerCase()+' de 1 à 5."> <span class="val" id="sv_'+camp+'_'+cr.k+'">'+v+'</span></span></div>';
+    });
+    h+='<textarea class="dbg-ta" placeholder="Meilleur argument entendu (facultatif)" maxlength="200" oninput="specSet(\''+camp+'\',\'meilleur\',this.value)" title="Le meilleur argument que tu as entendu pour ce camp.">'+esc(specDraft[camp].meilleur||"")+'</textarea>';
+    h+='</div>';
+  });
+  h+='<div style="text-align:center;margin-top:6px"><button class="dbg-btn" onclick="submitGrille()" title="Envoie tes notes au professeur. Elles compteront dans le score de la manche.">📨 Envoyer mes notes</button></div>';
+  h+='</div>';
+  wrap.innerHTML=h;
+}
+
+// ═══════════ PHASE 3 — Tournoi automatique ═══════════
+// Répartition optimale des poules (tailles 3-4, vise 4 poules quand possible)
+function planPools(n){
+  if(n<2) return [];
+  if(n<=2) return [n];
+  const lo=Math.ceil(n/4), hi=Math.floor(n/3);
+  let P;
+  if(lo>hi){ P=Math.ceil(n/4); }
+  else if(4>=lo && 4<=hi){ P=4; }
+  else { P=(Math.abs(4-lo)<=Math.abs(4-hi))?lo:hi; }
+  if(P<1)P=1;
+  const base=Math.floor(n/P), rem=n%P, sizes=[];
+  for(let i=0;i<P;i++) sizes.push(base+(i<rem?1:0));
+  return sizes;
+}
+// Génération automatique du tournoi (poules + manches) puis chargement de la 1re manche
+function generateTournament(){
+  const bs=Object.keys((sessionData.binomes)||{});
+  if(bs.length<2){ toast("Il faut au moins 2 binômes connectés pour générer le tournoi."); return; }
+  const doIt=function(){
+    archiveCurrentTournament();
+    const arr=bs.slice();
+    for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=arr[i];arr[i]=arr[j];arr[j]=t; }
+    const sizes=planPools(arr.length);
+    const poules={}; let k=0;
+    sizes.forEach(function(sz,idx){
+      const ids=arr.slice(k,k+sz); k+=sz; const pid=uid();
+      poules[pid]={id:pid, name:"Poule "+String.fromCharCode(65+idx), binomes:ids, matches:genRoundRobin(ids)};
+    });
+    db.ref(DEBAT).update({poules:poules, bracket:null, tournament:{phase:"poules",generatedAt:Date.now()}, scores:null, currentMatch:null});
+    const firstPid=Object.keys(poules)[0], firstM=poules[firstPid].matches[0];
+    if(firstM) loadMatch({type:"poule",pouleId:firstPid,matchId:firstM.id}, firstM.a, firstM.b);
+    toast("Tournoi généré : "+sizes.length+" poule(s). Première manche prête.");
+  };
+  if(Object.keys(poulesObj()).length>0) askConfirm("Régénérer le tournoi ? Les poules, scores et manches actuels seront remplacés.", doIt);
+  else doIt();
+}
+// Chargement générique d'une manche
+function loadMatch(origin, a, b){
+  db.ref(DEBAT+"/currentMatch").set({
+    id: origin.type==="poule"?origin.matchId:("F"+origin.r+"_"+origin.i),
+    origin:origin, pouleId: origin.pouleId||null,
+    binomeA:a, binomeB:b, campA:null, campB:null, tirageAt:null,
+    durations:DBG_DEFAULT_DUR.slice(),
+    chronoState:"idle", chronoPhase:0, chronoEndsAt:0, chronoRemaining:0
+  });
+  toast("Manche chargée. Lancez le tirage POUR / CONTRE.");
+}
+// Phase de poules terminée ?
+function poolPhaseComplete(){
+  const ps=Object.values(poulesObj()); if(ps.length===0) return false;
+  return ps.every(function(p){ return (p.matches||[]).every(function(m){ return m.played; }); });
+}
+// Prochaine manche de poule (équilibrage + évite l'enchaînement immédiat)
+function nextPoolMatch(){
+  const poules=poulesObj(); const played={};
+  Object.values(poules).forEach(function(p){ (p.matches||[]).forEach(function(m){ if(m.played){ played[m.a]=(played[m.a]||0)+1; played[m.b]=(played[m.b]||0)+1; } }); });
+  const last=debatData().currentMatch; const lastBs=last?[last.binomeA,last.binomeB]:[];
+  const cands=[];
+  Object.entries(poules).forEach(function(pe){ (pe[1].matches||[]).forEach(function(m){ if(!m.played) cands.push({pid:pe[0],mid:m.id,a:m.a,b:m.b}); }); });
+  if(cands.length===0) return null;
+  function sc(c){ let s=(played[c.a]||0)+(played[c.b]||0); if(lastBs.indexOf(c.a)>=0||lastBs.indexOf(c.b)>=0) s+=100; return s; }
+  cands.sort(function(x,y){ return sc(x)-sc(y); });
+  return cands[0];
+}
+// Bracket à élimination : ordre de têtes de série, byes aux mieux classés
+function pow2ge(q){ let s=1; while(s<q)s*=2; return s; }
+function seedOrder(size){ let r=[1,2]; while(r.length<size){ const m=r.length*2+1, nr=[]; r.forEach(function(s){ nr.push(s); nr.push(m-s); }); r=nr; } return r; }
+function roundName(teams){ if(teams<=2)return "Finale"; if(teams===4)return "Demi-finale"; if(teams===8)return "Quart de finale"; return Math.floor(teams/2)+"èmes de finale"; }
+function buildBracket(seeds){
+  const Q=seeds.length, size=pow2ge(Q), order=seedOrder(size), rounds=[];
+  const r0=[];
+  for(let i=0;i<size;i+=2){
+    const sA=order[i], sB=order[i+1];
+    const a=(sA<=Q)?seeds[sA-1]:null, b=(sB<=Q)?seeds[sB-1]:null;
+    let winner=null, played=false;
+    if(a&&!b){winner=a;played=true;} else if(b&&!a){winner=b;played=true;}
+    r0.push({a:a,b:b,winner:winner,played:played});
+  }
+  rounds.push({name:roundName(r0.length*2), matches:r0});
+  let prev=r0;
+  while(prev.length>1){ const cnt=prev.length/2, ms=[]; for(let i=0;i<cnt;i++) ms.push({a:null,b:null,winner:null,played:false}); rounds.push({name:roundName(cnt*2), matches:ms}); prev=ms; }
+  propagateBracket(rounds);
+  return rounds;
+}
+function propagateBracket(rounds){
+  for(let r=0;r<rounds.length-1;r++){
+    rounds[r].matches.forEach(function(m,i){
+      if(m.played && m.winner){
+        const nr=rounds[r+1].matches[Math.floor(i/2)];
+        if(i%2===0) nr.a=m.winner; else nr.b=m.winner;
+      }
+    });
+  }
+}
+function nextFinalMatch(rounds){
+  for(let r=0;r<rounds.length;r++) for(let i=0;i<rounds[r].matches.length;i++){ const m=rounds[r].matches[i]; if(m.a&&m.b&&!m.played) return {r:r,i:i}; }
+  return null;
+}
+function championOf(rounds){ const last=rounds[rounds.length-1]; const m=last.matches[0]; return (m&&m.played)?m.winner:null; }
+function bestSeed(x,y){ const seeds=(debatData().bracket&&debatData().bracket.seeds)||[]; const ix=seeds.indexOf(x), iy=seeds.indexOf(y); if(ix<0)return y; if(iy<0)return x; return ix<=iy?x:y; }
+function advanceBracket(origin, winner, sp, sc){
+  const br=debatData().bracket; if(!br) return;
+  const rounds=JSON.parse(JSON.stringify(br.rounds));
+  const mm=rounds[origin.r].matches[origin.i];
+  mm.winner=winner; mm.played=true; mm.scorePour=sp; mm.scoreContre=sc;
+  propagateBracket(rounds);
+  db.ref(DEBAT+"/bracket/rounds").set(rounds);
+}
+// Génère la phase finale à partir des 1ers de poule (seedés par classement général)
+function generateFinalPhase(){
+  const poules=poulesObj(), qualifiers=[];
+  Object.values(poules).forEach(function(p){ const rows=classementRows(p); if(rows[0]) qualifiers.push(rows[0].bid); });
+  const sc=scoresObj();
+  qualifiers.sort(function(a,b){ const sa=sc[a]||{},sb=sc[b]||{}; return ((sb.victoires||0)-(sa.victoires||0))||((sb.cumul||0)-(sa.cumul||0)); });
+  if(qualifiers.length<=1){ db.ref(DEBAT+"/tournament").update({phase:"termine", champion:qualifiers[0]||null}); return null; }
+  const rounds=buildBracket(qualifiers);
+  db.ref(DEBAT+"/bracket").set({seeds:qualifiers, rounds:rounds});
+  db.ref(DEBAT+"/tournament").update({phase:"finale"});
+  toast("Phase de poules terminée. Phase finale générée !");
+  return {seeds:qualifiers, rounds:rounds};
+}
+// Enchaînement automatique : poule suivante → phase finale → champion
+function nextMatchAuto(){
+  if(!poolPhaseComplete()){
+    const nm=nextPoolMatch();
+    if(nm){ loadMatch({type:"poule",pouleId:nm.pid,matchId:nm.mid}, nm.a, nm.b); return; }
+  }
+  let br=debatData().bracket, rounds=br?br.rounds:null;
+  if(!rounds){ const built=generateFinalPhase(); if(!built){ db.ref(DEBAT+"/currentMatch").remove(); return; } rounds=built.rounds; }
+  const nf=nextFinalMatch(rounds);
+  if(nf){ const m=rounds[nf.r].matches[nf.i]; loadMatch({type:"final",r:nf.r,i:nf.i}, m.a, m.b); return; }
+  const champ=championOf(rounds);
+  db.ref(DEBAT+"/currentMatch").remove();
+  db.ref(DEBAT+"/tournament").update({phase:"termine", champion:champ});
+  toast(champ?"🏆 Tournoi terminé !":"Tournoi terminé.");
+}
+
+// ═══════════ PHASE 4 — Archives de tournois (par code de session) ═══════════
+const TARCH = ROOT + "/tournamentArchives";
+let loadedArchives = {};
+
+// Archive l'état du tournoi en cours sous le code de la session active
+function archiveCurrentTournament(){
+  const d=debatData();
+  const poules=d.poules;
+  if(!poules || Object.keys(poules).length===0) return false; // rien à archiver
+  const code=(sessionData && sessionData.code) || "—";
+  const ts=Date.now();
+  const bsnap={};
+  Object.entries((sessionData.binomes)||{}).forEach(function(e){ bsnap[e[0]]=(e[1].names||[]); });
+  const champ=(d.tournament && d.tournament.champion) || null;
+  const entry={
+    code:code, sessionId:(sessionData && sessionData.id)||null, archivedAt:ts,
+    nbBinomes:Object.keys((sessionData.binomes)||{}).length,
+    champion:champ, championName:(champ?(binomeName(findBinome(champ))||null):null),
+    binomes:bsnap,
+    tournament:d.tournament||null, poules:poules, scores:d.scores||null, bracket:d.bracket||null
+  };
+  db.ref(TARCH+"/"+code+"/"+ts).set(entry);
+  return true;
+}
+
+function openArchives(){
+  db.ref(TARCH).once("value").then(function(snap){
+    loadedArchives=snap.val()||{};
+    renderArchivesList();
+    $("archivesOverlay").classList.add("show");
+  });
+}
+function closeArchives(){ $("archivesOverlay").classList.remove("show"); }
+
+function renderArchivesList(){
+  const body=$("archivesBody"); if(!body)return;
+  let h="";
+  if(Object.keys(poulesObj()).length>0){
+    h+='<div style="margin-bottom:14px"><button class="dbg-btn" onclick="manualArchive()" title="Enregistre une copie du tournoi en cours dans les archives, sous le code de la session.">📥 Archiver le tournoi en cours</button></div>';
+  }
+  const codes=Object.keys(loadedArchives);
+  if(codes.length===0){ h+='<div style="color:var(--muted);font-style:italic">Aucune archive pour le moment.</div>'; body.innerHTML=h; return; }
+  codes.sort();
+  codes.forEach(function(code){
+    const entries=Object.entries(loadedArchives[code]||{}).sort(function(a,b){ return (b[1].archivedAt||0)-(a[1].archivedAt||0); });
+    if(entries.length===0) return;
+    h+='<div style="margin-bottom:14px"><div style="font-weight:700;color:var(--gold);margin-bottom:6px">Session '+esc(code)+'</div>';
+    entries.forEach(function(en){
+      const ts=en[0], e=en[1];
+      let dt; try{ dt=new Date(e.archivedAt||parseInt(ts,10)).toLocaleString("fr-FR"); }catch(x){ dt=String(ts); }
+      const issue=e.championName?("🏆 "+esc(e.championName)):"en cours";
+      h+='<div class="dbg-match" style="padding:6px 0;flex-wrap:wrap"><span>'+esc(dt)+' · '+(e.nbBinomes||0)+' binômes · '+issue+'</span><span class="res">'
+       + '<button class="dbg-btn ghost" onclick="restoreTournament(\''+code+'\',\''+ts+'\')" title="Recharge ce tournoi comme tournoi actif. Le tournoi en cours sera d\'abord archivé.">Restaurer</button>'
+       + '<button class="dbg-btn ghost" style="color:var(--accent2)" onclick="deleteTournamentArchive(\''+code+'\',\''+ts+'\')" title="Supprimer définitivement cette archive.">Suppr.</button>'
+       + '</span></div>';
+    });
+    h+='</div>';
+  });
+  body.innerHTML=h;
+}
+function manualArchive(){
+  if(archiveCurrentTournament()){ toast("Tournoi archivé sous le code "+((sessionData&&sessionData.code)||"—")+"."); openArchives(); }
+  else toast("Aucun tournoi à archiver.");
+}
+function restoreTournament(code,ts){
+  const e=loadedArchives[code] && loadedArchives[code][ts]; if(!e)return;
+  askConfirm("Restaurer ce tournoi ? Le tournoi en cours (s'il existe) sera d'abord archivé.", function(){
+    archiveCurrentTournament();
+    db.ref(DEBAT).update({poules:e.poules||null, scores:e.scores||null, bracket:e.bracket||null, tournament:e.tournament||{phase:"poules"}, currentMatch:null});
+    closeArchives();
+    toast("Tournoi restauré (session "+esc(code)+").");
+  });
+}
+function deleteTournamentArchive(code,ts){
+  askConfirm("Supprimer définitivement cette archive ?", function(){
+    db.ref(TARCH+"/"+code+"/"+ts).remove().then(function(){ openArchives(); });
+  });
+}
+
 function closeOnBackdrop(overlayId, closeFn){
   const o = $(overlayId);
   if(!o) return;
   o.addEventListener("click", (e)=>{ if(e.target===o) closeFn(); });
 }
-closeOnBackdrop("gelOverlay", cancelGel);
 closeOnBackdrop("confirmOverlay", closeConfirm);
 closeOnBackdrop("editOverlay", closeEdit);
 closeOnBackdrop("menuOverlay", closeMenu);
 closeOnBackdrop("pwdOverlay", closePwdOverlay);
+closeOnBackdrop("archivesOverlay", closeArchives);
 
 $("confirmYes").addEventListener("click", ()=>{
   if(confirmAction) confirmAction();
