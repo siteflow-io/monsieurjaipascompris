@@ -78,7 +78,10 @@ textarea{resize:vertical;min-height:120px}
 .score-info{flex:1;font-size:.88rem;color:var(--text-sub);line-height:1.8}
 .score-eleve{font-size:1rem;font-weight:700;color:var(--text)}
 /* Word grid */
-.word-grid{line-height:2.6;padding:8px 0}
+.word-grid{line-height:2.2;padding:8px 0;position:relative}
+.word-line-pulse{position:absolute;left:-6px;right:-6px;background:rgba(37,99,235,.10);border-radius:6px;pointer-events:none;z-index:0;transition:top .25s ease,height .25s ease;animation:linePulse 2s ease-in-out infinite}
+@keyframes linePulse{0%,100%{background:rgba(37,99,235,.08)}50%{background:rgba(37,99,235,.20)}}
+.word-grid>.word-btn,.word-grid>.extra-word,.word-grid>.insert-zone{position:relative;z-index:1}
 .word-btn{display:inline-block;padding:4px 6px;margin:3px 1px;border-radius:6px;font-size:1.1rem;line-height:1.5;cursor:pointer;border:2px solid transparent;background:transparent;color:var(--text);font-family:inherit;font-weight:400;transition:all .15s}
 .word-btn:hover{background:rgba(0,0,0,.04)}
 .word-btn.punct{padding:1px 2px;margin:0;font-size:.95rem}
@@ -2153,6 +2156,8 @@ function CorrEleve(p){
   var s4=useState(null),insertIdx=s4[0],setInsertIdx=s4[1];
   var s5=useState(""),insertWord=s5[0],setInsertWord=s5[1];
   var s6=useState(-1),lastTouched=s6[0],setLastTouched=s6[1];
+  var wordGridRef=React.useRef(null);
+  var sFs=useState(1),fontScale=sFs[0],setFontScale=sFs[1];
   var s7=useState(p.startFast||false),fastMode=s7[0],setFastMode=s7[1];
   var s8=useState(0),fastIdx=s8[0],setFastIdx=s8[1];
   var sSp=useState(getSpeechEnabled()),speechOn=sSp[0],_setSpeechOn=sSp[1];
@@ -2293,6 +2298,51 @@ function CorrEleve(p){
   // Coupe le son quand on sort du mode rapide
   React.useEffect(function(){return function(){stopSpeech()}},[]);
 
+  // Auto-shrink de la police du word-grid pour faire tenir le texte sans scroll
+  React.useEffect(function(){
+    if(fastMode)return;
+    var grid=wordGridRef.current;if(!grid)return;
+    // Mesure : on commence à 1rem et on réduit si nécessaire
+    // Hauteur disponible = viewport - position du grid - hauteur des boutons (~120px de marge)
+    function adjust(){
+      if(!wordGridRef.current)return;
+      var g=wordGridRef.current;
+      var rect=g.getBoundingClientRect();
+      var avail=window.innerHeight-rect.top-140; // marge pour boutons + padding
+      if(avail<200)avail=200;
+      // Reset to 1, measure
+      g.style.fontSize="1rem";
+      var actual=g.scrollHeight;
+      var scale=1;
+      if(actual>avail){
+        scale=Math.max(.6,avail/actual);
+      }
+      setFontScale(scale);
+    }
+    adjust();
+    window.addEventListener("resize",adjust);
+    return function(){window.removeEventListener("resize",adjust)};
+  },[fastMode,data.text,errors.length,extras.length]);
+
+  // Highlight pulsant de la ligne du dernier mot touché (mode texte)
+  React.useEffect(function(){
+    if(fastMode)return; // pas en mode rapide
+    var grid=wordGridRef.current;if(!grid)return;
+    var overlay=grid.querySelector('[data-line-overlay="1"]');
+    if(!overlay)return;
+    if(lastTouched<0){overlay.style.display="none";return}
+    var el=grid.querySelector('[data-word-idx="'+lastTouched+'"]');
+    if(!el){overlay.style.display="none";return}
+    // Position relative au word-grid
+    var gridRect=grid.getBoundingClientRect();
+    var elRect=el.getBoundingClientRect();
+    var top=elRect.top-gridRect.top-2;
+    var height=elRect.height+4;
+    overlay.style.display="block";
+    overlay.style.top=top+"px";
+    overlay.style.height=height+"px";
+  },[lastTouched,errors,extras,fastMode]);
+
   var fastModalContent=null;
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
@@ -2320,7 +2370,7 @@ function CorrEleve(p){
           h("div",{style:{height:4,background:"#e5e3dd",borderRadius:2,marginTop:4,overflow:"hidden"}},
             h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
         ),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"4px 8px"}},speechOn?"\ud83d\udd0a":"\ud83d\udd07"),
+        speechAvailable?h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?(isSpeaking?"rgba(43,108,203,.25)":"rgba(43,108,203,.12)"):"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,transition:"all .15s",fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio"+(isSpeaking?" \u2026":""):"\ud83d\udd07 Muet"):h("span",{style:{fontSize:".7rem",color:"#999"},title:"Web Speech API non disponible dans ce navigateur"},"\ud83d\udd07 \u2014"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
       ),
@@ -2447,13 +2497,16 @@ function CorrEleve(p){
     ),
     // Text
     h("div",{className:"card"},
-      h("div",{className:"word-grid"},display.map(function(d){
+      h("div",{className:"word-grid",ref:wordGridRef,style:{fontSize:(fontScale*1).toFixed(3)+"rem"}},
+        // Overlay pulsant de la ligne du dernier mot touché
+        h("div",{className:"word-line-pulse","data-line-overlay":"1",style:{display:"none"}}),
+        display.map(function(d){
         if(d.t==="ins")return h("span",{key:d.k,className:"insert-zone",onClick:function(){setInsertIdx(d.ai)}});
         if(d.t==="ex")return h("span",{key:d.k,className:"extra-word",onClick:function(){removeExtra(d.gi)},title:"Supprimer"},"+"+d.w);
         var cls="word-btn";if(isPunct(d.w))cls+=" punct";
         if(errMap[d.idx]==="G")cls+=" err-g";else if(errMap[d.idx]==="L")cls+=" err-l";else if(errMap[d.idx]==="M")cls+=" err-m";else if(errMap[d.idx]==="I")cls+=" err-i";else if(errMap[d.idx]==="P")cls+=" err-p";else if(errMap[d.idx]==="A")cls+=" err-a";
         if(d.idx===lastTouched)cls+=" last-touched";
-        return h("button",{key:d.k,className:cls,onClick:function(){clickWord(d.idx)}},d.w,errMap[d.idx]?h("sup",{style:{fontSize:9,marginLeft:2}},errMap[d.idx]):null);
+        return h("button",{key:d.k,"data-word-idx":d.idx,className:cls,onClick:function(){clickWord(d.idx)}},d.w,errMap[d.idx]?h("sup",{style:{fontSize:9,marginLeft:2}},errMap[d.idx]):null);
       }))
     ),
     h("div",{style:{display:"flex",gap:8,marginBottom:20}},
