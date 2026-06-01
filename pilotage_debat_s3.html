@@ -426,6 +426,17 @@
 .dbg-class th{color:var(--muted);font-weight:600}
 .dbg-class td.nm{text-align:left;color:var(--ink)}
 .std-sent{text-align:center;color:var(--done);font-weight:700;padding:14px;background:rgba(98,176,127,.08);border:1px solid var(--done);border-radius:12px;line-height:1.5}
+.vote-box{margin-top:8px;padding:7px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);font-size:.82rem}
+.vote-head{font-weight:700;color:var(--ink2);margin-bottom:2px}
+.vote-missing{color:var(--accent2);margin-top:2px}
+.vote-done{color:var(--done);margin-top:2px}
+.eval-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px}
+.eval-who{font-weight:700;margin-bottom:5px;font-size:.9rem;color:var(--ink)}
+.eval-row{font-size:.84rem;margin:3px 0;color:var(--ink2)}
+.eval-camp{display:inline-block;min-width:58px;text-align:center;font-weight:700;font-size:.7rem;padding:1px 6px;border-radius:6px;margin-right:6px}
+.eval-camp.pour{color:var(--accent2);border:1px solid var(--accent)}
+.eval-camp.contre{color:var(--done);border:1px solid var(--done)}
+.eval-cmt{font-size:.82rem;color:var(--ink2);font-style:italic;margin:3px 0 5px 4px}
 .std-grille .dbg-campcol{margin-bottom:10px}
 </style>
 
@@ -525,6 +536,7 @@
     <div id="studentOthersList"></div>
   </div>
   </div><!-- /studentPilotageWrap -->
+  <button id="studentCarnetBtn" class="dbg-btn ghost" style="display:none;margin:10px auto 0" onclick="openCarnetEleve()" title="Revoir toutes les évaluations que ton binôme a envoyées (figées).">📓 Mes évaluations</button>
   <div id="studentDebatView" style="display:none"></div>
   <footer>Tablette du binôme. Vos actions sont visibles en direct sur l'écran prof. Le passage à <b>« fait »</b> nécessite la validation du professeur.</footer>
 </div>
@@ -688,6 +700,32 @@
     <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:16px">Rangées par code de session.</p>
     <div id="archivesBody"></div>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeArchives()" title="Fermer.">Fermer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="evalDetailOverlay">
+  <div class="gelcard" style="text-align:left;max-width:600px;max-height:84vh;overflow:auto">
+    <h2 style="font-size:1.15rem;margin-bottom:12px;text-align:center">📋 Détail des évaluations</h2>
+    <div id="evalDetailBody"></div>
+    <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeEvalDetail()" title="Fermer.">Fermer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="carnetEleveOverlay">
+  <div class="gelcard" style="text-align:left;max-width:580px;max-height:84vh;overflow:auto">
+    <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Mes évaluations</h2>
+    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Tout ce que ton binôme a envoyé, figé.</p>
+    <div id="carnetEleveBody"></div>
+    <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeCarnetEleve()" title="Fermer.">Fermer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="carnetProfOverlay">
+  <div class="gelcard" style="text-align:left;max-width:600px;max-height:84vh;overflow:auto">
+    <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Carnets des évaluateurs</h2>
+    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Par binôme : tout ce qu'il a envoyé.</p>
+    <div id="carnetProfBody"></div>
+    <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeCarnetProf()" title="Fermer.">Fermer</button></div>
   </div>
 </div>
 
@@ -1311,9 +1349,10 @@ function renderStudent(){
   // ── Bascule mode débat ──
   {
     const _on=!!(sessionData.debat && sessionData.debat.active);
-    const _w=$("studentPilotageWrap"), _v=$("studentDebatView");
+    const _w=$("studentPilotageWrap"), _v=$("studentDebatView"), _cb=$("studentCarnetBtn");
     if(_w)_w.style.display=_on?"none":"";
     if(_v)_v.style.display=_on?"":"none";
+    if(_cb)_cb.style.display=_on?"":"none";
     if(_on){ studentRendered=true; renderDebatStudent(); return; }
   }
   // Détecter un refus prof récent (postérieur au dernier vu) — uniquement après le premier render
@@ -2011,6 +2050,7 @@ function debatClockTick(){
     if(rem<=0 && role==="prof"){ advancePhase(cm); return; }
   }
   paintCountdown(cm);
+  updateVoteStatus(d, cm);
 }
 function fmt(ms){ if(ms<0)ms=0; const s=Math.ceil(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
 function remainingMs(cm){
@@ -2058,12 +2098,19 @@ function beep(freq,ms){
 
 // ═══════════ PHASE 2 — Grille d'écoute, scores ═══════════
 let specDraft=null, grilleSent={};
+function binomeMembers(bid){
+  const b=findBinome(bid); const ns=(b&&b.names)||[];
+  const out=[]; ns.forEach(function(n,i){ if(n&&String(n).trim()!=="") out.push({idx:i,nom:n}); });
+  if(out.length===0) out.push({idx:0,nom:"(binôme)"});
+  return out;
+}
 function ensureSpecDraft(mid){
   if(!specDraft||specDraft.matchId!==mid){
-    specDraft={matchId:mid, pour:{clarte:3,args:3,exemples:3,replique:3,meilleur:""}, contre:{clarte:3,args:3,exemples:3,replique:3,meilleur:""}};
+    specDraft={matchId:mid, pour:{clarte:3,args:3,exemples:3,replique:3,meilleur:"",eleves:{}}, contre:{clarte:3,args:3,exemples:3,replique:3,meilleur:"",eleves:{}}};
   }
 }
 function specSet(camp,k,v){ ensureSpecDraft(specDraft?specDraft.matchId:null); specDraft[camp][k]=(k==="meilleur")?v:parseInt(v,10); const el=$("sv_"+camp+"_"+k); if(el)el.textContent=v; }
+function specSetEleve(camp,idx,v){ ensureSpecDraft(specDraft?specDraft.matchId:null); if(!specDraft[camp].eleves)specDraft[camp].eleves={}; specDraft[camp].eleves[idx]=parseInt(v,10); const el=$("sve_"+camp+"_"+idx); if(el)el.textContent=v; }
 function submitGrille(){
   const cm=debatData().currentMatch; if(!cm)return;
   ensureSpecDraft(cm.id);
@@ -2074,11 +2121,13 @@ function submitGrille(){
 let profDraft=null;
 function ensureProfDraft(mid){
   if(!profDraft||profDraft.matchId!==mid){
-    profDraft={matchId:mid, pour:[3,3,3,3], contre:[3,3,3,3], comment:""};
+    profDraft={matchId:mid, pour:[3,3,3,3], contre:[3,3,3,3], comment:"", elevesP:{}, elevesC:{}, ecP:{}, ecC:{}};
   }
 }
 function profSet(camp,i,v){ ensureProfDraft(profDraft?profDraft.matchId:null); profDraft[camp][i]=parseInt(v,10); const el=$("pv_"+camp+"_"+i); if(el)el.textContent=v; }
 function profComment(v){ ensureProfDraft(profDraft?profDraft.matchId:null); profDraft.comment=v; }
+function profSetEleve(camp,idx,v){ ensureProfDraft(profDraft?profDraft.matchId:null); const k=camp==="pour"?"elevesP":"elevesC"; if(!profDraft[k])profDraft[k]={}; profDraft[k][idx]=parseInt(v,10); const el=$("pve_"+camp+"_"+idx); if(el)el.textContent=v; }
+function profSetEleveC(camp,idx,v){ ensureProfDraft(profDraft?profDraft.matchId:null); const k=camp==="pour"?"ecP":"ecC"; if(!profDraft[k])profDraft[k]={}; profDraft[k][idx]=v; }
 
 function sum4(a){ return (a||[]).reduce(function(x,y){return x+(parseInt(y,10)||0);},0); }
 function aggregateCamp(mid, camp, profArr){
@@ -2094,6 +2143,26 @@ function aggregateCamp(mid, camp, profArr){
   const score=(moy===null)?profNote:Math.round(((profNote*2+moy)/3)*10)/10;
   return {profNote:profNote, moy:(moy===null?null:Math.round(moy*10)/10), nb:notes.length, score:score};
 }
+function aggregateEleves(mid, camp, profEleves, members){
+  const grille=(debatData().grilleEcoute||{})[mid]||{};
+  const res={};
+  members.forEach(function(mem){
+    const pn=(profEleves&&profEleves[mem.idx]!=null)?profEleves[mem.idx]:null;
+    const sn=[];
+    Object.keys(grille).forEach(function(sid){
+      const g=grille[sid]; if(!g||!g[camp]||!g[camp].eleves)return;
+      const v=g[camp].eleves[mem.idx]; if(v!=null)sn.push(v);
+    });
+    const moy=sn.length?(sn.reduce(function(a,b){return a+b;},0)/sn.length):null;
+    let score;
+    if(pn==null&&moy==null) score=null;
+    else if(moy==null) score=pn;
+    else if(pn==null) score=Math.round(moy*10)/10;
+    else score=Math.round(((pn*2+moy)/3)*10)/10;
+    res[mem.idx]={nom:mem.nom, profN:pn, moy:(moy==null?null:Math.round(moy*10)/10), nb:sn.length, score:score};
+  });
+  return res;
+}
 function clotureManche(){
   const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Aucune manche à clôturer."); return; }
   ensureProfDraft(cm.id);
@@ -2105,10 +2174,16 @@ function clotureManche(){
   let gagnantBinome=gagnant==="pour"?binomePour:(gagnant==="contre"?binomeContre:null);
   const origin=cm.origin||{type:"poule",pouleId:cm.pouleId,matchId:cm.id};
   if(origin.type==="final" && gagnant==="nul"){ gagnantBinome=bestSeed(binomePour,binomeContre); gagnant=(gagnantBinome===binomePour?"pour":"contre"); }
+  const memP=binomeMembers(binomePour), memC=binomeMembers(binomeContre);
+  const eleveScoresPour=aggregateEleves(cm.id,"pour",profDraft.elevesP,memP);
+  const eleveScoresContre=aggregateEleves(cm.id,"contre",profDraft.elevesC,memC);
   // matches
   db.ref(DEBAT+"/matches/"+cm.id).set({
     binomeA:cm.binomeA, binomeB:cm.binomeB, campA:cm.campA, campB:cm.campB,
     profPour:profDraft.pour, profContre:profDraft.contre, comment:profDraft.comment||"",
+    profElevesPour:profDraft.elevesP||{}, profElevesContre:profDraft.elevesC||{},
+    profEleveCommentPour:profDraft.ecP||{}, profEleveCommentContre:profDraft.ecC||{},
+    eleveScoresPour:eleveScoresPour, eleveScoresContre:eleveScoresContre,
     scorePour:scorePour, scoreContre:scoreContre, gagnant:gagnant, gagnantBinome:gagnantBinome,
     nbSpect:aggP.nb, terminatedAt:Date.now()
   });
@@ -2158,7 +2233,7 @@ function profSignature(d,cm){
   const cmkey=cm?(cm.id+"|"+(cm.tirageAt?1:0)+"|"+cm.campA+"|"+cm.chronoState+"|"+(cm.chronoPhase||0)+"|"+(cm.result?1:0)):"none";
   const tt=debatData().tournament||{}; const brr=debatData().bracket;
   const bsig=brr&&brr.rounds?brr.rounds.map(function(rd){return rd.matches.filter(function(m){return m.played;}).length;}).join("-"):"nb";
-  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig;
+  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig+"|"+(retoursVisibles()?1:0);
 }
 function renderDebatProf(){
   ensureDebatClock();
@@ -2175,7 +2250,7 @@ function renderDebatProf(){
 
   let h='';
   h+='<div class="dbg-bar"><h2>🎙 Pilotage du débat — Le triomphe simien</h2>'
-   + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
+   + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button><button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par binôme évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
   const tour=d.tournament||{};
   if(tour.phase==="termine" && tour.champion){
     h+='<div class="dbg-result" style="margin-bottom:14px"><div class="win" style="font-size:1.5rem">🏆 '+esc(binomeName(findBinome(tour.champion))||"?")+' remporte le tournoi !</div></div>';
@@ -2208,7 +2283,7 @@ function renderDebatProf(){
         const na=esc(binomeName(findBinome(m.a))||"?"), nb=esc(binomeName(findBinome(m.b))||"?");
         const isCur=cm&&cm.id===m.id;
         h+='<div class="dbg-match"><span>'+na+' <span class="vs">vs</span> '+nb+'</span><span class="res">';
-        if(m.played){ h+='<span class="dbg-played">✓ '+(m.scorePour!=null?(m.scorePour+'–'+m.scoreContre):'jouée')+'</span>'; }
+        if(m.played){ h+='<button class="dbg-btn ghost" style="padding:3px 9px" onclick="openEvalDetail(\''+m.id+'\')" title="Voir le détail des évaluations de cette manche.">📋 '+(m.scorePour!=null?(m.scorePour+'–'+m.scoreContre):'jouée')+'</button>'; }
         if(isCur){ h+='<span style="color:var(--gold);font-size:.82rem">● en cours</span>'; }
         else if(!m.played){ h+='<button class="dbg-btn" onclick="startMatch(\''+pid+'\',\''+m.id+'\')" title="Charger cette manche : tirage du camp puis chronomètre.">Lancer</button>'; }
         else { h+='<button class="dbg-btn ghost" onclick="startMatch(\''+pid+'\',\''+m.id+'\')" title="Rejouer cette manche.">Rejouer</button>'; }
@@ -2228,13 +2303,13 @@ function renderDebatProf(){
   const _br=debatData().bracket;
   if(_br && _br.rounds){
     h+='<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:10px"><div style="font-weight:700;color:var(--gold);margin-bottom:6px">Phase finale</div>';
-    _br.rounds.forEach(function(rd){
+    _br.rounds.forEach(function(rd,ri){
       h+='<div style="margin-bottom:8px"><div style="font-size:.8rem;color:var(--muted);margin-bottom:3px">'+esc(rd.name)+'</div>';
-      rd.matches.forEach(function(m){
+      rd.matches.forEach(function(m,mi){
         const na=m.a?esc(binomeName(findBinome(m.a))||"?"):'<span style="color:var(--muted)">à venir</span>';
         const nb=m.b?esc(binomeName(findBinome(m.b))||"?"):'<span style="color:var(--muted)">à venir</span>';
         const w=m.winner?esc(binomeName(findBinome(m.winner))||""):"";
-        h+='<div class="dbg-match" style="padding:3px 0"><span>'+na+' <span class="vs">vs</span> '+nb+'</span><span class="res">'+(m.played?('<span class="dbg-played">🏆 '+w+'</span>'):"")+'</span></div>';
+        h+='<div class="dbg-match" style="padding:3px 0"><span>'+na+' <span class="vs">vs</span> '+nb+'</span><span class="res">'+(m.played?('<button class="dbg-btn ghost" style="padding:2px 8px" onclick="openEvalDetail(\'F'+ri+'_'+mi+'\')" title="Voir le détail des évaluations de cette manche.">🏆 '+w+'</button>'):"")+'</span></div>';
       });
       h+='</div>';
     });
@@ -2278,6 +2353,7 @@ function renderDebatProf(){
       h+='<div class="std-phaserow">';
       DBG_PHASES.forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+esc(q.label.slice(0,4))+' '+(q.camp==="pour"?"P":"C")+'</span>'; });
       h+='</div>';
+      h+='<div id="voteStatusProf"></div>';
       if(cm.chronoState==="idle"){
         h+='<div class="dbg-dur"><span>Durées (s) :</span>';
         (cm.durations||DBG_DEFAULT_DUR).forEach(function(d2,i){ h+='<input type="number" min="5" value="'+d2+'" onchange="setDuration('+i+',this.value)" title="Durée en secondes de la phase '+(i+1)+'.">'; });
@@ -2293,6 +2369,13 @@ function renderDebatProf(){
           DBG_CRITS.forEach(function(cr,i){
             const v=profDraft[camp][i];
             h+='<div class="dbg-crit"><span>'+cr.lib+'</span><span><input type="range" min="1" max="5" value="'+v+'" oninput="profSet(\''+camp+'\','+i+',this.value)" title="Note '+cr.lib.toLowerCase()+' de 1 à 5."> <span class="val" id="pv_'+camp+'_'+i+'">'+v+'</span></span></div>';
+          });
+          binomeMembers(speakerOf(cm,camp)).forEach(function(mem){
+            const k=camp==="pour"?"elevesP":"elevesC", ck=camp==="pour"?"ecP":"ecC";
+            if(profDraft[k][mem.idx]==null)profDraft[k][mem.idx]=3;
+            const ev=profDraft[k][mem.idx];
+            h+='<div class="dbg-crit"><span>👤 '+esc(mem.nom)+'</span><span><input type="range" min="1" max="5" value="'+ev+'" oninput="profSetEleve(\''+camp+'\','+mem.idx+',this.value)" title="Note individuelle de '+esc(mem.nom)+'."> <span class="val" id="pve_'+camp+'_'+mem.idx+'">'+ev+'</span></span></div>';
+            h+='<input class="dbg-input" style="margin:2px 0 8px;font-size:.82rem" placeholder="Mot pour '+esc(mem.nom)+' (facultatif)" value="'+esc((profDraft[ck]&&profDraft[ck][mem.idx])||"")+'" oninput="profSetEleveC(\''+camp+'\','+mem.idx+',this.value)" title="Commentaire individuel adressé à '+esc(mem.nom)+'.">';
           });
           h+='</div>';
         });
@@ -2310,7 +2393,7 @@ function renderDebatProf(){
       h+='<div class="dbg-result"><div style="color:var(--muted);font-size:.85rem">POUR '+r.scorePour+' &nbsp;—&nbsp; '+r.scoreContre+' CONTRE</div>';
       h+='<div class="win">'+(winName?("🏆 "+winName+" l\'emporte"):"Égalité")+'</div>';
       h+='<div style="font-size:.8rem;color:var(--muted)">'+r.nbSpect+' spectateur(s) ont voté</div>';
-      h+='<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="dbg-btn" onclick="nextMatchAuto()" title="Charge automatiquement la manche suivante (ou génère la phase finale quand les poules sont finies).">Manche suivante →</button><button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer sans charger la manche suivante.">Fermer</button></div></div>';
+      h+='<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="openEvalDetail(\''+cm.id+'\')" title="Voir qui a évalué quoi : notes et commentaires de chaque évaluateur, et les tiens.">📋 Détail des évaluations</button><button class="dbg-btn" onclick="nextMatchAuto()" title="Charge automatiquement la manche suivante (ou génère la phase finale quand les poules sont finies).">Manche suivante →</button><button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer sans charger la manche suivante.">Fermer</button></div></div>';
     }
   }
   h+='</div></div>';
@@ -2330,8 +2413,8 @@ function renderDebatStudent(){
   }
   // signature : le spectateur ne re-render PAS sur changement de phase (préserve la grille)
   let sig;
-  if(mode==="debat") sig=cm.id+"|"+(cm.tirageAt?1:0)+"|debat|"+(cm.chronoPhase||0)+"|"+cm.chronoState+"|"+(cm.result?1:0);
-  else if(mode==="spec") sig=cm.id+"|"+(cm.tirageAt?1:0)+"|spec|"+(grilleSent[cm.id]?1:0)+"|"+(cm.result?1:0);
+  if(mode==="debat") sig=cm.id+"|"+(cm.tirageAt?1:0)+"|debat|"+(cm.chronoPhase||0)+"|"+cm.chronoState+"|"+(cm.result?1:0)+"|"+(retoursVisibles()?1:0);
+  else if(mode==="spec") sig=cm.id+"|"+(cm.tirageAt?1:0)+"|spec|"+(grilleSent[cm.id]?1:0)+"|"+(cm.result?1:0)+"|"+(retoursVisibles()?1:0);
   else sig="wait";
   if(sig===lastStudentSig){ paintCountdown(cm); return; }
   lastStudentSig=sig;
@@ -2352,8 +2435,26 @@ function renderDebatStudent(){
     if(cm.result){
       const won = cm.result.gagnantBinome===myBinomeId;
       const nul = !cm.result.gagnantBinome;
-      wrap.innerHTML='<div class="std-debat"><div class="std-bigcamp '+myCamp+'">'+(nul?"Égalité":(won?"🏆 Vous gagnez cette manche !":"Manche perdue"))+'</div><div class="std-vs">Notez votre manche dans le carnet de bord (DOC 10) : qu\'allez-vous améliorer ?</div></div>';
-      return;
+      let h='<div class="std-debat"><div class="std-bigcamp '+myCamp+'">'+(nul?"Égalité":(won?"🏆 Vous gagnez cette manche !":"Manche perdue"))+'</div>';
+      if(!retoursVisibles()){
+        h+='<div class="std-wait">Le professeur a mis les retours en pause. La séance continue.</div></div>';
+        wrap.innerHTML=h; return;
+      }
+      const MM=(debatData().matches||{})[cm.id]||{};
+      const myScore=myCamp==="pour"?MM.scorePour:MM.scoreContre;
+      h+='<div class="std-vs">Score de votre camp : <b>'+(myScore!=null?myScore:"–")+'/20</b></div>';
+      const es=myCamp==="pour"?MM.eleveScoresPour:MM.eleveScoresContre;
+      if(es){ h+='<div style="margin:6px 0">'; Object.keys(es).forEach(function(idx){ const e=es[idx]; h+='<div class="eval-row" style="justify-content:center">👤 '+esc(e.nom||"?")+' : <b>'+(e.score!=null?e.score:"–")+'/5</b></div>'; }); h+='</div>'; }
+      h+='<div style="font-weight:700;color:var(--ink2);margin:10px 0 4px;text-align:center">Commentaires reçus</div>';
+      let any=false;
+      if(MM.comment){ h+='<div class="eval-cmt">Professeur : « '+esc(MM.comment)+' »</div>'; any=true; }
+      const pc=myCamp==="pour"?MM.profEleveCommentPour:MM.profEleveCommentContre;
+      if(pc){ const mems=binomeMembers(myBinomeId); Object.keys(pc).forEach(function(idx){ if(pc[idx]){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; h+='<div class="eval-cmt">Professeur → 👤 '+esc(mem?mem.nom:idx)+' : « '+esc(pc[idx])+' »</div>'; any=true; } }); }
+      const GG=(debatData().grilleEcoute||{})[cm.id]||{};
+      Object.keys(GG).forEach(function(sid){ const c=GG[sid]&&GG[sid][myCamp]; if(c&&c.meilleur){ h+='<div class="eval-cmt">'+esc(binomeName(findBinome(sid))||"?")+' : « '+esc(c.meilleur)+' »</div>'; any=true; } });
+      if(!any) h+='<div style="color:var(--muted);font-style:italic;text-align:center">Aucun commentaire.</div>';
+      h+='</div>';
+      wrap.innerHTML=h; return;
     }
     const ph=cm.chronoPhase||0, P=DBG_PHASES[ph], iSpeak=(myCamp===P.camp);
     let h='<div class="std-debat">';
@@ -2365,6 +2466,7 @@ function renderDebatStudent(){
     h+='<div class="std-phaserow">';
     DBG_PHASES.forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+(q.camp==="pour"?"POUR":"CONTRE")+'</span>'; });
     h+='</div></div></div>';
+    h+='<div id="voteStatusStudent"></div>';
     wrap.innerHTML=h;
     return;
   }
@@ -2373,6 +2475,7 @@ function renderDebatStudent(){
   let h='<div class="std-debat std-grille">';
   h+='<div class="std-vs" style="margin-bottom:8px">👀 <b>'+na+'</b> contre <b>'+nb+'</b></div>';
   h+='<div class="dbg-chrono" style="margin-bottom:8px"><div class="dbg-count" id="stdCount" style="font-size:2.4rem">'+(cm.tirageAt?(cm.chronoState==="finished"?"Terminé":fmt(remainingMs(cm))):"…")+'</div></div>';
+  h+='<div id="voteStatusStudent"></div>';
   if(cm.result){
     h+='<div class="std-sent">Manche terminée. Merci pour vos votes !</div></div>';
     wrap.innerHTML=h; return;
@@ -2394,6 +2497,12 @@ function renderDebatStudent(){
     DBG_CRITS.forEach(function(cr){
       const v=specDraft[camp][cr.k];
       h+='<div class="dbg-crit"><span>'+cr.lib+'</span><span><input type="range" min="1" max="5" value="'+v+'" oninput="specSet(\''+camp+'\',\''+cr.k+'\',this.value)" title="Note '+cr.lib.toLowerCase()+' de 1 à 5."> <span class="val" id="sv_'+camp+'_'+cr.k+'">'+v+'</span></span></div>';
+    });
+    binomeMembers(speakerOf(cm,camp)).forEach(function(mem){
+      if(!specDraft[camp].eleves)specDraft[camp].eleves={};
+      if(specDraft[camp].eleves[mem.idx]==null)specDraft[camp].eleves[mem.idx]=3;
+      const ev=specDraft[camp].eleves[mem.idx];
+      h+='<div class="dbg-crit"><span>👤 '+esc(mem.nom)+'</span><span><input type="range" min="1" max="5" value="'+ev+'" oninput="specSetEleve(\''+camp+'\','+mem.idx+',this.value)" title="Note individuelle de '+esc(mem.nom)+' (1 à 5)."> <span class="val" id="sve_'+camp+'_'+mem.idx+'">'+ev+'</span></span></div>';
     });
     h+='<textarea class="dbg-ta" placeholder="Meilleur argument entendu (facultatif)" maxlength="200" oninput="specSet(\''+camp+'\',\'meilleur\',this.value)" title="Le meilleur argument que tu as entendu pour ce camp.">'+esc(specDraft[camp].meilleur||"")+'</textarea>';
     h+='</div>';
@@ -2621,6 +2730,176 @@ function deleteTournamentArchive(code,ts){
   });
 }
 
+// ═══════════ PHASE 5 — Détail des évaluations (transparence) ═══════════
+let curEvalMatch=null;
+function evalTot(o){ return o?((o.clarte||0)+(o.args||0)+(o.exemples||0)+(o.replique||0)):0; }
+function evalLine(o){
+  if(!o) return '<span style="color:var(--muted)">non noté</span>';
+  return "clarté "+(o.clarte||"–")+" · arg. "+(o.args||"–")+" · ex. "+(o.exemples||"–")+" · répl. "+(o.replique||"–")+" → <b>"+evalTot(o)+"/20</b>";
+}
+function eleveAggLine(sc){
+  if(!sc) return "";
+  let s="";
+  Object.keys(sc).forEach(function(idx){ const e=sc[idx]; s+='<div class="eval-row" style="margin-left:6px">👤 '+esc(e.nom||"?")+' : <b>'+(e.score!=null?e.score:"–")+'/5</b> <span style="color:var(--muted);font-size:.76rem">(toi '+(e.profN!=null?e.profN:"–")+' · spect. '+(e.moy!=null?e.moy:"–")+' ×'+(e.nb||0)+')</span></div>'; });
+  return s;
+}
+function profEleveLines(M){
+  let s="";
+  [["pour",M.profElevesPour,M.profEleveCommentPour,M.campA==="pour"?M.binomeA:M.binomeB],["contre",M.profElevesContre,M.profEleveCommentContre,M.campA==="pour"?M.binomeB:M.binomeA]].forEach(function(t){
+    const camp=t[0], notes=t[1]||{}, cmt=t[2]||{}, bid=t[3];
+    const mems=binomeMembers(bid);
+    Object.keys(notes).forEach(function(idx){
+      const mem=mems.filter(function(m){return m.idx==idx;})[0];
+      s+='<div class="eval-row" style="margin-left:4px"><span class="eval-camp '+camp+'" style="min-width:auto;padding:0 5px">'+(camp==="pour"?"P":"C")+'</span>👤 '+esc(mem?mem.nom:("élève "+idx))+' : <b>'+notes[idx]+'/5</b>'+(cmt[idx]?(' — <i>« '+esc(cmt[idx])+' »</i>'):'')+'</div>';
+    });
+  });
+  return s;
+}
+function openEvalDetail(mid){ curEvalMatch=mid; renderEvalDetail(); $("evalDetailOverlay").classList.add("show"); }
+function closeEvalDetail(){ $("evalDetailOverlay").classList.remove("show"); }
+function renderEvalDetail(){
+  const body=$("evalDetailBody"); if(!body) return;
+  const mid=curEvalMatch;
+  const M=(debatData().matches||{})[mid];
+  const G=(debatData().grilleEcoute||{})[mid]||{};
+  if(!M){ body.innerHTML='<div style="color:var(--muted);font-style:italic">Cette manche n\'a pas encore été clôturée.</div>'; return; }
+  const pourB=(M.campA==="pour")?M.binomeA:M.binomeB;
+  const contreB=(M.campA==="pour")?M.binomeB:M.binomeA;
+  const pourN=esc(binomeName(findBinome(pourB))||"?"), contreN=esc(binomeName(findBinome(contreB))||"?");
+  let h='';
+  h+='<div style="margin-bottom:12px;font-size:.9rem"><span style="color:var(--accent2);font-weight:700">POUR</span> : '+pourN+' &nbsp;·&nbsp; <span style="color:var(--done);font-weight:700">CONTRE</span> : '+contreN
+   + ' &nbsp;<span style="color:var(--muted)">(score '+M.scorePour+'–'+M.scoreContre+')</span></div>';
+  if(M.eleveScoresPour||M.eleveScoresContre){
+    h+='<div style="margin-bottom:12px;font-size:.85rem;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px"><div style="color:var(--ink2);font-weight:700;margin-bottom:4px">Notes individuelles (sur 5)</div>';
+    h+='<div style="color:var(--accent2);font-weight:600">POUR</div>'+eleveAggLine(M.eleveScoresPour);
+    h+='<div style="color:var(--done);font-weight:600;margin-top:4px">CONTRE</div>'+eleveAggLine(M.eleveScoresContre);
+    h+='</div>';
+  }
+  // Ton évaluation (prof)
+  const pp=M.profPour||[], pc=M.profContre||[];
+  h+='<div class="eval-card" style="border-color:var(--gold)"><div class="eval-who" style="color:var(--gold)">Ton évaluation (professeur)</div>';
+  h+='<div class="eval-row"><span class="eval-camp pour">POUR</span> '+evalLine({clarte:pp[0],args:pp[1],exemples:pp[2],replique:pp[3]})+'</div>';
+  h+='<div class="eval-row"><span class="eval-camp contre">CONTRE</span> '+evalLine({clarte:pc[0],args:pc[1],exemples:pc[2],replique:pc[3]})+'</div>';
+  if(M.comment){ h+='<div class="eval-cmt">« '+esc(M.comment)+' »</div>'; }
+  h+=profEleveLines(M);
+  h+='</div>';
+  // Évaluateurs (spectateurs)
+  const sids=Object.keys(G);
+  h+='<div style="font-weight:700;color:var(--ink2);margin:14px 0 6px">Évaluateurs (spectateurs) — '+sids.length+'</div>';
+  if(sids.length===0){ h+='<div style="color:var(--muted);font-style:italic">Aucun spectateur n\'a envoyé d\'évaluation pour cette manche.</div>'; }
+  sids.forEach(function(sid){
+    const g=G[sid]||{}; const nm=esc(binomeName(findBinome(sid))||"(binôme inconnu)");
+    h+='<div class="eval-card"><div class="eval-who">'+nm+'</div>';
+    h+='<div class="eval-row"><span class="eval-camp pour">POUR</span> '+evalLine(g.pour)+'</div>';
+    if(g.pour&&g.pour.meilleur){ h+='<div class="eval-cmt">meilleur argument POUR : « '+esc(g.pour.meilleur)+' »</div>'; }
+    h+='<div class="eval-row"><span class="eval-camp contre">CONTRE</span> '+evalLine(g.contre)+'</div>';
+    if(g.contre&&g.contre.meilleur){ h+='<div class="eval-cmt">meilleur argument CONTRE : « '+esc(g.contre.meilleur)+' »</div>'; }
+    ["pour","contre"].forEach(function(camp){
+      const c=g[camp]; if(!c||!c.eleves)return;
+      const bid=(M.campA===camp)?M.binomeA:M.binomeB; const mems=binomeMembers(bid);
+      Object.keys(c.eleves).forEach(function(idx){
+        const mem=mems.filter(function(m){return m.idx==idx;})[0];
+        h+='<div class="eval-cmt" style="margin-left:2px">👤 '+esc(mem?mem.nom:("él. "+idx))+' ('+(camp==="pour"?"POUR":"CONTRE")+') : <b>'+c.eleves[idx]+'/5</b></div>';
+      });
+    });
+    h+='</div>';
+  });
+  body.innerHTML=h;
+}
+
+// ═══════════ PHASE 6 — Retour aux évalués · interrupteur · carnets ═══════════
+function retoursVisibles(){ const d=debatData(); return d.retoursVisibles!==false; }
+function toggleRetours(){
+  const nv=!retoursVisibles();
+  db.ref(DEBAT).update({retoursVisibles:nv});
+  toast(nv?"Retours affichés aux élèves.":"Retours mis en pause (mode restreint). La séance continue.");
+}
+
+// ── Carnet de l'évaluateur — côté élève ──
+function openCarnetEleve(){ renderCarnetEleve(); $("carnetEleveOverlay").classList.add("show"); }
+function closeCarnetEleve(){ $("carnetEleveOverlay").classList.remove("show"); }
+function renderCarnetEleve(){
+  const body=$("carnetEleveBody"); if(!body)return;
+  const GE=debatData().grilleEcoute||{}, M=debatData().matches||{};
+  const mids=Object.keys(GE).filter(function(mid){ return GE[mid] && GE[mid][myBinomeId]; });
+  if(mids.length===0){ body.innerHTML='<div style="color:var(--muted);font-style:italic">Tu n\'as pas encore envoyé d\'évaluation. Elles apparaîtront ici, figées, au fur et à mesure.</div>'; return; }
+  mids.sort(function(a,b){ return (GE[a][myBinomeId].at||0)-(GE[b][myBinomeId].at||0); });
+  let h='';
+  mids.forEach(function(mid){
+    const g=GE[mid][myBinomeId], mm=M[mid]||{};
+    const na=esc(binomeName(findBinome(mm.binomeA))||"?"), nb=esc(binomeName(findBinome(mm.binomeB))||"?");
+    h+='<div class="eval-card"><div class="eval-who">'+na+' vs '+nb+'</div>';
+    ["pour","contre"].forEach(function(camp){
+      const c=g[camp]; if(!c)return;
+      h+='<div class="eval-row"><span class="eval-camp '+camp+'">'+(camp==="pour"?"POUR":"CONTRE")+'</span> '+evalLine(c)+'</div>';
+      if(c.eleves){ const bid=(mm.campA===camp)?mm.binomeA:mm.binomeB; const mems=binomeMembers(bid); Object.keys(c.eleves).forEach(function(idx){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; h+='<div class="eval-cmt" style="margin-left:2px">👤 '+esc(mem?mem.nom:("él. "+idx))+' : <b>'+c.eleves[idx]+'/5</b></div>'; }); }
+      if(c.meilleur){ h+='<div class="eval-cmt">meilleur argument : « '+esc(c.meilleur)+' »</div>'; }
+    });
+    h+='</div>';
+  });
+  body.innerHTML=h;
+}
+
+// ── Carnets des évaluateurs — côté prof (par binôme) ──
+function openCarnetProf(){ renderCarnetProf(); $("carnetProfOverlay").classList.add("show"); }
+function closeCarnetProf(){ $("carnetProfOverlay").classList.remove("show"); }
+function renderCarnetProf(){
+  const body=$("carnetProfBody"); if(!body)return;
+  const GE=debatData().grilleEcoute||{}, M=debatData().matches||{};
+  const byEv={};
+  Object.keys(GE).forEach(function(mid){ const subs=GE[mid]||{}; Object.keys(subs).forEach(function(sid){ (byEv[sid]=byEv[sid]||[]).push({mid:mid, g:subs[sid]}); }); });
+  const sids=Object.keys(byEv);
+  if(sids.length===0){ body.innerHTML='<div style="color:var(--muted);font-style:italic">Aucune évaluation envoyée pour l\'instant.</div>'; return; }
+  sids.sort(function(a,b){ return (binomeName(findBinome(a))||"").localeCompare(binomeName(findBinome(b))||""); });
+  let h='';
+  sids.forEach(function(sid){
+    const nm=esc(binomeName(findBinome(sid))||"(binôme inconnu)"), list=byEv[sid];
+    list.sort(function(a,b){ return (a.g.at||0)-(b.g.at||0); });
+    h+='<div class="eval-card"><div class="eval-who">'+nm+' — '+list.length+' évaluation(s)</div>';
+    list.forEach(function(it){
+      const mm=M[it.mid]||{};
+      const na=esc(binomeName(findBinome(mm.binomeA))||"?"), nb=esc(binomeName(findBinome(mm.binomeB))||"?");
+      h+='<div style="margin:6px 0 2px;font-size:.82rem;color:var(--muted)">'+na+' vs '+nb+'</div>';
+      ["pour","contre"].forEach(function(camp){
+        const c=it.g[camp]; if(!c)return;
+        h+='<div class="eval-row"><span class="eval-camp '+camp+'" style="min-width:auto;padding:0 5px">'+(camp==="pour"?"P":"C")+'</span> '+evalLine(c)+(c.meilleur?(' — <i>« '+esc(c.meilleur)+' »</i>'):'')+'</div>';
+      });
+    });
+    h+='</div>';
+  });
+  body.innerHTML=h;
+}
+
+// ═══════════ PHASE 7 — Participation des évaluateurs en temps réel ═══════════
+function voteState(d, cm){
+  const bin=(sessionData&&sessionData.binomes)||{};
+  const expected=Object.keys(bin).filter(function(b){ return b!==cm.binomeA && b!==cm.binomeB; });
+  const g=((d.grilleEcoute||{})[cm.id])||{};
+  const voted=expected.filter(function(b){ return !!g[b]; });
+  const missing=expected.filter(function(b){ return !g[b]; });
+  return {expected:expected, voted:voted, missing:missing};
+}
+function updateVoteStatus(d, cm){
+  const elP=$("voteStatusProf"), elS=$("voteStatusStudent");
+  const show = cm && cm.tirageAt && !cm.result;
+  if(!show){ if(elP)elP.innerHTML=""; if(elS)elS.innerHTML=""; return; }
+  const vs=voteState(d, cm); const n=vs.expected.length, k=vs.voted.length;
+  const nm=function(b){ return esc(binomeName(findBinome(b))||"?"); };
+  if(elP){
+    let h='<div class="vote-box"><div class="vote-head">📨 Évaluations reçues : <b>'+k+' / '+n+'</b></div>';
+    if(vs.missing.length) h+='<div class="vote-missing">En attente : '+vs.missing.map(nm).join(", ")+'</div>';
+    else if(n>0) h+='<div class="vote-done">Tous les binômes ont voté ✓</div>';
+    h+='</div>'; elP.innerHTML=h;
+  }
+  if(elS){
+    let h='<div class="vote-box"><div class="vote-head">📨 Évaluations : <b>'+k+' / '+n+'</b></div>';
+    if(vs.voted.length) h+='<div class="vote-done">Ont évalué : '+vs.voted.map(nm).join(" · ")+'</div>';
+    if(vs.missing.length) h+='<div class="vote-missing">En attente : '+vs.missing.map(nm).join(" · ")+'</div>';
+    else if(n>0) h+='<div class="vote-done">Tout le monde a évalué ✓</div>';
+    h+='</div>'; elS.innerHTML=h;
+  }
+}
+
 function closeOnBackdrop(overlayId, closeFn){
   const o = $(overlayId);
   if(!o) return;
@@ -2631,6 +2910,9 @@ closeOnBackdrop("editOverlay", closeEdit);
 closeOnBackdrop("menuOverlay", closeMenu);
 closeOnBackdrop("pwdOverlay", closePwdOverlay);
 closeOnBackdrop("archivesOverlay", closeArchives);
+closeOnBackdrop("evalDetailOverlay", closeEvalDetail);
+closeOnBackdrop("carnetEleveOverlay", closeCarnetEleve);
+closeOnBackdrop("carnetProfOverlay", closeCarnetProf);
 
 $("confirmYes").addEventListener("click", ()=>{
   if(confirmAction) confirmAction();
