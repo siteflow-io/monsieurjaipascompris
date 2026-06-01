@@ -304,6 +304,50 @@
   .conn-dot.ok{background:var(--done);box-shadow:0 0 6px var(--done)}
   .conn-dot.bad{background:var(--accent);box-shadow:0 0 6px var(--accent)}
 
+  /* ===== Zones cliquables des documents : signalétique claire ===== */
+  .zone.clickable{cursor:pointer;border:2px dashed rgba(220,171,85,.55)!important;position:relative;transition:all .15s ease}
+  .zone.clickable:hover{border-color:var(--gold)!important;background:rgba(220,171,85,.08)!important;box-shadow:0 4px 14px rgba(220,171,85,.25),inset 0 0 0 1px var(--gold)}
+  .zone.clickable:hover::before{content:"👆 cliquer pour de l'aide";position:absolute;top:-12px;left:14px;background:var(--gold);color:#1a1710;padding:2px 9px;border-radius:6px;font-size:.7rem;font-weight:700;letter-spacing:.3px;z-index:2}
+  .zone.clickable.flagged{border:2px solid var(--accent)!important;background:rgba(192,57,43,.04)!important}
+  .zone.clickable.flagged:hover::before{content:"👆 revoir l'aide (gratuit)"}
+  .cost-badge{position:absolute;top:6px;right:8px;background:var(--gold);color:#1a1710;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  .seen-badge{position:absolute;top:6px;right:8px;background:var(--done);color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase}
+  .free-badge{position:absolute;top:6px;right:8px;background:var(--done);color:#fff;font-size:.65rem;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:10px;text-transform:uppercase;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  /* Zones gratuites : bordure verte au lieu d'or, hover différencié */
+  .zone.clickable.free{border:2px dashed rgba(31,111,84,.55)!important}
+  .zone.clickable.free:hover{border-color:var(--done)!important;background:rgba(31,111,84,.07)!important;box-shadow:0 4px 14px rgba(31,111,84,.25),inset 0 0 0 1px var(--done)}
+  .zone.clickable.free:hover::before{content:"👆 cliquer pour de l'aide (gratuit)";background:var(--done);color:#fff}
+
+  /* ===== Jetons cliquables côté prof (remboursement) ===== */
+  .tkbtn.givable{cursor:pointer;transition:all .15s ease;border-radius:8px;padding:2px}
+  .tkbtn.givable:hover{background:rgba(220,171,85,.18);box-shadow:0 0 0 2px var(--gold)}
+  .tkbtn.givable:hover::after{content:"+1 jeton";display:block;position:absolute;font-size:.65rem;font-weight:800;color:var(--gold);letter-spacing:.5px;margin-top:2px;text-transform:uppercase}
+  .tkbtn.empty.givable{padding:4px 8px;border-radius:8px}
+  .tkbtn.empty.givable:hover .mute{filter:none;opacity:.5}
+  .tkbtn.at-max{cursor:default}
+  td.tk{position:relative}
+  th.doc{cursor:pointer}
+  th.doc .open{display:block;font-size:.7rem;color:var(--gold);font-weight:600;margin-top:2px;padding:2px 6px;background:rgba(220,171,85,.12);border-radius:4px;border:1px solid rgba(220,171,85,.3);transition:all .15s}
+  th.doc:hover .open{background:var(--gold);color:#1a1710;border-color:var(--gold)}
+  th.doc:hover{background:rgba(220,171,85,.06)}
+
+  /* ===== Deux camps POUR / CONTRE ===== */
+  .camps{display:flex;gap:12px;flex-wrap:wrap}
+  .camp{flex:1;min-width:240px;padding:10px 14px;border-radius:10px;font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .camp.pour{background:rgba(192,57,43,.12);border:1.5px solid var(--accent);border-left-width:4px}
+  .camp.contre{background:rgba(31,111,84,.15);border:1.5px solid var(--done);border-left-width:4px}
+  .camp .lbl{font-weight:800;font-size:.78rem;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-bottom:3px}
+  .camp.pour .lbl{color:var(--accent2)}
+  .camp.contre .lbl{color:var(--done)}
+  .camp b{color:var(--gold)}
+  /* Version sticky permanente (en haut de l'écran élève/prof) */
+  .camps-sticky{position:sticky;top:0;z-index:90;background:linear-gradient(to bottom, rgba(26,23,18,.96), rgba(26,23,18,.9));
+    backdrop-filter:blur(8px);padding:10px 0 12px 0;margin:0 0 14px 0;border-bottom:1px solid var(--line)}
+  /* Version compacte (vue document) */
+  .camps-mini{display:flex;gap:10px;flex-wrap:wrap;margin:0;padding:8px 14px;background:rgba(26,23,18,.7);border-bottom:1px solid var(--line)}
+  .camps-mini .camp{padding:5px 10px;font-size:.8rem;min-width:0;line-height:1.3}
+  .camps-mini .camp .lbl{font-size:.68rem;margin-bottom:1px;display:inline;letter-spacing:.8px}
+
 </style>
 </head>
 <body>
@@ -392,6 +436,10 @@
       <button class="ghost" onclick="studentLogout()" title="Quitter cette session et revenir à l'écran d'accueil.">⎋ Quitter</button>
     </div>
   </header>
+  <div class="camps camps-sticky">
+    <div class="camp pour"><span class="lbl">Si vous êtes POUR</span>vous défendez que cette affirmation est <b>vraie</b>. L'histoire se répète : qui maltraite finit maltraité. Avec l'IA, ce sera pareil.</div>
+    <div class="camp contre"><span class="lbl">Si vous êtes CONTRE</span>vous défendez que cette affirmation est <b>fausse</b>. Les trois situations sont trop différentes. L'IA ne reproduira pas forcément ce schéma.</div>
+  </div>
   <div id="studentValidationStrip"></div>
   <div id="studentMineCard" class="mine-card"></div>
   <div id="studentTableSection"></div>
@@ -441,6 +489,11 @@
     </div>
   </header>
 
+  <div class="camps camps-sticky">
+    <div class="camp pour" title="Le camp POUR défend que la thèse de l'affirmation est vraie : il y a une fatalité du retour de bâton."><span class="lbl">Camp POUR</span>défend que cette affirmation est <b>vraie</b>. L'histoire se répète : qui maltraite finit maltraité. Avec l'IA, ce sera pareil.</div>
+    <div class="camp contre" title="Le camp CONTRE conteste la thèse : la comparaison est trop facile, on peut briser le cycle."><span class="lbl">Camp CONTRE</span>défend que cette affirmation est <b>fausse</b>. Les trois situations sont trop différentes. L'IA ne reproduira pas forcément ce schéma.</div>
+  </div>
+
   <!-- Bandeau code de classe (pour projection au tableau) -->
   <div class="codebanner">
     <div title="Affiche ce bloc en grand au tableau : les élèves saisissent ce code pour rejoindre la session.">
@@ -473,11 +526,17 @@
 
 <!-- ============ Vue document (commune élève + prof) ============ -->
 <div class="docview" id="docview">
-  <div class="dh">
+  <div class="docbar">
     <div class="left"><button onclick="closeDoc()" title="Fermer ce document et revenir au tableau.">← Retour</button><span class="dt" id="docTitle">Document</span></div>
-    <div class="dctx" id="docCtx"></div>
+    <div class="ctx" id="docCtx"></div>
   </div>
-  <div class="dsheet" id="docSheet"></div>
+  <div class="camps camps-mini">
+    <div class="camp pour"><span class="lbl">POUR :</span> affirmation <b>vraie</b> · l'oppresseur devient victime, l'IA fera pareil.</div>
+    <div class="camp contre"><span class="lbl">CONTRE :</span> affirmation <b>fausse</b> · les 3 situations sont trop différentes.</div>
+  </div>
+  <div class="docscroll">
+    <div class="sheet" id="docSheet"></div>
+  </div>
 </div>
 
 <!-- ============ Panneau d'aide latéral ============ -->
@@ -540,6 +599,17 @@
   </div>
 </div>
 
+<div class="overlay" id="pwdOverlay">
+  <div class="gelcard" style="text-align:left;max-width:400px">
+    <h2 style="font-size:1.2rem;margin-bottom:6px;text-align:center">Nouveau mot de passe prof</h2>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px;text-align:center">Stocké dans Firebase. Prend effet immédiatement.</p>
+    <input id="pwdNew" type="password" placeholder="Nouveau mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:10px" autocomplete="new-password">
+    <input id="pwdConfirm" type="password" placeholder="Confirmer le mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:6px" autocomplete="new-password">
+    <div id="pwdErr" style="color:var(--accent2);font-size:.85rem;min-height:1.2em;margin-bottom:12px"></div>
+    <div class="acts"><button class="ghost" onclick="closePwdOverlay()" title="Annuler le changement.">Annuler</button><button class="primary" onclick="confirmChangePassword()" title="Enregistrer le nouveau mot de passe dans Firebase.">Enregistrer</button></div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <!-- Firebase 8.10.1 (cohérent avec ton appli dictée) -->
@@ -569,10 +639,21 @@ const DEFAULT_PWD = "1312";
 
 // ─────────── Données statiques ───────────
 const DOCS=[
- {n:1,label:"Plan"},{n:2,label:"Texte"},{n:3,label:"Argument"},{n:4,label:"Banque"},{n:5,label:"Prépa"},
- {n:6,label:"Machine"},{n:7,label:"Règles"},{n:8,label:"Écoute"},{n:9,label:"Plus loin"},{n:10,label:"Carnet"}];
+ {n:1,label:"Plan",desc:"Ta feuille de route. Explique ce que tu dois faire et dans quel ordre."},
+ {n:2,label:"Texte",desc:"Fouiller le livre pour comprendre comment les singes jugent l'Homme."},
+ {n:3,label:"Argument",desc:"Découvrir ce qui fait un vrai argument (et ce qui n'en est pas un)."},
+ {n:4,label:"Banque",desc:"Trier les 14 arguments POUR / CONTRE et repérer les faux arguments."},
+ {n:5,label:"Prépa",desc:"Préparer les DEUX camps (POUR et CONTRE) avec des citations expliquées."},
+ {n:6,label:"Machine",desc:"Construire un raisonnement solide en reliant tes idées avec des connecteurs (parce que / donc / mais)."},
+ {n:7,label:"Règles",desc:"Apprendre comment se passe le débat, le rôle de chacun, ce qui est interdit."},
+ {n:8,label:"Écoute",desc:"Observer les autres binômes débattre pour repérer leurs bons et leurs mauvais coups."},
+ {n:9,label:"Plus loin",desc:"Piocher des arguments puissants (Zira, Swift, hier-aujourd'hui-demain) pour faire la différence."},
+ {n:10,label:"Carnet",desc:"Noter après chaque manche ce qui a marché et ce que tu vas améliorer la fois suivante."}
+];
 const STATUSES=["todo","wip","done"];
 const MAX_TOKENS=2;
+// Documents pour lesquels les aides sont gratuites (méta-pédagogique : règles du jeu, méthodologie, etc.)
+const FREE_DOCS = new Set([1]);
 const DOCDATA={
  1:{title:"Ton plan de travail",sub:"Le débat — à préparer en binôme",color:"#1F6F54",blocks:[
    {type:"head",num:1,title:"Ton plan de travail",sub:"Le débat — à préparer en binôme"},
@@ -1011,6 +1092,7 @@ async function doStudentLogin(){
   role = "student";
   startSessionListener();
   showScreen("Student");
+  $("loginBtn").disabled = false;  // Réactiver pour les prochaines connexions
 }
 
 async function rejoinStudent(sessionId, binomeId){
@@ -1026,19 +1108,35 @@ async function rejoinStudent(sessionId, binomeId){
   return true;
 }
 
+function resetWelcomeScreen(){
+  // Affiche le bloc élève, cache le bloc prof, vide les champs, réactive le bouton
+  $("loginBlock").style.display = "block";
+  $("profLoginBlock").style.display = "none";
+  $("loginCode").value = "";
+  $("loginName1").value = "";
+  $("loginName2").value = "";
+  $("loginName3").value = "";
+  $("profPwd").value = "";
+  $("loginErr").textContent = "";
+  $("profErr").textContent = "";
+  $("loginBtn").disabled = false;
+}
+
 function studentLogout(){
   if(sessionListener){db.ref(ACTIVE).off("value", sessionListener); sessionListener=null;}
   safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId");
-  myBinomeId=null; role=null; sessionData=null;
+  myBinomeId=null; role=null; sessionData=null; lastSeenRejection=null; studentRendered=false;
   showScreen("Welcome");
-  $("loginCode").value="";$("loginName1").value="";$("loginName2").value="";$("loginName3").value="";
+  resetWelcomeScreen();
 }
 
 function profLogout(){
   if(sessionListener){db.ref(ACTIVE).off("value", sessionListener); sessionListener=null;}
   safeStorage.del("role");
   role=null; sessionData=null;
+  activeBinomeForDoc=null;
   showScreen("Welcome");
+  resetWelcomeScreen();
 }
 
 // ─────────── Mode prof : entrée ───────────
@@ -1093,8 +1191,13 @@ function startSessionListener(){
     sessionData = snap.val() || null;
     if(role==="student"){
       // Si plus de session ou si notre binôme a disparu : retour accueil
-      if(!sessionData || !sessionData.binomes || !sessionData.binomes[myBinomeId]){
-        toast("Session terminée par le professeur.");
+      if(!sessionData){
+        toast("Le professeur a démarré une nouvelle session. Saisis le nouveau code de classe au tableau.");
+        studentLogout();
+        return;
+      }
+      if(!sessionData.binomes || !sessionData.binomes[myBinomeId]){
+        toast("Votre binôme a été retiré par le professeur. Reconnecte-toi pour rejoindre.");
         studentLogout();
         return;
       }
@@ -1106,11 +1209,22 @@ function startSessionListener(){
   db.ref(ACTIVE).on("value", sessionListener);
 }
 
+let lastSeenRejection = null;
+let studentRendered = false;
 // ─────────── Rendu mode élève ───────────
 function renderStudent(){
   if(!sessionData) return;
   const me = sessionData.binomes[myBinomeId];
   if(!me) return;
+  // Détecter un refus prof récent (postérieur au dernier vu) — uniquement après le premier render
+  if(me.lastRejection && me.lastRejection.at){
+    if(studentRendered && (lastSeenRejection === null || me.lastRejection.at > lastSeenRejection)){
+      const docInfo = DOCS[me.lastRejection.docIdx];
+      if(docInfo) toast(`Le professeur a refusé la validation du DOC ${docInfo.n} (${docInfo.label}). Continuez à travailler dessus.`);
+    }
+    lastSeenRejection = me.lastRejection.at;
+  }
+  studentRendered = true;
   // Carte de mon binôme
   const tokenStr = me.tokens > 0
     ? Array(MAX_TOKENS).fill(0).map((_,i)=>`<span class="tok ${i<me.tokens?'':'used'}"></span>`).join("")
@@ -1121,9 +1235,9 @@ function renderStudent(){
     <div class="lbl">Votre binôme</div>
     <div class="names">${esc(binomeName(me))}</div>
     <div class="stats">
-      <div><b>${pct}%</b> terminé</div>
-      <div>Aides : <span class="tkwrap" style="display:inline-flex;gap:5px;vertical-align:middle">${tokenStr}</span></div>
-      ${aided>0 ? `<div>${aided} zone${aided>1?'s':''} aidée${aided>1?'s':''}</div>` : ''}
+      <div title="Pourcentage de documents validés « fait » par le professeur."><b>${pct}%</b> terminé</div>
+      <div title="Vous avez 2 jetons d'aide pour toute la séance. Une aide demandée = 1 jeton consommé.">Aides : <span class="tkwrap" style="display:inline-flex;gap:5px;vertical-align:middle">${tokenStr}</span></div>
+      ${aided>0 ? `<div title="Vous avez déjà demandé de l'aide sur ${aided} zone(s) de documents. Vous pouvez les reconsulter sans consommer un nouveau jeton.">${aided} zone${aided>1?'s':''} aidée${aided>1?'s':''}</div>` : ''}
     </div>
   `;
   // Bandeau : avez-vous des validations en attente ?
@@ -1138,11 +1252,25 @@ function renderStudent(){
     $("studentValidationStrip").innerHTML = "";
   }
   // Tableau du binôme (uniquement la sienne)
-  let html = '<div class="tablewrap"><table id="myGrid"><thead><tr>';
-  html += '<th class="bn" style="min-width:60px">Vous</th>';
-  html += '<th class="tk">Aides</th>';
-  DOCS.forEach(d=>{html += `<th class="doc" onclick="openDoc(${d.n})" title="Ouvrir le DOC ${d.n} — ${esc(d.label)}."><span class="num">${d.n}</span><span class="lab">${esc(d.label)}</span><span class="open">▸ ouvrir</span></th>`;});
-  html += '<th class="pr">Avancement</th></tr></thead><tbody>';
+  let html = '<div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:14px">';
+  html += '<div style="font-family:\'Fraunces\',serif;font-weight:700;color:var(--gold);font-size:1.05rem;margin-bottom:10px">📖 Comment lire ce tableau</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;font-size:.88rem;color:var(--ink2);line-height:1.4">';
+  html += '<div><span style="display:inline-block;width:14px;height:14px;background:var(--todo-bg);border:1px solid var(--todo);border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>Case vide</b> = À faire. Clique pour passer en « en cours ».</div>';
+  html += '<div><span style="display:inline-block;width:14px;height:14px;background:var(--wip-bg);border:1px solid var(--wip);border-radius:3px;vertical-align:middle;margin-right:6px;color:var(--wip);text-align:center;font-size:.8rem">◐</span><b>En cours</b>. Quand vous avez fini, recliquez : demande validation au prof.</div>';
+  html += '<div><span style="display:inline-block;width:14px;height:14px;background:repeating-linear-gradient(45deg,var(--wip-bg),var(--wip-bg) 3px,rgba(232,154,36,.4) 3px,rgba(232,154,36,.4) 6px);border:1px solid var(--wip);border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>Rayé orange</b> = en attente. Le prof doit valider.</div>';
+  html += '<div><span style="display:inline-block;width:14px;height:14px;background:var(--done-bg);border:1px solid var(--done);border-radius:3px;vertical-align:middle;margin-right:6px;color:var(--done);text-align:center;font-size:.8rem">✓</span><b>Fait</b>, validé par le prof. Bravo !</div>';
+  html += '<div><span style="display:inline-block;vertical-align:middle;margin-right:6px"><span style="display:inline-block;width:8px;height:8px;background:var(--gold);border-radius:50%"></span><span style="display:inline-block;width:8px;height:8px;background:var(--gold);border-radius:50%;margin-left:3px"></span></span><b>2 jetons d\'aide</b> pour toute la séance. Une zone bloque ? Clique-la dans le document.</div>';
+  html += '<div>🔇 <b>Plus de jetons</b> : à vous de relire et d\'en sortir tout seuls.</div>';
+  html += '</div></div>';
+
+  html += '<div class="tablewrap"><table id="myGrid"><thead><tr>';
+  html += '<th class="bn" style="min-width:60px" title="Le nom de votre binôme. Le tableau ci-dessous est le vôtre.">Vous</th>';
+  html += '<th class="tk" title="Vous avez 2 jetons d\'aide pour toute la séance. Chaque aide demandée consomme 1 jeton.">Aides</th>';
+  DOCS.forEach(d=>{
+    const tip = `DOC ${d.n} ${d.label} — ${d.desc} (Clique pour ouvrir le document.)`;
+    html += `<th class="doc" onclick="openDoc(${d.n})" title="${esc(tip)}"><span class="num">${d.n}</span><span class="lab">${esc(d.label)}</span><span class="open">▸ ouvrir</span></th>`;
+  });
+  html += '<th class="pr" title="Votre pourcentage d\'avancement : combien de documents ont été validés « fait » par le prof.">Avancement</th></tr></thead><tbody>';
   html += renderRowHtml(me, myBinomeId, /*isStudent*/true);
   html += '</tbody></table></div>';
   $("studentTableSection").innerHTML = html;
@@ -1187,7 +1315,10 @@ function renderProf(){
   // Tableau
   const t = $("grid");
   let h = "<thead><tr><th class='bn' title=\"Nom du binôme. Le bouton ✎ modifier permet de renommer ou supprimer.\">Binôme</th><th class='tk' title=\"Chaque binôme dispose de 2 jetons d'aide.\">Aides</th>";
-  DOCS.forEach(d=>{h += `<th class='doc' onclick="openDoc(${d.n})" title="Ouvrir le DOC ${d.n} — ${esc(d.label)} : reproduit fidèlement la fiche que le binôme a sous les yeux."><span class='num'>${d.n}</span><span class='lab'>${esc(d.label)}</span><span class='open'>▸ ouvrir</span></th>`;});
+  DOCS.forEach(d=>{
+    const tip = `DOC ${d.n} ${d.label} — ${d.desc} (Clique pour ouvrir le document tel que le binôme le voit.)`;
+    h += `<th class='doc' onclick="openDoc(${d.n})" title="${esc(tip)}"><span class='num'>${d.n}</span><span class='lab'>${esc(d.label)}</span><span class='open'>▸ ouvrir</span></th>`;
+  });
   h += "<th class='pr' title=\"Pourcentage de documents au statut « fait ».\">Avancement</th></tr></thead><tbody>";
   const list = Object.entries(binomes).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
   if(list.length===0){
@@ -1212,42 +1343,65 @@ function renderRowHtml(b, id, isStudent){
   }
   // Colonne aides
   h += "<td class='tk'><div class='tkwrap'>";
-  if((b.tokens||0)>0){
-    if(isStudent){
-      h += `<div class='tkbtn' onclick="startStudentQuestion()" title="Demander de l'aide : ouvre les documents pour que vous puissiez pointer ce qui vous bloque.">`;
+  if(isStudent){
+    // Vue élève : clic = lancer une question (si jetons restants)
+    if((b.tokens||0) > 0){
+      h += `<div class='tkbtn' onclick="startStudentQuestion()" title="Vous avez ${b.tokens} jeton${b.tokens>1?'s':''} d'aide. Pour les utiliser : ouvrez un document et cliquez sur la zone qui vous bloque.">`;
+      for(let i=0;i<MAX_TOKENS;i++) h += `<span class='tok ${i<(b.tokens||0)?'':'used'}'></span>`;
+      h += "</div>";
     } else {
-      h += `<div class='tkbtn' onclick="startQuestion('${id}')" title="Lancer une question pour ${esc(binomeName(b))} (consomme un jeton).">`;
+      h += `<div class='tkbtn empty' title="Vous avez utilisé vos 2 jetons d'aide. Plus possible de demander de l'aide pour cette séance — relisez les documents pour vous en sortir."><span class='mute'>🔇</span></div>`;
     }
-    for(let i=0;i<MAX_TOKENS;i++) h += `<span class='tok ${i<(b.tokens||0)?'':'used'}'></span>`;
-    h += "</div>";
   } else {
-    h += `<div class='tkbtn empty' title="Aides épuisées. Le binôme doit se débrouiller seul."><span class='mute'>🔇</span></div>`;
+    // Vue prof : clic = rendre un jeton (sauf si déjà au max)
+    const tokens = b.tokens || 0;
+    const atMax = tokens >= MAX_TOKENS;
+    const profTip = atMax
+      ? `${binomeName(b)} a déjà ses ${MAX_TOKENS} jetons (aucune action possible).`
+      : `Rendre 1 jeton à ${binomeName(b)} (utile s'ils ont consommé un jeton par erreur). Actuellement : ${tokens}/${MAX_TOKENS}.`;
+    if(tokens > 0){
+      const cls = atMax ? 'tkbtn at-max' : 'tkbtn givable';
+      const onclick = atMax ? '' : `onclick="giveTokenBack('${id}')"`;
+      h += `<div class='${cls}' ${onclick} title="${esc(profTip)}">`;
+      for(let i=0;i<MAX_TOKENS;i++) h += `<span class='tok ${i<tokens?'':'used'}'></span>`;
+      h += "</div>";
+    } else {
+      h += `<div class='tkbtn empty givable' onclick="giveTokenBack('${id}')" title="${esc(profTip)}"><span class='mute'>🔇</span></div>`;
+    }
   }
   const nbAides = Object.keys(b.flags||{}).length;
   if(nbAides>0){
     const docs = [...new Set(Object.keys(b.flags).map(k=>k.split(':')[0]))].sort((a,c)=>+a-+c);
-    h += `<div class="aided" title="Zones aidées : DOC ${docs.join(', DOC ')}">${nbAides} zone${nbAides>1?'s':''} aidée${nbAides>1?'s':''}</div>`;
+    const aidedTip = isStudent
+      ? `Vous avez déjà reçu de l'aide sur ${nbAides} zone${nbAides>1?'s':''} : DOC ${docs.join(', DOC ')}. Vous pouvez les reconsulter sans consommer un nouveau jeton.`
+      : `Zones aidées : DOC ${docs.join(', DOC ')}`;
+    h += `<div class="aided" title="${esc(aidedTip)}">${nbAides} zone${nbAides>1?'s':''} aidée${nbAides>1?'s':''}</div>`;
   }
   h += "</div></td>";
   // Colonnes statuts
   const statuses = b.statuses || Array(10).fill("todo");
   const pendings = b.pendingValidation || Array(10).fill(false);
-  const statusLabels = {todo:"À faire — clic pour passer en « en cours »", wip:"En cours — clic pour demander la validation au prof", done:"Fait — clic pour repasser à « à faire »"};
+  const statusLabelsProf = {todo:"À faire — clic pour passer en « en cours »", wip:"En cours — clic pour demander la validation au prof", done:"Fait — clic pour repasser à « à faire »"};
+  const statusLabelsStudent = {
+    todo:"À faire. Clique pour commencer ce document (passe en « en cours »).",
+    wip:"En cours. Clique quand vous avez terminé : ça envoie une demande de validation au professeur.",
+    done:"Fait ! Validé par le prof. Clique pour revenir en arrière si besoin."
+  };
   statuses.forEach((s,i)=>{
     const pending = pendings[i];
+    const docInfo = `DOC ${DOCS[i].n} ${DOCS[i].label}`;
     if(pending){
-      // Pending : élève voit "en attente", prof voit "clic pour valider"
       if(isStudent){
-        h += `<td class='st pending' title="En attente de validation par le professeur."></td>`;
+        h += `<td class='st pending' title="${esc(docInfo+' — En attente de validation. Le professeur va valider ce document. Continuez à travailler en attendant.')}"></td>`;
       } else {
-        h += `<td class='st pending' onclick="validateDone('${id}',${i})" title="DOC ${DOCS[i].n} ${esc(DOCS[i].label)} — Le binôme demande la validation. Clique pour valider en « fait », clic long pour refuser."  oncontextmenu="event.preventDefault();rejectDone('${id}',${i});return false"></td>`;
+        h += `<td class='st pending' onclick="validateDone('${id}',${i})" title="${esc(docInfo+' — Le binôme demande la validation. Clic pour valider, clic droit pour refuser.')}"  oncontextmenu="event.preventDefault();rejectDone('${id}',${i});return false"></td>`;
       }
     } else {
       const cls = s;
       if(isStudent){
-        h += `<td class='st ${cls}' onclick="studentToggle('${id}',${i})" title="DOC ${DOCS[i].n} ${esc(DOCS[i].label)} — ${statusLabels[s]}"></td>`;
+        h += `<td class='st ${cls}' onclick="studentToggle('${id}',${i})" title="${esc(docInfo+' — '+statusLabelsStudent[s])}"></td>`;
       } else {
-        h += `<td class='st ${cls}' onclick="profToggle('${id}',${i})" title="DOC ${DOCS[i].n} ${esc(DOCS[i].label)} — ${statusLabels[s]}"></td>`;
+        h += `<td class='st ${cls}' onclick="profToggle('${id}',${i})" title="${esc(docInfo+' — '+statusLabelsProf[s])}"></td>`;
       }
     }
   });
@@ -1281,9 +1435,7 @@ function startStudentQuestion(){
   const me = findBinome(myBinomeId);
   if(!me) return;
   if((me.tokens||0) <= 0){ toast("Vous n'avez plus de jeton."); return; }
-  // Pour l'élève, on active automatiquement son propre binôme et on ouvre l'aperçu des docs
-  activeBinomeForDoc = myBinomeId;
-  toast("Cliquez sur la zone du document qui vous bloque pour recevoir l'aide.");
+  toast("Ouvrez le document concerné et cliquez sur la zone qui vous bloque. Un jeton sera consommé.");
 }
 
 // ─────────── Actions prof ───────────
@@ -1305,7 +1457,10 @@ async function validateDone(id, i){
   toast("Validé.");
 }
 async function rejectDone(id, i){
-  await db.ref(ACTIVE+"/binomes/"+id+"/pendingValidation/"+i).set(false);
+  await db.ref(ACTIVE+"/binomes/"+id).update({
+    [`pendingValidation/${i}`]: false,
+    lastRejection: {docIdx: i, at: Date.now()}
+  });
   toast("Demande refusée — le statut reste « en cours ».");
 }
 
@@ -1371,9 +1526,24 @@ function openProfMenu(){ $("menuOverlay").classList.add("show"); }
 function closeMenu(){ $("menuOverlay").classList.remove("show"); }
 function changePassword(){
   closeMenu();
-  const np = prompt("Nouveau mot de passe prof :");
-  if(!np) return;
-  db.ref(META+"/profPassword").set(np).then(()=>toast("Mot de passe mis à jour."));
+  $("pwdNew").value="";
+  $("pwdConfirm").value="";
+  $("pwdErr").textContent="";
+  $("pwdOverlay").classList.add("show");
+  setTimeout(()=>$("pwdNew").focus(),50);
+}
+function closePwdOverlay(){
+  $("pwdOverlay").classList.remove("show");
+}
+async function confirmChangePassword(){
+  const np = ($("pwdNew").value||"").trim();
+  const nc = ($("pwdConfirm").value||"").trim();
+  if(!np){ $("pwdErr").textContent="Entre un mot de passe."; return; }
+  if(np.length < 3){ $("pwdErr").textContent="Mot de passe trop court (3 caractères min.)."; return; }
+  if(np !== nc){ $("pwdErr").textContent="Les deux mots de passe ne correspondent pas."; return; }
+  await db.ref(META+"/profPassword").set(np);
+  closePwdOverlay();
+  toast("Mot de passe mis à jour.");
 }
 function wipeAll(){
   closeMenu();
@@ -1384,22 +1554,32 @@ function wipeAll(){
   });
 }
 
-// ─────────── Question prof (mode pilotage) ───────────
-function startQuestion(id){
+// ─────────── Rendu d'un jeton (mode prof) : récupération en cas de clic accidentel ───────────
+function giveTokenBack(id){
   const b = findBinome(id);
   if(!b) return;
-  if(activeBinomeForDoc === id){
-    activeBinomeForDoc = null;
-    toast("Question annulée.");
+  const tokens = b.tokens || 0;
+  if(tokens >= MAX_TOKENS){
+    toast(`${binomeName(b)} a déjà ses ${MAX_TOKENS} jetons.`);
     return;
   }
-  if((b.tokens||0) <= 0){ toast("Ce binôme n'a plus d'aide."); return; }
-  activeBinomeForDoc = id;
-  toast(`Question en cours : ${binomeName(b)}.`);
-  if(currentDoc){
-    const ctx = $("docCtx");
-    if(ctx) ctx.innerHTML = `Question de <b>${esc(binomeName(b))}</b> · la zone qui le bloque ouvre son aide`;
-  }
+  askConfirm(
+    `Rendre 1 jeton à ${binomeName(b)} ? Ils ont actuellement ${tokens} jeton${tokens>1?'s':''}, ils auront ${tokens+1} après.`,
+    async () => {
+      await db.ref(ACTIVE+"/binomes/"+id+"/tokens").set(tokens + 1);
+      toast(`Jeton rendu à ${binomeName(b)}.`);
+    }
+  );
+}
+
+// (startQuestion supprimé — la fonctionnalité "pilotage manuel" a été remplacée par giveTokenBack)
+
+function hexSoft(hex){
+  if(!hex) return "#f5f1e3";
+  const c=hex.replace('#','');
+  const r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);
+  const m=v=>Math.round(v+(255-v)*0.87);
+  return `rgb(${m(r)},${m(g)},${m(b)})`;
 }
 
 // ─────────── Ouverture de documents (commune) ───────────
@@ -1415,36 +1595,47 @@ function openDoc(n){
     return;
   }
   title.textContent = `DOC ${n} — ${data.title}`;
+  const isFreeDoc = FREE_DOCS.has(n);
   if(role === "student"){
-    ctx.innerHTML = activeBinomeForDoc===myBinomeId
-      ? `Cliquez sur la zone qui vous bloque pour ouvrir l'aide (consomme 1 jeton)`
-      : `Consultation libre`;
+    const me = findBinome(myBinomeId);
+    const tokens = me ? (me.tokens||0) : 0;
+    if(isFreeDoc){
+      ctx.innerHTML = `Aides <b>gratuites</b> pour ce document (règles du jeu). Aucun jeton consommé.`;
+    } else if(tokens>0){
+      ctx.innerHTML = `Les zones bordées d'or sont <b>cliquables</b>. Cliquer une zone consomme <b>1 jeton</b>. Il vous en reste ${tokens}.`;
+    } else {
+      ctx.innerHTML = `Vous n'avez plus de jeton. Relisez le document pour vous en sortir.`;
+    }
   } else {
-    ctx.innerHTML = activeBinomeForDoc
-      ? `Question de <b>${esc(binomeName(findBinome(activeBinomeForDoc)))}</b> · la zone qui le bloque ouvre son aide`
-      : `Une zone ouvre l'aide correspondante`;
+    ctx.innerHTML = `Vue prof — clique une zone pour consulter son aide (aucun jeton consommé, c'est ta consultation libre).`;
   }
-  // Construire la fiche
-  const b = activeBinomeForDoc ? findBinome(activeBinomeForDoc) : null;
+  // Construire la fiche avec les classes CSS d'origine pour rendu fidèle au papier
+  const b = role==="student" ? findBinome(myBinomeId) : null;
   let html = '';
   data.blocks.forEach(blk=>{
-    if(blk.type==="head"){
-      html += `<div class="doc-head" style="background:${data.color||'#333'};color:#fff;padding:14px 18px;border-radius:12px 12px 0 0;margin:-24px -24px 16px">
-        <div class="num">${blk.num}</div><h2 style="font-family:'Fraunces',serif;font-weight:900;font-size:1.6rem;color:#fff">${esc(blk.title)}</h2>
-        ${blk.sub?`<div class="sub" style="color:rgba(255,255,255,.85);font-style:italic;margin-top:2px">${esc(blk.sub)}</div>`:''}</div>`;
-    } else if(blk.type==="text"){
-      html += `<div class="doc-text" style="margin-bottom:14px">${blk.html}</div>`;
-    } else if(blk.type==="zone"){
+    if(blk.type === "head"){
+      html += `<div class="d-head"><div class="past" style="background:${data.color}"><div><div class="l1">DOC</div><div class="l2">${blk.num}</div></div></div><div class="ttl" style="background:${hexSoft(data.color)}"><h3>${esc(blk.title)}</h3><div class="s">${esc(blk.sub||'')}</div></div></div>`;
+    } else if(blk.type === "sect"){
+      html += `<div class="d-sect" style="color:${data.color}">${blk.text}</div>`;
+    } else if(blk.type === "text"){
+      // Compat. : si le DOCDATA contient encore des blocs de type "text"
+      html += `<div class="d-box" style="background:${hexSoft(data.color)};border:1px solid #e7e0d0">${blk.html}</div>`;
+    } else if(blk.type === "zone"){
       const key = `${n}:${blk.id}`;
       const flagged = b && b.flags && b.flags[key];
-      const cls = blk.cls || "";
-      const bg = blk.bg || "";
-      const tip = activeBinomeForDoc===myBinomeId
-        ? "Cliquer pour consommer un jeton et afficher l'aide à votre binôme."
-        : (role==="prof" && activeBinomeForDoc)
-          ? "Cliquer pour consommer un jeton et afficher l'aide à ce binôme."
-          : "Cliquer pour consulter l'aide (aucun jeton consommé).";
-      html += `<div class="${cls} zone ${flagged?'flagged':''}" style="${bg?'background:'+bg:''}" onclick="zoneClick('${blk.id}')" title="${esc(tip)}">${blk.html}<span class="qmark">● question posée</span></div>`;
+      const cls = blk.cls === "item" ? "d-item" : "d-box";
+      const bg = blk.cls === "soft" ? hexSoft(data.color) : "";
+      const numHtml = blk.num ? `<span class="n" style="color:${data.color}">${blk.num}.</span>` : "";
+      const tip = isFreeDoc
+        ? "Cliquer pour ouvrir l'aide de cette zone (gratuite — document de règles)."
+        : role === "student"
+          ? (flagged ? "Aide déjà consultée — clique pour la revoir (aucun nouveau jeton)." : "Cliquer pour ouvrir l'aide de cette zone (consomme 1 jeton).")
+          : "Cliquer pour consulter l'aide (aucun jeton consommé — vue prof).";
+      let badge = '';
+      if(isFreeDoc) badge = '<span class="free-badge" title="Aide gratuite pour ce document">gratuit</span>';
+      else if(role === "student" && !flagged) badge = '<span class="cost-badge" title="Consomme 1 jeton">1 jeton</span>';
+      else if(flagged) badge = '<span class="seen-badge" title="Vous avez déjà vu cette aide">✓ déjà vue</span>';
+      html += `<div class="${cls} zone clickable ${flagged?'flagged':''} ${isFreeDoc?'free':''}" style="${bg?'background:'+bg:''}" onclick="zoneClick('${blk.id}')" title="${esc(tip)}">${numHtml}${blk.html}<span class="qmark">● question posée</span>${badge}</div>`;
     }
   });
   sheet.innerHTML = html;
@@ -1454,12 +1645,7 @@ function openDoc(n){
 function closeDoc(){
   $("docview").classList.remove("show");
   currentDoc = null;
-  if(activeBinomeForDoc && role==="prof"){
-    const b = findBinome(activeBinomeForDoc);
-    if(b) toast(`Question toujours active pour ${binomeName(b)}. Pour annuler, clique à nouveau sur ses jetons.`);
-  } else if(role==="student"){
-    activeBinomeForDoc = null;
-  }
+  activeBinomeForDoc = null;
 }
 
 function zoneClick(zoneId){
@@ -1467,21 +1653,38 @@ function zoneClick(zoneId){
   if(!data) return;
   const blk = data.blocks.find(x=>x.id===zoneId);
   if(!blk || !blk.help) return;
-  if(activeBinomeForDoc){
-    const b = findBinome(activeBinomeForDoc);
-    if(!b){ showHelp(blk,false,null); return; }
+
+  // ── Documents gratuits (DOC 1 : règles du jeu) : aide directe, pas de jeton consommé
+  if(FREE_DOCS.has(currentDoc)){
+    const b = role==="student" ? findBinome(myBinomeId) : null;
+    showHelp(blk, false, b);
+    return;
+  }
+
+  // ── Mode élève : toute aide consomme un jeton (pas de consultation libre)
+  if(role === "student"){
+    const me = findBinome(myBinomeId);
+    if(!me) return;
     const key = `${currentDoc}:${zoneId}`;
-    if(b.flags && b.flags[key]){
-      showHelp(blk,false,b);
-      toast("Aide déjà vue pour cette zone. Aucun nouveau jeton consommé.");
+    // Aide déjà vue : réafficher sans reconsommer
+    if(me.flags && me.flags[key]){
+      showHelp(blk, false, me);
+      toast("Aide déjà vue. Aucun nouveau jeton consommé.");
       return;
     }
-    if((b.tokens||0) <= 0){ showHelp(blk,false,null); return; }
-    pendingHelp = { binomeId: activeBinomeForDoc, docN: currentDoc, zoneId, blk };
+    // Plus de jeton : refus
+    if((me.tokens||0) <= 0){
+      toast("Vous n'avez plus de jeton d'aide. Débrouillez-vous en relisant le document.");
+      return;
+    }
+    // Sinon : ouvrir le gel pour confirmation avant consommation
+    pendingHelp = { binomeId: myBinomeId, docN: currentDoc, zoneId, blk };
     $("gelOverlay").classList.add("show");
-  } else {
-    showHelp(blk,false,null);
+    return;
   }
+
+  // ── Mode prof : consultation libre (jamais de consommation depuis l'UI prof)
+  showHelp(blk, false, null);
 }
 
 function cancelGel(){
@@ -1512,7 +1715,7 @@ async function confirmGel(){
 
 function showHelp(blk, consumed, b){
   const hp = $("help");
-  $("helpFor").textContent = (b ? "Pour "+binomeName(b) : (activeBinomeForDoc ? "Pour "+binomeName(findBinome(activeBinomeForDoc)) : "Consultation"));
+  $("helpFor").textContent = (b ? "Pour "+binomeName(b) : "Consultation");
   hp.querySelector(".t").textContent = blk.help.titre || "Aide";
   let h = "";
   if(blk.help.cite) h += `<div class="seg"><span class="k">Dans le livre</span><div class="quote">${blk.help.cite}</div></div>`;
@@ -1520,7 +1723,8 @@ function showHelp(blk, consumed, b){
   h += `<div class="seg didac"><span class="k">Comment fallait-il s'y prendre</span><p>${blk.help.didac}</p></div>`;
   $("helpBody").innerHTML = h;
   let foot;
-  if(consumed) foot = "Une aide vient d'être utilisée. Il en reste "+((b?b.tokens-1:0))+" pour ce binôme.";
+  if(FREE_DOCS.has(currentDoc)) foot = "Aide gratuite (document de règles). Aucun jeton consommé.";
+  else if(consumed) foot = "Une aide vient d'être utilisée. Il en reste "+((b?b.tokens-1:0))+" pour ce binôme.";
   else if(b) foot = "Aide déjà vue par ce binôme (aucun nouveau jeton consommé). Il en reste "+(b.tokens||0)+".";
   else foot = "Consultation libre (aucun jeton consommé).";
   $("helpFoot").textContent = foot;
@@ -1531,7 +1735,7 @@ function closeHelp(){ $("help").classList.remove("show"); }
 // ─────────── Raccourcis clavier ───────────
 document.addEventListener("keydown", (e)=>{
   if(e.key === "Escape"){
-    const overs = ["gelOverlay","confirmOverlay","editOverlay","menuOverlay"];
+    const overs = ["gelOverlay","confirmOverlay","editOverlay","menuOverlay","pwdOverlay"];
     for(const id of overs){
       const o = $(id);
       if(o && o.classList.contains("show")){
@@ -1539,6 +1743,7 @@ document.addEventListener("keydown", (e)=>{
         else if(id==="confirmOverlay") closeConfirm();
         else if(id==="editOverlay") closeEdit();
         else if(id==="menuOverlay") closeMenu();
+        else if(id==="pwdOverlay") closePwdOverlay();
         return;
       }
     }
@@ -1549,6 +1754,7 @@ document.addEventListener("keydown", (e)=>{
     if($("editOverlay").classList.contains("show")){ e.preventDefault(); saveEdit(); return; }
     if($("confirmOverlay").classList.contains("show")){ e.preventDefault(); const cy=$("confirmYes"); if(cy) cy.click(); return; }
     if($("gelOverlay").classList.contains("show")){ e.preventDefault(); confirmGel(); return; }
+    if($("pwdOverlay").classList.contains("show")){ e.preventDefault(); confirmChangePassword(); return; }
     // Welcome screen : Entrée valide login
     if($("screenWelcome").classList.contains("show")){
       const a = document.activeElement;
@@ -1568,6 +1774,7 @@ closeOnBackdrop("gelOverlay", cancelGel);
 closeOnBackdrop("confirmOverlay", closeConfirm);
 closeOnBackdrop("editOverlay", closeEdit);
 closeOnBackdrop("menuOverlay", closeMenu);
+closeOnBackdrop("pwdOverlay", closePwdOverlay);
 
 $("confirmYes").addEventListener("click", ()=>{
   if(confirmAction) confirmAction();
