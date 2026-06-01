@@ -1181,6 +1181,45 @@ function generateConsigne(amen){
   if(hasC)parts.push("aide-toi des indices num\u00e9rot\u00e9s en bas");
   return "Pour chaque blanc, "+parts.join(", ou ")+".";
 }
+// ═══ TTS (Web Speech API) — lecture audio pour mode rapide ═══
+// Inspiré de etude_dugain.html : lecture asservie à la navigation,
+// interruption immédiate à tout changement de mot.
+
+// Dictionnaire de prononciation pour la ponctuation
+var SPEECH_PUNCT={
+  ".":"point","\u2026":"points de suspension","...":"points de suspension",
+  ",":"virgule",";":"point virgule",":":"deux points",
+  "?":"point d'interrogation","!":"point d'exclamation",
+  "\u00ab":"ouvrir les guillemets","\u00bb":"fermer les guillemets",
+  "\u201c":"ouvrir les guillemets","\u201d":"fermer les guillemets",
+  "(":"parenthèse ouvrante",")":"parenthèse fermante",
+  "-":"tiret","\u2013":"tiret","\u2014":"tiret",
+  "'":"apostrophe","\u2019":"apostrophe"
+};
+function speechText(word){
+  if(!word)return "";
+  // Pour un token de ponctuation pure, lit son nom
+  if(SPEECH_PUNCT[word])return SPEECH_PUNCT[word];
+  // Pour un mot finissant par apostrophe (qu', l', s'…), enlève l'apostrophe pour la lecture
+  // (l'apostrophe sera prononcée naturellement par le moteur français en attaque du mot suivant)
+  return word.replace(/['\u2019]$/, "");
+}
+function speakWord(word){
+  if(!('speechSynthesis' in window))return;
+  window.speechSynthesis.cancel();
+  var txt=speechText(word);if(!txt)return;
+  var u=new SpeechSynthesisUtterance(txt);
+  u.lang="fr-FR";u.rate=0.95;u.pitch=1.0;u.volume=1.0;
+  var voices=window.speechSynthesis.getVoices();
+  var fr=voices.find(function(v){return v.lang&&v.lang.startsWith("fr")});
+  if(fr)u.voice=fr;
+  window.speechSynthesis.speak(u);
+}
+function stopSpeech(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
+// Persistance du toggle audio (localStorage)
+function getSpeechEnabled(){try{return localStorage.getItem("mjpc_speech_fastmode")!=="0"}catch(e){return true}}
+function setSpeechEnabled(v){try{localStorage.setItem("mjpc_speech_fastmode",v?"1":"0")}catch(e){}}
+
 var PROF_CODES=[3141,1312];
 function App(){
   var s0=useState(null),mode=s0[0],setMode=s0[1];
@@ -2116,6 +2155,8 @@ function CorrEleve(p){
   var s6=useState(-1),lastTouched=s6[0],setLastTouched=s6[1];
   var s7=useState(p.startFast||false),fastMode=s7[0],setFastMode=s7[1];
   var s8=useState(0),fastIdx=s8[0],setFastIdx=s8[1];
+  var sSp=useState(getSpeechEnabled()),speechOn=sSp[0],_setSpeechOn=sSp[1];
+  function setSpeechOn(v){_setSpeechOn(v);setSpeechEnabled(v);if(!v)stopSpeech()}
   var s9=useState(null),fastFlash=s9[0],setFastFlash=s9[1];
   var sSearch=useState(""),searchVal=sSearch[0],setSearchVal=sSearch[1];
   var sXfer=useState(false),xferOpen=sXfer[0],setXferOpen=sXfer[1];
@@ -2241,6 +2282,17 @@ function CorrEleve(p){
     return function(){window.removeEventListener("keydown",onKey)};
   });
 
+  // Lecture audio du mot courant en mode rapide
+  React.useEffect(function(){
+    if(!fastMode||!speechOn||askFautifI){stopSpeech();return}
+    var wt=wordTokens[fastIdx];
+    if(wt&&wt.text)speakWord(wt.text);
+    return function(){stopSpeech()};
+  },[fastMode,fastIdx,speechOn,askFautifI]);
+
+  // Coupe le son quand on sort du mode rapide
+  React.useEffect(function(){return function(){stopSpeech()}},[]);
+
   var fastModalContent=null;
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
@@ -2268,6 +2320,7 @@ function CorrEleve(p){
           h("div",{style:{height:4,background:"#e5e3dd",borderRadius:2,marginTop:4,overflow:"hidden"}},
             h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
         ),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"4px 8px"}},speechOn?"\ud83d\udd0a":"\ud83d\udd07"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
       ),
