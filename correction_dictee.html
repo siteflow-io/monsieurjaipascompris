@@ -1241,6 +1241,20 @@ function speakWord(word){
   window.speechSynthesis.speak(u);
 }
 function stopSpeech(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
+// Enchaîne plusieurs utterances sans cancel entre elles (annonce type + mot)
+function speakSequence(texts){
+  if(!('speechSynthesis' in window))return;
+  window.speechSynthesis.cancel();
+  texts.forEach(function(t){
+    var txt=speechText(t);if(!txt)return;
+    var u=new SpeechSynthesisUtterance(txt);
+    u.lang="fr-FR";u.rate=getSpeechRate();u.pitch=1.0;u.volume=1.0;
+    if(_frenchVoice)u.voice=_frenchVoice;
+    window.speechSynthesis.speak(u);
+  });
+}
+// Libellé vocal de chaque type d'erreur
+var ERROR_LABEL={G:"Grammaire",L:"Lexique",M:"Manquant",P:"Ponctuation",I:"Illisible",A:"Attention"};
 // Persistance du toggle audio (localStorage)
 function getSpeechEnabled(){try{return localStorage.getItem("mjpc_speech_fastmode")!=="0"}catch(e){return true}}
 function setSpeechEnabled(v){try{localStorage.setItem("mjpc_speech_fastmode",v?"1":"0")}catch(e){}}
@@ -2288,14 +2302,26 @@ function CorrEleve(p){
   React.useEffect(function(){if(askFautifI&&fautifRefI.current)fautifRefI.current.focus()},[askFautifI]);
 
   function fastMark(type){
-    if(type==="G"||type==="L"){setAskFautifI(type);setFautifValI("");return}
+    if(type==="G"||type==="L"){
+      // G ou L : popup de saisie. On annonce uniquement le type, le mot suivant viendra après la saisie.
+      if(speechOn&&ERROR_LABEL[type])speakSequence([ERROR_LABEL[type]]);
+      setAskFautifI(type);setFautifValI("");return;
+    }
     var wt=wordTokens[fastIdx];if(!wt)return;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     ne.push({idx:wt.idx,type:type,word:wt.text});
     setErrors(ne);setFastFlash(type);setTimeout(function(){setFastFlash(null)},400);
     var newIdx=fastIdx+1;
     setFastIdx(newIdx);
-    speakAt(newIdx);
+    // Annonce vocale : type d'erreur puis mot suivant
+    if(speechOn&&!askFautifI){
+      var label=ERROR_LABEL[type];
+      var next=wordTokens[newIdx];
+      var seq=[];
+      if(label)seq.push(label);
+      if(next&&next.text)seq.push(next.text);
+      if(seq.length)speakSequence(seq);
+    }
     if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
   function confirmFautifI(overrideVal){
@@ -2309,8 +2335,7 @@ function CorrEleve(p){
     setFastFlash(obj.type);setTimeout(function(){setFastFlash(null)},400);
     var newIdx=fastIdx+1;
     setFastIdx(newIdx);
-    // speak direct : appelé avec askFautifI=null déjà dans le contexte React futur,
-    // mais ici la lecture est immédiate donc on bypass le check
+    // Le type a déjà été annoncé dans fastMark, on enchaîne juste sur le mot suivant
     if(speechOn){var next=wordTokens[newIdx];if(next&&next.text)speakWord(next.text)}
     if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
