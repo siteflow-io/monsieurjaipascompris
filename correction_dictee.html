@@ -1726,9 +1726,13 @@ function CorrScreen(p){
       setCur(null);
       setMsg("\u21bb "+cur.split(" ").pop()+" r\u00e9initialis\u00e9");setTimeout(function(){setMsg(null)},2000);
     },
-    onAutoSave:function(err,ext){
+    onAutoSave:function(err,ext,fastIdxVal){
       // Sauvegarde silencieuse sans navigation — protège contre la perte en mode rapide
       p.onSave(curKey,err,ext);
+      // Persistance fastIdx pour reprise au point exact à la prochaine entrée en mode rapide
+      if(typeof fastIdxVal==="number"){
+        db.ref("correction_dictee/"+p.dicteeId+"/results/"+curKey+"/fastIdx").set(fastIdxVal);
+      }
     },
     onCancel:function(){setCur(null)}
   });
@@ -1884,7 +1888,10 @@ function CorrScreen(p){
       return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,
         existing:p.corrections[san(rapideEleve)]||null,
         startFast:true,
-        onAutoSave:function(err,ext){p.onSave(san(rapideEleve),err,ext)},
+        onAutoSave:function(err,ext,fastIdxVal){
+          p.onSave(san(rapideEleve),err,ext);
+          if(typeof fastIdxVal==="number")db.ref("correction_dictee/"+p.dicteeId+"/results/"+san(rapideEleve)+"/fastIdx").set(fastIdxVal);
+        },
         onSave:function(err,ext){
           p.onSave(san(rapideEleve),err,ext);
           // Move to next uncorrected
@@ -2160,7 +2167,13 @@ function CorrEleve(p){
   var wordGridRef=React.useRef(null);
   var sFs=useState(1),fontScale=sFs[0],setFontScale=sFs[1];
   var s7=useState(p.startFast||false),fastMode=s7[0],setFastMode=s7[1];
-  var s8=useState(0),fastIdx=s8[0],setFastIdx=s8[1];
+  var s8=useState(p.existing&&typeof p.existing.fastIdx==="number"?p.existing.fastIdx:0),fastIdx=s8[0],setFastIdx=s8[1];
+  // True si on arrive sur un élève dont la correction rapide est déjà terminée
+  var sDone=useState(function(){
+    if(!p.existing||typeof p.existing.fastIdx!=="number")return false;
+    var wt=(data.tokens||tokenize(data.text||"")).filter(function(x){return!isPunct(x)});
+    return p.existing.fastIdx>=wt.length;
+  }),wasAlreadyDone=sDone[0],setWasAlreadyDone=sDone[1];
   var sSp=useState(getSpeechEnabled()),speechOn=sSp[0],_setSpeechOn=sSp[1];
   function setSpeechOn(v){_setSpeechOn(v);setSpeechEnabled(v);if(!v)stopSpeech()}
   var s9=useState(null),fastFlash=s9[0],setFastFlash=s9[1];
@@ -2240,8 +2253,10 @@ function CorrEleve(p){
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     ne.push({idx:wt.idx,type:type,word:wt.text});
     setErrors(ne);setFastFlash(type);setTimeout(function(){setFastFlash(null)},400);
-    setFastIdx(fastIdx+1);
-    if(p.onAutoSave)p.onAutoSave(ne,extras);
+    var newIdx=fastIdx+1;
+    setFastIdx(newIdx);
+    speakAt(newIdx);
+    if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
   function confirmFautifI(overrideVal){
     var wt=wordTokens[fastIdx];if(!wt)return;
@@ -2252,22 +2267,37 @@ function CorrEleve(p){
     ne.push(obj);setErrors(ne);
     setAskFautifI(null);setFautifValI("");
     setFastFlash(obj.type);setTimeout(function(){setFastFlash(null)},400);
-    setFastIdx(fastIdx+1);
-    if(p.onAutoSave)p.onAutoSave(ne,extras);
+    var newIdx=fastIdx+1;
+    setFastIdx(newIdx);
+    // speak direct : appelé avec askFautifI=null déjà dans le contexte React futur,
+    // mais ici la lecture est immédiate donc on bypass le check
+    if(speechOn){var next=wordTokens[newIdx];if(next&&next.text)speakWord(next.text)}
+    if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
   function fastSkip(){
     var wt=wordTokens[fastIdx];if(!wt)return;
-    // Don't remove existing errors — just advance
-    setFastIdx(fastIdx+1);
+    var newIdx=fastIdx+1;
+    setFastIdx(newIdx);
+    speakAt(newIdx);
+    if(p.onAutoSave)p.onAutoSave(errors,extras,newIdx);
   }
   function fastClear(){
     var wt=wordTokens[fastIdx];if(!wt)return;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     setErrors(ne);
-    setFastIdx(fastIdx+1);
-    if(p.onAutoSave)p.onAutoSave(ne,extras);
+    var newIdx=fastIdx+1;
+    setFastIdx(newIdx);
+    speakAt(newIdx);
+    if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
-  function fastBack(){if(fastIdx>0)setFastIdx(fastIdx-1)}
+  function fastBack(){
+    if(fastIdx>0){
+      var newIdx=fastIdx-1;
+      setFastIdx(newIdx);
+      speakAt(newIdx);
+      if(p.onAutoSave)p.onAutoSave(errors,extras,newIdx);
+    }
+  }
 
   React.useEffect(function(){
     if(!fastMode||askFautifI)return;
@@ -2288,13 +2318,21 @@ function CorrEleve(p){
     return function(){window.removeEventListener("keydown",onKey)};
   });
 
-  // Lecture audio du mot courant en mode rapide
+  // Lecture audio à l'entrée en mode rapide (1er mot). Les actions de navigation
+  // appellent speakWord directement pour éviter le délai du cycle React.
   React.useEffect(function(){
-    if(!fastMode||!speechOn||askFautifI){stopSpeech();return}
+    if(!fastMode||!speechOn){stopSpeech();return}
+    // À l'entrée : lit le mot où on en est
     var wt=wordTokens[fastIdx];
-    if(wt&&wt.text)speakWord(wt.text);
+    if(wt&&wt.text&&!askFautifI)speakWord(wt.text);
     return function(){stopSpeech()};
-  },[fastMode,fastIdx,speechOn,askFautifI]);
+  },[fastMode,speechOn]);
+  // Helper : lit immédiatement le mot à l'index donné (appelé depuis fastMark, fastSkip, etc.)
+  function speakAt(idx){
+    if(!speechOn||askFautifI)return;
+    var wt=wordTokens[idx];
+    if(wt&&wt.text)speakWord(wt.text);
+  }
 
   // Coupe le son quand on sort du mode rapide
   React.useEffect(function(){return function(){stopSpeech()}},[]);
@@ -2384,12 +2422,12 @@ function CorrEleve(p){
       ),
       fastDone?
         h("div",{className:"card",style:{textAlign:"center",padding:30}},
-          h("div",{style:{fontSize:"2rem",marginBottom:8}},"\u2705"),
-          h("div",{style:{fontSize:"1.2rem",fontWeight:700,marginBottom:8}},"Termin\u00e9 !"),
+          h("div",{style:{fontSize:"2rem",marginBottom:8}},wasAlreadyDone?"\u2714\ufe0f":"\u2705"),
+          h("div",{style:{fontSize:"1.2rem",fontWeight:700,marginBottom:8}},wasAlreadyDone?"\u00c9l\u00e8ve d\u00e9j\u00e0 corrig\u00e9":"Termin\u00e9 !"),
           h("div",{style:{fontSize:".9rem",color:"var(--text-sub)"}},errors.length+" erreur"+(errors.length>1?"s":"")+" trouv\u00e9e"+(errors.length>1?"s":"")),
           h("div",{style:{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}},
-            h("button",{className:"btn btn-primary",onClick:function(){p.onSave(errors,extras)}},"\u2705 Enregistrer"),
-            h("button",{className:"btn btn-ghost",onClick:function(){setFastIdx(0)}},"\u21bb Relire"),
+            !wasAlreadyDone&&h("button",{className:"btn btn-primary",onClick:function(){p.onSave(errors,extras)}},"\u2705 Enregistrer"),
+            h("button",{className:"btn btn-ghost",onClick:function(){setWasAlreadyDone(false);setFastIdx(0);if(p.onAutoSave)p.onAutoSave(errors,extras,0)}},"\u21bb Relire"),
             h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(false)}},"\u270f\ufe0f V\u00e9rifier en mode texte")
           )
         ):
