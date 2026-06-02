@@ -1229,7 +1229,7 @@ if('speechSynthesis' in window){
   window.speechSynthesis.addEventListener("voiceschanged",_selectFrenchVoice);
 }
 // Permet à l'utilisateur de surcharger via le curseur de réactivité (rate)
-function getSpeechRate(){try{var r=parseFloat(localStorage.getItem("mjpc_speech_rate"));return(r>=.5&&r<=2)?r:1.15}catch(e){return 1.15}}
+function getSpeechRate(){try{var r=parseFloat(localStorage.getItem("mjpc_speech_rate"));return(r>=.5&&r<=4)?r:1.15}catch(e){return 1.15}}
 function setSpeechRate(r){try{localStorage.setItem("mjpc_speech_rate",String(r))}catch(e){}}
 function speakWord(word){
   if(!('speechSynthesis' in window))return;
@@ -1689,6 +1689,21 @@ function CorrScreen(p){
     if(cur)db.ref(path).remove();else db.ref(path).set(true);
     setCtxMenu(null);
   }
+
+  // Raccourci clavier : Shift+R pour basculer en mode rapide depuis le mode texte
+  useEffect(function(){
+    function onKey(e){
+      // Ignorer si on tape dans un input
+      var t=e.target&&e.target.tagName;
+      if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
+      if(e.shiftKey&&(e.key==="R"||e.key==="r")&&tab==="correct"&&cur){
+        e.preventDefault();
+        setTab("rapide");
+      }
+    }
+    window.addEventListener("keydown",onKey);
+    return function(){window.removeEventListener("keydown",onKey)};
+  },[tab,cur]);
   var nAbs=Object.keys(p.absents||{}).length;
   var nTotal=data.eleves.length-nAbs;
   var nDone=data.eleves.filter(function(e){var k=san(e);return!p.absents[k]&&p.corrections[k]}).length;
@@ -1857,7 +1872,7 @@ function CorrScreen(p){
     msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
     h("div",{className:"tabs"},
       h("button",{className:"tab"+(tab==="correct"?" active":""),onClick:function(){setTab("correct")}},"Correction"),
-      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")}},"\u26a1 Rapide",ifo("Corrige en faisant d\u00e9filer les mots un par un. Tu regardes la copie et tu tapes G, L, / ou ? au clavier.")),
+      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")},title:"Raccourci : Maj+R depuis le mode Correction"},"\u26a1 Rapide ",h("span",{style:{fontSize:".7em",opacity:.6,marginLeft:2}},"(\u21e7R)"),ifo("Corrige les mots un par un avec audio. Raccourci pour y entrer : Maj+R depuis le mode Correction (quand un \u00e9l\u00e8ve est s\u00e9lectionn\u00e9).")),
       h("button",{className:"tab"+(tab==="bilan"?" active":""),onClick:function(){setTab("bilan")}},"Bilan"),
       h("button",{className:"tab"+(tab==="copies"?" active":""),onClick:function(){setTab("copies")}},"\ud83d\udcc4 Copies"),
       h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
@@ -1914,6 +1929,7 @@ function CorrScreen(p){
           p.onSave(san(rapideEleve),err,ext);
           if(typeof fastIdxVal==="number")db.ref("correction_dictee/"+p.dicteeId+"/results/"+san(rapideEleve)+"/fastIdx").set(fastIdxVal);
         },
+        onExitFast:function(){setTab("correct")},
         onSave:function(err,ext){
           p.onSave(san(rapideEleve),err,ext);
           // Move to next uncorrected
@@ -2406,7 +2422,6 @@ function CorrEleve(p){
     overlay.style.height=height+"px";
   },[lastTouched,errors,extras,fastMode]);
 
-  var fastModalContent=null;
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
     var pct=Math.round(fastIdx/wordTokens.length*100);
@@ -2414,17 +2429,7 @@ function CorrEleve(p){
     var ctxStart=Math.max(0,fastIdx-3);
     var ctxEnd=Math.min(wordTokens.length,fastIdx+4);
 
-    fastModalContent=h("div",{
-      style:{position:"fixed",inset:0,zIndex:1000,background:"rgba(35,30,20,.55)",
-             display:"flex",alignItems:"flex-start",justifyContent:"center",
-             padding:"20px 12px",overflowY:"auto",backdropFilter:"blur(2px)",
-             WebkitBackdropFilter:"blur(2px)"},
-      onClick:function(e){if(e.target===e.currentTarget)setFastMode(false)}
-    },h("div",{className:"fade-up",style:{
-      maxWidth:480,width:"100%",background:"var(--bg)",borderRadius:16,
-      padding:"16px 18px",boxShadow:"0 12px 40px rgba(0,0,0,.35)",
-      border:"1.5px solid var(--border)"
-    },onClick:function(e){e.stopPropagation()}},
+    return h("div",{className:"container fade-up",style:{maxWidth:480}},
       h("div",{className:"score-bar"},
         h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},sc.note),
         h("div",{style:{flex:1}},
@@ -2435,13 +2440,13 @@ function CorrEleve(p){
         ),
         ("speechSynthesis" in window)?h("div",{style:{display:"flex",gap:6,alignItems:"center"}},
           h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"),
-          speechOn&&h("label",{title:"Vitesse de la voix (0.7\u00d7 \u00e0 1.6\u00d7). Si \u00e7a lag, augmente. Si tu ne comprends pas le mot, diminue.",style:{display:"flex",alignItems:"center",gap:4,fontSize:".72rem",color:"#2b6cb0"}},
+          speechOn&&h("label",{title:"Vitesse de la voix (0.7\u00d7 \u00e0 3.0\u00d7). Si \u00e7a lag, augmente. Si tu ne comprends pas le mot, diminue.",style:{display:"flex",alignItems:"center",gap:4,fontSize:".72rem",color:"#2b6cb0"}},
             h("span",{style:{minWidth:32,textAlign:"right",fontVariantNumeric:"tabular-nums"}},speechRate.toFixed(2)+"\u00d7"),
-            h("input",{type:"range",min:.7,max:1.6,step:.05,value:speechRate,onChange:function(e){var r=parseFloat(e.target.value);changeSpeechRate(r)},style:{width:80,accentColor:"#2b6cb0"}})
+            h("input",{type:"range",min:.7,max:3,step:.05,value:speechRate,onChange:function(e){var r=parseFloat(e.target.value);changeSpeechRate(r)},style:{width:80,accentColor:"#2b6cb0"}})
           )
         ):h("span",{style:{fontSize:".7rem",color:"#999"},title:"Web Speech API non disponible dans ce navigateur"},"\ud83d\udd07 \u2014"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
       ),
       h("div",{style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
         wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
@@ -2458,7 +2463,7 @@ function CorrEleve(p){
           h("div",{style:{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}},
             !wasAlreadyDone&&h("button",{className:"btn btn-primary",onClick:function(){p.onSave(errors,extras)}},"\u2705 Enregistrer"),
             h("button",{className:"btn btn-ghost",onClick:function(){setWasAlreadyDone(false);setFastIdx(0);if(p.onAutoSave)p.onAutoSave(errors,extras,0)}},"\u21bb Relire"),
-            h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(false)}},"\u270f\ufe0f V\u00e9rifier en mode texte")
+            h("button",{className:"btn btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (la position est sauvegardée)"},"\u270f\ufe0f V\u00e9rifier en mode texte")
           )
         ):
         (function(){
@@ -2485,29 +2490,29 @@ function CorrEleve(p){
           ),
           !askFautifI&&h("div",{className:"fast-btns"},
             existingErr?
-              h("button",{className:"fast-btn fast-ok",onClick:fastSkip},"\u2713 Garder ("+existingErr.type+")"):
-              h("button",{className:"fast-btn fast-ok",onClick:fastSkip},"\u2192 Correct"),
-            existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear},"\u2715 Annuler l\u2019erreur"),
-            existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")}},"Changer \u2192 G"),
-            existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")}},"Changer \u2192 L"),
-            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")}},"G Grammaire"),
-            !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")}},"L Lexique"),
+              h("button",{className:"fast-btn fast-ok",onClick:fastSkip,title:"Garder cette erreur en l\u2019\u00e9tat. Raccourci : Espace ou Entr\u00e9e"},"\u2713 Garder ("+existingErr.type+")"):
+              h("button",{className:"fast-btn fast-ok",onClick:fastSkip,title:"Ce mot est correct, passer au suivant. Raccourci : Espace ou Entr\u00e9e"},"\u2192 Correct"),
+            existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear,title:"Supprimer cette erreur et passer au suivant"},"\u2715 Annuler l\u2019erreur"),
+            existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Changer cette erreur en Grammaire (accord, conjugaison, homophone)"},"Changer \u2192 G"),
+            existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer cette erreur en Lexique (orthographe pure)"},"Changer \u2192 L"),
+            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire (\u22121 pt). Une saisie du mot fautif te sera demand\u00e9e. Raccourci : G"},"G Grammaire"),
+            !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Une saisie du mot fautif te sera demand\u00e9e. Raccourci : L"},"L Lexique"),
             !existingErr&&(curWord&&isPunct(curWord.text)
-              ?h("button",{className:"fast-btn fast-p",onClick:function(){fastMark("P")}},"\u00b7 Ponct. manqu.")
-              :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")}},"\u2205 Manquant")),
-            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")}},"? Illisible"),
-            !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")}},"\u26a0 Attention")
+              ?h("button",{className:"fast-btn fast-p",onClick:function(){fastMark("P")},title:"Ponctuation manquante (\u22120,5 pt). Raccourci : P"},"\u00b7 Ponct. manqu.")
+              :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 (\u22121 pt). Raccourci : \u00d8 ou /"},"\u2205 Manquant")),
+            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible (\u22121 pt). Une saisie de transcription te sera demand\u00e9e. Raccourci : I ou ?"},"? Illisible"),
+            !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")},title:"Attention graphie : signalement sans p\u00e9nalit\u00e9 (graphie limite). Raccourci : A"},"\u26a0 Attention")
           ),
           h("div",{style:{display:"flex",justifyContent:"space-between",marginTop:12}},
-            h("button",{className:"btn-sm btn-ghost",onClick:fastBack,disabled:fastIdx===0},"\u2190 Pr\u00e9c."),
-            p.onPrev&&h("button",{className:"btn-sm btn-ghost",onClick:p.onPrev},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
-            p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext},"\u00c9l\u00e8ve suiv. \u2192"),
-            h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)}},"Terminer \u2192")
+            h("button",{className:"btn-sm btn-ghost",onClick:fastBack,disabled:fastIdx===0,title:"Mot pr\u00e9c\u00e9dent. Raccourci : Retour arri\u00e8re"},"\u2190 Pr\u00e9c."),
+            p.onPrev&&h("button",{className:"btn-sm btn-ghost",onClick:p.onPrev,title:"\u00c9l\u00e8ve pr\u00e9c\u00e9dent dans la classe (ta position est sauvegard\u00e9e)"},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
+            p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext,title:"\u00c9l\u00e8ve suivant dans la classe (ta position est sauvegard\u00e9e)"},"\u00c9l\u00e8ve suiv. \u2192"),
+            h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)},title:"Sauter \u00e0 la fin de la dict\u00e9e (sans marquer le reste)"},"Terminer \u2192")
           ),
           h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 / = manquant \u00b7 P = ponct. \u00b7 ? = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
         )
     })()
-    ));
+    );
   }
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
@@ -2579,8 +2584,7 @@ function CorrEleve(p){
       }))
     ),
     h("div",{style:{display:"flex",gap:8,marginBottom:20}},
-      h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant"),
-      h("button",{className:"btn btn-ghost",onClick:function(){setFastMode(true);setFastIdx(0)}},"\u26a1 Rapide")
+      h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){p.onSave(errors,extras)}},"Enregistrer ("+sc.note+"/"+data.base+") \u2192 suivant")
     ),
     // Popup transfert
     xferOpen&&(function(){
@@ -2672,8 +2676,7 @@ function CorrEleve(p){
           h("button",{className:"btn-sm btn-ghost",onClick:function(){setInsertIdx(null)},style:{flex:1}},"Annuler")
         )
       )
-    ),
-    fastModalContent
+    )
   );
 }
 
