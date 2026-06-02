@@ -1207,15 +1207,37 @@ function speechText(word){
   // (l'apostrophe sera prononcée naturellement par le moteur français en attaque du mot suivant)
   return word.replace(/['\u2019]$/, "");
 }
+// Sélection de voix : voix locale UNIQUEMENT (les voix réseau type "Google français"
+// causent un lag réseau de 200-500ms à chaque mot). Préférence : Hortense > Julie > autre locale.
+var _frenchVoice=null;
+function _selectFrenchVoice(){
+  if(!('speechSynthesis' in window))return;
+  var voices=window.speechSynthesis.getVoices();
+  if(!voices||!voices.length){_frenchVoice=null;return}
+  var french=voices.filter(function(v){return v.lang&&v.lang.startsWith("fr")});
+  var locals=french.filter(function(v){return v.localService});
+  // Préférence par nom (Hortense est généralement la plus rapide à démarrer sous Windows)
+  var prefer=["Hortense","Julie","Paul","Microsoft"];
+  for(var i=0;i<prefer.length;i++){
+    var found=locals.find(function(v){return v.name.indexOf(prefer[i])>=0});
+    if(found){_frenchVoice=found;return}
+  }
+  _frenchVoice=locals[0]||null; // toujours une voix locale, jamais réseau
+}
+if('speechSynthesis' in window){
+  _selectFrenchVoice();
+  window.speechSynthesis.addEventListener("voiceschanged",_selectFrenchVoice);
+}
+// Permet à l'utilisateur de surcharger via le curseur de réactivité (rate)
+function getSpeechRate(){try{var r=parseFloat(localStorage.getItem("mjpc_speech_rate"));return(r>=.5&&r<=2)?r:1.15}catch(e){return 1.15}}
+function setSpeechRate(r){try{localStorage.setItem("mjpc_speech_rate",String(r))}catch(e){}}
 function speakWord(word){
   if(!('speechSynthesis' in window))return;
   window.speechSynthesis.cancel();
   var txt=speechText(word);if(!txt)return;
   var u=new SpeechSynthesisUtterance(txt);
-  u.lang="fr-FR";u.rate=0.95;u.pitch=1.0;u.volume=1.0;
-  var voices=window.speechSynthesis.getVoices();
-  var fr=voices.find(function(v){return v.lang&&v.lang.startsWith("fr")});
-  if(fr)u.voice=fr;
+  u.lang="fr-FR";u.rate=getSpeechRate();u.pitch=1.0;u.volume=1.0;
+  if(_frenchVoice)u.voice=_frenchVoice;
   window.speechSynthesis.speak(u);
 }
 function stopSpeech(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
@@ -2176,6 +2198,8 @@ function CorrEleve(p){
   }),wasAlreadyDone=sDone[0],setWasAlreadyDone=sDone[1];
   var sSp=useState(getSpeechEnabled()),speechOn=sSp[0],_setSpeechOn=sSp[1];
   function setSpeechOn(v){_setSpeechOn(v);setSpeechEnabled(v);if(!v)stopSpeech()}
+  var sRate=useState(getSpeechRate()),speechRate=sRate[0],_setSpeechRate=sRate[1];
+  function changeSpeechRate(r){_setSpeechRate(r);setSpeechRate(r)}
   var s9=useState(null),fastFlash=s9[0],setFastFlash=s9[1];
   var sSearch=useState(""),searchVal=sSearch[0],setSearchVal=sSearch[1];
   var sXfer=useState(false),xferOpen=sXfer[0],setXferOpen=sXfer[1];
@@ -2409,7 +2433,13 @@ function CorrEleve(p){
           h("div",{style:{height:4,background:"#e5e3dd",borderRadius:2,marginTop:4,overflow:"hidden"}},
             h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
         ),
-        ("speechSynthesis" in window)?h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"):h("span",{style:{fontSize:".7rem",color:"#999"},title:"Web Speech API non disponible dans ce navigateur"},"\ud83d\udd07 \u2014"),
+        ("speechSynthesis" in window)?h("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+          h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"),
+          speechOn&&h("label",{title:"Vitesse de la voix (0.7\u00d7 \u00e0 1.6\u00d7). Si \u00e7a lag, augmente. Si tu ne comprends pas le mot, diminue.",style:{display:"flex",alignItems:"center",gap:4,fontSize:".72rem",color:"#2b6cb0"}},
+            h("span",{style:{minWidth:32,textAlign:"right",fontVariantNumeric:"tabular-nums"}},speechRate.toFixed(2)+"\u00d7"),
+            h("input",{type:"range",min:.7,max:1.6,step:.05,value:speechRate,onChange:function(e){var r=parseFloat(e.target.value);changeSpeechRate(r)},style:{width:80,accentColor:"#2b6cb0"}})
+          )
+        ):h("span",{style:{fontSize:".7rem",color:"#999"},title:"Web Speech API non disponible dans ce navigateur"},"\ud83d\udd07 \u2014"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
       ),
