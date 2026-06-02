@@ -447,6 +447,34 @@
 .carnet-quote{font-style:italic;color:var(--ink2);font-size:.82rem;margin:4px 0 0;padding-left:9px;border-left:2px solid var(--line)}
 .carnet-consigne{margin:5px 0 2px;padding:6px 9px;border-left:3px solid var(--gold);background:rgba(220,171,85,.10);border-radius:6px;font-size:.8rem;color:var(--ink2);line-height:1.35}
 .carnet-consigne.hs{border-left-color:var(--accent);background:rgba(192,57,43,.10)}
+#cineOverlay{position:fixed;inset:0;z-index:99999;background:#14110d;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;color:#f6f1e4}
+#cineOverlay.show{display:flex}
+.cine-title{position:absolute;top:8%;left:0;right:0;text-align:center;font-size:1.7rem;font-weight:700;color:var(--gold);opacity:0;transition:opacity .5s;padding:0 16px}
+.cine-title.show{opacity:1}
+.cine-arena{display:flex;align-items:center;justify-content:center;gap:10px;perspective:1100px;opacity:0;transition:opacity .4s}
+.cine-arena.show{opacity:1}
+.cine-plate{width:40vw;max-width:240px;padding:20px 12px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:5px;transition:transform .5s cubic-bezier(.3,1,.3,1),opacity .5s,background .4s,border-color .4s}
+.cine-pp{background:#3a1f1a;border:2px solid #c0392b;transform:rotateY(26deg)}
+.cine-pc{background:#163029;border:2px solid #62b07f;transform:rotateY(-26deg)}
+.cine-plate .cmp{font-size:.95rem;font-weight:700}
+.cine-pp .cmp{color:#dd6a52}.cine-pc .cmp{color:#62b07f}
+.cine-plate .cnm{font-size:1.05rem;color:#f6f1e4}
+.cine-plate.win{background:#3a2f12;border-color:var(--gold)}.cine-plate.win .cmp{color:#a99e88}
+.cine-plate .csc{font-size:1.5rem;color:var(--gold);font-weight:700}
+.cine-crown{font-size:2.6rem;animation:cineCd .55s cubic-bezier(.2,1.6,.4,1)}
+@keyframes cineCd{from{transform:translateY(-30px) rotate(-18deg);opacity:0}to{transform:translateY(0);opacity:1}}
+.cine-bolt{font-size:3.2rem;opacity:0}
+.cine-bolt.show{animation:cineBz .5s ease}@keyframes cineBz{0%{opacity:0;transform:scale(.4)}25%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(1.4)}}
+.cine-bravo{position:absolute;bottom:13%;left:0;right:0;text-align:center;font-size:3.2rem;font-weight:700;color:var(--gold);letter-spacing:.04em;opacity:0;transform:scale(.5)}
+.cine-bravo.show{animation:cineBv .6s cubic-bezier(.2,1.6,.4,1) forwards}@keyframes cineBv{to{opacity:1;transform:scale(1)}}
+.cine-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.cine-flash.go{animation:cineFl .32s ease}@keyframes cineFl{0%{opacity:0}22%{opacity:.5}100%{opacity:0}}
+.cine-fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.cine-confetti{position:absolute;top:-20px;width:10px;height:16px;border-radius:2px;animation:cineFall linear forwards}
+@keyframes cineFall{to{transform:translateY(106vh) rotate(720deg);opacity:.1}}
+.cine-emo{position:absolute;bottom:-40px;animation:cineRise linear forwards}
+@keyframes cineRise{to{transform:translateY(-108vh) translateX(var(--sway,0px));opacity:0}}
+.cine-close{position:absolute;top:14px;right:16px;background:rgba(0,0,0,.35);color:#f6f1e4;border:1px solid #423b2c;border-radius:8px;padding:8px 14px;font-size:.9rem;cursor:pointer;display:none;z-index:3}
 .vote-box{margin-top:8px;padding:7px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);font-size:.82rem}
 .vote-head{font-weight:700;color:var(--ink2);margin-bottom:2px}
 .vote-missing{color:var(--accent2);margin-top:2px}
@@ -672,6 +700,15 @@
 </div>
 
 <!-- ============ Overlays ============ -->
+<div id="cineOverlay">
+  <button class="cine-close" id="cineClose" onclick="closeReveal()">Fermer ✕</button>
+  <div class="cine-title" id="cineTitle"></div>
+  <div class="cine-arena" id="cineArena"></div>
+  <div class="cine-bravo" id="cineBravo">BRAVO</div>
+  <div class="cine-fx" id="cineFx"></div>
+  <div class="cine-flash" id="cineFlash"></div>
+</div>
+
 <div class="overlay" id="endReminderOverlay">
   <div class="gelcard" style="max-width:470px;text-align:left">
     <h2 style="font-size:1.15rem;margin-bottom:8px;text-align:center">Clôturer la séance ?</h2>
@@ -1432,8 +1469,10 @@ function startSessionListener(){
         return;
       }
       renderStudent();
+      maybePlayReveal();
     } else if(role==="prof"){
       renderProf();
+      maybePlayReveal();
     }
   };
   db.ref(ACTIVE).on("value", sessionListener);
@@ -2218,6 +2257,9 @@ function maybeBeep(cm){
 
 // ─────────── Audio ───────────
 let audioCtx=null;
+let lastRevealAt=null;
+let cineTimers=[];
+let cineEmoTimer=null;
 function ensureAudio(){ try{ if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended")audioCtx.resume(); }catch(e){} }
 function beep(freq,ms){
   try{
@@ -2299,6 +2341,77 @@ function aggregateEleves(mid, camp, profEleves, members){
   });
   return res;
 }
+function clearCine(){ cineTimers.forEach(function(t){clearTimeout(t);}); cineTimers=[]; }
+function cineAdd(fn,ms){ cineTimers.push(setTimeout(fn,ms)); }
+function cineConfetti(n){ var fx=document.getElementById("cineFx"); if(!fx)return; var c=["#dcab55","#f6f1e4","#dd6a52","#62b07f","#c0392b","#e8c87a"]; for(var k=0;k<n;k++){ var d=document.createElement("div"); d.className="cine-confetti"; d.style.left=(Math.random()*100)+"%"; d.style.background=c[k%c.length]; d.style.animationDuration=(2.6+Math.random()*1.4)+"s"; d.style.animationDelay=(Math.random()*0.5)+"s"; d.style.height=(12+Math.random()*9)+"px"; fx.appendChild(d); } }
+function cineSpawnEmoji(){ var fx=document.getElementById("cineFx"); if(!fx)return; var E=["\u2764\uFE0F","\uD83D\uDC4F","\uD83C\uDF89","\u2B50","\u2728","\uD83C\uDFC6"]; var e=document.createElement("div"); e.className="cine-emo"; e.textContent=E[Math.floor(Math.random()*E.length)]; e.style.left=(Math.random()*100)+"%"; e.style.fontSize=(22+Math.random()*20)+"px"; e.style.setProperty("--sway",((Math.random()*60)-30)+"px"); e.style.animationDuration=(2.6+Math.random()*1.6)+"s"; fx.appendChild(e); setTimeout(function(){e.remove();},4600); }
+function closeCine(){ clearCine(); if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;} var o=document.getElementById("cineOverlay"); if(o){o.classList.remove("show"); var fx=document.getElementById("cineFx"); if(fx)fx.innerHTML="";} }
+function playRevealCine(rv){
+  if(!rv) return; ensureAudio(); clearCine(); if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;}
+  var o=document.getElementById("cineOverlay"); if(!o)return;
+  document.getElementById("cineFx").innerHTML="";
+  document.getElementById("cineBravo").className="cine-bravo";
+  document.getElementById("cineClose").style.display=(role==="prof")?"block":"none";
+  var ttl=document.getElementById("cineTitle"); ttl.className="cine-title"; ttl.textContent="";
+  var arena=document.getElementById("cineArena"); arena.className="cine-arena";
+  arena.innerHTML='<div class="cine-plate cine-pp" id="cinePP"><div class="cmp">POUR</div><div class="cnm">'+esc(rv.pourName||"?")+'</div></div><div class="cine-bolt" id="cineBolt">\u26A1</div><div class="cine-plate cine-pc" id="cinePC"><div class="cmp">CONTRE</div><div class="cnm">'+esc(rv.contreName||"?")+'</div></div>';
+  o.classList.add("show");
+  var pp=document.getElementById("cinePP"), pc=document.getElementById("cinePC");
+  var winEl = rv.winnerCamp==="pour"?pp:(rv.winnerCamp==="contre"?pc:null);
+  var loseEl = winEl===pp?pc:(winEl===pc?pp:null);
+  cineAdd(function(){ ttl.textContent="Manche termin\u00e9e"; ttl.classList.add("show"); },150);
+  cineAdd(function(){ ttl.textContent="Et le vainqueur est..."; },1500);
+  cineAdd(function(){ ttl.classList.remove("show"); arena.classList.add("show"); },2300);
+  cineAdd(function(){ pp.style.transform="rotateY(-10deg) translateX(6vw)"; pc.style.transform="rotateY(10deg) translateX(-6vw)"; beep(200,420); },2600);
+  cineAdd(function(){
+    pp.style.transform="rotateY(0) translateX(2vw)"; pc.style.transform="rotateY(0) translateX(-2vw)";
+    var bolt=document.getElementById("cineBolt"); if(bolt)bolt.classList.add("show");
+    var fl=document.getElementById("cineFlash"); fl.classList.add("go"); beep(1500,90);
+    cineAdd(function(){ fl.classList.remove("go"); },340);
+  },3100);
+  cineAdd(function(){
+    if(winEl){
+      winEl.className="cine-plate "+(winEl===pp?"cine-pp":"cine-pc")+" win";
+      winEl.style.transform="translateX(0) translateZ(45px) scale(1.12)";
+      if(loseEl){ loseEl.style.transform="translateX("+(loseEl===pp?"-8vw":"-8vw")+") rotateY(46deg)"; loseEl.style.opacity="0.18"; }
+      winEl.insertAdjacentHTML("afterbegin",'<div class="cine-crown">\uD83C\uDFC6</div>');
+      if(rv.winnerScore!=null) winEl.insertAdjacentHTML("beforeend",'<div class="csc" id="cineScore">0,0 /20</div>');
+    }
+  },3650);
+  cineAdd(function(){
+    var bravo=document.getElementById("cineBravo");
+    bravo.textContent = winEl ? "BRAVO" : "\u00c9galit\u00e9";
+    bravo.classList.add("show");
+    cineConfetti(80); cineEmoTimer=setInterval(function(){cineSpawnEmoji();cineSpawnEmoji();},150);
+    beep(740,140); cineAdd(function(){ beep(1100,300); },150);
+    if(winEl && rv.winnerScore!=null){
+      var sc=document.getElementById("cineScore"), t0=performance.now(), tgt=rv.winnerScore;
+      (function step(now){ var p=Math.min(1,(now-t0)/1100); if(sc) sc.textContent=(tgt*p).toFixed(1).replace(".",",")+" /20"; if(p<1) requestAnimationFrame(step); })(t0);
+    }
+  },4000);
+  cineAdd(function(){ if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;} },7200);
+}
+function maybePlayReveal(){
+  var rv=((sessionData&&sessionData.debat)||{}).reveal||null;
+  var at=(rv&&rv.at)||0;
+  if(lastRevealAt===null){ lastRevealAt=at; return; }
+  if(at===lastRevealAt) return;
+  lastRevealAt=at;
+  if(at && rv) playRevealCine(rv); else closeCine();
+}
+function revealWinner(){
+  var cm=debatData().currentMatch; if(!cm||!cm.result){ toast("Cl\u00f4ture d'abord la manche."); return; }
+  var r=cm.result;
+  var pourBid=speakerOf(cm,"pour"), contreBid=speakerOf(cm,"contre");
+  var rv={ at:Date.now(), matchId:cm.id,
+    pourName:(binomeName(findBinome(pourBid))||"?"),
+    contreName:(binomeName(findBinome(contreBid))||"?"),
+    winnerCamp:r.gagnant||"nul",
+    winnerName:(r.gagnantBinome?(binomeName(findBinome(r.gagnantBinome))||"?"):null),
+    winnerScore:(r.gagnant==="pour"?r.scorePour:(r.gagnant==="contre"?r.scoreContre:null)) };
+  db.ref(DEBAT+"/reveal").set(rv);
+}
+function closeReveal(){ db.ref(DEBAT+"/reveal").remove(); closeCine(); }
 function clotureManche(){
   const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Aucune manche à clôturer."); return; }
   ensureProfDraft(cm.id);
@@ -2532,7 +2645,7 @@ function renderDebatProf(){
       h+='<div class="dbg-result"><div style="color:var(--muted);font-size:.85rem">POUR '+r.scorePour+' &nbsp;—&nbsp; '+r.scoreContre+' CONTRE</div>';
       h+='<div class="win">'+(winName?("🏆 "+winName+" l\'emporte"):"Égalité")+'</div>';
       h+='<div style="font-size:.8rem;color:var(--muted)">'+r.nbSpect+' spectateur(s) ont voté</div>';
-      h+='<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="openEvalDetail(\''+cm.id+'\')" title="Voir qui a évalué quoi : notes et commentaires de chaque évaluateur, et les tiens.">📋 Détail des évaluations</button><button class="dbg-btn" onclick="nextMatchAuto()" title="Charge automatiquement la manche suivante (ou génère la phase finale quand les poules sont finies).">Manche suivante →</button><button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer sans charger la manche suivante.">Fermer</button></div></div>';
+      h+='<div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="dbg-btn" style="border-color:var(--gold);color:var(--gold)" onclick="revealWinner()" title="Lancer la r\u00e9v\u00e9lation cin\u00e9matique du vainqueur sur toutes les tablettes.">\uD83C\uDFAC R\u00e9v\u00e9ler le vainqueur</button><button class="dbg-btn ghost" onclick="openEvalDetail(\''+cm.id+'\')" title="Voir qui a évalué quoi : notes et commentaires de chaque évaluateur, et les tiens.">📋 Détail des évaluations</button><button class="dbg-btn" onclick="nextMatchAuto()" title="Charge automatiquement la manche suivante (ou génère la phase finale quand les poules sont finies).">Manche suivante →</button><button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer sans charger la manche suivante.">Fermer</button></div></div>';
     }
   }
   h+='</div></div>';
