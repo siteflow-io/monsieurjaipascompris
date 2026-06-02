@@ -1233,8 +1233,6 @@ function getSpeechRate(){try{var r=parseFloat(localStorage.getItem("mjpc_speech_
 function setSpeechRate(r){try{localStorage.setItem("mjpc_speech_rate",String(r))}catch(e){}}
 function speakWord(word){
   if(!('speechSynthesis' in window))return;
-  // Re-sélection défensive : si _frenchVoice est null ou non-locale, on retente
-  if(!_frenchVoice||!_frenchVoice.localService)_selectFrenchVoice();
   window.speechSynthesis.cancel();
   var txt=speechText(word);if(!txt)return;
   var u=new SpeechSynthesisUtterance(txt);
@@ -1243,21 +1241,6 @@ function speakWord(word){
   window.speechSynthesis.speak(u);
 }
 function stopSpeech(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
-// Enchaîne plusieurs utterances sans cancel entre elles (annonce type + mot)
-function speakSequence(texts){
-  if(!('speechSynthesis' in window))return;
-  if(!_frenchVoice||!_frenchVoice.localService)_selectFrenchVoice();
-  window.speechSynthesis.cancel();
-  texts.forEach(function(t){
-    var txt=speechText(t);if(!txt)return;
-    var u=new SpeechSynthesisUtterance(txt);
-    u.lang="fr-FR";u.rate=getSpeechRate();u.pitch=1.0;u.volume=1.0;
-    if(_frenchVoice)u.voice=_frenchVoice;
-    window.speechSynthesis.speak(u);
-  });
-}
-// Libellé vocal de chaque type d'erreur
-var ERROR_LABEL={G:"Grammaire",L:"Lexique",M:"Manquant",P:"Ponctuation",I:"Illisible",A:"Attention"};
 // Persistance du toggle audio (localStorage)
 function getSpeechEnabled(){try{return localStorage.getItem("mjpc_speech_fastmode")!=="0"}catch(e){return true}}
 function setSpeechEnabled(v){try{localStorage.setItem("mjpc_speech_fastmode",v?"1":"0")}catch(e){}}
@@ -1350,7 +1333,6 @@ function AppProf(p){
   function save(ek,errors,extras,fastIdxVal){
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,dicteeData.base);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
-    // Préserver fastIdx : si fourni explicitement, on l'utilise ; sinon on garde l'ancien
     if(typeof fastIdxVal==="number")c[ek].fastIdx=fastIdxVal;
     else if(corrections[ek]&&typeof corrections[ek].fastIdx==="number")c[ek].fastIdx=corrections[ek].fastIdx;
     setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
@@ -1709,16 +1691,12 @@ function CorrScreen(p){
     if(cur)db.ref(path).remove();else db.ref(path).set(true);
     setCtxMenu(null);
   }
-
-  // Raccourci clavier : Shift+R pour basculer en mode rapide depuis le mode texte
   useEffect(function(){
     function onKey(e){
-      // Ignorer si on tape dans un input
       var t=e.target&&e.target.tagName;
       if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
       if(e.shiftKey&&(e.key==="R"||e.key==="r")&&tab==="correct"&&cur){
-        e.preventDefault();
-        setTab("rapide");
+        e.preventDefault();setTab("rapide");
       }
     }
     window.addEventListener("keydown",onKey);
@@ -1784,8 +1762,7 @@ function CorrScreen(p){
       setMsg("\u21bb "+cur.split(" ").pop()+" r\u00e9initialis\u00e9");setTimeout(function(){setMsg(null)},2000);
     },
     onAutoSave:function(err,ext,fastIdxVal){
-      // Sauvegarde silencieuse sans navigation — protège contre la perte en mode rapide
-      // fastIdxVal passé à save() pour persistance dans le state local + Firebase
+      // Sauvegarde silencieuse + persistance fastIdx via save()
       p.onSave(curKey,err,ext,fastIdxVal);
     },
     onCancel:function(){setCur(null)}
@@ -1889,7 +1866,7 @@ function CorrScreen(p){
     msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
     h("div",{className:"tabs"},
       h("button",{className:"tab"+(tab==="correct"?" active":""),onClick:function(){setTab("correct")}},"Correction"),
-      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")},title:"Raccourci : Maj+R depuis le mode Correction"},"\u26a1 Rapide ",h("span",{style:{fontSize:".7em",opacity:.6,marginLeft:2}},"(\u21e7R)"),ifo("Corrige les mots un par un avec audio. Raccourci pour y entrer : Maj+R depuis le mode Correction (quand un \u00e9l\u00e8ve est s\u00e9lectionn\u00e9).")),
+      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")},title:"Raccourci : Maj+R depuis le mode Correction"},"\u26a1 Rapide ",h("span",{style:{fontSize:".7em",opacity:.6,marginLeft:2}},"(\u21e7R)"),ifo("Corrige les mots un par un avec audio. Raccourci : Maj+R depuis le mode Correction (\u00e9l\u00e8ve s\u00e9lectionn\u00e9 requis).")),
       h("button",{className:"tab"+(tab==="bilan"?" active":""),onClick:function(){setTab("bilan")}},"Bilan"),
       h("button",{className:"tab"+(tab==="copies"?" active":""),onClick:function(){setTab("copies")}},"\ud83d\udcc4 Copies"),
       h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
@@ -1927,7 +1904,7 @@ function CorrScreen(p){
         )
       )
     ),
-    tab==="bilan"&&h(Bilan,{data:data,corrections:p.corrections,absents:p.absents}),
+    tab==="bilan"&&h(Bilan,{data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId}),
     tab==="copies"&&h(Copies,{data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId,onLocalUpdate:function(k,newC){if(p.onResetCorrections){var nc=Object.assign({},p.corrections);nc[k]=newC;p.onResetCorrections(nc)}}}),
     tab==="fiches"&&h(Fiches,{data:data,corrections:p.corrections,absents:p.absents}),
     tab==="suivi"&&h(Suivi,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents}),
@@ -2304,30 +2281,17 @@ function CorrEleve(p){
   React.useEffect(function(){if(askFautifI&&fautifRefI.current)fautifRefI.current.focus()},[askFautifI]);
 
   function fastMark(type){
-    if(type==="G"||type==="L"){
-      // G ou L : popup de saisie. On annonce uniquement le type, le mot suivant viendra après la saisie.
-      if(speechOn&&ERROR_LABEL[type])speakSequence([ERROR_LABEL[type]]);
-      setAskFautifI(type);setFautifValI("");return;
-    }
+    if(type==="G"||type==="L"){setAskFautifI(type);setFautifValI("");return}
     var wt=wordTokens[fastIdx];if(!wt)return;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     ne.push({idx:wt.idx,type:type,word:wt.text});
     setErrors(ne);setFastFlash(type);setTimeout(function(){setFastFlash(null)},400);
     var newIdx=fastIdx+1;
     setFastIdx(newIdx);
-    // Annonce vocale : type d'erreur puis mot suivant
-    if(speechOn&&!askFautifI){
-      var label=ERROR_LABEL[type];
-      var next=wordTokens[newIdx];
-      var seq=[];
-      if(label)seq.push(label);
-      if(next&&next.text)seq.push(next.text);
-      if(seq.length)speakSequence(seq);
-    }
+    speakAt(newIdx);
     if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
   function cancelFautifI(){
-    // Annule le marquage G/L en cours : ferme le popup sans toucher errors ni fastIdx
     setAskFautifI(null);
     setFautifValI("");
   }
@@ -2342,7 +2306,8 @@ function CorrEleve(p){
     setFastFlash(obj.type);setTimeout(function(){setFastFlash(null)},400);
     var newIdx=fastIdx+1;
     setFastIdx(newIdx);
-    // Le type a déjà été annoncé dans fastMark, on enchaîne juste sur le mot suivant
+    // speak direct : appelé avec askFautifI=null déjà dans le contexte React futur,
+    // mais ici la lecture est immédiate donc on bypass le check
     if(speechOn){var next=wordTokens[newIdx];if(next&&next.text)speakWord(next.text)}
     if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
@@ -2406,8 +2371,7 @@ function CorrEleve(p){
     if(wt&&wt.text)speakWord(wt.text);
   }
 
-  // Listener global pour annuler le popup G/L sans focus dans l'input.
-  // Backspace est intercepté seulement si on n'est pas DANS l'input (sinon il efface).
+  // Listener global pour annuler le popup G/L sans focus dans l'input
   React.useEffect(function(){
     if(!askFautifI)return;
     function onKey(e){
@@ -2484,7 +2448,7 @@ function CorrEleve(p){
             h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
         ),
         ("speechSynthesis" in window)?h("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-          h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?("Couper l\u2019audio. Voix actuelle : "+(_frenchVoice?_frenchVoice.name+(_frenchVoice.localService?" (local \u26a1)":" (r\u00e9seau, lent \u26a0)"):"non d\u00e9finie \u26a0")):"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"),
+          h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"),
           speechOn&&h("label",{title:"Vitesse de la voix (0.7\u00d7 \u00e0 3.0\u00d7). Si \u00e7a lag, augmente. Si tu ne comprends pas le mot, diminue.",style:{display:"flex",alignItems:"center",gap:4,fontSize:".72rem",color:"#2b6cb0"}},
             h("span",{style:{minWidth:32,textAlign:"right",fontVariantNumeric:"tabular-nums"}},speechRate.toFixed(2)+"\u00d7"),
             h("input",{type:"range",min:.7,max:3,step:.05,value:speechRate,onChange:function(e){var r=parseFloat(e.target.value);changeSpeechRate(r)},style:{width:80,accentColor:"#2b6cb0"}})
@@ -2508,7 +2472,7 @@ function CorrEleve(p){
           h("div",{style:{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}},
             !wasAlreadyDone&&h("button",{className:"btn btn-primary",onClick:function(){p.onSave(errors,extras)}},"\u2705 Enregistrer"),
             h("button",{className:"btn btn-ghost",onClick:function(){setWasAlreadyDone(false);setFastIdx(0);if(p.onAutoSave)p.onAutoSave(errors,extras,0)}},"\u21bb Relire"),
-            h("button",{className:"btn btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (la position est sauvegardée)"},"\u270f\ufe0f V\u00e9rifier en mode texte")
+            h("button",{className:"btn btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (la position est sauvegard\u00e9e)"},"\u270f\ufe0f V\u00e9rifier en mode texte")
           )
         ):
         (function(){
@@ -2537,7 +2501,7 @@ function CorrEleve(p){
                 else if(e.key==="Backspace"&&!fautifValI){e.preventDefault();e.stopPropagation();cancelFautifI()}
               }}),
               h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()},title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e"},"\u2713 Valider"),
-              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")},title:"Valider sans saisir le mot fautif (l\u2019erreur sera marqu\u00e9e quand m\u00eame)"},"Passer")
+              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")},title:"Valider sans saisir le mot fautif"},"Passer")
             )
           ),
           !askFautifI&&h("div",{className:"fast-btns"},
@@ -2545,21 +2509,21 @@ function CorrEleve(p){
               h("button",{className:"fast-btn fast-ok",onClick:fastSkip,title:"Garder cette erreur en l\u2019\u00e9tat. Raccourci : Espace ou Entr\u00e9e"},"\u2713 Garder ("+existingErr.type+")"):
               h("button",{className:"fast-btn fast-ok",onClick:fastSkip,title:"Ce mot est correct, passer au suivant. Raccourci : Espace ou Entr\u00e9e"},"\u2192 Correct"),
             existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear,title:"Supprimer cette erreur et passer au suivant"},"\u2715 Annuler l\u2019erreur"),
-            existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Changer cette erreur en Grammaire (accord, conjugaison, homophone)"},"Changer \u2192 G"),
-            existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer cette erreur en Lexique (orthographe pure)"},"Changer \u2192 L"),
-            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire (\u22121 pt). Une saisie du mot fautif te sera demand\u00e9e. Raccourci : G"},"G Grammaire"),
-            !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Une saisie du mot fautif te sera demand\u00e9e. Raccourci : L"},"L Lexique"),
+            existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Changer en Grammaire (accord, conjugaison, homophone)"},"Changer \u2192 G"),
+            existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer en Lexique (orthographe pure)"},"Changer \u2192 L"),
+            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire (\u22121 pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
+            !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Saisie demand\u00e9e. Raccourci : L"},"L Lexique"),
             !existingErr&&(curWord&&isPunct(curWord.text)
               ?h("button",{className:"fast-btn fast-p",onClick:function(){fastMark("P")},title:"Ponctuation manquante (\u22120,5 pt). Raccourci : P"},"\u00b7 Ponct. manqu.")
               :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 (\u22121 pt). Raccourci : \u00d8 ou /"},"\u2205 Manquant")),
-            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible (\u22121 pt). Une saisie de transcription te sera demand\u00e9e. Raccourci : I ou ?"},"? Illisible"),
-            !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")},title:"Attention graphie : signalement sans p\u00e9nalit\u00e9 (graphie limite). Raccourci : A"},"\u26a0 Attention")
+            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible (\u22121 pt). Saisie de transcription demand\u00e9e. Raccourci : I ou ?"},"? Illisible"),
+            !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")},title:"Attention graphie : signalement sans p\u00e9nalit\u00e9. Raccourci : A"},"\u26a0 Attention")
           ),
           h("div",{style:{display:"flex",justifyContent:"space-between",marginTop:12}},
             h("button",{className:"btn-sm btn-ghost",onClick:fastBack,disabled:fastIdx===0,title:"Mot pr\u00e9c\u00e9dent. Raccourci : Retour arri\u00e8re"},"\u2190 Pr\u00e9c."),
-            p.onPrev&&h("button",{className:"btn-sm btn-ghost",onClick:p.onPrev,title:"\u00c9l\u00e8ve pr\u00e9c\u00e9dent dans la classe (ta position est sauvegard\u00e9e)"},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
-            p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext,title:"\u00c9l\u00e8ve suivant dans la classe (ta position est sauvegard\u00e9e)"},"\u00c9l\u00e8ve suiv. \u2192"),
-            h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)},title:"Sauter \u00e0 la fin de la dict\u00e9e (sans marquer le reste)"},"Terminer \u2192")
+            p.onPrev&&h("button",{className:"btn-sm btn-ghost",onClick:p.onPrev,title:"\u00c9l\u00e8ve pr\u00e9c\u00e9dent (position sauvegard\u00e9e)"},"\u2190 \u00c9l\u00e8ve pr\u00e9c."),
+            p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext,title:"\u00c9l\u00e8ve suivant (position sauvegard\u00e9e)"},"\u00c9l\u00e8ve suiv. \u2192"),
+            h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)},title:"Sauter \u00e0 la fin (sans marquer le reste)"},"Terminer \u2192")
           ),
           h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 / = manquant \u00b7 P = ponct. \u00b7 ? = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
         )
@@ -2733,6 +2697,124 @@ function CorrEleve(p){
 }
 
 // ═══ BILAN ═══
+// PROMPT IA POUR BANQUE D'EXERCICES
+
+var PROMPT_IA_BANQUE_DEFAUT = "Tu es un professeur de fran\u00e7ais expert en didactique. Je te fournis ci-dessous le JSON d'une dict\u00e9e corrig\u00e9e pour ma classe : texte, \u00e9l\u00e8ves, erreurs commises par chacun avec leur type (G=grammaire, L=lexique, M=mot manquant, P=ponctuation manquante, I=illisible, A=attention).\n\nObjectif : produire un document HTML autonome (1 seul fichier, design soign\u00e9 mais sobre, lisible pour des coll\u00e9giens) contenant DEUX SETS d'exercices :\n\n=== SET 1 \u2014 EXERCICES POUR LA CLASSE ENTI\u00c8RE ===\nAnalyse les erreurs les plus fr\u00e9quentes (au moins 3 \u00e9l\u00e8ves concern\u00e9s). Pour chaque difficult\u00e9 collective d\u00e9tect\u00e9e :\n- Un rappel de r\u00e8gle concis (max 4 lignes)\n- 3 \u00e0 5 exercices cibl\u00e9s (difficult\u00e9 croissante : reconnaissance > application > r\u00e9investissement)\n- Corrig\u00e9s en fin de section (ou en <details>)\n\n=== SET 2 \u2014 EXERCICES PERSONNALIS\u00c9S PAR \u00c9L\u00c8VE ===\nPour chaque \u00e9l\u00e8ve ayant fait au moins 3 erreurs, une mini-page personnelle avec son pr\u00e9nom en titre :\n- R\u00e9cap visuel de ses 3 difficult\u00e9s principales (avec exemples tir\u00e9s de SA dict\u00e9e)\n- 5 \u00e0 8 exercices cibl\u00e9s sur SES erreurs (pas celles des autres)\n- Corrig\u00e9s en fin de section\n\n=== CONTRAINTES TECHNIQUES ===\n- HTML5 valide, autonome (CSS + JS inline, aucune d\u00e9pendance externe)\n- Imprimable : @media print propre, sauts de page entre sections\n- Typographie agr\u00e9able (system font stack, EB Garamond via Google Fonts en option)\n- Sommaire en haut avec ancres vers les sections\n- Pas de tableaux d\u00e9coratifs, pas d'images\n- Niveau de langue adapt\u00e9 au niveau scolaire du JSON\n- Palette : G=rouge, L=bleu, M=ocre, P=bleu, I=violet, A=orange\n\n=== \u00c9VOLUTION FUTURE ===\n\u00c0 terme, cette m\u00eame requ\u00eate devra pouvoir g\u00e9n\u00e9rer un JSON injectable dans l'app de dict\u00e9e. Pense la structure HTML pour qu'elle puisse \u00eatre convertie facilement en donn\u00e9es structur\u00e9es (un exercice = un objet avec type, \u00e9nonc\u00e9, items, correction).\n\n=== JSON DE LA DICT\u00c9E ===\n{{JSON_DICTEE}}";
+
+function buildDicteeJSON(data, corrections, absents){
+  absents = absents || {};
+  var prenomOnly = function(n){var p=n.split(/\s+/);return p.length>1?p[p.length-1]:n};
+  var out = {
+    dictee: {
+      titre: data.title || "",
+      classe: data.classe || "",
+      niveau: data.niveau || "",
+      base: data.base || 20,
+      competences: toArr(data.competences) || [],
+      texte: data.text || ""
+    },
+    eleves: [],
+    bilan_classe: {effectif: 0, corriges: 0, moyenne: null, mediane: null, mots_les_plus_echoues: []}
+  };
+  var notes = [];
+  var wordFreq = {};
+  data.eleves.forEach(function(e){
+    var k = san(e);
+    if (absents[k]) return;
+    var c = corrections[k];
+    var elObj = {prenom: prenomOnly(e), nom_complet: e, corrige: !!c};
+    if (c) {
+      elObj.note = c.note;
+      elObj.compteurs = c.counts || {};
+      elObj.erreurs = toArr(c.errors).map(function(err){
+        var o = {position: err.idx, mot_correct: err.word || null, type: err.type};
+        if (err.fautif) o.mot_ecrit_par_eleve = err.fautif;
+        return o;
+      });
+      elObj.mots_ajoutes_en_trop = toArr(c.extras).map(function(ex){return ex.word});
+      notes.push(c.note);
+      toArr(c.errors).forEach(function(err){
+        var w = err.word || "?";
+        if (!wordFreq[w]) wordFreq[w] = {mot: w, total: 0, par_type: {}, eleves_concernes: []};
+        wordFreq[w].total++;
+        wordFreq[w].par_type[err.type] = (wordFreq[w].par_type[err.type] || 0) + 1;
+        wordFreq[w].eleves_concernes.push(prenomOnly(e));
+      });
+    }
+    out.eleves.push(elObj);
+  });
+  out.bilan_classe.effectif = out.eleves.length;
+  out.bilan_classe.corriges = notes.length;
+  if (notes.length) {
+    out.bilan_classe.moyenne = Math.round(notes.reduce(function(a,b){return a+b},0) / notes.length * 10) / 10;
+    var s = notes.slice().sort(function(a,b){return a-b}), m = Math.floor(s.length/2);
+    out.bilan_classe.mediane = s.length % 2 ? s[m] : Math.round((s[m-1]+s[m])*5)/10;
+  }
+  out.bilan_classe.mots_les_plus_echoues = Object.values(wordFreq).sort(function(a,b){return b.total-a.total}).slice(0, 20);
+  return out;
+}
+
+function PromptIaModal(p){
+  var s1 = useState(""), promptText = s1[0], setPromptText = s1[1];
+  var s2 = useState(false), editing = s2[0], setEditing = s2[1];
+  var s3 = useState(""), draft = s3[0], setDraft = s3[1];
+  var s4 = useState(""), msg = s4[0], setMsg = s4[1];
+  React.useEffect(function(){
+    db.ref("dictee_settings/promptIaBanque").once("value").then(function(snap){
+      var v = snap.val();
+      setPromptText(v && typeof v === "string" ? v : PROMPT_IA_BANQUE_DEFAUT);
+    }).catch(function(){setPromptText(PROMPT_IA_BANQUE_DEFAUT)});
+  }, []);
+  var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents), null, 2);
+  var fullPrompt = (promptText || "").replace("{{JSON_DICTEE}}", jsonStr);
+  function copier(){
+    navigator.clipboard.writeText(fullPrompt).then(function(){
+      setMsg("\u2705 Prompt + JSON copi\u00e9s dans le presse-papiers");
+      setTimeout(function(){setMsg("")}, 3000);
+    }).catch(function(){setMsg("\u274c Copie \u00e9chou\u00e9e \u2014 s\u00e9lectionne \u00e0 la main");setTimeout(function(){setMsg("")},3000)});
+  }
+  function ouvrirEdition(){setDraft(promptText); setEditing(true)}
+  function enregistrer(){
+    db.ref("dictee_settings/promptIaBanque").set(draft).then(function(){
+      setPromptText(draft); setEditing(false);
+      setMsg("\u2705 Template enregistr\u00e9 dans Firebase");
+      setTimeout(function(){setMsg("")},3000);
+    });
+  }
+  function annuler(){setDraft(promptText); setEditing(false); setMsg("")}
+  function restaurer(){
+    if(!confirm("Restaurer le prompt par d\u00e9faut ? Tes modifications actuelles seront perdues apr\u00e8s clic sur Enregistrer."))return;
+    setDraft(PROMPT_IA_BANQUE_DEFAUT);
+  }
+  return h("div",{className:"popup-overlay",onClick:function(e){if(e.target===e.currentTarget)p.onClose()}},
+    h("div",{style:{background:"var(--card)",borderRadius:16,padding:"22px 26px",maxWidth:780,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 16px 50px rgba(0,0,0,.25)"},onClick:function(e){e.stopPropagation()}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
+        h("h2",{style:{margin:0}},"\ud83e\udd16 Prompt IA \u2014 Banque d'exercices"),
+        h("button",{className:"btn-sm btn-ghost",onClick:p.onClose,title:"Fermer"},"\u2715")
+      ),
+      h("p",{style:{fontSize:".88rem",color:"var(--muted)",marginBottom:14}},
+        "Copie ce prompt + JSON et colle-le dans une nouvelle conversation Claude (ou autre IA). L'IA te g\u00e9n\u00e9rera un fichier HTML avec un set d'exercices pour la classe enti\u00e8re + un set personnalis\u00e9 par \u00e9l\u00e8ve, bas\u00e9s sur les erreurs r\u00e9elles."
+      ),
+      !editing && h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}},
+        h("button",{className:"btn btn-primary",onClick:copier,title:"Copie le prompt + le JSON dans le presse-papiers"},"\ud83d\udccb Copier le prompt + JSON"),
+        h("button",{className:"btn btn-ghost",onClick:ouvrirEdition,title:"\u00c9diter le template (modifications enregistr\u00e9es dans Firebase, r\u00e9utilisables)"},"\u270f\ufe0f Modifier le template")
+      ),
+      !editing && h("div",{style:{fontSize:".72rem",color:"var(--muted)",marginBottom:6}},"Aper\u00e7u (template + JSON inject\u00e9) :"),
+      !editing && h("pre",{style:{background:"var(--card2)",padding:"12px 14px",borderRadius:10,fontSize:".72rem",fontFamily:"ui-monospace,monospace",maxHeight:380,overflowY:"auto",whiteSpace:"pre-wrap",border:"1px solid var(--border)"}}, fullPrompt),
+      editing && h("div",null,
+        h("p",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:6}},"\u00c9dite le template. Le placeholder ",h("code",null,"{{JSON_DICTEE}}")," sera remplac\u00e9 par le JSON r\u00e9el au moment de la copie."),
+        h("textarea",{value:draft,onChange:function(e){setDraft(e.target.value)},style:{width:"100%",minHeight:360,padding:"12px 14px",fontFamily:"ui-monospace,monospace",fontSize:".82rem",border:"1.5px solid var(--primary)",borderRadius:10,resize:"vertical"}}),
+        h("div",{style:{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}},
+          h("button",{className:"btn btn-primary",onClick:enregistrer,title:"Enregistrer dans Firebase (r\u00e9utilisable sur toutes les dict\u00e9es)"},"\ud83d\udcbe Enregistrer"),
+          h("button",{className:"btn btn-ghost",onClick:annuler,title:"Annuler les modifications"},"\u21a9\ufe0f Annuler"),
+          h("button",{className:"btn btn-ghost",onClick:restaurer,title:"Remplacer le brouillon par le template par d\u00e9faut"},"\ud83d\udd04 Restaurer par d\u00e9faut")
+        )
+      ),
+      msg && h("div",{style:{marginTop:12,padding:"8px 12px",borderRadius:8,background:"rgba(72,160,87,.15)",color:"#1b6a30",fontSize:".88rem",fontWeight:600}}, msg)
+    )
+  );
+}
+
 function Bilan(p){
   var data=p.data,corr=p.corrections,abs=p.absents||{};
   var entries=data.eleves.filter(function(e){return!abs[san(e)]}).map(function(e){var k=san(e),c=corr[k];return{name:e,done:!!c,note:c?c.note:null,counts:c&&c.counts?c.counts:{G:0,L:0,M:0,I:0,P:0,A:0,X:0},errors:c?toArr(c.errors):[]}}).sort(function(a,b){if(a.done!==b.done)return a.done?-1:1;return(a.note||0)-(b.note||0)});
@@ -2742,7 +2824,13 @@ function Bilan(p){
   var wf={};done.forEach(function(e){e.errors.forEach(function(err){var w=err.word||"?";if(!wf[w])wf[w]={w:w,n:0,t:{},eleves:[]};wf[w].n++;wf[w].t[err.type]=(wf[w].t[err.type]||0)+1;wf[w].eleves.push({name:e.name,type:err.type,fautif:err.fautif||null})})});
   var top=Object.values(wf).sort(function(a,b){return b.n-a.n}).slice(0,15);
   function prenomOnly(n){var p=n.split(/\s+/);return p.length>1?p[p.length-1]:n}
+  var sPrompt = useState(false), showPrompt = sPrompt[0], setShowPrompt = sPrompt[1];
   return h("div",{className:"fade-up"},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}},
+      h("h2",{style:{margin:0,fontSize:"1.4rem"}},"Bilan de la dict\u00e9e"),
+      h("button",{className:"btn btn-primary",onClick:function(){setShowPrompt(true)},title:"G\u00e9n\u00e8re un prompt + JSON \u00e0 coller dans Claude pour obtenir un HTML d'exercices personnalis\u00e9s par \u00e9l\u00e8ve + classe enti\u00e8re",style:{fontSize:".9rem"}},"\ud83e\udd16 Prompt IA \u2014 Banque d'exercices")
+    ),
+    showPrompt && h(PromptIaModal,{data:data,corrections:corr,absents:abs,dicteeId:p.dicteeId,onClose:function(){setShowPrompt(false)}}),
     h("div",{className:"card"},h("div",{style:{display:"flex",gap:16,flexWrap:"wrap",textAlign:"center"}},
       h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Corrig\u00e9es"),h("div",{style:{fontSize:"1.6rem",fontWeight:700}},done.length+"/"+data.eleves.length)),
       h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Moyenne"),h("div",{style:{fontSize:"1.6rem",fontWeight:700,color:noteColor(avg,data.base)}},avg)),
