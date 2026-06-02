@@ -419,6 +419,23 @@ body.admin-mode .admin-only { display: block; }
 .seance-items.open{display:block}
 .seance-header{cursor:pointer}
 .doc-label small{white-space:normal}
+
+/* --- section Élèves & codes --- */
+.el-import{display:flex;gap:10px;align-items:flex-start;margin:14px 0}
+.el-import textarea{flex:1;min-height:84px;font-family:inherit;font-size:.95rem;padding:10px 12px;border-radius:9px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.16);color:#fff;resize:vertical}
+.el-toolbar{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:14px 0 10px}
+.el-list{display:flex;flex-direction:column;gap:6px}
+.el-row{display:grid;grid-template-columns:28px minmax(0,1fr) 96px auto;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:9px}
+.el-num{color:rgba(255,255,255,.4);font-size:.8rem;text-align:center}
+.el-name{font-size:.98rem}
+.el-code{font:700 1.1rem ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#34d399;text-align:center}
+.el-nocode{font:italic .8rem inherit;color:rgba(255,255,255,.3);letter-spacing:0}
+.el-acts{display:flex;gap:4px;justify-content:flex-end}
+.tprof-btn.danger{border-color:rgba(248,113,113,.35);color:#f87171}
+
+/* --- bandeau profil test --- */
+#test-banner{position:fixed;top:0;left:0;right:0;z-index:9999;display:none;align-items:center;justify-content:center;gap:14px;padding:8px 16px;background:linear-gradient(90deg,#3b82f6,#60a5fa);color:#06121f;font-family:'EB Garamond',Georgia,serif;font-weight:600;box-shadow:0 3px 14px rgba(0,0,0,.35)}
+#test-banner button{padding:5px 13px;border-radius:999px;border:1px solid rgba(6,18,31,.35);background:rgba(255,255,255,.88);color:#06121f;cursor:pointer;font-family:inherit;font-weight:700;font-size:.85rem}
 </style>
 </head>
 <body>
@@ -1620,11 +1637,38 @@ var TRACK={eleve:null,session:null,isActive:true,activeStart:0,activeTotal:0,scr
 var currentLevel=(new URLSearchParams(window.location.search).get('n')||'').toLowerCase();
 if(!levelLabels[currentLevel])currentLevel=null;
 window.addEventListener('DOMContentLoaded',function(){var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.getElementById('val-btn').style.display='none';document.getElementById('dev-banner').style.display='block';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&TRACK.eleve.niveau===currentLevel){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
-function doLogin(){var nom=document.getElementById('val-nom').value.trim();var prenom=document.getElementById('val-prenom').value.trim();var err=document.getElementById('val-error');var status=document.getElementById('val-status');
-// Login prof : code numérique seul dans le champ "Nom" (prénom vide)
-if(/^\d{3,5}$/.test(nom)&&!prenom){err.textContent='';if(PROF_CODES.indexOf(nom)>=0){loginAsProf();return;}else{err.textContent='Code invalide.';return;}}
-if(!nom||!prenom){err.textContent='Remplis ton nom et ton prénom (ou tape ton code prof seul).';return;}err.textContent='';
-status.textContent='Vérification...';status.classList.remove('connected');document.getElementById('val-btn').disabled=true;trackLogin(nom,prenom,currentLevel).then(function(result){document.getElementById('val-btn').disabled=false;if(result.success){ensureEleveUuid(result.eleve).then(function(eleveWithUuid){TRACK.eleve=eleveWithUuid;sessionStorage.setItem('mjpc_eleve',JSON.stringify(eleveWithUuid));notifyConnection(eleveWithUuid);startHeartbeat();status.textContent='Bienvenue, '+eleveWithUuid.display+' !';status.classList.add('connected');setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();},600);});}else{status.textContent='';err.textContent=result.error;setTimeout(function(){err.textContent='';},3000);}});}
+function _normName(s){return String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');}
+function _findEleveByName(full){var t=_normName(full);if(!t)return null;var r=null;Object.keys(classesData||{}).forEach(function(slug){var cl=classesData[slug];if(!cl||cl.archivee||!cl.eleves)return;Object.keys(cl.eleves).forEach(function(k){var e=cl.eleves[k];if(e&&typeof e==='object'&&_normName(e.nom)===t)r={slug:slug,key:k,eleve:e,classe:cl};});});return r;}
+function _findEleveByCode(code){var r=null;Object.keys(classesData||{}).forEach(function(slug){var cl=classesData[slug];if(!cl||cl.archivee||!cl.eleves)return;Object.keys(cl.eleves).forEach(function(k){var e=cl.eleves[k];if(e&&typeof e==='object'&&e.code===code)r={slug:slug,key:k,eleve:e,classe:cl};});});return r;}
+function _loginEleveFound(found,status){
+  var e=found.eleve,cl=found.classe;
+  var eleve={is_prof:false,nom:e.nom,prenom:'',classe:found.slug,niveau:cl.niveau||currentLevel||'3e',code:e.code||'',display:e.nom,uuid:''};
+  ensureEleveUuid(eleve).then(function(ev){
+    TRACK.eleve=ev;sessionStorage.setItem('mjpc_eleve',JSON.stringify(ev));
+    if(typeof notifyConnection==='function')notifyConnection(ev);
+    if(typeof startHeartbeat==='function')startHeartbeat();
+    currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}
+    if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}
+    setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);
+  });
+}
+function doLogin(){
+  var nom=document.getElementById('val-nom').value.trim();var prenom=document.getElementById('val-prenom').value.trim();
+  var err=document.getElementById('val-error');var status=document.getElementById('val-status');var btn=document.getElementById('val-btn');
+  err.textContent='';
+  if(/^\d{3,5}$/.test(nom)&&!prenom&&PROF_CODES.indexOf(nom)>=0){loginAsProf();return;}
+  if(!nom){err.textContent='Tape ton nom et ton prénom, ou ton code.';return;}
+  status.textContent='Vérification\u2026';status.classList.remove('connected');btn.disabled=true;
+  var proceed=function(){
+    btn.disabled=false;var found=null;var isCode=(/^\d{3,5}$/.test(nom)&&!prenom);
+    if(isCode){found=_findEleveByCode(nom);}
+    else if(nom&&prenom){found=_findEleveByName(nom+' '+prenom)||_findEleveByName(prenom+' '+nom);}
+    else{found=_findEleveByName(nom);}
+    if(found){_loginEleveFound(found,status);}
+    else{status.textContent='';err.textContent=isCode?'Code non reconnu. Demande \u00e0 ton professeur.':'Nom non reconnu. V\u00e9rifie l\u2019orthographe ou demande \u00e0 ton professeur.';setTimeout(function(){err.textContent='';},4000);}
+  };
+  if(!_classesLoaded)loadClasses(proceed);else proceed();
+}
 
 function loginAsProf(){
   TRACK.eleve={is_prof:true,uuid:'prof',nom:'Meney',prenom:'M.',classe:'PROF',niveau:currentLevel||'3e',display:'M. Meney (prof)'};
@@ -1908,14 +1952,94 @@ function showProfSection(id){
 function _renderProfSection(id){
   if(id==='dashboard')return _profSectionDashboard();
   if(id==='classes')return _profSectionClasses();
-  if(id==='eleves')return _profPlaceholder('\u00c9l\u00e8ves &amp; codes','Cr\u00e9er les \u00e9l\u00e8ves dans chaque classe (nom, pr\u00e9nom, num\u00e9ro d\u2019ordre), g\u00e9n\u00e9rer leur code d\u2019acc\u00e8s, le r\u00e9g\u00e9n\u00e9rer si besoin. Le code servira au login rapide sur le site <strong>et</strong> aux apps.','Tranche d\u00e9pendante de la cr\u00e9ation des classes. Logique reprise de la dict\u00e9e co\u00e9valu\u00e9e (codes courts, enregistr\u00e9s, r\u00e9g\u00e9n\u00e9rables).');
-  if(id==='profil-test')return _profPlaceholder('Profil test','Un faux \u00e9l\u00e8ve dont tu prends le contr\u00f4le pour voir la vraie vue \u00e9l\u00e8ve (sondage d\u2019intention inclus, niveaux bloqu\u00e9s, etc.) sans utiliser un compte r\u00e9el.','Tranche suivante apr\u00e8s les classes/\u00e9l\u00e8ves. Activable depuis ce panneau, d\u00e9sactivable d\u2019un clic pour revenir en mode prof.');
+  if(id==='eleves')return _profSectionEleves();
+  if(id==='profil-test')return _profSectionProfilTest();
   if(id==='archi')return _profSectionArchi();
   if(id==='archives')return _profPlaceholder('Archives','Archiver une ann\u00e9e scolaire compl\u00e8te (classes + \u00e9l\u00e8ves + activit\u00e9 sauvegard\u00e9s en lecture seule), pour repartir propre l\u2019ann\u00e9e suivante sans rien perdre.','D\u00e9pend de la cr\u00e9ation des classes. Pr\u00e9vu : un bouton \u00ab Archiver l\u2019ann\u00e9e XXXX-YYYY \u00bb qui d\u00e9place les donn\u00e9es dans <code>/archives/{annee}/</code>.');
   if(id==='config')return _profSectionConfig();
   if(id==='presence')return _profSectionPresence();
   return '<div class="tprof-placeholder">Section inconnue.</div>';
 }
+var PROF_EL_CLASSE=null;
+function san(s){return String(s||'').replace(/[^a-zA-Z0-9]/g,'_');}
+function parseEleves(txt){return String(txt||'').split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});}
+function _classCodes(slug){var t={};var e=(classesData[slug]&&classesData[slug].eleves)||{};Object.keys(e).forEach(function(k){if(e[k]&&e[k].code)t[e[k].code]=true;});return t;}
+function _genCode4(taken){var c,g=0;do{c=String(Math.floor(1000+Math.random()*9000));g++;}while(taken[c]&&g<9999);return c;}
+function _selectProfElClasse(slug){PROF_EL_CLASSE=slug;showProfSection('eleves');}
+function _elevesSorted(slug){var e=(classesData[slug]&&classesData[slug].eleves)||{};return Object.keys(e).filter(function(k){return e[k]&&typeof e[k]==='object';}).sort(function(a,b){return ((e[a].ordre||0)-(e[b].ordre||0))||(e[a].nom||'').localeCompare(e[b].nom||'');});}
+function _profSectionEleves(){
+  if(!_classesLoaded){loadClasses(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
+  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
+  var html='<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-section-sub">Choisis une classe, colle ta liste (un \u00e9l\u00e8ve par ligne, NOM Pr\u00e9nom), puis g\u00e9n\u00e8re les codes. Le code \u00e0 4 chiffres sert au login rapide et aux apps. R\u00e9g\u00e9n\u00e9rable \u00e9l\u00e8ve par \u00e9l\u00e8ve en cas de perte.</div>';
+  if(actives.length===0)return html+'<div class="tprof-placeholder">Aucune classe active. Cr\u00e9e d\u2019abord une classe dans \u00ab Classes \u00bb.</div>';
+  if(!PROF_EL_CLASSE||actives.indexOf(PROF_EL_CLASSE)<0)PROF_EL_CLASSE=actives[0];
+  var slug=PROF_EL_CLASSE;var cl=classesData[slug];
+  html+='<div class="lens-bar">'+actives.map(function(k){var c=classesData[k];var on=k===slug;var col=c.couleur||'#888';return '<span class="lens-pill'+(on?' on':'')+'" style="'+(on?'background:'+col:'border-color:'+col)+'" onclick="_selectProfElClasse(\''+k+'\')"><span class="lpd" style="background:'+(on?'#10071a66':col)+'"></span>'+escapeHtml(c.nom||k)+'</span>';}).join('')+'</div>';
+  html+='<div class="el-import"><textarea id="el-import-ta" placeholder="Un \u00e9l\u00e8ve par ligne &#10;ex : DUPONT Marie"></textarea><button class="tprof-add-btn" onclick="_importEleves(\''+slug+'\')">+ Importer / compl\u00e9ter</button></div>';
+  var keys=_elevesSorted(slug);
+  if(keys.length===0)return html+'<div class="tprof-placeholder">Aucun \u00e9l\u00e8ve dans cette classe. Colle ta liste ci-dessus.</div>';
+  var eleves=cl.eleves||{};
+  var sansCode=keys.filter(function(k){return !eleves[k].code;}).length;
+  html+='<div class="el-toolbar">';
+  if(sansCode>0)html+='<button class="tprof-btn" onclick="_genererCodesClasse(\''+slug+'\')">G\u00e9n\u00e9rer '+sansCode+' code'+(sansCode>1?'s':'')+' manquant'+(sansCode>1?'s':'')+'</button>';
+  html+='<button class="tprof-btn" onclick="_printCodesClasse(\''+slug+'\')">\ud83d\udda8 Imprimer</button>';
+  html+='<button class="tprof-btn danger" onclick="_resetAllCodesClasse(\''+slug+'\')">Tout r\u00e9g\u00e9n\u00e9rer</button></div>';
+  html+='<div class="el-list">';
+  keys.forEach(function(k,i){var e=eleves[k];
+    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name">'+escapeHtml(e.nom||k)+'</span><span class="el-code">'+(e.code?e.code:'<span class="el-nocode">\u2014</span>')+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\',\''+k+'\')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\',\''+k+'\')">\u2715</button></span></div>';
+  });
+  return html+'</div>';
+}
+function _importEleves(slug){
+  var ta=document.getElementById('el-import-ta');if(!ta)return;
+  var names=parseEleves(ta.value);if(names.length===0){alert('Colle au moins un nom.');return;}
+  var cl=classesData[slug];if(!cl)return;if(!cl.eleves)cl.eleves={};
+  var base=Object.keys(cl.eleves).length;var added=0;var puts=[];
+  names.forEach(function(nom,idx){var key=san(nom);if(cl.eleves[key])return;var rec={nom:nom,ordre:base+idx+1};cl.eleves[key]=rec;puts.push({key:key,rec:rec});added++;});
+  if(added===0){alert('Ces \u00e9l\u00e8ves sont d\u00e9j\u00e0 pr\u00e9sents.');showProfSection('eleves');return;}
+  puts.forEach(function(p){fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+p.key+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p.rec)}).catch(function(){});});
+  showProfSection('eleves');
+}
+function _genererCodesClasse(slug){var cl=classesData[slug];if(!cl||!cl.eleves)return;var taken=_classCodes(slug);Object.keys(cl.eleves).forEach(function(k){var e=cl.eleves[k];if(e&&typeof e==='object'&&!e.code){var c=_genCode4(taken);taken[c]=true;e.code=c;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+k+'/code.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(function(){});}});showProfSection('eleves');}
+function _regenCodeEleve(slug,key){var cl=classesData[slug];if(!cl||!cl.eleves||!cl.eleves[key])return;var taken=_classCodes(slug);var c=_genCode4(taken);cl.eleves[key].code=c;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+key+'/code.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(function(){});showProfSection('eleves');}
+function _resetAllCodesClasse(slug){if(!confirm('R\u00e9g\u00e9n\u00e9rer TOUS les codes de cette classe ? Les anciens ne fonctionneront plus.'))return;var cl=classesData[slug];if(!cl||!cl.eleves)return;var taken={};Object.keys(cl.eleves).forEach(function(k){if(!cl.eleves[k]||typeof cl.eleves[k]!=='object')return;var c=_genCode4(taken);taken[c]=true;cl.eleves[k].code=c;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+k+'/code.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(function(){});});showProfSection('eleves');}
+function _deleteEleveCls(slug,key){var cl=classesData[slug];if(!cl||!cl.eleves||!cl.eleves[key])return;if(!confirm('Retirer '+(cl.eleves[key].nom||key)+' de la classe ?'))return;delete cl.eleves[key];fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+key+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');}
+function _printCodesClasse(slug){var cl=classesData[slug];if(!cl||!cl.eleves)return;var keys=_elevesSorted(slug);var rows=keys.map(function(k){var e=cl.eleves[k];return '<tr><td>'+escapeHtml(e.nom||k)+'</td><td class="c">'+(e.code||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
+
+var PROF_TEST_CLASSE=null;
+function _profSectionProfilTest(){
+  if(!_classesLoaded){loadClasses(function(){if(document.querySelector('.tprof-section-btn[data-section="profil-test"].active'))showProfSection('profil-test');});return '<h2>Profil test</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
+  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
+  var html='<h2>Profil test</h2><div class="tprof-section-sub">Prends le contr\u00f4le d\u2019un faux \u00e9l\u00e8ve pour voir la <strong>vraie vue \u00e9l\u00e8ve</strong> (publication par classe incluse), sans compte r\u00e9el. Tu reviens en mode prof d\u2019un clic.</div>';
+  if(actives.length===0)return html+'<div class="tprof-placeholder">Cr\u00e9e d\u2019abord une classe pour tester sa vue.</div>';
+  if(!PROF_TEST_CLASSE||(PROF_TEST_CLASSE!=='__all__'&&actives.indexOf(PROF_TEST_CLASSE)<0))PROF_TEST_CLASSE=actives[0];
+  html+='<div class="lens-bar"><span class="lens-pill'+(PROF_TEST_CLASSE==='__all__'?' on':'')+'" style="'+(PROF_TEST_CLASSE==='__all__'?'background:#fff':'')+'" onclick="_selectTestClasse(\'__all__\')">Passe-partout (tous niveaux)</span>'+actives.map(function(k){var c=classesData[k];var on=PROF_TEST_CLASSE===k;var col=c.couleur||'#888';return '<span class="lens-pill'+(on?' on':'')+'" style="'+(on?'background:'+col:'border-color:'+col)+'" onclick="_selectTestClasse(\''+k+'\')"><span class="lpd" style="background:'+(on?'#10071a66':col)+'"></span>'+escapeHtml(c.nom||k)+'</span>';}).join('')+'</div>';
+  var lbl=PROF_TEST_CLASSE==='__all__'?'\u00e9l\u00e8ve passe-partout (tous niveaux)':('\u00e9l\u00e8ve de '+escapeHtml(classesData[PROF_TEST_CLASSE].nom||PROF_TEST_CLASSE));
+  html+='<div class="tprof-section-sub" style="margin-top:6px">Tu verras le site exactement comme un '+lbl+' : seuls les chapitres/s\u00e9ances/items publi\u00e9s pour cette classe appara\u00eetront.</div>';
+  html+='<div style="margin-top:14px"><button class="tprof-add-btn" onclick="_activerProfilTest(\''+PROF_TEST_CLASSE+'\')">\ud83d\udc41 Voir le site comme cet \u00e9l\u00e8ve</button></div>';
+  return html;
+}
+function _selectTestClasse(k){PROF_TEST_CLASSE=k;showProfSection('profil-test');}
+function _activerProfilTest(slug){
+  var classe,niveau,nomAff;
+  if(slug==='__all__'){classe='TEST';niveau=currentLevel||'3e';nomAff='passe-partout';}
+  else{var cl=classesData[slug];if(!cl)return;classe=slug;niveau=cl.niveau||'3e';nomAff=cl.nom||slug;}
+  TRACK.eleve={is_prof:false,is_test:true,uuid:'test',nom:'\u00c9l\u00e8ve test',prenom:'',classe:classe,niveau:niveau,code:'',display:'\u00c9l\u00e8ve test \u2014 '+nomAff};
+  sessionStorage.setItem('mjpc_eleve',JSON.stringify(TRACK.eleve));
+  if(typeof DEV_MODE!=='undefined')DEV_MODE=false;if(typeof ADMIN_MODE!=='undefined')ADMIN_MODE=false;
+  document.body.classList.remove('admin-mode');
+  var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\ud83d\udc41 TEST';badge.style.background='rgba(96,165,250,0.92)';badge.style.color='#06121f';}
+  closeProfPanel();
+  currentLevel=niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}
+  document.getElementById('page-validation').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+  if(typeof initHome==='function')initHome();
+  _showTestBanner(nomAff);
+}
+function _quitterProfilTest(){_hideTestBanner();loginAsProf();}
+function _showTestBanner(nomAff){var b=document.getElementById('test-banner');if(!b){b=document.createElement('div');b.id='test-banner';document.body.appendChild(b);}b.innerHTML='<span>\ud83d\udc41 Vue \u00e9l\u00e8ve test \u2014 '+escapeHtml(nomAff)+'</span><button onclick="_quitterProfilTest()">Revenir en mode prof</button>';b.style.display='flex';}
+function _hideTestBanner(){var b=document.getElementById('test-banner');if(b)b.style.display='none';}
+
 function _profPlaceholder(title,desc,note){
   return '<h2>'+title+'</h2><div class="tprof-section-sub">'+desc+'</div><div class="tprof-placeholder">\u2728 <strong>\u00c0 venir.</strong> '+note+'</div>';
 }
