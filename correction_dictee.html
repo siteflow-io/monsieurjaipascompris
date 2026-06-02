@@ -1347,9 +1347,12 @@ function AppProf(p){
     setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:classeName,eleves:eleves,base:cfg.base||20});
     setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
   })}
-  function save(ek,errors,extras){
+  function save(ek,errors,extras,fastIdxVal){
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,dicteeData.base);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
+    // Préserver fastIdx : si fourni explicitement, on l'utilise ; sinon on garde l'ancien
+    if(typeof fastIdxVal==="number")c[ek].fastIdx=fastIdxVal;
+    else if(corrections[ek]&&typeof corrections[ek].fastIdx==="number")c[ek].fastIdx=corrections[ek].fastIdx;
     setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
     // Remap student autocorrection if errors changed
     var acPath="correction_dictee/"+dicteeId+"/autocorrection/"+ek;
@@ -1782,11 +1785,8 @@ function CorrScreen(p){
     },
     onAutoSave:function(err,ext,fastIdxVal){
       // Sauvegarde silencieuse sans navigation — protège contre la perte en mode rapide
-      p.onSave(curKey,err,ext);
-      // Persistance fastIdx pour reprise au point exact à la prochaine entrée en mode rapide
-      if(typeof fastIdxVal==="number"){
-        db.ref("correction_dictee/"+p.dicteeId+"/results/"+curKey+"/fastIdx").set(fastIdxVal);
-      }
+      // fastIdxVal passé à save() pour persistance dans le state local + Firebase
+      p.onSave(curKey,err,ext,fastIdxVal);
     },
     onCancel:function(){setCur(null)}
   });
@@ -1943,8 +1943,7 @@ function CorrScreen(p){
         existing:p.corrections[san(rapideEleve)]||null,
         startFast:true,
         onAutoSave:function(err,ext,fastIdxVal){
-          p.onSave(san(rapideEleve),err,ext);
-          if(typeof fastIdxVal==="number")db.ref("correction_dictee/"+p.dicteeId+"/results/"+san(rapideEleve)+"/fastIdx").set(fastIdxVal);
+          p.onSave(san(rapideEleve),err,ext,fastIdxVal);
         },
         onExitFast:function(){setTab("correct")},
         onSave:function(err,ext){
@@ -2327,6 +2326,11 @@ function CorrEleve(p){
     }
     if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
+  function cancelFautifI(){
+    // Annule le marquage G/L en cours : ferme le popup sans toucher errors ni fastIdx
+    setAskFautifI(null);
+    setFautifValI("");
+  }
   function confirmFautifI(overrideVal){
     var wt=wordTokens[fastIdx];if(!wt)return;
     var vv=overrideVal!==undefined?overrideVal:fautifValI;
@@ -2509,11 +2513,17 @@ function CorrEleve(p){
               existingErr?"D\u00e9j\u00e0 marqu\u00e9 "+existingErr.type+" \u2014 Mot "+(fastIdx+1)+"/"+wordTokens.length:"Mot "+(fastIdx+1)+"/"+wordTokens.length)
           ),
           askFautifI&&h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginTop:10,border:"1.5px solid var(--primary)"}},
-            h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
+            h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+              h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",fontWeight:600}},"Marquage "+askFautifI+" \u2014 Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
+              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourci : Echap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
+            ),
             h("div",{style:{display:"flex",gap:8}},
-              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter"){e.preventDefault();e.stopPropagation();confirmFautifI()}}}),
-              h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()}},"\u2713"),
-              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")}},"Passer")
+              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
+                if(e.key==="Enter"){e.preventDefault();e.stopPropagation();confirmFautifI()}
+                else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();cancelFautifI()}
+              }}),
+              h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()},title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e"},"\u2713 Valider"),
+              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")},title:"Valider sans saisir le mot fautif (l\u2019erreur sera marqu\u00e9e quand m\u00eame)"},"Passer")
             )
           ),
           !askFautifI&&h("div",{className:"fast-btns"},
