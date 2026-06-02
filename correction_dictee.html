@@ -176,6 +176,41 @@ db.ref("classes").once("value",function(snap){
   var val=snap.val();
   if(val) CLASSES=val;
 });
+// Extraction robuste des élèves d'une classe — gère plusieurs formats Firebase :
+//  - array de strings : ["NOM Prenom", ...]
+//  - objet {eleves: [...]} : structure MJPC v2
+//  - map {id: {nom, prenom}} : structure MJPC v3
+//  - map {id: "NOM Prenom"} : format intermédiaire
+//  - fallback : eleves du config de la dictée
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
+    return fbClasse;
+  }
+  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
+    // Format {eleves: [...]}
+    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
+    // Format map d'élèves
+    var keys = Object.keys(fbClasse).filter(function(k){
+      // Exclure les clés non-élèves (métadonnées éventuelles)
+      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
+    });
+    if (keys.length > 0) {
+      var names = keys.map(function(k){
+        var v = fbClasse[k];
+        if (typeof v === "string") return v;
+        if (v && typeof v === "object") {
+          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
+          if (v.nomComplet) return v.nomComplet;
+          if (v.name) return v.name;
+        }
+        return null;
+      }).filter(function(x){ return x && typeof x === "string"; });
+      if (names.length > 0) return names;
+    }
+  }
+  return cfgEleves;
+}
 function tokenize(text){if(!text)return[];var t=[],re=/(\s+)|([.,;:!?\u2026\u00ab\u00bb\u201c\u201d()\-\u2013\u2014]+)|([^\s.,;:!?\u2026\u00ab\u00bb\u201c\u201d()'\u2019\-\u2013\u2014]+['\u2019]?)/g,m;while((m=re.exec(text))!==null){if(!m[1])t.push(m[2]||m[3])}return t}
 function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+$/.test(w)}
 // Espacement entre token courant et suivant — règles françaises :
@@ -1308,12 +1343,12 @@ function AppProf(p){
   },[]);
 
   useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
-    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var fbE=CLASSES[cn];var nE=fbE&&fbE.length>0?fbE.length:(d.eleves||[]).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac}}))
+    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(CLASSES[cn], d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac}}))
   })},[]);
 
   function start(){
     if(!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput)return;
-    var tokens=tokenize(textInput.trim()),eleves=CLASSES[classeInput]||[],id=san(titleInput)+"-"+san(classeInput);
+    var tokens=tokenize(textInput.trim()),eleves=extractEleves(CLASSES[classeInput], []),id=san(titleInput)+"-"+san(classeInput);
     var data={title:titleInput.trim(),text:textInput.trim(),tokens:tokens,classe:classeInput,eleves:eleves,base:baseInput};
     // Store classe name as reference, not a copy of eleves — eleves are in /classes/{name}
     db.ref("correction_dictee/"+id+"/config").set({title:data.title,text:data.text,classe:data.classe,base:baseInput,niveau:niveauInput,published:publishedInput});
@@ -1325,8 +1360,7 @@ function AppProf(p){
     var val=snap.val()||{},cfg=val.config||{};
     var classeName=cfg.classe||"";
     // Dynamic class reference: use /classes/{name} if available, fallback to config/eleves
-    var fbEleves=CLASSES[classeName];
-    var eleves=fbEleves&&fbEleves.length>0?fbEleves:(cfg.eleves||[]);
+    var eleves=extractEleves(CLASSES[classeName], cfg.eleves);
     setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:classeName,eleves:eleves,base:cfg.base||20});
     setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
   })}
@@ -1541,7 +1575,7 @@ function AppProf(p){
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
       h("div",{className:"config-field"},h("label",null,"Niveau"),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"— Choisir —"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
-      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).filter(function(c){return !niveauInput||c.toLowerCase().indexOf(niveauInput)===0}).map(function(c){return h("option",{key:c,value:c},c+" ("+CLASSES[c].length+")")}))),
+      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).filter(function(c){return !niveauInput||c.toLowerCase().indexOf(niveauInput)===0}).map(function(c){return h("option",{key:c,value:c},c+" ("+extractEleves(CLASSES[c],[]).length+")")}))),
       h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:textInput,onChange:function(e){setTextInput(e.target.value)},placeholder:"Colle le texte correct..."})),
       // Analyse automatique des pièges
       textInput.trim().length>10&&(function(){
@@ -1624,7 +1658,7 @@ function AppProf(p){
         Object.keys(CLASSES).length>0&&h("div",{style:{marginBottom:14}},
           Object.keys(CLASSES).map(function(cn){
             return h("div",{key:cn,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)"}},
-              h("span",{style:{fontWeight:600}},cn+" ("+CLASSES[cn].length+" \u00e9l\u00e8ves)"),
+              h("span",{style:{fontWeight:600}},cn+" ("+extractEleves(CLASSES[cn],[]).length+" \u00e9l\u00e8ves)"),
               h("button",{className:"btn-sm btn-ghost",style:{color:"var(--coral)",fontSize:".8rem"},onClick:function(){
                 if(confirm("Supprimer la classe "+cn+" ?")){db.ref("classes/"+cn).remove()}
               }},"\u2715")
@@ -3845,7 +3879,7 @@ function getCopyOptions(){
     var v = localStorage.getItem("mjpc_copy_options");
     if(v){var o = JSON.parse(v); if(o&&typeof o==="object")return o;}
   }catch(e){}
-  return {mode:"barre", showOverlay:true, showBadge:true, showPoints:true};
+  return {mode:"barre", showOverlay:true, showBadge:true, showPoints:true, dueDate:""};
 }
 function setCopyOptions(opts){
   try{localStorage.setItem("mjpc_copy_options", JSON.stringify(opts))}catch(e){}
@@ -3858,6 +3892,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   var showBadge = options.showBadge !== false;
   var showPoints = options.showPoints !== false;
   var bilanOverride = options.bilanOverride;
+  var exercicesUrl = options.exercicesUrl || "";
+  var dueDate = options.dueDate || "";
 
   var code = dicteeId+"-"+eleveKey;
   var errors = toArr(c.errors||[]).filter(function(e){return e!=null});
@@ -4069,6 +4105,14 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     '.err-comment{margin-top:6px;font-size:.82rem;color:#5a4a2f;font-style:italic;line-height:1.5}' +
     '.placeholder-msg{font-size:.78rem;color:#a89868;font-style:italic}' +
     /* Code identifiant */
+    /* Bouton vers la fiche d'exercices */
+    '.exercices-bloc{margin-top:30px;padding:18px 22px;background:#eaf4ee;border-radius:8px;border:1.5px solid #2d8659;text-align:center}' +
+    '.exercices-bloc .titre{font-family:system-ui,sans-serif;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:#1e6042;font-weight:700;margin-bottom:6px}' +
+    '.exercices-bloc .desc{font-size:.92rem;color:#4a3a1f;margin-bottom:12px;line-height:1.5}' +
+    '.exercices-bloc .due-date{background:#fef0d6;border:1.5px solid #b7791f;color:#7c5610;padding:8px 14px;border-radius:6px;margin-bottom:12px;font-size:.95rem}' +
+    '.btn-exercices{display:inline-block;padding:12px 24px;background:#2d8659;color:#fff;text-decoration:none;border-radius:8px;font-family:system-ui,sans-serif;font-size:.95rem;font-weight:600;transition:background .12s;box-shadow:0 2px 6px rgba(45,134,89,.25)}' +
+    '.btn-exercices:hover{background:#1e6042}' +
+    '.btn-exercices .arrow{margin-left:6px;font-weight:400}' +
     '.code-bas{margin-top:30px;text-align:center;font-family:ui-monospace,monospace;font-size:.7rem;color:#a89868;letter-spacing:.05em}' +
     '@media print{body{background:#fff}.copie{box-shadow:none;border:none;margin:0;max-width:none;padding:20px 28px}}' +
     '</style></head>' +
@@ -4085,6 +4129,26 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     '<div class="texte">' + textHtml + '</div>' +
     (bilan ? '<div class="bilan"><div class="bilan-title">Bilan</div>' + escapeHtml(bilan) + '</div>' : '') +
     (analyseHtml ? '<div class="analyse"><div class="analyse-title">Détail des erreurs (' + errors.length + ')</div>' + analyseHtml + '</div>' : '') +
+    (function(){
+      if(!exercicesUrl)return '';
+      var dueHtml = '';
+      if(dueDate){
+        try{
+          var d = new Date(dueDate);
+          if(!isNaN(d.getTime())){
+            var fmt = d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+            dueHtml = '<div class="due-date"><strong>\u23f0 \u00c0 rendre pour le ' + fmt + '</strong></div>';
+          }
+        }catch(e){}
+      }
+      return '<div class="exercices-bloc"><div class="titre">\u2728 Pour t\u2019entra\u00eener</div>' +
+        '<div class="desc">J\u2019ai fait une fiche d\u2019exercices personnalis\u00e9s pour toi d\u2019apr\u00e8s tes erreurs.<br>' +
+        '<strong>Tu dois faire ces exercices et taper tes r\u00e9ponses dans l\u2019app. C\u2019est obligatoire.</strong><br>' +
+        'Tu peux les faire sur ton cahier d\u2019abord pour r\u00e9fl\u00e9chir, mais la saisie finale dans l\u2019app est ce qui compte \u2014 c\u2019est seulement comme \u00e7a que je peux v\u00e9rifier ton travail et t\u2019aider si besoin.</div>' +
+        dueHtml +
+        '<a href="' + exercicesUrl + '" class="btn-exercices" target="_blank" rel="noopener">\ud83c\udfaf Acc\u00e9der \u00e0 mes exercices<span class="arrow">\u2192</span></a>' +
+        '</div>';
+    })() +
     '<div class="code-bas">' + escapeHtml(code) + '</div>' +
     '</div></body></html>';
 }
@@ -4103,7 +4167,32 @@ function Copies(p){
     var no=Object.assign({},copyOpts,patch);
     _setCopyOpts(no);setCopyOptions(no);
   }
+  // Aperçu défilant de toutes les copies (modal)
+  var sPv=useState(false),previewOpen=sPv[0],setPreviewOpen=sPv[1];
+  var sPvI=useState(0),previewIdx=sPvI[0],setPreviewIdx=sPvI[1];
+  // Détection : la dictée a-t-elle des exercices injectés ? (pour afficher le lien dans la copie)
+  var sHasExo=useState(false),hasExercices=sHasExo[0],setHasExercices=sHasExo[1];
+  React.useEffect(function(){
+    var ref=db.ref("correction_dictee/"+dicteeId+"/exercices");
+    function onData(snap){setHasExercices(!!snap.val())}
+    ref.on("value",onData);
+    return function(){ref.off("value",onData)};
+  },[dicteeId]);
   var editInputRef=React.useRef(null);
+
+  // Raccourcis clavier dans la modale d'aperçu (flèches ← → et Échap)
+  React.useEffect(function(){
+    if(!previewOpen)return;
+    function onKey(e){
+      var t=e.target&&e.target.tagName;
+      if(t==="INPUT"||t==="TEXTAREA")return;
+      if(e.key==="ArrowRight"){e.preventDefault();setPreviewIdx(function(i){return Math.min(i+1,done.length-1)})}
+      else if(e.key==="ArrowLeft"){e.preventDefault();setPreviewIdx(function(i){return Math.max(i-1,0)})}
+      else if(e.key==="Escape"){e.preventDefault();setPreviewOpen(false)}
+    }
+    window.addEventListener("keydown",onKey);
+    return function(){window.removeEventListener("keydown",onKey)};
+  },[previewOpen,done.length]);
 
   // Load autoCorr from Firebase (once + live updates if prof switches around)
   useEffect(function(){
@@ -4169,6 +4258,14 @@ function Copies(p){
     var opts=Object.assign({},copyOpts);
     // Si on est sur l'élève sélectionné et qu'on demande le bilan local non validé, on l'utilise
     if(useLocalBilan&&eleveKey===selectedKey)opts.bilanOverride=bilanText;
+    // Lien vers la page d'exercices (auto-login via params URL) si la dictée a des exercices
+    if(hasExercices&&typeof window!=="undefined"){
+      var baseUrl=window.location.origin+window.location.pathname;
+      var params="?mode=eleve&dicteeId="+encodeURIComponent(dicteeId)+"&eleveKey="+encodeURIComponent(eleveKey)+"&screen=exercices";
+      opts.exercicesUrl=baseUrl+params;
+      // dueDate uniquement si bouton de liaison présent
+      if(copyOpts.dueDate)opts.dueDate=copyOpts.dueDate;
+    }
     return {html:buildCopieHtml(data,eleveName,eleveKey,c,acData,dicteeId,opts),eleveName:eleveName};
   }
 
@@ -4257,11 +4354,44 @@ function Copies(p){
             );
           })
         ),
+        hasExercices&&h("div",{style:{display:"flex",gap:10,alignItems:"center",marginBottom:10,padding:"8px 12px",background:"rgba(72,160,87,.08)",border:"1.5px solid rgba(72,160,87,.3)",borderRadius:6}},
+          h("span",{style:{fontSize:".78rem",color:"#1b6a30",fontWeight:600}},"\u23f0 Date limite exercices :"),
+          h("input",{type:"date",value:copyOpts.dueDate||"",onChange:function(e){updCopyOpts({dueDate:e.target.value})},style:{padding:"4px 8px",fontSize:".82rem",border:"1.5px solid var(--border)",borderRadius:4,fontFamily:"inherit"}}),
+          copyOpts.dueDate&&h("button",{className:"btn-sm btn-ghost",onClick:function(){updCopyOpts({dueDate:""})},style:{fontSize:".72rem",padding:"3px 8px"},title:"Effacer la date"},"\u2715"),
+          h("span",{style:{fontSize:".7rem",color:"var(--muted)",fontStyle:"italic",marginLeft:"auto"}},"Optionnelle. S\u2019insert dans la copie sous le bouton d\u2019exercices.")
+        ),
         h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+          h("button",{className:"btn btn-ghost",onClick:function(){setPreviewIdx(0);setPreviewOpen(true)},disabled:done.length===0,title:"Feuillete les "+done.length+" copies dans une fen\u00eatre plein \u00e9cran (\u2190 / \u2192 / \u00c9chap) pour valider le rendu avant export"},"\ud83d\udc41 Pr\u00e9visualiser toutes ("+done.length+")"),
           h("button",{className:"btn btn-primary",onClick:exportZip,disabled:done.length===0,title:"T\u00e9l\u00e9charge un ZIP avec une copie HTML par \u00e9l\u00e8ve corrig\u00e9, selon les options ci-dessus"},"\ud83d\udce6 Exporter ZIP ("+done.length+" copies)")
         )
       )
     ),
+    // Modale d'aperçu défilant
+    previewOpen&&(function(){
+      var elName=done[previewIdx];
+      var k=san(elName);
+      var r=buildHtmlFor(k,false); // pour la modale on prend les bilans VALIDÉS (= ce qui sera dans le ZIP)
+      return h("div",{
+        style:{position:"fixed",inset:0,zIndex:1000,background:"rgba(35,30,20,.7)",display:"flex",flexDirection:"column",padding:"14px 16px"},
+        onClick:function(e){if(e.target===e.currentTarget)setPreviewOpen(false)}
+      },
+        h("div",{style:{background:"var(--card)",borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
+            h("strong",null,"Aper\u00e7u : "+elName),
+            h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"("+(previewIdx+1)+" / "+done.length+")"),
+            (corr[k]&&corr[k].bilanComment)?h("span",{style:{fontSize:".72rem",color:"var(--green)",background:"rgba(72,160,87,.1)",padding:"2px 8px",borderRadius:4}},"\u2713 Bilan valid\u00e9"):h("span",{style:{fontSize:".72rem",color:"var(--coral)",background:"rgba(197,48,48,.08)",padding:"2px 8px",borderRadius:4}},"\u26a0 Bilan auto (non valid\u00e9 par toi)")
+          ),
+          h("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setPreviewIdx(Math.max(previewIdx-1,0))},disabled:previewIdx===0,title:"\u00c9l\u00e8ve pr\u00e9c\u00e9dent (\u2190)"},"\u2190 Pr\u00e9c."),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setPreviewIdx(Math.min(previewIdx+1,done.length-1))},disabled:previewIdx>=done.length-1,title:"\u00c9l\u00e8ve suivant (\u2192)"},"Suiv. \u2192"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){exportHtml(k)},title:"T\u00e9l\u00e9charger seulement cette copie"},"\u2b07 T\u00e9l\u00e9charger"),
+            h("button",{className:"btn-sm btn-primary",onClick:exportZip,title:"Tout est OK, exporter le ZIP de la classe"},"\ud83d\udce6 Export ZIP"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setPreviewOpen(false)},title:"Fermer (\u00c9chap)"},"\u2715")
+          )
+        ),
+        r?h("iframe",{srcDoc:r.html,style:{flex:1,width:"100%",border:"none",borderRadius:8,background:"#faf6ee"},sandbox:""}):h("div",{style:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}},"Aucune copie")
+      );
+    })(),
     // Panneau pour l'élève sélectionné
     selectedKey&&(function(){
       var c=corr[selectedKey];
@@ -4368,12 +4498,38 @@ function AppEleve(p){
   var s7=useState(null),forcedDicteeId=s7[0],setForcedDicteeId=s7[1];
   var s8=useState(""),dicteeTitle=s8[0],setDicteeTitle=s8[1];
 
-  // Check URL param for specific dictee
+  // Check URL params : "dictee" (id) [+ "eleveKey" + "screen" pour auto-login direct]
+  var s9=useState(null),autoLoginParams=s9[0],setAutoLoginParams=s9[1];
   useEffect(function(){
+    if(typeof URLSearchParams==="undefined")return;
     var params=new URLSearchParams(window.location.search);
-    var did=params.get("dictee");
+    var did=params.get("dictee")||params.get("dicteeId");
     if(did)setForcedDicteeId(did);
+    var ek=params.get("eleveKey");
+    var sc=params.get("screen");
+    if(did&&ek)setAutoLoginParams({dicteeId:did,eleveKey:ek,screen:sc});
   },[]);
+
+  // Auto-login depuis URL params dès que les dictées sont chargées
+  var s10=useState(false),autoLoginDone=s10[0],setAutoLoginDone=s10[1];
+  useEffect(function(){
+    if(!autoLoginParams||autoLoginDone||!dictees.length)return;
+    var d=dictees.find(function(x){return x.id===autoLoginParams.dicteeId});
+    if(!d)return; // dictée pas trouvée, on attend (peut-être pas encore chargée)
+    var ek=autoLoginParams.eleveKey;
+    var eleveName=null;
+    for(var i=0;i<d.eleves.length;i++){if(san(d.eleves[i])===ek){eleveName=d.eleves[i];break}}
+    if(!eleveName){setErrMsg("\u00c9l\u00e8ve introuvable dans cette dict\u00e9e.");setAutoLoginDone(true);return}
+    var corr=d.results[ek];
+    if(!corr){setErrMsg("Pas de correction enregistr\u00e9e pour cet \u00e9l\u00e8ve.");setAutoLoginDone(true);return}
+    var errors=toArr(corr.errors||[]);
+    var extras=toArr(corr.extras||[]);
+    setEleveData({eleve:eleveName,dictee:d,key:ek,errors:errors,extras:extras,note:corr.note,base:d.base});
+    // Navigation directe selon screen demandé
+    if(autoLoginParams.screen==="exercices")setScreen("exercices");
+    else setScreen("correction");
+    setAutoLoginDone(true);
+  },[dictees,autoLoginParams,autoLoginDone]);
 
   // Load available dictees
   useEffect(function(){
@@ -4382,8 +4538,7 @@ function AppEleve(p){
       var list=Object.keys(val).map(function(id){
         var cfg=val[id].config||{};
         var classeName=cfg.classe||"";
-        var fbEleves=CLASSES[classeName];
-        var eleves=fbEleves&&fbEleves.length>0?fbEleves:(cfg.eleves||[]);
+        var eleves=extractEleves(CLASSES[classeName], cfg.eleves);
         return{id:id,title:cfg.title||id,classe:classeName,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
       });
       setDictees(list);
