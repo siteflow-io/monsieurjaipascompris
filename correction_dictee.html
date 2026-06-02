@@ -2406,6 +2406,19 @@ function CorrEleve(p){
     if(wt&&wt.text)speakWord(wt.text);
   }
 
+  // Listener global pour annuler le popup G/L sans focus dans l'input.
+  // Backspace est intercepté seulement si on n'est pas DANS l'input (sinon il efface).
+  React.useEffect(function(){
+    if(!askFautifI)return;
+    function onKey(e){
+      var inInput=e.target&&(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA");
+      if(e.key==="Escape"){e.preventDefault();e.stopPropagation();cancelFautifI()}
+      else if(e.key==="Backspace"&&!inInput){e.preventDefault();e.stopPropagation();cancelFautifI()}
+    }
+    window.addEventListener("keydown",onKey,true);
+    return function(){window.removeEventListener("keydown",onKey,true)};
+  },[askFautifI]);
+
   // Coupe le son quand on sort du mode rapide
   React.useEffect(function(){return function(){stopSpeech()}},[]);
 
@@ -2515,12 +2528,13 @@ function CorrEleve(p){
           askFautifI&&h("div",{style:{padding:"12px 14px",background:"var(--primary-light)",borderRadius:10,marginTop:10,border:"1.5px solid var(--primary)"}},
             h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
               h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",fontWeight:600}},"Marquage "+askFautifI+" \u2014 Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
-              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourci : Echap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
+              h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourcis : Retour (champ vide) ou \u00c9chap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
             ),
             h("div",{style:{display:"flex",gap:8}},
               h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
                 if(e.key==="Enter"){e.preventDefault();e.stopPropagation();confirmFautifI()}
                 else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();cancelFautifI()}
+                else if(e.key==="Backspace"&&!fautifValI){e.preventDefault();e.stopPropagation();cancelFautifI()}
               }}),
               h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()},title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e"},"\u2713 Valider"),
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")},title:"Valider sans saisir le mot fautif (l\u2019erreur sera marqu\u00e9e quand m\u00eame)"},"Passer")
