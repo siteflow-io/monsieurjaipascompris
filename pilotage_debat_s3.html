@@ -622,6 +622,7 @@
     </div>
     <div class="codebanner-actions">
       <button id="lockGroupsBtn" onclick="toggleGroupsLock()" title="Verrouille les groupes : plus de création possible. Les reconnexions se font en choisissant le groupe dans une liste. Se verrouille aussi automatiquement au lancement du tournoi.">🔓 Groupes ouverts</button>
+      <button onclick="endSession()" title="Fin de séance : verrouille les groupes ET déconnecte toutes les tablettes (retour à l'accueil). Les binômes, poules et scores sont conservés ; au rallumage, la tablette ne se reconnecte plus toute seule.">⎋ Fin de séance</button>
       <button class="primary" onclick="newSession()" title="Crée une nouvelle session avec un nouveau code. La session actuelle (binômes, statuts, aides) sera archivée automatiquement.">+ Nouvelle session</button>
     </div>
   </div>
@@ -671,6 +672,17 @@
 </div>
 
 <!-- ============ Overlays ============ -->
+<div class="overlay" id="endReminderOverlay">
+  <div class="gelcard" style="max-width:470px;text-align:left">
+    <h2 style="font-size:1.15rem;margin-bottom:8px;text-align:center">Clôturer la séance ?</h2>
+    <p style="color:var(--ink2);font-size:.92rem;line-height:1.5">Tu allais fermer l'onglet. Si la séance n'est pas clôturée, les tablettes restent connectées et se rouvriront sur l'appli au rallumage. Clôture-la : ça verrouille les groupes et déconnecte les tablettes (binômes, poules et scores conservés).</p>
+    <div class="acts" style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <button class="primary" onclick="doEndSession()" title="Verrouille les groupes et déconnecte toutes les tablettes.">⎋ Clôturer la séance</button>
+      <button class="ghost" onclick="closeEndReminder()" title="Fermer ce rappel sans clôturer.">Plus tard</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="confirmOverlay">
   <div class="gelcard">
     <h2 id="confirmText" style="margin-bottom:24px">Confirmer ?</h2>
@@ -1093,6 +1105,8 @@ let activeBinomeForDoc = null;  // (legacy, conservé neutre)
 let editingId = null;
 let confirmAction = null;
 let sessionListener = null;
+let sessionEnded=false;
+let endReminderTimer=null;
 let connListener = null;
 
 // Helpers
@@ -1275,6 +1289,7 @@ function enterAsStudent(binomeId, data){
   safeStorage.set("role","student");
   safeStorage.set("sessionId", (data&&data.id) || "active");
   safeStorage.set("binomeId", binomeId);
+  safeStorage.set("epoch", String((data&&data.logoutEpoch)||0));
   myBinomeId = binomeId;
   mySessionId = (data&&data.id) || "active";
   role = "student";
@@ -1287,12 +1302,28 @@ function toggleGroupsLock(){
   db.ref(ACTIVE+"/groupsLocked").set(nv);
   toast(nv?"Groupes verrouillés : plus de création, reconnexion par liste.":"Groupes ouverts : création libre.");
 }
+function doEndSession(){
+  db.ref(ACTIVE+"/groupsLocked").set(true);
+  db.ref(ACTIVE+"/logoutEpoch").set(Date.now());
+  sessionEnded=true;
+  closeEndReminder();
+  toast("Séance clôturée : groupes verrouillés et tablettes déconnectées.");
+}
+function endSession(){
+  askConfirm("Clôturer la séance ? Les groupes seront verrouillés et toutes les tablettes déconnectées. Les binômes, poules et scores sont conservés ; à la reprise, les élèves se reconnectent par la liste.", doEndSession);
+}
+function shouldGuardClose(){
+  return role==="prof" && !sessionEnded && !!(sessionData && sessionData.binomes && Object.keys(sessionData.binomes).length>0);
+}
+function showEndSessionReminder(){ if(shouldGuardClose() && $("endReminderOverlay")) $("endReminderOverlay").classList.add("show"); }
+function closeEndReminder(){ if($("endReminderOverlay")) $("endReminderOverlay").classList.remove("show"); }
 
 async function rejoinStudent(sessionId, binomeId){
   const snap = await db.ref(ACTIVE).once("value");
   const data = snap.val();
   if(!data){ safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId"); return false; }
   if(!data.binomes || !data.binomes[binomeId]){ safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId"); return false; }
+  if(String(data.logoutEpoch||0) !== String(safeStorage.get("epoch")||0)){ safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId");safeStorage.del("epoch"); return false; }
   myBinomeId = binomeId;
   mySessionId = sessionId;
   role = "student";
@@ -1317,7 +1348,7 @@ function resetWelcomeScreen(){
 
 function studentLogout(){
   if(sessionListener){db.ref(ACTIVE).off("value", sessionListener); sessionListener=null;}
-  safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId");
+  safeStorage.del("role");safeStorage.del("sessionId");safeStorage.del("binomeId");safeStorage.del("epoch");
   myBinomeId=null; role=null; sessionData=null; lastSeenRejection=null; studentRendered=false;
   showScreen("Welcome");
   resetWelcomeScreen();
@@ -1387,6 +1418,11 @@ function startSessionListener(){
       // Si plus de session ou si notre binôme a disparu : retour accueil
       if(!sessionData){
         toast("Le professeur a démarré une nouvelle session. Saisis le nouveau code de classe au tableau.");
+        studentLogout();
+        return;
+      }
+      if(String(sessionData.logoutEpoch||0)!==String(safeStorage.get("epoch")||0)){
+        toast("Le professeur a clôturé la séance. À bientôt !");
         studentLogout();
         return;
       }
@@ -2611,6 +2647,7 @@ function generateTournament(){
     });
     db.ref(DEBAT).update({poules:poules, bracket:null, tournament:{phase:"poules",generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
     db.ref(ACTIVE+"/groupsLocked").set(true);
+    sessionEnded=false;
     const firstPid=Object.keys(poules)[0], firstM=poules[firstPid].matches[0];
     if(firstM) loadMatch({type:"poule",pouleId:firstPid,matchId:firstM.id}, firstM.a, firstM.b);
     toast("Tournoi généré : "+sizes.length+" poule(s). Première manche prête.");
@@ -3172,6 +3209,14 @@ closeOnBackdrop("archivesOverlay", closeArchives);
 closeOnBackdrop("evalDetailOverlay", closeEvalDetail);
 closeOnBackdrop("carnetEleveOverlay", closeCarnetEleve);
 closeOnBackdrop("carnetProfOverlay", closeCarnetProf);
+closeOnBackdrop("endReminderOverlay", closeEndReminder);
+window.addEventListener("beforeunload", function(e){
+  if(shouldGuardClose()){
+    if(endReminderTimer) clearTimeout(endReminderTimer);
+    endReminderTimer=setTimeout(showEndSessionReminder, 400);
+    e.preventDefault(); e.returnValue=""; return "";
+  }
+});
 
 $("confirmYes").addEventListener("click", ()=>{
   if(confirmAction) confirmAction();
