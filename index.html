@@ -386,6 +386,39 @@ body.admin-mode .admin-only { display: block; }
 .admin-action-add { padding: 6px 14px; border-radius: 8px; border: 1px dashed rgba(255,184,108,0.35); background: transparent; color: rgba(255,184,108,0.7); cursor: pointer; font-family: inherit; font-size: 0.82rem; margin-top: 10px; transition: all 0.15s; display: inline-block; }
 .admin-action-add:hover { background: rgba(255,184,108,0.08); color: #ffb86c; }
 .admin-add-row { padding: 10px 14px 4px; }
+
+.cm-palette{display:flex;gap:9px;flex-wrap:wrap;margin:4px 0 8px}
+.cm-sw{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:.15s;position:relative}
+.cm-sw.sel{border-color:#fff;transform:scale(1.12)}
+.cm-sw.sel::after{content:'\2713';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#10071a;font-size:.78rem;font-weight:800}
+.tcr-color{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-right:8px;display:inline-block;vertical-align:middle}
+
+.lens-bar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:0 0 14px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px}
+.lens-bar .ll{font-size:.78rem;color:rgba(255,255,255,.45);margin-right:2px}
+.lens-pill{padding:6px 13px;border-radius:999px;cursor:pointer;font-family:inherit;font-size:.86rem;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);color:#fff;transition:.15s}
+.lens-pill.on{font-weight:700;color:#10071a}
+.lens-pill .lpd{width:10px;height:10px;border-radius:50%}
+.pub-btn{padding:5px 11px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:.8rem;white-space:nowrap;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.42);font-weight:600;transition:.15s}
+.pub-dots{display:inline-flex;gap:4px;flex-wrap:wrap}
+.pub-dot{padding:2px 8px;border-radius:999px;font-size:.68rem;letter-spacing:.02em;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.42);font-weight:600}
+.pub-dot.clk{cursor:pointer;transition:.12s}
+.pub-dot.clk:hover{border-color:rgba(255,255,255,.55);transform:translateY(-1px)}
+.pub-none{font-size:.74rem;color:rgba(255,255,255,.35);font-style:italic}
+
+/* --- rendu admin : grille alignée + accordéon --- */
+.gr-row{display:grid;grid-template-columns:var(--indent,0px) 34px minmax(0,1fr) 84px 156px 184px;align-items:center;gap:0 8px}
+.gc-lead{display:flex;align-items:center;justify-content:center}
+.gc-ttl{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.gc-stat{font-size:.82rem;white-space:nowrap}
+.gc-pub{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.gc-acts{display:flex;gap:3px;justify-content:flex-end;align-items:center}
+.chevron{font-size:1.05rem;color:var(--level-accent);font-weight:700;width:18px;text-align:center;display:inline-block;text-shadow:0 0 9px var(--level-glow);transition:transform .2s;flex-shrink:0}
+.chapter-card:has(> .chapter-body.open) > .chapter-header .chevron{transform:rotate(90deg)}
+.seance-block:has(> .seance-items.open) > .seance-header .chevron{transform:rotate(90deg)}
+.seance-items{display:none}
+.seance-items.open{display:block}
+.seance-header{cursor:pointer}
+.doc-label small{white-space:normal}
 </style>
 </head>
 <body>
@@ -554,6 +587,8 @@ body.admin-mode .admin-only { display: block; }
     </select>
     <label for="class-modal-annee">Année scolaire</label>
     <input type="text" id="class-modal-annee" placeholder="ex : 2025-2026" autocomplete="off">
+    <label>Couleur de la classe</label>
+    <div class="cm-palette" id="class-modal-palette"></div>
     <div class="class-modal-actions">
       <button class="cancel" onclick="closeCreateClassModal()">Annuler</button>
       <button class="primary" onclick="submitCreateClass()">Créer</button>
@@ -650,7 +685,7 @@ var PUBLISHABLE_TABS=['dictee','reecriture','evalconn','image','etude','redactio
 var TAB_LABELS={dictee:'Dict\u00e9e',reecriture:'R\u00e9\u00e9criture',evalconn:'\u00c9valuation des connaissances',image:'Analyse d\u2019image',etude:'\u00c9tude de texte',redaction:'R\u00e9daction'};
 var chapitresData={};
 // État UI : chapitres dépliés (clé = level::chnum), survit aux re-renders
-var UI_OPEN={};
+var UI_OPEN={};var UI_OPEN_S={};
 // Cache des classes chargées depuis Firebase + flag pour lazy-load
 var classesData={};
 var _classesLoaded=false;
@@ -705,6 +740,53 @@ function loadPublished(level){
     });
 }
 
+var ADMIN_LENS='all';
+function setAdminLens(sg){ADMIN_LENS=sg;renderChapitres(clickedLevel||currentLevel);}
+function _lvlClasses(level){var o=classesData||{};return Object.keys(o).filter(function(k){return o[k]&&o[k].niveau===level&&!o[k].archivee;}).sort(function(a,b){return (o[a].nom||'').localeCompare(o[b].nom||'');}).map(function(k){return {slug:k,nom:o[k].nom||k,couleur:o[k].couleur||'#888'};});}
+function _classTag(nom){return (nom||'').replace(/^\s*\d+e\s*/i,'').trim().toUpperCase()||nom;}
+function _isPubAny(node,level){if(node&&node.published===true)return true;var cls=_lvlClasses(level);for(var i=0;i<cls.length;i++){if(isPubFor(node,cls[i].slug))return true;}return false;}
+function _dimNode(node,level){if(ADMIN_LENS==='all')return !_isPubAny(node,level);return !isPubFor(node,ADMIN_LENS);}
+function _renderLensBar(level){
+ if(!_classesLoaded){loadClasses(function(){renderChapitres(level);});return '<div class="lens-bar"><span class="ll">Chargement des classes\u2026</span></div>';}
+ var cls=_lvlClasses(level);
+ if(cls.length===0)return '<div class="lens-bar"><span class="ll">Aucune classe pour ce niveau \u2014 cr\u00e9e-en dans le panneau prof pour publier par classe.</span></div>';
+ var h='<div class="lens-bar"><span class="ll">Je publie pour :</span>';
+ h+='<span class="lens-pill'+(ADMIN_LENS==="all"?' on':'')+'" style="'+(ADMIN_LENS==="all"?'background:#fff':'')+'" onclick="setAdminLens(\'all\')">Vue d\u2019ensemble</span>';
+ cls.forEach(function(c){var on=ADMIN_LENS===c.slug;h+='<span class="lens-pill'+(on?' on':'')+'" style="'+(on?'background:'+c.couleur:'border-color:'+c.couleur)+'" onclick="setAdminLens(\''+c.slug+'\')"><span class="lpd" style="background:'+(on?'#10071a66':c.couleur)+'"></span>'+escapeHtml(c.nom)+'</span>';});
+ return h+'</div>';
+}
+function _pubCtrl(node,kind,level,chnum,snum,itemId){
+ var cls=_lvlClasses(level);
+ if(cls.length===0)return '<span class="pub-none">+ classe ?</span>';
+ function call(sg){if(kind==="ch")return "togglePublishChapterCls('"+level+"','"+chnum+"','"+sg+"')";if(kind==="sce")return "togglePublishSeanceCls('"+level+"','"+chnum+"','"+snum+"','"+sg+"')";return "togglePublishItemCls('"+level+"','"+chnum+"','"+snum+"','"+itemId+"','"+sg+"')";}
+ if(ADMIN_LENS==='all'){return '<span class="pub-dots">'+cls.map(function(c){var on=isPubFor(node,c.slug);var st=on?(' style="background:'+c.couleur+';border-color:'+c.couleur+';color:#10071a"'):'';return '<span class="pub-dot clk"'+st+' onclick="event.stopPropagation();'+call(c.slug)+'">'+_classTag(c.nom)+'</span>';}).join('')+'</span>';}
+ var c=null;cls.forEach(function(x){if(x.slug===ADMIN_LENS)c=x;});
+ if(!c)return '<span class="pub-none">\u2014</span>';
+ var on=isPubFor(node,ADMIN_LENS);var st=on?(' style="background:'+c.couleur+';border-color:'+c.couleur+';color:#10071a"'):'';
+ return '<button class="pub-btn"'+st+' onclick="event.stopPropagation();'+call(ADMIN_LENS)+'">'+(on?'\u2713 Publi\u00e9':'Publier')+'</button>';
+}
+function _markPub(node,slug,nv){if(!node.published||typeof node.published!=='object')node.published={};node.published[slug]=nv;}
+function _applyPubCascade(level,chnum,snum,itemId,slug,nv){
+ var d=chapitresData[level];if(!d||!d[chnum])return;var ch=d[chnum];var paths=[];
+ function put(p){paths.push(p+'/published/'+slug);}
+ if(itemId){var sce=ch.seances[snum];if(!sce||!sce.items||!sce.items[itemId])return;var it=sce.items[itemId];
+  _markPub(it,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId);
+  if(nv){_markPub(sce,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);}
+ }else if(snum){var sce=ch.seances[snum];if(!sce)return;
+  _markPub(sce,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);
+  if(nv){_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);}
+  else{var its=sce.items||{};Object.keys(its).forEach(function(k){if(its[k]&&typeof its[k]==='object'){_markPub(its[k],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+k);}});}
+ }else{_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);
+  if(!nv){var ses=ch.seances||{};Object.keys(ses).forEach(function(sk){var sc=ses[sk];if(!sc||typeof sc!=='object')return;_markPub(sc,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk);var its=sc.items||{};Object.keys(its).forEach(function(ik){if(its[ik]&&typeof its[ik]==='object'){_markPub(its[ik],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk+'/items/'+ik);}});});}
+ }
+ paths.forEach(function(p){fetch(FIREBASE_BASE+p+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nv)}).catch(function(){});});
+ renderChapitres(level);
+}
+function togglePublishChapterCls(level,num,slug){var d=chapitresData[level];if(!d||!d[num])return;_applyPubCascade(level,num,'','',slug,!isPubFor(d[num],slug));}
+function togglePublishSeanceCls(level,chnum,snum,slug){var d=chapitresData[level];if(!d||!d[chnum]||!d[chnum].seances[snum])return;_applyPubCascade(level,chnum,snum,'',slug,!isPubFor(d[chnum].seances[snum],slug));}
+function togglePublishItemCls(level,chnum,snum,itemId,slug){var d=chapitresData[level];if(!d||!d[chnum]||!d[chnum].seances[snum]||!d[chnum].seances[snum].items[itemId])return;_applyPubCascade(level,chnum,snum,itemId,slug,!isPubFor(d[chnum].seances[snum].items[itemId],slug));}
+function isPubFor(node,cls){if(!node)return false;var p=node.published;if(p===true)return true;if(!p||typeof p!=='object')return false;return !!p[cls];}
+function _eleveClasse(){return (TRACK.eleve&&TRACK.eleve.classe)?_slugifyClass(TRACK.eleve.classe):'';}
 function renderChapitres(level){
   var container=document.getElementById('chapters-dynamic');
   if(!container)return;
@@ -723,13 +805,13 @@ function renderChapitres(level){
       return;
     }
     if(isAdmin){
-      html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
+      html+=_renderLensBar(level);html+='<div style="margin-bottom:14px;text-align:right"><button onclick="resetChapitres(\''+level+'\')" style="padding:6px 12px;border-radius:6px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;cursor:pointer;font-family:inherit;font-size:0.78rem">\ud83d\uddd1 Tout effacer (Firebase)</button></div>';
     }
     var nums=Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
     nums.forEach(function(num,idx){
       var ch=data[num];
       if(!ch)return;
-      if(!isAdmin && !ch.published)return;
+      if(!isAdmin && !isPubFor(ch,_eleveClasse()))return;
       var posNum=idx+1;
       try{
         html+=renderChapterCard(level,num,ch,posNum,isAdmin);
@@ -757,77 +839,66 @@ function resetChapitres(level){
 }
 
 function renderChapterCard(level,num,ch,dispNum,isAdmin){
-  var adminBtns='';
+  var pub=isAdmin?_pubCtrl(ch,'ch',level,num,'',''):'';
+  var acts='';
   if(isAdmin){
-    adminBtns='<button class="ch-publish-btn'+(ch.published?' published':'')+'" onclick="event.stopPropagation();togglePublishChapter(\''+level+'\',\''+num+'\')">'+(ch.published?'\u2705 Publi\u00e9':'Publier')+'</button>';
-    adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+num+'\')">\u270f</button>';
-    adminBtns+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',-1)">\u2191</button>';
-    adminBtns+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',1)">\u2193</button>';
-    adminBtns+='<button class="admin-action-btn danger" title="Supprimer le chapitre" onclick="event.stopPropagation();deleteChapter(\''+level+'\',\''+num+'\')">\u2715</button>';
+    acts+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+num+'\')">\u270f</button>';
+    acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',-1)">\u2191</button>';
+    acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',1)">\u2193</button>';
+    acts+='<button class="admin-action-btn danger" title="Supprimer le chapitre" onclick="event.stopPropagation();deleteChapter(\''+level+'\',\''+num+'\')">\u2715</button>';
   }
-  var opacityStyle=(isAdmin && !ch.published)?' style="opacity:0.55"':'';
+  var opacityStyle=(isAdmin && _dimNode(ch,level))?' style="opacity:0.55"':'';
   var html='<div class="chapter-card" data-chapter="'+num+'" data-chapter-id="'+num+'"'+opacityStyle+'>';
-  html+='<div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num">'+dispNum+'</div><div class="chapter-info"><div class="chapter-title">'+escapeHtml(ch.title||'')+'</div></div>'+adminBtns+'</div>';
-  // Body : séances
+  html+='<div class="chapter-header gr-row" style="--indent:0px" onclick="toggleChapter(this)">';
+  html+='<span class="gc-ind"></span><span class="gc-lead"><span class="cnum">'+dispNum+'</span></span>';
+  html+='<span class="gc-ttl"><span class="chevron">\u25b8</span><span class="chapter-title">'+escapeHtml(ch.title||'')+'</span></span>';
+  html+='<span class="gc-stat"></span><span class="gc-pub">'+pub+'</span><span class="gc-acts">'+acts+'</span></div>';
   var seances=ch.seances||{};
   var snums=Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);});
-  var bodyHtml='<div class="doc-list">';
+  var bodyHtml='';
   snums.forEach(function(snum,idx){
-    var sce=seances[snum];
-    if(!sce)return;
-    if(!isAdmin && !sce.published)return;
-    // Compter items publiés
+    var sce=seances[snum];if(!sce)return;
+    if(!isAdmin && !isPubFor(sce,_eleveClasse()))return;
     var items=sce.items||{};
-    var itemKeys=Object.keys(items);
-    var visibleItems=itemKeys.filter(function(k){return items[k] && (isAdmin || items[k].published);});
+    var visibleItems=Object.keys(items).filter(function(k){return items[k] && (isAdmin || isPubFor(items[k],_eleveClasse()));});
     if(!isAdmin && visibleItems.length===0)return;
-    var posNum=idx+1;
-    bodyHtml+=renderSeance(level,num,snum,sce,posNum,isAdmin);
+    bodyHtml+=renderSeance(level,num,snum,sce,idx+1,isAdmin);
   });
-  if(isAdmin){
-    bodyHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addSeance(\''+level+'\',\''+num+'\')">+ Nouvelle s\u00e9ance</button></div>';
-  }
-  bodyHtml+='</div>';
-  html+='<div class="chapter-body'+(UI_OPEN[level+'::'+num]?' open':'')+'">'+bodyHtml+'</div>';
-  html+='</div>';
+  if(isAdmin){bodyHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addSeance(\''+level+'\',\''+num+'\')">+ Nouvelle s\u00e9ance</button></div>';}
+  html+='<div class="chapter-body'+(UI_OPEN[level+'::'+num]?' open':'')+'">'+bodyHtml+'</div></div>';
   return html;
 }
 
 function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
-  var adminBtns='';
+  var pub=isAdmin?_pubCtrl(sce,'sce',level,chnum,snum,''):'';
+  var acts='';
   if(isAdmin){
-    adminBtns='<button class="ch-publish-btn'+(sce.published?' published':'')+'" onclick="event.stopPropagation();togglePublishSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">'+(sce.published?'\u2705':'Publier')+'</button>';
-    adminBtns+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u270f</button>';
-    adminBtns+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',-1)">\u2191</button>';
-    adminBtns+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',1)">\u2193</button>';
-    adminBtns+='<button class="admin-action-btn" title="Coller (image du presse-papier \u2192 nouvel item)" onclick="event.stopPropagation();pasteIntoSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\ud83d\udccb</button>';
-    adminBtns+='<button class="admin-action-btn danger" title="Supprimer la s\u00e9ance" onclick="event.stopPropagation();deleteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u2715</button>';
+    acts+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u270f</button>';
+    acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',-1)">\u2191</button>';
+    acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',1)">\u2193</button>';
+    acts+='<button class="admin-action-btn" title="Coller" onclick="event.stopPropagation();pasteIntoSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\ud83d\udccb</button>';
+    acts+='<button class="admin-action-btn danger" title="Supprimer la s\u00e9ance" onclick="event.stopPropagation();deleteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u2715</button>';
   }
-  var opacityCls=(isAdmin && !sce.published)?' item-unpublished':'';
+  var opacityCls=(isAdmin && _dimNode(sce,level))?' item-unpublished':'';
+  var skey=level+'::'+chnum+'::'+snum;
   var html='<div class="seance-block'+opacityCls+'" data-seance-num="'+snum+'">';
-  html+='<div class="seance-header"><span class="seance-disp-num">S\u00e9ance '+dispNum+'</span><span class="seance-title-disp">'+escapeHtml(sce.title||'')+'</span>'+adminBtns+'</div>';
-  // Items
+  html+='<div class="seance-header gr-row" style="--indent:18px" onclick="toggleSeanceOpen(this,\''+skey+'\')">';
+  html+='<span class="gc-ind"></span><span class="gc-lead"><span class="chevron">\u25b8</span></span>';
+  html+='<span class="gc-ttl"><span class="seance-disp-num">S\u00e9ance '+dispNum+'</span> <span class="seance-title-disp">'+escapeHtml(sce.title||'')+'</span></span>';
+  html+='<span class="gc-stat"></span><span class="gc-pub">'+pub+'</span><span class="gc-acts">'+acts+'</span></div>';
   var items=sce.items||{};
   var ikeys=Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);});
-  var isNotions=(sce.type==='notions');
-  var subDispNum=0;
-  var rendered=0;
+  var isNotions=(sce.type==='notions');var subDispNum=0,rendered=0,itemsHtml='';
   ikeys.forEach(function(itemId){
-    var it=items[itemId];
-    if(!it)return;
-    if(!isAdmin && !it.published)return;
-    subDispNum++;
-    rendered++;
+    var it=items[itemId];if(!it)return;
+    if(!isAdmin && !isPubFor(it,_eleveClasse()))return;
+    subDispNum++;rendered++;
     var subNumStr=isNotions?(dispNum+'.'+subDispNum):'';
-    html+=renderItem(level,chnum,snum,itemId,it,subNumStr,isAdmin);
+    itemsHtml+=renderItem(level,chnum,snum,itemId,it,subNumStr,isAdmin);
   });
-  if(rendered===0){
-    if(isAdmin){html+='<div class="seance-empty">(aucun item)</div>';}
-  }
-  if(isAdmin){
-    html+='<div class="admin-add-row"><button class="admin-action-add" onclick="addItem(\''+level+'\',\''+chnum+'\',\''+snum+'\')">+ Nouvel item</button></div>';
-  }
-  html+='</div>';
+  if(rendered===0 && isAdmin){itemsHtml+='<div class="seance-empty">(aucun item)</div>';}
+  if(isAdmin){itemsHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addItem(\''+level+'\',\''+chnum+'\',\''+snum+'\')">+ Nouvel item</button></div>';}
+  html+='<div class="seance-items'+(UI_OPEN_S[skey]?' open':'')+'">'+itemsHtml+'</div></div>';
   return html;
 }
 
@@ -835,54 +906,43 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   var isGallery=it.kind==='gallery';
   var imgKeys=isGallery?Object.keys(it.images||{}).filter(function(k){return it.images[k]&&typeof it.images[k]==='object';}):[];
   var iconClass='pdf';
-  if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm')iconClass='html';
-  if(it.kind==='analyse_logique'||it.kind==='grammaire')iconClass='pdf';
-  if(it.kind==='tache')iconClass='html';
-  if(isGallery)iconClass='pdf';
+  if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm'||it.kind==='tache')iconClass='html';
   var icon=it.icon||(isGallery?'\ud83d\uddbc':'\ud83d\udcc4');
   var hasRef=isGallery?imgKeys.length>0:!!it.ref;
-  var canOpen=hasRef && it.published;
+  var pubV=(isAdmin||isPubFor(it,_eleveClasse()));
+  var canOpen=hasRef && pubV;
   var subPrefix=subNum?'<span class="item-sub-num">'+subNum+'</span>':'';
   var actionTxt;
   if(isGallery){
-    if(imgKeys.length===0)actionTxt=it.published?'\u26a0 Galerie vide':'\ud83d\udd12';
-    else actionTxt=canOpen?'\u2192 Ouvrir ('+imgKeys.length+' image'+(imgKeys.length>1?'s':'')+')':'\ud83d\udd12 ('+imgKeys.length+')';
-  } else {
-    actionTxt=canOpen?'\u2192 Ouvrir':(it.published?'\u26a0 Non li\u00e9':'\ud83d\udd12');
-  }
-  var pasteTip=isGallery?'Coller : ajoute une image \u00e0 la galerie':'Coller (image du presse-papier \u2192 ajoute/remplace la ressource)';
-  var pubBtn='';
+    if(imgKeys.length===0)actionTxt=pubV?'\u26a0 Galerie vide':'\ud83d\udd12';
+    else actionTxt=canOpen?'\u2192 Ouvrir ('+imgKeys.length+')':'\ud83d\udd12 ('+imgKeys.length+')';
+  } else { actionTxt=canOpen?'\u2192 Ouvrir':(pubV?'\u26a0 Non li\u00e9':'\ud83d\udd12'); }
+  var acts='';
   if(isAdmin){
-    pubBtn='<button class="item-pub-btn'+(it.published?' published':'')+'" onclick="event.stopPropagation();togglePublishItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">'+(it.published?'\u2705':'Publier')+'</button>';
-    pubBtn+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u270f</button>';
-    if(!isGallery)pubBtn+='<button class="admin-action-btn" title="Lier l\u2019item \u00e0 une ressource : fichier Drive / URL externe, dict\u00e9e, r\u00e9\u00e9criture ou \u00e9valuation QCM" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
-    pubBtn+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',-1)">\u2191</button>';
-    pubBtn+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',1)">\u2193</button>';
-    pubBtn+='<button class="admin-action-btn" title="'+pasteTip+'" onclick="event.stopPropagation();pasteIntoItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udccb</button>';
-    pubBtn+='<button class="admin-action-btn danger" title="Supprimer l\u2019item" onclick="event.stopPropagation();deleteItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u2715</button>';
+    acts+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u270f</button>';
+    if(!isGallery)acts+='<button class="admin-action-btn" title="Lier la ressource" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
+    acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',-1)">\u2191</button>';
+    acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',1)">\u2193</button>';
+    acts+='<button class="admin-action-btn" title="Coller" onclick="event.stopPropagation();pasteIntoItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udccb</button>';
+    acts+='<button class="admin-action-btn danger" title="Supprimer l\u2019item" onclick="event.stopPropagation();deleteItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u2715</button>';
   }
-  var opacityCls=(isAdmin && !it.published)?' item-unpublished':'';
+  var pub=isAdmin?_pubCtrl(it,'item',level,chnum,snum,itemId):'';
+  var opacityCls=(isAdmin && _dimNode(it,level))?' item-unpublished':'';
   var clickAttr=canOpen?(' onclick="openItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')" style="cursor:pointer"'):' style="cursor:default"';
-  var html='<div class="doc-item'+opacityCls+'" data-item-id="'+itemId+'"'+clickAttr+'>';
-  html+='<div class="doc-icon '+iconClass+'">'+icon+'</div>';
-  html+='<div class="doc-label">'+subPrefix+escapeHtml(it.title||'')+(it.subtitle?'<small>'+escapeHtml(it.subtitle)+'</small>':'')+'</div>';
-  html+='<div class="doc-action">'+actionTxt+'</div>';
-  if(pubBtn)html+='<div class="item-pub-wrap">'+pubBtn+'</div>';
-  html+='</div>';
-  // Mode admin + galerie : liste des images avec pilotage
+  var html='<div class="doc-item gr-row'+opacityCls+'" style="--indent:40px" data-item-id="'+itemId+'"'+clickAttr+'>';
+  html+='<span class="gc-ind"></span><span class="gc-lead"><span class="doc-icon '+iconClass+'">'+icon+'</span></span>';
+  html+='<span class="gc-ttl"><span class="doc-label">'+subPrefix+escapeHtml(it.title||'')+(it.subtitle?'<small>'+escapeHtml(it.subtitle)+'</small>':'')+'</span></span>';
+  html+='<span class="gc-stat doc-action">'+actionTxt+'</span><span class="gc-pub">'+pub+'</span><span class="gc-acts">'+acts+'</span></div>';
   if(isAdmin && isGallery && imgKeys.length>0){
     var sortedImg=imgKeys.sort(function(a,b){return (it.images[a].ordre||0)-(it.images[b].ordre||0);});
     html+='<div class="gallery-admin-list">';
-    sortedImg.forEach(function(imgK){
-      var img=it.images[imgK];
-      html+='<div class="gallery-image-row">';
-      html+='<span class="gallery-image-title">'+escapeHtml(img.titre||imgK)+'</span>';
+    sortedImg.forEach(function(imgK){var img=it.images[imgK];
+      html+='<div class="gallery-image-row"><span class="gallery-image-title">'+escapeHtml(img.titre||imgK)+'</span>';
       html+='<button class="admin-action-btn" title="Aper\u00e7u" onclick="event.stopPropagation();previewImage(\''+img.ref+'\')">\ud83d\udc41</button>';
       html+='<button class="admin-action-btn" title="Renommer" onclick="event.stopPropagation();renameImageInGallery(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',\''+imgK+'\')">\u270f</button>';
       html+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveImageInGallery(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',\''+imgK+'\',-1)">\u2191</button>';
       html+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveImageInGallery(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',\''+imgK+'\',1)">\u2193</button>';
-      html+='<button class="admin-action-btn danger" title="Retirer cette image" onclick="event.stopPropagation();deleteImageInGallery(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',\''+imgK+'\')">\u2715</button>';
-      html+='</div>';
+      html+='<button class="admin-action-btn danger" title="Retirer" onclick="event.stopPropagation();deleteImageInGallery(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',\''+imgK+'\')">\u2715</button></div>';
     });
     html+='</div>';
   }
@@ -936,35 +996,8 @@ function closeGalleryViewer(){
   document.body.style.overflow='';
 }
 
-function togglePublishChapter(level,num){
-  var data=chapitresData[level];if(!data||!data[num])return;
-  var newPub=!data[num].published;
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+num+'/published.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newPub)
-  }).then(function(){
-    data[num].published=newPub;renderChapitres(level);
-  });
-}
 
-function togglePublishSeance(level,chnum,snum){
-  var data=chapitresData[level];if(!data||!data[chnum]||!data[chnum].seances[snum])return;
-  var newPub=!data[chnum].seances[snum].published;
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/published.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newPub)
-  }).then(function(){
-    data[chnum].seances[snum].published=newPub;renderChapitres(level);
-  });
-}
 
-function togglePublishItem(level,chnum,snum,itemId){
-  var data=chapitresData[level];if(!data||!data[chnum]||!data[chnum].seances[snum]||!data[chnum].seances[snum].items[itemId])return;
-  var newPub=!data[chnum].seances[snum].items[itemId].published;
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/published.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newPub)
-  }).then(function(){
-    data[chnum].seances[snum].items[itemId].published=newPub;renderChapitres(level);
-  });
-}
 
 // =========== CRUD chapitres / séances / items ===========
 function addChapter(level){
@@ -1783,6 +1816,7 @@ function closeIntentSurvey(skipped){
 function openLevel(code,label,color){if(BLOCKED_LEVELS.indexOf(code)>=0 && !(TRACK.eleve&&TRACK.eleve.is_prof)){showLevelBlockedDialog(code);return;}document.documentElement.style.setProperty('--level-color',color);document.getElementById('level-header-title').textContent=label;document.getElementById('level-header-badge').textContent=label;document.getElementById('bnav-level').textContent=label;var dl=document.getElementById('dictee-link');if(dl)dl.href='dictee_universelle.html?n='+code;if(clickedLevel===code){document.getElementById('hero-timer').classList.remove('visible');document.getElementById('page-home').classList.remove('active');document.getElementById('page-level').classList.add('active');document.getElementById('level-timer').classList.add('visible');applyLevelTheme(code);loadPublished(code);window.scrollTo(0,0);}else{clickedLevel=code;var t=levelThemes[code];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(timerInterval){clearInterval(timerInterval);timerInterval=null;}lastSec=-1;updateTimers();timerInterval=setInterval(updateTimers,1000);var ht=document.getElementById('hero-timer');ht.style.display='block';requestAnimationFrame(function(){requestAnimationFrame(function(){ht.classList.add('visible');});});setTimeout(function(){showIntentSurvey(code,label);},420);}}
 function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval(timerInterval);timerInterval=null;}document.getElementById('page-level').classList.remove('active');document.getElementById('page-home').classList.add('active');document.getElementById('level-timer').classList.remove('visible');var ht=document.getElementById('hero-timer');ht.classList.remove('visible');setTimeout(function(){ht.style.display='none';},600);showAccueilBg();window.scrollTo(0,0);}
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;var isOpen=body.classList.toggle('open');var card=header.closest('.chapter-card[data-chapter-id]');if(card){var chId=card.getAttribute('data-chapter-id');var lvl=clickedLevel||currentLevel||'';if(isOpen)UI_OPEN[lvl+'::'+chId]=true;else delete UI_OPEN[lvl+'::'+chId];}}
+function toggleSeanceOpen(h,key){var b=h.nextElementSibling;if(!b||!b.classList.contains('seance-items'))return;var o=b.classList.toggle('open');if(o)UI_OPEN_S[key]=true;else delete UI_OPEN_S[key];}
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
 function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';var de=document.getElementById('tab-dictee');if(de)de.style.display='none';}
 function collectChapterItems(level,kind){
@@ -1955,7 +1989,7 @@ function _profSectionClasses(){
     active.forEach(function(slug){
       var c=classesData[slug];
       html+='<div class="tprof-class-row">';
-      html+='<div class="tcr-name">'+escapeHtml(c.nom||slug)+'</div>';
+      html+='<div class="tcr-name"><span class="tcr-color" style="background:'+(c.couleur||'#888')+'"></span>'+escapeHtml(c.nom||slug)+'</div>';
       html+='<div class="tcr-meta">'+escapeHtml(c.niveau||'?')+' \u00b7 '+escapeHtml(c.annee||'?')+'</div>';
       html+='<div class="tcr-actions">';
       html+='<button title="Renommer" onclick="renameClass(\''+slug+'\')">\u270f</button>';
@@ -1969,7 +2003,7 @@ function _profSectionClasses(){
     archived.forEach(function(slug){
       var c=classesData[slug];
       html+='<div class="tprof-class-row" style="opacity:0.55">';
-      html+='<div class="tcr-name">'+escapeHtml(c.nom||slug)+'</div>';
+      html+='<div class="tcr-name"><span class="tcr-color" style="background:'+(c.couleur||'#888')+'"></span>'+escapeHtml(c.nom||slug)+'</div>';
       html+='<div class="tcr-meta">'+escapeHtml(c.niveau||'?')+' \u00b7 '+escapeHtml(c.annee||'?')+'</div>';
       html+='<div class="tcr-actions">';
       html+='<button title="D\u00e9sarchiver" onclick="unarchiveClass(\''+slug+'\')">\u21a9</button>';
@@ -1995,6 +2029,7 @@ function openCreateClassModal(){
   document.getElementById('class-modal-nom').value='';
   document.getElementById('class-modal-niveau').value='3e';
   document.getElementById('class-modal-annee').value=currentSchoolYear();
+  _newClassColor=CLASS_PALETTE[0];_renderClassPalette();
   setTimeout(function(){document.getElementById('class-modal-nom').focus();},60);
 }
 
@@ -2002,6 +2037,10 @@ function closeCreateClassModal(){
   document.getElementById('class-modal').classList.remove('visible');
 }
 
+var CLASS_PALETTE=['#FF4D4D','#FF8A00','#FFD60A','#A3FF3C','#22E84D','#00E0C6','#18C3FF','#3B82F6','#7B5CFF','#B14DFF','#FF3DCB','#FF4D8D'];
+var _newClassColor=CLASS_PALETTE[0];
+function _renderClassPalette(){var el=document.getElementById('class-modal-palette');if(!el)return;el.innerHTML=CLASS_PALETTE.map(function(col){return '<span class="cm-sw'+(col===_newClassColor?' sel':'')+'" style="background:'+col+'" onclick="_pickClassColor(\''+col+'\')"></span>';}).join('');}
+function _pickClassColor(col){_newClassColor=col;_renderClassPalette();}
 function submitCreateClass(){
   var nom=document.getElementById('class-modal-nom').value.trim();
   var niveau=document.getElementById('class-modal-niveau').value;
@@ -2011,7 +2050,7 @@ function submitCreateClass(){
   var slug=_slugifyClass(nom);
   if(!slug){alert('Nom invalide (vide apr\u00e8s simplification).');return;}
   if(classesData[slug]){alert('Une classe avec ce nom (slug \u00ab '+slug+' \u00bb) existe d\u00e9j\u00e0.');return;}
-  var record={nom:nom,niveau:niveau,annee:annee,cree_le:Date.now(),archivee:false};
+  var record={nom:nom,niveau:niveau,annee:annee,couleur:_newClassColor,cree_le:Date.now(),archivee:false};
   fetch(FIREBASE_BASE+'/classes/'+slug+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)})
     .then(function(r){if(!r.ok)throw new Error('Firebase '+r.status);return r.json();})
     .then(function(){
