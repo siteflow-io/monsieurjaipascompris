@@ -1233,6 +1233,8 @@ function getSpeechRate(){try{var r=parseFloat(localStorage.getItem("mjpc_speech_
 function setSpeechRate(r){try{localStorage.setItem("mjpc_speech_rate",String(r))}catch(e){}}
 function speakWord(word){
   if(!('speechSynthesis' in window))return;
+  // Re-sélection défensive : si _frenchVoice est null ou non-locale, on retente
+  if(!_frenchVoice||!_frenchVoice.localService)_selectFrenchVoice();
   window.speechSynthesis.cancel();
   var txt=speechText(word);if(!txt)return;
   var u=new SpeechSynthesisUtterance(txt);
@@ -1244,6 +1246,7 @@ function stopSpeech(){if('speechSynthesis' in window)window.speechSynthesis.canc
 // Enchaîne plusieurs utterances sans cancel entre elles (annonce type + mot)
 function speakSequence(texts){
   if(!('speechSynthesis' in window))return;
+  if(!_frenchVoice||!_frenchVoice.localService)_selectFrenchVoice();
   window.speechSynthesis.cancel();
   texts.forEach(function(t){
     var txt=speechText(t);if(!txt)return;
@@ -2464,7 +2467,7 @@ function CorrEleve(p){
             h("div",{style:{height:"100%",background:"var(--primary)",borderRadius:2,width:pct+"%",transition:"width .3s"}}))
         ),
         ("speechSynthesis" in window)?h("div",{style:{display:"flex",gap:6,alignItems:"center"}},
-          h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?"Couper l\u2019audio (lecture du mot courant)":"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"),
+          h("button",{className:"btn-sm",onClick:function(){setSpeechOn(!speechOn)},title:speechOn?("Couper l\u2019audio. Voix actuelle : "+(_frenchVoice?_frenchVoice.name+(_frenchVoice.localService?" (local \u26a1)":" (r\u00e9seau, lent \u26a0)"):"non d\u00e9finie \u26a0")):"Activer l\u2019audio (lecture du mot courant \u00e0 chaque \u00e9tape)",style:{padding:"5px 12px",fontWeight:700,background:speechOn?"rgba(43,108,203,.12)":"rgba(0,0,0,.05)",color:speechOn?"#2b6cb0":"var(--muted)",border:"1.5px solid "+(speechOn?"#2b6cb0":"var(--border)"),borderRadius:8,fontSize:".85rem"}},speechOn?"\ud83d\udd0a Audio":"\ud83d\udd07 Muet"),
           speechOn&&h("label",{title:"Vitesse de la voix (0.7\u00d7 \u00e0 3.0\u00d7). Si \u00e7a lag, augmente. Si tu ne comprends pas le mot, diminue.",style:{display:"flex",alignItems:"center",gap:4,fontSize:".72rem",color:"#2b6cb0"}},
             h("span",{style:{minWidth:32,textAlign:"right",fontVariantNumeric:"tabular-nums"}},speechRate.toFixed(2)+"\u00d7"),
             h("input",{type:"range",min:.7,max:3,step:.05,value:speechRate,onChange:function(e){var r=parseFloat(e.target.value);changeSpeechRate(r)},style:{width:80,accentColor:"#2b6cb0"}})
