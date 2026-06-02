@@ -445,6 +445,8 @@
 .camp-pour{color:var(--accent2)}
 .camp-contre{color:var(--done)}
 .carnet-quote{font-style:italic;color:var(--ink2);font-size:.82rem;margin:4px 0 0;padding-left:9px;border-left:2px solid var(--line)}
+.carnet-consigne{margin:5px 0 2px;padding:6px 9px;border-left:3px solid var(--gold);background:rgba(220,171,85,.10);border-radius:6px;font-size:.8rem;color:var(--ink2);line-height:1.35}
+.carnet-consigne.hs{border-left-color:var(--accent);background:rgba(192,57,43,.10)}
 .vote-box{margin-top:8px;padding:7px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);font-size:.82rem}
 .vote-head{font-weight:700;color:var(--ink2);margin-bottom:2px}
 .vote-missing{color:var(--accent2);margin-top:2px}
@@ -488,10 +490,16 @@
       <div id="loginBlock">
         <label for="loginCode">Code de classe</label>
         <input id="loginCode" class="code" placeholder="LIMA-4827" maxlength="12" autocomplete="off">
+        <div id="loginNamesWrap">
         <label>Vos prénoms (1, 2 ou 3 élèves)</label>
         <input id="loginName1" placeholder="Prénom 1" autocomplete="off">
         <input id="loginName2" placeholder="Prénom 2 (optionnel)" style="margin-top:8px" autocomplete="off">
         <input id="loginName3" placeholder="Prénom 3 (optionnel)" style="margin-top:8px" autocomplete="off">
+        </div>
+        <div id="loginGroupWrap" style="display:none">
+        <label>Choisis ton groupe</label>
+        <select id="loginGroupSelect" class="code" style="width:100%" title="Choisis ton groupe dans la liste. Si tu ne le trouves pas, préviens le professeur : les groupes sont verrouillés."><option value="">— Choisis ton groupe —</option></select>
+        </div>
         <div class="err" id="loginErr"></div>
         <div class="actions">
           <button class="prof-link" onclick="showProfLogin()">⚙ Accès professeur</button>
@@ -613,6 +621,7 @@
       <div class="url">Adresse : <b id="profSessionUrl" title="URL de l'app à ouvrir sur les tablettes. Donne-la aux élèves (ou affiche-la avec un QR code).">—</b></div>
     </div>
     <div class="codebanner-actions">
+      <button id="lockGroupsBtn" onclick="toggleGroupsLock()" title="Verrouille les groupes : plus de création possible. Les reconnexions se font en choisissant le groupe dans une liste. Se verrouille aussi automatiquement au lancement du tournoi.">🔓 Groupes ouverts</button>
       <button class="primary" onclick="newSession()" title="Crée une nouvelle session avec un nouveau code. La session actuelle (binômes, statuts, aides) sera archivée automatiquement.">+ Nouvelle session</button>
     </div>
   </div>
@@ -730,6 +739,14 @@
   </div>
 </div>
 
+<div class="overlay" id="modQueueOverlay">
+  <div class="gelcard" style="text-align:left;max-width:600px;max-height:84vh;overflow:auto">
+    <h2 style="font-size:1.15rem;margin-bottom:12px;text-align:center">🛡 Modération des commentaires</h2>
+    <div id="modQueueBody"></div>
+    <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeModQueue()" title="Fermer.">Fermer</button></div>
+  </div>
+</div>
+
 <div class="overlay" id="carnetEleveOverlay">
   <div class="gelcard" style="text-align:left;max-width:580px;max-height:84vh;overflow:auto">
     <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Mes évaluations</h2>
@@ -747,6 +764,8 @@
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeCarnetProf()" title="Fermer.">Fermer</button></div>
   </div>
 </div>
+
+<input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="handleImportFile(event)">
 
 <div id="toast" class="toast"></div>
 
@@ -1192,7 +1211,6 @@ async function doStudentLogin(){
   const n3 = ($("loginName3").value||"").trim();
   const names = [n1,n2,n3].filter(Boolean);
   if(!code){ $("loginErr").textContent="Entre le code de classe affiché au tableau."; return; }
-  if(names.length===0){ $("loginErr").textContent="Entre au moins un prénom."; return; }
   if(names.length>3){ $("loginErr").textContent="Maximum 3 élèves par binôme."; return; }
   $("loginErr").textContent="";
   $("loginBtn").disabled=true;
@@ -1204,6 +1222,26 @@ async function doStudentLogin(){
     $("loginBtn").disabled=false;
     return;
   }
+  // Mode verrouillé : reconnexion par liste déroulante, aucune création
+  if(data.groupsLocked===true){
+    const sel=$("loginGroupSelect");
+    const chosen=sel?sel.value:"";
+    if(chosen && data.binomes && data.binomes[chosen]){ enterAsStudent(chosen, data); return; }
+    if(sel){
+      let opts='<option value="">— Choisis ton groupe —</option>';
+      Object.keys(data.binomes||{}).map(function(bid){return {bid:bid, nm:((data.binomes[bid].names||[]).join(" & "))};})
+        .sort(function(a,b){return a.nm.localeCompare(b.nm);})
+        .forEach(function(o){ opts+='<option value="'+o.bid+'">'+o.nm.replace(/</g,"&lt;")+'</option>'; });
+      sel.innerHTML=opts;
+    }
+    const nw=$("loginNamesWrap"), gw=$("loginGroupWrap");
+    if(nw)nw.style.display="none"; if(gw)gw.style.display="block";
+    $("loginErr").textContent="Cette classe est verrouillée : choisis ton groupe dans la liste, puis « Rejoindre ».";
+    $("loginBtn").disabled=false;
+    return;
+  }
+  { const nw=$("loginNamesWrap"), gw=$("loginGroupWrap"); if(nw)nw.style.display=""; if(gw)gw.style.display="none"; }
+  if(names.length===0){ $("loginErr").textContent="Entre au moins un prénom."; $("loginBtn").disabled=false; return; }
   // Vérifier si un binôme avec exactement les mêmes prénoms existe déjà (reprise)
   let existingId = null;
   if(data.binomes){
@@ -1231,16 +1269,23 @@ async function doStudentLogin(){
     };
     await db.ref(ACTIVE+"/binomes/"+binomeId).set(newB);
   }
-  // Mémoriser localement et entrer en mode élève
+  enterAsStudent(binomeId, data);
+}
+function enterAsStudent(binomeId, data){
   safeStorage.set("role","student");
-  safeStorage.set("sessionId", data.id || "active");
+  safeStorage.set("sessionId", (data&&data.id) || "active");
   safeStorage.set("binomeId", binomeId);
   myBinomeId = binomeId;
-  mySessionId = data.id || "active";
+  mySessionId = (data&&data.id) || "active";
   role = "student";
   startSessionListener();
   showScreen("Student");
-  $("loginBtn").disabled = false;  // Réactiver pour les prochaines connexions
+  $("loginBtn").disabled = false;
+}
+function toggleGroupsLock(){
+  const nv = !(sessionData && sessionData.groupsLocked===true);
+  db.ref(ACTIVE+"/groupsLocked").set(nv);
+  toast(nv?"Groupes verrouillés : plus de création, reconnexion par liste.":"Groupes ouverts : création libre.");
 }
 
 async function rejoinStudent(sessionId, binomeId){
@@ -1463,6 +1508,7 @@ function renderProf(){
   // Code de classe et URL
   $("profSessionCode").textContent = sessionData.code || "—";
   $("profSessionUrl").textContent = window.location.origin + window.location.pathname;
+  { const lb=$("lockGroupsBtn"); if(lb) lb.textContent = (sessionData.groupsLocked===true)?"🔒 Groupes verrouillés":"🔓 Groupes ouverts"; }
 
   // Bandeau validations à faire
   const binomes = sessionData.binomes || {};
@@ -1980,6 +2026,8 @@ function createPouleFromUI(){
 }
 function deletePoule(pid){
   askConfirm("Supprimer cette poule et ses manches ?", function(){
+    const p=poulesObj()[pid];
+    if(p){ (p.matches||[]).forEach(function(m){ db.ref(DEBAT+"/matches/"+m.id).remove(); db.ref(DEBAT+"/grilleEcoute/"+m.id).remove(); }); }
     const cm=debatData().currentMatch;
     const orphan = cm && ((cm.origin && cm.origin.type==="poule" && cm.origin.pouleId===pid) || cm.pouleId===pid);
     db.ref(DEBAT+"/poules/"+pid).remove();
@@ -2258,6 +2306,7 @@ function renderDebatProf(){
   ensureDebatClock();
   const d=debatData(); const cm=d.currentMatch||null;
   maybeBeep(cm);
+  refreshModViews();
   const sig=profSignature(d,cm);
   if(sig===lastProfSig){ paintCountdown(cm); return; }
   lastProfSig=sig;
@@ -2269,7 +2318,7 @@ function renderDebatProf(){
 
   let h='';
   h+='<div class="dbg-bar"><h2>🎙 Pilotage du débat — Le triomphe simien</h2>'
-   + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button><button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par binôme évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
+   + '<span style="display:flex;gap:8px;flex-wrap:wrap"><button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button>'+modQueueBtn()+'<button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par binôme évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="exportDebatJSON()" title="Télécharger une sauvegarde complète du débat au format JSON (binômes, poules, manches, scores).">💾 Export</button><button class="dbg-btn ghost" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Import</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
   const tour=d.tournament||{};
   if(tour.phase==="termine" && tour.champion){
     h+='<div class="dbg-result" style="margin-bottom:14px"><div class="win" style="font-size:1.5rem">🏆 '+esc(binomeName(findBinome(tour.champion))||"?")+' remporte le tournoi !</div></div>';
@@ -2470,7 +2519,7 @@ function renderDebatStudent(){
       const pc=myCamp==="pour"?MM.profEleveCommentPour:MM.profEleveCommentContre;
       if(pc){ const mems=binomeMembers(myBinomeId); Object.keys(pc).forEach(function(idx){ if(pc[idx]){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; h+='<div class="eval-cmt">Professeur → 👤 '+esc(mem?mem.nom:idx)+' : « '+esc(pc[idx])+' »</div>'; any=true; } }); }
       const GG=(debatData().grilleEcoute||{})[cm.id]||{};
-      Object.keys(GG).forEach(function(sid){ const c=GG[sid]&&GG[sid][myCamp]; if(c&&c.meilleur){ h+='<div class="eval-cmt">'+esc(binomeName(findBinome(sid))||"?")+' : « '+esc(c.meilleur)+' »</div>'; any=true; } });
+      Object.keys(GG).forEach(function(sid){ const c=GG[sid]&&GG[sid][myCamp]; if(c&&c.meilleur&&commentApproved(cm.id,sid,myCamp)){ h+='<div class="eval-cmt">'+esc(binomeName(findBinome(sid))||"?")+' : « '+esc(c.meilleur)+' »'+avisBadge(cm.id,sid,myCamp)+'</div>'; any=true; } });
       if(!any) h+='<div style="color:var(--muted);font-style:italic;text-align:center">Aucun commentaire.</div>';
       h+='</div>';
       wrap.innerHTML=h; return;
@@ -2560,7 +2609,8 @@ function generateTournament(){
       const ids=arr.slice(k,k+sz); k+=sz; const pid=uid();
       poules[pid]={id:pid, name:"Poule "+String.fromCharCode(65+idx), binomes:ids, matches:genRoundRobin(ids)};
     });
-    db.ref(DEBAT).update({poules:poules, bracket:null, tournament:{phase:"poules",generatedAt:Date.now()}, scores:null, currentMatch:null});
+    db.ref(DEBAT).update({poules:poules, bracket:null, tournament:{phase:"poules",generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
+    db.ref(ACTIVE+"/groupsLocked").set(true);
     const firstPid=Object.keys(poules)[0], firstM=poules[firstPid].matches[0];
     if(firstM) loadMatch({type:"poule",pouleId:firstPid,matchId:firstM.id}, firstM.a, firstM.b);
     toast("Tournoi généré : "+sizes.length+" poule(s). Première manche prête.");
@@ -2754,7 +2804,7 @@ let curEvalMatch=null;
 function evalTot(o){ return o?((o.clarte||0)+(o.args||0)+(o.exemples||0)+(o.replique||0)):0; }
 function evalLine(o){
   if(!o) return '<span style="color:var(--muted)">non noté</span>';
-  return "clarté "+(o.clarte||"–")+" · arg. "+(o.args||"–")+" · ex. "+(o.exemples||"–")+" · répl. "+(o.replique||"–")+" → <b>"+evalTot(o)+"/20</b>";
+  return "Clarté "+(o.clarte||"–")+" · Arguments "+(o.args||"–")+" · Exemples "+(o.exemples||"–")+" · Réplique "+(o.replique||"–")+" → <b>"+evalTot(o)+"/20</b>";
 }
 function eleveAggLine(sc){
   if(!sc) return "";
@@ -2810,9 +2860,9 @@ function renderEvalDetail(){
     const g=G[sid]||{}; const nm=esc(binomeName(findBinome(sid))||"(binôme inconnu)");
     h+='<div class="eval-card"><div class="eval-who">'+nm+'</div>';
     h+='<div class="eval-row"><span class="eval-camp pour">POUR</span> '+evalLine(g.pour)+'</div>';
-    if(g.pour&&g.pour.meilleur){ h+='<div class="eval-cmt">meilleur argument POUR : « '+esc(g.pour.meilleur)+' »</div>'; }
+    if(g.pour&&g.pour.meilleur){ h+='<div class="eval-cmt">meilleur argument POUR : « '+esc(g.pour.meilleur)+' » '+avisButtons(mid,sid,"pour")+'</div>'; }
     h+='<div class="eval-row"><span class="eval-camp contre">CONTRE</span> '+evalLine(g.contre)+'</div>';
-    if(g.contre&&g.contre.meilleur){ h+='<div class="eval-cmt">meilleur argument CONTRE : « '+esc(g.contre.meilleur)+' »</div>'; }
+    if(g.contre&&g.contre.meilleur){ h+='<div class="eval-cmt">meilleur argument CONTRE : « '+esc(g.contre.meilleur)+' » '+avisButtons(mid,sid,"contre")+'</div>'; }
     ["pour","contre"].forEach(function(camp){
       const c=g[camp]; if(!c||!c.eleves)return;
       const bid=(M.campA===camp)?M.binomeA:M.binomeB; const mems=binomeMembers(bid);
@@ -2840,7 +2890,7 @@ function closeCarnetEleve(){ $("carnetEleveOverlay").classList.remove("show"); }
 function critPills(o){
   if(!o) return '';
   function p(lib,v){ return '<span class="crit-pill">'+lib+' <b>'+(v!=null?v:"–")+'</b></span>'; }
-  return '<div class="crit-row">'+p("Clarté",o.clarte)+p("Args",o.args)+p("Ex.",o.exemples)+p("Répl.",o.replique)+'<span class="crit-total">'+evalTot(o)+'/20</span></div>';
+  return '<div class="crit-row">'+p("Clarté",o.clarte)+p("Arguments",o.args)+p("Exemples",o.exemples)+p("Réplique",o.replique)+'<span class="crit-total">'+evalTot(o)+'/20</span></div>';
 }
 function elevePills(elevesObj, bid){
   if(!elevesObj) return '';
@@ -2848,7 +2898,7 @@ function elevePills(elevesObj, bid){
   Object.keys(elevesObj).forEach(function(idx){ const mem=mems.filter(function(m){return m.idx==idx;})[0]; s+='<span class="eleve-pill">👤 '+esc(mem?mem.nom:("él."+idx))+' <b>'+elevesObj[idx]+'/5</b></span>'; });
   return s+'</div>';
 }
-function carnetRecueCard(mm, grille, n){
+function carnetRecueCard(mm, grille, n, mid){
   const myCamp=(mm.binomeA===myBinomeId)?mm.campA:mm.campB;
   const oppB=(mm.binomeA===myBinomeId)?mm.binomeB:mm.binomeA;
   const oppName=esc(binomeName(findBinome(oppB))||"?");
@@ -2870,13 +2920,13 @@ function carnetRecueCard(mm, grille, n){
   Object.keys(grille).forEach(function(sid){ if(sid===myBinomeId) return; const c=grille[sid]&&grille[sid][myCamp]; if(!c) return;
     h+='<div class="carnet-eval"><div class="carnet-who">'+esc(binomeName(findBinome(sid))||"?")+' vous a évalués :</div>'+critPills(c);
     if(c.eleves) h+=elevePills(c.eleves, myBinomeId);
-    if(c.meilleur) h+='<div class="carnet-quote">Coup de cœur : « '+esc(c.meilleur)+' »</div>';
+    if(c.meilleur && commentApproved(mid,sid,myCamp)) h+='<div class="carnet-quote">Coup de cœur : « '+esc(c.meilleur)+' »'+avisBadge(mid,sid,myCamp)+'</div>'+consigneRecue((n||"?"),mid,sid,myCamp);
     h+='</div>';
   });
   h+='</div>';
   return h;
 }
-function carnetDonneeCard(mm, g, n){
+function carnetDonneeCard(mm, g, n, mid){
   const na=esc(binomeName(findBinome(mm.binomeA))||"?"), nb=esc(binomeName(findBinome(mm.binomeB))||"?");
   let h='<div class="carnet-card">';
   h+='<div class="carnet-when">'+(n?("Manche "+n+" · "):"")+na+' vs '+nb+'</div>';
@@ -2887,7 +2937,7 @@ function carnetDonneeCard(mm, g, n){
     const cn=esc(binomeName(findBinome(bid))||"");
     h+='<div class="carnet-eval"><div class="carnet-who">Camp <b class="camp-'+camp+'">'+(camp==="pour"?"POUR":"CONTRE")+'</b>'+(cn?(' ('+cn+')'):'')+' :</div>'+critPills(c);
     if(c.eleves) h+=elevePills(c.eleves, bid);
-    if(c.meilleur) h+='<div class="carnet-quote">Votre coup de cœur : « '+esc(c.meilleur)+' »</div>';
+    if(c.meilleur) h+='<div class="carnet-quote">Votre coup de cœur : « '+esc(c.meilleur)+' »'+avisBadge(mid,myBinomeId,camp)+'</div>'+consigneDonnee((n||"?"),mid,myBinomeId,camp);
     h+='</div>';
   });
   h+='</div>';
@@ -2905,13 +2955,13 @@ function renderCarnetEleve(){
   } else {
     const recues=order.filter(function(mid){ return M[mid].binomeA===myBinomeId || M[mid].binomeB===myBinomeId; });
     if(recues.length===0){ h+='<div class="carnet-empty">Vos manches en tant que débatteurs apparaîtront ici.</div>'; }
-    recues.forEach(function(mid){ h+=carnetRecueCard(M[mid], GE[mid]||{}, num[mid]); });
+    recues.forEach(function(mid){ h+=carnetRecueCard(M[mid], GE[mid]||{}, num[mid], mid); });
   }
   h+='<div class="carnet-sec">Vos évaluations</div>';
   const donnees=Object.keys(GE).filter(function(mid){ return GE[mid] && GE[mid][myBinomeId]; })
     .sort(function(a,b){ return (GE[a][myBinomeId].at||0)-(GE[b][myBinomeId].at||0); });
   if(donnees.length===0){ h+='<div class="carnet-empty">Tu n\'as pas encore envoyé d\'évaluation. Elles apparaîtront ici, figées, au fur et à mesure.</div>'; }
-  donnees.forEach(function(mid){ h+=carnetDonneeCard(M[mid]||{}, GE[mid][myBinomeId], num[mid]); });
+  donnees.forEach(function(mid){ h+=carnetDonneeCard(M[mid]||{}, GE[mid][myBinomeId], num[mid], mid); });
   body.innerHTML=h;
 }
 
@@ -2973,6 +3023,140 @@ function updateVoteStatus(d, cm){
     else if(n>0) h+='<div class="vote-done">Tout le monde a évalué ✓</div>';
     h+='</div>'; elS.innerHTML=h;
   }
+}
+
+// ═══════════ PHASE 8 — Export / Import JSON de l'état du débat ═══════════
+function buildDebatExport(v){
+  return { version:1, exportedAt:Date.now(), code:(sessionData&&sessionData.code)||null,
+           binomes:(v&&v.binomes)||{}, debat:(v&&v.debat)||{} };
+}
+function downloadJSON(obj, fname){
+  try{
+    const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=fname; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); },2000);
+    return true;
+  }catch(e){ toast("Téléchargement impossible : "+e.message); return false; }
+}
+function exportDebatJSON(){
+  db.ref(ACTIVE).once("value").then(function(snap){
+    const payload=buildDebatExport(snap.val()||{});
+    const fname="debat_"+((sessionData&&sessionData.code)||"export")+"_"+new Date().toISOString().slice(0,10)+".json";
+    if(downloadJSON(payload, fname)) toast("Export téléchargé : "+fname);
+  });
+}
+function validateDebatImport(payload){ return !!(payload && (payload.debat || payload.binomes)); }
+function applyDebatImport(payload){
+  if(payload.binomes) db.ref(ACTIVE+"/binomes").set(payload.binomes);
+  db.ref(ACTIVE+"/debat").set(payload.debat||null);
+}
+function importDebatJSON(){ const el=$("importFileInput"); if(el) el.click(); }
+function handleImportFile(ev){
+  const f=ev.target && ev.target.files && ev.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=function(){
+    let payload=null;
+    try{ payload=JSON.parse(reader.result); }catch(e){ toast("Fichier JSON invalide."); return; }
+    if(!validateDebatImport(payload)){ toast("Ce fichier n'est pas un export de débat."); return; }
+    askConfirm("Réinjecter cet export ? L'état actuel du débat (binômes, poules, manches, scores) sera entièrement remplacé. À faire hors séance.", function(){
+      applyDebatImport(payload);
+      toast("Import effectué.");
+    });
+  };
+  reader.readAsText(f);
+  ev.target.value="";
+}
+
+// ═══════════ MODÉRATION DES COMMENTAIRES (« meilleur argument ») ═══════════
+const AVIS={ fort:{lib:"Vrai coup de cœur", short:"Vrai coup de cœur", color:"var(--done)"},
+             partiel:{lib:"Coup de cœur partiel", short:"Partiel", color:"var(--gold)"},
+             hs:{lib:"Hors sujet", short:"Hors sujet", color:"var(--accent2)"} };
+function commentAvis(mid,sid,camp){
+  const cm=(debatData().commentMod)||{};
+  return (cm[mid] && cm[mid][sid] && cm[mid][sid][camp]) || null;
+}
+function commentApproved(mid,sid,camp){ return !!commentAvis(mid,sid,camp); }
+function setCommentAvis(mid,sid,camp,avis){
+  const r=DEBAT+"/commentMod/"+mid+"/"+sid+"/"+camp;
+  if(avis) db.ref(r).set(avis); else db.ref(r).remove();
+  const d=debatData();
+  if(d){ d.commentMod=d.commentMod||{}; d.commentMod[mid]=d.commentMod[mid]||{}; d.commentMod[mid][sid]=d.commentMod[mid][sid]||{};
+    if(avis) d.commentMod[mid][sid][camp]=avis; else delete d.commentMod[mid][sid][camp]; }
+  refreshModViews();
+}
+function toggleAvis(mid,sid,camp,avis){ setCommentAvis(mid,sid,camp, commentAvis(mid,sid,camp)===avis?null:avis); }
+function refreshModViews(){
+  if($("modQueueOverlay") && $("modQueueOverlay").classList.contains("show")) renderModQueue();
+  if($("evalDetailOverlay") && $("evalDetailOverlay").classList.contains("show")) renderEvalDetail();
+  const b=$("modQueueBtn");
+  if(b){ const n=pendingCount(); b.textContent='🛡 À valider'+(n>0?(' ('+n+')'):''); b.style.borderColor=n>0?'var(--accent)':''; b.style.color=n>0?'var(--accent2)':''; }
+}
+function avisBadge(mid,sid,camp){
+  const a=AVIS[commentAvis(mid,sid,camp)]; if(!a) return '';
+  return '<span style="display:inline-block;font-size:.72rem;padding:1px 8px;border-radius:20px;border:1px solid '+a.color+';color:'+a.color+';margin-left:6px;white-space:nowrap">Avis du prof : '+a.lib+'</span>';
+}
+function consigneRecue(n,mid,sid,camp){
+  const k=commentAvis(mid,sid,camp);
+  if(k==="hs") return '<div class="carnet-consigne hs">✍ <b>Manche '+n+'</b> — le professeur juge cet argument <b>hors sujet</b> : ne le garde pas tel quel pour la suite.</div>';
+  const nu=(k==="partiel")?' — à <b>affiner</b> avant de t\'en resservir':'';
+  return '<div class="carnet-consigne">✍ <b>Manche '+n+'</b> — reporte-le dans ton <b>Carnet (DOC 10)</b>, à « <b>L\'argument qui a fait mouche (je le garde)</b> »'+nu+'.</div>';
+}
+function consigneDonnee(n,mid,sid,camp){
+  const k=commentAvis(mid,sid,camp);
+  if(k==="hs") return '<div class="carnet-consigne hs">✍ Le professeur juge cet argument <b>hors sujet</b> : ne le reprends pas.</div>';
+  const nu=(k==="partiel")?', à <b>affiner</b>':'';
+  return '<div class="carnet-consigne">✍ Bon argument <b>repéré chez un autre binôme</b>'+nu+'. Note-le dans ton <b>Carnet (DOC 10)</b>, à « <b>Mon objectif pour la prochaine manche</b> » : c\'est un argument à voler.</div>';
+}
+function collectComments(){
+  const GE=(debatData().grilleEcoute)||{}; const out=[];
+  Object.keys(GE).forEach(function(mid){
+    const subs=GE[mid]||{};
+    Object.keys(subs).forEach(function(sid){
+      ["pour","contre"].forEach(function(camp){
+        const c=subs[sid] && subs[sid][camp];
+        if(c && c.meilleur && String(c.meilleur).trim()){
+          out.push({mid:mid, sid:sid, camp:camp, text:c.meilleur, avis:commentAvis(mid,sid,camp)});
+        }
+      });
+    });
+  });
+  return out;
+}
+function pendingCount(){ return collectComments().filter(function(x){return !x.avis;}).length; }
+function avisButtons(mid,sid,camp){
+  const cur=commentAvis(mid,sid,camp);
+  function b(key){ const a=AVIS[key], on=(cur===key);
+    return '<button class="dbg-btn ghost" style="padding:1px 7px;font-size:.74rem;white-space:nowrap;'+(on?('border-color:'+a.color+';color:'+a.color):'')+'" onclick="toggleAvis(\''+mid+'\',\''+sid+'\',\''+camp+'\',\''+key+'\')" title="Valider en accrochant l\'avis : '+a.lib+'. Reclique pour retirer.">'+(on?'● ':'')+a.short+'</button>';
+  }
+  return '<span style="display:inline-flex;gap:4px;flex-wrap:wrap">'+b("fort")+b("partiel")+b("hs")+'</span>';
+}
+function modQueueBtn(){
+  const n=pendingCount();
+  return '<button id="modQueueBtn" class="dbg-btn ghost" onclick="openModQueue()" title="Valider les « meilleurs arguments » des élèves en leur accrochant un avis (Vrai coup de cœur / Partiel / Hors sujet). Un commentaire sans avis reste invisible pour le groupe évalué." style="'+(n>0?'border-color:var(--accent);color:var(--accent2)':'')+'">🛡 À valider'+(n>0?(' ('+n+')'):'')+'</button>';
+}
+function openModQueue(){ renderModQueue(); $("modQueueOverlay").classList.add("show"); }
+function closeModQueue(){ $("modQueueOverlay").classList.remove("show"); }
+function renderModQueue(){
+  const body=$("modQueueBody"); if(!body) return;
+  const list=collectComments();
+  if(list.length===0){ body.innerHTML='<div style="color:var(--muted);font-style:italic;text-align:center;padding:18px">Aucun commentaire d\'élève à modérer pour l\'instant.</div>'; return; }
+  const pend=list.filter(function(x){return !x.avis;}).length;
+  let h='<div style="color:var(--ink2);margin-bottom:12px;font-size:.9rem">'+pend+' commentaire'+(pend>1?'s':'')+' en attente sur '+list.length+'. Choisis un avis pour valider et rendre le commentaire visible au groupe évalué : <b>Vrai coup de cœur</b>, <b>Partiel</b> ou <b>Hors sujet</b>. Reclique l\'avis pour retirer.</div>';
+  const M=(debatData().matches)||{};
+  const byM={}; list.forEach(function(x){ (byM[x.mid]=byM[x.mid]||[]).push(x); });
+  Object.keys(byM).forEach(function(mid){
+    const mm=M[mid]||{};
+    const na=esc(binomeName(findBinome(mm.binomeA))||"?"), nb=esc(binomeName(findBinome(mm.binomeB))||"?");
+    h+='<div class="eval-card"><div class="eval-who">'+na+' vs '+nb+'</div>';
+    byM[mid].forEach(function(x){
+      const auteur=esc(binomeName(findBinome(x.sid))||"?");
+      h+='<div class="eval-cmt" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>'+auteur+' ('+(x.camp==="pour"?"POUR":"CONTRE")+') : « '+esc(x.text)+' »</span>'+avisButtons(x.mid,x.sid,x.camp)+'</div>';
+    });
+    h+='</div>';
+  });
+  body.innerHTML=h;
 }
 
 function closeOnBackdrop(overlayId, closeFn){
