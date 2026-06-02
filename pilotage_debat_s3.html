@@ -1756,8 +1756,41 @@ async function saveEdit(){
 }
 async function deleteBinome(){
   if(!editingId){ closeEdit(); return; }
-  await db.ref(ACTIVE+"/binomes/"+editingId).remove();
+  const id=editingId, d=debatData(), poules=(d.poules)||{};
+  Object.keys(poules).forEach(function(pid){
+    const p=poules[pid]; if(!p) return;
+    if(Array.isArray(p.binomes) && p.binomes.indexOf(id)>=0){
+      db.ref(DEBAT+"/poules/"+pid+"/binomes").set(p.binomes.filter(function(x){return x!==id;}));
+    }
+    const ms=(p.matches||[]), removed=ms.filter(function(m){return m.a===id||m.b===id;});
+    if(removed.length){
+      db.ref(DEBAT+"/poules/"+pid+"/matches").set(ms.filter(function(m){return m.a!==id&&m.b!==id;}));
+      removed.forEach(function(m){ db.ref(DEBAT+"/matches/"+m.id).remove(); db.ref(DEBAT+"/grilleEcoute/"+m.id).remove(); db.ref(DEBAT+"/commentMod/"+m.id).remove(); });
+    }
+  });
+  if((d.scores)&&d.scores[id]) db.ref(DEBAT+"/scores/"+id).remove();
+  const cm=d.currentMatch;
+  if(cm && (cm.binomeA===id||cm.binomeB===id)) db.ref(DEBAT+"/currentMatch").remove();
+  await db.ref(ACTIVE+"/binomes/"+id).remove();
   closeEdit();
+}
+function purgeOrphanPouleMatches(){
+  if(!sessionData || !sessionData.binomes || !Object.keys(sessionData.binomes).length) return;
+  const B=sessionData.binomes, d=debatData(), poules=(d.poules)||{};
+  Object.keys(poules).forEach(function(pid){
+    const p=poules[pid]; if(!p) return;
+    if(Array.isArray(p.binomes)){
+      const nb=p.binomes.filter(function(x){return B[x];});
+      if(nb.length!==p.binomes.length) db.ref(DEBAT+"/poules/"+pid+"/binomes").set(nb);
+    }
+    const ms=(p.matches||[]);
+    const keep=ms.filter(function(m){return B[m.a] && B[m.b];});
+    if(keep.length!==ms.length){
+      const removed=ms.filter(function(m){return !(B[m.a] && B[m.b]);});
+      db.ref(DEBAT+"/poules/"+pid+"/matches").set(keep);
+      removed.forEach(function(m){ db.ref(DEBAT+"/matches/"+m.id).remove(); db.ref(DEBAT+"/grilleEcoute/"+m.id).remove(); });
+    }
+  });
 }
 function closeEdit(){ $("editOverlay").classList.remove("show"); editingId = null; }
 
@@ -2342,6 +2375,7 @@ function renderDebatProf(){
   ensureDebatClock();
   const d=debatData(); const cm=d.currentMatch||null;
   maybeBeep(cm);
+  purgeOrphanPouleMatches();
   refreshModViews();
   const sig=profSignature(d,cm);
   if(sig===lastProfSig){ paintCountdown(cm); return; }
@@ -2384,6 +2418,7 @@ function renderDebatProf(){
       h+='<div class="dbg-poule"><div class="ph"><span class="pn">'+esc(p.name||"Poule")+'</span>'
        + '<button class="dbg-btn ghost" onclick="deletePoule(\''+pid+'\')" title="Supprimer cette poule et toutes ses manches.">Supprimer</button></div>';
       (p.matches||[]).forEach(function(m){
+        if(!findBinome(m.a) || !findBinome(m.b)) return;
         const na=esc(binomeName(findBinome(m.a))||"?"), nb=esc(binomeName(findBinome(m.b))||"?");
         const isCur=cm&&cm.id===m.id;
         h+='<div class="dbg-match"><span>'+na+' <span class="vs">vs</span> '+nb+'</span><span class="res">';
