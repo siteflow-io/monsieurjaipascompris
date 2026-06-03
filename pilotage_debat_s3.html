@@ -475,6 +475,18 @@
 .cine-emo{position:absolute;bottom:-40px;animation:cineRise linear forwards}
 @keyframes cineRise{to{transform:translateY(-108vh) translateX(var(--sway,0px));opacity:0}}
 .cine-close{position:absolute;top:14px;right:16px;background:rgba(0,0,0,.35);color:#f6f1e4;border:1px solid #423b2c;border-radius:8px;padding:8px 14px;font-size:.9rem;cursor:pointer;display:none;z-index:3}
+.cine-react{position:absolute;bottom:5%;left:0;right:0;display:none;justify-content:center;gap:14px;z-index:6}
+.cine-react.show{display:flex}
+.cine-react button{font-size:1.8rem;background:rgba(255,255,255,.08);border:1px solid #423b2c;border-radius:50%;width:60px;height:60px;cursor:pointer;transition:transform .1s;line-height:1;padding:0}
+.cine-react button:active{transform:scale(1.3)}
+.cine-tplate{width:40vw;max-width:240px;padding:20px 12px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:8px;background:#262219;border:2px solid #423b2c;transition:transform .25s,background .3s,border-color .3s}
+.cine-tplate.lock{animation:cineBounce .5s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cineBounce{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1.05)}}
+.cine-tplate.pour{background:#3a1f1a;border-color:#c0392b}
+.cine-tplate.contre{background:#163029;border-color:#62b07f}
+.cine-tplate .cnm{font-size:1.05rem;color:#f6f1e4;text-align:center}
+.tlab{font-size:1.6rem;font-weight:700;letter-spacing:.04em;color:#a99e88}
+.tlab.pour{color:#dd6a52}.tlab.contre{color:#62b07f}
 .vote-box{margin-top:8px;padding:7px 10px;border:1px dashed var(--line);border-radius:10px;background:var(--panel2);font-size:.82rem}
 .vote-head{font-weight:700;color:var(--ink2);margin-bottom:2px}
 .vote-missing{color:var(--accent2);margin-top:2px}
@@ -705,6 +717,7 @@
   <div class="cine-title" id="cineTitle"></div>
   <div class="cine-arena" id="cineArena"></div>
   <div class="cine-bravo" id="cineBravo">BRAVO</div>
+  <div class="cine-react" id="cineReact"><button onclick="sendReaction('clap')" aria-label="Applaudir">👏</button><button onclick="sendReaction('heart')" aria-label="Coeur">❤️</button><button onclick="sendReaction('fire')" aria-label="Feu">🔥</button></div>
   <div class="cine-fx" id="cineFx"></div>
   <div class="cine-flash" id="cineFlash"></div>
 </div>
@@ -1470,9 +1483,13 @@ function startSessionListener(){
       }
       renderStudent();
       maybePlayReveal();
+      maybeFlyReactions();
+      maybePlayTirage();
     } else if(role==="prof"){
       renderProf();
       maybePlayReveal();
+      maybeFlyReactions();
+      maybePlayTirage();
     }
   };
   db.ref(ACTIVE).on("value", sessionListener);
@@ -2157,28 +2174,10 @@ function cancelMatch(){
 let tirageSpinning=false;
 function doTirage(){
   const cm=debatData().currentMatch; if(!cm||tirageSpinning) return;
-  ensureAudio();
   tirageSpinning=true;
-  const el=$("tirageCamp");
-  if(!el){ tirageSpinning=false; return; }
-  el.classList.add("spin");
-  let flips=0;
-  const iv=setInterval(function(){
-    flips++;
-    const pour=flips%2===0;
-    el.textContent=pour?"POUR":"CONTRE";
-    el.className="tirage-camp spin "+(pour?"pour":"contre");
-  },120);
-  setTimeout(function(){
-    clearInterval(iv);
-    const aPour=Math.random()<0.5;
-    el.classList.remove("spin");
-    el.textContent=aPour?"POUR":"CONTRE";
-    el.className="tirage-camp "+(aPour?"pour":"contre");
-    beep(880,160);
-    db.ref(DEBAT+"/currentMatch").update({campA:(aPour?"pour":"contre"), campB:(aPour?"contre":"pour"), tirageAt:Date.now()});
-    tirageSpinning=false;
-  },2600);
+  const aPour=Math.random()<0.5;
+  db.ref(DEBAT+"/currentMatch").update({campA:(aPour?"pour":"contre"), campB:(aPour?"contre":"pour"), tirageAt:Date.now()});
+  setTimeout(function(){ tirageSpinning=false; }, 800);
 }
 
 // ─────────── Chronomètre ───────────
@@ -2260,6 +2259,9 @@ let audioCtx=null;
 let lastRevealAt=null;
 let cineTimers=[];
 let cineEmoTimer=null;
+let reactSeen=null;
+let lastReactTap=0;
+let lastTirageAt=null;
 function ensureAudio(){ try{ if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended")audioCtx.resume(); }catch(e){} }
 function beep(freq,ms){
   try{
@@ -2345,7 +2347,7 @@ function clearCine(){ cineTimers.forEach(function(t){clearTimeout(t);}); cineTim
 function cineAdd(fn,ms){ cineTimers.push(setTimeout(fn,ms)); }
 function cineConfetti(n){ var fx=document.getElementById("cineFx"); if(!fx)return; var c=["#dcab55","#f6f1e4","#dd6a52","#62b07f","#c0392b","#e8c87a"]; for(var k=0;k<n;k++){ var d=document.createElement("div"); d.className="cine-confetti"; d.style.left=(Math.random()*100)+"%"; d.style.background=c[k%c.length]; d.style.animationDuration=(2.6+Math.random()*1.4)+"s"; d.style.animationDelay=(Math.random()*0.5)+"s"; d.style.height=(12+Math.random()*9)+"px"; fx.appendChild(d); } }
 function cineSpawnEmoji(){ var fx=document.getElementById("cineFx"); if(!fx)return; var E=["\u2764\uFE0F","\uD83D\uDC4F","\uD83C\uDF89","\u2B50","\u2728","\uD83C\uDFC6"]; var e=document.createElement("div"); e.className="cine-emo"; e.textContent=E[Math.floor(Math.random()*E.length)]; e.style.left=(Math.random()*100)+"%"; e.style.fontSize=(22+Math.random()*20)+"px"; e.style.setProperty("--sway",((Math.random()*60)-30)+"px"); e.style.animationDuration=(2.6+Math.random()*1.6)+"s"; fx.appendChild(e); setTimeout(function(){e.remove();},4600); }
-function closeCine(){ clearCine(); if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;} var o=document.getElementById("cineOverlay"); if(o){o.classList.remove("show"); var fx=document.getElementById("cineFx"); if(fx)fx.innerHTML="";} }
+function closeCine(){ clearCine(); if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;} reactSeen=null; var rb=document.getElementById("cineReact"); if(rb)rb.classList.remove("show"); var o=document.getElementById("cineOverlay"); if(o){o.classList.remove("show"); var fx=document.getElementById("cineFx"); if(fx)fx.innerHTML="";} }
 function playRevealCine(rv){
   if(!rv) return; ensureAudio(); clearCine(); if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;}
   var o=document.getElementById("cineOverlay"); if(!o)return;
@@ -2356,6 +2358,7 @@ function playRevealCine(rv){
   var arena=document.getElementById("cineArena"); arena.className="cine-arena";
   arena.innerHTML='<div class="cine-plate cine-pp" id="cinePP"><div class="cmp">POUR</div><div class="cnm">'+esc(rv.pourName||"?")+'</div></div><div class="cine-bolt" id="cineBolt">\u26A1</div><div class="cine-plate cine-pc" id="cinePC"><div class="cmp">CONTRE</div><div class="cnm">'+esc(rv.contreName||"?")+'</div></div>';
   o.classList.add("show");
+  reactSeen={clap:0,heart:0,fire:0}; var _rb=document.getElementById("cineReact"); if(_rb)_rb.classList.remove("show");
   var pp=document.getElementById("cinePP"), pc=document.getElementById("cinePC");
   var winEl = rv.winnerCamp==="pour"?pp:(rv.winnerCamp==="contre"?pc:null);
   var loseEl = winEl===pp?pc:(winEl===pc?pp:null);
@@ -2382,6 +2385,7 @@ function playRevealCine(rv){
     var bravo=document.getElementById("cineBravo");
     bravo.textContent = winEl ? "BRAVO" : "\u00c9galit\u00e9";
     bravo.classList.add("show");
+    var rbar=document.getElementById("cineReact"); if(rbar && role!=="prof") rbar.classList.add("show");
     cineConfetti(80); cineEmoTimer=setInterval(function(){cineSpawnEmoji();cineSpawnEmoji();},150);
     beep(740,140); cineAdd(function(){ beep(1100,300); },150);
     if(winEl && rv.winnerScore!=null){
@@ -2410,8 +2414,74 @@ function revealWinner(){
     winnerName:(r.gagnantBinome?(binomeName(findBinome(r.gagnantBinome))||"?"):null),
     winnerScore:(r.gagnant==="pour"?r.scorePour:(r.gagnant==="contre"?r.scoreContre:null)) };
   db.ref(DEBAT+"/reveal").set(rv);
+  db.ref(DEBAT+"/reactions").set({clap:0,heart:0,fire:0,at:rv.at});
 }
-function closeReveal(){ db.ref(DEBAT+"/reveal").remove(); closeCine(); }
+function closeReveal(){ db.ref(DEBAT+"/reveal").remove(); db.ref(DEBAT+"/reactions").remove(); closeCine(); }
+var REMOJI={clap:"\uD83D\uDC4F",heart:"\u2764\uFE0F",fire:"\uD83D\uDD25"};
+function sendReaction(key){
+  if(!REMOJI[key]) return;
+  var now=Date.now(); if(now-lastReactTap<400) return; lastReactTap=now;
+  var ref=db.ref(DEBAT+"/reactions/"+key);
+  if(ref.transaction) ref.transaction(function(v){return (v||0)+1;});
+  else ref.set((((debatData().reactions)||{})[key]||0)+1);
+}
+function flyReaction(emoji,n){
+  var fx=document.getElementById("cineFx"); if(!fx) return;
+  for(var i=0;i<n;i++){ var e=document.createElement("div"); e.className="cine-emo"; e.textContent=emoji; e.style.left=(8+Math.random()*84)+"%"; e.style.fontSize=(26+Math.random()*22)+"px"; e.style.setProperty("--sway",((Math.random()*70)-35)+"px"); e.style.animationDuration=(2.4+Math.random()*1.5)+"s"; fx.appendChild(e); (function(el){ setTimeout(function(){el.remove();},4200); })(e); }
+}
+function maybeFlyReactions(){
+  if(!reactSeen) return;
+  var r=(debatData().reactions)||{};
+  ["clap","heart","fire"].forEach(function(k){
+    var cur=r[k]||0, d=cur-(reactSeen[k]||0);
+    if(d>0){ flyReaction(REMOJI[k], Math.min(d,6)); reactSeen[k]=cur; }
+    else if(d<0){ reactSeen[k]=cur; }
+  });
+}
+function playTirageCine(cm){
+  if(!cm) return; ensureAudio(); clearCine(); if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;} reactSeen=null;
+  var o=document.getElementById("cineOverlay"); if(!o) return;
+  document.getElementById("cineFx").innerHTML="";
+  document.getElementById("cineBravo").className="cine-bravo";
+  document.getElementById("cineClose").style.display="none";
+  var rb=document.getElementById("cineReact"); if(rb) rb.classList.remove("show");
+  var ttl=document.getElementById("cineTitle"); ttl.className="cine-title"; ttl.textContent="";
+  var arena=document.getElementById("cineArena"); arena.className="cine-arena";
+  var nameA=esc(binomeName(findBinome(cm.binomeA))||"?"), nameB=esc(binomeName(findBinome(cm.binomeB))||"?");
+  arena.innerHTML='<div class="cine-tplate" id="tA"><div class="cnm">'+nameA+'</div><div class="tlab" id="tlA">?</div></div><div class="cine-bolt" id="cineBolt">\u26A1</div><div class="cine-tplate" id="tB"><div class="cnm">'+nameB+'</div><div class="tlab" id="tlB">?</div></div>';
+  o.classList.add("show");
+  var tlA=document.getElementById("tlA"), tlB=document.getElementById("tlB"), tA=document.getElementById("tA"), tB=document.getElementById("tB");
+  cineAdd(function(){ ttl.textContent="Tirage des camps"; ttl.classList.add("show"); },150);
+  cineAdd(function(){ arena.classList.add("show"); },500);
+  var delays=[90,90,100,115,135,165,200,255,330,430];
+  function spinStep(k){
+    var pour=(k%2===0);
+    tlA.textContent=pour?"POUR":"CONTRE"; tlA.className="tlab "+(pour?"pour":"contre");
+    tlB.textContent=pour?"CONTRE":"POUR"; tlB.className="tlab "+(pour?"contre":"pour");
+    beep(220,40);
+    if(k<delays.length){ cineAdd(function(){spinStep(k+1);}, delays[k]); }
+    else { lock(); }
+  }
+  function lock(){
+    var aIsPour=(cm.campA==="pour");
+    tlA.textContent=aIsPour?"POUR":"CONTRE"; tlA.className="tlab "+(aIsPour?"pour":"contre");
+    tlB.textContent=aIsPour?"CONTRE":"POUR"; tlB.className="tlab "+(aIsPour?"contre":"pour");
+    tA.className="cine-tplate lock "+(aIsPour?"pour":"contre");
+    tB.className="cine-tplate lock "+(aIsPour?"contre":"pour");
+    var fl=document.getElementById("cineFlash"); fl.classList.add("go"); cineAdd(function(){fl.classList.remove("go");},340);
+    beep(880,180);
+    ttl.textContent="Que le d\u00e9bat commence !";
+  }
+  cineAdd(function(){ spinStep(0); }, 900);
+  cineAdd(function(){ closeCine(); }, 4200);
+}
+function maybePlayTirage(){
+  var cm=(debatData().currentMatch)||null;
+  var at=(cm&&cm.tirageAt)||0;
+  if(lastTirageAt===null){ lastTirageAt=at; return; }
+  if(at && at!==lastTirageAt){ lastTirageAt=at; playTirageCine(cm); }
+  else lastTirageAt=at;
+}
 function clotureManche(){
   const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Aucune manche à clôturer."); return; }
   ensureProfDraft(cm.id);
