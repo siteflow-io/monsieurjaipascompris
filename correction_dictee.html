@@ -5066,6 +5066,8 @@ function ExercicesAdmin(p){
   // Impression rapide : sélection multi-élèves
   var sSelImp = useState({}), selImp = sSelImp[0], setSelImp = sSelImp[1];
   var sImpMsg = useState(""), impMsg = sImpMsg[0], setImpMsg = sImpMsg[1];
+  // Overlay d'impression (iframe plein écran, alternative à window.open qui peut être bloqué)
+  var sImpHtml = useState(null), impPrintHtml = sImpHtml[0], setImpPrintHtml = sImpHtml[1];
 
   React.useEffect(function(){
     var ref = db.ref("correction_dictee/"+p.dicteeId+"/exercices");
@@ -5257,13 +5259,9 @@ function ExercicesAdmin(p){
       }
       var bodyJ = fiches.join("\n");
       var printHtmlJ = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Exercices \u00e0 imprimer</title>'+styleImpressionJson()+'</head><body>'+bodyJ+'</body></html>';
-      setImpMsg("\u2705 "+fiches.length+" \u00e9l\u00e8ve(s) envoy\u00e9(s) \u00e0 l\u2019imprimante");
-      var winJ=window.open("","_blank","width=900,height=700");
-      if(!winJ){setImpMsg("\u274c Pop-up bloqu\u00e9. Autorise les pop-ups pour ce site.");setTimeout(function(){setImpMsg("")},5000);return}
-      winJ.document.open();
-      winJ.document.write(printHtmlJ);
-      winJ.document.close();
-      winJ.onload=function(){setTimeout(function(){try{winJ.focus();winJ.print()}catch(e){}},300)};
+      // Affiche dans une overlay (pas de window.open qui peut être bloqué)
+      setImpPrintHtml(printHtmlJ);
+      setImpMsg("\u2705 "+fiches.length+" fiche(s) pr\u00eate(s). Clique sur \ud83d\udda8 Imprimer en haut.");
       setTimeout(function(){setImpMsg("")},6000);
       return;
     }
@@ -5299,14 +5297,9 @@ function ExercicesAdmin(p){
       return '<div class="mjpc-print-section" style="page-break-after:always;'+(i===sections.length-1?'page-break-after:auto;':'')+'">'+s.html+'</div>';
     }).join("\n");
     var printHtml='<!DOCTYPE html><html lang="fr"><head>'+head+'<style>@media print{.mjpc-print-section{page-break-after:always}.mjpc-print-section:last-child{page-break-after:auto}}</style></head><body class="'+bodyClasses+'">'+body+'</body></html>';
-    setImpMsg("\u2705 "+sections.length+" \u00e9l\u00e8ve(s) envoy\u00e9(s) \u00e0 l\u2019imprimante");
-    // Ouvrir la fenêtre d'impression
-    var win=window.open("","_blank","width=900,height=700");
-    if(!win){setImpMsg("\u274c Pop-up bloqu\u00e9. Autorise les pop-ups pour ce site.");setTimeout(function(){setImpMsg("")},5000);return}
-    win.document.open();
-    win.document.write(printHtml);
-    win.document.close();
-    win.onload=function(){setTimeout(function(){try{win.focus();win.print()}catch(e){}},300)};
+    // Affiche dans une overlay (pas de window.open qui peut être bloqué)
+    setImpPrintHtml(printHtml);
+    setImpMsg("\u2705 "+sections.length+" fiche(s) pr\u00eate(s). Clique sur \ud83d\udda8 Imprimer en haut.");
     setTimeout(function(){setImpMsg("")},6000);
   }
 
@@ -5434,19 +5427,42 @@ function ExercicesAdmin(p){
         h("span",{style:{fontSize:".74rem",color:"var(--muted)"}},Object.keys(selImp).filter(function(k){return selImp[k]}).length+" \u00e9l\u00e8ve(s) coch\u00e9(s)")
       ),
       // Grille de checkboxes (utilise la liste filtrée pour respecter la recherche)
-      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:4,maxHeight:240,overflowY:"auto",padding:"6px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:6,marginBottom:10}},
+      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:2,maxHeight:240,overflowY:"auto",padding:"6px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:6,marginBottom:10}},
         elevesFiltered.map(function(elName){
           var np=getEleveNomPrenom(elName);
           var displayName=np.nom.charAt(0)+". "+np.prenom;
           var checked=!!selImp[elName];
-          return h("label",{key:elName,style:{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",borderRadius:4,cursor:"pointer",background:checked?"rgba(43,108,203,.08)":"transparent",fontSize:".86rem"},title:elName},
-            h("input",{type:"checkbox",checked:checked,onChange:function(){var n=Object.assign({},selImp);if(n[elName])delete n[elName];else n[elName]=true;setSelImp(n)},style:{margin:0}}),
-            h("span",null,displayName)
+          return h("label",{key:elName,style:{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:4,cursor:"pointer",background:checked?"rgba(43,108,203,.08)":"transparent",fontSize:".88rem",lineHeight:"1.3"},title:elName},
+            h("input",{type:"checkbox",checked:checked,onChange:function(){var n=Object.assign({},selImp);if(n[elName])delete n[elName];else n[elName]=true;setSelImp(n)},style:{margin:0,flex:"0 0 auto",width:"16px",height:"16px",cursor:"pointer"}}),
+            h("span",{style:{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},displayName)
           );
         })
       ),
-      h("button",{className:"btn btn-primary",onClick:imprimerSelection,disabled:Object.keys(selImp).filter(function(k){return selImp[k]}).length===0,title:"Ouvre une fen\u00eatre d\u2019impression avec les fiches des \u00e9l\u00e8ves coch\u00e9s"},"\ud83d\udda8 Imprimer "+Object.keys(selImp).filter(function(k){return selImp[k]}).length+" fiche(s)"),
+      h("button",{className:"btn btn-primary",onClick:imprimerSelection,disabled:Object.keys(selImp).filter(function(k){return selImp[k]}).length===0,title:"Pr\u00e9pare les fiches \u00e0 imprimer dans une fen\u00eatre plein \u00e9cran"},"\ud83d\udda8 Pr\u00e9parer "+Object.keys(selImp).filter(function(k){return selImp[k]}).length+" fiche(s)"),
       impMsg&&h("div",{style:{marginTop:8,padding:"8px 12px",borderRadius:6,fontSize:".82rem",fontWeight:600,background:impMsg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":impMsg.indexOf("\u26a0")===0?"rgba(236,201,75,.15)":"rgba(72,160,87,.12)",color:impMsg.indexOf("\u274c")===0?"#9f1c2d":impMsg.indexOf("\u26a0")===0?"#7a5a00":"#1b6a30"}},impMsg)
+    ),
+    // ─── OVERLAY D'IMPRESSION (alternative fiable à window.open) ───
+    impPrintHtml&&h("div",{style:{position:"fixed",inset:0,zIndex:2000,background:"rgba(35,30,20,.85)",display:"flex",flexDirection:"column",padding:"10px 12px"},onClick:function(e){if(e.target===e.currentTarget)setImpPrintHtml(null)}},
+      h("div",{style:{background:"var(--card)",borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
+        h("div",null,
+          h("strong",{style:{fontSize:".95rem"}},"\ud83d\udda8 Aper\u00e7u d\u2019impression"),
+          h("div",{style:{fontSize:".74rem",color:"var(--muted)"}},"V\u00e9rifie l\u2019aper\u00e7u, puis clique sur Imprimer.")
+        ),
+        h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+          h("button",{className:"btn btn-primary",onClick:function(){
+            // Imprime le contenu de l'iframe
+            try {
+              var ifr = document.getElementById("mjpc-print-iframe");
+              if(ifr && ifr.contentWindow){
+                ifr.contentWindow.focus();
+                ifr.contentWindow.print();
+              }
+            } catch(e) { alert("Erreur d\u2019impression : "+e.message) }
+          },title:"Ouvrir le dialogue d\u2019impression"},"\ud83d\udda8 Imprimer"),
+          h("button",{className:"btn btn-ghost",onClick:function(){setImpPrintHtml(null)},title:"Fermer l\u2019aper\u00e7u"},"\u2715 Fermer")
+        )
+      ),
+      h("iframe",{id:"mjpc-print-iframe",srcDoc:impPrintHtml,style:{flex:1,width:"100%",border:"none",borderRadius:8,background:"#fff",minHeight:400}})
     ),
     // Modale d'upload HTML
     showUploadHtml&&h("div",{className:"card",style:{border:"2px solid var(--primary)",marginBottom:12}},
