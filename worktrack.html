@@ -60,6 +60,16 @@
   .pname{all:unset;cursor:pointer;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);text-align:center;font-size:.9rem;transition:.15s}
   .pname:hover:not(.busy){border-color:var(--accent);color:var(--accent2)}
   .pname.busy{opacity:.38;cursor:not-allowed}
+  .login{padding:18px 14px;text-align:center;display:flex;flex-direction:column;gap:6px;max-width:300px;margin:4vh auto 0}
+  .login .ph{font-family:'EB Garamond',serif;font-size:1.3rem;margin-bottom:10px;color:var(--ink)}
+  .login label{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;margin-top:4px}
+  .login .lin{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font-size:.92rem}
+  .lg-prof{all:unset;cursor:pointer;margin-top:18px;font-size:.76rem;color:var(--muted);opacity:.7}
+  .lg-prof:hover{opacity:1;text-decoration:underline}
+  .classpick{max-width:520px;margin:8vh auto 0;text-align:center;padding:22px}
+  .classpick .ph{font-family:'EB Garamond',serif;font-size:1.5rem;margin-bottom:18px;color:var(--ink)}
+  .classpick .proster{max-width:360px;margin:0 auto 12px}
+  .classpick code,.prof-sec code{background:var(--panel2);padding:2px 6px;border-radius:5px;font-size:.82rem;word-break:break-all}
   /* confirmation propre à une moitié (n'affecte pas l'autre élève) */
   .laneconfirm{position:absolute;inset:0;background:rgba(8,6,3,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20;animation:fade .2s ease}
   .lcbox{background:var(--panel);border:1px solid var(--gold-deep);border-radius:14px;padding:18px;max-width:340px;width:100%}
@@ -422,6 +432,11 @@ function extractEleves(fbClasse, cfgEleves){
   return cfgEleves || [];
 }
 function niveauOf(nom){ const m=/^\s*(6e|5e|4e|3e)/i.exec(nom||""); return m?m[1].toLowerCase():""; }
+/* ── IDENTITÉ : chaque connexion porte sa classe. Le chapitre appartient au NIVEAU ;
+   l'élève choisit Classe + Nom à la connexion (comme la dictée). Identifiant unique = classe + nom.
+   Données rangées à plat sous l'uid : progress|sessions / {chapId} / {uid}. ── */
+function uidOf(classe, nom){ return (classe?sanId(classe)+"__":"") + sanId(nom); }
+function urlParam(k){ try{ return new URLSearchParams(location.search).get(k); }catch(e){ return null; } }
 function sanId(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
   .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"") || "x"; }
 const NIVEAUX = ["6e","5e","4e","3e"];
@@ -751,11 +766,12 @@ const APP = {
   panel(id){ return this.panels[id]; },
   // qui occupe la séance id : un élève local OU un élève d'un autre poste (session récente < 60 s)
   occupant(id, exceptKey){
+    const self=this.panels[exceptKey], selfId=self&&self.engine?self.engine.studentId:null, selfSeg=self?self.classeSeg:null;
     for(const k in this.panels){ if(k===exceptKey) continue; const p=this.panels[k];
-      if(p && p.screen==="seance" && p.current===id) return p.name; }
-    const self=this.panels[exceptKey], selfId=self&&self.engine?self.engine.studentId:null, now=Date.now();
+      if(p && p.classeSeg===selfSeg && p.screen==="seance" && p.current===id) return p.name; }
+    const now=Date.now();
     for(const sid in this._sessions){ if(sid===selfId) continue; const s=this._sessions[sid];
-      if(s && s.current===id && (now-(s.lastSeen||0))<60000) return s.name||sid; }
+      if(s && s.classeSeg===selfSeg && s.current===id && (now-(s.lastSeen||0))<60000) return s.name||sid; }
     return null;
   },
   syncMaps(){ for(const k in this.panels){ const p=this.panels[k]; if(p && p.screen==="map") p.render(); } },
@@ -773,7 +789,7 @@ const APP = {
     const tables=[]; for(let i=0;i<t2;i++) tables.push(2); if(t3) tables.push(3);
     return { tables, total:tables.length, cheminsRequis: t3?3:2 }; },
 
-  /* ── Présence temps réel (lastSeen 30 s, seuil 60 s) + déconnexion fin de séance (logoutEpoch) ── */
+  /* ── Présence temps réel (lastSeen 30 s, seuil 60 s) + déconnexion fin de séance (logoutEpoch, par classe) ── */
   startPresence(){
     this._unsubs.forEach(u=>{ try{u();}catch(e){} }); this._unsubs=[];
     if(this._hb) clearInterval(this._hb); if(this._tick) clearInterval(this._tick);
@@ -781,55 +797,71 @@ const APP = {
     const chap=CHAPTER.meta.id||"chapitre";
     this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMaps();
       if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
-    this._unsubs.push(store.subscribe("control/"+chap, v=>{ const le=v&&v.logoutEpoch; if(!le) return;
-      Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(p && p.epoch && p.epoch<le) this.kick(k); }); }));
+    this._unsubs.push(store.subscribe("control/"+chap, v=>{ this._control=v||{};
+      Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(!p||!p.epoch) return;
+        const le=(this._control[p.classeSeg]||{}).logoutEpoch; if(le && p.epoch<le) this.kick(k); }); }));
     this.beatAll(); this._hb=setInterval(()=>this.beatAll(),30000);
     this._tick=setInterval(()=>{ if(PROF.authed && PROF.tab==="suivi") PROF.render(); },15000);
   },
   beatAll(){ for(const k in this.panels) if(this.panels[k]) this.beat(k); },
   beat(key){ if(this.testMode) return; const p=this.panels[key]; if(!p||!p.engine) return;
     const chap=CHAPTER.meta.id||"chapitre";
-    store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, lastSeen:Date.now(),
-      current:(p.screen==="seance"?p.current:null), epoch:p.epoch||0 }); },
-  endSession(){ const chap=CHAPTER.meta.id||"chapitre"; store.save("control/"+chap, { logoutEpoch:Date.now() });
-    toast("Classe déconnectée."); },
+    store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
+      lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null), epoch:p.epoch||0 }); },
+  endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre"; store.save("control/"+chap+"/"+classeSeg, { logoutEpoch:Date.now() }); },
   kick(key){ const p=this.panels[key]; if(!p) return; const lane=$("lane"+key); this.panels[key]=null;
-    if(!lane) return; const who=lane.querySelector("[data-who]"); if(who) who.textContent="Poste "+key;
-    const roster=(CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]) ? extractEleves(CLASSES[CHAPTER.meta.classe],[]) : null;
-    if(roster) this.mountPortal(key, LETTERS.indexOf(key), roster, lane);
-    else this.mountStudent(key, LETTERS.indexOf(key), "Élève "+key, "eleve"+key, lane); },
+    if(lane) this.mountLogin(key, LETTERS.indexOf(key), lane); },
 
   boot(){
     setAccentForLevel(CHAPTER.meta.niveau);
     $("chapTitle").textContent = CHAPTER.meta.titre;
     const stage=$("stage"); stage.innerHTML=""; this.panels={}; const test=this.testMode;
-    const roster = (!test && CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]) ? extractEleves(CLASSES[CHAPTER.meta.classe],[]) : null;
-    this._needsRoster = (!test && CHAPTER.meta.classe && !roster);   // classe affectée mais pas encore arrivée (Firebase async)
     for(let i=0;i<this.tableSize;i++){ const key=LETTERS[i];
       const lane=document.createElement("div"); lane.className="lane"+(test?" test":""); lane.id="lane"+key;
-      lane.innerHTML=`<div class="lanehead"><div class="who" data-who>${test?'Élève '+key:(roster?'Poste '+key:'Élève '+key)}</div><span class="badge">${test?'TEST':'autonome'}</span></div>`
+      lane.innerHTML=`<div class="lanehead"><div class="who" data-who>${test?'Élève '+key:'Connexion'}</div><span class="badge">${test?'TEST':'autonome'}</span></div>`
         +(test?`<div class="testbar"><button class="btn ghost" onclick="APP.resetLane('${key}')">↺ Réinitialiser</button>
             <button class="btn ghost" onclick="APP.forcePass('${key}')">✓ Réussir l'étape</button></div>`:'')
         +`<div class="lanebody"></div>`;
       stage.appendChild(lane);
       this.panels[key]=null;
-      if(roster) this.mountPortal(key,i,roster,lane);
-      else this.mountStudent(key,i,"Élève "+key,(test?"test":"eleve")+key,lane);
+      if(test) this.mountStudent(key,i,"Élève "+key,"",("test"+key),lane);
+      else this.mountLogin(key,i,lane);
     }
     this.startPresence();
   },
-  mountPortal(key,i,roster,lane){
-    const body=lane.querySelector(".lanebody"), taken=this.takenNames();
-    body.innerHTML=`<div class="portal"><div class="ph">Qui es-tu ?</div>
-      <div class="proster">${roster.map(n=>`<button class="pname${taken.includes(n)?' busy':''}" data-n="${esc(n)}" ${taken.includes(n)?'disabled':''}>${esc(n)}</button>`).join("")}</div>
-      <div class="d">Choisis ton nom pour retrouver ton travail.</div></div>`;
-    body.querySelectorAll(".pname").forEach(b=> b.onclick=()=>{ const n=b.dataset.n;
-      lane.querySelector("[data-who]").textContent=n; this.mountStudent(key,i,n,sanId(n),lane); });
+  // re-render des connexions non encore validées quand les classes arrivent (Firebase async)
+  refreshLogins(){ if(this.testMode) return;
+    for(const key in this.panels){ if(this.panels[key]===null){ const lane=$("lane"+key); if(lane) this.mountLogin(key, LETTERS.indexOf(key), lane); } } },
+
+  // panneau de connexion d'une moitié d'écran (= une tablette) : Classe → Nom → Entrer, accès prof discret dessous
+  mountLogin(key,i,lane){
+    const body=lane.querySelector(".lanebody"); const who=lane.querySelector("[data-who]"); if(who) who.textContent="Connexion";
+    const levelClasses=Object.keys(CLASSES).filter(cn=>!CHAPTER.meta.niveau||niveauOf(cn)===CHAPTER.meta.niveau);
+    const def=urlParam("classe"); const sel=(def && CLASSES[def] && levelClasses.includes(def))?def:"";
+    const opts=cn=>extractEleves(CLASSES[cn],[]).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+    body.innerHTML=`<div class="login">
+        <div class="ph">Connexion</div>
+        ${levelClasses.length?`
+        <label>Classe</label>
+        <select class="lin" id="lg-c-${key}"><option value="">— choisir —</option>${levelClasses.map(cn=>`<option value="${esc(cn)}" ${sel===cn?'selected':''}>${esc(cn)}</option>`).join("")}</select>
+        <label>Nom Prénom</label>
+        <select class="lin" id="lg-n-${key}"><option value="">— choisir —</option>${sel?opts(sel):''}</select>
+        <button class="btn primary" id="lg-go-${key}" disabled style="margin-top:10px;width:100%">Entrer</button>
+        ` : `<div class="d">Aucune classe ${esc(CHAPTER.meta.niveau)} disponible. Crée-la dans l'espace enseignant.</div>`}
+        <button class="lg-prof" onclick="PROF.open()">Accès enseignant</button>
+      </div>`;
+    const cSel=$("lg-c-"+key), nSel=$("lg-n-"+key), go=$("lg-go-"+key);
+    if(cSel){ cSel.onchange=()=>{ const cn=cSel.value;
+        nSel.innerHTML=`<option value="">— choisir —</option>`+(cn?opts(cn):""); go.disabled=true; };
+      nSel.onchange=()=>{ go.disabled=!(cSel.value && nSel.value); };
+      go.onclick=()=>{ const cn=cSel.value, nom=nSel.value; if(!cn||!nom) return;
+        if(who) who.textContent=nom; this.mountStudent(key,i,nom,cn,uidOf(cn,nom),lane); }; }
   },
   takenNames(){ return Object.values(this.panels).filter(Boolean).map(p=>p.name); },
-  mountStudent(key,i,name,studentId,lane){
+  mountStudent(key,i,name,classe,studentId,lane){
     const engine=createEngine(CHAPTER, store, studentId, i);
-    const p=Panel(engine, lane.querySelector(".lanebody"), name); p.epoch=Date.now();
+    const p=Panel(engine, lane.querySelector(".lanebody"), name);
+    p.epoch=Date.now(); p.classe=classe||""; p.classeSeg=classe?sanId(classe):"libre";
     this.panels[key]=p;
     store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved); p.render(); this.beat(key); });
   }
@@ -935,14 +967,11 @@ const PROF = {
     const list=c.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
       <span class="meta">${(s.aides||[]).length} aide(s) · ${s.evaluation.items.filter(i=>i.type==="qcm").length} QCM · →${s.aretes.conseillee||"—"}</span></div>`).join("");
     const hasContent=c.seances.length>0;
-    const classOpts=Object.keys(CLASSES).filter(cn=>!c.meta.niveau||niveauOf(cn)===c.meta.niveau)
-      .map(cn=>`<option value="${esc(cn)}" ${c.meta.classe===cn?'selected':''}>${esc(cn)} (${extractEleves(CLASSES[cn],[]).length})</option>`).join("");
     return `<div class="prof-sec"><h4>Identité du chapitre</h4>
         <div class="prof-row"><input class="txtin" style="flex:1" placeholder="titre" value="${esc(c.meta.titre)}" oninput="PROF.setMeta('titre',this.value)">
           <select onchange="PROF.setMeta('niveau',this.value)">${NIVEAUX.map(n=>`<option value="${n}" ${c.meta.niveau===n?'selected':''}>${n}</option>`).join("")}</select></div>
-        <div class="prof-row">Classe affectée
-          <select onchange="PROF.setMeta('classe',this.value)"><option value="">— aucune (Élève A/B) —</option>${classOpts}</select></div>
         <textarea class="txtin" style="width:100%;min-height:46px;margin-top:6px" placeholder="problématique du chapitre" oninput="PROF.setMeta('problematique',this.value)">${esc(c.meta.problematique||'')}</textarea>
+        <div class="d">Le chapitre sert toutes les classes de ${esc(c.meta.niveau)}. Chaque élève choisit sa classe et son nom à la connexion.</div>
         <div class="prof-row"><button class="btn ghost" onclick="PROF.newChapter()">Nouveau chapitre (vierge)</button></div></div>
       <div class="prof-sec"><div class="prof-row">
         <button class="btn ghost" onclick="PROF.promptView()">🤖 Prompt IA</button>
@@ -957,7 +986,7 @@ const PROF = {
   setMeta(f,v){ CHAPTER.meta[f]=v;
     if(f==='titre'){ $("chapTitle").textContent=v; return; }
     if(f==='problematique') return;
-    if(f==='niveau'){ setAccentForLevel(v); if(CHAPTER.meta.classe && (CLASSES[CHAPTER.meta.classe]||{}).niveau!==v) CHAPTER.meta.classe=""; }
+    if(f==='niveau') setAccentForLevel(v);
     APP.boot(); this.render(); },
   newChapter(){ CHAPTER={ meta:{ id:"ch"+String(Date.now()).slice(-4), titre:"Nouveau chapitre", niveau:CHAPTER.meta.niveau||"4e", classe:"", problematique:"" },
       reglages:{reorientation:"immediate",confirmationSaut:true,exclusiviteSeance:true}, cheminsIdeaux:[], seances:[] };
@@ -985,8 +1014,8 @@ const PROF = {
     const eleves=(($("ncEleves")||{}).value||"").split("\n").map(l=>l.trim()).filter(Boolean);
     if(!nom||!eleves.length){ toast("Nom et au moins un élève requis."); return; }
     CLASSES[nom]=eleves; persistClasses(); this.classDraft=null; toast("Classe « "+nom+" » enregistrée.");
-    if(CHAPTER.meta.classe===nom) APP.boot(); this.render(); },
-  delClass(cn){ delete CLASSES[cn]; persistClasses(); if(CHAPTER.meta.classe===cn){ CHAPTER.meta.classe=""; APP.boot(); } this.render(); },
+    APP.refreshLogins(); this.render(); },
+  delClass(cn){ delete CLASSES[cn]; persistClasses(); APP.refreshLogins(); this.render(); },
 
   /* ── Prompt IA : aperçu + copier + modifier le template (en mémoire) ── */
   promptView(){ const tpl=this.tpl;
@@ -1032,30 +1061,36 @@ const PROF = {
       r.onload=()=>{ try{ loadChapter(JSON.parse(r.result)); }catch(e){ toast("Fichier illisible : "+e.message); } };
       r.readAsText(f); }; i.click(); },
 
-  /* ── onglet SUIVI ── */
-  suiviBody(){ return `<div class="prof-sec"><h4>Suivi de la classe</h4>
-      <div class="d">Présence en direct (🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne) et séance en cours. Multi-poste via le nœud sessions.</div>
-      <div class="prof-list">${this.suiviRows()}</div>
-      <div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div></div>
-    <div class="prof-sec"><h4>Fin de séance</h4><div class="d">Déconnecte tous les élèves de la classe (ils reviennent au choix du nom).</div>
-      <div class="prof-row"><button class="btn ghost" onclick="PROF.endSession()">Déconnecter la classe</button></div></div>`; },
-  endSession(){ APP.endSession(); this.render(); },
+  /* ── onglet SUIVI (présence groupée par classe, multi-poste) ── */
+  suiviBody(){
+    const sess=APP._sessions||{};
+    // regrouper les sessions présentes par classe
+    const byClass={};
+    Object.keys(sess).forEach(uid=>{ const s=sess[uid]||{}; const cl=s.classe||"(sans classe)";
+      (byClass[cl]=byClass[cl]||[]).push(s); });
+    // compléter avec les élèves connectés localement non encore remontés (cas local)
+    Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(!p) return;
+      const cl=p.classe||"(sans classe)"; const arr=byClass[cl]=byClass[cl]||[];
+      if(!arr.some(s=>s.name===p.name)) arr.push({ name:p.name, classe:cl, classeSeg:p.classeSeg,
+        lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); });
+    const classes=Object.keys(byClass);
+    if(!classes.length) return `<div class="prof-sec"><h4>Suivi</h4><div class="d">Personne de connecté pour l'instant.</div></div>`;
+    return classes.map(cl=>{ const seg=sanId(cl);
+      const rows=byClass[cl].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviRow(s.name, s)).join("");
+      return `<div class="prof-sec"><h4>${esc(cl)} <span class="meta">· ${byClass[cl].length} présent(s)</span></h4>
+        <div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne</div>
+        <div class="prof-list">${rows}</div>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.endSessionFor('${seg}','${esc(cl)}')">Déconnecter ${esc(cl)}</button></div></div>`;
+    }).join("") + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
+  },
+  endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
   suiviRow(name, s){
     const age = s ? Date.now()-(s.lastSeen||0) : Infinity;
     const dot = age<60000?"🟢":(age<300000?"🟠":"⚪");
     const where = (s && s.current) ? ((CHAPTER.seances.find(x=>x.id===s.current)||{}).titre || s.current)
-      : (s ? "sur la carte" : "pas encore connecté");
+      : (s ? "sur la carte" : "—");
     return `<div class="r"><span>${dot}</span><span>${esc(name)}</span>
       <span class="meta" style="margin-left:auto">${esc(where)}</span></div>`;
-  },
-  suiviRows(){
-    const roster = (CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]) ? extractEleves(CLASSES[CHAPTER.meta.classe],[]) : null;
-    if(roster) return roster.map(n=>this.suiviRow(n, APP._sessions[sanId(n)])).join("");
-    const keys=Object.keys(APP._sessions);
-    if(keys.length) return keys.map(sid=>this.suiviRow(APP._sessions[sid].name||sid, APP._sessions[sid])).join("");
-    return Object.keys(APP.panels).filter(k=>APP.panels[k]).map(k=>{ const p=APP.panels[k];
-      return this.suiviRow(p.name, { lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); }).join("")
-      || '<div class="d">Personne pour l\'instant.</div>';
   },
 
   /* ── onglet BILAN ── */
@@ -1283,7 +1318,7 @@ loadClasses();
 // souscription au nœud commun /classes (live en Firebase ; immédiat en mémoire)
 classesStore.subscribe(m=>{ CLASSES=m||{};
   if(PROF.authed && PROF.tab==="classes") PROF.render();
-  if(APP._needsRoster && CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]){ APP._needsRoster=false; APP.boot(); }
+  APP.refreshLogins();
 });
 // classe de démonstration : UNIQUEMENT en local (jamais écrite dans le /classes réel sous Firebase)
 if(!MJPC.USE_FIREBASE && !lsGet("mjpc:classes:init") && !Object.keys(CLASSES).length){
