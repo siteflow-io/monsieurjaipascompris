@@ -5655,6 +5655,116 @@ function ExercicesAdmin(p){
       impMsg&&h("div",{style:{marginTop:8,padding:"8px 12px",borderRadius:6,fontSize:".82rem",fontWeight:600,background:impMsg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":impMsg.indexOf("\u26a0")===0?"rgba(236,201,75,.15)":"rgba(72,160,87,.12)",color:impMsg.indexOf("\u274c")===0?"#9f1c2d":impMsg.indexOf("\u26a0")===0?"#7a5a00":"#1b6a30"}},impMsg)
     ),
 
+    // ─── PANNEAU SUIVI DES EXERCICES — qui a fait quoi (module isolé) ───
+    exercices && (function(){
+      var elevesP = sortElevesByNom((p && p.data && p.data.eleves) || []);
+      var s_query = sProdQuery; // réutilise pour économiser un state (panneaux liés visuellement)
+      // Pour chaque élève, calculer son avancement sur les exos qui LUI sont assignés
+      function statsEleve(eleveName){
+        var eleveKey = san(eleveName);
+        var bundle = exGetForEleve(exercices, eleveName); // {classe, personnels}
+        var allExos = bundle.personnels.concat(bundle.classe);
+        if(allExos.length === 0) return {hasExos:false};
+        var er = (exResults || {})[eleveKey];
+        var exosDone = 0;
+        var totalAuto = 0, okAuto = 0;
+        var totalLibres = 0, saisiesLibres = 0;
+        ["personnels","classe"].forEach(function(typeKey){
+          var pool = typeKey === "personnels" ? bundle.personnels : bundle.classe;
+          pool.forEach(function(ex, exIdx){
+            var items = (ex.items || []);
+            var r = er && er[typeKey] && er[typeKey][exIdx];
+            if(r && r.completed) exosDone++;
+            items.forEach(function(it, itIdx){
+              if(!it) return;
+              if(it.type === "copie" || it.type === "ecriture"){
+                totalLibres++;
+                var ansK = typeKey + "_" + exIdx + "_" + itIdx;
+                var ans = er && er.answers && er.answers[ansK];
+                if(ans && String(ans).trim()) saisiesLibres++;
+              } else if(it.type === "qcm" || it.type === "trous" || it.type === "reecriture"){
+                totalAuto++;
+                if(r && r.items && r.items[itIdx] === true) okAuto++;
+              }
+            });
+          });
+        });
+        return {
+          hasExos: true,
+          totalExos: allExos.length,
+          exosDone: exosDone,
+          totalAuto: totalAuto, okAuto: okAuto,
+          totalLibres: totalLibres, saisiesLibres: saisiesLibres,
+          lastUpdate: er && er.lastUpdate ? er.lastUpdate : 0
+        };
+      }
+      // Filtre recherche
+      var query = (prodQuery || "").trim();
+      var rows = elevesP.filter(function(name){
+        if(!query) return true;
+        return matchEleveInitials(name, query) || name.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+      }).map(function(name){
+        return {name: name, stats: statsEleve(name)};
+      });
+      // Stats globales
+      var nbAvecExos = rows.filter(function(r){return r.stats.hasExos}).length;
+      var nbFinis = rows.filter(function(r){return r.stats.hasExos && r.stats.exosDone === r.stats.totalExos}).length;
+      var nbEnCours = rows.filter(function(r){return r.stats.hasExos && r.stats.exosDone > 0 && r.stats.exosDone < r.stats.totalExos}).length;
+      var nbRien = rows.filter(function(r){return r.stats.hasExos && r.stats.exosDone === 0}).length;
+
+      return h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
+        h("h3",{style:{marginTop:0,marginBottom:8}},"\ud83d\udcca Suivi des exercices"),
+        h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},
+          "Vue d'ensemble de l'avancement des \u00e9l\u00e8ves sur leurs exercices personnels et de classe. ",
+          h("strong",null,nbFinis+" termin\u00e9"+(nbFinis>1?"s":""))," \u00b7 ",
+          h("span",{style:{color:"#7a5a00"}},nbEnCours+" en cours")," \u00b7 ",
+          h("span",{style:{color:"#888"}},nbRien+" pas commenc\u00e9"+(nbRien>1?"s":""))
+        ),
+        h("div",{style:{maxHeight:300,overflowY:"auto",border:"1px solid var(--border)",borderRadius:6,background:"var(--card)"}},
+          h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:".85rem"}},
+            h("thead",{style:{position:"sticky",top:0,background:"var(--card2)",zIndex:1}},
+              h("tr",null,
+                h("th",{style:{textAlign:"left",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"\u00c9l\u00e8ve"),
+                h("th",{style:{textAlign:"center",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"Exos"),
+                h("th",{style:{textAlign:"center",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"Auto-cor."),
+                h("th",{style:{textAlign:"center",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"Productions")
+              )
+            ),
+            h("tbody",null,
+              rows.length === 0 ? h("tr",null,h("td",{colSpan:4,style:{textAlign:"center",padding:14,color:"var(--muted)",fontStyle:"italic"}},"Aucun \u00e9l\u00e8ve")) :
+              rows.map(function(r){
+                var st = r.stats;
+                if(!st.hasExos){
+                  return h("tr",{key:r.name,style:{opacity:.4}},
+                    h("td",{style:{padding:"5px 10px"}},r.name),
+                    h("td",{colSpan:3,style:{padding:"5px 10px",textAlign:"center",fontSize:".78rem",fontStyle:"italic"}},"Pas d'exercices assign\u00e9s")
+                  );
+                }
+                var pct = st.totalExos > 0 ? Math.round(100 * st.exosDone / st.totalExos) : 0;
+                var color = pct === 100 ? "#1b6a30" : pct > 0 ? "#7a5a00" : "#888";
+                var bg = pct === 100 ? "rgba(72,160,87,.08)" : pct > 0 ? "rgba(236,201,75,.08)" : "transparent";
+                var icon = pct === 100 ? "\u2705" : pct > 0 ? "\u23f3" : "\u26ab";
+                var np = getEleveNomPrenom(r.name);
+                var displayName = np.nom + " " + np.prenom;
+                return h("tr",{key:r.name,style:{background:bg,borderBottom:"1px solid var(--border)"}},
+                  h("td",{style:{padding:"5px 10px",fontWeight:pct===100?600:400}}, icon + " " + displayName),
+                  h("td",{style:{padding:"5px 10px",textAlign:"center",color:color,fontWeight:600}}, st.exosDone+"/"+st.totalExos),
+                  h("td",{style:{padding:"5px 10px",textAlign:"center"}},
+                    st.totalAuto === 0 ? h("span",{style:{color:"var(--muted)"}},"\u2014") :
+                    h("span",{style:{color: st.okAuto === st.totalAuto ? "#1b6a30" : "inherit"}}, st.okAuto+"/"+st.totalAuto)
+                  ),
+                  h("td",{style:{padding:"5px 10px",textAlign:"center"}},
+                    st.totalLibres === 0 ? h("span",{style:{color:"var(--muted)"}},"\u2014") :
+                    h("span",{style:{color: st.saisiesLibres === st.totalLibres ? "#1b6a30" : "inherit"}}, st.saisiesLibres+"/"+st.totalLibres)
+                  )
+                );
+              })
+            )
+          )
+        )
+      );
+    })(),
+
     // ─── PANNEAU PRODUCTIONS LIBRES (copie + ecriture) — module isolé ───
     exercices && (function(){
       // Helper local : collecte toutes les productions libres saisies
