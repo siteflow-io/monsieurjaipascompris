@@ -5101,20 +5101,19 @@ function ExercicesAdmin(p){
   // Auto-cochage : dès qu'un élève passe à "done" ET n'a pas encore été imprimé, on le coche
   React.useEffect(function(){
     if(!doneEleves || Object.keys(doneEleves).length === 0) return;
+    // Re-calculer la liste élèves localement (les useEffect ne voient pas les `var` situées après le if(loading)return de la fonction parente)
+    var elevesLocal = sortElevesByNom((p && p.data && p.data.eleves) || []);
+    if(!elevesLocal || elevesLocal.length === 0) return;
     setSelImp(function(prev){
       var next = Object.assign({}, prev);
       var changed = false;
-      // Pour chaque élève "done" non imprimé, vérifier qu'il est bien dans la liste élèves
       Object.keys(doneEleves).forEach(function(k){
-        // Trouver le nom complet correspondant à cette key
         var found = null;
-        for(var i=0;i<eleves.length;i++){
-          if(san(eleves[i]) === k){found = eleves[i]; break}
+        for(var i=0;i<elevesLocal.length;i++){
+          if(san(elevesLocal[i]) === k){found = elevesLocal[i]; break}
         }
         if(!found) return;
-        // Si déjà imprimé, ne pas re-cocher
         if(printedEleves[k]) return;
-        // Sinon cocher si pas déjà coché
         if(!next[found]){
           next[found] = true;
           changed = true;
