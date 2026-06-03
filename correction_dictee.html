@@ -5111,6 +5111,85 @@ function ExercicesAdmin(p){
     setTimeout(function(){setMsg("")},3000);
   }
 
+  // ─── Génère une fiche d'exercices imprimable depuis le JSON pour un élève ───
+  function ficheJsonHtmlPourEleve(eleveName){
+    var ex = exGetForEleve(exercices, eleveName);
+    var classe = ex.classe || [];
+    var perso = ex.personnels || [];
+    if(perso.length===0 && classe.length===0)return null;
+    function renderItem(item, idx){
+      if(!item || !item.type)return '';
+      var enonce = item.enonce ? '<div class="enonce">'+escapeHtml(item.enonce)+'</div>' : '';
+      if(item.type==="qcm"){
+        var phrase = (item.phrase||"").replace(/___/g,'<span class="trou">_____</span>');
+        var props = (item.propositions||[]).map(function(p,i){
+          var letters="ABCDEFGH";
+          return '<div class="qcm-prop"><span class="qcm-letter">'+letters[i]+'.</span> <span class="qcm-box">\u25a1</span> '+escapeHtml(p)+'</div>';
+        }).join("");
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+'<div class="qcm-phrase">'+phrase+'</div>'+props+'</div></div>';
+      }
+      if(item.type==="trous"){
+        var segs = item.segments||[];
+        var phraseHtml = segs.map(function(s){
+          if(s===null)return '<span class="trou-input">__________</span>';
+          return escapeHtml(String(s||""));
+        }).join("");
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+'<div class="trous-phrase">'+phraseHtml+'</div></div></div>';
+      }
+      if(item.type==="reecriture"){
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+
+          '<div class="reec-phrase"><strong>'+escapeHtml(item.phrase||"")+'</strong></div>'+
+          '<div class="reec-ligne">\u2192 ____________________________________________________________</div></div></div>';
+      }
+      return '';
+    }
+    function renderEx(exo){
+      var titre = exo.titre ? '<div class="ex-titre">'+escapeHtml(exo.titre)+'</div>' : '';
+      var regle = exo.regle ? '<div class="ex-regle">'+escapeHtml(exo.regle)+'</div>' : '';
+      var items = (exo.items||[]).map(renderItem).join("");
+      return '<div class="exercice">'+titre+regle+items+'</div>';
+    }
+    var perHtml = perso.length>0 ? '<section class="section-perso"><h2>\ud83c\udfaf Pour toi</h2>'+perso.map(renderEx).join("")+'</section>' : '';
+    var clHtml = classe.length>0 ? '<section class="section-classe"><h2>\ud83d\udcdd Pour la classe</h2>'+classe.map(renderEx).join("")+'</section>' : '';
+    var titreDictee = (p.data&&p.data.title)?p.data.title:"";
+    return '<article class="fiche-eleve">'+
+      '<header class="fiche-header"><div class="eleve-nom">'+escapeHtml(eleveName)+'</div>'+(titreDictee?'<div class="dictee-titre">'+escapeHtml(titreDictee)+'</div>':'')+'</header>'+
+      perHtml + clHtml +
+      '</article>';
+  }
+
+  function styleImpressionJson(){
+    return '<style>'+
+      '@page{margin:1.5cm}'+
+      'body{font-family:Georgia,"Times New Roman",serif;font-size:11pt;line-height:1.5;color:#222;margin:0;padding:0}'+
+      '.fiche-eleve{page-break-after:always;padding:0 0 1cm 0}'+
+      '.fiche-eleve:last-child{page-break-after:auto}'+
+      '.fiche-header{border-bottom:2px solid #2b6ccb;padding-bottom:8px;margin-bottom:14px}'+
+      '.eleve-nom{font-size:1.4rem;font-weight:700;color:#1a3a7a}'+
+      '.dictee-titre{font-size:.95rem;color:#666;font-style:italic;margin-top:2px}'+
+      'section{margin-bottom:18px}'+
+      'h2{font-size:1.05rem;margin:14px 0 8px;color:#1a3a7a;border-bottom:1px solid #ccc;padding-bottom:3px}'+
+      '.exercice{margin-bottom:14px;padding-bottom:8px;border-bottom:1px dotted #ddd}'+
+      '.exercice:last-child{border-bottom:none}'+
+      '.ex-titre{font-weight:700;font-size:.98rem;margin-bottom:4px}'+
+      '.ex-regle{font-size:.88rem;font-style:italic;color:#555;background:#f5f3ee;padding:6px 10px;border-left:3px solid #c8a951;margin:4px 0 8px}'+
+      '.item{display:flex;gap:8px;margin:8px 0;align-items:flex-start}'+
+      '.item-num{font-weight:700;color:#2b6ccb;min-width:18px}'+
+      '.item-body{flex:1}'+
+      '.enonce{font-size:.88rem;color:#555;font-style:italic;margin-bottom:3px}'+
+      '.qcm-phrase{margin:3px 0 6px;font-size:1rem}'+
+      '.qcm-prop{margin:2px 0 2px 14px;font-size:.95rem}'+
+      '.qcm-letter{font-weight:700;color:#1a3a7a;display:inline-block;width:18px}'+
+      '.qcm-box{font-size:1.1rem;color:#888}'+
+      '.trou{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:80px;font-family:monospace}'+
+      '.trou-input{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:90px;margin:0 3px;font-family:monospace;color:transparent}'+
+      '.trous-phrase{margin:3px 0;font-size:1rem;line-height:2}'+
+      '.reec-phrase{margin:4px 0 6px;font-size:.98rem}'+
+      '.reec-ligne{font-family:monospace;color:#888;font-size:.95rem;margin-top:4px}'+
+      '@media print{.fiche-eleve{page-break-after:always}.fiche-eleve:last-child{page-break-after:auto}}'+
+      '</style>';
+  }
+
   // ─── Impression rapide pour les élèves sélectionnés ────────────
   function trouverSectionEleve(doc, eleveName, eleveKey){
     // Essaie plusieurs conventions de structure HTML possibles
@@ -5150,9 +5229,46 @@ function ExercicesAdmin(p){
 
   function imprimerSelection(){
     setImpMsg("");
-    if(!exHtml||!exHtml.content){setImpMsg("\u274c Aucun HTML d\u2019exercices upload\u00e9.");setTimeout(function(){setImpMsg("")},3000);return}
+    var hasJsonExos = exercices && (exercices.exercices_classe || exercices.exercices_personnels);
+    var hasHtmlExos = exHtml && exHtml.content;
+    if(!hasJsonExos && !hasHtmlExos){
+      setImpMsg("\u274c Aucun exercice disponible (ni JSON ni HTML).");
+      setTimeout(function(){setImpMsg("")},3000);return;
+    }
     var selectedNames=Object.keys(selImp).filter(function(k){return selImp[k]});
     if(selectedNames.length===0){setImpMsg("\u274c Coche au moins un \u00e9l\u00e8ve.");setTimeout(function(){setImpMsg("")},3000);return}
+
+    // ─── BRANCHE JSON : génération à la volée d'une fiche imprimable par élève ───
+    if(hasJsonExos){
+      var fiches=[];
+      var notFoundJ=[];
+      selectedNames.forEach(function(name){
+        var fiche = ficheJsonHtmlPourEleve(name);
+        if(fiche)fiches.push(fiche);
+        else notFoundJ.push(name);
+      });
+      if(fiches.length===0){
+        setImpMsg("\u274c Aucun exercice trouv\u00e9 pour les \u00e9l\u00e8ves coch\u00e9s : "+notFoundJ.join(", ")+". Ils n\u2019ont peut-\u00eatre pas d\u2019exercices personnels (moins de 3 erreurs ?).");
+        return;
+      }
+      if(notFoundJ.length>0){
+        setImpMsg("\u274c Aucune fiche pour : "+notFoundJ.join(", ")+" (pas d\u2019exercices personnels). Aucune impression.");
+        return;
+      }
+      var bodyJ = fiches.join("\n");
+      var printHtmlJ = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Exercices \u00e0 imprimer</title>'+styleImpressionJson()+'</head><body>'+bodyJ+'</body></html>';
+      setImpMsg("\u2705 "+fiches.length+" \u00e9l\u00e8ve(s) envoy\u00e9(s) \u00e0 l\u2019imprimante");
+      var winJ=window.open("","_blank","width=900,height=700");
+      if(!winJ){setImpMsg("\u274c Pop-up bloqu\u00e9. Autorise les pop-ups pour ce site.");setTimeout(function(){setImpMsg("")},5000);return}
+      winJ.document.open();
+      winJ.document.write(printHtmlJ);
+      winJ.document.close();
+      winJ.onload=function(){setTimeout(function(){try{winJ.focus();winJ.print()}catch(e){}},300)};
+      setTimeout(function(){setImpMsg("")},6000);
+      return;
+    }
+
+    // ─── BRANCHE HTML : détection de sections dans le HTML uploadé ───
     // Parse le HTML d'exercices dans un DOM temporaire
     var parser=new DOMParser();
     var doc=parser.parseFromString(exHtml.content,"text/html");
@@ -5302,10 +5418,16 @@ function ExercicesAdmin(p){
         )
       )
     ),
-    // ─── PANNEAU IMPRESSION RAPIDE ───
-    exHtml&&h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
+    // ─── PANNEAU IMPRESSION RAPIDE ─── (visible si HTML uploadé OU JSON injecté)
+    (exHtml||exercices)&&h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
       h("h3",{style:{marginTop:0,marginBottom:8}},"\ud83d\udda8 Impression rapide"),
-      h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},"Coche les \u00e9l\u00e8ves dont tu veux imprimer la fiche d\u2019exercices, puis clic sur \u00ab Imprimer \u00bb. Une fen\u00eatre s\u2019ouvre directement sur le dialogue d\u2019impression."),
+      h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},
+        "Coche les \u00e9l\u00e8ves dont tu veux imprimer la fiche d\u2019exercices, puis clic sur \u00ab Imprimer \u00bb. Une fen\u00eatre s\u2019ouvre directement sur le dialogue d\u2019impression.",
+        h("br",null),
+        h("span",{style:{fontSize:".74rem",fontStyle:"italic"}},
+          exHtml?"Source : HTML upload\u00e9 (sections par \u00e9l\u00e8ve d\u00e9tect\u00e9es automatiquement)":"Source : JSON inject\u00e9 (fiche g\u00e9n\u00e9r\u00e9e \u00e0 la vol\u00e9e \u00e0 partir des exercices personnels de chaque \u00e9l\u00e8ve)"
+        )
+      ),
       h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}},
         h("button",{className:"btn-sm btn-ghost",onClick:function(){toggleAllImp(true)},style:{fontSize:".74rem"}},"Tout cocher"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){toggleAllImp(false)},style:{fontSize:".74rem"}},"Tout d\u00e9cocher"),
