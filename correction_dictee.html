@@ -4983,6 +4983,18 @@ function AppEleve(p){
 // ════════════════════════════════════════════════════════════════════
 
 // Prompt IA spécifique à la production de JSON exercices (vs HTML)
+// ─── Prompt IA exercices : décomposé en deux zones distinctes ───
+// Zone éditable (ce que tu changes pour personnaliser le type d'exos / niveau / thèmes)
+var PROMPT_DIRECTIVES_DEFAULT = "Tu es un professeur de fran\u00e7ais expert en didactique. Je te fournis ci-dessous le JSON d'une dict\u00e9e corrig\u00e9e. Tu dois produire un JSON d'exercices personnalis\u00e9s, dans le FORMAT d\u00e9crit plus bas (et rien d'autre, ni HTML, ni commentaire externe).\n\n=== R\u00c8GLES P\u00c9DAGOGIQUES ===\n\n- Exercices_classe : analyse les erreurs faites par AU MOINS 3 \u00e9l\u00e8ves dans le JSON. Pour chaque difficult\u00e9 collective, cr\u00e9e UN exercice avec 4 \u00e0 6 items.\n- Exercices_personnels : pour CHAQUE \u00e9l\u00e8ve ayant fait au moins 3 erreurs, cr\u00e9e 2 \u00e0 4 exercices cibl\u00e9s sur SES erreurs (pas celles des autres). La cl\u00e9 doit \u00eatre le pr\u00e9nom normalis\u00e9 (minuscules, sans accent, espaces remplac\u00e9s par _).\n- ALTERNE les types d'exercices au sein de chaque s\u00e9rie : par exemple un QCM, puis un exo de copie, puis une r\u00e9\u00e9criture, puis un exo d'\u00e9criture libre. Ne fais PAS QUE des QCM \u2014 varie selon ce qui aidera vraiment l'\u00e9l\u00e8ve.\n- Choisis le type d'item selon l'objectif :\n  \u2022 QCM : pour discriminer entre formes proches (homophones, accords ambigus)\n  \u2022 TROUS : pour entra\u00eener un automatisme (conjugaison, terminaison)\n  \u2022 R\u00c9\u00c9CRITURE : pour transformer (changement de temps, de personne, voix active/passive)\n  \u2022 COPIE : pour ancrer l'orthographe lexicale d'un mot/expression difficile (recopier en attention)\n  \u2022 \u00c9CRITURE : pour produire (mobiliser une notion en production libre, faire 2-3 phrases sur consigne)\n- Pour les trous, UN SEUL MOT par null (jamais une expression).\n- Pour reecriture, donne 1 \u00e0 3 variantes accept\u00e9es pour couvrir les flottements normaux (accords libres, ponctuation).\n- Niveau de langue adapt\u00e9 au niveau scolaire indiqu\u00e9 dans le JSON.\n- AUCUN commentaire en dehors du JSON. Le JSON commence par { et se termine par }.";
+
+// Zone fixe (spec technique JSON — modifiable en mode expert si tu veux d'autres types d'items, mais l'app reconnaît officiellement qcm/trous/reecriture)
+var PROMPT_FORMAT_DEFAULT = "=== FORMAT JSON DE SORTIE ===\n\n{\n  \"exercices_classe\": [\n    {\n      \"id\": \"ex_classe_1\",\n      \"titre\": \"Titre court\",\n      \"regle\": \"Rappel de r\u00e8gle (max 4 lignes)\",\n      \"items\": [ ... voir types ci-dessous ... ]\n    }\n  ],\n  \"exercices_personnels\": {\n    \"prenom_eleve_normalise\": [ { ... m\u00eame structure ... } ]\n  }\n}\n\n=== TYPES D'ITEMS DISPONIBLES (5 types) ===\n\n1. QCM : un seul bon choix\n{\n  \"type\": \"qcm\",\n  \"enonce\": \"Consigne courte (ex: Choisis la bonne orthographe)\",\n  \"phrase\": \"Phrase avec ___ \u00e0 la place du mot manquant\",\n  \"propositions\": [\"proposition 1\", \"proposition 2\", \"proposition 3\"],\n  \"reponse\": 1\n}\n(reponse = index 0-bas\u00e9 de la bonne proposition)\n\n2. TROUS : phrase \u00e0 trous, un champ par mot\n{\n  \"type\": \"trous\",\n  \"enonce\": \"Compl\u00e8te avec le verbe au bon temps\",\n  \"segments\": [\"Le chat \", null, \" la souris et \", null, \" sur le toit.\"],\n  \"reponses\": [\"attrape\", \"saute\"]\n}\n(segments = tableau alternant cha\u00eenes et null ; null = case \u00e0 remplir ; reponses align\u00e9 sur l'ordre des null. Un null = UN seul mot \u00e0 remplir).\n\n3. R\u00c9\u00c9CRITURE : transformer une phrase\n{\n  \"type\": \"reecriture\",\n  \"enonce\": \"R\u00e9\u00e9cris au pass\u00e9 compos\u00e9\",\n  \"phrase\": \"Phrase de d\u00e9part\",\n  \"reponse_exacte\": \"Phrase attendue\",\n  \"reponses_acceptees\": [\"Variante 1 accept\u00e9e\", \"Variante 2\"]\n}\n(reponses_acceptees facultatif, pour les variantes)\n\n4. COPIE : recopier une phrase en focalisant sur un point pr\u00e9cis\n{\n  \"type\": \"copie\",\n  \"enonce\": \"Recopie cette phrase en faisant bien attention aux accents\",\n  \"phrase\": \"La phrase \u00e0 recopier exactement (souvent contenant le mot/expression cibl\u00e9).\",\n  \"lignes\": 2\n}\n(lignes = nombre de lignes blanches pour la recopie, par d\u00e9faut 2)\n\n5. \u00c9CRITURE : production \u00e9crite libre avec crit\u00e8res\n{\n  \"type\": \"ecriture\",\n  \"enonce\": \"\u00c9cris 3 phrases utilisant les pronoms relatifs lequel et laquelle\",\n  \"criteres\": [\"Au moins 3 phrases\", \"Utiliser lequel et laquelle\", \"Sujet libre\"],\n  \"lignes\": 5\n}\n(criteres = liste de points \u00e0 respecter ; lignes = nombre de lignes blanches pour \u00e9crire)\n\nN.B. : qcm/trous/reecriture sont auto-corrig\u00e9s c\u00f4t\u00e9 \u00e9l\u00e8ve dans l'app. copie/ecriture sont saisis en texte libre c\u00f4t\u00e9 \u00e9l\u00e8ve, et corrig\u00e9s manuellement par le prof.\n\n=== JSON DE LA DICT\u00c9E ===\n{{JSON_DICTEE}}";
+
+// Concatène directives + format en respectant {{DIRECTIVES}} et {{FORMAT}} si présents dans un prompt legacy
+function assemblePrompt(directives, format){
+  return (directives||PROMPT_DIRECTIVES_DEFAULT) + "\n\n" + (format||PROMPT_FORMAT_DEFAULT);
+}
+
 var PROMPT_IA_EXERCICES_JSON = "Tu es un professeur de fran\u00e7ais expert en didactique. Je te fournis ci-dessous le JSON d'une dict\u00e9e corrig\u00e9e. Tu dois produire un JSON d'exercices personnalis\u00e9s, dans le FORMAT STRICT d\u00e9crit ci-dessous (et rien d'autre, ni HTML, ni commentaire externe).\n\n=== FORMAT JSON DE SORTIE (STRICT) ===\n\n{\n  \"exercices_classe\": [\n    {\n      \"id\": \"ex_classe_1\",\n      \"titre\": \"Titre court\",\n      \"regle\": \"Rappel de r\u00e8gle (max 4 lignes)\",\n      \"items\": [ ... voir types ci-dessous ... ]\n    }\n  ],\n  \"exercices_personnels\": {\n    \"prenom_eleve_normalise\": [ { ... m\u00eame structure ... } ]\n  }\n}\n\n=== TYPES D'ITEMS AUTORIS\u00c9S (3 SEULEMENT) ===\n\n1. QCM : un seul bon choix\n{\n  \"type\": \"qcm\",\n  \"enonce\": \"Consigne courte (ex: Choisis la bonne orthographe)\",\n  \"phrase\": \"Phrase avec ___ \u00e0 la place du mot manquant\",\n  \"propositions\": [\"proposition 1\", \"proposition 2\", \"proposition 3\"],\n  \"reponse\": 1\n}\n(reponse = index 0-bas\u00e9 de la bonne proposition)\n\n2. TROUS : phrase \u00e0 trous, un champ par mot (PAS de saisie libre invariable)\n{\n  \"type\": \"trous\",\n  \"enonce\": \"Compl\u00e8te avec le verbe au bon temps\",\n  \"segments\": [\"Le chat \", null, \" la souris et \", null, \" sur le toit.\"],\n  \"reponses\": [\"attrape\", \"saute\"]\n}\n(segments = tableau alternant cha\u00eenes et null ; null = case \u00e0 remplir ; reponses align\u00e9 sur l'ordre des null. Un null = UN seul mot \u00e0 remplir, pas une expression).\n\n3. R\u00c9\u00c9CRITURE : transformer une phrase\n{\n  \"type\": \"reecriture\",\n  \"enonce\": \"R\u00e9\u00e9cris au pass\u00e9 compos\u00e9\",\n  \"phrase\": \"Phrase de d\u00e9part\",\n  \"reponse_exacte\": \"Phrase attendue\",\n  \"reponses_acceptees\": [\"Variante 1 accept\u00e9e\", \"Variante 2\"]\n}\n(reponses_acceptees facultatif, pour les variantes type accord ou ponctuation finale optionnelle)\n\n=== R\u00c8GLES IMP\u00c9RATIVES ===\n\n- Exercices_classe : analyse les erreurs faites par AU MOINS 3 \u00e9l\u00e8ves dans le JSON. Pour chaque difficult\u00e9 collective, cr\u00e9e UN exercice avec 4 \u00e0 6 items.\n- Exercices_personnels : pour CHAQUE \u00e9l\u00e8ve ayant fait au moins 3 erreurs, cr\u00e9e 1 \u00e0 3 exercices cibl\u00e9s sur SES erreurs (pas celles des autres). La cl\u00e9 doit \u00eatre le pr\u00e9nom normalis\u00e9 (minuscules, sans accent, espaces remplac\u00e9s par _).\n- Privil\u00e9gie les items \"trous\" et \"qcm\" (auto-corrigeables sans ambigu\u00eft\u00e9). Utilise \"reecriture\" seulement si pertinent (transformation, conjugaison).\n- Pour les trous, UN SEUL MOT par null (jamais une expression).\n- Pour reecriture, donne 1 \u00e0 3 variantes accept\u00e9es pour couvrir les flottements normaux (accords libres, ponctuation).\n- Niveau de langue adapt\u00e9 au niveau scolaire indiqu\u00e9 dans le JSON.\n- AUCUN commentaire en dehors du JSON. Le JSON commence par { et se termine par }.\n\n=== JSON DE LA DICT\u00c9E ===\n{{JSON_DICTEE}}";
 
 // Normalise une réponse pour comparaison (minuscule, sans accent, espaces réduits, ponctuation finale optionnelle)
@@ -5025,6 +5037,19 @@ function exCheckItem(item, userInput){
   if(item.type==="reecriture"){
     var ok = exCheck(userInput||"", item.reponse_exacte, item.reponses_acceptees);
     return {ok:ok, details:[ok]};
+  }
+  if(item.type==="copie"){
+    // Comparaison stricte sur le texte recopié (normalisation espaces + casse douce)
+    var attendu = String(item.phrase||"").trim().replace(/\s+/g," ");
+    var saisi = String(userInput||"").trim().replace(/\s+/g," ");
+    var ok = (attendu === saisi);
+    return {ok:ok, details:[ok], attendu:attendu};
+  }
+  if(item.type==="ecriture"){
+    // Production libre : pas d'auto-correction. On marque "saisi" si non vide.
+    var saisi = String(userInput||"").trim();
+    var ok = (saisi.length > 0);
+    return {ok:ok, details:[ok], libre:true};
   }
   return {ok:false, details:[]};
 }
@@ -5072,6 +5097,20 @@ function ExercicesAdmin(p){
   var sDone = useState({}), doneEleves = sDone[0], setDoneEleves = sDone[1];
   // Élèves déjà imprimés (key → timestamp), persistant en Firebase pour suivre entre vagues
   var sPrinted = useState({}), printedEleves = sPrinted[0], setPrintedEleves = sPrinted[1];
+
+  // ─── PANNEAU PRODUCTIONS LIBRES (module isolé, prêt à extraction app autonome) ───
+  // States : recherche, élèves dépliés, saisies marquées comme consultées par le prof
+  var sProdQuery = useState(""); var prodQuery = sProdQuery[0], setProdQuery = sProdQuery[1];
+  var sProdExpanded = useState({}); var prodExpanded = sProdExpanded[0], setProdExpanded = sProdExpanded[1];
+  var sProdConsultes = useState({}); var prodConsultes = sProdConsultes[0], setProdConsultes = sProdConsultes[1];
+
+  // Listener Firebase : saisies marquées comme consultées (clé = eleveKey_ansKey)
+  React.useEffect(function(){
+    var ref = db.ref("correction_dictee/"+p.dicteeId+"/exercices_consultes");
+    function onConsultes(snap){ setProdConsultes(snap.val() || {}) }
+    ref.on("value", onConsultes);
+    return function(){ ref.off("value", onConsultes) };
+  }, [p.dicteeId]);
 
   // Listener : statuts des élèves dans autocorrection (pour détecter ceux qui ont fini)
   React.useEffect(function(){
@@ -5212,6 +5251,36 @@ function ExercicesAdmin(p){
           '<div class="reec-ligne">\u2192 ____________________________________________________________</div>'+
           '<div class="reec-ligne reec-ligne-2">____________________________________________________________</div></div></div>';
       }
+      // COPIE : phrase source bien visible + N lignes blanches pour recopier (par défaut 2)
+      if(item.type==="copie"){
+        var nLignesC = parseInt(item.lignes,10);
+        if(!nLignesC || nLignesC < 1) nLignesC = 2;
+        var lignesC = "";
+        for(var lc=0; lc<nLignesC; lc++){
+          lignesC += '<div class="copie-ligne">____________________________________________________________</div>';
+        }
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+
+          '<div class="copie-source"><strong>\u00ab '+escapeHtml(item.phrase||"")+' \u00bb</strong></div>'+
+          lignesC+'</div></div>';
+      }
+      // ECRITURE : énoncé + critères en liste + N lignes blanches pour écrire (par défaut 5)
+      if(item.type==="ecriture"){
+        var nLignesE = parseInt(item.lignes,10);
+        if(!nLignesE || nLignesE < 1) nLignesE = 5;
+        var lignesE = "";
+        for(var le=0; le<nLignesE; le++){
+          lignesE += '<div class="ecriture-ligne">____________________________________________________________</div>';
+        }
+        var criteres = "";
+        if(Array.isArray(item.criteres) && item.criteres.length > 0){
+          criteres = '<ul class="ecriture-criteres">'+item.criteres.map(function(c){
+            return '<li>'+escapeHtml(String(c||""))+'</li>';
+          }).join("")+'</ul>';
+        }
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+
+          criteres + lignesE +
+          '</div></div>';
+      }
       // Fallback pour tout autre type d'item : énoncé + phrase + ligne de réponse
       if(item.enonce || item.phrase){
         var phr = item.phrase || "";
@@ -5304,6 +5373,13 @@ function ExercicesAdmin(p){
       '.reec-ligne-2{margin-top:4px}'+
       '.item-reponse-libre{margin:2px 0;font-size:.9rem;line-height:1.9}'+
       '.item-reponse-libre .ligne-reponse{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:180px;font-family:monospace}'+
+      // Copie : phrase source en italique encadrée + lignes pour recopier
+      '.copie-source{margin:2px 0 3px;font-size:.92rem;font-style:italic;color:#444;background:#fef8ec;padding:2px 8px;border-left:2px solid #c8a951;display:inline-block}'+
+      '.copie-ligne{font-family:monospace;color:#888;font-size:.88rem;margin-top:3px;line-height:2}'+
+      // Écriture : critères en liste à puces + lignes blanches
+      '.ecriture-criteres{margin:2px 0 4px 16px;padding:0;font-size:.82rem;color:#444;line-height:1.4}'+
+      '.ecriture-criteres li{margin:0 0 1px}'+
+      '.ecriture-ligne{font-family:monospace;color:#888;font-size:.88rem;margin-top:3px;line-height:2}'+
       '</style>';
   }
 
@@ -5578,6 +5654,142 @@ function ExercicesAdmin(p){
       h("button",{className:"btn btn-primary",onClick:imprimerSelection,disabled:Object.keys(selImp).filter(function(k){return selImp[k]}).length===0,title:"Pr\u00e9pare les fiches \u00e0 imprimer dans une fen\u00eatre plein \u00e9cran"},"\ud83d\udda8 Pr\u00e9parer "+Object.keys(selImp).filter(function(k){return selImp[k]}).length+" fiche(s)"),
       impMsg&&h("div",{style:{marginTop:8,padding:"8px 12px",borderRadius:6,fontSize:".82rem",fontWeight:600,background:impMsg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":impMsg.indexOf("\u26a0")===0?"rgba(236,201,75,.15)":"rgba(72,160,87,.12)",color:impMsg.indexOf("\u274c")===0?"#9f1c2d":impMsg.indexOf("\u26a0")===0?"#7a5a00":"#1b6a30"}},impMsg)
     ),
+
+    // ─── PANNEAU PRODUCTIONS LIBRES (copie + ecriture) — module isolé ───
+    exercices && (function(){
+      // Helper local : collecte toutes les productions libres saisies
+      var elevesP = sortElevesByNom((p && p.data && p.data.eleves) || []);
+      var byEleve = {};
+      Object.keys(exResults || {}).forEach(function(eleveKey){
+        var er = exResults[eleveKey];
+        if(!er) return;
+        var eleveName = null;
+        for(var i = 0; i < elevesP.length; i++){
+          if(san(elevesP[i]) === eleveKey){ eleveName = elevesP[i]; break }
+        }
+        if(!eleveName) eleveName = eleveKey;
+        var ans = er.answers || {};
+        ["personnels","classe"].forEach(function(typeKey){
+          var pool;
+          if(typeKey === "personnels"){
+            pool = (exercices.exercices_personnels && exercices.exercices_personnels[eleveKey]) || [];
+          } else {
+            pool = exercices.exercices_classe || [];
+          }
+          pool = Array.isArray(pool) ? pool : [];
+          pool.forEach(function(ex, exIdx){
+            var items = (ex.items || []);
+            items.forEach(function(item, itemIdx){
+              if(!item || (item.type !== "copie" && item.type !== "ecriture")) return;
+              var ansKey = typeKey + "_" + exIdx + "_" + itemIdx;
+              var saisie = ans[ansKey];
+              if(saisie === undefined || saisie === null) return;
+              var saisieStr = String(saisie).trim();
+              if(!saisieStr) return;
+              if(!byEleve[eleveName]) byEleve[eleveName] = [];
+              byEleve[eleveName].push({
+                ansKey: ansKey, type: item.type,
+                exTitre: ex.titre || ("Exercice "+(exIdx+1)),
+                enonce: item.enonce || "", phrase: item.phrase || "",
+                criteres: Array.isArray(item.criteres) ? item.criteres : [],
+                saisie: saisieStr,
+                consultedKey: eleveKey + "_" + ansKey
+              });
+            });
+          });
+        });
+      });
+      var nbTotal = 0;
+      Object.keys(byEleve).forEach(function(k){ nbTotal += byEleve[k].length });
+      var nbConsultes = 0;
+      Object.keys(byEleve).forEach(function(k){
+        byEleve[k].forEach(function(p){ if(prodConsultes[p.consultedKey]) nbConsultes++ });
+      });
+      // Filtre recherche par élève
+      var query = (prodQuery || "").trim();
+      var elevesFilt = Object.keys(byEleve).sort(function(a,b){
+        return a.localeCompare(b, "fr", {sensitivity:"base"});
+      }).filter(function(name){
+        if(!query) return true;
+        return matchEleveInitials(name, query) || name.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+      });
+
+      return h("div",{className:"card",style:{border:"1.5px solid #c8a951",background:"rgba(200,169,81,.05)",marginBottom:12}},
+        h("h3",{style:{marginTop:0,marginBottom:8}},"\u270d Productions libres \u00e0 corriger \u00e0 la main"),
+        h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},
+          "Les saisies des \u00e9l\u00e8ves pour les exercices de type ",h("strong",null,"copie")," et ",h("strong",null,"\u00e9criture")," apparaissent ici. ",
+          "Marque-les comme consult\u00e9es au fur et \u00e0 mesure pour t'organiser."
+        ),
+        nbTotal === 0 ? h("div",{style:{fontStyle:"italic",color:"var(--muted)",fontSize:".88rem",padding:"10px 0"}},"Aucune saisie pour l'instant. (Elles appara\u00eetront ici d\u00e8s que des \u00e9l\u00e8ves auront travaill\u00e9 sur des exercices de copie ou d'\u00e9criture.)") :
+        h("div",null,
+          h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}},
+            h(EleveSearchBar,{value:prodQuery, onChange:setProdQuery, placeholder:"Rechercher un \u00e9l\u00e8ve\u2026", style:{flex:1, minWidth:180}}),
+            h("span",{style:{fontSize:".74rem",color:"var(--muted)"}},
+              nbTotal+" saisie"+(nbTotal>1?"s":"")+" \u00b7 "+nbConsultes+" consult\u00e9e"+(nbConsultes>1?"s":"")+" \u00b7 "+Object.keys(byEleve).length+" \u00e9l\u00e8ve"+(Object.keys(byEleve).length>1?"s":"")
+            )
+          ),
+          elevesFilt.length === 0 ? h("div",{style:{textAlign:"center",padding:14,color:"var(--muted)",fontStyle:"italic"}},"Aucun \u00e9l\u00e8ve ne correspond \u00e0 la recherche.") :
+          h("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+            elevesFilt.map(function(eleveName){
+              var prods = byEleve[eleveName] || [];
+              var nbCons = prods.filter(function(p){ return prodConsultes[p.consultedKey] }).length;
+              var expanded = !!prodExpanded[eleveName];
+              return h("div",{key:eleveName,style:{border:"1px solid var(--border)",borderRadius:6,background:"var(--card)"}},
+                // En-tête élève cliquable (toggle)
+                h("button",{
+                  onClick:function(){
+                    var n = Object.assign({}, prodExpanded);
+                    n[eleveName] = !n[eleveName];
+                    setProdExpanded(n);
+                  },
+                  style:{display:"flex",width:"100%",alignItems:"center",justifyContent:"space-between",padding:"8px 12px",background:"transparent",border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:".92rem",fontWeight:600,color:"inherit"}
+                },
+                  h("span",null, (expanded?"\u25bc ":"\u25b6 ") + eleveName),
+                  h("span",{style:{fontSize:".78rem",fontWeight:400,color:nbCons===prods.length?"#1b6a30":"var(--muted)"}}, nbCons+"/"+prods.length+" consult\u00e9e"+(prods.length>1?"s":""))
+                ),
+                // Contenu déplié : chaque saisie
+                expanded && h("div",{style:{padding:"4px 12px 12px",borderTop:"1px solid var(--border)"}},
+                  prods.map(function(prod, i){
+                    var isCons = !!prodConsultes[prod.consultedKey];
+                    return h("div",{key:i,style:{margin:"8px 0",padding:"10px 12px",border:"1px solid "+(isCons?"#ccc":"var(--primary)"),borderRadius:6,background:isCons?"rgba(0,0,0,.02)":"rgba(43,108,203,.04)",opacity:isCons?.7:1}},
+                      // Titre exercice + type
+                      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:6,flexWrap:"wrap"}},
+                        h("div",null,
+                          h("span",{style:{fontSize:".74rem",padding:"2px 6px",borderRadius:3,background:prod.type==="copie"?"rgba(200,169,81,.2)":"rgba(43,108,203,.15)",color:prod.type==="copie"?"#7a5a00":"#1a3a7a",fontWeight:600,marginRight:8,textTransform:"uppercase"}}, prod.type),
+                          h("span",{style:{fontSize:".88rem",fontWeight:600}}, prod.exTitre)
+                        ),
+                        h("button",{
+                          onClick:function(){
+                            var newVal = !isCons;
+                            db.ref("correction_dictee/"+p.dicteeId+"/exercices_consultes/"+prod.consultedKey).set(newVal ? Date.now() : null);
+                          },
+                          style:{fontSize:".74rem",padding:"3px 10px",borderRadius:4,border:"1px solid "+(isCons?"#1b6a30":"var(--border)"),background:isCons?"rgba(72,160,87,.12)":"var(--card)",color:isCons?"#1b6a30":"inherit",cursor:"pointer",fontFamily:"inherit"}
+                        }, isCons ? "\u2713 Consult\u00e9e" : "Marquer consult\u00e9e")
+                      ),
+                      // Énoncé + (phrase source pour copie OU critères pour ecriture)
+                      prod.enonce && h("div",{style:{fontSize:".82rem",fontStyle:"italic",color:"#555",marginBottom:4}}, prod.enonce),
+                      prod.type === "copie" && prod.phrase && h("div",{style:{fontSize:".82rem",padding:"4px 8px",background:"#fef8ec",border:"1px solid #c8a951",borderRadius:4,marginBottom:6}},
+                        h("strong",null,"\u00c0 recopier : "),"\u00ab "+prod.phrase+" \u00bb"
+                      ),
+                      prod.type === "ecriture" && prod.criteres.length>0 && h("div",{style:{fontSize:".8rem",marginBottom:6}},
+                        h("strong",null,"Crit\u00e8res : "),
+                        h("ul",{style:{margin:"2px 0 0 18px",padding:0}}, prod.criteres.map(function(c,j){return h("li",{key:j},String(c))}))
+                      ),
+                      // Saisie de l'élève
+                      h("div",{style:{marginTop:4}},
+                        h("div",{style:{fontSize:".78rem",fontWeight:600,color:"var(--muted)",marginBottom:3}}, "R\u00e9ponse de l'\u00e9l\u00e8ve :"),
+                        h("div",{style:{whiteSpace:"pre-wrap",padding:"8px 12px",background:"var(--card2)",borderRadius:4,fontSize:".92rem",lineHeight:1.5,border:"1px solid var(--border)",fontFamily:"inherit"}}, prod.saisie)
+                      )
+                    );
+                  })
+                )
+              );
+            })
+          )
+        )
+      );
+    })(),
+
     // ─── OVERLAY D'IMPRESSION (alternative fiable à window.open) ───
     impPrintHtml&&h("div",{style:{position:"fixed",inset:0,zIndex:2000,background:"rgba(35,30,20,.85)",display:"flex",flexDirection:"column",padding:"10px 12px"},onClick:function(e){if(e.target===e.currentTarget)setImpPrintHtml(null)}},
       h("div",{style:{background:"var(--card)",borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
@@ -5690,58 +5902,104 @@ function ExercicesAdmin(p){
 
 // ─── COMPOSANT MODAL PROMPT IA POUR EXERCICES (différent du prompt HTML) ─
 function PromptIaExoModal(p){
-  var s1 = useState(""), promptText = s1[0], setPromptText = s1[1];
-  var s2 = useState(false), editing = s2[0], setEditing = s2[1];
-  var s3 = useState(""), draft = s3[0], setDraft = s3[1];
-  var s4 = useState(""), msg = s4[0], setMsg = s4[1];
+  // Deux zones distinctes : directives (rapide à éditer) + format (mode expert)
+  var s1 = useState(""), directives = s1[0], setDirectives = s1[1];
+  var s2 = useState(""), formatSpec = s2[0], setFormatSpec = s2[1];
+  // Modes d'édition : "none" | "directives" | "format"
+  var s3 = useState("none"), editMode = s3[0], setEditMode = s3[1];
+  var s4 = useState(""), draft = s4[0], setDraft = s4[1];
+  var s5 = useState(""), msg = s5[0], setMsg = s5[1];
+  var s6 = useState(false), showFullPreview = s6[0], setShowFullPreview = s6[1];
+
   React.useEffect(function(){
-    db.ref("dictee_settings/promptIaExercices").once("value").then(function(snap){
+    // Charger les directives personnalisées (et le format si modifié)
+    db.ref("dictee_settings/promptDirectives").once("value").then(function(snap){
       var v = snap.val();
-      setPromptText(v && typeof v === "string" ? v : PROMPT_IA_EXERCICES_JSON);
-    }).catch(function(){setPromptText(PROMPT_IA_EXERCICES_JSON)});
+      setDirectives(v && typeof v === "string" ? v : PROMPT_DIRECTIVES_DEFAULT);
+    }).catch(function(){setDirectives(PROMPT_DIRECTIVES_DEFAULT)});
+    db.ref("dictee_settings/promptFormat").once("value").then(function(snap){
+      var v = snap.val();
+      setFormatSpec(v && typeof v === "string" ? v : PROMPT_FORMAT_DEFAULT);
+    }).catch(function(){setFormatSpec(PROMPT_FORMAT_DEFAULT)});
   }, []);
+
   var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents), null, 2);
-  var fullPrompt = (promptText || "").replace("{{JSON_DICTEE}}", jsonStr);
+  var assembled = assemblePrompt(directives, formatSpec);
+  var fullPrompt = assembled.replace("{{JSON_DICTEE}}", jsonStr);
+
   function copier(){
     copyToClipboard(fullPrompt).then(function(ok){
-      if(ok){
-        setMsg("\u2705 Prompt + JSON copi\u00e9s");
-      } else {
-        setMsg("\u274c Copie \u00e9chou\u00e9e \u2014 s\u00e9lectionne le texte dans l\u2019aper\u00e7u et fais Ctrl+C");
-      }
+      setMsg(ok ? "\u2705 Prompt + JSON copi\u00e9s" : "\u274c Copie \u00e9chou\u00e9e \u2014 s\u00e9lectionne le texte dans l\u2019aper\u00e7u et fais Ctrl+C");
       setTimeout(function(){setMsg("")},4000);
     });
   }
-  function ouvrirEdition(){setDraft(promptText);setEditing(true)}
+
+  function ouvrirEditionDirectives(){setDraft(directives);setEditMode("directives")}
+  function ouvrirEditionFormat(){
+    if(!confirm("Mode expert : modifier le format JSON peut casser le rendu de l\u2019app. L\u2019app reconna\u00eet officiellement qcm/trous/reecriture. Les autres types seront imprim\u00e9s en mode papier avec une ligne de r\u00e9ponse, mais ne seront PAS interactifs c\u00f4t\u00e9 \u00e9l\u00e8ve. Continuer ?")) return;
+    setDraft(formatSpec);setEditMode("format");
+  }
   function enregistrer(){
-    db.ref("dictee_settings/promptIaExercices").set(draft).then(function(){
-      setPromptText(draft);setEditing(false);
-      setMsg("\u2705 Template enregistr\u00e9");setTimeout(function(){setMsg("")},3000);
+    var path = editMode === "directives" ? "dictee_settings/promptDirectives" : "dictee_settings/promptFormat";
+    db.ref(path).set(draft).then(function(){
+      if(editMode === "directives") setDirectives(draft); else setFormatSpec(draft);
+      setEditMode("none");
+      setMsg("\u2705 Enregistr\u00e9");setTimeout(function(){setMsg("")},3000);
     });
   }
-  function annuler(){setDraft(promptText);setEditing(false);setMsg("")}
-  function restaurer(){if(confirm("Restaurer le prompt par d\u00e9faut ?"))setDraft(PROMPT_IA_EXERCICES_JSON)}
+  function annuler(){setEditMode("none");setMsg("")}
+  function restaurer(){
+    var def = editMode === "directives" ? PROMPT_DIRECTIVES_DEFAULT : PROMPT_FORMAT_DEFAULT;
+    if(confirm("Restaurer la version par d\u00e9faut ?"))setDraft(def);
+  }
+
   return h("div",{className:"popup-overlay",onClick:function(e){if(e.target===e.currentTarget)p.onClose()}},
-    h("div",{style:{background:"var(--card)",borderRadius:16,padding:"22px 26px",maxWidth:780,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 16px 50px rgba(0,0,0,.25)"},onClick:function(e){e.stopPropagation()}},
+    h("div",{style:{background:"var(--card)",borderRadius:16,padding:"22px 26px",maxWidth:820,width:"100%",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 16px 50px rgba(0,0,0,.25)"},onClick:function(e){e.stopPropagation()}},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
-        h("h2",{style:{margin:0}},"\ud83e\udd16 Prompt IA \u2014 G\u00e9n\u00e9rer un JSON d'exercices"),
+        h("h2",{style:{margin:0}},"\ud83e\udd16 Prompt IA \u2014 G\u00e9n\u00e9rer un JSON d\u2019exercices"),
         h("button",{className:"btn-sm btn-ghost",onClick:p.onClose,title:"Fermer"},"\u2715")
       ),
-      h("p",{style:{fontSize:".88rem",color:"var(--muted)",marginBottom:14}},"Ce prompt force l'IA \u00e0 produire un JSON STRICT au format attendu par l'app (3 types d'items autoris\u00e9s : qcm, trous, reecriture). Tu colleras le JSON ensuite via le bouton \u00ab \ud83d\udce5 Injecter \u00bb."),
-      !editing&&h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}},
-        h("button",{className:"btn btn-primary",onClick:copier},"\ud83d\udccb Copier le prompt + JSON"),
-        h("button",{className:"btn btn-ghost",onClick:ouvrirEdition},"\u270f\ufe0f Modifier le template")
-      ),
-      !editing&&h("pre",{style:{background:"var(--card2)",padding:"12px 14px",borderRadius:10,fontSize:".72rem",fontFamily:"ui-monospace,monospace",maxHeight:380,overflowY:"auto",whiteSpace:"pre-wrap",border:"1px solid var(--border)"}},fullPrompt),
-      editing&&h("div",null,
-        h("textarea",{value:draft,onChange:function(e){setDraft(e.target.value)},style:{width:"100%",minHeight:360,padding:"12px 14px",fontFamily:"ui-monospace,monospace",fontSize:".82rem",border:"1.5px solid var(--primary)",borderRadius:10,resize:"vertical"}}),
-        h("div",{style:{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}},
-          h("button",{className:"btn btn-primary",onClick:enregistrer},"\ud83d\udcbe Enregistrer"),
-          h("button",{className:"btn btn-ghost",onClick:annuler},"\u21a9\ufe0f Annuler"),
-          h("button",{className:"btn btn-ghost",onClick:restaurer},"\ud83d\udd04 Restaurer par d\u00e9faut")
+
+      // ─── MODE NONE : aperçu + actions principales ───
+      editMode === "none" && h("div",null,
+        h("p",{style:{fontSize:".88rem",color:"var(--muted)",marginBottom:14}},"Le prompt est compos\u00e9 de deux zones : tes ",h("strong",null,"directives p\u00e9dagogiques")," (niveau d\u2019exigence, th\u00e8mes, types d\u2019exos voulus) et un ",h("strong",null,"format JSON technique")," fixe (qui d\u00e9crit \u00e0 l\u2019IA la structure attendue). Copie le tout puis colle-le dans Claude/ChatGPT."),
+        h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}},
+          h("button",{className:"btn btn-primary",onClick:copier,title:"Copier directives + format + donn\u00e9es de la dict\u00e9e"},"\ud83d\udccb Copier le prompt complet"),
+          h("button",{className:"btn btn-primary",onClick:ouvrirEditionDirectives,style:{background:"rgba(43,108,203,.85)"},title:"Personnaliser tes consignes p\u00e9dagogiques (sans toucher au format JSON)"},"\u270f\ufe0f Personnaliser les directives"),
+          h("button",{className:"btn btn-ghost",onClick:ouvrirEditionFormat,title:"Modifier le format JSON technique (mode expert, peut casser le rendu)"},"\u2699 Mode expert (format JSON)")
+        ),
+        // Aperçu : directives (en haut, distinct) + format (replié)
+        h("div",{style:{marginBottom:10}},
+          h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}},
+            h("strong",{style:{fontSize:".82rem",color:"var(--primary)"}},"\ud83d\udccc Tes directives p\u00e9dagogiques (\u00e9ditable)"),
+            directives !== PROMPT_DIRECTIVES_DEFAULT && h("span",{style:{fontSize:".72rem",color:"#1b6a30",fontWeight:600}},"\u2713 personnalis\u00e9es")
+          ),
+          h("pre",{style:{background:"rgba(43,108,203,.06)",padding:"10px 12px",borderRadius:8,fontSize:".74rem",fontFamily:"ui-monospace,monospace",maxHeight:200,overflowY:"auto",whiteSpace:"pre-wrap",border:"1px solid rgba(43,108,203,.2)",margin:0}},directives)
+        ),
+        h("div",{style:{marginBottom:10}},
+          h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}},
+            h("strong",{style:{fontSize:".82rem",color:"var(--muted)"}},"\u2699 Format JSON technique (fixe)"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowFullPreview(!showFullPreview)},style:{fontSize:".74rem",padding:"2px 8px"}}, showFullPreview ? "\u25b2 Masquer" : "\u25bc Afficher")
+          ),
+          showFullPreview && h("pre",{style:{background:"var(--card2)",padding:"10px 12px",borderRadius:8,fontSize:".7rem",fontFamily:"ui-monospace,monospace",maxHeight:200,overflowY:"auto",whiteSpace:"pre-wrap",border:"1px solid var(--border)",margin:0}},formatSpec)
         )
       ),
-      msg&&h("div",{style:{marginTop:12,padding:"8px 12px",borderRadius:8,background:"rgba(72,160,87,.15)",color:"#1b6a30",fontSize:".88rem",fontWeight:600}},msg)
+
+      // ─── MODE EDIT (directives ou format) ───
+      editMode !== "none" && h("div",null,
+        h("p",{style:{fontSize:".88rem",color:editMode==="format"?"#9f1c2d":"var(--primary)",marginBottom:8,fontWeight:600}},
+          editMode === "directives" ? "\u270f\ufe0f Personnaliser tes directives p\u00e9dagogiques" : "\u26a0 Mode expert : modification du format JSON"
+        ),
+        editMode === "format" && h("p",{style:{fontSize:".78rem",color:"#9f1c2d",fontStyle:"italic",marginBottom:8}},"L\u2019app reconna\u00eet officiellement qcm/trous/reecriture. Les autres types ne seront pas interactifs c\u00f4t\u00e9 \u00e9l\u00e8ve mais imprimables (avec ligne de r\u00e9ponse libre)."),
+        h("textarea",{value:draft,onChange:function(e){setDraft(e.target.value)},style:{width:"100%",minHeight:380,padding:"12px 14px",fontFamily:"ui-monospace,monospace",fontSize:".78rem",border:"1.5px solid "+(editMode==="format"?"#c53030":"var(--primary)"),borderRadius:10,resize:"vertical"}}),
+        h("div",{style:{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}},
+          h("button",{className:"btn btn-primary",onClick:enregistrer},"\ud83d\udcbe Enregistrer"),
+          h("button",{className:"btn btn-ghost",onClick:annuler},"\u21a9 Annuler"),
+          h("button",{className:"btn btn-ghost",onClick:restaurer,style:{color:"#8a4a00"}},"\u21bb Restaurer par d\u00e9faut")
+        )
+      ),
+
+      msg&&h("div",{style:{marginTop:12,padding:"8px 12px",borderRadius:8,background:msg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":"rgba(72,160,87,.15)",color:msg.indexOf("\u274c")===0?"#9f1c2d":"#1b6a30",fontSize:".88rem",fontWeight:600}},msg)
     )
   );
 }
@@ -5823,7 +6081,42 @@ function ExercicesEleve(p){
       var tot = r.items.length;
       return {ok:ok, tot:tot, done:r.completed===true};
     }
+    // Calcul global : tous les exos sont-ils terminés ?
+    var allExos = bundle.personnels.concat(bundle.classe);
+    var allDone = allExos.length > 0 && allExos.every(function(ex, gIdx){
+      var type = gIdx < bundle.personnels.length ? "personnels" : "classe";
+      var idx = gIdx < bundle.personnels.length ? gIdx : gIdx - bundle.personnels.length;
+      var st = exStatus(type, idx);
+      return st && st.done;
+    });
+    // Score global (uniquement sur qcm/trous/reecriture, donc auto-corrigeables)
+    var totalOk = 0, totalAuto = 0, totalSaisi = 0;
+    ["personnels","classe"].forEach(function(typeKey){
+      var pool = typeKey === "personnels" ? bundle.personnels : bundle.classe;
+      pool.forEach(function(ex, idx){
+        var items = toArr(ex.items||[]);
+        var r = (results[typeKey]||{})[idx];
+        if(!r || !r.items) return;
+        items.forEach(function(it, i){
+          var typeIt = it && it.type;
+          if(typeIt === "ecriture" || typeIt === "copie"){
+            if(r.items[i] === true || r.items[i] === false) totalSaisi++;
+          } else if(typeIt === "qcm" || typeIt === "trous" || typeIt === "reecriture"){
+            totalAuto++;
+            if(r.items[i] === true) totalOk++;
+          }
+        });
+      });
+    });
     return h("div",{className:"fade-up"},
+      // ─── ÉCRAN DE FIN : visible uniquement quand tous les exos sont done ───
+      allDone && h("div",{className:"card",style:{textAlign:"center",border:"2px solid var(--green)",background:"rgba(72,160,87,.06)"}},
+        h("div",{style:{fontSize:"2.4rem",marginBottom:8}},"\ud83c\udf89"),
+        h("h2",{style:{margin:"0 0 6px",color:"#1b6a30"}},"Bravo, tu as termin\u00e9 tous tes exercices !"),
+        totalAuto > 0 && h("p",{style:{fontSize:"1.05rem",margin:"8px 0",fontWeight:600}},"Score auto-corrig\u00e9 : "+totalOk+" / "+totalAuto+" bonnes r\u00e9ponses"),
+        totalSaisi > 0 && h("p",{style:{fontSize:".88rem",color:"var(--muted)",margin:"4px 0",fontStyle:"italic"}},totalSaisi+" exercice"+(totalSaisi>1?"s":"")+" de production (\u00e9criture / copie) enregistr\u00e9"+(totalSaisi>1?"s":"")+", \u00e0 corriger par le professeur."),
+        p.onBack && h("button",{className:"btn btn-primary",style:{marginTop:14},onClick:p.onBack},"\u2190 Quitter")
+      ),
       h("div",{className:"card",style:{textAlign:"center"}},
         h("h2",{style:{margin:"0 0 6px"}},"\ud83c\udfaf Tes exercices"),
         h("p",{style:{color:"var(--muted)",margin:0,fontSize:".9rem"}},"Tu dois d'abord les faire sur ton cahier, puis venir taper tes r\u00e9ponses ici pour corriger.")
@@ -5974,6 +6267,36 @@ function ExercicesEleve(p){
           h("b",null,"Corrig\u00e9 : "),item.reponse_exacte)
       );
     }
+    if(item.type==="copie"){
+      return h("div",null,
+        item.enonce&&h("div",{style:{fontSize:".88rem",color:"var(--muted)",marginBottom:8}},item.enonce),
+        h("div",{style:{fontSize:"1rem",marginBottom:10,padding:"10px 14px",background:"#fef8ec",border:"1px solid #c8a951",borderRadius:8,fontStyle:"italic"}},
+          h("b",{style:{fontStyle:"normal"}},"\u00c0 recopier : "),"\u00ab "+(item.phrase||"")+" \u00bb"
+        ),
+        h("textarea",{value:userAns||"",onChange:function(e){setAnswer(e.target.value)},disabled:validated!==null,
+          placeholder:"Recopie la phrase ci-dessus en faisant attention\u2026",
+          style:{width:"100%",minHeight:60,padding:"10px 14px",fontSize:"1rem",border:"2px solid "+(validated?(validated.ok?"var(--green)":"var(--coral)"):"var(--primary)"),borderRadius:8,background:validated?(validated.ok?"rgba(72,160,87,.06)":"rgba(197,48,48,.06)"):"var(--card)",fontFamily:"inherit",resize:"vertical"}}),
+        validated&&!validated.ok&&h("div",{style:{marginTop:10,padding:"10px 14px",background:"rgba(72,160,87,.12)",borderRadius:8,fontSize:".9rem"}},
+          h("b",null,"Phrase exacte attendue : "),item.phrase)
+      );
+    }
+    if(item.type==="ecriture"){
+      var criteres = Array.isArray(item.criteres)?item.criteres:[];
+      var nLignes = parseInt(item.lignes,10);
+      if(!nLignes || nLignes < 3) nLignes = 5;
+      return h("div",null,
+        item.enonce&&h("div",{style:{fontSize:".95rem",fontWeight:600,marginBottom:8}},item.enonce),
+        criteres.length>0&&h("div",{style:{marginBottom:10,padding:"10px 14px",background:"var(--card2)",borderRadius:8,fontSize:".88rem"}},
+          h("div",{style:{fontWeight:600,marginBottom:4}},"\u00c0 respecter :"),
+          h("ul",{style:{margin:0,paddingLeft:18}},criteres.map(function(c,i){return h("li",{key:i},String(c||""))}))
+        ),
+        h("textarea",{value:userAns||"",onChange:function(e){setAnswer(e.target.value)},disabled:validated!==null,
+          placeholder:"\u00c9cris ici\u2026",
+          rows:nLignes,
+          style:{width:"100%",minHeight:Math.max(80, nLignes*22),padding:"10px 14px",fontSize:"1rem",border:"2px solid "+(validated?(validated.ok?"var(--green)":"var(--coral)"):"var(--primary)"),borderRadius:8,background:validated?(validated.ok?"rgba(72,160,87,.06)":"rgba(197,48,48,.06)"):"var(--card)",fontFamily:"inherit",resize:"vertical",lineHeight:1.5}}),
+        validated&&validated.ok&&h("div",{style:{marginTop:10,padding:"8px 12px",background:"rgba(43,108,203,.08)",borderRadius:6,fontSize:".82rem",fontStyle:"italic",color:"var(--muted)"}},"\u270d Ta r\u00e9ponse a \u00e9t\u00e9 enregistr\u00e9e. Le professeur la corrigera \u00e0 la main.")
+      );
+    }
     return h("div",null,"Type d'item inconnu : "+item.type);
   }
 
@@ -5981,6 +6304,8 @@ function ExercicesEleve(p){
     if(item.type==="qcm")return userAns!==undefined&&userAns!==null;
     if(item.type==="trous")return Array.isArray(userAns)&&userAns.length>0&&userAns.some(function(x){return x&&x.trim()});
     if(item.type==="reecriture")return userAns&&userAns.trim();
+    if(item.type==="copie")return userAns&&userAns.trim();
+    if(item.type==="ecriture")return userAns&&userAns.trim();
     return false;
   })();
 
@@ -5993,7 +6318,7 @@ function ExercicesEleve(p){
       ex.regle&&cur.itemIdx===0&&h("div",{style:{padding:"10px 14px",background:"rgba(43,108,203,.06)",border:"1px solid rgba(43,108,203,.2)",borderRadius:8,fontSize:".88rem",marginBottom:12}},h("b",null,"R\u00e8gle : "),ex.regle),
       renderItem(),
       validated&&h("div",{style:{marginTop:14,padding:"12px 16px",borderRadius:10,background:validated.ok?"rgba(72,160,87,.15)":"rgba(197,48,48,.12)",color:validated.ok?"#1b6a30":"#9f1c2d",fontWeight:600,textAlign:"center"}},
-        validated.ok?"\u2705 Bonne r\u00e9ponse !":"\u274c Pas tout \u00e0 fait\u2026"),
+        validated.libre?"\u2705 R\u00e9ponse enregistr\u00e9e":(validated.ok?"\u2705 Bonne r\u00e9ponse !":"\u274c Pas tout \u00e0 fait\u2026")),
       h("div",{style:{display:"flex",gap:8,marginTop:14,justifyContent:"space-between",flexWrap:"wrap"}},
         h("button",{className:"btn-sm btn-ghost",onClick:prevItem,disabled:cur.itemIdx===0},"\u2190 Pr\u00e9c."),
         validated?
