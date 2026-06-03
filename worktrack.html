@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan de travail — Les Misérables</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
+  :root{
+    --bg:#141024; --panel:#211a38; --panel2:#1a1430; --panel3:#2d2350;
+    --ink:#ffffff; --ink2:#e7e0f2; --muted:#9a8fb4; --line:#3a2c54;
+    --gold:#fbbf24; --gold2:#fcd34d; --gold-deep:#d99a1f;
+    --accent:#f87171; --accent2:#fca5a5; --accent-glow:rgba(248,113,113,.5);
+    --fire:#d6455d; --fire2:#ec6a82; --done:#5fb37a; --wip:#fb923c;
+    --radius:16px; --shadow:0 24px 60px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  html{background:linear-gradient(180deg,#1a1030 0%,#1e1535 30%,#2a1a3a 55%,#3a1e35 75%,#4a2040 90%,#5a2545 100%) fixed}
+  body{color:var(--ink);font-family:'Spline Sans',sans-serif;background:transparent;position:relative;overflow-x:hidden;padding:16px;min-height:100%}
+  body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:
+      radial-gradient(ellipse 100% 45% at 50% 108%, rgba(255,140,50,.22) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 35% at 30% 106%, rgba(255,100,70,.15) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 30% at 75% 110%, rgba(220,60,120,.12) 0%, transparent 50%),
+      radial-gradient(circle at 15% 18%, rgba(255,255,255,.7) 0 1px, transparent 2px),
+      radial-gradient(circle at 72% 12%, rgba(255,255,255,.6) 0 1px, transparent 2px),
+      radial-gradient(circle at 45% 26%, rgba(255,255,255,.5) 0 1px, transparent 2px),
+      radial-gradient(circle at 88% 30%, rgba(255,255,255,.55) 0 1px, transparent 2px),
+      radial-gradient(circle at 28% 7%, rgba(255,255,255,.5) 0 1px, transparent 2px);}
+  .bgbase{position:fixed;inset:0;z-index:-3;background:radial-gradient(120% 90% at 50% 0%,#1a140c,#0d0a07 60%,#080604)}
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:1280px;margin:0 auto}
+
+  /* en-tête global + bascule de tour */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .brand .kick{font-size:.66rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-deep);font-weight:600}
+  .brand h1{font-family:'EB Garamond',serif;font-weight:900;font-size:1.5rem;line-height:1.05}
+  .profbtn{all:unset;cursor:pointer;font-size:.78rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 13px}
+  .profbtn:hover{color:var(--gold);border-color:var(--gold-deep)}
+
+  /* écran scindé */
+  .stage{display:flex;gap:14px}
+  @media(max-width:880px){.stage{flex-direction:column}}
+  .lane{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .lanehead{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--line);
+    background:linear-gradient(120deg,rgba(251,191,36,.06),transparent)}
+  .lanehead .who{display:flex;align-items:center;gap:9px;font-family:'EB Garamond',serif;font-weight:600}
+  .lanehead .badge{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3a2a0e;background:var(--gold);padding:3px 8px;border-radius:999px}
+  .lanebody{padding:12px;position:relative}
+  .lane.test{border-color:var(--wip)}
+  .lane.test .badge{background:var(--wip);color:#2a1c06}
+  .testbar{display:flex;gap:6px;padding:7px 12px;background:rgba(251,146,60,.1);border-bottom:1px solid var(--line)}
+  .testbar .btn{font-size:.72rem;padding:5px 9px}
+  .portal{padding:16px 6px;text-align:center}
+  .portal .ph{font-family:'EB Garamond',serif;font-size:1.2rem;margin-bottom:13px;color:var(--ink)}
+  .proster{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+  .pname{all:unset;cursor:pointer;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);text-align:center;font-size:.9rem;transition:.15s}
+  .pname:hover:not(.busy){border-color:var(--accent);color:var(--accent2)}
+  .pname.busy{opacity:.38;cursor:not-allowed}
+  /* confirmation propre à une moitié (n'affecte pas l'autre élève) */
+  .laneconfirm{position:absolute;inset:0;background:rgba(8,6,3,.82);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20;animation:fade .2s ease}
+  .lcbox{background:var(--panel);border:1px solid var(--gold-deep);border-radius:14px;padding:18px;max-width:340px;width:100%}
+  .lcbox h3{font-family:'EB Garamond',serif;font-size:1.05rem;margin-bottom:6px}
+  .lcbox p{color:var(--ink2);font-size:.86rem;line-height:1.45;margin-bottom:8px}
+  .cwarn{background:rgba(214,69,93,.12);border:1px solid var(--fire);border-radius:9px;padding:9px 11px;font-size:.82rem;color:var(--ink2);margin-bottom:10px}
+  .lcfoot{display:flex;gap:8px;justify-content:flex-end}
+
+  /* HUD élève : autonomie (étoiles) + notes */
+  .hud{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .chip{flex:1;min-width:120px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:9px 11px}
+  .chip .k{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .chip .v{font-family:'EB Garamond',serif;font-weight:900;font-size:1.15rem;margin-top:1px}
+  .chip .v.auto{color:var(--gold2)} .chip .v.qcm{color:var(--ink)}
+
+  /* carte */
+  .mapcard{position:relative;background:linear-gradient(180deg,rgba(33,26,56,.55),rgba(20,15,40,.75)),repeating-linear-gradient(45deg,rgba(251,191,36,.015) 0 12px,transparent 12px 24px);
+    border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .mapcard .mh{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;font-size:.78rem}
+  .mapcard .mh .lab{font-family:'EB Garamond',serif;color:var(--gold)}
+  .mapcard .mh .free{font-size:.66rem;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:3px 8px}
+  .graph{position:relative;width:100%;height:330px}
+  .graph svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .grid-l{stroke:var(--gold-deep);stroke-width:.2;opacity:.1}
+  .river{stroke:#3c5660;stroke-width:3;fill:none;opacity:.3;stroke-linecap:round}
+  .route{stroke:var(--accent);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-dasharray:1.5 6;opacity:.42}
+  .route.lit{stroke:var(--accent);stroke-width:2;opacity:1;animation:march 1s linear infinite}
+  @keyframes march{to{stroke-dashoffset:-22}}
+  .mine{stroke:#f0e6d0;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(240,230,208,.5));
+    stroke-dasharray:360;stroke-dashoffset:360;animation:draw 1s ease forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .minedot{fill:#f0e6d0}
+  .place{position:absolute;transform:translate(-50%,-50%);width:118px;text-align:center;cursor:pointer;opacity:0;animation:fade .5s ease forwards}
+  @keyframes fade{to{opacity:1}}
+  .medal{width:50px;height:50px;margin:0 auto;border-radius:50%;display:grid;place-items:center;position:relative;font-family:'EB Garamond',serif;font-weight:900;font-size:1.2rem;transition:transform .18s}
+  .place.todo .medal{background:radial-gradient(circle at 35% 30%,#2c2415,#161009);border:2px solid #3a3120;color:#6e5f3e;filter:saturate(.5) brightness(.75);opacity:.8}
+  .place.wip .medal{background:radial-gradient(circle at 35% 30%,#3a2c12,#221808);border:2px solid var(--wip);color:var(--gold2)}
+  .place.done .medal{background:radial-gradient(circle at 35% 30%,#fcd34d,#d99a1f 72%,#9a6a12);border:2px solid #9a6a12;color:#3a2a0e}
+  .place:hover .medal{transform:scale(1.07)}
+  .place .nm{font-family:'EB Garamond',serif;font-weight:600;font-size:.84rem;margin-top:6px;line-height:1.05}
+  .place .city{font-size:.66rem;color:var(--muted);font-style:italic}
+  .place .stars{margin-top:2px;font-size:.7rem;letter-spacing:1px}
+  .place .stars .full{color:var(--gold2)} .place .stars .empty{color:#37301f}
+  .place .stars .na{color:var(--muted);font-size:.6rem;font-style:italic;letter-spacing:0}
+  .place.suggested .medal{box-shadow:0 0 0 3px rgba(248,113,113,.35),0 0 18px rgba(248,113,113,.55)}
+  .place.here .medal{box-shadow:0 0 0 3px rgba(255,255,255,.8)}
+  .place.locked{cursor:not-allowed}
+  .place.locked .medal{filter:grayscale(.7) brightness(.55);opacity:.6}
+  .place .occ{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--fire);color:#fff;font-size:.56rem;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
+  .check{position:absolute;bottom:-3px;right:-3px;width:19px;height:19px;border-radius:50%;background:var(--done);border:2px solid var(--bg);display:grid;place-items:center;color:#0c1a11;font-size:.62rem;font-weight:700}
+
+  /* séance */
+  .backbtn{all:unset;cursor:pointer;color:var(--muted);font-size:.82rem;margin-bottom:10px;display:inline-block}
+  .backbtn:hover{color:var(--gold)}
+  .shead{padding:0 2px 10px} .shead .lv{font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-deep);font-weight:600}
+  .shead h2{font-family:'EB Garamond',serif;font-weight:900;font-size:1.3rem}
+  .tabs{display:flex;gap:4px;margin-bottom:10px}
+  .tabs button{all:unset;cursor:pointer;font-weight:600;font-size:.82rem;color:var(--muted);padding:7px 13px;border-radius:9px;transition:.15s}
+  .tabs button.on{background:var(--panel2);color:var(--gold2)}
+  .objective{display:flex;gap:8px;align-items:center;background:rgba(251,191,36,.07);border:1px solid var(--gold-deep);border-radius:10px;padding:9px 12px;margin-bottom:11px;font-size:.85rem}
+  .objective .t{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:700;border:1px solid var(--gold-deep);border-radius:5px;padding:2px 6px;white-space:nowrap}
+  .rule{display:flex;gap:8px;align-items:flex-start;background:rgba(214,69,93,.1);border:1px solid var(--fire);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.84rem}
+  .rule b{color:var(--fire2)}
+  .consigne p{color:var(--ink2);line-height:1.55;font-size:.88rem}
+  .item{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:10px}
+  .item .typ{display:inline-block;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;padding:2px 7px;border-radius:999px;margin-bottom:8px;background:rgba(111,161,115,.16);color:#8fc794}
+  .item .typ.prof{background:rgba(251,146,60,.2);color:var(--wip)}
+  .item .typ.libre{background:rgba(251,191,36,.16);color:var(--gold2)}
+  .item .typ.renvoi{background:rgba(60,86,96,.35);color:#9fc3cf}
+  .supports{margin-top:13px}
+  .supports .sh{font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:7px}
+  .support{display:flex;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:7px;font-size:.85rem;color:var(--ink2);line-height:1.5}
+  .support .stype{flex-shrink:0;font-size:.58rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;padding-top:3px;min-width:46px}
+  .nonqcm{margin-top:14px}
+  .item .qz{font-weight:600;font-size:.9rem;margin-bottom:9px;line-height:1.35}
+  .opt{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;cursor:pointer;transition:.13s;font-size:.86rem}
+  .opt:hover{border-color:var(--gold-deep);background:var(--panel3)}
+  .opt.right{border-color:var(--done);background:rgba(111,161,115,.15)}
+  .opt.wrong{border-color:var(--fire);background:rgba(214,69,93,.13)}
+  .aides{margin:10px 0}
+  .aides .ah{font-size:.74rem;color:var(--muted);margin-bottom:6px}
+  .aide{display:flex;align-items:center;gap:8px;border:1px dashed var(--gold-deep);border-radius:9px;padding:8px 11px;margin-bottom:6px;font-size:.82rem}
+  .aide .lab{flex:1}
+  .aide button{all:unset;cursor:pointer;font-size:.74rem;font-weight:600;color:var(--gold2);border:1px solid var(--gold-deep);border-radius:7px;padding:5px 10px}
+  .aide.used{opacity:.65;border-style:solid}
+  .aide.used button{display:none}
+  .aide .cost{font-size:.66rem;color:var(--fire2)}
+  .palier{margin-top:7px;padding:8px 11px;background:var(--panel3);border-left:2px solid var(--gold-deep);border-radius:6px;font-size:.82rem;color:var(--ink2)}
+  .btn{all:unset;cursor:pointer;font-weight:600;font-size:.86rem;padding:10px 18px;border-radius:10px;transition:.15s;text-align:center}
+  .btn.primary{background:linear-gradient(180deg,var(--gold2),var(--gold-deep));color:#3a2a0e}
+  .btn.ghost{border:1px solid var(--line);color:var(--ink2)} .btn.ghost:hover{border-color:var(--gold-deep);color:var(--ink)}
+  .btn.fire{background:var(--fire);color:#fff}
+  .actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .verdict{margin-top:8px;border-radius:11px;padding:13px 15px;animation:fade .35s ease}
+  .verdict.pass{background:linear-gradient(120deg,rgba(111,161,115,.15),rgba(251,191,36,.09));border:1.5px solid var(--done)}
+  .verdict.fail{background:rgba(214,69,93,.11);border:1.5px solid var(--fire)}
+  .verdict .vh{font-family:'EB Garamond',serif;font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .verdict.pass .vh{color:#93cfa3}.verdict.fail .vh{color:var(--fire2)}
+  .verdict p{color:var(--ink2);font-size:.85rem;line-height:1.45;margin-bottom:8px}
+  .f4d{margin-top:10px;border:1.5px solid var(--gold-deep);border-radius:11px;overflow:hidden}
+  .f4head{padding:10px 13px;background:linear-gradient(120deg,rgba(251,191,36,.14),transparent);border-bottom:1px solid var(--line);font-family:'EB Garamond',serif;font-weight:600;font-size:.95rem}
+  .layer{border-bottom:1px solid var(--line)}.layer:last-child{border:none}
+  .layer .lh{display:flex;align-items:center;gap:9px;padding:10px 13px;cursor:pointer;user-select:none}
+  .layer .lh:hover{background:var(--panel2)} .layer .lh .ic{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:.78rem;background:rgba(251,191,36,.16);color:var(--gold)}
+  .layer .lh .lt{font-weight:600;font-size:.85rem;flex:1} .layer .lh .chev{color:var(--muted);transition:.2s}
+  .layer.open .lh .chev{transform:rotate(90deg)}
+  .layer .lc{max-height:0;overflow:hidden;transition:max-height .3s ease} .layer.open .lc{max-height:400px}
+  .layer .lc .in{padding:2px 13px 13px 46px;color:var(--ink2);font-size:.85rem;line-height:1.55}
+  .ref{display:inline-block;font-size:.74rem;color:var(--gold);border:1px solid var(--gold-deep);border-radius:7px;padding:4px 9px;margin:6px 6px 0 0;text-decoration:none}
+
+  /* modale */
+  .overlay{position:fixed;inset:0;background:rgba(6,5,3,.74);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .overlay.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--gold-deep);border-radius:15px;max-width:440px;width:100%;padding:20px;box-shadow:var(--shadow)}
+  .modal h3{font-family:'EB Garamond',serif;font-size:1.15rem;margin-bottom:8px}
+  .modal p{color:var(--ink2);font-size:.88rem;line-height:1.5;margin-bottom:8px}
+  .modal .warn{background:rgba(214,69,93,.12);border:1px solid var(--fire);border-radius:9px;padding:10px 12px;font-size:.84rem;color:var(--ink2);margin-bottom:10px}
+  .modal .mfoot{display:flex;gap:9px;justify-content:flex-end;margin-top:6px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(18px);background:var(--panel3);border:1px solid var(--gold-deep);color:var(--ink);padding:11px 18px;border-radius:11px;font-size:.85rem;opacity:0;pointer-events:none;transition:.25s;z-index:60}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .spark{position:fixed;width:5px;height:5px;border-radius:50%;background:var(--gold2);z-index:55;pointer-events:none;box-shadow:0 0 7px var(--gold)}
+  .hidden{display:none!important}
+</style>
+<!-- SDK Firebase Realtime DB v8 (compat) — même version que les autres apps MJPC. Inerte tant que USE_FIREBASE=false. -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+<div class="bgbase"></div><div class="grain"></div>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="kick">Chapitre 7 · plan de travail</div>
+      <h1 id="chapTitle">…</h1>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="profbtn" onclick="MJPC.openProf()">Prof</button>
+    </div>
+  </div>
+  <div class="stage" id="stage"></div>
+</div>
+
+<div class="overlay" id="profOverlay"><div class="modal big" id="profModal"></div></div>
+<div class="toast" id="toast"></div>
+<style>
+  .modal.big{max-width:760px;max-height:88vh;overflow:auto}
+  .prof-sec{border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:12px}
+  .prof-sec h4{font-family:'EB Garamond',serif;font-size:1rem;margin-bottom:4px}
+  .prof-sec .d{color:var(--muted);font-size:.78rem;margin-bottom:9px}
+  .prof-sec textarea{width:100%;min-height:120px;background:#0a0805;border:1px solid var(--line);border-radius:9px;
+    color:var(--ink2);font-family:ui-monospace,monospace;font-size:.74rem;padding:11px;resize:vertical;line-height:1.45}
+  .prof-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  .prof-list{font-size:.82rem}
+  .prof-list .r{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .prof-list .r:last-child{border:none} .prof-list .r .id{color:var(--gold);font-weight:600;min-width:34px}
+  .prof-list .r .meta{color:var(--muted);margin-left:auto;font-size:.74rem}
+  .ptabs{display:flex;gap:5px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px}
+  .ptab{all:unset;cursor:pointer;padding:8px 15px;border-radius:10px;font-size:.86rem;font-weight:600;color:var(--muted);transition:.15s}
+  .ptab.active{background:var(--gold);color:#3a2a0e}
+  .ptab:hover:not(.active){color:var(--gold2)}
+  .txtin{background:#0a0805;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:inherit;font-size:.84rem;padding:8px 10px}
+  .empty-state{text-align:center;padding:28px;color:var(--muted)}
+  .empty-state .ic{font-size:2.2rem;margin-bottom:8px}
+  .prof-pre{background:#0a0805;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:ui-monospace,monospace;
+    font-size:.72rem;line-height:1.5;max-height:340px;overflow:auto;white-space:pre-wrap;color:var(--ink2)}
+  .gate{text-align:center;padding:20px}
+  .gate input{background:#0a0805;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:1rem;
+    padding:10px 14px;text-align:center;letter-spacing:.3em;width:140px;margin:10px auto;display:block}
+</style>
+
+<script>
+"use strict";
+/* ════════════════════════════════════════════════════════════════════════
+   PLAN DE TRAVAIL UNIVERSEL — architecture en couches
+   §A Config + intégration MJPC (points de branchement)
+   §B Données du chapitre (JSON conforme au contrat — injectable)
+   §C Store (interface + mémoire + stub Firebase)
+   §D Moteur (factory instanciable : 1 instance par élève)
+   §E Outils UI
+   §F Panel élève (rendu d'une moitié d'écran)
+   §G Shell (écran scindé + alternance + boot)
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────── §A · CONFIG + MJPC ─────────────────────────
+   Tout ce qui touche au site MJPC est ISOLÉ ici. Brancher = remplir ces stubs,
+   sans toucher au moteur ni à l'UI. */
+const MJPC = {
+  ROOT: "plan_de_travail",                 // racine Firebase (à confirmer)
+  PROF_CODES: [3141, 1312],
+  niveauFiltre: new URLSearchParams(location.search).get("n") || null, // ?n=4e …
+  published: true,
+  USE_FIREBASE: true,                        // bascule local ↔ Firebase (true = déployé sur GitHub Pages)
+  firebaseConfig: { apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI", authDomain:"dictee-5e-ch4.firebaseapp.com",
+    databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app", projectId:"dictee-5e-ch4",
+    storageBucket:"dictee-5e-ch4.appspot.com" },
+
+  // — Banque MJPC : récupérer une question étiquetée compétence/notion —
+  bank: {
+    fetchQuestion(ref){ /* TODO MJPC : lire la banque commune (4e_chNN_qNNN) */ return null; }
+  },
+  // — Renvoi vers une autre app de l'écosystème (étude de texte…) —
+  openActivity(app, ref){ /* TODO MJPC */ toast("Renvoi « "+app+" » — à brancher."); },
+  // — Export des notes vers École Directe —
+  exportED(payload){ /* TODO MJPC */ toast("Export École Directe — à brancher."); },
+  // — Archivage du bilan dans le profil longitudinal de l'élève (chaîne archiverDansProfilsMJPC) —
+  archive(payload){ /* TODO MJPC : écrire bilanHTML + notes dans le profil MJPC */ console.log("[MJPC.archive]", payload); },
+  // — Générateur IA (méta-prompt cadrage → JSON du chapitre, QCM compris) —
+  aiPrompt(){ /* TODO MJPC : ouvrir le méta-prompt cadrage→JSON */ toast("Prompt IA — à brancher."); },
+  // — Panneau prof / création —
+  openProf(){ PROF.open(); }
+};
+
+/* ─────────────────────────── §B · CHAPITRE (données) ───────────────────
+   Objet STRICTEMENT conforme au moule (chapter_data_model). Remplaçable par
+   le JSON produit par le prompt IA et validé par le prof. Ici : factice. */
+let CHAPTER = {
+  meta:{ id:"ch07", titre:"Les Misérables — valeurs en miroir", niveau:"4e", classe:"",
+    problematique:"Comment Les Misérables mettent-ils en miroir les valeurs humaines, d'une époque à l'autre ?" },
+  reglages:{ reorientation:"immediate", confirmationSaut:true, exclusiviteSeance:true },
+  cheminsIdeaux:[ ["S1","S2","S3","S4"], ["S2","S3","S1","S4"], ["S3","S1","S2","S4"] ],
+  seances:[
+    { id:"S1", titre:"Le bagne", ville:"Toulon", rn:"I", carte:{x:16,y:74}, niveauEntonnoir:"socle",
+      aretes:{ conseillee:"S2", prerequis:null },
+      objectif:"Comprendre qui est Jean Valjean en sortant du bagne.",
+      corps:{ consigne:"Lis le passage indiqué, puis note sur ton cahier ce qui est demandé.", supports:[
+        { type:"renvoiLivre", source:"Les Misérables (éd. abrégée)", pages:"12-15", contenu:"la sortie du bagne" },
+        { type:"texte", contenu:"Repère pour situer : nous sommes en 1815, Valjean a passé 19 ans au bagne." }
+      ] },
+      aides:[
+        { id:"a1", cible:"seance", paliers:["Relis le moment où il sort du bagne : que ressent-il ?","Pense à l'injustice de sa peine initiale."] }
+      ],
+      evaluation:{ seuil:2, items:[
+        { id:"q1", type:"qcm", enonce:"Pourquoi Valjean a-t-il été condamné au départ ?", choix:["Un vol de pain","Un meurtre","Une évasion"], bonnes:[0] },
+        { id:"q2", type:"qcm", enonce:"Combien de temps a duré son bagne ?", choix:["5 ans","19 ans","2 ans"], bonnes:[1] },
+        { id:"q3", type:"qcm", enonce:"Que devient-il en sortant ?", choix:["Un homme libre et apaisé","Un paria marqué par le passeport jaune","Un soldat"], bonnes:[1] }
+      ]},
+      fiche4d:{ titre:"Correction — Le bagne", layers:[
+        { ic:"✓", titre:"Ce qu'il fallait trouver", type:"texte", contenu:"Valjean, condamné pour un vol de pain, sort marqué après 19 ans." },
+        { ic:"?", titre:"Pourquoi", type:"texte", contenu:"Hugo montre la disproportion de la peine : la misère pousse au délit, la société punit à l'excès." },
+        { ic:"↗", titre:"Pour aller plus loin", type:"lien", contenu:"Le passeport jaune comme stigmate social.", references:[{libelle:"Extrait — la sortie du bagne",url:"#",type:"livre"}] }
+      ]}
+    },
+    { id:"S2", titre:"La mansarde", ville:"Paris", rn:"II", carte:{x:30,y:30}, niveauEntonnoir:"socle",
+      aretes:{ conseillee:"S3", prerequis:null },
+      objectif:"Mesurer la chute de Fantine et ce qu'elle dit de la misère.",
+      corps:{ consigne:"Lis le passage, relève les étapes de la chute de Fantine sur ton cahier.", supports:[] },
+      aides:[
+        { id:"a1", cible:"seance", paliers:["Liste ce que Fantine vend, dans l'ordre."] }
+      ],
+      evaluation:{ seuil:2, items:[
+        { id:"q1", type:"qcm", enonce:"Que vend Fantine en premier ?", choix:["Ses cheveux","Sa maison","Son temps"], bonnes:[0] },
+        { id:"q2", type:"qcm", enonce:"Pour qui se sacrifie-t-elle ?", choix:["Pour Valjean","Pour Cosette","Pour Javert"], bonnes:[1] },
+        { id:"q3", type:"qcm", enonce:"Que dénonce Hugo à travers elle ?", choix:["La misère qui broie les femmes","La guerre","La maladie"], bonnes:[0] },
+        { id:"r1", type:"renvoi", app:"etude_texte", ref:"fantine_mansarde" }
+      ]},
+      fiche4d:{ titre:"Correction — La mansarde", layers:[
+        { ic:"✓", titre:"Ce qu'il fallait trouver", type:"texte", contenu:"Fantine vend ses cheveux, ses dents, puis son corps, pour Cosette." },
+        { ic:"?", titre:"Pourquoi", type:"texte", contenu:"La déchéance est imposée par la misère, non choisie : Hugo accuse la société." }
+      ]}
+    },
+    { id:"S3", titre:"L'auberge", ville:"Montfermeil", rn:"III", carte:{x:54,y:62}, niveauEntonnoir:"socle",
+      aretes:{ conseillee:"S4", prerequis:null },
+      objectif:"Lire l'enfance de Cosette chez les Thénardier.",
+      corps:{ consigne:"Lis le passage, note les mauvais traitements relevés.", supports:[] },
+      aides:[],   // ← séance SANS aide : ne compte pas dans la note d'autonomie
+      evaluation:{ seuil:2, items:[
+        { id:"q1", type:"qcm", enonce:"Comment les Thénardier traitent-ils Cosette ?", choix:["Comme leur fille","Comme une servante","Comme une invitée"], bonnes:[1] },
+        { id:"q2", type:"qcm", enonce:"Que va-t-elle chercher la nuit ?", choix:["Du pain","De l'eau à la source","Du bois"], bonnes:[1] },
+        { id:"q3", type:"qcm", enonce:"Qui la délivre ?", choix:["Valjean","Javert","Gavroche"], bonnes:[0] }
+      ]},
+      fiche4d:{ titre:"Correction — L'auberge", layers:[
+        { ic:"✓", titre:"Ce qu'il fallait trouver", type:"texte", contenu:"Cosette, exploitée comme servante, est délivrée par Valjean." }
+      ]}
+    },
+    { id:"S4", titre:"La barricade", ville:"1832", rn:"IV", carte:{x:84,y:40}, niveauEntonnoir:"convergence",
+      aretes:{ conseillee:null, prerequis:"S3" },
+      objectif:"Faire le miroir : ces valeurs, hier et aujourd'hui.",
+      corps:{ consigne:"Lis le passage de la barricade, puis confronte les valeurs du roman aux nôtres sur ton cahier.", supports:[] },
+      aides:[
+        { id:"a1", cible:"seance", paliers:["Quelles valeurs défendent les insurgés ?","Lesquelles te parlent encore aujourd'hui ?"] }
+      ],
+      evaluation:{ seuil:2, items:[
+        { id:"q1", type:"qcm", enonce:"Que défend Gavroche sur la barricade ?", choix:["Ses intérêts","Un idéal de justice","Sa famille"], bonnes:[1] },
+        { id:"q2", type:"qcm", enonce:"La barricade de 1832 est…", choix:["Une victoire","Un échec porteur d'espoir","Une fête"], bonnes:[1] },
+        { id:"q3", type:"qcm", enonce:"Le « miroir » du chapitre invite à…", choix:["Comparer hier et aujourd'hui","Apprendre des dates","Recopier le texte"], bonnes:[0] },
+        { id:"p1", type:"prof", question:"En quelques lignes : montre une valeur du roman qui résonne encore aujourd'hui (nomme-la, donne un exemple actuel).", criteres:"une valeur nommée + un exemple actuel pertinent" },
+        { id:"l1", type:"libre", question:"Quelle scène du chapitre t'a le plus marqué, et pourquoi ?" }
+      ]},
+      fiche4d:{ titre:"Correction — La barricade", layers:[
+        { ic:"✓", titre:"Ce qu'il fallait trouver", type:"texte", contenu:"La barricade incarne des valeurs (justice, fraternité) qui résonnent encore." },
+        { ic:"◎", titre:"Te situer", type:"critereAutoEval", contenu:"As-tu relié au moins une valeur du roman à une question actuelle ? Si oui, l'objectif est atteint." }
+      ]}
+    }
+  ]
+};
+
+/* ─────────────────────────── §C · STORE ────────────────────────────────
+   Interface unique de persistance. L'app parle à `store`, jamais à Firebase
+   directement → on bascule mémoire ↔ Firebase sans toucher au reste. */
+/* Interface store : save(key,val) · load(key) · subscribe(key,cb)→unsub
+   L'app ne parle qu'à `store`. Brancher Firebase = changer d'adaptateur, rien d'autre. */
+// accès localStorage tolérant : en cas d'indisponibilité (aperçu sandboxé…), repli silencieux
+function lsGet(k){ try{ const r=localStorage.getItem(k); return r==null?null:JSON.parse(r); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+// Hors Firebase : cache mémoire (réactivité en session) + persistance localStorage (survit au rechargement)
+function LocalStore(){ const d={}, subs={}, pfx=MJPC.ROOT+":"; const K=key=>pfx+key;
+  return {
+    save(key,val){ d[key]=JSON.parse(JSON.stringify(val)); lsSet(K(key),d[key]); (subs[key]||[]).forEach(cb=>cb(d[key])); },
+    load(key){ if(!(key in d)){ const v=lsGet(K(key)); if(v!=null) d[key]=v; } return d[key]||null; },
+    once(key,cb){ cb(this.load(key)); },
+    subscribe(key,cb){ (subs[key]=subs[key]||[]).push(cb); const v=this.load(key); if(v)cb(v); return ()=>{}; }
+  };
+}
+/* Adaptateur Firebase (Realtime DB v8) — MÊME interface. Prêt, désactivé.
+   Au branchement MJPC : charger le SDK, initializeApp(MJPC.firebaseConfig), USE_FIREBASE=true,
+   déployer sur GitHub Pages (file:// bloqué par CORS). La reprise de session se fera via subscribe. */
+function FirebaseStore(){
+  const db = window.firebase.database();
+  const base = MJPC.ROOT + "/" + (MJPC.niveauFiltre || "default");
+  return {
+    save(key,val){ db.ref(base+"/"+key).set(val); },
+    load(key){ return null; },                    // Firebase = asynchrone → lecture via once/subscribe
+    once(key,cb){ db.ref(base+"/"+key).once("value", s=>cb(s.val())); },
+    subscribe(key,cb){ const r=db.ref(base+"/"+key); const h=r.on("value",s=>cb(s.val()));
+      return ()=> r.off("value",h); }
+  };
+}
+// Initialise Firebase si activé ET SDK chargé (sinon on reste en local)
+if(MJPC.USE_FIREBASE && window.firebase && !firebase.apps.length){
+  try{ firebase.initializeApp(MJPC.firebaseConfig); }catch(e){ console.warn("init Firebase impossible, repli local",e); }
+}
+function makeStore(){
+  if(MJPC.USE_FIREBASE && window.firebase){ try{ return FirebaseStore(); }catch(e){ console.warn("Firebase indisponible, repli local",e); } }
+  return LocalStore();
+}
+const store = makeStore();
+
+/* ── Couche CLASSES : MUTUALISÉE sur /classes à la RACINE Firebase (commun à tout l'écosystème MJPC :
+   correction_dictee, dictee_universelle… lisent le même nœud). Lecture directe, AUCUN couplage fonctionnel :
+   l'app reste utilisable même si MJPC ou une autre app tombe. Le niveau est lu dans le NOM ("4e Banksy"). ── */
+const APP_SLUG = MJPC.ROOT;                       // pour les classes de test : _test_<nomapp>
+const classesStore = (MJPC.USE_FIREBASE && window.firebase)
+  ? (function(){ const ref=()=>window.firebase.database().ref("classes");   // RACINE, pas sous le nœud de l'app
+      return { load:()=>null, save:m=>ref().set(m),
+        subscribe:cb=>{ const r=ref(); const h=r.on("value",s=>cb(s.val()||{})); return ()=>r.off("value",h); } }; })()
+  : (function(){ const KEY="mjpc:classes"; let mem=lsGet(KEY)||{}; const subs=[]; return { load:()=>mem,
+        save:m=>{ mem=JSON.parse(JSON.stringify(m)); lsSet(KEY,mem); subs.forEach(cb=>cb(mem)); },
+        subscribe:cb=>{ subs.push(cb); cb(mem); return ()=>{}; } }; })();
+let CLASSES = {};
+function loadClasses(){ CLASSES = classesStore.load() || {}; }
+function persistClasses(){ classesStore.save(CLASSES); }
+// helper commun MJPC — tolérant à 3 formats : tableau de strings, objet {eleves:[...]}, map d'élèves
+function extractEleves(fbClasse, cfgEleves){
+  if(Array.isArray(fbClasse) && fbClasse.length && typeof fbClasse[0]==="string") return fbClasse.slice();
+  if(fbClasse && typeof fbClasse==="object" && !Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves) && fbClasse.eleves.length) return fbClasse.eleves.slice();
+    const keys=Object.keys(fbClasse).filter(k=>["niveau","annee","id","title","nom","published"].indexOf(k)===-1 && k.charAt(0)!=="_");
+    if(keys.length) return keys.map(k=>{ const v=fbClasse[k]; return typeof v==="string"?v:(v&&typeof v==="object"?(v.nom||v.name||k):k); });
+  }
+  return cfgEleves || [];
+}
+function niveauOf(nom){ const m=/^\s*(6e|5e|4e|3e)/i.exec(nom||""); return m?m[1].toLowerCase():""; }
+function sanId(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"") || "x"; }
+const NIVEAUX = ["6e","5e","4e","3e"];
+// couleur d'accent par niveau (charte Cosmic Glow Sunset)
+const LEVEL_ACCENT = { "6e":["#fbbf24","#fcd34d","rgba(251,191,36,.5)"], "5e":["#fb923c","#fdba74","rgba(251,146,60,.5)"],
+  "4e":["#f87171","#fca5a5","rgba(248,113,113,.5)"], "3e":["#e879a0","#f9a8c9","rgba(232,121,160,.5)"] };
+function setAccentForLevel(niv){ const a=LEVEL_ACCENT[niv]||LEVEL_ACCENT["4e"]; const r=document.documentElement.style;
+  r.setProperty("--accent",a[0]); r.setProperty("--accent2",a[1]); r.setProperty("--accent-glow",a[2]); }
+
+/* ─────────────────────────── §D · MOTEUR (factory) ─────────────────────
+   createEngine = un cerveau de progression PAR élève. Aucune dépendance UI. */
+function createEngine(chapter, store, studentId, eleveIndex){
+  const seances = chapter.seances;
+  const find = id => seances.find(s=>s.id===id);
+  const idx = eleveIndex||0;
+  const state = {};
+  seances.forEach(s=> state[s.id] = { status:"todo", passed:false, qcm:null, aidesUsed:[], soumissions:{}, libres:{} });
+  const path = [];
+  let lastVisited = null;
+
+  const progKey = "progress/" + (chapter.meta.id||"chapitre") + "/" + studentId;
+  function persist(){ store.save(progKey, { state, path, lastVisited }); }
+  // reprise : si une progression est déjà stockée pour cet élève, on la recharge
+  function hydrate(saved){ if(!saved || !saved.state) return;
+    Object.keys(state).forEach(id=>{ if(saved.state[id]) Object.assign(state[id], saved.state[id]); });
+    if(Array.isArray(saved.path)){ path.length=0; saved.path.forEach(x=>path.push(x)); }
+    lastVisited = saved.lastVisited || null; }
+  // chemin idéal propre à CET élève (décalé en canon), robuste si la donnée manque
+  function idealPath(){ const ci=chapter.cheminsIdeaux;
+    let p = (Array.isArray(ci) && ci.length) ? ci[idx % ci.length] : null;
+    if(!Array.isArray(p) || !p.length) p = seances.map(s=>s.id);
+    return p.filter(id=>find(id)); }
+
+  const api = {
+    chapter, studentId,
+    seance:find,
+    snapshot(){ return { state, path, lastVisited }; },
+
+    start(id){ if(state[id].status==="todo") state[id].status="wip";
+      if(!path.includes(id)) path.push(id); lastVisited=id; persist(); },
+
+    // QCM : renvoie le nb de bonnes ; ouvre la porte si ≥ seuil
+    gradeQCM(id, answers){ const ev=find(id).evaluation; let good=0;
+      ev.items.forEach(q=>{ if(q.type!=="qcm") return; const a=answers[q.id];
+        if(a!=null && q.bonnes.length===1 && a===q.bonnes[0]) good++; });
+      const passed = good>=ev.seuil;
+      state[id].qcm={good,total:ev.items.filter(i=>i.type==="qcm").length};
+      if(passed){ state[id].status="done"; state[id].passed=true; }
+      persist(); return { good, total:state[id].qcm.total, passed };
+    },
+
+    useAide(id, aideId){ if(!state[id].aidesUsed.includes(aideId)){ state[id].aidesUsed.push(aideId); persist(); } },
+    submitProf(id, itemId, texte){ const st=state[id]; st.soumissions=st.soumissions||{};
+      st.soumissions[itemId]={ texte, statut:"soumis" }; persist(); },
+    saveLibre(id, itemId, texte){ const st=state[id]; st.libres=st.libres||{}; st.libres[itemId]=texte; persist(); },
+    hydrate,
+    reset(){ seances.forEach(s=> state[s.id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{}});
+      path.length=0; lastVisited=null; persist(); },
+    forcePass(id){ const ev=find(id).evaluation, tot=ev.items.filter(i=>i.type==="qcm").length;
+      state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot};
+      if(!path.includes(id)) path.push(id); lastVisited=id; persist(); },
+
+    // — Autonomie : étoiles par séance (reflet de l'aide) —
+    hasAides(id){ return (find(id).aides||[]).length>0; },
+    starsOf(id){ if(!api.hasAides(id)) return null;           // séance sans aide = hors autonomie
+      return Math.max(0, 3 - state[id].aidesUsed.length); },
+    // — Note d'autonomie du chapitre : N = séances proposant une aide —
+    autonomyNote(){ const withAide = seances.filter(s=>(s.aides||[]).length>0);
+      const N = withAide.length;
+      const lost = withAide.filter(s=>state[s.id].aidesUsed.length>0).length;
+      return { note:N-lost, sur:N }; },
+    // — Note QCM classique : moyenne des séances faites, ramenée sur 20 —
+    qcmNote(){ const done=seances.filter(s=>state[s.id].qcm);
+      if(!done.length) return null;
+      let g=0,t=0; done.forEach(s=>{ g+=state[s.id].qcm.good; t+=state[s.id].qcm.total; });
+      return { sur20: Math.round(g/t*20), brut:g+"/"+t }; },
+    // — Bilan : agrège autonomie, QCM, réponses prof et libres —
+    bilan(){ const faites=seances.filter(s=>state[s.id].status==="done").map(s=>s.titre);
+      const prof=[], libre=[];
+      seances.forEach(s=>{ const st=state[s.id]; (s.evaluation.items||[]).forEach(it=>{
+        if(it.type==="prof"){ const sub=(st.soumissions||{})[it.id]; if(sub) prof.push({question:it.question,texte:sub.texte,statut:sub.statut}); }
+        if(it.type==="libre"){ const v=(st.libres||{})[it.id]; if(v) libre.push({question:it.question,texte:v}); }
+      }); });
+      return { faites, autonomie:api.autonomyNote(), qcm:api.qcmNote(), prof, libre }; },
+
+    // — Conseil basé sur le chemin idéal de CET élève —
+    idealPath, eleveIndex:idx,
+    // prochaine séance du chemin non encore terminée
+    suggestNext(id){ const p=idealPath(); const i=p.indexOf(id);
+      if(i<0||i+1>=p.length) return null; return p[i+1]; },
+    globalSuggestion(){ const p=idealPath(); for(const id of p){ if(state[id].status!=="done") return id; } return null; },
+    diagnose(id){ const miss=[]; let cur=find(id);
+      while(cur && cur.aretes.prerequis){ const p=find(cur.aretes.prerequis);
+        if(p && state[p.id].status!=="done") miss.push(p); cur=p; }
+      if(!miss.length) return null;
+      return chapter.reglages.reorientation==="root" ? miss[miss.length-1] : miss[0]; },
+    statusOf(id){ return state[id].status; }
+  };
+  return api;
+}
+
+/* ─────────────────────────── §E · OUTILS UI ────────────────────────────*/
+const $=id=>document.getElementById(id);
+let toastTimer; function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2800); }
+function sparkle(x,y){ for(let i=0;i<12;i++){ const s=document.createElement("div"); s.className="spark";
+  s.style.left=x+"px"; s.style.top=y+"px"; document.body.appendChild(s);
+  const a=Math.random()*6.28,d=26+Math.random()*44;
+  s.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d}px)`,opacity:0}],
+    {duration:650+Math.random()*350,easing:'ease-out'}); setTimeout(()=>s.remove(),1100);} }
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ─────────────────────────── §F · PANEL ÉLÈVE ──────────────────────────
+   Un Panel = une moitié d'écran, branché sur UNE instance de moteur.
+   Aucune logique d'évaluation ici : il lit/écrit via l'engine. */
+function Panel(engine, root, name){
+  const P = { engine, root, name, screen:"map", current:null, answers:{} };
+
+  P.render = function(){ P.screen==="map" ? renderMap() : renderSeance(); };
+
+  function hud(){
+    const a=engine.autonomyNote(), q=engine.qcmNote();
+    return `<div class="hud">
+      <div class="chip"><div class="k">Autonomie</div><div class="v auto">${a.note}/${a.sur}</div></div>
+      <div class="chip"><div class="k">Note QCM</div><div class="v qcm">${q?q.sur20+"/20":"—"}</div></div>
+    </div>`;
+  }
+
+  // conseil = prochaine séance du chemin idéal de l'élève, en sautant celles déjà faites
+  // (et, si l'exclusivité est active, celles occupées par l'autre — simple filet, le canon évite normalement)
+  function suggestion(){
+    const p=engine.idealPath(), lane=laneIdOf(), excl=CHAPTER.reglages.exclusiviteSeance;
+    for(const id of p){
+      if(engine.statusOf(id)==="done") continue;
+      if(excl && engine.seance(id).niveauEntonnoir!=="convergence" && APP.occupant(id,lane)) continue;
+      return id;
+    }
+    return null;
+  }
+  function renderMap(){
+    const sug=suggestion();
+    const ideal=engine.idealPath();
+    let svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none">';
+    for(let i=20;i<100;i+=20){ svg+=`<line class="grid-l" x1="${i}" y1="0" x2="${i}" y2="100"/><line class="grid-l" x1="0" y1="${i}" x2="100" y2="${i}"/>`; }
+    svg+='<path class="river" d="M -3 50 C 20 40, 32 64, 52 56 S 80 66, 103 58"/>';
+    // tracé conseillé = chemin idéal de CET élève (segments consécutifs) ; segment menant au conseil = animé
+    for(let i=0;i<ideal.length-1;i++){ const s=engine.seance(ideal[i]), t=engine.seance(ideal[i+1]); if(!s||!t)continue;
+      const lit=(ideal[i+1]===sug); const mx=(s.carte.x+t.carte.x)/2,my=Math.min(s.carte.y,t.carte.y)-8;
+      svg+=`<path class="route ${lit?'lit':''}" d="M ${s.carte.x} ${s.carte.y} Q ${mx} ${my} ${t.carte.x} ${t.carte.y}"/>`; }
+    const snap=engine.snapshot();
+    if(snap.path.length>=2){ let d="M "+snap.path.map(id=>{const s=engine.seance(id);return s.carte.x+" "+s.carte.y;}).join(" L ");
+      svg+=`<path class="mine" d="${d}"/>`; }
+    snap.path.forEach(id=>{const s=engine.seance(id);svg+=`<circle class="minedot" cx="${s.carte.x}" cy="${s.carte.y}" r="1.3"/>`;});
+    svg+='</svg>';
+    const S=engine.chapter.seances;
+    let nodes="";
+    const excl=CHAPTER.reglages.exclusiviteSeance;
+    S.forEach((s,i)=>{ const st=engine.statusOf(s.id), here=(s.id===snap.lastVisited&&st!=="done");
+      const occ = (excl && s.niveauEntonnoir!=="convergence") ? APP.occupant(s.id, laneIdOf()) : null;
+      const stars=engine.starsOf(s.id);
+      const starsH = stars===null ? '<span class="na">hors autonomie</span>'
+        : [1,2,3].map(k=>`<span class="${k<=stars?'full':'empty'}">★</span>`).join("");
+      nodes+=`<div class="place ${st}${s.id===sug?' suggested':''}${here?' here':''}${occ?' locked':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}">
+        <div class="medal">${s.rn}${st==="done"?'<span class="check">✓</span>':''}${occ?'<span class="occ">occupé</span>':''}</div>
+        <div class="nm">${esc(s.titre)}</div><div class="city">${esc(s.ville)}</div>
+        <div class="stars">${starsH}</div></div>`; });
+    root.innerHTML = hud()+`<div class="mapcard"><div class="mh"><span class="lab">La carte</span><span class="free">aucun ordre imposé</span></div>
+      <div class="graph">${svg}${nodes}</div></div>`;
+    root.querySelectorAll(".place").forEach(el=> el.onclick=()=>{
+      if(el.dataset.occ){ toast(el.dataset.occ+" fait cette séance, choisis-en une autre."); return; }
+      askConfirm(el.dataset.id); });
+  }
+
+  // double confirmation explicative — propre à CETTE moitié (l'autre élève continue)
+  function askConfirm(id){
+    const s=engine.seance(id), sug=suggestion(), isSug=(id===sug);
+    const here=engine.snapshot().lastVisited, hereTitle=here?engine.seance(here).titre:null;
+    const warn = isSug
+      ? `<p>C'est l'étape conseillée. Bon choix.</p>`
+      : `<div class="cwarn">Tu ${hereTitle?`es sur « ${esc(hereTitle)} » et tu `:''}choisis « ${esc(s.titre)} », qui n'est pas l'étape conseillée. Tu peux, mais si tu coinces, on te renverra en arrière.</div>`;
+    const ov=document.createElement("div"); ov.className="laneconfirm";
+    ov.innerHTML=`<div class="lcbox"><h3>Tu vas faire « ${esc(s.titre)} »</h3><p>${esc(s.objectif)}</p>${warn}
+      <div class="lcfoot"><button class="btn ghost" data-act="cancel">Annuler</button>
+        <button class="btn primary" data-act="go">C'est parti</button></div></div>`;
+    root.appendChild(ov);
+    ov.querySelector('[data-act="cancel"]').onclick=()=>ov.remove();
+    ov.querySelector('[data-act="go"]').onclick=()=>{ ov.remove(); travelTo(id); };
+  }
+  // le tracé se construit, puis la séance s'ouvre
+  function travelTo(id){ engine.start(id); renderMap();
+    setTimeout(()=>{ P.screen="seance"; P.current=id; P.answers={}; renderSeance(); }, 850); }
+
+  function renderSeance(){
+    const s=engine.seance(P.current);
+    root.innerHTML = `<button class="backbtn" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>
+      <div class="shead"><div class="lv">${s.niveauEntonnoir} · ${esc(s.ville)}</div><h2>${esc(s.titre)}</h2></div>
+      <div class="tabs"><button class="tabC on" onclick="APP.panel('${laneIdOf()}').tab('c')">Consigne</button>
+        <button class="tabE" onclick="APP.panel('${laneIdOf()}').tab('e')">S'évaluer</button></div>
+      <div class="tabbody"></div>`;
+    P.tab('c'); APP.syncMaps(); APP.beat(APP.laneIdFor(P));
+  }
+  P.tab=function(t){
+    root.querySelector(".tabC").classList.toggle("on",t==='c'); root.querySelector(".tabE").classList.toggle("on",t==='e');
+    const s=engine.seance(P.current);
+    if(t==='c'){
+      root.querySelector(".tabbody").innerHTML=`<div class="objective"><span class="t">objectif</span><span>${esc(s.objectif)}</span></div>
+        <div class="rule">⚠️ <div><b>Règle d'or.</b> Rien sur les fiches : tout sur ton <b>cahier</b>. Les fiches servent à lire et réfléchir.</div></div>
+        <div class="consigne"><p>${esc(s.corps.consigne)}</p></div>${supportsHTML(s)}`;
+    } else renderEval();
+  };
+  function supportsHTML(s){ const sup=(s.corps&&s.corps.supports)||[]; if(!sup.length) return "";
+    let h=`<div class="supports"><div class="sh">À lire</div>`;
+    sup.forEach(x=>{
+      if(x.type==="renvoiLivre") h+=`<div class="support"><span class="stype">📖 livre</span><div>${esc(x.source||'Le livre')}${x.pages?', p. '+esc(x.pages):''}${x.contenu?' — '+esc(x.contenu):''}</div></div>`;
+      else if(x.type==="lien") h+=`<div class="support"><span class="stype">🔗 lien</span><a class="ref" href="${esc(x.contenu||'#')}" target="_blank" rel="noopener">${esc(x.legende||x.contenu||'ouvrir')}</a></div>`;
+      else if(x.type==="image") h+=`<div class="support"><span class="stype">🖼 image</span><div><img src="${esc(x.contenu||'')}" alt="${esc(x.legende||'')}" style="max-width:100%;border-radius:8px">${x.legende?`<div class="d">${esc(x.legende)}</div>`:''}</div></div>`;
+      else if(x.type==="audio") h+=`<div class="support"><span class="stype">🔊 audio</span><audio controls src="${esc(x.contenu||'')}" style="width:100%"></audio></div>`;
+      else h+=`<div class="support"><span class="stype">texte</span><div>${esc(x.contenu||'')}</div></div>`;
+    });
+    return h+`</div>`;
+  }
+  P.toMap=function(){ P.screen="map"; P.current=null; renderMap(); APP.syncMaps(); APP.beat(APP.laneIdFor(P)); };
+
+  function renderEval(){
+    const s=engine.seance(P.current), ev=s.evaluation; const lane=laneIdOf();
+    let h="";
+    ev.items.filter(i=>i.type==="qcm").forEach((q,i)=>{ h+=`<div class="item"><span class="typ">QCM</span><div class="qz">${i+1}. ${esc(q.enonce)}</div>`;
+      q.choix.forEach((c,ci)=>{ h+=`<label class="opt" data-q="${q.id}" data-c="${ci}"><input type="radio" name="${lane}-${q.id}" onchange="APP.panel('${lane}').pick('${q.id}',${ci})"> ${esc(c)}</label>`; });
+      h+=`</div>`; });
+    const aides=s.aides||[];
+    if(aides.length){ h+=`<div class="aides"><div class="ah">Coups de pouce — chacun ouvert coûte une étoile d'autonomie :</div>`;
+      aides.forEach(a=>{ const used=engine.snapshot().state[s.id].aidesUsed.includes(a.id);
+        h+=`<div class="aide ${used?'used':''}" data-aide="${a.id}"><span class="lab">${used?'Aide ouverte':'Besoin d\'un coup de pouce ?'}</span>
+          <span class="cost">${used?'−1 ★':''}</span>
+          <button onclick="APP.panel('${lane}').openAide('${a.id}')">Ouvrir</button></div>
+          <div data-palier="${a.id}"></div>`; });
+      h+=`</div>`; }
+    h+=`<div class="actions"><span style="font-size:.78rem;color:var(--muted)">Porte : ${ev.seuil}/${ev.items.filter(i=>i.type==="qcm").length}</span>
+      <button class="btn primary" onclick="APP.panel('${lane}').submit()">Vérifier</button></div><div class="verdict-box"></div>`;
+    h+=nonQcmHTML(s,lane);
+    root.querySelector(".tabbody").innerHTML=h;
+  }
+  function nonQcmHTML(s,lane){ const others=s.evaluation.items.filter(i=>i.type!=="qcm"); if(!others.length) return "";
+    const st=engine.snapshot().state[s.id];
+    let h=`<div class="nonqcm">`;
+    others.forEach(it=>{
+      if(it.type==="prof"){ const sub=(st.soumissions||{})[it.id];
+        h+=`<div class="item"><span class="typ prof">corrigé par le prof</span><div class="qz">${esc(it.question)}</div>
+          <textarea class="txtin" style="width:100%;min-height:64px" data-prof="${it.id}" placeholder="Rédige ta réponse…">${esc(sub?sub.texte:'')}</textarea>
+          <div class="actions"><span class="d" data-profstatut="${it.id}">${sub?'Soumis — en attente de validation.':''}</span>
+            <button class="btn ghost" onclick="APP.panel('${lane}').submitProf('${it.id}')">Soumettre au professeur</button></div></div>`;
+      } else if(it.type==="libre"){ const val=(st.libres||{})[it.id]||"";
+        h+=`<div class="item"><span class="typ libre">pour aller plus loin</span><div class="qz">${esc(it.question)}</div>
+          <textarea class="txtin" style="width:100%;min-height:56px" data-libre="${it.id}" oninput="APP.panel('${lane}').saveLibre('${it.id}',this.value)" placeholder="Réponse libre — jamais bloquante…">${esc(val)}</textarea></div>`;
+      } else if(it.type==="renvoi"){
+        h+=`<div class="item"><span class="typ renvoi">dans une autre app</span><div class="qz">Cette partie se fait dans « ${esc(it.app)} ».</div>
+          <div class="actions"><span></span><button class="btn ghost" onclick="MJPC.openActivity('${esc(it.app)}','${esc(it.ref||'')}')">Ouvrir « ${esc(it.app)} » →</button></div></div>`;
+      }
+    });
+    return h+`</div>`;
+  }
+  P.submitProf=function(itemId){ const ta=root.querySelector(`[data-prof="${itemId}"]`); if(!ta)return;
+    engine.submitProf(P.current, itemId, ta.value);
+    const st=root.querySelector(`[data-profstatut="${itemId}"]`); if(st) st.textContent="Soumis — en attente de validation.";
+    toast("Réponse soumise au professeur."); };
+  P.saveLibre=function(itemId,val){ engine.saveLibre(P.current, itemId, val); };
+  P.pick=function(qid,ci){ P.answers[qid]=ci; };
+  P.openAide=function(aideId){ const s=engine.seance(P.current);
+    engine.useAide(s.id, aideId);
+    const a=(s.aides||[]).find(x=>x.id===aideId);
+    root.querySelector(`[data-palier="${aideId}"]`).innerHTML = a.paliers.map(p=>`<div class="palier">${esc(p)}</div>`).join("");
+    const el=root.querySelector(`[data-aide="${aideId}"]`); el.classList.add("used");
+    el.querySelector(".lab").textContent="Aide ouverte"; el.querySelector(".cost").textContent="−1 ★";
+    toast("Aide ouverte : une étoile d'autonomie en moins.");
+  };
+  function fiche4d(s){ const f=s.fiche4d; if(!f) return "";
+    let h=`<div class="f4d"><div class="f4head">${esc(f.titre||"Correction")}</div>`;
+    (f.layers||[]).forEach((L,i)=>{
+      h+=`<div class="layer${i===0?' open':''}"><div class="lh" onclick="this.closest('.layer').classList.toggle('open')">
+        <span class="ic">${L.ic||'•'}</span><span class="lt">${esc(L.titre)}</span><span class="chev">›</span></div>
+        <div class="lc"><div class="in">${L.contenu||""}`;
+      if(Array.isArray(L.references)) h+= L.references.map(r=>`<a class="ref" href="${r.url||'#'}" onclick="return false">🔗 ${esc(r.libelle)}</a>`).join("");
+      h+=`</div></div></div>`; });
+    return h+`</div>`;
+  }
+  P.submit=function(){
+    const s=engine.seance(P.current), ev=s.evaluation;
+    const r=engine.gradeQCM(s.id, P.answers);
+    ev.items.filter(i=>i.type==="qcm").forEach(q=>{ root.querySelectorAll(`.opt[data-q="${q.id}"]`).forEach(el=>{
+      el.classList.remove("right","wrong"); const ci=+el.dataset.c;
+      if(q.bonnes.includes(ci)) el.classList.add("right");
+      else if(P.answers[q.id]===ci) el.classList.add("wrong"); }); });
+    const v=root.querySelector(".verdict-box");
+    if(r.passed){
+      const nx=engine.suggestNext(s.id), next=nx?engine.seance(nx):null;
+      const stars=engine.starsOf(s.id);
+      let h=`<div class="verdict pass"><div class="vh">Réussi — ${r.good}/${r.total}</div>
+        <p>Note QCM enregistrée.${stars!==null?` Autonomie sur cette séance : ${stars}★ ${stars<3?'(aide utilisée)':'(sans aide)'}.`:''} La correction se débloque.</p>`;
+      if(next) h+=`<p><b>Conseil :</b> « ${esc(next.titre)} ». Tu fais comme tu veux.</p>`;
+      else h+=`<p>Dernière séance. Chapitre terminé.</p>`;
+      h+=`</div>`+fiche4d(s); v.innerHTML=h;
+      const rect=v.getBoundingClientRect(); if(stars===3||stars===null) sparkle(rect.left+rect.width/2,rect.top+20);
+      // rafraîchir le HUD au-dessus (on re-render la séance garde l'écran ; on met juste le hud à jour via toast léger)
+    } else {
+      const t=engine.diagnose(s.id);
+      let h=`<div class="verdict fail"><div class="vh">Raté — ${r.good}/${r.total}</div>
+        <p>Tu n'as pas le minimum (${ev.seuil}). La correction reste fermée.</p>`;
+      if(t) h+=`<div class="warn" style="margin-top:6px">↩ Fais d'abord « ${esc(t.titre)} » : tu as sauté une étape qui prépare celle-ci. Reviens ensuite, ça passera.</div>
+        <div class="actions"><span></span><button class="btn fire" onclick="APP.panel('${laneIdOf()}').goto('${t.id}')">« ${esc(t.titre)} »</button></div>`;
+      else h+=`<div class="actions"><span></span><button class="btn ghost" onclick="APP.panel('${laneIdOf()}').tab('e')">Réessayer</button></div>`;
+      h+=`</div>`; v.innerHTML=h;
+    }
+  };
+  P.goto=function(id){ P.screen="map"; renderMap(); setTimeout(()=>askConfirm(id),150); };
+
+  // identifie la lane (pour les handlers inline) — A ou B
+  function laneIdOf(){ return APP.laneIdFor(P); }
+  return P;
+}
+
+/* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
+const LETTERS=["A","B","C","D"];
+const APP = {
+  panels:{}, tableSize:2, testMode:false,
+  _sessions:{}, _unsubs:[], _hb:null, _tick:null,
+  laneIdFor(p){ for(const k in this.panels){ if(this.panels[k]===p) return k; } return null; },
+  panel(id){ return this.panels[id]; },
+  // qui occupe la séance id : un élève local OU un élève d'un autre poste (session récente < 60 s)
+  occupant(id, exceptKey){
+    for(const k in this.panels){ if(k===exceptKey) continue; const p=this.panels[k];
+      if(p && p.screen==="seance" && p.current===id) return p.name; }
+    const self=this.panels[exceptKey], selfId=self&&self.engine?self.engine.studentId:null, now=Date.now();
+    for(const sid in this._sessions){ if(sid===selfId) continue; const s=this._sessions[sid];
+      if(s && s.current===id && (now-(s.lastSeen||0))<60000) return s.name||sid; }
+    return null;
+  },
+  syncMaps(){ for(const k in this.panels){ const p=this.panels[k]; if(p && p.screen==="map") p.render(); } },
+  setTableSize(n){ this.tableSize=Math.max(1,Math.min(LETTERS.length,n|0)); this.boot(); },
+  toggleTest(){ this.testMode=!this.testMode; this.boot(); },
+  resetLane(key){ const p=this.panels[key]; if(!p)return; p.engine.reset(); p.screen="map"; p.render(); this.syncMaps();
+    toast("Poste réinitialisé."); },
+  forcePass(key){ const p=this.panels[key]; if(!p)return;
+    const id=(p.screen==="seance"&&p.current)?p.current:p.engine.globalSuggestion();
+    if(!id){ toast("Rien à réussir."); return; }
+    p.engine.forcePass(id); p.screen="map"; p.render(); this.syncMaps(); toast("Étape « "+p.engine.seance(id).titre+" » réussie (test)."); },
+  repartition(N){ N=Math.max(0,N|0);
+    if(N<2) return { tables:N?[N]:[], total:N?1:0, cheminsRequis:2 };
+    const t3=(N%2===1)?1:0; const t2=(N-(t3?3:0))/2;
+    const tables=[]; for(let i=0;i<t2;i++) tables.push(2); if(t3) tables.push(3);
+    return { tables, total:tables.length, cheminsRequis: t3?3:2 }; },
+
+  /* ── Présence temps réel (lastSeen 30 s, seuil 60 s) + déconnexion fin de séance (logoutEpoch) ── */
+  startPresence(){
+    this._unsubs.forEach(u=>{ try{u();}catch(e){} }); this._unsubs=[];
+    if(this._hb) clearInterval(this._hb); if(this._tick) clearInterval(this._tick);
+    if(this.testMode) return;                               // pas de présence en mode test
+    const chap=CHAPTER.meta.id||"chapitre";
+    this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMaps();
+      if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
+    this._unsubs.push(store.subscribe("control/"+chap, v=>{ const le=v&&v.logoutEpoch; if(!le) return;
+      Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(p && p.epoch && p.epoch<le) this.kick(k); }); }));
+    this.beatAll(); this._hb=setInterval(()=>this.beatAll(),30000);
+    this._tick=setInterval(()=>{ if(PROF.authed && PROF.tab==="suivi") PROF.render(); },15000);
+  },
+  beatAll(){ for(const k in this.panels) if(this.panels[k]) this.beat(k); },
+  beat(key){ if(this.testMode) return; const p=this.panels[key]; if(!p||!p.engine) return;
+    const chap=CHAPTER.meta.id||"chapitre";
+    store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, lastSeen:Date.now(),
+      current:(p.screen==="seance"?p.current:null), epoch:p.epoch||0 }); },
+  endSession(){ const chap=CHAPTER.meta.id||"chapitre"; store.save("control/"+chap, { logoutEpoch:Date.now() });
+    toast("Classe déconnectée."); },
+  kick(key){ const p=this.panels[key]; if(!p) return; const lane=$("lane"+key); this.panels[key]=null;
+    if(!lane) return; const who=lane.querySelector("[data-who]"); if(who) who.textContent="Poste "+key;
+    const roster=(CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]) ? extractEleves(CLASSES[CHAPTER.meta.classe],[]) : null;
+    if(roster) this.mountPortal(key, LETTERS.indexOf(key), roster, lane);
+    else this.mountStudent(key, LETTERS.indexOf(key), "Élève "+key, "eleve"+key, lane); },
+
+  boot(){
+    setAccentForLevel(CHAPTER.meta.niveau);
+    $("chapTitle").textContent = CHAPTER.meta.titre;
+    const stage=$("stage"); stage.innerHTML=""; this.panels={}; const test=this.testMode;
+    const roster = (!test && CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]) ? extractEleves(CLASSES[CHAPTER.meta.classe],[]) : null;
+    this._needsRoster = (!test && CHAPTER.meta.classe && !roster);   // classe affectée mais pas encore arrivée (Firebase async)
+    for(let i=0;i<this.tableSize;i++){ const key=LETTERS[i];
+      const lane=document.createElement("div"); lane.className="lane"+(test?" test":""); lane.id="lane"+key;
+      lane.innerHTML=`<div class="lanehead"><div class="who" data-who>${test?'Élève '+key:(roster?'Poste '+key:'Élève '+key)}</div><span class="badge">${test?'TEST':'autonome'}</span></div>`
+        +(test?`<div class="testbar"><button class="btn ghost" onclick="APP.resetLane('${key}')">↺ Réinitialiser</button>
+            <button class="btn ghost" onclick="APP.forcePass('${key}')">✓ Réussir l'étape</button></div>`:'')
+        +`<div class="lanebody"></div>`;
+      stage.appendChild(lane);
+      this.panels[key]=null;
+      if(roster) this.mountPortal(key,i,roster,lane);
+      else this.mountStudent(key,i,"Élève "+key,(test?"test":"eleve")+key,lane);
+    }
+    this.startPresence();
+  },
+  mountPortal(key,i,roster,lane){
+    const body=lane.querySelector(".lanebody"), taken=this.takenNames();
+    body.innerHTML=`<div class="portal"><div class="ph">Qui es-tu ?</div>
+      <div class="proster">${roster.map(n=>`<button class="pname${taken.includes(n)?' busy':''}" data-n="${esc(n)}" ${taken.includes(n)?'disabled':''}>${esc(n)}</button>`).join("")}</div>
+      <div class="d">Choisis ton nom pour retrouver ton travail.</div></div>`;
+    body.querySelectorAll(".pname").forEach(b=> b.onclick=()=>{ const n=b.dataset.n;
+      lane.querySelector("[data-who]").textContent=n; this.mountStudent(key,i,n,sanId(n),lane); });
+  },
+  takenNames(){ return Object.values(this.panels).filter(Boolean).map(p=>p.name); },
+  mountStudent(key,i,name,studentId,lane){
+    const engine=createEngine(CHAPTER, store, studentId, i);
+    const p=Panel(engine, lane.querySelector(".lanebody"), name); p.epoch=Date.now();
+    this.panels[key]=p;
+    store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved); p.render(); this.beat(key); });
+  }
+};
+/* ─────────────── §H · PANNEAU PROF (création / injection / prompts IA) ───
+   Produit et injecte le JSON du chapitre. Protégé par le code prof. */
+const PROMPT_CHAPTER =
+"Tu vas m'aider à concevoir un CHAPITRE PLAN DE TRAVAIL pour ma classe.\n\n"+
+"NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
+"Commence par une discussion de cadrage, un point à la fois, en me posant des questions sur :\n"+
+"  1. la problématique du chapitre et 4 à 6 sous-objectifs ;\n"+
+"  2. l'œuvre / les supports de lecture ;\n"+
+"  3. le découpage en séances : des SOCLES interchangeables (niveau 1) + une CONVERGENCE (niveau 2) ;\n"+
+"  4. pour chaque séance : objectif, consigne (l'élève écrit tout sur son cahier), supports ;\n"+
+"  5. les items d'évaluation par séance (QCM à réponse vérifiable) et le seuil de réussite ;\n"+
+"  6. les aides modulables (0 à N par séance, à paliers : indice puis réponse) ;\n"+
+"  7. les couches de la fiche-correction (trouver / pourquoi / aller plus loin / te situer) ;\n"+
+"  8. les compétences visées et les notions de langue.\n"+
+"Procède par allers-retours. Reformule, propose, mais attends mes validations.\n\n"+
+"QUAND, ET SEULEMENT QUAND, je dis explicitement « produis le JSON », tu réponds UNIQUEMENT avec\n"+
+"un objet JSON valide (aucun texte autour, pas de balises), STRICTEMENT à ce format :\n\n"+
+"{\n"+
+'  "meta": { "id": "chNN", "titre": "", "niveau": "4e", "problematique": "", "sousObjectifs": [], "oeuvre": {"auteur":"","titre":"","edition":""} },\n'+
+'  "competences": [ { "code": "", "libelle": "", "type": "francais|transversale" } ],\n'+
+'  "reglages": { "reorientation": "immediate", "confirmationSaut": true, "exclusiviteSeance": true },\n'+
+'  "cheminsIdeaux": [ ["S1","S2","S3"], ["S2","S3","S1"] ],   (ordres décalés "en canon", voir règle ci-dessous)\n'+
+'  "seances": [ {\n'+
+'      "id": "S1", "titre": "", "ville": "", "rn": "I",\n'+
+'      "carte": { "x": 0, "y": 0 },                  (x,y en % sur la carte, 0–100)\n'+
+'      "niveauEntonnoir": "socle|convergence",\n'+
+'      "aretes": { "conseillee": "S2 ou null", "prerequis": "S0 ou null" },\n'+
+'      "objectif": "",\n'+
+'      "corps": { "consigne": "", "supports": [] },\n'+
+'      "aides": [ { "id": "a1", "cible": "seance", "paliers": ["indice", "réponse"] } ],\n'+
+'      "evaluation": { "seuil": 2, "items": [ { "id": "q1", "type": "qcm", "enonce": "", "choix": ["",""], "bonnes": [0] } ] },\n'+
+'      "fiche4d": { "titre": "", "layers": [ { "ic": "✓", "titre": "", "type": "texte", "contenu": "", "references": [] } ] }\n'+
+'  } ]\n'+
+"}\n\n"+
+"Règles : chaque séance avec une carte {x,y} distincte ; au moins une séance de convergence ;\n"+
+"3 à 4 QCM par séance, une seule bonne réponse ; vocabulaire de la classe visée.\n"+
+"CHEMINS IDÉAUX : demande-moi l'effectif de la classe. Les élèves travaillent par tables de 2, avec UN groupe\n"+
+"de 3 si l'effectif est impair. Fournis donc 3 chemins si une table de 3 existe, sinon 2 ; DÉCALÉS en canon\n"+
+"(carré latin) pour qu'à chaque étape les élèves d'une table soient sur des séances différentes ; chaque chemin\n"+
+"parcourt TOUS les socles puis finit par la convergence. Conséquence à respecter dans la rédaction : les socles\n"+
+"doivent être AUTONOMES (aucune phrase du type « comme on l'a vu à la séance précédente »), puisqu'un socle peut\n"+
+"être abordé en 1re position par un élève et en dernière par un autre.\n"+
+"Une fois le chapitre produit, je peux te redemander d'AJOUTER ou de remplacer les QCM d'une séance précise\n"+
+"(3 à 4 questions, une seule bonne réponse, distracteurs plausibles) sans régénérer tout le chapitre.";
+
+function validateChapter(o){
+  if(!o || typeof o!=="object") return "ce n'est pas un objet";
+  if(!o.meta || !o.meta.titre) return "meta.titre manquant";
+  if(!Array.isArray(o.seances) || !o.seances.length) return "aucune séance";
+  for(const s of o.seances){
+    if(!s.id || !s.titre) return "une séance sans id/titre";
+    if(!s.carte || typeof s.carte.x!=="number" || typeof s.carte.y!=="number") return "carte {x,y} manquante sur "+(s.id||"?");
+    if(!s.aretes) return "aretes manquantes sur "+s.id;
+    if(!s.evaluation || !Array.isArray(s.evaluation.items)) return "evaluation.items manquant sur "+s.id;
+  }
+  return null;
+}
+function loadChapter(obj){
+  const err=validateChapter(obj);
+  if(err){ toast("JSON refusé : "+err); return false; }
+  if(!obj.reglages) obj.reglages={reorientation:"immediate",confirmationSaut:true,exclusiviteSeance:true};
+  if(obj.reglages.exclusiviteSeance===undefined) obj.reglages.exclusiviteSeance=true;
+  obj.seances.forEach(s=>{ if(!s.aretes) s.aretes={conseillee:null,prerequis:null};
+    if(!Array.isArray(s.aides)) s.aides=[]; if(!s.corps) s.corps={consigne:"",supports:[]}; if(!s.rn) s.rn=""; });
+  CHAPTER=obj; PROF.close(); APP.boot();
+  toast("Chapitre chargé : "+obj.meta.titre); return true;
+}
+
+const PROF = {
+  authed:false, tab:"creation", tpl:PROMPT_CHAPTER,
+  open(){ $("profOverlay").classList.add("show"); this.authed?this.render():this.gate(); },
+  close(){ $("profOverlay").classList.remove("show"); },
+  gate(){ $("profModal").innerHTML=`<div class="gate"><h3>Panneau de contrôle</h3>
+      <p style="color:var(--muted);font-size:.85rem">Entre le code professeur.</p>
+      <input id="profCode" type="password" inputmode="numeric" placeholder="••••" onkeydown="if(event.key==='Enter')PROF.checkCode()">
+      <div class="mfoot" style="justify-content:center"><button class="btn ghost" onclick="PROF.close()">Fermer</button>
+        <button class="btn primary" onclick="PROF.checkCode()">Entrer</button></div></div>`;
+    setTimeout(()=>{const i=$("profCode");i&&i.focus();},50); },
+  checkCode(){ const v=($("profCode")||{}).value||"";
+    if(MJPC.PROF_CODES.includes(Number(v))){ this.authed=true; this.tab="creation"; this.render(); } else toast("Code incorrect."); },
+
+  /* ── coquille à onglets ── */
+  render(){ const c=CHAPTER, T=this.tab;
+    const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" onclick="PROF.go('${id}')">${lab}</button>`;
+    $("profModal").innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3>
+        <button class="btn ghost" onclick="PROF.close()">← Retour</button></div>
+      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi","Suivi 🟢")}${tabBtn("bilan","Bilan")}${tabBtn("reglages","Réglages")}</div>
+      <div id="ptabbody">${this.body()}</div>`; },
+  go(t){ this.tab=t; this.render(); },
+  body(){ return this.tab==="creation"?this.creationBody()
+        : this.tab==="classes"?this.classesBody()
+        : this.tab==="suivi"?this.suiviBody()
+        : this.tab==="bilan"?this.bilanBody() : this.reglagesBody(); },
+
+  /* ── onglet CRÉATION : triptyque + éditeur ── */
+  creationBody(){ const c=CHAPTER;
+    const list=c.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
+      <span class="meta">${(s.aides||[]).length} aide(s) · ${s.evaluation.items.filter(i=>i.type==="qcm").length} QCM · →${s.aretes.conseillee||"—"}</span></div>`).join("");
+    const hasContent=c.seances.length>0;
+    const classOpts=Object.keys(CLASSES).filter(cn=>!c.meta.niveau||niveauOf(cn)===c.meta.niveau)
+      .map(cn=>`<option value="${esc(cn)}" ${c.meta.classe===cn?'selected':''}>${esc(cn)} (${extractEleves(CLASSES[cn],[]).length})</option>`).join("");
+    return `<div class="prof-sec"><h4>Identité du chapitre</h4>
+        <div class="prof-row"><input class="txtin" style="flex:1" placeholder="titre" value="${esc(c.meta.titre)}" oninput="PROF.setMeta('titre',this.value)">
+          <select onchange="PROF.setMeta('niveau',this.value)">${NIVEAUX.map(n=>`<option value="${n}" ${c.meta.niveau===n?'selected':''}>${n}</option>`).join("")}</select></div>
+        <div class="prof-row">Classe affectée
+          <select onchange="PROF.setMeta('classe',this.value)"><option value="">— aucune (Élève A/B) —</option>${classOpts}</select></div>
+        <textarea class="txtin" style="width:100%;min-height:46px;margin-top:6px" placeholder="problématique du chapitre" oninput="PROF.setMeta('problematique',this.value)">${esc(c.meta.problematique||'')}</textarea>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.newChapter()">Nouveau chapitre (vierge)</button></div></div>
+      <div class="prof-sec"><div class="prof-row">
+        <button class="btn ghost" onclick="PROF.promptView()">🤖 Prompt IA</button>
+        <button class="btn ghost" onclick="PROF.injectView()">📥 Injecter</button>
+        <button class="btn ghost" onclick="PROF.snapshot()">📸 Snapshot</button>
+        <button class="btn ghost" onclick="PROF.restore()">📤 Restaurer</button>
+      </div></div>
+      ${hasContent ? `<div class="prof-sec"><h4>Séances du chapitre</h4><div class="prof-list">${list}</div>
+        <div class="prof-row"><button class="btn primary" onclick="PROF.editor()">✎ Éditer les séances</button></div></div>`
+      : `<div class="prof-sec empty-state"><div class="ic">📖</div><p>Aucune séance.</p>
+        <p style="font-size:.85rem">Génère un JSON via « 🤖 Prompt IA », colle-le dans « 📥 Injecter », ou pars d'un « Nouveau chapitre » et édite les séances.</p></div>`}`; },
+  setMeta(f,v){ CHAPTER.meta[f]=v;
+    if(f==='titre'){ $("chapTitle").textContent=v; return; }
+    if(f==='problematique') return;
+    if(f==='niveau'){ setAccentForLevel(v); if(CHAPTER.meta.classe && (CLASSES[CHAPTER.meta.classe]||{}).niveau!==v) CHAPTER.meta.classe=""; }
+    APP.boot(); this.render(); },
+  newChapter(){ CHAPTER={ meta:{ id:"ch"+String(Date.now()).slice(-4), titre:"Nouveau chapitre", niveau:CHAPTER.meta.niveau||"4e", classe:"", problematique:"" },
+      reglages:{reorientation:"immediate",confirmationSaut:true,exclusiviteSeance:true}, cheminsIdeaux:[], seances:[] };
+    APP.boot(); this.render(); toast("Nouveau chapitre vierge — ajoute des séances dans l'éditeur."); },
+
+  /* ── onglet CLASSES (couche identité, réutilisable) ── */
+  classDraft:null,
+  classesBody(){ const d=this.classDraft||{nom:"",eleves:""};
+    const list=Object.keys(CLASSES).map(cn=>`<div class="r"><span class="id">${esc(niveauOf(cn)||'?')}</span><span>${esc(cn)}</span>
+        <span class="meta">${extractEleves(CLASSES[cn],[]).length} élève(s)</span>
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn ghost" onclick="PROF.editClass('${esc(cn)}')">éditer</button>
+          <button class="btn ghost" onclick="PROF.delClass('${esc(cn)}')">×</button></span></div>`).join("");
+    return `<div class="prof-sec"><h4>Mes classes</h4>
+        <div class="d">Mutualisées sur le nœud <code>/classes</code> commun à tout l'écosystème MJPC — mêmes listes que tes autres apps. Le niveau se lit dans le nom (« 4e Banksy »).</div>
+        <div class="prof-list">${list||'<div class="d">Aucune classe.</div>'}</div></div>
+      <div class="prof-sec"><h4>Ajouter / mettre à jour une classe</h4>
+        <input class="txtin" style="width:100%" id="ncName" placeholder="Nom (ex : 4e Banksy)" value="${esc(d.nom)}">
+        <textarea class="txtin" id="ncEleves" style="width:100%;min-height:120px;margin-top:6px" placeholder="Un élève par ligne — NOM Prénom">${esc(d.eleves)}</textarea>
+        <div class="prof-row"><button class="btn primary" onclick="PROF.addClass()">Enregistrer la classe</button>
+          ${this.classDraft?'<button class="btn ghost" onclick="PROF.cancelClass()">Annuler</button>':''}</div></div>`; },
+  editClass(cn){ this.classDraft={ nom:cn, eleves:extractEleves(CLASSES[cn],[]).join("\n") }; this.render(); },
+  cancelClass(){ this.classDraft=null; this.render(); },
+  addClass(){ const nom=(($("ncName")||{}).value||"").trim();
+    const eleves=(($("ncEleves")||{}).value||"").split("\n").map(l=>l.trim()).filter(Boolean);
+    if(!nom||!eleves.length){ toast("Nom et au moins un élève requis."); return; }
+    CLASSES[nom]=eleves; persistClasses(); this.classDraft=null; toast("Classe « "+nom+" » enregistrée.");
+    if(CHAPTER.meta.classe===nom) APP.boot(); this.render(); },
+  delClass(cn){ delete CLASSES[cn]; persistClasses(); if(CHAPTER.meta.classe===cn){ CHAPTER.meta.classe=""; APP.boot(); } this.render(); },
+
+  /* ── Prompt IA : aperçu + copier + modifier le template (en mémoire) ── */
+  promptView(){ const tpl=this.tpl;
+    $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">🤖 Prompt IA</h3>
+        <button class="btn ghost" onclick="PROF.go('creation')">← Création</button></div>
+      <div class="prof-sec"><div class="d">Impose d'abord une discussion cadrée, puis sort le JSON injectable au format du moule (séances, chemins idéaux, aides, fiche 4D et QCM compris).</div>
+        <div class="prof-row">
+          <button class="btn primary" onclick="PROF.copyTpl()">📋 Copier le prompt</button>
+          <button class="btn ghost" onclick="PROF.editTpl()">✏️ Modifier le template</button></div>
+        <pre class="prof-pre" id="promptPre">${esc(tpl)}</pre></div>`; },
+  editTpl(){ const tpl=this.tpl;
+    $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">✏️ Modifier le template</h3>
+        <button class="btn ghost" onclick="PROF.promptView()">← Annuler</button></div>
+      <div class="prof-sec"><textarea id="tplEdit" class="txtin" style="width:100%;min-height:320px;font-family:ui-monospace,monospace;font-size:.76rem">${esc(tpl)}</textarea>
+        <div class="prof-row"><button class="btn primary" onclick="PROF.saveTpl()">💾 Enregistrer</button>
+          <button class="btn ghost" onclick="PROF.resetTpl()">🔄 Restaurer par défaut</button></div>
+        <div class="d">La persistance Firebase du template viendra au branchement ; pour l'instant, valable le temps de la session.</div></div>`; },
+  saveTpl(){ this.tpl=($("tplEdit")||{}).value||this.tpl; toast("Template enregistré."); this.promptView(); },
+  resetTpl(){ this.tpl=PROMPT_CHAPTER; toast("Template par défaut restauré."); this.editTpl(); },
+  copyTpl(){ const t=this.tpl;
+    navigator.clipboard?navigator.clipboard.writeText(t).then(()=>toast("Prompt copié."),()=>toast("Copie indisponible, sélectionne le texte.")):toast("Copie indisponible."); },
+
+  /* ── Injecter (validation avant chargement) ── */
+  injectView(){ $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">📥 Injecter un chapitre</h3><button class="btn ghost" onclick="PROF.go('creation')">← Création</button></div>
+      <div class="prof-sec"><div class="d">Colle le JSON validé (produit par l'IA). Il est contrôlé avant chargement.</div>
+        <textarea id="profInject" class="txtin" style="width:100%;min-height:240px;font-family:ui-monospace,monospace;font-size:.78rem" placeholder='{ "meta": { "titre": … }, "seances": [ … ] }'></textarea>
+        <div id="injErr" style="color:var(--fire2);font-size:.82rem;margin-top:6px"></div>
+        <div class="prof-row"><button class="btn primary" onclick="PROF.doInject()">✓ Valider et injecter</button></div></div>`; },
+  doInject(){ const raw=($("profInject")||{}).value||""; let obj;
+    try{ obj=JSON.parse(raw); }catch(e){ $("injErr").textContent="JSON illisible : "+e.message; return; }
+    const err=validateChapter(obj); if(err){ $("injErr").textContent="Refusé : "+err; return; }
+    loadChapter(obj); },
+
+  /* ── Snapshot / Restaurer par fichier ── */
+  snapshot(){ const blob=new Blob([JSON.stringify(CHAPTER,null,2)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=(CHAPTER.meta.id||"chapitre")+".json"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000); toast("Snapshot téléchargé."); },
+  restore(){ const i=document.createElement("input"); i.type="file"; i.accept=".json,application/json";
+    i.onchange=()=>{ const f=i.files[0]; if(!f)return; const r=new FileReader();
+      r.onload=()=>{ try{ loadChapter(JSON.parse(r.result)); }catch(e){ toast("Fichier illisible : "+e.message); } };
+      r.readAsText(f); }; i.click(); },
+
+  /* ── onglet SUIVI ── */
+  suiviBody(){ return `<div class="prof-sec"><h4>Suivi de la classe</h4>
+      <div class="d">Présence en direct (🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne) et séance en cours. Multi-poste via le nœud sessions.</div>
+      <div class="prof-list">${this.suiviRows()}</div>
+      <div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div></div>
+    <div class="prof-sec"><h4>Fin de séance</h4><div class="d">Déconnecte tous les élèves de la classe (ils reviennent au choix du nom).</div>
+      <div class="prof-row"><button class="btn ghost" onclick="PROF.endSession()">Déconnecter la classe</button></div></div>`; },
+  endSession(){ APP.endSession(); this.render(); },
+  suiviRow(name, s){
+    const age = s ? Date.now()-(s.lastSeen||0) : Infinity;
+    const dot = age<60000?"🟢":(age<300000?"🟠":"⚪");
+    const where = (s && s.current) ? ((CHAPTER.seances.find(x=>x.id===s.current)||{}).titre || s.current)
+      : (s ? "sur la carte" : "pas encore connecté");
+    return `<div class="r"><span>${dot}</span><span>${esc(name)}</span>
+      <span class="meta" style="margin-left:auto">${esc(where)}</span></div>`;
+  },
+  suiviRows(){
+    const roster = (CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]) ? extractEleves(CLASSES[CHAPTER.meta.classe],[]) : null;
+    if(roster) return roster.map(n=>this.suiviRow(n, APP._sessions[sanId(n)])).join("");
+    const keys=Object.keys(APP._sessions);
+    if(keys.length) return keys.map(sid=>this.suiviRow(APP._sessions[sid].name||sid, APP._sessions[sid])).join("");
+    return Object.keys(APP.panels).filter(k=>APP.panels[k]).map(k=>{ const p=APP.panels[k];
+      return this.suiviRow(p.name, { lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); }).join("")
+      || '<div class="d">Personne pour l\'instant.</div>';
+  },
+
+  /* ── onglet BILAN ── */
+  bilanBody(){
+    const rows=Object.keys(APP.panels).filter(k=>APP.panels[k]).map(k=>{ const p=APP.panels[k], b=p.engine.bilan();
+      return `<div class="r"><span class="id">${k}</span><span>${esc(p.name)}</span>
+        <span class="meta">${b.faites.length}/${CHAPTER.seances.length} faites · autonomie ${b.autonomie.note}/${b.autonomie.sur} · QCM ${b.qcm?b.qcm.sur20+'/20':'—'}</span>
+        <span style="margin-left:auto;display:flex;gap:6px">
+          <button class="btn ghost" onclick="PROF.printBilan('${k}')">🖨 Bilan</button>
+          <button class="btn ghost" onclick="PROF.archiveBilan('${k}')">📥 Archiver</button></span></div>`; }).join("");
+    return `<div class="prof-sec"><h4>Bilans par élève</h4>
+        <div class="d">Trois sources agrégées : autonomie (barème 1), note QCM (sur 20), réponses rédigées (prof) et libres. « Bilan » ouvre un document imprimable ; « Archiver » prépare le payload pour le profil MJPC.</div>
+        <div class="prof-list">${rows}</div></div>
+      <div class="prof-sec"><h4>Note d'autonomie → École Directe</h4>
+        <div class="d">Assemble le payload des notes d'autonomie ; l'envoi se branchera sur l'API ED.</div>
+        <div class="prof-row"><button class="btn primary" onclick="PROF.exportED()">Basculer l'autonomie vers École Directe</button></div>
+        <pre class="prof-pre" id="edOut" style="margin-top:10px">—</pre></div>`; },
+  exportED(){ const payload=Object.keys(APP.panels).filter(k=>APP.panels[k]).map(k=>{ const e=APP.panels[k].engine, a=e.autonomyNote();
+      return { eleve:e.studentId, autonomie_note:a.note, autonomie_sur:a.sur, bareme:1 }; });
+    const out=$("edOut"); if(out) out.textContent=JSON.stringify(payload,null,2);
+    MJPC.exportED(payload); },
+  bilanHTML(key){ const p=APP.panels[key], b=p.engine.bilan(), m=CHAPTER.meta;
+    const css="body{font-family:Georgia,'Times New Roman',serif;color:#1a1a1a;max-width:720px;margin:24px auto;padding:0 18px;line-height:1.5}"
+      +"h1{font-size:1.45rem;margin:0 0 2px}.sub{color:#666;font-size:.9rem;margin-bottom:14px}"
+      +".grid{display:flex;gap:10px;margin:14px 0}.card{flex:1;border:1px solid #ccc;border-radius:10px;padding:10px 12px;text-align:center}"
+      +".k{font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:#888}.v{font-size:1.5rem;font-weight:700}"
+      +"h2{font-size:1.02rem;border-bottom:1px solid #ddd;padding-bottom:4px;margin-top:22px}"
+      +".q{font-weight:700;margin-top:10px}.a{white-space:pre-wrap;background:#f6f6f4;border-radius:8px;padding:8px 10px;margin-top:4px}"
+      +".st{font-size:.78rem;color:#a06a1b;margin-top:3px}@media print{button{display:none}}";
+    let h=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bilan — ${esc(p.name)}</title><style>${css}</style></head><body>`;
+    h+=`<h1>${esc(m.titre)}</h1><div class="sub">${esc(m.classe||m.niveau||'')} · Bilan de ${esc(p.name)}</div>`;
+    h+=`<div class="grid"><div class="card"><div class="k">Autonomie</div><div class="v">${b.autonomie.note}/${b.autonomie.sur}</div></div>
+        <div class="card"><div class="k">Note QCM</div><div class="v">${b.qcm?b.qcm.sur20+'/20':'—'}</div></div>
+        <div class="card"><div class="k">Séances</div><div class="v">${b.faites.length}/${CHAPTER.seances.length}</div></div></div>`;
+    if(b.faites.length) h+=`<h2>Séances terminées</h2><p>${b.faites.map(esc).join(' · ')}</p>`;
+    if(b.prof.length){ h+=`<h2>Réponses rédigées (corrigées par le professeur)</h2>`;
+      b.prof.forEach(x=>{ h+=`<div class="q">${esc(x.question)}</div><div class="a">${esc(x.texte||'')}</div><div class="st">${x.statut==='valide'?'✓ validé':'soumis — en attente de validation'}</div>`; }); }
+    if(b.libre.length){ h+=`<h2>Pour aller plus loin</h2>`;
+      b.libre.forEach(x=>{ h+=`<div class="q">${esc(x.question)}</div><div class="a">${esc(x.texte||'')}</div>`; }); }
+    h+=`<button onclick="window.print()" style="margin-top:22px;padding:8px 14px;cursor:pointer">Imprimer</button></body></html>`;
+    return h; },
+  printBilan(key){ const w=window.open("","_blank"); if(!w){ toast("Autorise les pop-ups pour ouvrir le bilan."); return; }
+    w.document.write(this.bilanHTML(key)); w.document.close(); },
+  archiveBilan(key){ const p=APP.panels[key], b=p.engine.bilan();
+    MJPC.archive({ eleve:p.engine.studentId, chapitre:CHAPTER.meta.id, autonomie:b.autonomie, qcm:b.qcm, bilanHTML:this.bilanHTML(key) });
+    toast("Bilan archivé — payload prêt pour les profils MJPC."); },
+
+  /* ── onglet RÉGLAGES ── */
+  reglagesBody(){ const c=CHAPTER;
+    return `<div class="prof-sec"><h4>Réorientation sur échec</h4>
+        <div class="prof-row">
+          <button class="btn ghost" onclick="PROF.setReo('immediate')" ${c.reglages.reorientation==='immediate'?'style="border-color:var(--gold-deep);color:var(--gold)"':''}>prérequis immédiat</button>
+          <button class="btn ghost" onclick="PROF.setReo('root')" ${c.reglages.reorientation==='root'?'style="border-color:var(--gold-deep);color:var(--gold)"':''}>racine</button></div></div>
+      <div class="prof-sec"><h4>Double confirmation</h4>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleConfirm()">${c.reglages.confirmationSaut?'activée':'désactivée'}</button></div></div>
+      <div class="prof-sec"><h4>Une seule fois la même séance</h4>
+        <div class="d">Empêche deux élèves de la même table de faire la même séance au même moment (anti-copiage).</div>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleExcl()">${c.reglages.exclusiviteSeance?'activé — séance verrouillée si occupée':'désactivé — séances libres'}</button></div></div>
+      <div class="prof-sec"><h4>Élèves à ce poste</h4>
+        <div class="d">Nombre de moitiés d'écran sur cette tablette/cet ordi (le chapitre doit fournir autant de chemins idéaux).</div>
+        <div class="prof-row">
+          <button class="btn ghost" onclick="APP.setTableSize(2);PROF.render()" ${APP.tableSize===2?'style="border-color:var(--gold-deep);color:var(--gold)"':''}>2 élèves</button>
+          <button class="btn ghost" onclick="APP.setTableSize(3);PROF.render()" ${APP.tableSize===3?'style="border-color:var(--gold-deep);color:var(--gold)"':''}>3 élèves</button>
+          <span class="d" style="margin:0">chemins disponibles : ${(c.cheminsIdeaux||[]).length}${(c.cheminsIdeaux||[]).length<APP.tableSize?' ⚠️ insuffisant':''}</span></div></div>
+      <div class="prof-sec"><h4>Répartition de la classe</h4>
+        <div class="d">Tables de 2, avec un groupe de 3 si l'effectif est impair. En déduit le nombre de chemins idéaux à prévoir dans le JSON.</div>
+        <div class="prof-row">Effectif <input class="txtin" style="width:64px" type="number" id="effectif" value="24" oninput="PROF.calcRepartition()"></div>
+        <div id="repOut" class="d" style="margin-top:4px">${this.repText(24)}</div></div>
+      <div class="prof-sec"><h4>Mode TEST</h4>
+        <div class="d">Bascule les postes en élève « bac à sable » (données séparées des vrais élèves), avec réinitialisation et réussite forcée pour parcourir vite un chapitre.</div>
+        <div class="prof-row"><button class="btn ghost" onclick="APP.toggleTest();PROF.render()">${APP.testMode?'activé — postes en test':'désactivé'}</button></div></div>`; },
+  repText(N){ const r=APP.repartition(N);
+    const t2=r.tables.filter(t=>t===2).length, t3=r.tables.filter(t=>t===3).length;
+    const has=(CHAPTER.cheminsIdeaux||[]).length;
+    return `${r.total} table(s) : ${t2} de 2${t3?` + ${t3} de 3`:''}. Chemins idéaux requis : <b>${r.cheminsRequis}</b> — `
+      +`le chapitre en fournit ${has}${has<r.cheminsRequis?' <span style="color:var(--fire2)">⚠️ à compléter</span>':' ✓'}.`; },
+  calcRepartition(){ const N=Number(($("effectif")||{}).value)||0; const out=$("repOut"); if(out) out.innerHTML=this.repText(N); },
+  setReo(m){ CHAPTER.reglages.reorientation=m; this.render(); toast("Réorientation : "+m); },
+  toggleConfirm(){ CHAPTER.reglages.confirmationSaut=!CHAPTER.reglages.confirmationSaut; this.render(); },
+  toggleExcl(){ CHAPTER.reglages.exclusiviteSeance=!CHAPTER.reglages.exclusiviteSeance;
+    this.render(); APP.syncMaps(); toast("Exclusivité de séance : "+(CHAPTER.reglages.exclusiviteSeance?"activée":"désactivée")); },
+
+  /* ── Éditeur visuel des séances ── */
+  seance(id){ return CHAPTER.seances.find(s=>s.id===id); },
+  genId(prefix,arr){ let n=1; const ids=arr.map(x=>x.id); while(ids.includes(prefix+n)) n++; return prefix+n; },
+  editor(){ const list=CHAPTER.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
+      <span class="meta"><button class="btn ghost" onclick="PROF.editSeance('${s.id}')">éditer</button>
+      <button class="btn ghost" onclick="PROF.delSeance('${s.id}')">suppr.</button></span></div>`).join("");
+    const seances=CHAPTER.seances, ids=seances.map(s=>s.id);
+    const optS=sel=>seances.map(o=>`<option value="${o.id}" ${sel===o.id?'selected':''}>${esc(o.rn||o.id)}</option>`).join("");
+    const chemins=(CHAPTER.cheminsIdeaux||[]).map((ch,ci)=>{
+      const complet=ch.length===ids.length && ids.every(id=>ch.includes(id)) && new Set(ch).size===ch.length;
+      const cells=seances.map((_,pos)=>`<select onchange="PROF.setCheminPos(${ci},${pos},this.value)">${optS(ch[pos])}</select>`).join(" → ");
+      return `<div class="prof-sec" style="padding:8px 10px"><div class="prof-row"><b>Chemin ${LETTERS[ci]||ci+1}</b>
+          <span class="d" style="margin:0 0 0 8px">${complet?'✓ complet':'⚠️ doit lister chaque séance une fois'}</span>
+          <button class="btn ghost" style="margin-left:auto" onclick="PROF.delChemin(${ci})">×</button></div>
+        <div class="prof-row" style="flex-wrap:wrap;gap:4px">${cells}</div></div>`; }).join("");
+    $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Éditeur — séances</h3><button class="btn ghost" onclick="PROF.render()">← Retour</button></div>
+      <div class="prof-sec"><div class="prof-list">${list}</div>
+        <div class="prof-row"><button class="btn primary" onclick="PROF.addSeance()">+ Ajouter une séance</button></div></div>
+      <div class="prof-sec"><h4>Chemins idéaux (un par élève d'une table, décalés en canon)</h4>
+        <div class="d">Chaque chemin doit lister toutes les séances une seule fois. Les élèves d'une table suivent des chemins différents pour ne jamais se croiser.</div>
+        ${chemins||'<div class="d">Aucun chemin — l\'app suivra l\'ordre des séances.</div>'}
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.addChemin()">+ chemin</button></div></div>
+      <div class="prof-row"><button class="btn ghost" onclick="PROF.apply()">Appliquer à l'app</button></div>`; },
+  setCheminPos(ci,pos,id){ const ch=CHAPTER.cheminsIdeaux[ci]; while(ch.length<CHAPTER.seances.length) ch.push(null); ch[pos]=id; },
+  addChemin(){ CHAPTER.cheminsIdeaux=CHAPTER.cheminsIdeaux||[]; CHAPTER.cheminsIdeaux.push(CHAPTER.seances.map(s=>s.id)); this.editor(); },
+  delChemin(ci){ CHAPTER.cheminsIdeaux.splice(ci,1); this.editor(); },
+  addSeance(){ const id=this.genId("S",CHAPTER.seances);
+    CHAPTER.seances.push({ id, titre:"Nouvelle séance", ville:"", rn:String(CHAPTER.seances.length+1),
+      carte:{x:50,y:50}, niveauEntonnoir:"socle", aretes:{conseillee:null,prerequis:null},
+      objectif:"", corps:{consigne:"",supports:[]}, aides:[],
+      evaluation:{seuil:2, items:[{id:"q1",type:"qcm",enonce:"",choix:["",""],bonnes:[0]}]},
+      fiche4d:{titre:"Correction",layers:[]} });
+    this.editSeance(id); },
+  delSeance(id){ if(CHAPTER.seances.length<=1){toast("Au moins une séance.");return;}
+    CHAPTER.seances=CHAPTER.seances.filter(s=>s.id!==id);
+    CHAPTER.seances.forEach(s=>{ if(s.aretes.conseillee===id)s.aretes.conseillee=null; if(s.aretes.prerequis===id)s.aretes.prerequis=null; });
+    this.editor(); },
+  editSeance(id){ const s=this.seance(id), others=CHAPTER.seances.filter(x=>x.id!==id);
+    const opt=sel=>`<option value="">—</option>`+others.map(o=>`<option value="${o.id}" ${sel===o.id?'selected':''}>${esc(o.titre)}</option>`).join("");
+    const qcm=s.evaluation.items.filter(i=>i.type==="qcm").map((q,qi)=>{
+      const choix=q.choix.map((c,ci)=>`<div class="prof-row" style="gap:6px">
+        <input type="radio" name="b-${q.id}" ${q.bonnes[0]===ci?'checked':''} onchange="PROF.setBonne('${id}','${q.id}',${ci})">
+        <input class="txtin" style="flex:1" value="${esc(c)}" oninput="PROF.setChoix('${id}','${q.id}',${ci},this.value)">
+        <button class="btn ghost" onclick="PROF.delChoix('${id}','${q.id}',${ci})">×</button></div>`).join("");
+      return `<div class="prof-sec"><div class="prof-row"><b>Q${qi+1}</b>
+          <button class="btn ghost" style="margin-left:auto" onclick="PROF.delItem('${id}','${q.id}')">suppr.</button></div>
+        <input class="txtin" style="width:100%" placeholder="énoncé" value="${esc(q.enonce)}" oninput="PROF.setQ('${id}','${q.id}','enonce',this.value)">
+        <div style="margin-top:6px">${choix}</div>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.addChoix('${id}','${q.id}')">+ choix</button></div></div>`;
+    }).join("");
+    const aides=(s.aides||[]).map(a=>`<div class="prof-sec"><div class="prof-row"><b>Aide ${a.id}</b>
+        <button class="btn ghost" style="margin-left:auto" onclick="PROF.delAide('${id}','${a.id}')">suppr.</button></div>
+        <textarea class="txtin" style="width:100%;min-height:54px" placeholder="un palier par ligne" oninput="PROF.setPaliers('${id}','${a.id}',this.value)">${esc((a.paliers||[]).join("\n"))}</textarea></div>`).join("");
+    const layers=(s.fiche4d.layers||[]).map((L,li)=>`<div class="prof-row" style="gap:6px">
+        <input class="txtin" style="width:46px" value="${esc(L.ic||'')}" oninput="PROF.setLayer('${id}',${li},'ic',this.value)">
+        <input class="txtin" style="flex:1" placeholder="titre" value="${esc(L.titre||'')}" oninput="PROF.setLayer('${id}',${li},'titre',this.value)">
+        <button class="btn ghost" onclick="PROF.delLayer('${id}',${li})">×</button></div>
+        <textarea class="txtin" style="width:100%;min-height:46px;margin-top:4px" placeholder="contenu" oninput="PROF.setLayer('${id}',${li},'contenu',this.value)">${esc(L.contenu||'')}</textarea>`).join("");
+    const supports=(s.corps.supports||[]).map((x,xi)=>`<div class="prof-sec" style="padding:8px 10px">
+        <div class="prof-row" style="gap:6px"><select onchange="PROF.setSupport('${id}',${xi},'type',this.value)">
+          ${["texte","renvoiLivre","lien","image","audio"].map(t=>`<option value="${t}" ${x.type===t?'selected':''}>${t}</option>`).join("")}</select>
+          <button class="btn ghost" style="margin-left:auto" onclick="PROF.delSupport('${id}',${xi})">×</button></div>
+        <input class="txtin" style="width:100%;margin-top:4px" placeholder="contenu (texte, url, ou détail)" value="${esc(x.contenu||'')}" oninput="PROF.setSupport('${id}',${xi},'contenu',this.value)">
+        <div class="prof-row" style="gap:6px;margin-top:4px"><input class="txtin" style="flex:1" placeholder="source" value="${esc(x.source||'')}" oninput="PROF.setSupport('${id}',${xi},'source',this.value)">
+          <input class="txtin" style="width:74px" placeholder="pages" value="${esc(x.pages||'')}" oninput="PROF.setSupport('${id}',${xi},'pages',this.value)">
+          <input class="txtin" style="flex:1" placeholder="légende" value="${esc(x.legende||'')}" oninput="PROF.setSupport('${id}',${xi},'legende',this.value)"></div></div>`).join("");
+    const otherItems=s.evaluation.items.filter(i=>i.type!=="qcm").map(it=>{
+      const head=`<div class="prof-row"><b>${it.type}</b><button class="btn ghost" style="margin-left:auto" onclick="PROF.delItem('${id}','${it.id}')">suppr.</button></div>`;
+      if(it.type==="prof") return `<div class="prof-sec">${head}
+        <textarea class="txtin" style="width:100%;min-height:46px" placeholder="question rédigée" oninput="PROF.setQ('${id}','${it.id}','question',this.value)">${esc(it.question||'')}</textarea>
+        <input class="txtin" style="width:100%;margin-top:4px" placeholder="critères de validation (pour toi)" value="${esc(it.criteres||'')}" oninput="PROF.setQ('${id}','${it.id}','criteres',this.value)"></div>`;
+      if(it.type==="libre") return `<div class="prof-sec">${head}
+        <textarea class="txtin" style="width:100%;min-height:46px" placeholder="question libre" oninput="PROF.setQ('${id}','${it.id}','question',this.value)">${esc(it.question||'')}</textarea></div>`;
+      return `<div class="prof-sec">${head}
+        <div class="prof-row" style="gap:6px"><input class="txtin" style="flex:1" placeholder="app (ex. etude_texte)" value="${esc(it.app||'')}" oninput="PROF.setQ('${id}','${it.id}','app',this.value)">
+          <input class="txtin" style="flex:1" placeholder="référence" value="${esc(it.ref||'')}" oninput="PROF.setQ('${id}','${it.id}','ref',this.value)"></div></div>`;
+    }).join("");
+    $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Séance ${esc(s.id)}</h3><button class="btn ghost" onclick="PROF.editor()">← Séances</button></div>
+      <div class="prof-sec"><h4>Identité</h4>
+        <div class="prof-row"><input class="txtin" style="flex:1" placeholder="titre" value="${esc(s.titre)}" oninput="PROF.setField('${id}','titre',this.value)">
+          <input class="txtin" style="width:110px" placeholder="ville" value="${esc(s.ville||'')}" oninput="PROF.setField('${id}','ville',this.value)">
+          <input class="txtin" style="width:54px" placeholder="n°" value="${esc(s.rn||'')}" oninput="PROF.setField('${id}','rn',this.value)"></div>
+        <div class="prof-row">Type
+          <select onchange="PROF.setField('${id}','niveauEntonnoir',this.value)">
+            <option value="socle" ${s.niveauEntonnoir==='socle'?'selected':''}>socle</option>
+            <option value="convergence" ${s.niveauEntonnoir==='convergence'?'selected':''}>convergence</option></select>
+          carte x<input class="txtin" style="width:54px" type="number" value="${s.carte.x}" oninput="PROF.setCarte('${id}','x',this.value)">
+          y<input class="txtin" style="width:54px" type="number" value="${s.carte.y}" oninput="PROF.setCarte('${id}','y',this.value)"></div>
+        <div class="prof-row">conseillée→<select onchange="PROF.setArete('${id}','conseillee',this.value)">${opt(s.aretes.conseillee)}</select>
+          prérequis→<select onchange="PROF.setArete('${id}','prerequis',this.value)">${opt(s.aretes.prerequis)}</select></div></div>
+      <div class="prof-sec"><h4>Objectif & consigne</h4>
+        <input class="txtin" style="width:100%" placeholder="objectif" value="${esc(s.objectif||'')}" oninput="PROF.setField('${id}','objectif',this.value)">
+        <textarea class="txtin" style="width:100%;min-height:54px;margin-top:6px" placeholder="consigne" oninput="PROF.setConsigne('${id}',this.value)">${esc(s.corps.consigne||'')}</textarea></div>
+      <div class="prof-sec"><h4>Supports à lire</h4>${supports}
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.addSupport('${id}')">+ support</button></div></div>
+      <div class="prof-sec"><h4>QCM — seuil <input class="txtin" style="width:48px" type="number" value="${s.evaluation.seuil}" onchange="PROF.setSeuil('${id}',this.value)"></h4>
+        ${qcm}<div class="prof-row"><button class="btn ghost" onclick="PROF.addItem('${id}','qcm')">+ QCM</button></div></div>
+      <div class="prof-sec"><h4>Autres items (corrigés par le prof, libres, renvois)</h4>${otherItems}
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.addItem('${id}','prof')">+ prof</button>
+          <button class="btn ghost" onclick="PROF.addItem('${id}','libre')">+ libre</button>
+          <button class="btn ghost" onclick="PROF.addItem('${id}','renvoi')">+ renvoi</button></div></div>
+      <div class="prof-sec"><h4>Aides (chacune coûte une étoile)</h4>${aides}
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.addAide('${id}')">+ aide</button></div></div>
+      <div class="prof-sec"><h4>Fiche 4D</h4>${layers}
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.addLayer('${id}')">+ couche</button></div></div>
+      <div class="prof-row"><button class="btn primary" onclick="PROF.apply()">Appliquer à l'app</button></div>`; },
+  setField(id,f,v){ this.seance(id)[f]=v; },
+  setConsigne(id,v){ this.seance(id).corps.consigne=v; },
+  setCarte(id,axis,v){ this.seance(id).carte[axis]=Math.max(0,Math.min(100,Number(v)||0)); },
+  setArete(id,which,v){ this.seance(id).aretes[which]=v||null; },
+  setSeuil(id,v){ this.seance(id).evaluation.seuil=Math.max(1,Number(v)||1); },
+  setQ(id,qid,f,v){ this.seance(id).evaluation.items.find(x=>x.id===qid)[f]=v; },
+  setChoix(id,qid,ci,v){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix[ci]=v; },
+  setBonne(id,qid,ci){ this.seance(id).evaluation.items.find(x=>x.id===qid).bonnes=[ci]; },
+  addChoix(id,qid){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix.push(""); this.editSeance(id); },
+  delChoix(id,qid,ci){ const q=this.seance(id).evaluation.items.find(x=>x.id===qid); if(q.choix.length<=2){toast("2 choix minimum.");return;}
+    q.choix.splice(ci,1); if(q.bonnes[0]>=q.choix.length) q.bonnes=[0]; this.editSeance(id); },
+  addItem(id,type){ const ev=this.seance(id).evaluation; const pfx={qcm:"q",prof:"p",libre:"l",renvoi:"r"}[type]||"i";
+    const base = type==="qcm" ? {type:"qcm",enonce:"",choix:["",""],bonnes:[0]}
+      : type==="prof" ? {type:"prof",question:"",criteres:""}
+      : type==="libre" ? {type:"libre",question:""}
+      : {type:"renvoi",app:"",ref:""};
+    ev.items.push(Object.assign({id:this.genId(pfx,ev.items)}, base)); this.editSeance(id); },
+  delItem(id,itemId){ const ev=this.seance(id).evaluation; const it=ev.items.find(x=>x.id===itemId);
+    if(it && it.type==="qcm" && ev.items.filter(i=>i.type==="qcm").length<=1){ toast("1 QCM minimum (la porte)."); return; }
+    ev.items=ev.items.filter(x=>x.id!==itemId);
+    const nq=ev.items.filter(i=>i.type==="qcm").length; if(ev.seuil>nq) ev.seuil=Math.max(1,nq); this.editSeance(id); },
+  addSupport(id){ const s=this.seance(id); s.corps.supports=s.corps.supports||[]; s.corps.supports.push({type:"texte",contenu:""}); this.editSeance(id); },
+  setSupport(id,xi,f,v){ this.seance(id).corps.supports[xi][f]=v; },
+  delSupport(id,xi){ this.seance(id).corps.supports.splice(xi,1); this.editSeance(id); },
+  addAide(id){ const s=this.seance(id); s.aides=s.aides||[]; s.aides.push({id:this.genId("a",s.aides),cible:"seance",paliers:[""]}); this.editSeance(id); },
+  delAide(id,aid){ const s=this.seance(id); s.aides=s.aides.filter(a=>a.id!==aid); this.editSeance(id); },
+  setPaliers(id,aid,v){ this.seance(id).aides.find(x=>x.id===aid).paliers=v.split("\n").map(p=>p.trim()).filter(Boolean); },
+  addLayer(id){ const f=this.seance(id).fiche4d; f.layers=f.layers||[]; f.layers.push({ic:"•",titre:"",type:"texte",contenu:""}); this.editSeance(id); },
+  setLayer(id,li,f,v){ this.seance(id).fiche4d.layers[li][f]=v; },
+  delLayer(id,li){ this.seance(id).fiche4d.layers.splice(li,1); this.editSeance(id); },
+  apply(){ const err=validateChapter(CHAPTER); if(err){toast("Incomplet : "+err);return;} APP.boot(); toast("Appliqué à l'app."); }
+};
+
+loadClasses();
+// souscription au nœud commun /classes (live en Firebase ; immédiat en mémoire)
+classesStore.subscribe(m=>{ CLASSES=m||{};
+  if(PROF.authed && PROF.tab==="classes") PROF.render();
+  if(APP._needsRoster && CHAPTER.meta.classe && CLASSES[CHAPTER.meta.classe]){ APP._needsRoster=false; APP.boot(); }
+});
+// classe de démonstration : UNIQUEMENT en local (jamais écrite dans le /classes réel sous Firebase)
+if(!MJPC.USE_FIREBASE && !lsGet("mjpc:classes:init") && !Object.keys(CLASSES).length){
+  CLASSES["4e Banksy"] = ["BERNARD Emma","DUPONT Marie","LEROY Hugo","MARTIN Lucas","MOREAU Léa","PETIT Thomas"];
+  persistClasses();
+}
+if(!MJPC.USE_FIREBASE) lsSet("mjpc:classes:init", 1);
+APP.boot();
+</script>
+</body>
+</html>
