@@ -182,6 +182,45 @@ db.ref("classes").once("value",function(snap){
 //  - map {id: {nom, prenom}} : structure MJPC v3
 //  - map {id: "NOM Prenom"} : format intermédiaire
 //  - fallback : eleves du config de la dictée
+// ─── Recherche/tri des élèves (unifié pour tous les onglets) ───────────
+function getEleveNomPrenom(name){
+  if(!name)return{nom:"",prenom:""};
+  var parts=String(name).trim().split(/\s+/);
+  return{nom:parts[0]||"", prenom:parts.slice(1).join(" ")||""};
+}
+function sortElevesByNom(eleves){
+  return(eleves||[]).slice().sort(function(a,b){
+    return getEleveNomPrenom(a).nom.localeCompare(getEleveNomPrenom(b).nom,"fr",{sensitivity:"base"});
+  });
+}
+function matchEleveInitials(eleveName, query){
+  if(!query||!query.trim())return true;
+  var np=getEleveNomPrenom(eleveName);
+  var nomU=np.nom.toUpperCase(),prenomU=np.prenom.toUpperCase();
+  var n1=nomU.charAt(0),p1=prenomU.charAt(0);
+  var q=query.trim().toUpperCase().replace(/\s+/g,"");
+  // Match exact 2 lettres : NOM+PRENOM ou PRENOM+NOM
+  if(q.length===2){
+    if((n1+p1)===q||(p1+n1)===q)return true;
+  }
+  // Match préfixe sur nom ou prénom
+  if(nomU.indexOf(q)===0||prenomU.indexOf(q)===0)return true;
+  // Match contient (au milieu)
+  if(nomU.indexOf(q)>=0||prenomU.indexOf(q)>=0)return true;
+  return false;
+}
+// Composant réutilisable de barre de recherche par initiales
+function EleveSearchBar(p){
+  return h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10,padding:"6px 10px",background:"var(--card2)",border:"1px solid var(--border)",borderRadius:8}},
+    h("span",{style:{fontSize:".88rem",opacity:.7}},"\ud83d\udd0d"),
+    h("input",{type:"text",value:p.query||"",onChange:function(e){p.onChange(e.target.value)},
+      placeholder:p.placeholder||"Recherche (initiales : DM pour Dupont Marie)",
+      style:{flex:1,padding:"4px 6px",border:"none",background:"transparent",fontSize:".88rem",outline:"none",fontFamily:"inherit"}}),
+    p.query&&h("button",{onClick:function(){p.onChange("")},title:"Effacer",style:{padding:"2px 8px",background:"transparent",border:"1px solid var(--border)",borderRadius:4,cursor:"pointer",fontSize:".78rem"}},"\u2715"),
+    (typeof p.count==="number")&&h("span",{style:{fontSize:".74rem",color:"var(--muted)",whiteSpace:"nowrap"}},p.count+" \u00e9l\u00e8ve"+(p.count>1?"s":""))
+  );
+}
+
 function extractEleves(fbClasse, cfgEleves){
   cfgEleves = cfgEleves || [];
   if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
@@ -1687,6 +1726,7 @@ function CorrScreen(p){
   var data=p.data,s1=useState("correct"),tab=s1[0],setTab=s1[1];
   var s2=useState(null),cur=s2[0],setCur=s2[1];
   var s3=useState(null),msg=s3[0],setMsg=s3[1];
+  var sQ=useState(""),eleveQuery=sQ[0],setEleveQuery=sQ[1];
   // Aménagée : registre par classe + override par dictée
   var sA1=useState({}),amenagesDictee=sA1[0],setAmenagesDictee=sA1[1];
   var sA2=useState({}),classeAmenages=sA2[0],setClasseAmenages=sA2[1];
@@ -1907,16 +1947,20 @@ function CorrScreen(p){
       h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
       h("button",{className:"tab"+(tab==="suivi"?" active":""),onClick:function(){setTab("suivi")}},"Suivi \ud83d\udfe2")
     ),
-    tab==="correct"&&h("div",null,
-      h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
-      h("div",{className:"eleve-grid"},data.eleves.map(function(e){
+    tab==="correct"&&(function(){
+      var sortedEleves=sortElevesByNom(data.eleves);
+      var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
+      return h("div",null,
+        h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
+        h(EleveSearchBar,{query:eleveQuery,onChange:setEleveQuery,count:filteredEleves.length,placeholder:"Recherche \u00e9l\u00e8ve (initiales : DM pour Dupont Marie)"}),
+        h("div",{className:"eleve-grid"},filteredEleves.map(function(e){
       var key=san(e),c=p.corrections[key],done=!!c,isAbs=!!p.absents[key];
       var isAmen=isEleveAmenage(key,amenagesDictee,classeAmenages);
       return h("div",{key:key,className:"eleve-card"+(done?" done":"")+(isAbs?" absent":""),
         style:isAmen?{borderColor:"#0369a1",borderWidth:"2px"}:{},
         onClick:function(){if(!isAbs)setCur(e)},
         onContextMenu:function(ev){ev.preventDefault();ev.stopPropagation();setCtxMenu({x:ev.clientX,y:ev.clientY,eleveKey:key,name:e})}},
-        h("span",{className:"eleve-name"},e.split(" ").pop()+" "+e.split(" ")[0].charAt(0)+".",
+        h("span",{className:"eleve-name"},e.split(" ")[0].charAt(0)+". "+e.split(" ").pop(),
           isAmen&&h("span",{className:"pap-badge",title:"\u00c9l\u00e8ve am\u00e9nag\u00e9 (PAP/DYS)"},"\ud83d\udcd8")
         ),
         isAbs?h("span",{style:{fontSize:".78rem",fontWeight:700,color:"var(--muted)"}},"ABS"):
@@ -1938,7 +1982,8 @@ function CorrScreen(p){
           h("p",{style:{fontSize:".68rem",color:"#999",padding:"4px 10px 6px",margin:0,fontStyle:"italic"}},"Le registre s\u2019applique \u00e0 toutes les dict\u00e9es. L\u2019override par dict\u00e9e n\u2019affecte que celle-ci.")
         )
       )
-    ),
+      );
+    })(),
     tab==="bilan"&&h(Bilan,{data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId}),
     tab==="copies"&&h(Copies,{data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId,onLocalUpdate:function(k,newC){if(p.onResetCorrections){var nc=Object.assign({},p.corrections);nc[k]=newC;p.onResetCorrections(nc)}}}),
     tab==="exercices"&&h(ExercicesAdmin,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents}),
@@ -2804,10 +2849,14 @@ function PromptIaModal(p){
   var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents), null, 2);
   var fullPrompt = (promptText || "").replace("{{JSON_DICTEE}}", jsonStr);
   function copier(){
-    navigator.clipboard.writeText(fullPrompt).then(function(){
-      setMsg("\u2705 Prompt + JSON copi\u00e9s dans le presse-papiers");
-      setTimeout(function(){setMsg("")}, 3000);
-    }).catch(function(){setMsg("\u274c Copie \u00e9chou\u00e9e \u2014 s\u00e9lectionne \u00e0 la main");setTimeout(function(){setMsg("")},3000)});
+    copyToClipboard(fullPrompt).then(function(ok){
+      if(ok){
+        setMsg("\u2705 Prompt + JSON copi\u00e9s dans le presse-papiers");
+      } else {
+        setMsg("\u274c Copie \u00e9chou\u00e9e \u2014 utilise Ctrl+A puis Ctrl+C dans l\u2019aper\u00e7u ci-dessous");
+      }
+      setTimeout(function(){setMsg("")},4000);
+    });
   }
   function ouvrirEdition(){setDraft(promptText); setEditing(true)}
   function enregistrer(){
@@ -2853,7 +2902,16 @@ function PromptIaModal(p){
 
 function Bilan(p){
   var data=p.data,corr=p.corrections,abs=p.absents||{};
-  var entries=data.eleves.filter(function(e){return!abs[san(e)]}).map(function(e){var k=san(e),c=corr[k];return{name:e,done:!!c,note:c?c.note:null,counts:c&&c.counts?c.counts:{G:0,L:0,M:0,I:0,P:0,A:0,X:0},errors:c?toArr(c.errors):[]}}).sort(function(a,b){if(a.done!==b.done)return a.done?-1:1;return(a.note||0)-(b.note||0)});
+  var sQb=useState(""),bilanQuery=sQb[0],setBilanQuery=sQb[1];
+  var sortMode=useState("nom"),sortBy=sortMode[0],setSortBy=sortMode[1];
+  var entries=data.eleves.filter(function(e){return!abs[san(e)]}).map(function(e){var k=san(e),c=corr[k];return{name:e,done:!!c,note:c?c.note:null,counts:c&&c.counts?c.counts:{G:0,L:0,M:0,I:0,P:0,A:0,X:0},errors:c?toArr(c.errors):[]}});
+  // Tri selon mode choisi (nom alpha par défaut)
+  if(sortBy==="nom"){
+    entries.sort(function(a,b){return getEleveNomPrenom(a.name).nom.localeCompare(getEleveNomPrenom(b.name).nom,"fr",{sensitivity:"base"})});
+  } else if(sortBy==="note"){
+    entries.sort(function(a,b){if(a.done!==b.done)return a.done?-1:1;return(a.note||0)-(b.note||0)});
+  }
+  var entriesFiltered=bilanQuery.trim()?entries.filter(function(e){return matchEleveInitials(e.name,bilanQuery)}):entries;
   var done=entries.filter(function(e){return e.done});
   var avg=done.length?Math.round(done.reduce(function(a,e){return a+e.note},0)/done.length*10)/10:0;
   var med=done.length?(function(){var s=done.map(function(e){return e.note}).sort(function(a,b){return a-b}),m=Math.floor(s.length/2);return s.length%2?s[m]:Math.round((s[m-1]+s[m])*5)/10})():0;
@@ -2903,9 +2961,18 @@ function Bilan(p){
         })
       )
     ),
-    h("div",{className:"card"},h("h2",null,"D\u00e9tail"),h("table",{className:"bilan-table"},
+    h("div",{className:"card"},
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:10}},
+        h("h2",{style:{margin:0}},"D\u00e9tail"),
+        h("div",{style:{display:"flex",gap:6,fontSize:".78rem"}},
+          h("span",{style:{color:"var(--muted)",fontWeight:600,alignSelf:"center"}},"Trier par :"),
+          ["nom","note"].map(function(m){return h("button",{key:m,onClick:function(){setSortBy(m)},style:{padding:"3px 8px",border:"1.5px solid "+(sortBy===m?"var(--primary)":"var(--border)"),borderRadius:5,background:sortBy===m?"var(--primary-light)":"var(--card)",cursor:"pointer",fontFamily:"inherit",fontWeight:sortBy===m?700:400,fontSize:".78rem"}},m==="nom"?"Nom (A\u2192Z)":"Note (\u2191)")})
+        )
+      ),
+      h(EleveSearchBar,{query:bilanQuery,onChange:setBilanQuery,count:entriesFiltered.length}),
+      h("table",{className:"bilan-table"},
       h("thead",null,h("tr",null,h("th",null,"\u00c9l\u00e8ve"),h("th",null,"Note"),h("th",null,"G"),h("th",null,"L"),h("th",null,"\u2205"),h("th",null,"P"),h("th",null,"?"),h("th",null,"\u26a0"),h("th",null,"+"))),
-      h("tbody",null,entries.map(function(e){var c=e.counts;return h("tr",{key:e.name},h("td",null,e.name),
+      h("tbody",null,entriesFiltered.map(function(e){var c=e.counts;return h("tr",{key:e.name},h("td",null,e.name),
         h("td",{style:{fontWeight:700,color:e.done?noteColor(e.note,data.base):"var(--muted)"}},e.done?e.note+"/"+data.base:"\u2014"),
         h("td",null,e.done?c.G:"\u2014"),h("td",null,e.done?c.L:"\u2014"),h("td",null,e.done?(c.M||0):"\u2014"),h("td",null,e.done?(c.P||0):"\u2014"),h("td",null,e.done?(c.I||0):"\u2014"),h("td",null,e.done?(c.A||0):"\u2014"),h("td",null,e.done?(c.X||0):"\u2014")
       )}))
@@ -2918,6 +2985,7 @@ function Suivi(p){
   var data=p.data,abs=p.absents||{};
   var s1=useState({}),autoCorr=s1[0],setAutoCorr=s1[1];
   var s2=useState(null),selectedEleve=s2[0],setSelectedEleve=s2[1];
+  var sQs=useState(""),suiviQuery=sQs[0],setSuiviQuery=sQs[1];
   var s3=useState(0),tick=s3[0],setTick=s3[1];
   var NOW=Date.now();
   var RECENT=60*1000;
@@ -2994,6 +3062,10 @@ function Suivi(p){
   function prenom(n){var p=n.split(" ");return p.length>1?p[p.length-1]:n}
   function prenomList(arr){return arr.length?arr.map(function(r){return prenom(r.name)}).join("\n"):"Aucun"}
 
+  // Tri alphabétique par NOM
+  rows.sort(function(a,b){return getEleveNomPrenom(a.name).nom.localeCompare(getEleveNomPrenom(b.name).nom,"fr",{sensitivity:"base"})});
+  // Filtre par recherche (mais les stats utilisent rows non filtrées pour rester complètes)
+  var rowsFiltered=suiviQuery.trim()?rows.filter(function(r){return matchEleveInitials(r.name,suiviQuery)}):rows;
   var activeRows=rows.filter(function(r){return r.status==="active"});
   var doneRows=rows.filter(function(r){return r.status==="done"});
   var startedRows=rows.filter(function(r){return r.status!=="waiting"});
@@ -3033,6 +3105,7 @@ function Suivi(p){
     // Detailed table
     h("div",{className:"card"},
       h("h2",{style:{marginBottom:10}},"D\u00e9tail par \u00e9l\u00e8ve"),
+      h(EleveSearchBar,{query:suiviQuery,onChange:setSuiviQuery,count:rowsFiltered.length}),
       h("div",{style:{overflowX:"auto"}},
         h("table",{className:"bilan-table"},
           h("thead",null,h("tr",null,
@@ -3045,7 +3118,7 @@ function Suivi(p){
             h("th",null,"Note corr."),
             h("th",null,"Statut")
           )),
-          h("tbody",null,rows.map(function(r){
+          h("tbody",null,rowsFiltered.map(function(r){
             var pct=r.total>0?Math.round(r.solved/r.total*100):0;
             return h("tr",{key:r.key,className:r.status==="done"?"blink-done":"",onClick:function(){setSelectedEleve(selectedEleve===r.key?null:r.key)},style:{cursor:"pointer",
               background:r.status==="done"?"var(--green-light)":r.status==="active"?"var(--primary-light)":r.status==="idle"?"rgba(236,201,75,.08)":"transparent",
@@ -3053,7 +3126,7 @@ function Suivi(p){
             }},
               h("td",{style:{fontSize:"1.1rem",textAlign:"center",width:30}},statusIcon(r.status)),
               h("td",{style:{fontWeight:600}},
-                r.name.split(" ").pop()+" "+r.name.split(" ")[0].charAt(0)+".",
+                r.name.split(" ")[0].charAt(0)+". "+r.name.split(" ").pop(),
                 r.isTest?h("span",{className:"badge",style:{marginLeft:4,background:"var(--orange-light)",color:"var(--orange)",fontSize:".7rem"}},"TEST"):null
               ),
               h("td",null,r.noteDictee!==null?h("span",{style:{color:noteColor(r.noteDictee,data.base),fontWeight:600}},r.noteDictee+"/"+data.base):"\u2014"),
@@ -3274,7 +3347,9 @@ function Suivi(p){
 // ═══ FICHES HTML IMPRIMABLES ═══
 function Fiches(p){
   var data=p.data,corr=p.corrections,abs=p.absents||{};
-  var done=data.eleves.filter(function(e){var k=san(e);return!abs[k]&&!!corr[k]});
+  var done=sortElevesByNom(data.eleves.filter(function(e){var k=san(e);return!abs[k]&&!!corr[k]}));
+  var sQf=useState(""),fQuery=sQf[0],setFQuery=sQf[1];
+  var doneF=fQuery.trim()?done.filter(function(e){return matchEleveInitials(e,fQuery)}):done;
 
   function generateHTML(eleves){
     var html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Fiches correction</title><style>';
@@ -3464,8 +3539,10 @@ function Fiches(p){
         )
       )
     ),
-    done.length>0&&h("div",{className:"card"},h("h2",null,"\u00c9l\u00e8ves pr\u00eats ("+done.length+")"),
-      h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},done.map(function(e){var c=corr[san(e)];return h("span",{key:e,style:{padding:"4px 10px",borderRadius:8,fontSize:".85rem",background:"var(--green-light)",color:"var(--green)",fontWeight:500}},e.split(" ").pop()+" "+c.note+"/"+data.base)}))
+    done.length>0&&h("div",{className:"card"},
+      h("h2",null,"\u00c9l\u00e8ves pr\u00eats ("+done.length+")"),
+      h(EleveSearchBar,{query:fQuery,onChange:setFQuery,count:doneF.length}),
+      h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},doneF.map(function(e){var c=corr[san(e)];return h("span",{key:e,style:{padding:"4px 10px",borderRadius:8,fontSize:".85rem",background:"var(--green-light)",color:"var(--green)",fontWeight:500}},e.split(" ").pop()+" "+c.note+"/"+data.base)}))
     )
   );
 }
@@ -3866,6 +3943,43 @@ function downloadBlob(filename, content, mimeType){
   document.body.appendChild(a); a.click();
   setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url)}, 100);
 }
+
+// Copie robuste vers le presse-papiers avec fallback execCommand
+// Retourne une Promise qui résout en true/false selon succès
+function copyToClipboard(text){
+  return new Promise(function(resolve){
+    // Méthode 1 : Clipboard API moderne (HTTPS + permission)
+    if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(function(){resolve(true)}, function(){
+        // Si échec, on tente le fallback
+        resolve(_legacyCopy(text));
+      });
+      return;
+    }
+    // Méthode 2 : fallback execCommand (toujours dispo, mais déprécié)
+    resolve(_legacyCopy(text));
+  });
+}
+function _legacyCopy(text){
+  try{
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.top = "0"; ta.style.left = "0";
+    ta.style.width = "1px"; ta.style.height = "1px";
+    ta.style.opacity = "0";
+    ta.style.pointerEvents = "none";
+    ta.setAttribute("readonly", "");
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch(e){
+    return false;
+  }
+}
 function sanFilename(s){
   return String(s||"")
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
@@ -3874,12 +3988,17 @@ function sanFilename(s){
     .toLowerCase()
     .substring(0, 80) || "sans_nom";
 }
+var DEFAULT_APP_URL = "https://siteflow-io.github.io/monsieurjaipascompris/correction_dictee.html";
 function getCopyOptions(){
   try{
     var v = localStorage.getItem("mjpc_copy_options");
-    if(v){var o = JSON.parse(v); if(o&&typeof o==="object")return o;}
+    if(v){var o = JSON.parse(v); if(o&&typeof o==="object"){
+      if(typeof o.linkExercices==="undefined")o.linkExercices=true;
+      if(typeof o.appUrl==="undefined")o.appUrl=DEFAULT_APP_URL;
+      return o;
+    }}
   }catch(e){}
-  return {mode:"barre", showOverlay:true, showBadge:true, showPoints:true, dueDate:""};
+  return {mode:"barre", showOverlay:true, showBadge:true, showPoints:true, dueDate:"", linkExercices:true, appUrl:DEFAULT_APP_URL};
 }
 function setCopyOptions(opts){
   try{localStorage.setItem("mjpc_copy_options", JSON.stringify(opts))}catch(e){}
@@ -3948,7 +4067,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     }
     var typeClass = "type-" + ev.type;
     var disp = displayTranscript(ev, errIdx);
-    var origText = (disp && disp.text) ? disp.text : ev.word;  // si pas de transcript, on met le mot correct pour l'orig (placeholder visuel)
+    var origText = (disp && disp.text) ? disp.text : "";  // mode brut = exactement ce que l'élève a écrit ; si pas connu, rien
     var correctText = ev.word;
 
     // Construction conditionnelle des couches
@@ -4045,7 +4164,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     /* Modes radio (un seul actif) */
     'body.mode-rien .mot.faux .layer-base::before{content:"·";color:#c8bda3}' +
     'body.mode-brut .mot.faux .layer-base .orig{display:inline}' +
-    'body.mode-barre .mot.faux .layer-base .orig{display:inline;text-decoration:line-through;text-decoration-thickness:2px}' +
+    'body.mode-barre .mot.faux .layer-base .orig{display:inline;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}' +
     'body.mode-barre .mot.faux.type-G .layer-base .orig{color:#c53030;text-decoration-color:#c53030}' +
     'body.mode-barre .mot.faux.type-L .layer-base .orig{color:#2b6cb0;text-decoration-color:#2b6cb0}' +
     'body.mode-barre .mot.faux.type-I .layer-base .orig{color:#7c3aed;text-decoration-color:#7c3aed}' +
@@ -4074,15 +4193,16 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     '.mot.faux .vert-after::before{content:"→ ";color:#8a7a5a;font-weight:normal;font-style:normal;padding-right:2px}' +
     /* Placeholder */
     '.mot.faux .placeholder{border-bottom:1.5px solid #8a7a5a;min-width:60px;height:1.1em;vertical-align:-2px;display:inline-block}' +
-    /* Cas spéciaux M (mot manquant) */
+    /* Cas spéciaux M (mot manquant) : l'élève n'a rien écrit → RIEN dans la base en modes
+       brut/souligné/placeholder/rien (la correction passe par le mode vert ou la sur-impression). */
     '.mot.faux.type-M .orig{display:none !important}' +
-    'body.mode-brut .mot.faux.type-M .layer-base::before,body.mode-barre .mot.faux.type-M .layer-base::before,body.mode-placeholder .mot.faux.type-M .layer-base::before{content:"^";color:#975a16;font-weight:bold}' +
     'body.mode-vert .mot.faux.type-M .layer-base .vert{background:rgba(151,90,22,.08);padding:0 4px;border-radius:3px}' +
     'body.show-overlay.mode-brut .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-placeholder .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-rien .mot.faux.type-M .layer-top .vert-top{background:rgba(151,90,22,.12);padding:0 4px;border-radius:3px}' +
-    /* Cas spéciaux P (ponctuation) */
+    /* Cas spéciaux P (ponctuation) : l'élève n'a rien écrit → RIEN dans la base en modes
+       brut/souligné/placeholder/rien. Le signe manquant apparaît uniquement en mode vert direct
+       (en rouge encadré pour bien le distinguer d'un signe normal). */
     '.mot.faux.type-P .orig,.mot.faux.type-P .placeholder{display:none !important}' +
-    'body.mode-brut .mot.faux.type-P .layer-base::before,body.mode-barre .mot.faux.type-P .layer-base::before,body.mode-placeholder .mot.faux.type-P .layer-base::before{content:"^";color:#c53030;font-weight:bold}' +
-    'body.mode-vert .mot.faux.type-P .layer-base .vert{color:#c53030;font-weight:bold;font-size:1.1em}' +
+    'body.mode-vert .mot.faux.type-P .layer-base .vert{display:inline !important;color:#c53030;font-weight:bold;font-size:1.05em;background:rgba(197,48,48,.08);padding:0 3px;border-radius:3px}' +
     /* Extras (mots en trop) */
     '.mot.extra-w .extra-orig{display:inline;color:#2563eb;text-decoration:line-through;text-decoration-color:#2563eb;text-decoration-thickness:2px;font-style:italic}' +
     /* Bilan */
@@ -4154,7 +4274,9 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
 }
 function Copies(p){
   var data=p.data,corr=p.corrections||{},abs=p.absents||{},dicteeId=p.dicteeId;
-  var done=data.eleves.filter(function(e){var k=san(e);return !abs[k]&&!!corr[k]});
+  var done=sortElevesByNom(data.eleves.filter(function(e){var k=san(e);return !abs[k]&&!!corr[k]}));
+  var sQc=useState(""),copQuery=sQc[0],setCopQuery=sQc[1];
+  var doneFiltered=copQuery.trim()?done.filter(function(e){return matchEleveInitials(e,copQuery)}):done;
   var s0=useState(null),selectedKey=s0[0],setSelectedKey=s0[1];
   var s1=useState(""),bilanText=s1[0],setBilanText=s1[1];
   var s2=useState(false),bilanDirty=s2[0],setBilanDirty=s2[1];
@@ -4166,18 +4288,74 @@ function Copies(p){
   function updCopyOpts(patch){
     var no=Object.assign({},copyOpts,patch);
     _setCopyOpts(no);setCopyOptions(no);
+    // Auto-sync vers Firebase si la copie a déjà été publiée (pas besoin de re-cliquer Publier)
+    if(copyPublishedAt){
+      var opts={
+        mode:no.mode, showOverlay:no.showOverlay, showBadge:no.showBadge, showPoints:no.showPoints,
+        dueDate:no.dueDate||"", linkExercices:no.linkExercices!==false,
+        appUrl:no.appUrl||DEFAULT_APP_URL
+      };
+      db.ref("correction_dictee/"+dicteeId+"/copyOptions").set(opts);
+    }
   }
   // Aperçu défilant de toutes les copies (modal)
   var sPv=useState(false),previewOpen=sPv[0],setPreviewOpen=sPv[1];
   var sPvI=useState(0),previewIdx=sPvI[0],setPreviewIdx=sPvI[1];
-  // Détection : la dictée a-t-elle des exercices injectés ? (pour afficher le lien dans la copie)
-  var sHasExo=useState(false),hasExercices=sHasExo[0],setHasExercices=sHasExo[1];
+  // Détection : la dictée a-t-elle des exercices (JSON injecté OU HTML uploadé) ?
+  // → on affiche le lien dans la copie dans les deux cas
+  var sHasJ=useState(false),hasJson=sHasJ[0],setHasJson=sHasJ[1];
+  var sHasH=useState(false),hasHtml=sHasH[0],setHasHtml=sHasH[1];
+  var hasExercices=hasJson||hasHtml;
+  // État de publication (lien partagé pour École Directe)
+  var sPub=useState(null),copyPublishedAt=sPub[0],setCopyPublishedAt=sPub[1];
+  var sPubMsg=useState(""),pubMsg=sPubMsg[0],setPubMsg=sPubMsg[1];
   React.useEffect(function(){
     var ref=db.ref("correction_dictee/"+dicteeId+"/exercices");
-    function onData(snap){setHasExercices(!!snap.val())}
+    function onData(snap){setHasJson(!!snap.val())}
     ref.on("value",onData);
-    return function(){ref.off("value",onData)};
+    var refH=db.ref("correction_dictee/"+dicteeId+"/exercices_html");
+    function onDataH(snap){setHasHtml(!!(snap.val()&&snap.val().content))}
+    refH.on("value",onDataH);
+    var refP=db.ref("correction_dictee/"+dicteeId+"/copyPublishedAt");
+    function onDataP(snap){setCopyPublishedAt(snap.val()||null)}
+    refP.on("value",onDataP);
+    return function(){ref.off("value",onData);refH.off("value",onDataH);refP.off("value",onDataP)};
   },[dicteeId]);
+
+  // Publication : sauvegarde des options actuelles côté Firebase
+  function publierCopies(){
+    var opts={
+      mode:copyOpts.mode,
+      showOverlay:copyOpts.showOverlay,
+      showBadge:copyOpts.showBadge,
+      showPoints:copyOpts.showPoints,
+      dueDate:copyOpts.dueDate||"",
+      linkExercices:copyOpts.linkExercices!==false,
+      appUrl:copyOpts.appUrl||DEFAULT_APP_URL
+    };
+    db.ref("correction_dictee/"+dicteeId+"/copyOptions").set(opts).then(function(){
+      db.ref("correction_dictee/"+dicteeId+"/copyPublishedAt").set(Date.now());
+      setPubMsg("\u2705 Copies publi\u00e9es. Les \u00e9l\u00e8ves peuvent acc\u00e9der \u00e0 leur copie via le lien.");
+      setTimeout(function(){setPubMsg("")},4000);
+    }).catch(function(e){setPubMsg("\u274c Erreur : "+e.message);setTimeout(function(){setPubMsg("")},4000)});
+  }
+
+  function depublierCopies(){
+    if(!confirm("D\u00e9publier ? Les \u00e9l\u00e8ves ne pourront plus acc\u00e9der \u00e0 leur copie via le lien partag\u00e9."))return;
+    db.ref("correction_dictee/"+dicteeId+"/copyPublishedAt").remove();
+    setPubMsg("\u2705 D\u00e9publi\u00e9");
+    setTimeout(function(){setPubMsg("")},3000);
+  }
+
+  function copierLienPartage(){
+    var baseUrl=(copyOpts.appUrl&&copyOpts.appUrl.trim())?copyOpts.appUrl.trim():DEFAULT_APP_URL;
+    var url=baseUrl+"?mode=eleve&dicteeId="+encodeURIComponent(dicteeId)+"&screen=copie";
+    copyToClipboard(url).then(function(ok){
+      if(ok)setPubMsg("\u2705 Lien copi\u00e9 \u2014 colle-le dans \u00c9cole Directe");
+      else setPubMsg("\u274c Copie impossible. Lien : "+url);
+      setTimeout(function(){setPubMsg("")},5000);
+    });
+  }
   var editInputRef=React.useRef(null);
 
   // Raccourcis clavier dans la modale d'aperçu (flèches ← → et Échap)
@@ -4259,11 +4437,12 @@ function Copies(p){
     // Si on est sur l'élève sélectionné et qu'on demande le bilan local non validé, on l'utilise
     if(useLocalBilan&&eleveKey===selectedKey)opts.bilanOverride=bilanText;
     // Lien vers la page d'exercices (auto-login via params URL) si la dictée a des exercices
-    if(hasExercices&&typeof window!=="undefined"){
-      var baseUrl=window.location.origin+window.location.pathname;
+    // ET si le prof n'a pas désactivé la liaison.
+    if(hasExercices&&copyOpts.linkExercices!==false){
+      // Utilise l'URL publique de l'app configurée par le prof (pas window.location qui peut être file://)
+      var baseUrl=(copyOpts.appUrl&&copyOpts.appUrl.trim())?copyOpts.appUrl.trim():DEFAULT_APP_URL;
       var params="?mode=eleve&dicteeId="+encodeURIComponent(dicteeId)+"&eleveKey="+encodeURIComponent(eleveKey)+"&screen=exercices";
       opts.exercicesUrl=baseUrl+params;
-      // dueDate uniquement si bouton de liaison présent
       if(copyOpts.dueDate)opts.dueDate=copyOpts.dueDate;
     }
     return {html:buildCopieHtml(data,eleveName,eleveKey,c,acData,dicteeId,opts),eleveName:eleveName};
@@ -4315,8 +4494,9 @@ function Copies(p){
     h("div",{className:"card"},
       h("h2",null,"\ud83d\udcc4 Copies \u00e0 envoyer aux familles"),
       h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:10}},"S\u00e9lectionne un \u00e9l\u00e8ve pour pr\u00e9visualiser, \u00e9diter le bilan et exporter sa copie en HTML."),
+      h(EleveSearchBar,{query:copQuery,onChange:setCopQuery,count:doneFiltered.length}),
       h("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}},
-        done.map(function(e){
+        doneFiltered.map(function(e){
           var k=san(e),c=corr[k];
           var isSel=selectedKey===k;
           var hasBilan=c&&c.bilanComment;
@@ -4324,7 +4504,7 @@ function Copies(p){
             style:{padding:"6px 12px",borderRadius:8,border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),
               background:isSel?"var(--primary-light)":"var(--card2)",fontFamily:"inherit",cursor:"pointer",
               fontWeight:isSel?700:500,fontSize:".85rem",position:"relative"}},
-            e.split(" ").pop()+" "+e.split(" ")[0].charAt(0)+".",
+            e.split(" ")[0].charAt(0)+". "+e.split(" ").pop(),
             h("span",{style:{marginLeft:6,color:noteColor(c.note,data.base),fontWeight:700}},c.note+"/"+data.base),
             hasBilan&&h("span",{style:{marginLeft:4,color:"var(--green)",fontSize:".75rem"}},"\u2713")
           );
@@ -4335,7 +4515,7 @@ function Copies(p){
         h("div",{style:{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center",marginBottom:8}},
           h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}},
             h("span",{style:{fontSize:".78rem",color:"var(--muted)",fontWeight:600,marginRight:4}},"Mode :"),
-            [["rien","Rien"],["brut","Brut"],["barre","Barr\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
+            [["rien","Rien"],["brut","Brut"],["barre","Soulign\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
               var v=pair[0],lab=pair[1],isSel=copyOpts.mode===v;
               return h("label",{key:v,title:"Mode d\u2019affichage du mot fautif : "+lab,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:6,cursor:"pointer",background:isSel?"var(--primary-light)":"var(--card)",fontSize:".78rem",fontWeight:isSel?700:400}},
                 h("input",{type:"radio",name:"copyMode",value:v,checked:isSel,onChange:function(){updCopyOpts({mode:v})},style:{margin:0}}),
@@ -4354,15 +4534,48 @@ function Copies(p){
             );
           })
         ),
-        hasExercices&&h("div",{style:{display:"flex",gap:10,alignItems:"center",marginBottom:10,padding:"8px 12px",background:"rgba(72,160,87,.08)",border:"1.5px solid rgba(72,160,87,.3)",borderRadius:6}},
-          h("span",{style:{fontSize:".78rem",color:"#1b6a30",fontWeight:600}},"\u23f0 Date limite exercices :"),
-          h("input",{type:"date",value:copyOpts.dueDate||"",onChange:function(e){updCopyOpts({dueDate:e.target.value})},style:{padding:"4px 8px",fontSize:".82rem",border:"1.5px solid var(--border)",borderRadius:4,fontFamily:"inherit"}}),
-          copyOpts.dueDate&&h("button",{className:"btn-sm btn-ghost",onClick:function(){updCopyOpts({dueDate:""})},style:{fontSize:".72rem",padding:"3px 8px"},title:"Effacer la date"},"\u2715"),
-          h("span",{style:{fontSize:".7rem",color:"var(--muted)",fontStyle:"italic",marginLeft:"auto"}},"Optionnelle. S\u2019insert dans la copie sous le bouton d\u2019exercices.")
+        h("div",{style:{padding:"8px 12px",borderRadius:6,marginBottom:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",background:hasExercices?"rgba(72,160,87,.08)":"rgba(0,0,0,.04)",border:"1.5px solid "+(hasExercices?"rgba(72,160,87,.3)":"var(--border)")}},
+          h("span",{style:{fontSize:".78rem",fontWeight:600,color:hasExercices?"#1b6a30":"var(--muted)"}},"\ud83d\udd17 Lien copie \u2192 exercices :"),
+          hasExercices?h("label",{style:{display:"flex",alignItems:"center",gap:5,fontSize:".78rem",cursor:"pointer",fontWeight:copyOpts.linkExercices!==false?700:400,color:copyOpts.linkExercices!==false?"#1b6a30":"var(--muted)"},title:"Inclut le bloc \u00ab \u2728 Pour t\u2019entra\u00eener \u00bb avec un bouton menant aux exercices de l\u2019\u00e9l\u00e8ve dans l\u2019app MJPC (auto-login)"},
+            h("input",{type:"checkbox",checked:copyOpts.linkExercices!==false,onChange:function(e){updCopyOpts({linkExercices:e.target.checked})},style:{margin:0}}),
+            h("span",null,copyOpts.linkExercices!==false?"\u2713 Inclus dans la copie":"D\u00e9sactiv\u00e9")
+          ):h("span",{style:{fontSize:".78rem",color:"var(--muted)",fontStyle:"italic"}},"\u26a0\ufe0f Aucune banque d\u2019exercices inject\u00e9e \u2014 va dans l\u2019onglet \ud83c\udfaf Exercices pour en cr\u00e9er une"),
+          hasExercices&&copyOpts.linkExercices!==false&&h("span",{style:{borderLeft:"1px solid rgba(72,160,87,.3)",paddingLeft:10,marginLeft:4,display:"flex",alignItems:"center",gap:6,fontSize:".78rem"}},
+            h("span",{style:{color:"#1b6a30",fontWeight:600}},"\u23f0 Date limite :"),
+            h("input",{type:"date",value:copyOpts.dueDate||"",onChange:function(e){updCopyOpts({dueDate:e.target.value})},style:{padding:"3px 6px",fontSize:".78rem",border:"1.5px solid var(--border)",borderRadius:4,fontFamily:"inherit"}}),
+            copyOpts.dueDate&&h("button",{className:"btn-sm btn-ghost",onClick:function(){updCopyOpts({dueDate:""})},style:{fontSize:".7rem",padding:"2px 6px"},title:"Effacer la date"},"\u2715")
+          )
         ),
-        h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-          h("button",{className:"btn btn-ghost",onClick:function(){setPreviewIdx(0);setPreviewOpen(true)},disabled:done.length===0,title:"Feuillete les "+done.length+" copies dans une fen\u00eatre plein \u00e9cran (\u2190 / \u2192 / \u00c9chap) pour valider le rendu avant export"},"\ud83d\udc41 Pr\u00e9visualiser toutes ("+done.length+")"),
-          h("button",{className:"btn btn-primary",onClick:exportZip,disabled:done.length===0,title:"T\u00e9l\u00e9charge un ZIP avec une copie HTML par \u00e9l\u00e8ve corrig\u00e9, selon les options ci-dessus"},"\ud83d\udce6 Exporter ZIP ("+done.length+" copies)")
+        // URL publique de l'app (essentielle pour que le bouton fonctionne hors de ton ordi)
+        hasExercices&&copyOpts.linkExercices!==false&&h("div",{style:{display:"flex",gap:6,alignItems:"center",marginBottom:10,padding:"6px 10px",background:"rgba(43,108,203,.04)",border:"1.5px solid rgba(43,108,203,.2)",borderRadius:6}},
+          h("span",{style:{fontSize:".78rem",color:"var(--primary)",fontWeight:600,whiteSpace:"nowrap"}},"\ud83c\udf10 URL publique de l\u2019app :"),
+          h("input",{type:"url",value:copyOpts.appUrl||"",onChange:function(e){updCopyOpts({appUrl:e.target.value})},placeholder:DEFAULT_APP_URL,style:{flex:1,padding:"3px 8px",fontSize:".78rem",border:"1.5px solid var(--border)",borderRadius:4,fontFamily:"ui-monospace,monospace"}}),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){updCopyOpts({appUrl:DEFAULT_APP_URL})},style:{fontSize:".7rem",padding:"3px 8px"},title:"R\u00e9tablir l\u2019URL par d\u00e9faut (GitHub Pages)"},"\u21bb"),
+          h("span",{style:{fontSize:".68rem",color:"var(--muted)",fontStyle:"italic",whiteSpace:"nowrap"}},"= URL d\u2019o\u00f9 les \u00e9l\u00e8ves acc\u00e9deront")
+        ),
+        // BLOC PUBLICATION (lien partagé École Directe — workflow principal)
+        h("div",{style:{padding:"12px 14px",borderRadius:8,marginTop:10,background:copyPublishedAt?"rgba(72,160,87,.08)":"rgba(43,108,203,.06)",border:"1.5px solid "+(copyPublishedAt?"rgba(72,160,87,.3)":"rgba(43,108,203,.2)")}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}},
+            h("strong",{style:{fontSize:".88rem",color:copyPublishedAt?"#1b6a30":"var(--primary)"}},"\ud83c\udf10 Lien partag\u00e9 \u00e9l\u00e8ves"),
+            copyPublishedAt?h("span",{style:{fontSize:".74rem",color:"#1b6a30"}},"\u2705 Publi\u00e9 le "+new Date(copyPublishedAt).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})):h("span",{style:{fontSize:".74rem",color:"var(--muted)",fontStyle:"italic"}},"Pas encore publi\u00e9")
+          ),
+          h("p",{style:{fontSize:".78rem",color:"var(--muted)",margin:"0 0 10px",lineHeight:1.5}},
+            "Au lieu d\u2019envoyer un fichier par \u00e9l\u00e8ve, publie un lien unique sur \u00c9cole Directe (cahier de textes ou messagerie). Chaque \u00e9l\u00e8ve clique, saisit son nom/pr\u00e9nom et voit SA copie avec le rendu ci-dessus."
+          ),
+          h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+            h("button",{className:"btn btn-primary",onClick:publierCopies,disabled:done.length===0,title:copyPublishedAt?"Republier (les modifications post-publication seront visibles)":"Publier les copies (avec les options et bilan actuels)"},copyPublishedAt?"\ud83d\udd04 Republier":"\ud83d\udce4 Publier ("+done.length+" copies)"),
+            copyPublishedAt&&h("button",{className:"btn btn-ghost",onClick:copierLienPartage,title:"Copier le lien \u00e0 coller dans \u00c9cole Directe"},"\ud83d\udd17 Copier le lien"),
+            copyPublishedAt&&h("button",{className:"btn btn-ghost",onClick:depublierCopies,style:{color:"#c53030",borderColor:"rgba(197,48,48,.2)",fontSize:".82rem"},title:"D\u00e9publier (les \u00e9l\u00e8ves perdront l\u2019acc\u00e8s)"},"\u2715 D\u00e9publier")
+          ),
+          pubMsg&&h("div",{style:{marginTop:8,padding:"6px 10px",borderRadius:6,fontSize:".82rem",fontWeight:600,background:pubMsg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":"rgba(72,160,87,.12)",color:pubMsg.indexOf("\u274c")===0?"#9f1c2d":"#1b6a30"}},pubMsg)
+        ),
+        // BLOC ARCHIVE LOCALE (ZIP) — workflow secondaire
+        h("div",{style:{padding:"10px 14px",borderRadius:8,marginTop:8,background:"rgba(0,0,0,.02)",border:"1px solid var(--border)"}},
+          h("div",{style:{fontSize:".74rem",color:"var(--muted)",textTransform:"uppercase",fontWeight:600,letterSpacing:".04em",marginBottom:6}},"Archive locale (optionnel)"),
+          h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+            h("button",{className:"btn btn-ghost",onClick:function(){setPreviewIdx(0);setPreviewOpen(true)},disabled:done.length===0,title:"Feuillete les "+done.length+" copies dans une fen\u00eatre plein \u00e9cran (\u2190 / \u2192 / \u00c9chap) pour valider le rendu avant export"},"\ud83d\udc41 Pr\u00e9visualiser toutes ("+done.length+")"),
+            h("button",{className:"btn btn-ghost",onClick:exportZip,disabled:done.length===0,title:"T\u00e9l\u00e9charge un ZIP avec une copie HTML par \u00e9l\u00e8ve (archive pour toi ou les familles qui veulent en local)"},"\ud83d\udce6 Archive ZIP ("+done.length+")")
+          )
         )
       )
     ),
@@ -4375,7 +4588,7 @@ function Copies(p){
         style:{position:"fixed",inset:0,zIndex:1000,background:"rgba(35,30,20,.7)",display:"flex",flexDirection:"column",padding:"14px 16px"},
         onClick:function(e){if(e.target===e.currentTarget)setPreviewOpen(false)}
       },
-        h("div",{style:{background:"var(--card)",borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
+        h("div",{style:{background:"var(--card)",borderRadius:10,padding:"10px 14px",marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
           h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
             h("strong",null,"Aper\u00e7u : "+elName),
             h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"("+(previewIdx+1)+" / "+done.length+")"),
@@ -4387,6 +4600,42 @@ function Copies(p){
             h("button",{className:"btn-sm btn-ghost",onClick:function(){exportHtml(k)},title:"T\u00e9l\u00e9charger seulement cette copie"},"\u2b07 T\u00e9l\u00e9charger"),
             h("button",{className:"btn-sm btn-primary",onClick:exportZip,title:"Tout est OK, exporter le ZIP de la classe"},"\ud83d\udce6 Export ZIP"),
             h("button",{className:"btn-sm btn-ghost",onClick:function(){setPreviewOpen(false)},title:"Fermer (\u00c9chap)"},"\u2715")
+          )
+        ),
+        // Toggles dans la modale : permet d'ajuster le rendu sans sortir
+        h("div",{style:{background:"var(--card)",borderRadius:10,padding:"8px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap",fontSize:".78rem"}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
+            h("span",{style:{color:"var(--muted)",fontWeight:600}},"Mode :"),
+            [["rien","Rien"],["brut","Brut"],["barre","Soulign\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
+              var v=pair[0],lab=pair[1],isSel=copyOpts.mode===v;
+              return h("label",{key:v,style:{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:5,cursor:"pointer",background:isSel?"var(--primary-light)":"var(--card)",fontWeight:isSel?700:400}},
+                h("input",{type:"radio",name:"copyMode_modal",value:v,checked:isSel,onChange:function(){updCopyOpts({mode:v})},style:{margin:0}}),
+                h("span",null,lab)
+              );
+            })
+          ),
+          h("span",{style:{color:"var(--border)"}},"|"),
+          h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
+            [["showOverlay","Corr. verte"],["showBadge","Badge"],["showPoints","Points"]].map(function(pair){
+              var kk=pair[0],lab=pair[1],isOn=!!copyOpts[kk];
+              return h("label",{key:kk,style:{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",border:"1.5px solid "+(isOn?"var(--primary)":"var(--border)"),borderRadius:5,cursor:"pointer",background:isOn?"var(--primary-light)":"var(--card)",fontWeight:isOn?700:400}},
+                h("input",{type:"checkbox",checked:isOn,onChange:function(){var patch={};patch[kk]=!isOn;updCopyOpts(patch)},style:{margin:0}}),
+                h("span",null,lab)
+              );
+            })
+          ),
+          h("span",{style:{color:"var(--border)"}},"|"),
+          h("div",{style:{display:"flex",alignItems:"center",gap:6,fontSize:".78rem"}},
+            hasExercices?h("label",{style:{display:"flex",alignItems:"center",gap:4,cursor:"pointer",color:copyOpts.linkExercices!==false?"#1b6a30":"var(--muted)",fontWeight:copyOpts.linkExercices!==false?700:400},title:"Inclure le bloc menant aux exercices dans la copie"},
+              h("input",{type:"checkbox",checked:copyOpts.linkExercices!==false,onChange:function(e){updCopyOpts({linkExercices:e.target.checked})},style:{margin:0}}),
+              h("span",null,"\ud83d\udd17 Lien exos")
+            ):h("span",{style:{color:"var(--muted)",fontStyle:"italic"}},"\u26a0 Pas d\u2019exos inject\u00e9s"),
+            hasExercices&&copyOpts.linkExercices!==false&&[
+              h("span",{key:"sep",style:{color:"var(--muted)"}},"\u00b7"),
+              h("span",{key:"lab",style:{color:"var(--muted)",fontWeight:600}},"\u23f0"),
+              h("input",{key:"inp",type:"date",value:copyOpts.dueDate||"",onChange:function(e){updCopyOpts({dueDate:e.target.value})},style:{padding:"2px 6px",fontSize:".78rem",border:"1.5px solid var(--border)",borderRadius:4,fontFamily:"inherit"}}),
+              copyOpts.dueDate?h("button",{key:"x",className:"btn-sm btn-ghost",onClick:function(){updCopyOpts({dueDate:""})},style:{fontSize:".7rem",padding:"2px 6px"}},"\u2715"):null
+            ]
           )
         ),
         r?h("iframe",{srcDoc:r.html,style:{flex:1,width:"100%",border:"none",borderRadius:8,background:"#faf6ee"},sandbox:""}):h("div",{style:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff"}},"Aucune copie")
@@ -4487,6 +4736,102 @@ function Copies(p){
   );
 }
 
+// ═══ MA COPIE (vue épurée pour l'élève — workflow École Directe) ═══
+function MaCopie(p){
+  var data=p.data;
+  var dicteeId=data.dictee.id;
+  // Charger les options publiées (mode + toggles tels que le prof a publié)
+  var sOpts=useState(null),pubOpts=sOpts[0],setPubOpts=sOpts[1];
+  var sPubAt=useState(null),pubAt=sPubAt[0],setPubAt=sPubAt[1];
+  var sLoad=useState(true),loading=sLoad[0],setLoading=sLoad[1];
+  // Pour le bouton exercices : détecter si la dictée a des exercices
+  var sHasJ2=useState(false),hasJ2=sHasJ2[0],setHasJ2=sHasJ2[1];
+  var sHasH2=useState(false),hasH2=sHasH2[0],setHasH2=sHasH2[1];
+  var hasExos=hasJ2||hasH2;
+
+  React.useEffect(function(){
+    var refO=db.ref("correction_dictee/"+dicteeId+"/copyOptions");
+    refO.on("value",function(snap){setPubOpts(snap.val()||null);setLoading(false)});
+    var refP=db.ref("correction_dictee/"+dicteeId+"/copyPublishedAt");
+    refP.on("value",function(snap){setPubAt(snap.val()||null)});
+    var refJ=db.ref("correction_dictee/"+dicteeId+"/exercices");
+    refJ.on("value",function(snap){setHasJ2(!!snap.val())});
+    var refH=db.ref("correction_dictee/"+dicteeId+"/exercices_html");
+    refH.on("value",function(snap){setHasH2(!!(snap.val()&&snap.val().content))});
+    return function(){refO.off();refP.off();refJ.off();refH.off()};
+  },[dicteeId]);
+
+  if(loading)return h("div",{className:"container fade-up",style:{paddingTop:40,textAlign:"center"}},h("p",null,"Chargement\u2026"));
+
+  // Si pas publié → message clair
+  if(!pubAt){
+    return h("div",{className:"container fade-up",style:{paddingTop:40}},
+      h("div",{className:"card",style:{textAlign:"center",padding:30}},
+        h("div",{style:{fontSize:"2rem",marginBottom:10}},"\u23f3"),
+        h("h2",{style:{marginTop:0}},"Ta dict\u00e9e corrig\u00e9e n\u2019est pas encore disponible"),
+        h("p",{style:{color:"var(--muted)"}},"Le professeur ne l\u2019a pas encore publi\u00e9e. Reviens plus tard."),
+        h("button",{className:"btn btn-ghost",style:{marginTop:14},onClick:p.onLogout},"\u2190 Retour")
+      )
+    );
+  }
+
+  // Reconstruire le HTML de la copie avec les options publiées
+  var dictee=data.dictee;
+  var corr=dictee.results[data.key];
+  var ac=(dictee.autocorrection&&dictee.autocorrection[data.key])||{};
+  var opts=pubOpts||{mode:"barre",showOverlay:true,showBadge:true,showPoints:true,linkExercices:true,appUrl:DEFAULT_APP_URL};
+  // Préparer dueDate / exercicesUrl si demandé
+  var renderOpts={
+    mode:opts.mode,
+    showOverlay:opts.showOverlay,
+    showBadge:opts.showBadge,
+    showPoints:opts.showPoints
+  };
+  if(hasExos&&opts.linkExercices!==false){
+    if(opts.dueDate)renderOpts.dueDate=opts.dueDate;
+    // Pas besoin de exercicesUrl ici car on a un bouton interne
+  }
+  var html;
+  try {
+    html=buildCopieHtml(dictee,data.eleve,data.key,corr,ac,dicteeId,renderOpts);
+  } catch(e) {
+    return h("div",{className:"container fade-up",style:{paddingTop:40}},
+      h("div",{className:"card",style:{textAlign:"center",padding:30}},
+        h("h2",null,"\u26a0 Une erreur est survenue"),
+        h("p",{style:{color:"var(--muted)",fontSize:".9rem"}},e.message),
+        h("button",{className:"btn btn-ghost",style:{marginTop:14},onClick:p.onLogout},"\u2190 Retour")
+      )
+    );
+  }
+
+  // Téléchargement local pour archive
+  function telecharger(){
+    var blob=new Blob([html],{type:"text/html;charset=utf-8"});
+    var filename="dictee_"+sanFilename((dictee.titre||"copie")+"_"+(data.eleve||""))+".html";
+    downloadBlob(blob,filename);
+  }
+
+  return h("div",{style:{display:"flex",flexDirection:"column",minHeight:"100vh"}},
+    // Barre de titre simple, sans jargon
+    h("div",{style:{padding:"12px 16px",background:"var(--primary)",color:"#fff",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",position:"sticky",top:0,zIndex:10,boxShadow:"0 2px 8px rgba(0,0,0,.1)"}},
+      h("div",null,
+        h("div",{style:{fontWeight:700,fontSize:"1.02rem"}},"Ta dict\u00e9e corrig\u00e9e"),
+        h("div",{style:{fontSize:".78rem",opacity:.9}},(data.eleve||"")+(dictee.titre?" \u2014 "+dictee.titre:""))
+      ),
+      h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+        h("button",{onClick:telecharger,title:"Enregistrer cette page pour pouvoir la garder",style:{padding:"6px 12px",background:"rgba(255,255,255,.18)",color:"#fff",border:"1px solid rgba(255,255,255,.3)",borderRadius:6,cursor:"pointer",fontSize:".82rem",fontFamily:"inherit"}},"\u2b07 T\u00e9l\u00e9charger"),
+        h("button",{onClick:p.onLogout,title:"Quitter",style:{padding:"6px 12px",background:"rgba(255,255,255,.10)",color:"#fff",border:"1px solid rgba(255,255,255,.2)",borderRadius:6,cursor:"pointer",fontSize:".82rem",fontFamily:"inherit"}},"Quitter")
+      )
+    ),
+    // La copie en iframe (rendu identique à ce que le prof a publié)
+    h("iframe",{srcDoc:html,style:{flex:1,width:"100%",border:"none",background:"#faf6ee",minHeight:600},sandbox:""}),
+    // Bouton exercices en bas (gros, visible)
+    hasExos&&opts.linkExercices!==false&&h("div",{style:{padding:"12px 16px",background:"var(--card2)",borderTop:"1.5px solid var(--border)",display:"flex",justifyContent:"center"}},
+      h("button",{onClick:p.onExercices,style:{padding:"12px 24px",background:"var(--green)",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:"1rem",fontWeight:700,fontFamily:"inherit",boxShadow:"0 4px 12px rgba(72,160,87,.3)"}},"\ud83c\udfaf Faire mes exercices")
+    )
+  );
+}
+
 // ═══ APP ÉLÈVE ═══
 function AppEleve(p){
   var s1=useState("login"),screen=s1[0],setScreen=s1[1];
@@ -4500,6 +4845,8 @@ function AppEleve(p){
 
   // Check URL params : "dictee" (id) [+ "eleveKey" + "screen" pour auto-login direct]
   var s9=useState(null),autoLoginParams=s9[0],setAutoLoginParams=s9[1];
+  // Screen forcé depuis URL (ex: screen=copie sans eleveKey → l'élève saisit son nom)
+  var sScrUrl=useState(null),forcedScreenUrl=sScrUrl[0],setForcedScreenUrl=sScrUrl[1];
   useEffect(function(){
     if(typeof URLSearchParams==="undefined")return;
     var params=new URLSearchParams(window.location.search);
@@ -4507,6 +4854,7 @@ function AppEleve(p){
     if(did)setForcedDicteeId(did);
     var ek=params.get("eleveKey");
     var sc=params.get("screen");
+    if(sc)setForcedScreenUrl(sc);
     if(did&&ek)setAutoLoginParams({dicteeId:did,eleveKey:ek,screen:sc});
   },[]);
 
@@ -4527,6 +4875,7 @@ function AppEleve(p){
     setEleveData({eleve:eleveName,dictee:d,key:ek,errors:errors,extras:extras,note:corr.note,base:d.base});
     // Navigation directe selon screen demandé
     if(autoLoginParams.screen==="exercices")setScreen("exercices");
+    else if(autoLoginParams.screen==="copie")setScreen("copie");
     else setScreen("correction");
     setAutoLoginDone(true);
   },[dictees,autoLoginParams,autoLoginDone]);
@@ -4593,13 +4942,15 @@ function AppEleve(p){
     var errors=toArr(corr.errors||[]);
     var extras=toArr(corr.extras||[]);
     setEleveData({eleve:full,dictee:dictee,key:key,errors:errors,extras:extras,note:corr.note,base:dictee.base});
-    setScreen("correction");
+    // Si URL demandait screen=copie, on y va directement
+    if(forcedScreenUrl==="copie")setScreen("copie");
+    else setScreen("correction");
   }
 
   if(screen==="login") return h("div",{className:"container fade-up",style:{paddingTop:40}},
     h("div",{className:"card",style:{textAlign:"center"}},
-      h("h1",null,dicteeTitle?"Correction : "+dicteeTitle:"Correction de dict\u00e9e"),
-      h("p",{className:"subtitle"},dicteeTitle?"Entre ton nom et ton pr\u00e9nom pour acc\u00e9der \u00e0 ta copie.":"Connecte-toi pour corriger tes erreurs et gagner des points."),
+      h("h1",null,forcedScreenUrl==="copie"?(dicteeTitle?"Ta dict\u00e9e corrig\u00e9e \u2014 "+dicteeTitle:"Ta dict\u00e9e corrig\u00e9e"):(dicteeTitle?"Correction : "+dicteeTitle:"Correction de dict\u00e9e")),
+      h("p",{className:"subtitle"},forcedScreenUrl==="copie"?"Saisis ton nom et ton pr\u00e9nom pour voir ta dict\u00e9e corrig\u00e9e.":(dicteeTitle?"Entre ton nom et ton pr\u00e9nom pour acc\u00e9der \u00e0 ta copie.":"Connecte-toi pour corriger tes erreurs et gagner des points.")),
       h("div",{style:{maxWidth:340,margin:"0 auto"}},
         h("div",{className:"config-field"},h("label",null,"Nom"),h("input",{value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",style:{textTransform:"uppercase"}})),
         h("div",{className:"config-field"},h("label",null,"Pr\u00e9nom"),h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
@@ -4612,8 +4963,14 @@ function AppEleve(p){
 
   if(screen==="correction") return h(EleveCorrection,{data:eleveData,onBack:function(){setScreen("login");setEleveData(null)},onExercices:function(){setScreen("exercices")}});
   if(screen==="exercices") return h("div",{className:"container fade-up"},
-    h(ExercicesEleve,{dicteeId:eleveData.dictee.id,eleve:eleveData.eleve,onBack:function(){setScreen("correction")}})
+    h(ExercicesEleve,{dicteeId:eleveData.dictee.id,eleve:eleveData.eleve,onBack:function(){
+      // Si on est venu via URL (lien partagé ou copie téléchargée), retour à MaCopie.
+      // EleveCorrection reste pour le mode "correction interactive" sans param URL.
+      if(forcedScreenUrl==="copie"||forcedScreenUrl==="exercices"||autoLoginParams)setScreen("copie");
+      else setScreen("correction");
+    }})
   );
+  if(screen==="copie") return h(MaCopie,{data:eleveData,onExercices:function(){setScreen("exercices")},onLogout:function(){setScreen("login");setEleveData(null)}});
   return null;
 }
 
@@ -4701,6 +5058,15 @@ function ExercicesAdmin(p){
   var sMsg = useState(""), msg = sMsg[0], setMsg = sMsg[1];
   var sShowPrompt = useState(false), showPrompt = sShowPrompt[0], setShowPrompt = sShowPrompt[1];
   var sResults = useState({}), exResults = sResults[0], setExResults = sResults[1];
+  // HTML d'exercices uploadé (alternative au JSON : un seul HTML monolithique
+  // généré par l'IA via le prompt "Banque d'exercices" du Bilan)
+  var sHtml = useState(null), exHtml = sHtml[0], setExHtml = sHtml[1];
+  var sShowHtml = useState(false), showUploadHtml = sShowHtml[0], setShowUploadHtml = sShowHtml[1];
+  var sHtmlInput = useState(""), htmlInput = sHtmlInput[0], setHtmlInput = sHtmlInput[1];
+  var sShowPreviewHtml = useState(false), showPreviewHtml = sShowPreviewHtml[0], setShowPreviewHtml = sShowPreviewHtml[1];
+  // Impression rapide : sélection multi-élèves
+  var sSelImp = useState({}), selImp = sSelImp[0], setSelImp = sSelImp[1];
+  var sImpMsg = useState(""), impMsg = sImpMsg[0], setImpMsg = sImpMsg[1];
 
   React.useEffect(function(){
     var ref = db.ref("correction_dictee/"+p.dicteeId+"/exercices");
@@ -4712,8 +5078,129 @@ function ExercicesAdmin(p){
     refR.on("value", function(snap){
       setExResults(snap.val()||{});
     });
-    return function(){ref.off();refR.off()};
+    var refH = db.ref("correction_dictee/"+p.dicteeId+"/exercices_html");
+    refH.on("value", function(snap){
+      setExHtml(snap.val()||null);
+    });
+    return function(){ref.off();refR.off();refH.off()};
   }, [p.dicteeId]);
+
+  function uploadHtml(){
+    setErrMsg("");
+    var s = (htmlInput||"").trim();
+    if(!s){setErrMsg("Le HTML est vide.");return}
+    // Vérification minimale : doit contenir un tag html ou body
+    if(s.length<100 || (s.indexOf("<html")===-1 && s.indexOf("<body")===-1 && s.indexOf("<!DOCTYPE")===-1)){
+      setErrMsg("Le contenu ne ressemble pas \u00e0 du HTML (manque DOCTYPE, <html> ou <body>).");return;
+    }
+    if(s.length > 4000000){setErrMsg("HTML trop volumineux (max ~4 Mo).");return}
+    db.ref("correction_dictee/"+p.dicteeId+"/exercices_html").set({
+      content: s,
+      uploadedAt: Date.now(),
+      size: s.length
+    }).then(function(){
+      setMsg("\u2705 HTML d\u2019exercices upload\u00e9 ("+(s.length/1024).toFixed(1)+" Ko)");
+      setHtmlInput("");setShowUploadHtml(false);
+      setTimeout(function(){setMsg("")},3000);
+    }).catch(function(e){setErrMsg("Erreur Firebase : "+e.message)});
+  }
+
+  function deleteHtml(){
+    if(!confirm("Supprimer le HTML d\u2019exercices upload\u00e9 ? Les \u00e9l\u00e8ves ne pourront plus y acc\u00e9der."))return;
+    db.ref("correction_dictee/"+p.dicteeId+"/exercices_html").remove();
+    setMsg("\u2705 HTML supprim\u00e9");
+    setTimeout(function(){setMsg("")},3000);
+  }
+
+  // ─── Impression rapide pour les élèves sélectionnés ────────────
+  function trouverSectionEleve(doc, eleveName, eleveKey){
+    // Essaie plusieurs conventions de structure HTML possibles
+    var sels = [
+      '[data-eleve="'+eleveName+'"]',
+      '[data-eleve-key="'+eleveKey+'"]',
+      '[data-name="'+eleveName+'"]',
+      '#eleve-'+eleveKey,
+      '#exos-'+eleveKey,
+      '#fiche-'+eleveKey,
+      '#'+eleveKey,
+      '.eleve-'+eleveKey,
+      '.fiche-'+eleveKey
+    ];
+    for(var i=0;i<sels.length;i++){
+      try{
+        var el=doc.querySelector(sels[i]);
+        if(el)return el;
+      }catch(e){}
+    }
+    // Fallback : chercher un titre h1/h2/h3 contenant le nom de l'élève
+    var hs=doc.querySelectorAll("h1, h2, h3, h4, .eleve, .nom-eleve, .fiche, section, article");
+    for(var j=0;j<hs.length;j++){
+      var txt=(hs[j].textContent||"").trim();
+      if(txt&&txt.indexOf(eleveName)>=0&&txt.length<200){
+        // C'est probablement un titre/section. Remonter à l'ancêtre logique (section/article/div parent)
+        var parent=hs[j];
+        while(parent&&parent.parentElement&&parent.parentElement.tagName&&!/^(SECTION|ARTICLE|MAIN|BODY)$/i.test(parent.tagName)){
+          if(parent.tagName==="DIV"&&parent.children.length>1)break;
+          parent=parent.parentElement;
+        }
+        return parent||hs[j];
+      }
+    }
+    return null;
+  }
+
+  function imprimerSelection(){
+    setImpMsg("");
+    if(!exHtml||!exHtml.content){setImpMsg("\u274c Aucun HTML d\u2019exercices upload\u00e9.");setTimeout(function(){setImpMsg("")},3000);return}
+    var selectedNames=Object.keys(selImp).filter(function(k){return selImp[k]});
+    if(selectedNames.length===0){setImpMsg("\u274c Coche au moins un \u00e9l\u00e8ve.");setTimeout(function(){setImpMsg("")},3000);return}
+    // Parse le HTML d'exercices dans un DOM temporaire
+    var parser=new DOMParser();
+    var doc=parser.parseFromString(exHtml.content,"text/html");
+    // Pour chaque élève sélectionné, trouve sa section
+    var sections=[];
+    var notFound=[];
+    selectedNames.forEach(function(name){
+      var key=san(name);
+      var sec=trouverSectionEleve(doc,name,key);
+      if(sec)sections.push({name:name,html:sec.outerHTML});
+      else notFound.push(name);
+    });
+    // Récupérer head (CSS + meta) pour conserver la mise en forme
+    var head=doc.head?doc.head.innerHTML:"";
+    var bodyClasses=doc.body?doc.body.className:"";
+    // Refus net si aucune section n'est identifiable : pas de fallback caché
+    if(sections.length===0){
+      setImpMsg("\u274c Aucune section \u00e9l\u00e8ve d\u00e9tect\u00e9e dans le HTML. V\u00e9rifie qu\u2019il contient des marqueurs reconnaissables (ex. data-eleve=\"NOM Pr\u00e9nom\", id=\"eleve-NOM_Prenom\", ou un titre h1\u2013h4 contenant le nom).");
+      return;
+    }
+    // Si certains élèves cochés n'ont pas de section trouvée, on refuse aussi : pas d'impression partielle silencieuse
+    if(notFound.length>0){
+      setImpMsg("\u274c Section non trouv\u00e9e pour : "+notFound.join(", ")+". Aucune impression. V\u00e9rifie les marqueurs dans le HTML.");
+      return;
+    }
+    // OK : tous les élèves cochés ont une section identifiée
+    var body=sections.map(function(s,i){
+      return '<div class="mjpc-print-section" style="page-break-after:always;'+(i===sections.length-1?'page-break-after:auto;':'')+'">'+s.html+'</div>';
+    }).join("\n");
+    var printHtml='<!DOCTYPE html><html lang="fr"><head>'+head+'<style>@media print{.mjpc-print-section{page-break-after:always}.mjpc-print-section:last-child{page-break-after:auto}}</style></head><body class="'+bodyClasses+'">'+body+'</body></html>';
+    setImpMsg("\u2705 "+sections.length+" \u00e9l\u00e8ve(s) envoy\u00e9(s) \u00e0 l\u2019imprimante");
+    // Ouvrir la fenêtre d'impression
+    var win=window.open("","_blank","width=900,height=700");
+    if(!win){setImpMsg("\u274c Pop-up bloqu\u00e9. Autorise les pop-ups pour ce site.");setTimeout(function(){setImpMsg("")},5000);return}
+    win.document.open();
+    win.document.write(printHtml);
+    win.document.close();
+    win.onload=function(){setTimeout(function(){try{win.focus();win.print()}catch(e){}},300)};
+    setTimeout(function(){setImpMsg("")},6000);
+  }
+
+  function toggleAllImp(check){
+    var newSel={};
+    if(check)elevesFiltered.forEach(function(e){newSel[e]=true});
+    setSelImp(newSel);
+  }
+
 
   function injecter(){
     setErrMsg("");
@@ -4776,10 +5263,14 @@ function ExercicesAdmin(p){
     setTimeout(function(){setMsg("")},3000);
   }
 
+  // Hook DOIT être avant tout return early (règle des hooks React)
+  var sQe = useState(""), exQuery = sQe[0], setExQuery = sQe[1];
+
   if(loading)return h("div",{className:"card"},"Chargement\u2026");
 
   var data = p.data;
-  var eleves = data.eleves||[];
+  var eleves = sortElevesByNom(data.eleves||[]);
+  var elevesFiltered = exQuery.trim() ? eleves.filter(function(e){return matchEleveInitials(e,exQuery)}) : eleves;
   var classeExs = exercices?toArr(exercices.exercices_classe||[]):[];
   var personnels = exercices?(exercices.exercices_personnels||{}):{};
 
@@ -4787,13 +5278,74 @@ function ExercicesAdmin(p){
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}},
       h("h2",{style:{margin:0,fontSize:"1.4rem"}},"\ud83c\udfaf Banque d'exercices personnalis\u00e9s"),
       h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowPrompt(true)},title:"Voir le prompt IA pour g\u00e9n\u00e9rer un JSON d'exercices"},"\ud83e\udd16 Prompt IA"),
-        h("button",{className:"btn btn-primary",onClick:function(){setShowInject(true);setErrMsg("")},title:"Coller un JSON g\u00e9n\u00e9r\u00e9 par l'IA"},"\ud83d\udce5 Injecter un JSON"),
-        exercices&&h("button",{className:"btn-sm",onClick:supprimer,style:{background:"rgba(197,48,48,.1)",color:"#c53030"},title:"Supprimer la banque actuelle et tous les r\u00e9sultats"},"\u2715 Supprimer")
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowPrompt(true)},title:"Voir le prompt IA pour g\u00e9n\u00e9rer un JSON d'exercices (interactif dans l\u2019app)"},"\ud83e\udd16 Prompt IA (JSON)"),
+        h("button",{className:"btn btn-primary",onClick:function(){setShowInject(true);setErrMsg("")},title:"Coller un JSON g\u00e9n\u00e9r\u00e9 par l'IA (interactif dans l\u2019app)"},"\ud83d\udce5 Injecter un JSON"),
+        h("button",{className:"btn btn-ghost",onClick:function(){setShowUploadHtml(true);setErrMsg("")},title:"Coller un HTML d\u2019exercices entier (g\u00e9n\u00e9r\u00e9 par l\u2019IA via le prompt du Bilan). Les \u00e9l\u00e8ves le verront tel quel via le bouton de leur copie."},"\ud83d\udcc4 Uploader un HTML"),
+        exercices&&h("button",{className:"btn-sm",onClick:supprimer,style:{background:"rgba(197,48,48,.1)",color:"#c53030"},title:"Supprimer la banque JSON actuelle et tous les r\u00e9sultats"},"\u2715 Suppr. JSON")
       )
     ),
     showPrompt&&h(PromptIaExoModal,{data:data,corrections:p.corrections,absents:p.absents,onClose:function(){setShowPrompt(false)}}),
     msg&&h("div",{style:{padding:"10px 14px",background:"rgba(72,160,87,.15)",color:"#1b6a30",borderRadius:8,marginBottom:10,fontWeight:600}},msg),
+    // État du HTML uploadé (s'il existe)
+    exHtml&&h("div",{className:"card",style:{border:"1.5px solid var(--green)",background:"rgba(72,160,87,.06)",marginBottom:12}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}},
+        h("div",null,
+          h("strong",{style:{color:"#1b6a30"}},"\ud83d\udcc4 HTML d\u2019exercices upload\u00e9"),
+          h("p",{style:{margin:"4px 0 0",fontSize:".82rem",color:"var(--muted)"}},
+            (exHtml.size?(exHtml.size/1024).toFixed(1)+" Ko":"")+
+            (exHtml.uploadedAt?" \u00b7 le "+new Date(exHtml.uploadedAt).toLocaleDateString("fr-FR"):"")
+          ),
+          h("p",{style:{margin:"4px 0 0",fontSize:".78rem",color:"#1b6a30",fontStyle:"italic"}},"Les \u00e9l\u00e8ves voient ce HTML quand ils cliquent sur \u00ab Acc\u00e9der \u00e0 mes exercices \u00bb depuis leur copie.")
+        ),
+        h("div",{style:{display:"flex",gap:6}},
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowPreviewHtml(true)},title:"Voir le HTML upload\u00e9 (comme l\u2019\u00e9l\u00e8ve le verra)"},"\ud83d\udc41 Pr\u00e9visualiser"),
+          h("button",{className:"btn-sm",onClick:deleteHtml,style:{background:"rgba(197,48,48,.1)",color:"#c53030"},title:"Supprimer le HTML upload\u00e9"},"\u2715 Supprimer")
+        )
+      )
+    ),
+    // ─── PANNEAU IMPRESSION RAPIDE ───
+    exHtml&&h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
+      h("h3",{style:{marginTop:0,marginBottom:8}},"\ud83d\udda8 Impression rapide"),
+      h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},"Coche les \u00e9l\u00e8ves dont tu veux imprimer la fiche d\u2019exercices, puis clic sur \u00ab Imprimer \u00bb. Une fen\u00eatre s\u2019ouvre directement sur le dialogue d\u2019impression."),
+      h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}},
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){toggleAllImp(true)},style:{fontSize:".74rem"}},"Tout cocher"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){toggleAllImp(false)},style:{fontSize:".74rem"}},"Tout d\u00e9cocher"),
+        h("span",{style:{fontSize:".74rem",color:"var(--muted)"}},Object.keys(selImp).filter(function(k){return selImp[k]}).length+" \u00e9l\u00e8ve(s) coch\u00e9(s)")
+      ),
+      // Grille de checkboxes (utilise la liste filtrée pour respecter la recherche)
+      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:4,maxHeight:240,overflowY:"auto",padding:"6px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:6,marginBottom:10}},
+        elevesFiltered.map(function(elName){
+          var np=getEleveNomPrenom(elName);
+          var displayName=np.nom.charAt(0)+". "+np.prenom;
+          var checked=!!selImp[elName];
+          return h("label",{key:elName,style:{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",borderRadius:4,cursor:"pointer",background:checked?"rgba(43,108,203,.08)":"transparent",fontSize:".86rem"},title:elName},
+            h("input",{type:"checkbox",checked:checked,onChange:function(){var n=Object.assign({},selImp);if(n[elName])delete n[elName];else n[elName]=true;setSelImp(n)},style:{margin:0}}),
+            h("span",null,displayName)
+          );
+        })
+      ),
+      h("button",{className:"btn btn-primary",onClick:imprimerSelection,disabled:Object.keys(selImp).filter(function(k){return selImp[k]}).length===0,title:"Ouvre une fen\u00eatre d\u2019impression avec les fiches des \u00e9l\u00e8ves coch\u00e9s"},"\ud83d\udda8 Imprimer "+Object.keys(selImp).filter(function(k){return selImp[k]}).length+" fiche(s)"),
+      impMsg&&h("div",{style:{marginTop:8,padding:"8px 12px",borderRadius:6,fontSize:".82rem",fontWeight:600,background:impMsg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":impMsg.indexOf("\u26a0")===0?"rgba(236,201,75,.15)":"rgba(72,160,87,.12)",color:impMsg.indexOf("\u274c")===0?"#9f1c2d":impMsg.indexOf("\u26a0")===0?"#7a5a00":"#1b6a30"}},impMsg)
+    ),
+    // Modale d'upload HTML
+    showUploadHtml&&h("div",{className:"card",style:{border:"2px solid var(--primary)",marginBottom:12}},
+      h("h3",{style:{marginTop:0}},"Coller le HTML g\u00e9n\u00e9r\u00e9 par l\u2019IA"),
+      h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginTop:0}},"Colle ci-dessous le HTML complet (commence par ",h("code",null,"<!DOCTYPE html>")," ou ",h("code",null,"<html>"),"). Ce HTML sera servi tel quel aux \u00e9l\u00e8ves via le bouton de leur copie."),
+      h("textarea",{value:htmlInput,onChange:function(e){setHtmlInput(e.target.value);setErrMsg("")},placeholder:"<!DOCTYPE html>\n<html>...",style:{width:"100%",minHeight:200,padding:"10px 12px",fontFamily:"ui-monospace,monospace",fontSize:".78rem",border:"1.5px solid var(--border)",borderRadius:8,resize:"vertical"}}),
+      errMsg&&h("div",{style:{padding:"8px 12px",background:"rgba(197,48,48,.12)",color:"#9f1c2d",borderRadius:8,marginTop:8,fontSize:".88rem"}},"\u274c "+errMsg),
+      h("div",{style:{display:"flex",gap:8,marginTop:10,flexWrap:"wrap"}},
+        h("button",{className:"btn btn-primary",onClick:uploadHtml,disabled:!htmlInput.trim()},"\u2713 Uploader"),
+        h("button",{className:"btn btn-ghost",onClick:function(){setShowUploadHtml(false);setHtmlInput("");setErrMsg("")}},"Annuler")
+      )
+    ),
+    // Modale de prévisualisation
+    showPreviewHtml&&exHtml&&h("div",{style:{position:"fixed",inset:0,zIndex:1000,background:"rgba(35,30,20,.7)",display:"flex",flexDirection:"column",padding:"14px 16px"},onClick:function(e){if(e.target===e.currentTarget)setShowPreviewHtml(false)}},
+      h("div",{style:{background:"var(--card)",borderRadius:10,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+        h("strong",null,"Aper\u00e7u HTML d\u2019exercices (vue \u00e9l\u00e8ve)"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowPreviewHtml(false)},title:"Fermer"},"\u2715 Fermer")
+      ),
+      h("iframe",{srcDoc:exHtml.content,style:{flex:1,width:"100%",border:"none",borderRadius:8,background:"#fff"},sandbox:"allow-same-origin allow-scripts"})
+    ),
     showInject&&h("div",{className:"card",style:{border:"2px solid var(--primary)",marginBottom:12}},
       h("h3",{style:{marginTop:0}},"Coller le JSON g\u00e9n\u00e9r\u00e9 par l'IA"),
       h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginTop:0}},"Le JSON sera valid\u00e9 avant enregistrement. Format attendu : ",h("code",null,"{exercices_classe:[...], exercices_personnels:{...}}"),"."),
@@ -4827,7 +5379,8 @@ function ExercicesAdmin(p){
       ),
       Object.keys(personnels).length>0&&h("div",{className:"card"},
         h("h3",{style:{marginTop:0}},"\ud83d\udc64 Exercices personnels (par \u00e9l\u00e8ve)"),
-        eleves.map(function(elName){
+        h(EleveSearchBar,{query:exQuery,onChange:setExQuery,count:elevesFiltered.length}),
+        elevesFiltered.map(function(elName){
           var key = exKeyForEleve(elName);
           var exs = toArr(personnels[key]||[]);
           if(exs.length===0)return null;
@@ -4865,9 +5418,14 @@ function PromptIaExoModal(p){
   var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents), null, 2);
   var fullPrompt = (promptText || "").replace("{{JSON_DICTEE}}", jsonStr);
   function copier(){
-    navigator.clipboard.writeText(fullPrompt).then(function(){
-      setMsg("\u2705 Prompt + JSON copi\u00e9s");setTimeout(function(){setMsg("")},3000);
-    }).catch(function(){setMsg("\u274c Copie \u00e9chou\u00e9e");setTimeout(function(){setMsg("")},3000)});
+    copyToClipboard(fullPrompt).then(function(ok){
+      if(ok){
+        setMsg("\u2705 Prompt + JSON copi\u00e9s");
+      } else {
+        setMsg("\u274c Copie \u00e9chou\u00e9e \u2014 s\u00e9lectionne le texte dans l\u2019aper\u00e7u et fais Ctrl+C");
+      }
+      setTimeout(function(){setMsg("")},4000);
+    });
   }
   function ouvrirEdition(){setDraft(promptText);setEditing(true)}
   function enregistrer(){
@@ -4907,7 +5465,9 @@ function PromptIaExoModal(p){
 // ─── COMPOSANT ÉLÈVE : RÉALISATION DES EXERCICES ─────────────────────
 function ExercicesEleve(p){
   var sExo = useState(null), exercices = sExo[0], setExercices = sExo[1];
+  var sHtml = useState(null), exHtml = sHtml[0], setExHtml = sHtml[1];
   var sLoad = useState(true), loading = sLoad[0], setLoading = sLoad[1];
+  var sLoadH = useState(true), loadingH = sLoadH[0], setLoadingH = sLoadH[1];
   var sCur = useState({type:null,idx:0,itemIdx:0}), cur = sCur[0], setCur = sCur[1];
   var sAnsw = useState({}), answers = sAnsw[0], setAnswers = sAnsw[1];
   var sRes = useState({}), results = sRes[0], setResults = sRes[1];
@@ -4916,24 +5476,41 @@ function ExercicesEleve(p){
   React.useEffect(function(){
     var ref = db.ref("correction_dictee/"+p.dicteeId+"/exercices");
     ref.on("value", function(snap){setExercices(snap.val()||null);setLoading(false)});
+    var refH = db.ref("correction_dictee/"+p.dicteeId+"/exercices_html");
+    refH.on("value", function(snap){setExHtml(snap.val()||null);setLoadingH(false)});
     // Charger les résultats existants pour cet élève
     var refR = db.ref("correction_dictee/"+p.dicteeId+"/exercices_results/"+san(p.eleve));
     refR.once("value").then(function(snap){
       var v = snap.val();
       if(v){
         setResults(v);
-        // Recharger les réponses si stockées
         if(v.answers)setAnswers(v.answers);
       }
     });
-    return function(){ref.off()};
+    return function(){ref.off();refH.off()};
   }, [p.dicteeId, p.eleve]);
 
   function saveResult(updated){
     db.ref("correction_dictee/"+p.dicteeId+"/exercices_results/"+san(p.eleve)).set(updated);
   }
 
-  if(loading)return h("div",{className:"card"},"Chargement\u2026");
+  if(loading||loadingH)return h("div",{className:"card"},"Chargement\u2026");
+
+  // Cas 1 : HTML monolithique uploadé → on le sert dans un iframe plein écran
+  if(exHtml&&exHtml.content){
+    return h("div",{style:{display:"flex",flexDirection:"column",height:"calc(100vh - 40px)"}},
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"10px 14px",background:"var(--card)",borderRadius:8,marginBottom:8,flexWrap:"wrap"}},
+        h("div",null,
+          h("strong",{style:{fontSize:"1rem"}},"\ud83c\udfaf Tes exercices personnalis\u00e9s"),
+          h("div",{style:{fontSize:".78rem",color:"var(--muted)"}},"Fais-les sur ton cahier d\u2019abord pour r\u00e9fl\u00e9chir, puis viens taper tes r\u00e9ponses (si l\u2019exercice est interactif).")
+        ),
+        p.onBack&&h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour \u00e0 la correction")
+      ),
+      h("iframe",{srcDoc:exHtml.content,style:{flex:1,width:"100%",border:"1px solid var(--border)",borderRadius:8,background:"#fff",minHeight:500},sandbox:"allow-same-origin allow-scripts allow-forms"})
+    );
+  }
+
+  // Cas 2 : JSON interactif injecté (système ExercicesEleve normal)
   if(!exercices){
     return h("div",{className:"card",style:{textAlign:"center",padding:30}},
       h("div",{style:{fontSize:"2rem",marginBottom:8}},"\ud83d\udcd6"),
