@@ -1482,7 +1482,8 @@ function AppProf(p){
         db.ref(acPath).update({results:remappedResults,attempts:remappedAttempts,history:remappedHistory,total:errors.length,solved:nOk,score:Math.round(newScore*100)/100,errorRefs:newRefs});
       } else {
         // No remap needed, just sync total and errorRefs
-        db.ref(acPath+"/total").set(errors.length);
+        // total = nombre d'erreurs CORRIGIBLES (exclut type A = signalements graphie)
+        db.ref(acPath+"/total").set(errors.filter(function(e){return e&&e.type!=="A"}).length);
         db.ref(acPath+"/errorRefs").set(newRefs);
       }
     });
@@ -1925,7 +1926,8 @@ function CorrScreen(p){
             if(newCorr[ek]===p.corrections[ek])return;
             db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek).set(newCorr[ek]);
             var nErrs=newCorr[ek].errors;
-            db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/total").set(nErrs.length);
+            // total = erreurs corrigibles (exclut type A = signalements graphie)
+            db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/total").set(nErrs.filter(function(e){return e&&e.type!=="A"}).length);
             db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/errorRefs").set(nErrs.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
           });
           p.onResetCorrections(newCorr);
@@ -2987,6 +2989,9 @@ function Suivi(p){
   var s2=useState(null),selectedEleve=s2[0],setSelectedEleve=s2[1];
   var sQs=useState(""),suiviQuery=sQs[0],setSuiviQuery=sQs[1];
   var s3=useState(0),tick=s3[0],setTick=s3[1];
+  // Exercices : pour la colonne "exos" du tableau + la vue détail dans la modale
+  var sEx=useState(null), exercices=sEx[0], setExercices=sEx[1];
+  var sExR=useState({}), exResults=sExR[0], setExResults=sExR[1];
   var NOW=Date.now();
   var RECENT=60*1000;
 
@@ -3000,8 +3005,49 @@ function Suivi(p){
     var ref=db.ref("correction_dictee/"+p.dicteeId+"/autocorrection");
     function onData(snap){setAutoCorr(snap.val()||{})}
     ref.on("value",onData);
-    return function(){ref.off("value",onData)};
+    var refE=db.ref("correction_dictee/"+p.dicteeId+"/exercices");
+    function onEx(snap){setExercices(snap.val()||null)}
+    refE.on("value",onEx);
+    var refR=db.ref("correction_dictee/"+p.dicteeId+"/exercices_results");
+    function onR(snap){setExResults(snap.val()||{})}
+    refR.on("value",onR);
+    return function(){ref.off("value",onData);refE.off("value",onEx);refR.off("value",onR)};
   },[p.dicteeId]);
+
+  // Helper : calcule les stats exos pour un élève (rétroactif, lit Firebase)
+  function statsExos(eleveName){
+    if(!exercices)return{hasExos:false,totalExos:0,exosDone:0,totalAuto:0,okAuto:0,totalLibres:0,saisiesLibres:0,totalAttempts:0,wrongAttempts:0};
+    var bundle=exGetForEleve(exercices,eleveName);
+    var allExos=bundle.personnels.concat(bundle.classe);
+    if(allExos.length===0)return{hasExos:false,totalExos:0,exosDone:0,totalAuto:0,okAuto:0,totalLibres:0,saisiesLibres:0,totalAttempts:0,wrongAttempts:0};
+    var eleveKey=san(eleveName);
+    var er=(exResults||{})[eleveKey];
+    var exosDone=0,totalAuto=0,okAuto=0,totalLibres=0,saisiesLibres=0,totalAttempts=0,wrongAttempts=0;
+    ["personnels","classe"].forEach(function(typeKey){
+      var pool=typeKey==="personnels"?bundle.personnels:bundle.classe;
+      pool.forEach(function(ex,exIdx){
+        var items=(ex.items||[]);
+        var r=er&&er[typeKey]&&er[typeKey][exIdx];
+        if(r&&r.completed)exosDone++;
+        items.forEach(function(it,itIdx){
+          if(!it)return;
+          var attempts=r&&r.attempts&&r.attempts[itIdx]?r.attempts[itIdx]:0;
+          if(attempts>0)totalAttempts+=attempts;
+          if(it.type==="copie"||it.type==="ecriture"){
+            totalLibres++;
+            var ansK=typeKey+"_"+exIdx+"_"+itIdx;
+            var ans=er&&er.answers&&er.answers[ansK];
+            if(ans&&String(ans).trim())saisiesLibres++;
+          }else if(it.type==="qcm"||it.type==="trous"||it.type==="reecriture"){
+            totalAuto++;
+            if(r&&r.items&&r.items[itIdx]===true){okAuto++;wrongAttempts+=Math.max(0,attempts-1)}
+            else if(attempts>0){wrongAttempts+=attempts}
+          }
+        });
+      });
+    });
+    return{hasExos:true,totalExos:allExos.length,exosDone:exosDone,totalAuto:totalAuto,okAuto:okAuto,totalLibres:totalLibres,saisiesLibres:saisiesLibres,totalAttempts:totalAttempts,wrongAttempts:wrongAttempts};
+  }
 
   var eleves=data.eleves.filter(function(e){return!abs[san(e)]});
   var classKeys=data.eleves.map(san);
@@ -3024,7 +3070,15 @@ function Suivi(p){
       });
     }
     var solved=ac?ac.solved||0:0;
-    var total=ac?ac.total||nErr:nErr;
+    // Total = erreurs CORRIGIBLES uniquement (exclut A). On recalcule depuis errorRefs (rétroactif)
+    // car l'ancienne version stockait .total avec les A inclus, ce qui rendait solved>=total impossible.
+    var totalCorrigible = nErr; // valeur de référence (depuis la copie prof)
+    if(ac && ac.errorRefs){
+      var refs = toArr(ac.errorRefs);
+      var nonA = refs.filter(function(e){return e&&e.type!=="A"}).length;
+      if(nonA > 0) totalCorrigible = nonA;
+    }
+    var total = totalCorrigible;
     var finished=total>0&&solved>=total;
     var lastSeen=ac&&ac.lastSeen?ac.lastSeen:ac?ac.timestamp:0;
     var status;
@@ -3108,18 +3162,28 @@ function Suivi(p){
       h(EleveSearchBar,{query:suiviQuery,onChange:setSuiviQuery,count:rowsFiltered.length}),
       h("div",{style:{overflowX:"auto"}},
         h("table",{className:"bilan-table"},
+          // Ordre chronologique : Élève → étape 1 (Dictée) → étape 2 (Autocorr) → étape 3 (Exos) → Statut
           h("thead",null,h("tr",null,
             h("th",null,""),
             h("th",null,"\u00c9l\u00e8ve"),
-            h("th",null,"Note dict\u00e9e"),
-            h("th",null,"Progression"),
-            h("th",null,"Essais"),
-            h("th",null,"Rat\u00e9s"),
-            h("th",null,"Note corr."),
+            // ─── Étape 1 : Dictée ───
+            h("th",{title:"Note de la dict\u00e9e (corrig\u00e9e par le prof)"},"Note dict\u00e9e"),
+            // ─── Étape 2 : Autocorrection ───
+            h("th",{title:"Avancement dans l'autocorrection"},"Autocorr."),
+            h("th",{style:{fontSize:".78rem"},title:"Nombre total d'essais (autocorrection)"},"Essais"),
+            h("th",{style:{fontSize:".78rem"},title:"Essais rat\u00e9s (autocorrection)"},"Rat\u00e9s"),
+            h("th",{title:"Note finale d'autocorrection sur 5"},"Note corr."),
+            // ─── Étape 3 : Exercices ───
+            h("th",{style:{borderLeft:"2px solid var(--border)",fontSize:".82rem"},title:"Exercices entièrement complétés / total"},"\ud83c\udfaf Exos"),
+            h("th",{style:{fontSize:".82rem"},title:"Bonnes réponses sur items auto-corrigés"},"Auto"),
+            h("th",{style:{fontSize:".82rem"},title:"Productions libres saisies (copie/écriture)"},"Prod"),
+            h("th",{style:{fontSize:".82rem"},title:"Essais rat\u00e9s sur les exercices"},"Ratés ex"),
+            // ─── Statut connexion ───
             h("th",null,"Statut")
           )),
           h("tbody",null,rowsFiltered.map(function(r){
             var pct=r.total>0?Math.round(r.solved/r.total*100):0;
+            var ex=statsExos(r.name);
             return h("tr",{key:r.key,className:r.status==="done"?"blink-done":"",onClick:function(){setSelectedEleve(selectedEleve===r.key?null:r.key)},style:{cursor:"pointer",
               background:r.status==="done"?"var(--green-light)":r.status==="active"?"var(--primary-light)":r.status==="idle"?"rgba(236,201,75,.08)":"transparent",
               opacity:r.status==="waiting"?0.5:1
@@ -3129,7 +3193,9 @@ function Suivi(p){
                 r.name.split(" ")[0].charAt(0)+". "+r.name.split(" ").pop(),
                 r.isTest?h("span",{className:"badge",style:{marginLeft:4,background:"var(--orange-light)",color:"var(--orange)",fontSize:".7rem"}},"TEST"):null
               ),
+              // Note dictée
               h("td",null,r.noteDictee!==null?h("span",{style:{color:noteColor(r.noteDictee,data.base),fontWeight:600}},r.noteDictee+"/"+data.base):"\u2014"),
+              // Progression autocorrection
               h("td",{style:{minWidth:120}},
                 r.status!=="waiting"?h("div",{style:{display:"flex",alignItems:"center",gap:6}},
                   h("div",{style:{flex:1,height:8,background:"var(--border)",borderRadius:4,overflow:"hidden"}},
@@ -3142,6 +3208,17 @@ function Suivi(p){
               h("td",{style:{textAlign:"center",fontWeight:500}},r.totalAttempts||"\u2014"),
               h("td",{style:{textAlign:"center",fontWeight:500,color:r.wrongAttempts>0?"var(--coral)":"var(--muted)"}},r.wrongAttempts||"\u2014"),
               h("td",{style:{textAlign:"center",fontWeight:700,color:r.score!==null?noteColor(r.score,5):"var(--muted)"}},r.score!==null?r.score+"/5":"\u2014"),
+              // Exos (avec séparateur visuel)
+              h("td",{style:{borderLeft:"2px solid var(--border)",textAlign:"center"}},
+                ex.hasExos?h("span",{style:{fontWeight:600,color:ex.exosDone===ex.totalExos?"var(--green)":ex.exosDone>0?"#7a5a00":"var(--muted)"}},ex.exosDone+"/"+ex.totalExos):"\u2014"
+              ),
+              h("td",{style:{textAlign:"center"}},
+                ex.hasExos&&ex.totalAuto>0?h("span",{style:{color:ex.okAuto===ex.totalAuto?"var(--green)":"inherit",fontWeight:500}},ex.okAuto+"/"+ex.totalAuto):"\u2014"
+              ),
+              h("td",{style:{textAlign:"center"}},
+                ex.hasExos&&ex.totalLibres>0?h("span",{style:{color:ex.saisiesLibres===ex.totalLibres?"var(--green)":"inherit",fontWeight:500}},ex.saisiesLibres+"/"+ex.totalLibres):"\u2014"
+              ),
+              h("td",{style:{textAlign:"center",fontWeight:500,color:ex.wrongAttempts>0?"var(--coral)":"var(--muted)"}},ex.wrongAttempts||"\u2014"),
               h("td",null,h("span",{style:{fontSize:".8rem",color:r.status==="active"?"var(--primary)":r.status==="done"?"var(--green)":"var(--muted)"}},statusLabel(r.status)))
             );
           }))
@@ -3337,7 +3414,89 @@ function Suivi(p){
               h("p",{style:{fontWeight:700,fontSize:".9rem",marginBottom:4}},"Ce que je vais faire diff\u00e9remment :"),
               ac.bilan.b4?h("p",{style:{fontSize:".88rem",margin:"2px 0 2px 12px"}},ac.bilan.b4):h("p",{style:{fontSize:".85rem",color:"#999",marginLeft:12}},"Non rempli")
             )
-          )
+          ),
+          // ═══ VUE EXOS EN DIRECT — étape 3 du flux élève ═══
+          (function(){
+            if(!exercices) return null;
+            var eleveName = selRow ? selRow.name : selectedEleve;
+            var bundle = exGetForEleve(exercices, eleveName);
+            var allExos = bundle.personnels.concat(bundle.classe);
+            if(allExos.length === 0) return null;
+            var er = (exResults || {})[selectedEleve] || {};
+            var ex = statsExos(eleveName);
+            // Helper : rendu d'un exo avec grille d'items
+            function renderExo(exo, typeKey, exIdx){
+              var items = (exo.items || []);
+              var r = (er[typeKey] || {})[exIdx];
+              return h("div",{key:typeKey+"_"+exIdx,style:{padding:"10px 14px",margin:"6px 0",border:"1px solid #e5e5e5",borderRadius:8,background:r&&r.completed?"rgba(72,160,87,.05)":"#fafafa"}},
+                h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}},
+                  h("div",null,
+                    h("span",{style:{fontWeight:700,fontSize:".9rem"}},(r&&r.completed?"\u2705 ":"")+(exo.titre||"Exercice "+(exIdx+1))),
+                    h("span",{style:{marginLeft:8,fontSize:".74rem",color:"#888",fontWeight:500}},typeKey==="personnels"?"Perso":"Classe")
+                  ),
+                  r&&r.lastUpdate?h("span",{style:{fontSize:".72rem",color:"#888"}},"MAJ : "+new Date(r.lastUpdate).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})):null
+                ),
+                // Grille d'items avec statut visuel
+                h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
+                  items.map(function(it, itIdx){
+                    if(!it) return null;
+                    var resI = r && r.items ? r.items[itIdx] : null;
+                    var att = r && r.attempts ? (r.attempts[itIdx]||0) : 0;
+                    var ansK = typeKey+"_"+exIdx+"_"+itIdx;
+                    var ans = er.answers ? er.answers[ansK] : null;
+                    // Détermination de la couleur selon type et résultat
+                    var isLibre = (it.type==="copie"||it.type==="ecriture");
+                    var bg, color, sym;
+                    if(isLibre){
+                      var hasSaisie = ans && String(ans).trim();
+                      bg = hasSaisie?"rgba(43,108,203,.15)":"#eee";
+                      color = hasSaisie?"#1a3a7a":"#999";
+                      sym = hasSaisie?"\u270d":"\u2014";
+                    } else {
+                      if(resI === true){ bg="rgba(72,160,87,.18)"; color="#1b6a30"; sym="\u2713" }
+                      else if(resI === false){ bg="rgba(197,48,48,.15)"; color="#9f1c2d"; sym="\u2715" }
+                      else { bg="#eee"; color="#999"; sym="\u2014" }
+                    }
+                    var label = (itIdx+1)+"."+sym+(att>1?" ("+att+")":"");
+                    var titleTxt = "Item "+(itIdx+1)+" \u00b7 "+it.type+(att>0?" \u00b7 "+att+" essai"+(att>1?"s":""):"")+(isLibre&&ans?" \u00b7 R\u00e9ponse : "+String(ans).substring(0,120)+(String(ans).length>120?"\u2026":""):"");
+                    return h("div",{key:itIdx,title:titleTxt,style:{padding:"3px 8px",borderRadius:4,background:bg,color:color,fontSize:".82rem",fontWeight:600,fontFamily:"ui-monospace,monospace",cursor:"help"}}, label);
+                  })
+                ),
+                // Saisies libres : afficher en clair sous la grille
+                items.some(function(it){return it&&(it.type==="copie"||it.type==="ecriture")})&&er.answers&&h("div",{style:{marginTop:8,paddingTop:8,borderTop:"1px dashed #ddd"}},
+                  items.map(function(it, itIdx){
+                    if(!it||(it.type!=="copie"&&it.type!=="ecriture")) return null;
+                    var ansK = typeKey+"_"+exIdx+"_"+itIdx;
+                    var ans = er.answers ? er.answers[ansK] : null;
+                    if(!ans||!String(ans).trim()) return null;
+                    return h("div",{key:itIdx,style:{margin:"4px 0",fontSize:".82rem"}},
+                      h("span",{style:{display:"inline-block",padding:"1px 6px",borderRadius:3,fontSize:".7rem",fontWeight:600,background:it.type==="copie"?"rgba(200,169,81,.2)":"rgba(43,108,203,.15)",color:it.type==="copie"?"#7a5a00":"#1a3a7a",marginRight:6,textTransform:"uppercase"}}, it.type+" #"+(itIdx+1)),
+                      h("span",{style:{fontStyle:"italic",color:"#444"}}, "\u00ab "+String(ans).substring(0,200)+(String(ans).length>200?"\u2026":"")+" \u00bb")
+                    );
+                  })
+                )
+              );
+            }
+            return h("div",{style:{background:"#fff",borderRadius:12,padding:20,marginTop:16}},
+              h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10}},
+                h("div",{style:{fontSize:".75rem",color:"#999",fontWeight:700,textTransform:"uppercase",letterSpacing:".05em"}},"\ud83c\udfaf Exercices personnalis\u00e9s"),
+                h("div",{style:{fontSize:".82rem",color:"#666"}},
+                  h("strong",{style:{color:ex.exosDone===ex.totalExos?"#1b6a30":"#7a5a00"}},ex.exosDone+"/"+ex.totalExos+" termin\u00e9s"),
+                  ex.totalAuto>0?h("span",null," \u00b7 auto-cor "+ex.okAuto+"/"+ex.totalAuto):null,
+                  ex.totalLibres>0?h("span",null," \u00b7 prod "+ex.saisiesLibres+"/"+ex.totalLibres):null,
+                  ex.totalAttempts>0?h("span",null," \u00b7 "+ex.totalAttempts+" essai"+(ex.totalAttempts>1?"s":"")+(ex.wrongAttempts>0?", "+ex.wrongAttempts+" rat\u00e9"+(ex.wrongAttempts>1?"s":""):"")):null
+                )
+              ),
+              bundle.personnels.length>0&&h("div",{style:{marginBottom:12}},
+                h("div",{style:{fontSize:".82rem",color:"#666",marginBottom:4,fontStyle:"italic"}},"\ud83d\udc64 Pour cet \u00e9l\u00e8ve"),
+                bundle.personnels.map(function(ex,i){return renderExo(ex,"personnels",i)})
+              ),
+              bundle.classe.length>0&&h("div",null,
+                h("div",{style:{fontSize:".82rem",color:"#666",marginBottom:4,fontStyle:"italic"}},"\ud83d\udc65 Pour la classe"),
+                bundle.classe.map(function(ex,i){return renderExo(ex,"classe",i)})
+              )
+            );
+          })()
         )
       )
     })()
@@ -5655,117 +5814,7 @@ function ExercicesAdmin(p){
       impMsg&&h("div",{style:{marginTop:8,padding:"8px 12px",borderRadius:6,fontSize:".82rem",fontWeight:600,background:impMsg.indexOf("\u274c")===0?"rgba(197,48,48,.1)":impMsg.indexOf("\u26a0")===0?"rgba(236,201,75,.15)":"rgba(72,160,87,.12)",color:impMsg.indexOf("\u274c")===0?"#9f1c2d":impMsg.indexOf("\u26a0")===0?"#7a5a00":"#1b6a30"}},impMsg)
     ),
 
-    // ─── PANNEAU SUIVI DES EXERCICES — qui a fait quoi (module isolé) ───
-    exercices && (function(){
-      var elevesP = sortElevesByNom((p && p.data && p.data.eleves) || []);
-      var s_query = sProdQuery; // réutilise pour économiser un state (panneaux liés visuellement)
-      // Pour chaque élève, calculer son avancement sur les exos qui LUI sont assignés
-      function statsEleve(eleveName){
-        var eleveKey = san(eleveName);
-        var bundle = exGetForEleve(exercices, eleveName); // {classe, personnels}
-        var allExos = bundle.personnels.concat(bundle.classe);
-        if(allExos.length === 0) return {hasExos:false};
-        var er = (exResults || {})[eleveKey];
-        var exosDone = 0;
-        var totalAuto = 0, okAuto = 0;
-        var totalLibres = 0, saisiesLibres = 0;
-        ["personnels","classe"].forEach(function(typeKey){
-          var pool = typeKey === "personnels" ? bundle.personnels : bundle.classe;
-          pool.forEach(function(ex, exIdx){
-            var items = (ex.items || []);
-            var r = er && er[typeKey] && er[typeKey][exIdx];
-            if(r && r.completed) exosDone++;
-            items.forEach(function(it, itIdx){
-              if(!it) return;
-              if(it.type === "copie" || it.type === "ecriture"){
-                totalLibres++;
-                var ansK = typeKey + "_" + exIdx + "_" + itIdx;
-                var ans = er && er.answers && er.answers[ansK];
-                if(ans && String(ans).trim()) saisiesLibres++;
-              } else if(it.type === "qcm" || it.type === "trous" || it.type === "reecriture"){
-                totalAuto++;
-                if(r && r.items && r.items[itIdx] === true) okAuto++;
-              }
-            });
-          });
-        });
-        return {
-          hasExos: true,
-          totalExos: allExos.length,
-          exosDone: exosDone,
-          totalAuto: totalAuto, okAuto: okAuto,
-          totalLibres: totalLibres, saisiesLibres: saisiesLibres,
-          lastUpdate: er && er.lastUpdate ? er.lastUpdate : 0
-        };
-      }
-      // Filtre recherche
-      var query = (prodQuery || "").trim();
-      var rows = elevesP.filter(function(name){
-        if(!query) return true;
-        return matchEleveInitials(name, query) || name.toLowerCase().indexOf(query.toLowerCase()) !== -1;
-      }).map(function(name){
-        return {name: name, stats: statsEleve(name)};
-      });
-      // Stats globales
-      var nbAvecExos = rows.filter(function(r){return r.stats.hasExos}).length;
-      var nbFinis = rows.filter(function(r){return r.stats.hasExos && r.stats.exosDone === r.stats.totalExos}).length;
-      var nbEnCours = rows.filter(function(r){return r.stats.hasExos && r.stats.exosDone > 0 && r.stats.exosDone < r.stats.totalExos}).length;
-      var nbRien = rows.filter(function(r){return r.stats.hasExos && r.stats.exosDone === 0}).length;
-
-      return h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
-        h("h3",{style:{marginTop:0,marginBottom:8}},"\ud83d\udcca Suivi des exercices"),
-        h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},
-          "Vue d'ensemble de l'avancement des \u00e9l\u00e8ves sur leurs exercices personnels et de classe. ",
-          h("strong",null,nbFinis+" termin\u00e9"+(nbFinis>1?"s":""))," \u00b7 ",
-          h("span",{style:{color:"#7a5a00"}},nbEnCours+" en cours")," \u00b7 ",
-          h("span",{style:{color:"#888"}},nbRien+" pas commenc\u00e9"+(nbRien>1?"s":""))
-        ),
-        h("div",{style:{maxHeight:300,overflowY:"auto",border:"1px solid var(--border)",borderRadius:6,background:"var(--card)"}},
-          h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:".85rem"}},
-            h("thead",{style:{position:"sticky",top:0,background:"var(--card2)",zIndex:1}},
-              h("tr",null,
-                h("th",{style:{textAlign:"left",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"\u00c9l\u00e8ve"),
-                h("th",{style:{textAlign:"center",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"Exos"),
-                h("th",{style:{textAlign:"center",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"Auto-cor."),
-                h("th",{style:{textAlign:"center",padding:"6px 10px",borderBottom:"1px solid var(--border)",fontWeight:600,fontSize:".78rem"}},"Productions")
-              )
-            ),
-            h("tbody",null,
-              rows.length === 0 ? h("tr",null,h("td",{colSpan:4,style:{textAlign:"center",padding:14,color:"var(--muted)",fontStyle:"italic"}},"Aucun \u00e9l\u00e8ve")) :
-              rows.map(function(r){
-                var st = r.stats;
-                if(!st.hasExos){
-                  return h("tr",{key:r.name,style:{opacity:.4}},
-                    h("td",{style:{padding:"5px 10px"}},r.name),
-                    h("td",{colSpan:3,style:{padding:"5px 10px",textAlign:"center",fontSize:".78rem",fontStyle:"italic"}},"Pas d'exercices assign\u00e9s")
-                  );
-                }
-                var pct = st.totalExos > 0 ? Math.round(100 * st.exosDone / st.totalExos) : 0;
-                var color = pct === 100 ? "#1b6a30" : pct > 0 ? "#7a5a00" : "#888";
-                var bg = pct === 100 ? "rgba(72,160,87,.08)" : pct > 0 ? "rgba(236,201,75,.08)" : "transparent";
-                var icon = pct === 100 ? "\u2705" : pct > 0 ? "\u23f3" : "\u26ab";
-                var np = getEleveNomPrenom(r.name);
-                var displayName = np.nom + " " + np.prenom;
-                return h("tr",{key:r.name,style:{background:bg,borderBottom:"1px solid var(--border)"}},
-                  h("td",{style:{padding:"5px 10px",fontWeight:pct===100?600:400}}, icon + " " + displayName),
-                  h("td",{style:{padding:"5px 10px",textAlign:"center",color:color,fontWeight:600}}, st.exosDone+"/"+st.totalExos),
-                  h("td",{style:{padding:"5px 10px",textAlign:"center"}},
-                    st.totalAuto === 0 ? h("span",{style:{color:"var(--muted)"}},"\u2014") :
-                    h("span",{style:{color: st.okAuto === st.totalAuto ? "#1b6a30" : "inherit"}}, st.okAuto+"/"+st.totalAuto)
-                  ),
-                  h("td",{style:{padding:"5px 10px",textAlign:"center"}},
-                    st.totalLibres === 0 ? h("span",{style:{color:"var(--muted)"}},"\u2014") :
-                    h("span",{style:{color: st.saisiesLibres === st.totalLibres ? "#1b6a30" : "inherit"}}, st.saisiesLibres+"/"+st.totalLibres)
-                  )
-                );
-              })
-            )
-          )
-        )
-      );
-    })(),
-
-    // ─── PANNEAU PRODUCTIONS LIBRES (copie + ecriture) — module isolé ───
+    // ─── PANNEAU PRODUCTIONS LIBRES─── PANNEAU PRODUCTIONS LIBRES (copie + ecriture) — module isolé ───
     exercices && (function(){
       // Helper local : collecte toutes les productions libres saisies
       var elevesP = sortElevesByNom((p && p.data && p.data.eleves) || []);
@@ -6218,6 +6267,16 @@ function ExercicesEleve(p){
         });
       });
     });
+    // ─── TODO ressenti élève ───────────────────────────────────────────────────────
+    // À implémenter dans une future itération : zone d'écriture libre en bas de la
+    // liste d'exercices, pour que l'élève écrive son ressenti scolaire sur la dictée
+    // (s'est-il bien préparé ? quelles erreurs aurait-il pu éviter ? que ne refera-t-il
+    // pas ? ce qu'il a compris ?). Stocker dans Firebase à :
+    //   correction_dictee/{dicteeId}/exercices_results/{eleveKey}/ressenti
+    //   (champ texte libre, mis à jour à chaque modification, visible côté prof
+    //   dans la modale détail élève de l'onglet Suivi)
+    // Idéalement avec autosave silencieux (debounce 1s).
+    // ─────────────────────────────────────────────────────────────────────────────────
     return h("div",{className:"fade-up"},
       // ─── ÉCRAN DE FIN : visible uniquement quand tous les exos sont done ───
       allDone && h("div",{className:"card",style:{textAlign:"center",border:"2px solid var(--green)",background:"rgba(72,160,87,.06)"}},
@@ -6287,6 +6346,10 @@ function ExercicesEleve(p){
     // Aligne le tableau d'items
     while(nr[cur.type][cur.idx].items.length<items.length)nr[cur.type][cur.idx].items.push(null);
     nr[cur.type][cur.idx].items[cur.itemIdx] = check.ok;
+    // Tracking essais : nb tentatives par item (non rétroactif, démarre avec ce code)
+    nr[cur.type][cur.idx].attempts = nr[cur.type][cur.idx].attempts || [];
+    while(nr[cur.type][cur.idx].attempts.length<items.length)nr[cur.type][cur.idx].attempts.push(0);
+    nr[cur.type][cur.idx].attempts[cur.itemIdx] = (nr[cur.type][cur.idx].attempts[cur.itemIdx] || 0) + 1;
     // Marquer complete si tous les items validés
     if(nr[cur.type][cur.idx].items.every(function(x){return x===true||x===false})){
       nr[cur.type][cur.idx].completed = true;
@@ -6469,7 +6532,8 @@ function EleveCorrection(p){
       setErrors(newErrors);
       setExtras(newExtras);
       if(val.note!=null)setNoteDictee(val.note);
-      db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/total").set(newErrors.length);
+      // total = erreurs corrigibles (exclut type A = signalements graphie)
+      db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/total").set(newErrors.filter(function(e){return e&&e.type!=="A"}).length);
       db.ref("correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key+"/errorRefs").set(newErrors.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
     }
     corrRef.on("value",onCorrChange);
