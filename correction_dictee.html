@@ -5068,6 +5068,61 @@ function ExercicesAdmin(p){
   var sImpMsg = useState(""), impMsg = sImpMsg[0], setImpMsg = sImpMsg[1];
   // Overlay d'impression (iframe plein écran, alternative à window.open qui peut être bloqué)
   var sImpHtml = useState(null), impPrintHtml = sImpHtml[0], setImpPrintHtml = sImpHtml[1];
+  // Élèves ayant fini leur autocorrection (status === "done" en Firebase)
+  var sDone = useState({}), doneEleves = sDone[0], setDoneEleves = sDone[1];
+  // Élèves déjà imprimés (key → timestamp), persistant en Firebase pour suivre entre vagues
+  var sPrinted = useState({}), printedEleves = sPrinted[0], setPrintedEleves = sPrinted[1];
+
+  // Listener : statuts des élèves dans autocorrection (pour détecter ceux qui ont fini)
+  React.useEffect(function(){
+    var refAc = db.ref("correction_dictee/"+p.dicteeId+"/autocorrection");
+    function onAc(snap){
+      var v = snap.val() || {};
+      var done = {};
+      Object.keys(v).forEach(function(k){
+        if(!v[k]) return;
+        // Détection multi-critères :
+        // 1. status === "done" (idéal — nouveau code)
+        // 2. solved >= total et total > 0 (rattrape les anciens "active"/"offline" qui ont en fait fini)
+        var hasDoneStatus = v[k].status === "done";
+        var solved = v[k].solved || 0, total = v[k].total || 0;
+        var allCorrected = (total > 0 && solved >= total);
+        if(hasDoneStatus || allCorrected) done[k] = true;
+      });
+      setDoneEleves(done);
+    }
+    refAc.on("value", onAc);
+    var refImp = db.ref("correction_dictee/"+p.dicteeId+"/exercices_imprimes");
+    function onImp(snap){ setPrintedEleves(snap.val() || {}) }
+    refImp.on("value", onImp);
+    return function(){ refAc.off("value", onAc); refImp.off("value", onImp) };
+  }, [p.dicteeId]);
+
+  // Auto-cochage : dès qu'un élève passe à "done" ET n'a pas encore été imprimé, on le coche
+  React.useEffect(function(){
+    if(!doneEleves || Object.keys(doneEleves).length === 0) return;
+    setSelImp(function(prev){
+      var next = Object.assign({}, prev);
+      var changed = false;
+      // Pour chaque élève "done" non imprimé, vérifier qu'il est bien dans la liste élèves
+      Object.keys(doneEleves).forEach(function(k){
+        // Trouver le nom complet correspondant à cette key
+        var found = null;
+        for(var i=0;i<eleves.length;i++){
+          if(san(eleves[i]) === k){found = eleves[i]; break}
+        }
+        if(!found) return;
+        // Si déjà imprimé, ne pas re-cocher
+        if(printedEleves[k]) return;
+        // Sinon cocher si pas déjà coché
+        if(!next[found]){
+          next[found] = true;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [doneEleves, printedEleves]);
 
   React.useEffect(function(){
     var ref = db.ref("correction_dictee/"+p.dicteeId+"/exercices");
@@ -5130,14 +5185,22 @@ function ExercicesAdmin(p){
       var enonce = item.enonce ? '<div class="enonce">'+escapeHtml(item.enonce)+'</div>' : '';
       if(item.type==="qcm"){
         var phrase = (item.phrase||"").replace(/___/g,'<span class="trou">_____</span>');
+        // QCM en grille 2 colonnes (gain de place majeur)
         var props = (item.propositions||[]).map(function(p,i){
           var letters="ABCDEFGH";
           return '<div class="qcm-prop"><span class="qcm-letter">'+letters[i]+'.</span> <span class="qcm-box">\u25a1</span> '+escapeHtml(p)+'</div>';
         }).join("");
-        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+'<div class="qcm-phrase">'+phrase+'</div>'+props+'</div></div>';
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+'<div class="qcm-phrase">'+phrase+'</div><div class="qcm-props">'+props+'</div></div></div>';
       }
       if(item.type==="trous"){
         var segs = item.segments||[];
+        // Si pas de segments OU aucun null dans segments → fallback : afficher la phrase + une ligne de réponse
+        var hasBlank = segs.some(function(s){return s===null});
+        if(segs.length===0 || !hasBlank){
+          var phrase = item.phrase || segs.filter(function(s){return s!==null}).map(function(s){return String(s||"")}).join("");
+          return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+
+            '<div class="item-reponse-libre">'+escapeHtml(phrase)+' <span class="ligne-reponse">__________________</span></div></div></div>';
+        }
         var phraseHtml = segs.map(function(s){
           if(s===null)return '<span class="trou-input">__________</span>';
           return escapeHtml(String(s||""));
@@ -5147,54 +5210,101 @@ function ExercicesAdmin(p){
       if(item.type==="reecriture"){
         return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+
           '<div class="reec-phrase"><strong>'+escapeHtml(item.phrase||"")+'</strong></div>'+
-          '<div class="reec-ligne">\u2192 ____________________________________________________________</div></div></div>';
+          '<div class="reec-ligne">\u2192 ____________________________________________________________</div>'+
+          '<div class="reec-ligne reec-ligne-2">____________________________________________________________</div></div></div>';
+      }
+      // Fallback pour tout autre type d'item : énoncé + phrase + ligne de réponse
+      if(item.enonce || item.phrase){
+        var phr = item.phrase || "";
+        return '<div class="item"><div class="item-num">'+(idx+1)+'.</div><div class="item-body">'+enonce+
+          (phr ? '<div class="qcm-phrase">'+escapeHtml(phr)+'</div>' : '')+
+          '<div class="item-reponse-libre"><span class="ligne-reponse">________________________________</span></div></div></div>';
       }
       return '';
     }
     function renderEx(exo){
       var titre = exo.titre ? '<div class="ex-titre">'+escapeHtml(exo.titre)+'</div>' : '';
       var regle = exo.regle ? '<div class="ex-regle">'+escapeHtml(exo.regle)+'</div>' : '';
-      var items = (exo.items||[]).map(renderItem).join("");
-      return '<div class="exercice">'+titre+regle+items+'</div>';
+      var items = exo.items || [];
+      // Si tous les items partagent le MÊME énoncé, on l'affiche une seule fois en tête (gain de place)
+      var commonEnonce = null;
+      if(items.length>1){
+        var first = items[0] && items[0].enonce;
+        if(first && items.every(function(it){return it && it.enonce === first})){
+          commonEnonce = first;
+        }
+      }
+      var consigne = commonEnonce ? '<div class="consigne">'+escapeHtml(commonEnonce)+'</div>' : '';
+      var itemsHtml = items.map(function(it, idx){
+        // Si énoncé commun retiré, on passe à renderItem un item sans enonce
+        if(commonEnonce){
+          var clean = Object.assign({}, it);
+          delete clean.enonce;
+          return renderItem(clean, idx);
+        }
+        return renderItem(it, idx);
+      }).join("");
+      return '<div class="exercice">'+titre+regle+consigne+itemsHtml+'</div>';
     }
     var perHtml = perso.length>0 ? '<section class="section-perso"><h2>\ud83c\udfaf Pour toi</h2>'+perso.map(renderEx).join("")+'</section>' : '';
     var clHtml = classe.length>0 ? '<section class="section-classe"><h2>\ud83d\udcdd Pour la classe</h2>'+classe.map(renderEx).join("")+'</section>' : '';
     var titreDictee = (p.data&&p.data.title)?p.data.title:"";
-    return '<article class="fiche-eleve">'+
-      '<header class="fiche-header"><div class="eleve-nom">'+escapeHtml(eleveName)+'</div>'+(titreDictee?'<div class="dictee-titre">'+escapeHtml(titreDictee)+'</div>':'')+'</header>'+
-      perHtml + clHtml +
-      '</article>';
+    // Wrapper <table> avec thead répété : seul mécanisme CSS fiable pour répéter un en-tête sur chaque page imprimée
+    var phHtml = '<div class="print-header"><span class="ph-eleve">'+escapeHtml(eleveName)+'</span>'+(titreDictee?'<span class="ph-dictee">'+escapeHtml(titreDictee)+'</span>':'')+'</div>';
+    var mainHeader = '<header class="fiche-header"><div class="eleve-nom">'+escapeHtml(eleveName)+'</div>'+(titreDictee?'<div class="dictee-titre">'+escapeHtml(titreDictee)+'</div>':'')+'</header>';
+    return '<table class="fiche-eleve">'+
+      '<thead><tr><td>'+phHtml+'</td></tr></thead>'+
+      '<tbody><tr><td>'+mainHeader+perHtml+clHtml+'</td></tr></tbody>'+
+      '</table>';
   }
 
   function styleImpressionJson(){
     return '<style>'+
-      '@page{margin:1.5cm}'+
-      'body{font-family:Georgia,"Times New Roman",serif;font-size:11pt;line-height:1.5;color:#222;margin:0;padding:0}'+
-      '.fiche-eleve{page-break-after:always;padding:0 0 1cm 0}'+
-      '.fiche-eleve:last-child{page-break-after:auto}'+
-      '.fiche-header{border-bottom:2px solid #2b6ccb;padding-bottom:8px;margin-bottom:14px}'+
-      '.eleve-nom{font-size:1.4rem;font-weight:700;color:#1a3a7a}'+
-      '.dictee-titre{font-size:.95rem;color:#666;font-style:italic;margin-top:2px}'+
-      'section{margin-bottom:18px}'+
-      'h2{font-size:1.05rem;margin:14px 0 8px;color:#1a3a7a;border-bottom:1px solid #ccc;padding-bottom:3px}'+
-      '.exercice{margin-bottom:14px;padding-bottom:8px;border-bottom:1px dotted #ddd}'+
+      // Marges page resserrées
+      '@page{margin:10mm 9mm 9mm 9mm}'+
+      'body{font-family:Georgia,"Times New Roman",serif;font-size:9.5pt;line-height:1.25;color:#222;margin:0;padding:0}'+
+      // Chaque fiche est une table avec thead répété = seul mécanisme CSS fiable pour répéter un en-tête sur chaque page imprimée
+      'table.fiche-eleve{width:100%;border-collapse:collapse;page-break-after:right;break-after:right}'+
+      'table.fiche-eleve:last-child{page-break-after:auto;break-after:auto}'+
+      'table.fiche-eleve thead{display:table-header-group}'+
+      'table.fiche-eleve > thead > tr > td{padding:0 0 2mm 0;border-bottom:1px solid #888}'+
+      'table.fiche-eleve > tbody > tr > td{padding:3mm 0 0 0}'+
+      // En-tête répété (thead) — discret, en haut de chaque page
+      '.print-header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:8.5pt;color:#444}'+
+      '.print-header .ph-eleve{font-weight:700;color:#1a3a7a;font-size:9.5pt}'+
+      '.print-header .ph-dictee{font-style:italic}'+
+      // En-tête principal (1ère page de chaque fiche)
+      '.fiche-header{border-bottom:2px solid #2b6ccb;padding-bottom:4px;margin-bottom:6px}'+
+      '.eleve-nom{font-size:1.2rem;font-weight:700;color:#1a3a7a;line-height:1.1}'+
+      '.dictee-titre{font-size:.85rem;color:#666;font-style:italic;margin-top:1px}'+
+      // Sections très compactées
+      'section{margin-bottom:4px}'+
+      // h2 et titres restent attachés au contenu suivant (pas d'orphelins en bas de page)
+      'h2{font-size:.95rem;margin:5px 0 2px;color:#1a3a7a;border-bottom:1px solid #ccc;padding-bottom:1px;break-after:avoid;page-break-after:avoid}'+
+      // .exercice PEUT se couper entre items (gain d'espace blanc en bas de page) mais titre/règle/consigne collent au 1er item
+      '.exercice{margin-bottom:3px;padding-bottom:2px;border-bottom:1px dotted #ddd}'+
       '.exercice:last-child{border-bottom:none}'+
-      '.ex-titre{font-weight:700;font-size:.98rem;margin-bottom:4px}'+
-      '.ex-regle{font-size:.88rem;font-style:italic;color:#555;background:#f5f3ee;padding:6px 10px;border-left:3px solid #c8a951;margin:4px 0 8px}'+
-      '.item{display:flex;gap:8px;margin:8px 0;align-items:flex-start}'+
-      '.item-num{font-weight:700;color:#2b6ccb;min-width:18px}'+
-      '.item-body{flex:1}'+
-      '.enonce{font-size:.88rem;color:#555;font-style:italic;margin-bottom:3px}'+
-      '.qcm-phrase{margin:3px 0 6px;font-size:1rem}'+
-      '.qcm-prop{margin:2px 0 2px 14px;font-size:.95rem}'+
-      '.qcm-letter{font-weight:700;color:#1a3a7a;display:inline-block;width:18px}'+
-      '.qcm-box{font-size:1.1rem;color:#888}'+
-      '.trou{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:80px;font-family:monospace}'+
-      '.trou-input{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:90px;margin:0 3px;font-family:monospace;color:transparent}'+
-      '.trous-phrase{margin:3px 0;font-size:1rem;line-height:2}'+
-      '.reec-phrase{margin:4px 0 6px;font-size:.98rem}'+
-      '.reec-ligne{font-family:monospace;color:#888;font-size:.95rem;margin-top:4px}'+
-      '@media print{.fiche-eleve{page-break-after:always}.fiche-eleve:last-child{page-break-after:auto}}'+
+      '.ex-titre{font-weight:700;font-size:.9rem;margin-bottom:1px;break-after:avoid;page-break-after:avoid}'+
+      '.ex-regle{font-size:.74rem;font-style:italic;color:#555;background:#f5f3ee;padding:2px 6px;border-left:2px solid #c8a951;margin:1px 0 3px;line-height:1.25;break-after:avoid;page-break-after:avoid}'+
+      '.consigne{font-size:.78rem;color:#444;font-weight:600;margin:2px 0;font-style:italic;break-after:avoid;page-break-after:avoid}'+
+      // Items très resserrés
+      '.item{display:flex;gap:5px;margin:2px 0;align-items:flex-start;break-inside:avoid;page-break-inside:avoid}'+
+      '.item-num{font-weight:700;color:#2b6ccb;min-width:14px;font-size:.88rem}'+
+      '.item-body{flex:1;min-width:0}'+
+      '.enonce{font-size:.78rem;color:#555;font-style:italic;margin-bottom:1px}'+
+      '.qcm-phrase{margin:1px 0 2px;font-size:.9rem}'+
+      '.qcm-props{display:flex;flex-wrap:wrap;gap:2px 12px;margin:1px 0 2px 10px;align-items:baseline}'+
+      '.qcm-prop{font-size:.83rem;line-height:1.35;white-space:nowrap}'+
+      '.qcm-letter{font-weight:700;color:#1a3a7a;display:inline-block;width:12px}'+
+      '.qcm-box{font-size:1rem;color:#888}'+
+      '.trou{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:60px;font-family:monospace}'+
+      '.trou-input{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:80px;margin:0 3px;font-family:monospace;color:transparent}'+
+      '.trous-phrase{margin:1px 0;font-size:.9rem;line-height:1.85}'+
+      '.reec-phrase{margin:2px 0 3px;font-size:.9rem}'+
+      '.reec-ligne{font-family:monospace;color:#888;font-size:.88rem;margin-top:2px;line-height:2}'+
+      '.reec-ligne-2{margin-top:4px}'+
+      '.item-reponse-libre{margin:2px 0;font-size:.9rem;line-height:1.9}'+
+      '.item-reponse-libre .ligne-reponse{display:inline-block;border-bottom:1.5px solid #2b6ccb;min-width:180px;font-family:monospace}'+
       '</style>';
   }
 
@@ -5428,7 +5538,7 @@ function ExercicesAdmin(p){
     (exHtml||exercices)&&h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
       h("h3",{style:{marginTop:0,marginBottom:8}},"\ud83d\udda8 Impression rapide"),
       h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},
-        "Coche les \u00e9l\u00e8ves dont tu veux imprimer la fiche d\u2019exercices, puis clic sur \u00ab Imprimer \u00bb. Une fen\u00eatre s\u2019ouvre directement sur le dialogue d\u2019impression.",
+        "Les \u00e9l\u00e8ves se cochent ",h("strong",null,"automatiquement"),"d\u00e8s qu\u2019ils finissent leur autocorrection. Tu cliques sur Imprimer pour la vague en cours \u2192 ils sont marqu\u00e9s comme imprim\u00e9s et ne reviendront pas \u00e0 la vague suivante.",
         h("br",null),
         h("span",{style:{fontSize:".74rem",fontStyle:"italic"}},
           exHtml?"Source : HTML upload\u00e9 (sections par \u00e9l\u00e8ve d\u00e9tect\u00e9es automatiquement)":"Source : JSON inject\u00e9 (fiche g\u00e9n\u00e9r\u00e9e \u00e0 la vol\u00e9e \u00e0 partir des exercices personnels de chaque \u00e9l\u00e8ve)"
@@ -5437,17 +5547,32 @@ function ExercicesAdmin(p){
       h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}},
         h("button",{className:"btn-sm btn-ghost",onClick:function(){toggleAllImp(true)},style:{fontSize:".74rem"}},"Tout cocher"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){toggleAllImp(false)},style:{fontSize:".74rem"}},"Tout d\u00e9cocher"),
-        h("span",{style:{fontSize:".74rem",color:"var(--muted)"}},Object.keys(selImp).filter(function(k){return selImp[k]}).length+" \u00e9l\u00e8ve(s) coch\u00e9(s)")
+        h("span",{style:{fontSize:".74rem",color:"var(--muted)"}},
+          Object.keys(doneEleves).length+" ont fini \u00b7 "+
+          Object.keys(selImp).filter(function(k){return selImp[k]}).length+" coch\u00e9(s) \u00b7 "+
+          Object.keys(printedEleves).length+" d\u00e9j\u00e0 imprim\u00e9(s)"
+        ),
+        Object.keys(printedEleves).length>0&&h("button",{className:"btn-sm btn-ghost",onClick:function(){
+          if(!confirm("R\u00e9initialiser le suivi des impressions ? Tous les \u00e9l\u00e8ves d\u00e9j\u00e0 imprim\u00e9s redeviendront cochables automatiquement quand ils auront fini."))return;
+          db.ref("correction_dictee/"+p.dicteeId+"/exercices_imprimes").remove();
+          setImpMsg("\u2705 Suivi r\u00e9initialis\u00e9");setTimeout(function(){setImpMsg("")},3000);
+        },style:{fontSize:".74rem",color:"#8a4a00"},title:"Effacer le suivi des impressions (utile pour une nouvelle s\u00e9ance)"},"\u21bb R\u00e9initialiser le suivi")
       ),
       // Grille de checkboxes (utilise la liste filtrée pour respecter la recherche)
-      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:2,maxHeight:240,overflowY:"auto",padding:"6px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:6,marginBottom:10}},
+      h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))",gap:2,maxHeight:280,overflowY:"auto",padding:"6px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:6,marginBottom:10}},
         elevesFiltered.map(function(elName){
           var np=getEleveNomPrenom(elName);
           var displayName=np.nom.charAt(0)+". "+np.prenom;
           var checked=!!selImp[elName];
-          return h("label",{key:elName,style:{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:4,cursor:"pointer",background:checked?"rgba(43,108,203,.08)":"transparent",fontSize:".88rem",lineHeight:"1.3"},title:elName},
+          var key=san(elName);
+          var isDone=!!doneEleves[key];
+          var isPrinted=!!printedEleves[key];
+          var bg=checked?"rgba(43,108,203,.10)":(isPrinted?"rgba(0,0,0,.04)":(isDone?"rgba(72,160,87,.06)":"transparent"));
+          return h("label",{key:elName,style:{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",borderRadius:4,cursor:"pointer",background:bg,fontSize:".88rem",lineHeight:"1.3"},title:elName+(isPrinted?" \u00b7 d\u00e9j\u00e0 imprim\u00e9 le "+new Date(printedEleves[key]).toLocaleString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"")+(isDone&&!isPrinted?" \u00b7 a fini son autocorrection":"")},
             h("input",{type:"checkbox",checked:checked,onChange:function(){var n=Object.assign({},selImp);if(n[elName])delete n[elName];else n[elName]=true;setSelImp(n)},style:{margin:0,flex:"0 0 auto",width:"16px",height:"16px",cursor:"pointer"}}),
-            h("span",{style:{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},displayName)
+            h("span",{style:{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",color:isPrinted?"#888":"inherit",textDecoration:isPrinted?"line-through":"none"}},displayName),
+            isDone&&!isPrinted&&h("span",{style:{flex:"0 0 auto",fontSize:".7rem",padding:"1px 6px",borderRadius:3,background:"rgba(72,160,87,.18)",color:"#1b6a30",fontWeight:600},title:"A fini son autocorrection"},"\u2713"),
+            isPrinted&&h("span",{style:{flex:"0 0 auto",fontSize:".7rem",padding:"1px 6px",borderRadius:3,background:"rgba(0,0,0,.08)",color:"#666"},title:"D\u00e9j\u00e0 imprim\u00e9"},"\ud83d\udda8")
           );
         })
       ),
@@ -5470,9 +5595,20 @@ function ExercicesAdmin(p){
                 ifr.contentWindow.focus();
                 ifr.contentWindow.print();
               }
+              // Marquer les élèves cochés comme "imprimés" dans Firebase + décocher
+              var toMark = Object.keys(selImp).filter(function(k){return selImp[k]});
+              if(toMark.length > 0){
+                var updates = {};
+                var ts = Date.now();
+                toMark.forEach(function(name){ updates[san(name)] = ts });
+                db.ref("correction_dictee/"+p.dicteeId+"/exercices_imprimes").update(updates);
+                setSelImp({});
+                setImpMsg("\u2705 "+toMark.length+" \u00e9l\u00e8ve(s) marqu\u00e9(s) comme imprim\u00e9(s) \u00b7 d\u00e9coch\u00e9s automatiquement");
+                setTimeout(function(){setImpMsg("")},5000);
+              }
             } catch(e) { alert("Erreur d\u2019impression : "+e.message) }
-          },title:"Ouvrir le dialogue d\u2019impression"},"\ud83d\udda8 Imprimer"),
-          h("button",{className:"btn btn-ghost",onClick:function(){setImpPrintHtml(null)},title:"Fermer l\u2019aper\u00e7u"},"\u2715 Fermer")
+          },title:"Ouvrir le dialogue d\u2019impression et marquer ces \u00e9l\u00e8ves comme trait\u00e9s"},"\ud83d\udda8 Imprimer"),
+          h("button",{className:"btn btn-ghost",onClick:function(){setImpPrintHtml(null)},title:"Fermer l\u2019aper\u00e7u sans marquer comme imprim\u00e9s"},"\u2715 Fermer")
         )
       ),
       h("iframe",{id:"mjpc-print-iframe",srcDoc:impPrintHtml,style:{flex:1,width:"100%",border:"none",borderRadius:8,background:"#fff",minHeight:400}})
@@ -5914,6 +6050,9 @@ function EleveCorrection(p){
   var s7=useState(false),quizDone=s7[0],setQuizDone=s7[1];
   var s8=useState(null),quizQ=s8[0],setQuizQ=s8[1];
   var s9=useState(false),finished=s9[0],setFinished=s9[1];
+  // Ref persistante pour finished : la closure des setInterval (useEffect[]) capture la valeur initiale (false)
+  // et continue d'écrire "active" même après done. Avec une ref, on lit la valeur courante à chaque tick.
+  var finishedRef = React.useRef(false);
   var s10=useState(true),loading=s10[0],setLoading=s10[1];
   var s12=useState(false),idleWarning=s12[0],setIdleWarning=s12[1];
   var s13=useState({b1:"",b2:"",b3:"",b4:""}),bilan=s13[0],setBilan=s13[1];
@@ -5966,6 +6105,11 @@ function EleveCorrection(p){
   // Heartbeat: write lastSeen every 30s + on mount
   function sendHeartbeat(status){
     db.ref(acRef+"/lastSeen").set(Date.now());
+    // Une fois "done", on ne réécrit plus "active"/"idle" — seul "done" ou "offline" peut passer
+    if(finishedRef.current){
+      if(status === "done" || status === "offline") db.ref(acRef+"/status").set(status);
+      return;
+    }
     if(status)db.ref(acRef+"/status").set(status);
   }
   function recordAction(){lastActionRef.current=Date.now();if(idleWarning)setIdleWarning(false);sendHeartbeat("active")}
@@ -5980,7 +6124,7 @@ function EleveCorrection(p){
         sendHeartbeat("idle");
       }
     },30000);
-    return function(){clearInterval(hb);clearInterval(idle);if(!finished)db.ref(acRef+"/status").set("offline")};
+    return function(){clearInterval(hb);clearInterval(idle);if(!finishedRef.current)db.ref(acRef+"/status").set("offline")};
   },[]);
 
   // Load existing progress from Firebase on mount + listen for live changes
@@ -6180,6 +6324,7 @@ function EleveCorrection(p){
     var nothingToCorrect=(totalErrors===0&&errors.length>0);
     var allCorrected=(nSolved===totalErrors&&totalErrors>0);
     if((allCorrected||nothingToCorrect)&&!finished){
+      finishedRef.current = true;
       setFinished(true);
       saveProgress(attempts,results);
       sendHeartbeat("done");
