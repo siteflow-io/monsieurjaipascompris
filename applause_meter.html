@@ -81,6 +81,19 @@ button{font-family:inherit;cursor:pointer;border:none}
 .meter-emoji{font-size:1.7rem}
 .meter-label{font-weight:800;font-size:.82rem;text-align:center;color:var(--noir);line-height:1.15}
 .meter-glow{box-shadow:0 0 26px 4px var(--jaune)}
+.help-key{display:inline-block;animation:helpBreath 3.6s ease-in-out infinite;color:#5b3fd4;font-weight:700}
+@keyframes helpBreath{0%,100%{opacity:.78;transform:scale(1)}50%{opacity:1;transform:scale(1.045)}}
+
+/* ---- Carte Mode checkpoints (Réglages) ---- */
+.checkbox-row{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;padding:6px 0}
+.checkbox-row input{width:18px;height:18px;accent-color:var(--violet)}
+.cp-seuil-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:6px}
+.cp-seuil-col{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px;background:rgba(124,92,255,.04);border-radius:10px;border:1px solid rgba(124,92,255,.12)}
+.cp-seuil-bar{height:140px;display:flex;justify-content:center;align-items:center}
+.cp-vrange{appearance:slider-vertical;-webkit-appearance:slider-vertical;writing-mode:vertical-lr;direction:rtl;width:36px;height:140px;accent-color:var(--violet);cursor:pointer}
+.cp-seuil-val{font-weight:800;color:var(--violet);font-size:1rem;font-variant-numeric:tabular-nums}
+.cp-seuil-emoji{font-size:1.6rem;line-height:1}
+.cp-seuil-lbl{font-size:.74rem;text-align:center;color:var(--noir);font-weight:600;line-height:1.15}
 
 /* ---- VUE BOARD (projection — très lisible de loin) ---- */
 .board{position:relative;overflow:hidden;height:100vh;background:linear-gradient(165deg,var(--noir),#2A2A4A);background-size:170% 170%;animation:boardShift 24s ease infinite;color:#fff;display:flex;flex-direction:column;padding:22px 30px}
@@ -90,7 +103,20 @@ button{font-family:inherit;cursor:pointer;border:none}
 .board-sub{color:#B9C0E0;font-size:1.05rem;font-weight:600}
 .board-meters{flex:1;display:flex;justify-content:center;align-items:flex-end;gap:48px;padding:20px 0}
 .board .meter{width:170px;max-width:20vw}
-.board .meter-track{height:72vh;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);border-radius:22px}
+.board .meter-track{height:72vh;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:6px 4px;display:flex;flex-direction:column-reverse;gap:1px;overflow:hidden}
+.board .meter-seg{flex:1;border-radius:2px;background:rgba(255,255,255,.05)}
+
+/* ---- Mode checkpoints : ligne flash au seuil + pile horaires + compteur ---- */
+.board .meter{position:relative}
+.board .meter-trackwrap{position:relative;width:100%;display:flex;justify-content:center}
+.board .meter-trackwrap .meter-track{width:100%}
+.board .cp-line{position:absolute;left:6px;right:6px;height:3px;border-radius:2px;background:linear-gradient(to right,transparent,#ffd24f 18%,#fff 50%,#ffd24f 82%,transparent);box-shadow:0 0 12px #ffd24f,0 0 24px rgba(255,210,79,.6);animation:cpFlash 2.4s ease-in-out infinite;pointer-events:none;z-index:5;transform:translateY(-50%)}
+@keyframes cpFlash{0%,90%,100%{opacity:.55}45%{opacity:1}}
+.board .cp-stack{position:absolute;right:-72px;display:flex;flex-direction:column;gap:3px;font-family:ui-monospace,Menlo,monospace;pointer-events:none;z-index:6;transform:translateY(-50%)}
+.board .cp-time{font-size:.78rem;color:#ffd24f;background:rgba(255,210,79,.08);padding:2px 7px;border-radius:4px;border:1px solid rgba(255,210,79,.22);font-weight:600;white-space:nowrap;text-align:center}
+.board .cp-time.latest{font-size:.9rem;font-weight:700;text-shadow:0 0 8px rgba(255,210,79,.6);border-color:rgba(255,210,79,.5);animation:cpStampIn .5s ease-out}
+@keyframes cpStampIn{from{opacity:0;transform:translateY(8px) scale(.85)}to{opacity:1;transform:translateY(0) scale(1)}}
+.board .cp-count{color:#ffd24f;font-weight:800;font-size:1rem;text-shadow:0 0 8px rgba(255,210,79,.5);margin-left:8px;letter-spacing:.02em}
 .board .meter-emoji{font-size:2.6rem}
 .board .meter-label{color:#fff;font-size:1.15rem}
 .board .meter-pct{font-size:2.1rem;font-weight:900;color:#fff;text-shadow:0 0 12px rgba(255,210,63,.5);font-variant-numeric:tabular-nums;margin-bottom:6px}
@@ -124,6 +150,157 @@ button{font-family:inherit;cursor:pointer;border:none}
 /* pluie de 👏 quand ça applaudit fort */
 .board-claps-zone{position:absolute;left:0;right:0;bottom:16%;height:0;pointer-events:none}
 .clap-rise{position:absolute;bottom:0;font-size:2.4rem;animation:floatUp 1.2s ease-out forwards}
+
+/* ---- Minuteur, gel et célébration de fin ---- */
+.board-chrono{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:3;font-family:ui-monospace,Menlo,monospace;font-size:2.8rem;font-weight:900;color:#fff;text-shadow:0 0 12px rgba(255,255,255,.25);font-variant-numeric:tabular-nums;letter-spacing:.04em;padding:4px 22px;background:rgba(0,0,0,.18);border-radius:14px;border:1px solid rgba(255,255,255,.08)}
+.board-chrono.alert{color:#ffd24f;animation:chronoPulse 1s ease-in-out infinite;border-color:rgba(255,210,79,.4);background:rgba(255,180,40,.12)}
+@keyframes chronoPulse{0%,100%{transform:translateX(-50%) scale(1);text-shadow:0 0 18px rgba(255,180,40,.7);box-shadow:0 0 22px rgba(255,180,40,.4)}50%{transform:translateX(-50%) scale(1.08);text-shadow:0 0 36px rgba(255,210,79,1);box-shadow:0 0 40px rgba(255,210,79,.7)}}
+.board-paillettes-zone{position:absolute;left:0;right:0;bottom:0;top:0;pointer-events:none;overflow:hidden;z-index:3}
+.paillette-rise{position:absolute;bottom:0;font-size:2.6rem;animation:floatUp 1.6s ease-out forwards}
+.board-fin-message{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);font-size:3.4rem;font-weight:900;color:#fff;text-shadow:0 0 24px rgba(255,210,79,.55),0 4px 14px rgba(0,0,0,.55);text-align:center;z-index:4;animation:finMsgIn .8s cubic-bezier(.18,.89,.32,1.18);padding:22px 44px;background:rgba(15,15,30,.45);border-radius:24px;backdrop-filter:blur(10px);border:1px solid rgba(255,210,79,.3);box-shadow:0 0 60px rgba(124,92,255,.35),0 0 120px rgba(255,210,79,.25);max-width:88%}
+@keyframes finMsgIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}60%{transform:translate(-50%,-50%) scale(1.04)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+/* ---- Pause : cercle respirant 4 s inspiration / 6 s expiration ---- */
+.board-pause-overlay{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(165deg,rgba(15,15,30,.92),rgba(30,25,55,.92));backdrop-filter:blur(8px);animation:pauseFadeIn .5s ease-out}
+@keyframes pauseFadeIn{from{opacity:0}to{opacity:1}}
+.board-pause-label{font-size:.9rem;font-weight:600;color:rgba(255,255,255,.45);letter-spacing:.4em;text-transform:uppercase;margin-bottom:48px}
+.board-breath-circle{width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.45) 0%,rgba(124,92,255,.18) 55%,rgba(124,92,255,0) 100%);animation:breathe 10s ease-in-out infinite}
+@keyframes breathe{0%{transform:scale(.55);box-shadow:0 0 30px rgba(124,92,255,.3)}40%{transform:scale(1);box-shadow:0 0 100px rgba(124,92,255,.55)}100%{transform:scale(.55);box-shadow:0 0 30px rgba(124,92,255,.3)}}
+.board-pause-reader{margin-top:48px;font-size:.95rem;color:rgba(255,255,255,.4);font-weight:500;letter-spacing:.04em}
+
+/* Pause côté tablette élève (reprend le cercle respirant 4/6) */
+.eleve-pause{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;text-align:center}
+.eleve-pause-label{font-size:.9rem;font-weight:600;color:rgba(80,60,140,.6);letter-spacing:.4em;text-transform:uppercase;margin-bottom:30px}
+.eleve-pause-circle{width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(124,92,255,.5) 0%,rgba(124,92,255,.18) 60%,transparent 100%);animation:breathe 10s ease-in-out infinite}
+.eleve-pause-msg{font-size:.95rem;color:rgba(80,60,140,.7);max-width:280px;margin-top:30px;line-height:1.5}
+
+/* ---- Phases vote / bilan : écran neutre tableau + écrans tablette élève ---- */
+.board-neutre{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:40px;animation:finMsgIn .5s ease-out}
+.board-neutre-emoji{font-size:5rem;margin-bottom:24px;filter:drop-shadow(0 0 32px rgba(255,255,255,.25))}
+.board-neutre-titre{font-size:2.6rem;font-weight:900;letter-spacing:.01em;text-shadow:0 0 24px rgba(255,255,255,.15),0 4px 14px rgba(0,0,0,.5);margin-bottom:14px;color:#fff}
+.board-neutre-sub{font-size:1.1rem;color:rgba(255,255,255,.6);max-width:680px;line-height:1.5;font-weight:500}
+.board-vote-counter{margin-top:32px;font-size:1.5rem;font-weight:800;color:#ffd24f;text-shadow:0 0 16px rgba(255,210,79,.5);font-variant-numeric:tabular-nums;padding:14px 28px;background:rgba(255,210,79,.08);border-radius:14px;border:1px solid rgba(255,210,79,.25);letter-spacing:.02em}
+.eleve-vote-wait{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 24px;text-align:center;flex:1}
+.eleve-vote-wait .big{font-size:3.4rem;margin-bottom:18px}
+.eleve-vote-wait .vote-titre{font-size:1.4rem;font-weight:800;color:var(--violet);margin-bottom:12px}
+
+/* ---- Phase vote : sélecteur d'occupant ---- */
+.vote-selection{padding:24px 16px;flex:1;display:flex;flex-direction:column;align-items:center;text-align:center}
+.vote-selection .vote-titre{font-size:1.5rem;font-weight:800;color:var(--violet);margin-bottom:10px}
+.vote-occ-list{width:100%;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.vote-occ-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:12px;background:#fff;border:2px solid var(--bordure);font-size:1rem;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s}
+.vote-occ-row:hover{border-color:var(--violet);background:rgba(124,92,255,.04)}
+.vote-occ-row.voted{background:#f0f4ff;color:var(--gris);cursor:default;border-color:#e2e6ef}
+.vote-occ-row.voted:hover{border-color:#e2e6ef;background:#f0f4ff}
+.vote-occ-row.dim{background:rgba(124,92,255,.06);border-style:dashed;border-color:rgba(124,92,255,.25);cursor:default;color:var(--gris)}
+.vote-occ-name{font-weight:700;color:var(--noir)}
+.vote-occ-row.voted .vote-occ-name,.vote-occ-row.dim .vote-occ-name{color:var(--gris)}
+.vote-occ-state{font-size:.88rem;color:var(--violet);font-weight:600}
+.vote-occ-row.voted .vote-occ-state{color:#22c55e}
+
+/* ---- Phase vote : formulaire (4 questions, échelle 4 niveaux) ---- */
+.vote-form{padding:16px;flex:1;overflow-y:auto}
+.vote-form-hdr{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--bordure);margin-bottom:14px}
+.vote-form-titre{font-size:1.05rem;font-weight:800;color:var(--noir)}
+.vote-q-block{margin-bottom:18px;background:#fff;border-radius:12px;padding:14px;border:1px solid var(--bordure)}
+.vote-q-titre{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--noir);margin-bottom:10px;font-size:1rem;line-height:1.3}
+.vote-q-emoji{font-size:1.5rem;flex-shrink:0}
+.vote-q-choix{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.vote-choix{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;border-radius:10px;border:2px solid var(--bordure);background:#f9faff;cursor:pointer;font-family:inherit;transition:all .15s;color:var(--noir)}
+.vote-choix:hover{border-color:var(--violet);background:rgba(124,92,255,.06)}
+.vote-choix.sel{border-color:var(--violet);background:rgba(124,92,255,.14);box-shadow:0 0 0 3px rgba(124,92,255,.18)}
+.vote-choix-emoji{font-size:1.7rem;line-height:1}
+.vote-choix-label{font-size:.82rem;font-weight:600;text-align:center}
+
+/* ---- Phase bilan : grille École Directe (lecteur uniquement) ---- */
+.bilan{padding:20px 16px;flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.bilan-hdr{text-align:center;margin-bottom:18px}
+.bilan-emoji-grand{font-size:3rem;margin-bottom:6px}
+.bilan-titre{font-size:1.4rem;font-weight:800;color:var(--violet)}
+.bilan-grille{display:flex;flex-direction:column;gap:10px}
+.bilan-crit{background:#fff;border-radius:14px;border:2px solid var(--bordure);overflow:hidden;display:flex;flex-direction:column}
+.bilan-crit-emoji{font-size:2.4rem;text-align:center;padding:14px 0 4px}
+.bilan-crit-label{text-align:center;font-weight:700;color:var(--noir);padding:0 14px 10px;font-size:.95rem}
+.bilan-crit-niveau{text-align:center;font-weight:800;padding:12px;font-size:1rem;background:rgba(0,0,0,.02);border-top:2px solid}
+
+/* ---- Séances archivées (liste dans Pilotage) ---- */
+.seances-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding:2px}
+.seance-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#f9faff;border-radius:8px;border:1px solid var(--bordure)}
+.seance-info{flex:1;min-width:0}
+.seance-lib{font-weight:700;color:var(--noir);font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seance-meta{font-size:.78rem;color:var(--gris);margin-top:2px}
+
+/* ---- Liste des passages de la séance + modale détail ---- */
+.passages-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;padding:2px}
+.passage-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:#f9faff;border-radius:10px;border:1px solid var(--bordure);cursor:pointer;font-family:inherit;text-align:left;transition:all .15s}
+.passage-row:hover{border-color:var(--violet);background:rgba(124,92,255,.05)}
+.passage-info{flex:1;min-width:0}
+.passage-lecteur{font-weight:700;color:var(--noir);font-size:.95rem}
+.passage-statut{font-size:.78rem;margin-top:2px;font-weight:600}
+.passage-statut.st-ok{color:#16a34a}
+.passage-statut.st-annule{color:#dc2626}
+.passage-statut.st-encours{color:#7c5cff}
+.passage-arrow{color:var(--violet);font-size:1.4rem;font-weight:700;flex-shrink:0}
+
+/* Modale détail d'un passage */
+.mp-modal{max-width:780px}
+.mp-sec-title{margin-top:18px;margin-bottom:10px;font-size:1rem;color:var(--violet);font-weight:800;letter-spacing:.02em}
+.courbe-wrap{background:#fafbfd;border-radius:10px;padding:10px;border:1px solid var(--bordure)}
+.courbe-svg{display:block;width:100%;height:200px}
+.courbe-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;justify-content:center;font-size:.82rem;color:var(--gris)}
+.courbe-leg-item{display:flex;align-items:center;gap:6px}
+.courbe-leg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 4px rgba(0,0,0,.2)}
+.mp-grille{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.mp-checkpoints{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.mp-cp-col{background:#fafbfd;border-radius:10px;padding:10px 8px;border:1px solid var(--bordure);text-align:center}
+.mp-cp-emoji{font-size:1.6rem;line-height:1;margin-bottom:4px}
+.mp-cp-count{font-weight:800;color:#7c5cff;font-size:1.1rem;margin-bottom:6px}
+.mp-cp-list{display:flex;flex-direction:column;gap:3px;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;color:var(--gris)}
+.mp-cp-time{background:rgba(124,92,255,.1);padding:2px 6px;border-radius:4px;font-weight:600}
+
+/* ---- Feedback flux IA (étape 9) ---- */
+.ia-msg{margin-top:10px;padding:10px 14px;border-radius:10px;font-size:.9rem;font-weight:600;line-height:1.4}
+.ia-msg.ok{color:#16a34a;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+.ia-msg.err{color:#bf2a2a;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3)}
+
+/* ---- Modale Check-in absents (pattern QCM répliqué) ---- */
+.checkin-list{max-height:50vh;overflow-y:auto;border:1px solid #e2e6ef;border-radius:10px;margin:14px 0;background:#f9faff}
+.checkin-row{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border:none;background:transparent;text-align:left;cursor:pointer;border-bottom:1px solid #eef0f8;font-size:1rem;color:var(--noir);transition:background .15s;font-family:inherit}
+.checkin-row:last-child{border-bottom:none}
+.checkin-row:hover{background:rgba(124,92,255,.06)}
+.checkin-row.abs{background:rgba(248,113,113,.07);color:#bf2a2a}
+.checkin-row.abs .checkin-nom{text-decoration:line-through;text-decoration-color:rgba(191,42,42,.4)}
+.checkin-pict{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(34,197,94,.18);color:#16a34a;font-size:.85rem;font-weight:700;flex-shrink:0}
+.checkin-row.abs .checkin-pict{background:rgba(248,113,113,.2);color:#dc2626}
+.checkin-nom{flex:1;font-weight:600}
+.checkin-summary{text-align:center;color:var(--gris);font-weight:600;padding:6px 0;font-size:.92rem}
+
+/* ---- Formulaire de connexion élève (NOM + Prénom, pattern correction_dictee) ---- */
+.form-wrap{padding:16px;max-width:480px;margin:0 auto}
+.form-connect{background:#fff;padding:20px;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.form-connect input{font-size:1.15rem;letter-spacing:.04em;padding:12px;width:100%;border-radius:10px;border:1px solid #d0d4dd}
+.form-connect input:focus{border-color:var(--violet);outline:none;box-shadow:0 0 0 3px rgba(124,92,255,.18)}
+.form-err{color:#bf2a2a;font-size:.9rem;background:rgba(248,113,113,.1);padding:10px 14px;border-radius:10px;margin:10px 0;border:1px solid rgba(248,113,113,.25)}
+
+/* ---- Zones multi-occupants (1 / 2 / 3 colonnes) ---- */
+.zones-multi{display:grid;gap:8px;padding:8px;flex:1;align-content:stretch}
+.zones-1{grid-template-columns:1fr}
+.zones-2{grid-template-columns:1fr 1fr}
+.zones-3{grid-template-columns:1fr 1fr 1fr}
+.zone-occ{background:#fff;border-radius:14px;border:2px solid var(--bordure);padding:6px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.zone-occ.zone-lecteur{background:rgba(124,92,255,.08);border-color:rgba(124,92,255,.35)}
+.zone-hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;margin-bottom:6px;font-weight:700;color:var(--noir);font-size:.95rem}
+.zone-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zone-rm{background:none;border:none;color:var(--gris);font-size:1.3rem;cursor:pointer;padding:0 6px;line-height:1;border-radius:6px;transition:all .15s}
+.zone-rm:hover{color:#dc2626;background:rgba(248,113,113,.1)}
+.zone-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;flex:1}
+.zone-grid .clap-btn{font-size:.78rem}
+.zone-grid .clap-btn .ce{font-size:1.6rem}
+.zone-grid .clap-btn .cl{font-size:.7rem}
+.zone-overlay{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px}
+.zone-overlay .big{font-size:2.6rem;margin-bottom:4px}
+.btn-add-occ{display:block;width:calc(100% - 16px);padding:14px;margin:6px 8px;background:rgba(124,92,255,.08);border:1px dashed rgba(124,92,255,.4);border-radius:12px;font-weight:600;color:var(--violet);cursor:pointer;font-size:.95rem;font-family:inherit}
+.btn-add-occ:hover{background:rgba(124,92,255,.14)}
 
 /* bande discrète des tables actives en direct */
 .board-tables{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:2px 0 6px;min-height:24px}
@@ -521,10 +698,10 @@ var NB_TABLES_DEFAUT = 14;
 
 // 4 critères de lecture orale (intitulés modifiables par le prof)
 var CRITERES_DEFAUT = [
-  { emoji:"🔊", label:"On t'entend bien" },
-  { emoji:"✦",  label:"C'est clair" },
-  { emoji:"〰", label:"Le rythme est agréable" },
-  { emoji:"🎭", label:"C'est vivant" }
+  { emoji:"🔊", label:"On t'entend bien",        questionVotant:"Est-ce qu'on l'entendait bien ?" },
+  { emoji:"✦",  label:"C'est clair",             questionVotant:"Sa lecture était-elle claire et bien articulée ?" },
+  { emoji:"〰", label:"Le rythme est agréable",   questionVotant:"Le rythme et les pauses étaient-ils agréables ?" },
+  { emoji:"🎭", label:"C'est vivant",             questionVotant:"Sa lecture donnait-elle envie d'écouter ?" }
 ];
 
 // Banque de compliments — listes fermées, AUCUN texte libre (respect absolu)
@@ -544,12 +721,141 @@ var REGLAGES_DEFAUT = {
   decay: 35,          // % de décroissance par seconde (0 = cumul pur plafonné)
   boost: 16,          // gain par applaudissement (tap)
   complimentsOn: true,
+  dureeSec: 60,                                    // durée d'un passage de lecture (s), figée au lancement
+  modeCheckpoints: false,                          // affiche pile horaires + compteur ✓ ×N au tableau
+  seuilsCheckpoints: [70, 70, 70, 70],             // un seuil en % par critère (réglable dans Réglages)
   criteres: CRITERES_DEFAUT,
   compliments: COMPLIMENTS_DEFAUT
 };
 
 // Liste élèves de TEST (reprise écosystème MJPC)
-var TEST_SLUG = "_test";
+var TEST_SLUG = "_test_applause";
+
+// Messages tirés au sort à la fin du minuteur (le {prénom} est remplacé à l'affichage)
+var MESSAGES_FIN = [
+  "Bravo {prénom}.",
+  "Bien joué {prénom}.",
+  "Merci {prénom}.",
+  "Mission accomplie, {prénom}.",
+  "Félicitations {prénom}."
+];
+
+// Échelle de vote côté votant (4 niveaux, formulation positive et discrète)
+var ECHELLE_VOTANT = [
+  {emoji:"😕", label:"Pas vraiment"},
+  {emoji:"🙂", label:"Un peu"},
+  {emoji:"😊", label:"Plutôt"},
+  {emoji:"🤩", label:"Tout à fait"}
+];
+
+// Traduction interne en grille École Directe pour le bilan du lecteur
+var ECHELLE_ED = [
+  "Maîtrise insuffisante",
+  "Maîtrise fragile",
+  "Maîtrise satisfaisante",
+  "Très bonne maîtrise"
+];
+var ED_COLORS = ["#dc2626", "#f59e0b", "#22c55e", "#7c5cff"]; // rouge / ambre / vert / violet
+
+// ════════════ Carte « Générer 4 critères avec une IA » (étape 9) ════════════
+function CarteIACriteres(p){
+  var s1=useState(""), theme=s1[0], setTheme=s1[1];
+  var s2=useState(function(){return genererPromptIA("");}), prompt=s2[0], setPrompt=s2[1];
+  var s3=useState(""), jsonInput=s3[0], setJsonInput=s3[1];
+  var s4=useState(null), msg=s4[0], setMsg=s4[1];
+  function copier(){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(prompt).then(
+        function(){setMsg({ok:"Prompt copié. Colle-le dans Claude ou ChatGPT, puis recolle ici le JSON renvoyé."});},
+        function(){setMsg({err:"Copie auto échouée. Sélectionne le texte et copie manuellement (Ctrl+C)."});}
+      );
+    } else {
+      setMsg({err:"Presse-papier indisponible — sélectionne et copie manuellement."});
+    }
+  }
+  function appliquer(){
+    var r=parseCriteresJSON(jsonInput);
+    if(r.err){ setMsg({err:r.err}); return; }
+    p.onAppliquer(r.ok);
+    setMsg({ok:"4 critères appliqués. Tu peux encore les ajuster manuellement en dessous."});
+    setJsonInput("");
+  }
+  return h("div",{className:"card"},
+    h("h3",null,"🤖 Générer 4 critères avec une IA",
+      ifo("Workflow : décris ton thème → copie le prompt → colle-le dans Claude/ChatGPT → recolle le JSON renvoyé. Aucune IA n'est appelée par l'app — c'est toi qui pilotes.")),
+    h("div",{className:"field"},
+      h("label",null,"Thème de la séance"),
+      h("input",{value:theme,
+        onChange:function(e){var v=e.target.value; setTheme(v); setPrompt(genererPromptIA(v));},
+        placeholder:"ex : Les Misérables — la veillée chez les Thénardier",
+        style:{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid #d0d4dd",fontSize:"1rem"}})),
+    h("div",{className:"field"},
+      h("label",null,"Prompt à copier (modifiable)"),
+      h("textarea",{value:prompt,onChange:function(e){setPrompt(e.target.value);},
+        style:{width:"100%",minHeight:170,fontFamily:"ui-monospace,Menlo,monospace",fontSize:".78rem",padding:10,borderRadius:8,border:"1px solid #d0d4dd",resize:"vertical",lineHeight:1.45}})),
+    h("div",{className:"btn-row"},
+      h("button",{className:"btn btn-ghost",onClick:function(){setPrompt(genererPromptIA(theme));setMsg(null);}},"🔄 Régénérer depuis le thème"),
+      h("button",{className:"btn btn-bleu",style:{flex:1},onClick:copier},"📋 Copier le prompt")),
+    h("div",{className:"field",style:{marginTop:14}},
+      h("label",null,"Colle ici le JSON renvoyé par l'IA"),
+      h("textarea",{value:jsonInput,onChange:function(e){setJsonInput(e.target.value);setMsg(null);},
+        placeholder:'{ "criteres": [ ... ] }',
+        style:{width:"100%",minHeight:120,fontFamily:"ui-monospace,Menlo,monospace",fontSize:".8rem",padding:10,borderRadius:8,border:"1px solid #d0d4dd",resize:"vertical"}})),
+    h("button",{className:"btn btn-vert btn-lg",style:{width:"100%"},onClick:appliquer},
+      "✅ Parser et appliquer aux 4 critères"),
+    msg ? h("div",{className:"ia-msg "+(msg.err?"err":"ok")}, msg.err||msg.ok) : null);
+}
+function genererPromptIA(theme){
+  return [
+    "Tu vas générer 4 critères d'évaluation pour une séance de lecture orale au collège (4e).",
+    "",
+    "Thème de la séance : "+((theme||"").trim() || "(à préciser : œuvre, passage, ton attendu)"),
+    "",
+    "Pour chaque critère, fournis :",
+    "- emoji  : un emoji représentatif unique",
+    "- label  : libellé court, tutoyé, formulé pour le lecteur (ex : \"On t'entend bien\")",
+    "- questionVotant : question oui/non posée à l'évaluateur (ex : \"Est-ce qu'on l'entendait bien ?\")",
+    "",
+    "Échelle votant fixe — gérée par l'app, ne PAS générer :",
+    "  Pas vraiment / Un peu / Plutôt / Tout à fait",
+    "",
+    "Contraintes pédagogiques :",
+    "- exactement 4 critères, pas plus, pas moins",
+    "- formulation positive, bienveillante",
+    "- adaptée à des élèves de 4e, sans jargon technique",
+    "- chaque critère doit pouvoir être perçu à l'oreille (pas de chose invisible)",
+    "",
+    "Format de sortie : UNIQUEMENT un objet JSON brut, sans markdown ni texte autour :",
+    "",
+    "{",
+    "  \"criteres\": [",
+    "    {\"emoji\": \"🔊\", \"label\": \"...\", \"questionVotant\": \"...\"},",
+    "    {\"emoji\": \"...\", \"label\": \"...\", \"questionVotant\": \"...\"},",
+    "    {\"emoji\": \"...\", \"label\": \"...\", \"questionVotant\": \"...\"},",
+    "    {\"emoji\": \"...\", \"label\": \"...\", \"questionVotant\": \"...\"}",
+    "  ]",
+    "}"
+  ].join("\n");
+}
+
+function parseCriteresJSON(txt){
+  // Tolère du markdown ```json ... ``` autour
+  var clean=(txt||"").trim().replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
+  if(!clean) return {err:"Colle d'abord le JSON renvoyé par l'IA."};
+  var obj;
+  try { obj=JSON.parse(clean); }
+  catch(e){ return {err:"JSON invalide — "+e.message}; }
+  if(!obj || !Array.isArray(obj.criteres)) return {err:"Champ « criteres » manquant ou ce n'est pas un tableau."};
+  if(obj.criteres.length!==4) return {err:"Il faut exactement 4 critères ; j'en compte "+obj.criteres.length+"."};
+  for(var i=0;i<4;i++){
+    var c=obj.criteres[i];
+    if(!c||typeof c!=="object") return {err:"Critère "+(i+1)+" : objet JSON attendu."};
+    if(!c.emoji||typeof c.emoji!=="string") return {err:"Critère "+(i+1)+" : « emoji » manquant ou vide."};
+    if(!c.label||typeof c.label!=="string") return {err:"Critère "+(i+1)+" : « label » manquant ou vide."};
+    if(!c.questionVotant||typeof c.questionVotant!=="string") return {err:"Critère "+(i+1)+" : « questionVotant » manquant ou vide."};
+  }
+  return {ok:obj.criteres.map(function(c){return {emoji:c.emoji.trim(), label:c.label.trim(), questionVotant:c.questionVotant.trim()};})};
+}
 var TEST_ELEVES = [
   "AUDEBERT Élise","AUGEREAU Gatien","BOIVIN Eden","BOURREAU Céleste",
   "BRESSIN Titouan","CALDEIRA Tiago","CESBRON Lili","CHALUMEAU Jules",
@@ -561,6 +867,10 @@ var TEST_ELEVES = [
 
 // ════════════ HELPERS (parité MJPC) ════════════
 function san(s){ return String(s||"").replace(/[^a-zA-Z0-9]/g,"_"); }
+function newSessionId(){
+  var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
+  return "s_"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"_"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
+}
 function slugify(s){
   return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
@@ -585,13 +895,44 @@ function toArr(v){
   }
   return [v];
 }
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
+    return fbClasse;
+  }
+  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
+    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
+    var keys = Object.keys(fbClasse).filter(function(k){
+      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
+    });
+    if (keys.length > 0) {
+      var names = keys.map(function(k){
+        var v = fbClasse[k];
+        if (typeof v === "string") return v;
+        if (v && typeof v === "object") {
+          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
+          if (v.nomComplet) return v.nomComplet;
+          if (v.name) return v.name;
+        }
+        return null;
+      }).filter(function(x){ return x && typeof x === "string"; });
+      if (names.length > 0) return names;
+    }
+  }
+  return cfgEleves;
+}
 function reglagesSafe(r){
   r = r || {};
+  var seuils = toArr(r.seuilsCheckpoints);
+  if(seuils.length!==4) seuils = REGLAGES_DEFAUT.seuilsCheckpoints.slice();
   return {
     nbTables: r.nbTables || NB_TABLES_DEFAUT,
     decay: (r.decay===undefined?REGLAGES_DEFAUT.decay:r.decay),
     boost: (r.boost===undefined?REGLAGES_DEFAUT.boost:r.boost),
     complimentsOn: (r.complimentsOn===undefined?true:!!r.complimentsOn),
+    dureeSec: Math.max(15, Math.min(300, parseInt(r.dureeSec,10) || REGLAGES_DEFAUT.dureeSec)),
+    modeCheckpoints: !!r.modeCheckpoints,
+    seuilsCheckpoints: seuils.map(function(v){return Math.max(0,Math.min(100,Number(v)||0));}),
     criteres: (toArr(r.criteres).length===4?toArr(r.criteres):CRITERES_DEFAUT),
     compliments: (toArr(r.compliments).length?toArr(r.compliments):COMPLIMENTS_DEFAUT)
   };
@@ -659,8 +1000,13 @@ function HelpModal(p){
   } else {
     contenu=[
       section("a","👏 C'est quoi ?", h(F,null,
-        h("p",null,"Pendant qu'un camarade lit à voix haute, ",h("strong",null,"tu l'encourages"),
-          " en faisant monter quatre barres au tableau. Plus tu trouves que c'est réussi sur un point, plus tu appuies sur le bouton de ce point.")
+        h("p",null,"Pendant qu'un camarade lit à voix haute, tu fais monter quatre barres au tableau quand tu trouves qu'il réussit. ",
+          h("strong",{className:"help-key"},"Tu n'es pas là pour appuyer le plus possible"),
+          " — les barres servent à ",
+          h("strong",{className:"help-key"},"l'aider à savoir où il en est"),
+          " dans sa lecture."),
+        h("p",null,"S'il voit que la barre « Articulation » monte, il sait qu'on l'entend bien. Si elle reste basse, il comprend qu'il doit articuler plus fort. ",
+          h("strong",{className:"help-key"},"Tu l'aides en applaudissant pour de vrai, à chaque fois que ça marche bien."))
       )),
       section("b","🎮 Comment faire", h(F,null,
         h("ul",null,
@@ -699,8 +1045,8 @@ function Accueil(p){
     p.onTest();                                   // active le badge + le flag test
     db.ref(DB_ROOT+"/live").remove();             // anti-télescopage : on repart de barres vides
     db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/classes/"+TEST_SLUG).set({nom:"⚙️ Classe TEST", eleves:TEST_ELEVES.slice()});
-    db.ref(DB_ROOT+"/session").update({classeSlug:TEST_SLUG, reader:"", reglages:REGLAGES_DEFAUT, startedAt:Date.now()});
+    db.ref("classes/"+TEST_SLUG).set({nom:"⚙️ Classe TEST", eleves:TEST_ELEVES.slice()});
+    db.ref(DB_ROOT+"/session").update({classeSlug:TEST_SLUG, reader:"", reglages:REGLAGES_DEFAUT, startedAt:null, demarreeLe:Date.now(), absents:[], passageId:"", messageFinIdx:null, pauseStartedAt:null, pausedDuration:0});
     p.go("prof");                                 // entre directement dans le panneau prof
   }
   return h("div",{className:"accueil"},
@@ -721,7 +1067,7 @@ function AppProf(p){
   var sc=useState({}), classes=sc[0], setClasses=sc[1];
   var ss=useState(null), session=ss[0], setSession=ss[1];
   useEffect(function(){
-    var r1=db.ref(DB_ROOT+"/classes"); var f1=r1.on("value",function(s){setClasses(s.val()||{});});
+    var r1=db.ref("classes"); var f1=r1.on("value",function(s){setClasses(s.val()||{});});
     var r2=db.ref(DB_ROOT+"/session"); var f2=r2.on("value",function(s){setSession(s.val()||{});});
     return function(){ r1.off("value",f1); r2.off("value",f2); };
   },[]);
@@ -744,21 +1090,285 @@ function AppProf(p){
     h(HelpFab,{role:"prof"}));
 }
 
+// ════════════ MODALE DÉTAIL D'UN PASSAGE — courbe + bilan + checkpoints ════════════
+function CourbePassage(p){
+  // p.courbe = {s0:{c0,c1,c2,c3}, s1:{...}}, p.criteres, p.dureeSec
+  var couleurs=["#7c5cff","#3b82f6","#22c55e","#f59e0b"];
+  var entries=Object.keys(p.courbe||{}).map(function(k){
+    return {sec:parseInt(k.replace(/^s/,""),10), vals:p.courbe[k]};
+  }).filter(function(e){return !isNaN(e.sec) && e.vals;}).sort(function(a,b){return a.sec-b.sec;});
+  if(!entries.length){
+    return h("div",{className:"muted",style:{textAlign:"center",padding:24,fontSize:".88rem"}},
+      "Pas de données échantillonnées (passage trop court ou interrompu très tôt).");
+  }
+  var W=Math.max(p.dureeSec||60, entries[entries.length-1].sec+1);
+  var H=100;
+  return h("div",{className:"courbe-wrap"},
+    h("svg",{viewBox:"-2 -6 "+(W+4)+" "+(H+12),preserveAspectRatio:"none",className:"courbe-svg"},
+      [25,50,75].map(function(y){return h("line",{key:y,x1:0,y1:H-y,x2:W,y2:H-y,stroke:"#e2e6ef",strokeWidth:.4,strokeDasharray:"2,2"});}),
+      [0,1,2,3].map(function(ci){
+        var pts=entries.map(function(e){return e.sec+","+(H-(e.vals["c"+ci]||0));}).join(" ");
+        return h("polyline",{key:ci,points:pts,fill:"none",stroke:couleurs[ci],strokeWidth:1.4,strokeLinejoin:"round",strokeLinecap:"round",opacity:.92});
+      })),
+    h("div",{className:"courbe-legend"},
+      (p.criteres||[]).map(function(c,i){return h("span",{key:i,className:"courbe-leg-item"},
+        h("span",{className:"courbe-leg-dot",style:{background:couleurs[i]}}),
+        h("span",null,c.emoji+" "+c.label));
+      })));
+}
+
+function ModalePassage(p){
+  // p.passageId, p.data, p.criteres, p.dureeSec, p.onClose
+  var d=p.data||{};
+  var votes=d.votes||{};
+  var courbe=d.courbe||{};
+  var checkpoints=d.checkpoints||{};
+  var criteres=p.criteres||CRITERES_DEFAUT;
+  function med(arr){ if(!arr.length) return null; var s=arr.slice().sort(function(a,b){return a-b;}); var m=Math.floor(s.length/2); return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2); }
+  var votantsSlugs=Object.keys(votes);
+  var nbVotes=votantsSlugs.length;
+  var medianes=[null,null,null,null];
+  for(var i=0;i<4;i++){
+    var vals=votantsSlugs.map(function(slug){var v=votes[slug]&&votes[slug].votes; return v?v["c"+i]:null;}).filter(function(v){return typeof v==="number";});
+    medianes[i]=med(vals);
+  }
+  var cpByCrit=[[],[],[],[]];
+  Object.keys(checkpoints).forEach(function(k){
+    var c=checkpoints[k]; if(c && typeof c.critereIdx==="number" && c.critereIdx>=0 && c.critereIdx<4) cpByCrit[c.critereIdx].push(c);
+  });
+  cpByCrit.forEach(function(arr){arr.sort(function(a,b){return (a.ts||0)-(b.ts||0);});});
+  var statut=d.annule?'🚫 Annulé':(d.bilanTermine?'✅ Terminé':'🎙️ Encore en cours');
+  function fmt(s){var m=Math.floor((s||0)/60),sec=(s||0)%60; return (m<10?"0":"")+m+":"+(sec<10?"0":"")+sec;}
+  return h("div",{className:"help-back",onClick:function(e){if(e.target.className==="help-back")p.onClose();}},
+    h("div",{className:"help-modal mp-modal"},
+      h("button",{className:"modal-close",onClick:p.onClose},"✕"),
+      h("h1",null,d.lecteur||p.passageId),
+      h("p",{className:"subtitle"},statut+" · "+nbVotes+" vote"+(nbVotes!==1?"s":"")+" · "+Object.keys(checkpoints).length+" checkpoint"+(Object.keys(checkpoints).length!==1?"s":"")),
+      h("h3",{className:"mp-sec-title"},"Courbe applaudimètre"),
+      h(CourbePassage,{courbe:courbe,criteres:criteres,dureeSec:p.dureeSec}),
+      h("h3",{className:"mp-sec-title"},"Bilan École Directe"),
+      nbVotes===0
+        ? h("p",{className:"muted",style:{textAlign:"center",padding:16}},"Aucun vote enregistré pour ce passage.")
+        : h("div",{className:"bilan-grille mp-grille"},
+            criteres.map(function(c,i){
+              var niv=medianes[i];
+              var color=niv!==null?ED_COLORS[niv]:"#cbd5e1";
+              var label=niv!==null?ECHELLE_ED[niv]:"Pas d'évaluation";
+              return h("div",{className:"bilan-crit",key:i,style:{borderColor:color}},
+                h("div",{className:"bilan-crit-emoji"}, c.emoji),
+                h("div",{className:"bilan-crit-label"}, c.label),
+                h("div",{className:"bilan-crit-niveau",style:{color:color,borderTopColor:color}}, label));
+            })),
+      h("h3",{className:"mp-sec-title"},"Checkpoints (passages de seuil)"),
+      h("div",{className:"mp-checkpoints"},
+        criteres.map(function(c,i){
+          var liste=cpByCrit[i];
+          return h("div",{className:"mp-cp-col",key:i},
+            h("div",{className:"mp-cp-emoji"}, c.emoji),
+            h("div",{className:"mp-cp-count"}, "×"+liste.length),
+            h("div",{className:"mp-cp-list"},
+              liste.length ? liste.map(function(cp,k){return h("span",{key:k,className:"mp-cp-time"},fmt(cp.time));}) : h("span",{className:"muted",style:{fontSize:".82rem"}},"—")));
+        }))));
+}
+
 function OngletPilotage(p){
   var classes=p.classes||{}, session=p.session||{};
   var slug=session.classeSlug||"";
   var classe=classes[slug];
-  var eleves=classe?toArr(classe.eleves):[];
+  var eleves=classe?extractEleves(classe, []):[];
   // présence : lit live, compte ts récents
   var sl=useState({}), live=sl[0], setLive=sl[1];
   var sq=useState(false), qrOpen=sq[0], setQrOpen=sq[1];
+  var schk=useState(false), checkinOpen=schk[0], setCheckinOpen=schk[1];
+  var sSeances=useState({}), seances=sSeances[0], setSeances=sSeances[1];
+  var sTab=useState({}), tablettes=sTab[0], setTablettes=sTab[1];                // pour calculer le nombre de votants attendus
+  var sV=useState({}), passageVotes=sV[0], setPassageVotes=sV[1];                // votes du passage courant (pour auto-clôture)
+  var sHist=useState({}), historique=sHist[0], setHist=sHist[1];                  // /historiqueLectures (toutes les courbes/votes/checkpoints)
+  var sDet=useState(""), passageDetailId=sDet[0], setPassageDetailId=sDet[1];     // passage ouvert en modale détail
+  var stk=useState(0), setTickP=stk[1];           // tick 1 s pour rafraîchir fini/paused dans les boutons
   useEffect(function(){
     var r=db.ref(DB_ROOT+"/live"); var f=r.on("value",function(s){setLive(s.val()||{});});
-    return function(){ r.off("value",f); };
-  },[]);
+    var r2=db.ref(DB_ROOT+"/seances"); var f2=r2.on("value",function(s){setSeances(s.val()||{});});
+    var r3=db.ref(DB_ROOT+"/tablettes"); var f3=r3.on("value",function(s){setTablettes(s.val()||{});});
+    var r4=db.ref(DB_ROOT+"/historiqueLectures"); var f4=r4.on("value",function(s){setHist(s.val()||{});});
+    var ivt=setInterval(function(){setTickP(function(x){return x+1;});},1000);
+    return function(){ r.off("value",f); r2.off("value",f2); r3.off("value",f3); r4.off("value",f4); clearInterval(ivt); };
+  },[]);;
   var now=Date.now();
   var presents=Object.keys(live).filter(function(k){return live[k]&&(now-(live[k].ts||0))<6000;}).length;
   var reg=reglagesSafe(session&&session.reglages);
+  // État du passage en cours (pour affichage conditionnel des actions A/B/C)
+  var passageId=session.passageId||"";
+  var startedAt=session.startedAt||0;
+  var pauseStartedAt=session.pauseStartedAt||null;
+  var pausedDuration=session.pausedDuration||0;
+  var paused=!!pauseStartedAt;
+  var reader=session.reader||"";
+  var phase=calcPhase(session, reg);             // "idle" | "live" | "fin" | "vote" | "bilan"
+  var enLive=phase==="live", fini=phase==="fin", voteOn=phase==="vote", bilanOn=phase==="bilan";
+  // Listener votes du passage courant + calcul du compteur attendu/actuel
+  useEffect(function(){
+    if(!passageId){ setPassageVotes({}); return; }
+    var r=db.ref(DB_ROOT+"/votes/"+passageId);
+    var f=r.on("value",function(s){setPassageVotes(s.val()||{});});
+    return function(){r.off("value",f);};
+  },[passageId]);
+  var occupantsTotaux=0, occupantsLecteurs=0;
+  Object.keys(tablettes).forEach(function(tid){
+    var occs=toArr(tablettes[tid].occupants);
+    occupantsTotaux+=occs.length;
+    occs.forEach(function(o){if(o.nom===reader)occupantsLecteurs++;});
+  });
+  var votantsAttendus=Math.max(0, occupantsTotaux-occupantsLecteurs);
+  var votantsActuels=Object.keys(passageVotes).length;
+  // Auto-clôture : tous les votants attendus ont voté → bascule en bilan
+  useEffect(function(){
+    if(voteOn && votantsAttendus>0 && votantsActuels>=votantsAttendus){
+      db.ref(DB_ROOT+"/session").update({phaseLockee:"bilan"});
+    }
+  },[voteOn, votantsActuels, votantsAttendus]);
+  // Check-in : la séance est-elle démarrée ? Qui est absent ?
+  var demarree=!!session.demarreeLe;
+  var absents=toArr(session.absents);             // liste des slugs absents
+  function estAbsent(nom){ return absents.indexOf(san(nom))!==-1; }
+  var elevesPresents=eleves.filter(function(nom){return !estAbsent(nom);});
+  function demarrerSeance(absentsList, libelle){
+    var sessionId=newSessionId();
+    var nom=(classes[slug]&&classes[slug].nom)||slug;
+    var libelleFinal=libelle||(nom+" — "+(new Date().toLocaleDateString("fr-FR")));
+    db.ref(DB_ROOT+"/seances/"+sessionId).set({
+      libelle:libelleFinal, classeSlug:slug, demarreLe:Date.now(), termineLe:null, passages:{},
+      criteres:reg.criteres.map(function(c){return {emoji:c.emoji,label:c.label};})    // snapshot pour récap futur
+    });
+    db.ref(DB_ROOT+"/session").update({demarreeLe:Date.now(), absents:absentsList||[], sessionId:sessionId});
+    setCheckinOpen(false);
+  }
+  function majAbsents(absentsList){
+    db.ref(DB_ROOT+"/session").update({absents:absentsList||[]});
+    setCheckinOpen(false);
+  }
+  function deconnexionGlobale(){
+    if(!confirm("Terminer la séance et déconnecter toutes les tablettes ?\n\nLes tablettes des élèves seront vidées. La séance reste archivée.")) return;
+    var sid=session.sessionId;
+    if(sid) db.ref(DB_ROOT+"/seances/"+sid+"/termineLe").set(Date.now());
+    db.ref(DB_ROOT+"/tablettes").remove();
+    db.ref(DB_ROOT+"/live").remove();
+    db.ref(DB_ROOT+"/compliments").remove();
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/session").update({
+      demarreeLe:null, sessionId:null, absents:[], reader:"", passageId:"", startedAt:null,
+      messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null
+    });
+  }
+  function exportSeance(sId){
+    Promise.all([
+      db.ref(DB_ROOT+"/seances/"+sId).once("value"),
+      db.ref(DB_ROOT+"/historiqueLectures").once("value")
+    ]).then(function(snaps){
+      var seance=snaps[0].val()||{}, hist=snaps[1].val()||{};
+      var passagesIds=Object.keys(seance.passages||{});
+      var passagesData={};
+      passagesIds.forEach(function(pid){ if(hist[pid]) passagesData[pid]=hist[pid]; });
+      var data=Object.assign({}, seance, {passages_data:passagesData, sessionId:sId});
+      var blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a"); a.href=url; a.download=sId+".json"; a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+  function recapSeance(sId){
+    Promise.all([
+      db.ref(DB_ROOT+"/seances/"+sId).once("value"),
+      db.ref(DB_ROOT+"/historiqueLectures").once("value")
+    ]).then(function(snaps){
+      var seance=snaps[0].val()||{}, hist=snaps[1].val()||{};
+      var passagesIds=Object.keys(seance.passages||{}).sort();
+      // Priorité au snapshot critères stocké dans la séance (cohérence historique)
+      var critRef=(seance.criteres && seance.criteres.length===4) ? seance.criteres : (reg.criteres||CRITERES_DEFAUT);
+      var critEmojis=critRef.map(function(c){return c.emoji;});
+      var critLabels=critRef.map(function(c){return c.label;});
+      function med(arr){ if(!arr.length) return null; var s=arr.slice().sort(function(a,b){return a-b;}); var m=Math.floor(s.length/2); return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2); }
+      var rows=passagesIds.map(function(pid){
+        var pp=hist[pid]||{};
+        var lecteur=pp.lecteur||"?";
+        var statut=pp.annule?'<span style="color:#dc2626">annulé</span>':(pp.bilanTermine?'<span style="color:#16a34a">terminé</span>':'<span style="color:#888">en cours</span>');
+        var medianes=[null,null,null,null];
+        if(pp.votes){
+          var slugs=Object.keys(pp.votes);
+          for(var i=0;i<4;i++){
+            var vals=slugs.map(function(s){return pp.votes[s].votes && pp.votes[s].votes["c"+i];}).filter(function(v){return typeof v==="number";});
+            medianes[i]=med(vals);
+          }
+        }
+        var nbCp=(pp.checkpoints && Object.keys(pp.checkpoints).length)||0;
+        var cells=medianes.map(function(niv){
+          var label=niv!==null?ECHELLE_ED[niv]:"—";
+          var color=niv!==null?ED_COLORS[niv]:"#bbb";
+          return '<td style="color:'+color+';font-weight:600">'+label+'</td>';
+        }).join("");
+        return '<tr><td><strong>'+lecteur+'</strong></td>'+cells+'<td style="text-align:center">'+nbCp+'</td><td>'+statut+'</td></tr>';
+      }).join("");
+      var entetes=critEmojis.map(function(e,i){return '<th>'+e+' '+critLabels[i]+'</th>';}).join("");
+      var html='<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>'+(seance.libelle||sId)+' — récap</title>'+
+        '<style>body{font-family:system-ui,-apple-system,sans-serif;padding:30px;color:#222;max-width:1000px;margin:0 auto}'+
+        'h1{color:#7c5cff;margin-bottom:6px}.meta{color:#666;margin-bottom:24px}'+
+        'table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.92rem}'+
+        'th,td{padding:10px 12px;border-bottom:1px solid #e2e6ef;text-align:left;vertical-align:middle}'+
+        'th{background:#f9faff;font-weight:700;font-size:.85rem}.foot{margin-top:30px;color:#888;font-size:.82rem}'+
+        '@media print{body{padding:14px}.no-print{display:none}}</style></head><body>'+
+        '<h1>'+(seance.libelle||sId)+'</h1>'+
+        '<div class="meta">Démarré le '+new Date(seance.demarreLe).toLocaleString("fr-FR")+
+        (seance.termineLe?(' — terminé le '+new Date(seance.termineLe).toLocaleString("fr-FR")):' — encore active')+'<br>'+
+        passagesIds.length+' passages</div>'+
+        '<table><thead><tr><th>Lecteur</th>'+entetes+'<th>✓</th><th>État</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+        '<div class="foot">Généré par l\'Applaudimètre — MJPC. <button class="no-print" onclick="window.print()" style="padding:8px 16px;background:#7c5cff;color:#fff;border:0;border-radius:6px;cursor:pointer">🖨 Imprimer</button></div>'+
+        '</body></html>';
+      var w=window.open("","_blank");
+      w.document.write(html); w.document.close();
+    });
+  }
+  // Actions d'incident
+  function interrompre(){
+    if(!confirm("Interrompre ce passage ? Le minuteur s'arrête, rien n'est conservé pour "+prenom(reader)+".")) return;
+    if(passageId) db.ref(DB_ROOT+"/historiqueLectures/"+passageId).remove();   // aucune trace, A = annulation propre
+    db.ref(DB_ROOT+"/live").remove();
+    db.ref(DB_ROOT+"/compliments").remove();
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/session").update({reader:"", passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
+  }
+  function annuler(){
+    if(!confirm("Annuler ce passage ? Le bilan ne sera pas validé, mais la courbe reste archivée (marquée annulée).")) return;
+    if(passageId) db.ref(DB_ROOT+"/historiqueLectures/"+passageId+"/annule").set(true);
+    db.ref(DB_ROOT+"/live").remove();
+    db.ref(DB_ROOT+"/compliments").remove();
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/session").update({reader:"", passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
+  }
+  function togglePause(){
+    if(paused){
+      // reprise : on cumule la durée passée en pause
+      var add=now-pauseStartedAt;
+      db.ref(DB_ROOT+"/session").update({pauseStartedAt:null, pausedDuration:pausedDuration+add});
+    } else {
+      db.ref(DB_ROOT+"/session").update({pauseStartedAt:now});
+    }
+  }
+  function ouvrirVote(){ db.ref(DB_ROOT+"/session").update({phaseLockee:"vote"}); }
+  function cloreVote(){ db.ref(DB_ROOT+"/session").update({phaseLockee:"bilan"}); }
+  function passageSuivant(){
+    if(passageId){
+      db.ref(DB_ROOT+"/votes/"+passageId).once("value").then(function(snap){
+        var votesData=snap.val()||{};
+        db.ref(DB_ROOT+"/historiqueLectures/"+passageId).update({
+          bilanTermine:true, finalisedAt:Date.now(), lecteur:reader||"", classeSlug:session.classeSlug||"", votes:votesData
+        });
+        db.ref(DB_ROOT+"/votes/"+passageId).remove();       // archivés → on libère le nœud actif
+        setReader("");
+      });
+    } else {
+      setReader("");
+    }
+  }
   var ssim=useState(false), simOn=ssim[0], setSimOn=ssim[1];
   useEffect(function(){
     if(!simOn||!p.test) return;                    // ne tourne qu'en mode test
@@ -779,14 +1389,22 @@ function OngletPilotage(p){
     return function(){ clearInterval(id); db.ref(DB_ROOT+"/live").remove(); }; // stop sim → barres vidées
   },[simOn,p.test]);
   function setClasse(e){
-    db.ref(DB_ROOT+"/live").remove();             // changement de classe : on vide barres + lecteur
+    db.ref(DB_ROOT+"/live").remove();             // changement de classe : on vide barres + lecteur + séance
     db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/session").update({classeSlug:e.target.value, reader:""});
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/session").update({classeSlug:e.target.value, reader:"", demarreeLe:null, sessionId:null, absents:[], passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
   }
   function setReader(nom){
     db.ref(DB_ROOT+"/live").remove();
     db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/session").update({reader:nom});
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    var upd={reader:nom, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null};
+    if(nom){
+      var newPid="p_"+Date.now();
+      upd.passageId=newPid; upd.startedAt=Date.now();
+      if(session.sessionId){ db.ref(DB_ROOT+"/seances/"+session.sessionId+"/passages/"+newPid).set(true); }
+    } else { upd.passageId=""; }
+    db.ref(DB_ROOT+"/session").update(upd);
   }
   return h(React.Fragment,null,
     h("div",{className:"card"},
@@ -796,15 +1414,26 @@ function OngletPilotage(p){
           h("select",{value:slug,onChange:setClasse},
             h("option",{value:""},"— choisir une classe —"),
             Object.keys(classes).map(function(s){return h("option",{key:s,value:s},classes[s].nom||s);})))),
-      slug && h("p",{className:"muted"},eleves.length+" élève(s) · "+presents+" / "+reg.nbTables+" tablette(s) connectée(s)")),
+      slug && h("p",{className:"muted"},
+        eleves.length+" élève(s) · "+presents+" / "+reg.nbTables+" tablette(s) connectée(s)"+
+        (demarree?(" · "+absents.length+" absent"+(absents.length>1?"s":"")):"")),
+      slug && !demarree ? h("button",{className:"btn btn-violet btn-lg",style:{width:"100%",marginTop:10},onClick:function(){setCheckinOpen(true);}},
+        "🚀 Démarrer la séance",
+        ifo("Pointe les présents avant de désigner un lecteur. La séance reste ouverte jusqu'à ce que tu changes de classe.")) : null,
+      slug && demarree ? h("button",{className:"btn btn-ghost",style:{width:"100%",marginTop:10},onClick:function(){setCheckinOpen(true);}},
+        "✏️ Modifier les absents",
+        ifo("Rouvre la liste pour gérer un retardataire ou une sortie en cours de séance.")) : null),
 
-    slug && h("div",{className:"card"},
-      h("h3",null,"Lecteur en cours",ifo("Désigne qui lit à voix haute. Les barres au tableau évaluent CE lecteur. « Lecteur suivant » remet tout à zéro.")),
+    slug && demarree && h("div",{className:"card"},
+      h("h3",null,"Lecteur en cours",ifo("Désigne qui lit à voix haute. Les absents sont grisés. « Lecteur suivant » saute les absents.")),
       h("div",{className:"field"},
         h("div",{className:"sel-wrap"},
           h("select",{value:session.reader||"",onChange:function(e){setReader(e.target.value);}},
             h("option",{value:""},"— personne ne lit —"),
-            eleves.map(function(nom,i){return h("option",{key:i,value:nom},nom);})))),
+            eleves.map(function(nom,i){
+              var abs=estAbsent(nom);
+              return h("option",{key:i,value:nom,disabled:abs},(abs?"🚫 ":"")+nom);
+            })))),
       session.reader
         ? h("div",{style:{textAlign:"center",padding:"6px 0"}},
             h("div",{style:{fontSize:"1.4rem",fontWeight:900,color:"var(--violet)"}},"🎤 "+session.reader),
@@ -812,11 +1441,35 @@ function OngletPilotage(p){
         : h("p",{className:"muted"},"Aucun lecteur désigné : les tablettes affichent « attends le prof »."),
       h("div",{className:"btn-row",style:{marginTop:12}},
         h("button",{className:"btn btn-violet",style:{flex:1},onClick:function(){
-          if(!eleves.length)return;
-          var idx=eleves.indexOf(session.reader); var nxt=eleves[(idx+1)%eleves.length];
+          if(!elevesPresents.length)return;
+          var idx=elevesPresents.indexOf(session.reader);
+          var nxt=elevesPresents[(idx+1)%elevesPresents.length];
           setReader(nxt);
         }},"⏭️ Lecteur suivant"),
-        session.reader && h("button",{className:"btn btn-ghost",onClick:function(){setReader("");}},"⏹️ Stop"))),
+        session.reader && h("button",{className:"btn btn-ghost",onClick:function(){setReader("");}},"⏹️ Stop")),
+      session.reader ? h("div",{className:"btn-row",style:{marginTop:8,flexWrap:"wrap"}},
+        enLive && !paused ? h("button",{className:"btn btn-bleu",style:{flex:1,minWidth:120},onClick:togglePause},
+          "⏸️ Pause",
+          ifo("Suspend le minuteur. Au tableau et sur les tablettes, un cercle respirant invite à se recentrer (rythme 4 s / 6 s).")) : null,
+        enLive && paused ? h("button",{className:"btn btn-vert",style:{flex:1,minWidth:120},onClick:togglePause},
+          "▶️ Reprendre",
+          ifo("Reprend le minuteur là où il en était.")) : null,
+        enLive ? h("button",{className:"btn btn-rose",onClick:interrompre},
+          "✖ Interrompre",
+          ifo("Annule ce passage sans laisser de trace dans l'historique. Pour un élève qui craque ou un imprévu de classe.")) : null,
+        !enLive && phase!=="idle" ? h("button",{className:"btn btn-rose",onClick:annuler},
+          "🗑 Annuler",
+          ifo("Marque ce passage comme annulé dans l'historique (la courbe reste, le bilan n'est pas validé).")) : null,
+        fini ? h("button",{className:"btn btn-violet",style:{flex:1,minWidth:140},onClick:ouvrirVote},
+          "📝 Ouvrir le vote",
+          ifo("Passe en phase de co-évaluation. Le tableau bascule en écran neutre, les tablettes affichent le formulaire d'avis (un vote par occupant).")) : null,
+        voteOn ? h("button",{className:"btn btn-violet",style:{flex:1,minWidth:140},onClick:cloreVote},
+          "✅ Clore le vote",
+          ifo("Termine la phase de vote et passe au bilan. La tablette du lecteur affichera son bilan privé.")) : null,
+        bilanOn ? h("button",{className:"btn btn-violet",style:{flex:1,minWidth:140},onClick:passageSuivant},
+          "▶️ Passage suivant",
+          ifo("Archive le bilan dans /historiqueLectures, libère la tablette du lecteur et revient en mode désignation.")) : null
+      ) : null),
 
     h("div",{className:"card"},
       h("h3",null,"Outils"),
@@ -827,7 +1480,78 @@ function OngletPilotage(p){
         h("button",{className:"btn btn-bleu",onClick:function(){window.open(window.location.pathname+"?view=board","BoardWindow","width=1280,height=800");}},"📺 Vue tableau",ifo("Ouvre la projection dans une fenêtre séparée (à mettre sur le vidéoprojecteur). Ton pilotage reste sur cette fenêtre-ci.")),
         h("button",{className:"btn btn-violet",onClick:function(){setQrOpen(true);}},"📱 QR pilotage",ifo("Affiche un QR à scanner avec ton téléphone : tu désignes le lecteur et passes au suivant depuis le fond de la salle.")),
         h("button",{className:"btn btn-gris",onClick:function(){snapshotExport(DB_ROOT,"applaudimetre_"+Date.now()+".json");}},"💾 Sauvegarde")),
-      qrOpen && h(OverlayQRPhone,{onClose:function(){setQrOpen(false);}})));
+      qrOpen && h(OverlayQRPhone,{onClose:function(){setQrOpen(false);}})),
+
+    session.sessionId && seances[session.sessionId] ? (function(){
+      var s=seances[session.sessionId];
+      var nbP=Object.keys(s.passages||{}).length;
+      return h("div",{className:"card"},
+        h("h3",null,"📋 Séance en cours",ifo("La séance est ouverte jusqu'à « Déconnexion globale ». Tous les passages réalisés y seront archivés.")),
+        h("div",{style:{fontWeight:700,fontSize:"1rem",marginBottom:4}}, s.libelle),
+        h("p",{className:"muted",style:{fontSize:".88rem",marginBottom:10}},
+          "Démarrée le "+new Date(s.demarreLe).toLocaleString("fr-FR")+" · "+nbP+" passage"+(nbP>1?"s":"")),
+        h("div",{className:"btn-row"},
+          h("button",{className:"btn btn-bleu",onClick:function(){recapSeance(session.sessionId);}},"🖨 Récap HTML",ifo("Ouvre un récap imprimable dans une fenêtre séparée (tous les passages avec leur bilan).")),
+          h("button",{className:"btn btn-gris",onClick:function(){exportSeance(session.sessionId);}},"📥 Export JSON",ifo("Télécharge la séance complète (passages, votes, checkpoints) en JSON.")),
+          h("button",{className:"btn btn-rose",onClick:deconnexionGlobale},"🚪 Déconnexion globale",ifo("Termine la séance, vide les tablettes et libère tout. La séance reste archivée."))));
+    })() : null,
+
+    session.sessionId && seances[session.sessionId] ? (function(){
+      var s=seances[session.sessionId];
+      var passagesIds=Object.keys(s.passages||{}).sort().reverse();         // plus récent en haut
+      if(!passagesIds.length) return null;
+      return h("div",{className:"card"},
+        h("h3",null,"🎤 Passages de la séance",ifo("Clique sur un passage pour voir sa courbe applaudimètre, son bilan École Directe, et les checkpoints traversés.")),
+        h("div",{className:"passages-list"},
+          passagesIds.map(function(pid){
+            var pData=historique[pid]||{};
+            var statut=pData.annule?'🚫 annulé':(pData.bilanTermine?'✅ terminé':'🎙️ en cours');
+            var statutClass=pData.annule?'st-annule':(pData.bilanTermine?'st-ok':'st-encours');
+            return h("button",{key:pid,className:"passage-row",onClick:function(){setPassageDetailId(pid);}},
+              h("div",{className:"passage-info"},
+                h("div",{className:"passage-lecteur"}, pData.lecteur||"(en cours)"),
+                h("div",{className:"passage-statut "+statutClass}, statut)),
+              h("div",{className:"passage-arrow"},"›"));
+          })));
+    })() : null,
+
+    (function(){
+      var sidNow=session.sessionId;
+      var archives=Object.keys(seances).filter(function(sId){return sId!==sidNow && seances[sId];})
+        .sort().reverse();                          // plus récent en haut
+      if(!archives.length) return null;
+      return h("div",{className:"card"},
+        h("h3",null,"📦 Séances archivées",ifo("Toutes les séances précédentes. Clique pour exporter ou imprimer le récap.")),
+        h("div",{className:"seances-list"},
+          archives.slice(0,20).map(function(sId){
+            var s=seances[sId];
+            var nbP=Object.keys(s.passages||{}).length;
+            var dt=new Date(s.demarreLe);
+            return h("div",{key:sId,className:"seance-row"},
+              h("div",{className:"seance-info"},
+                h("div",{className:"seance-lib"}, s.libelle||sId),
+                h("div",{className:"seance-meta"}, dt.toLocaleString("fr-FR")+" · "+nbP+" passage"+(nbP>1?"s":""))),
+              h("div",{className:"btn-row"},
+                h("button",{className:"btn btn-bleu",style:{padding:"6px 10px",fontSize:".85rem"},onClick:function(){recapSeance(sId);}},"🖨"),
+                h("button",{className:"btn btn-gris",style:{padding:"6px 10px",fontSize:".85rem"},onClick:function(){exportSeance(sId);}},"📥")));
+          })));
+    })(),
+
+    checkinOpen && h(ModaleCheckIn,{
+      eleves:eleves,
+      absentsInitial:absents,
+      modifier:demarree,
+      libellePlaceholder:(classe&&classe.nom?classe.nom:slug)+" — séance lecture",
+      onCancel:function(){setCheckinOpen(false);},
+      onValider:function(list,libelle){ demarree?majAbsents(list):demarrerSeance(list,libelle); }
+    }),
+    passageDetailId && historique[passageDetailId] ? h(ModalePassage,{
+      passageId:passageDetailId,
+      data:historique[passageDetailId],
+      criteres:(session.sessionId && seances[session.sessionId] && seances[session.sessionId].criteres) || reg.criteres || CRITERES_DEFAUT,
+      dureeSec:reg.dureeSec,
+      onClose:function(){setPassageDetailId("");}
+    }) : null);
 }
 
 function OngletClasses(p){
@@ -839,11 +1563,11 @@ function OngletClasses(p){
     var eleves=liste.split("\n").map(function(l){return l.trim();}).filter(function(l){return l.length;});
     if(!eleves.length){ alert("Colle au moins un élève (un par ligne, format NOM Prénom)."); return; }
     var slug=slugify(n)||("classe-"+Date.now());
-    db.ref(DB_ROOT+"/classes/"+slug).set({nom:n,eleves:eleves})
+    db.ref("classes/"+slug).set({nom:n,eleves:eleves})
       .then(function(){ setNom(""); setListe(""); })
       .catch(function(e){ alert("Échec de l'enregistrement Firebase : "+((e&&e.message)||e)+"\n\nVérifie ta config Firebase et les règles de la base (lecture/écriture autorisées)."); });
   }
-  function suppr(slug){ if(confirm("Supprimer cette classe ?")) db.ref(DB_ROOT+"/classes/"+slug).remove(); }
+  function suppr(slug){ if(confirm("Supprimer cette classe ?")) db.ref("classes/"+slug).remove(); }
   return h(React.Fragment,null,
     h("div",{className:"card"},
       h("h3",null,"Nouvelle classe",ifo("Colle ta liste depuis École Directe : un élève par ligne, au format NOM Prénom. Le prénom seul s'affichera côté élève et au tableau.")),
@@ -853,7 +1577,7 @@ function OngletClasses(p){
         h("textarea",{value:liste,onChange:function(e){setListe(e.target.value);},placeholder:"DUPONT Jean\nMARTIN Léa\n…"})),
       h("button",{className:"btn btn-violet btn-lg",onClick:creer},"➕ Créer la classe")),
     Object.keys(classes).map(function(slug){
-      var c=classes[slug]; var el=toArr(c.eleves);
+      var c=classes[slug]; var el=extractEleves(c, []);
       return h("div",{className:"card",key:slug},
         h("h3",null,c.nom||slug),
         h("p",{className:"muted",style:{marginBottom:8}},el.length+" élève(s)"),
@@ -866,8 +1590,12 @@ function OngletReglages(p){
   var reg=p.reg;
   function upd(patch){ db.ref(DB_ROOT+"/session/reglages").update(patch); }
   function updCrit(i,val){
-    var cr=reg.criteres.map(function(c){return {emoji:c.emoji,label:c.label};});
+    var cr=reg.criteres.map(function(c){return {emoji:c.emoji,label:c.label,questionVotant:c.questionVotant||""};});
     cr[i]=Object.assign({},cr[i],val); upd({criteres:cr});
+  }
+  function updSeuil(i,val){
+    var arr=reg.seuilsCheckpoints.slice(); arr[i]=Math.max(10,Math.min(95,parseInt(val,10)||0));
+    upd({seuilsCheckpoints:arr});
   }
   return h(React.Fragment,null,
     h("div",{className:"card"},
@@ -883,16 +1611,46 @@ function OngletReglages(p){
           h("input",{type:"range",min:4,max:40,value:reg.boost,onChange:function(e){upd({boost:parseInt(e.target.value,10)});}}),
           h("span",{className:"range-val"},"+"+reg.boost))),
       h("div",{className:"field"},
+        h("label",null,"Durée d'un passage",ifo("Combien de temps chaque lecteur a pour lire. À zéro, les barres sont figées et un message de fin s'affiche. Le prof garde la main pour passer au suivant.")),
+        h("div",{className:"range-row"},
+          h("input",{type:"range",min:15,max:300,step:5,value:reg.dureeSec,onChange:function(e){upd({dureeSec:parseInt(e.target.value,10)});}}),
+          h("span",{className:"range-val"},(function(){var m=Math.floor(reg.dureeSec/60),s=reg.dureeSec%60;return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;})()))),
+      h("div",{className:"field"},
         h("label",null,"Nombre de tablettes",ifo("Sert au compteur de présence (x / total) sur le tableau et le pilotage.")),
         h("div",{className:"range-row"},
           h("input",{type:"range",min:1,max:20,value:reg.nbTables,onChange:function(e){upd({nbTables:parseInt(e.target.value,10)});}}),
           h("span",{className:"range-val"},reg.nbTables+" tables")))),
     h("div",{className:"card"},
-      h("h3",null,"Les 4 critères",ifo("Modifie ce que tu veux faire travailler. L'emoji s'affiche en grand au tableau.")),
+      h("h3",null,"Mode checkpoints",ifo("Pour les premières séances : affiche au tableau combien de fois chaque barre passe son seuil, et l'horaire de chaque passage. L'élève sait qu'il a 'marqué' des points, même si son volume baisse plus tard.")),
+      h("label",{className:"checkbox-row"},
+        h("input",{type:"checkbox",checked:!!reg.modeCheckpoints,onChange:function(e){upd({modeCheckpoints:!!e.target.checked});}}),
+        " Activer le mode checkpoints"),
+      reg.modeCheckpoints ? h("div",{style:{marginTop:14}},
+        h("label",{className:"muted",style:{fontSize:".88rem",display:"block",marginBottom:8}},"Seuils par critère",ifo("Glisse le curseur pour chaque critère. La barre doit dépasser ce niveau pour valider un checkpoint.")),
+        h("div",{className:"cp-seuil-grid"},
+          reg.criteres.map(function(c,i){
+            return h("div",{className:"cp-seuil-col",key:i},
+              h("div",{className:"cp-seuil-bar"},
+                h("input",{type:"range",min:10,max:95,value:reg.seuilsCheckpoints[i],
+                  onChange:function(e){updSeuil(i,e.target.value);},
+                  className:"cp-vrange"})),
+              h("div",{className:"cp-seuil-val"},reg.seuilsCheckpoints[i]+" %"),
+              h("div",{className:"cp-seuil-emoji"},c.emoji),
+              h("div",{className:"cp-seuil-lbl"},c.label));
+          }))) : null),
+    h(CarteIACriteres,{onAppliquer:function(critList){ upd({criteres:critList}); }}),
+    h("div",{className:"card"},
+      h("h3",null,"Les 4 critères",ifo("Modifie ce que tu veux faire travailler. L'emoji et le label s'affichent en grand au tableau. La question est posée aux votants au moment du vote.")),
       reg.criteres.map(function(c,i){
-        return h("div",{className:"field",key:i,style:{display:"flex",gap:8,alignItems:"center"}},
-          h("input",{value:c.emoji,onChange:function(e){updCrit(i,{emoji:e.target.value});},style:{width:60,textAlign:"center",fontSize:"1.2rem"}}),
-          h("input",{value:c.label,onChange:function(e){updCrit(i,{label:e.target.value});}}));
+        return h("div",{className:"field",key:i,style:{marginBottom:16,paddingBottom:12,borderBottom:i<3?"1px solid #eef0f8":"none"}},
+          h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:8}},
+            h("input",{value:c.emoji,onChange:function(e){updCrit(i,{emoji:e.target.value});},
+              style:{width:60,textAlign:"center",fontSize:"1.2rem"}}),
+            h("input",{value:c.label,onChange:function(e){updCrit(i,{label:e.target.value});},
+              placeholder:"Libellé côté lecteur",style:{flex:1}})),
+          h("input",{value:c.questionVotant||"",onChange:function(e){updCrit(i,{questionVotant:e.target.value});},
+            placeholder:"Question oui/non posée aux votants",
+            style:{width:"100%",fontSize:".9rem",fontStyle:"italic",color:"#5b3fd4"}}));
       })),
     h("div",{className:"card"},
       h("h3",null,"Compliments",ifo("Barre de compliments à cocher côté élève (listes fermées : aucun texte libre possible).")),
@@ -903,19 +1661,60 @@ function OngletReglages(p){
 }
 
 // ════════════ VUE TABLEAU (projection live) ════════════
+// calcPhase — état déduit du modèle session (helper commun à tous les composants)
+// Retourne "idle" / "live" / "fin" / "vote" / "bilan"
+function calcPhase(session, reg){
+  if(!session||!session.reader||!session.startedAt) return "idle";
+  if(session.phaseLockee==="vote") return "vote";
+  if(session.phaseLockee==="bilan") return "bilan";
+  var pauseDur = session.pausedDuration||0;
+  var pauseStart = session.pauseStartedAt||null;
+  var paused = !!pauseStart;
+  var elapsed = Math.max(0, (Date.now() - session.startedAt - pauseDur - (paused?(Date.now()-pauseStart):0))/1000);
+  return (elapsed >= ((reg&&reg.dureeSec)||60)) ? "fin" : "live";
+}
+
+function meterSegs(pct){                            // V3 — 64 segments cubes, tête à opacité partielle pour mouvement fluide
+  var total=64, litFloat=(pct/100)*total, litFull=Math.floor(litFloat), partial=litFloat-litFull;
+  for(var s=0;s<total;s++){
+    var hue=290 - (s/total)*220;                    // violet (bas) → orangé (haut)
+    var style;
+    if(s<litFull){
+      style={background:"linear-gradient(to bottom, hsl("+hue+",90%,72%) 0%, hsl("+hue+",85%,58%) 40%, hsl("+hue+",80%,42%) 100%)",
+        boxShadow:"inset 0 1px 0 hsla("+hue+",100%,88%,.7), inset 0 -1px 2px hsla("+hue+",80%,25%,.6), 0 0 6px hsla("+hue+",90%,55%,.45)"};
+    } else if(s===litFull){
+      style={background:"linear-gradient(to bottom, hsl("+hue+",90%,72%) 0%, hsl("+hue+",85%,58%) 40%, hsl("+hue+",80%,42%) 100%)",
+        boxShadow:"inset 0 1px 0 hsla("+hue+",100%,88%,.5), 0 0 6px hsla("+hue+",90%,55%,.35)",
+        opacity:(0.15+partial*0.85)};
+    } else { style=null; }
+    out.push(h("div",{key:s,className:"meter-seg",style:style}));
+  }
+  return out;
+}
+
 function VueBoard(p){
   var ss=useState(null), session=ss[0], setSession=ss[1];
   var sl=useState({}), live=sl[0], setLive=sl[1];
   var sc=useState({}), comps=sc[0], setComps=sc[1];
   var tick=useState(0), setTick=tick[1];
   var scl=useState([]), claps=scl[0], setClaps=scl[1];
+  var sCp=useState([[],[],[],[]]), cps=sCp[0], setCps=sCp[1];   // checkpoints par critère
+  var sSnap=useState(null), snap=sSnap[0], setSnap=sSnap[1];    // snapshot des barres au gel
+  var sPlt=useState([]), paillettes=sPlt[0], setPlt=sPlt[1];    // paillettes de fin
+  var sTb=useState({}), tablettesBoard=sTb[0], setTablettesBoard=sTb[1];     // pour compteur "X / N votes"
+  var sVb=useState({}), votesBoard=sVb[0], setVotesBoard=sVb[1];             // votes du passage courant
+  var lastValsRef=useRef([0,0,0,0]);                            // pour détection passage de seuil par en bas
+  var finiRef=useRef(false);                                    // pour suspendre la pluie de 👏 en phase fin
+  var courbeLastSecRef=useRef(-1);                              // dernière seconde écrite dans /courbe pour ne pas doublonner
   var lvlRef=useRef(0);
   useEffect(function(){
     var r1=db.ref(DB_ROOT+"/session"); var f1=r1.on("value",function(s){setSession(s.val()||{});});
     var r2=db.ref(DB_ROOT+"/live"); var f2=r2.on("value",function(s){setLive(s.val()||{});});
     var r3=db.ref(DB_ROOT+"/compliments"); var f3=r3.on("value",function(s){setComps(s.val()||{});});
-    var iv=setInterval(function(){setTick(function(t){return t+1;});},300); // rafraîchit présence/decay visuel
-    return function(){ r1.off("value",f1); r2.off("value",f2); r3.off("value",f3); clearInterval(iv); };
+    var r4=db.ref(DB_ROOT+"/liveSnapshot"); var f4=r4.on("value",function(s){setSnap(s.val()||null);});
+    var r5=db.ref(DB_ROOT+"/tablettes"); var f5=r5.on("value",function(s){setTablettesBoard(s.val()||{});});
+    var iv=setInterval(function(){setTick(function(t){return t+1;});},100); // rafraîchit présence/decay/segments à 10 fps
+    return function(){ r1.off("value",f1); r2.off("value",f2); r3.off("value",f3); r4.off("value",f4); r5.off("value",f5); clearInterval(iv); };
   },[]);
   useEffect(function(){                              // pluie de 👏 pilotée par le niveau des barres
     var n=0;
@@ -924,6 +1723,7 @@ function VueBoard(p){
       setClaps(function(prev){
         var t=Date.now();
         var next=prev.filter(function(c){return t-c.born<1200;});
+        if(finiRef.current) return next;             // gel atteint : on laisse disparaître, on n'ajoute plus
         if(lvl>50) next=next.concat([{id:(++n)+"_"+t, left:8+Math.random()*84, emoji:Math.random()<0.15?"✨":"👏", born:t}]);
         if(lvl>82) next=next.concat([{id:(++n)+"_"+t+"b", left:8+Math.random()*84, emoji:"👏", born:t}]);
         return next;
@@ -932,6 +1732,30 @@ function VueBoard(p){
     return function(){ clearInterval(ivc); };
   },[]);
   var reg=reglagesSafe(session&&session.reglages);
+  var passageId=(session&&session.passageId)||"";
+  var startedAt=(session&&session.startedAt)||0;
+  // Lecture temps réel des checkpoints du passage en cours (survit aux refresh)
+  useEffect(function(){
+    if(!passageId){ setCps([[],[],[],[]]); return; }
+    var ref=db.ref(DB_ROOT+"/historiqueLectures/"+passageId+"/checkpoints");
+    var f=ref.on("value",function(s){
+      var v=s.val()||{};
+      var byIdx=[[],[],[],[]];
+      Object.keys(v).forEach(function(k){
+        var c=v[k]; if(c && typeof c.critereIdx==="number" && c.critereIdx>=0 && c.critereIdx<4) byIdx[c.critereIdx].push(c);
+      });
+      byIdx.forEach(function(arr){ arr.sort(function(a,b){return (a.ts||0)-(b.ts||0);}); });
+      setCps(byIdx);
+    });
+    return function(){ ref.off("value",f); };
+  },[passageId]);
+  // Listener votes du passage (pour compteur "X / N votes" en phase vote)
+  useEffect(function(){
+    if(!passageId){ setVotesBoard({}); return; }
+    var r=db.ref(DB_ROOT+"/votes/"+passageId);
+    var f=r.on("value",function(s){setVotesBoard(s.val()||{});});
+    return function(){r.off("value",f);};
+  },[passageId]);
   var reader=session&&session.reader;
   var now=Date.now();
   var tables=Object.keys(live).map(function(k){return live[k];}).filter(function(v){return v&&(now-(v.ts||0))<6000;});
@@ -944,6 +1768,72 @@ function VueBoard(p){
     }
   }
   lvlRef.current=Math.max(vals[0],vals[1],vals[2],vals[3]);
+  // Détection passage de seuil par en bas (mode checkpoints uniquement, suspendue en pause)
+  if(reg.modeCheckpoints && passageId && startedAt && !(session&&session.pauseStartedAt)){
+    for(var ci=0;ci<4;ci++){
+      var seuil=reg.seuilsCheckpoints[ci];
+      if(vals[ci]>=seuil && lastValsRef.current[ci]<seuil){
+        var elapsed=Math.floor((Date.now()-startedAt)/1000);
+        db.ref(DB_ROOT+"/historiqueLectures/"+passageId+"/checkpoints").push({
+          critereIdx:ci, time:elapsed, ts:Date.now(),
+          lecteur:reader||"", classeSlug:(session&&session.classeSlug)||"", seuil:seuil
+        });
+      }
+    }
+  }
+  lastValsRef.current=vals.slice();
+  // Minuteur de lecture + phase explicite (live/fin/vote/bilan/idle)
+  var pauseStartedAt=(session&&session.pauseStartedAt)||null;
+  var pausedDuration=(session&&session.pausedDuration)||0;
+  var paused=!!pauseStartedAt;
+  var phase=calcPhase(session, reg);                          // "idle" | "live" | "fin" | "vote" | "bilan"
+  var elapsed = (reader && startedAt) ? Math.max(0, (Date.now() - startedAt - pausedDuration - (paused ? (Date.now() - pauseStartedAt) : 0)) / 1000) : 0;
+  var remaining = Math.max(0, Math.ceil(reg.dureeSec - elapsed));
+  var fini = phase==="fin";                                   // gel : uniquement en phase fin (vote/bilan ont leur propre rendu)
+  var enVote = phase==="vote", enBilan = phase==="bilan";
+  var messageFinIdx = (session && typeof session.messageFinIdx === "number") ? session.messageFinIdx : null;
+  finiRef.current = fini || paused || enVote || enBilan;      // gel des claps en phase fin, en pause, en vote, en bilan
+  // Échantillonnage 1 Hz de la courbe (uniquement en live, pas en pause/vote/bilan)
+  if(passageId && startedAt && phase==="live"){
+    var secEch=Math.floor(elapsed);
+    if(secEch>=0 && secEch!==courbeLastSecRef.current){
+      courbeLastSecRef.current=secEch;
+      db.ref(DB_ROOT+"/historiqueLectures/"+passageId+"/courbe/s"+secEch).set({
+        c0:Math.round(vals[0]), c1:Math.round(vals[1]), c2:Math.round(vals[2]), c3:Math.round(vals[3])
+      });
+    }
+  } else if(!passageId) {
+    courbeLastSecRef.current=-1;                              // reset entre passages
+  }
+  // Valeurs utilisées pour le rendu : pendant la phase fin, on affiche le snapshot Firebase
+  var valsAffich = (fini && snap) ? [snap.c0||0, snap.c1||0, snap.c2||0, snap.c3||0] : vals;
+  // Déclenchement unique du gel (snapshot Firebase + tirage du message) quand le minuteur atteint zéro
+  useEffect(function(){
+    if(!fini || !passageId) return;
+    if(messageFinIdx !== null) return;            // gel déjà appliqué pour ce passage
+    var snapVals = {c0:vals[0]||0, c1:vals[1]||0, c2:vals[2]||0, c3:vals[3]||0, presents:presents, ts:Date.now()};
+    var idx = Math.floor(Math.random() * MESSAGES_FIN.length);
+    db.ref(DB_ROOT+"/liveSnapshot").set(snapVals);
+    db.ref(DB_ROOT+"/session").update({messageFinIdx: idx});
+  }, [fini, passageId, messageFinIdx]);
+  // Pluie de paillettes en phase fin (✨🎉⭐)
+  useEffect(function(){
+    if(!fini){ setPlt([]); return; }
+    var n=0;
+    function spawn(){
+      setPlt(function(prev){
+        var t=Date.now();
+        var next=prev.filter(function(p){return t-p.born<1600;});
+        var emos=["✨","🎉","⭐","✨"];
+        next=next.concat([{id:(++n)+"_"+t, left:5+Math.random()*90, emoji:emos[Math.floor(Math.random()*emos.length)], born:t}]);
+        if(Math.random()<0.5) next=next.concat([{id:(++n)+"_"+t+"b", left:5+Math.random()*90, emoji:"✨", born:t}]);
+        return next;
+      });
+    }
+    spawn(); spawn();
+    var iv=setInterval(spawn, 280);
+    return function(){ clearInterval(iv); };
+  }, [fini]);
   // compliments cochés (les plus fréquents)
   var compArr=reg.compliments.map(function(txt,i){return {txt:txt,n:(comps&&comps[i])||0};}).filter(function(o){return o.n>0;}).sort(function(a,b){return b.n-a.n;});
 
@@ -963,7 +1853,31 @@ function VueBoard(p){
           h("div",{className:"big"},"👏"),
           h("div",{style:{fontSize:"1.6rem",fontWeight:800}},"En attente d'un lecteur…"),
           h("div",null,"Le professeur va désigner qui lit."))
+      : enVote
+        ? (function(){
+            var occTot=0, occLec=0;
+            Object.keys(tablettesBoard).forEach(function(tid){
+              var occs=toArr(tablettesBoard[tid].occupants);
+              occTot+=occs.length;
+              occs.forEach(function(o){if(o.nom===reader)occLec++;});
+            });
+            var attendus=Math.max(0,occTot-occLec);
+            var actuels=Object.keys(votesBoard).length;
+            return h("div",{className:"board-neutre"},
+              h("div",{className:"board-neutre-emoji"},"📝"),
+              h("div",{className:"board-neutre-titre"},"La salle évalue "+prenom(reader)),
+              h("div",{className:"board-neutre-sub"},"Chaque tablette se passe entre occupants pour le vote."),
+              attendus>0 ? h("div",{className:"board-vote-counter"},
+                actuels+" / "+attendus+" élève"+(attendus>1?"s ont":" a")+" voté") : null);
+          })()
+      : enBilan
+        ? h("div",{className:"board-neutre"},
+            h("div",{className:"board-neutre-emoji"},"📋"),
+            h("div",{className:"board-neutre-titre"},"Évaluation de "+prenom(reader)+" terminée"),
+            h("div",{className:"board-neutre-sub"},prenom(reader)+" consulte son bilan. Le prof passe au lecteur suivant quand c'est prêt."))
       : h(React.Fragment,null,
+          !fini ? h("div",{className:"board-chrono"+(remaining<=10?" alert":"")},
+            (function(){ var m=Math.floor(remaining/60), s=remaining%60; return (m<10?"0":"")+m+":"+(s<10?"0":"")+s; })()) : null,
           h("div",{className:"board-top"},
             h("div",{className:"board-sub"},"🎤 c'est au tour de"),
             h("div",{className:"board-reader"},prenom(reader))),
@@ -973,39 +1887,102 @@ function VueBoard(p){
             })),
           h("div",{className:"board-meters"},
             reg.criteres.map(function(c,i){
-              var pct=Math.max(0,Math.min(100,vals[i]));
+              var pct=Math.max(0,Math.min(100,valsAffich[i]));
+              var seuil=reg.seuilsCheckpoints[i];
+              var hist=cps[i]||[];
+              var derniers=hist.slice(-4).reverse();                // les 4 plus récents, plus récent en haut
+              function fmt(sec){ var m=Math.floor((sec||0)/60), s=(sec||0)%60; return (m<10?"0":"")+m+":"+(s<10?"0":"")+s; }
               return h("div",{className:"meter",key:i},
                 h("div",{className:"meter-pct"},Math.round(pct)+"%"),
-                h("div",{className:"meter-track"+(pct>80?" meter-glow":"")},
-                  h("div",{className:"meter-fill",style:{height:pct+"%"}})),
+                h("div",{className:"meter-trackwrap"},
+                  h("div",{className:"meter-track"},
+                    meterSegs(pct),
+                    reg.modeCheckpoints ? h("div",{className:"cp-line",style:{top:(100-seuil)+"%"}}) : null),
+                  reg.modeCheckpoints && derniers.length ? h("div",{className:"cp-stack",style:{top:(100-seuil)+"%"}},
+                    derniers.map(function(cp,k){return h("span",{key:cp.ts||k,className:"cp-time"+(k===0?" latest":"")},fmt(cp.time));})) : null),
                 h("div",{className:"meter-emoji"},c.emoji),
-                h("div",{className:"meter-label"},c.label));
+                h("div",{className:"meter-label"},c.label,
+                  reg.modeCheckpoints ? h("span",{className:"cp-count"},"✓ ×"+hist.length) : null));
             })),
           h("div",{className:"board-count"},
             presents+" / "+reg.nbTables+" tables · ",
             compArr.length? compArr.slice(0,3).map(function(o,i){return h("span",{key:i,className:"pill",style:{background:"rgba(255,210,63,.22)",color:"#fff"}},"💛 "+o.txt);}) : "encourage avec les compliments !"
           ),
           h("div",{className:"board-claps-zone"},
-            claps.map(function(c){return h("span",{className:"clap-rise",key:c.id,style:{left:c.left+"%"}},c.emoji);}))));
+            claps.map(function(c){return h("span",{className:"clap-rise",key:c.id,style:{left:c.left+"%"}},c.emoji);})),
+          fini ? h("div",{className:"board-paillettes-zone"},
+            paillettes.map(function(p){return h("span",{className:"paillette-rise",key:p.id,style:{left:p.left+"%"}},p.emoji);})) : null,
+          fini && messageFinIdx!==null ? h("div",{className:"board-fin-message"},
+            (MESSAGES_FIN[messageFinIdx]||MESSAGES_FIN[0]).replace("{prénom}", prenom(reader))) : null,
+          paused ? h("div",{className:"board-pause-overlay"},
+            h("div",{className:"board-pause-label"},"⏸ Pause"),
+            h("div",{className:"board-breath-circle"}),
+            h("div",{className:"board-pause-reader"},prenom(reader))) : null));
 }
 
 // ════════════ TABLETTE ÉLÈVE ════════════
+function FormConnexion(p){
+  // Login pattern correction_dictee : NOM + Prénom au clavier, matching strict slugifié
+  var sn=useState(""), nom=sn[0], setNom=sn[1];
+  var sp=useState(""), pre=sp[0], setPre=sp[1];
+  var se=useState(""), err=se[0], setErr=se[1];
+  function valider(){
+    var n=nom.trim(), pr=pre.trim();
+    if(!n||!pr){ setErr("Saisis ton nom ET ton prénom."); return; }
+    var saisi=san((n+" "+pr).toLowerCase());
+    var found=null;
+    for(var i=0;i<p.eleves.length;i++){
+      if(san(String(p.eleves[i]).toLowerCase())===saisi){ found=p.eleves[i]; break; }
+    }
+    if(!found){ setErr("Ce nom n'est pas dans la liste de la classe. Vérifie l'orthographe."); return; }
+    var slug=san(found);
+    if(p.absents.indexOf(slug)!==-1){ setErr("Tu es marqué absent. Demande au prof si c'est une erreur."); return; }
+    if((p.dejaInscrits||[]).indexOf(slug)!==-1){ setErr("Tu es déjà connecté sur cette tablette."); return; }
+    p.onValider({nom:found, slug:slug});
+  }
+  return h("div",{className:"form-connect"},
+    h("div",{className:"field"},h("label",null,"Nom"),
+      h("input",{value:nom,onChange:function(e){setNom(e.target.value);setErr("");},
+        onKeyDown:function(e){if(e.key==="Enter")valider();},
+        autoFocus:true,placeholder:"DUPONT",autoCapitalize:"characters",inputMode:"text"})),
+    h("div",{className:"field"},h("label",null,"Prénom"),
+      h("input",{value:pre,onChange:function(e){setPre(e.target.value);setErr("");},
+        onKeyDown:function(e){if(e.key==="Enter")valider();},
+        placeholder:"Léa",autoCapitalize:"words",inputMode:"text"})),
+    err? h("div",{className:"form-err"},err) : null,
+    h("div",{className:"btn-row"},
+      p.onCancel? h("button",{className:"btn btn-ghost",onClick:p.onCancel},"Annuler") : null,
+      h("button",{className:"btn btn-violet btn-lg",style:{flex:1},onClick:valider},"Me connecter")));
+}
+
 function AppEleve(p){
   var ss=useState(null), session=ss[0], setSession=ss[1];
   var sc=useState({}), classes=sc[0], setClasses=sc[1];
-  var st=useState(""), table=st[0], setTable=st[1];
-  var sm=useState(""), moi=sm[0], setMoi=sm[1];
+  // Table persistée en sessionStorage (résiste au refresh accidentel pendant une séance)
+  var st=useState(function(){try{return sessionStorage.getItem("am_table")||"";}catch(e){return "";}}), table=st[0], setTable_=st[1];
+  function setTable(v){ try{ if(v) sessionStorage.setItem("am_table",v); else sessionStorage.removeItem("am_table"); }catch(e){} setTable_(v); }
+  var so=useState([]), occupants=so[0], setOccupants=so[1];
+  var sa=useState(false), addOpen=sa[0], setAddOpen=sa[1];
   useEffect(function(){
     var r1=db.ref(DB_ROOT+"/session"); var f1=r1.on("value",function(s){setSession(s.val()||{});});
-    var r2=db.ref(DB_ROOT+"/classes"); var f2=r2.on("value",function(s){setClasses(s.val()||{});});
+    var r2=db.ref("classes"); var f2=r2.on("value",function(s){setClasses(s.val()||{});});
     return function(){ r1.off("value",f1); r2.off("value",f2); };
   },[]);
+  // Listener temps réel sur /tablettes/{tableId} : permet la reconnexion automatique
+  useEffect(function(){
+    if(!table){ setOccupants([]); return; }
+    var ref=db.ref(DB_ROOT+"/tablettes/"+table);
+    var f=ref.on("value",function(s){ var v=s.val()||{}; setOccupants(toArr(v.occupants)); });
+    return function(){ ref.off("value",f); };
+  },[table]);
   var reg=reglagesSafe(session&&session.reglages);
   var slug=session&&session.classeSlug;
   var classe=slug&&classes[slug];
-  var eleves=classe?toArr(classe.eleves):[];
+  var eleves=classe?extractEleves(classe, []):[];
+  var demarree=!!(session&&session.demarreeLe);
+  var absents=session?toArr(session.absents):[];
 
-  // ---- login : table puis nom ----
+  // ---- 1. Choix de la table ----
   if(!table){
     return h("div",{className:"eleve"},
       h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:p.onBack},"← Accueil"),h("h2",null,"Quelle table ?")),
@@ -1017,37 +1994,217 @@ function AppEleve(p){
           }))),
       h(HelpFab,{role:"eleve"}));
   }
-  if(!moi){
+
+  // ---- 2. Attendre que la séance soit démarrée par le prof ----
+  if(!classe){
     return h("div",{className:"eleve"},
-      h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:function(){setTable("");}},"← Table"),h("h2",null,"Qui évalue ?")),
+      h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:function(){setTable("");}},"← Table"),h("h2",null,"Table "+table.slice(1))),
       h("div",{className:"eleve-wait"},
-        !classe ? h("p",{className:"muted"},"Le professeur n'a pas encore choisi de classe. Patiente…")
-        : h(React.Fragment,null,
-            h("p",{className:"muted"},"Table "+table.slice(1)+" — choisis ton prénom :"),
-            h("div",{className:"choice-list"},
-              eleves.map(function(nom,i){return h("button",{key:i,className:"classe-btn",onClick:function(){setMoi(nom);}},prenom(nom));})))),
+        h("div",{className:"big"},"⏳"),
+        h("p",{className:"muted"},"Le professeur n'a pas encore choisi la classe. Patiente…")),
       h(HelpFab,{role:"eleve"}));
   }
-  return h(EleveVote,{table:table,moi:moi,session:session,reg:reg,
-    onChangeEleve:function(){setMoi("");}, onBack:p.onBack});
+  if(!demarree){
+    return h("div",{className:"eleve"},
+      h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:function(){setTable("");}},"← Table"),h("h2",null,"Table "+table.slice(1))),
+      h("div",{className:"eleve-wait"},
+        h("div",{className:"big"},"🚀"),
+        h("p",{className:"muted"},"En attente du démarrage de la séance par le prof.")),
+      h(HelpFab,{role:"eleve"}));
+  }
+
+  // ---- 3. Aucun occupant : formulaire d'inscription du premier ----
+  function ajouterOccupant(occ){
+    var newList=occupants.concat([occ]).slice(0,3);          // max 3
+    db.ref(DB_ROOT+"/tablettes/"+table).set({occupants:newList, ts:Date.now()});
+    setAddOpen(false);
+  }
+  function retirerOccupant(slugRet){
+    var newList=occupants.filter(function(o){return o.slug!==slugRet;});
+    if(newList.length===0) db.ref(DB_ROOT+"/tablettes/"+table).remove();
+    else db.ref(DB_ROOT+"/tablettes/"+table).set({occupants:newList, ts:Date.now()});
+  }
+  function changerTable(){
+    if(!confirm("Quitter cette tablette ? Tu pourras t'y reconnecter, ou choisir une autre table.")) return;
+    setTable("");
+  }
+  var dejaInscrits=occupants.map(function(o){return o.slug;});
+
+  if(occupants.length===0){
+    return h("div",{className:"eleve"},
+      h("div",{className:"hdr"},
+        h("button",{className:"btn-back",onClick:function(){setTable("");}},"← Table"),
+        h("h2",null,"Table "+table.slice(1)+" — connexion")),
+      h("div",{className:"form-wrap"},
+        h("p",{className:"muted",style:{textAlign:"center",marginBottom:14}},"Le premier élève de la table tape son nom + prénom."),
+        h(FormConnexion,{eleves:eleves,absents:absents,dejaInscrits:dejaInscrits,onValider:ajouterOccupant})),
+      h(HelpFab,{role:"eleve"}));
+  }
+
+  // ---- 4. Vue applaudimètre avec zones par occupant ----
+  if(addOpen){
+    return h("div",{className:"eleve"},
+      h("div",{className:"hdr"},
+        h("button",{className:"btn-back",onClick:function(){setAddOpen(false);}},"← Annuler"),
+        h("h2",null,"Ajouter un élève")),
+      h("div",{className:"form-wrap"},
+        h("p",{className:"muted",style:{textAlign:"center",marginBottom:14}},"Tape ton nom + prénom. Tu rejoins la Table "+table.slice(1)+".")),
+        h(FormConnexion,{eleves:eleves,absents:absents,dejaInscrits:dejaInscrits,
+          onCancel:function(){setAddOpen(false);},onValider:ajouterOccupant}),
+      h(HelpFab,{role:"eleve"}));
+  }
+  return h(EleveVote,{table:table,occupants:occupants,session:session,reg:reg,
+    onAddOccupant:function(){setAddOpen(true);},
+    onRemoveOccupant:retirerOccupant,
+    onChangeTable:changerTable, onBack:p.onBack});
+}
+
+// ════════════ PHASE VOTE — sélecteur d'occupant + formulaire par critère ════════════
+function PhaseVote(p){
+  // p.occupants, p.reader, p.reg, p.passageId
+  var sLec=useState(""), votant=sLec[0], setVotant=sLec[1];   // slug de l'occupant en cours de vote
+  var sV=useState({}), votes=sV[0], setVotes=sV[1];           // {slug:{nom,votes:{c0..c3},ts}} déjà votés
+  useEffect(function(){
+    if(!p.passageId) return;
+    var ref=db.ref(DB_ROOT+"/votes/"+p.passageId);
+    var f=ref.on("value",function(s){ setVotes(s.val()||{}); });
+    return function(){ ref.off("value",f); };
+  },[p.passageId]);
+
+  if(!votant){
+    return h("div",{className:"vote-selection"},
+      h("div",{className:"vote-titre"},"📝 Tour de vote"),
+      h("p",{className:"muted",style:{marginBottom:14}},"Chacun à votre tour, choisissez votre prénom pour donner votre avis sur "+prenom(p.reader)+"."),
+      h("div",{className:"vote-occ-list"},
+        p.occupants.map(function(occ){
+          var aVote=!!votes[occ.slug];
+          var estLecteur=occ.nom===p.reader;
+          if(estLecteur){
+            return h("div",{className:"vote-occ-row dim",key:occ.slug},
+              h("span",{className:"vote-occ-name"}, prenom(occ.nom)),
+              h("span",{className:"vote-occ-state"},"🎤 lecteur — ne vote pas"));
+          }
+          return h("button",{className:"vote-occ-row"+(aVote?" voted":""),key:occ.slug,
+            onClick:function(){ if(!aVote) setVotant(occ.slug); },disabled:aVote},
+            h("span",{className:"vote-occ-name"}, prenom(occ.nom)),
+            h("span",{className:"vote-occ-state"}, aVote?"✓ a voté":"À toi de voter →"));
+        })));
+  }
+
+  var occ=null;
+  for(var i=0;i<p.occupants.length;i++){ if(p.occupants[i].slug===votant){ occ=p.occupants[i]; break; } }
+  if(!occ){ setVotant(""); return null; }
+  return h(VoteFormulaire,{
+    occupant:occ, criteres:p.reg.criteres, reader:p.reader,
+    onValider:function(scores){
+      db.ref(DB_ROOT+"/votes/"+p.passageId+"/"+votant).set({
+        nom:occ.nom, votes:scores, ts:Date.now()
+      });
+      setVotant("");
+    },
+    onAnnuler:function(){ setVotant(""); }
+  });
+}
+
+function VoteFormulaire(p){
+  var sR=useState([null,null,null,null]), rep=sR[0], setRep=sR[1];
+  function setNiveau(i,v){ var n=rep.slice(); n[i]=v; setRep(n); }
+  function valider(){
+    var tousReplis=rep.every(function(r){return r!==null;});
+    if(!tousReplis){ alert("Réponds à toutes les questions avant de valider."); return; }
+    p.onValider({c0:rep[0], c1:rep[1], c2:rep[2], c3:rep[3]});
+  }
+  return h("div",{className:"vote-form"},
+    h("div",{className:"vote-form-hdr"},
+      h("button",{className:"btn-back",onClick:p.onAnnuler},"← Changer de votant"),
+      h("div",{className:"vote-form-titre"},prenom(p.occupant.nom)+" évalue "+prenom(p.reader))),
+    p.criteres.map(function(c,i){
+      var question = c.questionVotant || "Pour le critère « "+c.label+" » :";
+      return h("div",{className:"vote-q-block",key:i},
+        h("div",{className:"vote-q-titre"}, h("span",{className:"vote-q-emoji"},c.emoji), h("span",null,question)),
+        h("div",{className:"vote-q-choix"},
+          ECHELLE_VOTANT.map(function(e,j){
+            return h("button",{key:j,className:"vote-choix"+(rep[i]===j?" sel":""),
+              onClick:function(){setNiveau(i,j);}},
+              h("span",{className:"vote-choix-emoji"}, e.emoji),
+              h("span",{className:"vote-choix-label"}, e.label));
+          })));
+    }),
+    h("button",{className:"btn btn-violet btn-lg",style:{width:"100%",marginTop:14},onClick:valider},
+      "Valider mon vote"));
+}
+
+// ════════════ PHASE BILAN — grille École Directe pour le lecteur ════════════
+function PhaseBilan(p){
+  // p.occupants, p.reader, p.reg, p.passageId, p.lecteurEstIci
+  var sV=useState({}), votes=sV[0], setVotes=sV[1];
+  useEffect(function(){
+    if(!p.passageId) return;
+    var ref=db.ref(DB_ROOT+"/votes/"+p.passageId);
+    var f=ref.on("value",function(s){ setVotes(s.val()||{}); });
+    return function(){ ref.off("value",f); };
+  },[p.passageId]);
+
+  function median(arr){
+    if(!arr.length) return null;
+    var s=arr.slice().sort(function(a,b){return a-b;});
+    var m=Math.floor(s.length/2);
+    return s.length%2 ? s[m] : Math.round((s[m-1]+s[m])/2);
+  }
+  var votantsSlugs=Object.keys(votes);
+  var nbVotes=votantsSlugs.length;
+  var medianes=[null,null,null,null];
+  for(var i=0;i<4;i++){
+    var vals=votantsSlugs.map(function(slug){var vv=votes[slug]&&votes[slug].votes; return vv?vv["c"+i]:null;}).filter(function(v){return typeof v==="number";});
+    medianes[i]=median(vals);
+  }
+
+  if(!p.lecteurEstIci){
+    return h("div",{className:"eleve-vote-wait"},
+      h("div",{className:"big"},"✅"),
+      h("div",{className:"vote-titre"},"Évaluation terminée"),
+      h("p",{className:"muted"},prenom(p.reader)+" consulte son bilan."));
+  }
+  return h("div",{className:"bilan"},
+    h("div",{className:"bilan-hdr"},
+      h("div",{className:"bilan-emoji-grand"},"📋"),
+      h("div",{className:"bilan-titre"},"Ton bilan, "+prenom(p.reader)),
+      h("p",{className:"muted",style:{marginTop:6}}, nbVotes===0
+        ? "Personne n'a voté pour ce passage."
+        : (nbVotes+" camarade"+(nbVotes>1?"s ont":" a")+" donné son avis."))),
+    h("div",{className:"bilan-grille"},
+      p.reg.criteres.map(function(c,i){
+        var niv=medianes[i];
+        var color=niv!==null ? ED_COLORS[niv] : "#cbd5e1";
+        var label=niv!==null ? ECHELLE_ED[niv] : "Pas d'évaluation";
+        return h("div",{className:"bilan-crit",key:i,style:{borderColor:color}},
+          h("div",{className:"bilan-crit-emoji"}, c.emoji),
+          h("div",{className:"bilan-crit-label"}, c.label),
+          h("div",{className:"bilan-crit-niveau",style:{color:color,borderTopColor:color}}, label));
+      })));
 }
 
 function EleveVote(p){
   var reg=p.reg, session=p.session||{};
   var reader=session.reader;
-  var jeLis = reader && reader===p.moi;
+  var paused=!!session.pauseStartedAt;
+  var occupants=p.occupants||[];
+  var phase=calcPhase(session, reg);
+  var enVote=phase==="vote", enBilan=phase==="bilan";
+  var lecteurEstIci=false;
+  for(var ii=0;ii<occupants.length;ii++){ if(occupants[ii].nom===reader){ lecteurEstIci=true; break; } }
   var valsRef=useRef([0,0,0,0]);
   var pressRef=useRef(null);
-  var sd=useState(0), setDraw=sd[1]; // force redraw
+  var sd=useState(0), setDraw=sd[1];
   var sComp=useState({}), monComp=sComp[0], setMonComp=sComp[1];
   var lastReaderRef=useRef(reader);
+  // libellé Firebase = liste des prénoms (pour info au prof, agrégation reste par table)
+  var noms = occupants.map(function(o){return prenom(o.nom);}).join(" + ");
 
-  // reset quand le lecteur change
   useEffect(function(){
     if(lastReaderRef.current!==reader){ valsRef.current=[0,0,0,0]; setMonComp({}); lastReaderRef.current=reader; }
   },[reader]);
 
-  // boucle décroissance + publication présence/valeurs
   useEffect(function(){
     var tableId=p.table;
     var iv=setInterval(function(){
@@ -1058,28 +2215,26 @@ function EleveVote(p){
         if(v[i]<0.4) v[i]=0;
       }
       valsRef.current=v;
-      // publie (sert aussi de présence via ts)
       db.ref(DB_ROOT+"/live/"+tableId).set({
-        table:p.table, nom:p.moi, c0:v[0],c1:v[1],c2:v[2],c3:v[3], ts:Date.now()
+        table:p.table, nom:noms, c0:v[0],c1:v[1],c2:v[2],c3:v[3], ts:Date.now()
       });
       setDraw(function(x){return x+1;});
     },250);
     var ref=db.ref(DB_ROOT+"/live/"+tableId);
     ref.onDisconnect().remove();
     return function(){ clearInterval(iv); ref.remove(); };
-  },[p.table,p.moi,reg.decay]);
+  },[p.table,noms,reg.decay]);
 
   function applaudir(i){
-    if(jeLis||!reader) return;
+    if(!reader||paused) return;
     var v=valsRef.current.slice();
     v[i]=Math.min(100, v[i]+reg.boost);
     valsRef.current=v; setDraw(function(x){return x+1;});
   }
   function startPress(i){ applaudir(i); pressRef.current=setInterval(function(){applaudir(i);},220); }
   function stopPress(){ if(pressRef.current){clearInterval(pressRef.current);pressRef.current=null;} }
-
   function toggleComp(i){
-    if(jeLis||!reader) return;
+    if(!reader||paused) return;
     var nc=Object.assign({},monComp);
     var ref=db.ref(DB_ROOT+"/compliments/"+i);
     if(nc[i]){ delete nc[i]; ref.transaction(function(c){return Math.max(0,(c||0)-1);}); }
@@ -1089,38 +2244,105 @@ function EleveVote(p){
 
   return h("div",{className:"eleve"},
     h("div",{className:"hdr"},
-      h("button",{className:"btn-back",onClick:p.onChangeEleve},"↺ Changer d'élève"),
-      h("h2",null,"Table "+p.table.slice(1)+" · "+prenom(p.moi))),
+      h("button",{className:"btn-back",onClick:p.onChangeTable},"↺ Changer la table"),
+      h("h2",null,"Table "+p.table.slice(1)+" · "+occupants.length+"/3")),
     h("div",{className:"eleve-reader"},
       reader
         ? h(React.Fragment,null,h("div",{className:"lbl"},"on écoute"),h("div",{className:"who"},"🎤 "+prenom(reader)))
         : h("div",{className:"who"},"⏳ attends le prof")),
-    jeLis
-      ? h("div",{className:"eleve-wait"},h("div",{className:"big"},"🎤"),
-          h("div",{style:{fontSize:"1.3rem",fontWeight:800,color:"var(--violet)"}},"C'est à toi de lire !"),
-          h("p",{className:"muted"},"Passe la tablette à un camarade de ta table pour qu'il t'encourage."))
-      : !reader
-        ? h("div",{className:"eleve-wait"},h("div",{className:"big"},"⏳"),h("p",{className:"muted"},"Attends que le professeur désigne un lecteur."))
+
+    !reader
+      ? h("div",{className:"eleve-wait"},h("div",{className:"big"},"⏳"),
+          h("p",{className:"muted"},"Attends que le professeur désigne un lecteur."))
+      : enVote
+        ? h(PhaseVote,{occupants:occupants,reader:reader,reg:reg,passageId:session.passageId||""})
+      : enBilan
+        ? h(PhaseBilan,{occupants:occupants,reader:reader,reg:reg,
+            passageId:session.passageId||"",lecteurEstIci:lecteurEstIci})
+      : paused
+        ? h("div",{className:"eleve-pause"},
+            h("div",{className:"eleve-pause-label"},"⏸ Pause"),
+            h("div",{className:"eleve-pause-circle"}),
+            h("p",{className:"eleve-pause-msg"},"On reprend dans un instant. Suis la respiration du cercle si tu veux."))
         : h(React.Fragment,null,
-            h("div",{className:"clap-grid"},
-              reg.criteres.map(function(c,i){
-                var pct=Math.max(0,Math.min(100,valsRef.current[i]));
-                return h("button",{key:i,className:"clap-btn clap-c"+i,
-                  onPointerDown:function(e){e.preventDefault();startPress(i);},
-                  onPointerUp:stopPress, onPointerLeave:stopPress, onPointerCancel:stopPress},
-                  h("div",{className:"clap-fill",style:{height:pct+"%"}}),
-                  h("span",{className:"ce"},c.emoji),
-                  h("span",{className:"cl"},c.label));
-              })),
-            reg.complimentsOn && h("div",{className:"compliments-bar"},
-              h("div",{className:"ttl"},"💛 Un compliment ? (facultatif)"),
-              h("div",null, reg.compliments.map(function(txt,i){
-                return h("button",{key:i,className:"comp-chip"+(monComp[i]?" on":""),onClick:function(){toggleComp(i);}},txt);
-              })))),
+          h("div",{className:"zones-multi zones-"+occupants.length},
+            occupants.map(function(occ){
+              var jeLis = reader === occ.nom;
+              return h("div",{className:"zone-occ"+(jeLis?" zone-lecteur":""),key:occ.slug},
+                h("div",{className:"zone-hdr"},
+                  h("span",{className:"zone-name"}, prenom(occ.nom)),
+                  h("button",{className:"zone-rm",onClick:function(){
+                    if(confirm("Retirer "+prenom(occ.nom)+" de cette tablette ?")) p.onRemoveOccupant(occ.slug);
+                  },title:"Quitter la tablette"},"×")),
+                jeLis
+                  ? h("div",{className:"zone-overlay"},
+                      h("div",{className:"big"},"🎤"),
+                      h("div",{style:{fontWeight:800,marginTop:6,color:"var(--violet)"}},"C'est à toi"),
+                      h("p",{className:"muted",style:{fontSize:".82rem",marginTop:6}},"Laisse tes camarades t'encourager."))
+                  : h("div",{className:"zone-grid"},
+                      reg.criteres.map(function(c,i){
+                        var pct=Math.max(0,Math.min(100,valsRef.current[i]));
+                        return h("button",{key:i,className:"clap-btn clap-c"+i,
+                          onPointerDown:function(e){e.preventDefault();startPress(i);},
+                          onPointerUp:stopPress, onPointerLeave:stopPress, onPointerCancel:stopPress},
+                          h("div",{className:"clap-fill",style:{height:pct+"%"}}),
+                          h("span",{className:"ce"},c.emoji),
+                          h("span",{className:"cl"},c.label));
+                      })));
+            })),
+          occupants.length<3 ? h("button",{className:"btn-add-occ",onClick:p.onAddOccupant},
+            "➕ Un autre élève rejoint la tablette") : null,
+          reg.complimentsOn && h("div",{className:"compliments-bar"},
+            h("div",{className:"ttl"},"💛 Un compliment ? (facultatif)"),
+            h("div",null, reg.compliments.map(function(txt,i){
+              return h("button",{key:i,className:"comp-chip"+(monComp[i]?" on":""),onClick:function(){toggleComp(i);}},txt);
+            })))),
     h(HelpFab,{role:"eleve"}));
 }
 
 // ════════════ QR PILOTAGE MOBILE ════════════
+function ModaleCheckIn(p){
+  // Pattern QCM : tout le monde présent par défaut, on coche pour marquer absent
+  var s1=useState(function(){var init={}; (p.absentsInitial||[]).forEach(function(slug){init[slug]=true;}); return init;});
+  var checked=s1[0], setChecked=s1[1];
+  var sLib=useState(p.libelleInitial||""), libelle=sLib[0], setLibelle=sLib[1];
+  function toggle(slug){ var c=Object.assign({},checked); if(c[slug]) delete c[slug]; else c[slug]=true; setChecked(c); }
+  function toutPresent(){ setChecked({}); }
+  function valider(){
+    var absents=Object.keys(checked);
+    p.onValider(absents, libelle.trim());
+  }
+  var eleves=p.eleves||[];
+  var nbAbs=Object.keys(checked).length;
+  return h("div",{className:"help-back",onClick:function(e){if(e.target.className==="help-back")p.onCancel();}},
+    h("div",{className:"help-modal",style:{maxWidth:520}},
+      h("button",{className:"modal-close",onClick:p.onCancel},"✕"),
+      h("h1",null,p.modifier?"✏️ Modifier les absents":"🚀 Démarrer la séance"),
+      h("p",{className:"subtitle"},p.modifier
+        ? "Coche les élèves qui sont absents ou doivent être exclus de la séance."
+        : "Donne un libellé à la séance et vérifie qui est présent."),
+      !p.modifier ? h("div",{className:"field",style:{marginBottom:10}},
+        h("label",null,"Libellé de la séance"),
+        h("input",{value:libelle,onChange:function(e){setLibelle(e.target.value);},
+          placeholder:p.libellePlaceholder||"4e Banksy — séance lecture",
+          style:{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid #d0d4dd",fontSize:"1rem"}})) : null,
+      h("div",{className:"checkin-list"},
+        eleves.map(function(nom){
+          var slug=san(nom);
+          var abs=!!checked[slug];
+          return h("button",{key:slug,className:"checkin-row"+(abs?" abs":""),onClick:function(){toggle(slug);}},
+            h("span",{className:"checkin-pict"},abs?"🚫":"✓"),
+            h("span",{className:"checkin-nom"},nom));
+        })),
+      h("div",{className:"checkin-summary"},
+        nbAbs===0?"Tout le monde présent.":(nbAbs+" absent"+(nbAbs>1?"s":"")+" sur "+eleves.length+".")),
+      h("div",{className:"btn-row",style:{marginTop:14}},
+        h("button",{className:"btn btn-ghost",onClick:p.onCancel},"Annuler"),
+        h("button",{className:"btn btn-bleu",onClick:toutPresent},"Tout le monde présent"),
+        h("button",{className:"btn btn-violet",style:{flex:1},onClick:valider},
+          p.modifier?"Enregistrer":"🚀 Lancer la séance"))));
+}
+
 function OverlayQRPhone(p){
   var s1=useState(function(){return "qr_"+Date.now()+"_"+Math.random().toString(36).substr(2,6);}), nonce=s1[0];
   var url=window.location.origin+window.location.pathname+"?view=phone&qr="+nonce;
@@ -1150,20 +2372,27 @@ function VuePhone(p){
   var sl=useState({}), live=sl[0], setLive=sl[1];
   useEffect(function(){
     var r1=db.ref(DB_ROOT+"/session"); var f1=r1.on("value",function(s){setSession(s.val()||{});});
-    var r2=db.ref(DB_ROOT+"/classes"); var f2=r2.on("value",function(s){setClasses(s.val()||{});});
+    var r2=db.ref("classes"); var f2=r2.on("value",function(s){setClasses(s.val()||{});});
     var r3=db.ref(DB_ROOT+"/live"); var f3=r3.on("value",function(s){setLive(s.val()||{});});
     return function(){ r1.off("value",f1); r2.off("value",f2); r3.off("value",f3); };
   },[]);
   session=session||{};
   var reg=reglagesSafe(session.reglages);
   var slug=session.classeSlug, classe=slug&&classes[slug];
-  var eleves=classe?toArr(classe.eleves):[];
+  var eleves=classe?extractEleves(classe, []):[];
   var now=Date.now();
   var presents=Object.keys(live).filter(function(k){return live[k]&&(now-(live[k].ts||0))<6000;}).length;
   function setReader(nom){
     db.ref(DB_ROOT+"/live").remove();
     db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/session").update({reader:nom});
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    var upd={reader:nom, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null};
+    if(nom){
+      var newPid="p_"+Date.now();
+      upd.passageId=newPid; upd.startedAt=Date.now();
+      if(session.sessionId){ db.ref(DB_ROOT+"/seances/"+session.sessionId+"/passages/"+newPid).set(true); }
+    } else { upd.passageId=""; }
+    db.ref(DB_ROOT+"/session").update(upd);
   }
   return h("div",null,
     h("div",{className:"hdr"},
@@ -1225,10 +2454,11 @@ function App(){
     else if(md==="eleve") setMode("eleve");
   },[]);
   function quitterTest(){
-    db.ref(DB_ROOT+"/classes/"+TEST_SLUG).remove();
+    db.ref("classes/"+TEST_SLUG).remove();
     db.ref(DB_ROOT+"/live").remove();
     db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/session").update({classeSlug:"", reader:""});
+    db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/session").update({classeSlug:"", reader:"", demarreeLe:null, sessionId:null, absents:[], passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
     setTest(false); setMode(null);
   }
   // Gate code 1312 sur tout accès prof/tableau/téléphone (URL directe ou bouton accueil)
