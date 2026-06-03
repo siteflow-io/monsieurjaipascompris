@@ -64,6 +64,7 @@
   .login .ph{font-family:'EB Garamond',serif;font-size:1.3rem;margin-bottom:10px;color:var(--ink)}
   .login label{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;margin-top:4px}
   .login .lin{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font-size:.92rem}
+  .login .lin.locked{text-align:left;opacity:.85;font-weight:600}
   .lg-prof{all:unset;cursor:pointer;margin-top:18px;font-size:.76rem;color:var(--muted);opacity:.7}
   .lg-prof:hover{opacity:1;text-decoration:underline}
   .classpick{max-width:520px;margin:8vh auto 0;text-align:center;padding:22px}
@@ -809,8 +810,7 @@ const APP = {
     store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
       lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null), epoch:p.epoch||0 }); },
   endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre"; store.save("control/"+chap+"/"+classeSeg, { logoutEpoch:Date.now() }); },
-  kick(key){ const p=this.panels[key]; if(!p) return; const lane=$("lane"+key); this.panels[key]=null;
-    if(lane) this.mountLogin(key, LETTERS.indexOf(key), lane); },
+  kick(key){ const p=this.panels[key]; if(!p) return; this.panels[key]=null; this.refreshLogins(); },
 
   boot(){
     setAccentForLevel(CHAPTER.meta.niveau);
@@ -833,17 +833,23 @@ const APP = {
   refreshLogins(){ if(this.testMode) return;
     for(const key in this.panels){ if(this.panels[key]===null){ const lane=$("lane"+key); if(lane) this.mountLogin(key, LETTERS.indexOf(key), lane); } } },
 
-  // panneau de connexion d'une moitié d'écran (= une tablette) : Classe → Nom → Entrer, accès prof discret dessous
+  // classe du poste : celle déjà choisie par une moitié connectée (les 2 moitiés = même classe)
+  posteClasse(){ for(const k in this.panels){ const p=this.panels[k]; if(p && p.classe) return p.classe; } return null; },
+  // panneau de connexion d'une moitié : Classe → Nom → Entrer. La 1re connexion fixe la classe du poste.
   mountLogin(key,i,lane){
     const body=lane.querySelector(".lanebody"); const who=lane.querySelector("[data-who]"); if(who) who.textContent="Connexion";
     const levelClasses=Object.keys(CLASSES).filter(cn=>!CHAPTER.meta.niveau||niveauOf(cn)===CHAPTER.meta.niveau);
-    const def=urlParam("classe"); const sel=(def && CLASSES[def] && levelClasses.includes(def))?def:"";
-    const opts=cn=>extractEleves(CLASSES[cn],[]).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+    const locked=this.posteClasse();                          // classe fixée par l'autre moitié, sinon null
+    const def=urlParam("classe"); const sel=locked || ((def && CLASSES[def] && levelClasses.includes(def))?def:"");
+    const taken=this.takenNames();
+    const opts=cn=>extractEleves(CLASSES[cn],[]).map(n=>`<option value="${esc(n)}" ${taken.includes(n)?'disabled':''}>${esc(n)}${taken.includes(n)?' (pris)':''}</option>`).join("");
     body.innerHTML=`<div class="login">
         <div class="ph">Connexion</div>
         ${levelClasses.length?`
         <label>Classe</label>
-        <select class="lin" id="lg-c-${key}"><option value="">— choisir —</option>${levelClasses.map(cn=>`<option value="${esc(cn)}" ${sel===cn?'selected':''}>${esc(cn)}</option>`).join("")}</select>
+        ${locked
+          ? `<div class="lin locked">${esc(locked)}</div><input type="hidden" id="lg-c-${key}" value="${esc(locked)}">`
+          : `<select class="lin" id="lg-c-${key}"><option value="">— choisir —</option>${levelClasses.map(cn=>`<option value="${esc(cn)}" ${sel===cn?'selected':''}>${esc(cn)}</option>`).join("")}</select>`}
         <label>Nom Prénom</label>
         <select class="lin" id="lg-n-${key}"><option value="">— choisir —</option>${sel?opts(sel):''}</select>
         <button class="btn primary" id="lg-go-${key}" disabled style="margin-top:10px;width:100%">Entrer</button>
@@ -851,11 +857,13 @@ const APP = {
         <button class="lg-prof" onclick="PROF.open()">Accès enseignant</button>
       </div>`;
     const cSel=$("lg-c-"+key), nSel=$("lg-n-"+key), go=$("lg-go-"+key);
-    if(cSel){ cSel.onchange=()=>{ const cn=cSel.value;
+    if(cSel && nSel && go){
+      if(cSel.tagName==="SELECT") cSel.onchange=()=>{ const cn=cSel.value;
         nSel.innerHTML=`<option value="">— choisir —</option>`+(cn?opts(cn):""); go.disabled=true; };
       nSel.onchange=()=>{ go.disabled=!(cSel.value && nSel.value); };
       go.onclick=()=>{ const cn=cSel.value, nom=nSel.value; if(!cn||!nom) return;
-        if(who) who.textContent=nom; this.mountStudent(key,i,nom,cn,uidOf(cn,nom),lane); }; }
+        if(who) who.textContent=nom; this.mountStudent(key,i,nom,cn,uidOf(cn,nom),lane); };
+    }
   },
   takenNames(){ return Object.values(this.panels).filter(Boolean).map(p=>p.name); },
   mountStudent(key,i,name,classe,studentId,lane){
@@ -863,6 +871,7 @@ const APP = {
     const p=Panel(engine, lane.querySelector(".lanebody"), name);
     p.epoch=Date.now(); p.classe=classe||""; p.classeSeg=classe?sanId(classe):"libre";
     this.panels[key]=p;
+    this.refreshLogins();                                     // verrouille la classe sur les autres moitiés
     store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved); p.render(); this.beat(key); });
   }
 };
