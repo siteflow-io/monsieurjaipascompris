@@ -952,7 +952,11 @@ var NIVEAUX_DEFAULT = [
 ];
 
 // === MODE TEST : constantes ===
-var TEST_CLASSE_SLUG = "_test";
+// Convention écosystème : nom complet "_test_<nomapp>" sous /classes racine.
+// Le slug interne (utilisé dans sessions, sessionActive, mjpcProfils sous qcm/)
+// est dérivé via slugify et ne porte plus le préfixe _.
+var TEST_CLASSE_NOM = "_test_evaluation-qcm";   // clé Firebase racine /classes/
+var TEST_CLASSE_SLUG = "test-evaluation-qcm";   // slug interne classes[slug]
 var TEST_EVAL_ID = "_eval_test";
 var TEST_ELEVES = [
   {nomComplet:"AUDEBERT Élise", sexe:"f"},
@@ -1010,6 +1014,191 @@ function slugify(s){
   return (s||"").toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
+}
+
+// Lit les paramètres d'URL en priorité depuis le hash (#mode=prof&view=phone),
+// fallback sur le query string (?mode=prof). Le hash est nécessaire car le
+// service worker du site MJPC (PWA) intercepte les URLs avec query string
+// inconnues et sert l'accueil à la place de l'app. Le hash, jamais transmis
+// au service worker, contourne ce problème pour les URLs internes (QR, board).
+function getURLParams(){
+  var hash = window.location.hash.replace(/^#/, "");
+  var search = window.location.search.replace(/^\?/, "");
+  var fused = (search ? search + (hash ? "&" : "") : "") + hash;
+  return new URLSearchParams(fused);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// IDENTITÉ MUTUALISÉE — /classes à la racine Firebase
+// Toutes les apps MJPC partagent le même nœud /classes (décision écosystème
+// du 3 juin 2026). Helper commun extractEleves repris tel quel de
+// correction_dictee.html (L.224) — tolérant à 3 formats Firebase.
+// ════════════════════════════════════════════════════════════════════
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
+    return fbClasse;
+  }
+  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
+    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
+    var keys = Object.keys(fbClasse).filter(function(k){
+      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
+    });
+    if (keys.length > 0) {
+      var names = keys.map(function(k){
+        var v = fbClasse[k];
+        if (typeof v === "string") return v;
+        if (v && typeof v === "object") {
+          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
+          if (v.nomComplet) return v.nomComplet;
+          if (v.name) return v.name;
+        }
+        return null;
+      }).filter(function(x){ return x && typeof x === "string"; });
+      if (names.length > 0) return names;
+    }
+  }
+  return cfgEleves;
+}
+
+// Normalise les élèves au format interne QCM : [{nomComplet, sexe}, ...]
+// (le sexe peut être absent si la classe a été créée par une autre app).
+function normaliserElevesQCM(elevesBrut){
+  return (elevesBrut || []).map(function(e){
+    if(typeof e === "string") return {nomComplet: e};
+    if(e && typeof e === "object"){
+      if(e.nomComplet) return {nomComplet: e.nomComplet, sexe: e.sexe || ""};
+      if(e.nom && e.prenom) return {nomComplet: String(e.nom).toUpperCase()+" "+e.prenom, sexe: e.sexe || ""};
+    }
+    return null;
+  }).filter(function(x){ return x && x.nomComplet; });
+}
+
+// Transforme le snapshot /classes racine (clés = noms complets) en l'objet
+// indexé par slug interne {slug: {nom, eleves}} que QCM consomme.
+function normaliserClassesQCM(snapVal){
+  var out = {};
+  if(!snapVal || typeof snapVal !== "object") return out;
+  Object.keys(snapVal).forEach(function(nomComplet){
+    var slug = slugify(nomComplet);
+    if(!slug) return;
+    var fb = snapVal[nomComplet];
+    var elevesNormalises = normaliserElevesQCM(extractEleves(fb, []));
+    var niveau = (fb && typeof fb === "object" && !Array.isArray(fb)) ? (fb.niveau || "") : "";
+    out[slug] = { nom: nomComplet, eleves: elevesNormalises, niveau: niveau };
+  });
+  return out;
+}
+
+// Surveille à la fois /classes (mutualisé) et qcm/eleveSexes (propre à QCM),
+// fusionne les sexes par élève sur les classes, et appelle onUpdate(classesObj)
+// dès que l'un ou l'autre change. Retourne une fonction de détachement.
+// Les sexes vivent dans un nœud séparé pour que correction_dictee ou d'autres
+// apps qui font des .set() complets sur /classes/{nom} ne puissent pas les écraser.
+function surveillerClassesAvecSexes(onUpdate){
+  var classesData = null;
+  var sexesData = {};
+  function combine(){
+    if(classesData === null) return; // pas encore chargé
+    var out = normaliserClassesQCM(classesData);
+    Object.keys(out).forEach(function(slug){
+      var sexesClasse = sexesData[out[slug].nom] || {};
+      out[slug].eleves = out[slug].eleves.map(function(el){
+        var slugEl = slugify(el.nomComplet);
+        var sex = sexesClasse[slugEl];
+        if(sex) return Object.assign({}, el, {sexe: sex});
+        // Si pas de sexe dans le nœud séparé mais un sexe legacy dans /classes,
+        // on le conserve (sera migré la 1re fois qu'on l'édite via setSexeEleve).
+        return el;
+      });
+    });
+    onUpdate(out);
+  }
+  function onC(snap){ classesData = snap.val() || {}; combine(); }
+  function onS(snap){ sexesData = snap.val() || {}; combine(); }
+  db.ref("classes").on("value", onC);
+  db.ref("qcm/eleveSexes").on("value", onS);
+  return function(){
+    db.ref("classes").off("value", onC);
+    db.ref("qcm/eleveSexes").off("value", onS);
+  };
+}
+
+// Migration silencieuse au démarrage : copie qcm/classes/{slug} vers
+// /classes/{nomComplet} pour toutes les classes absentes de la racine.
+// Idempotent (rien à faire si tout est déjà migré). Migre aussi les sexes legacy
+// stockés dans /classes/{nom}/eleves[i].sexe vers /qcm/eleveSexes/{nom}/{slugEl}.
+// Appelle onDone(nbCopiees, nbSexesMigres) une fois terminé.
+function migrerClassesUneFois(onDone){
+  Promise.all([
+    db.ref("qcm/classes").once("value"),
+    db.ref("classes").once("value"),
+    db.ref("qcm/eleveSexes").once("value")
+  ]).then(function(snaps){
+    var anciennes = snaps[0].val() || {};
+    var dejaRacine = snaps[1].val() || {};
+    var sexesExistants = snaps[2].val() || {};
+    var existantsParNom = {};
+    Object.keys(dejaRacine).forEach(function(k){ existantsParNom[k.toLowerCase()] = true; });
+    var nbCopiees = 0, nbSexesMigres = 0;
+    var promises = [];
+
+    // 1) Copier les anciennes classes qcm/classes/{slug} → /classes/{nom}
+    Object.keys(anciennes).forEach(function(slug){
+      var c = anciennes[slug];
+      if(!c || !c.nom) return;
+      if(existantsParNom[c.nom.toLowerCase()]) return;
+      var payload = {nom: c.nom, eleves: (c.eleves||[]).map(function(e){
+        // Stocker sans sexe dans /classes (sera dans qcm/eleveSexes à part)
+        if(typeof e === "object" && e && e.nomComplet){
+          return {nomComplet: e.nomComplet};
+        }
+        return e;
+      })};
+      if(c.niveau) payload.niveau = c.niveau;
+      promises.push(db.ref("classes/"+c.nom).set(payload));
+      // Et migrer les sexes vers qcm/eleveSexes
+      (c.eleves||[]).forEach(function(e){
+        if(typeof e === "object" && e && e.nomComplet && e.sexe){
+          var slugEl = slugify(e.nomComplet);
+          var sexClasse = sexesExistants[c.nom] || {};
+          if(!sexClasse[slugEl]){
+            promises.push(db.ref("qcm/eleveSexes/"+c.nom+"/"+slugEl).set(e.sexe));
+            nbSexesMigres++;
+          }
+        }
+      });
+      nbCopiees++;
+    });
+
+    // 2) Pour les classes déjà à la racine, migrer les sexes legacy qui pourraient
+    //    y être encore stockés (eleves[i].sexe), vers qcm/eleveSexes
+    Object.keys(dejaRacine).forEach(function(nom){
+      var fb = dejaRacine[nom];
+      if(!fb || typeof fb !== "object" || Array.isArray(fb)) return;
+      if(!Array.isArray(fb.eleves)) return;
+      fb.eleves.forEach(function(e){
+        if(typeof e === "object" && e && e.nomComplet && e.sexe){
+          var slugEl = slugify(e.nomComplet);
+          var sexClasse = sexesExistants[nom] || {};
+          if(!sexClasse[slugEl]){
+            promises.push(db.ref("qcm/eleveSexes/"+nom+"/"+slugEl).set(e.sexe));
+            nbSexesMigres++;
+          }
+        }
+      });
+    });
+
+    Promise.all(promises).then(function(){
+      onDone(nbCopiees, nbSexesMigres);
+    }).catch(function(err){
+      console.warn("Migration classes : écriture partielle échouée", err);
+      onDone(nbCopiees, nbSexesMigres);
+    });
+  }).catch(function(err){
+    console.warn("Migration classes : lecture échouée", err);
+    onDone(0, 0);
+  });
 }
 
 function parseListe(texte){
@@ -1215,7 +1404,7 @@ function App(){
   var s5 = useState("pilot"), profView = s5[0], setProfView = s5[1]; // pilot | board | phone
 
   useEffect(function(){
-    var p = new URLSearchParams(window.location.search);
+    var p = getURLParams();
     var md = p.get("mode");
     var vw = p.get("view");
     if(vw === "board" || vw === "phone") setProfView(vw);
@@ -1283,10 +1472,8 @@ function AppEleve(p){
   var s3 = useState(null), eleve = s3[0], setEleve = s3[1];
 
   useEffect(function(){
-    db.ref(DB_ROOT+"/classes").on("value", function(snap){
-      setClasses(snap.val() || {});
-    });
-    return function(){ db.ref(DB_ROOT+"/classes").off(); };
+    var detacherClasses = surveillerClassesAvecSexes(setClasses);
+    return function(){ detacherClasses(); };
   }, []);
 
   if(classes === null){
@@ -2889,7 +3076,7 @@ function AppTest(p){
   // Au montage : nettoyer les sessions test zombies, créer classe test + éval test + lancer la session
   useEffect(function(){
     var sid = "_sess_test_"+Date.now();
-    var classeData = {nom:"_TEST", eleves:TEST_ELEVES};
+    var classeData = {nom:TEST_CLASSE_NOM, eleves:TEST_ELEVES};
     var evalData = Object.assign({createdAt:Date.now()}, TEST_EVAL);
     var sessData = {classeSlug:TEST_CLASSE_SLUG, evalId:TEST_EVAL_ID, date:Date.now(), phase:"idle", qIdx:null, etat:"en_cours"};
 
@@ -2907,7 +3094,7 @@ function AppTest(p){
     }).then(function(){
       // 2) Créer classe + éval + nouvelle session en parallèle
       return Promise.all([
-        db.ref(DB_ROOT+"/classes/"+TEST_CLASSE_SLUG).set(classeData),
+        db.ref("classes/"+TEST_CLASSE_NOM).set(classeData),
         db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(evalData),
         db.ref(DB_ROOT+"/sessions/"+sid).set(sessData)
       ]);
@@ -2933,7 +3120,7 @@ function AppTest(p){
         }
       });
       promises.push(db.ref(DB_ROOT+"/sessionActive/"+TEST_CLASSE_SLUG).remove());
-      promises.push(db.ref(DB_ROOT+"/classes/"+TEST_CLASSE_SLUG).remove());
+      promises.push(db.ref("classes/"+TEST_CLASSE_NOM).remove());
       promises.push(db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).remove());
       promises.push(db.ref(DB_ROOT+"/presence/"+TEST_CLASSE_SLUG).remove());
       return Promise.all(promises);
@@ -3086,7 +3273,7 @@ function OngletPilotageTest(){
   var s3 = useState(null), session = s3[0], setSession = s3[1];
 
   useEffect(function(){
-    db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}) });
+    var detacherClasses = surveillerClassesAvecSexes(setClasses);
     db.ref(DB_ROOT+"/evaluations").on("value", function(s){ setEvals(s.val()||{}) });
     db.ref(DB_ROOT+"/sessionActive/"+TEST_CLASSE_SLUG).on("value", function(snap){
       var sid = snap.val();
@@ -3097,7 +3284,7 @@ function OngletPilotageTest(){
       });
     });
     return function(){
-      db.ref(DB_ROOT+"/classes").off();
+      if(typeof detacherClasses === "function") detacherClasses();
       db.ref(DB_ROOT+"/evaluations").off();
       db.ref(DB_ROOT+"/sessionActive/"+TEST_CLASSE_SLUG).off();
     };
@@ -3159,8 +3346,11 @@ function EleveSimule(p){
         }
       });
     });
-    db.ref(DB_ROOT+"/classes/"+TEST_CLASSE_SLUG).once("value").then(function(s){
-      setClasse(s.val());
+    db.ref("classes/"+TEST_CLASSE_NOM).once("value").then(function(s){
+      var brut = s.val();
+      if(!brut){ setClasse(null); return; }
+      var eleves = normaliserElevesQCM(extractEleves(brut, []));
+      setClasse({nom: TEST_CLASSE_NOM, eleves: eleves});
     });
     return function(){ db.ref(DB_ROOT+"/sessionActive/"+TEST_CLASSE_SLUG).off(); };
   }, []);
@@ -3255,14 +3445,16 @@ function VueBoard(p){
     var currentSid = null;
     var currentClasseSlug = null;
     var currentEvalId = null;
+    var detacherClasseListener = null;
 
     function detacherSession(){
       if(currentSid){
         db.ref(DB_ROOT+"/sessions/"+currentSid).off();
         currentSid = null;
       }
-      if(currentClasseSlug){
-        db.ref(DB_ROOT+"/classes/"+currentClasseSlug).off();
+      if(detacherClasseListener){
+        detacherClasseListener();
+        detacherClasseListener = null;
         currentClasseSlug = null;
       }
       if(currentEvalId){
@@ -3319,10 +3511,9 @@ function VueBoard(p){
               });
             }
           });
-          // Listener sur la classe
-          db.ref(DB_ROOT+"/classes/"+classeSlug).on("value", function(c){
-            var v = c.val();
-            setClasse(v ? Object.assign({}, v) : null);
+          // Listener sur la classe — fusionne sexes propres à QCM + données /classes mutualisées
+          detacherClasseListener = surveillerClassesAvecSexes(function(all){
+            setClasse(all[classeSlug] ? Object.assign({}, all[classeSlug]) : null);
           });
         }
       });
@@ -3588,7 +3779,7 @@ function OverlayQRPhone(p){
   var s1 = useState(function(){
     return "qr_"+Date.now()+"_"+Math.random().toString(36).substr(2,6);
   }), nonce = s1[0];
-  var url = window.location.origin + window.location.pathname + "?mode=prof&view=phone&qr=" + nonce;
+  var url = window.location.origin + window.location.pathname + "#mode=prof&view=phone&qr=" + nonce;
   var qrImgUrl = "https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=" + encodeURIComponent(url);
 
   useEffect(function(){
@@ -3621,7 +3812,7 @@ function OverlayQRPhone(p){
 function VuePhone(p){
   // Au montage : si l'URL contient ?qr=NONCE, écrire dans Firebase pour fermer la modale côté ordi
   useEffect(function(){
-    var params = new URLSearchParams(window.location.search);
+    var params = getURLParams();
     var qr = params.get("qr");
     if(qr){
       db.ref(DB_ROOT+"/qrScans/"+qr).set(firebase.database.ServerValue.TIMESTAMP);
@@ -3637,12 +3828,12 @@ function VuePhone(p){
   var sE = useState(null), eleveAction = sE[0], setEleveAction = sE[1]; // {slug, nom}
 
   useEffect(function(){
-    db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}); });
+    var detacherClasses = surveillerClassesAvecSexes(setClasses);
     db.ref(DB_ROOT+"/evaluations").on("value", function(s){ setEvals(s.val()||{}); });
     db.ref(DB_ROOT+"/sessions").on("value", function(s){ setSessions(s.val()||{}); });
     db.ref(DB_ROOT+"/sessionActive").on("value", function(s){ setSessionActive(s.val()||{}); });
     return function(){
-      db.ref(DB_ROOT+"/classes").off();
+      if(typeof detacherClasses === "function") detacherClasses();
       db.ref(DB_ROOT+"/evaluations").off();
       db.ref(DB_ROOT+"/sessions").off();
       db.ref(DB_ROOT+"/sessionActive").off();
@@ -4008,10 +4199,25 @@ function AppProf(p){
   var s7 = useState({}), classesData = s7[0], setClassesData = s7[1];
   var s8 = useState(false), sessionsMenuOpen = s8[0], setSessionsMenuOpen = s8[1];
 
+  // Migration silencieuse one-shot : qcm/classes → /classes racine + sexes legacy
+  // → qcm/eleveSexes. Idempotente (rien à faire si déjà migré). Message uniquement
+  // si quelque chose a effectivement bougé.
+  useEffect(function(){
+    migrerClassesUneFois(function(nbCopiees, nbSexesMigres){
+      if(nbCopiees > 0 || nbSexesMigres > 0){
+        var msg = "🔄 Mise à jour automatique des données :\n";
+        if(nbCopiees > 0) msg += "\n• "+nbCopiees+" classe(s) déplacée(s) vers le nœud partagé /classes (visibles maintenant dans correction de dictée et les autres apps MJPC)";
+        if(nbSexesMigres > 0) msg += "\n• "+nbSexesMigres+" sexe(s) d'élève déplacé(s) dans un espace protégé (qcm/eleveSexes)";
+        msg += "\n\nC'est fait une seule fois.";
+        alert(msg);
+      }
+    });
+  }, []);
+
   useEffect(function(){
     var refSA = db.ref(DB_ROOT+"/sessionActive");
     var refS = db.ref(DB_ROOT+"/sessions");
-    var refC = db.ref(DB_ROOT+"/classes");
+    var refC = db.ref("classes");
     var hSA = refSA.on("value", function(s){ setSessionActive(s.val() || {}); });
     var hS = refS.on("value", function(s){ setSessions(s.val() || {}); });
     var hC = refC.on("value", function(s){ setClassesData(s.val() || {}); });
@@ -4071,7 +4277,7 @@ function AppProf(p){
             // Permet de la glisser sur l'écran qui projette (W+P en mode Étendu)
             var w = Math.min(1280, screen.width);
             var h = Math.min(800, screen.height);
-            window.open(window.location.pathname+"?mode=prof&view=board", "BoardWindow",
+            window.open(window.location.pathname+"#mode=prof&view=board", "BoardWindow",
               "width="+w+",height="+h+",toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes");
           }, title:"Ouvre la vue tableau dans une NOUVELLE FENÊTRE (pas un onglet) que tu peux glisser sur l'écran qui projette. Utilise W+P en mode \"Étendre\" sur Windows pour avoir un bureau virtuel sur le vidéoprojecteur, puis F11 pour plein écran. Cette vue n'affiche QUE la question (sans contrôles), garantissant que le pilotage ne peut jamais être projeté par erreur."}, "📺 Ouvrir vue tableau"),
           h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setQrOpen(true)}, title:"Affiche un QR code à scanner avec ton téléphone pour piloter la classe à distance (depuis le fond de la salle par exemple). La fenêtre se ferme automatiquement dès que le scan est détecté."}, "📱 QR pilotage"),
@@ -4295,12 +4501,12 @@ function ModeEmploi(p){
         h("p", null, h("strong", null, "Tu veux annuler tout et recommencer : "), "Onglet Sauvegarde → bouton Importer pour revenir à un snapshot précédent. Garde une habitude d'export régulier.")
       )),
 
-      section("raccourcis", "🚪 Accès direct à l'app", h(React.Fragment, null,
-        h("p", null, "Pour aller directement à un mode sans passer par l'écran d'accueil :"),
+      section("raccourcis", "🚪 Accès direct au mode élève", h(React.Fragment, null,
+        h("p", null, "Pour ouvrir directement l'app en mode élève (utile pour mettre un marque-page sur les postes salle informatique) :"),
         h("ul", null,
-          h("li", null, h("code", null, "?mode=prof"), " — accès direct au panneau prof (tu es déjà ici)"),
-          h("li", null, h("code", null, "?mode=eleve"), " — accès direct au mode élève (à mettre en marque-page sur les postes)")
+          h("li", null, h("code", null, "#mode=eleve"), " — accès direct au mode élève")
         ),
+        h("p", {style:{fontSize:".88rem",color:"var(--gris)",marginTop:".5rem"}}, "⚠️ Important : utilise ", h("code", null, "#"), " (dièse) et pas ", h("code", null, "?"), " (point d'interrogation). Le dièse contourne le cache du site MJPC qui sinon renverrait à l'accueil."),
         h("p", null, "Codes prof : ", h("code", null, "1312"), " ou ", h("code", null, "3141"), ".")
       )),
 
@@ -4322,10 +4528,8 @@ function OngletClasses(){
   var s7 = useState({}), nouveauxNoms = s7[0], setNouveauxNoms = s7[1]; // {classeSlug: nomEnCoursDeSaisie}
 
   useEffect(function(){
-    db.ref(DB_ROOT+"/classes").on("value", function(snap){
-      setClasses(snap.val() || {});
-    });
-    return function(){ db.ref(DB_ROOT+"/classes").off(); };
+    var detacherClasses = surveillerClassesAvecSexes(setClasses);
+    return function(){ detacherClasses(); };
   }, []);
 
   // Pré-remplissage automatique du niveau à partir du nom (regex sur 6e/5e/4e/3e)
@@ -4342,11 +4546,14 @@ function OngletClasses(){
     }
   }
 
-  // Mise à jour du sexe d'un élève sur place dans Firebase
+  // Mise à jour du sexe d'un élève — stocké dans le nœud séparé qcm/eleveSexes
+  // pour éviter qu'une autre app (correction_dictee) ne l'écrase en écrivant
+  // sur /classes/{nom} avec son propre format (set complet de la liste).
   function setSexeEleve(slug, eleveIdx, nouveauSexe){
     var classe = classes[slug];
     if(!classe || !classe.eleves || !classe.eleves[eleveIdx]) return;
-    var path = DB_ROOT+"/classes/"+slug+"/eleves/"+eleveIdx+"/sexe";
+    var slugEl = slugify(classe.eleves[eleveIdx].nomComplet);
+    var path = "qcm/eleveSexes/"+classe.nom+"/"+slugEl;
     if(nouveauSexe === "" || nouveauSexe == null){
       db.ref(path).remove();
     } else {
@@ -4359,7 +4566,7 @@ function OngletClasses(){
     var nom = classe.eleves[eleveIdx].nomComplet || "(sans nom)";
     if(!confirm("Supprimer « "+nom+" » de cette classe ?\n\nAttention : si des résultats sont déjà archivés pour cet élève (sessions passées, profil longitudinal MJPC), ils ne sont PAS supprimés — seulement l'inscription à la classe. L'élève ne pourra plus se connecter à cette classe avec ce nom.")) return;
     var nouveaux = classe.eleves.filter(function(_, i){return i !== eleveIdx});
-    db.ref(DB_ROOT+"/classes/"+classeSlug+"/eleves").set(nouveaux);
+    db.ref("classes/"+classe.nom).update({eleves: nouveaux});
   }
   function ajouterEleve(classeSlug, nomComplet, callback){
     var nom = (nomComplet || "").trim();
@@ -4370,7 +4577,7 @@ function OngletClasses(){
     var doublon = existants.some(function(e){return (e.nomComplet||"").toLowerCase().trim() === nom.toLowerCase()});
     if(doublon){ alert("Un élève avec ce nom existe déjà dans cette classe."); return; }
     var nouveaux = existants.concat([{nomComplet:nom}]);
-    db.ref(DB_ROOT+"/classes/"+classeSlug+"/eleves").set(nouveaux, function(err){
+    db.ref("classes/"+classe.nom).update({eleves: nouveaux}, function(err){
       if(err){ alert("Erreur : "+err.message); return; }
       if(callback) callback();
     });
@@ -4395,15 +4602,17 @@ function OngletClasses(){
         if(indexAncienne[e.nomComplet]) e.sexe = indexAncienne[e.nomComplet];
       });
     }
-    db.ref(DB_ROOT+"/classes/"+slug).set({nom:nom, eleves:elevesNouveaux, niveau:niveauClasse}, function(err){
+    db.ref("classes/"+nom).update({nom:nom, eleves:elevesNouveaux, niveau:niveauClasse}, function(err){
       if(err){ alert("Erreur: "+err.message); return; }
       setNomClasse(""); setTexteListe(""); setClasseEdit(""); setNiveauClasse("");
     });
   }
 
   function supprimer(slug){
-    if(!confirm("Supprimer la classe « "+classes[slug].nom+" » ?")) return;
-    db.ref(DB_ROOT+"/classes/"+slug).remove();
+    var c = classes[slug];
+    if(!c) return;
+    if(!confirm("Supprimer la classe « "+c.nom+" » ?\n\nAttention : cette classe est partagée avec les autres applis MJPC (correction de dictée, etc.). La supprimer ici la supprime pour TOUTES les applis.")) return;
+    db.ref("classes/"+c.nom).remove();
   }
 
   function chargerPourEdition(slug){
@@ -5017,11 +5226,11 @@ function OngletPilotage(){
   var s9 = useState(null), sessionInterrompue = s9[0], setSessionInterrompue = s9[1];
 
   useEffect(function(){
-    db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}) });
+    var detacherClasses = surveillerClassesAvecSexes(setClasses);
     db.ref(DB_ROOT+"/evaluations").on("value", function(s){ setEvals(s.val()||{}) });
     db.ref(DB_ROOT+"/sessions").on("value", function(s){ setAllSessions(s.val()||{}) });
     return function(){
-      db.ref(DB_ROOT+"/classes").off();
+      if(typeof detacherClasses === "function") detacherClasses();
       db.ref(DB_ROOT+"/evaluations").off();
       db.ref(DB_ROOT+"/sessions").off();
     };
@@ -6322,11 +6531,11 @@ function OngletResultats(){
 
   useEffect(function(){
     db.ref(DB_ROOT+"/evaluations").on("value", function(s){ setEvals(s.val()||{}) });
-    db.ref(DB_ROOT+"/classes").on("value", function(s){ setClasses(s.val()||{}) });
+    var detacherClasses = surveillerClassesAvecSexes(setClasses);
     db.ref(DB_ROOT+"/sessions").on("value", function(s){ setSessions(s.val()||{}) });
     return function(){
       db.ref(DB_ROOT+"/evaluations").off();
-      db.ref(DB_ROOT+"/classes").off();
+      if(typeof detacherClasses === "function") detacherClasses();
       db.ref(DB_ROOT+"/sessions").off();
     };
   }, []);
@@ -6759,7 +6968,7 @@ function OngletSnapshot(){
     if(!confirm("⚠️ Tu vas supprimer TOUTES les classes (et les présences). Les évaluations et les sessions ne seront pas touchées.\n\nCette action est IRRÉVERSIBLE.\n\nIl est conseillé d'avoir exporté un snapshot avant. Continuer ?")) return;
     if(!confirm("Dernière confirmation. Toutes les classes seront supprimées. Continuer ?")) return;
     Promise.all([
-      db.ref(DB_ROOT+"/classes").remove(),
+      db.ref("classes").remove(),
       db.ref(DB_ROOT+"/presence").remove()
     ]).then(function(){
       alert("✅ Toutes les classes ont été purgées.");
@@ -6790,7 +6999,7 @@ function OngletSnapshot(){
     Promise.all([
       db.ref(DB_ROOT+"/sessionActive").once("value"),
       db.ref(DB_ROOT+"/sessions").once("value"),
-      db.ref(DB_ROOT+"/classes").once("value")
+      db.ref("classes").once("value")
     ]).then(function(results){
       var actives = results[0].val() || {};
       var sessions = results[1].val() || {};
