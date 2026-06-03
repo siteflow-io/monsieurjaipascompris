@@ -5115,6 +5115,12 @@ function ExercicesAdmin(p){
 
   // ─── Génère une fiche d'exercices imprimable depuis le JSON pour un élève ───
   function ficheJsonHtmlPourEleve(eleveName){
+    // escapeHtml local (la version globale est définie dans d'autres scopes uniquement)
+    function escapeHtml(s){
+      return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+        return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+      });
+    }
     var ex = exGetForEleve(exercices, eleveName);
     var classe = ex.classe || [];
     var perso = ex.personnels || [];
@@ -5230,6 +5236,13 @@ function ExercicesAdmin(p){
   }
 
   function imprimerSelection(){
+    try { _imprimerSelectionImpl(); }
+    catch(err){
+      setImpMsg("\u274c Erreur : "+(err && err.message ? err.message : String(err)));
+      console.error("[impression]", err);
+    }
+  }
+  function _imprimerSelectionImpl(){
     setImpMsg("");
     var hasJsonExos = exercices && (exercices.exercices_classe || exercices.exercices_personnels);
     var hasHtmlExos = exHtml && exHtml.content;
