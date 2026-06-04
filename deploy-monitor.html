@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MJPC · Deploy Monitor</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#141b24; --panel-2:#0f151d; --line:#243040;
+    --ink:#d7e2ee; --ink-dim:#8b9bb0; --ink-faint:#5d6b7e;
+    --ok:#39d98a; --warn:#ffb454; --bad:#ff6b6b; --info:#5cc8ff;
+    --accent:#ffb454;
+    --mono:'SFMono-Regular',ui-monospace,'JetBrains Mono','Cascadia Code',Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+  body{padding:28px 22px 80px;max-width:1100px;margin:0 auto}
+  a{color:var(--info)}
+  h1{font-family:var(--mono);font-size:18px;font-weight:600;letter-spacing:.04em;margin:0 0 2px;display:flex;align-items:center;gap:10px}
+  h1 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  .sub{color:var(--ink-faint);font-size:12.5px;margin:0 0 22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-dim);margin:0 0 12px;font-weight:600}
+  .cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 14px}
+  .cfg label{display:flex;flex-direction:column;gap:4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+  .cfg input{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;color:var(--ink);
+    font-family:var(--mono);font-size:13px;padding:8px 10px}
+  .cfg input:focus{outline:none;border-color:var(--accent)}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  button{font-family:var(--sans);font-size:13px;font-weight:600;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--ink);border-radius:7px;padding:9px 15px;cursor:pointer;transition:.12s}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#1a1206}
+  button.primary:hover{filter:brightness(1.08)}
+  button.danger{border-color:#5a2a2a;color:var(--bad)}
+  button.danger:hover{background:#2a1414;border-color:var(--bad)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .hint{color:var(--ink-faint);font-size:12px;margin:8px 0 0}
+  .banner{border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:16px;border:1px solid}
+  .banner.warn{background:#241c0e;border-color:#5a4316;color:var(--warn)}
+  .banner.bad{background:#2a1414;border-color:#5a2a2a;color:var(--bad)}
+  .banner.ok{background:#0f2419;border-color:#1d4a33;color:var(--ok)}
+  .banner.hidden{display:none}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);
+    font-weight:600;padding:0 10px 9px;border-bottom:1px solid var(--line)}
+  td{padding:11px 10px;border-bottom:1px solid var(--panel-2);vertical-align:middle}
+  tr.row:hover{background:var(--panel-2)}
+  .file{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+  .file a{color:inherit;text-decoration:none}
+  .file a:hover{color:var(--info)}
+  .sha{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint)}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+    padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .pill .d{width:7px;height:7px;border-radius:50%}
+  .pill.ok{background:#0f2419;color:var(--ok)} .pill.ok .d{background:var(--ok)}
+  .pill.warn{background:#241c0e;color:var(--warn)} .pill.warn .d{background:var(--warn)}
+  .pill.bad{background:#2a1414;color:var(--bad)} .pill.bad .d{background:var(--bad)}
+  .pill.wait{background:#0e1f2a;color:var(--info)} .pill.wait .d{background:var(--info);animation:pulse 1s infinite}
+  .pill.idle{background:var(--panel-2);color:var(--ink-faint)} .pill.idle .d{background:var(--ink-faint)}
+  @keyframes pulse{50%{opacity:.3}}
+  .changed{font-size:10px;color:var(--accent);font-weight:600;margin-left:7px;letter-spacing:.05em}
+  .detail{font-size:12px;color:var(--ink-dim);padding:4px 10px 12px;line-height:1.55}
+  .detail .k{color:var(--ink-faint)}
+  .swlist{font-family:var(--mono);font-size:12px}
+  .swlist div{padding:6px 0;border-bottom:1px solid var(--panel-2);word-break:break-all}
+  .swlist .scope{color:var(--info)} .swlist .empty{color:var(--ink-faint);font-style:italic}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:11.5px;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend .d{width:8px;height:8px;border-radius:50%}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--ink-faint);
+    border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite;vertical-align:-2px}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .meta{font-size:11.5px;color:var(--ink-faint);margin-left:auto;font-family:var(--mono)}
+  code{font-family:var(--mono);background:var(--panel-2);padding:1px 5px;border-radius:4px;font-size:12px}
+  .actionbar{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  details{margin-bottom:16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+  details summary{cursor:pointer;list-style:none;padding:12px 18px;font-size:11px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--ink-dim);font-weight:600;user-select:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸ ";color:var(--accent)}
+  details[open] summary::before{content:"▾ "}
+  details summary:hover{color:var(--ink)}
+  details .cfg,details .hint{padding-left:18px;padding-right:18px}
+  details .cfg{margin-top:4px} details .hint{padding-bottom:16px}
+</style>
+</head>
+<body>
+
+<h1><span class="dot"></span>MJPC · Deploy Monitor</h1>
+<p class="sub">Compare le code du dépôt à ce que sert réellement GitHub&nbsp;Pages, et traque le cache qui sert les vieilles versions « invisibles ».</p>
+
+<div id="ctrlBanner" class="banner hidden"></div>
+
+<div class="actionbar">
+  <button id="run" class="primary">↻ Re-vérifier</button>
+  <span id="status" class="meta"></span>
+</div>
+
+<details id="adv">
+  <summary>Réglages (auto-détectés)</summary>
+  <div class="cfg">
+    <label>Propriétaire (owner)<input id="owner" autocomplete="off"></label>
+    <label>Dépôt (repo)<input id="repo" autocomplete="off"></label>
+    <label>Branche<input id="branch" autocomplete="off" placeholder="auto"></label>
+    <label>URL Pages (racine)<input id="base" autocomplete="off" placeholder="https://…"></label>
+    <label>Filtre chemin (optionnel)<input id="filter" autocomplete="off" placeholder="ex: apps/ ou .html"></label>
+  </div>
+  <p class="hint">Dépôt <strong>public</strong> requis (pas de token, limite API ~60 vérifs/heure). À ne modifier que si l'auto-détection se trompe.</p>
+</details>
+
+<div class="card">
+  <h2>Fichiers</h2>
+  <table id="tbl">
+    <thead><tr><th style="width:34%">Fichier</th><th>SHA dépôt</th><th>SHA servi</th><th style="width:24%">État</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="4" class="detail">Analyse en cours…</td></tr></tbody>
+  </table>
+  <div class="legend">
+    <span><span class="d" style="background:var(--ok)"></span>Synchro — Pages sert bien la dernière version</span>
+    <span><span class="d" style="background:var(--warn)"></span>Désynchro — déploiement en cours ou cache CDN</span>
+    <span><span class="d" style="background:var(--bad)"></span>Erreur de lecture</span>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Service workers &amp; caches (ce navigateur)</h2>
+  <div id="swlist" class="swlist"><span class="empty">Non analysé.</span></div>
+  <div class="bar">
+    <button id="scanSw">Analyser</button>
+    <button id="purge" class="danger">Purger SW + caches</button>
+  </div>
+  <p class="hint">La purge désinscrit les service workers et vide les Cache Storage de cette origine, puis recharge. C'est le geste qui débloque les modifs internes « pas visibles » dans tes PWA.</p>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const LS = "mjpc_deploy_monitor_shas";
+
+/* ---------- auto-config depuis l'URL Pages ---------- */
+(function autodetect(){
+  try{
+    const h = location.hostname;            // ex: siteflow-io.github.io
+    const parts = location.pathname.split("/").filter(Boolean);
+    if(h.endsWith(".github.io")){
+      $("owner").value = h.replace(".github.io","");
+      // 1er segment du path = nom du repo de projet (sinon repo = owner.github.io)
+      const repo = parts.length ? parts[0] : (h);
+      $("repo").value = repo;
+      $("base").value = location.origin + "/" + (parts.length ? parts[0] + "/" : "");
+    }
+  }catch(e){}
+})();
+
+/* ---------- util ---------- */
+const hex = buf => [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+async function gitBlobSha(bytes){               // reproduit le hash git d'un blob
+  const header = new TextEncoder().encode("blob "+bytes.byteLength+"\0");
+  const full = new Uint8Array(header.byteLength + bytes.byteLength);
+  full.set(header,0); full.set(bytes, header.byteLength);
+  return hex(await crypto.subtle.digest("SHA-1", full));
+}
+const short = s => s ? s.slice(0,10) : "—";
+const setStatus = (t,spin)=>{ $("status").innerHTML = (spin?'<span class="spin"></span> ':'')+t; };
+
+/* ---------- bannière : cette page est-elle contrôlée par un SW ? ---------- */
+function refreshCtrlBanner(){
+  const b = $("ctrlBanner");
+  if(navigator.serviceWorker && navigator.serviceWorker.controller){
+    b.className = "banner warn";
+    b.innerHTML = "⚠️ <strong>Cette page est servie par un service worker.</strong> Les mesures « SHA servi » peuvent venir du cache, pas du réseau. Purge les SW ci-dessous puis recharge pour mesurer le vrai déploiement.";
+  }else{
+    b.className = "banner hidden";
+  }
+}
+
+/* ---------- vérification principale ---------- */
+let running = false;
+async function run(){
+  if(running) return; running = true;
+  $("run").disabled = true;
+  const owner = $("owner").value.trim();
+  const repo  = $("repo").value.trim();
+  let   branch= $("branch").value.trim();
+  let   base  = $("base").value.trim();
+  const filter= $("filter").value.trim();
+  if(base && !base.endsWith("/")) base += "/";
+
+  if(!owner || !repo){ setStatus("⚠️ owner et repo requis"); running=false; $("run").disabled=false; return; }
+  if(!crypto.subtle){ setStatus("⚠️ crypto.subtle indisponible (servir en https)"); running=false; $("run").disabled=false; return; }
+
+  const rows = $("rows"); rows.innerHTML = "";
+  try{
+    // branche par défaut si non fournie
+    if(!branch){
+      setStatus("lecture du dépôt…", true);
+      const r = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+      if(r.status===403) throw new Error("Limite API GitHub atteinte. Réessaie dans ~1h.");
+      if(!r.ok) throw new Error("Dépôt introuvable ou privé ("+r.status+").");
+      branch = (await r.json()).default_branch || "main";
+      $("branch").value = branch;
+    }
+
+    // arbre complet (1 appel) : chemin + sha de blob, temps réel
+    setStatus("lecture de l'arbre des fichiers…", true);
+    const tr = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+    if(tr.status===403) throw new Error("Limite API GitHub atteinte. Réessaie dans ~1h.");
+    if(!tr.ok) throw new Error("Lecture de l'arbre impossible ("+tr.status+").");
+    const tree = await tr.json();
+    if(tree.truncated) console.warn("Arbre tronqué par l'API (dépôt très volumineux).");
+
+    let files = (tree.tree||[])
+      .filter(n => n.type==="blob" && /\.html?$/i.test(n.path) && !n.path.split("/").some(s=>s.startsWith(".")))
+      .map(n => ({path:n.path, repoSha:n.sha}));
+    if(filter) files = files.filter(f => f.path.includes(filter));
+    files.sort((a,b)=> a.path.localeCompare(b.path));
+
+    if(!files.length){ rows.innerHTML = `<tr><td colspan="4" class="detail">Aucun fichier .html trouvé sur <code>${branch}</code>${filter?` (filtre « ${filter} »)`:""}.</td></tr>`; setStatus("0 fichier"); return; }
+
+    const prev = JSON.parse(localStorage.getItem(LS) || "{}");
+    const next = {};
+    let okN=0, warnN=0, badN=0;
+
+    // une ligne par fichier, vérifiées en parallèle limité
+    for(const f of files){ f.tr = addRow(f); }
+    setStatus(`vérification de ${files.length} fichiers…`, true);
+
+    const queue = [...files];
+    async function worker(){
+      while(queue.length){
+        const f = queue.shift();
+        try{
+          const url = base + f.path + "?_cb=" + Date.now();
+          const resp = await fetch(url, {cache:"no-store"});
+          if(!resp.ok) throw new Error("HTTP "+resp.status);
+          const bytes = new Uint8Array(await resp.arrayBuffer());
+          const servedSha = await gitBlobSha(bytes);
+          next[f.path] = servedSha;
+          const synced = servedSha === f.repoSha;
+          const changed = prev[f.path] && prev[f.path] !== servedSha;
+          if(synced) okN++; else warnN++;
+          paintRow(f, {servedSha, synced, changed, age:resp.headers.get("age")});
+        }catch(err){
+          badN++;
+          paintRow(f, {error:err.message});
+        }
+      }
+    }
+    await Promise.all([worker(),worker(),worker(),worker()]);
+
+    localStorage.setItem(LS, JSON.stringify(next));
+    // tri visuel : désynchro/erreur en haut
+    reorderRows();
+    setStatus(`${okN} synchro · ${warnN} désynchro · ${badN} erreur — ${new Date().toLocaleTimeString()}`);
+  }catch(err){
+    rows.innerHTML = `<tr><td colspan="4" class="banner bad" style="display:table-cell">${err.message}</td></tr>`;
+    setStatus("échec");
+  }finally{
+    running=false; $("run").disabled=false;
+  }
+}
+
+/* ---------- rendu des lignes ---------- */
+function addRow(f){
+  const tr = document.createElement("tr"); tr.className="row";
+  tr.innerHTML = `
+    <td class="file"><a href="${$("base").value.trim()+f.path}" target="_blank" rel="noopener">${f.path}</a></td>
+    <td class="sha">${short(f.repoSha)}</td>
+    <td class="sha js-served">…</td>
+    <td class="js-state"><span class="pill wait"><span class="d"></span>vérif…</span></td>`;
+  $("rows").appendChild(tr);
+  return tr;
+}
+function paintRow(f, r){
+  const tr = f.tr;
+  const served = tr.querySelector(".js-served");
+  const state  = tr.querySelector(".js-state");
+  if(r.error){
+    served.textContent = "—";
+    state.innerHTML = `<span class="pill bad"><span class="d"></span>erreur</span>`;
+    tr.dataset.rank = "0";
+    tr.title = r.error;
+    return;
+  }
+  served.textContent = short(r.servedSha) + (r.changed ? `<span class="changed">CHANGÉ</span>`:"");
+  served.innerHTML = `<span>${short(r.servedSha)}</span>` + (r.changed?`<span class="changed">↻ CHANGÉ</span>`:"");
+  if(r.synced){
+    state.innerHTML = `<span class="pill ok"><span class="d"></span>synchro</span>`;
+    tr.dataset.rank = "2";
+  }else{
+    const ageTxt = r.age ? ` · cache CDN ${r.age}s` : "";
+    state.innerHTML = `<span class="pill warn"><span class="d"></span>désynchro</span>`+
+      `<span style="font-size:11px;color:var(--ink-faint);margin-left:8px">repo ≠ servi${ageTxt}</span>`;
+    tr.dataset.rank = "1";
+  }
+}
+function reorderRows(){
+  const tb = $("rows");
+  [...tb.children]
+    .sort((a,b)=> (a.dataset.rank||"9").localeCompare(b.dataset.rank||"9")
+                 || a.querySelector(".file").textContent.localeCompare(b.querySelector(".file").textContent))
+    .forEach(tr=>tb.appendChild(tr));
+}
+
+/* ---------- service workers & caches ---------- */
+async function scanSw(){
+  const box = $("swlist");
+  if(!("serviceWorker" in navigator)){ box.innerHTML='<span class="empty">Service workers non supportés ici.</span>'; return; }
+  const regs = await navigator.serviceWorker.getRegistrations();
+  let keys = [];
+  try{ keys = await caches.keys(); }catch(e){}
+  let html = "";
+  if(!regs.length) html += '<div class="empty">Aucun service worker enregistré sur cette origine.</div>';
+  regs.forEach(reg=>{
+    const sw = reg.active||reg.installing||reg.waiting;
+    html += `<div>SW <span class="scope">${reg.scope}</span><br><span style="color:var(--ink-faint)">script: ${sw?sw.scriptURL:"?"} · état: ${sw?sw.state:"?"}</span></div>`;
+  });
+  html += keys.length
+    ? `<div>Cache Storage : <span class="scope">${keys.join(", ")}</span></div>`
+    : `<div class="empty">Aucun Cache Storage.</div>`;
+  box.innerHTML = html;
+  refreshCtrlBanner();
+}
+async function purge(){
+  if(!confirm("Désinscrire tous les service workers et vider les caches de cette origine, puis recharger ?")) return;
+  try{
+    if("serviceWorker" in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k=>caches.delete(k)));
+  }catch(e){ alert("Purge partielle : "+e.message); }
+  location.reload(true);
+}
+
+/* ---------- listeners ---------- */
+$("run").addEventListener("click", run);
+$("scanSw").addEventListener("click", scanSw);
+$("purge").addEventListener("click", purge);
+[ "owner","repo","branch","base","filter" ].forEach(id=>
+  $(id).addEventListener("keydown", e=>{ if(e.key==="Enter") run(); }));
+refreshCtrlBanner();
+
+/* ---------- démarrage automatique ---------- */
+window.addEventListener("load", ()=>{
+  const ready = $("owner").value.trim() && $("repo").value.trim();
+  const online = location.protocol === "https:" || location.protocol === "http:";
+  if(ready && online){
+    run();           // vérifie tout seul, sans aucune saisie
+    scanSw();
+  }else{
+    $("adv").open = true;
+    setStatus(online ? "⚠️ owner/repo non détectés — renseigne les réglages"
+                     : "⚠️ ouvre ce fichier via GitHub Pages (pas en local)");
+    $("rows").innerHTML = '<tr><td colspan="4" class="detail">En attente des réglages.</td></tr>';
+  }
+});
+</script>
+</body>
+</html>
