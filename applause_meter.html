@@ -1578,6 +1578,8 @@ function OngletPilotage(p){
     var nom=(classes[slug]&&classes[slug].nom)||slug;
     var libelleFinal=libelle||(nom+" — "+(new Date().toLocaleDateString("fr-FR")));
     db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/file").remove();             // ! nouvelle séance : la file part vide
+    db.ref(DB_ROOT+"/compteurLectures").remove(); // ! et les compteurs d'équité aussi
     db.ref(DB_ROOT+"/seances/"+sessionId).set({
       libelle:libelleFinal, classeSlug:slug, demarreLe:Date.now(), termineLe:null, passages:{},
       criteres:reg.criteres.map(function(c){return {emoji:c.emoji,label:c.label,questionVotant:c.questionVotant||""};})    // snapshot pour récap futur
@@ -1598,6 +1600,8 @@ function OngletPilotage(p){
     db.ref(DB_ROOT+"/live").remove();
     db.ref(DB_ROOT+"/compliments").remove();
     db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/file").remove();             // ! fin de séance : vider la file pour ne pas polluer la suivante
+    db.ref(DB_ROOT+"/compteurLectures").remove(); // ! idem compteurs d'équité
     db.ref(DB_ROOT+"/session").update({
       demarreeLe:null, sessionId:null, absents:[], reader:"", passageId:"", startedAt:null,
       messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null
@@ -1822,6 +1826,8 @@ function OngletPilotage(p){
     db.ref(DB_ROOT+"/live").remove();             // changement de classe : on vide barres + lecteur + séance
     db.ref(DB_ROOT+"/compliments").remove();
     db.ref(DB_ROOT+"/liveSnapshot").remove();
+    db.ref(DB_ROOT+"/file").remove();             // ! file d'attente du mode spontané : ne doit pas traverser entre classes
+    db.ref(DB_ROOT+"/compteurLectures").remove(); // ! compteurs équité : ne doivent pas traverser entre classes
     db.ref(DB_ROOT+"/session").update({classeSlug:e.target.value, reader:"", demarreeLe:null, sessionId:null, absents:[], passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
   }
   function setReader(nom){ _setReaderImpl(session, nom); }
