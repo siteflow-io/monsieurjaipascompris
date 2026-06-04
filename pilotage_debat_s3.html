@@ -506,6 +506,11 @@
 .eval-camp.contre{color:var(--done);border:1px solid var(--done)}
 .eval-cmt{font-size:.82rem;color:var(--ink2);font-style:italic;margin:3px 0 5px 4px}
 .std-grille .dbg-campcol{margin-bottom:10px}
+.presence-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--line,#3a3025);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:.85rem}
+.pres-lbl{color:var(--muted);font-weight:600;margin-right:2px}
+.pres-chip{border:1px solid;border-radius:8px;padding:4px 9px;font:inherit;font-size:.82rem;cursor:pointer;background:transparent}
+.pres-chip.away{color:#e8a924;border-color:#e8a924;background:rgba(232,169,36,.12)}
+.pres-chip.blocked{color:var(--accent2,#d9603a);border-color:var(--accent2,#d9603a);background:rgba(217,96,58,.12)}
 /* ── Icônes d'aide ⓘ (info au survol ET au clic, compatible tablette) ── */
 .tip-i{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;min-width:16px;margin:0 1px 0 5px;padding:0;border-radius:50%;border:1px solid var(--gold,#c9a24a);background:transparent;color:var(--gold,#c9a24a);font-family:'Fraunces',Georgia,serif;font-style:italic;font-weight:700;font-size:11px;line-height:1;cursor:pointer;vertical-align:middle;opacity:.62;transition:opacity .15s,background .15s;-webkit-tap-highlight-color:transparent;flex:0 0 auto}
 .tip-i:hover,.tip-i:focus-visible{opacity:1;background:rgba(201,162,74,.18)}
@@ -792,7 +797,10 @@
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 3 (trinôme)</label>
     <input id="editC" title="Prénom du troisième élève (trinôme)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
     <div class="acts" style="justify-content:space-between">
-      <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce binôme du tableau (action irréversible).">Supprimer</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce binôme du tableau (action irréversible).">Supprimer</button>
+        <button class="ghost" onclick="toggleBlockCurrent()" title="Bloquer ce binôme : son écran est suspendu (message « accès suspendu »). Recliquer pour le débloquer.">🚫 Bloquer / débloquer</button>
+      </div>
       <div style="display:flex;gap:10px">
         <button class="ghost" onclick="closeEdit()" title="Fermer sans enregistrer.">Annuler</button>
         <button class="primary" onclick="saveEdit()" title="Enregistrer les nouveaux noms du binôme.">Enregistrer</button>
@@ -868,6 +876,13 @@
 
 <input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="handleImportFile(event)" title="Choisir le fichier de sauvegarde à importer.">
 
+<div class="overlay" id="blockedOverlay">
+  <div class="gelcard" style="text-align:center;max-width:420px">
+    <div style="font-size:2.6rem;margin-bottom:6px">🚫</div>
+    <h2 style="font-size:1.2rem;margin:0 0 8px">Accès suspendu</h2>
+    <p style="color:var(--muted);font-size:.95rem;line-height:1.55;margin:0">Le professeur a mis ton binôme en pause. Range la tablette et attends son signal pour reprendre.</p>
+  </div>
+</div>
 <div id="toast" class="toast"></div>
 
 <!-- Firebase 8.10.1 (cohérent avec ton appli dictée) -->
@@ -1732,13 +1747,22 @@ function renderStudent(){
   if(!sessionData) return;
   const me = sessionData.binomes[myBinomeId];
   if(!me) return;
+  if(me.blocked){ showBlockedScreen(); return; }
+  hideBlockedScreen();
   // ── Bascule mode débat ──
   {
     const _on=!!(sessionData.debat && sessionData.debat.active);
     const _w=$("studentPilotageWrap"), _v=$("studentDebatView"), _cb=$("studentCarnetBtn");
     if(_w)_w.style.display=_on?"none":"";
     if(_v)_v.style.display=_on?"":"none";
-    if(_cb)_cb.style.display=_on?"":"none";
+    if(_cb){
+      _cb.style.display=_on?"":"none";
+      if(_on){
+        var _lock=debatLocked();
+        _cb.style.opacity=_lock?".45":"";
+        if(_lock){ const _ov=$("carnetEleveOverlay"); if(_ov && _ov.classList.contains("show")){ closeCarnetEleve(); toast("⏸ Le professeur pilote la séance — suis l'écran."); } }
+      }
+    }
     if(_on){ studentRendered=true; renderDebatStudent(); return; }
   }
   // Détecter un refus prof récent (postérieur au dernier vu) — uniquement après le premier render
@@ -2079,6 +2103,28 @@ function purgeOrphanPouleMatches(){
   });
 }
 function closeEdit(){ $("editOverlay").classList.remove("show"); editingId = null; }
+// ── Discipline : blocage de binôme + présence (élève hors écran) ──
+function showBlockedScreen(){ var o=$("blockedOverlay"); if(o) o.classList.add("show"); }
+function hideBlockedScreen(){ var o=$("blockedOverlay"); if(o) o.classList.remove("show"); }
+function toggleBlockCurrent(){
+  if(!editingId){ closeEdit(); return; }
+  var b=(sessionData&&sessionData.binomes&&sessionData.binomes[editingId])||{};
+  var nv=!b.blocked;
+  db.ref(ACTIVE+"/binomes/"+editingId+"/blocked").set(nv?true:null);
+  toast(nv?"Binôme bloqué \u2014 son écran est suspendu.":"Binôme débloqué.");
+  closeEdit();
+}
+function blockBinome(bid){ db.ref(ACTIVE+"/binomes/"+bid+"/blocked").set(true); toast("Binôme bloqué \u2014 son écran est suspendu."); }
+function unblockBinome(bid){ db.ref(ACTIVE+"/binomes/"+bid+"/blocked").remove(); toast("Binôme débloqué."); }
+function presenceBanner(){
+  var bs=(sessionData&&sessionData.binomes)||{}; var away=[], blk=[];
+  Object.keys(bs).forEach(function(bid){ var b=bs[bid]||{}; if(b.blocked) blk.push(bid); else if(b.away) away.push(bid); });
+  if(!away.length && !blk.length) return "";
+  var h='<div class="presence-bar">';
+  if(away.length){ h+='<span class="pres-lbl">\u26a0 Hors écran :</span>'; away.forEach(function(bid){ h+='<button class="pres-chip away" onclick="blockBinome(\''+bid+'\')" title="Cet élève a quitté l\'écran du débat (autre appli, écran éteint…). Clique pour bloquer son binôme.">'+esc(binomeName(findBinome(bid))||"?")+' 🚫</button>'; }); }
+  if(blk.length){ h+='<span class="pres-lbl">🚫 Bloqués :</span>'; blk.forEach(function(bid){ h+='<button class="pres-chip blocked" onclick="unblockBinome(\''+bid+'\')" title="Binôme bloqué : son écran est suspendu. Clique pour le débloquer.">'+esc(binomeName(findBinome(bid))||"?")+' ✓</button>'; }); }
+  h+='</div>'; return h;
+}
 
 // ─────────── Confirmation générique ───────────
 function askConfirm(text, action){
@@ -2332,6 +2378,8 @@ const DBG_PHASES = [
   {label:"Conclusion",   camp:"contre"}
 ];
 const DBG_DEFAULT_DUR = [90,90,60,60,30,30];
+function matchPhases(cm){ cm=cm||debatData().currentMatch||{}; return (cm.phases && cm.phases.length)?cm.phases:DBG_PHASES; }
+function matchDurations(cm){ cm=cm||debatData().currentMatch||{}; return (cm.durations && cm.durations.length)?cm.durations:DBG_DEFAULT_DUR; }
 const DBG_CRITS = [
   {k:"clarte",   lib:"Clarté de la thèse"},
   {k:"args",     lib:"Qualité des arguments"},
@@ -2354,6 +2402,14 @@ function exitDebatMode(){
 
 // ─────────── Helpers données ───────────
 function debatData(){ return (sessionData && sessionData.debat) || {}; }
+// Manche pilotée par le prof : carnet verrouillé pendant écoute/notation/attente et pendant la révélation ; libre entre les manches.
+function debatLocked(){
+  var dd=debatData(); if(!dd) return false;
+  if(dd.reveal && dd.reveal.at) return true;            // révélation en cours
+  var cm=dd.currentMatch;
+  if(cm && cm.tirageAt){ if(cm.result && cm.revealed) return false; return true; } // manche engagée
+  return false;
+}
 function poulesObj(){ return debatData().poules || {}; }
 function scoresObj(){ return debatData().scores || {}; }
 function binomeIdsInPoules(){
@@ -2415,7 +2471,7 @@ function doTirage(){
 function chronoStart(){
   const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Tirez d'abord le camp POUR / CONTRE."); return; }
   ensureAudio();
-  const dur=(cm.durations||DBG_DEFAULT_DUR)[0]*1000;
+  const dur=(matchDurations(cm)[0]||45)*1000;
   db.ref(DEBAT+"/currentMatch").update({chronoState:"running", chronoPhase:0, chronoEndsAt:Date.now()+dur});
 }
 function chronoPause(){
@@ -2427,19 +2483,31 @@ function chronoResume(){
   db.ref(DEBAT+"/currentMatch").update({chronoState:"running", chronoEndsAt:Date.now()+(cm.chronoRemaining||0)});
 }
 function chronoNext(){ advancePhase(debatData().currentMatch); }
+function addPhase(){
+  const cm=debatData().currentMatch; if(!cm||!cm.tirageAt){ toast("Lance d'abord une manche."); return; }
+  if(cm.result){ toast("Manche déjà clôturée \u2014 rejoue-la pour ajouter des échanges."); return; }
+  const ph=matchPhases(cm).slice(), dur=matchDurations(cm).slice();
+  const nextCamp=(ph.length && ph[ph.length-1].camp==="pour")?"contre":"pour";
+  const newIdx=ph.length;
+  ph.push({label:"Échange", camp:nextCamp}); dur.push(45);
+  const upd={phases:ph, durations:dur};
+  if(cm.chronoState==="finished"){ upd.chronoPhase=newIdx; upd.chronoState="running"; upd.chronoEndsAt=Date.now()+45000; upd.chronoRemaining=0; }
+  db.ref(DEBAT+"/currentMatch").update(upd);
+  toast("Échange ajouté : "+(nextCamp==="pour"?"POUR":"CONTRE")+" (45 s).");
+}
 function advancePhase(cm){
   cm=cm||debatData().currentMatch; if(!cm) return;
   const next=(cm.chronoPhase||0)+1;
-  if(next>=DBG_PHASES.length){
+  if(next>=matchPhases(cm).length){
     db.ref(DEBAT+"/currentMatch").update({chronoState:"finished", chronoEndsAt:0, chronoRemaining:0});
   } else {
-    const dur=(cm.durations||DBG_DEFAULT_DUR)[next]*1000;
+    const dur=(matchDurations(cm)[next]||45)*1000;
     db.ref(DEBAT+"/currentMatch").update({chronoPhase:next, chronoState:"running", chronoEndsAt:Date.now()+dur, chronoRemaining:0});
   }
 }
 function setDuration(i,v){
   const cm=debatData().currentMatch; if(!cm)return;
-  const dur=(cm.durations||DBG_DEFAULT_DUR).slice(); dur[i]=Math.max(5,parseInt(v,10)||DBG_DEFAULT_DUR[i]);
+  const dur=matchDurations(cm).slice(); dur[i]=Math.max(5,parseInt(v,10)||dur[i]||45);
   db.ref(DEBAT+"/currentMatch/durations").set(dur);
 }
 
@@ -2462,7 +2530,7 @@ function remainingMs(cm){
   if(cm.chronoState==="running")return Math.max(0,cm.chronoEndsAt-Date.now());
   if(cm.chronoState==="paused")return Math.max(0,cm.chronoRemaining||0);
   if(cm.chronoState==="finished")return 0;
-  return ((cm.durations||DBG_DEFAULT_DUR)[cm.chronoPhase||0])*1000;
+  return ((matchDurations(cm)[cm.chronoPhase||0])||45)*1000;
 }
 function paintCountdown(cm){
   cm=cm||debatData().currentMatch; if(!cm)return;
@@ -2793,7 +2861,8 @@ function profSignature(d,cm){
   const cmkey=cm?(cm.id+"|"+(cm.tirageAt?1:0)+"|"+cm.campA+"|"+cm.chronoState+"|"+(cm.chronoPhase||0)+"|"+(cm.result?1:0)):"none";
   const tt=debatData().tournament||{}; const brr=debatData().bracket;
   const bsig=brr&&brr.rounds?brr.rounds.map(function(rd){return rd.matches.filter(function(m){return m.played;}).length;}).join("-"):"nb";
-  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig+"|"+(retoursVisibles()?1:0);
+  const _bb=(sessionData.binomes)||{}; const presKey=Object.keys(_bb).map(function(k){return (_bb[k].away?"a":"")+(_bb[k].blocked?"b":"");}).join("");
+  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig+"|"+(retoursVisibles()?1:0)+"||"+presKey;
 }
 function renderDebatProf(){
   ensureDebatClock();
@@ -2901,7 +2970,7 @@ function renderDebatProf(){
     }
     h+='</div>';
     if(cm.tirageAt && !cm.result){
-      const ph=cm.chronoPhase||0, P=DBG_PHASES[ph];
+      const ph=cm.chronoPhase||0, P=matchPhases(cm)[ph]||{label:"",camp:"pour"};
       const speakerName=esc(binomeName(findBinome(speakerOf(cm,P.camp)))||"?");
       h+='<div class="dbg-chrono" style="margin-top:8px">';
       h+='<div class="phase">'+esc(P.label)+' · <span style="color:'+(P.camp==="pour"?"var(--accent2)":"var(--done)")+'">'+(P.camp==="pour"?"POUR":"CONTRE")+'</span></div>';
@@ -2912,15 +2981,16 @@ function renderDebatProf(){
       if(cm.chronoState==="running"){ h+='<button class="dbg-btn ghost" onclick="chronoPause()" title="Mettre le chrono en pause.">⏸ Pause</button>'; }
       if(cm.chronoState==="paused"){ h+='<button class="dbg-btn" onclick="chronoResume()" title="Reprendre le chrono.">▶ Reprendre</button>'; }
       if(cm.chronoState!=="finished"){ h+='<button class="dbg-btn ghost" onclick="chronoNext()" title="Passer immédiatement à la phase suivante.">⏭ Phase suivante</button>'; }
+      if(!cm.result){ h+='<button class="dbg-btn ghost" onclick="addPhase()" title="Ajouter un tour de parole (45 s) à la suite, camp alterné. Si la manche est déjà terminée, le chrono repart sur ce nouvel échange.">➕ Échange</button>'; }
       h+='<button class="dbg-btn ghost" onclick="cancelMatch()" style="color:var(--accent2)" title="Fermer la manche sans la noter.">✕ Fermer</button>';
       h+='</div>';
       h+='<div class="std-phaserow">';
-      DBG_PHASES.forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+esc(q.label.slice(0,4))+' '+(q.camp==="pour"?"P":"C")+'</span>'; });
+      matchPhases(cm).forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+esc((q.label||"").slice(0,4))+' '+(q.camp==="pour"?"P":"C")+'</span>'; });
       h+='</div>';
       h+='<div id="voteStatusProf"></div>';
       if(cm.chronoState==="idle"){
         h+='<div class="dbg-dur"><span>Durées (s) :</span>';
-        (cm.durations||DBG_DEFAULT_DUR).forEach(function(d2,i){ h+='<input type="number" min="5" value="'+d2+'" onchange="setDuration('+i+',this.value)" title="Durée en secondes de la phase '+(i+1)+'.">'; });
+        matchDurations(cm).forEach(function(d2,i){ h+='<input type="number" min="5" value="'+d2+'" onchange="setDuration('+i+',this.value)" title="Durée en secondes de la phase '+(i+1)+'.">'; });
         h+='</div>';
       }
       // Bloc notation prof à la fin du chrono
@@ -2961,7 +3031,7 @@ function renderDebatProf(){
     }
   }
   h+='</div></div>';
-  $("debatPanel").innerHTML=h;
+  $("debatPanel").innerHTML=presenceBanner()+h;
   applyDbgSplit();
 }
 
@@ -3025,7 +3095,7 @@ function renderDebatStudent(){
       h+='</div>';
       wrap.innerHTML=h; return;
     }
-    const ph=cm.chronoPhase||0, P=DBG_PHASES[ph], iSpeak=(myCamp===P.camp);
+    const ph=cm.chronoPhase||0, P=matchPhases(cm)[ph]||{label:"",camp:"pour"}, iSpeak=(myCamp===P.camp);
     let h='<div class="std-debat">';
     h+='<div class="std-bigcamp '+myCamp+'">Vous êtes '+(myCamp==="pour"?"POUR":"CONTRE")+'</div>';
     h+='<div class="std-vs">Vous affrontez <b>'+oppName+'</b></div>';
@@ -3033,7 +3103,7 @@ function renderDebatStudent(){
     h+='<div class="who" style="color:'+(iSpeak?"var(--gold)":"var(--muted)")+'">'+(iSpeak?"À vous de parler !":"Écoutez l\'adversaire")+'</div>';
     h+='<div class="dbg-count" id="stdCount">'+(cm.chronoState==="finished"?"Terminé":fmt(remainingMs(cm)))+'</div>';
     h+='<div class="std-phaserow">';
-    DBG_PHASES.forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+(q.camp==="pour"?"POUR":"CONTRE")+'</span>'; });
+    matchPhases(cm).forEach(function(q,i){ const cls=i<ph?"done":(i===ph?"on":""); h+='<span class="std-phasechip '+cls+'">'+(q.camp==="pour"?"POUR":"CONTRE")+'</span>'; });
     h+='</div></div></div>';
     h+='<div id="voteStatusStudent"></div>';
     wrap.innerHTML=h;
@@ -3387,7 +3457,7 @@ function toggleRetours(){
 }
 
 // ── Carnet de l'évaluateur — côté élève ──
-function openCarnetEleve(){ renderCarnetEleve(); $("carnetEleveOverlay").classList.add("show"); }
+function openCarnetEleve(){ if(debatLocked()){ toast("⏸ Le professeur pilote la séance — suis l'écran. Ton carnet se rouvrira entre les manches."); return; } renderCarnetEleve(); $("carnetEleveOverlay").classList.add("show"); }
 function closeCarnetEleve(){ $("carnetEleveOverlay").classList.remove("show"); }
 function critPills(o){
   if(!o) return '';
@@ -3763,6 +3833,17 @@ if(info){
     }catch(_){}
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
+})();
+
+/* ════════ Présence : signaler quand un élève quitte l'écran du débat ════════ */
+(function(){
+  if(typeof document==="undefined" || typeof document.addEventListener!=="function") return;
+  function setAway(v){
+    try{ if(role==="student" && myBinomeId){ var r=db.ref(ACTIVE+"/binomes/"+myBinomeId+"/away"); if(v) r.set(Date.now()); else r.remove(); } }catch(_){}
+  }
+  document.addEventListener("visibilitychange", function(){ setAway(document.visibilityState==="hidden"); });
+  window.addEventListener("pagehide", function(){ setAway(true); });
+  window.addEventListener("focus", function(){ if(document.visibilityState!=="hidden") setAway(false); });
 })();
 
 </script>
