@@ -673,6 +673,7 @@ function niveauOf(nom){ const m=/^\s*(6e|5e|4e|3e)/i.exec(nom||""); return m?m[1
    l'élève choisit Classe + Nom à la connexion (comme la dictée). Identifiant unique = classe + nom.
    Données rangées à plat sous l'uid : progress|sessions / {chapId} / {uid}. ── */
 function uidOf(classe, nom){ return (classe?sanId(classe)+"__":"") + sanId(nom); }
+function isTestUid(uid){ return typeof uid==="string" && uid.slice(0,4)==="test" && uid.indexOf("__")<0; }   // postes de test : testA/B/C
 function urlParam(k){ try{ return new URLSearchParams(location.search).get(k); }catch(e){ return null; } }
 function sanId(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
   .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"") || "x"; }
@@ -1169,7 +1170,10 @@ const APP = {
   syncMaps(){ for(const k in this.panels){ const p=this.panels[k]; if(p && p.screen==="map") p.render(); } },
   setTableSize(n){ this.tableSize=Math.max(1,Math.min(LETTERS.length,n|0)); lsSet("wt_seats", this.tableSize); this.boot(); },
   toggleHelp(key){ const el=$("help"+key); if(el) el.classList.toggle("open"); },
-  toggleTest(){ this.testMode=!this.testMode; this.boot(); },
+  toggleTest(){ this.testMode=!this.testMode;
+    this.purgeTest(); this.boot(); },                          // purge à l'entrée comme à la sortie
+  purgeTest(){ const chap=CHAPTER.meta.id||"chapitre";                  // efface les résidus testA/B/C
+    ['A','B','C'].forEach(k=>{ store.save("sessions/"+chap+"/test"+k, null); store.save("progress/"+chap+"/test"+k, null); }); },
   resetLane(key){ const p=this.panels[key]; if(!p)return; p.engine.reset(); p.screen="map"; p.render(); this.syncMaps();
     toast("Poste réinitialisé."); },
   forcePass(key){ const p=this.panels[key]; if(!p)return;
@@ -1303,7 +1307,8 @@ const APP = {
     p.epoch=Date.now(); p.classe=classe||""; p.classeSeg=classe?sanId(classe):"libre"; p.idx=i;
     this.panels[key]=p;
     this.refreshLogins();                                     // verrouille la classe sur les autres moitiés
-    store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved); p.render(); this.beat(key); });
+    if(this.testMode){ p.render(); this.beat(key); }          // test : chaque session repart de zéro (aucune hydratation)
+    else store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved); p.render(); this.beat(key); });
   },
   // recharge un poste élève sur la nouvelle version de SON chapitre actif, en préservant sa progression (édition en direct)
   reloadPanel(key, newChap){ const old=this.panels[key]; if(!old||!old.engine) return; const lane=$("lane"+key); if(!lane) return;
@@ -1652,9 +1657,9 @@ const PROF = {
   suiviBody(){
     const sess=APP._sessions||{};
     const byClass={};
-    Object.keys(sess).forEach(uid=>{ const s=Object.assign({_uid:uid}, sess[uid]||{}); const cl=s.classe||"(sans classe)";
+    Object.keys(sess).forEach(uid=>{ if(isTestUid(uid)) return; const s=Object.assign({_uid:uid}, sess[uid]||{}); const cl=s.classe||"(sans classe)";
       (byClass[cl]=byClass[cl]||[]).push(s); });
-    Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(!p||!p.engine) return; const uid=p.engine.studentId;
+    Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(!p||!p.engine) return; const uid=p.engine.studentId; if(isTestUid(uid)) return;
       const cl=p.classe||"(sans classe)"; const arr=byClass[cl]=byClass[cl]||[];
       if(!arr.some(s=>s._uid===uid)) arr.push({ _uid:uid, name:p.name, classe:cl, classeSeg:p.classeSeg,
         lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); });
@@ -1714,7 +1719,7 @@ const PROF = {
   },
   loadBilans(){ const chap=CHAPTER.meta.id||"chapitre"; const map={};
     // 1) élèves connectés localement (ex. mode test, ou poste partagé) — bilan live
-    Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(!p||!p.engine) return;
+    Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(!p||!p.engine) return; if(isTestUid(p.engine.studentId)) return;
       map[p.engine.studentId]={ uid:p.engine.studentId, classe:p.classe||"(sans classe)", nom:p.name, bilan:p.engine.bilan() }; });
     // 2) agrégat Firebase : toutes les tablettes. On croise le roster des classes pour retrouver les noms lisibles.
     store.once("progress/"+chap, prog=>{ setTimeout(()=>{ prog=prog||{};
