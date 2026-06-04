@@ -782,7 +782,7 @@ var MESSAGES_TIMIDES_DEFAUT = [
   "🌱 Tu as ta voix toi aussi — quand tu veux, elle est attendue.",
   "📖 Et toi, quel passage aurais-tu envie de partager ?",
   "💛 Personne ne te jugera, on est là pour t'encourager.",
-  "🎤 Il reste de la place dans la file — viens quand tu te sens prêt·e.",
+  "🎤 Il reste de la place dans la file — viens quand tu te sens prêt.",
   "✨ Ta lecture compte autant que celle des autres.",
   "🪶 Tu peux commencer par 2 lignes seulement si tu préfères.",
   "🌟 Inscris-toi quand tu veux — on t'écoutera avec plaisir.",
@@ -926,7 +926,7 @@ function compterPassagesTermines(historique, passagesSession){
   return n;
 }
 
-// Helper partagé OngletPilotage / VuePhone : désigne ou libère le lecteur, reset propre des champs de session
+// Helper partagé OngletPilotage / PhonePilot : désigne ou libère le lecteur, reset propre des champs de session
 // opts (optionnel) : {nbLignes, dureeSec} pour override du minuteur (mode spontané)
 function _setReaderImpl(session, nom, opts){
   db.ref(DB_ROOT+"/live").remove();
@@ -1277,7 +1277,7 @@ function HelpModal(p){
         h("p",null,"Quand le prof active ce mode, ",h("strong",null,"c'est toi qui décides quand tu veux lire"),
           ". Tu vois un bouton « 🎤 Je veux lire ! » sur ta zone."),
         h("ul",null,
-          h("li",null,h("strong",null,"T'inscrire : "),"tape combien de lignes tu vas lire, puis clique sur le bouton. Tu es ajouté·e à la file."),
+          h("li",null,h("strong",null,"T'inscrire : "),"tape combien de lignes tu vas lire, puis clique sur le bouton. Tu es ajouté à la file."),
           h("li",null,h("strong",null,"Attendre ton tour : "),"tu vois ta place dans la file (1ère, 2e…). Quand ton tour vient, ta tablette t'annonce « 🎤 C'est à toi »."),
           h("li",null,h("strong",null,"Te désister : "),"si tu changes d'avis, tu peux passer ton tour. Tu vas en fin de file mais tu gardes ton inscription. ",h("strong",null,"Maximum 2 fois"),", pour ne pas pénaliser les autres."),
           h("li",null,h("strong",null,"T'arrêter pendant ta lecture : "),"tu peux cliquer sur « ⏹ J'arrête » dans ta zone si tu n'es plus à l'aise. Ton passage sera marqué interrompu, sans vote."),
@@ -1815,7 +1815,7 @@ function OngletPilotage(p){
             h("option",{value:""},"— choisir une classe —"),
             Object.keys(classes).map(function(s){return h("option",{key:s,value:s},classes[s].nom||s);})))),
       slug && h("p",{className:"muted"},
-        eleves.length+" élève(s) · "+presents+" / "+reg.nbTables+" tablette(s) connectée(s)"+
+        eleves.length+" élèves · "+presents+" / "+reg.nbTables+" tablettes connectées"+
         (demarree?(" · "+absents.length+" absent"+(absents.length>1?"s":"")):"")),
       slug && !demarree ? h("button",{className:"btn btn-violet btn-lg",style:{width:"100%",marginTop:10},onClick:function(){setCheckinOpen(true);}},
         "🚀 Démarrer la séance",
@@ -2108,7 +2108,7 @@ function OngletClasses(p){
       var c=classes[slug]; var el=extractEleves(c, []);
       return h("div",{className:"card",key:slug},
         h("h3",null,c.nom||slug),
-        h("p",{className:"muted",style:{marginBottom:8}},el.length+" élève(s)"),
+        h("p",{className:"muted",style:{marginBottom:8}},el.length+" élèves"),
         h("div",null,el.slice(0,40).map(function(nm,i){return h("span",{className:"pill",key:i},prenom(nm));})),
         h("button",{className:"btn btn-ghost",style:{marginTop:10},onClick:function(){suppr(slug);},
           title:"Supprime la classe et ses élèves. Les séances archivées qui la référencent restent dans /seances."},"🗑️ Supprimer"));
@@ -2292,7 +2292,7 @@ function OngletReglages(p){
       reg.messagesTimides.length<MAX_MSGT ? h("button",{className:"btn btn-vert",style:{width:"100%",marginTop:10},
         title:"Ajoute un nouveau message d'encouragement (max "+MAX_MSGT+").",
         onClick:function(){
-          var arr=reg.messagesTimides.slice(); arr.push("✨ Quand tu te sens prêt·e, viens lire à ton tour."); upd({messagesTimides:arr});
+          var arr=reg.messagesTimides.slice(); arr.push("✨ Quand tu te sens prêt, viens lire à ton tour."); upd({messagesTimides:arr});
         }},"➕ Ajouter un message") : h("p",{className:"muted",style:{textAlign:"center",fontSize:".82rem",marginTop:8}},
           "Maximum atteint ("+MAX_MSGT+" messages).")));
 }
@@ -2718,6 +2718,8 @@ function PhaseVote(p){
   // p.occupants, p.reader, p.reg, p.passageId
   var sLec=useState(""), votant=sLec[0], setVotant=sLec[1];   // slug de l'occupant en cours de vote
   var sV=useState({}), votes=sV[0], setVotes=sV[1];           // {slug:{nom,votes:{c0..c3},ts}} déjà votés
+
+  // ─── Hooks : TOUS appelés en haut, AVANT tout early return (Rules of Hooks) ───
   useEffect(function(){
     if(!p.passageId) return;
     var ref=db.ref(DB_ROOT+"/votes/"+p.passageId);
@@ -2725,6 +2727,17 @@ function PhaseVote(p){
     return function(){ ref.off("value",f); };
   },[p.passageId]);
 
+  // Calcul de l'occupant courant (peut être null si pas encore sélectionné, ou si retiré pendant le vote)
+  var occ=null;
+  if(votant){
+    for(var i=0;i<p.occupants.length;i++){ if(p.occupants[i].slug===votant){ occ=p.occupants[i]; break; } }
+  }
+  // Si l'occupant choisi n'existe plus (retiré pendant la phase vote), on revient au sélecteur
+  useEffect(function(){
+    if(votant && !occ) setVotant("");
+  },[votant, occ]);
+
+  // ─── Branches de rendu (après tous les hooks) ───
   if(!votant){
     return h("div",{className:"vote-selection"},
       h("div",{className:"vote-titre"},"📝 Tour de vote"),
@@ -2746,12 +2759,6 @@ function PhaseVote(p){
         })));
   }
 
-  var occ=null;
-  for(var i=0;i<p.occupants.length;i++){ if(p.occupants[i].slug===votant){ occ=p.occupants[i]; break; } }
-  // Si l'occupant choisi n'existe plus (retiré pendant la phase vote), on revient au sélecteur via useEffect
-  useEffect(function(){
-    if(votant && !occ) setVotant("");
-  },[votant, occ]);
   if(!occ) return null;
   return h(VoteFormulaire,{
     occupant:occ, criteres:p.reg.criteres, reader:p.reader,
@@ -2873,7 +2880,7 @@ function PanneauSpontane(p){
     fe
       ? h("div",null,
           h("div",{style:{background:"#f1f0fa",padding:"10px 12px",borderRadius:8,marginBottom:8}},
-            h("div",{style:{fontWeight:700,color:"var(--violet)"}}, "⏳ Tu es "+(posFile===1?"prochain·e !":(posFile+"e dans la file"))),
+            h("div",{style:{fontWeight:700,color:"var(--violet)"}}, "⏳ Tu es "+(posFile===1?"le prochain !":(posFile+"e dans la file"))),
             h("div",{style:{fontSize:".82rem",color:"var(--gris)",marginTop:2}}, fe.nbLignes+" ligne"+(fe.nbLignes>1?"s":"")+" prévue"+(fe.nbLignes>1?"s":""))),
           h("button",{className:"btn btn-ghost",style:{width:"100%",fontSize:".88rem"},
             disabled:fe.desistements>=MAX_DESISTEMENTS,
@@ -3194,52 +3201,14 @@ function OverlayQRPhone(p){
 }
 
 // Pilotage compact depuis le téléphone du prof (désigner lecteur, suivant, présence)
-function VuePhone(p){
+// Wrapper « pilotage téléphone » — rend l'AppProf complet (Pilotage / Classes / Réglages / Archives),
+// précédé d'un ping QR pour traçabilité côté ordinateur. À tous égards identique au pilotage desktop.
+function PhonePilot(p){
   useEffect(function(){
     var qr=new URLSearchParams(window.location.search).get("qr");
     if(qr) db.ref(DB_ROOT+"/qrScans/"+qr).set(firebase.database.ServerValue.TIMESTAMP);
   },[]);
-  var ss=useState(null), session=ss[0], setSession=ss[1];
-  var sc=useState({}), classes=sc[0], setClasses=sc[1];
-  var sl=useState({}), live=sl[0], setLive=sl[1];
-  useEffect(function(){
-    var r1=db.ref(DB_ROOT+"/session"); var f1=r1.on("value",function(s){setSession(s.val()||{});});
-    var r2=db.ref("classes"); var f2=r2.on("value",function(s){setClasses(s.val()||{});});
-    var r3=db.ref(DB_ROOT+"/live"); var f3=r3.on("value",function(s){setLive(s.val()||{});});
-    return function(){ r1.off("value",f1); r2.off("value",f2); r3.off("value",f3); };
-  },[]);
-  session=session||{};
-  var reg=reglagesSafe(session.reglages);
-  var slug=session.classeSlug, classe=slug&&classes[slug];
-  var eleves=classe?extractEleves(classe, []):[];
-  var now=Date.now();
-  var presents=Object.keys(live).filter(function(k){return live[k]&&(now-(live[k].ts||0))<6000;}).length;
-  function setReader(nom){ _setReaderImpl(session, nom); }
-  return h("div",null,
-    h("div",{className:"hdr"},
-      h("button",{className:"btn-back",onClick:p.onBack,title:"Retour à l'accueil."},"← Accueil"),
-      h("h2",null,"📱 Pilotage mobile")),
-    h("div",{className:"wrap"},
-      h("div",{className:"card"},
-        h("h3",null,classe?(classe.nom||slug):"Aucune classe choisie"),
-        h("p",{className:"muted"},presents+" / "+reg.nbTables+" tablette(s) connectée(s)")),
-      classe
-        ? h("div",{className:"card"},
-            h("h3",null,"Lecteur en cours",ifo("Désigne le lecteur depuis ton téléphone (utile depuis le fond de la classe). Démarrer un lecteur lance automatiquement le minuteur.")),
-            h("div",{className:"field"},
-              h("select",{value:session.reader||"",onChange:function(e){setReader(e.target.value);},
-                title:"Choisis l'élève qui va lire. La sélection démarre immédiatement son passage."},
-                h("option",{value:""},"— personne ne lit —"),
-                eleves.map(function(nom,i){return h("option",{key:i,value:nom},nom);}))),
-            session.reader && h("div",{style:{textAlign:"center",fontSize:"1.4rem",fontWeight:900,color:"var(--violet)",margin:"8px 0"}},"🎤 "+session.reader),
-            h("div",{className:"btn-row"},
-              h("button",{className:"btn btn-violet",style:{flex:1},onClick:function(){
-                if(!eleves.length)return; var idx=eleves.indexOf(session.reader); setReader(eleves[(idx+1)%eleves.length]);
-              },title:"Passe au lecteur suivant dans l'ordre de la liste classe (équivalent du bouton sur le pilotage ordinateur)."},"⏭️ Lecteur suivant"),
-              session.reader && h("button",{className:"btn btn-ghost",onClick:function(){setReader("");},
-                title:"Arrête le passage courant sans archiver de bilan."},"⏹️ Stop")))
-        : h("div",{className:"card"},h("p",{className:"muted"},"Choisis d'abord une classe depuis le panneau professeur (sur l'ordinateur)."))),
-    h(HelpFab,{role:"prof"}));
+  return h(AppProf,{onBack:p.onBack, test:p.test, onQuitTest:p.onQuitTest});
 }
 
 // ════════════ ROUTEUR ════════════
@@ -3290,7 +3259,7 @@ function App(){
   }
   if(mode==="prof") return h(AppProf,{onBack:function(){setMode(null);},test:test,onQuitTest:quitterTest});
   if(mode==="board") return h(VueBoard,{onBack:function(){setMode(null);}});
-  if(mode==="phone") return h(VuePhone,{onBack:function(){setMode(null);}});
+  if(mode==="phone") return h(PhonePilot,{onBack:function(){setMode(null);},test:test,onQuitTest:quitterTest});
   if(mode==="eleve") return h(AppEleve,{onBack:function(){setMode(null);}});
   return h(Accueil,{go:setMode,test:test,onTest:function(){setTest(true);}});
 }
