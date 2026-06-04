@@ -104,9 +104,9 @@ button{font-family:inherit;cursor:pointer;border:none}
 .board-meters{flex:1;display:flex;justify-content:center;align-items:stretch;gap:48px;padding:20px 0;min-height:0}
 .board-meters.crit-6,.board-meters.crit-7{gap:32px}
 .board-meters.crit-8{gap:22px}
-.board .meter{width:170px;max-width:20vw;height:100%;min-height:0;justify-content:flex-end}
-.board-meters.crit-5 .meter,.board-meters.crit-6 .meter{width:140px;max-width:16vw}
-.board-meters.crit-7 .meter,.board-meters.crit-8 .meter{width:118px;max-width:13vw}
+.board .meter{width:110px;max-width:13vw;height:100%;min-height:0;justify-content:flex-end}
+.board-meters.crit-5 .meter,.board-meters.crit-6 .meter{width:92px;max-width:11vw}
+.board-meters.crit-7 .meter,.board-meters.crit-8 .meter{width:78px;max-width:9vw}
 .board .meter-track{flex:1;min-height:0;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:6px 4px;display:flex;flex-direction:column-reverse;gap:1px;overflow:hidden;width:100%}
 .board .meter-seg{flex:1;border-radius:2px;background:rgba(255,255,255,.05)}
 
@@ -794,7 +794,7 @@ var MESSAGES_TIMIDES_DEFAUT = [
 var REGLAGES_DEFAUT = {
   nbTables: NB_TABLES_DEFAUT,
   decay: 35,          // % de décroissance par seconde (0 = cumul pur plafonné)
-  boost: 16,          // gain par applaudissement (tap)
+  boost: 6,           // gain par applaudissement (tap) — fin pour granularité (4 = mini, 40 = max)
   complimentsOn: true,
   dureeSec: 60,                                    // durée d'un passage de lecture (s), figée au lancement
   modeCheckpoints: false,                          // affiche pile horaires + compteur ✓ ×N au tableau
@@ -938,9 +938,16 @@ function _setReaderImpl(session, nom, opts){
   if(nom){
     var newPid="p_"+Date.now();
     upd.passageId=newPid; upd.startedAt=Date.now();
+    // Démarrer EN PAUSE : le chrono ne tourne pas, les élèves voient le cercle respirant,
+    // les claps sont ignorés. Le prof clique « ▶️ Démarrer la lecture » pour libérer.
+    upd.pauseStartedAt=Date.now();
     if(opts && opts.nbLignes) upd.nbLignes=opts.nbLignes;
     if(opts && opts.dureeSec) upd.dureeOverride=opts.dureeSec;
     if(session && session.sessionId){ db.ref(DB_ROOT+"/seances/"+session.sessionId+"/passages/"+newPid).set(true); }
+    // Archive immédiatement les métadonnées dans le passage (sinon perdues à la fin de séance)
+    var metaArchive={lecteur:nom, startsAt:Date.now(), classeSlug:(session&&session.classeSlug)||""};
+    if(opts && opts.nbLignes) metaArchive.nbLignes=opts.nbLignes;
+    db.ref(DB_ROOT+"/historiqueLectures/"+newPid).update(metaArchive);
   } else {
     upd.passageId=""; upd.startedAt=null;       // FIX : reset startedAt côté nom vide
   }
@@ -1652,7 +1659,7 @@ function OngletPilotage(p){
       function med(arr){ return median(arr); }
       var rows=passagesIds.map(function(pid){
         var pp=hist[pid]||{};
-        var lecteur=pp.lecteur||"?";
+        var lecteur=pp.lecteur||"(abandonné)";
         var statut=pp.annule?'<span style="color:#dc2626">annulé</span>':(pp.bilanTermine?'<span style="color:#16a34a">terminé</span>':'<span style="color:#888">en cours</span>');
         var medianes=[];
         for(var k=0;k<nC;k++) medianes.push(null);
@@ -1878,8 +1885,8 @@ function OngletPilotage(p){
           "⏸️ Pause",
           ifo("Suspend le minuteur. Au tableau et sur les tablettes, un cercle respirant invite à se recentrer (rythme 4 s / 6 s).")) : null,
         enLive && paused ? h("button",{className:"btn btn-vert",style:{flex:1,minWidth:120},onClick:togglePause},
-          "▶️ Reprendre",
-          ifo("Reprend le minuteur là où il en était.")) : null,
+          (session.pausedDuration||0)===0 ? "▶️ Démarrer la lecture" : "▶️ Reprendre",
+          ifo((session.pausedDuration||0)===0 ? "Démarre effectivement la lecture : le chrono part, les barres s'activent. À cliquer quand l'élève est prêt à lire." : "Reprend le minuteur là où il en était.")) : null,
         enLive ? h("button",{className:"btn btn-rose",onClick:interrompre},
           "✖ Interrompre",
           ifo("Annule ce passage sans laisser de trace dans l'historique. Pour un élève qui craque ou un imprévu de classe.")) : null,
@@ -3043,7 +3050,7 @@ function EleveVote(p){
   function startPress(i){
     applaudir(i);
     if(pressRef.current[i]) clearInterval(pressRef.current[i]);   // évite l'accumulation si pointerdown dupliqué
-    pressRef.current[i]=setInterval(function(){applaudir(i);},220);
+    pressRef.current[i]=setInterval(function(){applaudir(i);},80);
   }
   function stopPress(i){
     if(typeof i==="number"){
@@ -3160,8 +3167,11 @@ function EleveVote(p){
         ? h(React.Fragment,null,h("div",{className:"lbl"},"on écoute"),h("div",{className:"who"},"🎤 "+prenom(reader)))
         : h("div",{className:"who"},"⏳ attends le prof")),
     renderPhase(),
-    occupants.length<3 ? h("button",{className:"btn-add-occ",onClick:p.onAddOccupant,
-      title:"Permet à un 2e ou 3e élève de rejoindre cette tablette (max 3). Disponible à tout moment de la séance."},
+    // Bouton « ajouter un élève » : uniquement pendant la phase de connexion,
+    // c'est-à-dire avant que le 1er lecteur ait été désigné. Après, les élèves restants
+    // doivent se rendre vers une autre tablette ou attendre un « ↻ Élèves suivants ».
+    (occupants.length<3 && !session.passageId) ? h("button",{className:"btn-add-occ",onClick:p.onAddOccupant,
+      title:"Permet à un 2e ou 3e élève de rejoindre cette tablette (max 3). Disponible uniquement avant que la séance démarre."},
       "➕ Un autre élève rejoint la tablette") : null,
     h(HelpFab,{role:"eleve"}));
 }
