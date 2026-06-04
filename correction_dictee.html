@@ -38,8 +38,16 @@ select:focus,input:focus,textarea:focus{border-color:var(--primary)}
 textarea{resize:vertical;min-height:120px}
 .fade-up{animation:fadeUp .3s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@keyframes blink{0%,100%{background:var(--green-light)}50%{background:rgba(39,103,73,.25)}}
-.blink-done{animation:blink 1.2s ease infinite}
+/* Statut "terminé" : pulsation douce une seule fois au passage à done, puis état stable avec liseré vert à gauche */
+@keyframes done-pulse{
+  0%{box-shadow:inset 4px 0 0 var(--green), 0 0 0 0 rgba(72,160,87,.5)}
+  50%{box-shadow:inset 4px 0 0 var(--green), 0 0 0 6px rgba(72,160,87,0)}
+  100%{box-shadow:inset 4px 0 0 var(--green), 0 0 0 0 rgba(72,160,87,0)}
+}
+.blink-done{
+  box-shadow:inset 4px 0 0 var(--green);
+  animation:done-pulse 2s ease-out 2;  /* pulse 2 fois (4s total) puis se calme */
+}
 .fast-word{font-size:2.2rem;font-weight:800;text-align:center;padding:30px 20px;min-height:120px;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
 .fast-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
 .fast-btn{padding:18px 10px;border-radius:14px;font-size:1.1rem;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
@@ -134,9 +142,8 @@ textarea{resize:vertical;min-height:120px}
 .tab.active{background:var(--primary);color:#fff}
 /* Bilan table */
 .bilan-table{width:100%;border-collapse:collapse;font-size:.86rem}
-.bilan-table th,.bilan-table td{padding:6px 8px}
-.bilan-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text-sub)}
-.bilan-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.bilan-table th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text-sub)}
+.bilan-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
 .bilan-table tr:hover{background:var(--card2)}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.78rem;font-weight:600;margin-right:2px}
 .badge-g{background:var(--coral-light);color:var(--coral)}
@@ -1481,7 +1488,9 @@ function AppProf(p){
         var nOk=Object.keys(remappedResults).filter(function(k){return remappedResults[k]}).length;
         var wr=0;Object.keys(remappedAttempts).forEach(function(k){var n=remappedAttempts[k]||0;if(remappedResults[k])wr+=(n-1);else wr+=n});
         var newScore=Math.max(0,5-wr*0.25);
-        db.ref(acPath).update({results:remappedResults,attempts:remappedAttempts,history:remappedHistory,total:errors.length,solved:nOk,score:Math.round(newScore*100)/100,errorRefs:newRefs});
+        // total = erreurs corrigibles (exclut type A = signalements graphie)
+        var totalNonA=errors.filter(function(e){return e&&e.type!=="A"}).length;
+        db.ref(acPath).update({results:remappedResults,attempts:remappedAttempts,history:remappedHistory,total:totalNonA,solved:nOk,score:Math.round(newScore*100)/100,errorRefs:newRefs});
       } else {
         // No remap needed, just sync total and errorRefs
         // total = nombre d'erreurs CORRIGIBLES (exclut type A = signalements graphie)
@@ -1846,10 +1855,8 @@ function CorrScreen(p){
   });
   }
 
-  // Largeur étendue pour les vues qui ont besoin de tableaux larges (Suivi, Bilan)
-  var widerTabs = {suivi:1, bilan:1, exercices:1};
-  var wrapClass = widerTabs[tab] ? "container-wide fade-up" : "container fade-up";
-  return h("div",{className:wrapClass},
+  // Largeur étendue pour TOUS les onglets prof (besoin de place pour tableaux, panneaux, etc.)
+  return h("div",{className:"container-wide fade-up"},
     h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}},
       h("div",null,h("h1",null,data.title),
         h("p",{className:"subtitle"},data.classe+" \u00b7 "+nDone+"/"+nTotal+(nAbs?" ("+nAbs+" abs.)":"")+" \u00b7 "+pct+"%"),
@@ -5159,7 +5166,6 @@ function assemblePrompt(directives, format){
   return (directives||PROMPT_DIRECTIVES_DEFAULT) + "\n\n" + (format||PROMPT_FORMAT_DEFAULT);
 }
 
-var PROMPT_IA_EXERCICES_JSON = "Tu es un professeur de fran\u00e7ais expert en didactique. Je te fournis ci-dessous le JSON d'une dict\u00e9e corrig\u00e9e. Tu dois produire un JSON d'exercices personnalis\u00e9s, dans le FORMAT STRICT d\u00e9crit ci-dessous (et rien d'autre, ni HTML, ni commentaire externe).\n\n=== FORMAT JSON DE SORTIE (STRICT) ===\n\n{\n  \"exercices_classe\": [\n    {\n      \"id\": \"ex_classe_1\",\n      \"titre\": \"Titre court\",\n      \"regle\": \"Rappel de r\u00e8gle (max 4 lignes)\",\n      \"items\": [ ... voir types ci-dessous ... ]\n    }\n  ],\n  \"exercices_personnels\": {\n    \"prenom_eleve_normalise\": [ { ... m\u00eame structure ... } ]\n  }\n}\n\n=== TYPES D'ITEMS AUTORIS\u00c9S (3 SEULEMENT) ===\n\n1. QCM : un seul bon choix\n{\n  \"type\": \"qcm\",\n  \"enonce\": \"Consigne courte (ex: Choisis la bonne orthographe)\",\n  \"phrase\": \"Phrase avec ___ \u00e0 la place du mot manquant\",\n  \"propositions\": [\"proposition 1\", \"proposition 2\", \"proposition 3\"],\n  \"reponse\": 1\n}\n(reponse = index 0-bas\u00e9 de la bonne proposition)\n\n2. TROUS : phrase \u00e0 trous, un champ par mot (PAS de saisie libre invariable)\n{\n  \"type\": \"trous\",\n  \"enonce\": \"Compl\u00e8te avec le verbe au bon temps\",\n  \"segments\": [\"Le chat \", null, \" la souris et \", null, \" sur le toit.\"],\n  \"reponses\": [\"attrape\", \"saute\"]\n}\n(segments = tableau alternant cha\u00eenes et null ; null = case \u00e0 remplir ; reponses align\u00e9 sur l'ordre des null. Un null = UN seul mot \u00e0 remplir, pas une expression).\n\n3. R\u00c9\u00c9CRITURE : transformer une phrase\n{\n  \"type\": \"reecriture\",\n  \"enonce\": \"R\u00e9\u00e9cris au pass\u00e9 compos\u00e9\",\n  \"phrase\": \"Phrase de d\u00e9part\",\n  \"reponse_exacte\": \"Phrase attendue\",\n  \"reponses_acceptees\": [\"Variante 1 accept\u00e9e\", \"Variante 2\"]\n}\n(reponses_acceptees facultatif, pour les variantes type accord ou ponctuation finale optionnelle)\n\n=== R\u00c8GLES IMP\u00c9RATIVES ===\n\n- Exercices_classe : analyse les erreurs faites par AU MOINS 3 \u00e9l\u00e8ves dans le JSON. Pour chaque difficult\u00e9 collective, cr\u00e9e UN exercice avec 4 \u00e0 6 items.\n- Exercices_personnels : pour CHAQUE \u00e9l\u00e8ve ayant fait au moins 3 erreurs, cr\u00e9e 1 \u00e0 3 exercices cibl\u00e9s sur SES erreurs (pas celles des autres). La cl\u00e9 doit \u00eatre le pr\u00e9nom normalis\u00e9 (minuscules, sans accent, espaces remplac\u00e9s par _).\n- Privil\u00e9gie les items \"trous\" et \"qcm\" (auto-corrigeables sans ambigu\u00eft\u00e9). Utilise \"reecriture\" seulement si pertinent (transformation, conjugaison).\n- Pour les trous, UN SEUL MOT par null (jamais une expression).\n- Pour reecriture, donne 1 \u00e0 3 variantes accept\u00e9es pour couvrir les flottements normaux (accords libres, ponctuation).\n- Niveau de langue adapt\u00e9 au niveau scolaire indiqu\u00e9 dans le JSON.\n- AUCUN commentaire en dehors du JSON. Le JSON commence par { et se termine par }.\n\n=== JSON DE LA DICT\u00c9E ===\n{{JSON_DICTEE}}";
 
 // Normalise une réponse pour comparaison (minuscule, sans accent, espaces réduits, ponctuation finale optionnelle)
 function exNormalize(s){
@@ -5386,7 +5392,8 @@ function ExercicesAdmin(p){
       if(!item || !item.type)return '';
       var enonce = item.enonce ? '<div class="enonce">'+escapeHtml(item.enonce)+'</div>' : '';
       if(item.type==="qcm"){
-        var phrase = (item.phrase||"").replace(/___/g,'<span class="trou">_____</span>');
+        // Escape AVANT le replace pour éviter d'injecter du HTML non escapé si la phrase contient < > & "
+        var phrase = escapeHtml(item.phrase||"").replace(/___/g,'<span class="trou">_____</span>');
         // QCM en grille 2 colonnes (gain de place majeur)
         var props = (item.propositions||[]).map(function(p,i){
           var letters="ABCDEFGH";
@@ -5777,7 +5784,7 @@ function ExercicesAdmin(p){
     (exHtml||exercices)&&h("div",{className:"card",style:{border:"1.5px solid var(--primary)",background:"rgba(43,108,203,.04)",marginBottom:12}},
       h("h3",{style:{marginTop:0,marginBottom:8}},"\ud83d\udda8 Impression rapide"),
       h("p",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},
-        "Les \u00e9l\u00e8ves se cochent ",h("strong",null,"automatiquement"),"d\u00e8s qu\u2019ils finissent leur autocorrection. Tu cliques sur Imprimer pour la vague en cours \u2192 ils sont marqu\u00e9s comme imprim\u00e9s et ne reviendront pas \u00e0 la vague suivante.",
+        "Les \u00e9l\u00e8ves se cochent ",h("strong",null,"automatiquement")," d\u00e8s qu\u2019ils finissent leur autocorrection. Tu cliques sur Imprimer pour la vague en cours \u2192 ils sont marqu\u00e9s comme imprim\u00e9s et ne reviendront pas \u00e0 la vague suivante.",
         h("br",null),
         h("span",{style:{fontSize:".74rem",fontStyle:"italic"}},
           exHtml?"Source : HTML upload\u00e9 (sections par \u00e9l\u00e8ve d\u00e9tect\u00e9es automatiquement)":"Source : JSON inject\u00e9 (fiche g\u00e9n\u00e9r\u00e9e \u00e0 la vol\u00e9e \u00e0 partir des exercices personnels de chaque \u00e9l\u00e8ve)"
@@ -5887,7 +5894,7 @@ function ExercicesAdmin(p){
         nbTotal === 0 ? h("div",{style:{fontStyle:"italic",color:"var(--muted)",fontSize:".88rem",padding:"10px 0"}},"Aucune saisie pour l'instant. (Elles appara\u00eetront ici d\u00e8s que des \u00e9l\u00e8ves auront travaill\u00e9 sur des exercices de copie ou d'\u00e9criture.)") :
         h("div",null,
           h("div",{style:{display:"flex",gap:8,alignItems:"center",marginBottom:10,flexWrap:"wrap"}},
-            h(EleveSearchBar,{value:prodQuery, onChange:setProdQuery, placeholder:"Rechercher un \u00e9l\u00e8ve\u2026", style:{flex:1, minWidth:180}}),
+            h(EleveSearchBar,{query:prodQuery, onChange:setProdQuery, placeholder:"Rechercher un \u00e9l\u00e8ve\u2026"}),
             h("span",{style:{fontSize:".74rem",color:"var(--muted)"}},
               nbTotal+" saisie"+(nbTotal>1?"s":"")+" \u00b7 "+nbConsultes+" consult\u00e9e"+(nbConsultes>1?"s":"")+" \u00b7 "+Object.keys(byEleve).length+" \u00e9l\u00e8ve"+(Object.keys(byEleve).length>1?"s":"")
             )
