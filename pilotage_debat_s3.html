@@ -506,6 +506,12 @@
 .eval-camp.contre{color:var(--done);border:1px solid var(--done)}
 .eval-cmt{font-size:.82rem;color:var(--ink2);font-style:italic;margin:3px 0 5px 4px}
 .std-grille .dbg-campcol{margin-bottom:10px}
+/* ── Icônes d'aide ⓘ (info au survol ET au clic, compatible tablette) ── */
+.tip-i{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;min-width:16px;margin:0 1px 0 5px;padding:0;border-radius:50%;border:1px solid var(--gold,#c9a24a);background:transparent;color:var(--gold,#c9a24a);font-family:'Fraunces',Georgia,serif;font-style:italic;font-weight:700;font-size:11px;line-height:1;cursor:pointer;vertical-align:middle;opacity:.62;transition:opacity .15s,background .15s;-webkit-tap-highlight-color:transparent;flex:0 0 auto}
+.tip-i:hover,.tip-i:focus-visible{opacity:1;background:rgba(201,162,74,.18)}
+.tip-i:focus-visible{outline:2px solid var(--gold,#c9a24a);outline-offset:1px}
+#tipBubble{position:fixed;z-index:99999;max-width:262px;background:var(--panel,#1c1812);color:var(--ink,#ece3d4);border:1px solid var(--line,#3a3024);border-radius:10px;padding:9px 12px;font-family:inherit;font-size:.84rem;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.55);opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity .14s,transform .14s}
+#tipBubble.show{opacity:1;transform:translateY(0)}
 </style>
 
 <div class="screen" id="screenWelcome">
@@ -536,12 +542,12 @@
       <p class="sub">Entrez le code de classe affiché au tableau et vos prénoms pour rejoindre le débat.</p>
       <div id="loginBlock">
         <label for="loginCode">Code de classe</label>
-        <input id="loginCode" class="code" placeholder="LIMA-4827" maxlength="12" autocomplete="off">
+        <input id="loginCode" class="code" title="Le code affiché au tableau par le professeur (par exemple LIMA-4827)." placeholder="LIMA-4827" maxlength="12" autocomplete="off">
         <div id="loginNamesWrap">
         <label>Vos prénoms (1, 2 ou 3 élèves)</label>
-        <input id="loginName1" placeholder="Prénom 1" autocomplete="off">
-        <input id="loginName2" placeholder="Prénom 2 (optionnel)" style="margin-top:8px" autocomplete="off">
-        <input id="loginName3" placeholder="Prénom 3 (optionnel)" style="margin-top:8px" autocomplete="off">
+        <input id="loginName1" placeholder="Prénom 1" autocomplete="off" title="Le prénom du premier élève du binôme.">
+        <input id="loginName2" placeholder="Prénom 2 (optionnel)" style="margin-top:8px" autocomplete="off" title="Le prénom du deuxième élève (laisse vide si tu es seul).">
+        <input id="loginName3" placeholder="Prénom 3 (optionnel)" style="margin-top:8px" autocomplete="off" title="Le prénom du troisième élève (pour un trinôme).">
         </div>
         <div id="loginGroupWrap" style="display:none">
         <label>Choisis ton groupe</label>
@@ -553,17 +559,17 @@
         </div>
         <div class="err" id="loginErr"></div>
         <div class="actions">
-          <button class="prof-link" onclick="showProfLogin()">⚙ Accès professeur</button>
-          <button class="primary" onclick="doStudentLogin()" id="loginBtn">Rejoindre →</button>
+          <button class="prof-link" onclick="showProfLogin()" title="Réservé au professeur : ouvre l'accès au pilotage de la classe.">⚙ Accès professeur</button>
+          <button class="primary" onclick="doStudentLogin()" id="loginBtn" title="Rejoindre le débat avec ce code et ces prénoms.">Rejoindre →</button>
         </div>
       </div>
       <div id="profLoginBlock" style="display:none">
         <label for="profPwd">Mot de passe professeur</label>
-        <input id="profPwd" type="password" placeholder="••••" autocomplete="off">
+        <input id="profPwd" type="password" placeholder="••••" autocomplete="off" title="Le mot de passe du professeur.">
         <div class="err" id="profErr"></div>
         <div class="actions">
-          <button class="prof-link" onclick="hideProfLogin()">← Retour</button>
-          <button class="primary" onclick="doProfLogin()">Accéder au pilotage →</button>
+          <button class="prof-link" onclick="hideProfLogin()" title="Revenir à l'écran des élèves.">← Retour</button>
+          <button class="primary" onclick="doProfLogin()" title="Entrer dans l'espace professeur pour piloter la classe.">Accéder au pilotage →</button>
         </div>
       </div>
     </div>
@@ -650,7 +656,7 @@
       </div>
     </div>
     <div class="tools">
-      <span id="profConn" style="font-size:.82rem;color:var(--muted)" title="État de la connexion à Firebase. Vert : tout est synchronisé. Rouge : vérifie ta connexion réseau."><span class="conn-dot ok"></span>connecté</span>
+      <span id="profConn" style="font-size:.82rem;color:var(--muted)" title="État de la connexion. Vert : tout est synchronisé en direct. Rouge : vérifie ta connexion réseau."><span class="conn-dot ok"></span>connecté</span>
       <button class="ghost" onclick="resetStatus()" title="Repasse tous les statuts à 'à faire' pour tous les binômes.">↺ Statuts à zéro</button>
       <button class="ghost" onclick="resetTokens()" title="Redonne les 2 jetons d'aide à tous les binômes.">⟳ Rendre les aides</button>
       <button class="ghost" onclick="openProfMenu()" title="Plus d'actions (archiver, changer mot de passe…).">⋯ Plus</button>
@@ -724,11 +730,11 @@
 
 <!-- ============ Overlays ============ -->
 <div id="cineOverlay">
-  <button class="cine-close" id="cineClose" onclick="closeReveal()">Fermer ✕</button>
+  <button class="cine-close" id="cineClose" onclick="closeReveal()" title="Fermer l'animation et revenir au tableau.">Fermer ✕</button>
   <div class="cine-title" id="cineTitle"></div>
   <div class="cine-arena" id="cineArena"></div>
   <div class="cine-bravo" id="cineBravo">BRAVO</div>
-  <div class="cine-react" id="cineReact"><button onclick="sendReaction('clap')" aria-label="Applaudir">👏</button><button onclick="sendReaction('heart')" aria-label="Coeur">❤️</button><button onclick="sendReaction('fire')" aria-label="Feu">🔥</button></div>
+  <div class="cine-react" id="cineReact"><button onclick="sendReaction('clap')" aria-label="Applaudir" title="Applaudir le binôme.">👏</button><button onclick="sendReaction('heart')" aria-label="Coeur" title="Envoyer un cœur.">❤️</button><button onclick="sendReaction('fire')" aria-label="Feu" title="Mettre le feu : c'était excellent !">🔥</button></div>
   <div class="cine-fx" id="cineFx"></div>
   <div class="cine-flash" id="cineFlash"></div>
 </div>
@@ -749,19 +755,19 @@
     <h2 style="text-align:center;margin-bottom:14px">Mes débats</h2>
     <div id="debatList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
     <details>
-      <summary style="cursor:pointer;font-weight:600;margin-bottom:8px">➕ Créer un nouveau débat</summary>
+      <summary style="cursor:pointer;font-weight:600;margin-bottom:8px" title="Déplier le formulaire pour créer un nouveau débat.">➕ Créer un nouveau débat</summary>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
-        <input id="dc_title" placeholder="Titre (ex : Le triomphe simien)">
-        <input id="dc_work" placeholder="Œuvre (ex : La Planète des singes)">
-        <input id="dc_author" placeholder="Auteur (ex : Pierre Boulle)">
-        <input id="dc_level" placeholder="Niveau (ex : 3e)">
-        <input id="dc_objective" placeholder="Objectif pédagogique">
-        <textarea id="dc_motion" placeholder="Motion / affirmation du débat" rows="2"></textarea>
-        <button class="primary" onclick="createDebatFromForm()">Créer et ouvrir →</button>
+        <input id="dc_title" title="Le nom du débat, tel qu'il apparaîtra aux élèves." placeholder="Titre (ex : Le triomphe simien)">
+        <input id="dc_work" title="L'œuvre étudiée (livre, pièce de théâtre…)." placeholder="Œuvre (ex : La Planète des singes)">
+        <input id="dc_author" title="L'auteur de l'œuvre." placeholder="Auteur (ex : Pierre Boulle)">
+        <input id="dc_level" title="La classe concernée (par exemple 3e)." placeholder="Niveau (ex : 3e)">
+        <input id="dc_objective" title="Ce que les élèves doivent comprendre ou apprendre." placeholder="Objectif pédagogique">
+        <textarea id="dc_motion" title="L'affirmation qui sera débattue : un camp la défend, l'autre la conteste." placeholder="Motion / affirmation du débat" rows="2"></textarea>
+        <button class="primary" onclick="createDebatFromForm()" title="Créer ce débat et l'ouvrir tout de suite.">Créer et ouvrir →</button>
       </div>
     </details>
     <div class="acts" style="margin-top:14px">
-      <button class="ghost" onclick="cancelDebatChooser()">← Accueil</button>
+      <button class="ghost" onclick="cancelDebatChooser()" title="Revenir à l'écran d'accueil sans ouvrir de débat.">← Accueil</button>
     </div>
   </div>
 </div>
@@ -780,11 +786,11 @@
   <div class="gelcard" style="text-align:left;max-width:460px">
     <h2 style="font-size:1.3rem;margin-bottom:18px;text-align:center" id="editTitle">Binôme</h2>
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 1</label>
-    <input id="editA" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <input id="editA" title="Prénom du premier élève du binôme." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 2 (laisser vide si seul)</label>
-    <input id="editB" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <input id="editB" title="Prénom du deuxième élève (laisse vide s'il est seul)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 3 (trinôme)</label>
-    <input id="editC" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
+    <input id="editC" title="Prénom du troisième élève (trinôme)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
     <div class="acts" style="justify-content:space-between">
       <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce binôme du tableau (action irréversible).">Supprimer</button>
       <div style="display:flex;gap:10px">
@@ -799,7 +805,7 @@
   <div class="gelcard" style="text-align:left;max-width:440px">
     <h2 style="font-size:1.25rem;margin-bottom:18px;text-align:center">Actions avancées</h2>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="enterDebatMode()" title="Lance le mode débat pour toute la classe : poules, tirage POUR/CONTRE et chronomètre. Les tablettes des élèves basculent automatiquement.">🎙 Mode débat — lancer les joutes</button>
-    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="changePassword()" title="Modifier le mot de passe d'accès au mode prof. Stocké dans Firebase, prend effet immédiatement.">🔑 Changer le mot de passe prof</button>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="changePassword()" title="Modifier le mot de passe d'accès au mode professeur. Le changement prend effet tout de suite, sur toutes les tablettes.">🔑 Changer le mot de passe prof</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="archiveCurrentSession()" title="Range la session actuelle dans les archives sans en créer une nouvelle. Utile pour faire une pause.">📦 Archiver cette session (sans en créer une nouvelle)</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left;color:var(--accent2)" onclick="wipeAll()" title="Supprime toute la session active sans archiver (binômes, statuts, aides). Action irréversible.">🗑 Effacer toute la session active (irréversible)</button>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeMenu()" title="Fermer ce menu.">Fermer</button></div>
@@ -809,11 +815,11 @@
 <div class="overlay" id="pwdOverlay">
   <div class="gelcard" style="text-align:left;max-width:400px">
     <h2 style="font-size:1.2rem;margin-bottom:6px;text-align:center">Nouveau mot de passe prof</h2>
-    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px;text-align:center">Stocké dans Firebase. Prend effet immédiatement.</p>
-    <input id="pwdNew" type="password" placeholder="Nouveau mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:10px" autocomplete="new-password">
-    <input id="pwdConfirm" type="password" placeholder="Confirmer le mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:6px" autocomplete="new-password">
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px;text-align:center">Le changement prend effet tout de suite, sur toutes les tablettes.</p>
+    <input id="pwdNew" type="password" title="Le nouveau mot de passe du professeur." placeholder="Nouveau mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:10px" autocomplete="new-password">
+    <input id="pwdConfirm" type="password" title="Retape le nouveau mot de passe pour confirmer." placeholder="Confirmer le mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:6px" autocomplete="new-password">
     <div id="pwdErr" style="color:var(--accent2);font-size:.85rem;min-height:1.2em;margin-bottom:12px"></div>
-    <div class="acts"><button class="ghost" onclick="closePwdOverlay()" title="Annuler le changement.">Annuler</button><button class="primary" onclick="confirmChangePassword()" title="Enregistrer le nouveau mot de passe dans Firebase.">Enregistrer</button></div>
+    <div class="acts"><button class="ghost" onclick="closePwdOverlay()" title="Annuler le changement.">Annuler</button><button class="primary" onclick="confirmChangePassword()" title="Enregistrer le nouveau mot de passe.">Enregistrer</button></div>
   </div>
 </div>
 
@@ -860,7 +866,7 @@
   </div>
 </div>
 
-<input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="handleImportFile(event)">
+<input type="file" id="importFileInput" accept="application/json,.json" style="display:none" onchange="handleImportFile(event)" title="Choisir le fichier de sauvegarde à importer.">
 
 <div id="toast" class="toast"></div>
 
@@ -1356,7 +1362,7 @@ window.addEventListener("load", async () => {
     watchClasses();
   } catch(e) {
     console.error("Firebase init error:", e);
-    toast("⚠ Impossible de joindre Firebase. Vérifiez votre connexion.");
+    toast("⚠ Impossible de joindre le serveur. Vérifiez votre connexion.");
     return;
   }
   // Si un mode est dans l'URL (?prof=1 par exemple), on respecte
@@ -1427,7 +1433,7 @@ function renderRoster(data){
   var wrap=$("loginRosterWrap"), box=$("rosterList");
   if(!wrap||!box) return false;
   if(!list.length){ wrap.style.display="none"; return false; }
-  box.innerHTML=list.map(function(nm,i){ var sel=studentRosterSel.indexOf(nm)>-1; return '<button type="button" class="roster-chip'+(sel?" on":"")+'" onclick="toggleRosterIdx('+i+')">'+esc(nm)+'</button>'; }).join("");
+  box.innerHTML=list.map(function(nm,i){ var sel=studentRosterSel.indexOf(nm)>-1; return '<button type="button" class="roster-chip'+(sel?" on":"")+'" title="Touche ton prénom pour le sélectionner (1 à 3 élèves par binôme)." onclick="toggleRosterIdx('+i+')">'+esc(nm)+'</button>'; }).join("");
   wrap.style.display="block";
   return true;
 }
@@ -3701,8 +3707,63 @@ $("confirmYes").addEventListener("click", ()=>{
 // Info autosave (n'a plus de sens en mode Firebase, mais on garde un footer informatif)
 const info = $("autosaveInfo");
 if(info){
-  info.innerHTML = '<span style="color:var(--done)">●</span> Données synchronisées en temps réel (Firebase).';
+  info.innerHTML = '<span style="color:var(--done)">●</span> Données synchronisées en temps réel.';
 }
+
+/* ════════════ Icônes d'aide ⓘ : bulle au survol ET au clic (compatible tablette) ════════════
+   Chaque <button> porteur d'un title reçoit une petite icône ⓘ à côté (hors du bouton).
+   Survol = aperçu ; clic/tap = épinglé. Un observateur couvre tout le contenu généré ensuite. */
+(function(){
+  if(typeof document==="undefined") return;
+  var bubble=null, pinned=null;
+  function getBubble(){ if(!bubble){ bubble=document.createElement("div"); bubble.id="tipBubble"; (document.body||document.documentElement).appendChild(bubble); } return bubble; }
+  function showTip(icon){
+    var bb=getBubble(); bb.textContent=icon.getAttribute("data-tip")||""; bb.classList.add("show");
+    var r=icon.getBoundingClientRect(), bw=bb.offsetWidth, bh=bb.offsetHeight;
+    var left=r.left + r.width/2 - bw/2, top=r.bottom + 8;
+    left=Math.max(8, Math.min(left, window.innerWidth - bw - 8));
+    if(top + bh > window.innerHeight - 8) top=r.top - bh - 8;
+    if(top < 8) top=8;
+    bb.style.left=left+"px"; bb.style.top=top+"px";
+  }
+  function hideTip(){ if(bubble) bubble.classList.remove("show"); pinned=null; }
+  function closestCls(el,cls){ while(el && el.classList){ if(el.classList.contains(cls)) return el; el=el.parentElement; } return null; }
+  document.addEventListener("mouseover", function(e){ var i=closestCls(e.target,"tip-i"); if(i && !pinned) showTip(i); });
+  document.addEventListener("mouseout",  function(e){ var i=closestCls(e.target,"tip-i"); if(i && !pinned) hideTip(); });
+  document.addEventListener("click", function(e){
+    var i=closestCls(e.target,"tip-i");
+    if(i){ e.preventDefault(); e.stopPropagation(); if(pinned===i){ hideTip(); } else { pinned=i; showTip(i); } return; }
+    if(pinned) hideTip();
+  }, true);
+  window.addEventListener("scroll", function(){ if(pinned) hideTip(); }, true);
+  window.addEventListener("resize", function(){ if(pinned) hideTip(); });
+  function decorate(btn){
+    if(!btn || btn.tagName!=="BUTTON") return;
+    if(btn.classList.contains("tip-i") || btn.classList.contains("roster-chip")) return;
+    if(btn.getAttribute("data-tipdone")) return;
+    var txt=btn.getAttribute("title"); if(!txt) return;
+    btn.setAttribute("data-tipdone","1"); btn.removeAttribute("title");
+    var b=document.createElement("button");
+    b.type="button"; b.className="tip-i"; b.setAttribute("aria-label","Aide"); b.setAttribute("data-tip",txt); b.textContent="i";
+    if(btn.parentNode) btn.parentNode.insertBefore(b, btn.nextSibling);
+  }
+  function decorateAll(root){ try{ (root||document).querySelectorAll("button[title]").forEach(decorate); }catch(_){} }
+  function start(){
+    decorateAll(document);
+    try{
+      var obs=new MutationObserver(function(muts){
+        muts.forEach(function(m){
+          for(var k=0;k<m.addedNodes.length;k++){ var n=m.addedNodes[k]; if(!n || n.nodeType!==1) continue;
+            if(n.tagName==="BUTTON" && n.hasAttribute("title")) decorate(n);
+            if(n.querySelectorAll) n.querySelectorAll("button[title]").forEach(decorate);
+          }
+        });
+      });
+      obs.observe(document.body,{childList:true,subtree:true});
+    }catch(_){}
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
+})();
 
 </script>
 </body>
