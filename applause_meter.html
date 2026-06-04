@@ -2555,6 +2555,12 @@ function VueBoard(p){
             h("div",{className:"board-neutre-emoji"},"📋"),
             h("div",{className:"board-neutre-titre"},"Évaluation de "+prenom(reader)+" terminée"),
             h("div",{className:"board-neutre-sub"},prenom(reader)+" consulte son bilan. Le prof passe au lecteur suivant quand c'est prêt."))
+      : paused
+        ? h("div",{className:"board-neutre"},
+            h("div",{style:{fontSize:".9rem",fontWeight:600,color:"rgba(255,255,255,.45)",letterSpacing:".4em",textTransform:"uppercase",marginBottom:36}},"⏸ Pause"),
+            h("div",{className:"board-breath-circle"}),
+            h("div",{style:{marginTop:36,fontSize:"1.4rem",color:"rgba(255,255,255,.7)",fontWeight:600}},"🎤 "+prenom(reader)),
+            h("div",{style:{marginTop:8,fontSize:".88rem",color:"rgba(255,255,255,.4)"}},(session.pausedDuration||0)===0 ? "Se prépare à lire — le professeur démarrera quand c'est prêt." : "Reprise dans un instant…"))
       : h(React.Fragment,null,
           !fini ? h("div",{className:"board-chrono"+(remaining<=10?" alert":"")}, fmtSec(remaining)) : null,
           h("div",{className:"board-top"},
@@ -2591,11 +2597,7 @@ function VueBoard(p){
           fini ? h("div",{className:"board-paillettes-zone"},
             paillettes.map(function(p){return h("span",{className:"paillette-rise",key:p.id,style:{left:p.left+"%"}},p.emoji);})) : null,
           fini && messageFinIdx!==null ? h("div",{className:"board-fin-message"},
-            (MESSAGES_FIN[messageFinIdx]||MESSAGES_FIN[0]).replace("{prénom}", prenom(reader))) : null,
-          paused ? h("div",{className:"board-pause-overlay"},
-            h("div",{className:"board-pause-label"},"⏸ Pause"),
-            h("div",{className:"board-breath-circle"}),
-            h("div",{className:"board-pause-reader"},prenom(reader))) : null));
+            (MESSAGES_FIN[messageFinIdx]||MESSAGES_FIN[0]).replace("{prénom}", prenom(reader))) : null));
 }
 
 // ════════════ TABLETTE ÉLÈVE ════════════
@@ -3260,7 +3262,9 @@ function PhonePilot(p){
     var qr=new URLSearchParams(window.location.search).get("qr");
     if(qr) db.ref(DB_ROOT+"/qrScans/"+qr).set(firebase.database.ServerValue.TIMESTAMP);
   },[]);
-  return h(AppProf,{onBack:p.onBack, test:p.test, onQuitTest:p.onQuitTest});
+  // Wrapper avec zoom CSS pour confort de lecture sur petit écran.
+  return h("div",{style:{zoom:1.18}},
+    h(AppProf,{onBack:p.onBack, test:p.test, onQuitTest:p.onQuitTest}));
 }
 
 // ════════════ ROUTEUR ════════════
