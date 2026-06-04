@@ -707,13 +707,41 @@ window.onerror = function(msg, src, line, col, err){
   try {
     var existing = document.getElementById("__err_overlay");
     if(existing) existing.remove();
-    var div = document.createElement("div");
-    div.id = "__err_overlay";
-    div.style.cssText = "position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px;font-family:monospace;font-size:11px;z-index:99999;max-height:60vh;overflow:auto;white-space:pre-wrap;border-bottom:3px solid #991b1b";
     var stack = err && err.stack ? err.stack : (src + ":" + line + ":" + col);
-    div.textContent = "🐞 ERREUR JS\n" + msg + "\n\n" + stack + "\n\n[Tape ici pour fermer]";
-    div.onclick = function(){ div.remove(); };
-    document.body.appendChild(div);
+    var full = "🐞 ERREUR JS\n" + msg + "\n\n" + stack;
+    var wrap = document.createElement("div");
+    wrap.id = "__err_overlay";
+    wrap.style.cssText = "position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px;font-family:monospace;font-size:11px;z-index:99999;max-height:60vh;overflow:auto;border-bottom:3px solid #991b1b";
+    var btnRow = document.createElement("div");
+    btnRow.style.cssText = "display:flex;gap:8px;margin-bottom:8px;position:sticky;top:0;background:#dc2626;padding-bottom:6px";
+    var btnCopy = document.createElement("button");
+    btnCopy.textContent = "📋 Copier l'erreur";
+    btnCopy.style.cssText = "background:#fff;color:#dc2626;border:0;padding:8px 14px;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer";
+    btnCopy.onclick = function(ev){
+      ev.stopPropagation();
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(full).then(function(){ btnCopy.textContent="✓ Copié !"; }, function(){ btnCopy.textContent="❌ Échec"; });
+      } else {
+        // Fallback : sélectionne le texte
+        var pre = document.getElementById("__err_pre");
+        if(pre){
+          var rng = document.createRange(); rng.selectNodeContents(pre);
+          var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rng);
+          btnCopy.textContent = "✓ Texte sélectionné — Cmd/Ctrl+C";
+        }
+      }
+    };
+    var btnClose = document.createElement("button");
+    btnClose.textContent = "✕ Fermer";
+    btnClose.style.cssText = "background:transparent;color:#fff;border:1px solid #fff;padding:8px 14px;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer";
+    btnClose.onclick = function(ev){ ev.stopPropagation(); wrap.remove(); };
+    btnRow.appendChild(btnCopy); btnRow.appendChild(btnClose);
+    var pre = document.createElement("pre");
+    pre.id = "__err_pre";
+    pre.style.cssText = "white-space:pre-wrap;margin:0;font-size:11px;user-select:text;-webkit-user-select:text";
+    pre.textContent = full;
+    wrap.appendChild(btnRow); wrap.appendChild(pre);
+    document.body.appendChild(wrap);
   } catch(e){}
   return false;
 };
@@ -747,6 +775,18 @@ var COMPLIMENTS_DEFAUT = [
   "Belle énergie",
   "On avait envie d'écouter",
   "Tu articulais bien"
+];
+
+// Pool de messages timides (utilisé dans REGLAGES_DEFAUT ci-dessous — doit être défini AVANT)
+var MESSAGES_TIMIDES_DEFAUT = [
+  "🌱 Tu as ta voix toi aussi — quand tu veux, elle est attendue.",
+  "📖 Et toi, quel passage aurais-tu envie de partager ?",
+  "💛 Personne ne te jugera, on est là pour t'encourager.",
+  "🎤 Il reste de la place dans la file — viens quand tu te sens prêt·e.",
+  "✨ Ta lecture compte autant que celle des autres.",
+  "🪶 Tu peux commencer par 2 lignes seulement si tu préfères.",
+  "🌟 Inscris-toi quand tu veux — on t'écoutera avec plaisir.",
+  "🤝 Tu peux te lancer même sur un tout petit passage."
 ];
 
 var REGLAGES_DEFAUT = {
@@ -962,16 +1002,7 @@ var MIN_COMP=1, MAX_COMP=16;
 var MIN_MSGT=1, MAX_MSGT=20;                  // pool messages timides
 var MAX_DESISTEMENTS=2;                       // règle stricte : pas négociable (sinon descente infinie)
 
-var MESSAGES_TIMIDES_DEFAUT = [
-  "🌱 Tu as ta voix toi aussi — quand tu veux, elle est attendue.",
-  "📖 Et toi, quel passage aurais-tu envie de partager ?",
-  "💛 Personne ne te jugera, on est là pour t'encourager.",
-  "🎤 Il reste de la place dans la file — viens quand tu te sens prêt·e.",
-  "✨ Ta lecture compte autant que celle des autres.",
-  "🪶 Tu peux commencer par 2 lignes seulement si tu préfères.",
-  "🌟 Inscris-toi quand tu veux — on t'écoutera avec plaisir.",
-  "🤝 Tu peux te lancer même sur un tout petit passage."
-];
+// (MESSAGES_TIMIDES_DEFAUT est défini plus haut, avant REGLAGES_DEFAUT qui l'utilise)
 
 function parseCriteresJSON(txt){
   // Tolère du markdown ```json ... ``` autour
@@ -3284,11 +3315,29 @@ ErrorBoundary.prototype.componentDidCatch = function(error, info){
 };
 ErrorBoundary.prototype.render = function(){
   if(this.state.err){
-    return h("div",{style:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#dc2626",color:"#fff",padding:16,fontFamily:"monospace",fontSize:12,zIndex:99999,overflow:"auto",whiteSpace:"pre-wrap"},onClick:function(){window.location.reload();}},
+    var full = "🐞 ERREUR REACT\n" + String(this.state.err && this.state.err.message || this.state.err) + "\n\n" + this.state.stack;
+    return h("div",{style:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#dc2626",color:"#fff",padding:16,fontFamily:"monospace",fontSize:12,zIndex:99999,overflow:"auto"}},
       h("div",{style:{fontSize:18,fontWeight:900,marginBottom:8}},"🐞 ERREUR REACT CAPTÉE"),
-      h("div",{style:{marginBottom:8}}, String(this.state.err && this.state.err.message || this.state.err)),
-      h("pre",{style:{whiteSpace:"pre-wrap",fontSize:11}}, this.state.stack),
-      h("div",{style:{marginTop:12,fontSize:12,fontStyle:"italic"}}, "[Tape pour recharger la page]"));
+      h("div",{style:{display:"flex",gap:8,marginBottom:12,position:"sticky",top:0,background:"#dc2626",padding:"4px 0"}},
+        h("button",{id:"__rb_copy",style:{background:"#fff",color:"#dc2626",border:0,padding:"10px 16px",borderRadius:6,fontWeight:800,fontSize:13,cursor:"pointer"},
+          onClick:function(ev){
+            ev.stopPropagation();
+            var btn=document.getElementById("__rb_copy");
+            if(navigator.clipboard && navigator.clipboard.writeText){
+              navigator.clipboard.writeText(full).then(function(){ btn.textContent="✓ Copié !"; }, function(){ btn.textContent="❌ Échec"; });
+            } else {
+              var pre = document.getElementById("__rb_pre");
+              if(pre){
+                var rng = document.createRange(); rng.selectNodeContents(pre);
+                var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rng);
+                btn.textContent = "✓ Texte sélectionné — Cmd/Ctrl+C";
+              }
+            }
+          }},"📋 Copier l'erreur"),
+        h("button",{style:{background:"transparent",color:"#fff",border:"1px solid #fff",padding:"10px 16px",borderRadius:6,fontWeight:800,fontSize:13,cursor:"pointer"},
+          onClick:function(ev){ ev.stopPropagation(); window.location.reload(); }},"🔄 Recharger")),
+      h("div",{style:{marginBottom:8,fontWeight:700}}, String(this.state.err && this.state.err.message || this.state.err)),
+      h("pre",{id:"__rb_pre",style:{whiteSpace:"pre-wrap",fontSize:11,userSelect:"text",WebkitUserSelect:"text",margin:0}}, this.state.stack));
   }
   return this.props.children;
 };
