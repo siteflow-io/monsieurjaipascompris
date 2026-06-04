@@ -101,19 +101,19 @@ button{font-family:inherit;cursor:pointer;border:none}
 .board-top{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;margin-bottom:10px}
 .board-reader{font-size:3.2rem;font-weight:900;color:var(--jaune);letter-spacing:-1px;text-align:center;line-height:1}
 .board-sub{color:#B9C0E0;font-size:1.05rem;font-weight:600}
-.board-meters{flex:1;display:flex;justify-content:center;align-items:flex-end;gap:48px;padding:20px 0}
+.board-meters{flex:1;display:flex;justify-content:center;align-items:stretch;gap:48px;padding:20px 0;min-height:0}
 .board-meters.crit-6,.board-meters.crit-7{gap:32px}
 .board-meters.crit-8{gap:22px}
-.board .meter{width:170px;max-width:20vw}
+.board .meter{width:170px;max-width:20vw;height:100%;min-height:0;justify-content:flex-end}
 .board-meters.crit-5 .meter,.board-meters.crit-6 .meter{width:140px;max-width:16vw}
 .board-meters.crit-7 .meter,.board-meters.crit-8 .meter{width:118px;max-width:13vw}
-.board .meter-track{height:72vh;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:6px 4px;display:flex;flex-direction:column-reverse;gap:1px;overflow:hidden}
+.board .meter-track{flex:1;min-height:0;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:6px 4px;display:flex;flex-direction:column-reverse;gap:1px;overflow:hidden;width:100%}
 .board .meter-seg{flex:1;border-radius:2px;background:rgba(255,255,255,.05)}
 
 /* ---- Mode checkpoints : ligne flash au seuil + pile horaires + compteur ---- */
 .board .meter{position:relative}
-.board .meter-trackwrap{position:relative;width:100%;display:flex;justify-content:center}
-.board .meter-trackwrap .meter-track{width:100%}
+.board .meter-trackwrap{position:relative;width:100%;flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.board .meter-trackwrap .meter-track{width:100%;height:100%}
 .board .cp-line{position:absolute;left:6px;right:6px;height:3px;border-radius:2px;background:linear-gradient(to right,transparent,#ffd24f 18%,#fff 50%,#ffd24f 82%,transparent);box-shadow:0 0 12px #ffd24f,0 0 24px rgba(255,210,79,.6);animation:cpFlash 2.4s ease-in-out infinite;pointer-events:none;z-index:5;transform:translateY(-50%)}
 @keyframes cpFlash{0%,90%,100%{opacity:.55}45%{opacity:1}}
 .board .cp-stack{position:absolute;right:-72px;display:flex;flex-direction:column;gap:3px;font-family:ui-monospace,Menlo,monospace;pointer-events:none;z-index:6;transform:translateY(-50%)}
@@ -361,6 +361,8 @@ button{font-family:inherit;cursor:pointer;border:none}
 .help-section-body ul{margin:.4rem 0 .7rem 1.3rem} .help-section-body li{margin-bottom:.3rem}
 .help-section-body .important{background:#FFF8E1;border-left:3px solid var(--jaune);padding:.55rem .75rem;border-radius:6px;margin:.5rem 0}
 .help-fab{position:fixed;bottom:18px;right:18px;background:var(--jaune);color:var(--noir);width:52px;height:52px;border-radius:50%;font-size:1.5rem;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:1500;display:flex;align-items:center;justify-content:center}
+@keyframes helpPulse{0%,100%{box-shadow:0 6px 18px rgba(0,0,0,.25),0 0 0 0 rgba(255,210,63,.7);transform:scale(1)}50%{box-shadow:0 6px 18px rgba(0,0,0,.25),0 0 0 14px rgba(255,210,63,0);transform:scale(1.08)}}
+.help-fab.pulse{animation:helpPulse 1.8s ease-in-out infinite}
 
 @media(max-width:600px){
   .accueil h1{font-size:1.9rem} .board-reader{font-size:2.2rem}
@@ -1253,6 +1255,15 @@ function HelpModal(p){
     ];
   } else {
     contenu=[
+      section("0","🛑 À lire en premier", h(F,null,
+        h("p",null,"Tu es sur une tablette. ",h("strong",null,"Avant de toucher à quoi que ce soit"),", lis ces 4 étapes. C'est rapide et tu sauras quoi faire."),
+        h("ol",{style:{paddingLeft:20,lineHeight:1.5}},
+          h("li",null,h("strong",null,"Trouve ta table. "),"Regarde le numéro posé sur ta table physique (T1, T2, T3…) et appuie sur ce numéro à l'écran « Quelle table ? »."),
+          h("li",null,h("strong",null,"Connecte-toi. "),"Tape ton NOM en MAJUSCULES puis ton Prénom (comme à l'appel)."),
+          h("li",null,h("strong",null,"Partage avec tes camarades. "),"Si d'autres élèves sont déjà connectés à cette tablette, tu les rejoins. Vous serez 2 ou 3 ensemble (3 max)."),
+          h("li",null,h("strong",null,"Libère la tablette à la fin. "),"Quand votre groupe a fini son tour, appuyez sur « ↻ Élèves suivants » en haut à gauche pour faire de la place à 3 autres camarades. ",h("strong",null,"La tablette ne bouge pas"),", c'est vous qui changez.")),
+        h("p",{className:"important",style:{marginTop:10}},"En cas de doute pendant la séance, retape sur le « ? » jaune en bas à droite pour revenir ici.")
+      )),
       section("a","👏 C'est quoi ?", h(F,null,
         h("p",null,"Quand un camarade lit, tu fais monter quatre barres au tableau en applaudissant. ",
           h("strong",{className:"help-key"},"Pas pour le noter"),
@@ -1263,7 +1274,10 @@ function HelpModal(p){
       )),
       section("b","🎮 Comment faire", h(F,null,
         h("ul",null,
-          h("li",null,h("strong",null,"Connexion : "),"choisis le numéro de ta table, puis tape ton NOM (en majuscules) et ton Prénom. Si une autre tablette est déjà prise, vous pouvez être 2 ou 3 sur la même."),
+          h("li",null,h("strong",null,"Choisir ta table : "),"regarde le numéro physiquement posé sur ta table (T1, T2…) et appuie sur le bouton correspondant à l'écran. Si tu t'es trompé, tape « ← Accueil » en haut puis recommence."),
+          h("li",null,h("strong",null,"Te connecter : "),"tape ton NOM en MAJUSCULES, puis ton Prénom. Tu apparais en bas dans la liste des occupants."),
+          h("li",null,h("strong",null,"S'ajouter en cours : "),"si un camarade arrive sur ta tablette pendant la séance, il tape « + Ajouter » en bas et se connecte (jusqu'à 3 occupants par tablette)."),
+          h("li",null,h("strong",null,"« ↻ Élèves suivants » : "),"quand votre groupe a terminé, appuyez sur ce bouton en haut à gauche pour libérer la tablette. 3 nouveaux élèves se connectent à la place — la tablette reste à votre table."),
           h("li",null,h("strong",null,"Pendant la lecture : "),"appuie ou maintiens un des 4 boutons quand tu trouves que ça marche bien. Tu peux aussi cocher un compliment."),
           h("li",null,h("strong",null,"Quand c'est ton tour de lire : "),"ta zone affiche « 🎤 C'est à toi ». Tu n'applaudis pas, tu lis !"),
           h("li",null,h("strong",null,"Phase de vote : "),"chacun à son tour choisit son prénom dans la liste et répond aux 4 questions sur le lecteur."),
@@ -1295,8 +1309,8 @@ function HelpModal(p){
 function HelpFab(p){
   var s=useState(false), o=s[0], set=s[1];
   return h(React.Fragment,null,
-    h("button",{className:"help-fab",title:"Ouvrir le mode d'emploi.",onClick:function(){set(true);}},"?"),
-    o && h(HelpModal,{role:p.role,onClose:function(){set(false);}}));
+    h("button",{className:"help-fab"+(p.pulse?" pulse":""),title:"Ouvrir le mode d'emploi.",onClick:function(){set(true);}},"?"),
+    o && h(HelpModal,{role:p.role,first:p.first,onClose:function(){set(false);}}));
 }
 
 </script>
@@ -1845,11 +1859,18 @@ function OngletPilotage(p){
         : h("p",{className:"muted"},"Aucun lecteur désigné : les tablettes affichent « attends le prof »."),
       h("div",{className:"btn-row",style:{marginTop:12}},
         h("button",{className:"btn btn-violet",style:{flex:1},onClick:function(){
+          // ─── Mode spontané : premier inscrit, premier servi ───
+          if(reg.modeSpontane){
+            var prem=premierDeLaFile(file);
+            if(prem){ lancerDepuisFile(prem.slug, prem.entry.nom, prem.entry.nbLignes); return; }
+            // file vide → fallback séquentiel
+          }
+          // Mode normal (ou file spontanée vide) : ordre liste classe, absents sautés
           if(!elevesPresents.length)return;
           var idx=elevesPresents.indexOf(session.reader);
           var nxt=elevesPresents[(idx+1)%elevesPresents.length];
           setReader(nxt);
-        },title:"Passe au lecteur suivant dans l'ordre de la liste classe. Les absents sont sautés."},"⏭️ Lecteur suivant"),
+        },title:"Mode spontané : prend le premier inscrit dans la file. Sinon : ordre liste classe, absents sautés."},"⏭️ Lecteur suivant"),
         session.reader && h("button",{className:"btn btn-ghost",onClick:function(){setReader("");},
           title:"Arrête le passage en cours sans archiver de bilan. Idéal pour revenir à la désignation."},"⏹️ Stop")),
       session.reader ? h("div",{className:"btn-row",style:{marginTop:8,flexWrap:"wrap"}},
@@ -2638,13 +2659,19 @@ function AppEleve(p){
     return h("div",{className:"eleve"},
       h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:p.onBack,title:"Retour à l'accueil."},"← Accueil"),h("h2",null,"Quelle table ?")),
       h("div",{className:"eleve-wait"},
+        h("div",{style:{margin:"4px auto 14px",maxWidth:480,padding:"12px 14px",background:"rgba(255,210,63,.18)",border:"1.5px dashed var(--jaune)",borderRadius:12,textAlign:"center",fontSize:".95rem",lineHeight:1.45,color:"var(--noir)"}},
+          "👉 Avant tout : tape sur le bouton ",
+          h("strong",{style:{display:"inline-block",background:"var(--jaune)",color:"var(--noir)",borderRadius:"50%",width:24,height:24,lineHeight:"24px",fontWeight:900,verticalAlign:"middle",textAlign:"center"}},"?"),
+          " en bas à droite pour lire le ",h("strong",null,"mode d'emploi"),".",
+          h("br"),
+          h("span",{style:{fontSize:".82rem",opacity:.78}},"Tu sauras quoi faire avant de toucher à quoi que ce soit.")),
         h("p",{className:"muted"},"Choisis le numéro de ta table :"),
         h("div",{className:"choice-list"},
           Array.apply(null,{length:reg.nbTables}).map(function(_,i){
             return h("button",{key:i,className:"classe-btn",onClick:function(){setTable("t"+(i+1));},
               title:"Sélectionne cette tablette comme la tienne. Tu pourras taper ton nom ensuite."},"Table "+(i+1));
           }))),
-      h(HelpFab,{role:"eleve"}));
+      h(HelpFab,{role:"eleve",pulse:true,first:"0"}));
   }
 
   // ---- 2. Attendre que la séance soit démarrée par le prof ----
@@ -2676,11 +2703,10 @@ function AppEleve(p){
     if(newList.length===0) db.ref(DB_ROOT+"/tablettes/"+table).remove();
     else db.ref(DB_ROOT+"/tablettes/"+table).set({occupants:newList, ts:Date.now()});
   }
-  function changerTable(){
-    if(!confirm("Quitter cette tablette ? Tous les occupants inscrits ici seront retirés. Tu pourras te reconnecter ailleurs.")) return;
-    // Anti-pollution : on retire ce que ce device avait inscrit avant de partir
+  function changerOccupants(){
+    if(!confirm("Faire tourner les élèves à cette tablette ?\n\nLes occupants actuels seront déconnectés pour laisser place à 3 nouveaux élèves.\nLa tablette reste à cette table.")) return;
     db.ref(DB_ROOT+"/tablettes/"+table).remove();
-    setTable("");
+    // pas de setTable("") : on garde la tablette à sa table physique, les 3 nouveaux élèves se connectent ici.
   }
   var dejaInscrits=occupants.map(function(o){return o.slug;});
 
@@ -2710,7 +2736,7 @@ function AppEleve(p){
   return h(EleveVote,{table:table,occupants:occupants,session:session,reg:reg,absents:absents,
     onAddOccupant:function(){setAddOpen(true);},
     onRemoveOccupant:retirerOccupant,
-    onChangeTable:changerTable, onBack:p.onBack});
+    onChangerOccupants:changerOccupants, onBack:p.onBack});
 }
 
 // ════════════ PHASE VOTE — sélecteur d'occupant + formulaire par critère ════════════
@@ -3037,90 +3063,106 @@ function EleveVote(p){
     setMonComp(nc);
   }
 
+  // ─── Rendu de la phase courante (extrait du return pour empêcher tout ré-enfouissement) ───
+  function renderPhase(){
+    // 1) Pas de lecteur désigné
+    if(!reader){
+      if(reg.modeSpontane){
+        return h("div",{style:{flex:1,padding:12,overflowY:"auto"}},
+          h("div",{style:{textAlign:"center",marginBottom:14}},
+            h("div",{style:{fontSize:"2rem"}},"🎙️"),
+            h("div",{style:{fontWeight:800,color:"var(--violet)",marginTop:4}},"Lecture spontanée"),
+            h("p",{className:"muted",style:{fontSize:".82rem",marginTop:4}},"Tu peux t'inscrire pour lire à ton tour.")),
+          occupants.map(function(occ){
+            return h(PanneauSpontane,{key:occ.slug,occ:occ,reg:reg,fileE:fileE,compteursE:compteursE,tabE:tabE,absents:p.absents||[],totalPassagesSession:totalPassagesSession,
+              onInscrire:inscrire, onDesister:desister});
+          }));
+      }
+      return h("div",{className:"eleve-wait"},h("div",{className:"big"},"⏳"),
+        h("p",{className:"muted"},"Attends que le professeur désigne un lecteur."));
+    }
+    // 2) Phase vote
+    if(enVote){
+      return h(PhaseVote,{occupants:occupants,reader:reader,reg:reg,passageId:session.passageId||""});
+    }
+    // 3) Phase bilan
+    if(enBilan){
+      return h(PhaseBilan,{occupants:occupants,reader:reader,reg:reg,
+        passageId:session.passageId||"",lecteurEstIci:lecteurEstIci});
+    }
+    // 4) Lecture terminée, attente du vote
+    if(phase==="fin"){
+      return h("div",{className:"eleve-wait"},
+        h("div",{className:"big"},"⏳"),
+        h("div",{style:{fontWeight:800,fontSize:"1.1rem",color:"var(--violet)",marginTop:8}},
+          "Lecture terminée"),
+        h("p",{className:"muted",style:{marginTop:8}},
+          "Le prof va lancer le tour de vote."));
+    }
+    // 5) Pause (cercle respirant)
+    if(paused){
+      return h("div",{className:"eleve-pause"},
+        h("div",{className:"eleve-pause-label"},"⏸ Pause"),
+        h("div",{className:"eleve-pause-circle"}),
+        h("p",{className:"eleve-pause-msg"},"On reprend dans un instant. Suis la respiration du cercle si tu veux."));
+    }
+    // 6) Applaudimètre live (par défaut)
+    return h(React.Fragment,null,
+      h("div",{className:"zones-multi zones-"+occupants.length},
+        occupants.map(function(occ){
+          var jeLis = reader === occ.nom;
+          return h("div",{className:"zone-occ"+(jeLis?" zone-lecteur":""),key:occ.slug},
+            h("div",{className:"zone-hdr"},
+              h("span",{className:"zone-name"}, prenom(occ.nom)),
+              h("button",{className:"zone-rm",onClick:function(){
+                if(confirm("Retirer "+prenom(occ.nom)+" de cette tablette ?")) p.onRemoveOccupant(occ.slug);
+              },title:"Retirer "+prenom(occ.nom)+" de cette tablette."},"×")),
+            jeLis
+              ? h("div",{className:"zone-overlay"},
+                  h("div",{className:"big"},"🎤"),
+                  h("div",{style:{fontWeight:800,marginTop:6,color:"var(--violet)"}},"C'est à toi"),
+                  session.nbLignes ? h("div",{style:{fontSize:".88rem",color:"var(--gris)",marginTop:2}}, session.nbLignes+" ligne"+(session.nbLignes>1?"s":"")) : null,
+                  h("p",{className:"muted",style:{fontSize:".82rem",marginTop:6,marginBottom:10}},"Laisse tes camarades t'encourager."),
+                  reg.modeSpontane ? h("button",{className:"btn btn-ghost",style:{fontSize:".82rem",padding:"6px 12px"},
+                    onClick:function(){
+                      if(confirm("Tu arrêtes ta lecture maintenant ? Ton passage sera marqué comme interrompu (pas de vote).")) arreterMaLecture();
+                    },
+                    title:"Tu arrêtes ta lecture toi-même. Le passage est marqué annulé, pas de phase vote."},"⏹ J'arrête") : null)
+              : h("div",{className:"zone-grid crit-"+nbCrit},
+                  reg.criteres.map(function(c,i){
+                    var pct=Math.max(0,Math.min(100,valsRef.current[i]||0));
+                    return h("button",{key:i,className:"clap-btn clap-c"+(i%8),
+                      title:"Maintiens ou tape pour faire monter le critère « "+c.label+" ».",
+                      onPointerDown:function(e){e.preventDefault();startPress(i);},
+                      onPointerUp:function(){stopPress(i);},
+                      onPointerLeave:function(){stopPress(i);},
+                      onPointerCancel:function(){stopPress(i);}},
+                      h("div",{className:"clap-fill",style:{height:pct+"%"}}),
+                      h("span",{className:"ce"},c.emoji),
+                      h("span",{className:"cl"},c.label));
+                  })));
+        })),
+      reg.complimentsOn && h("div",{className:"compliments-bar"},
+        h("div",{className:"ttl"},"💛 Un compliment ? (facultatif)"),
+        h("div",null, reg.compliments.map(function(txt,i){
+          return h("button",{key:i,className:"comp-chip"+(monComp[i]?" on":""),onClick:function(){toggleComp(i);},
+            title:monComp[i]?"Retirer ton compliment.":"Envoyer ce compliment au tableau."},txt);
+        }))));
+  }
+
   return h("div",{className:"eleve"},
     h("div",{className:"hdr"},
-      h("button",{className:"btn-back",onClick:p.onChangeTable,
-        title:"Quitte cette tablette. Tous les occupants seront retirés et tu pourras choisir une autre table."},"↺ Changer la table"),
+      h("button",{className:"btn-back",onClick:p.onChangerOccupants,
+        title:"Libère cette tablette pour 3 nouveaux élèves. Les occupants actuels sont déconnectés ; la tablette reste à cette table."},"↻ Élèves suivants"),
       h("h2",null,"Table "+p.table.slice(1)+" · "+occupants.length+"/3")),
     h("div",{className:"eleve-reader"},
       reader
         ? h(React.Fragment,null,h("div",{className:"lbl"},"on écoute"),h("div",{className:"who"},"🎤 "+prenom(reader)))
         : h("div",{className:"who"},"⏳ attends le prof")),
-
-    !reader
-      ? (reg.modeSpontane
-          ? h("div",{style:{flex:1,padding:12,overflowY:"auto"}},
-              h("div",{style:{textAlign:"center",marginBottom:14}},
-                h("div",{style:{fontSize:"2rem"}},"🎙️"),
-                h("div",{style:{fontWeight:800,color:"var(--violet)",marginTop:4}},"Lecture spontanée"),
-                h("p",{className:"muted",style:{fontSize:".82rem",marginTop:4}},"Tu peux t'inscrire pour lire à ton tour.")),
-              occupants.map(function(occ){
-                return h(PanneauSpontane,{key:occ.slug,occ:occ,reg:reg,fileE:fileE,compteursE:compteursE,tabE:tabE,absents:p.absents||[],totalPassagesSession:totalPassagesSession,
-                  onInscrire:inscrire, onDesister:desister});
-              }))
-          : h("div",{className:"eleve-wait"},h("div",{className:"big"},"⏳"),
-              h("p",{className:"muted"},"Attends que le professeur désigne un lecteur.")))
-      : enVote
-        ? h(PhaseVote,{occupants:occupants,reader:reader,reg:reg,passageId:session.passageId||""})
-      : enBilan
-        ? h(PhaseBilan,{occupants:occupants,reader:reader,reg:reg,
-            passageId:session.passageId||"",lecteurEstIci:lecteurEstIci})
-      : phase==="fin"
-        ? h("div",{className:"eleve-wait"},
-            h("div",{className:"big"},"⏳"),
-            h("div",{style:{fontWeight:800,fontSize:"1.1rem",color:"var(--violet)",marginTop:8}},
-              "Lecture terminée"),
-            h("p",{className:"muted",style:{marginTop:8}},
-              "Le prof va lancer le tour de vote."))
-      : paused
-        ? h("div",{className:"eleve-pause"},
-            h("div",{className:"eleve-pause-label"},"⏸ Pause"),
-            h("div",{className:"eleve-pause-circle"}),
-            h("p",{className:"eleve-pause-msg"},"On reprend dans un instant. Suis la respiration du cercle si tu veux."))
-        : h(React.Fragment,null,
-          h("div",{className:"zones-multi zones-"+occupants.length},
-            occupants.map(function(occ){
-              var jeLis = reader === occ.nom;
-              return h("div",{className:"zone-occ"+(jeLis?" zone-lecteur":""),key:occ.slug},
-                h("div",{className:"zone-hdr"},
-                  h("span",{className:"zone-name"}, prenom(occ.nom)),
-                  h("button",{className:"zone-rm",onClick:function(){
-                    if(confirm("Retirer "+prenom(occ.nom)+" de cette tablette ?")) p.onRemoveOccupant(occ.slug);
-                  },title:"Retirer "+prenom(occ.nom)+" de cette tablette."},"×")),
-                jeLis
-                  ? h("div",{className:"zone-overlay"},
-                      h("div",{className:"big"},"🎤"),
-                      h("div",{style:{fontWeight:800,marginTop:6,color:"var(--violet)"}},"C'est à toi"),
-                      session.nbLignes ? h("div",{style:{fontSize:".88rem",color:"var(--gris)",marginTop:2}}, session.nbLignes+" ligne"+(session.nbLignes>1?"s":"")) : null,
-                      h("p",{className:"muted",style:{fontSize:".82rem",marginTop:6,marginBottom:10}},"Laisse tes camarades t'encourager."),
-                      reg.modeSpontane ? h("button",{className:"btn btn-ghost",style:{fontSize:".82rem",padding:"6px 12px"},
-                        onClick:function(){
-                          if(confirm("Tu arrêtes ta lecture maintenant ? Ton passage sera marqué comme interrompu (pas de vote).")) arreterMaLecture();
-                        },
-                        title:"Tu arrêtes ta lecture toi-même. Le passage est marqué annulé, pas de phase vote."},"⏹ J'arrête") : null)
-                  : h("div",{className:"zone-grid crit-"+nbCrit},
-                      reg.criteres.map(function(c,i){
-                        var pct=Math.max(0,Math.min(100,valsRef.current[i]||0));
-                        return h("button",{key:i,className:"clap-btn clap-c"+(i%8),
-                          title:"Maintiens ou tape pour faire monter le critère « "+c.label+" ».",
-                          onPointerDown:function(e){e.preventDefault();startPress(i);},
-                          onPointerUp:function(){stopPress(i);},
-                          onPointerLeave:function(){stopPress(i);},
-                          onPointerCancel:function(){stopPress(i);}},
-                          h("div",{className:"clap-fill",style:{height:pct+"%"}}),
-                          h("span",{className:"ce"},c.emoji),
-                          h("span",{className:"cl"},c.label));
-                      })));
-            })),
-          occupants.length<3 ? h("button",{className:"btn-add-occ",onClick:p.onAddOccupant,
-            title:"Permet à un 2e ou 3e élève de rejoindre cette tablette (max 3)."},
-            "➕ Un autre élève rejoint la tablette") : null,
-          reg.complimentsOn && h("div",{className:"compliments-bar"},
-            h("div",{className:"ttl"},"💛 Un compliment ? (facultatif)"),
-            h("div",null, reg.compliments.map(function(txt,i){
-              return h("button",{key:i,className:"comp-chip"+(monComp[i]?" on":""),onClick:function(){toggleComp(i);},
-                title:monComp[i]?"Retirer ton compliment.":"Envoyer ce compliment au tableau."},txt);
-            })))),
+    renderPhase(),
+    occupants.length<3 ? h("button",{className:"btn-add-occ",onClick:p.onAddOccupant,
+      title:"Permet à un 2e ou 3e élève de rejoindre cette tablette (max 3). Disponible à tout moment de la séance."},
+      "➕ Un autre élève rejoint la tablette") : null,
     h(HelpFab,{role:"eleve"}));
 }
 
