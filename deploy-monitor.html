@@ -61,6 +61,8 @@
   .pill.idle{background:var(--panel-2);color:var(--ink-faint)} .pill.idle .d{background:var(--ink-faint)}
   @keyframes pulse{50%{opacity:.3}}
   .changed{font-size:10px;color:var(--accent);font-weight:600;margin-left:7px;letter-spacing:.05em}
+  .pushflag{display:inline-block;margin-left:9px;font-size:10px;font-weight:700;letter-spacing:.06em;
+    color:#1a1206;background:var(--accent);padding:2px 7px;border-radius:5px;vertical-align:1px}
   .detail{font-size:12px;color:var(--ink-dim);padding:4px 10px 12px;line-height:1.55}
   .detail .k{color:var(--ink-faint)}
   .swlist{font-family:var(--mono);font-size:12px}
@@ -218,9 +220,16 @@ async function run(){
 
     if(!files.length){ rows.innerHTML = `<tr><td colspan="4" class="detail">Aucun fichier .html trouvé sur <code>${branch}</code>${filter?` (filtre « ${filter} »)`:""}.</td></tr>`; setStatus("0 fichier"); return; }
 
-    const prev = JSON.parse(localStorage.getItem(LS) || "{}");
+    const prev = JSON.parse(localStorage.getItem(LS) || "{}");   // {path:{repo,served}}
     const next = {};
-    let okN=0, warnN=0, badN=0;
+    let okN=0, warnN=0, badN=0, pushN=0;
+
+    // nouveau push = le SHA source a changé depuis la dernière vérif de cette session
+    files.forEach(f=>{
+      const p = prev[f.path];
+      f.pushed = !!(p && p.repo && p.repo !== f.repoSha);
+      if(f.pushed) pushN++;
+    });
 
     // une ligne par fichier, vérifiées en parallèle limité
     for(const f of files){ f.tr = addRow(f); }
@@ -236,13 +245,14 @@ async function run(){
           if(!resp.ok) throw new Error("HTTP "+resp.status);
           const bytes = new Uint8Array(await resp.arrayBuffer());
           const servedSha = await gitBlobSha(bytes);
-          next[f.path] = servedSha;
+          next[f.path] = {repo:f.repoSha, served:servedSha};
           const synced = servedSha === f.repoSha;
-          const changed = prev[f.path] && prev[f.path] !== servedSha;
+          const changed = prev[f.path] && prev[f.path].served && prev[f.path].served !== servedSha;
           if(synced) okN++; else warnN++;
           paintRow(f, {servedSha, synced, changed, age:resp.headers.get("age")});
         }catch(err){
           badN++;
+          next[f.path] = {repo:f.repoSha, served:null};
           paintRow(f, {error:err.message});
         }
       }
@@ -252,7 +262,7 @@ async function run(){
     localStorage.setItem(LS, JSON.stringify(next));
     // tri visuel : désynchro/erreur en haut
     reorderRows();
-    setStatus(`${okN} synchro · ${warnN} désynchro · ${badN} erreur — ${new Date().toLocaleTimeString()}`);
+    setStatus(`${pushN?`🔔 ${pushN} push · `:""}${okN} synchro · ${warnN} désynchro · ${badN} erreur — ${new Date().toLocaleTimeString()}`);
   }catch(err){
     rows.innerHTML = `<tr><td colspan="4" class="banner bad" style="display:table-cell">${err.message}</td></tr>`;
     setStatus("échec");
@@ -264,8 +274,9 @@ async function run(){
 /* ---------- rendu des lignes ---------- */
 function addRow(f){
   const tr = document.createElement("tr"); tr.className="row";
+  const pushBadge = f.pushed ? `<span class="pushflag">🔔 PUSH</span>` : "";
   tr.innerHTML = `
-    <td class="file"><a href="${$("base").value.trim()+f.path}" target="_blank" rel="noopener">${f.path}</a></td>
+    <td class="file"><a href="${$("base").value.trim()+f.path}" target="_blank" rel="noopener">${f.path}</a>${pushBadge}</td>
     <td class="sha">${short(f.repoSha)}</td>
     <td class="sha js-served">…</td>
     <td class="js-state"><span class="pill wait"><span class="d"></span>vérif…</span></td>`;
@@ -279,20 +290,20 @@ function paintRow(f, r){
   if(r.error){
     served.textContent = "—";
     state.innerHTML = `<span class="pill bad"><span class="d"></span>erreur</span>`;
-    tr.dataset.rank = "0";
+    tr.dataset.rank = f.pushed ? "0" : "1";
     tr.title = r.error;
     return;
   }
-  served.textContent = short(r.servedSha) + (r.changed ? `<span class="changed">CHANGÉ</span>`:"");
   served.innerHTML = `<span>${short(r.servedSha)}</span>` + (r.changed?`<span class="changed">↻ CHANGÉ</span>`:"");
   if(r.synced){
-    state.innerHTML = `<span class="pill ok"><span class="d"></span>synchro</span>`;
-    tr.dataset.rank = "2";
+    state.innerHTML = `<span class="pill ok"><span class="d"></span>synchro</span>`
+      + (f.pushed ? `<span style="font-size:11px;color:var(--ink-faint);margin-left:8px">push déployé ✓</span>` : "");
+    tr.dataset.rank = f.pushed ? "0" : "3";
   }else{
     const ageTxt = r.age ? ` · cache CDN ${r.age}s` : "";
     state.innerHTML = `<span class="pill warn"><span class="d"></span>désynchro</span>`+
-      `<span style="font-size:11px;color:var(--ink-faint);margin-left:8px">repo ≠ servi${ageTxt}</span>`;
-    tr.dataset.rank = "1";
+      `<span style="font-size:11px;color:var(--ink-faint);margin-left:8px">${f.pushed?"push pas encore servi":"repo ≠ servi"}${ageTxt}</span>`;
+    tr.dataset.rank = f.pushed ? "0" : "2";
   }
 }
 function reorderRows(){
