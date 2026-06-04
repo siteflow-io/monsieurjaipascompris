@@ -1638,20 +1638,10 @@ var currentLevel=(new URLSearchParams(window.location.search).get('n')||'').toLo
 if(!levelLabels[currentLevel])currentLevel=null;
 window.addEventListener('DOMContentLoaded',function(){var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.getElementById('val-btn').style.display='none';document.getElementById('dev-banner').style.display='block';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&TRACK.eleve.niveau===currentLevel){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
 function _normName(s){return String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');}
-function _findEleveByName(full){var t=_normName(full);if(!t)return null;var r=null;Object.keys(classesData||{}).forEach(function(slug){var cl=classesData[slug];if(!cl||cl.archivee||!cl.eleves)return;Object.keys(cl.eleves).forEach(function(k){var e=cl.eleves[k];if(e&&typeof e==='object'&&_normName(e.nom)===t)r={slug:slug,key:k,eleve:e,classe:cl};});});return r;}
-function _findEleveByCode(code){var r=null;Object.keys(classesData||{}).forEach(function(slug){var cl=classesData[slug];if(!cl||cl.archivee||!cl.eleves)return;Object.keys(cl.eleves).forEach(function(k){var e=cl.eleves[k];if(e&&typeof e==='object'&&e.code===code)r={slug:slug,key:k,eleve:e,classe:cl};});});return r;}
-function _loginEleveFound(found,status){
-  var e=found.eleve,cl=found.classe;
-  var eleve={is_prof:false,nom:e.nom,prenom:'',classe:found.slug,niveau:cl.niveau||currentLevel||'3e',code:e.code||'',display:e.nom,uuid:''};
-  ensureEleveUuid(eleve).then(function(ev){
-    TRACK.eleve=ev;sessionStorage.setItem('mjpc_eleve',JSON.stringify(ev));
-    if(typeof notifyConnection==='function')notifyConnection(ev);
-    if(typeof startHeartbeat==='function')startHeartbeat();
-    currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}
-    if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}
-    setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);
-  });
-}
+function _findEleveByName(full){var t=_normName(full);if(!t)return null;var keys=Object.keys(classesData||{});for(var i=0;i<keys.length;i++){var slug=keys[i];var cl=classesData[slug];if(!cl||typeof cl!=='object'||cl.archivee)continue;var names=extractEleves(cl,[]);for(var j=0;j<names.length;j++){if(_normName(names[j])===t)return{slug:slug,nom:names[j],classe:cl,code:_eleveCode(names[j])};}}return null;}
+function _findEleveByCode(code){var keys=Object.keys(codesData||{});for(var i=0;i<keys.length;i++){var e=codesData[keys[i]];if(!e||e.code!==code)continue;var cl=classesData[e.classe];if(!cl||typeof cl!=='object'||cl.archivee)continue;var nom=e.name||e.nom||e.nomComplet||'';if(!nom)continue;return{slug:e.classe,nom:nom,classe:cl,code:code};}return null;}
+function _loginEleveFound(found,status){var cl=found.classe;var eleve={is_prof:false,nom:found.nom,prenom:'',classe:found.slug,niveau:(cl&&cl.niveau)||currentLevel||'3e',code:found.code||'',display:found.nom,uuid:''};ensureEleveUuid(eleve).then(function(ev){TRACK.eleve=ev;_writeSharedSession(ev);if(typeof notifyConnection==='function')notifyConnection(ev);if(typeof startHeartbeat==='function')startHeartbeat();currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);});}
+function _writeSharedSession(ev){try{var o=Object.assign({},ev||{},{ts:Date.now()});var p=JSON.stringify(o);sessionStorage.setItem('mjpc_eleve',p);try{localStorage.setItem('mjpc_eleve',p);}catch(e){}}catch(e){}}
 function doLogin(){
   var nom=document.getElementById('val-nom').value.trim();var prenom=document.getElementById('val-prenom').value.trim();
   var err=document.getElementById('val-error');var status=document.getElementById('val-status');var btn=document.getElementById('val-btn');
@@ -1667,12 +1657,12 @@ function doLogin(){
     if(found){_loginEleveFound(found,status);}
     else{status.textContent='';err.textContent=isCode?'Code non reconnu. Demande \u00e0 ton professeur.':'Nom non reconnu. V\u00e9rifie l\u2019orthographe ou demande \u00e0 ton professeur.';setTimeout(function(){err.textContent='';},4000);}
   };
-  if(!_classesLoaded)loadClasses(proceed);else proceed();
+  if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(proceed);});}else proceed();
 }
 
 function loginAsProf(){
   TRACK.eleve={is_prof:true,uuid:'prof',nom:'Meney',prenom:'M.',classe:'PROF',niveau:currentLevel||'3e',display:'M. Meney (prof)'};
-  sessionStorage.setItem('mjpc_eleve',JSON.stringify(TRACK.eleve));
+  _writeSharedSession(TRACK.eleve);
   notifyConnection(TRACK.eleve);
   startHeartbeat();
   // Bascule en mode admin
@@ -1904,7 +1894,7 @@ function openCorrectionDictee(id,title){openViewer(title||'Correction dictée','
 function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}
 function generateSessionId(){return 'ses-'+Date.now().toString(36)+'-'+Math.random().toString(36).substr(2,6);}
 function sendToBackend(data){if(data.action==='close'&&navigator.sendBeacon){var blob=new Blob([JSON.stringify(data)],{type:'application/json'});navigator.sendBeacon(APPS_SCRIPT_URL,blob);return Promise.resolve({status:'beacon_sent'});}return fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)}).then(function(){return{status:'sent'};}).catch(function(err){console.warn('[Tracking]',err);return{status:'error'};});}
-function trackLogin(nom,prenom,niveau){return fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'login',nom:nom,prenom:prenom,niveau:niveau})}).then(function(r){return r.json();}).then(function(data){if(data.error)return{success:false,error:data.error};TRACK.eleve=data.eleve;sessionStorage.setItem('mjpc_eleve',JSON.stringify(data.eleve));return{success:true,eleve:data.eleve};}).catch(function(err){console.warn('[Login]',err);return{success:false,error:'Erreur réseau. Réessaie.'};});}
+function trackLogin(nom,prenom,niveau){return fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'login',nom:nom,prenom:prenom,niveau:niveau})}).then(function(r){return r.json();}).then(function(data){if(data.error)return{success:false,error:data.error};TRACK.eleve=data.eleve;_writeSharedSession(data.eleve);return{success:true,eleve:data.eleve};}).catch(function(err){console.warn('[Login]',err);return{success:false,error:'Erreur réseau. Réessaie.'};});}
 function restoreSession(){var stored=sessionStorage.getItem('mjpc_eleve');if(stored){try{TRACK.eleve=JSON.parse(stored);if(TRACK.eleve&&TRACK.eleve.is_prof){DEV_MODE=true;ADMIN_MODE=true;document.body.classList.add('admin-mode');var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\u26a1 ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}}startHeartbeat();return true;}catch(e){}}return false;}
 function trackOpen(chapitre,doc,type_doc){if(!TRACK.eleve)return;if(TRACK.session)trackClose();var sid=generateSessionId();TRACK.session=sid;TRACK.openTime=Date.now();TRACK.activeStart=Date.now();TRACK.activeTotal=0;TRACK.isActive=true;TRACK.scrollMax=0;TRACK.interactions=0;TRACK.score='';startTracking_();sendToBackend({action:'open',session_id:sid,eleve:TRACK.eleve.display,classe:TRACK.eleve.classe,niveau:TRACK.eleve.niveau,chapitre:chapitre,document:doc,type_doc:type_doc});}
 function trackClose(){if(!TRACK.session)return;if(TRACK.isActive)TRACK.activeTotal+=Date.now()-TRACK.activeStart;sendToBackend({action:'close',session_id:TRACK.session,duree_totale:Math.round((Date.now()-TRACK.openTime)/1000),duree_active:Math.round(TRACK.activeTotal/1000),scroll_max:TRACK.scrollMax,interactions:TRACK.interactions,score:TRACK.score});stopTracking_();TRACK.session=null;}
@@ -1963,48 +1953,49 @@ function _renderProfSection(id){
 var PROF_EL_CLASSE=null;
 function san(s){return String(s||'').replace(/[^a-zA-Z0-9]/g,'_');}
 function parseEleves(txt){return String(txt||'').split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});}
-function _classCodes(slug){var t={};var e=(classesData[slug]&&classesData[slug].eleves)||{};Object.keys(e).forEach(function(k){if(e[k]&&e[k].code)t[e[k].code]=true;});return t;}
+function _allCodesTaken(){var t={};(PROF_CODES||[]).forEach(function(c){t[c]=true;});Object.keys(codesData||{}).forEach(function(k){if(codesData[k]&&codesData[k].code)t[codesData[k].code]=true;});return t;}
 function _genCode4(taken){var c,g=0;do{c=String(Math.floor(1000+Math.random()*9000));g++;}while(taken[c]&&g<9999);return c;}
 function _selectProfElClasse(slug){PROF_EL_CLASSE=slug;showProfSection('eleves');}
-function _elevesSorted(slug){var e=(classesData[slug]&&classesData[slug].eleves)||{};return Object.keys(e).filter(function(k){return e[k]&&typeof e[k]==='object';}).sort(function(a,b){return ((e[a].ordre||0)-(e[b].ordre||0))||(e[a].nom||'').localeCompare(e[b].nom||'');});}
+function _eleveCode(nom){var k=san(nom);return (codesData[k]&&codesData[k].code)||'';}
+function _putCode(nom,slug,code){var k=san(nom);var rec={code:code,name:nom,classe:slug,createdAt:Date.now()};codesData[k]=rec;fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)}).catch(function(){});}
 function _profSectionEleves(){
-  if(!_classesLoaded){loadClasses(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
-  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
-  var html='<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-section-sub">Choisis une classe, colle ta liste (un \u00e9l\u00e8ve par ligne, NOM Pr\u00e9nom), puis g\u00e9n\u00e8re les codes. Le code \u00e0 4 chiffres sert au login rapide et aux apps. R\u00e9g\u00e9n\u00e9rable \u00e9l\u00e8ve par \u00e9l\u00e8ve en cas de perte.</div>';
+  if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
+  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee;}).sort(function(a,b){return ((classesData[a].nom)||'').localeCompare((classesData[b].nom)||'');});
+  var html='<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-section-sub">Choisis une classe, colle ta liste (un \u00e9l\u00e8ve par ligne, NOM Pr\u00e9nom), puis g\u00e9n\u00e8re les codes. Liste partag\u00e9e avec tes apps (dict\u00e9e, etc.) ; code \u00e0 4 chiffres mutualis\u00e9 (login rapide). R\u00e9g\u00e9n\u00e9rable \u00e9l\u00e8ve par \u00e9l\u00e8ve.</div>';
   if(actives.length===0)return html+'<div class="tprof-placeholder">Aucune classe active. Cr\u00e9e d\u2019abord une classe dans \u00ab Classes \u00bb.</div>';
   if(!PROF_EL_CLASSE||actives.indexOf(PROF_EL_CLASSE)<0)PROF_EL_CLASSE=actives[0];
-  var slug=PROF_EL_CLASSE;var cl=classesData[slug];
+  var slug=PROF_EL_CLASSE;
   html+='<div class="lens-bar">'+actives.map(function(k){var c=classesData[k];var on=k===slug;var col=c.couleur||'#888';return '<span class="lens-pill'+(on?' on':'')+'" style="'+(on?'background:'+col:'border-color:'+col)+'" onclick="_selectProfElClasse(\''+k+'\')"><span class="lpd" style="background:'+(on?'#10071a66':col)+'"></span>'+escapeHtml(c.nom||k)+'</span>';}).join('')+'</div>';
   html+='<div class="el-import"><textarea id="el-import-ta" placeholder="Un \u00e9l\u00e8ve par ligne &#10;ex : DUPONT Marie"></textarea><button class="tprof-add-btn" onclick="_importEleves(\''+slug+'\')">+ Importer / compl\u00e9ter</button></div>';
-  var keys=_elevesSorted(slug);
-  if(keys.length===0)return html+'<div class="tprof-placeholder">Aucun \u00e9l\u00e8ve dans cette classe. Colle ta liste ci-dessus.</div>';
-  var eleves=cl.eleves||{};
-  var sansCode=keys.filter(function(k){return !eleves[k].code;}).length;
+  var names=extractEleves(classesData[slug],[]);
+  if(names.length===0)return html+'<div class="tprof-placeholder">Aucun \u00e9l\u00e8ve dans cette classe. Colle ta liste ci-dessus.</div>';
+  var sansCode=names.filter(function(n){return !_eleveCode(n);}).length;
   html+='<div class="el-toolbar">';
   if(sansCode>0)html+='<button class="tprof-btn" onclick="_genererCodesClasse(\''+slug+'\')">G\u00e9n\u00e9rer '+sansCode+' code'+(sansCode>1?'s':'')+' manquant'+(sansCode>1?'s':'')+'</button>';
   html+='<button class="tprof-btn" onclick="_printCodesClasse(\''+slug+'\')">\ud83d\udda8 Imprimer</button>';
   html+='<button class="tprof-btn danger" onclick="_resetAllCodesClasse(\''+slug+'\')">Tout r\u00e9g\u00e9n\u00e9rer</button></div>';
   html+='<div class="el-list">';
-  keys.forEach(function(k,i){var e=eleves[k];
-    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name">'+escapeHtml(e.nom||k)+'</span><span class="el-code">'+(e.code?e.code:'<span class="el-nocode">\u2014</span>')+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\',\''+k+'\')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\',\''+k+'\')">\u2715</button></span></div>';
+  names.forEach(function(nom,i){var code=_eleveCode(nom);
+    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name">'+escapeHtml(nom)+'</span><span class="el-code">'+(code?code:'<span class="el-nocode">\u2014</span>')+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\','+i+')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\','+i+')">\u2715</button></span></div>';
   });
   return html+'</div>';
 }
 function _importEleves(slug){
   var ta=document.getElementById('el-import-ta');if(!ta)return;
   var names=parseEleves(ta.value);if(names.length===0){alert('Colle au moins un nom.');return;}
-  var cl=classesData[slug];if(!cl)return;if(!cl.eleves)cl.eleves={};
-  var base=Object.keys(cl.eleves).length;var added=0;var puts=[];
-  names.forEach(function(nom,idx){var key=san(nom);if(cl.eleves[key])return;var rec={nom:nom,ordre:base+idx+1};cl.eleves[key]=rec;puts.push({key:key,rec:rec});added++;});
+  var existing=extractEleves(classesData[slug],[]);var merged=existing.slice();var added=0;
+  names.forEach(function(n){if(!merged.some(function(e){return _normName(e)===_normName(n);})){merged.push(n);added++;}});
   if(added===0){alert('Ces \u00e9l\u00e8ves sont d\u00e9j\u00e0 pr\u00e9sents.');showProfSection('eleves');return;}
-  puts.forEach(function(p){fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+p.key+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p.rec)}).catch(function(){});});
+  if(!classesData[slug]||typeof classesData[slug]!=='object')classesData[slug]={};
+  classesData[slug].eleves=merged;
+  fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});
   showProfSection('eleves');
 }
-function _genererCodesClasse(slug){var cl=classesData[slug];if(!cl||!cl.eleves)return;var taken=_classCodes(slug);Object.keys(cl.eleves).forEach(function(k){var e=cl.eleves[k];if(e&&typeof e==='object'&&!e.code){var c=_genCode4(taken);taken[c]=true;e.code=c;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+k+'/code.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(function(){});}});showProfSection('eleves');}
-function _regenCodeEleve(slug,key){var cl=classesData[slug];if(!cl||!cl.eleves||!cl.eleves[key])return;var taken=_classCodes(slug);var c=_genCode4(taken);cl.eleves[key].code=c;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+key+'/code.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(function(){});showProfSection('eleves');}
-function _resetAllCodesClasse(slug){if(!confirm('R\u00e9g\u00e9n\u00e9rer TOUS les codes de cette classe ? Les anciens ne fonctionneront plus.'))return;var cl=classesData[slug];if(!cl||!cl.eleves)return;var taken={};Object.keys(cl.eleves).forEach(function(k){if(!cl.eleves[k]||typeof cl.eleves[k]!=='object')return;var c=_genCode4(taken);taken[c]=true;cl.eleves[k].code=c;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+k+'/code.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)}).catch(function(){});});showProfSection('eleves');}
-function _deleteEleveCls(slug,key){var cl=classesData[slug];if(!cl||!cl.eleves||!cl.eleves[key])return;if(!confirm('Retirer '+(cl.eleves[key].nom||key)+' de la classe ?'))return;delete cl.eleves[key];fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves/'+key+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');}
-function _printCodesClasse(slug){var cl=classesData[slug];if(!cl||!cl.eleves)return;var keys=_elevesSorted(slug);var rows=keys.map(function(k){var e=cl.eleves[k];return '<tr><td>'+escapeHtml(e.nom||k)+'</td><td class="c">'+(e.code||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
+function _genererCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){if(!_eleveCode(nom)){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}});showProfSection('eleves');}
+function _regenCodeEleve(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;var taken=_allCodesTaken();var c=_genCode4(taken);_putCode(nom,slug,c);showProfSection('eleves');}
+function _resetAllCodesClasse(slug){if(!confirm('R\u00e9g\u00e9n\u00e9rer TOUS les codes de cette classe ? Les anciens ne fonctionneront plus.'))return;var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);});showProfSection('eleves');}
+function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;if(!confirm('Retirer '+nom+' de la classe ?'))return;var merged=names.filter(function(e,idx){return idx!==i;});classesData[slug].eleves=merged;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});var k=san(nom);delete codesData[k];fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');}
+function _printCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var cl=classesData[slug]||{};var rows=names.map(function(nom){return '<tr><td>'+escapeHtml(nom)+'</td><td class="c">'+(_eleveCode(nom)||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
 
 var PROF_TEST_CLASSE=null;
 function _profSectionProfilTest(){
@@ -2025,7 +2016,7 @@ function _activerProfilTest(slug){
   if(slug==='__all__'){classe='TEST';niveau=currentLevel||'3e';nomAff='passe-partout';}
   else{var cl=classesData[slug];if(!cl)return;classe=slug;niveau=cl.niveau||'3e';nomAff=cl.nom||slug;}
   TRACK.eleve={is_prof:false,is_test:true,uuid:'test',nom:'\u00c9l\u00e8ve test',prenom:'',classe:classe,niveau:niveau,code:'',display:'\u00c9l\u00e8ve test \u2014 '+nomAff};
-  sessionStorage.setItem('mjpc_eleve',JSON.stringify(TRACK.eleve));
+  _writeSharedSession(TRACK.eleve);
   if(typeof DEV_MODE!=='undefined')DEV_MODE=false;if(typeof ADMIN_MODE!=='undefined')ADMIN_MODE=false;
   document.body.classList.remove('admin-mode');
   var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\ud83d\udc41 TEST';badge.style.background='rgba(96,165,250,0.92)';badge.style.color='#06121f';}
@@ -2080,6 +2071,37 @@ function _profSectionPresence(){
 }
 
 // =========== Section Classes : gestion CRUD + archivage ===========
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
+    return fbClasse;
+  }
+  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
+    // Format {eleves: [...]}
+    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
+    // Format map d'élèves
+    var keys = Object.keys(fbClasse).filter(function(k){
+      // Exclure les clés non-élèves (métadonnées éventuelles)
+      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
+    });
+    if (keys.length > 0) {
+      var names = keys.map(function(k){
+        var v = fbClasse[k];
+        if (typeof v === "string") return v;
+        if (v && typeof v === "object") {
+          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
+          if (v.nomComplet) return v.nomComplet;
+          if (v.name) return v.name;
+        }
+        return null;
+      }).filter(function(x){ return x && typeof x === "string"; });
+      if (names.length > 0) return names;
+    }
+  }
+  return cfgEleves;
+}
+var codesData={};var _codesLoaded=false;
+function loadCodes(cb){fetch(FIREBASE_BASE+'/codes.json').then(function(r){return r.json()}).catch(function(){return null}).then(function(v){codesData=v||{};_codesLoaded=true;if(cb)cb();});}
 function loadClasses(callback){
   fetch(FIREBASE_BASE+'/classes.json')
     .then(function(r){return r.json()})
