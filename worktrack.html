@@ -2227,6 +2227,7 @@ const PROF = {
         <button class="btn ghost" onclick="PROF.injectView()">📥 Injecter</button>
         <button class="btn ghost" onclick="PROF.snapshot()">📸 Snapshot</button>
         <button class="btn ghost" onclick="PROF.restore()">📤 Restaurer</button>
+        <button class="btn ghost" onclick="PROF.printView()">🖨 Imprimer</button>
       </div></div>
       ${hasContent ? `<div class="prof-sec"><h4>Séances du chapitre</h4><div class="prof-list">${list}</div>
         <div class="prof-row"><button class="btn primary" onclick="PROF.editor()">✎ Éditer les séances</button></div></div>`
@@ -2339,6 +2340,116 @@ const PROF = {
     i.onchange=()=>{ const f=i.files[0]; if(!f)return; const r=new FileReader();
       r.onload=()=>{ try{ loadChapter(JSON.parse(r.result)); }catch(e){ toast("Fichier illisible : "+e.message); } };
       r.readAsText(f); }; i.click(); },
+
+  /* ── Impression / export papier : modulaire (textes, consignes, évaluation, aides, fiches) ── */
+  printView(){ const seances=CHAPTER.seances||[];
+    $("profModal").innerHTML=`<div style="margin-bottom:10px"><h3 style="margin:0">🖨 Imprimer / Exporter le chapitre</h3></div>
+      <div class="prof-sec"><div class="d">Ouvre une page propre, prête à imprimer (Ctrl+P) ou à enregistrer en PDF. Coche ce que tu veux inclure.</div>
+        <div class="prof-row" style="margin-top:8px"><label class="d">Portée :
+          <select id="prtScope" class="txtin" style="width:auto;margin-left:6px">
+            <option value="all">Tout le chapitre</option>
+            ${seances.map(s=>`<option value="${esc(s.id)}">${esc(s.titre)}</option>`).join("")}
+          </select></label></div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+          <label><input type="checkbox" id="prtTextes" checked> Textes à lire (extraits intégraux)</label>
+          <label><input type="checkbox" id="prtConsignes" checked> Consignes (objectif + questions)</label>
+          <label><input type="checkbox" id="prtEval"> Évaluation (QCM et exercices)</label>
+          <label style="margin-left:22px"><input type="checkbox" id="prtCorrige"> … avec les réponses (corrigé)</label>
+          <label><input type="checkbox" id="prtAides"> Aides (coups de pouce)</label>
+          <label><input type="checkbox" id="prtFiches"> Fiches-correction (4D)</label>
+        </div>
+        <div class="prof-row" style="margin-top:12px">
+          <button class="btn primary" onclick="PROF.doPrint()">Ouvrir la version imprimable</button></div></div>`;
+  },
+  doPrint(){ const scope=($("prtScope")||{}).value||"all";
+    const opt={ textes:$("prtTextes").checked, consignes:$("prtConsignes").checked, eval:$("prtEval").checked,
+      corrige:$("prtCorrige").checked, aides:$("prtAides").checked, fiches:$("prtFiches").checked };
+    if(!opt.textes&&!opt.consignes&&!opt.eval&&!opt.aides&&!opt.fiches){ toast("Coche au moins un élément à imprimer."); return; }
+    const w=window.open("","_blank"); if(!w){ toast("Autorise les pop-ups pour ouvrir l'impression."); return; }
+    w.document.write(this.chapterPrintHTML(scope, opt)); w.document.close();
+  },
+  _prtConsigne(blocks){ let h=""; const G={surligner:'à surligner',relier:'à relier',etiqueter:'à étiqueter'};
+    (blocks||[]).forEach(b=>{ const t=b.type||'question';
+      if(t==='note') h+='<p class="p-note">'+esc(b.texte||'')+'</p>';
+      else if(t==='section') h+='<h4 class="p-sec">'+esc(b.titre||'')+(b.ref?' <span>· '+esc(b.ref)+'</span>':'')+'</h4>';
+      else if(t==='lexique') h+='<p class="p-lex"><b>'+esc(b.terme||'')+'</b> — '+esc(b.definition||'')+'</p>';
+      else if(t==='question'){ let badges=[];
+        if(b.geste&&G[b.geste]) badges.push(G[b.geste]); if(b.longueur) badges.push(esc(b.longueur)); if(b.liaison) badges.push('📖 '+esc(b.liaison));
+        h+='<p class="p-q"><span class="n">'+(b.n!=null?esc(String(b.n))+')':'•')+'</span> '+esc(b.texte||'')
+          +(badges.length?' <span class="p-badge">['+badges.join(' · ')+']</span>':'')+'</p>';
+        if(Array.isArray(b.completer)&&b.completer.length) h+='<ul class="p-compl">'+b.completer.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul>'; }
+      else h+='<p>'+esc(b.texte||'')+'</p>'; });
+    return h; },
+  _prtSupports(sup){ let h=""; (sup||[]).forEach(x=>{ const t=x.type;
+    if(t==='texteEmbarque'){ h+='<div class="p-txt">'+(x.ref?'<span class="ref">'+esc(x.ref)+'</span>':'')
+        +(x.amorce?'<p class="amorce">'+esc(x.amorce)+'</p>':'')
+        +(x.texte||x.contenu||'').split(/\n+/).map(p=>'<p>'+esc(p)+'</p>').join('')+'</div>'; }
+    else if(t==='livre'||t==='renvoiLivre'){ const src=x.source||x.ref||'Le livre';
+      h+='<p class="p-src">📖 '+esc(src)+(x.pages?', p. '+esc(x.pages):'')+(x.contenu||x.detail?' — '+esc(x.contenu||x.detail):'')+'</p>'; }
+    else if(t==='rappel') h+='<p class="p-src">↺ '+(x.ref?esc(x.ref)+' — ':'')+esc(x.detail||x.contenu||'')+'</p>';
+    else if(t==='lien') h+='<p class="p-src">🔗 '+esc(x.legende||x.contenu||x.url||'')+' : '+esc(x.contenu||x.url||'')+'</p>';
+    else if(t==='image') h+='<div class="p-txt"><img src="'+esc(x.contenu||x.url||'')+'" alt="'+esc(x.legende||'')+'" style="max-width:100%">'+(x.legende?'<p class="amorce">'+esc(x.legende)+'</p>':'')+'</div>';
+    else h+='<p>'+esc(x.contenu||x.texte||x.detail||'')+'</p>'; });
+    return h; },
+  _prtItems(items, corrige){ let h=""; (items||[]).forEach((it,idx)=>{ const no=(idx+1)+'. ';
+    if(it.type==='qcm'){ h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'')+(it.multi?' <i>(plusieurs réponses)</i>':'')+'<ul class="p-ch">'
+        +(it.choix||[]).map((c,ci)=>{ const ok=corrige&&(it.bonnes||[]).includes(ci);
+          return '<li>'+(corrige?(ok?'☑ ':'☐ '):'○ ')+'<span'+(ok?' class="ok"':'')+'>'+esc(c)+'</span></li>'; }).join('')+'</ul></div>'; }
+    else if(it.type==='trous'){ const parts=parseTrous(it.texte||''); let tx='';
+        parts.forEach(p=>{ if(p.t==='txt') tx+=esc(p.v); else tx+= corrige ? '<b class="ok">['+esc(p.sols[0]||'')+']</b>' : '……………'; });
+        h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'Texte à trous')+'<div class="p-sub">'+tx+'</div></div>'; }
+    else if(it.type==='ordre'){ h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'Remets dans l\'ordre')+'<ol class="p-sub">'
+        +(it.elements||[]).map(e=>'<li>'+esc(e)+'</li>').join('')+'</ol>'+(corrige?'<div class="p-ans">Ordre attendu : celui ci-dessus.</div>':'')+'</div>'; }
+    else if(it.type==='paires'){ h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'Associe')+'<ul class="p-sub">'
+        +(it.paires||[]).map(p=>'<li>'+esc(p.g)+' → '+(corrige?'<b class="ok">'+esc(p.d)+'</b>':'……')+'</li>').join('')+'</ul></div>'; }
+    else if(it.type==='reperage'){ const segs=parseReperage(it.texte||''); let tx='';
+        segs.forEach(p=>{ if(p.w){ tx+= (corrige&&p.target)?'<u class="ok">'+esc(p.txt)+'</u>':esc(p.txt); } else tx+=esc(p.txt); });
+        h+='<div class="p-item"><b>'+no+'</b><div class="p-sub">'+tx+'</div></div>'; }
+    else if(it.type==='court'){ h+='<div class="p-item"><b>'+no+'</b>'+esc(it.question||'')+(corrige&&(it.reponses||[]).length?'<div class="p-ans">Réponses acceptées : '+esc((it.reponses||[]).join(', '))+'</div>':'')+'</div>'; }
+    else if(it.type==='vraifaux'){ h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'')+(corrige?'<div class="p-ans">Réponse : <b class="ok">'+(it.vrai?'Vrai':'Faux')+'</b></div>':' — Vrai / Faux')+'</div>'; }
+    else if(it.type==='classement'){ h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'Classe')+'<ul class="p-sub">'
+        +(it.paires||[]).map(p=>'<li>'+esc(p.g)+(corrige?' → <b class="ok">'+esc(p.d)+'</b>':'')+'</li>').join('')+'</ul></div>'; }
+    else if(it.type==='prof') h+='<div class="p-item"><b>'+no+'</b>'+esc(it.question||'')+' <i>(réponse rédigée — corrigée par le professeur)</i><div class="p-lines"></div></div>';
+    else if(it.type==='libre') h+='<div class="p-item"><b>'+no+'</b>'+esc(it.question||'')+' <i>(pour aller plus loin)</i></div>';
+    else if(it.type==='renvoi') h+='<div class="p-item"><b>'+no+'</b><i>À faire dans « '+esc(it.app||'')+' ».</i></div>'; });
+    return h; },
+  _prtAides(aides){ if(!(aides||[]).length) return ""; let h='<div class="p-aides"><h4 class="p-sec">Aides</h4>';
+    aides.forEach((a,i)=>{ h+='<div class="p-aide"><b>Coup de pouce '+(i+1)+'</b><ol>'+(a.paliers||[]).map(p=>'<li>'+esc(p)+'</li>').join('')+'</ol></div>'; });
+    return h+'</div>'; },
+  _prtFiche(f){ if(!f||!(f.layers||[]).length) return ""; let h='<div class="p-fiche"><h4 class="p-sec">'+esc(f.titre||'Correction')+'</h4>';
+    f.layers.forEach(L=>{ h+='<div class="p-layer"><div class="lh">'+(L.ic?esc(L.ic)+' ':'')+esc(L.titre||'')+'</div><div>'+esc(L.contenu||'')+'</div></div>'; });
+    return h+'</div>'; },
+  chapterPrintHTML(scope, opt){ const m=CHAPTER.meta;
+    const seances=(scope==='all')?CHAPTER.seances:CHAPTER.seances.filter(s=>s.id===scope);
+    const css="body{font-family:Georgia,'Times New Roman',serif;color:#161616;max-width:760px;margin:22px auto;padding:0 22px;line-height:1.5}"
+      +"h1{font-size:1.5rem;margin:0 0 3px}.prob{color:#555;font-style:italic;margin:0 0 16px}"
+      +"section.seance{margin-top:18px}section.brk{page-break-before:always}"
+      +"h2{font-size:1.18rem;border-bottom:2px solid #222;padding-bottom:4px;margin:20px 0 8px}"
+      +".obj{background:#f4f3f0;border-left:3px solid #999;padding:6px 11px;margin:8px 0 12px;font-size:.95rem}"
+      +"h3.part{font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:#7a3b1f;margin:16px 0 6px}"
+      +"h4.p-sec{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:#444;border-bottom:1px solid #ccc;margin:12px 0 4px;padding-bottom:2px}"
+      +".p-note{margin:6px 0;color:#333}.p-lex{background:#f1ece0;border-radius:6px;padding:6px 10px;margin:8px 0}"
+      +".p-q{margin:6px 0}.p-q .n{font-weight:700;color:#a33}.p-badge{font-size:.74rem;color:#666}"
+      +".p-compl{margin:2px 0 10px 20px;padding:0}.p-compl li{list-style:none;border-bottom:1px dotted #999;padding:3px 0}"
+      +".p-txt{border:1px solid #ccc;border-radius:6px;padding:10px 14px;margin:10px 0}.p-txt .ref{font-size:.8rem;color:#666;display:block;margin-bottom:5px}.p-txt .amorce{font-style:italic;color:#555;margin:0 0 6px}.p-txt p{margin:6px 0}"
+      +".p-src{font-size:.9rem;color:#444;margin:6px 0}"
+      +".p-item{margin:9px 0}.p-ch{margin:3px 0 0 18px}.p-ch li{list-style:none}.p-sub{margin:4px 0 4px 14px}.p-ans{font-size:.85rem;color:#176a3a;margin-top:3px}.ok{color:#176a3a}.p-lines{height:46px;border-bottom:1px solid #bbb}"
+      +".p-aide ol,.p-fiche{margin:3px 0 8px 16px}.p-layer{margin:5px 0}.p-layer .lh{font-weight:700}"
+      +".noprint{margin:26px 0;text-align:center}.noprint button{padding:9px 18px;font-size:1rem;cursor:pointer}"
+      +"@media print{.noprint{display:none}}";
+    let h='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+esc(m.titre||'Chapitre')+'</title><style>'+css+'</style></head><body>';
+    h+='<h1>'+esc(m.titre||'')+'</h1>'+(m.problematique?'<p class="prob">'+esc(m.problematique)+'</p>':'');
+    seances.forEach((s,i)=>{ h+='<section class="seance'+(i>0?' brk':'')+'">';
+      h+='<h2>'+(s.rn?esc(s.rn)+' — ':'')+esc(s.titre||'')+(s.ville?' · '+esc(s.ville):'')+'</h2>';
+      if(s.objectif) h+='<div class="obj"><b>Objectif.</b> '+esc(s.objectif)+'</div>';
+      if(opt.textes){ const sup=(s.corps&&s.corps.supports)||[]; if(sup.length){ h+='<h3 class="part">À lire</h3>'+this._prtSupports(sup); } }
+      if(opt.consignes){ h+='<h3 class="part">Travail</h3>'+this._prtConsigne((s.corps&&s.corps.consigne)||[]); }
+      if(opt.eval && s.evaluation){ h+='<h3 class="part">Évaluation'+(opt.corrige?' (corrigé)':'')+'</h3>'+this._prtItems(s.evaluation.items, opt.corrige); }
+      if(opt.aides) h+=this._prtAides(s.aides);
+      if(opt.fiches) h+=this._prtFiche(s.fiche4d);
+      h+='</section>'; });
+    h+='<div class="noprint"><button onclick="window.print()">Imprimer</button></div></body></html>';
+    return h; },
 
   /* ── onglet SUIVI (présence groupée par classe, multi-poste) ── */
   suiviBody(){
