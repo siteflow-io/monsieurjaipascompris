@@ -77,14 +77,8 @@
   .dico-x{flex:none;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;font-size:1rem;line-height:1}
   .dico-warn{font-size:.74rem;color:var(--gold2);background:rgba(200,162,78,.1);border:1px solid var(--gold-deep);border-radius:8px;padding:6px 9px;margin-bottom:8px}
   .dico-body{font-size:.86rem;color:var(--ink);line-height:1.5}
-  .dico-pos{margin-bottom:8px}
-  .dico-pos .pos{display:inline-block;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:2px}
-  .dico-pos ul{margin:2px 0 0;padding-left:18px}
-  .dico-pos li{margin:2px 0}
+  .dico-text p{margin:4px 0}
   .dico-none{color:var(--muted);font-size:.82rem;font-style:italic}
-  .dico-links{margin-top:9px;font-size:.74rem;color:var(--muted)}
-  .dico-links a{color:var(--gold);text-decoration:none}
-  .dico-links a:hover{text-decoration:underline}
   .dico-foot{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
   .dico-add,.dico-gloss{font-family:'Spline Sans',sans-serif;font-size:.72rem;font-weight:600;cursor:pointer;border-radius:8px;padding:5px 10px;border:1px solid var(--gold-deep);background:var(--panel2);color:var(--gold2)}
   .dico-add:hover,.dico-gloss:hover{border-color:var(--gold)}
@@ -226,6 +220,10 @@
   .docsheet .dsec-t{font-family:'Spline Sans',sans-serif;font-size:.74rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#8a6d2f}
   .docsheet .dsec-r{font-size:.72rem;color:#9b8757;font-style:italic;white-space:nowrap}
   .docsheet .dcompl{margin:2px 0 10px 22px;padding:0;list-style:none}
+  .docsheet .qmeta{margin:3px 0 8px 22px;display:flex;flex-wrap:wrap;gap:6px}
+  .docsheet .qbadge{font-family:'Spline Sans',sans-serif;font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid #cbb884;color:#6b551f;background:rgba(200,162,78,.12)}
+  .docsheet .qbadge.geste{color:#7a3b1f;border-color:#d9a679;background:rgba(217,166,121,.16)}
+  .docsheet .qbadge.lia{color:#2f5d4a;border-color:#9cc3b1;background:rgba(120,181,138,.14)}
   .docsheet .dcompl li{padding:3px 0;border-bottom:1px dotted #cbb884;color:#4a3d22;font-size:.96rem}
   .docsheet .qcheck{display:flex;width:max-content;max-width:100%;align-items:center;gap:5px;margin:6px 0 0;text-indent:0;white-space:nowrap;font-family:'Spline Sans',sans-serif;font-size:.7rem;color:#9b7d34;font-weight:600;cursor:pointer;user-select:none}
   .docsheet .qcheck input{cursor:pointer;accent-color:#c8a24e}
@@ -865,7 +863,13 @@ const CONSIGNE_TYPES = {
   note:    { label:'Note',            fields:[{k:'texte',l:'Texte',kind:'area'}] },
   lexique: { label:'Mot à connaître', fields:[{k:'terme',l:'Terme',kind:'text'},{k:'definition',l:'Définition',kind:'area'}] },
   section: { label:'Intertitre',      fields:[{k:'titre',l:'Titre',kind:'text'},{k:'ref',l:'Référence (pages, précision…)',kind:'text'}] },
-  question:{ label:'Question',         fields:[{k:'texte',l:'Énoncé',kind:'area'},{k:'completer',l:'Lignes à compléter',kind:'list'}] }
+  question:{ label:'Question',         fields:[
+    {k:'texte',l:'Énoncé',kind:'area'},
+    {k:'geste',l:'Geste',kind:'select',options:[{v:'',l:'Geste attendu : aucun'},{v:'surligner',l:'Geste : surligner'},{v:'relier',l:'Geste : relier'},{v:'etiqueter',l:'Geste : étiqueter'}]},
+    {k:'longueur',l:'Longueur attendue (ex : 2-3 phrases)',kind:'text'},
+    {k:'liaison',l:'Renvoi au manuel (ex : Déclic p. 82-85)',kind:'text'},
+    {k:'completer',l:'Lignes à compléter',kind:'list'}
+  ] }
 };
 function blockDefaults(t){ const b={type:t}; if(t==='note')b.texte=''; else if(t==='lexique'){b.terme='';b.definition='';}
   else if(t==='section'){b.titre='';b.ref='';} else if(t==='question'){b.texte='';} return b; }
@@ -1440,6 +1444,12 @@ function Panel(engine, root, name){
       else if(t==='question'){ const done=!!qd[zone];
         body+='<div class="docq'+(done?' qfait':'')+'"><span class="qn">'+(b.n!=null?esc(String(b.n))+')':'•')+'</span> '+gZone(b.texte||'',zone)
           +'<label class="qcheck" title="Coche quand tu as terminé cette question (le temps est enregistré)"><input type="checkbox" '+(done?'checked':'')+(isMirror?' disabled':'')+' onchange="APP.panel(\''+lane+'\').markQ(\''+zone+'\',this.checked,this)"> fait</label></div>';
+        const gestes={surligner:'🖊 à surligner',relier:'🔗 à relier',etiqueter:'🏷 à étiqueter'};
+        let meta='';
+        if(b.geste&&gestes[b.geste]) meta+='<span class="qbadge geste">'+gestes[b.geste]+'</span>';
+        if(b.longueur) meta+='<span class="qbadge long">✍ '+esc(b.longueur)+'</span>';
+        if(b.liaison) meta+='<span class="qbadge lia">📖 '+esc(b.liaison)+'</span>';
+        if(meta) body+='<div class="qmeta">'+meta+'</div>';
         if(Array.isArray(b.completer)&&b.completer.length) body+='<ul class="dcompl">'+b.completer.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul>'; }
       else body+='<div class="docq">'+gZone(b.texte||'',zone)+'</div>'; });
     return '<div class="docsheet docquest">'+head+'<div class="docbody">'+body+'</div></div>'; }
@@ -1514,32 +1524,37 @@ function Panel(engine, root, name){
   function dicoEl(){ const host=laneEl(); if(!host.querySelector) return null; let d=host.querySelector(':scope > .dico');
     if(!d){ d=document.createElement('div'); d.className='dico'; host.appendChild(d); } return d; }
   P.closeDico=function(){ const host=laneEl(); const d=host.querySelector&&host.querySelector(':scope > .dico'); if(d) d.classList.remove('show'); };
+  // nettoie l'extrait brut du Wiktionnaire : isole la partie française si repérable, compacte, tronque
+  function cleanDef(ex){ let t=String(ex||'').replace(/\r/g,'');
+    const fr=t.search(/(^|\n)\s*Français\s*(\n|$)/); if(fr>=0) t=t.slice(fr);
+    t=t.split('\n').map(s=>s.trim()).filter(Boolean).join('\n').replace(/\n{2,}/g,'\n').trim();
+    if(t.length>600) t=t.slice(0,600).replace(/\s+\S*$/,'')+'…'; return t; }
+  // définition via l'API MediaWiki (extracts) du Wiktionnaire FR — CORS ouvert avec origin=*
   async function fetchDef(mot){ const tries=[mot, mot.toLowerCase()].filter((v,i,a)=>a.indexOf(v)===i);
-    for(const t of tries){ try{ const r=await fetch('https://fr.wiktionary.org/api/rest_v1/page/definition/'+encodeURIComponent(t));
-      if(r.ok){ const j=await r.json(); if(j && Array.isArray(j.fr) && j.fr.length) return { ok:true, pos:j.fr }; } }catch(e){} }
+    for(const t of tries){ try{
+      const url='https://fr.wiktionary.org/w/api.php?action=query&format=json&origin=*&prop=extracts&explaintext=1&redirects=1&titles='+encodeURIComponent(t);
+      const r=await fetch(url); if(!r.ok) continue; const j=await r.json();
+      const pages=j&&j.query&&j.query.pages; if(!pages) continue;
+      const pg=Object.values(pages)[0]; if(!pg || pg.missing!==undefined) continue;
+      const txt=cleanDef(pg.extract); if(txt) return { ok:true, text:txt };
+    }catch(e){} }
     return { ok:false }; }
   async function openDico(mot){ const clean=String(mot||'').replace(/^[^\p{L}]+|[^\p{L}]+$/gu,''); if(!clean) return;
     engine.lookupDico(P.current, clean); const cnt=engine.dicoCount(P.current); P._dicoMot=clean; P._dicoDef='';
     const d=dicoEl(); if(!d) return; d.classList.add('show');
     const lane=laneIdOf();
-    const larousse='https://www.larousse.fr/dictionnaires/francais/'+encodeURIComponent(clean);
-    const wikt='https://fr.wiktionary.org/wiki/'+encodeURIComponent(clean);
     const warn = cnt>10 ? '<div class="dico-warn">Tu as déjà cherché '+cnt+' mots. Essaie d’abord de deviner par le contexte.</div>' : '';
     d.innerHTML='<div class="dico-h"><b>'+esc(clean)+'</b><span class="dico-cnt">'+cnt+' mot'+(cnt>1?'s':'')+' cette séance</span>'
       +'<button class="dico-x" title="Fermer" onclick="APP.panel(\''+lane+'\').closeDico()">×</button></div>'
       +warn+'<div class="dico-body">Recherche…</div>'
       +'<div class="dico-foot"><button class="dico-add" onclick="APP.panel(\''+lane+'\').glossToggle()">'+(engine.inGlossaire(clean)?'✓ dans ton glossaire':'+ ajouter à mon glossaire')+'</button>'
-      +'<button class="dico-gloss" onclick="APP.panel(\''+lane+'\').openGlossaire()">📚 mon glossaire</button></div>'
-      +'<div class="dico-links"><a href="'+larousse+'" target="_blank" rel="noopener">voir sur Larousse</a> · <a href="'+wikt+'" target="_blank" rel="noopener">Wiktionnaire</a></div>';
+      +'<button class="dico-gloss" onclick="APP.panel(\''+lane+'\').openGlossaire()">📚 mon glossaire</button></div>';
     const res=await fetchDef(clean); const body=d.querySelector('.dico-body'); if(!body) return;
-    if(!res.ok){ body.innerHTML='<div class="dico-none">Pas de définition trouvée ici. Ouvre Larousse ou le Wiktionnaire ci-dessous.</div>'; return; }
-    const strip=h=>String(h||'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim();
-    let out='', first='';
-    res.pos.slice(0,3).forEach(p=>{ const defs=(p.definitions||[]).slice(0,3).map(x=>strip(x.definition)).filter(Boolean);
-      if(!defs.length) return; if(!first) first=defs[0];
-      out+='<div class="dico-pos"><span class="pos">'+esc(p.partOfSpeech||'')+'</span><ul>'+defs.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>'; });
-    P._dicoDef=first;
-    body.innerHTML=out||'<div class="dico-none">Définition indisponible. Ouvre les liens ci-dessous.</div>'; }
+    if(!res.ok){ body.innerHTML='<div class="dico-none">Définition indisponible — utilise ton dictionnaire papier.</div>'; return; }
+    let lines=res.text.split('\n').map(s=>s.trim()).filter(Boolean);
+    if(lines[0] && /^Français$/i.test(lines[0])) lines=lines.slice(1);   // titre de langue redondant
+    P._dicoDef = lines.find(l=>l.length>25 && /\s/.test(l)) || lines[0] || '';   // une vraie phrase pour le glossaire
+    body.innerHTML='<div class="dico-text">'+lines.map(l=>'<p>'+esc(l)+'</p>').join('')+'</div>'; }
   P.glossToggle=function(){ const m=P._dicoMot; if(!m) return;
     if(engine.inGlossaire(m)) engine.removeGlossaire(m); else engine.addGlossaire(m, P._dicoDef);
     const host=laneEl(), d=host.querySelector&&host.querySelector(':scope > .dico'); if(d){ const b=d.querySelector('.dico-add'); if(b) b.textContent=engine.inGlossaire(m)?'✓ dans ton glossaire':'+ ajouter à mon glossaire'; } };
@@ -2082,8 +2097,10 @@ const PROMPT_CHAPTER =
 '  { "type": "note", "texte": "consigne ou méthode" }\n'+
 '  { "type": "section", "titre": "intertitre", "ref": "pages / précision (optionnel)" }\n'+
 '  { "type": "lexique", "terme": "mot", "definition": "sens à connaître" }\n'+
-'  { "type": "question", "n": 1, "texte": "énoncé", "completer": ["amorce à compléter (optionnel)"] }\n'+
-"  (numérote les questions 1,2,3… dans n ; completer = lignes à trous pointillées, sinon omets-le.)\n\n"+
+'  { "type": "question", "n": 1, "texte": "énoncé", "geste": "surligner|relier|etiqueter (optionnel)", "longueur": "ex : 2-3 phrases (optionnel)", "liaison": "ex : Déclic p. 82-85 (optionnel)", "completer": ["amorce à compléter (optionnel)"] }\n'+
+"  (numérote les questions 1,2,3… dans n. Mets les intertitres thématiques — PREMIÈRE LECTURE, LANGUE, POUR FINIR… —\n"+
+"   en blocs \"section\" SÉPARÉS, jamais collés dans le texte d'une question. geste = geste de lecture attendu ;\n"+
+"   longueur = attendu de rédaction ; liaison = renvoi au manuel ; completer = lignes pointillées. Omets tout champ vide.)\n\n"
 "ITEMS d'évaluation (tous AUTO-CORRIGÉS mécaniquement — je ne corrige pas le contenu). Le seuil porte sur le\n"+
 "nombre total d'items auto-corrigés réussis. Chaque item a un \"id\" unique. Types disponibles :\n"+
 '  qcm        { "id":"q1","type":"qcm","enonce":"","choix":["",""],"bonnes":[0],"multi":false }\n'+
@@ -2653,6 +2670,8 @@ const PROF = {
   blockField(id,bi,b,f){ const v=b[f.k];
     if(f.kind==='text') return '<input class="txtin" style="width:100%;margin-top:4px" placeholder="'+esc(f.l)+'" value="'+esc(v||'')+'" oninput="PROF.setBlock(\''+id+'\','+bi+',\''+f.k+'\',this.value)">';
     if(f.kind==='area') return '<textarea class="txtin" style="width:100%;min-height:48px;margin-top:4px" placeholder="'+esc(f.l)+'" oninput="PROF.setBlock(\''+id+'\','+bi+',\''+f.k+'\',this.value)">'+esc(v||'')+'</textarea>';
+    if(f.kind==='select') return '<select class="txtin" style="width:100%;margin-top:4px" onchange="PROF.setBlock(\''+id+'\','+bi+',\''+f.k+'\',this.value)">'
+        +(f.options||[]).map(o=>'<option value="'+esc(o.v)+'" '+((v||'')===o.v?'selected':'')+'>'+esc(o.l)+'</option>').join('')+'</select>';
     if(f.kind==='list'){ const arr=Array.isArray(v)?v:[];
       return '<div class="blk-list"><div class="blk-llbl">'+esc(f.l)+'</div>'
         +arr.map((it,li)=>'<div class="prof-row" style="gap:4px;margin-top:3px"><input class="txtin" style="flex:1" value="'+esc(it)+'" oninput="PROF.setComplLine(\''+id+'\','+bi+','+li+',this.value)"><button class="btn ghost" onclick="PROF.delComplLine(\''+id+'\','+bi+','+li+')">×</button></div>').join('')
