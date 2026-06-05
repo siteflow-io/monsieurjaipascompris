@@ -1722,14 +1722,13 @@ const APP = {
   _sessions:{}, _unsubs:[], _hb:null, _tick:null,
   laneIdFor(p){ if(p && p._mirrorLane) return p._mirrorLane; for(const k in this.panels){ if(this.panels[k]===p) return k; } return null; },
   panel(id){ if(id==="__mirror") return (typeof MIRROR!=="undefined" && MIRROR._pilot) || NULLPANEL; return this.panels[id] || NULLPANEL; },
-  // qui occupe la séance id : un élève local OU un élève d'un autre poste (session récente < 60 s)
+  // qui occupe la séance id PARMI LES AUTRES ÉLÈVES DE LA MÊME TABLETTE (lanes locales) uniquement.
+  // L'exclusivité ne joue JAMAIS entre tablettes : sinon une séance prise par un élève bloquerait
+  // toute la classe (et tout le monde finirait poussé vers la convergence). Entre postes, séances partagées.
   occupant(id, exceptKey){
-    const self=this.panels[exceptKey], selfId=self&&self.engine?self.engine.studentId:null, selfSeg=self?self.classeSeg:null;
+    const self=this.panels[exceptKey], selfSeg=self?self.classeSeg:null;
     for(const k in this.panels){ if(k===exceptKey) continue; const p=this.panels[k];
       if(p && p.classeSeg===selfSeg && ((p.screen==="seance" && p.current===id) || p._entering===id)) return p.name; }
-    const now=Date.now();
-    for(const sid in this._sessions){ if(sid===selfId) continue; const s=this._sessions[sid];
-      if(s && s.classeSeg===selfSeg && s.current===id && (now-(s.lastSeen||0))<60000) return s.name||sid; }
     return null;
   },
   syncMaps(){ for(const k in this.panels){ const p=this.panels[k]; if(p && p.screen==="map") p.render(); } },
