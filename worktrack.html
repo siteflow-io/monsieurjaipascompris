@@ -2365,10 +2365,13 @@ const PROF = {
     const opt={ textes:$("prtTextes").checked, consignes:$("prtConsignes").checked, eval:$("prtEval").checked,
       corrige:$("prtCorrige").checked, aides:$("prtAides").checked, fiches:$("prtFiches").checked };
     if(!opt.textes&&!opt.consignes&&!opt.eval&&!opt.aides&&!opt.fiches){ toast("Coche au moins un élément à imprimer."); return; }
+    let html; try{ html=this.chapterPrintHTML(scope, opt); }
+    catch(e){ toast("Impression impossible : "+e.message); return; }
     const w=window.open("","_blank"); if(!w){ toast("Autorise les pop-ups pour ouvrir l'impression."); return; }
-    w.document.write(this.chapterPrintHTML(scope, opt)); w.document.close();
+    w.document.write(html); w.document.close();
   },
   _prtConsigne(blocks){ let h=""; const G={surligner:'à surligner',relier:'à relier',etiqueter:'à étiqueter'};
+    blocks = Array.isArray(blocks) ? blocks : parseLegacy(blocks);   // tolère un chapitre encore au format texte
     (blocks||[]).forEach(b=>{ const t=b.type||'question';
       if(t==='note') h+='<p class="p-note">'+esc(b.texte||'')+'</p>';
       else if(t==='section') h+='<h4 class="p-sec">'+esc(b.titre||'')+(b.ref?' <span>· '+esc(b.ref)+'</span>':'')+'</h4>';
