@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
+<meta name="app-version" content="2026-06-05a">
+<!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
   :root{
@@ -356,6 +358,10 @@
   .dash-chrono{font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted)}
   .dash-chrono.warn{color:var(--gold2)} .dash-chrono.late{color:var(--fire2)} .dash-chrono.done{color:#79b58a}
   .dash-row.dash-warn{background:rgba(200,90,70,.1);box-shadow:inset 3px 0 0 var(--fire2)}
+  .dash-row.dash-spam{background:rgba(214,158,46,.12);box-shadow:inset 3px 0 0 var(--gold2)}
+  .dash-spam-b{color:var(--gold2);font-weight:700;cursor:help}
+  .dd-spam{font-size:.74rem;color:#0c0a07;background:var(--gold2);border-radius:6px;padding:2px 7px;font-weight:700;cursor:help}
+  .dd-reset{margin-left:auto;font-size:.74rem;padding:3px 9px}
   .dash-nm{cursor:pointer}
   .dash-nm:hover{color:var(--gold2);text-decoration:underline}
   .dash-detail{max-width:920px;margin:0 auto}
@@ -458,6 +464,20 @@
   .lock-ic{font-size:2.4rem;margin-bottom:8px}
   .lock-t{font-family:'EB Garamond',serif;font-size:1.3rem;color:var(--gold);margin-bottom:5px}
   .lock-s{color:var(--muted);font-size:.86rem}
+  /* récap de reprise (overlay montré une fois par cours) */
+  .recap-ov{position:absolute;inset:0;z-index:55;background:rgba(8,6,4,.92);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;border-radius:var(--radius);overflow:auto;padding:16px}
+  .recap-card{width:min(420px,92%);background:var(--panel2);border:1px solid var(--gold-deep);border-radius:14px;padding:20px 22px;box-shadow:var(--shadow)}
+  .recap-h{font-family:'EB Garamond',serif;font-size:1.35rem;color:var(--gold);margin-bottom:12px}
+  .recap-line{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+  .recap-line .rk{color:var(--muted)} .recap-line .rv{font-weight:600;text-align:right}
+  .recap-line .rv.late{color:var(--fire2)} .recap-line .rv.ok{color:#79b58a}
+  .recap-cadrage{margin:14px 0 16px;font-style:italic;color:var(--ink2);font-size:.92rem}
+  .recap-go{width:100%}
+  /* mise à jour automatique */
+  .upd-banner{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;display:flex;gap:12px;align-items:center;
+    background:var(--panel2);border:1px solid var(--gold-deep);border-radius:12px;padding:10px 14px;box-shadow:var(--shadow);font-size:.86rem;color:var(--ink)}
+  .pub-wait{color:var(--gold2);font-size:.86rem;font-weight:600}
   /* coches du bloc Figer (panneau prof) */
   .freeze-sec{border-color:var(--gold-deep)}
   .fz-opts{display:flex;flex-direction:column;gap:7px;margin:4px 0 4px}
@@ -1075,6 +1095,14 @@ const LEVEL_ACCENT = { "6e":["#fbbf24","#fcd34d","rgba(251,191,36,.5)"], "5e":["
 function setAccentForLevel(niv){ const a=LEVEL_ACCENT[niv]||LEVEL_ACCENT["4e"]; const r=document.documentElement.style;
   r.setProperty("--accent",a[0]); r.setProperty("--accent2",a[1]); r.setProperty("--accent-glow",a[2]); }
 
+/* ── Seuils de réglage (valeurs de départ, à caler en classe ; à promouvoir en réglages prof si besoin) ── */
+const SPAM_GAP_MS    = 7000;    // sous cet intervalle entre deux coches « fait », la coche est jugée trop rapide
+const SPAM_MIN_FAST  = 3;       // nombre minimal de coches rapides pour signaler une rafale
+const SPAM_FAST_RATIO= 0.6;     // ... et part minimale que ces coches rapides doivent représenter
+const PRESENCE_MS    = 90000;   // au-delà, une session n'est plus comptée « présente »
+const RECAP_COOLDOWN_MS = 3600000;  // ne pas re-montrer le récap de reprise plus d'une fois par heure (évite les doublons et les reconnexions techniques)
+const APP_VERSION = ((document.querySelector && document.querySelector('meta[name=app-version]'))||{}).content || '0';  // version embarquée dans CE fichier
+
 /* ─────────────────────────── §D · MOTEUR (factory) ─────────────────────
    createEngine = un cerveau de progression PAR élève. Aucune dépendance UI. */
 function createEngine(chapter, store, studentId, eleveIndex){
@@ -1086,9 +1114,10 @@ function createEngine(chapter, store, studentId, eleveIndex){
   const path = [];
   let lastVisited = null;
   let glossaire = [];                       // mots retenus par l'élève (transversal au chapitre) : {mot, def, ts}
+  let recapAt = 0;                          // dernier affichage du récap de reprise (anti-doublon, cf. RECAP_COOLDOWN_MS)
 
   const progKey = "progress/" + (chapter.meta.id||"chapitre") + "/" + studentId;
-  function persist(){ store.save(progKey, { state, path, lastVisited, glossaire }); }
+  function persist(){ store.save(progKey, { state, path, lastVisited, glossaire, recapAt }); }
   // — Chrono pausable : accumMs (temps cumulé gelé) + runSince (début de la période active, 0 = en pause/gelé).
   //   Temps écoulé = accumMs + (runSince ? now - runSince : 0). Permet de figer en fin de cours sans compter l'intervalle.
   function _normChrono(st){ if(!st) return;                       // migration depuis l'ancien format (startedAt seul)
@@ -1108,6 +1137,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
     Object.keys(state).forEach(id=>{ if(saved.state[id]) Object.assign(state[id], saved.state[id]); });
     if(Array.isArray(saved.path)){ path.length=0; saved.path.forEach(x=>path.push(x)); }
     if(Array.isArray(saved.glossaire)) glossaire=saved.glossaire.slice();
+    recapAt = saved.recapAt || 0;
     lastVisited = saved.lastVisited || null;
     Object.keys(state).forEach(id=>_normChrono(state[id])); }   // normalise les anciens états au chargement
   // chemin idéal propre à CET élève (décalé en canon), robuste si la donnée manque
@@ -1229,7 +1259,51 @@ function createEngine(chapter, store, studentId, eleveIndex){
         if(p && state[p.id].status!=="done") miss.push(p); cur=p; }
       if(!miss.length) return null;
       return chapter.reglages.reorientation==="root" ? miss[miss.length-1] : miss[0]; },
-    statusOf(id){ return state[id].status; }
+    statusOf(id){ return state[id].status; },
+    // une séance « convergence » n'est accessible que lorsque toutes les autres (non-convergence) sont terminées
+    convergencePrete(){ return seances.filter(s=>s.niveauEntonnoir!=="convergence").every(s=>state[s.id] && state[s.id].status==="done"); },
+    peutAcceder(id){ const s=find(id); if(!s) return false;
+      if(s.niveauEntonnoir==="convergence" && state[id].status!=="done") return api.convergencePrete();
+      return true; },
+    // progression des cases « fait » d'une séance (pour exiger qu'elles soient cochées avant le QCM)
+    qProgress(id){ const s=find(id), c=s&&s.corps&&s.corps.consigne, blocks=Array.isArray(c)?c:[];
+      const qd=(state[id]||{}).qdone||{}; let total=0, done=0;
+      blocks.forEach((b,bi)=>{ if((b.type||'question')==='question'){ total++; if(qd['q'+bi]) done++; } });
+      return { total, done, allDone: total===0 || done>=total }; },
+    // détection de « mitraille » : beaucoup de cases cochées coup sur coup, signe d'un remplissage sans travail au cahier
+    spamFlag(id){ const qt=api.qTimes(id); if(qt.length<3) return null;
+      const fast=qt.filter((e,i)=> i>0 && e.ms>0 && e.ms<SPAM_GAP_MS).length;     // coches trop rapprochées (hors la 1re)
+      if(fast>=SPAM_MIN_FAST && fast>=Math.ceil((qt.length-1)*SPAM_FAST_RATIO)){
+        const span=qt[qt.length-1].ts-qt[0].ts;
+        return { fast, total:qt.length, span }; }
+      return null; },
+    // remettre UNE séance à zéro (efface réponses, gestes, chrono, cases « fait ») sans toucher au reste
+    resetSeance(id){ if(!state[id]) return;
+      state[id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{}};
+      const i=path.indexOf(id); if(i>=0) path.splice(i,1);
+      if(lastVisited===id) lastVisited=null; persist(); },
+    // — Récap de reprise : montré une fois par cours (cooldown), si une progression est entamée —
+    recapDue(){ if(!seances.some(s=>state[s.id] && state[s.id].status!=='todo')) return false;
+      return !recapAt || (Date.now()-recapAt) > RECAP_COOLDOWN_MS; },
+    markRecapSeen(){ recapAt=Date.now(); persist(); },
+    recapData(){
+      const total=seances.length, faites=seances.filter(s=>state[s.id].status==='done').length;
+      let tempsMs=0, prevuMs=0;
+      seances.forEach(s=>{ tempsMs+=_elapsed(state[s.id]); prevuMs+=(s.dureeEstimee||0)*60000; });
+      const prioId=api.globalSuggestion(), prioritaire=prioId?find(prioId):null;
+      const qp=prioId?api.qProgress(prioId):null;
+      const donesQcm=seances.filter(s=>state[s.id].status==='done'&&state[s.id].qcm)
+        .sort((a,b)=>(state[a.id].finishedAt||0)-(state[b.id].finishedAt||0));
+      let qcmPrec=null; if(donesQcm.length){ const l=donesQcm[donesQcm.length-1], q=state[l.id].qcm; qcmPrec={titre:l.titre,good:q.good,total:q.total}; }
+      const auto=api.autonomyNote();
+      const notees=seances.filter(s=>state[s.id].status==='done'&&api.hasAides(s.id));
+      let starMoy=null; if(notees.length) starMoy=Math.round(notees.reduce((a,s)=>a+api.starsOf(s.id),0)/notees.length);
+      let cadrage;
+      if(faites>=total) cadrage="Tu as tout terminé : relis et soigne tes réponses.";
+      else if(prevuMs>0 && tempsMs>prevuMs*1.15) cadrage="Tu as pris du retard : avance un peu plus vite aujourd'hui.";
+      else if(prevuMs>0 && faites>0 && tempsMs<prevuMs*0.6) cadrage="Bon rythme : continue comme ça.";
+      else cadrage="Tu es dans les temps. Reprends où tu t'étais arrêté.";
+      return { total, faites, tempsMs, prevuMs, prioritaire, qp, qcmPrec, auto, starMoy, cadrage }; }
   };
   return api;
 }
@@ -1325,6 +1399,7 @@ function Panel(engine, root, name){
   function nagHide(){ const host=laneEl(); const n=host.querySelector&&host.querySelector(':scope > .nag'); if(n) n.classList.remove('show'); P._nag=false; }
   P.iAmHere=function(){ P._lastAct=Date.now(); nagHide(); };
   P.checkIdle=function(){ if(P._mirrorLane) return;
+    if(P._locked){ if(P._nag) nagHide(); return; }                                   // écran en pause : pas de rappel
     if(P.screen!=='seance'||!P.current){ if(P._nag) nagHide(); return; }
     const t=engine.timing(P.current); if(t.fin){ if(P._nag) nagHide(); return; }   // séance finie : plus de rappel
     if(Date.now()-P._lastAct>IDLE_MS) nagShow(); };
@@ -1344,6 +1419,7 @@ function Panel(engine, root, name){
     let firstUndone=null;
     for(const id of p){
       if(engine.statusOf(id)==="done") continue;
+      if(!engine.peutAcceder(id)) continue;                 // convergence pas encore ouverte
       if(firstUndone===null) firstUndone=id;
       if(excl && engine.seance(id).niveauEntonnoir!=="convergence" && APP.occupant(id,lane)) continue;
       return id;
@@ -1370,17 +1446,22 @@ function Panel(engine, root, name){
     const excl=CHAPTER.reglages.exclusiviteSeance;
     S.forEach((s,i)=>{ const st=engine.statusOf(s.id), here=(s.id===snap.lastVisited&&st!=="done");
       const occ = (excl && s.niveauEntonnoir!=="convergence") ? APP.occupant(s.id, laneIdOf()) : null;
+      const lock = !occ && st!=="done" && !engine.peutAcceder(s.id);     // convergence pas encore ouverte
       const stars=engine.starsOf(s.id);
       const starsH = stars===null ? '<span class="na">hors autonomie</span>'
         : [1,2,3].map(k=>`<span class="${k<=stars?'full':'empty'}">★</span>`).join("");
-      nodes+=`<div class="place ${st}${s.id===sug?' suggested':''}${here?' here':''}${occ?' locked':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}" title="${occ?esc(occ)+` fait cette séance — choisis-en une autre`:`Clique pour faire « `+esc(s.titre)+` »`}">
-        <div class="medal">${s.rn}${st==="done"?'<span class="check">✓</span>':''}${occ?'<span class="occ">occupé</span>':''}</div>
+      const ttl = occ ? esc(occ)+` fait cette séance — choisis-en une autre`
+        : lock ? `Termine d'abord les autres séances : la convergence s'ouvre à la fin`
+        : `Clique pour faire « `+esc(s.titre)+` »`;
+      nodes+=`<div class="place ${st}${s.id===sug?' suggested':''}${here?' here':''}${(occ||lock)?' locked':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}" data-lock="${lock?'1':''}" title="${ttl}">
+        <div class="medal">${s.rn}${st==="done"?'<span class="check">✓</span>':''}${occ?'<span class="occ">occupé</span>':''}${lock?'<span class="occ">🔒</span>':''}</div>
         <div class="nm">${esc(s.titre)}</div><div class="city">${esc(s.ville)}</div>
         <div class="stars">${starsH}</div></div>`; });
     root.innerHTML = hud()+`<div class="mapcard"><div class="mh"><span class="lab">La carte</span><span class="free">aucun ordre imposé</span></div>
       <div class="graph">${svg}${nodes}</div></div>`;
     root.querySelectorAll(".place").forEach(el=> el.onclick=()=>{
       if(el.dataset.occ){ toast(el.dataset.occ+" fait cette séance, choisis-en une autre."); return; }
+      if(el.dataset.lock){ toast("Termine d'abord les autres séances : la convergence s'ouvre à la fin."); return; }
       askConfirm(el.dataset.id); });
   }
 
@@ -1401,6 +1482,7 @@ function Panel(engine, root, name){
   }
   // le tracé se construit, puis la séance s'ouvre — avec verrou « premier arrivé, premier servi »
   function travelTo(id){
+    if(!engine.peutAcceder(id)){ toast("Termine d'abord les autres séances : la convergence s'ouvre à la fin."); renderMap(); return; }
     const excl=CHAPTER.reglages.exclusiviteSeance, s0=engine.seance(id);
     if(excl && s0 && s0.niveauEntonnoir!=="convergence"){
       const occ=APP.occupant(id, laneIdOf());                 // qqn l'a-t-il prise entre le clic et la validation ?
@@ -1420,7 +1502,7 @@ function Panel(engine, root, name){
     if(laneIdOf()!=="__mirror") attachSwipe();                  // balayage des gestes (l'élève local ; le miroir est piloté à part)
     P.tab('c'); APP.syncMaps();
   }
-  // chrono de séance (sans pause : temps alloué) + message de repère, à partir de l'état partagé
+  // chrono de séance (pausable : peut être gelé en fin de cours) + message de repère, à partir de l'état partagé
   function chronoInfo(id){ const cs=chronoState(engine.timing(id), engine.seance(id).dureeEstimee);
     if(cs.txt==='—') return { html:'⏱ —', cls:'ok' };
     const msg = cs.cls==='done' ? 'terminée' : cs.cls==='late' ? 'tu dépasses le temps prévu'
@@ -1490,6 +1572,9 @@ function Panel(engine, root, name){
       else body+='<div class="docq">'+gZone(b.texte||'',zone)+'</div>'; });
     return '<div class="docsheet docquest">'+head+'<div class="docbody">'+body+'</div></div>'; }
   P.tab=function(t){
+    if(t==='e' && laneIdOf()!=='__mirror' && P.current){          // exiger que toutes les cases « fait » soient cochées avant le QCM
+      const qp=engine.qProgress(P.current);
+      if(!qp.allDone){ toast("Coche d'abord toutes tes questions « fait » ("+qp.done+"/"+qp.total+") avant de t'évaluer."); t='c'; } }
     P.tabCur=t;
     root.querySelector(".tabC").classList.toggle("on",t==='c'); root.querySelector(".tabE").classList.toggle("on",t==='e');
     if(t==='c') fillC();
@@ -1561,12 +1646,29 @@ function Panel(engine, root, name){
     if(!d){ d=document.createElement('div'); d.className='dico'; host.appendChild(d); } return d; }
   P.closeDico=function(){ const host=laneEl(); const d=host.querySelector&&host.querySelector(':scope > .dico'); if(d) d.classList.remove('show'); };
   // verrouillage de l'écran en pause/fin de séance : voile non-cliquable par-dessus toute la lane
-  P.setLock=function(on){ const lane=laneEl(); if(!lane||!lane.querySelector) return;
+  P.setLock=function(on){ P._locked=!!on; const lane=laneEl(); if(!lane||!lane.querySelector) return;
     let ov=lane.querySelector(':scope > .lock-ov');
     if(on){ if(!ov){ ov=document.createElement('div'); ov.className='lock-ov';
         ov.innerHTML='<div class="lock-card"><div class="lock-ic">⏸</div><div class="lock-t">Séance en pause</div><div class="lock-s">On reprend au prochain cours.</div></div>';
         lane.appendChild(ov); } }
     else if(ov){ ov.remove(); } };
+  // récap de reprise : bilan de la séance précédente, montré une fois par cours à la reconnexion
+  P.showRecap=function(){ const lane=laneEl(); if(!lane||!lane.querySelector) return;
+    if(lane.querySelector(':scope > .recap-ov')) return;                 // déjà affiché
+    const d=engine.recapData(); const fmtMin=ms=>Math.max(0,Math.round(ms/60000))+' min';
+    const ecart = d.prevuMs>0 ? d.tempsMs-d.prevuMs : 0, enRetard = ecart>0;
+    let h='<div class="recap-card"><div class="recap-h">Bon retour, '+esc(name)+'</div>'
+      +'<div class="recap-line"><span class="rk">Séances faites</span><span class="rv">'+d.faites+' / '+d.total+'</span></div>'
+      +'<div class="recap-line"><span class="rk">Temps passé</span><span class="rv">'+fmtMin(d.tempsMs)+(d.prevuMs?' / '+fmtMin(d.prevuMs)+' prévu':'')+'</span></div>';
+    if(d.prevuMs>0) h+='<div class="recap-line"><span class="rk">Rythme</span><span class="rv '+(enRetard?'late':'ok')+'">'+(enRetard?'+'+fmtMin(ecart)+' de retard':'dans les temps')+'</span></div>';
+    if(d.prioritaire) h+='<div class="recap-line"><span class="rk">À finir en priorité</span><span class="rv">'+esc(d.prioritaire.titre)+(d.qp&&d.qp.total?' ('+d.qp.done+'/'+d.qp.total+' questions cochées)':'')+'</span></div>';
+    if(d.qcmPrec) h+='<div class="recap-line"><span class="rk">Ton QCM précédent</span><span class="rv">'+esc(d.qcmPrec.titre)+' — '+d.qcmPrec.good+'/'+d.qcmPrec.total+'</span></div>';
+    if(d.auto && d.auto.sur>0) h+='<div class="recap-line"><span class="rk">Autonomie</span><span class="rv">'+d.auto.note+'/'+d.auto.sur+' sans aide'+(d.starMoy!=null?' · '+'★'.repeat(d.starMoy)+'☆'.repeat(Math.max(0,3-d.starMoy)):'')+'</span></div>';
+    h+='<div class="recap-cadrage">'+esc(d.cadrage)+'</div><button class="btn primary recap-go">Reprendre</button></div>';
+    const ov=document.createElement('div'); ov.className='recap-ov'; ov.innerHTML=h; lane.appendChild(ov);
+    const btn=ov.querySelector('.recap-go'); if(btn) btn.onclick=()=>P.closeRecap();
+    engine.markRecapSeen(); };                                           // marqué dès l'affichage (anti-doublon même sans clic)
+  P.closeRecap=function(){ const lane=laneEl(); const ov=lane&&lane.querySelector&&lane.querySelector(':scope > .recap-ov'); if(ov) ov.remove(); };
   // nettoie l'extrait brut du Wiktionnaire : isole la partie française si repérable, compacte, tronque
   function cleanDef(ex){ let t=String(ex||'').replace(/\r/g,'');
     const fr=t.search(/(^|\n)\s*Français\s*(\n|$)/); if(fr>=0) t=t.slice(fr);
@@ -1759,7 +1861,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false,
   _sessions:{}, _unsubs:[], _hb:null, _tick:null,
@@ -1798,6 +1900,7 @@ const APP = {
     this._unsubs.forEach(u=>{ try{u();}catch(e){} }); this._unsubs=[];
     if(this._hb) clearInterval(this._hb); if(this._tick) clearInterval(this._tick);
     const chap=CHAPTER.meta.id||"chapitre";
+    this._unsubs.push(store.subscribe("appVersion", v=>{ this._appVersion=v||''; this.onAppVersion(this._appVersion); }));   // mise à jour auto
     this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMaps();
       if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
     this._unsubs.push(store.subscribe("control/"+chap, v=>{ this._control=v||{};
@@ -1844,10 +1947,12 @@ const APP = {
     const chap=CHAPTER.meta.id||"chapitre";
     store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
       idx:p.idx||0, lastSeen:Date.now(), current:(p.screen==="seance"?p.current:(p._entering||null)), tab:(p.tabCur||'c'), epoch:p.epoch||0 }); },
-  endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre"; store.save("control/"+chap+"/"+classeSeg, { logoutEpoch:Date.now() }); },
+  endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre";
+    const node=Object.assign({}, this._control[classeSeg]||{}); node.logoutEpoch=Date.now();   // merge : ne pas écraser un freeze en cours
+    store.save("control/"+chap+"/"+classeSeg, node); },
   // classes (segments) actuellement présentes, d'après les sessions vivantes
   presentSegs(){ const now=Date.now();
-    return [...new Set(Object.values(this._sessions||{}).filter(s=>s && (now-(s.lastSeen||0))<90000).map(s=>s.classeSeg).filter(Boolean))]; },
+    return [...new Set(Object.values(this._sessions||{}).filter(s=>s && (now-(s.lastSeen||0))<PRESENCE_MS).map(s=>s.classeSeg).filter(Boolean))]; },
   // FIGER : gel des chronos / verrouillage / déconnexion, par coches — appliqué à toutes les classes présentes
   freezeSessions(opt){ const chap=CHAPTER.meta.id||"chapitre"; const segs=this.presentSegs();
     if(!segs.length){ toast("Aucun élève connecté."); return; }
@@ -1870,8 +1975,35 @@ const APP = {
     this.endSessionForUid(uid); },                                      // puis déconnecte → repart de zéro à la reconnexion
   kick(key){ const p=this.panels[key]; if(!p) return; this.panels[key]=null; this.refreshLogins(); },
 
+  // ── Mise à jour automatique : déclenchée quand la version publiée (Firebase) diffère de la version embarquée ──
+  onAppVersion(published){
+    if(!published || published===APP_VERSION){ if(lsGet("wt_reload_for")) lsSet("wt_reload_for", null); this._hideUpdateBanner(); return; }  // à jour : on lève le garde-fou
+    if(lsGet("wt_reload_for")===published){ this._showUpdateBanner(published); return; }   // déjà rechargé pour cette version sans succès (serveur à la traîne) → bannière, pas de boucle
+    this._doUpdate(published);
+  },
+  _doUpdate(version){ this.snapshotForUpdate(version); location.href = location.pathname + "?v=" + encodeURIComponent(version); },
+  // mémorise l'état de chaque écran connecté pour le restaurer après le reload
+  snapshotForUpdate(version){
+    const lanes={};
+    for(const key in this.panels){ const p=this.panels[key]; if(!p||!p.engine) continue;
+      let scroll=0; const lb=$("lane"+key), sc=lb&&lb.querySelector('.tabbody'); if(sc) scroll=sc.scrollTop||0;
+      lanes[key]={ name:p.name, classe:p.classe||'', studentId:p.engine.studentId, idx:p.idx||0,
+        screen:p.screen||'map', current:p.current||null, tabCur:p.tabCur||'c', scroll }; }
+    lsSet("wt_resume", { tableSize:this.tableSize, lanes });
+    lsSet("wt_reload_for", version);
+  },
+  _showUpdateBanner(v){ if($("updBanner")) return;
+    const b=document.createElement('div'); b.id="updBanner"; b.className="upd-banner";
+    b.innerHTML='<span>Mise à jour prête — en attente du serveur.</span><button class="btn primary" id="updGo">Recharger</button>';
+    document.body.appendChild(b);
+    const go=$("updGo"); if(go) go.onclick=()=>{ this.snapshotForUpdate(v); location.href=location.pathname+"?v="+encodeURIComponent(v); }; },
+  _hideUpdateBanner(){ const b=$("updBanner"); if(b) b.remove(); },
+
   boot(){
     if(this._seatsInit===undefined){ this._seatsInit=true; const s=lsGet("wt_seats"); if(s&&s>=1&&s<=LETTERS.length) this.tableSize=s; }  // choix mémorisé sur cette tablette
+    const resume = (!this.testMode) ? lsGet("wt_resume") : null;       // reprise après un reload de mise à jour
+    if(resume){ lsSet("wt_resume", null);                              // consommé une seule fois
+      if(resume.tableSize>=1 && resume.tableSize<=LETTERS.length) this.tableSize=resume.tableSize; }
     setAccentForLevel(CHAPTER.meta.niveau);
     $("chapTitle").textContent = CHAPTER.meta.titre;
     this.renderSeatPick();
@@ -1885,7 +2017,9 @@ const APP = {
       stage.appendChild(lane);
       lane.insertAdjacentHTML("beforeend", helpFAB(key));   // bouton « ? » par écran élève
       this.panels[key]=null;
+      const L = resume && resume.lanes && resume.lanes[key];
       if(test) this.mountStudent(key,i,"Élève "+key,"",("test"+key),lane);
+      else if(L && L.studentId) this.mountStudent(key, i, L.name, L.classe, L.studentId, lane, L);  // reconnexion auto + restauration de l'écran (pas de récap)
       else this.mountLogin(key,i,lane);
     }
     this.startPresence();
@@ -1936,14 +2070,24 @@ const APP = {
     }
   },
   takenNames(){ return Object.values(this.panels).filter(Boolean).map(p=>p.name); },
-  mountStudent(key,i,name,classe,studentId,lane){
+  mountStudent(key,i,name,classe,studentId,lane,resume){
     const engine=createEngine(CHAPTER, store, studentId, i);
     const p=Panel(engine, lane.querySelector(".lanebody"), name);
     p.epoch=Date.now(); p.classe=classe||""; p.classeSeg=classe?sanId(classe):"libre"; p.idx=i;
     this.panels[key]=p;
     this.refreshLogins();                                     // verrouille la classe sur les autres moitiés
     if(this.testMode){ p.render(); this.beat(key); }          // test : chaque session repart de zéro (aucune hydratation)
-    else store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved); p.render(); this.beat(key); });
+    else store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved);
+      if(resume){                                             // reprise après mise à jour : on rouvre exactement le même écran, SANS récap
+        if(resume.screen==='seance' && engine.seance(resume.current)){ p.screen='seance'; p.current=resume.current; }
+        p.render();
+        if(p.screen==='seance'){ if(resume.tabCur) p.tab(resume.tabCur);
+          if(resume.scroll){ const sc=lane.querySelector('.tabbody'); if(sc) sc.scrollTop=resume.scroll; } }
+      } else {
+        p.render();
+        if(engine.recapDue()) p.showRecap();                  // récap de reprise (1×/cours) — connexion manuelle uniquement
+      }
+      this.beat(key); });
   },
   // recharge un poste élève sur la nouvelle version de SON chapitre actif, en préservant sa progression (édition en direct)
   reloadPanel(key, newChap){ const old=this.panels[key]; if(!old||!old.engine) return; const lane=$("lane"+key); if(!lane) return;
@@ -2080,14 +2224,15 @@ const DASH = {
     const age=s.lastSeen?Date.now()-s.lastSeen:Infinity; const dot=age<60000?'🟢':(age<300000?'🟠':'⚪');
     const cur=s.current||null; const seance=cur?CHAPTER.seances.find(x=>x.id===cur):null;
     const where=seance?seance.titre:(cur?cur:'sur la carte');
-    let ch={txt:'—',cls:'ok'}, qtxt='—', dico='—', qcm='—';
+    let ch={txt:'—',cls:'ok'}, qtxt='—', dico='—', qcm='—', spam=null;
     if(eng&&cur&&seance){ ch=chronoState(eng.timing(cur), seance.dureeEstimee);
       const done=Object.keys(eng.timing(cur).qdone||{}).length, tot=nbQuestions(seance); qtxt=tot?done+'/'+tot:String(done);
-      dico=String(eng.dicoCount(cur)); const st=eng.snapshot().state[cur]; if(st&&st.qcm) qcm=st.qcm.good+'/'+st.qcm.total; }
+      dico=String(eng.dicoCount(cur)); const st=eng.snapshot().state[cur]; if(st&&st.qcm) qcm=st.qcm.good+'/'+st.qcm.total;
+      spam=eng.spamFlag(cur); }
     const blocked = ch.cls==='late' || (age>=300000 && cur);
-    return '<div class="dash-grid dash-row'+(blocked?' dash-warn':'')+'">'
+    return '<div class="dash-grid dash-row'+(blocked?' dash-warn':'')+(spam?' dash-spam':'')+'">'
       +'<span title="'+(age<60000?'actif':(age<300000?'en pause':'hors ligne'))+'">'+dot+'</span>'
-      +'<span class="dash-nm" title="Voir la fiche détaillée" onclick="DASH.detail(\''+esc(uid)+'\')">'+esc(s.name||uid)+'</span>'
+      +'<span class="dash-nm" title="Voir la fiche détaillée" onclick="DASH.detail(\''+esc(uid)+'\')">'+esc(s.name||uid)+(spam?' <span class="dash-spam-b" title="'+spam.fast+' questions cochées coup sur coup (moins de 7 s) — possible remplissage sans travail. Ouvre sa fiche et vérifie le cahier.">⚠</span>':'')+'</span>'
       +'<span class="dash-sea">'+esc(where)+'</span>'
       +'<span>'+qtxt+'</span>'
       +'<span class="dash-chrono '+ch.cls+'" data-uid="'+esc(uid)+'" title="Temps passé sur la séance en cours / temps prévu">'+esc(ch.txt)+'</span>'
@@ -2103,6 +2248,15 @@ const DASH = {
   mirror(uid){ MIRROR.open(uid); },
   detail(uid){ this._detailUid=uid; this.render(); },
   back(){ this._detailUid=null; this.render(); },
+  resetSeance(uid, sid, label){ const eng=this._engines[uid]; if(!eng) return;
+    if(typeof confirm==="function" && !confirm("Remettre « "+label+" » à zéro pour cet élève ?\nElle redevient « à faire » ; le reste de sa progression est conservé.\nS'il est connecté, il sera déconnecté pour repartir proprement.")) return;
+    const chap=CHAPTER.meta.id||"chapitre"; const snap=JSON.parse(JSON.stringify(eng.snapshot()));
+    snap.state[sid]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{}};
+    if(Array.isArray(snap.path)) snap.path=snap.path.filter(x=>x!==sid);
+    if(snap.lastVisited===sid) snap.lastVisited=null;
+    store.save("progress/"+chap+"/"+uid, { state:snap.state, path:snap.path, lastVisited:snap.lastVisited, glossaire:snap.glossaire });
+    APP.endSessionForUid(uid);                       // déconnecte si connecté → re-hydrate l'état corrigé au retour
+    toast("« "+label+" » remise à zéro."); this.render(); },
   detailHTML(uid){ const eng=this._engines[uid], s0=this._sess[uid]||{}, nom=s0.name||uid;
     if(!eng) return '<div class="dash-detail"><div class="dd-top"><button class="btn ghost" onclick="DASH.back()">← Retour</button><h3>'+esc(nom)+'</h3></div><div class="dash-empty">Aucune progression enregistrée pour cet élève.</div></div>';
     const card=(k,v)=>'<div class="dd-card"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div></div>';
@@ -2113,11 +2267,15 @@ const DASH = {
       const etat = st.status==='done'?'terminée':(st.status==='wip'?'en cours':'à faire');
       const temps = (t.elapsedMs!=null) ? fmtMMSS(t.elapsedMs) : (t.start ? fmtMMSS((t.fin||Date.now())-t.start) : '—');
       const qmap={}; (Array.isArray(s.corps.consigne)?s.corps.consigne:[]).forEach((bk,bi)=>{ if(bk.type==='question') qmap['q'+bi]=bk.n; });
-      const qt=eng.qTimes(s.id), dico=eng.dicoList(s.id), stars=eng.starsOf(s.id);
+      const qt=eng.qTimes(s.id), dico=eng.dicoList(s.id), stars=eng.starsOf(s.id), sp=eng.spamFlag(s.id);
+      const titJs=(s.titre||'').replace(/'/g,"\\'");
       h+='<div class="dd-sea"><div class="dd-sh"><b>'+esc(s.titre)+'</b><span class="dd-tag dd-'+(st.status||'todo')+'">'+etat+'</span>'
         +'<span class="dd-meta">⏱ '+temps+(s.dureeEstimee?' / '+s.dureeEstimee+':00':'')+'</span>'
         +(st.qcm?'<span class="dd-meta">QCM '+st.qcm.good+'/'+st.qcm.total+'</span>':'')
-        +(stars!==null?'<span class="dd-meta">'+'★'.repeat(stars)+'☆'.repeat(Math.max(0,3-stars))+'</span>':'')+'</div>';
+        +(stars!==null?'<span class="dd-meta">'+'★'.repeat(stars)+'☆'.repeat(Math.max(0,3-stars))+'</span>':'')
+        +(sp?'<span class="dd-spam" title="'+sp.fast+' questions cochées coup sur coup (moins de 7 s chacune) — possible remplissage sans travail au cahier. À vérifier dans le cahier.">⚠ coches en rafale</span>':'')
+        +((st.status&&st.status!=='todo')?'<button class="btn ghost dd-reset" title="Remettre cette séance à zéro pour cet élève" onclick="DASH.resetSeance(\''+esc(uid)+'\',\''+s.id+'\',\''+titJs+'\')">↺ remettre à zéro</button>':'')
+        +'</div>';
       if(qt.length) h+='<div class="dd-q">'+qt.map(x=>'<span class="dd-qchip">Q'+(qmap[x.key]||'?')+' · '+fmtMMSS(x.ms)+'</span>').join('')+'</div>';
       if(dico.length) h+='<div class="dd-dico">📖 '+dico.map(d=>esc(d.mot)).join(', ')+'</div>';
       h+='</div>'; });
@@ -2664,7 +2822,13 @@ const PROF = {
 
   /* ── onglet RÉGLAGES ── */
   reglagesBody(){ const c=CHAPTER;
-    return `<div class="prof-sec"><h4>Réorientation sur échec</h4>
+    const pub = this._pubState==='polling'
+      ? `<div class="prof-row"><span class="pub-wait">⏳ Vérification du serveur…</span><button class="btn ghost" onclick="PROF.cancelPublish()">Annuler</button></div>`
+      : `<div class="prof-row"><button class="btn primary" onclick="PROF.publishUpdate()">Publier la mise à jour</button></div>`;
+    return `<div class="prof-sec"><h4>Mise à jour de l'application</h4>
+        <div class="d">Après avoir déployé la nouvelle version sur le serveur, recharge d'abord <b>ta</b> page, puis clique. L'app attend que le serveur serve réellement la nouvelle version, puis rafraîchit tous les élèves automatiquement — ils retrouvent leur écran. Version de ce poste : <b>${esc(APP_VERSION)}</b>${APP._appVersion?` · publiée : <b>${esc(APP._appVersion)}</b>`:''}.</div>
+        ${pub}${this._pubMsg?`<div class="d" style="margin-top:8px">${esc(this._pubMsg)}</div>`:''}</div>
+      <div class="prof-sec"><h4>Réorientation sur échec</h4>
         <div class="d">Si un élève rate le QCM d'une séance qui a un <b>prérequis</b>, l'app le renvoie vers ce prérequis. « immédiat » = le prérequis direct ; « racine » = la première séance manquante de la chaîne. Sans prérequis défini, ce réglage n'a aucun effet.</div>
         <div class="prof-row">
           <button class="btn ghost" onclick="PROF.setReo('immediate')" ${c.reglages.reorientation==='immediate'?'style="border-color:var(--gold-deep);color:var(--gold)"':''}>prérequis immédiat</button>
@@ -2673,12 +2837,29 @@ const PROF = {
         <div class="d">Affiche une pop-up « Tu vas faire… » quand l'élève choisit une séance sur la carte.</div>
         <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleConfirm()">${c.reglages.confirmationSaut?'activée':'désactivée'}</button></div></div>
       <div class="prof-sec"><h4>Une seule fois la même séance</h4>
-        <div class="d">Empêche deux élèves de la même classe d'être sur la même séance au même moment (anti-copiage).</div>
-        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleExcl()">${c.reglages.exclusiviteSeance?'activé — séance verrouillée si occupée':'désactivé — séances libres'}</button></div></div>
+        <div class="d">Empêche deux élèves <b>de la même tablette</b> (écran partagé) d'être sur la même séance au même moment (anti-copiage de voisin). Sans effet entre tablettes différentes : chaque élève reste libre de sa séance.</div>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleExcl()">${c.reglages.exclusiviteSeance?'activé — séance verrouillée si le voisin de tablette l\'a prise':'désactivé — séances libres'}</button></div></div>
       <div class="prof-sec"><h4>Mode TEST</h4>
         <div class="d">Bascule les postes en élève « bac à sable » (données séparées des vrais élèves), avec réinitialisation et réussite forcée pour parcourir vite un chapitre.</div>
         <div class="prof-row"><button class="btn ghost" onclick="APP.toggleTest();PROF.render()">${APP.testMode?'activé — postes en test':'désactivé'}</button></div></div>`; },
   setReo(m){ CHAPTER.reglages.reorientation=m; this.render(); toast("Réorientation : "+m); },
+  // publication d'une mise à jour : on sonde le serveur, on ne publie (et donc ne rafraîchit les élèves) QUE lorsqu'il sert la nouvelle version
+  publishUpdate(){ this._pubState='polling'; this._pubMsg=''; this.render();
+    const base=location.pathname, current=APP._appVersion||'';
+    let lastSeen=null, hits=0, tries=0;
+    const poll=()=>{ if(this._pubState!=='polling') return; tries++;
+      fetch(base+'?_='+Date.now(), {cache:'no-store'}).then(r=>r.text()).then(html=>{
+        const m=html.match(/name=["']app-version["'][^>]*content=["']([^"']+)["']/i) || html.match(/content=["']([^"']+)["'][^>]*name=["']app-version["']/i);
+        const remote=m?m[1]:null;
+        if(remote && remote!==current){ if(remote===lastSeen) hits++; else { hits=1; lastSeen=remote; }
+          if(hits>=2){ store.save("appVersion", remote); this._pubState='done';
+            this._pubMsg='Publié ('+remote+'). Les élèves vont se rafraîchir automatiquement.'; this.render(); return; } }
+        else { hits=0; lastSeen=remote; }
+        if(tries>=18){ this._pubState='timeout'; this._pubMsg='Le serveur sert encore l\'ancienne version ('+(remote||'?')+'). Attends une minute et réessaie.'; this.render(); return; }
+        setTimeout(poll, 10000);
+      }).catch(()=>{ if(tries>=18){ this._pubState='timeout'; this._pubMsg='Impossible de joindre le serveur — réessaie.'; this.render(); } else setTimeout(poll, 10000); }); };
+    poll(); },
+  cancelPublish(){ this._pubState=null; this._pubMsg='Publication annulée.'; this.render(); },
   toggleConfirm(){ CHAPTER.reglages.confirmationSaut=!CHAPTER.reglages.confirmationSaut; this.render(); },
   toggleExcl(){ CHAPTER.reglages.exclusiviteSeance=!CHAPTER.reglages.exclusiviteSeance;
     this.render(); APP.syncMaps(); toast("Exclusivité de séance : "+(CHAPTER.reglages.exclusiviteSeance?"activée":"désactivée")); },
