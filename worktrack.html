@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05b">
+<meta name="app-version" content="2026-06-05d">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1581,11 +1581,20 @@ function Panel(engine, root, name){
     else { renderEval(); root.classList.remove('frozen-scroll'); const tb=root.querySelector('.tabbody'); if(tb) tb.style.touchAction=''; }   // l'éval n'est jamais figée
     APP.beat(APP.laneIdFor(P));
   };
+  // Coups de pouce de la SÉANCE (cible « seance ») : rendus dans la consigne, là où l'élève travaille — pas dans l'éval
+  function aidesHTML(s){ const aides=s.aides||[]; if(!aides.length) return ''; const lane=laneIdOf();
+    let h=`<div class="aides"><div class="ah">Coups de pouce — chacun ouvert coûte une étoile d'autonomie :</div>`;
+    aides.forEach(a=>{ const used=((engine.snapshot().state[s.id]||{}).aidesUsed||[]).includes(a.id);
+      h+=`<div class="aide ${used?'used':''}" data-aide="${a.id}"><span class="lab">${used?'Aide ouverte':'Besoin d\'un coup de pouce ?'}</span>
+        <span class="cost">${used?'−1 ★':''}</span>
+        <button title="Ouvrir un indice — coûte une étoile d'autonomie" onclick="APP.panel('${lane}').openAide('${a.id}')">Ouvrir</button></div>
+        <div data-palier="${a.id}">${used?(s.aides.find(x=>x.id===a.id).paliers||[]).map(p=>`<div class="palier">${esc(p)}</div>`).join(""):""}</div>`; });
+    return h+`</div>`; }
   function fillC(){ const s=engine.seance(P.current); const tb=root.querySelector(".tabbody"); if(!tb) return;
     tb.innerHTML=gBar()
       +`<div class="objective"><span class="t">objectif</span><span>${gZone(s.objectif,'obj')}</span></div>
         <div class="rule">⚠️ <div><b>Règle d'or.</b> Rien sur les fiches : tout sur ton <b>cahier</b>. Les fiches servent à lire et réfléchir.</div></div>
-        ${consigneHTML(s.corps.consigne)}${supportsHTML(s)}`;
+        ${consigneHTML(s.corps.consigne)}${supportsHTML(s)}${aidesHTML(s)}`;
     root.classList.toggle('frozen-scroll', !!P._tool);          // outil actif → feuille figée
     tb.style.touchAction = P._tool ? 'none' : '';
     requestAnimationFrame(()=>paintAllDocs(root));               // numérote les lignes une fois le texte mis en page
@@ -1735,14 +1744,6 @@ function Panel(engine, root, name){
     ev.items.filter(i=>EVAL_TYPES[i.type]).forEach(it=>{ const T=EVAL_TYPES[it.type];
       const a=saved&&saved.answers?saved.answers[it.id]:P.answers[it.id];
       h+=`<div class="item" id="reg-${it.id}"><span class="typ reg">${esc(T.label)}</span>`+T.render(it, a, { corrected:!!saved, lane })+`</div>`; });
-    const aides=s.aides||[];
-    if(aides.length){ h+=`<div class="aides"><div class="ah">Coups de pouce — chacun ouvert coûte une étoile d'autonomie :</div>`;
-      aides.forEach(a=>{ const used=engine.snapshot().state[s.id].aidesUsed.includes(a.id);
-        h+=`<div class="aide ${used?'used':''}" data-aide="${a.id}"><span class="lab">${used?'Aide ouverte':'Besoin d\'un coup de pouce ?'}</span>
-          <span class="cost">${used?'−1 ★':''}</span>
-          <button title="Ouvrir un indice — coûte une étoile d'autonomie" onclick="APP.panel('${lane}').openAide('${a.id}')">Ouvrir</button></div>
-          <div data-palier="${a.id}">${used?(s.aides.find(x=>x.id===a.id).paliers||[]).map(p=>`<div class="palier">${esc(p)}</div>`).join(""):""}</div>`; });
-      h+=`</div>`; }
     h+=`<div class="actions"><span style="font-size:.78rem;color:var(--muted)">Porte : ${ev.seuil}/${ev.items.filter(isAutoItem).length}</span>
       <button class="btn primary" title="Valider tes réponses (correction immédiate)" onclick="APP.panel('${lane}').submit()">Vérifier</button></div><div class="verdict-box"></div>`;
     h+=nonQcmHTML(s,lane);
@@ -1821,12 +1822,14 @@ function Panel(engine, root, name){
   P.reorder=function(itemId, pos, dir){ const it=engine.seance(P.current).evaluation.items.find(x=>x.id===itemId); if(!it) return;
     const n=(it.elements||[]).length; let order=(Array.isArray(P.answers[itemId])&&P.answers[itemId].length===n)?P.answers[itemId].slice():seededOrder(n, itemId);
     const j=pos+dir; if(j<0||j>=n) return; const t=order[pos]; order[pos]=order[j]; order[j]=t; P.answers[itemId]=order; P.refreshReg(itemId); };
-  P.openAide=function(aideId){ const s=engine.seance(P.current);
+  P.openAide=function(aideId){ const s=engine.seance(P.current); if(!s) return;
     engine.useAide(s.id, aideId);
-    const a=(s.aides||[]).find(x=>x.id===aideId);
-    root.querySelector(`[data-palier="${aideId}"]`).innerHTML = a.paliers.map(p=>`<div class="palier">${esc(p)}</div>`).join("");
-    const el=root.querySelector(`[data-aide="${aideId}"]`); el.classList.add("used");
-    el.querySelector(".lab").textContent="Aide ouverte"; el.querySelector(".cost").textContent="−1 ★";
+    const a=(s.aides||[]).find(x=>x.id===aideId); if(!a) return;
+    const pal=root.querySelector(`[data-palier="${aideId}"]`);
+    if(pal){ pal.innerHTML = a.paliers.map(p=>`<div class="palier">${esc(p)}</div>`).join("");
+      const el=root.querySelector(`[data-aide="${aideId}"]`); if(el){ el.classList.add("used");
+        el.querySelector(".lab").textContent="Aide ouverte"; el.querySelector(".cost").textContent="−1 ★"; } }
+    else if(P.tabCur==='c') fillC();          // sécurité si le bloc n'est pas dans le DOM courant
     toast("Aide ouverte : une étoile d'autonomie en moins.");
   };
   function fiche4d(s){ const f=s.fiche4d; if(!f) return "";
@@ -1959,7 +1962,9 @@ const APP = {
     const ts=Date.now();
     segs.forEach(seg=>{ const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:!!opt.gel, lock:!!opt.lock };
       if(opt.logout) node.logoutEpoch=ts; store.save("control/"+chap+"/"+seg, node); });
-    const parts=[]; if(opt.gel) parts.push("chronos gelés"); if(opt.lock) parts.push("écrans verrouillés"); if(opt.logout) parts.push("élèves déconnectés");
+    if(opt.logout) segs.forEach(seg=>{ const nom=(this.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
+      setTimeout(()=>this.archiveSession(seg, nom), 1500); });   // fin de cours : on archive après le gel+persistance des élèves
+    const parts=[]; if(opt.gel) parts.push("chronos gelés"); if(opt.lock) parts.push("écrans verrouillés"); if(opt.logout) parts.push("élèves déconnectés, session archivée");
     toast("Séance figée — "+(parts.join(", ")||"aucune option")+"."); },
   // REPRENDRE : lève le gel et le verrou (les chronos repartent là où ils s'étaient arrêtés)
   resumeSessions(){ const chap=CHAPTER.meta.id||"chapitre"; const segs=this.presentSegs();
@@ -1986,6 +1991,18 @@ const APP = {
       .concat(this.knownClasses().map(c=>opt(c.seg, esc(c.nom), !auto&&cur===c.seg)));
     return '<div class="prof-row" style="margin-bottom:10px"><label class="d">Classe affichée&nbsp;: '
       +'<select class="txtin classe-sel" style="width:auto;margin-left:6px" onchange="APP.setClasseFiltre(this.value)">'+opts.join('')+'</select></label></div>'; },
+  // ── Archive de session : instantané de la classe à la fin du cours (état complet de chaque élève) ──
+  archiveSession(seg, nom){ const chap=CHAPTER.meta.id||"chapitre";
+    store.once("progress/"+chap, prog=>{ prog=prog||{}; const eleves={};
+      const roster = (typeof CLASSES==='object' && CLASSES && CLASSES[nom]) ? extractEleves(CLASSES[nom],[]) : [];
+      roster.forEach(n=>{ const uid=uidOf(nom,n); if(prog[uid]) eleves[uid]={ name:n, snap:prog[uid] }; });
+      Object.keys(prog).forEach(uid=>{ if(uid.indexOf('__')>0 && uid.split('__')[0]===seg && !eleves[uid] && !isTestUid(uid)){
+        const nm=(this._sessions[uid]||{}).name || uid.split('__')[1] || uid; eleves[uid]={ name:nm, snap:prog[uid] }; } });
+      if(!Object.keys(eleves).length) return;                       // rien d'enregistré pour cette classe
+      const ts=Date.now();
+      const arch={ ts, date:new Date(ts).toLocaleString('fr-FR'), classe:nom, seg, chap, n:Object.keys(eleves).length, eleves };
+      store.save("archives/"+chap+"/"+seg+"/"+ts, arch);
+      if(typeof PROF!=='undefined' && PROF.authed && PROF.tab==='archives'){ PROF._archives=null; PROF.render(); } }); },
   endSessionForUid(uid){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/logoutEpoch", Date.now());   // sous-clé : n'écrase pas /nav
     store.save("sessions/"+chap+"/"+uid, null); },                     // et sort du suivi
@@ -2222,6 +2239,19 @@ const DASH = {
     this._unsubs.push(store.subscribe("progress/"+chap, v=>{ this._prog=v||{}; this._rebuild(); this.render(); }));
     this._tick=setInterval(()=>this.tickChronos(),1000);
     this.render(); },
+  // ouvre le tableau de bord en mode FIGÉ depuis une archive de session (aucun abonnement live, données du snapshot)
+  openArchive(seg, ts){ const chap=CHAPTER.meta.id||"chapitre";
+    store.once("archives/"+chap+"/"+seg+"/"+ts, arch=>{ if(!arch||!arch.eleves){ toast("Archive introuvable."); return; }
+      this.close();
+      this._open=true; this._frozen=true; this._detailUid=null; this._archiveMeta={classe:arch.classe, date:arch.date};
+      this._engines={}; this._sess={}; this._prog={};
+      Object.keys(arch.eleves).forEach(uid=>{ const e=arch.eleves[uid]||{};
+        try{ const eng=createEngine(CHAPTER, MIRROR.roStore, uid, 0); eng.hydrate(e.snap||{}); this._engines[uid]=eng;
+          this._sess[uid]={ name:e.name, classe:arch.classe, lastSeen:0 }; }catch(_){} });
+      APP._classeFiltre = arch.seg || sanId(arch.classe||'');
+      $("dashTitle").textContent = "Archive — "+(arch.classe||'')+" · "+(arch.date||'');
+      $("dashOverlay").classList.add("show");
+      this.render(); }); },
   _rebuild(){ this._engines={}; Object.keys(this._prog).forEach(uid=>{ if(!APP.testMode && isTestUid(uid)) return;
     try{ const e=createEngine(CHAPTER, MIRROR.roStore, uid, 0); e.hydrate(this._prog[uid]||{}); this._engines[uid]=e; }catch(e){} }); },
   _uids(){ const set=new Set();
@@ -2306,7 +2336,7 @@ const DASH = {
     const g=eng.glossaire(); if(g.length) h+='<div class="dd-gloss"><div class="dd-glh">📚 Glossaire · '+g.length+'</div>'+g.map(x=>'<span class="dd-gword">'+esc(x.mot)+'</span>').join('')+'</div>';
     return h+'</div>'; },
   close(){ this._unsubs.forEach(u=>{ try{u();}catch(e){} }); this._unsubs=[]; if(this._tick){ clearInterval(this._tick); this._tick=null; }
-    this._open=false; this._engines={}; this._sess={}; this._prog={}; this._detailUid=null;
+    this._open=false; this._frozen=false; this._archiveMeta=null; this._engines={}; this._sess={}; this._prog={}; this._detailUid=null;
     const o=$("dashOverlay"); if(o) o.classList.remove("show"); const b=$("dashBody"); if(b) b.innerHTML=""; }
 };
 const PROMPT_CHAPTER =
@@ -2441,13 +2471,14 @@ const PROF = {
     $("profModal").innerHTML=`
       <div style="margin-bottom:10px">
         <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
-      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi","Suivi 🟢")}${tabBtn("bilan","Bilan")}${tabBtn("reglages","Réglages")}</div>
+      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi","Suivi 🟢")}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("reglages","Réglages")}</div>
       <div id="ptabbody">${this.body()}</div>`; },
-  go(t){ if(t==="bilan") this._bilans=null; this.tab=t; this.render(); },
+  go(t){ if(t==="bilan") this._bilans=null; if(t==="archives") this._archives=null; this.tab=t; this.render(); },
   body(){ return this.tab==="creation"?this.creationBody()
         : this.tab==="classes"?this.classesBody()
         : this.tab==="suivi"?this.suiviBody()
-        : this.tab==="bilan"?this.bilanBody() : this.reglagesBody(); },
+        : this.tab==="bilan"?this.bilanBody()
+        : this.tab==="archives"?this.archivesBody() : this.reglagesBody(); },
 
   /* ── onglet CRÉATION : triptyque + éditeur ── */
   creationBody(){ const c=CHAPTER;
@@ -2805,6 +2836,33 @@ const PROF = {
     },0); });
   },
   refreshBilans(){ this._bilans=null; this.render(); },
+  /* ── onglet ARCHIVES : instantanés de fin de cours, rejouables en tableau de bord figé ── */
+  _archives:null,
+  archivesBody(){
+    if(this._archives==null){ this._archives="loading"; this.loadArchives();
+      return `<div class="prof-sec"><h4>Archives de session</h4><div class="d">Lecture des archives…</div></div>`; }
+    if(this._archives==="loading") return `<div class="prof-sec"><h4>Archives de session</h4><div class="d">Lecture des archives…</div></div>`;
+    const head=APP.classeSelectHTML()+`<div class="prof-sec"><h4>Archives de session</h4><div class="d">Un instantané est pris à chaque fin de cours (quand tu figes en déconnectant). Clique sur « Ouvrir » pour revoir le tableau de bord figé de cette séance.</div></div>`;
+    if(!this._archives.length) return head+`<div class="prof-sec"><div class="d">Aucune archive pour l'instant — elles se créent automatiquement quand tu figes une classe en la déconnectant.</div></div>`;
+    const list=this._archives.filter(a=>APP.classeMatchNom(a.classe));
+    if(!list.length) return head+`<div class="prof-sec"><div class="d">Aucune archive pour la classe affichée — change le filtre ci-dessus.</div></div>`;
+    const byClass={}; list.forEach(a=>{ (byClass[a.classe]=byClass[a.classe]||[]).push(a); });
+    const groups=Object.keys(byClass).sort().map(cl=>{
+      const rows=byClass[cl].sort((a,b)=>b.ts-a.ts).map(a=>{ const nomJs=(a.classe||'').replace(/'/g,"\\'");
+        return `<div class="r"><span>${esc(a.date)}</span><span class="meta" style="margin-left:auto">${a.n} élève(s)</span>
+          <button class="btn ghost" title="Revoir le tableau de bord figé de cette séance" style="margin-left:8px" onclick="DASH.openArchive('${esc(a.seg)}',${a.ts})">⛶ Ouvrir</button>
+          <button class="btn ghost" title="Supprimer cette archive" onclick="PROF.deleteArchive('${esc(a.seg)}',${a.ts},'${esc(nomJs)}')">🗑</button></div>`; }).join("");
+      return `<div class="prof-sec"><h4>${esc(cl)} <span class="meta">· ${byClass[cl].length} archive(s)</span></h4><div class="prof-list">${rows}</div></div>`;
+    }).join("");
+    return head+groups+`<div class="prof-row"><button class="btn ghost" onclick="PROF.refreshArchives()">↻ Rafraîchir</button></div>`;
+  },
+  loadArchives(){ const chap=CHAPTER.meta.id||"chapitre";
+    store.once("archives/"+chap, v=>{ const all=[]; const root=v||{};
+      Object.keys(root).forEach(seg=>{ const byTs=root[seg]||{}; Object.keys(byTs).forEach(ts=>{ if(byTs[ts]) all.push(byTs[ts]); }); });
+      all.sort((a,b)=>b.ts-a.ts); this._archives=all; if(this.authed && this.tab==="archives") this.render(); }); },
+  refreshArchives(){ this._archives=null; this.render(); },
+  deleteArchive(seg, ts, nom){ if(typeof confirm==="function" && !confirm("Supprimer l'archive de « "+nom+" » ?\nL'instantané sera perdu (la progression des élèves n'est pas touchée).")) return;
+    const chap=CHAPTER.meta.id||"chapitre"; store.save("archives/"+chap+"/"+seg+"/"+ts, null); this._archives=null; toast("Archive supprimée."); this.render(); },
   deleteBilan(uid, nom){ if(typeof confirm==="function" && !confirm("Supprimer le bilan de "+nom+" ?\nSa progression sur ce chapitre sera effacée définitivement.")) return;
     APP.resetProgressFor(uid);     // efface progress/{chap}/{uid} (+ déconnecte si encore connecté)
     this.refreshBilans(); toast("Bilan de "+nom+" supprimé."); },
