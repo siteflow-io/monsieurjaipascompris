@@ -449,6 +449,20 @@
   .chrono.warn{color:var(--gold2)}
   .chrono.late{color:var(--fire2)}
   .chrono.done{color:#79b58a}
+  .chrono.paused{color:var(--gold2)}
+  .dash-chrono.paused{color:var(--gold2)}
+  /* voile de verrouillage (séance en pause / fin de cours) */
+  .lock-ov{position:absolute;inset:0;z-index:60;background:rgba(8,6,4,.86);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;border-radius:var(--radius);cursor:not-allowed}
+  .lock-card{text-align:center;color:var(--ink);padding:24px;max-width:80%}
+  .lock-ic{font-size:2.4rem;margin-bottom:8px}
+  .lock-t{font-family:'EB Garamond',serif;font-size:1.3rem;color:var(--gold);margin-bottom:5px}
+  .lock-s{color:var(--muted);font-size:.86rem}
+  /* coches du bloc Figer (panneau prof) */
+  .freeze-sec{border-color:var(--gold-deep)}
+  .fz-opts{display:flex;flex-direction:column;gap:7px;margin:4px 0 4px}
+  .fz-ck{display:flex;align-items:center;gap:8px;font-size:.86rem;color:var(--ink2);cursor:pointer}
+  .fz-ck input{width:16px;height:16px;accent-color:var(--gold)}
   .prof-sec h4{font-family:'EB Garamond',serif;font-size:1rem;margin-bottom:4px}
   .prof-sec .d{color:var(--muted);font-size:.78rem;margin-bottom:9px}
   .prof-sec textarea{width:100%;min-height:120px;background:#0a0805;border:1px solid var(--line);border-radius:9px;
@@ -1021,10 +1035,13 @@ const EVAL_TYPES = {
 function isAutoItem(it){ return it && (it.type==='qcm' || !!EVAL_TYPES[it.type]); }
 // chrono partagé (panel élève + miroir + tableau de bord) : calcule l'état d'avancement vs durée allouée
 function fmtMMSS(ms){ const x=Math.max(0,Math.floor(ms/1000)); return Math.floor(x/60)+':'+String(x%60).padStart(2,'0'); }
-function chronoState(t, dureeMin){ if(!t||!t.start) return { txt:'—', cls:'ok', el:0 };
-  const dur=(dureeMin||0)*60000, now=t.fin||Date.now(), el=now-t.start; let cls='ok';
-  if(t.fin) cls='done'; else if(dur>0){ if(el>dur) cls='late'; else if(el>dur*0.8) cls='warn'; }
-  return { txt: fmtMMSS(el)+(dur?' / '+fmtMMSS(dur):''), cls, el, dur }; }
+function chronoState(t, dureeMin){ if(!t||(!t.start && !t.elapsedMs)) return { txt:'—', cls:'ok', el:0 };
+  const dur=(dureeMin||0)*60000;
+  const el=(t.elapsedMs!=null) ? t.elapsedMs : ((t.fin||Date.now())-t.start);   // pausable si elapsedMs fourni, sinon calcul direct (miroir/legacy)
+  const paused = (t.running===false) && !t.fin;
+  let cls='ok';
+  if(t.fin) cls='done'; else if(paused) cls='paused'; else if(dur>0){ if(el>dur) cls='late'; else if(el>dur*0.8) cls='warn'; }
+  return { txt: fmtMMSS(el)+(dur?' / '+fmtMMSS(dur):'')+(paused?' ⏸':''), cls, el, dur }; }
 function nbQuestions(s){ const c=s&&s.corps&&s.corps.consigne; return Array.isArray(c)?c.filter(b=>b.type==='question').length:0; }
 // mélange déterministe (même résultat à chaque rendu) à partir d'une graine texte ; évite de tomber sur l'ordre correct
 function seededOrder(n, seedStr){ if(n<=0) return []; let s=0; const str=String(seedStr||'');
@@ -1072,12 +1089,27 @@ function createEngine(chapter, store, studentId, eleveIndex){
 
   const progKey = "progress/" + (chapter.meta.id||"chapitre") + "/" + studentId;
   function persist(){ store.save(progKey, { state, path, lastVisited, glossaire }); }
+  // — Chrono pausable : accumMs (temps cumulé gelé) + runSince (début de la période active, 0 = en pause/gelé).
+  //   Temps écoulé = accumMs + (runSince ? now - runSince : 0). Permet de figer en fin de cours sans compter l'intervalle.
+  function _normChrono(st){ if(!st) return;                       // migration depuis l'ancien format (startedAt seul)
+    if(st.accumMs==null){
+      if(st.status==='done'){ st.accumMs=Math.max(0,(st.finishedAt||st.startedAt||0)-(st.startedAt||0)); st.runSince=0; }
+      else { st.accumMs=0; st.runSince=st.startedAt||0; }          // tournait depuis le premier accès
+    }
+    if(st.runSince==null) st.runSince=0; }
+  function _elapsed(st){ if(!st) return 0; _normChrono(st);
+    return (st.accumMs||0) + (st.runSince ? Math.max(0, Date.now()-st.runSince) : 0); }
+  function _freezeChrono(st){ if(!st) return; _normChrono(st);
+    if(st.runSince){ st.accumMs=(st.accumMs||0)+Math.max(0, Date.now()-st.runSince); st.runSince=0; } }
+  function _resumeChrono(st){ if(!st || st.status==='done') return; _normChrono(st);
+    if(!st.runSince) st.runSince=Date.now(); }
   // reprise : si une progression est déjà stockée pour cet élève, on la recharge
   function hydrate(saved){ if(!saved || !saved.state) return;
     Object.keys(state).forEach(id=>{ if(saved.state[id]) Object.assign(state[id], saved.state[id]); });
     if(Array.isArray(saved.path)){ path.length=0; saved.path.forEach(x=>path.push(x)); }
     if(Array.isArray(saved.glossaire)) glossaire=saved.glossaire.slice();
-    lastVisited = saved.lastVisited || null; }
+    lastVisited = saved.lastVisited || null;
+    Object.keys(state).forEach(id=>_normChrono(state[id])); }   // normalise les anciens états au chargement
   // chemin idéal propre à CET élève (décalé en canon), robuste si la donnée manque
   function idealPath(){ const ci=chapter.cheminsIdeaux;
     let p = (Array.isArray(ci) && ci.length) ? ci[idx % ci.length] : null;
@@ -1096,8 +1128,12 @@ function createEngine(chapter, store, studentId, eleveIndex){
 
     start(id){ if(state[id].status==="todo") state[id].status="wip";
       if(!state[id].startedAt) state[id].startedAt=Date.now();      // horodatage : premier accès (chrono)
+      _resumeChrono(state[id]);                                     // (re)démarre la période active si pas done/déjà en cours
       if(!path.includes(id)) path.push(id); lastVisited=id; persist(); },
-    timing(id){ const s=state[id]||{}; return { start:s.startedAt||0, fin:s.finishedAt||0, qdone:s.qdone||{} }; },
+    timing(id){ const s=state[id]||{}; return { start:s.startedAt||0, fin:s.finishedAt||0, qdone:s.qdone||{}, elapsedMs:_elapsed(s), running:!!s.runSince }; },
+    // Figer / reprendre le chrono d'une séance (pilotés par le prof en fin de cours ou en pause)
+    freeze(id){ const st=state[id]; if(!st) return; _freezeChrono(st); persist(); },
+    resume(id){ const st=state[id]; if(!st) return; _resumeChrono(st); persist(); },
     markQ(id, qKey, done){ const st=state[id]; if(!st) return; st.qdone=st.qdone||{};
       if(done){ if(!st.startedAt) st.startedAt=Date.now(); st.qdone[qKey]=Date.now(); } else delete st.qdone[qKey]; persist(); },
     qTimes(id){ const st=state[id]||{}, qd=st.qdone||{};
@@ -1120,7 +1156,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
       });
       const passed = good>=ev.seuil;
       state[id].qcm={good,total,answers:JSON.parse(JSON.stringify(answers||{}))};
-      if(passed){ state[id].status="done"; state[id].passed=true; state[id].finishedAt=state[id].finishedAt||Date.now(); }
+      if(passed){ state[id].status="done"; state[id].passed=true; state[id].finishedAt=state[id].finishedAt||Date.now(); _freezeChrono(state[id]); }
       persist(); return { good, total, passed };
     },
 
@@ -1149,7 +1185,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
       path.length=0; lastVisited=null; glossaire=[]; persist(); },
     forcePass(id){ const ev=find(id).evaluation, tot=ev.items.filter(isAutoItem).length;
       state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot,answers:{}};
-      if(!state[id].startedAt) state[id].startedAt=Date.now(); state[id].finishedAt=state[id].finishedAt||Date.now();
+      if(!state[id].startedAt) state[id].startedAt=Date.now(); state[id].finishedAt=state[id].finishedAt||Date.now(); _freezeChrono(state[id]);
       if(!path.includes(id)) path.push(id); lastVisited=id; persist(); },
     // nouvelle tentative après un échec : on efface la soumission (note + correction), sans toucher au chrono ni aux gestes
     retry(id){ const st=state[id]; if(!st||st.passed) return; st.qcm=null; if(st.status!=="done") st.status="wip"; persist(); },
@@ -1501,6 +1537,7 @@ function Panel(engine, root, name){
     else if(HLT.includes(tool)){ if((g.marks||{})[w.wi]!==tool){ engine.paintMark(id,w.zone,w.wi,tool,true); fillC(); } } }
   let _drag=false;
   function gDown(e){ if(!P._tool) return; const w=wordAt(e.clientX,e.clientY); if(!w) return; e.preventDefault();
+    if(P._tool==='dico'){ openDico(w.txt); return; }    // tap = recherche immédiate au contact (reste actif pour enchaîner)
     if(HLT.includes(P._tool)||P._tool==='gomme'){ _drag=true; const tb=root.querySelector('.tabbody'); try{ tb.setPointerCapture(e.pointerId); }catch(_){} applyAt(w); } }
   function gMove(e){ if(!_drag) return; e.preventDefault(); applyAt(wordAt(e.clientX,e.clientY)); }
   function gUp(e){
@@ -1514,7 +1551,6 @@ function Panel(engine, root, name){
       if(P._linkPending && P._linkPending.zone===w.zone && P._linkPending.tok!==w.wi){ engine.addLink(id,w.zone,P._linkPending.tok,w.wi); P._linkPending=null; P._tool=null; }   // se désactive après la paire
       else { P._linkPending={zone:w.zone, tok:w.wi}; }
       fillC(); APP.beat(APP.laneIdFor(P)); }
-    else if(P._tool==='dico'){ openDico(w.txt); }   // reste actif : on peut enchaîner plusieurs mots
   }
   function attachSwipe(){ const tb=root.querySelector('.tabbody'); if(!tb) return;
     tb.addEventListener('pointerdown',gDown); tb.addEventListener('pointermove',gMove);
@@ -1524,6 +1560,13 @@ function Panel(engine, root, name){
   function dicoEl(){ const host=laneEl(); if(!host.querySelector) return null; let d=host.querySelector(':scope > .dico');
     if(!d){ d=document.createElement('div'); d.className='dico'; host.appendChild(d); } return d; }
   P.closeDico=function(){ const host=laneEl(); const d=host.querySelector&&host.querySelector(':scope > .dico'); if(d) d.classList.remove('show'); };
+  // verrouillage de l'écran en pause/fin de séance : voile non-cliquable par-dessus toute la lane
+  P.setLock=function(on){ const lane=laneEl(); if(!lane||!lane.querySelector) return;
+    let ov=lane.querySelector(':scope > .lock-ov');
+    if(on){ if(!ov){ ov=document.createElement('div'); ov.className='lock-ov';
+        ov.innerHTML='<div class="lock-card"><div class="lock-ic">⏸</div><div class="lock-t">Séance en pause</div><div class="lock-s">On reprend au prochain cours.</div></div>';
+        lane.appendChild(ov); } }
+    else if(ov){ ov.remove(); } };
   // nettoie l'extrait brut du Wiktionnaire : isole la partie française si repérable, compacte, tronque
   function cleanDef(ex){ let t=String(ex||'').replace(/\r/g,'');
     const fr=t.search(/(^|\n)\s*Français\s*(\n|$)/); if(fr>=0) t=t.slice(fr);
@@ -1716,7 +1759,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false,
   _sessions:{}, _unsubs:[], _hb:null, _tick:null,
@@ -1760,8 +1803,16 @@ const APP = {
     this._unsubs.push(store.subscribe("control/"+chap, v=>{ this._control=v||{};
       Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(!p||!p.epoch||!p.engine) return;
         const ctl=this._control[p.engine.studentId]||{};
-        const le=Math.max((this._control[p.classeSeg]||{}).logoutEpoch||0, ctl.logoutEpoch||0);
-        if(le && p.epoch<le){ this.kick(k); return; }                 // déconnexion (classe ou élève)
+        const segCtl=this._control[p.classeSeg]||{};
+        // 1) FIGER (gel des chronos + verrouillage) — AVANT toute déconnexion ; seulement pour les lanes présentes au moment du figer
+        const fz=segCtl.freeze;
+        if(fz && fz.epoch>(p._fzEpoch||0) && fz.epoch>=p.epoch){ p._fzEpoch=fz.epoch;
+          if(p.screen==='seance' && p.current){ if(fz.gel) p.engine.freeze(p.current); else p.engine.resume(p.current); }
+          if(typeof p.setLock==='function') p.setLock(!!fz.lock);
+          if(p.refreshChrono) p.refreshChrono(); }
+        // 2) déconnexion (classe ou élève)
+        const le=Math.max(segCtl.logoutEpoch||0, ctl.logoutEpoch||0);
+        if(le && p.epoch<le){ this.kick(k); return; }
         if(ctl.act && ctl.act.ts>(p._actTs||0)){ p._actTs=ctl.act.ts; this.applyAct(k, ctl.act); }     // pilotage direct (clic du prof dans l'écran)
         if(ctl.gest && ctl.gest.ts>(p._gestTs||0)){ p._gestTs=ctl.gest.ts; this.applyGeste(k, ctl.gest); } }); }));
     this.beatAll(); this._hb=setInterval(()=>this.beatAll(),30000);
@@ -1794,6 +1845,23 @@ const APP = {
     store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
       idx:p.idx||0, lastSeen:Date.now(), current:(p.screen==="seance"?p.current:(p._entering||null)), tab:(p.tabCur||'c'), epoch:p.epoch||0 }); },
   endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre"; store.save("control/"+chap+"/"+classeSeg, { logoutEpoch:Date.now() }); },
+  // classes (segments) actuellement présentes, d'après les sessions vivantes
+  presentSegs(){ const now=Date.now();
+    return [...new Set(Object.values(this._sessions||{}).filter(s=>s && (now-(s.lastSeen||0))<90000).map(s=>s.classeSeg).filter(Boolean))]; },
+  // FIGER : gel des chronos / verrouillage / déconnexion, par coches — appliqué à toutes les classes présentes
+  freezeSessions(opt){ const chap=CHAPTER.meta.id||"chapitre"; const segs=this.presentSegs();
+    if(!segs.length){ toast("Aucun élève connecté."); return; }
+    const ts=Date.now();
+    segs.forEach(seg=>{ const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:!!opt.gel, lock:!!opt.lock };
+      if(opt.logout) node.logoutEpoch=ts; store.save("control/"+chap+"/"+seg, node); });
+    const parts=[]; if(opt.gel) parts.push("chronos gelés"); if(opt.lock) parts.push("écrans verrouillés"); if(opt.logout) parts.push("élèves déconnectés");
+    toast("Séance figée — "+(parts.join(", ")||"aucune option")+"."); },
+  // REPRENDRE : lève le gel et le verrou (les chronos repartent là où ils s'étaient arrêtés)
+  resumeSessions(){ const chap=CHAPTER.meta.id||"chapitre"; const segs=this.presentSegs();
+    const ts=Date.now();
+    segs.forEach(seg=>{ const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:false, lock:false };
+      store.save("control/"+chap+"/"+seg, node); });
+    toast("Reprise — chronos relancés."); },
   endSessionForUid(uid){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/logoutEpoch", Date.now());   // sous-clé : n'écrase pas /nav
     store.save("sessions/"+chap+"/"+uid, null); },                     // et sort du suivi
@@ -2043,7 +2111,7 @@ const DASH = {
     h+='<div class="dd-cards">'+card('Séances faites', b.faites.length+'/'+CHAPTER.seances.length)+card('Note', q?q.sur20+'/20':'—')+card('Autonomie', au.note+'/'+au.sur)+'</div>';
     CHAPTER.seances.forEach(s=>{ const st=eng.snapshot().state[s.id]||{}, t=eng.timing(s.id);
       const etat = st.status==='done'?'terminée':(st.status==='wip'?'en cours':'à faire');
-      const temps = t.start ? fmtMMSS((t.fin||Date.now())-t.start) : '—';
+      const temps = (t.elapsedMs!=null) ? fmtMMSS(t.elapsedMs) : (t.start ? fmtMMSS((t.fin||Date.now())-t.start) : '—');
       const qmap={}; (Array.isArray(s.corps.consigne)?s.corps.consigne:[]).forEach((bk,bi)=>{ if(bk.type==='question') qmap['q'+bi]=bk.n; });
       const qt=eng.qTimes(s.id), dico=eng.dicoList(s.id), stars=eng.starsOf(s.id);
       h+='<div class="dd-sea"><div class="dd-sh"><b>'+esc(s.titre)+'</b><span class="dd-tag dd-'+(st.status||'todo')+'">'+etat+'</span>'
@@ -2464,10 +2532,21 @@ const PROF = {
       if(!arr.some(s=>s._uid===uid)) arr.push({ _uid:uid, name:p.name, classe:cl, classeSeg:p.classeSeg,
         lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); });
     const classes=Object.keys(byClass);
+    const fz=this._fz||(this._fz={gel:true,lock:false,logout:false});
+    const freezeBox = classes.length ? `<div class="prof-sec freeze-sec"><h4>❄ Fin de séance / pause</h4>
+      <div class="d">Coche ce que tu veux appliquer, puis fige. « Reprendre » relance les chronos là où ils s'étaient arrêtés.</div>
+      <div class="fz-opts">
+        <label class="fz-ck"><input type="checkbox" ${fz.gel?'checked':''} onchange="PROF._fz.gel=this.checked"> Geler les chronos</label>
+        <label class="fz-ck"><input type="checkbox" ${fz.lock?'checked':''} onchange="PROF._fz.lock=this.checked"> Verrouiller les écrans</label>
+        <label class="fz-ck"><input type="checkbox" ${fz.logout?'checked':''} onchange="PROF._fz.logout=this.checked"> Déconnecter</label>
+      </div>
+      <div class="prof-row"><button class="btn primary" onclick="PROF.doFreeze()">Figer la séance</button>
+        <button class="btn ghost" onclick="PROF.doResume()">▶ Reprendre</button></div></div>` : '';
     if(!classes.length) return `<div class="prof-sec"><h4>Suivi</h4>
       <div class="prof-row"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>
       <div class="d" style="margin-top:8px">Personne de connecté pour l'instant — le tableau de bord affichera aussi les progressions enregistrées.</div></div>`;
     return `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
+      + freezeBox
       + classes.map(cl=>{ const seg=sanId(cl);
       const rows=byClass[cl].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviRow(s)).join("");
       return `<div class="prof-sec"><h4>${esc(cl)} <span class="meta">· ${byClass[cl].length} présent(s)</span></h4>
@@ -2477,6 +2556,11 @@ const PROF = {
     }).join("") + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
+  doFreeze(){ const o=this._fz||{gel:true,lock:false,logout:false};
+    if(!o.gel && !o.lock && !o.logout){ toast("Coche au moins une option."); return; }
+    if(o.logout && typeof confirm==="function" && !confirm("Figer la séance et déconnecter les élèves ?\nIls reprendront leur progression exacte à la prochaine connexion.")) return;
+    APP.freezeSessions(o); this.render(); },
+  doResume(){ APP.resumeSessions(); this.render(); },
   kickStudent(uid, name){ APP.endSessionForUid(uid); toast(name+" déconnecté."); this.render(); },
   resetStudent(uid, name){ if(typeof confirm==="function" && !confirm("Réinitialiser la progression de "+name+" ?\nL'élève repartira de zéro et sera déconnecté.")) return;
     APP.resetProgressFor(uid); toast("Progression de "+name+" réinitialisée."); this.render(); },
