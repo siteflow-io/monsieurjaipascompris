@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05a">
+<meta name="app-version" content="2026-06-05b">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1863,7 +1863,7 @@ const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
 const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){} };
 const APP = {
-  panels:{}, tableSize:2, testMode:false,
+  panels:{}, tableSize:2, testMode:false, _classeFiltre:null,   // _classeFiltre : null=classe en cours (auto), ''=toutes, 'seg'=une classe
   _sessions:{}, _unsubs:[], _hb:null, _tick:null,
   laneIdFor(p){ if(p && p._mirrorLane) return p._mirrorLane; for(const k in this.panels){ if(this.panels[k]===p) return k; } return null; },
   panel(id){ if(id==="__mirror") return (typeof MIRROR!=="undefined" && MIRROR._pilot) || NULLPANEL; return this.panels[id] || NULLPANEL; },
@@ -1967,6 +1967,25 @@ const APP = {
     segs.forEach(seg=>{ const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:false, lock:false };
       store.save("control/"+chap+"/"+seg, node); });
     toast("Reprise — chronos relancés."); },
+  // ── Filtre de classe (suivi / tableau de bord / bilan) : par défaut la classe en cours, sélecteur pour consulter les autres ──
+  knownClasses(){ const m={};
+    if(typeof CLASSES==='object' && CLASSES) Object.keys(CLASSES).forEach(cl=>{ m[sanId(cl)]=cl; });
+    Object.values(this._sessions||{}).forEach(s=>{ if(s && s.classe) m[sanId(s.classe)]=s.classe; });
+    return Object.keys(m).map(seg=>({seg, nom:m[seg]})).sort((a,b)=>a.nom.localeCompare(b.nom)); },
+  activeClasseSeg(){ const now=Date.now();
+    const segs=[...new Set(Object.values(this._sessions||{}).filter(s=>s && (now-(s.lastSeen||0))<PRESENCE_MS && s.classe).map(s=>sanId(s.classe)))];
+    return segs[0]||''; },
+  classeFiltreSeg(){ return (this._classeFiltre==null) ? this.activeClasseSeg() : this._classeFiltre; },   // '' = aucune restriction
+  setClasseFiltre(v){ this._classeFiltre=(v==='__auto')?null:v;
+    if(typeof DASH!=='undefined' && DASH._open) DASH.render();
+    if(typeof PROF!=='undefined' && PROF.authed) PROF.render(); },
+  classeMatchNom(classe){ const f=this.classeFiltreSeg(); return !f || sanId(classe||'')===f; },
+  classeSelectHTML(){ const auto=(this._classeFiltre==null), cur=this._classeFiltre;
+    const opt=(val,lab,sel)=>'<option value="'+val+'"'+(sel?' selected':'')+'>'+lab+'</option>';
+    const opts=[ opt('__auto','Classe en cours (auto)', auto), opt('','Toutes les classes', !auto&&cur==='') ]
+      .concat(this.knownClasses().map(c=>opt(c.seg, esc(c.nom), !auto&&cur===c.seg)));
+    return '<div class="prof-row" style="margin-bottom:10px"><label class="d">Classe affichée&nbsp;: '
+      +'<select class="txtin classe-sel" style="width:auto;margin-left:6px" onchange="APP.setClasseFiltre(this.value)">'+opts.join('')+'</select></label></div>'; },
   endSessionForUid(uid){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/logoutEpoch", Date.now());   // sous-clé : n'écrase pas /nav
     store.save("sessions/"+chap+"/"+uid, null); },                     // et sort du suivi
@@ -2211,10 +2230,15 @@ const DASH = {
     return [...set]; },
   render(){ if(!this._open) return; const body=$("dashBody"); if(!body) return;
     if(this._detailUid){ body.innerHTML=this.detailHTML(this._detailUid); return; }
-    const uids=this._uids();
-    if(!uids.length){ body.innerHTML='<div class="dash-empty">Personne de connecté, aucune progression enregistrée.</div>'; return; }
-    const byClass={}; uids.forEach(uid=>{ const s=this._sess[uid]||{}; const cl=s.classe||(this._engines[uid]?'(progression enregistrée)':'(sans classe)'); (byClass[cl]=byClass[cl]||[]).push(uid); });
-    let h='';
+    const f=APP.classeFiltreSeg();
+    let uids=this._uids(); if(f) uids=uids.filter(uid=>(uid.indexOf('__')>0?uid.split('__')[0]:'')===f);
+    const sel=APP.classeSelectHTML();
+    if(!uids.length){ body.innerHTML=sel+'<div class="dash-empty">Personne dans la classe affichée — change le filtre ci-dessus, ou aucune progression enregistrée.</div>'; return; }
+    const segMap={}; APP.knownClasses().forEach(c=>segMap[c.seg]=c.nom);
+    const byClass={}; uids.forEach(uid=>{ const s=this._sess[uid]||{};
+      const cl=s.classe || (uid.indexOf('__')>0 ? (segMap[uid.split('__')[0]]||uid.split('__')[0]) : '(sans classe)');
+      (byClass[cl]=byClass[cl]||[]).push(uid); });
+    let h=sel;
     Object.keys(byClass).sort().forEach(cl=>{ const list=byClass[cl].sort((a,b)=>((this._sess[a]||{}).name||a).localeCompare((this._sess[b]||{}).name||b));
       h+='<div class="dash-class"><div class="dash-ch">'+esc(cl)+' <span>· '+list.length+'</span></div>'
         +'<div class="dash-grid dash-head"><span></span><span>Élève</span><span>Séance</span><span title="Questions cochées « fait » / total">Quest.</span><span title="Temps écoulé / durée allouée">Temps</span><span title="Mots cherchés au dictionnaire">Dico</span><span title="Score à l’évaluation auto-corrigée">QCM</span><span></span></div>'
@@ -2690,6 +2714,7 @@ const PROF = {
       if(!arr.some(s=>s._uid===uid)) arr.push({ _uid:uid, name:p.name, classe:cl, classeSeg:p.classeSeg,
         lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); });
     const classes=Object.keys(byClass);
+    const classesAff=classes.filter(cl=>APP.classeMatchNom(cl));   // affichage filtré (le figer agit sur tous les présents)
     const fz=this._fz||(this._fz={gel:true,lock:false,logout:false});
     const freezeBox = classes.length ? `<div class="prof-sec freeze-sec"><h4>❄ Fin de séance / pause</h4>
       <div class="d">Coche ce que tu veux appliquer, puis fige. « Reprendre » relance les chronos là où ils s'étaient arrêtés.</div>
@@ -2703,9 +2728,11 @@ const PROF = {
     if(!classes.length) return `<div class="prof-sec"><h4>Suivi</h4>
       <div class="prof-row"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>
       <div class="d" style="margin-top:8px">Personne de connecté pour l'instant — le tableau de bord affichera aussi les progressions enregistrées.</div></div>`;
-    return `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
+    return APP.classeSelectHTML()
+      + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
       + freezeBox
-      + classes.map(cl=>{ const seg=sanId(cl);
+      + (classesAff.length ? '' : `<div class="prof-sec"><div class="d">Aucun élève présent dans la classe affichée. Change le filtre ci-dessus pour voir une autre classe.</div></div>`)
+      + classesAff.map(cl=>{ const seg=sanId(cl);
       const rows=byClass[cl].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviRow(s)).join("");
       return `<div class="prof-sec"><h4>${esc(cl)} <span class="meta">· ${byClass[cl].length} présent(s)</span></h4>
         <div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne · 👁 voir l'écran</div>
@@ -2747,7 +2774,8 @@ const PROF = {
         <div class="d">Aucune progression enregistrée pour ce chapitre.</div>
         <div class="prof-row"><button class="btn ghost" onclick="PROF.refreshBilans()">↻ Rafraîchir</button></div></div>`;
     const byClass={}; this._bilans.forEach(x=>{ (byClass[x.classe]=byClass[x.classe]||[]).push(x); });
-    const groups=Object.keys(byClass).sort().map(cl=>{ const seg=sanId(cl);
+    const clsAff=Object.keys(byClass).filter(cl=>APP.classeMatchNom(cl)).sort();
+    const groups=clsAff.map(cl=>{ const seg=sanId(cl);
       const rows=byClass[cl].sort((a,b)=>a.nom.localeCompare(b.nom)).map(x=>{ const b=x.bilan;
         return `<div class="r"><span>${esc(x.nom)}</span>
           <span class="meta">${b.faites.length}/${CHAPTER.seances.length} faites · autonomie ${b.autonomie.note}/${b.autonomie.sur} · QCM ${b.qcm?b.qcm.sur20+'/20':'—'}</span>
@@ -2760,7 +2788,9 @@ const PROF = {
           <div class="prof-row"><button class="btn primary" onclick="PROF.exportEDClass('${seg}','${esc(cl)}')">Autonomie → École Directe (${esc(cl)})</button></div>
           <pre class="prof-pre" id="edOut-${seg}" style="margin-top:8px;display:none"></pre></div>`;
     }).join("");
-    return groups + `<div class="prof-row"><button class="btn ghost" onclick="PROF.refreshBilans()">↻ Rafraîchir</button></div>`;
+    return APP.classeSelectHTML()
+      + (groups || `<div class="prof-sec"><div class="d">Aucun bilan pour la classe affichée — change le filtre ci-dessus.</div></div>`)
+      + `<div class="prof-row"><button class="btn ghost" onclick="PROF.refreshBilans()">↻ Rafraîchir</button></div>`;
   },
   loadBilans(){ const chap=CHAPTER.meta.id||"chapitre"; const map={};
     // 1) élèves connectés localement (ex. mode test, ou poste partagé) — bilan live
