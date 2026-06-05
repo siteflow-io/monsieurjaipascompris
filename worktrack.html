@@ -227,7 +227,7 @@
   .docsheet .dsec-r{font-size:.72rem;color:#9b8757;font-style:italic;white-space:nowrap}
   .docsheet .dcompl{margin:2px 0 10px 22px;padding:0;list-style:none}
   .docsheet .dcompl li{padding:3px 0;border-bottom:1px dotted #cbb884;color:#4a3d22;font-size:.96rem}
-  .docsheet .qcheck{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-family:'Spline Sans',sans-serif;font-size:.7rem;color:#9b7d34;font-weight:600;cursor:pointer;vertical-align:middle;user-select:none}
+  .docsheet .qcheck{display:flex;width:max-content;max-width:100%;align-items:center;gap:5px;margin:6px 0 0;text-indent:0;white-space:nowrap;font-family:'Spline Sans',sans-serif;font-size:.7rem;color:#9b7d34;font-weight:600;cursor:pointer;user-select:none}
   .docsheet .qcheck input{cursor:pointer;accent-color:#c8a24e}
   .docsheet .docq.qfait{opacity:.62}
   .docsheet .docq.qfait .qn{text-decoration:line-through}
@@ -414,7 +414,7 @@
   <div class="stage" id="stage"></div>
 </div>
 
-<div class="overlay" id="profOverlay"><div class="modal big" id="profModal"></div></div>
+<div class="overlay" id="profOverlay"><button class="prof-x" title="Fermer le panneau de contrôle" aria-label="fermer" onclick="PROF.close()">✕</button><div class="modal big" id="profModal"></div></div>
 <div class="overlay" id="mirrorOverlay"><div class="modal big" id="mirrorModal">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
     <h3 style="margin:0" id="mirrorTitle">Écran de l'élève</h3>
@@ -433,6 +433,12 @@
 </div>
 <style>
   .modal.big{max-width:760px;max-height:88vh;overflow:auto}
+  /* panneau prof en plein écran (ciblé par id, n'affecte pas les autres modales) */
+  #profOverlay.show{padding:0;align-items:stretch;justify-content:stretch}
+  #profModal.big{max-width:none;width:100%;height:100%;max-height:100%;border-radius:0;border:0;padding:22px 24px 30px;padding-top:58px}
+  .prof-x{position:fixed;top:12px;left:14px;z-index:55;width:38px;height:38px;border-radius:50%;border:1px solid var(--gold-deep);background:var(--panel3);color:var(--gold);font-size:1.05rem;font-weight:700;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+  #profOverlay.show .prof-x{display:flex}
+  .prof-x:hover{color:var(--gold2);border-color:var(--gold)}
   .prof-sec{border:1px solid var(--line);border-radius:11px;padding:13px 15px;margin-bottom:12px}
   .blk{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:8px}
   .blk-head{display:flex;align-items:center;gap:6px}
@@ -1141,6 +1147,8 @@ function createEngine(chapter, store, studentId, eleveIndex){
       state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot,answers:{}};
       if(!state[id].startedAt) state[id].startedAt=Date.now(); state[id].finishedAt=state[id].finishedAt||Date.now();
       if(!path.includes(id)) path.push(id); lastVisited=id; persist(); },
+    // nouvelle tentative après un échec : on efface la soumission (note + correction), sans toucher au chrono ni aux gestes
+    retry(id){ const st=state[id]; if(!st||st.passed) return; st.qcm=null; if(st.status!=="done") st.status="wip"; persist(); },
 
     // — Autonomie : étoiles par séance (reflet de l'aide) —
     hasAides(id){ return (find(id).aides||[]).length>0; },
@@ -1272,7 +1280,7 @@ function Panel(engine, root, name){
   function laneEl(){ return (root.closest&&root.closest('.lane'))||root; }
   function nagShow(){ const host=laneEl(); if(!host.querySelector) return; let n=host.querySelector(':scope > .nag');
     if(!n){ n=document.createElement('div'); n.className='nag'; host.appendChild(n); }
-    n.innerHTML='<span>Arrêté·e ? '+chronoInfo(P.current).html+'</span><button class="btn ghost" onclick="APP.panel(\''+laneIdOf()+'\').iAmHere()">j’y retourne</button>';
+    n.innerHTML='<span>Tu n\'as rien fait depuis 2 minutes — reprends ton travail. <span title="Temps passé sur la séance / temps prévu">'+chronoInfo(P.current).html+'</span></span><button class="btn ghost" onclick="APP.panel(\''+laneIdOf()+'\').iAmHere()">Je continue</button>';
     n.classList.add('show'); P._nag=true; }
   function nagHide(){ const host=laneEl(); const n=host.querySelector&&host.querySelector(':scope > .nag'); if(n) n.classList.remove('show'); P._nag=false; }
   P.iAmHere=function(){ P._lastAct=Date.now(); nagHide(); };
@@ -1406,14 +1414,14 @@ function Panel(engine, root, name){
   function hintOf(t){ if(['j','v','r','b'].includes(t)) return '— balaye les mots à surligner, puis relâche';
     return ({relier:'— tape un mot, puis un autre pour les relier',label:'— tape le mot à étiqueter',
       gomme:'— tape ou balaye pour effacer ; reclique sur gomme pour arrêter',
-      dico:'— tape un mot pour voir sa définition'})[t]||''; }
+      dico:'— touche un mot du texte pour lire sa définition ; touche encore « dico » pour arrêter'})[t]||''; }
   function gBar(){ const cur=P._tool, lane=laneIdOf();
     let bar='<div class="gtools gbar"><span class="gblbl">outils :</span>'
       +[['j','jaune'],['v','vert'],['r','rose'],['b','bleu']].map(([k,n])=>'<button class="gt hl-'+k+(cur===k?' on':'')+'" title="Surligneur '+n+'" onclick="APP.panel(\''+lane+'\').gtool(\''+k+'\')">surligner</button>').join('')
       +'<button class="gt'+(cur==='relier'?' on':'')+'" title="Relier deux mots : tape le premier, puis le second" onclick="APP.panel(\''+lane+'\').gtool(\'relier\')">🔗 relier</button>'
       +'<button class="gt'+(cur==='label'?' on':'')+'" title="Coller une étiquette sur un mot" onclick="APP.panel(\''+lane+'\').gtool(\'label\')">🏷 étiquette</button>'
       +'<button class="gt'+(cur==='gomme'?' on':'')+'" title="Effacer un mot" onclick="APP.panel(\''+lane+'\').gtool(\'gomme\')">gomme</button>'
-      +'<button class="gt'+(cur==='dico'?' on':'')+'" title="Définition d’un mot" onclick="APP.panel(\''+lane+'\').gtool(\'dico\')">📖 dico</button>'
+      +'<button class="gt'+(cur==='dico'?' on':'')+'" title="Dictionnaire : touche ce bouton, puis touche un mot du texte pour lire sa définition" onclick="APP.panel(\''+lane+'\').gtool(\'dico\')">📖 dico</button>'
       +'<button class="gt" title="Mon glossaire" onclick="APP.panel(\''+lane+'\').openGlossaire()">📚 glossaire</button>';
     if(cur) bar+='<div class="ghint"><span class="frozen">feuille figée</span><span>'+hintOf(cur)+'</span></div>';
     return bar+'</div>'; }
@@ -1555,7 +1563,7 @@ function Panel(engine, root, name){
     const s=engine.seance(P.current), ev=s.evaluation; const lane=laneIdOf();
     const stState=engine.snapshot().state[s.id]; const saved=stState.qcm;   // {good,total,answers} si déjà soumis
     let h="";
-    ev.items.filter(i=>i.type==="qcm").forEach((q,i)=>{ const a=saved&&saved.answers?saved.answers[q.id]:undefined;
+    ev.items.filter(i=>i.type==="qcm").forEach((q,i)=>{ const a=saved&&saved.answers?saved.answers[q.id]:P.answers[q.id];
       h+=`<div class="item"><span class="typ">QCM</span><div class="qz">${i+1}. ${esc(q.enonce)}${q.multi?' <span class="multi">plusieurs réponses</span>':''}</div>`;
       q.choix.forEach((c,ci)=>{ const chosen = q.multi ? (Array.isArray(a)&&a.includes(ci)) : a===ci;
         const inp = q.multi
@@ -1608,7 +1616,7 @@ function Panel(engine, root, name){
         <p>Tu n'as pas le minimum (${s.evaluation.seuil}). La correction reste fermée.</p>`;
       if(t) h+=`<div class="warn" style="margin-top:6px">↩ Fais d'abord « ${esc(t.titre)} » : tu as sauté une étape qui prépare celle-ci. Reviens ensuite, ça passera.</div>
         <div class="actions"><span></span><button class="btn fire" onclick="APP.panel('${laneIdOf()}').goto('${t.id}')">« ${esc(t.titre)} »</button></div>`;
-      else h+=`<div class="actions"><span></span><button class="btn ghost" onclick="APP.panel('${laneIdOf()}').tab('e')">Réessayer</button></div>`;
+      else h+=`<div class="actions"><span></span><button class="btn ghost" title="Effacer cette tentative et recommencer le QCM" onclick="APP.panel('${laneIdOf()}').retry()">Réessayer</button></div>`;
       v.innerHTML=h+`</div>`;
     }
   }
@@ -1679,6 +1687,10 @@ function Panel(engine, root, name){
     if(r.passed){ const stars=engine.starsOf(s.id), v=root.querySelector(".verdict-box");
       if(v && (stars===3||stars===null)){ const rect=v.getBoundingClientRect(); sparkle(rect.left+rect.width/2,rect.top+20); } }
   };
+  // nouvelle tentative : on récupère les réponses précédentes, on efface la soumission, puis on réaffiche l'éval éditable
+  P.retry=function(){ const s=engine.seance(P.current); if(!s) return;
+    const prev=((engine.snapshot().state[s.id]||{}).qcm||{}).answers||{};
+    engine.retry(s.id); P.answers=Object.assign({}, prev); P.tab('e'); };
   P.goto=function(id){ P.screen="map"; renderMap(); setTimeout(()=>askConfirm(id),150); };
 
   // identifie la lane (pour les handlers inline) — A ou B
@@ -1689,7 +1701,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false,
   _sessions:{}, _unsubs:[], _hb:null, _tick:null,
@@ -1743,7 +1755,7 @@ const APP = {
   },
   // rejoue sur le panneau de l'élève l'action que le prof a déclenchée en cliquant dans le miroir
   applyAct(key, act){ const p=this.panels[key]; if(!p||!p.engine||!act) return;
-    const allow={goto:1,pick:1,submit:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1};
+    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1};
     if(!allow[act.m] || typeof p[act.m]!=='function') return;
     try{ p[act.m].apply(p, act.a||[]); }catch(e){}
     this.beat(key);
@@ -1902,6 +1914,7 @@ const MIRROR = {
     goto(id){ MIRROR.act('goto',[id]); },
     pick(qid,ci,multi){ MIRROR.act('pick',[qid,ci,multi]); },
     submit(){ MIRROR.act('submit',[]); },
+    retry(){ MIRROR.act('retry',[]); },
     openAide(id){ MIRROR.act('openAide',[id]); },
     submitProf(id){ MIRROR.act('submitProf',[id]); },
     saveLibre(id,txt){ MIRROR.act('saveLibre',[id,txt]); },
@@ -1995,7 +2008,7 @@ const DASH = {
       +'<span class="dash-nm" title="Voir la fiche détaillée" onclick="DASH.detail(\''+esc(uid)+'\')">'+esc(s.name||uid)+'</span>'
       +'<span class="dash-sea">'+esc(where)+'</span>'
       +'<span>'+qtxt+'</span>'
-      +'<span class="dash-chrono '+ch.cls+'" data-uid="'+esc(uid)+'">'+esc(ch.txt)+'</span>'
+      +'<span class="dash-chrono '+ch.cls+'" data-uid="'+esc(uid)+'" title="Temps passé sur la séance en cours / temps prévu">'+esc(ch.txt)+'</span>'
       +'<span>'+dico+'</span>'
       +'<span>'+qcm+'</span>'
       +'<span><button class="btn ghost" title="Voir son écran en direct" onclick="DASH.mirror(\''+esc(uid)+'\')">👁</button></span>'
@@ -2160,9 +2173,8 @@ const PROF = {
     const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",reglages:"Réorientation, exclusivité, mode test"};
     const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" title="${tips[id]||''}" onclick="PROF.go('${id}')">${lab}</button>`;
     $("profModal").innerHTML=`
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3>
-        <button class="btn ghost" onclick="PROF.close()">← Retour</button></div>
+      <div style="margin-bottom:10px">
+        <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
       <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi","Suivi 🟢")}${tabBtn("bilan","Bilan")}${tabBtn("reglages","Réglages")}</div>
       <div id="ptabbody">${this.body()}</div>`; },
   go(t){ if(t==="bilan") this._bilans=null; this.tab=t; this.render(); },
@@ -2264,7 +2276,8 @@ const PROF = {
     if(!nom||!eleves.length){ toast("Nom et au moins un élève requis."); return; }
     CLASSES[nom]=eleves; persistClasses(); this.classDraft=null; toast("Classe « "+nom+" » enregistrée.");
     APP.refreshLogins(); this.render(); },
-  delClass(cn){ delete CLASSES[cn]; persistClasses(); APP.refreshLogins(); this.render(); },
+  delClass(cn){ if(typeof confirm==="function" && !confirm("Supprimer la classe « "+cn+" » ?\nElle est partagée avec tes autres apps MJPC : la liste sera retirée partout.")) return;
+    delete CLASSES[cn]; persistClasses(); APP.refreshLogins(); this.render(); },
 
   /* ── Prompt IA : aperçu + copier + modifier le template (en mémoire) ── */
   promptView(){ const tpl=this.tpl;
@@ -2334,8 +2347,8 @@ const PROF = {
     }).join("") + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
-  kickStudent(uid, name){ APP.endSessionForUid(uid); toast(name+" déconnecté(e)."); this.render(); },
-  resetStudent(uid, name){ if(typeof confirm==="function" && !confirm("Réinitialiser la progression de "+name+" ?\nIl/elle repartira de zéro et sera déconnecté(e).")) return;
+  kickStudent(uid, name){ APP.endSessionForUid(uid); toast(name+" déconnecté."); this.render(); },
+  resetStudent(uid, name){ if(typeof confirm==="function" && !confirm("Réinitialiser la progression de "+name+" ?\nL'élève repartira de zéro et sera déconnecté.")) return;
     APP.resetProgressFor(uid); toast("Progression de "+name+" réinitialisée."); this.render(); },
   suiviRow(s){
     const age = s ? Date.now()-(s.lastSeen||0) : Infinity;
