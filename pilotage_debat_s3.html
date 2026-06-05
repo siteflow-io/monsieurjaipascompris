@@ -363,12 +363,12 @@
 #debatPanel{margin-top:4px}
 .dbg-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px}
 .dbg-bar h2{font-family:'Fraunces',serif;color:var(--gold);font-size:1.15rem;margin:0}
-.dbg-grid{display:grid;grid-template-columns:var(--dbg-left,1fr) 10px 1fr;gap:14px;align-items:start}
+.dbg-grid{display:grid;grid-template-columns:minmax(0,var(--dbg-left,1fr)) 10px minmax(0,1fr);gap:14px;align-items:start}
 .dbg-split{cursor:col-resize;align-self:stretch;display:flex;align-items:center;justify-content:center;min-height:80px;touch-action:none}
 .dbg-split::before{content:"";width:3px;border-radius:3px;height:46px;background:var(--line);transition:background .15s,height .15s}
 .dbg-split:hover::before{background:var(--gold);height:70px}
 @media(max-width:820px){.dbg-grid{grid-template-columns:1fr}.dbg-split{display:none}}
-.dbg-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.dbg-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
 .dbg-card h3{font-family:'Fraunces',serif;color:var(--gold);font-size:1.02rem;margin:0 0 10px}
 .dbg-chk{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .dbg-chk label{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:.88rem;cursor:pointer}
@@ -382,7 +382,7 @@
 .dbg-poule{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--panel2)}
 .dbg-poule .ph{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
 .dbg-poule .pn{font-weight:700;color:var(--gold)}
-.dbg-match{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:.92rem}
+.dbg-match{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:.92rem;min-width:0;flex-wrap:wrap}
 .dbg-match .vs{color:var(--muted);font-size:.82rem}
 .dbg-match .res{margin-left:auto;display:flex;align-items:center;gap:8px}
 .dbg-played{color:var(--done);font-size:.85rem}
@@ -1706,6 +1706,8 @@ async function archiveCurrentSession(silent){
 
 // ─────────── Listener temps réel ───────────
 function startSessionListener(){
+  // Élève qui (re)vient et page visible : on efface un éventuel marqueur « hors écran » resté d'une session précédente (ex. après rechargement).
+  try{ if(role==="student" && myBinomeId && (typeof document==="undefined" || document.visibilityState!=="hidden")) db.ref(ACTIVE+"/binomes/"+myBinomeId+"/away").remove(); }catch(_){}
   if(sessionListener) db.ref(ACTIVE).off("value", sessionListener);
   sessionListener = function(snap){
     sessionData = snap.val() || null;
@@ -3809,7 +3811,7 @@ if(info){
   window.addEventListener("resize", function(){ if(pinned) hideTip(); });
   function decorate(btn){
     if(!btn || btn.tagName!=="BUTTON") return;
-    if(btn.classList.contains("tip-i") || btn.classList.contains("roster-chip")) return;
+    if(btn.classList.contains("tip-i") || btn.classList.contains("roster-chip") || btn.classList.contains("pres-chip")) return;
     if(btn.getAttribute("data-tipdone")) return;
     var txt=btn.getAttribute("title"); if(!txt) return;
     btn.setAttribute("data-tipdone","1"); btn.removeAttribute("title");
