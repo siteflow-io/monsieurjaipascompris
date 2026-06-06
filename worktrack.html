@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05e">
+<meta name="app-version" content="2026-06-05f">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -2029,7 +2029,9 @@ const APP = {
 
   // ── Mise à jour automatique : déclenchée quand la version publiée (Firebase) diffère de la version embarquée ──
   onAppVersion(published){
-    if(!published || published===APP_VERSION){ if(lsGet("wt_reload_for")) lsSet("wt_reload_for", null); this._hideUpdateBanner(); return; }  // à jour : on lève le garde-fou
+    // mise à jour SEULEMENT si la version publiée est strictement plus récente que la version embarquée
+    // (format AAAA-MM-JJx croissant lexicographiquement). Égale ou plus ancienne → rien, et on masque toute bannière résiduelle.
+    if(!published || published<=APP_VERSION){ if(lsGet("wt_reload_for")) lsSet("wt_reload_for", null); this._hideUpdateBanner(); return; }
     if(lsGet("wt_reload_for")===published){ this._showUpdateBanner(published); return; }   // déjà rechargé pour cette version sans succès (serveur à la traîne) → bannière, pas de boucle
     this._doUpdate(published);
   },
@@ -2931,7 +2933,8 @@ const PROF = {
       : `<div class="prof-row"><button class="btn primary" onclick="PROF.publishUpdate()">Publier la mise à jour</button></div>`;
     return `<div class="prof-sec"><h4>Mise à jour de l'application</h4>
         <div class="d">Après avoir déployé la nouvelle version sur le serveur, recharge d'abord <b>ta</b> page, puis clique. L'app attend que le serveur serve réellement la nouvelle version, puis rafraîchit tous les élèves automatiquement — ils retrouvent leur écran. Version de ce poste : <b>${esc(APP_VERSION)}</b>${APP._appVersion?` · publiée : <b>${esc(APP._appVersion)}</b>`:''}.</div>
-        ${pub}${this._pubMsg?`<div class="d" style="margin-top:8px">${esc(this._pubMsg)}</div>`:''}</div>
+        ${pub}${this._pubMsg?`<div class="d" style="margin-top:8px">${esc(this._pubMsg)}</div>`:''}
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.resetVersion()" title="Aligne la version publiée sur ce fichier — supprime une bannière de mise à jour fantôme">Réinitialiser le suivi de version</button></div></div>
       <div class="prof-sec"><h4>Réorientation sur échec</h4>
         <div class="d">Si un élève rate le QCM d'une séance qui a un <b>prérequis</b>, l'app le renvoie vers ce prérequis. « immédiat » = le prérequis direct ; « racine » = la première séance manquante de la chaîne. Sans prérequis défini, ce réglage n'a aucun effet.</div>
         <div class="prof-row">
@@ -2967,6 +2970,8 @@ const PROF = {
       }).catch(()=>{ if(tries>=18){ this._pubState='timeout'; this._pubMsg='Impossible de joindre le serveur — réessaie.'; this.render(); } else setTimeout(poll, 10000); }); };
     poll(); },
   cancelPublish(){ this._pubState=null; this._pubMsg='Publication annulée.'; this.render(); },
+  resetVersion(){ store.save("appVersion", APP_VERSION); if(typeof APP!=='undefined' && APP._hideUpdateBanner) APP._hideUpdateBanner();
+    this._pubMsg="Suivi de version réaligné sur ce fichier ("+APP_VERSION+")."; this.render(); toast("Version publiée alignée."); },
   // Snapshot COMPLET : chapitre + tout l'état Firebase (progressions, sessions, contrôle, archives) → fichier à transmettre pour diagnostic
   exportSnapshot(){ const chap=CHAPTER.meta.id||"chapitre";
     const snap={ exportedAt:new Date().toISOString(), appVersion:APP_VERSION, chapitre:chap, chapter:CHAPTER, firebase:{} };
