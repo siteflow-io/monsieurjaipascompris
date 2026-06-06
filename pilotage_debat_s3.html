@@ -363,8 +363,15 @@
 #debatPanel{margin-top:4px}
 .dbg-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:14px}
 .dbg-bar h2{font-family:'Fraunces',serif;color:var(--gold);font-size:1.15rem;margin:0}
-.dbg-grid{display:grid;grid-template-columns:minmax(0,var(--dbg-left,1fr)) 18px minmax(0,1fr);gap:14px;align-items:start}
-.dbg-split{cursor:col-resize;align-self:stretch;display:flex;align-items:center;justify-content:center;min-height:80px;touch-action:none;position:relative}
+.dbg-grid{display:flex;flex-direction:column;gap:16px}
+.dbg-grid.has-match>.dbg-card:last-child{order:-1}
+.poules-wrap{display:flex;flex-wrap:wrap;gap:14px;margin-top:4px}
+.poules-wrap>.dbg-poule{flex:1 1 320px;min-width:290px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.board-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.board-head h3{margin:0}
+.board-meta{font-size:.82rem;color:var(--gold);font-weight:600}
+.pp-prog{font-size:.72rem;color:var(--muted);font-weight:700;margin-left:8px}
+.dbg-split{display:none}
 .dbg-split::before{content:"\22ee\22ee";white-space:pre;line-height:.5;letter-spacing:-2px;font-size:18px;color:#2a2113;display:flex;align-items:center;justify-content:center;width:14px;height:62px;border-radius:7px;background:var(--gold);box-shadow:0 1px 4px rgba(0,0,0,.3);transition:height .15s,box-shadow .15s}
 .dbg-split:hover::before,.dbg-split:active::before{height:84px;box-shadow:0 2px 8px rgba(0,0,0,.45)}
 @media(max-width:820px){.dbg-grid{grid-template-columns:1fr}.dbg-split{display:none}}
@@ -2891,10 +2898,13 @@ function renderDebatProf(){
   if(tour.phase==="termine" && tour.champion){
     h+='<div class="dbg-result" style="margin-bottom:14px"><div class="win" style="font-size:1.5rem">🏆 '+esc(binomeName(findBinome(tour.champion))||"?")+' remporte le tournoi !</div></div>';
   }
-  h+='<div class="dbg-grid" id="dbgGrid">';
+  const _hasMatch = cm && !(cm.origin && cm.origin.type==="poule" && !poulesObj()[cm.origin.pouleId]);
+  h+='<div class="dbg-grid'+(_hasMatch?' has-match':'')+'" id="dbgGrid">';
 
   // Colonne gauche : poules + classement
-  h+='<div class="dbg-card"><h3>Les poules</h3>';
+  let _tot=0,_pl=0; Object.values(poules).forEach(function(p){ (p.matches||[]).forEach(function(m){ if(findBinome(m.a)&&findBinome(m.b)){_tot++; if(m.played)_pl++;} }); });
+  const _phaseLbl=(debatData().bracket&&debatData().bracket.rounds)?"Phase finale":((tour.phase==="termine")?"Tournoi terminé":"Phase de poules");
+  h+='<div class="dbg-card pilot-board"><div class="board-head"><h3>Tableau de bord</h3><span class="board-meta">'+esc(_phaseLbl)+' · '+_pl+'/'+_tot+' manches jouées</span></div>';
   h+='<div style="margin-bottom:10px"><button class="dbg-btn" style="width:100%" onclick="generateTournament()" title="Répartit automatiquement tous les binômes connectés en poules équilibrées, génère toutes les manches et charge la première. Tu n\'as plus rien à organiser.">⚡ Générer le tournoi automatiquement</button><div style="font-size:.76rem;color:var(--muted);margin-top:4px">Recommandé. Tu peux aussi composer une poule à la main ci-dessous.</div></div>';
   h+='<div style="margin-bottom:12px">';
   h+='<input id="dbgPouleName" class="dbg-input" placeholder="Nom de la poule (ex : Poule A)" title="Donne un nom à la poule. Laisse vide pour une numérotation automatique.">';
@@ -2908,12 +2918,14 @@ function renderDebatProf(){
   }
   h+='</div>';
   const pentries=Object.entries(poules);
+  h+='<div class="poules-wrap">';
   if(pentries.length===0){
     h+='<div style="color:var(--muted);font-style:italic;font-size:.88rem">Aucune poule pour l\'instant. Sélectionne des binômes ci-dessus et crée ta première poule.</div>';
   } else {
     pentries.forEach(function(pe){
       const pid=pe[0], p=pe[1];
-      h+='<div class="dbg-poule"><div class="ph"><span class="pn">'+esc(p.name||"Poule")+'</span>'
+      const _vm=(p.matches||[]).filter(function(m){return findBinome(m.a)&&findBinome(m.b);}); const _vp=_vm.filter(function(m){return m.played;}).length;
+      h+='<div class="dbg-poule"><div class="ph"><span class="pn">'+esc(p.name||"Poule")+'</span><span class="pp-prog" title="Manches jouées / total dans cette poule.">'+_vp+'/'+_vm.length+'</span>'
        + '<button class="dbg-btn ghost" onclick="deletePoule(\''+pid+'\')" title="Supprimer cette poule et toutes ses manches.">Supprimer</button></div>';
       (p.matches||[]).forEach(function(m){
         if(!findBinome(m.a) || !findBinome(m.b)) return;
@@ -2936,6 +2948,7 @@ function renderDebatProf(){
       h+='</div>';
     });
   }
+  h+='</div>';
   // Tableau de la phase finale
   const _br=debatData().bracket;
   if(_br && _br.rounds){
