@@ -400,6 +400,9 @@
 .reb-why,.reb-cons{font-size:.84rem;line-height:1.5;margin-bottom:6px;color:var(--ink2)}
 .reb-tag{display:inline-block;font-size:.7rem;text-transform:uppercase;letter-spacing:.03em;font-weight:700;color:var(--gold);margin-right:4px}
 #rebalanceBody .reb-card .imb-btn{margin-top:2px}
+.reb-det{margin:2px 0 8px}
+.reb-det summary{font-size:.82rem;color:var(--gold);cursor:pointer;user-select:none}
+.reb-list{margin:6px 0 2px;padding-left:18px;font-size:.82rem;color:var(--ink2);line-height:1.65}
 .bracket-rounds{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch}
 .bracket-col{flex:1;min-width:190px;display:flex;flex-direction:column;gap:10px;justify-content:center}
 .bracket-rname{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
@@ -3289,6 +3292,35 @@ function formatSelector(){
   return h;
 }
 
+// ───────── Système suisse : moteur d'appariement ─────────
+function swissPairKey(a,b){ return a<b?(a+"|"+b):(b+"|"+a); }
+// Apparie une ronde : trie par score (victoires puis cumul), évite les re-matchs, gère l'exempt avec rotation.
+// ids: binômes ; playedPairs: {"a|b":1} déjà rencontrés ; scores: {bid:{victoires,cumul}} ; alreadyByed: {bid:1} déjà exemptés.
+function swissPairing(ids, playedPairs, scores, alreadyByed){
+  playedPairs=playedPairs||{}; scores=scores||{}; alreadyByed=alreadyByed||{};
+  var sorted=ids.slice().sort(function(x,y){
+    var sx=scores[x]||{}, sy=scores[y]||{};
+    return ((sy.victoires||0)-(sx.victoires||0))||((sy.cumul||0)-(sx.cumul||0));
+  });
+  var bye=null;
+  if(sorted.length%2===1){
+    for(var i=sorted.length-1;i>=0;i--){ if(!alreadyByed[sorted[i]]){ bye=sorted[i]; break; } }
+    if(bye===null) bye=sorted[sorted.length-1];
+    sorted=sorted.filter(function(b){ return b!==bye; });
+  }
+  var used={}, pairs=[];
+  for(var a=0;a<sorted.length;a++){
+    if(used[sorted[a]]) continue;
+    var pa=sorted[a], partner=null;
+    for(var b=a+1;b<sorted.length;b++){ if(!used[sorted[b]] && !playedPairs[swissPairKey(pa,sorted[b])]){ partner=sorted[b]; break; } }
+    if(partner===null){ for(var c=a+1;c<sorted.length;c++){ if(!used[sorted[c]]){ partner=sorted[c]; break; } } }
+    if(partner!==null){ used[pa]=1; used[partner]=1; pairs.push([pa,partner]); }
+  }
+  return {pairs:pairs, bye:bye};
+}
+// Nombre de rondes proposé par défaut selon l'effectif (formulé « chaque binôme débat N fois »).
+function swissDefaultRounds(n){ if(n<=2) return 1; if(n<=4) return 3; if(n<=8) return 4; return 5; }
+
 function generateTournament(){
   const bs=Object.keys((sessionData.binomes)||{});
   if(bs.length<2){ toast("Il faut au moins 2 binômes connectés pour générer le tournoi."); return; }
@@ -3599,10 +3631,14 @@ function planDissolve(pid){
     load[bestK]++;
     return dest;
   });
-  var lt={}; others.forEach(function(k){ lt[k]=(poules[k].binomes||[]).length; });
-  var newMatches=0; plan.forEach(function(p){ newMatches+=lt[p.pid]; lt[p.pid]++; });
-  var cancelledPlayed=(srcP.matches||[]).filter(function(m){ return m.played; }).length;
-  return {pid:pid, name:srcP.name||"Poule", moving:moving, plan:plan, newMatches:newMatches, cancelledPlayed:cancelledPlayed};
+  var tb={}; others.forEach(function(k){ tb[k]=(poules[k].binomes||[]).slice(); });
+  var newMatchList=[];
+  plan.forEach(function(p){
+    tb[p.pid].forEach(function(m){ newMatchList.push({a:p.bid, b:m, pouleName:(poules[p.pid].name||"poule")}); });
+    tb[p.pid].push(p.bid);
+  });
+  var cancelledList=(srcP.matches||[]).filter(function(m){ return m.played; }).map(function(m){ return {a:m.a, b:m.b, scorePour:m.scorePour, scoreContre:m.scoreContre}; });
+  return {pid:pid, name:srcP.name||"Poule", moving:moving, plan:plan, newMatches:newMatchList.length, cancelledPlayed:cancelledList.length, newMatchList:newMatchList, cancelledList:cancelledList};
 }
 // Bandeau d'alerte concret (binômes réels + conséquences).
 function imbalanceBanner(){
@@ -3619,7 +3655,7 @@ function imbalanceBanner(){
   h+='<div class="imb-body">'+raisons+'</div>';
   h+='<div class="imb-cons">'+cons+'</div>';
   h+='<button class="dbg-btn imb-btn" onclick="dissolvePoule(\''+s.pid+'\')" title="Rééquilibrer maintenant.">⚖ Rééquilibrer maintenant</button> ';
-  h+='<button class="dbg-btn ghost" onclick="openRebalance()" title="Voir tous les déséquilibres et l historique des rééquilibrages.">Détails et historique</button>';
+  h+='<button class="dbg-btn ghost" onclick="openRebalance()" title="Voir tous les déséquilibres et l historique des rééquilibrages.">Voir le détail des manches</button>';
   h+='</div>';
   return h;
 }
@@ -3638,6 +3674,12 @@ function rebalanceHtml(){
     h+='<div class="reb-card"><div class="reb-card-h">'+esc(e[1].name||"Poule")+' — '+n+' binôme(s)</div>';
     h+='<div class="reb-why"><span class="reb-tag">Raisons</span> '+names.join(", ")+' '+(pl.moving.length>1?"ont débattu":"a débattu")+' '+(n-1)+' fois, contre '+(max-1)+' fois ailleurs.</div>';
     h+='<div class="reb-cons"><span class="reb-tag">Conséquences</span> '+pl.plan.map(function(p){ return esc(binomeName(findBinome(p.bid))||"?")+" → "+esc(p.pouleName); }).join(", ")+'. '+pl.newMatches+' nouvelle(s) manche(s)'+(pl.cancelledPlayed?(', '+pl.cancelledPlayed+' déjà jouée(s) annulée(s)'):'')+', phase finale régénérée.</div>';
+    var _nm=(pl.newMatchList||[]).map(function(x){ return esc(binomeName(findBinome(x.a))||"?")+" vs "+esc(binomeName(findBinome(x.b))||"?")+' <span class="why-meta">('+esc(x.pouleName)+')</span>'; });
+    if(_nm.length) h+='<details class="reb-det"><summary>Voir les '+pl.newMatches+' nouvelle(s) manche(s)</summary><ul class="reb-list"><li>'+_nm.join("</li><li>")+'</li></ul></details>';
+    if((pl.cancelledList||[]).length){
+      var _cm=pl.cancelledList.map(function(x){ var sx=(x.scorePour!=null&&x.scoreContre!=null)?' <span class="why-meta">('+x.scorePour+"–"+x.scoreContre+')</span>':""; return esc(binomeName(findBinome(x.a))||"?")+" vs "+esc(binomeName(findBinome(x.b))||"?")+sx; });
+      h+='<details class="reb-det"><summary>Voir la ou les manche(s) annulée(s) ('+pl.cancelledPlayed+')</summary><ul class="reb-list"><li>'+_cm.join("</li><li>")+'</li></ul></details>';
+    }
     h+='<button class="dbg-btn imb-btn" onclick="dissolvePoule(\''+e[0]+'\')" title="Appliquer ce rééquilibrage.">⚖ Rééquilibrer</button></div>';
   });
   h+='</div>';
