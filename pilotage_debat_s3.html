@@ -1004,6 +1004,56 @@ body:has(.overlay.show){overflow:hidden}
    Backend : Firebase Realtime Database, branche debat_singes/
    ============================================================ */
 
+/* ════════════════════════════════════════════════════════════════════
+   ⚠ CHANTIER À REPRENDRE — DÉBATS MULTI-CLASSES (un débat par classe)
+   ────────────────────────────────────────────────────────────────────
+   PROBLÈME ACTUEL :
+     Le sélecteur de classe (classeSelector / setDebatClasse) écrit
+     seulement active/classe (une étiquette). Il n'y a qu'UN débat actif,
+     sous active/debat. Changer de classe ne bascule donc PAS de débat :
+     on voit toujours le même. Cf. setDebatClasse() ~L164.
+
+   OBJECTIF (validé par Paul) :
+     Plusieurs débats en parallèle, UN par classe, JAMAIS deux pour la
+     même classe. La classe est la clé unique.
+
+   ARCHITECTURE CIBLE :
+     • Débats persistants sous  active/debats/<slugClasse>  (tout l'état
+       actuel d'active/debat : poules, matches, scores, tournament, swiss,
+       bracket, rebalances, currentMatch…), une copie par classe.
+     • Pointeur  active/classeEnCours  = la classe pilotée / en séance.
+     • Les DEUX seuls points à rebrancher (tout le moteur passe par eux) :
+         - la variable  DEBAT  → ACTIVE + "/debats/" + slug(classeEnCours)
+         - la fonction  debatData()  → (sessionData.debats||{})[slug] || {}
+       (cf. DEBAT ~L21 et debatData() ~L1260)
+     • Le listener écoute déjà tout ACTIVE → récupère tous les débats,
+       AUCUN ré-attachement nécessaire.
+     • setDebatClasse(v) : écrire active/classeEnCours = v + re-render
+       (lastProfSig=null), au lieu d'écrire active/classe.
+     • MIGRATION au boot : si active/debat existe et pas active/debats,
+       déplacer active/debat → active/debats/<classe rattachée actuelle>
+       (en douceur, rien perdu). Idéalement détecter la classe via
+       l'ancien active/classe ; sinon demander.
+
+   DÉCISION EN SUSPENS — CÔTÉ ÉLÈVE / CODES (à trancher avant de coder l'étape 2) :
+     Option 1 (RECOMMANDÉE) : un code commun ; classeEnCours détermine ce
+       que voient les élèves (une séance = une classe). Inconvénient : si
+       le prof bascule sa vue pendant la séance, les élèves basculent aussi.
+     Option 2 : un code par classe (cloisonné ; plusieurs codes à gérer).
+
+   ÉTAPES :
+     1. Résolution DEBAT par classe + debatData() + setDebatClasse →
+        classeEnCours + migration boot. Testé. (Côté pilotage uniquement.)
+     2. Raccordement côté élève (selon l'option 1/2 retenue).
+
+   POINTS D'ATTENTION :
+     • DEBAT est le cœur : toute fonction écrivant en dur ACTIVE+"/debat"
+       doit passer par DEBAT. Vérifier exportDebatJSON / importDebatJSON /
+       archive / bootDebat.
+     • Ne pas casser la régression (≥430 tests, harnais _test_tournoi & co).
+     • Penser slug(classe) stable (accents/espaces) pour la clé Firebase.
+   ════════════════════════════════════════════════════════════════════ */
+
 // ─────────── Firebase init ───────────
 firebase.initializeApp({
   apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",
