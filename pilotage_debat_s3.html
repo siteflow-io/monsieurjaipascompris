@@ -381,6 +381,25 @@
 .why-list li{margin:2px 0}
 .why-meta{color:var(--muted);font-size:.78rem}
 .bracket-mode{font-size:.8rem;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.imbalance{background:rgba(220,171,85,.08);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.imb-head{color:var(--gold);font-weight:700;font-size:.92rem;margin-bottom:4px}
+.imb-body{font-size:.84rem;color:var(--ink);margin-bottom:8px;line-height:1.5}
+.imb-btn{border-color:var(--gold);color:var(--gold)}
+.imb-cons{font-size:.8rem;color:var(--muted);margin-bottom:8px;line-height:1.5}
+.fmt-sel{margin-bottom:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02)}
+.fmt-lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.fmt-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.fmt-pill{border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:999px;padding:4px 12px;font-size:.82rem;cursor:pointer;font-family:inherit}
+.fmt-pill.on{border-color:var(--gold);color:var(--gold);background:rgba(220,171,85,.1);font-weight:700}
+.fmt-desc{font-size:.8rem;color:var(--muted);line-height:1.5}
+.reb-sec{margin-bottom:18px}
+.reb-h{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px;font-weight:700}
+.reb-empty{font-size:.85rem;color:var(--muted);font-style:italic;padding:6px 0}
+.reb-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:rgba(255,255,255,.02)}
+.reb-card-h{font-weight:700;font-size:.92rem;color:var(--ink);margin-bottom:6px}
+.reb-why,.reb-cons{font-size:.84rem;line-height:1.5;margin-bottom:6px;color:var(--ink2)}
+.reb-tag{display:inline-block;font-size:.7rem;text-transform:uppercase;letter-spacing:.03em;font-weight:700;color:var(--gold);margin-right:4px}
+#rebalanceBody .reb-card .imb-btn{margin-top:2px}
 .bracket-rounds{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch}
 .bracket-col{flex:1;min-width:190px;display:flex;flex-direction:column;gap:10px;justify-content:center}
 .bracket-rname{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
@@ -918,6 +937,13 @@ body:has(.overlay.show){overflow:hidden}
   <div class="gelcard" style="text-align:left;max-width:760px;max-height:88vh;padding:0;display:flex;flex-direction:column;overflow:hidden">
     <div class="modq-head"><h2 style="font-size:1.15rem;margin:0">🕓 Chronologie du débat</h2><button class="modq-x notipi" onclick="closeChrono()" title="Fermer (ou Échap, ou clic en dehors).">✕</button></div>
     <div id="chronoBody" class="modq-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="rebalanceOverlay">
+  <div class="gelcard" style="text-align:left;max-width:720px;max-height:88vh;padding:0;display:flex;flex-direction:column;overflow:hidden">
+    <div class="modq-head"><h2 style="font-size:1.15rem;margin:0">⚖ Rééquilibrages</h2><button class="modq-x notipi" onclick="closeRebalance()" title="Fermer (ou Échap, ou clic en dehors).">✕</button></div>
+    <div id="rebalanceBody" class="modq-body"></div>
   </div>
 </div>
 
@@ -2402,7 +2428,7 @@ function closeHelp(){ $("help").classList.remove("show"); }
 // ─────────── Raccourcis clavier ───────────
 document.addEventListener("keydown", (e)=>{
   if(e.key === "Escape"){
-    const overs = ["confirmOverlay","editOverlay","menuOverlay","pwdOverlay","modQueueOverlay","chronoOverlay"];
+    const overs = ["confirmOverlay","editOverlay","menuOverlay","pwdOverlay","modQueueOverlay","chronoOverlay","rebalanceOverlay"];
     for(const id of overs){
       const o = $(id);
       if(o && o.classList.contains("show")){
@@ -2412,6 +2438,7 @@ document.addEventListener("keydown", (e)=>{
         else if(id==="pwdOverlay") closePwdOverlay();
         else if(id==="modQueueOverlay") closeModQueue();
         else if(id==="chronoOverlay") closeChrono();
+        else if(id==="rebalanceOverlay") closeRebalance();
         return;
       }
     }
@@ -2963,7 +2990,9 @@ function renderDebatProf(){
   // Colonne gauche : poules + classement
   let _tot=0,_pl=0; Object.values(poules).forEach(function(p){ (p.matches||[]).forEach(function(m){ if(findBinome(m.a)&&findBinome(m.b)){_tot++; if(m.played)_pl++;} }); });
   const _phaseLbl=(debatData().bracket&&debatData().bracket.rounds)?"Phase finale":((tour.phase==="termine")?"Tournoi terminé":"Phase de poules");
-  h+='<div class="dbg-card pilot-board"><div class="board-head"><h3>Tableau de bord</h3><span class="board-meta">'+esc(_phaseLbl)+' · '+_pl+'/'+_tot+' manches jouées</span><button class="dbg-btn ghost" style="padding:3px 10px;margin-left:auto" onclick="openChrono()" title="Journal des manches dans l\'ordre du temps : qui était POUR/CONTRE, scores et vainqueurs.">🕓 Chronologie</button></div>';
+  h+='<div class="dbg-card pilot-board"><div class="board-head"><h3>Tableau de bord</h3><span class="board-meta">'+esc(_phaseLbl)+' · '+_pl+'/'+_tot+' manches jouées</span><button class="dbg-btn ghost" style="padding:3px 10px;margin-left:auto" onclick="openChrono()" title="Journal des manches dans l\'ordre du temps : qui était POUR/CONTRE, scores et vainqueurs.">🕓 Chronologie</button><button class="dbg-btn ghost" style="padding:3px 10px;margin-left:6px" onclick="openRebalance()" title="Voir les déséquilibres détectés, leurs conséquences, et annuler un rééquilibrage.">⚖ Rééquilibrages</button></div>';
+  h+=imbalanceBanner();
+  h+=formatSelector();
   h+='<div style="margin-bottom:10px"><button class="dbg-btn" style="width:100%" onclick="generateTournament()" title="Répartit automatiquement tous les binômes connectés en poules équilibrées, génère toutes les manches et charge la première. Tu n\'as plus rien à organiser.">⚡ Générer le tournoi automatiquement</button><div style="font-size:.76rem;color:var(--muted);margin-top:4px">Recommandé. Tu peux aussi composer une poule à la main ci-dessous.</div></div>';
   h+='<div style="margin-bottom:12px">';
   h+='<input id="dbgPouleName" class="dbg-input" placeholder="Nom de la poule (ex : Poule A)" title="Donne un nom à la poule. Laisse vide pour une numérotation automatique.">';
@@ -2985,7 +3014,6 @@ function renderDebatProf(){
       const pid=pe[0], p=pe[1];
       const _vm=(p.matches||[]).filter(function(m){return findBinome(m.a)&&findBinome(m.b);}); const _vp=_vm.filter(function(m){return m.played;}).length;
       h+='<div class="dbg-poule"><div class="ph"><span class="pn">'+esc(p.name||"Poule")+'</span><span class="pp-prog" title="Manches jouées / total dans cette poule.">'+_vp+'/'+_vm.length+'</span>'
-       + (pentries.length>1?('<button class="dbg-btn ghost" onclick="dissolvePoule(\''+pid+'\')" title="Dissoudre cette poule et répartir ses binômes dans les autres poules : ils débattront davantage.">⤳ Ventiler</button>'):'')
        + '<button class="dbg-btn ghost" onclick="deletePoule(\''+pid+'\')" title="Supprimer cette poule et toutes ses manches.">Supprimer</button></div>';
       (p.matches||[]).forEach(function(m){
         if(!findBinome(m.a) || !findBinome(m.b)) return;
@@ -3244,20 +3272,48 @@ function planPools(n){
   return sizes;
 }
 // Génération automatique du tournoi (poules + manches) puis chargement de la 1re manche
+// ───────── Formats de tournoi (socle du sélecteur) ─────────
+var _selectedFormat="poules_finale";
+var TOURNAMENT_FORMATS=[
+  {id:"poules_finale", label:"Poules + finale", desc:"Des poules équilibrées, puis une phase finale (demi-finales, finale) entre les premiers de chaque poule. Le format classique."},
+  {id:"poules", label:"Poules seules", desc:"Des poules équilibrées, sans phase finale : le champion est le binôme en tête du classement général."},
+  {id:"round_robin", label:"Round-robin intégral", desc:"Une seule grande poule : chaque binôme affronte tous les autres. Le plus équitable, mais le plus long."},
+  {id:"elimination", label:"Élimination directe", desc:"Un tableau à élimination directe sur tous les binômes : le perdant est éliminé à chaque tour. Rapide et tendu, mais le moins équitable (un binôme battu d'entrée n'aura débattu qu'une fois)."}
+];
+function formatDesc(f){ for(var i=0;i<TOURNAMENT_FORMATS.length;i++){ if(TOURNAMENT_FORMATS[i].id===f) return TOURNAMENT_FORMATS[i].desc; } return ""; }
+function setFormat(f){ _selectedFormat=f; lastProfSig=null; renderDebatProf(); }
+function formatSelector(){
+  var h='<div class="fmt-sel"><div class="fmt-lbl">Format du tournoi</div><div class="fmt-pills">';
+  TOURNAMENT_FORMATS.forEach(function(f){ h+='<button class="fmt-pill'+(_selectedFormat===f.id?" on":"")+'" onclick="setFormat(\''+f.id+'\')" title="'+esc(f.desc)+'">'+esc(f.label)+'</button>'; });
+  h+='</div><div class="fmt-desc">'+esc(formatDesc(_selectedFormat))+'</div></div>';
+  return h;
+}
+
 function generateTournament(){
   const bs=Object.keys((sessionData.binomes)||{});
   if(bs.length<2){ toast("Il faut au moins 2 binômes connectés pour générer le tournoi."); return; }
+  const fmt=_selectedFormat||"poules_finale";
   const doIt=function(){
     archiveCurrentTournament();
     const arr=bs.slice();
     for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=arr[i];arr[i]=arr[j];arr[j]=t; }
-    const sizes=planPools(arr.length);
+    if(fmt==="elimination"){
+      const elimRounds=buildBracket(arr);
+      db.ref(DEBAT).update({poules:null, bracket:{seeds:arr, rounds:elimRounds, mode:"elimination"}, tournament:{phase:"finale",format:fmt,generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
+      db.ref(ACTIVE+"/groupsLocked").set(true);
+      sessionEnded=false;
+      const enf=nextFinalMatch(elimRounds);
+      if(enf){ const em=elimRounds[enf.r].matches[enf.i]; loadMatch({type:"final",r:enf.r,i:enf.i}, em.a, em.b); }
+      toast("Tournoi à élimination directe généré. Première manche prête.");
+      return;
+    }
+    const sizes = fmt==="round_robin" ? [arr.length] : planPools(arr.length);
     const poules={}; let k=0;
     sizes.forEach(function(sz,idx){
       const ids=arr.slice(k,k+sz); k+=sz; const pid=uid();
       poules[pid]={id:pid, name:"Poule "+String.fromCharCode(65+idx), binomes:ids, matches:genRoundRobin(ids)};
     });
-    db.ref(DEBAT).update({poules:poules, bracket:null, tournament:{phase:"poules",generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
+    db.ref(DEBAT).update({poules:poules, bracket:null, tournament:{phase:"poules",format:fmt,generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
     db.ref(ACTIVE+"/groupsLocked").set(true);
     sessionEnded=false;
     const firstPid=Object.keys(poules)[0], firstM=poules[firstPid].matches[0];
@@ -3349,14 +3405,16 @@ function bracketHtml(cm){
     var sn=seeds.indexOf(bid); var sd=sn>=0?('<span class="bseed" title="Tête de série">#'+(sn+1)+'</span>'):'';
     return '<div class="bteam'+(isWin?' win':'')+'">'+sd+'<span class="bnm">'+esc(binomeName(findBinome(bid))||"?")+'</span>'+(isWin?'<span class="bcrown">🏆</span>':'')+'</div>';
   }
-  var h='<div class="bracket-box"><div class="bracket-title">Phase finale</div>';
-  h+='<div class="bracket-mode">Qualification : <b>'+(mode==="general"?"classement général":"1ers de poule")+'</b><button class="dbg-btn ghost notipi" style="padding:2px 9px;margin-left:8px" onclick="regenFinalPhase(\''+(mode==="general"?"poules":"general")+'\')" title="'+(mode==="general"?"Revenir aux 1ers de chaque poule.":"Requalifier les meilleurs binômes toutes poules confondues — plus juste si les poules sont déséquilibrées.")+'">⚖ '+(mode==="general"?"Revenir aux 1ers de poule":"Régénérer au classement général")+'</button></div>';
+  var h='<div class="bracket-box"><div class="bracket-title">'+(mode==="elimination"?"Élimination directe":"Phase finale")+'</div>';
+  if(mode!=="elimination") h+='<div class="bracket-mode">Qualification : <b>'+(mode==="general"?"classement général":"1ers de poule")+'</b><button class="dbg-btn ghost notipi" style="padding:2px 9px;margin-left:8px" onclick="regenFinalPhase(\''+(mode==="general"?"poules":"general")+'\')" title="'+(mode==="general"?"Revenir aux 1ers de chaque poule.":"Requalifier les meilleurs binômes toutes poules confondues — plus juste si les poules sont déséquilibrées.")+'">⚖ '+(mode==="general"?"Revenir aux 1ers de poule":"Régénérer au classement général")+'</button></div>';
   if(seeds.length){
-    var whyTxt = mode==="general"
+    var whyTxt = mode==="elimination"
+      ? 'Tableau <b>tiré au sort</b>. Ordre des binômes dans le tableau :'
+      : (mode==="general"
       ? 'Sont qualifiés les <b>meilleurs binômes au classement général</b> (toutes poules confondues), classés par <b>victoires</b> puis par <b>points cumulés</b>. Têtes de série :'
-      : 'Sont qualifiés les <b>1ers de chaque poule</b>, classés par <b>victoires</b> puis par <b>points cumulés</b>. Têtes de série :';
+      : 'Sont qualifiés les <b>1ers de chaque poule</b>, classés par <b>victoires</b> puis par <b>points cumulés</b>. Têtes de série :');
     h+='<details class="bracket-why"><summary>Pourquoi ces binômes ?</summary><div class="why-body"><p>'+whyTxt+'</p><ol class="why-list">';
-    seeds.forEach(function(bid){ var s=sc[bid]||{}; h+='<li>'+esc(binomeName(findBinome(bid))||"?")+' <span class="why-meta">('+esc(pouleOf(bid))+' · '+(s.victoires||0)+' V · '+(s.cumul||0)+' pts)</span></li>'; });
+    seeds.forEach(function(bid){ var s=sc[bid]||{}; h+='<li>'+esc(binomeName(findBinome(bid))||"?")+(mode==="elimination"?'':' <span class="why-meta">('+esc(pouleOf(bid))+' · '+(s.victoires||0)+' V · '+(s.cumul||0)+' pts)</span>')+'</li>'; });
     h+='</ol></div></details>';
   }
   h+='<div class="bracket-rounds">';
@@ -3479,10 +3537,18 @@ function dissolvePoule(pid){
   var recap=plan.map(function(p){ return (binomeName(findBinome(p.bid))||"?")+" rejoint "+(poules[p.pid].name||"une poule"); }).join(", ");
   askConfirm("Dissoudre « "+(srcP.name||"cette poule")+" » ? "+recap+". Les manches déjà jouées de cette poule seront annulées, de nouvelles manches générées, et la phase finale réinitialisée.", function(){
     // Construire les nouvelles poules cibles (binômes + matchs), en séquence pour gérer plusieurs arrivées
+    var _snapPoules=JSON.parse(JSON.stringify(poulesObj()));
+    var _snapScores=JSON.parse(JSON.stringify(scoresObj()||{}));
+    var _snapMatches=JSON.parse(JSON.stringify(debatData().matches||{}));
+    var _snapTour=JSON.parse(JSON.stringify(debatData().tournament||{}));
+    var _snapBracket=debatData().bracket?JSON.parse(JSON.stringify(debatData().bracket)):null;
+    var _snapCM=debatData().currentMatch?JSON.parse(JSON.stringify(debatData().currentMatch)):null;
+    db.ref(DEBAT+"/rebalances/reb_"+Date.now()).set({at:Date.now(), pouleName:(srcP.name||"Poule"), plan:plan.map(function(pp){return {name:(binomeName(findBinome(pp.bid))||"?"), pouleName:(poulesObj()[pp.pid].name||"poule")};}), snapshot:{poules:_snapPoules, scores:_snapScores, matches:_snapMatches, tournament:_snapTour, bracket:_snapBracket, currentMatch:_snapCM}});
     var tb={}, tm={};
     others.forEach(function(k){ tb[k]=(poules[k].binomes||[]).slice(); tm[k]=(poules[k].matches||[]).slice(); });
+    var firstNew=null;
     plan.forEach(function(p){
-      tb[p.pid].forEach(function(m){ tm[p.pid].push({id:uid(), a:p.bid, b:m, played:false}); });
+      tb[p.pid].forEach(function(m){ var mid=uid(); tm[p.pid].push({id:mid, a:p.bid, b:m, played:false}); if(!firstNew) firstNew={pid:p.pid, mid:mid, a:p.bid, b:m}; });
       tb[p.pid].push(p.bid);
     });
     others.forEach(function(k){
@@ -3496,8 +3562,117 @@ function dissolvePoule(pid){
     // Invalider la phase finale (les poules ont changé)
     db.ref(DEBAT+"/bracket").remove();
     db.ref(DEBAT+"/tournament").update({phase:"poules", champion:null});
-    db.ref(DEBAT+"/currentMatch").remove();
-    toast("« "+(srcP.name||"Poule")+" » dissoute. Nouvelles manches générées, phase finale réinitialisée.");
+    if(firstNew){ loadMatch({type:"poule", pouleId:firstNew.pid, matchId:firstNew.mid}, firstNew.a, firstNew.b); }
+    else { db.ref(DEBAT+"/currentMatch").remove(); }
+    toast("« "+(srcP.name||"Poule")+" » dissoute. Nouvelles manches générées, première manche chargée.");
+  });
+}
+
+// Détecte un déséquilibre de taille entre poules (écart >= 2 binômes), qui crée une inéquité de temps de parole.
+function detectImbalance(){
+  var poules=poulesObj();
+  var entries=Object.entries(poules);
+  if(entries.length<2) return null;
+  var sizes=entries.map(function(e){ return (e[1].binomes||[]).length; });
+  var max=Math.max.apply(null,sizes), min=Math.min.apply(null,sizes);
+  if(max-min<2) return null; // un écart de 1 (ex : poules de 4 et 3) est normal et toléré
+  var small=entries.filter(function(e){ return (e[1].binomes||[]).length<=max-2; })
+    .map(function(e){ return {pid:e[0], name:e[1].name||"Poule", n:(e[1].binomes||[]).length}; });
+  if(small.length===0) return null;
+  return {max:max, min:min, small:small};
+}
+// Bandeau d'alerte affiché dans le tableau de bord quand un rééquilibrage est justifié.
+
+// Calcule (sans appliquer) le plan de ventilation d'une poule et ses conséquences chiffrées.
+function planDissolve(pid){
+  var poules=poulesObj();
+  var srcP=poules[pid];
+  if(!srcP) return null;
+  var others=Object.keys(poules).filter(function(k){ return k!==pid; });
+  if(others.length===0) return null;
+  var moving=(srcP.binomes||[]).filter(function(b){ return findBinome(b); });
+  if(moving.length===0) return null;
+  var load={}; others.forEach(function(k){ load[k]=(poules[k].binomes||[]).length; });
+  var plan=moving.map(function(bid){
+    var bestK=others[0]; others.forEach(function(k){ if(load[k]<load[bestK]) bestK=k; });
+    var dest={bid:bid, pid:bestK, pouleName:(poules[bestK].name||"poule")};
+    load[bestK]++;
+    return dest;
+  });
+  var lt={}; others.forEach(function(k){ lt[k]=(poules[k].binomes||[]).length; });
+  var newMatches=0; plan.forEach(function(p){ newMatches+=lt[p.pid]; lt[p.pid]++; });
+  var cancelledPlayed=(srcP.matches||[]).filter(function(m){ return m.played; }).length;
+  return {pid:pid, name:srcP.name||"Poule", moving:moving, plan:plan, newMatches:newMatches, cancelledPlayed:cancelledPlayed};
+}
+// Bandeau d'alerte concret (binômes réels + conséquences).
+function imbalanceBanner(){
+  var im=detectImbalance(); if(!im) return "";
+  var s=im.small[0];
+  var pl=planDissolve(s.pid); if(!pl) return "";
+  var names=pl.moving.map(function(b){ return esc(binomeName(findBinome(b))||"?"); });
+  var qui=names.length<=1?names[0]:(names.slice(0,-1).join(", ")+" et "+names[names.length-1]);
+  var verbe=pl.moving.length>1?"ont débattu":"a débattu";
+  var raisons=qui+" "+verbe+" "+(s.n-1)+" fois (poule de "+s.n+"), contre "+(im.max-1)+" fois pour les autres binômes.";
+  var dest=pl.plan.map(function(p){ return esc(binomeName(findBinome(p.bid))||"?")+" → "+esc(p.pouleName); }).join(", ");
+  var cons="Rééquilibrer : "+dest+". "+pl.newMatches+" nouvelle(s) manche(s)"+(pl.cancelledPlayed?(", "+pl.cancelledPlayed+" déjà jouée(s) annulée(s)"):"")+", phase finale régénérée, première manche chargée.";
+  var h='<div class="imbalance"><div class="imb-head">⚠ Déséquilibre détecté — '+esc(s.name)+'</div>';
+  h+='<div class="imb-body">'+raisons+'</div>';
+  h+='<div class="imb-cons">'+cons+'</div>';
+  h+='<button class="dbg-btn imb-btn" onclick="dissolvePoule(\''+s.pid+'\')" title="Rééquilibrer maintenant.">⚖ Rééquilibrer maintenant</button> ';
+  h+='<button class="dbg-btn ghost" onclick="openRebalance()" title="Voir tous les déséquilibres et l historique des rééquilibrages.">Détails et historique</button>';
+  h+='</div>';
+  return h;
+}
+// Onglet « Rééquilibrages » : déséquilibres (raisons + conséquences) et historique annulable.
+function rebalanceHtml(){
+  var poules=poulesObj(); var entries=Object.entries(poules);
+  var sizes=entries.map(function(e){ return (e[1].binomes||[]).length; });
+  var max=sizes.length?Math.max.apply(null,sizes):0;
+  var problem=entries.filter(function(e){ return (e[1].binomes||[]).length<=max-2; });
+  var h='<div class="reb-sec"><div class="reb-h">Déséquilibres détectés</div>';
+  if(problem.length===0){ h+='<div class="reb-empty">Aucun déséquilibre. Toutes les poules sont équilibrées.</div>'; }
+  else problem.forEach(function(e){
+    var pl=planDissolve(e[0]); if(!pl) return;
+    var names=pl.moving.map(function(b){ return esc(binomeName(findBinome(b))||"?"); });
+    var n=(e[1].binomes||[]).length;
+    h+='<div class="reb-card"><div class="reb-card-h">'+esc(e[1].name||"Poule")+' — '+n+' binôme(s)</div>';
+    h+='<div class="reb-why"><span class="reb-tag">Raisons</span> '+names.join(", ")+' '+(pl.moving.length>1?"ont débattu":"a débattu")+' '+(n-1)+' fois, contre '+(max-1)+' fois ailleurs.</div>';
+    h+='<div class="reb-cons"><span class="reb-tag">Conséquences</span> '+pl.plan.map(function(p){ return esc(binomeName(findBinome(p.bid))||"?")+" → "+esc(p.pouleName); }).join(", ")+'. '+pl.newMatches+' nouvelle(s) manche(s)'+(pl.cancelledPlayed?(', '+pl.cancelledPlayed+' déjà jouée(s) annulée(s)'):'')+', phase finale régénérée.</div>';
+    h+='<button class="dbg-btn imb-btn" onclick="dissolvePoule(\''+e[0]+'\')" title="Appliquer ce rééquilibrage.">⚖ Rééquilibrer</button></div>';
+  });
+  h+='</div>';
+  var rebs=debatData().rebalances||{};
+  var rids=Object.keys(rebs).sort(function(a,b){ return (rebs[b].at||0)-(rebs[a].at||0); });
+  h+='<div class="reb-sec"><div class="reb-h">Rééquilibrages effectués</div>';
+  if(rids.length===0){ h+='<div class="reb-empty">Aucun rééquilibrage effectué.</div>'; }
+  else rids.forEach(function(rid){
+    var r=rebs[rid]; var t=r.at?new Date(r.at):null;
+    var hh=t?(("0"+t.getHours()).slice(-2)+":"+("0"+t.getMinutes()).slice(-2)):"";
+    h+='<div class="reb-card"><div class="reb-card-h">'+esc(r.pouleName||"Poule")+' dissoute'+(hh?' à '+hh:'')+'</div>';
+    if(r.plan&&r.plan.length) h+='<div class="reb-why">'+r.plan.map(function(p){ return esc(p.name||"?")+" → "+esc(p.pouleName||"?"); }).join(", ")+'</div>';
+    h+='<button class="dbg-btn ghost" onclick="undoRebalance(\''+rid+'\')" title="Restaurer l état précédent ce rééquilibrage.">↩ Annuler ce rééquilibrage</button></div>';
+  });
+  h+='</div>';
+  return h;
+}
+function openRebalance(){ var ov=document.getElementById("rebalanceOverlay"); if(!ov) return; var b=document.getElementById("rebalanceBody"); if(b) b.innerHTML=rebalanceHtml(); ov.classList.add("show"); }
+function closeRebalance(){ var ov=document.getElementById("rebalanceOverlay"); if(ov) ov.classList.remove("show"); }
+// Restaure l'état d'avant un rééquilibrage.
+function undoRebalance(rid){
+  var rebs=debatData().rebalances||{};
+  var reb=rebs[rid];
+  if(!reb||!reb.snapshot){ toast("Sauvegarde introuvable."); return; }
+  askConfirm("Annuler ce rééquilibrage et revenir à l'état précédent ? Les manches jouées depuis seront perdues.", function(){
+    var sn=reb.snapshot;
+    db.ref(DEBAT+"/poules").set(sn.poules||{});
+    db.ref(DEBAT+"/scores").set(sn.scores||{});
+    db.ref(DEBAT+"/matches").set(sn.matches||{});
+    db.ref(DEBAT+"/tournament").set(sn.tournament||{});
+    if(sn.bracket) db.ref(DEBAT+"/bracket").set(sn.bracket); else db.ref(DEBAT+"/bracket").remove();
+    if(sn.currentMatch) db.ref(DEBAT+"/currentMatch").set(sn.currentMatch); else db.ref(DEBAT+"/currentMatch").remove();
+    db.ref(DEBAT+"/rebalances/"+rid).remove();
+    closeRebalance();
+    toast("Rééquilibrage annulé. État précédent restauré.");
   });
 }
 
@@ -3541,6 +3716,14 @@ function nextMatchAuto(){
   if(!poolPhaseComplete()){
     const nm=nextPoolMatch();
     if(nm){ loadMatch({type:"poule",pouleId:nm.pid,matchId:nm.mid}, nm.a, nm.b); return; }
+  }
+  const _fmt=(debatData().tournament||{}).format||"poules_finale";
+  if(_fmt==="poules" || _fmt==="round_robin"){
+    const gr=globalRanking();
+    db.ref(DEBAT+"/currentMatch").remove();
+    db.ref(DEBAT+"/tournament").update({phase:"termine", champion:(gr[0]?gr[0].bid:null)});
+    toast(gr[0]?"🏆 Tournoi terminé !":"Tournoi terminé.");
+    return;
   }
   let br=debatData().bracket, rounds=br?br.rounds:null;
   if(!rounds){ const built=generateFinalPhase(); if(!built){ db.ref(DEBAT+"/currentMatch").remove(); return; } rounds=built.rounds; }
@@ -4019,6 +4202,7 @@ closeOnBackdrop("confirmOverlay", closeConfirm);
 closeOnBackdrop("editOverlay", closeEdit);
 closeOnBackdrop("menuOverlay", closeMenu);
 closeOnBackdrop("chronoOverlay", closeChrono);
+closeOnBackdrop("rebalanceOverlay", closeRebalance);
 closeOnBackdrop("pwdOverlay", closePwdOverlay);
 closeOnBackdrop("archivesOverlay", closeArchives);
 closeOnBackdrop("evalDetailOverlay", closeEvalDetail);
