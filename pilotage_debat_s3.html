@@ -392,6 +392,20 @@
 .fmt-pill{border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:999px;padding:4px 12px;font-size:.82rem;cursor:pointer;font-family:inherit}
 .fmt-pill.on{border-color:var(--gold);color:var(--gold);background:rgba(220,171,85,.1);font-weight:700}
 .fmt-desc{font-size:.8rem;color:var(--muted);line-height:1.5}
+.swiss-set{font-size:.82rem;color:var(--ink2);margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.swiss-set b{color:var(--gold);font-size:1rem;min-width:18px;text-align:center}
+.sw-step{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:1rem;line-height:1;font-family:inherit}
+.swiss-rounds{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0}
+.swiss-rnd{flex:1;min-width:210px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.02)}
+.swiss-rname{font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.swiss-m{font-size:.84rem;padding:4px 0;border-bottom:1px solid var(--line);color:var(--ink2)}
+.swiss-m:last-child{border-bottom:0}
+.swiss-m.cur{color:var(--gold)}
+.swiss-m.done{color:var(--ink)}
+.sw-win{color:var(--gold);font-weight:700}
+.sw-cur{color:var(--gold);font-size:.78rem}
+.swiss-bye{font-size:.78rem;color:var(--muted);font-style:italic;margin-top:6px}
+.swiss-rank{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
 .reb-sec{margin-bottom:18px}
 .reb-h{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:8px;font-weight:700}
 .reb-empty{font-size:.85rem;color:var(--muted);font-style:italic;padding:6px 0}
@@ -427,7 +441,8 @@
 .chrono-meta{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:.76rem;color:var(--muted)}
 .chrono-n{background:var(--gold);color:#1a1408;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:.72rem;flex:0 0 auto}
 .chrono-phase{text-transform:uppercase;letter-spacing:.04em;font-weight:600}
-.chrono-time{margin-left:auto}
+.chrono-time{margin-left:auto;font-size:.72rem;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mtime{font-size:.72rem;color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
 .chrono-duel{display:flex;flex-direction:column;gap:3px}
 .chrono-side{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:5px;font-size:.9rem}
 .chrono-side.win{background:rgba(220,171,85,.16);font-weight:700}
@@ -2477,6 +2492,7 @@ const DBG_PHASES = [
   {label:"Conclusion",   camp:"contre"}
 ];
 const DBG_DEFAULT_DUR = [90,90,60,60,30,30];
+const DBG_SPEED_DUR = [45,45,30,30,20,20];
 function matchPhases(cm){ cm=cm||debatData().currentMatch||{}; return (cm.phases && cm.phases.length)?cm.phases:DBG_PHASES; }
 function matchDurations(cm){ cm=cm||debatData().currentMatch||{}; return (cm.durations && cm.durations.length)?cm.durations:DBG_DEFAULT_DUR; }
 const DBG_CRITS = [
@@ -2963,7 +2979,8 @@ function profSignature(d,cm){
   const tt=debatData().tournament||{}; const brr=debatData().bracket;
   const bsig=brr&&brr.rounds?brr.rounds.map(function(rd){return rd.matches.filter(function(m){return m.played;}).length;}).join("-"):"nb";
   const _bb=(sessionData.binomes)||{}; const presKey=Object.keys(_bb).map(function(k){return (_bb[k].away?"a":"")+(_bb[k].blocked?"b":"");}).join("");
-  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig+"|"+(retoursVisibles()?1:0)+"||"+presKey+"||"+((d&&d.reveal&&d.reveal.at)||0);
+  const _sw=debatData().swiss; const swsig=_sw?((_sw.currentRound||1)+"."+(_sw.rounds||[]).reduce(function(a,rd){return a+(rd.matches?rd.matches.length:0);},0)):"ns";
+  return pkey+"||"+cmkey+"||"+ssum+"||"+Object.keys((sessionData.binomes)||{}).length+"||"+(tt.phase||"")+"|"+(tt.champion||"")+"|"+bsig+"|"+(retoursVisibles()?1:0)+"||"+presKey+"||"+((d&&d.reveal&&d.reveal.at)||0)+"||"+swsig;
 }
 function renderDebatProf(){
   ensureDebatClock();
@@ -3040,7 +3057,7 @@ function renderDebatProf(){
     });
   }
   h+='</div>';
-  h+=bracketHtml(cm);
+  if(((debatData().tournament||{}).format)==="suisse") h+=swissHtml(cm); else h+=bracketHtml(cm);
   h+='</div>';
 
   // Colonne droite : manche en cours
@@ -3281,14 +3298,16 @@ var TOURNAMENT_FORMATS=[
   {id:"poules_finale", label:"Poules + finale", desc:"Des poules équilibrées, puis une phase finale (demi-finales, finale) entre les premiers de chaque poule. Le format classique."},
   {id:"poules", label:"Poules seules", desc:"Des poules équilibrées, sans phase finale : le champion est le binôme en tête du classement général."},
   {id:"round_robin", label:"Round-robin intégral", desc:"Une seule grande poule : chaque binôme affronte tous les autres. Le plus équitable, mais le plus long."},
-  {id:"elimination", label:"Élimination directe", desc:"Un tableau à élimination directe sur tous les binômes : le perdant est éliminé à chaque tour. Rapide et tendu, mais le moins équitable (un binôme battu d'entrée n'aura débattu qu'une fois)."}
+  {id:"suisse", label:"Système suisse", desc:"Chaque binôme débat un nombre fixe de fois, apparié à chaque ronde avec un adversaire de niveau proche, sans élimination. L'équité du temps de parole est garantie par construction."},
+  {id:"elimination", label:"Élimination directe", desc:"Un tableau à élimination directe sur tous les binômes : le perdant est éliminé à chaque tour. Rapide et tendu, mais le moins équitable (un binôme battu d'entrée n'aura débattu qu'une fois)."},
+  {id:"speed", label:"Speed dating", desc:"Rotation générale en manches courtes : chaque binôme croise un maximum d'adversaires. Pour brasser et faire débattre tout le monde — sans vainqueur, c'est un échauffement."}
 ];
 function formatDesc(f){ for(var i=0;i<TOURNAMENT_FORMATS.length;i++){ if(TOURNAMENT_FORMATS[i].id===f) return TOURNAMENT_FORMATS[i].desc; } return ""; }
 function setFormat(f){ _selectedFormat=f; lastProfSig=null; renderDebatProf(); }
 function formatSelector(){
   var h='<div class="fmt-sel"><div class="fmt-lbl">Format du tournoi</div><div class="fmt-pills">';
   TOURNAMENT_FORMATS.forEach(function(f){ h+='<button class="fmt-pill'+(_selectedFormat===f.id?" on":"")+'" onclick="setFormat(\''+f.id+'\')" title="'+esc(f.desc)+'">'+esc(f.label)+'</button>'; });
-  h+='</div><div class="fmt-desc">'+esc(formatDesc(_selectedFormat))+'</div></div>';
+  h+='</div><div class="fmt-desc">'+esc(formatDesc(_selectedFormat))+'</div>'+swissRoundsControl()+'</div>';
   return h;
 }
 
@@ -3321,6 +3340,14 @@ function swissPairing(ids, playedPairs, scores, alreadyByed){
 // Nombre de rondes proposé par défaut selon l'effectif (formulé « chaque binôme débat N fois »).
 function swissDefaultRounds(n){ if(n<=2) return 1; if(n<=4) return 3; if(n<=8) return 4; return 5; }
 
+function _moisFR(m){ return ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."][m]||""; }
+function fmtMancheTime(ts, withDate){
+  if(!ts) return "";
+  var t=new Date(ts);
+  var hh=("0"+t.getHours()).slice(-2)+"h"+("0"+t.getMinutes()).slice(-2);
+  return withDate ? (t.getDate()+" "+_moisFR(t.getMonth())+" · "+hh) : hh;
+}
+
 function generateTournament(){
   const bs=Object.keys((sessionData.binomes)||{});
   if(bs.length<2){ toast("Il faut au moins 2 binômes connectés pour générer le tournoi."); return; }
@@ -3329,6 +3356,18 @@ function generateTournament(){
     archiveCurrentTournament();
     const arr=bs.slice();
     for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=arr[i];arr[i]=arr[j];arr[j]=t; }
+    if(fmt==="suisse"){
+      const N = _swissRounds>0 ? _swissRounds : swissDefaultRounds(arr.length);
+      const r1=swissPairing(arr, {}, {}, {});
+      const round1={n:1, matches:r1.pairs.map(function(p){return {id:uid(),a:p[0],b:p[1]};}), bye:r1.bye||null};
+      const byes1={}; if(r1.bye) byes1[r1.bye]=1;
+      db.ref(DEBAT).update({poules:null, bracket:null, swiss:{binomes:arr, totalRounds:N, currentRound:1, rounds:[round1], byes:byes1}, tournament:{phase:"suisse",format:"suisse",generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
+      db.ref(ACTIVE+"/groupsLocked").set(true);
+      sessionEnded=false;
+      if(round1.matches[0]){ const fm=round1.matches[0]; loadMatch({type:"swiss",round:1,matchId:fm.id}, fm.a, fm.b); }
+      toast("Tournoi suisse généré — chaque binôme débattra "+N+" fois. Première manche prête.");
+      return;
+    }
     if(fmt==="elimination"){
       const elimRounds=buildBracket(arr);
       db.ref(DEBAT).update({poules:null, bracket:{seeds:arr, rounds:elimRounds, mode:"elimination"}, tournament:{phase:"finale",format:fmt,generatedAt:Date.now()}, scores:null, currentMatch:null, grilleEcoute:null, matches:null});
@@ -3339,7 +3378,7 @@ function generateTournament(){
       toast("Tournoi à élimination directe généré. Première manche prête.");
       return;
     }
-    const sizes = fmt==="round_robin" ? [arr.length] : planPools(arr.length);
+    const sizes = (fmt==="round_robin"||fmt==="speed") ? [arr.length] : planPools(arr.length);
     const poules={}; let k=0;
     sizes.forEach(function(sz,idx){
       const ids=arr.slice(k,k+sz); k+=sz; const pid=uid();
@@ -3349,19 +3388,20 @@ function generateTournament(){
     db.ref(ACTIVE+"/groupsLocked").set(true);
     sessionEnded=false;
     const firstPid=Object.keys(poules)[0], firstM=poules[firstPid].matches[0];
-    if(firstM) loadMatch({type:"poule",pouleId:firstPid,matchId:firstM.id}, firstM.a, firstM.b);
+    if(firstM) loadMatch({type:"poule",pouleId:firstPid,matchId:firstM.id}, firstM.a, firstM.b, fmt);
     toast("Tournoi généré : "+sizes.length+" poule(s). Première manche prête.");
   };
   if(Object.keys(poulesObj()).length>0) askConfirm("Régénérer le tournoi ? Les poules, scores et manches actuels seront remplacés.", doIt);
   else doIt();
 }
 // Chargement générique d'une manche
-function loadMatch(origin, a, b){
+function loadMatch(origin, a, b, fmtHint){
+  var _lfmt=fmtHint||((debatData().tournament||{}).format);
   db.ref(DEBAT+"/currentMatch").set({
-    id: origin.type==="poule"?origin.matchId:("F"+origin.r+"_"+origin.i),
+    id: (origin.type==="poule"||origin.type==="swiss")?origin.matchId:("F"+origin.r+"_"+origin.i),
     origin:origin, pouleId: origin.pouleId||null,
     binomeA:a, binomeB:b, campA:null, campB:null, tirageAt:null,
-    durations:DBG_DEFAULT_DUR.slice(),
+    durations:(_lfmt==="speed"?DBG_SPEED_DUR:DBG_DEFAULT_DUR).slice(),
     chronoState:"idle", chronoPhase:0, chronoEndsAt:0, chronoRemaining:0
   });
   toast("Manche chargée. Lancez le tirage POUR / CONTRE.");
@@ -3460,7 +3500,7 @@ function bracketHtml(cm){
       h+='<div class="bvs">'+(m.played&&m.scorePour!=null?('<span class="bscore">'+m.scorePour+'–'+m.scoreContre+'</span>'):'<span class="bvslbl">vs</span>')+'</div>';
       h+=side(m.b, m.played&&m.winner===m.b);
       if(isCur){ h+='<div class="bstate cur">● en cours</div>'; }
-      else if(m.played){ h+='<button class="dbg-btn ghost bstate" style="padding:2px 8px" onclick="openEvalDetail(\'F'+ri+'_'+mi+'\')" title="Voir le détail des évaluations de cette manche.">📋 détail</button>'; }
+      else if(m.played){ var _mrec=(debatData().matches||{})["F"+ri+"_"+mi]; var _mht=(_mrec&&_mrec.terminatedAt)?fmtMancheTime(_mrec.terminatedAt,false):""; h+=(_mht?'<span class="mtime" style="margin-right:6px">🕓 '+_mht+'</span>':'')+'<button class="dbg-btn ghost bstate" style="padding:2px 8px" onclick="openEvalDetail(\'F'+ri+'_'+mi+'\')" title="Voir le détail des évaluations de cette manche.">📋 détail</button>'; }
       else if(ready){ h+='<button class="dbg-btn bstate" style="padding:3px 10px" onclick="startFinalMatch('+ri+','+mi+')" title="Lancer cette manche de la phase finale.">Lancer</button>'; }
       else { h+='<div class="bstate wait">en attente du vainqueur</div>'; }
       h+='</div>';
@@ -3493,11 +3533,10 @@ function chronoHtml(){
   rows.forEach(function(m,i){
     var ca=m.campA;
     var pourBid=ca==="pour"?m.binomeA:m.binomeB, contreBid=ca==="pour"?m.binomeB:m.binomeA;
-    var t=m.terminatedAt?new Date(m.terminatedAt):null;
-    var hh=t?(("0"+t.getHours()).slice(-2)+":"+("0"+t.getMinutes()).slice(-2)):"";
+    var hh=fmtMancheTime(m.terminatedAt, true);
     var winPour=m.gagnant==="pour", winContre=m.gagnant==="contre";
     h+='<div class="chrono-item">';
-    h+='<div class="chrono-meta"><span class="chrono-n">'+(i+1)+'</span><span class="chrono-phase">'+esc(phaseOf(m._id))+'</span>'+(hh?'<span class="chrono-time">'+hh+'</span>':'')+'</div>';
+    h+='<div class="chrono-meta"><span class="chrono-n">'+(i+1)+'</span><span class="chrono-phase">'+esc(phaseOf(m._id))+'</span>'+(hh?'<span class="chrono-time">🕓 '+hh+'</span>':'')+'</div>';
     h+='<div class="chrono-duel">';
     h+='<div class="chrono-side'+(winPour?' win':'')+'"><span class="chrono-camp pour">POUR</span><span class="chrono-nm">'+esc(binomeName(findBinome(pourBid))||"?")+'</span><span class="chrono-sc">'+(m.scorePour!=null?m.scorePour:"")+'</span>'+(winPour?'<span class="chrono-w">🏆</span>':'')+'</div>';
     h+='<div class="chrono-side'+(winContre?' win':'')+'"><span class="chrono-camp contre">CONTRE</span><span class="chrono-nm">'+esc(binomeName(findBinome(contreBid))||"?")+'</span><span class="chrono-sc">'+(m.scoreContre!=null?m.scoreContre:"")+'</span>'+(winContre?'<span class="chrono-w">🏆</span>':'')+'</div>';
@@ -3718,6 +3757,78 @@ function undoRebalance(rid){
   });
 }
 
+// ───────── Système suisse : intégration ─────────
+var _swissRounds=0; // 0 = nombre de rondes par défaut (selon effectif)
+function setSwissRounds(n){ var nb=Object.keys((sessionData.binomes)||{}).length||4; _swissRounds=Math.max(1,Math.min((n|0),Math.max(1,nb-1))); lastProfSig=null; renderDebatProf(); }
+function swissRoundsControl(){
+  if(_selectedFormat!=="suisse") return "";
+  var nb=Object.keys((sessionData.binomes)||{}).length||4;
+  var defN=_swissRounds>0?_swissRounds:swissDefaultRounds(nb);
+  return '<div class="swiss-set">Chaque binôme débattra <button class="sw-step" onclick="setSwissRounds('+(defN-1)+')" title="Moins de rondes.">−</button><b>'+defN+'</b><button class="sw-step" onclick="setSwissRounds('+(defN+1)+')" title="Plus de rondes.">+</button> fois</div>';
+}
+// Génère une ronde : appariement par score, en évitant les re-matchs et avec rotation de l'exempt.
+function genSwissRound(roundNum){
+  var sw=debatData().swiss; if(!sw) return null;
+  var playedPairs={};
+  (sw.rounds||[]).forEach(function(rd){ (rd.matches||[]).forEach(function(m){ playedPairs[swissPairKey(m.a,m.b)]=1; }); });
+  var res=swissPairing(sw.binomes||[], playedPairs, scoresObj(), sw.byes||{});
+  return {n:roundNum, matches:res.pairs.map(function(p){ return {id:uid(),a:p[0],b:p[1]}; }), bye:res.bye||null};
+}
+// Enchaîne : prochaine manche de la ronde, sinon nouvelle ronde appariée, sinon fin au classement.
+function nextSwissMatch(){
+  var sw=debatData().swiss; if(!sw) return;
+  var mt=debatData().matches||{};
+  var cur=sw.currentRound||1;
+  var round=(sw.rounds||[])[cur-1];
+  if(round){
+    for(var i=0;i<round.matches.length;i++){ var m=round.matches[i]; if(!mt[m.id]){ loadMatch({type:"swiss",round:cur,matchId:m.id}, m.a, m.b); return; } }
+  }
+  if(cur < (sw.totalRounds||1)){
+    var ng=genSwissRound(cur+1);
+    if(ng && ng.matches.length){
+      var rounds=(sw.rounds||[]).slice(); rounds.push(ng);
+      var byes=Object.assign({}, sw.byes||{}); if(ng.bye) byes[ng.bye]=1;
+      db.ref(DEBAT+"/swiss").update({rounds:rounds, currentRound:cur+1, byes:byes});
+      var fm=ng.matches[0]; loadMatch({type:"swiss",round:cur+1,matchId:fm.id}, fm.a, fm.b);
+      return;
+    }
+  }
+  var gr=globalRanking();
+  db.ref(DEBAT+"/currentMatch").remove();
+  db.ref(DEBAT+"/tournament").update({phase:"termine", champion:(gr[0]?gr[0].bid:null)});
+  toast(gr[0]?"🏆 Tournoi suisse terminé !":"Tournoi terminé.");
+}
+// Affichage : rondes (avec résultats et exempt) + classement général.
+function swissHtml(cm){
+  var sw=debatData().swiss; if(!sw) return "";
+  var mt=debatData().matches||{};
+  var h='<div class="bracket-box"><div class="bracket-title">Système suisse</div>';
+  h+='<div class="bracket-mode">Ronde '+(sw.currentRound||1)+' / '+(sw.totalRounds||1)+' — chaque binôme débat '+(sw.totalRounds||1)+' fois</div>';
+  h+='<div class="swiss-rounds">';
+  (sw.rounds||[]).forEach(function(rd){
+    h+='<div class="swiss-rnd"><div class="swiss-rname">Ronde '+rd.n+'</div>';
+    rd.matches.forEach(function(m){
+      var rec=mt[m.id]; var played=!!rec; var isCur=cm&&cm.id===m.id&&!played;
+      var na=esc(binomeName(findBinome(m.a))||"?"), nb=esc(binomeName(findBinome(m.b))||"?");
+      h+='<div class="swiss-m'+(isCur?' cur':'')+(played?' done':'')+'">';
+      if(played){ var wb=rec.gagnantBinome; h+='<span class="'+(wb===m.a?"sw-win":"")+'">'+na+'</span> <b>'+(rec.scorePour!=null?rec.scorePour:"")+' – '+(rec.scoreContre!=null?rec.scoreContre:"")+'</b> <span class="'+(wb===m.b?"sw-win":"")+'">'+nb+'</span>'+(rec.terminatedAt?' <span class="mtime">🕓 '+fmtMancheTime(rec.terminatedAt,false)+'</span>':''); }
+      else { h+=na+' vs '+nb+(isCur?' <span class="sw-cur">● en cours</span>':''); }
+      h+='</div>';
+    });
+    if(rd.bye) h+='<div class="swiss-bye">Exempt cette ronde : '+esc(binomeName(findBinome(rd.bye))||"?")+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  var gr=globalRanking();
+  if(gr.length){
+    h+='<div class="swiss-rank"><div class="swiss-rname">Classement général</div><ol class="why-list">';
+    gr.forEach(function(r){ h+='<li>'+esc(binomeName(findBinome(r.bid))||"?")+' <span class="why-meta">('+r.v+' V · '+r.cumul+' pts)</span></li>'; });
+    h+='</ol></div>';
+  }
+  h+='</div>';
+  return h;
+}
+
 function advanceBracket(origin, winner, sp, sc){
   const br=debatData().bracket; if(!br) return;
   const rounds=JSON.parse(JSON.stringify(br.rounds));
@@ -3755,11 +3866,18 @@ function generateFinalPhase(){
 }
 // Enchaînement automatique : poule suivante → phase finale → champion
 function nextMatchAuto(){
+  if(((debatData().tournament||{}).format)==="suisse"){ nextSwissMatch(); return; }
   if(!poolPhaseComplete()){
     const nm=nextPoolMatch();
     if(nm){ loadMatch({type:"poule",pouleId:nm.pid,matchId:nm.mid}, nm.a, nm.b); return; }
   }
   const _fmt=(debatData().tournament||{}).format||"poules_finale";
+  if(_fmt==="speed"){
+    db.ref(DEBAT+"/currentMatch").remove();
+    db.ref(DEBAT+"/tournament").update({phase:"termine", champion:null});
+    toast("Brassage terminé — tout le monde a débattu !");
+    return;
+  }
   if(_fmt==="poules" || _fmt==="round_robin"){
     const gr=globalRanking();
     db.ref(DEBAT+"/currentMatch").remove();
