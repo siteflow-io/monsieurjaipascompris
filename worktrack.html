@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05aq">
+<meta name="app-version" content="2026-06-05ar">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -3387,7 +3387,23 @@ const PROF = {
         <div class="prof-row"><button class="btn ghost" onclick="APP.toggleTest();PROF.render()">${APP.testMode?'activé — postes en test':'désactivé'}</button></div></div>
       <div class="prof-sec"><h4>Snapshot complet (diagnostic)</h4>
         <div class="d">Capture tout l'état de l'app — chapitre, progressions, sessions, contrôle, archives — dans un fichier JSON. À transmettre pour analyse ou optimisation.</div>
-        <div class="prof-row"><button class="btn ghost" onclick="PROF.exportSnapshot()">📦 Exporter un snapshot</button></div></div>`; },
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.exportSnapshot()">📦 Exporter un snapshot</button>
+          <button class="btn ghost" onclick="PROF.importSnapshot()">📥 Importer un snapshot</button></div>
+        <div class="d" style="margin-top:6px">L'import réécrit les progressions, sessions, contrôle et archives à partir du fichier. Il ne touche jamais aux classes partagées avec tes autres apps.</div></div>`; },
+  // réinjecte un snapshot nettoyé : réécrit chaque branche de données, SAUF /classes (racine partagée avec les autres apps MJPC)
+  importSnapshot(){ const i=document.createElement("input"); i.type="file"; i.accept=".json,application/json";
+    i.onchange=()=>{ const f=i.files[0]; if(!f) return; const r=new FileReader();
+      r.onload=()=>{ let snap; try{ snap=JSON.parse(r.result); }catch(e){ toast("Fichier illisible."); return; }
+        if(!snap || !snap.firebase){ toast("Ce fichier n'est pas un snapshot complet."); return; }
+        const chap=CHAPTER.meta.id||"chapitre";
+        const branches=Object.keys(snap.firebase).filter(b=>b!=="classes");   // jamais /classes (partagé)
+        const nb=(snap.firebase["progress/"+chap] && Object.keys(snap.firebase["progress/"+chap]).length)||0;
+        if(typeof confirm==="function" && !confirm("Réinjecter ce snapshot ?\nLes progressions, sessions, contrôle et archives actuels seront REMPLACÉS par ceux du fichier ("+nb+" élèves). Les classes partagées ne sont pas touchées.")) return;
+        branches.forEach(b=>{ try{ store.save(b, snap.firebase[b]); }catch(e){} });
+        toast("Snapshot réinjecté. Recharge la page pour repartir sur cette base.");
+      };
+      r.readAsText(f); };
+    i.click(); },
   setReo(m){ CHAPTER.reglages.reorientation=m; this.touch(); this.render(); toast("Réorientation : "+m); },
   // publication d'une mise à jour : on sonde le serveur, on ne publie (et donc ne rafraîchit les élèves) QUE lorsqu'il sert la nouvelle version
   publishUpdate(){ this._pubState='polling'; this._pubMsg=''; this.render();
