@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05al">
+<meta name="app-version" content="2026-06-05aq">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -523,12 +523,20 @@
   .freeze-sec{border-color:var(--gold-deep)}
   .cours-sec.on{border-color:var(--done)}
   .cours-sec.on h4{color:#79b58a}
-  .cours-ov{position:fixed;inset:0;z-index:90;background:rgba(8,6,4,.78);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:20px}
-  .cours-ov.show{display:flex}
-  .cours-box{background:var(--panel);border:1px solid var(--gold-deep);border-radius:15px;max-width:420px;width:100%;padding:20px;box-shadow:var(--shadow)}
-  .cours-box h3{font-family:'EB Garamond',serif;font-size:1.15rem;margin-bottom:8px}
-  .cours-box .d{color:var(--ink2);font-size:.86rem;line-height:1.5;margin-bottom:12px}
-  .cours-foot{display:flex;gap:9px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+  .app-modal-ov{position:fixed;inset:0;z-index:90;background:rgba(8,6,4,.78);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:20px}
+  .app-modal-ov.show{display:flex}
+  .app-modal-box{background:var(--panel);border:1px solid var(--gold-deep);border-radius:15px;max-width:420px;width:100%;padding:20px;box-shadow:var(--shadow)}
+  .app-modal-box h3{font-family:'EB Garamond',serif;font-size:1.15rem;margin-bottom:8px}
+  .app-modal-box .d{color:var(--ink2);font-size:.86rem;line-height:1.5;margin-bottom:12px}
+  .app-modal-foot{display:flex;gap:9px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+  .clot-recap{max-height:38vh;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:4px 0;margin:4px 0}
+  .clot-row{display:flex;justify-content:space-between;gap:10px;padding:5px 12px;border-bottom:1px solid var(--line);font-size:.88rem}
+  .clot-row:last-child{border-bottom:none}
+  .r-tap{cursor:pointer}
+  .r-tap:hover{background:rgba(200,160,80,.07)}
+  .r-chev{margin-left:10px;color:var(--ink2);opacity:.6}
+  .elv-acts{display:flex;flex-direction:column;gap:7px;margin:6px 0}
+  .elv-acts .btn{justify-content:flex-start;text-align:left}
   .fz-opts{display:flex;flex-direction:column;gap:7px;margin:4px 0 4px}
   .fz-ck{display:flex;align-items:center;gap:8px;font-size:.86rem;color:var(--ink2);cursor:pointer}
   .fz-ck input{width:16px;height:16px;accent-color:var(--gold)}
@@ -1182,6 +1190,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
   let lastVisited = null;
   let glossaire = [];                       // mots retenus par l'élève (transversal au chapitre) : {mot, def, ts}
   let recapAt = 0;                          // dernier affichage du récap de reprise (anti-doublon, cf. RECAP_COOLDOWN_MS)
+  let _helpSeen = false;                     // l'aide « ? » a-t-elle déjà été lue par CET élève (suit l'élève, pas l'appareil)
 
   const progKey = "progress/" + (chapter.meta.id||"chapitre") + "/" + studentId;
   function persist(){ store.save(progKey, { state, path, lastVisited, glossaire, recapAt }); }
@@ -1205,6 +1214,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
     if(Array.isArray(saved.path)){ path.length=0; saved.path.forEach(x=>path.push(x)); }
     if(Array.isArray(saved.glossaire)) glossaire=saved.glossaire.slice();
     recapAt = saved.recapAt || 0;
+    _helpSeen = !!saved.helpSeen;
     lastVisited = saved.lastVisited || null;
     Object.keys(state).forEach(id=>_normChrono(state[id])); }   // normalise les anciens états au chargement
   // chemin idéal propre à CET élève (décalé en canon), robuste si la donnée manque
@@ -1216,7 +1226,9 @@ function createEngine(chapter, store, studentId, eleveIndex){
   const api = {
     chapter, studentId,
     seance:find,
-    snapshot(){ return { state, path, lastVisited, glossaire }; },
+    snapshot(){ return { state, path, lastVisited, glossaire, helpSeen:_helpSeen }; },
+    helpSeen(){ return _helpSeen; },
+    markHelpSeen(){ if(!_helpSeen){ _helpSeen=true; persist(); } },
     glossaire(){ return glossaire.slice(); },
     addGlossaire(mot, def){ const m=String(mot||'').trim(); if(!m) return; const key=m.toLowerCase();
       if(glossaire.some(g=>g.mot.toLowerCase()===key)) return; glossaire.push({ mot:m, def:String(def||'').slice(0,240), ts:Date.now() }); persist(); },
@@ -1443,52 +1455,43 @@ function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ── Mode d'emploi élève (langage 4e) : un bouton « ? » par écran, ouvre cette aide dans la moitié d'écran ── */
 const HELP_HTML = `
   <h4>1. Ce que tu fais ici</h4>
-  <p>Ce chapitre est <b>nouveau</b> pour toi. La différence avec d'habitude : tu ne le travailles pas en cours classique, mais en <b>plan de travail</b>. Tu avances seul, à ton rythme, étape par étape.</p>
-  <p>La compétence que je regarde en priorité ici, c'est ton <b>autonomie</b> : lire une consigne, chercher, te corriger, demander de l'aide à bon escient — sans que je sois derrière toi.</p>
+  <p>Ce chapitre se travaille en <b>plan de travail</b> : tu avances seul, à ton rythme, étape par étape. La compétence que je regarde en priorité, c'est ton <b>autonomie</b> : lire une consigne, chercher, te corriger, demander de l'aide à bon escient.</p>
 
-  <h4>2. La carte</h4>
-  <p>Tu vois une <b>carte</b> avec des ronds. Chaque rond est une <b>séance</b> (une étape de travail). Une ligne montre le chemin conseillé. Tape un rond pour entrer dedans.</p>
-  <div class="hex"><b>Exemple :</b> tu tapes le rond « Séance 1 » → tu commences la séance 1.</div>
+  <h4>2. Comment tu travailles</h4>
+  <p>Au début, tu as indiqué ta façon de travailler : <b>sur l'écran</b>, <b>sur le papier</b>, ou <b>les deux</b>. Si tu t'es trompé, tu peux changer <b>une fois</b> avec le bouton de bascule. Dans tous les cas, la règle d'or ne change pas (point 4).</p>
 
-  <h4>3. Dans une séance : deux onglets</h4>
-  <ul>
-    <li><b>Consigne</b> : ce qu'il faut faire (l'objectif, les questions, les textes à lire).</li>
-    <li><b>S'évaluer</b> : un test (QCM) à faire à la fin pour vérifier que tu as compris.</li>
-  </ul>
-  <p>Tu passes de l'un à l'autre en tapant l'onglet en haut.</p>
+  <h4>3. La carte</h4>
+  <p>Tu vois une <b>carte</b> avec des ronds : chaque rond est une <b>séance</b> (une étape). Une ligne montre le chemin conseillé. Tape un rond pour entrer dans la séance.</p>
 
   <h4>4. La règle d'or : tout sur ton cahier</h4>
   <p>Tu écris <b>toutes tes réponses sur ton cahier</b>, en phrases complètes. L'écran sert à <b>lire</b> et à <b>réfléchir</b>, pas à écrire (sauf le test).</p>
 
-  <h4>5. Surligner et étiqueter</h4>
-  <p>En haut, une barre de couleurs. Choisis une couleur, puis <b>tape un mot</b> : il se surligne. Tu peux surligner <b>partout</b> : une question, un mot d'un texte, une notion.</p>
+  <h4>5. Dans une séance : deux onglets</h4>
   <ul>
-    <li>🏷 <b>étiquette</b> : tape un mot et écris une note dessus.</li>
-    <li><b>gomme</b> : tape un mot surligné pour l'enlever.</li>
+    <li><b>Consigne</b> : ce qu'il faut faire, les questions, les textes et documents à lire.</li>
+    <li><b>S'évaluer</b> : un petit test (QCM) à la fin, pour vérifier que tu as compris.</li>
   </ul>
-  <div class="hex"><b>Exemple :</b> on te demande les mots qui disent la peur → choisis le <b>jaune</b> et tape ces mots un par un. Sur le mot « pourtant », tu peux coller l'étiquette « opposition ».</div>
-  <p>Tes surlignages sont gardés : si tu reviens plus tard, ils sont toujours là.</p>
 
-  <h4>6. Les documents « À lire »</h4>
-  <p>Sous la consigne : un extrait, un rappel de cours, un renvoi à ton livre. Lis-les <b>avant</b> de répondre.</p>
+  <h4>6. Surligner, étiqueter, garder des mots</h4>
+  <p>Une barre de couleurs en haut : choisis une couleur, puis <b>tape un mot</b> pour le surligner. Tu peux coller une <b>étiquette</b> (une note sur un mot), ou <b>gommer</b> en tapant un mot déjà surligné. Un mot difficile&nbsp;? Tu peux le mettre dans ton <b>glossaire</b> pour le retrouver. Tout est gardé : si tu reviens plus tard, c'est toujours là.</p>
 
-  <h4>7. Le test (QCM)</h4>
-  <p>Va dans l'onglet <b>S'évaluer</b>. Choisis ta réponse, puis tape <b>Vérifier</b>. Il faut un certain nombre de bonnes réponses pour valider l'étape. Si tu te trompes, tu peux recommencer.</p>
+  <h4>7. Le test, et ton premier essai</h4>
+  <p>Dans <b>S'évaluer</b>, réponds puis tape <b>Vérifier</b>. Ton <b>premier essai</b> ne te coûte rien et n'est pas une note : il me sert juste à voir <b>où tu en es seul</b>, avant correction. Si tu n'as pas le compte, tu <b>recommences</b> autant qu'il faut pour franchir l'étape. Ce qui compte, c'est ta progression.</p>
 
   <h4>8. La correction</h4>
-  <p>Une fois le test réussi, la <b>correction</b> apparaît. Compare-la avec ce que tu as écrit sur ton cahier et corrige-toi.</p>
+  <p>Une fois l'étape franchie, la <b>correction</b> apparaît. Compare-la à ce que tu as écrit sur ton cahier, et corrige-toi soigneusement.</p>
 
-  <h4>9. Les étoiles d'autonomie</h4>
-  <p>Chaque séance a <b>3 étoiles</b>. Tu les gardes en travaillant seul. Chaque aide que tu ouvres t'en coûte une. Demander de l'aide reste possible, mais cherche d'abord par toi-même : c'est exactement ce que je veux dire par autonomie.</p>
+  <h4>9. Viser le sans-faute</h4>
+  <p>Quand une séance est réussie, tu peux la <b>refaire pour viser le sans-faute</b> (comme aller chercher les trois étoiles d'un niveau). C'est possible <b>chez toi</b>, en dehors du temps de classe. Ta réussite reste acquise quoi qu'il arrive : on garde toujours ton <b>meilleur</b> passage, jamais le moins bon.</p>
 
-  <h4>10. Les aides (les indices)</h4>
-  <p>Si tu es bloqué, tu peux ouvrir une <b>aide</b> en tapant « Ouvrir ». Cela coûte une étoile.</p>
+  <h4>10. Les étoiles d'autonomie et les aides</h4>
+  <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. Tu les gardes en travaillant seul ; chaque <b>aide</b> que tu ouvres en coûte une. Demander de l'aide reste permis — mais cherche d'abord par toi-même.</p>
 
   <h4>11. Revenir à la carte</h4>
   <p>Le bouton <b>← La carte</b> te ramène à la carte pour choisir une autre séance.</p>
 
   <h4>12. Je vois ton écran</h4>
-  <p>Je vois ton écran sur le mien. Je peux t'ouvrir une séance, surligner un mot pour toi, ou te ramener à la carte, sans me déplacer.</p>
+  <p>Je vois ton écran sur le mien. Je peux t'ouvrir une séance, surligner un mot pour toi, ou même t'ouvrir cette aide à distance si tu lèves la main — sans me déplacer.</p>
 
   <h4>13. Tu es bloqué ?</h4>
   <p>Relis la consigne, regarde les documents, essaie une aide. Si ça ne suffit pas, appelle-moi.</p>
@@ -1529,7 +1532,7 @@ function Panel(engine, root, name){
     const a=engine.autonomyNote(), q=engine.qcmNote();
     return `<div class="hud">
       <div class="chip" title="Étoiles d'autonomie : tu en gardes plus quand tu réussis sans ouvrir d'aide"><div class="k">Autonomie</div><div class="v auto">${a.note}/${a.sur}</div></div>
-      ${(CHAPTER.reglages.afficherNote!==false)?`<div class="chip" title="Note d'évaluation : le total de tes réussites aux exercices auto-corrigés"><div class="k">Note</div><div class="v qcm">${q?q.brut:"—"}</div></div>`:''}
+      ${(CHAPTER.reglages.afficherNote===true)?`<div class="chip" title="Note d'évaluation : le total de tes réussites aux exercices auto-corrigés"><div class="k">Note</div><div class="v qcm">${q?q.brut:"—"}</div></div>`:''}
     </div>`;
   }
 
@@ -1650,6 +1653,7 @@ function Panel(engine, root, name){
     const ci=chronoInfo(P.current); el.className='chrono '+ci.cls; el.innerHTML=ci.html; };
   // le drapeau « séance en cours » a changé : si l'élève regarde le verdict d'une séance réussie (hors re-jeu), rafraîchir pour (dé)montrer le bouton re-jeu
   P.reflectCours=function(){ if(P.screen==='seance' && P.tabCur==='e' && !P._replay && P.current && engine.statusOf(P.current)==='done') renderEval(); };
+  P.openHelp=function(){ const el=$("help"+laneIdOf()); if(el) el.classList.add("open"); };   // ouverture de l'aide (1er accès auto, ou déclenchée par le prof)
   P.markQ=function(qKey, done, cb){ if(!P.current) return; engine.markQ(P.current, qKey, done, P.mode==='papier');
     if(cb){ const dq=cb.closest('.docq'); if(dq) dq.classList.toggle('qfait', done); }
     APP.beat(APP.laneIdFor(P)); };
@@ -2048,7 +2052,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false, _classeFiltre:null,   // _classeFiltre : null=classe en cours (auto), ''=toutes, 'seg'=une classe
   _sessions:{}, _unsubs:[], _hb:null, _tick:null,
@@ -2115,15 +2119,18 @@ const APP = {
         // 2) déconnexion (classe ou élève)
         const le=Math.max(segCtl.logoutEpoch||0, ctl.logoutEpoch||0);
         if(le && p.epoch<le){ this.kick(k); return; }
-        if(ctl.act && ctl.act.ts>(p._actTs||0)){ p._actTs=ctl.act.ts; this.applyAct(k, ctl.act); }     // pilotage direct (clic du prof dans l'écran)
-        if(ctl.gest && ctl.gest.ts>(p._gestTs||0)){ p._gestTs=ctl.gest.ts; this.applyGeste(k, ctl.gest); }
+        // pilotage : on n'applique que les ordres POSTÉRIEURS à la connexion de cet écran (un ordre resté en base ne se rejoue pas à la reconnexion)
+        if(ctl.act && ctl.act.ts>(p._actTs||0) && ctl.act.ts>=p.epoch){ p._actTs=ctl.act.ts; this.applyAct(k, ctl.act); }
+        else if(ctl.act && ctl.act.ts>(p._actTs||0)) p._actTs=ctl.act.ts;     // ordre ancien : on l'absorbe sans l'exécuter
+        if(ctl.gest && ctl.gest.ts>(p._gestTs||0) && ctl.gest.ts>=p.epoch){ p._gestTs=ctl.gest.ts; this.applyGeste(k, ctl.gest); }
+        else if(ctl.gest && ctl.gest.ts>(p._gestTs||0)) p._gestTs=ctl.gest.ts;
         if(p.reflectCours) p.reflectCours(); }); }));   // (dé)montre le bouton « viser le sans-faute » selon que la classe est en séance
     this.beatAll(); this._hb=setInterval(()=>this.beatAll(),30000);
     this._tick=setInterval(()=>{ if(PROF.authed && PROF.tab==="suivi") PROF.render(); },15000);
   },
   // rejoue sur le panneau de l'élève l'action que le prof a déclenchée en cliquant dans le miroir
   applyAct(key, act){ const p=this.panels[key]; if(!p||!p.engine||!act) return;
-    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1};
+    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1};
     if(!allow[act.m] || typeof p[act.m]!=='function') return;
     try{ p[act.m].apply(p, act.a||[]); }catch(e){}
     this.beat(key);
@@ -2196,6 +2203,8 @@ const APP = {
      (« ma classe est en cours → je ne peux pas refaire une séance déjà réussie »). La clôture reste un GESTE explicite du prof. */
   coursDe(seg){ return (this._control && this._control[seg] && this._control[seg].cours) || null; },
   classeEnCours(seg){ return !!this.coursDe(seg); },   // séance lancée et non clôturée → re-jeu fermé pour cette classe
+  openHelpFor(uid){ const chap=CHAPTER.meta.id||"chapitre";   // ouvre l'aide « ? » directement sur l'écran de l'élève (l'élève a levé la main)
+    store.save("control/"+chap+"/"+uid+"/act", { m:'openHelp', a:[], ts:Date.now() }); },
   lancerCours(seg, finTs){ const chap=CHAPTER.meta.id||"chapitre";
     const node=Object.assign({}, this._control[seg]||{});
     node.cours={ debut:Date.now(), fin:finTs };
@@ -2229,7 +2238,9 @@ const APP = {
     if(typeof CLASSES==='object' && CLASSES) Object.keys(CLASSES).forEach(cl=>{ m[sanId(cl)]=cl; });
     Object.values(this._sessions||{}).forEach(s=>{ if(s && s.classe) m[sanId(s.classe)]=s.classe; });
     return Object.keys(m).map(seg=>({seg, nom:m[seg]})).sort((a,b)=>a.nom.localeCompare(b.nom)); },
-  activeClasseSeg(){ const now=Date.now();
+  activeClasseSeg(){
+    if(this._control){ for(const seg in this._control){ if(seg.indexOf('__')<0 && this._control[seg] && this._control[seg].cours) return seg; } }   // priorité : la classe en séance
+    const now=Date.now();
     const segs=[...new Set(Object.values(this._sessions||{}).filter(s=>s && (now-(s.lastSeen||0))<PRESENCE_MS && s.classe).map(s=>sanId(s.classe)))];
     return segs[0]||''; },
   classeFiltreSeg(){ return (this._classeFiltre==null) ? this.activeClasseSeg() : this._classeFiltre; },   // '' = aucune restriction
@@ -2237,9 +2248,10 @@ const APP = {
     if(typeof DASH!=='undefined' && DASH._open) DASH.render();
     if(typeof PROF!=='undefined' && PROF.authed) PROF.render(); },
   classeMatchNom(classe){ const f=this.classeFiltreSeg(); return !f || sanId(classe||'')===f; },
-  classeSelectHTML(){ const auto=(this._classeFiltre==null), cur=this._classeFiltre;
+  classeSelectHTML(noToutes){ const auto=(this._classeFiltre==null), cur=this._classeFiltre;
     const opt=(val,lab,sel)=>'<option value="'+val+'"'+(sel?' selected':'')+'>'+lab+'</option>';
-    const opts=[ opt('__auto','Classe en cours (auto)', auto), opt('','Toutes les classes', !auto&&cur==='') ]
+    const opts=[ opt('__auto','Classe en cours (auto)', auto) ]
+      .concat(noToutes?[]:[ opt('','Toutes les classes', !auto&&cur==='') ])
       .concat(this.knownClasses().map(c=>opt(c.seg, esc(c.nom), !auto&&cur===c.seg)));
     return '<div class="prof-row" style="margin-bottom:10px"><label class="d">Classe affichée&nbsp;: '
       +'<select class="txtin classe-sel" style="width:auto;margin-left:6px" onchange="APP.setClasseFiltre(this.value)">'+opts.join('')+'</select></label></div>'; },
@@ -2304,7 +2316,7 @@ const APP = {
       lane.innerHTML=`<div class="lanehead"><div class="who" data-who>${test?'Élève '+key:'Connexion'}</div><span class="badge">${test?'TEST · app':'autonome'}</span></div>`
         +(test?`<div class="testbar"><button class="btn ghost" title="Efface la progression de ce poste de test et revient à la carte" onclick="APP.resetLane('${key}')">↺ Réinitialiser</button>
             <button class="btn ghost" title="Force la réussite de l'étape en cours (pour tester la suite sans tout refaire)" onclick="APP.forcePass('${key}')">✓ Réussir l'étape</button>
-            <span class="tmode" title="Mode de travail simulé pour ce poste de test"><button class="btn ghost tm on" data-m="app" onclick="APP.setTestMode('${key}','app')">📱</button><button class="btn ghost tm" data-m="deux" onclick="APP.setTestMode('${key}','deux')">📱✏️</button><button class="btn ghost tm" data-m="papier" onclick="APP.setTestMode('${key}','papier')">✏️</button></span></div>`:'')
+            <span class="tmode" title="Mode de travail simulé pour ce poste de test"><button class="btn ghost tm on" data-m="app" title="Tout sur la tablette" onclick="APP.setTestMode('${key}','app')">📱</button><button class="btn ghost tm" data-m="deux" title="Tablette + cahier" onclick="APP.setTestMode('${key}','deux')">📱✏️</button><button class="btn ghost tm" data-m="papier" title="Tout sur le cahier, tablette pour lire" onclick="APP.setTestMode('${key}','papier')">✏️</button></span></div>`:'')
         +`<div class="lanebody"></div>`;
       stage.appendChild(lane);
       lane.insertAdjacentHTML("beforeend", helpFAB(key));   // bouton « ? » par écran élève
@@ -2347,9 +2359,9 @@ const APP = {
         <select class="lin" id="lg-n-${key}"><option value="">— choisir —</option>${sel?opts(sel):''}</select>
         <label style="margin-top:8px">Aujourd'hui, je travaille…</label>
         <div class="lg-modes" id="lg-mode-${key}" data-mode="">
-          <button type="button" class="lg-m" data-m="app">📱 sur l'app</button>
-          <button type="button" class="lg-m" data-m="deux">📱✏️ les deux</button>
-          <button type="button" class="lg-m" data-m="papier">✏️ sur papier</button>
+          <button type="button" class="lg-m" data-m="app" title="Tu fais tout sur la tablette, y compris écrire">📱 sur l'app</button>
+          <button type="button" class="lg-m" data-m="deux" title="Tu lis et réponds sur la tablette, mais tu écris aussi sur ton cahier">📱✏️ les deux</button>
+          <button type="button" class="lg-m" data-m="papier" title="Tu écris tout sur ton cahier ; la tablette sert à lire et te corriger">✏️ sur papier</button>
         </div>
         <button class="btn primary" id="lg-go-${key}" disabled style="margin-top:10px;width:100%">Entrer</button>
         ` : `<div class="d">Aucune classe disponible. Crée-la dans l'espace enseignant.</div>`}
@@ -2391,7 +2403,8 @@ const APP = {
           if(resume.scroll){ const sc=lane.querySelector('.tabbody'); if(sc) sc.scrollTop=resume.scroll; } }
       } else {
         p.render();
-        if(engine.recapDue()) p.showRecap();                  // récap de reprise (1×/cours) — connexion manuelle uniquement
+        if(!engine.helpSeen()){ p.openHelp(); engine.markHelpSeen(); }   // 1er accès : l'aide s'ouvre une seule fois, puis reste sous le « ? »
+        else if(engine.recapDue()) p.showRecap();                  // récap de reprise (1×/cours) — connexion manuelle uniquement
       }
       this.beat(key); });
   },
@@ -2454,7 +2467,7 @@ const MIRROR = {
     toMap(){ MIRROR.act('toMap',[]); },
     gtool(tool){ if(MIRROR._panel){ MIRROR._panel._tool=(MIRROR._panel._tool===tool)?null:tool; MIRROR._panel._linkPending=null; MIRROR._panel.tab('c'); } },   // choix d'outil : local au prof
     // le prof observe, il ne répond pas à la place de l'élève : ces gestes sont neutralisés dans le miroir
-    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){},
+    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){},
     openGlossaire(){}, glossToggle(){}, glossRemove(){}, closeDico(){},
     render(){}
   },
@@ -2511,6 +2524,10 @@ const DASH = {
     this._tick=setInterval(()=>this.tickChronos(),1000);
     this.render(); },
   // ouvre le tableau de bord en mode FIGÉ depuis une archive de session (aucun abonnement live, données du snapshot)
+  openLastArchive(seg){ const chap=CHAPTER.meta.id||"chapitre";
+    store.once("archives/"+chap+"/"+seg, byTs=>{ const keys=byTs?Object.keys(byTs):[];
+      if(!keys.length){ toast("Aucune session archivée pour cette classe."); return; }
+      const ts=keys.map(Number).sort((a,b)=>b-a)[0]; this.openArchive(seg, ts); }); },
   openArchive(seg, ts){ const chap=CHAPTER.meta.id||"chapitre";
     store.once("archives/"+chap+"/"+seg+"/"+ts, arch=>{ if(!arch||!arch.eleves){ toast("Archive introuvable."); return; }
       this.close();
@@ -2724,7 +2741,7 @@ function loadChapter(obj){
   if(err){ toast("JSON refusé : "+err); return false; }
   if(!obj.reglages) obj.reglages={reorientation:"immediate",confirmationSaut:true,exclusiviteSeance:true};
   if(obj.reglages.exclusiviteSeance===undefined) obj.reglages.exclusiviteSeance=true;
-  if(obj.reglages.afficherNote===undefined) obj.reglages.afficherNote=true;
+  if(obj.reglages.afficherNote===undefined) obj.reglages.afficherNote=false;   // note MASQUÉE par défaut : ne s'affiche que si le prof l'active
   obj.seances.forEach(s=>{ if(!s.aretes) s.aretes={conseillee:null,prerequis:null};
     if(!Array.isArray(s.aides)) s.aides=[];
     if(!s.corps) s.corps={consigne:"",supports:[]};
@@ -3079,41 +3096,36 @@ const PROF = {
 
   /* ── onglet SUIVI (présence groupée par classe, multi-poste) ── */
   suiviBody(){
-    const sess=APP._sessions||{};
-    const byClass={};
-    Object.keys(sess).forEach(uid=>{ if(!APP.testMode && isTestUid(uid)) return; const s=Object.assign({_uid:uid}, sess[uid]||{}); const cl=s.classe||"(sans classe)";
-      (byClass[cl]=byClass[cl]||[]).push(s); });
+    const sess=APP._sessions||{}; const all=[];
+    Object.keys(sess).forEach(uid=>{ if(!APP.testMode && isTestUid(uid)) return; const s=Object.assign({_uid:uid}, sess[uid]||{});
+      s.classe=s.classe||"(sans classe)"; s.classeSeg=s.classeSeg||sanId(s.classe); all.push(s); });
     Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(!p||!p.engine) return; const uid=p.engine.studentId; if(!APP.testMode && isTestUid(uid)) return;
-      const cl=p.classe||"(sans classe)"; const arr=byClass[cl]=byClass[cl]||[];
-      if(!arr.some(s=>s._uid===uid)) arr.push({ _uid:uid, name:p.name, classe:cl, classeSeg:p.classeSeg,
-        lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); });
-    const classes=Object.keys(byClass);
-    const classesAff=classes.filter(cl=>APP.classeMatchNom(cl));   // affichage filtré (le figer agit sur tous les présents)
-    // « Ailleurs » : élèves RÉELLEMENT connectés (lastSeen récent) d'une autre classe que celle pilotée — étude, maison, autre niveau.
-    //   N'a de sens que si une classe précise est affichée ; si « toutes », tout est déjà visible plus bas.
-    const fAff=APP.classeFiltreSeg(); const ailleurs=[];
-    if(fAff){ const now=Date.now(); classes.forEach(cl=>{ if(sanId(cl)===fAff) return;
-      byClass[cl].forEach(s=>{ if(now-(s.lastSeen||0) < PRESENCE_MS) ailleurs.push(s); }); }); }
-    const ailleursSec = ailleurs.length ? `<div class="prof-sec"><h4>Ailleurs <span class="meta">· ${ailleurs.length} connecté(s) hors de ta classe</span></h4>
-      <div class="d">Élèves d'une autre classe qui travaillent en ce moment (étude, maison…). Pour information : le figer ci-dessus ne les touche pas.</div>
-      <div class="prof-list">${ailleurs.sort((a,b)=>(a.classe||'').localeCompare(b.classe||'')||(a.name||'').localeCompare(b.name||'')).map(s=>this.suiviRowAilleurs(s)).join('')}</div></div>` : '';
+      if(all.some(s=>s._uid===uid)) return;
+      all.push({ _uid:uid, name:p.name, classe:p.classe||"(sans classe)", classeSeg:p.classeSeg||sanId(p.classe||''), lastSeen:Date.now(), current:(p.screen==="seance"?p.current:null) }); });
+    const now=Date.now(); const present=s=>now-(s.lastSeen||0)<PRESENCE_MS;
+    // UNE classe à la fois : celle pilotée (auto = classe en séance) ou celle choisie au sélecteur.
+    const segAff = APP.classeFiltreSeg() || APP.activeClasseSeg();
+    const nomAff = segAff ? ((APP.knownClasses().find(c=>c.seg===segAff)||{}).nom || segAff) : '';
+    const dansClasse = all.filter(s=> s.classeSeg===segAff && present(s));
+    // « Ailleurs » : connectés d'une AUTRE classe — donc hors de la séance en cours (un seul cours à la fois). Étude, maison, autre niveau.
+    const ailleurs   = all.filter(s=> s.classeSeg!==segAff && present(s));
     const fz=this._fz||(this._fz={gel:true,lock:false,logout:false});
-    // bloc « séance en cours » : lancer (choix heure de fin) ou, si déjà lancée, l'état + clôture
+
     let coursBox='';
-    if(fAff){ const nomAff=(APP.knownClasses().find(c=>c.seg===fAff)||{}).nom||fAff; const c=APP.coursDe(fAff);
+    if(segAff){ const c=APP.coursDe(segAff);
       if(c && c.fin){ const f=new Date(c.fin); const hhmm=String(f.getHours()).padStart(2,'0')+'h'+String(f.getMinutes()).padStart(2,'0');
-        const reste=Math.round((c.fin-Date.now())/60000);
+        const reste=Math.round((c.fin-now)/60000);
         coursBox=`<div class="prof-sec cours-sec on"><h4>● Séance en cours — ${esc(nomAff)}</h4>
           <div class="d">Fin prévue à <b>${hhmm}</b>${reste>0?' (dans '+reste+' min)':' — dépassée'}. Alerte 5 min avant la fin. Pendant la séance, tes élèves ne peuvent pas refaire chez eux une séance déjà réussie.</div>
-          <div class="prof-row"><button class="btn fire" onclick="PROF.cloturerCours('${fAff}')">■ Clôturer la séance</button>
-            <button class="btn ghost" onclick="APP.prolongerCours('${fAff}',10);PROF.render()">+10 min</button></div></div>`;
+          <div class="prof-row"><button class="btn fire" onclick="PROF.cloturerCours('${segAff}')">■ Clôturer la séance</button>
+            <button class="btn ghost" onclick="APP.prolongerCours('${segAff}',10);PROF.render()">+10 min</button></div></div>`;
       } else {
         coursBox=`<div class="prof-sec cours-sec"><h4>▶ Lancer la séance — ${esc(nomAff)}</h4>
           <div class="d">Démarre le cours pour cette classe&nbsp;: tu choisis l'heure de fin, je t'alerte 5 minutes avant, puis je t'amène à la clôture.</div>
-          <div class="prof-row"><button class="btn primary" onclick="PROF.lancerCoursModal('${fAff}')">▶ Lancer la séance</button></div></div>`;
+          <div class="prof-row"><button class="btn primary" onclick="PROF.lancerCoursModal('${segAff}')">▶ Lancer la séance</button></div></div>`;
       }
     }
-    const freezeBox = classes.length ? `<div class="prof-sec freeze-sec"><h4>❄ Fin de séance / pause</h4>
+    const freezeBox = dansClasse.length ? `<div class="prof-sec freeze-sec"><h4>❄ Fin de séance / pause</h4>
       <div class="d">Coche ce que tu veux appliquer, puis fige. « Reprendre » relance les chronos là où ils s'étaient arrêtés.</div>
       <div class="fz-opts">
         <label class="fz-ck"><input type="checkbox" ${fz.gel?'checked':''} onchange="PROF._fz.gel=this.checked"> Geler les chronos</label>
@@ -3122,21 +3134,26 @@ const PROF = {
       </div>
       <div class="prof-row"><button class="btn primary" onclick="PROF.doFreeze()">Figer la séance</button>
         <button class="btn ghost" onclick="PROF.doResume()">▶ Reprendre</button></div></div>` : '';
-    if(!classes.length) return `<div class="prof-sec"><h4>Suivi</h4>
-      <div class="prof-row"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>
-      <div class="d" style="margin-top:8px">Personne de connecté pour l'instant — le tableau de bord affichera aussi les progressions enregistrées.</div></div>`;
-    return APP.classeSelectHTML()
+
+    let classeSec;
+    if(!segAff){ classeSec=`<div class="prof-sec"><div class="d">Aucune classe à afficher pour l'instant. Choisis une classe dans le menu ci-dessus pour ouvrir sa dernière session archivée.</div></div>`; }
+    else { const rows=dansClasse.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviRow(s)).join("");
+      const corps = dansClasse.length
+        ? `<div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne · 👁 voir l'écran</div><div class="prof-list">${rows}</div>
+           <div class="prof-row"><button class="btn ghost" onclick="PROF.endSessionFor('${segAff}','${esc(nomAff)}')">Déconnecter ${esc(nomAff)}</button></div>`
+        : `<div class="d">Personne de cette classe n'est connecté pour l'instant.</div>`;
+      classeSec=`<div class="prof-sec"><h4>${esc(nomAff)} <span class="meta">· ${dansClasse.length} présent(s)</span></h4>
+        ${corps}
+        <div class="prof-row"><button class="btn ghost" onclick="DASH.openLastArchive('${segAff}')">📂 Ouvrir la dernière session archivée</button></div></div>`;
+    }
+    const ailleursSec = ailleurs.length ? `<div class="prof-sec"><h4>Ailleurs <span class="meta">· ${ailleurs.length} connecté(s) hors séance</span></h4>
+      <div class="d">Élèves d'une autre classe connectés en ce moment (étude, maison…), en dehors de toute séance lancée. Pour information : le figer ci-dessus ne les touche pas.</div>
+      <div class="prof-list">${ailleurs.sort((a,b)=>(a.classe||'').localeCompare(b.classe||'')||(a.name||'').localeCompare(b.name||'')).map(s=>this.suiviRowAilleurs(s)).join('')}</div></div>` : '';
+
+    return APP.classeSelectHTML(true)
       + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
-      + coursBox
-      + freezeBox
-      + (classesAff.length ? '' : `<div class="prof-sec"><div class="d">Aucun élève présent dans la classe affichée. Change le filtre ci-dessus pour voir une autre classe.</div></div>`)
-      + classesAff.map(cl=>{ const seg=sanId(cl);
-      const rows=byClass[cl].sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviRow(s)).join("");
-      return `<div class="prof-sec"><h4>${esc(cl)} <span class="meta">· ${byClass[cl].length} présent(s)</span></h4>
-        <div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne · 👁 voir l'écran</div>
-        <div class="prof-list">${rows}</div>
-        <div class="prof-row"><button class="btn ghost" onclick="PROF.endSessionFor('${seg}','${esc(cl)}')">Déconnecter ${esc(cl)}</button></div></div>`;
-    }).join("") + ailleursSec + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
+      + coursBox + freezeBox + classeSec + ailleursSec
+      + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
   doFreeze(){ const o=this._fz||{gel:true,lock:false,logout:false};
@@ -3145,33 +3162,53 @@ const PROF = {
     APP.freezeSessions(o); this.render(); },
   doResume(){ APP.resumeSessions(); this.render(); },
   // overlay flottant indépendant du panneau (s'affiche même panneau fermé) — réutilisé pour lancer et pour la fin de séance
-  _coursOverlay(html){ let ov=$("coursOverlay");
-    if(!ov){ ov=document.createElement('div'); ov.id='coursOverlay'; ov.className='cours-ov'; document.body.appendChild(ov); }
-    ov.innerHTML='<div class="cours-box">'+html+'</div>'; ov.classList.add('show'); return ov; },
-  _coursClose(){ const ov=$("coursOverlay"); if(ov) ov.classList.remove('show'); },
+  _modalOpen(html){ let ov=$("appModal");
+    if(!ov){ ov=document.createElement('div'); ov.id='coursOverlay'; ov.className='app-modal-ov'; document.body.appendChild(ov); }
+    ov.innerHTML='<div class="app-modal-box">'+html+'</div>'; ov.classList.add('show'); return ov; },
+  _modalClose(){ const ov=$("appModal"); if(ov) ov.classList.remove('show'); },
   lancerCoursModal(seg){ const nom=(APP.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
     const d=new Date(Date.now()+55*60000); const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
-    this._coursOverlay(`<h3>Lancer la séance — ${esc(nom)}</h3>
+    this._modalOpen(`<h3>Lancer la séance — ${esc(nom)}</h3>
       <p class="d">À quelle heure se termine le cours ? Je t'alerterai 5 minutes avant, puis je t'amènerai à la clôture.</p>
       <div class="prof-row" style="align-items:center"><label class="d">Fin&nbsp;: <input type="time" id="coursFin" class="txtin" value="${hh}:${mm}" style="margin-left:6px"></label></div>
       <div class="prof-row"><button class="btn ghost" onclick="PROF.setFinRel(50)">+50 min</button><button class="btn ghost" onclick="PROF.setFinRel(55)">+55 min</button><button class="btn ghost" onclick="PROF.setFinRel(110)">+1h50</button></div>
-      <div class="cours-foot"><button class="btn ghost" onclick="PROF._coursClose()">Annuler</button>
+      <div class="app-modal-foot"><button class="btn ghost" onclick="PROF._modalClose()">Annuler</button>
         <button class="btn primary" onclick="PROF.doLancerCours('${seg}')">▶ Lancer</button></div>`); },
   setFinRel(min){ const d=new Date(Date.now()+min*60000); const el=$("coursFin"); if(el) el.value=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); },
   doLancerCours(seg){ const v=($("coursFin")||{}).value||""; const m=/^(\d{1,2}):(\d{2})$/.exec(v);
     if(!m){ toast("Indique une heure de fin valide."); return; }
     const now=new Date(); const fin=new Date(now); fin.setHours(+m[1], +m[2], 0, 0);
     if(fin.getTime()<=now.getTime()){ toast("L'heure de fin doit être après l'heure actuelle."); return; }
-    APP.lancerCours(seg, fin.getTime()); this._coursClose();
+    APP.lancerCours(seg, fin.getTime()); this._modalClose();
     const nom=(APP.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
     toast("Séance lancée pour "+nom+" — fin à "+m[1].padStart(2,'0')+"h"+m[2]+"."); this.render(); },
-  cloturerCours(seg){ if(typeof confirm==="function" && !confirm("Clôturer la séance ?\nLes chronos sont gelés, les élèves déconnectés, et un instantané de la classe est archivé.")) return;
-    APP.cloturerCours(seg); this._coursClose(); toast("Séance clôturée et archivée."); this.render(); },
+  // double confirmation : on montre où en est la classe, on rassure (tout est sauvegardé), PUIS on clôture sur geste explicite
+  cloturerCours(seg){ const chap=CHAPTER.meta.id||"chapitre"; const nom=(APP.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
+    this._modalOpen(`<h3>Clôturer la séance — ${esc(nom)} ?</h3><p class="d">Lecture de l'état de la classe…</p>`);
+    store.once("progress/"+chap, prog=>{ prog=prog||{}; const total=(CHAPTER.seances||[]).length;
+      // état par élève : nombre de séances terminées sur le total (lecture seule, n'écrit rien)
+      const lignes=Object.keys(prog).filter(uid=>APP.testMode||!isTestUid(uid)).filter(uid=>{
+          const c=(prog[uid]&&prog[uid].classe)||''; return c?sanId(c)===seg:uid.indexOf(seg+'__')===0; })
+        .map(uid=>{ let faites=0,n=(prog[uid]||{}).name||uid.split('__').pop();
+          try{ let e=(typeof DASH!=='undefined'&&DASH._open)?DASH._engines[uid]:null;     // réutilise le moteur déjà construit si le tableau de bord est ouvert
+            if(!e){ e=createEngine(CHAPTER, MIRROR.roStore, uid, 0); e.hydrate(prog[uid]); }
+            faites=(e.bilan().faites||[]).length; }catch(_){}
+          return { n, faites }; })
+        .sort((a,b)=>a.n.localeCompare(b.n));
+      const corps = lignes.length
+        ? `<div class="clot-recap">${lignes.map(l=>`<div class="clot-row"><span>${esc(l.n)}</span><span class="meta">${l.faites}/${total} séances</span></div>`).join('')}</div>`
+        : `<p class="d">Aucune progression enregistrée pour cette classe.</p>`;
+      this._modalOpen(`<h3>Clôturer la séance — ${esc(nom)} ?</h3>
+        <p class="d">Voici où en est la classe. Tu peux clôturer en toute sécurité&nbsp;: <b>tout est déjà sauvegardé</b> au fil de l'eau. Tu retrouveras l'état exact en rouvrant la session, ou en consultant l'archive figée à cet instant.</p>
+        ${corps}
+        <div class="app-modal-foot"><button class="btn ghost" onclick="PROF._modalClose()">Annuler</button>
+          <button class="btn fire" onclick="PROF.doCloturerCours('${seg}')">■ Clôturer définitivement</button></div>`); }); },
+  doCloturerCours(seg){ APP.cloturerCours(seg); this._modalClose(); toast("Séance clôturée et archivée."); this.render(); },
   // modale déclenchée automatiquement à l'heure de fin (peut surgir panneau fermé)
-  coursFinModal(seg, nom){ this._coursOverlay(`<h3>⏰ Séance terminée — ${esc(nom||'')}</h3>
+  coursFinModal(seg, nom){ this._modalOpen(`<h3>⏰ Séance terminée — ${esc(nom||'')}</h3>
       <p class="d">L'heure de fin est atteinte. Clôture la séance (gel des chronos, déconnexion, archive), ou prolonge si tu débordes. Rien n'est clôturé automatiquement — c'est toujours toi qui décides.</p>
-      <div class="cours-foot"><button class="btn ghost" onclick="PROF._coursClose()">Plus tard</button>
-        <button class="btn ghost" onclick="APP.prolongerCours('${seg}',10);PROF._coursClose();if(PROF.authed)PROF.render()">+10 min</button>
+      <div class="app-modal-foot"><button class="btn ghost" onclick="PROF._modalClose()">Plus tard</button>
+        <button class="btn ghost" onclick="APP.prolongerCours('${seg}',10);PROF._modalClose();if(PROF.authed)PROF.render()">+10 min</button>
         <button class="btn fire" onclick="PROF.cloturerCours('${seg}')">■ Clôturer la séance</button></div>`); },
   kickStudent(uid, name){ APP.endSessionForUid(uid); toast(name+" déconnecté."); this.render(); },
   resetStudent(uid, name){ if(typeof confirm==="function" && !confirm("Réinitialiser la progression de "+name+" ?\nL'élève repartira de zéro et sera déconnecté.")) return;
@@ -3191,12 +3228,21 @@ const PROF = {
     const where = (s && s.current) ? ((CHAPTER.seances.find(x=>x.id===s.current)||{}).titre || s.current)
       : (s ? "sur la carte" : "—");
     const uid=s._uid, nm=(s.name||s._uid).replace(/'/g,"\\'");
-    return `<div class="r"><span title="${age<60000?'actif':(age<300000?'en pause':'hors ligne')}">${dot}</span><span>${esc(s.name||s._uid)}</span>
+    return `<div class="r r-tap" title="Toucher pour les actions" onclick="PROF.elevePopup('${esc(uid)}','${esc(nm)}')">
+      <span title="${age<60000?'actif':(age<300000?'en pause':'hors ligne')}">${dot}</span><span>${esc(s.name||s._uid)}</span>
       <span class="meta" style="margin-left:auto">${esc(where)}</span>
-      <button class="btn ghost" title="Voir son écran en direct" style="margin-left:8px" onclick="MIRROR.open('${esc(uid)}')">👁</button>
-      <button class="btn ghost" title="Réinitialiser sa progression (repart de zéro)" onclick="PROF.resetStudent('${esc(uid)}','${esc(nm)}')">↺</button>
-      <button class="btn ghost" title="Déconnecter cet élève" onclick="PROF.kickStudent('${esc(uid)}','${esc(nm)}')">⏏</button></div>`;
+      <span class="r-chev">›</span></div>`;
   },
+  // popup d'actions sur un élève (l'élève lève la main : on tape son nom)
+  elevePopup(uid, nom){ this._modalOpen(`<h3>${esc(nom)}</h3>
+      <p class="d">Que veux-tu faire pour cet élève&nbsp;?</p>
+      <div class="elv-acts">
+        <button class="btn ghost" onclick="PROF._modalClose();MIRROR.open('${esc(uid)}')">👁 Voir son écran en direct</button>
+        <button class="btn ghost" onclick="APP.openHelpFor('${esc(uid)}');PROF._modalClose();toast('Aide ouverte sur son écran.')">❓ Ouvrir l'aide chez lui</button>
+        <button class="btn ghost" onclick="PROF._modalClose();PROF.resetStudent('${esc(uid)}','${esc(nom)}')">↺ Réinitialiser sa progression</button>
+        <button class="btn ghost" onclick="PROF._modalClose();PROF.kickStudent('${esc(uid)}','${esc(nom)}')">⏏ Déconnecter</button>
+      </div>
+      <div class="app-modal-foot"><button class="btn ghost" onclick="PROF._modalClose()">Fermer</button></div>`); },
 
   /* ── onglet BILAN ── */
   /* ── onglet BILAN : agrège TOUTE la classe depuis Firebase (lecture unique de progress/{chap}),
@@ -3335,7 +3381,7 @@ const PROF = {
         <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleExcl()">${c.reglages.exclusiviteSeance?'activé — séance verrouillée si le voisin de tablette l\'a prise':'désactivé — séances libres'}</button></div></div>
       <div class="prof-sec"><h4>Afficher la note à l'élève</h4>
         <div class="d">Quand c'est masqué, l'élève ne voit plus sa note (« X sur Y ») dans son tableau de bord — son autonomie et sa progression restent visibles. Toi, tu vois toujours la note dans ton suivi. Indépendant de l'évaluation notée de la convergence.</div>
-        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleNote()">${c.reglages.afficherNote!==false?'affichée à l\'élève':'masquée pour l\'élève'}</button></div></div>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleNote()">${c.reglages.afficherNote===true?'affichée à l\'élève':'masquée pour l\'élève'}</button></div></div>
       <div class="prof-sec"><h4>Mode TEST</h4>
         <div class="d">Bascule les postes en élève « bac à sable » (données séparées des vrais élèves), avec réinitialisation et réussite forcée pour parcourir vite un chapitre.</div>
         <div class="prof-row"><button class="btn ghost" onclick="APP.toggleTest();PROF.render()">${APP.testMode?'activé — postes en test':'désactivé'}</button></div></div>
@@ -3377,7 +3423,7 @@ const PROF = {
   toggleConfirm(){ CHAPTER.reglages.confirmationSaut=!CHAPTER.reglages.confirmationSaut; this.touch(); this.render(); },
   toggleExcl(){ CHAPTER.reglages.exclusiviteSeance=!CHAPTER.reglages.exclusiviteSeance; this.touch();
     this.render(); APP.syncMaps(); toast("Exclusivité de séance : "+(CHAPTER.reglages.exclusiviteSeance?"activée":"désactivée")); },
-  toggleNote(){ const shown=CHAPTER.reglages.afficherNote!==false; CHAPTER.reglages.afficherNote=!shown;
+  toggleNote(){ const shown=CHAPTER.reglages.afficherNote===true; CHAPTER.reglages.afficherNote=!shown;
     this.touch();
     this.render();
     Object.keys(APP.panels).forEach(k=>{ const p=APP.panels[k]; if(p&&p.render) p.render(); });   // rafraîchit le HUD sur tous les postes (carte comme séance)
