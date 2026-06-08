@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bj">
+<meta name="app-version" content="2026-06-05bl">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -401,6 +401,8 @@
   .signaux-sec .sig-ic{flex:0 0 auto;font-size:1rem;line-height:1.3}
   .signaux-sec .sig-act{color:var(--muted);font-size:.78rem}
   .signaux-sec .r.sig-incoherence .sig-ic{filter:saturate(1.3)}
+  .signaux-sec .sig-btns{margin-left:auto;display:flex;gap:6px;flex:0 0 auto}
+  .signaux-sec .sig-conv{border-color:var(--fire);color:var(--fire2)}
   .ptab-badge{display:inline-block;min-width:16px;padding:0 5px;margin-left:3px;background:var(--fire);color:#fff;font-size:.68rem;font-weight:700;border-radius:999px;line-height:16px;text-align:center}
   /* éditeur : bilan mis en avant, fiche 4D atténuée quand désactivée */
   .prof-sec.bilan-edit{border-color:var(--gold-deep);background:linear-gradient(160deg,rgba(251,191,36,.07),transparent)}
@@ -583,6 +585,9 @@
   .lock-ic{font-size:2.4rem;margin-bottom:8px}
   .lock-t{font-family:'EB Garamond',serif;font-size:1.3rem;color:var(--gold);margin-bottom:5px}
   .lock-s{color:var(--muted);font-size:.86rem}
+  /* bandeau de convocation « viens montrer ton bilan » : remplace le bouton retour, laisse le bilan visible dessous */
+  .vv-band{background:rgba(214,69,93,.16);border:1.5px solid var(--fire);color:var(--ink);
+    border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:.9rem;line-height:1.35}
   /* récap de reprise (overlay montré une fois par cours) */
   .recap-ov{position:absolute;inset:0;z-index:55;background:rgba(8,6,4,.92);backdrop-filter:blur(3px);
     display:flex;align-items:center;justify-content:center;border-radius:var(--radius);overflow:auto;padding:16px}
@@ -1783,8 +1788,9 @@ function Panel(engine, root, name){
   function renderSeance(){
     const s=engine.seance(P.current);
     P._acPhase=false;   // navigation vers une séance : on repart d'un état d'autocorrection neutre (setAutoCrit/validateAutocorr le gèrent ensuite)
-    if(P.mode==='papier' && !P.expanded && laneIdOf()!=="__mirror"){ renderCompact(s); return; }   // mode papier : vue réduite par défaut
-    root.innerHTML = `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>
+    const conv=(P._venirVoir===P.current);   // convoqué par le prof sur ce bilan : on retient l'élève ici
+    if(P.mode==='papier' && !P.expanded && !conv && laneIdOf()!=="__mirror"){ renderCompact(s); return; }   // mode papier : vue réduite par défaut (sauf convocation)
+    root.innerHTML = `${conv ? `<div class="vv-band">✋ Viens montrer ton bilan au professeur. Applique ses remarques, puis attends qu'il valide pour reprendre.</div>` : `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>`}
       <div class="shead"><div class="lv">${s.niveauEntonnoir} · ${esc(s.ville)}</div><h2>${esc(s.titre)}</h2></div>
       <div class="chrono ${chronoInfo(P.current).cls}" title="Temps passé sur la séance / temps prévu">${chronoInfo(P.current).html}</div>
       ${(P.mode==='papier')?`<button class="btn ghost reduce-btn" title="Masquer la consigne et revenir à la vue compacte" onclick="APP.panel('${laneIdOf()}').reduce()">⤡ Masquer l'app — je reprends mon cahier</button>`:''}
@@ -1907,9 +1913,10 @@ function Panel(engine, root, name){
   };
   P.expand=function(t){ P.expanded=true; renderSeance(); if(t && t!=='c') P.tab(t); APP.beat(APP.laneIdFor(P)); };
   P.goEval=function(){ P.expanded=true; renderSeance(); P.tab('e'); };
-  P.reduce=function(){ P.expanded=false; renderSeance(); APP.beat(APP.laneIdFor(P)); };
+  P.reduce=function(){ if(P._venirVoir){ toast("Montre d'abord ton bilan au professeur."); return; } P.expanded=false; renderSeance(); APP.beat(APP.laneIdFor(P)); };
   // Bascule de mode en cours de séance — UNE SEULE FOIS par session (anti zapping), avec message « ce qui est gardé / ce qui ne se reconstitue pas / définitif aujourd'hui »
   P.switchMode=function(target){
+    if(P._venirVoir){ toast("Montre d'abord ton bilan au professeur."); return; }
     if(target===P.mode) return;
     if(P.modeSwitched){ toast("Tu as déjà changé de mode une fois aujourd'hui."); return; }
     const msg = (target==='papier')
@@ -1964,7 +1971,8 @@ function Panel(engine, root, name){
     });
     return h+`</div>`;
   }
-  P.toMap=function(){ if(P.current) engine.freeze(P.current);   // quitter la séance fige son chrono (il reprendra à la prochaine ouverture)
+  P.toMap=function(){ if(P._venirVoir){ toast("Montre d'abord ton bilan au professeur."); return; }
+    if(P.current) engine.freeze(P.current);   // quitter la séance fige son chrono (il reprendra à la prochaine ouverture)
     P.screen="map"; P.current=null; P.expanded=false; renderMap(); APP.syncMaps(); APP.relayout(); APP.beat(APP.laneIdFor(P)); };
   // — Gestes : un outil actif fige la feuille ; surligner/gomme au balayage, relier/étiquette au tap —
   P._tool=null; P._linkPending=null;
@@ -2295,10 +2303,16 @@ function Panel(engine, root, name){
   P.setBilanEcrit=function(val){ const s=engine.seance(P.current); if(!s) return;
     engine.setBilanEcrit(s.id, !!val);
     const chap=CHAPTER.meta.id||"chapitre";
-    // signal prof « bilan à relire » (rouge), effacé si l'élève décoche
-    store.save("signaux/"+chap+"/"+engine.studentId+"/bilan", val ? { type:'bilan', seance:s.titre, nom:P.name, classeSeg:P.classeSeg||'', ts:Date.now() } : null);
+    // signal prof « bilan à relire » (rouge), effacé si l'élève décoche. seanceId : permet de le reconvoquer pile sur ce bilan.
+    store.save("signaux/"+chap+"/"+engine.studentId+"/bilan", val ? { type:'bilan', seance:s.titre, seanceId:s.id, nom:P.name, classeSeg:P.classeSeg||'', ts:Date.now() } : null);
     renderEval();
     if(val){ const v=root.querySelector(".verdict-box"); if(v){ const r=v.getBoundingClientRect(); sparkle(r.left+r.width/2, r.top+20); } toast("Bilan validé. La suite est ouverte."); } };
+  // Convocation prof : on renvoie l'élève sur le bilan de LA séance visée (même s'il est parti ailleurs) et on le retient là tant que le prof n'a pas validé.
+  P.venirVoir=function(seanceId){ const id=seanceId||P.current; const s=engine.seance(id); if(!s) return;
+    if(P.current && P.current!==id) engine.freeze(P.current);   // gèle le chrono de la séance qu'il quitte
+    P._venirVoir=id; P.screen='seance'; P.current=id; P.expanded=true; renderSeance(); P.tab('e');   // S'évaluer → écran « Réussi » + bilan tissé visible
+    APP.beat(APP.laneIdFor(P)); toast("Le professeur veut voir ton bilan."); };
+  P.closeVenirVoir=function(){ const wasOn=!!P._venirVoir; P._venirVoir=null; if(wasOn && P.screen==='seance') renderSeance(); };
   P.submit=function(){
     const s=engine.seance(P.current); const wasReplay=P._replay;
     const r=engine.gradeQCM(s.id, P.answers, { replay:wasReplay });
@@ -2329,7 +2343,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false, _classeFiltre:null,   // _classeFiltre : null=classe en cours (auto), ''=toutes, 'seg'=une classe
   _sessions:{}, _control:{}, _signaux:{}, _unsubs:[], _hb:null, _tick:null,
@@ -2416,7 +2430,7 @@ const APP = {
   },
   // rejoue sur le panneau de l'élève l'action que le prof a déclenchée en cliquant dans le miroir
   applyAct(key, act){ const p=this.panels[key]; if(!p||!p.engine||!act) return;
-    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1,reopenAutocorr:1};
+    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1,reopenAutocorr:1,venirVoir:1,closeVenirVoir:1};
     if(!allow[act.m] || typeof p[act.m]!=='function') return;
     try{ p[act.m].apply(p, act.a||[]); }catch(e){}
     this.beat(key);
@@ -2584,9 +2598,10 @@ const APP = {
         const arch={ ts, date:new Date(ts).toLocaleString('fr-FR'), classe:nom, seg, chap, n:Object.keys(eleves).length, eleves };
         store.save("archives/"+chap+"/"+seg+"/"+ts, arch);
         if(typeof PROF!=='undefined' && PROF.authed && PROF.tab==='archives'){ PROF._archives=null; PROF.render(); } }
-      // nettoyage du suivi : on retire les présences de cette classe (les noms sont déjà capturés) → l'heure suivante repart sans chevauchement
+      // nettoyage du suivi : on retire les présences ET les alertes de cette classe → l'heure suivante repart sans chevauchement ni alerte fantôme
       if(purge){ Object.keys(this._sessions||{}).forEach(uid=>{ const s=this._sessions[uid];
-        if(s && s.classeSeg===seg && !isTestUid(uid)) store.save("sessions/"+chap+"/"+uid, null); }); }
+        if(s && s.classeSeg===seg && !isTestUid(uid)) store.save("sessions/"+chap+"/"+uid, null); });
+        Object.keys(this._signaux||{}).forEach(uid=>{ if(uid.split('__')[0]===seg && !isTestUid(uid)) store.save("signaux/"+chap+"/"+uid, null); }); }
     }); },
   endSessionForUid(uid){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/logoutEpoch", Date.now());   // sous-clé : n'écrase pas /nav
@@ -2793,7 +2808,7 @@ const MIRROR = {
     toMap(){ MIRROR.act('toMap',[]); },
     gtool(tool){ if(MIRROR._panel){ MIRROR._panel._tool=(MIRROR._panel._tool===tool)?null:tool; MIRROR._panel._linkPending=null; MIRROR._panel.tab('c'); } },   // choix d'outil : local au prof
     // le prof observe, il ne répond pas à la place de l'élève : ces gestes sont neutralisés dans le miroir
-    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){},
+    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){},
     openGlossaire(){}, glossToggle(){}, glossRemove(){}, closeDico(){},
     render(){}
   },
@@ -3503,17 +3518,24 @@ const PROF = {
                       incoherence:{ic:'⚠', lab:'s\'est sur-évalué', act:'écart entre QCM et autocorrection'},
                       aide:{ic:'✋', lab:'demande de l\'aide', act:''} };
     const signauxBox = sigCls.length ? `<div class="prof-sec signaux-sec"><h4>Signaux <span class="meta">· ${sigCls.length}</span></h4>
-      <div class="d">Événements en attente. Va voir, puis marque comme vu pour éteindre le signal.</div>
+      <div class="d">Événements en attente. « Venir me voir » renvoie l'élève sur son bilan et l'y retient ; « ✓ vu » éteint le signal et le libère.</div>
       <div class="prof-list">${sigCls.map(x=>{ const m=sigMeta[x.type]||{ic:'•',lab:x.type,act:''};
+        const conv = (x.type==='bilan' && x.seanceId) ? `<button class="btn ghost sig-conv" title="Renvoie l'élève sur ce bilan et le bloque jusqu'à ton « ✓ vu »" onclick="PROF.convoquer('${esc(x.uid)}','${esc(x.seanceId)}')">✋ Venir me voir</button>` : '';
         return `<div class="r sig-${x.type}"><span class="sig-ic">${m.ic}</span><span><b>${esc(x.nom||x.uid)}</b> ${m.lab}${x.seance?` · ${esc(x.seance)}`:''}${m.act?`<span class="sig-act"> → ${m.act}</span>`:''}</span>`
-          +`<button class="btn ghost" style="margin-left:auto" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}')">✓ vu</button></div>`; }).join('')}</div></div>` : '';
+          +`<span class="sig-btns">${conv}<button class="btn ghost" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}')">✓ vu</button></span></div>`; }).join('')}</div></div>` : '';
 
     return APP.classeSelectHTML(true)
       + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
       + signauxBox + coursBox + freezeBox + classeSec + ailleursSec
       + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
-  signalVu(uid, type){ const chap=CHAPTER.meta.id||"chapitre"; store.save("signaux/"+chap+"/"+uid+"/"+type, null); toast("Signal traité."); if(this.authed) this.render(); },
+  signalVu(uid, type){ const chap=CHAPTER.meta.id||"chapitre"; store.save("signaux/"+chap+"/"+uid+"/"+type, null);
+    if(type==='bilan') store.save("control/"+chap+"/"+uid+"/act", { m:'closeVenirVoir', a:[], ts:Date.now() });   // libère l'élève s'il était convoqué sur son bilan
+    toast("Signal traité."); if(this.authed) this.render(); },
+  // convoque un élève sur le bilan d'une séance précise : il y est renvoyé et retenu jusqu'au « ✓ vu »
+  convoquer(uid, seanceId){ const chap=CHAPTER.meta.id||"chapitre";
+    store.save("control/"+chap+"/"+uid+"/act", { m:'venirVoir', a:[seanceId||''], ts:Date.now() });
+    toast("Élève renvoyé sur son bilan. Marque « ✓ vu » quand tu l'auras vu."); },
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
   doFreeze(){ const o=this._fz||{gel:true,lock:false,logout:false};
     if(!o.gel && !o.lock && !o.logout){ toast("Coche au moins une option."); return; }
