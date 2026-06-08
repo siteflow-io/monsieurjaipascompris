@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bd">
+<meta name="app-version" content="2026-06-05be">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1472,7 +1472,10 @@ function createEngine(chapter, store, studentId, eleveIndex){
     reset(){ seances.forEach(s=> state[s.id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{},autocorr:{}, bilanEcrit:false});
       path.length=0; lastVisited=null; glossaire=[]; persist(); },
     forcePass(id){ const ev=find(id).evaluation, tot=ev.items.filter(isAutoItem).length;
-      state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot,answers:{}};
+      // simule un élève qui RÉUSSIT : on coche les bonnes réponses, sinon le bilan (qui lit les réponses) n'a aucun contenu à montrer
+      const answers={}; (ev.items||[]).filter(it=>it.type==='qcm').forEach(it=>{ const b=(it.bonnes||[]).map(Number);
+        answers[it.id] = it.multi ? b.slice() : (b.length? b[0] : 0); });
+      state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot,answers};
       // simule aussi l'autocorrection (tout acquis), pour que la séance soit pleinement « done » comme en réel
       const corr=(find(id)||{}).corrige||[]; const ac=state[id].autocorr={}; corr.forEach(c=>{ ac[c.n]=Array(_critCount(c)).fill('ok'); });
       state[id].bilanEcrit=true; state[id].bilanEcritTs=state[id].bilanEcritTs||Date.now();
