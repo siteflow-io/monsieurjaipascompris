@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bf">
+<meta name="app-version" content="2026-06-05bg">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1789,17 +1789,30 @@ function Panel(engine, root, name){
         <button class="tabE" title="Réponds au QCM de « ${esc(s.titre)} » pour débloquer la correction" onclick="APP.panel('${laneIdOf()}').tab('e')">S'évaluer</button></div>
       <div class="tabbody"></div>`;
     if(laneIdOf()!=="__mirror") attachSwipe();                  // balayage des gestes (l'élève local ; le miroir est piloté à part)
-    P.tab('c'); APP.syncMaps(); APP.relayout();
+    // QCM réussi mais séance non terminée → il reste l'autocorrection et/ou le bilan : on rouvre sur « S'évaluer » pour ne pas les zapper
+    const stS=engine.snapshot().state[s.id]||{};
+    P.tab((stS.passed && stS.status!=='done') ? 'e' : 'c'); APP.syncMaps(); APP.relayout();
   }
   // Mode papier : vue compacte — uniquement les incontournables (chrono + accès aux checkpoints), l'app reste à portée sans encombrer
   function renderCompact(s){
+    // état d'avancement : oriente le bouton (faire le QCM, reprendre la correction zappée, ou écrire le bilan)
+    const stS=engine.snapshot().state[s.id]||{};
+    const reprendre = stS.passed && stS.status!=='done';
+    const acFait = engine.autocorrDone(s.id);
+    const goLabel = !reprendre
+      ? `J'ai fini sur le cahier — répondre au QCM de « ${esc(s.titre)} »`
+      : (!acFait ? `Reprendre — corriger mon travail de « ${esc(s.titre)} »`
+                 : `Reprendre — écrire mon bilan de « ${esc(s.titre)} »`);
+    const paperD = reprendre
+      ? `<b>Il te reste une étape ici :</b> ${acFait?'écrire ton bilan.':'corriger ton travail, puis écrire ton bilan.'}`
+      : `<b>Maintenant :</b> fais la séance sur ton cahier.<br><b>Ensuite, ici :</b> tu répondras au QCM, tu corrigeras ton travail, puis tu écriras ton bilan.`;
     root.innerHTML = `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>
       <div class="shead"><div class="lv">${s.niveauEntonnoir} · ${esc(s.ville)}</div><h2>${esc(s.titre)}</h2></div>
       <div class="chrono ${chronoInfo(P.current).cls}" title="Temps passé sur la séance / temps prévu">${chronoInfo(P.current).html}</div>
       <div class="paper-card">
         <div class="paper-h">✏️ Tu travailles sur papier</div>
-        <p class="paper-d"><b>Maintenant :</b> fais la séance sur ton cahier.<br><b>Ensuite, ici :</b> tu répondras au QCM, tu corrigeras ton travail, puis tu écriras ton bilan.</p>
-        <button class="btn primary pc-go" onclick="APP.panel('${laneIdOf()}').goEval()">J'ai fini sur le cahier — répondre au QCM de « ${esc(s.titre)} »</button>
+        <p class="paper-d">${paperD}</p>
+        <button class="btn primary pc-go" onclick="APP.panel('${laneIdOf()}').goEval()">${goLabel}</button>
         <button class="btn ghost pc-go" onclick="APP.panel('${laneIdOf()}').expand('c')">⤢ Revoir la consigne et les textes</button>
         ${!P.modeSwitched?`<button class="btn link switch-mode" onclick="APP.panel('${laneIdOf()}').switchMode('app')">Finalement, je préfère travailler sur l'app →</button>`:''}
       </div>`;
