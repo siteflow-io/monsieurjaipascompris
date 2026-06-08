@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05be">
+<meta name="app-version" content="2026-06-05bf">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -129,6 +129,7 @@
   .lcbox h3{font-family:'EB Garamond',serif;font-size:1.05rem;margin-bottom:6px}
   .lcbox p{color:var(--ink2);font-size:.86rem;line-height:1.45;margin-bottom:8px}
   .cwarn{background:rgba(214,69,93,.12);border:1px solid var(--fire);border-radius:9px;padding:9px 11px;font-size:.82rem;color:var(--ink2);margin-bottom:10px}
+  .cwarn.cwarn-wip{background:rgba(251,191,36,.13);border-color:var(--gold-deep)}
   .lcfoot{display:flex;gap:8px;justify-content:flex-end}
 
   /* HUD élève : autonomie (étoiles) + notes */
@@ -1744,20 +1745,29 @@ function Panel(engine, root, name){
   function askConfirm(id){
     const s=engine.seance(id), sug=suggestion(), isSug=(id===sug);
     const here=engine.snapshot().lastVisited, hereTitle=here?engine.seance(here).titre:null;
+    // séances DÉJÀ en cours (autres que celle visée) : on prévient pour éviter de se disperser, et on propose de reprendre
+    const autresWip=(CHAPTER.seances||[]).filter(x=>x.id!==id && engine.statusOf(x.id)==='wip');
+    const reprise=autresWip.find(x=>x.id===here)||autresWip[0]||null;
     const warn = isSug
       ? `<p>C'est l'étape conseillée. Bon choix.</p>`
       : `<div class="cwarn">Tu ${hereTitle?`es sur « ${esc(hereTitle)} » et tu `:''}choisis « ${esc(s.titre)} », qui n'est pas l'étape conseillée. Tu peux, mais si tu coinces, on te renverra en arrière.</div>`;
+    const warnWip = reprise
+      ? `<div class="cwarn cwarn-wip">⚠ Tu as déjà une séance en cours : « ${esc(reprise.titre)} ». Si tu en ouvres une autre, pense à revenir la terminer.</div>`
+      : '';
     const ov=document.createElement("div"); ov.className="laneconfirm";
-    ov.innerHTML=`<div class="lcbox"><h3>Tu vas faire « ${esc(s.titre)} »</h3><p>${esc(s.objectif)}</p>${warn}
+    ov.innerHTML=`<div class="lcbox"><h3>Tu vas faire « ${esc(s.titre)} »</h3><p>${esc(s.objectif)}</p>${warn}${warnWip}
       <div class="lcfoot"><button class="btn ghost" data-act="cancel">Annuler</button>
-        <button class="btn primary" data-act="go">C'est parti</button></div></div>`;
+        ${reprise?`<button class="btn ghost" data-act="reprise">↩ Reprendre « ${esc(reprise.titre)} »</button>`:''}
+        <button class="btn primary" data-act="go">${reprise?'Commencer celle-ci':"C'est parti"}</button></div></div>`;
     root.appendChild(ov);
     ov.querySelector('[data-act="cancel"]').onclick=()=>ov.remove();
     ov.querySelector('[data-act="go"]').onclick=()=>{ ov.remove(); travelTo(id); };
+    const rb=ov.querySelector('[data-act="reprise"]'); if(rb) rb.onclick=()=>{ ov.remove(); travelTo(reprise.id); };
   }
   // le tracé se construit, puis la séance s'ouvre — avec verrou « premier arrivé, premier servi »
   function travelTo(id){
     if(!engine.peutAcceder(id)){ toast("Termine d'abord les autres séances : la convergence s'ouvre à la fin."); renderMap(); return; }
+    if(P.current && P.current!==id) engine.freeze(P.current);   // changement de séance : on fige le chrono de celle qu'on quitte
     const excl=CHAPTER.reglages.exclusiviteSeance, s0=engine.seance(id);
     if(excl && s0 && s0.niveauEntonnoir!=="convergence"){
       const occ=APP.occupant(id, laneIdOf());                 // qqn l'a-t-il prise entre le clic et la validation ?
@@ -1776,7 +1786,7 @@ function Panel(engine, root, name){
       ${(P.mode==='papier')?`<button class="btn ghost reduce-btn" title="Masquer la consigne et revenir à la vue compacte" onclick="APP.panel('${laneIdOf()}').reduce()">⤡ Masquer l'app — je reprends mon cahier</button>`:''}
       ${(P.mode!=='papier' && !P.modeSwitched && laneIdOf()!=='__mirror')?`<button class="btn link switch-mode" onclick="APP.panel('${laneIdOf()}').switchMode('papier')">✏️ Je passe sur papier →</button>`:''}
       <div class="tabs"><button class="tabC on" title="Ce qu'il faut faire" onclick="APP.panel('${laneIdOf()}').tab('c')">Consigne</button>
-        <button class="tabE" title="Réponds au QCM pour débloquer la correction" onclick="APP.panel('${laneIdOf()}').tab('e')">S'évaluer</button></div>
+        <button class="tabE" title="Réponds au QCM de « ${esc(s.titre)} » pour débloquer la correction" onclick="APP.panel('${laneIdOf()}').tab('e')">S'évaluer</button></div>
       <div class="tabbody"></div>`;
     if(laneIdOf()!=="__mirror") attachSwipe();                  // balayage des gestes (l'élève local ; le miroir est piloté à part)
     P.tab('c'); APP.syncMaps(); APP.relayout();
@@ -1789,7 +1799,7 @@ function Panel(engine, root, name){
       <div class="paper-card">
         <div class="paper-h">✏️ Tu travailles sur papier</div>
         <p class="paper-d"><b>Maintenant :</b> fais la séance sur ton cahier.<br><b>Ensuite, ici :</b> tu répondras au QCM, tu corrigeras ton travail, puis tu écriras ton bilan.</p>
-        <button class="btn primary pc-go" onclick="APP.panel('${laneIdOf()}').goEval()">J'ai fini sur le cahier — répondre au QCM</button>
+        <button class="btn primary pc-go" onclick="APP.panel('${laneIdOf()}').goEval()">J'ai fini sur le cahier — répondre au QCM de « ${esc(s.titre)} »</button>
         <button class="btn ghost pc-go" onclick="APP.panel('${laneIdOf()}').expand('c')">⤢ Revoir la consigne et les textes</button>
         ${!P.modeSwitched?`<button class="btn link switch-mode" onclick="APP.panel('${laneIdOf()}').switchMode('app')">Finalement, je préfère travailler sur l'app →</button>`:''}
       </div>`;
@@ -1936,7 +1946,8 @@ function Panel(engine, root, name){
     });
     return h+`</div>`;
   }
-  P.toMap=function(){ P.screen="map"; P.current=null; P.expanded=false; renderMap(); APP.syncMaps(); APP.relayout(); APP.beat(APP.laneIdFor(P)); };
+  P.toMap=function(){ if(P.current) engine.freeze(P.current);   // quitter la séance fige son chrono (il reprendra à la prochaine ouverture)
+    P.screen="map"; P.current=null; P.expanded=false; renderMap(); APP.syncMaps(); APP.relayout(); APP.beat(APP.laneIdFor(P)); };
   // — Gestes : un outil actif fige la feuille ; surligner/gomme au balayage, relier/étiquette au tap —
   P._tool=null; P._linkPending=null;
   P.gtool=function(tool){ P._tool=(P._tool===tool)?null:tool; P._linkPending=null; fillC(); };   // reclic = désactive
