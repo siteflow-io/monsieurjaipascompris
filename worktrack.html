@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05ar">
+<meta name="app-version" content="2026-06-05az">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -352,6 +352,47 @@
   .layer .lc .in{padding:2px 13px 13px 46px;color:var(--ink2);font-size:.85rem;line-height:1.55}
   .ref{display:inline-block;font-size:.74rem;color:var(--gold);border:1px solid var(--gold-deep);border-radius:7px;padding:4px 9px;margin:6px 6px 0 0;text-decoration:none}
 
+  /* checkpoint 2 — autocorrection par critères */
+  .autocorr{margin-top:10px;border:1.5px solid var(--gold-deep);border-radius:11px;overflow:hidden}
+  .autocorr .ac-head{padding:10px 13px;background:linear-gradient(120deg,rgba(251,191,36,.14),transparent);border-bottom:1px solid var(--line);font-family:'EB Garamond',serif;font-weight:600;font-size:.95rem}
+  .autocorr .ac-intro{padding:9px 13px 4px;color:var(--ink2);font-size:.8rem;line-height:1.45;margin:0}
+  .ac-q{border-top:1px solid var(--line);padding:10px 13px}
+  .ac-qn{font-weight:600;font-size:.84rem;color:var(--ink);margin-bottom:5px}
+  .ac-ref{font-size:.82rem;color:var(--ink2);line-height:1.5;background:var(--panel2);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+  .ac-crit{display:flex;align-items:center;gap:10px;padding:5px 0;flex-wrap:wrap}
+  .ac-crit .ac-ct{flex:1;min-width:140px;font-size:.82rem;color:var(--ink2);line-height:1.4}
+  .ac-choix{display:inline-flex;gap:6px;flex:0 0 auto}
+  .ac-b{border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:8px;padding:5px 11px;font-size:.76rem;cursor:pointer;transition:.15s}
+  .ac-b:hover:not(:disabled){border-color:var(--ink2)} .ac-b:disabled{cursor:default;opacity:.7}
+  .ac-b.ok.on{background:rgba(111,161,115,.2);border-color:var(--done);color:#bfe6c8}
+  .ac-b.rev.on{background:rgba(251,191,36,.16);border-color:var(--gold-deep);color:var(--gold)}
+
+  /* checkpoint 3 — bilan tissé */
+  .bilan-t{margin-top:10px;border:1.5px solid var(--gold-deep);border-radius:11px;overflow:hidden;background:linear-gradient(160deg,rgba(251,191,36,.06),transparent)}
+  .bilan-t .bt-head{padding:10px 13px;background:linear-gradient(120deg,rgba(251,191,36,.16),transparent);border-bottom:1px solid var(--line);font-family:'EB Garamond',serif;font-weight:600;font-size:.98rem}
+  .bt-synth{padding:10px 13px 2px;margin:0;font-size:.86rem;line-height:1.5;color:var(--ink2)}
+  .bt-alert{margin:6px 13px;padding:8px 11px;background:rgba(214,69,93,.12);border:1px solid var(--fire);border-radius:9px;font-size:.8rem;color:var(--ink2)}
+  .bt-cle{margin:8px 13px;padding:9px 11px;background:var(--panel2);border-left:3px solid var(--gold);border-radius:8px;font-size:.82rem;line-height:1.5;color:var(--ink)}
+  .bt-cle .bt-lab{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:3px}
+  .bt-consigne{padding:2px 13px;margin:4px 0;font-size:.8rem;color:var(--muted);line-height:1.45}
+  .bt-coche{display:flex;align-items:center;gap:9px;margin:10px 13px 13px;padding:10px 12px;border:1.5px dashed var(--line);border-radius:9px;font-size:.85rem;color:var(--ink2);cursor:pointer;transition:.15s}
+  label.bt-coche:hover{border-color:var(--gold-deep)}
+  .bt-coche input{width:17px;height:17px;accent-color:var(--done)}
+  .bt-coche.on{border-style:solid;border-color:var(--done);background:rgba(111,161,115,.12);color:#bfe6c8}
+  /* signaux prof — file unifiée (bilans, incohérences…) */
+  .prof-sec.signaux-sec{border:1.5px solid var(--fire);background:rgba(214,69,93,.08)}
+  .prof-sec.signaux-sec h4{color:var(--fire2)}
+  .signaux-sec .r{align-items:flex-start;gap:8px}
+  .signaux-sec .sig-ic{flex:0 0 auto;font-size:1rem;line-height:1.3}
+  .signaux-sec .sig-act{color:var(--muted);font-size:.78rem}
+  .signaux-sec .r.sig-incoherence .sig-ic{filter:saturate(1.3)}
+  .ptab-badge{display:inline-block;min-width:16px;padding:0 5px;margin-left:3px;background:var(--fire);color:#fff;font-size:.68rem;font-weight:700;border-radius:999px;line-height:16px;text-align:center}
+  /* éditeur : bilan mis en avant, fiche 4D atténuée quand désactivée */
+  .prof-sec.bilan-edit{border-color:var(--gold-deep);background:linear-gradient(160deg,rgba(251,191,36,.07),transparent)}
+  .prof-sec.bilan-edit h4{color:var(--gold)}
+  .prof-sec.f4d-edit.off{opacity:.62}
+  .prof-sec.f4d-edit.off h4 .meta{color:var(--fire2)}
+
   /* modale */
   .overlay{position:fixed;inset:0;background:rgba(6,5,3,.74);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
   .overlay.show{display:flex}
@@ -655,10 +696,11 @@ let CHAPTER = {
   "seances": [
     {
       "id": "S1",
+      "acquis": "Une petite faute commise par misère (voler un pain) est punie d'une peine énorme : la justice peut être disproportionnée. Le bagne n'aide pas Jean Valjean, il l'endurcit et lui fait perdre jusqu'à son nom. Javert incarne la loi appliquée sans tenir compte des circonstances humaines.",
       "titre": "La faute et la machine judiciaire",
       "ville": "Faverolles",
       "rn": "I",
-      "corrige": [{"n": 1, "r": "Il était émondeur (élagueur, tailleur d'arbres) et vivait au village de Faverolles."}, {"n": 2, "r": "Il a volé un pain. Il l'a fait pour nourrir les enfants affamés de sa sœur, car la famille n'avait rien à manger."}, {"n": 3, "r": "Il est surpris par le boulanger (Isabeau) après avoir cassé une vitre pour prendre le pain, puis arrêté."}, {"n": 4, "r": "Peine initiale = 5 ans de bagne / temps réellement passé = 19 ans / cause de l'allongement = ses tentatives d'évasion (la peine est rallongée à chaque fois)."}, {"n": 5, "r": "Son cœur s'endurcit : il devient méfiant, plein de haine et de colère contre la société ; il perd sa douceur. (Relever une expression du texte sur son cœur.)"}, {"n": 6, "r": "On le désigne par un numéro (matricule), il n'a plus de nom ; il est traité comme une bête, privé de liberté : il perd son identité d'homme."}, {"n": 7, "r": "Question d'opinion : attendre un avis justifié par le texte. Réponse la plus fidèle : ces années l'ont surtout endurci (haine, méfiance). Une nuance est acceptée si elle s'appuie sur un élément précis."}, {"n": 8, "r": "Javert est inspecteur / agent de police. Son rôle est de faire appliquer la loi."}, {"n": 9, "r": "Il fait arrêter Fantine sans tenir compte de sa misère ni de sa maladie : il applique le règlement sans pitié."}, {"n": 10, "r": "Reformulation attendue : Javert obéit à la loi de façon rigide, sans s'intéresser à la situation humaine des personnes qu'il punit."}, {"n": 11, "r": "Champ lexical de la justice et de la punition (au moins 5) : bagne, forçat, condamné, peine, loi, prison, gendarme, vol/voler, galères, châtiment…"}, {"n": 12, "r": "Phrase personnelle réutilisant deux de ces mots, par ex. : « Le forçat fut condamné à une lourde peine de bagne. » Vérifier le bon emploi des mots."}, {"n": 13, "r": "Bilan, réponse personnelle argumentée : la responsabilité est partagée — la misère pousse Valjean au vol, mais la loi le punit trop durement. Attendre une prise de position appuyée sur l'extrait."}],
+      "corrige": [{"n": 1, "r": "Il était émondeur (élagueur, tailleur d'arbres) et vivait au village de Faverolles.", "criteres": ["Tu as nommé son métier (émondeur / élagueur)", "Tu as nommé son village (Faverolles)"]}, {"n": 2, "r": "Il a volé un pain. Il l'a fait pour nourrir les enfants affamés de sa sœur, car la famille n'avait rien à manger.", "criteres": ["Tu as dit ce qu'il a volé (un pain)", "Tu as expliqué pourquoi (nourrir les enfants de sa sœur)"]}, {"n": 3, "r": "Il est surpris par le boulanger (Isabeau) après avoir cassé une vitre pour prendre le pain, puis arrêté.", "criteres": ["Tu as raconté comment il est pris (vitre cassée, surpris par le boulanger)", "Tu as dit ce qui suit (il est arrêté)"]}, {"n": 4, "r": "Peine initiale = 5 ans de bagne / temps réellement passé = 19 ans / cause de l'allongement = ses tentatives d'évasion (la peine est rallongée à chaque fois).", "criteres": ["Peine de départ : 5 ans", "Temps réellement passé : 19 ans", "Cause de l'allongement : les évasions"]}, {"n": 5, "r": "Son cœur s'endurcit : il devient méfiant, plein de haine et de colère contre la société ; il perd sa douceur. (Relever une expression du texte sur son cœur.)", "criteres": ["Tu as décrit le changement (son cœur s'endurcit : haine, méfiance)", "Tu as relevé une expression du texte sur son cœur"]}, {"n": 6, "r": "On le désigne par un numéro (matricule), il n'a plus de nom ; il est traité comme une bête, privé de liberté : il perd son identité d'homme.", "criteres": ["Tu as repéré qu'on le désigne par un numéro (plus de nom)", "Tu as expliqué ce qu'il perd (son identité d'homme)"]}, {"n": 7, "r": "Question d'opinion : attendre un avis justifié par le texte. Réponse la plus fidèle : ces années l'ont surtout endurci (haine, méfiance). Une nuance est acceptée si elle s'appuie sur un élément précis.", "criteres": ["Tu as donné ton avis clairement", "Tu l'as justifié avec un élément précis du texte"]}, {"n": 8, "r": "Javert est inspecteur / agent de police. Son rôle est de faire appliquer la loi.", "criteres": ["Tu as dit qui est Javert (policier / inspecteur)", "Tu as dit son rôle (faire appliquer la loi)"]}, {"n": 9, "r": "Il fait arrêter Fantine sans tenir compte de sa misère ni de sa maladie : il applique le règlement sans pitié.", "criteres": ["Tu as donné l'exemple (il fait arrêter Fantine)", "Tu as montré sa dureté (sans tenir compte de sa misère, sans pitié)"]}, {"n": 10, "r": "Reformulation attendue : Javert obéit à la loi de façon rigide, sans s'intéresser à la situation humaine des personnes qu'il punit.", "criteres": ["Tu as reformulé avec tes mots, sans recopier le texte", "Tu as gardé l'idée : il applique la loi sans regarder la situation humaine"]}, {"n": 11, "r": "Champ lexical de la justice et de la punition (au moins 5) : bagne, forçat, condamné, peine, loi, prison, gendarme, vol/voler, galères, châtiment…", "criteres": ["Tu as relevé au moins 5 mots", "Tes mots appartiennent bien au thème de la justice et de la punition"]}, {"n": 12, "r": "Phrase personnelle réutilisant deux de ces mots, par ex. : « Le forçat fut condamné à une lourde peine de bagne. » Vérifier le bon emploi des mots.", "criteres": ["Ta phrase réutilise deux mots de la liste", "Les mots sont bien employés et la phrase a du sens"]}, {"n": 13, "r": "Bilan, réponse personnelle argumentée : la responsabilité est partagée — la misère pousse Valjean au vol, mais la loi le punit trop durement. Attendre une prise de position appuyée sur l'extrait.", "criteres": ["Tu as pris position clairement (qui est responsable ?)", "Tu as appuyé ton avis sur l'extrait", "Tu as rédigé un vrai paragraphe, pas une seule phrase"]}],
       "carte": { "x": 20, "y": 25 },
       "niveauEntonnoir": "socle",
       "aretes": { "conseillee": "S2", "prerequis": null },
@@ -695,10 +737,11 @@ let CHAPTER = {
     },
     {
       "id": "S2",
+      "acquis": "Hugo choisit une enfant seule, dans le froid et la peur, pour émouvoir le lecteur : c'est le registre pathétique. Cosette exploitée et Fantine sacrifiée sont deux victimes de la même misère.",
       "titre": "Les victimes de la misère",
       "ville": "Montfermeil",
       "rn": "II",
-      "corrige": [{"n": 1, "r": "Cosette a environ huit ans ; elle vit chez les Thénardier (des aubergistes). Ils l'envoient la nuit chercher de l'eau à la source, dans le bois."}, {"n": 2, "r": "Trois détails de froid et d'obscurité, mots exacts du texte (par ex. la nuit, le noir, l'ombre, le froid, la forêt). Relever les termes employés."}, {"n": 3, "r": "Deux passages montrant la peur : elle tremble, sursaute aux bruits, a peur du noir et de la forêt. Citer deux passages précis."}, {"n": 4, "r": "La phrase montrant que le seau est trop lourd pour ses petits bras, qu'elle doit s'arrêter sans cesse : c'est l'épuisement de l'enfant."}, {"n": 5, "r": "Elle est seule. Cela rend la scène plus émouvante : une enfant sans défense, abandonnée dans le noir, inspire davantage la pitié."}, {"n": 6, "r": "Deux exemples de la petitesse et de la fatigue (ses petites mains, ses bras trop faibles…). Effet attendu : émouvoir le lecteur, susciter la compassion."}, {"n": 7, "r": "Geste « surligner » : champ lexical de la peur (trembler, effroi, terreur…) et de la nuit (noir, obscurité, ténèbres, ombre…), au moins 4 mots, recopiés et classés en deux colonnes."}, {"n": 8, "r": "Comparaison avec le Déclic p. 82-85 : selon l'édition, un passage ou une phrase a été coupé/raccourci. Attendre un exemple précis relevé par l'élève."}, {"n": 9, "r": "Fantine se sacrifie (vend ses cheveux, ses dents, se prostitue) pour envoyer de l'argent à Cosette. La mère et la fille sont victimes de la même misère : l'une se détruit, l'autre est exploitée."}, {"n": 10, "r": "Bilan : Hugo choisit une enfant car son innocence et sa faiblesse rendent l'injustice plus révoltante et touchent davantage le lecteur que le malheur d'un adulte."}],
+      "corrige": [{"n": 1, "r": "Cosette a environ huit ans ; elle vit chez les Thénardier (des aubergistes). Ils l'envoient la nuit chercher de l'eau à la source, dans le bois.", "criteres": ["Tu as donné son âge (environ huit ans)", "Tu as dit chez qui elle vit (les Thénardier)", "Tu as dit ce qu'ils lui font faire (chercher de l'eau, la nuit, dans le bois)"]}, {"n": 2, "r": "Trois détails de froid et d'obscurité, mots exacts du texte (par ex. la nuit, le noir, l'ombre, le froid, la forêt). Relever les termes employés.", "criteres": ["Tu as relevé trois détails de froid ou d'obscurité", "Tu as recopié les mots exacts du texte"]}, {"n": 3, "r": "Deux passages montrant la peur : elle tremble, sursaute aux bruits, a peur du noir et de la forêt. Citer deux passages précis.", "criteres": ["Tu as cité deux passages précis", "Tes passages montrent bien la peur de Cosette"]}, {"n": 4, "r": "La phrase montrant que le seau est trop lourd pour ses petits bras, qu'elle doit s'arrêter sans cesse : c'est l'épuisement de l'enfant.", "criteres": ["Tu as relevé la bonne phrase (le seau trop lourd)", "Tu as expliqué ce qu'elle montre (l'épuisement de l'enfant)"]}, {"n": 5, "r": "Elle est seule. Cela rend la scène plus émouvante : une enfant sans défense, abandonnée dans le noir, inspire davantage la pitié.", "criteres": ["Tu as répondu qu'elle est seule", "Tu as expliqué l'effet (la scène est plus émouvante, on a pitié)"]}, {"n": 6, "r": "Deux exemples de la petitesse et de la fatigue (ses petites mains, ses bras trop faibles…). Effet attendu : émouvoir le lecteur, susciter la compassion.", "criteres": ["Tu as donné deux exemples de sa petitesse ou de sa fatigue", "Tu as dit l'effet recherché (émouvoir, susciter la pitié)"]}, {"n": 7, "r": "Geste « surligner » : champ lexical de la peur (trembler, effroi, terreur…) et de la nuit (noir, obscurité, ténèbres, ombre…), au moins 4 mots, recopiés et classés en deux colonnes.", "criteres": ["Tu as relevé au moins 4 mots", "Tu les as classés en deux colonnes (peur / nuit)"]}, {"n": 8, "r": "Comparaison avec le Déclic p. 82-85 : selon l'édition, un passage ou une phrase a été coupé/raccourci. Attendre un exemple précis relevé par l'élève.", "criteres": ["Tu as comparé avec le Déclic", "Tu as relevé un exemple précis de différence (passage coupé ou raccourci)"]}, {"n": 9, "r": "Fantine se sacrifie (vend ses cheveux, ses dents, se prostitue) pour envoyer de l'argent à Cosette. La mère et la fille sont victimes de la même misère : l'une se détruit, l'autre est exploitée.", "criteres": ["Tu as dit ce que fait Fantine pour Cosette (elle se sacrifie)", "Tu as relié la mère et la fille (deux victimes de la même misère)"]}, {"n": 10, "r": "Bilan : Hugo choisit une enfant car son innocence et sa faiblesse rendent l'injustice plus révoltante et touchent davantage le lecteur que le malheur d'un adulte.", "criteres": ["Tu as expliqué le choix d'une enfant (innocence, faiblesse)", "Tu as dit l'effet sur le lecteur (l'injustice révolte davantage)"]}],
       "carte": { "x": 75, "y": 20 },
       "niveauEntonnoir": "socle",
       "aretes": { "conseillee": "S3", "prerequis": null },
@@ -736,10 +779,11 @@ let CHAPTER = {
     },
     {
       "id": "S3",
+      "acquis": "Face au vol, deux réponses s'opposent : la loi (les gendarmes) veut punir, la charité (l'évêque) pardonne et offre une seconde chance. Myriel parie sur la bonté pour transformer Jean Valjean plutôt que par la punition.",
       "titre": "Myriel : la charité contre la loi",
       "ville": "Digne",
       "rn": "III",
-      "corrige": [{"n": 1, "r": "Les gendarmes l'amènent car il a été repris avec l'argenterie volée chez l'évêque. Il risque de retourner au bagne, lourdement, comme récidiviste."}, {"n": 2, "r": "L'évêque déclare qu'il a lui-même donné l'argenterie à Jean Valjean (en substance : « Je vous l'avais donnée »). Relever la citation exacte du texte."}, {"n": 3, "r": "Il ajoute les chandeliers d'argent. C'est surprenant : non seulement il ne dénonce pas le voleur, mais il lui offre encore davantage."}, {"n": 4, "r": "Geste « relier » : la loi (les gendarmes) punit ; la charité (l'évêque) pardonne et donne. Les deux réactions à la même faute sont opposées."}, {"n": 5, "r": "« J'achète ton âme » : l'évêque veut dire qu'il rachète Valjean, qu'il lui offre une chance de devenir honnête ; il consacre cet argent au bien et au salut de Valjean."}, {"n": 6, "r": "Discours direct : paroles entre guillemets ou après un tiret, introduites par des verbes de parole (dit, répondit, s'écria…). Relever deux verbes de parole."}, {"n": 7, "r": "Impératif, par ex. « Prenez-les » : l'évêque ordonne (ou invite avec autorité) Valjean à accepter le don et à s'en servir pour devenir un honnête homme."}, {"n": 8, "r": "Liaison Déclic : entre les deux chapitres, pendant la nuit, Valjean hésite puis s'enfuit en emportant l'argenterie. Résumer en deux phrases ce que raconte le livre."}, {"n": 9, "r": "Bilan : l'évêque croit au pardon et à la bonté. Il espère sauver Valjean et le transformer par la confiance, plutôt que par la punition."}],
+      "corrige": [{"n": 1, "r": "Les gendarmes l'amènent car il a été repris avec l'argenterie volée chez l'évêque. Il risque de retourner au bagne, lourdement, comme récidiviste.", "criteres": ["Tu as dit pourquoi les gendarmes l'amènent (repris avec l'argenterie volée)", "Tu as dit ce qu'il risque (retourner au bagne)"]}, {"n": 2, "r": "L'évêque déclare qu'il a lui-même donné l'argenterie à Jean Valjean (en substance : « Je vous l'avais donnée »). Relever la citation exacte du texte.", "criteres": ["Tu as dit ce que déclare l'évêque (il a lui-même donné l'argenterie)", "Tu as relevé la citation exacte du texte"]}, {"n": 3, "r": "Il ajoute les chandeliers d'argent. C'est surprenant : non seulement il ne dénonce pas le voleur, mais il lui offre encore davantage.", "criteres": ["Tu as dit ce qu'il ajoute (les chandeliers d'argent)", "Tu as expliqué pourquoi c'est surprenant (il donne plus au lieu de dénoncer)"]}, {"n": 4, "r": "Geste « relier » : la loi (les gendarmes) punit ; la charité (l'évêque) pardonne et donne. Les deux réactions à la même faute sont opposées.", "criteres": ["Tu as relié la loi à la punition (les gendarmes)", "Tu as relié la charité au pardon et au don (l'évêque)"]}, {"n": 5, "r": "« J'achète ton âme » : l'évêque veut dire qu'il rachète Valjean, qu'il lui offre une chance de devenir honnête ; il consacre cet argent au bien et au salut de Valjean.", "criteres": ["Tu as expliqué la phrase avec tes mots", "Tu as gardé l'idée : il offre à Valjean une chance de devenir honnête"]}, {"n": 6, "r": "Discours direct : paroles entre guillemets ou après un tiret, introduites par des verbes de parole (dit, répondit, s'écria…). Relever deux verbes de parole.", "criteres": ["Tu as reconnu le discours direct (guillemets ou tiret)", "Tu as relevé deux verbes de parole"]}, {"n": 7, "r": "Impératif, par ex. « Prenez-les » : l'évêque ordonne (ou invite avec autorité) Valjean à accepter le don et à s'en servir pour devenir un honnête homme.", "criteres": ["Tu as relevé un verbe à l'impératif", "Tu as dit ce que l'évêque demande (accepter le don, devenir honnête)"]}, {"n": 8, "r": "Liaison Déclic : entre les deux chapitres, pendant la nuit, Valjean hésite puis s'enfuit en emportant l'argenterie. Résumer en deux phrases ce que raconte le livre.", "criteres": ["Tu as résumé en deux phrases", "Ton résumé dit l'essentiel (Valjean hésite puis s'enfuit avec l'argenterie)"]}, {"n": 9, "r": "Bilan : l'évêque croit au pardon et à la bonté. Il espère sauver Valjean et le transformer par la confiance, plutôt que par la punition.", "criteres": ["Tu as dit en quoi croit l'évêque (le pardon, la bonté)", "Tu as expliqué son espoir (transformer Valjean par la confiance, pas la punition)"]}],
       "carte": { "x": 80, "y": 70 },
       "niveauEntonnoir": "socle",
       "aretes": { "conseillee": "S4", "prerequis": null },
@@ -776,10 +820,11 @@ let CHAPTER = {
     },
     {
       "id": "S4",
+      "acquis": "Dans une préface, l'auteur parle en son nom, avant le récit. Hugo y annonce les trois maux de son siècle — l'homme, la femme et l'enfant détruits par la misère — et donne ainsi la clé de lecture du roman.",
       "titre": "La voix de Hugo (la préface)",
       "ville": "Hauteville-House",
       "rn": "IV",
-      "corrige": [{"n": 1, "r": "C'est Victor Hugo, l'auteur, qui écrit. À Hauteville-House (Guernesey), en 1862, comme l'indique la fin du texte."}, {"n": 2, "r": "Le texte explique quelque chose : il ne raconte pas une histoire, il annonce le but du livre. (Justifier par l'emploi du « je » et du présent.)"}, {"n": 3, "r": "Les trois problèmes du siècle : la dégradation de l'homme par la misère (le prolétaire), la déchéance de la femme par la faim, l'atrophie de l'enfant par l'ignorance et la nuit. Reformuler chacun."}, {"n": 4, "r": "Liaison : homme = Jean Valjean ; femme = Fantine ; enfant = Cosette (ou Gavroche). Une phrase d'explication par personnage."}, {"n": 5, "r": "Phrase longue : l'expression répétée « Tant que… » ouvre chaque partie. Cette répétition sert à insister, à marteler que le livre restera utile tant que ces malheurs existeront."}, {"n": 6, "r": "Geste « étiqueter » : marques de l'auteur qui parle en son nom — le pronom « je », le présent, l'adresse au lecteur, le jugement personnel. Noter deux exemples."}, {"n": 7, "r": "Selon Hugo, un tel livre sert à dénoncer la misère et reste utile tant qu'il y aura de l'injustice. Relever la phrase, puis donner un avis personnel."}, {"n": 8, "r": "Bilan : Hugo place ce texte avant l'histoire pour donner au lecteur la clé de lecture — comprendre que le roman dénonce la misère et garder ce but en tête."}],
+      "corrige": [{"n": 1, "r": "C'est Victor Hugo, l'auteur, qui écrit. À Hauteville-House (Guernesey), en 1862, comme l'indique la fin du texte.", "criteres": ["Tu as dit qui écrit (Victor Hugo, l'auteur)", "Tu as donné le lieu ou la date (Hauteville-House, 1862)"]}, {"n": 2, "r": "Le texte explique quelque chose : il ne raconte pas une histoire, il annonce le but du livre. (Justifier par l'emploi du « je » et du présent.)", "criteres": ["Tu as dit que le texte explique, qu'il ne raconte pas une histoire", "Tu as justifié (emploi du « je », du présent)"]}, {"n": 3, "r": "Les trois problèmes du siècle : la dégradation de l'homme par la misère (le prolétaire), la déchéance de la femme par la faim, l'atrophie de l'enfant par l'ignorance et la nuit. Reformuler chacun.", "criteres": ["Tu as nommé les trois problèmes (l'homme, la femme, l'enfant)", "Tu as reformulé chacun avec tes mots"]}, {"n": 4, "r": "Liaison : homme = Jean Valjean ; femme = Fantine ; enfant = Cosette (ou Gavroche). Une phrase d'explication par personnage.", "criteres": ["Tu as relié chaque problème à un personnage (Valjean, Fantine, Cosette)", "Tu as écrit une phrase d'explication par personnage"]}, {"n": 5, "r": "Phrase longue : l'expression répétée « Tant que… » ouvre chaque partie. Cette répétition sert à insister, à marteler que le livre restera utile tant que ces malheurs existeront.", "criteres": ["Tu as repéré l'expression répétée (« Tant que… »)", "Tu as expliqué son effet (insister, marteler)"]}, {"n": 6, "r": "Geste « étiqueter » : marques de l'auteur qui parle en son nom — le pronom « je », le présent, l'adresse au lecteur, le jugement personnel. Noter deux exemples.", "criteres": ["Tu as noté deux marques de l'auteur qui parle", "Tes exemples conviennent (« je », présent, adresse au lecteur…)"]}, {"n": 7, "r": "Selon Hugo, un tel livre sert à dénoncer la misère et reste utile tant qu'il y aura de l'injustice. Relever la phrase, puis donner un avis personnel.", "criteres": ["Tu as relevé la phrase sur l'utilité du livre", "Tu as donné ton avis personnel"]}, {"n": 8, "r": "Bilan : Hugo place ce texte avant l'histoire pour donner au lecteur la clé de lecture — comprendre que le roman dénonce la misère et garder ce but en tête.", "criteres": ["Tu as expliqué pourquoi Hugo place ce texte avant l'histoire (donner la clé de lecture)", "Tu as dit le but du roman (dénoncer la misère)"]}],
       "carte": { "x": 25, "y": 75 },
       "niveauEntonnoir": "socle",
       "aretes": { "conseillee": "S5", "prerequis": null },
@@ -816,10 +861,11 @@ let CHAPTER = {
     },
     {
       "id": "S5",
+      "acquis": "Les cinq personnages des Misérables illustrent les trois maux annoncés par Hugo. Le roman oppose la justice des hommes (Javert) et la justice du cœur (Myriel), et penche clairement pour la seconde.",
       "titre": "Convergence : le tribunal des Misérables",
       "ville": "Paris",
       "rn": "V",
-      "corrige": [{"n": 1, "r": "Tableau attendu — Jean Valjean : ancien bagnard, victime de la misère et de la dureté de la loi. Fantine : mère sacrifiée, victime de la misère et du jugement social. Cosette : enfant exploitée par les Thénardier. Myriel : l'évêque qui pardonne et sauve. Javert : le policier qui applique la loi sans pitié."}, {"n": 2, "r": "Le procès : trois personnages au choix ; pour chacun, montrer en quoi son histoire accuse la société ou la loi (3-4 phrases). Attendre des arguments appuyés sur les extraits."}, {"n": 3, "r": "La voix de Hugo : les personnages choisis illustrent les trois problèmes du siècle annoncés dans la préface ; ils donnent raison à Hugo en montrant que la misère détruit l'homme, la femme et l'enfant."}, {"n": 4, "r": "Verdict, réponse personnelle argumentée (8-10 phrases, avec connecteurs), appuyée sur au moins trois extraits. Attendre une prise de position claire : loi, société ou conscience de chacun."}],
+      "corrige": [{"n": 1, "r": "Tableau attendu — Jean Valjean : ancien bagnard, victime de la misère et de la dureté de la loi. Fantine : mère sacrifiée, victime de la misère et du jugement social. Cosette : enfant exploitée par les Thénardier. Myriel : l'évêque qui pardonne et sauve. Javert : le policier qui applique la loi sans pitié.", "criteres": ["Tu as rempli la ligne de chacun des cinq personnages", "Tu as bien désigné le responsable pour chacun (lui-même, la société ou la loi)"]}, {"n": 2, "r": "Le procès : trois personnages au choix ; pour chacun, montrer en quoi son histoire accuse la société ou la loi (3-4 phrases). Attendre des arguments appuyés sur les extraits.", "criteres": ["Tu as traité trois personnages", "Pour chacun, tu as montré en quoi son histoire accuse la société ou la loi", "Tu t'es appuyé sur les extraits"]}, {"n": 3, "r": "La voix de Hugo : les personnages choisis illustrent les trois problèmes du siècle annoncés dans la préface ; ils donnent raison à Hugo en montrant que la misère détruit l'homme, la femme et l'enfant.", "criteres": ["Tu as relié tes personnages aux trois problèmes de la préface", "Tu as montré qu'ils donnent raison à Hugo"]}, {"n": 4, "r": "Verdict, réponse personnelle argumentée (8-10 phrases, avec connecteurs), appuyée sur au moins trois extraits. Attendre une prise de position claire : loi, société ou conscience de chacun.", "criteres": ["Tu as pris position clairement (la loi, la société ou la conscience ?)", "Tu t'es appuyé sur au moins trois extraits", "Tu as rédigé 8 à 10 phrases avec des connecteurs"]}],
       "carte": { "x": 50, "y": 50 },
       "niveauEntonnoir": "convergence",
       "aretes": { "conseillee": null, "prerequis": null },
@@ -1185,7 +1231,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
   const find = id => seances.find(s=>s.id===id);
   const idx = eleveIndex||0;
   const state = {};
-  seances.forEach(s=> state[s.id] = { status:"todo", passed:false, qcm:null, aidesUsed:[], soumissions:{}, libres:{}, gestes:{} });
+  seances.forEach(s=> state[s.id] = { status:"todo", passed:false, qcm:null, aidesUsed:[], soumissions:{}, libres:{}, gestes:{}, autocorr:{}, bilanEcrit:false });
   const path = [];
   let lastVisited = null;
   let glossaire = [];                       // mots retenus par l'élève (transversal au chapitre) : {mot, def, ts}
@@ -1222,6 +1268,27 @@ function createEngine(chapter, store, studentId, eleveIndex){
     let p = (Array.isArray(ci) && ci.length) ? ci[idx % ci.length] : null;
     if(!Array.isArray(p) || !p.length) p = seances.map(s=>s.id);
     return p.filter(id=>find(id)); }
+
+  // ── Checkpoint 2 : autocorrection par critères ──────────────────────────────
+  // L'élève confronte sa rédaction au corrigé du carnet, question par question.
+  // Chaque question expose des « critères » (éléments attendus) ; à défaut, un seul
+  // positionnement global. Statut par critère : 'ok' (réussi) / 'revoir' (à revoir).
+  // Une séance n'est « done » qu'une fois la PORTE (QCM) franchie ET l'autocorrection faite.
+  // TODO (généralisation) : aujourd'hui l'autocorrection ne porte que sur les questions
+  // rédigées du carnet (corrige[]). Les items auto-corrigés mécaniquement (trous, paires,
+  // ordre, repérage, court, vrai/faux, classement) restent corrigés par l'app, sans
+  // autopositionnement. À étendre quand on voudra une autocorrection sur ces types-là.
+  const _critCount = c => (Array.isArray(c.criteres) && c.criteres.length) ? c.criteres.length : 1;
+  function _autocorrDone(id){ const corr=(find(id)||{}).corrige||[]; if(!corr.length) return true;   // rien à corriger → checkpoint sans objet
+    const ac=state[id].autocorr||{};
+    return corr.every(c=>{ const arr=ac[c.n]; const nb=_critCount(c);
+      return Array.isArray(arr) && arr.slice(0,nb).filter(v=>v==='ok'||v==='revoir').length>=nb; }); }
+  // Recalcule le statut d'une séance dont la porte est franchie. Trois checkpoints :
+  // QCM (porte) → autocorrection par critères → bilan écrit au cahier. « done » suppose les trois.
+  // Le chrono et finishedAt se figent à la clôture réelle (case « j'ai écrit mon bilan »), pas au QCM.
+  function _syncDone(id){ const st=state[id]; if(!st || !st.passed) return;
+    if(_autocorrDone(id) && st.bilanEcrit){ if(st.status!=="done"){ st.status="done"; st.finishedAt=st.finishedAt||Date.now(); _freezeChrono(st); } }
+    else if(st.status!=="done"){ st.status="wip"; } }
 
   const api = {
     chapter, studentId,
@@ -1300,9 +1367,42 @@ function createEngine(chapter, store, studentId, eleveIndex){
       const ancN = anc ? (anc.noteGood!=null?anc.noteGood:(anc.good||0)) : -1;
       const nouveauMeilleur = (porte>ancP) || (porte===ancP && ng>=ancN);
       if(!replay || !anc || nouveauMeilleur) state[id].qcm = nouveau;
-      if(passed){ state[id].status="done"; state[id].passed=true; state[id].finishedAt=state[id].finishedAt||Date.now(); _freezeChrono(state[id]); }
+      if(passed){ state[id].passed=true; _syncDone(id); }   // porte franchie ; la séance ne devient « done » qu'après l'autocorrection (checkpoint 2)
       persist(); return { porte, porteTotal, noteGood:ng, noteTotal:nt, tentes, good:porte, total:porteTotal, passed };
     },
+
+    // — Autocorrection par critères (checkpoint 2) —
+    autocorrData(id){ return state[id].autocorr||{}; },
+    autocorrDone(id){ return _autocorrDone(id); },
+    setAutoCrit(id, n, ci, val){ const st=state[id]; st.autocorr=st.autocorr||{};
+      const arr=st.autocorr[n]=st.autocorr[n]||[]; arr[ci]=val; _syncDone(id); persist(); },
+    // Croisement QCM (objectif) × autocorrection (déclarée) : signale au prof l'élève qui
+    // se déclare « tout réussi » alors que son QCM n'était pas parfait. Consommé par le pilotage (Lot 4).
+    autocorrSignal(id){ const st=state[id]; const corr=(find(id)||{}).corrige||[];
+      if(!corr.length || !st.qcm) return { incoherent:false };
+      const q=st.qcm, qcmParfait = (q.porteTotal!=null) ? (q.porte>=q.porteTotal) : ((q.good||0)>=(q.total||0));
+      let total=0, revoir=0; corr.forEach(c=>{ (st.autocorr&&st.autocorr[c.n]||[]).forEach(v=>{ total++; if(v==='revoir') revoir++; }); });
+      if(total>0 && revoir===0 && !qcmParfait) return { incoherent:true, raison:"se déclare tout réussi malgré des erreurs au QCM" };
+      return { incoherent:false }; },
+
+    // — Bilan tissé (checkpoint 3) —
+    bilanEcritDe(id){ return !!(state[id] && state[id].bilanEcrit); },
+    setBilanEcrit(id, val){ const st=state[id]; if(!st) return; st.bilanEcrit=!!val;
+      if(val && !st.bilanEcritTs) st.bilanEcritTs=Date.now(); _syncDone(id); persist(); },
+    // Agrège les trois fils du bilan : la trace (apport commun), ce que le QCM dit de la compréhension,
+    // ce que l'autocorrection dit de la rédaction (critères à revoir). Consommé par l'écran élève et, plus tard, le pilotage.
+    bilanData(id){ const st=state[id]||{}, s=find(id)||{}, corr=s.corrige||[], ac=st.autocorr||{};
+      const q=st.qcm||null;
+      const qcmTxt = q ? (q.good+"/"+q.total) : null;
+      const qcmPart = q ? (q.total? Math.round(100*q.good/q.total) : 0) : null;
+      const revoir=[]; corr.forEach(c=>{ const arr=ac[c.n]||[]; const crits=(Array.isArray(c.criteres)&&c.criteres.length)?c.criteres:null;
+        arr.forEach((v,i)=>{ if(v==='revoir'){ revoir.push(crits?crits[i]:('Question '+c.n)); } }); });
+      let trouver=null, pourquoi=null; const layers=(s.fiche4d&&s.fiche4d.layers)||[];
+      layers.forEach(L=>{ const t=(L.titre||'').toLowerCase(); if(L.ic==='✓'||t.indexOf('trouver')>=0) trouver=trouver||L.contenu;
+        if(L.ic==='?'||t.indexOf('pourquoi')>=0) pourquoi=pourquoi||L.contenu; });
+      const acquis = ((s.acquis||'').trim()) || trouver || '';   // champ invariable dédié, repli sur l'ancienne couche « Trouver »
+      return { titre:s.titre, qcm:qcmTxt, qcmPart, revoir, acquis, trouver, pourquoi,
+        signal:this.autocorrSignal(id), bilanEcrit:!!st.bilanEcrit }; },
 
     useAide(id, aideId){ if(!state[id].aidesUsed.includes(aideId)){ state[id].aidesUsed.push(aideId); persist(); } },
     submitProf(id, itemId, texte){ const st=state[id]; st.soumissions=st.soumissions||{};
@@ -1325,10 +1425,13 @@ function createEngine(chapter, store, studentId, eleveIndex){
       const n=g.links.reduce((m,l)=>Math.max(m,l.n||0),0)+1; g.links.push({a,b,n}); persist(); },
     removeLink(id, supIdx, tok){ const g=this.geste(id,supIdx); g.links=(g.links||[]).filter(l=>l.a!==tok&&l.b!==tok); persist(); },
     hydrate,
-    reset(){ seances.forEach(s=> state[s.id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{}});
+    reset(){ seances.forEach(s=> state[s.id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{},autocorr:{}, bilanEcrit:false});
       path.length=0; lastVisited=null; glossaire=[]; persist(); },
     forcePass(id){ const ev=find(id).evaluation, tot=ev.items.filter(isAutoItem).length;
       state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot,answers:{}};
+      // simule aussi l'autocorrection (tout acquis), pour que la séance soit pleinement « done » comme en réel
+      const corr=(find(id)||{}).corrige||[]; const ac=state[id].autocorr={}; corr.forEach(c=>{ ac[c.n]=Array(_critCount(c)).fill('ok'); });
+      state[id].bilanEcrit=true; state[id].bilanEcritTs=state[id].bilanEcritTs||Date.now();
       if(!state[id].startedAt) state[id].startedAt=Date.now(); state[id].finishedAt=state[id].finishedAt||Date.now(); _freezeChrono(state[id]);
       if(!path.includes(id)) path.push(id); lastVisited=id; persist(); },
     // nouvelle tentative après un échec : on efface la soumission (note + correction), sans toucher au chrono ni aux gestes
@@ -1374,6 +1477,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
         return { id:s.id, titre:s.titre, statut:st.status,
           qcm: st.qcm?{good:st.qcm.good,total:st.qcm.total}:null,
           etoiles: api.starsOf(s.id),
+          autocorrFait: api.autocorrDone(s.id), autocorrSignal: api.autocorrSignal(s.id), bilanEcrit: !!st.bilanEcrit,
           aides:(s.aides||[]).length, aidesUsed:(st.aidesUsed||[]).length }; });
       seances.forEach(s=>{ const st=state[s.id]; (s.evaluation.items||[]).forEach(it=>{
         if(it.type==="prof"){ const sub=(st.soumissions||{})[it.id]; if(sub) prof.push({question:it.question,texte:sub.texte,statut:sub.statut}); }
@@ -1412,7 +1516,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
       return null; },
     // remettre UNE séance à zéro (efface réponses, gestes, chrono, cases « fait ») sans toucher au reste
     resetSeance(id){ if(!state[id]) return;
-      state[id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{}};
+      state[id]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{},autocorr:{}, bilanEcrit:false};
       const i=path.indexOf(id); if(i>=0) path.splice(i,1);
       if(lastVisited===id) lastVisited=null; persist(); },
     // — Récap de reprise : montré une fois par cours (cooldown), si une progression est entamée —
@@ -1617,6 +1721,7 @@ function Panel(engine, root, name){
 
   function renderSeance(){
     const s=engine.seance(P.current);
+    P._acPhase=false;   // navigation vers une séance : on repart d'un état d'autocorrection neutre (setAutoCrit/validateAutocorr le gèrent ensuite)
     if(P.mode==='papier' && !P.expanded && laneIdOf()!=="__mirror"){ renderCompact(s); return; }   // mode papier : vue réduite par défaut
     root.innerHTML = `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>
       <div class="shead"><div class="lv">${s.niveauEntonnoir} · ${esc(s.ville)}</div><h2>${esc(s.titre)}</h2></div>
@@ -1939,17 +2044,33 @@ function Panel(engine, root, name){
     const reussis=porte, aRevoir=Math.max(0,tentes-porte), nonTentes=Math.max(0,ptot-tentes);
     const score3=`<div class="score3"><span class="s3 ok"><b>${reussis}</b> réussis</span><span class="s3 mid"><b>${aRevoir}</b> à revoir</span><span class="s3 none"><b>${nonTentes}</b> non tentés</span></div>`;
     if(r.passed){
-      const nx=engine.suggestNext(s.id), next=nx?engine.seance(nx):null, stars=engine.starsOf(s.id);
+      const mir=(laneIdOf()==='__mirror'); const corr=s.corrige||[];
+      const acDone=engine.autocorrDone(s.id);
+      const f4dOn = lsGet("wt_fiche4d")==='1';   // fiche4D désactivée par défaut (toggle réglages) — la trace est désormais tissée dans le bilan
+      // Checkpoint 2 : tant que l'autocorrection n'est pas faite (ou en cours, P._acPhase), on corrige avant le bilan.
+      if(corr.length && (!acDone || P._acPhase)){
+        let h=`<div class="verdict pass"><div class="vh">Porte franchie</div>${score3}
+          <p>Avant de continuer, corrige ton travail : compare ce que tu as écrit au corrigé, question par question.</p></div>`;
+        v.innerHTML=h+autocorrHTML(s, mir); return;
+      }
+      const stars=engine.starsOf(s.id);
+      // Checkpoint 3 : bilan tissé + case « j'ai écrit mon bilan ». La séance n'est terminée qu'une fois la case cochée.
+      if(!engine.bilanEcritDe(s.id)){
+        let h=`<div class="verdict pass"><div class="vh">Ton bilan</div>${score3}
+          <p>Dernière étape avant la suite : lis ce bilan, puis écris-le sur ton cahier.</p></div>`;
+        v.innerHTML=h+bilanTisseHTML(s, mir)+(f4dOn?fiche4d(s):''); return;
+      }
+      const nx=engine.suggestNext(s.id), next=nx?engine.seance(nx):null;
       let h=`<div class="verdict pass"><div class="vh">Réussi</div>${score3}
-        <p>Correction débloquée.${stars!==null?` Autonomie sur cette séance : ${stars}★ ${stars<3?'(aide utilisée)':'(sans aide)'}.`:''}</p>`;
+        <p>Séance terminée.${stars!==null?` Autonomie : ${stars}★ ${stars<3?'(aide utilisée)':'(sans aide)'}.`:''}</p>`;
       if(next) h+=`<p><b>Conseil :</b> « ${esc(next.titre)} ». Tu fais comme tu veux.</p>`;
       else h+=`<p>Dernière séance. Chapitre terminé.</p>`;
       const parfait = ptot>0 && porte>=ptot;     // déjà tout juste → rien à améliorer
-      if(laneIdOf()!=='__mirror' && !parfait && !s.sommative){
+      if(!mir && !parfait && !s.sommative){
         if(APP.classeEnCours(P.classeSeg)) h+=`<p class="replay-note">Tu pourras revenir <b>viser le sans-faute</b> chez toi, en dehors du temps de classe.</p>`;
         else h+=`<div class="actions"><span></span><button class="btn ghost" title="Refaire le QCM à blanc pour viser le sans-faute — ta réussite reste acquise" onclick="APP.panel('${laneIdOf()}').replay()">↻ Viser le sans-faute</button></div>`;
       }
-      v.innerHTML=h+`</div>`+fiche4d(s);
+      v.innerHTML=h+`</div>`+bilanTisseHTML(s, mir)+(f4dOn?fiche4d(s):'');
     } else {
       const t=engine.diagnose(s.id);
       let h=`<div class="verdict fail"><div class="vh">Pas encore</div>${score3}
@@ -2022,6 +2143,69 @@ function Panel(engine, root, name){
       h+=`</div></div></div>`; });
     return h+`</div>`;
   }
+  // ── Checkpoint 2 : écran d'autocorrection par critères (élève) ──────────────
+  // Retrouve l'énoncé de chaque question du carnet (pour situer chaque ligne d'autocorrection).
+  function _qEnonces(s){ const map={}; const c=s.corps&&s.corps.consigne;
+    const blocs = Array.isArray(c)?c:(typeof c==='string'?parseLegacy(c):[]);
+    (blocs||[]).forEach(b=>{ if(b && b.type==='question' && b.n!=null) map[b.n]=b.texte||''; });
+    return map; }
+  // ro = lecture seule (miroir prof : reflète les positions de l'élève, sans agir).
+  function autocorrHTML(s, ro){ const corr=s.corrige||[]; if(!corr.length) return "";
+    const lane=laneIdOf(), data=engine.autocorrData(s.id), enon=_qEnonces(s);
+    const choix=(n,ci,val)=>`<span class="ac-choix">`
+      +`<button class="ac-b ok${val==='ok'?' on':''}" ${ro?'disabled':''} onclick="APP.panel('${lane}').setAutoCrit(${n},${ci},'ok')">✓ réussi</button>`
+      +`<button class="ac-b rev${val==='revoir'?' on':''}" ${ro?'disabled':''} onclick="APP.panel('${lane}').setAutoCrit(${n},${ci},'revoir')">à revoir</button></span>`;
+    let h=`<div class="autocorr"><div class="ac-head">Corrige ton travail</div>`
+      +`<p class="ac-intro">Compare ce que tu as écrit sur ton cahier au corrigé, question par question. Marque ce que tu as réussi et ce qui reste à revoir — honnêtement&nbsp;: c'est pour toi.</p>`;
+    corr.forEach(c=>{ const arr=data[c.n]||[]; const crits=(Array.isArray(c.criteres)&&c.criteres.length)?c.criteres:null;
+      h+=`<div class="ac-q"><div class="ac-qn">Question ${esc(String(c.n))}${enon[c.n]?' — '+esc(enon[c.n]):''}</div>`
+        +`<div class="ac-ref">${esc(c.r||'')}</div>`;
+      if(crits) crits.forEach((ct,ci)=>{ h+=`<div class="ac-crit"><span class="ac-ct">${esc(ct)}</span>${choix(c.n,ci,arr[ci])}</div>`; });
+      else h+=`<div class="ac-crit"><span class="ac-ct">As-tu su répondre à cette question&nbsp;?</span>${choix(c.n,0,arr[0])}</div>`;
+      h+=`</div>`; });
+    const done=engine.autocorrDone(s.id);
+    if(!ro) h+=`<div class="actions"><span class="d">${done?'Tu peux valider.':'Positionne chaque ligne pour continuer.'}</span>`
+      +`<button class="btn primary" ${done?'':'disabled'} onclick="APP.panel('${lane}').validateAutocorr()">Valider ma correction</button></div>`;
+    return h+`</div>`;
+  }
+  P.setAutoCrit=function(n,ci,val){ const s=engine.seance(P.current); if(!s) return;
+    engine.setAutoCrit(s.id,n,ci,val); P._acPhase=true; renderEval(); };   // reste sur l'autocorrection le temps de tout positionner
+  P.validateAutocorr=function(){ const s=engine.seance(P.current); if(!s) return;
+    if(!engine.autocorrDone(s.id)){ toast("Positionne chaque ligne avant de valider."); return; }
+    P._acPhase=false; renderEval();
+    // signal prof : incohérence (tout déclaré réussi alors que le QCM accroche) — émis ou effacé selon le cas
+    const chap=CHAPTER.meta.id||"chapitre", sig=engine.autocorrSignal(s.id);
+    store.save("signaux/"+chap+"/"+engine.studentId+"/incoherence", (sig&&sig.incoherent)?{ seance:s.titre, nom:P.name, classeSeg:P.classeSeg||'', raison:sig.raison||'', ts:Date.now() }:null);
+    const v=root.querySelector(".verdict-box"); if(v){ const rect=v.getBoundingClientRect(); sparkle(rect.left+rect.width/2, rect.top+20); }
+    toast("Correction validée."); };
+  // ── Checkpoint 3 : bilan tissé — entrelace la trace (apport commun), le QCM (compréhension)
+  // et l'autocorrection (rédaction). Sert de modèle au bilan que l'élève écrit sur son cahier.
+  function bilanTisseHTML(s, ro){ const d=engine.bilanData(s.id); const lane=laneIdOf();
+    let compr='';
+    if(d.qcm!=null){ const p=d.qcmPart;
+      compr = p>=80 ? `Tu as bien compris l'essentiel (QCM ${esc(d.qcm)}).`
+            : p>=50 ? `Tu as compris une bonne partie (QCM ${esc(d.qcm)}), quelques points restent à consolider.`
+                    : `Le QCM (${esc(d.qcm)}) montre que plusieurs points ne sont pas encore acquis.`; }
+    let redac='';
+    if(d.revoir.length) redac = ` À l'écrit, tu as repéré des points à reprendre : ${d.revoir.map(esc).join(' · ')}.`;
+    else if((s.corrige||[]).length) redac = ` À l'écrit, tu estimes avoir réussi toutes les questions.`;
+    const alerte = (d.signal && d.signal.incoherent) ? `<p class="bt-alert">Attention : tu t'es dit que tout était réussi, mais le QCM accroche encore. Relis ce point avant d'écrire ton bilan.</p>` : '';
+    const cle = d.acquis ? `<div class="bt-cle"><span class="bt-lab">Les acquis de la séance — à noter</span><span>${esc(d.acquis)}</span></div>` : '';
+    const coche = ro
+      ? `<div class="bt-coche${d.bilanEcrit?' on':''}">${d.bilanEcrit?'✓ Bilan écrit au cahier':'Bilan pas encore écrit'}</div>`
+      : `<label class="bt-coche${d.bilanEcrit?' on':''}"><input type="checkbox" ${d.bilanEcrit?'checked':''} onclick="APP.panel('${lane}').setBilanEcrit(this.checked)"> J'ai écrit mon bilan sur mon cahier</label>`;
+    return `<div class="bilan-t"><div class="bt-head">Ton bilan</div>`
+      +`<p class="bt-synth">${compr}${redac}</p>${alerte}${cle}`
+      +`<p class="bt-consigne">Écris maintenant ton bilan sur ton cahier : note les acquis de la séance, puis ce que tu as compris et ce qu'il te reste à revoir.</p>`
+      +coche+`</div>`;
+  }
+  P.setBilanEcrit=function(val){ const s=engine.seance(P.current); if(!s) return;
+    engine.setBilanEcrit(s.id, !!val);
+    const chap=CHAPTER.meta.id||"chapitre";
+    // signal prof « bilan à relire » (rouge), effacé si l'élève décoche
+    store.save("signaux/"+chap+"/"+engine.studentId+"/bilan", val ? { type:'bilan', seance:s.titre, nom:P.name, classeSeg:P.classeSeg||'', ts:Date.now() } : null);
+    renderEval();
+    if(val){ const v=root.querySelector(".verdict-box"); if(v){ const r=v.getBoundingClientRect(); sparkle(r.left+r.width/2, r.top+20); } toast("Bilan validé. La suite est ouverte."); } };
   P.submit=function(){
     const s=engine.seance(P.current); const wasReplay=P._replay;
     const r=engine.gradeQCM(s.id, P.answers, { replay:wasReplay });
@@ -2052,10 +2236,10 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, setBilanEcrit(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false, _classeFiltre:null,   // _classeFiltre : null=classe en cours (auto), ''=toutes, 'seg'=une classe
-  _sessions:{}, _unsubs:[], _hb:null, _tick:null,
+  _sessions:{}, _control:{}, _signaux:{}, _unsubs:[], _hb:null, _tick:null,
   laneIdFor(p){ if(p && p._mirrorLane) return p._mirrorLane; for(const k in this.panels){ if(this.panels[k]===p) return k; } return null; },
   panel(id){ if(id==="__mirror") return (typeof MIRROR!=="undefined" && MIRROR._pilot) || NULLPANEL; return this.panels[id] || NULLPANEL; },
   // qui occupe la séance id PARMI LES AUTRES ÉLÈVES DE LA MÊME TABLETTE (lanes locales) uniquement.
@@ -2106,10 +2290,12 @@ const APP = {
     // À traiter en fin de chantier : ne syncMaps que si la signature des occupants change + ne pas rejouer l'animation sur rafraîchissement (idéal : maj non destructive des seuls badges).
     this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMaps();
       if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
+    this._unsubs.push(store.subscribe("signaux/"+chap, v=>{ this._signaux=v||{};   // bilans écrits à relire (signal rouge)
+      if(PROF.authed) PROF.render(); }));
     this._unsubs.push(store.subscribe("control/"+chap, v=>{ this._control=v||{};
       Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(!p||!p.epoch||!p.engine) return;
         const ctl=this._control[p.engine.studentId]||{};
-        const segCtl=this._control[p.classeSeg]||{};
+        const segCtl=(this._control||{})[p.classeSeg]||{};
         // 1) FIGER (gel des chronos + verrouillage) — AVANT toute déconnexion ; seulement pour les lanes présentes au moment du figer
         const fz=segCtl.freeze;
         if(fz && fz.epoch>(p._fzEpoch||0) && fz.epoch>=p.epoch){ p._fzEpoch=fz.epoch;
@@ -2156,7 +2342,7 @@ const APP = {
     store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
       idx:p.idx||0, mode:p.mode||'app', modeSwitched:!!p.modeSwitched, lastSeen:Date.now(), current:(p.screen==="seance"?p.current:(p._entering||null)), tab:(p.tabCur||'c'), epoch:p.epoch||0 }); },
   endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre";
-    const node=Object.assign({}, this._control[classeSeg]||{}); node.logoutEpoch=Date.now();   // merge : ne pas écraser un freeze en cours
+    const node=Object.assign({}, (this._control||{})[classeSeg]||{}); node.logoutEpoch=Date.now();   // merge : ne pas écraser un freeze en cours
     store.save("control/"+chap+"/"+classeSeg, node); },
   // classes (segments) actuellement présentes, d'après les sessions vivantes
   presentSegs(){ const now=Date.now();
@@ -2186,7 +2372,7 @@ const APP = {
     const ts=Date.now();
     segs.forEach(seg=>{
       if(opt.gel) this.freezeProgress(seg);                 // gel DIRECT en base : arrête les chronos même si la classe est déconnectée
-      const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:!!opt.gel, lock:!!opt.lock };
+      const node=Object.assign({}, (this._control||{})[seg]||{}); node.freeze={ epoch:ts, gel:!!opt.gel, lock:!!opt.lock };
       if(opt.logout) node.logoutEpoch=ts; store.save("control/"+chap+"/"+seg, node); });   // signal pour les éventuels connectés (verrou + réactivité)
     if(opt.logout) segs.forEach(seg=>{ const nom=(this.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
       setTimeout(()=>this.archiveSession(seg, nom), 1500); });
@@ -2195,7 +2381,7 @@ const APP = {
   // REPRENDRE : lève le gel et le verrou (les chronos repartent là où ils s'étaient arrêtés)
   resumeSessions(){ const chap=CHAPTER.meta.id||"chapitre"; const segs=this.presentSegs();
     const ts=Date.now();
-    segs.forEach(seg=>{ const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:false, lock:false };
+    segs.forEach(seg=>{ const node=Object.assign({}, (this._control||{})[seg]||{}); node.freeze={ epoch:ts, gel:false, lock:false };
       store.save("control/"+chap+"/"+seg, node); });
     toast("Reprise — chronos relancés."); },
   /* ── SÉANCE EN COURS (drapeau partagé control/{chap}/{seg}/cours = {debut, fin}) ──
@@ -2206,7 +2392,7 @@ const APP = {
   openHelpFor(uid){ const chap=CHAPTER.meta.id||"chapitre";   // ouvre l'aide « ? » directement sur l'écran de l'élève (l'élève a levé la main)
     store.save("control/"+chap+"/"+uid+"/act", { m:'openHelp', a:[], ts:Date.now() }); },
   lancerCours(seg, finTs){ const chap=CHAPTER.meta.id||"chapitre";
-    const node=Object.assign({}, this._control[seg]||{});
+    const node=Object.assign({}, (this._control||{})[seg]||{});
     node.cours={ debut:Date.now(), fin:finTs };
     delete node.logoutEpoch;                                   // nouvelle séance : annule une déconnexion précédente (sinon kick au retour)
     node.freeze={ epoch:Date.now(), gel:false, lock:false };   // relance les chronos des déjà-connectés
@@ -2214,25 +2400,30 @@ const APP = {
     store.save("control/"+chap+"/"+seg, node); },
   cloturerCours(seg){ const chap=CHAPTER.meta.id||"chapitre"; const ts=Date.now();
     this.freezeProgress(seg);                                  // gèle les chronos en base (même élèves déconnectés)
-    const node=Object.assign({}, this._control[seg]||{}); node.freeze={ epoch:ts, gel:true, lock:false };
+    const node=Object.assign({}, (this._control||{})[seg]||{}); node.freeze={ epoch:ts, gel:true, lock:false };
     node.logoutEpoch=ts; delete node.cours;                    // déconnecte + éteint le drapeau « en cours »
     store.save("control/"+chap+"/"+seg, node);
     if(this._coursAlerted) delete this._coursAlerted[seg];
     const nom=(this.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
     setTimeout(()=>this.archiveSession(seg, nom), 1500); },     // instantané de fin de cours
   prolongerCours(seg, minutes){ const c=this.coursDe(seg); if(!c) return; const chap=CHAPTER.meta.id||"chapitre";
-    const node=Object.assign({}, this._control[seg]||{}); node.cours=Object.assign({}, c, { fin:c.fin+(minutes||10)*60000 });
+    const node=Object.assign({}, (this._control||{})[seg]||{}); node.cours=Object.assign({}, c, { fin:c.fin+(minutes||10)*60000 });
     if(this._coursAlerted) delete this._coursAlerted[seg];      // réarme l'alerte sur la nouvelle fin
     store.save("control/"+chap+"/"+seg, node); },
   // minuteur prof : alerte 5 min avant la fin, puis modale de clôture à l'heure de fin (flags anti-répétition par classe)
   checkCours(){ if(typeof PROF==='undefined' || (!PROF.authed && !lsGet("wt_prof_poste")) || !this._control) return;
     this._coursAlerted=this._coursAlerted||{}; const now=Date.now();
-    Object.keys(this._control).forEach(seg=>{ const c=(this._control[seg]||{}).cours; if(!c||!c.fin) return;
+    Object.keys(this._control).forEach(seg=>{ const c=((this._control||{})[seg]||{}).cours; if(!c||!c.fin) return;
       const nom=(this.knownClasses().find(x=>x.seg===seg)||{}).nom||seg;
       if(now>=c.fin-300000 && now<c.fin && this._coursAlerted[seg]!=='5' && this._coursAlerted[seg]!=='fin'){
         this._coursAlerted[seg]='5'; toast("⏰ "+nom+" — la séance se termine dans 5 minutes."); }
       if(now>=c.fin && this._coursAlerted[seg]!=='fin'){ this._coursAlerted[seg]='fin'; PROF.coursFinModal(seg, nom); }
     }); },
+  // file de signaux (Lot 4) : liste plate des événements qui demandent l'attention du prof, tous types confondus
+  signauxList(){ const out=[]; const S=this._signaux||{};
+    Object.keys(S).forEach(uid=>{ if(!this.testMode && isTestUid(uid)) return; const node=S[uid]||{};
+      ['bilan','incoherence','aide'].forEach(type=>{ if(node[type]) out.push(Object.assign({uid, type}, node[type])); }); });
+    return out.sort((a,b)=>(a.ts||0)-(b.ts||0)); },
   // ── Filtre de classe (suivi / tableau de bord / bilan) : par défaut la classe en cours, sélecteur pour consulter les autres ──
   knownClasses(){ const m={};
     if(typeof CLASSES==='object' && CLASSES) Object.keys(CLASSES).forEach(cl=>{ m[sanId(cl)]=cl; });
@@ -2467,7 +2658,7 @@ const MIRROR = {
     toMap(){ MIRROR.act('toMap',[]); },
     gtool(tool){ if(MIRROR._panel){ MIRROR._panel._tool=(MIRROR._panel._tool===tool)?null:tool; MIRROR._panel._linkPending=null; MIRROR._panel.tab('c'); } },   // choix d'outil : local au prof
     // le prof observe, il ne répond pas à la place de l'élève : ces gestes sont neutralisés dans le miroir
-    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){},
+    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){},
     openGlossaire(){}, glossToggle(){}, glossRemove(){}, closeDico(){},
     render(){}
   },
@@ -2593,7 +2784,7 @@ const DASH = {
   resetSeance(uid, sid, label){ const eng=this._engines[uid]; if(!eng) return;
     if(typeof confirm==="function" && !confirm("Remettre « "+label+" » à zéro pour cet élève ?\nElle redevient « à faire » ; le reste de sa progression est conservé.\nS'il est connecté, il sera déconnecté pour repartir proprement.")) return;
     const chap=CHAPTER.meta.id||"chapitre"; const snap=JSON.parse(JSON.stringify(eng.snapshot()));
-    snap.state[sid]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{}};
+    snap.state[sid]={status:"todo",passed:false,qcm:null,aidesUsed:[],soumissions:{},libres:{},gestes:{},autocorr:{}, bilanEcrit:false};
     if(Array.isArray(snap.path)) snap.path=snap.path.filter(x=>x!==sid);
     if(snap.lastVisited===sid) snap.lastVisited=null;
     store.save("progress/"+chap+"/"+uid, { state:snap.state, path:snap.path, lastVisited:snap.lastVisited, glossaire:snap.glossaire });
@@ -2660,8 +2851,9 @@ const PROMPT_CHAPTER =
 "  5. les items d'évaluation par séance (auto-corrigés, voir types ci-dessous) et le seuil ;\n"+
 "  6. les aides modulables (0 à N par séance, à paliers : indice puis réponse) ;\n"+
 "  7. les couches de la fiche-correction (trouver / pourquoi / aller plus loin / te situer) ;\n"+
-"  8. un CORRIGÉ DU CARNET : pour CHAQUE question rédigée de la consigne, la réponse de référence attendue (pour les questions ouvertes ou de relevé, donner les attendus / critères, pas une réponse unique) ;\n"+
-"  9. les compétences visées et les notions de langue.\n"+
+"  8. un CORRIGÉ DU CARNET : pour CHAQUE question rédigée de la consigne, la réponse de référence (r) ET une liste de CRITÈRES (criteres) — les éléments attendus décomposés, que l'élève coche un par un en autocorrection (« citer le métier », « citer le village »…) ; 1 à 4 critères courts par question, ou des critères de réussite pour une question ouverte (« prise de position claire », « appui sur le texte »…) ;\n"+
+"  9. les ACQUIS de la séance : un court texte invariable (1 à 3 points), le même pour tous les élèves, qui résume ce qu'il faut retenir — il forme le cœur du bilan que chaque élève recopie sur son cahier ;\n"+
+"  10. les compétences visées et les notions de langue.\n"+
 "Procède par allers-retours. Reformule, propose, mais attends mes validations.\n\n"+
 "QUAND, ET SEULEMENT QUAND, je dis explicitement « produis le JSON », tu réponds UNIQUEMENT avec\n"+
 "un objet JSON valide (aucun texte autour, pas de balises), STRICTEMENT à ce format :\n\n"+
@@ -2677,8 +2869,9 @@ const PROMPT_CHAPTER =
 '      "aretes": { "conseillee": "S2 ou null", "prerequis": "S0 ou null" },\n'+
 '      "dureeEstimee": 50,                            (minutes — voir RÈGLE DURÉE ci-dessous)\n'+
 '      "objectif": "",\n'+
+'      "acquis": "les acquis / apprentissages de la séance, en clair et invariables — le même texte pour tous, à noter par chaque élève",\n'+
 '      "corps": { "consigne": [ BLOCS ], "supports": [] },\n'+
-'      "corrige": [ { "n": 1, "r": "réponse de référence à la question 1 du carnet" } ],   (une entrée par question rédigée ; attendus/critères pour les questions ouvertes)\n'+
+'      "corrige": [ { "n": 1, "r": "réponse de référence à la question 1 du carnet", "criteres": ["élément attendu 1", "élément attendu 2"] } ],   (une entrée par question rédigée ; r = réponse modèle, criteres = éléments cochables en autocorrection)\n'+
 '      "aides": [ { "id": "a1", "cible": "seance", "paliers": ["indice", "réponse"] } ],\n'+
 '      "evaluation": { "seuil": 2, "items": [ ITEMS ] },\n'+
 '      "fiche4d": { "titre": "", "layers": [ { "ic": "✓", "titre": "", "type": "texte", "contenu": "", "references": [] } ] }\n'+
@@ -2787,10 +2980,12 @@ const PROF = {
   render(){ const c=CHAPTER, T=this.tab;
     const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",reglages:"Réorientation, exclusivité, mode test"};
     const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" title="${tips[id]||''}" onclick="PROF.go('${id}')">${lab}</button>`;
+    const nBil = APP.signauxList().length;
+    const suiviLab = "Suivi 🟢" + (nBil?` <span class="ptab-badge">${nBil}</span>`:'');
     $("profModal").innerHTML=`
       <div style="margin-bottom:10px">
         <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
-      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi","Suivi 🟢")}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("reglages","Réglages")}</div>
+      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("reglages","Réglages")}</div>
       <div id="ptabbody">${this.body()}</div>`; },
   go(t){ if(t==="bilan") this._bilans=null; if(t==="archives") this._archives=null; this.tab=t; this.render(); },
   body(){ return this.tab==="creation"?this.creationBody()
@@ -3150,11 +3345,22 @@ const PROF = {
       <div class="d">Élèves d'une autre classe connectés en ce moment (étude, maison…), en dehors de toute séance lancée. Pour information : le figer ci-dessus ne les touche pas.</div>
       <div class="prof-list">${ailleurs.sort((a,b)=>(a.classe||'').localeCompare(b.classe||'')||(a.name||'').localeCompare(b.name||'')).map(s=>this.suiviRowAilleurs(s)).join('')}</div></div>` : '';
 
+    const sigCls = APP.signauxList().filter(x=> !segAff || x.classeSeg===segAff);
+    const sigMeta = { bilan:{ic:'📝', lab:'a écrit son bilan', act:'va relire son cahier'},
+                      incoherence:{ic:'⚠', lab:'s\'est sur-évalué', act:'écart entre QCM et autocorrection'},
+                      aide:{ic:'✋', lab:'demande de l\'aide', act:''} };
+    const signauxBox = sigCls.length ? `<div class="prof-sec signaux-sec"><h4>Signaux <span class="meta">· ${sigCls.length}</span></h4>
+      <div class="d">Événements en attente. Va voir, puis marque comme vu pour éteindre le signal.</div>
+      <div class="prof-list">${sigCls.map(x=>{ const m=sigMeta[x.type]||{ic:'•',lab:x.type,act:''};
+        return `<div class="r sig-${x.type}"><span class="sig-ic">${m.ic}</span><span><b>${esc(x.nom||x.uid)}</b> ${m.lab}${x.seance?` · ${esc(x.seance)}`:''}${m.act?`<span class="sig-act"> → ${m.act}</span>`:''}</span>`
+          +`<button class="btn ghost" style="margin-left:auto" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}')">✓ vu</button></div>`; }).join('')}</div></div>` : '';
+
     return APP.classeSelectHTML(true)
       + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
-      + coursBox + freezeBox + classeSec + ailleursSec
+      + signauxBox + coursBox + freezeBox + classeSec + ailleursSec
       + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
+  signalVu(uid, type){ const chap=CHAPTER.meta.id||"chapitre"; store.save("signaux/"+chap+"/"+uid+"/"+type, null); toast("Signal traité."); if(this.authed) this.render(); },
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
   doFreeze(){ const o=this._fz||{gel:true,lock:false,logout:false};
     if(!o.gel && !o.lock && !o.logout){ toast("Coche au moins une option."); return; }
@@ -3446,6 +3652,9 @@ const PROF = {
     if(typeof MIRROR!=='undefined' && MIRROR._panel && MIRROR._panel.render) MIRROR._panel.render();
     APP.syncMaps();
     toast("Note de l'élève : "+(!shown?"affichée":"masquée")); },
+  toggleFiche4d(seanceId){ const on=lsGet("wt_fiche4d")==='1'; lsSet("wt_fiche4d", on?'0':'1');
+    if(seanceId && this.editSeance) this.editSeance(seanceId); else this.render();
+    toast("Fiche 4D : "+(on?"désactivée":"affichée sous le bilan")); },
 
   /* ── Éditeur visuel des séances ── */
   seance(id){ return CHAPTER.seances.find(s=>s.id===id); },
@@ -3605,7 +3814,14 @@ const PROF = {
           <button class="btn ghost" onclick="PROF.addItem('${id}','renvoi')">+ renvoi</button></div></div>
       <div class="prof-sec"><h4>Aides (chacune coûte une étoile)</h4>${aides}
         <div class="prof-row"><button class="btn ghost" onclick="PROF.addAide('${id}')">+ aide</button></div></div>
-      <div class="prof-sec"><h4>Fiche 4D</h4>${layers}
+      <div class="prof-sec bilan-edit"><h4>Bilan tissé <span class="meta">· 3ᵉ checkpoint</span></h4>
+        <div class="d">Affiché à l'élève après l'autocorrection. Il <b>tisse</b> ce champ commun avec ses données : la <b>compréhension</b> (QCM) et la <b>rédaction</b> (critères « à revoir »). L'élève recopie son bilan au cahier puis coche « j'ai écrit mon bilan » → la séance se termine et tu reçois un <b>signal rouge</b>.</div>
+        <label class="d" style="display:block;margin:6px 0 3px"><b>Acquis / apprentissages de la séance</b> — morceau invariable, le même pour tous, que chaque élève doit noter :</label>
+        <textarea class="txtin" rows="3" placeholder="Ce que tout élève doit retenir de cette séance…" oninput="PROF.setField('${id}','acquis',this.value)">${esc(s.acquis||'')}</textarea></div>
+      <div class="prof-sec f4d-edit${lsGet('wt_fiche4d')==='1'?'':' off'}"><h4>Fiche 4D <span class="meta">· ${lsGet('wt_fiche4d')==='1'?'affichée sous le bilan':'désactivée par défaut'}</span></h4>
+        <div class="d">Remplacée par le bilan tissé ci-dessus. <b>Désactivée par défaut</b> (réglage global, toutes séances) — <i>chantier à reprendre l'an prochain</i>. Tu peux la rallumer pour la revoir sous le bilan, en classe comme en édition.</div>
+        <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleFiche4d('${id}')">${lsGet('wt_fiche4d')==='1'?'✓ affichée — cliquer pour désactiver':'désactivée — cliquer pour afficher'}</button></div>
+        ${layers}
         <div class="prof-row"><button class="btn ghost" onclick="PROF.addLayer('${id}')">+ couche</button></div></div>
       <div class="prof-row"><button class="btn primary" onclick="PROF.apply()">Appliquer à l'app</button></div>`; },
   setField(id,f,v){ this.seance(id)[f]=v; this.touch(); },
