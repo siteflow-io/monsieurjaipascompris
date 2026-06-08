@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bi">
+<meta name="app-version" content="2026-06-05bj">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -417,6 +417,7 @@
   .sui-head:hover{background:rgba(251,191,36,.05)}
   .sui-nom{font-weight:600}
   .sui-flag{color:var(--fire);font-size:.7rem}
+  .sui-mode{font-size:.68rem;background:var(--panel3);border-radius:6px;padding:2px 6px;color:var(--ink2);white-space:nowrap}
   .sui-chev{color:var(--muted);font-size:.8rem;margin-left:6px}
   .sui-body{padding:2px 12px 11px;border-top:1px solid var(--line)}
   .sui-stats{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 4px}
@@ -2474,7 +2475,7 @@ const APP = {
       const node=Object.assign({}, (this._control||{})[seg]||{}); node.freeze={ epoch:ts, gel:!!opt.gel, lock:!!opt.lock };
       if(opt.logout) node.logoutEpoch=ts; store.save("control/"+chap+"/"+seg, node); });   // signal pour les éventuels connectés (verrou + réactivité)
     if(opt.logout) segs.forEach(seg=>{ const nom=(this.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
-      setTimeout(()=>this.archiveSession(seg, nom), 1500); });
+      setTimeout(()=>this.archiveSession(seg, nom, true), 1500); });
     const parts=[]; if(opt.gel) parts.push("chronos gelés"); if(opt.lock) parts.push("écrans verrouillés"); if(opt.logout) parts.push("élèves déconnectés, session archivée");
     toast("Séance figée — "+(parts.join(", ")||"aucune option")+"."); },
   // REPRENDRE : lève le gel et le verrou (les chronos repartent là où ils s'étaient arrêtés)
@@ -2508,7 +2509,7 @@ const APP = {
     store.save("control/"+chap+"/"+seg, node);
     if(this._coursAlerted) delete this._coursAlerted[seg];
     const nom=(this.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
-    setTimeout(()=>this.archiveSession(seg, nom), 1500); },     // instantané de fin de cours
+    setTimeout(()=>this.archiveSession(seg, nom, true), 1500); },     // instantané de fin de cours + nettoyage du suivi
   prolongerCours(seg, minutes){ const c=this.coursDe(seg); if(!c) return; const chap=CHAPTER.meta.id||"chapitre";
     const node=Object.assign({}, (this._control||{})[seg]||{}); node.cours=Object.assign({}, c, { fin:c.fin+(minutes||10)*60000 });
     if(this._coursAlerted) delete this._coursAlerted[seg];      // réarme l'alerte sur la nouvelle fin
@@ -2572,17 +2573,21 @@ const APP = {
     return '<div class="prof-row" style="margin-bottom:10px"><label class="d">Classe affichée&nbsp;: '
       +'<select class="txtin classe-sel" style="width:auto;margin-left:6px" onchange="APP.setClasseFiltre(this.value)">'+opts.join('')+'</select></label></div>'; },
   // ── Archive de session : instantané de la classe à la fin du cours (état complet de chaque élève) ──
-  archiveSession(seg, nom){ const chap=CHAPTER.meta.id||"chapitre";
+  archiveSession(seg, nom, purge){ const chap=CHAPTER.meta.id||"chapitre";
     store.once("progress/"+chap, prog=>{ prog=prog||{}; const eleves={};
       const roster = (typeof CLASSES==='object' && CLASSES && CLASSES[nom]) ? extractEleves(CLASSES[nom],[]) : [];
       roster.forEach(n=>{ const uid=uidOf(nom,n); if(prog[uid]) eleves[uid]={ name:n, snap:prog[uid] }; });
       Object.keys(prog).forEach(uid=>{ if(uid.indexOf('__')>0 && uid.split('__')[0]===seg && !eleves[uid] && !isTestUid(uid)){
         const nm=(this._sessions[uid]||{}).name || uid.split('__')[1] || uid; eleves[uid]={ name:nm, snap:prog[uid] }; } });
-      if(!Object.keys(eleves).length) return;                       // rien d'enregistré pour cette classe
-      const ts=Date.now();
-      const arch={ ts, date:new Date(ts).toLocaleString('fr-FR'), classe:nom, seg, chap, n:Object.keys(eleves).length, eleves };
-      store.save("archives/"+chap+"/"+seg+"/"+ts, arch);
-      if(typeof PROF!=='undefined' && PROF.authed && PROF.tab==='archives'){ PROF._archives=null; PROF.render(); } }); },
+      if(Object.keys(eleves).length){                               // archive seulement s'il y a quelque chose à garder
+        const ts=Date.now();
+        const arch={ ts, date:new Date(ts).toLocaleString('fr-FR'), classe:nom, seg, chap, n:Object.keys(eleves).length, eleves };
+        store.save("archives/"+chap+"/"+seg+"/"+ts, arch);
+        if(typeof PROF!=='undefined' && PROF.authed && PROF.tab==='archives'){ PROF._archives=null; PROF.render(); } }
+      // nettoyage du suivi : on retire les présences de cette classe (les noms sont déjà capturés) → l'heure suivante repart sans chevauchement
+      if(purge){ Object.keys(this._sessions||{}).forEach(uid=>{ const s=this._sessions[uid];
+        if(s && s.classeSeg===seg && !isTestUid(uid)) store.save("sessions/"+chap+"/"+uid, null); }); }
+    }); },
   endSessionForUid(uid){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/logoutEpoch", Date.now());   // sous-clé : n'écrase pas /nav
     store.save("sessions/"+chap+"/"+uid, null); },                     // et sort du suivi
@@ -3581,11 +3586,13 @@ const PROF = {
   suiviCard(s){ const uid=s._uid, depth=this._depth[uid]||0;
     const age=Date.now()-(s.lastSeen||0);
     const dot=age<60000?"🟢":(age<300000?"🟠":"⚪");
+    const mode={app:'📱 tablette', deux:'📱✏️ les deux', papier:'✏️ papier'}[s.mode||'app']||'';
     const where=(s&&s.current)?((CHAPTER.seances.find(x=>x.id===s.current)||{}).titre||s.current):"sur la carte";
     const sig=(APP._signaux||{})[uid]||{}; const flag=(sig.bilan||sig.incoherence||sig.aide)?'<span class="sui-flag" title="signal en attente">●</span>':'';
     let h=`<div class="sui-card d${depth}">
       <div class="sui-head" onclick="PROF.cycleCard('${esc(uid)}')">
         <span title="${age<60000?'actif':(age<300000?'en pause':'hors ligne')}">${dot}</span>
+        <span class="sui-mode" title="Mode de travail déclaré">${mode}</span>
         <span class="sui-nom">${esc(s.name||uid)}</span>${flag}
         <span class="meta" style="margin-left:auto">${esc(where)}</span>
         <span class="sui-chev">${depth?'▾':'▸'}</span></div>`;
