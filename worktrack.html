@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bg">
+<meta name="app-version" content="2026-06-05bi">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -393,6 +393,7 @@
   .bt-list li{font-size:.82rem;line-height:1.45;margin:3px 0;color:var(--ink)}
   .bt-rev li{color:var(--ink2)}
   .bt-q{font-size:.72rem;color:var(--muted)}
+  .bt-revoir{margin:2px 13px 0;text-align:right}
   /* signaux prof — file unifiée (bilans, incohérences…) */
   .prof-sec.signaux-sec{border:1.5px solid var(--fire);background:rgba(214,69,93,.08)}
   .prof-sec.signaux-sec h4{color:var(--fire2)}
@@ -530,7 +531,7 @@
 </div>
 
 <div class="overlay" id="profOverlay"><button class="prof-x" title="Fermer le panneau de contrôle" aria-label="fermer" onclick="PROF.close()">✕</button><div class="modal big" id="profModal"></div></div>
-<div class="overlay" id="mirrorOverlay"><div class="modal big" id="mirrorModal">
+<div class="overlay" id="mirrorOverlay" onclick="if(event.target===this)MIRROR.close()"><div class="modal big" id="mirrorModal">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
     <h3 style="margin:0" id="mirrorTitle">Écran de l'élève</h3>
     <div style="display:flex;gap:8px;align-items:center"><span id="mirrorLive">● live</span>
@@ -1329,6 +1330,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
     chapter, studentId,
     seance:find,
     snapshot(){ return { state, path, lastVisited, glossaire, helpSeen:_helpSeen }; },
+    commit(){ persist(); },   // force l'écriture de l'état courant (utilisé après une reprise depuis l'instantané local)
     helpSeen(){ return _helpSeen; },
     markHelpSeen(){ if(!_helpSeen){ _helpSeen=true; persist(); } },
     glossaire(){ return glossaire.slice(); },
@@ -1763,6 +1765,7 @@ function Panel(engine, root, name){
     ov.querySelector('[data-act="cancel"]').onclick=()=>ov.remove();
     ov.querySelector('[data-act="go"]').onclick=()=>{ ov.remove(); travelTo(id); };
     const rb=ov.querySelector('[data-act="reprise"]'); if(rb) rb.onclick=()=>{ ov.remove(); travelTo(reprise.id); };
+    ov.onclick=e=>{ if(e.target===ov) ov.remove(); };   // clic en dehors de la boîte → annuler
   }
   // le tracé se construit, puis la séance s'ouvre — avec verrou « premier arrivé, premier servi »
   function travelTo(id){
@@ -1921,6 +1924,7 @@ function Panel(engine, root, name){
       P.mode=target; P.modeSwitched=true; P.expanded=false;
       P.render(); APP.relayout(); APP.beat(APP.laneIdFor(P));
       toast(target==='papier'?"Tu travailles maintenant sur papier.":"Tu travailles maintenant sur l'app."); };
+    ov.onclick=e=>{ if(e.target===ov) ov.remove(); };   // clic en dehors de la boîte → annuler
   };
   // Coups de pouce de la SÉANCE (cible « seance ») : rendus dans la consigne, là où l'élève travaille — pas dans l'éval
   function aidesHTML(s){ const aides=s.aides||[]; if(!aides.length) return ''; const lane=laneIdOf();
@@ -2018,6 +2022,7 @@ function Panel(engine, root, name){
     h+='<div class="recap-cadrage">'+esc(d.cadrage)+'</div><button class="btn primary recap-go">Reprendre</button></div>';
     const ov=document.createElement('div'); ov.className='recap-ov'; ov.innerHTML=h; lane.appendChild(ov);
     const btn=ov.querySelector('.recap-go'); if(btn) btn.onclick=()=>P.closeRecap();
+    ov.onclick=e=>{ if(e.target===ov) P.closeRecap(); };   // clic en dehors de la carte → fermer
     engine.markRecapSeen(); };                                           // marqué dès l'affichage (anti-doublon même sans clic)
   P.closeRecap=function(){ const lane=laneEl(); const ov=lane&&lane.querySelector&&lane.querySelector(':scope > .recap-ov'); if(ov) ov.remove(); };
   // nettoie l'extrait brut du Wiktionnaire : isole la partie française si repérable, compacte, tronque
@@ -2249,6 +2254,11 @@ function Panel(engine, root, name){
     store.save("signaux/"+chap+"/"+engine.studentId+"/incoherence", (sig&&sig.incoherent)?{ seance:s.titre, nom:P.name, classeSeg:P.classeSeg||'', raison:sig.raison||'', ts:Date.now() }:null);
     const v=root.querySelector(".verdict-box"); if(v){ const rect=v.getBoundingClientRect(); sparkle(rect.left+rect.width/2, rect.top+20); }
     toast("Correction validée."); };
+  // rouvre l'autocorrection (même déjà validée) : pour l'élève via le bouton « Revoir ma correction », pour le prof via un ordre à distance
+  P.reopenAutocorr=function(seanceId){ const id=seanceId||P.current; const s=engine.seance(id); if(!s) return;
+    P.screen='seance'; P.current=id; P.expanded=true; renderSeance();   // renderSeance remet _acPhase à false…
+    P._acPhase=true; P.tab('e');                                         // … donc on force la phase APRÈS, puis on ouvre l'évaluation (→ autocorrection)
+    toast("Reprends ta correction, critère par critère."); };
   // ── Checkpoint 3 : bilan tissé — DEUX temps explicites pour l'élève :
   //   (1) la leçon, commune à toute la classe, qu'il RECOPIE ; (2) son bilan personnel, reflet de SON
   //   QCM + SA correction, qu'il REFORMULE avec ses mots. On pointe les CONTENUS, jamais les scores.
@@ -2274,11 +2284,12 @@ function Panel(engine, root, name){
     const coche = ro
       ? `<div class="bt-coche${d.bilanEcrit?' on':''}">${d.bilanEcrit?'✓ Bilan écrit au cahier':'Bilan pas encore écrit'}</div>`
       : `<label class="bt-coche${d.bilanEcrit?' on':''}"><input type="checkbox" ${d.bilanEcrit?'checked':''} onclick="APP.panel('${lane}').setBilanEcrit(this.checked)"> J'ai recopié la leçon et écrit mon bilan personnel</label>`;
+    const revoir = ro ? '' : `<div class="bt-revoir"><button class="btn link" onclick="APP.panel('${lane}').reopenAutocorr()">↻ Revoir ma correction</button></div>`;
     return `<div class="bilan-t"><div class="bt-head">Ton bilan</div>`
       +`<p class="bt-intro">Ton bilan a <b>deux parties</b>. D'abord tu <b>recopies la leçon</b> (la même pour toute la classe). Ensuite tu écris, <b>avec tes mots</b>, ton bilan personnel : ce que tu as compris et ce qu'il te reste à travailler. Écris <b>les deux</b> sur ton cahier.</p>`
       +lecon+perso
       +`<p class="bt-consigne">Recopie la leçon, puis écris ton bilan personnel : une ou deux phrases sur ce que tu as compris, une sur ce qu'il te reste à travailler.</p>`
-      +coche+`</div>`;
+      +revoir+coche+`</div>`;
   }
   P.setBilanEcrit=function(val){ const s=engine.seance(P.current); if(!s) return;
     engine.setBilanEcrit(s.id, !!val);
@@ -2317,7 +2328,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false, _classeFiltre:null,   // _classeFiltre : null=classe en cours (auto), ''=toutes, 'seg'=une classe
   _sessions:{}, _control:{}, _signaux:{}, _unsubs:[], _hb:null, _tick:null,
@@ -2404,7 +2415,7 @@ const APP = {
   },
   // rejoue sur le panneau de l'élève l'action que le prof a déclenchée en cliquant dans le miroir
   applyAct(key, act){ const p=this.panels[key]; if(!p||!p.engine||!act) return;
-    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1};
+    const allow={goto:1,pick:1,submit:1,retry:1,openAide:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1,reopenAutocorr:1};
     if(!allow[act.m] || typeof p[act.m]!=='function') return;
     try{ p[act.m].apply(p, act.a||[]); }catch(e){}
     this.beat(key);
@@ -2479,6 +2490,10 @@ const APP = {
   classeEnCours(seg){ return !!this.coursDe(seg); },   // séance lancée et non clôturée → re-jeu fermé pour cette classe
   openHelpFor(uid){ const chap=CHAPTER.meta.id||"chapitre";   // ouvre l'aide « ? » directement sur l'écran de l'élève (l'élève a levé la main)
     store.save("control/"+chap+"/"+uid+"/act", { m:'openHelp', a:[], ts:Date.now() }); },
+  // renvoie l'élève sur son autocorrection (à distance) — utile quand le prof voit qu'il s'est sur-évalué sans rien corriger au cahier
+  renvoyerAutocorr(uid, seanceId){ const chap=CHAPTER.meta.id||"chapitre";
+    store.save("control/"+chap+"/"+uid+"/act", { m:'reopenAutocorr', a:[seanceId||null], ts:Date.now() });
+    toast("Renvoyé à l'autocorrection."); },
   lancerCours(seg, finTs){ const chap=CHAPTER.meta.id||"chapitre";
     const node=Object.assign({}, (this._control||{})[seg]||{});
     node.cours={ debut:Date.now(), fin:finTs };
@@ -2592,7 +2607,9 @@ const APP = {
     for(const key in this.panels){ const p=this.panels[key]; if(!p||!p.engine) continue;
       let scroll=0; const lb=$("lane"+key), sc=lb&&lb.querySelector('.tabbody'); if(sc) scroll=sc.scrollTop||0;
       lanes[key]={ name:p.name, classe:p.classe||'', studentId:p.engine.studentId, idx:p.idx||0,
-        screen:p.screen||'map', current:p.current||null, tabCur:p.tabCur||'c', scroll }; }
+        screen:p.screen||'map', current:p.current||null, tabCur:p.tabCur||'c', scroll,
+        mode:p.mode||'app', modeSwitched:!!p.modeSwitched,
+        snap:p.engine.snapshot() }; }   // état complet (coches, autocorrection, chrono) pris AVANT le reload : aucune perte si Firebase n'a pas encore reçu les dernières écritures
     lsSet("wt_resume", { tableSize:this.tableSize, lanes });
     lsSet("wt_reload_for", version);
   },
@@ -2696,7 +2713,10 @@ const APP = {
     this.panels[key]=p;
     this.refreshLogins();                                     // verrouille la classe sur les autres moitiés
     if(this.testMode){ p.render(); this.beat(key); }          // test : chaque session repart de zéro (aucune hydratation)
-    else store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{ engine.hydrate(saved);
+    else store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{
+      // reprise après push : l'instantané local (pris juste avant le reload) prime sur Firebase, qui peut ne pas avoir reçu les dernières coches
+      if(resume && resume.snap && resume.snap.state){ engine.hydrate(resume.snap); engine.commit(); }
+      else engine.hydrate(saved);
       if(resume){                                             // reprise après mise à jour : on rouvre exactement le même écran, SANS récap
         if(resume.screen==='seance' && engine.seance(resume.current)){ p.screen='seance'; p.current=resume.current; }
         p.render();
@@ -2768,7 +2788,7 @@ const MIRROR = {
     toMap(){ MIRROR.act('toMap',[]); },
     gtool(tool){ if(MIRROR._panel){ MIRROR._panel._tool=(MIRROR._panel._tool===tool)?null:tool; MIRROR._panel._linkPending=null; MIRROR._panel.tab('c'); } },   // choix d'outil : local au prof
     // le prof observe, il ne répond pas à la place de l'élève : ces gestes sont neutralisés dans le miroir
-    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){},
+    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){},
     openGlossaire(){}, glossToggle(){}, glossRemove(){}, closeDico(){},
     render(){}
   },
@@ -3496,10 +3516,11 @@ const PROF = {
     APP.freezeSessions(o); this.render(); },
   doResume(){ APP.resumeSessions(); this.render(); },
   // overlay flottant indépendant du panneau (s'affiche même panneau fermé) — réutilisé pour lancer et pour la fin de séance
-  _modalOpen(html){ let ov=$("appModal");
-    if(!ov){ ov=document.createElement('div'); ov.id='coursOverlay'; ov.className='app-modal-ov'; document.body.appendChild(ov); }
+  _modalOpen(html){ let ov=$("coursOverlay");
+    if(!ov){ ov=document.createElement('div'); ov.id='coursOverlay'; ov.className='app-modal-ov'; document.body.appendChild(ov);
+      ov.onclick=e=>{ if(e.target===ov) PROF._modalClose(); }; }   // clic en dehors de la boîte → fermer
     ov.innerHTML='<div class="app-modal-box">'+html+'</div>'; ov.classList.add('show'); return ov; },
-  _modalClose(){ const ov=$("appModal"); if(ov) ov.classList.remove('show'); },
+  _modalClose(){ const ov=$("coursOverlay"); if(ov) ov.classList.remove('show'); },
   lancerCoursModal(seg){ const nom=(APP.knownClasses().find(c=>c.seg===seg)||{}).nom||seg;
     const d=new Date(Date.now()+55*60000); const hh=String(d.getHours()).padStart(2,'0'), mm=String(d.getMinutes()).padStart(2,'0');
     this._modalOpen(`<h3>Lancer la séance — ${esc(nom)}</h3>
@@ -3592,6 +3613,7 @@ const PROF = {
         <div class="sui-actions">
           <button class="btn ghost" onclick="event.stopPropagation();PROF.close();MIRROR.open('${esc(uid)}')">👁 écran</button>
           <button class="btn ghost" onclick="event.stopPropagation();APP.openHelpFor('${esc(uid)}');toast('Aide ouverte sur son écran.')">❓ aide</button>
+          <button class="btn ghost" onclick="event.stopPropagation();APP.renvoyerAutocorr('${esc(uid)}','${esc(s.current||'')}')">↻ autocorrection</button>
           ${bloque
             ? `<button class="btn ghost" onclick="event.stopPropagation();PROF.debloquer('${esc(uid)}','${esc(nm)}')">▶ débloquer</button>`
             : `<button class="btn fire" onclick="event.stopPropagation();PROF.bloquer('${esc(uid)}','${esc(nm)}')">⛔ bloquer</button>`}
