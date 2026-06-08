@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bs">
+<meta name="app-version" content="2026-06-05bt">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1686,28 +1686,37 @@ const HELP_HTML = `
     <li><b>S'évaluer</b> : un petit test (QCM) à la fin, pour vérifier que tu as compris.</li>
   </ul>
 
-  <h4>6. Surligner, étiqueter, garder des mots</h4>
+  <h4>6. Cocher « fait » : seulement quand c'est fait</h4>
+  <p>Quand tu as terminé une question <b>sur ton cahier</b>, coche <b>« fait »</b>. À ce moment, tu vois ton <b>temps</b> et la durée que cette question demande d'habitude. Ce <b>n'est pas une note</b> : juste un repère pour t'aider à doser ton travail. Ne coche pas avant d'avoir fait, et ne joue pas avec le bouton.</p>
+
+  <h4>7. Le temps qui s'affiche</h4>
+  <p>En haut d'une séance, deux temps : <b>« cette heure »</b> (depuis le début du cours) et <b>« en tout »</b> (sur toute la séance, même commencée un autre jour). C'est pour voir où passe ton temps, pas pour te juger.</p>
+
+  <h4>8. Surligner, étiqueter, garder des mots</h4>
   <p>Une barre de couleurs en haut : choisis une couleur, puis <b>tape un mot</b> pour le surligner. Tu peux coller une <b>étiquette</b> (une note sur un mot), ou <b>gommer</b> en tapant un mot déjà surligné. Un mot difficile&nbsp;? Tu peux le mettre dans ton <b>glossaire</b> pour le retrouver. Tout est gardé : si tu reviens plus tard, c'est toujours là.</p>
 
-  <h4>7. Le test, et ton premier essai</h4>
+  <h4>9. Le test, et ton premier essai</h4>
   <p>Dans <b>S'évaluer</b>, réponds puis tape <b>Vérifier</b>. Ton <b>premier essai</b> ne te coûte rien et n'est pas une note : il me sert juste à voir <b>où tu en es seul</b>, avant correction. Si tu n'as pas le compte, tu <b>recommences</b> autant qu'il faut pour franchir l'étape. Ce qui compte, c'est ta progression.</p>
 
-  <h4>8. La correction</h4>
+  <h4>10. La correction</h4>
   <p>Une fois l'étape franchie, la <b>correction</b> apparaît. Compare-la à ce que tu as écrit sur ton cahier, et corrige-toi soigneusement.</p>
 
-  <h4>9. Viser le sans-faute</h4>
+  <h4>11. Ton parcours de séance</h4>
+  <p>Quand une séance est réussie, déplie <b>« Ton parcours de cette séance »</b> : un petit bilan de ta façon de travailler — ton temps, la question la plus longue, les mots cherchés au dictionnaire à <b>ajouter à ton glossaire</b>. Sers-t'en pour progresser la fois suivante.</p>
+
+  <h4>12. Viser le sans-faute</h4>
   <p>Quand une séance est réussie, tu peux la <b>refaire pour viser le sans-faute</b> (comme aller chercher les trois étoiles d'un niveau). C'est possible <b>chez toi</b>, en dehors du temps de classe. Ta réussite reste acquise quoi qu'il arrive : on garde toujours ton <b>meilleur</b> passage, jamais le moins bon.</p>
 
-  <h4>10. Les étoiles d'autonomie et les aides</h4>
+  <h4>13. Les étoiles d'autonomie et les aides</h4>
   <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. Tu les gardes en travaillant seul ; chaque <b>aide</b> que tu ouvres en coûte une. Demander de l'aide reste permis — mais cherche d'abord par toi-même.</p>
 
-  <h4>11. Revenir à la carte</h4>
+  <h4>14. Revenir à la carte</h4>
   <p>Le bouton <b>← La carte</b> te ramène à la carte pour choisir une autre séance.</p>
 
-  <h4>12. Je vois ton écran</h4>
-  <p>Je vois ton écran sur le mien. Je peux t'ouvrir une séance, surligner un mot pour toi, ou même t'ouvrir cette aide à distance si tu lèves la main — sans me déplacer.</p>
+  <h4>15. Je vois ton écran</h4>
+  <p>Je vois ton écran sur le mien. Je peux t'ouvrir une séance, surligner un mot pour toi, ou t'ouvrir cette aide à distance. Je peux aussi te demander de <b>venir me montrer ton bilan</b> : ton écran t'amène alors à ce bilan et t'attend, le temps que tu viennes me voir.</p>
 
-  <h4>13. Tu es bloqué ?</h4>
+  <h4>16. Tu es bloqué ?</h4>
   <p>Relis la consigne, regarde les documents, essaie une aide. Si ça ne suffit pas, appelle-moi.</p>
 `;
 function helpFAB(key){ return '<button class="helpfab" title="Comment ça marche ?" aria-label="aide" onclick="APP.toggleHelp(\''+key+'\')">?</button>'
@@ -3629,8 +3638,7 @@ const PROF = {
         <button class="btn ghost" onclick="PROF.doResume()">▶ Reprendre</button></div></div>` : '';
 
     let classeSec;
-    if(!segAff){ classeSec=`<div class="prof-sec"><div class="d">Aucune classe à afficher pour l'instant. Choisis une classe dans le menu ci-dessus pour ouvrir sa dernière session archivée.</div></div>`; }
-    else { const rows=dansClasse.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviCard(s)).join("");
+    { const rows=dansClasse.sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(s=>this.suiviCard(s)).join("");
       const corps = dansClasse.length
         ? `<div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne · touche une carte pour la déplier (détail, puis tout + actions)</div><div class="prof-list">${rows}</div>
            <div class="prof-row"><button class="btn ghost" onclick="PROF.endSessionFor('${segAff}','${esc(nomAff)}')">Déconnecter ${esc(nomAff)}</button></div>`
