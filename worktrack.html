@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05cc">
+<meta name="app-version" content="2026-06-05ce">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1465,7 +1465,9 @@ function createEngine(chapter, store, studentId, eleveIndex){
           nt += (res&&typeof res.total==='number'&&res.total>0)?res.total:1;
         } else { nt++; }
       });
-      const passed = porte>=ev.seuil;
+      const nAuto = ev.items.filter(isAutoItem).length;
+      const seuilEff = (ev.seuilPct!=null) ? Math.max(1, Math.ceil(ev.seuilPct/100*nAuto)) : (ev.seuil!=null?ev.seuil:nAuto);
+      const passed = porte>=seuilEff;   // seuil proportionnel : se recalcule quand on ajoute/retire des questions
       // HISTORIQUE DES ESSAIS — on EMPILE chaque soumission (jamais d'écrasement). essais[0] = diagnostic (ce que l'élève savait seul, avant toute correction).
       //   dt = temps de réflexion depuis l'essai précédent (null pour le 1er, dont le temps amont est déjà raconté par le travail au cahier / qTimes).
       const st0=state[id]; st0.essais = st0.essais || [];
@@ -1495,6 +1497,8 @@ function createEngine(chapter, store, studentId, eleveIndex){
       const ans=(st&&st.qcm&&st.qcm.answers)||null; if(!ans) return;
       const items=(ev.items||[]).filter(it=>isAutoItem(it) && !(it.id in ans));
       if(items.length) out.push({ id:s.id, titre:s.titre, items }); }); return out; },
+    porteSeuil(id){ const ev=(find(id)||{}).evaluation||{}; const n=(ev.items||[]).filter(isAutoItem).length;
+      return (ev.seuilPct!=null) ? Math.max(1, Math.ceil(ev.seuilPct/100*n)) : (ev.seuil!=null?ev.seuil:n); },
 
     // — Autocorrection par critères (checkpoint 2) —
     autocorrData(id){ return state[id].autocorr||{}; },
@@ -1978,10 +1982,13 @@ function Panel(engine, root, name){
   P.reflectCours=function(){ if(P.screen==='seance' && P.tabCur==='e' && !P._replay && P.current && engine.statusOf(P.current)==='done') renderEval(); };
   P.openHelp=function(){ const el=$("help"+laneIdOf()); if(el) el.classList.add("open"); };   // ouverture de l'aide (1er accès auto, ou déclenchée par le prof)
   P.markQ=function(qKey, done, cb){ if(!P.current) return;
-    const now=Date.now(); P._coch=(P._coch||[]).filter(t=>now-t<SPAM_WIN); P._coch.push(now);   // fenêtre glissante des bascules
-    engine.markQ(P.current, qKey, done, P.mode==='papier');
+    const papier=(P.mode==='papier'); const now=Date.now();
+    engine.markQ(P.current, qKey, done, papier);
     const dq=cb&&cb.closest&&cb.closest('.docq'); if(dq) dq.classList.toggle('qfait', done);
-    if(P._coch.length>=SPAM_N){ if(dq) qcheckMsg(dq,'spam'); APP.beat(APP.laneIdFor(P)); return; }   // spam : on arrête, pas de mesure
+    if(papier){ if(dq && !done) qcheckMsg(dq,'clear'); APP.beat(APP.laneIdFor(P)); return; }   // papier : coches reportées du cahier, hors radar → ni mesure de temps, ni anti-spam
+    // anti-spam PAR CASE : ne vise QUE le fait de jouer avec UNE même question (cocher/décocher), pas des coches sur des cases différentes
+    P._coch=P._coch||{}; const sc=(P._coch[qKey]||[]).filter(t=>now-t<SPAM_WIN); sc.push(now); P._coch[qKey]=sc;
+    if(sc.length>=SPAM_N){ if(dq) qcheckMsg(dq,'spam'); APP.beat(APP.laneIdFor(P)); return; }   // cette case : on arrête, pas de mesure
     if(done){ const qt=engine.qTimes(P.current); const last=qt.filter(e=>e.key===qKey).pop(); const ms=last?last.ms:0;
       const ref=parseTref(cb&&cb.dataset&&cb.dataset.tref);
       if(ms>0 && ms<UNSAFE_MS){ engine.markUnsafe(P.current,qKey,true); if(dq) qcheckMsg(dq,'unsafe',ms); }   // garde-fou : non retenu, pas de « tu as fait moins »
@@ -2276,7 +2283,7 @@ function Panel(engine, root, name){
     ev.items.filter(i=>EVAL_TYPES[i.type] && (!comp||comp.includes(i.id))).forEach(it=>{ const T=EVAL_TYPES[it.type];
       const a=(saved&&saved.answers&&!comp)?saved.answers[it.id]:P.answers[it.id];
       h+=`<div class="item" id="reg-${it.id}"><span class="typ reg">${esc(T.label)}</span>`+T.render(it, a, { corrected:!!saved&&!comp, lane })+`</div>`; });
-    h+=`<div class="actions"><span style="font-size:.78rem;color:var(--muted)">${comp?('Questions ajoutées : '+comp.length):('Porte : '+ev.seuil+'/'+ev.items.filter(isAutoItem).length)}</span>
+    h+=`<div class="actions"><span style="font-size:.78rem;color:var(--muted)">${comp?('Questions ajoutées : '+comp.length):('Porte : '+engine.porteSeuil(s.id)+'/'+ev.items.filter(isAutoItem).length)}</span>
       <button class="btn primary" title="Valider tes réponses (correction immédiate)" onclick="APP.panel('${lane}').submit()">Vérifier</button></div><div class="verdict-box"></div>`;
     h+=comp?'':nonQcmHTML(s,lane);
     root.querySelector(".tabbody").innerHTML=h;
