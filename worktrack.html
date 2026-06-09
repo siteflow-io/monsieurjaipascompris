@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05bt">
+<meta name="app-version" content="2026-06-05cc">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -122,6 +122,7 @@
   .lg-m:hover{border-color:var(--gold2)}
   .lg-m.on{background:var(--gold);color:#1a1206;border-color:var(--gold);font-weight:700}
   .lg-prof{all:unset;cursor:pointer;margin-top:18px;font-size:.76rem;color:var(--muted);opacity:.7}
+  .lg-hint{font-size:.74rem;color:var(--muted);margin-top:2px}
   .lg-prof:hover{opacity:1;text-decoration:underline}
   .prof-sec code{background:var(--panel2);padding:2px 6px;border-radius:5px;font-size:.82rem;word-break:break-all}
   /* confirmation propre à une moitié (n'affecte pas l'autre élève) */
@@ -159,6 +160,8 @@
   .minedot{fill:#f0e6d0}
   .place{position:absolute;transform:translate(-50%,-50%);width:118px;text-align:center;cursor:pointer;opacity:0;animation:fade .5s ease forwards}
   @keyframes fade{to{opacity:1}}
+  .mapcard.no-anim .place{animation:none;opacity:1}
+  .mapcard.no-anim .mine{animation:none;stroke-dashoffset:0}
   .medal{width:50px;height:50px;margin:0 auto;border-radius:50%;display:grid;place-items:center;position:relative;font-family:'EB Garamond',serif;font-weight:900;font-size:1.2rem;transition:transform .18s}
   .place.todo .medal{background:radial-gradient(circle at 35% 30%,#2c2415,#161009);border:2px solid #3a3120;color:#6e5f3e;filter:saturate(.5) brightness(.75);opacity:.8}
   .place.wip .medal{background:radial-gradient(circle at 35% 30%,#3a2c12,#221808);border:2px solid var(--wip);color:var(--gold2)}
@@ -176,6 +179,14 @@
   .place.locked .medal{filter:grayscale(.7) brightness(.55);opacity:.6}
   .place .occ{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--fire);color:#fff;font-size:.56rem;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
   .check{position:absolute;bottom:-3px;right:-3px;width:19px;height:19px;border-radius:50%;background:var(--done);border:2px solid var(--bg);display:grid;place-items:center;color:#0c1a11;font-size:.62rem;font-weight:700}
+  .check.comp{background:var(--fire);color:#1a0f06}
+  .place.has-comp .medal{box-shadow:0 0 0 2px var(--fire),0 6px 18px rgba(0,0,0,.4)}
+  .comp-ov{position:absolute;inset:0;background:rgba(8,6,3,.84);display:flex;align-items:center;justify-content:center;padding:18px;z-index:30;animation:fade .2s ease}
+  .comp-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 18px 8px;max-width:440px;width:100%;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .comp-box h3{margin:0 0 6px;color:var(--fire)}
+  .comp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px dashed var(--line);padding:11px 0}
+  .comp-row .comp-n{display:block;font-size:.74rem;color:var(--muted);margin-top:2px}
+  .comp-head{background:var(--panel2);border:1px solid var(--fire);border-radius:11px;padding:9px 12px;margin-bottom:11px;font-size:.84rem;color:var(--ink2)}
 
   /* séance */
   .backbtn{all:unset;cursor:pointer;color:var(--muted);font-size:.82rem;margin-bottom:10px;display:inline-block}
@@ -443,6 +454,7 @@
   .sui-sig{font-size:.78rem;color:var(--fire2);margin:5px 0}
   .sui-all{margin:8px 0;border-top:1px dashed var(--line);padding-top:7px}
   .sui-prow{display:flex;justify-content:space-between;gap:10px;font-size:.78rem;padding:3px 0;color:var(--ink2)}
+  .sui-pmini{font-size:.72rem;color:var(--muted);padding:1px 0 5px 14px;line-height:1.35}
   .sui-prow .meta{white-space:nowrap}
   .sui-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
   .sui-actions .btn{font-size:.74rem;padding:5px 9px}
@@ -603,6 +615,7 @@
   /* bandeau de convocation « viens montrer ton bilan » : remplace le bouton retour, laisse le bilan visible dessous */
   .vv-band{background:rgba(214,69,93,.16);border:1.5px solid var(--fire);color:var(--ink);
     border-radius:10px;padding:9px 12px;margin:0 0 10px;font-size:.9rem;line-height:1.35}
+  .vv-lock > *:not(.vv-band){pointer-events:none}   /* convocation : interactions figées (l'élève montre, il ne clique pas) */
   /* récap de reprise (overlay montré une fois par cours) */
   .recap-ov{position:absolute;inset:0;z-index:55;background:rgba(8,6,4,.92);backdrop-filter:blur(3px);
     display:flex;align-items:center;justify-content:center;border-radius:var(--radius);overflow:auto;padding:16px}
@@ -1226,10 +1239,31 @@ const EVAL_TYPES = {
       return { ok: ps.length>0 && good===ps.length, good, total:ps.length }; }
   }
 };
+// réponse CORRECTE d'un item auto-corrigé (alignée sur chaque grade ci-dessus) — utilisée pour simuler une réussite en mode test
+function _autoSolve(it){ if(!it) return null; const t=it.type;
+  if(t==='trous'){ const a=[]; parseTrous(it.texte||'').filter(p=>p.t==='gap').forEach(g=>{ a[g.gi]=(g.sols&&g.sols[0])||''; }); return a; }
+  if(t==='ordre')      return (it.elements||[]).map((_,i)=>i);
+  if(t==='paires')     return (it.paires||[]).map((_,i)=>i);
+  if(t==='classement') return (it.paires||[]).map(p=>p.d);
+  if(t==='reperage')   return parseReperage(it.texte||'').filter(p=>p.w&&p.target).map(p=>p.wi);
+  if(t==='court')      return (it.reponses||[])[0]||'';
+  if(t==='vraifaux'){ const o={vf:!!it.vrai}; const pv=(it.preuves||[])[0]; if(pv) o.preuve=pv; return o; }
+  return null; }
 function isAutoItem(it){ return it && (it.type==='qcm' || !!EVAL_TYPES[it.type]); }
 // chrono partagé (panel élève + miroir + tableau de bord) : calcule l'état d'avancement vs durée allouée
 function fmtMMSS(ms){ const x=Math.max(0,Math.floor(ms/1000)); return Math.floor(x/60)+':'+String(x%60).padStart(2,'0'); }
 function fmtDur(ms){ const s=Math.round(ms/1000); if(s<60) return s+' s'; const m=Math.floor(s/60), r=s%60; return r? m+' min '+r+' s' : m+' min'; }
+// ── Seuils de comportement, centralisés (calibrables ici) — ne touche pas aux données de chapitre (fourchettes tRef, porte QCM) ──
+const CONFIG = {
+  unsafeMs:   5000,     // sous ce délai entre deux coches : temps non fiable (coche accidentelle)
+  spamN:      4,        // nombre de bascules coche/décoche…
+  spamWin:    15000,    // …dans cette fenêtre (ms) → message d'arrêt
+  idleMs:     240000,   // inactivité tablette avant rappel (consigne/QCM) — 4 min : laisse le temps de lire et réfléchir
+  idleCahierMs: 360000, // inactivité tolérée si l'élève écrit au cahier (papier / autocorrection / bilan)
+  evMax:      200,      // plafond du journal d'actions par séance
+  recapCooldownMs: 3600000, // anti-doublon du récap de reprise
+  qmsgFadeMs: 8000      // disparition douce du message de temps sous une question
+};
 function chronoState(t, dureeMin){ if(!t||(!t.start && !t.elapsedMs)) return { txt:'—', cls:'ok', el:0 };
   const dur=(dureeMin||0)*60000;
   const el=(t.elapsedMs!=null) ? t.elapsedMs : ((t.fin||Date.now())-t.start);   // pausable si elapsedMs fourni, sinon calcul direct (miroir/legacy)
@@ -1256,7 +1290,9 @@ function parseLegacy(str){ if(Array.isArray(str)) return str; const txt=String(s
   for(let i=0;i<out.length-1;i++){ const t=out[i].texte||''; const mm=SEC.exec(t);
     if(mm){ out[i].texte=t.slice(0,mm.index).trim(); out[i+1].section=mm[1].trim(); } }
   return out; }
-// numérote les lignes VISUELLES d'un texte (gouttière façon manuel) — tous les 5, recalculé après rendu et au resize
+// applique le tRef par question (corps.tRefParQ = { n: {min,max} }) sur les blocs question, sans toucher au texte (indices/coches préservés)
+function injectTref(blocks, seance){ const map=seance&&seance.corps&&seance.corps.tRefParQ; if(!map) return blocks;
+  blocks.forEach(b=>{ if(b && b.type==='question' && b.n!=null && !b.tRef && map[b.n]) b.tRef=map[b.n]; }); return blocks; }
 function paintLineNumbers(body){ const g=body.querySelector('.gutter'); if(!g) return; g.innerHTML='';
   const toks=body.querySelectorAll('.tok'); if(!toks.length) return; let prev=null, no=0;
   toks.forEach(t=>{ const top=t.offsetTop; if(prev===null||top-prev>4){ prev=top; no++;
@@ -1280,7 +1316,7 @@ const SPAM_GAP_MS    = 7000;    // sous cet intervalle entre deux coches « fait
 const SPAM_MIN_FAST  = 3;       // nombre minimal de coches rapides pour signaler une rafale
 const SPAM_FAST_RATIO= 0.6;     // ... et part minimale que ces coches rapides doivent représenter
 const PRESENCE_MS    = 90000;   // au-delà, une session n'est plus comptée « présente »
-const RECAP_COOLDOWN_MS = 3600000;  // ne pas re-montrer le récap de reprise plus d'une fois par heure (évite les doublons et les reconnexions techniques)
+const RECAP_COOLDOWN_MS = CONFIG.recapCooldownMs;  // ne pas re-montrer le récap de reprise plus d'une fois par heure (évite les doublons et les reconnexions techniques)
 const APP_VERSION = ((document.querySelector && document.querySelector('meta[name=app-version]'))||{}).content || '0';  // version embarquée dans CE fichier
 
 /* ─────────────────────────── §D · MOTEUR (factory) ─────────────────────
@@ -1302,10 +1338,10 @@ function createEngine(chapter, store, studentId, eleveIndex){
   // journal d'actions (Lot B) : on accumule en mémoire et on écrit GROUPÉ (au plus une fois toutes les 5 s, et à chaque persist « dur »)
   function _persistSoon(){ if(_persistT) return; _persistT=setTimeout(()=>{ _persistT=null; persist(); }, 5000); }
   function persist(){ if(_persistT){ clearTimeout(_persistT); _persistT=null; } store.save(progKey, { state, path, lastVisited, glossaire, recapAt }); }
-  const EV_MAX=200;
+  const EV_MAX=CONFIG.evMax;
   function _logEvent(id, kind, q, data){ const st=state[id]; if(!st) return; if(!st.events) st.events=[];
     st.events.push({ t:Date.now(), k:kind, q:q||null, d:(data!==undefined&&data!==null)?data:null });
-    if(st.events.length>EV_MAX) st.events.splice(0, st.events.length-EV_MAX);   // plafond : on garde les plus récents
+    if(st.events.length>EV_MAX) st.events.splice(0, st.events.length-EV_MAX);   // plafond : on garde les plus récents. Décision : pas d'agrégation — le journal sert le PARCOURS récent (fenêtres entre coches), pas un historique exhaustif ; EV_MAX=200 est une marge jamais atteinte en séance normale (~quelques dizaines d'actions).
     _persistSoon(); }
   // — Chrono pausable : accumMs (temps cumulé gelé) + runSince (début de la période active, 0 = en pause/gelé).
   //   Temps écoulé = accumMs + (runSince ? now - runSince : 0). Permet de figer en fin de cours sans compter l'intervalle.
@@ -1448,6 +1484,18 @@ function createEngine(chapter, store, studentId, eleveIndex){
       persist(); return { porte, porteTotal, noteGood:ng, noteTotal:nt, tentes, good:porte, total:porteTotal, passed };
     },
 
+    // — Compléments d'évaluation : questions AJOUTÉES après le passage de l'élève —
+    //   Fiable car toute séance évaluée a ses réponses enregistrées (clés de answers = questions connues au passage).
+    //   Un item auto (QCM ou registre) sans réponse sur une séance déjà soumise = un ajout postérieur, à proposer en complément.
+    pendingFor(id){ const st=state[id]; if(!st) return [];
+      const ev=(find(id)||{}).evaluation||{}; const ans=(st.qcm&&st.qcm.answers)||null;
+      if(!ans) return [];                                                  // pas encore évaluée → 1er passage normal, rien à « compléter »
+      return (ev.items||[]).filter(it=>isAutoItem(it) && !(it.id in ans)); },
+    pendingAll(){ const out=[]; (chapter.seances||[]).forEach(s=>{ const st=state[s.id]; const ev=s.evaluation||{};
+      const ans=(st&&st.qcm&&st.qcm.answers)||null; if(!ans) return;
+      const items=(ev.items||[]).filter(it=>isAutoItem(it) && !(it.id in ans));
+      if(items.length) out.push({ id:s.id, titre:s.titre, items }); }); return out; },
+
     // — Autocorrection par critères (checkpoint 2) —
     autocorrData(id){ return state[id].autocorr||{}; },
     autocorrDone(id){ return _autocorrDone(id); },
@@ -1488,6 +1536,11 @@ function createEngine(chapter, store, studentId, eleveIndex){
         const bonne=bonnes.map(b=>(it.choix||[])[b]).filter(x=>x!=null).join(' / ');
         (ok?compris:qcmRevoir).push({ n:idx+1, enonce:(it.enonce||'').trim(), bonne });
       });
+      // items mécaniques (trous, paires, ordre…) : auto-corrigés → on les classe aussi en « compris » / « à revoir »
+      const autoItems=((s.evaluation&&s.evaluation.items)||[]).filter(it=>EVAL_TYPES[it.type]);
+      autoItems.forEach((it,idx)=>{ let res; try{ res=EVAL_TYPES[it.type].grade(it, ans[it.id]); }catch(e){ res={ok:false}; }
+        const enonce=((it.enonce||it.question||'')+'').trim() || EVAL_TYPES[it.type].label;
+        (res&&res.ok?compris:qcmRevoir).push({ n:qItems.length+idx+1, enonce, bonne:'' }); });
       return { titre:s.titre, qcm:qcmTxt, qcmPart, revoir, acquis, trouver, pourquoi, compris, qcmRevoir,
         signal:this.autocorrSignal(id), bilanEcrit:!!st.bilanEcrit }; },
 
@@ -1516,8 +1569,10 @@ function createEngine(chapter, store, studentId, eleveIndex){
       path.length=0; lastVisited=null; glossaire=[]; persist(); },
     forcePass(id){ const ev=find(id).evaluation, tot=ev.items.filter(isAutoItem).length;
       // simule un élève qui RÉUSSIT : on coche les bonnes réponses, sinon le bilan (qui lit les réponses) n'a aucun contenu à montrer
-      const answers={}; (ev.items||[]).filter(it=>it.type==='qcm').forEach(it=>{ const b=(it.bonnes||[]).map(Number);
-        answers[it.id] = it.multi ? b.slice() : (b.length? b[0] : 0); });
+      const answers={}; (ev.items||[]).forEach(it=>{
+        if(it.type==='qcm'){ const b=(it.bonnes||[]).map(Number); answers[it.id] = it.multi ? b.slice() : (b.length? b[0] : 0); }
+        else if(EVAL_TYPES[it.type]){ const sol=_autoSolve(it); if(sol!=null) answers[it.id]=sol; }   // trous, paires, ordre… : réussite simulée
+      });
       state[id].status="done"; state[id].passed=true; state[id].qcm={good:tot,total:tot,answers};
       // simule aussi l'autocorrection (tout acquis), pour que la séance soit pleinement « done » comme en réel
       const corr=(find(id)||{}).corrige||[]; const ac=state[id].autocorr={}; corr.forEach(c=>{ ac[c.n]=Array(_critCount(c)).fill('ok'); });
@@ -1605,7 +1660,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
         return { fast, total:qt.length, span }; }
       return null; },
     // Lot C — analyse croisée d'une séance : chaque coche rattache les actions de sa fenêtre temporelle (dico, surlignage, aide, sortie)
-    parcours(id){ const st=state[id]||{}; const s=find(id); const blocks=parseLegacy(s&&s.corps&&s.corps.consigne);
+    parcours(id){ const st=state[id]||{}; const s=find(id); const blocks=injectTref(parseLegacy(s&&s.corps&&s.corps.consigne), s);
       const qt=api.qTimes(id), ev=api.events(id), dico=api.dicoList(id);
       const gloss=glossaire.map(g=>g.mot.toLowerCase());
       const refOf=(zone)=>{ const bi=parseInt(String(zone).slice(1),10); const b=blocks[bi];
@@ -1657,8 +1712,9 @@ function createEngine(chapter, store, studentId, eleveIndex){
 
 /* ─────────────────────────── §E · OUTILS UI ────────────────────────────*/
 const $=id=>document.getElementById(id);
-let toastTimer; function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show");
-  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2800); }
+let toastTimer, toastClear; function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show");
+  clearTimeout(toastTimer); clearTimeout(toastClear);
+  toastTimer=setTimeout(()=>{ t.classList.remove("show"); toastClear=setTimeout(()=>{ if(!t.classList.contains("show")) t.textContent=""; }, 350); }, 2800); }
 function sparkle(x,y){ for(let i=0;i<12;i++){ const s=document.createElement("div"); s.className="spark";
   s.style.left=x+"px"; s.style.top=y+"px"; document.body.appendChild(s);
   const a=Math.random()*6.28,d=26+Math.random()*44;
@@ -1734,7 +1790,7 @@ function Panel(engine, root, name){
   P.render = function(){ P.screen==="map" ? renderMap() : renderSeance(); };
 
   // — suivi d'activité + rappel d'inactivité (le chrono ne se met jamais en pause) —
-  const IDLE_MS=120000;                                  // 2 min sans rien toucher → rappel doux
+  const IDLE_MS=CONFIG.idleMs;                                  // 2 min sans rien toucher → rappel doux
   P._lastAct=Date.now();
   function bumpAct(){ P._lastAct=Date.now(); if(P._nag) nagHide(); }
   if(root && !root._actWired){ root._actWired=true; root.addEventListener('pointerdown',bumpAct,true); root.addEventListener('keydown',bumpAct,true); }
@@ -1756,7 +1812,7 @@ function Panel(engine, root, name){
     // Inactivité tablette NORMALE quand l'élève écrit au cahier : mode papier, ou QCM réussi (autocorrection/bilan se font sur le cahier).
     const stS=engine.snapshot().state[P.current]||{};
     const cahier=(P.mode==='papier') || (stS.passed && stS.status!=='done');
-    const seuil = cahier ? 360000 : IDLE_MS;                                         // 6 min si écriture cahier attendue ; 2 min sinon
+    const seuil = cahier ? CONFIG.idleCahierMs : IDLE_MS;                                         // 6 min si écriture cahier attendue ; 2 min sinon
     if(Date.now()-P._lastAct>seuil) nagShow(cahier); };
 
   function hud(){
@@ -1800,6 +1856,7 @@ function Panel(engine, root, name){
     let nodes="";
     const excl=CHAPTER.reglages.exclusiviteSeance;
     S.forEach((s,i)=>{ const st=engine.statusOf(s.id), here=(s.id===snap.lastVisited&&st!=="done");
+      const comp=(st==="done")?engine.pendingFor(s.id).length:0;        // séance réussie mais questions ajoutées depuis → à compléter
       const occ = (excl && s.niveauEntonnoir!=="convergence") ? APP.occupant(s.id, laneIdOf()) : null;
       const lock = !occ && st!=="done" && !engine.peutAcceder(s.id);     // convergence pas encore ouverte
       const stars=engine.starsOf(s.id);
@@ -1807,17 +1864,20 @@ function Panel(engine, root, name){
         : [1,2,3].map(k=>`<span class="${k<=stars?'full':'empty'}">★</span>`).join("");
       const ttl = occ ? esc(occ)+` fait cette séance — choisis-en une autre`
         : lock ? `Termine d'abord les autres séances : la convergence s'ouvre à la fin`
+        : comp ? `« `+esc(s.titre)+` » : réussi, mais des questions ont été ajoutées — clique pour les faire`
         : `Clique pour faire « `+esc(s.titre)+` »`;
-      nodes+=`<div class="place ${st}${s.id===sug?' suggested':''}${here?' here':''}${(occ||lock)?' locked':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}" data-lock="${lock?'1':''}" title="${ttl}">
-        <div class="medal">${s.rn}${st==="done"?'<span class="check">✓</span>':''}${occ?'<span class="occ">occupé</span>':''}${lock?'<span class="occ">🔒</span>':''}</div>
+      nodes+=`<div class="place ${st}${comp?' has-comp':''}${s.id===sug?' suggested':''}${here?' here':''}${(occ||lock)?' locked':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}" data-lock="${lock?'1':''}" title="${ttl}">
+        <div class="medal">${s.rn}${st==="done"?`<span class="check${comp?' comp':''}">${comp?'➕':'✓'}</span>`:''}${occ?'<span class="occ">occupé</span>':''}${lock?'<span class="occ">🔒</span>':''}</div>
         <div class="nm">${esc(s.titre)}</div><div class="city">${esc(s.ville)}</div>
         <div class="stars">${starsH}</div></div>`; });
-    root.innerHTML = hud()+`<div class="mapcard"><div class="mh"><span class="lab">La carte</span><span class="free">aucun ordre imposé</span></div>
+    root.innerHTML = hud()+`<div class="mapcard${P._mapSeen?' no-anim':''}"><div class="mh"><span class="lab">La carte</span><span class="free">aucun ordre imposé</span></div>
       <div class="graph">${svg}${nodes}</div></div>`;
     root.querySelectorAll(".place").forEach(el=> el.onclick=()=>{
       if(el.dataset.occ){ toast(el.dataset.occ+" fait cette séance, choisis-en une autre."); return; }
       if(el.dataset.lock){ toast("Termine d'abord les autres séances : la convergence s'ouvre à la fin."); return; }
+      if(el.classList.contains('has-comp')){ P.startComplement(el.dataset.id); return; }   // réussie + questions ajoutées → on va droit au complément
       askConfirm(el.dataset.id); });
+    P._mapSeen=true;   // l'animation d'entrée a joué une fois ; les rafraîchissements (syncMaps) n'y reviennent pas
   }
 
   // double confirmation explicative — propre à CETTE moitié (l'autre élève continue)
@@ -1859,10 +1919,11 @@ function Panel(engine, root, name){
   function renderSeance(){
     const s=engine.seance(P.current);
     P._acPhase=false;   // navigation vers une séance : on repart d'un état d'autocorrection neutre (setAutoCrit/validateAutocorr le gèrent ensuite)
+    P._mapSeen=false;   // on a quitté la carte → la prochaine vraie entrée rejouera son animation (une fois)
     const conv=(P._venirVoir===P.current);   // convoqué par le prof sur ce bilan : on retient l'élève ici
     engine.markSession(P.current, (((( APP._control||{})[P.classeSeg])||{}).cours||{}).debut||0);   // ancre « cette heure »
     if(P.mode==='papier' && !P.expanded && !conv && laneIdOf()!=="__mirror"){ renderCompact(s); return; }   // mode papier : vue réduite par défaut (sauf convocation)
-    root.innerHTML = `${conv ? `<div class="vv-band">✋ Viens montrer ton bilan au professeur. Applique ses remarques, puis attends qu'il valide pour reprendre.</div>` : `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>`}
+    root.innerHTML = `${conv ? `<div class="vv-band">👋🏻 Viens me montrer ton bilan pour vérifier s'il est complet.</div>` : `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>`}
       <div class="shead"><div class="lv">${s.niveauEntonnoir} · ${esc(s.ville)}</div><h2>${esc(s.titre)}</h2></div>
       <div class="chrono ${chronoInfo(P.current).cls}" title="« Cette heure » : ton temps depuis le début du cours · « En tout » : ton temps total sur la séance / temps prévu">${chronoInfo(P.current).html}</div>
       ${(P.mode==='papier')?`<button class="btn ghost reduce-btn" title="Masquer la consigne et revenir à la vue compacte" onclick="APP.panel('${laneIdOf()}').reduce()">⤡ Masquer l'app — je reprends mon cahier</button>`:''}
@@ -1870,6 +1931,7 @@ function Panel(engine, root, name){
       <div class="tabs"><button class="tabC on" title="Ce qu'il faut faire" onclick="APP.panel('${laneIdOf()}').tab('c')">Consigne</button>
         <button class="tabE" title="Réponds au QCM de « ${esc(s.titre)} » pour débloquer la correction" onclick="APP.panel('${laneIdOf()}').tab('e')">S'évaluer</button></div>
       <div class="tabbody"></div>`;
+    root.classList.toggle('vv-lock', conv);   // convoqué : tout est figé (sauf le bandeau) → pas de clic intempestif, aucune incohérence (coche/décoche du bilan, etc.)
     if(laneIdOf()!=="__mirror") attachSwipe();                  // balayage des gestes (l'élève local ; le miroir est piloté à part)
     // QCM réussi mais séance non terminée → il reste l'autocorrection et/ou le bilan : on rouvre sur « S'évaluer » pour ne pas les zapper
     const stS=engine.snapshot().state[s.id]||{};
@@ -1961,29 +2023,33 @@ function Panel(engine, root, name){
     if(cur) bar+='<div class="ghint"><span class="frozen">feuille figée</span><span>'+hintOf(cur)+'</span></div>';
     return bar+'</div>'; }
   // ── Parcours de séance : référence de temps par question + garde-fous (Lot A) ──
-  const UNSAFE_MS=5000;            // sous ce délai entre deux coches : temps jugé non fiable (coche accidentelle), non retenu
-  const SPAM_N=4, SPAM_WIN=15000; // ≥ 4 bascules coche/décoche en 15 s → l'élève joue avec le bouton : on l'arrête
+  const UNSAFE_MS=CONFIG.unsafeMs;            // sous ce délai entre deux coches : temps jugé non fiable (coche accidentelle), non retenu
+  const SPAM_N=CONFIG.spamN, SPAM_WIN=CONFIG.spamWin; // ≥ 4 bascules coche/décoche en 15 s → l'élève joue avec le bouton : on l'arrête
   function tRefDe(b){ const r=(b&&b.tRef) || (CHAPTER.reglages&&CHAPTER.reglages.tRefDefaut) || null;   // spécifique au bloc, sinon défaut du chapitre
     if(!r || r.min==null || r.max==null) return null; const mn=+r.min, mx=+r.max; return (isFinite(mn)&&isFinite(mx)&&mn>=0&&mx>=mn)?{min:mn,max:mx}:null; }
   function parseTref(str){ if(!str) return null; const p=String(str).split(','); const mn=+p[0], mx=+p[1]; return (isFinite(mn)&&isFinite(mx)&&mx>=mn)?{min:mn,max:mx}:null; }
   // message incrusté sous une question cochée : temps passé vs fourchette de référence, sans modalisateur
   function qcheckMsg(dq, kind, ms, ref){ if(!dq||!dq.querySelector) return; let m=dq.querySelector(':scope > .qtimemsg');
-    if(kind==='clear'){ if(m) m.remove(); return; }
+    if(kind==='clear'){ if(m){ clearTimeout(m._fadeT); m.remove(); } return; }
     if(!m){ m=document.createElement('div'); dq.appendChild(m); }
+    m.style.opacity=''; m.style.transition='';   // réveille un encart en cours de disparition
     if(kind==='spam'){ m.className='qtimemsg spam';
-      m.textContent='Tu coches et décoches sans arrêt, ce n\'est pas ce qui est attendu. On coche une question uniquement quand elle est faite sur le cahier, au fur et à mesure. Tu n\'as aucune raison de jouer avec ce bouton : passe à la suite, ne perds pas de temps.'; return; }
-    if(kind==='unsafe'){ m.className='qtimemsg unsafe';
-      m.textContent='⏱ '+fmtDur(ms)+' — temps trop court, non retenu pour cette question.'; return; }
-    let txt='⏱ Tu as mis '+fmtDur(ms)+'.';
-    if(ref){ txt+=' Le niveau de difficulté de cette question demande d\'y passer entre '+fmtDur(ref.min*1000)+' et '+fmtDur(ref.max*1000)+'.';
-      if(ms<ref.min*1000) txt+=' Vu que tu as fait moins, es-tu sûr que ta réponse est suffisamment développée ?';
-      else if(ms>ref.max*1000) txt+=' Vu que tu as fait plus, tu feras attention à ton parcours général de la séance.'; }
-    m.className='qtimemsg'; m.textContent=txt; }
+      m.textContent='Tu coches et décoches sans arrêt, ce n\'est pas ce qui est attendu. On coche une question uniquement quand elle est faite sur le cahier, au fur et à mesure. Tu n\'as aucune raison de jouer avec ce bouton : passe à la suite, ne perds pas de temps.'; }
+    else if(kind==='unsafe'){ m.className='qtimemsg unsafe';
+      m.textContent='⏱ '+fmtDur(ms)+' — temps trop court, non retenu pour cette question.'; }
+    else { let txt='⏱ Tu as mis '+fmtDur(ms)+'.';
+      if(ref){ txt+=' Le niveau de difficulté de cette question demande d\'y passer entre '+fmtDur(ref.min*1000)+' et '+fmtDur(ref.max*1000)+'.';
+        if(ms<ref.min*1000) txt+=' Vu que tu as fait moins, es-tu sûr que ta réponse est suffisamment développée ?';
+        else if(ms>ref.max*1000) txt+=' Vu que tu as fait plus, tu feras attention à ton parcours général de la séance.'; }
+      m.className='qtimemsg'; m.textContent=txt; }
+    clearTimeout(m._fadeT);   // disparition douce après quelques secondes (décharge cognitive)
+    m._fadeT=setTimeout(()=>{ m.style.transition='opacity .6s'; m.style.opacity='0';
+      setTimeout(()=>{ if(m.parentNode && m.style.opacity==='0') m.remove(); }, 650); }, CONFIG.qmsgFadeMs); }
   // consigne en « feuille » document : en-tête séance + questions numérotées, entièrement surlignable/reliable (zone « q »)
   // consigne en « feuille » document : blocs typés (note, lexique, section, question), chaque bloc surlignable (zone « qN »)
   function consigneHTML(consigne){ const s=engine.seance(P.current);
     const head=docHead('Travail · Séance '+seanceNo(s.id), CHAPTER.meta.titre||'');
-    const blocks = Array.isArray(consigne) ? consigne : parseLegacy(consigne);
+    const blocks = injectTref(Array.isArray(consigne) ? consigne.slice() : parseLegacy(consigne), s);
     if(!blocks.length) return '<div class="docsheet docquest">'+head+'</div>';
     const lane=laneIdOf(), isMirror=lane==="__mirror", qd=engine.timing(P.current).qdone||{};
     let body='';
@@ -2034,6 +2100,8 @@ function Panel(engine, root, name){
     ov.querySelector('[data-act="go"]').onclick=()=>{ ov.remove();
       if(P.current) engine.logEvent(P.current,'mode',null,target);
       P.mode=target; P.modeSwitched=true; P.expanded=false;
+      const _lane=$("lane"+laneIdOf());   // garde le badge de mode synchronisé (postes test : « TEST · app/papier/app+papier »)
+      if(_lane && APP.testMode){ const _b=_lane.querySelector('.lanehead .badge'); if(_b) _b.textContent='TEST · '+(target==='papier'?'papier':target==='deux'?'app+papier':'app'); }
       P.render(); APP.relayout(); APP.beat(APP.laneIdFor(P));
       toast(target==='papier'?"Tu travailles maintenant sur papier.":"Tu travailles maintenant sur l'app."); };
     ov.onclick=e=>{ if(e.target===ov) ov.remove(); };   // clic en dehors de la boîte → annuler
@@ -2077,7 +2145,7 @@ function Panel(engine, root, name){
   }
   P.toMap=function(){ if(P._venirVoir){ toast("Montre d'abord ton bilan au professeur."); return; }
     if(P.current){ engine.logEvent(P.current,'exit'); engine.freeze(P.current); }   // quitter la séance fige son chrono (il reprendra à la prochaine ouverture)
-    P.screen="map"; P.current=null; P.expanded=false; renderMap(); APP.syncMaps(); APP.relayout(); APP.beat(APP.laneIdFor(P)); };
+    P.screen="map"; P.current=null; P.expanded=false; P._complement=null; renderMap(); APP.syncMaps(); APP.relayout(); APP.beat(APP.laneIdFor(P)); };
   // — Gestes : un outil actif fige la feuille ; surligner/gomme au balayage, relier/étiquette au tap —
   P._tool=null; P._linkPending=null;
   P.gtool=function(tool){ P._tool=(P._tool===tool)?null:tool; P._linkPending=null; fillC(); };   // reclic = désactive
@@ -2191,8 +2259,10 @@ function Panel(engine, root, name){
   function renderEval(){
     const s=engine.seance(P.current), ev=s.evaluation; const lane=laneIdOf();
     const stState=engine.snapshot().state[s.id]; const saved=P._replay?null:stState.qcm;   // {good,total,answers} si déjà soumis ; en re-jeu : éditable
+    const comp=(P._complement && P._complement.seanceId===s.id)?P._complement.ids:null;     // mode complément : seules les questions AJOUTÉES, éditables (la réussite acquise est gardée)
     let h="";
-    ev.items.filter(i=>i.type==="qcm").forEach((q,i)=>{ const a=saved&&saved.answers?saved.answers[q.id]:P.answers[q.id];
+    if(comp) h+=`<div class="comp-head">➕ De nouvelles questions ont été ajoutées à cette séance. Réponds-y : ta réussite déjà acquise est conservée.</div>`;
+    ev.items.filter(i=>i.type==="qcm" && (!comp||comp.includes(i.id))).forEach((q,i)=>{ const a=(saved&&saved.answers&&!comp)?saved.answers[q.id]:P.answers[q.id];
       h+=`<div class="item"><span class="typ">QCM</span><div class="qz">${i+1}. ${esc(q.enonce)}${q.multi?' <span class="multi">plusieurs réponses</span>':''}</div>`;
       // ordre d'affichage mélangé et stable par élève (anti-triche) ; l'index stocké reste l'index NATIF (ci) → gradeQCM intact
       const qOrder=seededOrder((q.choix||[]).length, q.id+'|'+(engine.studentId||''));
@@ -2203,15 +2273,15 @@ function Panel(engine, root, name){
         h+=`<label class="opt" data-q="${q.id}" data-c="${ci}">${inp} ${esc(c)}</label>`; });
       h+=`</div>`; });
     // items auto-corrigés du registre (texte à trous, etc.)
-    ev.items.filter(i=>EVAL_TYPES[i.type]).forEach(it=>{ const T=EVAL_TYPES[it.type];
-      const a=saved&&saved.answers?saved.answers[it.id]:P.answers[it.id];
-      h+=`<div class="item" id="reg-${it.id}"><span class="typ reg">${esc(T.label)}</span>`+T.render(it, a, { corrected:!!saved, lane })+`</div>`; });
-    h+=`<div class="actions"><span style="font-size:.78rem;color:var(--muted)">Porte : ${ev.seuil}/${ev.items.filter(isAutoItem).length}</span>
+    ev.items.filter(i=>EVAL_TYPES[i.type] && (!comp||comp.includes(i.id))).forEach(it=>{ const T=EVAL_TYPES[it.type];
+      const a=(saved&&saved.answers&&!comp)?saved.answers[it.id]:P.answers[it.id];
+      h+=`<div class="item" id="reg-${it.id}"><span class="typ reg">${esc(T.label)}</span>`+T.render(it, a, { corrected:!!saved&&!comp, lane })+`</div>`; });
+    h+=`<div class="actions"><span style="font-size:.78rem;color:var(--muted)">${comp?('Questions ajoutées : '+comp.length):('Porte : '+ev.seuil+'/'+ev.items.filter(isAutoItem).length)}</span>
       <button class="btn primary" title="Valider tes réponses (correction immédiate)" onclick="APP.panel('${lane}').submit()">Vérifier</button></div><div class="verdict-box"></div>`;
-    h+=nonQcmHTML(s,lane);
+    h+=comp?'':nonQcmHTML(s,lane);
     root.querySelector(".tabbody").innerHTML=h;
     // déjà soumis : on restaure les réponses, la correction visuelle et le verdict (fidèle pour l'élève ET le miroir)
-    if(saved){ P.answers=Object.assign({}, saved.answers||{});
+    if(saved && !comp){ P.answers=Object.assign({}, saved.answers||{});
       paintCorrection(s); paintVerdict(s, { porte:saved.porte, porteTotal:saved.porteTotal, tentes:saved.tentes, noteGood:saved.noteGood, noteTotal:saved.noteTotal, good:saved.good, total:saved.total, passed:stState.passed }); }
   }
   // applique le code couleur juste/faux sur les options (depuis P.answers + bonnes)
@@ -2431,6 +2501,16 @@ function Panel(engine, root, name){
   P.closeVenirVoir=function(){ const wasOn=!!P._venirVoir; P._venirVoir=null; if(wasOn && P.screen==='seance') renderSeance(); };
   P.submit=function(){
     const s=engine.seance(P.current); const wasReplay=P._replay;
+    if(P._complement && P._complement.seanceId===s.id){               // COMPLÉMENT : on fusionne les nouvelles réponses avec les anciennes (réussite gardée, on ne retient que le meilleur)
+      const prev=((engine.snapshot().state[s.id]||{}).qcm||{}).answers||{};
+      const merged=Object.assign({}, prev, P.answers);
+      engine.gradeQCM(s.id, merged, {});
+      P._complement=null; P.answers=Object.assign({}, merged);
+      renderEval();                                                   // verdict + bilan désormais à jour (incluant les nouvelles questions)
+      toast("Questions ajoutées : c'est complété.");
+      setTimeout(()=>{ if(P.showComplements) P.showComplements(); }, 500);   // d'autres séances à compléter ?
+      return;
+    }
     const r=engine.gradeQCM(s.id, P.answers, { replay:wasReplay });
     P._replay=false;                       // une soumission consomme le re-jeu → on réaffiche le verdict + la trace mise à jour
     renderEval();                          // réaffiche tout en mode corrigé (QCM + items registre)
@@ -2451,6 +2531,26 @@ function Panel(engine, root, name){
     engine.retry(s.id); P.answers=Object.assign({}, prev); P.tab('e'); };
   P.goto=function(id){ P.screen="map"; renderMap(); setTimeout(()=>askConfirm(id),150); };
 
+  // — Compléments d'évaluation : notif + centre (multi-séances), à l'ouverture et après chaque complément —
+  P.showComplements=function(){
+    if(P._venirVoir) return;                                   // une convocation est prioritaire
+    if(root.querySelector('.help-ov')) return;                 // ne pas recouvrir l'aide au 1er accès
+    const old=root.querySelector('.comp-ov'); if(old) old.remove();
+    const list=engine.pendingAll(); if(!list.length) return;
+    const rows=list.map(c=>`<div class="comp-row"><div><b>${esc(c.titre)}</b><span class="comp-n">${c.items.length} nouvelle${c.items.length>1?'s':''} question${c.items.length>1?'s':''}</span></div>
+      <button class="btn primary" onclick="APP.panel('${laneIdOf()}').startComplement('${c.id}')">Je reviens à « ${esc(c.titre)} »</button></div>`).join('');
+    const ov=document.createElement('div'); ov.className='comp-ov';
+    ov.innerHTML=`<div class="comp-box"><h3>➕ ${list.length>1?'Des questions ont été ajoutées':'Une question a été ajoutée'}</h3>
+      <p class="d">J'ai complété l'évaluation de ${list.length>1?'plusieurs séances que tu as déjà faites':'une séance que tu as déjà faite'}. Réponds aux nouvelles questions${list.length>1?', une séance à la fois':''} : ce que tu as déjà réussi reste gardé.</p>
+      ${rows}</div>`;
+    root.appendChild(ov);
+  };
+  P.startComplement=function(id){ const o=root.querySelector('.comp-ov'); if(o) o.remove();
+    const pend=engine.pendingFor(id); if(!pend.length) return;
+    P._complement={ seanceId:id, ids:pend.map(it=>it.id) };
+    P._replay=false; P.answers={}; P.screen='seance'; P.current=id; P.expanded=true;
+    renderSeance(); P.tab('e'); APP.beat(APP.laneIdFor(P)); };
+
   // identifie la lane (pour les handlers inline) — A ou B
   function laneIdOf(){ return APP.laneIdFor(P); }
   return P;
@@ -2459,7 +2559,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, openAide(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){}, showComplements(){}, startComplement(){} };
 const APP = {
   panels:{}, tableSize:2, testMode:false, _classeFiltre:null,   // _classeFiltre : null=classe en cours (auto), ''=toutes, 'seg'=une classe
   _sessions:{}, _control:{}, _signaux:{}, _unsubs:[], _hb:null, _tick:null,
@@ -2513,11 +2613,13 @@ const APP = {
   /* ── Présence temps réel (lastSeen 30 s, seuil 60 s) + déconnexion fin de séance (logoutEpoch, par classe) ── */
   startPresence(){
     this._unsubs.forEach(u=>{ try{u();}catch(e){} }); this._unsubs=[];
+    // CONVENTION minuteurs (anti-fuite) : tout setInterval est nettoyé AVANT réassignation (ici _hb/_tick) ou au close (DASH._tick). Le tick chrono global est un singleton (window.__chronoTick). Pas de registre central : 4 intervals, tous couverts.
     if(this._hb) clearInterval(this._hb); if(this._tick) clearInterval(this._tick);
     const chap=CHAPTER.meta.id||"chapitre";
     this._unsubs.push(store.subscribe("appVersion", v=>{ this._appVersion=v||''; this.onAppVersion(this._appVersion); }));   // mise à jour auto
-    // DETTE (clignotement carte) : redessine toutes les cartes à CHAQUE écriture sessions ; en classe (~28 présences) ≈ 1 redessin/s → l'animation d'entrée se rejoue et gêne le clic.
-    // À traiter en fin de chantier : ne syncMaps que si la signature des occupants change + ne pas rejouer l'animation sur rafraîchissement (idéal : maj non destructive des seuls badges).
+    // CLIGNOTEMENT CARTE — résolu : (1) syncMapsIfChanged ne redessine que si la signature des occupants change (cf. _sessSig) ;
+    //   (2) la carte porte .no-anim aux rafraîchissements → l'animation d'entrée ne se rejoue qu'à la vraie entrée (toMap), pas à chaque écriture sessions.
+    //   Amélioration possible un jour (non nécessaire) : maj non destructive des seuls badges au lieu d'un re-render.
     this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMapsIfChanged();
       if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
     this._unsubs.push(store.subscribe("signaux/"+chap, v=>{ this._signaux=v||{};   // bilans écrits à relire (signal rouge)
@@ -2824,13 +2926,14 @@ const APP = {
           <button type="button" class="lg-m" data-m="papier" title="Tu écris tout sur ton cahier ; la tablette sert à lire et te corriger">✏️ sur papier</button>
         </div>
         <button class="btn primary" id="lg-go-${key}" disabled style="margin-top:10px;width:100%">Entrer</button>
+        <div class="lg-hint" id="lg-hint-${key}">Choisis ta classe, ton nom et ton mode pour entrer.</div>
         ` : `<div class="d">Aucune classe disponible. Crée-la dans l'espace enseignant.</div>`}
         <button class="lg-prof" onclick="PROF.open()">Accès enseignant</button>
       </div>`;
     const cSel=$("lg-c-"+key), nSel=$("lg-n-"+key), go=$("lg-go-"+key);
     if(cSel && nSel && go){
       const modeBox=$("lg-mode-"+key);
-      const upd=()=>{ go.disabled=!(cSel.value && nSel.value && modeBox && modeBox.dataset.mode); };
+      const upd=()=>{ const ok=!!(cSel.value && nSel.value && modeBox && modeBox.dataset.mode); go.disabled=!ok; const hint=$("lg-hint-"+key); if(hint) hint.style.display=ok?'none':''; };
       if(modeBox) modeBox.querySelectorAll('.lg-m').forEach(b=>b.onclick=()=>{
         modeBox.querySelectorAll('.lg-m').forEach(x=>x.classList.remove('on')); b.classList.add('on');
         modeBox.dataset.mode=b.dataset.m; upd(); });
@@ -2869,6 +2972,7 @@ const APP = {
         if(!engine.helpSeen()){ p.openHelp(); engine.markHelpSeen(); }   // 1er accès : l'aide s'ouvre une seule fois, puis reste sous le « ? »
         else if(engine.recapDue()) p.showRecap();                  // récap de reprise (1×/cours) — connexion manuelle uniquement
       }
+      setTimeout(()=>{ if(p.showComplements) p.showComplements(); }, 450);   // questions ajoutées depuis le dernier passage ?
       this.beat(key); });
   },
   // recharge un poste élève sur la nouvelle version de SON chapitre actif, en préservant sa progression (édition en direct)
@@ -2930,7 +3034,7 @@ const MIRROR = {
     toMap(){ MIRROR.act('toMap',[]); },
     gtool(tool){ if(MIRROR._panel){ MIRROR._panel._tool=(MIRROR._panel._tool===tool)?null:tool; MIRROR._panel._linkPending=null; MIRROR._panel.tab('c'); } },   // choix d'outil : local au prof
     // le prof observe, il ne répond pas à la place de l'élève : ces gestes sont neutralisés dans le miroir
-    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){},
+    markQ(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){}, showComplements(){}, startComplement(){},
     openGlossaire(){}, glossToggle(){}, glossRemove(){}, closeDico(){},
     render(){}
   },
@@ -3181,11 +3285,16 @@ const PROMPT_CHAPTER =
 "lecture ≈ 130 mots/min en 4e, copie/écriture ≈ 12 mots/min, +réflexion (question simple ≈ 1–2 min,\n"+
 "analyse ≈ 3–5 min), +évaluation. Additionne lecture des supports + écriture attendue + réflexion + éval,\n"+
 "explique brièvement ce calcul AVANT le JSON, puis mets le total arrondi dans dureeEstimee. Je l'ajusterai.\n\n"+
-"RÈGLE TEMPS PAR QUESTION (tRef, en SECONDES) : chaque question de travail porte une fourchette tRef {min,max}\n"+
-"qui dit combien de temps cette question demande à CE niveau, selon sa difficulté. Repères : repérage simple ≈ 30–90 s,\n"+
-"question de compréhension à rédiger ≈ 60–180 s, analyse/justification de plusieurs phrases ≈ 120–300 s, geste\n"+
-"(surligner/relier) ≈ +30–60 s. Estime min et max par discussion explicite (difficulté × niveau), JAMAIS au hasard.\n"+
-"Si tu ne peux pas estimer chaque question, mets une fourchette globale dans reglages.tRefDefaut. Formulation côté élève :\n"+
+"RÈGLE TEMPS PAR QUESTION (tRef, en SECONDES) — fondée sur la science, jamais au hasard. Vitesses de référence pour le niveau :\n"+
+"écriture en COMPOSITION (réfléchir + écrire à la main) ≈ 10 mots/min en moyenne (7 posé, 14 rapide) ; lecture silencieuse de\n"+
+"compréhension ≈ 130 mots/min. Ajuste si le niveau diffère (un 6e est plus lent qu'un 3e). FORMULE par question : tRef = temps\n"+
+"amont (relire la consigne + le passage utile + réfléchir, selon la charge cognitive) + temps d'écriture (mots attendus ÷ vitesse).\n"+
+"min = élève rapide, max = élève posé. PALIERS indicatifs (s) : repérage/relevé/geste 60–150 ; factuelle 1 phrase 90–210 ;\n"+
+"réflexion 2–3 phrases 210–420 ; développée 3–4 phrases 300–540 ; argumentée 4–5 phrases 420–780 ; bilan 5–6 phrases 540–1020.\n"+
+"Pour CHAQUE question, explicite (mots attendus, charge cognitive) puis applique la formule. Mets le résultat dans\n"+
+"corps.tRefParQ = { \"1\":{\"min\":..,\"max\":..}, \"2\":{...} } (clé = numéro de la question). reglages.tRefDefaut reste le filet.\n"+
+"AVANT de figer les tRef, DEMANDE-MOI si je veux ajouter d'autres TYPES de questions (ex. « compléter un tableau »,\n"+
+"« inventer une phrase », « geste obligatoire ») afin de les calibrer ensemble. Formulation côté élève :\n"+
 "factuelle, SANS modalisateur (« demande d'y passer entre X et Y »), le différentiel est laissé à l'élève.\n\n"+
 "Règles : chaque séance avec une carte {x,y} distincte ; au moins une séance de convergence ; vocabulaire de la classe visée.\n"+
 "CHEMINS IDÉAUX : demande-moi l'effectif. Les élèves travaillent par tables de 2, avec UN groupe de 3 si\n"+
@@ -3267,7 +3376,8 @@ const PROF = {
   render(){ const c=CHAPTER, T=this.tab;
     const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",reglages:"Réorientation, exclusivité, mode test"};
     const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" title="${tips[id]||''}" onclick="PROF.go('${id}')">${lab}</button>`;
-    const nBil = APP.signauxList().length;
+    const _segBadge = APP.classeFiltreSeg() || APP.activeClasseSeg();
+    const nBil = (_segBadge && _segBadge!=='__none') ? APP.signauxList().filter(x=>x.classeSeg===_segBadge).length : 0;
     const suiviLab = "Suivi 🟢" + (nBil?` <span class="ptab-badge">${nBil}</span>`:'');
     $("profModal").innerHTML=`
       <div style="margin-bottom:10px">
@@ -3446,6 +3556,7 @@ const PROF = {
               <label class="fz-ck" style="margin-left:22px"><input type="checkbox" id="prtCorrige" ${o.corrige?'checked':''} onchange="PROF.refreshPreview()"> … avec le corrigé</label>
               <label class="fz-ck"><input type="checkbox" id="prtAides" ${o.aides?'checked':''} onchange="PROF.refreshPreview()"> Aides (coups de pouce)</label>
               <label class="fz-ck"><input type="checkbox" id="prtBilan" ${o.bilan?'checked':''} onchange="PROF.refreshPreview()"> Bilan (acquis à noter)</label>
+              <!-- TODO (à reprendre, pas de presse) : l'« ancienne fiche-correction » (couches trouver/pourquoi/aller plus loin/te situer) est une BONNE idée, conservée volontairement. À ré-articuler un jour avec le bilan tissé (qui l'a remplacée à l'usage). Ne pas retirer. -->
               <label class="fz-ck"><input type="checkbox" id="prtFiches" ${o.fiches?'checked':''} onchange="PROF.refreshPreview()"> Fiches-correction (ancienne)</label>
             </div></div>
           <div class="prof-sec print-count"><h4>Impression</h4>
@@ -3673,7 +3784,8 @@ const PROF = {
   // convoque un élève sur le bilan d'une séance précise : il y est renvoyé et retenu jusqu'au « ✓ vu »
   convoquer(uid, seanceId){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/act", { m:'venirVoir', a:[seanceId||''], ts:Date.now() });
-    toast("Élève renvoyé sur son bilan. Marque « ✓ vu » quand tu l'auras vu."); },
+    if(typeof MIRROR!=="undefined" && MIRROR.open) MIRROR.open(uid);   // ouvre la vue élève sur l'écran prof → comparer cahier et écran sans déranger la tablette du voisin
+    toast("Élève renvoyé sur son bilan. Sa vue s'ouvre ici. Marque « ✓ vu » quand c'est fait."); },
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
   doFreeze(){ const o=this._fz||{gel:true,lock:false,logout:false};
     if(!o.gel && !o.lock && !o.logout){ toast("Coche au moins une option."); return; }
@@ -3760,9 +3872,10 @@ const PROF = {
     return h+`</div>`;
   },
   // Lot C — diagnostic prof : phrases « solides », appuyées sur les données, pour l'oral. Temps non fiables exclus, sorties nuancées.
-  parcoursPhrases(eng, seanceId){ const p=eng.parcours(seanceId); const ph=[];
+  parcoursPhrases(eng, seanceId, coursDebut){ const p=eng.parcours(seanceId); const ph=[];
     if(p.start){ const d=new Date(p.start); const hh=String(d.getHours()).padStart(2,'0')+'h'+String(d.getMinutes()).padStart(2,'0');
-      ph.push('Commencée à '+hh+' · '+fmtDur(p.total)+' en tout.'); }
+      const sMs=coursDebut?eng.sessionMs(seanceId, coursDebut):null;
+      ph.push('Commencée à '+hh+' · '+(sMs!=null?'cette heure : '+fmtDur(sMs)+' · ':'')+fmtDur(p.total)+' en tout.'); }
     p.questions.forEach(q=>{
       if(q.statut==='long' && !q.sorti){ const ratio=q.refMax?q.ms/(q.refMax*1000):0;
         let s='Q'+q.n+' : '+fmtDur(q.ms)+(q.refMax?' (attendu ≤ '+fmtDur(q.refMax*1000)+(ratio>=2?', ~'+Math.round(ratio)+'×':'')+')':'')+'.';
@@ -3784,7 +3897,7 @@ const PROF = {
       +(b.qcm?`<span>QCM ${b.qcm.sur20}/20</span>`:'')+`</div>`;
     if(s.current){ const ps=(b.parSeance||[]).find(x=>x.id===s.current);
       if(ps) h+=`<div class="sui-cp">« ${esc(ps.titre)} » — QCM ${ck(ps.passed)} · correction ${ck(ps.autocorrFait)} · bilan ${ck(ps.bilanEcrit)}</div>`;
-      const phr=this.parcoursPhrases(eng, s.current);
+      const phr=this.parcoursPhrases(eng, s.current, (((( APP._control||{})[s.classeSeg])||{}).cours||{}).debut||0);
       if(phr.length) h+=`<div class="sui-parc"><div class="sui-parc-h">📋 Parcours de la séance</div><ul>${phr.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>`; }
     const sig=(APP._signaux||{})[uid]||{}, st=[];
     if(sig.bilan)st.push('📝 bilan à relire'); if(sig.incoherence)st.push('⚠ s\'est sur-évalué'); if(sig.aide)st.push('✋ demande de l\'aide');
@@ -3792,7 +3905,15 @@ const PROF = {
     if(depth>=2){
       const rows=(b.parSeance||[]).map(ps=>{ const mark=ps.statut==='done'?'✓':(ps.statut==='wip'?'…':'·');
         const inc=ps.autocorrSignal&&ps.autocorrSignal.incoherent?' ⚠':'';
-        return `<div class="sui-prow"><span>${mark} ${esc(ps.titre)}</span><span class="meta">${ps.qcm?ps.qcm.good+'/'+ps.qcm.total:''}${ps.etoiles!=null?' · '+ps.etoiles+'★':''}${inc}</span></div>`; }).join('');
+        let line=`<div class="sui-prow"><span>${mark} ${esc(ps.titre)}</span><span class="meta">${ps.qcm?ps.qcm.good+'/'+ps.qcm.total:''}${ps.etoiles!=null?' · '+ps.etoiles+'★':''}${inc}</span></div>`;
+        const t=eng.timing(ps.id);
+        if(t.start){ const p=eng.parcours(ps.id); const bits=[fmtDur(p.total)];
+          if(p.longest) bits.push('plus longue n°'+p.longest.n+' ('+fmtDur(p.longest.ms)+')');
+          const nA=p.questions.length; if(nA) bits.push(nA+' coche'+(nA>1?'s':''));
+          const al=[]; if(p.spam) al.push('⚠ rafale'); else if(p.nUnsafe) al.push(p.nUnsafe+' non fiable'+(p.nUnsafe>1?'s':''));
+          if(p.dicoNouveaux.length) al.push('dico→gloss : '+p.dicoNouveaux.slice(0,3).join(', '));
+          line+=`<div class="sui-pmini">${esc(bits.join(' · ')+(al.length?' · '+al.join(' · '):''))}</div>`; }
+        return line; }).join('');
       const bloque=((((APP._control||{})[uid]||{}).freeze)||{}).gel;
       const nm=(s.name||uid).replace(/'/g,"\\'");
       h+=`<div class="sui-all">${rows}</div>
@@ -3948,7 +4069,7 @@ const PROF = {
       ? `<div class="prof-row"><span class="pub-wait">⏳ Vérification du serveur…</span><button class="btn ghost" onclick="PROF.cancelPublish()">Annuler</button></div>`
       : `<div class="prof-row"><button class="btn primary" onclick="PROF.publishUpdate()">Publier la mise à jour</button></div>`;
     return `<div class="prof-sec"><h4>Mise à jour de l'application</h4>
-        <div class="d">Après avoir déployé la nouvelle version sur le serveur, recharge d'abord <b>ta</b> page, puis clique. L'app attend que le serveur serve réellement la nouvelle version, puis rafraîchit tous les élèves automatiquement — ils retrouvent leur écran. Version de ce poste : <b>${esc(APP_VERSION)}</b>${APP._appVersion?` · publiée : <b>${esc(APP._appVersion)}</b>`:''}.</div>
+        <div class="d">Après avoir déployé la nouvelle version sur le serveur, recharge d'abord <b>ta</b> page, puis clique. L'app attend que le serveur serve réellement la nouvelle version, puis rafraîchit tous les élèves automatiquement — ils retrouvent leur écran. Version de ce poste : <b>${esc(APP_VERSION)}</b>${APP._appVersion?` · publiée : <b>${esc(APP._appVersion)}</b>`:''}. <span style="opacity:.7">(format : date AAAA-MM-JJ + révision en lettres ; « bt » est plus récent que « bl ».)</span></div>
         ${pub}${this._pubMsg?`<div class="d" style="margin-top:8px">${esc(this._pubMsg)}</div>`:''}
         <div class="prof-row"><button class="btn ghost" onclick="PROF.resetVersion()" title="Aligne la version publiée sur ce fichier — supprime une bannière de mise à jour fantôme">Réinitialiser le suivi de version</button></div></div>
       <div class="prof-sec"><h4>Réorientation sur échec</h4>
