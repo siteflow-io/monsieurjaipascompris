@@ -965,6 +965,15 @@ body:has(.overlay.show){overflow:hidden}
   </div>
 </div>
 
+<div class="overlay" id="fsOverlay">
+  <div class="gelcard" style="text-align:center;max-width:420px">
+    <div style="font-size:2.6rem;margin-bottom:6px">⛶</div>
+    <h2 style="margin:0 0 8px;font-size:1.3rem">Reste en plein écran</h2>
+    <p style="color:var(--muted);margin:0 0 18px;line-height:1.5">Le débat se déroule en plein écran. Touche le bouton pour y revenir et continuer à participer.</p>
+    <button class="dbg-btn" style="padding:10px 22px;font-size:1rem" onclick="goFullscreen()">Revenir en plein écran</button>
+  </div>
+</div>
+
 <div class="overlay" id="carnetEleveOverlay">
   <div class="gelcard" style="text-align:left;max-width:580px;max-height:84vh;overflow:auto">
     <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Mes évaluations</h2>
@@ -1618,6 +1627,30 @@ function toggleRosterIdx(i){
   else { if(studentRosterSel.length>=3){ toast("3 élèves maximum par binôme."); return; } studentRosterSel.push(nm); }
   if(lastLoginData) renderRoster(lastLoginData);
 }
+// ───────── Plein écran dissuasif (mode élève uniquement) ─────────
+// Le navigateur interdit de FORCER le plein écran sans geste et n'empêche pas Échap :
+// on déclenche le plein écran au moment où l'élève rejoint, et on le réinvite s'il en sort.
+function fsSupported(){ var e=document.documentElement; return !!(e&&(e.requestFullscreen||e.webkitRequestFullscreen)); }
+function isFs(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+function goFullscreen(){
+  if(!fsSupported()) return;
+  try{ var e=document.documentElement; (e.requestFullscreen||e.webkitRequestFullscreen).call(e); }catch(_){}
+  var o=document.getElementById("fsOverlay"); if(o) o.classList.remove("show");
+}
+var _fsWatch=false;
+function setupFullscreenWatch(){
+  if(_fsWatch || !fsSupported()) return; _fsWatch=true;
+  function check(){
+    var o=document.getElementById("fsOverlay"); if(!o) return;
+    if(role==="student" && !isFs()) o.classList.add("show"); else o.classList.remove("show");
+  }
+  document.addEventListener("fullscreenchange", check);
+  document.addEventListener("webkitfullscreenchange", check);
+  document.addEventListener("visibilitychange", function(){
+    if(role==="student" && document.visibilityState==="visible" && !isFs()){ var o=document.getElementById("fsOverlay"); if(o) o.classList.add("show"); }
+  });
+}
+
 async function joinAsStudentWithNames(names, data){
   names=(names||[]).filter(Boolean);
   if(names.length===0){ $("loginErr").textContent="Aucun élève sélectionné."; $("loginBtn").disabled=false; return; }
@@ -1640,6 +1673,8 @@ async function joinAsStudentWithNames(names, data){
   enterAsStudent(binomeId, data);
 }
 async function doStudentLogin(){
+  // Plein écran dissuasif tablette : DOIT partir du geste, avant tout await réseau (sinon le navigateur refuse).
+  goFullscreen(); setupFullscreenWatch();
   const code = ($("loginCode").value||"").trim().toUpperCase();
   const n1 = ($("loginName1").value||"").trim();
   const n2 = ($("loginName2").value||"").trim();
