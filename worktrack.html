@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05ci">
+<meta name="app-version" content="2026-06-05cp">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1269,6 +1269,7 @@ const CONFIG = {
   idleCahierMs: 360000, // inactivité tolérée si l'élève écrit au cahier (papier / autocorrection / bilan)
   evMax:      200,      // plafond du journal d'actions par séance
   recapCooldownMs: 3600000, // anti-doublon du récap de reprise
+  maxRunMs:   10800000, // GARDE-FOU chrono : un intervalle actif (runSince→now) au-delà de 3 h est une anomalie (séance jamais figée) — plafonné, jamais compté tel quel
   qmsgFadeMs: 8000      // disparition douce du message de temps sous une question
 };
 function chronoState(t, dureeMin){ if(!t||(!t.start && !t.elapsedMs)) return { txt:'—', cls:'ok', el:0 };
@@ -1308,6 +1309,11 @@ function paintAllDocs(rootEl){ try{ (rootEl||document).querySelectorAll('.docbod
 if(typeof window!=="undefined" && !window.__lnResize){ window.__lnResize=true;
   window.addEventListener('resize', ()=>{ clearTimeout(window.__lnT); window.__lnT=setTimeout(()=>paintAllDocs(document),180); }); }
 if(typeof window!=="undefined" && !window.__chronoTick){ window.__chronoTick=setInterval(()=>{ try{ if(typeof APP!=="undefined") APP.tickChronos(); }catch(e){} }, 1000); }
+// Bornage du temps de travail : l'élève cache l'onglet (bascule, verrouillage) ou le ferme → on fige aussitôt les chronos ouverts.
+//   Le compteur ne court donc jamais pendant que l'onglet dort, même sans cours lancé. (Le ticker reprend le chrono au retour si l'élève est présent.)
+if(typeof document!=="undefined" && !document.__wtVisWired){ document.__wtVisWired=true;
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && typeof APP!=="undefined" && APP.freezeOpen) APP.freezeOpen(); });
+  window.addEventListener('pagehide', ()=>{ if(typeof APP!=="undefined" && APP.freezeOpen) APP.freezeOpen(); }); }
 function urlParam(k){ try{ return new URLSearchParams(location.search).get(k); }catch(e){ return null; } }
 function sanId(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
   .replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"") || "x"; }
@@ -1358,11 +1364,14 @@ function createEngine(chapter, store, studentId, eleveIndex){
       else { st.accumMs=0; st.runSince=st.startedAt||0; }          // tournait depuis le premier accès
     }
     if(st.runSince==null) st.runSince=0; }
+  // GARDE-FOU : tout intervalle actif au-delà de CONFIG.maxRunMs est plafonné — empêche définitivement un chrono
+  //   de gonfler si une séance n'a jamais été figée (tablette laissée ouverte, déclencheur imprévu). Ceinture + bretelles.
+  function _runDelta(st){ return st.runSince ? Math.min(Math.max(0, Date.now()-st.runSince), CONFIG.maxRunMs) : 0; }
   function _elapsed(st){ if(!st) return 0; _normChrono(st);
-    return (st.accumMs||0) + (st.runSince ? Math.max(0, Date.now()-st.runSince) : 0); }
+    return (st.accumMs||0) + _runDelta(st); }
   function _freezeChrono(st){ if(!st) return; _normChrono(st);
-    if(st.runSince){ st.accumMs=(st.accumMs||0)+Math.max(0, Date.now()-st.runSince); st.runSince=0; } }
-  function _resumeChrono(st){ if(!st || st.status==='done') return; _normChrono(st);
+    if(st.runSince){ st.accumMs=(st.accumMs||0)+_runDelta(st); st.runSince=0; } }
+  function _resumeChrono(st){ if(!st || st.status==='done') return; _normChrono(st);   // le chrono court dès que l'élève est présent sur une séance (cours ou hors cours)
     if(!st.runSince) st.runSince=Date.now(); }
   // reprise : si une progression est déjà stockée pour cet élève, on la recharge
   function hydrate(saved){ if(!saved || !saved.state) return;
@@ -1429,7 +1438,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
     // gèle TOUTES les séances actives en une fois (gel direct côté prof). borneTs = dernière présence connue : on ne compte pas le temps écoulé après le départ de l'élève.
     freezeAll(borneTs){ const lim=Math.min(Date.now(), borneTs||Date.now());
       seances.forEach(s=>{ const st=state[s.id]; if(!st) return; _normChrono(st);
-        if(st.runSince){ st.accumMs=(st.accumMs||0)+Math.max(0, lim-st.runSince); st.runSince=0; } });
+        if(st.runSince){ st.accumMs=(st.accumMs||0)+Math.min(Math.max(0, lim-st.runSince), CONFIG.maxRunMs); st.runSince=0; } });
       persist(); },
     markQ(id, qKey, done, horsRadar){ const st=state[id]; if(!st) return; st.qdone=st.qdone||{}; st.qhr=st.qhr||{};
       if(done){ if(!st.startedAt) st.startedAt=Date.now(); st.qdone[qKey]=Date.now(); if(horsRadar) st.qhr[qKey]=true; else delete st.qhr[qKey]; }
@@ -1451,9 +1460,15 @@ function createEngine(chapter, store, studentId, eleveIndex){
 
     // Évaluation : compte les items auto-corrigés justes (QCM + registre) ; ouvre la porte si ≥ seuil.
     gradeQCM(id, answers, opts){ const ev=find(id).evaluation;
+      const wasPassed = !!(state[id] && state[id].passed);   // séance DÉJÀ réussie → barème figé, jamais dégradé
+      // ENRICHISSEMENT NON DESTRUCTIF : sur une séance déjà réussie, un item auto ABSENT des réponses est un AJOUT
+      // POSTÉRIEUR (question ajoutée après le passage de l'élève). Il reste un complément FACULTATIF et n'entre pas
+      // dans le barème tant que l'élève ne l'a pas traité. Une réussite acquise ne recule jamais.
+      const compteItem = q => !wasPassed || !isAutoItem(q) || (answers && (q.id in answers));
       let porte=0, porteTotal=0, ng=0, nt=0, tentes=0;        // porte = items ENTIÈREMENT réussis (sert le seuil) ; note = somme des détails justes (partiel) ; tentes = items abordés
       const att=a=>a!=null && (Array.isArray(a)?a.some(x=>x!=null&&x!==''):(typeof a==='object'?Object.keys(a).length>0:String(a)!==''));
-      ev.items.forEach(q=>{ porteTotal++; if(att(answers[q.id])) tentes++;
+      ev.items.forEach(q=>{ if(!compteItem(q)) return;   // ajout postérieur non traité → hors barème de cet élève
+        porteTotal++; if(att(answers[q.id])) tentes++;
         if(q.type==="qcm"){ const a=answers[q.id]; const setA=new Set(Array.isArray(a)?a:(a!=null?[a]:[]));
           if(q.multi){
             const ok = q.bonnes.length===setA.size && q.bonnes.every(b=>setA.has(b));
@@ -1472,9 +1487,15 @@ function createEngine(chapter, store, studentId, eleveIndex){
           nt += (res&&typeof res.total==='number'&&res.total>0)?res.total:1;
         } else { nt++; }
       });
-      const nAuto = ev.items.filter(isAutoItem).length;
+      const nAuto = ev.items.filter(q=>isAutoItem(q)&&compteItem(q)).length;   // seuil sur le barème réellement présenté à cet élève
       const seuilEff = (ev.seuilPct!=null) ? Math.max(1, Math.ceil(ev.seuilPct/100*nAuto)) : (ev.seuil!=null?ev.seuil:nAuto);
       const passed = porte>=seuilEff;   // seuil proportionnel : se recalcule quand on ajoute/retire des questions
+      // IDEMPOTENCE : un re-grade qui ne change RIEN aux réponses (re-render, ré-ouverture, complément vide) ne crée
+      //   ni essai ni modification — neutralise les re-soumissions automatiques en rafale.
+      const ancAns0 = (state[id].qcm && state[id].qcm.answers) || null;
+      if(ancAns0 && JSON.stringify(ancAns0)===JSON.stringify(answers||{})){
+        if(passed && !state[id].passed){ state[id].passed=true; _syncDone(id); persist(); }
+        return { porte, porteTotal, noteGood:ng, noteTotal:nt, tentes, good:porte, total:porteTotal, passed: passed||wasPassed }; }
       // HISTORIQUE DES ESSAIS — on EMPILE chaque soumission (jamais d'écrasement). essais[0] = diagnostic (ce que l'élève savait seul, avant toute correction).
       //   dt = temps de réflexion depuis l'essai précédent (null pour le 1er, dont le temps amont est déjà raconté par le travail au cahier / qTimes).
       const st0=state[id]; st0.essais = st0.essais || [];
@@ -1488,7 +1509,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
       const ancP = anc ? (anc.porte!=null?anc.porte:(anc.good||0)) : -1;
       const ancN = anc ? (anc.noteGood!=null?anc.noteGood:(anc.good||0)) : -1;
       const nouveauMeilleur = (porte>ancP) || (porte===ancP && ng>=ancN);
-      if(!replay || !anc || nouveauMeilleur) state[id].qcm = nouveau;
+      if(!(replay||wasPassed) || !anc || nouveauMeilleur) state[id].qcm = nouveau;   // séance réussie : on ne remplace que si le complément AMÉLIORE (jamais de recul)
       if(passed){ state[id].passed=true; _syncDone(id); }   // porte franchie ; la séance ne devient « done » qu'après l'autocorrection (checkpoint 2)
       persist(); return { porte, porteTotal, noteGood:ng, noteTotal:nt, tentes, good:porte, total:porteTotal, passed };
     },
@@ -1778,8 +1799,9 @@ const HELP_HTML = `
   <h4>12. Viser le sans-faute</h4>
   <p>Quand une séance est réussie, tu peux la <b>refaire pour viser le sans-faute</b> (comme aller chercher les trois étoiles d'un niveau). C'est possible <b>chez toi</b>, en dehors du temps de classe. Ta réussite reste acquise quoi qu'il arrive : on garde toujours ton <b>meilleur</b> passage, jamais le moins bon.</p>
 
-  <h4>13. Les étoiles d'autonomie et les aides</h4>
-  <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. Tu les gardes en travaillant seul ; chaque <b>aide</b> que tu ouvres en coûte une. Demander de l'aide reste permis — mais cherche d'abord par toi-même.</p>
+  <h4>13. Les aides et les étoiles d'autonomie</h4>
+  <p>Quand tu bloques sur une question, ouvre <b>« Besoin d'un coup de pouce ? »</b> et choisis la question qui te pose problème. L'aide arrive en <b>trois temps</b> : d'abord une <b>orientation</b> (où chercher), puis la <b>méthode</b> (comment t'y prendre), enfin un <b>élément de réponse</b>. Tu ouvres ces étapes une par une, seulement si tu en as encore besoin.</p>
+  <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. La première <b>orientation est gratuite</b> : la demander ne coûte rien. Aller plus loin (méthode ou élément de réponse) coûte <b>une étoile</b>. Demander de l'aide reste permis et normal — mais cherche d'abord seul, et arrête-toi dès que tu as compris.</p>
 
   <h4>14. Revenir à la carte</h4>
   <p>Le bouton <b>← La carte</b> te ramène à la carte pour choisir une autre séance.</p>
@@ -1805,7 +1827,7 @@ function Panel(engine, root, name){
   P.render = function(){ P.screen==="map" ? renderMap() : renderSeance(); };
 
   // — suivi d'activité + rappel d'inactivité (le chrono ne se met jamais en pause) —
-  const IDLE_MS=CONFIG.idleMs;                                  // 2 min sans rien toucher → rappel doux
+  const IDLE_MS=CONFIG.idleMs;                                  // rappel doux après ce délai d'inactivité (consigne/QCM)
   P._lastAct=Date.now();
   function bumpAct(){ P._lastAct=Date.now(); if(P._nag) nagHide(); }
   if(root && !root._actWired){ root._actWired=true; root.addEventListener('pointerdown',bumpAct,true); root.addEventListener('keydown',bumpAct,true); }
@@ -1814,7 +1836,7 @@ function Panel(engine, root, name){
     if(!n){ n=document.createElement('div'); n.className='nag'; host.appendChild(n); }
     const msg = cahier
       ? 'Tu écris sur ton cahier ? Très bien. Pense à cocher tes questions au fur et à mesure, puis reviens à la tablette quand tu as fini.'
-      : 'Tu n\'as rien fait depuis 2 minutes — reprends ton travail.';
+      : 'Tu n\'as rien fait depuis '+Math.round(IDLE_MS/60000)+' minutes — reprends ton travail.';
     n.innerHTML='<span>'+msg+' <span title="Temps passé sur la séance / temps prévu">'+chronoInfo(P.current).html+'</span></span><button class="btn ghost" onclick="APP.panel(\''+laneIdOf()+'\').iAmHere()">Je continue</button>';
     n.classList.add('show'); P._nag=true; }
   function nagHide(){ const host=laneEl(); const n=host.querySelector&&host.querySelector(':scope > .nag'); if(n) n.classList.remove('show'); P._nag=false; }
@@ -1827,7 +1849,7 @@ function Panel(engine, root, name){
     // Inactivité tablette NORMALE quand l'élève écrit au cahier : mode papier, ou QCM réussi (autocorrection/bilan se font sur le cahier).
     const stS=engine.snapshot().state[P.current]||{};
     const cahier=(P.mode==='papier') || (stS.passed && stS.status!=='done');
-    const seuil = cahier ? CONFIG.idleCahierMs : IDLE_MS;                                         // 6 min si écriture cahier attendue ; 2 min sinon
+    const seuil = cahier ? CONFIG.idleCahierMs : IDLE_MS;                                         // tolérance plus longue si écriture au cahier attendue
     if(Date.now()-P._lastAct>seuil) nagShow(cahier); };
 
   function hud(){
@@ -1987,7 +2009,17 @@ function Panel(engine, root, name){
     if(sMs!=null) return { html:'⏱ cette heure : '+fmtDur(sMs)+' · en tout : '+cs.txt+(msg?' · '+msg:''), cls:cs.cls };
     return { html:'⏱ '+cs.txt+(msg?' · '+msg:''), cls:cs.cls }; }
   P.refreshChrono=function(){ const el=root.querySelector('.chrono'); if(!el||P.screen!=='seance'||!P.current) return;
-    const coursDebut=(((( APP._control||{})[P.classeSeg])||{}).cours||{}).debut||0; engine.markSession(P.current, coursDebut);
+    // AUTORITÉ DU CHRONO (appelé chaque seconde) : il court tant que l'élève est PRÉSENT sur la séance (cours ou hors cours),
+    //   et s'arrête en pause prof, séance terminée, ou onglet caché/fermé. Le bornage connexion→fermeture vit ici + dans les handlers de visibilité.
+    const ctrl=(( APP._control||{})[P.classeSeg])||{}; const cours=ctrl.cours||null;
+    const indCtl=(( APP._control||{})[engine.studentId])||{};                                  // blocage CIBLÉ éventuel de cet élève (control/{chap}/{uid})
+    const fzActif=[ctrl.freeze, indCtl.freeze].filter(Boolean).sort((a,b)=>(b.epoch||0)-(a.epoch||0))[0];  // gel de CLASSE ou CIBLÉ : le plus récent fait foi (même règle que le subscribe control)
+    const gel=!!(fzActif&&fzActif.gel);
+    const present=(typeof document==='undefined' || document.visibilityState!=='hidden');
+    const done=engine.statusOf(P.current)==='done'; const running=engine.timing(P.current).running;
+    if(present && !gel && !done){ if(!running) engine.resume(P.current); }   // présent : (re)démarre le compteur si à l'arrêt
+    else if(running){ engine.freeze(P.current); }                            // pause / terminé / onglet caché : on fige (consolide proprement)
+    const coursDebut=(cours||{}).debut||0; engine.markSession(P.current, coursDebut);   // « cette heure » : repère seulement si un cours est lancé
     const ci=chronoInfo(P.current); el.className='chrono '+ci.cls; el.innerHTML=ci.html; };
   // le drapeau « séance en cours » a changé : si l'élève regarde le verdict d'une séance réussie (hors re-jeu), rafraîchir pour (dé)montrer le bouton re-jeu
   P.reflectCours=function(){ if(P.screen==='seance' && P.tabCur==='e' && !P._replay && P.current && engine.statusOf(P.current)==='done') renderEval(); };
@@ -2129,7 +2161,7 @@ function Panel(engine, root, name){
     if(isQ) return 'Question '+String(c).replace(/^q/,''); return 'Aide générale'; }
   function aidesHTML(s){ const aides=s.aides||[]; if(!aides.length) return ''; const lane=laneIdOf();
     const off=((((APP._control||{})[P.classeSeg])||{}).aidesOff)||{};                 // aides masquées pour CETTE classe (toggle prof, Phase 9B)
-    const opt=a=>{ const dis=off[a.cible]?' — aide désactivée':''; return `<option value="${a.id}"${off[a.cible]?' disabled':''}>${aideLabel(a)}${dis}</option>`; };
+    const opt=a=>{ const masque=off.__tout||off[a.cible]; const dis=masque?' — aide désactivée':''; return `<option value="${a.id}"${masque?' disabled':''}>${aideLabel(a)}${dis}</option>`; };
     return `<div class="aides"><div class="ah">Besoin d'un coup de pouce ? Choisis la question où tu bloques :</div>
       <select class="aide-sel" onchange="APP.panel('${lane}').selAide(this.value)">
         <option value="">— choisis une question —</option>${aides.map(opt).join('')}</select>
@@ -2659,9 +2691,8 @@ const APP = {
         // 1) FIGER (gel des chronos + verrouillage) — gel de CLASSE (segCtl) ou blocage CIBLÉ d'un élève (ctl) : le plus récent s'applique
         const fz=[segCtl.freeze, ctl.freeze].filter(Boolean).sort((a,b)=>(b.epoch||0)-(a.epoch||0))[0];
         if(fz && fz.epoch>(p._fzEpoch||0) && fz.epoch>=p.epoch){ p._fzEpoch=fz.epoch;
-          if(p.screen==='seance' && p.current){ if(fz.gel) p.engine.freeze(p.current); else p.engine.resume(p.current); }
           if(typeof p.setLock==='function') p.setLock(!!fz.lock);
-          if(p.refreshChrono) p.refreshChrono(); }
+          if(p.refreshChrono) p.refreshChrono(); }   // chrono : refreshChrono est l'UNIQUE autorité (gel classe + ciblé + visibilité + done) — plus de freeze/resume dupliqué ici
         // 2) déconnexion (classe ou élève)
         const le=Math.max(segCtl.logoutEpoch||0, ctl.logoutEpoch||0);
         if(le && p.epoch<le){ this.kick(k); return; }
@@ -2697,6 +2728,9 @@ const APP = {
   tickChronos(){ for(const k in this.panels){ const p=this.panels[k]; if(!p) continue; if(p.refreshChrono) p.refreshChrono(); if(p.checkIdle) p.checkIdle(); }
     if(typeof MIRROR!=="undefined" && MIRROR._panel && MIRROR._panel.refreshChrono) MIRROR._panel.refreshChrono();
     this.checkCours(); },
+  // L'élève cache ou ferme l'onglet → on fige immédiatement le chrono de chaque séance ouverte (consolidé jusqu'à maintenant).
+  //   C'est ce qui borne le temps « connexion → fermeture » : le compteur ne court jamais pendant que l'onglet est fermé/en arrière-plan.
+  freezeOpen(){ for(const k in this.panels){ const p=this.panels[k]; if(p && p.engine && p.screen==="seance" && p.current){ try{ p.engine.freeze(p.current); }catch(_){} } } },
   beat(key){ const p=this.panels[key]; if(!p||!p.engine) return;
     const chap=CHAPTER.meta.id||"chapitre";
     store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
@@ -3253,7 +3287,8 @@ const PROMPT_CHAPTER =
 "  3. le découpage en séances : des SOCLES interchangeables (niveau 1) + une CONVERGENCE (niveau 2) ;\n"+
 "  4. pour chaque séance : objectif, consigne (l'élève écrit tout sur son cahier), supports ;\n"+
 "  5. les items d'évaluation par séance (auto-corrigés, voir types ci-dessous) et le seuil ;\n"+
-"  6. les aides modulables (0 à N par séance, à paliers : indice puis réponse) ;\n"+
+"  6. les aides GRADUÉES, idéalement UNE PAR QUESTION (cible = numéro de la question ; ou \"seance\" pour une aide générale), à 2 ou 3 paliers, du plus discret au plus explicite :\n"+
+"     palier 1 ORIENTATION (gratuit) : recadre et dit QUOI se demander, sans rien donner. Palier 2 MÉTHODE (coûte une étoile d'autonomie) : la démarche, où regarder, comment s'y prendre, ADAPTÉE au type d'exercice (ordre : par quoi commencer ; trous : quel indice grammatical ; repérage : quelle classe de mots viser ; paires : quel critère d'association). Palier 3 ÉLÉMENT DE RÉPONSE : un bout concret, jamais toute la réponse ;\n"+
 "  7. les couches de la fiche-correction (trouver / pourquoi / aller plus loin / te situer) ;\n"+
 "  8. un CORRIGÉ DU CARNET : pour CHAQUE question rédigée de la consigne, la réponse de référence (r) ET une liste de CRITÈRES (criteres) — les éléments attendus décomposés, que l'élève coche un par un en autocorrection (« citer le métier », « citer le village »…) ; 1 à 4 critères courts par question, ou des critères de réussite pour une question ouverte (« prise de position claire », « appui sur le texte »…) ;\n"+
 "  9. les ACQUIS de la séance : un court texte invariable, le même pour tous les élèves, qui forme la leçon recopiée dans le bilan. Il DOIT couvrir trois dimensions, explicitement étiquetées « Contenu : … Langue : … Style : … » : le contenu (ce qu'il faut comprendre du texte), un fait de LANGUE concret (champ lexical, temps verbal, classe de mots, type de phrase…) et un fait de STYLE (un procédé d'écriture nommé et son effet sur le lecteur) ;\n"+
@@ -3276,7 +3311,7 @@ const PROMPT_CHAPTER =
 '      "acquis": "Contenu : … Langue : … Style : … (texte invariable, le même pour tous, à recopier — TOUJOURS ces trois dimensions étiquetées : contenu du texte, un fait de langue concret, un procédé de style et son effet)",\n'+
 '      "corps": { "consigne": [ BLOCS ], "supports": [] },\n'+
 '      "corrige": [ { "n": 1, "r": "réponse de référence à la question 1 du carnet", "criteres": ["élément attendu 1", "élément attendu 2"] } ],   (une entrée par question rédigée ; r = réponse modèle, criteres = éléments cochables en autocorrection)\n'+
-'      "aides": [ { "id": "a1", "cible": "seance", "paliers": ["indice", "réponse"] } ],\n'+
+'      "aides": [ { "id": "a1", "cible": 1, "paliers": ["Demande-toi QUOI chercher, sans répondre.", "La démarche : où regarder, comment t\'y prendre.", "Un élément de réponse concret, pas la totalité."] }, { "id": "a2", "cible": "seance", "paliers": ["orientation générale", "méthode générale"] } ],\n'+
 '      "evaluation": { "seuil": 2, "items": [ ITEMS ] },\n'+
 '      "fiche4d": { "titre": "", "layers": [ { "ic": "✓", "titre": "", "type": "texte", "contenu": "", "references": [] } ] }\n'+
 '  } ]\n'+
@@ -4140,6 +4175,12 @@ const PROF = {
         <div class="d">Désactivés volontairement : on apprend l'app d'abord, on enrichit ensuite. Le code est déjà préparé (file de signaux + canal d'ordres) ; il restera à brancher l'émetteur. Désactivés par défaut.</div>
         <div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">✋ <b>Main levée</b> — l'élève signale qu'il a besoin d'aide</span><button class="btn ghost todo-off" disabled>à venir</button></div>
         <div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">💬 <b>Rappel</b> — pousser un mot court sur l'écran d'un élève</span><button class="btn ghost todo-off" disabled>à venir</button></div></div>
+      <div class="prof-sec"><h4>Coup de pouce (aides)</h4>
+        <div class="d">Coupe ou rouvre les aides graduées pour une classe — par exemple pendant une évaluation. Les élèves voient alors « aide désactivée », sans pouvoir l'ouvrir. Réglage par classe, sans effet sur les autres.</div>
+        ${(APP.knownClasses()||[]).map(cl=>{ const coupe=(((( APP._control||{})[cl.seg]||{}).aidesOff)||{}).__tout;
+            return `<div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">${esc(cl.nom)}</span>
+              <button class="btn ghost" onclick="PROF.toggleAides('${cl.seg}')"${coupe?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${coupe?'aides coupées':'aides ouvertes'}</button></div>`;
+          }).join('') || '<div class="d" style="opacity:.7">Aucune classe enregistrée pour l\'instant.</div>'}</div>
       <div class="prof-sec"><h4>Mode TEST</h4>
         <div class="d">Bascule les postes en élève « bac à sable » (données séparées des vrais élèves), avec réinitialisation et réussite forcée pour parcourir vite un chapitre.</div>
         <div class="prof-row"><button class="btn ghost" onclick="APP.toggleTest();PROF.render()">${APP.testMode?'activé — postes en test':'désactivé'}</button></div></div>
@@ -4163,6 +4204,11 @@ const PROF = {
       r.readAsText(f); };
     i.click(); },
   setReo(m){ CHAPTER.reglages.reorientation=m; this.touch(); this.render(); toast("Réorientation : "+m); },
+  // 9B — coupe / rouvre les aides d'une classe (par ex. pendant une éval). Écrit control/{chap}/{seg}.aidesOff, lu côté élève (aidesHTML).
+  toggleAides(seg){ const chap=CHAPTER.meta.id||"chapitre"; const node=Object.assign({}, (APP._control||{})[seg]||{});
+    const coupe=!((node.aidesOff||{}).__tout); node.aidesOff = coupe?{__tout:true}:{};   // merge : ne touche ni cours ni freeze
+    store.save("control/"+chap+"/"+seg, node); this.render();
+    toast(coupe?"Aides coupées pour cette classe.":"Aides rouvertes pour cette classe."); },
   // publication d'une mise à jour : on sonde le serveur, on ne publie (et donc ne rafraîchit les élèves) QUE lorsqu'il sert la nouvelle version
   publishUpdate(){ this._pubState='polling'; this._pubMsg=''; this.render();
     const base=location.pathname, current=APP._appVersion||'';
