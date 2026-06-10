@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05ct">
+<meta name="app-version" content="2026-06-05cu">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -425,6 +425,19 @@
   .bt-amorce{font-size:.82rem;color:var(--ink2);font-style:italic;margin:4px 0;padding-left:2px}
   .bt-comp{background:var(--panel2);border:1px solid var(--gold-deep)}
   .bt-comp .bt-bloc-h{background:rgba(251,191,36,.1);color:var(--gold)}
+  /* zoom élève — agrandissement global des zones de lecture (toggle, mémorisé par tablette). Additif : ne touche pas les tailles par défaut. */
+  body.zoom-big .docsheet .docbody{font-size:1.2rem}
+  body.zoom-big .docsheet .docq{font-size:1.16rem}
+  body.zoom-big .docsheet .docamorce{font-size:1.05rem}
+  body.zoom-big .docsheet .dnote{font-size:1rem}
+  body.zoom-big .docsheet .dcompl li{font-size:1.08rem}
+  body.zoom-big .support{font-size:.97rem}
+  body.zoom-big .objective{font-size:.94rem}
+  body.zoom-big .rule{font-size:.96rem}
+  body.zoom-big .bt-bloc-c,body.zoom-big .bt-list li{font-size:.95rem}
+  body.zoom-big .bt-sub{font-size:.88rem}
+  body.zoom-big .bt-amorce{font-size:.95rem}
+  body.zoom-big .gt-zoom.on{border-color:var(--gold-deep);color:var(--gold)}
   /* signaux prof — file unifiée (bilans, incohérences…) */
   .prof-sec.signaux-sec{border:1.5px solid var(--fire);background:rgba(214,69,93,.08)}
   .prof-sec.signaux-sec h4{color:var(--fire2)}
@@ -1789,7 +1802,7 @@ const HELP_HTML = `
   <p>En haut d'une séance, deux temps : <b>« cette heure »</b> (depuis le début du cours) et <b>« en tout »</b> (sur toute la séance, même commencée un autre jour). C'est pour voir où passe ton temps, pas pour te juger.</p>
 
   <h4>8. Surligner, étiqueter, garder des mots</h4>
-  <p>Une barre de couleurs en haut : choisis une couleur, puis <b>tape un mot</b> pour le surligner. Tu peux coller une <b>étiquette</b> (une note sur un mot), ou <b>gommer</b> en tapant un mot déjà surligné. Un mot difficile&nbsp;? Tu peux le mettre dans ton <b>glossaire</b> pour le retrouver. Tout est gardé : si tu reviens plus tard, c'est toujours là.</p>
+  <p>Une barre de couleurs en haut : choisis une couleur, puis <b>tape un mot</b> pour le surligner. Tu peux coller une <b>étiquette</b> (une note sur un mot), ou <b>gommer</b> en tapant un mot déjà surligné. Un mot difficile&nbsp;? Tu peux le mettre dans ton <b>glossaire</b> pour le retrouver. Tout est gardé : si tu reviens plus tard, c'est toujours là. Dans la même barre, le bouton <b>Aa</b> agrandit le texte si tu lis mieux en gros — retape-le pour revenir à la taille normale.</p>
 
   <h4>9. Le test, et ton premier essai</h4>
   <p>Dans <b>S'évaluer</b>, réponds puis tape <b>Vérifier</b>. Ton <b>premier essai</b> ne te coûte rien et n'est pas une note : il me sert juste à voir <b>où tu en es seul</b>, avant correction. Si tu n'as pas le compte, tu <b>recommences</b> autant qu'il faut pour franchir l'étape. Ce qui compte, c'est ta progression.</p>
@@ -2074,6 +2087,7 @@ function Panel(engine, root, name){
       +'<button class="gt'+(cur==='gomme'?' on':'')+'" title="Effacer un mot" onclick="APP.panel(\''+lane+'\').gtool(\'gomme\')">gomme</button>'
       +'<button class="gt'+(cur==='dico'?' on':'')+'" title="Dictionnaire : touche ce bouton, puis touche un mot du texte pour lire sa définition" onclick="APP.panel(\''+lane+'\').gtool(\'dico\')">📖 dico</button>'
       +'<button class="gt" title="Mon glossaire" onclick="APP.panel(\''+lane+'\').openGlossaire()">📚 glossaire</button>';
+    bar+='<button class="gt gt-zoom'+(APP.zoomBig?' on':'')+'" title="Agrandir le texte pour mieux lire" onclick="APP.toggleZoom()">Aa '+(APP.zoomBig?'Texte normal':'Texte plus grand')+'</button>';
     if(cur) bar+='<div class="ghint"><span class="frozen">feuille figée</span><span>'+hintOf(cur)+'</span></div>';
     return bar+'</div>'; }
   // ── Parcours de séance : référence de temps par question + garde-fous (Lot A) ──
@@ -2663,6 +2677,8 @@ const APP = {
     lane.classList.toggle('reduced', reduced); } },
   setTableSize(n){ this.tableSize=Math.max(1,Math.min(LETTERS.length,n|0)); lsSet("wt_seats", this.tableSize); this.boot(); },
   toggleHelp(key){ const el=$("help"+key); if(el) el.classList.toggle("open"); },
+  toggleZoom(){ this.zoomBig=!this.zoomBig; document.body.classList.toggle('zoom-big', this.zoomBig); lsSet('wt_zoom', this.zoomBig?1:0);
+    document.querySelectorAll('.gt-zoom').forEach(b=>{ b.textContent='Aa '+(this.zoomBig?'Texte normal':'Texte plus grand'); b.classList.toggle('on', this.zoomBig); }); },
   toggleTest(){ this.testMode=!this.testMode;
     this.purgeTest(); this.boot(); },                          // purge à l'entrée comme à la sortie
   purgeTest(){ const chap=CHAPTER.meta.id||"chapitre";                  // efface les résidus testA/B/C
@@ -2942,6 +2958,7 @@ const APP = {
   _hideUpdateBanner(){ const b=$("updBanner"); if(b) b.remove(); },
 
   boot(){
+    this.zoomBig = !!lsGet("wt_zoom"); document.body.classList.toggle("zoom-big", this.zoomBig);   // préférence de taille de texte mémorisée par tablette
     if(this._seatsInit===undefined){ this._seatsInit=true; const s=lsGet("wt_seats"); if(s&&s>=1&&s<=LETTERS.length) this.tableSize=s; }  // choix mémorisé sur cette tablette
     const resume = (!this.testMode) ? lsGet("wt_resume") : null;       // reprise après un reload de mise à jour
     if(resume){ lsSet("wt_resume", null);                              // consommé une seule fois
