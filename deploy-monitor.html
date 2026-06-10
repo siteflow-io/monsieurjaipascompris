@@ -245,14 +245,16 @@ async function run(){
 
     if(!files.length){ rows.innerHTML = `<tr><td colspan="4" class="detail">Aucun fichier .html trouvé sur <code>${branch}</code>${filter?` (filtre « ${filter} »)`:""}.</td></tr>`; setStatus("0 fichier"); return; }
 
-    const prev = JSON.parse(localStorage.getItem(LS) || "{}");   // {path:{repo,served}}
+    const prev = JSON.parse(localStorage.getItem(LS) || "{}");   // SHA servi précédents (badge ↻ CHANGÉ)
     const next = {};
     let okN=0, warnN=0, badN=0, pushN=0;
 
-    // nouveau push = le SHA source a changé depuis la dernière vérif de cette session
+    // push récent = un commit a touché le fichier dans les 30 dernières minutes
+    setStatus("lecture des commits récents…", true);
+    const recent = await fetchRecentPushes(owner, repo, branch, 30*60*1000);
     files.forEach(f=>{
-      const p = prev[f.path];
-      f.pushed = !!(p && p.repo && p.repo !== f.repoSha);
+      f.commitMs = recent.get(f.path) || null;
+      f.pushed   = f.commitMs != null;
       if(f.pushed){ pushN++; delete diffCache[f.path]; }   // diff périmé → on le rechargera
     });
 
@@ -340,7 +342,10 @@ function paintRow(f, r){
     tr.dataset.rank = f.pushed ? "0" : "3";
   }else{
     f.synced = false;
-    if(!clocks.has(f.path)) clocks.set(f.path, Date.now());   // démarre le chrono à la 1re observation
+    if(!clocks.has(f.path)){
+      // démarre le chrono à l'heure réelle du commit si connue, sinon à l'instant d'observation
+      clocks.set(f.path, f.commitMs || Date.now());
+    }
     state.innerHTML = `<span class="pill warn"><span class="d"></span>désynchro</span>`+
       `<span class="clock js-clock" data-path="${f.path}">⏱ 0:00</span>`+
       `<span style="font-size:11px;color:var(--ink-faint);margin-left:6px">${f.pushed?"push pas encore servi":"pas encore servi"}</span>`;
@@ -393,6 +398,31 @@ function syncWatchers(){
 function stopWatchers(){
   if(ticker){ clearInterval(ticker); ticker=null; }
   if(poller){ clearInterval(poller); poller=null; }
+}
+/* récupère les fichiers touchés par un commit dans les dernières sinceMs millisecondes,
+   sur la branche déployée. Retourne Map path -> timestamp du commit le plus récent.
+   Coût : 1 appel (liste) + 1 par commit récent (en général 1 à 3). */
+async function fetchRecentPushes(owner, repo, branch, sinceMs){
+  const map = new Map();
+  try{
+    const since = new Date(Date.now() - sinceMs).toISOString();
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(branch)}&since=${since}&per_page=20&_cb=${Date.now()}`, {cache:"no-store"});
+    if(!r.ok) return map;
+    const commits = await r.json();
+    if(!Array.isArray(commits) || !commits.length) return map;
+    // du plus ancien au plus récent (cap 10) pour que le commit le plus récent l'emporte
+    const list = commits.slice(0, 10).reverse();
+    for(const c of list){
+      const t = Math.min(new Date(c.commit.committer.date).getTime(), Date.now());
+      const d = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${c.sha}?_cb=${Date.now()}`, {cache:"no-store"});
+      if(!d.ok) continue;
+      const detail = await d.json();
+      (detail.files||[]).forEach(file=>{
+        if(/\.html?$/i.test(file.filename)) map.set(file.filename, t);
+      });
+    }
+  }catch(e){}
+  return map;
 }
 
 /* ---------- service workers & caches ---------- */
