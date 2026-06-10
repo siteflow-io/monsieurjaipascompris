@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05cs">
+<meta name="app-version" content="2026-06-05ct">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -422,6 +422,9 @@
   .bt-rev li{color:var(--ink2)}
   .bt-q{font-size:.72rem;color:var(--muted)}
   .bt-revoir{margin:2px 13px 0;text-align:right}
+  .bt-amorce{font-size:.82rem;color:var(--ink2);font-style:italic;margin:4px 0;padding-left:2px}
+  .bt-comp{background:var(--panel2);border:1px solid var(--gold-deep)}
+  .bt-comp .bt-bloc-h{background:rgba(251,191,36,.1);color:var(--gold)}
   /* signaux prof — file unifiée (bilans, incohérences…) */
   .prof-sec.signaux-sec{border:1.5px solid var(--fire);background:rgba(214,69,93,.08)}
   .prof-sec.signaux-sec h4{color:var(--fire2)}
@@ -1574,6 +1577,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
         const enonce=((it.enonce||it.question||'')+'').trim() || EVAL_TYPES[it.type].label;
         (res&&res.ok?compris:qcmRevoir).push({ n:qItems.length+idx+1, enonce, bonne:'' }); });
       return { titre:s.titre, qcm:qcmTxt, qcmPart, revoir, acquis, trouver, pourquoi, compris, qcmRevoir,
+        competences:(Array.isArray(s.competences)?s.competences:[]),
         signal:this.autocorrSignal(id), bilanEcrit:!!st.bilanEcrit }; },
 
     useAide(id, aideId, niveau){ const st=state[id]; if(!st) return; st.aidePal=st.aidePal||{};
@@ -2522,27 +2526,38 @@ function Panel(engine, root, name){
     const lecon = d.acquis
       ? `<div class="bt-bloc bt-copy"><div class="bt-bloc-h">✍️ À recopier — la leçon</div><div class="bt-bloc-c">${esc(d.acquis)}</div></div>`
       : '';
-    // bloc 2 — bilan personnel : contenus compris (QCM réussis) / à revoir (QCM ratés + critères de l'autocorrection)
+    // bloc 2 — bilan personnel : trois zones distinctes. On NOMME les sujets, sans donner les réponses : l'élève reformule.
     const comprisHTML = d.compris && d.compris.length
       ? `<div class="bt-sub">Ce que tu as compris :</div><ul class="bt-list">`
-        + d.compris.map(c=>`<li>${esc(c.enonce)}${c.bonne?` → <b>${esc(c.bonne)}</b>`:''} <span class="bt-q">(Q${c.n})</span></li>`).join('')
+        + d.compris.map(c=>`<li>${esc(c.enonce)} <span class="bt-q">(Q${c.n})</span></li>`).join('')
         + `</ul>` : '';
-    const revoirItems=[];
-    (d.qcmRevoir||[]).forEach(c=> revoirItems.push(`${esc(c.enonce)} <span class="bt-q">(Q${c.n})</span> — relis le passage`));
-    (d.revoir||[]).forEach(r=> revoirItems.push(`À l'écrit : ${esc(r)}`));
-    const revoirHTML = revoirItems.length
-      ? `<div class="bt-sub">Ce qu'il te reste à revoir :</div><ul class="bt-list bt-rev">`+revoirItems.map(x=>`<li>${x}</li>`).join('')+`</ul>` : '';
-    const rien = (!comprisHTML && !revoirHTML) ? `<p class="d">Termine le QCM et la correction pour voir ton bilan personnel.</p>` : '';
+    const aRelireHTML = d.qcmRevoir && d.qcmRevoir.length
+      ? `<div class="bt-sub">À relire — ce que tu n'avais pas encore trouvé :</div><ul class="bt-list bt-rev">`
+        + d.qcmRevoir.map(c=>`<li>${esc(c.enonce)} <span class="bt-q">(Q${c.n})</span></li>`).join('')
+        + `</ul>` : '';
+    const aEcrireHTML = d.revoir && d.revoir.length
+      ? `<div class="bt-sub">À retravailler à l'écrit :</div><ul class="bt-list bt-rev">`
+        + d.revoir.map(r=>`<li>${esc(r)}</li>`).join('')
+        + `</ul>` : '';
+    const amorces = `<div class="bt-sub" style="margin-top:9px">Pour t'aider à écrire ton bilan (à compléter) :</div>`
+      + `<div class="bt-amorce">« Dans cette séance, j'ai compris que … »</div>`
+      + `<div class="bt-amorce">« Ce qu'il me reste à revoir, c'est … »</div>`;
+    const rien = (!comprisHTML && !aRelireHTML && !aEcrireHTML) ? `<p class="d">Termine le QCM et la correction pour voir ton bilan personnel.</p>` : '';
     const alerte = (d.signal && d.signal.incoherent)
-      ? `<p class="bt-alert">Tu as coché toutes tes réponses comme réussies, mais une question du QCM est encore fausse : vérifie le point « à revoir » ci-dessus avant de conclure.</p>` : '';
-    const perso = `<div class="bt-bloc bt-perso"><div class="bt-bloc-h">🖊️ Ton bilan personnel — à écrire avec tes mots</div><div class="bt-bloc-c">${comprisHTML}${revoirHTML}${rien}${alerte}</div></div>`;
+      ? `<p class="bt-alert">Tu as coché toutes tes réponses comme réussies, mais une question du QCM est encore fausse : vérifie le point « à relire » ci-dessus avant de conclure.</p>` : '';
+    const perso = `<div class="bt-bloc bt-perso"><div class="bt-bloc-h">🖊️ Ton bilan personnel — à reformuler avec tes mots</div><div class="bt-bloc-c">${comprisHTML}${aRelireHTML}${aEcrireHTML}${rien}${alerte}${amorces}</div></div>`;
+    // bloc 3 — compétences transférables (tirées des questions de la séance), à garder pour la suite
+    const competencesHTML = (d.competences && d.competences.length)
+      ? `<div class="bt-bloc bt-comp"><div class="bt-bloc-h">🎯 Compétences à garder en tête pour la prochaine fois</div><div class="bt-bloc-c"><ul class="bt-list" style="margin-bottom:0">`
+        + d.competences.map(c=>`<li>${esc(c)}</li>`).join('')
+        + `</ul></div></div>` : '';
     const coche = ro
       ? `<div class="bt-coche${d.bilanEcrit?' on':''}">${d.bilanEcrit?'✓ Bilan écrit au cahier':'Bilan pas encore écrit'}</div>`
       : `<label class="bt-coche${d.bilanEcrit?' on':''}"><input type="checkbox" ${d.bilanEcrit?'checked':''} onclick="APP.panel('${lane}').setBilanEcrit(this.checked)"> J'ai recopié la leçon et écrit mon bilan personnel</label>`;
     const revoir = ro ? '' : `<div class="bt-revoir"><button class="btn link" onclick="APP.panel('${lane}').reopenAutocorr()">↻ Revoir ma correction</button></div>`;
     return `<div class="bilan-t"><div class="bt-head">Ton bilan</div>`
       +`<p class="bt-intro">Ton bilan a <b>deux parties</b>. La <b>leçon</b> (en haut) se <b>recopie</b> telle quelle : elle est la même pour toute la classe. Ton <b>bilan personnel</b>, lui, ne se recopie pas : tu le <b>reformules avec tes propres mots</b>. C'est en le redisant toi-même que tu apprends. Écris <b>les deux</b> sur ton cahier.</p>`
-      +lecon+perso
+      +lecon+perso+competencesHTML
       +`<p class="bt-consigne">Recopie la leçon. Puis, pour ton bilan personnel, <b>reformule avec tes propres mots</b> — tu ne recopies pas le bilan tel quel : redis ce que tu as compris, et ce qu'il te reste à travailler.</p>`
       +revoir+coche+`</div>`;
   }
