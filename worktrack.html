@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05cr">
+<meta name="app-version" content="2026-06-05cs">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -1673,7 +1673,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
       if(i<0||i+1>=p.length) return null; return p[i+1]; },
     globalSuggestion(){ const p=idealPath(); for(const id of p){ if(state[id].status!=="done") return id; } return null; },
     diagnose(id){ const miss=[]; let cur=find(id);
-      while(cur && cur.aretes.prerequis){ const p=find(cur.aretes.prerequis);
+      while(cur && cur.aretes && cur.aretes.prerequis){ const p=find(cur.aretes.prerequis);
         if(p && state[p.id].status!=="done") miss.push(p); cur=p; }
       if(!miss.length) return null;
       return chapter.reglages.reorientation==="root" ? miss[miss.length-1] : miss[0]; },
@@ -3476,7 +3476,7 @@ const PROF = {
           <button class="btn ghost" onclick="PROF.delChapter('${esc(id)}')">×</button></span></div>
         <div class="scopes">${this.scopeChips(id, niv)}</div></div>`; }).join("");
     const list=c.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
-      <span class="meta">${(s.aides||[]).length} aide(s) · ${s.evaluation.items.filter(i=>i.type==="qcm").length} QCM · →${s.aretes.conseillee||"—"}</span></div>`).join("");
+      <span class="meta">${(s.aides||[]).length} aide(s) · ${s.evaluation.items.filter(i=>i.type==="qcm").length} QCM · →${(s.aretes||{}).conseillee||"—"}</span></div>`).join("");
     const hasContent=c.seances.length>0;
     return `<div class="prof-sec"><h4>Bibliothèque <span class="meta" id="saveState">${this._saved?'· enregistré ✓':''}</span></h4>
         <div class="d">Tous tes chapitres, tous niveaux. <b>Activer</b> désigne celui que les tablettes du niveau ouvriront. L'édition est enregistrée en direct dans Firebase.</div>
@@ -4305,7 +4305,7 @@ const PROF = {
     this.touch(); this.editSeance(id); },
   delSeance(id){ if(CHAPTER.seances.length<=1){toast("Au moins une séance.");return;}
     CHAPTER.seances=CHAPTER.seances.filter(s=>s.id!==id);
-    CHAPTER.seances.forEach(s=>{ if(s.aretes.conseillee===id)s.aretes.conseillee=null; if(s.aretes.prerequis===id)s.aretes.prerequis=null; });
+    CHAPTER.seances.forEach(s=>{ if(!s.aretes) return; if(s.aretes.conseillee===id)s.aretes.conseillee=null; if(s.aretes.prerequis===id)s.aretes.prerequis=null; });
     this.touch(); this.editor(); },
   editSeance(id){ const s=this.seance(id), others=CHAPTER.seances.filter(x=>x.id!==id);
     const opt=sel=>`<option value="">—</option>`+others.map(o=>`<option value="${o.id}" ${sel===o.id?'selected':''}>${esc(o.titre)}</option>`).join("");
@@ -4396,8 +4396,8 @@ const PROF = {
           carte x<input class="txtin" style="width:54px" type="number" value="${s.carte.x}" oninput="PROF.setCarte('${id}','x',this.value)">
           y<input class="txtin" style="width:54px" type="number" value="${s.carte.y}" oninput="PROF.setCarte('${id}','y',this.value)">
           durée<input class="txtin" style="width:58px" type="number" min="0" title="Temps alloué en minutes (chrono élève)" value="${s.dureeEstimee||''}" oninput="PROF.setDuree('${id}',this.value)">min</div>
-        <div class="prof-row">conseillée→<select onchange="PROF.setArete('${id}','conseillee',this.value)">${opt(s.aretes.conseillee)}</select>
-          prérequis→<select onchange="PROF.setArete('${id}','prerequis',this.value)">${opt(s.aretes.prerequis)}</select></div></div>
+        <div class="prof-row">conseillée→<select onchange="PROF.setArete('${id}','conseillee',this.value)">${opt((s.aretes||{}).conseillee)}</select>
+          prérequis→<select onchange="PROF.setArete('${id}','prerequis',this.value)">${opt((s.aretes||{}).prerequis)}</select></div></div>
       <div class="prof-sec"><h4>Objectif & consigne</h4>
         <input class="txtin" style="width:100%" placeholder="objectif" value="${esc(s.objectif||'')}" oninput="PROF.setField('${id}','objectif',this.value)">
         <div style="margin-top:8px">${this.consigneBlocksHTML(id)}</div></div>
