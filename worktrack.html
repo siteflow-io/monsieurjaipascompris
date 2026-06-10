@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05cq">
+<meta name="app-version" content="2026-06-05cr">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -2541,9 +2541,9 @@ function Panel(engine, root, name){
       : `<label class="bt-coche${d.bilanEcrit?' on':''}"><input type="checkbox" ${d.bilanEcrit?'checked':''} onclick="APP.panel('${lane}').setBilanEcrit(this.checked)"> J'ai recopié la leçon et écrit mon bilan personnel</label>`;
     const revoir = ro ? '' : `<div class="bt-revoir"><button class="btn link" onclick="APP.panel('${lane}').reopenAutocorr()">↻ Revoir ma correction</button></div>`;
     return `<div class="bilan-t"><div class="bt-head">Ton bilan</div>`
-      +`<p class="bt-intro">Ton bilan a <b>deux parties</b>. D'abord tu <b>recopies la leçon</b> (la même pour toute la classe). Ensuite tu écris, <b>avec tes mots</b>, ton bilan personnel : ce que tu as compris et ce qu'il te reste à travailler. Écris <b>les deux</b> sur ton cahier.</p>`
+      +`<p class="bt-intro">Ton bilan a <b>deux parties</b>. La <b>leçon</b> (en haut) se <b>recopie</b> telle quelle : elle est la même pour toute la classe. Ton <b>bilan personnel</b>, lui, ne se recopie pas : tu le <b>reformules avec tes propres mots</b>. C'est en le redisant toi-même que tu apprends. Écris <b>les deux</b> sur ton cahier.</p>`
       +lecon+perso
-      +`<p class="bt-consigne">Recopie la leçon, puis écris ton bilan personnel : une ou deux phrases sur ce que tu as compris, une sur ce qu'il te reste à travailler.</p>`
+      +`<p class="bt-consigne">Recopie la leçon. Puis, pour ton bilan personnel, <b>reformule avec tes propres mots</b> — tu ne recopies pas le bilan tel quel : redis ce que tu as compris, et ce qu'il te reste à travailler.</p>`
       +revoir+coche+`</div>`;
   }
   P.setBilanEcrit=function(val){ const s=engine.seance(P.current); if(!s) return;
@@ -4541,9 +4541,20 @@ if(!MJPC.USE_FIREBASE) lsSet("mjpc:classes:init", 1);
 
 // — Bibliothèque de chapitres : on amorce avec la graine, puis Firebase complète/remplace en direct —
 LIBRARY = { [CHAPTER_SEED.meta.id]: JSON.parse(JSON.stringify(CHAPTER_SEED)) };
+let _chapterBootSynced=false;   // adoption unique de la version persistée au démarrage
 chaptersStore.subscribe(v=>{ const fb=v||{};
   // la graine reste disponible tant qu'aucune version Firebase ne porte le même id
   LIBRARY = Object.assign({ [CHAPTER_SEED.meta.id]: JSON.parse(JSON.stringify(CHAPTER_SEED)) }, fb);
+  // au boot, si une version PERSISTÉE du chapitre courant existe (dans fb, pas la graine), l'adopter une seule fois :
+  // sans ça, après un reload l'éditeur prof reste collé sur le seed embarqué (ancienne version, ex. 4 QCM) → tous les décalages.
+  if(!_chapterBootSynced && fb[CHAPTER.meta.id]){
+    _chapterBootSynced=true;
+    if(!Object.values(APP.panels||{}).some(p=>p&&p.engine)){   // aucune session élève en cours → poste prof / boot
+      CHAPTER=JSON.parse(JSON.stringify(fb[CHAPTER.meta.id]));
+      $("chapTitle").textContent=CHAPTER.meta.titre; setAccentForLevel(CHAPTER.meta.niveau);
+      if(PROF.authed) PROF.render();
+    }
+  }
   APP.onLibraryUpdate();   // propage aux postes élèves ; le panneau prof se rafraîchit sur action (pas sur sa propre écriture)
 });
 activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
