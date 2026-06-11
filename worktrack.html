@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05cu">
+<meta name="app-version" content="2026-06-05df">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -402,6 +402,16 @@
   .bt-coche{display:flex;align-items:center;gap:9px;margin:10px 13px 13px;padding:10px 12px;border:1.5px dashed var(--line);border-radius:9px;font-size:.85rem;color:var(--ink2);cursor:pointer;transition:.15s}
   label.bt-coche:hover{border-color:var(--gold-deep)}
   .bt-coche input{width:17px;height:17px;accent-color:var(--done)}
+  /* sous-onglets Texte / Questions (page de la consigne) */
+  .subtabs{display:flex;gap:6px;margin:8px 13px 2px}
+  .subtab{flex:1;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink2);font-size:.9rem;cursor:pointer}
+  .subtab.on{border-color:var(--gold-deep);color:var(--gold);background:rgba(251,191,36,.1);font-weight:600}
+  /* coche « j'ai fait au cahier » (modes papier / les deux) + message d'envoi vers le prof */
+  .cahier-coche{display:flex;align-items:center;gap:9px;margin:12px 13px 6px;padding:10px 12px;border:1.5px solid var(--gold-deep);border-radius:9px;font-size:.9rem;color:var(--ink2);cursor:pointer}
+  .cahier-coche input{width:17px;height:17px;accent-color:var(--done)}
+  .cahier-coche.on{background:rgba(95,179,122,.1)}
+  .cahier-msg{margin:0 13px 12px;padding:10px 12px;border-radius:9px;background:rgba(251,191,36,.12);border:1px solid var(--gold-deep);color:var(--gold2);font-weight:600;font-size:.9rem;line-height:1.4}
+  .cahier-msg.ok{background:rgba(95,179,122,.12);border-color:var(--done);color:var(--done)}
   .bt-coche.on{border-style:solid;border-color:var(--done);background:rgba(111,161,115,.12);color:#bfe6c8}
   .bt-intro{padding:10px 13px 4px;margin:0;font-size:.82rem;line-height:1.5;color:var(--ink2)}
   .bt-bloc{margin:8px 13px;border-radius:9px;overflow:hidden}
@@ -440,6 +450,20 @@
   body.zoom-big .gt-zoom.on{border-color:var(--gold-deep);color:var(--gold)}
   /* signaux prof — file unifiée (bilans, incohérences…) */
   .prof-sec.signaux-sec{border:1.5px solid var(--fire);background:rgba(214,69,93,.08)}
+  .prof-sec.bilans-sec.alert{border:1.5px solid var(--fire);background:rgba(214,69,93,.08)}
+  .prof-sec.bilans-sec.alert h4{color:var(--fire2)}
+  .bilans-sec .d.ok{color:var(--done)}
+  .bilans-sec .seance-tally{display:flex;justify-content:space-between;padding:3px 0;border-top:1px solid var(--line)}
+  /* annonces : bandeau élève (carte) + onglet « MAJ » prof */
+  .ann-band{margin:10px 0;padding:12px 14px;border:1.5px solid var(--gold-deep);border-radius:11px;background:rgba(251,191,36,.1)}
+  .ann-band .ann-h{font-weight:700;color:var(--gold2);margin-bottom:6px}
+  .ann-band .ann-msg{color:var(--ink2);font-size:.92rem;line-height:1.45;margin:4px 0}
+  .ann-band .ann-ok{margin-top:8px;padding:6px 14px;border:1px solid var(--gold-deep);border-radius:8px;background:transparent;color:var(--gold2);cursor:pointer;font-weight:600}
+  .ann-list{display:flex;flex-direction:column;gap:10px}
+  .ann-row{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .ann-row-h{display:flex;justify-content:space-between;font-weight:700;color:var(--gold2);margin-bottom:5px}
+  .ann-eleve{font-size:.9rem;color:var(--ink2);line-height:1.4;margin:3px 0}
+  .ann-interne{font-size:.85rem;color:var(--muted);line-height:1.4;margin:3px 0}
   .prof-sec.signaux-sec h4{color:var(--fire2)}
   .signaux-sec .r{align-items:flex-start;gap:8px}
   .signaux-sec .sig-ic{flex:0 0 auto;font-size:1rem;line-height:1.3}
@@ -703,6 +727,56 @@
   .gate{text-align:center;padding:20px}
   .gate input{background:#0a0805;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:1rem;
     padding:10px 14px;text-align:center;letter-spacing:.3em;width:140px;margin:10px auto;display:block}
+
+  /* ========================================================================
+     SECTION DÉDIÉE — LECTEUR D'OUVERTURE DE CHAPITRE (diaporama théâtre d'ombres)
+     Tout scopé sous #wtIntro / .wti-* : aucune collision avec le reste de l'app.
+     Sortie prof : saisie d'un code prof au clavier (aucun bouton visible).
+     ======================================================================== */
+  #wtIntro{position:fixed;inset:0;z-index:9999;background:#000;overflow:hidden;font-family:'Spline Sans',system-ui,sans-serif}
+  #wtIntro .wti-loader{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;z-index:20;background:#0e0a1c;transition:opacity .6s}
+  #wtIntro .wti-loader.hidden{opacity:0;pointer-events:none}
+  #wtIntro .wti-ring{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:wti-spin .9s linear infinite}
+  @keyframes wti-spin{to{transform:rotate(360deg)}}
+  #wtIntro .wti-lbl{font-family:'EB Garamond',serif;font-style:italic;color:var(--muted);font-size:1.05rem}
+  #wtIntro .wti-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease;display:flex;align-items:center;justify-content:center;overflow:hidden;will-change:opacity}
+  #wtIntro .wti-slide.on{opacity:1}
+  #wtIntro .wti-scene{position:relative;aspect-ratio:16/9;flex:0 0 auto;width:max(100vw, calc(100vh * 16 / 9));will-change:transform}
+  @media (max-aspect-ratio: 3/2){ #wtIntro .wti-scene{width:min(100vw, calc(100vh * 16 / 9))} }
+  #wtIntro .wti-img{position:absolute;inset:0;background-size:cover;background-position:center}
+  #wtIntro .wti-veil{position:absolute;inset:0;background:linear-gradient(180deg, rgba(0,0,0,.12) 0%, transparent 26%, transparent 54%, rgba(0,0,0,.68) 100%);pointer-events:none;z-index:5}
+  #wtIntro .wti-glow{position:absolute;width:40%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;opacity:0;mix-blend-mode:screen}
+  #wtIntro .wti-glow.warm{background:radial-gradient(circle, rgba(255,196,110,.6), transparent 64%)}
+  #wtIntro .wti-glow.cool{background:radial-gradient(circle, rgba(214,224,255,.5), transparent 66%)}
+  #wtIntro .wti-slide.on .wti-glow{animation:wti-glow var(--gp,3.6s) ease-in-out infinite}
+  @keyframes wti-glow{0%,100%{opacity:.16}50%{opacity:.42}}
+  #wtIntro .wti-sky{position:absolute;inset:0;pointer-events:none;-webkit-mask-size:cover;mask-size:cover;-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+  #wtIntro .wti-stars{position:absolute;inset:0}
+  #wtIntro .wti-stars i{position:absolute;display:block;background:#fff;border-radius:50%;opacity:.16;box-shadow:0 0 4px 1px rgba(255,255,255,.55)}
+  #wtIntro .wti-slide.on .wti-stars i{animation:wti-twk var(--tw,3s) ease-in-out infinite}
+  @keyframes wti-twk{0%,100%{opacity:.12;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+  #wtIntro .wti-shoot{position:absolute;width:var(--len,11vmin);height:2px;border-radius:2px;background:linear-gradient(90deg, transparent, rgba(255,255,255,.95));transform-origin:left center;opacity:0;filter:drop-shadow(0 0 4px rgba(255,255,255,.7))}
+  #wtIntro .wti-slide.on .wti-shoot{animation:wti-shoot var(--dur,8s) ease-in var(--del,3s) infinite}
+  @keyframes wti-shoot{0%{opacity:0;transform:rotate(var(--ang,30deg)) translateX(-10%) scaleX(.3)}3%{opacity:1}13%{opacity:1;transform:rotate(var(--ang,30deg)) translateX(150%) scaleX(1)}17%{opacity:0;transform:rotate(var(--ang,30deg)) translateX(210%) scaleX(1)}100%{opacity:0}}
+  #wtIntro .wti-flame{position:absolute;width:1.5%;height:3.6%;transform:translate(-50%,-50%);border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;background:radial-gradient(ellipse at 50% 62%, rgba(255,242,200,.95), rgba(255,168,70,.6) 55%, transparent 76%);mix-blend-mode:screen;filter:blur(.6px);pointer-events:none;opacity:0}
+  #wtIntro .wti-slide.on .wti-flame{animation:wti-flick var(--ff,.5s) ease-in-out var(--fd,0s) infinite}
+  @keyframes wti-flick{0%,100%{opacity:.6;transform:translate(-50%,-50%) scaleY(1)}30%{opacity:.96;transform:translate(-50%,-53%) scaleY(1.2)}60%{opacity:.7;transform:translate(-50.5%,-50%) scaleY(.9)}}
+  #wtIntro .wti-flash{position:absolute;inset:0;opacity:0;pointer-events:none;z-index:8;mix-blend-mode:screen;background:radial-gradient(circle at 50% 48%, rgba(255,198,120,.85), rgba(255,150,70,.32) 52%, transparent 78%)}
+  #wtIntro .wti-flash.go{animation:wti-fire .95s ease-out}
+  @keyframes wti-fire{0%{opacity:0}16%{opacity:.62}100%{opacity:0}}
+  #wtIntro .wti-cap{position:absolute;left:0;right:0;bottom:11%;text-align:center;padding:0 7%;z-index:6;opacity:0;transform:translateY(14px);transition:opacity 1s ease, transform 1s ease}
+  #wtIntro .wti-slide.on .wti-cap{opacity:1;transform:none;transition-delay:.6s}
+  #wtIntro .wti-pre{font-size:clamp(.68rem,2vw,.82rem);letter-spacing:.3em;text-transform:uppercase;color:var(--gold2);font-weight:600;margin-bottom:12px;text-shadow:0 2px 12px rgba(0,0,0,.9)}
+  #wtIntro .wti-line{font-family:'EB Garamond',serif;font-style:italic;font-size:clamp(1.2rem,4vw,1.95rem);line-height:1.5;color:#fff;text-shadow:0 2px 22px rgba(0,0,0,.95);text-wrap:balance;max-width:24em;margin:0 auto}
+  #wtIntro .wti-cap.quote .wti-line{font-size:clamp(1.12rem,3.4vw,1.72rem)}
+  #wtIntro .wti-src{display:block;font-style:normal;font-size:clamp(.76rem,2vw,.9rem);color:var(--gold2);margin-top:14px;letter-spacing:.05em;text-shadow:0 2px 12px rgba(0,0,0,.9)}
+  #wtIntro .wti-final{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:28px;z-index:10;background:linear-gradient(180deg, rgba(10,7,20,.40) 0%, rgba(10,7,20,.66) 70%, rgba(10,7,20,.80) 100%)}
+  #wtIntro .wti-final.show{display:flex;animation:wti-fadein 1s ease}
+  @keyframes wti-fadein{from{opacity:0}to{opacity:1}}
+  #wtIntro .wti-sub{font-size:.78rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2);margin-bottom:12px;text-shadow:0 2px 14px rgba(0,0,0,.9)}
+  #wtIntro .wti-ttl{font-family:'EB Garamond',serif;font-size:clamp(1.7rem,6vw,2.6rem);font-weight:500;color:#fff;text-shadow:0 2px 30px rgba(0,0,0,.85),0 0 40px rgba(251,191,36,.2)}
+  #wtIntro .wti-enter{margin-top:34px;font-family:'Spline Sans',sans-serif;font-size:1rem;font-weight:600;color:#1a1024;background:linear-gradient(180deg,var(--gold2),var(--gold-deep));border:none;border-radius:12px;padding:13px 32px;cursor:pointer;box-shadow:0 10px 30px rgba(251,191,36,.35)}
+  #wtIntro .wti-bar{position:absolute;bottom:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--gold-deep),var(--gold2));z-index:12}
 </style>
 
 <script>
@@ -1002,6 +1076,12 @@ let CHAPTER = {
 // accès localStorage tolérant : en cas d'indisponibilité (aperçu sandboxé…), repli silencieux
 function lsGet(k){ try{ const r=localStorage.getItem(k); return r==null?null:JSON.parse(r); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+function fmtHeureJour(ts){ const d=new Date(ts), n=new Date(); const z=x=>String(x).padStart(2,'0');   // « HHhMM » si c'est aujourd'hui, « HHhMM le J/M » si la séance a commencé un autre jour (anti-confusion)
+  const hh=z(d.getHours())+'h'+z(d.getMinutes());
+  const memeJour=d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();
+  return memeJour?hh:hh+' le '+d.getDate()+'/'+(d.getMonth()+1); }
+function critEv(c){ return (c&&typeof c==='object') ? (c.ev||c.todo||'') : (c||''); }     // critère : formulation d'AUTO-ÉVALUATION (checkpoint 2, « Tu as relevé… »)
+function critTodo(c){ return (c&&typeof c==='object') ? (c.todo||c.ev||'') : (c||''); }    // critère : formulation CONSIGNE pour le bilan « à retravailler » (checkpoint 3, « Relève… »)
 // Hors Firebase : cache mémoire (réactivité en session) + persistance localStorage (survit au rechargement)
 function LocalStore(){ const d={}, subs={}, pfx=MJPC.ROOT+":"; const K=key=>pfx+key;
   return {
@@ -1382,13 +1462,14 @@ function createEngine(chapter, store, studentId, eleveIndex){
     if(st.runSince==null) st.runSince=0; }
   // GARDE-FOU : tout intervalle actif au-delà de CONFIG.maxRunMs est plafonné — empêche définitivement un chrono
   //   de gonfler si une séance n'a jamais été figée (tablette laissée ouverte, déclencheur imprévu). Ceinture + bretelles.
-  function _runDelta(st){ return st.runSince ? Math.min(Math.max(0, Date.now()-st.runSince), CONFIG.maxRunMs) : 0; }
+  function _runDelta(st){ if(!st.runSince) return 0; const d=Date.now()-st.runSince; return (d<0 || d>CONFIG.maxRunMs) ? 0 : d; }   // intervalle aberrant (autre jour, tablette partagée non figée, horloge divergente) => 0, on ne compte pas le trou (au lieu d'ajouter +3h)
   function _elapsed(st){ if(!st) return 0; _normChrono(st);
     return (st.accumMs||0) + _runDelta(st); }
   function _freezeChrono(st){ if(!st) return; _normChrono(st);
     if(st.runSince){ st.accumMs=(st.accumMs||0)+_runDelta(st); st.runSince=0; } }
   function _resumeChrono(st){ if(!st || st.status==='done') return; _normChrono(st);   // le chrono court dès que l'élève est présent sur une séance (cours ou hors cours)
-    if(!st.runSince) st.runSince=Date.now(); }
+    const gap = st.runSince ? Date.now()-st.runSince : 0;
+    if(!st.runSince || gap<0 || gap>CONFIG.maxRunMs) st.runSince=Date.now(); }   // reprise : runSince absent OU aberrant (trou d'un autre jour) => on repart de maintenant sans compter le trou
   // reprise : si une progression est déjà stockée pour cet élève, on la recharge
   function hydrate(saved){ if(!saved || !saved.state) return;
     Object.keys(state).forEach(id=>{ if(saved.state[id]) Object.assign(state[id], saved.state[id]); });
@@ -1454,7 +1535,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
     // gèle TOUTES les séances actives en une fois (gel direct côté prof). borneTs = dernière présence connue : on ne compte pas le temps écoulé après le départ de l'élève.
     freezeAll(borneTs){ const lim=Math.min(Date.now(), borneTs||Date.now());
       seances.forEach(s=>{ const st=state[s.id]; if(!st) return; _normChrono(st);
-        if(st.runSince){ st.accumMs=(st.accumMs||0)+Math.min(Math.max(0, lim-st.runSince), CONFIG.maxRunMs); st.runSince=0; } });
+        if(st.runSince){ const dl=lim-st.runSince; st.accumMs=(st.accumMs||0)+((dl<0||dl>CONFIG.maxRunMs)?0:dl); st.runSince=0; } });   // intervalle aberrant => 0 (cohérent avec _runDelta)
       persist(); },
     markQ(id, qKey, done, horsRadar){ const st=state[id]; if(!st) return; st.qdone=st.qdone||{}; st.qhr=st.qhr||{};
       if(done){ if(!st.startedAt) st.startedAt=Date.now(); st.qdone[qKey]=Date.now(); if(horsRadar) st.qhr[qKey]=true; else delete st.qhr[qKey]; }
@@ -1562,6 +1643,9 @@ function createEngine(chapter, store, studentId, eleveIndex){
     bilanEcritDe(id){ return !!(state[id] && state[id].bilanEcrit); },
     setBilanEcrit(id, val){ const st=state[id]; if(!st) return; st.bilanEcrit=!!val;
       if(val && !st.bilanEcritTs) st.bilanEcritTs=Date.now(); _syncDone(id); persist(); },
+    cahierConfirme(id){ return !!(state[id]||{}).cahierFait; },
+    setCahierFait(id, val){ const st=state[id]; if(!st) return; st.cahierFait=!!val; st.cahierFaitAt=val?Date.now():0; persist(); },
+    cahierFaitAt(id){ return (state[id]||{}).cahierFaitAt||0; },
     // Agrège les trois fils du bilan : la trace (apport commun), ce que le QCM dit de la compréhension,
     // ce que l'autocorrection dit de la rédaction (critères à revoir). Consommé par l'écran élève et, plus tard, le pilotage.
     bilanData(id){ const st=state[id]||{}, s=find(id)||{}, corr=s.corrige||[], ac=st.autocorr||{};
@@ -1569,7 +1653,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
       const qcmTxt = q ? (q.good+"/"+q.total) : null;
       const qcmPart = q ? (q.total? Math.round(100*q.good/q.total) : 0) : null;
       const revoir=[]; corr.forEach(c=>{ const arr=ac[c.n]||[]; const crits=(Array.isArray(c.criteres)&&c.criteres.length)?c.criteres:null;
-        arr.forEach((v,i)=>{ if(v==='revoir'){ revoir.push(crits?crits[i]:('Question '+c.n)); } }); });
+        arr.forEach((v,i)=>{ if(v==='revoir'){ revoir.push({ q:c.n, txt: crits?critTodo(crits[i]):('Question '+c.n) }); } }); });
       let trouver=null, pourquoi=null; const layers=(s.fiche4d&&s.fiche4d.layers)||[];
       layers.forEach(L=>{ const t=(L.titre||'').toLowerCase(); if(L.ic==='✓'||t.indexOf('trouver')>=0) trouver=trouver||L.contenu;
         if(L.ic==='?'||t.indexOf('pourquoi')>=0) pourquoi=pourquoi||L.contenu; });
@@ -1924,7 +2008,7 @@ function Panel(engine, root, name){
         <div class="medal">${s.rn}${st==="done"?`<span class="check${comp?' comp':''}">${comp?'➕':'✓'}</span>`:''}${occ?'<span class="occ">occupé</span>':''}${lock?'<span class="occ">🔒</span>':''}</div>
         <div class="nm">${esc(s.titre)}</div><div class="city">${esc(s.ville)}</div>
         <div class="stars">${starsH}</div></div>`; });
-    root.innerHTML = hud()+`<div class="mapcard${P._mapSeen?' no-anim':''}"><div class="mh"><span class="lab">La carte</span><span class="free">aucun ordre imposé</span></div>
+    root.innerHTML = hud()+ANN.bandeauHTML()+`<div class="mapcard${P._mapSeen?' no-anim':''}"><div class="mh"><span class="lab">La carte</span><span class="free">aucun ordre imposé</span></div>
       <div class="graph">${svg}${nodes}</div></div>`;
     root.querySelectorAll(".place").forEach(el=> el.onclick=()=>{
       if(el.dataset.occ){ toast(el.dataset.occ+" fait cette séance, choisis-en une autre."); return; }
@@ -2139,9 +2223,14 @@ function Panel(engine, root, name){
       else body+='<div class="docq">'+gZone(b.texte||'',zone)+'</div>'; });
     return '<div class="docsheet docquest">'+head+'<div class="docbody">'+body+'</div></div>'; }
   P.tab=function(t){
-    if(t==='e' && laneIdOf()!=='__mirror' && P.current && P.mode!=='papier'){          // exiger que toutes les cases « fait » soient cochées avant le QCM (sauf papier : travail au cahier)
-      const qp=engine.qProgress(P.current);
-      if(!qp.allDone){ toast("Coche d'abord toutes tes questions « fait » ("+qp.done+"/"+qp.total+") avant de t'évaluer."); t='c'; } }
+    if(t==='e' && laneIdOf()!=='__mirror' && P.current && engine.statusOf(P.current)!=='done'){   // ne jamais re-bloquer une séance déjà terminée
+      if(P.mode==='app'){                                   // app : chaque question cochée « fait »
+        const qp=engine.qProgress(P.current);
+        if(!qp.allDone){ toast("Coche d'abord toutes tes questions « fait » ("+qp.done+"/"+qp.total+") avant de t'évaluer."); t='c'; }
+      } else if(!cahierDebloque(P.current)){               // papier / les deux : declaré au cahier ET validé par le prof (semi-controle)
+        toast(engine.cahierConfirme(P.current) ? "Le professeur n'a pas encore validé ton cahier — patiente un instant." : "Confirme d'abord que tu as fait toutes tes questions sur ton cahier."); t='c'; P.subTab='questions';
+      }
+    }
     P.tabCur=t;
     root.querySelector(".tabC").classList.toggle("on",t==='c'); root.querySelector(".tabE").classList.toggle("on",t==='e');
     if(t==='c') fillC();
@@ -2184,11 +2273,29 @@ function Panel(engine, root, name){
       <select class="aide-sel" onchange="APP.panel('${lane}').selAide(this.value)">
         <option value="">— choisis une question —</option>${aides.map(opt).join('')}</select>
       <div class="aide-zone" data-aidezone></div></div>`; }
+  // coche « j'ai fait au cahier » (modes papier / les deux uniquement) + message d'envoi vers le prof
+  function cahierDebloque(id){ if(!engine.cahierConfirme(id)) return false; const ctl=(APP._control||{})[engine.studentId]||{}; const vu=((ctl.cahierVu||{})[id])||0; return vu>0 && vu>=engine.cahierFaitAt(id); }
+  function cahierCocheHTML(s){
+    if(P.mode==='app' || laneIdOf()==='__mirror') return '';
+    const on=engine.cahierConfirme(s.id), lane=laneIdOf(), vu=cahierDebloque(s.id);
+    const lab=on?"En fait je dois encore terminer":"J'ai fait toutes les questions sur mon cahier";
+    let h=`<label class="cahier-coche${on?' on':''}"><input type="checkbox" ${on?'checked':''} onclick="APP.panel('${lane}').setCahierFait(this.checked)"> ${lab}</label>`;
+    if(on && !vu) h+=`<div class="cahier-msg">Lève-toi en silence et va montrer tes questions au professeur.</div>`;
+    if(on && vu)  h+=`<div class="cahier-msg ok">✓ Validé. Tu peux passer à « S'évaluer ».</div>`;
+    return h;
+  }
   function fillC(){ const s=engine.seance(P.current); const tb=root.querySelector(".tabbody"); if(!tb) return;
+    const sub=(P.subTab==='questions')?'questions':'texte', lane=laneIdOf();
+    const subbar=`<div class="subtabs">`
+      +`<button class="subtab${sub==='texte'?' on':''}" onclick="APP.panel('${lane}').setSub('texte')">📄 Le texte</button>`
+      +`<button class="subtab${sub==='questions'?' on':''}" onclick="APP.panel('${lane}').setSub('questions')">✍️ Les questions</button></div>`;
+    const page=(sub==='questions')
+      ? consigneHTML(s.corps.consigne)+aidesHTML(s)+cahierCocheHTML(s)
+      : supportsHTML(s);
     tb.innerHTML=gBar()
       +`<div class="objective"><span class="t">objectif</span><span>${gZone(s.objectif,'obj')}</span></div>
-        <div class="rule">⚠️ <div><b>Règle d'or.</b> Rien sur les fiches : tout sur ton <b>cahier</b>. Les fiches servent à lire et réfléchir.</div></div>
-        ${consigneHTML(s.corps.consigne)}${supportsHTML(s)}${aidesHTML(s)}`;
+        <div class="rule">⚠️ <div><b>Règle d'or.</b> Rien sur les fiches : tout sur ton <b>cahier</b>. Les fiches servent à lire et réfléchir.</div></div>`
+      +subbar+page;
     root.classList.toggle('frozen-scroll', !!P._tool);          // outil actif → feuille figée
     tb.style.touchAction = P._tool ? 'none' : '';
     requestAnimationFrame(()=>paintAllDocs(root));               // numérote les lignes une fois le texte mis en page
@@ -2497,7 +2604,7 @@ function Panel(engine, root, name){
     corr.forEach(c=>{ const arr=data[c.n]||[]; const crits=(Array.isArray(c.criteres)&&c.criteres.length)?c.criteres:null;
       h+=`<div class="ac-q"><div class="ac-qn">Question ${esc(String(c.n))}${enon[c.n]?' — '+esc(enon[c.n]):''}</div>`
         +`<div class="ac-ref">${esc(c.r||'')}</div>`;
-      if(crits) crits.forEach((ct,ci)=>{ h+=`<div class="ac-crit"><span class="ac-ct">${esc(ct)}</span>${choix(c.n,ci,arr[ci])}</div>`; });
+      if(crits) crits.forEach((ct,ci)=>{ h+=`<div class="ac-crit"><span class="ac-ct">${esc(critEv(ct))}</span>${choix(c.n,ci,arr[ci])}</div>`; });
       else h+=`<div class="ac-crit"><span class="ac-ct">As-tu su répondre à cette question&nbsp;?</span>${choix(c.n,0,arr[0])}</div>`;
       h+=`</div>`; });
     const done=engine.autocorrDone(s.id);
@@ -2525,7 +2632,7 @@ function Panel(engine, root, name){
   //   QCM + SA correction, qu'il REFORMULE avec ses mots. On pointe les CONTENUS, jamais les scores.
   // Lot C — récit « parcours de séance » côté élève : 3-4 points métacognitifs, en volet dépliable
   function parcoursEleveHTML(s){ const p=engine.parcours(s.id); const items=[];
-    if(p.start){ const d=new Date(p.start); const hh=String(d.getHours()).padStart(2,'0')+'h'+String(d.getMinutes()).padStart(2,'0');
+    if(p.start){ const hh=fmtHeureJour(p.start);
       items.push('Tu as commencé cette séance à '+hh+', et tu y as passé '+fmtDur(p.total)+' en tout.'); }
     if(p.longest){ let t='La question qui t\'a demandé le plus de temps : la n°'+p.longest.n+' ('+fmtDur(p.longest.ms)+')';
       if(p.longest.sorti) t+=' — mais tu es sorti puis revenu, donc ce temps n\'a pas été passé d\'un seul coup';
@@ -2551,7 +2658,7 @@ function Panel(engine, root, name){
         + `</ul>` : '';
     const aEcrireHTML = d.revoir && d.revoir.length
       ? `<div class="bt-sub">À retravailler à l'écrit :</div><ul class="bt-list bt-rev">`
-        + d.revoir.map(r=>`<li>${esc(r)}</li>`).join('')
+        + d.revoir.map(r=>`<li><span class="bt-q">Q${esc(String(r.q))}</span> ${esc(r.txt)}</li>`).join('')
         + `</ul>` : '';
     const amorces = `<div class="bt-sub" style="margin-top:9px">Pour t'aider à écrire ton bilan (à compléter) :</div>`
       + `<div class="bt-amorce">« Dans cette séance, j'ai compris que … »</div>`
@@ -2563,7 +2670,8 @@ function Panel(engine, root, name){
     // bloc 3 — compétences transférables (tirées des questions de la séance), à garder pour la suite
     const competencesHTML = (d.competences && d.competences.length)
       ? `<div class="bt-bloc bt-comp"><div class="bt-bloc-h">🎯 Compétences à garder en tête pour la prochaine fois</div><div class="bt-bloc-c"><ul class="bt-list" style="margin-bottom:0">`
-        + d.competences.map(c=>`<li>${esc(c)}</li>`).join('')
+        + d.competences.map(c=>{ const t=(c&&typeof c==='object')?(c.t||''):c; const qs=(c&&typeof c==='object'&&Array.isArray(c.q))?c.q:[];
+            const tag=qs.length?` <span class="bt-q">(${qs.map(n=>'Q'+n).join(', ')})</span>`:''; return `<li>${esc(t)}${tag}</li>`; }).join('')
         + `</ul></div></div>` : '';
     const coche = ro
       ? `<div class="bt-coche${d.bilanEcrit?' on':''}">${d.bilanEcrit?'✓ Bilan écrit au cahier':'Bilan pas encore écrit'}</div>`
@@ -2575,6 +2683,11 @@ function Panel(engine, root, name){
       +`<p class="bt-consigne">Recopie la leçon. Puis, pour ton bilan personnel, <b>reformule avec tes propres mots</b> — tu ne recopies pas le bilan tel quel : redis ce que tu as compris, et ce qu'il te reste à travailler.</p>`
       +revoir+coche+`</div>`;
   }
+  P.setSub=function(v){ P.subTab=(v==='questions')?'questions':'texte'; fillC(); APP.beat(APP.laneIdFor(P)); };
+  P.setCahierFait=function(val){ const s=engine.seance(P.current); if(!s) return; engine.setCahierFait(s.id, !!val);
+    const chap=CHAPTER.meta.id||"chapitre";
+    store.save("signaux/"+chap+"/"+engine.studentId+"/cahier", { type:'cahier', etat: val?'fini':'reprend', seance:s.titre, seanceId:s.id, nom:P.name, classeSeg:P.classeSeg||'', ts:Date.now() });
+    fillC(); APP.beat(APP.laneIdFor(P)); };
   P.setBilanEcrit=function(val){ const s=engine.seance(P.current); if(!s) return;
     engine.setBilanEcrit(s.id, !!val);
     const chap=CHAPTER.meta.id||"chapitre";
@@ -2878,7 +2991,7 @@ const APP = {
   // file de signaux (Lot 4) : liste plate des événements qui demandent l'attention du prof, tous types confondus
   signauxList(){ const out=[]; const S=this._signaux||{};
     Object.keys(S).forEach(uid=>{ if(!this.testMode && isTestUid(uid)) return; const node=S[uid]||{};
-      ['bilan','incoherence','aide'].forEach(type=>{ if(node[type]) out.push(Object.assign({uid, type}, node[type])); }); });
+      ['bilan','incoherence','aide','cahier'].forEach(type=>{ if(node[type]) out.push(Object.assign({uid, type}, node[type])); }); });
     return out.sort((a,b)=>(a.ts||0)-(b.ts||0)); },
   // ── Filtre de classe (suivi / tableau de bord / bilan) : par défaut la classe en cours, sélecteur pour consulter les autres ──
   knownClasses(){ const m={};
@@ -3039,7 +3152,7 @@ const APP = {
         if(!ch){ toast("Aucun chapitre ouvert pour "+(cn||"cette classe")+" pour le moment."); return; }
         try{ const el=document.documentElement; if(el.requestFullscreen) el.requestFullscreen().catch(()=>{}); }catch(_){}   // plein écran : autorisé car déclenché par un clic
         CHAPTER=ch; setAccentForLevel(niv); $("chapTitle").textContent=ch.meta.titre;   // le poste s'aligne sur le chapitre actif du niveau
-        if(who) who.textContent=nom; this.mountStudent(key,i,nom,cn,uidOf(cn,nom),lane,null,mode); };
+        if(who) who.textContent=nom; this.mountStudent(key,i,nom,cn,uidOf(cn,nom),lane,null,mode); INTRO.maybePlay(CHAPTER); };
     }
   },
   takenNames(){ return Object.values(this.panels).filter(Boolean).map(p=>p.name); },
@@ -3480,7 +3593,7 @@ const PROF = {
 
   /* ── coquille à onglets ── */
   render(){ const c=CHAPTER, T=this.tab;
-    const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",reglages:"Réorientation, exclusivité, mode test"};
+    const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",maj:"Historique des mises à jour",reglages:"Réorientation, exclusivité, mode test"};
     const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" title="${tips[id]||''}" onclick="PROF.go('${id}')">${lab}</button>`;
     const _segBadge = APP.classeFiltreSeg() || APP.activeClasseSeg();
     const nBil = (_segBadge && _segBadge!=='__none') ? APP.signauxList().filter(x=>x.classeSeg===_segBadge).length : 0;
@@ -3488,14 +3601,19 @@ const PROF = {
     $("profModal").innerHTML=`
       <div style="margin-bottom:10px">
         <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
-      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("reglages","Réglages")}</div>
+      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("maj","MAJ")}${tabBtn("reglages","Réglages")}</div>
       <div id="ptabbody">${this.body()}</div>`; },
   go(t){ if(t==="bilan") this._bilans=null; if(t==="archives") this._archives=null; this.tab=t; this.render(); },
   body(){ return this.tab==="creation"?this.creationBody()
         : this.tab==="classes"?this.classesBody()
         : this.tab==="suivi"?this.suiviBody()
         : this.tab==="bilan"?this.bilanBody()
-        : this.tab==="archives"?this.archivesBody() : this.reglagesBody(); },
+        : this.tab==="archives"?this.archivesBody()
+        : this.tab==="maj"?this.majBody() : this.reglagesBody(); },
+  /* ── onglet MAJ : historique des mises à jour de l'application ── */
+  majBody(){ return `<div class="prof-sec"><h4>Histoire des mises à jour</h4>
+    <div class="d">Journal des versions. « Élèves » = ce qui leur est annoncé au bandeau de la carte ; « Note interne » = pour toi seul.</div>`
+    + ANN.histoireHTML() + `</div>`; },
 
   /* ── onglet CRÉATION : triptyque + éditeur ── */
   creationBody(){ const c=CHAPTER;
@@ -3879,22 +3997,36 @@ const PROF = {
     const sigCls = APP.signauxList().filter(x=> x.classeSeg===segAff);
     const sigMeta = { bilan:{ic:'📝', lab:'a écrit son bilan', act:'va relire son cahier'},
                       incoherence:{ic:'⚠', lab:'s\'est sur-évalué', act:'écart entre QCM et autocorrection'},
-                      aide:{ic:'✋', lab:'demande de l\'aide', act:''} };
+                      aide:{ic:'✋', lab:'demande de l\'aide', act:''},
+                      cahier:{ic:'📋', lab:'déclare avoir fini au cahier', act:''} };
     const signauxBox = sigCls.length ? `<div class="prof-sec signaux-sec"><h4>Signaux <span class="meta">· ${sigCls.length}</span></h4>
       <div class="d">Événements en attente. « Venir me voir » renvoie l'élève sur son bilan et l'y retient ; « ✓ vu » éteint le signal et le libère.</div>
       <div class="prof-list">${sigCls.map(x=>{ const m=sigMeta[x.type]||{ic:'•',lab:x.type,act:''};
-        const conv = (x.type==='bilan' && x.seanceId) ? `<button class="btn ghost sig-conv" title="Renvoie l'élève sur ce bilan et le bloque jusqu'à ton « ✓ vu »" onclick="PROF.convoquer('${esc(x.uid)}','${esc(x.seanceId)}')">✋ Venir me voir</button>` : '';
-        return `<div class="r sig-${x.type}"><span class="sig-ic">${m.ic}</span><span><b>${esc(x.nom||x.uid)}</b> ${m.lab}${x.seance?` · ${esc(x.seance)}`:''}${m.act?`<span class="sig-act"> → ${m.act}</span>`:''}</span>`
-          +`<span class="sig-btns">${conv}<button class="btn ghost" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}')">✓ vu</button></span></div>`; }).join('')}</div></div>` : '';
+        const lab=(x.type==='cahier')?(x.etat==='reprend'?'veut prendre le temps de terminer':'déclare avoir fini au cahier'):m.lab;
+        const conv = (x.type==='bilan' && x.seanceId) ? `<button class="btn ghost sig-conv" title="Renvoie l'élève sur ce bilan et le bloque jusqu'à ton « ✓ vu »" onclick="PROF.convoquer('${esc(x.uid)}','${esc(x.seanceId)}')">✋ Venir me voir</button>`
+          : (x.type==='cahier') ? `<button class="btn ghost sig-conv" title="Voir l'écran de l'élève sans le déranger" onclick="PROF.voirEcran('${esc(x.uid)}')">👁 voir son écran</button>` : '';
+        return `<div class="r sig-${x.type}"><span class="sig-ic">${m.ic}</span><span><b>${esc(x.nom||x.uid)}</b> ${lab}${x.seance?` · ${esc(x.seance)}`:''}${m.act?`<span class="sig-act"> → ${m.act}</span>`:''}</span>`
+          +`<span class="sig-btns">${conv}<button class="btn ghost" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}','${esc(x.seanceId||'')}','${esc(x.etat||'')}')">✓ vu</button></span></div>`; }).join('')}</div></div>` : '';
 
+    const bilA = APP.signauxList().filter(x=> x.type==='bilan' && x.classeSeg===segAff);   // angle mort : bilans écrits non encore « vus »
+    const bilParS = {}; bilA.forEach(x=>{ const k=x.seance||x.seanceId||'?'; bilParS[k]=(bilParS[k]||0)+1; });
+    const bilansBox = `<div class="prof-sec bilans-sec${bilA.length?' alert':''}"><h4>Bilans à vérifier <span class="meta">· ${bilA.length}</span></h4>`
+      + (bilA.length
+          ? `<div class="d">Bilans écrits non encore vérifiés. Ouvre le bilan de l'élève, lis-le, puis « ✓ vu » sur le signal.</div>`
+            + `<div class="prof-list">${Object.keys(bilParS).sort().map(k=>`<div class="r seance-tally"><span>${esc(k)}</span><span class="meta">${bilParS[k]}</span></div>`).join('')}</div>`
+          : `<div class="d ok">✓ Tous les bilans écrits ont été vérifiés.</div>`)
+      + `</div>`;
     return APP.classeSelectHTML(true)
       + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
-      + signauxBox + coursBox + freezeBox + classeSec + ailleursSec
+      + signauxBox + bilansBox + coursBox + freezeBox + classeSec + ailleursSec
       + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
-  signalVu(uid, type){ const chap=CHAPTER.meta.id||"chapitre"; store.save("signaux/"+chap+"/"+uid+"/"+type, null);
-    if(type==='bilan') store.save("control/"+chap+"/"+uid+"/act", { m:'closeVenirVoir', a:[], ts:Date.now() });   // libère l'élève s'il était convoqué sur son bilan
+  signalVu(uid, type, seanceId, etat){ const chap=CHAPTER.meta.id||"chapitre"; store.save("signaux/"+chap+"/"+uid+"/"+type, null);
+    if(type==='bilan'){ store.save("control/"+chap+"/"+uid+"/act", { m:'closeVenirVoir', a:[], ts:Date.now() });   // libère l'élève s'il était convoqué sur son bilan
+      if(seanceId) store.save("control/"+chap+"/"+uid+"/bilanVu/"+seanceId, Date.now()); }                          // trace la vérification (compteur angle mort, dette #3)
+    if(type==='cahier' && etat!=='reprend' && seanceId) store.save("control/"+chap+"/"+uid+"/cahierVu/"+seanceId, Date.now());   // valide le cahier -> débloque le QCM (semi-controle)
     toast("Signal traité."); if(this.authed) this.render(); },
+  voirEcran(uid){ if(typeof MIRROR!=="undefined" && MIRROR.open) MIRROR.open(uid); toast("Vue de l'élève ouverte ici."); },
   // convoque un élève sur le bilan d'une séance précise : il y est renvoyé et retenu jusqu'au « ✓ vu »
   convoquer(uid, seanceId){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/act", { m:'venirVoir', a:[seanceId||''], ts:Date.now() });
@@ -3903,7 +4035,12 @@ const PROF = {
   endSessionFor(seg, label){ APP.endSessionFor(seg); toast("Classe « "+label+" » déconnectée."); this.render(); },
   doFreeze(){ const o=this._fz||{gel:true,lock:false,logout:false};
     if(!o.gel && !o.lock && !o.logout){ toast("Coche au moins une option."); return; }
-    if(o.logout && typeof confirm==="function" && !confirm("Figer la séance et déconnecter les élèves ?\nIls reprendront leur progression exacte à la prochaine connexion.")) return;
+    if(o.logout && typeof confirm==="function"){
+      const segAff=APP.classeFiltreSeg();
+      const nBil=APP.signauxList().filter(x=> x.type==='bilan' && x.classeSeg===segAff).length;
+      const extra=nBil?("\n\n⚠ "+nBil+" bilan(s) écrit(s) ne sont pas encore vérifiés."):"";
+      if(!confirm("Figer la séance et déconnecter les élèves ?\nIls reprendront leur progression exacte à la prochaine connexion."+extra)) return;
+    }
     APP.freezeSessions(o); this.render(); },
   doResume(){ APP.resumeSessions(); this.render(); },
   // overlay flottant indépendant du panneau (s'affiche même panneau fermé) — réutilisé pour lancer et pour la fin de séance
@@ -3987,7 +4124,7 @@ const PROF = {
   },
   // Lot C — diagnostic prof : phrases « solides », appuyées sur les données, pour l'oral. Temps non fiables exclus, sorties nuancées.
   parcoursPhrases(eng, seanceId, coursDebut){ const p=eng.parcours(seanceId); const ph=[];
-    if(p.start){ const d=new Date(p.start); const hh=String(d.getHours()).padStart(2,'0')+'h'+String(d.getMinutes()).padStart(2,'0');
+    if(p.start){ const hh=fmtHeureJour(p.start);
       const sMs=coursDebut?eng.sessionMs(seanceId, coursDebut):null;
       ph.push('Commencée à '+hh+' · '+(sMs!=null?'cette heure : '+fmtDur(sMs)+' · ':'')+fmtDur(p.total)+' en tout.'); }
     p.questions.forEach(q=>{
@@ -4269,7 +4406,7 @@ const PROF = {
     const done=()=>{ if(--pending>0) return;
       try{ const blob=new Blob([JSON.stringify(snap,null,2)],{type:"application/json"});
         const url=URL.createObjectURL(blob); const a=document.createElement("a");
-        a.href=url; a.download="worktrack-snapshot-"+chap+"-"+new Date().toISOString().slice(0,16).replace(/[:T]/g,"")+".json";
+        a.href=url; a.download="worktrack-snapshot-"+chap+"-"+(()=>{const d=new Date();const z=n=>String(n).padStart(2,'0');return ''+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+z(d.getHours())+z(d.getMinutes());})()+".json";
         document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
         toast("Snapshot complet téléchargé."); }catch(e){ toast("Échec de l'export."); } };
     branches.forEach(b=>{ try{ store.once(b, v=>{ snap.firebase[b]=(v||null); done(); }); }catch(_){ snap.firebase[b]=null; done(); } }); },
@@ -4590,6 +4727,132 @@ chaptersStore.subscribe(v=>{ const fb=v||{};
   APP.onLibraryUpdate();   // propage aux postes élèves ; le panneau prof se rafraîchit sur action (pas sur sa propre écriture)
 });
 activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
+
+/* ========================================================================
+   SECTION DÉDIÉE — LECTEUR D'OUVERTURE DE CHAPITRE (diaporama)
+   Autonome. Déclenché par INTRO.maybePlay(CHAPTER) au login explicite de l'élève (handler de connexion).
+   Joué une fois par session de tablette (sessionStorage), tous modes, plein écran (couvre les 2 lanes). Bloquant élève.
+   Sortie prof : taper un code prof (MJPC.PROF_CODES) au clavier pendant l'ouverture -> ferme.
+   Effets : scène 16:9 (image + effets calés, cover/contain selon écran), étoiles + filantes
+   MASQUÉES (passent derrière les silhouettes), halos respirants, flammes, flashs.
+   ======================================================================== */
+/* ===================== ANNONCES — Histoire des MAJ =====================
+   Journal des mises à jour de l'application (SECTION DÉDIÉE, ne pas empiler ailleurs).
+   Chaque entrée documente une version :
+     eleve   : message affiché aux élèves dans le bandeau de la carte (vide => MAJ technique, pas de bandeau).
+     interne : détail réservé au professeur (onglet « MAJ »).
+   Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
+const ANNONCES = [
+  { id:"de", date:"2026-06-11", version:"de", eleve:"", interne:"Correctif temps/chronos : un intervalle aberrant (séance reprise un autre jour, tablette partagée non figée, horloge divergente) est annulé au lieu d'ajouter +3 h ; la reprise repart de maintenant sans compter le trou ; nom de snapshot et heure de début en heure LOCALE, date affichée si la séance a commencé un autre jour." },
+  { id:"dc", date:"2026-06-05", version:"dc", eleve:"", interne:"Compteur de vérification des bilans : angle mort (bilans écrits non vus) par séance et global dans le pilotage, rappel en fin de séance. Côté professeur uniquement." },
+  { id:"db", date:"2026-06-05", version:"db", eleve:"Quand vous avez fini toutes vos questions sur le cahier, vous cochez la case : le QCM ne s'ouvre pas tout de suite. Levez-vous en silence, venez me montrer votre travail ; je vérifie, je valide, et le QCM s'ouvre à votre retour.", interne:"Semi-contrôle de la coche : la coche poste un signal au prof, le QCM reste verrouillé jusqu'au « vu » (cahierVu horodaté, anti-contournement par décoche/recoche)." },
+  { id:"da", date:"2026-06-05", version:"da", eleve:"En ouvrant le plan de travail, une courte séquence accueille le chapitre. Regardez-la jusqu'au bout, puis entrez dans le travail.", interne:"Ouverture théâtralisée du chapitre : diaporama en ombres chinoises, une fois par tablette au premier login, plein écran. Sortie professeur par code clavier." },
+];
+const ANN = {
+  vues(){ const r=lsGet("wt_ann_vues"); return Array.isArray(r)?r:[]; },
+  marquerVues(){ lsSet("wt_ann_vues", ANNONCES.map(a=>a.id)); },
+  nonVues(){ const v=this.vues(); return ANNONCES.filter(a=> a.eleve && v.indexOf(a.id)<0); },
+  bandeauHTML(){ const n=this.nonVues(); if(!n.length) return "";
+    return `<div class="ann-band"><div class="ann-h">Du nouveau dans le plan de travail</div>`
+      + n.map(a=>`<div class="ann-msg">${esc(a.eleve)}</div>`).join("")
+      + `<button class="ann-ok" onclick="ANN.lu()">J'ai lu</button></div>`; },
+  lu(){ this.marquerVues(); document.querySelectorAll(".ann-band").forEach(e=>e.remove()); },
+  histoireHTML(){ if(!ANNONCES.length) return '<div class="d">Aucune mise à jour enregistrée.</div>';
+    return `<div class="ann-list">`+ANNONCES.map(a=>`<div class="ann-row"><div class="ann-row-h"><span class="ann-ver">${esc(a.version||a.id)}</span><span class="ann-date">${esc(a.date||"")}</span></div>`
+      + (a.eleve?`<div class="ann-eleve"><b>Élèves :</b> ${esc(a.eleve)}</div>`:"")
+      + (a.interne?`<div class="ann-interne"><b>Note interne :</b> ${esc(a.interne)}</div>`:"")
+      + `</div>`).join("")+`</div>`; },
+};
+
+const INTRO = {
+  STORY: {
+    ch07: {
+      base: "https://siteflow-io.github.io/mjpc-medias/worktrack/ch07/",
+      finalSub: "Les Misérables · Victor Hugo",
+      slides: [
+        { img:"img-01.webp", mask:"mask-01.png", dur:8500,  kb:{from:"scale(1.05)", to:"scale(1.24)", e:"linear", d:8.5},
+          stars:[[16,3,34,24],[58,3,97,26]], shoot:2, glow:{x:"40%",y:"18%",warm:false,gp:"5s"},
+          pre:"Les Misérables · Victor Hugo", line:"Digne, un soir d'octobre 1815. La nuit tombe sur la petite ville." },
+        { img:"img-02.webp", mask:"mask-02.png", dur:9000,  kb:{from:"scale(1.06) translateX(-3%)", to:"scale(1.18) translateX(4%)", e:"ease-in-out", d:9},
+          stars:[[40,2,55,20],[66,2,97,22]], shoot:1, glow:{x:"32%",y:"18%",warm:false,gp:"5s"},
+          line:"Un homme marche depuis quatre jours. Il sort de dix-neuf années de bagne." },
+        { img:"img-03.webp", mask:"mask-03.png", dur:8500,  kb:{from:"scale(1.28)", to:"scale(1.04)", e:"ease-out", d:8.5},
+          stars:[[32,3,58,24],[32,2,90,8]], glow:{x:"82%",y:"42%",warm:true,gp:"2.6s"},
+          line:"Auberge après auberge, porte après porte, on chasse l'ancien forçat dans la nuit." },
+        { img:"img-04.webp", mask:"mask-04.png", dur:9000,  kb:{from:"scale(1.02)", to:"scale(1.22)", e:"ease-out", d:3.2}, flash:true,
+          stars:[[26,3,40,22],[12,2,38,10]], glow:{x:"57%",y:"46%",warm:true,gp:"3s"},
+          line:"Une seule porte s'ouvre : celle de l'évêque de Digne." },
+        { img:"img-05.webp", dur:9000,  kb:{from:"scale(1.2)", to:"scale(1.02)", e:"ease-in-out", d:9},
+          glow:{x:"50%",y:"42%",warm:true,gp:"2.4s"}, flames:[{x:43.5,y:37},{x:59,y:37}],
+          line:"Il le fait entrer, le nourrit, et l'installe à sa table — comme un frère." },
+        { img:"img-06.webp", dur:12000, kb:{from:"scale(1.04)", to:"scale(1.26)", e:"ease-out", d:5}, flash:true,
+          glow:{x:"50%",y:"34%",warm:true,gp:"2.2s"}, flames:[{x:53.5,y:16.5},{x:69,y:16.5}], quote:true,
+          line:"\u00AB\u00A0Jean Valjean, mon fr\u00E8re, vous n'appartenez plus au mal, mais au bien.\u00A0\u00BB", src:"Victor Hugo, Les Misérables" }
+      ]
+    }
+  },
+  _el:null,_slides:[],_scenes:[],_timers:[],_raf:0,_t0:0,_total:0,_sb:null,_lastTitle:"",_started:false,_keyh:null,_kbuf:"",
+  storyboardFor(id){ return this.STORY[id]||null; },
+  maybePlay(chap){ if(this._el) return; if(!chap||!chap.meta) return; const sb=this.storyboardFor(chap.meta.id); if(!sb) return;
+    const key='wt_intro_'+chap.meta.id; let seen=false; try{ seen=sessionStorage.getItem(key)==='1'; }catch(e){}
+    if(seen) return; try{ sessionStorage.setItem(key,'1'); }catch(e){}
+    this.play(sb, chap.meta.titre||''); },
+  play(sb,title){ this.close(); this._sb=sb; this._lastTitle=title; this._started=false; this.build(sb,title); this.preload();
+    this._kbuf=""; this._keyh=(e)=>this._onKey(e); document.addEventListener('keydown', this._keyh); },
+  _onKey(e){ if(e.key>='0'&&e.key<='9'){ this._kbuf=(this._kbuf+e.key).slice(-6);
+    const codes=(typeof MJPC!=='undefined'&&MJPC.PROF_CODES)?MJPC.PROF_CODES:[3141,1312];
+    for(let i=0;i<codes.length;i++){ if(this._kbuf.endsWith(String(codes[i]))){ this.close(); return; } } } },
+  build(sb,title){
+    const o=document.createElement('div'); o.id='wtIntro';
+    o.innerHTML='<div class="wti-bar"></div><div class="wti-flash"></div>'
+      +'<div class="wti-loader"><div class="wti-ring"></div><div class="wti-lbl">L\'ouverture se pr\u00E9pare\u2026</div></div>'
+      +'<div class="wti-final"><div class="wti-sub">'+esc(sb.finalSub||'')+'</div><div class="wti-ttl">'+esc(title||'')+'</div>'
+      +'<button class="wti-enter" onclick="INTRO.enter()">Entrer dans le chapitre</button></div>';
+    document.body.appendChild(o); this._el=o; this._slides=[]; this._scenes=[];
+    const loader=o.querySelector('.wti-loader');
+    sb.slides.forEach(s=>{
+      const sl=document.createElement('div'); sl.className='wti-slide';
+      const sc=document.createElement('div'); sc.className='wti-scene'; sc.style.transition='none'; sc.style.transform=s.kb.from;
+      const im=document.createElement('div'); im.className='wti-img'; im.style.backgroundImage="url('"+sb.base+s.img+"')"; sc.appendChild(im);
+      if(s.glow){ const g=document.createElement('div'); g.className='wti-glow '+(s.glow.warm?'warm':'cool'); g.style.left=s.glow.x; g.style.top=s.glow.y; if(s.glow.gp) g.style.setProperty('--gp',s.glow.gp); sc.appendChild(g); }
+      if(s.stars){ const sky=document.createElement('div'); sky.className='wti-sky';
+        if(s.mask){ const mu="url('"+sb.base+s.mask+"')"; sky.style.webkitMaskImage=mu; sky.style.maskImage=mu; }
+        const st=document.createElement('div'); st.className='wti-stars'; this._mkStars(st,s.stars,16); sky.appendChild(st);
+        if(s.shoot) this._mkShoot(sky,s.stars,s.shoot);
+        sc.appendChild(sky); }
+      if(s.flames) this._mkFlames(sc,s.flames);
+      sl.appendChild(sc);
+      const v=document.createElement('div'); v.className='wti-veil'; sl.appendChild(v);
+      const cap=document.createElement('div'); cap.className='wti-cap'+(s.quote?' quote':'');
+      cap.innerHTML=(s.pre?'<div class="wti-pre">'+s.pre+'</div>':'')+'<div class="wti-line">'+s.line+'</div>'+(s.src?'<span class="wti-src">'+s.src+'</span>':'');
+      sl.appendChild(cap);
+      o.insertBefore(sl,loader); this._slides.push(sl); this._scenes.push(sc);
+    });
+    this._total=sb.slides.reduce((a,s)=>a+s.dur,0);
+  },
+  _rndIn(rects){ const a=rects.map(r=>(r[2]-r[0])*(r[3]-r[1])); const tot=a.reduce((x,y)=>x+y,0); let t=Math.random()*tot,i=0; while(t>a[i]){t-=a[i];i++;} const r=rects[i]; return [(r[0]+Math.random()*(r[2]-r[0])),(r[1]+Math.random()*(r[3]-r[1]))]; },
+  _mkStars(c,rects,n){ for(let k=0;k<n;k++){ const e=document.createElement('i'); const p=this._rndIn(rects); const sz=(Math.random()*1.5+0.8).toFixed(1); e.style.cssText='left:'+p[0].toFixed(1)+'%;top:'+p[1].toFixed(1)+'%;width:'+sz+'px;height:'+sz+'px;--tw:'+(Math.random()*2.6+2).toFixed(1)+'s;animation-delay:'+(Math.random()*3).toFixed(1)+'s'; c.appendChild(e); } },
+  _mkShoot(sky,rects,n){ const top=rects.reduce((a,b)=>(b[3]<a[3]?b:a)); for(let k=0;k<n;k++){ const p=this._rndIn([top]); const sh=document.createElement('span'); sh.className='wti-shoot'; const ang=(22+Math.random()*16).toFixed(0), len=(9+Math.random()*4).toFixed(0); sh.style.cssText='left:'+p[0].toFixed(1)+'%;top:'+p[1].toFixed(1)+'%;--ang:'+ang+'deg;--len:'+len+'vmin;--del:'+(Math.random()*7+2).toFixed(1)+'s;--dur:'+(8+Math.random()*4).toFixed(1)+'s'; sky.appendChild(sh); } },
+  _mkFlames(sc,arr){ arr.forEach((f,idx)=>{ const e=document.createElement('span'); e.className='wti-flame'; e.style.cssText='left:'+f.x+'%;top:'+f.y+'%;--ff:'+(0.42+Math.random()*0.22).toFixed(2)+'s;--fd:'+(idx*0.17).toFixed(2)+'s'; sc.appendChild(e); }); },
+  preload(){ const sb=this._sb; let done=0,need=sb.slides.length; const ok=()=>{ if(++done>=need) this._start(); };
+    sb.slides.forEach(s=>{ const im=new Image(); im.onload=ok; im.onerror=ok; im.src=sb.base+s.img; });
+    setTimeout(()=>{ if(done<need) this._start(); },6000); },
+  _start(){ if(this._started||!this._el) return; this._started=true; const l=this._el.querySelector('.wti-loader'); if(l) l.classList.add('hidden'); this._run(); },
+  _flash(){ const f=this._el&&this._el.querySelector('.wti-flash'); if(!f) return; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); },
+  _resetKB(){ const sb=this._sb; this._scenes.forEach((sc,i)=>{ sc.style.transition='none'; sc.style.transform=sb.slides[i].kb.from; }); if(this._el) void this._el.offsetWidth; },
+  _activate(i){ const s=this._sb.slides[i],sc=this._scenes[i]; if(i>0&&this._slides[i-1]) this._slides[i-1].classList.remove('on'); this._slides[i].classList.add('on'); sc.style.transition='transform '+s.kb.d+'s '+s.kb.e; sc.style.transform=s.kb.to; if(s.flash) this._flash(); },
+  _clear(){ this._timers.forEach(clearTimeout); this._timers=[]; cancelAnimationFrame(this._raf); this._slides.forEach(s=>s.classList.remove('on')); },
+  _bar(){ const p=Math.min(1,(Date.now()-this._t0)/this._total); const b=this._el&&this._el.querySelector('.wti-bar'); if(b) b.style.width=(p*100)+'%'; if(p<1) this._raf=requestAnimationFrame(()=>this._bar()); },
+  _run(){ this._clear(); this._resetKB(); const f=this._el.querySelector('.wti-final'); if(f) f.classList.remove('show'); this._t0=Date.now(); this._bar();
+    let acc=0; this._sb.slides.forEach((s,i)=>{ this._timers.push(setTimeout(()=>this._activate(i),acc)); acc+=s.dur; });
+    this._timers.push(setTimeout(()=>this._finish(),this._total)); },
+  _finish(){ this._timers.forEach(clearTimeout); this._timers=[]; cancelAnimationFrame(this._raf); const b=this._el&&this._el.querySelector('.wti-bar'); if(b) b.style.width='100%';
+    this._slides.forEach((s,i)=>{ if(i!==this._slides.length-1) s.classList.remove('on'); }); if(this._slides.length) this._slides[this._slides.length-1].classList.add('on');
+    const f=this._el&&this._el.querySelector('.wti-final'); if(f) f.classList.add('show'); },
+  enter(){ this.close(); },
+  close(){ this._clear(); if(this._keyh){ document.removeEventListener('keydown', this._keyh); this._keyh=null; } this._kbuf="";
+    if(this._el&&this._el.parentNode) this._el.parentNode.removeChild(this._el); this._el=null; this._slides=[]; this._scenes=[]; this._started=false; }
+};
 
 APP.boot();
 </script>
