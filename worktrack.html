@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05ee">
+<meta name="app-version" content="2026-06-05eh">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -65,7 +65,17 @@
   /* PILOTAGE EN CLASSE (dp) : main levée élève + bandeau rappel prof */
   .handfab{position:absolute;right:12px;bottom:58px;z-index:20;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel3);font-size:1.05rem;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.35);opacity:.85}
   .handfab.up{border-color:var(--gold-deep);background:rgba(251,191,36,.16);opacity:1;box-shadow:0 0 0 2px rgba(251,191,36,.25),0 3px 10px rgba(0,0,0,.35)}
-  .rappel-band{position:absolute;left:10px;right:10px;top:8px;z-index:24;display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(251,191,36,.14);border:1px solid var(--gold-deep);border-radius:9px;font-size:.86rem;color:var(--ink)}
+  .rappel-band{position:absolute;right:12px;bottom:104px;max-width:min(78%,340px);z-index:26;display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(42,26,58,.97);border:1.5px solid var(--gold-deep);border-radius:11px;font-size:.86rem;color:var(--ink);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+  .rappel-band .rb-ic{animation:rbBlink 1s steps(2,start) infinite;font-size:1.15rem}
+  @keyframes rbBlink{to{visibility:hidden}}
+  .rappel-band .rb-tx{flex:1;line-height:1.35}
+  .rappel-band .rb-ok{padding:5px 14px;white-space:nowrap}
+  .rap-zone{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .rap-chip{display:inline-flex;align-items:center;gap:2px}
+  .rap-b{font-size:.7rem;padding:3px 8px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rap-x{border:none;background:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:1px 3px}
+  .rap-in{width:200px;font-size:.72rem;padding:4px 7px}
+  .rap-new{display:inline-flex;gap:5px;align-items:center}
   .rappel-band .rb-ic{font-size:1rem}
   .rappel-band .rb-x{margin-left:auto;background:none;border:none;color:var(--ink2);font-size:1rem;cursor:pointer;padding:2px 6px}
   .rappel-sel{max-width:230px;font-size:.78rem;background:var(--panel3);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 5px}
@@ -461,6 +471,12 @@
   body.zoom-big .docsheet .dcompl li{font-size:1.08rem}
   body.zoom-big .support{font-size:.97rem}
   body.zoom-big .objective{font-size:.94rem}
+  /* eg — le zoom agit sur la RACINE : toute la typographie de l'app est en rem (284 font-size, 0 px),
+     donc html{font-size} agrandit l'écriture PARTOUT (entrée, carte, séance, QCM, panneau) et l'UI suit
+     dans ses conteneurs (paddings/largeurs en px stables, flex/wrap existants). Les surcharges .docsheet
+     ci-dessous ACCENTUENT en plus les zones de lecture longue. */
+  html.zoom-big{font-size:118%}
+  html.zoom-max{font-size:140%}
   /* palier ×3 (ee2) : pour les élèves qui fatiguent devant l'écran */
   body.zoom-max .docsheet .docbody{font-size:1.45rem;line-height:1.6}
   body.zoom-max .docsheet .docq{font-size:1.4rem;line-height:1.6}
@@ -4107,6 +4123,7 @@ const SPAM_FAST_RATIO= 0.6;     // ... et part minimale que ces coches rapides d
 const PRESENCE_MS    = 90000;   // au-delà, une session n'est plus comptée « présente »
 const RECAP_COOLDOWN_MS = CONFIG.recapCooldownMs;  // ne pas re-montrer le récap de reprise plus d'une fois par heure (évite les doublons et les reconnexions techniques)
 const APP_VERSION = ((document.querySelector && document.querySelector('meta[name=app-version]'))||{}).content || '0';  // version embarquée dans CE fichier
+const RAPPELS_BASE = ["Reprends la consigne et avance.","Concentre-toi : tu sembles t'être éloigné du travail.","Pense à cocher chaque question quand elle est faite au cahier.","Termine ta question en cours, puis viens me voir."];   // eh2 : messages pré-écrits du rappel (les persos s'y ajoutent, store « rappelsPerso »)
 
 /* ─────────────────────────── §D · MOTEUR (factory) ─────────────────────
    createEngine = un cerveau de progression PAR élève. Aucune dépendance UI. */
@@ -4679,7 +4696,7 @@ const HELP_HTML = `
 
   <h4 id="hq13">13. Les aides et les étoiles d'autonomie</h4>
   <p>Quand tu bloques sur une question, ouvre <b>« Besoin d'un coup de pouce ? »</b> et choisis la question qui te pose problème. L'aide arrive en <b>trois temps</b> : d'abord une <b>orientation</b> (où chercher), puis la <b>méthode</b> (comment t'y prendre), enfin un <b>élément de réponse</b>. Tu ouvres ces étapes une par une, seulement si tu en as encore besoin.</p>
-  <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. La première <b>orientation est gratuite</b> : la demander ne coûte rien. Aller plus loin (méthode ou élément de réponse) coûte <b>une étoile</b>. Demander de l'aide reste permis et normal — mais cherche d'abord seul, et arrête-toi dès que tu as compris.</p>
+  <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. La première <b>orientation est gratuite</b> : la demander ne coûte rien. Aller plus loin (méthode ou élément de réponse) coûte <b>une étoile</b>. Exception : si c'est <b>moi</b> qui t'ouvre une aide après ta main levée (la « question orale »), elle est <b>entièrement gratuite</b> — une fois par séance. Demander de l'aide reste permis et normal — mais cherche d'abord seul, et arrête-toi dès que tu as compris.</p>
 
   <h4 id="hq14">14. Revenir à la carte</h4>
   <p>Le bouton <b>← La carte</b> te ramène à la carte pour choisir une autre séance.</p>
@@ -4691,7 +4708,7 @@ const HELP_HTML = `
   <p>Relis la consigne, regarde les documents, essaie une aide. Si ça ne suffit pas, appelle-moi.</p>
 
   <h4 id="hq17">17. Lever la main ✋ <span style="opacity:.7;font-weight:400">(si je l'ai activé pour ta classe)</span></h4>
-  <p>Un bouton ✋ peut apparaître au-dessus du « ? ». Il me prévient discrètement que tu as besoin d'aide, sans déranger la classe. <b>Continue à travailler en attendant</b> : je viens dès que possible. Re-toucher le bouton retire ton signal.</p>
+  <p>Un bouton ✋ peut apparaître au-dessus du « ? ». Il me prévient discrètement que tu as besoin d'aide, sans déranger la classe. <b>Continue à travailler en attendant</b>. Je peux te répondre de trois façons : venir te voir, t'ouvrir directement un coup de pouce de ta séance (il ne te coûte alors <b>aucune étoile</b>), ou faire s'allumer la page de ce guide qui répond à ta question. La main reste levée jusqu'à ce que j'aie traité ta demande ; re-toucher le bouton retire ton signal.</p>
   <h4 id="hq18">18. Questions fréquentes</h4>
   <p><b>J'ai fermé l'onglet, la tablette s'est éteinte : ai-je perdu mon travail ?</b> Non. Tout est enregistré au fur et à mesure. Reconnecte-toi avec ta classe et ton nom : tu reprends où tu en étais.</p>
   <p><b>Une séance est marquée « occupé », c'est quoi ?</b> Un camarade y travaille déjà : choisis-en une autre (voir 3. La carte). En toute fin de chapitre, vous pouvez être deux sur la dernière : c'est normal.</p>
@@ -4762,7 +4779,7 @@ function Panel(engine, root, name){
   P._laneHost=function(){ return root.closest('.lane')||root; };
   P.updateHandFab=function(){ const host=P._laneHost(); let b=host.querySelector('.handfab');
     if(!P.mainLeveeOn()){ if(b) b.remove(); return; }
-    if(!b){ host.insertAdjacentHTML('beforeend', '<button class="handfab" title="Lever la main : prévenir le professeur que tu as besoin d\'aide" aria-label="lever la main" onclick="APP.panel(\''+laneIdOf()+'\').mainLevee()">✋</button>'); b=host.querySelector('.handfab'); }
+    if(!b){ host.insertAdjacentHTML('beforeend', '<button class="handfab" title="Lever la main : prévenir le professeur que tu as besoin d\'aide — le signal reste allumé jusqu\'à ce qu\'il te réponde" aria-label="lever la main" onclick="APP.panel(\''+laneIdOf()+'\').mainLevee()">✋</button>'); b=host.querySelector('.handfab'); }
     b.classList.toggle('up', !!P._handUp); };
   P.mainLevee=function(){ const chap=CHAPTER.meta.id||'chapitre'; const s=P.current?engine.seance(P.current):null;
     P._handUp=!P._handUp;
@@ -4770,9 +4787,9 @@ function Panel(engine, root, name){
     toast(P._handUp ? 'Le professeur est prévenu. Continue à travailler en attendant.' : 'Signal retiré.');
     P.updateHandFab(); };
   P.rappel=function(txt){ const host=P._laneHost(); const old=host.querySelector('.rappel-band'); if(old) old.remove();
-    host.insertAdjacentHTML('beforeend', '<div class="rappel-band"><span class="rb-ic">📣</span><span><b>Message du professeur :</b> '+esc(String(txt||''))+'</span><button class="rb-x" title="Fermer" onclick="this.parentElement.remove()">✕</button></div>');
-    if(P._rappelT) clearTimeout(P._rappelT);
-    P._rappelT=setTimeout(()=>{ const b=host.querySelector('.rappel-band'); if(b) b.remove(); }, 25000); };
+    // eh3 : overlay LÀ OÙ EST L'ÉLÈVE — ancré au-dessus de la main ✋ et du « ? » (les deux boutons toujours présents),
+    //   flag ⚠️ clignotant, et il ne s'éteint QUE par le « D'accord » de l'élève (plus d'auto-disparition).
+    host.insertAdjacentHTML('beforeend', '<div class="rappel-band"><span class="rb-ic">⚠️</span><div class="rb-tx"><b>Message du professeur</b><br>'+esc(String(txt||''))+'</div><button class="btn primary rb-ok" onclick="this.parentElement.remove()">D\'accord</button></div>'); };
   /* ===== fin PILOTAGE EN CLASSE ===== */
 
   P.render = function(){ P.screen==="map" ? renderMap() : renderSeance(); };
@@ -4991,6 +5008,8 @@ function Panel(engine, root, name){
   // le prof répond à une main levée par un coup de pouce ciblé : navigation forcée (la zone d'aide ne vit que sur la page Questions) puis ouverture SANS étoile
   P.profAide=function(seanceId, aideId){ if(!P.current || P.current!==seanceId) return;   // l'élève a changé de séance entre temps : ordre obsolète, on ne casse rien
     engine.aideProf(P.current, aideId);
+    const sA=engine.seance(P.current), aA=((sA&&sA.aides)||[]).find(x=>x.id===aideId);
+    if(aA) engine.useAide(P.current, aideId, aA.paliers.length);   // eh1 : l'aide prof ouvre TOUS les paliers d'un coup (gratuits via aideProf) — sinon l'élève voyait « j'ai encore besoin d'aide » avec son avertissement d'étoile, mensonger pour une aide offerte
     if(P.screen==='seance'){ P.expanded=true; if(P.mode==='papier') renderSeance(); P.tab('c'); P.setSub('questions'); }
     P.selAide(aideId);
     const sel=root.querySelector('.aide-sel'); if(sel) sel.value=aideId;
@@ -5724,7 +5743,8 @@ const APP = {
   zoomLabel(){ return 'Aa ×'+((this.zoomLvl|0)+1); },
   toggleZoom(){ this.zoomLvl=((this.zoomLvl|0)+1)%3; lsSet('wt_zoom', this.zoomLvl); this.applyZoom();
     document.querySelectorAll('.gt-zoom').forEach(b=>{ b.textContent=this.zoomLabel(); b.classList.toggle('on', this.zoomLvl>0); }); },
-  applyZoom(){ const l=this.zoomLvl|0; document.body.classList.toggle('zoom-big', l===1); document.body.classList.toggle('zoom-max', l===2);
+  applyZoom(){ const l=this.zoomLvl|0;
+    [document.documentElement, document.body].forEach(el=>{ el.classList.toggle('zoom-big', l===1); el.classList.toggle('zoom-max', l===2); });   // html = racine du rem (l'écriture grandit PARTOUT) ; body = surcharges lecture
     this.zoomBig=l>0; },
   toggleTest(){ this.testMode=!this.testMode;
     this.purgeTest(); this.boot(); },                          // purge à l'entrée comme à la sortie
@@ -5757,6 +5777,8 @@ const APP = {
     if(this._hb) clearInterval(this._hb); if(this._tick) clearInterval(this._tick);
     const chap=CHAPTER.meta.id||"chapitre";
     this._unsubs.push(store.subscribe("appVersion", v=>{ this._appVersion=v||''; this.onAppVersion(this._appVersion); }));   // mise à jour auto
+    this._unsubs.push(store.subscribe("rappelsPerso", v=>{ this._rappelsPerso=Array.isArray(v)?v:Object.values(v||{});   // eh2 : messages perso du rappel, partagés entre postes prof
+      if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
     this._unsubs.push(store.subscribe("annoncesPub", v=>{ this._annPub=v||{};
       this.syncMaps(); }));   // annonces publiées par le prof (jamais auto) — syncMaps : le bandeau vit sur la carte, une publication EN COURS de session doit y apparaître sans rechargement (dette C : sans ce re-render, l'élève déjà sur la carte ne voyait rien avant un re-render fortuit)
     // CLIGNOTEMENT CARTE — résolu : (1) syncMapsIfChanged ne redessine que si la signature des occupants change (cf. _sessSig) ;
@@ -7027,10 +7049,10 @@ const PROF = {
     }
     const remeds=(CHAPTER.seances||[]).filter(x=>x.remediation);
     const remedBox = (remeds.length && segAff) ? `<div class="prof-sec"><h4>🧰 Remédiation</h4>
-      <div class="d">Ateliers invisibles tant que tu ne les débloques pas — ici pour toute la classe, ou élève par élève depuis sa carte (2ᵉ cran). Les exercices de chaque élève sont choisis d'après SES erreurs (critères « à revoir », QCM ratés) ; un atelier à la fois.</div>
+      <div class="d">Ateliers invisibles tant que tu ne les débloques pas — ici pour toute la classe, ou élève par élève depuis sa carte (2ᵉ cran). Même débloqués, ils n'apparaissent chez un élève qu'<b>après sa séance de convergence</b> (tu peux donc activer en avance) ; l'élève est prévenu et un signal 🧩 t'arrive. Les exercices de chaque élève sont choisis d'après SES erreurs (critères « à revoir », QCM ratés) ; un atelier à la fois.</div>
       ${remeds.map(rs=>{ const onC=!!((((APP._control||{})[segAff]||{}).remedOn||{})[rs.id]);
         return `<div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">${esc(rs.titre)}</span>
-          <button class="btn ghost" title="Ouvre ou referme cet atelier pour TOUTE la classe d'un coup" onclick="REMED.toggle('${segAff}','${rs.id}');PROF.render()"${onC?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${onC?'débloqué pour la classe — reverrouiller':'débloquer pour la classe'}</button></div>`; }).join('')}</div>` : '';
+          <button class="btn ghost" title="Ouvre ou referme cet atelier pour TOUTE la classe d'un coup — chaque élève ne le verra qu'après sa convergence" onclick="REMED.toggle('${segAff}','${rs.id}');PROF.render()"${onC?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${onC?'débloqué pour la classe — reverrouiller':'débloquer pour la classe'}</button></div>`; }).join('')}</div>` : '';
     const ailleursSec = ailleurs.length ? `<div class="prof-sec"><h4>Ailleurs <span class="meta">· ${ailleurs.length} connecté(s) hors séance</span></h4>
       <div class="d">Élèves d'une autre classe connectés en ce moment (étude, maison…), en dehors de toute séance lancée. Pour information : le figer ci-dessus ne les touche pas.</div>
       <div class="prof-list">${ailleurs.sort((a,b)=>(a.classe||'').localeCompare(b.classe||'')||(a.name||'').localeCompare(b.name||'')).map(s=>this.suiviRowAilleurs(s)).join('')}</div></div>` : '';
@@ -7050,7 +7072,7 @@ const PROF = {
           : (x.type==='cahier') ? `<button class="btn ghost sig-conv" title="Voir l'écran de l'élève sans le déranger" onclick="PROF.voirEcran('${esc(x.uid)}')">👁 voir son écran</button>`
           : (x.type==='aide')   ? APP.aideMenuHTML(x) : '';
         return `<div class="r sig-${x.type}"><span class="sig-ic">${m.ic}</span><span><b>${esc(x.nom||x.uid)}</b> ${lab}${x.seance?` · ${esc(x.seance)}`:''}${m.act?`<span class="sig-act"> → ${m.act}</span>`:''}</span>`
-          +`<span class="sig-btns">${conv}<button class="btn ghost" title="Efface ce signal de la liste (sans rien changer chez l'élève)" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}','${esc(x.seanceId||'')}','${esc(x.etat||'')}')">✓ vu</button></span></div>`; }).join('')}</div></div>` : '';
+          +`<span class="sig-btns">${conv}<button class="btn ghost" title="${x.type==='aide'?'Efface le signal ET éteint la main ✋ sur la tablette de l\'élève':'Efface ce signal de la liste (sans rien changer chez l\'élève)'}" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}','${esc(x.seanceId||'')}','${esc(x.etat||'')}')">✓ vu</button></span></div>`; }).join('')}</div></div>` : '';
 
     const bilA = APP.signauxList().filter(x=> x.type==='bilan' && x.classeSeg===segAff);   // angle mort : bilans écrits non encore « vus »
     const bilParS = {}; bilA.forEach(x=>{ const k=x.seance||x.seanceId||'?'; bilParS[k]=(bilParS[k]||0)+1; });
@@ -7200,13 +7222,11 @@ const PROF = {
       if(top.length) h+=`<div class="sui-cp" title="Temps de manipulation mesuré à l'écran (gestes réels, jamais compté deux fois) — sous-estime la réflexion silencieuse : un temps court ne s'interprète JAMAIS, seul un net dépassement se signale">⏱ Manipulation des exercices : ${top.map(x=>{ const r=eng.tRefIt(s.current,x.id); const dep=r&&x.ms>r.max*1000;
         return esc(x.id)+' ~'+fmtDur(x.ms)+' ('+x.n+' gestes'+(r?', attendu '+r.min+'–'+r.max+' s':'')+')'+(dep?' ⚠':''); }).join(' · ')}</div>`; }
     // RAPPEL (dp) : pousser un message court, non bloquant — visible seulement si le réglage du poste est actif
-    if(lsGet('wt_rappel')==='1' && !isTestUid(uid)) h+=`<div class="sui-cp" style="display:flex;gap:6px;align-items:center">📣
-      <select class="rappel-sel" title="Choisis le message à pousser sur son écran" id="rap-${esc(uid)}"><option value="">— message à pousser —</option>
-        <option>Reprends la consigne et avance.</option>
-        <option>Concentre-toi : tu sembles t'être éloigné du travail.</option>
-        <option>Pense à cocher chaque question quand elle est faite au cahier.</option>
-        <option>Termine ta question en cours, puis viens me voir.</option></select>
-      <button class="btn ghost" title="Pousse ce message sur son écran : bandeau non bloquant, effacé après 25 s" onclick="PROF.envoyerRappel('${esc(uid)}')">envoyer</button></div>`;
+    if(lsGet('wt_rappel')==='1' && !isTestUid(uid)){ const persos=APP._rappelsPerso||[]; const uidJs2=esc(uid);
+      const btn=(t,i)=>`<span class="rap-chip"><button class="btn ghost rap-b" title="Pousse ce message sur son écran (overlay près de sa main ✋, jusqu'à son « D'accord »)" onclick="PROF.pushRappel('${uidJs2}',this.dataset.m)" data-m="${esc(t)}">${esc(t)}</button>${i!=null?`<button class="rap-x" title="Supprimer ce message enregistré" onclick="PROF.delRappelPerso(${i})">✕</button>`:''}</span>`;
+      h+=`<div class="sui-cp rap-zone">📣 ${RAPPELS_BASE.map(t=>btn(t,null)).join('')}${persos.map((t,i)=>btn(t,i)).join('')}
+        <span class="rap-new"><input class="txtin rap-in" id="rap-${uidJs2}" placeholder="ou écris ton message…" maxlength="140">
+        <button class="btn ghost" title="Pousse ce message ET l'enregistre pour la prochaine fois" onclick="PROF.rappelPerso('${uidJs2}')">envoyer</button></span></div>`; }
     const sig=(APP._signaux||{})[uid]||{}, st=[];
     if(sig.bilan)st.push('📝 bilan à relire'); if(sig.incoherence)st.push('⚠ s\'est sur-évalué'); if(sig.aide)st.push('✋ demande de l\'aide');
     if(st.length) h+=`<div class="sui-sig">${st.join(' · ')}</div>`;
@@ -7486,10 +7506,16 @@ const PROF = {
   setSeuilPctDefaut(v){ const x=parseInt(v,10); if(!CHAPTER.reglages) CHAPTER.reglages={};
     if(isFinite(x)&&x>=1&&x<=100) CHAPTER.reglages.seuilPctDefaut=x; else delete CHAPTER.reglages.seuilPctDefaut;
     this.apply(); },
-  envoyerRappel(uid){ const sel=document.getElementById('rap-'+uid); const txt=sel&&sel.value; if(!txt){ toast("Choisis d'abord un message."); return; }
+  pushRappel(uid, txt){ txt=String(txt||'').trim(); if(!txt) return;
     const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/act", { m:'rappel', a:[txt], ts:Date.now() });
-    sel.value=''; toast("Rappel envoyé."); },
+    toast("Rappel envoyé — il restera affiché jusqu'à son « D'accord »."); },
+  rappelPerso(uid){ const inp=document.getElementById('rap-'+uid); const txt=inp&&inp.value.trim(); if(!txt){ toast("Écris d'abord ton message."); return; }
+    this.pushRappel(uid, txt); inp.value='';
+    const l=(APP._rappelsPerso||[]).slice();   // eh2 : tout message créé s'ENREGISTRE (réutilisable en bouton, supprimable par ✕)
+    if(!RAPPELS_BASE.includes(txt) && !l.includes(txt)){ l.push(txt); store.save("rappelsPerso", l.slice(-12)); }
+    this.render(); },
+  delRappelPerso(i){ const l=(APP._rappelsPerso||[]).slice(); l.splice(i,1); store.save("rappelsPerso", l); this.render(); },
   toggleAides(seg){ const chap=CHAPTER.meta.id||"chapitre"; const node=Object.assign({}, (APP._control||{})[seg]||{});
     const coupe=!((node.aidesOff||{}).__tout); node.aidesOff = coupe?{__tout:true}:{};   // merge : ne touche ni cours ni freeze
     store.save("control/"+chap+"/"+seg, node); this.render();
@@ -7860,6 +7886,9 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"eh", date:"2026-06-12", version:"eh", eleve:"", interne:"Retours terrain pilotage : (1) l'aide prof ouvre desormais L'INTEGRALITE des paliers d'un coup (gratuits via aideProf) — avant, seul le palier 1 s'affichait et le bouton « j'ai encore besoin d'aide » montrait son avertissement d'etoile, mensonger pour une aide offerte ; (2) rappel prof : plus de menu deroulant — BOUTONS cliquables (4 pre-ecrits RAPPELS_BASE + messages perso), champ libre dont tout envoi s'ENREGISTRE (store rappelsPerso, partage entre postes, max 12, supprimables ✕) ; (3) cote eleve : le message s'affiche en overlay LA OU IL EST — ancre au-dessus de la main ✋ et du « ? » (bottom 104), flag ⚠️ clignotant (rbBlink), et ne s'eteint QUE par son bouton « D'accord » (plus d'auto-disparition 25 s)." },
+  { id:"eg", date:"2026-06-12", version:"eg", eleve:"", interne:"Retour terrain : « le zoom ne fait rien ». Exact en dehors des seances : les classes ne ciblaient que .docsheet (zones de lecture) — sur l'entree, la carte, le QCM : aucun effet, et le bouton vit justement a l'entree. Correctif structurel : l'app est 100% rem (284 font-size en rem, 0 en px) → le zoom agit desormais sur la RACINE (html.zoom-big 118%, html.zoom-max 140%) : l'ecriture grandit PARTOUT et l'UI suit dans ses conteneurs (px stables, flex existants). Les surcharges .docsheet restent en ACCENTUATION des zones de lecture longue (×3 lecture ≈ 2em). applyZoom pose les classes sur html ET body." },
+  { id:"ef", date:"2026-06-12", version:"ef", eleve:"", interne:"Passe de coherence post eb-ee (tooltips + ? + regles) : (1) tooltip « ✓ vu » devenu FAUX pour le type aide (il eteint desormais la main de l'eleve) → title contextuel ; (2) encart + tooltip du deblocage d'ateliers : regle de convergence ajoutee (activer en avance ne devoile rien, signal 🧩) ; (3) handfab : « le signal reste allume jusqu'a ce qu'il te reponde » ; (4) ? section 17 : les trois reponses possibles du prof (venir, coup de pouce gratuit, page du guide allumee) + la main reste levee jusqu'au traitement ; (5) ? section 13 : la question orale gratuite (une par seance). Doc integree deja a jour (ed7)." },
   { id:"ee", date:"2026-06-12", version:"ee", eleve:"Trois nouveautés sur ta tablette : les cases « fait » sont devenues de vrais boutons, plus faciles à toucher. Le bouton « Aa » (en haut, à côté du titre) règle la taille du texte sur trois niveaux — si tes yeux fatiguent, monte au ×3, la tablette s'en souvient. Et le « ? » a maintenant une rubrique « Questions fréquentes » à la fin : regarde-la avant de lever la main.", interne:"Lot ee : coches « fait » en vrais boutons tactiles (min-width 130, padding 6x18, etat coche dore) ; zoom 3 paliers ×1/×2/×3 (wt_zoom 0/1/2, classes zoom-big/zoom-max, palier 3 pour les yeux qui fatiguent) avec bouton pulsant dans l'en-tete a cote du titre (hdr-zoom, animation 2.6s) ET conserve dans la barre d'outils (meme preference) ; FAQ section 18 du « ? » (6 questions non couvertes par les 17 sections, renvois plutot que repetitions)." },
   { id:"ed", date:"2026-06-12", version:"ed", eleve:"", interne:"Lot ed : (1) les ateliers n'apparaissent qu'APRES la convergence de l'eleve meme si actives (REMED.visible + condition statusOf convergence done) — activer en avance ne devoile plus rien ; toast eleve a l'apparition + signal prof 🧩 type remed. (2) Exclusivite AUTO-LEVEE quand la seance visee est la derniere seance socle non faite de l'eleve (derniereRestante, appliquee aux 3 points : suggestion, renderMap, travelTo) ; a la cohabitation : message aux deux eleves (fin de chapitre, continuez en autonomie, c'est ce qui est evalue) + signal prof 🤝 type duo. Doc integree mise a jour (volets ateliers, carte, etoiles, pilotage, lexique)." },
   { id:"ec", date:"2026-06-12", version:"ec", eleve:"", interne:"Lot ec : le signal main levee porte un MENU deux natures — question de COURS : coups de pouce de la seance de l'eleve (aperçu palier 1 en infobulle), ouverture a distance avec navigation forcee (onglet Consigne + page Questions), BYPASS ETOILES (la « question orale au prof » : tous paliers gratuits, UNE par seance, mention chez l'eleve) ; question de FONCTIONNEMENT : les 18 sections du « ? », la section choisie defile et clignote chez l'eleve (ids hq1-hq18, .help-blink). La main ✋ devient le reflet du signal Firebase : elle s'eteint au « ✓ vu » du prof (avant : etat local jamais redescendu), et reprend son vrai etat a la reconnexion. L'ancien bouton « ? ouvrir son aide » (qui ouvrait le mode d'emploi a l'aveugle) est remplace." },
