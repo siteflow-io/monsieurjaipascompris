@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05dz">
+<meta name="app-version" content="2026-06-05ee">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -185,6 +185,11 @@
   /* ateliers de remédiation : médaille en pointillés dorés — n'apparaissent que débloqués (cf. REMED) */
   .place.remed .medal{border-style:dashed;border-color:var(--gold-deep)}
   .place.remed .nm{color:var(--gold2)}
+  /* ec : pointage prof dans le « ? » + aide « question orale » */
+  @keyframes helpBlink{0%,100%{background:transparent;outline-color:transparent}50%{background:rgba(251,191,36,.18);outline-color:var(--gold-deep)}}
+  .help-blink{animation:helpBlink 1.4s ease-in-out 3;outline:2px solid transparent;outline-offset:4px;border-radius:6px}
+  .aide-prof-band{border:1px solid var(--gold-deep);background:rgba(251,191,36,.1);border-radius:8px;padding:6px 10px;margin:0 0 8px;font-size:.74rem;color:var(--gold2)}
+  .sig-aidemenu{width:auto;max-width:280px;font-size:.72rem;padding:4px 6px}
   .place.locked{cursor:not-allowed}
   .place.locked .medal{filter:grayscale(.7) brightness(.55);opacity:.6}
   .place .occ{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--fire);color:#fff;font-size:.56rem;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
@@ -258,8 +263,10 @@
   .docsheet .qbadge.geste{color:#7a3b1f;border-color:#d9a679;background:rgba(217,166,121,.16)}
   .docsheet .qbadge.lia{color:#2f5d4a;border-color:#9cc3b1;background:rgba(120,181,138,.14)}
   .docsheet .dcompl li{padding:3px 0;border-bottom:1px dotted #cbb884;color:#4a3d22;font-size:.96rem}
-  .docsheet .qcheck{display:flex;width:max-content;max-width:100%;align-items:center;gap:5px;margin:6px 0 0;text-indent:0;white-space:nowrap;font-family:'Spline Sans',sans-serif;font-size:.7rem;color:#9b7d34;font-weight:600;cursor:pointer;user-select:none}
-  .docsheet .qcheck input{cursor:pointer;accent-color:#c8a24e}
+  .docsheet .qcheck{display:inline-flex;min-width:130px;max-width:100%;align-items:center;justify-content:center;gap:7px;margin:8px 0 0;padding:6px 18px;text-indent:0;white-space:nowrap;font-family:'Spline Sans',sans-serif;font-size:.72rem;color:#9b7d34;font-weight:700;cursor:pointer;user-select:none;border:1.5px solid #c8a24e88;border-radius:9px;background:rgba(200,162,78,.08);touch-action:manipulation;transition:background .15s,border-color .15s}
+  .docsheet .qcheck:active{background:rgba(200,162,78,.22)}
+  .docsheet .docq.qfait .qcheck{background:rgba(200,162,78,.26);border-color:#c8a24e;color:#3b2f12}
+  .docsheet .qcheck input{cursor:pointer;accent-color:#c8a24e;width:15px;height:15px}
   .docsheet .docq.qfait{opacity:.62}
   .docsheet .docq.qfait .qn{text-decoration:line-through}
   .docsheet .qtimemsg{text-indent:0;margin:4px 0 6px 22px;font-family:'Spline Sans',sans-serif;font-size:.74rem;line-height:1.4;
@@ -454,6 +461,18 @@
   body.zoom-big .docsheet .dcompl li{font-size:1.08rem}
   body.zoom-big .support{font-size:.97rem}
   body.zoom-big .objective{font-size:.94rem}
+  /* palier ×3 (ee2) : pour les élèves qui fatiguent devant l'écran */
+  body.zoom-max .docsheet .docbody{font-size:1.45rem;line-height:1.6}
+  body.zoom-max .docsheet .docq{font-size:1.4rem;line-height:1.6}
+  body.zoom-max .docsheet .docamorce{font-size:1.25rem}
+  body.zoom-max .docsheet .dnote{font-size:1.2rem}
+  body.zoom-max .docsheet .dcompl li{font-size:1.3rem}
+  body.zoom-max .support{font-size:1.18rem;line-height:1.6}
+  body.zoom-max .objective{font-size:1.1rem}
+  /* ee3 : bouton zoom à l'entrée, à côté du titre du chapitre — pulsation lente */
+  @keyframes zoomPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}50%{box-shadow:0 0 0 7px rgba(251,191,36,.18)}}
+  .hdr-zoom{border:1.5px solid #c8a24e88;background:rgba(200,162,78,.1);color:var(--gold2);border-radius:9px;padding:5px 12px;font-size:.78rem;font-weight:700;cursor:pointer;animation:zoomPulse 2.6s ease-in-out infinite;touch-action:manipulation}
+  .hdr-zoom.on{background:rgba(200,162,78,.25)}
   body.zoom-big .rule{font-size:.96rem}
   body.zoom-big .bt-bloc-c,body.zoom-big .bt-list li{font-size:.95rem}
   body.zoom-big .bt-sub{font-size:.88rem}
@@ -608,6 +627,7 @@
       <div class="kick">Chapitre 7 · plan de travail</div>
       <h1 id="chapTitle">…</h1>
     </div>
+    <button class="hdr-zoom gt-zoom" title="Taille du texte : touche pour passer en ×1, ×2 ou ×3 (pour les yeux qui fatiguent)" onclick="APP.toggleZoom()">Aa ×1</button>
     <div style="display:flex;gap:10px;align-items:center">
       <div id="seatPick" class="seatpick"></div>
       <button class="profbtn" title="Espace enseignant (code requis)" onclick="MJPC.openProf()">Prof</button>
@@ -870,6 +890,13 @@ let CHAPTER = {
       "S3",
       "S4",
       "S1",
+      "S5"
+    ],
+    [
+      "S3",
+      "S4",
+      "S1",
+      "S2",
       "S5"
     ]
   ],
@@ -3659,7 +3686,7 @@ let CHAPTER = {
       "ville": "L'écritoire"
     }
   ],
-  "version": "2026-06-11ds"
+  "version": "2026-06-12eb"
 };
 
 /* ─────────────────────────── §C · STORE ────────────────────────────────
@@ -4422,8 +4449,14 @@ function createEngine(chapter, store, studentId, eleveIndex){
 
     useAide(id, aideId, niveau){ const st=state[id]; if(!st) return; st.aidePal=st.aidePal||{};
       const prev=st.aidePal[aideId]||0; niveau=niveau||1; if(niveau>prev) st.aidePal[aideId]=niveau;
-      if(niveau>=2 && !st.aidesUsed.includes(aideId)){ st.aidesUsed.push(aideId); }   // palier 1 = orientation GRATUITE ; l'étoile ne tombe qu'au palier approfondi
+      if(niveau>=2 && st.aideProf!==aideId && !st.aidesUsed.includes(aideId)){ st.aidesUsed.push(aideId); }   // palier 1 = orientation GRATUITE ; l'étoile ne tombe qu'au palier approfondi — SAUF l'aide ouverte par le prof (la « question orale »), gratuite à tous les paliers
       _logEvent(id,'aide',null,aideId+':'+niveau); persist(); },
+    // « question orale au prof » (ec) : l'aide que le prof ouvre suite à une main levée ne coûte JAMAIS d'étoile,
+    //   tous paliers — c'est le prof qui donne, pas l'élève qui consomme. UNE SEULE par séance (grain des étoiles) :
+    //   si une autre aide a déjà ce statut, la nouvelle se comporte normalement.
+    aideProf(id, aideId){ const st=state[id]; if(!st) return false;
+      if(st.aideProf && st.aideProf!==aideId) return false;
+      st.aideProf=aideId; _logEvent(id,'aideprof',null,aideId); persist(); return true; },
     submitProf(id, itemId, texte){ const st=state[id]; st.soumissions=st.soumissions||{};
       st.soumissions[itemId]={ texte, statut:"soumis" }; persist(); },
     saveLibre(id, itemId, texte){ const st=state[id]; st.libres=st.libres||{}; st.libres[itemId]=texte; persist(); },
@@ -4605,60 +4638,67 @@ function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>
 
 /* ── Mode d'emploi élève (langage 4e) : un bouton « ? » par écran, ouvre cette aide dans la moitié d'écran ── */
 const HELP_HTML = `
-  <h4>1. Ce que tu fais ici</h4>
+  <h4 id="hq1">1. Ce que tu fais ici</h4>
   <p>Ce chapitre se travaille en <b>plan de travail</b> : tu avances seul, à ton rythme, étape par étape. La compétence que je regarde en priorité, c'est ton <b>autonomie</b> : lire une consigne, chercher, te corriger, demander de l'aide à bon escient.</p>
 
-  <h4>2. Comment tu travailles</h4>
+  <h4 id="hq2">2. Comment tu travailles</h4>
   <p>Au début, tu as indiqué ta façon de travailler : <b>sur l'écran</b>, <b>sur le papier</b>, ou <b>les deux</b>. Si tu t'es trompé, tu peux changer <b>une fois</b> avec le bouton de bascule. Dans tous les cas, la règle d'or ne change pas (point 4).</p>
 
-  <h4>3. La carte</h4>
+  <h4 id="hq3">3. La carte</h4>
   <p>Tu vois une <b>carte</b> avec des ronds : chaque rond est une <b>séance</b> (une étape). Une ligne montre le chemin conseillé. Tape un rond pour entrer dans la séance.</p>
 
-  <h4>4. La règle d'or : tout sur ton cahier</h4>
+  <h4 id="hq4">4. La règle d'or : tout sur ton cahier</h4>
   <p>Tu écris <b>toutes tes réponses sur ton cahier</b>, en phrases complètes. L'écran sert à <b>lire</b> et à <b>réfléchir</b>, pas à écrire (sauf le test).</p>
 
-  <h4>5. Dans une séance : deux onglets</h4>
+  <h4 id="hq5">5. Dans une séance : deux onglets</h4>
   <ul>
     <li><b>Consigne</b> : ce qu'il faut faire, les questions, les textes et documents à lire.</li>
     <li><b>S'évaluer</b> : un petit test (QCM) à la fin, pour vérifier que tu as compris.</li>
   </ul>
 
-  <h4>6. Cocher « fait » : seulement quand c'est fait</h4>
+  <h4 id="hq6">6. Cocher « fait » : seulement quand c'est fait</h4>
   <p>Quand tu as terminé une question <b>sur ton cahier</b>, coche <b>« fait »</b>. À ce moment, tu vois ton <b>temps</b> et la durée que cette question demande d'habitude. Ce <b>n'est pas une note</b> : juste un repère pour t'aider à doser ton travail. Ne coche pas avant d'avoir fait, et ne joue pas avec le bouton.</p>
 
-  <h4>7. Le temps qui s'affiche</h4>
+  <h4 id="hq7">7. Le temps qui s'affiche</h4>
   <p>En haut d'une séance, deux temps : <b>« cette heure »</b> (depuis le début du cours) et <b>« en tout »</b> (sur toute la séance, même commencée un autre jour). C'est pour voir où passe ton temps, pas pour te juger.</p>
 
-  <h4>8. Surligner, étiqueter, garder des mots</h4>
+  <h4 id="hq8">8. Surligner, étiqueter, garder des mots</h4>
   <p>Une barre de couleurs en haut : choisis une couleur, puis <b>tape un mot</b> pour le surligner. Tu peux coller une <b>étiquette</b> (une note sur un mot), ou <b>gommer</b> en tapant un mot déjà surligné. Un mot difficile&nbsp;? Tu peux le mettre dans ton <b>glossaire</b> pour le retrouver. Tout est gardé : si tu reviens plus tard, c'est toujours là. Dans la même barre, le bouton <b>Aa</b> agrandit le texte si tu lis mieux en gros — retape-le pour revenir à la taille normale.</p>
 
-  <h4>9. Le test, et ton premier essai</h4>
+  <h4 id="hq9">9. Le test, et ton premier essai</h4>
   <p>Dans <b>S'évaluer</b>, réponds puis tape <b>Vérifier</b>. Ton <b>premier essai</b> ne te coûte rien et n'est pas une note : il me sert juste à voir <b>où tu en es seul</b>, avant correction. Si tu n'as pas le compte, tu <b>recommences</b> autant qu'il faut pour franchir l'étape. Ce qui compte, c'est ta progression.</p>
 
-  <h4>10. La correction</h4>
+  <h4 id="hq10">10. La correction</h4>
   <p>Une fois l'étape franchie, la <b>correction</b> apparaît. Compare-la à ce que tu as écrit sur ton cahier, et corrige-toi soigneusement.</p>
 
-  <h4>11. Ton parcours de séance</h4>
+  <h4 id="hq11">11. Ton parcours de séance</h4>
   <p>Quand une séance est réussie, déplie <b>« Ton parcours de cette séance »</b> : un petit bilan de ta façon de travailler — ton temps, la question la plus longue, les mots cherchés au dictionnaire à <b>ajouter à ton glossaire</b>. Sers-t'en pour progresser la fois suivante.</p>
 
-  <h4>12. Viser le sans-faute</h4>
+  <h4 id="hq12">12. Viser le sans-faute</h4>
   <p>Quand une séance est réussie, tu peux la <b>refaire pour viser le sans-faute</b> (comme aller chercher les trois étoiles d'un niveau). C'est possible <b>chez toi</b>, en dehors du temps de classe. Ta réussite reste acquise quoi qu'il arrive : on garde toujours ton <b>meilleur</b> passage, jamais le moins bon.</p>
 
-  <h4>13. Les aides et les étoiles d'autonomie</h4>
+  <h4 id="hq13">13. Les aides et les étoiles d'autonomie</h4>
   <p>Quand tu bloques sur une question, ouvre <b>« Besoin d'un coup de pouce ? »</b> et choisis la question qui te pose problème. L'aide arrive en <b>trois temps</b> : d'abord une <b>orientation</b> (où chercher), puis la <b>méthode</b> (comment t'y prendre), enfin un <b>élément de réponse</b>. Tu ouvres ces étapes une par une, seulement si tu en as encore besoin.</p>
   <p>Chaque séance qui propose de l'aide a <b>3 étoiles</b>. La première <b>orientation est gratuite</b> : la demander ne coûte rien. Aller plus loin (méthode ou élément de réponse) coûte <b>une étoile</b>. Demander de l'aide reste permis et normal — mais cherche d'abord seul, et arrête-toi dès que tu as compris.</p>
 
-  <h4>14. Revenir à la carte</h4>
+  <h4 id="hq14">14. Revenir à la carte</h4>
   <p>Le bouton <b>← La carte</b> te ramène à la carte pour choisir une autre séance.</p>
 
-  <h4>15. Je vois ton écran</h4>
+  <h4 id="hq15">15. Je vois ton écran</h4>
   <p>Je vois ton écran sur le mien. Je peux t'ouvrir une séance, surligner un mot pour toi, ou t'ouvrir cette aide à distance. Je peux aussi te demander de <b>venir me montrer ton bilan</b> : ton écran t'amène alors à ce bilan et t'attend, le temps que tu viennes me voir.</p>
 
-  <h4>16. Tu es bloqué ?</h4>
+  <h4 id="hq16">16. Tu es bloqué ?</h4>
   <p>Relis la consigne, regarde les documents, essaie une aide. Si ça ne suffit pas, appelle-moi.</p>
 
-  <h4>17. Lever la main ✋ <span style="opacity:.7;font-weight:400">(si je l'ai activé pour ta classe)</span></h4>
+  <h4 id="hq17">17. Lever la main ✋ <span style="opacity:.7;font-weight:400">(si je l'ai activé pour ta classe)</span></h4>
   <p>Un bouton ✋ peut apparaître au-dessus du « ? ». Il me prévient discrètement que tu as besoin d'aide, sans déranger la classe. <b>Continue à travailler en attendant</b> : je viens dès que possible. Re-toucher le bouton retire ton signal.</p>
+  <h4 id="hq18">18. Questions fréquentes</h4>
+  <p><b>J'ai fermé l'onglet, la tablette s'est éteinte : ai-je perdu mon travail ?</b> Non. Tout est enregistré au fur et à mesure. Reconnecte-toi avec ta classe et ton nom : tu reprends où tu en étais.</p>
+  <p><b>Une séance est marquée « occupé », c'est quoi ?</b> Un camarade y travaille déjà : choisis-en une autre (voir 3. La carte). En toute fin de chapitre, vous pouvez être deux sur la dernière : c'est normal.</p>
+  <p><b>De nouvelles séances sont apparues sur ma carte ?</b> Ce sont tes ateliers : ils s'ouvrent après la séance de convergence, choisis-en un quand tu es prêt.</p>
+  <p><b>Le bouton « Aa » ?</b> Il change la taille du texte : ×1, ×2 ou ×3. La tablette s'en souvient.</p>
+  <p><b>Je veux changer entre papier et app ?</b> C'est possible une seule fois par jour — réfléchis avant (voir 2. Comment tu travailles).</p>
+  <p><b>J'ai raté le test, c'est grave ?</b> Non : tu peux le repasser après t'être corrigé (voir 9 et 10). Réussir au deuxième ou troisième essai reste une réussite.</p>
 `;
 function helpFAB(key){ return '<button class="helpfab" title="Comment ça marche ?" aria-label="aide" onclick="APP.toggleHelp(\''+key+'\')">?</button>'
   +'<div class="helpsheet" id="help'+key+'"><div class="helphead"><b>Comment ça marche ?</b>'
@@ -4780,7 +4820,7 @@ function Panel(engine, root, name){
       if(engine.statusOf(id)==="done") continue;
       if(!engine.peutAcceder(id)) continue;                 // convergence pas encore ouverte
       if(firstUndone===null) firstUndone=id;
-      if(excl && engine.seance(id).niveauEntonnoir!=="convergence" && APP.occupant(id,lane)) continue;
+      if(excl && engine.seance(id).niveauEntonnoir!=="convergence" && !APP.derniereRestante(P,id) && APP.occupant(id,lane)) continue;
       return id;
     }
     return firstUndone;   // toutes occupées → on pointe quand même la prochaine étape (entrée bloquée si occupée)
@@ -4803,10 +4843,11 @@ function Panel(engine, root, name){
     const S=engine.chapter.seances;
     let nodes="";
     const excl=CHAPTER.reglages.exclusiviteSeance;
+    REMED.notifyIfUnlocked(P);   // ed2/ed3 : premiers ateliers visibles → toast élève + signal prof (une fois)
     S.forEach((s,i)=>{ if(s.remediation && !REMED.visible(P, s.id)) return;   // atelier non débloqué pour CET élève : invisible
       const st=engine.statusOf(s.id), here=(s.id===snap.lastVisited&&st!=="done");
       const comp=(st==="done")?engine.pendingFor(s.id).length:0;        // séance réussie mais questions ajoutées depuis → à compléter
-      const occ = (excl && s.niveauEntonnoir!=="convergence" && !s.remediation) ? APP.occupant(s.id, laneIdOf()) : null;   // atelier : sélection individuelle, jamais d'exclusivité
+      const occ = (excl && s.niveauEntonnoir!=="convergence" && !s.remediation && !APP.derniereRestante(P, s.id)) ? APP.occupant(s.id, laneIdOf()) : null;   // atelier : sélection individuelle, jamais d'exclusivité · dernière restante : exclusivité levée (ed4)
       const remLock = s.remediation && st!=="done" && !REMED.accessible(P, s.id);   // un atelier à la fois
       const lock = !occ && st!=="done" && (!engine.peutAcceder(s.id) || remLock);
       const stars=engine.starsOf(s.id);
@@ -4864,7 +4905,12 @@ function Panel(engine, root, name){
     const excl=CHAPTER.reglages.exclusiviteSeance;
     if(excl && s0 && s0.niveauEntonnoir!=="convergence" && !s0.remediation){
       const occ=APP.occupant(id, laneIdOf());                 // qqn l'a-t-il prise entre le clic et la validation ?
-      if(occ){ toast(occ+" vient de prendre cette séance — choisis-en une autre."); renderMap(); APP.beat(APP.laneIdFor(P)); return; }
+      if(occ && !APP.derniereRestante(P, id)){ toast(occ+" vient de prendre cette séance — choisis-en une autre."); renderMap(); APP.beat(APP.laneIdFor(P)); return; }
+      if(occ){   // ed5/ed6 : cohabitation dérogatoire de fin de parcours — on rassure les deux élèves, on prévient le prof
+        toast("Vous êtes deux sur cette séance parce que vous arrivez à la fin du chapitre : c'est normal et c'est bien. Continuez chacun en autonomie — c'est ce qui est évalué dans ce plan de travail.");
+        const chap=CHAPTER.meta.id||'chapitre';
+        store.save('signaux/'+chap+'/'+engine.studentId+'/duo', { type:'duo', nom:P.name, avec:occ, seance:s0.titre, seanceId:id, classeSeg:P.classeSeg||'', ts:Date.now() });
+      }
     }
     engine.start(id); engine.logEvent(id,'enter'); P._entering=id; renderMap();        // réservée dès la validation (ferme la fenêtre d'animation)
     setTimeout(()=>{ P._entering=null; P.screen="seance"; P.current=id; P.answers={}; renderSeance(); APP.beat(APP.laneIdFor(P)); }, 850); }
@@ -4939,7 +4985,16 @@ function Panel(engine, root, name){
   // le drapeau « séance en cours » a changé : si l'élève regarde le verdict d'une séance réussie (hors re-jeu), rafraîchir pour (dé)montrer le bouton re-jeu
   P.reflectCours=function(){ P.updateHandFab();   // main levée : suit l'activation par classe en direct (subscribe control)
     if(P.screen==='seance' && P.tabCur==='e' && !P._replay && P.current && engine.statusOf(P.current)==='done') renderEval(); };
-  P.openHelp=function(){ const el=$("help"+laneIdOf()); if(el) el.classList.add("open"); };   // ouverture de l'aide (1er accès auto, ou déclenchée par le prof)
+  P.openHelp=function(sectionId){ const el=$("help"+laneIdOf()); if(!el) return; el.classList.add("open");
+    if(sectionId){ const h=el.querySelector('#'+sectionId); if(h){ h.scrollIntoView({block:'start'});   // le prof pointe la section qui répond à la question de l'élève
+      h.classList.add('help-blink'); setTimeout(()=>h.classList.remove('help-blink'), 4200); } } };
+  // le prof répond à une main levée par un coup de pouce ciblé : navigation forcée (la zone d'aide ne vit que sur la page Questions) puis ouverture SANS étoile
+  P.profAide=function(seanceId, aideId){ if(!P.current || P.current!==seanceId) return;   // l'élève a changé de séance entre temps : ordre obsolète, on ne casse rien
+    engine.aideProf(P.current, aideId);
+    if(P.screen==='seance'){ P.expanded=true; if(P.mode==='papier') renderSeance(); P.tab('c'); P.setSub('questions'); }
+    P.selAide(aideId);
+    const sel=root.querySelector('.aide-sel'); if(sel) sel.value=aideId;
+    toast('Le professeur t\'ouvre une aide — elle ne te coûte pas d\'étoile.'); };
   P.markQ=function(qKey, done, cb){ if(!P.current) return;
     const papier=(P.mode==='papier'); const now=Date.now();
     engine.markQ(P.current, qKey, done, papier);
@@ -4987,7 +5042,7 @@ function Panel(engine, root, name){
       +'<button class="gt'+(cur==='gomme'?' on':'')+'" title="Effacer un mot" onclick="APP.panel(\''+lane+'\').gtool(\'gomme\')">gomme</button>'
       +'<button class="gt'+(cur==='dico'?' on':'')+'" title="Dictionnaire : touche ce bouton, puis touche un mot du texte pour lire sa définition" onclick="APP.panel(\''+lane+'\').gtool(\'dico\')">📖 dico</button>'
       +'<button class="gt" title="Mon glossaire" onclick="APP.panel(\''+lane+'\').openGlossaire()">📚 glossaire</button>';
-    bar+='<button class="gt gt-zoom'+(APP.zoomBig?' on':'')+'" title="Agrandir le texte pour mieux lire" onclick="APP.toggleZoom()">Aa '+(APP.zoomBig?'Texte normal':'Texte plus grand')+'</button>';
+    bar+='<button class="gt gt-zoom'+(APP.zoomBig?' on':'')+'" title="Taille du texte : ×1, ×2 ou ×3 (pour les yeux qui fatiguent)" onclick="APP.toggleZoom()">'+APP.zoomLabel()+'</button>';
     if(cur) bar+='<div class="ghint"><span class="frozen">feuille figée</span><span>'+hintOf(cur)+'</span></div>';
     return bar+'</div>'; }
   // ── Parcours de séance : référence de temps par question + garde-fous (Lot A) ──
@@ -5389,12 +5444,13 @@ function Panel(engine, root, name){
     P._renderAide(aideId); };
   P._renderAide=function(aideId){ const zone=root.querySelector('[data-aidezone]'); if(!zone) return;
     const s=engine.seance(P.current); const a=(s.aides||[]).find(x=>x.id===aideId); if(!a) return;
+    const parProf=(engine.snapshot().state[s.id]||{}).aideProf===aideId;
     const lvl=Math.max(1,(engine.snapshot().state[s.id].aidePal||{})[aideId]||1); const np=a.paliers.length;
     const noms=['Orientation','Méthode','Élément de réponse'];
     let h=a.paliers.slice(0,lvl).map((p,i)=>`<div class="palier"><span class="pnum">${noms[i]||('Palier '+(i+1))}</span>${esc(p)}</div>`).join('');
     if(lvl<np){ const cost=(lvl+1)>=2?" <span class='star-cost'>−1 ★</span>":''; h+=`<button class="btn ghost aide-more" title="Ouvre le palier d'aide suivant — à partir du 2e palier, cela coûte une étoile d'autonomie" onclick="APP.panel('${laneIdOf()}').openPalier('${aideId}')">J'ai encore besoin d'aide${cost}</button>`; }
     else h+=`<div class="aide-end">C'est tout pour cette question — à toi de jouer.</div>`;
-    zone.innerHTML=h; };
+    zone.innerHTML=(parProf?'<div class="aide-prof-band">🤝 Ouverte par le professeur — elle ne te coûte pas d\'étoile.</div>':'')+h; };
   P.openPalier=function(aideId){ const s=engine.seance(P.current); const a=(s.aides||[]).find(x=>x.id===aideId); if(!a) return;
     const cur=Math.max(1,(engine.snapshot().state[s.id].aidePal||{})[aideId]||1); const next=Math.min(a.paliers.length, cur+1);
     if(next===cur) return;
@@ -5594,7 +5650,7 @@ function Panel(engine, root, name){
 /* ─────────────────────────── §G · SHELL (écran scindé + boot) ──────────*/
 const LETTERS=["A","B","C","D"];
 // panneau inerte : renvoyé quand un handler vise une lane absente (ex. clic résiduel) → aucun crash
-const NULLPANEL = { toMap(){}, tab(){}, pick(){}, selAide(){}, openPalier(){}, setSub(){}, setCahierFait(){}, mainLevee(){}, updateHandFab(){}, rappel(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){}, showComplements(){}, startComplement(){} };
+const NULLPANEL = { toMap(){}, tab(){}, pick(){}, selAide(){}, openPalier(){}, setSub(){}, setCahierFait(){}, mainLevee(){}, updateHandFab(){}, rappel(){}, submit(){}, retry(){}, submitProf(){}, saveLibre(){}, goto(){}, render(){}, gtool(){}, gtap(){}, markQ(){}, iAmHere(){}, refreshChrono(){}, checkIdle(){}, closeDico(){}, openGlossaire(){}, glossToggle(){}, glossRemove(){}, setReg(){}, reorder(){}, refreshReg(){}, setPair(){}, toggleRep(){}, setShort(){}, setVF(){}, setClass(){}, setLock(){}, showRecap(){}, closeRecap(){}, expand(){}, goEval(){}, reduce(){}, switchMode(){}, replay(){}, reflectCours(){}, openHelp(){}, setAutoCrit(){}, validateAutocorr(){}, setBilanEcrit(){}, reopenAutocorr(){}, venirVoir(){}, closeVenirVoir(){}, showComplements(){}, startComplement(){}, profAide(){} };
 /* ── SECTION DÉDIÉE — REMÉDIATION (déblocage + visibilité) ─────────────────────
    Les ateliers (séances remediation:true) sont INVISIBLES sur la carte tant que le
    professeur ne les a pas débloqués — par élève OU par classe (geste explicite, jamais
@@ -5607,7 +5663,18 @@ const REMED = {
     return !!(((C[uid]||{}).remedOn||{})[sid]) || !!(((C[seg]||{}).remedOn||{})[sid]); },
   visible(p, sid){ const s=p.engine.seance(sid); if(!s || !s.remediation) return true;
     if(p.engine.statusOf(sid)!=='todo') return true;                      // déjà commencé : reste visible même si reverrouillé entre-temps
+    const conv=(p.engine.chapter.seances||[]).find(z=>z.niveauEntonnoir==='convergence');   // ed : les ateliers n'apparaissent qu'APRÈS la convergence de l'élève — le prof peut activer en avance sans rien dévoiler
+    if(conv && p.engine.statusOf(conv.id)!=='done') return false;
     return this.on(p.classeSeg, p.engine.studentId, sid); },
+  // ed2/ed3 : au moment où les ateliers DEVIENNENT visibles pour cet élève (convergence franchie + activation),
+  //   une seule fois par session de travail : toast élève + signal prof (panneau Signaux, type 'remed', ✓ vu).
+  notifyIfUnlocked(p){ if(!p||!p.engine||p._remedNotified||p._mirrorLane) return;
+    const ids=(p.engine.chapter.seances||[]).filter(s=>s.remediation && p.engine.statusOf(s.id)==='todo' && this.visible(p, s.id)).map(s=>s.id);
+    if(!ids.length) return;
+    p._remedNotified=true;
+    toast('De nouvelles séances sont apparues sur ta carte : tes ateliers. Choisis-en un quand tu es prêt.');
+    const chap=CHAPTER.meta.id||'chapitre';
+    store.save('signaux/'+chap+'/'+p.engine.studentId+'/remed', { type:'remed', nom:p.name, classeSeg:p.classeSeg||'', n:ids.length, ts:Date.now() }); },
   // un atelier à la fois : tous les ateliers PRÉCÉDENTS visibles pour cet élève doivent être terminés
   accessible(p, sid){ const list=(p.engine.chapter.seances||[]).filter(s=>s.remediation).map(s=>s.id);
     for(const id of list){ if(id===sid) break;
@@ -5627,6 +5694,12 @@ const APP = {
   // qui occupe la séance id PARMI LES AUTRES ÉLÈVES DE LA MÊME TABLETTE (lanes locales) uniquement.
   // L'exclusivité ne joue JAMAIS entre tablettes : sinon une séance prise par un élève bloquerait
   // toute la classe (et tout le monde finirait poussé vers la convergence). Entre postes, séances partagées.
+  // ed4 : en fin de carré latin, deux élèves n'ont plus que LA MÊME séance restante — l'exclusivité n'a plus
+  //   de fonction (la dispersion a déjà eu lieu) et ne ferait qu'une file d'attente. Elle est LEVÉE quand la
+  //   séance visée est la dernière séance socle non faite de l'élève.
+  derniereRestante(p, id){ if(!p||!p.engine) return false;
+    const reste=(p.engine.chapter.seances||[]).filter(s=>!s.remediation && s.niveauEntonnoir!=='convergence' && p.engine.statusOf(s.id)!=='done').map(s=>s.id);
+    return reste.length===1 && reste[0]===id; },
   occupant(id, exceptKey){
     const self=this.panels[exceptKey], selfSeg=self?self.classeSeg:null;
     for(const k in this.panels){ if(k===exceptKey) continue; const p=this.panels[k];
@@ -5647,8 +5720,12 @@ const APP = {
     lane.classList.toggle('reduced', reduced); } },
   setTableSize(n){ this.tableSize=Math.max(1,Math.min(LETTERS.length,n|0)); lsSet("wt_seats", this.tableSize); this.boot(); },
   toggleHelp(key){ const el=$("help"+key); if(el) el.classList.toggle("open"); },
-  toggleZoom(){ this.zoomBig=!this.zoomBig; document.body.classList.toggle('zoom-big', this.zoomBig); lsSet('wt_zoom', this.zoomBig?1:0);
-    document.querySelectorAll('.gt-zoom').forEach(b=>{ b.textContent='Aa '+(this.zoomBig?'Texte normal':'Texte plus grand'); b.classList.toggle('on', this.zoomBig); }); },
+  // ee2 : trois paliers de zoom (×1 / ×2 / ×3) — le ×3 pour les élèves qui fatiguent devant l'écran
+  zoomLabel(){ return 'Aa ×'+((this.zoomLvl|0)+1); },
+  toggleZoom(){ this.zoomLvl=((this.zoomLvl|0)+1)%3; lsSet('wt_zoom', this.zoomLvl); this.applyZoom();
+    document.querySelectorAll('.gt-zoom').forEach(b=>{ b.textContent=this.zoomLabel(); b.classList.toggle('on', this.zoomLvl>0); }); },
+  applyZoom(){ const l=this.zoomLvl|0; document.body.classList.toggle('zoom-big', l===1); document.body.classList.toggle('zoom-max', l===2);
+    this.zoomBig=l>0; },
   toggleTest(){ this.testMode=!this.testMode;
     this.purgeTest(); this.boot(); },                          // purge à l'entrée comme à la sortie
   purgeTest(){ const chap=CHAPTER.meta.id||"chapitre";                  // efface les résidus testA/B/C
@@ -5688,6 +5765,9 @@ const APP = {
     this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMapsIfChanged();
       if(PROF.authed && PROF.tab==="suivi") PROF.render(); }));
     this._unsubs.push(store.subscribe("signaux/"+chap, v=>{ this._signaux=v||{};   // bilans écrits à relire (signal rouge)
+      Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(!p||!p.engine||!p.updateHandFab) return;   // ec : la main levée est le REFLET du signal Firebase — le « ✓ vu » du prof l'éteint chez l'élève (avant : état local jamais redescendu → la main brillait indéfiniment), et une reconnexion reprend l'état vrai
+        const up=!!(((this._signaux||{})[p.engine.studentId]||{}).aide);
+        if(p._handUp!==up){ p._handUp=up; p.updateHandFab(); } });
       if(PROF.authed) PROF.render(); }));
     this._unsubs.push(store.subscribe("control/"+chap, v=>{ this._control=v||{};
       Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(!p||!p.epoch||!p.engine) return;
@@ -5713,7 +5793,7 @@ const APP = {
   },
   // rejoue sur le panneau de l'élève l'action que le prof a déclenchée en cliquant dans le miroir
   applyAct(key, act){ const p=this.panels[key]; if(!p||!p.engine||!act) return;
-    const allow={goto:1,pick:1,submit:1,retry:1,selAide:1,setSub:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1,reopenAutocorr:1,venirVoir:1,closeVenirVoir:1,rappel:1};
+    const allow={goto:1,pick:1,submit:1,retry:1,selAide:1,setSub:1,submitProf:1,saveLibre:1,tab:1,toMap:1,openHelp:1,reopenAutocorr:1,venirVoir:1,closeVenirVoir:1,rappel:1,profAide:1};
     if(!allow[act.m] || typeof p[act.m]!=='function') return;
     try{ p[act.m].apply(p, act.a||[]); }catch(e){}
     this.beat(key);
@@ -5789,8 +5869,25 @@ const APP = {
      (« ma classe est en cours → je ne peux pas refaire une séance déjà réussie »). La clôture reste un GESTE explicite du prof. */
   coursDe(seg){ return (this._control && this._control[seg] && this._control[seg].cours) || null; },
   classeEnCours(seg){ return !!this.coursDe(seg); },   // séance lancée et non clôturée → re-jeu fermé pour cette classe
-  openHelpFor(uid){ const chap=CHAPTER.meta.id||"chapitre";   // ouvre l'aide « ? » directement sur l'écran de l'élève (l'élève a levé la main)
-    store.save("control/"+chap+"/"+uid+"/act", { m:'openHelp', a:[], ts:Date.now() }); },
+  // menu du signal ✋ : le prof choisit selon la QUESTION de l'élève — coup de pouce de SA séance (sans étoile),
+  //   ou section précise du « ? » (qui pulsera à l'écran). Fini l'aide à l'aveugle.
+  aideMenuHTML(x){ const s=(CHAPTER.seances||[]).find(z=>z.id===x.seanceId); const aides=(s&&s.aides)||[];
+    const lab=a=>{ const c=a.cible; const isQ=(typeof c==='number')||/^q?\d+$/.test(String(c||'')); return isQ?('Question '+String(c).replace(/^q/,'')):'Aide générale'; };
+    const apercu=a=>esc(String((a.paliers&&a.paliers[0])||'').slice(0,90));
+    const optA=aides.map(a=>`<option value="a:${esc(a.id)}" title="${apercu(a)}">${esc(lab(a))}</option>`).join('');
+    const secs=[]; String(typeof HELP_HTML!=='undefined'?HELP_HTML:'').replace(/<h4 id="(hq\d+)">([^<]+)/g,(m0,id,t)=>{ secs.push({id,t:t.trim()}); return m0; });
+    const optH=secs.map(z=>`<option value="h:${z.id}">${esc(z.t)}</option>`).join('');
+    return `<select class="txtin sig-aidemenu" title="Réponds selon sa question : un coup de pouce de sa séance (sans étoile pour lui), ou la section du « ? » qui s'allumera sur son écran" onchange="APP.aideMenu('${esc(x.uid)}','${esc(x.seanceId||'')}',this)">
+      <option value="">répondre…</option>
+      ${optA?`<optgroup label="Question de cours — coup de pouce (sans étoile)">${optA}</optgroup>`:''}
+      <optgroup label="Fonctionnement de l'app — le « ? »">${optH}</optgroup></select>`; },
+  aideMenu(uid, seanceId, sel){ const v=sel.value; sel.value=''; if(!v) return;
+    if(v.slice(0,2)==='a:'){ this.profAideFor(uid, seanceId, v.slice(2)); toast('Coup de pouce ouvert chez l\'élève — sans étoile pour lui.'); }
+    else { this.openHelpFor(uid, v.slice(2)); toast('Le « ? » s\'ouvre chez l\'élève, la section choisie clignote.'); } },
+  openHelpFor(uid, sectionId){ const chap=CHAPTER.meta.id||"chapitre";   // ouvre le « ? » sur l'écran de l'élève, et fait pulser la section choisie
+    store.save("control/"+chap+"/"+uid+"/act", { m:'openHelp', a:sectionId?[sectionId]:[], ts:Date.now() }); },
+  profAideFor(uid, seanceId, aideId){ const chap=CHAPTER.meta.id||"chapitre";   // coup de pouce ciblé « question orale » : navigation forcée + aide SANS étoile (cf. P.profAide)
+    store.save("control/"+chap+"/"+uid+"/act", { m:'profAide', a:[seanceId, aideId], ts:Date.now() }); },
   // renvoie l'élève sur son autocorrection (à distance) — utile quand le prof voit qu'il s'est sur-évalué sans rien corriger au cahier
   renvoyerAutocorr(uid, seanceId){ const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+uid+"/act", { m:'reopenAutocorr', a:[seanceId||null], ts:Date.now() });
@@ -5853,7 +5950,7 @@ const APP = {
   // file de signaux (Lot 4) : liste plate des événements qui demandent l'attention du prof, tous types confondus
   signauxList(){ const out=[]; const S=this._signaux||{};
     Object.keys(S).forEach(uid=>{ if(!this.testMode && isTestUid(uid)) return; const node=S[uid]||{};
-      ['bilan','incoherence','aide','cahier'].forEach(type=>{ if(node[type]) out.push(Object.assign({uid, type}, node[type])); }); });
+      ['bilan','incoherence','aide','cahier','remed','duo'].forEach(type=>{ if(node[type]) out.push(Object.assign({uid, type}, node[type])); }); });
     return out.sort((a,b)=>(a.ts||0)-(b.ts||0)); },
   // ── Filtre de classe (suivi / tableau de bord / bilan) : par défaut la classe en cours, sélecteur pour consulter les autres ──
   knownClasses(){ const m={};
@@ -5933,7 +6030,8 @@ const APP = {
   _hideUpdateBanner(){ const b=$("updBanner"); if(b) b.remove(); },
 
   boot(){
-    this.zoomBig = !!lsGet("wt_zoom"); document.body.classList.toggle("zoom-big", this.zoomBig);   // préférence de taille de texte mémorisée par tablette
+    this.zoomLvl = (+lsGet("wt_zoom"))||0; if(this.zoomLvl>2||this.zoomLvl<0) this.zoomLvl=0; this.applyZoom();   // préférence de taille de texte mémorisée par tablette (3 paliers)
+    document.querySelectorAll('.gt-zoom').forEach(b=>{ b.textContent=this.zoomLabel(); b.classList.toggle('on', this.zoomLvl>0); });
     if(this._seatsInit===undefined){ this._seatsInit=true; const s=lsGet("wt_seats"); if(s&&s>=1&&s<=LETTERS.length) this.tableSize=s; }  // choix mémorisé sur cette tablette
     const resume = (!this.testMode) ? lsGet("wt_resume") : null;       // reprise après un reload de mise à jour
     if(resume){ lsSet("wt_resume", null);                              // consommé une seule fois
@@ -6272,13 +6370,14 @@ const DASH = {
         else if(ns && ns.repondu) h+='<div class="dd-somm">Note provisoire : <b>'+ns.note+' / '+ns.bareme+'</b>'
           +(lock?'':' <button class="btn primary dd-reset" title="Valider et figer cette note" onclick="DASH.figerSommatif(\''+uidJs+'\',\''+s.id+'\')">valider la note</button>')+'</div>';
         else h+='<div class="dd-somm dd-somm-wait">Évaluation notée — en attente du QCM de l\'élève.</div>'; }
-      if(qt.length) h+='<div class="dd-track"><span class="dd-track-l">Travail au cahier</span><span class="dd-q">'+qt.map(x=>'<span class="dd-qchip"'+(x.hr?' title="coché en rattrapage (travail papier)"':'')+'>Q'+(qmap[x.key]||'?')+' · '+fmtMMSS(x.ms)+(x.hr?' ✎':'')+'</span>').join('')+'</span></div>';
+      if(qt.length) h+='<div class="dd-track"><span class="dd-track-l">Travail au cahier</span><span class="dd-q">'+qt.map(x=>'<span class="dd-qchip"'+(x.hr?' title="coché en rattrapage (travail papier)"':'')+'>Q'+(qmap[x.key]||'?')+' · '+(x.out?'<i>repris un autre moment</i>':fmtMMSS(x.ms))+(x.hr?' ✎':'')+'</span>').join('')+'</span></div>';
       const ess=eng.essaisOf(s.id);
       if(ess.length){ const piste=ess.map((e,i)=>{ const diag=(i===0); const score=e.porte+'/'+e.porteTotal;
-          const refl = e.replay ? ' · re-jeu' : ((e.dt!=null)?' · réflexion '+fmtMMSS(e.dt):''); const ok=e.passed?' ✓':'';
+          const dtOut=(e.dt!=null && e.dt>CONFIG.qGapMaxMs);   // délai invraisemblable (cf. qGapMaxMs) : reprise un autre jour, pas de la réflexion
+          const refl = e.replay ? ' · re-jeu' : (dtOut ? ' · <i>repris un autre moment</i>' : ((e.dt!=null)?' · réflexion '+fmtMMSS(e.dt):'')); const ok=e.passed?' ✓':'';
           const tip=diag?'1er essai = diagnostic : ses acquis seul, avant toute correction'
             :(e.replay?'re-jeu hors classe (viser le sans-faute) — la porte était déjà acquise'
-              :('essai '+(i+1)+(e.dt!=null?' — '+Math.round(e.dt/1000)+' s de réflexion depuis le précédent':'')));
+              :('essai '+(i+1)+(dtOut?' — repris bien plus tard (delai non significatif)':(e.dt!=null?' — '+Math.round(e.dt/1000)+' s de réflexion depuis le précédent':''))));
           return '<span class="dd-essai'+(diag?' dd-diag':'')+(e.replay?' dd-replay':'')+(e.passed?' dd-pass':'')+'" title="'+tip+'">'+(diag?'◉ ':'')+'Essai '+(i+1)+' · '+score+refl+ok+'</span>'; }).join('<span class="dd-fleche">→</span>');
         h+='<div class="dd-track"><span class="dd-track-l">Essais au QCM</span><span class="dd-essais">'+piste+'</span></div>'; }
       if(dico.length) h+='<div class="dd-dico">📖 '+dico.map(d=>esc(d.mot)).join(', ')+'</div>';
@@ -6940,6 +7039,8 @@ const PROF = {
     const sigMeta = { bilan:{ic:'📝', lab:'a écrit son bilan', act:'va relire son cahier'},
                       incoherence:{ic:'⚠', lab:'s\'est sur-évalué', act:'écart entre QCM et autocorrection'},
                       aide:{ic:'✋', lab:'demande de l\'aide', act:''},
+                      remed:{ic:'🧩', lab:'a fini la convergence — ses ateliers sont débloqués', act:''},
+                      duo:{ic:'🤝', lab:'termine sur la même séance qu\'un camarade (fin de parcours)', act:''},
                       cahier:{ic:'📋', lab:'déclare avoir fini au cahier', act:''} };
     const signauxBox = sigCls.length ? `<div class="prof-sec signaux-sec"><h4>Signaux <span class="meta">· ${sigCls.length}</span></h4>
       <div class="d">Événements en attente. « Venir me voir » renvoie l'élève sur son bilan et l'y retient ; « ✓ vu » éteint le signal et le libère.</div>
@@ -6947,7 +7048,7 @@ const PROF = {
         const lab=(x.type==='cahier')?(x.etat==='reprend'?'veut prendre le temps de terminer':'déclare avoir fini au cahier'):m.lab;
         const conv = (x.type==='bilan' && x.seanceId) ? `<button class="btn ghost sig-conv" title="Renvoie l'élève sur ce bilan et le bloque jusqu'à ton « ✓ vu »" onclick="PROF.convoquer('${esc(x.uid)}','${esc(x.seanceId)}')">✋ Venir me voir</button>`
           : (x.type==='cahier') ? `<button class="btn ghost sig-conv" title="Voir l'écran de l'élève sans le déranger" onclick="PROF.voirEcran('${esc(x.uid)}')">👁 voir son écran</button>`
-          : (x.type==='aide')   ? `<button class="btn ghost sig-conv" title="Ouvre l'aide « ? » directement sur l'écran de l'élève" onclick="APP.openHelpFor('${esc(x.uid)}')">? ouvrir son aide</button>` : '';
+          : (x.type==='aide')   ? APP.aideMenuHTML(x) : '';
         return `<div class="r sig-${x.type}"><span class="sig-ic">${m.ic}</span><span><b>${esc(x.nom||x.uid)}</b> ${lab}${x.seance?` · ${esc(x.seance)}`:''}${m.act?`<span class="sig-act"> → ${m.act}</span>`:''}</span>`
           +`<span class="sig-btns">${conv}<button class="btn ghost" title="Efface ce signal de la liste (sans rien changer chez l'élève)" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}','${esc(x.seanceId||'')}','${esc(x.etat||'')}')">✓ vu</button></span></div>`; }).join('')}</div></div>` : '';
 
@@ -7345,20 +7446,20 @@ const PROF = {
         <div class="d" style="margin-top:6px">L'import réécrit les progressions, sessions, contrôle et archives à partir du fichier. Il ne touche jamais aux classes partagées avec tes autres apps.</div></div>
       <div class="prof-sec doc-sec"><h4>📖 Comment l'app fonctionne — pédagogie et mécanique</h4>
         <div class="d">Chaque dispositif : l'intention d'abord, puis la mécanique exacte, au chiffre près. Aucun terme technique sans définition (lexique en bas).</div>
-        <details><summary>La carte et les chemins</summary><div class="db"><span class="why">Intention : l'élève choisit son parcours, mais dans un cadre qui converge.</span><br>La carte montre les séances du chapitre. Des flèches relient les séances : la flèche <b>conseillée</b> suggère la suite naturelle, la flèche <b>prérequis</b> indique la séance à maîtriser avant. Les séances de travail au choix s'appellent des <b>socles</b> ; la séance finale commune à tous s'appelle la <b>convergence</b>. En cas d'échec à une évaluation, le réglage « réorientation » décide où l'app propose d'aller : vers le prérequis immédiat, ou vers le début du chemin.<span class="ref">📚 Le plan de travail vient du plan Dalton (Helen Parkhurst, 1922) et de la pédagogie Freinet ; le retour sur les mêmes notions par des entrées différentes — socles croisés, convergence, ateliers — met en œuvre le curriculum spiralaire de Jerome Bruner (1960).</span></div></details>
+        <details><summary>La carte et les chemins</summary><div class="db"><span class="why">Intention : l'élève choisit son parcours, mais dans un cadre qui converge.</span><br>La carte montre les séances du chapitre. Des flèches relient les séances : la flèche <b>conseillée</b> suggère la suite naturelle, la flèche <b>prérequis</b> indique la séance à maîtriser avant. Les séances de travail au choix s'appellent des <b>socles</b> ; la séance finale commune à tous s'appelle la <b>convergence</b>. En cas d'échec à une évaluation, le réglage « réorientation » décide où l'app propose d'aller : vers le prérequis immédiat, ou vers le début du chemin. Quand l'exclusivité de séance est active, elle est <b>levée d'elle-même en fin de parcours</b> : si la séance visée est la dernière qui reste à un élève, il peut la rejoindre même si un camarade y travaille — les deux reçoivent un mot qui les rassure, et un signal 🤝 prévient le professeur.<span class="ref">📚 Le plan de travail vient du plan Dalton (Helen Parkhurst, 1922) et de la pédagogie Freinet ; le retour sur les mêmes notions par des entrées différentes — socles croisés, convergence, ateliers — met en œuvre le curriculum spiralaire de Jerome Bruner (1960).</span></div></details>
         <details><summary>Formatif, sommatif, spiralaire : les repères</summary><div class="db"><span class="why">Les trois mots qui décrivent ce que fait l'app — et où chacun agit.</span><br><b>Évaluation formative</b> : elle sert à réguler l'apprentissage PENDANT qu'il a lieu, pas à le sanctionner (distinction de Michael Scriven, 1967, appliquée aux élèves par Benjamin Bloom, 1971). Dans l'app : la porte, l'autocorrection critériée, le bilan tissé, la réorientation après échec et les ateliers — tout cela informe et corrige sans jamais figer une note. Les travaux de Paul Black et Dylan Wiliam (1998) montrent que c'est l'un des leviers les plus efficaces connus, particulièrement pour les élèves fragiles.<br><b>Évaluation sommative</b> : elle certifie un niveau EN FIN de parcours. Dans l'app, elle n'existe que là où tu la décides : la bascule « notée » d'une séance, la note des exercices auto-corrigés, la note d'autonomie exportée vers École Directe. Tout le reste est formatif par construction.<br><b>Apprentissage spiralaire</b> (Bruner, 1960) : on revient sur les mêmes notions à des profondeurs croissantes au lieu de les traiter une fois pour toutes. Dans l'app : les socles abordent les notions par des textes et des angles différents, la convergence les remobilise ensemble, les ateliers y font revenir une troisième fois sur mesure, et les compléments rouvrent une séance déjà réussie.<br><b>Évaluation critériée</b> (Robert Glaser, 1963) : on mesure chacun par rapport à un seuil de maîtrise explicite, jamais par rapport aux autres. La porte est un seuil absolu : aucun classement, aucun quota.</div></details>
-        <details><summary>Les étoiles d'autonomie</summary><div class="db"><span class="why">Intention : apprendre à doser sa demande d'aide — pas l'interdire.</span><br>Chaque séance qui propose des aides donne un capital de <b>3 étoiles</b>. Les aides sont en <b>paliers</b> : le palier 1 (l'orientation) est <b>gratuit</b> ; ouvrir le palier 2 ou au-delà d'une même aide coûte <b>1 étoile — une seule fois par aide</b>, même si l'élève ouvre ensuite le palier 3. Les étoiles ne mesurent donc pas la réussite mais l'autonomie. La note d'autonomie du chapitre (export École Directe) compte les séances traversées <b>sans aide approfondie</b> sur le total des séances qui en proposaient. Ni le professeur ni le miroir ne peuvent ouvrir un palier à la place de l'élève : l'étoile ne tombe que par son geste.<span class="ref">📚 Les aides à paliers sont un étayage gradué (Wood, Bruner et Ross, 1976), réglé sur la zone proximale de développement de Vygotski : aider juste assez, juste à temps. Les étoiles organisent le désétayage — l'aide est faite pour disparaître.</span></div></details>
+        <details><summary>Les étoiles d'autonomie</summary><div class="db"><span class="why">Intention : apprendre à doser sa demande d'aide — pas l'interdire.</span><br>Chaque séance qui propose des aides donne un capital de <b>3 étoiles</b>. Les aides sont en <b>paliers</b> : le palier 1 (l'orientation) est <b>gratuit</b> ; ouvrir le palier 2 ou au-delà d'une même aide coûte <b>1 étoile — une seule fois par aide</b>, même si l'élève ouvre ensuite le palier 3. Les étoiles ne mesurent donc pas la réussite mais l'autonomie. La note d'autonomie du chapitre (export École Directe) compte les séances traversées <b>sans aide approfondie</b> sur le total des séances qui en proposaient. Le miroir ne peut rien déclencher qui coûte une étoile. Le professeur, lui, peut ouvrir une aide sur l'écran d'un élève en réponse à une main levée : c'est la <b>question orale au professeur</b> — tous les paliers de cette aide sont alors <b>gratuits</b> (une seule aide de ce type par séance) ; au-delà, les aides redeviennent payantes normalement.<span class="ref">📚 Les aides à paliers sont un étayage gradué (Wood, Bruner et Ross, 1976), réglé sur la zone proximale de développement de Vygotski : aider juste assez, juste à temps. Les étoiles organisent le désétayage — l'aide est faite pour disparaître.</span></div></details>
         <details><summary>La porte des évaluations</summary><div class="db"><span class="why">Intention : vérifier l'essentiel avant d'avancer, sans pénaliser l'enrichissement du chapitre.</span><br>La <b>porte</b> est le nombre d'exercices auto-corrigés à réussir pour débloquer la suite. Elle est exprimée en <b>pourcentage</b>, donc elle se recalcule seule si on ajoute des exercices : ce chapitre exige <b>75 %</b> (défaut du chapitre, soit 5 sur 6), la convergence est volontairement plus souple à <b>60 %</b> (3 sur 5). L'arrondi se fait toujours <b>au supérieur</b>, jamais en dessous de 1. Le calcul porte sur les exercices <b>réellement présentés à cet élève</b>. La porte est <b>retentable sans limite</b> : seul le meilleur passage compte, et une réussite acquise n'est jamais reprise.<span class="ref">📚 C'est la pédagogie de maîtrise de Bloom (1968) : la maîtrise du préalable est l'invariant, le temps pour y parvenir est la variable — d'où la porte retentable et le meilleur passage conservé.</span></div></details>
         <details><summary>Autocorrection, critères et bilan tissé</summary><div class="db"><span class="why">Intention : que l'élève juge son propre travail avec des critères explicites.</span><br>Après les questions au cahier, l'élève s'autocorrige critère par critère : <b>✓ réussi</b> ou <b>à revoir</b>. Chaque « à revoir » est conservé et alimente le <b>bilan tissé</b> de fin de séance : un texte qui reprend ses points faibles avec ses propres réponses. Le professeur peut renvoyer un élève sur son autocorrection s'il s'est survalué.<span class="ref">📚 Royce Sadler (1989) : pour progresser, l'élève doit connaître le critère, situer sa production par rapport à lui, puis agir sur l'écart — c'est exactement le cycle critères → ✓/à revoir → bilan tissé. Le bilan répond aux trois questions du feedback efficace selon Hattie et Timperley (2007) : où vais-je, où en suis-je, quelle est l'étape suivante.</span></div></details>
         <details><summary>Compléments d'une séance déjà réussie</summary><div class="db"><span class="why">Intention : pouvoir enrichir un chapitre en cours d'usage sans casser ce qui est acquis.</span><br>Quand des questions sont ajoutées à une séance qu'un élève a déjà validée, sa réussite est <b>conservée</b> : il ne répond qu'aux <b>questions ajoutées</b>, signalées sur sa carte.</div></details>
         <details><summary>Tablette ou cahier : un choix définitif par séance</summary><div class="db"><span class="why">Intention : un engagement par séance, pas du zapping entre supports.</span><br>Au début d'une séance, l'élève choisit : tout à l'écran, ou écran pour lire et <b>cahier pour écrire</b>. Ce choix est <b>définitif pour la séance</b> (le bouton le dit avant le clic). Le retour au mode tablette n'est possible que tant que la bascule n'a pas été confirmée.</div></details>
-        <details><summary>Les ateliers de remédiation</summary><div class="db"><span class="why">Intention : une reprise ciblée sur les erreurs de chacun, donnée au bon moment — pas une punition visible de tous.</span><br>Les deux dernières séances du chapitre sont des <b>ateliers</b> : invisibles sur la carte tant que le professeur ne les a pas <b>débloqués</b> (élève par élève, ou toute la classe ; un seul atelier ouvert à la fois). Pour chaque élève, l'app compose une sélection de <b>3 à 5 exercices</b> : un tronc commun, puis des exercices ciblés sur ses critères « à revoir » et ses exercices d'évaluation ratés ; s'il n'a pas assez de cibles, des exercices des notions les plus fragiles complètent. La porte est de <b>75 % de sa sélection</b> (3 exercices → sans-faute : c'est une porte de reprise courte, retentable sans limite). Les ateliers ne comptent pas dans les compteurs du chapitre (progression, notes).<span class="ref">📚 Ce sont les « correctifs » de la pédagogie de maîtrise (Bloom, 1968) : une remédiation ciblée par les erreurs constatées, donnée après l'évaluation formative — le maillon dont Black et Wiliam (1998) font la condition d'efficacité du formatif.</span></div></details>
+        <details><summary>Les ateliers de remédiation</summary><div class="db"><span class="why">Intention : une reprise ciblée sur les erreurs de chacun, donnée au bon moment — pas une punition visible de tous.</span><br>Les deux dernières séances du chapitre sont des <b>ateliers</b> : invisibles sur la carte tant que le professeur ne les a pas <b>débloqués</b> (élève par élève, ou toute la classe ; un seul atelier ouvert à la fois) — et même débloqués, ils n'apparaissent chez un élève qu'<b>après sa séance de convergence</b> : on peut donc activer en avance sans rien dévoiler. À leur apparition, l'élève est prévenu d'un mot, et un signal 🧩 arrive au panneau du professeur. Pour chaque élève, l'app compose une sélection de <b>3 à 5 exercices</b> : un tronc commun, puis des exercices ciblés sur ses critères « à revoir » et ses exercices d'évaluation ratés ; s'il n'a pas assez de cibles, des exercices des notions les plus fragiles complètent. La porte est de <b>75 % de sa sélection</b> (3 exercices → sans-faute : c'est une porte de reprise courte, retentable sans limite). Les ateliers ne comptent pas dans les compteurs du chapitre (progression, notes).<span class="ref">📚 Ce sont les « correctifs » de la pédagogie de maîtrise (Bloom, 1968) : une remédiation ciblée par les erreurs constatées, donnée après l'évaluation formative — le maillon dont Black et Wiliam (1998) font la condition d'efficacité du formatif.</span></div></details>
         <details><summary>Ce que mesurent les temps — et ce qu'ils ne disent pas</summary><div class="db"><span class="why">Intention : des repères factuels, jamais des verdicts de vitesse.</span><br>Deux mesures distinctes. <b>Les questions au cahier</b> : le temps entre les coches « fait » ; un délai de moins de 5 secondes est jugé non fiable (coche accidentelle) et ignoré ; un délai de plus de 45 minutes aussi (séance restée ouverte entre deux jours) — ni l'un ni l'autre ne sont affichés ni comptés. <b>La manipulation des exercices à l'écran</b> : le temps des <b>gestes réels</b> (taper, cliquer, choisir) ; après 3 minutes sans geste sur un exercice, la fenêtre se ferme (l'élève est parti ailleurs) ; un même instant n'est <b>jamais compté deux fois</b>, ni pour deux exercices à la fois. Chaque type d'exercice a une <b>fourchette attendue</b>, calculée d'après sa longueur de lecture et ses manipulations. Règle absolue : un temps <b>court ne s'interprète jamais</b> — la mesure ignore la réflexion silencieuse qui précède le premier geste. Seul un net dépassement se signale, à l'élève comme au professeur.<span class="ref">📚 John Carroll (1963) : le temps nécessaire pour apprendre varie d'un élève à l'autre ; c'est une donnée, pas un défaut. Les fourchettes sont donc des repères, jamais des verdicts — et la restitution du parcours à l'élève vise la métacognition (Flavell, 1976) : apprendre à regarder sa propre manière de travailler.</span></div></details>
-        <details><summary>Pendant l'heure : présence, signaux, pilotage</summary><div class="db"><span class="why">Intention : voir la classe sans interrompre le travail.</span><br>Quand tu lances la séance, l'app suit les présences et les chronos de l'heure. Un élève inactif 4 minutes (6 s'il écrit au cahier) reçoit un rappel discret. La <b>main levée</b> (bouton ✋, à activer classe par classe) crée un signal dans ton panneau, où chaque demande peut être traitée : aller voir, ouvrir son aide à distance, effacer le signal. Tu peux pousser un <b>rappel</b> pré-écrit sur un écran (bandeau non bloquant, disparaît seul), <b>geler</b> tous les écrans (« regarde le tableau »), ou ouvrir le <b>miroir</b> : une copie en lecture de l'écran d'un élève, qui ne le dérange pas — et qui ne peut déclencher aucun geste qui lui coûterait (ouvrir un palier, cocher à sa place). Clôturer l'heure fige les chronos, archive la séance et purge présences et signaux.</div></details>
+        <details><summary>Pendant l'heure : présence, signaux, pilotage</summary><div class="db"><span class="why">Intention : voir la classe sans interrompre le travail.</span><br>Quand tu lances la séance, l'app suit les présences et les chronos de l'heure. Un élève inactif 4 minutes (6 s'il écrit au cahier) reçoit un rappel discret. La <b>main levée</b> (bouton ✋, à activer classe par classe) crée un signal dans ton panneau, où chaque demande peut être traitée selon la question posée : ouvrir un <b>coup de pouce de sa séance</b> (sans étoile pour lui), ou ouvrir le <b>« ? »</b> en faisant clignoter la section qui répond, ou effacer le signal. Tu peux pousser un <b>rappel</b> pré-écrit sur un écran (bandeau non bloquant, disparaît seul), <b>geler</b> tous les écrans (« regarde le tableau »), ou ouvrir le <b>miroir</b> : une copie en lecture de l'écran d'un élève, qui ne le dérange pas — et qui ne peut déclencher aucun geste qui lui coûterait (ouvrir un palier, cocher à sa place). Clôturer l'heure fige les chronos, archive la séance et purge présences et signaux.</div></details>
         <details><summary>Annonces et mises à jour</summary><div class="db"><span class="why">Intention : rien n'apparaît chez les élèves sans décision explicite.</span><br>Les <b>annonces</b> (onglet MAJ) ne s'affichent chez les élèves que lorsque tu les <b>publies</b> ; le bandeau apparaît alors en direct sur leur carte ; « J'ai lu » le ferme sur leur poste sans le dépublier ailleurs. Les <b>mises à jour de l'app</b> suivent le même principe : après avoir déployé une nouvelle version, tu la publies ; chaque tablette sauvegarde alors sa progression et se recharge automatiquement dans la nouvelle version.</div></details>
         <details><summary>Le chapitre existe en deux exemplaires</summary><div class="db"><span class="why">Intention : pouvoir tester sans toucher à ce que vivent les élèves — sans jamais tester à l'aveugle.</span><br>Le chapitre vit en deux endroits : un exemplaire <b>embarqué dans le fichier de l'app</b> (c'est lui que jouent le mode test et l'aperçu) et un exemplaire <b>en ligne</b> (celui que voient les élèves, mis à jour par « Injecter »). S'ils divergent, ce que tu testes n'est plus ce que vivent les élèves. L'app les compare en permanence : l'encart en haut de ces Réglages affiche ✓ ou ⚠, et la <b>sentinelle</b> t'interpelle à chaque ouverture du panneau tant qu'une mise à jour n'est pas publiée, qu'un poste est en retard, ou qu'un chapitre n'est pas injecté — avec le bon geste à un clic. « Plus tard » ferme l'avertissement mais ne le désarme pas.</div></details>
         <details><summary>Ce qui est enregistré, et où</summary><div class="db"><span class="why">Intention : la progression suit l'élève, pas la tablette.</span><br>Pour chaque élève et chaque chapitre : sa progression (réponses, autocorrections, étoiles, temps), sa présence pendant l'heure, ses signaux. Tout est en ligne : l'élève retrouve son travail sur n'importe quel poste. La clôture d'une heure archive son bilan. Les <b>classes</b> (listes d'élèves) sont <b>partagées entre toutes les applications MJPC</b> : aucune restauration de sauvegarde ne les touche.</div></details>
-        <details><summary>Lexique</summary><div class="db"><b>Socle</b> : séance de travail au choix. <b>Convergence</b> : séance finale commune. <b>Porte</b> : seuil d'exercices réussis qui débloque la suite. <b>Palier</b> : niveau d'une aide, du coup de pouce (gratuit) à l'aide approfondie (coûte une étoile). <b>Atelier</b> : séance de remédiation cachée, débloquée par le professeur. <b>Bilan tissé</b> : synthèse de fin de séance bâtie sur les « à revoir » de l'élève. <b>Miroir</b> : copie en lecture de l'écran d'un élève. <b>Chapitre embarqué</b> : l'exemplaire du chapitre contenu dans le fichier de l'app (mode test). <b>Injecter</b> : remplacer le chapitre en ligne par un nouveau (progressions conservées). <b>Publier</b> : rendre visible aux élèves (une annonce, une version). <b>Snapshot</b> : fichier de sauvegarde téléchargé. <b>Sentinelle</b> : l'avertisseur qui exige la synchronisation à l'ouverture du panneau.</div></details>
+        <details><summary>Lexique</summary><div class="db"><b>Socle</b> : séance de travail au choix. <b>Convergence</b> : séance finale commune. <b>Porte</b> : seuil d'exercices réussis qui débloque la suite. <b>Palier</b> : niveau d'une aide, du coup de pouce (gratuit) à l'aide approfondie (coûte une étoile). <b>Atelier</b> : séance de remédiation cachée, débloquée par le professeur. <b>Bilan tissé</b> : synthèse de fin de séance bâtie sur les « à revoir » de l'élève. <b>Miroir</b> : copie en lecture de l'écran d'un élève. <b>Chapitre embarqué</b> : l'exemplaire du chapitre contenu dans le fichier de l'app (mode test). <b>Injecter</b> : remplacer le chapitre en ligne par un nouveau (progressions conservées). <b>Publier</b> : rendre visible aux élèves (une annonce, une version). <b>Snapshot</b> : fichier de sauvegarde téléchargé. <b>Sentinelle</b> : l'avertisseur qui exige la synchronisation à l'ouverture du panneau. <b>Question orale</b> : l'aide qu'ouvre le professeur en réponse à une main levée — gratuite, une par séance.</div></details>
       </div>`; },
   // réinjecte un snapshot nettoyé : réécrit chaque branche de données, SAUF /classes (racine partagée avec les autres apps MJPC)
   importSnapshot(){ const i=document.createElement("input"); i.type="file"; i.accept=".json,application/json";
@@ -7726,6 +7827,7 @@ if(!MJPC.USE_FIREBASE) lsSet("mjpc:classes:init", 1);
 LIBRARY = { [CHAPTER_SEED.meta.id]: JSON.parse(JSON.stringify(CHAPTER_SEED)) };
 let _chapterBootSynced=false;   // adoption unique de la version persistée au démarrage
 chaptersStore.subscribe(v=>{ const fb=v||{};
+  Object.keys(fb).forEach(id=>{ try{ chapterDefaults(fb[id]); }catch(e){} });   // eb : Firebase SUPPRIME null/objets vides à l'écriture (aretes S5…) — on rétablit les défauts à CHAQUE relecture, sinon validateChapter refuse un chapitre pourtant sain (« aretes manquantes sur S5 » à chaque Appliquer)
   // la graine reste disponible tant qu'aucune version Firebase ne porte le même id
   LIBRARY = Object.assign({ [CHAPTER_SEED.meta.id]: JSON.parse(JSON.stringify(CHAPTER_SEED)) }, fb);
   seedDiffCheck(fb);   // GARDE-FOU dr : la divergence seed↔production ne doit JAMAIS être silencieuse
@@ -7758,6 +7860,11 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"ee", date:"2026-06-12", version:"ee", eleve:"Trois nouveautés sur ta tablette : les cases « fait » sont devenues de vrais boutons, plus faciles à toucher. Le bouton « Aa » (en haut, à côté du titre) règle la taille du texte sur trois niveaux — si tes yeux fatiguent, monte au ×3, la tablette s'en souvient. Et le « ? » a maintenant une rubrique « Questions fréquentes » à la fin : regarde-la avant de lever la main.", interne:"Lot ee : coches « fait » en vrais boutons tactiles (min-width 130, padding 6x18, etat coche dore) ; zoom 3 paliers ×1/×2/×3 (wt_zoom 0/1/2, classes zoom-big/zoom-max, palier 3 pour les yeux qui fatiguent) avec bouton pulsant dans l'en-tete a cote du titre (hdr-zoom, animation 2.6s) ET conserve dans la barre d'outils (meme preference) ; FAQ section 18 du « ? » (6 questions non couvertes par les 17 sections, renvois plutot que repetitions)." },
+  { id:"ed", date:"2026-06-12", version:"ed", eleve:"", interne:"Lot ed : (1) les ateliers n'apparaissent qu'APRES la convergence de l'eleve meme si actives (REMED.visible + condition statusOf convergence done) — activer en avance ne devoile plus rien ; toast eleve a l'apparition + signal prof 🧩 type remed. (2) Exclusivite AUTO-LEVEE quand la seance visee est la derniere seance socle non faite de l'eleve (derniereRestante, appliquee aux 3 points : suggestion, renderMap, travelTo) ; a la cohabitation : message aux deux eleves (fin de chapitre, continuez en autonomie, c'est ce qui est evalue) + signal prof 🤝 type duo. Doc integree mise a jour (volets ateliers, carte, etoiles, pilotage, lexique)." },
+  { id:"ec", date:"2026-06-12", version:"ec", eleve:"", interne:"Lot ec : le signal main levee porte un MENU deux natures — question de COURS : coups de pouce de la seance de l'eleve (aperçu palier 1 en infobulle), ouverture a distance avec navigation forcee (onglet Consigne + page Questions), BYPASS ETOILES (la « question orale au prof » : tous paliers gratuits, UNE par seance, mention chez l'eleve) ; question de FONCTIONNEMENT : les 18 sections du « ? », la section choisie defile et clignote chez l'eleve (ids hq1-hq18, .help-blink). La main ✋ devient le reflet du signal Firebase : elle s'eteint au « ✓ vu » du prof (avant : etat local jamais redescendu), et reprend son vrai etat a la reconnexion. L'ancien bouton « ? ouvrir son aide » (qui ouvrait le mode d'emploi a l'aveugle) est remplace." },
+  { id:"eb", date:"2026-06-12", version:"eb", eleve:"", interne:"Lot eb — chemins ideaux (bug famille fbNorm, pas une dette) : Firebase strippait les aretes nulles de S5 → « aretes manquantes sur S5 » a chaque Appliquer, et le chemin cree dans l'UI etait ecrase a la reinjection suivante (boucle garde-fou → sentinelle → reinjection). Correctifs : chapterDefaults applique a TOUT chapitre relu du subscribe (les defauts strippes sont retablis, symetrique pour le hash du garde-fou) ; bilanV5 porte le 3e chemin [S3,S4,S1,S2,S5] (effectif impair → 3 requis) + seed synchronise meme livraison. A INJECTER : chapitre-ch07-bilanV5.json." },
+  { id:"ea", date:"2026-06-12", version:"ea", eleve:"", interne:"Audit retrospectif des canaux de temps (suite des 1220 min) : DEUX residus du meme defaut trouves et corriges, tous deux dans la fiche prof. (1) Piste Essais au QCM : le dt entre deux essais etait calcule brut et PERSISTE (L4334) puis affiche tel quel — un eleve qui rate le QCM le soir et retente le lendemain affichait 'reflexion 20:20:00'. Correctif a l'AFFICHAGE (donnee brute conservee, historique persiste assaini sans migration) : dt > qGapMaxMs (45 min) → 'repris un autre moment'. (2) Piste Travail au cahier : les chips affichaient fmtMMSS(x.ms) brut sans appliquer le flag out pose en dz → 'Q3 · 1220:00' possible ; desormais mention neutre. Bilan de l'audit : 6 canaux de temps inventories, tous desormais plafonnes ou bornes (chronos maxRunMs 3h depuis le 10/06 ; coches qGapMaxMs 45 min depuis dz ; items itGapMs 3 min des la conception ; sessionMs borne par le cours ; essais et piste cahier en ea)." },
   { id:"dz", date:"2026-06-12", version:"dz", eleve:"", interne:"Deux correctifs d'usage réel. (1) FAUX POSITIF du garde-fou chapitre : Firebase supprime silencieusement les null/tableaux vides à l'écriture et relit un tableau troué comme objet — le chapitre relu n'est JAMAIS identique au JSON injecté (bilanV4 : 15 null, 10 []). L'alerte persistait après une injection parfaite. Correctif : fbNorm (réplique exacte de la transformation Firebase, idempotente) appliquée aux DEUX côtés avant hash. (2) TEMPS ABSURDES (« 1220 minutes » vus par les élèves) : le délai entre deux coches était brut — séance laissée ouverte la nuit → la 1re coche du lendemain affichait « ⏱ Tu as mis 20 h 22 ». Correctif : plafond de vraisemblance CONFIG.qGapMaxMs=45 min (symétrique haut du 5 s) — au-delà : message neutre (« le temps n'est pas significatif, non retenu »), marqué non fiable, exclu des statuts court/dans/long, de la question la plus longue et des restitutions. Le flag est RECALCULÉ depuis les timestamps : l'historique pollué d'hier est assaini sans migration. Doc mise à jour (volet temps)." },
   { id:"dy", date:"2026-06-11", version:"dy", eleve:"", interne:"Ancrage de la doc dans la littérature pédagogique (demande Paul) : nouveau volet transversal « Formatif, sommatif, spiralaire : les repères » (Scriven 1967 / Bloom 1971 ; Black & Wiliam 1998 ; Bruner 1960 ; Glaser 1963 — avec, pour chaque concept, OÙ il agit dans l'app : tout est formatif par construction, le sommatif n'existe que par décision explicite — bascule notée, note QCM, export ED) + lignes d'ancrage 📚 dans 6 volets : plan de travail (Parkhurst 1922, Freinet) et spiralaire au volet carte ; étayage/désétayage (Wood-Bruner-Ross 1976, ZPD Vygotski) aux étoiles ; pédagogie de maîtrise (Bloom 1968) à la porte ; Sadler 1989 + Hattie-Timperley 2007 à l'autocorrection/bilan tissé ; correctifs de Bloom + Black-Wiliam aux ateliers ; Carroll 1963 + métacognition (Flavell 1976) aux temps. Références nommées et datées, jamais citées verbatim. 14 volets désormais." },
   { id:"dx", date:"2026-06-11", version:"dx", eleve:"", interne:"Documentation intégrée (demande Paul) : section dépliable « 📖 Comment l'app fonctionne — pédagogie et mécanique » en queue des Réglages. 13 volets <details> natifs : carte/chemins, étoiles (3 par séance, palier 1 gratuit, −1 à partir du palier 2 UNE SEULE FOIS PAR AIDE — nuance vérifiée au code, aidesUsed par aide), porte (75 % chapitre / 60 % convergence, arrondi supérieur, sur les exercices réellement servis, meilleur passage conservé), autocorrection/bilan tissé, compléments, papier définitif, ateliers (3-5 items, déblocage prof, 75 % de la sélection, hors compteurs), mesures de temps (5 s non fiable, fenêtre close à 3 min, jamais deux fois, jamais de « trop court »), pilotage (rappel 4/6 min, main levée, gel, miroir sans gestes coûteux), annonces/MAJ, chapitre en deux exemplaires + sentinelle, données (classes partagées intouchées), lexique de 12 termes. Chaque volet : intention pédagogique en italique PUIS mécanique chiffrée — tous les chiffres vérifiés au code avant rédaction. Raison : mémoire institutionnelle du dispositif (soi-même dans six mois, contestations d'élèves, collègues, parents, inspection)." },
