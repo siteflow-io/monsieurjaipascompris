@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05eq">
+<meta name="app-version" content="2026-06-05er">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -233,6 +233,18 @@
   .cours-band .sig-btns{margin-left:auto;display:flex;gap:6px}
   .sig-line{display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 8px}
   .sui-adv{display:inline-block;margin-left:8px;font-size:.66rem;color:var(--gold2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;white-space:nowrap}
+  /* er : fiche réorganisée — l'instant en tête, parcours en pastilles, rail d'initiales en split */
+  .fi-instant{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:rgba(255,255,255,.02)}
+  .fi-now{font-size:.92rem;margin-bottom:4px} .fi-now .meta{font-size:.78rem}
+  .fi-parc{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+  .fi-chip{font-size:.68rem;border:1px solid var(--line);border-radius:7px;padding:2px 7px;white-space:nowrap;color:var(--muted);cursor:default}
+  .fi-chip.done{color:var(--done);border-color:rgba(74,222,128,.4)}
+  .fi-chip.cur{color:var(--gold2);border-color:var(--gold-deep);font-weight:600}
+  .fiche-mini .fm .ini{display:none;font-weight:700;font-size:.72rem}
+  body.mirror-split .fiche-mini{flex:0 0 74px}
+  body.mirror-split .fiche-mini .fm{padding:6px 7px;justify-content:center;gap:4px}
+  body.mirror-split .fiche-mini .fm .nm{display:none}
+  body.mirror-split .fiche-mini .fm .ini{display:inline}
   /* ep1 : saisie d'étiquette NON bloquante (le prompt natif gelait le panneau au miroir) */
   .lbl-pop{position:fixed;z-index:120;background:var(--panel3);border:1.5px solid var(--gold-deep);border-radius:10px;padding:8px;display:flex;gap:6px;align-items:center;box-shadow:0 8px 26px rgba(0,0,0,.5)}
   .lbl-pop input{width:150px;font-size:.8rem;padding:5px 8px}
@@ -7364,7 +7376,8 @@ const PROF = {
   // en : mini-carte (colonne de gauche quand une fiche est ouverte — la grille TOTALE reste là)
   miniCard(s){ const uid=s._uid; const age=Date.now()-(s.lastSeen||0); const dot=age<60000?"🟢":(age<300000?"🟠":"⚪");
     const sig=(APP._signaux||{})[uid]||{}; const flag=(sig.aide||sig.bilan||sig.incoherence||sig.cahier||sig.remed||sig.duo)?'<span class="sui-flag" title="signal en attente">●</span>':'';
-    return `<div class="fm${this._ficheUid===uid?' on':''}" onclick="PROF.ficheEleve('${esc(uid)}')"><span>${dot}</span><span class="nm">${esc(s.name||uid)}</span>${flag}</div>`; },
+    const ini=(s.name||uid).split(/\s+/).map(w=>(w[0]||'').toUpperCase()).join('').slice(0,3);
+    return `<div class="fm${this._ficheUid===uid?' on':''}" title="${esc(s.name||uid)}" onclick="PROF.ficheEleve('${esc(uid)}')"><span>${dot}</span><span class="nm">${esc(s.name||uid)}</span><span class="ini">${esc(ini)}</span>${flag}</div>`; },
   // Lot C — diagnostic prof : phrases « solides », appuyées sur les données, pour l'oral. Temps non fiables exclus, sorties nuancées.
   parcoursPhrases(eng, seanceId, coursDebut){ const p=eng.parcours(seanceId); const ph=[];
     if(p.start){ const hh=fmtHeureJour(p.start);
@@ -7383,81 +7396,77 @@ const PROF = {
     if(p.autocorrIncoherent) ph.push('Autocorrection : sur-évaluation signalée, à reprendre à l\'oral.');
     if(ph.length<=1) ph.push('Parcours régulier, rien à signaler.');
     return ph; },
-  // en : la FICHE « instant T » — tout ce qu'il faut savoir sur l'élève, au même endroit (réutilise cardDetail, éprouvé)
+  // en/er : la FICHE « instant T » — en-tête 1 ligne (toutes les actions), le corps organisé par cardDetail
   ficheHTML(uid, s){ const age=Date.now()-(s.lastSeen||0); const dot=age<60000?"🟢":(age<300000?"🟠":"⚪");
-    const mode={app:'📱 tablette', deux:'📱✏️ les deux', papier:'✏️ papier'}[s.mode||'app']||'';
-    const where=(s&&s.current)?((CHAPTER.seances.find(x=>x.id===s.current)||{}).titre||s.current):"sur la carte";
+    const mode={app:'📱', deux:'📱✏️', papier:'✏️'}[s.mode||'app']||'';
     const sig=(APP._signaux||{})[uid]||{};
     const notifs=['aide','bilan','incoherence','cahier','remed','duo'].filter(t=>sig[t]).map(t=>this.signalRowHTML(Object.assign({uid,type:t},sig[t]), true)).join('');
-    return `<div class="fiche-head">${dot}<h3>${esc(s.name||uid)}</h3><span class="meta">${mode} · ${esc(where)}</span>
+    return `<div class="fiche-head">${dot}<h3>${esc(s.name||uid)}</h3><span class="meta" title="Mode de travail déclaré">${mode}</span>
         <span class="sig-btns" style="margin-left:auto"><button class="btn ghost" title="Voir son écran en direct, docké à droite — le panneau reste utilisable" onclick="MIRROR.open('${esc(uid)}')">👁 écran</button>
         <button class="btn ghost" title="Ouvre le panneau d'aide « ? » sur son écran" onclick="APP.openHelpFor('${esc(uid)}');toast('Aide ouverte sur son écran.')">❓ aide</button>
-        <button class="btn ghost" title="Rend la dernière étoile décomptée sur sa séance en cours" onclick="APP.rendreEtoile('${esc(uid)}')">⭐ rendre</button></span></div>
-      ${notifs?`<div class="sui-notifs" style="padding:0 0 8px">${notifs}</div>`:''}
-      ${this.cardDetail(uid, s, 2)}
-      ${(()=>{ const j=Object.values(APP._journal||{}).filter(e=>e.uid===uid).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,15);
-        return j.length?`<details class="adv"><summary>📜 ses interventions · ${j.length}</summary><div class="prof-list" style="padding:6px 10px">${j.map(e=>`<div class="r"><span class="sig-when">${e.ts?new Date(e.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span><span>${esc(e.raison||e.type||'')} <span class="sig-act">→ ${esc(e.action||'')}</span></span></div>`).join('')}</div></details>`:''; })()}`; },
-  cardDetail(uid, s, depth){ const eng=this.engineFor(uid);
-    if(!eng) return `<div class="sui-body"><div class="d">Pas encore de progression enregistrée.</div></div>`;
+        <button class="btn ghost" title="Rend la dernière étoile décomptée sur sa séance en cours" onclick="APP.rendreEtoile('${esc(uid)}')">⭐ rendre</button>
+        <button class="btn ghost" title="Renvoie l'élève sur son autocorrection (utile s'il s'est sur-évalué)" onclick="APP.renvoyerAutocorr('${esc(uid)}','${esc(s.current||'')}')">↻ autocorr.</button></span></div>
+      ${this.cardDetail(uid, s, 2, notifs?`<div class="sui-notifs" style="padding:0 0 8px">${notifs}</div>`:'')}`; },
+  // er : la fiche « instant T » réorganisée — L'INSTANT, À TRAITER, AGIR (volets), SON PARCOURS en pied.
+  cardDetail(uid, s, depth, notifsHTML){ const eng=this.engineFor(uid);
+    if(!eng) return `<div class="sui-body"><div class="d">Pas encore de progression enregistrée.</div>${notifsHTML||''}</div>`;
     const b=eng.bilan(), total=seancesParcours().length, ck=ok=>ok?'✓':'⋯';
-    let h=`<div class="sui-body"><div class="sui-stats"><span>${b.faites.length}/${total} faites</span>`
-      +`<span>autonomie ${b.autonomie.note}/${b.autonomie.sur}</span>`
-      +(b.qcm?`<span>QCM ${b.qcm.sur20}/20</span>`:'')+`</div>`;
+    let h=`<div class="sui-body">`;
+    // ── L'INSTANT : où il en est, là, maintenant ──
+    h+=`<div class="fi-instant">`;
     if(s.current){ const ps=(b.parSeance||[]).find(x=>x.id===s.current);
-      if(ps) h+=`<div class="sui-cp">« ${esc(ps.titre)} » — QCM ${ck(ps.passed)} · correction ${ck(ps.autocorrFait)} · bilan ${ck(ps.bilanEcrit)}</div>`;
+      const stars=eng.starsOf(s.current); const pc=eng.parcours(s.current);
+      const tps=(pc&&pc.total>0)?Math.round(pc.total/60000)+' min':'—';
+      h+=`<div class="fi-now">▶ <b>${esc(ps?ps.titre:s.current)}</b><span class="meta"> · ${tps}${stars!=null?' · '+'★'.repeat(stars)+'☆'.repeat(Math.max(0,3-stars)):''}</span></div>`;
+      if(ps) h+=`<div class="sui-cp">QCM ${ck(ps.passed)} · correction ${ck(ps.autocorrFait)} · bilan ${ck(ps.bilanEcrit)} · ${b.faites.length}/${total} faites · autonomie ${b.autonomie.note}/${b.autonomie.sur}${b.qcm?' · QCM chap. '+b.qcm.sur20+'/20':''}</div>`;
       const phr=this.parcoursPhrases(eng, s.current, (((( APP._control||{})[s.classeSeg])||{}).cours||{}).debut||0);
       if(phr.length) h+=`<div class="sui-parc"><div class="sui-parc-h">📋 Parcours de la séance</div><ul>${phr.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>`;
-      // TEMPS PAR ITEM (Lot 5) : top 2 des exercices les plus manipulés — items à fenêtre significative seulement (≥ 5 s), un QCM à un clic n'apprend rien
+      // TEMPS PAR ITEM (Lot 5) : top 2 des exercices les plus manipulés — items à fenêtre significative seulement (≥ 5 s)
       const itT=eng.itemTimes(s.current); const top=Object.keys(itT).map(k=>({id:k,ms:itT[k].ms,n:itT[k].n}))
         .filter(x=>x.ms>=5000).sort((a,b)=>b.ms-a.ms).slice(0,2);
       if(top.length) h+=`<div class="sui-cp" title="Temps de manipulation mesuré à l'écran (gestes réels, jamais compté deux fois) — sous-estime la réflexion silencieuse : un temps court ne s'interprète JAMAIS, seul un net dépassement se signale">⏱ Manipulation des exercices : ${top.map(x=>{ const r=eng.tRefIt(s.current,x.id); const dep=r&&x.ms>r.max*1000;
         return esc(x.id)+' ~'+fmtDur(x.ms)+' ('+x.n+' gestes'+(r?', attendu '+r.min+'–'+r.max+' s':'')+')'+(dep?' ⚠':''); }).join(' · ')}</div>`; }
-    // RAPPEL (dp) : pousser un message court, non bloquant — visible seulement si le réglage du poste est actif
+    else h+=`<div class="fi-now">Sur la carte du parcours<span class="meta"> · ${b.faites.length}/${total} faites · autonomie ${b.autonomie.note}/${b.autonomie.sur}${b.qcm?' · QCM chap. '+b.qcm.sur20+'/20':''}</span></div>`;
+    h+=`</div>`;
+    // ── À TRAITER : la notification développée, en UN exemplaire ──
+    if(notifsHTML) h+=notifsHTML;
+    // ── AGIR : quatre volets repliés, un clic chacun ──
     if(lsGet('wt_rappel')==='1' && !isTestUid(uid)){ const persos=APP._rappelsPerso||[]; const uidJs2=esc(uid);
       const btn=(t,i)=>`<span class="rap-chip"><button class="btn ghost rap-b" title="Pousse ce message sur son écran (overlay près de sa main ✋, jusqu'à son « D'accord »)" onclick="PROF.pushRappel('${uidJs2}',this.dataset.m)" data-m="${esc(t)}">${esc(t)}</button>${i!=null?`<button class="rap-x" title="Supprimer ce message enregistré" onclick="PROF.delRappelPerso(${i})">✕</button>`:''}</span>`;
-      h+=`<div class="sui-cp rap-zone">📣 ${RAPPELS_BASE.map(t=>btn(t,null)).join('')}${persos.map((t,i)=>btn(t,i)).join('')}
+      h+=`<details class="adv"><summary>📣 Rappel — pousser un message sur son écran</summary><div class="sui-cp rap-zone" style="margin:0 10px 8px">${RAPPELS_BASE.map(t=>btn(t,null)).join('')}${persos.map((t,i)=>btn(t,i)).join('')}
         <span class="rap-new"><input class="txtin rap-in" id="rap-${uidJs2}" placeholder="ou écris ton message…" maxlength="140">
-        <button class="btn ghost" title="Pousse ce message ET l'enregistre pour la prochaine fois" onclick="PROF.rappelPerso('${uidJs2}')">envoyer</button></span></div>`; }
-    const sig=(APP._signaux||{})[uid]||{}, st=[];
-    if(sig.bilan)st.push('📝 bilan à relire'); if(sig.incoherence)st.push('⚠ s\'est sur-évalué'); if(sig.aide)st.push('✋ demande de l\'aide');
-    if(st.length) h+=`<div class="sui-sig">${st.join(' · ')}</div>`;
-    if(depth>=2){
-      const rows=(b.parSeance||[]).filter(ps=>!ps.remediation || ps.statut!=='todo').map(ps=>{ const mark=(ps.remediation?'🧰 ':'')+(ps.statut==='done'?'✓':(ps.statut==='wip'?'…':'·'));
-        const inc=ps.autocorrSignal&&ps.autocorrSignal.incoherent?' ⚠':'';
-        let line=`<div class="sui-prow"><span>${mark} ${esc(ps.titre)}</span><span class="meta">${ps.qcm?ps.qcm.good+'/'+ps.qcm.total:''}${ps.etoiles!=null?' · '+ps.etoiles+'★':''}${inc}</span></div>`;
-        const t=eng.timing(ps.id);
-        if(t.start){ const p=eng.parcours(ps.id); const bits=[fmtDur(p.total)];
-          if(p.longest) bits.push('plus longue n°'+p.longest.n+' ('+fmtDur(p.longest.ms)+')');
-          const nA=p.questions.length; if(nA) bits.push(nA+' coche'+(nA>1?'s':''));
-          const al=[]; if(p.spam) al.push('⚠ rafale'); else if(p.nUnsafe) al.push(p.nUnsafe+' non fiable'+(p.nUnsafe>1?'s':''));
-          if(p.dicoNouveaux.length) al.push('dico→gloss : '+p.dicoNouveaux.slice(0,3).join(', '));
-          line+=`<div class="sui-pmini">${esc(bits.join(' · ')+(al.length?' · '+al.join(' · '):''))}</div>`; }
-        return line; }).join('');
-      const bloque=((((APP._control||{})[uid]||{}).freeze)||{}).gel;
-      const nm=(s.name||uid).replace(/'/g,"\\'");
-      const remeds=(CHAPTER.seances||[]).filter(x=>x.remediation);
-      let remedH='';
-      if(remeds.length){ remedH='<div class="sui-all">'+remeds.map(rs=>{
-          const onE=!!((((APP._control||{})[uid]||{}).remedOn||{})[rs.id]);
-          const onC=!!((((APP._control||{})[s.classeSeg]||{}).remedOn||{})[rs.id]);
-          const stR=(eng.snapshot().state||{})[rs.id]||{};
-          const d=eng.remedDiag(rs.id)||{n:0,nCibles:0,srcs:[]};
-          const etat=stR.status==='done'?'✓ terminé':(stR.status==='wip'?'en cours':((onE||onC)?'débloqué':'verrouillé'));
-          return `<div class="sui-prow"><span>🧰 ${esc(rs.titre)}</span><span class="meta">${etat} · ${d.n} exercice${d.n>1?'s':''}${d.srcs.length?' ('+d.srcs.join(', ')+')':''}</span></div>`
-            +(onC?`<div class="sui-pmini">débloqué pour toute la classe</div>`:'')
-            +`<div class="sui-actions" style="margin-top:2px"><button class="btn ghost" title="Ouvre ou referme cet atelier pour cet élève seul" onclick="event.stopPropagation();REMED.toggle('${esc(uid)}','${rs.id}');PROF.render()">${onE?'🔒 reverrouiller pour lui':'🔓 débloquer pour lui'}</button></div>`;
-        }).join('')+'</div>'; }
-      h+=remedH+`<div class="sui-all">${rows}</div>
-        <div class="sui-actions">
-          <button class="btn ghost" title="Renvoie l'élève sur son autocorrection (utile s'il s'est sur-évalué)" onclick="event.stopPropagation();APP.renvoyerAutocorr('${esc(uid)}','${esc(s.current||'')}')">↻ autocorrection</button>
-          </div><details class="adv"><summary>avancé — gestes rares (blocage, remise à zéro, déconnexion)</summary><div class="sui-actions">
-          ${bloque
-            ? `<button class="btn ghost" title="Libère son écran bloqué" onclick="event.stopPropagation();PROF.debloquer('${esc(uid)}','${esc(nm)}')">▶ débloquer</button>`
-            : `<button class="btn fire" title="Bloque son écran : plus aucune action possible jusqu'au déblocage" onclick="event.stopPropagation();PROF.bloquer('${esc(uid)}','${esc(nm)}')">⛔ bloquer</button>`}
-          <button class="btn ghost" title="Efface TOUTE la progression de cet élève sur ce chapitre — irréversible" onclick="event.stopPropagation();PROF.resetStudent('${esc(uid)}','${esc(nm)}')">↺ réinit.</button>
-          <button class="btn ghost" title="Libère le poste — la progression est conservée" onclick="event.stopPropagation();PROF.kickStudent('${esc(uid)}','${esc(nm)}')">⏏ déconnecter</button>
-        </div></details>`;
-    }
+        <button class="btn ghost" title="Pousse ce message ET l'enregistre pour la prochaine fois" onclick="PROF.rappelPerso('${uidJs2}')">envoyer</button></span></div></details>`; }
+    const bloque=((((APP._control||{})[uid]||{}).freeze)||{}).gel;
+    const nm=(s.name||uid).replace(/'/g,"\\'");
+    const remeds=(CHAPTER.seances||[]).filter(x=>x.remediation);
+    if(remeds.length){ h+=`<details class="adv"><summary>🧰 Ateliers de remédiation — déblocage individuel</summary><div style="padding:0 10px 8px">`+remeds.map(rs=>{
+        const onE=!!((((APP._control||{})[uid]||{}).remedOn||{})[rs.id]);
+        const onC=!!((((APP._control||{})[s.classeSeg]||{}).remedOn||{})[rs.id]);
+        const stR=(eng.snapshot().state||{})[rs.id]||{};
+        const d=eng.remedDiag(rs.id)||{n:0,nCibles:0,srcs:[]};
+        const etat=stR.status==='done'?'✓ terminé':(stR.status==='wip'?'en cours':((onE||onC)?'débloqué':'verrouillé'));
+        return `<div class="sui-prow"><span>🧰 ${esc(rs.titre)}</span><span class="meta">${etat} · ${d.n} exercice${d.n>1?'s':''}${d.srcs.length?' ('+d.srcs.join(', ')+')':''}</span></div>`
+          +(onC?`<div class="sui-pmini">débloqué pour toute la classe</div>`:'')
+          +`<div class="sui-actions" style="margin-top:2px"><button class="btn ghost" title="Ouvre ou referme cet atelier pour cet élève seul" onclick="event.stopPropagation();REMED.toggle('${esc(uid)}','${rs.id}');PROF.render()">${onE?'🔒 reverrouiller pour lui':'🔓 débloquer pour lui'}</button></div>`;
+      }).join('')+`</div></details>`; }
+    h+=`<details class="adv"><summary>avancé — gestes rares (blocage, remise à zéro, déconnexion)</summary><div class="sui-actions">
+      ${bloque
+        ? `<button class="btn ghost" title="Libère son écran bloqué" onclick="event.stopPropagation();PROF.debloquer('${esc(uid)}','${esc(nm)}')">▶ débloquer</button>`
+        : `<button class="btn fire" title="Bloque son écran : plus aucune action possible jusqu'au déblocage" onclick="event.stopPropagation();PROF.bloquer('${esc(uid)}','${esc(nm)}')">⛔ bloquer</button>`}
+      <button class="btn ghost" title="Efface TOUTE la progression de cet élève sur ce chapitre — irréversible" onclick="event.stopPropagation();PROF.resetStudent('${esc(uid)}','${esc(nm)}')">↺ réinit.</button>
+      <button class="btn ghost" title="Libère le poste — la progression est conservée" onclick="event.stopPropagation();PROF.kickStudent('${esc(uid)}','${esc(nm)}')">⏏ déconnecter</button>
+    </div></details>`;
+    const jE=Object.values(APP._journal||{}).filter(e=>e.uid===uid).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,15);
+    if(jE.length) h+=`<details class="adv"><summary>📜 ses interventions · ${jE.length}</summary><div class="prof-list" style="padding:6px 10px">${jE.map(e=>`<div class="r"><span class="sig-when">${e.ts?new Date(e.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span><span>${esc(e.raison||e.type||'')} <span class="sig-act">→ ${esc(e.action||'')}</span></span></div>`).join('')}</div></details>`;
+    // ── SON PARCOURS : une ligne de pastilles (le détail fin vit au survol et dans Bilan) ──
+    const chips=(b.parSeance||[]).filter(ps=>!ps.remediation || ps.statut!=='todo').map(ps=>{
+      const cur=ps.id===s.current;
+      const mk=cur?'▶':(ps.statut==='done'?'✓':(ps.statut==='wip'?'…':'·'));
+      const star=(ps.statut!=='todo'&&ps.etoiles!=null)?' '+ps.etoiles+'★':'';
+      const tip=[ps.titre, ps.qcm?('QCM '+ps.qcm.good+'/'+ps.qcm.total):'', (()=>{ const t=eng.timing(ps.id); if(!t.start) return ''; const p=eng.parcours(ps.id); const al=[fmtDur(p.total)]; if(p.spam) al.push('⚠ rafale'); else if(p.nUnsafe) al.push(p.nUnsafe+' non fiable'+(p.nUnsafe>1?'s':'')); if(p.dicoNouveaux.length) al.push('dico→gloss : '+p.dicoNouveaux.slice(0,3).join(', ')); return al.join(' · '); })(), (ps.autocorrSignal&&ps.autocorrSignal.incoherent)?'⚠ sur-évalué':''].filter(Boolean).join(' — ');
+      return `<span class="fi-chip${cur?' cur':''}${ps.statut==='done'?' done':''}" title="${esc(tip)}">${ps.remediation?'🧩':''}${mk} ${esc((ps.titre||ps.id).split('—')[0].split(':')[0].trim().slice(0,16))}${star}${(ps.autocorrSignal&&ps.autocorrSignal.incoherent)?' ⚠':''}</span>`;
+    }).join('');
+    if(chips) h+=`<div class="fi-parc" title="Son parcours — survole une pastille pour le détail">${chips}</div>`;
     return h+`</div>`;
   },
   // blocage CIBLÉ d'un seul élève (chrono gelé + écran verrouillé), via control/{chap}/{uid} — distinct du gel de toute la classe
@@ -8078,6 +8087,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"er", date:"2026-06-12", version:"er", eleve:"", interne:"Fiche eleve REORGANISEE (wireframe valide, ~540px utiles en split). cardDetail REECRIT (seul appelant : la fiche ; depth ignore ; 4e param notifsHTML) : (1) EN-TETE 1 ligne — nom · mode + TOUTES les actions 👁/❓/⭐/↻ (le ↻ remonte de sui-actions, le « ou » quitte l'en-tete) ; (2) L'INSTANT en premier (.fi-instant) : ▶ titre seance courante · temps · etoiles, ligne d'etats QCM/correction/bilan · x/N · autonomie · QCM chap, diagnostic parcoursPhrases + ⏱ itemTimes ; hors seance : « Sur la carte » + stats ; (3) A TRAITER : notifs developpees inserees par la fiche en UN exemplaire (sui-sig doublon SUPPRIME) ; (4) AGIR en 4 volets replies : 📣 Rappel (la rap-zone quitte le milieu de fiche), 🧰 Ateliers (remedH), ⚙ avance (trio), 📜 ses interventions (DEPLACE de ficheHTML vers cardDetail) ; (5) SON PARCOURS en pied : pastilles .fi-chip (✓/▶/…/· + titre court 16c + etoiles + ⚠ incoherence, detail complet au title : QCM, temps, rafale, dico→gloss) — les sui-prow verbeux supprimes ; (6) split etroit : mini-grille → RAIL 74px (initiales .ini, noms masques, title=nom complet)." },
   { id:"eq", date:"2026-06-12", version:"eq", eleve:"", interne:"NETTOYAGE ERGONOMIE du panneau (audit en situation, 7 recos validees Paul). (1) Defaut intelligent : cours actif → onglet SUIVI a l'ouverture (avant : l'EDITEUR en pleine seance a chaque reload de maj) ; sinon dernier onglet memorise (wt_prof_tab via go()). (2) Reordonnancement : bandeau cours COMPACT en tete (● classe · fin hh:mm · reste N min · +10 · ■ Cloturer) → GRILLE → file → bilans → volets replies (fini la classe sous la ligne de flottaison). (3) Signaux → FILE D'ATTENTE compacte une ligne, triee du plus ancien au plus recent (equite des mains levees), ✓ vu seul — le traitement riche vit dans les cartes. (4) = INVENTAIRE #1 : ❄ → volet replie « Gestes d'urgence » avec ⛔ Tout figer maintenant (gel+lock pre-regles) + Reprendre + reglage fin aux coches. (5) Remediation reployee en volet. (6) Fiche dedupliquee : cardDetail perd 👁/⭐ (l'en-tete les porte), l'en-tete gagne ❓ aide. (7) Carte : micro-indicateur x/N · M min (engineFor cache). CSS cours-band/sig-line/sui-adv." },
   { id:"ep", date:"2026-06-12", version:"ep", eleve:"", interne:"Lot ep — rapport de test miroir (instance extension). (1) ETIQUETTE : prompt() natif GELAIT le panneau (boite bloquante, reload force) → askLabel popover inline non bloquant (Enter/Echap/clic dehors), aux 2 sites (panel eleve + miroir). (2) MARQUES EN DIRECT : echo LOCAL du geste prof (APP._gestCore factorise, applique au moteur du miroir avant l'envoi → couleur instantanee) + en exploration, _mergeGestes fait arriver les marques de l'eleve en continu (seuls les gestes, l'exploration est preservee) + GARDE : en exploration sur une AUTRE seance que celle de l'eleve, le geste reel est BLOQUE avec explication (sinon corruption d'indices de mots). (3) Aa retire de la barre du miroir (il ne reglait rien — la taille est PAR ecran eleve). (4) DICO : le balayage du miroir ne routait pas l'outil dico → silence total ; route (P.openDico expose, consultation LOCALE jamais transmise) ; cleanDef coupait au DEBUT du francais mais pas a la FIN → etymologie/anagrammes/AUTRES LANGUES passaient (les « definitions sans rapport ») : sections parasites sautees, stop net a la langue suivante. (5) glossaire ouvre → outil dico desactive (etats coherents). (6) renderSoon : throttle 4 s + garde pointeur 1,5 s (les cibles de clic ne bougent plus en rafale de heartbeats)." },
   { id:"eo", date:"2026-06-12", version:"eo", eleve:"", interne:"Lots el-em-en-eo. EL poste prof persistant : wt_prof_poste re-authentifie ET rouvre le panneau au boot (bootResume, reload de maj/F5 compris) ; sortie EXPLICITE seule (bouton « Rendre ce poste aux eleves », Reglages). EM split miroir : l'oeil ne ferme plus le panneau — body.mirror-split (panneau 55vw gauche, miroir docke 45vw droite, AUCUN voile, les deux interactifs simultanement ; <1000px : plein ecran classique). EN grille : le Suivi devient une grille de cartes (sui-grid), notifs DEVELOPPEES dans la carte avec leurs boutons (signalRowHTML factorise, date+heure), recherche instantanee par initiales (data-search, filtre par display sans re-render, valeur preservee) ; clic carte → FICHE « instant T » (ficheHTML : en-tete + actions 👁/⭐ + notifs + cardDetail eprouve + journal de l'eleve), mini-grille TOTALE a gauche (filtre REINITIALISE a l'ouverture — jamais bloque sur la recherche) ; trio dangereux (bloquer/reinit/deconnecter) replie en details « avance » (inventaire #2 absorbe) ; section Signaux : noms cliquables → fiche. EO journal : logJournal sur les 5 voies (✓ vu, coup de pouce ouvert (lequel), section du ? pointee (laquelle), convocation, rappel (texte), etoile rendue) → journal/{chap} (SURVIT a la cloture), vue repliee dans le Suivi (80 dernieres, noms cliquables) + section « ses interventions » dans chaque fiche. cycleCard/depth obsoletes (clic=fiche)." },
