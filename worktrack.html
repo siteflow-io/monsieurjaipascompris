@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05dy">
+<meta name="app-version" content="2026-06-05dz">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -3776,6 +3776,18 @@ const CHAPTER_SEED = JSON.parse(JSON.stringify(CHAPTER));   // graine : amorce l
    ne supprime pas la double source : il rend toute divergence VISIBLE (encart Réglages), jamais silencieuse.
    Méthode : empreinte du JSON canonicalisé (clés triées récursivement, hash FNV-1a), APRÈS application des
    MÊMES défauts (chapterDefaults) aux deux côtés. */
+/* Normalisation « à la Firebase » (dz) : Firebase SUPPRIME silencieusement les null, les tableaux et objets
+   vides à l'écriture, et relit un tableau troué comme un OBJET à clés numériques. Le chapitre relu n'est donc
+   JAMAIS identique octet pour octet au JSON injecté — d'où un faux positif permanent du garde-fou après une
+   injection pourtant parfaite (constaté le 12/06 : encart ⚠ malgré bilanV4 injecté ; bilanV4 contient 15 null
+   et 10 tableaux vides). On applique la MÊME transformation aux deux côtés avant le hash. Idempotente. */
+function fbNorm(o){ if(o===null||o===undefined) return undefined;
+  if(Array.isArray(o)){ const r={}; o.forEach((v,i)=>{ const x=fbNorm(v); if(x!==undefined) r[i]=x; });
+    const ks=Object.keys(r); if(!ks.length) return undefined;
+    return ks.every((k,i)=>String(i)===k) ? ks.map(k=>r[k]) : r; }
+  if(typeof o==='object'){ const r={}; for(const k in o){ const x=fbNorm(o[k]); if(x!==undefined) r[k]=x; }
+    return Object.keys(r).length ? r : undefined; }
+  return o; }
 function stableStr(o){ if(o===null||typeof o!=='object') return JSON.stringify(o);
   if(Array.isArray(o)) return '['+o.map(stableStr).join(',')+']';
   return '{'+Object.keys(o).sort().map(k=>JSON.stringify(k)+':'+stableStr(o[k])).join(',')+'}'; }
@@ -3785,8 +3797,8 @@ function chapHash(o){ const s=stableStr(o); let h=0x811c9dc5;
 function seedDiffCheck(fb){ try{
     const seedId=(CHAPTER_SEED.meta||{}).id;
     if(!fb || !fb[seedId]){ APP._seedDiff={ etat:'seul' }; return; }     // pas de version Firebase de ce chapitre : le seed fait foi partout
-    const seedNorm=chapterDefaults(JSON.parse(JSON.stringify(CHAPTER_SEED)));
-    const hSeed=chapHash(seedNorm), hProd=chapHash(fb[seedId]);
+    const seedNorm=fbNorm(chapterDefaults(JSON.parse(JSON.stringify(CHAPTER_SEED))));
+    const hSeed=chapHash(seedNorm), hProd=chapHash(fbNorm(fb[seedId]));
     APP._seedDiff = (hSeed===hProd) ? { etat:'sync' } : { etat:'diverge', vSeed:CHAPTER_SEED.version||'?', vProd:fb[seedId].version||'?' };
     if(APP._seedDiff.etat==='diverge') console.warn('[worktrack] seed ≠ production ('+seedId+') : le mode test/aperçu ne reflète pas ce que voient les élèves. seed='+(CHAPTER_SEED.version||'?')+' prod='+(fb[seedId].version||'?'));
   }catch(e){ APP._seedDiff={ etat:'inconnu' }; } }
@@ -4003,6 +4015,7 @@ const CONFIG = {
   idleCahierMs: 360000, // inactivité tolérée si l'élève écrit au cahier (papier / autocorrection / bilan)
   evMax:      200,      // plafond du journal d'actions par séance
   recapCooldownMs: 3600000, // anti-doublon du récap de reprise
+  qGapMaxMs:  2700000,  // PLAFOND DE VRAISEMBLANCE (dz) : au-delà de 45 min entre deux coches, ce n'est pas du travail continu sur la question (séance laissée ouverte la nuit, retour le lendemain) — temps NON RETENU, jamais affiché. Le symétrique haut de unsafeMs.
   itGapMs:    180000,   // TEMPS PAR ITEM (Lot 5) : au-delà de ce silence entre deux gestes sur un même exercice, la fenêtre d'attention est close (l'élève est parti ailleurs) — on cumule les fenêtres, jamais les trous
   maxRunMs:   10800000, // GARDE-FOU chrono : un intervalle actif (runSince→now) au-delà de 3 h est une anomalie (séance jamais figée) — plafonné, jamais compté tel quel
   qmsgFadeMs: 8000      // disparition douce du message de temps sous une question
@@ -4265,7 +4278,8 @@ function createEngine(chapter, store, studentId, eleveIndex){
     qTimes(id){ const st=state[id]||{}, qd=st.qdone||{}, hr=st.qhr||{};
       const entries=Object.keys(qd).map(k=>({key:k,ts:qd[k],hr:!!hr[k]})).sort((a,b)=>a.ts-b.ts);
       let prev=st.startedAt||0; const out=[];
-      entries.forEach(e=>{ out.push({ key:e.key, ts:e.ts, hr:e.hr, ms:(prev?Math.max(0,e.ts-prev):0) }); prev=e.ts; });
+      entries.forEach(e=>{ const ms=(prev?Math.max(0,e.ts-prev):0);
+        out.push({ key:e.key, ts:e.ts, hr:e.hr, ms, out: ms>CONFIG.qGapMaxMs }); prev=e.ts; });   // out : délai invraisemblable (cf. qGapMaxMs) — recalculé des timestamps, donc l'historique est assaini aussi
       return out; },
     // historique des essais au QCM (la trace) : essais[0] = diagnostic. Chaque essai : { ts, porte, porteTotal, dt, passed }.
     essaisOf(id){ return ((state[id]||{}).essais||[]).slice(); },
@@ -4533,7 +4547,7 @@ function createEngine(chapter, store, studentId, eleveIndex){
         const r=(b&&b.tRef)||(chapter.reglages&&chapter.reglages.tRefDefaut)||null; const n=(b&&b.n!=null)?b.n:(bi+1);
         return (r&&r.min!=null&&r.max!=null)?{min:+r.min,max:+r.max,n}:{min:null,max:null,n}; };
       let prev=st.startedAt||(qt[0]&&qt[0].ts)||0; const questions=[];
-      qt.forEach(e=>{ const win=t=>t>prev && t<=e.ts; const ref=refOf(e.key); const unsafe=!!(st.qunsafe&&st.qunsafe[e.key]);
+      qt.forEach(e=>{ const win=t=>t>prev && t<=e.ts; const ref=refOf(e.key); const unsafe=!!(st.qunsafe&&st.qunsafe[e.key])||!!e.out;
         let statut='?'; if(!unsafe && ref.min!=null) statut = e.ms<ref.min*1000?'court':(e.ms>ref.max*1000?'long':'dans');
         questions.push({ zone:e.key, n:ref.n, ms:e.ms, hr:e.hr, refMin:ref.min, refMax:ref.max, unsafe, statut,
           dico:dico.filter(d=>win(d.ts)).map(d=>d.mot), aides:ev.filter(x=>x.k==='aide'&&win(x.t)).map(x=>x.d),
@@ -4937,6 +4951,7 @@ function Panel(engine, root, name){
     if(done){ const qt=engine.qTimes(P.current); const last=qt.filter(e=>e.key===qKey).pop(); const ms=last?last.ms:0;
       const ref=parseTref(cb&&cb.dataset&&cb.dataset.tref);
       if(ms>0 && ms<UNSAFE_MS){ engine.markUnsafe(P.current,qKey,true); if(dq) qcheckMsg(dq,'unsafe',ms); }   // garde-fou : non retenu, pas de « tu as fait moins »
+      else if(ms>CONFIG.qGapMaxMs){ engine.markUnsafe(P.current,qKey,true); if(dq) qcheckMsg(dq,'gap'); }      // dz : délai invraisemblable (séance restée ouverte) → JAMAIS « ⏱ Tu as mis 20 h » à l'élève
       else { engine.markUnsafe(P.current,qKey,false); if(dq) qcheckMsg(dq,'time',ms,ref); } }
     else if(dq) qcheckMsg(dq,'clear');
     APP.beat(APP.laneIdFor(P)); };
@@ -4990,6 +5005,8 @@ function Panel(engine, root, name){
       m.textContent='Tu coches et décoches sans arrêt, ce n\'est pas ce qui est attendu. On coche une question uniquement quand elle est faite sur le cahier, au fur et à mesure. Tu n\'as aucune raison de jouer avec ce bouton : passe à la suite, ne perds pas de temps.'; }
     else if(kind==='unsafe'){ m.className='qtimemsg unsafe';
       m.textContent='⏱ '+fmtDur(ms)+' — temps trop court, non retenu pour cette question.'; }
+    else if(kind==='gap'){ m.className='qtimemsg unsafe';
+      m.textContent='⏱ Cette coche arrive longtemps après la précédente — le temps n\'est pas significatif, il n\'est pas retenu.'; }
     else { let txt='⏱ Tu as mis '+fmtDur(ms)+'.';
       if(ref){ txt+=' Le niveau de difficulté de cette question demande d\'y passer entre '+fmtDur(ref.min*1000)+' et '+fmtDur(ref.max*1000)+'.';
         if(ms<ref.min*1000) txt+=' Vu que tu as fait moins, es-tu sûr que ta réponse est suffisamment développée ?';
@@ -7336,7 +7353,7 @@ const PROF = {
         <details><summary>Compléments d'une séance déjà réussie</summary><div class="db"><span class="why">Intention : pouvoir enrichir un chapitre en cours d'usage sans casser ce qui est acquis.</span><br>Quand des questions sont ajoutées à une séance qu'un élève a déjà validée, sa réussite est <b>conservée</b> : il ne répond qu'aux <b>questions ajoutées</b>, signalées sur sa carte.</div></details>
         <details><summary>Tablette ou cahier : un choix définitif par séance</summary><div class="db"><span class="why">Intention : un engagement par séance, pas du zapping entre supports.</span><br>Au début d'une séance, l'élève choisit : tout à l'écran, ou écran pour lire et <b>cahier pour écrire</b>. Ce choix est <b>définitif pour la séance</b> (le bouton le dit avant le clic). Le retour au mode tablette n'est possible que tant que la bascule n'a pas été confirmée.</div></details>
         <details><summary>Les ateliers de remédiation</summary><div class="db"><span class="why">Intention : une reprise ciblée sur les erreurs de chacun, donnée au bon moment — pas une punition visible de tous.</span><br>Les deux dernières séances du chapitre sont des <b>ateliers</b> : invisibles sur la carte tant que le professeur ne les a pas <b>débloqués</b> (élève par élève, ou toute la classe ; un seul atelier ouvert à la fois). Pour chaque élève, l'app compose une sélection de <b>3 à 5 exercices</b> : un tronc commun, puis des exercices ciblés sur ses critères « à revoir » et ses exercices d'évaluation ratés ; s'il n'a pas assez de cibles, des exercices des notions les plus fragiles complètent. La porte est de <b>75 % de sa sélection</b> (3 exercices → sans-faute : c'est une porte de reprise courte, retentable sans limite). Les ateliers ne comptent pas dans les compteurs du chapitre (progression, notes).<span class="ref">📚 Ce sont les « correctifs » de la pédagogie de maîtrise (Bloom, 1968) : une remédiation ciblée par les erreurs constatées, donnée après l'évaluation formative — le maillon dont Black et Wiliam (1998) font la condition d'efficacité du formatif.</span></div></details>
-        <details><summary>Ce que mesurent les temps — et ce qu'ils ne disent pas</summary><div class="db"><span class="why">Intention : des repères factuels, jamais des verdicts de vitesse.</span><br>Deux mesures distinctes. <b>Les questions au cahier</b> : le temps entre les coches « fait » ; un délai de moins de 5 secondes est jugé non fiable (coche accidentelle) et ignoré. <b>La manipulation des exercices à l'écran</b> : le temps des <b>gestes réels</b> (taper, cliquer, choisir) ; après 3 minutes sans geste sur un exercice, la fenêtre se ferme (l'élève est parti ailleurs) ; un même instant n'est <b>jamais compté deux fois</b>, ni pour deux exercices à la fois. Chaque type d'exercice a une <b>fourchette attendue</b>, calculée d'après sa longueur de lecture et ses manipulations. Règle absolue : un temps <b>court ne s'interprète jamais</b> — la mesure ignore la réflexion silencieuse qui précède le premier geste. Seul un net dépassement se signale, à l'élève comme au professeur.<span class="ref">📚 John Carroll (1963) : le temps nécessaire pour apprendre varie d'un élève à l'autre ; c'est une donnée, pas un défaut. Les fourchettes sont donc des repères, jamais des verdicts — et la restitution du parcours à l'élève vise la métacognition (Flavell, 1976) : apprendre à regarder sa propre manière de travailler.</span></div></details>
+        <details><summary>Ce que mesurent les temps — et ce qu'ils ne disent pas</summary><div class="db"><span class="why">Intention : des repères factuels, jamais des verdicts de vitesse.</span><br>Deux mesures distinctes. <b>Les questions au cahier</b> : le temps entre les coches « fait » ; un délai de moins de 5 secondes est jugé non fiable (coche accidentelle) et ignoré ; un délai de plus de 45 minutes aussi (séance restée ouverte entre deux jours) — ni l'un ni l'autre ne sont affichés ni comptés. <b>La manipulation des exercices à l'écran</b> : le temps des <b>gestes réels</b> (taper, cliquer, choisir) ; après 3 minutes sans geste sur un exercice, la fenêtre se ferme (l'élève est parti ailleurs) ; un même instant n'est <b>jamais compté deux fois</b>, ni pour deux exercices à la fois. Chaque type d'exercice a une <b>fourchette attendue</b>, calculée d'après sa longueur de lecture et ses manipulations. Règle absolue : un temps <b>court ne s'interprète jamais</b> — la mesure ignore la réflexion silencieuse qui précède le premier geste. Seul un net dépassement se signale, à l'élève comme au professeur.<span class="ref">📚 John Carroll (1963) : le temps nécessaire pour apprendre varie d'un élève à l'autre ; c'est une donnée, pas un défaut. Les fourchettes sont donc des repères, jamais des verdicts — et la restitution du parcours à l'élève vise la métacognition (Flavell, 1976) : apprendre à regarder sa propre manière de travailler.</span></div></details>
         <details><summary>Pendant l'heure : présence, signaux, pilotage</summary><div class="db"><span class="why">Intention : voir la classe sans interrompre le travail.</span><br>Quand tu lances la séance, l'app suit les présences et les chronos de l'heure. Un élève inactif 4 minutes (6 s'il écrit au cahier) reçoit un rappel discret. La <b>main levée</b> (bouton ✋, à activer classe par classe) crée un signal dans ton panneau, où chaque demande peut être traitée : aller voir, ouvrir son aide à distance, effacer le signal. Tu peux pousser un <b>rappel</b> pré-écrit sur un écran (bandeau non bloquant, disparaît seul), <b>geler</b> tous les écrans (« regarde le tableau »), ou ouvrir le <b>miroir</b> : une copie en lecture de l'écran d'un élève, qui ne le dérange pas — et qui ne peut déclencher aucun geste qui lui coûterait (ouvrir un palier, cocher à sa place). Clôturer l'heure fige les chronos, archive la séance et purge présences et signaux.</div></details>
         <details><summary>Annonces et mises à jour</summary><div class="db"><span class="why">Intention : rien n'apparaît chez les élèves sans décision explicite.</span><br>Les <b>annonces</b> (onglet MAJ) ne s'affichent chez les élèves que lorsque tu les <b>publies</b> ; le bandeau apparaît alors en direct sur leur carte ; « J'ai lu » le ferme sur leur poste sans le dépublier ailleurs. Les <b>mises à jour de l'app</b> suivent le même principe : après avoir déployé une nouvelle version, tu la publies ; chaque tablette sauvegarde alors sa progression et se recharge automatiquement dans la nouvelle version.</div></details>
         <details><summary>Le chapitre existe en deux exemplaires</summary><div class="db"><span class="why">Intention : pouvoir tester sans toucher à ce que vivent les élèves — sans jamais tester à l'aveugle.</span><br>Le chapitre vit en deux endroits : un exemplaire <b>embarqué dans le fichier de l'app</b> (c'est lui que jouent le mode test et l'aperçu) et un exemplaire <b>en ligne</b> (celui que voient les élèves, mis à jour par « Injecter »). S'ils divergent, ce que tu testes n'est plus ce que vivent les élèves. L'app les compare en permanence : l'encart en haut de ces Réglages affiche ✓ ou ⚠, et la <b>sentinelle</b> t'interpelle à chaque ouverture du panneau tant qu'une mise à jour n'est pas publiée, qu'un poste est en retard, ou qu'un chapitre n'est pas injecté — avec le bon geste à un clic. « Plus tard » ferme l'avertissement mais ne le désarme pas.</div></details>
@@ -7741,6 +7758,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"dz", date:"2026-06-12", version:"dz", eleve:"", interne:"Deux correctifs d'usage réel. (1) FAUX POSITIF du garde-fou chapitre : Firebase supprime silencieusement les null/tableaux vides à l'écriture et relit un tableau troué comme objet — le chapitre relu n'est JAMAIS identique au JSON injecté (bilanV4 : 15 null, 10 []). L'alerte persistait après une injection parfaite. Correctif : fbNorm (réplique exacte de la transformation Firebase, idempotente) appliquée aux DEUX côtés avant hash. (2) TEMPS ABSURDES (« 1220 minutes » vus par les élèves) : le délai entre deux coches était brut — séance laissée ouverte la nuit → la 1re coche du lendemain affichait « ⏱ Tu as mis 20 h 22 ». Correctif : plafond de vraisemblance CONFIG.qGapMaxMs=45 min (symétrique haut du 5 s) — au-delà : message neutre (« le temps n'est pas significatif, non retenu »), marqué non fiable, exclu des statuts court/dans/long, de la question la plus longue et des restitutions. Le flag est RECALCULÉ depuis les timestamps : l'historique pollué d'hier est assaini sans migration. Doc mise à jour (volet temps)." },
   { id:"dy", date:"2026-06-11", version:"dy", eleve:"", interne:"Ancrage de la doc dans la littérature pédagogique (demande Paul) : nouveau volet transversal « Formatif, sommatif, spiralaire : les repères » (Scriven 1967 / Bloom 1971 ; Black & Wiliam 1998 ; Bruner 1960 ; Glaser 1963 — avec, pour chaque concept, OÙ il agit dans l'app : tout est formatif par construction, le sommatif n'existe que par décision explicite — bascule notée, note QCM, export ED) + lignes d'ancrage 📚 dans 6 volets : plan de travail (Parkhurst 1922, Freinet) et spiralaire au volet carte ; étayage/désétayage (Wood-Bruner-Ross 1976, ZPD Vygotski) aux étoiles ; pédagogie de maîtrise (Bloom 1968) à la porte ; Sadler 1989 + Hattie-Timperley 2007 à l'autocorrection/bilan tissé ; correctifs de Bloom + Black-Wiliam aux ateliers ; Carroll 1963 + métacognition (Flavell 1976) aux temps. Références nommées et datées, jamais citées verbatim. 14 volets désormais." },
   { id:"dx", date:"2026-06-11", version:"dx", eleve:"", interne:"Documentation intégrée (demande Paul) : section dépliable « 📖 Comment l'app fonctionne — pédagogie et mécanique » en queue des Réglages. 13 volets <details> natifs : carte/chemins, étoiles (3 par séance, palier 1 gratuit, −1 à partir du palier 2 UNE SEULE FOIS PAR AIDE — nuance vérifiée au code, aidesUsed par aide), porte (75 % chapitre / 60 % convergence, arrondi supérieur, sur les exercices réellement servis, meilleur passage conservé), autocorrection/bilan tissé, compléments, papier définitif, ateliers (3-5 items, déblocage prof, 75 % de la sélection, hors compteurs), mesures de temps (5 s non fiable, fenêtre close à 3 min, jamais deux fois, jamais de « trop court »), pilotage (rappel 4/6 min, main levée, gel, miroir sans gestes coûteux), annonces/MAJ, chapitre en deux exemplaires + sentinelle, données (classes partagées intouchées), lexique de 12 termes. Chaque volet : intention pédagogique en italique PUIS mécanique chiffrée — tous les chiffres vérifiés au code avant rédaction. Raison : mémoire institutionnelle du dispositif (soi-même dans six mois, contestations d'élèves, collègues, parents, inspection)." },
   { id:"dw", date:"2026-06-11", version:"dw", eleve:"", interne:"Passe de tooltips COMPLÉMENTAIRE (audit « tout tooltipé ? ») : 13 ajouts ciblés après re-inventaire — le passage papier (conséquence définitive, oublié en dq qui n'avait couvert que le retour-app), les 4 outils chapitre de l'onglet Création dont la paire Snapshot/Restaurer (chapitre SEUL, à distinguer du snapshot complet des Réglages — confusion possible), le déblocage d'atelier pour toute la classe, ✓ vu des signaux, les raccourcis de durée de la modale Lancer, les deux stratégies de réorientation, les selects d'arêtes conseillée/prérequis (jargon). Les ~90 boutons restants sans title sont VOLONTAIREMENT nus : libellés auto-suffisants (Fermer, Annuler, Retour, +/× d'éditeur, libellés dynamiques explicites) — doctrine d'épure." },
