@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05eo">
+<meta name="app-version" content="2026-06-05eq">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -227,6 +227,15 @@
   details.adv summary{cursor:pointer;padding:6px 10px;font-size:.72rem;color:var(--muted);list-style:none}
   details.adv summary::before{content:"⚙ "} details.adv .sui-actions{padding:0 10px 8px}
   .sui-nomlink{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+  /* eq : bandeau cours compact, file de signaux une ligne, micro-avancement de carte */
+  .cours-band{display:flex;align-items:center;gap:10px;padding:8px 12px}
+  .cours-band .cb-dot{color:var(--done)} .cours-band .cb-time{color:var(--muted);font-size:.8rem}
+  .cours-band .sig-btns{margin-left:auto;display:flex;gap:6px}
+  .sig-line{display:flex;align-items:center;gap:8px;font-size:.76rem;padding:4px 8px}
+  .sui-adv{display:inline-block;margin-left:8px;font-size:.66rem;color:var(--gold2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;white-space:nowrap}
+  /* ep1 : saisie d'étiquette NON bloquante (le prompt natif gelait le panneau au miroir) */
+  .lbl-pop{position:fixed;z-index:120;background:var(--panel3);border:1.5px solid var(--gold-deep);border-radius:10px;padding:8px;display:flex;gap:6px;align-items:center;box-shadow:0 8px 26px rgba(0,0,0,.5)}
+  .lbl-pop input{width:150px;font-size:.8rem;padding:5px 8px}
   .sig-aidemenu{width:auto;max-width:280px;font-size:.72rem;padding:4px 6px}
   .place.locked{cursor:not-allowed}
   .place.locked .medal{filter:grayscale(.7) brightness(.55);opacity:.6}
@@ -4155,6 +4164,20 @@ const SPAM_FAST_RATIO= 0.6;     // ... et part minimale que ces coches rapides d
 const PRESENCE_MS    = 90000;   // au-delà, une session n'est plus comptée « présente »
 const RECAP_COOLDOWN_MS = CONFIG.recapCooldownMs;  // ne pas re-montrer le récap de reprise plus d'une fois par heure (évite les doublons et les reconnexions techniques)
 const APP_VERSION = ((document.querySelector && document.querySelector('meta[name=app-version]'))||{}).content || '0';  // version embarquée dans CE fichier
+// ep1 : remplace prompt() — popover positionné au point du tap, Enter valide, Échap/clic dehors annule, cb(null) si annulé
+function askLabel(x, y, cur, cb){ document.querySelectorAll('.lbl-pop').forEach(e=>e.remove());
+  const pop=document.createElement('div'); pop.className='lbl-pop';
+  pop.innerHTML='<input class="txtin" maxlength="30" placeholder="étiquette…"><button class="btn primary" style="padding:4px 10px">OK</button><button class="btn ghost" style="padding:4px 8px">✕</button>';
+  document.body.appendChild(pop);
+  pop.style.left=Math.min(x, window.innerWidth-230)+'px'; pop.style.top=Math.max(8, y-52)+'px';
+  const inp=pop.querySelector('input'); inp.value=cur||'';
+  const done=v=>{ pop.remove(); document.removeEventListener('pointerdown', out, true); cb(v); };
+  const out=e=>{ if(!pop.contains(e.target)) done(null); };
+  setTimeout(()=>document.addEventListener('pointerdown', out, true), 50);
+  pop.querySelector('.btn.primary').onclick=()=>done(inp.value);
+  pop.querySelector('.btn.ghost').onclick=()=>done(null);
+  inp.onkeydown=e=>{ if(e.key==='Enter') done(inp.value); if(e.key==='Escape') done(null); };
+  setTimeout(()=>inp.focus(), 60); }
 const RAPPELS_BASE = ["Reprends la consigne et avance.","Concentre-toi : tu sembles t'être éloigné du travail.","Pense à cocher chaque question quand elle est faite au cahier.","Termine ta question en cours, puis viens me voir."];   // eh2 : messages pré-écrits du rappel (les persos s'y ajoutent, store « rappelsPerso »)
 
 /* ─────────────────────────── §D · MOTEUR (factory) ─────────────────────
@@ -5105,7 +5128,7 @@ function Panel(engine, root, name){
       +'<button class="gt'+(cur==='gomme'?' on':'')+'" title="Effacer un mot" onclick="APP.panel(\''+lane+'\').gtool(\'gomme\')">gomme</button>'
       +'<button class="gt'+(cur==='dico'?' on':'')+'" title="Dictionnaire : touche ce bouton, puis touche un mot du texte pour lire sa définition" onclick="APP.panel(\''+lane+'\').gtool(\'dico\')">📖 dico</button>'
       +'<button class="gt" title="Mon glossaire" onclick="APP.panel(\''+lane+'\').openGlossaire()">📚 glossaire</button>';
-    bar+='<button class="gt gt-zoom'+(APP.zoomLvlFor(laneIdOf())>0?' on':'')+'" title="Taille du texte de CET écran : ×1, ×2 ou ×3 (pour les yeux qui fatiguent)" onclick="APP.toggleZoom(\''+laneIdOf()+'\')">'+APP.zoomLabel(laneIdOf())+'</button>';
+    if(laneIdOf()!=='__mirror') bar+='<button class="gt gt-zoom'+(APP.zoomLvlFor(laneIdOf())>0?' on':'')+'" title="Taille du texte de CET écran : ×1, ×2 ou ×3 (pour les yeux qui fatiguent)" onclick="APP.toggleZoom(\''+laneIdOf()+'\')">'+APP.zoomLabel(laneIdOf())+'</button>';   // ep3 : au miroir, Aa réglerait… rien (la taille est PAR écran élève) — retiré
     if(cur) bar+='<div class="ghint"><span class="frozen">feuille figée</span><span>'+hintOf(cur)+'</span></div>';
     return bar+'</div>'; }
   // ── Parcours de séance : référence de temps par question + garde-fous (Lot A) ──
@@ -5279,9 +5302,8 @@ function Panel(engine, root, name){
     if(_drag){ _drag=false; engine.flush(); APP.beat(APP.laneIdFor(P)); if(HLT.includes(P._tool)){ P._tool=null; fillC(); } return; }  // surligneur = one-shot ; gomme reste
     if(!P._tool) return; const w=wordAt(e.clientX,e.clientY); if(!w) return; const id=P.current;
     if(P._tool==='label'){ const cur=(engine.geste(id,w.zone).labels||{})[w.wi]||"";
-      const v=(typeof prompt==='function')?prompt("Étiquette pour ce mot (vide pour retirer) :",cur):null;
-      if(v!==null){ const tt=v.trim(); if(tt && !engine.geste(id,w.zone).marks[w.wi]) engine.paintMark(id,w.zone,w.wi,'j'); engine.setLabel(id,w.zone,w.wi,tt); }
-      P._tool=null; fillC(); APP.beat(APP.laneIdFor(P)); }
+      askLabel(e.clientX, e.clientY, cur, v=>{ if(v!==null){ const tt=v.trim(); if(tt && !engine.geste(id,w.zone).marks[w.wi]) engine.paintMark(id,w.zone,w.wi,'j'); engine.setLabel(id,w.zone,w.wi,tt); }
+        P._tool=null; fillC(); APP.beat(APP.laneIdFor(P)); }); }
     else if(P._tool==='relier'){
       if(P._linkPending && P._linkPending.zone===w.zone && P._linkPending.tok!==w.wi){ engine.addLink(id,w.zone,P._linkPending.tok,w.wi); P._linkPending=null; P._tool=null; }   // se désactive après la paire
       else { P._linkPending={zone:w.zone, tok:w.wi}; }
@@ -5295,6 +5317,7 @@ function Panel(engine, root, name){
   function dicoEl(){ const host=laneEl(); if(!host.querySelector) return null; let d=host.querySelector(':scope > .dico');
     if(!d){ d=document.createElement('div'); d.className='dico'; host.appendChild(d); } return d; }
   P.closeDico=function(){ const host=laneEl(); const d=host.querySelector&&host.querySelector(':scope > .dico'); if(d) d.classList.remove('show'); };
+  P.openDico=function(mot){ openDico(mot); };   // ep4 : exposé pour le miroir (son balayage ne routait pas l'outil dico → silence total)
   // verrouillage de l'écran en pause/fin de séance : voile non-cliquable par-dessus toute la lane
   P.setLock=function(on){ P._locked=!!on; const lane=laneEl(); if(!lane||!lane.querySelector) return;
     let ov=lane.querySelector(':scope > .lock-ov');
@@ -5323,7 +5346,17 @@ function Panel(engine, root, name){
   // nettoie l'extrait brut du Wiktionnaire : isole la partie française si repérable, compacte, tronque
   function cleanDef(ex){ let t=String(ex||'').replace(/\r/g,'');
     const fr=t.search(/(^|\n)\s*Français\s*(\n|$)/); if(fr>=0) t=t.slice(fr);
-    t=t.split('\n').map(s=>s.trim()).filter(Boolean).join('\n').replace(/\n{2,}/g,'\n').trim();
+    // ep4 : ne garder QUE la partie française utile — l'extrait Wiktionnaire enchaîne étymologie, prononciation,
+    //   anagrammes puis LES AUTRES LANGUES : c'étaient les « définitions sans rapport » vues en classe.
+    const LANGS=/^(Anglais|Espagnol|Italien|Allemand|Portugais|Latin|Néerlandais|Ancien français|Moyen français|Occitan|Catalan|Roumain|Suédois|Danois|Norvégien|Polonais|Tchèque|Breton|Basque|Corse|Esperanto|Espéranto|Flamand|Gallo|Picard|Wallon|Interlingua|Ido|Afrikaans|Frison|Finnois|Hongrois|Turc|Slovène|Slovaque|Croate|Estonien|Letton|Lituanien|Gaélique.*|Islandais|Galicien|Luxembourgeois)$/i;
+    const SKIP=/^(Étymologie|Prononciation|Anagrammes|Références|Voir aussi|Traductions|Dérivés|Apparentés.*|Hyperonymes|Hyponymes|Synonymes|Antonymes|Vocabulaire.*|Notes|Variantes.*|Abréviations|Homophones|Paronymes|Sources|Bibliographie)$/i;
+    const out=[]; let skip=false;
+    for(const raw of t.split('\n')){ const l=raw.trim(); if(!l) continue;
+      if(LANGS.test(l)) break;                       // langue suivante : stop net
+      if(SKIP.test(l)){ skip=true; continue; }       // section parasite : on saute jusqu'à la prochaine section utile
+      if(/^(Nom commun|Verbe|Adjectif|Adverbe|Pronom|Interjection|Conjonction|Préposition|Déterminant|Locution.*|Forme de.*|Français)$/i.test(l)){ skip=false; if(/^Français$/i.test(l)) continue; out.push(l); continue; }
+      if(!skip) out.push(l); }
+    t=out.join('\n').replace(/\n{2,}/g,'\n').trim();
     if(t.length>600) t=t.slice(0,600).replace(/\s+\S*$/,'')+'…'; return t; }
   // définition via l'API MediaWiki (extracts) du Wiktionnaire FR — CORS ouvert avec origin=*
   async function fetchDef(mot){ const tries=[mot, mot.toLowerCase()].filter((v,i,a)=>a.indexOf(v)===i);
@@ -5355,7 +5388,8 @@ function Panel(engine, root, name){
     if(engine.inGlossaire(m)) engine.removeGlossaire(m); else engine.addGlossaire(m, P._dicoDef);
     const host=laneEl(), d=host.querySelector&&host.querySelector(':scope > .dico'); if(d){ const b=d.querySelector('.dico-add'); if(b) b.textContent=engine.inGlossaire(m)?'✓ dans ton glossaire':'+ ajouter à mon glossaire'; } };
   function jsStr(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-  function openGlossaire(){ const d=dicoEl(); if(!d) return; d.classList.add('show'); const lane=laneIdOf();
+  function openGlossaire(){ if(P._tool==='dico'){ P._tool=null; fillC(); }   // ep5 : un seul état d'outil surligné à la fois
+    const d=dicoEl(); if(!d) return; d.classList.add('show'); const lane=laneIdOf();
     const s=engine.seance(P.current);
     const lex=(Array.isArray(s.corps.consigne)?s.corps.consigne:[]).filter(b=>b.type==='lexique');
     const mine=engine.glossaire();
@@ -5870,6 +5904,10 @@ const APP = {
   },
   // applique un geste piloté (surligner/gomme en plage, relier en paire, étiquette) envoyé par le prof
   applyGeste(key, g){ const p=this.panels[key]; if(!p||!p.engine||!g) return;
+    this._gestCore(p, g);
+    this.beat(key);
+  },
+  _gestCore(p, g){ if(!p||!p.engine||!g) return;
     const id=g.seance; if(!p.engine.seance(id)) return;
     const words = Array.isArray(g.words) ? g.words : (typeof g.tok==='number' ? [g.tok] : []);
     const pf=(g.origin==='prof')?'P':'';   // ek3 : les marques du prof portent un préfixe — rendu distinct, jamais confondues avec celles de l'élève
@@ -5879,7 +5917,6 @@ const APP = {
       if(t!=null){ if(g.label && !p.engine.geste(id,g.supIdx).marks[t]) p.engine.paintMark(id,g.supIdx,t,pf+'j',true); p.engine.setLabel(id,g.supIdx,t,(g.label&&pf)?('Prof : '+g.label):(g.label||'')); } }
     else { words.forEach(w=>p.engine.paintMark(id,g.supIdx,w,pf+(g.tool||'j'),true)); p.engine.flush(); }
     if(p.screen==="seance" && p.current===id && p.tabCur!=='e') p.tab('c');   // rafraîchir si l'élève regarde ce texte
-    this.beat(key);
   },
   beatAll(){ for(const k in this.panels) if(this.panels[k]) this.beat(k); },
   tickChronos(){ for(const k in this.panels){ const p=this.panels[k]; if(!p) continue; if(p.refreshChrono) p.refreshChrono(); if(p.checkIdle) p.checkIdle(); }
@@ -6266,7 +6303,8 @@ const MIRROR = {
     this._panel._mirrorLane="__mirror";                                          // les clics du miroir passent par APP.panel('__mirror') = proxy de pilotage
     this._explore=false; this._lastSnap=null;
     this._unsubs.push(store.subscribe("progress/"+chap+"/"+uid, snap=>{ if(!this._engine) return; this._lastSnap=snap||{};
-      if(!this._explore){ this._engine.hydrate(this._lastSnap); this._apply(); } }));   // ek : en exploration, le direct n'écrase plus ce que le prof regarde
+      if(!this._explore){ this._engine.hydrate(this._lastSnap); this._apply(); }
+      else this._mergeGestes(this._lastSnap); }));   // ek/ep : en exploration, SEULES les marques continuent d'arriver en direct
     this._unsubs.push(store.subscribe("sessions/"+chap+"/"+uid, sess=>{ if(!this._panel) return; this._sess=sess||{}; this._apply(); }));
     const body=$("mirrorBody");
     if(body && !body._expWired){ body._expWired=true;
@@ -6290,8 +6328,19 @@ const MIRROR = {
   // envoie un geste à appliquer chez l'élève : plage de mots (surligner/gomme), paire (relier) ou étiquette
   sendGest(obj){ if(!this._uid) return; const chap=CHAPTER.meta.id||"chapitre";
     const cur=(this._sess&&this._sess.current)||null; if(!cur){ toast("L'élève n'est pas dans une séance."); return; }
-    store.save("control/"+chap+"/"+this._uid+"/gest", Object.assign({ ts:Date.now(), seance:cur, origin:'prof' }, obj));   // ek3 : la marque s'affichera chez l'élève comme MARQUE DU PROFESSEUR
+    if(this._explore && this._panel && this._panel.current && this._panel.current!==cur){ toast("L'élève n'est pas sur cette séance (tu explores « "+((CHAPTER.seances.find(z=>z.id===this._panel.current)||{}).titre||'')+" ») — geste non envoyé."); return; }   // ep2 : ne jamais marquer la mauvaise séance chez l'élève
+    const g=Object.assign({ ts:Date.now(), seance:cur, origin:'prof' }, obj);
+    store.save("control/"+chap+"/"+this._uid+"/gest", g);   // ek3 : la marque s'affichera chez l'élève comme MARQUE DU PROFESSEUR
+    APP._gestCore(this._panel, g);   // ep2 : ÉCHO LOCAL immédiat — la couleur s'affiche au miroir sans attendre l'aller-retour (et l'exploration ne la perd plus)
     toast("Geste envoyé à l'élève — il s'affiche comme marque du professeur."); },
+  // ep2 : en exploration, les MARQUES de l'élève continuent d'arriver en direct (le reste de l'exploration est préservé)
+  _mergeGestes(snap){ const p=this._panel; if(!p||!p.engine||!snap||!snap.state) return;
+    const sid=p.current; if(!sid || !snap.state[sid] || !snap.state[sid].gestes) return;
+    const gs=snap.state[sid].gestes; let chg=false;
+    Object.keys(gs).forEach(z=>{ const loc=p.engine.geste(sid, +z); const rem=gs[z]||{};
+      ['marks','labels','links'].forEach(k=>{ const a=JSON.stringify(loc[k]||null), b=JSON.stringify(rem[k]||null);
+        if(a!==b){ loc[k]=JSON.parse(JSON.stringify(rem[k]||(k==='links'?[]:{}))); chg=true; } }); });
+    if(chg && p.screen==='seance' && p.tabCur!=='e') p.tab('c'); },
   // — capture du balayage sur l'écran de contrôle (rejoué chez l'élève) —
   _wordAt(x,y){ const host=$("mirrorBody"); const el=document.elementFromPoint(x,y); if(!el||!el.closest) return null;
     const t=el.closest('.tok'); if(!t||!host.contains(t)) return null; return { zone:t.dataset.z, wi:+t.dataset.i, el:t }; },
@@ -6306,8 +6355,9 @@ const MIRROR = {
       if(M._drag){ M._drag=false; const words=Object.keys(M._range.set).map(Number); if(words.length) M.sendGest({ supIdx:M._range.zone, tool:p._tool, words });
         if(['j','v','r','b'].includes(p._tool)){ p._tool=null; p.tab('c'); } return; }
       if(!p._tool) return; const w=M._wordAt(e.clientX,e.clientY); if(!w) return;
-      if(p._tool==='label'){ const v=(typeof prompt==='function')?prompt("Étiquette à coller chez l'élève (vide = retirer) :",""):null; if(v===null) return;
-        M.sendGest({ supIdx:w.zone, tool:'label', words:[w.wi], label:v.trim() }); p._tool=null; p.tab('c'); }
+      if(p._tool==='dico'){ p.openDico(w.txt); return; }   // ep4 : consultation LOCALE (le dico n'est jamais transmis à l'élève)
+      if(p._tool==='label'){ askLabel(e.clientX, e.clientY, '', v=>{ if(v===null) return;
+        M.sendGest({ supIdx:w.zone, tool:'label', words:[w.wi], label:v.trim() }); p._tool=null; p.tab('c'); }); }
       else if(p._tool==='relier'){ const pend=p._linkPending;
         if(pend && pend.zone===w.zone && pend.tok!==w.wi){ M.sendGest({ supIdx:w.zone, tool:'relier', a:pend.tok, b:w.wi }); p._linkPending=null; p._tool=null; }
         else { p._linkPending={zone:w.zone, tok:w.wi}; } p.tab('c'); } });
@@ -6707,11 +6757,11 @@ const PROF = {
   filterCards(v){ this._filtre=(v||'').toLowerCase();
     document.querySelectorAll('.sui-grid .sui-card').forEach(c=>{ c.style.display=(!this._filtre || (c.dataset.search||'').includes(this._filtre))?'':'none'; }); },
   open(){ $("profOverlay").classList.add("show"); this.watchProgress();
-    if(!this.authed && lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.tab||"creation"; }   // el : poste marqué prof → jamais re-saisir le code (le marqueur ne tombe que par « Rendre ce poste aux élèves »)
+    if(!this.authed && lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.tab||this.defaultTab(); }   // el : poste marqué prof → jamais re-saisir le code · eq1 : en séance, on arrive sur le Suivi
     if(this.authed){ this.render(); SENTINEL.maybeShow(); } else this.gate(); },
   // el1 : au boot, un poste marqué prof ROUVRE le panneau de lui-même — un reload (mise à jour publiée, F5)
   //   ne renvoie JAMAIS sur l'écran de connexion des élèves : seule la sortie explicite rend le poste.
-  bootResume(){ if(lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.tab||"creation"; this.open(); } },
+  bootResume(){ if(lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.defaultTab(); this.open(); } },
   // el2 : la SEULE sortie — efface le marqueur, le poste redevient un poste élèves
   rendrePoste(){ if(!confirm("Rendre ce poste aux élèves ? Le code professeur sera redemandé à la prochaine ouverture.")) return;
     lsSet("wt_prof_poste",""); this.authed=false; this.close(); toast("Poste rendu aux élèves."); },
@@ -6723,7 +6773,7 @@ const PROF = {
         <button class="btn primary" onclick="PROF.checkCode()">Entrer</button></div></div>`;
     setTimeout(()=>{const i=$("profCode");i&&i.focus();},50); },
   checkCode(){ const v=($("profCode")||{}).value||"";
-    if(MJPC.PROF_CODES.includes(Number(v))){ this.authed=true; lsSet("wt_prof_poste", true); this.tab="creation"; this.render(); SENTINEL.maybeShow(); } else toast("Code incorrect."); },
+    if(MJPC.PROF_CODES.includes(Number(v))){ this.authed=true; lsSet("wt_prof_poste", true); this.tab=this.defaultTab(); this.render(); SENTINEL.maybeShow(); } else toast("Code incorrect."); },
 
   /* ── coquille à onglets ── */
   // ei1 : le panneau se re-rendait à CHAQUE écriture Firebase (heartbeats 30 s × N élèves, signaux, control)
@@ -6734,10 +6784,13 @@ const PROF = {
     const box=document.getElementById('profModal');
     if(!this._holdInit && box){ this._holdInit=true;
       box.addEventListener('focusout', ()=>{ if(this._dirty){ this._dirty=false; this.renderSoon(); } }); }
+    if(box && !box._ptrWired){ box._ptrWired=true; box.addEventListener('pointerdown', ()=>{ this._lastPtr=Date.now(); }, true); }
     const ae=document.activeElement;
     if(box && ae && box.contains(ae) && /^(SELECT|INPUT|TEXTAREA)$/.test(ae.tagName)){ this._dirty=true; return; }   // ne JAMAIS détruire un menu/champ en cours d'usage
     if(this._rsT) clearTimeout(this._rsT);
-    this._rsT=setTimeout(()=>{ this._rsT=null; if(this.authed) this.render(); }, 700); },
+    const sincePtr=Date.now()-(this._lastPtr||0), sinceRender=Date.now()-(this._lastMachineRender||0);
+    const delay=Math.max(700, 1500-sincePtr, 4000-sinceRender);   // ep6 : throttle 4 s + jamais sous le doigt (clic récent < 1,5 s) — les cibles de clic ne bougent plus en rafale
+    this._rsT=setTimeout(()=>{ this._rsT=null; if(this.authed){ this._lastMachineRender=Date.now(); this.render(); } }, delay); },
   render(){ const c=CHAPTER, T=this.tab;
     const _box=document.getElementById('profModal'); const _sc=_box?_box.scrollTop:0;
     const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",maj:"Historique des mises à jour",reglages:"Réorientation, exclusivité, mode test"};
@@ -6750,7 +6803,12 @@ const PROF = {
         <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
       <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("maj","MAJ")}${tabBtn("reglages","Réglages"+(SENTINEL.badge()?" ⚠":""))}</div>
       <div id="ptabbody">${this.body()}</div>`; },
-  go(t){ if(t==="bilan") this._bilans=null; if(t==="archives") this._archives=null; this.tab=t; this.render(); },
+  go(t){ if(t==="bilan") this._bilans=null; if(t==="archives") this._archives=null; this.tab=t; lsSet("wt_prof_tab", t); this.render(); },
+  // eq1 : en séance, le panneau s'ouvre sur le SUIVI (avant : « creation » → l'éditeur en pleine classe à chaque reload de màj)
+  defaultTab(){ const ctl=APP._control||{}; const now=Date.now();
+    const coursActif=Object.keys(ctl).some(k=>{ const c=ctl[k]&&ctl[k].cours; return c&&c.fin&&c.fin>now; });
+    if(coursActif) return "suivi";
+    const last=lsGet("wt_prof_tab"); return (typeof last==='string'&&last)?last:"creation"; },
   body(){ return this.tab==="creation"?this.creationBody()
         : this.tab==="classes"?this.classesBody()
         : this.tab==="suivi"?this.suiviBody()
@@ -7103,25 +7161,26 @@ const PROF = {
     if(segAff){ const c=APP.coursDe(segAff);
       if(c && c.fin){ const f=new Date(c.fin); const hhmm=String(f.getHours()).padStart(2,'0')+'h'+String(f.getMinutes()).padStart(2,'0');
         const reste=Math.round((c.fin-now)/60000);
-        coursBox=`<div class="prof-sec cours-sec on"><h4>● Séance en cours — ${esc(nomAff)}</h4>
-          <div class="d">Fin prévue à <b>${hhmm}</b>${reste>0?' (dans '+reste+' min)':' — dépassée'}. Alerte 5 min avant la fin. Pendant la séance, tes élèves ne peuvent pas refaire chez eux une séance déjà réussie.</div>
-          <div class="prof-row"><button class="btn fire" title="Fige les chronos, archive la séance et purge présences et signaux de la classe" onclick="PROF.cloturerCours('${segAff}')">■ Clôturer la séance</button>
-            <button class="btn ghost" title="Prolonge la séance en cours de 10 minutes" onclick="APP.prolongerCours('${segAff}',10);PROF.render()">+10 min</button></div></div>`;
+        coursBox=`<div class="prof-sec cours-sec on cours-band"><span class="cb-dot">●</span><b>${esc(nomAff)}</b>
+          <span class="cb-time" title="Fin prévue à ${hhmm} — alerte 5 min avant ; pendant la séance, pas de refaite à la maison d'une séance réussie">fin ${hhmm}${reste>0?' · reste <b>'+reste+' min</b>':' · <b>dépassée</b>'}</span>
+          <span class="sig-btns"><button class="btn ghost" title="Prolonge la séance en cours de 10 minutes" onclick="APP.prolongerCours('${segAff}',10);PROF.render()">+10</button>
+          <button class="btn fire" title="Fige les chronos, archive la séance et purge présences et signaux de la classe" onclick="PROF.cloturerCours('${segAff}')">■ Clôturer</button></span></div>`;
       } else {
         coursBox=`<div class="prof-sec cours-sec"><h4>▶ Lancer la séance — ${esc(nomAff)}</h4>
           <div class="d">Démarre le cours pour cette classe&nbsp;: tu choisis l'heure de fin, je t'alerte 5 minutes avant, puis je t'amène à la clôture.</div>
           <div class="prof-row"><button class="btn primary" title="Démarre l'heure pour la classe : chronos « cette heure », présences, suivi en direct" onclick="PROF.lancerCoursModal('${segAff}')">▶ Lancer la séance</button></div></div>`;
       }
     }
-    const freezeBox = dansClasse.length ? `<div class="prof-sec freeze-sec"><h4>❄ Fin de séance / pause</h4>
-      <div class="d">Coche ce que tu veux appliquer, puis fige. « Reprendre » relance les chronos là où ils s'étaient arrêtés.</div>
+    const freezeBox = dansClasse.length ? `<div class="prof-sec freeze-sec"><details class="adv"><summary>⛔ Gestes d'urgence (figer la classe, pause)</summary>
+      <div class="prof-row" style="padding:6px 10px 0"><button class="btn fire" title="D'un seul geste : chronos gelés + écrans verrouillés pour toute la classe (« regarde le tableau », évacuation…)" onclick="PROF._fz.gel=true;PROF._fz.lock=true;PROF.doFreeze()">⛔ Tout figer maintenant</button>
+        <button class="btn ghost" title="Libère les écrans gelés, les chronos repartent où ils s'étaient arrêtés" onclick="PROF.doResume()">▶ Reprendre</button></div>
+      <div class="d" style="padding:0 10px">Réglage fin si besoin — coche puis « Figer » :</div>
       <div class="fz-opts">
         <label class="fz-ck"><input type="checkbox" ${fz.gel?'checked':''} onchange="PROF._fz.gel=this.checked"> Geler les chronos</label>
         <label class="fz-ck"><input type="checkbox" ${fz.lock?'checked':''} onchange="PROF._fz.lock=this.checked"> Verrouiller les écrans</label>
         <label class="fz-ck"><input type="checkbox" ${fz.logout?'checked':''} onchange="PROF._fz.logout=this.checked"> Déconnecter</label>
       </div>
-      <div class="prof-row"><button class="btn primary" title="Gèle tous les écrans de la classe : les élèves ne peuvent plus interagir jusqu'à la reprise" onclick="PROF.doFreeze()">Figer la séance</button>
-        <button class="btn ghost" title="Libère les écrans gelés" onclick="PROF.doResume()">▶ Reprendre</button></div></div>` : '';
+      <div class="prof-row" style="padding:0 10px 8px"><button class="btn ghost" title="Applique seulement ce qui est coché" onclick="PROF.doFreeze()">Figer (selon les coches)</button></div></details></div>` : '';
 
     let classeSec;
     { // en : FICHE OUVERTE → mini-grille TOTALE à gauche (filtre réinitialisé) + fiche « instant T » à droite
@@ -7150,19 +7209,22 @@ const PROF = {
       }
     }
     const remeds=(CHAPTER.seances||[]).filter(x=>x.remediation);
-    const remedBox = (remeds.length && segAff) ? `<div class="prof-sec"><h4>🧰 Remédiation</h4>
+    const remedBox = (remeds.length && segAff) ? `<div class="prof-sec"><details class="adv"><summary>🧰 Remédiation — déblocage des ateliers</summary><div style="padding:0 10px 8px">
       <div class="d">Ateliers invisibles tant que tu ne les débloques pas — ici pour toute la classe, ou élève par élève depuis sa carte (2ᵉ cran). Même débloqués, ils n'apparaissent chez un élève qu'<b>après sa séance de convergence</b> (tu peux donc activer en avance) ; l'élève est prévenu et un signal 🧩 t'arrive. Les exercices de chaque élève sont choisis d'après SES erreurs (critères « à revoir », QCM ratés) ; un atelier à la fois.</div>
       ${remeds.map(rs=>{ const onC=!!((((APP._control||{})[segAff]||{}).remedOn||{})[rs.id]);
         return `<div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">${esc(rs.titre)}</span>
-          <button class="btn ghost" title="Ouvre ou referme cet atelier pour TOUTE la classe d'un coup — chaque élève ne le verra qu'après sa convergence" onclick="REMED.toggle('${segAff}','${rs.id}');PROF.render()"${onC?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${onC?'débloqué pour la classe — reverrouiller':'débloquer pour la classe'}</button></div>`; }).join('')}</div>` : '';
+          <button class="btn ghost" title="Ouvre ou referme cet atelier pour TOUTE la classe d'un coup — chaque élève ne le verra qu'après sa convergence" onclick="REMED.toggle('${segAff}','${rs.id}');PROF.render()"${onC?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${onC?'débloqué pour la classe — reverrouiller':'débloquer pour la classe'}</button></div>`; }).join('')}</div></details></div>` : '';
     const ailleursSec = ailleurs.length ? `<div class="prof-sec"><h4>Ailleurs <span class="meta">· ${ailleurs.length} connecté(s) hors séance</span></h4>
       <div class="d">Élèves d'une autre classe connectés en ce moment (étude, maison…), en dehors de toute séance lancée. Pour information : le figer ci-dessus ne les touche pas.</div>
       <div class="prof-list">${ailleurs.sort((a,b)=>(a.classe||'').localeCompare(b.classe||'')||(a.name||'').localeCompare(b.name||'')).map(s=>this.suiviRowAilleurs(s)).join('')}</div></div>` : '';
 
     const sigCls = APP.signauxList().filter(x=> x.classeSeg===segAff);
-    const signauxBox = sigCls.length ? `<div class="prof-sec signaux-sec"><h4>Signaux <span class="meta">· ${sigCls.length}</span></h4>
-      <div class="d">Événements en attente — ils s'affichent aussi DANS la carte de l'élève. Clique un nom pour sa fiche.</div>
-      <div class="prof-list">${sigCls.map(x=>this.signalRowHTML(x,false)).join('')}</div></div>` : '';
+    const sigIc={bilan:'📝',incoherence:'⚠',aide:'✋',remed:'🧩',duo:'🤝',cahier:'📋'};
+    const signauxBox = sigCls.length ? `<div class="prof-sec signaux-sec"><h4>File d'attente <span class="meta">· ${sigCls.length} · du plus ancien au plus récent — le traitement se fait dans les cartes</span></h4>
+      <div class="prof-list">${sigCls.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).map(x=>`<div class="r sig-line"><span class="sig-ic">${sigIc[x.type]||'•'}</span>
+        <b class="sui-nomlink" title="Ouvrir sa fiche" onclick="PROF.ficheEleve('${esc(x.uid)}')">${esc(x.nom||x.uid)}</b>
+        <span class="meta">${x.seance?esc(x.seance):''}</span><span class="sig-when">${x.ts?new Date(x.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span>
+        <button class="btn ghost" style="margin-left:auto" title="${x.type==='aide'?'Efface le signal ET éteint la main ✋':'Efface ce signal'}" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}','${esc(x.seanceId||'')}','${esc(x.etat||'')}')">✓ vu</button></div>`).join('')}</div></div>` : '';
 
     // eo : le JOURNAL — chaque intervention archivée (raison → action, date+heure) ; il survit à la clôture
     const jAll=Object.values(APP._journal||{}).filter(e=>!e.classeSeg||e.classeSeg===segAff).sort((a,b)=>(b.ts||0)-(a.ts||0));
@@ -7180,7 +7242,7 @@ const PROF = {
       + `</div>`;
     return APP.classeSelectHTML(true)
       + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
-      + signauxBox + bilansBox + coursBox + freezeBox + remedBox + classeSec + journalBox + ailleursSec
+      + coursBox + classeSec + signauxBox + bilansBox + freezeBox + remedBox + journalBox + ailleursSec   // eq2 : la GRILLE remonte sous le chrono — fini la classe sous la ligne de flottaison
       + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
   // eo : JOURNAL DES INTERVENTIONS — chaque traitement est archivé (qui, quoi, ce que j'ai fait, quand).
@@ -7286,12 +7348,16 @@ const PROF = {
     const sig=(APP._signaux||{})[uid]||{};
     const notifs=['aide','bilan','incoherence','cahier','remed','duo'].filter(t=>sig[t]).map(t=>this.signalRowHTML(Object.assign({uid,type:t},sig[t]), true)).join('');
     const search=((s.name||uid)+' '+((s.name||'').split(/\s+/).map(w=>w[0]||'').join(''))).toLowerCase();
+    let adv='';   // eq7 : le coup d'œil de circulation — avancement + temps de la séance en cours
+    try{ const eng=this.engineFor(uid); if(eng){ const b=eng.bilan(); const tot=seancesParcours().length;
+      let tps=''; if(s.current){ const pc=eng.parcours(s.current); if(pc&&pc.total>0) tps=' · '+Math.round(pc.total/60000)+' min'; }
+      adv='<span class="sui-adv">'+b.faites.length+'/'+tot+tps+'</span>'; } }catch(e){}
     return `<div class="sui-card" data-search="${esc(search)}">
       <div class="sui-head" title="Ouvrir la fiche complète de l'élève" onclick="PROF.ficheEleve('${esc(uid)}')">
         <span title="${age<60000?'actif':(age<300000?'en pause':'hors ligne')}">${dot}</span>
         <span class="sui-mode" title="Mode de travail déclaré">${mode}</span>
         <span class="sui-nom">${esc(s.name||uid)}</span>${notifs?'<span class="sui-flag" title="signal en attente">●</span>':''}
-        <span class="meta" style="margin-left:auto">${esc(where)}</span>
+        <span class="meta" style="margin-left:auto">${esc(where)}${adv}</span>
         <span class="sui-chev">▸</span></div>
       ${notifs?`<div class="sui-notifs">${notifs}</div>`:''}</div>`;
   },
@@ -7325,6 +7391,7 @@ const PROF = {
     const notifs=['aide','bilan','incoherence','cahier','remed','duo'].filter(t=>sig[t]).map(t=>this.signalRowHTML(Object.assign({uid,type:t},sig[t]), true)).join('');
     return `<div class="fiche-head">${dot}<h3>${esc(s.name||uid)}</h3><span class="meta">${mode} · ${esc(where)}</span>
         <span class="sig-btns" style="margin-left:auto"><button class="btn ghost" title="Voir son écran en direct, docké à droite — le panneau reste utilisable" onclick="MIRROR.open('${esc(uid)}')">👁 écran</button>
+        <button class="btn ghost" title="Ouvre le panneau d'aide « ? » sur son écran" onclick="APP.openHelpFor('${esc(uid)}');toast('Aide ouverte sur son écran.')">❓ aide</button>
         <button class="btn ghost" title="Rend la dernière étoile décomptée sur sa séance en cours" onclick="APP.rendreEtoile('${esc(uid)}')">⭐ rendre</button></span></div>
       ${notifs?`<div class="sui-notifs" style="padding:0 0 8px">${notifs}</div>`:''}
       ${this.cardDetail(uid, s, 2)}
@@ -7382,9 +7449,6 @@ const PROF = {
         }).join('')+'</div>'; }
       h+=remedH+`<div class="sui-all">${rows}</div>
         <div class="sui-actions">
-          <button class="btn ghost" title="Voir son écran en direct (miroir), sans le déranger" onclick="event.stopPropagation();MIRROR.open('${esc(uid)}')">👁 écran</button>
-          <button class="btn ghost" title="Ouvre le panneau d'aide « ? » sur son écran" onclick="event.stopPropagation();APP.openHelpFor('${esc(uid)}');toast('Aide ouverte sur son écran.')">❓ aide</button>
-          <button class="btn ghost" title="Rend la dernière étoile décomptée sur sa séance en cours (aide retirée du compte d'autonomie)" onclick="event.stopPropagation();APP.rendreEtoile('${esc(uid)}')">⭐ rendre</button>
           <button class="btn ghost" title="Renvoie l'élève sur son autocorrection (utile s'il s'est sur-évalué)" onclick="event.stopPropagation();APP.renvoyerAutocorr('${esc(uid)}','${esc(s.current||'')}')">↻ autocorrection</button>
           </div><details class="adv"><summary>avancé — gestes rares (blocage, remise à zéro, déconnexion)</summary><div class="sui-actions">
           ${bloque
@@ -8014,6 +8078,8 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"eq", date:"2026-06-12", version:"eq", eleve:"", interne:"NETTOYAGE ERGONOMIE du panneau (audit en situation, 7 recos validees Paul). (1) Defaut intelligent : cours actif → onglet SUIVI a l'ouverture (avant : l'EDITEUR en pleine seance a chaque reload de maj) ; sinon dernier onglet memorise (wt_prof_tab via go()). (2) Reordonnancement : bandeau cours COMPACT en tete (● classe · fin hh:mm · reste N min · +10 · ■ Cloturer) → GRILLE → file → bilans → volets replies (fini la classe sous la ligne de flottaison). (3) Signaux → FILE D'ATTENTE compacte une ligne, triee du plus ancien au plus recent (equite des mains levees), ✓ vu seul — le traitement riche vit dans les cartes. (4) = INVENTAIRE #1 : ❄ → volet replie « Gestes d'urgence » avec ⛔ Tout figer maintenant (gel+lock pre-regles) + Reprendre + reglage fin aux coches. (5) Remediation reployee en volet. (6) Fiche dedupliquee : cardDetail perd 👁/⭐ (l'en-tete les porte), l'en-tete gagne ❓ aide. (7) Carte : micro-indicateur x/N · M min (engineFor cache). CSS cours-band/sig-line/sui-adv." },
+  { id:"ep", date:"2026-06-12", version:"ep", eleve:"", interne:"Lot ep — rapport de test miroir (instance extension). (1) ETIQUETTE : prompt() natif GELAIT le panneau (boite bloquante, reload force) → askLabel popover inline non bloquant (Enter/Echap/clic dehors), aux 2 sites (panel eleve + miroir). (2) MARQUES EN DIRECT : echo LOCAL du geste prof (APP._gestCore factorise, applique au moteur du miroir avant l'envoi → couleur instantanee) + en exploration, _mergeGestes fait arriver les marques de l'eleve en continu (seuls les gestes, l'exploration est preservee) + GARDE : en exploration sur une AUTRE seance que celle de l'eleve, le geste reel est BLOQUE avec explication (sinon corruption d'indices de mots). (3) Aa retire de la barre du miroir (il ne reglait rien — la taille est PAR ecran eleve). (4) DICO : le balayage du miroir ne routait pas l'outil dico → silence total ; route (P.openDico expose, consultation LOCALE jamais transmise) ; cleanDef coupait au DEBUT du francais mais pas a la FIN → etymologie/anagrammes/AUTRES LANGUES passaient (les « definitions sans rapport ») : sections parasites sautees, stop net a la langue suivante. (5) glossaire ouvre → outil dico desactive (etats coherents). (6) renderSoon : throttle 4 s + garde pointeur 1,5 s (les cibles de clic ne bougent plus en rafale de heartbeats)." },
   { id:"eo", date:"2026-06-12", version:"eo", eleve:"", interne:"Lots el-em-en-eo. EL poste prof persistant : wt_prof_poste re-authentifie ET rouvre le panneau au boot (bootResume, reload de maj/F5 compris) ; sortie EXPLICITE seule (bouton « Rendre ce poste aux eleves », Reglages). EM split miroir : l'oeil ne ferme plus le panneau — body.mirror-split (panneau 55vw gauche, miroir docke 45vw droite, AUCUN voile, les deux interactifs simultanement ; <1000px : plein ecran classique). EN grille : le Suivi devient une grille de cartes (sui-grid), notifs DEVELOPPEES dans la carte avec leurs boutons (signalRowHTML factorise, date+heure), recherche instantanee par initiales (data-search, filtre par display sans re-render, valeur preservee) ; clic carte → FICHE « instant T » (ficheHTML : en-tete + actions 👁/⭐ + notifs + cardDetail eprouve + journal de l'eleve), mini-grille TOTALE a gauche (filtre REINITIALISE a l'ouverture — jamais bloque sur la recherche) ; trio dangereux (bloquer/reinit/deconnecter) replie en details « avance » (inventaire #2 absorbe) ; section Signaux : noms cliquables → fiche. EO journal : logJournal sur les 5 voies (✓ vu, coup de pouce ouvert (lequel), section du ? pointee (laquelle), convocation, rappel (texte), etoile rendue) → journal/{chap} (SURVIT a la cloture), vue repliee dans le Suivi (80 dernieres, noms cliquables) + section « ses interventions » dans chaque fiche. cycleCard/depth obsoletes (clic=fiche)." },
   { id:"ek", date:"2026-06-12", version:"ek", eleve:"", interne:"REFONTE MIROIR (3 demandes terrain). (1) EXPLORATION SANDBOX : APP.panel('__mirror') route desormais vers le PANEL REEL (le moteur du miroir etait DEJA en lecture seule via roStore — c'etait le proxy _pilot qui neutralisait reopenAutocorr/openHelp/validateAutocorr/etc. et teleportait les clics chez l'eleve) → toute la navigation marche LOCALEMENT : onglets, sous-onglets, questions, aides, etoiles fictives, revoir la correction — zero imputation par construction. Proxy _pilot SUPPRIME. 4 guards !P._mirrorLane sur les ecritures de signaux du panel (duo/incoherence/cahier/bilan ; aide deja gardee ; beat('__mirror') inoffensif : panel inexistant). (2) DIRECT ↔ EXPLORATION : suivi en direct a l'ouverture ; 1er clic (hors outil) → exploration (hydrate suspendu, bandeau 🧪 + « revenir au direct » qui re-hydrate du dernier snapshot) — corrige aussi la regression de navigation (le proxy ne connaissait pas la nouvelle UI). (3) MARQUES PROF : sendGest porte origin:'prof' → applyGeste prefixe la couleur ('Pj'…) + label « Prof : … » ; rendu hlCls : meme couleur + .hl-prof (lisere pointille dore) + title « Marque du professeur » ; AUCUN comptage automatique des marques n'existe (gestes obligatoires = autocorrection manuelle) donc rien a exclure. Doc volet pilotage mise a jour." },
   { id:"ej", date:"2026-06-12", version:"ej", eleve:"Mise au point sur les etoiles : TOUTE aide que j'ouvre moi-meme sur ton ecran est gratuite, tous paliers — sans exception. Si une etoile t'a ete retiree aujourd'hui apres mon aide, signale-le moi : je peux te la rendre.", interne:"BUG TERRAIN CRITIQUE (eleves : « l'aide gratuite retire une etoile ») : la limite « une question orale par seance » refusait EN SILENCE le statut gratuit a la 2e main levee d'une meme seance, pendant que l'ouverture integrale (eh1) s'executait → etoile decomptee a l'insu du prof ET de l'eleve. REGLE ej : toute aide ouverte par le prof est gratuite, tous paliers, SANS LIMITE (st.aideProfs LISTE, compat ancienne cle aideProf migree) ; justice retroactive a l'ouverture (si l'aide etait deja decomptee, elle est retiree de aidesUsed) ; bouton « ⭐ rendre » au 2e cran de la fiche eleve (act rendreEtoile a distance → moteur rendreEtoile : pop du dernier aidesUsed, log etoile-rendue) pour reparer les eleves touches aujourd'hui. Textes mis a jour (? §13, volet etoiles, lexique). Audit canaux : starsOf/autonomie/bilans lisent TOUS aidesUsed (un seul canal de verite, sain)." },
