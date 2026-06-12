@@ -1664,6 +1664,7 @@ function AppProf(p){
       h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput},"Commencer"),
       h("div",{style:{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}},
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee",i.files[0],function(){window.location.reload()})};i.click()}},"📥 Importer global",ifo("Réinjecte un snapshot global (toutes les dictées) dans la base. Écrase les données actuelles de correction_dictee.")),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee","correction_dictee_complet")}},"\ud83d\udcf8 Snapshot global",ifo("T\u00e9l\u00e9charge toutes les donn\u00e9es de correction dans un fichier. Tu peux me le partager pour que j\u2019analyse les r\u00e9sultats.")),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){
           db.ref("correction_dictee").once("value",function(snap){
@@ -1948,6 +1949,7 @@ function CorrScreen(p){
 
         h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee/"+p.dicteeId,"dictee_"+p.dicteeId)}},"\ud83d\udcf8 Snapshot",ifo("T\u00e9l\u00e9charge les donn\u00e9es de cette dict\u00e9e dans un fichier.",{below:true,right:true})),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee/"+p.dicteeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4 Restaurer",ifo("Recharge les donn\u00e9es d\u2019une dict\u00e9e depuis un fichier sauvegard\u00e9.",{below:true,right:true})),
+        h("button",{className:"btn-sm btn-ghost",style:{color:"#b00"},onClick:function(){var t=(p.data&&p.data.config&&p.data.config.title)||p.dicteeId;if(confirm("Supprimer définitivement la dictée : "+t+" ? (texte, barème ET résultats). Exporte un snapshot avant. Irréversible."))db.ref("correction_dictee/"+p.dicteeId).remove().then(function(){alert("Dictée supprimée.");if(p.onBack)p.onBack()})}},"🗑️ Supprimer cette dictée",ifo("Supprime entièrement cette dictée. Exporte un snapshot avant si tu veux la conserver.",{below:true,right:true})),
         h("button",{className:"btn-sm btn-ghost",onClick:p.onBack},"\u2190 Retour")
       )
     ),
