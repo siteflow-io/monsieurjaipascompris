@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05es">
+<meta name="app-version" content="2026-06-05et">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -213,7 +213,8 @@
   .sui-notif{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.74rem;border:1px solid var(--gold-deep);background:rgba(251,191,36,.08);border-radius:8px;padding:6px 8px}
   .sui-notif .sig-btns{margin-left:auto;display:flex;gap:5px;align-items:center}
   .sui-notif .sig-when{color:var(--muted);font-size:.66rem;white-space:nowrap}
-  .rech-in{width:190px;font-size:.78rem;padding:5px 9px;margin-left:10px}
+  .rech-bar{display:flex;gap:6px;align-items:center;margin:0 0 8px}
+  .rech-in{flex:1;font-size:.82rem;padding:7px 11px}
   .fiche-layout{display:flex;gap:14px;align-items:flex-start}
   .fiche-mini{flex:0 0 215px;display:flex;flex-direction:column;gap:6px;max-height:72vh;overflow:auto}
   .fiche-mini .fm{display:flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:.76rem;background:rgba(255,255,255,.02)}
@@ -7161,8 +7162,7 @@ const PROF = {
     // « Aucune classe » (choix explicite) OU rien d'actif → tableau neutre : on ne lit ni présences ni alertes d'aucune classe.
     if(APP.classeFiltreSeg()==='__none' || !segAff){
       return APP.classeSelectHTML(true)
-        + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
-        + `<div class="prof-sec"><div class="d">Aucune classe sélectionnée : le tableau de bord est neutre, aucune présence ni alerte d'une classe n'est lue. Choisis une classe ci-dessus, ou « Classe en cours (auto) » pour suivre la séance lancée.</div></div>`;
+          + `<div class="prof-sec"><div class="d">Aucune classe sélectionnée : le tableau de bord est neutre, aucune présence ni alerte d'une classe n'est lue. Choisis une classe ci-dessus, ou « Classe en cours (auto) » pour suivre la séance lancée.</div></div>`;
     }
     const nomAff = segAff ? ((APP.knownClasses().find(c=>c.seg===segAff)||{}).nom || segAff) : '';
     const dansClasse = all.filter(s=> s.classeSeg===segAff && present(s));
@@ -7211,13 +7211,13 @@ const PROF = {
         <option value="avancement"${sel('avancement')}>Avancement (à la traîne d'abord)</option>
         <option value="seance"${sel('seance')}>Séance en cours</option>
         <option value="alerte"${sel('alerte')}>Alertes d'abord</option></select>` : '';
-      const rechBox = dansClasse.length>4 ? `<input class="txtin rech-in" placeholder="🔎 initiales…" value="${esc(this._filtre||'')}" title="Tape les initiales ou le début du nom : la grille se réduit en direct" oninput="PROF.filterCards(this.value)">` : '';
+      const rechBox = dansClasse.length>=3 ? `<div class="rech-bar"><input class="txtin rech-in" placeholder="🔎 chercher un élève (initiales ou début du nom)…" value="${esc(this._filtre||'')}" title="La grille se réduit en direct ; vide le champ pour tout revoir" oninput="PROF.filterCards(this.value)">${this._filtre?`<button class="btn ghost" title="Effacer la recherche" onclick="PROF.filterCards('');var i=document.querySelector('.rech-in');if(i)i.value='';">✕</button>`:''}</div>` : '';
       const corps = dansClasse.length
         ? `<div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne · les signaux s'affichent DANS la carte · touche une carte pour la fiche complète</div><div class="sui-grid">${rows}</div>
            <div class="prof-row"><button class="btn ghost" title="Libère ce poste : la progression de l'élève est conservée" onclick="PROF.endSessionFor('${segAff}','${esc(nomAff)}')">Déconnecter ${esc(nomAff)}</button></div>`
         : `<div class="d">Personne de cette classe n'est connecté pour l'instant.</div>`;
-      classeSec=`<div class="prof-sec"><h4>${esc(nomAff)} <span class="meta">· ${dansClasse.length} présent(s)</span>${triBox}${rechBox}</h4>
-        ${corps}
+      classeSec=`<div class="prof-sec"><h4>${esc(nomAff)} <span class="meta">· ${dansClasse.length} présent(s)</span>${triBox}</h4>
+        ${rechBox}${corps}
         <div class="prof-row"><button class="btn ghost" title="Consulte le bilan archivé de la dernière séance close de cette classe" onclick="DASH.openLastArchive('${segAff}')">📂 Ouvrir la dernière session archivée</button></div></div>`;
       }
     }
@@ -7254,7 +7254,6 @@ const PROF = {
           : `<div class="d ok">✓ Tous les bilans écrits ont été vérifiés.</div>`)
       + `</div>`;
     return APP.classeSelectHTML(true)
-      + `<div class="prof-row" style="margin-bottom:10px"><button class="btn primary" onclick="DASH.open()">⛶ Tableau de bord plein écran</button></div>`
       + coursBox + classeSec + signauxBox + bilansBox + freezeBox + remedBox + journalBox + ailleursSec   // eq2 : la GRILLE remonte sous le chrono — fini la classe sous la ligne de flottaison
       + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
@@ -8088,6 +8087,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"et", date:"2026-06-12", version:"et", eleve:"", interne:"et — (1) RECHERCHE par initiales remise EN EVIDENCE : elle existait depuis 'en' mais etait coincee dans le <h4> de la section classe (discrete) et masquee sous 4 eleves ; desormais BARRE DEDIEE (.rech-bar) AU-DESSUS de la grille, seuil abaisse a 3 eleves, placeholder explicite + bouton ✕ pour tout revoir. (2) Bouton « ⛶ Tableau de bord plein ecran » RETIRE (les 2 sites) : la grille de cartes + fiche le remplacent (live redondant). DASH conserve UNIQUEMENT pour les archives figees (openArchive/openLastArchive : revoir une seance passee) — code DASH garde, overlay garde, seul l'acces LIVE disparait." },
   { id:"es", date:"2026-06-12", version:"es", eleve:"", interne:"es — (1) DICO TRANSMIS (revirement demande par Paul, ep le faisait local) : l'outil dico au miroir envoie desormais un sendGest tool:'dico' (mot inclus) → _gestCore branche dico → openDico s'ouvre CHEZ L'ELEVE, et l'echo local l'ouvre au miroir (le prof voit ce que l'eleve voit) ; toast adapte ; la garde seance exploration (ep2) s'applique. (2) ETIQUETTE prompt() residuel cote eleve : AUCUN prompt dans le code (verifie : 2 occurrences = commentaires) — c'est une VERSION ANTERIEURE a ep sur la tablette : publier + recharger cote eleve regle le probleme." },
   { id:"er", date:"2026-06-12", version:"er", eleve:"", interne:"Fiche eleve REORGANISEE (wireframe valide, ~540px utiles en split). cardDetail REECRIT (seul appelant : la fiche ; depth ignore ; 4e param notifsHTML) : (1) EN-TETE 1 ligne — nom · mode + TOUTES les actions 👁/❓/⭐/↻ (le ↻ remonte de sui-actions, le « ou » quitte l'en-tete) ; (2) L'INSTANT en premier (.fi-instant) : ▶ titre seance courante · temps · etoiles, ligne d'etats QCM/correction/bilan · x/N · autonomie · QCM chap, diagnostic parcoursPhrases + ⏱ itemTimes ; hors seance : « Sur la carte » + stats ; (3) A TRAITER : notifs developpees inserees par la fiche en UN exemplaire (sui-sig doublon SUPPRIME) ; (4) AGIR en 4 volets replies : 📣 Rappel (la rap-zone quitte le milieu de fiche), 🧰 Ateliers (remedH), ⚙ avance (trio), 📜 ses interventions (DEPLACE de ficheHTML vers cardDetail) ; (5) SON PARCOURS en pied : pastilles .fi-chip (✓/▶/…/· + titre court 16c + etoiles + ⚠ incoherence, detail complet au title : QCM, temps, rafale, dico→gloss) — les sui-prow verbeux supprimes ; (6) split etroit : mini-grille → RAIL 74px (initiales .ini, noms masques, title=nom complet)." },
   { id:"eq", date:"2026-06-12", version:"eq", eleve:"", interne:"NETTOYAGE ERGONOMIE du panneau (audit en situation, 7 recos validees Paul). (1) Defaut intelligent : cours actif → onglet SUIVI a l'ouverture (avant : l'EDITEUR en pleine seance a chaque reload de maj) ; sinon dernier onglet memorise (wt_prof_tab via go()). (2) Reordonnancement : bandeau cours COMPACT en tete (● classe · fin hh:mm · reste N min · +10 · ■ Cloturer) → GRILLE → file → bilans → volets replies (fini la classe sous la ligne de flottaison). (3) Signaux → FILE D'ATTENTE compacte une ligne, triee du plus ancien au plus recent (equite des mains levees), ✓ vu seul — le traitement riche vit dans les cartes. (4) = INVENTAIRE #1 : ❄ → volet replie « Gestes d'urgence » avec ⛔ Tout figer maintenant (gel+lock pre-regles) + Reprendre + reglage fin aux coches. (5) Remediation reployee en volet. (6) Fiche dedupliquee : cardDetail perd 👁/⭐ (l'en-tete les porte), l'en-tete gagne ❓ aide. (7) Carte : micro-indicateur x/N · M min (engineFor cache). CSS cours-band/sig-line/sui-adv." },
