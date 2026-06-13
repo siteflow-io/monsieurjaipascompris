@@ -499,6 +499,13 @@ body.admin-mode .admin-only { display: block; }
 .mjpc-act:hover{background:rgba(255,255,255,.1)}
 .mjpc-act.primary{background:rgba(110,231,183,.16);border-color:rgba(110,231,183,.5);color:#6ee7b7}
 .mjpc-act.danger{background:rgba(248,113,113,.16);border-color:rgba(248,113,113,.55);color:#f87171}
+
+.cm-lazy{margin:1px 0}
+.cm-lazy>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:.86rem;list-style:none;border-bottom:1px solid rgba(255,255,255,.04)}
+.cm-lazy>summary::-webkit-details-marker{display:none}
+.cm-lazy>summary::before{content:'\25b8';color:rgba(255,255,255,.35);margin-right:6px;display:inline-block;font-size:.7rem;transition:transform .12s}
+.cm-lazy[open]>summary::before{transform:rotate(90deg)}
+.cm-lazy-body{padding:2px 0 4px 16px;border-left:1px solid rgba(255,255,255,.06)}
 </style>
 </head>
 <body>
@@ -2205,9 +2212,42 @@ function _renderNodeBody(node,v){
   if(node==='codes')return '<table class="cm-sub-table"><tbody>'+keys.map(function(k){var e=v[k]||{};return '<tr><td>'+escapeHtml(String(e.name||k))+'</td><td class="cm-codeval">'+escapeHtml(String(e.code||'?'))+'</td></tr>';}).join('')+'</tbody></table>';
   if(node==='site')return keys.map(function(lvl){var ch=(v[lvl]&&v[lvl].chapitres)||[];var arr=Array.isArray(ch)?ch:Object.keys(ch||{}).map(function(kk){return ch[kk];});var t=arr.filter(function(c){return c&&typeof c==='object';}).map(function(c){return '<li>'+escapeHtml(String(c.titre||c.title||'(sans titre)'))+'</li>';}).join('');return '<div class="cm-sub-h">'+escapeHtml(String(lvl))+' \u2014 '+arr.length+' chapitres</div><ul class="cm-ul">'+t+'</ul>';}).join('');
   if(node==='classes')return keys.map(function(k){var el=v[k];var arr=Array.isArray(el)?el:((el&&Array.isArray(el.eleves))?el.eleves:[]);return '<details class="cm-sub"><summary>'+escapeHtml(String(k))+' \u2014 '+arr.length+' \u00e9l\u00e8ves</summary><div class="cm-items">'+arr.map(function(n){return '<span class="cm-chip">'+escapeHtml(String(n))+'</span>';}).join('')+'</div></details>';}).join('');
-  return keys.map(function(k){return '<div class="cm-entry"><span class="cm-elabel">'+escapeHtml(String(_entryLabel(k,v[k])))+'</span><span class="cm-eeff">'+_entryEffectif(v[k])+'</span></div>';}).join('');
+  return keys.map(function(k){return _pvRow(k,v[k]);}).join('');
 }
-function _hubDetailHtml(data){
+var _PV_DATA=null,_PV_NODES={},_PV_SEQ=0;
+function _pvInit(d){_PV_DATA=d;_PV_NODES={};_PV_SEQ=0;}
+function _pvRegister(v){var id=++_PV_SEQ;_PV_NODES[id]=v;return id;}
+function _leafStr(v){return v===null?'null':(v===''?'(vide)':String(v));}
+function _pvRow(k,val){
+  var label=escapeHtml(String(_entryLabel(k,val)));
+  if(val&&typeof val==='object'&&(Array.isArray(val)?val.length:Object.keys(val).length)){
+    var id=_pvRegister(val);
+    return '<details class="cm-lazy" data-id="'+id+'"><summary><span class="cm-elabel">'+label+'</span><span class="cm-eeff">'+_entryEffectif(val)+'</span></summary><div class="cm-lazy-body"></div></details>';
+  }
+  return '<div class="cm-entry"><span class="cm-elabel">'+label+'</span><span class="cm-eeff">'+escapeHtml(_leafStr(val))+'</span></div>';
+}
+function _pvChildrenHtml(v){
+  if(v===null||typeof v!=='object')return '<div class="cm-leaf">'+escapeHtml(_leafStr(v))+'</div>';
+  var keys=Array.isArray(v)?v.map(function(_x,i){return i;}):Object.keys(v);
+  var cap=50,more=keys.length-cap;
+  var html=keys.slice(0,cap).map(function(k){return _pvRow(String(k),v[k]);}).join('');
+  if(more>0)html+='<div class="cm-leaf">\u2026 +'+more+' de plus</div>';
+  return html||'<div class="cm-leaf">vide</div>';
+}
+function _collapseDescendants(d){Array.prototype.forEach.call(d.querySelectorAll('details[open]'),function(c){c.open=false;});}
+function _pvBindLazy(root){
+  Array.prototype.forEach.call(root.querySelectorAll('details.cm-lazy:not([data-bound])'),function(d){
+    d.setAttribute('data-bound','1');
+    d.addEventListener('toggle',function(){
+      if(d.open&&!d.getAttribute('data-loaded')){
+        d.setAttribute('data-loaded','1');
+        var body=d.querySelector('.cm-lazy-body');
+        if(body){body.innerHTML=_pvChildrenHtml(_PV_NODES[d.getAttribute('data-id')]);_pvBindLazy(body);}
+      }
+    });
+  });
+}
+function _hubDetailHtml(data){_pvInit(data);
   var info=_describeHub(data);
   if(info.length===0)return '<div class="cm-leaf">Hub vide.</div>';
   return '<div class="cm-nodes">'+info.map(function(n){var v=data[n.key];var unit=NODE_UNIT[n.key]||'entr\u00e9es';return '<details class="cm-node"><summary><span class="cm-nlabel">'+escapeHtml(n.label)+'</span><span class="cm-nmeta">'+n.count+' '+unit+' \u00b7 '+_humanSize(n.size)+'</span></summary><div class="cm-nbody">'+_renderNodeBody(n.key,v)+'</div></details>';}).join('')+'</div>';
@@ -2222,10 +2262,10 @@ function _diffHub(fileData,current){
 /* --- Modale console --- */
 function _showConsoleModal(title,bodyHtml,actions){
   var ov=document.getElementById('console-modal');
-  if(!ov){ov=document.createElement('div');ov.id='console-modal';document.body.appendChild(ov);}
-  var btns=actions.map(function(a,i){return '<button class="cm-btn '+(a.cls||'')+'" data-i="'+i+'">'+escapeHtml(a.label)+'</button>';}).join('');
+  if(!ov){ov=document.createElement('div');ov.id='console-modal';document.body.appendChild(ov);ov.addEventListener('toggle',function(e){var t=e.target;if(t&&t.tagName==='DETAILS'&&!t.open)_collapseDescendants(t);},true);}
+  var btns=actions.map(function(a,i){return '<button class="cm-btn '+(a.cls||'')+'"'+(a.title?' title="'+escapeHtml(a.title)+'"':'')+' data-i="'+i+'">'+escapeHtml(a.label)+'</button>';}).join('');
   ov.innerHTML='<div class="cm-box"><div class="cm-title">'+escapeHtml(title)+'</div><div class="cm-body">'+bodyHtml+'</div><div class="cm-actions">'+btns+'</div></div>';
-  ov.style.display='flex';
+  ov.style.display='flex';_pvBindLazy(ov);
   Array.prototype.forEach.call(ov.querySelectorAll('.cm-btn'),function(b){b.onclick=function(){var i=+b.getAttribute('data-i');var keep=actions[i].onclick&&actions[i].onclick();if(!keep)_closeConsoleModal();};});
 }
 function _closeConsoleModal(){var ov=document.getElementById('console-modal');if(ov)ov.style.display='none';}
@@ -2271,6 +2311,7 @@ function _importPreview(fileData,current,fname){
     +'<div class="cm-modes"><b>Compléter</b> = ajoute / met à jour ce qui est dans le fichier, garde le reste.<br><b>Remplacer tout</b> = le hub devient exactement le fichier (voir l\u2019avertissement ci-dessus).<br><span class="cm-note">Dans les deux cas, une archive datée de l\u2019état actuel est téléchargée AVANT d\u2019écrire.</span></div>';
   _showConsoleModal('Importer — aperçu',body,[
     {label:'Annuler',cls:'ghost'},
+    {label:'⬇ Diagnostic (.json pour Claude)',cls:'ghost',title:'Flux : 1) clic → un .json complet se télécharge (structure + données réelles + diff + consignes d’analyse). 2) Envoie-le à Claude. 3) Claude renvoie le rapport des zones à lisser, bugs et dangers. Aucune relecture de ta part.',onclick:function(){_exportDiagnostic(fileData,diff,'import-preview',current);return true;}},
     {label:'Compléter',cls:'warn',onclick:function(){_doImport(fileData,current,'patch',fname);_closeConsoleModal();}},
     {label:'Remplacer tout',cls:'danger',onclick:function(){_doImport(fileData,current,'put',fname);_closeConsoleModal();}}
   ]);
@@ -2288,6 +2329,68 @@ function _doImport(fileData,current,mode,fname){
 }
 
 /* --- Rendu onglet Archives --- */
+/* ===== CONSOLE MJPC — diagnostic factuel (à déléguer à Claude) ===== */
+
+var _DIAG_PROMPT=[
+"INSTRUCTIONS D'ANALYSE (destinées a Claude, pas a l'utilisateur).",
+"Ce fichier est un diagnostic complet d'un instantane du hub MJPC (Firebase Realtime Database).",
+"Il contient : _meta (contexte), diff (comparaison avec le hub actuel si c'est un apercu d'import), analysis (FAITS de structure par noeud, deja calcules mais NON interpretes), et data (le contenu integral et reel).",
+"",
+"TA MISSION : analyser sur les FAITS (champs data + analysis), sans traiter les drapeaux (flags) comme des conclusions. Produire un rapport couvrant :",
+"1. MELANGES DE GENRES : un noeud dont les entrees n'ont pas toutes la meme forme (ex : /codes contenant a la fois des objets {code,name} d'eleves et des chaines nues de session de debat).",
+"2. VALEURS HORS-FORME : entrees sans les champs attendus, chaine la ou un objet est attendu, cles au format atypique.",
+"3. DANGERS : donnees qui seraient ecrasees ou perdues a l'import ; orphelins (resultats referencant un eleve ou une classe absents) ; doublons ; collisions de codes.",
+"4. ZONES A LISSER : incoherences de format entre noeuds (cle en nom brut vs slug, conventions de san() divergentes), noeuds qui melangent deux usages et devraient etre separes.",
+"5. BUGS potentiels reveles par les donnees.",
+"",
+"POUR CHAQUE POINT : cite le noeud et la cle exacts, l'effectif concerne, et un correctif concret. VERIFIE chaque flag contre data avant de l'affirmer et signale les faux positifs. Distingue clairement ce qui est URGENT (perte/corruption) de ce qui est COSMETIQUE (a lisser plus tard).",
+"Ne recopie pas de donnees nominatives d'eleves au-dela du strict necessaire pour localiser un probleme.",
+"Termine par une liste ordonnee : d'abord les dangers, puis les zones a lisser, puis le cosmetique."
+].join("\n");
+
+function _formSig(v){
+  if(v===null)return 'null';
+  if(Array.isArray(v))return 'array['+(v.length?typeof v[0]:'vide')+']';
+  if(typeof v==='object')return 'object{'+Object.keys(v).sort().join(',')+'}';
+  return typeof v;
+}
+function _analyzeNode(key,v){
+  var node={key:key, valueType:(Array.isArray(v)?'array':(v===null?'null':typeof v))};
+  if(Array.isArray(v)){ node.count=v.length; node.itemForms=_tally(v.map(_formSig)); node.samples=v.slice(0,3); return node; }
+  if(v&&typeof v==='object'){
+    var keys=Object.keys(v); node.count=keys.length;
+    var forms={};
+    keys.forEach(function(ek){var sig=_formSig(v[ek]); if(!forms[sig])forms[sig]={form:sig,count:0,keys:[],samples:[]}; forms[sig].count++; if(forms[sig].keys.length<25)forms[sig].keys.push(ek); if(forms[sig].samples.length<3)forms[sig].samples.push({key:ek,value:v[ek]});});
+    var arr=Object.keys(forms).map(function(f){return forms[f];}).sort(function(a,b){return b.count-a.count;});
+    node.dominantForm=arr.length?arr[0].form:null;
+    node.forms=arr;
+    node.flags=[];
+    if(arr.length>1)node.flags.push('formes multiples ('+arr.length+') : '+arr.map(function(f){return f.form+' x'+f.count;}).join(' | '));
+    arr.forEach(function(f){ if(/^(string|number|boolean|null)$/.test(f.form)) node.flags.push('valeurs scalaires comme entrees ('+f.count+') : ex cles '+f.keys.slice(0,5).join(', ')); });
+    if(key==='codes')keys.forEach(function(ek){var e=v[ek]; if(!(e&&typeof e==='object'&&e.code))node.flags.push('code sans champ {code} : '+ek+' = '+JSON.stringify(e).slice(0,60)); });
+    return node;
+  }
+  node.count=1; node.value=v; return node;
+}
+function _tally(a){var t={};a.forEach(function(x){t[x]=(t[x]||0)+1;});return t;}
+
+function _buildDiagnostic(data, diff, mode, current){
+  var analysis=Object.keys(data||{}).map(function(k){return _analyzeNode(k,data[k]);});
+  return {
+    _prompt:_DIAG_PROMPT,
+    _meta:{ generatedAt:new Date().toISOString(), tool:'mjpc-console-diagnostic', version:1, mode:mode||'snapshot',
+            fichierNoeuds:Object.keys(data||{}), hubActuelNoeuds:current?Object.keys(current):null,
+            tailleData:JSON.stringify(data||{}).length },
+    diff:diff||null,
+    analysis:analysis,
+    data:data
+  };
+}
+function _exportDiagnostic(data, diff, mode, current){
+  var diag=_buildDiagnostic(data, diff, mode, current);
+  var name='mjpc-diagnostic_'+_tsName('x').replace('mjpc-hub_x_','').replace('.json','')+'.json';
+  _saveJSON(diag, name).then(function(ok){ if(ok)_logBackup({ts:Date.now(),date:_nowStr(),kind:'diagnostic',filename:name,nodes:diag.analysis.length,size:_humanSize(JSON.stringify(diag).length)}); });
+}
 function _profSectionArchives(){
   var j=_readBackupJournal();
   var rows = j.length
@@ -2295,7 +2398,7 @@ function _profSectionArchives(){
     : '<tr><td colspan="5" class="cm-empty">Aucune sauvegarde enregistrée pour l\u2019instant.</td></tr>';
   return '<h2>Archives</h2>'
     +'<div class="tprof-section-sub">Télécharge une sauvegarde complète du hub (classes, élèves, codes, chapitres, dictées, corrections, débats…), puis range le fichier sur ta clé USB. L\u2019import se fait depuis <b>Configuration</b>.</div>'
-    +'<button class="mjpc-act primary" onclick="_exportHub()">\u2b07 Exporter une sauvegarde complète</button>'
+    +'<button class="mjpc-act primary" title="Sauvegarde compl\u00e8te du hub (sans risque). Le geste inverse, Importer, se trouve dans Configuration \u2192 Zone dangereuse." onclick="_exportHub()">\u2b07 Exporter une sauvegarde complète</button>'
     +'<h3 class="cm-h3">Journal des sauvegardes <span class="cm-h3note">(sur cet ordinateur)</span></h3>'
     +'<table class="cm-journal"><thead><tr><th>Date</th><th>Type</th><th>Fichier</th><th>Nœuds</th><th>Taille</th></tr></thead><tbody>'+rows+'</tbody></table>';
 }
@@ -2306,7 +2409,7 @@ function _profSectionConfig(){
     +'<div class="tprof-info-row"><span class="tir-label">Firebase</span><span class="tir-value"><code>'+escapeHtml(FIREBASE_BASE.replace('https://','').split('.')[0])+'</code></span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Notifications ntfy.sh</span><span class="tir-value">'+ntfyLine+'</span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Niveaux bloqu\u00e9s</span><span class="tir-value">'+(BLOCKED_LEVELS.join(', ')||'aucun')+'</span></div>'
-    +'<div class="tprof-info-row"><span class="tir-label">Codes prof</span><span class="tir-value">'+PROF_CODES.length+' configur\u00e9'+(PROF_CODES.length>1?'s':'')+'</span></div>'+'<div class="danger-zone"><div class="dz-title">\u26a0 Zone dangereuse</div><div class="dz-sub">Importer un fichier de sauvegarde peut \u00e9craser les donn\u00e9es en ligne. Une archive dat\u00e9e de l\u2019\u00e9tat actuel est t\u00e9l\u00e9charg\u00e9e automatiquement AVANT toute \u00e9criture.</div><button class="mjpc-act danger" onclick="_importHubStart()">\u2b06 Importer un fichier\u2026</button></div>';
+    +'<div class="tprof-info-row"><span class="tir-label">Codes prof</span><span class="tir-value">'+PROF_CODES.length+' configur\u00e9'+(PROF_CODES.length>1?'s':'')+'</span></div>'+'<div class="danger-zone"><div class="dz-title">\u26a0 Zone dangereuse</div><div class="dz-sub">Importer un fichier de sauvegarde peut \u00e9craser les donn\u00e9es en ligne. Une archive dat\u00e9e de l\u2019\u00e9tat actuel est t\u00e9l\u00e9charg\u00e9e automatiquement AVANT toute \u00e9criture.</div><button class="mjpc-act danger" title="Restaure ou compl\u00e8te le hub depuis une sauvegarde. Pour en cr\u00e9er une au pr\u00e9alable, va dans Archives \u2192 Exporter." onclick="_importHubStart()">\u2b06 Importer un fichier\u2026</button></div>';
 }
 function _profSectionPresence(){
   return '<h2>Pr\u00e9sence live</h2>'
