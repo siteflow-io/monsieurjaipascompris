@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05ex">
+<meta name="app-version" content="2026-06-05ey">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -6877,7 +6877,7 @@ const PROF = {
   _saved:false, _saveTimer:null,
   touch(){ this._saved=false; const st=$("saveState"); if(st) st.textContent="· enregistrement…";
     const st2=$("edSaveState"); if(st2) st2.textContent="· enregistrement…";
-    if(this._edId && $("edFrame")) this._edPreviewSoon();   // ex : la feuille suit l'édition en direct
+    if(this._edId && $("edFrame")) this._edPreviewSoon(this._edZone||null);   // ex/ey : la feuille suit l'édition en direct, zone modifiée pulsée
     clearTimeout(this._saveTimer); this._saveTimer=setTimeout(()=>this.saveCurrent(),700); },
   saveCurrent(){ if(!CHAPTER.meta||!CHAPTER.meta.id) return; const err=validateChapter(CHAPTER);
     chaptersStore.saveOne(CHAPTER.meta.id, CHAPTER); LIBRARY[CHAPTER.meta.id]=JSON.parse(JSON.stringify(CHAPTER));
@@ -7137,22 +7137,24 @@ const PROF = {
       +".p-corr{margin:12px 0;padding:8px 12px;border-left:3px solid #176a3a;background:#f0f6f1;border-radius:0 6px 6px 0}.p-corr .p-sec{color:#176a3a;border:none;margin-top:0}.p-cq{margin:5px 0;font-size:.95rem}.p-cq b{color:#176a3a}"
       +".p-bilan{margin:12px 0;padding:8px 12px;border:1.5px solid #b8860b;border-radius:6px;page-break-inside:avoid}.p-bilan .p-sec{color:#8a6d0a;border:none;margin-top:0}.p-acquis{margin:4px 0;font-size:.95rem}.p-bcons{margin:4px 0;font-size:.82rem;color:#555;font-style:italic}.p-blines{margin-top:6px}.p-bline{border-bottom:1px solid #bbb;height:20px}"
       +".noprint{margin:26px 0;text-align:center}.noprint button{padding:9px 18px;font-size:1rem;cursor:pointer}"
-      +"@media print{.noprint{display:none}}";
+      +"@media print{.noprint{display:none}}"
+      +".zwrap{border-radius:6px;scroll-margin-top:14px}"
+      +"@keyframes edPulse{0%{box-shadow:0 0 0 3px rgba(212,160,23,.85);background:rgba(212,160,23,.20)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0);background:transparent}}"
+      +".zwrap.pulse{animation:edPulse 5s ease-out forwards}";
     let h='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+esc(m.titre||'Chapitre')+'</title><style>'+css+'</style></head><body>';
     h+='<h1>'+esc(m.titre||'')+'</h1>'+(m.problematique?'<p class="prob">'+esc(m.problematique)+'</p>':'');
+    const pz=opt.pulse||'';   // ey3 : zone à faire pulser dans la feuille (identite/textes/consignes/eval/aides/bilan)
+    const zw=(zone,inner)=>'<div class="zwrap'+(pz===zone?' pulse':'')+'" data-z="'+zone+'">'+inner+'</div>';
     seances.forEach((s,i)=>{ h+='<section class="seance'+(i>0?' brk':'')+'">';
-      h+='<h2>'+(s.rn?esc(s.rn)+' — ':'')+esc(s.titre||'')+(s.ville?' · '+esc(s.ville):'')+'</h2>';
-      if(s.objectif) h+='<div class="obj"><b>Objectif.</b> '+esc(s.objectif)+'</div>';
-      if(opt.textes){ const sup=(s.corps&&s.corps.supports)||[]; if(sup.length){ h+='<h3 class="part">À lire</h3>'+this._prtSupports(sup); } }
-      if(opt.consignes){ h+='<h3 class="part">Travail</h3>'+this._prtConsigne((s.corps&&s.corps.consigne)||[]);
-        if(opt.corrige) h+=this._prtCorrigeCarnet(s); }
-      if(opt.eval && s.evaluation){ h+='<h3 class="part">Évaluation'+(opt.corrige?' (corrigé)':'')+'</h3>'+this._prtItems(s.evaluation.items, opt.corrige);
-        if(opt.corrige) h+=this._prtGrilleQCM(s); }
-      if(opt.aides) h+=this._prtAides(s.aides);
-      if(opt.bilan) h+=this._prtBilan(s);
+      h+=zw('identite','<h2>'+(s.rn?esc(s.rn)+' — ':'')+esc(s.titre||'')+(s.ville?' · '+esc(s.ville):'')+'</h2>'+(s.objectif?'<div class="obj"><b>Objectif.</b> '+esc(s.objectif)+'</div>':''));
+      if(opt.textes){ const sup=(s.corps&&s.corps.supports)||[]; if(sup.length){ h+=zw('textes','<h3 class="part">À lire</h3>'+this._prtSupports(sup)); } }
+      if(opt.consignes){ h+=zw('consignes','<h3 class="part">Travail</h3>'+this._prtConsigne((s.corps&&s.corps.consigne)||[])+(opt.corrige?this._prtCorrigeCarnet(s):'')); }
+      if(opt.eval && s.evaluation){ h+=zw('eval','<h3 class="part">Évaluation'+(opt.corrige?' (corrigé)':'')+'</h3>'+this._prtItems(s.evaluation.items, opt.corrige)+(opt.corrige?this._prtGrilleQCM(s):'')); }
+      if(opt.aides) h+=zw('aides',this._prtAides(s.aides));
+      if(opt.bilan) h+=zw('bilan',this._prtBilan(s));
       if(opt.fiches) h+=this._prtFiche(s.fiche4d);
       h+='</section>'; });
-    h+=(preview?'':'<div class="noprint"><button onclick="window.print()">Imprimer</button></div>')+'</body></html>';
+    h+=(preview?(pz?'<script>try{var z=document.querySelector(".zwrap.pulse");if(z)z.scrollIntoView({block:"nearest"});}catch(e){}<\/script>':''):'<div class="noprint"><button onclick="window.print()">Imprimer</button></div>')+'</body></html>';
     return h; },
 
   /* ── onglet SUIVI (présence groupée par classe, multi-poste) ── */
@@ -7952,6 +7954,7 @@ const PROF = {
       <div class="prof-row"><button class="btn primary" title="Enregistre et propage aux tablettes" onclick="PROF.apply()">Appliquer à l'app</button></div>`;
     // ex : éditeur À GAUCHE, aperçu de la FEUILLE imprimable À DROITE — mise à jour en direct à chaque frappe.
     this._edId=id;
+    const _prevForm=document.querySelector('.edit-form'); const _prevScroll=_prevForm?_prevForm.scrollTop:0;   // ey1 : ne plus sauter en haut à chaque clic structurel
     $("profModal").innerHTML=`<div class="print-head"><button class="btn ghost" onclick="PROF.editor()">← Séances</button>
         <h3 style="margin:0 0 0 10px">Séance ${esc(s.id)} <span class="meta" id="edSaveState">${this._saved?'· enregistré ✓':''}</span></h3>
         <span style="margin-left:auto"><button class="btn ghost" title="Voir la feuille en grand / options d'impression" onclick="PROF.printView('${esc(id)}')">🖨 Imprimer cette séance</button></span></div>
@@ -7959,16 +7962,20 @@ const PROF = {
         <div class="print-side edit-form">${form}</div>
         <div class="print-preview"><iframe id="edFrame" title="Aperçu de la feuille (mise à jour en direct)"></iframe></div>
       </div>`;
+    const nf=document.querySelector('.edit-form'); if(nf && _prevScroll) nf.scrollTop=_prevScroll;   // ey1 : restaure la position exacte
+    this._edPulse=this._edZone||null; this._edZone=null;   // ey3 : pulser la zone touchée même quand l'action a reconstruit l'éditeur
     this.refreshEditPreview();
   },
   // ex : régénère l'aperçu feuille de la séance en cours d'édition (réutilise le moteur d'impression, débounced)
   refreshEditPreview(){ const fr=$("edFrame"); if(!fr||!this._edId) return;
-    let html; try{ html=this.chapterPrintHTML(this._edId, { scope:this._edId, textes:true, consignes:true, eval:true, corrige:true, aides:true, bilan:true, fiches:false }, true); }
+    let html; try{ html=this.chapterPrintHTML(this._edId, { scope:this._edId, textes:true, consignes:true, eval:true, corrige:true, aides:true, bilan:true, fiches:false, pulse:this._edPulse }, true); }
     catch(e){ html='<!doctype html><body style="font-family:serif;padding:20px;color:#a33">Aperçu impossible : '+esc(e.message)+'</body>'; }
     fr.srcdoc=html; },
-  _edPreviewSoon(){ clearTimeout(this._edPrevT); this._edPrevT=setTimeout(()=>this.refreshEditPreview(), 450); },   // ne pas régénérer à CHAQUE caractère
-  setField(id,f,v){ this.seance(id)[f]=v; this.touch(); },
-  setConsigne(id,v){ const t=v.trim();
+  _edPreviewSoon(zone){ if(zone) this._edPulse=zone; clearTimeout(this._edPrevT);
+    this._edPrevT=setTimeout(()=>this.refreshEditPreview(), 140); },   // ey2 : 140 ms — l'aperçu suit la frappe sans clignoter
+  _z(zone){ this._edZone=zone; return true; },   // ey3 : déclare quelle zone de la feuille pulser au prochain touch()
+  setField(id,f,v){ this.seance(id)[f]=v; this._z('identite'); this.touch(); },
+  setConsigne(id,v){ this._z('consignes'); const t=v.trim();
     if(t.charAt(0)==='['){ try{ const a=JSON.parse(t); if(Array.isArray(a)){ this.seance(id).corps.consigne=a; this.touch(); return; } }catch(e){} }
     this.seance(id).corps.consigne=v; this.touch(); },
   // — éditeur structuré de la consigne (piloté par CONSIGNE_TYPES) —
@@ -8019,7 +8026,7 @@ const PROF = {
   setArete(id,which,v){ this.seance(id).aretes[which]=v||null; this.touch(); },
   setSeuil(id,v){ const ev=this.seance(id).evaluation; const nq=ev.items.filter(isAutoItem).length||1;
     ev.seuil=Math.max(1,Math.min(nq,Number(v)||1)); this.touch(); this.editSeance(id); },
-  setQ(id,qid,f,v){ this.seance(id).evaluation.items.find(x=>x.id===qid)[f]=v; this.touch(); },
+  setQ(id,qid,f,v){ this.seance(id).evaluation.items.find(x=>x.id===qid)[f]=v; this._z('eval'); this.touch(); },
   setPoints(id,itemId,v){ const it=this.seance(id).evaluation.items.find(x=>x.id===itemId); if(!it) return;
     const n=parseFloat(v); it.points=(isFinite(n)&&n>=0)?n:1; this.touch(); },
   toggleSommative(id){ const s=this.seance(id); s.sommative=!s.sommative; this.touch(); this.editSeance(id);
@@ -8032,14 +8039,14 @@ const PROF = {
   setPairCell(id,itemId,pi,side,v){ const it=this._evItem(id,itemId); it.paires=it.paires||[]; it.paires[pi]=it.paires[pi]||{g:'',d:''}; it.paires[pi][side]=v; this.touch(); },
   addPair(id,itemId){ const it=this._evItem(id,itemId); it.paires=it.paires||[]; it.paires.push({g:'',d:''}); this.touch(); this.editSeance(id); },
   delPair(id,itemId,pi){ const it=this._evItem(id,itemId); (it.paires||[]).splice(pi,1); this.touch(); this.editSeance(id); },
-  setChoix(id,qid,ci,v){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix[ci]=v; this.touch(); },
+  setChoix(id,qid,ci,v){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix[ci]=v; this._z('eval'); this.touch(); },
   setBonne(id,qid,ci){ this.seance(id).evaluation.items.find(x=>x.id===qid).bonnes=[ci]; this.touch(); },
   toggleBonne(id,qid,ci,on){ const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.bonnes=q.bonnes||[];
     const k=q.bonnes.indexOf(ci); if(on){ if(k<0) q.bonnes.push(ci); } else if(k>=0) q.bonnes.splice(k,1);
     q.bonnes.sort((a,b)=>a-b); this.touch(); },
-  setMulti(id,qid,on){ const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.multi=!!on;
+  setMulti(id,qid,on){ this._z('eval'); const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.multi=!!on;
     if(!on && q.bonnes.length>1) q.bonnes=[q.bonnes[0]]; if(!q.bonnes.length) q.bonnes=[0]; this.touch(); this.editSeance(id); },
-  addChoix(id,qid){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix.push(""); this.touch(); this.editSeance(id); },
+  addChoix(id,qid){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix.push(""); this._z('eval'); this.touch(); this.editSeance(id); },
   delChoix(id,qid,ci){ const q=this.seance(id).evaluation.items.find(x=>x.id===qid); if(q.choix.length<=2){toast("2 choix minimum.");return;}
     q.choix.splice(ci,1); q.bonnes=(q.bonnes||[]).filter(b=>b!==ci).map(b=>b>ci?b-1:b); if(!q.bonnes.length) q.bonnes=[0];
     this.touch(); this.editSeance(id); },
@@ -8055,11 +8062,11 @@ const PROF = {
     ev.items=ev.items.filter(x=>x.id!==itemId);
     const nq=ev.items.filter(isAutoItem).length; if(ev.seuil>nq) ev.seuil=Math.max(1,nq); this.touch(); this.editSeance(id); },
   addSupport(id){ const s=this.seance(id); s.corps.supports=s.corps.supports||[]; s.corps.supports.push({type:"texte",contenu:""}); this.touch(); this.editSeance(id); },
-  setSupport(id,xi,f,v){ this.seance(id).corps.supports[xi][f]=v; this.touch(); if(f==='type') this.editSeance(id); },
+  setSupport(id,xi,f,v){ this.seance(id).corps.supports[xi][f]=v; this._z('textes'); this.touch(); if(f==='type') this.editSeance(id); },
   delSupport(id,xi){ this.seance(id).corps.supports.splice(xi,1); this.touch(); this.editSeance(id); },
   addAide(id){ const s=this.seance(id); s.aides=s.aides||[]; s.aides.push({id:this.genId("a",s.aides),cible:"seance",paliers:[""]}); this.touch(); this.editSeance(id); },
   delAide(id,aid){ const s=this.seance(id); s.aides=s.aides.filter(a=>a.id!==aid); this.touch(); this.editSeance(id); },
-  setPaliers(id,aid,v){ this.seance(id).aides.find(x=>x.id===aid).paliers=v.split("\n").map(p=>p.trim()).filter(Boolean); this.touch(); },
+  setPaliers(id,aid,v){ this.seance(id).aides.find(x=>x.id===aid).paliers=v.split("\n").map(p=>p.trim()).filter(Boolean); this._z('aides'); this.touch(); },
   addLayer(id){ const f=this.seance(id).fiche4d; f.layers=f.layers||[]; f.layers.push({ic:"•",titre:"",type:"texte",contenu:""}); this.touch(); this.editSeance(id); },
   setLayer(id,li,f,v){ this.seance(id).fiche4d.layers[li][f]=v; this.touch(); },
   delLayer(id,li){ this.seance(id).fiche4d.layers.splice(li,1); this.touch(); this.editSeance(id); },
@@ -8117,6 +8124,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"ey", date:"2026-06-12", version:"ey", eleve:"", interne:"ey — 3 correctifs ergonomie de l'editeur split. (1) SAUT VERS LE HAUT (grave) : les actions structurelles (setMulti, addChoix, blocs, etc.) rappellent editSeance() qui reconstruit tout le panneau → scrollTop de .edit-form sauvegarde AVANT et restaure APRES (meme remede que le panneau prof en ei). (2) LAG : debounce de l'apercu 450→140 ms (suit la frappe sans clignoter). (3) PULSATION : la feuille enveloppe chaque zone (identite/textes/consignes/eval/aides/bilan) dans .zwrap[data-z] ; la zone modifiee recoit .pulse → keyframe edPulse 5s ease-out forwards (halo+fond dores decroissants jusqu'a zero) + scrollIntoview(nearest) ; _edPreviewSoon(zone) memorise this._edPulse, les setters poseront this._edZone. NB : sans zone precisee, pas de pulsation (juste le refresh)." },
   { id:"ex", date:"2026-06-12", version:"ex", eleve:"", interne:"ex — INVENTAIRE #5 : editeur de seance en DEUX PANNEAUX (WYSIWYG). editSeance genere desormais son formulaire dans une variable `form`, puis l'affiche A GAUCHE (.edit-form 46%) avec a DROITE un iframe #edFrame montrant la FEUILLE imprimable (chapterPrintHTML(scope=seance, tout active sauf fiches) — meme moteur que l'apercu du bouton Imprimer). refreshEditPreview() regenere la feuille ; touch() la rafraichit en DIRECT a chaque frappe (debounce 450ms via _edPreviewSoon) → fini l'edition a l'aveugle. En-tete print-head (← Seances, etat d'enregistrement, « 🖨 Imprimer cette seance » qui ouvre printView avec la portee pre-selectionnee). editor() reset _edId (sinon touch cherche un iframe absent hors edition). printView(initialScope) accepte une portee initiale. Responsive <1000px : empile formulaire puis apercu. Aucun changement du moteur d'edition ni de rendu : cablage seulement." },
   { id:"ew", date:"2026-06-12", version:"ew", eleve:"", interne:"ew — PASSE DE TOOLTIPS de desambiguisation (declencheur : confusion « snapshot », bouton non defini). Audit : 223 boutons, 130 deja tooltipes, 59 libelles uniques nus (la plupart VOLONTAIREMENT : Annuler/Fermer/OK/← Retour/↑↓ auto-suffisants — doctrine d'epure). Traite les ambigus : (1) FAMILLE SNAPSHOT renommee + tooltips explicites — « 📸 Exporter le chapitre (JSON) » (conception seule, zero donnee eleve) vs « 📤 Importer un chapitre (JSON) » (= Injecter depuis fichier) en Creation ; « 📦 Exporter un snapshot COMPLET » (chapitre + TOUTES les donnees eleves, fichier de diagnostic) en Reglages — les libelles disent maintenant le perimetre, fini la confusion. (2) Tooltips ajoutes aux actions importantes nues : ▶ Lancer, ■ Cloturer definitivement (irreversible), Convertir en blocs, 📋 Copier le prompt, ✏️ Modifier/💾 Enregistrer/🔄 Restaurer le template IA, Enregistrer la classe. Les ~50 boutons restants nus le restent (libelles auto-suffisants). NB : snapshotForUpdate = bouee INTERNE invisible (pas un bouton), aucune action requise." },
   { id:"ev", date:"2026-06-12", version:"ev", eleve:"", interne:"ev — Edition rapide d'une seance : chaque ligne de la liste « Seances du chapitre » (onglet Creation) gagne un bouton ✎ direct → PROF.editSeance(id) (le formulaire de la seance s'ouvre sans passer par le goulot « Editer les seances »). Le bouton general reste, renomme « Editer les seances (vue d'ensemble) » pour son vrai role : reordonner, ajouter/supprimer, chemins ideaux. editSeance existait deja (2e cran de l'editeur) : aucun nouveau moteur. NB inventaire #4 : SANS OBJET — le snapshot de MAJ ne capture QUE les sessions eleves (pas le chapitre), l'export JSON du chapitre (Snapshot/Restaurer) n'est donc pas redondant et reste en Creation avec Injecter/Prompt IA (meme famille : le chapitre comme donnee)." },
