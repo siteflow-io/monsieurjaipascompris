@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05ey">
+<meta name="app-version" content="2026-06-05ez">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -7072,9 +7072,9 @@ const PROF = {
     return h; },
   _prtItems(items, corrige){ let h=""; (items||[]).forEach((it,idx)=>{ const no=(idx+1)+'. ';
     if(it.type==='qcm'){ const ord=seededOrder((it.choix||[]).length, it.id);   // ordre fixe par question (commun à la feuille), bonne plus jamais en position 1
-      h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'')+(it.multi?' <i>(plusieurs réponses)</i>':'')+'<ul class="p-ch">'
+      h+='<div class="p-item" data-frag="item:'+esc(it.id)+'"><b>'+no+'</b><span data-frag="enonce:'+esc(it.id)+'">'+esc(it.enonce||'')+'</span>'+(it.multi?' <i>(plusieurs réponses)</i>':'')+'<ul class="p-ch">'
         +ord.map((ci,di)=>{ const c=it.choix[ci]; const ok=corrige&&(it.bonnes||[]).includes(ci);
-          return '<li>'+(corrige?(ok?'☑ ':'☐ '):'○ ')+'<b>'+String.fromCharCode(97+di)+'.</b> <span'+(ok?' class="ok"':'')+'>'+esc(c)+'</span></li>'; }).join('')+'</ul></div>'; }
+          return '<li data-frag="choix:'+esc(it.id)+':'+ci+'">'+(corrige?(ok?'☑ ':'☐ '):'○ ')+'<b>'+String.fromCharCode(97+di)+'.</b> <span'+(ok?' class="ok"':'')+'>'+esc(c)+'</span></li>'; }).join('')+'</ul></div>'; }
     else if(it.type==='trous'){ const parts=parseTrous(it.texte||''); let tx='';
         parts.forEach(p=>{ if(p.t==='txt') tx+=esc(p.v); else tx+= corrige ? '<b class="ok">['+esc(p.sols[0]||'')+']</b>' : '……………'; });
         h+='<div class="p-item"><b>'+no+'</b>'+esc(it.enonce||'Texte à trous')+'<div class="p-sub">'+tx+'</div></div>'; }
@@ -7140,11 +7140,14 @@ const PROF = {
       +"@media print{.noprint{display:none}}"
       +".zwrap{border-radius:6px;scroll-margin-top:14px}"
       +"@keyframes edPulse{0%{box-shadow:0 0 0 3px rgba(212,160,23,.85);background:rgba(212,160,23,.20)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0);background:transparent}}"
-      +".zwrap.pulse{animation:edPulse 5s ease-out forwards}";
+      +".zwrap.pulse{animation:edPulse 5s ease-out forwards}"
+      +"[data-frag]{border-radius:5px;scroll-margin-top:14px}"
+      +".fragpulse{animation:edPulse 5s ease-out forwards}";
     let h='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+esc(m.titre||'Chapitre')+'</title><style>'+css+'</style></head><body>';
     h+='<h1>'+esc(m.titre||'')+'</h1>'+(m.problematique?'<p class="prob">'+esc(m.problematique)+'</p>':'');
-    const pz=opt.pulse||'';   // ey3 : zone à faire pulser dans la feuille (identite/textes/consignes/eval/aides/bilan)
-    const zw=(zone,inner)=>'<div class="zwrap'+(pz===zone?' pulse':'')+'" data-z="'+zone+'">'+inner+'</div>';
+    const pz=opt.pulse||'';   // ez : peut être une zone (identite/textes/…) OU un fragment précis (item:ID, choix:ID:n, enonce:ID)
+    const isFrag=/[:]/.test(pz);   // un fragment contient un ':' → on ne pulse PAS la zone entière, seulement le fragment (via le <script> injecté)
+    const zw=(zone,inner)=>'<div class="zwrap'+((!isFrag&&pz===zone)?' pulse':'')+'" data-z="'+zone+'">'+inner+'</div>';
     seances.forEach((s,i)=>{ h+='<section class="seance'+(i>0?' brk':'')+'">';
       h+=zw('identite','<h2>'+(s.rn?esc(s.rn)+' — ':'')+esc(s.titre||'')+(s.ville?' · '+esc(s.ville):'')+'</h2>'+(s.objectif?'<div class="obj"><b>Objectif.</b> '+esc(s.objectif)+'</div>':''));
       if(opt.textes){ const sup=(s.corps&&s.corps.supports)||[]; if(sup.length){ h+=zw('textes','<h3 class="part">À lire</h3>'+this._prtSupports(sup)); } }
@@ -7154,7 +7157,8 @@ const PROF = {
       if(opt.bilan) h+=zw('bilan',this._prtBilan(s));
       if(opt.fiches) h+=this._prtFiche(s.fiche4d);
       h+='</section>'; });
-    h+=(preview?(pz?'<script>try{var z=document.querySelector(".zwrap.pulse");if(z)z.scrollIntoView({block:"nearest"});}catch(e){}<\/script>':''):'<div class="noprint"><button onclick="window.print()">Imprimer</button></div>')+'</body></html>';
+    const pulseJs = pz ? ('<script>try{var P='+JSON.stringify(pz)+';var z=P.indexOf(":")>=0?document.querySelector(\'[data-frag="\'+P+\'"]\'):document.querySelector(".zwrap.pulse");if(z){z.classList.add("fragpulse");z.scrollIntoView({block:"nearest"});}}catch(e){}<\/script>') : '';
+    h+=(preview? pulseJs : '<div class="noprint"><button onclick="window.print()">Imprimer</button></div>')+'</body></html>';
     return h; },
 
   /* ── onglet SUIVI (présence groupée par classe, multi-poste) ── */
@@ -8026,7 +8030,7 @@ const PROF = {
   setArete(id,which,v){ this.seance(id).aretes[which]=v||null; this.touch(); },
   setSeuil(id,v){ const ev=this.seance(id).evaluation; const nq=ev.items.filter(isAutoItem).length||1;
     ev.seuil=Math.max(1,Math.min(nq,Number(v)||1)); this.touch(); this.editSeance(id); },
-  setQ(id,qid,f,v){ this.seance(id).evaluation.items.find(x=>x.id===qid)[f]=v; this._z('eval'); this.touch(); },
+  setQ(id,qid,f,v){ this.seance(id).evaluation.items.find(x=>x.id===qid)[f]=v; this._z(f==='enonce'?('enonce:'+qid):('item:'+qid)); this.touch(); },
   setPoints(id,itemId,v){ const it=this.seance(id).evaluation.items.find(x=>x.id===itemId); if(!it) return;
     const n=parseFloat(v); it.points=(isFinite(n)&&n>=0)?n:1; this.touch(); },
   toggleSommative(id){ const s=this.seance(id); s.sommative=!s.sommative; this.touch(); this.editSeance(id);
@@ -8039,14 +8043,14 @@ const PROF = {
   setPairCell(id,itemId,pi,side,v){ const it=this._evItem(id,itemId); it.paires=it.paires||[]; it.paires[pi]=it.paires[pi]||{g:'',d:''}; it.paires[pi][side]=v; this.touch(); },
   addPair(id,itemId){ const it=this._evItem(id,itemId); it.paires=it.paires||[]; it.paires.push({g:'',d:''}); this.touch(); this.editSeance(id); },
   delPair(id,itemId,pi){ const it=this._evItem(id,itemId); (it.paires||[]).splice(pi,1); this.touch(); this.editSeance(id); },
-  setChoix(id,qid,ci,v){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix[ci]=v; this._z('eval'); this.touch(); },
-  setBonne(id,qid,ci){ this.seance(id).evaluation.items.find(x=>x.id===qid).bonnes=[ci]; this.touch(); },
-  toggleBonne(id,qid,ci,on){ const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.bonnes=q.bonnes||[];
+  setChoix(id,qid,ci,v){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix[ci]=v; this._z('choix:'+qid+':'+ci); this.touch(); },
+  setBonne(id,qid,ci){ this.seance(id).evaluation.items.find(x=>x.id===qid).bonnes=[ci]; this._z('choix:'+qid+':'+ci); this.touch(); },
+  toggleBonne(id,qid,ci,on){ this._z('choix:'+qid+':'+ci); const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.bonnes=q.bonnes||[];
     const k=q.bonnes.indexOf(ci); if(on){ if(k<0) q.bonnes.push(ci); } else if(k>=0) q.bonnes.splice(k,1);
     q.bonnes.sort((a,b)=>a-b); this.touch(); },
-  setMulti(id,qid,on){ this._z('eval'); const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.multi=!!on;
+  setMulti(id,qid,on){ this._z('item:'+qid); const q=this.seance(id).evaluation.items.find(x=>x.id===qid); q.multi=!!on;
     if(!on && q.bonnes.length>1) q.bonnes=[q.bonnes[0]]; if(!q.bonnes.length) q.bonnes=[0]; this.touch(); this.editSeance(id); },
-  addChoix(id,qid){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix.push(""); this._z('eval'); this.touch(); this.editSeance(id); },
+  addChoix(id,qid){ this.seance(id).evaluation.items.find(x=>x.id===qid).choix.push(""); this._z('item:'+qid); this.touch(); this.editSeance(id); },
   delChoix(id,qid,ci){ const q=this.seance(id).evaluation.items.find(x=>x.id===qid); if(q.choix.length<=2){toast("2 choix minimum.");return;}
     q.choix.splice(ci,1); q.bonnes=(q.bonnes||[]).filter(b=>b!==ci).map(b=>b>ci?b-1:b); if(!q.bonnes.length) q.bonnes=[0];
     this.touch(); this.editSeance(id); },
@@ -8124,6 +8128,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"ez", date:"2026-06-12", version:"ez", eleve:"", interne:"ez — PULSATION AU FRAGMENT (pas a la zone, sinon sans interet). _prtItems pose data-frag sur chaque item QCM (item:ID), son enonce (enonce:ID) et CHAQUE choix (choix:ID:n). chapterPrintHTML : si opt.pulse contient ':' → fragment precis (un script injecte cible [data-frag=...] et lui pose .fragpulse = meme keyframe edPulse 5s decroissante + scrollIntoView), sinon zone entiere (.zwrap.pulse, pour ajout/suppr larges). Setters re-cables : setQ(enonce)→enonce:ID, setChoix→choix:ID:n, setBonne/toggleBonne→choix:ID:n, setMulti/addChoix→item:ID. Resultat : quand tu corriges un mot dans un choix, SEUL ce choix pulse sur la feuille, pas tout le bloc evaluation." },
   { id:"ey", date:"2026-06-12", version:"ey", eleve:"", interne:"ey — 3 correctifs ergonomie de l'editeur split. (1) SAUT VERS LE HAUT (grave) : les actions structurelles (setMulti, addChoix, blocs, etc.) rappellent editSeance() qui reconstruit tout le panneau → scrollTop de .edit-form sauvegarde AVANT et restaure APRES (meme remede que le panneau prof en ei). (2) LAG : debounce de l'apercu 450→140 ms (suit la frappe sans clignoter). (3) PULSATION : la feuille enveloppe chaque zone (identite/textes/consignes/eval/aides/bilan) dans .zwrap[data-z] ; la zone modifiee recoit .pulse → keyframe edPulse 5s ease-out forwards (halo+fond dores decroissants jusqu'a zero) + scrollIntoview(nearest) ; _edPreviewSoon(zone) memorise this._edPulse, les setters poseront this._edZone. NB : sans zone precisee, pas de pulsation (juste le refresh)." },
   { id:"ex", date:"2026-06-12", version:"ex", eleve:"", interne:"ex — INVENTAIRE #5 : editeur de seance en DEUX PANNEAUX (WYSIWYG). editSeance genere desormais son formulaire dans une variable `form`, puis l'affiche A GAUCHE (.edit-form 46%) avec a DROITE un iframe #edFrame montrant la FEUILLE imprimable (chapterPrintHTML(scope=seance, tout active sauf fiches) — meme moteur que l'apercu du bouton Imprimer). refreshEditPreview() regenere la feuille ; touch() la rafraichit en DIRECT a chaque frappe (debounce 450ms via _edPreviewSoon) → fini l'edition a l'aveugle. En-tete print-head (← Seances, etat d'enregistrement, « 🖨 Imprimer cette seance » qui ouvre printView avec la portee pre-selectionnee). editor() reset _edId (sinon touch cherche un iframe absent hors edition). printView(initialScope) accepte une portee initiale. Responsive <1000px : empile formulaire puis apercu. Aucun changement du moteur d'edition ni de rendu : cablage seulement." },
   { id:"ew", date:"2026-06-12", version:"ew", eleve:"", interne:"ew — PASSE DE TOOLTIPS de desambiguisation (declencheur : confusion « snapshot », bouton non defini). Audit : 223 boutons, 130 deja tooltipes, 59 libelles uniques nus (la plupart VOLONTAIREMENT : Annuler/Fermer/OK/← Retour/↑↓ auto-suffisants — doctrine d'epure). Traite les ambigus : (1) FAMILLE SNAPSHOT renommee + tooltips explicites — « 📸 Exporter le chapitre (JSON) » (conception seule, zero donnee eleve) vs « 📤 Importer un chapitre (JSON) » (= Injecter depuis fichier) en Creation ; « 📦 Exporter un snapshot COMPLET » (chapitre + TOUTES les donnees eleves, fichier de diagnostic) en Reglages — les libelles disent maintenant le perimetre, fini la confusion. (2) Tooltips ajoutes aux actions importantes nues : ▶ Lancer, ■ Cloturer definitivement (irreversible), Convertir en blocs, 📋 Copier le prompt, ✏️ Modifier/💾 Enregistrer/🔄 Restaurer le template IA, Enregistrer la classe. Les ~50 boutons restants nus le restent (libelles auto-suffisants). NB : snapshotForUpdate = bouee INTERNE invisible (pas un bouton), aucune action requise." },
