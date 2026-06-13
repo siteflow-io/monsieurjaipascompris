@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05et">
+<meta name="app-version" content="2026-06-05ex">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -213,6 +213,7 @@
   .sui-notif{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.74rem;border:1px solid var(--gold-deep);background:rgba(251,191,36,.08);border-radius:8px;padding:6px 8px}
   .sui-notif .sig-btns{margin-left:auto;display:flex;gap:5px;align-items:center}
   .sui-notif .sig-when{color:var(--muted);font-size:.66rem;white-space:nowrap}
+  .se-edit{margin-left:8px;padding:3px 9px}
   .rech-bar{display:flex;gap:6px;align-items:center;margin:0 0 8px}
   .rech-in{flex:1;font-size:.82rem;padding:7px 11px}
   .fiche-layout{display:flex;gap:14px;align-items:flex-start}
@@ -807,6 +808,8 @@
   .print-head{display:flex;align-items:center;margin-bottom:10px}
   .print-modal{display:flex;gap:14px;height:calc(100vh - 150px);min-height:420px}
   .print-side{width:300px;flex-shrink:0;overflow-y:auto;padding-right:4px}
+  .edit-split .edit-form{width:46%;max-width:560px}   /* ex : éditeur | feuille — l'éditeur a besoin de plus de place que les options d'impression */
+  @media(max-width:1000px){ .edit-split{flex-direction:column;height:auto} .edit-split .edit-form{width:100%;max-width:none} .edit-split .print-preview{min-height:380px} }
   .print-side .prof-sec{margin-bottom:10px}
   .print-preview{flex:1;background:#3a3a3a;border-radius:10px;overflow:auto;display:flex;justify-content:center;padding:18px}
   .print-preview iframe{width:794px;min-height:1123px;height:max-content;background:#fff;border:none;border-radius:2px;box-shadow:0 6px 30px rgba(0,0,0,.55);flex-shrink:0}
@@ -6848,7 +6851,8 @@ const PROF = {
           <button class="btn ghost" title="Retire ce chapitre de la bibliothèque" onclick="PROF.delChapter('${esc(id)}')">×</button></span></div>
         <div class="scopes">${this.scopeChips(id, niv)}</div></div>`; }).join("");
     const list=c.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
-      <span class="meta">${(s.aides||[]).length} aide(s) · ${s.evaluation.items.filter(i=>i.type==="qcm").length} QCM · →${(s.aretes||{}).conseillee||"—"}</span></div>`).join("");
+      <span class="meta">${(s.aides||[]).length} aide(s) · ${s.evaluation.items.filter(i=>i.type==="qcm").length} QCM · →${(s.aretes||{}).conseillee||"—"}</span>
+      <button class="btn ghost se-edit" title="Modifier directement cette séance (raccourci — sans passer par « Éditer les séances »)" onclick="PROF.editSeance('${esc(s.id)}')">✎</button></div>`).join("");
     const hasContent=c.seances.length>0;
     return `<div class="prof-sec"><h4>Bibliothèque <span class="meta" id="saveState">${this._saved?'· enregistré ✓':''}</span></h4>
         <div class="d">Tous tes chapitres, tous niveaux. <b>Activer</b> désigne celui que les tablettes du niveau ouvriront. L'édition est enregistrée en direct dans Firebase.</div>
@@ -6862,16 +6866,18 @@ const PROF = {
       <div class="prof-sec"><div class="prof-row">
         <button class="btn ghost" title="Affiche le prompt complet à coller dans une IA pour générer un chapitre au bon format" onclick="PROF.promptView()">🤖 Prompt IA</button>
         <button class="btn ghost" title="Colle le JSON d'un chapitre : il remplace le chapitre actif, les progressions des élèves sont conservées" onclick="PROF.injectView()">📥 Injecter</button>
-        <button class="btn ghost" title="Télécharge le chapitre actif SEUL (JSON) — différent du snapshot complet des Réglages" onclick="PROF.snapshot()">📸 Snapshot</button>
-        <button class="btn ghost" title="Recharge un chapitre depuis un fichier JSON : remplace le chapitre actif, progressions conservées" onclick="PROF.restore()">📤 Restaurer</button>
+        <button class="btn ghost" title="EXPORTE LE CHAPITRE SEUL (sa conception : séances, barème, aides, chemins idéaux) dans un fichier JSON — pour le sauvegarder ou le réutiliser ailleurs. Ne contient AUCUNE donnée d'élève. À distinguer du « Snapshot complet » des Réglages (qui, lui, capture tout l'état pour diagnostic)." onclick="PROF.snapshot()">📸 Exporter le chapitre (JSON)</button>
+        <button class="btn ghost" title="Remplace le chapitre actif par celui d'un fichier JSON exporté ici. Les progressions des élèves sont conservées. Identique à « Injecter » mais depuis un fichier au lieu d'un copier-coller." onclick="PROF.restore()">📤 Importer un chapitre (JSON)</button>
         <button class="btn ghost" onclick="PROF.printView()">🖨 Imprimer</button>
       </div></div>
       ${hasContent ? `<div class="prof-sec"><h4>Séances du chapitre</h4><div class="prof-list">${list}</div>
-        <div class="prof-row"><button class="btn primary" onclick="PROF.editor()">✎ Éditer les séances</button></div></div>`
+        <div class="prof-row"><button class="btn primary" title="Vue d'ensemble : réordonner, ajouter/supprimer une séance, gérer les chemins idéaux" onclick="PROF.editor()">✎ Éditer les séances (vue d'ensemble)</button></div></div>`
       : `<div class="prof-sec empty-state"><div class="ic">📖</div><p>Aucune séance.</p>
         <p style="font-size:.85rem">Génère un JSON via « 🤖 Prompt IA », colle-le dans « 📥 Injecter », ou pars d'un « Nouveau chapitre » et édite les séances.</p></div>`}`; },
   _saved:false, _saveTimer:null,
   touch(){ this._saved=false; const st=$("saveState"); if(st) st.textContent="· enregistrement…";
+    const st2=$("edSaveState"); if(st2) st2.textContent="· enregistrement…";
+    if(this._edId && $("edFrame")) this._edPreviewSoon();   // ex : la feuille suit l'édition en direct
     clearTimeout(this._saveTimer); this._saveTimer=setTimeout(()=>this.saveCurrent(),700); },
   saveCurrent(){ if(!CHAPTER.meta||!CHAPTER.meta.id) return; const err=validateChapter(CHAPTER);
     chaptersStore.saveOne(CHAPTER.meta.id, CHAPTER); LIBRARY[CHAPTER.meta.id]=JSON.parse(JSON.stringify(CHAPTER));
@@ -6927,7 +6933,7 @@ const PROF = {
       <div class="prof-sec"><h4>Ajouter / mettre à jour une classe</h4>
         <input class="txtin" style="width:100%" id="ncName" placeholder="Nom (ex : 4e Banksy)" value="${esc(d.nom)}">
         <textarea class="txtin" id="ncEleves" style="width:100%;min-height:120px;margin-top:6px" placeholder="Un élève par ligne — NOM Prénom">${esc(d.eleves)}</textarea>
-        <div class="prof-row"><button class="btn primary" onclick="PROF.addClass()">Enregistrer la classe</button>
+        <div class="prof-row"><button class="btn primary" title="Ajoute cette classe à la liste partagée par toutes tes apps MJPC (le niveau détermine quel chapitre s'ouvre sur les tablettes)" onclick="PROF.addClass()">Enregistrer la classe</button>
           ${this.classDraft?'<button class="btn ghost" onclick="PROF.cancelClass()">Annuler</button>':''}</div></div>`; },
   editClass(cn){ this.classDraft={ nom:cn, eleves:extractEleves(CLASSES[cn],[]).join("\n") }; this.render(); },
   cancelClass(){ this.classDraft=null; this.render(); },
@@ -6946,16 +6952,16 @@ const PROF = {
         <button class="btn ghost" onclick="PROF.go('creation')">← Création</button></div>
       <div class="prof-sec"><div class="d">Impose d'abord une discussion cadrée, puis sort le JSON injectable au format du moule (séances, chemins idéaux, aides, fiche 4D et QCM compris).</div>
         <div class="prof-row">
-          <button class="btn primary" onclick="PROF.copyTpl()">📋 Copier le prompt</button>
-          <button class="btn ghost" onclick="PROF.editTpl()">✏️ Modifier le template</button></div>
+          <button class="btn primary" title="Copie dans le presse-papier le prompt complet à coller dans une IA pour générer un chapitre au bon format JSON" onclick="PROF.copyTpl()">📋 Copier le prompt</button>
+          <button class="btn ghost" title="Édite le texte du prompt IA (le modèle de consignes envoyé à l'IA) — tes modifications sont mémorisées sur ce poste" onclick="PROF.editTpl()">✏️ Modifier le template</button></div>
         <pre class="prof-pre" id="promptPre">${esc(tpl)}</pre></div>`; },
   editTpl(){ const tpl=this.tpl;
     $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <h3 style="margin:0">✏️ Modifier le template</h3>
         <button class="btn ghost" onclick="PROF.promptView()">← Annuler</button></div>
       <div class="prof-sec"><textarea id="tplEdit" class="txtin" style="width:100%;min-height:320px;font-family:ui-monospace,monospace;font-size:.76rem">${esc(tpl)}</textarea>
-        <div class="prof-row"><button class="btn primary" onclick="PROF.saveTpl()">💾 Enregistrer</button>
-          <button class="btn ghost" onclick="PROF.resetTpl()">🔄 Restaurer par défaut</button></div>
+        <div class="prof-row"><button class="btn primary" title="Enregistre tes modifications du prompt IA sur ce poste" onclick="PROF.saveTpl()">💾 Enregistrer</button>
+          <button class="btn ghost" title="Remet le prompt IA dans sa version d'origine (annule tes modifications du template)" onclick="PROF.resetTpl()">🔄 Restaurer par défaut</button></div>
         <div class="d">La persistance Firebase du template viendra au branchement ; pour l'instant, valable le temps de la session.</div></div>`; },
   saveTpl(){ this.tpl=($("tplEdit")||{}).value||this.tpl; toast("Template enregistré."); this.promptView(); },
   resetTpl(){ this.tpl=PROMPT_CHAPTER; toast("Template par défaut restauré."); this.editTpl(); },
@@ -6984,8 +6990,9 @@ const PROF = {
       r.readAsText(f); }; i.click(); },
 
   /* ── Impression / export papier : modulaire (textes, consignes, évaluation, aides, fiches) ── */
-  printView(){ const seances=CHAPTER.seances||[];
+  printView(initialScope){ const seances=CHAPTER.seances||[];
     const o=this._prtOpt||(this._prtOpt={ scope:'all', textes:true, consignes:true, eval:false, corrige:false, aides:false, bilan:false, fiches:false });
+    if(initialScope) o.scope=initialScope;   // ex : « Imprimer cette séance » arrive avec la séance pré-sélectionnée
     $("profModal").innerHTML=`
       <div class="print-head"><button class="btn ghost" onclick="PROF.render()">← Retour</button><h3 style="margin:0 0 0 10px">🖨 Imprimer / Exporter</h3></div>
       <div class="print-modal">
@@ -7301,7 +7308,7 @@ const PROF = {
       <div class="prof-row" style="align-items:center"><label class="d">Fin&nbsp;: <input type="time" id="coursFin" class="txtin" value="${hh}:${mm}" style="margin-left:6px"></label></div>
       <div class="prof-row"><button class="btn ghost" title="Fin de séance dans 50 minutes" onclick="PROF.setFinRel(50)">+50 min</button><button class="btn ghost" title="Fin de séance dans 55 minutes" onclick="PROF.setFinRel(55)">+55 min</button><button class="btn ghost" title="Fin de séance dans 1 h 50 (deux heures de cours)" onclick="PROF.setFinRel(110)">+1h50</button></div>
       <div class="app-modal-foot"><button class="btn ghost" onclick="PROF._modalClose()">Annuler</button>
-        <button class="btn primary" onclick="PROF.doLancerCours('${seg}')">▶ Lancer</button></div>`); },
+        <button class="btn primary" title="Démarre le chrono de séance pour cette classe : les élèves voient le temps restant, et ne peuvent plus refaire à la maison une séance déjà réussie pendant le cours" onclick="PROF.doLancerCours('${seg}')">▶ Lancer</button></div>`); },
   setFinRel(min){ const d=new Date(Date.now()+min*60000); const el=$("coursFin"); if(el) el.value=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); },
   doLancerCours(seg){ const v=($("coursFin")||{}).value||""; const m=/^(\d{1,2}):(\d{2})$/.exec(v);
     if(!m){ toast("Indique une heure de fin valide."); return; }
@@ -7330,7 +7337,7 @@ const PROF = {
         <p class="d">Voici où en est la classe. Tu peux clôturer en toute sécurité&nbsp;: <b>tout est déjà sauvegardé</b> au fil de l'eau. Tu retrouveras l'état exact en rouvrant la session, ou en consultant l'archive figée à cet instant.</p>
         ${corps}
         <div class="app-modal-foot"><button class="btn ghost" onclick="PROF._modalClose()">Annuler</button>
-          <button class="btn fire" onclick="PROF.doCloturerCours('${seg}')">■ Clôturer définitivement</button></div>`); }); },
+          <button class="btn fire" title="Fige les chronos, archive la séance (consultable dans Archives) puis purge présences et signaux de la classe. Les progressions des élèves sont conservées. Irréversible pour la séance en cours." onclick="PROF.doCloturerCours('${seg}')">■ Clôturer définitivement</button></div>`); }); },
   doCloturerCours(seg){ APP.cloturerCours(seg); this._modalClose(); toast("Séance clôturée et archivée."); this.render(); },
   // modale déclenchée automatiquement à l'heure de fin (peut surgir panneau fermé)
   coursFinModal(seg, nom){ this._modalOpen(`<h3>⏰ Séance terminée — ${esc(nom||'')}</h3>
@@ -7431,7 +7438,7 @@ const PROF = {
     // ── À TRAITER : la notification développée, en UN exemplaire ──
     if(notifsHTML) h+=notifsHTML;
     // ── AGIR : quatre volets repliés, un clic chacun ──
-    if(lsGet('wt_rappel')==='1' && !isTestUid(uid)){ const persos=APP._rappelsPerso||[]; const uidJs2=esc(uid);
+    if(this.rappelActif() && !isTestUid(uid)){ const persos=APP._rappelsPerso||[]; const uidJs2=esc(uid);
       const btn=(t,i)=>`<span class="rap-chip"><button class="btn ghost rap-b" title="Pousse ce message sur son écran (overlay près de sa main ✋, jusqu'à son « D'accord »)" onclick="PROF.pushRappel('${uidJs2}',this.dataset.m)" data-m="${esc(t)}">${esc(t)}</button>${i!=null?`<button class="rap-x" title="Supprimer ce message enregistré" onclick="PROF.delRappelPerso(${i})">✕</button>`:''}</span>`;
       h+=`<details class="adv"><summary>📣 Rappel — pousser un message sur son écran</summary><div class="sui-cp rap-zone" style="margin:0 10px 8px">${RAPPELS_BASE.map(t=>btn(t,null)).join('')}${persos.map((t,i)=>btn(t,i)).join('')}
         <span class="rap-new"><input class="txtin rap-in" id="rap-${uidJs2}" placeholder="ou écris ton message…" maxlength="140">
@@ -7648,7 +7655,7 @@ const PROF = {
               <button class="btn ghost" title="Affiche ou retire le bouton ✋ chez tous les élèves de cette classe" onclick="PROF.toggleMainLevee('${cl.seg}')"${on?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${on?'✋ activée':'désactivée'}</button></div>`;
           }).join('') || '<div class="d" style="opacity:.7">Aucune classe enregistrée pour l\'instant.</div>'}
         <div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">📣 <b>Rappel</b> — pousser un message court, non bloquant, sur l'écran d'un élève (depuis sa fiche du Suivi). Réglage de ce poste :</span>
-          <button class="btn ghost" title="Affiche ou retire l'outil Rappel dans les fiches élèves, sur ce poste seulement" onclick="PROF.toggleRappel()"${lsGet('wt_rappel')==='1'?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${lsGet('wt_rappel')==='1'?'📣 activé':'désactivé'}</button></div></div>
+          <button class="btn ghost" title="Affiche ou masque l'outil Rappel dans les fiches élèves, pour TOUS les postes (réglage global)" onclick="PROF.toggleRappel()"${this.rappelActif()?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${this.rappelActif()?'📣 activé (tous postes)':'masqué (tous postes)'}</button></div></div>
       <div class="prof-sec"><h4>Coup de pouce (aides)</h4>
         <div class="d">Coupe ou rouvre les aides graduées pour une classe — par exemple pendant une évaluation. Les élèves voient alors « aide désactivée », sans pouvoir l'ouvrir. Réglage par classe, sans effet sur les autres.</div>
         ${(APP.knownClasses()||[]).map(cl=>{ const coupe=(((( APP._control||{})[cl.seg]||{}).aidesOff)||{}).__tout;
@@ -7660,8 +7667,8 @@ const PROF = {
         <div class="prof-row"><button class="btn ghost" onclick="APP.toggleTest();PROF.render()">${APP.testMode?'activé — postes en test':'désactivé'}</button></div>
         <div class="prof-row"><button class="btn ghost" title="Ce poste redeviendra un poste élèves : le code professeur sera redemandé à la prochaine ouverture du panneau" onclick="PROF.rendrePoste()">⏏ Rendre ce poste aux élèves</button></div></div>
       <div class="prof-sec"><h4>Snapshot complet (diagnostic)</h4>
-        <div class="d">Capture tout l'état de l'app — chapitre, progressions, sessions, contrôle, archives — dans un fichier JSON. À transmettre pour analyse ou optimisation.</div>
-        <div class="prof-row"><button class="btn ghost" title="Télécharge l'état complet du chapitre (progressions, contrôle, signaux) — sauvegarde et diagnostic" onclick="PROF.exportSnapshot()">📦 Exporter un snapshot</button>
+        <div class="d">Capture <b>tout</b> l'état de l'app — le chapitre ET les données de tous les élèves (progressions, sessions, contrôle, archives) — dans un seul fichier JSON. C'est l'export à m'envoyer pour analyse ou dépannage. Différent du « 📸 Exporter le chapitre » de Création, qui ne prend que la conception.</div>
+        <div class="prof-row"><button class="btn ghost" title="Télécharge TOUT l'état du chapitre dans un fichier : sa conception + les progressions, sessions, contrôle et archives de tous les élèves. Pour sauvegarde lourde ou diagnostic — c'est le fichier à transmettre en cas de problème." onclick="PROF.exportSnapshot()">📦 Exporter un snapshot complet</button>
           <button class="btn ghost" title="Restaure un snapshot : ÉCRASE les données du chapitre par celles du fichier (les classes partagées ne sont jamais touchées)" onclick="PROF.importSnapshot()">📥 Importer un snapshot</button></div>
         <div class="d" style="margin-top:6px">L'import réécrit les progressions, sessions, contrôle et archives à partir du fichier. Il ne touche jamais aux classes partagées avec tes autres apps.</div></div>
       <div class="prof-sec doc-sec"><h4>📖 Comment l'app fonctionne — pédagogie et mécanique</h4>
@@ -7702,7 +7709,14 @@ const PROF = {
     node.mainLevee=!node.mainLevee; store.save("control/"+chap+"/"+seg, node);
     toast(node.mainLevee?"Main levée activée : le bouton ✋ apparaît chez les élèves de la classe.":"Main levée désactivée pour la classe.");
     this.render(); },
-  toggleRappel(){ const on=lsGet("wt_rappel")==='1'; lsSet("wt_rappel", on?'0':'1'); this.render(); },
+  // eu : le Rappel est désormais ACTIF PAR DÉFAUT et réglé GLOBALEMENT (control/{chap}/__cfg.rappelOff).
+  //   off = masqué pour tous les postes ; absent/false = visible partout. (Aucune empreinte côté élève : un rappel
+  //   ne s'affiche que quand le prof en pousse un — rien ne signale à l'élève que l'outil est « actif ».)
+  rappelActif(){ return !((((APP._control||{}).__cfg)||{}).rappelOff); },
+  toggleRappel(){ const chap=CHAPTER.meta.id||"chapitre"; const node=Object.assign({}, (APP._control||{}).__cfg||{});
+    node.rappelOff=this.rappelActif(); store.save("control/"+chap+"/__cfg", node);
+    toast(node.rappelOff?"Outil Rappel masqué pour tous les postes.":"Outil Rappel visible sur tous les postes.");
+    this.render(); },
   setSeuilPctDefaut(v){ const x=parseInt(v,10); if(!CHAPTER.reglages) CHAPTER.reglages={};
     if(isFinite(x)&&x>=1&&x<=100) CHAPTER.reglages.seuilPctDefaut=x; else delete CHAPTER.reglages.seuilPctDefaut;
     this.apply(); },
@@ -7772,7 +7786,8 @@ const PROF = {
   /* ── Éditeur visuel des séances ── */
   seance(id){ return CHAPTER.seances.find(s=>s.id===id); },
   genId(prefix,arr){ let n=1; const ids=arr.map(x=>x.id); while(ids.includes(prefix+n)) n++; return prefix+n; },
-  editor(){ const list=CHAPTER.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
+  editor(){ this._edId=null;
+    const list=CHAPTER.seances.map(s=>`<div class="r"><span class="id">${s.rn||s.id}</span><span>${esc(s.titre)}</span>
       <span class="meta"><button class="btn ghost" onclick="PROF.editSeance('${s.id}')">éditer</button>
       <button class="btn ghost" title="Supprime cette séance du chapitre" onclick="PROF.delSeance('${s.id}')">suppr.</button></span></div>`).join("");
     const seances=CHAPTER.seances, ids=seances.map(s=>s.id);
@@ -7894,9 +7909,7 @@ const PROF = {
         ${s.sommative?`<label style="margin-left:10px;font-size:.78rem;display:inline-flex;align-items:center;gap:4px" title="Barème de cet item pour la note sommative">points <input class="txtin" type="number" min="0" style="width:46px" value="${it.points!=null?it.points:1}" onchange="PROF.setPoints('${id}','${it.id}',this.value)"></label>`:''}
         <button class="btn ghost" style="margin-left:auto" onclick="PROF.delItem('${id}','${it.id}')">suppr.</button></div>
         ${T.fields.map(f=>regField(it,f)).join('')}</div>`; }).join("");
-    $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="margin:0">Séance ${esc(s.id)}</h3><button class="btn ghost" onclick="PROF.editor()">← Séances</button></div>
-      <div class="prof-sec"><h4>Identité</h4>
+    const form=`<div class="prof-sec"><h4>Identité</h4>
         <div class="prof-row"><input class="txtin" style="flex:1" placeholder="titre" value="${esc(s.titre)}" oninput="PROF.setField('${id}','titre',this.value)">
           <input class="txtin" style="width:110px" placeholder="ville" value="${esc(s.ville||'')}" oninput="PROF.setField('${id}','ville',this.value)">
           <input class="txtin" style="width:54px" placeholder="n°" value="${esc(s.rn||'')}" oninput="PROF.setField('${id}','rn',this.value)"></div>
@@ -7936,7 +7949,24 @@ const PROF = {
         <div class="prof-row"><button class="btn ghost" onclick="PROF.toggleFiche4d('${id}')">${lsGet('wt_fiche4d')==='1'?'✓ affichée — cliquer pour désactiver':'désactivée — cliquer pour afficher'}</button></div>
         ${layers}
         <div class="prof-row"><button class="btn ghost" onclick="PROF.addLayer('${id}')">+ couche</button></div></div>
-      <div class="prof-row"><button class="btn primary" title="Enregistre et propage aux tablettes" onclick="PROF.apply()">Appliquer à l'app</button></div>`; },
+      <div class="prof-row"><button class="btn primary" title="Enregistre et propage aux tablettes" onclick="PROF.apply()">Appliquer à l'app</button></div>`;
+    // ex : éditeur À GAUCHE, aperçu de la FEUILLE imprimable À DROITE — mise à jour en direct à chaque frappe.
+    this._edId=id;
+    $("profModal").innerHTML=`<div class="print-head"><button class="btn ghost" onclick="PROF.editor()">← Séances</button>
+        <h3 style="margin:0 0 0 10px">Séance ${esc(s.id)} <span class="meta" id="edSaveState">${this._saved?'· enregistré ✓':''}</span></h3>
+        <span style="margin-left:auto"><button class="btn ghost" title="Voir la feuille en grand / options d'impression" onclick="PROF.printView('${esc(id)}')">🖨 Imprimer cette séance</button></span></div>
+      <div class="print-modal edit-split">
+        <div class="print-side edit-form">${form}</div>
+        <div class="print-preview"><iframe id="edFrame" title="Aperçu de la feuille (mise à jour en direct)"></iframe></div>
+      </div>`;
+    this.refreshEditPreview();
+  },
+  // ex : régénère l'aperçu feuille de la séance en cours d'édition (réutilise le moteur d'impression, débounced)
+  refreshEditPreview(){ const fr=$("edFrame"); if(!fr||!this._edId) return;
+    let html; try{ html=this.chapterPrintHTML(this._edId, { scope:this._edId, textes:true, consignes:true, eval:true, corrige:true, aides:true, bilan:true, fiches:false }, true); }
+    catch(e){ html='<!doctype html><body style="font-family:serif;padding:20px;color:#a33">Aperçu impossible : '+esc(e.message)+'</body>'; }
+    fr.srcdoc=html; },
+  _edPreviewSoon(){ clearTimeout(this._edPrevT); this._edPrevT=setTimeout(()=>this.refreshEditPreview(), 450); },   // ne pas régénérer à CHAQUE caractère
   setField(id,f,v){ this.seance(id)[f]=v; this.touch(); },
   setConsigne(id,v){ const t=v.trim();
     if(t.charAt(0)==='['){ try{ const a=JSON.parse(t); if(Array.isArray(a)){ this.seance(id).corps.consigne=a; this.touch(); return; } }catch(e){} }
@@ -7946,7 +7976,7 @@ const PROF = {
   renumber(id){ let n=0; this._blocks(id).forEach(b=>{ if(b.type==='question'){ n++; b.n=n; } }); },
   consigneBlocksHTML(id){ const s=this.seance(id); const blocks=s.corps.consigne;
     if(!Array.isArray(blocks)) return '<div class="hint" style="font-size:.72rem;color:var(--muted);margin-bottom:6px">Ancienne consigne (texte brut). '
-        +'<button class="btn ghost" onclick="PROF.convertConsigne(\''+id+'\')">Convertir en blocs</button></div>'
+        +'<button class="btn ghost" title="Transforme cette consigne en texte libre en blocs structurés éditables (titres, étapes) — pratique pour reprendre une consigne collée brute" onclick="PROF.convertConsigne(\''+id+'\')">Convertir en blocs</button></div>'
         +'<textarea class="txtin" style="width:100%;min-height:90px" oninput="PROF.setConsigne(\''+id+'\',this.value)">'+esc(blocks||'')+'</textarea>';
     let h='<div class="blocks">';
     blocks.forEach((b,bi)=>{ const def=CONSIGNE_TYPES[b.type]||CONSIGNE_TYPES.note;
@@ -8087,6 +8117,10 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"ex", date:"2026-06-12", version:"ex", eleve:"", interne:"ex — INVENTAIRE #5 : editeur de seance en DEUX PANNEAUX (WYSIWYG). editSeance genere desormais son formulaire dans une variable `form`, puis l'affiche A GAUCHE (.edit-form 46%) avec a DROITE un iframe #edFrame montrant la FEUILLE imprimable (chapterPrintHTML(scope=seance, tout active sauf fiches) — meme moteur que l'apercu du bouton Imprimer). refreshEditPreview() regenere la feuille ; touch() la rafraichit en DIRECT a chaque frappe (debounce 450ms via _edPreviewSoon) → fini l'edition a l'aveugle. En-tete print-head (← Seances, etat d'enregistrement, « 🖨 Imprimer cette seance » qui ouvre printView avec la portee pre-selectionnee). editor() reset _edId (sinon touch cherche un iframe absent hors edition). printView(initialScope) accepte une portee initiale. Responsive <1000px : empile formulaire puis apercu. Aucun changement du moteur d'edition ni de rendu : cablage seulement." },
+  { id:"ew", date:"2026-06-12", version:"ew", eleve:"", interne:"ew — PASSE DE TOOLTIPS de desambiguisation (declencheur : confusion « snapshot », bouton non defini). Audit : 223 boutons, 130 deja tooltipes, 59 libelles uniques nus (la plupart VOLONTAIREMENT : Annuler/Fermer/OK/← Retour/↑↓ auto-suffisants — doctrine d'epure). Traite les ambigus : (1) FAMILLE SNAPSHOT renommee + tooltips explicites — « 📸 Exporter le chapitre (JSON) » (conception seule, zero donnee eleve) vs « 📤 Importer un chapitre (JSON) » (= Injecter depuis fichier) en Creation ; « 📦 Exporter un snapshot COMPLET » (chapitre + TOUTES les donnees eleves, fichier de diagnostic) en Reglages — les libelles disent maintenant le perimetre, fini la confusion. (2) Tooltips ajoutes aux actions importantes nues : ▶ Lancer, ■ Cloturer definitivement (irreversible), Convertir en blocs, 📋 Copier le prompt, ✏️ Modifier/💾 Enregistrer/🔄 Restaurer le template IA, Enregistrer la classe. Les ~50 boutons restants nus le restent (libelles auto-suffisants). NB : snapshotForUpdate = bouee INTERNE invisible (pas un bouton), aucune action requise." },
+  { id:"ev", date:"2026-06-12", version:"ev", eleve:"", interne:"ev — Edition rapide d'une seance : chaque ligne de la liste « Seances du chapitre » (onglet Creation) gagne un bouton ✎ direct → PROF.editSeance(id) (le formulaire de la seance s'ouvre sans passer par le goulot « Editer les seances »). Le bouton general reste, renomme « Editer les seances (vue d'ensemble) » pour son vrai role : reordonner, ajouter/supprimer, chemins ideaux. editSeance existait deja (2e cran de l'editeur) : aucun nouveau moteur. NB inventaire #4 : SANS OBJET — le snapshot de MAJ ne capture QUE les sessions eleves (pas le chapitre), l'export JSON du chapitre (Snapshot/Restaurer) n'est donc pas redondant et reste en Creation avec Injecter/Prompt IA (meme famille : le chapitre comme donnee)." },
+  { id:"eu", date:"2026-06-12", version:"eu", eleve:"", interne:"eu — Outil RAPPEL : (1) ACTIF PAR DEFAUT (avant : masque, a reactiver par poste) ; (2) reglage GLOBAL (control/{chap}/__cfg.rappelOff) au lieu de wt_rappel local — un seul toggle vaut pour tous les postes ; off=masque partout, absent/false=visible partout. Justification : l'activation n'a AUCUNE empreinte cote eleve (un rappel ne s'affiche que quand le prof en pousse un, bandeau ponctuel ferme par « D'accord » ; rien ne signale a l'eleve un mode actif) → aucune raison de le cacher. rappelActif() helper ; toggleRappel ecrit __cfg ; bouton Reglages « active (tous postes) / masque (tous postes) ». __cfg arrive via l'abonnement control/{chap} existant et est ignore par la boucle panels (filtre p.epoch && p.engine)." },
   { id:"et", date:"2026-06-12", version:"et", eleve:"", interne:"et — (1) RECHERCHE par initiales remise EN EVIDENCE : elle existait depuis 'en' mais etait coincee dans le <h4> de la section classe (discrete) et masquee sous 4 eleves ; desormais BARRE DEDIEE (.rech-bar) AU-DESSUS de la grille, seuil abaisse a 3 eleves, placeholder explicite + bouton ✕ pour tout revoir. (2) Bouton « ⛶ Tableau de bord plein ecran » RETIRE (les 2 sites) : la grille de cartes + fiche le remplacent (live redondant). DASH conserve UNIQUEMENT pour les archives figees (openArchive/openLastArchive : revoir une seance passee) — code DASH garde, overlay garde, seul l'acces LIVE disparait." },
   { id:"es", date:"2026-06-12", version:"es", eleve:"", interne:"es — (1) DICO TRANSMIS (revirement demande par Paul, ep le faisait local) : l'outil dico au miroir envoie desormais un sendGest tool:'dico' (mot inclus) → _gestCore branche dico → openDico s'ouvre CHEZ L'ELEVE, et l'echo local l'ouvre au miroir (le prof voit ce que l'eleve voit) ; toast adapte ; la garde seance exploration (ep2) s'applique. (2) ETIQUETTE prompt() residuel cote eleve : AUCUN prompt dans le code (verifie : 2 occurrences = commentaires) — c'est une VERSION ANTERIEURE a ep sur la tablette : publier + recharger cote eleve regle le probleme." },
   { id:"er", date:"2026-06-12", version:"er", eleve:"", interne:"Fiche eleve REORGANISEE (wireframe valide, ~540px utiles en split). cardDetail REECRIT (seul appelant : la fiche ; depth ignore ; 4e param notifsHTML) : (1) EN-TETE 1 ligne — nom · mode + TOUTES les actions 👁/❓/⭐/↻ (le ↻ remonte de sui-actions, le « ou » quitte l'en-tete) ; (2) L'INSTANT en premier (.fi-instant) : ▶ titre seance courante · temps · etoiles, ligne d'etats QCM/correction/bilan · x/N · autonomie · QCM chap, diagnostic parcoursPhrases + ⏱ itemTimes ; hors seance : « Sur la carte » + stats ; (3) A TRAITER : notifs developpees inserees par la fiche en UN exemplaire (sui-sig doublon SUPPRIME) ; (4) AGIR en 4 volets replies : 📣 Rappel (la rap-zone quitte le milieu de fiche), 🧰 Ateliers (remedH), ⚙ avance (trio), 📜 ses interventions (DEPLACE de ficheHTML vers cardDetail) ; (5) SON PARCOURS en pied : pastilles .fi-chip (✓/▶/…/· + titre court 16c + etoiles + ⚠ incoherence, detail complet au title : QCM, temps, rafale, dico→gloss) — les sui-prow verbeux supprimes ; (6) split etroit : mini-grille → RAIL 74px (initiales .ini, noms masques, title=nom complet)." },
