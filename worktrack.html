@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05er">
+<meta name="app-version" content="2026-06-05es">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -5922,6 +5922,7 @@ const APP = {
   _gestCore(p, g){ if(!p||!p.engine||!g) return;
     const id=g.seance; if(!p.engine.seance(id)) return;
     const words = Array.isArray(g.words) ? g.words : (typeof g.tok==='number' ? [g.tok] : []);
+    if(g.tool==='dico'){ if(p.openDico && g.mot) p.openDico(String(g.mot)); return; }   // es : le dico se montre — chez l'élève quand le prof le pousse, en écho au miroir
     const pf=(g.origin==='prof')?'P':'';   // ek3 : les marques du prof portent un préfixe — rendu distinct, jamais confondues avec celles de l'élève
     if(g.tool==='gomme'){ words.forEach(w=>p.engine.clearMark(id,g.supIdx,w,true)); p.engine.flush(); }
     else if(g.tool==='relier'){ if(typeof g.a==='number' && typeof g.b==='number') p.engine.addLink(id,g.supIdx,g.a,g.b); }
@@ -6344,7 +6345,7 @@ const MIRROR = {
     const g=Object.assign({ ts:Date.now(), seance:cur, origin:'prof' }, obj);
     store.save("control/"+chap+"/"+this._uid+"/gest", g);   // ek3 : la marque s'affichera chez l'élève comme MARQUE DU PROFESSEUR
     APP._gestCore(this._panel, g);   // ep2 : ÉCHO LOCAL immédiat — la couleur s'affiche au miroir sans attendre l'aller-retour (et l'exploration ne la perd plus)
-    toast("Geste envoyé à l'élève — il s'affiche comme marque du professeur."); },
+    toast(obj.tool==='dico' ? "Définition ouverte chez l'élève — et ici, en écho." : "Geste envoyé à l'élève — il s'affiche comme marque du professeur."); },
   // ep2 : en exploration, les MARQUES de l'élève continuent d'arriver en direct (le reste de l'exploration est préservé)
   _mergeGestes(snap){ const p=this._panel; if(!p||!p.engine||!snap||!snap.state) return;
     const sid=p.current; if(!sid || !snap.state[sid] || !snap.state[sid].gestes) return;
@@ -6367,7 +6368,7 @@ const MIRROR = {
       if(M._drag){ M._drag=false; const words=Object.keys(M._range.set).map(Number); if(words.length) M.sendGest({ supIdx:M._range.zone, tool:p._tool, words });
         if(['j','v','r','b'].includes(p._tool)){ p._tool=null; p.tab('c'); } return; }
       if(!p._tool) return; const w=M._wordAt(e.clientX,e.clientY); if(!w) return;
-      if(p._tool==='dico'){ p.openDico(w.txt); return; }   // ep4 : consultation LOCALE (le dico n'est jamais transmis à l'élève)
+      if(p._tool==='dico'){ M.sendGest({ supIdx:w.zone, tool:'dico', words:[w.wi], mot:w.txt }); return; }   // es : la définition s'ouvre chez L'ÉLÈVE aussi (l'écho local l'ouvre au miroir)
       if(p._tool==='label'){ askLabel(e.clientX, e.clientY, '', v=>{ if(v===null) return;
         M.sendGest({ supIdx:w.zone, tool:'label', words:[w.wi], label:v.trim() }); p._tool=null; p.tab('c'); }); }
       else if(p._tool==='relier'){ const pend=p._linkPending;
@@ -8087,6 +8088,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"es", date:"2026-06-12", version:"es", eleve:"", interne:"es — (1) DICO TRANSMIS (revirement demande par Paul, ep le faisait local) : l'outil dico au miroir envoie desormais un sendGest tool:'dico' (mot inclus) → _gestCore branche dico → openDico s'ouvre CHEZ L'ELEVE, et l'echo local l'ouvre au miroir (le prof voit ce que l'eleve voit) ; toast adapte ; la garde seance exploration (ep2) s'applique. (2) ETIQUETTE prompt() residuel cote eleve : AUCUN prompt dans le code (verifie : 2 occurrences = commentaires) — c'est une VERSION ANTERIEURE a ep sur la tablette : publier + recharger cote eleve regle le probleme." },
   { id:"er", date:"2026-06-12", version:"er", eleve:"", interne:"Fiche eleve REORGANISEE (wireframe valide, ~540px utiles en split). cardDetail REECRIT (seul appelant : la fiche ; depth ignore ; 4e param notifsHTML) : (1) EN-TETE 1 ligne — nom · mode + TOUTES les actions 👁/❓/⭐/↻ (le ↻ remonte de sui-actions, le « ou » quitte l'en-tete) ; (2) L'INSTANT en premier (.fi-instant) : ▶ titre seance courante · temps · etoiles, ligne d'etats QCM/correction/bilan · x/N · autonomie · QCM chap, diagnostic parcoursPhrases + ⏱ itemTimes ; hors seance : « Sur la carte » + stats ; (3) A TRAITER : notifs developpees inserees par la fiche en UN exemplaire (sui-sig doublon SUPPRIME) ; (4) AGIR en 4 volets replies : 📣 Rappel (la rap-zone quitte le milieu de fiche), 🧰 Ateliers (remedH), ⚙ avance (trio), 📜 ses interventions (DEPLACE de ficheHTML vers cardDetail) ; (5) SON PARCOURS en pied : pastilles .fi-chip (✓/▶/…/· + titre court 16c + etoiles + ⚠ incoherence, detail complet au title : QCM, temps, rafale, dico→gloss) — les sui-prow verbeux supprimes ; (6) split etroit : mini-grille → RAIL 74px (initiales .ini, noms masques, title=nom complet)." },
   { id:"eq", date:"2026-06-12", version:"eq", eleve:"", interne:"NETTOYAGE ERGONOMIE du panneau (audit en situation, 7 recos validees Paul). (1) Defaut intelligent : cours actif → onglet SUIVI a l'ouverture (avant : l'EDITEUR en pleine seance a chaque reload de maj) ; sinon dernier onglet memorise (wt_prof_tab via go()). (2) Reordonnancement : bandeau cours COMPACT en tete (● classe · fin hh:mm · reste N min · +10 · ■ Cloturer) → GRILLE → file → bilans → volets replies (fini la classe sous la ligne de flottaison). (3) Signaux → FILE D'ATTENTE compacte une ligne, triee du plus ancien au plus recent (equite des mains levees), ✓ vu seul — le traitement riche vit dans les cartes. (4) = INVENTAIRE #1 : ❄ → volet replie « Gestes d'urgence » avec ⛔ Tout figer maintenant (gel+lock pre-regles) + Reprendre + reglage fin aux coches. (5) Remediation reployee en volet. (6) Fiche dedupliquee : cardDetail perd 👁/⭐ (l'en-tete les porte), l'en-tete gagne ❓ aide. (7) Carte : micro-indicateur x/N · M min (engineFor cache). CSS cours-band/sig-line/sui-adv." },
   { id:"ep", date:"2026-06-12", version:"ep", eleve:"", interne:"Lot ep — rapport de test miroir (instance extension). (1) ETIQUETTE : prompt() natif GELAIT le panneau (boite bloquante, reload force) → askLabel popover inline non bloquant (Enter/Echap/clic dehors), aux 2 sites (panel eleve + miroir). (2) MARQUES EN DIRECT : echo LOCAL du geste prof (APP._gestCore factorise, applique au moteur du miroir avant l'envoi → couleur instantanee) + en exploration, _mergeGestes fait arriver les marques de l'eleve en continu (seuls les gestes, l'exploration est preservee) + GARDE : en exploration sur une AUTRE seance que celle de l'eleve, le geste reel est BLOQUE avec explication (sinon corruption d'indices de mots). (3) Aa retire de la barre du miroir (il ne reglait rien — la taille est PAR ecran eleve). (4) DICO : le balayage du miroir ne routait pas l'outil dico → silence total ; route (P.openDico expose, consultation LOCALE jamais transmise) ; cleanDef coupait au DEBUT du francais mais pas a la FIN → etymologie/anagrammes/AUTRES LANGUES passaient (les « definitions sans rapport ») : sections parasites sautees, stop net a la langue suivante. (5) glossaire ouvre → outil dico desactive (etats coherents). (6) renderSoon : throttle 4 s + garde pointeur 1,5 s (les cibles de clic ne bougent plus en rafale de heartbeats)." },
