@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fh">
+<meta name="app-version" content="2026-06-05fj">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -186,21 +186,21 @@
   .mapcard .mh{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;font-size:.78rem}
   .mapcard .mh .lab{font-family:'EB Garamond',serif;color:var(--gold)}
   .mapcard .mh .free{font-size:.66rem;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:3px 8px}
-  .graph{position:relative;width:100%;height:330px}
+  /* fi : la carte épouse le ratio de l'image (≈16/10) au lieu d'une hauteur figée → plus d'écrasement sur grand écran ; bornée pour rester lisible sur mobile comme sur large moniteur */
+  .graph{position:relative;width:100%;aspect-ratio:16/10;min-height:300px;max-height:min(72vh,640px)}
+  @supports not (aspect-ratio:1){ .graph{height:330px} }   /* repli navigateurs sans aspect-ratio */
   .graph svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .grid-l{stroke:var(--gold-deep);stroke-width:.2;opacity:.1}
   .river{stroke:#3c5660;stroke-width:3.4;fill:none;opacity:.34;stroke-linecap:round;filter:blur(.3px)}
   .route{stroke:var(--accent);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-dasharray:1.5 6;opacity:.42}
   .route.lit{stroke:var(--accent);stroke-width:2;opacity:1;animation:march 1s linear infinite}
+  /* fj : segment du chemin conseillé dont la séance d'origine est faite → trait doré plein lumineux (progression) */
+  .route.done{stroke:var(--gold,#fcd34d);stroke-width:2.6;opacity:1;stroke-dasharray:none;filter:drop-shadow(0 0 4px rgba(252,211,77,.55))}
   @keyframes march{to{stroke-dashoffset:-22}}
-  .mine{stroke:#f0e6d0;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(240,230,208,.5));
-    stroke-dasharray:360;stroke-dashoffset:360;animation:draw 1s ease forwards}
-  @keyframes draw{to{stroke-dashoffset:0}}
-  .minedot{fill:#f0e6d0}
   .place{position:absolute;transform:translate(-50%,-50%);width:118px;text-align:center;cursor:pointer;opacity:0;animation:fade .5s ease forwards}
   @keyframes fade{to{opacity:1}}
   .mapcard.no-anim .place{animation:none;opacity:1}
-  .mapcard.no-anim .mine{animation:none;stroke-dashoffset:0}
+
   .medal{width:50px;height:50px;margin:0 auto;border-radius:50%;display:grid;place-items:center;position:relative;font-family:'EB Garamond',serif;font-weight:900;font-size:1.2rem;transition:transform .18s}
   .place.todo .medal{background:radial-gradient(circle at 35% 30%,#2c2415,#161009);border:2px solid #3a3120;color:#6e5f3e;filter:saturate(.5) brightness(.75);opacity:.8}
   .place.wip .medal{background:radial-gradient(circle at 35% 30%,#3a2c12,#221808);border:2px solid var(--wip);color:var(--gold2)}
@@ -5001,14 +5001,18 @@ function Panel(engine, root, name){
     svg+='<svg viewBox="0 0 100 100" preserveAspectRatio="none">';
     for(let i=20;i<100;i+=20){ svg+=`<line class="grid-l" x1="${i}" y1="0" x2="${i}" y2="100"/><line class="grid-l" x1="0" y1="${i}" x2="100" y2="${i}"/>`; }
     svg+='<path class="river" d="M -3 50 C 20 40, 32 64, 52 56 S 80 66, 103 58"/>';
-    // tracé conseillé = chemin idéal de CET élève (segments consécutifs) ; segment menant au conseil = animé
+    // fj : le chemin conseillé de CET élève sert de jauge de progression.
+    //   • segment dont la séance d'ORIGINE est faite → doré plein lumineux (.route.done)
+    //   • segment menant à la prochaine séance à faire → pointillés animés (.route.lit)
+    //   • le reste → pointillés éteints (.route)
+    //   Plus de tracé du parcours réel (les anciennes « barres blanches » .mine sont retirées).
     for(let i=0;i<ideal.length-1;i++){ const s=engine.seance(ideal[i]), t=engine.seance(ideal[i+1]); if(!s||!t)continue;
-      const lit=(ideal[i+1]===sug); const mx=(s.carte.x+t.carte.x)/2,my=Math.min(s.carte.y,t.carte.y)-8;
-      svg+=`<path class="route ${lit?'lit':''}" d="M ${s.carte.x} ${s.carte.y} Q ${mx} ${my} ${t.carte.x} ${t.carte.y}"/>`; }
-    const snap=engine.snapshot();
-    if(snap.path.length>=2){ let d="M "+snap.path.map(id=>{const s=engine.seance(id);return s.carte.x+" "+s.carte.y;}).join(" L ");
-      svg+=`<path class="mine" d="${d}"/>`; }
-    snap.path.forEach(id=>{const s=engine.seance(id);svg+=`<circle class="minedot" cx="${s.carte.x}" cy="${s.carte.y}" r="1.3"/>`;});
+      const fromDone=(engine.statusOf(ideal[i])==="done");
+      const lit=(ideal[i+1]===sug);
+      const cls=fromDone ? 'route done' : (lit ? 'route lit' : 'route');
+      const mx=(s.carte.x+t.carte.x)/2,my=Math.min(s.carte.y,t.carte.y)-8;
+      svg+=`<path class="${cls}" d="M ${s.carte.x} ${s.carte.y} Q ${mx} ${my} ${t.carte.x} ${t.carte.y}"/>`; }
+    const snap=engine.snapshot();   // fj : encore nécessaire pour here=snap.lastVisited (le tracé .mine a disparu, pas le snapshot)
     svg+='</svg>';
     const S=engine.chapter.seances;
     let nodes="";
@@ -8264,6 +8268,8 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fj", date:"2026-06-12", version:"fj", eleve:"Sur la carte, le chemin conseille s'illumine en dore au fur et a mesure que tu termines tes seances dans l'ordre propose. Les anciens traits blancs ont disparu.", interne:"fj — CHEMINS revus (signalé Paul : « barres blanches » bizarres = ancien tracé .mine du parcours RÉEL, reliait les séances dans l'ordre de visite → traits en travers ; et chemin conseillé « pas à tous les coups »). SUPPRIMÉ : .mine + .minedot (parcours réel) et la règle no-anim associée. NOUVEAU : le chemin conseillé de CET élève (idealPath, qui dépend de eleveIndex → propre à chacun) sert de jauge : segment dont la séance d'ORIGINE est done → .route.done (doré plein lumineux, drop-shadow) ; segment vers la prochaine séance à faire (sug) → .route.lit (pointillés animés) ; reste → .route (pointillés éteints). Plus lisible et pédagogique : on voit la progression LE LONG du chemin préconisé, pas un gribouillis du trajet réel." },
+  { id:"fi", date:"2026-06-12", version:"fi", eleve:"", interne:"fi — CARTE ADAPTATIVE (signalé Paul : carte écrasée en haut sur ordi/tablette). CAUSE : .graph avait une hauteur FIXE de 330px → sur grand écran la carte s'étale en largeur mais reste basse, les pions (% top) se tassent verticalement. CORRECTIF : .graph passe en aspect-ratio:16/10 (ratio de l'image de fond 1440×900) + min-height:300px (mobile) + max-height:min(72vh,640px) (borne grand écran). Repli height:330px via @supports pour les très vieux navigateurs. AUCUN changement du moteur ni des coordonnées : les pions en % et le SVG 0-100 s'adaptent automatiquement à la nouvelle hauteur. Ne casse rien (carte.x/y, interactivité, fond image, routes : intacts)." },
   { id:"fh", date:"2026-06-12", version:"fh", eleve:"", interne:"fh — CORRECTIF BUG CARTE (signalé Paul : seules 2 séances sur 9 visibles, route blanche aberrante). CAUSE : données Firebase de prod où plusieurs séances ont carte.x/y = 0,0 (placement/import raté) → toutes empilées dans le coin, masquées les unes sous les autres ; la garde existante laissait passer 0 (nombre valide). CORRECTIF chapterDefaults : (1) garde renforcée (x ET y doivent être des nombres) ; (2) garde-fou GLOBAL __cartePatch() après la boucle : détecte les positions EXACTEMENT en doublon ou à (0,0) et répartit ces séances sur une grille de repli (cols=ceil(sqrt(N)), marges 14–86% / 18–82%) — aucune séance ne disparaît plus sous une autre, même données corrompues. Le seed embarqué est sain (vraies coords) ; le patch protège les données live. NB : Paul doit re-placer proprement les séances via l'éditeur (🗺) puis publier pour des positions définitives ; le patch est un filet, pas un placement esthétique." },
   { id:"fg", date:"2026-06-12", version:"fg", eleve:"La carte du chapitre s'affiche maintenant sur un vrai plan de Paris au XIXe siecle. Rien ne change pour jouer : tu choisis ta seance en touchant son rond.", interne:"fg — CARTE DE FOND HEBERGEE (choix Paul : image sur GitHub, comme l'intro, plutot que SVG 50 Ko embarque ou PNG base64 lourd). Le plan parisien XIXe genere par GPT est a exporter en image (webp/png 1440x900) et a deposer sur le repo mjpc-medias sous worktrack/ch07/carte-fond.webp. Cote code : constante MAP_BG (URL), couche .mapbg en fond de .graph (z-index 0, background-size:cover + voile radial de lisibilite), SVG dynamique (grille/riviere/routes 0-100) et pions .place passent z-index 1 AU-DESSUS. carte.x/y et toute l'interactivite INCHANGES. Si MAP_BG vide ou image absente → repli automatique sur le degrade sombre (rien ne casse). La grille/riviere SVG internes restent (discretes) ; on pourra les retirer plus tard si elles doublonnent avec l'image." },
   { id:"ff", date:"2026-06-12", version:"ff", eleve:"", interne:"ff — (1) PULSATION étendue (fe) : data-frag sur CHAQUE bloc de consigne (bloc:bi, posé par setBlock) et CHAQUE support (sup:xi, setSupport) — modifier un bloc/support fait pulser CE fragment précis sur la feuille, comme les QCM. (2) BYPASS de blocage signalé : un gel/verrou actif SANS cours vivant pour la classe (clôture pendant blocage, voie détournée) → côté élève le voile n'est PAS imposé hors cours (gelEffectif=gel&&coursVivant ; setLock&&coursVivant dans le subscribe control) et un signal 'bypass' (🛑) + entrée journal sont créés (une fois par epoch de blocage). Le prof voit l'anomalie dans le suivi au lieu d'un élève bloqué à tort le dimanche." },
