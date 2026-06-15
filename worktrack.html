@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fk">
+<meta name="app-version" content="2026-06-05fr">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -205,6 +205,7 @@
   .place.todo .medal{background:radial-gradient(circle at 35% 30%,#2c2415,#161009);border:2px solid #3a3120;color:#6e5f3e;filter:saturate(.5) brightness(.75);opacity:.8}
   .place.wip .medal{background:radial-gradient(circle at 35% 30%,#3a2c12,#221808);border:2px solid var(--wip);color:var(--gold2)}
   .place.done .medal{background:radial-gradient(circle at 35% 30%,#fcd34d,#d99a1f 72%,#9a6a12);border:2px solid #9a6a12;color:#3a2a0e}
+  .place.offpath .medal{box-shadow:0 0 0 2px var(--night-main,#171126),0 0 0 4px rgba(199,231,239,.55)}   /* fq : faite hors du chemin conseillé — liseré bleuté discret pour la repérer */
   .place:hover .medal{transform:scale(1.07)}
   .place .nm{font-family:'EB Garamond',serif;font-weight:600;font-size:.84rem;margin-top:6px;line-height:1.05}
   .place .city{font-size:.66rem;color:var(--muted);font-style:italic}
@@ -5006,6 +5007,7 @@ function Panel(engine, root, name){
     //   • segment menant à la prochaine séance à faire → pointillés animés (.route.lit)
     //   • le reste → pointillés éteints (.route)
     //   Plus de tracé du parcours réel (les anciennes « barres blanches » .mine sont retirées).
+    const onPath=new Set(ideal);   // fq : séances qui appartiennent au chemin conseillé de cet élève
     for(let i=0;i<ideal.length-1;i++){ const s=engine.seance(ideal[i]), t=engine.seance(ideal[i+1]); if(!s||!t)continue;
       const fromDone=(engine.statusOf(ideal[i])==="done");
       const lit=(ideal[i+1]===sug);
@@ -5032,7 +5034,8 @@ function Panel(engine, root, name){
         : lock ? lockMsg
         : comp ? `« `+esc(s.titre)+` » : réussi, mais des questions ont été ajoutées — clique pour les faire`
         : `Clique pour faire « `+esc(s.titre)+` »`;
-      nodes+=`<div class="place ${st}${s.remediation?' remed':''}${comp?' has-comp':''}${s.id===sug?' suggested':''}${here?' here':''}${(occ||lock)?' locked':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}" data-lock="${lock?'1':''}" data-lockmsg="${lock?esc(lockMsg):''}" title="${ttl}">
+      const offPath = (st==="done" && !s.remediation && !onPath.has(s.id));   // fq : faite mais hors du chemin conseillé
+      nodes+=`<div class="place ${st}${s.remediation?' remed':''}${comp?' has-comp':''}${s.id===sug?' suggested':''}${here?' here':''}${(occ||lock)?' locked':''}${offPath?' offpath':''}" style="left:${s.carte.x}%;top:${s.carte.y}%;animation-delay:${i*80}ms" data-id="${s.id}" data-occ="${occ?esc(occ):''}" data-lock="${lock?'1':''}" data-lockmsg="${lock?esc(lockMsg):''}" title="${offPath?'Faite hors du chemin conseillé · ':''}${ttl}">
         <div class="medal">${s.rn}${st==="done"?`<span class="check${comp?' comp':''}">${comp?'➕':'✓'}</span>`:''}${occ?'<span class="occ">occupé</span>':''}${lock?'<span class="occ">🔒</span>':''}</div>
         <div class="nm">${esc(s.titre)}</div><div class="city">${esc(s.ville)}</div>
         <div class="stars">${starsH}</div></div>`; });
@@ -6192,7 +6195,7 @@ const APP = {
     const opt=(val,lab,sel)=>'<option value="'+val+'"'+(sel?' selected':'')+'>'+lab+'</option>';
     const opts=[ opt('__auto','Classe en cours (auto)', auto) ]
       .concat([ opt('__none','— Aucune classe (tableau neutre) —', !auto&&cur==='__none') ])
-      .concat(noToutes?[]:[ opt('','Toutes les classes', !auto&&cur==='') ])
+      .concat(noToutes?[]:[ opt('','👥 Tous les élèves connectés (toutes classes)', !auto&&cur==='') ])
       .concat(this.knownClasses().map(c=>opt(c.seg, esc(c.nom), !auto&&cur===c.seg)));
     return '<div class="prof-row" style="margin-bottom:10px"><label class="d">Classe affichée&nbsp;: '
       +'<select class="txtin classe-sel" style="width:auto;margin-left:6px" onchange="APP.setClasseFiltre(this.value)">'+opts.join('')+'</select></label></div>'; },
@@ -6427,13 +6430,25 @@ const MIRROR = {
     if(!on && this._engine){ this._engine.hydrate(this._lastSnap||{}); this._apply(); }
     this._renderCtrl(); },
   _renderCtrl(){ const el=$("mirrorCtrl"); if(!el) return;
-    el.innerHTML = this._explore
+    const cur=(this._sess&&this._sess.current)||(this._panel&&this._panel.current)||null;
+    // fo : geste prof RÉEL (renvoie l'élève sur son autocorrection) — disponible dans les deux modes ; ce n'est pas une exploration locale, c'est une action sur l'élève
+    const reAuto = (this._uid && cur && !isTestUid(this._uid))
+      ? ' <button class="btn ghost" title="Renvoie l\'élève sur son autocorrection (utile s\'il s\'est sur-évalué) — action réelle sur son écran" onclick="MIRROR.renvoyerAutocorr()">↻ revoir son autocorrection</button>'
+      : '';
+    el.innerHTML = (this._explore
       ? '<span class="mir-exp">🧪 Exploration — tu navigues sur une copie : <b>rien n\'est envoyé à l\'élève</b>, aucune étoile, aucun résultat. Seuls les gestes (outils) lui parviennent, marqués « professeur ».</span> <button class="btn ghost" onclick="MIRROR.setExplore(false)">↻ revenir au direct</button>'
-      : '<span class="d" style="margin:0">Tu vois l\'écran en direct. <b>Clique dedans</b> pour explorer librement (copie locale, zéro impact élève). Pour pousser un geste réel : choisis un outil puis balaye les mots — il s\'affichera comme <b>marque du professeur</b>.</span>'; },
+      : '<span class="d" style="margin:0">Tu vois l\'écran en direct. <b>Clique dedans</b> pour explorer librement (copie locale, zéro impact élève). Pour pousser un geste réel : choisis un outil puis balaye les mots — il s\'affichera comme <b>marque du professeur</b>.</span>')
+      + reAuto; },
   // ek : le proxy _pilot est mort — APP.panel('__mirror') route vers le panel réel (exploration locale sans imputation)
   act(m, a){ if(!this._uid) return; const chap=CHAPTER.meta.id||"chapitre";
     store.save("control/"+chap+"/"+this._uid+"/act", { m, a:a||[], ts:Date.now() }); },
   // envoie un geste à appliquer chez l'élève : plage de mots (surligner/gomme), paire (relier) ou étiquette
+  renvoyerAutocorr(){ if(!this._uid) return;   // fo : action prof réelle depuis le miroir
+    const cur=(this._sess&&this._sess.current)||(this._panel&&this._panel.current)||null;
+    if(!cur){ toast("L'élève n'est pas dans une séance."); return; }
+    APP.renvoyerAutocorr(this._uid, cur);
+    if(typeof PROF!=='undefined' && PROF.logJournal) PROF.logJournal(this._uid, 'autocorr', 'depuis le miroir', 'renvoyé sur son autocorrection');
+    toast("L'élève est renvoyé sur son autocorrection."); },
   sendGest(obj){ if(!this._uid) return; const chap=CHAPTER.meta.id||"chapitre";
     const cur=(this._sess&&this._sess.current)||null; if(!cur){ toast("L'élève n'est pas dans une séance."); return; }
     if(this._explore && this._panel && this._panel.current && this._panel.current!==cur){ toast("L'élève n'est pas sur cette séance (tu explores « "+((CHAPTER.seances.find(z=>z.id===this._panel.current)||{}).titre||'')+" ») — geste non envoyé."); return; }   // ep2 : ne jamais marquer la mauvaise séance chez l'élève
@@ -6876,8 +6891,12 @@ const PROF = {
       +`<span class="sig-btns">${conv}<button class="btn ghost" title="${x.type==='aide'?'Efface le signal ET éteint la main ✋ sur la tablette de l\'élève':'Efface ce signal de la liste (sans rien changer chez l\'élève)'}" onclick="PROF.signalVu('${esc(x.uid)}','${x.type}','${esc(x.seanceId||'')}','${esc(x.etat||'')}')">✓ vu</button></span></div>`; },
   // en : la fiche élève « instant T » — clic sur une carte ; null = retour grille. Le filtre de recherche est RÉINITIALISÉ (la grille totale revient à côté).
   ficheEleve(uid){ this._ficheUid=uid||null; this._filtre=''; this.render(); },
-  filterCards(v){ this._filtre=(v||'').toLowerCase();
-    document.querySelectorAll('.sui-grid .sui-card').forEach(c=>{ c.style.display=(!this._filtre || (c.dataset.search||'').includes(this._filtre))?'':'none'; }); },
+  filterCards(v){ this._filtre=(v||'');
+    const raw=String(v||'').trim();
+    const q=raw ? sanId(raw) : '';   // fp : NE PAS passer '' à sanId (qui renvoie 'x') ; vide → tout réafficher
+    document.querySelectorAll('.sui-card[data-search]').forEach(c=>{ c.style.display=(!q || (c.dataset.search||'').includes(q))?'':'none'; });
+    // masquer le titre « Hors séance » s'il ne reste rien après filtre (sinon titre orphelin)
+    document.querySelectorAll('details[data-dk="horsseance"]').forEach(d=>{ const any=[...d.querySelectorAll('.sui-card')].some(c=>c.style.display!=='none'); d.style.display=(q && !any)?'none':''; }); },
   open(){ $("profOverlay").classList.add("show"); this.watchProgress();
     if(!this.authed && lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.tab||this.defaultTab(); }   // el : poste marqué prof → jamais re-saisir le code · eq1 : en séance, on arrive sur le Suivi
     if(this.authed){ this.render(); SENTINEL.maybeShow(); } else this.gate(); },
@@ -6906,15 +6925,25 @@ const PROF = {
     const box=document.getElementById('profModal');
     if(!this._holdInit && box){ this._holdInit=true;
       box.addEventListener('focusout', ()=>{ if(this._dirty){ this._dirty=false; this.renderSoon(); } }); }
-    if(box && !box._ptrWired){ box._ptrWired=true; box.addEventListener('pointerdown', ()=>{ this._lastPtr=Date.now(); }, true); }
+    if(box && !box._ptrWired){ box._ptrWired=true;
+      box.addEventListener('pointerdown', ()=>{ this._lastPtr=Date.now(); }, true);
+      box.addEventListener('input', ()=>{ this._lastKey=Date.now(); }, true);    // fl : toute frappe/édition (input/select) horodatée — couvre tout le panneau
+      box.addEventListener('keydown', ()=>{ this._lastKey=Date.now(); }, true); }
     const ae=document.activeElement;
-    if(box && ae && box.contains(ae) && /^(SELECT|INPUT|TEXTAREA)$/.test(ae.tagName)){ this._dirty=true; return; }   // ne JAMAIS détruire un menu/champ en cours d'usage
+    // fl : on NE reconstruit JAMAIS pendant une saisie active — focus dans un champ OU frappe très récente (< 2,5 s). On replanifie pour plus tard au lieu de jeter le re-render.
+    const focusInField = box && ae && box.contains(ae) && /^(SELECT|INPUT|TEXTAREA)$/.test(ae.tagName);
+    const tapingRecently = (Date.now()-(this._lastKey||0)) < 2500;
+    if(focusInField || tapingRecently){ this._dirty=true;
+      if(this._rsT) clearTimeout(this._rsT);
+      this._rsT=setTimeout(()=>{ this._rsT=null; this.renderSoon(); }, 1200);   // re-tente plus tard : le re-render n'est pas perdu, juste reporté
+      return; }
     if(this._rsT) clearTimeout(this._rsT);
     const sincePtr=Date.now()-(this._lastPtr||0), sinceRender=Date.now()-(this._lastMachineRender||0);
-    const delay=Math.max(700, 1500-sincePtr, 4000-sinceRender);   // ep6 : throttle 4 s + jamais sous le doigt (clic récent < 1,5 s) — les cibles de clic ne bougent plus en rafale
+    const delay=Math.max(700, 1500-sincePtr, 4000-sinceRender);   // ep6 : throttle 4 s + jamais sous le doigt (clic récent < 1,5 s)
     this._rsT=setTimeout(()=>{ this._rsT=null; if(this.authed){ this._lastMachineRender=Date.now(); this.render(); } }, delay); },
   render(){ const c=CHAPTER, T=this.tab;
     const _box=document.getElementById('profModal'); const _sc=_box?_box.scrollTop:0;
+    const _openDK = _box ? [..._box.querySelectorAll('details[data-dk][open]')].map(d=>d.getAttribute('data-dk')) : [];   // fn : volets dépliés à rouvrir après reconstruction
     const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",maj:"Historique des mises à jour",reglages:"Réorientation, exclusivité, mode test"};
     const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" title="${tips[id]||''}" onclick="PROF.go('${id}')">${lab}</button>`;
     const _segBadge = APP.classeFiltreSeg() || APP.activeClasseSeg();
@@ -6924,7 +6953,10 @@ const PROF = {
       <div style="margin-bottom:10px">
         <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
       <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("maj","MAJ")}${tabBtn("reglages","Réglages"+(SENTINEL.badge()?" ⚠":""))}</div>
-      <div id="ptabbody">${this.body()}</div>`; },
+      <div id="ptabbody">${this.body()}</div>`;
+    const _nb=document.getElementById('profModal');
+    if(_nb && _openDK.length) _openDK.forEach(k=>{ const d=_nb.querySelector('details[data-dk="'+(window.CSS&&CSS.escape?CSS.escape(k):k.replace(/"/g,'\\"'))+'"]'); if(d) d.open=true; });   // fn : rouvre les volets dépliés (la capture _openDK est en tête de render)
+    if(_nb && _sc) _nb.scrollTop=_sc; },   // ei1 : le scroll du panneau survit au re-render
   go(t){ if(t==="bilan") this._bilans=null; if(t==="archives") this._archives=null; this.tab=t; lsSet("wt_prof_tab", t); this.render(); },
   // eq1 : en séance, le panneau s'ouvre sur le SUIVI (avant : « creation » → l'éditeur en pleine classe à chaque reload de màj)
   defaultTab(){ const ctl=APP._control||{}; const now=Date.now();
@@ -6936,8 +6968,7 @@ const PROF = {
         : this.tab==="suivi"?this.suiviBody()
         : this.tab==="bilan"?this.bilanBody()
         : this.tab==="archives"?this.archivesBody()
-        : this.tab==="maj"?this.majBody() : this.reglagesBody();
-    if(_box && _sc) _box.scrollTop=_sc; },   // ei1 : le scroll du panneau survit au re-render (il sautait en plein geste)
+        : this.tab==="maj"?this.majBody() : this.reglagesBody(); },
   /* ── onglet MAJ : historique des mises à jour de l'application ── */
   majBody(){ return `<div class="prof-sec"><h4>Histoire des mises à jour</h4>
     <div class="d">Journal des versions. « Élèves » = ce qui leur est annoncé au bandeau de la carte, <b>uniquement si tu cliques « Publier aux élèves »</b> ; « Note interne » = pour toi seul. Rien ne s'affiche aux élèves tant que tu n'as pas publié.</div>`
@@ -7304,7 +7335,7 @@ const PROF = {
           <div class="prof-row"><button class="btn primary" title="Démarre l'heure pour la classe : chronos « cette heure », présences, suivi en direct" onclick="PROF.lancerCoursModal('${segAff}')">▶ Lancer la séance</button></div></div>`;
       }
     }
-    const freezeBox = (dansClasse.length && APP.coursActifSeg(segAff)) ? `<div class="prof-sec freeze-sec"><details class="adv"><summary>⛔ Gestes d'urgence (figer la classe, pause)</summary>
+    const freezeBox = (dansClasse.length && APP.coursActifSeg(segAff)) ? `<div class="prof-sec freeze-sec"><details class="adv" data-dk="urgence"><summary>⛔ Gestes d'urgence (figer la classe, pause)</summary>
       <div class="prof-row" style="padding:6px 10px 0"><button class="btn fire" title="D'un seul geste : chronos gelés + écrans verrouillés pour toute la classe (« regarde le tableau », évacuation…)" onclick="PROF._fz.gel=true;PROF._fz.lock=true;PROF.doFreeze()">⛔ Tout figer maintenant</button>
         <button class="btn ghost" title="Libère les écrans gelés, les chronos repartent où ils s'étaient arrêtés" onclick="PROF.doResume()">▶ Reprendre</button></div>
       <div class="d" style="padding:0 10px">Réglage fin si besoin — coche puis « Figer » :</div>
@@ -7332,7 +7363,7 @@ const PROF = {
         <option value="avancement"${sel('avancement')}>Avancement (à la traîne d'abord)</option>
         <option value="seance"${sel('seance')}>Séance en cours</option>
         <option value="alerte"${sel('alerte')}>Alertes d'abord</option></select>` : '';
-      const rechBox = dansClasse.length>=3 ? `<div class="rech-bar"><input class="txtin rech-in" placeholder="🔎 chercher un élève (initiales ou début du nom)…" value="${esc(this._filtre||'')}" title="La grille se réduit en direct ; vide le champ pour tout revoir" oninput="PROF.filterCards(this.value)">${this._filtre?`<button class="btn ghost" title="Effacer la recherche" onclick="PROF.filterCards('');var i=document.querySelector('.rech-in');if(i)i.value='';">✕</button>`:''}</div>` : '';
+      const rechBox = (dansClasse.length+horsSeance.length)>=3 ? `<div class="rech-bar"><input class="txtin rech-in" id="rech-suivi" placeholder="🔎 chercher un élève (initiales, nom ou classe)…" value="${esc(this._filtre||'')}" title="La grille se réduit en direct ; cherche par initiales, début du nom, ou nom de classe" oninput="PROF.filterCards(this.value)">${this._filtre?`<button class="btn ghost" title="Effacer la recherche" onclick="PROF.filterCards('');var i=document.getElementById('rech-suivi');if(i){i.value='';i.focus();}">✕</button>`:''}</div>` : '';
       const corps = dansClasse.length
         ? `<div class="d">🟢 actif &lt; 1 min · 🟠 en pause · ⚪ hors ligne · les signaux s'affichent DANS la carte · touche une carte pour la fiche complète</div><div class="sui-grid">${rows}</div>
            <div class="prof-row"><button class="btn ghost" title="Libère ce poste : la progression de l'élève est conservée" onclick="PROF.endSessionFor('${segAff}','${esc(nomAff)}')">Déconnecter ${esc(nomAff)}</button></div>`
@@ -7344,14 +7375,14 @@ const PROF = {
       }
     }
     const remeds=(CHAPTER.seances||[]).filter(x=>x.remediation);
-    const remedBox = (remeds.length && segAff) ? `<div class="prof-sec"><details class="adv"><summary>🧰 Remédiation — déblocage des ateliers</summary><div style="padding:0 10px 8px">
+    const remedBox = (remeds.length && segAff) ? `<div class="prof-sec"><details class="adv" data-dk="remedclasse"><summary>🧰 Remédiation — déblocage des ateliers</summary><div style="padding:0 10px 8px">
       <div class="d">Ateliers invisibles tant que tu ne les débloques pas — ici pour toute la classe, ou élève par élève depuis sa carte (2ᵉ cran). Même débloqués, ils n'apparaissent chez un élève qu'<b>après sa séance de convergence</b> (tu peux donc activer en avance) ; l'élève est prévenu et un signal 🧩 t'arrive. Les exercices de chaque élève sont choisis d'après SES erreurs (critères « à revoir », QCM ratés) ; un atelier à la fois.</div>
       ${remeds.map(rs=>{ const onC=!!((((APP._control||{})[segAff]||{}).remedOn||{})[rs.id]);
         return `<div class="prof-row" style="justify-content:space-between"><span class="d" style="margin:0">${esc(rs.titre)}</span>
           <button class="btn ghost" title="Ouvre ou referme cet atelier pour TOUTE la classe d'un coup — chaque élève ne le verra qu'après sa convergence" onclick="REMED.toggle('${segAff}','${rs.id}');PROF.render()"${onC?' style="border-color:var(--gold-deep);color:var(--gold)"':''}>${onC?'débloqué pour la classe — reverrouiller':'débloquer pour la classe'}</button></div>`; }).join('')}</div></details></div>` : '';
     // fb : « 🏠 Hors séance » — élèves présents sans cours lancé (cette classe au repos + autres classes). Cartes complètes, mêmes actions (sauf blocages, retirés dans cardDetail). Section dépliable.
     const hsSorted = horsSeance.slice().sort((a,b)=>(a.classe||'').localeCompare(b.classe||'')||(a.name||'').localeCompare(b.name||''));
-    const ailleursSec = (horsSeance.length && !(this._ficheUid && horsSeance.some(s=>s._uid===this._ficheUid))) ? `<div class="prof-sec"><details class="adv" open><summary>🏠 Hors séance · ${horsSeance.length} (travail en autonomie, hors cours lancé)</summary>
+    const ailleursSec = (horsSeance.length && !(this._ficheUid && horsSeance.some(s=>s._uid===this._ficheUid))) ? `<div class="prof-sec"><details class="adv" data-dk="horsseance" open><summary>🏠 Hors séance · ${horsSeance.length} (travail en autonomie, hors cours lancé)</summary>
       <div class="d" style="padding:0 10px">Élèves connectés sans cours lancé (maison, étude, ou avant que tu lances le cours). Leur travail compte, marqué <b>🏠 autonomie ×2</b>. Tu gardes toutes tes actions ; seuls les blocages sont retirés (un voile chez eux le dimanche n'aurait pas de sens).</div>
       <div class="sui-grid" style="padding:0 10px 8px">${hsSorted.map(s=>this.suiviCard(s, true)).join('')}</div></details></div>` : '';
 
@@ -7367,7 +7398,7 @@ const PROF = {
     const jAll=Object.values(APP._journal||{}).filter(e=>!e.classeSeg||e.classeSeg===segAff).sort((a,b)=>(b.ts||0)-(a.ts||0));
     const jRow=e=>`<div class="r"><span class="sig-when">${e.ts?new Date(e.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span>
       <span><b class="sui-nomlink" onclick="PROF.ficheEleve('${esc(e.uid)}')">${esc(e.nom||e.uid)}</b> · ${esc(e.raison||e.type||'')} <span class="sig-act">→ ${esc(e.action||'')}</span></span></div>`;
-    const journalBox = jAll.length ? `<div class="prof-sec"><details class="adv"><summary>📜 Journal des interventions · ${jAll.length} (il survit à la clôture)</summary>
+    const journalBox = jAll.length ? `<div class="prof-sec"><details class="adv" data-dk="journal"><summary>📜 Journal des interventions · ${jAll.length} (il survit à la clôture)</summary>
       <div class="prof-list" style="padding:6px 10px">${jAll.slice(0,80).map(jRow).join('')}</div></details></div>` : '';
     const bilA = APP.signauxList().filter(x=> x.type==='bilan' && x.classeSeg===segAff);   // angle mort : bilans écrits non encore « vus »
     const bilParS = {}; bilA.forEach(x=>{ const k=x.seance||x.seanceId||'?'; bilParS[k]=(bilParS[k]||0)+1; });
@@ -7477,7 +7508,8 @@ const PROF = {
     const clB = hors ? `<span class="meta hs-cl">${esc(s.classe||'')}</span>` : '';
     const sig=(APP._signaux||{})[uid]||{};
     const notifs=['aide','bilan','incoherence','cahier','remed','duo'].filter(t=>sig[t]).map(t=>this.signalRowHTML(Object.assign({uid,type:t},sig[t]), true)).join('');
-    const search=((s.name||uid)+' '+((s.name||'').split(/\s+/).map(w=>w[0]||'').join(''))).toLowerCase();
+    const _nom=(s.name||uid); const _ini=_nom.split(/\s+/).map(w=>w[0]||'').join('');
+    const search=sanId(_nom+' '+_ini+' '+(s.classe||''));   // fp : normalisé (accents/casse retirés via sanId) → recherche tolérante, inclut la classe
     let adv='';   // eq7 : le coup d'œil de circulation — avancement + temps de la séance en cours
     try{ const eng=this.engineFor(uid); if(eng){ const b=eng.bilan(); const tot=seancesParcours().length;
       let tps=''; if(s.current){ const pc=eng.parcours(s.current); if(pc&&pc.total>0) tps=' · '+Math.round(pc.total/60000)+' min'; }
@@ -7553,13 +7585,19 @@ const PROF = {
     // ── AGIR : quatre volets repliés, un clic chacun ──
     if(this.rappelActif() && !isTestUid(uid)){ const persos=APP._rappelsPerso||[]; const uidJs2=esc(uid);
       const btn=(t,i)=>`<span class="rap-chip"><button class="btn ghost rap-b" title="Pousse ce message sur son écran (overlay près de sa main ✋, jusqu'à son « D'accord »)" onclick="PROF.pushRappel('${uidJs2}',this.dataset.m)" data-m="${esc(t)}">${esc(t)}</button>${i!=null?`<button class="rap-x" title="Supprimer ce message enregistré" onclick="PROF.delRappelPerso(${i})">✕</button>`:''}</span>`;
-      h+=`<details class="adv"><summary>📣 Rappel — pousser un message sur son écran</summary><div class="sui-cp rap-zone" style="margin:0 10px 8px">${RAPPELS_BASE.map(t=>btn(t,null)).join('')}${persos.map((t,i)=>btn(t,i)).join('')}
+      h+=`<details class="adv" data-dk="rappel:${uidJs2}"><summary>📣 Rappel — pousser un message sur son écran</summary><div class="sui-cp rap-zone" style="margin:0 10px 8px">${RAPPELS_BASE.map(t=>btn(t,null)).join('')}${persos.map((t,i)=>btn(t,i)).join('')}
         <span class="rap-new"><input class="txtin rap-in" id="rap-${uidJs2}" placeholder="ou écris ton message…" maxlength="140">
         <button class="btn ghost" title="Pousse ce message ET l'enregistre pour la prochaine fois" onclick="PROF.rappelPerso('${uidJs2}')">envoyer</button></span></div></details>`; }
+    // fm : coup de pouce GRATUIT à la demande du prof (sans attendre que l'élève lève la main). Basé sur sa séance en cours.
+    if(s.current && !isTestUid(uid)){ const sc=(CHAPTER.seances||[]).find(z=>z.id===s.current); const aidesSc=(sc&&sc.aides)||[];
+      if(aidesSc.length || (typeof HELP_HTML!=='undefined'&&HELP_HTML)){
+        h+=`<details class="adv" data-dk="pouce:${esc(uid)}"><summary>💡 Coup de pouce — ouvrir une aide sur son écran (sans étoile)</summary><div class="sui-cp" style="margin:0 10px 8px">`
+          +APP.aideMenuHTML({uid:uid, seanceId:s.current})
+          +`<div class="d" style="margin:4px 0 0">Tu peux ouvrir un coup de pouce de sa séance (gratuit, sans lui retirer d'étoile) ou pointer une section du « ? ».</div></div></details>`; } }
     const bloque=((((APP._control||{})[uid]||{}).freeze)||{}).gel;
     const nm=(s.name||uid).replace(/'/g,"\\'");
     const remeds=(CHAPTER.seances||[]).filter(x=>x.remediation);
-    if(remeds.length){ h+=`<details class="adv"><summary>🧰 Ateliers de remédiation — déblocage individuel</summary><div style="padding:0 10px 8px">`+remeds.map(rs=>{
+    if(remeds.length){ h+=`<details class="adv" data-dk="ateliers:${esc(uid)}"><summary>🧰 Ateliers de remédiation — déblocage individuel</summary><div style="padding:0 10px 8px">`+remeds.map(rs=>{
         const onE=!!((((APP._control||{})[uid]||{}).remedOn||{})[rs.id]);
         const onC=!!((((APP._control||{})[s.classeSeg]||{}).remedOn||{})[rs.id]);
         const stR=(eng.snapshot().state||{})[rs.id]||{};
@@ -7569,7 +7607,7 @@ const PROF = {
           +(onC?`<div class="sui-pmini">débloqué pour toute la classe</div>`:'')
           +`<div class="sui-actions" style="margin-top:2px"><button class="btn ghost" title="Ouvre ou referme cet atelier pour cet élève seul" onclick="event.stopPropagation();REMED.toggle('${esc(uid)}','${rs.id}');PROF.render()">${onE?'🔒 reverrouiller pour lui':'🔓 débloquer pour lui'}</button></div>`;
       }).join('')+`</div></details>`; }
-    h+=`<details class="adv"><summary>avancé — gestes rares (${hors?'remise à zéro, déconnexion':'blocage, remise à zéro, déconnexion'})</summary><div class="sui-actions">
+    h+=`<details class="adv" data-dk="avance:${esc(uid)}"><summary>avancé — gestes rares (${hors?'remise à zéro, déconnexion':'blocage, remise à zéro, déconnexion'})</summary><div class="sui-actions">
       ${hors ? '<span class="d" style="margin:0 0 4px">Blocage indisponible hors séance (un voile chez l\'élève le dimanche n\'aurait pas de sens). Tes autres gestes restent.</span>'
         : (bloque
           ? `<button class="btn ghost" title="Libère son écran bloqué" onclick="event.stopPropagation();PROF.debloquer('${esc(uid)}','${esc(nm)}')">▶ débloquer</button>`
@@ -7578,7 +7616,7 @@ const PROF = {
       <button class="btn ghost" title="Libère le poste — la progression est conservée" onclick="event.stopPropagation();PROF.kickStudent('${esc(uid)}','${esc(nm)}')">⏏ déconnecter</button>
     </div></details>`;
     const jE=Object.values(APP._journal||{}).filter(e=>e.uid===uid).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,15);
-    if(jE.length) h+=`<details class="adv"><summary>📜 ses interventions · ${jE.length}</summary><div class="prof-list" style="padding:6px 10px">${jE.map(e=>`<div class="r"><span class="sig-when">${e.ts?new Date(e.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span><span>${esc(e.raison||e.type||'')} <span class="sig-act">→ ${esc(e.action||'')}</span></span></div>`).join('')}</div></details>`;
+    if(jE.length) h+=`<details class="adv" data-dk="sesinterv:${esc(uid)}"><summary>📜 ses interventions · ${jE.length}</summary><div class="prof-list" style="padding:6px 10px">${jE.map(e=>`<div class="r"><span class="sig-when">${e.ts?new Date(e.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span><span>${esc(e.raison||e.type||'')} <span class="sig-act">→ ${esc(e.action||'')}</span></span></div>`).join('')}</div></details>`;
     // ── SON PARCOURS : une ligne de pastilles (le détail fin vit au survol et dans Bilan) ──
     const chips=(b.parSeance||[]).filter(ps=>!ps.remediation || ps.statut!=='todo').map(ps=>{
       const cur=ps.id===s.current;
@@ -8138,7 +8176,10 @@ const PROF = {
   addComplLine(id,bi){ const b=this._blocks(id)[bi]; b.completer=b.completer||[]; b.completer.push(''); this.touch(); this.editSeance(id); },
   delComplLine(id,bi,li){ const b=this._blocks(id)[bi]; (b.completer||[]).splice(li,1); if(b.completer && !b.completer.length) delete b.completer; this.touch(); this.editSeance(id); },
   convertConsigne(id){ const s=this.seance(id); s.corps.consigne=parseLegacy(s.corps.consigne); this.renumber(id); this.touch(); this.editSeance(id); },
-  setCarte(id,axis,v){ this.seance(id).carte[axis]=Math.max(0,Math.min(100,Number(v)||0)); this.touch();
+  setCarte(id,axis,v){ const raw=String(v==null?'':v).trim();
+    if(raw==='' ){ return; }   // fr : champ momentanément vide pendant la frappe → NE PAS écrire 0 (c'était la cause des séances empilées à 0,0)
+    const num=Number(raw); if(!isFinite(num)) return;   // saisie non numérique ignorée
+    this.seance(id).carte[axis]=Math.max(0,Math.min(100,num)); this.touch();
     const f=$('cart'+(axis==='x'?'X':'Y')+'-'+id); if(f && document.activeElement!==f) f.value=this.seance(id).carte[axis]; },
   // fa2 : placer une séance sur la carte au glisser-déposer (plus de coordonnées à l'aveugle)
   openCarteEditor(id){ this._carteEdit=id;
@@ -8268,6 +8309,13 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fr", date:"2026-06-12", version:"fr", eleve:"", interne:"fr — CAUSE des séances à 0,0 TROUVÉE ET CORRIGÉE (origine du bug carte fh/fk). setCarte faisait Number(v)||0 → quand le prof VIDE le champ x/y (input type=number) pour retaper une valeur, Number('')=NaN, NaN||0=0 → la coordonnée tombait à 0, et vider x ET y donnait 0,0 (séances empilées). CORRECTIF : setCarte ignore une saisie vide ('' → return, garde l'ancienne valeur) et non numérique (isFinite). Le champ n'écrit plus 0 par accident. Le filet __cartePatch (fh) reste en place comme double sécurité. La dette « investiguer l'origine des 0,0 » est close." },
+  { id:"fq", date:"2026-06-12", version:"fq", eleve:"", interne:"fq — SÉANCES FAITES HORS CHEMIN (suite fj, point laissé ouvert). fj n'illuminait que les segments DU chemin conseillé → une séance faite dans le désordre n'avait aucun repère « hors parcours ». AJOUT : onPath=Set(ideal) ; une .place done non-remed absente du chemin conseillé reçoit la classe « offpath » → liseré bleuté discret (box-shadow .55) + tooltip « Faite hors du chemin conseillé ». La médaille dorée+✓ marque toujours TOUTE séance faite ; offpath ajoute juste le repère visuel du hors-parcours. Aucun impact moteur/notes." },
+  { id:"fp", date:"2026-06-12", version:"fp", eleve:"", interne:"fp — SUIVI : recherche + sélecteur (signalé Paul). (1) Sélecteur : option « 👥 Tous les élèves connectés (toutes classes) » (= valeur '' aucune restriction, libellé clarifié) → affiche actifs de la session ET hors séance, toutes classes. (2) Recherche : data-search normalisé via sanId (accents/casse retirés, + classe incluse) ; filterCards utilise sanId(v) → « jose » trouve « José », « 4eb » trouve la classe ; cible désormais TOUTES les .sui-card[data-search] (grille active + section hors séance), plus seulement .sui-grid ; masque le titre « Hors séance » s'il ne reste rien après filtre. (3) Champ : id stable #rech-suivi (protégé par le garde de saisie fl, inventaire des champs tick), focus rendu après ✕. Seuil d'apparition de la barre = (actifs+hors séance) ≥ 3." },
+  { id:"fo", date:"2026-06-12", version:"fo", eleve:"", interne:"fo — BOUTON « revoir son autocorrection » dans le MIROIR (signalé Paul : absent de la vue écran de l'élève). Le bouton « ↻ Revoir ma correction » (L5769) est celui de l'ÉLÈVE, sur son écran de bilan ; le geste PROF renvoyerAutocorr(uid) existait (L6113) mais n'était nulle part dans la barre du miroir. AJOUT dans _renderCtrl (barre mirrorCtrl) : bouton « ↻ revoir son autocorrection » présent dans les DEUX modes (direct + exploration) — c'est une action RÉELLE sur l'élève, pas une exploration locale, donc toujours active dès que l'élève est sur une séance (cur depuis _sess.current ou _panel.current ; masqué si pas de séance ou uid test). MIRROR.renvoyerAutocorr() délègue à APP.renvoyerAutocorr(uid,cur) (control act reopenAutocorr) + journal 'autocorr'." },
+  { id:"fn", date:"2026-06-12", version:"fn", eleve:"", interne:"fn — VOLETS QUI SE REFERMENT (suite logique de fl, signalé Paul : et les dépliants ?). PROBLÈME : un <details> a son état open dans le DOM, pas dans les données → chaque re-render (renderSoon : tick 15 s + 5 subscribes) le rouvrait à son état par défaut, refermant ceux que le prof avait dépliés pour LIRE (sans taper, donc non couvert par fl). CORRECTIF : data-dk (clé stable) sur tous les <details> du Suivi (urgence, remedclasse, horsseance, journal) et de la fiche (rappel/pouce/ateliers/avance/sesinterv:uid) ; render() capture les data-dk ouverts AVANT innerHTML et les rouvre APRÈS (comme le scroll _sc en ei1). CSS.escape pour les clés à uid. INVENTAIRE complet des dépliants consigné. Les <details> des Réglages (doc pédagogique) ne sont pas exposés à renderSoon → pas concernés." },
+  { id:"fm", date:"2026-06-12", version:"fm", eleve:"", interne:"fm — AIDE GRATUITE accessible EN PERMANENCE dans la fiche (signalé Paul : pas de bouton d'aide gratuite au clic sur la carte élève). Avant : le coup de pouce sans étoile (aideMenuHTML) n'apparaissait QUE dans la notif ✋ quand l'élève levait la main ; le bouton « ❓ aide » de l'en-tête n'ouvre que le « ? » (fonctionnement). NOUVEAU volet « 💡 Coup de pouce » dans cardDetail (si l'élève est sur une séance) : réutilise aideMenuHTML(uid, s.current) → menu déroulant « coup de pouce de la séance (sans étoile) » + sections du « ? ». Le prof peut donc pousser une aide gratuite quand il veut, sans attendre une demande. profAideFor inchangé (control act profAide, sans étoile)." },
+  { id:"fl", date:"2026-06-12", version:"fl", eleve:"", interne:"fl — CHAMPS QUI SAUTENT (signalé Paul : saisie d'un rappel perso interrompue toutes les ~secondes). CAUSE : renderSoon (déclenché par 5 subscribes Firebase + tick 15 s sur l'onglet Suivi) reconstruit le panneau ; le garde ep6 ne tenait que sur le focus EXACT à l'instant du re-render → entre deux frappes, ou micro-perte de focus, le <details> rappel se reconstruisait et le champ sautait. CORRECTIF : (1) tout input/keydown dans #profModal horodaté (this._lastKey, capture globale) ; (2) renderSoon NE reconstruit plus si focus dans un champ OU frappe < 2,5 s → il REPLANIFIE (setTimeout 1,2 s) au lieu de jeter le re-render (donc le panneau finit par se rafraîchir, mais jamais pendant la frappe). Couvre TOUS les champs du panneau : rappel perso (rap-uid), recherche élève, durée de cours (coursFin), menus déroulants impression. INVENTAIRE des champs concernés consigné au doc." },
   { id:"fk", date:"2026-06-12", version:"fk", eleve:"", interne:"fk — CORRECTIF CRITIQUE d'affichage carte (régression fg). CAUSE : en fg (couche fond image), j'avais écrit « .graph svg, .graph .place{position:relative;z-index:1} » → le position:relative a ÉCRASÉ le position:absolute des .place (règle dédiée) → les ronds ne se plaçaient plus en left/top:% mais s'empilaient en flux normal ; seuls les 2 premiers (I,II) restaient visibles, les autres poussés hors cadre → « chemins qui tombent dans le vide ». Les données étaient SAINES (snapshot Paul : 20/25,75/20,80/70,25/75,50/50). CORRECTIF : z-index appliqué SANS toucher au positionnement — .graph svg en absolute z-1, .graph .place en z-2 (reste absolute via sa règle dédiée). Les 5 séances + ronds réapparaissent à leurs coordonnées. NB : le 404 carte-fond.webp est normal (image pas encore déposée) — sans effet sur l'affichage." },
   { id:"fj", date:"2026-06-12", version:"fj", eleve:"Sur la carte, le chemin conseille s'illumine en dore au fur et a mesure que tu termines tes seances dans l'ordre propose. Les anciens traits blancs ont disparu.", interne:"fj — CHEMINS revus (signalé Paul : « barres blanches » bizarres = ancien tracé .mine du parcours RÉEL, reliait les séances dans l'ordre de visite → traits en travers ; et chemin conseillé « pas à tous les coups »). SUPPRIMÉ : .mine + .minedot (parcours réel) et la règle no-anim associée. NOUVEAU : le chemin conseillé de CET élève (idealPath, qui dépend de eleveIndex → propre à chacun) sert de jauge : segment dont la séance d'ORIGINE est done → .route.done (doré plein lumineux, drop-shadow) ; segment vers la prochaine séance à faire (sug) → .route.lit (pointillés animés) ; reste → .route (pointillés éteints). Plus lisible et pédagogique : on voit la progression LE LONG du chemin préconisé, pas un gribouillis du trajet réel." },
   { id:"fi", date:"2026-06-12", version:"fi", eleve:"", interne:"fi — CARTE ADAPTATIVE (signalé Paul : carte écrasée en haut sur ordi/tablette). CAUSE : .graph avait une hauteur FIXE de 330px → sur grand écran la carte s'étale en largeur mais reste basse, les pions (% top) se tassent verticalement. CORRECTIF : .graph passe en aspect-ratio:16/10 (ratio de l'image de fond 1440×900) + min-height:300px (mobile) + max-height:min(72vh,640px) (borne grand écran). Repli height:330px via @supports pour les très vieux navigateurs. AUCUN changement du moteur ni des coordonnées : les pions en % et le SVG 0-100 s'adaptent automatiquement à la nouvelle hauteur. Ne casse rien (carte.x/y, interactivité, fond image, routes : intacts)." },
