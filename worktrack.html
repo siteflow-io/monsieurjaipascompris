@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fr">
+<meta name="app-version" content="2026-06-05fs">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -7310,7 +7310,7 @@ const PROF = {
     const segAff = APP.classeFiltreSeg() || APP.activeClasseSeg();
     // « Aucune classe » (choix explicite) OU rien d'actif → tableau neutre : on ne lit ni présences ni alertes d'aucune classe.
     if(APP.classeFiltreSeg()==='__none' || !segAff){
-      return APP.classeSelectHTML(true)
+      return APP.classeSelectHTML(false)
           + `<div class="prof-sec"><div class="d">Aucune classe sélectionnée : le tableau de bord est neutre, aucune présence ni alerte d'une classe n'est lue. Choisis une classe ci-dessus, ou « Classe en cours (auto) » pour suivre la séance lancée.</div></div>`;
     }
     const nomAff = segAff ? ((APP.knownClasses().find(c=>c.seg===segAff)||{}).nom || segAff) : '';
@@ -7408,7 +7408,7 @@ const PROF = {
             + `<div class="prof-list">${Object.keys(bilParS).sort().map(k=>`<div class="r seance-tally"><span>${esc(k)}</span><span class="meta">${bilParS[k]}</span></div>`).join('')}</div>`
           : `<div class="d ok">✓ Tous les bilans écrits ont été vérifiés.</div>`)
       + `</div>`;
-    return APP.classeSelectHTML(true)
+    return APP.classeSelectHTML(false)
       + coursBox + classeSec + signauxBox + bilansBox + freezeBox + remedBox + journalBox + ailleursSec   // eq2 : la GRILLE remonte sous le chrono — fini la classe sous la ligne de flottaison
       + `<div class="prof-row"><button class="btn ghost" onclick="PROF.render()">Rafraîchir</button></div>`;
   },
@@ -8309,6 +8309,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fs", date:"2026-06-12", version:"fs", eleve:"", interne:"fs — CORRECTIF (Paul) : l'option « 👥 Tous les élèves connectés » de fp était bien ajoutée à classeSelectHTML, MAIS le SUIVI appelait classeSelectHTML(true) (noToutes) aux deux endroits (suiviBody : vue normale L7411 + écran « aucune classe » L7313) → l'option y était masquée. C'est le BILAN qui l'avait (appel sans true). fp avait corrigé le libellé mais pas activé l'option côté Suivi. CORRECTIF : les deux appels du Suivi passent classeSelectHTML(false) → l'option « Tous les élèves connectés » apparaît bien dans le sélecteur du Suivi (montre actifs + hors séance, toutes classes)." },
   { id:"fr", date:"2026-06-12", version:"fr", eleve:"", interne:"fr — CAUSE des séances à 0,0 TROUVÉE ET CORRIGÉE (origine du bug carte fh/fk). setCarte faisait Number(v)||0 → quand le prof VIDE le champ x/y (input type=number) pour retaper une valeur, Number('')=NaN, NaN||0=0 → la coordonnée tombait à 0, et vider x ET y donnait 0,0 (séances empilées). CORRECTIF : setCarte ignore une saisie vide ('' → return, garde l'ancienne valeur) et non numérique (isFinite). Le champ n'écrit plus 0 par accident. Le filet __cartePatch (fh) reste en place comme double sécurité. La dette « investiguer l'origine des 0,0 » est close." },
   { id:"fq", date:"2026-06-12", version:"fq", eleve:"", interne:"fq — SÉANCES FAITES HORS CHEMIN (suite fj, point laissé ouvert). fj n'illuminait que les segments DU chemin conseillé → une séance faite dans le désordre n'avait aucun repère « hors parcours ». AJOUT : onPath=Set(ideal) ; une .place done non-remed absente du chemin conseillé reçoit la classe « offpath » → liseré bleuté discret (box-shadow .55) + tooltip « Faite hors du chemin conseillé ». La médaille dorée+✓ marque toujours TOUTE séance faite ; offpath ajoute juste le repère visuel du hors-parcours. Aucun impact moteur/notes." },
   { id:"fp", date:"2026-06-12", version:"fp", eleve:"", interne:"fp — SUIVI : recherche + sélecteur (signalé Paul). (1) Sélecteur : option « 👥 Tous les élèves connectés (toutes classes) » (= valeur '' aucune restriction, libellé clarifié) → affiche actifs de la session ET hors séance, toutes classes. (2) Recherche : data-search normalisé via sanId (accents/casse retirés, + classe incluse) ; filterCards utilise sanId(v) → « jose » trouve « José », « 4eb » trouve la classe ; cible désormais TOUTES les .sui-card[data-search] (grille active + section hors séance), plus seulement .sui-grid ; masque le titre « Hors séance » s'il ne reste rien après filtre. (3) Champ : id stable #rech-suivi (protégé par le garde de saisie fl, inventaire des champs tick), focus rendu après ✕. Seuil d'apparition de la barre = (actifs+hors séance) ≥ 3." },
