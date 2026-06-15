@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fc">
+<meta name="app-version" content="2026-06-05fh">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -179,6 +179,10 @@
   /* carte */
   .mapcard{position:relative;background:radial-gradient(ellipse at 25% 15%,rgba(251,191,36,.07),transparent 55%),linear-gradient(180deg,rgba(33,26,56,.6),rgba(16,11,34,.82)),repeating-linear-gradient(45deg,rgba(251,191,36,.015) 0 12px,transparent 12px 24px);
     border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  /* fg : carte parisienne XIXe en fond (image hébergée sur mjpc-medias, comme l'intro) ; le dégradé ci-dessus reste en repli si l'image manque */
+  .graph .mapbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:.9;pointer-events:none}
+  .graph .mapbg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 58%,rgba(13,10,22,.55));pointer-events:none}
+  .graph svg, .graph .place{position:relative;z-index:1}
   .mapcard .mh{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;font-size:.78rem}
   .mapcard .mh .lab{font-family:'EB Garamond',serif;color:var(--gold)}
   .mapcard .mh .free{font-size:.66rem;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:3px 8px}
@@ -858,6 +862,8 @@
   .txtin{background:#0a0805;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:inherit;font-size:.84rem;padding:8px 10px}
   textarea.txtin{resize:vertical;min-height:80px;line-height:1.45}   /* fa1 : toute zone de texte est étirable par le coin, et jamais riquiqui */
   .edit-form textarea.txtin{min-height:96px}   /* fa1 : dans l'éditeur, encore plus de place par défaut */
+  textarea.txtin.grow{min-height:36px;resize:vertical;overflow:hidden}   /* fd : champ court (énoncé, choix, titre) qui GRANDIT avec le contenu, et reste étirable à la main */
+  .edit-form textarea.txtin.grow{min-height:36px}
   .empty-state{text-align:center;padding:28px;color:var(--muted)}
   .empty-state .ic{font-size:2.2rem;margin-bottom:8px}
   .prof-pre{background:#0a0805;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:ui-monospace,monospace;
@@ -4990,7 +4996,9 @@ function Panel(engine, root, name){
   function renderMap(){
     const sug=suggestion();
     const ideal=engine.idealPath();
-    let svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none">';
+    let svg='';
+    if(MAP_BG) svg+='<div class="mapbg" style="background-image:url(\''+MAP_BG+'\')"></div>';   // fg : fond carte hébergé (vide → repli sur le dégradé .mapcard)
+    svg+='<svg viewBox="0 0 100 100" preserveAspectRatio="none">';
     for(let i=20;i<100;i+=20){ svg+=`<line class="grid-l" x1="${i}" y1="0" x2="${i}" y2="100"/><line class="grid-l" x1="0" y1="${i}" x2="100" y2="${i}"/>`; }
     svg+='<path class="river" d="M -3 50 C 20 40, 32 64, 52 56 S 80 66, 103 58"/>';
     // tracé conseillé = chemin idéal de CET élève (segments consécutifs) ; segment menant au conseil = animé
@@ -5141,9 +5149,17 @@ function Panel(engine, root, name){
     const indCtl=(( APP._control||{})[engine.studentId])||{};                                  // blocage CIBLÉ éventuel de cet élève (control/{chap}/{uid})
     const fzActif=[ctrl.freeze, indCtl.freeze].filter(Boolean).sort((a,b)=>(b.epoch||0)-(a.epoch||0))[0];  // gel de CLASSE ou CIBLÉ : le plus récent fait foi (même règle que le subscribe control)
     const gel=!!(fzActif&&fzActif.gel);
+    // ff : BYPASS — un gel actif SANS cours lancé (clôture pendant un blocage, ou voie détournée). Ne devrait pas arriver (⛔ retiré hors séance) ; si ça arrive, on le SIGNALE au prof et on n'impose PAS le voile hors séance.
+    const coursVivant=!!(cours && cours.fin && cours.fin>Date.now());
+    const bypass=gel && !coursVivant;
+    if(bypass && !P._mirrorLane && !isTestUid(engine.studentId)){ const chap=CHAPTER.meta.id||'chapitre';
+      if(P._bypassEpoch!==(fzActif.epoch||1)){ P._bypassEpoch=(fzActif.epoch||1);   // une fois par blocage
+        store.save('signaux/'+chap+'/'+engine.studentId+'/bypass', { type:'bypass', seance:(engine.seance(P.current)||{}).titre||P.current, seanceId:P.current, nom:P.name, classeSeg:P.classeSeg||'', ts:Date.now() });
+        store.save('journal/'+chap+'/'+Date.now()+'_'+String(engine.studentId).slice(0,8), { ts:Date.now(), uid:engine.studentId, nom:P.name, classeSeg:P.classeSeg||'', type:'bypass', raison:'blocage actif sans cours lancé (hors séance)', action:'voile NON imposé — signalé au suivi' }); } }
+    const gelEffectif = gel && coursVivant;   // ff : hors séance, le gel ne verrouille PAS l'écran (mais il est signalé)
     const present=(typeof document==='undefined' || document.visibilityState!=='hidden');
     const done=engine.statusOf(P.current)==='done'; const running=engine.timing(P.current).running;
-    if(present && !gel && !done){ if(!running) engine.resume(P.current); }   // présent : (re)démarre le compteur si à l'arrêt
+    if(present && !gelEffectif && !done){ if(!running) engine.resume(P.current); }   // présent : (re)démarre le compteur si à l'arrêt (ff : un gel hors cours ne fige pas)
     else if(running){ engine.freeze(P.current); }                            // pause / terminé / onglet caché : on fige (consolide proprement)
     const coursDebut=(cours||{}).debut||0; engine.markSession(P.current, coursDebut);   // « cette heure » : repère seulement si un cours est lancé
     const ci=chronoInfo(P.current); el.className='chrono '+ci.cls; el.innerHTML=ci.html; };
@@ -5963,8 +5979,9 @@ const APP = {
         const segCtl=(this._control||{})[p.classeSeg]||{};
         // 1) FIGER (gel des chronos + verrouillage) — gel de CLASSE (segCtl) ou blocage CIBLÉ d'un élève (ctl) : le plus récent s'applique
         const fz=[segCtl.freeze, ctl.freeze].filter(Boolean).sort((a,b)=>(b.epoch||0)-(a.epoch||0))[0];
+        const coursVivant=!!((segCtl.cours||{}).fin && (segCtl.cours||{}).fin>Date.now());   // ff : un blocage ne verrouille l'écran QUE pendant un cours
         if(fz && fz.epoch>(p._fzEpoch||0) && fz.epoch>=p.epoch){ p._fzEpoch=fz.epoch;
-          if(typeof p.setLock==='function') p.setLock(!!fz.lock);
+          if(typeof p.setLock==='function') p.setLock(!!fz.lock && coursVivant);   // ff : hors cours, pas de voile (bypass signalé par refreshChrono)
           if(p.refreshChrono) p.refreshChrono(); }   // chrono : refreshChrono est l'UNIQUE autorité (gel classe + ciblé + visibilité + done) — plus de freeze/resume dupliqué ici
         // 2) déconnexion (classe ou élève)
         const le=Math.max(segCtl.logoutEpoch||0, ctl.logoutEpoch||0);
@@ -6732,14 +6749,25 @@ function chapterDefaults(obj){
   if(obj.reglages.exclusiviteSeance===undefined) obj.reglages.exclusiviteSeance=true;
   if(obj.reglages.afficherNote===undefined) obj.reglages.afficherNote=false;   // note MASQUÉE par défaut : ne s'affiche que si le prof l'active
   if(obj.reglages.tRefDefaut===undefined) obj.reglages.tRefDefaut={min:60,max:180};   // fourchette de temps par question (s), à calibrer par chapitre
+  // fh : garde-fou — si plusieurs séances partagent EXACTEMENT la même position (ex. toutes à 0,0 après un import/placement raté), on les répartit sur une grille de repli pour qu'aucune ne disparaisse sous une autre.
+  obj.__cartePatch=function(){ const S=obj.seances||[]; const cnt={};
+    S.forEach(s=>{ if(!s.carte) return; const k=Math.round(s.carte.x)+','+Math.round(s.carte.y); cnt[k]=(cnt[k]||0)+1; });
+    // une position est « fautive » si à (0,0) ou partagée par ≥2 séances : on marque AVANT de bouger (sinon la détection se fausse en cours de route)
+    const bad=S.map(s=>{ if(!s.carte) return true; const k=Math.round(s.carte.x)+','+Math.round(s.carte.y); return (k==='0,0')||(cnt[k]>1); });
+    if(bad.some(Boolean)){ const N=S.length; const cols=Math.ceil(Math.sqrt(N)); const rows=Math.max(1,Math.ceil(N/cols));
+      S.forEach((s,i)=>{ if(!bad[i]) return; if(!s.carte) s.carte={x:50,y:50};
+        const r=Math.floor(i/cols), c=i%cols;
+        s.carte.x=Math.round(14 + c*(72/Math.max(1,cols-1)));
+        s.carte.y=Math.round(18 + r*(64/Math.max(1,rows-1))); }); } };
   obj.seances.forEach(s=>{ if(!s.aretes) s.aretes={conseillee:null,prerequis:null};
     if(!Array.isArray(s.aides)) s.aides=[];
     if(!s.corps) s.corps={consigne:"",supports:[]};
     if(!Array.isArray(s.corps.supports)) s.corps.supports=[];
     if(!s.rn) s.rn="";
-    if(!s.carte || typeof s.carte.x!=="number") s.carte={x:50,y:50};
+    if(!s.carte || typeof s.carte.x!=="number" || typeof s.carte.y!=="number") s.carte={x:50,y:50};
     if(!s.fiche4d) s.fiche4d={titre:"Correction",layers:[]};
     if(!Array.isArray(s.fiche4d.layers)) s.fiche4d.layers=[];
+    if(!s.carte._seed) s.carte._seed={x:s.carte.x,y:s.carte.y};   // fh : mémorise la position pour diagnostic
     if(!s.evaluation) s.evaluation={seuil:1,items:[]};
     if(s.sommative===undefined) s.sommative=false;   // une convergence naît formative ; notée seulement par geste explicite du prof
     if(!Array.isArray(s.evaluation.items)) s.evaluation.items=[];
@@ -6753,6 +6781,7 @@ function chapterDefaults(obj){
     if(nq>0 && s.evaluation.seuil>nq) s.evaluation.seuil=nq;
   });
   if(!obj.meta.id) obj.meta.id="ch"+String(Date.now()).slice(-5);
+  if(typeof obj.__cartePatch==='function'){ try{ obj.__cartePatch(); }catch(_){} delete obj.__cartePatch; }   // fh : répartit les séances empilées (anti-superposition)
   return obj;
 }
 function loadChapter(obj){
@@ -6830,7 +6859,8 @@ const PROF = {
   signalRowHTML(x, compact){ const sigMeta={ bilan:{ic:'📝',lab:'a écrit son bilan'}, incoherence:{ic:'⚠',lab:'s\'est sur-évalué'},
       aide:{ic:'✋',lab:'demande de l\'aide'}, remed:{ic:'🧩',lab:'a fini la convergence — ateliers débloqués'},
       duo:{ic:'🤝',lab:'termine sur la même séance qu\'un camarade'}, cahier:{ic:'📋',lab:'déclare avoir fini au cahier'},
-      autonomie:{ic:'🏠',lab:'travaille en autonomie (hors cours)'} };
+      autonomie:{ic:'🏠',lab:'travaille en autonomie (hors cours)'},
+      bypass:{ic:'🛑',lab:'BLOCAGE CONTOURNÉ : un verrou était actif sans cours — le voile n\'a pas été imposé'} };
     const m=sigMeta[x.type]||{ic:'•',lab:x.type};
     const lab=(x.type==='cahier')?(x.etat==='reprend'?'veut prendre le temps de terminer':'déclare avoir fini au cahier'):m.lab;
     const when=x.ts?new Date(x.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
@@ -7119,27 +7149,27 @@ const PROF = {
   },
   _prtConsigne(blocks){ let h=""; const G={surligner:'à surligner',relier:'à relier',etiqueter:'à étiqueter'};
     blocks = Array.isArray(blocks) ? blocks : parseLegacy(blocks);   // tolère un chapitre encore au format texte
-    (blocks||[]).forEach(b=>{ const t=b.type||'question';
-      if(t==='note'){ if((b.texte||'').trim()) h+='<p class="p-note">'+esc(b.texte||'')+'</p>'; }
-      else if(t==='section') h+='<h4 class="p-sec">'+esc(b.titre||'')+(b.ref?' <span>· '+esc(b.ref)+'</span>':'')+'</h4>';
-      else if(t==='lexique') h+='<p class="p-lex"><b>'+esc(b.terme||'')+'</b> — '+esc(b.definition||'')+'</p>';
+    (blocks||[]).forEach((b,bi)=>{ const t=b.type||'question'; const fr='bloc:'+bi;   // fe : chaque bloc de consigne devient un fragment pulsable
+      if(t==='note'){ if((b.texte||'').trim()) h+='<p class="p-note" data-frag="'+fr+'">'+esc(b.texte||'')+'</p>'; }
+      else if(t==='section') h+='<h4 class="p-sec" data-frag="'+fr+'">'+esc(b.titre||'')+(b.ref?' <span>· '+esc(b.ref)+'</span>':'')+'</h4>';
+      else if(t==='lexique') h+='<p class="p-lex" data-frag="'+fr+'"><b>'+esc(b.terme||'')+'</b> — '+esc(b.definition||'')+'</p>';
       else if(t==='question'){ if(b.section) h+='<h4 class="p-sec">'+esc(b.section)+'</h4>'; let badges=[];
         if(b.geste&&G[b.geste]) badges.push(G[b.geste]); if(b.longueur) badges.push(esc(b.longueur)); if(b.liaison) badges.push('📖 '+esc(b.liaison));
-        h+='<p class="p-q"><span class="n">'+(b.n!=null?esc(String(b.n))+')':'•')+'</span> '+esc(b.texte||'')
+        h+='<p class="p-q" data-frag="'+fr+'"><span class="n">'+(b.n!=null?esc(String(b.n))+')':'•')+'</span> '+esc(b.texte||'')
           +(badges.length?' <span class="p-badge">['+badges.join(' · ')+']</span>':'')+'</p>';
         if(Array.isArray(b.completer)&&b.completer.length) h+='<ul class="p-compl">'+b.completer.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul>'; }
-      else h+='<p>'+esc(b.texte||'')+'</p>'; });
+      else h+='<p data-frag="'+fr+'">'+esc(b.texte||'')+'</p>'; });
     return h; },
-  _prtSupports(sup){ let h=""; (sup||[]).forEach(x=>{ const t=x.type;
-    if(t==='texteEmbarque'){ h+='<div class="p-txt">'+(x.ref?'<span class="ref">'+esc(x.ref)+'</span>':'')
+  _prtSupports(sup){ let h=""; (sup||[]).forEach((x,xi)=>{ const t=x.type; const fr=' data-frag="sup:'+xi+'"';   // fe : chaque support = fragment pulsable
+    if(t==='texteEmbarque'){ h+='<div class="p-txt"'+fr+'>'+(x.ref?'<span class="ref">'+esc(x.ref)+'</span>':'')
         +(x.amorce?'<p class="amorce">'+esc(x.amorce)+'</p>':'')
         +(x.texte||x.contenu||'').split(/\n+/).map(p=>'<p>'+esc(p)+'</p>').join('')+'</div>'; }
     else if(t==='livre'||t==='renvoiLivre'){ const src=x.source||x.ref||'Le livre';
-      h+='<p class="p-src">📖 '+esc(src)+(x.pages?', p. '+esc(x.pages):'')+(x.contenu||x.detail?' — '+esc(x.contenu||x.detail):'')+'</p>'; }
-    else if(t==='rappel') h+='<p class="p-src">↺ '+(x.ref?esc(x.ref)+' — ':'')+esc(x.detail||x.contenu||'')+'</p>';
-    else if(t==='lien') h+='<p class="p-src">🔗 '+esc(x.legende||x.contenu||x.url||'')+' : '+esc(x.contenu||x.url||'')+'</p>';
-    else if(t==='image') h+='<div class="p-txt"><img src="'+esc(x.contenu||x.url||'')+'" alt="'+esc(x.legende||'')+'" style="max-width:100%">'+(x.legende?'<p class="amorce">'+esc(x.legende)+'</p>':'')+'</div>';
-    else h+='<p>'+esc(x.contenu||x.texte||x.detail||'')+'</p>'; });
+      h+='<p class="p-src"'+fr+'>📖 '+esc(src)+(x.pages?', p. '+esc(x.pages):'')+(x.contenu||x.detail?' — '+esc(x.contenu||x.detail):'')+'</p>'; }
+    else if(t==='rappel') h+='<p class="p-src"'+fr+'>↺ '+(x.ref?esc(x.ref)+' — ':'')+esc(x.detail||x.contenu||'')+'</p>';
+    else if(t==='lien') h+='<p class="p-src"'+fr+'>🔗 '+esc(x.legende||x.contenu||x.url||'')+' : '+esc(x.contenu||x.url||'')+'</p>';
+    else if(t==='image') h+='<div class="p-txt"'+fr+'><img src="'+esc(x.contenu||x.url||'')+'" alt="'+esc(x.legende||'')+'" style="max-width:100%">'+(x.legende?'<p class="amorce">'+esc(x.legende)+'</p>':'')+'</div>';
+    else h+='<p'+fr+'>'+esc(x.contenu||x.texte||x.detail||'')+'</p>'; });
     return h; },
   _prtItems(items, corrige){ let h=""; (items||[]).forEach((it,idx)=>{ const no=(idx+1)+'. ';
     if(it.type==='qcm'){ const ord=seededOrder((it.choix||[]).length, it.id);   // ordre fixe par question (commun à la feuille), bonne plus jamais en position 1
@@ -7919,14 +7949,14 @@ const PROF = {
       const choix=q.choix.map((c,ci)=>{ const mark = q.multi
           ? `<input type="checkbox" title="Bonne réponse ?" ${q.bonnes.includes(ci)?'checked':''} onchange="PROF.toggleBonne('${id}','${q.id}',${ci},this.checked)">`
           : `<input type="radio" name="b-${q.id}" title="Bonne réponse" ${q.bonnes[0]===ci?'checked':''} onchange="PROF.setBonne('${id}','${q.id}',${ci})">`;
-        return `<div class="prof-row" style="gap:6px">${mark}
-        <input class="txtin" style="flex:1" value="${esc(c)}" oninput="PROF.setChoix('${id}','${q.id}',${ci},this.value)">
+        return `<div class="prof-row" style="gap:6px;align-items:flex-start">${mark}
+        <textarea class="txtin grow" style="flex:1;min-height:38px" placeholder="réponse" oninput="PROF.setChoix('${id}','${q.id}',${ci},this.value)">${esc(c)}</textarea>
         <button class="btn ghost" onclick="PROF.delChoix('${id}','${q.id}',${ci})">×</button></div>`; }).join("");
       return `<div class="prof-sec"><div class="prof-row"><b>Q${qi+1}</b>
           <label style="margin-left:12px;font-size:.78rem;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" ${q.multi?'checked':''} onchange="PROF.setMulti('${id}','${q.id}',this.checked)"> choix multiple</label>
           ${s.sommative?`<label style="margin-left:10px;font-size:.78rem;display:inline-flex;align-items:center;gap:4px" title="Barème de cet item pour la note sommative">points <input class="txtin" type="number" min="0" style="width:46px" value="${q.points!=null?q.points:1}" onchange="PROF.setPoints('${id}','${q.id}',this.value)"></label>`:''}
           <button class="btn ghost" style="margin-left:auto" onclick="PROF.delItem('${id}','${q.id}')">suppr.</button></div>
-        <input class="txtin" style="width:100%" placeholder="énoncé" value="${esc(q.enonce)}" oninput="PROF.setQ('${id}','${q.id}','enonce',this.value)">
+        <textarea class="txtin grow" style="width:100%;min-height:44px" placeholder="énoncé de la question" oninput="PROF.setQ('${id}','${q.id}','enonce',this.value)">${esc(q.enonce)}</textarea>
         <div style="margin-top:6px">${choix}</div>
         <div class="prof-row"><button class="btn ghost" onclick="PROF.addChoix('${id}','${q.id}')">+ choix</button></div></div>`;
     }).join("");
@@ -7935,7 +7965,7 @@ const PROF = {
         <textarea class="txtin" style="width:100%;min-height:54px" placeholder="un palier par ligne" oninput="PROF.setPaliers('${id}','${a.id}',this.value)">${esc((a.paliers||[]).join("\n"))}</textarea></div>`).join("");
     const layers=(s.fiche4d.layers||[]).map((L,li)=>`<div class="prof-row" style="gap:6px">
         <input class="txtin" style="width:46px" value="${esc(L.ic||'')}" oninput="PROF.setLayer('${id}',${li},'ic',this.value)">
-        <input class="txtin" style="flex:1" placeholder="titre" value="${esc(L.titre||'')}" oninput="PROF.setLayer('${id}',${li},'titre',this.value)">
+        <textarea class="txtin grow" style="flex:1;min-height:36px" placeholder="titre" oninput="PROF.setLayer('${id}',${li},'titre',this.value)">${esc(L.titre||'')}</textarea>
         <button class="btn ghost" onclick="PROF.delLayer('${id}',${li})">×</button></div>
         <textarea class="txtin" style="width:100%;min-height:46px;margin-top:4px" placeholder="contenu" oninput="PROF.setLayer('${id}',${li},'contenu',this.value)">${esc(L.contenu||'')}</textarea>`).join("");
     const champ=(xi,f,ph,val,wide)=>`<input class="txtin" style="${wide?'width:100%':'flex:1'};margin-top:4px" placeholder="${ph}" value="${esc(val||'')}" oninput="PROF.setSupport('${id}',${xi},'${f}',this.value)">`;
@@ -8044,8 +8074,12 @@ const PROF = {
     const nf=document.querySelector('.edit-form'); if(nf && _prevScroll) nf.scrollTop=_prevScroll;   // ey1 : restaure la position exacte
     this._edPulse=this._edZone||null; this._edZone=null;   // ey3 : pulser la zone touchée même quand l'action a reconstruit l'éditeur
     this.refreshEditPreview();
+    setTimeout(()=>this._autoGrow(), 0);   // fd : ajuste la hauteur des champs courts à leur contenu
   },
   // ex : régénère l'aperçu feuille de la séance en cours d'édition (réutilise le moteur d'impression, débounced)
+  _autoGrow(){ document.querySelectorAll('.edit-form textarea.grow').forEach(t=>{ if(t._grown) return; t._grown=true;
+      const fit=()=>{ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; };
+      fit(); t.addEventListener('input', fit); }); },   // fd : les champs courts épousent leur contenu
   refreshEditPreview(){ const fr=$("edFrame"); if(!fr||!this._edId) return;
     let html; try{ html=this.chapterPrintHTML(this._edId, { scope:this._edId, textes:true, consignes:true, eval:true, corrige:true, aides:true, bilan:true, fiches:false, pulse:this._edPulse }, true); }
     catch(e){ html='<!doctype html><body style="font-family:serif;padding:20px;color:#a33">Aperçu impossible : '+esc(e.message)+'</body>'; }
@@ -8089,7 +8123,7 @@ const PROF = {
         +arr.map((it,li)=>'<div class="prof-row" style="gap:4px;margin-top:3px"><input class="txtin" style="flex:1" value="'+esc(it)+'" oninput="PROF.setComplLine(\''+id+'\','+bi+','+li+',this.value)"><button class="btn ghost" onclick="PROF.delComplLine(\''+id+'\','+bi+','+li+')">×</button></div>').join('')
         +'<div class="prof-row" style="margin-top:3px"><button class="btn ghost" onclick="PROF.addComplLine(\''+id+'\','+bi+')">+ ligne</button></div></div>'; }
     return ''; },
-  setBlock(id,bi,k,v){ const b=this._blocks(id)[bi]; if(b) b[k]=v; this.touch(); },
+  setBlock(id,bi,k,v){ const b=this._blocks(id)[bi]; if(b) b[k]=v; this._z('bloc:'+bi); this.touch(); },
   setBlockType(id,bi,t){ const a=this._blocks(id), b=a[bi]; if(!b) return; const merged=Object.assign(blockDefaults(t), {type:t});
     (CONSIGNE_TYPES[t].fields||[]).forEach(f=>{ if(b[f.k]!=null) merged[f.k]=b[f.k]; }); a[bi]=merged; this.renumber(id); this.touch(); this.editSeance(id); },
   addBlock(id,t){ this._blocks(id).push(blockDefaults(t)); this.renumber(id); this.touch(); this.editSeance(id); },
@@ -8168,7 +8202,7 @@ const PROF = {
     ev.items=ev.items.filter(x=>x.id!==itemId);
     const nq=ev.items.filter(isAutoItem).length; if(ev.seuil>nq) ev.seuil=Math.max(1,nq); this.touch(); this.editSeance(id); },
   addSupport(id){ const s=this.seance(id); s.corps.supports=s.corps.supports||[]; s.corps.supports.push({type:"texte",contenu:""}); this.touch(); this.editSeance(id); },
-  setSupport(id,xi,f,v){ this.seance(id).corps.supports[xi][f]=v; this._z('textes'); this.touch(); if(f==='type') this.editSeance(id); },
+  setSupport(id,xi,f,v){ this.seance(id).corps.supports[xi][f]=v; this._z('sup:'+xi); this.touch(); if(f==='type') this.editSeance(id); },
   delSupport(id,xi){ this.seance(id).corps.supports.splice(xi,1); this.touch(); this.editSeance(id); },
   addAide(id){ const s=this.seance(id); s.aides=s.aides||[]; s.aides.push({id:this.genId("a",s.aides),cible:"seance",paliers:[""]}); this.touch(); this.editSeance(id); },
   delAide(id,aid){ const s=this.seance(id); s.aides=s.aides.filter(a=>a.id!==aid); this.touch(); this.editSeance(id); },
@@ -8230,6 +8264,10 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fh", date:"2026-06-12", version:"fh", eleve:"", interne:"fh — CORRECTIF BUG CARTE (signalé Paul : seules 2 séances sur 9 visibles, route blanche aberrante). CAUSE : données Firebase de prod où plusieurs séances ont carte.x/y = 0,0 (placement/import raté) → toutes empilées dans le coin, masquées les unes sous les autres ; la garde existante laissait passer 0 (nombre valide). CORRECTIF chapterDefaults : (1) garde renforcée (x ET y doivent être des nombres) ; (2) garde-fou GLOBAL __cartePatch() après la boucle : détecte les positions EXACTEMENT en doublon ou à (0,0) et répartit ces séances sur une grille de repli (cols=ceil(sqrt(N)), marges 14–86% / 18–82%) — aucune séance ne disparaît plus sous une autre, même données corrompues. Le seed embarqué est sain (vraies coords) ; le patch protège les données live. NB : Paul doit re-placer proprement les séances via l'éditeur (🗺) puis publier pour des positions définitives ; le patch est un filet, pas un placement esthétique." },
+  { id:"fg", date:"2026-06-12", version:"fg", eleve:"La carte du chapitre s'affiche maintenant sur un vrai plan de Paris au XIXe siecle. Rien ne change pour jouer : tu choisis ta seance en touchant son rond.", interne:"fg — CARTE DE FOND HEBERGEE (choix Paul : image sur GitHub, comme l'intro, plutot que SVG 50 Ko embarque ou PNG base64 lourd). Le plan parisien XIXe genere par GPT est a exporter en image (webp/png 1440x900) et a deposer sur le repo mjpc-medias sous worktrack/ch07/carte-fond.webp. Cote code : constante MAP_BG (URL), couche .mapbg en fond de .graph (z-index 0, background-size:cover + voile radial de lisibilite), SVG dynamique (grille/riviere/routes 0-100) et pions .place passent z-index 1 AU-DESSUS. carte.x/y et toute l'interactivite INCHANGES. Si MAP_BG vide ou image absente → repli automatique sur le degrade sombre (rien ne casse). La grille/riviere SVG internes restent (discretes) ; on pourra les retirer plus tard si elles doublonnent avec l'image." },
+  { id:"ff", date:"2026-06-12", version:"ff", eleve:"", interne:"ff — (1) PULSATION étendue (fe) : data-frag sur CHAQUE bloc de consigne (bloc:bi, posé par setBlock) et CHAQUE support (sup:xi, setSupport) — modifier un bloc/support fait pulser CE fragment précis sur la feuille, comme les QCM. (2) BYPASS de blocage signalé : un gel/verrou actif SANS cours vivant pour la classe (clôture pendant blocage, voie détournée) → côté élève le voile n'est PAS imposé hors cours (gelEffectif=gel&&coursVivant ; setLock&&coursVivant dans le subscribe control) et un signal 'bypass' (🛑) + entrée journal sont créés (une fois par epoch de blocage). Le prof voit l'anomalie dans le suivi au lieu d'un élève bloqué à tort le dimanche." },
+  { id:"fd", date:"2026-06-12", version:"fd", eleve:"", interne:"fd — CHAMPS LONGS DE L'ÉDITEUR étirables (fa1 n'avait traité que les textarea, pas les input mono-ligne). Énoncé de question, choix de QCM, titre de couche : input → textarea.grow (resize:vertical + auto-grandissement au contenu via PROF._autoGrow, appelé après chaque rendu d'éditeur et à la frappe). Lignes de choix alignées en haut (align-items:flex-start) pour rester propres quand un choix passe sur 2 lignes. Les petits champs STRUCTURELS (numériques points/durée/x/y, ville, n°, icône de couche) restent en input court (volontaire : valeurs brèves)." },
   { id:"fc", date:"2026-06-12", version:"fc", eleve:"Si tu te connectes en dehors d'un cours, tu entres en « séance d'autonomie » : un message te l'explique. Tu travailles sans l'aide du professeur, donc tu peux gagner jusqu'à 6 étoiles au lieu de 3 ! Tu as 45 minutes, avec un rappel 5 minutes avant la fin. Les coups de pouce de la séance restent là.", interne:"fc — SESSION D'AUTONOMIE (hors cours). À l'entrée d'une séance sans cours actif pour sa classe (askConfirm → engine.start) et hors miroir/test : engine.markAutonome(id) pose state.autonome → starsOf = 6 − aidesUsed (starsMax=6). P._startAutonomie : (1) message plein écran à valider (.auto-intro, texte reformulé propre, 🦉) ; (2) chrono LOCAL 45 min (P._autoEnd), _autonomieTick (15 s) → alerte T-5 (.rappel-band) puis _autoEndSession (fige le chrono — travail CONSERVÉ — + retour carte, PAS de reset) ; (3) archivage SILENCIEUX : signal control 'autonomie' (🏠, sigMeta) + entrée journal. Rendu ×2 : carte élève affiche badge ×2 + /6 ; côté prof la carte hors séance porte déjà 🏠 ×2 (fb). starsOf nourrit l'affichage, PAS la note d'autonomie ED (binaire, inchangée)." },
   { id:"fb", date:"2026-06-12", version:"fb", eleve:"", interne:"fb — VUE HORS SÉANCE. suiviBody scinde la classe affichée selon le cours : actifs (cours lancé) EN HAUT (grille), section « 🏠 Hors séance · N » EN DESSOUS (dépliable, ouverte par défaut) regroupant TOUS les présents sans cours actif (cette classe au repos + autres classes — l'ancienne « Ailleurs » fusionnée). coursActifSeg(seg)=cours&&fin>now. Cartes COMPLÈTES (suiviCard(s,true) : badge classe + « 🏠 ×2 », bordure dorée), clic→fiche (la fiche cherche dans actifs+horsSeance ; ficheHTML pose hors=!coursActifSeg(sa classe) → bandeau + cardDetail(hors)). suiviRowAilleurs SUPPRIMÉE. ACTIONS : toutes conservées hors séance SAUF blocages — cardDetail(hors) masque ⛔ bloquer (garde réinit/déconnecter) + Gestes d'urgence de classe cachés si pas de cours actif. (Étoiles ×2 réelles + message d'accueil + plafond 45 min = lot fc.)" },
   { id:"fa", date:"2026-06-12", version:"fa", eleve:"Ta carte du chapitre a ete un peu embellie (fond, riviere, halos). Rien ne change a la facon de jouer : tu choisis toujours ta seance en tapant son rond.", interne:"fa — (1) CHAMPS ETIRABLES : textarea.txtin = resize:vertical + min-height 80px (96 dans l'editeur) ; les grands .prof-sec textarea l'avaient deja. (2) PLACEMENT CARTE AU GLISSER-DEPOSER : bouton « 🗺 placer sur la carte » dans l'editeur de seance → openCarteEditor (overlay carte-ov) : toutes les seances affichees pour reperage, le pion de la seance courante draggable (pointerdown/move/up + clic direct = poser) ecrit carte.x/y (0-100, clampe), met a jour les champs x/y (si pas focus) ; closeCarteEditor revient a l'editeur. setCarte synchronise aussi les champs numeriques. (3) CARTE PIMPEE (cote eleve) : fond radial+degrade+trame, riviere adoucie (blur), grille de l'editeur de carte. Aucun changement de gameplay ni de format (carte.x/y inchanges)." },
@@ -8295,6 +8333,9 @@ const ANN = {
       + `</div>`).join("")+`</div>`; },
 };
 
+// fg : fond de carte du chapitre (image hébergée sur mjpc-medias, comme les visuels d'intro).
+//   Laisser vide ('') pour garder le dégradé sombre ; renseigner l'URL une fois l'image déposée sur le repo.
+const MAP_BG = "https://siteflow-io.github.io/mjpc-medias/worktrack/ch07/carte-fond.webp";
 const INTRO = {
   STORY: {
     ch07: {
