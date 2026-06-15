@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fj">
+<meta name="app-version" content="2026-06-05fk">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -182,14 +182,14 @@
   /* fg : carte parisienne XIXe en fond (image hébergée sur mjpc-medias, comme l'intro) ; le dégradé ci-dessus reste en repli si l'image manque */
   .graph .mapbg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;opacity:.9;pointer-events:none}
   .graph .mapbg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 58%,rgba(13,10,22,.55));pointer-events:none}
-  .graph svg, .graph .place{position:relative;z-index:1}
+  .graph .place{z-index:2}   /* fk : z-index seul — ne PAS forcer position (casserait left/top:% → ronds empilés). .place reste absolute (règle dédiée). svg : z-index sur la règle complète ci-dessous. */
   .mapcard .mh{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;font-size:.78rem}
   .mapcard .mh .lab{font-family:'EB Garamond',serif;color:var(--gold)}
   .mapcard .mh .free{font-size:.66rem;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:3px 8px}
   /* fi : la carte épouse le ratio de l'image (≈16/10) au lieu d'une hauteur figée → plus d'écrasement sur grand écran ; bornée pour rester lisible sur mobile comme sur large moniteur */
   .graph{position:relative;width:100%;aspect-ratio:16/10;min-height:300px;max-height:min(72vh,640px)}
   @supports not (aspect-ratio:1){ .graph{height:330px} }   /* repli navigateurs sans aspect-ratio */
-  .graph svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .graph svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
   .grid-l{stroke:var(--gold-deep);stroke-width:.2;opacity:.1}
   .river{stroke:#3c5660;stroke-width:3.4;fill:none;opacity:.34;stroke-linecap:round;filter:blur(.3px)}
   .route{stroke:var(--accent);stroke-width:1.5;fill:none;stroke-linecap:round;stroke-dasharray:1.5 6;opacity:.42}
@@ -8268,6 +8268,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fk", date:"2026-06-12", version:"fk", eleve:"", interne:"fk — CORRECTIF CRITIQUE d'affichage carte (régression fg). CAUSE : en fg (couche fond image), j'avais écrit « .graph svg, .graph .place{position:relative;z-index:1} » → le position:relative a ÉCRASÉ le position:absolute des .place (règle dédiée) → les ronds ne se plaçaient plus en left/top:% mais s'empilaient en flux normal ; seuls les 2 premiers (I,II) restaient visibles, les autres poussés hors cadre → « chemins qui tombent dans le vide ». Les données étaient SAINES (snapshot Paul : 20/25,75/20,80/70,25/75,50/50). CORRECTIF : z-index appliqué SANS toucher au positionnement — .graph svg en absolute z-1, .graph .place en z-2 (reste absolute via sa règle dédiée). Les 5 séances + ronds réapparaissent à leurs coordonnées. NB : le 404 carte-fond.webp est normal (image pas encore déposée) — sans effet sur l'affichage." },
   { id:"fj", date:"2026-06-12", version:"fj", eleve:"Sur la carte, le chemin conseille s'illumine en dore au fur et a mesure que tu termines tes seances dans l'ordre propose. Les anciens traits blancs ont disparu.", interne:"fj — CHEMINS revus (signalé Paul : « barres blanches » bizarres = ancien tracé .mine du parcours RÉEL, reliait les séances dans l'ordre de visite → traits en travers ; et chemin conseillé « pas à tous les coups »). SUPPRIMÉ : .mine + .minedot (parcours réel) et la règle no-anim associée. NOUVEAU : le chemin conseillé de CET élève (idealPath, qui dépend de eleveIndex → propre à chacun) sert de jauge : segment dont la séance d'ORIGINE est done → .route.done (doré plein lumineux, drop-shadow) ; segment vers la prochaine séance à faire (sug) → .route.lit (pointillés animés) ; reste → .route (pointillés éteints). Plus lisible et pédagogique : on voit la progression LE LONG du chemin préconisé, pas un gribouillis du trajet réel." },
   { id:"fi", date:"2026-06-12", version:"fi", eleve:"", interne:"fi — CARTE ADAPTATIVE (signalé Paul : carte écrasée en haut sur ordi/tablette). CAUSE : .graph avait une hauteur FIXE de 330px → sur grand écran la carte s'étale en largeur mais reste basse, les pions (% top) se tassent verticalement. CORRECTIF : .graph passe en aspect-ratio:16/10 (ratio de l'image de fond 1440×900) + min-height:300px (mobile) + max-height:min(72vh,640px) (borne grand écran). Repli height:330px via @supports pour les très vieux navigateurs. AUCUN changement du moteur ni des coordonnées : les pions en % et le SVG 0-100 s'adaptent automatiquement à la nouvelle hauteur. Ne casse rien (carte.x/y, interactivité, fond image, routes : intacts)." },
   { id:"fh", date:"2026-06-12", version:"fh", eleve:"", interne:"fh — CORRECTIF BUG CARTE (signalé Paul : seules 2 séances sur 9 visibles, route blanche aberrante). CAUSE : données Firebase de prod où plusieurs séances ont carte.x/y = 0,0 (placement/import raté) → toutes empilées dans le coin, masquées les unes sous les autres ; la garde existante laissait passer 0 (nombre valide). CORRECTIF chapterDefaults : (1) garde renforcée (x ET y doivent être des nombres) ; (2) garde-fou GLOBAL __cartePatch() après la boucle : détecte les positions EXACTEMENT en doublon ou à (0,0) et répartit ces séances sur une grille de repli (cols=ceil(sqrt(N)), marges 14–86% / 18–82%) — aucune séance ne disparaît plus sous une autre, même données corrompues. Le seed embarqué est sain (vraies coords) ; le patch protège les données live. NB : Paul doit re-placer proprement les séances via l'éditeur (🗺) puis publier pour des positions définitives ; le patch est un filet, pas un placement esthétique." },
