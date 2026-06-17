@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fs">
+<meta name="app-version" content="2026-06-05fv">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -258,6 +258,12 @@
   .hs-cl{margin-left:6px;color:var(--gold2)}
   .hs-card{border-color:var(--gold-deep)}
   .hs-fiche-band{border:1px solid var(--gold-deep);background:rgba(251,191,36,.1);border-radius:8px;padding:6px 10px;margin:0 0 8px;font-size:.76rem;color:var(--gold2)}
+  /* ft/fu : historique de connexions */
+  .hc-day{margin:0 0 8px} .hc-dl{font-size:.72rem;color:var(--gold2);text-transform:capitalize;margin:0 0 2px;border-bottom:1px solid var(--line)}
+  .hc-line{display:flex;gap:8px;align-items:center;font-size:.8rem;padding:2px 0}
+  .hc-h{font-variant-numeric:tabular-nums;min-width:104px}
+  .hc-tag{font-size:.62rem;border-radius:6px;padding:1px 6px;font-weight:700}
+  .hc-cl{background:rgba(99,179,237,.16);color:#7bb6e0} .hc-au{background:linear-gradient(180deg,#fcd34d,#d99a1f);color:#3a2a0e}
   /* fc : message d'accueil session d'autonomie (overlay élève) + badge étoiles ×2 */
   .auto-intro{position:absolute;inset:0;z-index:70;background:rgba(8,6,16,.9);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px}
   .auto-intro .ai-card{max-width:440px;text-align:center;background:linear-gradient(180deg,#221833,#140e26);border:1.5px solid var(--gold-deep);border-radius:16px;padding:26px 24px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
@@ -5973,6 +5979,8 @@ const APP = {
     // CLIGNOTEMENT CARTE — résolu : (1) syncMapsIfChanged ne redessine que si la signature des occupants change (cf. _sessSig) ;
     //   (2) la carte porte .no-anim aux rafraîchissements → l'animation d'entrée ne se rejoue qu'à la vraie entrée (toMap), pas à chaque écriture sessions.
     //   Amélioration possible un jour (non nécessaire) : maj non destructive des seuls badges au lieu d'un re-render.
+    this._unsubs.push(store.subscribe("connexions/"+chap, v=>{ this._connexions=v||{};   // ft : historique de connexions (plages)
+      if(PROF.authed && (PROF.tab==="suivi"||PROF.tab==="historique")) PROF.renderSoon(); }));
     this._unsubs.push(store.subscribe("sessions/"+chap, v=>{ this._sessions=v||{}; this.syncMapsIfChanged();
       if(PROF.authed && PROF.tab==="suivi") PROF.renderSoon(); }));
     this._unsubs.push(store.subscribe("signaux/"+chap, v=>{ this._signaux=v||{};   // bilans écrits à relire (signal rouge)
@@ -5981,6 +5989,7 @@ const APP = {
         if(p._handUp!==up){ p._handUp=up; p.updateHandFab(); } });
       if(PROF.authed) PROF.renderSoon(); }));
     this._unsubs.push(store.subscribe("control/"+chap, v=>{ this._control=v||{};
+      if(this.authed) this.purgeGelsOrphelins();   // fv : un gel orphelin lu en base est neutralisé aussitôt
       Object.keys(this.panels).forEach(k=>{ const p=this.panels[k]; if(!p||!p.epoch||!p.engine) return;
         const ctl=this._control[p.engine.studentId]||{};
         const segCtl=(this._control||{})[p.classeSeg]||{};
@@ -6001,7 +6010,7 @@ const APP = {
         if(p.reflectCours) p.reflectCours(); });
       if(PROF.authed) PROF.renderSoon();
       this.syncMaps(); }));   // (dé)montre le bouton « viser le sans-faute » + fait apparaître les ateliers débloqués (remedOn) sur les cartes
-    this.beatAll(); this._hb=setInterval(()=>this.beatAll(),30000);
+    this.beatAll(); this.sweepConnexions(); this.purgeGelsOrphelins(); this._hb=setInterval(()=>{ this.beatAll(); this.sweepConnexions(); this.purgeGelsOrphelins(); },30000);
     this._tick=setInterval(()=>{ if(PROF.authed && PROF.tab==="suivi") PROF.renderSoon(); },15000);
   },
   // rejoue sur le panneau de l'élève l'action que le prof a déclenchée en cliquant dans le miroir
@@ -6038,10 +6047,47 @@ const APP = {
   beat(key){ const p=this.panels[key]; if(!p||!p.engine) return;
     const chap=CHAPTER.meta.id||"chapitre";
     store.save("sessions/"+chap+"/"+p.engine.studentId, { name:p.name, classe:p.classe||"", classeSeg:p.classeSeg||"libre",
-      idx:p.idx||0, mode:p.mode||'app', modeSwitched:!!p.modeSwitched, lastSeen:Date.now(), current:(p.screen==="seance"?p.current:(p._entering||null)), tab:(p.tabCur||'c'), epoch:p.epoch||0 }); },
+      idx:p.idx||0, mode:p.mode||'app', modeSwitched:!!p.modeSwitched, lastSeen:Date.now(), current:(p.screen==="seance"?p.current:(p._entering||null)), tab:(p.tabCur||'c'), epoch:p.epoch||0 });
+    if(!this.testMode) this.beatConnexion(p); },   // ft : prolonge la plage de connexion ouverte
   endSessionFor(classeSeg){ const chap=CHAPTER.meta.id||"chapitre";
     const node=Object.assign({}, (this._control||{})[classeSeg]||{}); node.logoutEpoch=Date.now();   // merge : ne pas écraser un freeze en cours
-    store.save("control/"+chap+"/"+classeSeg, node); },
+    store.save("control/"+chap+"/"+classeSeg, node);
+    this.cloreConnexionsSeg(classeSeg, Date.now()); },   // ft : ta clôture de cours BORNE proprement les plages de la classe
+
+  /* ── ft : HISTORIQUE DE CONNEXIONS — plages réelles (connexion→fin), statut classe/autonomie ──
+     Stockage : connexions/<chap>/<uid>/<plageId> = { debut, fin, lastBeat, classeSeg, nom, statut }
+     Fin = 1er des trois : ta clôture de cours (logoutEpoch), déconnexion explicite, ou silence > seuil (2 min) → fin=lastBeat. */
+  CONNEXION_SEUIL_MS: 120000,
+  openConnexion(p){ if(!p||!p.engine) return; const chap=CHAPTER.meta.id||"chapitre"; const uid=p.engine.studentId; if(isTestUid(uid)) return;
+    const seg=p.classeSeg||'libre'; const now=Date.now();
+    const statut = this.coursActifSeg(seg) ? 'classe' : 'autonomie';
+    const pid = String(now)+'_'+Math.random().toString(36).slice(2,6);
+    const data={ debut:now, fin:null, lastBeat:now, classeSeg:seg, nom:p.name||uid, statut };
+    p._connexionId=pid; p._connexionData=data; p._connexionStatut=statut;
+    store.save("connexions/"+chap+"/"+uid+"/"+pid, data); },
+  beatConnexion(p){ if(!p||!p._connexionId||!p._connexionData||!p.engine) return; const chap=CHAPTER.meta.id||"chapitre"; const uid=p.engine.studentId; if(isTestUid(uid)) return;
+    const seg=p.classeSeg||'libre';
+    const d=p._connexionData;
+    if(d.statut!=='classe' && this.coursActifSeg(seg)) d.statut='classe';   // un cours lancé pendant la plage la bascule en « classe » (et n'en ressort pas)
+    d.lastBeat=Date.now();
+    store.save("connexions/"+chap+"/"+uid+"/"+p._connexionId, d); },
+  cloreConnexion(p, fin){ if(!p||!p._connexionId||!p._connexionData||!p.engine) return; const chap=CHAPTER.meta.id||"chapitre"; const uid=p.engine.studentId; if(isTestUid(uid)) return;
+    const d=p._connexionData; d.fin=fin||Date.now();
+    store.save("connexions/"+chap+"/"+uid+"/"+p._connexionId, d); p._connexionId=null; p._connexionData=null; },
+  cloreConnexionsSeg(seg, fin){ for(const k in this.panels){ const p=this.panels[k]; if(p && p._connexionId && (p.classeSeg||'libre')===seg) this.cloreConnexion(p, fin); } },
+  // fv : purge des GELS ORPHELINS (gel:true sans cours vivant) — un gel oublié après clôture ne doit JAMAIS figer un élève hors séance,
+  //      quelle que soit la version de sa tablette. On remet freeze.gel à false en base (sans toucher au reste du control).
+  purgeGelsOrphelins(){ const chap=CHAPTER.meta.id||"chapitre"; const ctl=this._control||{}; const now=Date.now();
+    Object.keys(ctl).forEach(seg=>{ if(seg.startsWith('__')) return; const c=ctl[seg]||{}; const fz=c.freeze||{};
+      const coursVivant=!!((c.cours||{}).fin && (c.cours||{}).fin>now);
+      if(fz.gel && !coursVivant){ const node=Object.assign({}, c); node.freeze=Object.assign({}, fz, { gel:false, epoch:Date.now() });
+        store.save("control/"+chap+"/"+seg, node); } }); },
+  // balayage rétroactif (à l'ouverture du panneau prof) : toute plage sans fin et silencieuse > seuil est close à son dernier lastBeat
+  sweepConnexions(){ const chap=CHAPTER.meta.id||"chapitre"; const all=this._connexions||{}; const now=Date.now(); const seuil=this.CONNEXION_SEUIL_MS;
+    Object.keys(all).forEach(uid=>{ const plages=all[uid]||{}; Object.keys(plages).forEach(pid=>{ const pl=plages[pid]; if(!pl||pl.fin) return;
+      // ne pas clore une plage encore vivante (un panel local la tient) ni une plage récente
+      const vivante = Object.values(this.panels).some(p=>p&&p._connexionId===pid);
+      if(!vivante && (now-(pl.lastBeat||pl.debut||0))>seuil){ const d=Object.assign({}, pl, { fin: pl.lastBeat||pl.debut||now }); store.save("connexions/"+chap+"/"+uid+"/"+pid, d); } }); }); },
   // classes (segments) actuellement présentes, d'après les sessions vivantes
   presentSegs(){ const now=Date.now();
     return [...new Set(Object.values(this._sessions||{}).filter(s=>s && (now-(s.lastSeen||0))<PRESENCE_MS).map(s=>s.classeSeg).filter(Boolean))]; },
@@ -6223,7 +6269,7 @@ const APP = {
     store.save("progress/"+chap+"/"+uid, null);                         // efface la progression
     store.save("sommatif/"+chap+"/"+uid, null);                         // ... et ses notes figées (sinon fantôme après remise à zéro)
     this.endSessionForUid(uid); },                                      // puis déconnecte → repart de zéro à la reconnexion
-  kick(key){ const p=this.panels[key]; if(!p) return; this.panels[key]=null; this.refreshLogins(); },
+  kick(key){ const p=this.panels[key]; if(!p) return; if(p._connexionId) this.cloreConnexion(p, Date.now()); this.panels[key]=null; this.refreshLogins(); },
 
   // ── Mise à jour automatique : déclenchée quand la version publiée (Firebase) diffère de la version embarquée ──
   onAppVersion(published){
@@ -6353,6 +6399,7 @@ const APP = {
     p.modeSwitched=!!(resume&&resume.modeSwitched);           // bascule unique : déjà utilisée ? (survit à la reconnexion)
     this.panels[key]=p;
     this.refreshLogins();                                     // verrouille la classe sur les autres moitiés
+    if(!this.testMode && !isTestUid(studentId)) this.openConnexion(p);   // ft : historiser la plage de connexion (hors test)
     if(this.testMode){ p.render(); this.beat(key); }          // test : chaque session repart de zéro (aucune hydratation)
     else store.once("progress/"+(CHAPTER.meta.id||"chapitre")+"/"+studentId, saved=>{
       // reprise après push : l'instantané local (pris juste avant le reload) prime sur Firebase, qui peut ne pas avoir reçu les dernières coches
@@ -6944,7 +6991,7 @@ const PROF = {
   render(){ const c=CHAPTER, T=this.tab;
     const _box=document.getElementById('profModal'); const _sc=_box?_box.scrollTop:0;
     const _openDK = _box ? [..._box.querySelectorAll('details[data-dk][open]')].map(d=>d.getAttribute('data-dk')) : [];   // fn : volets dépliés à rouvrir après reconstruction
-    const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",maj:"Historique des mises à jour",reglages:"Réorientation, exclusivité, mode test"};
+    const tips={creation:"Bibliothèque et édition des chapitres",classes:"Gérer les classes et leurs élèves",suivi:"Qui est connecté, où, en direct",bilan:"Notes et bilans de toute la classe",historique:"Quand chaque élève s'est connecté (plages, classe/autonomie)",archives:"Tableaux de bord figés des cours passés",maj:"Historique des mises à jour",reglages:"Réorientation, exclusivité, mode test"};
     const tabBtn=(id,lab)=>`<button class="ptab ${T===id?'active':''}" title="${tips[id]||''}" onclick="PROF.go('${id}')">${lab}</button>`;
     const _segBadge = APP.classeFiltreSeg() || APP.activeClasseSeg();
     const nBil = (_segBadge && _segBadge!=='__none') ? APP.signauxList().filter(x=>x.classeSeg===_segBadge).length : 0;
@@ -6952,7 +6999,7 @@ const PROF = {
     $("profModal").innerHTML=`
       <div style="margin-bottom:10px">
         <h3 style="margin:0">Panneau de contrôle — ${esc(c.meta.titre)}</h3></div>
-      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("archives","Archives")}${tabBtn("maj","MAJ")}${tabBtn("reglages","Réglages"+(SENTINEL.badge()?" ⚠":""))}</div>
+      <div class="ptabs">${tabBtn("creation","Création")}${tabBtn("classes","Classes")}${tabBtn("suivi",suiviLab)}${tabBtn("bilan","Bilan")}${tabBtn("historique","Historique")}${tabBtn("archives","Archives")}${tabBtn("maj","MAJ")}${tabBtn("reglages","Réglages"+(SENTINEL.badge()?" ⚠":""))}</div>
       <div id="ptabbody">${this.body()}</div>`;
     const _nb=document.getElementById('profModal');
     if(_nb && _openDK.length) _openDK.forEach(k=>{ const d=_nb.querySelector('details[data-dk="'+(window.CSS&&CSS.escape?CSS.escape(k):k.replace(/"/g,'\\"'))+'"]'); if(d) d.open=true; });   // fn : rouvre les volets dépliés (la capture _openDK est en tête de render)
@@ -6967,6 +7014,7 @@ const PROF = {
         : this.tab==="classes"?this.classesBody()
         : this.tab==="suivi"?this.suiviBody()
         : this.tab==="bilan"?this.bilanBody()
+        : this.tab==="historique"?this.historiqueBody()
         : this.tab==="archives"?this.archivesBody()
         : this.tab==="maj"?this.majBody() : this.reglagesBody(); },
   /* ── onglet MAJ : historique des mises à jour de l'application ── */
@@ -7617,6 +7665,7 @@ const PROF = {
     </div></details>`;
     const jE=Object.values(APP._journal||{}).filter(e=>e.uid===uid).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,15);
     if(jE.length) h+=`<details class="adv" data-dk="sesinterv:${esc(uid)}"><summary>📜 ses interventions · ${jE.length}</summary><div class="prof-list" style="padding:6px 10px">${jE.map(e=>`<div class="r"><span class="sig-when">${e.ts?new Date(e.ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):''}</span><span>${esc(e.raison||e.type||'')} <span class="sig-act">→ ${esc(e.action||'')}</span></span></div>`).join('')}</div></details>`;
+    h+=this.connexionsFicheHTML(uid);   // fu : volet « 🕒 Connexions » dans la fiche (alimente le profil MJPC)
     // ── SON PARCOURS : une ligne de pastilles (le détail fin vit au survol et dans Bilan) ──
     const chips=(b.parSeance||[]).filter(ps=>!ps.remediation || ps.statut!=='todo').map(ps=>{
       const cur=ps.id===s.current;
@@ -7691,6 +7740,47 @@ const PROF = {
   refreshBilans(){ this._bilans=null; this.render(); },
   /* ── onglet ARCHIVES : instantanés de fin de cours, rejouables en tableau de bord figé ── */
   _archives:null,
+  /* ── ft/fu : HISTORIQUE DE CONNEXIONS — helpers de lecture ── */
+  _hdate(ts){ return new Date(ts).toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'2-digit'}); },
+  _hheure(ts){ return new Date(ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); },
+  _hjour(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); },
+  // toutes les plages d'un élève (tableau trié, fin estimée si encore ouverte), avec durée
+  plagesEleve(uid){ const all=(APP._connexions||{})[uid]||{}; const now=Date.now();
+    return Object.keys(all).map(pid=>{ const p=all[pid]||{}; const fin=p.fin||Math.max(p.lastBeat||0,p.debut||0)||now; const ouverte=!p.fin;
+      return { pid, debut:p.debut||0, fin, ouverte, classeSeg:p.classeSeg||'', statut:p.statut||'autonomie', dureeMin:Math.max(0,Math.round((fin-(p.debut||fin))/60000)) }; })
+      .filter(p=>p.debut>0).sort((a,b)=>b.debut-a.debut); },
+  // compteurs pour le profil MJPC (« travaille seul et souvent »)
+  statsEleve(uid){ const pl=this.plagesEleve(uid); const auto=pl.filter(p=>p.statut==='autonomie');
+    return { sessions:pl.length, sessionsAutonomie:auto.length, minTotal:pl.reduce((s,p)=>s+p.dureeMin,0), minAutonomie:auto.reduce((s,p)=>s+p.dureeMin,0), jours:new Set(pl.map(p=>this._hjour(p.debut))).size }; },
+  _plageLine(p){ const st=p.statut==='classe'?'<span class="hc-tag hc-cl">en classe</span>':'<span class="hc-tag hc-au">autonomie</span>';
+    return '<div class="hc-line"><span class="hc-h">'+this._hheure(p.debut)+'–'+(p.ouverte?'<i>en cours</i>':this._hheure(p.fin))+'</span> '+st+' <span class="meta">'+(p.dureeMin?p.dureeMin+' min':'')+'</span></div>'; },
+  // bloc « connexions » réutilisé dans la fiche élève
+  connexionsFicheHTML(uid){ const pl=this.plagesEleve(uid); if(!pl.length) return '';
+    const st=this.statsEleve(uid);
+    const parJour={}; pl.forEach(p=>{ const j=this._hjour(p.debut); (parJour[j]=parJour[j]||[]).push(p); });
+    const jours=Object.keys(parJour).sort().reverse().slice(0,8);
+    const body=jours.map(j=>'<div class="hc-day"><div class="hc-dl">'+this._hdate(parJour[j][0].debut)+'</div>'+parJour[j].map(p=>this._plageLine(p)).join('')+'</div>').join('');
+    return '<details class="adv" data-dk="connex:'+esc(uid)+'"><summary>🕒 Connexions · '+st.sessions+' session'+(st.sessions>1?'s':'')+' · '+st.minTotal+' min</summary>'
+      +'<div style="padding:0 10px 8px"><div class="d" style="margin:0 0 6px">Autonomie (hors cours) : <b>'+st.sessionsAutonomie+'</b> session'+(st.sessionsAutonomie>1?'s':'')+' · '+st.minAutonomie+' min · sur <b>'+st.jours+'</b> jour'+(st.jours>1?'s':'')+'. Ces repères nourriront le profil MJPC (travailler seul et souvent).</div>'+body+'</div></details>'; },
+  historiqueBody(){
+    APP.sweepConnexions();
+    const segAff = APP.classeFiltreSeg();
+    const all=APP._connexions||{};
+    let uids=Object.keys(all);
+    // filtre classe (sauf « toutes » '' ou auto)
+    if(segAff && segAff!=='__none') uids=uids.filter(uid=>{ const pl=(all[uid]&&Object.values(all[uid]))||[]; return pl.some(p=>(p.classeSeg||'')===segAff); });
+    // nom le plus récent connu pour chaque uid
+    const nomDe=uid=>{ const pl=Object.values(all[uid]||{}); pl.sort((a,b)=>(b.debut||0)-(a.debut||0)); return (pl[0]&&pl[0].nom)||uid; };
+    uids=uids.filter(uid=>!isTestUid(uid)).sort((a,b)=>nomDe(a).localeCompare(nomDe(b)));
+    const head=APP.classeSelectHTML()+'<div class="prof-sec"><h4>🕒 Historique de connexions</h4><div class="d">Plages réelles de connexion de chaque élève, par jour, avec le statut (en classe / autonomie). Les fins sont bornées par ta clôture de cours, une déconnexion, ou ~2 min sans activité.</div></div>';
+    if(!uids.length) return head+'<div class="prof-sec"><div class="d">Aucune connexion enregistrée'+(segAff&&segAff!=='__none'?' pour cette classe':'')+' pour l\'instant.</div></div>';
+    const cards=uids.map(uid=>{ const pl=this.plagesEleve(uid); const stt=this.statsEleve(uid);
+      const parJour={}; pl.forEach(p=>{ const j=this._hjour(p.debut); (parJour[j]=parJour[j]||[]).push(p); });
+      const jours=Object.keys(parJour).sort().reverse();
+      const jbody=jours.map(j=>'<div class="hc-day"><div class="hc-dl">'+this._hdate(parJour[j][0].debut)+'</div>'+parJour[j].map(p=>this._plageLine(p)).join('')+'</div>').join('');
+      return '<div class="prof-sec"><details class="adv" data-dk="hist:'+esc(uid)+'"><summary><b>'+esc(nomDe(uid))+'</b> <span class="meta">· '+stt.sessions+' session'+(stt.sessions>1?'s':'')+' · '+stt.minTotal+' min · '+stt.sessionsAutonomie+' autonomie</span></summary>'
+        +'<div style="padding:0 10px 8px">'+jbody+'</div></details></div>'; }).join('');
+    return head+cards; },
   archivesBody(){
     if(this._archives==null){ this._archives="loading"; this.loadArchives();
       return `<div class="prof-sec"><h4>Archives de session</h4><div class="d">Lecture des archives…</div></div>`; }
@@ -8309,6 +8399,8 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fv", date:"2026-06-12", version:"fv", eleve:"", interne:"fv — GELS ORPHELINS (élèves bloqués hors séance le 16/06). DIAGNOSTIC sur snapshot : 4e_banksy et 4e_pythagore avaient freeze.gel=true SANS cours (posé par cloturerCours en fin de séance les 12 et 15/06). Le bypass ff neutralise ce gel hors cours — mais AUCUN signal/journal bypass n'a été émis le 16 → les TABLETTES tournaient sur une version ANTÉRIEURE à ff (le 'Publier la mise à jour' n'avait pas propagé ff ; appVersion:fs dans le snapshot = celui du poste prof, pas des tablettes). Sur cette vieille version, le gel:true traînant figeait le chrono hors séance → impression de blocage. CORRECTIF DE FOND (indépendant de la version tablette) : purgeGelsOrphelins() remet freeze.gel=false en base pour tout segment ayant gel:true sans cours vivant ; branché au subscribe control (réaction immédiate) + au heartbeat 30 s. Ainsi un gel oublié après clôture ne peut PLUS figer un élève hors séance, même sur une tablette non à jour. RAPPEL PROCÉDURE : après déploiement, cliquer « Publier la mise à jour » pour que les tablettes chargent la nouvelle version." },
+  { id:"fu", date:"2026-06-12", version:"fu", eleve:"", interne:"fu — AFFICHAGE de l'historique de connexions (sur le moteur ft). (1) Onglet « Historique » dans le panneau prof : par classe (sélecteur), un volet dépliable par élève → plages groupées par jour (heure début–fin + tag « en classe »/« autonomie » + durée), récap session/min/autonomie en résumé. sweepConnexions() au rendu. (2) Volet « 🕒 Connexions » dans la fiche élève (connexionsFicheHTML) : 8 derniers jours + compteurs sessionsAutonomie/minAutonomie/jours destinés au profil MJPC (« travailler seul et souvent »). Helpers : plagesEleve(uid) (plages triées, fin estimée si ouverte, durée), statsEleve(uid) (compteurs). data-dk sur les details (préservés au re-render, fn)." },
   { id:"fs", date:"2026-06-12", version:"fs", eleve:"", interne:"fs — CORRECTIF (Paul) : l'option « 👥 Tous les élèves connectés » de fp était bien ajoutée à classeSelectHTML, MAIS le SUIVI appelait classeSelectHTML(true) (noToutes) aux deux endroits (suiviBody : vue normale L7411 + écran « aucune classe » L7313) → l'option y était masquée. C'est le BILAN qui l'avait (appel sans true). fp avait corrigé le libellé mais pas activé l'option côté Suivi. CORRECTIF : les deux appels du Suivi passent classeSelectHTML(false) → l'option « Tous les élèves connectés » apparaît bien dans le sélecteur du Suivi (montre actifs + hors séance, toutes classes)." },
   { id:"fr", date:"2026-06-12", version:"fr", eleve:"", interne:"fr — CAUSE des séances à 0,0 TROUVÉE ET CORRIGÉE (origine du bug carte fh/fk). setCarte faisait Number(v)||0 → quand le prof VIDE le champ x/y (input type=number) pour retaper une valeur, Number('')=NaN, NaN||0=0 → la coordonnée tombait à 0, et vider x ET y donnait 0,0 (séances empilées). CORRECTIF : setCarte ignore une saisie vide ('' → return, garde l'ancienne valeur) et non numérique (isFinite). Le champ n'écrit plus 0 par accident. Le filet __cartePatch (fh) reste en place comme double sécurité. La dette « investiguer l'origine des 0,0 » est close." },
   { id:"fq", date:"2026-06-12", version:"fq", eleve:"", interne:"fq — SÉANCES FAITES HORS CHEMIN (suite fj, point laissé ouvert). fj n'illuminait que les segments DU chemin conseillé → une séance faite dans le désordre n'avait aucun repère « hors parcours ». AJOUT : onPath=Set(ideal) ; une .place done non-remed absente du chemin conseillé reçoit la classe « offpath » → liseré bleuté discret (box-shadow .55) + tooltip « Faite hors du chemin conseillé ». La médaille dorée+✓ marque toujours TOUTE séance faite ; offpath ajoute juste le repère visuel du hors-parcours. Aucun impact moteur/notes." },
