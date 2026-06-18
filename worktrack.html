@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-06-05fx">
+<meta name="app-version" content="2026-06-05fz">
 <!-- ^ marqueur de version : à incrémenter à CHAQUE livraison. Le client le lit pour se comparer à la version publiée ; le bouton « Publier » le sonde sur le serveur avant de déclencher les rafraîchissements. -->         
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Spline+Sans:wght@400;500;600;700&display=swap');
@@ -4453,7 +4453,10 @@ function createEngine(chapter, store, studentId, eleveIndex){
       // ENRICHISSEMENT NON DESTRUCTIF : sur une séance déjà réussie, un item auto ABSENT des réponses est un AJOUT
       // POSTÉRIEUR (question ajoutée après le passage de l'élève). Il reste un complément FACULTATIF et n'entre pas
       // dans le barème tant que l'élève ne l'a pas traité. Une réussite acquise ne recule jamais.
-      const compteItem = q => (!selR || selR.indexOf(q.id)>=0) && (!wasPassed || !isAutoItem(q) || (answers && (q.id in answers)));
+      const surPapier = !!(opts && (opts.mode==='papier' || opts.mode==='deux'));   // fy : registre fait au cahier en papier/deux
+      // un item registre (non-QCM auto) NON répondu à l'écran en mode papier/deux est fait au cahier → hors barème de la porte (ne bloque pas).
+      const registreCahier = q => surPapier && q.type!=='qcm' && isAutoItem(q) && !(answers && (q.id in answers) && (function(a){ return a!=null && (Array.isArray(a)?a.some(x=>x!=null&&x!==''):(typeof a==='object'?Object.keys(a).length>0:String(a)!==''));})(answers[q.id]));
+      const compteItem = q => (!selR || selR.indexOf(q.id)>=0) && (!wasPassed || !isAutoItem(q) || (answers && (q.id in answers))) && !registreCahier(q);
       let porte=0, porteTotal=0, ng=0, nt=0, tentes=0;        // porte = items ENTIÈREMENT réussis (sert le seuil) ; note = somme des détails justes (partiel) ; tentes = items abordés
       const att=a=>a!=null && (Array.isArray(a)?a.some(x=>x!=null&&x!==''):(typeof a==='object'?Object.keys(a).length>0:String(a)!==''));
       ev.items.forEach(q=>{ if(!compteItem(q)) return;   // ajout postérieur non traité → hors barème de cet élève
@@ -5107,7 +5110,16 @@ function Panel(engine, root, name){
     const s=engine.seance(P.current);
     P._acPhase=false;   // navigation vers une séance : on repart d'un état d'autocorrection neutre (setAutoCrit/validateAutocorr le gèrent ensuite)
     P._mapSeen=false;   // on a quitté la carte → la prochaine vraie entrée rejouera son animation (une fois)
-    const conv=(P._venirVoir===P.current);   // convoqué par le prof sur ce bilan : on retient l'élève ici
+    // fz : une convocation ne vaut QUE pendant un cours vivant. Hors séance (clôture pendant la convocation, ou travail à la maison),
+    //      « viens me montrer ton bilan » n'a aucun sens et figeait l'écran → l'élève restait bloqué. On la neutralise comme le gel (ff/fv).
+    const _coursViv=!!(((( APP._control||{})[P.classeSeg])||{}).cours||{}).fin && ((((APP._control||{})[P.classeSeg])||{}).cours||{}).fin>Date.now();
+    if(P._venirVoir && !_coursViv && laneIdOf()!=='__mirror'){   // convocation orpheline (hors cours) → on libère l'élève
+      if(!isTestUid(engine.studentId)){ const chap=CHAPTER.meta.id||'chapitre';   // signal/journal : pas pour les postes de test
+        if(P._convBypassEpoch!==P._venirVoir){ P._convBypassEpoch=P._venirVoir;
+          store.save('signaux/'+chap+'/'+engine.studentId+'/convbypass', { type:'convbypass', seance:(engine.seance(P._venirVoir)||{}).titre||P._venirVoir, nom:P.name, classeSeg:P.classeSeg||'', ts:Date.now() });
+          store.save('journal/'+chap+'/'+Date.now()+'_'+String(engine.studentId).slice(0,8), { ts:Date.now(), uid:engine.studentId, nom:P.name, classeSeg:P.classeSeg||'', type:'convbypass', raison:'convocation « montrer le bilan » active hors cours', action:'écran NON figé hors séance — signalé au suivi' }); } }
+      P._venirVoir=null; }   // libère TOUJOURS (même en test) : l'élève peut continuer à travailler seul
+    const conv=(P._venirVoir===P.current) && _coursViv;   // convoqué ET cours vivant : on le retient ici ; sinon, pas de blocage
     engine.markSession(P.current, (((( APP._control||{})[P.classeSeg])||{}).cours||{}).debut||0);   // ancre « cette heure »
     if(P.mode==='papier' && !P.expanded && !conv && !s.remediation && laneIdOf()!=="__mirror"){ renderCompact(s); return; }   // mode papier : vue réduite par défaut (sauf convocation ; un atelier se fait à l'écran)
     root.innerHTML = `${conv ? `<div class="vv-band">👋🏻 Viens me montrer ton bilan pour vérifier s'il est complet.</div>` : `<button class="backbtn" title="Revenir à la carte des séances" onclick="APP.panel('${laneIdOf()}').toMap()">← La carte</button>`}
@@ -5815,7 +5827,7 @@ function Panel(engine, root, name){
       setTimeout(()=>{ if(P.showComplements) P.showComplements(); }, 500);   // d'autres séances à compléter ?
       return;
     }
-    const r=engine.gradeQCM(s.id, P.answers, { replay:wasReplay });
+    const r=engine.gradeQCM(s.id, P.answers, { replay:wasReplay, mode:P.mode });   // fy : le moteur sait si on est sur papier (registre fait au cahier)
     P._replay=false;                       // une soumission consomme le re-jeu → on réaffiche le verdict + la trace mise à jour
     renderEval();                          // réaffiche tout en mode corrigé (QCM + items registre)
     if(r.passed){ const stars=engine.starsOf(s.id), v=root.querySelector(".verdict-box");
@@ -8450,6 +8462,8 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
      interne : détail réservé au professeur (onglet « MAJ »).
    Le plus récent en tête. Accusé de lecture par tablette en localStorage (wt_ann_vues). */
 const ANNONCES = [
+  { id:"fz", date:"2026-06-12", version:"fz", eleve:"", interne:"fz — ÉLÈVES BLOQUÉS HORS SÉANCE par la CONVOCATION (signalé Paul, même famille qu'hier). Le blocage n'était PAS le seuil QCM/registre (fy) ni le gel (fv) mais la CONVOCATION « 👋 Viens me montrer ton bilan » (P._venirVoir, posée par venirVoir via ordre prof act). conv → root.vv-lock → pointer-events:none sur TOUT sauf le bandeau → écran figé. Scénario : élève convoqué pendant le cours, le cours se termine (ou il continue à la maison) → _venirVoir reste actif localement, plus aucun cours → le prof ne peut plus valider → élève BLOQUÉ hors séance, exactement le parallèle du gel orphelin (ff/fv). Les items 'prof' (autre source de « validation prof ») : ce chapitre n'en a aucun → c'était bien la convocation. CORRECTIF (modèle ff/fv) : conv n'est effective QUE si un cours est vivant (_coursViv) ; hors cours, on neutralise — on LIBÈRE P._venirVoir (l'élève reprend la main) + signal 'convbypass' au prof + journal. NB : en mode app pur, le symptôme était masqué (l'app ne reste pas sur la vue figée de la même façon) ; en papier/papier+app il était visible." },
+  { id:"fy", date:"2026-06-12", version:"fy", eleve:"", interne:"fy — ÉLÈVES BLOQUÉS « après leurs questions » en mode PAPIER / PAPIER+APP (signalé Paul). CAUSE RACINE (moteur) : gradeQCM compte dans la porte TOUS les items auto, QCM ET registre (ordre/trous/paires/classement/repérage/vraifaux via EVAL_TYPES). Le seuil _seuilEff = n (tous les items auto si pas de seuilPct). Or chaque séance a 1+ exercice registre. En mode papier/deux, l'élève fait ces exercices AU CAHIER, pas à l'écran → leur porte n'est jamais créditée → porte < seuil → passed=false → BLOQUÉ après le QCM (ex. S1 : 5 QCM + 1 ordre = seuil 6, plafonne à 5/6). CORRECTIF : gradeQCM reçoit opts.mode (passé par submit) ; en papier/deux, un item registre NON répondu à l'écran est considéré « fait au cahier » → exclu du barème de la porte (compteItem=false) → ne bloque plus. Les QCM restent toujours requis ; en mode app, comportement INCHANGÉ ; un registre RÉPONDU à l'écran (même en papier) compte normalement. La vérification de ces exercices se fait à l'autocorrection (cahier vs corrigé)." },
   { id:"fx", date:"2026-06-12", version:"fx", eleve:"", interne:"fx — RECONSTITUÉ plus HONNÊTE (Paul : « le reconstitué ne me donne pas confiance » — plages 23:11–23:11 0 min). CAUSE : les events enter/exit ne mesurent pas une présence (un seul enter sans exit → debut===fin → plage 0 min, artefact de navigation). CORRECTIFS : (1) on ne garde que les plages reconstituées de durée >= 2 min (les 0 min, pur bruit de navigation, sont écartées) ; durée plancher 1 min pour les retenues. (2) Bandeau d'avertissement explicite en tête de l'Historique : les données AVANT cette MAJ sont ESTIMÉES (ordre de grandeur), celles d'APRÈS sont mesurées précisément (sans ≈). (3) Résumé par élève : « ~X min » + tag « reconstitué » si tout est reconstitué, « partiel. reconstitué » si mélange. CONFIRMÉ : les nouvelles connexions (après déploiement ft) sont des plages PRÉCISES (début/fin réels via heartbeat), PAS reconstituées ; elles priment et ne doublonnent jamais le reconstitué." },
   { id:"fw", date:"2026-06-12", version:"fw", eleve:"", interne:"fw — HISTORIQUE : tous les élèves connus + reconstitution du passé (signalé Paul : sélecteur incomplet, élèves connectés invisibles). (1) tousElevesConnus() agrège roster CLASSES + toute trace (connexions, progress, sessions) → l'onglet Historique liste TOUS les élèves, connectés ou non (déconnectés inclus). Tri par dernière activité puis alpha ; « jamais connecté » affiché pour les autres. (2) plagesReconstituees(uid) : à partir des données DÉJÀ en base (events enter/exit de progress, regroupés par gap 30 min ; statut classe/autonomie via le journal), reconstruit des plages PASSÉES — sans doublonner les plages précises (ft). Marquées « ≈ » + tag « reconstitué ». Ainsi le 16/06 est visible immédiatement, sans attendre le remplissage de connexions. watchProgress ré-abonné pour l'onglet historique. NB : la précision viendra des plages ft à partir du déploiement ; la reconstitution couvre le passé." },
   { id:"fv", date:"2026-06-12", version:"fv", eleve:"", interne:"fv — GELS ORPHELINS (élèves bloqués hors séance le 16/06). DIAGNOSTIC sur snapshot : 4e_banksy et 4e_pythagore avaient freeze.gel=true SANS cours (posé par cloturerCours en fin de séance les 12 et 15/06). Le bypass ff neutralise ce gel hors cours — mais AUCUN signal/journal bypass n'a été émis le 16 → les TABLETTES tournaient sur une version ANTÉRIEURE à ff (le 'Publier la mise à jour' n'avait pas propagé ff ; appVersion:fs dans le snapshot = celui du poste prof, pas des tablettes). Sur cette vieille version, le gel:true traînant figeait le chrono hors séance → impression de blocage. CORRECTIF DE FOND (indépendant de la version tablette) : purgeGelsOrphelins() remet freeze.gel=false en base pour tout segment ayant gel:true sans cours vivant ; branché au subscribe control (réaction immédiate) + au heartbeat 30 s. Ainsi un gel oublié après clôture ne peut PLUS figer un élève hors séance, même sur une tablette non à jour. RAPPEL PROCÉDURE : après déploiement, cliquer « Publier la mise à jour » pour que les tablettes chargent la nouvelle version." },
