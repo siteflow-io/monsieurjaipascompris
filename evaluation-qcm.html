@@ -496,6 +496,14 @@ body.impression-active .deco{display:none !important}
 
 /* États interro */
 .etat-attente{padding:3rem 2rem;border-radius:24px;background:linear-gradient(135deg,var(--bleu),var(--turquoise));color:#fff;font-size:clamp(1.4rem,3vw,2rem);font-weight:900;animation:pulseAttente 2.5s ease-in-out infinite}
+.eleve-mode-info{margin-top:1.4rem;padding:1.2rem 1.5rem;border-radius:16px;text-align:left;font-size:.95rem;line-height:1.45}
+.eleve-mode-info.strict{background:linear-gradient(135deg,#FFF7DC,#FFEFB8);border:3px solid #F59E0B;color:#5C4500}
+.eleve-mode-info.partiel{background:linear-gradient(135deg,#E0F2FE,#BAE6FD);border:3px solid #0284C7;color:#0C4A6E}
+.eleve-mode-info .mode-titre{font-size:1.05rem;font-weight:900;margin-bottom:.7rem;text-align:center}
+.eleve-mode-info .mode-regles{margin:.4rem 0;padding-left:1.4rem}
+.eleve-mode-info .mode-regles li{margin:.3rem 0}
+.eleve-mode-info .mode-exemple{margin-top:.8rem;padding:.6rem .8rem;background:rgba(255,255,255,.55);border-radius:8px;font-size:.88rem;font-style:italic}
+.eleve-q-points-badge{display:inline-block;margin-left:.4rem;padding:.18rem .5rem;background:rgba(106,76,224,.15);color:var(--violet);border-radius:6px;font-size:.78rem;font-weight:700;letter-spacing:.02em}
 @keyframes pulseAttente{0%,100%{box-shadow:0 0 0 0 rgba(33,150,243,.4)}50%{box-shadow:0 0 0 16px rgba(33,150,243,0)}}
 
 /* Phase REFLEXION */
@@ -602,6 +610,7 @@ body.impression-active .deco{display:none !important}
 .correction-compteur-pastille{display:inline-flex;align-items:center;justify-content:center;width:1.8rem;height:1.8rem;border-radius:50%;font-size:.95rem;font-weight:700;border:2px solid var(--bordure)}
 .correction-compteur-pastille.vide{background:#fff;color:var(--gris);font-size:.78rem;border-color:var(--gris-clair)}
 .correction-compteur-pastille.juste{background:var(--vert);border-color:var(--vert);color:#fff;animation:reveal-pop .35s ease-out backwards}
+.correction-compteur-pastille.partiel{background:#F59E0B;border-color:#F59E0B;color:#fff;animation:reveal-pop .35s ease-out backwards}
 .correction-compteur-pastille.faux{background:var(--rouge);border-color:var(--rouge);color:#fff;animation:reveal-pop .35s ease-out backwards}
 .correction-compteur-pastille.nonrep{background:var(--gris-clair);border-color:var(--gris);color:#fff;animation:reveal-pop .35s ease-out backwards}
 
@@ -1019,6 +1028,65 @@ function slugify(s){
     .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
 }
 
+// ════════════════════════════════════════════════════════════════════
+// SCORING — mode strict ou partiel (configuré au niveau de l'éval)
+// ════════════════════════════════════════════════════════════════════
+// Une éval a un champ `mode` :
+//   - "strict"  (défaut) : tout ou rien. Chaque question vaut 1 point ; score=1 si
+//                          réponse parfaite (toutes les bonnes, aucune mauvaise),
+//                          0 sinon. Total max éval = nb de questions.
+//                          → identique au comportement historique : rétro-compat.
+//   - "partiel" : chaque question vaut autant de points qu'elle a de bonnes cases.
+//                 Score par question = max(0, nb_bonnes_cochées − nb_mauvaises_cochées),
+//                 plafonné au max. Total max éval = somme des nb_bonnes.
+// Helpers utilisés partout dans le code pour homogénéiser le calcul.
+
+function modeEval(ev){
+  return (ev && ev.mode === "partiel") ? "partiel" : "strict";
+}
+
+function scoreMaxQuestion(question, mode){
+  if(!question) return 0;
+  if(mode === "partiel") return ((question.bonnes||[]).length);
+  return 1; // mode strict : tout ou rien sur 1 point
+}
+
+function scoreMaxEval(ev){
+  if(!ev || !ev.questions) return 0;
+  var mode = modeEval(ev);
+  return ev.questions.reduce(function(acc, q){ return acc + scoreMaxQuestion(q, mode); }, 0);
+}
+
+// Calcule le score d'une réponse pour une question.
+// Retourne { score, max, ok, partiel }
+//   ok      = vrai si la réponse est parfaite (toutes les bonnes, aucune mauvaise)
+//   partiel = vrai en mode partiel si score > 0 mais imparfait (état intermédiaire)
+function calculerScoreQuestion(choixEleve, bonnes, mode){
+  var bn = (bonnes || []);
+  var ch = (choixEleve || []);
+  var maxStrict = 1;
+  var maxPartiel = bn.length;
+  if(ch.length === 0){
+    return {score: 0, max: (mode === "partiel") ? maxPartiel : maxStrict, ok: false, partiel: false};
+  }
+  var chSorted = ch.slice().sort(function(a,b){return a-b});
+  var bnSorted = bn.slice().sort(function(a,b){return a-b});
+  var parfait = (chSorted.length === bnSorted.length) &&
+                JSON.stringify(chSorted) === JSON.stringify(bnSorted);
+  if(mode === "partiel"){
+    var nbBon = 0, nbMauv = 0;
+    ch.forEach(function(c){
+      if(bn.indexOf(c) >= 0) nbBon++;
+      else nbMauv++;
+    });
+    var score = Math.max(0, nbBon - nbMauv);
+    if(score > maxPartiel) score = maxPartiel; // sécurité
+    return {score: score, max: maxPartiel, ok: parfait, partiel: !parfait && score > 0};
+  }
+  // Mode strict (défaut)
+  return {score: parfait ? maxStrict : 0, max: maxStrict, ok: parfait, partiel: false};
+}
+
 // Lit les paramètres d'URL en priorité depuis le hash (#mode=prof&view=phone),
 // fallback sur le query string (?mode=prof). Le hash est nécessaire car le
 // service worker du site MJPC (PWA) intercepte les URLs avec query string
@@ -1324,6 +1392,10 @@ function parseEvaluation(texte){
   }
   return {
     titre: raw.titre.trim(),
+    // Mode de scoring : "strict" (défaut, tout ou rien) ou "partiel" (1 pt/bonne case,
+    // -1 pt/mauvaise case, plancher 0). Tolérance sur le champ : si absent ou invalide,
+    // on retombe sur "strict" (rétro-compat avec toutes les évals existantes).
+    mode: (raw.mode === "partiel") ? "partiel" : "strict",
     questions: questions
   };
 }
@@ -1336,10 +1408,12 @@ var PROMPT_IA_DEFAUT = "Tu vas m'aider à créer un QCM pour mon évaluation. Vo
 + "1. Quel est le thème et le niveau scolaire (collège 6e/5e/4e/3e, lycée, etc.) ?\n"
 + "2. Combien de questions au total dois-je créer ?\n"
 + "3. Parmi ces questions, combien doivent être à réponses multiples (plusieurs bonnes réponses) ?\n"
-+ "4. Quel équilibre de niveaux souhaites-tu (facile/standard/approfondi/expert) ?\n\n"
++ "4. Quel équilibre de niveaux souhaites-tu (facile/standard/approfondi/expert) ?\n"
++ "5. Mode de scoring : strict (tout ou rien) ou partiel (1 point par bonne case, −1 par mauvaise case, plancher 0) ?\n\n"
 + "FORMAT DE SORTIE OBLIGATOIRE — JSON valide selon ce schéma :\n\n"
 + "{\n"
 + "  \"titre\": \"Titre de l'évaluation\",\n"
++ "  \"mode\": \"strict\",\n"
 + "  \"questions\": [\n"
 + "    {\n"
 + "      \"enonce\": \"Texte de la question, formulée de façon AUTONOME (l'élève doit pouvoir répondre sans voir les choix).\",\n"
@@ -1352,14 +1426,15 @@ var PROMPT_IA_DEFAUT = "Tu vas m'aider à créer un QCM pour mon évaluation. Vo
 + "}\n\n"
 + "RÈGLES :\n"
 + "1. Les énoncés doivent être AUTONOMES : l'élève doit pouvoir répondre de mémoire, sans avoir besoin de voir les choix. Évite donc les formulations du type « Laquelle des propositions suivantes... » ou « Parmi les choix ci-dessous... ». Préfère des questions directes : « Quelle est la capitale de l'Italie ? », « En quelle année... ? », « Quel auteur a écrit... ? ».\n"
-+ "2. Le tableau \"choix\" peut contenir 2 choix ou plus (pas de limite haute).\n"
-+ "3. Le tableau \"bonnes\" liste les index (0=A, 1=B, 2=C...) des bonnes réponses. Plusieurs valeurs autorisées si question à réponses multiples (selon le nombre que je t'ai indiqué).\n"
-+ "4. \"niveau\" doit être l'une de ces valeurs : \"facile\" (5 secondes de réflexion), \"standard\" (10s), \"approfondi\" (15s), \"expert\" (20s). Choisis selon la difficulté objective de la question.\n"
-+ "5. \"explication\" est OBLIGATOIRE et destinée aux élèves pendant la correction. Elle doit justifier la bonne réponse de façon pédagogique, claire et concise (1 à 3 phrases). Évite le jargon. Tu peux y mentionner pourquoi les distracteurs sont faux si c'est utile.\n"
-+ "6. Pour chaque question, les choix doivent être homogènes en longueur et en construction grammaticale.\n"
-+ "7. Évite les choix piégeux artificiels. Les distracteurs doivent être plausibles mais clairement faux pour qui maîtrise la notion.\n"
-+ "8. Varie les lettres des bonnes réponses (évite que la bonne réponse soit toujours en A ou toujours en B). Ne mets jamais 3 fois la même lettre d'affilée.\n"
-+ "9. Réponds avec UNIQUEMENT le JSON, sans texte avant ni après, sans bloc markdown ```json. Le JSON doit être directement collable dans mon application.";
++ "2. Le champ \"mode\" prend la valeur \"strict\" ou \"partiel\". En strict : chaque question vaut 1 point (tout ou rien). En partiel : chaque question vaut autant de points qu'elle a de bonnes cases ; chaque bonne case cochée rapporte 1 point, chaque mauvaise case cochée enlève 1 point, plancher 0. Si je ne précise pas, utilise \"strict\".\n"
++ "3. Le tableau \"choix\" peut contenir 2 choix ou plus (pas de limite haute).\n"
++ "4. Le tableau \"bonnes\" liste les index (0=A, 1=B, 2=C...) des bonnes réponses. Plusieurs valeurs autorisées si question à réponses multiples (selon le nombre que je t'ai indiqué).\n"
++ "5. \"niveau\" doit être l'une de ces valeurs : \"facile\" (5 secondes de réflexion), \"standard\" (10s), \"approfondi\" (15s), \"expert\" (20s). Choisis selon la difficulté objective de la question.\n"
++ "6. \"explication\" est OBLIGATOIRE et destinée aux élèves pendant la correction. Elle doit justifier la bonne réponse de façon pédagogique, claire et concise (1 à 3 phrases). Évite le jargon. Tu peux y mentionner pourquoi les distracteurs sont faux si c'est utile.\n"
++ "7. Pour chaque question, les choix doivent être homogènes en longueur et en construction grammaticale.\n"
++ "8. Évite les choix piégeux artificiels. Les distracteurs doivent être plausibles mais clairement faux pour qui maîtrise la notion.\n"
++ "9. Varie les lettres des bonnes réponses (évite que la bonne réponse soit toujours en A ou toujours en B). Ne mets jamais 3 fois la même lettre d'affilée.\n"
++ "10. Réponds avec UNIQUEMENT le JSON, sans texte avant ni après, sans bloc markdown ```json. Le JSON doit être directement collable dans mon application.";
 
 var PROMPT_IA = PROMPT_IA_DEFAUT; // peut être surchargé depuis Firebase à l'init
 
@@ -1775,29 +1850,31 @@ function EleveResultats(p){
     });
   }
 
-  // Calcul scores
-  function isJuste(qi, choix){
-    var b = ((evaluation.questions[qi]||{}).bonnes||[]).slice().sort();
-    var c = (choix||[]).slice().sort();
-    return JSON.stringify(b) === JSON.stringify(c);
+  // Calcul scores (compatibles strict ET partiel)
+  var modeEv = modeEval(evaluation);
+  var maxBrutEv = scoreMaxEval(evaluation);
+  function scoreQ(qi, choix){
+    var bonnes = (evaluation.questions[qi]||{}).bonnes||[];
+    return calculerScoreQuestion(choix, bonnes, modeEv);
   }
   var scoreApp = 0, scorePapier = 0;
   evaluation.questions.forEach(function(q, qi){
     var ra = reponsesApp[qi];
-    if(ra && isJuste(qi, ra.choix)) scoreApp++;
+    if(ra) scoreApp += scoreQ(qi, ra.choix).score;
     var cp = papier.choix[qi];
-    if(cp && isJuste(qi, cp)) scorePapier++;
+    if(cp) scorePapier += scoreQ(qi, cp).score;
   });
-  // Bonus écart isolé favorable : si une question est juste app + faux papier, on garde le point
-  var scoreFinal = scorePapier;
+  // Bonus écart isolé favorable : on prend pour chaque question le MEILLEUR
+  // entre le score app et le score papier — cohérent strict et partiel.
+  var scoreFinal = 0;
   evaluation.questions.forEach(function(q, qi){
     var ra = reponsesApp[qi];
     var cp = papier.choix[qi];
-    var appJuste = ra && isJuste(qi, ra.choix);
-    var papJuste = cp && isJuste(qi, cp);
-    if(appJuste && !papJuste) scoreFinal++;
+    var sApp = ra ? scoreQ(qi, ra.choix).score : 0;
+    var sPap = cp ? scoreQ(qi, cp).score : 0;
+    scoreFinal += Math.max(sApp, sPap);
   });
-  if(scoreFinal > evaluation.questions.length) scoreFinal = evaluation.questions.length;
+  if(scoreFinal > maxBrutEv) scoreFinal = maxBrutEv;
 
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
@@ -1833,8 +1910,10 @@ function EleveResultats(p){
         var cp = papier.choix[qi];
         var bonnes = (q.bonnes||[]).slice().sort();
         function lettres(arr){ return arr && arr.length ? arr.slice().sort().map(lettreFromIndex).join("") : "—"; }
-        var appJuste = ra && isJuste(qi, ra.choix);
-        var papJuste = cp && isJuste(qi, cp);
+        var scApp = ra ? scoreQ(qi, ra.choix) : null;
+        var scPap = cp ? scoreQ(qi, cp) : null;
+        var appJuste = scApp && scApp.ok;
+        var papJuste = scPap && scPap.ok;
         var ecartApp = ra && cp && JSON.stringify((ra.choix||[]).slice().sort()) !== JSON.stringify((cp||[]).slice().sort());
         var clsLi = "eleve-q-recap";
         if(appJuste && papJuste) clsLi += " juste-tout";
@@ -2078,13 +2157,52 @@ function EleveEval(p){
       h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
       h("h1", null, ev.titre),
       // État
-      phase === "idle" && h("div", {className:"etat-attente"}, "⏳ En attente du démarrage..."),
+      phase === "idle" && h(React.Fragment, null,
+        h("div", {className:"etat-attente"}, "⏳ En attente du démarrage..."),
+        // Encadré explicatif du mode (visible avant la 1re question)
+        (function(){
+          var mode = modeEval(ev);
+          var maxBrut = scoreMaxEval(ev);
+          var nbQ = ev.questions.length;
+          if(mode === "partiel"){
+            return h("div", {className:"eleve-mode-info partiel"},
+              h("div", {className:"mode-titre"}, "📋 Comment ça marche pour cette évaluation"),
+              h("ul", {className:"mode-regles"},
+                h("li", null, "Cette éval contient ", h("strong", null, nbQ+" question"+(nbQ>1?"s":"")), " pour un total de ", h("strong", null, maxBrut+" points"), "."),
+                h("li", null, "Chaque question rapporte autant de points qu'il y a de bonnes cases à trouver."),
+                h("li", null, h("strong", null, "Chaque bonne case cochée"), " te rapporte ", h("strong", null, "1 point"), "."),
+                h("li", null, "Attention : ", h("strong", null, "chaque case en trop"), " (mauvaise réponse cochée) ", h("strong", null, "t'enlève 1 point"), "."),
+                h("li", null, "Tu ne peux pas descendre en dessous de 0 sur une question.")
+              ),
+              h("div", {className:"mode-exemple"},
+                h("strong", null, "Exemple : "), "une question avec ", h("strong", null, "3 bonnes cases"), ". Tu coches 2 bonnes + 1 mauvaise → ", h("strong", null, "1 point"), " (2 − 1). Tu coches les 3 bonnes sans erreur → ", h("strong", null, "3 points"), "."
+              )
+            );
+          }
+          return h("div", {className:"eleve-mode-info strict"},
+            h("div", {className:"mode-titre"}, "📋 Comment ça marche pour cette évaluation"),
+            h("ul", {className:"mode-regles"},
+              h("li", null, "Cette éval contient ", h("strong", null, nbQ+" question"+(nbQ>1?"s":"")), " pour un total de ", h("strong", null, maxBrut+" point"+(maxBrut>1?"s":"")), "."),
+              h("li", null, "Chaque question rapporte ", h("strong", null, "1 point"), " si la réponse est ", h("strong", null, "exacte"), "."),
+              h("li", null, "Tu dois cocher ", h("strong", null, "toutes les bonnes cases"), ", et ", h("strong", null, "seulement celles-là"), "."),
+              h("li", null, "Un oubli, une case en trop, et la question entière vaut ", h("strong", null, "0"), ".")
+            ),
+            h("div", {className:"mode-exemple"},
+              h("strong", null, "Exemple : "), "une question avec 3 bonnes cases à trouver. Tu en trouves 2 → ", h("strong", null, "0 point"), ". Tu trouves les 3 sans erreur → ", h("strong", null, "1 point"), "."
+            )
+          );
+        })()
+      ),
 
       // Phase reflexion
       phase === "reflexion" && question && h("div", {className:"eleve-q-zone"},
         h("div", {className:"eleve-q-header"},
           h("span", {className:"eleve-q-num"}, "Question "+(qIdx+1)+" / "+ev.questions.length),
-          h("span", {className:"eleve-q-pastille", style:{background:getNiveau(question.niveau).color, color:question.niveau==="facile"?"#5C4500":"#fff"}}, getNiveau(question.niveau).label)
+          h("span", {className:"eleve-q-pastille", style:{background:getNiveau(question.niveau).color, color:question.niveau==="facile"?"#5C4500":"#fff"}}, getNiveau(question.niveau).label),
+          (function(){
+            var maxQ = scoreMaxQuestion(question, modeEval(ev));
+            return h("span", {className:"eleve-q-points-badge", title:"Nombre de points que vaut cette question"}, maxQ+" pt"+(maxQ>1?"s":""));
+          })()
         ),
         h("div", {className:"eleve-q-enonce"}, question.enonce),
         h("div", {className:"eleve-q-consigne"}, "✍️ RÉDIGE TA RÉPONSE EN ENTIER SUR TA FEUILLE"),
@@ -2098,7 +2216,11 @@ function EleveEval(p){
       (phase === "reponse" || reouvert) && question && h("div", {className:"eleve-q-zone"},
         h("div", {className:"eleve-q-header"},
           h("span", {className:"eleve-q-num"}, "Question "+(qIdx+1)+" / "+ev.questions.length+(reouvert?" — RÉOUVERTE":"")),
-          h("span", {className:"eleve-q-pastille", style:{background:getNiveau(question.niveau).color, color:question.niveau==="facile"?"#5C4500":"#fff"}}, getNiveau(question.niveau).label)
+          h("span", {className:"eleve-q-pastille", style:{background:getNiveau(question.niveau).color, color:question.niveau==="facile"?"#5C4500":"#fff"}}, getNiveau(question.niveau).label),
+          (function(){
+            var maxQ = scoreMaxQuestion(question, modeEval(ev));
+            return h("span", {className:"eleve-q-points-badge", title:"Nombre de points que vaut cette question"}, maxQ+" pt"+(maxQ>1?"s":""));
+          })()
         ),
         h("div", {className:"eleve-q-enonce"}, question.enonce),
         h("div", {className:"eleve-pose-stylo"},
@@ -2274,6 +2396,7 @@ var BILAN_CSS = `
   .bilan-marge-marque { position:absolute; left:-70px; top:36px; font-size:1.8rem; font-weight:700; font-family:Georgia,serif }
   .bilan-marge-marque.juste { color:#16A34A }
   .bilan-marge-marque.faux { color:#DC2626 }
+  .bilan-marge-marque.partiel { color:#CA8A04 }
   .bilan-q-header { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;
     border-bottom:1px solid #ddd; padding-bottom:.3rem; margin-bottom:.5rem; }
   .bilan-q-num { font-weight:700; font-size:1.08rem; color:#1A2540 }
@@ -2281,6 +2404,7 @@ var BILAN_CSS = `
   .bilan-q-status { font-size:.82rem; font-weight:700; padding:.1rem .6rem; border-radius:50px }
   .bilan-q-status.juste { background:#DEF7EC; color:#03543F; border:1px solid #03543F }
   .bilan-q-status.faux { background:#FDE8E8; color:#9B1C1C; border:1px solid #9B1C1C }
+  .bilan-q-status.partiel { background:#FEF3C7; color:#854D0E; border:1px solid #CA8A04 }
   .bilan-q-status.nonrep { background:#F3F4F6; color:#666; border:1px solid #aaa }
   .bilan-q-enonce { font-size:1rem; line-height:1.55; margin-bottom:.6rem }
   .bilan-choix { list-style:none; padding:0; margin:.5rem 0 }
@@ -2302,17 +2426,21 @@ var BILAN_CSS = `
 function bilanEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 // Construit l'objet calibration {type, titre, detail} pour le bilan, ou null
-function construireCalibrationBilan(fEstimee, fReelle, scoreBrut, nbTotal){
+function construireCalibrationBilan(fEstimee, fReelle, scoreBrut, nbTotal, mode){
   if(!fEstimee || !IDX_FOURCHETTE[fEstimee] || !IDX_FOURCHETTE[fReelle]) return null;
   var iE = IDX_FOURCHETTE[fEstimee], iR = IDX_FOURCHETTE[fReelle];
-  var libEstime = libelleFourchette(fEstimee, nbTotal);
+  var libEstime = libelleFourchette(fEstimee, nbTotal, mode);
+  var partiel = (mode === "partiel");
+  var lib = function(n){ return n + " " + (partiel ? "point" : "bonne réponse") + (n>1?"s":"") + (partiel ? "" : ""); };
+  // Note : pour le mode strict "1 bonne réponse" / "2 bonnes réponses"
+  //        pour le mode partiel "1 point" / "2 points"
   if(iE === iR) return {type:"ok", titre:"✅ Ton estimation", detail:"Tu pensais avoir "+libEstime+" et tu en as effectivement obtenu "+scoreBrut+" sur "+nbTotal+". Ton estimation correspond à ton vrai résultat : tu te connais bien !"};
   if(iE > iR) return {type:"sur", titre:"⚠️ Ton estimation", detail:"Tu pensais avoir "+libEstime+" mais tu en as eu "+scoreBrut+" sur "+nbTotal+". Tu as un peu surestimé ce que tu avais réussi."};
   return {type:"sous", titre:"🌟 Ton estimation", detail:"Tu pensais avoir "+libEstime+" mais tu en as eu "+scoreBrut+" sur "+nbTotal+" ! Tu as fait mieux que ce que tu croyais."};
 }
 
 // Construit la phrase de comparaison à la classe (subtile), ou "" si pas assez d'élèves
-function construireCompaBilan(scoreBrut, mediane, nbEleves){
+function construireCompaBilan(scoreBrut, mediane, nbEleves, mode){
   if(nbEleves < 2) return "";
   // mediane peut être décimale (classe paire avec scores différents au milieu).
   // Pour l'affichage on arrondit, pour la comparaison on garde la valeur exacte.
@@ -2320,17 +2448,28 @@ function construireCompaBilan(scoreBrut, mediane, nbEleves){
   var pos = scoreBrut > mediane ? "mieux que la moitié de la classe"
           : scoreBrut < mediane ? "moins bien que la moitié de la classe"
           : "comme la moitié de la classe (pile au milieu)";
-  return "La moitié de la classe a obtenu <strong>"+medianeAff+" bonne"+(medianeAff>1?"s":"")+" réponse"+(medianeAff>1?"s":"")+" ou moins</strong>. Tu fais <strong>"+pos+"</strong>.";
+  var libUnit = (mode === "partiel")
+    ? medianeAff+" point"+(medianeAff>1?"s":"")
+    : medianeAff+" bonne"+(medianeAff>1?"s":"")+" réponse"+(medianeAff>1?"s":"");
+  return "La moitié de la classe a obtenu <strong>"+libUnit+" ou moins</strong>. Tu fais <strong>"+pos+"</strong>.";
 }
 
 // Génère le bilan HTML. standalone=true → document complet imprimable ; false → fragment injectable MJPC.
 function genererBilanHTML(opts, standalone){
   var qHTML = opts.questions.map(function(item, idx){
-    var statusClass = item.nonRep ? "nonrep" : (item.juste ? "juste" : "faux");
-    var statusLbl = item.nonRep ? "\u2014 Sans r\u00e9ponse" : (item.juste ? "\u2713 R\u00e9ussie" : "\u2717 Rat\u00e9e");
-    var margeMarque = item.nonRep ? "" : (item.juste
-      ? '<span class="bilan-marge-marque juste">\u2713</span>'
-      : '<span class="bilan-marge-marque faux">\u2717</span>');
+    // 4 états : nonrep / partiel / juste / faux
+    var statusClass = item.nonRep ? "nonrep"
+                    : item.juste ? "juste"
+                    : item.partiel ? "partiel"
+                    : "faux";
+    var statusLbl = item.nonRep ? "\u2014 Sans r\u00e9ponse"
+                  : item.juste ? "\u2713 R\u00e9ussie ("+item.score+"/"+item.max+")"
+                  : item.partiel ? "\u25D0 Partielle ("+item.score+"/"+item.max+")"
+                  : "\u2717 Rat\u00e9e (0/"+item.max+")";
+    var margeMarque = item.nonRep ? ""
+                    : item.juste ? '<span class="bilan-marge-marque juste">\u2713</span>'
+                    : item.partiel ? '<span class="bilan-marge-marque partiel">\u25D0</span>'
+                    : '<span class="bilan-marge-marque faux">\u2717</span>';
     var choixHTML = item.choix.map(function(txt, ci){
       var estBonne = item.bonnes.indexOf(ci) >= 0;
       var estCoche = item.choixEleve.indexOf(ci) >= 0;
@@ -2340,6 +2479,7 @@ function genererBilanHTML(opts, standalone){
       if(estCoche) cls.push("coche");
       return '<li class="'+cls.join(" ")+'"><span class="lettre">'+lettreFromIndex(ci)+'.</span><span class="txt">'+bilanEsc(txt)+'</span></li>';
     }).join("");
+    // Afficher l'explication quand l'élève n'a pas eu la réponse parfaite
     var explicationHTML = (!item.juste && item.explication)
       ? '<div class="bilan-explication"><strong>Explication</strong>'+bilanEsc(item.explication)+'</div>'
       : "";
@@ -2358,7 +2498,7 @@ function genererBilanHTML(opts, standalone){
 
   var fragment = '<div class="bilan-copie">'
     + '<div class="bilan-bandeau"><div><h1>Bilan d\'\u00e9valuation</h1><div class="sous">'+bilanEsc(opts.classeNom)+' \u2014 \u00c9valuation QCM</div></div>'
-    + '<div class="bilan-note-box"><div class="bilan-note-num">'+opts.scoreBrut+' / '+opts.nbTotal+'</div><div class="bilan-note-lbl">BONNES R\u00c9PONSES</div></div></div>'
+    + '<div class="bilan-note-box"><div class="bilan-note-num">'+opts.scoreBrut+' / '+opts.nbTotal+'</div><div class="bilan-note-lbl">'+((opts.mode === "partiel") ? "POINTS" : "BONNES R\u00c9PONSES")+'</div></div></div>'
     + '<div class="bilan-corps">'
     + '<div class="bilan-infos"><div><strong>\u00c9l\u00e8ve :</strong> '+bilanEsc(opts.nomComplet)+'</div>'
     + '<div><strong>\u00c9valuation :</strong> '+bilanEsc(opts.evalTitre)+'</div>'
@@ -2379,22 +2519,26 @@ function genererBilanHTML(opts, standalone){
 
 // Prépare le tableau "questions" attendu par genererBilanHTML pour un élève donné
 function preparerQuestionsBilan(ev, reponses, slug){
-  var cmpNum = function(a,b){return a-b};
+  var mode = modeEval(ev);
   return ev.questions.map(function(q, i){
     var rep = reponses[i] && reponses[i][slug];
     var mine = rep && rep.choix ? rep.choix.slice() : [];
     var bonnes = (q.bonnes||[]).slice();
-    var mineSorted = mine.slice().sort(cmpNum);
-    var bonnesSorted = bonnes.slice().sort(cmpNum);
-    var juste = mineSorted.length > 0 && JSON.stringify(mineSorted) === JSON.stringify(bonnesSorted);
+    var sc = calculerScoreQuestion(mine, bonnes, mode);
     return {
       enonce: q.enonce || "",
       niveauLabel: getNiveau(q.niveau).label,
       choix: q.choix || [],
       bonnes: bonnes,
       choixEleve: mine,
-      juste: juste,
+      // juste = parfait (toutes les bonnes, aucune mauvaise)
+      // partiel = mode partiel + score>0 mais imparfait (état intermédiaire)
+      // nonRep = aucune réponse cochée
+      juste: sc.ok,
+      partiel: sc.partiel,
       nonRep: mine.length === 0,
+      score: sc.score,
+      max: sc.max,
       explication: q.explication || ""
     };
   });
@@ -2405,6 +2549,8 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
   var classeSlug = classe.slug || sess.classeSlug || "_inconnu";
   // Ne pas archiver les sessions de test pour ne pas polluer le profil longitudinal
   if(classeSlug === TEST_CLASSE_SLUG) return;
+  var mode = modeEval(ev);
+  var maxBrut = scoreMaxEval(ev); // en strict = nb_questions ; en partiel = somme nb_bonnes
   var maxP = calculerMaxPondere(ev.questions);
   var autoevals = sess.autoevals || {};
   var date = sess.date || Date.now();
@@ -2418,9 +2564,9 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
     var sb = 0;
     ev.questions.forEach(function(q, i){
       var rep = reponses[i] && reponses[i][slug];
-      var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
-      var bonnes = (q.bonnes||[]).slice().sort();
-      if(mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes)) sb++;
+      var mine = rep && rep.choix ? rep.choix.slice() : null;
+      var sc = calculerScoreQuestion(mine, q.bonnes||[], mode);
+      sb += sc.score;
     });
     scoresBrutClasse.push(sb);
   });
@@ -2436,14 +2582,15 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
     var scoreBrut = 0, scorePondere = 0;
     var details = ev.questions.map(function(q, i){
       var rep = reponses[i] && reponses[i][slug];
-      var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
-      var bonnes = (q.bonnes||[]).slice().sort();
-      var juste = !!(mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes));
+      var mine = rep && rep.choix ? rep.choix.slice() : null;
+      var sc = calculerScoreQuestion(mine, q.bonnes||[], mode);
       var poids = POIDS_NIVEAU[q.niveau] || 1;
-      if(juste){ scoreBrut++; scorePondere += poids; }
-      return {idx:i, niveau:q.niveau || "facile", poids:poids, juste:juste};
+      scoreBrut += sc.score;
+      // Pondération : en strict = poids si juste ; en partiel = poids × (score/max)
+      if(sc.max > 0) scorePondere += poids * (sc.score / sc.max);
+      return {idx:i, niveau:q.niveau || "facile", poids:poids, juste:sc.ok, score:sc.score, max:sc.max, partiel:sc.partiel};
     });
-    var fReelleObj = fourchetteDuScore(scoreBrut, ev.questions.length);
+    var fReelleObj = fourchetteDuScore(scoreBrut, maxBrut);
     var fReelle = fReelleObj.key;
     var fEstimee = autoevals[slug] || null;
     var calibration = null;
@@ -2460,9 +2607,10 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
         evalTitre: ev.titre || "Évaluation",
         dateFr: dateFr,
         scoreBrut: scoreBrut,
-        nbTotal: ev.questions.length,
-        compaText: construireCompaBilan(scoreBrut, mediane, nbEleves),
-        calibration: construireCalibrationBilan(fEstimee, fReelle, scoreBrut, ev.questions.length),
+        nbTotal: maxBrut,
+        mode: mode,
+        compaText: construireCompaBilan(scoreBrut, mediane, nbEleves, mode),
+        calibration: construireCalibrationBilan(fEstimee, fReelle, scoreBrut, maxBrut, mode),
         questions: preparerQuestionsBilan(ev, reponses, slug)
       }, false);
     } catch(err){ bilanHTML = ""; }
@@ -2471,9 +2619,11 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
       sessId: sess.id,
       evalId: sess.evalId || null,
       titre: ev.titre || "Évaluation",
+      mode: mode,
       scoreBrut: scoreBrut,
+      scoreMax: maxBrut,
       totalQ: ev.questions.length,
-      scorePondere: scorePondere,
+      scorePondere: Math.round(scorePondere * 100) / 100,
       maxP: maxP,
       fourchetteEstimee: fEstimee,
       fourchetteReelle: fReelle,
@@ -2550,18 +2700,23 @@ var sessActions = {
     db.ref(DB_ROOT+"/sessions/"+sess.id).update(u);
   },
   lancerCorrection: function(sess, ev){
-    // Calcul de l'ordre : tri par taux d'erreur décroissant
+    // Calcul de l'ordre : tri par taux d'erreur décroissant (les Q les plus ratées en 1er).
+    // En mode partiel, "taux d'erreur" = 1 − (score moyen normalisé) — cohérent avec strict
+    // où ce taux = % d'élèves n'ayant pas eu juste.
+    var mode = modeEval(ev);
     var reponses = sess.reponses || {};
     var ordres = ev.questions.map(function(q, i){
       var reps = reponses[i] || {};
-      var nbTotal = 0, nbFaux = 0;
-      var bonnes = (q.bonnes||[]).slice().sort();
+      var nbTotal = 0, sumScoreNorm = 0;
       Object.keys(reps).forEach(function(k){
         nbTotal++;
-        var c = (reps[k].choix||[]).slice().sort();
-        if(JSON.stringify(c) !== JSON.stringify(bonnes)) nbFaux++;
+        var c = (reps[k].choix||[]).slice();
+        var sc = calculerScoreQuestion(c, q.bonnes||[], mode);
+        if(sc.max > 0) sumScoreNorm += sc.score / sc.max;
       });
-      var tx = nbTotal === 0 ? 0 : nbFaux/nbTotal;
+      // Taux d'erreur = 1 − réussite moyenne
+      var reussiteMoy = nbTotal === 0 ? 0 : sumScoreNorm / nbTotal;
+      var tx = nbTotal === 0 ? 0 : (1 - reussiteMoy);
       return {idx:i, taux:tx};
     });
     ordres.sort(function(a,b){return b.taux - a.taux});
@@ -2677,9 +2832,10 @@ function EleveAutoeval(p){
     ref.once("value", function(snap){ setMonVote(snap.val()); });
   }, [sess.id, slug]);
 
-  // Fourchettes calculées en NOMBRE DE BONNES RÉPONSES BRUTES (pas en score pondéré)
-  // Les seuils internes restent en % pour cohérence avec FOURCHETTES_DEF
-  var nbTotal = ev.questions.length;
+  // Fourchettes calculées en NOMBRE BRUT — en strict = nb bonnes réponses, en partiel = points.
+  // Les seuils internes restent en % pour cohérence avec FOURCHETTES_DEF.
+  var mode = modeEval(ev);
+  var nbTotal = scoreMaxEval(ev); // strict = nb questions ; partiel = somme nb_bonnes
   function borneInfBrut(pct){ return Math.ceil(nbTotal * pct / 100); }
   function borneSupBrut(pct){ return Math.floor(nbTotal * pct / 100); }
   var fourchettes = [
@@ -2697,8 +2853,10 @@ function EleveAutoeval(p){
   }
 
   function libelle(f){
-    if(f.inf === f.sup) return f.inf + " bonne" + (f.inf>1?"s":"") + " réponse" + (f.inf>1?"s":"") + " sur " + nbTotal;
-    return "Entre " + f.inf + " et " + f.sup + " bonnes réponses sur " + nbTotal;
+    var unit = (mode === "partiel") ? "point" : "bonne";
+    var suffixe = (mode === "partiel") ? "" : " réponse";
+    if(f.inf === f.sup) return f.inf + " " + unit + (f.inf>1?"s":"") + suffixe + (f.inf>1?"s":"") + " sur " + nbTotal;
+    return "Entre " + f.inf + " et " + f.sup + " " + unit + "s" + suffixe + (mode==="partiel"?"":"s") + " sur " + nbTotal;
   }
 
   return h("div", {className:"eleve-page"},
@@ -2749,10 +2907,13 @@ function bornesFourchette(fkey, total){
   if(fkey === "orange")return {inf:Math.ceil(total*0.26), sup:Math.floor(total*0.50)};
   return {inf:0, sup:Math.floor(total*0.25)};
 }
-function libelleFourchette(fkey, total){
+function libelleFourchette(fkey, total, mode){
   var b = bornesFourchette(fkey, total);
-  if(b.inf === b.sup) return b.inf + " bonne" + (b.inf>1?"s":"") + " réponse" + (b.inf>1?"s":"");
-  return "entre " + b.inf + " et " + b.sup + " bonnes réponses";
+  var partiel = (mode === "partiel");
+  var unit = partiel ? "point" : "bonne";
+  var suffixe = partiel ? "" : " réponse";
+  if(b.inf === b.sup) return b.inf + " " + unit + (b.inf>1?"s":"") + suffixe + (b.inf>1?"s":"");
+  return "entre " + b.inf + " et " + b.sup + " " + unit + "s" + suffixe + (partiel?"":"s");
 }
 
 function fourchetteDuScore(score, max){
@@ -2791,28 +2952,33 @@ function EleveBilan(p){
   if(allReps === null) return h("div", {className:"eleve-page"}, h("div", {className:"eleve-card"}, h("p", null, "Chargement du bilan…")));
 
   var maxP = calculerMaxPondere(ev.questions);
-  var nbTotal = ev.questions.length;
+  var mode = modeEval(ev);
+  var maxBrut = scoreMaxEval(ev); // en strict = nb questions, en partiel = somme nb_bonnes
+  var nbTotal = maxBrut; // historiquement nommé "nbTotal" dans la suite ; pour rester compatible
   // Score pondéré + brut de l'élève
   var monScore = 0; // pondéré
-  var monScoreBrut = 0; // nb de Q justes
+  var monScoreBrut = 0; // en mode strict = nb Q justes ; en partiel = somme des scores
   var mesResultats = ev.questions.map(function(q, i){
     var rep = allReps[i] && allReps[i][slug];
-    var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
-    var bonnes = (q.bonnes||[]).slice().sort();
-    var juste = mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes);
+    var mine = rep && rep.choix ? rep.choix.slice() : null;
+    var sc = calculerScoreQuestion(mine, q.bonnes||[], mode);
+    var juste = sc.ok;
+    var partielQ = sc.partiel;
     var nonRep = !mine || mine.length === 0;
-    if(juste){ monScore += POIDS_NIVEAU[q.niveau] || 1; monScoreBrut++; }
-    // taux classe
-    var totalClasse = 0, bonClasse = 0;
+    monScoreBrut += sc.score;
+    if(sc.max > 0) monScore += (POIDS_NIVEAU[q.niveau] || 1) * (sc.score / sc.max);
+    // taux classe : moyenne du score normalisé (en strict, équivaut au % d'élèves justes)
+    var totalClasse = 0, sumScoreClasse = 0;
     Object.keys(allReps[i] || {}).forEach(function(s){
-      var c = (allReps[i][s].choix||[]).slice().sort();
+      var c = (allReps[i][s].choix||[]).slice();
       if(c.length > 0){
         totalClasse++;
-        if(JSON.stringify(c) === JSON.stringify(bonnes)) bonClasse++;
+        var scClasse = calculerScoreQuestion(c, q.bonnes||[], mode);
+        if(scClasse.max > 0) sumScoreClasse += scClasse.score / scClasse.max;
       }
     });
-    var tauxClasse = totalClasse > 0 ? (bonClasse / totalClasse) * 100 : 0;
-    return {idx:i, q:q, juste:juste, nonRep:nonRep, tauxClasse:tauxClasse, poids:POIDS_NIVEAU[q.niveau]||1};
+    var tauxClasse = totalClasse > 0 ? (sumScoreClasse / totalClasse) * 100 : 0;
+    return {idx:i, q:q, juste:juste, partiel:partielQ, score:sc.score, max:sc.max, nonRep:nonRep, tauxClasse:tauxClasse, poids:POIDS_NIVEAU[q.niveau]||1};
   });
 
   // Fourchette RÉELLE basée sur le NB BRUT de bonnes réponses (cohérent avec autoeval)
@@ -2829,12 +2995,10 @@ function EleveBilan(p){
     var scB = 0, scP = 0;
     ev.questions.forEach(function(q, i){
       var r = allReps[i] && allReps[i][s];
-      var mn = r && r.choix ? r.choix.slice().sort() : null;
-      var bn = (q.bonnes||[]).slice().sort();
-      if(mn && mn.length > 0 && JSON.stringify(mn) === JSON.stringify(bn)){
-        scB++;
-        scP += POIDS_NIVEAU[q.niveau] || 1;
-      }
+      var mn = r && r.choix ? r.choix.slice() : null;
+      var sc = calculerScoreQuestion(mn, q.bonnes||[], mode);
+      scB += sc.score;
+      if(sc.max > 0) scP += (POIDS_NIVEAU[q.niveau] || 1) * (sc.score / sc.max);
     });
     scoresClasse.push(scB);
     scoresClassePondere.push(scP);
@@ -2855,8 +3019,8 @@ function EleveBilan(p){
     var idxEstime = IDX_FOURCHETTE[monAutoeval];
     var idxReel = IDX_FOURCHETTE[maFourchette.key];
     var fEstime = FOURCHETTES_DEF.find(function(f){return f.key===monAutoeval});
-    var libEstime = libelleFourchette(monAutoeval, nbTotal);
-    var libReel = libelleFourchette(maFourchette.key, nbTotal);
+    var libEstime = libelleFourchette(monAutoeval, nbTotal, mode);
+    var libReel = libelleFourchette(maFourchette.key, nbTotal, mode);
     if(idxEstime === idxReel) calibration = {type:"ok", msg:"✅ Tu te connais bien !", detail:"Tu pensais avoir "+libEstime+" "+fEstime.emoji+" et tu en as effectivement obtenu "+monScoreBrut+" sur "+nbTotal+". Ton estimation correspond à ton vrai résultat."};
     else if(idxEstime > idxReel) calibration = {type:"sur", msg:"⚠️ Tu pensais avoir mieux fait", detail:"Tu pensais avoir "+libEstime+" "+fEstime.emoji+" mais tu en as eu "+monScoreBrut+" sur "+nbTotal+" ("+libReel+" "+maFourchette.emoji+"). Tu as un peu surestimé ce que tu avais réussi."};
     else calibration = {type:"sous", msg:"🌟 Tu te sous-estimais !", detail:"Tu pensais avoir "+libEstime+" "+fEstime.emoji+" mais tu en as eu "+monScoreBrut+" sur "+nbTotal+" ("+libReel+" "+maFourchette.emoji+") ! Tu as fait mieux que ce que tu croyais."};
@@ -2886,8 +3050,9 @@ function EleveBilan(p){
           dateFr: (function(){ var d = new Date(sess.date || Date.now()); return d.getDate()+" "+["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"][d.getMonth()]+" "+d.getFullYear(); })(),
           scoreBrut: monScoreBrut,
           nbTotal: nbTotal,
-          compaText: construireCompaBilan(monScoreBrut, mediane, scoresClasse.length),
-          calibration: construireCalibrationBilan(monAutoeval, maFourchette.key, monScoreBrut, nbTotal),
+          mode: mode,
+          compaText: construireCompaBilan(monScoreBrut, mediane, scoresClasse.length, mode),
+          calibration: construireCalibrationBilan(monAutoeval, maFourchette.key, monScoreBrut, nbTotal, mode),
           questions: preparerQuestionsBilan(ev, allReps, slug)
         }, true);
         var w = window.open("", "_blank");
@@ -3021,25 +3186,30 @@ function EleveCorrection(p){
     );
   }
 
-  // Calcul juste/faux
-  var monChoix = maRep && maRep.choix ? maRep.choix.slice().sort() : null;
-  var bonnes = (question.bonnes||[]).slice().sort();
+  // Calcul juste/partiel/faux selon le mode de l'éval
+  var mode = modeEval(ev);
+  var monChoix = maRep && maRep.choix ? maRep.choix.slice() : null;
+  var scoreQ = calculerScoreQuestion(monChoix, question.bonnes||[], mode);
   var nonRepondue = !monChoix || monChoix.length === 0;
-  var juste = !nonRepondue && JSON.stringify(monChoix) === JSON.stringify(bonnes);
+  var juste = scoreQ.ok;       // parfait
+  var partielQ = scoreQ.partiel; // mode partiel + score>0 mais imparfait
   var revealed = sess.corrRevealed === true;
 
-  // Compteur progressif (Lot 3)
+  // Compteur progressif (Lot 3) — pastilles tricolores en mode partiel
   var histo = sess.revealedHistory || {};
   var pastilles = ev.questions.map(function(q, i){
     if(!histo[i]) return "—"; // pas encore révélée
     var mr = mesReps[i];
-    var mch = mr && mr.choix ? mr.choix.slice().sort() : null;
-    var bn = (q.bonnes||[]).slice().sort();
+    var mch = mr && mr.choix ? mr.choix.slice() : null;
     if(!mch || mch.length===0) return "⚪";
-    return JSON.stringify(mch) === JSON.stringify(bn) ? "✅" : "❌";
+    var sc = calculerScoreQuestion(mch, q.bonnes||[], mode);
+    if(sc.ok) return "✅";
+    if(sc.partiel) return "🟡";
+    return "❌";
   });
   var nbRevealed = pastilles.filter(function(x){return x!=="—"}).length;
   var nbJustes = pastilles.filter(function(x){return x==="✅"}).length;
+  var nbPartiels = pastilles.filter(function(x){return x==="🟡"}).length;
 
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
@@ -3058,7 +3228,7 @@ function EleveCorrection(p){
         ),
         h("div", {className:"correction-compteur-pastilles"},
           pastilles.map(function(em, i){
-            return h("span", {key:i, className:"correction-compteur-pastille "+(em==="—"?"vide":em==="✅"?"juste":em==="❌"?"faux":"nonrep"), title:"Q"+(i+1)},
+            return h("span", {key:i, className:"correction-compteur-pastille "+(em==="—"?"vide":em==="✅"?"juste":em==="🟡"?"partiel":em==="❌"?"faux":"nonrep"), title:"Q"+(i+1)},
               em==="—" ? (i+1) : em
             );
           })
@@ -4024,6 +4194,14 @@ function VuePhone(p){
   var isCorr = (phase === "correction");
   var isAutoeval = (phase === "autoeval");
   var disRevealer = !isCorr || !!activeSession.corrRevealed;
+  // En phase correction, la question à afficher (et son explication) est celle en cours
+  // de correction (correctionIdx, ordonnée par taux d'erreur décroissant), pas celle qui
+  // était posée en dernier (qIdx, qui reste figé sur la dernière de la phase poser).
+  // Sorti au scope du composant pour être réutilisé hors de l'IIFE de rendu (notamment
+  // pour l'affichage de l'explication ligne ~4146 ; bug : sans ça, l'explication montrée
+  // sur le téléphone du prof restait celle de la dernière question posée).
+  var qAffichee = isCorr ? (ev.questions && ev.questions[activeSession.correctionIdx]) : question;
+  var qAfficheeIdx = isCorr ? activeSession.correctionIdx : qIdx;
   // Chrono restant (B-ii)
   var chronoVisible = isActif || hasPaused;
   var chronoSec = 0;
@@ -4053,9 +4231,7 @@ function VuePhone(p){
     ),
     // Q en cours (avec bonne réponse pour rester focus sur le SENS)
     (function(){
-      // En phase correction, on affiche la Q en cours de correction
-      var qAffichee = isCorr ? (ev.questions && ev.questions[activeSession.correctionIdx]) : question;
-      var qAfficheeIdx = isCorr ? activeSession.correctionIdx : qIdx;
+      // qAffichee / qAfficheeIdx sont définis au scope du composant (cf. plus haut).
       if(!qAffichee) return null;
       var bonnes = (qAffichee.bonnes||[]).slice().sort();
       var libBonnes = bonnes.map(function(idx){
@@ -4143,9 +4319,9 @@ function VuePhone(p){
           : h("button", {onClick:actCorrSuiv, style:phoneBtnStyle("primary", "large")}, "Question suivante →"),
         h("button", {onClick:actCorrPrec, style:phoneBtnStyle("ghost", "small"), disabled:(activeSession.correctionOrdre||[]).indexOf(activeSession.correctionIdx) <= 0}, "← Question précédente")
       ),
-      isCorr && activeSession.corrRevealed && question && question.explication && h("div", {style:{padding:".5rem .7rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".82rem",lineHeight:1.35}},
+      isCorr && activeSession.corrRevealed && qAffichee && qAffichee.explication && h("div", {style:{padding:".5rem .7rem",background:"rgba(255,210,63,.18)",border:"2px solid rgba(255,210,63,.5)",borderRadius:"10px",color:"#fff",fontSize:".82rem",lineHeight:1.35}},
         h("div", {style:{fontWeight:900,fontSize:".72rem",letterSpacing:".05em",marginBottom:".2rem",color:"#FFD23F"}}, "💡 EXPLICATION"),
-        h("div", null, question.explication)
+        h("div", null, qAffichee.explication)
       ),
       phase === "finie" && h("div", {style:{padding:"1rem",background:"rgba(0,0,0,.3)",borderRadius:"10px",textAlign:"center"}},
         h("div", {style:{fontSize:"2.5rem",marginBottom:".4rem"}}, "🏁"),
@@ -4155,17 +4331,20 @@ function VuePhone(p){
     ),
     // Stats globales par question (anticipation correction)
     totalQ > 0 && phase !== "idle" && phase !== "finie" && (function(){
+      var mode = modeEval(ev);
       var qStats = ev.questions.map(function(qq, qi){
         var reps = (activeSession.reponses && activeSession.reponses[qi]) || {};
-        var bn = (qq.bonnes||[]).slice().sort();
-        var nbRep = 0, nbBon = 0;
+        var nbRep = 0, sumScoreNorm = 0, nbParfaits = 0;
         Object.keys(reps).forEach(function(slug){
           nbRep++;
-          var ch = (reps[slug].choix||[]).slice().sort();
-          if(JSON.stringify(ch) === JSON.stringify(bn)) nbBon++;
+          var ch = (reps[slug].choix||[]).slice();
+          var sc = calculerScoreQuestion(ch, qq.bonnes||[], mode);
+          if(sc.max > 0) sumScoreNorm += sc.score / sc.max;
+          if(sc.ok) nbParfaits++;
         });
-        var tx = nbRep === 0 ? null : Math.round((nbBon/nbRep)*100);
-        return {idx:qi, nbRep:nbRep, nbBon:nbBon, tx:tx};
+        // tx = score moyen normalisé en % (en strict = % d'élèves parfaits ; en partiel = moy. des scores partiels)
+        var tx = nbRep === 0 ? null : Math.round((sumScoreNorm / nbRep) * 100);
+        return {idx:qi, nbRep:nbRep, nbBon:nbParfaits, tx:tx};
       });
       function couleurQ(s, isCurrent){
         if(isCurrent) return "linear-gradient(135deg,var(--violet),var(--rose))";
@@ -4200,21 +4379,27 @@ function VuePhone(p){
           var qPourPastille = isCorr ? activeSession.correctionIdx : qIdx;
           var rep = activeSession.reponses && activeSession.reponses[qPourPastille] && activeSession.reponses[qPourPastille][slug];
           var qCible = (qPourPastille != null && ev.questions) ? ev.questions[qPourPastille] : null;
-          var bn = qCible ? (qCible.bonnes||[]).slice().sort() : null;
-          var choix = (rep && rep.choix) ? rep.choix.slice().sort() : null;
-          var juste = (choix && bn) ? JSON.stringify(choix) === JSON.stringify(bn) : null;
+          var choix = (rep && rep.choix) ? rep.choix.slice() : null;
+          var scEl = (qCible && choix) ? calculerScoreQuestion(choix, qCible.bonnes||[], mode) : null;
+          var juste = scEl ? scEl.ok : null;
+          var partielEl = scEl ? scEl.partiel : false;
           var reouvOuvert = activeSession.reouverts && activeSession.reouverts[slug] === qPourPastille;
-          var lettre = choix && choix.length ? choix.map(function(c){return lettreFromIndex(c)}).join("") : null;
+          var lettre = choix && choix.length ? choix.slice().sort(function(a,b){return a-b}).map(function(c){return lettreFromIndex(c)}).join("") : null;
           // Couleur pastille
           var pastBg = "rgba(255,255,255,.12)";
           var pastColor = "#fff";
           if(absent){ pastBg = "rgba(255,255,255,.05)"; pastColor = "rgba(255,255,255,.4)"; }
           else if(choix === null){ pastBg = "rgba(255,210,63,.18)"; pastColor = "#FFD23F"; }
           else if(juste === true){ pastBg = "linear-gradient(135deg,#22C55E,#16A34A)"; }
+          else if(partielEl){ pastBg = "linear-gradient(135deg,#F59E0B,#D97706)"; }
           else if(juste === false){ pastBg = "linear-gradient(135deg,#EF4444,#DC2626)"; }
           var pastContent = absent ? "⚪" : (choix === null ? "⏳" : lettre);
           // Nom court : 12 chars max
           var nomCourt = (el.nomComplet||"").length > 14 ? (el.nomComplet||"").slice(0,13) + "…" : el.nomComplet;
+          var titreEtat = juste===true ? " ✓ juste"
+                        : partielEl ? " ◐ partiel ("+scEl.score+"/"+scEl.max+")"
+                        : juste===false ? " ✗ faux"
+                        : "";
           return h("button", {key:slug, onClick:function(){setEleveAction({slug:slug,nom:el.nomComplet,absent:absent,reouvOuvert:reouvOuvert,hasRep:!!rep})}, style:{
             display:"flex",justifyContent:"space-between",alignItems:"center",
             padding:".22rem .35rem",fontSize:".72rem",
@@ -4222,7 +4407,7 @@ function VuePhone(p){
             border:"1px solid rgba(255,255,255,.08)",
             color:"#fff",cursor:"pointer",fontFamily:"inherit",textAlign:"left",
             borderRadius:"6px",opacity:absent?.55:1
-          }, title:el.nomComplet+(choix?" — a coché "+lettre+(juste===true?" ✓ juste":(juste===false?" ✗ faux":"")):(absent?" — absent":" — pas de réponse"))},
+          }, title:el.nomComplet+(choix?" — a coché "+lettre+titreEtat:(absent?" — absent":" — pas de réponse"))},
             h("span", {style:{textDecoration:absent?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:"1 1 auto",minWidth:0}}, nomCourt),
             h("span", {style:{
               minWidth:"28px",height:"22px",lineHeight:"22px",textAlign:"center",
@@ -5190,6 +5375,7 @@ function PreviewEval(p){
     copy.questions.splice(qi, 1);
     commit(copy);
   }
+  function modifMode(v){ commit(Object.assign({}, parsed, {mode: (v === "partiel") ? "partiel" : "strict"})); }
   function ajouterQ(){
     var copy = Object.assign({}, parsed);
     copy.questions = (copy.questions || []).slice();
@@ -5207,10 +5393,30 @@ function PreviewEval(p){
     commit(copy);
   }
 
+  var modeActuel = modeEval(parsed);
   return h("div", {className:"preview"},
     h("div", {className:"preview-titre-row"},
       h("input", {className:"preview-titre-input", value:parsed.titre || "", onChange:function(e){modifTitre(e.target.value)}, placeholder:"Titre de l'évaluation"}),
       h("span", {className:"preview-titre-meta"}, parsed.questions.length+" question"+(parsed.questions.length>1?"s":""))
+    ),
+    h("div", {className:"preview-mode-row", style:{marginBottom:".8rem",padding:".7rem .9rem",background:"#FFF9E6",border:"2px solid #FFD23F",borderRadius:"10px"}},
+      h("div", {style:{fontWeight:900,fontSize:".9rem",color:"#8B6914",marginBottom:".4rem"}}, "📊 Mode de scoring",
+        h(InfoI, null, "Définit comment l'app comptabilise les réponses sur toutes les questions de cette éval. Le mode est annoncé aux élèves au début de l'évaluation, avec une explication adaptée. Une question vaut toujours autant de points qu'elle compte de bonnes cases (Q à 1 bonne = 1 pt, Q à 3 bonnes = 3 pts).")
+      ),
+      h("div", {style:{display:"flex",gap:".5rem",flexWrap:"wrap"}},
+        h("label", {style:{flex:"1 1 auto",minWidth:"180px",cursor:"pointer",padding:".5rem .7rem",border:"2px solid "+(modeActuel==="strict"?"var(--violet)":"var(--bordure)"),borderRadius:"8px",background:modeActuel==="strict"?"rgba(106,76,224,.08)":"#fff",display:"flex",alignItems:"center",gap:".5rem",fontSize:".85rem",fontWeight:600}},
+          h("input", {type:"radio", name:"eval-mode", value:"strict", checked:modeActuel==="strict", onChange:function(){modifMode("strict")}}),
+          h("span", null, "🎯 Tout ou rien",
+            h("div", {style:{fontSize:".72rem",color:"var(--gris)",fontWeight:400,marginTop:".15rem"}}, "Réponse exacte = max ; sinon 0")
+          )
+        ),
+        h("label", {style:{flex:"1 1 auto",minWidth:"180px",cursor:"pointer",padding:".5rem .7rem",border:"2px solid "+(modeActuel==="partiel"?"var(--violet)":"var(--bordure)"),borderRadius:"8px",background:modeActuel==="partiel"?"rgba(106,76,224,.08)":"#fff",display:"flex",alignItems:"center",gap:".5rem",fontSize:".85rem",fontWeight:600}},
+          h("input", {type:"radio", name:"eval-mode", value:"partiel", checked:modeActuel==="partiel", onChange:function(){modifMode("partiel")}}),
+          h("span", null, "✨ Points par bonne case",
+            h("div", {style:{fontSize:".72rem",color:"var(--gris)",fontWeight:400,marginTop:".15rem"}}, "+1 par bonne ; −1 par mauvaise (plancher 0)")
+          )
+        )
+      )
     ),
     h("p", {style:{fontSize:".85rem",color:"var(--gris)",marginBottom:".8rem"}}, "Édite directement chaque champ. Coche les bonnes réponses. La pastille de niveau définit la durée de réflexion.",
       h(InfoI, null, "Édition in-place : tu modifies chaque question directement dans cette zone (énoncé, choix, bonnes réponses, niveau, explication). Le JSON ci-dessus est mis à jour automatiquement. Tu peux aussi modifier le JSON directement et cliquer sur « Vérifier le format » pour rebasculer en mode visuel.")
@@ -5728,21 +5934,21 @@ function BilanClasse(p){
   if(allReps === null) return h("div", {className:"card"}, h("h2", null, "🏁 Bilan classe"), h("p", null, "Chargement…"));
 
   var maxP = calculerMaxPondere(ev.questions);
-  var nbTotal = ev.questions.length;
+  var mode = modeEval(ev);
+  var maxBrut = scoreMaxEval(ev);
+  var nbTotal = maxBrut;
   var eleves = (classe.eleves || []).map(function(e){
     var slug = e.slug || slugify(e.nomComplet);
     var scoreP = 0; // pondéré
-    var scoreB = 0; // brut
+    var scoreB = 0; // brut (1pt/Q juste en strict, somme partielle en partiel)
     ev.questions.forEach(function(q, i){
       var rep = allReps[i] && allReps[i][slug];
-      var mine = rep && rep.choix ? rep.choix.slice().sort() : null;
-      var bonnes = (q.bonnes||[]).slice().sort();
-      if(mine && mine.length > 0 && JSON.stringify(mine) === JSON.stringify(bonnes)){
-        scoreP += POIDS_NIVEAU[q.niveau] || 1;
-        scoreB++;
-      }
+      var mine = rep && rep.choix ? rep.choix.slice() : null;
+      var sc = calculerScoreQuestion(mine, q.bonnes||[], mode);
+      scoreB += sc.score;
+      if(sc.max > 0) scoreP += (POIDS_NIVEAU[q.niveau] || 1) * (sc.score / sc.max);
     });
-    var fReelle = fourchetteDuScore(scoreB, nbTotal); // basé sur le brut
+    var fReelle = fourchetteDuScore(scoreB, maxBrut); // basé sur le brut, max adapté au mode
     var auto = autoevals[slug];
     var fEst = auto ? FOURCHETTES_DEF.find(function(f){return f.key===auto}) : null;
     var calib = null;
@@ -6130,16 +6336,18 @@ function SessionLive(p){
   // Stats
   var eleves = classe.eleves || [];
   var repsQ = qIdx != null ? (reponses[qIdx] || {}) : {};
-  var nbConnectes = 0, nbRepondu = 0, nbJuste = 0;
+  var modeEv = modeEval(ev);
+  var nbConnectes = 0, nbRepondu = 0, nbJuste = 0, nbPartiel = 0;
   eleves.forEach(function(e){
     var slug = slugify(e.nomComplet);
     if(presence[slug]) nbConnectes++;
     if(repsQ[slug]){
       nbRepondu++;
       if(question){
-        var bonnes = (question.bonnes||[]).slice().sort();
-        var c = (repsQ[slug].choix||[]).slice().sort();
-        if(JSON.stringify(c) === JSON.stringify(bonnes)) nbJuste++;
+        var c = (repsQ[slug].choix||[]).slice();
+        var sc = calculerScoreQuestion(c, question.bonnes||[], modeEv);
+        if(sc.ok) nbJuste++;
+        else if(sc.partiel) nbPartiel++;
       }
     }
   });
@@ -6585,10 +6793,12 @@ function SessionLive(p){
             // Calcul du score classe pour cette question
             var repsQi = reponses[qi] || {};
             var nbRep = 0, nbJusteQ = 0;
+            var modeEv = modeEval(ev);
             Object.keys(repsQi).forEach(function(slug){
               nbRep++;
-              var c = (repsQi[slug].choix||[]).slice().sort();
-              if(JSON.stringify(c) === JSON.stringify(bonnesQ)) nbJusteQ++;
+              var c = (repsQi[slug].choix||[]).slice();
+              var sc = calculerScoreQuestion(c, q.bonnes||[], modeEv);
+              if(sc.ok) nbJusteQ++;
             });
             var totalEleves = eleves.length;
             // Code couleur selon taux de réussite
@@ -6985,8 +7195,11 @@ function StudentReport(p){
       var monApp = r && r.choix ? r.choix.slice().sort() : null;
       var pap = p.reponsesPapier && p.reponsesPapier.choix ? p.reponsesPapier.choix[qi] : null;
       var monPap = pap ? pap.slice().sort() : null;
-      var appJuste = monApp && JSON.stringify(monApp) === JSON.stringify(bonnes);
-      var papJuste = monPap && JSON.stringify(monPap) === JSON.stringify(bonnes);
+      var modeEv = modeEval(ev);
+      var scApp = monApp ? calculerScoreQuestion(monApp, bonnes, modeEv) : null;
+      var scPap = monPap ? calculerScoreQuestion(monPap, bonnes, modeEv) : null;
+      var appJuste = scApp && scApp.ok;
+      var papJuste = scPap && scPap.ok;
       function lettres(arr){ return arr && arr.length ? arr.map(lettreFromIndex).join("") : "—"; }
       return h("div", {key:qi, className:"ligne-q"},
         h("span", {className:"num", title:"Question "+(qi+1)}, "Q"+(qi+1)),
