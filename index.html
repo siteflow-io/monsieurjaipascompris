@@ -543,7 +543,7 @@ body.admin-mode .admin-only { display: block; }
 <style>
 .uni-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .uni-count{font-weight:600;font-size:15px}
-.uni-i{width:22px;height:22px;border-radius:50%;border:1px solid var(--border,#ccc);background:transparent;color:inherit;font-style:italic;font-weight:600;cursor:pointer;line-height:1;padding:0}
+.uni-i{width:22px;height:22px;border-radius:50%;border:1px solid rgba(127,127,127,.5);background:transparent;color:inherit;font-style:italic;font-weight:600;cursor:pointer;line-height:1;padding:0}
 .uni-i:hover{background:rgba(127,127,127,.15)}
 .uni-sub{font-size:13px;opacity:.8;margin:0 0 12px}
 .uni-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
@@ -557,9 +557,8 @@ body.admin-mode .admin-only { display: block; }
 .uni-note{font-size:12px;opacity:.75;margin-top:10px}
 .uni-ok{color:#16a34a;font-weight:600}
 .uni-err{color:#dc2626;font-weight:600}
-.uni-wait{opacity:.7}
 .uni-list{margin:6px 0 0 18px}
-.uni-input{width:100%;padding:8px 10px;border:1px solid var(--border,#ccc);border-radius:6px;font-size:15px;margin-top:4px;box-sizing:border-box}
+.uni-input{width:100%;padding:8px 10px;border:1px solid rgba(127,127,127,.5);border-radius:6px;font-size:15px;margin-top:4px;box-sizing:border-box;background:transparent;color:inherit}
 .uni-info p{margin:8px 0;font-size:14px;line-height:1.5}
 </style>
 </head>
@@ -2633,7 +2632,7 @@ function _uniApply(hub,nodes){
 }
 
 /* ===== UNIFIER — interface ===== */
-var _UNI_CACHE=null;
+var _UNI={hub:null,plan:null,sel:[]};
 
 function _uniInfo(){
   var b='<div class="uni-info">'
@@ -2648,107 +2647,108 @@ function _uniInfo(){
     +'<p>Les sauvegardes horodat\u00e9es (snapshots) des r\u00e9\u00e9critures sont trait\u00e9es elles aussi\u00a0: sinon, restaurer une sauvegarde r\u00e9injecterait les anciennes \u00e9tiquettes.</p>'
     +'<p><b>\u00c0 faire une seule fois</b>, et <b>avant</b> de mettre en ligne les apps mises \u00e0 jour.</p>'
     +'</div>';
-  _showConsoleModal('\u2139 \u00c0 quoi sert l\u2019unification\u00a0?',b,[{label:'Fermer',cls:''}]);
+  _showConsoleModal('\u2139 \u00c0 quoi sert l\u2019unification\u00a0?',b,[
+    {label:'\u2190 Retour',cls:'ghost',onclick:function(){_uniRender();return true;}}
+  ]);
 }
 
 function _uniOpen(){
-  _showConsoleModal('\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves','<p class="uni-wait">Lecture du hub\u2026</p>',[{label:'Annuler',cls:''}]);
+  _showConsoleModal('Chargement\u2026','<div class="cm-sub">Lecture du hub en cours\u2026</div>',[{label:'Annuler',cls:'ghost'}]);
   _fbReadAll().then(function(hub){
-    _UNI_CACHE=hub;
-    var p=_uniPlan(hub);
-    _uniRender(p);
-  }).catch(function(e){
-    _showConsoleModal('\ud83d\udd17 Unifier','<p class="uni-err">Lecture impossible\u00a0: '+escapeHtml(e.message||String(e))+'</p>',[{label:'Fermer',cls:''}]);
+    _UNI.hub=hub; _UNI.plan=_uniPlan(hub); _uniRender();
+  }).catch(function(){
+    _showConsoleModal('Erreur','<div class="cm-sub">Lecture du hub impossible (r\u00e9seau\u00a0?).</div>',[{label:'Fermer',cls:'ghost'}]);
   });
 }
 
-function _uniRender(p){
-  if(!p.total){
-    _showConsoleModal('\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves',
-      '<p class="uni-ok">\u2714 Rien \u00e0 unifier\u00a0: toutes les \u00e9tiquettes sont d\u00e9j\u00e0 \u00e0 la bonne forme.</p>',
-      [{label:'Fermer',cls:''}]);
+function _uniRender(){
+  var p=_UNI.plan;
+  if(!p||!p.total){
+    _showConsoleModal('Unifier les identifiants d\u2019\u00e9l\u00e8ves',
+      '<div class="cm-sub uni-ok">\u2714 Rien \u00e0 unifier\u00a0: toutes les \u00e9tiquettes sont d\u00e9j\u00e0 \u00e0 la bonne forme.</div>',
+      [{label:'Fermer',cls:'ghost'}]);
     return;
   }
-  var b='<div class="uni-head">'
-    +'<span class="uni-count">'+p.total+' \u00e9tiquette'+(p.total>1?'s':'')+' \u00e0 renommer</span>'
-    +'<button class="uni-i" onclick="_uniInfo()" title="\u00c0 quoi sert cet outil\u00a0?">i</button>'
-    +'</div>'
+  var b='<div class="uni-head"><span class="uni-count">'+p.total+' \u00e9tiquette'+(p.total>1?'s':'')+' \u00e0 renommer</span>'
+    +'<button class="uni-i" onclick="_uniInfo()" title="\u00c0 quoi sert cet outil\u00a0?">i</button></div>'
     +'<p class="uni-sub">'+p.eleves+' \u00e9l\u00e8ves connus. Coche les rubriques \u00e0 unifier. Les donn\u00e9es sont d\u00e9plac\u00e9es, jamais supprim\u00e9es.</p>';
-
   if(p.collisions.length){
-    b+='<div class="uni-warn"><b>\u26a0 '+p.collisions.length+' conflit'+(p.collisions.length>1?'s':'')+'</b><br>'
-      +'Ces \u00e9tiquettes existent d\u00e9j\u00e0 sous les deux formes. Elles seront <b>laiss\u00e9es intactes</b> pour ne rien \u00e9craser\u00a0:<ul>';
+    b+='<div class="uni-warn"><b>\u26a0 '+p.collisions.length+' conflit'+(p.collisions.length>1?'s':'')+'</b><br>Laiss\u00e9s intacts pour ne rien \u00e9craser\u00a0:<ul>';
     p.collisions.slice(0,6).forEach(function(c){
       b+='<li>'+escapeHtml(_nodeLabel(c.node))+' \u2014 '+escapeHtml(c.cles.join(' + '))+' \u2192 <code>'+escapeHtml(c.cible)+'</code></li>';
     });
     b+='</ul></div>';
   }
-
   b+='<table class="uni-tab uni-plan"><tr><th></th><th>Rubrique</th><th>\u00c0 renommer</th><th>Exemple</th></tr>';
   Object.keys(p.plan).forEach(function(node){
-    var items=p.plan[node],pret=!!UNI_NODES_PRETS[node];
-    var ex=items[0];
+    var items=p.plan[node],pret=!!UNI_NODES_PRETS[node],ex=items[0];
     b+='<tr class="'+(pret?'':'uni-row-off')+'">'
       +'<td><input type="checkbox" class="uni-cb" value="'+escapeHtml(node)+'"'+(pret?' checked':'')+'></td>'
       +'<td>'+escapeHtml(_nodeLabel(node))+(pret?'':' <span class="uni-tag">app non mise \u00e0 jour</span>')+'</td>'
       +'<td class="uni-n">'+items.length+'</td>'
-      +'<td><code>'+escapeHtml(ex.oldKey)+'</code> \u2192 <code>'+escapeHtml(ex.newKey)+'</code></td>'
-      +'</tr>';
+      +'<td><code>'+escapeHtml(ex.oldKey)+'</code> \u2192 <code>'+escapeHtml(ex.newKey)+'</code></td></tr>';
   });
-  b+='</table>'
-    +'<p class="uni-note">Une sauvegarde compl\u00e8te du hub sera t\u00e9l\u00e9charg\u00e9e avant toute modification.</p>';
-
+  b+='</table><p class="uni-note">Une sauvegarde compl\u00e8te du hub sera t\u00e9l\u00e9charg\u00e9e avant toute modification.</p>';
   _showConsoleModal('\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves',b,[
-    {label:'Annuler',cls:''},
-    {label:'Sauvegarder et unifier\u2026',cls:'danger',onclick:'_uniConfirm()'}
+    {label:'Annuler',cls:'ghost'},
+    {label:'Sauvegarder et unifier\u2026',cls:'danger',onclick:function(){
+      var sel=[];
+      Array.prototype.forEach.call(document.querySelectorAll('.uni-cb'),function(cb){if(cb.checked)sel.push(cb.value);});
+      if(!sel.length){alert('Aucune rubrique coch\u00e9e.');return true;}
+      _UNI.sel=sel; _uniSave(); return true;
+    }}
   ]);
 }
 
-function _uniSelected(){
-  var out=[];
-  document.querySelectorAll('.uni-cb').forEach(function(cb){if(cb.checked)out.push(cb.value);});
-  return out;
+/* Sauvegarde D'ABORD : si l'enregistrement est annule, on n'ecrit rien. */
+function _uniSave(){
+  var name=_tsName('avant-unification');
+  _saveJSON(_UNI.hub,name).then(function(ok){
+    if(!ok){
+      _showConsoleModal('Enregistrement annul\u00e9','<div class="cm-sub">Rien n\u2019a \u00e9t\u00e9 modifi\u00e9. Tu peux r\u00e9essayer.</div>',
+        [{label:'\u2190 Retour',cls:'ghost',onclick:function(){_uniRender();return true;}}]);
+      return;
+    }
+    _logBackup({ts:Date.now(),date:(typeof _nowStr==='function'?_nowStr():new Date().toLocaleString()),kind:'avant-unification',filename:name,size:_humanSize(JSON.stringify(_UNI.hub).length)});
+    _uniConfirm(name);
+  });
 }
 
-var _UNI_SEL=[];
-function _uniConfirm(){
-  _UNI_SEL=_uniSelected();
-  if(!_UNI_SEL.length){alert('Aucune rubrique coch\u00e9e.');return;}
-  var r=_uniApply(_UNI_CACHE,_UNI_SEL);
-  var b='<p>Tu t\u2019appr\u00eates \u00e0 renommer <b>'+r.done+' \u00e9tiquette'+(r.done>1?'s':'')+'</b> dans\u00a0:</p><ul class="uni-list">';
-  _UNI_SEL.forEach(function(n){b+='<li>'+escapeHtml(_nodeLabel(n))+'</li>';});
-  b+='</ul>'
-    +'<p>Une sauvegarde du hub sera t\u00e9l\u00e9charg\u00e9e d\u2019abord. Les donn\u00e9es sont d\u00e9plac\u00e9es, pas supprim\u00e9es.</p>'
+function _uniConfirm(savedName){
+  var r=_uniApply(_UNI.hub,_UNI.sel);
+  _UNI.done=r.done;
+  var b='<div class="cm-sub">Sauvegarde enregistr\u00e9e\u00a0: <code>'+escapeHtml(savedName)+'</code></div>'
+    +'<p>Tu t\u2019appr\u00eates \u00e0 renommer <b>'+r.done+' \u00e9tiquette'+(r.done>1?'s':'')+'</b> dans\u00a0:</p><ul class="uni-list">';
+  _UNI.sel.forEach(function(n){b+='<li>'+escapeHtml(_nodeLabel(n))+'</li>';});
+  b+='</ul><p>Les donn\u00e9es sont d\u00e9plac\u00e9es, pas supprim\u00e9es.</p>'
     +'<p class="uni-note"><b>Ensuite seulement</b>, mets en ligne les apps mises \u00e0 jour.</p>'
     +'<p>Pour confirmer, tape <b>UNIFIER</b>\u00a0:</p>'
     +'<input id="uniWord" class="uni-input" autocomplete="off" placeholder="UNIFIER">';
   _showConsoleModal('\u26a0 Confirmer l\u2019unification',b,[
-    {label:'Annuler',cls:''},
-    {label:'Unifier maintenant',cls:'danger',onclick:'_uniExec()'}
+    {label:'Annuler',cls:'ghost'},
+    {label:'Unifier maintenant',cls:'danger',onclick:function(){
+      var w=document.getElementById('uniWord');
+      if(!w||w.value.trim().toUpperCase()!=='UNIFIER'){alert('Tape UNIFIER pour confirmer.');return true;}
+      _uniExec(savedName); return true;
+    }}
   ]);
 }
 
-function _uniExec(){
-  var w=document.getElementById('uniWord');
-  if(!w||w.value.trim().toUpperCase()!=='UNIFIER'){alert('Tape UNIFIER pour confirmer.');return;}
-  var before=_UNI_CACHE, sel=_UNI_SEL;
-  var name=_tsName('avant-unification');
-  _saveJSON(before,name);
-  _logBackup({date:new Date().toISOString(),kind:'avant-unification',file:name});
-  var r=_uniApply(before,sel);
-  _showConsoleModal('\ud83d\udd17 Unification','<p class="uni-wait">\u00c9criture en cours\u2026 ('+r.done+' \u00e9tiquettes)</p>',[]);
+function _uniExec(savedName){
+  var r=_uniApply(_UNI.hub,_UNI.sel);
+  _showConsoleModal('Unification en cours\u2026','<div class="cm-sub">\u00c9criture de '+r.done+' \u00e9tiquettes\u2026</div>',[]);
   _fbWriteRoot(r.hub,'PUT').then(function(){
     if(typeof loadClasses==='function')loadClasses(function(){if(typeof loadCodes==='function')loadCodes(function(){});});
     _showConsoleModal('\u2714 Unification termin\u00e9e',
-      '<p class="uni-ok">'+r.done+' \u00e9tiquette'+(r.done>1?'s ont':' a')+' \u00e9t\u00e9 renomm\u00e9e'+(r.done>1?'s':'')+'.</p>'
-      +'<p>Sauvegarde t\u00e9l\u00e9charg\u00e9e\u00a0: <code>'+escapeHtml(name)+'</code></p>'
-      +'<p class="uni-note"><b>Prochaine \u00e9tape\u00a0:</b> mets en ligne les apps mises \u00e0 jour (dict\u00e9e universelle, r\u00e9\u00e9criture, applaudim\u00e8tre, ce site).</p>',
-      [{label:'Fermer',cls:''}]);
+      '<div class="cm-sub uni-ok">'+r.done+' \u00e9tiquette'+(r.done>1?'s renomm\u00e9es':' renomm\u00e9e')+'.</div>'
+      +'<p>Sauvegarde\u00a0: <code>'+escapeHtml(savedName)+'</code></p>'
+      +'<p class="uni-note"><b>Prochaine \u00e9tape\u00a0:</b> mets en ligne les apps mises \u00e0 jour \u2014 dict\u00e9e universelle, r\u00e9\u00e9criture, r\u00e9\u00e9criture brevet 4e, applaudim\u00e8tre.</p>',
+      [{label:'Fermer',cls:'ghost'}]);
   }).catch(function(e){
     _showConsoleModal('\u2717 \u00c9chec',
-      '<p class="uni-err">Rien n\u2019a \u00e9t\u00e9 modifi\u00e9\u00a0: '+escapeHtml(e.message||String(e))+'</p>'
-      +'<p>Ta sauvegarde <code>'+escapeHtml(name)+'</code> est intacte.</p>',
-      [{label:'Fermer',cls:''}]);
+      '<div class="cm-sub uni-err">Rien n\u2019a \u00e9t\u00e9 modifi\u00e9\u00a0: '+escapeHtml(e.message||String(e))+'</div>'
+      +'<p>Ta sauvegarde <code>'+escapeHtml(savedName)+'</code> est intacte.</p>',
+      [{label:'Fermer',cls:'ghost'}]);
   });
 }
 /* ===== fin UNIFIER ===== */
