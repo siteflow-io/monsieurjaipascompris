@@ -929,15 +929,7 @@ body.impression-active .deco{display:none !important}
 // ════════════════════════════════════════════════════════════════════
 // CONFIGURATION FIREBASE
 // ════════════════════════════════════════════════════════════════════
-var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDvdLJ_9QFvNUWyDKhlqVRVnmYEaqD4pwk",
-  authDomain: "plickers-mjpc.firebaseapp.com",
-  databaseURL: "https://plickers-mjpc-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "plickers-mjpc",
-  storageBucket: "plickers-mjpc.firebasestorage.app",
-  messagingSenderId: "117330218517",
-  appId: "1:117330218517:web:fabd9609b26be153df881c"
-};
+var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
 
 firebase.initializeApp(FIREBASE_CONFIG);
 var db = firebase.database();
@@ -1022,11 +1014,12 @@ function lettreFromIndex(i){ return String.fromCharCode(65+i); } // 0→A, 1→B
 // ════════════════════════════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════════════════════════════
-function slugify(s){
+function slugClasse(s){
   return (s||"").toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
-}
+} /* slugs de CLASSE : tirets, comportement historique */
+function slugify(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");} /* sanMJPC canonique : cle-eleve */
 
 // ════════════════════════════════════════════════════════════════════
 // SCORING — mode strict ou partiel (configuré au niveau de l'éval)
@@ -1107,27 +1100,26 @@ function getURLParams(){
 // ════════════════════════════════════════════════════════════════════
 function extractEleves(fbClasse, cfgEleves){
   cfgEleves = cfgEleves || [];
-  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
-    return fbClasse;
-  }
-  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
-    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
-    var keys = Object.keys(fbClasse).filter(function(k){
-      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
-    });
-    if (keys.length > 0) {
-      var names = keys.map(function(k){
-        var v = fbClasse[k];
-        if (typeof v === "string") return v;
-        if (v && typeof v === "object") {
-          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
-          if (v.nomComplet) return v.nomComplet;
-          if (v.name) return v.name;
-        }
-        return null;
-      }).filter(function(x){ return x && typeof x === "string"; });
-      if (names.length > 0) return names;
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){
+      var e=fbClasse.eleves.map(function(x){return typeof x==="string"?x:(x&&x.nomComplet)||null;});
+      e=clean(e); if(e.length) return e;
     }
+    var names=Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){
+      var v=fbClasse[k];
+      if(typeof v==="string") return v;
+      if(v&&typeof v==="object"){
+        if(v.nomComplet) return v.nomComplet;
+        if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+        if(v.name) return v.name;
+      }
+      return null;
+    });
+    names=clean(names);
+    if(names.length) return names;
   }
   return cfgEleves;
 }
@@ -1151,7 +1143,7 @@ function normaliserClassesQCM(snapVal){
   var out = {};
   if(!snapVal || typeof snapVal !== "object") return out;
   Object.keys(snapVal).forEach(function(nomComplet){
-    var slug = slugify(nomComplet);
+    var slug = slugClasse(nomComplet);
     if(!slug) return;
     var fb = snapVal[nomComplet];
     var elevesNormalises = normaliserElevesQCM(extractEleves(fb, []));
@@ -2931,7 +2923,7 @@ function EleveBilan(p){
   // p.classe.slug devrait être présent (injecté par normaliserClassesQCM), mais on
   // tolère l'absence (cas EleveSimule où la classe est construite à la main) en
   // recalculant le slug à partir du nom.
-  var classeSlug = p.classe.slug || slugify(p.classe.nom || "");
+  var classeSlug = p.classe.slug || slugClasse(p.classe.nom || "");
   var s1 = useState(null), allReps = s1[0], setAllReps = s1[1];
   var s2 = useState({}), allAutoevals = s2[0], setAllAutoevals = s2[1];
   var s3 = useState({}), historique = s3[0], setHistorique = s3[1]; // Lot 6 : profil longitudinal
