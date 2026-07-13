@@ -2518,14 +2518,8 @@ function _uniCanon(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u0
 function _uniNoms(hub){
   var out=[];var cls=(hub&&hub.classes)||{};
   Object.keys(cls).forEach(function(slug){
-    var c=cls[slug];if(!c||typeof c!=='object')return;
-    Object.keys(c).forEach(function(k){
-      if(k==='archivee')return;
-      var v=c[k],nom=null;
-      if(typeof v==='string')nom=v;
-      else if(v&&typeof v==='object')nom=v.nom||v.name||null;
-      if(nom&&String(nom).trim())out.push(String(nom).trim());
-    });
+    if(_estClasseInterne(slug))return;                 /* classes de test des apps : ignorees */
+    extractEleves(cls[slug],[]).forEach(function(n){out.push(String(n).trim());});
   });
   return out;
 }
@@ -2912,33 +2906,27 @@ function _profSectionPresence(){
 // =========== Section Classes : gestion CRUD + archivage ===========
 function extractEleves(fbClasse, cfgEleves){
   cfgEleves = cfgEleves || [];
-  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
-    return fbClasse;
-  }
-  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
-    // Format {eleves: [...]}
-    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
-    // Format map d'élèves
-    var keys = Object.keys(fbClasse).filter(function(k){
-      // Exclure les clés non-élèves (métadonnées éventuelles)
-      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
-    });
-    if (keys.length > 0) {
-      var names = keys.map(function(k){
-        var v = fbClasse[k];
-        if (typeof v === "string") return v;
-        if (v && typeof v === "object") {
-          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
-          if (v.nomComplet) return v.nomComplet;
-          if (v.name) return v.name;
-        }
-        return null;
-      }).filter(function(x){ return x && typeof x === "string"; });
-      if (names.length > 0) return names;
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  function nomDe(v){
+    if(typeof v==="string") return v;
+    if(v&&typeof v==="object"){
+      if(v.nomComplet) return v.nomComplet;
+      if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+      if(v.name) return v.name;
     }
+    return null;
+  }
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse.map(nomDe)); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves.map(nomDe)); if(e.length) return e; }
+    var names=clean(Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){return nomDe(fbClasse[k]);}));
+    if(names.length) return names;
   }
   return cfgEleves;
 }
+/* Classe interne (test d'une app) : slug prefixe par "_" -> jamais comptee comme classe reelle */
+function _estClasseInterne(slug){return String(slug||"").charAt(0)==="_";}
 var codesData={};var _codesLoaded=false;
 function loadCodes(cb){fetch(FIREBASE_BASE+'/codes.json').then(function(r){return r.json()}).catch(function(){return null}).then(function(v){codesData=v||{};_codesLoaded=true;if(cb)cb();});}
 function loadClasses(callback){
@@ -2958,6 +2946,7 @@ function _profSectionClasses(){
     return '<h2>Classes</h2><div class="tprof-section-sub">Chargement des classes depuis Firebase\u2026</div><div class="tprof-placeholder">\u23f3</div>';
   }
   var entries=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object';});
+  entries=entries.filter(function(k){return !_estClasseInterne(k);});   /* classes de test des apps : masquees */
   var active=entries.filter(function(k){return !classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
   var archived=entries.filter(function(k){return classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
 
