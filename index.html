@@ -2517,8 +2517,8 @@ function _b2BuildExtract(list){
 function _uniCanon(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
 
 /* Referentiel : tous les eleves reels, depuis /classes */
-function _uniEleveMap(hub){
-  var map={};var cls=(hub&&hub.classes)||{};
+function _uniNoms(hub){
+  var out=[];var cls=(hub&&hub.classes)||{};
   Object.keys(cls).forEach(function(slug){
     var c=cls[slug];if(!c||typeof c!=='object')return;
     Object.keys(c).forEach(function(k){
@@ -2526,32 +2526,73 @@ function _uniEleveMap(hub){
       var v=c[k],nom=null;
       if(typeof v==='string')nom=v;
       else if(v&&typeof v==='object')nom=v.nom||v.name||null;
-      if(!nom)return;nom=String(nom).trim();if(!nom)return;
-      var can=_uniCanon(nom);if(can&&!map[can])map[can]=nom;
+      if(nom&&String(nom).trim())out.push(String(nom).trim());
     });
   });
-  return map;
+  return out;
+}
+
+/* Toutes les formes qu'un nom a pu prendre selon les anciennes fonctions.
+   Indispensable : l'ancienne san() detruisait les accents (CLEMENT Noe -> CL_MENT_No_),
+   forme qu'aucune normalisation ne peut retrouver a rebours. */
+function _uniVariants(n){
+  var v={};
+  function add(x){if(x)v[x]=1;}
+  add(n);                                      /* brut : "CLEMENT Noe"        (reecriture) */
+  add(n.replace(/[^a-zA-Z0-9]/g,'_'));         /* destructif : "CL_MENT_No_"  (dictee, applaudimetre, index) */
+  add(n.replace(/[.#$/\[\]]/g,'_'));           /* san reecriture */
+  add(_uniCanon(n));                           /* canonique */
+  add(n.toLowerCase());
+  add(n.replace(/[^a-zA-Z0-9]/g,'_').toLowerCase());
+  var p=n.split(/\s+/);
+  if(p.length>1){                              /* ordre inverse : "Angele_JUIN" (anciennes dictees) */
+    var inv=p[p.length-1]+' '+p.slice(0,-1).join(' ');
+    add(inv); add(inv.replace(/[^a-zA-Z0-9]/g,'_')); add(_uniCanon(inv));
+  }
+  return Object.keys(v);
+}
+
+/* Table variante -> etiquette canonique. Les variantes ambigues (2 eleves) sont ecartees. */
+function _uniVarMap(hub){
+  var noms=_uniNoms(hub),tmp={};
+  noms.forEach(function(n){
+    var can=_uniCanon(n);
+    _uniVariants(n).forEach(function(v){
+      if(!tmp[v])tmp[v]={};
+      tmp[v][can]=1;
+    });
+  });
+  var map={},ambigus=[];
+  Object.keys(tmp).forEach(function(v){
+    var cibles=Object.keys(tmp[v]);
+    if(cibles.length===1)map[v]=cibles[0];
+    else ambigus.push(v);
+  });
+  return {map:map,ambigus:ambigus,nEleves:noms.length};
 }
 
 /* Apps deja mises a jour -> rubriques cochees par defaut */
 var UNI_NODES_PRETS={reecritures:1,reecriture_bb4e:1,dictees:1,applaudimetre:1,codes:1};
 
-/* Parcours d'une rubrique : repere toute cle dont la forme canonique est un eleve connu */
-function _uniScanNode(root,node,eleveMap){
+/* Parcours d'une rubrique : repere toute cle correspondant a un eleve connu */
+function _uniScanNode(root,node,VAR){
   var items=[],collisions=[];
   (function walk(obj,path){
     if(!obj||typeof obj!=='object'||Array.isArray(obj))return;
-    var keys=Object.keys(obj);
-    keys.forEach(function(k){
-      var can=_uniCanon(k);
-      if(eleveMap[can]){
-        if(k!==can){
-          if(Object.prototype.hasOwnProperty.call(obj,can)) collisions.push({node:node,path:path.slice(),oldKey:k,newKey:can});
-          else items.push({node:node,path:path.slice(),oldKey:k,newKey:can,nom:eleveMap[can]});
-        }
-        return; /* c'est une feuille-eleve : on ne descend pas dedans */
+    var cibles={};
+    Object.keys(obj).forEach(function(k){
+      var can=VAR[k];
+      if(can){
+        if(!cibles[can])cibles[can]=[];
+        cibles[can].push(k);
+        return;                                /* feuille-eleve : on ne descend pas dedans */
       }
       walk(obj[k],path.concat([k]));
+    });
+    Object.keys(cibles).forEach(function(can){
+      var ks=cibles[can];
+      if(ks.length>1){ collisions.push({node:node,path:path.slice(),cible:can,cles:ks}); return; }
+      if(ks[0]!==can) items.push({node:node,path:path.slice(),oldKey:ks[0],newKey:can});
     });
   })(root,[]);
   return {items:items,collisions:collisions};
@@ -2559,24 +2600,24 @@ function _uniScanNode(root,node,eleveMap){
 
 /* Plan complet, rubrique par rubrique */
 function _uniPlan(hub){
-  var eleveMap=_uniEleveMap(hub);
+  var vm=_uniVarMap(hub);
   var plan={},collisions=[],total=0;
   Object.keys(hub||{}).forEach(function(node){
     if(node==='classes')return;                      /* les noms y sont des valeurs, pas des cles */
-    var r=_uniScanNode(hub[node],node,eleveMap);
+    var r=_uniScanNode(hub[node],node,vm.map);
     if(r.collisions.length)collisions=collisions.concat(r.collisions);
     if(r.items.length){plan[node]=r.items;total+=r.items.length;}
   });
-  return {plan:plan,collisions:collisions,total:total,eleves:Object.keys(eleveMap).length};
+  return {plan:plan,collisions:collisions,total:total,eleves:vm.nEleves};
 }
 
 /* Applique les renommages sur une copie du hub */
 function _uniApply(hub,nodes){
   var out=JSON.parse(JSON.stringify(hub));
-  var eleveMap=_uniEleveMap(out),done=0;
+  var vm=_uniVarMap(out),done=0;
   nodes.forEach(function(node){
     if(!out[node])return;
-    var r=_uniScanNode(out[node],node,eleveMap);
+    var r=_uniScanNode(out[node],node,vm.map);
     r.items.forEach(function(it){
       var cont=out[node];
       for(var i=0;i<it.path.length;i++){cont=cont&&cont[it.path[i]];}
@@ -2638,7 +2679,7 @@ function _uniRender(p){
     b+='<div class="uni-warn"><b>\u26a0 '+p.collisions.length+' conflit'+(p.collisions.length>1?'s':'')+'</b><br>'
       +'Ces \u00e9tiquettes existent d\u00e9j\u00e0 sous les deux formes. Elles seront <b>laiss\u00e9es intactes</b> pour ne rien \u00e9craser\u00a0:<ul>';
     p.collisions.slice(0,6).forEach(function(c){
-      b+='<li>'+escapeHtml(_nodeLabel(c.node))+' \u2014 <code>'+escapeHtml(c.oldKey)+'</code> vs <code>'+escapeHtml(c.newKey)+'</code></li>';
+      b+='<li>'+escapeHtml(_nodeLabel(c.node))+' \u2014 '+escapeHtml(c.cles.join(' + '))+' \u2192 <code>'+escapeHtml(c.cible)+'</code></li>';
     });
     b+='</ul></div>';
   }
