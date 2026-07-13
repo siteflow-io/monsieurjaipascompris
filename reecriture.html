@@ -96,6 +96,28 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
 firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"});
 var db=firebase.database();
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves); if(e.length) return e; }
+    var names=Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){
+      var v=fbClasse[k];
+      if(typeof v==="string") return v;
+      if(v&&typeof v==="object"){
+        if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+        if(v.nomComplet) return v.nomComplet;
+        if(v.name) return v.name;
+      }
+      return null;
+    });
+    names=clean(names);
+    if(names.length) return names;
+  }
+  return cfgEleves;
+} /* MJPC : tolere liste OU objet {0:..,1:..,archivee:..} */
 function sanId(s){return String(s||"").replace(/[.#$/\[\]]/g,"_")} /* ids de reecriture : comportement historique, NE PAS TOUCHER */
 function san(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")} /* sanMJPC canonique : cle-eleve nom_prenom */
 function toArr(v){if(!v)return[];if(Array.isArray(v))return v;return Object.values(v)}
@@ -705,7 +727,7 @@ function AppProf(p){
     var val=snap.val()||{};
     setSaved(Object.keys(val).map(function(id){
       var c=val[id].config||{};var cn=c.classe||"";var fbE=CLASSES[cn];
-      return{id:id,title:c.title||id,classe:cn,n:fbE?fbE.length:(c.eleves||[]).length}
+      return{id:id,title:c.title||id,classe:cn,n:extractEleves(fbE,c.eleves||[]).length}
     }))
   })},[classesLoaded]);
 
@@ -804,7 +826,7 @@ function AppProf(p){
     db.ref("reecritures/"+id).once("value",function(snap){
       var val=snap.val()||{},cfg=val.config||{};
       var cn=cfg.classe||"";var fbE=CLASSES[cn];
-      var eleves=fbE&&fbE.length>0?fbE:(cfg.eleves||[]);
+      var eleves=extractEleves(fbE,cfg.eleves||[]);
       setCurrentRee({title:cfg.title||id,classe:cn,eleves:eleves,original:cfg.original||"",attendu:cfg.attendu||"",modifs:toArr(cfg.modifs||[]),consigne:cfg.consigne||"",baremeTotal:cfg.baremeTotal!=null?cfg.baremeTotal:10,pieges:toArr(cfg.pieges||[])});
       setCurrentId(id);setAbsents(val.absents||{});setCorrections(val.corrections||{});
       setCorrEleve(null);setPaquetOrder(toArr(val.paquetOrder||[]));setScreen("suivi");
@@ -851,7 +873,7 @@ function AppProf(p){
     db.ref("reecritures/"+id).once("value",function(snap){
       var val=snap.val()||{},cfg=val.config||{};
       var cn=cfg.classe||"";var fbE=CLASSES[cn];
-      var eleves=fbE&&fbE.length>0?fbE:(cfg.eleves||[]);
+      var eleves=extractEleves(fbE,cfg.eleves||[]);
       setCurrentRee({title:cfg.title||id,classe:cn,eleves:eleves,original:cfg.original||"",attendu:cfg.attendu||"",modifs:toArr(cfg.modifs||[]),consigne:cfg.consigne||"",baremeTotal:cfg.baremeTotal!=null?cfg.baremeTotal:10,pieges:toArr(cfg.pieges||[])});
       setCurrentId(id);setAbsents(val.absents||{});setCorrections(val.corrections||{});
       setCorrEleve(null);setPaquetOrder(toArr(val.paquetOrder||[]));setScreen("correction");
@@ -1290,7 +1312,7 @@ function AppProf(p){
       Object.keys(CLASSES).length>0&&h("div",{style:{marginBottom:14}},
         Object.keys(CLASSES).map(function(cn){
           return h("div",{key:cn,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--border)"}},
-            h("span",{style:{fontWeight:600}},cn+" ("+CLASSES[cn].length+" \u00e9l\u00e8ves)"),
+            h("span",{style:{fontWeight:600}},cn+" ("+extractEleves(CLASSES[cn]).length+" \u00e9l\u00e8ves)"),
             h("button",{className:"btn-sm btn-ghost",style:{color:"var(--coral)",fontSize:".8rem"},title:"Supprimer cette classe et sa liste d'\u00e9l\u00e8ves.",onClick:function(){if(confirm("Supprimer "+cn+" ?")){db.ref("classes/"+cn).remove()}}},"\u2715")
           )
         })
