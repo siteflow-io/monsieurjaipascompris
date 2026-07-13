@@ -96,7 +96,8 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
 firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDomain:"dictee-5e-ch4.firebaseapp.com",databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"dictee-5e-ch4",storageBucket:"dictee-5e-ch4.appspot.com"});
 var db=firebase.database();
-function san(s){return s.replace(/[.#$/\[\]]/g,"_")}
+function sanId(s){return String(s||"").replace(/[.#$/\[\]]/g,"_")} /* ids de reecriture : comportement historique, NE PAS TOUCHER */
+function san(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")} /* sanMJPC canonique : cle-eleve nom_prenom */
 function toArr(v){if(!v)return[];if(Array.isArray(v))return v;return Object.values(v)}
 function noteColor(n,base){var p=n/base;return p>=.8?"var(--green)":p>=.5?"var(--orange)":"var(--coral)"}
 
@@ -768,7 +769,7 @@ function AppProf(p){
     var modifs=modifsEdited;
     if(modifs.length===0){alert("Aucune modification d\u00e9tect\u00e9e entre le texte original et le texte attendu.");return}
     // Mode édition : conserver l'id existant pour préserver les corrections/absents
-    var id=editing||(san(titleInput)+"-"+san(classeInput));
+    var id=editing||(sanId(titleInput)+"-"+sanId(classeInput));
     // Si édition et que des corrections existent, prévenir Paul du risque d'incohérence
     if(editing){
       var hasCorrections=Object.keys(corrections||{}).length>0;
