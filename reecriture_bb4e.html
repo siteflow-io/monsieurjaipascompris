@@ -73,7 +73,8 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
 firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDomain:"dictee-5e-ch4.firebaseapp.com",databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"dictee-5e-ch4",storageBucket:"dictee-5e-ch4.appspot.com"});
 var db=firebase.database();
-function san(s){return s.replace(/[.#$/\[\]]/g,"_")}
+function sanId(s){return String(s||"").replace(/[.#$/\[\]]/g,"_")} /* ids bb4e : comportement historique, NE PAS TOUCHER */
+function san(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")} /* sanMJPC canonique : cle-eleve */
 function toArr(v){if(!v)return[];if(Array.isArray(v))return v;return Object.values(v)}
 function noteColor(n,base){var p=n/base;return p>=.8?"var(--green)":p>=.5?"var(--orange)":"var(--coral)"}
 
@@ -219,7 +220,7 @@ function AppProf(p){
 
   function createForClasse(){
     if(!classeInput)return;
-    var id="bb4e-"+san(classeInput);
+    var id="bb4e-"+sanId(classeInput);
     db.ref("reecriture_bb4e/"+id+"/config").set({
       title:"R\u00e9\u00e9criture brevet blanc 4E",classe:classeInput,niveau:"4e",published:true,
       original:BB4E_ORIGINAL,attendu:BB4E_ATTENDU,modifs:BB4E_MODIFS
