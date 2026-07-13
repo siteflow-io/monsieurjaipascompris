@@ -2083,7 +2083,7 @@ function _eleveCode(nom){var k=san(nom);return (codesData[k]&&codesData[k].code)
 function _putCode(nom,slug,code){var k=san(nom);var rec={code:code,name:nom,classe:slug,createdAt:Date.now()};codesData[k]=rec;fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)}).catch(function(){});}
 function _profSectionEleves(){
   if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
-  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee;}).sort(function(a,b){return ((classesData[a].nom)||'').localeCompare((classesData[b].nom)||'');});
+  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee&&!_estClasseInterne(k);}).sort(function(a,b){return ((classesData[a].nom)||'').localeCompare((classesData[b].nom)||'');});
   var html='<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-section-sub">Choisis une classe, colle ta liste (un \u00e9l\u00e8ve par ligne, NOM Pr\u00e9nom), puis g\u00e9n\u00e8re les codes. Liste partag\u00e9e avec tes apps (dict\u00e9e, etc.) ; code \u00e0 4 chiffres mutualis\u00e9 (login rapide). R\u00e9g\u00e9n\u00e9rable \u00e9l\u00e8ve par \u00e9l\u00e8ve.</div>';
   if(actives.length===0)return html+'<div class="tprof-placeholder">Aucune classe active. Cr\u00e9e d\u2019abord une classe dans \u00ab Classes \u00bb.</div>';
   if(!PROF_EL_CLASSE||actives.indexOf(PROF_EL_CLASSE)<0)PROF_EL_CLASSE=actives[0];
@@ -2123,7 +2123,7 @@ function _printCodesClasse(slug){var names=extractEleves(classesData[slug],[]);v
 var PROF_TEST_CLASSE=null;
 function _profSectionProfilTest(){
   if(!_classesLoaded){loadClasses(function(){if(document.querySelector('.tprof-section-btn[data-section="profil-test"].active'))showProfSection('profil-test');});return '<h2>Profil test</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
-  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
+  var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee&&!_estClasseInterne(k);}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
   var html='<h2>Profil test</h2><div class="tprof-section-sub">Prends le contr\u00f4le d\u2019un faux \u00e9l\u00e8ve pour voir la <strong>vraie vue \u00e9l\u00e8ve</strong> (publication par classe incluse), sans compte r\u00e9el. Tu reviens en mode prof d\u2019un clic.</div>';
   if(actives.length===0)return html+'<div class="tprof-placeholder">Cr\u00e9e d\u2019abord une classe pour tester sa vue.</div>';
   if(!PROF_TEST_CLASSE||(PROF_TEST_CLASSE!=='__all__'&&actives.indexOf(PROF_TEST_CLASSE)<0))PROF_TEST_CLASSE=actives[0];
