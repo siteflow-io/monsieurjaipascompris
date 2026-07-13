@@ -1415,27 +1415,23 @@ function toArr(v){
 }
 function extractEleves(fbClasse, cfgEleves){
   cfgEleves = cfgEleves || [];
-  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") {
-    return fbClasse;
-  }
-  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
-    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
-    var keys = Object.keys(fbClasse).filter(function(k){
-      return k !== "niveau" && k !== "annee" && k !== "id" && k !== "title" && k !== "nom" && !k.startsWith("_");
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves); if(e.length) return e; }
+    var names=Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){
+      var v=fbClasse[k];
+      if(typeof v==="string") return v;
+      if(v&&typeof v==="object"){
+        if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+        if(v.nomComplet) return v.nomComplet;
+        if(v.name) return v.name;
+      }
+      return null;
     });
-    if (keys.length > 0) {
-      var names = keys.map(function(k){
-        var v = fbClasse[k];
-        if (typeof v === "string") return v;
-        if (v && typeof v === "object") {
-          if (v.nom && v.prenom) return String(v.nom).toUpperCase() + " " + v.prenom;
-          if (v.nomComplet) return v.nomComplet;
-          if (v.name) return v.name;
-        }
-        return null;
-      }).filter(function(x){ return x && typeof x === "string"; });
-      if (names.length > 0) return names;
-    }
+    names=clean(names);
+    if(names.length) return names;
   }
   return cfgEleves;
 }
