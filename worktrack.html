@@ -954,9 +954,7 @@ const MJPC = {
   niveauFiltre: new URLSearchParams(location.search).get("n") || null, // ?n=4e …
   published: true,
   USE_FIREBASE: true,                        // bascule local ↔ Firebase (true = déployé sur GitHub Pages)
-  firebaseConfig: { apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI", authDomain:"dictee-5e-ch4.firebaseapp.com",
-    databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app", projectId:"dictee-5e-ch4",
-    storageBucket:"dictee-5e-ch4.appspot.com" },
+  firebaseConfig: {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"},
 
   // — Banque MJPC : récupérer une question étiquetée compétence/notion —
   bank: {
@@ -3960,13 +3958,26 @@ function chapitreActifPour(classeOuNiveau){
   return null; }
 // helper commun MJPC — tolérant à 3 formats : tableau de strings, objet {eleves:[...]}, map d'élèves
 function extractEleves(fbClasse, cfgEleves){
-  if(Array.isArray(fbClasse) && fbClasse.length && typeof fbClasse[0]==="string") return fbClasse.slice();
-  if(fbClasse && typeof fbClasse==="object" && !Array.isArray(fbClasse)){
-    if(Array.isArray(fbClasse.eleves) && fbClasse.eleves.length) return fbClasse.eleves.slice();
-    const keys=Object.keys(fbClasse).filter(k=>["niveau","annee","id","title","nom","published"].indexOf(k)===-1 && k.charAt(0)!=="_");
-    if(keys.length) return keys.map(k=>{ const v=fbClasse[k]; return typeof v==="string"?v:(v&&typeof v==="object"?(v.nom||v.name||k):k); });
+  cfgEleves = cfgEleves || [];
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves); if(e.length) return e; }
+    var names=Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){
+      var v=fbClasse[k];
+      if(typeof v==="string") return v;
+      if(v&&typeof v==="object"){
+        if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+        if(v.nomComplet) return v.nomComplet;
+        if(v.name) return v.name;
+      }
+      return null;
+    });
+    names=clean(names);
+    if(names.length) return names;
   }
-  return cfgEleves || [];
+  return cfgEleves;
 }
 function niveauOf(nom){ const m=/^\s*(6e|5e|4e|3e)/i.exec(nom||""); return m?m[1].toLowerCase():""; }
 /* ── IDENTITÉ : chaque connexion porte sa classe. Le chapitre appartient au NIVEAU ;
