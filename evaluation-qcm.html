@@ -956,11 +956,11 @@ var NIVEAUX_DEFAULT = [
 
 // === MODE TEST : constantes ===
 // Convention écosystème : nom complet "_test_<nomapp>" sous /classes racine.
-// Le slug interne (utilisé dans sessions, sessionActive sous qcm/ ; mjpcProfils est
-// à la racine Firebase, voir architecture L.2146+)
-// est dérivé via slugify et ne porte plus le préfixe _.
+// Depuis le 14/07/2026 (décision §5.12), le slug de classe EST la clé du hub :
+// plus aucune dérivation. slug === nom, préfixe _ inclus (classe interne,
+// invisible des élèves, jamais archivée dans mjpcProfils).
 var TEST_CLASSE_NOM = "_test_evaluation-qcm";   // clé Firebase racine /classes/
-var TEST_CLASSE_SLUG = "test-evaluation-qcm";   // slug interne classes[slug]
+var TEST_CLASSE_SLUG = TEST_CLASSE_NOM;         // identité : slug = clé du hub
 var TEST_EVAL_ID = "_eval_test";
 var TEST_ELEVES = [
   {nomComplet:"AUDEBERT Élise", sexe:"f"},
@@ -1014,12 +1014,186 @@ function lettreFromIndex(i){ return String.fromCharCode(65+i); } // 0→A, 1→B
 // ════════════════════════════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════════════════════════════
-function slugClasse(s){
-  return (s||"").toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
-} /* slugs de CLASSE : tirets, comportement historique */
-function slugify(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");} /* sanMJPC canonique : cle-eleve */
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
+// toute évolution passe par une nouvelle version diffusée partout.
+// Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
+// est propre à chaque app — il se remplit, il ne se réécrit pas.
+// Dépendances : firebase 8.x (db = firebase.database()) déjà initialisé par l'app.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── DÉCLARATION DE L'APP (à remplir par app — exemple ci-dessous) ──
+// var MJPC_APP = {
+//   id: "correction_dictee",          // identifiant technique (anglais/ascii)
+//   nom: "Correction de dictée",      // libellé lisible
+//   contenant: "aucun"                // "aucun" | "binome" | "groupe" | "classe"
+// };                                  // = l'élève travaille seul / à 2-3 / en groupe / classe entière
+// var MJPC_MANIFESTE = { notions: [], noeuds: [] };   // vocabulaire + nœuds Firebase de l'app (vue projetée)
+// var MJPC_PURGE = { preserver: [], purger: [] };     // contrat de purge : chemins à garder / à effacer au reset
+
+// ── 1. Identité élève : clé canonique ──
+// "CLÉMENT Noé" → "clement_noe". Déterministe, recalculable, lisible.
+function sanMJPC(s){
+  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+}
+
+// ── 2. Identité classe : la clé du hub EST l'identifiant ──
+// Décision du 14/07/2026 : aucune app ne transforme le nom de classe.
+// La clé de /classes (ex. "4E BANKSY") est l'unique étiquette de rangement.
+function cleClasse(nom){ return String(nom||"").trim(); }
+
+// ── 3. Classes de test (bac à sable) : convention unique "_test_<app>" ──
+// Préfixe "_" = classe interne : jamais montrée aux élèves, jamais archivée
+// dans les profils, nettoyable sans risque. "CLASSE TEST" et "_TEST" sont
+// reconnues comme héritage le temps de leur nettoyage (dette B).
+function classeTestId(){ return "_test_"+MJPC_APP.id; }
+function estClasseInterne(nom){ return !!nom && String(nom).charAt(0)==="_"; }
+function estClasseTest(nom){
+  return estClasseInterne(nom) || nom==="CLASSE TEST"; // héritage toléré en lecture
+}
+
+// ── 4. Lecture robuste d'un roster : extractEleves ──
+// Tolère les 3 formats rencontrés dans les données réelles :
+//   liste ["NOM Prénom", …] · objet indexé {0:…, archivee:…} ·
+//   objet {nom, eleves:[{nomComplet}|{nom,prenom}|{name}|"…"]}
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  function nomDe(v){
+    if(typeof v==="string") return v;
+    if(v&&typeof v==="object"){
+      if(v.nomComplet) return v.nomComplet;
+      if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+      if(v.name) return v.name;
+    }
+    return null;
+  }
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse.map(nomDe)); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves.map(nomDe)); if(e.length) return e; }
+    var names=clean(Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){return nomDe(fbClasse[k]);}));
+    if(names.length) return names;
+  }
+  return clean(cfgEleves.map(nomDe));
+}
+
+// ── 5. Écriture NON destructive d'une classe : ecrireClasse ──
+// Remplace UNIQUEMENT la liste d'élèves ; préserve toute métadonnée existante
+// (archivee, niveau, couleur, …) ; normalise au format canonique
+// {eleves:["NOM Prénom",…], …métadonnées} : les élèves-objets ({nomComplet},
+// {nom,prenom}, {name}) sont ramenés à la chaîne, les résidus indexés {0:…} purgés.
+// meta (optionnel) : métadonnées à poser/mettre à jour (ex. {niveau:"4e"}) —
+// appliquées PAR-DESSUS l'existant, jamais en le remplaçant.
+// Transaction Firebase : atomique, idempotente, sûre en concurrence.
+function ecrireClasse(db, nomClasse, eleves, meta, cb){
+  if(typeof meta==="function"){ cb=meta; meta=null; }
+  var nom=cleClasse(nomClasse);
+  if(!nom){ if(cb) cb(new Error("Nom de classe vide")); return; }
+  function nomDe(v){
+    if(typeof v==="string") return v.trim();
+    if(v&&typeof v==="object"){
+      if(v.nomComplet) return String(v.nomComplet).trim();
+      if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+String(v.prenom).trim();
+      if(v.name) return String(v.name).trim();
+    }
+    return null;
+  }
+  var propres=(eleves||[]).map(nomDe).filter(function(e){return e&&typeof e==="string";});
+  db.ref("classes/"+nom).transaction(function(cur){
+    var out={eleves:propres};
+    if(cur&&typeof cur==="object"&&!Array.isArray(cur)){
+      for(var k in cur){
+        if(k==="eleves") continue;          // remplacée
+        if(/^\d+$/.test(k)) continue;       // résidu indexé : purgé (les élèves vivent dans .eleves)
+        out[k]=cur[k];                      // métadonnée : préservée
+      }
+    }
+    if(meta&&typeof meta==="object"){ for(var m in meta){ if(meta[m]!==undefined) out[m]=meta[m]; } }
+    if(out.archivee===undefined) out.archivee=false;
+    return out;
+  }, function(err, committed){ if(cb) cb(err||null, committed); });
+}
+
+// ── 6. Suppression d'élève : INTERDITE hors MJPC ──
+// Une seule logique de suppression, dans la console MJPC (archive avant tout).
+// Les apps remplacent leurs boutons de suppression par ce renvoi.
+var MJPC_URL="https://siteflow-io.github.io/monsieurjaipascompris/index.html";
+function renvoyerVersMJPC(motif){
+  var msg="La gestion des \u00e9l\u00e8ves (ajout, retrait, archivage) se fait dans MJPC, pour que rien ne se perde."
+        +(motif?"\n\n("+motif+")":"");
+  if(typeof window!=="undefined"&&window.confirm(msg+"\n\nOuvrir MJPC ?")){ window.open(MJPC_URL,"_blank"); }
+}
+
+// ── 7. Identification nominative : le portail commun (logique) ──
+// Toute identification produit des élèves SINGULIERS (clé canonique), que le
+// travail soit individuel ou en groupe. Le groupe est un contenant, pas une identité.
+// resolveEleves(roster, saisies) → [{nom, cle}] ou {erreur}
+//   roster  : liste des noms de la classe (extractEleves)
+//   saisies : ["DUPONT Marie", …] (chips) ou [{nom:"DUPONT",prenom:"Marie"}] (champs)
+function resolveEleves(roster, saisies){
+  var res=[], vus={};
+  for(var i=0;i<(saisies||[]).length;i++){
+    var s=saisies[i], trouve=null;
+    if(typeof s==="string"){
+      for(var j=0;j<roster.length;j++){ if(roster[j]===s){trouve=roster[j];break;} }
+      if(!trouve){ var k=sanMJPC(s); for(j=0;j<roster.length;j++){ if(sanMJPC(roster[j])===k){trouve=roster[j];break;} } }
+    } else if(s&&s.nom&&s.prenom){
+      var nomU=String(s.nom).trim().toUpperCase(), preL=String(s.prenom).trim().toLowerCase();
+      for(j=0;j<roster.length;j++){
+        var parts=roster[j].split(" ");
+        var rNom=parts.slice(0,-1).join(" ").toUpperCase(), rPre=(parts[parts.length-1]||"").toLowerCase();
+        if(rNom===nomU&&rPre===preL){trouve=roster[j];break;}
+      }
+    }
+    if(!trouve) return {erreur:"\u00c9l\u00e8ve introuvable : "+(typeof s==="string"?s:(s.nom+" "+s.prenom))+". V\u00e9rifie l'orthographe."};
+    var cle=sanMJPC(trouve);
+    if(vus[cle]) return {erreur:"\u00c9l\u00e8ve s\u00e9lectionn\u00e9 deux fois : "+trouve};
+    vus[cle]=1; res.push({nom:trouve, cle:cle});
+  }
+  if(!res.length) return {erreur:"Aucun \u00e9l\u00e8ve identifi\u00e9."};
+  return res;
+}
+
+// ── 8. Manifeste (vue projetée, ADDITIVE) ──
+// Les constantes en dur dans l'app restent la source de vérité ; le manifeste
+// n'est qu'une photographie publiée pour MJPC. Incapable de diverger : republiée
+// à chaque chargement prof.
+function publierManifeste(db){
+  try{
+    db.ref("manifestes/"+MJPC_APP.id).set({
+      version: MJPC_CORE_VERSION,
+      app: MJPC_APP,
+      manifeste: MJPC_MANIFESTE||{},
+      purge: MJPC_PURGE||{preserver:[],purger:[]},
+      publie_le: Date.now()
+    });
+  }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
+}
+
+var MJPC_CORE_VERSION="1.0.0";
+// ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
+// ── DÉCLARATION DE L'APP (evaluation-qcm) ──
+var MJPC_APP = {
+  id: "evaluation-qcm",
+  nom: "\u00c9valuation QCM",
+  contenant: "aucun"            // l'\u00e9l\u00e8ve r\u00e9pond seul, sur sa tablette
+};
+var MJPC_MANIFESTE = {
+  noeuds: ["qcm/evaluations","qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes","qcm/settings","mjpcProfils"],
+  notions: []                   // rattachement aux notions : Phase 3 (Concordance)
+};
+var MJPC_PURGE = {
+  preserver: ["qcm/evaluations","qcm/settings"],                            // corpus de conception : survit aux ann\u00e9es
+  purger:    ["qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes","qcm/classes"]  // donn\u00e9es d'\u00e9l\u00e8ves : archive \u2192 purge au reset
+};
+
+// ── ALIAS HISTORIQUES (les centaines d'appels existants restent valides) ──
+function slugClasse(s){ return cleClasse(s); }  // d\u00e9cision 14/07/2026 (\u00a75.12) : la cl\u00e9 du hub EST l'identifiant \u2014 plus de tirets
+function slugify(s){ return sanMJPC(s); }       // cl\u00e9-\u00e9l\u00e8ve canonique
 
 // ════════════════════════════════════════════════════════════════════
 // SCORING — mode strict ou partiel (configuré au niveau de l'éval)
@@ -1098,31 +1272,7 @@ function getURLParams(){
 // du 3 juin 2026). Helper commun extractEleves repris tel quel de
 // correction_dictee.html (L.224) — tolérant à 3 formats Firebase.
 // ════════════════════════════════════════════════════════════════════
-function extractEleves(fbClasse, cfgEleves){
-  cfgEleves = cfgEleves || [];
-  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
-  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
-  if(Array.isArray(fbClasse)){ var a=clean(fbClasse); if(a.length) return a; }
-  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
-    if(Array.isArray(fbClasse.eleves)){
-      var e=fbClasse.eleves.map(function(x){return typeof x==="string"?x:(x&&x.nomComplet)||null;});
-      e=clean(e); if(e.length) return e;
-    }
-    var names=Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){
-      var v=fbClasse[k];
-      if(typeof v==="string") return v;
-      if(v&&typeof v==="object"){
-        if(v.nomComplet) return v.nomComplet;
-        if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
-        if(v.name) return v.name;
-      }
-      return null;
-    });
-    names=clean(names);
-    if(names.length) return names;
-  }
-  return cfgEleves;
-}
+/* extractEleves : fourni par MJPC-CORE (canon), définition locale retirée le 14/07/2026 */
 
 // Normalise les élèves au format interne QCM : [{nomComplet, sexe}, ...]
 // (le sexe peut être absent si la classe a été créée par une autre app).
@@ -1239,14 +1389,12 @@ function migrerClassesUneFois(onDone){
       if(dejaPresente) return;
       // Copie de la classe vers /classes/{nom} SANS les sexes (les sexes vivent
       // désormais dans qcm/eleveSexes, séparément, pour éviter qu'une autre app les écrase).
-      var payload = {nom: c.nom, eleves: (c.eleves||[]).map(function(e){
-        if(typeof e === "object" && e && e.nomComplet){
-          return {nomComplet: e.nomComplet};
-        }
-        return e;
-      })};
-      if(c.niveau) payload.niveau = c.niveau;
-      promises.push(db.ref("classes/"+c.nom).set(payload));
+      // MJPC-CORE : la classe absente est créée via ecrireClasse — format
+      // canonique {eleves:[chaînes], nom, niveau?, archivee:false} d'emblée.
+      var metaCl = c.niveau ? {nom:c.nom, niveau:c.niveau} : {nom:c.nom};
+      promises.push(new Promise(function(resolve){
+        ecrireClasse(db, c.nom, c.eleves||[], metaCl, function(){ resolve(); });
+      }));
       nbCopiees++;
     });
 
@@ -1472,14 +1620,23 @@ function snapshotImport(file, onDone){
       var version = (payload._meta && payload._meta.version) || 1;
       var msg = "⚠️ Écraser toutes les données QCM avec le snapshot du "+dateSnap+" ?\n\n";
       if(aPayloadClasses){
-        msg += "Ce snapshot (v"+version+") contient AUSSI les classes partagées /classes. Restaurer écrasera donc les classes pour TOUTES les apps MJPC (correction de dictée, dictée universelle…).\n";
+        msg += "Ce snapshot (v"+version+") contient AUSSI les classes partagées /classes. Leurs LISTES D'ÉLÈVES seront restaurées classe par classe (écriture non destructive : métadonnées préservées, aucune classe existante supprimée).\n";
       } else {
         msg += "Ce snapshot est ancien (v1, avant juin 2026) et ne contient PAS les classes mutualisées. Les classes actuelles à /classes seront conservées telles quelles.\n";
       }
       if(!confirm(msg+"\nContinuer ?")) return;
       var promises = [db.ref(DB_ROOT).set(dataQcm)];
       if(aPayloadClasses){
-        promises.push(db.ref("classes").set(dataClasses));
+        // MJPC-CORE 14/07/2026 : fini le .set() sur la racine /classes (dette A.1).
+        // Restauration classe par classe via ecrireClasse : la liste d'élèves du
+        // snapshot remplace la liste courante ; archivee/niveau/… sont préservés ;
+        // les classes absentes du snapshot ne sont PAS touchées (jamais de
+        // suppression silencieuse).
+        Object.keys(dataClasses).forEach(function(nomCl){
+          promises.push(new Promise(function(resolve){
+            ecrireClasse(db, nomCl, extractEleves(dataClasses[nomCl], []), function(){ resolve(); });
+          }));
+        });
       }
       Promise.all(promises).then(function(){
         alert("✅ Snapshot importé.");
@@ -2539,8 +2696,9 @@ function preparerQuestionsBilan(ev, reponses, slug){
 function archiverDansProfilsMJPC(sess, ev, classe, reponses){
   if(!sess || !ev || !classe || !reponses) return;
   var classeSlug = classe.slug || sess.classeSlug || "_inconnu";
-  // Ne pas archiver les sessions de test pour ne pas polluer le profil longitudinal
-  if(classeSlug === TEST_CLASSE_SLUG) return;
+  // Ne pas archiver les sessions de test pour ne pas polluer le profil longitudinal.
+  // Généralisé (MJPC-CORE) : toute classe interne (_*) ou de test, y compris héritage.
+  if(classeSlug === TEST_CLASSE_SLUG || estClasseTest(classeSlug) || estClasseTest(classe.nom)) return;
   var mode = modeEval(ev);
   var maxBrut = scoreMaxEval(ev); // en strict = nb_questions ; en partiel = somme nb_bonnes
   var maxP = calculerMaxPondere(ev.questions);
@@ -3323,8 +3481,13 @@ function AppTest(p){
       return Promise.all(cleanups);
     }).then(function(){
       // 2) Créer classe + éval + nouvelle session en parallèle
+      // ecrireClasse normalise les élèves en chaînes : les sexes de TEST_ELEVES
+      // sont écrits dans qcm/eleveSexes (leur vrai nœud), plus jamais dans /classes.
+      var sexesTest = {};
+      TEST_ELEVES.forEach(function(e){ if(e.sexe) sexesTest[slugify(e.nomComplet)] = e.sexe; });
       return Promise.all([
-        db.ref("classes/"+TEST_CLASSE_NOM).set(classeData),
+        new Promise(function(resolve){ ecrireClasse(db, TEST_CLASSE_NOM, classeData.eleves, {nom:TEST_CLASSE_NOM}, function(){ resolve(); }); }),
+        db.ref("qcm/eleveSexes/"+TEST_CLASSE_NOM).set(sexesTest),
         db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(evalData),
         db.ref(DB_ROOT+"/sessions/"+sid).set(sessData)
       ]);
@@ -4451,6 +4614,10 @@ function AppProf(p){
   var s7 = useState({}), classesData = s7[0], setClassesData = s7[1];
   var s8 = useState(false), sessionsMenuOpen = s8[0], setSessionsMenuOpen = s8[1];
 
+  // MJPC-CORE : publication du manifeste (vue projetée — les constantes en dur
+  // restent la source de vérité). Republiée à chaque ouverture prof.
+  useEffect(function(){ publierManifeste(db); }, []);
+
   // Migration silencieuse one-shot : qcm/classes → /classes racine + sexes legacy
   // → qcm/eleveSexes. Idempotente (rien à faire si déjà migré). Message uniquement
   // si quelque chose a effectivement bougé.
@@ -4814,14 +4981,12 @@ function OngletClasses(){
     }
   }
   function supprimerEleve(classeSlug, eleveIdx){
+    // Décision MJPC (§5, validée juin 2026) : une seule logique de suppression,
+    // dans la console MJPC — qui archive TOUJOURS avant d'effacer et supprime
+    // en cascade (classe, codes, sexes, profils). Ici, on renvoie.
     var classe = classes[classeSlug];
-    if(!classe || !classe.eleves || !classe.eleves[eleveIdx]) return;
-    var nom = classe.eleves[eleveIdx].nomComplet || "(sans nom)";
-    if(!confirm("Supprimer « "+nom+" » de cette classe ?\n\nAttention : si des résultats sont déjà archivés pour cet élève (sessions passées, profil longitudinal MJPC), ils ne sont PAS supprimés — seulement l'inscription à la classe. L'élève ne pourra plus se connecter à cette classe avec ce nom.")) return;
-    var nouveaux = classe.eleves.filter(function(_, i){return i !== eleveIdx});
-    var slugEl = slugify(nom);
-    db.ref("classes/"+classe.nom).update({eleves: nouveaux});
-    db.ref("qcm/eleveSexes/"+classe.nom+"/"+slugEl).remove();
+    var nom = classe && classe.eleves && classe.eleves[eleveIdx] ? (classe.eleves[eleveIdx].nomComplet||"") : "";
+    renvoyerVersMJPC(nom ? "Retrait demand\u00e9 : "+nom : null);
   }
   function ajouterEleve(classeSlug, nomComplet, callback){
     var nom = (nomComplet || "").trim();
@@ -4833,7 +4998,9 @@ function OngletClasses(){
     var doublon = existants.some(function(e){return (e.nomComplet||"").toLowerCase().trim() === nom.toLowerCase()});
     if(doublon){ alert("Un élève avec ce nom existe déjà dans cette classe."); return; }
     var nouveaux = existants.concat([{nomComplet:nom}]);
-    db.ref("classes/"+classe.nom).update({eleves: nouveaux}, function(err){
+    // ecrireClasse (MJPC-CORE) : ne touche que la liste, préserve archivee/niveau/…,
+    // normalise les élèves-objets en chaînes canoniques.
+    ecrireClasse(db, classe.nom, nouveaux, function(err){
       if(err){ alert("Erreur : "+err.message); return; }
       if(callback) callback();
     });
@@ -4883,7 +5050,10 @@ function OngletClasses(){
     var elevesPourClasses = elevesNouveaux.map(function(e){
       return {nomComplet: e.nomComplet};
     });
-    db.ref("classes/"+nom).update({nom:nom, eleves:elevesPourClasses, niveau:niveauClasse}, function(err){
+    // MJPC-CORE : écriture non destructive — liste remplacée, métadonnées préservées,
+    // format canonique (chaînes) garanti, résidus indexés purgés.
+    var metaEdit = niveauClasse ? {nom:nom, niveau:niveauClasse} : {nom:nom};
+    ecrireClasse(db, nom, elevesPourClasses, metaEdit, function(err){
       if(err){ alert("Erreur: "+err.message); return; }
       // Écriture des sexes dans le nœud séparé qcm/eleveSexes (s'il y en a).
       var sexesPromises = Object.keys(sexesAReecrire).map(function(slugEl){
@@ -4895,12 +5065,12 @@ function OngletClasses(){
   }
 
   function supprimer(slug){
+    // Décision MJPC (§5) : les classes sont partagées entre toutes les apps —
+    // leur suppression se fait dans la console MJPC, qui archive TOUJOURS avant
+    // d'effacer et nettoie en cascade (codes, sexes, profils). Jamais de
+    // suppression sèche depuis une app.
     var c = classes[slug];
-    if(!c) return;
-    if(!confirm("Supprimer la classe « "+c.nom+" » ?\n\nAttention : cette classe est partagée avec les autres applis MJPC (correction de dictée, etc.). La supprimer ici la supprime pour TOUTES les applis.")) return;
-    // Supprimer la classe ET les sexes M/F associés (sinon ils restent orphelins).
-    db.ref("classes/"+c.nom).remove();
-    db.ref("qcm/eleveSexes/"+c.nom).remove();
+    renvoyerVersMJPC(c && c.nom ? "Suppression demand\u00e9e : classe "+c.nom : null);
   }
 
   function chargerPourEdition(slug){
@@ -7283,16 +7453,11 @@ function PonderationEditor(){
 // ─────────── Onglet Snapshot ───────────
 function OngletSnapshot(){
   function purgerClasses(){
-    if(!confirm("⚠️ ATTENTION CROSS-APPS : tu vas supprimer TOUTES les classes du nœud Firebase partagé /classes.\n\nDepuis juin 2026, les classes sont mutualisées avec correction de dictée, dictée universelle et toutes les autres apps MJPC. Les supprimer ici les supprimera AUSSI dans ces autres apps.\n\nLes évaluations QCM, les sessions et les présences ne seront pas touchées.\n\nCette action est IRRÉVERSIBLE. Il est conseillé d'avoir exporté un snapshot avant. Continuer ?")) return;
-    if(!confirm("Dernière confirmation. Toutes les classes seront supprimées pour TOUTES les apps MJPC. Continuer ?")) return;
-    Promise.all([
-      db.ref("classes").remove(),
-      db.ref(DB_ROOT+"/presence").remove(),
-      db.ref("qcm/eleveSexes").remove()
-    ]).then(function(){
-      alert("✅ Toutes les classes ont été purgées (pour toutes les apps MJPC).");
-      window.location.reload();
-    }).catch(function(err){ alert("Erreur : "+err.message); });
+    // Retiré le 14/07/2026 (décision §4 bis) : la purge des classes — partagées
+    // entre TOUTES les apps — passe par le contrat de purge, exécuté dans la
+    // console MJPC selon le mécanisme archive → confirmation → effacement.
+    // Une app ne détruit jamais un nœud commun.
+    renvoyerVersMJPC("Purge des classes : archive puis effacement, depuis la console MJPC uniquement");
   }
   function purgerEvaluations(){
     if(!confirm("⚠️ Tu vas supprimer TOUTES les évaluations. Les classes et les sessions ne seront pas touchées (mais les sessions passées ne pourront plus afficher leur évaluation).\n\nCette action est IRRÉVERSIBLE.\n\nIl est conseillé d'avoir exporté un snapshot avant. Continuer ?")) return;
