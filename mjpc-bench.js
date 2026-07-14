@@ -58,6 +58,93 @@ function sandbox(noms, prelude, exportsSup) {
     !Object.keys(mock._out).some(k => /^\d+$/.test(k)));
 })();
 
+
+/* ════ SUITE 3 — EMPREINTE ÉLÈVE (Phase 2, lot 2) ════ */
+(function () {
+  const noms = ['_idBlocks', '_idSkeleton', '_idIsTimestampKey', '_idStripClassPrefix', '_idVariants', '_idMatch', '_fpScan', '_fpScanChamp', '_eleveFootprint'];
+  let code = '';
+  for (const n of noms) { const c = corpsFonction(n); if (!c) { section('EMPREINTE'); console.log('  (fonctions absentes — suite ignorée)'); return; } code += c + '\n'; }
+  const sb = {};
+  new Function(code + '; this.x={_idMatch,_eleveFootprint};').call(sb);
+  const { _idMatch, _eleveFootprint } = sb.x;
+  section('EMPREINTE ÉLÈVE (lot 2)');
+  t('_idMatch : clé composée 4e_banksy__aloyeau_elyse ← ALOYEAU Elyse', _idMatch('4e_banksy__aloyeau_elyse', 'ALOYEAU Elyse'));
+  t('_idMatch : clé dégradée CL_MENT_Lylou ← CLÉMENT Lylou', _idMatch('CL_MENT_Lylou', 'CLÉMENT Lylou'));
+  t('_idMatch : pas de faux positif entre élèves', !_idMatch('boivin_eden', 'ALOYEAU Elyse'));
+
+  const fp1 = _eleveFootprint(hub, 'ALOYEAU Elyse', '4E BANKSY');
+  const nodes1 = new Set(fp1.map(x => x.node));
+  t('empreinte ALOYEAU Elyse : mjpcProfils couvert', nodes1.has('mjpcProfils'));
+  t('empreinte ALOYEAU Elyse : plan_de_travail couvert (progress/signaux/connexions)', nodes1.has('plan_de_travail'));
+  t('empreinte : signaux/connexions présents dans les chemins',
+    fp1.some(x => x.path.includes('/signaux/')) && fp1.some(x => x.path.includes('/connexions/')));
+
+  // un lecteur réel de l'applaudimètre (champ lecteur)
+  const hl = (hub.applaudimetre || {}).historiqueLectures || {};
+  const unLecteur = Object.values(hl).map(p => p && p.lecteur).find(Boolean);
+  if (unLecteur) {
+    const fp2 = _eleveFootprint(hub, unLecteur, '');
+    t('empreinte lecteur applaudimètre (' + unLecteur + ') : passage trouvé par CHAMP',
+      fp2.some(x => x.path.startsWith('applaudimetre/historiqueLectures/')));
+  }
+  // eleveSexes QCM
+  const es = ((hub.qcm || {}).eleveSexes || {});
+  const cl0 = Object.keys(es)[0];
+  if (cl0) {
+    const ek0 = Object.keys(es[cl0])[0];
+    const nomDe = ek0.split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+    const fp3 = _eleveFootprint(hub, nomDe, '');
+    t('empreinte : qcm/eleveSexes couvert (' + ek0 + ')', fp3.some(x => x.path.startsWith('qcm/eleveSexes/')));
+  }
+  // GARDE-FOU CAPITAL : l'empreinte ne pointe JAMAIS la conception
+  const interdits = ['/config', 'referentiel', 'chapitres', '/bareme', '/corrige', '/meta', 'manifestes', '/site/', '/dictee\u001f'];
+  const tousFp = [];
+  Object.values(hub.classes || {}).slice(0, 2).forEach((c, i) => {});
+  ['ALOYEAU Elyse', 'BOIVIN Eden', unLecteur || 'X Y'].forEach(n => { _eleveFootprint(hub, n, '4E BANKSY').forEach(x => tousFp.push(x.path)); });
+  const fuite = tousFp.find(p => ['referentiel', 'chapitres', 'manifestes', 'corbeille'].some(m => p.includes(m)) || /\/(config|bareme|corrige|meta)(\/|$)/.test(p));
+  t('GARDE-FOU : aucune empreinte ne pointe la conception (config/referentiel/chapitres/corrige/meta/manifestes/corbeille)', !fuite);
+  if (fuite) console.log('    FUITE :', fuite);
+  // exclusion des binômes (prénoms ambigus)
+  const fpT = _eleveFootprint(hub, 'CALDEIRA Tiago', '3E Charles de Gaulle');
+  t('exclusion à dessein : aucun chemin debats/* (binômes = prénoms, trop ambigu)', !fpT.some(x => x.path.startsWith('debats/')));
+})();
+
+
+/* ════ SUITE 4 — PURGE DE RENTRÉE (Phase 2, lot 3) ════ */
+(function () {
+  const x = sandbox(['_b2GetPath', '_purgeResoudreMotif', '_purgeExpand', '_purgePlan'], '');
+  if (!x) { section('PURGE'); console.log('  (fonctions absentes — suite ignorée)'); return; }
+  section('PURGE DE RENTRÉE (lot 3)');
+  const { _purgeResoudreMotif, _purgeExpand, _purgePlan } = x;
+
+  t('wildcard : dictees/*/results → autant que de dictées avec results',
+    _purgeResoudreMotif(hub, 'dictees/*/results').length === Object.values(hub.dictees).filter(d => d.results).length);
+  t('motif inexistant → zéro chemin (pas d\'invention)', _purgeResoudreMotif(hub, 'dictees/*/inexistant').length === 0);
+  t('motif simple : students absent du hub → zéro chemin', _purgeResoudreMotif(hub, 'students').length === 0);
+
+  // PRESERVER PRIME : session purgée SAUF session/reglages (le cas fondateur applause_meter)
+  const hubT = { a: { session: { reglages: { x: 1 }, reader: 'X', classeSlug: 'Y' } } };
+  const del1 = _purgeExpand(hubT, 'a/session', ['a/session/reglages']);
+  t('preserver prime : a/session éclatée en enfants, reglages épargné',
+    del1.length === 2 && del1.includes('a/session/reader') && del1.includes('a/session/classeSlug') && !del1.includes('a/session/reglages'));
+  t('preserver prime : chemin lui-même préservé → aucun delete', _purgeExpand(hubT, 'a/session/reglages', ['a/session/reglages']).length === 0);
+  t('sans branche préservée → delete du bloc entier', _purgeExpand(hubT, 'a/session', []).join() === 'a/session');
+
+  // Plan complet sur le hub réel avec les VRAIS manifestes publiés
+  const res = _purgePlan(hub);
+  const apps = Object.keys(res.parApp);
+  t('plan : les 10 manifestes lus (' + apps.length + ')', apps.length === 10);
+  t('plan : jamais un chemin de conception',
+    !res.plan.some(p => ['referentiel', 'chapitres', 'manifestes', 'corbeille'].some(m => p.path.includes(m)) || /\/(config|bareme|corrige|meta|reglages|dictee)$/.test(p.path)));
+  t('plan : applaudimetre/session/reglages épargné, le reste de session purgé',
+    !res.plan.some(p => p.path === 'applaudimetre/session/reglages') &&
+    !res.plan.some(p => p.path === 'applaudimetre/session') &&
+    res.plan.some(p => p.path.startsWith('applaudimetre/session/')));
+  t('plan : dédoublonné inter-apps', new Set(res.plan.map(p => p.path)).size === res.plan.length);
+  t('plan : mesurable (taille totale > 0)', Object.values(res.parApp).reduce((a, d) => a + d.taille, 0) > 0);
+  console.log('    → dry-run réel :', res.plan.length, 'emplacements sur', apps.length, 'contrats');
+})();
+
 /* ════ SUITE 2 — CORBEILLE (Phase 2, lot 1) ════ */
 (async function () {
   const prelude = `var FIREBASE_BASE='https://mock';var _puts=[];
