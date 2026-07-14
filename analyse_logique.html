@@ -1032,22 +1032,29 @@ var SEED = {
 
 /* ════════════ ZONE 2 — FIREBASE ════════════ */
 // Config PARTAGÉE avec correction_dictee / dictee_universelle -> /classes mutualisé.
-firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDomain:"dictee-5e-ch4.firebaseapp.com",databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"dictee-5e-ch4",storageBucket:"dictee-5e-ch4.appspot.com"});
+firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"});
 var db = firebase.database();
 var ROOT = "analyse_logique";
 
 // Helper repris de correction_dictee (~L233) : tolérant à 3 formats de classe.
 function extractEleves(fbClasse, cfgEleves){
   cfgEleves = cfgEleves || [];
-  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") return fbClasse;
-  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
-    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
-    var keys = Object.keys(fbClasse).filter(function(k){ return k!=="niveau"&&k!=="annee"&&k!=="id"&&k!=="title"&&k!=="nom"&&!k.startsWith("_"); });
-    var names = keys.map(function(k){ var v=fbClasse[k];
-      if(typeof v==="string")return v;
-      if(v&&typeof v==="object"){ if(v.nom&&v.prenom)return String(v.nom).toUpperCase()+" "+v.prenom; if(v.nomComplet)return v.nomComplet; if(v.name)return v.name; }
-      return null; }).filter(function(x){return x&&typeof x==="string"});
-    if(names.length>0)return names;
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  function nomDe(v){
+    if(typeof v==="string") return v;
+    if(v&&typeof v==="object"){
+      if(v.nomComplet) return v.nomComplet;
+      if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+      if(v.name) return v.name;
+    }
+    return null;
+  }
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse.map(nomDe)); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves.map(nomDe)); if(e.length) return e; }
+    var names=clean(Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){return nomDe(fbClasse[k]);}));
+    if(names.length) return names;
   }
   return cfgEleves;
 }
