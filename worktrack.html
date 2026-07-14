@@ -7153,11 +7153,11 @@ const PROF = {
     // masquer le titre « Hors séance » s'il ne reste rien après filtre (sinon titre orphelin)
     document.querySelectorAll('details[data-dk="horsseance"]').forEach(d=>{ const any=[...d.querySelectorAll('.sui-card')].some(c=>c.style.display!=='none'); d.style.display=(q && !any)?'none':''; }); },
   open(){ $("profOverlay").classList.add("show"); this.watchProgress();
-    if(!this.authed && lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.tab||this.defaultTab(); }   // el : poste marqué prof → jamais re-saisir le code · eq1 : en séance, on arrive sur le Suivi
+    if(!this.authed && lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.tab||this.defaultTab(); if(MJPC.USE_FIREBASE && window.firebase) publierManifeste(window.firebase.database()); }   // el : poste marqué prof → jamais re-saisir le code · eq1 : en séance, on arrive sur le Suivi
     if(this.authed){ this.render(); SENTINEL.maybeShow(); } else this.gate(); },
   // el1 : au boot, un poste marqué prof ROUVRE le panneau de lui-même — un reload (mise à jour publiée, F5)
   //   ne renvoie JAMAIS sur l'écran de connexion des élèves : seule la sortie explicite rend le poste.
-  bootResume(){ if(lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.defaultTab(); this.open(); } },
+  bootResume(){ if(lsGet("wt_prof_poste")){ this.authed=true; this.tab=this.defaultTab(); if(MJPC.USE_FIREBASE && window.firebase) publierManifeste(window.firebase.database()); this.open(); } },
   // el2 : la SEULE sortie — efface le marqueur, le poste redevient un poste élèves
   rendrePoste(){ if(!confirm("Rendre ce poste aux élèves ? Le code professeur sera redemandé à la prochaine ouverture.")) return;
     lsSet("wt_prof_poste",""); this.authed=false; this.close(); toast("Poste rendu aux élèves."); },
