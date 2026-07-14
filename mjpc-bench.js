@@ -145,6 +145,20 @@ function sandbox(noms, prelude, exportsSup) {
   console.log('    → dry-run réel :', res.plan.length, 'emplacements sur', apps.length, 'contrats');
 })();
 
+
+/* ════ SUITE 5 — ORPHELINS (Phase 2, lot 4) ════ */
+(function () {
+  const x = sandbox(['_orphelins'], 'var _ORPH_BLANCHE={classes:1,manifestes:1,corbeille:1};');
+  if (!x) { section('ORPHELINS'); console.log('  (fonction absente — suite ignorée)'); return; }
+  section('ORPHELINS (lot 4)');
+  const os = x._orphelins(hub);
+  t('sur le hub réel : results est le seul orphelin (' + JSON.stringify(os) + ')', os.length === 1 && os[0] === 'results');
+  t('qcm couvert par préfixe (manifeste déclare qcm/eleveSexes…)', !os.includes('qcm'));
+  t('mjpcProfils couvert (déclaré, hors purge : longitudinal voulu)', !os.includes('mjpcProfils'));
+  t('liste blanche jamais orpheline', !os.includes('classes') && !os.includes('manifestes') && !os.includes('corbeille'));
+  t('détection des futurs : un nœud inconnu ressortirait', x._orphelins(Object.assign({ zombie_2027: { a: 1 } }, hub)).includes('zombie_2027'));
+})();
+
 /* ════ SUITE 2 — CORBEILLE (Phase 2, lot 1) ════ */
 (async function () {
   const prelude = `var FIREBASE_BASE='https://mock';var _puts=[];
