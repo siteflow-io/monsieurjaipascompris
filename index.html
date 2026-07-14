@@ -2528,6 +2528,14 @@ function _idMatch(key,nom){
 }
 /* Empreinte d'un élève : tous les chemins du hub où il laisse une donnée.
    fam : 'nc' = Nom et code (Classes, Codes élèves) ; 'tr' = Travail (productions). */
+/* Scan par CHAMP : l'élève est porté par une valeur (ex : historiqueLectures/<p_id>.lecteur,
+   journal/<entry>.nom) — la clé, elle, est un identifiant technique. */
+function _fpScanChamp(bag,champ,nom,basePath,node,fp){
+  if(!bag||typeof bag!=='object')return;
+  Object.keys(bag).forEach(function(k){var e=bag[k];
+    if(e&&typeof e==='object'&&e[champ]&&_idMatch(String(e[champ]),nom))
+      fp.push({node:node,fam:'tr',op:'delete',key:k+' ('+e[champ]+')',path:basePath+'/'+k});});
+}
 function _fpScan(hub,node,subs,nom,fp){
   var v=hub[node]||{};Object.keys(v).forEach(function(id){var act=v[id]||{};
     subs.forEach(function(sub){var bag=act[sub];if(bag&&typeof bag==='object')Object.keys(bag).forEach(function(k){
@@ -2538,7 +2546,7 @@ function _eleveFootprint(hub,nom,slug){
   fp.push({node:'classes',fam:'nc',op:'name-remove',key:nom,slug:slug,path:'classes/'+slug});      /* retrait du nom, étiquette "archivee" préservée */
   var codes=hub.codes||{};Object.keys(codes).forEach(function(k){var e=codes[k];
     if(e&&typeof e==='object'&&_idMatch(k,nom))fp.push({node:'codes',fam:'nc',op:'delete',key:k,path:'codes/'+k});});
-  _fpScan(hub,'dictees',['results'],nom,fp);
+  _fpScan(hub,'dictees',['results','codes','drafts','locks','contestations','autocorrect'],nom,fp);
   _fpScan(hub,'correction_dictee',['results','autocorrection','amenages','exercices_results'],nom,fp);
   _fpScan(hub,'reecritures',['corrections','presence','snapshots'],nom,fp);
   _fpScan(hub,'reecriture_bb4e',['autocorrection','absents','notesFictives','corrections','presence','snapshots'],nom,fp);
@@ -2547,12 +2555,28 @@ function _eleveFootprint(hub,nom,slug){
   var rr=hub.results||{};Object.keys(rr).forEach(function(k){
     if(_idMatch(k,nom))fp.push({node:'results',fam:'tr',op:'delete',key:k,path:'results/'+k});});
   var pt=hub.plan_de_travail||{};Object.keys(pt).forEach(function(scope){var sc=pt[scope]||{};
-    ['progress','control','sessions','archives'].forEach(function(sub){var bag=sc[sub]||{};
+    ['progress','control','sessions','archives','signaux','connexions'].forEach(function(sub){var bag=sc[sub]||{};
       if(bag&&typeof bag==='object')Object.keys(bag).forEach(function(chap){var leaf=bag[chap];
         if(leaf&&typeof leaf==='object')Object.keys(leaf).forEach(function(k){
           if(_idMatch(k,nom))fp.push({node:'plan_de_travail',fam:'tr',op:'delete',key:k,path:'plan_de_travail/'+scope+'/'+sub+'/'+chap+'/'+k});});});});});
   var apc=(hub.applaudimetre||{}).classes||{};Object.keys(apc).forEach(function(s){var els=(apc[s]&&apc[s].eleves)||[];
     if(Array.isArray(els))els.forEach(function(n){if(_idMatch(n,nom))fp.push({node:'applaudimetre',fam:'tr',op:'name-remove',key:n,path:'applaudimetre/classes/'+s+'/eleves'});});});
+  /* ── extension lot 2 (14/07/2026) : couverture complète post-passe-socle ── */
+  var mp=hub.mjpcProfils||{};Object.keys(mp).forEach(function(cl){var bag=mp[cl]||{};Object.keys(bag).forEach(function(k){
+    if(_idMatch(k,nom))fp.push({node:'mjpcProfils',fam:'tr',op:'delete',key:k,path:'mjpcProfils/'+cl+'/'+k});});});
+  var qs=(hub.qcm||{}).eleveSexes||{};Object.keys(qs).forEach(function(cl){var bag=qs[cl]||{};Object.keys(bag).forEach(function(k){
+    if(_idMatch(k,nom))fp.push({node:'qcm',fam:'tr',op:'delete',key:k,path:'qcm/eleveSexes/'+cl+'/'+k});});});
+  ['students','students_sim','eleves_index'].forEach(function(n){var bag=hub[n]||{};Object.keys(bag).forEach(function(k){
+    if(_idMatch(k,nom))fp.push({node:n,fam:'tr',op:'delete',key:k,path:n+'/'+k});});});
+  _fpScanChamp((hub.applaudimetre||{}).historiqueLectures,'lecteur',nom,'applaudimetre/historiqueLectures','applaudimetre',fp);
+  var cpt=(hub.applaudimetre||{}).compteurLectures||{};Object.keys(cpt).forEach(function(s){var bag=cpt[s]||{};
+    if(bag&&typeof bag==='object')Object.keys(bag).forEach(function(k){
+      if(_idMatch(k,nom))fp.push({node:'applaudimetre',fam:'tr',op:'delete',key:k,path:'applaudimetre/compteurLectures/'+s+'/'+k});});});
+  Object.keys(hub.plan_de_travail||{}).forEach(function(scope){var jn=((hub.plan_de_travail[scope]||{}).journal)||{};
+    Object.keys(jn).forEach(function(chap){_fpScanChamp(jn[chap],'nom',nom,'plan_de_travail/'+scope+'/journal/'+chap,'plan_de_travail',fp);});});
+  /* EXCLUS À DESSEIN : debats/<id>/active/binomes et debats/<id>/archives — les binômes ne portent
+     que des PRÉNOMS (["Tiago","Auriane"]) : matching trop ambigu pour une destruction automatique
+     (risque de faux positif entre homonymes). La purge annuelle (contrat pilotage) les couvre en bloc. */
   return fp;
 }
 /* Suppression Firebase ciblée d'un chemin (REST). Inerte tant que l'écran ne l'appelle pas. */
@@ -2566,7 +2590,7 @@ function _fbPutPath(path,data){return fetch(FIREBASE_BASE+'/'+_b2Url(path)+'.jso
 function _b2Eleves(slug){return extractEleves(_b2.hub.classes&&_b2.hub.classes[slug])||[];}
 function _b2GetPath(root,path){var p=String(path).split('/'),o=root,i;for(i=0;i<p.length;i++){if(o==null)return undefined;o=o[p[i]];}return o;}
 function _b2SetPath(root,path,val){var p=String(path).split('/'),o=root,i;for(i=0;i<p.length-1;i++){o[p[i]]=o[p[i]]||{};o=o[p[i]];}o[p[p.length-1]]=val;}
-function _b2Label(node){var L={classes:'Classes',codes:'Codes élèves',dictees:'Dictées',correction_dictee:'Corrections de dictées',reecritures:'Réécritures',reecriture_bb4e:'Réécritures (brevet 4e)',classes_amenages:'Élèves à dispositif aménagé',results:'Résultats QCM',plan_de_travail:'Plans de travail',applaudimetre:'Applaudimètre'};return L[node]||node;}
+function _b2Label(node){var L={classes:'Classes',codes:'Codes élèves',dictees:'Dictées',correction_dictee:'Corrections de dictées',reecritures:'Réécritures',reecriture_bb4e:'Réécritures (brevet 4e)',classes_amenages:'Élèves à dispositif aménagé',results:'Résultats QCM',plan_de_travail:'Plans de travail',applaudimetre:'Applaudimètre',mjpcProfils:'Profils MJPC',qcm:'QCM (fiche élève)',students:'Carnets d\'erreurs',students_sim:'Carnets d\'erreurs (simulation)',eleves_index:'Index des élèves'};return L[node]||node;}
 function _b2Legend(){return '<div class="b2-legend"><span class="b2-lg"><span class="b2-dot j"></span><b>Nom et code</b></span><span class="b2-lg"><span class="b2-dot o"></span><b>Travail</b></span><span class="b2-lg"><span class="b2-dot g"></span><b>Cours</b> — jamais touché</span></div>';}
 
 function _b2Open(){
@@ -2724,6 +2748,110 @@ function _corbeillePuis(motif,extract,meta,suite){
   });
 }
 /* ===== fin CORBEILLE ===== */
+
+/* ===== PURGE DE RENTRÉE — exécuteur des contrats de purge (Phase 2, lot 3) =====
+   Lit les manifestes publiés par les apps (manifestes/<id>.purge), résout les motifs
+   (wildcard * = tous les enfants existants) contre un hub FRAIS, applique la règle
+   « PRESERVER PRIME SUR PURGER » (une branche préservée survit même englobée par un
+   motif purgé — cas applaudimetre/session/reglages ⊂ session), et impose un DRY-RUN
+   chiffré avant toute exécution. Chaîne réelle : fichier local → corbeille → frappe
+   « PURGER » → effacement séquentiel → bilan. */
+function _purgeResoudreMotif(hub,motif){
+  var segs=String(motif).split('/'),out=[['']];
+  segs.forEach(function(s){var nx=[];out.forEach(function(pref){
+    var base=pref[0]?_b2GetPath(hub,pref[0]):hub;
+    if(s==='*'){if(base&&typeof base==='object')Object.keys(base).forEach(function(k){nx.push([pref[0]?pref[0]+'/'+k:k]);});}
+    else{if(base&&typeof base==='object'&&base[s]!==undefined)nx.push([pref[0]?pref[0]+'/'+s:s]);}
+  });out=nx;});
+  return out.map(function(p){return p[0];});
+}
+/* Expansion d'un chemin purgé face aux branches préservées : rend la liste des DELETE concrets. */
+function _purgeExpand(hub,path,preservers){
+  if(preservers.indexOf(path)>=0)return [];                       /* chemin lui-même préservé */
+  var dessous=preservers.some(function(p){return p.indexOf(path+'/')===0;});
+  if(!dessous)return [path];                                      /* rien à préserver dessous : delete du bloc */
+  var node=_b2GetPath(hub,path),out=[];
+  if(!node||typeof node!=='object')return [path];
+  Object.keys(node).forEach(function(k){out=out.concat(_purgeExpand(hub,path+'/'+k,preservers));});
+  return out;
+}
+function _purgePlan(hub){
+  var manifs=hub.manifestes||{},plan=[],parApp={};
+  Object.keys(manifs).forEach(function(app){
+    var m=manifs[app]||{},pg=(m.purge&&m.purge.purger)||[],pv=(m.purge&&m.purge.preserver)||[];
+    var preservers=[];pv.forEach(function(mot){preservers=preservers.concat(_purgeResoudreMotif(hub,mot));});
+    var chemins=[];
+    pg.forEach(function(mot){_purgeResoudreMotif(hub,mot).forEach(function(c){
+      _purgeExpand(hub,c,preservers).forEach(function(x){chemins.push(x);});});});
+    var uniq={};chemins=chemins.filter(function(c){if(uniq[c])return false;uniq[c]=1;return true;});
+    var taille=0;chemins.forEach(function(c){var v=_b2GetPath(hub,c);if(v!==undefined)taille+=JSON.stringify(v).length;});
+    parApp[app]={chemins:chemins,preservers:preservers,taille:taille,nom:(m.app&&m.app.nom)||app};
+    chemins.forEach(function(c){plan.push({app:app,path:c});});
+  });
+  /* dédoublonnage inter-apps (un chemin revendiqué deux fois ne se purge qu'une fois) */
+  var seen={};plan=plan.filter(function(x){if(seen[x.path])return false;seen[x.path]=1;return true;});
+  return {plan:plan,parApp:parApp};
+}
+var _pr={hub:null,res:null};
+function _purgeOpen(){
+  _showConsoleModal('Purge de rentrée','<div class="cm-sub">Lecture du hub et des contrats…</div>',[{label:'Annuler',cls:'ghost'}]);
+  _fbReadAll().then(function(hub){_pr.hub=hub;_pr.res=_purgePlan(hub);_purgeDryRun();})
+    .catch(function(){_showConsoleModal('Erreur','<div class="cm-sub">Lecture du hub impossible (réseau ?).</div>',[{label:'Fermer',cls:'ghost'}]);});
+}
+function _purgeDryRun(){
+  var r=_pr.res,apps=Object.keys(r.parApp).sort(),totC=r.plan.length,totT=0;
+  var rows=apps.map(function(a){var d=r.parApp[a];totT+=d.taille;
+    return '<div class="b2-ln"><span><b>'+escapeHtml(d.nom)+'</b> — '+d.chemins.length+' emplacement'+(d.chemins.length>1?'s':'')+' · '+_humanSize(d.taille)+'</span>'
+      +'<span class="b2-how">'+(d.preservers.length?('préservé : '+d.preservers.length+' branche'+(d.preservers.length>1?'s':'')):'')+'</span></div>';}).join('');
+  var body='<div class="cm-sub"><b>SIMULATION</b> — rien n\u2019est encore touché. Voici ce que la purge ferait, contrat par contrat :</div>'
+    +rows
+    +'<div class="b2-total"><b>'+totC+'</b> emplacements · <b>'+_humanSize(totT)+'</b> de données d\u2019élèves seraient effacés.</div>'
+    +'<div class="b2-intact">⚪ Préservé par contrat : textes, pièges, barèmes, corrigés, référentiels, chapitres, réglages — la conception ne bouge pas.</div>'
+    +'<div class="cm-sub">Détail complet exportable au clic sur « Rapport ».</div>';
+  _showConsoleModal('Purge de rentrée — simulation',body,[
+    {label:'Fermer',cls:'ghost'},
+    {label:'📄 Rapport (JSON)',cls:'ghost',onclick:function(){_saveJSON({_meta:{kind:'dry-run-purge',date:_nowStr(),annee:_anneeScolaire()},plan:_pr.res.plan,parApp:_pr.res.parApp},_tsName('dry-run-purge'));return true;}},
+    {label:'Continuer vers la purge réelle…',cls:'danger',onclick:function(){_purgeSauvegarde();return true;}}
+  ]);
+}
+function _purgeSauvegarde(){
+  var body='<div class="cm-sub">Un <b>fichier de sauvegarde complet du hub</b> va être enregistré chez toi, puis une <b>copie des données purgées</b> ira en corbeille cloud (1 an). Ensuite seulement, la confirmation finale.</div>';
+  _showConsoleModal('Purge — sauvegardes',body,[
+    {label:'← Retour',cls:'ghost',onclick:function(){_purgeDryRun();return true;}},
+    {label:'⬇ Enregistrer la sauvegarde…',cls:'primary',onclick:function(){
+      _saveJSON(_pr.hub,_tsName('sauvegarde-avant-purge')).then(function(ok){
+        if(!ok){_purgeDryRun();return;}
+        var extract={};_pr.res.plan.forEach(function(x){var v=_b2GetPath(_pr.hub,x.path);if(v!==undefined)_b2SetPath(extract,x.path,v);});
+        _corbeillePuis('purge-rentree',extract,{emplacements:_pr.res.plan.length},function(chemin){_purgeConfirm(chemin);});
+      });return true;}}
+  ]);
+}
+function _purgeConfirm(cheminCorbeille){
+  var body='<div class="cm-ok">✓ Sauvegardes faites'+(cheminCorbeille?(' · corbeille : <code>'+escapeHtml(cheminCorbeille)+'</code>'):' (fichier local seul)')+'</div>'
+    +'<div class="cm-sub" style="margin-top:10px">Pour lancer la purge de rentrée, tape <code>PURGER</code> en majuscules.</div>'
+    +'<input class="b2-input" id="prcf" placeholder="Tape PURGER" autocomplete="off"><div id="prcferr" class="b2-err"></div>'
+    +'<div class="b2-total"><b>'+_pr.res.plan.length+'</b> emplacements. Geste définitif côté hub (mais réversible via tes sauvegardes).</div>';
+  _showConsoleModal('Purge — confirmation finale',body,[
+    {label:'Annuler',cls:'ghost'},
+    {label:'🧹 Purger définitivement',cls:'danger',onclick:function(){
+      var v=(document.getElementById('prcf')||{}).value||'';
+      if(v.trim()!=='PURGER'){var e=document.getElementById('prcferr');if(e)e.textContent='Tape exactement PURGER pour confirmer.';return true;}
+      _purgeExec();return true;}}
+  ]);
+  setTimeout(function(){var i=document.getElementById('prcf');if(i)i.focus();},60);
+}
+function _purgeExec(){
+  var plan=_pr.res.plan,ok={n:0},fail=[];
+  var ops=plan.map(function(x){return function(){return _fbDeletePath(x.path).then(function(){ok.n++;}).catch(function(){fail.push(x.path);});};});
+  _showConsoleModal('Purge en cours…','<div class="cm-sub">Effacement de '+ops.length+' emplacements…</div>',[]);
+  ops.reduce(function(ch,op){return ch.then(op);},Promise.resolve()).then(function(){
+    var body='<div class="'+(fail.length?'cm-sub':'cm-ok')+'">'+(fail.length?'⚠ ':'✓ ')+ok.n+' emplacements purgés'+(fail.length?(' · '+fail.length+' échec(s)'):' · 0 échec')+'.</div>'
+      +'<div class="cm-sub">Le hub est prêt pour la nouvelle année. Conception intacte, sauvegardes chez toi et en corbeille.</div>'
+      +(fail.length?('<div class="b2-fail">'+fail.map(escapeHtml).join('<br>')+'</div><div class="cm-sub">Relance la purge pour réessayer les échecs (les contrats sont idempotents).</div>'):'');
+    _showConsoleModal('Purge terminée',body,[{label:'Fermer',cls:'ghost'}]);
+  });
+}
+/* ===== fin PURGE DE RENTRÉE ===== */
 
 
 /* ===== UNIFIER — moteur ===== */
@@ -3111,7 +3239,7 @@ function _profSectionConfig(){
     +'<div class="tprof-info-row"><span class="tir-label">Firebase</span><span class="tir-value"><code>'+escapeHtml(FIREBASE_BASE.replace('https://','').split('.')[0])+'</code></span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Notifications ntfy.sh</span><span class="tir-value">'+ntfyLine+'</span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Niveaux bloqu\u00e9s</span><span class="tir-value">'+(BLOCKED_LEVELS.join(', ')||'aucun')+'</span></div>'
-    +'<div class="tprof-info-row"><span class="tir-label">Codes prof</span><span class="tir-value">'+PROF_CODES.length+' configur\u00e9'+(PROF_CODES.length>1?'s':'')+'</span></div>'+'<div class="danger-zone"><div class="dz-title">\u26a0 Zone dangereuse</div><div class="dz-sub">Importer un fichier de sauvegarde peut \u00e9craser les donn\u00e9es en ligne. Une archive dat\u00e9e de l\u2019\u00e9tat actuel est t\u00e9l\u00e9charg\u00e9e automatiquement AVANT toute \u00e9criture.</div><button class="mjpc-act danger" title="Restaure ou compl\u00e8te le hub depuis une sauvegarde. Pour en cr\u00e9er une au pr\u00e9alable, va dans Archives \u2192 Exporter." onclick="_importHubStart()">\u2b06 Importer un fichier\u2026</button>'+'<button class="mjpc-act danger" title="Supprimer ou archiver des \u00e9l\u00e8ves et toutes leurs donn\u00e9es." onclick="_b2Open()">\ud83d\udc65 Supprimer / archiver des \u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Donner \u00e0 chaque \u00e9l\u00e8ve une \u00e9tiquette unique, identique dans toutes les apps." onclick="_uniOpen()">\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves\u2026</button>'+'</div>';
+    +'<div class="tprof-info-row"><span class="tir-label">Codes prof</span><span class="tir-value">'+PROF_CODES.length+' configur\u00e9'+(PROF_CODES.length>1?'s':'')+'</span></div>'+'<div class="danger-zone"><div class="dz-title">\u26a0 Zone dangereuse</div><div class="dz-sub">Importer un fichier de sauvegarde peut \u00e9craser les donn\u00e9es en ligne. Une archive dat\u00e9e de l\u2019\u00e9tat actuel est t\u00e9l\u00e9charg\u00e9e automatiquement AVANT toute \u00e9criture.</div><button class="mjpc-act danger" title="Restaure ou compl\u00e8te le hub depuis une sauvegarde. Pour en cr\u00e9er une au pr\u00e9alable, va dans Archives \u2192 Exporter." onclick="_importHubStart()">\u2b06 Importer un fichier\u2026</button>'+'<button class="mjpc-act danger" title="Supprimer ou archiver des \u00e9l\u00e8ves et toutes leurs donn\u00e9es." onclick="_b2Open()">\ud83d\udc65 Supprimer / archiver des \u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Donner \u00e0 chaque \u00e9l\u00e8ve une \u00e9tiquette unique, identique dans toutes les apps." onclick="_uniOpen()">\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Reset annuel : efface les donn\u00e9es d\u2019\u00e9l\u00e8ves selon les contrats publi\u00e9s par les apps. Simulation chiffr\u00e9e obligatoire avant toute action." onclick="_purgeOpen()">\ud83e\uddf9 Purge de rentr\u00e9e\u2026</button>'+'</div>';
 }
 function _profSectionPresence(){
   return '<h2>Pr\u00e9sence live</h2>'
