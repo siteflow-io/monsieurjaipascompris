@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analyse logique — atelier MJPC</title>
+
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+  ANALYSE LOGIQUE — application universelle MJPC
+  Socle v0 — cloné sur le patron de correction_dictee (c'est le moule MJPC).
+  On ne remplace que le cœur métier : moteur "dictée" -> moteur "analyse logique".
+
+  RÈGLES DURES (à ne jamais transgresser)
+  ───────────────────────────────────────
+  • App MÉCANIQUE : AUCUN appel à une IA en cours d'usage. L'IA n'intervient
+    qu'en amont, par le pattern « prompt IA × prof » (l'app fabrique un prompt,
+    le prof dialogue dehors, colle le résultat structuré, le moteur prend le relais).
+    Vrai pour : le corrigé, l'OCR (photo→prompt→collage→marques→validation prof),
+    la banque d'exercices.
+  • Autonome : login / classes / Firebase propres. MJPC viendra en surcouche
+    (bypass login, lecture des nœuds pour le profil longitudinal) — aucun couplage dur.
+  • Tout en Firebase ; ossature minimale ET abondable depuis l'app (référentiel,
+    barème, modes, outils… se créent en place, rien en dur).
+  • Code en zones étanches (cf. ZONES ci-dessous), pas de fonction enfouie,
+    dette traitée activement.
+
+  MODÈLE DE DONNÉES (Firebase Realtime)
+  ───────────────────────────────────────
+  /classes/{NOM}                         élèves — MUTUALISÉ MJPC (lu via extractEleves)
+  /analyse_logique/
+    referentiel/                         LA BANQUE abondable (surcouche taxonomie MJPC)
+      couleurs/{id}   {label, hex}
+      outils/{id}     {label, geste}                 crochet, souligné, entourage, cadre, pointillé, flèche
+      etiquettes/{id} {code, libelle, couleurId, taxo} PP, DPP, FPP, PI, PSR, PSCc, PSCci, VC, VCP, Ant, MS, PR, CDS
+      dimensions/{id} {code, libelle, defautActif}     nomination, marque, couleur, lien… (le barème en cases)
+      modes/{id}      {code, libelle, statut}          delimitation(actif) | libre_phrase | libre_coherence | libre_paragraphe (ecran)
+    baremeDefauts/{CLASSE} {dims:{code:bool}}          défaut par classe (évolue dans l'année)
+    travaux/{id}/
+      config  {titre, classe, niveau, texte, modeCode, base, published, ts}
+      bareme  {dims:{code:bool}}                       surcharge le défaut de la classe
+      corrige {...}                                     analyse de référence (collée via prompt IA×prof) — À VENIR
+      results/{eleveKey}/ {marks:[...], verdicts:{...}, note, absent}
+    todo/{id} {texte, fait, ts}                        zone de développement, persistée
+
+  ZONES DU CODE (étanches — comme le noyau al-core)
+  ───────────────────────────────────────
+  1. DATA      constantes immuables + référentiel par défaut (semence)
+  2. FIREBASE  init, helpers de lecture/écriture, extractEleves
+  3. MOTEUR    barème en cases, computeNote (verdicts -> note) — squelette, à étoffer
+  4. UI        composants React (App / AppProf / AppEleve / écrans)
+  Le NOYAU d'interaction (al-core : crochets, VC, étiquettes, flèche) sera monté
+  dans l'écran de recopie ; il lira le RÉFÉRENTIEL au lieu de coder ses outils en dur.
+
+  TODO (feuille de route — aussi persistée dans /analyse_logique/todo)
+  ───────────────────────────────────────
+  [ ] Monter le noyau al-core dans l'écran Correction (recopie de l'analyse élève)
+  [ ] Moteur d'évaluation : verdicts par dimension (marque/couleur/nomination/lien) + note
+  [ ] Corrigé via prompt IA × prof (collage d'une analyse de référence) + comparaison mécanique
+  [ ] OCR : photo -> prompt -> collage -> marques pré-remplies -> validation prof
+  [ ] Modes « l'élève invente » : phrase imposée -> cohérence textuelle -> paragraphe argumentatif
+  [ ] Onglets cliniques : Bilan, Copies, Fiches imprimables, Suivi, Exercices (clonés de correction_dictee)
+  [ ] Aménagements (registre /classes_amenages, comme correction_dictee)
+  [ ] Éditeur de référentiel complet (réordonner, taxonomie Domaine›Famille›Notion)
+═══════════════════════════════════════════════════════════════════════════════
+-->
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+  :root{
+    --paper:#faf7f0; --card:#fffdf8; --card2:#f3eee2; --ink:#2a2722; --sub:#6b6358;
+    --line:#e4dccb; --muted:#9b9384;
+    --pp:#1b7a39; --ps:#c62828; --pi:#1c1c1c; --ms:#1565c0; --accent:#1565c0;
+    --green:#1b7a39; --orange:#c97a16; --coral:#c62828;
+    --serif:Georgia,'Iowan Old Style',serif;
+    --sans:ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;margin:0}
+  a{color:var(--accent)}
+  .container{max-width:1180px;margin:0 auto;padding:22px 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card2{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .col{display:flex;flex-direction:column;gap:10px}
+  .spacer{flex:1}
+  label{font-size:.82rem;color:var(--sub);font-weight:600}
+  input,select,textarea{font-family:inherit;font-size:.95rem;padding:7px 9px;border:1px solid var(--line);
+    border-radius:8px;background:#fff;color:var(--ink);outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  textarea{width:100%;min-height:120px;resize:vertical;line-height:1.6}
+  .btn{font-family:inherit;font-size:.9rem;padding:8px 14px;border-radius:9px;border:1px solid var(--line);
+    background:var(--card2);color:var(--ink);cursor:pointer;font-weight:600}
+  .btn:hover{border-color:var(--accent)}
+  .btn-pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn-sm{font-size:.8rem;padding:5px 10px}
+  .btn-ghost{background:transparent;border-color:transparent}
+  .btn-ghost:hover{background:var(--card2)}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tab{font-family:inherit;font-size:.9rem;padding:8px 14px;border:none;background:transparent;color:var(--sub);
+    cursor:pointer;border-bottom:2px solid transparent;font-weight:600}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab.todo{margin-left:auto}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:.74rem;padding:2px 9px;border-radius:999px;
+    background:var(--card2);border:1px solid var(--line);color:var(--sub)}
+  .pill.ecran{opacity:.6;font-style:italic}
+  .item{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);
+    border-radius:10px;background:var(--card);margin-bottom:8px}
+  .item:hover{border-color:var(--accent)}
+  .title{font-family:var(--serif);font-size:1.05rem}
+  .muted{color:var(--muted)}
+  .sub{color:var(--sub);font-size:.85rem}
+  .hr{height:1px;background:var(--line);margin:14px 0}
+  .swatch{width:15px;height:15px;border-radius:4px;display:inline-block;vertical-align:middle}
+  .check{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+    background:var(--card);cursor:pointer;user-select:none}
+  .check input{width:16px;height:16px}
+  .topbar{display:flex;align-items:center;gap:12px;padding:12px 18px;background:var(--card);border-bottom:1px solid var(--line)}
+  .brand{font-family:var(--serif);font-size:1.25rem;font-weight:600}
+  .brand .dot{color:var(--accent)}
+  .empty{padding:30px;text-align:center;color:var(--muted);font-style:italic}
+  .mount{min-height:160px;border:1px dashed var(--line);border-radius:12px;background:var(--card2);
+    display:flex;align-items:center;justify-content:center;color:var(--muted);font-style:italic;padding:24px;text-align:center}
+  .fade{animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/plain" id="noyau-tpl">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>Analyse logique — noyau d'interaction</title>
+<style>
+  :root{
+    --pp:#1b7a39; --ps:#c62828; --pi:#1c1c1c;
+    --vc:#1c1c1c; --ms:#1565c0; --box:#1b7a39; --arrow:#1565c0;
+    --ink:#1c1c1c; --muted:#6b6b6b; --line:#e4e2dc; --bg:#faf9f6;
+
+    --gutter-base:11px; --slot:22px;
+    --brk-w:8px; --brk-h:1.28em; --brk-bw:3px;
+    --brk-drop:0.26em;     /* alignement vertical des crochets : + descend / - monte */
+    --cell-lh:1.34;        /* hauteur de cellule mot : rapproche/éloigne soulignement & cadres */
+    --u-w:2.5px; --bx-w:2.5px; --ms-w:2.5px;   /* épaisseurs : soulignement / cadre / entourage */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;}
+  .wrap{max-width:1000px;margin:0 auto;padding:28px 22px 90px;}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;
+    color:var(--muted);font-family:ui-sans-serif,"Segoe UI",system-ui,sans-serif;margin:0 0 2px;}
+  header p{margin:0 0 26px;color:var(--muted);font-size:13.5px;
+    font-family:ui-sans-serif,"Segoe UI",system-ui,sans-serif;}
+
+  #stage{position:relative;z-index:1;font-size:30px;line-height:2.5;padding:36px 16px;background:#fff;
+    border:1px solid var(--line);border-radius:14px;min-height:120px;
+    user-select:none;-webkit-user-select:none;touch-action:none;}
+  #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:4;}
+  .ah{pointer-events:auto;cursor:grab;}
+  @keyframes ah-pulse{ 0%,100%{ r:7px; opacity:1; } 50%{ r:11px; opacity:.5; } }
+  .ah-pulse{ animation:ah-pulse 1.15s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .ah-pulse{ animation:none; } }
+
+  .syl{display:inline-block;vertical-align:baseline;white-space:nowrap;}
+  .word{display:inline-block;vertical-align:baseline;line-height:var(--cell-lh);
+    white-space:nowrap;position:relative;border-radius:5px;}
+  .word.target{background:rgba(0,0,0,.06);}
+  .gutter{display:inline-block;vertical-align:baseline;line-height:var(--cell-lh);
+    white-space:nowrap;text-align:center;width:var(--gutter-base);transition:width .13s ease;border-radius:6px;}
+  .gutter::before{content:"\200B";}            /* baseline de texte pour aligner les marques */
+  .gutter.target{background:rgba(0,0,0,.05);}
+
+  /* VC : trait PLAT (border-radius 0 pour ne pas faire d'accolade aux extrémités) */
+  .m-vc{border-bottom:var(--u-w) solid var(--vc);border-radius:0;}
+  .m-vc-dotted{border-bottom-style:dashed;}   /* segment interne = pas le verbe (adverbe) */
+  /* Ant./VCP : cadre rectangulaire */
+  .m-box{border-top:var(--bx-w) solid var(--box);border-bottom:var(--bx-w) solid var(--box);border-radius:0;}
+  .m-box-l{border-left:var(--bx-w) solid var(--box);}
+  .m-box-r{border-right:var(--bx-w) solid var(--box);}
+  /* MS : CONTOUR en pilule. border-radius:0 sur la base => pas d'arrondi par cellule
+     (cause des bourrelets) ; seules les extrémités gauche/droite sont arrondies. */
+  .m-ms{border-top:var(--ms-w) solid var(--ms);border-bottom:var(--ms-w) solid var(--ms);border-radius:0;}
+  .m-ms-l{border-left:var(--ms-w) solid var(--ms);border-top-left-radius:999px;border-bottom-left-radius:999px;}
+  .m-ms-r{border-right:var(--ms-w) solid var(--ms);border-top-right-radius:999px;border-bottom-right-radius:999px;}
+
+  /* poignées d'étirement (un bout de chaque plage) */
+  .handle{position:absolute;top:50%;width:15px;height:15px;border-radius:50%;background:#fff;
+    border:2.5px solid currentColor;cursor:grab;touch-action:none;z-index:6;
+    box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .handle:active{cursor:grabbing;}
+  .handle::before{content:"";position:absolute;inset:-11px;}   /* zone d'attrape élargie = pointage précis */
+  .handle.h-left{left:0;transform:translate(-115%,-50%);}
+  .handle.h-right{right:0;transform:translate(115%,-50%);}
+  /* VC : poignées AU NIVEAU DU TRAIT (bas du mot), pas au milieu */
+  .handle.h-vc.h-left{top:100%;}
+  .handle.h-vc.h-right{top:100%;}
+  .h-vc{color:var(--vc)} .h-ms{color:var(--ms)} .h-box{color:var(--box)}
+
+  /* crochet */
+  .brk{display:inline-block;vertical-align:baseline;width:var(--slot);text-align:center;
+    cursor:grab;border-radius:6px;transition:background .12s ease;}
+  .brk:hover{background:rgba(0,0,0,.05);}
+  .brk .mark{display:inline-block;pointer-events:none;
+    vertical-align:calc(-1 * var(--brk-drop));width:var(--brk-w);height:var(--brk-h);
+    border-top:var(--brk-bw) solid currentColor;border-bottom:var(--brk-bw) solid currentColor;}
+  .brk.open  .mark{border-left:var(--brk-bw) solid currentColor;}
+  .brk.close .mark{border-right:var(--brk-bw) solid currentColor;}
+  .brk.pp{color:var(--pp)} .brk.ps{color:var(--ps)} .brk.pi{color:var(--pi)}
+
+  /* palette */
+  .palette{position:relative;z-index:10;display:flex;gap:26px;flex-wrap:wrap;margin:26px 0 0;align-items:flex-start;}
+  .group{display:flex;flex-direction:column;gap:8px;}
+  .group > .gtitle{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    font-family:ui-sans-serif,system-ui,sans-serif;}
+  .tools{display:flex;gap:10px;flex-wrap:wrap;}
+  .toolset{display:flex;flex-direction:column;gap:5px;align-items:center;}
+  .toolset .lbl{font-size:10px;color:var(--muted);font-family:ui-sans-serif,system-ui,sans-serif;}
+  .toolrow{display:flex;gap:6px;}
+  .tool{width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid var(--line);border-radius:10px;cursor:grab;
+    touch-action:none;-webkit-user-select:none;user-select:none;}
+  .tool .mark{width:9px;height:26px;border-top:3px solid currentColor;border-bottom:3px solid currentColor;}
+  .tool.open  .mark{border-left:3px solid currentColor;}
+  .tool.close .mark{border-right:3px solid currentColor;}
+  .tool.pp{color:var(--pp)} .tool.ps{color:var(--ps)} .tool.pi{color:var(--pi)}
+  .tool.t-vc{color:var(--vc)}  .tool.t-vc  .mark{width:24px;height:0;border:0;border-bottom:3px solid currentColor;}
+  .tool.t-ms{color:var(--ms)}  .tool.t-ms  .mark{width:22px;height:18px;border:2.5px solid currentColor;border-radius:999px;}
+  .tool.t-box{color:var(--box)}.tool.t-box .mark{width:24px;height:18px;border:2.5px solid currentColor;}
+  .tool.t-dot{color:var(--vc)} .tool.t-dot .mark{width:24px;height:0;border:0;border-bottom:3px dashed currentColor;}
+  .tool.t-arrow{color:var(--arrow)} .tool.t-arrow .mark{width:auto;height:auto;border:0;}
+  .tool.t-label{width:auto;min-width:0;height:32px;padding:0 9px;
+    font:600 13px/1 ui-sans-serif,system-ui,sans-serif;}
+  .group > .gtitle{display:inline-flex;align-items:center;gap:6px;}
+
+  .bar{display:flex;align-items:center;gap:16px;margin-top:26px;
+    font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--muted);}
+  .bar button{font:inherit;color:var(--muted);background:none;border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;cursor:pointer;}
+  .bar button:hover{color:var(--ink)}
+
+  #ghost{position:fixed;top:0;left:0;z-index:50;pointer-events:none;opacity:.92;
+    transform:translate(-9999px,-9999px) translate(-50%,-55%);}
+  #ghost.open{width:var(--brk-w);height:34px;border-top:3px solid currentColor;border-bottom:3px solid currentColor;border-left:3px solid currentColor;}
+  #ghost.close{width:var(--brk-w);height:34px;border-top:3px solid currentColor;border-bottom:3px solid currentColor;border-right:3px solid currentColor;}
+  #ghost.g-vc{width:26px;height:0;border-bottom:3px solid currentColor;}
+  #ghost.g-ms{width:24px;height:18px;border:2.5px solid currentColor;border-radius:999px;}
+  #ghost.g-box{width:26px;height:20px;border:2.5px solid currentColor;}
+  #ghost.g-dot{width:26px;height:0;border-bottom:3px dashed currentColor;}
+  #ghost.g-arrow{width:14px;height:14px;border:2.5px solid currentColor;border-radius:50%;}
+  #ghost.g-label{width:auto;height:auto;font:600 14px/1 ui-sans-serif,system-ui,sans-serif;
+    background:#fff;border:1px solid var(--line);border-radius:7px;padding:4px 8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.2);}
+
+  /* aide contextuelle : bulle qui accompagne l'outil pendant le glisser */
+  #helptip{position:fixed;z-index:9999;display:none;max-width:240px;
+    background:#1565c0;color:#fff;font:normal 12px/1.45 ui-sans-serif,system-ui,sans-serif;
+    text-align:left;padding:9px 11px;border-radius:9px;pointer-events:none;
+    box-shadow:0 6px 20px rgba(0,0,0,.25);}
+header{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Analyse logique — noyau</h1>
+    <p>Crochets : glisse-les dans les espaces (déplaçables, lâcher dans le vide = retirer).
+       Marques : dépose sur un mot ; étire chaque bout par sa poignée ; redépose l'outil dessus pour la retirer.</p>
+  </header>
+
+  <div id="stage" aria-label="phrase à analyser"><div id="content"></div><svg id="ov"></svg></div>
+  <div class="palette" id="palette"></div>
+
+  <div class="bar">
+    <span id="count">0 marque posée</span>
+    <button id="clear" type="button">Tout effacer</button>
+  </div>
+</div>
+
+<div id="ghost"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   ARCHITECTURE — 4 zones étanches.
+   Deux familles de marques :
+     • bracket  (interstice)        : objet positionné, déplaçable, jeté = retiré.
+     • plage    (vc | ms | box)     : [from,to] sur les mots, étirable par 2 poignées,
+                                       re-dépôt de l'outil dessus = retiré.
+   Ajouter un type de plage = 1 entrée MARK + ses classes CSS. Le reste est générique.
+   ============================================================================ */
+
+/* ---------- 1. DATA -------------------------------------------------------- */
+const SENTENCE = (window.__INJ_TEXTE__ || "");
+
+function buildTokens(text){
+  text = text.replace(/[\u2019]/g, "'");
+  const raw = text.match(/[.,;:!?\u2026«»"()]|[^\s.,;:!?\u2026«»"()]+/g) || [];
+  const ELISION = /^(c|d|j|l|m|n|s|t|qu|lorsqu|puisqu|quoiqu|jusqu|presqu)'(.+)$/i;
+  const out = [];
+  for(const r of raw){
+    const m = r.match(ELISION);
+    if(m){ out.push(m[1] + "'"); out.push(m[2]); } else out.push(r);
+  }
+  return out;
+}
+const TOKENS = (window.__INJ_TOKENS__ && window.__INJ_TOKENS__.length) ? window.__INJ_TOKENS__ : buildTokens(SENTENCE);
+const NB_GUTTERS = TOKENS.length + 1;
+
+const CLOSING = new Set([",", ".", "\u2026", ")"]);
+const OPENING = new Set(["("]);
+const isElision = t => /'$/.test(t);
+function buildTight(toks){
+  const n = toks.length, tight = new Array(n + 1).fill(false);
+  for(let i = 0; i <= n; i++){
+    const L = i > 0 ? toks[i-1] : null, R = i < n ? toks[i] : null;
+    if(L && isElision(L)) tight[i] = true;
+    else if(R && CLOSING.has(R)) tight[i] = true;
+    else if(L && OPENING.has(L)) tight[i] = true;
+  }
+  return tight;
+}
+const TIGHT = buildTight(TOKENS);
+
+const KINDS = {
+  PP: { cls:"pp", label:"PP", title:"Principale",   info:"Proposition principale. Glisse un crochet ouvrant dans l'espace avant son premier mot, et un crochet fermant dans l'espace après son dernier mot." },
+  PS: { cls:"ps", label:"PS", title:"Subordonnée",  info:"Proposition subordonnée. Glisse un crochet ouvrant et un crochet fermant dans les espaces qui l'encadrent." },
+  PI: { cls:"pi", label:"PI", title:"Indépendante", info:"Proposition indépendante. Glisse un crochet dans l'espace à chacune de ses deux extrémités." },
+};
+const MARK = {                                  // plages étirables
+  vc:  { label:"VC",       title:"Verbe conjugué",   info:"Verbe conjugué. Glisse le trait sur un mot, puis tire chaque poignée pour l'étendre à tout le verbe." },
+  ms:  { label:"MS",       title:"Mot subordonnant", info:"Mot subordonnant. Glisse l'entourage sur le mot ; tire les poignées s'il tient en plusieurs mots." },
+  box: { label:"Ant./VCP", title:"Antécédent · verbe complété", info:"Antécédent ou verbe complété. Glisse l'encadrement sur le mot ; tire les poignées pour couvrir plusieurs mots." },
+};
+const DOT_INFO = "Glisse le pointillé sur un mot situé à l'intérieur d'un verbe souligné, pour l'en exclure.";
+const ARROW_INFO = "Relie un subordonnant à son antécédent. Glisse la flèche sur le mot de départ, puis tire sa pointe (qui clignote) jusqu'au mot d'arrivée.";
+const LABEL_HELP = "Glisse ce nom sur la proposition ou le groupe qu'il désigne : il s'inscrit en dessous.";
+const isRangeType = t => t === "vc" || t === "ms" || t === "box";
+// Étiquettes textuelles que l'ÉLÈVE pose lui-même (jeu repris du PPT, à compléter librement).
+// c = suffixe de variable couleur : pp(vert) ps(rouge) pi(noir) vc(noir) ms(bleu) box(vert)
+const _LABELS_DUR = {
+  PP:{t:"PP",c:"pp"}, DPP:{t:"DPP",c:"pp"}, FPP:{t:"FPP",c:"pp"}, PI:{t:"PI",c:"pi"},
+  PSR:{t:"PSR",c:"ps"}, PSCc:{t:"PSCc",c:"ps"}, PSCci:{t:"PSCci",c:"ps"},
+  VC:{t:"VC",c:"vc"}, VCP:{t:"VCP",c:"box"}, Ant:{t:"Ant.",c:"box"},
+  MS:{t:"MS",c:"ms"}, PR:{t:"PR",c:"ms"}, CDS:{t:"CDS",c:"ms"},
+};
+const _LABEL_TARGET_DUR = {
+  PP:["prop","pp"], DPP:["prop","pp"], FPP:["prop","pp"], PI:["prop","pi"],
+  PSR:["prop","ps"], PSCc:["prop","ps"], PSCci:["prop","ps"],
+  VC:["mark","vc"], VCP:["mark","box"], Ant:["mark","box"], MS:["mark","ms"], PR:["mark","ms"], CDS:["mark","ms"],
+};
+function refVersLabels(etqs){
+  var LAB={}, TGT={};
+  var ids=Object.keys(etqs||{}).sort(function(a,b){ return ((etqs[a]&&etqs[a].ordre)||0)-((etqs[b]&&etqs[b].ordre)||0); });
+  ids.forEach(function(id){ var e=etqs[id]; if(!e||!e.code||!e.cible||e.cible.length<2) return; LAB[e.code]={t:e.code,c:e.cible[1]}; TGT[e.code]=[e.cible[0],e.cible[1]]; });
+  return {LABELS:LAB, LABEL_TARGET:TGT};
+}
+const __REF_BUILT = (typeof window!=="undefined" && window.__INJ_REF__ && window.__INJ_REF__.etiquettes) ? refVersLabels(window.__INJ_REF__.etiquettes) : null;
+const LABELS = (__REF_BUILT && Object.keys(__REF_BUILT.LABELS).length) ? __REF_BUILT.LABELS : _LABELS_DUR;
+const LABEL_TARGET = (__REF_BUILT && Object.keys(__REF_BUILT.LABEL_TARGET).length) ? __REF_BUILT.LABEL_TARGET : _LABEL_TARGET_DUR;;
+
+/* ---------- 2. STATE ------------------------------------------------------- */
+const state = {
+  // { id, type:"bracket", gutter, side, kind }
+  // { id, type:"vc"|"ms"|"box", from, to }
+  marks: [],
+  // place  : { mode:"place",  tool, fromId, target }
+  // resize : { mode:"resize", id, end:"from"|"to" }
+  drag: null,
+};
+let _seq = 1;
+let hoverId = null;   // VUE éphémère : quelle plage montre ses poignées (survol / édition)
+let dragHi = null;    // VUE éphémère : segment {from,to} à éclairer pendant un drag d'étiquette
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+/* ---------- 3. ACTIONS ----------------------------------------------------- */
+function startPlace(tool){ state.drag = { mode:"place", tool, fromId:null, target:null }; render(); }
+function startBracketPickup(id){
+  const b = state.marks.find(x => x.id === id);
+  if(!b || b.type !== "bracket") return;
+  state.marks = state.marks.filter(x => x.id !== id);
+  state.drag = { mode:"place", tool:{type:"bracket", side:b.side, kind:b.kind}, fromId:id, target:null };
+  render();
+}
+function startResize(id, end){ state.drag = { mode:"resize", id, end }; render(); }
+function startLabelPickup(id){
+  const b = state.marks.find(x => x.id === id);
+  if(!b || b.type !== "label") return;
+  state.marks = state.marks.filter(x => x.id !== id);
+  state.drag = { mode:"place", tool:{type:"label", key:b.key}, fromId:id, target:null };
+  render();
+}
+function startRangePickup(id, grabTok){            // saisir une plage entière pour la déplacer
+  const r = state.marks.find(x => x.id === id);
+  if(!r || !isRangeType(r.type)) return;
+  state.marks = state.marks.filter(x => x.id !== id);
+  state.drag = { mode:"place", tool:{type:r.type}, fromId:id, target:null,
+                 span:(r.to - r.from), off:(grabTok - r.from),
+                 dotted:(r.dotted || []).map(x => x - r.from) };
+  render();
+}
+function setTarget(t){ if(!state.drag || state.drag.mode !== "place" || state.drag.target === t) return; state.drag.target = t; render(); }
+function applyResize(t){
+  const d = state.drag; if(!d || d.mode !== "resize" || t === null) return;
+  const r = state.marks.find(m => m.id === d.id); if(!r) return;
+  if(r.type === "arrow"){ if(d.end === "from") r.from = clamp(t, 0, TOKENS.length - 1); else r.to = clamp(t, 0, TOKENS.length - 1); render(); return; }
+  if(d.end === "from") r.from = clamp(Math.min(t, r.to), 0, TOKENS.length - 1);
+  else                 r.to   = clamp(Math.max(t, r.from), 0, TOKENS.length - 1);
+  if(r.dotted) r.dotted = r.dotted.filter(x => x > r.from && x < r.to);   // un pointillé reste interne
+  render();
+}
+// bascule plein <-> pointillé d'un mot INTERNE à une plage VC (l'adverbe entre aux. et participe)
+function toggleDotted(id, i){
+  const r = state.marks.find(m => m.id === id && m.type === "vc"); if(!r) return;
+  if(!(r.from < i && i < r.to)) return;             // jamais sur l'auxiliaire ni le participe (les bouts)
+  const k = r.dotted.indexOf(i);
+  if(k >= 0) r.dotted.splice(k, 1); else r.dotted.push(i);
+  render();
+}
+function place(){
+  const d = state.drag; state.drag = null;
+  if(d && d.mode === "place" && d.target !== null){
+    if(d.tool.type === "bracket"){
+      state.marks.push({ id:_seq++, type:"bracket", gutter:d.target, side:d.tool.side, kind:d.tool.kind });
+    } else if(d.tool.type === "dot"){           // pointille un mot INTERNE à un verbe (sinon : sans effet)
+      const vcr = ranges("vc").find(r => r.from < d.target && d.target < r.to);
+      if(vcr) toggleDotted(vcr.id, d.target);
+    } else if(d.tool.type === "arrow"){
+      const ex = state.marks.find(m => m.type === "arrow" && m.from === d.target);
+      if(ex){ state.marks = state.marks.filter(m => m !== ex); }            // re-dépôt sur l'origine = retrait
+      else { const a = { id:_seq++, type:"arrow", from:d.target, to:d.target }; state.marks.push(a); hoverId = a.id; }
+    } else if(d.tool.type === "label"){
+      if(d.fromId){                                                        // déplacement d'une étiquette reprise
+        state.marks.push({ id:d.fromId, type:"label", token:d.target, key:d.tool.key });
+      } else {
+        const i = state.marks.findIndex(m => m.type === "label" && m.key === d.tool.key && m.token === d.target);
+        if(i >= 0) state.marks.splice(i, 1);                               // re-dépôt identique = retrait
+        else state.marks.push({ id:_seq++, type:"label", token:d.target, key:d.tool.key });
+      }
+    } else {                                    // plage
+      if(d.fromId){                             // déplacement de toute la plage
+        let from = clamp(d.target - (d.off || 0), 0, TOKENS.length - 1);
+        let to   = clamp(from + (d.span || 0), 0, TOKENS.length - 1);
+        from = Math.min(from, to);
+        const dotted = (d.dotted || []).map(x => from + x).filter(x => x > from && x < to);
+        state.marks.push({ id:d.fromId, type:d.tool.type, from, to, dotted });
+      } else {                                  // re-dépôt du même outil sur une plage existante = retrait
+        const i = state.marks.findIndex(m => m.type === d.tool.type && m.from <= d.target && d.target <= m.to);
+        if(i >= 0) state.marks.splice(i, 1);
+        else state.marks.push({ id:_seq++, type:d.tool.type, from:d.target, to:d.target, dotted:[] });
+      }
+    }
+  }
+  render();
+}
+function clearAll(){ state.marks = []; state.drag = null; render(); }
+
+/* ---------- coverage helpers (lecture seule de STATE) ---------------------- */
+function ranges(type){ return state.marks.filter(m => m.type === type); }
+function tokCov(type, i){ return ranges(type).some(r => i >= r.from && i <= r.to); }
+function gutCov(type, g){ return ranges(type).some(r => r.from <= g-1 && r.to >= g); } // couvre g-1 ET g
+function vcDottedAt(i){ return ranges("vc").some(r => r.dotted && r.dotted.indexOf(i) >= 0); }
+function rangeCovering(i){
+  for(const t of Object.keys(MARK)) for(const r of ranges(t)) if(i >= r.from && i <= r.to) return r.id;
+  return null;
+}
+function activeMarkAt(i){
+  for(const t of Object.keys(MARK)) for(const r of ranges(t)) if(i >= r.from && i <= r.to) return r.id;
+  for(const a of ranges("arrow")) if(a.from === i || a.to === i) return a.id;
+  return null;
+}
+
+/* ---------- 4. RENDER (pur) ------------------------------------------------ */
+const stage = document.getElementById("stage");
+const content = document.getElementById("content");
+const ov = document.getElementById("ov");
+
+function bracketsOfGutter(g){
+  return state.marks.filter(m => m.type === "bracket" && m.gutter === g)
+    .sort((a,b) => (a.side === b.side) ? (a.id - b.id) : (a.side === "close" ? -1 : 1));
+}
+function gutterWidth(g, nBrk){
+  const d = state.drag, incoming = (d && d.mode === "place" && d.tool.type === "bracket" && d.target === g) ? 1 : 0;
+  const n = nBrk + incoming;
+  const base = TIGHT[g] ? "0px" : "var(--gutter-base)";
+  return n === 0 ? base : `calc(${base} + ${n} * var(--slot))`;
+}
+function bracketTargeted(g){
+  const d = state.drag; return d && d.mode === "place" && d.tool.type === "bracket" && d.target === g;
+}
+// ---- appariement des crochets en PROPOSITIONS (pile LIFO par couleur, imbrication) ----
+function propositions(){
+  const out = [];
+  for(const col of ["pp","ps","pi"]){
+    const brs = state.marks.filter(m => m.type === "bracket" && KINDS[m.kind].cls === col)
+      .sort((a,b) => a.gutter !== b.gutter ? a.gutter - b.gutter
+                   : (a.side !== b.side ? (a.side === "close" ? -1 : 1) : a.id - b.id));
+    const stack = [];
+    for(const b of brs){
+      if(b.side === "open") stack.push(b.gutter);
+      else { const o = stack.pop(); if(o !== undefined && o <= b.gutter - 1) out.push({ from:o, to:b.gutter - 1, col }); }
+    }
+  }
+  return out;
+}
+function propAt(col, i){                       // proposition la plus INTERNE de cette couleur contenant i
+  let best = null;
+  for(const p of propositions()) if(p.col === col && p.from <= i && i <= p.to)
+    if(!best || (p.to - p.from) < (best.to - best.from)) best = p;
+  return best;
+}
+function markAt(type, i){ return ranges(type).find(r => r.from <= i && i <= r.to) || null; }
+// chaque étiquette nomme une STRUCTURE : une proposition (par couleur) ou un groupe marqué
+/* LABEL_TARGET défini plus haut (référentiel ou repli dur) */ void 0;
+function labelSegment(key, token){             // segment {from,to} nommé, ou null si rien sous le point
+  const t = LABEL_TARGET[key]; if(!t || token == null) return null;
+  const s = t[0] === "prop" ? propAt(t[1], token) : markAt(t[1], token);
+  return s ? { from:s.from, to:s.to } : null;
+}
+function draggingLabel(){ return state.drag && state.drag.mode === "place" && state.drag.tool.type === "label"; }
+function tokenTargeted(i){
+  const d = state.drag; return d && d.mode === "place" && d.tool.type !== "bracket" && d.target === i;
+}
+function makeGutter(g){
+  const brks = bracketsOfGutter(g);
+  let cls = "gutter";
+  if(bracketTargeted(g)) cls += " target";
+  if(gutCov("vc", g)){ cls += " m-vc"; if(vcDottedAt(g-1) || vcDottedAt(g)) cls += " m-vc-dotted"; }
+  if(gutCov("box", g)) cls += " m-box";
+  if(gutCov("ms", g))  cls += " m-ms";
+  const el = document.createElement("span");
+  el.className = cls; el.dataset.gutter = g;
+  el.style.width = gutterWidth(g, brks.length);
+  for(const b of brks){
+    const c = document.createElement("span");
+    c.className = "brk " + b.side + " " + KINDS[b.kind].cls; c.dataset.id = b.id;
+    const mk = document.createElement("span"); mk.className = "mark"; c.appendChild(mk);
+    el.appendChild(c);
+  }
+  return el;
+}
+function handleVisible(id){
+  if(id === hoverId) return true;
+  return !!(state.drag && state.drag.mode === "resize" && state.drag.id === id);
+}
+function addHandles(w, i){
+  // poignées affichées seulement pour la plage active (survol / étirement) — sinon marque propre
+  for(const type of Object.keys(MARK)){
+    for(const r of ranges(type)){
+      if(!handleVisible(r.id)) continue;
+      if(r.from === i){ w.appendChild(handle(r.id, "from", "h-left",  "h-" + type)); }
+      if(r.to   === i){ w.appendChild(handle(r.id, "to",   "h-right", "h-" + type)); }
+    }
+  }
+}
+function handle(id, end, posCls, colorCls){
+  const h = document.createElement("span");
+  h.className = "handle " + posCls + " " + colorCls;
+  h.dataset.id = id; h.dataset.end = end;
+  return h;
+}
+function makeWord(i){
+  let cls = "word";
+  if(tokCov("vc", i)){ cls += " m-vc"; if(vcDottedAt(i)) cls += " m-vc-dotted"; }
+  if(tokCov("box", i)){ cls += " m-box"; if(!tokCov("box", i-1)) cls += " m-box-l"; if(!tokCov("box", i+1)) cls += " m-box-r"; }
+  if(tokCov("ms", i)){  cls += " m-ms";  if(!tokCov("ms", i-1))  cls += " m-ms-l";  if(!tokCov("ms", i+1))  cls += " m-ms-r"; }
+  if(draggingLabel()){ if(dragHi && i >= dragHi.from && i <= dragHi.to) cls += " target"; }
+  else if(tokenTargeted(i)) cls += " target";
+  const w = document.createElement("span");
+  w.className = cls; w.dataset.tok = i; w.textContent = TOKENS[i];
+  addHandles(w, i);
+  return w;
+}
+function render(){
+  dragHi = draggingLabel() ? labelSegment(state.drag.tool.key, state.drag.target) : null;
+  const frag = document.createDocumentFragment();
+  let syl = document.createElement("span"); syl.className = "syl";
+  syl.appendChild(makeGutter(0));
+  for(let j = 0; j < TOKENS.length; j++){
+    syl.appendChild(makeWord(j));
+    const gi = j + 1;
+    syl.appendChild(makeGutter(gi));
+    if(gi < TOKENS.length && !TIGHT[gi]){
+      frag.appendChild(syl);
+      syl = document.createElement("span"); syl.className = "syl";
+    }
+  }
+  frag.appendChild(syl);
+  content.replaceChildren(frag);
+  const n = state.marks.length;
+  document.getElementById("count").textContent = n + (n > 1 ? " marques posées" : " marque posée");
+  paint();                                   // (re)trace les flèches par-dessus la phrase
+}
+
+/* ---------- couche de tracé SVG : les flèches (dérivée pure de STATE + géométrie) --- */
+const SVGNS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs){
+  const e = document.createElementNS(SVGNS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function anchorTop(tok){
+  const w = stage.querySelector('.word[data-tok="' + tok + '"]');
+  if(!w) return null;
+  const r = w.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  return { x: r.left - s.left - stage.clientLeft + r.width/2, y: r.top - s.top - stage.clientTop };
+}
+function rectIn(el){
+  const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  const ox = s.left + stage.clientLeft, oy = s.top + stage.clientTop;
+  return { cx: r.left - ox + r.width/2, top: r.top - oy, bottom: r.bottom - oy };
+}
+function svgLabel(x, y, text, color){
+  // nom posé DANS le calque (interligne) -> n'affecte jamais la mise en page du texte
+  const t = svgEl("text", { x:x, y:y, fill:color, "text-anchor":"middle",
+    "font-family":"ui-sans-serif,system-ui,sans-serif", "font-size":"12", "font-weight":"600",
+    "paint-order":"stroke", stroke:"#fff", "stroke-width":"3.5", "stroke-linejoin":"round" });
+  t.textContent = text;
+  ov.appendChild(t);
+  return t;
+}
+function paint(){
+  ov.setAttribute("viewBox", "0 0 " + stage.clientWidth + " " + stage.clientHeight);
+  while(ov.firstChild) ov.removeChild(ov.firstChild);
+  for(const a of ranges("arrow")){
+    const A = anchorTop(a.from); if(!A) continue;
+    const incomplete = (a.from === a.to);
+    const active = incomplete || hoverId === a.id ||
+      (state.drag && state.drag.mode === "resize" && state.drag.id === a.id);
+    let hx, hy;
+    if(incomplete){
+      hx = A.x + 18; hy = A.y - 24;                         // poignée d'amorce, au-dessus de l'origine
+    } else {
+      const B = anchorTop(a.to); if(!B) continue;
+      const ax = A.x, ay = A.y - 2;
+      const apx = B.x, apy = B.y - 2;                       // pointe : touche le haut de l'antécédent
+      const arc = Math.min(Math.max(Math.abs(apx - ax) * 0.40 + 12, 26), 90);  // galbe (réglable)
+      const topY = Math.min(ay, apy) - arc;
+      const headLen = 11, headW = 5.5;                      // taille de la pointe (réglable)
+      const baseY = apy - headLen;                          // le corps s'arrête ICI = base du triangle
+      // corps : Bézier cubique en « pont », tangentes verticales aux deux extrémités
+      ov.appendChild(svgEl("path", {
+        d:"M " + ax + " " + ay + " C " + ax + " " + topY + " " + apx + " " + topY + " " + apx + " " + baseY,
+        fill:"none", stroke:"var(--arrow)", "stroke-width":"2.5", "stroke-linecap":"round" }));
+      // pointe : triangle vertical, peint PAR-DESSUS le bout du corps (donc jamais mangé)
+      ov.appendChild(svgEl("path", {
+        d:"M " + (apx - headW) + " " + baseY + " L " + (apx + headW) + " " + baseY + " L " + apx + " " + apy + " Z",
+        fill:"var(--arrow)" }));
+      hx = B.x; hy = B.y;
+    }
+    if(active){
+      if(incomplete){
+        ov.appendChild(svgEl("line", { x1:A.x, y1:A.y - 2, x2:hx, y2:hy,
+          stroke:"var(--arrow)", "stroke-width":"1.5", "stroke-dasharray":"3 3", opacity:"0.55" }));
+      }
+      const c = svgEl("circle", { cx:hx, cy:hy, r:"8", fill:"#fff", stroke:"var(--arrow)", "stroke-width":"2.5" });
+      c.setAttribute("class", incomplete ? "ah ah-pulse" : "ah"); c.dataset.id = a.id; c.dataset.end = "to";
+      ov.appendChild(c);
+      if(!incomplete){                                  // poignée d'origine : déplacer la queue de la flèche
+        const c2 = svgEl("circle", { cx:A.x, cy:A.y - 2, r:"7", fill:"#fff", stroke:"var(--arrow)", "stroke-width":"2.5" });
+        c2.setAttribute("class", "ah"); c2.dataset.id = a.id; c2.dataset.end = "from";
+        ov.appendChild(c2);
+      }
+    }
+  }
+  // ---- étiquettes posées PAR L'ÉLÈVE (au-dessus du mot, dans le calque) ----
+  for(const m of state.marks){
+    if(m.type !== "label") continue;
+    const L = LABELS[m.key];
+    const seg = labelSegment(m.key, m.token);                  // structure nommée (ou null)
+    let cx, botY;
+    if(seg){
+      const wf = content.querySelector('.word[data-tok="' + seg.from + '"]');
+      const wt = content.querySelector('.word[data-tok="' + seg.to + '"]');
+      if(!wf || !wt) continue;
+      const rf = rectIn(wf), rt = rectIn(wt);
+      if(Math.abs(rf.top - rt.top) < 4){ cx = (rf.cx + rt.cx) / 2; botY = Math.max(rf.bottom, rt.bottom); }
+      else { const wa = content.querySelector('.word[data-tok="' + m.token + '"]'); if(!wa) continue;
+             const ra = rectIn(wa); cx = ra.cx; botY = ra.bottom; }   // segment multi-lignes : sous l'ancre
+    } else {
+      const w = content.querySelector('.word[data-tok="' + m.token + '"]'); if(!w) continue;
+      const r = rectIn(w); cx = r.cx; botY = r.bottom;            // aucune structure : sous le mot (droit à l'erreur)
+    }
+    const t = svgLabel(cx, botY + 14, L.t, "var(--" + L.c + ")");
+    t.setAttribute("class", "lab"); t.dataset.id = m.id;
+    t.style.pointerEvents = "auto"; t.style.cursor = "grab";
+  }
+}
+
+/* ---------- fantôme (place uniquement) ------------------------------------- */
+const ghost = document.getElementById("ghost");
+function showGhost(tool){
+  if(tool.type === "label"){
+    ghost.className = "g-label"; ghost.textContent = LABELS[tool.key].t;
+    ghost.style.color = `var(--${LABELS[tool.key].c})`; return;
+  }
+  ghost.textContent = "";
+  ghost.className = (tool.type === "bracket") ? tool.side : ("g-" + tool.type);
+  ghost.style.color = (tool.type === "bracket") ? `var(--${KINDS[tool.kind].cls})` : (tool.type === "dot" ? "var(--vc)" : (tool.type === "arrow" ? "var(--arrow)" : `var(--${tool.type})`));
+}
+function moveGhost(x, y){ ghost.style.transform = `translate(${x}px,${y}px) translate(-50%,-55%)`; }
+function hideGhost(){ ghost.style.transform = "translate(-9999px,-9999px)"; }
+
+/* ---------- ciblage -------------------------------------------------------- */
+// Ciblage stable malgré l'interligne : distance au RECTANGLE (0 si dans la bande),
+// la verticale (la LIGNE) pesant 1000x plus que l'horizontale (la colonne) -> pas de saut entre lignes.
+function nearestByRect(sel, x, y, maxDy){
+  let best = null, bd = Infinity, bestDy = Infinity;
+  for(const e of stage.querySelectorAll(sel)){
+    const r = e.getBoundingClientRect();
+    if(r.height === 0) continue;
+    const dy = (y < r.top) ? r.top - y : (y > r.bottom) ? y - r.bottom : 0;
+    const dx = (x < r.left) ? r.left - x : (x > r.right) ? x - r.right : 0;
+    const d = dy * 1000 + dx;
+    if(d < bd){ bd = d; best = e; bestDy = dy; }
+  }
+  return (best && bestDy <= maxDy) ? best : null;
+}
+function nearestGutterIdx(x, y){ const e = nearestByRect(".gutter", x, y, 70); return e ? +e.dataset.gutter : null; }
+function nearestTokenIdx(x, y){ const e = nearestByRect(".word", x, y, 70); return e ? +e.dataset.tok : null; }
+function placeTarget(x, y){ return state.drag.tool.type === "bracket" ? nearestGutterIdx(x, y) : nearestTokenIdx(x, y); }
+
+/* ---------- événements pointeur -------------------------------------------- */
+function onMove(e){
+  e.preventDefault();
+  if(!state.drag) return;
+  if(state.drag.mode === "resize"){ applyResize(nearestTokenIdx(e.clientX, e.clientY)); }
+  else { moveGhost(e.clientX, e.clientY); moveHelp(e.clientX, e.clientY); setTarget(placeTarget(e.clientX, e.clientY)); }
+}
+function onUp(){
+  window.removeEventListener("pointermove", onMove);
+  hideGhost();
+  const d = state.drag;
+  if(d && d.mode === "resize"){ state.drag = null; render(); return; }   // poignée tapée -> garder l'aide
+  const placedFromPalette = d && !d.fromId && d.target !== null;         // outil posé depuis la palette
+  place();
+  if(placedFromPalette) hideHelp();                                      // pose terminée -> masquer ; sinon garder (lecture)
+}
+function beginDrag(e){
+  e.preventDefault();
+  helpPinned = true; showHelp(dragHelpText()); moveHelp(e.clientX, e.clientY);
+  if(state.drag.mode === "place"){
+    showGhost(state.drag.tool); moveGhost(e.clientX, e.clientY);
+    setTarget(placeTarget(e.clientX, e.clientY));
+  } else {
+    applyResize(nearestTokenIdx(e.clientX, e.clientY));
+  }
+  window.addEventListener("pointermove", onMove, { passive:false });
+  window.addEventListener("pointerup", onUp, { once:true });
+}
+ov.addEventListener("pointerdown", e => {
+  const h = e.target.closest(".ah");
+  if(h){ startResize(+h.dataset.id, h.dataset.end || "to"); beginDrag(e); return; }
+  const lb = e.target.closest(".lab");
+  if(lb){ startLabelPickup(+lb.dataset.id); beginDrag(e); }
+});
+stage.addEventListener("pointerdown", e => {
+  const h = e.target.closest(".handle");
+  if(h){ startResize(+h.dataset.id, h.dataset.end); beginDrag(e); return; }
+  const b = e.target.closest(".brk");
+  if(b){ startBracketPickup(+b.dataset.id); beginDrag(e); return; }
+  const w = e.target.closest(".word");
+  if(!w){ if(hoverId !== null){ hoverId = null; render(); } return; }
+  const ti = +w.dataset.tok;
+  const rid = rangeCovering(ti);                   // plage (VC/MS/encadrement) couvrant ce mot
+  if(rid !== null){
+    // APPUI = montrer les poignées (étirer) ; GLISSÉ = déplacer toute la plage
+    const sx = e.clientX, sy = e.clientY;
+    function clean(){ window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); }
+    const move = ev => { if(Math.hypot(ev.clientX - sx, ev.clientY - sy) > 6){ clean(); startRangePickup(rid, ti); beginDrag(ev); } };
+    const up = () => { clean(); if(rid !== hoverId){ hoverId = rid; render(); }
+      const m = state.marks.find(z => z.id === rid); if(m){ showHelp(MARK[m.type].info); moveHelp(sx, sy); helpPinned = true; } };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once:true });
+    return;
+  }
+  const id = activeMarkAt(ti);                     // sinon (flèche…) : révéler ses poignées
+  if(id !== hoverId){ hoverId = id; render(); }
+});
+// survol (desktop) : montrer les poignées de la plage survolée
+stage.addEventListener("pointerover", e => {
+  if(e.pointerType === "mouse" && !helpPinned && !state.drag){
+    const t = placedHelpText(e.target);
+    if(t){ showHelp(t); moveHelp(e.clientX, e.clientY); } else hideHelp();
+  }
+  if(state.drag) return;
+  const w = e.target.closest(".word");
+  if(!w) return;                                   // gutter/poignée : on garde l'état courant
+  const id = activeMarkAt(+w.dataset.tok);
+  if(id !== hoverId){ hoverId = id; render(); }
+});
+stage.addEventListener("pointerleave", () => {
+  if(!helpPinned) hideHelp();
+  if(state.drag) return;
+  if(hoverId !== null){ hoverId = null; render(); }
+});
+
+/* ---------- palette -------------------------------------------------------- */
+(function buildPalette(){
+  const pal = document.getElementById("palette");
+
+  const g1 = document.createElement("div"); g1.className = "group";
+  const t1 = document.createElement("div"); t1.className = "gtitle"; t1.textContent = "Propositions"; g1.appendChild(t1);
+  const r1 = document.createElement("div"); r1.className = "tools";
+  for(const k of Object.keys(KINDS)){
+    const set = document.createElement("div"); set.className = "toolset";
+    const row = document.createElement("div"); row.className = "toolrow";
+    for(const side of ["open","close"]){
+      const tl = document.createElement("div"); tl.className = "tool " + side + " " + KINDS[k].cls;
+      tl.dataset.help = KINDS[k].info;
+      const mk = document.createElement("div"); mk.className = "mark"; tl.appendChild(mk);
+      tl.addEventListener("pointerdown", e => { startPlace({type:"bracket", side, kind:k}); beginDrag(e); });
+      row.appendChild(tl);
+    }
+    const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = KINDS[k].label;
+    set.appendChild(row); set.appendChild(lbl); r1.appendChild(set);
+  }
+  g1.appendChild(r1); pal.appendChild(g1);
+
+  const g2 = document.createElement("div"); g2.className = "group";
+  const t2 = document.createElement("div"); t2.className = "gtitle"; t2.textContent = "Marques"; g2.appendChild(t2);
+  const r2 = document.createElement("div"); r2.className = "tools";
+  for(const type of Object.keys(MARK)){
+    const set = document.createElement("div"); set.className = "toolset";
+    const tl = document.createElement("div"); tl.className = "tool t-" + type;
+    tl.dataset.help = MARK[type].info;
+    const mk = document.createElement("div"); mk.className = "mark"; tl.appendChild(mk);
+    tl.addEventListener("pointerdown", e => { startPlace({type}); beginDrag(e); });
+    const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = MARK[type].label;
+    set.appendChild(tl); set.appendChild(lbl); r2.appendChild(set);
+  }
+  // outil "Pointillé" : applique le pointillé à un mot interne d'un VC (l'élève choisit lequel)
+  {
+    const set = document.createElement("div"); set.className = "toolset";
+    const tl = document.createElement("div"); tl.className = "tool t-dot";
+    tl.dataset.help = DOT_INFO;
+    const mk = document.createElement("div"); mk.className = "mark"; tl.appendChild(mk);
+    tl.addEventListener("pointerdown", e => { startPlace({type:"dot"}); beginDrag(e); });
+    const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = "Pointillé";
+    set.appendChild(tl); set.appendChild(lbl); r2.appendChild(set);
+  }
+  g2.appendChild(r2); pal.appendChild(g2);
+
+  // groupe Relation : la flèche subordonnant -> antécédent
+  const g3 = document.createElement("div"); g3.className = "group";
+  const t3 = document.createElement("div"); t3.className = "gtitle"; t3.textContent = "Relation"; g3.appendChild(t3);
+  const r3 = document.createElement("div"); r3.className = "tools";
+  {
+    const set = document.createElement("div"); set.className = "toolset";
+    const tl = document.createElement("div"); tl.className = "tool t-arrow";
+    tl.dataset.help = ARROW_INFO;
+    const mk = document.createElement("div"); mk.className = "mark";
+    const s = svgEl("svg", { viewBox:"0 0 30 20", width:"30", height:"20" });
+    s.appendChild(svgEl("path", { d:"M 4 16 Q 15 1 25 13", fill:"none", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round" }));
+    s.appendChild(svgEl("path", { d:"M 20 12 L 30 13 L 24 19 Z", fill:"currentColor" }));
+    mk.appendChild(s); tl.appendChild(mk);
+    tl.addEventListener("pointerdown", e => { startPlace({type:"arrow"}); beginDrag(e); });
+    const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = "Flèche";
+    set.appendChild(tl); set.appendChild(lbl); r3.appendChild(set);
+  }
+  g3.appendChild(r3); pal.appendChild(g3);
+
+  // groupe Étiquettes : noms que l'élève glisse lui-même sur les mots
+  const g4 = document.createElement("div"); g4.className = "group";
+  const t4 = document.createElement("div"); t4.className = "gtitle"; t4.textContent = "Étiquettes";
+  g4.appendChild(t4);
+  const r4 = document.createElement("div"); r4.className = "tools"; r4.style.maxWidth = "330px";
+  for(const key of Object.keys(LABELS)){
+    const tl = document.createElement("div"); tl.className = "tool t-label";
+    tl.textContent = LABELS[key].t; tl.style.color = "var(--" + LABELS[key].c + ")";
+    tl.dataset.help = LABEL_HELP;
+    tl.addEventListener("pointerdown", e => { startPlace({type:"label", key}); beginDrag(e); });
+    r4.appendChild(tl);
+  }
+  g4.appendChild(r4); pal.appendChild(g4);
+})();
+document.getElementById("clear").addEventListener("click", clearAll);
+
+// AIDE contextuelle : survol, tap ET glisser de l'outil l'affichent ; masquée sinon
+const helptip = document.createElement("div"); helptip.id = "helptip"; document.body.appendChild(helptip);
+let helpPinned = false;                                   // épinglée par un tap (lecture)
+function toolHelp(tool){
+  if(!tool) return "";
+  if(tool.type === "bracket") return KINDS[tool.kind].info;
+  if(tool.type === "dot")     return DOT_INFO;
+  if(tool.type === "arrow")   return ARROW_INFO;
+  if(tool.type === "label")   return LABEL_HELP;
+  return MARK[tool.type] ? MARK[tool.type].info : "";
+}
+function placedHelpText(target){                 // aide d'une marque DÉJÀ POSÉE sous le pointeur
+  if(!target || !target.closest) return "";
+  const brk = target.closest(".brk");
+  if(brk){ const m = state.marks.find(z => z.id === +brk.dataset.id); return m ? KINDS[m.kind].info : ""; }
+  if(target.closest(".ah")) return ARROW_INFO;
+  if(target.closest(".lab")) return LABEL_HELP;
+  const w = target.closest(".word");
+  if(w){ const rid = rangeCovering(+w.dataset.tok); if(rid !== null){ const m = state.marks.find(z => z.id === rid); return m ? MARK[m.type].info : ""; } }
+  return "";
+}
+function dragHelpText(){                          // aide de l'objet en cours de glisser/étirer
+  const d = state.drag; if(!d) return "";
+  if(d.mode === "resize"){ const m = state.marks.find(x => x.id === d.id); return m ? toolHelp({type:m.type, kind:m.kind, key:m.key}) : ""; }
+  return toolHelp(d.tool);
+}
+function showHelp(text){ helptip.textContent = text || ""; helptip.style.display = text ? "block" : "none"; }
+function hideHelp(){ helptip.style.display = "none"; helpPinned = false; }
+function moveHelp(x, y){                                   // suit le curseur pendant le glisser
+  if(helptip.style.display === "none") return;
+  const w = helptip.offsetWidth, h = helptip.offsetHeight;
+  let left = x + 16, top = y - h - 14;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  if(top < 8) top = y + 22;
+  helptip.style.left = left + "px"; helptip.style.top = top + "px";
+}
+function placeHelpAbove(rect){                             // au-dessus de l'outil (survol / tap)
+  const w = helptip.offsetWidth, h = helptip.offsetHeight;
+  let left = rect.left + rect.width / 2 - w / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  let top = rect.top - h - 8;
+  if(top < 8) top = rect.bottom + 8;
+  helptip.style.left = left + "px"; helptip.style.top = top + "px";
+}
+function helpForTool(el){ showHelp(el.dataset.help || ""); placeHelpAbove(el.getBoundingClientRect()); }
+// survol souris d'un outil
+document.addEventListener("pointerover", e => {
+  if(e.pointerType !== "mouse") return;
+  const t = e.target.closest(".tool"); if(t) helpForTool(t);
+});
+document.addEventListener("pointerout", e => {
+  if(e.pointerType !== "mouse") return;
+  const from = e.target.closest(".tool"); if(!from) return;
+  const to = (e.relatedTarget && e.relatedTarget.closest) ? e.relatedTarget.closest(".tool") : null;
+  if(to !== from && !helpPinned) hideHelp();              // sortie réelle de l'outil
+});
+// appui ailleurs (hors d'un outil) : referme l'aide épinglée
+document.addEventListener("pointerdown", e => {
+  const onTool = e.target.closest && e.target.closest(".tool");
+  if(!onTool && !placedHelpText(e.target)) hideHelp();
+}, true);
+
+/* ===== PONT MJPC (recopie embarquée -> app) ===== */
+function analyseSemantique(){
+  var props = propositions().map(function(p){ return {from:p.from,to:p.to,col:p.col}; });
+  var plages = state.marks.filter(function(m){return isRangeType(m.type)}).map(function(r){ return {type:r.type,from:r.from,to:r.to}; });
+  var labels = state.marks.filter(function(m){return m.type==="label"}).map(function(l){ var s=labelSegment(l.key,l.token); return {key:l.key,token:l.token,from:s?s.from:null,to:s?s.to:null}; });
+  var liens = state.marks.filter(function(m){return m.type==="arrow"}).map(function(a){ return {from:a.from,to:a.to}; });
+  return {props:props,plages:plages,labels:labels,liens:liens};
+}
+function __postState(){
+  try{ parent.postMessage({source:"noyau", type:"marks", marks: state.marks, analyse: analyseSemantique(), height: document.documentElement.scrollHeight}, "*"); }catch(e){}
+}
+(function(){ var __orig = render; render = function(){ __orig(); __postState(); }; })();
+window.addEventListener("message", function(e){
+  var d = e.data || {};
+  if(d.type === "load" && Array.isArray(d.marks)){
+    state.marks = d.marks;
+    _seq = d.marks.reduce(function(m,x){ return Math.max(m, (x&&x.id)||0); }, 0) + 1;
+    render();
+  }
+});
+window.addEventListener("resize", __postState);
+parent.postMessage({source:"noyau", type:"ready"}, "*");
+render();
+window.addEventListener("resize", paint);
+if(window.ResizeObserver){ new ResizeObserver(() => paint()).observe(stage); }
+@@ENDSCRIPT@@
+</body>
+</html>
+
+</script>
+
+<script>
+"use strict";
+/* ════════════ ZONE 1 — DATA (immuable + semence du référentiel) ════════════ */
+var h = React.createElement, useState = React.useState, useEffect = React.useEffect, useRef = React.useRef;
+
+// Référentiel par défaut : semé dans Firebase au premier lancement, puis abondable EN PLACE.
+// (reprend les outils/couleurs/étiquettes du noyau al-core ; barème = "dimensions")
+var SEED = {
+  couleurs: {
+    vert:  { label:"Vert (principale)",  hex:"#1b7a39" },
+    rouge: { label:"Rouge (subordonnée)",hex:"#c62828" },
+    noir:  { label:"Noir (indépendante / verbe)", hex:"#1c1c1c" },
+    bleu:  { label:"Bleu (subordonnant / lien)",  hex:"#1565c0" }
+  },
+  outils: {
+    crochet:     { label:"Crochets de proposition", geste:"crochet" },
+    souligne:    { label:"Soulignement (verbe)",    geste:"souligne" },
+    entoure:     { label:"Entourage (subordonnant)",geste:"entoure" },
+    cadre:       { label:"Encadrement (antécédent)",geste:"cadre" },
+    pointille:   { label:"Pointillé (mot interne)", geste:"pointille" },
+    fleche:      { label:"Flèche (lien)",           geste:"fleche" }
+  },
+  etiquettes: {
+    PP:{code:"PP",libelle:"Proposition principale",couleurId:"vert",cible:["prop","pp"],ordre:1},
+    DPP:{code:"DPP",libelle:"Début de principale",couleurId:"vert",cible:["prop","pp"],ordre:2},
+    FPP:{code:"FPP",libelle:"Fin de principale",couleurId:"vert",cible:["prop","pp"],ordre:3},
+    PI:{code:"PI",libelle:"Proposition indépendante",couleurId:"noir",cible:["prop","pi"],ordre:4},
+    PSR:{code:"PSR",libelle:"Subordonnée relative",couleurId:"rouge",cible:["prop","ps"],ordre:5},
+    PSCc:{code:"PSCc",libelle:"Subordonnée conjonctive circ.",couleurId:"rouge",cible:["prop","ps"],ordre:6},
+    PSCci:{code:"PSCci",libelle:"Subordonnée conj. compl. d'objet",couleurId:"rouge",cible:["prop","ps"],ordre:7},
+    VC:{code:"VC",libelle:"Verbe conjugué",couleurId:"noir",cible:["mark","vc"],ordre:8},
+    VCP:{code:"VCP",libelle:"Verbe complété",couleurId:"vert",cible:["mark","box"],ordre:9},
+    Ant:{code:"Ant",libelle:"Antécédent",couleurId:"vert",cible:["mark","box"],ordre:10},
+    MS:{code:"MS",libelle:"Mot subordonnant",couleurId:"bleu",cible:["mark","ms"],ordre:11},
+    PR:{code:"PR",libelle:"Pronom relatif",couleurId:"bleu",cible:["mark","ms"],ordre:12},
+    CDS:{code:"CDS",libelle:"Conjonction de subordination",couleurId:"bleu",cible:["mark","ms"],ordre:13}
+  },
+  // LE BARÈME EN CASES — chaque dimension est activable ; decochée = hors barème.
+  // defautActif reflète le DÉBUT d'année : on n'évalue que la nomination.
+  dimensions: {
+    nomination:{code:"nomination",libelle:"Nomination (l'étiquette est-elle juste ?)",defautActif:true,poidsDefaut:1},
+    marque:    {code:"marque",   libelle:"Marque / geste (bon élément, bien délimité)",defautActif:false,poidsDefaut:0},
+    couleur:   {code:"couleur",  libelle:"Couleur / nature (principale, subordonnée…)",defautActif:false,poidsDefaut:0},
+    lien:      {code:"lien",     libelle:"Lien de la flèche (subordonnant → antécédent)",defautActif:false,poidsDefaut:0}
+  },
+  modes: {
+    delimitation:    {code:"delimitation",   libelle:"Délimitation (recopie + évaluation)",statut:"actif",description:"L'élève analyse sur papier ; le prof recopie l'analyse dans le noyau et évalue. (Mode opérationnel.)"},
+    libre_phrase:    {code:"libre_phrase",   libelle:"Libre — phrase imposée",statut:"a_venir",description:"L'élève réalise lui-même l'analyse d'une phrase imposée, directement à l'écran (noyau interactif), avec évaluation automatique en direct contre le corrigé. Pas de recopie prof."},
+    libre_coherence: {code:"libre_coherence",libelle:"Libre — cohérence textuelle",statut:"a_venir",description:"Repérage des connecteurs et des relations logiques entre propositions (cause, conséquence, opposition…) plutôt que la seule délimitation ; nouvelles étiquettes de liaison à prévoir au référentiel."},
+    libre_paragraphe:{code:"libre_paragraphe",libelle:"Libre — paragraphe argumentatif",statut:"a_venir",description:"Comme « libre — phrase », mais sur un texte de plusieurs phrases : navigation phrase à phrase, progression et score cumulés sur l'ensemble."}
+  }
+};
+
+/* ════════════ ZONE 2 — FIREBASE ════════════ */
+// Config PARTAGÉE avec correction_dictee / dictee_universelle -> /classes mutualisé.
+firebase.initializeApp({apiKey:"AIzaSyBWKMGAIax6MhYGWa2GDe5LeGcTaBfxsJI",authDomain:"dictee-5e-ch4.firebaseapp.com",databaseURL:"https://dictee-5e-ch4-default-rtdb.europe-west1.firebasedatabase.app",projectId:"dictee-5e-ch4",storageBucket:"dictee-5e-ch4.appspot.com"});
+var db = firebase.database();
+var ROOT = "analyse_logique";
+
+// Helper repris de correction_dictee (~L233) : tolérant à 3 formats de classe.
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  if (Array.isArray(fbClasse) && fbClasse.length > 0 && typeof fbClasse[0] === "string") return fbClasse;
+  if (fbClasse && typeof fbClasse === "object" && !Array.isArray(fbClasse)) {
+    if (Array.isArray(fbClasse.eleves) && fbClasse.eleves.length > 0) return fbClasse.eleves;
+    var keys = Object.keys(fbClasse).filter(function(k){ return k!=="niveau"&&k!=="annee"&&k!=="id"&&k!=="title"&&k!=="nom"&&!k.startsWith("_"); });
+    var names = keys.map(function(k){ var v=fbClasse[k];
+      if(typeof v==="string")return v;
+      if(v&&typeof v==="object"){ if(v.nom&&v.prenom)return String(v.nom).toUpperCase()+" "+v.prenom; if(v.nomComplet)return v.nomComplet; if(v.name)return v.name; }
+      return null; }).filter(function(x){return x&&typeof x==="string"});
+    if(names.length>0)return names;
+  }
+  return cfgEleves;
+}
+function ekey(name){ return String(name).replace(/[.#$\[\]\/]/g,"_"); }
+function seedReferentiel(){ // sème le référentiel s'il est absent (jamais écrasé ensuite)
+  db.ref(ROOT+"/referentiel").once("value",function(s){ if(!s.exists()) db.ref(ROOT+"/referentiel").set(SEED); });
+}
+function deduireNiveauDuNom(nom){ var m=String(nom||"").match(/\b([3-6])\s*[eè]/i); return m?m[1]+"e":""; } // dette QCM : niveau inféré, pas stocké
+
+/* ════════════ ZONE 3 — MOTEUR (barème + note) — squelette à étoffer ════════════ */
+// Le barème effectif d'un travail = défaut de classe, surchargé par le travail.
+function _poids(x){ if(x===true) return 1; if(x===false||x==null) return 0; var n=Number(x); return (isFinite(n)&&n>=0)?n:0; }
+function baremeEffectif(dimsRef, defautClasse, baremeTravail){
+  var out = {};
+  Object.keys(dimsRef||{}).forEach(function(id){
+    var code = dimsRef[id].code;
+    var v = (dimsRef[id].poidsDefaut!=null) ? _poids(dimsRef[id].poidsDefaut) : (dimsRef[id].defautActif?1:0); // 1) défaut référentiel
+    if(defautClasse && code in defautClasse) v = _poids(defautClasse[code]);    // 2) défaut de la classe
+    if(baremeTravail && code in baremeTravail) v = _poids(baremeTravail[code]); // 3) surcharge du travail
+    out[code] = v;
+  });
+  return out;
+}
+// Moteur d'évaluation : compare l'analyse de l'élève (sémantique, postée par le noyau)
+// au modèle du corrigé, dimension par dimension, selon le barème en cases.
+// Verdicts : juste / partiel / faux / absent. Règle « non avenu si non nommé » optionnelle.
+function _spanEq(a,b){ return a.from===b.from && a.to===b.to; }
+function _ovlLen(a,b){ return Math.max(0, Math.min(a.to,b.to)-Math.max(a.from,b.from)+1); }
+function _iou(a,b){ var inter=_ovlLen(a,b); var uni=(a.to-a.from+1)+(b.to-b.from+1)-inter; return uni>0?inter/uni:0; }
+function _codeNorm(c){ return String(c||"").replace(/[.\s]+$/,"").trim(); }
+// Miroir de LABEL_TARGET du noyau (code -> [prop|mark, sous-type]). À terme dans le référentiel (champ « cible »).
+var CODE_CIBLE_DEFAUT = {
+  PP:["prop","pp"],DPP:["prop","pp"],FPP:["prop","pp"],PI:["prop","pi"],
+  PSR:["prop","ps"],PSCc:["prop","ps"],PSCci:["prop","ps"],
+  VC:["mark","vc"],VCP:["mark","box"],Ant:["mark","box"],MS:["mark","ms"],PR:["mark","ms"],CDS:["mark","ms"]
+};
+// Conversions modèle <-> marques (pour afficher/ajuster le corrigé dans le noyau).
+function codeCibleDeRef(ref){ var et=(ref&&ref.etiquettes)||{}, cc={}; Object.keys(et).forEach(function(id){ var e=et[id]; if(e&&e.code&&e.cible&&e.cible.length>=2) cc[_codeNorm(e.code)]=[e.cible[0],e.cible[1]]; }); return Object.keys(cc).length?cc:null; }
+var COL_KIND={pp:"PP",ps:"PS",pi:"PI"};
+function modeleVersMarks(modele, CC){
+  CC=CC||CODE_CIBLE_DEFAUT; modele=modele||{};
+  var structs=Array.isArray(modele.structures)?modele.structures:Object.keys(modele.structures||{}).map(function(k){return modele.structures[k]});
+  var liens=Array.isArray(modele.liens)?modele.liens:Object.keys(modele.liens||{}).map(function(k){return modele.liens[k]});
+  var marks=[], id=1;
+  structs.forEach(function(st){
+    var code=_codeNorm(st.code), cc=CC[code]; if(!cc) return;
+    if(cc[0]==="prop"){
+      var kind=COL_KIND[cc[1]]||"PI";
+      marks.push({id:id++,type:"bracket",gutter:st.from,side:"open",kind:kind});
+      marks.push({id:id++,type:"bracket",gutter:st.to+1,side:"close",kind:kind});
+      marks.push({id:id++,type:"label",token:st.from,key:code});
+    } else {
+      marks.push({id:id++,type:cc[1],from:st.from,to:st.to,dotted:[]});
+      marks.push({id:id++,type:"label",token:st.from,key:code});
+    }
+  });
+  liens.forEach(function(ln){ marks.push({id:id++,type:"arrow",from:ln.deFrom,to:ln.versFrom}); });
+  return marks;
+}
+function marksVersModele(an, CC){
+  CC=CC||CODE_CIBLE_DEFAUT; an=an||{};
+  var structures=(an.labels||[]).filter(function(l){return l.from!=null}).map(function(l){
+    var code=_codeNorm(l.key), cc=CC[code];
+    return {role:(cc&&cc[0]==="prop")?"PROP":"ELEM", code:l.key, from:l.from, to:l.to};
+  });
+  var liens=(an.liens||[]).map(function(a){ return {deFrom:a.from,deTo:a.from,versFrom:a.to,versTo:a.to}; });
+  return {structures:structures, liens:liens};
+}
+function _meilleur(cands,cible){
+  for(var i=0;i<cands.length;i++) if(_spanEq(cands[i],cible)) return {s:cands[i],exact:true};
+  var best=null,bl=0; for(var j=0;j<cands.length;j++){ var l=_ovlLen(cands[j],cible); if(l>bl){bl=l;best=cands[j];} }
+  return best?{s:best,exact:false}:null;
+}
+function _pts(v){ return v==="juste"?1 : v==="partiel"?0.5 : 0; }
+// Collecte longitudinale : tous les travaux d'une classe + le résultat d'UN élève dans chacun.
+function collecteSuivi(arbre, classe, key, ctx){
+  arbre=arbre||{}; var items=[];
+  Object.keys(arbre).forEach(function(id){
+    var t=arbre[id]||{}, cfg=t.config||{}; if(cfg.classe!==classe) return;
+    var r=(t.results&&t.results[key])||null;
+    if(ctx && r){ var modele=(t.corrige&&t.corrige.modele)||null; var be=baremeEffectif(ctx.dimsRef||{}, (ctx.defauts&&ctx.defauts[cfg.classe]&&ctx.defauts[cfg.classe].dims)||null, (t.bareme&&t.bareme.dims)||null); r=recalcResult(r, modele, be, ctx.cc, cfg.base||20); }
+    items.push({id:id, titre:cfg.titre||id, ts:cfg.ts||0, base:cfg.base||20, coef:(cfg.coef!=null?(Number(cfg.coef)||1):1), note:(r&&typeof r.note==="number")?r.note:null, verdicts:(r&&r.verdicts)||null});
+  });
+  items.sort(function(a,b){return (a.ts||0)-(b.ts||0)});
+  return items;
+}
+// Agrégation des résultats d'une classe pour un travail (Bilan). Lit les verdicts stockés.
+function agregerResultats(keys, results){
+  results=results||{}; var notes=[], agg={};
+  keys.forEach(function(k){
+    var r=results[k]; if(!r) return;
+    if(typeof r.note==="number") notes.push(r.note);
+    var verds = r.verdicts ? (Array.isArray(r.verdicts)?r.verdicts:Object.keys(r.verdicts).map(function(x){return r.verdicts[x]})) : [];
+    verds.forEach(function(d){
+      var dims=d.dims||{};
+      Object.keys(dims).forEach(function(dim){
+        if(d.nonAvenu && (dim==="marque"||dim==="couleur")) return;
+        var code=d.code; agg[code]=agg[code]||{}; agg[code][dim]=agg[code][dim]||{pts:0,total:0};
+        agg[code][dim].pts += _pts(dims[dim]); agg[code][dim].total += 1;
+      });
+    });
+  });
+  Object.keys(agg).forEach(function(c){ Object.keys(agg[c]).forEach(function(dm){ var o=agg[c][dm]; o.taux=o.total?Math.round(o.pts/o.total*100):null; }); });
+  var moyenne = notes.length ? Math.round(notes.reduce(function(a,b){return a+b},0)/notes.length*100)/100 : null;
+  return {notes:notes, moyenne:moyenne, parNotion:agg, nbCorriges:notes.length};
+}
+function evaluer(eleve, modele, bareme, opts){
+  opts=opts||{}; eleve=eleve||{}; modele=modele||{}; bareme=bareme||{};
+  var base=opts.base||20, CC=opts.codeCible||CODE_CIBLE_DEFAUT, TOL=(opts.tolMarque!=null)?opts.tolMarque:0.5;
+  var structs = Array.isArray(modele.structures)?modele.structures:Object.keys(modele.structures||{}).map(function(k){return modele.structures[k]});
+  var liens   = Array.isArray(modele.liens)?modele.liens:Object.keys(modele.liens||{}).map(function(k){return modele.liens[k]});
+  var pMarque=_poids(bareme.marque), pCouleur=_poids(bareme.couleur), pNom=_poids(bareme.nomination), pLien=_poids(bareme.lien);
+  var gagne=0, possible=0, details=[];
+  structs.forEach(function(st){
+    var cible={from:st.from,to:st.to}, code=_codeNorm(st.code), cc=CC[code]||["mark","?"], estProp=cc[0]==="prop";
+    var cands = estProp ? (eleve.props||[]) : (eleve.plages||[]);
+    var m=_meilleur(cands,cible);
+    var vMarque = !m?"absent":(m.exact?"juste":((!estProp && _iou(m.s,cible)>=TOL)?"juste":"partiel"));
+    var vCouleur = !m?"absent":(estProp?(m.s.col===cc[1]?"juste":"faux"):(m.s.type===cc[1]?"juste":"faux"));
+    var labs=(eleve.labels||[]).filter(function(l){ return _codeNorm(l.key)===code && l.from!=null; }).map(function(l){return {from:l.from,to:l.to}});
+    var ml=_meilleur(labs,cible);
+    var vNom;
+    if(ml) vNom = ml.exact?"juste":"partiel";
+    else { // distingue MAL NOMMÉ (autre étiquette de même nature recouvrant la structure -> faux) de RIEN (absent)
+      var malNomme=(eleve.labels||[]).some(function(l){ if(l.from==null || _codeNorm(l.key)===code) return false; var lc=CC[_codeNorm(l.key)]; if(!lc) return false; if((lc[0]==="prop")!==estProp) return false; return _ovlLen({from:l.from,to:l.to},cible)>0; });
+      vNom = malNomme?"faux":"absent";
+    }
+    var dims={};
+    if(pMarque>0){ dims.marque=vMarque; possible+=pMarque; gagne+=_pts(vMarque)*pMarque; }
+    if(pCouleur>0){ dims.couleur=vCouleur; possible+=pCouleur; gagne+=_pts(vCouleur)*pCouleur; }
+    if(pNom>0){ dims.nomination=vNom; possible+=pNom; gagne+=_pts(vNom)*pNom; }
+    details.push({code:st.code,from:st.from,to:st.to,dims:dims});
+  });
+  if(pLien>0){
+    liens.forEach(function(ln){
+      var f=(eleve.liens||[]).find(function(a){ return a.from>=ln.deFrom&&a.from<=ln.deTo&&a.to>=ln.versFrom&&a.to<=ln.versTo; });
+      var part=(eleve.liens||[]).find(function(a){ return (a.from>=ln.deFrom&&a.from<=ln.deTo)||(a.to>=ln.versFrom&&a.to<=ln.versTo); });
+      var v=f?"juste":(part?"partiel":"absent"); possible+=pLien; gagne+=_pts(v)*pLien;
+      details.push({code:"LIEN",from:ln.deFrom,to:ln.versFrom,dims:{lien:v}});
+    });
+  }
+  return {note: possible>0?Math.round((gagne/possible)*base*100)/100:0, sur:base, gagne:gagne, possible:possible, details:details};
+}
+// Recalcule un résultat à partir de l'analyse stockée + le corrigé COURANT (anti-péremption). Repli sur les verdicts stockés si pas d'analyse.
+function recalcResult(result, modele, baremeEff, cc, base){
+  if(result && result.analyse && modele && (modele.structures||modele.liens)){
+    var ev=evaluer(result.analyse, modele, baremeEff, {codeCible:cc, base:base});
+    return {note:ev.note, sur:ev.sur, verdicts:ev.details, analyse:result.analyse, recalcule:true};
+  }
+  return result||null;
+}
+
+/* ════════════ ZONE 3ter — TOKENISEUR PARTAGÉ + parseur de corrigé ════════════ */
+// buildTokens DOIT rester identique à celui du noyau (mêmes indices). On l'injecte
+// d'ailleurs dans le noyau (source unique) pour éliminer tout risque de divergence.
+function buildTokens(text){
+  text = String(text||"").replace(/[\u2019]/g, "'");
+  var raw = text.match(/[.,;:!?\u2026«»"()]|[^\s.,;:!?\u2026«»"()]+/g) || [];
+  var ELISION = /^(c|d|j|l|m|n|s|t|qu|lorsqu|puisqu|quoiqu|jusqu|presqu)'(.+)$/i;
+  var out = [];
+  for(var idx=0; idx<raw.length; idx++){ var r=raw[idx], m=r.match(ELISION); if(m){ out.push(m[1]+"'"); out.push(m[2]); } else out.push(r); }
+  return out;
+}
+function _norm(s){ return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9']/g,""); }
+function _contentToks(text){ return buildTokens(text).map(function(t,i){return {t:t,i:i,n:_norm(t)};}).filter(function(x){return x.n!==""}); }
+function _localiser(content, segText, within){
+  var seg=_contentToks(segText).map(function(x){return x.n}); if(seg.length===0) return null;
+  for(var s=0;s+seg.length<=content.length;s++){ var ok=true;
+    for(var k=0;k<seg.length;k++){ if(content[s+k].n!==seg[k]){ok=false;break;} }
+    if(ok){ var f=content[s].i, t=content[s+seg.length-1].i; if(within && !(f>=within.from && t<=within.to)) continue; return {from:f,to:t}; } }
+  return null;
+}
+// Corrigé texte (format PROP/ELEM/LIEN) -> modèle structuré + lignes non localisées.
+// Best-effort assumé : ce qui n'est pas contigu (ex. principale discontinue) est SIGNALÉ, pas deviné.
+function parseCorrige(texte, retour){
+  var content=_contentToks(texte), structures=[], liens=[], nonLoc=[];
+  String(retour||"").split(/\r?\n/).forEach(function(line){
+    line=line.trim(); if(!line||line.charAt(0)==="#") return;
+    var parts=line.split("|").map(function(x){return x.trim()}), kind=(parts[0]||"").toUpperCase();
+    if(kind==="PROP"&&parts.length>=3){ var loc=_localiser(content,parts[2]); if(loc) structures.push({role:"PROP",code:parts[1],from:loc.from,to:loc.to}); else nonLoc.push(line); }
+    else if(kind==="ELEM"&&parts.length>=3){ var dans=null, md=(parts[3]||"").match(/dans\s*:\s*(.+)/i);
+      if(md){ var ld=_localiser(content,md[1]); if(ld) dans=ld; }
+      var loc2=_localiser(content,parts[2],dans);
+      if(loc2) structures.push({role:"ELEM",code:parts[1],from:loc2.from,to:loc2.to,dans:dans}); else nonLoc.push(line); }
+    else if(kind==="LIEN"&&parts.length>=2){ var lk=parts.slice(1).join("|"), mm=lk.split("->");
+      if(mm.length===2){ var a=_localiser(content,mm[0]), b=_localiser(content,mm[1]); if(a&&b) liens.push({deFrom:a.from,deTo:a.to,versFrom:b.from,versTo:b.to}); else nonLoc.push(line); }
+      else nonLoc.push(line); }
+  });
+  return {structures:structures,liens:liens,nonLocalises:nonLoc};
+}
+
+/* ════════════ ZONE 3bis — NOYAU embarqué (surface de recopie) ════════════ */
+// Le noyau al-core (validé) tourne isolé dans une iframe : zéro collision CSS/DOM.
+// On lui injecte le texte du travail ; il nous renvoie les marques par postMessage.
+// (Alimentation des OUTILS par le référentiel : increment suivant — ici outils par défaut.)
+function noyauTemplate(){ return document.getElementById("noyau-tpl").textContent.split("@@ENDSCRIPT@@").join("</scr"+"ipt>"); }
+// Surcharge des couleurs du noyau depuis le référentiel (hex validés). Vide -> couleurs en dur.
+function couleursOverride(referentiel){
+  var couleurs=(referentiel&&referentiel.couleurs)||null; if(!couleurs) return "";
+  var ROLE={pp:"vert",ps:"rouge",pi:"noir",vc:"noir",ms:"bleu",box:"vert",arrow:"bleu"};
+  var hexOk=function(x){ return /^#[0-9a-fA-F]{3,8}$/.test(String(x||"")); };
+  var decls=Object.keys(ROLE).map(function(role){ var c=couleurs[ROLE[role]]; return (c&&hexOk(c.hex))?("--"+role+":"+c.hex):""; }).filter(Boolean).join(";");
+  return decls ? ("<sty"+"le>:root{"+decls+"}</sty"+"le>") : "";
+}
+function montNoyau(host, opts){
+  opts = opts || {};
+  var tj = JSON.stringify(opts.texte || "").replace(/</g, "\\u003c");
+  var tk = JSON.stringify(buildTokens(opts.texte || "")).replace(/</g, "\\u003c");
+  var rj = JSON.stringify({etiquettes:(opts.referentiel&&opts.referentiel.etiquettes)||null}).replace(/</g, "\\u003c");
+  var styleOv = couleursOverride(opts.referentiel);
+  var html = noyauTemplate().replace("</head>", "<scr"+"ipt>window.__INJ_TEXTE__="+tj+";window.__INJ_TOKENS__="+tk+";window.__INJ_REF__="+rj+";</scr"+"ipt>"+styleOv+"</head>");
+  var ifr = document.createElement("iframe");
+  ifr.style.cssText = "width:100%;border:0;display:block;min-height:240px;background:#fff;border-radius:12px";
+  ifr.setAttribute("title", "surface d'analyse");
+  host.innerHTML = ""; host.appendChild(ifr);
+  function onMsg(e){
+    if(e.source !== ifr.contentWindow) return;
+    var d = e.data || {}; if(d.source !== "noyau") return;
+    if(d.type === "ready"){ ifr.contentWindow.postMessage({type:"load", marks: opts.marks || []}, "*"); }
+    if(d.type === "marks"){
+      if(d.height){ ifr.style.height = (d.height + 4) + "px"; }
+      if(opts.onChange) opts.onChange(d.marks || []);
+      if(opts.onAnalyse && d.analyse) opts.onAnalyse(d.analyse);
+    }
+  }
+  window.addEventListener("message", onMsg);
+  ifr.srcdoc = html;
+  return { destroy:function(){ window.removeEventListener("message", onMsg); if(ifr.parentNode) ifr.parentNode.removeChild(ifr); } };
+}
+
+/* ════════════ ZONE 4 — UI ════════════ */
+
+// — Brique réutilisable « prompt IA × prof » (RÈGLE DURE : aucune IA appelée par l'app).
+//   L'app fabrique un prompt -> le prof dialogue dehors -> colle le retour -> le moteur prendra le relais.
+//   Servira aussi à l'OCR et à la banque d'exercices.
+function promptCorrige(texte, ref){
+  var et = (ref && ref.etiquettes) || {};
+  var lignesEt = Object.keys(et).map(function(id){ return "  - " + et[id].code + " : " + et[id].libelle; }).join("\n");
+  return [
+    "Tu es professeur de français. Fais l'ANALYSE LOGIQUE complète de la phrase ci-dessous.",
+    "",
+    "PHRASE :",
+    "\u00ab " + texte + " \u00bb",
+    "",
+    "Codes d'analyse \u00e0 utiliser EXACTEMENT (n'en invente pas d'autres) :",
+    lignesEt,
+    "",
+    "FORMAT DE SORTIE \u2014 une information par ligne, rien d'autre :",
+    "  PROP | CODE | texte exact de la proposition",
+    "  ELEM | CODE | texte exact | dans: texte exact de la proposition qui le contient",
+    "  LIEN | texte du subordonnant -> texte de l'ant\u00e9c\u00e9dent",
+    "",
+    "Donne d'abord toutes les propositions (PROP), puis les \u00e9l\u00e9ments internes",
+    "(ELEM : verbes conjugu\u00e9s, mots subordonnants, ant\u00e9c\u00e9dents), puis les liens (LIEN).",
+    "Recopie les segments MOT POUR MOT depuis la phrase, sans les reformuler."
+  ].join("\n");
+}
+function PromptIA(p){
+  var s=useState(p.valeurInitiale||""),retour=s[0],setRetour=s[1];
+  var c=useState(false),copie=c[0],setCopie=c[1];
+  var rp=useState(function(){ return p.valeurInitiale ? parseCorrige(p.texte||"", p.valeurInitiale) : null; }),rapport=rp[0],setRapport=rp[1];
+  var prompt = promptCorrige(p.texte||"", p.referentiel);
+  function copier(){
+    try{ navigator.clipboard.writeText(prompt); setCopie(true); setTimeout(function(){setCopie(false)},1500); }
+    catch(e){ alert("Copie automatique impossible : s\u00e9lectionne le prompt et copie-le \u00e0 la main."); }
+  }
+  return h("div",{className:"card2 fade",style:{marginTop:10}},
+    h("h3",{style:{fontSize:"1rem",marginBottom:6}},"Corrig\u00e9 de r\u00e9f\u00e9rence \u2014 IA \u00d7 professeur"),
+    h("p",{className:"sub",style:{marginBottom:10}},"L'app fabrique le prompt. Tu le copies, tu le donnes \u00e0 une IA \u00e0 part, puis tu colles ici l'analyse renvoy\u00e9e. Aucune IA n'est appel\u00e9e par l'app."),
+    h("label",null,"1. Prompt \u00e0 copier"),
+    h("textarea",{readOnly:true,value:prompt,style:{minHeight:130,background:"#fff",fontFamily:"ui-monospace,monospace",fontSize:".78rem"}}),
+    h("div",{className:"row",style:{margin:"8px 0"}},h("button",{className:"btn btn-sm btn-pri",onClick:copier},copie?"\u2713 Copi\u00e9":"\ud83d\udccb Copier le prompt")),
+    rapport && rapport.nonLocalises && rapport.nonLocalises.length>0 && h("div",{className:"sub",style:{color:"var(--orange)",marginTop:8}}, "Attention : "+rapport.nonLocalises.length+" ligne(s) non localisée(s) dans le texte (ignorées) : "+rapport.nonLocalises.join("  ·  ")),
+    h("label",null,"2. Coller l'analyse renvoy\u00e9e par l'IA"),
+    h("textarea",{value:retour,onChange:function(e){setRetour(e.target.value)},placeholder:"PROP | PP | va maintenant dormir...\nELEM | VC | mang\u00e9 | dans: qui a goul\u00fbment mang\u00e9...\nLIEN | qui -> chat",style:{minHeight:120}}),
+    h("div",{className:"row",style:{marginTop:8}},h("div",{className:"spacer"}),h("button",{className:"btn btn-pri",onClick:function(){ setRapport(parseCorrige(p.texte||"", retour)); p.onSave(retour); }},"Enregistrer le corrig\u00e9")),
+    h("p",{className:"sub muted",style:{marginTop:8}},"Prochaine \u00e9tape : transformer ce corrig\u00e9 en marques affichables dans le noyau, puis comparer m\u00e9caniquement l'analyse de l'\u00e9l\u00e8ve.")
+  );
+}
+
+function TopBar(p){
+  return h("div",{className:"topbar"},
+    h("div",{className:"brand"},"Analyse logique ",h("span",{className:"dot"},"·"),h("span",{style:{fontSize:".8rem",color:"var(--sub)",marginLeft:6,fontFamily:"var(--sans)"}},"atelier MJPC")),
+    h("div",{className:"spacer"}),
+    p.right
+  );
+}
+
+// ——— Accueil : choix prof / élève ———
+function App(){
+  var s = useState(new URLSearchParams(location.search).get("role")||""), role=s[0], setRole=s[1];
+  useEffect(function(){ seedReferentiel(); },[]);
+  if(role==="prof") return h(AppProf,{onQuit:function(){setRole("")}});
+  if(role==="eleve") return h(AppEleve,{onQuit:function(){setRole("")}});
+  return h("div",null,
+    h(TopBar,{}),
+    h("div",{className:"container fade"},
+      h("div",{className:"card",style:{maxWidth:520,margin:"40px auto",textAlign:"center"}},
+        h("h2",{style:{marginBottom:6}},"Atelier d'analyse logique"),
+        h("p",{className:"sub",style:{marginBottom:20}},"Application universelle — famille MJPC"),
+        h("div",{className:"row",style:{justifyContent:"center"}},
+          h("button",{className:"btn btn-pri",onClick:function(){setRole("prof")}},"Espace professeur"),
+          h("button",{className:"btn",onClick:function(){setRole("eleve")}},"Espace élève")
+        )
+      )
+    )
+  );
+}
+
+// ——— Espace professeur ———
+function AppProf(p){
+  var t=useState("travaux"),tab=t[0],setTab=t[1];
+  var c=useState({}),classes=c[0],setClasses=c[1];
+  var r=useState(null),ref=r[0],setRef=r[1];
+  var w=useState([]),travaux=w[0],setTravaux=w[1];
+  var sel=useState(null),current=sel[0],setCurrent=sel[1];
+
+  useEffect(function(){
+    var a=db.ref("classes"); a.on("value",function(s){setClasses(s.val()||{})});
+    var b=db.ref(ROOT+"/referentiel"); b.on("value",function(s){setRef(s.val()||SEED)});
+    var c2=db.ref(ROOT+"/travaux"); c2.on("value",function(s){
+      var v=s.val()||{}; setTravaux(Object.keys(v).map(function(id){return Object.assign({id:id},v[id].config||{})}));
+    });
+    return function(){a.off();b.off();c2.off()};
+  },[]);
+
+  var TABS = [
+    ["travaux","Travaux"],["correction","Correction"],
+    ["bilan","Bilan"],["copies","Copies"],["fiches","Fiches"],["suivi","Suivi"],["exercices","Exercices"],
+    ["referentiel","Référentiel"],["bareme","Barème"]
+  ];
+
+  return h("div",null,
+    h(TopBar,{right:h("button",{className:"btn btn-sm btn-ghost",onClick:p.onQuit},"← accueil")}),
+    h("div",{className:"container fade"},
+      h("div",{className:"tabs"},
+        TABS.map(function(x){return h("button",{key:x[0],className:"tab"+(tab===x[0]?" active":""),onClick:function(){setTab(x[0])}},x[1])}),
+        h("button",{key:"todo",className:"tab todo"+(tab==="todo"?" active":""),onClick:function(){setTab("todo")}},"🛠 Développement")
+      ),
+      tab==="travaux"&&h(Travaux,{classes:classes,ref:ref,travaux:travaux,onOpen:function(tw){setCurrent(tw);setTab("correction")}}),
+      tab==="correction"&&(current && modeStatut(ref,current.modeCode)!=="actif" ? h(ModeAVenir,{mode:current.modeCode,ref:ref}) : h(Correction,{classes:classes,ref:ref,current:current})),
+      tab==="referentiel"&&h(Referentiel,{ref:ref}),
+      tab==="bareme"&&h(Bareme,{classes:classes,ref:ref,travaux:travaux}),
+      tab==="todo"&&h(Todo,{}),
+      tab==="bilan"&&h(Bilan,{classes:classes,ref:ref,travaux:travaux,current:current}),
+      tab==="fiches"&&h(Fiches,{classes:classes,ref:ref,travaux:travaux,current:current}),
+      tab==="suivi"&&h(Suivi,{classes:classes,ref:ref,current:current}),
+      ["copies","exercices"].indexOf(tab)>=0&&h(EcranAVenir,{nom:tab})
+    )
+  );
+}
+
+// — Liste + création des travaux ; génération de la feuille élève —
+function Travaux(p){
+  var f=useState({titre:"",classe:"",niveau:"",texte:"",base:20,coef:1,consigne:"",modeCode:"delimitation"}),form=f[0],setForm=f[1];
+  var classes=p.classes||{}, ref=p.ref;
+  function up(k,v){var n=Object.assign({},form);n[k]=v;setForm(n)}
+  function creer(){
+    if(!form.titre||!form.classe||!form.texte){alert("Titre, classe et texte sont requis.");return}
+    var id=(form.titre+"-"+form.classe).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")+"-"+Date.now().toString(36).slice(-5);
+    db.ref(ROOT+"/travaux/"+id+"/config").set({
+      titre:form.titre,classe:form.classe,niveau:form.niveau||deduireNiveauDuNom(form.classe),
+      texte:form.texte,modeCode:form.modeCode||"delimitation",base:Number(form.base)||20,coef:Number(form.coef)||1,consigne:form.consigne||"",published:true,ts:Date.now()
+    });
+    setForm({titre:"",classe:"",niveau:"",texte:"",base:20,coef:1,consigne:"",modeCode:"delimitation"});
+  }
+  function feuille(tw){ // génère la feuille-texte imprimable (l'élève analyse dessus, sur papier)
+    var w=window.open("","_blank");
+    var esc=function(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")};
+    w.document.write('<!doctype html><meta charset=utf-8><title>'+esc(tw.titre)+'</title>'+
+      '<style>body{font:18px/3.2 Georgia,serif;max-width:720px;margin:40px auto;padding:0 24px;color:#1c1c1c}'+
+      'h1{font-size:1.1rem}.consigne{font:13px/1.5 system-ui;color:#555;border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin:14px 0 26px}'+
+      '.meta{font:12px system-ui;color:#888;margin-bottom:4px}@media print{.noprint{display:none}}</style>'+
+      '<div class=meta>'+esc(tw.classe)+(tw.niveau?(" · "+esc(tw.niveau)):"")+'</div>'+
+      '<h1>'+esc(tw.titre)+'</h1>'+
+      (tw.consigne ? ('<div class=consigne>Nom : ........................<br>'+esc(tw.consigne)+'</div>') : '<div class=consigne>Nom : ........................  —  Fais l\'analyse logique du texte ci-dessous (crochets, soulignements, étiquettes, flèches).</div>')+
+      '<div>'+esc(tw.texte)+'</div>'+
+      '<button class=noprint onclick=print() style="margin-top:30px;padding:8px 16px">Imprimer</button>');
+    w.document.close();
+  }
+  return h("div",{className:"col"},
+    h("div",{className:"card"},
+      h("h3",{style:{marginBottom:12}},"Nouveau travail d'analyse"),
+      h("div",{className:"row"},
+        h("div",{className:"col",style:{flex:2,minWidth:200}},h("label",null,"Titre"),h("input",{value:form.titre,onChange:function(e){up("titre",e.target.value)},placeholder:"Les Misérables — phrase 1"})),
+        h("div",{className:"col",style:{flex:1,minWidth:140}},h("label",null,"Classe"),
+          h("select",{value:form.classe,onChange:function(e){up("classe",e.target.value)}},
+            h("option",{value:""},"— choisir —"),
+            Object.keys(classes).map(function(cn){return h("option",{key:cn,value:cn},cn+" ("+extractEleves(classes[cn],[]).length+")")})
+          )),
+        h("div",{className:"col",style:{width:90}},h("label",null,"Note sur"),h("input",{type:"number",value:form.base,onChange:function(e){up("base",e.target.value)}})),
+        h("div",{className:"col",style:{width:90}},h("label",null,"Coefficient"),h("input",{type:"number",min:1,step:1,value:form.coef,onChange:function(e){up("coef",e.target.value)}}))
+      ),
+      h("div",{className:"col",style:{marginTop:10}},h("label",null,"Mode de travail"),
+        h("select",{value:form.modeCode,onChange:function(e){up("modeCode",e.target.value)}},
+          Object.keys((ref&&ref.modes)||{delimitation:1}).map(function(mc){var md=(ref&&ref.modes&&ref.modes[mc])||{libelle:mc,statut:"actif"}; return h("option",{key:mc,value:mc}, md.libelle+(md.statut!=="actif"?" — à venir":""));}))),
+      h("div",{className:"col",style:{marginTop:10}},h("label",null,"Consigne (affichée à l'élève)"),
+        h("textarea",{value:form.consigne,onChange:function(e){up("consigne",e.target.value)},placeholder:"Ex. : Analyse cette phrase — ici, les subordonnées comptent double.",style:{minHeight:52}})),
+      h("div",{className:"col",style:{marginTop:10}},h("label",null,"Texte à analyser"),
+        h("textarea",{value:form.texte,onChange:function(e){up("texte",e.target.value)},placeholder:"Colle ici le texte que l'élève analysera…"})),
+      h("div",{className:"row",style:{marginTop:12}},h("div",{className:"spacer"}),h("button",{className:"btn btn-pri",onClick:creer},"Créer le travail"))
+    ),
+    h("div",{className:"card"},
+      h("h3",{style:{marginBottom:10}},"Travaux"),
+      (p.travaux||[]).length===0
+        ? h("div",{className:"empty"},"Aucun travail pour l'instant.")
+        : p.travaux.map(function(tw){return h("div",{key:tw.id,className:"item"},
+            h("div",{className:"col",style:{gap:2}},
+              h("span",{className:"title"},tw.titre),
+              h("span",{className:"sub"},tw.classe+(tw.niveau?(" · "+tw.niveau):"")+" · /"+ (tw.base||20))),
+            h("div",{className:"spacer"}),
+            h("span",{className:"pill"},(p.ref&&p.ref.modes&&p.ref.modes[tw.modeCode]?p.ref.modes[tw.modeCode].libelle:tw.modeCode)),
+            h("button",{className:"btn btn-sm",onClick:function(){feuille(tw)}},"🖨 Feuille élève"),
+            h("button",{className:"btn btn-sm btn-pri",onClick:function(){p.onOpen(tw)}},"Corriger")
+          )})
+    )
+  );
+}
+
+// — Écran Correction (mode délimitation) : sélection élève + NOYAU embarqué + barème —
+function Correction(p){
+  var ref=p.ref, current=p.current, classes=p.classes||{};
+  var s=useState(""),eleve=s[0],setEleve=s[1];
+  var hostRef=useRef(null), noyauRef=useRef(null), saveT=useRef(null);
+  var cg=useState(false),voirCorrige=cg[0],setVoirCorrige=cg[1];
+  var ctk=useState(0),corrTick=ctk[0],setCorrTick=ctk[1];
+  var cr=useState(""),corrige=cr[0],setCorrige=cr[1];
+  var an=useState(null),analyse=an[0],setAnalyse=an[1];
+  var md=useState(null),modele=md[0],setModele=md[1];
+  var bdS=useState(null),defautClasse=bdS[0],setDefautClasse=bdS[1];
+  var btS=useState(null),baremeTravail=btS[0],setBaremeTravail=btS[1];
+  var cmS=useState(null),corrigeMarks=cmS[0],setCorrigeMarks=cmS[1];
+  var corrHostRef=useRef(null), corrNoyauRef=useRef(null), corrAnalyseRef=useRef(null), saveCM=useRef(null);
+  var modeleRef=useRef(null), corrigeMarksRef=useRef(null);
+
+  useEffect(function(){
+    setAnalyse(null);   // évite d'écrire l'analyse de l'élève précédent sous le nouvel élève
+    if(!current || !eleve || !hostRef.current){
+      if(noyauRef.current){ noyauRef.current.destroy(); noyauRef.current=null; }
+      return;
+    }
+    var path = ROOT+"/travaux/"+current.id+"/results/"+ekey(eleve)+"/marks";
+    var alive = true;
+    db.ref(path).once("value", function(snap){
+      if(!alive || !hostRef.current) return;
+      var marks = snap.val() || [];
+      if(!Array.isArray(marks)) marks = Object.keys(marks).map(function(k){return marks[k]});
+      if(noyauRef.current) noyauRef.current.destroy();
+      noyauRef.current = montNoyau(hostRef.current, {
+        texte: current.texte || "",
+        referentiel: ref,
+        marks: marks,
+        onChange: function(m){ if(saveT.current) clearTimeout(saveT.current); saveT.current=setTimeout(function(){ db.ref(path).set(m); }, 350); },
+        onAnalyse: function(a){ setAnalyse(a); }
+      });
+    });
+    return function(){ alive=false; if(saveT.current) clearTimeout(saveT.current); if(noyauRef.current){ noyauRef.current.destroy(); noyauRef.current=null; } };
+  }, [current && current.id, eleve]);
+
+  useEffect(function(){
+    if(!current) return;
+    var rr=db.ref(ROOT+"/travaux/"+current.id+"/corrige/retour"); rr.on("value", function(s){ setCorrige(s.val()||""); });
+    var rm=db.ref(ROOT+"/travaux/"+current.id+"/corrige/modele"); rm.on("value", function(s){ setModele(s.val()||null); });
+    var rb=db.ref(ROOT+"/travaux/"+current.id+"/bareme/dims"); rb.on("value", function(s){ setBaremeTravail(s.val()||null); });
+    var rk=db.ref(ROOT+"/travaux/"+current.id+"/corrige/marks"); rk.on("value", function(s){ var v=s.val(); setCorrigeMarks(Array.isArray(v)?v:(v?Object.keys(v).map(function(k){return v[k]}):null)); });
+    return function(){ rr.off(); rm.off(); rb.off(); rk.off(); };
+  }, [current && current.id]);
+
+  useEffect(function(){ modeleRef.current=modele; }, [modele]);
+  useEffect(function(){ corrigeMarksRef.current=corrigeMarks; }, [corrigeMarks]);
+
+  // Noyau « corrigé » : monté quand le panneau corrigé est ouvert. Pré-rempli depuis les
+  // marques sauvegardées, sinon depuis le modèle parsé. Pas de re-dérivation auto (validation explicite).
+  useEffect(function(){
+    if(!voirCorrige || !current || !corrHostRef.current){
+      if(corrNoyauRef.current){ corrNoyauRef.current.destroy(); corrNoyauRef.current=null; }
+      return;
+    }
+    var base = (corrigeMarksRef.current && corrigeMarksRef.current.length) ? corrigeMarksRef.current
+             : (modeleRef.current ? modeleVersMarks(modeleRef.current, codeCibleDeRef(ref)) : []);
+    if(corrNoyauRef.current) corrNoyauRef.current.destroy();
+    corrNoyauRef.current = montNoyau(corrHostRef.current, {
+      texte: current.texte||"",
+      referentiel: ref,
+      marks: base,
+      onChange: function(m){ if(saveCM.current) clearTimeout(saveCM.current); saveCM.current=setTimeout(function(){ db.ref(ROOT+"/travaux/"+current.id+"/corrige/marks").set(m); }, 400); },
+      onAnalyse: function(a){ corrAnalyseRef.current=a; }
+    });
+    return function(){ if(saveCM.current) clearTimeout(saveCM.current); if(corrNoyauRef.current){ corrNoyauRef.current.destroy(); corrNoyauRef.current=null; } };
+  }, [voirCorrige, current && current.id, corrTick, !!(modele || (corrigeMarks && corrigeMarks.length))]);
+
+  useEffect(function(){
+    if(!current || !current.classe) return;
+    var rd=db.ref(ROOT+"/baremeDefauts/"+current.classe+"/dims"); rd.on("value", function(s){ setDefautClasse(s.val()||null); });
+    return function(){ rd.off(); };
+  }, [current && current.classe]);
+
+  // persistance (débouncée) de la note + verdicts dès que l'analyse ou le barème change
+  useEffect(function(){
+    if(!current || !eleve || !analyse || !modele || !ref) return;
+    var dd=baremeEffectif(ref.dimensions, defautClasse, baremeTravail);
+    var e=evaluer(analyse, modele, dd, {base: current.base||20, codeCible: codeCibleDeRef(ref)});
+    var p2=ROOT+"/travaux/"+current.id+"/results/"+ekey(eleve);
+    var t=setTimeout(function(){ db.ref(p2).update({note:e.note, sur:e.sur, verdicts:e.details, analyse:JSON.parse(JSON.stringify(analyse)), evalTs:Date.now()}); }, 500);
+    return function(){ clearTimeout(t); };
+  }, [analyse, modele, defautClasse, baremeTravail, eleve, current && current.id]);
+
+  if(!current) return h("div",{className:"empty"},"Choisis un travail dans l'onglet « Travaux » puis clique « Corriger ».");
+  var eleves = extractEleves(classes[current.classe],[]);
+  var dims = ref?baremeEffectif(ref.dimensions, defautClasse, baremeTravail):{};
+  var ev = (analyse && modele) ? evaluer(analyse, modele, dims, {base: current.base||20, codeCible: codeCibleDeRef(ref)}) : null;
+  var baremeActifs = Object.keys(dims).filter(function(k){return dims[k]});
+  return h("div",{className:"col fade"},
+    h("div",{className:"card2"},
+      h("div",{className:"row"},
+        h("div",{className:"col",style:{gap:2}},h("span",{className:"title"},current.titre),h("span",{className:"sub"},current.classe+" · /"+(current.base||20)+(current.coef>1?(" · coef "+current.coef):"")),current.consigne&&h("span",{className:"sub muted",style:{fontStyle:"italic"}},current.consigne)),
+        h("button",{className:"btn btn-sm"+(voirCorrige?" btn-pri":""),onClick:function(){setVoirCorrige(!voirCorrige)}},voirCorrige?"Masquer le corrigé":"📋 Corrigé (IA × prof)"),
+        h("div",{className:"spacer"}),
+        h("label",null,"Élève"),
+        h("select",{value:eleve,onChange:function(e){setEleve(e.target.value)}},
+          h("option",{value:""},"— choisir —"),
+          eleves.map(function(el){return h("option",{key:el,value:el},el)}))
+      )
+    ),
+    voirCorrige && h("div",{className:"col"},
+      h(PromptIA,{texte:current.texte,referentiel:ref,valeurInitiale:corrige,onSave:function(v){ var pr=parseCorrige(current.texte||"", v); var m={structures:pr.structures||[], liens:pr.liens||[]}; var cref=db.ref(ROOT+"/travaux/"+current.id+"/corrige"); cref.child("retour").set(v); cref.child("modele").set(m); cref.child("marks").remove(); setModele(m); setCorrigeMarks(null); setCorrTick(function(x){return x+1;}); }}),
+      h("div",{className:"card2"},
+        h("div",{className:"row",style:{justifyContent:"space-between",marginBottom:6}},
+          h("h3",{style:{fontSize:"1rem"}},"Vérifier / ajuster le corrigé dans le noyau"),
+          h("button",{className:"btn btn-sm btn-pri",onClick:function(){ if(corrAnalyseRef.current){ db.ref(ROOT+"/travaux/"+current.id+"/corrige/modele").set(marksVersModele(corrAnalyseRef.current, codeCibleDeRef(ref))); } }},"Valider ce corrigé")
+        ),
+        h("p",{className:"sub",style:{marginBottom:8}},"Le corrigé est affiché ici tel que le moteur le comprend. Ajuste-le au besoin (crochets, soulignements, étiquettes, flèche), puis clique « Valider ce corrigé » pour que le modèle reflète tes ajustements."),
+        modele || (corrigeMarks && corrigeMarks.length)
+          ? h("div",{ref:corrHostRef,style:{minHeight:200}})
+          : h("div",{className:"mount"},"Enregistre d'abord un corrigé (étape ci-dessus) pour le visualiser ici.")
+      )
+    ),
+    h("div",{className:"row",style:{alignItems:"flex-start",gap:16}},
+      h("div",{style:{flex:3,minWidth:300}},
+        eleve
+          ? h("div",{ref:hostRef,style:{minHeight:240}})
+          : h("div",{className:"mount"},"Sélectionne un élève pour ouvrir la surface d'analyse (recopie).")
+      ),
+      h("div",{className:"card",style:{flex:1,minWidth:250}},
+        h("div",{className:"row",style:{justifyContent:"space-between",marginBottom:8}},
+          h("h3",{style:{fontSize:"1rem"}},"Évaluation"),
+          ev && h("span",{style:{fontFamily:"var(--serif)",fontSize:"1.15rem",color:"var(--accent)",fontWeight:700}}, ev.note+" / "+ev.sur)
+        ),
+        !modele && h("p",{className:"sub",style:{color:"var(--orange)"}},"Pas de corrigé enregistré : la note ne peut pas se calculer. Ouvre « Corrigé (IA × prof) »."),
+        modele && !eleve && h("p",{className:"sub muted"},"Sélectionne un élève pour voir la note se calculer en recopiant son analyse."),
+        modele && eleve && ev && h("div",{className:"col",style:{gap:6,marginTop:4}},
+          ev.details.map(function(d,i){
+            return h("div",{key:i,className:"item",style:{marginBottom:0,padding:"7px 9px",flexWrap:"wrap"}},
+              h("span",{className:"pill"},d.code),
+              h("span",{className:"sub muted"}, d.code==="LIEN" ? "(flèche)" : ("["+d.from+(d.to!==d.from?("-"+d.to):"")+"]")),
+              h("div",{className:"spacer"}),
+              Object.keys(d.dims).map(function(dim){
+                var v=d.dims[dim], col=v==="juste"?"var(--green)":v==="partiel"?"var(--orange)":"var(--coral)";
+                var fade=(d.nonAvenu && (dim==="marque"||dim==="couleur"));
+                return h("span",{key:dim,className:"pill",title:dim,style:{color:col,opacity:fade?.35:1,margin:"2px 0 2px 4px"}}, dim.charAt(0).toUpperCase()+" "+v);
+              }),
+              d.nonAvenu && h("span",{className:"sub muted",style:{fontStyle:"italic",width:"100%",marginTop:2}},"non avenu (non nommé)")
+            );
+          })
+        ),
+        h("div",{className:"hr"}),
+        h("div",{className:"sub muted"}, baremeActifs.length?("Barème actif : "+baremeActifs.join(", ")+"."):"Aucune dimension cochée — règle le barème dans l'onglet « Barème »."),
+        h("div",{className:"sub muted",style:{marginTop:4}},"Les marques et la note s'enregistrent au fil de l'eau.")
+      )
+    )
+  );
+}
+
+// — Éditeur de référentiel (abondable) : v0 = visualisation + ajout d'étiquette —
+function Referentiel(p){
+  var ref=p.ref;
+  var CIBLES=[{key:"prop:pp",lib:"Proposition principale (vert)"},{key:"prop:ps",lib:"Proposition subordonnée (rouge)"},{key:"prop:pi",lib:"Proposition indépendante (noir)"},{key:"mark:vc",lib:"Verbe conjugué (noir)"},{key:"mark:ms",lib:"Mot subordonnant (bleu)"},{key:"mark:box",lib:"Antécédent / verbe complété (vert)"}];
+  var SS_COULEUR={pp:"vert",ps:"rouge",pi:"noir",vc:"noir",ms:"bleu",box:"vert"};
+  var f=useState({code:"",libelle:"",cibleKey:"prop:pp"}),form=f[0],setForm=f[1];
+  if(!ref) return h("div",{className:"empty"},"Chargement du référentiel…");
+  function up(k,v){var n=Object.assign({},form);n[k]=v;setForm(n)}
+  function ajouter(){ if(!form.code)return; var pr=(form.cibleKey||"prop:pp").split(":"); var couleurId=SS_COULEUR[pr[1]]||"noir"; var ordre=Math.max.apply(null,[0].concat(Object.values(ref.etiquettes||{}).map(function(x){return x.ordre||0})))+1; db.ref(ROOT+"/referentiel/etiquettes/"+form.code.replace(/[^A-Za-z0-9]/g,"")).set({code:form.code,libelle:form.libelle,cible:[pr[0],pr[1]],couleurId:couleurId,ordre:ordre}); setForm({code:"",libelle:"",cibleKey:"prop:pp"}); }
+  var couleurs=ref.couleurs||{};
+  return h("div",{className:"col fade"},
+    h("div",{className:"card"},
+      h("h3",{style:{marginBottom:4}},"Référentiel d'analyse"),
+      h("p",{className:"sub",style:{marginBottom:12}},"La banque abondable (étiquettes, couleurs, outils, dimensions). Tout est modifiable en place — rien n'est figé dans le code."),
+      h("div",{className:"row"},
+        h("div",{className:"col",style:{width:120}},h("label",null,"Code"),h("input",{value:form.code,onChange:function(e){up("code",e.target.value)},placeholder:"PSCcc"})),
+        h("div",{className:"col",style:{flex:1,minWidth:160}},h("label",null,"Libellé"),h("input",{value:form.libelle,onChange:function(e){up("libelle",e.target.value)},placeholder:"Subordonnée…"})),
+        h("div",{className:"col",style:{width:240}},h("label",null,"Désigne"),h("select",{value:form.cibleKey,onChange:function(e){up("cibleKey",e.target.value)}},CIBLES.map(function(c){return h("option",{key:c.key,value:c.key},c.lib)}))),
+        h("button",{className:"btn btn-pri",style:{alignSelf:"flex-end"},onClick:ajouter},"+ Étiquette")
+      )
+    ),
+    h("div",{className:"card"},h("h3",{style:{fontSize:"1rem",marginBottom:10}},"Étiquettes"),
+      h("div",{className:"row"},Object.keys(ref.etiquettes||{}).sort(function(a,b){return ((ref.etiquettes[a].ordre)||0)-((ref.etiquettes[b].ordre)||0)}).map(function(id){var e=ref.etiquettes[id];var col=(couleurs[e.couleurId]||{}).hex||"#888";
+        return h("span",{key:id,className:"pill",title:e.libelle+(e.cible?(" — "+(e.cible[0]==="prop"?"proposition":"groupe")+" "+e.cible[1]):"")},h("span",{className:"swatch",style:{background:col}}),e.code)}))),
+    h("div",{className:"card"},h("h3",{style:{fontSize:"1rem",marginBottom:10}},"Dimensions du barème"),
+      Object.keys(ref.dimensions||{}).map(function(id){var d=ref.dimensions[id];
+        return h("div",{key:id,className:"item",style:{marginBottom:6}},h("span",{className:"pill"},d.code),h("span",{className:"sub"},d.libelle),h("div",{className:"spacer"}),h("span",{className:"sub muted"},d.defautActif?"actif par défaut":"inactif par défaut"))}))
+  );
+}
+
+// — Barème en cases (défaut par classe, redéfinissable par travail) ; bi-face —
+function Bareme(p){
+  var ref=p.ref, classes=p.classes||{}, travaux=p.travaux||[];
+  var pm=useState("classe"),portee=pm[0],setPortee=pm[1];
+  var s=useState(""),classe=s[0],setClasse=s[1];
+  var stt=useState(""),tid=stt[0],setTid=stt[1];
+  var d=useState({}),defauts=d[0],setDefauts=d[1];
+  var tb=useState(null),baremeTravail=tb[0],setBaremeTravail=tb[1];
+  useEffect(function(){ var r=db.ref(ROOT+"/baremeDefauts"); r.on("value",function(s){setDefauts(s.val()||{})}); return function(){r.off()}; },[]);
+  useEffect(function(){ if(!tid){setBaremeTravail(null);return;} var r=db.ref(ROOT+"/travaux/"+tid+"/bareme/dims"); r.on("value",function(s){setBaremeTravail(s.val()||null)}); return function(){r.off()}; },[tid]);
+  if(!ref) return h("div",{className:"empty"},"Chargement…");
+  var dims=ref.dimensions||{};
+  function dimDefaut(code){ var f=Object.values(dims).find(function(x){return x.code===code}); return f?_poids(f.poidsDefaut!=null?f.poidsDefaut:(f.defautActif?1:0)):0; }
+  function valClasse(code, cl){ var cur=(defauts[cl]&&defauts[cl].dims)||{}; return (code in cur)?_poids(cur[code]):dimDefaut(code); }
+  var travail = travaux.find(function(t){return t.id===tid});
+  function valTravail(code){ if(baremeTravail && code in baremeTravail) return _poids(baremeTravail[code]); return travail?valClasse(code, travail.classe):dimDefaut(code); }
+  function setClasseVal(code, val){ var base={}; Object.keys(dims).forEach(function(id){base[dims[id].code]=valClasse(dims[id].code, classe)}); base[code]=_poids(val); db.ref(ROOT+"/baremeDefauts/"+classe+"/dims").set(base); }
+  function setTravailVal(code, val){ var cur={}; Object.keys(dims).forEach(function(id){var c=dims[id].code; cur[c]=valTravail(c);}); cur[code]=_poids(val); db.ref(ROOT+"/travaux/"+tid+"/bareme/dims").set(cur); }
+  function resetTravail(){ db.ref(ROOT+"/travaux/"+tid+"/bareme").remove(); }
+  function biface(getVal, onSet){
+    return h("div",{className:"row",style:{alignItems:"flex-start",gap:16}},
+      h("div",{className:"card",style:{flex:1}},h("h3",{style:{fontSize:"1rem",marginBottom:4}},"Côté professeur"),
+        h("p",{className:"sub",style:{marginBottom:10}},"Poids en points (0 = hors barème). Le poids fixe l'importance de chaque dimension dans la note."),
+        Object.keys(dims).map(function(id){var c=dims[id].code;
+          return h("label",{key:id,className:"check",style:{marginBottom:8,alignItems:"center"}},
+            h("input",{type:"number",min:0,step:1,value:getVal(c),onChange:function(e){onSet(c, e.target.value)},style:{width:62,marginRight:10,textAlign:"center"}}),
+            h("span",null,dims[id].libelle))})),
+      h("div",{className:"card2",style:{flex:1}},h("h3",{style:{fontSize:"1rem",marginBottom:10}},"Côté élève (ce qui compte)"),
+        h("p",{className:"sub",style:{marginBottom:8}},"On évalue :"),
+        Object.keys(dims).filter(function(id){return getVal(dims[id].code)>0}).map(function(id){var v=getVal(dims[id].code);return h("div",{key:id,className:"pill",style:{margin:"3px 4px 3px 0",color:"var(--green)"}},"✓ "+dims[id].libelle+" — "+v+" pt"+(v>1?"s":""))}),
+        Object.keys(dims).filter(function(id){return !(getVal(dims[id].code)>0)}).map(function(id){return h("div",{key:id,className:"pill",style:{margin:"3px 4px 3px 0",opacity:.55}},"— "+dims[id].libelle)}),
+        Object.keys(dims).every(function(id){return !(getVal(dims[id].code)>0)}) && h("p",{className:"sub",style:{color:"var(--orange)",marginTop:6}},"Aucune dimension au barème : la note ne pourra pas se calculer.")
+      ));
+  }
+  return h("div",{className:"col fade"},
+    h("div",{className:"card"},
+      h("h3",{style:{marginBottom:4}},"Barème"),
+      h("p",{className:"sub",style:{marginBottom:12}},"Donne un poids à chaque dimension. 0 = hors barème (ni point, ni pénalité), et c'est aussi ce que l'élève voit. Le défaut de classe évolue dans l'année ; un travail peut le redéfinir."),
+      h("div",{className:"row"},
+        h("label",null,"Portée"),
+        h("select",{value:portee,onChange:function(e){setPortee(e.target.value)}}, h("option",{value:"classe"},"Défaut de la classe"), h("option",{value:"travail"},"Travail précis")),
+        portee==="classe"
+          ? h("select",{value:classe,onChange:function(e){setClasse(e.target.value)}},h("option",{value:""},"— classe —"),Object.keys(classes).map(function(cn){return h("option",{key:cn,value:cn},cn)}))
+          : h("select",{value:tid,onChange:function(e){setTid(e.target.value)}},h("option",{value:""},"— travail —"),travaux.map(function(t){return h("option",{key:t.id,value:t.id},t.titre+" — "+t.classe)}))
+      )
+    ),
+    portee==="classe" && classe && biface(function(c){return valClasse(c,classe)}, setClasseVal),
+    portee==="travail" && travail && h("div",{className:"col"},
+      h("div",{className:"card2"},
+        h("div",{className:"row",style:{justifyContent:"space-between"}},
+          h("span",{className:"sub"}, baremeTravail ? "Barème spécifique à ce travail (prime sur la classe)." : ("Ce travail suit le défaut de "+travail.classe+".")),
+          baremeTravail && h("button",{className:"btn btn-sm",onClick:resetTravail},"Suivre le défaut de la classe")
+        )
+      ),
+      biface(valTravail, setTravailVal)
+    ),
+    portee==="travail" && !travail && h("div",{className:"empty"},"Choisis un travail.")
+  );
+}
+
+// — Zone de développement / TODO (persistée Firebase) —
+function Todo(){
+  var s=useState([]),items=s[0],setItems=s[1];
+  var f=useState(""),txt=f[0],setTxt=f[1];
+  useEffect(function(){ var r=db.ref(ROOT+"/todo"); r.on("value",function(s){var v=s.val()||{};setItems(Object.keys(v).map(function(id){return Object.assign({id:id},v[id])}).sort(function(a,b){return (a.ts||0)-(b.ts||0)}))}); return function(){r.off()}; },[]);
+  function add(){ if(!txt.trim())return; db.ref(ROOT+"/todo").push({texte:txt.trim(),fait:false,ts:Date.now()}); setTxt(""); }
+  function toggle(it){ db.ref(ROOT+"/todo/"+it.id+"/fait").set(!it.fait); }
+  function del(it){ db.ref(ROOT+"/todo/"+it.id).remove(); }
+  return h("div",{className:"card fade"},
+    h("h3",{style:{marginBottom:4}},"Développement de l'app"),
+    h("p",{className:"sub",style:{marginBottom:12}},"Feuille de route vivante, persistée. (Le détail figé est aussi en tête du fichier source.)"),
+    h("div",{className:"row",style:{marginBottom:12}},h("input",{style:{flex:1},value:txt,onChange:function(e){setTxt(e.target.value)},placeholder:"Nouvelle tâche…",onKeyDown:function(e){if(e.key==="Enter")add()}}),h("button",{className:"btn btn-pri",onClick:add},"+ Ajouter")),
+    items.length===0?h("div",{className:"empty"},"Rien pour l'instant."):items.map(function(it){return h("div",{key:it.id,className:"item",style:{marginBottom:6,opacity:it.fait?.55:1}},
+      h("input",{type:"checkbox",checked:!!it.fait,onChange:function(){toggle(it)}}),
+      h("span",{style:{textDecoration:it.fait?"line-through":"none"}},it.texte),
+      h("div",{className:"spacer"}),
+      h("button",{className:"btn btn-sm btn-ghost",onClick:function(){del(it)}},"✕"))})
+  );
+}
+
+/* ===========================================================================
+   MODES À VENIR — ARCHITECTURE (squelettes, NON implémentés)
+   Routage : referentiel.modes[code].statut === "actif" -> écran réel ;
+   sinon -> ModeAVenir (stub). Ajouter/renommer un mode = éditer le RÉFÉRENTIEL,
+   sans toucher au code de routage. Chaque mode réutilise le NOYAU (analyse
+   interactive) et le MOTEUR (evaluer / recalcResult / baremeEffectif) déjà en place.
+
+   • libre_phrase — « Libre, phrase imposée »
+       Données : config(texte = 1 phrase) + corrige/modele + results/{key}/{marks,analyse,note,verdicts}.
+       Élève   : monte le NOYAU en mode édition (l'élève pose crochets/soulignements/
+                 étiquettes/flèches lui-même, pas l'iframe figée du prof).
+       Éval    : à chaque postMessage -> evaluer(analyse, modele, baremeEff) en direct,
+                 feedback non-bloquant (étoiles d'autonomie).
+       Réutilise : montNoyau, buildTokens, evaluer, recalcResult, baremeEffectif.
+
+   • libre_paragraphe — « Libre, paragraphe argumentatif »
+       Comme libre_phrase mais texte multi-phrases : corrige/modele segmenté par phrase,
+       navigation phrase-à-phrase, score = cumul des phrases (réutiliser agregerResultats
+       sur les sous-résultats). À prévoir : index de phrase courant.
+
+   • libre_coherence — « Libre, cohérence textuelle »
+       Cible les LIENS logiques (cause/conséquence/opposition) plus que la délimitation.
+       À prévoir au RÉFÉRENTIEL : étiquettes de liaison dédiées (nouvelles familles).
+       Le MOTEUR gère déjà la dimension « lien » (evaluer -> bareme.lien).
+   =========================================================================== */
+function modeStatut(ref, code){ return (ref&&ref.modes&&ref.modes[code]&&ref.modes[code].statut)||"actif"; }
+function ModeAVenir(p){
+  var md=(p.ref&&p.ref.modes&&p.ref.modes[p.mode])||{libelle:p.mode,description:""};
+  return h("div",{className:"mount fade"},
+    h("div",{className:"card",style:{maxWidth:620,margin:"0 auto"}},
+      h("div",{className:"sub"},"Mode de travail"),
+      h("h3",{style:{margin:"2px 0 8px"}}, md.libelle),
+      h("p",{style:{lineHeight:1.6,color:"var(--ink)"}}, md.description||"Écran à construire."),
+      h("div",{className:"pill",style:{marginTop:12,color:"var(--orange)"}},"\u23f3 Écran à coder — l'architecture est posée dans le code (bloc « MODES À VENIR »).")
+    ));
+}
+function EcranAVenir(p){
+  var noms={bilan:"Bilan de classe",copies:"Copies imprimables",fiches:"Fiches élèves",suivi:"Suivi longitudinal",exercices:"Banque d'exercices"};
+  return h("div",{className:"mount fade"},(noms[p.nom]||p.nom)+" — écran à construire (clone de correction_dictee).");
+}
+
+// — Bilan de classe : notes + réussite par notion (lit les verdicts stockés) —
+function Bilan(p){
+  var travaux=p.travaux||[], classes=p.classes||{}, ref=p.ref;
+  var s=useState((p.current&&p.current.id)||(travaux[0]&&travaux[0].id)||""),tid=s[0],setTid=s[1];
+  var rs=useState({}),results=rs[0],setResults=rs[1];
+  var md=useState(null),modele=md[0],setModele=md[1];
+  var bt=useState(null),btDims=bt[0],setBtDims=bt[1];
+  var df=useState({}),defauts=df[0],setDefauts=df[1];
+  useEffect(function(){ if(!tid) return; var r=db.ref(ROOT+"/travaux/"+tid+"/results"); r.on("value",function(s){ setResults(s.val()||{}); }); return function(){ r.off(); }; },[tid]);
+  useEffect(function(){ if(!tid){setModele(null);setBtDims(null);return;} var r1=db.ref(ROOT+"/travaux/"+tid+"/corrige/modele"); r1.on("value",function(s){setModele(s.val()||null)}); var r2=db.ref(ROOT+"/travaux/"+tid+"/bareme/dims"); r2.on("value",function(s){setBtDims(s.val()||null)}); return function(){r1.off();r2.off();}; },[tid]);
+  useEffect(function(){ var r=db.ref(ROOT+"/baremeDefauts"); r.on("value",function(s){setDefauts(s.val()||{})}); return function(){r.off()}; },[]);
+  if(travaux.length===0) return h("div",{className:"empty"},"Aucun travail à analyser.");
+  var travail = travaux.find(function(t){return t.id===tid}) || travaux[0];
+  var eleves = travail?extractEleves(classes[travail.classe],[]):[];
+  var cc=codeCibleDeRef(ref);
+  var baremeEff=baremeEffectif((ref&&ref.dimensions)||{}, (defauts[travail.classe]&&defauts[travail.classe].dims)||null, btDims);
+  var resultsR={}; Object.keys(results).forEach(function(k){ resultsR[k]=recalcResult(results[k], modele, baremeEff, cc, travail.base||20); });
+  var ag = agregerResultats(eleves.map(function(el){return ekey(el)}), resultsR);
+  var notions = Object.keys(ag.parNotion).sort();
+  return h("div",{className:"col fade"},
+    h("div",{className:"card"},
+      h("div",{className:"row"},
+        h("h3",null,"Bilan de classe"), h("div",{className:"spacer"}),
+        h("label",null,"Travail"),
+        h("select",{value:tid,onChange:function(e){setTid(e.target.value)}}, travaux.map(function(t){return h("option",{key:t.id,value:t.id}, t.titre+" — "+t.classe)}))
+      )
+    ),
+    travail && h("div",{className:"card"},
+      h("div",{className:"row",style:{gap:28,marginBottom:12}},
+        h("div",null, h("div",{className:"sub"},"Moyenne classe"), h("div",{style:{fontFamily:"var(--serif)",fontSize:"1.5rem",color:"var(--accent)"}}, ag.moyenne!=null?(ag.moyenne+" / "+(travail.base||20)):"—")),
+        h("div",null, h("div",{className:"sub"},"Copies notées"), h("div",{style:{fontFamily:"var(--serif)",fontSize:"1.5rem"}}, ag.nbCorriges+" / "+eleves.length))
+      ),
+      eleves.map(function(el){ var r=resultsR[ekey(el)]; var note=(r&&typeof r.note==="number")?r.note:null;
+        return h("div",{key:el,className:"item",style:{marginBottom:6}},
+          h("span",null,el), h("div",{className:"spacer"}),
+          h("span",{className:"pill",style:{color:note==null?"var(--muted)":"var(--accent)",fontWeight:600}}, note==null?"non corrigé":(note+" / "+(travail.base||20))));
+      })
+    ),
+    travail && notions.length>0 && h("div",{className:"card"},
+      h("h3",{style:{marginBottom:4}},"Réussite par notion"),
+      h("p",{className:"sub",style:{marginBottom:10}},"Sur les copies notées. Repère ce qui est acquis (vert) ou fragile (rouge) collectivement."),
+      notions.map(function(code){
+        return h("div",{key:code,className:"item",style:{marginBottom:6,flexWrap:"wrap"}},
+          h("span",{className:"pill"},code), h("div",{className:"spacer"}),
+          Object.keys(ag.parNotion[code]).map(function(dim){ var o=ag.parNotion[code][dim]; var col=o.taux>=75?"var(--green)":o.taux>=50?"var(--orange)":"var(--coral)";
+            return h("span",{key:dim,className:"pill",title:dim+" — "+o.pts+"/"+o.total,style:{color:col,marginLeft:4}}, dim.charAt(0).toUpperCase()+" "+(o.taux!=null?o.taux+"%":"—")); }));
+      })
+    )
+  );
+}
+
+// — Fiches élève imprimables (sortie pour l'élève, comme les fiches de dictée) —
+function Fiches(p){
+  var travaux=p.travaux||[], classes=p.classes||{}, ref=p.ref;
+  var s=useState((p.current&&p.current.id)||(travaux[0]&&travaux[0].id)||""),tid=s[0],setTid=s[1];
+  var rs=useState({}),results=rs[0],setResults=rs[1];
+  var md=useState(null),modele=md[0],setModele=md[1];
+  var bt=useState(null),btDims=bt[0],setBtDims=bt[1];
+  var df=useState({}),defauts=df[0],setDefauts=df[1];
+  useEffect(function(){ if(!tid) return; var r=db.ref(ROOT+"/travaux/"+tid+"/results"); r.on("value",function(s){ setResults(s.val()||{}); }); return function(){ r.off(); }; },[tid]);
+  useEffect(function(){ if(!tid){setModele(null);setBtDims(null);return;} var r1=db.ref(ROOT+"/travaux/"+tid+"/corrige/modele"); r1.on("value",function(s){setModele(s.val()||null)}); var r2=db.ref(ROOT+"/travaux/"+tid+"/bareme/dims"); r2.on("value",function(s){setBtDims(s.val()||null)}); return function(){r1.off();r2.off();}; },[tid]);
+  useEffect(function(){ var r=db.ref(ROOT+"/baremeDefauts"); r.on("value",function(s){setDefauts(s.val()||{})}); return function(){r.off()}; },[]);
+  if(travaux.length===0) return h("div",{className:"empty"},"Aucun travail.");
+  var travail = travaux.find(function(t){return t.id===tid}) || travaux[0];
+  var eleves = travail?extractEleves(classes[travail.classe],[]):[];
+  var cc=codeCibleDeRef(ref);
+  var baremeEff=baremeEffectif((ref&&ref.dimensions)||{}, (defauts[travail.classe]&&defauts[travail.classe].dims)||null, btDims);
+  function resOf(el){ return recalcResult(results[ekey(el)], modele, baremeEff, cc, travail.base||20); }
+  function esc(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+  var STYLE='<style>body{font:14px/1.5 Georgia,serif;max-width:720px;margin:36px auto;padding:0 22px;color:#1c1c1c}h1{font-size:1.15rem;margin:0 0 2px} .meta{font:12px system-ui;color:#777;margin-bottom:14px}.note{font:700 1.3rem Georgia,serif;color:#1565c0;margin:10px 0 18px}table{border-collapse:collapse;width:100%;font-size:13px} td{border-top:1px solid #e4dccb;padding:7px 8px;vertical-align:top}th{text-align:left;font:600 12px system-ui;color:#666;padding:0 8px 6px} .txt{font:15px/1.9 Georgia,serif;margin:8px 0 18px} section{max-width:720px;margin:0 auto}@media print{.noprint{display:none}}</style>';
+  function corpsFiche(el, r){
+    var T=buildTokens(travail.texte||"");
+    var verds = (r&&r.verdicts)?(Array.isArray(r.verdicts)?r.verdicts:Object.keys(r.verdicts).map(function(k){return r.verdicts[k]})):[];
+    var seg=function(d){ if(d.code==="LIEN") return (T[d.from]||"?")+" \u2192 "+(T[d.to]||"?"); var a=d.from, b=(d.to!=null?d.to:d.from); return T.slice(a,b+1).join(" "); };
+    var rows = verds.map(function(d){
+      var dimsHtml=Object.keys(d.dims||{}).map(function(dim){ var v=d.dims[dim]; var c=v==="juste"?"#1b7a39":v==="partiel"?"#c97a16":"#c62828"; return '<span style="color:'+c+'">'+esc(dim)+' : '+esc(v)+'</span>'; }).join(" &nbsp;\u00b7&nbsp; ");
+      return '<tr><td><b>'+esc(d.code)+'</b></td><td>'+esc(seg(d))+'</td><td>'+dimsHtml+(d.nonAvenu?' <i style="color:#888">(non avenu : non nommé)</i>':'')+'</td></tr>';
+    }).join("");
+    var note=(r&&typeof r.note==="number")?(r.note+" / "+(travail.base||20)):"—";
+    return '<section><h1>'+esc(travail.titre)+'</h1><div class=meta>'+esc(travail.classe)+(travail.niveau?(" \u00b7 "+esc(travail.niveau)):"")+' — '+esc(el)+'</div>'+
+      '<div class=note>Note : '+esc(note)+'</div><div class=txt>'+esc(travail.texte)+'</div>'+
+      '<table><tr><th>Élément</th><th>Texte</th><th>Évaluation</th></tr>'+(rows||'<tr><td colspan=3><i>Aucun verdict enregistré.</i></td></tr>')+'</table></section>';
+  }
+  function doc(titre, corps){ return '<!doctype html><meta charset=utf-8><title>'+esc(titre)+'</title>'+STYLE+corps+'<button class=noprint onclick=print() style="margin:24px auto;display:block;padding:8px 16px">Imprimer</button>'; }
+  function imprimer(el){ var w=window.open("","_blank"); w.document.write(doc(travail.titre+" — "+el, corpsFiche(el,resOf(el)))); w.document.close(); }
+  function imprimerClasse(){ var w=window.open("","_blank");
+    var corps=eleves.filter(function(el){return !!resOf(el)}).map(function(el){ return corpsFiche(el,resOf(el)).replace("<section>","<section style=\"page-break-after:always\">"); }).join("");
+    w.document.write(doc(travail.titre+" — "+travail.classe, corps||"<p>Aucune copie notée.</p>")); w.document.close(); }
+  return h("div",{className:"col fade"},
+    h("div",{className:"card"},
+      h("div",{className:"row"},
+        h("h3",null,"Fiches élève"), h("div",{className:"spacer"}),
+        h("label",null,"Travail"),
+        h("select",{value:tid,onChange:function(e){setTid(e.target.value)}}, travaux.map(function(t){return h("option",{key:t.id,value:t.id}, t.titre+" — "+t.classe)})),
+        h("button",{className:"btn btn-sm btn-pri",style:{marginLeft:8},onClick:imprimerClasse},"🖨 Toute la classe")
+      )
+    ),
+    travail && h("div",{className:"card"},
+      h("p",{className:"sub",style:{marginBottom:10}},"Une fiche imprimable par élève : sa note et le détail de son analyse. Les fiches reflètent toujours le corrigé courant."),
+      eleves.map(function(el){ var r=resOf(el); var note=(r&&typeof r.note==="number")?r.note:null;
+        return h("div",{key:el,className:"item",style:{marginBottom:6}},
+          h("span",null,el), h("div",{className:"spacer"}),
+          h("span",{className:"pill",style:{color:note==null?"var(--muted)":"var(--accent)"}}, note==null?"non corrigé":(note+" / "+(travail.base||20))),
+          h("button",{className:"btn btn-sm",disabled:!r,onClick:function(){imprimer(el)}},"🖨 Fiche"));
+      })
+    )
+  );
+}
+
+// petit graphe d'évolution des notes (SVG inline)
+function sparkline(notes){
+  if(!notes || notes.length<2) return null;
+  var W=Math.max(160, notes.length*46), H=64, pad=10;
+  var coords=notes.map(function(p,i){ var x=pad+i*((W-2*pad)/(notes.length-1)); var ratio=(p.note||0)/(p.base||20); var y=H-pad-ratio*(H-2*pad); return [x,y]; });
+  var poly=coords.map(function(c){return c[0].toFixed(1)+","+c[1].toFixed(1)}).join(" ");
+  return h("div",{style:{overflowX:"auto",margin:"2px 0 14px"}}, h("svg",{width:W,height:H,style:{display:"block"}},
+    h("polyline",{points:poly,fill:"none",stroke:"var(--accent)",strokeWidth:2,strokeLinejoin:"round"}),
+    coords.map(function(c,i){return h("circle",{key:i,cx:c[0],cy:c[1],r:3,fill:"var(--accent)"})})
+  ));
+}
+
+// — Suivi longitudinal : profil d'un élève à travers ses travaux —
+function Suivi(p){
+  var classes=p.classes||{}, ref=p.ref;
+  var sc=useState((p.current&&p.current.classe)||""),classe=sc[0],setClasse=sc[1];
+  var se=useState(""),eleve=se[0],setEleve=se[1];
+  var ta=useState({}),arbre=ta[0],setArbre=ta[1];
+  var df=useState({}),defauts=df[0],setDefauts=df[1];
+  useEffect(function(){ var r=db.ref(ROOT+"/travaux"); r.on("value",function(s){setArbre(s.val()||{})}); return function(){r.off()}; },[]);
+  useEffect(function(){ var r=db.ref(ROOT+"/baremeDefauts"); r.on("value",function(s){setDefauts(s.val()||{})}); return function(){r.off()}; },[]);
+  var eleves = classe?extractEleves(classes[classe],[]):[];
+  var items = (classe&&eleve)?collecteSuivi(arbre, classe, ekey(eleve), {dimsRef:(ref&&ref.dimensions)||{}, defauts:defauts, cc:codeCibleDeRef(ref)}):[];
+  var notes = items.filter(function(it){return it.note!=null});
+  var _sw=0,_sc=0; notes.forEach(function(it){ var co=it.coef||1; _sw+=(it.note/(it.base||20))*co; _sc+=co; }); var moyPond=_sc>0?Math.round((_sw/_sc)*20*100)/100:null;
+  var resForAgg={}; items.forEach(function(it){ if(it.verdicts) resForAgg[it.id]={note:it.note,verdicts:it.verdicts}; });
+  var ag = agregerResultats(Object.keys(resForAgg), resForAgg);
+  var notions = Object.keys(ag.parNotion).sort();
+  return h("div",{className:"col fade"},
+    h("div",{className:"card"},
+      h("div",{className:"row"},
+        h("h3",null,"Suivi de l'élève"), h("div",{className:"spacer"}),
+        h("label",null,"Classe"), h("select",{value:classe,onChange:function(e){setClasse(e.target.value);setEleve("")}},h("option",{value:""},"— classe —"),Object.keys(classes).map(function(cn){return h("option",{key:cn,value:cn},cn)})),
+        h("label",null,"Élève"), h("select",{value:eleve,onChange:function(e){setEleve(e.target.value)}},h("option",{value:""},"— élève —"),eleves.map(function(el){return h("option",{key:el,value:el},el)}))
+      )
+    ),
+    classe && eleve && items.length>0 && h("div",{className:"card"},
+      h("div",{className:"row",style:{gap:28,marginBottom:10}},
+        h("div",null,h("div",{className:"sub"},"Travaux évalués"),h("div",{style:{fontFamily:"var(--serif)",fontSize:"1.4rem"}}, notes.length+" / "+items.length)),
+        h("div",null,h("div",{className:"sub"},"Moyenne personnelle"),h("div",{style:{fontFamily:"var(--serif)",fontSize:"1.4rem",color:"var(--accent)"}}, moyPond!=null?(moyPond+" / 20"):"—"))
+      ),
+      sparkline(notes),
+      items.map(function(it){ return h("div",{key:it.id,className:"item",style:{marginBottom:6}},
+        h("span",null,it.titre),
+        h("span",{className:"sub muted",style:{marginLeft:8}}, it.ts?new Date(it.ts).toLocaleDateString("fr-FR"):""),
+        h("div",{className:"spacer"}),
+        h("span",{className:"pill",style:{color:it.note==null?"var(--muted)":"var(--accent)",fontWeight:600}}, it.note==null?"non corrigé":(it.note+" / "+it.base))); })
+    ),
+    classe && eleve && notions.length>0 && h("div",{className:"card"},
+      h("h3",{style:{marginBottom:4}},"Réussite par notion (cumul de ses travaux)"),
+      h("p",{className:"sub",style:{marginBottom:10}},"Points forts et fragilités persistantes."),
+      notions.map(function(code){ return h("div",{key:code,className:"item",style:{marginBottom:6,flexWrap:"wrap"}},
+        h("span",{className:"pill"},code), h("div",{className:"spacer"}),
+        Object.keys(ag.parNotion[code]).map(function(dim){ var o=ag.parNotion[code][dim]; var col=o.taux>=75?"var(--green)":o.taux>=50?"var(--orange)":"var(--coral)";
+          return h("span",{key:dim,className:"pill",title:dim+" — "+o.pts+"/"+o.total,style:{color:col,marginLeft:4}}, dim.charAt(0).toUpperCase()+" "+(o.taux!=null?o.taux+"%":"—")); })); })
+    ),
+    classe && eleve && items.length===0 && h("div",{className:"empty"},"Aucun travail pour cette classe.")
+  );
+}
+
+// ——— Espace élève (délimitation = papier ; v0 informatif) ———
+function AppEleve(p){
+  return h("div",null,h(TopBar,{right:h("button",{className:"btn btn-sm btn-ghost",onClick:p.onQuit},"← accueil")}),
+    h("div",{className:"container fade"},h("div",{className:"card",style:{maxWidth:620,margin:"30px auto"}},
+      h("h2",{style:{marginBottom:8}},"Espace élève"),
+      h("p",{className:"sub"},"En mode délimitation, tu travailles sur la feuille papier remise par ton professeur. Les modes où tu rédiges directement à l'écran (phrase imposée, paragraphe argumentatif) arriveront ici."),
+      h("div",{className:"mount",style:{marginTop:16}},"Modes « l'élève rédige » — à construire.")
+    ))
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>
