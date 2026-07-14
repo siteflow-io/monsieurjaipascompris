@@ -2853,6 +2853,58 @@ function _purgeExec(){
 }
 /* ===== fin PURGE DE RENTRÉE ===== */
 
+/* ===== ORPHELINS — nœuds racine que personne ne revendique (Phase 2, lot 4) =====
+   Un nœud racine est COUVERT s'il est déclaré par un manifeste (exactement, ou via un
+   sous-nœud "racine/..."), ou s'il est dans la liste blanche des partagés/infra.
+   Tout le reste est orphelin : résidu d'anciennes versions → archive puis suppression,
+   nœud par nœud, avec frappe du nom exact. Détecte aussi les orphelins FUTURS. */
+var _ORPH_BLANCHE={classes:1,manifestes:1,corbeille:1};   /* partagé volontaire / infrastructure */
+function _orphelins(hub){
+  var declares={};Object.keys(hub.manifestes||{}).forEach(function(app){
+    var ns=((hub.manifestes[app]||{}).manifeste||{}).noeuds||[];
+    ns.forEach(function(n){declares[String(n).split('/')[0]]=1;});});
+  return Object.keys(hub).filter(function(k){return !_ORPH_BLANCHE[k]&&!declares[k];}).sort();
+}
+function _orphOpen(){
+  _showConsoleModal('Orphelins','<div class="cm-sub">Lecture du hub…</div>',[{label:'Annuler',cls:'ghost'}]);
+  _fbReadAll().then(function(hub){_orphRender(hub);})
+    .catch(function(){_showConsoleModal('Erreur','<div class="cm-sub">Lecture du hub impossible (réseau ?).</div>',[{label:'Fermer',cls:'ghost'}]);});
+}
+function _orphRender(hub){
+  var os=_orphelins(hub);
+  if(!os.length){_showConsoleModal('Orphelins','<div class="cm-ok">✓ Aucun nœud orphelin : tout le hub est revendiqué par un manifeste (ou partagé volontairement).</div>',[{label:'Fermer',cls:'ghost'}]);return;}
+  var rows=os.map(function(n){var v=hub[n];var nb=(v&&typeof v==='object')?Object.keys(v).length:1;var tl=JSON.stringify(v||null).length;
+    return '<div class="b2-ln"><span><b>'+escapeHtml(n)+'</b> — '+nb+' clé'+(nb>1?'s':'')+' · '+_humanSize(tl)+'</span>'
+      +'<button class="admin-action-btn danger" onclick="_orphDelete(\''+escapeHtml(n)+'\')">Archiver puis supprimer…</button></div>';}).join('');
+  _showConsoleModal('Orphelins — '+os.length+' nœud'+(os.length>1?'s':'')+' sans propriétaire',
+    '<div class="cm-sub">Ces nœuds ne sont déclarés par aucun manifeste : résidus d\u2019anciennes versions. L\u2019archive (fichier + corbeille) précède toujours la suppression.</div>'+rows,
+    [{label:'Fermer',cls:'ghost'}]);
+  window._orphHub=hub;
+}
+function _orphDelete(noeud){
+  var hub=window._orphHub;if(!hub||hub[noeud]===undefined)return;
+  var extract={};extract[noeud]=hub[noeud];
+  _saveJSON(extract,_tsName('orphelin-'+noeud)).then(function(ok){
+    if(!ok){_orphRender(hub);return;}
+    _corbeillePuis('orphelin-'+noeud,extract,{noeud:noeud},function(chemin){
+      var body='<div class="cm-ok">✓ Archivé'+(chemin?(' · corbeille : <code>'+escapeHtml(chemin)+'</code>'):' (fichier seul)')+'</div>'
+        +'<div class="cm-sub" style="margin-top:10px">Pour supprimer <b>'+escapeHtml(noeud)+'</b> du hub, retape son nom exact :</div>'
+        +'<input class="b2-input" id="orcf" autocomplete="off"><div id="orcferr" class="b2-err"></div>';
+      _showConsoleModal('Supprimer '+escapeHtml(noeud),body,[
+        {label:'Annuler',cls:'ghost',onclick:function(){_orphRender(hub);return true;}},
+        {label:'🗑 Supprimer définitivement',cls:'danger',onclick:function(){
+          var v=(document.getElementById('orcf')||{}).value||'';
+          if(v.trim()!==noeud){var e=document.getElementById('orcferr');if(e)e.textContent='Tape exactement '+noeud+'.';return true;}
+          _fbDeletePath(noeud).then(function(){delete hub[noeud];_orphRender(hub);})
+            .catch(function(){alert('Suppression impossible (réseau ?). Ton archive est intacte.');});
+          return true;}}
+      ]);
+      setTimeout(function(){var i=document.getElementById('orcf');if(i)i.focus();},60);
+    });
+  });
+}
+/* ===== fin ORPHELINS ===== */
+
 
 /* ===== UNIFIER — moteur ===== */
 /* Etiquette canonique d'un eleve : minuscules, sans accents, nom_prenom */
@@ -3239,7 +3291,7 @@ function _profSectionConfig(){
     +'<div class="tprof-info-row"><span class="tir-label">Firebase</span><span class="tir-value"><code>'+escapeHtml(FIREBASE_BASE.replace('https://','').split('.')[0])+'</code></span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Notifications ntfy.sh</span><span class="tir-value">'+ntfyLine+'</span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Niveaux bloqu\u00e9s</span><span class="tir-value">'+(BLOCKED_LEVELS.join(', ')||'aucun')+'</span></div>'
-    +'<div class="tprof-info-row"><span class="tir-label">Codes prof</span><span class="tir-value">'+PROF_CODES.length+' configur\u00e9'+(PROF_CODES.length>1?'s':'')+'</span></div>'+'<div class="danger-zone"><div class="dz-title">\u26a0 Zone dangereuse</div><div class="dz-sub">Importer un fichier de sauvegarde peut \u00e9craser les donn\u00e9es en ligne. Une archive dat\u00e9e de l\u2019\u00e9tat actuel est t\u00e9l\u00e9charg\u00e9e automatiquement AVANT toute \u00e9criture.</div><button class="mjpc-act danger" title="Restaure ou compl\u00e8te le hub depuis une sauvegarde. Pour en cr\u00e9er une au pr\u00e9alable, va dans Archives \u2192 Exporter." onclick="_importHubStart()">\u2b06 Importer un fichier\u2026</button>'+'<button class="mjpc-act danger" title="Supprimer ou archiver des \u00e9l\u00e8ves et toutes leurs donn\u00e9es." onclick="_b2Open()">\ud83d\udc65 Supprimer / archiver des \u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Donner \u00e0 chaque \u00e9l\u00e8ve une \u00e9tiquette unique, identique dans toutes les apps." onclick="_uniOpen()">\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Reset annuel : efface les donn\u00e9es d\u2019\u00e9l\u00e8ves selon les contrats publi\u00e9s par les apps. Simulation chiffr\u00e9e obligatoire avant toute action." onclick="_purgeOpen()">\ud83e\uddf9 Purge de rentr\u00e9e\u2026</button>'+'</div>';
+    +'<div class="tprof-info-row"><span class="tir-label">Codes prof</span><span class="tir-value">'+PROF_CODES.length+' configur\u00e9'+(PROF_CODES.length>1?'s':'')+'</span></div>'+'<div class="danger-zone"><div class="dz-title">\u26a0 Zone dangereuse</div><div class="dz-sub">Importer un fichier de sauvegarde peut \u00e9craser les donn\u00e9es en ligne. Une archive dat\u00e9e de l\u2019\u00e9tat actuel est t\u00e9l\u00e9charg\u00e9e automatiquement AVANT toute \u00e9criture.</div><button class="mjpc-act danger" title="Restaure ou compl\u00e8te le hub depuis une sauvegarde. Pour en cr\u00e9er une au pr\u00e9alable, va dans Archives \u2192 Exporter." onclick="_importHubStart()">\u2b06 Importer un fichier\u2026</button>'+'<button class="mjpc-act danger" title="Supprimer ou archiver des \u00e9l\u00e8ves et toutes leurs donn\u00e9es." onclick="_b2Open()">\ud83d\udc65 Supprimer / archiver des \u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Donner \u00e0 chaque \u00e9l\u00e8ve une \u00e9tiquette unique, identique dans toutes les apps." onclick="_uniOpen()">\ud83d\udd17 Unifier les identifiants d\u2019\u00e9l\u00e8ves\u2026</button>'+'<button class="mjpc-act danger" title="Reset annuel : efface les donn\u00e9es d\u2019\u00e9l\u00e8ves selon les contrats publi\u00e9s par les apps. Simulation chiffr\u00e9e obligatoire avant toute action." onclick="_purgeOpen()">\ud83e\uddf9 Purge de rentr\u00e9e\u2026</button>'+'<button class="mjpc-act danger" title="D\u00e9tecte les n\u0153uds du hub qu\u2019aucune app ne revendique (r\u00e9sidus d\u2019anciennes versions) et propose archive puis suppression." onclick="_orphOpen()">\ud83e\udded N\u0153uds orphelins\u2026</button>'+'</div>';
 }
 function _profSectionPresence(){
   return '<h2>Pr\u00e9sence live</h2>'
