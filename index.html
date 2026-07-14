@@ -2303,7 +2303,12 @@ function _importEleves(slug){
 function _genererCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){if(!_eleveCode(nom)){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}});showProfSection('eleves');}
 function _regenCodeEleve(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;var taken=_allCodesTaken();var c=_genCode4(taken);_putCode(nom,slug,c);showProfSection('eleves');}
 function _resetAllCodesClasse(slug){if(!confirm('R\u00e9g\u00e9n\u00e9rer TOUS les codes de cette classe ? Les anciens ne fonctionneront plus.'))return;var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);});showProfSection('eleves');}
-function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;if(!confirm('Retirer '+nom+' de la classe ?'))return;var merged=names.filter(function(e,idx){return idx!==i;});classesData[slug].eleves=merged;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});var k=san(nom);delete codesData[k];fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');}
+function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;if(!confirm('Retirer '+nom+' de la classe ?'))return;
+  var k=san(nom);var extract={classes:{}};extract.classes[slug]={eleves:[nom]};if(codesData[k]){extract.codes={};extract.codes[k]=codesData[k];}
+  _corbeillePuis('retrait-eleve',extract,{eleve:nom,classe:slug},function(){
+    var merged=names.filter(function(e,idx){return idx!==i;});classesData[slug].eleves=merged;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});
+    delete codesData[k];fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');
+  });}
 function _printCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var cl=classesData[slug]||{};var rows=names.map(function(nom){return '<tr><td>'+escapeHtml(nom)+'</td><td class="c">'+(_eleveCode(nom)||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
 
 var PROF_TEST_CLASSE=null;
@@ -2620,7 +2625,7 @@ function _b2Save(){
   ]);
 }
 function _b2DoSave(){
-  var list=_b2SelList(),arch=_b2.mode==='archive',an='2025-2026',slugs={};list.forEach(function(x){slugs[x.slug]=1;});
+  var list=_b2SelList(),arch=_b2.mode==='archive',an=_anneeScolaire(),slugs={};list.forEach(function(x){slugs[x.slug]=1;});
   var obj,name;
   if(arch){obj=_b2BuildExtract(list);
     name=(Object.keys(slugs).length===1)?('archive_'+String(Object.keys(slugs)[0]).replace(/[^A-Za-z0-9]/g,'-')+'_'+an+'.json'):('archive_lot_'+new Date().toISOString().slice(0,10)+'.json');
@@ -2650,6 +2655,9 @@ function _b2Confirm(savedName){
 }
 function _b2Exec(){
   var list=_b2SelList();
+  _corbeillePuis(_b2.mode==='archive'?'archive-eleves':'suppression-eleves',_b2BuildExtract(list),{eleves:list.length},function(_cb){_b2ExecReel(list,_cb);});
+}
+function _b2ExecReel(list,_cheminCorbeille){
   var leaf=[],classRem={},appRem={};
   list.forEach(function(it){var fp=_eleveFootprint(_b2.hub,it.nom,it.slug);
     fp.forEach(function(x){
@@ -2665,9 +2673,9 @@ function _b2Exec(){
   _showConsoleModal('Traitement…','<div class="cm-sub">Effacement en cours sur '+ops.length+' emplacements…</div>',[]);
   ops.reduce(function(chain,op){return chain.then(op);},Promise.resolve()).then(function(){
     loadClasses(function(){loadCodes(function(){
-      var verbe=_b2.mode==='archive'?'archivés et effacés du cloud':'supprimés';
+      var verbe=_b2.mode==='archive'?'archivés et effacés du cloud':'supprimés';var cbTxt=_cheminCorbeille?('<div class="cm-sub">Copie cloud : <code>'+escapeHtml(_cheminCorbeille)+'</code> (corbeille, 1 an).</div>'):'<div class="cm-sub">\u26a0 Corbeille cloud non écrite (fichier local seul).</div>';
       var body='<div class="'+(fail.length?'cm-sub':'cm-ok')+'">'+(fail.length?'⚠ ':'✓ ')+list.length+' élèves '+verbe+' · '+ok.n+' emplacements traités'+(fail.length?(' · '+fail.length+' échec(s)'):'· 0 échec')+'.</div>'
-        +(_b2.mode==='archive'?'<div class="cm-sub">Le fichier d’archive est chez toi, ré-importable.</div>':'')
+        +(_b2.mode==='archive'?'<div class="cm-sub">Le fichier d’archive est chez toi, ré-importable.</div>':'')+cbTxt
         +(fail.length?'<div class="b2-fail">'+fail.map(escapeHtml).join('<br>')+'</div><div class="cm-sub">Ta sauvegarde est intacte. Tu peux relancer pour réessayer les emplacements en échec.</div>':'');
       _showConsoleModal('Terminé',body,[{label:'Fermer',cls:'ghost'}]);
     });});
@@ -2694,6 +2702,28 @@ function _b2BuildExtract(list){
   return root;
 }
 /* ===== fin BRIQUE 2 (écran + exécution) ===== */
+
+/* ===== CORBEILLE — 2e ceinture d'archive, dans le hub (Phase 2, lot 1) =====
+   Doctrine : AUCUNE destruction sans archive. 1re ceinture = fichier local (flux _b2Save,
+   déjà obligatoire) ; 2e ceinture = corbeille/<AAAA-MM-JJ>/<motif>_<HHMMSS> dans Firebase.
+   Rétention : 1 an glissant, purge manuelle uniquement (décision 14/07/2026). */
+function _anneeScolaire(){var d=new Date(),y=d.getFullYear();return (d.getMonth()<7)?((y-1)+'-'+y):(y+'-'+(y+1));}
+function _corbeillePut(motif,extract,meta){
+  var d=new Date();
+  var jour=d.toISOString().slice(0,10);
+  var hms=('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2)+('0'+d.getSeconds()).slice(-2);
+  var cle=String(motif).replace(/[^a-z0-9_-]/gi,'-')+'_'+hms;
+  var payload={_meta:Object.assign({motif:motif,date:_nowStr?_nowStr():d.toISOString(),ts:Date.now(),annee:_anneeScolaire(),source:'index'},meta||{}),data:extract||{}};
+  return _fbPutPath('corbeille/'+jour+'/'+cle,payload).then(function(){return 'corbeille/'+jour+'/'+cle;});
+}
+/* Corbeille puis destruction : si la corbeille échoue, l'utilisateur tranche explicitement
+   (le fichier local, lui, est déjà enregistré quand ce chemin est atteint). */
+function _corbeillePuis(motif,extract,meta,suite){
+  _corbeillePut(motif,extract,meta).then(function(chemin){suite(chemin);}).catch(function(){
+    if(confirm('\u26a0 La corbeille cloud n\u2019a pas pu \u00eatre \u00e9crite.\n\nContinuer quand m\u00eame ? (annuler = rien n\u2019est d\u00e9truit)')){suite(null);}
+  });
+}
+/* ===== fin CORBEILLE ===== */
 
 
 /* ===== UNIFIER — moteur ===== */
@@ -3229,8 +3259,12 @@ function deleteClass(slug){
   var confirmName=prompt('Pour confirmer la suppression d\u00e9finitive, retape le nom exact de la classe :\n\n\u00ab '+(c.nom||slug)+' \u00bb');
   if(confirmName===null)return;
   if(confirmName.trim()!==(c.nom||slug)){alert('Le nom ne correspond pas. Suppression annul\u00e9e.');return;}
-  fetch(FIREBASE_BASE+'/classes/'+slug+'.json',{method:'DELETE'})
-    .then(function(){delete classesData[slug];showProfSection('classes');});
+  var extract={classes:{}};extract.classes[slug]=classesData[slug];
+  var noms=extractEleves(classesData[slug],[]);extract.codes={};noms.forEach(function(n){var k=san(n);if(codesData[k])extract.codes[k]=codesData[k];});
+  _corbeillePuis('suppression-classe',extract,{classe:slug,eleves:noms.length},function(){
+    fetch(FIREBASE_BASE+'/classes/'+slug+'.json',{method:'DELETE'})
+      .then(function(){delete classesData[slug];showProfSection('classes');});
+  });
 }
 
 function togglePublishTab(level,tabId){
