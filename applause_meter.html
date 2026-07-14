@@ -1043,6 +1043,191 @@ var db = firebase.database();
 var DB_ROOT = "applaudimetre";
 var PROF_CODES = ["3141","1312"];   // codes d'acces prof (ranges ici, plus en dur)
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
+// toute évolution passe par une nouvelle version diffusée partout.
+// Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
+// est propre à chaque app — il se remplit, il ne se réécrit pas.
+// Dépendances : firebase 8.x (db = firebase.database()) déjà initialisé par l'app.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── DÉCLARATION DE L'APP (à remplir par app — exemple ci-dessous) ──
+// var MJPC_APP = {
+//   id: "correction_dictee",          // identifiant technique (anglais/ascii)
+//   nom: "Correction de dictée",      // libellé lisible
+//   contenant: "aucun"                // "aucun" | "binome" | "groupe" | "classe"
+// };                                  // = l'élève travaille seul / à 2-3 / en groupe / classe entière
+// var MJPC_MANIFESTE = { notions: [], noeuds: [] };   // vocabulaire + nœuds Firebase de l'app (vue projetée)
+// var MJPC_PURGE = { preserver: [], purger: [] };     // contrat de purge : chemins à garder / à effacer au reset
+
+// ── 1. Identité élève : clé canonique ──
+// "CLÉMENT Noé" → "clement_noe". Déterministe, recalculable, lisible.
+function sanMJPC(s){
+  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+}
+
+// ── 2. Identité classe : la clé du hub EST l'identifiant ──
+// Décision du 14/07/2026 : aucune app ne transforme le nom de classe.
+// La clé de /classes (ex. "4E BANKSY") est l'unique étiquette de rangement.
+function cleClasse(nom){ return String(nom||"").trim(); }
+
+// ── 3. Classes de test (bac à sable) : convention unique "_test_<app>" ──
+// Préfixe "_" = classe interne : jamais montrée aux élèves, jamais archivée
+// dans les profils, nettoyable sans risque. "CLASSE TEST" et "_TEST" sont
+// reconnues comme héritage le temps de leur nettoyage (dette B).
+function classeTestId(){ return "_test_"+MJPC_APP.id; }
+function estClasseInterne(nom){ return !!nom && String(nom).charAt(0)==="_"; }
+function estClasseTest(nom){
+  return estClasseInterne(nom) || nom==="CLASSE TEST"; // héritage toléré en lecture
+}
+
+// ── 4. Lecture robuste d'un roster : extractEleves ──
+// Tolère les 3 formats rencontrés dans les données réelles :
+//   liste ["NOM Prénom", …] · objet indexé {0:…, archivee:…} ·
+//   objet {nom, eleves:[{nomComplet}|{nom,prenom}|{name}|"…"]}
+function extractEleves(fbClasse, cfgEleves){
+  cfgEleves = cfgEleves || [];
+  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,published:1,eleves:1};
+  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
+  function nomDe(v){
+    if(typeof v==="string") return v;
+    if(v&&typeof v==="object"){
+      if(v.nomComplet) return v.nomComplet;
+      if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
+      if(v.name) return v.name;
+    }
+    return null;
+  }
+  if(Array.isArray(fbClasse)){ var a=clean(fbClasse.map(nomDe)); if(a.length) return a; }
+  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
+    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves.map(nomDe)); if(e.length) return e; }
+    var names=clean(Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){return nomDe(fbClasse[k]);}));
+    if(names.length) return names;
+  }
+  return clean(cfgEleves.map(nomDe));
+}
+
+// ── 5. Écriture NON destructive d'une classe : ecrireClasse ──
+// Remplace UNIQUEMENT la liste d'élèves ; préserve toute métadonnée existante
+// (archivee, niveau, couleur, …) ; normalise au format canonique
+// {eleves:["NOM Prénom",…], …métadonnées} : les élèves-objets ({nomComplet},
+// {nom,prenom}, {name}) sont ramenés à la chaîne, les résidus indexés {0:…} purgés.
+// meta (optionnel) : métadonnées à poser/mettre à jour (ex. {niveau:"4e"}) —
+// appliquées PAR-DESSUS l'existant, jamais en le remplaçant.
+// Transaction Firebase : atomique, idempotente, sûre en concurrence.
+function ecrireClasse(db, nomClasse, eleves, meta, cb){
+  if(typeof meta==="function"){ cb=meta; meta=null; }
+  var nom=cleClasse(nomClasse);
+  if(!nom){ if(cb) cb(new Error("Nom de classe vide")); return; }
+  function nomDe(v){
+    if(typeof v==="string") return v.trim();
+    if(v&&typeof v==="object"){
+      if(v.nomComplet) return String(v.nomComplet).trim();
+      if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+String(v.prenom).trim();
+      if(v.name) return String(v.name).trim();
+    }
+    return null;
+  }
+  var propres=(eleves||[]).map(nomDe).filter(function(e){return e&&typeof e==="string";});
+  db.ref("classes/"+nom).transaction(function(cur){
+    var out={eleves:propres};
+    if(cur&&typeof cur==="object"&&!Array.isArray(cur)){
+      for(var k in cur){
+        if(k==="eleves") continue;          // remplacée
+        if(/^\d+$/.test(k)) continue;       // résidu indexé : purgé (les élèves vivent dans .eleves)
+        out[k]=cur[k];                      // métadonnée : préservée
+      }
+    }
+    if(meta&&typeof meta==="object"){ for(var m in meta){ if(meta[m]!==undefined) out[m]=meta[m]; } }
+    if(out.archivee===undefined) out.archivee=false;
+    return out;
+  }, function(err, committed){ if(cb) cb(err||null, committed); });
+}
+
+// ── 6. Suppression d'élève : INTERDITE hors MJPC ──
+// Une seule logique de suppression, dans la console MJPC (archive avant tout).
+// Les apps remplacent leurs boutons de suppression par ce renvoi.
+var MJPC_URL="https://siteflow-io.github.io/monsieurjaipascompris/index.html";
+function renvoyerVersMJPC(motif){
+  var msg="La gestion des \u00e9l\u00e8ves (ajout, retrait, archivage) se fait dans MJPC, pour que rien ne se perde."
+        +(motif?"\n\n("+motif+")":"");
+  if(typeof window!=="undefined"&&window.confirm(msg+"\n\nOuvrir MJPC ?")){ window.open(MJPC_URL,"_blank"); }
+}
+
+// ── 7. Identification nominative : le portail commun (logique) ──
+// Toute identification produit des élèves SINGULIERS (clé canonique), que le
+// travail soit individuel ou en groupe. Le groupe est un contenant, pas une identité.
+// resolveEleves(roster, saisies) → [{nom, cle}] ou {erreur}
+//   roster  : liste des noms de la classe (extractEleves)
+//   saisies : ["DUPONT Marie", …] (chips) ou [{nom:"DUPONT",prenom:"Marie"}] (champs)
+function resolveEleves(roster, saisies){
+  var res=[], vus={};
+  for(var i=0;i<(saisies||[]).length;i++){
+    var s=saisies[i], trouve=null;
+    if(typeof s==="string"){
+      for(var j=0;j<roster.length;j++){ if(roster[j]===s){trouve=roster[j];break;} }
+      if(!trouve){ var k=sanMJPC(s); for(j=0;j<roster.length;j++){ if(sanMJPC(roster[j])===k){trouve=roster[j];break;} } }
+    } else if(s&&s.nom&&s.prenom){
+      var nomU=String(s.nom).trim().toUpperCase(), preL=String(s.prenom).trim().toLowerCase();
+      for(j=0;j<roster.length;j++){
+        var parts=roster[j].split(" ");
+        var rNom=parts.slice(0,-1).join(" ").toUpperCase(), rPre=(parts[parts.length-1]||"").toLowerCase();
+        if(rNom===nomU&&rPre===preL){trouve=roster[j];break;}
+      }
+    }
+    if(!trouve) return {erreur:"\u00c9l\u00e8ve introuvable : "+(typeof s==="string"?s:(s.nom+" "+s.prenom))+". V\u00e9rifie l'orthographe."};
+    var cle=sanMJPC(trouve);
+    if(vus[cle]) return {erreur:"\u00c9l\u00e8ve s\u00e9lectionn\u00e9 deux fois : "+trouve};
+    vus[cle]=1; res.push({nom:trouve, cle:cle});
+  }
+  if(!res.length) return {erreur:"Aucun \u00e9l\u00e8ve identifi\u00e9."};
+  return res;
+}
+
+// ── 8. Manifeste (vue projetée, ADDITIVE) ──
+// Les constantes en dur dans l'app restent la source de vérité ; le manifeste
+// n'est qu'une photographie publiée pour MJPC. Incapable de diverger : republiée
+// à chaque chargement prof.
+function publierManifeste(db){
+  try{
+    db.ref("manifestes/"+MJPC_APP.id).set({
+      version: MJPC_CORE_VERSION,
+      app: MJPC_APP,
+      manifeste: MJPC_MANIFESTE||{},
+      purge: MJPC_PURGE||{preserver:[],purger:[]},
+      publie_le: Date.now()
+    });
+  }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
+}
+
+var MJPC_CORE_VERSION="1.0.0";
+// ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
+// ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
+var MJPC_APP = {
+  id: "applause_meter",
+  nom: "L'Applaudimètre",
+  contenant: "aucun"            // chaque passage de lecture appartient à UN élève lecteur
+};
+var MJPC_MANIFESTE = {
+  noeuds: ["applaudimetre"],    // tout vit sous ce nœud (l'app lit /classes racine, partagé, sans le posséder)
+  notions: []                   // rattachement aux notions : Phase 3 (Concordance)
+};
+var MJPC_PURGE = {
+  // conception (survit aux années) : les réglages du prof — critères, compliments,
+  // messages timides, bornes — vivent dans session/reglages. PRESERVER PRIME SUR PURGER :
+  // la console (Phase 2) épargne session/reglages en purgeant session.
+  preserver: ["applaudimetre/session/reglages"],
+  // données d'élèves et état de séance : archive → purge au reset de rentrée.
+  // applaudimetre/classes = résidu d'avant la mutualisation (l'app lit /classes racine) — couvert.
+  purger:    ["applaudimetre/seances","applaudimetre/historiqueLectures","applaudimetre/qrScans",
+              "applaudimetre/live","applaudimetre/liveSnapshot","applaudimetre/file",
+              "applaudimetre/compteurLectures","applaudimetre/votes","applaudimetre/tablettes",
+              "applaudimetre/compliments","applaudimetre/session","applaudimetre/classes"]
+};
+
 // ════════════ CONSTANTES ════════════
 var NB_TABLES_DEFAUT = 14;
 
@@ -1104,7 +1289,7 @@ var REGLAGES_DEFAUT = {
 };
 
 // Liste élèves de TEST (reprise écosystème MJPC)
-var TEST_SLUG = "_test_applause";
+var TEST_SLUG = classeTestId();   // convention socle : "_test_applause_meter" (classe interne, invisible élèves, jamais archivée)
 
 // Messages tirés au sort à la fin du minuteur (le {prénom} est remplacé à l'affichage)
 var MESSAGES_FIN = [
@@ -1384,15 +1569,12 @@ function CarteIACriteres(p){
 }
 
 // ════════════ HELPERS (parité MJPC) ════════════
-function san(s){ return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,""); } /* sanMJPC canonique : cle-eleve nom_prenom */
+var san = sanMJPC;   /* clé-élève canonique : fournie par le socle MJPC-CORE */
 function newSessionId(){
   var d=new Date(), pad=function(n){return (n<10?"0":"")+n;};
   return "s_"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"_"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
 }
-function slugify(s){
-  return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-z0-9]+/g," ").trim().replace(/\s+/g,"-");
-}
+/* slugify supprimé (14/07/2026) : la clé de /classes est le nom tel quel (cleClasse, décision §12) — plus de tirets */
 function prenom(full){
   if(!full) return "";
   var parts = String(full).trim().split(/\s+/);
@@ -1413,28 +1595,8 @@ function toArr(v){
   }
   return [v];
 }
-function extractEleves(fbClasse, cfgEleves){
-  cfgEleves = cfgEleves || [];
-  var META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1,cree_le:1,eleves:1};
-  function clean(a){return (a||[]).filter(function(x){return x&&typeof x==="string"&&x.trim();});}
-  if(Array.isArray(fbClasse)){ var a=clean(fbClasse); if(a.length) return a; }
-  if(fbClasse&&typeof fbClasse==="object"&&!Array.isArray(fbClasse)){
-    if(Array.isArray(fbClasse.eleves)){ var e=clean(fbClasse.eleves); if(e.length) return e; }
-    var names=Object.keys(fbClasse).filter(function(k){return !META[k]&&k.charAt(0)!=="_";}).map(function(k){
-      var v=fbClasse[k];
-      if(typeof v==="string") return v;
-      if(v&&typeof v==="object"){
-        if(v.nom&&v.prenom) return String(v.nom).toUpperCase()+" "+v.prenom;
-        if(v.nomComplet) return v.nomComplet;
-        if(v.name) return v.name;
-      }
-      return null;
-    });
-    names=clean(names);
-    if(names.length) return names;
-  }
-  return cfgEleves;
-}
+/* extractEleves local supprimé (14/07/2026) : le canon du socle MJPC-CORE fait foi
+   (il gère en plus les élèves-objets dans les listes et la méta "published"). */
 function reglagesSafe(r){
   r = r || {};
   var crit = toArr(r.criteres);
@@ -1642,7 +1804,7 @@ function Accueil(p){
     db.ref(DB_ROOT+"/compliments").remove();
     db.ref(DB_ROOT+"/liveSnapshot").remove();
     db.ref(DB_ROOT+"/tablettes").remove();
-    db.ref("classes/"+TEST_SLUG).set({nom:"⚙️ Classe TEST", eleves:TEST_ELEVES.slice()});
+    ecrireClasse(db, TEST_SLUG, TEST_ELEVES.slice(), {nom:"⚙️ Classe TEST"});   // transaction non destructive (socle)
     db.ref(DB_ROOT+"/session").update({classeSlug:TEST_SLUG, reader:"", reglages:REGLAGES_DEFAUT, startedAt:null, demarreeLe:Date.now(), absents:[], passageId:"", messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null, sessionId:null});
     p.go("prof");                                 // entre directement dans le panneau prof
   }
@@ -1672,6 +1834,7 @@ function AppProf(p){
   var sc=useState({}), classes=sc[0], setClasses=sc[1];
   var ss=useState(null), session=ss[0], setSession=ss[1];
   useEffect(function(){
+    publierManifeste(db);   // vue projetée pour la console MJPC (additive, ne casse jamais l'app)
     var r1=db.ref("classes"); var f1=r1.on("value",function(s){setClasses(s.val()||{});});
     var r2=db.ref(DB_ROOT+"/session"); var f2=r2.on("value",function(s){setSession(s.val()||{});});
     return function(){ r1.off("value",f1); r2.off("value",f2); };
@@ -2157,7 +2320,7 @@ function OngletPilotage(p){
         h("div",{className:"sel-wrap"},
           h("select",{value:slug,onChange:setClasse},
             h("option",{value:""},"— choisir une classe —"),
-            Object.keys(classes).map(function(s){return h("option",{key:s,value:s},classes[s].nom||s);})))),
+            Object.keys(classes).filter(function(s){return s===slug||!estClasseTest(s);}).map(function(s){return h("option",{key:s,value:s},classes[s].nom||s);})))),
       slug && h("p",{className:"muted"},
         eleves.length+" élèves · "+presents+" / "+reg.nbTables+" tablettes connectées"+
         (demarree?(" · "+absents.length+" absent"+(absents.length>1?"s":"")):"")),
@@ -2440,12 +2603,13 @@ function OngletClasses(p){
     var n=nom.trim(); if(!n){ alert("Donne d'abord un nom à la classe (ex. 4e Banksy), dans le champ du haut."); return; }
     var eleves=liste.split("\n").map(function(l){return l.trim();}).filter(function(l){return l.length;});
     if(!eleves.length){ alert("Colle au moins un élève (un par ligne, format NOM Prénom)."); return; }
-    var slug=slugify(n)||("classe-"+Date.now());
-    db.ref("classes/"+slug).set({nom:n,eleves:eleves})
-      .then(function(){ setNom(""); setListe(""); })
-      .catch(function(e){ alert("Échec de l'enregistrement Firebase : "+((e&&e.message)||e)+"\n\nVérifie ta config Firebase et les règles de la base (lecture/écriture autorisées)."); });
+    var cle=cleClasse(n);                              // décision §12 : la clé de /classes est le nom tel quel
+    ecrireClasse(db, cle, eleves, {nom:n}, function(err){   // transaction non destructive : préserve archivee/niveau/…
+      if(err){ alert("Échec de l'enregistrement Firebase : "+((err&&err.message)||err)+"\n\nVérifie ta config Firebase et les règles de la base (lecture/écriture autorisées)."); }
+      else { setNom(""); setListe(""); }
+    });
   }
-  function suppr(slug){ if(confirm("Supprimer cette classe ?")) db.ref("classes/"+slug).remove(); }
+  function suppr(slug){ renvoyerVersMJPC("Suppression de la classe « "+slug+" » demandée depuis l'Applaudimètre"); }   // plus de remove sec sur le nœud partagé
   return h(React.Fragment,null,
     h("div",{className:"card"},
       h("h3",null,"Nouvelle classe",ifo("Colle ta liste depuis École Directe : un élève par ligne, au format NOM Prénom. Le prénom seul s'affichera côté élève et au tableau.")),
@@ -2455,7 +2619,7 @@ function OngletClasses(p){
         h("textarea",{value:liste,onChange:function(e){setListe(e.target.value);},placeholder:"DUPONT Jean\nMARTIN Léa\n…"})),
       h("button",{className:"btn btn-violet btn-lg",onClick:creer,
         title:"Crée la classe dans Firebase. Le nom de la classe est slugifié pour produire un identifiant interne."},"➕ Créer la classe")),
-    Object.keys(classes).map(function(slug){
+    Object.keys(classes).filter(function(s){return !estClasseTest(s);}).map(function(slug){
       var c=classes[slug]; var el=extractEleves(c, []);
       return h("div",{className:"card",key:slug},
         h("h3",null,c.nom||slug),
