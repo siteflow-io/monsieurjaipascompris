@@ -641,28 +641,32 @@ body:has(.overlay.show){overflow:hidden}
       </div>
       <div class="eyebrow cfg-eyebrow">La Planète des singes · 3<sup>e</sup></div>
       <h1 class="cfg-title">Le triomphe simien</h1>
-      <p class="sub">Entrez le code de classe affiché au tableau et vos prénoms pour rejoindre le débat.</p>
+      <p class="sub">Connecte-toi avec ton code MJPC, ton nom et ton prénom.</p>
       <div id="loginBlock">
-        <label for="loginCode">Code de classe</label>
-        <input id="loginCode" class="code" title="Le code affiché au tableau par le professeur (par exemple LIMA-4827)." placeholder="LIMA-4827" maxlength="12" autocomplete="off">
-        <div id="loginNamesWrap">
-        <label>Vos prénoms (1, 2 ou 3 élèves)</label>
-        <input id="loginName1" placeholder="Prénom 1" autocomplete="off" title="Le prénom du premier élève du binôme.">
-        <input id="loginName2" placeholder="Prénom 2 (optionnel)" style="margin-top:8px" autocomplete="off" title="Le prénom du deuxième élève (laisse vide si tu es seul).">
-        <input id="loginName3" placeholder="Prénom 3 (optionnel)" style="margin-top:8px" autocomplete="off" title="Le prénom du troisième élève (pour un trinôme).">
+        <div id="mjpcDirect" style="display:none">
+          <div class="cm-ok" id="mjpcDirectMsg"></div>
+          <div class="actions" style="margin-top:8px">
+            <button class="prof-link" onclick="mjpcPasMoi()" title="Ouvre le formulaire de connexion habituel.">Ce n'est pas moi</button>
+            <button class="primary" id="mjpcDirectBtn" onclick="mjpcEntrer()" title="Entrer directement : tu es déjà connecté au site MJPC.">Entrer →</button>
+          </div>
         </div>
-        <div id="loginGroupWrap" style="display:none">
-        <label>Choisis ton groupe</label>
-        <select id="loginGroupSelect" class="code" style="width:100%" title="Choisis ton groupe dans la liste. Si tu ne le trouves pas, préviens le professeur : les groupes sont verrouillés."><option value="">— Choisis ton groupe —</option></select>
+        <div id="loginFormWrap">
+        <label for="loginCode">Ton code MJPC</label>
+        <input id="loginCode" class="code" title="Ton code personnel à 4 chiffres, donné par le professeur (le même que sur le site MJPC)." placeholder="0000" maxlength="6" inputmode="numeric" autocomplete="off">
+        <div id="loginNamesWrap">
+        <label>Ton nom et ton prénom</label>
+        <input id="loginName1" placeholder="Nom" autocomplete="off" title="Ton nom de famille.">
+        <input id="loginName2" placeholder="Prénom" style="margin-top:8px" autocomplete="off" title="Ton prénom.">
+        </div>
         </div>
         <div id="loginRosterWrap" style="display:none">
-        <label>Choisis ton prénom dans la liste de ta classe (1 à 3)</label>
+        <label id="rosterLabel">Qui débat avec toi ? Touchez vos prénoms (3 maximum, toi compris)</label>
         <div id="rosterList" class="roster-list"></div>
         </div>
         <div class="err" id="loginErr"></div>
         <div class="actions">
           <button class="prof-link" onclick="showProfLogin()" title="Réservé au professeur : ouvre l'accès au pilotage de la classe.">⚙ Accès professeur</button>
-          <button class="primary" onclick="doStudentLogin()" id="loginBtn" title="Rejoindre le débat avec ce code et ces prénoms.">Rejoindre →</button>
+          <button class="primary" onclick="doStudentLogin()" id="loginBtn" title="Se connecter au débat de ta classe.">Se connecter →</button>
         </div>
       </div>
       <div id="profLoginBlock" style="display:none">
@@ -1068,7 +1072,10 @@ firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDom
 const db = firebase.database();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -1226,7 +1233,39 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.0.0";
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+var MJPC_CORE_VERSION="1.1.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
@@ -1236,12 +1275,12 @@ var MJPC_APP = {
   contenant: "binome"           // évaluations par binôme — le binôme est un contenant, pas une identité
 };
 var MJPC_MANIFESTE = {
-  noeuds: ["debats","debat_singes","codes"],   // codes = nœud racine des codes élèves (dette ⑮ : à restructurer passe panneaux)
+  noeuds: ["debats","debat_singes"],   // /codes rendu au site MJPC (14/07) : plus de code de séance, seuls restent les codes personnels
   notions: []                   // rattachement compétences oral : Phase 3 (Concordance)
 };
 var MJPC_PURGE = {
   preserver: ["debats/*/config","debats/*/meta"],   // conception + meta (contient le mot de passe prof !)
-  purger:    ["debats/*/active","debats/*/archives","debat_singes","codes"]
+  purger:    ["debats/*/active","debats/*/archives","debat_singes"]
               // active = binômes/manches/scores (données élèves) · archives annuelles · debat_singes = legacy migré · codes = codes élèves annuels
 };
 let DEBAT_ID = "debat_singes";
@@ -1617,7 +1656,7 @@ var CLASSES={};
 function watchClasses(){
   try{
     db.ref("classes").once("value").then(function(snap){ CLASSES=snap.val()||{}; });
-    db.ref("classes").on("value", function(snap){ CLASSES=snap.val()||{}; });
+    db.ref("classes").on("value", function(snap){ CLASSES=snap.val()||{}; bootPortailMJPC(); });
   }catch(e){ console.error("watchClasses", e); }
 }
 function classeSelector(){
@@ -1821,61 +1860,134 @@ async function joinAsStudentWithNames(names, data){
   studentRosterSel=[];
   enterAsStudent(binomeId, data);
 }
-async function doStudentLogin(){
-  // Plein écran dissuasif tablette : DOIT partir du geste, avant tout await réseau (sinon le navigateur refuse).
-  goFullscreen(); setupFullscreenWatch();
-  const code = ($("loginCode").value||"").trim().toUpperCase();
-  const n1 = ($("loginName1").value||"").trim();
-  const n2 = ($("loginName2").value||"").trim();
-  const n3 = ($("loginName3").value||"").trim();
-  const names = [n1,n2,n3].filter(Boolean);
-  if(!code){ $("loginErr").textContent="Entre le code de classe affiché au tableau."; return; }
-  if(names.length>3){ $("loginErr").textContent="Maximum 3 élèves par binôme."; return; }
-  $("loginErr").textContent="";
-  $("loginBtn").disabled=true;
-  // Résoudre le code -> débat via l'index codes/{CODE} ; repli sur le débat courant si pas d'index
-  try{ const idSnap=await db.ref("codes/"+code).once("value"); const did=idSnap.val(); if(did) setDebatId(did); }catch(e){}
-  // Charger la session active et vérifier le code
-  const snap = await db.ref(ACTIVE).once("value");
-  const data = snap.val();
-  if(!data || !data.code || data.code.toUpperCase()!==code){
-    $("loginErr").textContent="Code de classe invalide. Vérifie au tableau.";
-    $("loginBtn").disabled=false;
-    return;
-  }
-  // Mode verrouillé : reconnexion par liste déroulante, aucune création
-  if(data.groupsLocked===true){
-    const sel=$("loginGroupSelect");
-    const chosen=sel?sel.value:"";
-    if(chosen && data.binomes && data.binomes[chosen]){ enterAsStudent(chosen, data); return; }
-    if(sel){
-      let opts='<option value="">— Choisis ton groupe —</option>';
-      Object.keys(data.binomes||{}).map(function(bid){return {bid:bid, nm:((data.binomes[bid].names||[]).join(" & "))};})
-        .sort(function(a,b){return a.nm.localeCompare(b.nm);})
-        .forEach(function(o){ opts+='<option value="'+o.bid+'">'+o.nm.replace(/</g,"&lt;")+'</option>'; });
-      sel.innerHTML=opts;
+/* ── Connexion élève nouvelle formule (jalon 2, 14/07/2026) ──
+   Identité PERSONNELLE d'abord (code MJPC + nom + prénom, ou session du site),
+   le débat de SA classe ensuite, le groupe enfin. Le code de séance a disparu.
+   Chaque élève travaille isolé : impossible d'entrer sous un autre nom. */
+var eleveConnecte = null;   /* {nom, classe, cle} une fois identifié */
+
+/* Session du site MJPC : proposer l'entrée directe (élève ou professeur). */
+function bootPortailMJPC(){
+  try{
+    var s = lireSessionMJPC();
+    var box = $("mjpcDirect"), form = $("loginFormWrap");
+    if(!box) return;
+    if(!s){ box.style.display="none"; if(form)form.style.display=""; return; }
+    if(s.is_prof){
+      $("mjpcDirectMsg").textContent = "Bonjour "+s.display+" — vous êtes connecté au site MJPC.";
+      $("mjpcDirectBtn").textContent = "Entrer en mode professeur →";
+      box.style.display=""; if(form)form.style.display="none"; return;
     }
-    const nw=$("loginNamesWrap"), gw=$("loginGroupWrap");
-    if(nw)nw.style.display="none"; if(gw)gw.style.display="block";
-    $("loginErr").textContent="Cette classe est verrouillée : choisis ton groupe dans la liste, puis « Rejoindre ».";
-    $("loginBtn").disabled=false;
-    return;
-  }
-  // Mode classe : sélection dans la liste de /classes (identité stable, court-circuitable par MJPC plus tard)
-  if(data.classe && extractEleves((CLASSES||{})[data.classe]||null,[]).length>0){
-    { const nw0=$("loginNamesWrap"), gw0=$("loginGroupWrap"); if(nw0)nw0.style.display="none"; if(gw0)gw0.style.display="none"; }
-    renderRoster(data);
-    if(studentRosterSel.length===0){
-      $("loginErr").textContent="Sélectionne ton prénom dans la liste de ta classe (1 à 3), puis « Rejoindre ».";
+    var el = validerEleveMJPC(s, CLASSES);
+    if(el){
+      $("mjpcDirectMsg").textContent = "Bonjour "+el.nom+" ("+el.classe+") — tu es déjà connecté au site MJPC.";
+      $("mjpcDirectBtn").textContent = "Entrer →";
+      box.style.display=""; if(form)form.style.display="none";
+    } else { box.style.display="none"; if(form)form.style.display=""; }
+  }catch(e){}
+}
+function mjpcPasMoi(){ var b=$("mjpcDirect"), f=$("loginFormWrap"); if(b)b.style.display="none"; if(f)f.style.display=""; }
+async function mjpcEntrer(){
+  goFullscreen(); setupFullscreenWatch();
+  var s = lireSessionMJPC(); if(!s){ mjpcPasMoi(); return; }
+  if(s.is_prof){ safeStorage.set("role","prof"); publierManifeste(db); await showDebatChooser(); return; }
+  var el = validerEleveMJPC(s, CLASSES); if(!el){ mjpcPasMoi(); return; }
+  await identifieEleve(el);
+}
+
+/* Connexion au formulaire : code personnel + nom + prénom, vérifiés ensemble. */
+async function doStudentLogin(){
+  goFullscreen(); setupFullscreenWatch();   /* plein écran : doit partir du geste, avant tout await */
+  const code = ($("loginCode").value||"").trim();
+  const nom = ($("loginName1").value||"").trim();
+  const prenom = ($("loginName2").value||"").trim();
+  if(!/^\d{3,5}$/.test(code)){ $("loginErr").textContent="Entre ton code MJPC (4 chiffres)."; return; }
+  if(!nom || !prenom){ $("loginErr").textContent="Entre ton nom ET ton prénom."; return; }
+  $("loginErr").textContent=""; $("loginBtn").disabled=true;
+  try{
+    const snap = await db.ref("codes").once("value");
+    const codes = snap.val()||{};
+    const saisie = sanMJPC(nom+" "+prenom), saisieInv = sanMJPC(prenom+" "+nom);
+    var trouve = null;
+    Object.keys(codes).forEach(function(k){
+      var e = codes[k];
+      if(!e || typeof e!=="object" || String(e.code)!==code) return;
+      var ref = sanMJPC(e.name||"");
+      if(ref===saisie || ref===saisieInv) trouve = e;
+    });
+    if(!trouve){
+      $("loginErr").textContent="Code, nom et prénom ne correspondent pas. Vérifie, ou demande au professeur.";
       $("loginBtn").disabled=false; return;
     }
-    await joinAsStudentWithNames(studentRosterSel.slice(), data);
-    return;
+    /* la classe : celle du code, sinon on la retrouve au registre */
+    var classe = trouve.classe || null;
+    if(!classe){
+      Object.keys(CLASSES||{}).forEach(function(cn){
+        if(classe) return;
+        var r = extractEleves(CLASSES[cn],[]);
+        for(var i=0;i<r.length;i++){ if(sanMJPC(r[i])===sanMJPC(trouve.name)){ classe=cn; return; } }
+      });
+    }
+    var el = validerEleveMJPC({is_prof:false, nom:trouve.name, classe:classe||"", ts:Date.now()}, CLASSES);
+    if(!el){
+      $("loginErr").textContent="Ton nom n'est pas au registre d'une classe active. Préviens le professeur.";
+      $("loginBtn").disabled=false; return;
+    }
+    await identifieEleve(el);
+  }catch(e){
+    $("loginErr").textContent="Connexion impossible (réseau ?). Réessaie.";
+    $("loginBtn").disabled=false;
   }
-  // Repli : saisie libre (aucune classe rattachée — l'app reste autonome)
-  { const nw=$("loginNamesWrap"), gw=$("loginGroupWrap"); if(nw)nw.style.display=""; if(gw)gw.style.display="none"; const rw=$("loginRosterWrap"); if(rw)rw.style.display="none"; }
-  if(names.length===0){ $("loginErr").textContent="Entre au moins un prénom."; $("loginBtn").disabled=false; return; }
-  await joinAsStudentWithNames(names, data);
+}
+
+/* L'élève est identifié : trouver le débat de SA classe, puis son groupe. */
+async function identifieEleve(el){
+  eleveConnecte = el;
+  /* le débat rattaché à sa classe (parcours des débats existants) */
+  var did = null;
+  try{
+    const ids = await db.ref("debats").once("value").then(function(s){ return Object.keys(s.val()||{}); });
+    for(var i=0;i<ids.length;i++){
+      const cl = await db.ref("debats/"+ids[i]+"/active/classe").once("value").then(function(s){ return s.val(); });
+      if(cl===el.classe){ did=ids[i]; break; }
+    }
+  }catch(e){}
+  if(!did){
+    $("loginErr").textContent="Aucun débat n'est ouvert pour ta classe ("+el.classe+"). Attends le professeur.";
+    $("loginBtn").disabled=false; return;
+  }
+  setDebatId(did);
+  const data = await db.ref(ACTIVE).once("value").then(function(s){ return s.val(); })||{};
+  /* reconnexion automatique : il est déjà dans un groupe → on l'y remet */
+  var dejaBid = null;
+  Object.keys(data.binomes||{}).forEach(function(bid){
+    var ns = (data.binomes[bid]&&data.binomes[bid].names)||[];
+    for(var i=0;i<ns.length;i++){ if(sanMJPC(ns[i])===el.cle) dejaBid=bid; }
+  });
+  if(dejaBid){ enterAsStudent(dejaBid, data); return; }
+  if(data.groupsLocked===true){
+    $("loginErr").textContent="Les groupes sont verrouillés et tu n'es dans aucun. Préviens le professeur.";
+    $("loginBtn").disabled=false; return;
+  }
+  /* formation du groupe (mode choisi) : lui pré-coché, il touche ses partenaires */
+  { const fw=$("loginFormWrap"), md=$("mjpcDirect"); if(fw)fw.style.display="none"; if(md)md.style.display="none"; }
+  studentRosterSel=[el.nom];
+  renderRoster({classe: el.classe});
+  $("loginErr").textContent="";
+  $("loginBtn").textContent="Rejoindre le débat →";
+  $("loginBtn").onclick=doGroupJoin;
+  $("loginBtn").disabled=false;
+}
+
+/* Créer le groupe avec les partenaires cochés au registre (jamais de texte libre). */
+async function doGroupJoin(){
+  if(!eleveConnecte){ location.reload(); return; }
+  if(studentRosterSel.indexOf(eleveConnecte.nom)<0) studentRosterSel.unshift(eleveConnecte.nom);
+  if(studentRosterSel.length===0){ $("loginErr").textContent="Touche au moins ton prénom dans la liste."; return; }
+  $("loginBtn").disabled=true;
+  const data = await db.ref(ACTIVE).once("value").then(function(s){ return s.val(); })||{};
+  if(data.groupsLocked===true){ $("loginErr").textContent="Les groupes viennent d'être verrouillés. Préviens le professeur."; $("loginBtn").disabled=false; return; }
+  await joinAsStudentWithNames(studentRosterSel.slice(), data);
 }
 function enterAsStudent(binomeId, data){
   safeStorage.set("role","student");
@@ -1893,7 +2005,7 @@ function enterAsStudent(binomeId, data){
 function toggleGroupsLock(){
   const nv = !(sessionData && sessionData.groupsLocked===true);
   db.ref(ACTIVE+"/groupsLocked").set(nv);
-  toast(nv?"Groupes verrouillés : plus de création, reconnexion par liste.":"Groupes ouverts : création libre.");
+  toast(nv?"Groupes verrouillés : plus de création. Chacun se reconnecte avec son code et retrouve son groupe.":"Groupes ouverts : création libre.");
 }
 function doEndSession(){
   db.ref(ACTIVE+"/groupsLocked").set(true);
@@ -1903,7 +2015,7 @@ function doEndSession(){
   toast("Séance clôturée : groupes verrouillés et tablettes déconnectées.");
 }
 function endSession(){
-  askConfirm("Clôturer la séance ? Les groupes seront verrouillés et toutes les tablettes déconnectées. Les binômes, poules et scores sont conservés ; à la reprise, les élèves se reconnectent par la liste.", doEndSession);
+  askConfirm("Clôturer la séance ? Les groupes seront verrouillés et toutes les tablettes déconnectées. Les binômes, poules et scores sont conservés ; à la reprise, chacun se reconnecte avec son code et retrouve son groupe.", doEndSession);
 }
 function shouldGuardClose(){
   return role==="prof" && !sessionEnded && !!(sessionData && sessionData.binomes && Object.keys(sessionData.binomes).length>0);
@@ -1932,7 +2044,6 @@ function resetWelcomeScreen(){
   $("loginCode").value = "";
   $("loginName1").value = "";
   $("loginName2").value = "";
-  $("loginName3").value = "";
   $("profPwd").value = "";
   $("loginErr").textContent = "";
   $("profErr").textContent = "";
@@ -2704,7 +2815,7 @@ document.addEventListener("keydown", (e)=>{
     // Welcome screen : Entrée valide login
     if($("screenWelcome").classList.contains("show")){
       const a = document.activeElement;
-      if(a && (a.id==="loginCode" || a.id==="loginName1" || a.id==="loginName2" || a.id==="loginName3")){ e.preventDefault(); doStudentLogin(); return; }
+      if(a && (a.id==="loginCode" || a.id==="loginName1" || a.id==="loginName2")){ e.preventDefault(); doStudentLogin(); return; }
       if(a && a.id==="profPwd"){ e.preventDefault(); doProfLogin(); return; }
     }
   }
