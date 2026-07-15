@@ -715,8 +715,8 @@ body:has(.overlay.show){overflow:hidden}
     </div>
   </header>
   <div class="camps camps-sticky">
-    <div class="camp pour"><span class="lbl">Si vous êtes POUR</span>vous défendez que cette affirmation est <b>vraie</b>. L'histoire se répète : qui maltraite finit maltraité. Avec l'IA, ce sera pareil.</div>
-    <div class="camp contre"><span class="lbl">Si vous êtes CONTRE</span>vous défendez que cette affirmation est <b>fausse</b>. Les trois situations sont trop différentes. L'IA ne reproduira pas forcément ce schéma.</div>
+    <div class="camp pour"><span class="lbl">Si vous êtes POUR</span>vous défendez que cette affirmation est <b>vraie</b>. <span class="cfg-pour"></span></div>
+    <div class="camp contre"><span class="lbl">Si vous êtes CONTRE</span>vous défendez que cette affirmation est <b>fausse</b>. <span class="cfg-contre"></span></div>
   </div>
   <div id="studentPilotageWrap">
   <div id="studentValidationStrip"></div>
@@ -772,8 +772,8 @@ body:has(.overlay.show){overflow:hidden}
   </header>
 
   <div class="camps camps-sticky">
-    <div class="camp pour" title="Le camp POUR défend que la thèse de l'affirmation est vraie : il y a une fatalité du retour de bâton."><span class="lbl">Camp POUR</span>défend que cette affirmation est <b>vraie</b>. L'histoire se répète : qui maltraite finit maltraité. Avec l'IA, ce sera pareil.</div>
-    <div class="camp contre" title="Le camp CONTRE conteste la thèse : la comparaison est trop facile, on peut briser le cycle."><span class="lbl">Camp CONTRE</span>défend que cette affirmation est <b>fausse</b>. Les trois situations sont trop différentes. L'IA ne reproduira pas forcément ce schéma.</div>
+    <div class="camp pour" title="Le camp POUR défend que l'affirmation du débat est vraie."><span class="lbl">Camp POUR</span>défend que cette affirmation est <b>vraie</b>. <span class="cfg-pour"></span></div>
+    <div class="camp contre" title="Le camp CONTRE défend que l'affirmation du débat est fausse."><span class="lbl">Camp CONTRE</span>défend que cette affirmation est <b>fausse</b>. <span class="cfg-contre"></span></div>
   </div>
 
   <div id="profPilotageWrap">
@@ -870,6 +870,8 @@ body:has(.overlay.show){overflow:hidden}
         <input id="dc_level" title="La classe concernée (par exemple 3e)." placeholder="Niveau (ex : 3e)">
         <input id="dc_objective" title="Ce que les élèves doivent comprendre ou apprendre." placeholder="Objectif pédagogique">
         <textarea id="dc_motion" title="L'affirmation qui sera débattue : un camp la défend, l'autre la conteste." placeholder="Motion / affirmation du débat" rows="2"></textarea>
+        <textarea id="dc_pour" title="Ce que défend le camp POUR (affiché en permanence sous l'affirmation). Facultatif : la phrase « défend que cette affirmation est vraie » s'affiche toujours." placeholder="Camp POUR — précision (facultatif)" rows="2"></textarea>
+        <textarea id="dc_contre" title="Ce que défend le camp CONTRE. Facultatif : la phrase « défend que cette affirmation est fausse » s'affiche toujours." placeholder="Camp CONTRE — précision (facultatif)" rows="2"></textarea>
         <button class="primary" onclick="createDebatFromForm()" title="Créer ce débat et l'ouvrir tout de suite.">Créer et ouvrir →</button>
       </div>
     </details>
@@ -1324,6 +1326,8 @@ const DEBAT_CFG = {
  level: "",
  objective: "",
  motion: "",
+ pour: "",
+ contre: "",
  etapes: [
   {n:1,label:"Plan",desc:"Ta feuille de route. Explique ce que tu dois faire et dans quel ordre."},
   {n:2,label:"Texte",desc:"Fouiller le livre pour comprendre comment les singes jugent l'Homme."},
@@ -1348,6 +1352,8 @@ function applyConfig(cfg){
     var b=document.querySelectorAll(".cfg-title"); for(var j=0;j<b.length;j++) b[j].textContent=cfg.title||"";
     var c=document.querySelectorAll(".cfg-motion"); for(var k=0;k<c.length;k++) c[k].textContent="« "+(cfg.motion||"")+" »";
     var d=document.querySelectorAll(".cfg-objective"); for(var m=0;m<d.length;m++) d[m].textContent=cfg.objective||"";
+    var p1=document.querySelectorAll(".cfg-pour"); for(var q1=0;q1<p1.length;q1++) p1[q1].textContent=cfg.pour||"";
+    var p2=document.querySelectorAll(".cfg-contre"); for(var q2=0;q2<p2.length;q2++) p2[q2].textContent=cfg.contre||"";
     if(cfg.title) document.title=cfg.title+" — Pilotage du débat";
   }catch(e){}
 }
@@ -2099,7 +2105,7 @@ async function createDebat(cfg){
   var base=slugify((cfg.title||"debat")+"-"+(cfg.level||""));
   var id=base;
   try{ var ex=await db.ref("debats/"+id+"/config").once("value"); if(ex.val()) id=base+"-"+uid().slice(0,4); }catch(e){}
-  var fullCfg={ title:cfg.title||"D\u00e9bat", work:cfg.work||"", author:cfg.author||"", level:cfg.level||"", objective:cfg.objective||"", motion:cfg.motion||"", etapes:(cfg.etapes||DEBAT_CFG.etapes) };
+  var fullCfg={ title:cfg.title||"D\u00e9bat", work:cfg.work||"", author:cfg.author||"", level:cfg.level||"", objective:cfg.objective||"", motion:cfg.motion||"", pour:cfg.pour||"", contre:cfg.contre||"", etapes:(cfg.etapes||DEBAT_CFG.etapes) };
   await db.ref("debats/"+id+"/config").set(fullCfg);
   await db.ref("debats/"+id+"/active").set({ id:uid(), createdAt:Date.now(), binomes:{}, debat:{active:false} });   /* plus de code de séance (14/07) : les élèves entrent avec leur code personnel */
   return { id:id };
@@ -2107,7 +2113,7 @@ async function createDebat(cfg){
 var creatingDebat=false;
 async function createDebatFromForm(){
   if(creatingDebat) return;
-  var cfg={ title:($("dc_title").value||"").trim(), work:($("dc_work").value||"").trim(), author:($("dc_author").value||"").trim(), level:($("dc_level").value||"").trim(), objective:($("dc_objective").value||"").trim(), motion:($("dc_motion").value||"").trim() };
+  var cfg={ title:($("dc_title").value||"").trim(), work:($("dc_work").value||"").trim(), author:($("dc_author").value||"").trim(), level:($("dc_level").value||"").trim(), objective:($("dc_objective").value||"").trim(), motion:($("dc_motion").value||"").trim(), pour:($("dc_pour").value||"").trim(), contre:($("dc_contre").value||"").trim() };
   if(!cfg.title){ toast("Donne au moins un titre au débat."); return; }
   creatingDebat=true;
   try{ var res=await createDebat(cfg); toast("Débat créé."); await openDebat(res.id); }
@@ -2309,7 +2315,7 @@ function renderProf(){
   }
   // Code de classe et URL
   { const lb=$("lockGroupsBtn"); if(lb) lb.textContent = (sessionData.groupsLocked===true)?"🔒 Groupes verrouillés":"🔓 Groupes ouverts"; }
-  { const pc=$("profClasseSel"); if(pc) pc.innerHTML="Classe rattachée : "+classeSelector(); }
+  { const pc=$("profClasseSel"); if(pc){ const sig=String(sessionData.classe||"")+"|"+Object.keys(CLASSES||{}).sort().join(","); if(pc.dataset.sig!==sig){ pc.dataset.sig=sig; pc.innerHTML="Classe rattachée : "+classeSelector(); } } }
 
   // Bandeau validations à faire
   const binomes = sessionData.binomes || {};
