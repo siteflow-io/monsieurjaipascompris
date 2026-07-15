@@ -641,7 +641,7 @@ body:has(.overlay.show){overflow:hidden}
       </div>
       <div class="eyebrow cfg-eyebrow">La Planète des singes · 3<sup>e</sup></div>
       <h1 class="cfg-title">Le triomphe simien</h1>
-      <p class="sub">Connecte-toi avec ton code MJPC, ton nom et ton prénom.</p>
+      <p class="sub" id="loginSub">Connecte-toi avec ton code MJPC, ton nom et ton prénom.</p>
       <div id="loginBlock">
         <div id="mjpcDirect" style="display:none">
           <div class="cm-ok" id="mjpcDirectMsg"></div>
@@ -1275,11 +1275,11 @@ var MJPC_APP = {
   contenant: "binome"           // évaluations par binôme — le binôme est un contenant, pas une identité
 };
 var MJPC_MANIFESTE = {
-  noeuds: ["debats","debat_singes"],   // /codes rendu au site MJPC (14/07) : plus de code de séance, seuls restent les codes personnels
+  noeuds: ["debats","debat_singes","debat_config"],   // debat_config = mot de passe prof unique (14/07) · /codes rendu au site MJPC
   notions: []                   // rattachement compétences oral : Phase 3 (Concordance)
 };
 var MJPC_PURGE = {
-  preserver: ["debats/*/config","debats/*/meta"],   // conception + meta (contient le mot de passe prof !)
+  preserver: ["debats/*/config","debats/*/meta","debat_config"],   // conception + meta + mot de passe prof unique
   purger:    ["debats/*/active","debats/*/archives","debat_singes"]
               // active = binômes/manches/scores (données élèves) · archives annuelles · debat_singes = legacy migré · codes = codes élèves annuels
 };
@@ -1763,14 +1763,20 @@ const safeStorage = {
 };
 
 // ─────────── Mot de passe prof ───────────
+/* Mot de passe UNIQUE de l'app (14/07) : un professeur = un mot de passe,
+   valable pour TOUS les débats. Stocké une fois sous debat_config/profPassword.
+   Avant : un mot de passe PAR débat (meta) → chaque nouveau débat naissait
+   verrouillé avec un meta vide. Migration douce : au premier passage, l'ancien
+   mot de passe du débat courant est repris ; à défaut, celui d'origine. */
 async function ensureProfPassword(){
-  const snap = await db.ref(META+"/profPassword").once("value");
-  if(!snap.exists()){
-    await db.ref(META+"/profPassword").set(DEFAULT_PWD);
-  }
+  const snap = await db.ref("debat_config/profPassword").once("value");
+  if(snap.exists()) return;
+  const ancien = await db.ref(META+"/profPassword").once("value");
+  await db.ref("debat_config/profPassword").set(ancien.exists() ? ancien.val() : DEFAULT_PWD);
 }
 async function checkProfPassword(pwd){
-  const snap = await db.ref(META+"/profPassword").once("value");
+  await ensureProfPassword();
+  const snap = await db.ref("debat_config/profPassword").once("value");
   return snap.val() === pwd;
 }
 
@@ -1778,11 +1784,13 @@ async function checkProfPassword(pwd){
 function showProfLogin(){
   $("loginBlock").style.display="none";
   $("profLoginBlock").style.display="block";
+  var s=$("loginSub"); if(s)s.textContent="Accès professeur : entre ton mot de passe.";
   setTimeout(()=>$("profPwd").focus(),50);
 }
 function hideProfLogin(){
   $("profLoginBlock").style.display="none";
   $("loginBlock").style.display="block";
+  var s=$("loginSub"); if(s)s.textContent="Connecte-toi avec ton code MJPC, ton nom et ton prénom.";
   $("profErr").textContent="";
 }
 async function doProfLogin(){
