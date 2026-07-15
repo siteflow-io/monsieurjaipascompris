@@ -159,6 +159,42 @@ function sandbox(noms, prelude, exportsSup) {
   t('détection des futurs : un nœud inconnu ressortirait', x._orphelins(Object.assign({ zombie_2027: { a: 1 } }, hub)).includes('zombie_2027'));
 })();
 
+
+/* ════ SUITE 6 — SESSION PARTAGÉE MJPC (passe panneaux, jalon 2 débat) ════ */
+(function () {
+  const prelude = `var _store={};
+    var sessionStorage={getItem:k=>_store[k]||null};
+    var localStorage={getItem:k=>_store[k]||null};
+    this._store=_store;`;
+  const x = sandbox(['sanMJPC', 'extractEleves', 'lireSessionMJPC', 'validerEleveMJPC'], prelude, ['_store']);
+  if (!x) { section('SESSION MJPC'); console.log('  (socle < v1.1.0 dans ce fichier — suite ignorée)'); return; }
+  section('SESSION PARTAGÉE MJPC (socle v1.1.0)');
+  const { lireSessionMJPC, validerEleveMJPC } = x;
+  const pose = o => { x._store['mjpc_eleve'] = JSON.stringify(o); };
+
+  pose({ nom: 'CLÉMENT', prenom: 'Noé', classe: '4E BANKSY', ts: Date.now() });
+  const s1 = lireSessionMJPC();
+  t('session élève fraîche → lue (nom complet reconstruit)', !!s1 && s1.nom === 'CLÉMENT Noé' && !s1.is_prof);
+
+  pose({ nom: 'X', prenom: 'Y', classe: '4E BANKSY', ts: Date.now() - 13 * 3600 * 1000 });
+  t('session de 13 h → périmée (validité 12 h)', lireSessionMJPC() === null);
+
+  pose({ is_prof: true, display: 'M. Meney (prof)', ts: Date.now() });
+  const sp = lireSessionMJPC();
+  t('session professeur → reconnue', !!sp && sp.is_prof === true);
+  t('session professeur ≠ élève (jamais validée comme élève)', validerEleveMJPC(sp, hub.classes) === null);
+
+  // validation contre le registre RÉEL du hub
+  const roster = Object.entries(hub.classes).find(([k, v]) => !v.archivee && k !== '_TEST');
+  const unNom = (function () { const l = []; const c = roster[1]; (Array.isArray(c.eleves) ? c.eleves : Object.values(c.eleves || c)).forEach(e => { if (typeof e === 'string') l.push(e); }); return l[0]; })();
+  if (unNom) {
+    const ok = validerEleveMJPC({ is_prof: false, nom: unNom, classe: roster[0], ts: Date.now() }, hub.classes);
+    t('élève réel du registre (' + unNom + ', ' + roster[0] + ') → identité résolue, clé canonique', !!ok && ok.cle === ok.cle.toLowerCase() && ok.nom === unNom);
+  }
+  t('élève inconnu au registre → refusé', validerEleveMJPC({ is_prof: false, nom: 'INTRUS Total', classe: roster[0], ts: Date.now() }, hub.classes) === null);
+  t('classe inexistante → refusé', validerEleveMJPC({ is_prof: false, nom: unNom || 'X Y', classe: '6e FANTOME', ts: Date.now() }, hub.classes) === null);
+})();
+
 /* ════ SUITE 2 — CORBEILLE (Phase 2, lot 1) ════ */
 (async function () {
   const prelude = `var FIREBASE_BASE='https://mock';var _puts=[];
