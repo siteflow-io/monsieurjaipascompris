@@ -260,6 +260,33 @@
   .welcome-card .prof-link{color:var(--muted);font-size:.82rem;cursor:pointer;background:none;border:none;font-family:inherit;padding:6px 10px;border-radius:8px}
   .welcome-card .prof-link:hover{color:var(--gold)}
 
+  /* ===== THÈME PROF CLAIR — passe ① (15/07) =====
+     Le cockpit prof entier passe à la charte de la souche par REDÉFINITION DES
+     VARIABLES du thème, scopée à l'écran prof. Les couleurs en dur restantes
+     se traitent aux passes ② (bandeau, légende, tableau) et ③ (tournoi, overlays).
+     Les écrans ÉLÈVES gardent le thème sombre : rien ne change hors de ce scope. */
+  body.bodyProf{background:#fafaf8}
+  #screenProf{
+    --bg:#fafaf8;
+    --panel:#ffffff; --panel2:#f5f4f0; --panel3:#ececea;
+    --ink:#1a1a1a; --ink2:#3a3a3a; --muted:#6b6b6b;
+    --line:#e5e3de;
+    --todo:#8a877d; --todo-bg:#f5f4f0;
+    --wip:#975a16; --wip-bg:rgba(151,90,22,.08);
+    --done:#276749; --done-bg:rgba(39,103,73,.08);
+    --accent:#c53030; --accent2:#c53030;
+    --gold:#2563eb;
+    --shadow:0 2px 12px rgba(0,0,0,.06);
+    background:#fafaf8; color:var(--ink);
+  }
+  #screenProf .ghost{border-color:var(--line)}
+  #screenProf .ppnav{border-bottom-color:var(--line)}
+  #screenProf .ppss .pps{border-color:var(--line);background:#fff}
+  #screenProf .ppss .pps.actif{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.35)}
+  #screenProf .ppform input,#screenProf .ppform textarea{background:#fff;border-color:var(--line);color:var(--ink)}
+  #screenProf .ppecran .primary{background:#2563eb;border-color:#2563eb}
+  #screenProf header .hero-text .eyebrow,#screenProf header .hero-text h1{color:var(--ink)}
+
   /* ===== ACCUEIL D'INSTANCES — clone du panneau de contrôle de correction_dictee (15/07) =====
      Couleurs relevées dans la souche : fond #fafaf8, carte #fff, bordure #e5e3de,
      texte #1a1a1a / #6b6b6b, action #2563eb, radius 14, ombre douce. */
@@ -1770,6 +1797,8 @@ function toast(msg){
 function showScreen(name){
   ["screenWelcome","screenStudent","screenProf"].forEach(s=>$(s).classList.remove("show"));
   $("screen"+name).classList.add("show");
+
+  try{ document.body.classList.toggle("bodyProf", name==="Prof"); }catch(e){}
 }
 
 // ─────────── Connectivité ───────────
@@ -4916,15 +4945,15 @@ if(info){
     b.type="button"; b.className="tip-i"; b.setAttribute("aria-label","Aide"); b.setAttribute("data-tip",txt); b.textContent="i";
     if(btn.parentNode) btn.parentNode.insertBefore(b, btn.nextSibling);
   }
-  function decorateAll(root){ try{ (root||document).querySelectorAll("button[title]").forEach(decorate); }catch(_){} }
+  function decorateAll(root){ try{ (root||document).querySelectorAll("button[title], .dbc-badge[title], .dbc-s[title], label[title]").forEach(decorate); }catch(_){} }
   function start(){
     decorateAll(document);
     try{
       var obs=new MutationObserver(function(muts){
         muts.forEach(function(m){
           for(var k=0;k<m.addedNodes.length;k++){ var n=m.addedNodes[k]; if(!n || n.nodeType!==1) continue;
-            if(n.tagName==="BUTTON" && n.hasAttribute("title")) decorate(n);
-            if(n.querySelectorAll) n.querySelectorAll("button[title]").forEach(decorate);
+            if((n.tagName==="BUTTON"||(n.classList&&n.classList.contains("dbc-badge"))) && n.hasAttribute("title")) decorate(n);
+            if(n.querySelectorAll) n.querySelectorAll("button[title], .dbc-badge[title]").forEach(decorate);
           }
         });
       });
