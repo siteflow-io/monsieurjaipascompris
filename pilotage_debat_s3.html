@@ -287,6 +287,19 @@
   #screenProf .ppecran .primary{background:#2563eb;border-color:#2563eb}
   #screenProf header .hero-text .eyebrow,#screenProf header .hero-text h1{color:var(--ink)}
 
+  /* ===== THÈME PROF CLAIR — passe ② (15/07) : les couleurs en dur des zones vues sur capture ===== */
+  body.bodyProf::before,body.bodyProf::after{display:none}
+  #screenProf .camp.pour{background:rgba(197,48,48,.06)}
+  #screenProf .camp.contre{background:rgba(39,103,73,.06)}
+  #screenProf .tablewrap{background:#fff;backdrop-filter:none}
+  #screenProf thead th{background:#f5f4f0;backdrop-filter:none}
+  #screenProf tbody tr{background:#fff}
+  #screenProf .legend{background:#fff;backdrop-filter:none}
+  #screenProf .codebanner{background:#fff;border-color:#e5e3de}
+  #screenProf .codebanner .code{color:#2563eb}
+  #screenProf button:not(.primary):not(.dbc-primary){background:#fff;color:var(--ink);border-color:var(--line)}
+  #screenProf .primary{background:#2563eb;border-color:#2563eb;color:#fff}
+
   /* ===== ACCUEIL D'INSTANCES — clone du panneau de contrôle de correction_dictee (15/07) =====
      Couleurs relevées dans la souche : fond #fafaf8, carte #fff, bordure #e5e3de,
      texte #1a1a1a / #6b6b6b, action #2563eb, radius 14, ombre douce. */
@@ -1858,11 +1871,11 @@ window.addEventListener("load", async () => {
   const savedRole = safeStorage.get("role");
   const savedSession = safeStorage.get("sessionId");
   const savedBinome = safeStorage.get("binomeId");
-  if(savedRole==="prof"){
-    publierManifeste(db);   // reprise d'auth persistante : 2e chemin d'entrée prof (leçon worktrack)
-    const savedDebatIdP = safeStorage.get("debatId"); if(savedDebatIdP) setDebatId(savedDebatIdP);
-    await enterProfMode();
-  } else if(savedRole==="student" && savedSession && savedBinome){
+  /* Reprise automatique PROF supprimée (15/07, décision Paul) : elle court-circuitait
+     le flux normal (mot de passe ou session MJPC) et replongeait dans le dernier débat
+     au lieu du panneau de contrôle. Le savoir-faire est recyclé : la persistance de
+     session est désormais portée par la session MJPC (socle §8, validité 12 h). */
+  if(savedRole==="student" && savedSession && savedBinome){
     // tenter de reprendre la session sur le bon débat
     const savedDebatId = safeStorage.get("debatId"); if(savedDebatId) setDebatId(savedDebatId);
     const ok = await rejoinStudent(savedSession, savedBinome);
@@ -1916,7 +1929,7 @@ async function doProfLogin(){
   const ok = await checkProfPassword(pwd);
   if(!ok){ $("profErr").textContent="Mot de passe incorrect."; return; }
   $("profPwd").value="";
-  safeStorage.set("role","prof");
+  /* rôle prof non mémorisé (15/07) */
   publierManifeste(db);
   await showDebatChooser();
 }
@@ -2016,7 +2029,7 @@ function mjpcPasMoi(){ var b=$("mjpcDirect"), f=$("loginFormWrap"); if(b)b.style
 async function mjpcEntrer(){
   goFullscreen(); setupFullscreenWatch();
   var s = lireSessionMJPC(); if(!s){ mjpcPasMoi(); return; }
-  if(s.is_prof){ safeStorage.set("role","prof"); publierManifeste(db); await showDebatChooser(); return; }
+  if(s.is_prof){ /* rôle prof non mémorisé (15/07) */ publierManifeste(db); await showDebatChooser(); return; }
   var el = validerEleveMJPC(s, CLASSES); if(!el){ mjpcPasMoi(); return; }
   await identifieEleve(el);
 }
