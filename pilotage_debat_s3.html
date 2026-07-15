@@ -260,6 +260,20 @@
   .welcome-card .prof-link{color:var(--muted);font-size:.82rem;cursor:pointer;background:none;border:none;font-family:inherit;padding:6px 10px;border-radius:8px}
   .welcome-card .prof-link:hover{color:var(--gold)}
 
+  /* ===== Navigation du panneau : deux niveaux (modèle universel, 15/07) ===== */
+  .ppnav{display:flex;gap:2px;margin:14px 0 0;border-bottom:1px solid rgba(255,255,255,.12);flex-wrap:wrap}
+  .ppnav .ppo{padding:8px 15px;font-size:.95rem;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit}
+  .ppnav .ppo.actif{color:var(--gold);border-bottom-color:var(--gold);font-weight:700}
+  .ppnav .pphelp{margin-left:auto;padding:6px 12px;font-size:1rem;color:var(--muted);background:none;border:none;cursor:pointer}
+  .ppss{display:flex;gap:8px;margin:10px 0 16px;flex-wrap:wrap}
+  .ppss .pps{padding:4px 14px;font-size:.85rem;border-radius:999px;border:1px solid rgba(255,255,255,.18);color:var(--muted);background:none;cursor:pointer;font-family:inherit}
+  .ppss .pps.actif{background:rgba(244,200,105,.16);border-color:rgba(244,200,105,.4);color:var(--gold);font-weight:700}
+  .ppecran{display:none}
+  .ppecran.actif{display:block}
+  .ppform label{display:block;font-size:.85rem;color:var(--muted);margin:12px 0 4px}
+  .ppform input,.ppform textarea{width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:var(--ink);padding:9px 12px;font-family:inherit;font-size:.95rem}
+  .ppform textarea{min-height:58px;resize:vertical}
+
   /* ===== Code de classe géant (mode prof, projection) ===== */
   .codebanner{margin:18px 0 12px;padding:18px 22px;background:linear-gradient(135deg,rgba(220,171,85,.12),rgba(192,57,43,.08));
     border:2px solid var(--gold);border-radius:18px;text-align:center;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
@@ -774,6 +788,47 @@ body:has(.overlay.show){overflow:hidden}
   <div class="camps camps-sticky">
     <div class="camp pour" title="Le camp POUR défend que l'affirmation du débat est vraie."><span class="lbl">Camp POUR</span>défend que cette affirmation est <b>vraie</b>. <span class="cfg-pour"></span></div>
     <div class="camp contre" title="Le camp CONTRE défend que l'affirmation du débat est fausse."><span class="lbl">Camp CONTRE</span>défend que cette affirmation est <b>fausse</b>. <span class="cfg-contre"></span></div>
+  </div>
+
+  <nav class="ppnav" id="ppOnglets">
+    <button class="ppo" data-o="pilotage" onclick="ppGo('pilotage')" title="Le travail du professeur : préparer le débat, mener la séance.">Pilotage</button>
+    <button class="ppo" data-o="donnees" onclick="ppGo('donnees')" title="Ce qui sort du débat : archives, exports, sauvegardes.">Données</button>
+    <button class="ppo" data-o="reglages" onclick="ppGo('reglages')" title="Ce qui persiste : mot de passe, options.">Réglages</button>
+    <button class="pphelp" onclick="ppAide()" title="Aide et nouveautés.">❓</button>
+  </nav>
+  <div class="ppss" id="ppSous"></div>
+
+  <div class="ppecran" id="pp_preparation">
+    <div class="ppform" style="max-width:640px">
+      <label for="pp_title">Titre du débat</label><input id="pp_title">
+      <label for="pp_work">Œuvre</label><input id="pp_work">
+      <label for="pp_author">Auteur</label><input id="pp_author">
+      <label for="pp_level">Niveau (ex : 4ᵉ)</label><input id="pp_level">
+      <label for="pp_classe">Classe rattachée</label><div id="pp_classe"></div>
+      <label for="pp_objective">Objectif</label><input id="pp_objective">
+      <label for="pp_motion">Affirmation du débat</label><textarea id="pp_motion"></textarea>
+      <label for="pp_pour">Camp POUR — précision (facultatif)</label><textarea id="pp_pour"></textarea>
+      <label for="pp_contre">Camp CONTRE — précision (facultatif)</label><textarea id="pp_contre"></textarea>
+      <div style="margin-top:16px;display:flex;gap:10px">
+        <button class="primary" onclick="ppSavePreparation()" title="Enregistre et applique immédiatement, sur toutes les tablettes.">Enregistrer</button>
+        <span id="pp_prep_msg" style="font-size:.85rem;color:var(--done);align-self:center"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ppecran" id="pp_donnees">
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:440px">
+      <button class="ghost" style="text-align:left" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés.">🗄 Archives des tournois</button>
+      <button class="ghost" style="text-align:left" onclick="exportDebatJSON()" title="Télécharger la session active (binômes, poules, manches, scores) au format JSON.">💾 Exporter la session</button>
+      <button class="ghost" style="text-align:left" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base des débats dans un fichier JSON. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button>
+      <button class="ghost" style="text-align:left" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Importer une sauvegarde</button>
+    </div>
+  </div>
+
+  <div class="ppecran" id="pp_reglages">
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:440px">
+      <button class="ghost" style="text-align:left" onclick="changePassword()" title="Modifier le mot de passe professeur, commun à tous les débats.">🔑 Changer le mot de passe professeur</button>
+    </div>
   </div>
 
   <div id="profPilotageWrap">
@@ -2131,6 +2186,7 @@ async function enterProfMode(){
   }
   startSessionListener();
   showScreen("Prof");
+  ppGo('pilotage','seance');   /* atterrissage : le travail principal (décision Q1, 15/07) */
 }
 
 async function newSessionRaw(){
@@ -2596,6 +2652,44 @@ function askConfirm(text, action){
 function closeConfirm(){ $("confirmOverlay").classList.remove("show"); confirmAction = null; }
 
 // ─────────── Menu avancé prof ───────────
+/* ── Navigation du panneau : deux niveaux (modèle universel, 15/07) ──
+   Le CADRE change, les écrans de travail existants sont re-rangés, pas rouverts :
+   « Séance » EST l'écran de pilotage historique (profPilotageWrap), intouché. */
+var PP_STRUCTURE={
+  pilotage:{sous:[{id:'preparation',nom:'Préparation'},{id:'seance',nom:'Séance'}],defaut:'seance'},
+  donnees:{sous:[{id:'donnees',nom:'Archives & exports'}],defaut:'donnees'},
+  reglages:{sous:[{id:'reglages',nom:'Réglages'}],defaut:'reglages'}
+};
+var ppEtat={o:'pilotage',s:'seance'};
+function ppGo(o,s){
+  ppEtat.o=o; ppEtat.s=s||PP_STRUCTURE[o].defaut;
+  document.querySelectorAll('#ppOnglets .ppo').forEach(function(b){b.classList.toggle('actif',b.dataset.o===o);});
+  var ss=$('ppSous');
+  ss.innerHTML=PP_STRUCTURE[o].sous.map(function(x){return '<button class="pps'+(x.id===ppEtat.s?' actif':'')+'" onclick="ppGo(\''+o+'\',\''+x.id+'\')">'+x.nom+'</button>';}).join('');
+  var wrap=$('profPilotageWrap'); if(wrap) wrap.style.display=(ppEtat.s==='seance')?'':'none';
+  ['preparation','donnees','reglages'].forEach(function(e){var el=$('pp_'+e); if(el) el.classList.toggle('actif',ppEtat.s===e);});
+  if(ppEtat.s==='preparation') ppChargePreparation();
+}
+function ppChargePreparation(){
+  db.ref(ROOT+"/config").once("value").then(function(s){
+    var c=s.val()||{};
+    ['title','work','author','level','objective','motion','pour','contre'].forEach(function(k){var el=$('pp_'+k); if(el) el.value=c[k]||'';});
+    var pc=$('pp_classe'); if(pc) pc.innerHTML=classeSelector();
+    var m=$('pp_prep_msg'); if(m) m.textContent='';
+  });
+}
+function ppSavePreparation(){
+  var c={};
+  ['title','work','author','level','objective','motion','pour','contre'].forEach(function(k){var el=$('pp_'+k); c[k]=el?(el.value||'').trim():'';});
+  if(!c.title){ var m0=$('pp_prep_msg'); if(m0){m0.textContent='Donne au moins un titre.';} return; }
+  db.ref(ROOT+"/config").update(c).then(function(){
+    applyConfig(Object.assign({etapes:DEBAT_CFG.etapes},c));
+    var m=$('pp_prep_msg'); if(m){ m.textContent='✓ Enregistré et appliqué.'; setTimeout(function(){m.textContent='';},2500); }
+  });
+}
+function ppAide(){
+  askConfirm("Aide du débat — l'essentiel :\n\n• Les élèves se connectent avec leur code MJPC, leur nom et leur prénom : chacun tombe sur le débat de SA classe et retrouve son groupe tout seul.\n• Pilotage → Préparation : modifier le débat (titre, affirmation, camps, classe).\n• Pilotage → Séance : mener la séance (groupes, tournoi, scores).\n• Données : archives et sauvegardes.\n\n(Les annonces de nouveautés arriveront ici, publiées depuis le site MJPC.)", function(){});
+}
 function openProfMenu(){ $("menuOverlay").classList.add("show"); }
 function closeMenu(){ $("menuOverlay").classList.remove("show"); }
 function changePassword(){
@@ -2615,7 +2709,7 @@ async function confirmChangePassword(){
   if(!np){ $("pwdErr").textContent="Entre un mot de passe."; return; }
   if(np.length < 3){ $("pwdErr").textContent="Mot de passe trop court (3 caractères min.)."; return; }
   if(np !== nc){ $("pwdErr").textContent="Les deux mots de passe ne correspondent pas."; return; }
-  await db.ref(META+"/profPassword").set(np);
+  await db.ref("debat_config/profPassword").set(np);   /* mot de passe UNIQUE de l'app (15/07) */
   closePwdOverlay();
   toast("Mot de passe mis à jour.");
 }
