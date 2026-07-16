@@ -1,0 +1,693 @@
+# MJPC 6 — PLAN DE TRAVAIL GÉNÉRAL (v13, 15/07/2026 soir)
+*Document de reprise totale : une conversation vierge doit pouvoir reprendre le chantier avec ce seul document (+ le socle mjpc-core.js et la doctrine mjpc-doctrine.md du dépôt). Toute décision y est consignée AVEC sa raison. Il est mis à jour à CHAQUE session et re-livré à Paul.*
+
+
+## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
+*Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
+
+**Le calendrier (16/07 → 15/08) :**
+| Semaine | Morceaux |
+|---|---|
+| 16–20 juillet | M1 · M2 · M3 |
+| 21–27 juillet | M4 · M5 · M6 · M7 |
+| 28 juillet – 3 août | M8 · M9 · M10 · M11 |
+| 4–10 août | M12 · M13 · M14 · M15 |
+| 11–15 août 🔴 | M16 · M17a + **marge de rattrapage** |
+
+**✔ LISTES 2026-2027 REÇUES (16/07)** : `effectifs_classes_2026-2027.xlsx` fourni par Paul (vu : 3 FRANKLIN ARETHA complète 29 él. — ZNIDI Iyad passe en 3e — ; 3 DYLAN BOB 25 él. en noms seuls ; feuilles 4e à inventorier en M17b). M17b n'est plus suspendu : purge (M17a) puis import immédiat, tout tient dans le butoir du 15/08. **PRUDENCE ABSOLUE : le fichier contient les coordonnées complètes des familles (adresses, téléphones, emails) — SEULS les noms et les classes montent au hub, jamais le reste.** Le fichier reste chez Paul, jamais au dépôt.
+**Règle de tenue du calendrier** : si une semaine prend du retard, ce sont les 🟢 qui sautent ou glissent après le 15/08 (M10, M11, M12, M13, M14, M15 dans cet ordre de sacrifice inverse — M15 saute en premier), JAMAIS M16-M17a.
+
+### Juillet — semaines 3-4
+- [ ] **M1 · S0, les décisions** 🟠 — une conversation, aucun code. Paul apporte les exhumations (§F : SPEC_ATELIER, master prompt, doctrine, cadrage, plickers-attente) ; on tranche les 7 décisions (§ Séquençage S0) + la session de nommage des concepts du débat. Livrable : plan avec décisions gelées. **→ M2 et M9 en dépendent.**
+- [ ] **M2 · Taxonomie : matérialisation** 🟠 — SPEC_ATELIER.md EN MAIN (Zone 2 complète) : appliquer le tranchage du 10/05 (40 familles, ~150 notions à revalider) → `taxonomie_atelier.json` + nœud `/taxonomie`. UNE conversation.
+- [ ] **M3 · Débat, charte définitive** 🟠 — clonage CSS de la souche côté prof, retrait de l'hybride du 15/07, décor d'en-tête → ligne de contexte. Arrêts photo. **Test C déroulé ici.**
+- [ ] **M4 · Débat, groupes** 🟠 — mode imposé (Pilotage → Groupes), refonte séance/groupes (qui se connecte sur une tablette partagée), UNE remise à zéro claire.
+- [ ] **M5 · Débat, multi-classe et fin** 🟠 — un débat par classe (mémo en tête du code), migration/archive du nœud `debat_singes`, « Mes débats », genre d'item « débat » côté site, essai réel complet. Fin de S1.
+
+### Août — semaines 1-3
+- [ ] **M6 · Souche (correction_dictee)** 🟠 — passe complète de la grille (re-rangement 2 niveaux, Réglages, connexion MJPC élève, « Mes dictées », « ? »). **Le test de la méthode : doit être COURT.**
+- [ ] **M7 · QCM** 🟠 — passe complète (structure selon S0-④, retrait onglet classes, « Mes évaluations » recyclé de son bilan).
+- [ ] **M8 · Site, lot 1** 🟠 — publication par classe (S0-①) + canal d'annonces central + « ? » des apps traitées + éditeur de taxonomie minimal (créer/renommer/désactiver, garde-fou S0-⑥) + retrait de l'entrée morte « Salle d'attente Plickers » du menu admin + date du brevet ÉDITABLE (chrono 2027, B5).
+- [ ] **M9 · Dictée universelle** 🟠 — passe complète + dette A② + rattachement taxonomie (premier client de M2).
+- [ ] **M10 · Jumelles réécriture** 🟢 — passe complète, une conversation pour les deux fichiers.
+- [ ] **M11 · Analyse logique** 🟢 — passe complète + extraction de l'onglet site (Q5).
+- [ ] **M12 · Site, lot 2** 🟢 — genres d'items manquants + marqueur « autonomie » + Zone autonomie (vue par étiquette) + modales admin + écran corbeille.
+- [ ] **M13 · Worktrack** 🟢 — passe adaptée (2 élèves/poste, chapitre côté site) + seed auto-généré à la livraison (remède S0-⑥, remplace la réplication manuelle).
+- [ ] **M14 · Applaudimètre** 🟢 — passe panneau seul (charte propre conservée).
+- [ ] **M15 · « Mon année » v1** 🟢 — la vue sur mjpcProfils (3 vues du 8 mai, vue élève d'abord) ; patron doctrinal : GÉNÉRALISER `archiverDansProfilsMJPC` du QCM (2 passes, bilanHTML injectable) + doctrine de maîtrise v0. Peut glisser en septembre.
+
+- [ ] **MD · Branchement des universalisations Dugain** 🟠 (conditionnel : dès que Paul livre ses versions « Étude de texte universelle » et « Rédaction universelle », en fabrication chez lui) — UNE conversation, tout d'un bloc : branchement Firebase (échelles descriptives dans le hub, K0) + socle MJPC-CORE avec MANIFESTE AU PREMIER GESTE (règle de naissance) + entrée dans la liste des outils prof d'index + RATTACHEMENT AUX ONGLETS `etude` et `redaction` (déjà publiés en 3e — demande antérieure consignée) + ouverture en modale + grille de passe applicable (deux niveaux, ⓘ, wording élève).
+
+### En parallèle, hors code — le CONTENU (découvert le 16/07)
+- [ ] **MC · Chapitres 2026-2027** 🟠 — état vérifié au hub : la 3e est structurellement construite (8 chapitres × 9 séances : Poésie et peinture XIXe · L'autobiographie · La satire et l'argumentation · Les lettres de guerre · La planète des singes [seul publié] · Le dernier jour d'un condamné · La vague · Révisions fin d'année) ; la 5e n'a qu'Alice (2 séances) ; **AUCUN chapitre 4e n'existe** alors que Paul aura deux 4e. Chantier de construction pédagogique (pas de code), étalé sur l'été, assistable par Claude — remplissage des séances/items compris. Le contrat de purge PRÉSERVE `site/` (vérifié) : tout ce qui se construit survit à M17a. À cartographier au passage : l'onglet `evalconn` (inconnu des inventaires) et l'état réel des onglets `image`/`etude`/`redaction` (published_tabs 3e les liste PUBLIÉS, contredisant la capture « placeholders grisés » du 8 mai).
+
+### 11–15 août 🔴 BUTOIR
+- [ ] **M16-0 · Contrôle des manifestes (ouverture de M16)** 🔴 — passage par l'écran « Nœuds orphelins » de la console : tout nœud né pendant l'été sans contrat (apps nouvellement branchées) est contractualisé ou archivé AVANT la purge. **RÈGLE DE NAISSANCE (16/07, Paul)** : toute app qui rejoint MJPC naît AVEC son manifeste — l'intégration du socle (publierManifeste) est le PREMIER geste de tout branchement. Concernées : étude/rédaction universelles (EN FABRICATION chez Paul — bloc socle à lui fournir), entraînement (M20), concordance.html, feuilletoir, apps de grammaire reprises.
+- [ ] **M16 · Concordance des identités + export** 🔴 — selon décision S0-② : migration des clés historiques des nœuds survivants, puis EXPORT IMPRIMABLE des profils. **Bloque M17.**
+- [ ] **M17a · Purge** 🔴 — purge réelle (simulation de référence du 14/07) + vérifications. AU PLUS TARD LE 15/08.
+- [ ] **M17b · Import de rentrée** — classes 2026-2027 + génération des codes, DÈS RÉCEPTION DES LISTES DÉFINITIVES (geste court ; seul morceau autorisé après le butoir).
+
+### Après la rentrée — au fil de l'eau
+- [ ] **M18+ · Fondements** 🟢 — une note de visée pédagogique par app, au rythme d'une par session courte.
+- [ ] **M19+ · Concordance, déploiement** 🟢 — tables de correspondance app par app (intégrées aux retouches d'apps).
+- [ ] **M20 · L'APP DE RÉVISIONS** 🟢 — le grand chantier d'automne, PAS ENCORE CODÉE : réconciliation SPEC_ATELIER × prompt révision adaptative + zones 6-9 + convergence du format banque de questions avec le QCM + le mécanisme « sélection par l'élève » hérité de la Console révisions. La Zone autonomie l'attend.
+- [ ] **M21 · Pipeline copies** 🟢 — année 2 (rédaction, étude de texte, analyse d'image) ; matériaux : les orphelins Dugain + master prompt exhumé.
+- [ ] **M22 · Clôtures** 🟢 — récapitulatif de méthode, CLAUDE.md, tri de la mémoire de Claude.
+
+*Lecture rapide : 5 morceaux de juillet (décisions, taxonomie, débat ×3) → 10 d'août (apps + site) → 2 datés durs de fin août → le fil de l'eau. Si un morceau d'app dépasse une conversation, c'est un signal : relire la grille et la fiche AVANT de continuer, pas après.*
+
+## A. L'ÉCOSYSTÈME EN BREF (pour reprendre sans rien connaître)
+- **MJPC** = monsieurjaipascompris.com : un site-hub (index.html) + ~10 apps pédagogiques HTML monofichier (React UMD ou vanilla + Firebase Realtime Database), dépôt GitHub Pages `siteflow-io/monsieurjaipascompris`. Paul enseigne le français (3e/4e/5e, Collège Saint-Joseph, Doué-en-Anjou) ; en 2026-2027 : deux 3e + deux 4e + regroupements avec ex-4e.
+- **Le hub Firebase** : `mjpc-hub` (europe-west1). Nœuds partagés : `/classes` (identité élève, format canonique `{eleves:[...], niveau, ...}`, clé élève `sanMJPC(nom_prenom)`), `/codes` (codes personnels à 4 chiffres), `/mjpcProfils` (empreinte longitudinale par élève), `/site` (chapitres/publication par niveau), `/manifestes` (contrats de purge par app), `/corbeille` (archives de sécurité, 1 an), + un nœud par app.
+- **Le socle MJPC-CORE v1.1.0** (`mjpc-core.js` au dépôt, embarqué dans chaque app) : `sanMJPC`, `extractEleves` (tolère 3 formats de classe), `ecrireClasse` (transaction non destructive), `renvoyerVersMJPC`, `publierManifeste`/`MJPC_PURGE`, §8 `lireSessionMJPC` (session partagée site→apps, 12 h) + `validerEleveMJPC` (code + nom + prénom contre /codes).
+- **La doctrine** (`mjpc-doctrine.md`) : hub unique ; le site gère seul l'identité (classes/codes) ; les apps restent autonomes si MJPC tombe (MJPC = shunt, jamais portail obligatoire) ; réinitialisation annuelle par purge contractuelle + réimport ; toute destruction passe par archive (corbeille).
+- **Méthode de travail Claude↔Paul** : annoncer AVANT de coder (jamais coder en réaction) ; lots fonctionnels ; banc de tests versionné (`mjpc-bench.js`, tourne sur un export réel du hub) ; double parseur (node --check + acorn) avant toute livraison ; vérification bit à bit après chaque push GitHub ; arrêts photo (captures de Paul) pour tout chantier visuel ; « R/A » = réponse concise puis attendre ; toute décision consignée avec sa raison pédagogique ; spec vivante restituée en fin de chaque message ; UNE APP = UNE PASSE COMPLÈTE de la grille (jamais de point isolé) ; lecture profonde obligatoire avant de modifier un écran de travail existant.
+
+## 0. LE PLAN (v12, 15/07 soir) — le séquençage exécutable
+
+*Leçon de la journée sur pilotage_debat : les allers-retours viennent des directives découvertes en cours de route. La grille est désormais COMPLÈTE et FIGÉE : chaque app reçoit UNE PASSE COMPLÈTE (tous les points d'un coup), jamais de mise à niveau isolée d'un point. Vérification par grille (greps) faite le 15/07 sur les 10 apps.*
+
+### LA GRILLE DE PASSE (appliquée intégralement à chaque app, dans l'ordre du séquençage)
+1. Panneau de contrôle de départ = accueil d'instances cloné de la souche (liste + badges d'état + création)
+2. Navigation deux niveaux (Pilotage · Données · Réglages + « ? »), atterrissage sur le travail principal
+3. Charte claire de la souche côté prof (l'habillage aux écrans élèves) ; largeur par TYPE d'écran — **sauf QCM et applaudimètre qui gardent leur charte propre (15/07)**
+4. Sous-onglet Préparation = édition complète d'une instance créée
+5. Onglet Réglages présent (même peu garni — principe « doter »)
+6. ⓘ partout (badges, boutons, mentions non évidentes)
+7. Connexion élève par code MJPC + nom + prénom, et shunt par session MJPC (socle §8) — LE TROU TRANSVERSAL : seul le débat l'a
+8. Travaux antérieurs de l'élève — LIBELLÉS (décision 15/07) : décliné par app (« Mes dictées », « Mes réécritures », « Mes évaluations » pour le QCM, « Mes débats »…) car « ouvrages » est un mot de prof et « évaluations » serait faux pour la moitié des apps ; côté site, la chronologie transversale s'appelle « Mon année ». « Ouvrages & chronologie » reste le nom interne du chantier. (Précédent à recycler : le bilan longitudinal du QCM.)
+9. Branchement au site : genre d'item (ou onglet/chapitre selon décision Q4-Q7) + ouverture en modale
+10. Annonces : le « ? » lit le canal central du site
+11. Manifeste/purge à jour si les nœuds évoluent (acquis Phase 1, à maintenir)
+12. Fondement pédagogique documenté (une note par app, chantier Fondements)
+13. Concordance : les référentiels locaux (familles d'erreurs, compétences, vocabulaire d'analyse) pointent le référentiel central par table de correspondance (voir §D)
+14. Wording élève : AUCUN jargon côté élève (test du collégien : tout mot compris par un 4e moyen sans explication) — « strate », « jalon », « notion prioritaire calculée » restent internes ; l'écran élève dit « ta fiche », « ton bilan »
+
+### État des trous (vérifié le 15/07)
+| App | Accueil inst. | Connexion MJPC | Réglages | Mes ouvrages | Particularité |
+|---|---|---|---|---|---|
+| correction_dictee (souche) | ✔ | ✘ | ✘ | ✘ (copies par dictée seulement) | re-rangement 2 niveaux léger |
+| evaluation-qcm | ~ (onglet evals) | ✘ | ✘ | ✔ bilan longitudinal (précédent !) | onglet classes à retirer ; thème gradient à charter |
+| dictee_universelle | ~ | ✘ | ~ | ~ (dates) | dette A② (suppression élève) |
+| reecriture / bb4e | ~ | ✘ | ✘ | ✘ | jumelles, une passe pour deux |
+| analyse_logique | ✘ | ✘ | ✘ | ✘ | + extraction onglet site (Q5) |
+| worktrack | ✘ (chapitre unique) | ✘ | ✔ | ~ (profil autonomie) | = un CHAPITRE côté site (Q6) |
+| applause_meter | ✘ | ✘ | ✔ | ~ | pas de connexion élève classique (vote) |
+| pilotage_debat | ✔ (fait 15/07) | ✔ (fait) | ✔ (fait) | ✘ | reste : Groupes, multi-classe, refonte conceptuelle |
+| index (site) | — | émetteur ✔ | — | ✘ chronologie élève | publication par NIVEAU seulement |
+
+### LE SÉQUENÇAGE
+
+**S0 — Décisions restantes (une session de conversation, aucun code)**
+① Variante classe à la publication (recommandation posée : progression par niveau + interrupteur de publication par classe). ② Lieu de vie de l'ouvrage final — À TRANCHER EN M1 : **deux intentions de Paul sont en tension documentaire** — le 8 mai (« MJPC prompt ») : champ `archived_year`, événements anciens *marqués mais consultables*, transmission possible aux collègues ; la présentation publique (exhumée 16/07) : « tout est effacé chaque été : un profil vit une année scolaire, pas plus » et « l'essentiel se termine sur papier [les fiches du cahier], c'est son vrai bilan ». TROISIÈME texte (doctrine v2, décision du 13/07, la plus récente) : *« ce qui survit d'une année sur l'autre, ce sont les statistiques des questions, annotées par COHORTE (4e_banksy_2026) — la cohorte annote le corpus, pas l'élève ; l'élève est archivé puis effacé »*. Les trois textes seront sur la table en M1 — la doctrine v2 étant la plus récente, la question résiduelle se resserre : LA FORME de l'archive avant effacement (export imprimable + fiches papier du cahier + fichier ?). ③ Session de nommage des concepts de pilotage_debat (débat/séance/tournoi, jetons, statuts) — ouvre la refonte conceptuelle et le chantier Fondements. ④ Périmètre de la grammaire pour QCM et applaudimètre (gardent leur charte : la grammaire structurelle s'applique-t-elle ?). ⑤ Raison pédagogique des exceptions de charte, à consigner. ⑥ Format du référentiel Concordance (voir §D) + RE-ARBITRAGE des surpassements Concordance (3 relations, proposé/validé — doctrine §3) et logement (concordance.html vs console). ⑦ Statut des orphelins du dépôt (§H). ⑧ Les « points ouverts v2 » de la doctrine : surpassements listés (strate, QR élève, halo, alertes, invariant id/libellé, exclusions manifeste, annotations cahier) + décisions neuves (nommage des nœuds français/anglais ; convergence du format banque de questions AVANT la révision ; arbitrage `eval-3e-paroles`, 30 résultats réels : archiver ou récupérer). Tout n'est pas à trancher en M1 — chaque point rejoint son chantier, M1 les DATE.
+
+**S1 — Finir le débat (une passe restante, tout compris)**
+Groupes imposés + un débat par classe + refonte conceptuelle (via ces deux jalons) + « Mes débats » + branchement site (item « débat ») + **passe charte DÉFINITIVE** (voir fiche) + essai réel complet. **RÈGLE RAPPELÉE (16/07) : pilotage_debat N'EST PAS et ne devient PAS un étalon — l'étalon est correction_dictee, unique et permanent. Le débat est un client du modèle, ni fini ni exemplaire en l'état.**
+
+**S2 — La souche et son clone (passes légères, grosse valeur)**
+correction_dictee : re-rangement 2 niveaux, Réglages, connexion MJPC élève, Mes dictées. evaluation-qcm : idem + retrait onglet classes ; **sa charte propre est CONSERVÉE (décision 15/07)** ; son bilan longitudinal devient le modèle des « Mes évaluations » de toutes les apps.
+
+**S3 — Les proches (une passe complète chacune)**
+dictee_universelle (+ dette A②) → reecriture + bb4e (une passe, deux fichiers) → analyse_logique (+ extraction de l'onglet site).
+
+**S4 — Les particulières**
+worktrack (chapitre côté site, connexion 2-élèves à adapter) → applause_meter (panneau seul, vote élève inchangé).
+
+**S5 — Le site (en parallèle de S2-S4, par petits chantiers)**
+① Publication par classe (S0-①). ② Canal d'annonces central + « ? » des apps. ③ Chronologie élève / profil longitudinal (croisement items × productions). ④ Menu admin → modales. ⑤ Genres d'items manquants (débat, applaudimètre, analyse) + chapitre worktrack.
+
+**RDV FIN AOÛT (daté, avant la rentrée)** : export imprimable des profils (selon décision S0-②) → purge réelle → import classes 2026-2027 + codes.
+
+**Après la rentrée / au fil de l'eau** : Fondements (app par app) · Concordance · améliorations pédagogiques.
+
+**Clôtures documentaires** : récapitulatif de méthode · tri mémoire Claude · CLAUDE.md du dépôt.
+
+
+
+## B. ÉTAT DÉTAILLÉ PAR APP (fiches de reprise — mises à jour le 15/07 au soir)
+
+### pilotage_debat_s3.html — LE CHANTIER OUVERT (S1)
+**Rôle** : débats argumentatifs en classe (binômes, documents guidés, jetons d'aide, mode tournoi avec poules/manches/scores). Écran prof projeté + tablettes élèves.
+**Fait (14-15/07, dans l'ordre)** : connexion élève code MJPC + nom + prénom (socle §8, vérification contre /codes, tolère l'inversion nom/prénom) ; shunt prof et élève par session MJPC ; mot de passe prof UNIQUE (`debat_config/profPassword`, migration douce, `confirmChangePassword` corrigé) ; code de séance SUPPRIMÉ (mort avec la connexion par identité) ; décorum « Planète des singes » neutralisé (textes, 3 SVG → bulles neutres, émoji gorille → micro) ; écran de connexion neutre (ne s'habille plus du dernier débat manipulé) ; encarts Camp POUR/CONTRE éditables (création + Préparation ; phrase-cadre fixe + précision configurable) ; navigation deux niveaux (Pilotage{Préparation·Séance} · Données{Archives & exports} · Réglages{mot de passe} · « ? ») avec atterrissage Séance ; sous-onglet Préparation = édition complète du débat créé (8 champs + classe rattachée) ; PANNEAU DE CONTRÔLE de départ cloné de la souche (cartes claires, lignes avec badges classe/verrouillé/archives, ✏️ Éditer → Préparation, Ouvrir →, formulaire de création façon souche) ; bouton « ← Mes débats » dans le cockpit ; ⓘ étendus aux badges ; sélecteur de classe permanent dans le bandeau Séance (stabilisé par signature anti-redessin, réutilisant la solution lastProfSig de l'année) ; reprise automatique PROF supprimée (recyclée : la persistance = session MJPC 12 h ; reprise ÉLÈVE tablette conservée) ; thème prof CLAIR complet en 3 passes vérifiées sur captures (variables scopées #screenProf + camps sticky + cellules du tableau + overlays ; le mode tournoi était 100 % sur variables) — l'écran élève reste sombre (décision).
+**CHARTE : ÉTAT INACHEVÉ ET FAUTIF (verdict Paul, 16/07)** : le re-thémage par redéfinition de variables (passes ①②③ du 15/07) produit un HYBRIDE immonde — polices Fraunces qui détonnent avec le bleu, boutons mi-marron mi-bleu, teintes fluorescentes. Leçon : la charte de la souche est un ENSEMBLE (polices, boutons, cartes, espacements) qui se CLONE — comme le panneau de départ, réussi parce qu'il copie les règles CSS réelles de la souche — et non une palette à injecter dans les variables d'un thème étranger. La passe charte définitive de S1 : reprendre le bloc CSS de la souche (font-family, .btn/.btn-primary/.btn-ghost, .card) et l'appliquer au côté prof, en retirant le mapping de variables du 15/07.
+**Reste (S1, une passe)** : passe charte définitive (ci-dessus) + Groupes imposés (Pilotage → Groupes) ; un débat par classe (mémo technique en tête du code : `active/debats/<classe>` + pointeur) ; refonte conceptuelle À TRAVERS ces deux jalons (3 temps entremêlés : débat/séance/tournoi ; 4 remises à zéro recouvrantes) ; réduction du grand décor d'en-tête prof à la ligne de contexte ; « Mes débats » élève ; branchement site (genre d'item « débat ») ; les 10 documents pédagogiques encore EN DUR (hérités « Planète des singes » par tout nouveau débat — à rendre configurables) ; suppression d'un débat avec chaîne d'archive ; ESSAI RÉEL complet. **Tests jamais déroulés** : test C élève (code 3413 + BERNARD Emma → pastilles → rejoindre → reconnexion).
+
+### correction_dictee.html — LA SOUCHE (S2)
+**Rôle** : correction de dictées mot à mot (mode copie par copie + mode Rapide avec audio et raccourcis Maj+R), bilan de classe, copies publiées aux élèves, exercices dérivés, fiches imprimables, suivi de présence temps réel. **L'étalon** : son panneau de départ (« Dictées existantes » + création) et sa charte (#fafaf8/#fff/#e5e3de/#2563eb/radius 14) sont LE modèle cloné partout.
+**État** : 7 onglets plats (Correction·Rapide·Bilan·Copies·Exercices·Fiches·Suivi), écran config = Préparation existante, ⓘ (ifo) systématiques, largeur étendue côté prof. Manifeste Phase 1 ✔.
+**Reste (S2, passe légère)** : re-rangement des 7 onglets en deux niveaux (Pilotage{Préparation·Correction·Rapide} · Données{Bilan·Copies·Fiches·Suivi·Exercices?} · Réglages) — RÈGLE : re-ranger sans rouvrir (les onglets sont des composants autonomes) ; onglet Réglages à créer ; connexion élève MJPC (mode copies) ; « Mes dictées » élève ; « ? » annonces. NOTE : l'onglet Exercices deviendra à terme une app autonome « Banque d'exercices » (décision antérieure, code déjà isolé).
+
+### evaluation-qcm.html (S2)
+**Rôle** : évaluations QCM (double barème « Tout ou rien »/« Points par case », chrono, pilotage en direct, bilan longitudinal par élève).
+**État** : onglets evals·pilot·results·classes·snapshot (clone historique de la souche) ; **possède LE bilan longitudinal élève = le précédent de tous les « Mes … »** ; charte propre (gradient violet/rose/turquoise) **CONSERVÉE (décision 15/07)**.
+**Reste (S2)** : deux niveaux (structure, pas charte) selon décision S0-④ ; retrait de l'onglet classes (→ site) ; connexion MJPC ; « Mes évaluations » (recyclage de son propre bilan) ; Préparation ; Réglages ; « ? » ; dette « niveau écrasé » (3 options connues, B recommandée : déduire du nom).
+
+### dictee_universelle.html (S3)
+**Rôle** : dictées autonomes (audio TTS, carnets d'erreurs, dictée ciblée, aménagements par élève — nœud classes_amenages).
+**Reste (S3, passe complète)** : toute la grille + **dette A②** (suppression d'élève à désarmer via renvoyerVersMJPC) + intégration taxonomie grammaticale (chantier transversal connu). Ses « dates » sont un embryon de chronologie à raccorder à « Mes dictées ».
+
+### reecriture.html + reecriture_bb4e.html — LES JUMELLES (S3, une passe pour deux)
+**Rôle** : exercices de réécriture (navigation par lots, pièges auto-détectés, snapshots) ; bb4e = variante brevet blanc 4e embarquant son texte.
+**Fait (15/07)** : correctif jumeau du chargement des lots (`fbE.length` → `extractEleves`) — les élèves étaient devenus invisibles après le passage des classes au format canonique (bug ZNIDI Iyad, vérifié réglé sur les 29+28 élèves).
+**Reste** : toute la grille, appliquée en une passe aux deux fichiers (tout correctif de l'une se réplique dans l'autre, TOUJOURS).
+
+### analyse_logique.html (S3)
+**Rôle** : analyse logique guidée (scoring pondéré, modes libre_phrase/coherence/paragraphe avec échafaudage).
+**Reste** : toute la grille + côté site : EXTRACTION du contenu « analyse logique » de l'onglet Fiches transversales → onglet de niveau à part entière qui portera l'app (décision Q5).
+
+### worktrack.html (S4)
+**Rôle** : plan de travail autonome (unité Misérables : QCM mélangés, cartes d'apprentissage, profil d'autonomie longitudinal). **2 élèves par poste** → connexion à ADAPTER (pas cloner).
+**Particularités** : côté site = un CHAPITRE entier (décision Q6 : clic chapitre → accueil worktrack) ; a DÉJÀ Réglages et un fondement pédagogique documenté (recherche en sciences de l'éducation) — le modèle du chantier Fondements ; RÈGLE ABSOLUE : toute modification de contenu livrée par JSON injecté DOIT être répliquée dans le seed embarqué (`let CHAPTER`) dans la MÊME livraison.
+
+### applause_meter.html (S4)
+**Rôle** : lectures orales applaudies (vidéoprojection + vote tablette, cartes de comportement B1+B2, mode lecture spontanée).
+**Particularités** : pas de connexion élève classique (vote anonyme/simple) → la grille s'applique au PANNEAU prof seulement ; charte propre CONSERVÉE (décision 15/07) ; côté site = genre d'item de séance (décision Q7, séances de lecture orale).
+
+### index.html — LE SITE (S5, chantiers parallèles)
+**Fait (Phases 1-2, closes)** : console de rentrée (purge par manifestes — simulation réelle 54 emplacements/10 contrats validée le 14/07), corbeille 2 ceintures, empreinte élève exhaustive, écran nœuds orphelins, session partagée émise (socle §8), gestion classes/codes centralisée.
+**Chantiers S5** : ① publication par classe (interrupteur, décision S0-①) ; ② canal d'annonces central + « ? » lecteurs ; ③ « Mon année » (vue sur mjpcProfils — le nœud existe, dormant) ; ④ menu admin → modales ; ⑤ genres d'items manquants (débat, applaudimètre, analyse) + chapitre-worktrack + cartographie des genres existants (tache/diagnostic/export/import) ; ⑥ corbeille : écran consulter/restaurer. ⑦ **LA VISIONNEUSE DE DOCUMENTS (chantier inscrit le 16/07)** : la visionneuse actuelle (modale iframe liée à Google Drive) affiche mal certains documents — NOTAMMENT LES ANIMATIONS (un diaporama animé passé par l'aperçu Drive devient une suite d'images figées : l'aperçu Drive ne rend pas les animations). À instruire : améliorer ou ABANDONNER la solution au profit d'une autre — pistes techniques à évaluer le moment venu : intégration Google Slides native (conserve les animations si le document est converti en Slides), lecteur PDF intégré pour le statique, export vidéo pour les séquences animées, ou visionneuse maison. Critère de choix : ce que la SÉANCE exige (voir §E7) — la projection en classe et la consultation maison n'ont pas les mêmes besoins.
+
+## C. LE SITE : CE QUI EXISTE ET N'EST PAS EXPLOITÉ (inventaire vérifié dans le code, 15/07 soir)
+1. **`mjpcProfils` — écrit, jamais lu** : l'empreinte longitudinale par élève est alimentée (Phase 2) et utilisée par la console (empreinte/suppression), mais AUCUNE vue élève ou prof ne la lit. C'est le socle dormant de « Mon année » : le chantier chronologie est d'abord une VUE sur un nœud qui existe déjà.
+2. **La corbeille — écrite, sans interface de lecture** : deux ceintures (fichier + `corbeille/<date>/<motif>`) à chaque destruction, mais pas d'écran de consultation/restauration. Un petit chantier « Corbeille : consulter/restaurer » manque (S5-⑥ ajouté).
+3. **Des genres d'items déjà codés et peu ou pas documentés** : outre doc/gallery/qcm/dictee/reecriture, il existe `tache`, `diagnostic`, `export`, `import`. À cartographier (qui les utilise, dans quels chapitres) avant de créer les genres manquants — le genre « débat » s'ajoutera à une famille plus riche que prévu.
+4. **Des nœuds hors radar des chantiers actuels** : `students` (carnets d'erreurs), `students_sim`, `eleves_index` (index des élèves), `classes_amenages` (élèves à dispositif aménagé). Ils sont couverts par les contrats de purge mais absents de la réflexion panneaux/chronologie : à intégrer au chantier Ouvrages (les carnets d'erreurs sont typiquement un « Mes ouvrages » transversal) et à documenter en Fondements.
+5. **Le mode admin du site** (Ctrl+Space ou 5 taps logo) et l'upload de documents par l'API GitHub : fonctionnels, non concernés par les chantiers en cours, à documenter en Fondements.
+
+## D. CONCORDANCE — LE RÉFÉRENTIEL CENTRAL DE L'ÉCOSYSTÈME (redéfinie le 15/07 soir, vérifiée dans le code)
+**Ce que c'est (définition de Paul)** : la Concordance est ce qui permettra de remplacer toutes les compétences et le vocabulaire d'analyse actuellement EN DUR dans chaque app, en les sortant vers un référentiel central que toutes les apps consomment.
+**Cartographie du dur (vérifiée par greps le 15/07)** : dictee_universelle est le plus gros porteur (~154 références grammaire/taxonomie + `DICT_CATEGORIES` : familles d'erreurs G/L/P avec codes et sous-catégories) ; correction_dictee a son moteur `GRAMM` (L479) + 13 mentions de compétences + 34 références taxonomiques ; worktrack adosse ses cartes d'apprentissage à ~20 compétences ; analyse_logique porte ses natures/fonctions dans ses données ; QCM et réécritures n'ont rien d'explicite (référentiels implicites dans les contenus).
+**Le canon existe déjà hors apps** : la taxonomie grammaticale de l'Atelier (3 niveaux Domaine > Famille > Notion : 5 domaines, 40 familles, 142 notions) et le référentiel de compétences Français cycle 4 (Oral ×4, Lire ×4, Écrire ×4, Langue ×4, Culture littéraire ×2 + transversales).
+**MÉCANISMES DU 12 JUIN — ⚠ CORRIGÉ PAR LA DOCTRINE v2 : ce sont en partie des SURPASSEMENTS.** La doctrine v2 (§3) avertit elle-même : *« l'architecture 3 relations + statut proposé/validé porte la marque de Claude »* — À RE-ARBITRER en M1 ; seule la TAXONOMIE (5 domaines/40 familles/142 notions, double libellé) est validée par Paul (mai 2026). Les mécanismes ci-dessous sont donc l'état documenté, PAS des décisions closes : le canon = Guide de terminologie grammaticale NIVEAU II (cycle 4) + socle C4 d'École Directe ; une **table d'alias à TROIS relations** — `égal` / `inclus` / `voisin` — parce qu'une équivalence brute serait fausse (« accord du PP » est *inclus* dans « accord ») et que `voisin` sert au halo de suggestion SANS JAMAIS entrer dans le décompte dur ; **statut proposé (IA) / validé (prof)** avec décompte uniquement sur le validé — règle générale du système : *l'IA propose en amont, le prof tranche, le moteur exécute du figé* ; **id opaque immuable / libellé séparé** — l'historique des élèves survit aux réformes de programmes. **Conflit à trancher en M1 (S0-⑧)** : le 12 juin décidait une app admin dédiée `concordance.html` ; le 15/07 proposait un éditeur dans la console du site — deux formes, même fonction : Paul arbitre (l'esprit du 12 juin prime par défaut).
+**Architecture cible** : un nœud hub `/concordance` (ou `/referentiel`) portant ① la taxonomie grammaticale, ② les compétences C4, ③ les TABLES DE CORRESPONDANCE app par app (chaque vocable local — un code de DICT_CATEGORIES, une entrée GRAMM, une compétence worktrack — pointe sa notion/compétence canonique). Les apps consomment le référentiel ET gardent un seed embarqué synchronisé (doctrine : autonomie si MJPC tombe — même règle que le seed worktrack).
+**Pourquoi c'est le cœur du système** : sans Concordance, « Mon année » n'est qu'une chronologie ; avec elle, le profil longitudinal AGRÈGE entre apps — une erreur d'accord en dictée, une faute d'accord en réécriture et une carte « accords » de worktrack deviennent LA MÊME notion canonique, mesurable dans le temps. C'est elle qui transforme des données d'apps en profil pédagogique.
+**Second volet (l'ancienne définition, conservée comme sous-chantier)** : la concordance des IDENTITÉS — migration des clés élèves historiques (formats antérieurs à sanMJPC) par table de correspondance, préalable au remontage du passé dans la chronologie, à exécuter avant la purge pour les nœuds survivants.
+**HÉRITAGE RETROUVÉ (recherche dans les conversations, 15/07 soir)** : la Concordance a des fondations décidées en mai 2026, à RESPECTER :
+- *Conv. du 5 mai (« Intégration des outils », id 8eb16cfa)* : spec Atelier complète par zones, dont Zone 2 = la taxonomie intégrale (5 domaines / 37 familles / 142 notions : ortho lex 6/26, ortho gram 6/42, grammaire 6/38, conjugaison 11/26, lexique 8/10) et les 10 principes (double libellé prof/élève sans jargon ; seuil 5 questions/notion ; « sert l'écriture, pas le grammairien »). Un document `SPEC_ATELIER.md` (1 352 lignes, zones 1-5) a été livré à l'époque — PAS au dépôt : à retrouver chez Paul ou à reconstituer depuis la conversation. **La Zone 9 / Principe 10 (« chaque app émet des événements standardisés vers un profil élève unifié 360° ») est l'ancêtre direct des chantiers Ouvrages/chronologie/Concordance.**
+- *Conv. du 10 mai (dictée universelle, id 1d3621ce)* : tranchage portant la taxonomie à **40 familles** (+ Mots invariables et Majuscules en ortho lexicale → 8 ; + Ponctuation en Grammaire → 7), ~150 notions à revalider famille par famille ; dimension orthogonale `errType` {erreur, omission, illisible, ajout} ; mapping des 13 codes dictée → Atelier et du manuscrit (G ⊃ ortho gram+gram+conj, L ⊃ ortho lex+lexique, M = omission, I = illisible) ; mécanisme « mise en lumière » (`cfg.miseEnLumiere`) ; **architecture DÉJÀ DÉCIDÉE : fichier `taxonomie_atelier.json`, nœud Firebase `/taxonomie/`, migration en couches (barème → pédagogique → Atelier)** — le nom `/concordance` proposé le 15/07 s'efface devant ces décisions antérieures ; « Concordance » reste le nom du CHANTIER (taxonomie + compétences + tables de correspondance), `/taxonomie/` celui du nœud grammatical.
+
+**État des lieux de la TAXONOMIE (vérifié dans le code le 15/07 soir)** : elle est élaborée (sessions de l'Atelier : 5 domaines, 40 familles, 142 notions) mais MATÉRIALISÉE NULLE PART — aucun fichier au dépôt, aucun nœud au hub. Les apps l'attendent déjà : champs `notions: []` vides commentés « rattachement Phase 3 (Concordance) » dans correction_dictee (L403), dictee_universelle (L681) et etude_dugain ; embryon `referentiel/` dans analyse_logique (« la banque abondable, surcouche taxonomie MJPC », TODO éditeur Domaine›Famille›Notion). **Premier geste du chantier : la MATÉRIALISATION** — retrouver la taxonomie complète (conversations de l'Atelier, ou état de référence fourni par Paul), la figer en fichier canonique au dépôt (ex. concordance.json), puis la publier en nœud /concordance.
+**S0-⑥ ARBITRÉE (16/07) — où vivent taxonomie et compétences : l'HYBRIDE À TROIS ÉTAGES.** ① Source de vérité : `taxonomie_atelier.json` AU DÉPÔT (compétences C4 dans le même fichier, branche propre) — Git versionne chaque évolution du référentiel avec sa date et sa raison. ② Canon vivant : le nœud `/taxonomie` du hub (décision du 10/05 respectée) — les apps le lisent au boot ; une mise à jour du nœud change le vocabulaire des dix apps SANS retoucher un HTML (la demande « sortir du dur ») ; les tables de correspondance y vivent aussi. ③ Secours : un seed embarqué par app (doctrine d'autonomie). *Raisons du rejet des extrêmes : tout-en-dur = la maladie actuelle (dix fichiers par évolution) ; tout-Firebase = autonomie brisée + une erreur de nœud casse dix apps.*
+**Mécanisme allégé (exigence Paul : moins lourd que worktrack)** : le seed n'est JAMAIS écrit à la main — régénéré automatiquement depuis le hub par le script de livraison à chaque passe d'app (rituel, comme les parseurs et le banc) ; version portée par `/taxonomie/meta/version`, comparée au boot (signal discret si divergence, jamais de casse — le principe de seedDiffCheck de worktrack, réduit à un numéro) ; et rareté structurelle : la taxonomie n'évolue que par décision délibérée, un seed de secours en retard d'une semaine dépanne parfaitement. → Item ajouté à M13 : appliquer le même remède au seed de worktrack (sa réplication manuelle est la charge restante ; son seedDiffCheck détecte mais ne répare pas — bug vécu du 11/06).
+
+**ANCRAGE OFFICIEL (16/07, Paul)** : la taxonomie est INDEXÉE sur la Terminologie grammaticale officielle (guide Eduscol 2020 : https://eduscol.education.gouv.fr/sites/default/files/document/guide-la-grammaire-du-francais-terminologie-grammaticale-67998.pdf) — c'est la source de nommage des libellés PROF (défendable face à l'institution, aux parents, aux collègues) et une source de référence du morceau M2 (chaque notion porte son terme officiel quand il existe). *Portée exacte : l'indexation vaut pour le VOCABULAIRE, pas pour la STRUCTURE — les 40 familles restent organisées par besoin d'écriture (principe de mai : « la taxonomie sert l'écriture, pas le grammairien »).* **Conséquence de stabilité** : les révisions officielles étant rarissimes (précédente terminologie : 1997), l'usage sera « comme du dur » — le mécanisme à trois étages devient confortable plutôt que sollicité, et les rares modifications viendront de l'usage pédagogique (règle du seuil : fusionner/scinder selon les questions disponibles), pas d'Eduscol. L'éditeur reste minimal, ambition calibrée en conséquence.
+
+**Complément S0-⑥ (16/07) — L'ÉDITEUR DE TAXONOMIE, à la main de Paul** : un écran dans la console du site (où vivent déjà classes et codes — l'idée dormait dans le TODO « Éditeur de référentiel » d'analyse_logique, elle déménage dans la console). Ce qu'il permet : créer une notion, renommer les libellés (prof ET élève — double libellé de mai), déplacer, réordonner — écrit directement sur `/taxonomie`, les dix apps suivent au prochain chargement, sans Claude. **Garde-fou (principe des identifiants immuables, spec de mai) : on ne déchire jamais une page du référentiel, on la range** — les erreurs passées des élèves sont étiquetées par notion ; l'éditeur propose DÉSACTIVER (la notion sort des choix, l'historique reste lisible), JAMAIS de suppression brute ni de fusion destructive. **Synchronisation inversée** : le nœud devient la référence des modifications courantes ; Claude resynchronise `taxonomie_atelier.json` au dépôt en DÉBUT DE CHAQUE SESSION (même rituel que le snapshot du hub) — zéro geste pour Paul, Git archive avec un temps de retard sans importance. Version minimale de l'éditeur : au lot site **M8**.
+
+**APPORTS DE LA DOCTRINE v2 (exhumée 16/07)** : ① *« Concordance est le GOULOT : six chantiers en dépendent »* (manifestes exploitables, profil par notion, cockpit, Atelier, banque pédagogique, cahier) et *« la dette vieillit »* : chaque app codée avant elle ajoute du vocabulaire à réaligner → **M2 s'élargit officiellement en « Concordance, premier étage »** (taxonomie + compétences + squelette d'alias), toujours une conversation, toujours avant les passes d'apps. ② Deux étages canoniques précis : notions = Guide Éduscol NIVEAU II, nommées EN OBJECTIFS (« identifier un participe passé »), pas d'ontologie ; compétences = socle C4 École Directe — et `correction_dictee` porte DÉJÀ 9 compétences D1.1–D1.6/D2.1–D2.3 (+ toggle showNote) : premier alias tout trouvé. ③ Extraction : l'ARBRE comme squelette (IA en amont, validé) ; les définitions ne s'avalent pas en masse, elles s'attachent acquis par acquis. ④ **LES QUATRE RÉFÉRENTIELS à ne pas confondre** (tableau doctrinal) : Concordance (dictionnaire des notions) · Banque d'exercices (extraction de l'onglet Exercices de correction_dictee) · Banque pédagogique (Concept→Expressions, rotation anti-monotonie) · Banque de questions (⚠ format actuel du QCM ≠ schéma de la spec révision → CONVERGER AVANT de coder la révision).
+**Position au séquençage** : M2 = Concordance premier étage (ci-dessus) ; le déploiement des alias app par app s'intègre à LA GRILLE DE PASSE (point 13) ; volet identités = M16, avant purge.
+
+
+## E. LA VISION FONDATRICE — retrouvée dans les conversations (fouille du 15/07 soir)
+*Sources : conv. « Site de cours de français » (20 mars, id 4ac6abbd), « Intégration des outils » (5 mai, id 8eb16cfa), « MJPC prompt » (8 mai, id e3e4b968 — LA conversation de conception), « MJPC5 » (14 juillet, id 912639f8). Tout ce qui suit avait été explicitement décidé par Paul et n'était plus consigné nulle part.*
+
+### E1. Les principes pédagogiques fondateurs (8 mai — le cœur doctrinal)
+1. **Le papier est roi pour la production** : les élèves écrivent à la main. **Le numérique est roi pour le feedback** : tapé, persistant, agrégé.
+2. **Le prof n'écrit jamais sur les copies rendues** : elles reviennent vierges ; l'élève les annote lui-même après avoir consulté les commentaires en ligne.
+3. **L'IA pré-trie, le prof décide toujours** (workflow export/import manuel, comme la dictée coévaluée).
+4. **La correction par pairs est réservée aux savoirs codifiés** (dictée, exercices fermés) — jamais rédaction ni analyse de texte.
+5. **Tout audio du prof est transcrit** avant qu'un élève le voie.
+6. **AUCUN score agrégé unique** : profil multi-dimensionnel, métaphore de la « montre connectée » — on mesure pour comprendre, pas pour classer. Pas de classement entre élèves, pas de « score MJPC », que des indicateurs descriptifs. (Garde-fou explicite : un profil qui note pousse les élèves à jouer la sécurité.)
+7. **La note est temporellement découplée du commentaire** : rituel d'autocorrection AVANT déblocage de la note (reformulation des commentaires majeurs + dépôt photo pour rédactions/analyses). Un cycle de validation maximum ; au-delà, contact direct en classe.
+8. **Contrainte architecturale dure : la relecture d'autocorrection ≤ 30 secondes par copie.**
+9. **Rejet du MVP itératif** : passes entièrement spécifiées avant code (« l'affinage incrémental est là où les projets s'effondrent »).
+
+### E2. Le vocabulaire fixé (8 mai)
+- **correction** = l'acte du prof sur la copie originale scannée (le prof scanne lui-même au photocopieur du collège).
+- **autocorrection** = le retravail de l'élève sur SA copie après lecture des commentaires (photo téléversée ou saisie clavier).
+- **relecture autocorrection** = la revue rapide (30 s) du prof.
+- **OCR : INTERDIT pour lire les copies originales** (testé, non fiable sur cursive) ; permis SEULEMENT en relecture d'autocorrection, où l'élève suit des consignes d'écriture OCR-compatibles (capitales, encre foncée, marges nettes).
+
+### E3. Le profil longitudinal tel que conçu (8 mai)
+- **Schéma d'événement standard** : `{eleve_id, app, type_event, notion_ids[], score, hesitations, timestamp, …}` émis vers `/profil/<eleve>/events/<timestamp>` — chaque app GARDE son stockage propre ET émet l'événement en parallèle. Les évaluations Apps Script ne migrent pas : appel Firebase parallèle au moment de l'envoi.
+- **Tagging par notions de la taxonomie** obligatoire (sinon le profil n'affiche que du temps et des scores globaux, pas « progresse sur les accords, stagne sur les homophones »). Mapping `exoToNotions` à poser app par app — c'est un pan de la Concordance.
+- **TROIS vues** : ① l'élève par lui-même (pédagogique, valorisante, montre connectée) ; ② le prof par élève (diagnostique, riche) ; ③ le prof par classe (heatmap notions × élèves, fragilités collectives). → C'est le cahier des charges de « Mon année » et du futur onglet Profil.
+- **Champ `archived_year` dès la conception** : l'archivage par année = un export filtré, pas une fonctionnalité de dernière minute ; transmission possible aux collègues. → Réponse partielle à la question « où vit l'ouvrage final » (S0-②) — l'intention d'origine était : les événements anciens MARQUÉS mais CONSULTABLES.
+- **DOCTRINE DE MAÎTRISE v0 (PROMPT v3 §4.5, exhumée le 16/07)** — le moteur de calcul du profil, jamais reporté jusqu'ici : `maîtrise(élève, notion) = moyenne pondérée par récence des N dernières tentatives (N ≥ 3, sinon « données insuffisantes ») · pondération récence exponentielle demi-vie 30 jours · pondération source : entraînement libre ×1, session guidée ×2, évaluation sommative ×3 · seuil de confiance : < 3 événements récents (90 jours) → « données insuffisantes », pas de score affiché`. À brancher au chantier « Mon année ».
+- **Loi du code (MJPC5, 14/07)** : l'élève est toujours singulier — l'identification résout toujours vers des clés individuelles ; le groupe est un contenant déclaré (`aucun/binome/groupe/classe`), jamais une identité. C'est ce qui permet au profil de traverser travail individuel, de groupe et de classe entière.
+
+### E4. Le site tel que voulu (20 mars — la vision d'usage)
+- **« Le site est le miroir de la classe »** : chaque séance faite en classe est reprise sur le site, mêmes contenus + activités à refaire en autonomie. **Déblocage progressif** au fil des séances réelles.
+- **Parcours maison SOUPLE** : aucune obligation quotidienne (« sinon je vais me prendre les parents ») — une deadline globale par chapitre ; au jour le jour ou tout la veille, l'élève gère.
+- **Accès cumulatif par niveau** : un 3e voit tous les niveaux, un 6e seulement le sien.
+- **« Un tronc commun par niveau + possibilité de différencier par classe »** — MARS 2026 : la variante classe (notre S0-①) était DÉJÀ dans la vision fondatrice ; la recommandation du 15/07 ne fait que la retrouver.
+- Protections prévues : pas de téléchargement, pas de copier-coller ; tracking envisagé (documents ouverts, horodatage, durée).
+
+### E5. Le dormant supplémentaire découvert (cartographie du site déployé, 8 mai)
+- **Onglets placeholders existants** : Analyse d'image, Étude de texte, Rédaction (grisés) — trois familles d'apps FUTURES déjà réservées dans l'interface.
+- **Zone autonomie** : onglet existant, 0 documents — hors radar de tous les chantiers actuels.
+- **Entrées « Outils prof » grisées** : « 📐 Grammaire (bientôt) » (= l'Atelier), « 📊 Profil élève — suivi longitudinal (à venir) », « 📦 Archives — archivage par année scolaire (à venir) » — les PORTES du profil et de l'archive existent déjà dans l'interface.
+- **« Salle d'attente Plickers »** : une app/entrée réelle absente de tout inventaire du plan — à inventorier (11e app ?).
+- Historique utile : codes d'accès niveau (3e = 1729, clin d'œil Swift ; 4e = 1897, Cyrano), thème « Cosmic Glow Sunset », EB Garamond.
+
+### E7. LA MANIÈRE DE TRAVAILLER EN CLASSE (section créée le 16/07 — LE référentiel des motivations)
+*Principe posé par Paul : toute décision technique est motivée par un aspect pédagogique, une manière de travailler, d'aborder une notion. Cette section est donc le RÉFÉRENTIEL AMONT de tout le reste — chaque chantier doit pouvoir y pointer sa raison. Ce qui suit est l'état SOURCÉ (conversations et doctrine) ; les manques sont listés ; Paul complète et corrige (session dédiée ou au fil de M1).*
+**Ce qui est documenté :**
+- **Le geste central est manuscrit** : les élèves produisent à la main (dictée sur papier puis saisie ; rédactions et analyses sur copies) ; la correction du prof se fait au numérique sur copies scannées ; le stylo vert et le cahier restent les instruments de l'élève ; à chaque étape importante, une fiche papier collée au cahier — « le vrai bilan, celui qu'il peut feuilleter ».
+- **La séance type outillée** : vidéoprojection de l'écran prof (débat piloté, applaudimètre, QCM en direct) + tablettes élèves pour les gestes courts (voter, rejoindre un groupe, saisir) ; le plan de travail se vit à deux élèves par poste ; « l'outil garde ce que je notais autrefois sur un carnet ».
+- **Le rythme** : la classe d'abord, le site en miroir ensuite (déblocage après la séance réelle) ; parcours maison souple à deadline de chapitre ; l'autonomie est un espace propre (Zone autonomie) et non une injonction quotidienne.
+- **La posture** : l'IA pré-trie, le prof tranche, toujours ; pas de note automatique, pas d'appréciation automatique ; la note découplée du commentaire (rituel d'autocorrection) ; correction par pairs sur les seuls savoirs codifiés ; « la donnée prépare la rencontre, elle ne la remplace pas ».
+**LE DÉPLOIEMENT DE L'ANNÉE (stratégie révélée le 16/07 — structurante, n'était consignée nulle part) :**
+1. **Début d'année : les apps s'utilisent INDÉPENDAMMENT** — les élèves découvrent les outils un par un, au fil des besoins de séance ; les apps abondent le profil longitudinal en arrière-plan.
+2. **Le site se présente d'abord comme un SITE DE RESSOURCES** — « le cours, transposé en ligne » — TOUT SUIVI DÉSACTIVÉ à la présentation. **TRANCHÉ (16/07)** : la collecte tourne évidemment, le profil se construit — il est juste MASQUÉ. **Mécanisme retenu : exactement le même principe que la publication des chapitres** (`published`), décliné en activation/désactivation du profil — même grammaire d'interface, même geste, cohérence système totale. À porter en M15 : le flag de visibilité est un `published` du profil.
+3. **Le profil longitudinal s'OUVRE aux élèves plus tard**, une fois la familiarité installée — le miroir arrive quand la matière existe.
+*Implications techniques à porter partout : un INTERRUPTEUR DE VISIBILITÉ du profil (par niveau ou par classe) ; « Mon année » et la Zone autonomie masquables ; M15 se conçoit avec ce flag dès la v1 ; la présentation de rentrée du site = ressources, pas suivi.*
+
+**L'EDT 2026-2027 (fourni le 16/07, image au dossier de Paul)** : 4 HUGO + 4 TURING (les deux 4e), 3 FRANKLIN ARETHA + 3 DYLAN BOB (les deux 3e), + créneaux de groupement « X Français » avec 4 BANKSY / 4 PYTHAGORE / 4 HUGO / 4 TURING en alternance A/B, salle 9 (parfois 20). **Souhait exprimé, À INSTRUIRE (Paul lui-même questionne l'utilité)** : un onglet MJPC « EDT vivant » — tableau cliquable, modifiable. Usages candidats qui lui donneraient un sens (à arbitrer avant de coder) : ① le PANNEAU DU JOUR — l'EDT croisé avec chapitres/séances donne « maintenant : 4 Hugo, chapitre X, séance Y » et ouvre les bons outils ; ② la gestion native des alternances A/B ; ③ l'alimentation automatique des dates de séance (le champ dateSeance des instances). Sans usage retenu : ne pas coder.
+
+**La gestion des absents (16/07)** : des apps ont DÉJÀ leurs systèmes (au moins les réécritures — nœud `absents` par lot — et la dictée) ; consigne de Paul : intégrer ou cloner, SOLUTION SIMPLE. Méthode : recenser les systèmes existants au fil des passes M6-M14, en extraire le motif commun, le standardiser (probablement dans le sous-onglet Séance du modèle).
+
+**LE CAHIER DE RÉFÉRENCE — défini le 16/07 (c'est le « cahier auto » doctrinal §8, enfin concret)** : une PHOTO du cahier académique de la classe — celui de l'élève qui écrit le mieux — ajoutée au site au fur et à mesure ; il devient un cahier numérique « dont les pages se tournent ». **Piste : une app dédiée** (un feuilletoir : téléversement de photos ordonnées + visionneuse à feuilletage, branchée aux chapitres). À instruire avant de coder : qui photographie et à quel rythme · l'anonymat de l'élève-référence · le feuilletage par chapitre/séance · le lien avec les absents (le cahier de référence est LA ressource naturelle de l'absent). Position : chantier après-rentrée, sauf si Paul le veut pour septembre.
+
+**LA SEMAINE TYPE (extraite de l'EDT 2026-2027, 16/07)** — salle 9 (parfois 20), alternances A/B en quinzaine :
+- *Lundi* : 3 Franklin Aretha (8h57) · groupement « X Français » 4 Hugo + 4 Turing (10h07, A|B) · 4 Hugo (11h04, B) · 3 Dylan Bob (15h07, A) · 4 Turing (16h04, A).
+- *Mardi* : 4 Turing (8h57, B) · 3 Dylan Bob (10h07) · X Français 4 Banksy (11h04, B) · 4 Hugo (13h00, A et B) · 4 Turing (13h57, A) · 3 Franklin Aretha (15h07, A et B) · 3 Dylan Bob (16h04, B).
+- *Mercredi* : 4 Hugo (8h00) · 4 Turing (8h57) · 3 Franklin Aretha (10h07) · 3 Dylan Bob (11h04, A) | X Français 4 Pythagore (11h04, B).
+- *Jeudi* : 4 Turing (11h04, B) · 3 Dylan Bob (15h07, A) · 3 Franklin Aretha (16h04, B).
+- *Vendredi* : 4 Turing (8h00) · 4 Hugo (8h57) · 3 Franklin Aretha (10h07) · 3 Dylan Bob (11h04) · 4 Hugo (15h07, B).
+*À préciser : le contenu des créneaux « X Français » (regroupements avec les ex-4e Banksy/Pythagore — ateliers ? groupes de besoin ?).*
+
+**LES RITUELS (consignés le 16/07)** :
+- **La demi-page A4 — la STRATE du cahier** (doctrine du 14/07, « Réduire la dépendance ») : le cahier EST le profil longitudinal version élève, construit par sédimentation — chaque strate demi-A4 collée à un JALON (après évaluation, tournant de chapitre — pas à chaque séance) ; le geste quotidien d'ouverture = RELIRE la dernière strate (« regardez votre point de vigilance »), zéro impression. **Deux pistes de production NON TRANCHÉES (à arbitrer)** : la sobre — demi-A4 semi-vierge photocopiée en série, trame fixe (ma notion prioritaire / ce sur quoi je bute / mon objectif), remplie PAR l'élève (écrit réflexif) — vs l'industrialisée — génération en lot PDF par MJPC (2 strates/A4, impression groupée par jalon). Cousines à articuler : le bilan de séance DICTÉ (demi-page recopiée au cahier, usage chapitre) et la fiche d'apprentissage de worktrack (cours progressif 3 états, imprimable).
+- **Une séance de langue = une évaluation QCM dans la foulée** — rituel systématique, qui explique la place du QCM dans l'écosystème et nourrit le profil à cadence régulière.
+
+**LES APPS DE GRAMMAIRE — famille ancêtre révélée le 16/07 (hors tous inventaires)** : `grammaire_ch10.html` fourni (306 Ko, « Ch.10 — La phrase complexe et ses propositions », backend Apps Script, tracking comportemental riche : 31 points d'hésitation, 22 de changements d'onglet — c'est l'app au tracking cité le 8 mai comme à migrer) + les évaluations de conjugaison (ch.16, ch.36…) de la même génération. **Mérite : à reprendre et actualiser sur Firebase** — chantier à positionner : leur contenu rejoint la Banque de questions (⚠ convergence de format préalable, doctrine) et le rituel « séance de langue → QCM » ; leur tracking rejoint le schéma d'événement du profil. **LE PIPELINE DE PRODUCTION (consigné le 16/07, schéma validé par Paul)** : screenshot du cahier de grammaire (la leçon) → extraction par Claude → JSON AU FORMAT CONVERGÉ de la Banque de questions (contrainte doctrinale : converger le format AVANT le premier screenshot), tagué en notions et compétences (Concordance) → consommé par le MOTEUR UNIQUE (l'app d'entraînement M20 + le QCM). UN moteur, N contenus — plus jamais une app par chapitre : une nouvelle leçon = un screenshot = du contenu, zéro code. Les apps ch10/ch16/ch36 = GISEMENTS de contenu à migrer dans la banque (pas des modèles à recloner). Rythme de croisière : photographier après la séance → JSON tagué livré → en banque → le rituel « séance de langue → QCM » et l'entraînement s'en nourrissent.
+**Où vit le flow (précisé 16/07)** : l'EXTRACTION = conversation avec Claude (maillon artisanal assumé) ; l'ENTRÉE EN BANQUE = guichet d'import à loger dans l'admin de l'app d'entraînement (M20 — sa spec porte déjà les leviers prof de gestion des questions ; orientation à trancher en M20) ; la CONSOMMATION = la banque est un NŒUD, entraînement + QCM y puisent. Avant M20 : Claude pousse le JSON directement au nœud.
+Position : après-rentrée, adossé au chantier Atelier/Banque de questions.
+
+**Ce qui MANQUE ENCORE (à faire dire par Paul) :** · la place exacte de la vidéoprojection des documents (d'où le chantier visionneuse : projection en classe vs consultation maison) · les rituels d'entrée/sortie de séance · la gestion des absents · l'articulation cahier/site au quotidien — EXPLICITÉE le 16/07, voir réponse en conversation : quand et comment l'élève passe du numérique au cahier (fiches générées/imprimées ou copiées à la main ; moment du collage ; rôle du « cahier auto » doctrinal §8 ; le site renvoie-t-il explicitement au cahier) · les usages différenciés 3e vs 4e · ce qui déclenche l'usage d'un outil plutôt qu'un autre dans l'instant.
+
+### E6. Ce que cette fouille change au plan
+- S0-① (variante classe) : ce n'est plus une recommandation, c'est la RESTAURATION d'une intention de mars.
+- S0-② (archive) : l'option « événements marqués archived_year, consultables, export filtré » devient l'option de référence (c'était le dessein d'origine).
+- « Mon année » : hérite du cahier des charges des 3 vues + de la métaphore montre connectée + de l'interdit du score unique.
+- La Concordance : le schéma d'événement standard du 8 mai est SON format de sortie — les tables de correspondance alimentent `notion_ids[]`.
+- Nouveaux items d'inventaire : Zone autonomie, placeholders (Analyse d'image/Étude de texte/Rédaction), Salle d'attente Plickers, entrées grisées.
+- Le pipeline copies/autocorrection (E1-7, E2) est un CHANTIER ENTIER jamais reporté dans MJPC6 — probablement le grand chantier d'apps de l'année 2 (rédaction, étude de texte) ; à positionner après la rentrée.
+
+
+## F. REGISTRE D'EXHUMATION — documents à retrouver, et OÙ (pour la prochaine conversation)
+*✔ EXHUMATIONS FAITES le 16/07 — Paul a fourni : `SPEC_ATELIER.md` (1 352 l., la Zone 2 contient bien la taxonomie intégrale : 233 lignes de tableaux), `PROMPT_MJPC_v3.md` (1 015 l., le master prompt : principes, vocabulaire, décisions immuables, PASSES DE CODAGE §6 dont 6a/6b/6c, doctrine de maîtrise v0), `MJPC6-cadrage.md` (261 l., HISTORIQUE : ses dettes A sont closes par la Phase 1), `mjpc-session-recap` du 12 juin (313 l., LES RAISONS de l'architecture, dont la Concordance-dictionnaire), et `MJPC-presentation.md` (le texte de vision publique). **À VERSER AU DÉPÔT dans un dossier `docs/`** (avec le présent plan). ✔ `mjpc-doctrine-v2.md` (391 l.) exhumée aussi le 16/07 — LA référence architecturale, à verser au dépôt en premier. **plickers-attente : projet DÉFINITIVEMENT ABANDONNÉ ET EFFACÉ (décision Paul, 16/07)** — l'exhumation est CLOSE. Conséquences : retirer l'entrée morte « Salle d'attente Plickers » du menu admin d'index (ajouté au lot site M8) ; la base Firebase `plickers-mjpc` est abandonnée avec lui (sa seule utilité — restaurer qcm/classes — a été consommée en MJPC 4).*
+1. **SPEC_ATELIER.md** (1 352 lignes, zones 1-5 de l'Atelier dont la taxonomie intégrale en Zone 2) — livré le 5 mai 2026 dans la conv **« Intégration des outils sur monsieurjaipascompris »** — https://claude.ai/chat/8eb16cfa-61bd-470d-a180-f2c0f7018b6e. Si Paul ne l'a pas conservé : reconstituer zone par zone depuis cette conversation. Bloque : matérialisation de la taxonomie (Concordance).
+2. **Le master prompt MJPC** — but explicite de la conv **« MJPC prompt »** du 8 mai — https://claude.ai/chat/e3e4b968-615f-4171-94d8-fd84b4939f66 : philosophie complète + organisation en passes de code non chevauchantes (dont les passes 6a/6b/6c du pipeline copies). Vérifier en fin de cette conversation s'il a été livré, et l'exhumer. Bloque : le chantier fantôme (pipeline copies) et complète la section E.
+3. **mjpc-doctrine.md** — ABSENT du dépôt (vérifié 404 le 15/07) et absent du conteneur : conçue dans la conv **« Réduire la dépendance aux notes et au numérique »** (14/07) — https://claude.ai/chat/c2266739-d2ff-43c8-b819-c45adbcdfef3 — et auditée (« surpassements ») dans **« MJPC 4 »** — https://claude.ai/chat/4636c095-b72c-4989-9e49-1017e22bfd05. À exhumer et VERSER AU DÉPÔT. Bloque : rien d'immédiat, mais c'est la doctrine de référence.
+4. **MJPC6-cadrage.md** (passation MJPC5→6 : registre des 19 dettes, décisions gelées, point de reprise) — produit le 14 juillet dans la conv **« MJPC5 »** — https://claude.ai/chat/912639f8-42b1-4e31-b9e3-60041a5d7c4b. Paul l'a (il a servi à ouvrir MJPC 6). À verser au dépôt.
+5. **plickers-attente.html** — le fichier est ABSENT du dépôt (404 vérifié) alors que le menu admin d'index pointe dessus : LIEN MORT. L'app (salle d'attente entre sessions QCM, complémentaire d'evaluation-qcm) : conversation d'origine NON RETROUVÉE par la recherche — PISTE CONCRÈTE : l'historique Git du dépôt (`git log --all -- plickers-attente.html` sur GitHub) retrouvera le fichier s'il a un jour été poussé puis supprimé ; sinon disque local de Paul ; sa base Firebase séparée `plickers-mjpc` (décision du 8 mai : lue en parallèle, sans migration immédiate) est HORS hub. À exhumer puis décider : intégrer au dépôt + hub, ou retirer l'entrée du menu.
+6. **La ROADMAP du profil** — pas une conversation : commentaire en tête du script d'`index.html` (L796, « ROADMAP — fonctionnalités à développer », modèle de données du profil prévu). À relire au chantier « Mon année ». La télémétrie TRACK existe déjà dans index (37 occurrences) — décision du 8 mai : l'ÉTENDRE vers les événements de profil, pas la remplacer.
+7. **Décision RÉVOQUÉE à connaître en exhumant** : le 8 mai actait un `eleve_uuid` immuable + tableau `inscriptions[]` — REMPLACÉ depuis (MJPC5) par la clé canonique `sanMJPC` ; toute exhumation doit lire les documents de mai avec ce correctif.
+
+## G. LE DORMANT ET LE FANTÔME — développés (15/07 soir)
+### G1. Le dormant du site, pièce par pièce
+- **Zone autonomie — VOCATION TRANCHÉE (15/07 soir, Paul)** : c'est L'ENDROIT DE L'ATELIER, et une VUE TRANSVERSALE PAR ÉTIQUETTE — tout ouvrage marqué « autonomie » (étude de texte, brevet blanc, dictée…) y est RENVOYÉ tout en restant présent à sa place d'origine (son onglet, sa séance). Mécanique : un marqueur `autonomie` sur les items + une vue d'agrégation au niveau — jamais de duplication de contenu. C'est le lieu concret du « parcours maison souple » de mars. **La doctrine v2 (§5) ajoute : c'est aussi le MIROIR ÉLÈVE du profil** (le pendant élève, montre connectée : jauge de complétude, données brutes assumées, pas d'accès parents, zéro gamification, soft delete uniquement) — Zone autonomie = Atelier + renvois « autonomie » + Mon année, un seul lieu élève. À intégrer au chantier S5-⑤ (genres d'items) : le marqueur s'ajoute au modèle d'item en même temps que les nouveaux genres.
+- **Les 3 onglets placeholders — Analyse d'image, Étude de texte, Rédaction** : ce ne sont pas des vides décoratifs, ce sont les TROIS FAMILLES D'APPS FUTURES réservées dans l'interface — exactement celles que le pipeline copies (G2) doit servir. L'analyse d'image correspond en plus à une pratique de classe déjà rodée (séance satire 3e : une image par élève, tableau d'analyse, présentation orale enregistrée).
+- **Les entrées « Outils prof » grisées** : « 📐 Grammaire (bientôt) » = l'Atelier (spec zones 1-5 faite, zones 6-9 restantes) ; « 📊 Profil élève » = « Mon année »/3 vues ; « 📦 Archives — archivage par année scolaire » = la décision S0-② déjà à moitié prise (archived_year). Les portes de l'interface attendent leurs chantiers.
+- **Salle d'attente Plickers** : voir F-5 — lien mort au dépôt, base Firebase orpheline hors hub.
+### G2. Le chantier fantôme : le pipeline copies → autocorrection → note (conçu le 8 mai, jamais reporté)
+Le workflow complet, tel qu'acté : ① le prof SCANNE lui-même les copies originales au photocopieur du collège (OCR interdit : non fiable sur cursive) ; ② correction dans l'espace de travail numérique — commentaires tapés, tout audio transcrit avant lecture élève ; ③ la copie papier revient à l'élève VIERGE de toute annotation ; ④ l'élève consulte les commentaires en ligne, annote LUI-MÊME sa copie, accomplit l'AUTOCORRECTION (reformulation des commentaires majeurs/critiques ; pour rédactions et analyses : photo de la copie retravaillée téléversée, écrite en style OCR-compatible — capitales, encre foncée, zones définies) ; ⑤ RELECTURE prof ≤ 30 secondes par copie (contrainte architecturale dure ; OCR permis ici seulement, pour détecter présence/absence de corrections par zone) ; ⑥ LA NOTE SE DÉBLOQUE alors seulement (découplage temporel note/commentaire) ; ⑦ un cycle d'approfondissement maximum — au-delà, le contact direct en classe remplace l'app.
+**Pourquoi c'est LE chantier de l'année 2** : il porte les trois placeholders (rédaction, étude de texte, analyse d'image), il incarne les principes E1 les plus profonds (papier roi / numérique feedback / note découplée), et sa SPEC DE CODE COMPLÈTE est dans PROMPT_MJPC_v3 §6 (exhumé) : passes 6a (reformulations, déclenchées par marqueurs majeurs/critiques), 6b (autocorrection, banque de consignes photo/OCR-compatibles), 6c (relecture, module factorisé `ocr_engine.js` sur Tesseract.js, détection présence/absence par zones — jamais transcription intégrale) ; sortie événementielle standard vers les événements de profil. Position : après la rentrée, une fois S1-S5 posés.
+
+## H. RELIQUAT DE LA DERNIÈRE PASSE TRANSVERSALE (15/07, nuit) — les orphelins
+*Vérifié dans le dépôt et le hub : quatre fichiers présents au dépôt, absents de tout inventaire, tous sans Firebase, sans manifeste, non référencés par index.*
+1. **etude_dugain.html** (316 Ko, « Étude de texte — Dugain — 3e De Gaulle ») et **redaction_dugain_v3.html** (348 Ko, « Brevet blanc 3e — Rédaction ») : apps ponctuelles liées à une classe qui part (3e De Gaulle) et au brevet blanc passé — MAIS ce sont les PRÉFIGURATIONS des familles « Étude de texte » et « Rédaction » (les placeholders du site, le pipeline fantôme G2). Statut à trancher (S0-⑦) : archiver comme matériau de conception du pipeline, ne pas supprimer.
+2. **Console_ateliers_revisions.html** (434 Ko, « Ateliers Révisions Brevet — Console ») : prépa DNB 2026, probablement obsolète depuis juin. Statut à trancher : archive.
+3. **deploy-monitor.html** (29 Ko, « MJPC · Deploy Monitor ») : outillage technique de déploiement. À documenter dans le CLAUDE.md du dépôt (clôtures), pas un chantier.
+4. **Nœud hub `debat_singes` (45 Ko)** : l'ancien débat vit dans un nœud SÉPARÉ de `debats/` — migration ou archivage à intégrer au jalon multi-classe de S1 (le débat historique doit rejoindre l'architecture unifiée ou partir en corbeille datée).
+5. **Labels de nœuds fantômes dans la console d'index** : `students`, `students_sim`, `eleves_index` sont libellés dans le code de la console mais N'EXISTENT PAS au hub — vestiges à nettoyer ou documenter (petit item S5).
+
+### Verdict de complétude (15/07, fin de session)
+Le plan couvre désormais : le modèle complet du panneau (grammaire, charte, exceptions, décisions Q1-Q7 sourcées) · le séquençage S0→S5 avec grille de passe figée (13 points) et matrice vérifiée · les fiches détaillées des 10 apps + les 4 orphelins · le site (mécanismes vérifiés, dormant complet, Zone autonomie tranchée) · la Concordance redéfinie (référentiel central, taxonomie 40 familles, héritage de mai respecté) · la vision fondatrice exhumée (principes, vocabulaire, profil 3 vues, pipeline copies) · le registre d'exhumation nominatif · le rendez-vous daté de fin août. **Limite honnête** : la fouille des conversations est thématique (recherches ciblées), pas une relecture intégrale — des détails peuvent encore dormir dans des conversations anciennes, mais tous les fils tirés ce soir ont abouti ; les découvertes marginales restantes se rattacheront aux chantiers existants.
+## I. L'APP DE RÉVISION ADAPTATIVE (prompt exhumé le 16/07 — 8e document du paquet docs/)
+`prompt_app_revision_adaptative_MJPC.md` (225 l.) : le document de commande de la « spec révision » citée par la doctrine — l'app SŒUR du « projet 1 » (l'app d'évaluation sommative devenue `evaluation-qcm`, qui a REMPLACÉ Plickers : voilà l'origine de plickers-attente, et sa fin). Contenu : révision espacée longitudinale (scénario dominant) + entraînement libre par chapitre ; mode « drill » Leitner 4 boîtes (mémorisation obligatoire : mots invariables, conjugaisons, listes) vs tirage intelligent ; bachotage autorisé SEULEMENT sur la mémorisation ; usage hybride (créneaux orchestrés en classe pour amorcer l'habitude + domicile libre) ; mode adapté BEP ; miroir élève transversal ; posture éthique/wording ; 4 couches de données ; articulation banque de questions commune avec le QCM. **Recouvre partiellement SPEC_ATELIER (mai)** : deux documents du même chantier — la RÉCONCILIATION des deux (+ la convergence de format avec le QCM actuel, alerte doctrinale) est le préalable du morceau M20 (Atelier). Rejoint la Zone autonomie (le scénario dominant EST l'usage autonome) et le rituel « séance de langue → QCM ».
+
+
+## J. LES RÉPONSES FINALES DE PAUL (16/07 — le questionnaire de clôture)
+- **A1 ✔** La grammaire structurelle s'applique à QCM et applaudimètre (sous leur charte propre).
+- **A2 ✔ raison sourcée** : identités visuelles abouties, usages événementiels de classe, ET côté ludifié assumé — « pour vivre ça comme une pause aussi dans le travail ».
+- **B1 ✔** Variante classe à la publication : ACTÉE (progression par niveau + interrupteur par classe).
+- **B3 ✔** `evalconn` = « évaluation des connaissances » = l'onglet QCM de niveau — à rattacher à evaluation-qcm (cartographié).
+- **B4 ✔** EDT vivant : chantier ULTÉRIEUR, pas nécessaire dans un premier temps (retiré du champ pré-rentrée).
+- **B5 (NOUVEAU, 16/07)** : la DATE DU BREVET du chrono d'accueil doit devenir ÉDITABLE (relancer le compte à rebours pour 2027) — petit item ajouté au lot site M8.
+- **B6 (NOUVEAU, 16/07)** : LA CHARTE VISUELLE DU SITE EST À REVOIR COMPLÈTEMENT, avec un RAPPORT DE LISIBILITÉ préalable — s'ajoute au chantier « sortie du mode dev » de l'étape site (après-rentrée sauf arbitrage contraire), le rapport de lisibilité en livrable d'analyse d'abord.
+- **C1 ✔** La forme de l'archive : EXPORTS HTML par élève — modèle : le document de correction de dictée tel qu'il se présente une fois le parcours d'autocorrection accompli.
+- **C2 ✔ + DOCTRINE NOUVELLE « DONNÉES MARTYRES »** : eval-3e-paroles À SUPPRIMER — et généralisation : TOUTES les données réelles actuelles des élèves ne sont gardées QUE pour tester les apps et le site ; elles serviront de données martyres et seront EFFACÉES À LA FINALISATION du site. (Éclaire M16-M17 : rien de l'existant n'a vocation à survivre au-delà des tests.)
+- **D1 ✔** Concordance : APP DÉDIÉE (`concordance.html`), mais VISIBLE dans le site côté prof (entrée outils prof).
+- **D3 ✔** Nommage des nœuds : FRANÇAIS.
+- **E1 ✔** La strate : LES DEUX — l'élève écrit d'abord puis compare (sobre) ; bascule vers l'impression directe (industrialisée) si trop lourd en temps → la génération en lot se prévoit EN OPTION dès la conception.
+- **E3 ✔** Les créneaux « X Français » : coanimation « écriture de la lettre » avec une collègue, PONCTUELS cette année — HORS progression générale et HORS MJPC (ne pas modéliser).
+- **F2 ✔** Session de nommage des concepts du débat : en ouverture de M4.
+- **F3 ✔ RÉVISION MAJEURE DES ORPHELINS** : `etude_dugain` et `redaction_dugain` ne sont PAS des archives — ce sont les SOUCHES à universaliser : ils doivent devenir **« Étude de texte universelle »** et **« Rédaction universelle »** (comme la dictée universelle), en puisant largement dans la taxonomie des compétences et des notions (la Concordance est leur prérequis). Chantiers d'apps du pipeline, année 2, avec bases de départ existantes. `Console_ateliers_revisions` : laissée de côté (essai non concluant) MAIS son MÉCANISME — révisions brevet en plan de travail, avec sélection par l'élève lui-même — est LE BON : à garder sous le coude pour l'app de révisions. `deploy-monitor` : documenté au CLAUDE.md.
+- **L'APP DE RÉVISIONS (rappel de Paul : PAS ENCORE CODÉE)** : ajoutée EXPLICITEMENT à la chronologie — M20 reprécisé : « L'app de révisions » = réconciliation SPEC_ATELIER × prompt révision adaptative + convergence du format de la banque de questions avec le QCM + code ; le mécanisme retenu de la Console révisions (sélection par l'élève) s'y verse.
+### Compléments du 16/07 (2e tour de réponses) :
+- **B2 ✔ RÉSOLU + INFO MAJEURE** : c'est Paul qui gère la publication des onglets. Et « Étude de texte universelle » + « Rédaction universelle » sont **EN COURS DE FABRICATION par Paul** (pas année 2 : maintenant) — seule « Analyse d'image » n'existe que dans sa tête. Les fiches Dugan/pipeline sont recalées : les universalisations sont VIVANTES, la Concordance (leur nourriture en compétences/notions) devient d'autant plus urgente pour elles.
+- **E2 ✔** : OUI, le site affiche le rappel rituel en fin de séance/au jalon. **ET RÈGLE TRANSVERSALE MAJEURE (16/07, à la faveur de cette question) : RIEN, côté élève, ne doit être du jargon** — « strate », « jalon », etc. sont du vocabulaire interne prof/développement, JAMAIS affiché à l'élève (côté élève : « ta fiche », « ton bilan », « colle ta fiche dans ton cahier »). C'est la généralisation du « test du collégien » du prompt révision à TOUT l'écosystème — ajoutée à la grille de passe (point 14 : wording élève sans jargon, test du collégien).
+- **F1 ✔ avec explicitation** : la règle concrète — quand un morceau de la chronologie touche un mécanisme doctrinal non validé, ce mécanisme est présenté AVANT tout code en trois lignes (ce que ça fait / pourquoi, pédagogiquement / un exemple concret avec les classes de Paul), et Paul répond ok/non/modifie ; rien ne se code sans ce passage. Affectations : M2 présentera l'invariant id/libellé et les exclusions de manifeste ; M15 présentera les alertes et le QR élève ; M4-M5 la strate §7 et les annotations cahier s'ils sont touchés.
+- **D2 ✔ VALIDÉE (16/07, après double explication)** : la table à trois relations (égal / inclus / voisin — le voisin JAMAIS compté, suggestions seulement) et le circuit proposé (IA) / validé (prof) — seul le validé entre dans les calculs — sont la CONCEPTION OFFICIELLE de la Concordance (plus des surpassements). *Raisons consignées : ① la granularité du geste n'est pas celle de l'analyse — les codes de correction rapide (« G ») sont des langues de geste à préserver, que la relation « inclus » traduit sans les détruire ; ② unification DIRECTE là où le geste n'impose rien : les apps nouvelles ou posées (QCM, révisions, étude/rédaction universelles) taguent directement en notions canoniques (le champ `notions:[]` qui attend) — la table ne sert que les langues de geste et le passé ; ③ le circuit proposé/validé rend exécutable « l'IA pré-trie, le prof décide » à l'échelle de centaines de liens, sans pollution silencieuse possible.*
+  **Amélioration simplifiante retenue (16/07, proposition Claude acceptée par principe)** : la relation « voisin » est DIFFÉRÉE — elle ne sert qu'aux suggestions de l'app de révisions (M20), pas au profil ni aux bilans ; la Concordance se lance donc en M2 avec égal + inclus seuls (100 % du décompte couvert), les liens voisin s'ajoutent quand naîtra leur consommateur — **l'app d'ENTRAÎNEMENT (précision Paul, 16/07) : c'est elle, l'app non codée de M20, qui consommera les voisins** (suggestions « tu as travaillé X, essaie Y qui y ressemble »). DIFFÉRÉ VALIDÉ. Au passage, « entraînement » est le mot de Paul pour cette app — candidat naturel de libellé élève pour M20 (mieux que « révision adaptative » : test du collégien).
+**→ LE QUESTIONNAIRE EST CLOS : TOUTES LES QUESTIONS DU DOCUMENT SONT RÉSOLUES (16/07).**
+
+### Restées ouvertes après le questionnaire (pour mémoire, état au 2e tour) :
+- **B2 (reformulée)** : dans les données du site, les onglets image/étude/rédaction de 3e sont marqués « publiés ». Question concrète : les élèves les VOIENT-ils (onglets affichés, vides ou presque) — et faut-il les dépublier jusqu'à ce que leurs apps existent ?
+- **D2 (en attente de validation après explication)** : les 2 mécanismes de la Concordance expliqués pédagogiquement en conversation le 16/07 (voir ci-dessous) — validation de Paul attendue.
+- **E2 (reformulée)** : le site doit-il AFFICHER le rappel rituel (« colle ta strate », « relis ta fiche ») en fin de séance/au jalon — ou ce geste reste-t-il purement oral en classe, sans trace à l'écran ?
+- **F1 (règle proposée)** : les 7 surpassements doctrinaux fins seront chacun présentés À VALIDATION AVEC LEUR EXPLICATION PÉDAGOGIQUE SIMPLE au moment où leur chantier s'ouvre — aucun mécanisme ne sera soumis sans elle (la règle qui a manqué à D2/F1 aujourd'hui). Accord de principe attendu.
+
+
+## K0. LES NIVEAUX DE COMPÉTENCE (découverts à la lecture des Dugain, 16/07 — le chaînon manquant)
+**Le système construit par Paul dans `redaction_dugain_v3` et `etude_dugain`** : chaque compétence évaluée = un INDICATEUR PONDÉRÉ (ex. « Remobilisation du texte », poids 5) portant QUATRE NIVEAUX DESCRIPTIFS RÉDIGÉS — des textes complets, personnalisés ({prenom}, tutoiement) et contextualisés à l'œuvre, décrivant ce que FAIT la copie à chaque palier — + un second étage de SOUS-DESCRIPTEURS affinant le texte (134 en rédaction, 48 en étude), correction au clavier (une touche par niveau), et SUGGESTION AUTOMATIQUE pour l'orthographe (plage d'erreurs → niveau proposé).
+**Ancrage** : échelle critériée descriptive — Glaser 1963 (seuil explicite, jamais de classement) et Sadler 1989 (le descripteur rédigé rend le critère connaissable, condition de l'écart et de l'action). Les 4 niveaux épousent l'échelle officielle du socle (insuffisante/fragile/satisfaisante/très bonne maîtrise) → pont naturel vers les compétences École Directe de la Concordance.
+**Origine (conv « Grille 1 de correction interactive pour rédactions DNB », 28 mai — https://claude.ai/chat/a91b6190-a76d-478e-9a35-63dc9fd5d39a)** : le second étage est né d'une exigence de Paul contre la résistance de Claude (« 4 niveaux sur un critère, ce n'est pas personnalisé du tout ») — les SOUS-DESCRIPTEURS sont des nuances À L'INTÉRIEUR du niveau choisi (bas / milieu-bas / milieu-haut / haut), coût chiffré et accepté (+50 s/copie, ~24 min sur 29 copies), résultat : ~20 phrases sur mesure par fiche élève. S'y ajoute la saisie du paquet de copies par initiales (modal « AE » → Audebert Élise), motif commun aux deux Dugain.
+**DÉCISION (16/07)** : « pour rédaction c'est pareil » (structure générique / textes par œuvre confirmée pour les deux universalisations) et **LES ÉCHELLES DESCRIPTIVES DOIVENT ÊTRE ÉDITABLES → ELLES VIVENT DANS FIREBASE** — l'édition passe par l'app (la Préparation de l'instance), jamais par re-livraison de code. Architecture cohérente avec la taxonomie : les échelles TYPES par compétence rejoignent le référentiel ; leurs HABILLAGES par œuvre vivent dans le nœud de l'app universelle, édités en Préparation.
+**LE CYCLE DE VIE DU DESCRIPTEUR (16/07 — donne son contenu concret à la « Banque pédagogique » des 4 référentiels doctrinaux)** : sur le modèle de la mutualisation des décisions de correction de la dictée (une décision énoncée une fois vaut pour toutes les copies — mécanisme source exact à re-repérer en M6) : ① AMONT, du rédigé assisté — l'IA propose des descripteurs engendrés depuis les échelles types × compétences (Concordance) × la banque existante (les phrases Dugain rhabillées pour la nouvelle œuvre), le prof édite et VALIDE (patron proposé/validé) ; ② SÉANCE, du cliquable — le validé devient les touches de correction (4 niveaux, sous-descripteurs) ; ③ DURÉE, du capital — chaque descripteur validé rejoint la banque, étiqueté par compétence : l'œuvre suivante rhabille, ne repart jamais de zéro. Rédigé → validé → cliquable → réutilisé.
+**Place dans l'architecture** : le chaînon entre la Concordance (les intitulés de compétences) et l'évaluation réelle. **Orientation consignée (à valider à l'universalisation)** : la STRUCTURE (compétence → 4 niveaux → sous-descripteurs → poids) est générique et réutilisable ; les TEXTES se contextualisent par œuvre — le référentiel peut porter des échelles types par compétence, chaque œuvre les habille. C'est le cœur de ce que « Étude de texte universelle » et « Rédaction universelle » (en cours chez Paul) généralisent.
+
+## K. LES DIX AMÉLIORATIONS PÉDAGOGIQUES (proposées et VALIDÉES EN BLOC le 16/07 — adossées au corpus de worktrack)
+*Corpus de référence (ancrage worktrack du 11/06 + prompt entraînement) : Scriven 1967, Bloom 1968/1971, Black & Wiliam 1998, Bruner 1960, Glaser 1963, Parkhurst 1922/Freinet, Wood-Bruner-Ross 1976/Vygotski, Sadler 1989, Hattie & Timperley 2007, Carroll 1963, Flavell 1976, Hattie d=1,33 (calibration), Roediger & Karpicke 2006 (effet test), Cepeda 2006 (espacement), Sweller (charge cognitive). Chaque amélioration se loge dans un morceau existant :*
+1. **M6 · Autocorrection dictée** : en fin de parcours, l'élève formule UNE action suivante (« je revois les participes en -é/-er ») → devient la « notion prioritaire » de sa prochaine strate (Sadler ; Hattie-Timperley, 3e question).
+2. **M7 · QCM** : « questions de rappel » — 2-3 questions de la séance de langue PRÉCÉDENTE glissées dans chaque QCM (effet test + espacement, coût nul).
+3. **M4 · Débat** : après consommation d'un jeton d'aide, le binôme reformule l'aide en une phrase avant de continuer (désétayage, ZPD).
+4. **M14 · Applaudimètre (option)** : 2-3 critères affichés AVANT la lecture, vote par critère — l'écoute des pairs devient apprentissage d'auditeur, mécanique festive intacte (Glaser, Sadler).
+5. **M13 · Plan de travail** : PRÉDICTION avant chaque porte (« je pense réussir 4/5 ») → écart prédiction/réalité au bilan tissé (calibration, Hattie d=1,33).
+6. **M9 · Dictée universelle** : « LA DICTÉE DE MES ERREURS » — mini-dictée personnelle générée périodiquement depuis le carnet d'erreurs de l'élève (récupération espacée sur corpus personnel, via taxonomie).
+7. **Fondements · La strate** : sa trame (« ma notion prioritaire / ce sur quoi je bute / mon objectif ») officiellement verrouillée sur les 3 questions de Hattie-Timperley.
+8. **M15 · « Mon année »** — **PRÉCISION DE PAUL (16/07)** : la progression doit être VISIBLE ET DATÉE — une **COURBE par notion** (les pourcentages atteints au fil du temps, points datés — la doctrine de maîtrise fournit les points) **et/ou la lecture NARRATIVE datée** : « En progrès sur les accords depuis le 12 novembre — on peut le voir : le 15 décembre tu as acquis l'accord sujet-verbe, le 20 janvier… ». Jamais un simple état (« 54 % »), toujours la trajectoire concrète. (Hattie-Timperley : le feedback porte sur le progrès vers le critère ; wording élève : phrases concrètes datées, zéro jargon.)
+9. **Après M2 · Chapitres** : le spiralaire rendu visible — « cette notion, déjà croisée au chapitre 2, reviendra au chapitre 7 » (Bruner ; nécessite la Concordance).
+10. **Fondements · Le modèle de panneau** : sa grammaire (« une chose à la fois, de l'air », atterrissage sur le travail principal) documentée comme gestion de la charge cognitive (Sweller) — l'ancrage du modèle entier.
+
+## 0bis.
+ LE MODÈLE DE PANNEAU — état des lieux de la souche et orientations
+
+### Ce que la souche (correction de dictée) fait bien, à généraliser
+La lecture approfondie révèle une architecture en trois étages qui fonctionne :
+1. **Un accueil d'instances** : on choisit ou on crée « une dictée pour une classe » ; tout le panneau travaille ensuite dans ce contexte. Équivalents : une évaluation (QCM), un travail (analyse logique), un débat. **C'est le concept unificateur n°1** — chaque app manipule des *instances* (préparation × classe).
+2. **Une barre d'onglets par fonction** : Correction · Rapide · Bilan · Copies · Exercices · Fiches · Suivi — avec info-bulles pédagogiques systématiques, raccourcis clavier, présence élèves en temps réel.
+3. **Une barre d'actions transverses** (sauvegarde-instantané, import, retour) toujours visible.
+Le clonage vers le QCM (evals · pilot · results · classes · snapshot) a confirmé la transposabilité — et montré le résidu à retirer partout : l'onglet « classes » (gestion d'identité), qui appartient au site.
+
+### Le modèle proposé (les 7 onglets de la souche rangés dans la cible)
+- **Pilotage** = le travail du prof : sous-onglets *Préparation* (créer ET modifier l'instance — le manque pointé sur le débat, présent dans la souche via l'écran « config »), puis les modes de travail propres à l'app (*Correction* et *Rapide* pour la dictée ; *Groupes* et *Séance* pour le débat ; *Direct* pour le QCM).
+- **Données** = ce qui sort : *Bilan*, *Copies/Productions*, *Fiches imprimables*, *Suivi en direct*, *Exports/Instantanés*.
+- **Réglages** = ce qui persiste entre les séances (barèmes par défaut, options d'affichage) — seulement si l'app en a.
+- **« ? »** = aide d'usage + annonces de nouveautés pédagogiques.
+- La gestion des classes disparaît de toutes les apps (renvois vers le site, déjà câblés).
+
+### Les 3 questions à trancher (étape 1) — avec mon conseil
+**Q1 — TRANCHÉE (15/07, sur mockup cliquable) : DEUX NIVEAUX, avec atterrissage sur le travail principal.** *Raison sourcée : c'est la définition même du panneau universel donnée par Paul — « identique, en tout cas pour les onglets ; les sous-onglets seront les spécificités de chaque app ». Trois onglets (Pilotage · Données · Réglages) toujours identiques = les repères du professeur se transfèrent d'une app à l'autre ; la barre plate ne pouvait pas tenir cette promesse (longueurs différentes par app). Sert aussi le principe « doter, pas s'aligner » : un onglet standard peu garni est un emplacement qui appelle son contenu. L'atterrissage à l'ouverture se fait sur le travail principal de l'app (Correction pour la dictée, Séance pour le débat) : le coût du second niveau ne se paie jamais sur le geste quotidien. Les raccourcis clavier existants restent inchangés.*
+**RÈGLE DE CHANTIER (15/07, à la suite du mockup)** : la refonte des panneaux change le CADRE (navigation), jamais les ÉCRANS DE TRAVAIL existants — ils sont re-rangés, pas rouverts. Si un écran existant doit un jour être modifié : lecture profonde préalable obligatoire (affichage réel, commandes clavier, gestes d'usage) avant toute proposition.
+**Q1-bis (ancienne formulation) —** La souche vit très bien en barre plate de 7 onglets ; la cible à 3 onglets impose un second niveau (sous-onglets), qui organise mais ajoute un clic. *Conseil : deux niveaux, avec « atterrissage intelligent » — le panneau s'ouvre directement sur Pilotage → le mode de travail principal de l'app (la Correction pour la dictée, la Séance pour le débat), si bien que le clic supplémentaire ne se paie qu'en changeant de fonction.* Alternative défendable : barre plate aux libellés et à l'ordre standardisés (Préparation toujours 1re, Données toujours groupées à droite) — moins de refonte, moins d'unité visuelle.
+**Q2 — TRANCHÉE (15/07) : annonces centralisées sur le site.** *Raison pédagogique sourcée (Paul) : un événement pédagogique est naturellement transversal — le brevet blanc s'éclate entre dictée, réécriture, étude de texte et rédaction ; une annonce unique cochant plusieurs apps épouse cette réalité.* (Archive de l'option écartée : annonces écrites app par app.)
+**Q2-bis (ancienne formulation) —** Option A (conseillée) : *centralisées sur le site* — tu écris une annonce une fois, tu coches les apps concernées, chaque « ? » la lit ; un seul geste, cohérent avec « le site orchestre », et l'annonce peut pointer plusieurs apps (« nouveau brevet blanc disponible dans Réécriture et Dictée »). Option B : écrites dans chaque app (plus proche du geste actuel du QCM, mais dix endroits où écrire). Techniquement, A = un nœud d'annonces sur le hub, lu par toutes les apps ; B = un nœud par app.
+**Q3 — TRANCHÉE (15/07) : l'onglet Réglages est PARTOUT.** *Raison (Paul, principe général réaffirmé) : les apps ont été faites dans l'année sur le besoin du moment, par priorisation — elles sont TOUTES en mode développement, aucune n'est finalisée ni intouchable (même si certaines sont bien plus abouties : correction de dictée, QCM, applaudimètre). L'uniformisation ne s'aligne donc pas sur l'existant minimal : elle DOTE chaque app des fonctionnalités des autres. Un onglet Réglages vide aujourd'hui est un emplacement qui appelle son contenu demain.* (Mon conseil initial — onglet seulement où il se justifie — était l'inverse : écarté pour cette raison.)
+**Q3-bis (ancienne formulation) —** Peu d'apps en ont beaucoup. *Conseil : onglet présent seulement là où il se justifie (applaudimètre, dictée universelle), pour ne pas afficher un onglet vide ailleurs.* L'uniformité porte sur « s'il existe, il est là et s'appelle ainsi », pas sur sa présence partout.
+
+### Cohérence apps ↔ site (le fil rouge)
+Le site est la **porte** (identité, session partagée, codes) et la **mémoire** (classes, profils, console, corbeille) ; les apps sont les **salles de travail** (instances, séances, données pédagogiques). Tout ce qui relève de *qui est l'élève* remonte au site ; tout ce qui relève de *ce qu'il fait* reste dans l'app et se déclare par contrat (manifestes — fait en Phase 1). Le panneau universel est la traduction visible de cette répartition : plus aucune app ne gère l'identité, toutes offrent les mêmes tiroirs au même endroit.
+
+### LA GRAMMAIRE DU PANNEAU (validée le 15/07 sur comparaison d'écrans — « c'est ce que je demande depuis le début »)
+Le modèle n'est pas qu'une navigation et une charte : c'est la grammaire complète de correction de dictée.
+1. **Accueil d'instances** : liste des instances existantes + création — on choisit son contexte AVANT d'entrer dans le panneau (le débat te jette aujourd'hui dans une séance : à corriger).
+2. **Panneau clair et sobre** : charte de correction de dictée (fond crème #fafaf8, cartes blanches, ombres discrètes, bleu d'action #2563eb, radius 14px) ; navigation deux niveaux EN TÊTE ; une chose à la fois, de l'air.
+3. **L'habillage appartient aux écrans élèves** : le grand décor (titre théâtral, objectif, affirmation, camps) n'a rien à faire en permanence sur l'écran de travail du prof — il se réduit à une ligne de contexte (« Débat teste · 4E »). L'ambiance de séance (sombre, projetée) reste côté élève.
+4. **Largeur d'écran (contrainte notée le 15/07)** : le débat est en écran LARGE (usage tablette/projection en classe), la dictée en colonne centrée. À unifier par TYPE d'écran, pas par app — orientation : colonne centrée lisible pour accueils et formulaires ; pleine largeur pour les écrans de travail denses (tableaux de suivi, correction, séance de débat). La souche fait déjà cette distinction (accueil étroit, correction élargie).
+
+### Règles d'interface actées le 15/07 (sur captures du panneau débat)
+- **Des ⓘ partout** : toute mention, badge ou bouton dont le sens n'est pas évident porte son info-bulle (le système de la souche : le petit ⓘ cliquable). Exemple fondateur : les badges « verrouillé » et « 3 archives » du panneau de contrôle, illisibles sans explication. Un attribut au survol ne suffit pas (lent, invisible sur tablette).
+- **Un seul thème côté professeur** : le passage du panneau clair (blanc/bleu) au cockpit sombre est « terrible » — l'ensemble du côté prof passe à la charte claire de la souche. **EXCEPTIONS ACTÉES (15/07 soir, Paul) : le QCM garde sa charte propre (gradient), l'applaudimètre aussi.** Raison non explicitée à consigner en S0 (probable : identités visuelles abouties et assumées — ces deux apps sont citées par Paul parmi les plus abouties). Question ouverte associée (S0-④) : la GRAMMAIRE (accueil d'instances, deux niveaux, ⓘ, Préparation) s'applique-t-elle à ces deux apps dans leur habillage propre ? (recommandation : oui — la grammaire est structurelle, la charte est cosmétique). Re-thémage en passes vérifiées sur capture : ① variables + fonds + en-tête/navigation ; ② bandeau de séance + légende + tableau des binômes ; ③ mode tournoi + fenêtres superposées. L'ambiance sombre reste aux écrans ÉLÈVES (séance projetée).
+- Le panneau de contrôle (écran de départ) cloné de la souche est validé (« on commence à arriver à la vérité »).
+
+### L'intégration au site (mécanisme vérifié dans le code le 15/07)
+**Le mécanisme confirmé** : chaque niveau a ses **onglets publiés** (`published_tabs`, basculés depuis le mode admin) et ses **chapitres** publiables à trois étages (chapitre → séance → item : chacun a son interrupteur `published`). Les **items de séances** portent les liens vers les apps, avec un « genre » par app ; côté élève, tout s'ouvre **en modale** (visionneuse intégrée) ; le lien direct vers le fichier de l'app reste l'ouverture classique.
+
+**Règle actée (15/07)** : *toute app s'ouvre en modale quand on passe par MJPC ; ouverture classique par lien direct sinon.* C'est du clonage : le mécanisme existe (visionneuse + genres d'items), il suffit de brancher les apps manquantes. Deux points techniques à valider au passage : le plein écran dans la visionneuse (autorisation d'iframe à vérifier pour les apps qui le demandent) ; et côté professeur, le menu d'outils admin ouvre aujourd'hui les apps en **nouvel onglet** — à convertir en modale pour respecter la règle (en gardant le lien direct pour les longues sessions de correction si le confort l'exige).
+
+**État des branchements côté élève (items de séances) :**
+| App | Branchée ? | Genre d'item |
+|---|---|---|
+| Évaluation QCM | ✔ | `qcm` |
+| Dictée universelle | ✔ | `dictee` |
+| Correction de dictée | ✔ | `dictee` (copie corrigée) |
+| Réécriture | ✔ | `reecriture` |
+| Réécriture BB 4e | ✔ (vérifié : ouverte en modale depuis l'onglet réécriture du niveau) | via onglet |
+| **Débat** | **✘ absente** | à créer |
+| **Analyse logique** | **✘ absente** | à créer |
+| **Plan de travail** | **✘ absente** | à créer (ou statut particulier) |
+| **Applaudimètre** | **✘ absente** | à créer (ou statut particulier) |
+
+**Questions ouvertes (Q4-Q7) — comment chaque app absente doit-elle apparaître aux élèves sur MJPC ?**
+- **Q4 — TRANCHÉE (15/07) : item de séance « débat »** (l'élève clique dans la séance, la modale s'ouvre, il se connecte). **Applaudimètre : idem, item de séance** (séances de lecture orale). **Plan de travail : un CHAPITRE entier** dans la liste des chapitres — l'élève clique le chapitre et arrive sur la page d'accueil de worktrack (sa carte).
+- **Q5 — TRANCHÉE (15/07) : l'analyse logique devient un ONGLET de niveau** (comme Réécriture), en EXTRAYANT le contenu « analyse logique » actuellement logé dans l'onglet Fiches transversales (vérifié : onglet de niveau existant). L'onglet portera l'app.
+- **Q6 Plan de travail** : outil de salle (2 élèves par poste, en classe) — doit-il apparaître aux élèves sur le site, ou rester un outil que TU ouvres en classe ?
+- **Q7 Applaudimètre** : app de vidéoprojection + vote sur tablette — les élèves n'ouvrent que l'écran de vote : faut-il un accès élève depuis le site, ou l'accès reste-t-il piloté en séance ?
+
+---
+
+## 1. Cadre et objectif
+
+MJPC 6 exécute la **Phase 1 du plan de fiabilisation du hub Firebase** (`mjpc-hub`, europe-west1) défini par le cadrage (`MJPC6-cadrage.md`) : déployer le **socle MJPC-CORE v1.0.0** (`mjpc-core.js`, recopié verbatim, jamais modifié localement) dans les **10 apps** de l'écosystème, avec pour chacune :
+
+- un bloc **DÉCLARATION** (`MJPC_APP` : id = nom de fichier sans extension, nom lisible, contenant ∈ {aucun, binome, groupe, classe}) ;
+- un **MANIFESTE** (`MJPC_MANIFESTE` : nœuds Firebase possédés, notions Phase 3 vides pour l'instant) ;
+- un **CONTRAT DE PURGE** (`MJPC_PURGE` : preserver = conception, purger = données élèves) publié sous `manifestes/<id>` à l'ouverture du panneau prof (`publierManifeste`) ;
+- la **conversion des écritures dangereuses** sur `/classes` racine (partagé) : sets destructifs → `ecrireClasse` (transaction non destructive, préserve `archivee`/`niveau`, normalise au format canonique `{eleves, métas}`, purge les résidus indexés) ; suppressions → `renvoyerVersMJPC` (une seule porte de destruction : MJPC) ;
+- l'**identité des clés** : clé de classe = nom tel quel (`cleClasse`, décision §12 — mort du slugify) ; clé élève = `sanMJPC` (canon `clement_noe`) ;
+- le **masquage des classes internes** (`_test_*`, `_TEST`, `CLASSE TEST` selon contexte) des sélecteurs, surtout côté élève.
+
+**Méthode par app** : sauvegarde → repérage (grep exhaustif) → lecture des sites → édition → audit complet post-édition → double parseur (node --check + acorn) → **banc d'exécution du segment livré sur l'export réel du hub** (`hub.json`) → livraison → push par Paul → vérification GitHub **bit à bit** + manifeste Firebase.
+
+Contexte amont : le QCM et correction_dictee avaient été traités en MJPC 5 (manifestes publiés dès 9h23/9h40, avant cette session). L'incident fondateur (juin) : un set racine de `/classes` avait rasé le hub.
+
+---
+
+## 2. Amorçage (étape 0)
+
+- **Accès REST Firebase opérationnel** depuis l'environnement Claude (domaine autorisé) : lecture directe du hub, plus d'allers-retours manuels. **L'export du hub est désormais auto-servi** : chaque session commence par un snapshot frais (`hub.json`, 5,7 Mo ce matin-là) — c'est à la fois l'archive-avant-tout et le banc d'exécution.
+- Dépôt cloné : `siteflow-io/monsieurjaipascompris` (GitHub Pages). **`mjpc-core.js` présent à la racine (8 986 octets) → dette ⑲ fermée.**
+- Hub au matin : 17 nœuds racine ; `/classes` = 6 classes (3E Charles de Gaulle, 4E BANKSY, 4E PYTHAGORE, 5e HERGÉ, CLASSE TEST, _TEST — les 2 dernières = banc d'essai volontaire, formats tordus).
+
+---
+
+## 3. Déroulé — les 8 apps traitées en séance
+
+### 3.1 `applause_meter.html` (v2 — 10 gestes)
+- Sites convertis : set destructif création (L2444) → `ecrireClasse` + `cleClasse` (mort du slugify, fonction supprimée) ; remove classe (L2448) → renvoi MJPC ; classe test → `TEST_SLug = classeTestId()` = `_test_applause_meter` (ex `_test_applause`), écrite via `ecrireClasse`, remove de fin de test conservé (brouillon nettoyable).
+- `san` aliasé sur `sanMJPC` ; `extractEleves` local supprimé (la redéfinition locale aurait écrasé le canon — les function declarations postérieures gagnent).
+- Manifeste : nœud `applaudimetre` ; purge : preserver `session/reglages` (avec la règle **« preserver prime sur purger »** posée en commentaire — à implémenter dans la console) ; purger seances, historiqueLectures, qrScans, live, liveSnapshot, file, compteurLectures, votes, tablettes, compliments, session, **`applaudimetre/classes`** (résidu d'avant mutualisation découvert dans le hub → dette B).
+- Filtres classes internes : sélecteur pilotage (classe courante visible même interne) + onglet Classes (strict).
+- Constat : la « suppression d'élève » (dette A②) n'existait que via la suppression de classe → couverte.
+- Banc 21/21 · GitHub bit à bit ✔ · manifeste ✔ (10:45).
+
+### 3.2 + 3.3 `reecriture.html` / `reecriture_bb4e.html` (v2 — 8 gestes chacune, miroir)
+- Sites convertis : set destructif `set(el)` (liste brute ! perte des métas ET dégradation de format) → `ecrireClasse` ; remove sec → renvoi MJPC. `cn` était déjà le nom trim (pas de slugify à tuer).
+- **Prise du banc AVANT édition** : les sélecteurs affichaient `CLASSES[c].length` — juste sur l'ancien format tableau, **« undefined » sur le format canonique** déjà présent dans le hub → convertis vers `extractEleves(...).length`.
+- `publierManifeste` aux **deux** portes prof (code + `?mode=prof`).
+- Système snapshot examiné : **mort dans reecriture** (défini, jamais monté — dette B), **sûr dans bb4e** (scopé `reecriture_bb4e/<id>`) ; la restauration crée un snapshot avant de restaurer (exemplaire).
+- Contrats : reecriture — preserver `reecritures/*/config` ; purger corrections, snapshots, paquetOrder, presence, absents. bb4e — preserver `*/config` ; purger absents, autocorrection, notesFictives.
+- **INCIDENT №1 (majeur, attrapé)** : le regex de suppression de l'`extractEleves` local a mangé la moitié du socle inséré (extractEleves→publierManifeste + déclaration), en laissant un fichier **syntaxiquement parfait**. Le double parseur n'a rien vu ; **le banc d'exécution l'a attrapé** (« extractEleves is not defined »). Restauration depuis backups, réédition dans le bon ordre (**suppression du local AVANT insertion du socle**), garde-fou de complétude ajouté (les 7 fonctions du socle vérifiées présentes après écriture). Zéro dégât.
+- Banc 14/14 · GitHub bit à bit ✔ · manifestes ✔ (11:00/11:01).
+
+### 3.4 `dictee_universelle.html` (v2 — 3 gestes)
+- **Correction de carte №1 : la dette A② n'existait pas.** L'app ne touche jamais `/classes` (élèves saisis par dictée dans `config`, champ `classe` = étiquette) ; le seul bloc de purge d'élève est réservé à `TEST_ELEVE` (réinitialisation du brouillon de test, confirm, scopé). Suppression de dictée entière et effacement de simulation : souverains sur nœud propre, confirm. Rien à désarmer.
+- Gestes : socle + déclaration (manifeste `dictees` + `students` + `students_sim`, nœuds racine des carnets d'erreurs) ; `san` aliasé ; `publierManifeste` aux 2 portes (Entrée + bouton).
+- Contrat : preserver `dictees/*/config` ; purger results, drafts, locks, contestations, codes, contestLock, distribution, autocorrect, correction, students, students_sim. Test de couverture contre les sous-nœuds réels du hub ✔.
+- Découverte : clé `MONSIEUR_Meney` hors format (compte de démo, majuscules) dans results/codes de 2 dictées → dette B.
+- Banc 6/6 · GitHub ✔ · manifeste ✔ (12:40).
+
+### 3.5 `worktrack.html` (v2 puis v3 — 7 gestes + fix)
+- **Correction de carte №2 et plus grosse prise de la session : PAS en lecture seule.** `classesStore.save = ref("classes").set(m)` — **set de la racine `/classes` entière** (le pattern de l'incident de juin), déclenché par « Enregistrer la classe » (avec dégradation au format tableau) et « Supprimer la classe » du panneau prof.
+- Gestes : set racine **neutralisé** (le `save` Firebase du store renvoie vers MJPC — défense en profondeur ; le store local mémoire conservé) ; `addClass` → `ecrireClasse` ciblée ; `delClass` → renvoi MJPC (mode local inchangé) ; socle + déclaration ; `extractEleves` local supprimé ; **`sanId` non touché** (≡ canon + garde `||"x"` — comportement historique des clés existantes) ; login élève : classes préfixées `_` masquées des tablettes, « CLASSE TEST » héritage conservée (workflow de test worktrack), tri interne du panneau prof non touché (il a sa logique `/test/i`).
+- **Règle du seed respectée** : `let CHAPTER` intact (garde-fou), aucun contenu chapitre modifié.
+- Contrat : preserver `plan_de_travail/chapitres` (bibliothèque = conception) ; purger `actifs` + `default` (progress, sessions, archives, journal, connexions, control, signaux ; appVersion se réécrit au boot).
+- **INCIDENT №2 (leçon d'auth №1)** : manifeste non publié après ouverture — le poste de Paul reprend l'auth via `wt_prof_poste` (localStorage) **sans repasser par `checkCode`**, seul point où j'avais mis la publication. **v3** : publication aux 3 chemins (checkCode + reprise à l'ouverture + `bootResume`). Vérifié ✔ (12:51, via bootResume après F5).
+- Banc 5/5 · GitHub ✔ (790 029 octets).
+
+### 3.6 `pilotage_debat_s3.html` (v2 — 5 gestes)
+- « **Chantier à reprendre** » dit à l'ouverture (règle) ; le multi-classe (⑰) est resté **suspendu et non touché** (TODO en tête de `_build_part2.js`, question code élève commun non tranchée).
+- Lecture seule `/classes` confirmée (2 lectures). Nœuds propres : `debats`, `debat_singes` (legacy), **`codes` racine — la dette ⑮ en direct** : clés dégradées (`CL_MENT_Lylou`, `PINEAU_Cl_mence`) mêlées aux canoniques. Vérifié : `/codes` racine appartient à pilotage seul (dictee_universelle scope sous `dictees/`) mais index le co-écrit (voir 3.8).
+- Gestes : socle + déclaration — **première app `contenant: "binome"`** (le binôme est un contenant, pas une identité) ; manifeste `debats`+`debat_singes`+`codes` ; **prise importante : `debats/*/meta` en preserver — il contient le mot de passe prof** (une purge naïve aurait enfermé Paul dehors) ; purger active, archives, debat_singes, codes ; publication aux **2 chemins d'auth** (mot de passe + reprise `role=prof` localStorage — leçon worktrack appliquée d'office) ; sélecteur de rattachement filtré (classe déjà rattachée reste visible même interne — rien ne bloque jamais le prof, principe directeur de l'app).
+- Vérifié sans y toucher : `restoreFullBackup` vise `ROOT` = **le débat courant, pas la racine** (libellé « TOUTE la base » trompeur mais code sûr → micro-dette de libellé).
+- Banc 6/6 · GitHub ✔ (333 511 octets — le 1er push servait encore l'ancienne version 324 277, re-téléchargement + re-push) · manifeste ✔ (13:54, via connexion auto = chemin de reprise validé).
+
+### 3.7 `analyse_logique.html` (v2 — 5 gestes)
+- L'app la plus saine : lecture seule `/classes`, écritures toutes sous `analyse_logique/`.
+- Gestes : socle + déclaration ; contrat très favorable à la conception — preserver referentiel, baremeDefauts, todo, `travaux/*/config|bareme|corrige` (le corrigé collé via prompt IA×prof = conception, marques comprises) ; purger `travaux/*/results` seul ; `publierManifeste` au montage d'`AppProf` (bouton et `?role=prof` convergent — un seul point suffit, pas d'auth persistante) ; filtres sur 3 listings dont le **login élève** ; `extractEleves` local supprimé (pas de `san` local).
+- Découverte : **nœud racine `results` orphelin** (clés ancien format `BARILLET_BIEMON_Axel`, aucune app ne l'écrit) → dette B, volontairement hors manifeste.
+- **INCIDENT №3 (protocole)** : le fichier embarque un template `noyau-tpl` avec `</script>` encodé `@@ENDSCRIPT@@` — pas du JS de page, mon extraction l'a donné au parseur. **Protocole enrichi : blocs modifiés → double parseur ; blocs non modifiés → identité bit à bit au backup.** Template vérifié intact.
+- Banc 6/6 · GitHub ✔ (138 414 octets) · manifeste ✔ (13:29, après Ctrl+F5 — premier essai mangé par le cache Pages).
+
+### 3.8 `index.html` (v2 puis v3 — 5 gestes + fix)
+- Le hub lui-même. **Parle à Firebase en REST pur** (pas de SDK) → les helpers SDK du socle restent en réserve ; **`publierManifesteREST()`** (format identique au socle) le remplace.
+- **Prise finale : l'origine des clés dégradées identifiée.** Le slug élève d'`eleves_index` (L1807) utilisait une normalisation locale **sans décomposition des accents** (`CLÉMENT` → `cl_ment`) — la source du format `CL_MENT_Lylou`. **Corrigé vers `sanMJPC` — gratuitement** : `eleves_index` n'existe pas encore dans le hub, zéro migration. Bug éteint à la source.
+- Écritures examinées : PUT ciblés `/site/...` (publication chapitres) et `/classes/<slug>/eleves` (ajout/retrait d'élève — ciblé, ne touche pas les métas) — sains. **MAIS la suppression d'élève (L2120) retire de la classe + DELETE le code SANS ARCHIVER** — c'est la porte centrale où aboutissent tous les renvois posés dans la passe. Non touché (c'est le cœur de Brique 2), **inscrit en première ligne de la spec Phase 2**.
+- Contrat : preserver `site` (chapitres publiés 3e/5e) ; purger `eleves_index`. `/classes` et `/codes` co-écrits mais possédés par leurs apps.
+- **INCIDENT №4 (leçon d'auth №2)** : manifeste non publié après ouverture — Paul entre par **Ctrl+Espace** → `activateAdmin()`, qui ne passe pas par `loginAsProf` (où était l'appel). **v3** : publication dans `activateAdmin()` même (couvre Ctrl+Espace + badge-tap ×5) + `loginAsProf` conservé.
+- Banc 6/6 · GitHub ✔ (282 205 octets) · manifeste ✔ (13:59, via Ctrl+Espace).
+
+---
+
+## 4. Incidents et leçons (pour le rétro-prompt)
+
+1. **Suppression avant insertion.** Tout helper local homonyme d'une fonction du socle se supprime AVANT d'insérer le socle (occurrence unique → ancres non ambiguës). Un regex non-greedy sur un doublon peut manger le socle en laissant un fichier syntaxiquement parfait.
+2. **Le banc d'exécution attrape ce que les parseurs ne voient pas.** Le double parseur valide la syntaxe ; seul le banc (fonctions du segment livré, exécutées sur `hub.json` réel) valide la sémantique. Ne jamais livrer sans banc.
+3. **Inventorier TOUS les chemins d'activation du mode prof/admin** avant de placer une publication : saisie de code, paramètre URL, reprise localStorage/sessionStorage, raccourcis clavier (Ctrl+Espace), gestes cachés (badge-tap). Deux occurrences (worktrack, index) avant que la leçon devienne règle.
+4. **Blocs template ≠ JS de page.** Critère : blocs modifiés → parseur ; blocs non modifiés → identité bit à bit au backup.
+5. **Grep avant de classer.** Le cadrage s'est trompé deux fois (dictee_universelle : dette fantôme ; worktrack : bombe classée inoffensive). Classer les apps APRÈS lecture du code, jamais sur souvenir.
+6. **Croiser code et données paie systématiquement** : résidu `applaudimetre/classes`, `results` orphelin, `MONSIEUR_Meney`, mot de passe prof dans `meta`, origine des clés dégradées — toutes découvertes par le va-et-vient hub ↔ code.
+7. **Garde-fous de complétude** : après toute écriture de fichier, vérifier la présence des 7 fonctions du socle + `var MJPC_APP` + marqueur de fin.
+8. **Cache GitHub Pages** : après push, 1-2 min + Ctrl+F5 avant de conclure à un échec. Contrôle par taille de fichier (bit à bit via raw.githubusercontent.com).
+
+---
+
+## 5. Décisions prises en séance
+
+- **Panneau de contrôle de pilotage : reporté à la passe panneaux** (Phase suivante), décision explicite de Paul sur ma recommandation. Motifs : finir la passe socle d'abord ; le panneau pilotage absorbe ⑰ (multi-classe, décision code élève pendante) et ⑮ (`/codes`) ; concevoir la passe panneaux d'un bloc.
+- **« Preserver prime sur purger »** : sémantique posée dans les contrats (cas `session/reglages` ⊂ `session` d'applause_meter), à implémenter dans la console.
+- **`id` de la déclaration = nom de fichier sans extension** (y compris `index`).
+- **Un nœud = une app propriétaire** dans les manifestes ; les co-écrivains le mentionnent en commentaire (`/codes` → pilotage ; `/classes` → aucun manifeste).
+
+---
+
+## 6. État de clôture (14/07/2026 ~14h00)
+
+**Phase 1 close : 10/10 apps livrées, poussées, vérifiées bit à bit sur GitHub ; 10/10 manifestes publiés et vérifiés sur Firebase ; hub intact** (6 classes inchangées, 17 nœuds racine, rien d'apparu ni disparu vs snapshot du matin).
+
+| App | Manifeste | Contenant | Preserver / Purger |
+|---|---|---|---|
+| evaluation-qcm (MJPC 5) | 09:23 | aucun | 2 / 6 |
+| correction_dictee (MJPC 5) | 09:40 | aucun | 2 / 9 |
+| applause_meter | 10:45 | aucun | 1 / 12 |
+| reecriture | 11:00 | aucun | 1 / 5 |
+| reecriture_bb4e | 11:01 | aucun | 1 / 3 |
+| dictee_universelle | 12:40 | aucun | 1 / 11 |
+| worktrack | 12:51 | aucun | 1 / 2 |
+| analyse_logique | 13:29 | aucun | 6 / 1 |
+| pilotage_debat_s3 | 13:54 | **binome** | 2 / 4 |
+| index | 13:59 | aucun | 1 / 1 |
+
+Tailles déployées (contrôle) : applause_meter 565 216 · reecriture 239 267 · reecriture_bb4e 108 545 · dictee_universelle 1 928 589 · worktrack 790 029 · pilotage_debat_s3 333 511 · analyse_logique 138 414 · index 282 205 octets.
+
+**Dettes fermées en séance** : ⑲ (mjpc-core.js poussé) · **A① — sets destructifs `/classes` (5/5 apps + set racine worktrack)** · **A② — suppressions d'élèves** (QCM/applause_meter par conversion, dictee_universelle par constat d'inexistence) · bug de normalisation des slugs élèves d'index (à la source, zéro migration).
+
+---
+
+## 7. Phase 2 — Console (14/07 après-midi, CLOSE et baptisée)
+
+**Organisation décidée pour accélérer sans bâcler** : lots fonctionnels, banc de test versionné (`mjpc-bench.js`, enrichi à chaque lot, jamais élagué), rapports aux jalons seulement, décisions structurantes tranchées en rafale. Décisions actées : archive = corbeille hub **ET** fichier local ; console dans le panneau prof d'`index.html` ; purge de rentrée lit les manifestes, dry-run obligatoire ; rétention corbeille 1 an glissant, purge manuelle.
+
+**Découverte d'ouverture (4e correction de carte)** : Brique 2 existait déjà, largement construite dans index (moteur `_eleveFootprint` + `_idMatch` tolérant, écran de sélection en lot, exécution avec sauvegarde-fichier obligatoire et frappe de confirmation, bloc UNIFIER). Les lots ont **complété l'existant**.
+
+- **Lot 1 — Corbeille** : `corbeille/<AAAA-MM-JJ>/<motif>_<HHMMSS>` ({_meta, data}), branchée sur les 3 portes de destruction (exécution en lot `_b2Exec`, retrait d'élève unitaire `_deleteEleveCls` — archive ciblée nom+code car retirer ≠ détruire les traces —, suppression de classe `deleteClass` — classe entière + codes). Échec corbeille = choix explicite de l'utilisateur (le fichier local existe déjà). Fix : année scolaire dynamique (`an='2025-2026'` était en dur).
+- **Lot 2 — Empreinte exhaustive** : nouvelle capacité `_fpScanChamp` (l'élève en valeur, pas en clé) + 9 couvertures (mjpcProfils, qcm/eleveSexes, students, students_sim, eleves_index, applaudimetre/historiqueLectures via champ `lecteur`, compteurLectures, pdt/{signaux,connexions}, journal via champ `nom`) ; dictées 1→6 sous-nœuds. `_idMatch` existant absorbe tout (clés composées, dégradées). **Exclusion à dessein : binômes de débat** (prénoms seuls → matching destructif trop ambigu ; couverts par la purge annuelle).
+- **Lot 3 — Purge de rentrée** : lit les 10 manifestes, résout les wildcards contre un hub frais, **« preserver prime sur purger » implémenté** (cas fondateur session/reglages validé), **dry-run chiffré obligatoire** avec rapport JSON exportable, chaîne réelle fichier → corbeille → frappe `PURGER` → effacement séquentiel → bilan à échecs relançables. Bouton en zone dangereuse.
+- **Lot 4 — Orphelins** : écran de diagnostic permanent — nœuds racine hors manifestes (couverture par préfixe) et hors liste blanche {classes, manifestes, corbeille} → archive fichier + corbeille + frappe du nom → suppression. Détecte les zombies futurs.
+- **Correction de contrat (sur intervention de Paul)** : `mjpcProfils` ajouté au purger du QCM — **les profils longitudinaux ne survivent QU'UN AN** (décision antérieure : export imprimable local en fin d'année, puis purge). Mon erreur : avoir rationalisé le trou du contrat (« longitudinal donc voulu ») au lieu de le questionner → **règle : ne jamais rationaliser un trou de contrat**. Manifeste republié et vérifié (15:04).
+- **Banc `mjpc-bench.js`** : 5 suites (socle, empreinte, purge, corbeille, orphelins), 37/37 sur le hub réel, dont garde-fous permanents : *aucune empreinte ni plan de purge ne pointe jamais la conception*. Le banc a attrapé l'incident n°5 (un `*/` dans un commentaire de chemin `debats/*/…` fermait le commentaire).
+- **Baptême réel (Paul, ~17h-19h30)** : orphelin `results` archivé (fichier + `corbeille/2026-07-14/orphelin-results_170709`) puis supprimé — hub vérifié intact (17 nœuds : results parti, corbeille apparue). Dry-run réel exporté : **54 emplacements / 10 contrats / ~5,4 Mo de données élèves**, preserver prime visible en production, conception intacte. Rapport conservé par Paul = état de référence pré-purge.
+
+**Leçon n°9** (s'ajoute aux 8 du §4) : un chemin de données élèves absent de tout `purger` est une anomalie à questionner, jamais à rationaliser.
+
+**Incidents cumulés de la journée : 5, tous attrapés (parseurs, bancs, vérifs), zéro dégât en prod.**
+
+## 8. Spec vivante (report intégral, état v2 — 14/07 soir)
+
+### Prochaine étape immédiate (décidée)
+- **⑯ URGENT : export des copies Dugain** (localStorage volatil — risque de perte réelle). À traiter en tout début de prochaine séquence.
+
+### Prérequis daté
+- **Export imprimable des profils `mjpcProfils` AVANT la première vraie purge (fin août).** La purge détruit les profils ; sans export préalable, perte sèche. À construire (petite feature console ou vue QCM).
+
+### Documents à produire
+- **Rétro-prompt MJPC 6** (en attente de go) — intégrer les 9 leçons du §4 + §7.
+- **⑱ Consolidation mémoire Claude** (30/30 edits pleins) — plan de fusion à proposer.
+- **⑭ `CLAUDE.md` du dépôt périmé** — réécrire : socle, conventions, manifestes, console, banc.
+
+### DETTE — Panneau de contrôle universel (conception, avant ou pendant la passe)
+**Inventaire de l'existant des 10 apps** : recenser les fonctionnalités des panneaux prof actuels (certaines apps ont ce que d'autres n'ont pas), puis **réagencer/étoffer/unifier — pas recréer**. Structure actée (14/07 soir) : onglets **Pilotage · Données · Réglages** (Réglages si l'app en a) — identiques partout ; les sous-onglets portent les spécificités de chaque app. Pas d'onglet Nouveautés : un bouton **« ? »** regroupe l'aide ET les notifications de nouveautés pédagogiques (nouvel exercice, nouveau brevet blanc…) — **reprendre le système de notifications d'évaluation-QCM**.
+
+### Passe panneaux (chantier en cours — ouvert par le débat) — DÉTAIL
+**Fait au 15/07** : socle v1.1.0 (lecture de la session du site : `lireSessionMJPC` + `validerEleveMJPC`, validité 12 h) · portail élève du débat refondu (code personnel + nom + prénom, vérification des trois ; reconnexion automatique dans son groupe ; plus de listes où se choisir ; plus de champs libres) · shunt prof et élève depuis le site · mot de passe prof UNIQUE (`debat_config/profPassword`, migration douce — un mot de passe par débat était le bug du 15/07) · code de séance supprimé partout (génération, écritures, affichage) · décorum neutralisé (app universelle) · nœud `codes` rendu au site (contrats des deux apps corrigés) · sélecteur de classe prof : CLASSE TEST visible (banc d'essai).
+**Décisions actées** : rattachement de classe obligatoire pour tout nouveau débat · plus de code de séance · groupes : taille 1-3 existante, modes imposé/choisi à construire (jalon 3).
+- **RÈGLE N°1 (décidée 14/07)** : identification résolue obligatoire partout — aucune saisie d'identité élève en texte libre ; tout passe par `resolveEleves` contre le roster `/classes` (clé canonique), refus bloquant. **Pilotage en premier** (binômes = 2 élèves résolus → lève à terme l'exclusion d'empreinte).
+- Trancher ⑰ : code élève commun (option 1, recommandée) vs un code par classe ; puis multi-classe pilotage (TODO en tête de `_build_part2.js`).
+- Restructuration `/codes` (⑮ — possédé par pilotage, co-écrit par index).
+- Modèle de panneau unifié sur les 10 apps. Snapshot mort de `reecriture` : nettoyer ou monter. Libellé « Sauvegarde totale » (pilotage) à corriger.
+
+### Phase 3 — Concordance (après panneaux)
+- Migration `mjpcProfils` slugs-tirets (`4e-banksy`) → clés canoniques ; `qcm/classes` slugs-tirets ; `eleveSexes` indexé par noms de classe non canoniques. Concordance 122 élèves (`mjpc-concordance_2026-06-30.json`).
+
+### Dettes B restantes (tombent avec la purge de rentrée — vérifier au dry-run d'août)
+- `applaudimetre/classes`, `MONSIEUR_Meney` (2 dictées), passages test `historiqueLectures`, `debat_singes`, codes dégradés : tous couverts par les contrats → la purge d'août les emporte. Plus rien à scripter.
+
+### Rappels de règles actives
+- Seed worktrack (`let CHAPTER`) : toute modif de contenu chapitre → répercuter dans le seed, même livraison.
+- Dire « chantier à reprendre » à chaque réouverture de pilotage_debat_s3 ; le prof n'y est jamais bloqué.
+- Toute app partagée est en développement actif. Snapshot hub en début de session. Vérif bit à bit post-push + manifeste après ouverture panneau (cache : Ctrl+F5, 1-2 min).
+- Nouvelle méthode de travail : lots fonctionnels, banc versionné, rapports aux jalons, décisions en rafale.
+
+---
+
+## 9. Inventaire des panneaux et entrées des 10 apps (15/07/2026)
+*Base de travail du panneau universel — réagencer/étoffer/unifier, pas recréer.*
+
+
+## 1. Comment le professeur entre aujourd'hui (7 mécanismes différents !)
+
+| App | Entrée professeur |
+|---|---|
+| Évaluation QCM | Code tapé (3141/1312) dans un champ |
+| Correction de dictée | Code tapé, même paire |
+| Applaudimètre | Code tapé, même paire (stocké en chaînes, pas en nombres) |
+| Réécriture / Réécriture BB 4e | Code tapé + republication du contrat |
+| Dictée universelle | Code tapé — **mais les codes peuvent venir de la base** (configurable), champ « mot de passe » |
+| Plan de travail | Code tapé **une fois**, puis le poste reste professeur (mémorisé sur la machine) |
+| Analyse logique | **Aucun code** : un bouton « Espace professeur » ouvre tout |
+| Débat | **Mot de passe** stocké dans la base (depuis le 15/07 : unique pour toute l'app) |
+| Site MJPC | Code dans le champ de connexion, **ou** Ctrl+Espace, **ou** 5 appuis sur le logo |
+
+**Constat** : neuf portes différentes pour la même personne. C'est là que les défauts se nichent (le mot de passe par débat en était un). **Cible** : partout pareil — session du site MJPC reconnue (déjà câblée dans le débat), avec le code local en secours.
+
+## 2. Comment l'élève entre aujourd'hui
+
+| App | Entrée élève | Risque d'usurpation |
+|---|---|---|
+| Évaluation QCM | QR code de séance + choix du nom | Choix dans une liste |
+| Correction de dictée | Choix classe → nom dans une liste | Choix dans une liste |
+| Applaudimètre | Pas de connexion individuelle (vidéoprojection + tablettes de vote) | — |
+| Réécriture (×2) | Choix classe → nom | Choix dans une liste |
+| Dictée universelle | Choix du prénom dans une liste (× 2 écrans) | Choix dans une liste |
+| Plan de travail | Choix classe → nom, par demi-écran (2 élèves par poste) | Choix dans une liste |
+| Analyse logique | Choix classe → nom | Choix dans une liste |
+| **Débat (depuis le 15/07)** | **Code MJPC personnel + nom + prénom, ou session du site** | **Aucun** |
+| Site MJPC | Nom+prénom **ou code personnel**, vérifiés | Faible (code) |
+
+**Constat** : partout ailleurs que dans le débat refondu, un élève peut se faire passer pour un autre en deux clics. **Cible (ta règle)** : le modèle du débat partout — code personnel + nom + prénom, ou session du site ; plus aucune liste où se choisir.
+
+## 3. Ce que contient chaque panneau professeur (fonctionnalités à réagencer)
+
+| App | Le cœur (futur **Pilotage**) | Données | Réglages | Divers |
+|---|---|---|---|---|
+| Évaluation QCM | Lancer/piloter l'éval en direct (chrono, +5/10/30 s, aperçu question suivante, niveaux) | Bilans, **bilan longitudinal**, impression (5 écrans) | Barème (2 modes de notation) | **Canal de notifications élèves en temps réel** ← la brique à généraliser |
+| Correction de dictée | Correction rapide en direct, remappage, publication de la copie | Résultats, exercices, productions, **impression riche** (12 écrans), instantanés | Options de copie | Présence élèves en direct |
+| Applaudimètre | Séance de lecture (file, passage, votes, compliments) | Historique des lectures, compteurs | **Réglages persistants** (protégés de la purge) | Cartes de comportement |
+| Réécriture | Correction par paquets, navigation | Corrections, instantanés (système à moitié monté) | — | Présence élèves |
+| Réécriture BB 4e | Idem, adapté brevet blanc | Autocorrection, notes fictives | — | — |
+| Dictée universelle | Dictée en direct (audio, pièges, barème) | Résultats, contestations, brouillons | Codes prof configurables | Carnets d'erreurs |
+| Plan de travail | Suivi de séance en direct (signaux, connexions) | Bilans, archives, journal, impression (12 écrans) | Options de cours | **Sentinelle** (surveillance de séance) |
+| Analyse logique | Créer/corriger des travaux (corrigé IA×prof) | Résultats par travail | Barèmes par défaut | Référentiel grammatical |
+| Débat | Groupes, tournois, manches, scores | Archives, export/import complet | Mot de passe | Verrouillage, fin de séance |
+| Site MJPC | — (c'est le hub) | **Console complète** : archives, corbeille, purge, orphelins, suppression en masse | — | Gestion classes/élèves/codes — **la seule légitime** |
+
+## 4. Ce qui existe ici et manque là (matière pour « étoffer/unifier »)
+
+- **Notifications élèves** : seul le QCM a le canal temps réel. À généraliser, et à étendre en « annonces de nouveautés » persistantes dans le bouton « ? » (l'onglet Nouveautés est abandonné).
+- **Aide intégrée** : inexistante partout (des info-bulles seulement). À créer dans le « ? ».
+- **Présence élèves en direct** : correction de dictée et réécriture l'ont ; les autres non.
+- **Impression** : très riche dans correction de dictée et plan de travail ; absente ailleurs où elle servirait (débat : fiches de synthèse ?).
+- **Gestion des classes** : encore présente dans plusieurs panneaux (plan de travail, QCM...) → à retirer partout, elle appartient au site (les renvois sont déjà câblés).
+- **Réglages persistants** : l'applaudimètre montre le modèle (protégés de la purge) ; les autres apps mélangent réglages et pilotage.
+- **Export/sauvegarde** : le débat a le plus complet (export/import ré-importable) ; à standardiser dans l'onglet Données.
+
+## 5. Proposition d'ordre pour la passe (à valider)
+1. **Débat** (en cours — jalons 3-6) : essuie les plâtres du modèle.
+2. **Dictée universelle, correction de dictée, réécriture ×2, analyse logique, QCM** : le modèle s'applique naturellement (connexion + 3 onglets).
+3. **Plan de travail** (2 élèves par poste : adaptation de la connexion) et **applaudimètre** (pas de connexion élève : panneau seul).
+4. **Site MJPC** : dernier, il orchestre.
+
