@@ -152,7 +152,10 @@ function sandbox(noms, prelude, exportsSup) {
   if (!x) { section('ORPHELINS'); console.log('  (fonction absente — suite ignorée)'); return; }
   section('ORPHELINS (lot 4)');
   const os = x._orphelins(hub);
-  t('sur le hub réel : results est le seul orphelin (' + JSON.stringify(os) + ')', os.length === 1 && os[0] === 'results');
+  /* MàJ M2 (16/07) : le nœud `results` a disparu du hub depuis l'écriture du test — l'état sain
+     est désormais AUCUN orphelin ; on tolère les deux états connus, tout autre nœud ressort. */
+  t('sur le hub réel : aucun orphelin (ou `results` seul, état historique) (' + JSON.stringify(os) + ')',
+    os.length === 0 || (os.length === 1 && os[0] === 'results'));
   t('qcm couvert par préfixe (manifeste déclare qcm/eleveSexes…)', !os.includes('qcm'));
   t('mjpcProfils couvert (déclaré, hors purge : longitudinal voulu)', !os.includes('mjpcProfils'));
   t('liste blanche jamais orpheline', !os.includes('classes') && !os.includes('manifestes') && !os.includes('corbeille'));
@@ -193,6 +196,86 @@ function sandbox(noms, prelude, exportsSup) {
   }
   t('élève inconnu au registre → refusé', validerEleveMJPC({ is_prof: false, nom: 'INTRUS Total', classe: roster[0], ts: Date.now() }, hub.classes) === null);
   t('classe inexistante → refusé', validerEleveMJPC({ is_prof: false, nom: unNom || 'X Y', classe: '6e FANTOME', ts: Date.now() }, hub.classes) === null);
+})();
+
+/* ════ SUITE TAXONOMIE — Concordance premier étage (M2, 16/07/2026) ════
+   Charge taxonomie_atelier.json (à côté du banc, ou 4e argument) et vérifie :
+   intégrité structurelle + RÈGLE DE COMPTAGE MULTI-CIBLE (plan, point 14bis).
+   taxoCompter est l'IMPLÉMENTATION DE RÉFÉRENCE du comptage : quand une app
+   l'embarquera (M9, M19+), le banc testera SA copie via corpsFonction — d'ici
+   là, la référence vit ici, livrée avec la règle (règle + test, même livraison). */
+function taxoCompter(erreurs, table) {
+  var idx = {}; table.forEach(function (a) { idx[a.terme] = a; });
+  var points = {}, nonMappes = 0;
+  erreurs.forEach(function (e) {
+    var a = idx[e.terme];
+    if (!a) { nonMappes++; return; }
+    /* UNE erreur = UN point, posé à l'étage que le code connaît :
+       la cible unique (egal) ou le GROUPE des cibles (inclus), jamais dupliqué. */
+    var cle = a.cibles.slice().sort().join('+');
+    points[cle] = (points[cle] || 0) + 1;
+  });
+  return { points: points, nonMappes: nonMappes };
+}
+(function () {
+  var taxoPath = process.argv[4] || require('path').join(__dirname, 'taxonomie_atelier.json');
+  if (!fs.existsSync(taxoPath)) { section('TAXONOMIE'); console.log('  (taxonomie_atelier.json absent — suite ignorée)'); return; }
+  var taxo = JSON.parse(fs.readFileSync(taxoPath, 'utf8'));
+  section('TAXONOMIE (M2 — intégrité)');
+  var doms = taxo.domaines || [];
+  var fams = [], notions = [];
+  doms.forEach(function (d) { (d.familles || []).forEach(function (f) { fams.push(f); (f.notions || []).forEach(function (n) { notions.push(n); }); }); });
+  t('5 domaines', doms.length === 5);
+  t('40 familles (tranchage 10/05)', fams.length === 40);
+  t('148 notions (Zone 2 réelle + revalidation M2)', notions.length === 148);
+  var nids = notions.map(function (n) { return n.id; });
+  t('ids de notions uniques', new Set(nids).size === nids.length);
+  var fids = fams.map(function (f) { return f.id; });
+  t('ids de familles uniques', new Set(fids).size === fids.length);
+  t('ids retirés jamais réutilisés (ortho-lex-009, ortho-gram-033)', nids.indexOf('ortho-lex-009') < 0 && nids.indexOf('ortho-gram-033') < 0);
+  t('double libellé prof/élève sur toute notion et toute famille',
+    notions.every(function (n) { return n.libelleProf && n.libelleEleve; }) &&
+    fams.every(function (f) { return f.libelleProf && f.libelleEleve; }));
+  t('fam-23 : id conservé, libellé élargi (invariant id/libellé)',
+    fams.some(function (f) { return f.id === 'fam-23' && /Temps composés/.test(f.libelleProf); }));
+  t('meta/version présente', !!(taxo.meta && taxo.meta.version));
+  t('4 types d\'erreur (dimension orthogonale)', (taxo.typesErreur || []).length === 4);
+  var nComp = 0;
+  Object.keys(taxo.competences || {}).forEach(function (k) { taxo.competences[k].forEach(function (d) { nComp += d.items.length; }); });
+  t('28 compétences (18 Français C4 + 10 transversales)', nComp === 28);
+  /* Résolution des cibles + egal → cible unique */
+  var valides = new Set(nids.concat(fids, doms.map(function (d) { return d.id; }), (taxo.typesErreur || []).map(function (e) { return e.id; })));
+  Object.keys(taxo.competences || {}).forEach(function (k) { taxo.competences[k].forEach(function (d) { valides.add(d.id); d.items.forEach(function (c) { valides.add(c.id); }); }); });
+  var tables = (taxo.alias && taxo.alias.tables) || {}, okCibles = true, okEgal = true, nAlias = 0;
+  Object.keys(tables).forEach(function (app) {
+    tables[app].forEach(function (a) {
+      nAlias++;
+      if (a.relation === 'egal' && a.cibles.length !== 1) okEgal = false;
+      a.cibles.forEach(function (c) { if (!valides.has(c)) okCibles = false; });
+    });
+  });
+  t('26 alias au squelette (9 + 13 + 4), tous en statut proposé', nAlias === 26 &&
+    Object.keys(tables).every(function (app) { return tables[app].every(function (a) { return a.statut === 'propose'; }); }));
+  t('egal → cible unique (contrôle d\'intégrité)', okEgal);
+  t('aucun alias orphelin (toutes cibles résolvables)', okCibles);
+
+  section('TAXONOMIE (M2 — règle de comptage 14bis)');
+  var tMan = tables.manuscrit || [], tDu = tables.dictee_universelle || [];
+  /* LE test exigé : 2 erreurs G → jamais plus de 2 points au total, où qu'on regarde. */
+  var r1 = taxoCompter([{ terme: 'G' }, { terme: 'G' }], tMan);
+  var tot1 = Object.values(r1.points).reduce(function (s, v) { return s + v; }, 0);
+  t('2 erreurs G (multi-cible ×3 domaines) → total = 2 points exactement', tot1 === 2 && r1.nonMappes === 0);
+  t('2 erreurs G → un seul étage porteur (le groupe), aucune duplication par domaine', Object.keys(r1.points).length === 1);
+  var r2 = taxoCompter([{ terme: 'G-ACC' }], tDu);
+  t('1 erreur G-ACC (inclus fam-07+fam-08) → 1 point au groupe, pas 1 par famille',
+    Object.values(r2.points).reduce(function (s, v) { return s + v; }, 0) === 1 && Object.keys(r2.points).length === 1);
+  var mix = [{ terme: 'G-HOM' }, { terme: 'G-ACC' }, { terme: 'G-ACC' }, { terme: 'L-MAJ' }, { terme: 'O1' }];
+  var r3 = taxoCompter(mix, tDu);
+  t('mix egal/inclus/errType (5 erreurs) → invariant : somme des points = 5',
+    Object.values(r3.points).reduce(function (s, v) { return s + v; }, 0) === 5);
+  var r4 = taxoCompter([{ terme: 'CODE-INCONNU' }], tDu);
+  t('terme non mappé → compté à part (nonMappes), jamais perdu ni inventé',
+    r4.nonMappes === 1 && Object.keys(r4.points).length === 0);
 })();
 
 /* ════ SUITE 2 — CORBEILLE (Phase 2, lot 1) ════ */
