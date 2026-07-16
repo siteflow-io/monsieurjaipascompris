@@ -1,4 +1,4 @@
-# MJPC 6 — PLAN DE TRAVAIL GÉNÉRAL (v13, 15/07/2026 soir)
+# MJPC 6 — PLAN DE TRAVAIL GÉNÉRAL (v50, 16/07/2026 — plan FUSIONNÉ par la conscience : dispositif A0 + livraison M2)
 *Document de reprise totale : une conversation vierge doit pouvoir reprendre le chantier avec ce seul document (+ le socle mjpc-core.js et la doctrine mjpc-doctrine.md du dépôt). Toute décision y est consignée AVEC sa raison. Il est mis à jour à CHAQUE session et re-livré à Paul.*
 
 
@@ -19,7 +19,7 @@
 
 ### Juillet — semaines 3-4
 - [ ] **M1 · S0, les décisions** 🟠 — une conversation, aucun code. Paul apporte les exhumations (§F : SPEC_ATELIER, master prompt, doctrine, cadrage, plickers-attente) ; on tranche les 7 décisions (§ Séquençage S0) + la session de nommage des concepts du débat. Livrable : plan avec décisions gelées. **→ M2 et M9 en dépendent.**
-- [ ] **M2 · Taxonomie : matérialisation** 🟠 — SPEC_ATELIER.md EN MAIN (Zone 2 complète) : appliquer le tranchage du 10/05 (40 familles, ~150 notions à revalider) → `taxonomie_atelier.json` + nœud `/taxonomie`. UNE conversation.
+- [x] **M2 ✔ LIVRÉE (16/07, une conversation — dispositif A0 étrenné)** : `taxonomie_atelier.json` au dépôt (5 domaines / 40 familles / **148 notions** — compte corrigé : la Zone 2 annonçait 26 en ortho lexicale mais en listait 25, `ortho-lex-009` déplacé en homophones sans renumérotation ; 141 héritées + 7 ajouts validés par blocs) · double libellé partout (prof en objectifs / élève de mai) · ids immuables (fam-23 renommée, id inchangé) · `typesErreur` séparé · 28 compétences École Directe · **26 alias en statut « proposé » (9 dictée-compétences + 13 codes + 4 manuscrit) — L'ARBITRAGE DE VALIDATION PAR PAUL EST À FAIRE (concordance.html ou en session)** · règle de comptage 14bis écrite dans `alias.regleComptage` · nœud `/taxonomie` publié (meta/version 1.0.0, vérifié REST, égalité profonde nœud↔fichier) · manifeste `/manifestes/taxonomie` publié (préservation intégrale, F1 validé) · `mjpc-bench.js` enrichi : suite TAXONOMIE 14 tests d'intégrité + 5 tests de la règle 14bis dont « 2 erreurs G → 2 points, un seul étage porteur », **56/56 sur l'export réel** ; l'implémentation de référence `taxoCompter` vit dans le banc — **À PROMOUVOIR AU SOCLE en M15** (sinon divergence banc/production) · test orphelins actualisé (le hub n'a plus d'orphelin ; deux états sains acceptés — vigilance : un test à deux états perd du mordant).
 - [ ] **M3 · Débat, charte définitive** 🟠 — clonage CSS de la souche côté prof, retrait de l'hybride du 15/07, décor d'en-tête → ligne de contexte. Arrêts photo. **Test C déroulé ici.**
 - [ ] **M4 · Débat, groupes** 🟠 — mode imposé (Pilotage → Groupes), refonte séance/groupes (qui se connecte sur une tablette partagée), UNE remise à zéro claire.
 - [ ] **M5 · Débat, multi-classe et fin** 🟠 — un débat par classe (mémo en tête du code), migration/archive du nœud `debat_singes`, « Mes débats », genre d'item « débat » côté site, essai réel complet. Fin de S1.
@@ -55,6 +55,9 @@
 - [ ] **M22 · Clôtures** 🟢 — récapitulatif de méthode, CLAUDE.md, tri de la mémoire de Claude.
 
 *Lecture rapide : 5 morceaux de juillet (décisions, taxonomie, débat ×3) → 10 d'août (apps + site) → 2 datés durs de fin août → le fil de l'eau. Si un morceau d'app dépasse une conversation, c'est un signal : relire la grille et la fiche AVANT de continuer, pas après.*
+
+## A0. LE DISPOSITIF DE TRAVAIL (institué le 16/07 — « on va procéder exactement comme ça tout du long »)
+**Deux étages de conversations** : une CONSCIENCE (mémoire complète du chantier, audits, arbitrages, tenue du plan, composition des prompts et des réponses) + des EXÉCUTANTS (une conversation par morceau M*, prompt verrouillé, livraison rapide, décisions gelées jamais rouvertes). **La navette** : la conscience ouvre le morceau (prompt) → Paul colle → rapporte la réponse de l'exécutant (en fichier .md dès que c'est long — les collages longs se perdent) → la conscience audite contre le plan et compose la réponse de Paul → boucle → audit de la livraison finale (bit à bit pour le code) → push → morceau coché au plan → plan re-téléversé. **Raisons (Paul)** : éviter les tâtonnements, tenir le 15/08, économiser les tokens. **La relève** : quand une conversation-conscience sature, elle compose elle-même le prompt de la conscience suivante (le plan sur GitHub est la mémoire de transfert).
 
 ## A. L'ÉCOSYSTÈME EN BREF (pour reprendre sans rien connaître)
 - **MJPC** = monsieurjaipascompris.com : un site-hub (index.html) + ~10 apps pédagogiques HTML monofichier (React UMD ou vanilla + Firebase Realtime Database), dépôt GitHub Pages `siteflow-io/monsieurjaipascompris`. Paul enseigne le français (3e/4e/5e, Collège Saint-Joseph, Doué-en-Anjou) ; en 2026-2027 : deux 3e + deux 4e + regroupements avec ex-4e.
