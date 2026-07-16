@@ -81,6 +81,7 @@
 11. Manifeste/purge à jour si les nœuds évoluent (acquis Phase 1, à maintenir)
 12. Fondement pédagogique documenté (une note par app, chantier Fondements)
 13. Concordance : les référentiels locaux (familles d'erreurs, compétences, vocabulaire d'analyse) pointent le référentiel central par table de correspondance (voir §D)
+14bis. **INTÉGRITÉ DU COMPTAGE (principe transversal, 16/07 — Paul : « rigueur absolue, sinon exposition à la méfiance »)** : tout point, score ou décompte affiché doit être exact, traçable et justifiable — le système entier est un garde-fou de confiance (élèves, familles), un seul décompte faux découvert expose tout l'édifice. Règle opérationnelle : AUCUNE mécanique de comptage ne se livre sans ses tests au banc (le calcul et son test dans la même livraison — pratique historique de Paul érigée en règle : double barème QCM, scores débat, 281 tests Dugain). Première application Concordance : la règle multi-cible (une erreur = UN point, posé à l'étage que le code connaît, jamais dupliqué) livrée AVEC son test.
 14. Wording élève : AUCUN jargon côté élève (test du collégien : tout mot compris par un 4e moyen sans explication) — « strate », « jalon », « notion prioritaire calculée » restent internes ; l'écran élève dit « ta fiche », « ton bilan »
 
 ### État des trous (vérifié le 15/07)
@@ -690,4 +691,3 @@ Tailles déployées (contrôle) : applause_meter 565 216 · reecriture 239 267 �
 2. **Dictée universelle, correction de dictée, réécriture ×2, analyse logique, QCM** : le modèle s'applique naturellement (connexion + 3 onglets).
 3. **Plan de travail** (2 élèves par poste : adaptation de la connexion) et **applaudimètre** (pas de connexion élève : panneau seul).
 4. **Site MJPC** : dernier, il orchestre.
-
