@@ -211,7 +211,7 @@
   .zone .qmark{position:absolute;top:7px;right:10px;font-size:.68rem;color:var(--accent);font-weight:700;opacity:0;transition:opacity .12s}
   .zone.flagged .qmark{opacity:1}
 
-  /* ---------- Panneau d'aide (s'adresse au binôme) ---------- */
+  /* ---------- Panneau d'aide (s'adresse au groupe) ---------- */
   .help{position:fixed;top:0;right:0;height:100%;width:0;z-index:95;overflow:hidden;
     transition:width .28s cubic-bezier(.4,0,.2,1);box-shadow:-22px 0 55px rgba(0,0,0,.45);
     background:linear-gradient(165deg,#2a251b,#201c14)}
@@ -538,7 +538,7 @@
   .validation-strip .txt{flex:1;color:var(--ink);font-size:.95rem}
   .validation-strip b{color:var(--wip)}
 
-  /* ===== Élève : carte de mon binôme ===== */
+  /* ===== Élève : carte de mon groupe ===== */
   .mine-card{background:linear-gradient(135deg,rgba(31,111,84,.18),rgba(192,57,43,.06));
     border:2px solid var(--done);border-radius:18px;padding:18px 22px;margin-bottom:18px}
   .mine-card .lbl{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px}
@@ -546,7 +546,7 @@
   .mine-card .stats{display:flex;gap:18px;flex-wrap:wrap;font-size:.9rem;color:var(--ink2)}
   .mine-card .stats b{color:var(--gold)}
 
-  /* ===== Liste autres binômes (vue élève) ===== */
+  /* ===== Liste autres groupes (vue élève) ===== */
   .others-list{margin-top:22px}
   .others-list h3{font-family:'Fraunces',serif;font-size:1.15rem;color:var(--ink);margin-bottom:10px}
   .others-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);
@@ -592,6 +592,18 @@
   th.doc .open{display:block;font-size:.7rem;color:var(--gold);font-weight:600;margin-top:2px;padding:2px 6px;background:rgba(220,171,85,.12);border-radius:4px;border:1px solid rgba(220,171,85,.3);transition:all .15s}
   th.doc:hover .open{background:var(--gold);color:#1a1710;border-color:var(--gold)}
   th.doc:hover{background:rgba(220,171,85,.06)}
+
+  /* ===== K.3 (M4) : reformulation après jeton d'aide — élève, thème sombre ===== */
+  .reformov{position:fixed;inset:0;background:rgba(10,8,5,.75);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:110;padding:24px}
+  .reformov.show{display:flex}
+  .reform-card{background:linear-gradient(160deg,#2a251b,#211d15);border:1px solid var(--line);border-radius:16px;padding:24px 26px;max-width:520px;width:100%;box-shadow:var(--shadow)}
+  .reform-card h3{font-family:'Fraunces',serif;color:var(--gold);font-size:1.15rem;margin:0 0 8px}
+  .reform-card p{color:var(--ink2);font-size:.92rem;margin:0 0 12px;line-height:1.5}
+  .reform-card textarea{width:100%;box-sizing:border-box;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:1rem;min-height:52px;resize:vertical}
+  .reform-card textarea:focus{outline:none;border-color:var(--gold)}
+  .reform-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;align-items:center}
+  .reform-skip{display:none}
+  .reform-skip.on{display:inline-block}
 
   /* ===== Deux camps POUR / CONTRE ===== */
   .camps{display:flex;gap:12px;flex-wrap:wrap}
@@ -980,13 +992,13 @@ body:has(.overlay.show){overflow:hidden}
   <div id="studentMineCard" class="mine-card"></div>
   <div id="studentTableSection"></div>
   <div class="others-list">
-    <h3>Les autres binômes</h3>
+    <h3>Les autres groupes</h3>
     <div id="studentOthersList"></div>
   </div>
   </div><!-- /studentPilotageWrap -->
-  <button id="studentCarnetBtn" class="dbg-btn ghost" style="display:none;margin:10px auto 0" onclick="openCarnetEleve()" title="Revoir toutes les évaluations que ton binôme a envoyées (figées).">📓 Mes évaluations</button>
+  <button id="studentCarnetBtn" class="dbg-btn ghost" style="display:none;margin:10px auto 0" onclick="openCarnetEleve()" title="Revoir toutes les évaluations que ton groupe a envoyées (figées).">📓 Mes évaluations</button>
   <div id="studentDebatView" style="display:none"></div>
-  <footer>Tablette du binôme. Vos actions sont visibles en direct sur l'écran prof. Le passage à <b>« fait »</b> nécessite la validation du professeur.</footer>
+  <footer>Tablette du groupe. Vos actions sont visibles en direct sur l'écran prof. Le passage à <b>« fait »</b> nécessite la validation du professeur.</footer>
 </div>
 
 <!-- ============ ÉCRAN 3 : VUE PROF (pilotage complet) ============ -->
@@ -1002,8 +1014,7 @@ body:has(.overlay.show){overflow:hidden}
     <div class="tools">
       <span id="profConn" style="font-size:.82rem;color:#6b6b6b" title="État de la connexion. Vert : tout est synchronisé en direct. Rouge : vérifie ta connexion réseau."><span class="conn-dot ok"></span>connecté</span>
       <button class="ghost" onclick="showDebatChooser()" title="Revenir au panneau de contrôle : la liste de tous tes débats.">← Mes débats</button>
-      <button class="ghost" onclick="resetStatus()" title="Repasse tous les statuts à 'à faire' pour tous les binômes.">↺ Statuts à zéro</button>
-      <button class="ghost" onclick="resetTokens()" title="Redonne les 2 jetons d'aide à tous les binômes.">⟳ Rendre les aides</button>
+      <button class="ghost" onclick="resetGroupes()" title="Le travail des groupes repart à neuf : documents « à faire », demandes effacées, 2 jetons rendus, zones marquées oubliées. La composition des groupes, le tournoi et les scores sont conservés.">↺ Remise à zéro des groupes</button>
       <button class="ghost" onclick="openProfMenu()" title="Plus d'actions (archiver, changer mot de passe…).">⋯ Plus</button>
       <button class="ghost" onclick="profLogout()" title="Quitter le mode prof.">⎋ Quitter</button>
     </div>
@@ -1033,6 +1044,11 @@ body:has(.overlay.show){overflow:hidden}
       <label for="pp_motion">Affirmation du débat</label><textarea id="pp_motion"></textarea>
       <label for="pp_pour">Camp POUR — précision (facultatif)</label><textarea id="pp_pour"></textarea>
       <label for="pp_contre">Camp CONTRE — précision (facultatif)</label><textarea id="pp_contre"></textarea>
+      <label>Formation des groupes</label>
+      <div class="ppss" style="margin:4px 0 0" id="pp_modeGroupes">
+        <button type="button" class="pps" data-mg="choisi" onclick="setPPModeGroupes('choisi')" title="Les élèves composent eux-mêmes leur groupe en se connectant (registre de la classe).">Les élèves se placent</button>
+        <button type="button" class="pps" data-mg="impose" onclick="setPPModeGroupes('impose')" title="Le professeur compose les groupes à l'avance sous Pilotage → Groupes ; les élèves retrouvent leur groupe en se connectant.">Groupes imposés par le professeur</button>
+      </div>
       <div style="margin-top:16px;display:flex;gap:10px">
         <button class="primary" onclick="ppSavePreparation()" title="Enregistre et applique immédiatement, sur toutes les tablettes.">Enregistrer</button>
         <span id="pp_prep_msg" style="font-size:.85rem;color:#276749;align-self:center"></span>
@@ -1040,10 +1056,14 @@ body:has(.overlay.show){overflow:hidden}
     </div>
   </div>
 
+  <div class="ppecran" id="pp_groupes">
+    <div id="ppGroupesBody"></div>
+  </div>
+
   <div class="ppecran" id="pp_donnees">
     <div style="display:flex;flex-direction:column;gap:8px;max-width:440px">
       <button class="ghost" style="text-align:left" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés.">🗄 Archives des tournois</button>
-      <button class="ghost" style="text-align:left" onclick="exportDebatJSON()" title="Télécharger la session active (binômes, poules, manches, scores) au format JSON.">💾 Exporter la session</button>
+      <button class="ghost" style="text-align:left" onclick="exportDebatJSON()" title="Télécharger la session active (groupes, poules, manches, scores) au format JSON.">💾 Exporter la session</button>
       <button class="ghost" style="text-align:left" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base des débats dans un fichier JSON. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button>
       <button class="ghost" style="text-align:left" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Importer une sauvegarde</button>
     </div>
@@ -1065,8 +1085,8 @@ body:has(.overlay.show){overflow:hidden}
     </div>
     <div class="codebanner-actions">
       <button id="lockGroupsBtn" onclick="toggleGroupsLock()" title="Verrouille les groupes : plus de création possible. Chacun se reconnecte avec son code et retrouve son groupe. Se verrouille aussi automatiquement au lancement du tournoi.">🔓 Groupes ouverts</button>
-      <button onclick="endSession()" title="Fin de séance : verrouille les groupes ET déconnecte toutes les tablettes (retour à l'accueil). Les binômes, poules et scores sont conservés ; au rallumage, la tablette ne se reconnecte plus toute seule.">⎋ Fin de séance</button>
-      <button class="primary" onclick="newSession()" title="Crée une nouvelle session. La session actuelle (binômes, statuts, aides) sera archivée automatiquement.">+ Nouvelle session</button>
+      <button onclick="endSession()" data-lex="cloturer" title="Fin de séance : verrouille les groupes ET déconnecte toutes les tablettes (retour à l'accueil). Les groupes, poules et scores sont conservés ; au rallumage, la tablette ne se reconnecte plus toute seule.">⎋ Clôturer la séance</button>
+      <button class="primary" onclick="newSession()" title="Crée une nouvelle séance. La séance actuelle (groupes, parcours, tournoi, scores) part automatiquement aux archives.">+ Nouvelle séance</button>
     </div>
   </div>
 
@@ -1075,12 +1095,12 @@ body:has(.overlay.show){overflow:hidden}
   <div style="background:#fff;border:1px solid #e5e3de;border-radius:14px;padding:14px 18px;margin-bottom:16px">
     <div style="font-weight:700;color:#1a1a1a;font-size:1.05rem;margin-bottom:8px">📖 Comment lire ce tableau</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;font-size:.88rem;color:#3a3a3a;line-height:1.4">
-      <div><span style="display:inline-block;width:14px;height:14px;background:#f5f4f0;border:1px solid #8a877d;border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>À faire</b> — le binôme n'a pas commencé ce document.</div>
-      <div><span style="display:inline-block;width:14px;height:14px;background:rgba(151,90,22,.08);border:1px solid #975a16;border-radius:3px;vertical-align:middle;margin-right:6px;color:#975a16;text-align:center;font-size:.8rem">◐</span><b>En cours</b> — le binôme travaille dessus.</div>
+      <div><span style="display:inline-block;width:14px;height:14px;background:#f5f4f0;border:1px solid #8a877d;border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>À faire</b> — le groupe n'a pas commencé ce document.</div>
+      <div><span style="display:inline-block;width:14px;height:14px;background:rgba(151,90,22,.08);border:1px solid #975a16;border-radius:3px;vertical-align:middle;margin-right:6px;color:#975a16;text-align:center;font-size:.8rem">◐</span><b>En cours</b> — le groupe travaille dessus.</div>
       <div><span style="display:inline-block;width:14px;height:14px;background:rgba(39,103,73,.08);border:1px solid #276749;border-radius:3px;vertical-align:middle;margin-right:6px;color:#276749;text-align:center;font-size:.8rem">✓</span><b>Fait</b> — validé par le prof.</div>
-      <div><span style="display:inline-block;width:14px;height:14px;background:repeating-linear-gradient(45deg,rgba(151,90,22,.08),rgba(151,90,22,.08) 3px,rgba(232,154,36,.4) 3px,rgba(232,154,36,.4) 6px);border:1px solid #975a16;border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>En attente</b> — le binôme demande une validation. <i>Clique pour valider.</i></div>
-      <div><span style="display:inline-block;vertical-align:middle;margin-right:6px"><span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:50%"></span><span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:50%;margin-left:3px"></span></span><b>Aides</b> — chaque binôme en a 2. Un jeton se consomme quand une zone est expliquée.</div>
-      <div>🔇 <b>Aides épuisées</b> — le binôme doit se débrouiller.</div>
+      <div><span style="display:inline-block;width:14px;height:14px;background:repeating-linear-gradient(45deg,rgba(151,90,22,.08),rgba(151,90,22,.08) 3px,rgba(232,154,36,.4) 3px,rgba(232,154,36,.4) 6px);border:1px solid #975a16;border-radius:3px;vertical-align:middle;margin-right:6px"></span><b>En attente</b> — le groupe demande une validation. <i>Clique pour valider.</i></div>
+      <div><span style="display:inline-block;vertical-align:middle;margin-right:6px"><span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:50%"></span><span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:50%;margin-left:3px"></span></span><b>Aides</b> — chaque groupe en a 2. Un jeton se consomme quand une zone est expliquée.</div>
+      <div>🔇 <b>Aides épuisées</b> — le groupe doit se débrouiller.</div>
     </div>
   </div>
 
@@ -1120,7 +1140,7 @@ body:has(.overlay.show){overflow:hidden}
   <div class="cine-title" id="cineTitle"></div>
   <div class="cine-arena" id="cineArena"></div>
   <div class="cine-bravo" id="cineBravo">BRAVO</div>
-  <div class="cine-react" id="cineReact"><button onclick="sendReaction('clap')" aria-label="Applaudir" title="Applaudir le binôme.">👏</button><button onclick="sendReaction('heart')" aria-label="Coeur" title="Envoyer un cœur.">❤️</button><button onclick="sendReaction('fire')" aria-label="Feu" title="Mettre le feu : c'était excellent !">🔥</button></div>
+  <div class="cine-react" id="cineReact"><button onclick="sendReaction('clap')" aria-label="Applaudir" title="Applaudir le groupe.">👏</button><button onclick="sendReaction('heart')" aria-label="Coeur" title="Envoyer un cœur.">❤️</button><button onclick="sendReaction('fire')" aria-label="Feu" title="Mettre le feu : c'était excellent !">🔥</button></div>
   <div class="cine-fx" id="cineFx"></div>
   <div class="cine-flash" id="cineFlash"></div>
 </div>
@@ -1128,7 +1148,7 @@ body:has(.overlay.show){overflow:hidden}
 <div class="overlay" id="endReminderOverlay">
   <div class="gelcard" style="max-width:470px;text-align:left">
     <h2 style="font-size:1.15rem;margin-bottom:8px;text-align:center">Clôturer la séance ?</h2>
-    <p style="color:var(--ink2);font-size:.92rem;line-height:1.5">Tu allais fermer l'onglet. Si la séance n'est pas clôturée, les tablettes restent connectées et se rouvriront sur l'appli au rallumage. Clôture-la : ça verrouille les groupes et déconnecte les tablettes (binômes, poules et scores conservés).</p>
+    <p style="color:var(--ink2);font-size:.92rem;line-height:1.5">Tu allais fermer l'onglet. Si la séance n'est pas clôturée, les tablettes restent connectées et se rouvriront sur l'appli au rallumage. Clôture-la : ça verrouille les groupes et déconnecte les tablettes (groupes, poules et scores conservés).</p>
     <div class="acts" style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <button class="primary" onclick="doEndSession()" title="Verrouille les groupes et déconnecte toutes les tablettes.">⎋ Clôturer la séance</button>
       <button class="ghost" onclick="closeEndReminder()" title="Fermer ce rappel sans clôturer.">Plus tard</button>
@@ -1173,21 +1193,21 @@ body:has(.overlay.show){overflow:hidden}
 
 <div class="overlay" id="editOverlay">
   <div class="gelcard" style="text-align:left;max-width:460px">
-    <h2 style="font-size:1.3rem;margin-bottom:18px;text-align:center" id="editTitle">Binôme</h2>
+    <h2 style="font-size:1.3rem;margin-bottom:18px;text-align:center" id="editTitle">Groupe</h2>
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 1</label>
-    <input id="editA" title="Prénom du premier élève du binôme." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <input id="editA" title="Prénom du premier élève du groupe." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 2 (laisser vide si seul)</label>
     <input id="editB" title="Prénom du deuxième élève (laisse vide s'il est seul)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 3 (trinôme)</label>
     <input id="editC" title="Prénom du troisième élève (trinôme)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
     <div class="acts" style="justify-content:space-between">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce binôme du tableau (action irréversible).">Supprimer</button>
-        <button class="ghost" onclick="toggleBlockCurrent()" title="Bloquer ce binôme : son écran est suspendu (message « accès suspendu »). Recliquer pour le débloquer.">🚫 Bloquer / débloquer</button>
+        <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce groupe du tableau (action irréversible).">Supprimer</button>
+        <button class="ghost" onclick="toggleBlockCurrent()" title="Bloquer ce groupe : son écran est suspendu (message « accès suspendu »). Recliquer pour le débloquer.">🚫 Bloquer / débloquer</button>
       </div>
       <div style="display:flex;gap:10px">
         <button class="ghost" onclick="closeEdit()" title="Fermer sans enregistrer.">Annuler</button>
-        <button class="primary" onclick="saveEdit()" title="Enregistrer les nouveaux noms du binôme.">Enregistrer</button>
+        <button class="primary" onclick="saveEdit()" title="Enregistrer les nouveaux noms du groupe.">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -1198,8 +1218,7 @@ body:has(.overlay.show){overflow:hidden}
     <h2 style="font-size:1.25rem;margin-bottom:18px;text-align:center">Actions avancées</h2>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="enterDebatMode()" title="Lance le mode débat pour toute la classe : poules, tirage POUR/CONTRE et chronomètre. Les tablettes des élèves basculent automatiquement.">🎙 Mode débat — lancer les joutes</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="changePassword()" title="Modifier le mot de passe d'accès au mode professeur. Le changement prend effet tout de suite, sur toutes les tablettes.">🔑 Changer le mot de passe prof</button>
-    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="archiveCurrentSession()" title="Range la session actuelle dans les archives sans en créer une nouvelle. Utile pour faire une pause.">📦 Archiver cette session (sans en créer une nouvelle)</button>
-    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left;color:var(--accent2)" onclick="wipeAll()" title="Supprime toute la session active sans archiver (binômes, statuts, aides). Action irréversible.">🗑 Effacer toute la session active (irréversible)</button>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="archiveCurrentSession()" title="Range la séance actuelle aux archives sans en créer une nouvelle. Utile pour faire une pause.">📦 Archiver cette séance (sans en créer une nouvelle)</button>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeMenu()" title="Fermer ce menu.">Fermer</button></div>
   </div>
 </div>
@@ -1264,7 +1283,7 @@ body:has(.overlay.show){overflow:hidden}
 <div class="overlay" id="carnetEleveOverlay">
   <div class="gelcard" style="text-align:left;max-width:580px;max-height:84vh;overflow:auto">
     <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Mes évaluations</h2>
-    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Tout ce que ton binôme a envoyé, figé.</p>
+    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Tout ce que ton groupe a envoyé, figé.</p>
     <div id="carnetEleveBody"></div>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeCarnetEleve()" title="Fermer.">Fermer</button></div>
   </div>
@@ -1273,7 +1292,7 @@ body:has(.overlay.show){overflow:hidden}
 <div class="overlay" id="carnetProfOverlay">
   <div class="gelcard" style="text-align:left;max-width:600px;max-height:84vh;overflow:auto">
     <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Carnets des évaluateurs</h2>
-    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Par binôme : tout ce qu'il a envoyé.</p>
+    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Par groupe : tout ce qu'il a envoyé.</p>
     <div id="carnetProfBody"></div>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeCarnetProf()" title="Fermer.">Fermer</button></div>
   </div>
@@ -1285,9 +1304,22 @@ body:has(.overlay.show){overflow:hidden}
   <div class="gelcard" style="text-align:center;max-width:420px">
     <div style="font-size:2.6rem;margin-bottom:6px">🚫</div>
     <h2 style="font-size:1.2rem;margin:0 0 8px">Accès suspendu</h2>
-    <p style="color:var(--muted);font-size:.95rem;line-height:1.55;margin:0">Le professeur a mis ton binôme en pause. Range la tablette et attends son signal pour reprendre.</p>
+    <p style="color:var(--muted);font-size:.95rem;line-height:1.55;margin:0">Le professeur a mis ton groupe en pause. Range la tablette et attends son signal pour reprendre.</p>
   </div>
 </div>
+<!-- K.3 (M4) : reformulation de l'aide reçue (élève, non bloquant après 15 s) -->
+<div class="reformov" id="reformOverlay">
+  <div class="reform-card">
+    <h3>À vous d'écrire</h3>
+    <p>Vous venez d'utiliser un jeton d'aide. Redites en <b>une phrase</b>, avec vos mots, ce que l'aide vous a appris — puis reprenez le travail.</p>
+    <textarea id="reformText" maxlength="240" placeholder="Ce qu'on a compris…"></textarea>
+    <div class="reform-acts">
+      <button class="ghost reform-skip" id="reformSkip" onclick="skipReform()" title="Reprendre le travail sans écrire.">Continuer sans écrire</button>
+      <button class="primary" onclick="sendReform()" title="Enregistrer votre phrase et reprendre le travail.">Envoyer</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <!-- Firebase 8.10.1 (cohérent avec ton appli dictée) -->
@@ -1348,6 +1380,38 @@ body:has(.overlay.show){overflow:hidden}
        archive / bootDebat.
      • Ne pas casser la régression (≥430 tests, harnais _test_tournoi & co).
      • Penser slug(classe) stable (accents/espaces) pour la clé Firebase.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════════════
+   LEXIQUE DU DÉBAT — validé par Paul le 16/07/2026 (M4, décision F2).
+   Il gouverne TOUS les libellés de l'interface. Les clés Firebase et les
+   identifiants du code ne bougent JAMAIS (invariant id/libellé — vaut
+   pour les chemins : le nœud reste `binomes/`, l'UI dit « groupe »).
+   ────────────────────────────────────────────────────────────────────
+   • DÉBAT        debats/<id> entier — l'objet choisi à l'accueil, rattaché à une classe.
+   • PRÉPARATION  /config — la conception (titre, œuvre, affirmation, camps) ; survit à la purge.
+   • SÉANCE       /active — la vie de classe en cours, d'une « Nouvelle séance » à la suivante.
+   • GROUPE       binomes/<id> — l'équipe d'élèves (UI : toujours « groupe », jamais « groupe »).
+   • DOCUMENTS    les DOC 1-10 (etapes) · PARCOURS : l'avancement du groupe (tableau de suivi).
+   • JETON D'AIDE tokens (2/groupe) — consommé par zone ; K.3 : reformulation après usage.
+   • VERROUILLAGE groupsLocked — fige la composition des groupes.
+   • DÉBAT ORAL   debat.active — bascule du parcours vers la joute orale (contient le tournoi).
+   • TOURNOI      tournament — l'enchaînement des manches (poules / phase finale / rondes suisses).
+   • MANCHE       currentMatch — UN duel POUR/CONTRE, en phases de parole chronométrées.
+   • GRILLE D'ÉCOUTE  grilleEcoute — les groupes spectateurs notent la manche.
+   • RÉVÉLATION   reveal — l'animation du vainqueur sur les tablettes.
+   • CARNET DE BORD   le DOC 10 papier · MES RETOURS : l'écran élève des retours reçus.
+   • CLASSE RATTACHÉE active/classe · PRÉSENCE : pastilles · SUSPENSION : blocked.
+   ── LES REMISES À ZÉRO (refonte M4 : quatre → une) ──
+   • « REMISE À ZÉRO DES GROUPES » (resetGroupes) : le travail repart à neuf
+     (statuts des documents, demandes de validation, jetons, zones marquées) ;
+     la COMPOSITION des groupes, le tournoi et les scores sont CONSERVÉS.
+     Remplace resetStatus + resetTokens (fusion validée Q18).
+   • « NOUVELLE SÉANCE » (newSession) : la séance part aux archives, on repart vide (Q19).
+   • « CLÔTURER LA SÉANCE » (endSession) : verrouille + déconnecte, n'efface RIEN (Q21).
+   • wipeAll : SUPPRIMÉE (Q20 — toute destruction passe par archive, doctrine).
+   • « Rendre 1 jeton » à un groupe précis (giveTokenBack) : conservé (Q22).
+   • Les remises internes au tournoi restent des gestes du tournoi (Q23).
    ════════════════════════════════════════════════════════════════════ */
 
 // ─────────── Firebase init ───────────
@@ -1555,7 +1619,7 @@ var MJPC_CORE_VERSION="1.1.0";
 var MJPC_APP = {
   id: "pilotage_debat_s3",
   nom: "Pilotage débat",
-  contenant: "binome"           // évaluations par binôme — le binôme est un contenant, pas une identité
+  contenant: "binome"           // évaluations par groupe — le groupe est un contenant, pas une identité
 };
 var MJPC_MANIFESTE = {
   noeuds: ["debats","debat_singes","debat_config"],   // debat_config = mot de passe prof unique (14/07) · /codes rendu au site MJPC
@@ -1564,7 +1628,7 @@ var MJPC_MANIFESTE = {
 var MJPC_PURGE = {
   preserver: ["debats/*/config","debats/*/meta","debat_config"],   // conception + meta + mot de passe prof unique
   purger:    ["debats/*/active","debats/*/archives","debat_singes"]
-              // active = binômes/manches/scores (données élèves) · archives annuelles · debat_singes = legacy migré · codes = codes élèves annuels
+              // active = groupes/manches/scores (données élèves) · archives annuelles · debat_singes = legacy migré · codes = codes élèves annuels
 };
 let DEBAT_ID = "debat_singes";
 let ROOT = "debat_singes";
@@ -1915,7 +1979,7 @@ const DOCDATA={
 // ─────────── État global ───────────
 let role = null;            // 'student' | 'prof' | null
 let mySessionId = null;     // ID de la session active
-let myBinomeId = null;      // pour les élèves : leur binôme
+let myBinomeId = null;      // pour les élèves : leur groupe
 let sessionData = null;     // miroir local de la session active (binomes, etc.)
 let currentDoc = null;
 let activeBinomeForDoc = null;  // (legacy, conservé neutre)
@@ -2098,7 +2162,7 @@ function renderRoster(data){
   var wrap=$("loginRosterWrap"), box=$("rosterList");
   if(!wrap||!box) return false;
   if(!list.length){ wrap.style.display="none"; return false; }
-  box.innerHTML=list.map(function(nm,i){ var sel=studentRosterSel.indexOf(nm)>-1; return '<button type="button" class="roster-chip'+(sel?" on":"")+'" title="Touche ton prénom pour le sélectionner (1 à 3 élèves par binôme)." onclick="toggleRosterIdx('+i+')">'+esc(nm)+'</button>'; }).join("");
+  box.innerHTML=list.map(function(nm,i){ var sel=studentRosterSel.indexOf(nm)>-1; return '<button type="button" class="roster-chip'+(sel?" on":"")+'" title="Touche ton prénom pour le sélectionner (1 à 3 élèves par groupe)." onclick="toggleRosterIdx('+i+')">'+esc(nm)+'</button>'; }).join("");
   wrap.style.display="block";
   return true;
 }
@@ -2106,7 +2170,7 @@ function toggleRosterIdx(i){
   var nm=currentRoster[i]; if(nm==null) return;
   var j=studentRosterSel.indexOf(nm);
   if(j>-1) studentRosterSel.splice(j,1);
-  else { if(studentRosterSel.length>=3){ toast("3 élèves maximum par binôme."); return; } studentRosterSel.push(nm); }
+  else { if(studentRosterSel.length>=3){ toast("3 élèves maximum par groupe."); return; } studentRosterSel.push(nm); }
   if(lastLoginData) renderRoster(lastLoginData);
 }
 // ───────── Plein écran dissuasif (mode élève uniquement) ─────────
@@ -2259,6 +2323,11 @@ async function identifieEleve(el){
     for(var i=0;i<ns.length;i++){ if(sanMJPC(ns[i])===el.cle) dejaBid=bid; }
   });
   if(dejaBid){ enterAsStudent(dejaBid, data); return; }
+  /* M4 — mode imposé : les groupes se composent côté professeur, jamais à la connexion */
+  if(((window._lastCfg||DEBAT_CFG).modeGroupes)==='impose'){
+    $("loginErr").textContent="Les groupes de ce débat sont composés par le professeur, et tu n'es dans aucun pour l'instant. Préviens-le.";
+    $("loginBtn").disabled=false; return;
+  }
   if(data.groupsLocked===true){
     $("loginErr").textContent="Les groupes sont verrouillés et tu n'es dans aucun. Préviens le professeur.";
     $("loginBtn").disabled=false; return;
@@ -2306,10 +2375,10 @@ function doEndSession(){
   db.ref(ACTIVE+"/logoutEpoch").set(Date.now());
   sessionEnded=true;
   closeEndReminder();
-  toast("Séance clôturée : groupes verrouillés et tablettes déconnectées.");
+  toast("Séance clôturée : groupes verrouillés, tablettes déconnectées, rien d\u2019effacé.");
 }
 function endSession(){
-  askConfirm("Clôturer la séance ? Les groupes seront verrouillés et toutes les tablettes déconnectées. Les binômes, poules et scores sont conservés ; à la reprise, chacun se reconnecte avec son code et retrouve son groupe.", doEndSession);
+  askConfirm("Clôturer la séance ? Les groupes sont verrouillés et toutes les tablettes déconnectées — rien n'est effacé. À la reprise, chacun se reconnecte avec son code et retrouve son groupe.", doEndSession);
 }
 function shouldGuardClose(){
   return role==="prof" && !sessionEnded && !!(sessionData && sessionData.binomes && Object.keys(sessionData.binomes).length>0);
@@ -2444,10 +2513,10 @@ async function newSessionRaw(){
 }
 
 async function newSession(){
-  askConfirm("Créer une nouvelle session ? La session actuelle sera archivée.", async ()=>{
+  askConfirm("Créer une nouvelle séance ? La séance actuelle part aux archives (groupes, parcours, tournoi, scores — rien n'est perdu).", async ()=>{
     await archiveCurrentSession(true);
     await newSessionRaw();
-    toast("Nouvelle session créée.");
+    toast("Nouvelle séance créée. L'ancienne est aux archives.");
   });
 }
 
@@ -2471,7 +2540,7 @@ function startSessionListener(){
   sessionListener = function(snap){
     sessionData = snap.val() || null;
     if(role==="student"){
-      // Si plus de session ou si notre binôme a disparu : retour accueil
+      // Si plus de session ou si notre groupe a disparu : retour accueil
       if(!sessionData){
         toast("Le professeur a démarré une nouvelle session. Saisis le nouveau code de classe au tableau.");
         studentLogout();
@@ -2483,7 +2552,7 @@ function startSessionListener(){
         return;
       }
       if(!sessionData.binomes || !sessionData.binomes[myBinomeId]){
-        toast("Votre binôme a été retiré par le professeur. Reconnecte-toi pour rejoindre.");
+        toast("Votre groupe a été retiré par le professeur. Reconnecte-toi pour rejoindre.");
         studentLogout();
         return;
       }
@@ -2535,14 +2604,14 @@ function renderStudent(){
     lastSeenRejection = me.lastRejection.at;
   }
   studentRendered = true;
-  // Carte de mon binôme
+  // Carte de mon groupe
   const tokenStr = me.tokens > 0
     ? Array(MAX_TOKENS).fill(0).map((_,i)=>`<span class="tok ${i<me.tokens?'':'used'}"></span>`).join("")
     : '<span class="mute">🔇</span>';
   const aided = Object.keys(me.flags||{}).length;
   const pct = progress(me);
   $("studentMineCard").innerHTML = `
-    <div class="lbl">Votre binôme</div>
+    <div class="lbl">Votre groupe</div>
     <div class="names">${esc(binomeName(me))}</div>
     <div class="stats">
       <div title="Pourcentage de documents validés « fait » par le professeur."><b>${pct}%</b> terminé</div>
@@ -2561,7 +2630,7 @@ function renderStudent(){
   } else {
     $("studentValidationStrip").innerHTML = "";
   }
-  // Tableau du binôme (uniquement la sienne)
+  // Tableau du groupe (uniquement la sienne)
   let html = '<div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:14px">';
   html += '<div style="font-family:\'Fraunces\',serif;font-weight:700;color:var(--gold);font-size:1.05rem;margin-bottom:10px">📖 Comment lire ce tableau</div>';
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px;font-size:.88rem;color:var(--ink2);line-height:1.4">';
@@ -2574,7 +2643,7 @@ function renderStudent(){
   html += '</div></div>';
 
   html += '<div class="tablewrap"><table id="myGrid"><thead><tr>';
-  html += '<th class="bn" style="min-width:60px" title="Le nom de votre binôme. Le tableau ci-dessous est le vôtre.">Vous</th>';
+  html += '<th class="bn" style="min-width:60px" title="Le nom de votre groupe. Le tableau ci-dessous est le vôtre.">Vous</th>';
   html += '<th class="tk" title="Vous avez 2 jetons d\'aide pour toute la séance. Chaque aide demandée consomme 1 jeton.">Aides</th>';
   DOCS.forEach(d=>{
     const tip = `DOC ${d.n} ${d.label} — ${d.desc} (Clique pour ouvrir le document.)`;
@@ -2585,7 +2654,7 @@ function renderStudent(){
   html += '</tbody></table></div>';
   $("studentTableSection").innerHTML = html;
 
-  // Liste autres binômes
+  // Liste autres groupes
   const others = Object.entries(sessionData.binomes||{}).filter(([id])=>id!==myBinomeId);
   if(others.length===0){
     $("studentOthersList").innerHTML = '<div style="color:var(--muted);font-style:italic;padding:8px 0">Vous êtes seuls pour le moment.</div>';
@@ -2617,6 +2686,7 @@ function profPhaseLabel(){
 }
 function renderProf(){
   if(!sessionData){return;}
+  if(ppEtat && ppEtat.s==='groupes') renderPPGroupes();
   // ── Ligne de contexte (mise à jour dans les DEUX modes, avant la bascule) ──
   { var _cc=$("ctxClasse"); if(_cc) _cc.textContent = sessionData.classe || "aucune classe";
     var _cp=$("ctxPhase"); if(_cp) _cp.textContent = profPhaseLabel(); }
@@ -2648,15 +2718,15 @@ function renderProf(){
 
   // Tableau
   const t = $("grid");
-  let h = "<thead><tr><th class='bn' title=\"Nom du binôme. Le bouton ✎ modifier permet de renommer ou supprimer.\">Binôme</th><th class='tk' title=\"Chaque binôme dispose de 2 jetons d'aide.\">Aides</th>";
+  let h = "<thead><tr><th class='bn' title=\"Nom du groupe. Le bouton ✎ modifier permet de renommer ou supprimer.\">Groupe</th><th class='tk' title=\"Chaque groupe dispose de 2 jetons d'aide.\">Aides</th>";
   DOCS.forEach(d=>{
-    const tip = `DOC ${d.n} ${d.label} — ${d.desc} (Clique pour ouvrir le document tel que le binôme le voit.)`;
+    const tip = `DOC ${d.n} ${d.label} — ${d.desc} (Clique pour ouvrir le document tel que le groupe le voit.)`;
     h += `<th class='doc' onclick="openDoc(${d.n})" title="${esc(tip)}"><span class='num'>${d.n}</span><span class='lab'>${esc(d.label)}</span><span class='open'>▸ ouvrir</span></th>`;
   });
   h += "<th class='pr' title=\"Pourcentage de documents au statut « fait ».\">Avancement</th></tr></thead><tbody>";
   const list = Object.entries(binomes).sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
   if(list.length===0){
-    h += `<tr><td colspan="13" style="text-align:center;padding:30px;color:#6b6b6b;font-style:italic">Aucun binôme connecté. Les élèves se connectent avec leur code MJPC, leur nom et leur prénom.</td></tr>`;
+    h += `<tr><td colspan="13" style="text-align:center;padding:30px;color:#6b6b6b;font-style:italic">Aucun groupe connecté. Les élèves se connectent avec leur code MJPC, leur nom et leur prénom.</td></tr>`;
   } else {
     list.forEach(([id,b])=>{ h += renderRowHtml(b, id, /*isStudent*/false); });
   }
@@ -2669,11 +2739,11 @@ function renderRowHtml(b, id, isStudent){
   if(!b) return "";
   const nm = esc(binomeName(b));
   let h = "<tr>";
-  // Colonne binôme
+  // Colonne groupe
   if(isStudent){
     h += `<td class='bn'><div class='names' style="font-size:1.05rem">${nm}</div></td>`;
   } else {
-    h += `<td class='bn'><div class='names'>${nm}</div><button class='edit' onclick="editB('${id}')" title="Renommer ou supprimer ce binôme.">✎ modifier</button></td>`;
+    h += `<td class='bn'><div class='names'>${nm}</div><button class='edit' onclick="editB('${id}')" title="Renommer ou supprimer ce groupe.">✎ modifier</button></td>`;
   }
   // Colonne aides
   h += "<td class='tk'><div class='tkwrap'>";
@@ -2706,9 +2776,13 @@ function renderRowHtml(b, id, isStudent){
   const nbAides = Object.keys(b.flags||{}).length;
   if(nbAides>0){
     const docs = [...new Set(Object.keys(b.flags).map(k=>k.split(':')[0]))].sort((a,c)=>+a-+c);
+    const _refs = b.reformulations || {};
+    const _refTxt = Object.keys(_refs).length
+      ? "\nCe qu'ils ont reformulé :\n" + Object.keys(_refs).map(k=>"— "+((_refs[k]||{}).t||"")).join("\n")
+      : "";
     const aidedTip = isStudent
       ? `Vous avez déjà reçu de l'aide sur ${nbAides} zone${nbAides>1?'s':''} : DOC ${docs.join(', DOC ')}. Vous pouvez les reconsulter sans consommer un nouveau jeton.`
-      : `Zones aidées : DOC ${docs.join(', DOC ')}`;
+      : `Zones aidées : DOC ${docs.join(', DOC ')}` + _refTxt;
     h += `<div class="aided" title="${esc(aidedTip)}">${nbAides} zone${nbAides>1?'s':''} aidée${nbAides>1?'s':''}</div>`;
   }
   h += "</div></td>";
@@ -2728,7 +2802,7 @@ function renderRowHtml(b, id, isStudent){
       if(isStudent){
         h += `<td class='st pending' title="${esc(docInfo+' — En attente de validation. Le professeur va valider ce document. Continuez à travailler en attendant.')}"></td>`;
       } else {
-        h += `<td class='st pending' onclick="validateDone('${id}',${i})" title="${esc(docInfo+' — Le binôme demande la validation. Clic pour valider, clic droit pour refuser.')}"  oncontextmenu="event.preventDefault();rejectDone('${id}',${i});return false"></td>`;
+        h += `<td class='st pending' onclick="validateDone('${id}',${i})" title="${esc(docInfo+' — Le groupe demande la validation. Clic pour valider, clic droit pour refuser.')}"  oncontextmenu="event.preventDefault();rejectDone('${id}',${i});return false"></td>`;
       }
     } else {
       const cls = s;
@@ -2798,34 +2872,30 @@ async function rejectDone(id, i){
   toast("Demande refusée — le statut reste « en cours ».");
 }
 
-function resetStatus(){
-  askConfirm("Remettre tous les statuts à zéro pour tous les binômes ?", async ()=>{
+/* M4 — LA remise à zéro unique (lexique Q18) : fusion de resetStatus + resetTokens.
+   Efface : statuts des 10 documents, demandes de validation, jetons (→ 2), zones marquées.
+   Conserve : la composition des groupes, le tournoi, les scores, les reformulations passées. */
+function resetGroupes(){
+  askConfirm("Remise à zéro des groupes : le travail repart à neuf (documents « à faire », demandes de validation effacées, 2 jetons rendus, zones marquées oubliées). La composition des groupes, le tournoi et les scores sont conservés. On y va ?", async ()=>{
     const binomes = (sessionData||{}).binomes || {};
     const upd = {};
     Object.keys(binomes).forEach(id=>{
       upd[id+"/statuses"] = Array(10).fill("todo");
       upd[id+"/pendingValidation"] = Array(10).fill(false);
+      upd[id+"/tokens"] = MAX_TOKENS;
+      upd[id+"/flags"] = {};
     });
     await db.ref(ACTIVE+"/binomes").update(upd);
-    toast("Statuts remis à zéro.");
-  });
-}
-function resetTokens(){
-  askConfirm("Rendre les 2 aides à tous les binômes ?", async ()=>{
-    const binomes = (sessionData||{}).binomes || {};
-    const upd = {};
-    Object.keys(binomes).forEach(id=>{ upd[id+"/tokens"] = MAX_TOKENS; upd[id+"/flags"] = {}; });
-    await db.ref(ACTIVE+"/binomes").update(upd);
-    toast("Aides rendues.");
+    toast("Groupes remis à zéro : travail à neuf, composition conservée.");
   });
 }
 
-// ─────────── Édition / suppression binôme (prof) ───────────
+// ─────────── Édition / suppression groupe (prof) ───────────
 function editB(id){
   const b = findBinome(id);
   if(!b) return;
   editingId = id;
-  $("editTitle").textContent = "Modifier le binôme";
+  $("editTitle").textContent = "Modifier le groupe";
   const names = b.names || [];
   $("editA").value = names[0] || "";
   $("editB").value = names[1] || "";
@@ -2879,7 +2949,7 @@ function purgeOrphanPouleMatches(){
   });
 }
 function closeEdit(){ $("editOverlay").classList.remove("show"); editingId = null; }
-// ── Discipline : blocage de binôme + présence (élève hors écran) ──
+// ── Discipline : blocage de groupe + présence (élève hors écran) ──
 function showBlockedScreen(){ var o=$("blockedOverlay"); if(o) o.classList.add("show"); }
 function hideBlockedScreen(){ var o=$("blockedOverlay"); if(o) o.classList.remove("show"); }
 function toggleBlockCurrent(){
@@ -2887,18 +2957,18 @@ function toggleBlockCurrent(){
   var b=(sessionData&&sessionData.binomes&&sessionData.binomes[editingId])||{};
   var nv=!b.blocked;
   db.ref(ACTIVE+"/binomes/"+editingId+"/blocked").set(nv?true:null);
-  toast(nv?"Binôme bloqué \u2014 son écran est suspendu.":"Binôme débloqué.");
+  toast(nv?"Groupe bloqué \u2014 son écran est suspendu.":"Groupe débloqué.");
   closeEdit();
 }
-function blockBinome(bid){ db.ref(ACTIVE+"/binomes/"+bid+"/blocked").set(true); toast("Binôme bloqué \u2014 son écran est suspendu."); }
-function unblockBinome(bid){ db.ref(ACTIVE+"/binomes/"+bid+"/blocked").remove(); toast("Binôme débloqué."); }
+function blockBinome(bid){ db.ref(ACTIVE+"/binomes/"+bid+"/blocked").set(true); toast("Groupe bloqué \u2014 son écran est suspendu."); }
+function unblockBinome(bid){ db.ref(ACTIVE+"/binomes/"+bid+"/blocked").remove(); toast("Groupe débloqué."); }
 function presenceBanner(){
   var bs=(sessionData&&sessionData.binomes)||{}; var away=[], blk=[];
   Object.keys(bs).forEach(function(bid){ var b=bs[bid]||{}; if(b.blocked) blk.push(bid); else if(b.away) away.push(bid); });
   if(!away.length && !blk.length) return "";
   var h='<div class="presence-bar">';
-  if(away.length){ h+='<span class="pres-lbl">\u26a0 Hors écran :</span>'; away.forEach(function(bid){ h+='<button class="pres-chip away" onclick="blockBinome(\''+bid+'\')" title="Cet élève a quitté l\'écran du débat (autre appli, écran éteint…). Clique pour bloquer son binôme.">'+esc(binomeName(findBinome(bid))||"?")+' 🚫</button>'; }); }
-  if(blk.length){ h+='<span class="pres-lbl">🚫 Bloqués :</span>'; blk.forEach(function(bid){ h+='<button class="pres-chip blocked" onclick="unblockBinome(\''+bid+'\')" title="Binôme bloqué : son écran est suspendu. Clique pour le débloquer.">'+esc(binomeName(findBinome(bid))||"?")+' ✓</button>'; }); }
+  if(away.length){ h+='<span class="pres-lbl">\u26a0 Hors écran :</span>'; away.forEach(function(bid){ h+='<button class="pres-chip away" onclick="blockBinome(\''+bid+'\')" title="Cet élève a quitté l\'écran du débat (autre appli, écran éteint…). Clique pour bloquer son groupe.">'+esc(binomeName(findBinome(bid))||"?")+' 🚫</button>'; }); }
+  if(blk.length){ h+='<span class="pres-lbl">🚫 Bloqués :</span>'; blk.forEach(function(bid){ h+='<button class="pres-chip blocked" onclick="unblockBinome(\''+bid+'\')" title="Groupe bloqué : son écran est suspendu. Clique pour le débloquer.">'+esc(binomeName(findBinome(bid))||"?")+' ✓</button>'; }); }
   h+='</div>'; return h;
 }
 
@@ -2915,7 +2985,7 @@ function closeConfirm(){ $("confirmOverlay").classList.remove("show"); confirmAc
    Le CADRE change, les écrans de travail existants sont re-rangés, pas rouverts :
    « Séance » EST l'écran de pilotage historique (profPilotageWrap), intouché. */
 var PP_STRUCTURE={
-  pilotage:{sous:[{id:'preparation',nom:'Préparation'},{id:'seance',nom:'Séance'}],defaut:'seance'},
+  pilotage:{sous:[{id:'preparation',nom:'Préparation'},{id:'groupes',nom:'Groupes'},{id:'seance',nom:'Séance'}],defaut:'seance'},
   donnees:{sous:[{id:'donnees',nom:'Archives & exports'}],defaut:'donnees'},
   reglages:{sous:[{id:'reglages',nom:'Réglages'}],defaut:'reglages'}
 };
@@ -2926,25 +2996,93 @@ function ppGo(o,s){
   var ss=$('ppSous');
   ss.innerHTML=PP_STRUCTURE[o].sous.map(function(x){return '<button class="pps'+(x.id===ppEtat.s?' actif':'')+'" onclick="ppGo(\''+o+'\',\''+x.id+'\')">'+x.nom+'</button>';}).join('');
   var wrap=$('profPilotageWrap'); if(wrap) wrap.style.display=(ppEtat.s==='seance')?'':'none';
-  ['preparation','donnees','reglages'].forEach(function(e){var el=$('pp_'+e); if(el) el.classList.toggle('actif',ppEtat.s===e);});
+  ['preparation','groupes','donnees','reglages'].forEach(function(e){var el=$('pp_'+e); if(el) el.classList.toggle('actif',ppEtat.s===e);});
   if(ppEtat.s==='preparation') ppChargePreparation();
+  if(ppEtat.s==='groupes') renderPPGroupes();
 }
 function ppChargePreparation(){
   db.ref(ROOT+"/config").once("value").then(function(s){
     var c=s.val()||{};
     ['title','work','author','level','objective','motion','pour','contre'].forEach(function(k){var el=$('pp_'+k); if(el) el.value=c[k]||'';});
     var pc=$('pp_classe'); if(pc) pc.innerHTML=classeSelector();
+    setPPModeGroupes(c.modeGroupes==='impose'?'impose':'choisi', true);
     var m=$('pp_prep_msg'); if(m) m.textContent='';
   });
+}
+/* M4 — interrupteur du mode de formation des groupes (par débat, dans la préparation) */
+var _ppModeGroupes='choisi';
+function setPPModeGroupes(m, silencieux){
+  _ppModeGroupes=(m==='impose')?'impose':'choisi';
+  document.querySelectorAll('#pp_modeGroupes .pps').forEach(function(b){ b.classList.toggle('actif', b.dataset.mg===_ppModeGroupes); });
+  if(!silencieux){ var msg=$('pp_prep_msg'); if(msg) msg.textContent='Pense à enregistrer.'; }
 }
 function ppSavePreparation(){
   var c={};
   ['title','work','author','level','objective','motion','pour','contre'].forEach(function(k){var el=$('pp_'+k); c[k]=el?(el.value||'').trim():'';});
+  c.modeGroupes=_ppModeGroupes;
   if(!c.title){ var m0=$('pp_prep_msg'); if(m0){m0.textContent='Donne au moins un titre.';} return; }
   db.ref(ROOT+"/config").update(c).then(function(){
     applyConfig(Object.assign({etapes:DEBAT_CFG.etapes},c));
     var m=$('pp_prep_msg'); if(m){ m.textContent='✓ Enregistré et appliqué.'; setTimeout(function(){m.textContent='';},2500); }
   });
+}
+/* ════ M4 — Pilotage → Groupes : composition imposée par le professeur ════
+   Le prof n'est JAMAIS bloqué : il compose même groupes verrouillés, même en séance.
+   Écrit dans ACTIVE/binomes/ (le nœud garde son nom — invariant id/libellé). */
+var _grpSel=[];
+function renderPPGroupes(){
+  var box=$('ppGroupesBody'); if(!box) return;
+  var cfg=window._lastCfg||DEBAT_CFG;
+  var mode=(cfg.modeGroupes==='impose')?'impose':'choisi';
+  var classe=(sessionData&&sessionData.classe)||'';
+  var binomes=(sessionData&&sessionData.binomes)||{};
+  var places={};
+  Object.keys(binomes).forEach(function(bid){ ((binomes[bid]||{}).names||[]).forEach(function(nm){ places[sanMJPC(nm)]=bid; }); });
+  var h='';
+  if(mode!=='impose'){
+    h+='<div style="max-width:640px"><p style="font-size:.95rem;line-height:1.55;margin-bottom:10px">Ce débat est en mode <b>« les élèves se placent »</b> : les groupes se forment à la connexion, depuis le registre de la classe. Pour composer les groupes toi-même, passe en <b>« groupes imposés »</b> dans la Préparation.</p>'
+      +'<button class="ghost" onclick="ppGo(\'pilotage\',\'preparation\')" title="Ouvrir la préparation pour changer le mode de formation des groupes.">→ Ouvrir la Préparation</button></div>';
+  } else if(!classe){
+    h+='<div style="max-width:640px"><p style="font-size:.95rem;line-height:1.55">Rattache d\u2019abord une classe à ce débat (Préparation ou bandeau de Séance) : le registre de la classe alimente la composition.</p></div>';
+  } else {
+    var roster=extractEleves((CLASSES||{})[classe]||null,[]);
+    h+='<div style="max-width:760px">';
+    h+='<p style="font-size:.92rem;color:#6b6b6b;margin-bottom:10px">Touche les élèves de <b>'+esc(classe)+'</b> (1 à 3), puis crée le groupe. Un élève grisé est déjà placé. Les élèves retrouveront leur groupe en se connectant.</p>';
+    h+='<div class="roster-list" style="margin-bottom:12px">'+ (roster.length? roster.map(function(nm,i){
+        var cle=sanMJPC(nm), pris=places[cle], sel=_grpSel.indexOf(nm)>-1;
+        if(pris) return '<span class="roster-chip" style="opacity:.45;cursor:not-allowed" title="Déjà placé dans un groupe.">'+esc(nm)+'</span>';
+        return '<button type="button" class="roster-chip'+(sel?' on':'')+'" onclick="grpToggle('+i+')" title="Touche pour ajouter ou retirer de la sélection.">'+esc(nm)+'</button>';
+      }).join('') : '<i>Registre vide pour cette classe.</i>') +'</div>';
+    h+='<div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">'
+      +'<button class="primary" onclick="grpCreer()" title="Crée le groupe avec les élèves sélectionnés (1 à 3).">+ Créer le groupe ('+_grpSel.length+')</button>'
+      +(_grpSel.length?'<span style="font-size:.88rem;color:#3a3a3a">'+_grpSel.map(esc).join(' · ')+'</span>':'<span style="font-size:.88rem;color:#6b6b6b">Aucun élève sélectionné.</span>')
+      +'</div>';
+    var bids=Object.keys(binomes);
+    h+='<h2 style="font-size:1.05rem;margin-bottom:8px">Groupes composés ('+bids.length+')</h2>';
+    h+= bids.length? bids.map(function(bid){
+        var b=binomes[bid]||{};
+        return '<div class="debat-row" style="border-color:#e5e3de;margin-bottom:8px"><span style="min-width:0;overflow-wrap:anywhere">'+esc((b.names||[]).join(' & '))+'</span>'
+          +'<button class="ghost" style="flex:0 0 auto" onclick="editB(\''+bid+'\')" title="Modifier ou supprimer ce groupe.">✏️ Modifier</button></div>';
+      }).join('') : '<p style="font-size:.9rem;color:#6b6b6b">Aucun groupe pour l\u2019instant.</p>';
+    h+='</div>';
+  }
+  box.innerHTML=h;
+}
+function grpToggle(i){
+  var classe=(sessionData&&sessionData.classe)||'';
+  var roster=extractEleves((CLASSES||{})[classe]||null,[]);
+  var nm=roster[i]; if(nm==null) return;
+  var j=_grpSel.indexOf(nm);
+  if(j>-1) _grpSel.splice(j,1); else { if(_grpSel.length>=3){ toast('3 élèves maximum par groupe.'); return; } _grpSel.push(nm); }
+  renderPPGroupes();
+}
+async function grpCreer(){
+  if(!_grpSel.length){ toast('Sélectionne d\u2019abord 1 à 3 élèves.'); return; }
+  var names=_grpSel.slice(); _grpSel=[];
+  var binomeId=uid();
+  await db.ref(ACTIVE+"/binomes/"+binomeId).set({ names:names, statuses:Array(10).fill("todo"), pendingValidation:Array(10).fill(false), tokens:MAX_TOKENS, flags:{}, joinedAt:Date.now(), impose:true });
+  toast('Groupe créé : '+names.join(' & ')+'.');
+  renderPPGroupes();
 }
 function ppAide(){
   askConfirm("Aide du débat — l'essentiel :\n\n• Les élèves se connectent avec leur code MJPC, leur nom et leur prénom : chacun tombe sur le débat de SA classe et retrouve son groupe tout seul.\n• Pilotage → Préparation : modifier le débat (titre, affirmation, camps, classe).\n• Pilotage → Séance : mener la séance (groupes, tournoi, scores).\n• Données : archives et sauvegardes.\n\n(Les annonces de nouveautés arriveront ici, publiées depuis le site MJPC.)", function(){});
@@ -2972,15 +3110,8 @@ async function confirmChangePassword(){
   closePwdOverlay();
   toast("Mot de passe mis à jour.");
 }
-function wipeAll(){
-  closeMenu();
-  askConfirm("Effacer toute la session active (binômes, statuts, aides) sans archiver ?", async ()=>{
-    try{ var _oc=(await db.ref(ACTIVE+"/code").once("value")).val(); if(_oc) await db.ref("codes/"+_oc).remove(); }catch(e){}
-    await db.ref(ACTIVE).remove();
-    await newSessionRaw();
-    toast("Session effacée et remplacée.");
-  });
-}
+/* wipeAll supprimée (M4, lexique Q20) : doublon de « Nouvelle séance » sans archive,
+   contraire à la doctrine « toute destruction passe par archive ». */
 
 // ─────────── Rendu d'un jeton (mode prof) : récupération en cas de clic accidentel ───────────
 function giveTokenBack(id){
@@ -3119,6 +3250,7 @@ async function zoneClick(zoneId){
     });
     // Recharger l'état pour showHelp
     const updatedMe = Object.assign({}, me, {tokens: newTokens, flags: Object.assign({}, me.flags||{}, {[key]: true})});
+    _pendingReformKey = key; // K.3 : reformulation demandée à la fermeture de l'aide
     showHelp(blk, true, updatedMe, /*isFree*/false);
     return;
   }
@@ -3144,7 +3276,36 @@ function showHelp(blk, consumed, b, isFree){
   $("helpFoot").textContent = foot;
   hp.classList.add("show");
 }
-function closeHelp(){ $("help").classList.remove("show"); }
+function closeHelp(){
+  $("help").classList.remove("show");
+  /* K.3 (M4) : après une aide payée d'un jeton, le groupe reformule en une phrase */
+  if(role==="student" && _pendingReformKey){ var k=_pendingReformKey; _pendingReformKey=null; openReform(k); }
+}
+/* ════ K.3 — reformulation (désétayage, ZPD) : champ court, non bloquant au-delà de 15 s ════ */
+var _pendingReformKey=null, _reformKey=null, _reformTimer=null;
+function openReform(key){
+  var ov=$("reformOverlay"); if(!ov){ return; }
+  _reformKey=key;
+  var ta=$("reformText"); if(ta) ta.value="";
+  var sk=$("reformSkip"); if(sk) sk.classList.remove("on");
+  ov.classList.add("show");
+  try{ if(ta) ta.focus(); }catch(e){}
+  clearTimeout(_reformTimer);
+  _reformTimer=setTimeout(function(){ var s=$("reformSkip"); if(s) s.classList.add("on"); }, 15000);
+}
+function closeReform(){ var ov=$("reformOverlay"); if(ov) ov.classList.remove("show"); clearTimeout(_reformTimer); _reformKey=null; }
+function skipReform(){ closeReform(); }
+async function sendReform(){
+  var ta=$("reformText"); var t=(ta&&ta.value||"").trim();
+  if(!t){ closeReform(); return; }
+  var k=_reformKey; closeReform();
+  if(role==="student" && myBinomeId && k){
+    try{
+      await db.ref(ACTIVE+"/binomes/"+myBinomeId+"/reformulations/"+k).set({t:t.slice(0,240), at:Date.now()});
+      toast("Merci ! Votre phrase est enregistrée.");
+    }catch(e){}
+  }
+}
 
 // ─────────── Raccourcis clavier ───────────
 document.addEventListener("keydown", (e)=>{
@@ -3248,8 +3409,8 @@ function speakerOf(cm, camp){ return (cm.campA===camp)?cm.binomeA:cm.binomeB; }
 function createPouleFromUI(){
   const name=($("dbgPouleName").value||"").trim();
   const checked=Array.from(document.querySelectorAll(".dbg-pick:checked")).map(function(c){return c.value;});
-  if(checked.length<2){ toast("Sélectionnez au moins 2 binômes pour former une poule."); return; }
-  if(checked.length>4){ toast("Une poule compte 3 ou 4 binômes (2 minimum). Réduisez la sélection."); return; }
+  if(checked.length<2){ toast("Sélectionnez au moins 2 groupes pour former une poule."); return; }
+  if(checked.length>4){ toast("Une poule compte 3 ou 4 groupes (2 minimum). Réduisez la sélection."); return; }
   const pid=uid();
   const poule={ id:pid, name:name||("Poule "+(Object.keys(poulesObj()).length+1)), binomes:checked, matches:genRoundRobin(checked) };
   db.ref(DEBAT+"/poules/"+pid).set(poule).then(function(){ toast("Poule créée : "+poule.matches.length+" manche(s) générée(s)."); });
@@ -3398,7 +3559,7 @@ let specDraft=null, grilleSent={};
 function binomeMembers(bid){
   const b=findBinome(bid); const ns=(b&&b.names)||[];
   const out=[]; ns.forEach(function(n,i){ if(n&&String(n).trim()!=="") out.push({idx:i,nom:n}); });
-  if(out.length===0) out.push({idx:0,nom:"(binôme)"});
+  if(out.length===0) out.push({idx:0,nom:"(groupe)"});
   return out;
 }
 function ensureSpecDraft(mid){
@@ -3702,7 +3863,7 @@ function renderDebatProf(){
 
   let h='';
   h+='<div class="dbg-bar"><h2>🎙 Pilotage du débat — '+esc(DEBAT_CFG.title)+' <span style="display:inline-block;margin-left:10px;font-size:.9rem;font-weight:700;color:#2563eb;border:1px solid #2563eb;border-radius:8px;padding:2px 10px;vertical-align:middle;letter-spacing:.05em">Code classe : '+esc((sessionData&&sessionData.code)||"—")+'</span></h2>'
-   + '<span style="display:flex;gap:8px;flex-wrap:wrap">'+classeSelector()+'<button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button>'+modQueueBtn()+'<button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par binôme évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="exportDebatJSON()" title="Télécharger la session active (binômes, poules, manches, scores) au format JSON.">💾 Export</button><button class="dbg-btn ghost" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base (session active + toutes les archives + code) dans un seul fichier JSON externe. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button><button class="dbg-btn ghost" onclick="migrateLegacy()" title="Copier debat_singes vers la nouvelle structure debats/planete-des-singes-3e (config + index code). Ancien conservé. À faire hors séance.">🚚 Migrer</button><button class="dbg-btn ghost" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Import</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
+   + '<span style="display:flex;gap:8px;flex-wrap:wrap">'+classeSelector()+'<button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button>'+modQueueBtn()+'<button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par groupe évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="exportDebatJSON()" title="Télécharger la session active (groupes, poules, manches, scores) au format JSON.">💾 Export</button><button class="dbg-btn ghost" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base (session active + toutes les archives + code) dans un seul fichier JSON externe. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button><button class="dbg-btn ghost" onclick="migrateLegacy()" title="Copier debat_singes vers la nouvelle structure debats/planete-des-singes-3e (config + index code). Ancien conservé. À faire hors séance.">🚚 Migrer</button><button class="dbg-btn ghost" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Import</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
   const tour=d.tournament||{};
   if(tour.phase==="termine" && tour.champion){
     h+='<div class="dbg-result" style="margin-bottom:14px"><div class="win" style="font-size:1.5rem">🏆 '+esc(binomeName(findBinome(tour.champion))||"?")+' remporte le tournoi !</div></div>';
@@ -3716,22 +3877,22 @@ function renderDebatProf(){
   h+='<div class="dbg-card pilot-board"><div class="board-head"><h3>Tableau de bord</h3><span class="board-meta">'+esc(_phaseLbl)+' · '+_pl+'/'+_tot+' manches jouées</span><button class="dbg-btn ghost" style="padding:3px 10px;margin-left:auto" onclick="openChrono()" title="Journal des manches dans l\'ordre du temps : qui était POUR/CONTRE, scores et vainqueurs.">🕓 Chronologie</button><button class="dbg-btn ghost" style="padding:3px 10px;margin-left:6px" onclick="openRebalance()" title="Voir les déséquilibres détectés, leurs conséquences, et annuler un rééquilibrage.">⚖ Rééquilibrages</button></div>';
   h+=imbalanceBanner();
   h+=formatSelector();
-  h+='<div style="margin-bottom:10px"><button class="dbg-btn" style="width:100%" onclick="generateTournament()" title="Répartit automatiquement tous les binômes connectés en poules équilibrées, génère toutes les manches et charge la première. Tu n\'as plus rien à organiser.">⚡ Générer le tournoi automatiquement</button><div style="font-size:.76rem;color:#6b6b6b;margin-top:4px">Recommandé. Tu peux aussi composer une poule à la main ci-dessous.</div></div>';
+  h+='<div style="margin-bottom:10px"><button class="dbg-btn" style="width:100%" onclick="generateTournament()" title="Répartit automatiquement tous les groupes connectés en poules équilibrées, génère toutes les manches et charge la première. Tu n\'as plus rien à organiser.">⚡ Générer le tournoi automatiquement</button><div style="font-size:.76rem;color:#6b6b6b;margin-top:4px">Recommandé. Tu peux aussi composer une poule à la main ci-dessous.</div></div>';
   h+='<div style="margin-bottom:12px">';
   h+='<input id="dbgPouleName" class="dbg-input" placeholder="Nom de la poule (ex : Poule A)" title="Donne un nom à la poule. Laisse vide pour une numérotation automatique.">';
   if(free.length===0){
-    h+='<div style="color:#6b6b6b;font-size:.85rem;font-style:italic">Tous les binômes connectés sont déjà placés dans une poule. (Pour la finale, crée une poule avec les binômes qualifiés.)</div>';
+    h+='<div style="color:#6b6b6b;font-size:.85rem;font-style:italic">Tous les groupes connectés sont déjà placés dans une poule. (Pour la finale, crée une poule avec les groupes qualifiés.)</div>';
   } else {
     h+='<div class="dbg-chk">';
-    free.forEach(function(e){ h+='<label title="Cocher pour ajouter ce binôme à la nouvelle poule."><input type="checkbox" class="dbg-pick" value="'+e[0]+'"> '+esc(binomeName(e[1])||"(sans nom)")+'</label>'; });
+    free.forEach(function(e){ h+='<label title="Cocher pour ajouter ce groupe à la nouvelle poule."><input type="checkbox" class="dbg-pick" value="'+e[0]+'"> '+esc(binomeName(e[1])||"(sans nom)")+'</label>'; });
     h+='</div>';
-    h+='<button class="dbg-btn" onclick="createPouleFromUI()" title="Crée une poule avec les binômes cochés et génère tous les matchs (chacun affronte tous les autres).">+ Créer la poule (round-robin)</button>';
+    h+='<button class="dbg-btn" onclick="createPouleFromUI()" title="Crée une poule avec les groupes cochés et génère tous les matchs (chacun affronte tous les autres).">+ Créer la poule (round-robin)</button>';
   }
   h+='</div>';
   const pentries=Object.entries(poules);
   h+='<div class="poules-wrap">';
   if(pentries.length===0){
-    h+='<div style="color:#6b6b6b;font-style:italic;font-size:.88rem">Aucune poule pour l\'instant. Sélectionne des binômes ci-dessus et crée ta première poule.</div>';
+    h+='<div style="color:#6b6b6b;font-style:italic;font-size:.88rem">Aucune poule pour l\'instant. Sélectionne des groupes ci-dessus et crée ta première poule.</div>';
   } else {
     pentries.forEach(function(pe){
       const pid=pe[0], p=pe[1];
@@ -3776,7 +3937,7 @@ function renderDebatProf(){
     if(!cm.tirageAt){
       h+='<div class="tirage-binome" id="tirageBinome">'+na+' tire son camp…</div>';
       h+='<div class="tirage-camp" id="tirageCamp">?</div>';
-      h+='<button class="dbg-btn" onclick="doTirage()" title="Lance une animation de tirage au sort qui désigne le camp (POUR ou CONTRE) de chaque binôme.">🎲 Tirer POUR / CONTRE</button> <button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer cette manche sans la jouer.">✕ Fermer</button>';
+      h+='<button class="dbg-btn" onclick="doTirage()" title="Lance une animation de tirage au sort qui désigne le camp (POUR ou CONTRE) de chaque groupe.">🎲 Tirer POUR / CONTRE</button> <button class="dbg-btn ghost" onclick="cancelMatch()" title="Fermer cette manche sans la jouer.">✕ Fermer</button>';
     } else {
       h+='<div style="display:flex;gap:10px;justify-content:center;margin-bottom:6px">'
        + '<div style="flex:1"><div style="font-size:.82rem;color:#6b6b6b">'+na+'</div><div class="tirage-camp '+cm.campA+'" style="font-size:1.6rem">'+(cm.campA==="pour"?"POUR":"CONTRE")+'</div></div>'
@@ -3956,7 +4117,7 @@ function renderDebatStudent(){
   }
   ensureSpecDraft(cm.id);
   h+='<div style="font-size:.85rem;color:var(--ink2);margin-bottom:8px">Notez chaque camp (1 à 5), puis envoyez à la fin de la manche.</div>';
-  // un bloc par camp (POUR puis CONTRE), avec le binôme qui le défend
+  // un bloc par camp (POUR puis CONTRE), avec le groupe qui le défend
   ["pour","contre"].forEach(function(camp){
     const bn=esc(binomeName(findBinome(speakerOf(cm,camp)))||"?");
     h+='<div class="dbg-campcol '+camp+'"><div class="ct">'+(camp==="pour"?"POUR":"CONTRE")+' — '+bn+'</div>';
@@ -3999,11 +4160,11 @@ function planPools(n){
 var _selectedFormat="poules_finale";
 var TOURNAMENT_FORMATS=[
   {id:"poules_finale", label:"Poules + finale", desc:"Des poules équilibrées, puis une phase finale (demi-finales, finale) entre les premiers de chaque poule. Le format classique."},
-  {id:"poules", label:"Poules seules", desc:"Des poules équilibrées, sans phase finale : le champion est le binôme en tête du classement général."},
-  {id:"round_robin", label:"Round-robin intégral", desc:"Une seule grande poule : chaque binôme affronte tous les autres. Le plus équitable, mais le plus long."},
-  {id:"suisse", label:"Système suisse", desc:"Chaque binôme débat un nombre fixe de fois, apparié à chaque ronde avec un adversaire de niveau proche, sans élimination. L'équité du temps de parole est garantie par construction."},
-  {id:"elimination", label:"Élimination directe", desc:"Un tableau à élimination directe sur tous les binômes : le perdant est éliminé à chaque tour. Rapide et tendu, mais le moins équitable (un binôme battu d'entrée n'aura débattu qu'une fois)."},
-  {id:"speed", label:"Speed dating", desc:"Rotation générale en manches courtes : chaque binôme croise un maximum d'adversaires. Pour brasser et faire débattre tout le monde — sans vainqueur, c'est un échauffement."}
+  {id:"poules", label:"Poules seules", desc:"Des poules équilibrées, sans phase finale : le champion est le groupe en tête du classement général."},
+  {id:"round_robin", label:"Round-robin intégral", desc:"Une seule grande poule : chaque groupe affronte tous les autres. Le plus équitable, mais le plus long."},
+  {id:"suisse", label:"Système suisse", desc:"Chaque groupe débat un nombre fixe de fois, apparié à chaque ronde avec un adversaire de niveau proche, sans élimination. L'équité du temps de parole est garantie par construction."},
+  {id:"elimination", label:"Élimination directe", desc:"Un tableau à élimination directe sur tous les groupes : le perdant est éliminé à chaque tour. Rapide et tendu, mais le moins équitable (un groupe battu d'entrée n'aura débattu qu'une fois)."},
+  {id:"speed", label:"Speed dating", desc:"Rotation générale en manches courtes : chaque groupe croise un maximum d'adversaires. Pour brasser et faire débattre tout le monde — sans vainqueur, c'est un échauffement."}
 ];
 function formatDesc(f){ for(var i=0;i<TOURNAMENT_FORMATS.length;i++){ if(TOURNAMENT_FORMATS[i].id===f) return TOURNAMENT_FORMATS[i].desc; } return ""; }
 function setFormat(f){ _selectedFormat=f; lastProfSig=null; renderDebatProf(); }
@@ -4017,7 +4178,7 @@ function formatSelector(){
 // ───────── Système suisse : moteur d'appariement ─────────
 function swissPairKey(a,b){ return a<b?(a+"|"+b):(b+"|"+a); }
 // Apparie une ronde : trie par score (victoires puis cumul), évite les re-matchs, gère l'exempt avec rotation.
-// ids: binômes ; playedPairs: {"a|b":1} déjà rencontrés ; scores: {bid:{victoires,cumul}} ; alreadyByed: {bid:1} déjà exemptés.
+// ids: groupes ; playedPairs: {"a|b":1} déjà rencontrés ; scores: {bid:{victoires,cumul}} ; alreadyByed: {bid:1} déjà exemptés.
 function swissPairing(ids, playedPairs, scores, alreadyByed){
   playedPairs=playedPairs||{}; scores=scores||{}; alreadyByed=alreadyByed||{};
   var sorted=ids.slice().sort(function(x,y){
@@ -4040,7 +4201,7 @@ function swissPairing(ids, playedPairs, scores, alreadyByed){
   }
   return {pairs:pairs, bye:bye};
 }
-// Nombre de rondes proposé par défaut selon l'effectif (formulé « chaque binôme débat N fois »).
+// Nombre de rondes proposé par défaut selon l'effectif (formulé « chaque groupe débat N fois »).
 function swissDefaultRounds(n){ if(n<=2) return 1; if(n<=4) return 3; if(n<=8) return 4; return 5; }
 
 function _moisFR(m){ return ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."][m]||""; }
@@ -4053,7 +4214,7 @@ function fmtMancheTime(ts, withDate){
 
 function generateTournament(){
   const bs=Object.keys((sessionData.binomes)||{});
-  if(bs.length<2){ toast("Il faut au moins 2 binômes connectés pour générer le tournoi."); return; }
+  if(bs.length<2){ toast("Il faut au moins 2 groupes connectés pour générer le tournoi."); return; }
   const fmt=_selectedFormat||"poules_finale";
   const doIt=function(){
     archiveCurrentTournament();
@@ -4068,7 +4229,7 @@ function generateTournament(){
       db.ref(ACTIVE+"/groupsLocked").set(true);
       sessionEnded=false;
       if(round1.matches[0]){ const fm=round1.matches[0]; loadMatch({type:"swiss",round:1,matchId:fm.id}, fm.a, fm.b); }
-      toast("Tournoi suisse généré — chaque binôme débattra "+N+" fois. Première manche prête.");
+      toast("Tournoi suisse généré — chaque groupe débattra "+N+" fois. Première manche prête.");
       return;
     }
     if(fmt==="elimination"){
@@ -4181,14 +4342,14 @@ function bracketHtml(cm){
     return '<div class="bteam'+(isWin?' win':'')+'">'+sd+'<span class="bnm">'+esc(binomeName(findBinome(bid))||"?")+'</span>'+(isWin?'<span class="bcrown">🏆</span>':'')+'</div>';
   }
   var h='<div class="bracket-box"><div class="bracket-title">'+(mode==="elimination"?"Élimination directe":"Phase finale")+'</div>';
-  if(mode!=="elimination") h+='<div class="bracket-mode">Qualification : <b>'+(mode==="general"?"classement général":"1ers de poule")+'</b><button class="dbg-btn ghost notipi" style="padding:2px 9px;margin-left:8px" onclick="regenFinalPhase(\''+(mode==="general"?"poules":"general")+'\')" title="'+(mode==="general"?"Revenir aux 1ers de chaque poule.":"Requalifier les meilleurs binômes toutes poules confondues — plus juste si les poules sont déséquilibrées.")+'">⚖ '+(mode==="general"?"Revenir aux 1ers de poule":"Régénérer au classement général")+'</button></div>';
+  if(mode!=="elimination") h+='<div class="bracket-mode">Qualification : <b>'+(mode==="general"?"classement général":"1ers de poule")+'</b><button class="dbg-btn ghost notipi" style="padding:2px 9px;margin-left:8px" onclick="regenFinalPhase(\''+(mode==="general"?"poules":"general")+'\')" title="'+(mode==="general"?"Revenir aux 1ers de chaque poule.":"Requalifier les meilleurs groupes toutes poules confondues — plus juste si les poules sont déséquilibrées.")+'">⚖ '+(mode==="general"?"Revenir aux 1ers de poule":"Régénérer au classement général")+'</button></div>';
   if(seeds.length){
     var whyTxt = mode==="elimination"
-      ? 'Tableau <b>tiré au sort</b>. Ordre des binômes dans le tableau :'
+      ? 'Tableau <b>tiré au sort</b>. Ordre des groupes dans le tableau :'
       : (mode==="general"
-      ? 'Sont qualifiés les <b>meilleurs binômes au classement général</b> (toutes poules confondues), classés par <b>victoires</b> puis par <b>points cumulés</b>. Têtes de série :'
+      ? 'Sont qualifiés les <b>meilleurs groupes au classement général</b> (toutes poules confondues), classés par <b>victoires</b> puis par <b>points cumulés</b>. Têtes de série :'
       : 'Sont qualifiés les <b>1ers de chaque poule</b>, classés par <b>victoires</b> puis par <b>points cumulés</b>. Têtes de série :');
-    h+='<details class="bracket-why"><summary>Pourquoi ces binômes ?</summary><div class="why-body"><p>'+whyTxt+'</p><ol class="why-list">';
+    h+='<details class="bracket-why"><summary>Pourquoi ces groupes ?</summary><div class="why-body"><p>'+whyTxt+'</p><ol class="why-list">';
     seeds.forEach(function(bid){ var s=sc[bid]||{}; h+='<li>'+esc(binomeName(findBinome(bid))||"?")+(mode==="elimination"?'':' <span class="why-meta">('+esc(pouleOf(bid))+' · '+(s.victoires||0)+' V · '+(s.cumul||0)+' pts)</span>')+'</li>'; });
     h+='</ol></div></details>';
   }
@@ -4257,7 +4418,7 @@ function openChrono(){
 }
 function closeChrono(){ var ov=document.getElementById("chronoOverlay"); if(ov) ov.classList.remove("show"); }
 
-// Classement général toutes poules confondues (binômes ayant joué), trié par victoires puis cumul
+// Classement général toutes poules confondues (groupes ayant joué), trié par victoires puis cumul
 function globalRanking(){
   var sc=scoresObj();
   return Object.keys(sc)
@@ -4291,8 +4452,8 @@ function regenFinalPhase(mode){
   else build();
 }
 
-// Dissout une poule et répartit ses binômes dans les autres poules (équilibrage automatique).
-// Les binômes déplacés repartent à zéro ; de nouvelles manches sont générées ; la phase finale est réinitialisée.
+// Dissout une poule et répartit ses groupes dans les autres poules (équilibrage automatique).
+// Les groupes déplacés repartent à zéro ; de nouvelles manches sont générées ; la phase finale est réinitialisée.
 function dissolvePoule(pid){
   var poules=poulesObj();
   var srcP=poules[pid];
@@ -4300,8 +4461,8 @@ function dissolvePoule(pid){
   var others=Object.keys(poules).filter(function(k){ return k!==pid; });
   if(others.length===0){ toast("Impossible : c'est la seule poule du tournoi."); return; }
   var moving=(srcP.binomes||[]).filter(function(b){ return findBinome(b); });
-  if(moving.length===0){ toast("Cette poule n'a aucun binôme à ventiler."); return; }
-  // Répartition équilibrée : chaque binôme rejoint la poule la moins peuplée du moment
+  if(moving.length===0){ toast("Cette poule n'a aucun groupe à ventiler."); return; }
+  // Répartition équilibrée : chaque groupe rejoint la poule la moins peuplée du moment
   var load={}; others.forEach(function(k){ load[k]=(poules[k].binomes||[]).length; });
   var plan=moving.map(function(bid){
     var bestK=others[0]; others.forEach(function(k){ if(load[k]<load[bestK]) bestK=k; });
@@ -4310,7 +4471,7 @@ function dissolvePoule(pid){
   });
   var recap=plan.map(function(p){ return (binomeName(findBinome(p.bid))||"?")+" rejoint "+(poules[p.pid].name||"une poule"); }).join(", ");
   askConfirm("Dissoudre « "+(srcP.name||"cette poule")+" » ? "+recap+". Les manches déjà jouées de cette poule seront annulées, de nouvelles manches générées, et la phase finale réinitialisée.", function(){
-    // Construire les nouvelles poules cibles (binômes + matchs), en séquence pour gérer plusieurs arrivées
+    // Construire les nouvelles poules cibles (groupes + matchs), en séquence pour gérer plusieurs arrivées
     var _snapPoules=JSON.parse(JSON.stringify(poulesObj()));
     var _snapScores=JSON.parse(JSON.stringify(scoresObj()||{}));
     var _snapMatches=JSON.parse(JSON.stringify(debatData().matches||{}));
@@ -4329,7 +4490,7 @@ function dissolvePoule(pid){
       db.ref(DEBAT+"/poules/"+k+"/binomes").set(tb[k]);
       db.ref(DEBAT+"/poules/"+k+"/matches").set(tm[k]);
     });
-    // Retirer les manches de la poule dissoute (historique + grilles) et remettre les binômes à zéro
+    // Retirer les manches de la poule dissoute (historique + grilles) et remettre les groupes à zéro
     (srcP.matches||[]).forEach(function(m){ db.ref(DEBAT+"/matches/"+m.id).remove(); db.ref(DEBAT+"/grilleEcoute/"+m.id).remove(); });
     moving.forEach(function(bid){ db.ref(DEBAT+"/scores/"+bid).set({manches:0,victoires:0,defaites:0,cumul:0}); });
     db.ref(DEBAT+"/poules/"+pid).remove();
@@ -4342,7 +4503,7 @@ function dissolvePoule(pid){
   });
 }
 
-// Détecte un déséquilibre de taille entre poules (écart >= 2 binômes), qui crée une inéquité de temps de parole.
+// Détecte un déséquilibre de taille entre poules (écart >= 2 groupes), qui crée une inéquité de temps de parole.
 function detectImbalance(){
   var poules=poulesObj();
   var entries=Object.entries(poules);
@@ -4382,7 +4543,7 @@ function planDissolve(pid){
   var cancelledList=(srcP.matches||[]).filter(function(m){ return m.played; }).map(function(m){ return {a:m.a, b:m.b, scorePour:m.scorePour, scoreContre:m.scoreContre}; });
   return {pid:pid, name:srcP.name||"Poule", moving:moving, plan:plan, newMatches:newMatchList.length, cancelledPlayed:cancelledList.length, newMatchList:newMatchList, cancelledList:cancelledList};
 }
-// Bandeau d'alerte concret (binômes réels + conséquences).
+// Bandeau d'alerte concret (groupes réels + conséquences).
 function imbalanceBanner(){
   var im=detectImbalance(); if(!im) return "";
   var s=im.small[0];
@@ -4390,7 +4551,7 @@ function imbalanceBanner(){
   var names=pl.moving.map(function(b){ return esc(binomeName(findBinome(b))||"?"); });
   var qui=names.length<=1?names[0]:(names.slice(0,-1).join(", ")+" et "+names[names.length-1]);
   var verbe=pl.moving.length>1?"ont débattu":"a débattu";
-  var raisons=qui+" "+verbe+" "+(s.n-1)+" fois (poule de "+s.n+"), contre "+(im.max-1)+" fois pour les autres binômes.";
+  var raisons=qui+" "+verbe+" "+(s.n-1)+" fois (poule de "+s.n+"), contre "+(im.max-1)+" fois pour les autres groupes.";
   var dest=pl.plan.map(function(p){ return esc(binomeName(findBinome(p.bid))||"?")+" → "+esc(p.pouleName); }).join(", ");
   var cons="Rééquilibrer : "+dest+". "+pl.newMatches+" nouvelle(s) manche(s)"+(pl.cancelledPlayed?(", "+pl.cancelledPlayed+" déjà jouée(s) annulée(s)"):"")+", phase finale régénérée, première manche chargée.";
   var h='<div class="imbalance"><div class="imb-head">⚠ Déséquilibre détecté — '+esc(s.name)+'</div>';
@@ -4413,7 +4574,7 @@ function rebalanceHtml(){
     var pl=planDissolve(e[0]); if(!pl) return;
     var names=pl.moving.map(function(b){ return esc(binomeName(findBinome(b))||"?"); });
     var n=(e[1].binomes||[]).length;
-    h+='<div class="reb-card"><div class="reb-card-h">'+esc(e[1].name||"Poule")+' — '+n+' binôme(s)</div>';
+    h+='<div class="reb-card"><div class="reb-card-h">'+esc(e[1].name||"Poule")+' — '+n+' groupe(s)</div>';
     h+='<div class="reb-why"><span class="reb-tag">Raisons</span> '+names.join(", ")+' '+(pl.moving.length>1?"ont débattu":"a débattu")+' '+(n-1)+' fois, contre '+(max-1)+' fois ailleurs.</div>';
     h+='<div class="reb-cons"><span class="reb-tag">Conséquences</span> '+pl.plan.map(function(p){ return esc(binomeName(findBinome(p.bid))||"?")+" → "+esc(p.pouleName); }).join(", ")+'. '+pl.newMatches+' nouvelle(s) manche(s)'+(pl.cancelledPlayed?(', '+pl.cancelledPlayed+' déjà jouée(s) annulée(s)'):'')+', phase finale régénérée.</div>';
     var _nm=(pl.newMatchList||[]).map(function(x){ return esc(binomeName(findBinome(x.a))||"?")+" vs "+esc(binomeName(findBinome(x.b))||"?")+' <span class="why-meta">('+esc(x.pouleName)+')</span>'; });
@@ -4467,7 +4628,7 @@ function swissRoundsControl(){
   if(_selectedFormat!=="suisse") return "";
   var nb=Object.keys((sessionData.binomes)||{}).length||4;
   var defN=_swissRounds>0?_swissRounds:swissDefaultRounds(nb);
-  return '<div class="swiss-set">Chaque binôme débattra <button class="sw-step" onclick="setSwissRounds('+(defN-1)+')" title="Moins de rondes.">−</button><b>'+defN+'</b><button class="sw-step" onclick="setSwissRounds('+(defN+1)+')" title="Plus de rondes.">+</button> fois</div>';
+  return '<div class="swiss-set">Chaque groupe débattra <button class="sw-step" onclick="setSwissRounds('+(defN-1)+')" title="Moins de rondes.">−</button><b>'+defN+'</b><button class="sw-step" onclick="setSwissRounds('+(defN+1)+')" title="Plus de rondes.">+</button> fois</div>';
 }
 // Génère une ronde : appariement par score, en évitant les re-matchs et avec rotation de l'exempt.
 function genSwissRound(roundNum){
@@ -4506,7 +4667,7 @@ function swissHtml(cm){
   var sw=debatData().swiss; if(!sw) return "";
   var mt=debatData().matches||{};
   var h='<div class="bracket-box"><div class="bracket-title">Système suisse</div>';
-  h+='<div class="bracket-mode">Ronde '+(sw.currentRound||1)+' / '+(sw.totalRounds||1)+' — chaque binôme débat '+(sw.totalRounds||1)+' fois</div>';
+  h+='<div class="bracket-mode">Ronde '+(sw.currentRound||1)+' / '+(sw.totalRounds||1)+' — chaque groupe débat '+(sw.totalRounds||1)+' fois</div>';
   h+='<div class="swiss-rounds">';
   (sw.rounds||[]).forEach(function(rd){
     h+='<div class="swiss-rnd"><div class="swiss-rname">Ronde '+rd.n+'</div>';
@@ -4650,7 +4811,7 @@ function renderArchivesList(){
       const ts=en[0], e=en[1];
       let dt; try{ dt=new Date(e.archivedAt||parseInt(ts,10)).toLocaleString("fr-FR"); }catch(x){ dt=String(ts); }
       const issue=e.championName?("🏆 "+esc(e.championName)):"en cours";
-      h+='<div class="dbg-match" style="padding:6px 0;flex-wrap:wrap"><span>'+esc(dt)+' · '+(e.nbBinomes||0)+' binômes · '+issue+'</span><span class="res">'
+      h+='<div class="dbg-match" style="padding:6px 0;flex-wrap:wrap"><span>'+esc(dt)+' · '+(e.nbBinomes||0)+' groupes · '+issue+'</span><span class="res">'
        + '<button class="dbg-btn ghost" onclick="restoreTournament(\''+code+'\',\''+ts+'\')" title="Recharge ce tournoi comme tournoi actif. Le tournoi en cours sera d\'abord archivé.">Restaurer</button>'
        + '<button class="dbg-btn ghost" style="color:#c53030" onclick="deleteTournamentArchive(\''+code+'\',\''+ts+'\')" title="Supprimer définitivement cette archive.">Suppr.</button>'
        + '</span></div>';
@@ -4736,7 +4897,7 @@ function renderEvalDetail(){
   h+='<div style="font-weight:700;color:#3a3a3a;margin:14px 0 6px">Évaluateurs (spectateurs) — '+sids.length+'</div>';
   if(sids.length===0){ h+='<div style="color:#6b6b6b;font-style:italic">Aucun spectateur n\'a envoyé d\'évaluation pour cette manche.</div>'; }
   sids.forEach(function(sid){
-    const g=G[sid]||{}; const nm=esc(binomeName(findBinome(sid))||"(binôme inconnu)");
+    const g=G[sid]||{}; const nm=esc(binomeName(findBinome(sid))||"(groupe inconnu)");
     h+='<div class="eval-card"><div class="eval-who">'+nm+'</div>';
     h+='<div class="eval-row"><span class="eval-camp pour">POUR</span> '+evalLine(g.pour)+'</div>';
     if(g.pour&&g.pour.meilleur){ h+='<div class="eval-cmt">meilleur argument POUR : « '+esc(g.pour.meilleur)+' » '+avisButtons(mid,sid,"pour")+'</div>'; }
@@ -4844,7 +5005,7 @@ function renderCarnetEleve(){
   body.innerHTML=h;
 }
 
-// ── Carnets des évaluateurs — côté prof (par binôme) ──
+// ── Carnets des évaluateurs — côté prof (par groupe) ──
 function openCarnetProf(){ renderCarnetProf(); $("carnetProfOverlay").classList.add("show"); }
 function closeCarnetProf(){ $("carnetProfOverlay").classList.remove("show"); }
 function renderCarnetProf(){
@@ -4857,7 +5018,7 @@ function renderCarnetProf(){
   sids.sort(function(a,b){ return (binomeName(findBinome(a))||"").localeCompare(binomeName(findBinome(b))||""); });
   let h='';
   sids.forEach(function(sid){
-    const nm=esc(binomeName(findBinome(sid))||"(binôme inconnu)"), list=byEv[sid];
+    const nm=esc(binomeName(findBinome(sid))||"(groupe inconnu)"), list=byEv[sid];
     list.sort(function(a,b){ return (a.g.at||0)-(b.g.at||0); });
     h+='<div class="eval-card"><div class="eval-who">'+nm+' — '+list.length+' évaluation(s)</div>';
     list.forEach(function(it){
@@ -4892,7 +5053,7 @@ function updateVoteStatus(d, cm){
   if(elP){
     let h='<div class="vote-box"><div class="vote-head">📨 Évaluations reçues : <b>'+k+' / '+n+'</b></div>';
     if(vs.missing.length) h+='<div class="vote-missing">En attente : '+vs.missing.map(nm).join(", ")+'</div>';
-    else if(n>0) h+='<div class="vote-done">Tous les binômes ont voté ✓</div>';
+    else if(n>0) h+='<div class="vote-done">Tous les groupes ont voté ✓</div>';
     h+='</div>'; elP.innerHTML=h;
   }
   if(elS){
@@ -4955,7 +5116,7 @@ function handleImportFile(ev){
     try{ payload=JSON.parse(reader.result); }catch(e){ toast("Fichier JSON invalide."); return; }
     if(payload && payload._backup){ restoreFullBackup(payload); return; }
     if(!validateDebatImport(payload)){ toast("Ce fichier n'est pas un export de débat."); return; }
-    askConfirm("Réinjecter cet export ? L'état actuel du débat (binômes, poules, manches, scores) sera entièrement remplacé. À faire hors séance.", function(){
+    askConfirm("Réinjecter cet export ? L'état actuel du débat (groupes, poules, manches, scores) sera entièrement remplacé. À faire hors séance.", function(){
       applyDebatImport(payload);
       toast("Import effectué.");
     });
@@ -5002,7 +5163,7 @@ function consigneDonnee(n,mid,sid,camp){
   const k=commentAvis(mid,sid,camp);
   if(k==="hs") return '<div class="carnet-consigne hs">✍ Le professeur juge cet argument <b>hors sujet</b> : ne le reprends pas.</div>';
   const nu=(k==="partiel")?', à <b>affiner</b>':'';
-  return '<div class="carnet-consigne">✍ Bon argument <b>repéré chez un autre binôme</b>'+nu+'. Note-le dans ton <b>Carnet (DOC 10)</b>, à « <b>Mon objectif pour la prochaine manche</b> » : c\'est un argument à voler.</div>';
+  return '<div class="carnet-consigne">✍ Bon argument <b>repéré chez un autre groupe</b>'+nu+'. Note-le dans ton <b>Carnet (DOC 10)</b>, à « <b>Mon objectif pour la prochaine manche</b> » : c\'est un argument à voler.</div>';
 }
 function collectComments(){
   const GE=(debatData().grilleEcoute)||{}; const out=[];
