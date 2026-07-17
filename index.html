@@ -772,6 +772,10 @@ body.admin-mode .admin-only { display: block; }
     <div class="link-modal-section-title">🗳️ Évaluation QCM existante</div>
     <div class="link-modal-row"><select class="link-modal-select" id="link-modal-qcm"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('qcm')">Lier</button></div>
   </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">🎙️ Débat existant</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-debat"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('debat')">Lier</button></div>
+  </div>
   <div class="link-modal-footer">
     <button class="link-modal-btn danger" onclick="linkModalUnlink()">Délier</button>
     <button class="link-modal-btn cancel" onclick="closeLinkModal()">Annuler</button>
@@ -1231,7 +1235,7 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   var isGallery=it.kind==='gallery';
   var imgKeys=isGallery?Object.keys(it.images||{}).filter(function(k){return it.images[k]&&typeof it.images[k]==='object';}):[];
   var iconClass='pdf';
-  if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm'||it.kind==='tache')iconClass='html';
+  if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm'||it.kind==='tache'||it.kind==='debat')iconClass='html';
   var icon=it.icon||(isGallery?'\ud83d\uddbc':'\ud83d\udcc4');
   var hasRef=isGallery?imgKeys.length>0:!!it.ref;
   var pubV=(isAdmin||isPubFor(it,_eleveClasse()));
@@ -1291,6 +1295,7 @@ function openItem(level,chnum,snum,itemId){
   if(item.kind==='dictee' && src==='firebase_app'){if(typeof openDicteeById==='function')openDicteeById(ref);return;}
   if(item.kind==='reecriture' && src==='firebase_app'){if(typeof openReecriture==='function')openReecriture(ref,item.title);return;}
   if(item.kind==='qcm' && src==='firebase_app'){openViewer(item.title||'\u00c9valuation QCM','evaluation-qcm.html?mode=eleve&eval='+encodeURIComponent(ref));return;}
+  if(item.kind==='debat' && src==='firebase_app'){openViewer(item.title||'D\u00e9bat','pilotage_debat_s3.html?debat='+encodeURIComponent(ref));return;}
   if(src==='drive'){openViewer(item.title,'https://drive.google.com/file/d/'+ref+'/preview');return;}
   if(src==='external'){openViewer(item.title,ref);return;}
   if(src==='html'){openViewer(item.title,ref);return;}
@@ -1519,6 +1524,7 @@ function openLinkModal(level,chnum,snum,itemId){
   loadAppList('dictee');
   loadAppList('reecriture');
   loadAppList('qcm');
+  loadAppList('debat');
   document.getElementById('link-modal').classList.add('visible');
 }
 
@@ -1535,6 +1541,7 @@ function loadAppList(kind){
   if(kind==='dictee')url=FIREBASE_BASE+'/dictees.json';
   else if(kind==='reecriture')url=FIREBASE_BASE+'/reecritures.json';
   else if(kind==='qcm')url=QCM_FIREBASE_BASE+'/qcm/evaluations.json';
+  else if(kind==='debat')url=FIREBASE_BASE+'/debats.json';
   fetch(url).then(function(r){return r.json();}).catch(function(){return null;}).then(function(data){
     sel.innerHTML='<option value="">\u2014 Choisir \u2014</option>';
     if(data){
