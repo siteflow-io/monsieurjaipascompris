@@ -593,6 +593,17 @@
   th.doc:hover .open{background:var(--gold);color:#1a1710;border-color:var(--gold)}
   th.doc:hover{background:rgba(220,171,85,.06)}
 
+  /* ===== M5 : « Mes débats » — historique élève, thème sombre ===== */
+  .mesdebov{position:fixed;inset:0;background:rgba(10,8,5,.78);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:112;padding:24px}
+  .mesdebov.show{display:flex}
+  .mesdeb-card{background:linear-gradient(160deg,#2a251b,#211d15);border:1px solid var(--line);border-radius:16px;padding:22px 24px;max-width:560px;width:100%;max-height:80vh;overflow:auto}
+  .mesdeb-card h3{font-family:'Fraunces',serif;color:var(--gold);font-size:1.15rem;margin:0 0 10px}
+  .mesdeb-item{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px;background:rgba(26,23,18,.55)}
+  .mesdeb-t{font-weight:700;color:var(--ink)}
+  .mesdeb-s{font-size:.85rem;color:var(--ink2);margin-top:2px;line-height:1.45}
+  .mesdeb-vide{color:var(--ink2);font-size:.92rem}
+  .mesdeb-close{margin-top:6px}
+
   /* ===== K.3 (M4) : reformulation après jeton d'aide — élève, thème sombre ===== */
   .reformov{position:fixed;inset:0;background:rgba(10,8,5,.75);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:110;padding:24px}
   .reformov.show{display:flex}
@@ -980,6 +991,7 @@ body:has(.overlay.show){overflow:hidden}
     </div>
     <div class="tools">
       <span id="studentConn" style="font-size:.82rem;color:var(--muted)"><span class="conn-dot ok"></span>connecté</span>
+      <button class="ghost" onclick="ouvrirMesDebats()" title="Ton historique : les débats où tu as travaillé cette année.">📜 Mes débats</button>
       <button class="ghost" onclick="studentLogout()" title="Quitter cette session et revenir à l'écran d'accueil.">⎋ Quitter</button>
     </div>
   </header>
@@ -1014,7 +1026,7 @@ body:has(.overlay.show){overflow:hidden}
     <div class="tools">
       <span id="profConn" style="font-size:.82rem;color:#6b6b6b" title="État de la connexion. Vert : tout est synchronisé en direct. Rouge : vérifie ta connexion réseau."><span class="conn-dot ok"></span>connecté</span>
       <button class="ghost" onclick="showDebatChooser()" title="Revenir au panneau de contrôle : la liste de tous tes débats.">← Mes débats</button>
-      <button class="ghost" onclick="resetGroupes()" title="Le travail des groupes repart à neuf : documents « à faire », demandes effacées, 2 jetons rendus, zones marquées oubliées. La composition des groupes, le tournoi et les scores sont conservés.">↺ Remise à zéro des groupes</button>
+      <button class="ghost" onclick="resetGroupes()" title="Le travail des groupes repart à neuf : documents « à faire », demandes effacées, 2 jetons rendus, zones marquées oubliées. La composition des groupes, le tournoi et les scores sont conservés.">↺ Remise à zéro du travail</button>
       <button class="ghost" onclick="openProfMenu()" title="Plus d'actions (archiver, changer mot de passe…).">⋯ Plus</button>
       <button class="ghost" onclick="profLogout()" title="Quitter le mode prof.">⎋ Quitter</button>
     </div>
@@ -1218,6 +1230,7 @@ body:has(.overlay.show){overflow:hidden}
     <h2 style="font-size:1.25rem;margin-bottom:18px;text-align:center">Actions avancées</h2>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="enterDebatMode()" title="Lance le mode débat pour toute la classe : poules, tirage POUR/CONTRE et chronomètre. Les tablettes des élèves basculent automatiquement.">🎙 Mode débat — lancer les joutes</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="changePassword()" title="Modifier le mot de passe d'accès au mode professeur. Le changement prend effet tout de suite, sur toutes les tablettes.">🔑 Changer le mot de passe prof</button>
+    <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="dissoudreGroupes()" title="Efface la composition des groupes ET leur travail (documents, jetons, reformulations) — la séance et les archives sont conservées. Les élèves se replacent (mode choisi) ou tu recomposes (mode imposé).">🫧 Dissoudre les groupes</button>
     <button class="ghost" style="width:100%;margin-bottom:8px;text-align:left" onclick="archiveCurrentSession()" title="Range la séance actuelle aux archives sans en créer une nouvelle. Utile pour faire une pause.">📦 Archiver cette séance (sans en créer une nouvelle)</button>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeMenu()" title="Fermer ce menu.">Fermer</button></div>
   </div>
@@ -1307,6 +1320,15 @@ body:has(.overlay.show){overflow:hidden}
     <p style="color:var(--muted);font-size:.95rem;line-height:1.55;margin:0">Le professeur a mis ton groupe en pause. Range la tablette et attends son signal pour reprendre.</p>
   </div>
 </div>
+<!-- M5 : « Mes débats » — l'historique de l'élève dans les débats -->
+<div class="mesdebov" id="mesDebatsOverlay">
+  <div class="mesdeb-card">
+    <h3>Mes débats</h3>
+    <div id="mesDebatsBody"><p class="mesdeb-vide">Chargement…</p></div>
+    <div style="display:flex;justify-content:flex-end"><button class="ghost mesdeb-close" onclick="fermerMesDebats()" title="Revenir au travail.">Fermer</button></div>
+  </div>
+</div>
+
 <!-- K.3 (M4) : reformulation de l'aide reçue (élève, non bloquant après 15 s) -->
 <div class="reformov" id="reformOverlay">
   <div class="reform-card">
@@ -1329,57 +1351,28 @@ body:has(.overlay.show){overflow:hidden}
 /* ============================================================
    Débat MJPC — version Firebase (ex-app dédiée, universalisée le 14/07/2026)
    Architecture : un fichier HTML, 3 écrans (welcome / student / prof)
-   Backend : Firebase Realtime Database, branche debat_singes/
+   Backend : Firebase Realtime Database, branche debats/ (multi-débats, un actif par classe)
    ============================================================ */
 
 /* ════════════════════════════════════════════════════════════════════
-   ⚠ CHANTIER À REPRENDRE — DÉBATS MULTI-CLASSES (un débat par classe)
+   ✔ CHANTIER MULTI-CLASSES EXÉCUTÉ (M5, 17/07/2026)
    ────────────────────────────────────────────────────────────────────
-   PROBLÈME ACTUEL :
-     Le sélecteur de classe (classeSelector / setDebatClasse) écrit
-     seulement active/classe (une étiquette). Il n'y a qu'UN débat actif,
-     sous active/debat. Changer de classe ne bascule donc PAS de débat :
-     on voit toujours le même. Cf. setDebatClasse() ~L164.
-
-   OBJECTIF (validé par Paul) :
-     Plusieurs débats en parallèle, UN par classe, JAMAIS deux pour la
-     même classe. La classe est la clé unique.
-
-   ARCHITECTURE CIBLE :
-     • Débats persistants sous  active/debats/<slugClasse>  (tout l'état
-       actuel d'active/debat : poules, matches, scores, tournament, swiss,
-       bracket, rebalances, currentMatch…), une copie par classe.
-     • Pointeur  active/classeEnCours  = la classe pilotée / en séance.
-     • Les DEUX seuls points à rebrancher (tout le moteur passe par eux) :
-         - la variable  DEBAT  → ACTIVE + "/debats/" + slug(classeEnCours)
-         - la fonction  debatData()  → (sessionData.debats||{})[slug] || {}
-       (cf. DEBAT ~L21 et debatData() ~L1260)
-     • Le listener écoute déjà tout ACTIVE → récupère tous les débats,
-       AUCUN ré-attachement nécessaire.
-     • setDebatClasse(v) : écrire active/classeEnCours = v + re-render
-       (lastProfSig=null), au lieu d'écrire active/classe.
-     • MIGRATION au boot : si active/debat existe et pas active/debats,
-       déplacer active/debat → active/debats/<classe rattachée actuelle>
-       (en douceur, rien perdu). Idéalement détecter la classe via
-       l'ancien active/classe ; sinon demander.
-
-   DÉCISION EN SUSPENS — CÔTÉ ÉLÈVE / CODES (à trancher avant de coder l'étape 2) :
-     Option 1 (RECOMMANDÉE) : un code commun ; classeEnCours détermine ce
-       que voient les élèves (une séance = une classe). Inconvénient : si
-       le prof bascule sa vue pendant la séance, les élèves basculent aussi.
-     Option 2 : un code par classe (cloisonné ; plusieurs codes à gérer).
-
-   ÉTAPES :
-     1. Résolution DEBAT par classe + debatData() + setDebatClasse →
-        classeEnCours + migration boot. Testé. (Côté pilotage uniquement.)
-     2. Raccordement côté élève (selon l'option 1/2 retenue).
-
-   POINTS D'ATTENTION :
-     • DEBAT est le cœur : toute fonction écrivant en dur ACTIVE+"/debat"
-       doit passer par DEBAT. Vérifier exportDebatJSON / importDebatJSON /
-       archive / bootDebat.
-     • Ne pas casser la régression (≥430 tests, harnais _test_tournoi & co).
-     • Penser slug(classe) stable (accents/espaces) pour la clé Firebase.
+   • État oral par classe : active/debats/<slugC(classe)> — la classe est
+     la clé unique, jamais deux débats oraux pour la même classe.
+   • Pointeur prof : active/classeEnCours (écrit par le sélecteur du bandeau,
+     avec active/classe — le rattachement M3/M4 est conservé).
+   • Côté ÉLÈVE : le créneau est SA classe (session MJPC) — la bascule de
+     vue du prof ne déplace JAMAIS les tablettes.
+   • Routage inter-débats : debat_config/routage/<slugC(classe)> = debatId,
+     écrit au rattachement et à la migration ; lu à la connexion élève
+     (fallback : parcours de debats/<id>/active/classe, comme avant).
+   • Migration douce au 1er snapshot prof : active/debat → active/debats/
+     <classe rattachée> (rien perdu), pointeur et routage posés.
+   • Les 2 points de rebranchement du mémo d'origine tenus : DEBAT (majDEBAT)
+     et debatData() — le moteur entier passe par eux, vérifié.
+   QUESTION ⑰ (code élève commun vs par classe) : MORTE DE FAIT — la
+   connexion par IDENTITÉ (session MJPC, qui porte la classe) a remplacé
+   les codes de séance ; le routage se fait par la classe, jamais par un code.
    ════════════════════════════════════════════════════════════════════ */
 
 /* ════════════════════════════════════════════════════════════════════
@@ -1391,7 +1384,7 @@ body:has(.overlay.show){overflow:hidden}
    • DÉBAT        debats/<id> entier — l'objet choisi à l'accueil, rattaché à une classe.
    • PRÉPARATION  /config — la conception (titre, œuvre, affirmation, camps) ; survit à la purge.
    • SÉANCE       /active — la vie de classe en cours, d'une « Nouvelle séance » à la suivante.
-   • GROUPE       binomes/<id> — l'équipe d'élèves (UI : toujours « groupe », jamais « groupe »).
+   • GROUPE       binomes/<id> — l'équipe d'élèves (UI : toujours « groupe », jamais « binôme »).
    • DOCUMENTS    les DOC 1-10 (etapes) · PARCOURS : l'avancement du groupe (tableau de suivi).
    • JETON D'AIDE tokens (2/groupe) — consommé par zone ; K.3 : reformulation après usage.
    • VERROUILLAGE groupsLocked — fige la composition des groupes.
@@ -1403,7 +1396,7 @@ body:has(.overlay.show){overflow:hidden}
    • CARNET DE BORD   le DOC 10 papier · MES RETOURS : l'écran élève des retours reçus.
    • CLASSE RATTACHÉE active/classe · PRÉSENCE : pastilles · SUSPENSION : blocked.
    ── LES REMISES À ZÉRO (refonte M4 : quatre → une) ──
-   • « REMISE À ZÉRO DES GROUPES » (resetGroupes) : le travail repart à neuf
+   • « REMISE À ZÉRO DU TRAVAIL » (resetGroupes) : le travail repart à neuf
      (statuts des documents, demandes de validation, jetons, zones marquées) ;
      la COMPOSITION des groupes, le tournoi et les scores sont CONSERVÉS.
      Remplace resetStatus + resetTokens (fusion validée Q18).
@@ -1622,45 +1615,48 @@ var MJPC_APP = {
   contenant: "binome"           // évaluations par groupe — le groupe est un contenant, pas une identité
 };
 var MJPC_MANIFESTE = {
-  noeuds: ["debats","debat_singes","debat_config"],   // debat_config = mot de passe prof unique (14/07) · /codes rendu au site MJPC
+  noeuds: ["debats","debat_config"],   // M5 : debat_singes archivé en corbeille puis supprimé (17/07) · debat_config = mot de passe prof + routage par classe
   notions: []                   // rattachement compétences oral : Phase 3 (Concordance)
 };
 var MJPC_PURGE = {
   preserver: ["debats/*/config","debats/*/meta","debat_config"],   // conception + meta + mot de passe prof unique
-  purger:    ["debats/*/active","debats/*/archives","debat_singes"]
-              // active = groupes/manches/scores (données élèves) · archives annuelles · debat_singes = legacy migré · codes = codes élèves annuels
+  purger:    ["debats/*/active","debats/*/archives"]
+              // active = groupes/manches/scores (données élèves) · archives annuelles
 };
-let DEBAT_ID = "debat_singes";
-let ROOT = "debat_singes";
+var DEFAULT_DEBAT_ID = "planete-des-singes-3e";
+let DEBAT_ID = DEFAULT_DEBAT_ID;
+let ROOT = "debats/" + DEFAULT_DEBAT_ID;
 let ACTIVE = ROOT + "/active";
 let ARCHIVES = ROOT + "/archives";
 let META = ROOT + "/meta";
-let DEBAT = ACTIVE + "/debat";
 let TARCH = ROOT + "/tournamentArchives";
 const DEFAULT_PWD = "1312";
-var DEFAULT_DEBAT_ID = "planete-des-singes-3e";
-function setDebatId(id, legacy){
+/* ════ M5 — UN DÉBAT ORAL PAR CLASSE (mémo multi-classes exécuté le 17/07) ════
+   • État oral par classe : ACTIVE/debats/<slugC(classe)> — la classe est la clé,
+     jamais deux débats oraux pour la même classe.
+   • Pointeur prof : ACTIVE/classeEnCours (la classe pilotée au bandeau).
+   • Côté ÉLÈVE, le créneau est SA classe (session MJPC) — la bascule du prof
+     ne déplace jamais les tablettes.
+   • Routage inter-débats : debat_config/routage/<slugC(classe)> = debatId
+     (l'élève connecté est routé vers LE débat de sa classe). */
+function slugC(c){ return String(c||"").replace(/[.#$/\[\]]/g,"_").trim() || "_defaut"; }
+let CLASSE_EN_COURS = "";
+function debatSlotSlug(){
+  if(role==="student" && eleveConnecte && eleveConnecte.classe) return slugC(eleveConnecte.classe);
+  return slugC(CLASSE_EN_COURS || ((sessionData||{}).classe) || "_defaut");
+}
+let DEBAT = ACTIVE + "/debats/" + "_defaut";
+function majDEBAT(){ DEBAT = ACTIVE + "/debats/" + debatSlotSlug(); }
+function setDebatId(id){
   DEBAT_ID = id;
-  ROOT = legacy ? id : ("debats/"+id);
+  ROOT = "debats/"+id;
   ACTIVE = ROOT + "/active";
   ARCHIVES = ROOT + "/archives";
   META = ROOT + "/meta";
-  DEBAT = ACTIVE + "/debat";
   TARCH = ROOT + "/tournamentArchives";
+  majDEBAT();
 }
-function migrateLegacy(){
-  var targetId="planete-des-singes-3e", dest="debats/"+targetId;
-  askConfirm("Migrer debat_singes vers "+dest+" ? L'ancien debat_singes est CONSERV\u00c9 (copie, pas d\u00e9placement). \u00c0 faire hors s\u00e9ance.", function(){
-    db.ref("debat_singes").once("value").then(function(snap){
-      var legacy=snap.val();
-      if(!legacy){ toast("Rien \u00e0 migrer (debat_singes vide)."); return; }
-      db.ref(dest).set(legacy).then(function(){
-        db.ref(dest+"/config").once("value").then(function(cs){ if(!cs.val()) db.ref(dest+"/config").set(DEBAT_CFG); });
-        toast("Migration effectu\u00e9e vers "+dest+(code?(" \u2014 code "+code+" index\u00e9."):"."));
-      }).catch(function(e){ toast("Migration impossible : "+e.message); });
-    });
-  });
-}
+/* migrateLegacy supprimée (M5, 17/07) : debat_singes archivé en corbeille/2026-07-17/legacy-debat_singes puis supprimé du hub — la migration vers debats/planete-des-singes-3e avait déjà eu lieu. */
 
 // ─────────── Données statiques ───────────
 const DEBAT_CFG = {
@@ -2014,7 +2010,15 @@ function classeSelector(){
   var opts='<option value="">— Classe —</option>'+keys.map(function(c){ return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+' ('+extractEleves(CLASSES[c],[]).length+')</option>'; }).join('');
   return '<select class="dbg-btn ghost" style="padding:6px 8px" onchange="setDebatClasse(this.value)" title="Classe rattachée à ce débat — élèves lus dans /classes (partagé avec les autres apps MJPC).">'+opts+'</select>';
 }
-function setDebatClasse(v){ db.ref(ACTIVE+"/classe").set(v||null); toast(v?("Classe rattachée : "+v):"Classe détachée."); }
+function setDebatClasse(v){
+  db.ref(ACTIVE+"/classe").set(v||null);
+  db.ref(ACTIVE+"/classeEnCours").set(v||null);   /* M5 : la classe pilotée bascule avec le rattachement */
+  if(v) ecrireRoutage(v); else db.ref("debat_config/routage").once("value").then(function(s){
+    var r=s.val()||{}; Object.keys(r).forEach(function(k){ if(r[k]===DEBAT_ID) db.ref("debat_config/routage/"+k).remove(); });
+  });
+  lastProfSig=null;
+  toast(v?("Classe rattachée : "+v+" — ses élèves tomberont sur ce débat."):"Classe détachée.");
+}
 
 // ─────────── Toast ───────────
 let toastTimer=null;
@@ -2050,24 +2054,13 @@ function watchConnection(){
 
 // ─────────── Démarrage ───────────
 async function bootDebat(){
-  var dest="debats/"+DEFAULT_DEBAT_ID;
   try{
-    var destSnap=await db.ref(dest).once("value");
-    if(!destSnap.val()){
-      var legacySnap=await db.ref("debat_singes").once("value");
-      var lv=legacySnap.val();
-      if(lv){
-        await db.ref(dest).set(lv);
-        var cs0=await db.ref(dest+"/config").once("value");
-        if(!cs0.val()) await db.ref(dest+"/config").set(DEBAT_CFG);
-      }
-    }
-    setDebatId(DEFAULT_DEBAT_ID);
+    setDebatId(DEFAULT_DEBAT_ID);   /* M5 : le legacy debat_singes n'existe plus (archivé en corbeille) */
     var cfgSnap=await db.ref(ROOT+"/config").once("value");
     if(cfgSnap.val()) applyConfig(cfgSnap.val());
   }catch(e){
-    console.error("bootDebat — repli sur debat_singes :", e);
-    setDebatId("debat_singes", true);
+    console.error("bootDebat :", e);
+    setDebatId(DEFAULT_DEBAT_ID);
   }
 }
 window.addEventListener("load", async () => {
@@ -2096,7 +2089,9 @@ window.addEventListener("load", async () => {
      session est désormais portée par la session MJPC (socle §8, validité 12 h). */
   if(savedRole==="student" && savedSession && savedBinome){
     // tenter de reprendre la session sur le bon débat
-    const savedDebatId = safeStorage.get("debatId"); if(savedDebatId) setDebatId(savedDebatId);
+    /* M5 : un item du site peut désigner un débat précis (?debat=<id>) — prioritaire sur la mémoire du poste */
+    try{ var _qd = new URLSearchParams(location.search).get("debat"); }catch(e){ var _qd=null; }
+    const savedDebatId = _qd || safeStorage.get("debatId"); if(savedDebatId) setDebatId(savedDebatId);
     const ok = await rejoinStudent(savedSession, savedBinome);
     if(!ok){ showScreen("Welcome"); }
   } else {
@@ -2301,13 +2296,16 @@ async function doStudentLogin(){
 /* L'élève est identifié : trouver le débat de SA classe, puis son groupe. */
 async function identifieEleve(el){
   eleveConnecte = el;
-  /* le débat rattaché à sa classe (parcours des débats existants) */
+  /* M5 — routage par le POINTEUR debat_config/routage/<classe> (une lecture),
+     fallback : parcours des débats existants (comportement antérieur). */
   var did = null;
-  try{
+  try{ did = await db.ref("debat_config/routage/"+slugC(el.classe)).once("value").then(function(s){ return s.val(); }); }catch(e){}
+  if(did){ try{ var ok = await db.ref("debats/"+did+"/config").once("value").then(function(s){ return !!s.val(); }); if(!ok) did=null; }catch(e){ did=null; } }
+  if(!did) try{
     const ids = await db.ref("debats").once("value").then(function(s){ return Object.keys(s.val()||{}); });
     for(var i=0;i<ids.length;i++){
       const cl = await db.ref("debats/"+ids[i]+"/active/classe").once("value").then(function(s){ return s.val(); });
-      if(cl===el.classe){ did=ids[i]; break; }
+      if(cl===el.classe){ did=ids[i]; ecrireRoutage(el.classe); break; }
     }
   }catch(e){}
   if(!did){
@@ -2454,12 +2452,37 @@ async function showDebatChooser(){
       return '<div class="dbc-row"><div class="dbc-main" onclick="openDebat(\''+id+'\')" title="Entrer dans le pilotage de ce d\u00e9bat."><div class="dbc-t">'+esc(c.title||id)+'</div><div class="dbc-s">'+sub+'</div></div>'
         +'<div class="dbc-right">'+badges
         +'<button class="dbc-btn" onclick="openDebatPrep(\''+id+'\')" title="Ouvrir directement la Pr\u00e9paration : titre, affirmation, camps, classe.">\u270f\ufe0f \u00c9diter</button>'
+        +'<button class="dbc-btn" onclick="supprimerDebat(\''+id+'\')" title="Supprimer ce d\u00e9bat : il part d\u2019abord ENTIER en corbeille (conservation 1 an), puis dispara\u00eet de la liste.">\ud83d\uddd1</button>'
         +'<button class="dbc-open" onclick="openDebat(\''+id+'\')">Ouvrir \u2192</button></div></div>';
     }).join("") : '<p class="dbc-sub">Aucun d\u00e9bat pour l\u2019instant \u2014 cr\u00e9e le premier ci-dessous.</p>';
   }
   var ov=$("debatChooserOverlay"); if(ov) ov.classList.add("show");
 }
 async function openDebatPrep(id){ await openDebat(id); ppGo('pilotage','preparation'); }
+/* ════ M5 — SUPPRESSION D'UN DÉBAT : la chaîne d'archive AVANT toute destruction
+   (doctrine : toute destruction passe par archive). Le débat ENTIER (préparation,
+   séance, archives, tournois) est copié en corbeille/<date>/debat-<id>, puis
+   supprimé ; le routage des classes qui pointaient ce débat est nettoyé. */
+async function supprimerDebat(id){
+  var snap = await db.ref("debats/"+id).once("value");
+  var d = snap.val();
+  if(!d){ toast("Ce d\u00e9bat n'existe plus."); showDebatChooser(); return; }
+  var titre=((d.config||{}).title)||id;
+  var nbArch=Object.keys(d.archives||{}).length;
+  askConfirm("Supprimer le d\u00e9bat \u00ab "+titre+" \u00bb ? TOUT part d'abord en corbeille (pr\u00e9paration, s\u00e9ance en cours, "+nbArch+" archive"+(nbArch>1?"s":"")+", tournois) \u2014 conservation 1 an, restauration possible. Puis il dispara\u00eet de la liste et les \u00e9l\u00e8ves de sa classe n'y tomberont plus.", async ()=>{
+    try{
+      var date = new Date().toISOString().slice(0,10);
+      await db.ref("corbeille/"+date+"/debat-"+id).set(d);
+      await db.ref("debats/"+id).remove();
+      try{
+        var r = await db.ref("debat_config/routage").once("value").then(function(s){ return s.val()||{}; });
+        for(var k in r){ if(r[k]===id) await db.ref("debat_config/routage/"+k).remove(); }
+      }catch(e){}
+      toast("D\u00e9bat \u00ab "+titre+" \u00bb archiv\u00e9 en corbeille puis supprim\u00e9.");
+      showDebatChooser();
+    }catch(e){ toast("Suppression impossible : "+e.message); }
+  });
+}
 async function openDebat(id){
   setDebatId(id);
   safeStorage.set("debatId", id);
@@ -2474,7 +2497,7 @@ async function createDebat(cfg){
   try{ var ex=await db.ref("debats/"+id+"/config").once("value"); if(ex.val()) id=base+"-"+uid().slice(0,4); }catch(e){}
   var fullCfg={ title:cfg.title||"D\u00e9bat", work:cfg.work||"", author:cfg.author||"", level:cfg.level||"", objective:cfg.objective||"", motion:cfg.motion||"", pour:cfg.pour||"", contre:cfg.contre||"", etapes:(cfg.etapes||DEBAT_CFG.etapes) };
   await db.ref("debats/"+id+"/config").set(fullCfg);
-  await db.ref("debats/"+id+"/active").set({ id:uid(), createdAt:Date.now(), binomes:{}, debat:{active:false} });   /* plus de code de séance (14/07) : les élèves entrent avec leur code personnel */
+  await db.ref("debats/"+id+"/active").set({ id:uid(), createdAt:Date.now(), binomes:{} });   /* M5 : les créneaux oraux naissent par classe sous active/debats/<classe> */   /* plus de code de séance (14/07) : les élèves entrent avec leur code personnel */
   return { id:id };
 }
 var creatingDebat=false;
@@ -2539,6 +2562,12 @@ function startSessionListener(){
   if(sessionListener) db.ref(ACTIVE).off("value", sessionListener);
   sessionListener = function(snap){
     sessionData = snap.val() || null;
+    /* M5 — multi-classe : le créneau oral suit la classe (pointeur prof ou classe de l'élève) */
+    if(sessionData){
+      CLASSE_EN_COURS = sessionData.classeEnCours || sessionData.classe || "";
+      majDEBAT();
+      migrerDebatOralSiBesoin(sessionData);
+    }
     if(role==="student"){
       // Si plus de session ou si notre groupe a disparu : retour accueil
       if(!sessionData){
@@ -2581,7 +2610,7 @@ function renderStudent(){
   hideBlockedScreen();
   // ── Bascule mode débat ──
   {
-    const _on=!!(sessionData.debat && sessionData.debat.active);
+    const _on=!!(debatData().active);
     const _w=$("studentPilotageWrap"), _v=$("studentDebatView"), _cb=$("studentCarnetBtn");
     if(_w)_w.style.display=_on?"none":"";
     if(_v)_v.style.display=_on?"":"none";
@@ -2673,7 +2702,7 @@ function renderStudent(){
 // ─────────── Rendu mode prof ───────────
 /* Ligne de contexte prof (M3) : débat · classe · phase — remplace le grand décor d'en-tête. */
 function profPhaseLabel(){
-  if(sessionData && sessionData.debat && sessionData.debat.active){
+  if(debatData().active){
     var t=(debatData().tournament)||{};
     if(t.phase==="termine") return "tournoi terminé";
     if(t.phase==="finale") return "phase finale";
@@ -2692,7 +2721,7 @@ function renderProf(){
     var _cp=$("ctxPhase"); if(_cp) _cp.textContent = profPhaseLabel(); }
   // ── Bascule mode débat ──
   {
-    const _on=!!(sessionData.debat && sessionData.debat.active);
+    const _on=!!(debatData().active);
     const _w=$("profPilotageWrap"), _p=$("debatPanel");
     if(_w)_w.style.display=_on?"none":"";
     if(_p)_p.style.display=_on?"":"none";
@@ -2876,7 +2905,7 @@ async function rejectDone(id, i){
    Efface : statuts des 10 documents, demandes de validation, jetons (→ 2), zones marquées.
    Conserve : la composition des groupes, le tournoi, les scores, les reformulations passées. */
 function resetGroupes(){
-  askConfirm("Remise à zéro des groupes : le travail repart à neuf (documents « à faire », demandes de validation effacées, 2 jetons rendus, zones marquées oubliées). La composition des groupes, le tournoi et les scores sont conservés. On y va ?", async ()=>{
+  askConfirm("Remise à zéro du travail : tout repart à neuf (documents « à faire », demandes de validation effacées, 2 jetons rendus, zones marquées oubliées). La composition des groupes, le tournoi et les scores sont conservés. On y va ?", async ()=>{
     const binomes = (sessionData||{}).binomes || {};
     const upd = {};
     Object.keys(binomes).forEach(id=>{
@@ -2886,7 +2915,7 @@ function resetGroupes(){
       upd[id+"/flags"] = {};
     });
     await db.ref(ACTIVE+"/binomes").update(upd);
-    toast("Groupes remis à zéro : travail à neuf, composition conservée.");
+    toast("Travail remis à zéro. La composition des groupes est conservée.");
   });
 }
 
@@ -3112,6 +3141,27 @@ async function confirmChangePassword(){
 }
 /* wipeAll supprimée (M4, lexique Q20) : doublon de « Nouvelle séance » sans archive,
    contraire à la doctrine « toute destruction passe par archive ». */
+/* ════ M5 — DISSOUDRE LES GROUPES (trou du 16/07 : aucun geste n'effaçait la composition)
+   Efface : la composition des groupes ET leur travail (statuts, demandes, jetons,
+   zones marquées, reformulations — le travail appartient aux groupes) + les créneaux
+   oraux du débat (poules/manches/scores : sans groupes, ils n'ont plus d'objet).
+   Conserve : la séance (id, classe, pointeurs) et les archives.
+   Le prof n'est JAMAIS bloqué : pendant un tournoi, la commande reste disponible
+   avec un avertissement explicite (règle du lexique n°23 : dire ce qu'on efface). */
+function dissoudreGroupes(){
+  closeMenu();
+  var t=debatData().tournament||{};
+  var enTournoi = !!(debatData().active) && t.phase && t.phase!=="termine";
+  var msg = "Dissoudre les groupes ? La composition ET le travail des groupes sont effacés (documents, demandes, jetons, zones marquées, reformulations)"
+    + (enTournoi ? " — ATTENTION : un TOURNOI EST EN COURS, il sera emporté aussi (poules, manches, scores non archivés)." : " — les créneaux de débat oral repartent à zéro.")
+    + " La séance et les archives sont conservées. Les élèves se replaceront (mode choisi) ou tu recomposeras (Pilotage → Groupes, mode imposé).";
+  askConfirm(msg, async ()=>{
+    await db.ref(ACTIVE+"/binomes").remove();
+    await db.ref(ACTIVE+"/debats").remove();
+    await db.ref(ACTIVE+"/groupsLocked").set(false);
+    toast("Groupes dissous. Séance et archives conservées.");
+  });
+}
 
 // ─────────── Rendu d'un jeton (mode prof) : récupération en cas de clic accidentel ───────────
 function giveTokenBack(id){
@@ -3281,6 +3331,37 @@ function closeHelp(){
   /* K.3 (M4) : après une aide payée d'un jeton, le groupe reformule en une phrase */
   if(role==="student" && _pendingReformKey){ var k=_pendingReformKey; _pendingReformKey=null; openReform(k); }
 }
+/* ════ M5 — « MES DÉBATS » (élève) : son historique, filtré par SA clé ════
+   Une lecture de debats/ AU CLIC (jamais au boot) ; pour chaque débat : la séance
+   en cours puis les séances archivées où figure un groupe portant son nom. */
+async function ouvrirMesDebats(){
+  var ov=$("mesDebatsOverlay"); if(!ov||!eleveConnecte) return;
+  ov.classList.add("show");
+  var box=$("mesDebatsBody"); box.innerHTML='<p class="mesdeb-vide">Chargement…</p>';
+  try{
+    var all = await db.ref("debats").once("value").then(function(s){ return s.val()||{}; });
+    var cle = eleveConnecte.cle, items=[];
+    function dansBinomes(bs){ var r=null; Object.keys(bs||{}).forEach(function(bid){ ((bs[bid]||{}).names||[]).forEach(function(nm){ if(sanMJPC(nm)===cle) r=bs[bid]; }); }); return r; }
+    Object.keys(all).forEach(function(did){
+      var d=all[did]||{}, titre=((d.config||{}).title)||did;
+      var b=dansBinomes((d.active||{}).binomes);
+      if(b) items.push({t:titre, s:"Séance en cours — ton groupe : "+(b.names||[]).join(" & ")+" · "+Math.round(((b.statuses||[]).filter(function(x){return x==="done";}).length/10)*100)+" % du parcours fait.", at:Date.now()});
+      Object.keys(d.archives||{}).forEach(function(aid){
+        var a=d.archives[aid]||{}, ab=dansBinomes(a.binomes);
+        if(ab){
+          var quand = a.archivedAt ? new Date(a.archivedAt).toLocaleDateString("fr-FR") : aid;
+          items.push({t:titre, s:"Séance du "+quand+" — ton groupe : "+(ab.names||[]).join(" & ")+" · "+Math.round(((ab.statuses||[]).filter(function(x){return x==="done";}).length/10)*100)+" % du parcours fait.", at:a.archivedAt||0});
+        }
+      });
+    });
+    items.sort(function(x,y){ return (y.at||0)-(x.at||0); });
+    box.innerHTML = items.length
+      ? items.map(function(it){ return '<div class="mesdeb-item"><div class="mesdeb-t">'+esc(it.t)+'</div><div class="mesdeb-s">'+esc(it.s)+'</div></div>'; }).join("")
+      : '<p class="mesdeb-vide">Rien pour l\u2019instant : tes d\u00e9bats appara\u00eetront ici au fil de l\u2019ann\u00e9e.</p>';
+  }catch(e){ box.innerHTML='<p class="mesdeb-vide">Impossible de charger ton historique. R\u00e9essaie plus tard.</p>'; }
+}
+function fermerMesDebats(){ var ov=$("mesDebatsOverlay"); if(ov) ov.classList.remove("show"); }
+
 /* ════ K.3 — reformulation (désétayage, ZPD) : champ court, non bloquant au-delà de 15 s ════ */
 var _pendingReformKey=null, _reformKey=null, _reformTimer=null;
 function openReform(key){
@@ -3380,7 +3461,32 @@ function exitDebatMode(){
 }
 
 // ─────────── Helpers données ───────────
-function debatData(){ return (sessionData && sessionData.debat) || {}; }
+function debatData(){ return ((sessionData||{}).debats||{})[debatSlotSlug()] || {}; }
+/* M5 — MIGRATION DOUCE : l'ancien créneau unique active/debat devient celui de la
+   classe rattachée (rien n'est perdu ; côté prof uniquement, une seule fois). */
+var _migDebatFait=false;
+function migrerDebatOralSiBesoin(data){
+  if(role!=="prof" || _migDebatFait) return;
+  if(!data || !data.debat || data.debats) return;
+  _migDebatFait=true;
+  var slot=slugC(data.classe||"_defaut");
+  db.ref(ACTIVE+"/debats/"+slot).set(data.debat).then(function(){
+    return db.ref(ACTIVE+"/debat").remove();
+  }).then(function(){
+    if(!data.classeEnCours && data.classe) db.ref(ACTIVE+"/classeEnCours").set(data.classe);
+    ecrireRoutage(data.classe);
+    toast("Débat oral migré vers le créneau de la classe "+(data.classe||"par défaut")+".");
+  }).catch(function(e){ _migDebatFait=false; console.error("migration débat oral :", e); });
+}
+/* M5 — le pointeur de routage inter-débats : la classe → SON débat actif.
+   NOTE (question ⑰, MORTE DE FAIT le 17/07) : l'ancienne alternative « code élève
+   commun vs un code par classe » n'a plus d'objet — la connexion par IDENTITÉ
+   (session MJPC, qui porte la classe) a remplacé les codes de séance ; le routage
+   se fait par la classe, jamais par un code. */
+function ecrireRoutage(classe){
+  if(!classe) return;
+  db.ref("debat_config/routage/"+slugC(classe)).set(DEBAT_ID).catch(function(){});
+}
 // Manche pilotée par le prof : carnet verrouillé pendant écoute/notation/attente et pendant la révélation ; libre entre les manches.
 function debatLocked(){
   var dd=debatData(); if(!dd) return false;
@@ -3676,7 +3782,7 @@ function playRevealCine(rv){
   cineAdd(function(){ if(cineEmoTimer){clearInterval(cineEmoTimer);cineEmoTimer=null;} },7200);
 }
 function maybePlayReveal(){
-  var rv=((sessionData&&sessionData.debat)||{}).reveal||null;
+  var rv=debatData().reveal||null;
   var at=(rv&&rv.at)||0;
   if(lastRevealAt===null){ lastRevealAt=at; return; }
   if(at===lastRevealAt) return;
@@ -3863,7 +3969,7 @@ function renderDebatProf(){
 
   let h='';
   h+='<div class="dbg-bar"><h2>🎙 Pilotage du débat — '+esc(DEBAT_CFG.title)+' <span style="display:inline-block;margin-left:10px;font-size:.9rem;font-weight:700;color:#2563eb;border:1px solid #2563eb;border-radius:8px;padding:2px 10px;vertical-align:middle;letter-spacing:.05em">Code classe : '+esc((sessionData&&sessionData.code)||"—")+'</span></h2>'
-   + '<span style="display:flex;gap:8px;flex-wrap:wrap">'+classeSelector()+'<button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button>'+modQueueBtn()+'<button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par groupe évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="exportDebatJSON()" title="Télécharger la session active (groupes, poules, manches, scores) au format JSON.">💾 Export</button><button class="dbg-btn ghost" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base (session active + toutes les archives + code) dans un seul fichier JSON externe. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button><button class="dbg-btn ghost" onclick="migrateLegacy()" title="Copier debat_singes vers la nouvelle structure debats/planete-des-singes-3e (config + index code). Ancien conservé. À faire hors séance.">🚚 Migrer</button><button class="dbg-btn ghost" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Import</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
+   + '<span style="display:flex;gap:8px;flex-wrap:wrap">'+classeSelector()+'<button class="dbg-btn ghost" onclick="toggleRetours()" title="Afficher ou mettre en pause les retours (notes et commentaires) côté élèves, sans interrompre la séance.">'+(retoursVisibles()?'👁 Retours : ON':'🚫 Retours : OFF')+'</button>'+modQueueBtn()+'<button class="dbg-btn ghost" onclick="openCarnetProf()" title="Voir, par groupe évaluateur, toutes les évaluations envoyées.">📓 Carnets</button><button class="dbg-btn ghost" onclick="exportDebatJSON()" title="Télécharger la session active (groupes, poules, manches, scores) au format JSON.">💾 Export</button><button class="dbg-btn ghost" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base (session active + toutes les archives + code) dans un seul fichier JSON externe. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button><button class="dbg-btn ghost" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Import</button><button class="dbg-btn ghost" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés (rangés par code de session).">🗄 Archives</button><button class="dbg-btn ghost" onclick="exitDebatMode()" title="Désactiver le mode débat pour toute la classe et revenir au tableau de pilotage du plan de travail.">← Quitter le mode débat</button></span></div>';
   const tour=d.tournament||{};
   if(tour.phase==="termine" && tour.champion){
     h+='<div class="dbg-result" style="margin-bottom:14px"><div class="win" style="font-size:1.5rem">🏆 '+esc(binomeName(findBinome(tour.champion))||"?")+' remporte le tournoi !</div></div>';
@@ -5105,7 +5211,7 @@ function exportDebatJSON(){
 function validateDebatImport(payload){ return !!(payload && (payload.debat || payload.binomes)); }
 function applyDebatImport(payload){
   if(payload.binomes) db.ref(ACTIVE+"/binomes").set(payload.binomes);
-  db.ref(ACTIVE+"/debat").set(payload.debat||null);
+  db.ref(DEBAT).set(payload.debat||null);
 }
 function importDebatJSON(){ const el=$("importFileInput"); if(el) el.click(); }
 function handleImportFile(ev){
