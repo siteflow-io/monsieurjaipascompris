@@ -1203,6 +1203,10 @@ body:has(.overlay.show){overflow:hidden}
       </div>
       <button class="dbc-primary" onclick="createDebatFromForm()" title="Créer ce débat et entrer dans son pilotage.">Créer et ouvrir →</button>
     </div>
+    <div class="dbc-card" id="dbcTestCard"><h2>🧪 Mode test</h2>
+      <p class="dbc-sub">Un bac à sable complet, séparé de tes vraies classes : une classe de test, 6 élèves fictifs avec leurs codes, un débat prêt. Tu incarnes les élèves pour tout essayer de bout en bout, puis tu purges — rien ne survit.</p>
+      <div id="dbcTestBody"><button class="dbc-btn" onclick="ouvrirModeTest()" title="Génère la classe de test, les 6 élèves, leurs codes et le débat de test — après nettoyage d'éventuels restes d'un test précédent.">🧪 Générer le bac à sable</button></div>
+    </div>
     <button class="dbc-ghostback" onclick="cancelDebatChooser()" title="Revenir à l'écran d'accueil de l'app.">← Accueil de l'app</button>
   </div>
 </div>
@@ -1213,10 +1217,6 @@ body:has(.overlay.show){overflow:hidden}
     <div class="acts">
       <button class="ghost" onclick="closeConfirm()" title="Annuler l'action.">Annuler</button>
       <button class="primary" id="confirmYes" title="Confirmer et exécuter l'action.">Confirmer</button>
-    </div>
-    <div class="dbc-card" id="dbcTestCard"><h2>🧪 Mode test</h2>
-      <p class="dbc-sub">Un bac à sable complet, séparé de tes vraies classes : une classe de test, 6 élèves fictifs avec leurs codes, un débat prêt. Tu incarnes les élèves pour tout essayer de bout en bout, puis tu purges — rien ne survit.</p>
-      <div id="dbcTestBody"><button class="dbc-btn" onclick="ouvrirModeTest()" title="Génère la classe de test, les 6 élèves, leurs codes et le débat de test — après nettoyage d'éventuels restes d'un test précédent.">🧪 Générer le bac à sable</button></div>
     </div>
   </div>
 </div>
@@ -2345,6 +2345,8 @@ window.addEventListener("load", async () => {
   try {
     watchConnection();
     await bootDebat();
+    await appliquerParamsURL();        /* M5ter fix : ?debat= (habillage rechargé) puis ?test_eleve= — pour TOUS les flux, db prêt */
+    if(window._incarne) return;        /* incarnation réussie : l'écran élève réel a pris la main */
     await ensureProfPassword();
     watchClasses();
   } catch(e) {
@@ -2364,24 +2366,9 @@ window.addEventListener("load", async () => {
      session est désormais portée par la session MJPC (socle §8, validité 12 h). */
   if(savedRole==="student" && savedSession && savedBinome){
     // tenter de reprendre la session sur le bon débat
-    /* M5 : un item du site peut désigner un débat précis (?debat=<id>) — prioritaire sur la mémoire du poste */
-    try{ var _qd = new URLSearchParams(location.search).get("debat"); }catch(e){ var _qd=null; }
-    const savedDebatId = _qd || safeStorage.get("debatId"); if(savedDebatId) setDebatId(savedDebatId);
-    /* M5ter — INCARNATION (mode test) : ?test_eleve=<cle>, honoré UNIQUEMENT pour une
-       classe commençant par "_test_" (garde-fou : jamais une porte de connexion réelle). */
-    try{
-      var _te = new URLSearchParams(location.search).get("test_eleve");
-      if(_te){
-        var _tc = await db.ref("classes/"+TEST_DEBAT_CLASSE).once("value").then(function(s){ return s.val(); });
-        var _roster = extractEleves(_tc, []);
-        var _nm = null;
-        _roster.forEach(function(r){ if(sanMJPC(r)===_te) _nm=r; });
-        if(_nm && TEST_DEBAT_CLASSE.indexOf("_test_")===0){
-          await identifieEleve({nom:_nm, classe:TEST_DEBAT_CLASSE, cle:_te});
-          return;   /* écran élève réel ouvert — la chaîne complète se teste */
-        }
-      }
-    }catch(e){}
+    /* M5 : un item du site peut désigner un débat précis (?debat=<id>) — prioritaire sur la mémoire du poste.
+       (Le setDebatId + rechargement de l'habillage a déjà eu lieu en amont du load, cf. appliquerParamsURL.) */
+    const savedDebatId = safeStorage.get("debatId"); if(!new URLSearchParams(location.search).get("debat") && savedDebatId) setDebatId(savedDebatId);
     const ok = await rejoinStudent(savedSession, savedBinome);
     if(!ok){ showScreen("Welcome"); }
   } else {
@@ -2603,6 +2590,7 @@ async function identifieEleve(el){
     $("loginBtn").disabled=false; return;
   }
   setDebatId(did);
+  try{ var _ic=await db.ref(ROOT+"/config").once("value"); if(_ic.val()) applyConfig(_ic.val()); }catch(e){}   /* M5ter fix : l'habillage suit le débat routé */
   await chargerDocumentsProjet();   /* M5bis : l'élève lit les documents de SON débat */
   const data = await db.ref(ACTIVE).once("value").then(function(s){ return s.val(); })||{};
   /* reconnexion automatique : il est déjà dans un groupe → on l'y remet */
@@ -3755,6 +3743,38 @@ function exitDebatMode(){
 
 // ─────────── Helpers données ───────────
 function debatData(){ return ((sessionData||{}).debats||{})[debatSlotSlug()] || {}; }
+/* ════ M5ter fix (audit 17/07) — les paramètres d'URL, traités AU LOAD pour tous les flux :
+   ?debat=<id>  : ouvre CE débat et RECHARGE l'habillage (config) + les documents (M5bis) —
+                  l'onglet incarné n'affiche plus jamais le titre d'un autre débat.
+   ?test_eleve= : INCARNATION du mode test — uniquement classe "_test_" (garde-fou),
+                  échec = message VISIBLE (plus de catch silencieux). ════ */
+async function appliquerParamsURL(){
+  var params; try{ params = new URLSearchParams(location.search); }catch(e){ return; }
+  var _qd = params.get("debat");
+  if(_qd){
+    setDebatId(_qd);
+    safeStorage.set("debatId", _qd);
+    try{ var cs=await db.ref(ROOT+"/config").once("value"); if(cs.val()) applyConfig(cs.val()); }catch(e){}
+    await chargerDocumentsProjet();
+  }
+  var _te = params.get("test_eleve");
+  if(!_te) return;
+  var echec = function(raison){
+    var el=$("loginErr"); if(el) el.textContent="Incarnation impossible : "+raison;
+    toast("Incarnation impossible : "+raison);
+  };
+  try{
+    if(TEST_DEBAT_CLASSE.indexOf("_test_")!==0){ echec("classe de test invalide."); return; }
+    var _tc = await db.ref("classes/"+TEST_DEBAT_CLASSE).once("value").then(function(s){ return s.val(); });
+    if(!_tc){ echec("la classe de test n'existe pas — génère d'abord le bac à sable."); return; }
+    var _roster = extractEleves(_tc, []);
+    var _nm = null;
+    _roster.forEach(function(r){ if(sanMJPC(r)===_te) _nm=r; });
+    if(!_nm){ echec("élève de test introuvable au registre ("+_te+")."); return; }
+    await identifieEleve({nom:_nm, classe:TEST_DEBAT_CLASSE, cle:_te});
+    window._incarne = true;   /* le load s'arrête là : l'écran élève réel a pris la main */
+  }catch(e){ echec(e.message||"erreur réseau."); }
+}
 /* M5 — MIGRATION DOUCE : l'ancien créneau unique active/debat devient celui de la
    classe rattachée (rien n'est perdu ; côté prof uniquement, une seule fois). */
 var _migDebatFait=false;
