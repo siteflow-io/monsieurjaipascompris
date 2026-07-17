@@ -593,6 +593,13 @@
   th.doc:hover .open{background:var(--gold);color:#1a1710;border-color:var(--gold)}
   th.doc:hover{background:rgba(220,171,85,.06)}
 
+  /* ===== Cours déclaré (2e volet M5ter) : bandeau élève T-5, non bloquant ===== */
+  .cours-band{position:fixed;right:14px;bottom:14px;max-width:min(80%,360px);z-index:115;display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(160deg,#2a251b,#211d15);border:1.5px solid var(--gold);border-radius:12px;font-size:.88rem;color:var(--ink);box-shadow:var(--shadow)}
+  .cours-band .cb-ic{font-size:1.15rem;animation:cbBlink 1s steps(2,start) infinite}
+  @keyframes cbBlink{50%{opacity:.35}}
+  .cours-band .cb-tx{flex:1;line-height:1.4}
+  .cours-band .cb-ok{padding:6px 14px;white-space:nowrap}
+
   /* ===== M5 : « Mes débats » — historique élève, thème sombre ===== */
   .mesdebov{position:fixed;inset:0;background:rgba(10,8,5,.78);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:112;padding:24px}
   .mesdebov.show{display:flex}
@@ -944,6 +951,7 @@ body:has(.overlay.show){overflow:hidden}
         <div id="rosterList" class="roster-list"></div>
         </div>
         <div class="err" id="loginErr"></div>
+        <button class="ghost" id="welcomeMesDebats" style="display:none;margin:10px auto 0" onclick="ouvrirMesDebats()" title="Consulter ton historique de débats — accessible même hors cours.">📜 Mes débats</button>
         <div class="actions">
           <button class="prof-link" onclick="showProfLogin()" title="Réservé au professeur : ouvre l'accès au pilotage de la classe.">⚙ Accès professeur</button>
           <button class="primary" onclick="doStudentLogin()" id="loginBtn" title="Se connecter au débat de ta classe.">Se connecter →</button>
@@ -1068,6 +1076,7 @@ body:has(.overlay.show){overflow:hidden}
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
           <button type="button" class="ghost" onclick="copierPromptDocs()" title="Copie le prompt complet (avec les champs de ce débat) à coller dans ton IA.">📋 Copier le prompt</button>
           <button type="button" class="ghost" onclick="revenirDocsExemple()" title="Retire les documents injectés (ils partent en corbeille) et rétablit le jeu d'exemple.">↩ Revenir au jeu d'exemple</button>
+          <button type="button" class="ghost" onclick="ouvrirPrintDocs()" title="Imprime les documents de CE débat (injectés, sinon le jeu d'exemple) : tout le jeu ou une sélection, avec l'affirmation et les camps en tête. Sans les aides — elles sont un mécanisme d'écran.">🖨 Imprimer les documents</button>
         </div>
         <textarea id="ppDocsJson" placeholder="Colle ici le JSON des 10 documents…" style="min-height:90px"></textarea>
         <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
@@ -1089,6 +1098,7 @@ body:has(.overlay.show){overflow:hidden}
   <div class="ppecran" id="pp_donnees">
     <div style="display:flex;flex-direction:column;gap:8px;max-width:440px">
       <button class="ghost" style="text-align:left" onclick="openArchives()" title="Consulter, restaurer ou supprimer les tournois archivés.">🗄 Archives des tournois</button>
+      <button class="ghost" style="text-align:left" onclick="ouvrirBilans()" title="Imprime une demi-page par élève (2 par feuille A4) : ce qu'il a fait (parcours, manches, écoute reçue) + trois lignes à remplir à la main — sa fiche à coller au cahier.">🖨 Bilans élèves (demi-A4)</button>
       <button class="ghost" style="text-align:left" onclick="exportDebatJSON()" title="Télécharger la session active (groupes, poules, manches, scores) au format JSON.">💾 Exporter la session</button>
       <button class="ghost" style="text-align:left" onclick="exportFullBackup()" title="Sauvegarder TOUTE la base des débats dans un fichier JSON. À faire avant toute opération sensible.">🛟 Sauvegarde totale</button>
       <button class="ghost" style="text-align:left" onclick="importDebatJSON()" title="Réinjecter une sauvegarde JSON. Remplace tout. À faire hors séance.">📥 Importer une sauvegarde</button>
@@ -1111,6 +1121,8 @@ body:has(.overlay.show){overflow:hidden}
     </div>
     <div class="codebanner-actions">
       <button id="lockGroupsBtn" onclick="toggleGroupsLock()" title="Verrouille les groupes : plus de création possible. Chacun se reconnecte avec son code et retrouve son groupe. Se verrouille aussi automatiquement au lancement du tournoi.">🔓 Groupes ouverts</button>
+      <button id="coursBtn" style="display:none" title=""></button>
+      <button id="attenteBadge" style="display:none;border-color:#975a16;color:#975a16" onclick="ouvrirAttente()" title="Des élèves sans groupe attendent que tu les places. Touche pour les placer directement."></button>
       <button onclick="endSession()" data-lex="cloturer" title="Fin de séance : verrouille les groupes ET déconnecte toutes les tablettes (retour à l'accueil). Les groupes, poules et scores sont conservés ; au rallumage, la tablette ne se reconnecte plus toute seule.">⎋ Clôturer la séance</button>
       <button class="primary" onclick="newSession()" title="Crée une nouvelle séance. La séance actuelle (groupes, parcours, tournoi, scores) part automatiquement aux archives.">+ Nouvelle séance</button>
     </div>
@@ -1208,6 +1220,78 @@ body:has(.overlay.show){overflow:hidden}
       <div id="dbcTestBody"><button class="dbc-btn" onclick="ouvrirModeTest()" title="Génère la classe de test, les 6 élèves, leurs codes et le débat de test — après nettoyage d'éventuels restes d'un test précédent.">🧪 Générer le bac à sable</button></div>
     </div>
     <button class="dbc-ghostback" onclick="cancelDebatChooser()" title="Revenir à l'écran d'accueil de l'app.">← Accueil de l'app</button>
+  </div>
+</div>
+
+<!-- Bilans demi-A4 (retouche finale — la strate du débat, 2 par feuille) -->
+<div class="overlay" id="bilansOverlay">
+  <div class="gelcard" style="max-width:820px;width:94%;text-align:left">
+    <h2 style="font-size:1.25rem;margin-bottom:6px">🖨 Bilans élèves — demi-A4</h2>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:10px">Une demi-page par élève, deux par feuille : ce qu'il a fait (imprimé) + trois lignes à écrire à la main — sa fiche à coller au cahier.</p>
+    <div id="bilansSel" style="margin-bottom:10px"></div>
+    <iframe id="bilansFrame" title="Aperçu des bilans à imprimer" style="width:100%;height:46vh;background:#fff;border:1px solid var(--line);border-radius:10px"></iframe>
+    <div class="acts" style="margin-top:14px">
+      <button class="ghost" onclick="fermerBilans()" title="Fermer sans imprimer.">Fermer</button>
+      <button class="ghost" onclick="imprimerBilansOnglet()" title="Ouvre la feuille dans un onglet — pratique pour enregistrer en PDF.">Onglet / PDF</button>
+      <button class="primary" onclick="imprimerBilans()" title="Imprime l'aperçu ci-dessus (2 bilans par A4).">Imprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Atelier d'impression des documents (retouche finale — patron worktrack) -->
+<div class="overlay" id="printDocsOverlay">
+  <div class="gelcard" style="max-width:820px;width:94%;text-align:left">
+    <h2 style="font-size:1.25rem;margin-bottom:6px">🖨 Imprimer les documents</h2>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:10px">Les documents de CE débat, en noir et blanc sobre — sans les aides (elles restent à l'écran). Décoche ce que tu ne veux pas.</p>
+    <div id="printDocsSel" style="margin-bottom:10px"></div>
+    <iframe id="prtDocsFrame" title="Aperçu des documents à imprimer" style="width:100%;height:46vh;background:#fff;border:1px solid var(--line);border-radius:10px"></iframe>
+    <div class="acts" style="margin-top:14px">
+      <button class="ghost" onclick="fermerPrintDocs()" title="Fermer sans imprimer.">Fermer</button>
+      <button class="ghost" onclick="imprimerDocsOnglet()" title="Ouvre la feuille dans un onglet — pratique pour enregistrer en PDF.">Onglet / PDF</button>
+      <button class="primary" onclick="imprimerDocs()" title="Imprime l'aperçu ci-dessus.">Imprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- File d'attente (retouche finale) : les élèves sans groupe, à placer directement -->
+<div class="overlay" id="attenteOverlay">
+  <div class="gelcard" style="max-width:480px;text-align:left">
+    <h2 style="font-size:1.25rem;margin-bottom:6px">⏳ Élèves en attente</h2>
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:14px">Ils se sont connectés sans groupe. Place-les : leur tablette entre toute seule.</p>
+    <div id="attenteBody"></div>
+    <div class="acts"><button class="ghost" onclick="fermerAttente()" title="Fermer.">Fermer</button></div>
+  </div>
+</div>
+
+<!-- Cours déclaré (2e volet M5ter) : démarrage (le prof choisit l'heure de fin, patron worktrack) -->
+<div class="overlay" id="coursOverlay">
+  <div class="gelcard" style="max-width:440px">
+    <h2 id="coursModalTitre" style="font-size:1.25rem;margin-bottom:10px">Démarrer le cours</h2>
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:14px">À quelle heure se termine le cours ? Je t'alerte 5 minutes avant, puis je t'amène à la clôture. Hors cours, les élèves ne peuvent pas entrer dans le débat.</p>
+    <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px">Fin du cours</label>
+    <input type="time" id="coursFinInput" title="L'heure de fin du cours." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:1rem;font-family:inherit;margin-bottom:12px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button class="ghost" onclick="coursFinRel(50)" title="Fin dans 50 minutes.">+50 min</button>
+      <button class="ghost" onclick="coursFinRel(55)" title="Fin dans 55 minutes.">+55 min</button>
+      <button class="ghost" onclick="coursFinRel(110)" title="Fin dans 1 h 50 (deux heures de cours).">+1h50</button>
+    </div>
+    <div class="acts">
+      <button class="ghost" onclick="fermerCoursModal()" title="Ne pas démarrer le cours.">Annuler</button>
+      <button class="primary" onclick="doDemarrerCours()" title="Pose le drapeau du cours pour la classe : les élèves peuvent entrer, l'alerte de fin est armée.">▶ Démarrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cours déclaré : la modale de fin (anti-répétition — rien d'automatique, le prof décide) -->
+<div class="overlay" id="coursFinOverlay">
+  <div class="gelcard" style="max-width:460px">
+    <h2 style="font-size:1.25rem;margin-bottom:10px">⏰ Fin du cours</h2>
+    <p id="coursFinTexte" style="font-size:.9rem;color:var(--muted);margin-bottom:18px"></p>
+    <div class="acts">
+      <button class="ghost" onclick="fermerCoursFin()" title="Fermer sans rien faire — tu décideras plus tard.">Plus tard</button>
+      <button class="ghost" onclick="prolongerCoursDebat(10)" title="Prolonge le cours de 10 minutes (l'alerte se réarme).">+10 minutes</button>
+      <button class="primary" onclick="fermerCoursFin();doEndSession()" title="Le geste de clôture : groupes verrouillés, tablettes déconnectées — rien n'est effacé.">■ Clôturer la séance</button>
+    </div>
   </div>
 </div>
 
@@ -2180,6 +2264,7 @@ async function purgeTestDebat(){
     Object.keys(r).forEach(function(k){ if(k===slugC(TEST_DEBAT_CLASSE)||r[k]===TEST_DEBAT_ID) ops.push(db.ref("debat_config/routage/"+k).remove()); });
   }catch(e){}
   TEST_DEBAT_ELEVES.forEach(function(nm){ ops.push(db.ref("mjpcProfils/"+sanMJPC(nm)).remove()); });
+  ops.push(db.ref("debat_config/cours/"+slugC(TEST_DEBAT_CLASSE)).remove());   /* le cours de test s'éteint aussi */
   await Promise.all(ops);
 }
 async function ouvrirModeTest(){
@@ -2198,17 +2283,25 @@ async function ouvrirModeTest(){
       active:{ id:uid(), createdAt:Date.now(), binomes:{}, classe:TEST_DEBAT_CLASSE, classeEnCours:TEST_DEBAT_CLASSE }
     });
     await db.ref("debat_config/routage/"+slugC(TEST_DEBAT_CLASSE)).set(TEST_DEBAT_ID);
+    await db.ref("debat_config/cours/"+slugC(TEST_DEBAT_CLASSE)).set({debut:Date.now(), fin:Date.now()+2*3600000});
+    /* sans ce cours actif, les élèves incarnés seraient refoulés (« hors cours ») */
     renderTestPanel();
   }catch(e){ if(box) box.innerHTML='<p class="dbc-sub">❌ Impossible de préparer le bac à sable : '+esc(e.message)+'</p>'; }
 }
 function renderTestPanel(){
   var box=$("dbcTestBody"); if(!box) return;
-  var h='<p class="dbc-sub">Bac à sable prêt ✔ — classe <b>'+esc(TEST_DEBAT_CLASSE)+'</b>, 6 élèves (codes 9001 à 9006), débat <b>Débat TEST</b> routé. Le débat utilise le jeu de documents d\u2019exemple : la Préparation permet d\u2019y tester la chaîne « Copier le prompt → injecter ».</p>';
+  var h='<p class="dbc-sub">Bac à sable prêt ✔ — classe <b>'+esc(TEST_DEBAT_CLASSE)+'</b>, 6 élèves (codes 9001 à 9006), débat <b>Débat TEST</b> routé, <b>cours actif 2 h</b>. Checklist : incarner (placement libre puis imposé) · injecter des documents (Préparation) · verrouiller les groupes puis incarner un 6e élève → <b>file d\u2019attente</b> (pastille ⏳ côté prof, placement direct, entrée automatique de la tablette) · « ⏱ Fin dans 6 min » → alerte T-5 puis modale de fin · « ■ Clôturer » le cours → un incarné est refoulé (« hors cours ») avec « 📜 Mes débats » accessible · démarrer/clôturer un cours réel depuis la Séance · imprimer les documents (Préparation) · imprimer les bilans élèves (Données → Archives, séance close) · Purger. Le débat utilise le jeu de documents d\u2019exemple : la Préparation permet d\u2019y tester la chaîne « Copier le prompt → injecter ».</p>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">';
   TEST_DEBAT_ELEVES.forEach(function(nm){
     h+='<button class="dbc-btn" onclick="incarnerTest(\''+sanMJPC(nm)+'\')" title="Ouvre l\u2019écran élève réel dans un nouvel onglet, connecté comme cet élève fictif — toute la chaîne se teste (documents, aides, jeton et reformulation, débat oral).">👤 Incarner '+esc(nm.split(" ")[1]||nm)+'</button>';
   });
   h+='</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
+    +'<span class="dbc-sub" style="margin:0">Cours de test :</span>'
+    +'<button class="dbc-btn" onclick="coursTest(120)" title="Pose un cours de 2 h pour la classe de test — les élèves incarnés entrent.">▶ Démarrer (2 h)</button>'
+    +'<button class="dbc-btn" onclick="coursTest(6)" title="Pose un cours qui finit dans 6 minutes : l\u2019alerte T-5 (toast prof + bandeau élève) arrive en moins d\u2019une minute, puis la modale de fin — le minuteur se teste sans attendre.">⏱ Fin dans 6 min</button>'
+    +'<button class="dbc-btn" onclick="coursTest(0)" title="Éteint le cours de test : un incarné est alors refoulé avec le message « hors cours » et « Mes débats » reste accessible — le refus ⓐ se teste.">■ Clôturer</button>'
+    +'</div>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
     +'<span class="dbc-sub" style="margin:0">Formation des groupes :</span>'
     +'<button class="dbc-btn" id="tmChoisi" onclick="testModeGroupes(\'choisi\')" title="Les élèves incarnés se placent eux-mêmes (registre de la classe de test).">Les élèves se placent</button>'
@@ -2220,6 +2313,13 @@ function renderTestPanel(){
     +'<button class="dbc-btn" style="color:#c53030;border-color:#c53030" onclick="purgerEtSortirTest()" title="Supprime TOUT le bac à sable : classe de test, codes, débat, routage, traces de profils. Rien ne survit.">🗑 Purger et sortir</button>'
     +'</div>';
   box.innerHTML=h;
+}
+async function coursTest(minutes){
+  var k=slugC(TEST_DEBAT_CLASSE);
+  if(!minutes){ await db.ref("debat_config/cours/"+k).remove(); delete _coursAlerte[k]; toast("Cours de test clôturé — un incarné sera refoulé (« hors cours »), avec « Mes débats » accessible."); return; }
+  await db.ref("debat_config/cours/"+k).set({debut:Date.now(), fin:Date.now()+minutes*60000});
+  delete _coursAlerte[k];
+  toast(minutes<=10 ? "Cours de test : fin dans "+minutes+" min — l'alerte T-5 arrive en moins d'une minute." : "Cours de test démarré ("+Math.round(minutes/60)+" h).");
 }
 function incarnerTest(cle){
   window.open("pilotage_debat_s3.html?debat="+encodeURIComponent(TEST_DEBAT_ID)+"&test_eleve="+encodeURIComponent(cle), "_blank");
@@ -2345,6 +2445,7 @@ window.addEventListener("load", async () => {
   try {
     watchConnection();
     await bootDebat();
+    watchCours();   /* 2e volet M5ter : le drapeau du cours, en temps réel pour tous */
     await appliquerParamsURL();        /* M5ter fix : ?debat= (habillage rechargé) puis ?test_eleve= — pour TOUS les flux, db prêt */
     if(window._incarne) return;        /* incarnation réussie : l'écran élève réel a pris la main */
     await ensureProfPassword();
@@ -2600,13 +2701,25 @@ async function identifieEleve(el){
     for(var i=0;i<ns.length;i++){ if(sanMJPC(ns[i])===el.cle) dejaBid=bid; }
   });
   if(dejaBid){ enterAsStudent(dejaBid, data); return; }
+  /* 2e volet M5ter — HORS COURS : le débat ne se joue pas (différence assumée avec
+     worktrack : pas de session d'autonomie). Message distinct du verrouillage — la
+     file d'attente des groupes ne concerne que le verrouillage, PENDANT un cours.
+     « Mes débats » reste consultable (l'identité est posée, pas l'entrée en séance). */
+  if(!coursActif(el.classe)){
+    eleveConnecte = el;   /* identité connue : son historique lui reste ouvert */
+    $("loginErr").textContent="Le débat se joue en classe, avec ta classe — il n'y a pas de cours en ce moment. Reviens pendant le cours ! Tu peux consulter tes débats passés en attendant.";
+    var _wmd=$("welcomeMesDebats"); if(_wmd) _wmd.style.display="";
+    $("loginBtn").disabled=false; return;
+  }
   /* M4 — mode imposé : les groupes se composent côté professeur, jamais à la connexion */
   if(((window._lastCfg||DEBAT_CFG).modeGroupes)==='impose'){
-    $("loginErr").textContent="Les groupes de ce débat sont composés par le professeur, et tu n'es dans aucun pour l'instant. Préviens-le.";
+    $("loginErr").textContent="Les groupes de ce débat sont composés par le professeur, et tu n'es dans aucun pour l'instant. Il est prévenu — dès qu'il te place, tu entreras tout seul.";
+    inscrireAttente(el);   /* file d'attente : pastille côté prof, entrée automatique au placement */
     $("loginBtn").disabled=false; return;
   }
   if(data.groupsLocked===true){
-    $("loginErr").textContent="Les groupes sont verrouillés et tu n'es dans aucun. Préviens le professeur.";
+    $("loginErr").textContent="Les groupes sont verrouillés et tu n'es dans aucun. Le professeur est prévenu — dès qu'il te place, tu entreras tout seul.";
+    inscrireAttente(el);   /* file d'attente : pastille côté prof, entrée automatique au placement */
     $("loginBtn").disabled=false; return;
   }
   /* formation du groupe (mode choisi) : lui pré-coché, il touche ses partenaires */
@@ -2650,6 +2763,7 @@ function toggleGroupsLock(){
 function doEndSession(){
   db.ref(ACTIVE+"/groupsLocked").set(true);
   db.ref(ACTIVE+"/logoutEpoch").set(Date.now());
+  if(sessionData && sessionData.classe) eteindreCours(sessionData.classe);   /* la clôture éteint le drapeau du cours */
   sessionEnded=true;
   closeEndReminder();
   toast("Séance clôturée : groupes verrouillés, tablettes déconnectées, rien d\u2019effacé.");
@@ -2996,6 +3110,8 @@ function profPhaseLabel(){
 function renderProf(){
   if(!sessionData){return;}
   if(ppEtat && ppEtat.s==='groupes') renderPPGroupes();
+  majCoursBtn();   /* 2e volet M5ter : l'état du cours suit la classe rattachée */
+  majAttenteBadge();   /* file d'attente : la pastille suit la séance */
   // ── Ligne de contexte (mise à jour dans les DEUX modes, avant la bascule) ──
   { var _cc=$("ctxClasse"); if(_cc) _cc.textContent = sessionData.classe || "aucune classe";
     var _cp=$("ctxPhase"); if(_cp) _cp.textContent = profPhaseLabel(); }
@@ -3743,6 +3859,380 @@ function exitDebatMode(){
 
 // ─────────── Helpers données ───────────
 function debatData(){ return ((sessionData||{}).debats||{})[debatSlotSlug()] || {}; }
+/* ════ FILE D'ATTENTE (retouche finale 17/07 — CONSTRUITE : n'existait pas) ════
+   Pendant un COURS ACTIF, un élève sans groupe (verrouillage, ou mode imposé non
+   placé) est inscrit en ACTIVE/attente/<cle>={nom,at} : pastille côté prof (outils
+   de Séance), placement direct (groupe existant s'il reste de la place, ou groupe
+   seul) ; la tablette de l'élève guette son placement (6 s) et entre TOUTE SEULE.
+   Hors cours : pas de file (le refus « hors cours » prime, Mes débats consultable). */
+var _attentePoll=null, _attenteMoi=null;
+async function inscrireAttente(el){
+  try{ await db.ref(ACTIVE+"/attente/"+el.cle).set({nom:el.nom, at:Date.now()}); }catch(e){}
+  _attenteMoi=el;
+  clearInterval(_attentePoll);
+  _attentePoll=setInterval(async function(){
+    try{
+      var bs=await db.ref(ACTIVE+"/binomes").once("value").then(function(s){ return s.val()||{}; });
+      var place=false;
+      Object.keys(bs).forEach(function(bid){ ((bs[bid]||{}).names||[]).forEach(function(nm){ if(sanMJPC(nm)===_attenteMoi.cle) place=true; }); });
+      if(place){
+        clearInterval(_attentePoll); _attentePoll=null;
+        try{ await db.ref(ACTIVE+"/attente/"+_attenteMoi.cle).remove(); }catch(e){}
+        toast("Le professeur t'a placé — c'est parti !");
+        identifieEleve(_attenteMoi);
+      }
+    }catch(e){}
+  }, 6000);
+}
+function attenteList(){ var a=(sessionData&&sessionData.attente)||{}; return Object.keys(a).map(function(k){ return {cle:k, nom:(a[k]||{}).nom||k, at:(a[k]||{}).at||0}; }).sort(function(x,y){ return x.at-y.at; }); }
+function majAttenteBadge(){
+  var b=$("attenteBadge"); if(!b || role!=="prof") return;
+  var n=attenteList().length;
+  b.style.display = n? "" : "none";
+  if(n) b.textContent="⏳ "+n+" en attente";
+}
+function ouvrirAttente(){
+  var ov=$("attenteOverlay"), box=$("attenteBody"); if(!ov||!box) return;
+  var lst=attenteList();
+  var binomes=(sessionData&&sessionData.binomes)||{};
+  var h = lst.length? "" : '<p style="font-size:.9rem;color:var(--muted)">Personne en attente.</p>';
+  lst.forEach(function(e){
+    h+='<div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px">'
+      +'<div style="font-weight:700;margin-bottom:8px">'+esc(e.nom)+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    Object.keys(binomes).forEach(function(bid){
+      var b=binomes[bid]||{}, names=b.names||[];
+      if(names.length>=3) return;
+      h+='<button class="ghost" onclick="placerAttente(\''+e.cle+'\',\''+bid+'\')" title="Ajoute cet élève à ce groupe.">→ '+esc(names.join(" & ")||"(groupe)")+'</button>';
+    });
+    h+='<button class="primary" onclick="placerAttente(\''+e.cle+'\',null)" title="Crée un groupe où il travaille seul (modifiable ensuite).">✚ Groupe seul</button>'
+      +'</div></div>';
+  });
+  box.innerHTML=h;
+  ov.classList.add("show");
+}
+function fermerAttente(){ var ov=$("attenteOverlay"); if(ov) ov.classList.remove("show"); }
+async function placerAttente(cle, bid){
+  var a=((sessionData&&sessionData.attente)||{})[cle]; var nom=(a&&a.nom)||null;
+  if(!nom){ toast("Cet élève n'est plus en attente."); fermerAttente(); return; }
+  if(bid){
+    var b=((sessionData&&sessionData.binomes)||{})[bid];
+    if(!b){ toast("Ce groupe n'existe plus."); return; }
+    var names=(b.names||[]).slice();
+    if(names.length>=3){ toast("Ce groupe est déjà complet (3 maximum)."); return; }
+    names.push(nom);
+    await db.ref(ACTIVE+"/binomes/"+bid+"/names").set(names);
+  } else {
+    await db.ref(ACTIVE+"/binomes/"+uid()).set({ names:[nom], statuses:Array(10).fill("todo"), pendingValidation:Array(10).fill(false), tokens:MAX_TOKENS, flags:{}, joinedAt:Date.now(), impose:true });
+  }
+  await db.ref(ACTIVE+"/attente/"+cle).remove();
+  toast(nom+" placé — sa tablette entre toute seule.");
+  ouvrirAttente();
+}
+
+/* ════ COURS DÉCLARÉ (2e volet M5ter, 17/07 — patron worktrack transposé) ════
+   Drapeau PAR CLASSE : debat_config/cours/<slugC(classe)> = {debut, fin} — cohérent
+   avec le multi-classe M5 (un cours vaut pour le débat routé de la classe) ; le nœud
+   debat_config est déjà en preserver (résidu estival inoffensif, écrasé au démarrage).
+   Différence ASSUMÉE avec worktrack : hors créneau, le débat ne se joue PAS (pas de
+   session d'autonomie) — mais « Mes débats » reste consultable. La clôture reste un
+   GESTE du prof (rien d'automatique) : elle passe par le geste M4 (endSession), qui
+   éteint aussi le drapeau. Le prof n'est JAMAIS bloqué (cours ou pas, il entre). */
+var COURS = {};                    // miroir de debat_config/cours
+var _coursAlerte = {};             // anti-répétition par classe : '5' | 'fin' (patron worktrack)
+var _coursBandVu = false;          // bandeau élève T-5 : une fois par cours
+function coursDe(classe){ return COURS[slugC(classe)] || null; }
+function coursActif(classe){ var c=coursDe(classe); return !!(c && c.fin && c.fin > Date.now()); }
+function watchCours(){
+  db.ref("debat_config/cours").on("value", function(s){
+    COURS = s.val() || {};
+    majCoursBtn();
+  });
+}
+function _hhmm(ts){ var d=new Date(ts); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+/* — Prof : bouton d'état dans les outils de Séance — */
+function majCoursBtn(){
+  var b=$("coursBtn"); if(!b || role!=="prof") return;
+  var cl=(sessionData&&sessionData.classe)||"";
+  if(!cl){ b.style.display="none"; return; }
+  b.style.display="";
+  if(coursActif(cl)){
+    b.textContent="⏱ Cours en cours — fin à "+_hhmm(coursDe(cl).fin);
+    b.title="Le cours est démarré pour "+cl+". Touche pour prolonger de 10 minutes (l'alerte de fin se réarme).";
+    b.onclick=function(){ prolongerCoursDebat(10); };
+  } else {
+    b.textContent="▶ Démarrer le cours";
+    b.title="Démarre le cours pour "+cl+" : tu choisis l'heure de fin, je t'alerte 5 minutes avant, puis je t'amène à la clôture. Hors cours, les élèves ne peuvent pas entrer dans le débat.";
+    b.onclick=demarrerCoursModal;
+  }
+}
+function demarrerCoursModal(){
+  var cl=(sessionData&&sessionData.classe)||"";
+  if(!cl){ toast("Rattache d'abord une classe à ce débat."); return; }
+  var d=new Date(Date.now()+55*60000);
+  var ov=$("coursOverlay"); if(!ov) return;
+  $("coursModalTitre").textContent="Démarrer le cours — "+cl;
+  $("coursFinInput").value=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  ov.classList.add("show");
+}
+function fermerCoursModal(){ var ov=$("coursOverlay"); if(ov) ov.classList.remove("show"); }
+function coursFinRel(min){ var d=new Date(Date.now()+min*60000); var el=$("coursFinInput"); if(el) el.value=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+async function doDemarrerCours(){
+  var cl=(sessionData&&sessionData.classe)||"";
+  var v=($("coursFinInput")||{}).value||"";
+  var m=/^(\d{1,2}):(\d{2})$/.exec(v);
+  if(!m){ toast("Indique une heure de fin valide."); return; }
+  var fin=new Date(); fin.setHours(+m[1], +m[2], 0, 0);
+  if(fin.getTime()<=Date.now()){ toast("L'heure de fin doit être après l'heure actuelle."); return; }
+  await db.ref("debat_config/cours/"+slugC(cl)).set({debut:Date.now(), fin:fin.getTime()});
+  delete _coursAlerte[slugC(cl)];
+  fermerCoursModal();
+  toast("Cours démarré pour "+cl+" — fin à "+m[1].padStart(2,"0")+"h"+m[2]+". Je t'alerte 5 minutes avant.");
+}
+function fermerCoursFin(){ var ov=$("coursFinOverlay"); if(ov) ov.classList.remove("show"); }
+async function prolongerCoursDebat(minutes){
+  var cl=(sessionData&&sessionData.classe)||"";
+  var c=coursDe(cl); if(!c) return;
+  await db.ref("debat_config/cours/"+slugC(cl)).set({debut:c.debut, fin:c.fin+(minutes||10)*60000});
+  delete _coursAlerte[slugC(cl)];
+  fermerCoursFin();
+  toast("Cours prolongé de "+(minutes||10)+" minutes — nouvelle fin à "+_hhmm(c.fin+(minutes||10)*60000)+".");
+}
+async function eteindreCours(classe){
+  if(!classe) return;
+  try{ await db.ref("debat_config/cours/"+slugC(classe)).remove(); }catch(e){}
+  delete _coursAlerte[slugC(classe)];
+}
+/* — Minuteur (15 s) : T-5 toast prof / bandeau élève ; T=fin modale prof (anti-répétition) — */
+function checkCoursDebat(){
+  var now=Date.now();
+  if(role==="prof" && sessionData && sessionData.classe){
+    var cl=sessionData.classe, k=slugC(cl), c=coursDe(cl);
+    if(c && c.fin){
+      if(now>=c.fin-300000 && now<c.fin && _coursAlerte[k]!=="5" && _coursAlerte[k]!=="fin"){
+        _coursAlerte[k]="5"; toast("⏰ "+cl+" — le cours se termine dans 5 minutes.");
+      }
+      if(now>=c.fin && _coursAlerte[k]!=="fin"){
+        _coursAlerte[k]="fin";
+        $("coursFinTexte").textContent="⏰ L'heure de fin est atteinte pour "+cl+". Clôture la séance (groupes verrouillés, tablettes déconnectées — rien n'est effacé), ou prolonge si tu débordes. Rien ne se clôture automatiquement : c'est toujours toi qui décides.";
+        $("coursFinOverlay").classList.add("show");
+      }
+    }
+  }
+  if(role==="student" && eleveConnecte && eleveConnecte.classe && !_coursBandVu){
+    var ce=coursDe(eleveConnecte.classe);
+    if(ce && ce.fin && now>=ce.fin-300000 && now<ce.fin){
+      _coursBandVu=true;
+      var b=document.createElement("div");
+      b.className="cours-band";
+      b.innerHTML='<span class="cb-ic">⏰</span><div class="cb-tx"><b>Plus que 5 minutes</b><br>Le cours se termine bientôt. Terminez ce que vous pouvez et pensez au carnet de bord.</div><button class="primary cb-ok" onclick="this.parentElement.remove()">D\u2019accord</button>';
+      document.body.appendChild(b);
+    }
+  }
+}
+setInterval(checkCoursDebat, 15000);
+
+/* ════ LE BILAN DEMI-A4 DE L'ÉLÈVE (retouche finale 17/07 — le débat produit sa strate).
+   syntheseEleveSeance(data, cle) est la FONCTION DE SYNTHÈSE RÉUTILISABLE (pas du HTML) :
+   les mêmes données ont vocation à s'émettre vers le profil longitudinal (M15, dessein
+   du 8 mai) — on ne l'implémente pas ici, on structure pour. Limite de données assumée :
+   le camp joué n'est pas persisté par manche (seule la dernière, via currentMatch) —
+   l'écoute reçue est donc restituée toutes notes confondues sur les manches du groupe. */
+var CRITERES_ECOUTE={clarte:"la clarté", args:"les arguments", exemples:"les exemples du texte", replique:"les réponses à l'adversaire"};
+function _matchesDuSlot(slot){
+  var out=[];
+  Object.keys((slot&&slot.poules)||{}).forEach(function(pid){ (((slot.poules[pid]||{}).matches)||[]).forEach(function(m){ out.push(m); }); });
+  ((((slot||{}).swiss)||{}).rounds||[]).forEach(function(r){ (r.matches||[]).forEach(function(m){ out.push(m); }); });
+  ((((slot||{}).bracket)||{}).rounds||[]).forEach(function(r){ (r.matches||[]).forEach(function(m){ out.push(m); }); });
+  return out;
+}
+function syntheseEleveSeance(data, cle){
+  var binomes=(data&&data.binomes)||{};
+  var bid=null, b=null;
+  Object.keys(binomes).forEach(function(k){ ((binomes[k]||{}).names||[]).forEach(function(nm){ if(sanMJPC(nm)===cle){ bid=k; b=binomes[k]; } }); });
+  if(!b) return null;
+  var nom=(b.names||[]).find(function(nm){ return sanMJPC(nm)===cle; })||cle;
+  var s={ nom:nom, groupe:(b.names||[]).slice(), etapesFaites:(b.statuses||[]).filter(function(x){ return x==="done"; }).length,
+          jetonsRestants:(typeof b.tokens==="number")?b.tokens:2, zonesAidees:[], reformulations:Object.keys(b.reformulations||{}).length,
+          manches:[], camp:null, ecoute:null };
+  Object.keys(b.flags||{}).forEach(function(k){ var d=parseInt(k.split(":")[0],10); if(d&&s.zonesAidees.indexOf(d)<0) s.zonesAidees.push(d); });
+  s.zonesAidees.sort(function(a,c){ return a-c; });
+  var notes=[], nNotes=0;
+  Object.keys((data&&data.debats)||{}).forEach(function(slotK){
+    var slot=data.debats[slotK]||{};
+    var cm=slot.currentMatch||null;
+    if(cm && (cm.binomeA===bid||cm.binomeB===bid) && cm.campA){ s.camp=(cm.binomeA===bid)?cm.campA:cm.campB; }
+    _matchesDuSlot(slot).forEach(function(m){
+      if(m.a!==bid && m.b!==bid) return;
+      var advId=(m.a===bid)?m.b:m.a;
+      var adv=((binomes[advId]||{}).names||[]).join(" & ")||"?";
+      var issue = m.played ? (m.winner===bid?"gagnée":(m.winner?"perdue":"jouée")) : "à venir";
+      s.manches.push({adversaire:adv, issue:issue});
+      var g=((slot.grilleEcoute)||{})[m.id]||{};
+      Object.keys(g).forEach(function(votant){
+        ["pour","contre"].forEach(function(camp){
+          var v=(g[votant]||{})[camp]; if(!v) return;
+          Object.keys(CRITERES_ECOUTE).forEach(function(c){ if(typeof v[c]==="number"){ notes.push({c:c, v:v[c]}); nNotes++; } });
+        });
+      });
+    });
+  });
+  if(nNotes){
+    var agg={}; notes.forEach(function(x){ agg[x.c]=agg[x.c]||{s:0,n:0}; agg[x.c].s+=x.v; agg[x.c].n++; });
+    var moys=Object.keys(agg).map(function(c){ return {c:c, m:agg[c].s/agg[c].n}; }).sort(function(a,b){ return b.m-a.m; });
+    s.ecoute={ fort:moys[0]?CRITERES_ECOUTE[moys[0].c]:null, fragile:moys.length>1?CRITERES_ECOUTE[moys[moys.length-1].c]:null };
+  }
+  return s;
+}
+function bilansPrintHTML(data, quand){
+  var cfg=_printCfg();
+  var binomes=(data&&data.binomes)||{};
+  var cles={};
+  Object.keys(binomes).forEach(function(k){ ((binomes[k]||{}).names||[]).forEach(function(nm){ cles[sanMJPC(nm)]=1; }); });
+  var syn=Object.keys(cles).map(function(c){ return syntheseEleveSeance(data,c); }).filter(Boolean)
+    .sort(function(a,b){ return a.nom.localeCompare(b.nom); });
+  var css="body{font-family:Georgia,'Times New Roman',serif;color:#111;margin:0;line-height:1.35}"
+    +".demi{box-sizing:border-box;height:148mm;padding:9mm 11mm;border-bottom:1px dashed #999;overflow:hidden}"
+    +".demi:nth-of-type(2n){page-break-after:always;border-bottom:none}"
+    +".bh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #111;padding-bottom:3px;margin-bottom:7px}"
+    +".bh .qui{font-size:1.05rem;font-weight:700}.bh .quoi{font-size:.8rem;color:#333;text-align:right}"
+    +".fact{font-size:.85rem;margin-bottom:8px}.fact b{font-weight:700}"
+    +".fact .lig{margin-bottom:2px}"
+    +".ref{font-size:.85rem}.ref .q{font-weight:700;margin:7px 0 2px}"
+    +".ref .tr{border-bottom:1px dotted #777;height:1.15em;margin-bottom:3px}"
+    +"@media print{body{margin:0}}";
+  var h='<!doctype html><html><head><meta charset="utf-8"><title>Bilans — '+esc(cfg.title||"Débat")+'</title><style>'+css+'</style></head><body>';
+  syn.forEach(function(s){
+    h+='<div class="demi"><div class="bh"><span class="qui">'+esc(s.nom)+'</span><span class="quoi">'+esc(cfg.title||"Débat")+' · '+esc(quand||"")+(s.camp?' · camp '+esc(String(s.camp).toUpperCase()):'')+'</span></div>';
+    h+='<div class="fact">';
+    h+='<div class="lig">Mon groupe : <b>'+esc(s.groupe.join(" & "))+'</b></div>';
+    h+='<div class="lig">Parcours : <b>'+s.etapesFaites+'/10 documents</b> · jetons d\u2019aide restants : <b>'+s.jetonsRestants+'/2</b>'
+      +(s.zonesAidees.length?' · aides prises sur : <b>DOC '+s.zonesAidees.join(", DOC ")+'</b>':' · aucune aide prise')
+      +(s.reformulations?' · reformulations écrites : <b>'+s.reformulations+'</b>':'')+'</div>';
+    if(s.manches.length){
+      h+='<div class="lig">Débat oral : '+s.manches.map(function(m){ return 'contre <b>'+esc(m.adversaire)+'</b> ('+m.issue+')'; }).join(" · ")+'</div>';
+    }
+    if(s.ecoute && s.ecoute.fort){
+      h+='<div class="lig">Ce que la classe a le plus remarqué chez vous : <b>'+esc(s.ecoute.fort)+'</b>'+(s.ecoute.fragile?' · à renforcer : <b>'+esc(s.ecoute.fragile)+'</b>':'')+'</div>';
+    }
+    h+='</div><div class="ref">';
+    h+='<div class="q">Ce que je retiens de notre argumentation :</div><div class="tr"></div><div class="tr"></div>';
+    h+='<div class="q">Ce sur quoi je bute encore :</div><div class="tr"></div><div class="tr"></div>';
+    h+='<div class="q">Mon objectif pour le prochain débat :</div><div class="tr"></div><div class="tr"></div>';
+    h+='</div></div>';
+  });
+  if(!syn.length) h+='<p style="padding:20px;font-family:serif">Aucun élève dans cette séance.</p>';
+  h+='</body></html>';
+  return h;
+}
+var _bilansData=null;
+async function ouvrirBilans(){
+  var ov=$("bilansOverlay"); if(!ov) return;
+  var selBox=$("bilansSel");
+  var opts=[];
+  if(sessionData && sessionData.binomes && Object.keys(sessionData.binomes).length) opts.push({k:"_encours", lib:"Séance en cours"+(sessionEnded?" (close)":"")});
+  try{
+    var arch=await db.ref(ARCHIVES).once("value").then(function(s){ return s.val()||{}; });
+    Object.keys(arch).sort().reverse().forEach(function(k){
+      var a=arch[k]||{}; var quand; try{ quand=new Date(a.archivedAt||a.createdAt||0).toLocaleDateString("fr-FR"); }catch(e){ quand=k; }
+      var n=Object.keys(a.binomes||{}).length;
+      if(n) opts.push({k:k, lib:"Séance archivée du "+quand+" ("+n+" groupes)"});
+    });
+  }catch(e){}
+  if(!opts.length){ toast("Aucune séance (en cours ou archivée) à imprimer."); return; }
+  selBox.innerHTML='<select id="bilansChoix" onchange="majBilans()" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:.92rem">'
+    + opts.map(function(o){ return '<option value="'+esc(o.k)+'">'+esc(o.lib)+'</option>'; }).join("") + '</select>';
+  ov.classList.add("show");
+  majBilans();
+}
+async function majBilans(){
+  var fr=$("bilansFrame"); if(!fr) return;
+  var k=($("bilansChoix")||{}).value||"_encours";
+  var data, quand;
+  if(k==="_encours"){ data=sessionData; quand=new Date().toLocaleDateString("fr-FR"); }
+  else{
+    data=await db.ref(ARCHIVES+"/"+k).once("value").then(function(s){ return s.val(); });
+    try{ quand=new Date((data||{}).archivedAt||parseInt(k.split("_").pop(),10)).toLocaleDateString("fr-FR"); }catch(e){ quand=""; }
+  }
+  _bilansData={data:data, quand:quand};
+  try{ fr.srcdoc=bilansPrintHTML(data, quand); }catch(e){ fr.srcdoc='<body style="font-family:serif;color:#a33;padding:20px">Aperçu impossible : '+esc(e.message)+'</body>'; }
+}
+function fermerBilans(){ var ov=$("bilansOverlay"); if(ov) ov.classList.remove("show"); }
+function imprimerBilans(){
+  var fr=$("bilansFrame");
+  if(!fr||!fr.contentWindow){ toast("L'aperçu n'est pas prêt."); return; }
+  try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ toast("Impression impossible : "+e.message); }
+}
+function imprimerBilansOnglet(){
+  if(!_bilansData){ toast("Choisis d'abord une séance."); return; }
+  var w=window.open("","_blank"); if(!w){ toast("Autorise les fenêtres pop-up pour ouvrir l'impression."); return; }
+  w.document.write(bilansPrintHTML(_bilansData.data,_bilansData.quand)); w.document.close();
+}
+
+/* ════ ATELIER D'IMPRESSION DES DOCUMENTS (retouche finale 17/07 — patron worktrack :
+   sélection → aperçu iframe (srcdoc) → contentWindow.print(), repli onglet/PDF).
+   Imprime les documents DU DÉBAT COURANT (injectés sinon embarqués), en-tête
+   titre + affirmation + camps, @media print sobre — ni boutons ni aides. ════ */
+function _printCfg(){ return window._lastCfg||DEBAT_CFG; }
+function documentsPrintHTML(sel){
+  var cfg=_printCfg();
+  var css="body{font-family:Georgia,'Times New Roman',serif;color:#111;margin:24px;line-height:1.45}"
+    +".ph{border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px}"
+    +".ph h1{font-size:1.35rem;margin:0 0 4px}.ph .aff{font-size:1.02rem;font-style:italic;margin:4px 0}"
+    +".ph .camps{font-size:.9rem;color:#333}"
+    +".pdoc{page-break-before:always;padding-top:6px}.pdoc:first-of-type{page-break-before:auto}"
+    +".pdoc h2{font-size:1.15rem;border-left:5px solid #111;padding-left:8px;margin:0 0 2px}"
+    +".pdoc .sub{font-size:.9rem;color:#444;margin:0 0 12px}"
+    +".psect{font-weight:700;font-size:.95rem;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em}"
+    +".pz{border:1px solid #999;border-radius:6px;padding:9px 12px;margin:0 0 10px;font-size:.92rem}"
+    +".pz.item{border-style:dashed}.pz .lab{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:#333;margin-bottom:3px}"
+    +".pz .num{display:inline-block;min-width:1.4em;font-weight:700}"
+    +"@media print{body{margin:10mm}}";
+  var h='<!doctype html><html><head><meta charset="utf-8"><title>'+esc(cfg.title||"Débat")+' — documents</title><style>'+css+'</style></head><body>';
+  h+='<div class="ph"><h1>'+esc(cfg.title||"Débat")+'</h1>'
+    +(cfg.motion?'<div class="aff">« '+esc(cfg.motion)+' »</div>':'')
+    +'<div class="camps"><b>POUR</b> — défend que l\u2019affirmation est vraie'+(cfg.pour?' : '+esc(cfg.pour):'')+' · <b>CONTRE</b> — la conteste'+(cfg.contre?' : '+esc(cfg.contre):'')+'</div></div>';
+  for(var n=1;n<=10;n++){
+    if(sel && !sel[n]) continue;
+    var d=DOCDATA[n]; if(!d) continue;
+    h+='<div class="pdoc"><h2>DOC '+n+' — '+esc(d.title||"")+'</h2><p class="sub">'+esc(d.sub||"")+'</p>';
+    (d.blocks||[]).forEach(function(b){
+      if(b.type==="sect"){ h+='<div class="psect">'+esc(b.text||"")+'</div>'; return; }
+      if(b.type!=="zone") return;
+      h+='<div class="pz '+(b.cls==="item"?"item":"")+'">'+(b.num?'<span class="num">'+esc(String(b.num))+'.</span> ':'')+(b.html||"")+'</div>';
+    });
+    h+='</div>';
+  }
+  h+='</body></html>';
+  return h;
+}
+function ouvrirPrintDocs(){
+  var ov=$("printDocsOverlay"); if(!ov) return;
+  var sels=$("printDocsSel");
+  var h='';
+  for(var n=1;n<=10;n++){ var d=DOCDATA[n]||{}; h+='<label style="display:inline-flex;align-items:center;gap:5px;margin:0 10px 6px 0;font-size:.85rem"><input type="checkbox" id="prtDoc'+n+'" checked onchange="majPrintDocs()"> DOC '+n+' — '+esc(d.title||"")+'</label>'; }
+  sels.innerHTML=h;
+  ov.classList.add("show");
+  majPrintDocs();
+}
+function _printDocsSel(){ var sel={}; for(var n=1;n<=10;n++){ var e=$("prtDoc"+n); sel[n]=!!(e&&e.checked); } return sel; }
+function majPrintDocs(){
+  var fr=$("prtDocsFrame"); if(!fr) return;
+  try{ fr.srcdoc=documentsPrintHTML(_printDocsSel()); }catch(e){ fr.srcdoc='<body style="font-family:serif;color:#a33;padding:20px">Aperçu impossible : '+esc(e.message)+'</body>'; }
+}
+function fermerPrintDocs(){ var ov=$("printDocsOverlay"); if(ov) ov.classList.remove("show"); }
+function imprimerDocs(){
+  var sel=_printDocsSel();
+  if(!Object.keys(sel).some(function(k){ return sel[k]; })){ toast("Coche au moins un document."); return; }
+  var fr=$("prtDocsFrame");
+  if(!fr||!fr.contentWindow){ toast("L'aperçu n'est pas prêt."); return; }
+  try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ toast("Impression impossible : "+e.message); }
+}
+function imprimerDocsOnglet(){
+  var w=window.open("","_blank"); if(!w){ toast("Autorise les fenêtres pop-up pour ouvrir l'impression."); return; }
+  w.document.write(documentsPrintHTML(_printDocsSel())); w.document.close();
+}
+
 /* ════ M5ter fix (audit 17/07) — les paramètres d'URL, traités AU LOAD pour tous les flux :
    ?debat=<id>  : ouvre CE débat et RECHARGE l'habillage (config) + les documents (M5bis) —
                   l'onglet incarné n'affiche plus jamais le titre d'un autre débat.
