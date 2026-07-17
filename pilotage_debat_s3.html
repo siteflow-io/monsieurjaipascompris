@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Débat — MJPC</title>
+<!-- ┌─ SOCLE-CANDIDAT : anti-cache (extractible tel quel) ─┐ -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<!-- └───────────────────────────────────────────────────────┘ -->
 <style>
 
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Spline+Sans:wght@400;500;600;700&family=Literata:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
@@ -162,7 +167,7 @@
 
   tfoot td{background:rgba(38,34,25,.6);padding:14px}
   .addform{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
-  .addform input{background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;
+  .addform input{border-radius:10px;border-radius:10px;
     padding:10px 13px;font-size:.92rem;font-family:inherit;min-width:175px}
   .addform input:focus{outline:none;border-color:var(--gold)}
 
@@ -249,7 +254,7 @@
   .welcome-card .eyebrow{font-size:.78rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:14px}
   .welcome-card .sub{color:var(--ink2);margin:8px 0 24px;font-size:1rem;line-height:1.5}
   .welcome-card label{display:block;text-align:left;font-size:.85rem;color:var(--muted);margin-bottom:6px;margin-top:14px;font-weight:600}
-  .welcome-card input{width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);
+  .welcome-card input{width:100%;border-radius:10px;
     border-radius:12px;padding:14px 16px;font-size:1.05rem;font-family:inherit;outline:none;transition:border-color .15s}
   .welcome-card input:focus{border-color:var(--gold)}
   .welcome-card input.code{text-align:center;letter-spacing:4px;font-weight:700;font-size:1.3rem;text-transform:uppercase}
@@ -475,6 +480,28 @@
   #screenProf .camp-contre{color:#276749}
   #screenProf .validation-strip{background:rgba(151,90,22,.08);border:1px solid #975a16;border-radius:14px;color:#1a1a1a}
 
+  /* ═══ Retouche finale 17/07 (soldé) — TOUS les overlays prof lisibles ═══
+     Cause du bug : dans une .gelcard, boutons/inputs héritent du thème SOMBRE
+     (texte clair) → illisibles sur la carte claire du côté prof. Solution :
+     conditionner à body.bodyProf (posé UNIQUEMENT sur l'écran prof) → couvre tout
+     overlay prof d'un coup (confirm, edit, menu, pwd, archives, cours, attente,
+     impression, bilans…) et JAMAIS un overlay élève (l'élève n'a pas bodyProf ;
+     ses overlays à thème propre — .reformov, .mesdebov — ne sont pas des .gelcard).
+     Valeurs dures, charte claire (patron du chooser dbc-*). */
+  body.bodyProf .overlay .gelcard button{background:#fff;color:#1a1a1a;border:1px solid #e5e3de;border-radius:8px;font-weight:600;backdrop-filter:none}
+  body.bodyProf .overlay .gelcard button:hover{background:#f5f4f0;transform:none;box-shadow:none}
+  /* Doublon robuste (askConfirm pose .ovprof si bodyProf) — mêmes valeurs claires */
+  .overlay.ovprof .gelcard{background:#fff;border:1px solid #e5e3de;color:#1a1a1a}
+  .overlay.ovprof .gelcard h2,.overlay.ovprof .gelcard #confirmText{color:#1a1a1a}
+  .overlay.ovprof .gelcard button{background:#fff;color:#1a1a1a;border:1px solid #e5e3de;border-radius:8px;font-weight:600;backdrop-filter:none}
+  .overlay.ovprof .gelcard button:hover{background:#f5f4f0;transform:none;box-shadow:none}
+  .overlay.ovprof .gelcard button.primary{background:#2563eb;color:#fff;border:none;border-radius:10px}
+  body.bodyProf .overlay .gelcard button.primary{background:#2563eb;color:#fff;border:none;border-radius:10px}
+  body.bodyProf .overlay .gelcard button.primary:hover{background:#1e50c8}
+  body.bodyProf .overlay .gelcard button.danger,body.bodyProf .overlay .gelcard button.primary.danger{background:#c53030;color:#fff;border:none}
+  body.bodyProf .overlay .gelcard input,body.bodyProf .overlay .gelcard select,body.bodyProf .overlay .gelcard textarea{background:#fff;color:#1a1a1a;border:1px solid #e5e3de;border-radius:10px}
+  body.bodyProf .overlay .gelcard input::placeholder,body.bodyProf .overlay .gelcard textarea::placeholder{color:#9a9a9a}
+
   /* ===== ACCUEIL D'INSTANCES — clone du panneau de contrôle de correction_dictee (15/07) =====
      Couleurs relevées dans la souche : fond #fafaf8, carte #fff, bordure #e5e3de,
      texte #1a1a1a / #6b6b6b, action #2563eb, radius 14, ombre douce. */
@@ -640,6 +667,36 @@
   .camps-mini .camp{padding:5px 10px;font-size:.8rem;min-width:0;line-height:1.3}
   .camps-mini .camp .lbl{font-size:.68rem;margin-bottom:1px;display:inline;letter-spacing:.8px}
 
+
+  /* ═══════════ SOCLE-CANDIDAT : responsive mobile (<480px) — bloc isolé, extractible ═══════════
+     N'affecte QUE la largeur/empilement. Aucune couleur de thème, aucun bloc gelé touché. */
+  @media(max-width:480px){
+    body{padding:16px 12px 84px}
+    #screenProf .tools{flex-direction:column;align-items:stretch;width:100%}
+    #screenProf .tools>button,#screenProf .tools>.ppss,#screenProf .tools>span{width:100%;text-align:center;box-sizing:border-box}
+    #screenProf header{flex-direction:column;align-items:stretch;gap:10px}
+    .overlay{padding:14px}
+    .overlay .gelcard{max-width:94vw !important;width:94vw;box-sizing:border-box;padding:22px 18px}
+    .overlay .gelcard .acts{flex-wrap:wrap}
+    .overlay .gelcard .acts>button{flex:1 1 auto;min-width:120px}
+    .modq-head{flex-wrap:wrap}
+    #prtDocsFrame,#bilansFrame{width:100%!important}
+    #coursOverlay .gelcard>div{flex-wrap:wrap}
+    #coursFinInput{width:auto;min-width:120px}
+    #debatChooserOverlay .gelcard{max-width:94vw !important;padding:0 8px}
+    .dbc-card{padding:16px 16px}
+    .dbc-row,.debat-row{flex-wrap:wrap}
+    /* panneau d'aide (écran élève) — mobile. Fond sombre élève INCHANGÉ.
+       FERMÉ (pas de .show) : le ✕ est masqué (option validée par l'audit) → rien ne dépasse.
+       OUVERT (.show) : le panneau vaut 92vw, l'inner suit, le ✕ réapparaît dans l'écran. */
+    .help{transition:none}
+    .help.show{width:92vw;max-width:100vw}
+    .help .inner{width:100%;max-width:100%}
+    .help:not(.show) .hh .notipi{display:none}
+  }
+  #appVersion{position:fixed;left:8px;bottom:6px;z-index:5;font-size:.68rem;color:#b9b2a3;font-family:'Spline Sans',sans-serif;letter-spacing:.02em;pointer-events:none;user-select:none}
+  body.bodyProf #appVersion{color:#a99e88}
+  /* ═══════════ fin SOCLE-CANDIDAT responsive ═══════════ */
 </style>
 </head>
 <body>
@@ -754,7 +811,7 @@ body:has(.overlay.show){overflow:hidden}
 .dbg-chk{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
 .dbg-chk label{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:.88rem;cursor:pointer}
 .dbg-chk label:hover{border-color:var(--gold)}
-.dbg-input{width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 12px;font-size:.92rem;font-family:inherit;margin-bottom:8px}
+.dbg-input{width:100%;border-radius:10px;border-radius:10px;padding:9px 12px;font-size:.92rem;font-family:inherit;margin-bottom:8px}
 .dbg-btn{background:var(--gold);color:#2a2113;border:none;border-radius:10px;padding:8px 14px;font-weight:700;font-family:inherit;font-size:.9rem;cursor:pointer}
 .dbg-btn:hover{filter:brightness(1.07)}
 .dbg-btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line)}
@@ -784,7 +841,7 @@ body:has(.overlay.show){overflow:hidden}
 .dbg-ctrls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
 .dbg-dur{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin-top:10px}
 .dbg-dur span{font-size:.78rem;color:var(--muted)}
-.dbg-dur input{width:56px;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:7px;padding:4px 6px;font-size:.82rem;font-family:inherit;text-align:center}
+.dbg-dur input{width:56px;border-radius:10px;border-radius:7px;padding:4px 6px;font-size:.82rem;font-family:inherit;text-align:center}
 .std-debat{padding:6px 0}
 .std-bigcamp{font-family:'Fraunces',serif;font-weight:800;font-size:2.6rem;text-align:center;padding:18px 0;border-radius:16px;margin-bottom:12px;border:2px solid}
 .std-bigcamp.pour{color:var(--accent2);border-color:var(--accent);background:rgba(192,57,43,.10)}
@@ -803,7 +860,7 @@ body:has(.overlay.show){overflow:hidden}
 .dbg-campcol .ct{font-weight:700;margin-bottom:6px}
 .dbg-campcol.pour .ct{color:var(--accent2)}
 .dbg-campcol.contre .ct{color:var(--done)}
-.dbg-ta{width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:.85rem;resize:vertical;margin-top:6px;min-height:38px}
+.dbg-ta{width:100%;border-radius:10px;border-radius:8px;padding:6px 8px;font-family:inherit;font-size:.85rem;resize:vertical;margin-top:6px;min-height:38px}
 .dbg-result{text-align:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);margin-top:10px}
 .dbg-result .win{font-family:'Fraunces',serif;font-size:1.2rem;color:var(--gold);margin:6px 0}
 .dbg-class{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:8px;table-layout:fixed}
@@ -1022,6 +1079,7 @@ body:has(.overlay.show){overflow:hidden}
 </div>
 
 <!-- ============ ÉCRAN 3 : VUE PROF (pilotage complet) ============ -->
+<div id="appVersion"></div>
 <div class="screen" id="screenProf">
   <header>
     <div class="prof-ctxline" id="profCtxLine">
@@ -1268,12 +1326,11 @@ body:has(.overlay.show){overflow:hidden}
   <div class="gelcard" style="max-width:440px">
     <h2 id="coursModalTitre" style="font-size:1.25rem;margin-bottom:10px">Démarrer le cours</h2>
     <p style="font-size:.9rem;color:var(--muted);margin-bottom:14px">À quelle heure se termine le cours ? Je t'alerte 5 minutes avant, puis je t'amène à la clôture. Hors cours, les élèves ne peuvent pas entrer dans le débat.</p>
-    <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:6px">Fin du cours</label>
-    <input type="time" id="coursFinInput" title="L'heure de fin du cours." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:1rem;font-family:inherit;margin-bottom:12px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <button class="ghost" onclick="coursFinRel(50)" title="Fin dans 50 minutes.">+50 min</button>
-      <button class="ghost" onclick="coursFinRel(55)" title="Fin dans 55 minutes.">+55 min</button>
-      <button class="ghost" onclick="coursFinRel(110)" title="Fin dans 1 h 50 (deux heures de cours).">+1h50</button>
+    <label for="coursFinInput" style="display:block;font-size:.9rem;margin-bottom:6px">Fin&nbsp;: <input type="time" id="coursFinInput" title="L'heure de fin du cours — modifiable à la main." style="margin-left:6px;padding:9px 11px;font-size:1rem;font-family:inherit"></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 16px">
+      <button class="ghost" onclick="coursFinRel(50)" title="Pré-remplit l'heure : fin dans 50 minutes (à ajuster ensuite si besoin).">+50 min</button>
+      <button class="ghost" onclick="coursFinRel(55)" title="Pré-remplit l'heure : fin dans 55 minutes.">+55 min</button>
+      <button class="ghost" onclick="coursFinRel(110)" title="Pré-remplit l'heure : fin dans 1 h 50 (deux heures de cours).">+1h50</button>
     </div>
     <div class="acts">
       <button class="ghost" onclick="fermerCoursModal()" title="Ne pas démarrer le cours.">Annuler</button>
@@ -1309,11 +1366,11 @@ body:has(.overlay.show){overflow:hidden}
   <div class="gelcard" style="text-align:left;max-width:460px">
     <h2 style="font-size:1.3rem;margin-bottom:18px;text-align:center" id="editTitle">Groupe</h2>
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 1</label>
-    <input id="editA" title="Prénom du premier élève du groupe." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <input id="editA" title="Prénom du premier élève du groupe." style="width:100%;border-radius:10px;border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 2 (laisser vide si seul)</label>
-    <input id="editB" title="Prénom du deuxième élève (laisse vide s'il est seul)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
+    <input id="editB" title="Prénom du deuxième élève (laisse vide s'il est seul)." style="width:100%;border-radius:10px;border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:12px">
     <label style="display:block;font-size:.85rem;color:var(--muted);margin-bottom:5px">Élève 3 (trinôme)</label>
-    <input id="editC" title="Prénom du troisième élève (trinôme)." style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
+    <input id="editC" title="Prénom du troisième élève (trinôme)." style="width:100%;border-radius:10px;border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:20px">
     <div class="acts" style="justify-content:space-between">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="ghost" onclick="deleteBinome()" style="color:var(--accent2)" title="Retirer ce groupe du tableau (action irréversible).">Supprimer</button>
@@ -1342,8 +1399,8 @@ body:has(.overlay.show){overflow:hidden}
   <div class="gelcard" style="text-align:left;max-width:400px">
     <h2 style="font-size:1.2rem;margin-bottom:6px;text-align:center">Nouveau mot de passe prof</h2>
     <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px;text-align:center">Le changement prend effet tout de suite, sur toutes les tablettes.</p>
-    <input id="pwdNew" type="password" title="Le nouveau mot de passe du professeur." placeholder="Nouveau mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:10px" autocomplete="new-password">
-    <input id="pwdConfirm" type="password" title="Retape le nouveau mot de passe pour confirmer." placeholder="Confirmer le mot de passe" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:6px" autocomplete="new-password">
+    <input id="pwdNew" type="password" title="Le nouveau mot de passe du professeur." placeholder="Nouveau mot de passe" style="width:100%;border-radius:10px;border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:10px" autocomplete="new-password">
+    <input id="pwdConfirm" type="password" title="Retape le nouveau mot de passe pour confirmer." placeholder="Confirmer le mot de passe" style="width:100%;border-radius:10px;border-radius:10px;padding:11px 13px;font-size:.95rem;font-family:inherit;margin-bottom:6px" autocomplete="new-password">
     <div id="pwdErr" style="color:var(--accent2);font-size:.85rem;min-height:1.2em;margin-bottom:12px"></div>
     <div class="acts"><button class="ghost" onclick="closePwdOverlay()" title="Annuler le changement.">Annuler</button><button class="primary" onclick="confirmChangePassword()" title="Enregistrer le nouveau mot de passe.">Enregistrer</button></div>
   </div>
@@ -2347,6 +2404,11 @@ async function purgerEtSortirTest(){
 }
 
 // ─────────── État global ───────────
+/* ┌─ SOCLE-CANDIDAT : version de l'app (extractible) ─┐
+   Bump manuel à chaque livraison ; affichée par la pastille #appVersion. */
+const APP_VERSION = "2026-07-17-1";
+try{ document.addEventListener("DOMContentLoaded", function(){ var e=document.getElementById("appVersion"); if(e) e.textContent="v"+APP_VERSION; }); }catch(e){}
+/* └────────────────────────────────────────────────────┘ */
 let role = null;            // 'student' | 'prof' | null
 let mySessionId = null;     // ID de la session active
 let myBinomeId = null;      // pour les élèves : leur groupe
@@ -3401,7 +3463,13 @@ function presenceBanner(){
 function askConfirm(text, action){
   confirmAction = action;
   $("confirmText").textContent = text;
-  $("confirmOverlay").classList.add("show");
+  /* Retouche 17/07 — l'ouvreur PARTAGÉ pose lui-même le durcissement clair : ovprof si
+     l'appel vient du côté prof (bodyProf), retiré sinon pour préserver un usage élève sombre.
+     Ceinture : la règle body.bodyProf .overlay .gelcard couvre déjà le cas ; ovprof est le
+     doublon robuste réclamé à l'audit (l'invariant tient même si un ouvreur oubliait bodyProf). */
+  var _ov=$("confirmOverlay");
+  _ov.classList.toggle("ovprof", document.body.classList.contains("bodyProf"));
+  _ov.classList.add("show");
 }
 function closeConfirm(){ $("confirmOverlay").classList.remove("show"); confirmAction = null; }
 
@@ -4140,7 +4208,7 @@ async function ouvrirBilans(){
     });
   }catch(e){}
   if(!opts.length){ toast("Aucune séance (en cours ou archivée) à imprimer."); return; }
-  selBox.innerHTML='<select id="bilansChoix" onchange="majBilans()" style="width:100%;background:rgba(26,23,18,.8);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:.92rem">'
+  selBox.innerHTML='<select id="bilansChoix" onchange="majBilans()" style="width:100%;border-radius:10px;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:.92rem">'
     + opts.map(function(o){ return '<option value="'+esc(o.k)+'">'+esc(o.lib)+'</option>'; }).join("") + '</select>';
   ov.classList.add("show");
   majBilans();
