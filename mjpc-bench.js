@@ -133,7 +133,9 @@ function sandbox(noms, prelude, exportsSup) {
   // Plan complet sur le hub réel avec les VRAIS manifestes publiés
   const res = _purgePlan(hub);
   const apps = Object.keys(res.parApp);
-  t('plan : les 10 manifestes lus (' + apps.length + ')', apps.length === 10);
+  /* MàJ M5 (17/07) : le manifeste 'taxonomie' (publié en M2) porte le compte à 11 —
+     10 apps + le référentiel. */
+  t('plan : les 11 manifestes lus — 10 apps + taxonomie (' + apps.length + ')', apps.length === 11 && apps.indexOf('taxonomie') > -1);
   t('plan : jamais un chemin de conception',
     !res.plan.some(p => ['referentiel', 'chapitres', 'manifestes', 'corbeille'].some(m => p.path.includes(m)) || /\/(config|bareme|corrige|meta|reglages|dictee)$/.test(p.path)));
   t('plan : applaudimetre/session/reglages épargné, le reste de session purgé',
