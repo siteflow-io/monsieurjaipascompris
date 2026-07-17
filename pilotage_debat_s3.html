@@ -1214,6 +1214,10 @@ body:has(.overlay.show){overflow:hidden}
       <button class="ghost" onclick="closeConfirm()" title="Annuler l'action.">Annuler</button>
       <button class="primary" id="confirmYes" title="Confirmer et exécuter l'action.">Confirmer</button>
     </div>
+    <div class="dbc-card" id="dbcTestCard"><h2>🧪 Mode test</h2>
+      <p class="dbc-sub">Un bac à sable complet, séparé de tes vraies classes : une classe de test, 6 élèves fictifs avec leurs codes, un débat prêt. Tu incarnes les élèves pour tout essayer de bout en bout, puis tu purges — rien ne survit.</p>
+      <div id="dbcTestBody"><button class="dbc-btn" onclick="ouvrirModeTest()" title="Génère la classe de test, les 6 élèves, leurs codes et le débat de test — après nettoyage d'éventuels restes d'un test précédent.">🧪 Générer le bac à sable</button></div>
+    </div>
   </div>
 </div>
 
@@ -2148,6 +2152,100 @@ function copierPromptDocs(){
   catch(e){ prompt("Copie ce texte :", texte); }
 }
 
+/* ════ M5ter (17/07) — MODE TEST, patron QCM transposé (point 16 de la grille)
+   Convention _test_<app> · nettoyage des zombies AVANT génération · INCARNATION
+   (l'écran élève réel, pas une simulation) · purge exhaustive en sortie (les
+   données de test ne sont pas des données réelles : remove direct, comme le QCM).
+   La chaîne M5bis (Copier le prompt → injecter) se teste sur le débat de test. ════ */
+var TEST_DEBAT_CLASSE = "_test_pilotage_debat_s3";
+var TEST_DEBAT_ID = "_test-debat-s3";
+var TEST_DEBAT_ELEVES = ["AUDEBERT Élise","AUGEREAU Gatien","BOIVIN Eden","BOURREAU Céleste","BRESSIN Titouan","CESBRON Lili"];
+function _testCodeDe(i){ return String(9001+i); }
+/* Nettoyage des zombies : tout ce qui référence la classe test OU l'id du débat test. */
+async function purgeTestDebat(){
+  var ops=[];
+  ops.push(db.ref("classes/"+TEST_DEBAT_CLASSE).remove());
+  try{
+    var cs=await db.ref("codes").once("value"); var codes=cs.val()||{};
+    Object.keys(codes).forEach(function(k){ var e=codes[k]; if(e && e.classe===TEST_DEBAT_CLASSE) ops.push(db.ref("codes/"+k).remove()); });
+  }catch(e){}
+  try{
+    var ds=await db.ref("debats").once("value"); var all=ds.val()||{};
+    Object.keys(all).forEach(function(id){
+      if(id===TEST_DEBAT_ID || (((all[id]||{}).active||{}).classe)===TEST_DEBAT_CLASSE) ops.push(db.ref("debats/"+id).remove());
+    });
+  }catch(e){}
+  try{
+    var rs=await db.ref("debat_config/routage").once("value"); var r=rs.val()||{};
+    Object.keys(r).forEach(function(k){ if(k===slugC(TEST_DEBAT_CLASSE)||r[k]===TEST_DEBAT_ID) ops.push(db.ref("debat_config/routage/"+k).remove()); });
+  }catch(e){}
+  TEST_DEBAT_ELEVES.forEach(function(nm){ ops.push(db.ref("mjpcProfils/"+sanMJPC(nm)).remove()); });
+  await Promise.all(ops);
+}
+async function ouvrirModeTest(){
+  var box=$("dbcTestBody"); if(box) box.innerHTML='<p class="dbc-sub">🧪 Préparation du bac à sable…</p>';
+  try{
+    await purgeTestDebat();   /* le geste QCM : les zombies d'abord */
+    await new Promise(function(res){ ecrireClasse(db, TEST_DEBAT_CLASSE, TEST_DEBAT_ELEVES.slice(), {nom:TEST_DEBAT_CLASSE}, function(){ res(); }); });
+    var updCodes={};
+    TEST_DEBAT_ELEVES.forEach(function(nm,i){ updCodes[sanMJPC(nm)]={code:_testCodeDe(i), name:nm, classe:TEST_DEBAT_CLASSE}; });
+    await db.ref("codes").update(updCodes);
+    await db.ref("debats/"+TEST_DEBAT_ID).set({
+      config:{ title:"Débat TEST", work:"Œuvre d'exemple", author:"—", level:"test",
+        objective:"Essayer l'application de bout en bout.",
+        motion:"Ce mode test permet d'essayer toute l'application sans toucher aux vraies classes.",
+        pour:"", contre:"", modeGroupes:"choisi", etapes:DEBAT_CFG.etapes },
+      active:{ id:uid(), createdAt:Date.now(), binomes:{}, classe:TEST_DEBAT_CLASSE, classeEnCours:TEST_DEBAT_CLASSE }
+    });
+    await db.ref("debat_config/routage/"+slugC(TEST_DEBAT_CLASSE)).set(TEST_DEBAT_ID);
+    renderTestPanel();
+  }catch(e){ if(box) box.innerHTML='<p class="dbc-sub">❌ Impossible de préparer le bac à sable : '+esc(e.message)+'</p>'; }
+}
+function renderTestPanel(){
+  var box=$("dbcTestBody"); if(!box) return;
+  var h='<p class="dbc-sub">Bac à sable prêt ✔ — classe <b>'+esc(TEST_DEBAT_CLASSE)+'</b>, 6 élèves (codes 9001 à 9006), débat <b>Débat TEST</b> routé. Le débat utilise le jeu de documents d\u2019exemple : la Préparation permet d\u2019y tester la chaîne « Copier le prompt → injecter ».</p>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">';
+  TEST_DEBAT_ELEVES.forEach(function(nm){
+    h+='<button class="dbc-btn" onclick="incarnerTest(\''+sanMJPC(nm)+'\')" title="Ouvre l\u2019écran élève réel dans un nouvel onglet, connecté comme cet élève fictif — toute la chaîne se teste (documents, aides, jeton et reformulation, débat oral).">👤 Incarner '+esc(nm.split(" ")[1]||nm)+'</button>';
+  });
+  h+='</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
+    +'<span class="dbc-sub" style="margin:0">Formation des groupes :</span>'
+    +'<button class="dbc-btn" id="tmChoisi" onclick="testModeGroupes(\'choisi\')" title="Les élèves incarnés se placent eux-mêmes (registre de la classe de test).">Les élèves se placent</button>'
+    +'<button class="dbc-btn" id="tmImpose" onclick="testModeGroupes(\'impose\')" title="Tu composes les groupes sous Pilotage → Groupes ; un élève incarné non placé est refusé (le message se teste aussi).">Groupes imposés</button>'
+    +'</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +'<button class="dbc-btn" onclick="peuplerTest()" title="Pré-remplit deux groupes (4 élèves) avec quelques statuts, pour voir les écrans prof garnis sans incarner.">🌱 Peupler (2 groupes)</button>'
+    +'<button class="dbc-open" onclick="openDebat(\''+TEST_DEBAT_ID+'\')" title="Entrer dans le pilotage du débat de test (Préparation, Groupes, Séance, tournoi — et la chaîne d\u2019injection des documents).">Ouvrir le pilotage →</button>'
+    +'<button class="dbc-btn" style="color:#c53030;border-color:#c53030" onclick="purgerEtSortirTest()" title="Supprime TOUT le bac à sable : classe de test, codes, débat, routage, traces de profils. Rien ne survit.">🗑 Purger et sortir</button>'
+    +'</div>';
+  box.innerHTML=h;
+}
+function incarnerTest(cle){
+  window.open("pilotage_debat_s3.html?debat="+encodeURIComponent(TEST_DEBAT_ID)+"&test_eleve="+encodeURIComponent(cle), "_blank");
+}
+async function testModeGroupes(m){
+  await db.ref("debats/"+TEST_DEBAT_ID+"/config/modeGroupes").set(m==="impose"?"impose":"choisi");
+  toast(m==="impose"?"Débat de test en groupes imposés — compose-les sous Pilotage → Groupes.":"Débat de test en placement libre.");
+}
+async function peuplerTest(){
+  var mk=function(names,st){ return {names:names, statuses:st, pendingValidation:Array(10).fill(false), tokens:2, flags:{}, joinedAt:Date.now()}; };
+  var upd={};
+  upd[uid()]=mk([TEST_DEBAT_ELEVES[0],TEST_DEBAT_ELEVES[1]], ["done","done","wip","todo","todo","todo","todo","todo","todo","todo"]);
+  upd[uid()]=mk([TEST_DEBAT_ELEVES[2],TEST_DEBAT_ELEVES[3]], ["done","wip","todo","todo","todo","todo","todo","todo","todo","todo"]);
+  await db.ref("debats/"+TEST_DEBAT_ID+"/active/binomes").update(upd);
+  toast("Deux groupes de test créés (statuts variés).");
+}
+async function purgerEtSortirTest(){
+  var box=$("dbcTestBody"); if(box) box.innerHTML='<p class="dbc-sub">🗑 Purge du bac à sable…</p>';
+  try{
+    await purgeTestDebat();
+    if(box) box.innerHTML='<button class="dbc-btn" onclick="ouvrirModeTest()" title="Génère la classe de test, les 6 élèves, leurs codes et le débat de test — après nettoyage d\u2019éventuels restes d\u2019un test précédent.">🧪 Générer le bac à sable</button>';
+    toast("Bac à sable purgé — rien ne survit.");
+    showDebatChooser();
+  }catch(e){ if(box) box.innerHTML='<p class="dbc-sub">❌ Purge incomplète : '+esc(e.message)+' — relance la purge.</p>'; }
+}
+
 // ─────────── État global ───────────
 let role = null;            // 'student' | 'prof' | null
 let mySessionId = null;     // ID de la session active
@@ -2269,6 +2367,21 @@ window.addEventListener("load", async () => {
     /* M5 : un item du site peut désigner un débat précis (?debat=<id>) — prioritaire sur la mémoire du poste */
     try{ var _qd = new URLSearchParams(location.search).get("debat"); }catch(e){ var _qd=null; }
     const savedDebatId = _qd || safeStorage.get("debatId"); if(savedDebatId) setDebatId(savedDebatId);
+    /* M5ter — INCARNATION (mode test) : ?test_eleve=<cle>, honoré UNIQUEMENT pour une
+       classe commençant par "_test_" (garde-fou : jamais une porte de connexion réelle). */
+    try{
+      var _te = new URLSearchParams(location.search).get("test_eleve");
+      if(_te){
+        var _tc = await db.ref("classes/"+TEST_DEBAT_CLASSE).once("value").then(function(s){ return s.val(); });
+        var _roster = extractEleves(_tc, []);
+        var _nm = null;
+        _roster.forEach(function(r){ if(sanMJPC(r)===_te) _nm=r; });
+        if(_nm && TEST_DEBAT_CLASSE.indexOf("_test_")===0){
+          await identifieEleve({nom:_nm, classe:TEST_DEBAT_CLASSE, cle:_te});
+          return;   /* écran élève réel ouvert — la chaîne complète se teste */
+        }
+      }
+    }catch(e){}
     const ok = await rejoinStudent(savedSession, savedBinome);
     if(!ok){ showScreen("Welcome"); }
   } else {
