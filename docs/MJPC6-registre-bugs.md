@@ -122,6 +122,64 @@
 
 ---
 
+## 9bis. `dictee_5e_herge_ch4` puis `dictee_universelle` — LA PLUS RICHE (~9 200 lignes)
+*Sources : « Adaptation de dictée pour classe de 5e » (10/04, 25b5469d), « Analyse d'un fichier HTML React » (12-14/04, ae922645), « Dictée universelle à intégrer à MJPC » (08/05, 7c23c455), « Débogage de dictée universelle » (10/05, 1d3621ce).*
+
+### Alignement et tokenisation (source de FAUSSES ERREURS sur copies réelles)
+- **`normalizeQuotes` transformait `«` `»` en `"` AVANT l'alignement Levenshtein** → cascade de décalages → des mots correctement écrits (« Les ») signalés comme erreurs.
+- **Ponctuation collée** : un correcteur tapant `danger.Quand` produit UN token, alors que la référence a `danger.` + `Quand` → décalage de tout l'alignement.
+- **Copies adaptées alignées par Levenshtein** au lieu d'un zip positionnel (même longueur) : Levenshtein optimise la distance globale et **décale les positions**.
+- **Accents rejetés** : « bonté » refusé en autocorrection parce que l'erreur simulée stockait `correct: a.refWord` **avec la ponctuation attachée** (« bonté. ») au lieu de nettoyée.
+- **Apostrophes** : comparaison `typed.toLowerCase()===refW.toLowerCase()` sans normalisation des apostrophes typographiques.
+- **`countWords` compte les tokens de ponctuation** : 82 mots affichés pour un texte de ~79.
+- **Conséquence réelle** : *une correction de classe faussée le matin même* — « l'appli a produit des fausses erreurs à cause de bugs techniques (ponctuation, ref adaptée) », nettoyage a posteriori par injection JSON.
+
+### Écritures Firebase destructives ou incomplètes
+- **`set()` au lieu d'`update()`** dans `DictSubmit` → **les bonus étaient écrasés**.
+- **`ProfConfig` en `set()`** → écrasait `config/live`.
+- **Contestations acceptées ne mettant à jour NI `errors[]`, NI `noteAvecBonus`, NI `errG/L/P/O`** : la décision du prof n'avait aucun effet sur la note.
+- **`nErrors` stocké de façon incohérente** selon les chemins.
+- **`ProfStats` et le dashboard lisaient `note` brut au lieu de `noteAvecBonus`** → notes affichées fausses.
+- **`ProfSim.runSim` efface TOUT avant de simuler** (`resultsRef.remove()` + toutes les autres refs) **sans confirmation spécifique** : lancer la simulation après une séance réelle DÉTRUIT les données réelles.
+- **Données Firebase résiduelles** (`autocorrect/`, `correction/`) persistant entre deux simulations → **les élèves voyaient des mots déjà corrigés**.
+- **Import d'un snapshot par le mauvais bouton** → structure Firebase corrompue (tout imbriqué sous `/results/`).
+- **TTL de verrou absent** · **unicité des codes élèves non garantie**.
+
+### Concurrence et état
+- **Race condition dans `decide()`** (décisions de contestation) → corrigée par sérialisation des promesses par élève.
+- **Perte d'état React au changement d'onglet** (interne ou navigateur) : `journal`, `summary`, `running`, `simDecisions` étaient locaux à `ProfSim` et perdus à l'unmount → **tous remontés dans le parent `ProfPanel`**.
+- **Absences non propagées en temps réel** : `absents` en `useState` local dans `App` → le prof marque un absent, les autres tablettes ne le voient pas ; l'absent reste dans le `<select>`.
+- **Verrou d'un correcteur absent non nettoyé** → **correcteur bloqué indéfiniment** (cas RAGUENEAU Jules, vu en base).
+
+### Données de test et codage en dur
+- **`SIM_ERROR_BANK` contenait les indices d'une ANCIENNE dictée** (`idx:1`, `idx:57`, mots « parent, », « année », « boche ») sans rapport avec le texte courant → **les erreurs injectées ne correspondaient pas au texte**.
+- **`29` codé en dur** dans le compteur du dashboard au lieu de `ELEVES.length`, numérateur non filtré **incluant la paire de test**.
+- **Mapping de codes incohérent** : `catCode` utilisateur (`G-ACC`, `L-ORT`) vs codes fins (`G1`, `L1`) → **popups affichant « aucune erreur » alors que le compteur en annonçait 2**.
+- **Simulation divergeant du flux réel** : `computeDicteeScore` et `computeBonus` n'étaient PAS utilisés par la simulation → elle ne testait pas ce qui tourne en classe.
+- **Wording élève** : « faux positif » dans la légende — incompréhensible pour des 5e.
+- **Code mort volumineux** : composants QCM entiers (`Correction`, `QInput`, `Results`) inutilisés.
+
+---
+
+## 9ter. `index.html` — LE SITE MJPC
+*Source : « MJPC code 1 » (01/06, f0c1392c) et Phases 1-2 de MJPC 6.*
+- **CRASH SILENCIEUX du rendu des chapitres** : des entrées `null` dans les données Firebase faisaient échouer `data[a].ordre` dans un `Array.sort` → `renderChapitres` mourait **avant** d'atteindre le bouton « + Nouveau chapitre » (donc bouton invisible, sans erreur visible). *Correctif : `sanitizeChapitres` récursif au chargement + null-safety sur les **neuf** `Object.keys(...).sort()` lisant `.ordre`.*
+- **État d'accordéon perdu à chaque re-render** → objet persistant `UI_OPEN` clé `level::chnum`.
+- **Numérotation trompeuse** : chapitres/séances numérotés selon les éléments VISIBLES (publiés) et non leur position absolue → publier le chapitre 4 sur 8 affichait « 1 ».
+- **Suppression d'élève sans archivage** (L2120) : retire de la classe + DELETE le code, sans corbeille — porte centrale où aboutissent tous les renvois.
+- **Slug élève sans décomposition des accents** (L1807) → source de TOUTES les clés dégradées de l'écosystème (`CL_MENT_Lylou`).
+
+---
+
+## 9quater. LES FAUSSES PISTES DE DIAGNOSTIC (erreurs de Claude, à ne pas répéter)
+*Ces épisodes ont coûté des sessions entières.*
+1. **`permission_denied at /dictees`** : Claude a diagnostiqué « c'est le protocole `file://` » ; Paul a recadré (« ça marche toujours en file:// pour cette app, cherche le bug dans le code ») ; Claude est reparti sur une **seconde** fausse piste (lecture racine). **Cause réelle : l'expiration des règles Firebase** — rien à voir avec le code ni le protocole. *Leçon : ne jamais attribuer une erreur à l'environnement sans preuve ; vérifier d'abord l'infrastructure (règles, quotas, dates d'expiration).*
+2. **« Les données sont perdues ! »** (app rucher) : la panique était injustifiée — les données étaient sur Firebase, seule la synchro était lente. *Leçon : distinguer « absent » de « pas encore chargé ».*
+3. **Classement « cosmétique vs bloquant »** : Claude avait laissé 7 points « cosmétiques » non corrigés ; Paul a exigé leur correction — l'un d'eux cachait un **vrai** bug (`updateEDCheckbox` manquante).
+4. **Confiance en une représentation** (13/07, trois incidents le même jour) : croire un export, le dépôt GitHub ou un résumé plutôt que le système lui-même. → Règle : **« Ne jamais affirmer un comportement sans l'avoir lu dans le code ou vu dans les données. »**
+
+---
+
 ## 9. LEÇONS TECHNIQUES TRANSVERSALES (à appliquer dans tout correctif)
 1. **Ne JAMAIS faire de `content.replace` sur des patterns contenant des apostrophes françaises** — utiliser des échappements unicode ou remplacer par position.
 2. **Les tests qui vérifient que les fonctions EXISTENT ne suffisent pas** — il faut simuler les actions et vérifier les effets.
