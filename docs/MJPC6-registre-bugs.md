@@ -63,7 +63,7 @@
 
 ---
 
-## 3. `evaluation-qcm` — 17 bugs (12 critiques, 4 moyens, 3 mineurs)
+## 3. `evaluation-qcm` — 17 bugs : **11 CRITIQUES + 3 MOYENS + 3 MINEURS** *(compte corrigé le 18/07 : le registre annonçait 12+4+3=19, la source dit 11+3+3=17 — contestation fondée de l'exécutant M7)*
 *Source : conv. « QCM evaluation suite » (19/06, 05574666).*
 - **`classe.slug` undefined dans `EleveBilan`** → **l'historique longitudinal MJPC était TOUJOURS vide** (le bilan promis n'existait pas).
 - **Classe de test non filtrée en 5 endroits** distincts.
@@ -75,6 +75,12 @@
 - **Blocage en phase de correction** : usage de `qIdx` au lieu de `correctionIdx` (VueBoard ET VuePhone).
 - **Champ `explication` silencieusement abandonné** par `parseEvaluation`.
 - **Recalcul RÉTROACTIF des scores** quand une éval est modifiée après la session : les résultats de la veille devenaient faux (incident réel).
+- **Bug #20 — sessions actives supprimées abusivement** (L.7023) : `!classes[slug]` où `slug` est un slug interne → toujours vrai → **toutes les sessions actives marquées « classe inexistante »** puis supprimées. *Fix : appliquer `normaliserClassesQCM` avant usage.*
+- **Bug #21 — fuite de listener dans SessionLive** (L.5779) : `db.ref(DB_ROOT+"/presence/"+classe.nom).off()` utilise le **nom complet** au lieu du **slug** — le chemin n'a jamais été abonné, le `.off()` n'a aucun effet, **les listeners précédents restent attachés** (fuite mémoire à chaque session).
+- **Bug #22 — snapshots sans les classes** (L.1350) : `db.ref(DB_ROOT).once("value")` lit `qcm/` alors que les classes vivent à `/classes` racine → **le snapshot ne contient plus les classes** ; un import ne les restaure pas.
+**MOYENS** : **#7** médiane décimale affichée telle quelle (« 2.5 bonnes réponses ou moins ») dans `construireCompaBilan` L.2261 et EleveBilan L.2845 · **#8** supprimer une classe laisse `qcm/eleveSexes/<nom>/*` orphelins (L.4615) · **#14** fourchettes invalides pour petits totaux (« Entre 2 et 1 bonnes réponses » quand total ≤ 2).
+**MINEURS** : **#9** commentaire trompeur (L.956 : « mjpcProfils sous qcm/ » alors qu'il est à la racine) · **#10** `.sort()` sans comparateur dans `preparerQuestionsBilan` (L.2324) · **#11** `surveillerClassesAvecSexes` provoque deux `setState` rapprochés (L.1098).
+**ORIGINE, à retenir** : *« la plupart des bugs critiques sont des RÉGRESSIONS introduites par les modifications de cette session — surtout par la mutualisation `/classes` racine et le changement de `TEST_CLASSE_SLUG` »*, et #21/#22 viennent d'un **remplacement automatique global** `DB_ROOT+"/classes"` → `"classes"`. *Leçon : un rechercher-remplacer global sur des chemins produit des bugs silencieux — cf. point 20 et l'incident du regex trop large de M5ter.*
 
 ---
 
