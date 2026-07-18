@@ -97,6 +97,22 @@
 13. Concordance : les référentiels locaux (familles d'erreurs, compétences, vocabulaire d'analyse) pointent le référentiel central par table de correspondance (voir §D)
 14ter. **SOLDE DES DETTES EN FIN DE SESSION (règle, 17/07 — Paul : « les dettes doivent absolument être réglées à la fin »)** : aucune session (S2, S3…) ne se clôt sans avoir soldé les dettes qu'elle a ouvertes. Le plan tient un registre visible (dette ouverte → dette fermée). Seule exception : un chantier explicitement différé avec ses raisons écrites (cf. section Z). À la fin de chaque session, la conscience liste les dettes ouvertes et les solde ou les justifie une par une avant clôture.
 14bis. **INTÉGRITÉ DU COMPTAGE (principe transversal, 16/07 — Paul : « rigueur absolue, sinon exposition à la méfiance »)** : tout point, score ou décompte affiché doit être exact, traçable et justifiable — le système entier est un garde-fou de confiance (élèves, familles), un seul décompte faux découvert expose tout l'édifice. Règle opérationnelle : AUCUNE mécanique de comptage ne se livre sans ses tests au banc (le calcul et son test dans la même livraison — pratique historique de Paul érigée en règle : double barème QCM, scores débat, 281 tests Dugain). Première application Concordance : la règle multi-cible (une erreur = UN point, posé à l'étage que le code connaît, jamais dupliqué) livrée AVEC son test.
+23. **LE BILAN AUTONOME DE L'ÉLÈVE — patron retrouvé le 18/07 (pièce fondatrice : `ROTUREAU_BREL_Diane.html`, 17 Ko, export de dictée coévaluée)**
+**Ce que c'est** : un fichier HTML **autonome** généré par l'app et téléchargé — il fonctionne HORS LIGNE, sans app, sans Firebase, ouvrable dans trois ans. Il porte sa propre serrure :
+```js
+var CODE="0000";                       // le code personnel de l'élève, gravé dans SON fichier
+function checkCode(){
+  var v=document.getElementById("codeInput").value.trim();
+  if(v===CODE || v==="1312"){ …afficher les résultats… }   // 1312 = passe-partout du prof
+  else { errMsg.textContent="Code incorrect."; }
+}
+```
+**Structure du patron** : écran de garde (titre de l'activité · nom de l'élève · champ 4 chiffres · « Voir mes résultats ») → résultats (en-tête au nom de l'élève, compétences avec barres, liste d'erreurs, info-bulles explicatives, onglets).
+**LE POINT DOCTRINAL** : à l'ouverture, **la note est CACHÉE** (`noteBig` en `display:none`) et remplacée par « Consulte tes compétences pour voir ta note ». Le découplage note/commentaire (principe E1-7) n'est pas seulement dans l'app : **il est gravé dans le fichier que l'élève emporte chez lui.**
+**Le bypass prof (`|| "1312"`) existe aussi dans l'app** : `dictee_universelle.verifyCode()` (seul endroit de l'écosystème, vérifié sur les 14 apps).
+**À généraliser (usages de Paul)** : tester sans chercher le code d'un élève · **dépanner en classe** l'élève qui a oublié son code. **Deux améliorations à la propagation** : ① accepter TOUS les `PROF_CODES` (aujourd'hui `1312` en dur, `3141` ne marche pas) ; ② laisser une trace visible côté écran (« accès professeur — <élève> ») pour ne pas fausser les données ni la présence.
+**Lien** : c'est la pièce fondatrice de la décision **C1** (forme de l'archive = exports HTML par élève) et le modèle des exports de M16.
+
 22. **PRÉSENCE DÉTAILLÉE ET SYSTÉMATIQUE (point de grille, 18/07 — Paul : « un point de présence détaillé et systématique dans toutes les apps »)**
 **Le mécanisme de référence EXISTE DÉJÀ dans `index.html`** (vérifié sur le code le 18/07) : nœud `/presence/<clé élève>` alimenté par `updatePresence()` avec le CONTEXTE de travail (`current_seance`, `current_item`), `navigator.sendBeacon` à la fermeture de l'onglet pour marquer proprement `offline:true` + `last_seen`, et un écran prof **« 📡 Présence live »** déjà construit. C'est le plus abouti de l'écosystème — le chantier n'est pas d'inventer, c'est de FAIRE REMONTER LES APPS VERS LUI.
 **État par app (18/07)** : `index` ✔ complet · `pilotage_debat_s3` ~ partiel (drapeaux `away`/`blocked` par groupe, sans horodatage ni contexte) · `correction_dictee` ✘ AUCUN (le « Suivi 🟢 » affiche l'AVANCEMENT calculé depuis les données, pas la connexion — constat de Paul confirmé par lecture du code : zéro `heartbeat`, zéro `presence`) · autres apps : à inventorier à leur passe.
