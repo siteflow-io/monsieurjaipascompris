@@ -843,6 +843,17 @@ Tailles déployées (contrôle) : applause_meter 565 216 · reecriture 239 267 �
 
 ---
 
+## W. GARANTIR LA CORBEILLE — la promesse « récupérable un an » (décidé 18/07)
+
+**Le déclencheur** : la confirmation de suppression d'une dictée annonce *« archivée dans la corbeille MJPC (récupérable un an) »*. **Paul décide de garder la phrase ET de garantir le flux** — une promesse faite à l'écran doit être tenue par le code (point 25 : le discours doit dire le flux réel).
+**Ce qui existe** : `corbeille/<jour>/<motif>` est écrit par le débat, l'index et maintenant la souche — mais **rien ne garantit ni la rétention ni la récupération** : aucune purge datée, aucun écran pour retrouver et restaurer un élément, aucune règle d'ancienneté.
+**À construire (uniformisation — vaut pour TOUTES les apps)** :
+1. **Un écran de corbeille** dans la console prof : ce qui a été supprimé, quand, par quelle app, avec un bouton **Restaurer**.
+2. **Une règle de rétention explicite** : conservation un an glissant, puis suppression définitive — automatique, annoncée, et **jamais silencieuse**.
+3. **Un format d'archive unique** pour toutes les apps (`{_meta:{app, date, motif, annee_scolaire}, data:{...}}` — le format que la souche vient d'adopter), pour qu'un seul écran sache tout restaurer.
+4. **La cohérence des textes** : toute app qui annonce la corbeille doit dire la même chose (durée, réversibilité).
+**Position** : après M8 (le site porte la console), avant la rentrée si possible — sinon la phrase devra être amendée. *Une promesse non garantie est une dette de confiance, pas une dette technique.*
+
 ## X. LE RATTRAPAGE MODAL DE L'ÉLÈVE ABSENT (idée de Paul, 18/07 — chantier de conception)
 
 **Le déclencheur** : Maïwen était absente à la dictée préparée « Grandes découvertes ». **L'absence EST dans les données** (`absents: {antonini_maiwen: true}` — vérifié au hub), mais l'app lui affiche « Pas encore corrigée » : un mensonge factuel de plus (cf. point 25). *Premier correctif, minimal : un quatrième état, « Tu étais absent(e) », qui dit la vérité.*
