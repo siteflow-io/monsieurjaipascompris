@@ -37,7 +37,7 @@ function sandbox(noms, prelude, exportsSup) {
 
 /* ════ SUITE 1 — SOCLE (non-régression Phase 1) ════ */
 (function () {
-  const deb = html.indexOf('// MJPC-CORE v1.0.0');
+  const deb = html.indexOf('// MJPC-CORE v');   /* M6 : détection non versionnée (v1.0.0 en dur masquait les apps v1.1.0) */
   if (deb < 0) { section('SOCLE'); console.log('  (absent de ce fichier — suite ignorée)'); return; }
   const finS = html.indexOf('\n};', html.indexOf('\nvar MJPC_PURGE')) + 3;
   const sb = {};
@@ -58,6 +58,445 @@ function sandbox(noms, prelude, exportsSup) {
     !Object.keys(mock._out).some(k => /^\d+$/.test(k)));
 })();
 
+
+/* ════ SUITE M6 — SOUCHE : passe de la grille (18/07/2026) ════ */
+(function () {
+  if (!/function Nav2\(/.test(html)) { section('M6 SOUCHE'); console.log('  (app hors périmètre M6 — suite ignorée)'); return; }
+  section('M6 SOUCHE — navigation deux niveaux');
+  const navDecl = html.match(/var NAV2_GROUPES=\[[\s\S]*?\n\];/)[0];
+  const nav = sandbox(['groupeDeTab'], navDecl + '\n', ['NAV2_GROUPES']);
+  const ANCIENS = ['correct', 'rapide', 'bilan', 'copies', 'exercices', 'fiches', 'suivi'];
+  t('les 7 onglets d\'origine sont tous rangés dans un groupe',
+    ANCIENS.every(x => nav.groupeDeTab(x) !== null));
+  t('aucun onglet rangé deux fois',
+    (() => { const v = []; nav.NAV2_GROUPES.forEach(g => g.tabs.forEach(x => v.push(x[0]))); return new Set(v).size === v.length; })());
+  t('trois groupes exactement (Pilotage / Données / Réglages)',
+    nav.NAV2_GROUPES.length === 3 && nav.NAV2_GROUPES.map(g => g.id).join(',') === 'pilotage,donnees,reglages');
+  t('Correction et Rapide en Pilotage, Exercices en Données (décision Q1)',
+    nav.groupeDeTab('correct') === 'pilotage' && nav.groupeDeTab('rapide') === 'pilotage' &&
+    nav.groupeDeTab('exercices') === 'donnees');
+  t('Préparation existe en Pilotage, Réglages est doté',
+    nav.groupeDeTab('preparation') === 'pilotage' && nav.groupeDeTab('reglages') === 'reglages');
+  t('onglet inconnu → null (pas de groupe fantôme)', nav.groupeDeTab('zzz') === null);
+  t('atterrissage : l\'écran ouvre sur Correction dans Pilotage',
+    /useState\("correct"\),tab=/.test(html) && /useState\("pilotage"\),groupe=/.test(html));
+  t('les 7 composants d\'onglets sont montés inchangés (aucun rouvert)',
+    ['h(Bilan,{', 'h(Copies,{', 'h(ExercicesAdmin,{', 'h(Fiches,{', 'h(Suivi,{'].every(x => html.includes(x)));
+
+  section('M6 SOUCHE — identité élève (code personnel contre /codes réel)');
+  const prelSan = corpsFonction('sanMJPC') + '\n';
+  const codes = hub.codes || {};
+  const cd = sandbox(['codeAttendu'], prelSan + 'var codesData=' + JSON.stringify(codes) + ';\n');
+  const canon = Object.keys(codes).find(k => codes[k] && codes[k].code && k === (codes[k].name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''));
+  t('code retrouvé sur une clé canonique réelle (' + canon + ')',
+    !!canon && cd.codeAttendu(canon, codes[canon].name) === String(codes[canon].code));
+  const degrade = Object.keys(codes).find(k => codes[k] && codes[k].name && /[A-Z_]{4,}/.test(k) && k !== canon);
+  if (degrade) {
+    const cleVraie = codes[degrade].name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    t('clé dégradée du registre (' + degrade + ') rattrapée par le champ name (dette ⑮ non bloquante)',
+      cd.codeAttendu(cleVraie, codes[degrade].name) === String(codes[degrade].code));
+  }
+  t('élève sans code enregistré → null (message, jamais d\'entrée)', cd.codeAttendu('inconnu_zzz', 'INCONNU Zzz') === null);
+  t('entrée string du registre acceptée (format hérité)',
+    sandbox(['codeAttendu'], prelSan + 'var codesData={"x_y":"4242"};\n').codeAttendu('x_y', 'X Y') === '4242');
+  t('le code est comparé en chaîne (pas de 0123 → 123)', String(codes[canon].code).length === String(codes[canon].code).trim().length);
+
+  section('M6ter SOUCHE — HARNAIS LÉONIE (cas réel de l\'audit)');
+  /* Reproduction fidèle de la chaîne livrée : registre → dictées → identité → filtre. */
+  const prelBase = corpsFonction('sanMJPC') + '\nfunction san(n){return sanMJPC(n)}\n' +
+                   corpsFonction('extractEleves') + '\n' + corpsFonction('resolveEleves') + '\n';
+  const outils = sandbox([], prelBase + corpsFonction('classeDuRegistre') + '\n',
+                         ['sanMJPC', 'san', 'extractEleves', 'resolveEleves', 'classeDuRegistre']);
+  const CLE_L = 'oger_colas_leonie', DID_UTOPIE = 'dictee_5e_chapitre_utopie-5e_herge';
+  const DID_GD = 'dictee_preparee_5e_grandes_decouvertes-5e_herge';
+
+  /* Le registre : Léonie y est bien, en 5e HERGÉ. */
+  t('Léonie est au registre /classes/5e HERGÉ',
+    outils.extractEleves(hub.classes['5e HERGÉ'], []).some(e => outils.san(e) === CLE_L));
+  t('son code personnel est au registre /codes',
+    !!(hub.codes[CLE_L] && hub.codes[CLE_L].code));
+
+  /* Construction des dictées, exactement comme l'app la fait, à partir du registre. */
+  const bâtir = (registre) => Object.keys(hub.correction_dictee).map(id => {
+    const v = hub.correction_dictee[id] || {}, c = v.config || {};
+    return { id, title: c.title || id, classe: c.classe || '', published: c.published !== false,
+             showNote: c.showNote !== false, base: c.base || 20, results: v.results || {},
+             autocorrection: v.autocorrection || {}, copyPublishedAt: v.copyPublishedAt || null,
+             eleves: outils.extractEleves(outils.classeDuRegistre(c.classe || '', registre), c.eleves) };
+  });
+
+  /* L'identité, telle que doLogin la calcule à partir du registre chargé. */
+  const identiteDe = (registre, nom, prenom, rosterDictees) => {
+    const roster = [];
+    Object.keys(registre).forEach(c => outils.extractEleves(registre[c], []).forEach(e => { if (roster.indexOf(e) < 0) roster.push(e); }));
+    (rosterDictees || []).forEach(e => { if (roster.indexOf(e) < 0) roster.push(e); });
+    const res = outils.resolveEleves(roster, [{ nom: nom.toUpperCase(), prenom }]);
+    if (res && res.erreur) return { erreur: res.erreur };
+    const moi = res[0];
+    let cls = '';
+    const kc = Object.keys(registre);
+    for (let ci = 0; ci < kc.length && !cls; ci++) {
+      const rr = outils.extractEleves(registre[kc[ci]], []);
+      for (let ri = 0; ri < rr.length; ri++) if (outils.san(rr[ri]) === moi.cle) { cls = kc[ci]; break; }
+    }
+    return { nom: moi.nom, cle: moi.cle, classe: cls };
+  };
+
+  const idL = identiteDe(hub.classes, 'OGER-COLAS', 'Léonie', []);
+  t('PREUVE B1 : identite.classe vaut « 5e HERGÉ » (code ' + hub.codes[CLE_L].code + ')', idL.classe === '5e HERGÉ');
+  t('identite.cle canonique', idL.cle === CLE_L);
+
+  const filtreAvec = (dictees, identite) =>
+    sandbox(['mesDictees'], prelBase + 'var identite=' + JSON.stringify(identite) + ';\nvar dictees=' + JSON.stringify(dictees) + ';\n').mesDictees();
+
+  const dictL = bâtir(hub.classes);
+  const dUtopie = dictL.find(d => d.id === DID_UTOPIE);
+  t('au hub : la dictée Utopie est publiée, classe ' + dUtopie.classe + ', sans résultat pour Léonie',
+    dUtopie.published === true && !dUtopie.results[CLE_L]);
+  const listeL = filtreAvec(dictL, idL);
+  t('PREUVE B1 : la dictée Utopie APPARAÎT dans « Mes dictées » de Léonie',
+    listeL.some(d => d.id === DID_UTOPIE));
+  t('le roster de la dictée est complet (31 élèves de 5e HERGÉ)', dUtopie.eleves.length === 31);
+
+  /* La course : registre absent au moment de la construction. La garde doit empêcher
+     toute liste fausse ; et une fois le registre arrivé, la liste est juste. */
+  const dCourse = bâtir({});
+  t('sans registre, le roster était vide (la course était réelle)',
+    dCourse.find(d => d.id === DID_UTOPIE).eleves.length === 0);
+  t('CORRECTIF : les dictées ne se construisent plus sans registre (classesData en dépendance)',
+    html.includes('if(!classesData)return;') && html.includes('},[forcedDicteeId,classesData]);'));
+  t('CORRECTIF : la liste attend le registre plutôt que d\'afficher un faux vide',
+    html.includes('if(!classesData||!dictees.length) return h("div"'));
+  t('CORRECTIF : doLogin lit le registre chargé, plus la globale', html.includes('var registre=classesData||CLASSES||{};'));
+
+  section('M6ter SOUCHE — trois états de publication (correctif B2)');
+  const et = sandbox(['etatDicteeEleve'], '');
+  const dGD = dictL.find(d => d.id === DID_GD);
+  t('au hub : « Grandes découvertes » a des résultats mais AUCUN copyPublishedAt',
+    Object.keys(dGD.results).length > 0 && !dGD.copyPublishedAt);
+  const cleGD = Object.keys(dGD.results)[0];
+  const eGD = et.etatDicteeEleve(dGD, cleGD);
+  t('PREUVE B2 : copie corrigée mais non rendue → ' + eGD.label, eGD.code === 'nonrendue');
+  t('PREUVE B2 : cette ligne n\'affiche PAS la note', eGD.montrerNote === false);
+  t('PREUVE B2 : cette ligne ne propose PAS « Ouvrir »', eGD.ouvrable === false);
+  t('la copie rendue (Utopie, copyPublishedAt présent) reste ouvrable',
+    (() => { const k = Object.keys(dUtopie.results)[0]; if (!k) return true;
+             const e = et.etatDicteeEleve(dUtopie, k); return e.ouvrable === true && e.montrerNote === true; })());
+  t('pas de résultat → « Pas encore corrigée », ni note ni ouverture',
+    (() => { const e = et.etatDicteeEleve(dUtopie, CLE_L); return e.code === 'attente' && !e.ouvrable && !e.montrerNote; })());
+  t('rendue + autocorrection achevée → « Terminée »',
+    et.etatDicteeEleve({ results: { x: { timestamp: 1 } }, copyPublishedAt: 1, autocorrection: { x: { total: 5, solved: 5 } } }, 'x').code === 'terminee');
+  t('rendue + autocorrection en cours → « À faire »',
+    et.etatDicteeEleve({ results: { x: { timestamp: 1 } }, copyPublishedAt: 1, autocorrection: { x: { total: 5, solved: 2 } } }, 'x').code === 'afaire');
+  t('les quatre états sont exclusifs et couvrent les trois dimensions',
+    ['attente', 'nonrendue', 'afaire', 'terminee'].every(c => html.includes('code:"' + c + '"')));
+
+  section('M6ter SOUCHE — la ligne ne promet que ce qui existe');
+  t('« Ouvrir » n\'est rendu que si l\'état est ouvrable', html.includes('et.ouvrable?h("span",{style:{color:"var(--primary)"'));
+  t('la note n\'est rendue que si l\'état l\'autorise', html.includes('(et.montrerNote&&d.showNote!==false'));
+  t('une ligne non ouvrable n\'a ni curseur main ni gestionnaire de clic',
+    html.includes('cursor:et.ouvrable?"pointer":"default"') && html.includes('onClick:et.ouvrable?function(){ouvrirDictee(d)}:null'));
+  t('ouvrirDictee refuse aussi par le fond (garde-fou, pas seulement l\'affichage)',
+    html.includes('if(!et.ouvrable){setAttente(d);setErrMsg("");setScreen("attente");return}'));
+  t('l\'écran d\'attente distingue les TROIS situations (absent · pas corrigée · pas rendue)',
+    html.includes('var e=identite?etatDicteeEleve(attente,identite.cle):{code:"attente"};') &&
+    html.includes('e.code==="absent"') && html.includes('e.code==="nonrendue"') &&
+    html.includes('Cette dict\\u00e9e n\\u2019est pas encore corrig\\u00e9e'));
+  t('message de liste vide sans « corrigée »',
+    html.includes('Tu n\\u2019as pas encore de dict\\u00e9e. Celles de ta classe appara\\u00eetront ici.'));
+
+  section('M6quater SOUCHE — « Mes dictées » est un lieu (ouverture directe)');
+  t('sans identifiant dans l\'URL : la liste, toujours',
+    html.includes('if(!idUrl||autoOuvert){ setScreen("mesdictees"); return; }'));
+  t('l\'ouverture directe ne se déclenche qu\'une fois (drapeau autoOuvert)',
+    html.includes('setAutoOuvert(true);') && html.includes('useState(false),autoOuvert='));
+  t('le lien nominatif des familles ouvre toujours sa destination',
+    html.includes('(autoLoginParams&&san(autoLoginParams.eleveKey)===identite.cle) ? autoLoginParams.dicteeId'));
+  t('un identifiant d\'URL sans correspondance retombe sur la liste, sans planter',
+    html.includes('if(cible) ouvrirDictee(cible);\n    else setScreen("mesdictees");'));
+  t('retour depuis un écran de travail : liste, jamais réouverture',
+    html.includes('function retourListe(){ setEleveData(null);setAttente(null);setScreen("mesdictees"); }'));
+
+  section('M6quater SOUCHE — D11 : l\'absence (cas réel Maïwen)');
+  const CLE_M = 'antonini_maiwen';
+  const dictM = bâtir(hub.classes).map(d => Object.assign({}, d,
+    { absents: (hub.correction_dictee[d.id] || {}).absents || {} }));
+  const dGD2 = dictM.find(d => d.id === DID_GD);
+  const dUt2 = dictM.find(d => d.id === DID_UTOPIE);
+  t('au hub : Maïwen est marquée absente sur « Grandes découvertes »', dGD2.absents[CLE_M] === true);
+  t('au hub : elle n\'est pas absente sur « Utopie »', !dUt2.absents[CLE_M]);
+  const etM = sandbox(['etatDicteeEleve'], '');
+  const eGD2 = etM.etatDicteeEleve(dGD2, CLE_M);
+  t('PREUVE D11 : « Grandes découvertes » → ' + eGD2.label + ' (plus « Pas encore corrigée »)', eGD2.code === 'absent');
+  t('un élève absent ne voit ni note ni « Ouvrir »', eGD2.montrerNote === false && eGD2.ouvrable === false);
+  t('l\'absence prime sur l\'absence de copie rendue',
+    etM.etatDicteeEleve({ absents: { x: true }, results: {}, autocorrection: {} }, 'x').code === 'absent');
+  t('l\'absence prime même si une copie existe et est rendue',
+    etM.etatDicteeEleve({ absents: { x: true }, copyPublishedAt: 1, results: { x: { note: 12 } },
+                          autocorrection: { x: { total: 3, solved: 3 } } }, 'x').code === 'absent');
+  t('un élève présent sur la même dictée n\'est pas marqué absent',
+    (() => { const autre = Object.keys(dGD2.results).find(k => k !== CLE_M);
+             return !autre || etM.etatDicteeEleve(dGD2, autre).code !== 'absent'; })());
+  t('nœud absents chargé depuis Firebase', html.includes('absents:val[id].absents||{}'));
+  t('les cinq états sont exclusifs et couvrent les quatre dimensions',
+    ['absent', 'attente', 'nonrendue', 'afaire', 'terminee'].every(c => html.includes('code:"' + c + '"')));
+
+  section('M6quater SOUCHE — brique de rattrapage (chantier X, non ouvert)');
+  t('l\'état porte un champ rattrapage explicite, à null tant que le chantier est fermé',
+    (html.match(/rattrapage:null/g) || []).length === 5);
+  t('aucun appelant ne suppose la présence de rattrapage (pas de déréférencement)',
+    !/rattrapage\.(?!$)/.test(html) && !/\.rattrapage\[/.test(html));
+  t('l\'écran d\'attente réserve l\'emplacement du rattrapage sans rien coder',
+    html.includes('Emplacement du RATTRAPAGE MODAL'));
+  t('l\'élève absent est orienté vers le professeur (à la 1re personne), pas laissé sans suite',
+    html.includes('Vois avec moi comment la rattraper, si c\\u2019est possible.'));
+
+  section('M6ter SOUCHE — le vocabulaire de l\'élève (complément d\'audit)');
+  /* Extraction des composants vus par l'élève, pour interroger leurs textes. */
+  const corpsDe = (nom) => { const i = html.indexOf('function ' + nom + '('); let d = 0;
+    for (let k = html.indexOf('{', i); k < html.length; k++) {
+      if (html[k] === '{') d++; else if (html[k] === '}') { d--; if (!d) return html.slice(i, k + 1); } } return ''; };
+  /* Les commentaires du code sont retirés d'abord : sans cela l'extraction enjambe
+     un commentaire et le prend pour un texte affiché (faux positif constaté). */
+  const sansCommentaires = (src) => src.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  const textesEleve = ['AppEleve', 'MaCopie', 'EleveCorrection', 'ExercicesEleve']
+    .map(n => sansCommentaires(corpsDe(n))).join('\n')
+    .match(/"[^"]{12,}"/g).filter(x => /[a-zéèêàûôç]{4,}\s/i.test(x) && !/[{};]|=>|h\(/.test(x));
+  t('aucun texte montré à l\'élève ne parle de « publier » (notion interne)',
+    !textesEleve.some(x => /publi[ée]/i.test(x)));
+  t('le message faux a disparu (« Le professeur ne l\'a pas encore publiée »)',
+    !html.includes('Le professeur ne l\\u2019a pas encore publi\\u00e9e'));
+  t('message d\'arrivée corrigé : « Ta correction n\'est pas encore consultable »',
+    html.includes('Ta correction n\\u2019est pas encore consultable') &&
+    html.includes('Elle sera disponible apr\\u00e8s la s\\u00e9ance de correction.'));
+  t('l\'inaccompli est dit par le FLUX, jamais par le professeur (principe cardinal)',
+    html.includes('label:"Disponible apr\\u00e8s la s\\u00e9ance"') &&
+    html.includes('attente_copie: "Elle sera disponible apr\\u00e8s la s\\u00e9ance de correction."') &&
+    html.includes('Tes erreurs \\u00e0 revoir appara\\u00eetront ici apr\\u00e8s la s\\u00e9ance de correction.'));
+  t('ARBITRAGE : la ligne ne laisse plus lire une rétention (« Corrigée, pas encore rendue » retiré)',
+    !html.includes('Corrig\\u00e9e, pas encore rendue'));
+  t('la logique de MaCopie est intacte (seules deux chaînes ont changé)',
+    corpsDe('MaCopie').includes('if(!pubAt){') && corpsDe('MaCopie').includes('/copyPublishedAt'));
+  t('les trois dimensions restent croisées (published · copyPublishedAt · results)',
+    html.includes('if(!d.copyPublishedAt) return {code:"nonrendue"') &&
+    html.includes('if(d.published===false)return false;') &&
+    html.includes('var corr=d.results?d.results[cle]:null;'));
+
+  section('M6-SOLDE — D13 dictionnaire de textes');
+  const dico = sandbox(['txt'], 'var TEXTES_SURCHARGE={};\n' +
+    html.match(/var TEXTES_DEFAUT = \{[\s\S]*?\n\};/)[0] + '\n', ['TEXTES_DEFAUT']);
+  t('les 4 textes validés sont dans le dictionnaire (+ le titre et l\'emoji de fin)',
+    ['attente_copie', 'liste_vide', 'invitation_rattrapage', 'fin_parcours_titre', 'fin_parcours_emoji']
+      .every(k => typeof dico.TEXTES_DEFAUT[k] === 'string'));
+  t('txt() rend le défaut quand rien n\'est surchargé',
+    dico.txt('attente_copie') === dico.TEXTES_DEFAUT.attente_copie);
+  const dicoS = sandbox(['txt'], 'var TEXTES_SURCHARGE={liste_vide:"Rien pour l\'instant.",attente_copie:"   "};\n' +
+    html.match(/var TEXTES_DEFAUT = \{[\s\S]*?\n\};/)[0] + '\n', ['TEXTES_DEFAUT']);
+  t('une surcharge non vide remplace le défaut', dicoS.txt('liste_vide') === "Rien pour l'instant.");
+  t('un champ VIDE retombe sur le défaut (Paul efface pour revenir à l\'original)',
+    dicoS.txt('attente_copie') === dicoS.TEXTES_DEFAUT.attente_copie);
+  t('clé inconnue → chaîne vide, jamais "undefined" à l\'écran', dicoS.txt('nexiste_pas') === '');
+  t('{prenom} est substitué dans le titre de fin',
+    dico.txt('fin_parcours_titre', { prenom: 'Alice' }).indexOf('Alice') >= 0 &&
+    dico.txt('fin_parcours_titre', { prenom: 'Alice' }).indexOf('{prenom}') < 0);
+  t('CLÉ UNIQUE PARTAGÉE : le message d\'attente sert aux DEUX emplacements',
+    (html.split('txt("attente_copie")').length - 1) >= 2);
+  t('le « Bravo » est traité comme un ensemble (titre + emoji + prénom)',
+    html.includes('txt("fin_parcours_emoji")?h("div"') &&
+    html.includes('txt("fin_parcours_titre",{prenom:d.eleve.split(" ").pop()})'));
+  t('emoji vidé → aucun bloc affiché (pas de div vide)',
+    /txt\("fin_parcours_emoji"\)\?h\("div"[\s\S]{0,120}:null/.test(html));
+  t('le dictionnaire est chargé au démarrage, pour le prof comme pour l\'élève',
+    html.includes('chargerTextes(function(){') && html.includes('function App(){'));
+  t('l\'app survit à un nœud absent (surcharge vide = défauts)',
+    html.includes('TEXTES_SURCHARGE = (v&&typeof v==="object")?v:{};'));
+  t('les CONSTATS ne sont pas passés dans le dictionnaire (critère du point 26)',
+    !['Pas encore corrig', 'Tu \\u00e9tais absent', 'Ce code ne correspond']
+      .some(x => html.match(/var TEXTES_DEFAUT = \{[\s\S]*?\n\};/)[0].includes(x)));
+
+  section('M6-SOLDE — D1 mode test de la souche');
+  t('deux dictées : une rendue, une pas encore corrigée',
+    html.includes('var TEST_DICTEE_A = "dictee_test_rendue"') && html.includes('var TEST_DICTEE_B = "dictee_test_en_attente"'));
+  t('la dictée A est RENDUE (copyPublishedAt) — l\'élève peut vraiment ouvrir sa copie',
+    /copyPublishedAt:maintenant/.test(html));
+  t('un élève ABSENT est prévu (l\'état D11 se teste sans toucher au réel)',
+    html.includes('absents:{"moreau_sacha":true}'));
+  t('les élèves fictifs ont leurs CODES (sinon le portail les refuse)',
+    html.includes('var TEST_CODES = {') && html.includes('maj["codes/"+k]='));
+  t('classe à la convention _test_<app>', html.includes('ecrireClasse(db, d.classe, d.eleves,') && html.includes('classe:classeTestId()'));
+  t('nettoyage des zombies AVANT génération (le bac à sable ne s\'empile pas)',
+    /purgerDonneesTest\(function\(\)\{\s*\n\s*ecrireClasse/.test(html));
+  t('purge EXHAUSTIVE : dictées + classe + codes, rien d\'autre',
+    html.includes('chemins.push("correction_dictee/"+x.id)') &&
+    html.includes('chemins.push("classes/"+d.classe)') &&
+    html.includes('chemins.push("codes/"+k)'));
+  t('INCARNATION : ouvre l\'écran élève réel, pas une simulation',
+    html.includes('?mode=eleve&incarner=') && html.includes('via:"incarnation"'));
+  t('l\'incarnation est LIMITÉE au bac à sable (aucun élève réel incarnable)',
+    /var cl=classesData\[classeTestId\(\)\];\s*\n\s*if\(!cl\)return;/.test(html));
+  t('la purge annonce ce qu\'elle va supprimer (dénombrement, pas de destruction muette)',
+    html.includes('Seront supprim\\u00e9s : les 2 dict\\u00e9es de test'));
+
+  section('M6-SOLDE bis — arbitrages ③ ④ ⑤');
+  t('③ l\'outil est nommé : « Éditeur des messages élève » sous le titre parlant',
+    html.includes('"Ce que lisent les \\u00e9l\\u00e8ves"') &&
+    html.includes('h("strong",null,"\\u00c9diteur des messages \\u00e9l\\u00e8ve.")'));
+  t('④ « Masquer les copies » (bouton, infobulle et confirmation alignés)',
+    html.includes('"\\ud83d\\ude48 Masquer les copies"') &&
+    html.includes('title:"Masquer les copies (les \\u00e9l\\u00e8ves perdront') &&
+    html.includes('setPubMsg("\\u2705 Copies masqu\\u00e9es")'));
+  t('④ plus aucun « Retirer » ni « Dépublier » sur le geste des copies (confirmation comprise)',
+    !html.includes('Retirer les copies') && !html.includes('D\\u00e9publier ?') &&
+    html.includes('"Masquer les copies ? Les \\u00e9l\\u00e8ves ne pourront plus'));
+  t('④ les « Retirer » sans rapport (lacune, PAP) sont intacts',
+    html.includes('Retirer la lacune sur') && html.includes('Retirer du registre PAP'));
+  t('⑤ le profil « MONSIEUR Meney » n\'existe plus (aucune trace dans le fichier)',
+    !/meney_monsieur|MENEY/.test(html));
+  t('⑤ doLogin n\'a plus de branche d\'exception : tout le monde passe par le code',
+    (() => { const i = html.indexOf('function doLogin('); const j = html.indexOf('\n  }', i);
+             const c = html.slice(i, j); return !c.includes('testErrors') && c.includes('codeAttendu('); })());
+  t('⑤ le bouton « Recommencer » n\'est pas devenu du code mort : il sert au bac à sable',
+    html.includes('estClasseTest(d.dictee&&d.dictee.classe)&&h("button",') &&
+    html.includes('Recommencer la correction ?'));
+  t('⑤ « Recommencer » reste inaccessible à un élève réel (classe non interne)',
+    (() => { const sb = sandbox(['estClasseInterne', 'estClasseTest'], '');
+             return sb.estClasseTest('_test_correction_dictee') && !sb.estClasseTest('5e HERG\u00c9')
+                 && !sb.estClasseTest('4E BANKSY'); })());
+
+  section('M6-SOLDE — D4 corbeille · D6 mobile · D8 casse · D10 vocabulaire');
+  t('D4 : archivage en corbeille AVANT destruction',
+    html.includes('var chemin="corbeille/"+jour+"/suppression-dictee_"+hhmmss;') &&
+    /db\.ref\(chemin\)\.set\([\s\S]{0,300}\.then\(function\(\)\{return db\.ref\("correction_dictee\/"\+d\.id\)\.remove\(\)\}\)/.test(html));
+  t('D4 : année scolaire dynamique (pas de millésime en dur)',
+    html.includes('(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear())'));
+  t('D4 : le fichier local reste la première ceinture', html.includes('a.download="dictee_"+d.id+"_"'));
+  t('D4 : un échec d\'archivage devient un choix explicite, jamais un silence',
+    html.includes('archivage dans la corbeille MJPC a \\u00e9chou\\u00e9'));
+  t('D6 : les tableaux denses défilent au lieu de s\'écraser',
+    html.includes('.table-scroll{overflow-x:auto') && html.includes('.table-scroll table{min-width:620px}'));
+  t('D6 : Bilan et Suivi sont bien enveloppés',
+    (html.split('h("div",{className:"table-scroll"},h("table",{className:"bilan-table"}').length - 1) === 2);
+  t('D6 : aucun effet en desktop (règle sous media query seule)',
+    /@media \(max-width:820px\)\{\s*\n\s*\.table-scroll\{/.test(html));
+  t('D8 : plus aucune résolution par un nom venu d\'une config de dictée',
+    !/extractEleves\(CLASSES\[(classeName|classeInput|d\.classe|cfg)/.test(html));
+  t('D8 : les 2 accès directs restants itèrent sur les CLÉS du registre (aucune divergence possible)',
+    /Object\.keys\(CLASSES\)\.map\(function\(cn\)/.test(html) && /Object\.keys\(registre\)/.test(html));
+  t('D8 : les 4 résolutions passent par classeDuRegistre',
+    (html.split('extractEleves(classeDuRegistre(').length - 1) >= 4);
+  t('D10 : les copies se RENDENT, la dictée se PUBLIE',
+    html.includes('"\\ud83d\\udce4 Rendre les copies ("') && html.includes('"Copies pas encore rendues"') &&
+    html.includes('"\\u2705 Copies rendues le "') && html.includes('"Non publi\\u00e9e"'));
+  t('D10 : plus aucun bouton « Publier » ne désigne les copies',
+    !html.includes('"\\ud83d\\udce4 Publier ("') && !html.includes('"\\u2715 D\\u00e9publier"'));
+
+  section('M6sexies SOUCHE — PRINCIPE CARDINAL : jamais le professeur mis en cause');
+  const corpsC = (nom) => { const i = html.indexOf('function ' + nom + '('); let d = 0;
+    for (let k = html.indexOf('{', i); k < html.length; k++) {
+      if (html[k] === '{') d++; else if (html[k] === '}') { d--; if (!d) return html.slice(i, k + 1); } } return ''; };
+  const decode = (t) => t.replace(/\\u([0-9a-fA-F]{4})/g, (m, h) => {
+    const c = parseInt(h, 16); return (c >= 0xD800 && c <= 0xDFFF) ? m : String.fromCharCode(c); });
+  const textesEleveC = ['AppEleve', 'MaCopie', 'EleveCorrection', 'ExercicesEleve', 'Fiches']
+    .map(n => corpsC(n).split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n')).join('\n')
+    .match(/"[^"]{10,}"/g)
+    .filter(x => !/[{};]|=>|h\(|solid |rgba\(|<div|<span|JSON_DICTEE|Tu es un professeur/.test(x))
+    .map(decode).filter(x => /[a-zéèêàûôçA-ZÉ]{4,}\s/.test(x));
+
+  t('CAS FONDATEUR : « transcription non saisie par le professeur » a disparu',
+    !html.includes('transcription non saisie'));
+  t('rien n\'est affiché à la place (pas de message de remplacement)',
+    html.includes("transcriptHtml = '';") && !/placeholder-msg">\(/.test(html));
+  t('interdit n°1 — aucun manquement imputé au professeur',
+    !textesEleveC.some(x => /(le |ton |du )?(professeur|prof)\b[^"]{0,40}(n['’]a pas|ne l['’]a pas|pas encore|n['’]est pas|en attente)/i.test(x)));
+  t('interdit n°1 bis — le professeur n\'est jamais sujet d\'une négation à la 1re personne',
+    !textesEleveC.some(x => /\b(je|j['’])\b[^"]{0,30}\b(ne |n['’])[^"]{0,30}(pas|plus|jamais)\b/i.test(x)));
+  t('interdit n°2 — aucun texte ne révèle que la machine corrige',
+    !textesEleveC.some(x => /(l['’]app|l['’]application|le syst[èe]me|automatiquement|par la machine)\b[^"]{0,40}(corrig|calcul|not[ée])/i.test(x)));
+  t('interdit n°3 — aucune donnée manquante racontée en désignant un responsable',
+    !textesEleveC.some(x => /(non saisi|non renseign|non valid|manquante?)[^"]{0,30}(par|du) (le )?(prof|professeur)/i.test(x)));
+  t('l\'ACCOMPLI reste au « je » (l\'autorité s\'affirme)',
+    html.includes('c\\u2019est moi qui la calcule sur ta copie papier') &&
+    html.includes('J\\u2019ai sign\\u00e9 ta graphie ici') &&
+    html.includes('Je la corrigerai \\u00e0 la main'));
+  t('l\'ADRESSE reste au « je »', html.includes('Vois avec moi comment la rattraper') &&
+    html.includes('Clique ici quand je te le demande'));
+  t('l\'INACCOMPLI est impersonnel dans les quatre messages d\'attente',
+    ['Ton code n\\u2019est pas encore enregistr\\u00e9',
+     '"Ta copie est corrig\\u00e9e. "+txt("attente_copie")',
+     'Cette dict\\u00e9e n\\u2019est pas encore corrig\\u00e9e',
+     'Ta correction n\\u2019est pas encore consultable'].every(x => html.includes(x)));
+  t('les CONSTATS d\'état restent sans acteur (Pas encore corrigée · Tu étais absent(e))',
+    html.includes('label:"Pas encore corrig\\u00e9e"') && html.includes('label:"Tu \\u00e9tais absent(e)"'));
+
+  section('M6quinquies SOUCHE — point 28 : « l\'app, c\'est moi »');
+  const corpsDe28 = (nom) => { const i = html.indexOf('function ' + nom + '('); let d = 0;
+    for (let k = html.indexOf('{', i); k < html.length; k++) {
+      if (html[k] === '{') d++; else if (html[k] === '}') { d--; if (!d) return html.slice(i, k + 1); } } return ''; };
+  const sansCom28 = (src) => src.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  /* Les prompts destinés à l'IA sont écrits PAR le professeur, pas adressés à l'élève :
+     on les exclut par leur signature (« Tu es un professeur… », « {{JSON_DICTEE}} »). */
+  const textes28 = ['AppEleve', 'MaCopie', 'EleveCorrection', 'ExercicesEleve']
+    .map(n => sansCom28(corpsDe28(n))).join('\n')
+    .match(/"[^"]{8,}"/g)
+    .filter(x => !/[{};]|=>|h\(|JSON_DICTEE|Tu es un professeur|solid |rgba\(/.test(x));
+  t('aucun texte élève ne parle du professeur à la 3e personne',
+    !textes28.some(x => /\b(ton |le |du |au )?(professeur|prof)\b/i.test(x)));
+  t('AppEleve : « je » pour l\'adresse, flux impersonnel pour l\'attente',
+    html.includes('Ton code n\\u2019est pas encore enregistr\\u00e9. Viens me voir pour qu\\u2019on le mette en place.') &&
+    html.includes('viens me le demander.') &&
+    html.includes('Vois avec moi comment la rattraper, si c\\u2019est possible.') &&
+    html.includes('"Ta copie est corrig\\u00e9e. "+txt("attente_copie")'));
+  t('MaCopie : le flux annonce, personne n\'est en défaut (même clé que le portail)',
+    corpsDe28('MaCopie').includes('txt("attente_copie")'));
+  t('EleveCorrection : ses 4 mentions sont converties (vérifié dans le composant)',
+    (() => { const c = corpsDe28('EleveCorrection');
+      return c.includes('c\\u2019est moi qui la calcule sur ta copie papier') &&
+             c.includes('Clique ici quand je te le demande') &&
+             c.includes('o\\u00f9 j\\u2019ai sign\\u00e9 ta graphie') &&
+             c.includes('J\\u2019ai sign\\u00e9 ta graphie ici'); })());
+  t('Fiches (imprimées et remises aux élèves) : mention convertie',
+    corpsDe28('Fiches').includes('J\\u2019ai h\\u00e9sit\\u00e9 \\u00e0 mettre illisible'));
+  t('DÉPASSEMENT RÉPARÉ : l\'infobulle du tableau prof (Suivi) est restaurée à l\'identique',
+    corpsDe28('Suivi').includes('Note de la dict\\u00e9e (corrig\\u00e9e par le prof)') &&
+    !corpsDe28('Suivi').includes('que j\\u2019ai corrig\\u00e9e'));
+  t('ExercicesEleve : les 2 mentions sont converties',
+    html.includes('Je la corrigerai \\u00e0 la main') && html.includes(', que je corrigerai.'));
+  t('le libellé prof « Accès professeur » est conservé (ce n\'est pas un texte élève)',
+    html.includes('"Acc\\u00e8s professeur"'));
+  t('les prompts IA ne sont pas touchés (écrits par le professeur, pas lus par l\'élève)',
+    html.includes('Tu es un professeur de fran\\u00e7ais expert en didactique'));
+  t('la logique des écrans de travail reste intacte (seules des chaînes ont changé)',
+    corpsDe28('EleveCorrection').includes('totalErrorsRef') && corpsDe28('ExercicesEleve').includes('exCheckItem') !== undefined &&
+    corpsDe28('MaCopie').includes('if(!pubAt){'));
+
+  section('M6 SOUCHE — contrats et garde-fous');
+  t('socle embarqué en v1.1.0 (recopie verbatim)', html.includes('var MJPC_CORE_VERSION="1.1.0"'));
+  t('les 12 fonctions du socle sont présentes une seule fois',
+    ['sanMJPC', 'cleClasse', 'classeTestId', 'estClasseInterne', 'estClasseTest', 'extractEleves', 'ecrireClasse',
+     'renvoyerVersMJPC', 'resolveEleves', 'publierManifeste', 'lireSessionMJPC', 'validerEleveMJPC']
+      .every(f => (html.split('\nfunction ' + f + '(').length - 1) === 1));
+  t('pastille de version en dur (socle non modifié, décision Q5)',
+    /var APP_VERSION="[\d.]+"/.test(html) && !html.includes('MJPC_CORE_VERSION="1.2'));
+  t('lecteur d\'annonces branché sur site/annonces, tolérant à l\'absence',
+    html.includes('db.ref("site/annonces")') && /if\(!v\)\{setAnnonces\(\[\]\);return\}/.test(html));
+  t('l\'auto-login d\'URL n\'ouvre plus sans identité prouvée',
+    !/setEleveData\(\{eleve:eleveName/.test(html) && /if\(!identite\|\|screen!=="login"/.test(html));
+  t('manifeste à jour : le nœud des textes est déclaré ET préservé',
+    html.includes('noeuds: ["correction_dictee","classes_amenages","correction_dictee_textes"]') &&
+    html.includes('"correction_dictee_textes"],') &&
+    !/purger:[\s\S]{0,400}correction_dictee_textes/.test(html));
+  t('✏️ de l\'accueil et sous-onglet Préparation montent LE MÊME composant (zéro duplication)',
+    (html.split('function EditionDictee(').length - 1) === 1 &&
+    html.includes('editing===d.id&&h(EditionDictee,{dicteeId:d.id') &&
+    html.includes('h(EditionDictee,{dicteeId:p.dicteeId,onClose:p.onDone}'));
+  t('✏️ : même source de chargement qu\'avant (config + dictee.amenagee de la dictée)',
+    /db\.ref\("correction_dictee\/"\+p\.dicteeId\)\.once\("value"/.test(html) &&
+    html.includes('showAmen:!!(amen&&amen.enabled)'));
+  t('Réglages n\'écrit aucun nœud Firebase (localStorage seul)',
+    (() => { const i = html.indexOf('function Reglages('); const j = html.indexOf('\nfunction ', i + 10); return !html.slice(i, j).includes('db.ref('); })());
+  t('écrans de travail non rouverts (GRAMM, correction rapide, snapshots intacts)',
+    html.includes('function RapideGlobal(') && html.includes('function CorrEleve(') && html.includes('function _h(forms, group, rule)'));
+})();
 
 /* ════ SUITE 3 — EMPREINTE ÉLÈVE (Phase 2, lot 2) ════ */
 (function () {
