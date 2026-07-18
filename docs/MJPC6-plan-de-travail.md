@@ -22,7 +22,11 @@
 | **6–10 août** | **M-SÉCU** 🔴 (règles Firebase, non négociable) · **M16-0** (nœuds orphelins) · **M16** · rattrapage | sécurité avant purge |
 | **11–15 août** 🔴 | **M17a** (purge + import de rentrée) + **marge** | butoir |
 | *en parallèle, à ton rythme* | **MC** (chapitres 4e) · **MD** (branchement Dugain, dès ta livraison) | hors code |
-| *après la rentrée* | **M17b · M18 · M19 · M20 · M21 · M22** · chantiers **W** (corbeille garantie), **X** (rattrapage modal), **Y** (débogage général), **Z** (pilotage-cartes mobile) | non bloquants |
+| **en fin de chaîne, AVANT le 15/08** | **M17b · M18 · M19 · M20 · M21 · M22** · chantiers **W** (corbeille garantie), **X** (rattrapage modal), **Y** (débogage général), **Z** (pilotage-cartes mobile) | **décision Paul 18/07 : TOUT doit être fait avant le 15 août** — plus rien n'est renvoyé après la rentrée |
+
+**DÉCISION DU 18/07 — TOUT AVANT LE 15 AOÛT.** Paul refuse le report après rentrée : les six morceaux d'après-rentrée (M17b→M22) et les quatre chantiers (W, X, Y, Z) entrent dans le butoir. **Conséquence sur la charge** : ~11 morceaux de chronologie + 6 morceaux d'après-rentrée + 4 chantiers + M-SÉCU + MC/MD = **une vingtaine d'unités en 28 jours**. Tenable au rythme constaté (3/jour), à condition que les chantiers W/X/Y/Z soient cadrés tôt (ce sont des CONCEPTIONS, pas des passes de grille) et que les dettes se soldent dans leur passe.
+
+**ORDRE INCHANGÉ pour l'instant** (décision Paul) : M7 poursuit, M8 suit. *Analyse de dépendance faite le 18/07 : **M8 n'a AUCUN prérequis** parmi M9-M15 — publication par classe, annonces, éditeur de taxonomie (M2 est livrée), retrait Plickers, date du brevet, alerte règles Firebase : tout est disponible. Et M6 ATTEND M8 (son lecteur d'annonces est branché sur `site/annonces`, que rien n'écrit encore). M7 et M8 peuvent donc être menés en parallèle sans conflit — deux fichiers distincts.*
 
 **Deux nuances honnêtes sur cette avance** : ① le chantier s'est ÉLARGI (quatre sections nouvelles W/X/Y/Z, deux morceaux ajoutés M-SÉCU et MD) — l'avance en morceaux est réelle, le volume total a grossi ; ② les morceaux à venir ne se ressemblent pas (le QCM porte 17 bugs et le temps réel, M8 porte le site entier, M15 est le plus dense). **Au rythme constaté — trois morceaux par jour, dettes soldées comprises — le butoir du 15/08 n'est pas menacé : onze morceaux de chronologie, vingt-huit jours.**
 
