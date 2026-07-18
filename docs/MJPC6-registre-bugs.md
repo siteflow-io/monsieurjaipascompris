@@ -1,4 +1,8 @@
 # MJPC — REGISTRE TECHNIQUE DES BUGS RÉELS DE L'ÉCOSYSTÈME
+> ## ⚠️ AVERTISSEMENT — CE REGISTRE EST UNE COMPILATION, PAS UNE AUTORITÉ
+> Il a été constitué le 17/07 depuis des rapports de conversations anciennes, **sans vérification ligne à ligne du code**. Il en porte les ambiguïtés. **Aucune de ses entrées ne peut fonder une décision sans avoir été RE-VÉRIFIÉE dans le fichier concerné.**
+> *Incident du 18/07 : la mention « VueBoard ET VuePhone » dans une liste de bugs élèves a fait croire à une entrée élève par QR code. Le code dit `#mode=prof&view=phone` — c'est le QR de pilotage mobile DU PROFESSEUR. Une source secondaire qui a pris l'apparence d'une source primaire.*
+
 *Exhumé le 17/07/2026 des conversations de débogage (mars → juillet 2026). Chaque entrée : symptôme → cause technique exacte → correctif. Ce document est le CAHIER DES CHARGES DES TESTS du chantier Y : un test qui ne détecterait pas ces bugs-là ne vaut rien.*
 
 **Règle fondatrice (Paul, 20/05/2026)** : « corrige les bugs que tu dis cosmétiques. Ce n'est pas à toi d'en juger. Je veux une app SANS bug, même "mineurs" selon toi. »
