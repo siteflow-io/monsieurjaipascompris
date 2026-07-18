@@ -6,13 +6,25 @@
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
 **Le calendrier (16/07 → 15/08) :**
-| Semaine | Morceaux |
-|---|---|
-| 16–20 juillet | M1 · M2 · M3 |
-| 21–27 juillet | M4 · M5 · M6 · M7 |
-| 28 juillet – 3 août | M8 · M9 · M10 · M11 |
-| 4–10 août | M12 · M13 · M14 · M15 |
-| 11–15 août 🔴 | M16 · M17a + **marge de rattrapage** |
+### CALENDRIER — RÉVISÉ LE 18/07 (fin du 3e jour)
+
+**PRÉVU À L'ORIGINE** (pour mémoire) : 16-20/07 → M1·M2·M3 · 21-27/07 → M4·M5·M6·M7 · 28/07-3/08 → M8·M9·M10·M11 · 4-10/08 → M12·M13·M14·M15 · 11-15/08 → M16·M17a.
+
+**FAIT EN TROIS JOURS (16→18/07)** : M1 · M2 · M3 · M4 · M5 · **M5bis** · **M5ter** · **M5ter-retouche** · M6 (+ M6bis→M6sexies + **M6-solde**, dettes de la souche comprises). **Neuf morceaux, dont cinq non prévus au plan initial. Une semaine pleine d'avance.**
+*S'y sont ajoutés, hors chronologie* : le dispositif conscience/exécutants (sas, deux jetons, verrou), le harnais de rendu (Playwright + adaptateur REST), le registre des bugs (13 sections), la checklist d'urgence, la convention `BUG` (mécanisme prouvé), le protocole de test de Paul, les textes de présentation, l'analyse du bilan HTML, le bloc diagnostic — et le plan lui-même, passé de 703 à ~956 lignes (principe cardinal, points 25-28, serrage de la vis).
+
+| Période | Morceaux | Remarque |
+|---|---|---|
+| ~~16–20 juillet~~ | ~~M1 · M2 · M3~~ → **fait : M1→M6 complets** | une semaine d'avance |
+| **19–23 juillet** | **M7** (QCM, en cours) · **M8** (site : publication par classe, annonces, alerte règles Firebase, éditeur taxo, retrait Plickers, date brevet) · **M9** (dictée universelle, + piège P1) | M8 est le plus attendu par Paul |
+| **24–29 juillet** | **M10 · M11 · M12 · M13** | apps restantes |
+| **30 juillet – 5 août** | **M14 · M15** (le plus dense : profil longitudinal, socle — taxoCompter, présence, dictionnaire de textes, pastille de version) | M15 absorbe D2, D12, D14 |
+| **6–10 août** | **M-SÉCU** 🔴 (règles Firebase, non négociable) · **M16-0** (nœuds orphelins) · **M16** · rattrapage | sécurité avant purge |
+| **11–15 août** 🔴 | **M17a** (purge + import de rentrée) + **marge** | butoir |
+| *en parallèle, à ton rythme* | **MC** (chapitres 4e) · **MD** (branchement Dugain, dès ta livraison) | hors code |
+| *après la rentrée* | **M17b · M18 · M19 · M20 · M21 · M22** · chantiers **W** (corbeille garantie), **X** (rattrapage modal), **Y** (débogage général), **Z** (pilotage-cartes mobile) | non bloquants |
+
+**Deux nuances honnêtes sur cette avance** : ① le chantier s'est ÉLARGI (quatre sections nouvelles W/X/Y/Z, deux morceaux ajoutés M-SÉCU et MD) — l'avance en morceaux est réelle, le volume total a grossi ; ② les morceaux à venir ne se ressemblent pas (le QCM porte 17 bugs et le temps réel, M8 porte le site entier, M15 est le plus dense). **Au rythme constaté — trois morceaux par jour, dettes soldées comprises — le butoir du 15/08 n'est pas menacé : onze morceaux de chronologie, vingt-huit jours.**
 
 **✔ LISTES 2026-2027 REÇUES (16/07)** : `effectifs_classes_2026-2027.xlsx` fourni par Paul (vu : 3 FRANKLIN ARETHA complète 29 él. — ZNIDI Iyad passe en 3e — ; 3 DYLAN BOB 25 él. en noms seuls ; feuilles 4e à inventorier en M17b). M17b n'est plus suspendu : purge (M17a) puis import immédiat, tout tient dans le butoir du 15/08. **PRUDENCE ABSOLUE : le fichier contient les coordonnées complètes des familles (adresses, téléphones, emails) — SEULS les noms et les classes montent au hub, jamais le reste.** Le fichier reste chez Paul, jamais au dépôt.
 **Règle de tenue du calendrier** : si une semaine prend du retard, ce sont les 🟢 qui sautent ou glissent après le 15/08 (M10, M11, M12, M13, M14, M15 dans cet ordre de sacrifice inverse — M15 saute en premier), JAMAIS M16-M17a.
