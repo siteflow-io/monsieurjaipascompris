@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Correction dictée</title>
 <link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
@@ -140,6 +143,32 @@ textarea{resize:vertical;min-height:120px}
 .tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
 .tab{padding:8px 16px;border-radius:10px;border:none;background:transparent;font-family:inherit;font-size:.92rem;font-weight:500;cursor:pointer;color:var(--muted);transition:all .15s}
 .tab.active{background:var(--primary);color:#fff}
+/* ── M6 : navigation deux niveaux (Pilotage / Données / Réglages + ?) ── */
+.nav2{margin-bottom:16px}
+.nav2-groupes{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-bottom:1.5px solid var(--border);padding-bottom:8px;margin-bottom:8px}
+.nav2-groupe{padding:8px 16px;border-radius:10px 10px 0 0;border:none;background:transparent;font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
+.nav2-groupe:hover{color:var(--text)}
+.nav2-groupe.active{background:var(--card2);color:var(--text)}
+.nav2-sous{display:flex;gap:4px;flex-wrap:wrap;min-height:34px}
+.nav2-aide{margin-left:auto;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);color:var(--text-sub);font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;flex-shrink:0}
+.nav2-aide:hover{border-color:var(--primary);color:var(--primary)}
+.version-pill{display:inline-block;padding:2px 9px;border-radius:20px;background:var(--card2);border:1px solid var(--border);color:var(--muted);font-size:.7rem;font-weight:600;letter-spacing:.02em;user-select:none}
+/* Modale d'aide */
+.m6-modal-fond{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.m6-modal{background:var(--card);border-radius:14px;border:1.5px solid var(--border);max-width:620px;width:100%;padding:22px 24px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.m6-modal h2{margin-top:0}
+.m6-modal h3{font-size:.95rem;margin:18px 0 6px}
+.m6-modal p,.m6-modal li{font-size:.9rem;color:var(--text-sub);line-height:1.55}
+/* ── M6 : responsive mobile (390 px) ── */
+@media (max-width:480px){
+  .nav2-groupes{gap:4px;padding-bottom:6px}
+  .nav2-groupe{padding:7px 11px;font-size:.88rem;flex:1 1 auto}
+  .nav2-sous{gap:3px}
+  .tab{padding:6px 11px;font-size:.85rem}
+  .nav2-aide{width:28px;height:28px;font-size:.88rem}
+  .m6-modal{padding:16px 15px;border-radius:12px}
+  .m6-mobile-col{flex-direction:column!important;align-items:stretch!important}
+}
 /* Bilan table */
 .bilan-table{width:100%;border-collapse:collapse;font-size:.86rem}
 .bilan-table th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);font-weight:600;color:var(--text-sub)}
@@ -231,7 +260,10 @@ function EleveSearchBar(p){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -389,10 +421,45 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.0.0";
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+var MJPC_CORE_VERSION="1.1.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
+/* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
+var APP_VERSION="6.0.0";
+var APP_VERSION_DATE="2026-07-18";
 var MJPC_APP = {
   id: "correction_dictee",
   nom: "Correction de dict\u00e9e",
@@ -1537,7 +1604,6 @@ function AppProf(p){
   var s16=useState(""),niveauInput=s16[0],setNiveauInput=s16[1];
   var s17=useState(true),publishedInput=s17[0],setPublishedInput=s17[1];
   var s18=useState(null),editing=s18[0],setEditing=s18[1];
-  var s19=useState({}),editForm=s19[0],setEditForm=s19[1];
 
   // Load classes from Firebase
   useEffect(function(){
@@ -1659,7 +1725,12 @@ function AppProf(p){
   }
 
   if(screen==="config") return h("div",{className:"container fade-up"},
-    h("div",{className:"card"},h("h1",null,"Correction de dict\u00e9e"),h("p",{className:"subtitle"},"Corrige les copies en cliquant sur les mots fautifs.")),
+    h("div",{className:"card"},
+      h("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}},
+        h("h1",{style:{margin:0}},"Correction de dict\u00e9e"),
+        h("span",{className:"version-pill",title:"Version de l\u2019application \u00b7 socle MJPC-CORE "+MJPC_CORE_VERSION},"v"+APP_VERSION)
+      ),
+      h("p",{className:"subtitle",style:{marginBottom:0}},"Corrige les copies en cliquant sur les mots fautifs.")),
     saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es existantes"),
       saved.map(function(d){return h("div",{key:d.id,style:{marginBottom:8}},
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10}},
@@ -1667,87 +1738,13 @@ function AppProf(p){
           h("div",{style:{display:"flex",alignItems:"center",gap:6}},
             d.amenEnabled&&h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:"rgba(252,211,77,.18)",color:"#92400e",fontWeight:600},title:"Cette dict\u00e9e a une version am\u00e9nag\u00e9e param\u00e9tr\u00e9e ("+d.nLac+" lacune"+(d.nLac>1?"s":"")+")"},"\ud83d\udcd8 Am\u00e9nag\u00e9e · "+d.nLac),
             h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:function(e){e.stopPropagation();if(editing===d.id){setEditing(null)}else{setEditing(d.id);db.ref("correction_dictee/"+d.id).once("value",function(allSnap){var allVal=allSnap.val()||{};var cfg=allVal.config||{};var dic=allVal.dictee||{};var amen=dic.amenagee||null;setEditForm({title:cfg.title||d.title,niveau:cfg.niveau||d.niveau||"",published:cfg.published!==false,text:cfg.text||"",classe:cfg.classe||d.classe||"",base:cfg.base||20,competences:cfg.competences||[],showNote:cfg.showNote!==false,peerHelp:!!cfg.peerHelp,showAmen:!!(amen&&amen.enabled)})})}}},editing===d.id?"\u2715":"\u270f\ufe0f"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"\u00c9diter cette dict\u00e9e",onClick:function(e){e.stopPropagation();setEditing(editing===d.id?null:d.id)}},editing===d.id?"\u2715":"\u270f\ufe0f"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"Dupliquer (copie le texte et le barème, sans les copies élèves)",onClick:function(e){e.stopPropagation();db.ref("correction_dictee/"+d.id+"/config").once("value",function(snap){var cfg=snap.val();if(!cfg){alert("Config introuvable.");return}var copy=Object.assign({},cfg);copy.title="Copie de "+(cfg.title||d.title);copy.published=false;var newId=d.id+"_copie_"+Date.now();db.ref("correction_dictee/"+newId+"/config").set(copy,function(err){if(err){alert("Erreur: "+err.message);return}alert("Dictée dupliquée : "+copy.title+". Réaffecte-la à une classe via le crayon si besoin.");window.location.reload()})})}},"⧉"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"#b00"},title:"Supprimer (un export JSON complet est téléchargé avant)",onClick:function(e){e.stopPropagation();if(!confirm("Supprimer "+d.title+" ? Un export JSON complet (dictée + résultats élèves) est téléchargé avant. Irréversible."))return;db.ref("correction_dictee/"+d.id).once("value",function(snap){var data=snap.val();if(data){var payload={_meta:{source:"correction_dictee/"+d.id,exportedAt:new Date().toISOString(),exportedBy:"suppression_auto",version:1},data:data};var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="dictee_"+d.id+"_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url)}db.ref("correction_dictee/"+d.id).remove().then(function(){window.location.reload()})})}},"🗑️"),
             h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
           )
         ),
-        editing===d.id&&h("div",{style:{padding:"14px",border:"1.5px solid var(--primary)",borderTop:"none",borderRadius:"0 0 10px 10px",background:"var(--primary-light)"}},
-          h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
-          h("div",{style:{display:"flex",gap:10,flexWrap:"wrap"}},
-            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Niveau"),h("select",{value:editForm.niveau||"",onChange:function(e){setEditForm(Object.assign({},editForm,{niveau:e.target.value}))}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
-            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Classe"),h("select",{value:editForm.classe||"",onChange:function(e){setEditForm(Object.assign({},editForm,{classe:e.target.value}))}},h("option",{value:""},"\u2014"),Object.keys(CLASSES).filter(function(c){return !editForm.niveau||c.toLowerCase().indexOf(editForm.niveau)===0}).map(function(c){return h("option",{key:c,value:c},c)}))),
-            h("div",{className:"config-field",style:{minWidth:80}},h("label",null,"Note sur"),h("input",{type:"number",value:editForm.base||20,onChange:function(e){setEditForm(Object.assign({},editForm,{base:parseInt(e.target.value)||20}))},style:{width:70}}))
-          ),
-          h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:editForm.text||"",onChange:function(e){setEditForm(Object.assign({},editForm,{text:e.target.value}))},style:{minHeight:80}})),
-          h("div",{className:"config-field"},h("label",null,"Comp\u00e9tences travaill\u00e9es"),
-            h("div",{style:{display:"flex",flexWrap:"wrap",gap:0,padding:"6px 0"}},
-              h("span",{key:"c0",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.1 Orthographe grammaticale");if(ci>=0)cc.splice(ci,1);else cc.push("D1.1 Orthographe grammaticale");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.1 Orth. grammaticale"),h("span",{key:"c1",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.2 Orthographe lexicale");if(ci>=0)cc.splice(ci,1);else cc.push("D1.2 Orthographe lexicale");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.2 Orth. lexicale"),h("span",{key:"c2",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.3 Conjugaison");if(ci>=0)cc.splice(ci,1);else cc.push("D1.3 Conjugaison");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.3 Conjugaison"),h("span",{key:"c3",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)");if(ci>=0)cc.splice(ci,1);else cc.push("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.4 Accords"),h("span",{key:"c4",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.5 Homophones grammaticaux");if(ci>=0)cc.splice(ci,1);else cc.push("D1.5 Homophones grammaticaux");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.5 Homophones"),h("span",{key:"c5",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.6 Ponctuation");if(ci>=0)cc.splice(ci,1);else cc.push("D1.6 Ponctuation");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.6 Ponctuation"),h("span",{key:"c6",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe");if(ci>=0)cc.splice(ci,1);else cc.push("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D2.1 R\u00e8gles d\u2019orth."),h("span",{key:"c7",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.2 R\u00e9diger un texte correct");if(ci>=0)cc.splice(ci,1);else cc.push("D2.2 R\u00e9diger un texte correct");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D2.2 R\u00e9diger correct"),h("span",{key:"c8",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.3 Enrichir son vocabulaire");if(ci>=0)cc.splice(ci,1);else cc.push("D2.3 Enrichir son vocabulaire");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D2.3 Vocabulaire")
-            )
-          ),
-          h("div",{style:{display:"flex",gap:8,alignItems:"center",marginTop:8}},
-            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.showNote!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{showNote:e.target.checked}))}}),"Afficher la note \u00e0 l\u2019\u00e9l\u00e8ve"),
-            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:!!editForm.peerHelp,onChange:function(e){setEditForm(Object.assign({},editForm,{peerHelp:e.target.checked}))}}),"Aide entre pairs (\u00e9l\u00e8ve termin\u00e9 \u2192 aide un camarade)"),
-            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
-            h("button",{className:"btn-sm btn-primary",onClick:function(){
-              var wantPublish=editForm.published!==false;
-              var niv=editForm.niveau||"";
-              if(wantPublish&&!niv){alert("\u26a0\ufe0f Choisis d\u2019abord un niveau.");return}
-              var updates={title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[],showNote:editForm.showNote!==false,peerHelp:!!editForm.peerHelp};
-              if(editForm.text)updates.text=editForm.text;
-              db.ref("correction_dictee/"+d.id+"/config").update(updates);
-              // Recalculate all notes if base changed
-              var newBase=editForm.base||20;
-              db.ref("correction_dictee/"+d.id+"/results").once("value",function(rSnap){
-                var rVal=rSnap.val()||{};
-                Object.keys(rVal).forEach(function(ek){
-                  var r=rVal[ek];if(!r)return;
-                  var errs=toArr(r.errors||[]).filter(function(e){return e!=null});
-                  var exts=toArr(r.extras||[]).filter(function(e){return e!=null});
-                  var sc=computeNote(errs,exts,newBase);
-                  if(sc.note!==r.note){
-                    db.ref("correction_dictee/"+d.id+"/results/"+ek+"/note").set(sc.note);
-                    db.ref("correction_dictee/"+d.id+"/results/"+ek+"/deduction").set(sc.deduction);
-                    db.ref("correction_dictee/"+d.id+"/results/"+ek+"/counts").set(sc.counts);
-                  }
-                });
-              });
-              setSaved(saved.map(function(x){return x.id===d.id?Object.assign({},x,{title:updates.title||x.title,niveau:updates.niveau||x.niveau,published:updates.published,classe:updates.classe||x.classe}):x}));
-              setEditing(null);
-            }},"Enregistrer"),
-            h("button",{className:"btn-sm btn-ghost",onClick:function(){setEditing(null)}},"Annuler")
-          ),
-          h("div",{style:{marginTop:14,padding:"12px 14px",background:"rgba(252,211,77,.08)",borderRadius:8,border:"1.5px solid rgba(180,83,9,.2)"}},
-            h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontWeight:600,fontSize:".92rem"}},
-              h("input",{type:"checkbox",checked:!!editForm.showAmen,onChange:function(e){
-                var checked=e.target.checked;
-                setEditForm(Object.assign({},editForm,{showAmen:checked}));
-                // Synchronise amenagee.enabled dans Firebase pour persister entre ouvertures
-                db.ref("correction_dictee/"+d.id+"/dictee/amenagee").once("value",function(snap){
-                  var existing=snap.val();
-                  if(checked){
-                    if(!existing)db.ref("correction_dictee/"+d.id+"/dictee/amenagee").set({enabled:true,defaultMode:"A",base:10,lacunes:[],consigne:""});
-                    else db.ref("correction_dictee/"+d.id+"/dictee/amenagee/enabled").set(true);
-                  }else{
-                    if(existing)db.ref("correction_dictee/"+d.id+"/dictee/amenagee/enabled").set(false);
-                  }
-                });
-                // Met à jour le badge dans la liste saved
-                setSaved(saved.map(function(x){return x.id===d.id?Object.assign({},x,{amenEnabled:checked}):x}));
-              },style:{width:18,height:18}}),
-              "\ud83d\udcd8 Param\u00e9trer une version am\u00e9nag\u00e9e (PAP/DYS) pour cette dict\u00e9e",
-              ifo("Ouvre le panneau de configuration des lacunes (mots \u00e0 trous, modes A/B/C, distracteurs, indices, raisonnements). G\u00e9n\u00e8re aussi le document papier imprimable au design pr\u00e9d\u00e9fini.",{below:true,right:true})
-            ),
-            editForm.showAmen&&h("div",{style:{marginTop:12,paddingTop:10,borderTop:"1px solid rgba(180,83,9,.18)"}},
-              h(ConfigAmenagee,{
-                data:{title:editForm.title,text:editForm.text,classe:editForm.classe,niveau:editForm.niveau,competences:editForm.competences,base:editForm.base||20},
-                dicteeId:d.id,
-                onClose:function(){setEditForm(Object.assign({},editForm,{showAmen:false}))}
-              })
-            )
-          )
-        )
+        editing===d.id&&h(EditionDictee,{dicteeId:d.id,onClose:function(){setEditing(null)}})
       )})
     ),
     h("div",{className:"card"},
@@ -1901,9 +1898,238 @@ function AppProf(p){
   return null;
 }
 
+// ═══ M6 : NAVIGATION DEUX NIVEAUX ═══
+// Les onglets ne sont pas rouverts : ils sont RANGÉS. Chaque groupe coiffe
+// des onglets qui restent les mêmes composants, montés avec les mêmes props.
+var NAV2_GROUPES=[
+  {id:"pilotage",label:"Pilotage",tabs:[["preparation","Pr\u00e9paration"],["correct","Correction"],["rapide","\u26a1 Rapide"]]},
+  {id:"donnees", label:"Donn\u00e9es", tabs:[["bilan","Bilan"],["copies","\ud83d\udcc4 Copies"],["fiches","Fiches \u00e9l\u00e8ves"],["suivi","Suivi \ud83d\udfe2"],["exercices","\ud83c\udfaf Exercices"]]},
+  {id:"reglages",label:"R\u00e9glages",tabs:[["reglages","R\u00e9glages"]]}
+];
+function groupeDeTab(tab){
+  for(var i=0;i<NAV2_GROUPES.length;i++){
+    var t=NAV2_GROUPES[i].tabs;
+    for(var j=0;j<t.length;j++){ if(t[j][0]===tab) return NAV2_GROUPES[i].id; }
+  }
+  return null;
+}
+function Nav2(p){
+  var courant=null;
+  for(var i=0;i<NAV2_GROUPES.length;i++){ if(NAV2_GROUPES[i].id===p.groupe) courant=NAV2_GROUPES[i]; }
+  if(!courant) courant=NAV2_GROUPES[0];
+  return h("div",{className:"nav2"},
+    h("div",{className:"nav2-groupes"},
+      NAV2_GROUPES.map(function(g){
+        return h("button",{key:g.id,className:"nav2-groupe"+(g.id===p.groupe?" active":""),onClick:function(){
+          p.onGroupe(g.id);
+          var dedans=false;
+          for(var k=0;k<g.tabs.length;k++){ if(g.tabs[k][0]===p.tab) dedans=true; }
+          if(!dedans) p.onTab(g.tabs[0][0]);
+        }},g.label);
+      }),
+      h("button",{className:"nav2-aide",title:"Aide et nouveaut\u00e9s",onClick:p.onAide},"?")
+    ),
+    h("div",{className:"nav2-sous"},
+      courant.tabs.length>1?courant.tabs.map(function(t){
+        var extra=t[0]==="rapide"?{title:"Raccourci : Maj+R depuis le mode Correction"}:{};
+        return h("button",Object.assign({key:t[0],className:"tab"+(p.tab===t[0]?" active":""),onClick:function(){p.onTab(t[0])}},extra),
+          t[1],
+          t[0]==="rapide"?h("span",{style:{fontSize:".7em",opacity:.6,marginLeft:4}},"(\u21e7R)"):null
+        );
+      }):null
+    )
+  );
+}
+
+// ═══ M6 : SOUS-ONGLET PRÉPARATION (monte le MÊME composant que le ✏️ de l'accueil) ═══
+function PreparationDictee(p){
+  return h("div",{className:"card",style:{padding:0,overflow:"hidden"}},
+    h("div",{style:{padding:"12px 16px 0"}},
+      h("h2",{style:{margin:0}},"Pr\u00e9paration"),
+      h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"4px 0 0"}},"Texte, bar\u00e8me, classe, comp\u00e9tences, publication et version am\u00e9nag\u00e9e de cette dict\u00e9e.")
+    ),
+    h(EditionDictee,{dicteeId:p.dicteeId,onClose:p.onDone})
+  );
+}
+
+// ═══ M6 : RÉGLAGES (principe « doter ») — préférences locales, aucun nœud Firebase ═══
+function Reglages(){
+  var sA=useState(getSpeechEnabled()),audio=sA[0],setAudio=sA[1];
+  var sV=useState(getSpeechRate()),vitesse=sV[0],setVitesse=sV[1];
+  var sC=useState(getCopyOptions()),copt=sC[0],setCopt=sC[1];
+  function majCopt(patch){ var o=Object.assign({},copt,patch); setCopt(o); setCopyOptions(o); }
+  function ligne(label,checked,onChange,aide){
+    return h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:".9rem",padding:"5px 0"}},
+      h("input",{type:"checkbox",checked:checked,onChange:onChange}),label,aide?ifo(aide):null);
+  }
+  return h("div",null,
+    h("div",{className:"card"},
+      h("h2",null,"Lecture audio"),
+      h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",marginTop:0}},"Utilis\u00e9e par le mode Rapide pour dire le mot \u00e0 corriger."),
+      ligne("Lire les mots \u00e0 voix haute en mode Rapide",audio,function(e){setAudio(e.target.checked);setSpeechEnabled(e.target.checked)}),
+      h("div",{style:{display:"flex",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap"}},
+        h("label",{style:{fontSize:".9rem"}},"Vitesse de lecture"),
+        h("input",{type:"range",min:.6,max:2,step:.05,value:vitesse,style:{flex:"1 1 180px",maxWidth:280},
+          onChange:function(e){var v=parseFloat(e.target.value);setVitesse(v);setSpeechRate(v)}}),
+        h("span",{style:{fontSize:".85rem",color:"var(--text-sub)",minWidth:44}},vitesse.toFixed(2)+"\u00d7"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){speakWord("dict\u00e9e")}},"\ud83d\udd0a Essayer")
+      )
+    ),
+    h("div",{className:"card"},
+      h("h2",null,"Copies envoy\u00e9es aux familles"),
+      h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",marginTop:0}},"R\u00e9glages par d\u00e9faut des copies g\u00e9n\u00e9r\u00e9es depuis l\u2019onglet Copies."),
+      ligne("Afficher la note sur la copie",copt.showBadge!==false,function(e){majCopt({showBadge:e.target.checked})}),
+      ligne("Afficher le d\u00e9tail des points",copt.showPoints!==false,function(e){majCopt({showPoints:e.target.checked})}),
+      ligne("Surligner les erreurs dans le texte",copt.showOverlay!==false,function(e){majCopt({showOverlay:e.target.checked})}),
+      ligne("Ajouter le lien vers les exercices",copt.linkExercices!==false,function(e){majCopt({linkExercices:e.target.checked})})
+    )
+  );
+}
+
+// ═══ M6 : AIDE ET NOUVEAUTÉS (« ? ») ═══
+// Le lecteur d'annonces lit site/annonces ; le nœud n'existe pas encore (il naîtra
+// avec le site) : l'absence est un cas normal, jamais une erreur.
+function AideModal(p){
+  var sA=useState(null),annonces=sA[0],setAnnonces=sA[1];
+  useEffect(function(){
+    try{
+      db.ref("site/annonces").once("value",function(snap){
+        var v=snap.val();
+        if(!v){setAnnonces([]);return}
+        var list=Array.isArray(v)?v:Object.keys(v).map(function(k){return v[k]});
+        list=list.filter(function(a){return a&&(!a.app||a.app==="correction_dictee"||a.app==="*")});
+        list.sort(function(a,b){return (b.date||0)-(a.date||0)});
+        setAnnonces(list);
+      },function(){setAnnonces([])});
+    }catch(e){setAnnonces([])}
+  },[]);
+  return h("div",{className:"m6-modal-fond",onClick:p.onClose},
+    h("div",{className:"m6-modal",onClick:function(e){e.stopPropagation()}},
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+        h("h2",null,"Aide"),
+        h("button",{className:"btn-sm btn-ghost",onClick:p.onClose},"\u2715")
+      ),
+      h("h3",null,"Les trois temps du travail"),
+      h("ul",null,
+        h("li",null,h("b",null,"Pilotage"),"\u00a0: pr\u00e9parer la dict\u00e9e, corriger les copies, encha\u00eener en mode Rapide."),
+        h("li",null,h("b",null,"Donn\u00e9es"),"\u00a0: ce qui sort de la correction \u2014 bilan, copies pour les familles, fiches, suivi en direct, exercices."),
+        h("li",null,h("b",null,"R\u00e9glages"),"\u00a0: audio du mode Rapide et r\u00e9glages par d\u00e9faut des copies.")
+      ),
+      h("h3",null,"Raccourcis"),
+      h("ul",null,
+        h("li",null,h("b",null,"Maj+R"),"\u00a0: passer en mode Rapide depuis la Correction (un \u00e9l\u00e8ve doit \u00eatre s\u00e9lectionn\u00e9)."),
+        h("li",null,"Clic droit sur un \u00e9l\u00e8ve\u00a0: absent / am\u00e9nag\u00e9 (PAP)."),
+        h("li",null,h("b",null,"\u2190 Retour"),"\u00a0: revenir \u00e0 la liste des dict\u00e9es.")
+      ),
+      h("h3",null,"C\u00f4t\u00e9 \u00e9l\u00e8ve"),
+      h("p",null,"L\u2019\u00e9l\u00e8ve entre avec son code personnel, son nom et son pr\u00e9nom, puis retrouve ses travaux dans \u00ab\u00a0Mes dict\u00e9es\u00a0\u00bb. S\u2019il est d\u00e9j\u00e0 connect\u00e9 au site MJPC, il entre directement."),
+      h("h3",null,"Nouveaut\u00e9s"),
+      annonces===null?h("p",null,"Chargement\u2026"):
+      annonces.length===0?h("p",{style:{fontStyle:"italic"}},"Aucune annonce pour le moment."):
+      h("ul",null,annonces.slice(0,8).map(function(a,i){
+        return h("li",{key:i},a.date?h("span",{style:{color:"var(--muted)"}},new Date(a.date).toLocaleDateString("fr-FR")+" \u2014 "):null,a.texte||a.titre||"");
+      })),
+      h("p",{style:{marginTop:18,fontSize:".78rem",color:"var(--muted)"}},"Correction de dict\u00e9e \u2014 version "+APP_VERSION+" ("+APP_VERSION_DATE+") \u00b7 socle MJPC-CORE "+MJPC_CORE_VERSION)
+    )
+  );
+}
+
+// ═══ M6 : ÉDITION D'UNE DICTÉE (extrait de l'accueil — monté aussi en sous-onglet Préparation) ═══
+function EditionDictee(p){
+  var sE=useState(null),editForm=sE[0],setEditForm=sE[1];
+  useEffect(function(){
+    db.ref("correction_dictee/"+p.dicteeId).once("value",function(allSnap){
+      var allVal=allSnap.val()||{};var cfg=allVal.config||{};var dic=allVal.dictee||{};var amen=dic.amenagee||null;
+      setEditForm({title:cfg.title||p.dicteeId,niveau:cfg.niveau||"",published:cfg.published!==false,text:cfg.text||"",
+        classe:cfg.classe||"",base:cfg.base||20,competences:cfg.competences||[],showNote:cfg.showNote!==false,
+        peerHelp:!!cfg.peerHelp,showAmen:!!(amen&&amen.enabled)});
+    });
+  },[p.dicteeId]);
+  if(!editForm) return h("div",{style:{padding:"14px",color:"var(--muted)",fontSize:".9rem"}},"Chargement\u2026");
+  return h("div",{style:{padding:"14px",border:"1.5px solid var(--primary)",borderTop:"none",borderRadius:"0 0 10px 10px",background:"var(--primary-light)"}},
+          h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
+          h("div",{style:{display:"flex",gap:10,flexWrap:"wrap"}},
+            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Niveau"),h("select",{value:editForm.niveau||"",onChange:function(e){setEditForm(Object.assign({},editForm,{niveau:e.target.value}))}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
+            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Classe"),h("select",{value:editForm.classe||"",onChange:function(e){setEditForm(Object.assign({},editForm,{classe:e.target.value}))}},h("option",{value:""},"\u2014"),Object.keys(CLASSES).filter(function(c){return !editForm.niveau||c.toLowerCase().indexOf(editForm.niveau)===0}).map(function(c){return h("option",{key:c,value:c},c)}))),
+            h("div",{className:"config-field",style:{minWidth:80}},h("label",null,"Note sur"),h("input",{type:"number",value:editForm.base||20,onChange:function(e){setEditForm(Object.assign({},editForm,{base:parseInt(e.target.value)||20}))},style:{width:70}}))
+          ),
+          h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:editForm.text||"",onChange:function(e){setEditForm(Object.assign({},editForm,{text:e.target.value}))},style:{minHeight:80}})),
+          h("div",{className:"config-field"},h("label",null,"Comp\u00e9tences travaill\u00e9es"),
+            h("div",{style:{display:"flex",flexWrap:"wrap",gap:0,padding:"6px 0"}},
+              h("span",{key:"c0",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.1 Orthographe grammaticale")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.1 Orthographe grammaticale");if(ci>=0)cc.splice(ci,1);else cc.push("D1.1 Orthographe grammaticale");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.1 Orth. grammaticale"),h("span",{key:"c1",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.2 Orthographe lexicale")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.2 Orthographe lexicale");if(ci>=0)cc.splice(ci,1);else cc.push("D1.2 Orthographe lexicale");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.2 Orth. lexicale"),h("span",{key:"c2",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.3 Conjugaison")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.3 Conjugaison");if(ci>=0)cc.splice(ci,1);else cc.push("D1.3 Conjugaison");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.3 Conjugaison"),h("span",{key:"c3",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)");if(ci>=0)cc.splice(ci,1);else cc.push("D1.4 Accords (sujet-verbe, d\u00e9terminant-nom-adjectif)");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.4 Accords"),h("span",{key:"c4",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.5 Homophones grammaticaux")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.5 Homophones grammaticaux");if(ci>=0)cc.splice(ci,1);else cc.push("D1.5 Homophones grammaticaux");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.5 Homophones"),h("span",{key:"c5",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D1.6 Ponctuation")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D1.6 Ponctuation");if(ci>=0)cc.splice(ci,1);else cc.push("D1.6 Ponctuation");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D1.6 Ponctuation"),h("span",{key:"c6",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe");if(ci>=0)cc.splice(ci,1);else cc.push("D2.1 Conna\u00eetre et appliquer les r\u00e8gles d\u2019orthographe");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D2.1 R\u00e8gles d\u2019orth."),h("span",{key:"c7",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D2.2 R\u00e9diger un texte correct")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.2 R\u00e9diger un texte correct");if(ci>=0)cc.splice(ci,1);else cc.push("D2.2 R\u00e9diger un texte correct");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D2.2 R\u00e9diger correct"),h("span",{key:"c8",style:{display:"inline-block",padding:"6px 12px",borderRadius:20,fontSize:".82rem",fontWeight:600,cursor:"pointer",margin:"3px",border:"1.5px solid",borderColor:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0?"#2563eb":"#ddd",background:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0?"rgba(37,99,235,.1)":"transparent",color:(editForm.competences||[]).indexOf("D2.3 Enrichir son vocabulaire")>=0?"#2563eb":"#666"},onClick:function(){var cc=(editForm.competences||[]).slice();var ci=cc.indexOf("D2.3 Enrichir son vocabulaire");if(ci>=0)cc.splice(ci,1);else cc.push("D2.3 Enrichir son vocabulaire");setEditForm(Object.assign({},editForm,{competences:cc}))}},"D2.3 Vocabulaire")
+            )
+          ),
+          h("div",{style:{display:"flex",gap:8,alignItems:"center",marginTop:8}},
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.showNote!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{showNote:e.target.checked}))}}),"Afficher la note \u00e0 l\u2019\u00e9l\u00e8ve"),
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:!!editForm.peerHelp,onChange:function(e){setEditForm(Object.assign({},editForm,{peerHelp:e.target.checked}))}}),"Aide entre pairs (\u00e9l\u00e8ve termin\u00e9 \u2192 aide un camarade)"),
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
+            h("button",{className:"btn-sm btn-primary",onClick:function(){
+              var wantPublish=editForm.published!==false;
+              var niv=editForm.niveau||"";
+              if(wantPublish&&!niv){alert("\u26a0\ufe0f Choisis d\u2019abord un niveau.");return}
+              var updates={title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[],showNote:editForm.showNote!==false,peerHelp:!!editForm.peerHelp};
+              if(editForm.text)updates.text=editForm.text;
+              db.ref("correction_dictee/"+p.dicteeId+"/config").update(updates);
+              // Recalculate all notes if base changed
+              var newBase=editForm.base||20;
+              db.ref("correction_dictee/"+p.dicteeId+"/results").once("value",function(rSnap){
+                var rVal=rSnap.val()||{};
+                Object.keys(rVal).forEach(function(ek){
+                  var r=rVal[ek];if(!r)return;
+                  var errs=toArr(r.errors||[]).filter(function(e){return e!=null});
+                  var exts=toArr(r.extras||[]).filter(function(e){return e!=null});
+                  var sc=computeNote(errs,exts,newBase);
+                  if(sc.note!==r.note){
+                    db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/note").set(sc.note);
+                    db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/deduction").set(sc.deduction);
+                    db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/counts").set(sc.counts);
+                  }
+                });
+              });
+              setSaved(saved.map(function(x){return x.id===p.dicteeId?Object.assign({},x,{title:updates.title||x.title,niveau:updates.niveau||x.niveau,published:updates.published,classe:updates.classe||x.classe}):x}));
+              p.onClose();
+            }},"Enregistrer"),
+            h("button",{className:"btn-sm btn-ghost",onClick:function(){p.onClose()}},"Annuler")
+          ),
+          h("div",{style:{marginTop:14,padding:"12px 14px",background:"rgba(252,211,77,.08)",borderRadius:8,border:"1.5px solid rgba(180,83,9,.2)"}},
+            h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontWeight:600,fontSize:".92rem"}},
+              h("input",{type:"checkbox",checked:!!editForm.showAmen,onChange:function(e){
+                var checked=e.target.checked;
+                setEditForm(Object.assign({},editForm,{showAmen:checked}));
+                // Synchronise amenagee.enabled dans Firebase pour persister entre ouvertures
+                db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee").once("value",function(snap){
+                  var existing=snap.val();
+                  if(checked){
+                    if(!existing)db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee").set({enabled:true,defaultMode:"A",base:10,lacunes:[],consigne:""});
+                    else db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee/enabled").set(true);
+                  }else{
+                    if(existing)db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee/enabled").set(false);
+                  }
+                });
+                // Met à jour le badge dans la liste saved
+                setSaved(saved.map(function(x){return x.id===p.dicteeId?Object.assign({},x,{amenEnabled:checked}):x}));
+              },style:{width:18,height:18}}),
+              "\ud83d\udcd8 Param\u00e9trer une version am\u00e9nag\u00e9e (PAP/DYS) pour cette dict\u00e9e",
+              ifo("Ouvre le panneau de configuration des lacunes (mots \u00e0 trous, modes A/B/C, distracteurs, indices, raisonnements). G\u00e9n\u00e8re aussi le document papier imprimable au design pr\u00e9d\u00e9fini.",{below:true,right:true})
+            ),
+            editForm.showAmen&&h("div",{style:{marginTop:12,paddingTop:10,borderTop:"1px solid rgba(180,83,9,.18)"}},
+              h(ConfigAmenagee,{
+                data:{title:editForm.title,text:editForm.text,classe:editForm.classe,niveau:editForm.niveau,competences:editForm.competences,base:editForm.base||20},
+                dicteeId:p.dicteeId,
+                onClose:function(){setEditForm(Object.assign({},editForm,{showAmen:false}))}
+              })
+            )
+          )
+  );
+}
+
 // ═══ ÉCRAN CORRECTION ═══
 function CorrScreen(p){
   var data=p.data,s1=useState("correct"),tab=s1[0],setTab=s1[1];
+  // M6 — navigation deux niveaux : le groupe coiffe l'onglet, sans rien rouvrir.
+  var sG=useState("pilotage"),groupe=sG[0],setGroupe=sG[1];
+  var sH=useState(false),showAide=sH[0],setShowAide=sH[1];
+  useEffect(function(){ var g=groupeDeTab(tab); if(g&&g!==groupe) setGroupe(g); },[tab]);
   var s2=useState(null),cur=s2[0],setCur=s2[1];
   var s3=useState(null),msg=s3[0],setMsg=s3[1];
   var sQ=useState(""),eleveQuery=sQ[0],setEleveQuery=sQ[1];
@@ -2120,15 +2346,10 @@ function CorrScreen(p){
       )
     ),
     msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
-    h("div",{className:"tabs"},
-      h("button",{className:"tab"+(tab==="correct"?" active":""),onClick:function(){setTab("correct")}},"Correction"),
-      h("button",{className:"tab"+(tab==="rapide"?" active":""),onClick:function(){setTab("rapide")},title:"Raccourci : Maj+R depuis le mode Correction"},"\u26a1 Rapide ",h("span",{style:{fontSize:".7em",opacity:.6,marginLeft:2}},"(\u21e7R)"),ifo("Corrige les mots un par un avec audio. Raccourci : Maj+R depuis le mode Correction (\u00e9l\u00e8ve s\u00e9lectionn\u00e9 requis).")),
-      h("button",{className:"tab"+(tab==="bilan"?" active":""),onClick:function(){setTab("bilan")}},"Bilan"),
-      h("button",{className:"tab"+(tab==="copies"?" active":""),onClick:function(){setTab("copies")}},"\ud83d\udcc4 Copies"),
-      h("button",{className:"tab"+(tab==="exercices"?" active":""),onClick:function(){setTab("exercices")},title:"Banque d'exercices personnalis\u00e9s g\u00e9n\u00e9r\u00e9e par IA"},"\ud83c\udfaf Exercices"),
-      h("button",{className:"tab"+(tab==="fiches"?" active":""),onClick:function(){setTab("fiches")}},"Fiches \u00e9l\u00e8ves"),
-      h("button",{className:"tab"+(tab==="suivi"?" active":""),onClick:function(){setTab("suivi")}},"Suivi \ud83d\udfe2")
-    ),
+    h(Nav2,{groupe:groupe,tab:tab,onGroupe:setGroupe,onTab:setTab,onAide:function(){setShowAide(true)}}),
+    showAide&&h(AideModal,{onClose:function(){setShowAide(false)}}),
+    tab==="preparation"&&h(PreparationDictee,{dicteeId:p.dicteeId,onDone:function(){setTab("correct")}}),
+    tab==="reglages"&&h(Reglages,null),
     tab==="correct"&&(function(){
       var sortedEleves=sortElevesByNom(data.eleves);
       var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
@@ -5171,20 +5392,29 @@ function MaCopie(p){
 }
 
 // ═══ APP ÉLÈVE ═══
+// M6 — Portail d'identité : code personnel MJPC + nom + prénom (vérifiés contre /codes),
+// ou shunt par session MJPC (socle §8) si l'élève est déjà connecté au site.
+// Le lien nominatif envoyé aux familles reste fonctionnel : il désigne la copie à ouvrir,
+// mais il ne PROUVE plus l'identité — sans session valide, le code est demandé.
 function AppEleve(p){
   var s1=useState("login"),screen=s1[0],setScreen=s1[1];
   var s2=useState([]),dictees=s2[0],setDictees=s2[1];
   var s3=useState(""),nomInput=s3[0],setNomInput=s3[1];
   var s4=useState(""),prenomInput=s4[0],setPrenomInput=s4[1];
+  var sC=useState(""),codeInput=sC[0],setCodeInput=sC[1];
   var s5=useState(null),eleveData=s5[0],setEleveData=s5[1];
   var s6=useState(""),errMsg=s6[0],setErrMsg=s6[1];
   var s7=useState(null),forcedDicteeId=s7[0],setForcedDicteeId=s7[1];
   var s8=useState(""),dicteeTitle=s8[0],setDicteeTitle=s8[1];
+  var sI=useState(null),identite=sI[0],setIdentite=sI[1];        /* {nom, cle} prouvée */
+  var sCo=useState(null),codesData=sCo[0],setCodesData=sCo[1];   /* /codes (lecture seule) */
+  var sCl=useState(null),classesData=sCl[0],setClassesData=sCl[1];
+  var sShunt=useState(false),shuntFait=sShunt[0],setShuntFait=sShunt[1];
 
-  // Check URL params : "dictee" (id) [+ "eleveKey" + "screen" pour auto-login direct]
   var s9=useState(null),autoLoginParams=s9[0],setAutoLoginParams=s9[1];
-  // Screen forcé depuis URL (ex: screen=copie sans eleveKey → l'élève saisit son nom)
   var sScrUrl=useState(null),forcedScreenUrl=sScrUrl[0],setForcedScreenUrl=sScrUrl[1];
+
+  // ── Paramètres d'URL : le lien désigne une destination, jamais une identité ──
   useEffect(function(){
     if(typeof URLSearchParams==="undefined")return;
     var params=new URLSearchParams(window.location.search);
@@ -5196,29 +5426,13 @@ function AppEleve(p){
     if(did&&ek)setAutoLoginParams({dicteeId:did,eleveKey:ek,screen:sc});
   },[]);
 
-  // Auto-login depuis URL params dès que les dictées sont chargées
-  var s10=useState(false),autoLoginDone=s10[0],setAutoLoginDone=s10[1];
+  // ── Registres d'identité (lecture seule) ──
   useEffect(function(){
-    if(!autoLoginParams||autoLoginDone||!dictees.length)return;
-    var d=dictees.find(function(x){return x.id===autoLoginParams.dicteeId});
-    if(!d)return; // dictée pas trouvée, on attend (peut-être pas encore chargée)
-    var ek=autoLoginParams.eleveKey;
-    var eleveName=null;
-    for(var i=0;i<d.eleves.length;i++){if(san(d.eleves[i])===ek){eleveName=d.eleves[i];break}}
-    if(!eleveName){setErrMsg("\u00c9l\u00e8ve introuvable dans cette dict\u00e9e.");setAutoLoginDone(true);return}
-    var corr=d.results[ek];
-    if(!corr){setErrMsg("Pas de correction enregistr\u00e9e pour cet \u00e9l\u00e8ve.");setAutoLoginDone(true);return}
-    var errors=toArr(corr.errors||[]);
-    var extras=toArr(corr.extras||[]);
-    setEleveData({eleve:eleveName,dictee:d,key:ek,errors:errors,extras:extras,note:corr.note,base:d.base});
-    // Navigation directe selon screen demandé
-    if(autoLoginParams.screen==="exercices")setScreen("exercices");
-    else if(autoLoginParams.screen==="copie")setScreen("copie");
-    else setScreen("correction");
-    setAutoLoginDone(true);
-  },[dictees,autoLoginParams,autoLoginDone]);
+    db.ref("codes").once("value",function(snap){setCodesData(snap.val()||{})},function(){setCodesData({})});
+    db.ref("classes").once("value",function(snap){setClassesData(snap.val()||{})},function(){setClassesData({})});
+  },[]);
 
-  // Load available dictees
+  // ── Dictées disponibles ──
   useEffect(function(){
     db.ref("correction_dictee").once("value",function(snap){
       var val=snap.val()||{};
@@ -5226,10 +5440,10 @@ function AppEleve(p){
         var cfg=val[id].config||{};
         var classeName=cfg.classe||"";
         var eleves=extractEleves(CLASSES[classeName], cfg.eleves);
-        return{id:id,title:cfg.title||id,classe:classeName,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
+        return{id:id,title:cfg.title||id,classe:classeName,niveau:cfg.niveau||"",published:cfg.published!==false,
+               showNote:cfg.showNote!==false,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,results:val[id].results||{}};
       });
       setDictees(list);
-      // If forced dictee, get its title
       if(forcedDicteeId){
         var found=list.find(function(d){return d.id===forcedDicteeId});
         if(found)setDicteeTitle(found.title);
@@ -5237,17 +5451,79 @@ function AppEleve(p){
     });
   },[forcedDicteeId]);
 
+  // ── Shunt MJPC (socle §8) : l'élève déjà connecté au site n'a rien à ressaisir ──
+  useEffect(function(){
+    if(shuntFait||identite||!classesData)return;
+    setShuntFait(true);
+    var sess=lireSessionMJPC();
+    if(!sess||sess.is_prof)return;
+    var val=validerEleveMJPC(sess,classesData);
+    if(val) setIdentite({nom:val.nom,cle:val.cle,via:"session"});
+  },[classesData,shuntFait,identite]);
+
+  // ── Les dictées de CET élève (copies existantes, dictées publiées) ──
+  function mesDictees(){
+    if(!identite)return[];
+    return dictees.filter(function(d){
+      if(d.published===false)return false;
+      return !!d.results[identite.cle];
+    });
+  }
+
+  function ouvrirDictee(d){
+    var corr=d.results[identite.cle];
+    if(!corr){setErrMsg("Pas de correction enregistr\u00e9e pour cette dict\u00e9e.");return}
+    var nomRegistre=identite.nom;
+    for(var i=0;i<d.eleves.length;i++){ if(san(d.eleves[i])===identite.cle) nomRegistre=d.eleves[i]; }
+    setEleveData({eleve:nomRegistre,dictee:d,key:identite.cle,errors:toArr(corr.errors||[]),extras:toArr(corr.extras||[]),note:corr.note,base:d.base});
+    setErrMsg("");
+    if(forcedScreenUrl==="exercices")setScreen("exercices");
+    else if(forcedScreenUrl==="copie")setScreen("copie");
+    else setScreen("correction");
+  }
+
+  // ── Une fois l'identité prouvée : destination de l'URL, sinon « Mes dictées » ──
+  useEffect(function(){
+    if(!identite||screen!=="login"||!dictees.length)return;
+    var cible=null;
+    if(autoLoginParams&&san(autoLoginParams.eleveKey)===identite.cle){
+      cible=dictees.find(function(d){return d.id===autoLoginParams.dicteeId});
+    } else if(forcedDicteeId){
+      cible=dictees.find(function(d){return d.id===forcedDicteeId&&d.results[identite.cle]});
+    }
+    if(cible&&cible.results[identite.cle]) ouvrirDictee(cible);
+    else setScreen("mesdictees");
+  },[identite,dictees,screen]);
+
+  // ── Vérification du code personnel contre /codes ──
+  // Tolère les clés dégradées du registre (dette connue) en retombant sur le champ name.
+  function codeAttendu(cle,nomComplet){
+    if(!codesData)return null;
+    var e=codesData[cle];
+    if(typeof e==="string")return e;
+    if(e&&e.code)return String(e.code);
+    var ks=Object.keys(codesData);
+    for(var i=0;i<ks.length;i++){
+      var v=codesData[ks[i]];
+      if(v&&v.name&&sanMJPC(v.name)===cle) return v.code?String(v.code):null;
+      if(sanMJPC(ks[i])===cle) return (typeof v==="string")?v:(v&&v.code?String(v.code):null);
+    }
+    return null;
+  }
+
   function doLogin(){
     var nom=nomInput.trim().toUpperCase();
     var prenom=prenomInput.trim();
+    var code=codeInput.trim();
     if(!nom||!prenom){setErrMsg("Entre ton nom et ton pr\u00e9nom.");return}
-    // Profil test : Monsieur MENEY — génère des erreurs fictives sur la première dictée disponible
+    if(!code){setErrMsg("Entre ton code personnel (4 chiffres).");return}
+
+    // Profil de test du professeur — conservé (bac à sable, aucun code requis)
     if(nom==="MENEY"&&prenom.toLowerCase()==="monsieur"){
       var testDict=null;
       for(var ti=0;ti<dictees.length;ti++){if(dictees[ti].tokens.length>0){testDict=dictees[ti];break}}
       if(!testDict){setErrMsg("Aucune dict\u00e9e configur\u00e9e.");return}
       var testErrors=[];var testTokens=testDict.tokens;
-      // Marquer quelques mots comme erreurs pour le test
       for(var tw=0;tw<testTokens.length&&testErrors.length<5;tw++){
         if(!isPunct(testTokens[tw])&&testTokens[tw].length>2){
           testErrors.push({idx:tw,type:testErrors.length%2===0?"G":"L",word:testTokens[tw]});
@@ -5256,59 +5532,96 @@ function AppEleve(p){
       setEleveData({eleve:"MENEY Monsieur",dictee:testDict,key:"meney_monsieur",errors:testErrors,extras:[],note:7.5,base:testDict.base});
       setScreen("correction");return;
     }
-    var full=null,dictee=null,key=null;
-    // Search in forced dictee or all dictees
-    var searchList=forcedDicteeId?dictees.filter(function(d){return d.id===forcedDicteeId}):dictees;
-    for(var i=0;i<searchList.length;i++){
-      var d=searchList[i];
-      for(var j=0;j<d.eleves.length;j++){
-        var e=d.eleves[j];
-        var parts=e.split(" ");
-        var enom=parts.slice(0,-1).join(" ").toUpperCase();
-        var eprenom=parts[parts.length-1];
-        if(enom===nom&&eprenom.toLowerCase()===prenom.toLowerCase()){
-          var k=san(e);
-          if(d.results[k]){
-            full=e;dictee=d;key=k;break;
-          }
-        }
-      }
-      if(full)break;
-    }
-    if(!full){setErrMsg("Aucune dict\u00e9e trouv\u00e9e pour "+nom+" "+prenom+". V\u00e9rifie l\u2019orthographe.");return}
-    var corr=dictee.results[key];
-    var errors=toArr(corr.errors||[]);
-    var extras=toArr(corr.extras||[]);
-    setEleveData({eleve:full,dictee:dictee,key:key,errors:errors,extras:extras,note:corr.note,base:dictee.base});
-    // Si URL demandait screen=copie, on y va directement
-    if(forcedScreenUrl==="copie")setScreen("copie");
-    else setScreen("correction");
+
+    // Le nom doit exister dans un roster (le registre officiel fait foi)
+    var rosterComplet=[];
+    Object.keys(CLASSES||{}).forEach(function(c){
+      extractEleves(CLASSES[c],[]).forEach(function(e){ if(rosterComplet.indexOf(e)<0) rosterComplet.push(e); });
+    });
+    dictees.forEach(function(d){ (d.eleves||[]).forEach(function(e){ if(rosterComplet.indexOf(e)<0) rosterComplet.push(e); }); });
+    var res=resolveEleves(rosterComplet,[{nom:nom,prenom:prenom}]);
+    if(res&&res.erreur){setErrMsg("Aucun \u00e9l\u00e8ve \u00e0 ce nom. V\u00e9rifie l\u2019orthographe de ton nom et de ton pr\u00e9nom.");return}
+    var moi=res[0];
+
+    var attendu=codeAttendu(moi.cle,moi.nom);
+    if(!attendu){setErrMsg("Aucun code n\u2019est enregistr\u00e9 pour toi. Demande \u00e0 ton professeur.");return}
+    if(String(code)!==String(attendu)){setErrMsg("Ce code ne correspond pas. V\u00e9rifie tes 4 chiffres.");return}
+
+    setErrMsg("");
+    setIdentite({nom:moi.nom,cle:moi.cle,via:"code"});
   }
 
+  function deconnexion(){
+    setIdentite(null);setEleveData(null);setNomInput("");setPrenomInput("");setCodeInput("");
+    setErrMsg("");setScreen("login");
+  }
+
+  // ── Écran de connexion ──
   if(screen==="login") return h("div",{className:"container fade-up",style:{paddingTop:40}},
     h("div",{className:"card",style:{textAlign:"center"}},
-      h("h1",null,forcedScreenUrl==="copie"?(dicteeTitle?"Ta dict\u00e9e corrig\u00e9e \u2014 "+dicteeTitle:"Ta dict\u00e9e corrig\u00e9e"):(dicteeTitle?"Correction : "+dicteeTitle:"Correction de dict\u00e9e")),
-      h("p",{className:"subtitle"},forcedScreenUrl==="copie"?"Saisis ton nom et ton pr\u00e9nom pour voir ta dict\u00e9e corrig\u00e9e.":(dicteeTitle?"Entre ton nom et ton pr\u00e9nom pour acc\u00e9der \u00e0 ta copie.":"Connecte-toi pour corriger tes erreurs et gagner des points.")),
-      h("div",{style:{maxWidth:340,margin:"0 auto"}},
-        h("div",{className:"config-field"},h("label",null,"Nom"),h("input",{value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",style:{textTransform:"uppercase"}})),
-        h("div",{className:"config-field"},h("label",null,"Pr\u00e9nom"),h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
+      h("h1",null,dicteeTitle?"Correction : "+dicteeTitle:"Correction de dict\u00e9e"),
+      h("p",{className:"subtitle"},"Entre ton code personnel, ton nom et ton pr\u00e9nom."),
+      h("div",{style:{maxWidth:340,margin:"0 auto",textAlign:"left"}},
+        h("div",{className:"config-field"},h("label",null,"Mon code (4 chiffres)"),
+          h("input",{value:codeInput,inputMode:"numeric",maxLength:6,onChange:function(e){setCodeInput(e.target.value)},placeholder:"1234",style:{textAlign:"center",letterSpacing:".3em",fontWeight:700}})),
+        h("div",{className:"config-field"},h("label",null,"Nom"),
+          h("input",{value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",style:{textTransform:"uppercase"}})),
+        h("div",{className:"config-field"},h("label",null,"Pr\u00e9nom"),
+          h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
         errMsg&&h("p",{style:{color:"var(--coral)",fontSize:".88rem",marginBottom:8}},errMsg),
-        h("button",{className:"btn btn-primary",onClick:doLogin},"Acc\u00e9der \u00e0 ma dict\u00e9e")
+        h("button",{className:"btn btn-primary",style:{width:"100%"},onClick:doLogin},"Entrer"),
+        h("p",{style:{fontSize:".78rem",color:"var(--muted)",marginTop:10,marginBottom:0}},"Ton code est le m\u00eame que sur le site MJPC. Si tu l\u2019as oubli\u00e9, demande-le \u00e0 ton professeur.")
       )
     ),
     h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},onClick:p.onBack},"\u2190 Retour")
   );
 
-  if(screen==="correction") return h(EleveCorrection,{data:eleveData,onBack:function(){setScreen("login");setEleveData(null)},onExercices:function(){setScreen("exercices")}});
+  // ── « Mes dictées » : liste systématique des travaux de l'élève ──
+  if(screen==="mesdictees"){
+    var liste=mesDictees();
+    return h("div",{className:"container fade-up",style:{paddingTop:30}},
+      h("div",{className:"card"},
+        h("div",{className:"m6-mobile-col",style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+          h("div",null,
+            h("h1",{style:{margin:0}},"Mes dict\u00e9es"),
+            h("p",{className:"subtitle",style:{marginBottom:0}},identite?identite.nom:"")
+          ),
+          h("button",{className:"btn-sm btn-ghost",onClick:deconnexion},"Me d\u00e9connecter")
+        )
+      ),
+      h("div",{className:"card"},
+        liste.length===0?
+          h("p",{style:{color:"var(--text-sub)",margin:0}},"Tu n\u2019as pas encore de dict\u00e9e corrig\u00e9e ici. Reviens quand ton professeur aura rendu la prochaine."):
+          liste.map(function(d){
+            var c=d.results[identite.cle];
+            return h("div",{key:d.id,className:"m6-mobile-col",style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"11px 14px",border:"1.5px solid var(--border)",borderRadius:10,marginBottom:8,cursor:"pointer"},
+              onClick:function(){ouvrirDictee(d)}},
+              h("div",null,
+                h("div",{style:{fontWeight:600}},d.title),
+                h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe)
+              ),
+              h("div",{style:{display:"flex",alignItems:"center",gap:10}},
+                (d.showNote!==false&&c&&typeof c.note!=="undefined")?
+                  h("span",{style:{fontWeight:700,color:noteColor(c.note,d.base)}},c.note+"/"+d.base):null,
+                h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem"}},"Ouvrir \u2192")
+              )
+            );
+          })
+      ),
+      errMsg&&h("p",{style:{color:"var(--coral)",fontSize:".88rem"}},errMsg)
+    );
+  }
+
+  function retourListe(){ setEleveData(null);setScreen("mesdictees"); }
+
+  if(screen==="correction") return h(EleveCorrection,{data:eleveData,onBack:retourListe,onExercices:function(){setScreen("exercices")}});
   if(screen==="exercices") return h("div",{className:"container fade-up"},
     h(ExercicesEleve,{dicteeId:eleveData.dictee.id,eleve:eleveData.eleve,onBack:function(){
-      // Si on est venu via URL (lien partagé ou copie téléchargée), retour à MaCopie.
-      // EleveCorrection reste pour le mode "correction interactive" sans param URL.
       if(forcedScreenUrl==="copie"||forcedScreenUrl==="exercices"||autoLoginParams)setScreen("copie");
       else setScreen("correction");
     }})
   );
-  if(screen==="copie") return h(MaCopie,{data:eleveData,onExercices:function(){setScreen("exercices")},onLogout:function(){setScreen("login");setEleveData(null)}});
+  if(screen==="copie") return h(MaCopie,{data:eleveData,onExercices:function(){setScreen("exercices")},onLogout:retourListe});
   return null;
 }
 
