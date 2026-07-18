@@ -1632,9 +1632,23 @@ function AppProf(p){
     });
   },[]);
 
-  useEffect(function(){db.ref("correction_dictee").once("value",function(snap){
-    var val=snap.val()||{};setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(classeDuRegistre(cn), d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac}}))
-  })},[]);
+  // Rafraîchissement des DONNÉES sans rechargement de page : un window.location.reload()
+  // détruit l'état React, donc profAuth — il déconnectait le professeur.
+  function chargerDictees(cb){
+    db.ref("correction_dictee").once("value",function(snap){
+      var val=snap.val()||{};
+      setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(classeDuRegistre(cn), d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac}}));
+      if(cb)cb();
+    });
+  }
+  // Le registre d'abord (le roster des dictées en dépend), les dictées ensuite.
+  function rafraichirDonnees(cb){
+    db.ref("classes").once("value",function(snap){
+      var val=snap.val()||{}; CLASSES=val; setClassesLoaded(val);
+      chargerDictees(cb);
+    },function(){ chargerDictees(cb); });
+  }
+  useEffect(function(){ chargerDictees(); },[]);
 
   function start(){
     if(!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput)return;
@@ -1757,15 +1771,15 @@ function AppProf(p){
             d.amenEnabled&&h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:"rgba(252,211,77,.18)",color:"#92400e",fontWeight:600},title:"Cette dict\u00e9e a une version am\u00e9nag\u00e9e param\u00e9tr\u00e9e ("+d.nLac+" lacune"+(d.nLac>1?"s":"")+")"},"\ud83d\udcd8 Am\u00e9nag\u00e9e · "+d.nLac),
             h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"\u00c9diter cette dict\u00e9e",onClick:function(e){e.stopPropagation();setEditing(editing===d.id?null:d.id)}},editing===d.id?"\u2715":"\u270f\ufe0f"),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"Dupliquer (copie le texte et le barème, sans les copies élèves)",onClick:function(e){e.stopPropagation();db.ref("correction_dictee/"+d.id+"/config").once("value",function(snap){var cfg=snap.val();if(!cfg){alert("Config introuvable.");return}var copy=Object.assign({},cfg);copy.title="Copie de "+(cfg.title||d.title);copy.published=false;var newId=d.id+"_copie_"+Date.now();db.ref("correction_dictee/"+newId+"/config").set(copy,function(err){if(err){alert("Erreur: "+err.message);return}alert("Dictée dupliquée : "+copy.title+". Réaffecte-la à une classe via le crayon si besoin.");window.location.reload()})})}},"⧉"),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"#b00"},title:"Supprimer (archiv\u00e9 dans la corbeille MJPC + export JSON t\u00e9l\u00e9charg\u00e9)",onClick:function(e){e.stopPropagation();if(!confirm("Supprimer "+d.title+" ?\n\nElle sera archiv\u00e9e dans la corbeille MJPC (r\u00e9cup\u00e9rable un an) et un export JSON sera t\u00e9l\u00e9charg\u00e9.\n\nContinuer ?"))return;db.ref("correction_dictee/"+d.id).once("value",function(snap){var data=snap.val();if(!data){alert("Cette dict\u00e9e est d\u00e9j\u00e0 vide.");return}var payload={_meta:{source:"correction_dictee/"+d.id,exportedAt:new Date().toISOString(),exportedBy:"suppression_auto",version:1},data:data};/* ceinture 1 : le fichier local, immediat et hors ligne */try{var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="dictee_"+d.id+"_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url)}catch(err){}/* ceinture 2 : la corbeille du hub, meme convention que la console MJPC */var now=new Date();var an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1));var jour=now.toISOString().slice(0,10);var hhmmss=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);var chemin="corbeille/"+jour+"/suppression-dictee_"+hhmmss;db.ref(chemin).set({_meta:{motif:"suppression-dictee",annee:an,source:"correction_dictee",dictee:d.id,titre:d.title,le:Date.now()},data:data}).then(function(){return db.ref("correction_dictee/"+d.id).remove()}).then(function(){window.location.reload()}).catch(function(err){if(confirm("L\u2019archivage dans la corbeille MJPC a \u00e9chou\u00e9 ("+(err&&err.message||"raison inconnue")+").\n\nL\u2019export JSON, lui, est bien t\u00e9l\u00e9charg\u00e9.\n\nSupprimer quand m\u00eame ?")){db.ref("correction_dictee/"+d.id).remove().then(function(){window.location.reload()})}});})}},"🗑️"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"Dupliquer (copie le texte et le barème, sans les copies élèves)",onClick:function(e){e.stopPropagation();db.ref("correction_dictee/"+d.id+"/config").once("value",function(snap){var cfg=snap.val();if(!cfg){alert("Config introuvable.");return}var copy=Object.assign({},cfg);copy.title="Copie de "+(cfg.title||d.title);copy.published=false;var newId=d.id+"_copie_"+Date.now();db.ref("correction_dictee/"+newId+"/config").set(copy,function(err){if(err){alert("Erreur: "+err.message);return}alert("Dictée dupliquée : "+copy.title+". Réaffecte-la à une classe via le crayon si besoin.");rafraichirDonnees()})})}},"⧉"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"#b00"},title:"Supprimer (archiv\u00e9 dans la corbeille MJPC + export JSON t\u00e9l\u00e9charg\u00e9)",onClick:function(e){e.stopPropagation();if(!confirm("Supprimer "+d.title+" ?\n\nElle sera archiv\u00e9e dans la corbeille MJPC (r\u00e9cup\u00e9rable un an) et un export JSON sera t\u00e9l\u00e9charg\u00e9.\n\nContinuer ?"))return;db.ref("correction_dictee/"+d.id).once("value",function(snap){var data=snap.val();if(!data){alert("Cette dict\u00e9e est d\u00e9j\u00e0 vide.");return}var payload={_meta:{source:"correction_dictee/"+d.id,exportedAt:new Date().toISOString(),exportedBy:"suppression_auto",version:1},data:data};/* ceinture 1 : le fichier local, immediat et hors ligne */try{var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="dictee_"+d.id+"_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url)}catch(err){}/* ceinture 2 : la corbeille du hub, meme convention que la console MJPC */var now=new Date();var an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1));var jour=now.toISOString().slice(0,10);var hhmmss=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);var chemin="corbeille/"+jour+"/suppression-dictee_"+hhmmss;db.ref(chemin).set({_meta:{motif:"suppression-dictee",annee:an,source:"correction_dictee",dictee:d.id,titre:d.title,le:Date.now()},data:data}).then(function(){return db.ref("correction_dictee/"+d.id).remove()}).then(function(){rafraichirDonnees()}).catch(function(err){if(confirm("L\u2019archivage dans la corbeille MJPC a \u00e9chou\u00e9 ("+(err&&err.message||"raison inconnue")+").\n\nL\u2019export JSON, lui, est bien t\u00e9l\u00e9charg\u00e9.\n\nSupprimer quand m\u00eame ?")){db.ref("correction_dictee/"+d.id).remove().then(function(){rafraichirDonnees()})}});})}},"🗑️"),
             h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
           )
         ),
         editing===d.id&&h(EditionDictee,{dicteeId:d.id,onClose:function(){setEditing(null)}})
       )})
     ),
-    h(ModeTest,{onGenere:function(){window.location.reload()},onPurge:function(){window.location.reload()}}),
+    h(ModeTest,{onGenere:function(){rafraichirDonnees()},onPurge:function(){rafraichirDonnees()}}),
     h("div",{className:"card"},
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
@@ -1808,7 +1822,7 @@ function AppProf(p){
       h("button",{className:"btn btn-primary",onClick:start,disabled:!textInput.trim()||!classeInput||!titleInput.trim()||!niveauInput},"Commencer"),
       h("div",{style:{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}},
         h("button",{className:"btn-sm btn-ghost",onClick:function(){setShowClassMgr(!showClassMgr)}},showClassMgr?"\u2715 Fermer la gestion des classes":"\u2699\ufe0f G\u00e9rer les classes"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee",i.files[0],function(){window.location.reload()})};i.click()}},"📥 Importer global",ifo("Réinjecte un snapshot global (toutes les dictées). Écrase les données actuelles de correction_dictee.")),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee",i.files[0],function(){rafraichirDonnees()})};i.click()}},"📥 Importer global",ifo("Réinjecte un snapshot global (toutes les dictées). Écrase les données actuelles de correction_dictee.")),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee","correction_dictee_complet")}},"\ud83d\udcf8 Snapshot global",ifo("T\u00e9l\u00e9charge toutes les donn\u00e9es de correction dans un fichier. Tu peux me le partager pour que j\u2019analyse les r\u00e9sultats.")),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){
           db.ref("correction_dictee").once("value",function(snap){
