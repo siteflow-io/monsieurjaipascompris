@@ -171,6 +171,33 @@
 
 ---
 
+## 9quinquies. `applause_meter` — L'APPLAUDIMÈTRE (~3 474 lignes)
+*Sources : « applaudilec 1 » (04/06, c0fb9340) et « Applaudilec 2 » (19/06, c628249d). Bugs découverts par CLAUDE en analysant les ARCHIVES JSON d'une séance réelle (4e PYTHAGORE) — Paul ne les avait pas signalés.*
+- **4 PASSAGES FANTÔMES** créés au démarrage de la séance **sans lecteur désigné** — dont un portant des données de courbe live.
+- **Barres résiduelles (« trailing bar »)** : après un passage, les barres continuaient de monter jusqu'à 38 **sans aucun lecteur assigné**.
+- **`critereIdx: 0` systématique dans TOUS les checkpoints** : seul le critère c0 était jamais enregistré, alors que les autres franchissaient le seuil. *Bug silencieux : les données existent, mais elles sont toutes fausses.*
+- **Champs `startsAt` et `nbLignes` manquants** dans les passages archivés.
+- **File d'attente persistant entre les CLASSES** : `/file` et `/compteurLectures` n'étaient nettoyés dans aucune des trois fonctions concernées (`setClasse`, `demarrerSeance`, `deconnexionGlobale`) → une classe héritait de la file de la précédente.
+- **« Tu es le prochain » persistant** après désistement solo.
+- **Overlay de pause en position absolue cassé** → remplacé par une branche `paused` dédiée dans le rendu.
+- **`modeSpontane` défaultant potentiellement à `true`**.
+- **Champ de saisie bloqué, spécifiquement sur écran téléphone**.
+- **Le tableau n'atteint jamais 100 %** (problème d'agrégation) — *différé, non résolu*.
+- **BUG NON RÉSOLU `Cannot read 'slice'`** : deux blocs de débogage laissés EN PRODUCTION pour le traquer — un `window.onerror` peignant **une bannière rouge plein écran** (L706-752) et un `ErrorBoundary` React (L3433-3469).
+- **RÉGRESSION STRUCTURELLE MAJEURE (19/06)** : le refactor du 4 juin **n'était pas dans le fichier de production** — `PROF_CODES` absent (codes en dur dans `CodeGate` L3376), CSS mort `.board-pause-overlay`, `renderPhase()` présent dans `EleveVote` mais pas dans `VueBoard`. *Soit la version refactorée n'a jamais été déployée, soit le travail a continué sur la branche d'avant — dans les deux cas, un travail entier perdu ou dupliqué.* **→ D'où la règle actuelle de vérification bit à bit après chaque push.**
+
+---
+
+## 9sexies. `etude_dugain` / `redaction_dugain` (les futures universelles)
+*Source : « appli étude de texte » (03/06, ad98f27e).*
+- **Navigation Backspace** ramenant trop loin (ne repassait pas par le sous-focus « langue »).
+- **5 bugs dans le basculement « Réponse non rédigée »**, dont `interroAnswer('transition-next')` **ignorant complètement l'état `nonRedigee`**.
+- **Scoping DOM dangereux** : `document.querySelector` pouvait patcher **le mauvais conteneur** quand `#main` et `#diapo-body` coexistaient.
+- **Bascule diapos → interrogatif** repartant toujours à Q1 au lieu de respecter la question courante.
+- **INCIDENT PÉDAGOGIQUE RÉEL** : les fiches de diagnostic HTML distribuées aux élèves **affichaient la note pour les élèves ayant beaucoup d'erreurs de langue** (via la simulation DNB) **et pas pour les autres** → confusion en classe, correctif d'urgence (bascule « 🔒 Cacher notes » persistante). *Leçon : tout affichage conditionnel doit être testé sur les DEUX branches, avec de vraies copies.*
+
+---
+
 ## 9quater. LES FAUSSES PISTES DE DIAGNOSTIC (erreurs de Claude, à ne pas répéter)
 *Ces épisodes ont coûté des sessions entières.*
 1. **`permission_denied at /dictees`** : Claude a diagnostiqué « c'est le protocole `file://` » ; Paul a recadré (« ça marche toujours en file:// pour cette app, cherche le bug dans le code ») ; Claude est reparti sur une **seconde** fausse piste (lecture racine). **Cause réelle : l'expiration des règles Firebase** — rien à voir avec le code ni le protocole. *Leçon : ne jamais attribuer une erreur à l'environnement sans preuve ; vérifier d'abord l'infrastructure (règles, quotas, dates d'expiration).*
