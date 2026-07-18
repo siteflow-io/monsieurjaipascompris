@@ -94,6 +94,28 @@
 
 *Leçon de la journée sur pilotage_debat : les allers-retours viennent des directives découvertes en cours de route. La grille est désormais COMPLÈTE et FIGÉE : chaque app reçoit UNE PASSE COMPLÈTE (tous les points d'un coup), jamais de mise à niveau isolée d'un point. Vérification par grille (greps) faite le 15/07 sur les 10 apps.*
 
+## ⚠ PRINCIPE CARDINAL — JAMAIS LE PROFESSEUR NE DOIT ÊTRE MIS EN CAUSE (Paul, 18/07 : « l'indépassable absolu »)
+
+*« JAMAIS le prof ne doit être mis en cause. "Transcription non saisie par le prof", ça veut dire concrètement dans un cerveau élève : LE PROF N'A PAS TRAVAILLÉ ET MA COPIE A ÉTÉ CORRIGÉE PAR UNE MACHINE. C'est vraiment l'indépassable absolu. JAMAIS le numérique ne peut scier mon autorité pédagogique et la confiance nécessaire au bon fonctionnement de mon flow de travail. JAMAIS. »*
+
+**Ce principe prime sur tous les autres points de la grille.** Un texte qui met le professeur en défaut détruit en une phrase ce que tout le dispositif construit : l'autorité pédagogique, et la conviction que c'est lui qui corrige (cf. pitch parents : « c'est moi qui corrige, moi qui décide, moi qui note »).
+
+**Trois interdits absolus dans tout texte lu par un élève** :
+1. **Imputer un manquement au professeur** — « non saisie par le professeur », « le professeur n'a pas encore… », « en attente de validation par le professeur ».
+2. **Révéler que la machine fait le travail** — tout ce qui laisse entendre que la correction, la note ou l'analyse viennent de l'application et non du professeur.
+3. **Exposer un défaut du système comme un défaut de personne** — un champ vide, une donnée manquante, une étape non faite ne se raconte jamais en désignant un responsable.
+
+**LA RÈGLE DE REFORMULATION : décrire le FLUX, jamais l'ACTEUR.** Pas « je n'ai pas encore validé » (qui reste un aveu), mais « ton cahier sera validé en classe » · « cette étape s'ouvrira quand nous l'aurons vue ensemble » · « la classe n'est pas encore lancée ». Personne n'est en défaut : c'est le déroulé normal qui parle. Et quand l'information ne sert pas à l'élève (un détail de saisie interne), **on ne l'affiche pas du tout**.
+
+**RELEVÉ DU 18/07 — à corriger app par app** (24 occurrences détectées, dont ~10 réelles) :
+- `correction_dictee` : « (transcription non saisie par le professeur) » — **le cas fondateur, à traiter immédiatement**
+- `worktrack` : « Le professeur n'a pas encore validé ton cahier — patiente un instant » · « en attente de validation » (×3)
+- `applause_meter` : « Le professeur n'a pas encore choisi la classe. Patiente… »
+- `pilotage_debat_s3` : « en attente de validation par le professeur » (×2)
+- `dictee_universelle` : « En attente de validation »
+*(Les autres occurrences sont des messages PROF ou techniques : hors périmètre.)*
+**À vérifier à chaque passe, et en priorité absolue dans le chantier Y.**
+
 ### LA GRILLE DE PASSE (appliquée intégralement à chaque app, dans l'ordre du séquençage)
 1. Panneau de contrôle de départ = accueil d'instances cloné de la souche (liste + badges d'état + création)
 2. Navigation deux niveaux (Pilotage · Données · Réglages + « ? »), atterrissage sur le travail principal
