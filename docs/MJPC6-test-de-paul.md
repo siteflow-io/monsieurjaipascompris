@@ -1,6 +1,9 @@
 # LE TEST DE PAUL — ce que le harnais ne peut pas voir
 > **VERSION À COMPLÉTER** — refondue le 18/07 après le premier essai réel : blocs séparés par RÔLE (on ne saute plus du prof à l'élève), et **chaque étape dit CE QU'ON DEVRAIT VOIR**.
 
+## QUAND CE TEST A LIEU — toujours APRÈS la promotion
+Le sas n'est pas servi comme page web : **Paul ne peut tester que ce qui est en production.** L'ordre est donc : audit de la conscience → « promeus » → promotion → **ce test** → `BUG` si quelque chose cloche. Le test n'est jamais un prérequis à la promotion ; il est le contrôle qui suit, et la convention `BUG` en est le filet.
+
 ## Les trois règles du protocole
 1. **Un bloc = un rôle = un appareil.** On ne mélange jamais prof et élève dans le même bloc : deux connexions, deux appareils, des allers-retours intenables.
 2. **Chaque étape énonce l'ATTENDU VISUEL** — ce qui doit apparaître à l'écran. Sans attendu écrit, un test ne prouve rien : on ne sait pas si l'absence de réaction est un bug ou le comportement normal.
