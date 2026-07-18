@@ -720,6 +720,8 @@ Tailles déployées (contrôle) : applause_meter 565 216 · reecriture 239 267 �
 5. **L'écran vide ment** : le tableau de séance (1100 px) n'a débordé qu'une fois PEUPLÉ de groupes réels. Tester une app vide ne teste rien.
 6. **Le bilan ment, le fichier fait foi** : un rapport d'exécutant a affirmé une correction non appliquée (libellé n°18).
 
+**→ REGISTRE TECHNIQUE COMPLET : `docs/MJPC6-registre-bugs.md`** (poussé le 17/07) — 9 sections, chaque bug avec sa cause exacte et son correctif, app par app (ch10 65 FIX · ch16 · QCM 17 bugs · souche · analyse logique · worktrack · réécriture · infrastructure · leçons techniques). **C'est LUI le cahier des charges des tests : un test qui ne détecterait pas ces bugs-là ne vaut rien.** À relire avant toute campagne de débogage.
+
 ### TYPOLOGIE RÉELLE DES BUGS DE L'ÉCOSYSTÈME (exhumée le 17/07 des conversations de débogage — ch10/ch16, QCM, réécriture, dictée universelle, MJPC 4)
 *Cette typologie est le VRAI cahier des charges des tests : chaque famille a déjà mordu, avec son cas concret.*
 **A — Visibilité et montage d'écran** : un écran caché qui reste visible derrière (shunt 4e après `showPhase1Results` : `display:block` jamais restauré) ; un élément monté dans un conteneur caché (carte mode test dans `confirmOverlay`) ; une fonction d'aide définie mais JAMAIS APPELÉE (`ifo()` de reecriture : les ⓘ n'existaient pas). *Test : visibilité RÉELLE (`offsetHeight>0`), jamais la présence d'une classe.*
