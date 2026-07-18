@@ -155,6 +155,7 @@ textarea{resize:vertical;min-height:120px}
 .etat-dictee{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:600;white-space:nowrap}
 .etat-attente{background:var(--card2);color:var(--text-sub);border:1px solid var(--border)}
 .etat-afaire{background:var(--primary-light);color:var(--primary);border:1px solid var(--primary)}
+.etat-absent{background:rgba(180,83,9,.08);color:#8a4b09;border:1px solid rgba(180,83,9,.28)}
 .etat-nonrendue{background:var(--card2);color:var(--text-sub);border:1px dashed var(--border)}
 .mesdictees-ligne.non-ouvrable{opacity:.72}
 .mesdictees-ligne.non-ouvrable:hover{border-color:var(--border)}
@@ -4046,7 +4047,7 @@ function Fiches(p){
       var n=1;
       errors.forEach(function(err){
         var typeLabel=err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":err.type==="P"?"Ponctuation manquante":err.type==="A"?"Attention \u00e0 ta graphie":"Illisible";
-        var hint=err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":err.type==="P"?"Un signe de ponctuation manquait (. , ; : ? !)":err.type==="A"?"Ton prof a h\u00e9sit\u00e9 \u00e0 mettre illisible. Aucun point retir\u00e9, mais soigne le trac\u00e9 \u00e0 l\u2019avenir.":"Le mot n\u2019\u00e9tait pas lisible";
+        var hint=err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":err.type==="P"?"Un signe de ponctuation manquait (. , ; : ? !)":err.type==="A"?"J\u2019ai h\u00e9sit\u00e9 \u00e0 mettre illisible. Aucun point retir\u00e9, mais soigne le trac\u00e9 \u00e0 l\u2019avenir.":"Le mot n\u2019\u00e9tait pas lisible";
         var numCls="err-num err-num-"+err.type.toLowerCase();
         var typeCls="err-type err-type-"+err.type.toLowerCase();
         html+='<div class="err-row">';
@@ -4681,7 +4682,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
         transcriptHtml = '<div class="err-trans"><span class="wrong-inline">« '+escapeHtml(disp.text)+' »</span> → <strong>'+escapeHtml(err.word)+'</strong></div>';
       }
     } else if (err.type !== "M" && err.type !== "P" && err.type !== "A") {
-      transcriptHtml = '<div class="err-trans placeholder-msg">(transcription non saisie par le professeur)</div>';
+      transcriptHtml = '';   /* Principe cardinal : un détail de saisie interne ne se
+                                raconte jamais à l'élève, et jamais en désignant quelqu'un. */
     }
     var comment = gramComment(err);
     var ptStr = POINTS[err.type] ? ' <span class="err-points">'+POINTS[err.type]+' pt</span>' : '';
@@ -5337,7 +5339,7 @@ function MaCopie(p){
       h("div",{className:"card",style:{textAlign:"center",padding:30}},
         h("div",{style:{fontSize:"2rem",marginBottom:10}},"\u23f3"),
         h("h2",{style:{marginTop:0}},"Ta correction n\u2019est pas encore consultable"),
-        h("p",{style:{color:"var(--muted)"}},"Ton professeur ne l\u2019a pas encore rendue. Reviens un peu plus tard."),
+        h("p",{style:{color:"var(--muted)"}},"Elle sera disponible apr\u00e8s la s\u00e9ance de correction."),
         h("button",{className:"btn btn-ghost",style:{marginTop:14},onClick:p.onLogout},"\u2190 Retour")
       )
     );
@@ -5410,22 +5412,29 @@ function classeDuRegistre(nom,source){
   return undefined;
 }
 
-// M6ter — État d'une dictée pour l'élève. TROIS dimensions se croisent, pas deux :
-//   ① la dictée est publiée (config.published)      — filtrée en amont
-//   ② la copie est rendue    (copyPublishedAt)      — le professeur a publié les copies
-//   ③ le travail de l'élève  (results, autocorrection)
-// Tant que ② manque, il n'y a rien à ouvrir et rien à annoncer : ni note, ni « Ouvrir ».
+// M6quater — État d'une dictée pour l'élève. QUATRE dimensions se croisent :
+//   ⓪ l'élève était-il là     (absents/<clé>)               — PRIORITAIRE sur tout
+//   ① la dictée est publiée   (config.published)            — filtrée en amont
+//   ② la copie est rendue     (copyPublishedAt)
+//   ③ le travail de l'élève   (results, autocorrection)
+// L'absence prime : dire « pas encore corrigée » à un élève qui n'était pas là est faux.
+// L'état rendu porte un champ `rattrapage` : point d'accroche du RATTRAPAGE MODAL
+// (chantier X — proposer une autre modalité, dont la dictée audio en étude, et inscrire
+// la modalité retenue sur la copie finale). Il vaut null tant que le chantier n'est pas
+// ouvert ; aucun appelant ne doit supposer sa présence.
 function etatDicteeEleve(d,cle){
+  if(d.absents&&d.absents[cle]) return {code:"absent",label:"Tu \u00e9tais absent(e)",
+    ouvrable:false,montrerNote:false,rattrapage:null};
   var corr=d.results?d.results[cle]:null;
-  if(!corr) return {code:"attente",label:"Pas encore corrig\u00e9e",ouvrable:false,montrerNote:false};
+  if(!corr) return {code:"attente",label:"Pas encore corrig\u00e9e",ouvrable:false,montrerNote:false,rattrapage:null};
   if(!d.copyPublishedAt) return {code:"nonrendue",label:"Corrig\u00e9e, pas encore rendue",
-                                 ouvrable:false,montrerNote:false,date:corr.timestamp||null};
+                                 ouvrable:false,montrerNote:false,rattrapage:null,date:corr.timestamp||null};
   var ac=(d.autocorrection||{})[cle]||null;
   var total=ac&&typeof ac.total==="number"?ac.total:null;
   var solved=ac&&typeof ac.solved==="number"?ac.solved:0;
   if(total!==null&&total>0&&solved>=total)
-    return {code:"terminee",label:"Termin\u00e9e",ouvrable:true,montrerNote:true,date:corr.timestamp||null};
-  return {code:"afaire",label:"\u00c0 faire",ouvrable:true,montrerNote:true,date:corr.timestamp||null,
+    return {code:"terminee",label:"Termin\u00e9e",ouvrable:true,montrerNote:true,rattrapage:null,date:corr.timestamp||null};
+  return {code:"afaire",label:"\u00c0 faire",ouvrable:true,montrerNote:true,rattrapage:null,date:corr.timestamp||null,
           reste:(total!==null&&total>0)?(total-solved):null};
 }
 
@@ -5449,6 +5458,7 @@ function AppEleve(p){
   var sCl=useState(null),classesData=sCl[0],setClassesData=sCl[1];
   var sShunt=useState(false),shuntFait=sShunt[0],setShuntFait=sShunt[1];
   var sAt=useState(null),attente=sAt[0],setAttente=sAt[1];
+  var sAO=useState(false),autoOuvert=sAO[0],setAutoOuvert=sAO[1];
 
   var s9=useState(null),autoLoginParams=s9[0],setAutoLoginParams=s9[1];
   var sScrUrl=useState(null),forcedScreenUrl=sScrUrl[0],setForcedScreenUrl=sScrUrl[1];
@@ -5489,7 +5499,7 @@ function AppEleve(p){
         return{id:id,title:cfg.title||id,classe:classeName,niveau:cfg.niveau||"",published:cfg.published!==false,
                showNote:cfg.showNote!==false,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,
                results:val[id].results||{},autocorrection:val[id].autocorrection||{},
-               copyPublishedAt:val[id].copyPublishedAt||null};
+               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{}};
       });
       setDictees(list);
       if(forcedDicteeId){
@@ -5539,15 +5549,17 @@ function AppEleve(p){
     else setScreen("correction");
   }
 
-  // ── Une fois l'identité prouvée : destination de l'URL, sinon « Mes dictées » ──
+  // ── Une fois l'identité prouvée : « Mes dictées » est un LIEU. L'élève y arrive
+  // toujours d'abord et choisit. L'ouverture directe ne subsiste QUE si un identifiant
+  // de dictée est explicitement passé dans l'URL (le lien nominatif des familles), et
+  // une seule fois : un retour à la liste ne doit pas être repris par l'ouverture.
   useEffect(function(){
     if(!identite||screen!=="login"||!dictees.length)return;
-    var cible=null;
-    if(autoLoginParams&&san(autoLoginParams.eleveKey)===identite.cle){
-      cible=dictees.find(function(d){return d.id===autoLoginParams.dicteeId});
-    } else if(forcedDicteeId){
-      cible=dictees.find(function(d){return d.id===forcedDicteeId&&d.results[identite.cle]});
-    }
+    var idUrl = (autoLoginParams&&san(autoLoginParams.eleveKey)===identite.cle) ? autoLoginParams.dicteeId
+              : (forcedDicteeId||null);
+    if(!idUrl||autoOuvert){ setScreen("mesdictees"); return; }
+    var cible=dictees.find(function(d){return d.id===idUrl});
+    setAutoOuvert(true);
     if(cible) ouvrirDictee(cible);
     else setScreen("mesdictees");
   },[identite,dictees,screen]);
@@ -5602,7 +5614,7 @@ function AppEleve(p){
     var moi=res[0];
 
     var attendu=codeAttendu(moi.cle,moi.nom);
-    if(!attendu){setErrMsg("Aucun code n\u2019est enregistr\u00e9 pour toi. Demande \u00e0 ton professeur.");return}
+    if(!attendu){setErrMsg("Ton code n\u2019est pas encore enregistr\u00e9. Viens me voir pour qu\u2019on le mette en place.");return}
     if(String(code)!==String(attendu)){setErrMsg("Ce code ne correspond pas. V\u00e9rifie tes 4 chiffres.");return}
 
     setErrMsg("");
@@ -5635,7 +5647,7 @@ function AppEleve(p){
           h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
         errMsg&&h("p",{style:{color:"var(--coral)",fontSize:".88rem",marginBottom:8}},errMsg),
         h("button",{className:"btn btn-primary",style:{width:"100%"},onClick:doLogin},"Entrer"),
-        h("p",{style:{fontSize:".78rem",color:"var(--muted)",marginTop:10,marginBottom:0}},"Ton code est le m\u00eame que sur le site MJPC. Si tu l\u2019as oubli\u00e9, demande-le \u00e0 ton professeur.")
+        h("p",{style:{fontSize:".78rem",color:"var(--muted)",marginTop:10,marginBottom:0}},"Ton code est le m\u00eame que sur le site MJPC. Si tu l\u2019as oubli\u00e9, viens me le demander.")
       )
     ),
     h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},onClick:p.onBack},"\u2190 Retour")
@@ -5693,10 +5705,17 @@ function AppEleve(p){
       h("div",{className:"card",style:{textAlign:"center"}},
         h("h1",null,attente.title),
         h("p",{className:"subtitle"},attente.classe),
-        h("p",{style:{fontSize:".95rem",color:"var(--text-sub)",maxWidth:420,margin:"0 auto 18px"}},
-          identite&&etatDicteeEleve(attente,identite.cle).code==="nonrendue"
-            ? "Ta copie est corrig\u00e9e, mais ton professeur ne l\u2019a pas encore rendue. Reviens quand elle sera l\u00e0."
-            : "Ta copie n\u2019est pas encore corrig\u00e9e. Quand ton professeur l\u2019aura rendue, tu retrouveras ici tes erreurs \u00e0 revoir."),
+        (function(){
+          var e=identite?etatDicteeEleve(attente,identite.cle):{code:"attente"};
+          var txt = e.code==="absent"
+              ? "Tu n\u2019\u00e9tais pas l\u00e0 le jour de cette dict\u00e9e. Vois avec moi comment la rattraper, si c\u2019est possible."
+            : e.code==="nonrendue"
+              ? "Ta copie est corrig\u00e9e. Elle sera disponible apr\u00e8s la s\u00e9ance de correction."
+              : "Cette dict\u00e9e n\u2019est pas encore corrig\u00e9e. Tes erreurs \u00e0 revoir appara\u00eetront ici apr\u00e8s la s\u00e9ance de correction.";
+          return h("p",{style:{fontSize:".95rem",color:"var(--text-sub)",maxWidth:420,margin:"0 auto 18px"}},txt);
+        })(),
+        /* Emplacement du RATTRAPAGE MODAL (chantier X) : quand e.rattrapage sera
+           renseigné, les modalités proposées s'afficheront ici, sans toucher au reste. */
         h("button",{className:"btn btn-primary",onClick:function(){setAttente(null);setScreen("mesdictees")}},"\u2190 Mes dict\u00e9es")
       )
     );
@@ -6866,7 +6885,7 @@ function ExercicesEleve(p){
         h("div",{style:{fontSize:"2.4rem",marginBottom:8}},"\ud83c\udf89"),
         h("h2",{style:{margin:"0 0 6px",color:"#1b6a30"}},"Bravo, tu as termin\u00e9 tous tes exercices !"),
         totalAuto > 0 && h("p",{style:{fontSize:"1.05rem",margin:"8px 0",fontWeight:600}},"Score auto-corrig\u00e9 : "+totalOk+" / "+totalAuto+" bonnes r\u00e9ponses"),
-        totalSaisi > 0 && h("p",{style:{fontSize:".88rem",color:"var(--muted)",margin:"4px 0",fontStyle:"italic"}},totalSaisi+" exercice"+(totalSaisi>1?"s":"")+" de production (\u00e9criture / copie) enregistr\u00e9"+(totalSaisi>1?"s":"")+", \u00e0 corriger par le professeur."),
+        totalSaisi > 0 && h("p",{style:{fontSize:".88rem",color:"var(--muted)",margin:"4px 0",fontStyle:"italic"}},totalSaisi+" exercice"+(totalSaisi>1?"s":"")+" de production (\u00e9criture / copie) enregistr\u00e9"+(totalSaisi>1?"s":"")+", que je corrigerai."),
         p.onBack && h("button",{className:"btn btn-primary",style:{marginTop:14},onClick:p.onBack},"\u2190 Quitter")
       ),
       h("div",{className:"card",style:{textAlign:"center"}},
@@ -7050,7 +7069,7 @@ function ExercicesEleve(p){
           placeholder:"\u00c9cris ici\u2026",
           rows:nLignes,
           style:{width:"100%",minHeight:Math.max(80, nLignes*22),padding:"10px 14px",fontSize:"1rem",border:"2px solid "+(validated?(validated.ok?"var(--green)":"var(--coral)"):"var(--primary)"),borderRadius:8,background:validated?(validated.ok?"rgba(72,160,87,.06)":"rgba(197,48,48,.06)"):"var(--card)",fontFamily:"inherit",resize:"vertical",lineHeight:1.5}}),
-        validated&&validated.ok&&h("div",{style:{marginTop:10,padding:"8px 12px",background:"rgba(43,108,203,.08)",borderRadius:6,fontSize:".82rem",fontStyle:"italic",color:"var(--muted)"}},"\u270d Ta r\u00e9ponse a \u00e9t\u00e9 enregistr\u00e9e. Le professeur la corrigera \u00e0 la main.")
+        validated&&validated.ok&&h("div",{style:{marginTop:10,padding:"8px 12px",background:"rgba(43,108,203,.08)",borderRadius:6,fontSize:".82rem",fontStyle:"italic",color:"var(--muted)"}},"\u270d Ta r\u00e9ponse a \u00e9t\u00e9 enregistr\u00e9e. Je la corrigerai \u00e0 la main.")
       );
     }
     return h("div",null,"Type d'item inconnu : "+item.type);
@@ -7443,7 +7462,7 @@ function EleveCorrection(p){
         h("p",{style:{fontSize:".85rem",color:"var(--muted)",marginTop:6}},"Sois discret et respectueux. Si tu ne travailles pas s\u00e9rieusement, tu te verras sanctionn\u00e9.")
       ),
       h("div",{style:{marginTop:10,padding:"10px 14px",background:"var(--primary-light)",borderRadius:8,fontSize:".85rem",lineHeight:1.6}},
-        h("strong",null,"\u00c0 savoir : "),"ta note de dict\u00e9e est calcul\u00e9e par ton professeur sur ta copie papier. Le bonus autocorrection /5 est un suppl\u00e9ment que tu gagnes en retrouvant tes erreurs ici \u2014 il ne modifie pas la note de dict\u00e9e."
+        h("strong",null,"\u00c0 savoir : "),"ta note de dict\u00e9e, c\u2019est moi qui la calcule sur ta copie papier. Le bonus autocorrection /5 est un suppl\u00e9ment que tu gagnes en retrouvant tes erreurs ici \u2014 il ne modifie pas la note de dict\u00e9e."
       )
     ),
     // Détail de la note (si note révélée)
@@ -7634,7 +7653,7 @@ function EleveCorrection(p){
       ),
       h("div",{style:{display:"flex",flexDirection:"column",gap:4}},
         h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},onClick:p.onBack},"\u2190"),
-        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".7rem",padding:"3px 8px",color:"var(--primary)"},onClick:function(){window.location.reload()}},"\ud83d\udd04",ifo("Recharge la page. Clique ici quand le professeur te le demande.",{below:true,right:true}))
+        h("button",{className:"btn-sm btn-ghost",style:{fontSize:".7rem",padding:"3px 8px",color:"var(--primary)"},onClick:function(){window.location.reload()}},"\ud83d\udd04",ifo("Recharge la page. Clique ici quand je te le demande.",{below:true,right:true}))
       )
     ),
     // Text with masked words
@@ -7648,7 +7667,7 @@ function EleveCorrection(p){
             "\ud83d\udccc "+extras.length+" mot"+(extras.length>1?"s":"")+" en trop dans ta copie (barr\u00e9"+(extras.length>1?"s":"")+" en bleu dans le texte) \u2014 \u22120,5 pt chacun"
           ),
           nA>0&&h("div",{style:{color:"#b7791f",fontWeight:600,marginTop:extras.length>0?6:0}},
-            "\u26a0 "+nA+" mot"+(nA>1?"s":"")+" o\u00f9 ton prof a sign\u00e9 ta graphie (soulign\u00e9"+(nA>1?"s":"")+" en orange) \u2014 aucun point retir\u00e9, mais soigne le trac\u00e9"
+            "\u26a0 "+nA+" mot"+(nA>1?"s":"")+" o\u00f9 j\u2019ai sign\u00e9 ta graphie (soulign\u00e9"+(nA>1?"s":"")+" en orange) \u2014 aucun point retir\u00e9, mais soigne le trac\u00e9"
           )
         );
       })(),
@@ -7666,7 +7685,7 @@ function EleveCorrection(p){
           }
           // Type A : signalement de graphie, affiché en clair, non cliquable, ne compte pas dans la note
           if(err.type==="A"){
-            acc.push(h("span",{key:"w"+i,className:"word-btn err-a",style:{cursor:"default"},title:"Ton prof a sign\u00e9 ta graphie ici. Aucun point retir\u00e9."},w,h("sub",{style:{fontSize:8,marginLeft:2}},"\u26a0")));
+            acc.push(h("span",{key:"w"+i,className:"word-btn err-a",style:{cursor:"default"},title:"J\u2019ai sign\u00e9 ta graphie ici. Aucun point retir\u00e9."},w,h("sub",{style:{fontSize:8,marginLeft:2}},"\u26a0")));
             return acc;
           }
           var solved=results[err.errIdx];
