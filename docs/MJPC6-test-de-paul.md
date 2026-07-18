@@ -1,57 +1,79 @@
-# LE TEST DE PAUL — 10 minutes, ce que le harnais ne peut pas voir
-*Créé le 18/07/2026 sur demande de Paul. Patron réutilisable à CHAQUE passe d'app. Il ne teste PAS ce que la conscience a déjà vérifié (structure, rendu statique, banc) : il vise exclusivement les zones structurellement hors de portée du harnais.*
+# LE TEST DE PAUL — ce que le harnais ne peut pas voir
+> **VERSION À COMPLÉTER** — refondue le 18/07 après le premier essai réel : blocs séparés par RÔLE (on ne saute plus du prof à l'élève), et **chaque étape dit CE QU'ON DEVRAIT VOIR**.
 
-## Pourquoi ces zones précisément
-Le harnais (navigateur simulé + adaptateur REST) ne peut voir NI le temps réel (polling, pas websocket), NI les vraies polices/Chrome Android/clavier mobile, NI la charge, NI la validation Firebase authentique. Ce sont les familles de bugs D (timing/courses) et G (rendu mobile) du registre — les plus vicieuses. D'où ce protocole.
+## Les trois règles du protocole
+1. **Un bloc = un rôle = un appareil.** On ne mélange jamais prof et élève dans le même bloc : deux connexions, deux appareils, des allers-retours intenables.
+2. **Chaque étape énonce l'ATTENDU VISUEL** — ce qui doit apparaître à l'écran. Sans attendu écrit, un test ne prouve rien : on ne sait pas si l'absence de réaction est un bug ou le comportement normal.
+3. **Retour minimal** : `✔` ou `✘ + trois mots`. Exemple : `A3✘ audio muet`.
 
-## Règles du test
-- **Chronomètre 10 minutes.** Si ça déborde, on s'arrête : c'est que le protocole est mal calibré, pas que Paul doit y passer plus de temps.
-- **Retour minimal** : pour chaque étape, `✔` ou `✘ + trois mots`. Rien de plus. Exemple : « 4✘ audio muet ».
-- **Sur le téléphone** (c'est l'outil réel de Paul) sauf mention « ordinateur ».
-- **Toujours ouvrir avec `?v=N`** (N incrémenté) pour contourner le cache.
-- Vérifier d'abord **la pastille de version** : si elle n'affiche pas la version attendue, ARRÊT — on teste l'ancienne version.
-
----
-
-## PROTOCOLE M6 — la souche (correction_dictee)
-
-**Préalable (30 s)** — ouvrir `monsieurjaipascompris.com/correction_dictee.html?v=1`, vérifier la pastille **v6.0.0**. Si absente : arrêt.
-
-**1. (1 min) — Connexion élève réelle.** Mode élève → saisir le code d'un vrai élève + son nom + son prénom → « Entrer ».
-*Attendu : entrée acceptée. Puis retenter avec un code FAUX : refus avec message clair.*
-
-**2. (1 min) — « Mes dictées ».** Une fois entré : la liste s'affiche-t-elle ? Ouvrir une dictée.
-*Attendu : les dictées où l'élève a une copie, avec titre et classe. Sans copie : message d'attente, pas d'erreur.*
-
-**3. (1 min) — Le lien nominatif (le point tranché).** Ouvrir un lien de copie envoyé aux familles (`?dictee=…&eleveKey=…`) dans un onglet privé.
-*Attendu : le code est demandé, puis la bonne copie s'ouvre directement.*
-
-**4. (2 min) — Le mode Rapide avec audio (ordinateur).** Accès prof → ouvrir une dictée → ⇧R → corriger deux mots.
-*Attendu : le raccourci bascule bien sur Pilotage, l'audio prononce le mot, la correction s'enregistre.*
-
-**5. (1 min) — Réglages.** Onglet Réglages → couper la lecture audio, changer la vitesse, revenir en Rapide.
-*Attendu : le réglage est pris en compte immédiatement et survit à un rechargement.*
-
-**6. (2 min) — Temps réel (le plus important, à deux appareils).** Téléphone en élève + ordinateur en prof sur l'onglet Suivi 🟢.
-*Attendu : la présence de l'élève apparaît côté prof ; son avancement se met à jour sans rechargement.*
-
-**7. (1 min) — Mobile réel.** Sur le téléphone, en prof : ouvrir une dictée, passer sur Données → Bilan.
-*Attendu connu : le tableau déborde (dette D6). Vérifier seulement que le RESTE (nav, Correction) est utilisable.*
-
-**8. (30 s) — Clavier mobile.** Sur un écran de saisie, ouvrir le clavier.
-*Attendu : rien ne se casse, le champ reste visible.*
-
-**Total : 10 minutes.** Retour attendu : une ligne du type `1✔ 2✔ 3✘ code non demandé 4✔ 5✔ 6✔ 7✔ 8✔`
+## Avant tout — le contrôle de version (30 s)
+Ouvrir l'app avec `?v=N` (N incrémenté à chaque essai).
+**ON DEVRAIT VOIR** : la pastille de version en haut ou en bas de l'écran prof, affichant le numéro attendu (ex. `v6.0.0`).
+**SI ON NE LE VOIT PAS** : c'est le cache — incrémenter `?v=`. Si le numéro reste l'ancien après trois essais : ARRÊT, on teste l'ancienne version, prévenir Claude.
 
 ---
 
-## PATRON POUR LES PASSES SUIVANTES
-À chaque app, la conscience compose le même protocole en 8 étapes maximum, en piochant dans ces catégories :
-1. **Authentification réelle** (Firebase, codes, sessions)
-2. **Les données de l'élève** (ses travaux, son historique)
-3. **Le point de conception tranché dans la passe** (ce que Paul a décidé, vérifié en vrai)
-4. **Le geste métier principal** (corriger, piloter, voter — l'usage quotidien)
-5. **Les réglages** (persistance après rechargement)
-6. **Le temps réel à deux appareils** (toujours, c'est l'angle mort n°1)
-7. **Le mobile réel** (Chrome Android, ce que le harnais approxime)
-8. **Le clavier mobile / le zoom** (famille G du registre)
+# PROTOCOLE M6 — LA SOUCHE (correction_dictee v6.0.0)
+
+## BLOC A — CÔTÉ PROF, sur ordinateur (5 min)
+*Un seul appareil, une seule session, du début à la fin du bloc.*
+
+**A1 · Entrer dans une dictée.** Accès professeur → code → choisir une dictée existante → « Ouvrir → ».
+**ON DEVRAIT VOIR** : sous le titre de la dictée, une barre de navigation à **trois groupes** — `Pilotage · Données · Réglages` + un bouton `?` — et l'écran s'ouvre **directement sur Correction** (pas sur un menu). Sous Pilotage, trois sous-onglets : `Préparation · Correction · ⚡ Rapide(⇧R)`.
+**SI DIFFÉRENT** : noter quel groupe manque ou sur quel écran ça s'ouvre.
+
+**A2 · Préparation.** Cliquer sur `Préparation`.
+**ON DEVRAIT VOIR** : le formulaire d'édition de la dictée (titre, niveau, classe, texte, note sur), **pré-rempli avec les valeurs actuelles** — le même formulaire que le ✏️ de l'accueil, au même endroit dans la page.
+
+**A3 · Mode Rapide et audio.** Revenir sur Correction, presser `⇧R` (Maj+R).
+**ON DEVRAIT VOIR** : bascule immédiate sur l'écran Rapide (mot à corriger en grand). **ON DEVRAIT ENTENDRE** : le mot prononcé à voix haute. Corriger deux mots.
+**ON DEVRAIT VOIR ENSUITE** : les deux corrections apparaissent dans la copie de l'élève (retour sur Correction pour vérifier).
+
+**A4 · Réglages.** Onglet `Réglages`.
+**ON DEVRAIT VOIR** : au moins la section « Lecture audio » avec son interrupteur et son explication (« Utilisée par le mode Rapide pour dire le mot à corriger »). Couper l'audio → repasser en Rapide → **ON NE DEVRAIT PLUS RIEN ENTENDRE**. Recharger la page (F5) → retourner aux Réglages → **l'interrupteur doit être resté sur OFF**.
+
+**A5 · Données.** Onglet `Données`.
+**ON DEVRAIT VOIR** : cinq sous-onglets — `Bilan · 📄 Copies · Fiches élèves · Suivi 🟢 · 🎯 Exercices`. Ouvrir `Suivi 🟢`.
+**ON DEVRAIT VOIR** : l'AVANCEMENT des élèves (qui a fait quoi, où il en est). ⚠️ **On ne verra PAS qui est connecté en ce moment** : la souche n'a pas de présence temps réel (dette ouverte, point 22 de la grille). C'est normal, ce n'est pas un bug.
+
+**A6 · L'aide.** Bouton `?`.
+**ON DEVRAIT VOIR** : un panneau « Aide » expliquant les trois temps du travail (Pilotage / Données / Réglages), avec une croix pour fermer. S'il y a une zone d'annonces, elle est vide pour l'instant (le canal naît en M8) — **elle ne doit PAS afficher d'erreur**.
+
+**A7 · Le lien nominatif — récupération.** Données → `📄 Copies` → repérer le lien de copie d'un élève (forme `...correction_dictee.html?dictee=<id>&eleveKey=<clé>`). Le copier.
+**SI AUCUN LIEN N'EST VISIBLE** : le noter — cela signifierait que la génération du lien famille a disparu, et c'est à instruire.
+
+## BLOC B — CÔTÉ ÉLÈVE, sur téléphone (4 min)
+*Autre appareil, ou même appareil en navigation privée. Ne pas revenir au prof pendant ce bloc.*
+
+**B1 · Connexion.** Ouvrir l'app → `🎓 Mode élève`.
+**ON DEVRAIT VOIR** : trois champs — `Mon code (4 chiffres)`, `Nom`, `Prénom` — et la phrase « Ton code est le même que sur le site MJPC ». **Il ne doit PAS y avoir de liste de noms où se choisir.**
+Saisir le code, le nom et le prénom d'un vrai élève → `Entrer`.
+**ON DEVRAIT VOIR** : l'entrée est acceptée, on arrive sur l'espace de l'élève.
+
+**B2 · Le refus.** Se déconnecter, recommencer avec un **code faux** (ex. 0000) et le même nom.
+**ON DEVRAIT VOIR** : un refus **avec un message clair et compréhensible par un élève** — pas un message technique, pas un écran figé.
+
+**B3 · « Mes dictées ».** Une fois connecté.
+**ON DEVRAIT VOIR** : la liste de ses dictées (titre, classe), **même s'il n'y en a qu'une** — jamais une ouverture directe sans liste. S'il n'a aucune copie publiée : un message d'attente clair, **pas une page vide ni une erreur**.
+Ouvrir une dictée → **ON DEVRAIT VOIR** sa copie avec ses erreurs et les commentaires.
+
+**B4 · Le lien nominatif — le test qui compte.** Coller le lien récupéré en A7, en navigation privée.
+**ON DEVRAIT VOIR** : **le code est demandé** (c'est la décision du 18/07 : le lien est une adresse, pas une preuve d'identité). Après saisie du bon code → la bonne copie s'ouvre directement.
+**SI LA COPIE S'OUVRE SANS CODE** : ✘ — c'est le point le plus important du bloc, le signaler tout de suite.
+
+**B5 · Clavier mobile.** Sur un écran où l'élève saisit du texte, ouvrir le clavier.
+**ON DEVRAIT VOIR** : le champ de saisie reste visible au-dessus du clavier, rien ne se superpose, rien ne saute.
+
+**B6 · Mobile — la navigation.** (Si tu passes en prof sur le téléphone.)
+**ON DEVRAIT VOIR** : la barre `Pilotage · Données · Réglages` lisible et cliquable, l'écran de Correction utilisable. ⚠️ **Le Bilan et le Suivi déborderont sur le côté** (tableaux à 9 et 12 colonnes) : c'est la dette D6, connue et attendue. Vérifier seulement que **le reste** est utilisable.
+
+## BLOC C — LES DEUX À LA FOIS (sans objet pour M6)
+La souche n'a pas de temps réel : rien à tester à deux appareils simultanément. *(Ce bloc reprendra tout son sens pour le QCM, le débat et l'applaudimètre.)*
+
+---
+
+# PATRON POUR LES PASSES SUIVANTES
+Composer le protocole en **trois blocs par rôle**, jamais plus de 8 étapes au total, chacune avec son ATTENDU VISUEL écrit :
+- **BLOC A — prof** : entrée dans l'instance · navigation · le geste métier principal · les réglages (et leur persistance après rechargement) · les données.
+- **BLOC B — élève** : connexion réelle + refus d'un mauvais code · ses travaux antérieurs · le point de conception tranché dans la passe · le clavier mobile.
+- **BLOC C — les deux** : présence, synchronisation, chrono — tout ce qui met deux appareils en relation (l'angle mort n°1 du harnais).
