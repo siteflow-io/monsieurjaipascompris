@@ -15,6 +15,8 @@
 
 ---
 
+> ⚠️ **Les « pièges » signalés ci-dessous sont TEMPORAIRES.** Ils sont inscrits au plan comme tâches de neutralisation (principe 19 : « aucun piège assumé » — registre P1-P5). Chacun doit disparaître de ce document au fil des passes : la protection appartient au code, pas à cette notice. Si un piège est encore listé ici dans six mois, c'est un échec du chantier.
+
 # ① SI DES DONNÉES SONT EN JEU — le geste conservatoire par app
 
 **Règle unique** : *avant toute tentative de réparation, EXPORTER.* Un export coûte 5 secondes, une donnée perdue coûte une séance de travail d'élèves.
