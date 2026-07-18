@@ -107,6 +107,12 @@
 
 **LA RÈGLE DE REFORMULATION : décrire le FLUX, jamais l'ACTEUR.** Pas « je n'ai pas encore validé » (qui reste un aveu), mais « ton cahier sera validé en classe » · « cette étape s'ouvrira quand nous l'aurons vue ensemble » · « la classe n'est pas encore lancée ». Personne n'est en défaut : c'est le déroulé normal qui parle. Et quand l'information ne sert pas à l'élève (un détail de saisie interne), **on ne l'affiche pas du tout**.
 
+**ARTICULATION AVEC LA RÈGLE DU « JE » (point 28) — signalée par Paul le 18/07, elles peuvent entrer en conflit** :
+> **Le professeur est TOUJOURS sujet de ce qui est FAIT. Il n'est JAMAIS sujet de ce qui MANQUE.**
+- **« Je » pour l'ACCOMPLI et pour l'ADRESSE** : « je t'ai signalé deux erreurs », « vois avec moi comment la rattraper », « j'ai ajouté des questions ». Le « je » AFFIRME l'autorité.
+- **FLUX IMPERSONNEL pour l'INACCOMPLI et l'ATTENTE** : « ta correction n'est pas encore disponible », « ton cahier sera validé en classe », « cette étape s'ouvrira après la séance ». Personne n'est en défaut.
+**Critère opérationnel, vérifiable en une lecture : jamais le professeur en sujet d'une négation ou d'un inaccompli.** *(Exemple du conflit : « JE ne l'ai pas encore rendue » respecte le point 28 mais enfreint le principe cardinal — c'est un aveu de manquement à la première personne, donc PIRE que la 3e personne. À proscrire.)*
+
 **RELEVÉ DU 18/07 — à corriger app par app** (24 occurrences détectées, dont ~10 réelles) :
 - `correction_dictee` : « (transcription non saisie par le professeur) » — **le cas fondateur, à traiter immédiatement**
 - `worktrack` : « Le professeur n'a pas encore validé ton cahier — patiente un instant » · « en attente de validation » (×3)
