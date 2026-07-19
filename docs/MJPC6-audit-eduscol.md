@@ -1,5 +1,5 @@
 # AUDIT ÉDUSCOL — les 148 libellés prof contre « La grammaire du français. Terminologie grammaticale » (2020)
-> **v3 — COUVERTURE 100 % (PDF téléversé par Paul, 213 pages extraites en local, 542 Ko de texte) + C1-C3 CLOS + liste finale de créations (19/07/2026)**. Audit par la conscience n°2 (tâche reprise de M8). Source auditée : `taxonomie_atelier.json` (58 155 o, meta v1.0.0). Référence : le texte même du guide Éduscol (PDF officiel), extrait deux fois (deux URL), même contenu confirmé.
+> **v4 — APPLIQUÉ (taxonomie v1.1.0, 154 notions : dépôt commit b4c4253dcd + nœud /taxonomie, vérifiés identiques) · v3 — COUVERTURE 100 % (PDF téléversé par Paul, 213 pages extraites en local, 542 Ko de texte) + C1-C3 CLOS + liste finale de créations (19/07/2026)**. Audit par la conscience n°2 (tâche reprise de M8). Source auditée : `taxonomie_atelier.json` (58 155 o, meta v1.0.0). Référence : le texte même du guide Éduscol (PDF officiel), extrait deux fois (deux URL), même contenu confirmé.
 
 ## LES QUATRE ARBITRAGES DE PAUL (19/07 — décisions gravées)
 1. **ADOSSEMENT INTÉGRAL** à la terminologie officielle 2020 — c'est la règle générale, les points 2 et 3 sont ses deux seules exceptions déclarées.
@@ -53,6 +53,12 @@ Deux écarts donc : ① « injonctive » se dit « impérative » dans le guide 
 - **C1 · `conj-024`** « adjectif verbal » — niveau II, modes non personnels détaillés (p. 150-158) non lus. Terme traditionnel très vraisemblablement présent ; à confirmer avant tout renommage (aucun proposé).
 - **C2 · `gram-029` à `032`** discours direct / indirect / indirect libre — relèvent des « fonctions énonciatives et textuelles » (II.2.7) non lues ; vocabulaire des programmes, aucun conflit connu.
 - **C3 · `gram-033` à `038`** connecteurs — le guide (II.1.6) nomme « connecteurs argumentatifs » et « connecteurs textuels » ; les libellés par sens (cause, conséquence…) sont descriptifs et compatibles. Aucun renommage proposé.
+
+## APPLICATION (19/07, validée par Paul : « je valide tout »)
+F1-F4 + K1-K5 appliqués (K6 : non-création confirmée). Interprétation déclarée : « tout » lu comme incluant les deux optionnels K4 (homonymes → fam-38) et K5 (dénotation/connotation → fam-37) — réversible par désactivation si Paul corrige. Total 154 notions, `meta` v1.1.0, ids intouchés, table d'alias `terminologie` créée dans la Concordance (statut `valide`).
+
+## NOTE — DISCOURS RAPPORTÉ (observation de Paul, 19/07)
+Paul s'étonne de l'absence du discours rapporté dans le guide, puis l'explique lui-même : ce n'est pas une notion grammaticale pure — c'est une notion d'ÉNONCIATION. Le texte du guide le confirme : son périmètre déclaré est la morphosyntaxe (natures, fonctions, structures) ; la stylistique et la pragmatique ne sont abordées qu'en encadrés « Pour aller plus loin ». Les libellés gram-029 à 032 restent donc sourcés sur les PROGRAMMES du cycle 4, ce qui est leur bon ancrage.
 
 ## NOTE ANNEXE (hors renommage, pour mémoire)
 Le guide range « donc » parmi les ADVERBES, pas les conjonctions de coordination (I.3.7.1, remarque explicite) — sans impact sur les libellés, mais utile aux contenus d'exercices sur gram-008 et gram-034.
