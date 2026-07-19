@@ -47,3 +47,11 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **État APRÈS promotion** : md5 `93db733dc3fb7fde4da027dd8fcf1193`, 327 344 o, `APP_VERSION="8.0.0"`
 - **Restauration en cas de BUG** : commits du fichier → contenu au sha du commit PRÉCÉDANT la promotion → PUT (mécanisme standard du registre)
 - **Contenu promu** : M8 lot 1 — ① toutes classes du niveau · ② annonces `site/annonces` · ③ alerte règles J+29 · ⑤ brevet éditable `site/config/brevetDates` · ⑥ contrat annonces prouvé · manifeste explicite (`preserver: site, site/annonces, site/config`)
+
+## Point de retour — PROMOTION M8bis (index.html), 19/07/2026
+- **Fichier** : `index.html` (production)
+- **État AVANT** : md5 `93db733dc3fb7fde4da027dd8fcf1193`, 327 344 o, v8.0.0 (M8 lot 1)
+- **État APRÈS** : md5 `f939e60d0d23fbb4b291f460b3277709`, 352 684 o, v8.1.0
+- **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT
+- **Contenu promu** : ④ éditeur de taxonomie (arborescence 5 domaines / 40 familles / 154 notions, création, renommage prof+élève+niveaux+exemple, désactivation réversible ; aucune suppression, aucun id éditable ; bandeau mode test ; `meta/version` incrémentée à chaque écriture)
+- **Audit** : parseurs rejoués, diff = 2 lignes remplacées + 460 ajoutées, MJPC_PURGE intact au caractère près, interdits vérifiés au navigateur, trafic réseau surveillé (GET seuls en mode test), captures desktop + 390 px
