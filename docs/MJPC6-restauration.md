@@ -36,3 +36,4 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - Elle ne touche **pas** aux données Firebase (le hub garde son état). Si un bug a écrit des données fautives, c'est un travail distinct, à faire après.
 - Elle ne supprime pas le travail : la version bugguée reste dans l'historique Git, disponible pour le diagnostic.
 - Elle ne remplace pas le test : elle limite les dégâts quand le test a laissé passer quelque chose.
+| `evaluation-qcm.html` | `8637a41b34a1c39639090c9e4c18cdba` (**M7**) | **`712059bdb427b7b0...`** — commit `87f022a3e4` | 18/07 |
