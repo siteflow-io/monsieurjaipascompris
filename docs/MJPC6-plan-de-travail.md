@@ -270,6 +270,50 @@ function checkCode(){
   → **LA VERSION FAIT PARTIE DE L'IDENTITÉ DE L'INSTRUMENT.** Ce n'est pas seulement un snapshot à la clôture : une évaluation modifiée devient **une autre évaluation**, avec ses propres résultats, ses propres statistiques, sa propre ligne dans le profil longitudinal. **Interdiction d'agréger les résultats de deux versions**, même à base de questions commune. Conséquences à porter en M7 : ① snapshot de l'énoncé + du barème à la clôture (voie A) ; ② **identité versionnée** de l'évaluation (`evalId` + version, ou nouvel `evalId` à la modification si des résultats existent) ; ③ les statistiques par question et le profil longitudinal ne cumulent JAMAIS deux versions ; ④ côté prof, l'historique doit montrer les versions distinctement.
   **CAUSE RACINE IDENTIFIÉE PAR PAUL — le vrai correctif est en amont** : *« ce qui m'oblige à modifier un QCM, c'est que l'IA me sort un JSON trop lâche par rapport à ce que je peux attendre. Donc ça se joue sur la rédaction du prompt. Et ce prompt doit dire à l'IA de prendre en compte réellement le niveau attendu dans telle classe sur telle notion — et là, on va se servir des documents Éduscol : ATTENDUS DE FIN DE CYCLE. »* → **chantier V ci-dessous.**
 
+## U. LE CHRONO DE SESSION ET LA DÉCISION DE COMPTAGE (conception Paul, 18/07)
+
+**Origine** : la question « que faire des sessions abandonnées ? » a révélé que le nettoyage automatique **décidait à la place de Paul**. Sa réponse : *« il faut coder une nouvelle fonctionnalité, ça permet de ne pas bricoler avec l'existant et d'avoir une solution propre et activable consciemment »*.
+
+### LE FLUX (tranché le 18/07)
+1. **Au lancement d'une session**, Paul choisit sa **durée** (patron worktrack : boutons assistants + champ modifiable à la main).
+2. **Pendant** : le chrono tourne **en arrière-plan**, **stocké dans Firebase** (comme tous les chronos de l'écosystème — le fonctionnement local des apps `ch` est abandonné). Visible dans le panneau de contrôle prof, **pausable et arrêtable**.
+3. **Deux sorties, une seule destination** : qu'il l'arrête ou qu'il expire, **le même écran de décision s'ouvre** — *compter / ne pas compter*.
+4. **Le bouton de clôture reste souverain** : il ferme la session quand Paul veut, chrono ou non. La session est enregistrée telle quelle, avec ses spécificités.
+5. **RÉVERSIBILITÉ TOTALE** : toute décision « compte / ne compte pas » est annulable après coup.
+6. **Prolongation** ( « +10 min ») : oui, elle fait partie du système.
+7. **La clôture produit le bilan** : impression (patron worktrack) + bilan HTML autonome (patron dictée coévaluée — voir chantier T).
+
+### PRINCIPE FONDATEUR RAPPELÉ PAR PAUL (à appliquer partout)
+> **« Rien de bloquant ni d'automatique pour le prof : que du PROPOSÉ, jamais de l'IMPOSÉ. »**
+Le chrono n'impose aucune fermeture — **aucune fermeture automatique, jamais**. Il propose, Paul dispose. C'est déjà le principe du cours déclaré de worktrack (son alerte peut être ignorée) et du débat (« le professeur n'est jamais bloqué »).
+
+### CÔTÉ ÉLÈVE (tranché)
+- **Le chrono de session ne leur est PAS visible** : *« c'est moi qui annonce à l'oral »*. (Le chrono de QUESTION, lui, reste — pas deux horloges à l'écran.)
+- **Aucune fermeture automatique de leur écran** : Paul contrôle.
+- **Une session « qui ne compte pas » APPARAÎT quand même** chez l'élève, **expliquée par un message à CHAMP ÉDITABLE** — Paul personnalise la communication selon le moment (point 26 : c'est une annonce, donc éditable).
+
+### CE QUE ÇA APPORTE EN PLUS (relevé le 18/07)
+Une session aura désormais **une durée réelle enregistrée** — donnée que rien d'autre ne produit, et qui nourrit le calendrier de M15 : non seulement *quand* l'élève a travaillé, mais **combien de temps la classe y a passé** (support de dialogue sur le rythme de travail).
+
+### EXTENSION RETENUE
+Cet écran de décision — **compter / ne pas compter, réversible** — vaut à terme pour **toute activité notée** de l'écosystème, pas seulement le QCM (doctrine d'unification). Pendant du rattrapage modal : là on décide comment on rattrape, ici on décide ce qui compte.
+
+### LE CHRONO MONTE AU SOCLE
+Le mécanisme « durée déclarée → alerte avant la fin → clôture douce proposée » est désormais demandé dans **trois apps** (worktrack, débat M5ter, QCM). Il cesse d'être un candidat : **il monte dans `mjpc-core.js` en M15**, avec la présence et `taxoCompter`, pour être écrit une fois.
+
+## T. LE BILAN HTML AUTONOME POUR TOUTES LES APPS (doctrine d'unification, 18/07)
+
+**Décision de Paul** : *« toute app doit posséder un bilan du style de la dictée coévaluée. C'est une organisation commune, un flux commun — comme les panneaux de création en fin de compte. »*
+**Le modèle** : `docs/MJPC6-analyse-bilan-html.md` — fichier autonome, zéro dépendance, **note cachée derrière la consultation des compétences**, onglets verrouillés tant que les commentaires ne sont pas lus, moteur de rédaction à connecteurs variés, accès par code élève ou code prof.
+**Ce que chaque app devra définir** : quelles compétences elle alimente · quels textes commentent une performance dans SA logique (un QCM ne se commente pas comme une dictée) · quelles données figurent dans le document.
+**⚠ AVERTISSEMENT DE CADRAGE** : ce n'est **pas** une passe de grille, c'est un **chantier à part entière** par app. Il rejoint la forme de l'archive (décision C1) et le bilan demi-A4 du débat. **À planifier explicitement, jamais à glisser dans une passe.**
+
+## S. LE QCM D'ENTRAÎNEMENT AUTOPORTANT (idée Paul, 18/07 — à élaborer)
+
+*« Le QCM sert en classe pour ÉVALUER, c'est sa nature. Mais on pourrait faire des QCM d'entraînement, AUTOPORTANTS (parce que je ne suis pas là pour cliquer les boutons), qui seraient transversaux à QCM ET à l'app d'entraînement. Il vivrait dans l'app d'entraînement, avec une vue aussi dans QCM. »* — idée déclarée non aboutie, à discuter.
+**Ce que ça implique, première analyse** : le QCM actuel est **piloté** (Paul avance les questions, chrono par question, tableau projeté) ; un QCM d'entraînement est **autoporté** (l'élève avance seul, à son rythme, sans personne). **Ce ne sont pas les mêmes moteurs d'exécution — mais c'est LA MÊME BANQUE DE QUESTIONS.** D'où l'architecture pressentie : **une banque, deux moteurs** (piloté / autonome), ce qui prolonge « un moteur, N contenus » (point 15) et rejoint le pipeline grammaire (screenshot → JSON → banque → moteurs) ainsi que le chantier V (prompt ancré sur les attendus de fin de cycle).
+**Questions ouvertes** : un QCM d'entraînement compte-t-il (jamais ? autrement ? alimente-t-il d'autres compétences, comme le rattrapage modal) · qui le déclenche (Paul le prescrit, ou l'élève le choisit) · où vivent les résultats (profil longitudinal, mais dans quelle catégorie).
+
 ## V. LE PROMPT DE GÉNÉRATION DES QCM — ancré sur les attendus de fin de cycle (décidé 18/07)
 
 **Le problème, à sa racine** : Paul ne modifie pas ses QCM par caprice — il les modifie parce que **le JSON généré par l'IA est trop lâche** : questions hors niveau, formulations approximatives, exigence mal calibrée pour la classe et la notion visées. Chaque correction post-session est un symptôme de cette imprécision initiale. **Neutraliser P2 traite l'accident ; corriger le prompt supprime la cause.**
