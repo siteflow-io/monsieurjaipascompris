@@ -1964,7 +1964,7 @@ function AppEleve(p){
     var cible2 = sanMJPC((sess.nom||"")+" "+(sess.prenom||""));
     var ks = Object.keys(classes);
     for(var i=0;i<ks.length;i++){
-      if(estClasseInterneObj(classes[ks[i]])) continue;
+      if(!p.bacASable && estClasseInterneObj(classes[ks[i]])) continue;
       var els = classes[ks[i]].eleves || [];
       for(var j=0;j<els.length;j++){
         var sl = slugify(els[j].nomComplet);
@@ -1985,7 +1985,12 @@ function AppEleve(p){
   }
 
   if(!classeSlug){
-    var classesArr = Object.keys(classes).filter(function(k){return !estClasseInterneObj(classes[k])}).map(function(k){return Object.assign({slug:k}, classes[k])});
+    // M-TEST : la classe du bac à sable est interne, donc masquée en usage réel.
+    // Le mode test la rend visible pour lui seul (p.bacASable), sans jamais
+    // toucher au filtrage vu par les élèves.
+    var classesArr = Object.keys(classes).filter(function(k){
+      return p.bacASable ? true : !estClasseInterneObj(classes[k]);
+    }).map(function(k){return Object.assign({slug:k}, classes[k])});
     return h("div", {className:"eleve-page"},
       ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
       h("div", {className:"eleve-card"},
@@ -2763,7 +2768,7 @@ function EleveEval(p){
           title:"Ta réponse est enregistrée automatiquement dès que tu cliques sur une lettre. Tu peux changer d'avis tant que le chrono tourne."
         }, (!peutRepondre && phase === "reponse")
             ? (valide
-                ? "✅ Ta réponse est enregistrée — chrono terminé, elle est figée"
+                ? "✅ Ta réponse est enregistrée — le temps est écoulé, tu ne peux plus la changer"
                 : "⏰ Chrono terminé — tu n'as pas répondu à temps")
             : (valide
                 ? "✅ Réponse enregistrée — tu peux encore la changer"
@@ -3826,6 +3831,189 @@ function EleveCorrection(p){
 }
 
 // ─────────── App Test (mode test intégré) ───────────
+// ════════════════════════════════════════════════════════════════════
+// M-TEST — Ce que le bac à sable doit pouvoir ÉPROUVER (point 16)
+// ════════════════════════════════════════════════════════════════════
+// Règle : on RÉUTILISE, on ne copie jamais. Chaque outil ci-dessous appelle la
+// fonction RÉELLE de l'app (cloturerSession, construireEvalSnapshot,
+// evalDeSession, calculerScoreQuestion) — si l'une changeait, le bac à sable
+// changerait avec elle. Aucune logique n'est réimplémentée ici.
+function OutilsTestP2(p){
+  var s1 = useState(""), msg = s1[0], setMsg = s1[1];
+  var s2 = useState(null), etat = s2[0], setEtat = s2[1];
+
+  function lireSessionTest(cb){
+    db.ref(DB_ROOT+"/sessionActive/"+TEST_CLASSE_SLUG).once("value", function(a){
+      var sid = a.val();
+      if(!sid){ cb(null, null); return; }
+      db.ref(DB_ROOT+"/sessions/"+sid).once("value", function(b){
+        var sess = b.val();
+        cb(sess ? Object.assign({id:sid}, sess) : null, sid);
+      });
+    });
+  }
+  function rafraichir(){
+    lireSessionTest(function(sess){
+      if(!sess){ setEtat({aucune:true}); return; }
+      db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).once("value", function(e){
+        var ev = e.val() || {};
+        // evalDeSession : LA fonction réelle de P2, pas une relecture maison.
+        var enonce = evalDeSession(sess, {[TEST_EVAL_ID]: ev});
+        setEtat({
+          etat: sess.etat || "en_cours",
+          figee: sessionEstFigee(sess),
+          origine: sess.evalSnapshotOrigine || null,
+          versionEval: versionEval(ev),
+          versionEnonce: enonce ? versionEval(enonce) : null,
+          titreEnonce: enonce ? enonce.titre : null
+        });
+      });
+    });
+  }
+  useEffect(rafraichir, []);
+
+  // ── ① CLÔTURE RÉELLE : appelle cloturerSession, comme le bouton du professeur.
+  function cloturerLaSessionDeTest(){
+    lireSessionTest(function(sess){
+      if(!sess){ setMsg("Aucune session de test à clôturer. Lance d'abord une question."); return; }
+      db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).once("value", function(e){
+        cloturerSession(sess, e.val(), function(){
+          setMsg("Session clôturée par le chemin réel (cloturerSession). Vérifie ci-dessous que l'énoncé est conservé.");
+          rafraichir();
+        });
+      });
+    });
+  }
+
+  // ── ② MODIFIER L'ÉVAL APRÈS COUP : reproduit exactement le geste qui causait
+  // le recalcul rétroactif (P2). On écrit dans l'éval de TEST uniquement.
+  function modifierEvalApresCoup(){
+    db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).once("value", function(e){
+      var ev = e.val(); if(!ev){ setMsg("Éval de test introuvable."); return; }
+      var qs = JSON.parse(JSON.stringify(ev.questions || []));
+      if(!qs.length){ setMsg("Éval de test sans question."); return; }
+      // On change la bonne réponse de la Q1 : sans P2, tous les scores passés bougeaient.
+      var anciennes = qs[0].bonnes || [];
+      var nbChoix = (qs[0].choix || []).length || 4;
+      var nouvelle = [];
+      for(var i=0;i<nbChoix;i++){ if(anciennes.indexOf(i) < 0){ nouvelle = [i]; break; } }
+      qs[0].bonnes = nouvelle.length ? nouvelle : anciennes;
+      qs[0].enonce = (qs[0].enonce || "") + " [modifiée en test]";
+      var maj = Object.assign({}, ev, {questions:qs, version: versionEval(ev) + 1, updatedAt: Date.now()});
+      db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(maj, function(){
+        setMsg("Évaluation de test modifiée (version " + maj.version + "). Les résultats de la session close ne doivent PAS avoir bougé.");
+        rafraichir();
+      });
+    });
+  }
+
+  // ── ③ PREUVE CHIFFRÉE : recompte les scores DEUX FOIS — d'après l'énoncé figé
+  // et d'après l'éval courante — avec la VRAIE fonction de calcul.
+  function comparerLesDeuxLectures(){
+    lireSessionTest(function(sess){
+      if(!sess){ setMsg("Aucune session de test."); return; }
+      db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).once("value", function(e){
+        var evCourante = e.val() || {};
+        var evFigee = sess.evalSnapshot || null;
+        if(!evFigee){ setMsg("Cette session n'est pas encore clôturée."); return; }
+        function totalPour(enonce){
+          var mode = modeEval(enonce), total = 0;
+          (enonce.questions || []).forEach(function(q, qi){
+            var reps = (sess.reponses && sess.reponses[qi]) || {};
+            Object.keys(reps).forEach(function(slug){
+              var choix = reps[slug] && (reps[slug].choix || reps[slug]);
+              total += calculerScoreQuestion(choix, q.bonnes || [], mode).score;
+            });
+          });
+          return total;
+        }
+        var tFige = totalPour(evFigee), tCourant = totalPour(evCourante);
+        setMsg("Le jour de l'évaluation : " + tFige +
+               " — Avec l'énoncé actuel : " + tCourant + ". " +
+               (tFige === tCourant
+                 ? "Identiques : l'évaluation n'a pas encore été modifiée."
+                 : "Différents — et c'est bien la preuve : l'application affiche " + tFige + ", la note du jour, pas " + tCourant + "."));
+      });
+    });
+  }
+
+  // ── ④ CHRONO : faire expirer le temps sans attendre (bug de Maëva).
+  // On repousse phaseStart dans le passé : peutRepondre recalcule et refuse.
+  function faireExpirerLeChrono(){
+    lireSessionTest(function(sess, sid){
+      if(!sess){ setMsg("Aucune session de test."); return; }
+      if(!sess.chrono){ setMsg("Aucun chrono sur cette question : règle une durée avant de lancer."); return; }
+      db.ref(DB_ROOT+"/sessions/"+sid+"/phaseStart").set(Date.now() - (sess.chrono + 5) * 1000, function(){
+        setMsg("Chrono expiré à l'instant. Un clic d'élève doit maintenant être refusé (peutRepondre = faux).");
+      });
+    });
+  }
+
+  var b = {className:"btn btn-ghost btn-sm", style:{marginRight:".4rem", marginBottom:".4rem"}};
+  return h("div", {className:"test-info", style:{marginTop:".8rem"}},
+    h("strong", null, "🔬 Éprouver les mécanismes livrés"),
+    h("p", {style:{margin:".4rem 0", fontSize:".88rem"}},
+      "Ces boutons appellent les fonctions réelles de l'application, pas des copies."),
+    h("div", null,
+      h("button", Object.assign({}, b, {onClick:cloturerLaSessionDeTest,
+        title:"Appelle cloturerSession() — le chemin exact du bouton « Terminer la session »."}), "🔒 Clôturer (chemin réel)"),
+      h("button", Object.assign({}, b, {onClick:modifierEvalApresCoup,
+        title:"Change la bonne réponse de la question 1 après coup : le geste qui causait le recalcul rétroactif."}), "✏️ Modifier l'éval après coup"),
+      h("button", Object.assign({}, b, {onClick:comparerLesDeuxLectures,
+        title:"Recompte les notes de la classe telles qu'elles étaient le jour de l'évaluation, puis telles qu'elles seraient avec l'énoncé actuel."}), "⚖️ Vérifier que les notes n'ont pas bougé"),
+      h("button", Object.assign({}, b, {onClick:faireExpirerLeChrono,
+        title:"Repousse le départ du chrono dans le passé : peutRepondre refuse immédiatement, sans attendre."}), "⏱️ Faire expirer le chrono"),
+      h("button", Object.assign({}, b, {onClick:rafraichir}), "🔄 Relire l'état")
+    ),
+    etat && !etat.aucune && h("div", {style:{marginTop:".5rem", fontSize:".85rem"}},
+      h("div", null, "Session : ", h("strong", null, etat.etat),
+        " · énoncé ", h("strong", null, etat.figee ? "conservé ✔" : "non conservé"),
+        // Le libellé traduit la valeur stockée ; la donnée elle-même ne change pas.
+        etat.origine === "nettoyage" ? " (conservé au nettoyage)"
+          : (etat.origine ? " (conservé au " + etat.origine + ")" : "")),
+      h("div", null, "Évaluation courante : version ", h("strong", null, String(etat.versionEval)),
+        etat.versionEnonce != null ? (" · énoncé lu par l'app : version " + etat.versionEnonce) : "")
+    ),
+    etat && etat.aucune && h("div", {style:{marginTop:".5rem", fontSize:".85rem", opacity:.8}}, "Aucune session de test en cours."),
+    msg && h("p", {style:{marginTop:".5rem", fontWeight:600}}, msg)
+  );
+}
+
+// M-TEST — Le portail élève et « Mes évaluations » traversables depuis le bac
+// à sable. On monte les VRAIS composants (AppEleve, donc EleveLogin puis
+// MesEvaluations) dans une fenêtre : aucune copie, aucun raccourci.
+function PortailTestQCM(){
+  var s1 = useState(false), ouvert = s1[0], setOuvert = s1[1];
+  var s2 = useState(null), codes = s2[0], setCodes = s2[1];
+  useEffect(function(){
+    // codesTest() est la fonction réelle qui a écrit ces codes : on la relit,
+    // on ne recopie pas la table.
+    try{ setCodes(codesTest()); }catch(e){ setCodes({}); }
+  }, []);
+  var premier = codes ? Object.keys(codes)[0] : null;
+  return h("div", {className:"test-info", style:{marginTop:".8rem"}},
+    h("strong", null, "🎓 Entrer comme un élève"),
+    h("p", {style:{margin:".4rem 0", fontSize:".88rem"}},
+      "Ouvre l'application élève telle qu'elle est : choix de la classe, puis code personnel. ",
+      premier ? h("span", null, "Exemple — ", h("strong", null, (codes[premier].name || premier)),
+        " · code ", h("strong", null, codes[premier].code)) : null),
+    h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setOuvert(true)},
+      title:"Monte le VRAI composant élève (AppEleve → EleveLogin), pas une simulation."}, "👋 Ouvrir le portail élève"),
+    codes && Object.keys(codes).length > 1 && h("details", {style:{marginTop:".5rem", fontSize:".85rem"}},
+      h("summary", null, "Voir tous les codes du bac à sable"),
+      h("ul", null, Object.keys(codes).map(function(k){
+        return h("li", {key:k}, (codes[k].name || k), " — ", h("strong", null, codes[k].code));
+      }))
+    ),
+    ouvert && h("div", {style:{position:"fixed", inset:0, zIndex:3000, background:"rgba(0,0,0,.55)", overflow:"auto"}},
+      h("div", {style:{position:"sticky", top:0, textAlign:"right", padding:".5rem", zIndex:3001}},
+        h("button", {className:"btn btn-rouge btn-sm", onClick:function(){setOuvert(false)}}, "✕ Fermer la vue élève")
+      ),
+      h(AppEleve, {bacASable:true, onBack:function(){setOuvert(false)}})
+    )
+  );
+}
+
 function AppTest(p){
   var s1 = useState("init"), etat = s1[0], setEtat = s1[1]; // init | ready | exiting
   var s2 = useState(""), erreur = s2[0], setErreur = s2[1];
@@ -4012,6 +4200,8 @@ function AppTest(p){
           h("button", {className:"btn btn-rouge btn-sm", onClick:purgerEtSortir, title:"Termine le mode test : supprime la classe _TEST, l'éval test et toutes les sessions associées. Aucune donnée réelle n'est affectée."}, "🗑️ Sortir et purger")
         )
       ),
+      h(OutilsTestP2, null),
+      h(PortailTestQCM, null),
       h("div", {className:"test-info"},
         h("strong", null, "Environnement de test isolé. "),
         "Classe fictive ("+TEST_ELEVES.length+" élèves simulés), éval test (capitales). Pilote en haut, vois les élèves répondre en bas. Bouton « Tous les élèves répondent » pour simuler une classe réelle. À la sortie, tout est purgé automatiquement."
@@ -7897,8 +8087,8 @@ function OngletSnapshot(){
           rapport.sessionsAFermer.map(function(s){var d=new Date(s.date);var hh=String(d.getHours()).padStart(2,'0');var mm=String(d.getMinutes()).padStart(2,'0');return "    - "+s.sid+" (lancée le "+d.toLocaleDateString()+" à "+hh+":"+mm+")"}).join("\n")+"\n";
       }
       msg += "\nLes données des sessions et leurs réponses sont CONSERVÉES. Seuls les marqueurs « en cours » sont nettoyés.\n" +
-             "L'énoncé actuel de chaque évaluation sera figé sur ces sessions, pour que leurs résultats ne bougent plus jamais " +
-             "(marqué « figé au nettoyage » : ce n'est pas forcément l'énoncé du jour de la session).\n\nContinuer ?";
+             "L'énoncé actuel de chaque évaluation y sera conservé, pour que leurs résultats ne bougent plus jamais " +
+             "(marqué « conservé au nettoyage » : ce n'est pas forcément l'énoncé du jour de la session).\n\nContinuer ?";
 
       if(!confirm(msg)) return;
 
