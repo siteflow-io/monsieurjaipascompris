@@ -37,3 +37,6 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - Elle ne supprime pas le travail : la version bugguée reste dans l'historique Git, disponible pour le diagnostic.
 - Elle ne remplace pas le test : elle limite les dégâts quand le test a laissé passer quelque chose.
 | `evaluation-qcm.html` | `8637a41b34a1c39639090c9e4c18cdba` (**M7**) | **`712059bdb427b7b0...`** — commit `87f022a3e4` | 18/07 |
+| `correction_dictee.html` | `2d0d39417bcb5f7126bb24e0ba0425aa` (M-TEST) | **`9145d8b88629617a...`** — commit `8f45fb2337` | 18/07 |
+| `evaluation-qcm.html` | `f35653745b3bf2627bab29db00fcb457` (M-TEST) | **`8637a41b34a1c396...`** — commit `2c28dc7fd5` | 18/07 |
+| `pilotage_debat_s3.html` | `405d11bb461d804a93ba383262fab659` (M-TEST) | **`3973f8f88e5c9527...`** — commit `02291d2f50` | 18/07 |
