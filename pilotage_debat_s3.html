@@ -1073,7 +1073,7 @@ body:has(.overlay.show){overflow:hidden}
     <div id="studentOthersList"></div>
   </div>
   </div><!-- /studentPilotageWrap -->
-  <button id="studentCarnetBtn" class="dbg-btn ghost" style="display:none;margin:10px auto 0" onclick="openCarnetEleve()" title="Revoir toutes les évaluations que ton groupe a envoyées (figées).">📓 Mes évaluations</button>
+  <button id="studentCarnetBtn" class="dbg-btn ghost" style="display:none;margin:10px auto 0" onclick="openCarnetEleve()" title="Revoir toutes les évaluations que ton groupe a envoyées.">📓 Mes évaluations</button>
   <div id="studentDebatView" style="display:none"></div>
   <footer>Tablette du groupe. Vos actions sont visibles en direct sur l'écran prof. Le passage à <b>« fait »</b> nécessite la validation du professeur.</footer>
 </div>
@@ -1455,7 +1455,7 @@ body:has(.overlay.show){overflow:hidden}
 <div class="overlay" id="carnetEleveOverlay">
   <div class="gelcard" style="text-align:left;max-width:580px;max-height:84vh;overflow:auto">
     <h2 style="font-size:1.15rem;margin-bottom:4px;text-align:center">📓 Mes évaluations</h2>
-    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Tout ce que ton groupe a envoyé, figé.</p>
+    <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:14px">Tout ce que ton groupe a envoyé.</p>
     <div id="carnetEleveBody"></div>
     <div class="acts" style="margin-top:16px"><button class="ghost" onclick="closeCarnetEleve()" title="Fermer.">Fermer</button></div>
   </div>
@@ -2357,6 +2357,9 @@ function renderTestPanel(){
     +'<span class="dbc-sub" style="margin:0">Cours de test :</span>'
     +'<button class="dbc-btn" onclick="coursTest(120)" title="Pose un cours de 2 h pour la classe de test — les élèves incarnés entrent.">▶ Démarrer (2 h)</button>'
     +'<button class="dbc-btn" onclick="coursTest(6)" title="Pose un cours qui finit dans 6 minutes : l\u2019alerte T-5 (toast prof + bandeau élève) arrive en moins d\u2019une minute, puis la modale de fin — le minuteur se teste sans attendre.">⏱ Fin dans 6 min</button>'
+    +'<button class="dbc-btn" onclick="coursTestT5()" title="Pose une fin dans 4 min 30 puis appelle checkCoursDebat() : l\u2019alerte T-5 tombe immédiatement, sans attendre.">\u26a1 T-5 maintenant</button>'
+    +'<button class="dbc-btn" onclick="coursTestFinAtteinte()" title="Pose une heure de fin déjà passée puis appelle checkCoursDebat() : la modale « clôturer ou prolonger » s\u2019ouvre immédiatement.">\u26a1 Fin atteinte maintenant</button>'
+    +'<button class="dbc-btn" onclick="injecterDocumentsTest()" title="Colle un jeu de 10 documents de test dans le champ d\u2019injection : il ne reste qu\u2019à cliquer « Injecter les documents », le chemin réel.">\ud83d\udcc4 Documents de test</button>'
     +'<button class="dbc-btn" onclick="coursTest(0)" title="Éteint le cours de test : un incarné est alors refoulé avec le message « hors cours » et « Mes débats » reste accessible — le refus ⓐ se teste.">■ Clôturer</button>'
     +'</div>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
@@ -2371,6 +2374,50 @@ function renderTestPanel(){
     +'</div>';
   box.innerHTML=h;
 }
+/* M-TEST — Déclencheurs immédiats. Ils posent l'état réel puis appellent la
+   VRAIE fonction de contrôle (checkCoursDebat) : aucune alerte n'est simulée. */
+async function coursTestT5(){
+  var k=slugC(TEST_DEBAT_CLASSE);
+  /* fin dans 4 min 30 : on est déjà DANS la fenêtre T-5 que checkCoursDebat surveille */
+  await db.ref("debat_config/cours/"+k).set({debut:Date.now()-3600000, fin:Date.now()+270000});
+  delete _coursAlerte[k];
+  _coursBandVu=false;                 /* le bandeau élève doit pouvoir réapparaître */
+  if(typeof COURS==="object") COURS[k]={debut:Date.now()-3600000, fin:Date.now()+270000};
+  checkCoursDebat();                  /* LA fonction réelle : l'alerte tombe maintenant */
+  toast("T-5 déclenché à l'instant. Côté prof : le toast. Côté élève incarné : le bandeau (recharge la vue élève).");
+}
+async function coursTestFinAtteinte(){
+  var k=slugC(TEST_DEBAT_CLASSE);
+  await db.ref("debat_config/cours/"+k).set({debut:Date.now()-3600000, fin:Date.now()-1000});
+  delete _coursAlerte[k];
+  if(typeof COURS==="object") COURS[k]={debut:Date.now()-3600000, fin:Date.now()-1000};
+  checkCoursDebat();                  /* déclenche la modale de fin, sans attendre */
+  toast("Heure de fin atteinte : la modale « clôturer ou prolonger » doit s'ouvrir.");
+}
+
+/* M-TEST — Injection de documents : passe par injecterDocuments(), la fonction
+   réelle (validation comprise). On remplit seulement le champ, comme Paul le ferait. */
+function injecterDocumentsTest(){
+  var jeu = {
+    sujet: "[TEST] Faut-il limiter la place des écrans au collège ?",
+    camps: {pour:"Oui, il faut les limiter", contre:"Non, il faut les accompagner"},
+    documents: []
+  };
+  for(var i=1;i<=10;i++){
+    jeu.documents.push({
+      id: "doc"+i,
+      titre: "[TEST] Document "+i,
+      source: "Source fictive "+i+" (bac à sable)",
+      texte: "Texte de test numéro "+i+". Il sert uniquement à vérifier que l'injection remplace bien les documents du débat de test, et que les élèves incarnés les voient.",
+      camp: (i%2===0) ? "contre" : "pour"
+    });
+  }
+  var ta=$("ppDocsJson");
+  if(!ta){ toast("Ouvre d'abord Préparation → Les 10 documents du parcours."); return; }
+  ta.value = JSON.stringify(jeu, null, 2);
+  toast("JSON de test collé. Clique « Injecter les documents » : c'est le chemin réel, validation comprise.");
+}
+
 async function coursTest(minutes){
   var k=slugC(TEST_DEBAT_CLASSE);
   if(!minutes){ await db.ref("debat_config/cours/"+k).remove(); delete _coursAlerte[k]; toast("Cours de test clôturé — un incarné sera refoulé (« hors cours »), avec « Mes débats » accessible."); return; }
@@ -5977,7 +6024,7 @@ function renderCarnetEleve(){
   h+='<div class="carnet-sec">Vos évaluations</div>';
   const donnees=Object.keys(GE).filter(function(mid){ return GE[mid] && GE[mid][myBinomeId]; })
     .sort(function(a,b){ return (GE[a][myBinomeId].at||0)-(GE[b][myBinomeId].at||0); });
-  if(donnees.length===0){ h+='<div class="carnet-empty">Tu n\'as pas encore envoyé d\'évaluation. Elles apparaîtront ici, figées, au fur et à mesure.</div>'; }
+  if(donnees.length===0){ h+='<div class="carnet-empty">Tu n\'as pas encore envoyé d\'évaluation. Elles apparaîtront ici au fur et à mesure.</div>'; }
   donnees.forEach(function(mid){ h+=carnetDonneeCard(M[mid]||{}, GE[mid][myBinomeId], num[mid], mid); });
   body.innerHTML=h;
 }
