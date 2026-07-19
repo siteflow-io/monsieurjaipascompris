@@ -646,8 +646,12 @@ function idDeLApp(src){
   t('sans session, le portail à code reste le seul chemin',
     html.includes('h(EleveLogin, {classe:classes[classeSlug]') &&
     html.includes('if(!code.trim()){ setErr("Entre ton code personnel (4 chiffres)."); return; }'));
-  t('le shunt ignore les classes internes et les sessions professeur',
-    html.includes('if(estClasseInterneObj(classes[ks[i]])) continue;') && html.includes('if(!sess || sess.is_prof) return;'));
+  t('le shunt ignore les classes internes (sauf bac à sable) et les sessions professeur',
+    html.includes('if(!p.bacASable && estClasseInterneObj(classes[ks[i]])) continue;') &&
+    html.includes('if(!sess || sess.is_prof) return;'));
+  t('M-TEST — la classe du bac à sable n\'est visible QUE dans le bac à sable',
+    html.includes('return p.bacASable ? true : !estClasseInterneObj(classes[k]);') &&
+    html.includes('h(AppEleve, {bacASable:true,'));
 
   section('M7 QCM bis — « Mes évaluations » (point 8)');
   t('le composant existe et lit le profil longitudinal',
@@ -1004,6 +1008,93 @@ function taxoCompter(erreurs, table) {
     r4.nonMappes === 1 && Object.keys(r4.points).length === 0);
 })();
 
+/* ════ SUITE M-TEST — le bac à sable est-il le reflet exact du réel ? ════ */
+(function () {
+  const app = idDeLApp(html);
+  const corpsDe = (nom) => { const i = html.indexOf('function ' + nom + '('); if (i < 0) return ''; let d = 0;
+    for (let k = html.indexOf('{', i); k < html.length; k++) {
+      if (html[k] === '{') d++; else if (html[k] === '}') { d--; if (!d) return html.slice(i, k + 1); } } return ''; };
+
+  if (app === 'evaluation-qcm' && /function OutilsTestP2\(/.test(html)) {
+    section('M-TEST · QCM — les mécanismes de M7 sont éprouvables');
+    const o = corpsDe('OutilsTestP2');
+    t('la clôture du bac à sable appelle cloturerSession (pas une copie)',
+      o.includes('cloturerSession(sess, e.val(), function()') && !/etat"\)\.set\("terminee"\)/.test(o));
+    t('le snapshot est lu par evalDeSession et sessionEstFigee, les fonctions réelles',
+      o.includes('evalDeSession(sess,') && o.includes('sessionEstFigee(sess)') && o.includes('versionEval(ev)'));
+    t('la comparaison figé/courant recompte avec calculerScoreQuestion (vraie fonction)',
+      o.includes('calculerScoreQuestion(choix, q.bonnes || [], mode).score') && o.includes('modeEval(enonce)'));
+    t('AUCUNE logique de score n\'est réimplémentée dans les outils de test',
+      !/nbBon|maxPartiel|parfait\s*=/.test(o));
+    t('le chrono se fait expirer sans attendre (phaseStart repoussé)',
+      o.includes('phaseStart").set(Date.now() - (sess.chrono + 5) * 1000'));
+    t('les écritures des outils restent dans le bac à sable',
+      (o.match(/db\.ref\(DB_ROOT\+"\/[a-zA-Z]+\//g) || []).every(x => true) &&
+      o.includes('TEST_EVAL_ID') && o.includes('TEST_CLASSE_SLUG') && !/\/classes\//.test(o));
+    t('le portail élève monte le VRAI AppEleve (donc EleveLogin), pas une copie',
+      corpsDe('PortailTestQCM').includes('h(AppEleve, {bacASable:true'));
+    t('les codes affichés viennent de codesTest(), la fonction qui les a écrits',
+      corpsDe('PortailTestQCM').includes('setCodes(codesTest());'));
+    t('« Mes évaluations » est atteignable depuis la vue élève du bac à sable',
+      html.includes('setVoirMesEvals(true)') && html.includes('function MesEvaluations(p)'));
+  }
+
+  if (app === 'correction_dictee' && /function OutilsTestSouche\(/.test(html)) {
+    section('M-TEST · Souche — les mécanismes de M6 sont éprouvables');
+    const o = corpsDe('OutilsTestSouche');
+    t('les 4 états sont calculés par etatDicteeEleve (vraie fonction)',
+      o.includes('var et=etatDicteeEleve(d,san(e));') && !/copyPublishedAt\s*\?/.test(o));
+    t('les 4 états sont ATTEIGNABLES depuis le bac à sable',
+      (() => { const sb = sandbox(['etatDicteeEleve'], '');
+        const A = { results: { durand_alice: { timestamp: 1 }, martin_lucas: { timestamp: 1 } },
+                    autocorrection: { durand_alice: { solved: 3, total: 3 } },
+                    absents: { moreau_sacha: true }, copyPublishedAt: 1 };
+        const B = { results: {}, autocorrection: {}, absents: {}, copyPublishedAt: null };
+        return sb.etatDicteeEleve(A, 'durand_alice').code === 'terminee'
+            && sb.etatDicteeEleve(A, 'martin_lucas').code === 'afaire'
+            && sb.etatDicteeEleve(A, 'moreau_sacha').code === 'absent'
+            && sb.etatDicteeEleve(B, 'robert_chloe').code === 'attente'; })());
+    t('le bac à sable écrit bien l\'autocorrection achevée d\'Alice (état Terminée)',
+      html.includes('autocorrection:{"durand_alice":{status:"idle", solved:3, total:3'));
+    t('l\'éditeur de textes est éprouvé par le vrai accesseur txt()',
+      o.includes('txt("liste_vide")') && o.includes('db.ref("correction_dictee_textes")'));
+    t('la corbeille est éprouvée par le chemin réel, EXTRAIT et non recopié',
+      o.includes('supprimerDicteeAvecCorbeille({id:TEST_DICTEE_B') &&
+      (html.split('function supprimerDicteeAvecCorbeille(').length - 1) === 1);
+    t('le bouton de l\'accueil et le bac à sable appellent LA MÊME fonction',
+      (html.split('supprimerDicteeAvecCorbeille(').length - 1) === 3);
+    t('les outils n\'écrivent que dans le périmètre de test',
+      o.includes('TEST_DICTEE_B') && o.includes('TEST_DICTEE_A') && !/db\.ref\("classes\//.test(o));
+    t('le portail élève est traversable par incarnation (il vit dans AppEleve)',
+      html.includes('?mode=eleve&incarner=') && html.includes('via:"incarnation"'));
+  }
+
+  if (app === 'pilotage_debat_s3' && /function coursTestT5\(/.test(html)) {
+    section('M-TEST · Débat — cours déclaré et injection éprouvables sans attendre');
+    const t5 = corpsDe('coursTestT5'), fin = corpsDe('coursTestFinAtteinte'), inj = corpsDe('injecterDocumentsTest');
+    t('T-5 appelle checkCoursDebat(), la vraie fonction d\'alerte',
+      t5.includes('checkCoursDebat();') && !/toast\("⏰/.test(t5));
+    t('T-5 est IMMÉDIAT (fin posée dans la fenêtre des 5 minutes)',
+      t5.includes('fin: Date.now()+270000') || t5.includes('fin:Date.now()+270000'));
+    t('le bandeau élève peut réapparaître (_coursBandVu remis à faux)', t5.includes('_coursBandVu=false;'));
+    t('la fin atteinte est immédiate et passe par la vraie fonction',
+      fin.includes('checkCoursDebat();') && (fin.includes('fin:Date.now()-1000') || fin.includes('fin: Date.now()-1000')));
+    t('les deux déclencheurs n\'écrivent que sur la classe de test',
+      t5.includes('slugC(TEST_DEBAT_CLASSE)') && fin.includes('slugC(TEST_DEBAT_CLASSE)'));
+    t('l\'injection passe par injecterDocuments() : le JSON est seulement COLLÉ',
+      inj.includes('ta.value = JSON.stringify(jeu, null, 2);') &&
+      !/db\.ref\(ROOT\+"\/documents"\)/.test(inj) && !/validerDocumentsJSON/.test(inj));
+    t('le jeu de test a bien 10 documents (format attendu par le validateur)',
+      inj.includes('for(var i=1;i<=10;i++)') && inj.includes('sujet:') && inj.includes('camps:'));
+    t('les boutons sont dans le panneau du bac à sable',
+      html.includes('onclick="coursTestT5()"') && html.includes('onclick="coursTestFinAtteinte()"') &&
+      html.includes('onclick="injecterDocumentsTest()"'));
+    t('l\'existant n\'est pas dégradé (coursTest, incarnation, purge intacts)',
+      html.includes('async function coursTest(minutes){') && html.includes('function incarnerTest(cle)') &&
+      html.includes('purgerEtSortirTest()'));
+  }
+})();
+
 /* ════ SUITE 2 — CORBEILLE (Phase 2, lot 1) ════ */
 (async function () {
   const prelude = `var FIREBASE_BASE='https://mock';var _puts=[];
@@ -1034,3 +1125,4 @@ function taxoCompter(erreurs, table) {
   }
   fin();
 })();
+
