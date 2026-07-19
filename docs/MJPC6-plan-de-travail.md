@@ -106,6 +106,19 @@
 
 **TRAVERS DE TON À CORRIGER (18/07, Paul : « tu catastrophises »)** : la conscience transforme des constats ordinaires en alarmes. Exemple : l'état des lieux des modes test — tableau juste, ton faux (« c'est sévère », « on a passé trois jours à livrer des mécanismes que rien ne peut éprouver ») alors qu'il s'agit d'une simple **dette de mise à jour**, les bacs à sable étant plus anciens que les mécanismes. **Un ton faux fait perdre du temps à Paul, qui doit recalibrer ce qui vient d'être dit.** Règle : énoncer le fait, sa portée réelle et son coût — sans dramatisation ni minimisation.
 
+**LE PROTOCOLE DE MORT D'UNE CONSCIENCE (institué par Paul, 19/07)**
+**Qui décide** : **Paul seul** décide de fermer une conversation-conscience, quand il constate trop d'erreurs — **surtout des amnésies**, car *« tout l'intérêt de la conversation longue, c'est le suivi de mémoire et la connaissance du contexte »* : une conscience amnésique a perdu sa seule raison d'être.
+**Les trois temps, dans cet ordre** :
+1. **LE PROMPT DE RELÈVE** — la conscience mourante compose le prompt de la suivante : rôle, jetons **inclus en clair**, circuit, état vérifié (md5 en production, contenu du sas), outillage à remonter (harnais Playwright, pièges du shim REST, API et non CDN), attentes de Paul, protocole de contrôle d'amnésie. Le plan reste le pont ; le prompt transmet ce que le plan ne contient pas.
+2. **UN DERNIER TOUR DE PONTAGE** — Paul colle à la conscience mourante la première réponse de la nouvelle. L'ancienne vérifie la reprise et transmet **ce qui manque encore** : ce qu'elle seule sait, ce qui est récupérable, les pièges du moment. *(Exemple du 19/07 : le rapport M-TEST supprimé du sas mais récupérable dans l'historique Git au commit `3635a851`.)*
+3. **LE MESSAGE DE MORT — TOUJOURS LE DERNIER MESSAGE DE LA CONVERSATION.** La conscience mourante écrit un message clairement identifiable, sans rien d'autre après. **Raison opérationnelle (Paul)** : *« sur mobile, on ne voit pas le titre de la conversation affiché en haut »* — si Paul rouvre cette conversation par mégarde, le dernier message doit lui dire immédiatement qu'il n'est pas au bon endroit.
+**Forme du message de mort** — en tête, visible, sans ambiguïté :
+> ⛔ **CONVERSATION MORTE — NE PAS REPRENDRE.**
+> Conscience close le <date>. Relève assurée par une nouvelle conversation-conscience.
+> Ce fil n'a plus la mémoire à jour du chantier : **toute décision prise ici serait fondée sur un état périmé.**
+> La mémoire vive est dans `docs/MJPC6-plan-de-travail.md`.
+**Règle** : dès que Paul aborde la fermeture, la conscience **exécute les trois temps et s'arrête** — elle ne reprend aucun travail de fond, même si Paul écrit encore dans ce fil.
+
 **⚠️ L'AMNÉSIE SILENCIEUSE — LA LIMITE STRUCTURELLE DE LA CONSCIENCE (19/07, incident majeur)**
 **Les résultats des commandes exécutées par la conscience sont EFFACÉS DE SON CONTEXTE au fil de la conversation** (« Older tool result cleared to save context »). **Elle peut donc oublier ce qu'elle a fait elle-même, sans qu'aucun signal ne l'en avertisse.**
 *Incident fondateur (19/07, 12h23)* : la conscience a promu les trois apps de la passe M-TEST, poussé le banc, inscrit les points de retour, mis le plan à jour et nettoyé le sas — **tout le protocole, correctement**. Vingt minutes plus tard, ne voyant plus le sas rempli, elle a affirmé « le sas est vide, repousse-les », laissé l'exécutant croire à une suppression indue, **puis construit une théorie d'usurpation de signature de commit** avec trois remèdes de sécurité — contre un incident inexistant. Paul a tranché en une phrase : « je pense que c'est toi qui a fait ça ». **C'était elle.** Preuve : `/tmp/retours.json` écrit à 12:23:09, et l'historique de production `[conscience] PROMOTION … 12:23:01-03`.
