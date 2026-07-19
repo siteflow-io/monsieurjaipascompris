@@ -16,7 +16,7 @@
 | Période | Morceaux | Remarque |
 |---|---|---|
 | ~~16–20 juillet~~ | ~~M1 · M2 · M3~~ → **fait : M1→M6 complets** | une semaine d'avance |
-| **19–23 juillet** | **M7** (QCM, en cours) · **M8** (site : publication par classe, annonces, alerte règles Firebase, éditeur taxo, retrait Plickers, date brevet) · **M9** (dictée universelle, + piège P1) | M8 est le plus attendu par Paul |
+| **19–23 juillet** | **M7** (QCM, en cours) · **M8 — LOT 1 ✔ PROMU (19/07, commit 813ceb2cec, prod md5 `93db733d…`, v8.0.0)** : ① toutes classes du niveau · ② annonces `site/annonces` (contrat M6 prouvé par rejeu indépendant, anti-collision 200/200) · ③ alerte règles J+29 (garde élève prouvée au navigateur) · ⑤ brevet éditable `site/config/brevetDates` · manifeste explicite (`preserver: site, site/annonces, site/config`) · point de retour au registre. **RESTE M8bis** : ④ éditeur de taxonomie (sur v1.1.0, 154 notions) — conversation exécutante NEUVE. Retrait Plickers : vérifié absent, clos. · **M9** (dictée universelle, + piège P1) | M8 est le plus attendu par Paul |
 | **24–29 juillet** | **M10 · M11 · M12 · M13** | apps restantes |
 | **30 juillet – 5 août** | **M14 · M15** (le plus dense : profil longitudinal, socle — taxoCompter, présence, dictionnaire de textes, pastille de version) | M15 absorbe D2, D12, D14 |
 | **6–10 août** | **M-SÉCU** 🔴 (règles Firebase, non négociable) · **M16-0** (nœuds orphelins) · **M16** · rattrapage | sécurité avant purge |
