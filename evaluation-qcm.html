@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Évaluation QCM</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -361,6 +364,30 @@ body.impression-active .deco{display:none !important}
 
 /* === PILOTAGE === */
 .pilot-grid{display:grid;grid-template-columns:minmax(420px,1.2fr) minmax(280px,1fr) minmax(280px,1fr);gap:1rem}
+/* ═══ M7 — NAVIGATION DEUX NIVEAUX (structure) ═══
+   Aucune couleur nouvelle : les variables et le gradient de la charte QCM
+   sont repris tels quels. Seule la disposition change. */
+.nav2{margin-bottom:1rem}
+.nav2-groupes{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem}
+.nav2-groupe{padding:.5rem 1.1rem;border:none;border-radius:10px 10px 0 0;background:transparent;
+  font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;color:inherit;opacity:.55;transition:opacity .15s}
+.nav2-groupe:hover{opacity:.85}
+.nav2-groupe.actif{opacity:1;background:rgba(255,255,255,.14)}
+.nav2-sous{display:flex;gap:.35rem;flex-wrap:wrap;min-height:2.1rem}
+.nav2-aide{margin-left:auto;width:1.9rem;height:1.9rem;border-radius:50%;border:1.5px solid currentColor;
+  background:transparent;color:inherit;font-family:inherit;font-weight:700;cursor:pointer;opacity:.65;flex-shrink:0}
+.nav2-aide:hover{opacity:1}
+.version-pill{display:inline-block;padding:.1rem .55rem;border-radius:20px;background:rgba(255,255,255,.16);
+  font-size:.7rem;font-weight:600;letter-spacing:.02em;user-select:none;opacity:.9}
+/* ═══ M7 — RESPONSIVE 390 px (point 17) ═══ */
+@media(max-width:480px){
+  .nav2-groupes{gap:.25rem}
+  .nav2-groupe{padding:.45rem .7rem;font-size:.88rem;flex:1 1 auto}
+  .nav2-sous{gap:.25rem}
+  .tab{padding:.4rem .7rem;font-size:.85rem}
+  .nav2-aide{width:1.7rem;height:1.7rem}
+  .m7-col{flex-direction:column!important;align-items:stretch!important}
+}
 @media(max-width:1200px){.pilot-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){.pilot-grid{grid-template-columns:1fr}}
 
@@ -962,6 +989,17 @@ var NIVEAUX_DEFAULT = [
 var TEST_CLASSE_NOM = "_test_evaluation-qcm";   // clé Firebase racine /classes/
 var TEST_CLASSE_SLUG = TEST_CLASSE_NOM;         // identité : slug = clé du hub
 var TEST_EVAL_ID = "_eval_test";
+// M7 — codes du bac à sable : dérivés du nom, donc stables et reproductibles.
+// Ils vivent dans /codes comme les vrais, pour que la chaîne testée soit la vraie.
+function codesTest(){
+  var out = {};
+  (TEST_ELEVES || []).forEach(function(e, i){
+    var cle = sanMJPC(e.nomComplet);
+    out[cle] = {code: String(1000 + ((i * 137) % 9000)), name: e.nomComplet,
+                classe: TEST_CLASSE_NOM, createdAt: Date.now()};
+  });
+  return out;
+}
 var TEST_ELEVES = [
   {nomComplet:"AUDEBERT Élise", sexe:"f"},
   {nomComplet:"AUGEREAU Gatien", sexe:"m"},
@@ -1015,7 +1053,10 @@ function lettreFromIndex(i){ return String.fromCharCode(65+i); } // 0→A, 1→B
 // UTILS
 // ════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -1173,8 +1214,91 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.0.0";
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+var MJPC_CORE_VERSION="1.1.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
+/* Pastille de version — en dur (M7). Promotion au socle prévue M15. */
+var APP_VERSION="7.0.0";
+var APP_VERSION_DATE="2026-07-18";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIAGNOSTIC — À LIRE EN PREMIER SI « ÇA NE MARCHE PLUS »
+   Écosystème MJPC — monsieurjaipascompris.com — Paul Meney
+   Avant de suspecter le code de cette app, vérifier CES CAUSES EXTERNES,
+   dans cet ordre. Elles expliquent la quasi-totalité des pannes soudaines
+   d'une app qui fonctionnait la veille.
+
+   1. LES RÈGLES FIREBASE ONT-ELLES EXPIRÉ ?  ← CAUSE N°1, DÉJÀ VÉCUE
+      Symptôme : "permission_denied", données qui ne chargent plus, écrans
+      vides sur TOUTES les apps en même temps.
+      Les règles créées en "mode test" contiennent une DATE D'EXPIRATION en dur.
+      Le jour venu, tout s'arrête d'un coup, sans que rien n'ait changé au code.
+      → console.firebase.google.com > projet mjpc-hub > Realtime Database >
+        onglet "Règles" > chercher une ligne du type
+        `".read": "now < 1234567890000"` ou `request.time < timestamp.date(...)`.
+      → Précédent : diagnostic initial FAUX (on a accusé le protocole file://
+        puis le code) alors que c'étaient les règles expirées. NE PAS REFAIRE.
+
+   2. LE CACHE DU NAVIGATEUR SERT-IL L'ANCIENNE VERSION ?
+      Symptôme : "j'ai poussé mais rien n'a changé".
+      → Comparer la PASTILLE DE VERSION affichée à l'écran avec APP_VERSION
+        ci-dessous. Si elles diffèrent : rouvrir avec ?v=N (N incrémenté).
+
+   3. UNE DÉPENDANCE EXTERNE EST-ELLE INJOIGNABLE ?
+      Cette app charge depuis Internet (hors Firebase) :
+        - React + ReactDOM (unpkg.com)        [si React]
+        - SDK Firebase compat (gstatic.com)
+        - Polices Google (fonts.googleapis.com) — cosmétique seulement
+      Symptôme : page blanche, "React is not defined", app qui ne boote pas.
+      → Vérifier la console réseau. Ces CDN ne tombent quasi jamais, mais un
+        réseau d'établissement filtrant peut les bloquer.
+
+   4. UNE API NAVIGATEUR MANQUE-T-ELLE ?
+      Web Speech API (lecture audio), visualViewport (zoom/clavier mobile),
+      File System Access. Symptôme : une fonction précise muette, le reste OK.
+
+   5. SEULEMENT ALORS : suspecter le code de cette app.
+      Le socle MJPC-CORE est identique partout : s'il "marche ailleurs",
+      le problème est local. Registre des bugs connus, cause par cause :
+      docs/MJPC6-registre-bugs.md (13 sections, ~150 bugs documentés).
+
+   EN CAS D'URGENCE PENDANT UN COURS : docs/MJPC6-urgence-en-classe.md
+   (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
+   RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var APP_VERSION = "…";   // ← la pastille affichée à l'écran doit dire ceci
 
 // ── DÉCLARATION DE L'APP (evaluation-qcm) ──
 var MJPC_APP = {
@@ -1183,11 +1307,11 @@ var MJPC_APP = {
   contenant: "aucun"            // l'\u00e9l\u00e8ve r\u00e9pond seul, sur sa tablette
 };
 var MJPC_MANIFESTE = {
-  noeuds: ["qcm/evaluations","qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes","qcm/settings","mjpcProfils"],
+  noeuds: ["qcm/evaluations","qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes","qcm/settings","qcm/textes","mjpcProfils"],
   notions: []                   // rattachement aux notions : Phase 3 (Concordance)
 };
 var MJPC_PURGE = {
-  preserver: ["qcm/evaluations","qcm/settings"],                            // corpus de conception : survit aux ann\u00e9es
+  preserver: ["qcm/evaluations","qcm/settings","qcm/textes"],                            // corpus de conception : survit aux ann\u00e9es
   purger:    ["qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes","qcm/classes",
               "mjpcProfils"]  // donn\u00e9es d'\u00e9l\u00e8ves : archive \u2192 purge au reset. mjpcProfils : r\u00e9tention 1 an
                               // (d\u00e9cision ant\u00e9rieure) \u2014 EXPORT IMPRIMABLE de fin d'ann\u00e9e AVANT la purge (garde-fou console)
@@ -1209,6 +1333,77 @@ function slugify(s){ return sanMJPC(s); }       // cl\u00e9-\u00e9l\u00e8ve cano
 //                 Score par question = max(0, nb_bonnes_cochées − nb_mauvaises_cochées),
 //                 plafonné au max. Total max éval = somme des nb_bonnes.
 // Helpers utilisés partout dans le code pour homogénéiser le calcul.
+
+// ════════════════════════════════════════════════════════════════════
+// P2 — L'INSTRUMENT DE MESURE EST VERSIONNÉ (M7, décision de Paul du 18/07)
+// ════════════════════════════════════════════════════════════════════
+// « Lorsque je crée un QCM et qu'une éval est faite dessus, les résultats sont
+//   figés avec ces questions telles qu'elles étaient. Si je modifie ensuite et
+//   que je recommence l'éval, ça compte comme une NOUVELLE éval. On ne mélange
+//   pas les résultats de deux QCM différents, même s'ils ont une base commune. »
+//
+// Conséquences codées ici :
+//   ① À LA CLÔTURE, la session fige l'énoncé + le barème (sess.evalSnapshot).
+//   ② MODIFIER une éval qui a déjà des résultats crée une VERSION nouvelle
+//      (ev.version incrémentée) : c'est une identité, pas une mise à jour.
+//   ③ On n'agrège JAMAIS deux versions — ni dans les stats par question,
+//      ni dans le profil longitudinal (la clé porte la version).
+//   ④ Côté prof, l'historique montre les versions distinctement.
+//
+// Règle d'accès : TOUT calcul de score sur une session passe par
+// evalDeSession(). Aucun autre point d'accès, sinon le piège renaît.
+
+// Identité versionnée d'une évaluation : "eval_123" + version 2 → "eval_123@v2".
+function versionEval(ev){ return (ev && typeof ev.version === "number") ? ev.version : 1; }
+function identiteEval(evId, version){ return String(evId) + "@v" + (version || 1); }
+
+// L'énoncé qui fait foi pour UNE session : son snapshot s'il existe, l'éval
+// courante sinon (sessions closes avant M7 — repli assumé, signalé côté prof).
+function evalDeSession(sess, evals){
+  if(sess && sess.evalSnapshot) return sess.evalSnapshot;
+  return (evals && sess) ? evals[sess.evalId] : null;
+}
+function sessionEstFigee(sess){ return !!(sess && sess.evalSnapshot); }
+
+// Ce qu'on fige : tout ce dont dépend un score. Rien d'autre (pas de titre
+// décoratif, pas de métadonnées mouvantes) — un snapshot doit rester lisible.
+function construireEvalSnapshot(ev){
+  if(!ev) return null;
+  return {
+    titre: ev.titre || "",
+    mode: modeEval(ev),
+    version: versionEval(ev),
+    questions: JSON.parse(JSON.stringify(ev.questions || [])),
+    figeLe: Date.now()
+  };
+}
+
+// Une évaluation a-t-elle déjà servi ? (sessions closes OU réponses enregistrées)
+function evalADesResultats(evId, sessions){
+  if(!evId || !sessions) return false;
+  var ks = Object.keys(sessions);
+  for(var i=0;i<ks.length;i++){
+    var sx = sessions[ks[i]];
+    if(!sx || sx.evalId !== evId) continue;
+    if(sx.etat === "terminee") return true;
+    if(sx.reponses && Object.keys(sx.reponses).length > 0) return true;
+  }
+  return false;
+}
+
+// Clôture UNIQUE de session (il y en avait deux, plus une écriture directe :
+// le snapshot aurait manqué par l'un des chemins).
+function cloturerSession(sess, ev, cb){
+  if(!sess || !sess.id) return;
+  var maj = {};
+  maj["/sessions/"+sess.id+"/etat"] = "terminee";
+  var snap = sess.evalSnapshot || construireEvalSnapshot(ev);
+  if(snap) maj["/sessions/"+sess.id+"/evalSnapshot"] = snap;
+  db.ref(DB_ROOT).update(maj, function(){
+    if(sess.classeSlug) db.ref(DB_ROOT+"/sessionActive/"+sess.classeSlug).remove();
+    if(cb) cb();
+  });
+}
 
 function modeEval(ev){
   return (ev && ev.mode === "partiel") ? "partiel" : "strict";
@@ -1308,9 +1503,13 @@ function normaliserClassesQCM(snapVal){
 // Détecte si une classe est "interne" (test, archive, etc.) : convention nom préfixé par "_".
 // Utilisé pour filtrer ces classes des listes affichées au prof et à l'élève.
 // IMPORTANT : on regarde le NOM COMPLET, pas le slug, car slugify() retire les "_" préfixes.
-function estClasseInterne(classe){
+// C1 (M7) — cette fonction prend un OBJET classe, le socle prend une CHAÎNE.
+// Portant le même nom, elle écrasait celle du socle pour tout le fichier :
+// estClasseTest("_test_evaluation-qcm") renvoyait false et seule l'égalité
+// littérale sauvait les filtres. Renommée, jamais supprimée.
+function estClasseInterneObj(classe){
   if(!classe || !classe.nom) return false;
-  return classe.nom.charAt(0) === "_";
+  return estClasseInterne(classe.nom);
 }
 
 // Surveille à la fois /classes (mutualisé) et qcm/eleveSexes (propre à QCM),
@@ -1667,6 +1866,8 @@ function InfoI(p){
 
 // ─────────── App Root ───────────
 function App(){
+  var sTx = useState(0), txRev = sTx[0], setTxRev = sTx[1];
+  useEffect(function(){ chargerTextes(function(){ setTxRev(function(n){return n+1}) }); }, []);
   var s0 = useState(null), mode = s0[0], setMode = s0[1];
   var s1 = useState(false), profAuth = s1[0], setProfAuth = s1[1];
   var s2 = useState(""), codeInput = s2[0], setCodeInput = s2[1];
@@ -1737,15 +1938,44 @@ function App(){
 
 // ─────────── App Élève ───────────
 function AppEleve(p){
-  // L'élève saisit son nom + sa classe, on cherche s'il y a une session en cours
+  // L'élève entre avec son identité MJPC ; à défaut, il choisit sa classe puis
+  // prouve son identité par son code (EleveLogin).
   var s1 = useState(null), classes = s1[0], setClasses = s1[1];
   var s2 = useState(""), classeSlug = s2[0], setClasseSlug = s2[1];
   var s3 = useState(null), eleve = s3[0], setEleve = s3[1];
+  var s4 = useState(false), shuntFait = s4[0], setShuntFait = s4[1];
+  var s5 = useState(false), voirMesEvals = s5[0], setVoirMesEvals = s5[1];
 
   useEffect(function(){
     var detacherClasses = surveillerClassesAvecSexes(setClasses);
     return function(){ detacherClasses(); };
   }, []);
+
+  // ═══ M7 — SHUNT MJPC (socle §8) ═══
+  // Placé ICI et non dans EleveLogin : une session valide porte la classe autant
+  // que l'identité. L'élève connecté au site n'a donc ni classe à choisir ni
+  // code à ressaisir. Sans session, rien ne change : le portail fait son office.
+  useEffect(function(){
+    if(shuntFait || !classes || eleve) return;
+    setShuntFait(true);
+    var sess = lireSessionMJPC();
+    if(!sess || sess.is_prof) return;
+    var cible = sanMJPC((sess.prenom||"")+" "+(sess.nom||""));
+    var cible2 = sanMJPC((sess.nom||"")+" "+(sess.prenom||""));
+    var ks = Object.keys(classes);
+    for(var i=0;i<ks.length;i++){
+      if(estClasseInterneObj(classes[ks[i]])) continue;
+      var els = classes[ks[i]].eleves || [];
+      for(var j=0;j<els.length;j++){
+        var sl = slugify(els[j].nomComplet);
+        if(sl === cible || sl === cible2){
+          setClasseSlug(ks[i]);
+          setEleve({nomComplet:els[j].nomComplet, slug:sl});
+          return;
+        }
+      }
+    }
+  }, [classes, shuntFait, eleve]);
 
   if(classes === null){
     return h("div", {className:"eleve-page"},
@@ -1755,7 +1985,7 @@ function AppEleve(p){
   }
 
   if(!classeSlug){
-    var classesArr = Object.keys(classes).filter(function(k){return !estClasseInterne(classes[k])}).map(function(k){return Object.assign({slug:k}, classes[k])});
+    var classesArr = Object.keys(classes).filter(function(k){return !estClasseInterneObj(classes[k])}).map(function(k){return Object.assign({slug:k}, classes[k])});
     return h("div", {className:"eleve-page"},
       ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
       h("div", {className:"eleve-card"},
@@ -1778,18 +2008,142 @@ function AppEleve(p){
     return h(EleveLogin, {classe:classes[classeSlug], classeSlug:classeSlug, onLogin:setEleve, onBack:function(){setClasseSlug("")}});
   }
 
-  return h(EleveSession, {classe:classes[classeSlug], classeSlug:classeSlug, eleve:eleve, onBack:function(){setEleve(null)}});
+  if(voirMesEvals){
+    return h(MesEvaluations, {classeSlug:classeSlug, eleve:eleve, onBack:function(){setVoirMesEvals(false)}});
+  }
+
+  return h("div", null,
+    h(EleveSession, {classe:classes[classeSlug], classeSlug:classeSlug, eleve:eleve, onBack:function(){setEleve(null)}}),
+    // Point 8 — « Mes évaluations » : le lieu des travaux antérieurs de l'élève.
+    h("div", {style:{textAlign:"center", padding:"0 1rem 1.5rem"}},
+      h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setVoirMesEvals(true)}}, "📊 Mes évaluations")
+    )
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// M7 — « MES ÉVALUATIONS » (point 8)
+// ════════════════════════════════════════════════════════════════════
+// Assemblé à partir des briques existantes : le profil longitudinal écrit par
+// archiverDansProfilsMJPC (mjpcProfils/<classe>/<élève>/sessions) est déjà le
+// modèle de tous les « Mes… » de l'écosystème. On ne le réécrit pas : on lui
+// donne un lieu. Lecture seule, aucun recalcul, aucune écriture.
+function MesEvaluations(p){
+  var s1 = useState(null), hist = s1[0], setHist = s1[1];
+  var s2 = useState(null), ouverte = s2[0], setOuverte = s2[1];
+  var classeSlug = p.classeSlug;
+  var slug = p.eleve.slug;
+
+  useEffect(function(){
+    db.ref("mjpcProfils/"+classeSlug+"/"+slug+"/sessions").once("value", function(snap){
+      var v = snap.val() || {};
+      var arr = Object.keys(v).map(function(k){ return Object.assign({sid:k}, v[k]); });
+      arr.sort(function(a,b){ return (b.date||0) - (a.date||0); });
+      setHist(arr);
+    }, function(){ setHist([]); });
+  }, [classeSlug, slug]);
+
+  if(hist === null) return h("div", {className:"eleve-page"},
+    h("div", {className:"eleve-card"}, h("h1", null, "Chargement…")));
+
+  if(ouverte){
+    // Le bilan détaillé est déjà produit à l'archivage : on le montre tel quel,
+    // sans recalculer un score (P2 : on ne recompte jamais après coup).
+    return h("div", {className:"eleve-page"},
+      h("div", {className:"eleve-card", style:{maxWidth:"860px"}},
+        h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setOuverte(null)}}, "← Mes évaluations"),
+        h("h1", null, ouverte.titre || "Évaluation"),
+        h("p", {style:{opacity:.75}}, new Date(ouverte.date).toLocaleDateString("fr-FR")),
+        ouverte.bilanHTML
+          ? h("div", {dangerouslySetInnerHTML:{__html: ouverte.bilanHTML}})
+          : h("p", null, "Le détail de cette évaluation n'a pas été conservé.")
+      )
+    );
+  }
+
+  return h("div", {className:"eleve-page"},
+    ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
+    h("div", {className:"eleve-card", style:{maxWidth:"640px"}},
+      h("h1", null, "📊 Mes évaluations"),
+      h("p", {style:{opacity:.8}}, p.eleve.nomComplet),
+      hist.length === 0
+        ? h("p", {style:{opacity:.8}}, "Tu n'as pas encore d'évaluation ici. Celles de ta classe apparaîtront après la correction.")
+        : h("div", {className:"eleves-grid"},
+            hist.map(function(x){
+              var pct = (x.maxP && x.scorePondere != null) ? Math.round((x.scorePondere / x.maxP) * 100) : null;
+              return h("button", {key:x.sid, className:"eleve-btn", style:{textAlign:"left"},
+                onClick:function(){ setOuverte(x); }},
+                h("div", {style:{fontWeight:700}}, x.titre || "Évaluation",
+                  // P2 : deux versions d'une même évaluation ne se confondent pas.
+                  (x.evalVersion && x.evalVersion > 1)
+                    ? h("span", {style:{marginLeft:".4rem", fontSize:".72rem", opacity:.8}}, "v" + x.evalVersion) : null),
+                h("div", {style:{fontSize:".82rem", opacity:.75}},
+                  new Date(x.date).toLocaleDateString("fr-FR"),
+                  (pct !== null ? " · " + pct + "%" : ""))
+              );
+            })
+          ),
+      h("div", {style:{marginTop:"1.5rem"}},
+        h("button", {className:"btn btn-ghost btn-sm", onClick:p.onBack}, "← Retour")
+      )
+    )
+  );
 }
 
 // ─────────── Login élève ───────────
+// ═══ M7 — PORTAIL D'IDENTITÉ ÉLÈVE (point 7) ═══
+// Avant : prénom + nom en texte libre, comparés au roster. N'importe qui
+// entrait en tant que n'importe qui. Désormais : code personnel MJPC + nom +
+// prénom, vérifiés contre /codes ; ou shunt si l'élève est déjà connecté au
+// site MJPC (socle §8). L'app reste autonome si MJPC tombe.
 function EleveLogin(p){
   var s1 = useState(""), prenom = s1[0], setPrenom = s1[1];
   var s2 = useState(""), nom = s2[0], setNom = s2[1];
   var s3 = useState(""), err = s3[0], setErr = s3[1];
+  var s4 = useState(""), code = s4[0], setCode = s4[1];
+  var s5 = useState(null), codesData = s5[0], setCodesData = s5[1];
+  var s6 = useState(false), shuntFait = s6[0], setShuntFait = s6[1];
+
+  useEffect(function(){
+    db.ref("codes").once("value", function(snap){ setCodesData(snap.val() || {}) }, function(){ setCodesData({}) });
+  }, []);
+
+  // Shunt : l'élève déjà connecté au site n'a rien à ressaisir.
+  useEffect(function(){
+    if(shuntFait) return;
+    setShuntFait(true);
+    var sess = lireSessionMJPC();
+    if(!sess || sess.is_prof) return;
+    var eleves = p.classe.eleves || [];
+    for(var i=0;i<eleves.length;i++){
+      if(slugify(eleves[i].nomComplet) === sanMJPC((sess.prenom||"")+" "+(sess.nom||"")) ||
+         slugify(eleves[i].nomComplet) === sanMJPC((sess.nom||"")+" "+(sess.prenom||""))){
+        p.onLogin({nomComplet:eleves[i].nomComplet, slug:slugify(eleves[i].nomComplet)});
+        return;
+      }
+    }
+  }, [shuntFait, p.classe]);
+
+  // Le code attendu, tolérant aux clés dégradées du registre (dette connue) :
+  // si la clé canonique manque, on retrouve l'élève par son champ `name`.
+  function codeAttendu(cle){
+    if(!codesData) return null;
+    var e = codesData[cle];
+    if(typeof e === "string") return e;
+    if(e && e.code) return String(e.code);
+    var ks = Object.keys(codesData);
+    for(var i=0;i<ks.length;i++){
+      var v = codesData[ks[i]];
+      if(v && v.name && sanMJPC(v.name) === cle) return v.code ? String(v.code) : null;
+      if(sanMJPC(ks[i]) === cle) return (typeof v === "string") ? v : (v && v.code ? String(v.code) : null);
+    }
+    return null;
+  }
 
   function valider(){
     var saisie = (prenom+" "+nom).trim().toLowerCase();
     if(!prenom.trim() || !nom.trim()){ setErr("Renseigne ton prénom et ton nom."); return; }
+    if(!code.trim()){ setErr("Entre ton code personnel (4 chiffres)."); return; }
     var eleves = p.classe.eleves || [];
     var saisieSlug = slugify(saisie);
     var found = null;
@@ -1804,7 +2158,12 @@ function EleveLogin(p){
       setErr("Élève introuvable dans la classe. Vérifie l'orthographe.");
       return;
     }
-    p.onLogin({nomComplet:found.nomComplet, slug:slugify(found.nomComplet)});
+    var cle = slugify(found.nomComplet);
+    var attendu = codeAttendu(cle);
+    if(!attendu){ setErr("Ton code n'est pas encore enregistré. Viens me voir pour qu'on le mette en place."); return; }
+    if(String(code.trim()) !== String(attendu)){ setErr("Ce code ne correspond pas. Vérifie tes 4 chiffres."); return; }
+    setErr("");
+    p.onLogin({nomComplet:found.nomComplet, slug:cle});
   }
 
   return h("div", {className:"eleve-page"},
@@ -1813,7 +2172,8 @@ function EleveLogin(p){
       h("div", {className:"eleve-classe-badge"}, p.classe.nom),
       h("h1", null, "👋 Identifie-toi"),
       h("div", {className:"eleve-form"},
-        h("input", {value:prenom, onChange:function(e){setPrenom(e.target.value)}, placeholder:"Prénom", autoFocus:true}),
+        h("input", {value:code, inputMode:"numeric", maxLength:6, onChange:function(e){setCode(e.target.value)}, placeholder:"Mon code (4 chiffres)", autoFocus:true, style:{textAlign:"center", letterSpacing:".3em", fontWeight:700}}),
+        h("input", {value:prenom, onChange:function(e){setPrenom(e.target.value)}, placeholder:"Prénom"}),
         h("input", {value:nom, onChange:function(e){setNom(e.target.value)}, placeholder:"Nom", onKeyDown:function(e){if(e.key==="Enter")valider()}}),
         err && h("div", {className:"err"}, "❌ "+err),
         h("button", {className:"btn-accueil", onClick:valider}, "Entrer →"),
@@ -1850,8 +2210,9 @@ function EleveSession(p){
         sess.id = sid;
         setSession(sess);
         if(sess.evalId){
+          if(sess.evalSnapshot){ setEvaluation(sess.evalSnapshot); }   // P2 : l'énoncé figé prime
           db.ref(DB_ROOT+"/evaluations/"+sess.evalId).once("value", function(snap3){
-            setEvaluation(snap3.val());
+            if(!sess.evalSnapshot) setEvaluation(snap3.val());   // P2 : ne pas écraser l'énoncé figé
           });
         }
       });
@@ -1961,8 +2322,9 @@ function EleveResultats(p){
       var s = snap.val();
       if(!s) return;
       setSession(Object.assign({id:p.sessionId}, s));
+      if(s.evalSnapshot){ setEvaluation(s.evalSnapshot); }   // P2 : l'énoncé du jour de la session
       db.ref(DB_ROOT+"/evaluations/"+s.evalId).once("value", function(s2){
-        setEvaluation(s2.val());
+        if(!s.evalSnapshot) setEvaluation(s2.val());   // P2 : ne pas écraser l'énoncé figé
       });
     });
     // Réponses app de l'élève
@@ -2417,7 +2779,7 @@ function EleveEval(p){
 
       // Bandeau pause (si chrono figé par le prof)
       sess.paused && h("div", {className:"eleve-pause-banner"},
-        "⏸️ Le professeur a mis le chrono en pause"
+        "⏸️ J'ai mis le chrono en pause"
       ),
 
       // Bandeau notification temporaire
@@ -2429,7 +2791,7 @@ function EleveEval(p){
       notifs.length > 0 && h("button", {
         className:"eleve-notif-cloche",
         onClick:function(){setHistoOpen(true);setSeenCount(notifs.length)},
-        title:"Voir l'historique des messages du professeur"
+        title:"Voir l'historique de mes messages"
       },
         "🔔",
         nbNonLues > 0 && h("span", {className:"eleve-notif-badge"}, nbNonLues)
@@ -2439,7 +2801,7 @@ function EleveEval(p){
       histoOpen && h("div", {className:"eleve-notif-back", onClick:function(e){if(e.target.className==="eleve-notif-back")setHistoOpen(false)}},
         h("div", {className:"eleve-notif-modal"},
           h("button", {className:"modal-close", onClick:function(){setHistoOpen(false)}}, "✕"),
-          h("h2", null, "🔔 Messages du professeur",
+          h("h2", null, "🔔 Mes messages",
             h(InfoI, null, "Le prof peut t'envoyer des messages pendant l'évaluation : il a ajouté du temps, mis en pause, ou rouvert une question. Tu les retrouves ici et au moment de leur arrivée en haut de l'écran.")
           ),
           notifs.length === 0
@@ -2697,6 +3059,9 @@ function preparerQuestionsBilan(ev, reponses, slug){
 
 function archiverDansProfilsMJPC(sess, ev, classe, reponses){
   if(!sess || !ev || !classe || !reponses) return;
+  // P2 : on archive TOUJOURS d'après l'énoncé qui a servi (snapshot si figé),
+  // jamais d'après une éval qui aurait été modifiée depuis.
+  ev = sess.evalSnapshot || ev;
   var classeSlug = classe.slug || sess.classeSlug || "_inconnu";
   // Ne pas archiver les sessions de test pour ne pas polluer le profil longitudinal.
   // Généralisé (MJPC-CORE) : toute classe interne (_*) ou de test, y compris héritage.
@@ -2770,6 +3135,10 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
       date: date,
       sessId: sess.id,
       evalId: sess.evalId || null,
+      // P2 ③ : la version fait partie de l'identité de l'instrument. Deux versions
+      // d'une même éval ne s'agrègent jamais — la clé les distingue.
+      evalVersion: versionEval(ev),
+      evalIdentite: identiteEval(sess.evalId, versionEval(ev)),
       titre: ev.titre || "Évaluation",
       mode: mode,
       scoreBrut: scoreBrut,
@@ -2835,7 +3204,7 @@ var sessActions = {
       var elapsed = Math.floor((Date.now() - sess.phaseStart)/1000);
       var r = Math.max(0, d - elapsed);
       db.ref(DB_ROOT+"/sessions/"+sess.id+"/paused").set({remaining:r, duree:d, at:Date.now()});
-      sessActions.notifier(sess, "⏸️ Pause demandée par le professeur.", "pause");
+      sessActions.notifier(sess, "⏸️ J'ai mis le chrono en pause.", "pause");
     }
   },
   ajouterTemps: function(sess, secondes){
@@ -2844,7 +3213,7 @@ var sessActions = {
     } else if(sess.phase === "reflexion" || sess.phase === "reponse"){
       db.ref(DB_ROOT+"/sessions/"+sess.id+"/phaseStart").set(sess.phaseStart + secondes*1000);
     } else { return; }
-    sessActions.notifier(sess, "⏱️ Le professeur a ajouté "+secondes+" seconde"+(secondes>1?"s":"")+".", "info");
+    sessActions.notifier(sess, "⏱️ J'ai ajouté "+secondes+" seconde"+(secondes>1?"s":"")+".", "info");
   },
   revealer: function(sess){
     var u = {corrRevealed:true};
@@ -2964,12 +3333,11 @@ var sessActions = {
     db.ref(DB_ROOT+"/sessions/"+sess.id+"/absents").set(absentsAct.length ? absentsAct : null);
     sessActions.notifier(sess, "Un élève est revenu.", "info");
   },
-  terminerSession: function(sess, askConfirm){
+  terminerSession: function(sess, askConfirm, ev){
     if(askConfirm){
       if(!confirm("Terminer la session ? Les élèves verront un écran de fin. Tu pourras toujours consulter les résultats dans l'onglet Résultats.")) return false;
     }
-    db.ref(DB_ROOT+"/sessions/"+sess.id+"/etat").set("terminee");
-    db.ref(DB_ROOT+"/sessionActive/"+sess.classeSlug).remove();
+    cloturerSession(sess, ev);   // P2 : fige l'énoncé et le barème
     return true;
   }
 };
@@ -3035,7 +3403,7 @@ function EleveAutoeval(p){
             h("span", {style:{fontSize:"2rem"}}, sel.emoji),
             h("span", null, libelle(sel))
           ),
-          h("div", {className:"autoeval-confirme-attente"}, "⏳ Attends que le professeur lance la correction…")
+          h("div", {className:"autoeval-confirme-attente"}, txt("attente_correction"))
         );
       })()
     )
@@ -3054,10 +3422,18 @@ var IDX_FOURCHETTE = {rouge:1, orange:2, bleu:3, vert:4};
 function bornesFourchette(fkey, total){
   var f = FOURCHETTES_DEF.find(function(x){return x.key===fkey});
   if(!f) return {inf:0, sup:0};
-  if(fkey === "vert")  return {inf:Math.ceil(total*0.76), sup:total};
-  if(fkey === "bleu")  return {inf:Math.ceil(total*0.51), sup:Math.floor(total*0.75)};
-  if(fkey === "orange")return {inf:Math.ceil(total*0.26), sup:Math.floor(total*0.50)};
-  return {inf:0, sup:Math.floor(total*0.25)};
+  var b;
+  if(fkey === "vert")       b = {inf:Math.ceil(total*0.76), sup:total};
+  else if(fkey === "bleu")  b = {inf:Math.ceil(total*0.51), sup:Math.floor(total*0.75)};
+  else if(fkey === "orange")b = {inf:Math.ceil(total*0.26), sup:Math.floor(total*0.50)};
+  else                      b = {inf:0, sup:Math.floor(total*0.25)};
+  // D3 (#14, M7) — sur un petit total, les arrondis se croisent : total 2 donnait
+  // « entre 2 et 1 ». Une fourchette dont la borne basse dépasse la haute n'a pas
+  // de sens : on la referme sur la borne haute plutôt que d'afficher l'absurde.
+  if(b.inf > b.sup) b.inf = b.sup;
+  if(b.inf < 0) b.inf = 0;
+  if(b.sup > total) b.sup = total;
+  return b;
 }
 function libelleFourchette(fkey, total, mode){
   var b = bornesFourchette(fkey, total);
@@ -3491,6 +3867,9 @@ function AppTest(p){
         new Promise(function(resolve){ ecrireClasse(db, TEST_CLASSE_NOM, classeData.eleves, {nom:TEST_CLASSE_NOM}, function(){ resolve(); }); }),
         db.ref("qcm/eleveSexes/"+TEST_CLASSE_NOM).set(sexesTest),
         db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(evalData),
+      // M7 — codes des élèves fictifs : sans eux, le portail d'identité refuse
+      // le bac à sable. Purgés à la sortie (voir purgerEtSortir).
+      db.ref("codes").update(codesTest()),
         db.ref(DB_ROOT+"/sessions/"+sid).set(sessData)
       ]);
     }).then(function(){
@@ -3518,6 +3897,9 @@ function AppTest(p){
       promises.push(db.ref("classes/"+TEST_CLASSE_NOM).remove());
       promises.push(db.ref("qcm/eleveSexes/"+TEST_CLASSE_NOM).remove());
       promises.push(db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).remove());
+      // M7 — purge des codes fictifs (exhaustivité du bac à sable)
+      var cds = codesTest();
+      Object.keys(cds).forEach(function(k){ promises.push(db.ref("codes/"+k).remove()); });
       promises.push(db.ref(DB_ROOT+"/presence/"+TEST_CLASSE_SLUG).remove());
       return Promise.all(promises);
     }).then(function(){
@@ -3736,8 +4118,9 @@ function EleveSimule(p){
         sess.id = sid;
         setSession(sess);
         if(sess.evalId){
+          if(sess.evalSnapshot){ setEvaluation(sess.evalSnapshot); }   // P2 : l'énoncé figé prime
           db.ref(DB_ROOT+"/evaluations/"+sess.evalId).once("value", function(snap3){
-            setEvaluation(snap3.val());
+            if(!sess.evalSnapshot) setEvaluation(snap3.val());   // P2 : ne pas écraser l'énoncé figé
           });
         }
       });
@@ -3923,7 +4306,7 @@ function VueBoard(p){
   if(!session || !classe || !evaluation){
     return h("div", {className:"board-attente"},
       h("div", {className:"board-titre"}, "📺 Vue tableau"),
-      h("div", {className:"board-msg"}, "En attente d'une session active…"),
+      h("div", {className:"board-msg"}, txt("attente_session")),
       h("div", {className:"board-sub"}, "Cette vue se met à jour automatiquement dès qu'une session est lancée depuis le pilotage.")
     );
   }
@@ -4306,7 +4689,7 @@ function VuePhone(p){
   }
   function actCorrPrec(){ sessActions.correctionPrec(activeSession, ev); }
   function actTerminer(){
-    sessActions.terminerSession(activeSession, true);
+    sessActions.terminerSession(activeSession, true, ev);
   }
   function actRouvrirIndiv(slug){
     sessActions.rouvrirIndividuel(activeSession, slug);
@@ -4605,8 +4988,159 @@ function VuePhone(p){
 }
 
 // ─────────── App Prof ───────────
+// ════════════════════════════════════════════════════════════════════
+// M7 — DICTIONNAIRE DE TEXTES ADRESSÉS À L'ÉLÈVE (point 26)
+// ════════════════════════════════════════════════════════════════════
+// Critère de tri : ce qui CONSTATE reste en dur, ce qui ANNONCE est éditable.
+// Le code porte les valeurs par défaut (l'app vit si Firebase tombe) ; le nœud
+// qcm/textes les surcharge. Un champ vide retombe TOUJOURS sur le défaut.
+var TEXTES_DEFAUT = {
+  attente_session:  "L'évaluation n'a pas encore commencé. Elle s'ouvrira quand nous la lancerons ensemble.",
+  attente_correction: "La correction s'ouvrira dans un instant.",
+  fin_session:      "C'est terminé. Tes réponses sont enregistrées."
+};
+var TEXTES_CHAMPS = [
+  ["attente_session","Avant le lancement de l'évaluation","Vu par l'élève qui ouvre l'application alors qu'aucune évaluation n'est lancée pour sa classe."],
+  ["attente_correction","Avant la correction","Vu quand la phase de réponse est close et que la correction n'est pas encore lancée."],
+  ["fin_session","À la fin de l'évaluation","Vu quand tu as terminé la session. Ce texte s'affiche quel que soit le résultat : il parle du travail fait, jamais de la réussite."]
+];
+var TEXTES_SURCHARGE = {};
+function txt(cle, vars){
+  var v = TEXTES_SURCHARGE[cle];
+  if(typeof v !== "string" || !v.trim()) v = TEXTES_DEFAUT[cle];
+  if(typeof v !== "string") return "";
+  if(vars){ for(var k in vars){ if(Object.prototype.hasOwnProperty.call(vars,k)) v = v.split("{"+k+"}").join(vars[k]); } }
+  return v;
+}
+function chargerTextes(cb){
+  try{
+    db.ref(DB_ROOT+"/textes").on("value", function(snap){
+      var v = snap.val();
+      TEXTES_SURCHARGE = (v && typeof v === "object") ? v : {};
+      if(cb) cb();
+    }, function(){ TEXTES_SURCHARGE = {}; if(cb) cb(); });
+  }catch(e){ TEXTES_SURCHARGE = {}; if(cb) cb(); }
+}
+
+function EditeurTextes(){
+  var sV = useState(null), vals = sV[0], setVals = sV[1];
+  var sM = useState(""), msg = sM[0], setMsg = sM[1];
+  useEffect(function(){
+    db.ref(DB_ROOT+"/textes").once("value", function(snap){ setVals(snap.val() || {}) }, function(){ setVals({}) });
+  }, []);
+  function enregistrer(cle, valeur){
+    var v = Object.assign({}, vals);
+    if(!valeur || !valeur.trim()){ delete v[cle]; } else { v[cle] = valeur; }
+    setVals(v);
+    db.ref(DB_ROOT+"/textes").set(v)
+      .then(function(){ setMsg("Enregistré."); setTimeout(function(){setMsg("")}, 1800); })
+      .catch(function(e){ setMsg("Échec de l'enregistrement : " + (e && e.message || "")); });
+  }
+  if(!vals) return h("div", {className:"card"}, h("h2", null, "💬 Ce que lisent les élèves"), h("p", null, "Chargement…"));
+  return h("div", {className:"card"},
+    h("h2", null, "💬 Ce que lisent les élèves",
+      h(InfoI, null, "Les messages qui CONSTATENT un état ne sont pas modifiables : ils sont vrais dans tous les cas. Seuls les messages qui ANNONCENT quelque chose sont ici, parce qu'eux dépendent de ton organisation.")
+    ),
+    h("p", {style:{opacity:.85}}, h("strong", null, "Éditeur des messages élève."), " Ces phrases s'affichent sur les tablettes de tes élèves. Modifie-les librement : un champ laissé vide revient au texte d'origine."),
+    TEXTES_CHAMPS.map(function(c){
+      var cle = c[0], surcharge = vals[cle];
+      var courant = (typeof surcharge === "string") ? surcharge : TEXTES_DEFAUT[cle];
+      return h("div", {key:cle, style:{marginBottom:"1rem"}},
+        h("label", {style:{display:"block", fontWeight:600, marginBottom:".25rem"}}, c[1],
+          typeof surcharge === "string" ? h("span", {style:{marginLeft:".5rem", fontSize:".72rem", opacity:.8}}, "modifié") : null),
+        h("textarea", {rows:2, defaultValue:courant, style:{width:"100%", fontFamily:"inherit", fontSize:".9rem", padding:".5rem", borderRadius:"8px"},
+          onBlur:function(e){ if(e.target.value !== courant) enregistrer(cle, e.target.value); }}),
+        h("p", {style:{fontSize:".78rem", opacity:.7, margin:".2rem 0 0"}}, c[2]),
+        typeof surcharge === "string" ? h("button", {className:"btn btn-sm btn-ghost", style:{marginTop:".25rem"},
+          onClick:function(){ enregistrer(cle, "") }}, "Revenir au texte d'origine") : null
+      );
+    }),
+    msg ? h("p", {style:{fontWeight:600}}, msg) : null
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// M7 — NAVIGATION DEUX NIVEAUX (structure ; la charte du QCM est intouchée)
+// ════════════════════════════════════════════════════════════════════
+// Les onglets ne sont pas rouverts : ils sont RANGÉS. Chaque groupe coiffe des
+// onglets qui restent les mêmes composants, montés avec les mêmes props.
+var NAV2_GROUPES = [
+  {id:"pilotage", label:"Pilotage", tabs:[["preparation","📄 Préparation"],["evals","📝 Évaluations"],["pilot","🎯 Pilotage classe"]]},
+  {id:"donnees",  label:"Données",  tabs:[["results","📊 Résultats"],["snapshot","💾 Sauvegarde"]]},
+  {id:"reglages", label:"Réglages", tabs:[["reglages","⚙️ Réglages"]]}
+];
+function groupeDeTab(tab){
+  for(var i=0;i<NAV2_GROUPES.length;i++){
+    var t = NAV2_GROUPES[i].tabs;
+    for(var j=0;j<t.length;j++){ if(t[j][0] === tab) return NAV2_GROUPES[i].id; }
+  }
+  return null;
+}
+function Nav2(p){
+  var courant = null;
+  for(var i=0;i<NAV2_GROUPES.length;i++){ if(NAV2_GROUPES[i].id === p.groupe) courant = NAV2_GROUPES[i]; }
+  if(!courant) courant = NAV2_GROUPES[0];
+  return h("div", {className:"nav2"},
+    h("div", {className:"nav2-groupes"},
+      NAV2_GROUPES.map(function(g){
+        return h("button", {key:g.id, className:"nav2-groupe"+(g.id===p.groupe?" actif":""), onClick:function(){
+          p.onGroupe(g.id);
+          var dedans = false;
+          for(var k=0;k<g.tabs.length;k++){ if(g.tabs[k][0] === p.tab) dedans = true; }
+          if(!dedans) p.onTab(g.tabs[0][0]);
+        }}, g.label);
+      }),
+      h("button", {className:"nav2-aide", title:"Aide et nouveautés", onClick:p.onAide}, "?")
+    ),
+    h("div", {className:"nav2-sous"},
+      courant.tabs.length > 1 ? courant.tabs.map(function(t){
+        return h("button", {key:t[0], className:"tab "+(p.tab===t[0]?"actif":""), onClick:function(){p.onTab(t[0])}}, t[1]);
+      }) : null
+    )
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// M7 — PRÉPARATION (monte les composants existants, n'en réécrit aucun)
+// ════════════════════════════════════════════════════════════════════
+function OngletPreparation(){
+  return h("div", null,
+    h("div", {className:"card"},
+      h("h2", null, "📄 Préparation",
+        h(InfoI, null, "Créer une évaluation, la relire, l'imprimer. Une évaluation qui a déjà servi en classe ne se modifie pas : la modifier en crée une nouvelle version, pour que les résultats déjà obtenus ne changent jamais.")
+      ),
+      h("p", {style:{opacity:.8}}, "Prépare ici tes évaluations : rédaction, relecture, impression. Le lancement en classe se fait dans « Pilotage classe ».")
+    ),
+    h(OngletEvals)
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// M7 — RÉGLAGES (principe « doter »)
+// ════════════════════════════════════════════════════════════════════
+function OngletReglages(){
+  return h("div", null,
+    h("div", {className:"card"},
+      h("h2", null, "👥 Classes et élèves",
+        h(InfoI, null, "Les classes sont communes à toutes les applications MJPC : elles se gèrent une seule fois, depuis la console MJPC. C'est ce qui garantit qu'un élève est le même partout.")
+      ),
+      h("p", {style:{opacity:.85}}, "Les listes d'élèves ne se modifient plus ici : elles appartiennent au site MJPC, qui les partage avec toutes les applications."),
+      h("button", {className:"btn", onClick:function(){
+        renvoyerVersMJPC("Ajouter, modifier ou supprimer une classe : cela se fait dans la console MJPC, pour toutes les applications à la fois.");
+      }}, "Ouvrir la console MJPC →")
+    ),
+    h(EditeurTextes),
+    h("div", {className:"card"},
+      h("h2", null, "ℹ️ Version"),
+      h("p", {style:{opacity:.85}}, "Évaluations QCM — version " + APP_VERSION + " (" + APP_VERSION_DATE + ") · socle MJPC-CORE " + MJPC_CORE_VERSION),
+      h("p", {style:{opacity:.7, fontSize:".85rem"}}, "VERSION À COMPLÉTER — cette application continue d'évoluer ; c'est Paul qui déclare quand elle est finie.")
+    )
+  );
+}
+
 function AppProf(p){
-  var s1 = useState("classes"), tab = s1[0], setTab = s1[1];
+  var s1 = useState("pilot"), tab = s1[0], setTab = s1[1];        // atterrissage : le travail principal
+  var sG = useState("pilotage"), groupe = sG[0], setGroupe = sG[1];  // M7 : navigation deux niveaux
   var s2 = useState(false), helpOpen = s2[0], setHelpOpen = s2[1];
   var s3 = useState(false), testMode = s3[0], setTestMode = s3[1];
   var s4 = useState(false), qrOpen = s4[0], setQrOpen = s4[1];
@@ -4615,10 +5149,17 @@ function AppProf(p){
   var s6 = useState({}), sessions = s6[0], setSessions = s6[1];
   var s7 = useState({}), classesData = s7[0], setClassesData = s7[1];
   var s8 = useState(false), sessionsMenuOpen = s8[0], setSessionsMenuOpen = s8[1];
+  // P2 : la clôture depuis le menu doit pouvoir figer l'énoncé → il lui faut les évals.
+  var s9 = useState({}), evalsPourCloture = s9[0], setEvalsPourCloture = s9[1];
 
   // MJPC-CORE : publication du manifeste (vue projetée — les constantes en dur
   // restent la source de vérité). Republiée à chaque ouverture prof.
   useEffect(function(){ publierManifeste(db); }, []);
+  useEffect(function(){
+    db.ref(DB_ROOT+"/evaluations").on("value", function(snap){ setEvalsPourCloture(snap.val() || {}); });
+    return function(){ db.ref(DB_ROOT+"/evaluations").off(); };
+  }, []);
+  useEffect(function(){ var g = groupeDeTab(tab); if(g && g !== groupe) setGroupe(g); }, [tab]);
 
   // Migration silencieuse one-shot : qcm/classes → /classes racine + sexes legacy
   // → qcm/eleveSexes. Idempotente (rien à faire si déjà migré). Message uniquement
@@ -4668,8 +5209,9 @@ function AppProf(p){
 
   function purgerSessionMenu(s){
     if(!confirm("Terminer la session « "+s.classeNom+" » (phase "+s.sess.phase+") ?\n\nLes élèves verront un écran de fin. Les résultats restent consultables dans l'onglet Résultats.")) return;
-    db.ref(DB_ROOT+"/sessions/"+s.sid+"/etat").set("terminee");
-    db.ref(DB_ROOT+"/sessionActive/"+s.classeSlug).remove();
+    // P2 — porte dérobée refermée (audit du 18/07) : ce bouton clôturait sans
+    // figer l'énoncé. Toute clôture passe par cloturerSession, sans exception.
+    cloturerSession(Object.assign({id:s.sid}, s.sess), evalsPourCloture[s.sess.evalId]);
   }
 
   if(testMode){
@@ -4710,17 +5252,14 @@ function AppProf(p){
         )
       ),
       h("div", {className:"tabs"},
-        h("button", {className:"tab "+(tab==="classes"?"actif":""), onClick:function(){setTab("classes")}}, "📋 Classes"),
-        h("button", {className:"tab "+(tab==="evals"?"actif":""), onClick:function(){setTab("evals")}}, "📝 Évaluations"),
-        h("button", {className:"tab "+(tab==="pilot"?"actif":""), onClick:function(){setTab("pilot")}}, "🎯 Pilotage classe"),
-        h("button", {className:"tab "+(tab==="results"?"actif":""), onClick:function(){setTab("results")}}, "📊 Résultats"),
-        h("button", {className:"tab "+(tab==="snapshot"?"actif":""), onClick:function(){setTab("snapshot")}}, "💾 Sauvegarde")
+        h(Nav2, {groupe:groupe, tab:tab, onGroupe:setGroupe, onTab:setTab, onAide:function(){setHelpOpen(true)}})
       ),
-      tab === "classes" && h(OngletClasses),
+      tab === "preparation" && h(OngletPreparation),
       tab === "evals" && h(OngletEvals),
       tab === "pilot" && h(OngletPilotage),
       tab === "results" && h(OngletResultats),
-      tab === "snapshot" && h(OngletSnapshot)
+      tab === "snapshot" && h(OngletSnapshot),
+      tab === "reglages" && h(OngletReglages)
     ),
     helpOpen && h(ModeEmploi, {onClose:function(){setHelpOpen(false)}}),
     qrOpen && h(OverlayQRPhone, {onClose:function(){setQrOpen(false)}}),
@@ -4775,6 +5314,34 @@ function AppProf(p){
 }
 
 // ─────────── Mode d'emploi (modale consultable) ───────────
+// M7 — Lecteur d'annonces : le canal central du site (point 10). Le nœud
+// n'existe pas encore — son absence est un cas normal, jamais une erreur.
+function AnnoncesSite(){
+  var sA = useState(null), annonces = sA[0], setAnnonces = sA[1];
+  useEffect(function(){
+    try{
+      db.ref("site/annonces").once("value", function(snap){
+        var v = snap.val();
+        if(!v){ setAnnonces([]); return; }
+        var list = Array.isArray(v) ? v : Object.keys(v).map(function(k){ return v[k]; });
+        list = list.filter(function(a){ return a && (!a.app || a.app === "evaluation-qcm" || a.app === "*"); });
+        list.sort(function(a,b){ return (b.date||0) - (a.date||0); });
+        setAnnonces(list);
+      }, function(){ setAnnonces([]) });
+    }catch(e){ setAnnonces([]) }
+  }, []);
+  return h("div", null,
+    h("h3", null, "Nouveautés"),
+    annonces === null ? h("p", null, "Chargement…") :
+    annonces.length === 0 ? h("p", {style:{fontStyle:"italic", opacity:.75}}, "Aucune annonce pour le moment.") :
+    h("ul", null, annonces.slice(0,8).map(function(a,i){
+      return h("li", {key:i}, a.date ? h("span", {style:{opacity:.7}}, new Date(a.date).toLocaleDateString("fr-FR") + " — ") : null, a.texte || a.titre || "");
+    })),
+    h("p", {style:{marginTop:"1rem", fontSize:".78rem", opacity:.7}},
+      "Évaluations QCM — version " + APP_VERSION + " (" + APP_VERSION_DATE + ") · socle MJPC-CORE " + MJPC_CORE_VERSION)
+  );
+}
+
 function ModeEmploi(p){
   var s1 = useState("philo"), open = s1[0], setOpen = s1[1];
   function toggle(id){ setOpen(open === id ? null : id); }
@@ -4932,6 +5499,8 @@ function ModeEmploi(p){
         h("p", null, "Codes prof : ", h("code", null, "1312"), " ou ", h("code", null, "3141"), ".")
       )),
 
+      h("div", {className:"help-section"}, h(AnnoncesSite)),
+
       h("div", {style:{marginTop:"1.5rem",textAlign:"center"}},
         h("button", {className:"btn btn-primary", onClick:p.onClose}, "✓ J'ai compris")
       )
@@ -4940,286 +5509,23 @@ function ModeEmploi(p){
 }
 
 // ─────────── Onglet Classes ───────────
-function OngletClasses(){
-  var s1 = useState({}), classes = s1[0], setClasses = s1[1];
-  var s2 = useState(""), nomClasse = s2[0], setNomClasse = s2[1];
-  var s3 = useState(""), texteListe = s3[0], setTexteListe = s3[1];
-  var s4 = useState(""), classeEdit = s4[0], setClasseEdit = s4[1];
-  var s5 = useState(""), niveauClasse = s5[0], setNiveauClasse = s5[1];
-  var s6 = useState(""), expandSexe = s6[0], setExpandSexe = s6[1];
-  var s7 = useState({}), nouveauxNoms = s7[0], setNouveauxNoms = s7[1]; // {classeSlug: nomEnCoursDeSaisie}
-
-  useEffect(function(){
-    var detacherClasses = surveillerClassesAvecSexes(setClasses);
-    return function(){ detacherClasses(); };
-  }, []);
-
-  // Pré-remplissage automatique du niveau à partir du nom (regex sur 6e/5e/4e/3e)
-  function deduireNiveauDuNom(nom){
-    var m = nom.match(/\b([3-6])\s*[eèEÈ]\b/);
-    if(m) return m[1]+"e";
-    return "";
-  }
-  function onChangeNomClasse(v){
-    setNomClasse(v);
-    if(!niveauClasse){
-      var n = deduireNiveauDuNom(v);
-      if(n) setNiveauClasse(n);
-    }
-  }
-
-  // Mise à jour du sexe d'un élève — stocké dans le nœud séparé qcm/eleveSexes
-  // pour éviter qu'une autre app (correction_dictee) ne l'écrase en écrivant
-  // sur /classes/{nom} avec son propre format (set complet de la liste).
-  function setSexeEleve(slug, eleveIdx, nouveauSexe){
-    var classe = classes[slug];
-    if(!classe || !classe.eleves || !classe.eleves[eleveIdx]) return;
-    var slugEl = slugify(classe.eleves[eleveIdx].nomComplet);
-    var path = "qcm/eleveSexes/"+classe.nom+"/"+slugEl;
-    if(nouveauSexe === "" || nouveauSexe == null){
-      db.ref(path).remove();
-    } else {
-      db.ref(path).set(nouveauSexe);
-    }
-  }
-  function supprimerEleve(classeSlug, eleveIdx){
-    // Décision MJPC (§5, validée juin 2026) : une seule logique de suppression,
-    // dans la console MJPC — qui archive TOUJOURS avant d'effacer et supprime
-    // en cascade (classe, codes, sexes, profils). Ici, on renvoie.
-    var classe = classes[classeSlug];
-    var nom = classe && classe.eleves && classe.eleves[eleveIdx] ? (classe.eleves[eleveIdx].nomComplet||"") : "";
-    renvoyerVersMJPC(nom ? "Retrait demand\u00e9 : "+nom : null);
-  }
-  function ajouterEleve(classeSlug, nomComplet, callback){
-    var nom = (nomComplet || "").trim();
-    if(!nom){ alert("Saisis un nom complet (Nom Prénom)."); return; }
-    if(nom.length < 3){ alert("Nom trop court."); return; }
-    var classe = classes[classeSlug];
-    if(!classe || !classe.nom){ alert("Classe introuvable. Recharge la page."); return; }
-    var existants = (classe.eleves) ? classe.eleves : [];
-    var doublon = existants.some(function(e){return (e.nomComplet||"").toLowerCase().trim() === nom.toLowerCase()});
-    if(doublon){ alert("Un élève avec ce nom existe déjà dans cette classe."); return; }
-    var nouveaux = existants.concat([{nomComplet:nom}]);
-    // ecrireClasse (MJPC-CORE) : ne touche que la liste, préserve archivee/niveau/…,
-    // normalise les élèves-objets en chaînes canoniques.
-    ecrireClasse(db, classe.nom, nouveaux, function(err){
-      if(err){ alert("Erreur : "+err.message); return; }
-      if(callback) callback();
-    });
-  }
-
-  function ajouterClasse(){
-    var nom = nomClasse.trim();
-    var elevesNouveaux = parseListe(texteListe);
-    if(!nom){ alert("Nom de classe requis"); return; }
-    if(!elevesNouveaux.length){ alert("Au moins un élève requis"); return; }
-    if(!niveauClasse){ alert("Niveau de classe requis (6e, 5e, 4e ou 3e)"); return; }
-    var slug = slugify(nom);
-    // Préserver les sexes déjà saisis : on récupère ceux de l'édition (depuis classes[slug]
-    // qui contient déjà les sexes fusionnés via surveillerClassesAvecSexes) ET on les écrit
-    // dans qcm/eleveSexes APRÈS l'écriture de /classes. On NE STOCKE PAS les sexes dans
-    // /classes pour éviter que correction_dictee les écrase en faisant un .set() complet.
-    var ancienne = classes[slug];
-    var sexesAReecrire = {}; // {slugEleve: "m"/"f"} à réécrire dans qcm/eleveSexes
-    if(ancienne && ancienne.eleves){
-      var indexAncienne = {};
-      ancienne.eleves.forEach(function(e){
-        if(e.sexe) indexAncienne[e.nomComplet] = e.sexe;
-      });
-      elevesNouveaux.forEach(function(e){
-        // Si l'ancien élève (même nomComplet) avait un sexe, on le reprend pour qcm/eleveSexes
-        if(indexAncienne[e.nomComplet]){
-          var slugEl = slugify(e.nomComplet);
-          sexesAReecrire[slugEl] = indexAncienne[e.nomComplet];
-        }
-        // Si l'utilisateur a explicitement saisi un sexe via parseListe, on l'utilise
-        if(e.sexe){
-          var slugEl2 = slugify(e.nomComplet);
-          sexesAReecrire[slugEl2] = e.sexe;
-        }
-      });
-    } else {
-      // Nouvelle classe : ne stocker que les sexes saisis explicitement via parseListe
-      elevesNouveaux.forEach(function(e){
-        if(e.sexe){
-          var slugEl3 = slugify(e.nomComplet);
-          sexesAReecrire[slugEl3] = e.sexe;
-        }
-      });
-    }
-    // On écrit dans /classes UNIQUEMENT le nomComplet (sans sexe) pour rester compatible
-    // avec le format mutualisé. Les sexes vont dans qcm/eleveSexes séparément.
-    var elevesPourClasses = elevesNouveaux.map(function(e){
-      return {nomComplet: e.nomComplet};
-    });
-    // MJPC-CORE : écriture non destructive — liste remplacée, métadonnées préservées,
-    // format canonique (chaînes) garanti, résidus indexés purgés.
-    var metaEdit = niveauClasse ? {nom:nom, niveau:niveauClasse} : {nom:nom};
-    ecrireClasse(db, nom, elevesPourClasses, metaEdit, function(err){
-      if(err){ alert("Erreur: "+err.message); return; }
-      // Écriture des sexes dans le nœud séparé qcm/eleveSexes (s'il y en a).
-      var sexesPromises = Object.keys(sexesAReecrire).map(function(slugEl){
-        return db.ref("qcm/eleveSexes/"+nom+"/"+slugEl).set(sexesAReecrire[slugEl]);
-      });
-      Promise.all(sexesPromises).catch(function(e){ console.warn("Erreur écriture sexes:", e); });
-      setNomClasse(""); setTexteListe(""); setClasseEdit(""); setNiveauClasse("");
-    });
-  }
-
-  function supprimer(slug){
-    // Décision MJPC (§5) : les classes sont partagées entre toutes les apps —
-    // leur suppression se fait dans la console MJPC, qui archive TOUJOURS avant
-    // d'effacer et nettoie en cascade (codes, sexes, profils). Jamais de
-    // suppression sèche depuis une app.
-    var c = classes[slug];
-    renvoyerVersMJPC(c && c.nom ? "Suppression demand\u00e9e : classe "+c.nom : null);
-  }
-
-  function chargerPourEdition(slug){
-    var c = classes[slug];
-    if(!c) return;
-    setClasseEdit(slug);
-    setNomClasse(c.nom);
-    setNiveauClasse(c.niveau || deduireNiveauDuNom(c.nom) || "");
-    setTexteListe((c.eleves||[]).map(eleveToString).join("\n"));
-    window.scrollTo({top:document.body.scrollHeight, behavior:"smooth"});
-  }
-
-  var arr = Object.keys(classes).filter(function(k){return !estClasseInterne(classes[k])}).map(function(k){return Object.assign({slug:k}, classes[k])});
-
-  return h("div", null,
-    h("div", {className:"card"},
-      h("h2", null, "Classes existantes",
-        h(InfoI, null, "Les classes sont la base de tout. Une classe regroupe les élèves qui passeront ensemble les évaluations. Les noms saisis ici servent à identifier l'élève (par fuzzy matching) quand il se connecte côté élève.")
-      ),
-      arr.length === 0
-        ? h("p", {style:{color:"var(--gris)",fontStyle:"italic"}}, "Aucune classe pour l'instant.")
-        : arr.map(function(c){
-            var nbSansSexe = (c.eleves||[]).filter(function(e){return !e.sexe}).length;
-            return h("div", {key:c.slug, className:"classe-block"},
-              h("div", {className:"classe-row"},
-                h("div", {className:"classe-info"},
-                  h("strong", null, c.nom),
-                  c.niveau && h("a", {
-                    className:"classe-niveau-badge",
-                    href:urlProfilClasseMJPC(c.slug),
-                    target:"_blank",
-                    rel:"noopener noreferrer",
-                    title:"Niveau "+c.niveau+". Clique pour ouvrir le profil longitudinal de la classe sur monsieurjaipascompris (suivi des résultats sur toute l'année, agrégation des évaluations QCM passées, comparaison aux autres classes du même niveau). Cette page n'est pas encore créée — le branchement est préparé."
-                  }, c.niveau),
-                  h("div", {className:"sub"}, (c.eleves||[]).length+" élèves"+(c.niveau ? "" : " · ⚠️ niveau à définir")+(nbSansSexe>0 ? " · ⚠️ "+nbSansSexe+" sans sexe défini" : ""))
-                ),
-                h("div", {className:"row"},
-                  h("button", {className:"btn btn-sm btn-ghost", onClick:function(){setExpandSexe(expandSexe===c.slug ? "" : c.slug)}, title:"Voir et modifier le sexe (M/F) de chaque élève. Le sexe sert à adapter les phrases du bilan personnel (« tu t'es jugé/jugée »)."}, expandSexe===c.slug ? "▼ Élèves" : "👤 Élèves"),
-                  h("button", {className:"btn btn-sm btn-ghost", onClick:function(){chargerPourEdition(c.slug)}, title:"Modifier le nom de la classe, le niveau, ou la liste des élèves."}, "✏️ Modifier"),
-                  h("button", {className:"btn btn-sm btn-rouge", onClick:function(){supprimer(c.slug)}, title:"Supprimer la classe (les sessions et résultats associés ne sont pas supprimés)."}, "🗑️")
-                )
-              ),
-              // Panneau dépliable : liste des élèves avec sélecteur M/F + ajout/suppression
-              expandSexe===c.slug && h("div", {className:"eleves-sexe-panel"},
-                h("div", {style:{fontSize:".82rem",color:"var(--gris)",marginBottom:".5rem"}},
-                  "Clique sur M ou F pour ajuster. Le sexe sert à adapter les phrases du bilan personnel (par exemple « tu t'es jugé/jugée »). Le bouton ✕ supprime l'élève de la classe (les résultats archivés ne sont pas effacés)."
-                ),
-                (c.eleves||[]).map(function(e, idx){
-                  return h("div", {key:idx, className:"eleve-sexe-row"},
-                    h("span", {className:"eleve-sexe-nom"}, e.nomComplet),
-                    h("div", {className:"eleve-sexe-btns"},
-                      h("button", {
-                        type:"button",
-                        className:"sexe-btn"+(e.sexe==="m" ? " actif-m" : ""),
-                        onClick:function(){setSexeEleve(c.slug, idx, "m")},
-                        title:"Marquer comme garçon"
-                      }, "M"),
-                      h("button", {
-                        type:"button",
-                        className:"sexe-btn"+(e.sexe==="f" ? " actif-f" : ""),
-                        onClick:function(){setSexeEleve(c.slug, idx, "f")},
-                        title:"Marquer comme fille"
-                      }, "F"),
-                      !e.sexe && h("span", {className:"sexe-warn", title:"Sexe non défini — clique sur M ou F"}, "?"),
-                      h("button", {
-                        type:"button",
-                        className:"eleve-supp-btn",
-                        onClick:function(){supprimerEleve(c.slug, idx)},
-                        title:"Supprimer cet élève de la classe. Les résultats archivés (sessions passées, profil longitudinal MJPC) ne sont pas touchés, seule l'inscription à la classe est retirée."
-                      }, "✕")
-                    )
-                  );
-                }),
-                // Champ d'ajout
-                h("div", {className:"eleve-ajouter-row"},
-                  h("input", {
-                    type:"text",
-                    placeholder:"Ajouter un élève (NOM Prénom)",
-                    value:nouveauxNoms[c.slug] || "",
-                    onChange:function(ev){
-                      var copy = Object.assign({}, nouveauxNoms);
-                      copy[c.slug] = ev.target.value;
-                      setNouveauxNoms(copy);
-                    },
-                    onKeyDown:function(ev){
-                      if(ev.key === "Enter"){
-                        ajouterEleve(c.slug, nouveauxNoms[c.slug] || "", function(){
-                          var copy = Object.assign({}, nouveauxNoms);
-                          copy[c.slug] = "";
-                          setNouveauxNoms(copy);
-                        });
-                      }
-                    },
-                    className:"eleve-ajouter-input"
-                  }),
-                  h("button", {
-                    type:"button",
-                    className:"btn btn-primary btn-sm",
-                    onClick:function(){
-                      ajouterEleve(c.slug, nouveauxNoms[c.slug] || "", function(){
-                        var copy = Object.assign({}, nouveauxNoms);
-                        copy[c.slug] = "";
-                        setNouveauxNoms(copy);
-                      });
-                    },
-                    title:"Ajoute cet élève à la classe. La convention est : NOM (en majuscules) puis Prénom (en minuscules avec majuscule au début), par exemple « DUPONT Léa »."
-                  }, "➕ Ajouter")
-                )
-              )
-            );
-          })
-    ),
-    h("div", {className:"card"},
-      h("h2", null, classeEdit ? "Modifier la classe" : "Ajouter une classe"),
-      h("div", {className:"field"},
-        h("label", null, "Nom de la classe"),
-        h("input", {value:nomClasse, onChange:function(e){onChangeNomClasse(e.target.value)}, placeholder:"4e Banksy"})
-      ),
-      h("div", {className:"field"},
-        h("label", null, "Niveau de classe",
-          h(InfoI, null, "Choisis le niveau de classe (6e, 5e, 4e ou 3e). Pré-rempli automatiquement à partir du nom si possible. Stocké en clair pour permettre la mémorisation des seuils par niveau et l'agrégation future sur ton site MJPC.")
-        ),
-        h("div", {className:"row", style:{gap:".4rem"}},
-          ["6e","5e","4e","3e"].map(function(n){
-            return h("button", {
-              key:n, type:"button",
-              className:"btn btn-sm "+(niveauClasse===n ? "btn-primary" : "btn-ghost"),
-              onClick:function(){setNiveauClasse(n)},
-              title:"Niveau "+n
-            }, n);
-          })
-        )
-      ),
-      h("div", {className:"field"},
-        h("label", null,
-          "Liste des élèves",
-          h(InfoI, null, "Une ligne par élève. Trois formats acceptés : (1) « Prénom NOM », (2) export École Directe avec « NOM Prénom <Tab> F/M » (le sexe est récupéré automatiquement), (3) « Prénom NOM: lien » pour conserver un lien (Plickers par exemple). Si le sexe n'est pas dans la ligne, il est déduit automatiquement à partir du prénom.")
-        ),
-        h("textarea", {value:texteListe, onChange:function(e){setTexteListe(e.target.value)}, placeholder:"Format simple :\nAdélie RENAULT\nAnna MISANDEAU\n\nFormat École Directe (avec sexe) :\nAUDEBERT Elise\tF\nAUGEREAU Gatien\tM\n\nAvec lien :\nAdélie RENAULT: https://..."})
-      ),
-      h("div", {className:"row"},
-        h("button", {className:"btn btn-primary", onClick:ajouterClasse}, classeEdit ? "💾 Enregistrer" : "➕ Ajouter la classe"),
-        classeEdit && h("button", {className:"btn btn-ghost", onClick:function(){setClasseEdit("");setNomClasse("");setTexteListe("");setNiveauClasse("")}}, "Annuler")
-      )
-    )
-  );
+// ════════════════════════════════════════════════════════════════════
+// M7 — L'ONGLET CLASSES A ÉTÉ RETIRÉ (décision Paul, 18/07)
+// ════════════════════════════════════════════════════════════════════
+// L'identité (classes, élèves, sexes) appartient au site MJPC : une app ne la
+// gère pas. C'est `ajouterClasse` qui réintroduisait les sexes M/F dans
+// /classes après la mutualisation (bug du registre §3). Le geste est remplacé
+// par un renvoi vers la console, dans Réglages.
+// SAUVÉE de l'ancien composant (utile hors de lui) : deduireNiveauDuNom, la
+// fonction recommandée par le plan pour la dette « niveau écrasé » (option B :
+// déduire le niveau du nom plutôt que de le stocker).
+function deduireNiveauDuNom(nom){
+  var m = nom.match(/\b([3-6])\s*[eèEÈ]\b/);
+  if(m) return m[1]+"e";
+  return "";
 }
+
+
 
 // ─────────── Onglet Évaluations ───────────
 function OngletEvals(){
@@ -5228,12 +5534,19 @@ function OngletEvals(){
   var s3 = useState(null), editId = s3[0], setEditId = s3[1];
   var s4 = useState(false), showPrompt = s4[0], setShowPrompt = s4[1];
   var s5 = useState(null), printEval = s5[0], setPrintEval = s5[1];
+  var s6 = useState({}), sessions = s6[0], setSessions = s6[1];   // P2 : savoir si une éval a servi
 
   useEffect(function(){
     db.ref(DB_ROOT+"/evaluations").on("value", function(snap){
       setEvals(snap.val() || {});
     });
-    return function(){ db.ref(DB_ROOT+"/evaluations").off(); };
+    db.ref(DB_ROOT+"/sessions").on("value", function(snap){
+      setSessions(snap.val() || {});
+    });
+    return function(){
+      db.ref(DB_ROOT+"/evaluations").off();
+      db.ref(DB_ROOT+"/sessions").off();
+    };
   }, []);
 
   function dupliquer(id){
@@ -5305,7 +5618,12 @@ function OngletEvals(){
             arr.map(function(e){
               return h("div", {key:e.id, className:"eval-row"},
                 h("div", null,
-                  h("div", {className:"eval-titre"}, e.titre),
+                  h("div", {className:"eval-titre"}, e.titre,
+                    // P2 ④ : les versions se voient. Une v2 n'est pas une v1 corrigée,
+                    // c'est un autre instrument de mesure.
+                    versionEval(e) > 1 ? h("span", {className:"version-pill", style:{marginLeft:".5rem"},
+                      title:"Cette évaluation a été modifiée après avoir servi. Les résultats des versions précédentes restent figés et ne sont jamais mélangés avec ceux-ci."},
+                      "version " + versionEval(e)) : null),
                   h("div", {className:"eval-meta"},
                     h("span", null, (e.questions||[]).length+" question"+((e.questions||[]).length>1?"s":"")),
                     h("span", null, "Créée le "+new Date(e.createdAt||0).toLocaleDateString("fr-FR"))
@@ -5324,6 +5642,7 @@ function OngletEvals(){
     showCreate && h(ModalCreerEval, {
       editId:editId,
       evaluation:editId ? evals[editId] : null,
+      sessions:sessions,
       onClose:function(){setShowCreate(false);setEditId(null)}
     }),
     showPrompt && h(ModalPromptIA, {onClose:function(){setShowPrompt(false)}, onCopy:copyPrompt})
@@ -5440,12 +5759,32 @@ function ModalCreerEval(p){
   function enregistrer(){
     if(!parsed){ alert("Aucune évaluation valide à enregistrer. Clique sur 'Vérifier le format' d'abord."); return; }
     var id = p.editId || ("eval_" + Date.now());
+    var ancienne = p.evaluation || null;
+    var versionCourante = versionEval(ancienne);
+    // ═══ P2 ② — l'instrument de mesure est versionné ═══
+    // Modifier une évaluation qui a déjà servi ne met pas à jour un instrument :
+    // cela en crée un NOUVEAU. Les sessions passées gardent leur énoncé figé,
+    // et leurs résultats ne se mélangeront jamais avec ceux de la version suivante.
+    var aServi = !!(p.editId && evalADesResultats(p.editId, p.sessions || {}));
+    var nouvelleVersion = versionCourante;
+    if(aServi){
+      nouvelleVersion = versionCourante + 1;
+      if(!confirm(
+        "Cette évaluation a déjà servi en classe.\n\n" +
+        "Tes modifications créeront la VERSION " + nouvelleVersion + ".\n\n" +
+        "• Les sessions déjà passées gardent l'énoncé et le barème d'origine — leurs résultats ne bougent pas.\n" +
+        "• Les résultats de la version " + nouvelleVersion + " ne seront jamais mélangés avec ceux de la version " + versionCourante + ".\n\n" +
+        "Enregistrer la version " + nouvelleVersion + " ?"
+      )) return;
+    }
     var data = {
       titre: parsed.titre,
       questions: parsed.questions,
-      createdAt: p.evaluation && p.evaluation.createdAt ? p.evaluation.createdAt : Date.now(),
+      version: nouvelleVersion,
+      createdAt: ancienne && ancienne.createdAt ? ancienne.createdAt : Date.now(),
       updatedAt: Date.now()
     };
+    if(aServi) data.versionPrecedenteLe = Date.now();
     db.ref(DB_ROOT+"/evaluations/"+id).set(data, function(err){
       if(err){ alert("Erreur: "+err.message); return; }
       p.onClose();
@@ -5761,10 +6100,12 @@ function OngletPilotage(){
     if(!sessionInterrompue) return;
     if(!confirm("Terminer définitivement la session ?\n\nLes réponses déjà données restent enregistrées et consultables dans Résultats. Cette action est irréversible.")) return;
     var sid = sessionInterrompue.id;
+    // P2 — porte dérobée refermée (audit du 18/07) : une session interrompue que
+    // le professeur termine EST une clôture ; ses réponses restent consultables,
+    // donc son énoncé doit être figé comme les autres.
+    cloturerSession(Object.assign({}, sessionInterrompue, {id:sid}), evals[sessionInterrompue.evalId]);
     var updates = {};
-    updates["/sessions/"+sid+"/etat"] = "termine";
     updates["/sessions/"+sid+"/lastDisconnect"] = null;
-    updates["/sessionActive/"+classeSlug] = null; // libère la classe
     db.ref(DB_ROOT).update(updates, function(err){
       if(err){ alert("Erreur : "+err.message); return; }
       setSessionInterrompue(null);
@@ -5830,8 +6171,7 @@ function OngletPilotage(){
   function terminerSession(){
     if(!session) return;
     if(!confirm("Terminer la session ? Les élèves verront un écran de fin.")) return;
-    db.ref(DB_ROOT+"/sessions/"+session.id+"/etat").set("terminee");
-    db.ref(DB_ROOT+"/sessionActive/"+classeSlug).remove();
+    cloturerSession(session, evals[session.evalId]);   // P2 : fige l'énoncé et le barème
   }
 
   // Modale prioritaire : session interrompue détectée → choix obligatoire avant de continuer
@@ -5894,7 +6234,7 @@ function OngletPilotage(){
           ),
           h("select", {value:classeSlug, onChange:function(e){setClasseSlug(e.target.value);setEvalId("")}},
             h("option", {value:""}, "— Choisir —"),
-            Object.keys(classes).filter(function(k){return !estClasseInterne(classes[k])}).map(function(k){
+            Object.keys(classes).filter(function(k){return !estClasseInterneObj(classes[k])}).map(function(k){
               return h("option", {key:k, value:k}, classes[k].nom + " ("+(classes[k].eleves||[]).length+" élèves)");
             })
           )
@@ -5969,7 +6309,7 @@ function OngletPilotage(){
         ),
         h("div", {className:"results-eval-list"},
           sessionsClasse.map(function(s){
-            var ev = evals[s.evalId];
+            var ev = evalDeSession(s, evals);   // P2
             return h("div", {key:s.id, className:"results-eval-row", style:{cursor:"default"}},
               h("div", null,
                 h("div", {className:"titre"}, ev ? ev.titre : "(évaluation supprimée)"),
@@ -6450,7 +6790,7 @@ function SessionLive(p){
     if(sess.phase === "reflexion" && qi === qIdx){
       db.ref(DB_ROOT+"/sessions/"+sess.id).update({phaseStart:Date.now(), paused:null});
       var diff = nouveauChrono - ancienChrono;
-      if(diff > 0) notifierEleves("⏱️ Le professeur a ajouté du temps de réflexion.", "info");
+      if(diff > 0) notifierEleves("⏱️ J'ai ajouté du temps de réflexion.", "info");
       else if(diff < 0) notifierEleves("⏱️ Le temps de réflexion a été réduit.", "info");
     }
   }
@@ -7029,17 +7369,23 @@ function OngletResultats(){
   function effacerSession(sid){
     var s = sessions[sid];
     if(!s) return;
-    var ev = evals[s.evalId];
+    var ev = evalDeSession(s, evals);   // P2
     var cl = classes[s.classeSlug];
     var titre = (ev ? ev.titre : "(éval supprimée)") + " — " + (cl ? cl.nom : "(classe supprimée)") + " — " + new Date(s.date||0).toLocaleString("fr-FR");
 
     if(!confirm("Tu vas effacer définitivement cette session de l'historique :\n\n"+titre+"\n\nUn snapshot complet de la base va d'abord être téléchargé pour pouvoir récupérer les données si besoin (cherche le fichier qcm_AVANT-effacement_*.json dans tes téléchargements).\n\nAprès effacement :\n- L'évaluation ne sera plus considérée comme « déjà passée » par cette classe (s'il s'agissait de la dernière session)\n- Aucun tableau de résultats ne sera généré pour cette session\n- Le suivi longitudinal n'en tiendra pas compte\n\nCette action est IRRÉVERSIBLE (sauf via le snapshot). Continuer ?")) return;
 
-    // Snapshot AVANT effacement
-    db.ref(DB_ROOT).once("value", function(snap){
+    // Snapshot AVANT effacement — C2 (M7) : les classes vivent à /classes racine
+    // depuis juin 2026 ; sans elles le fichier promis dans la confirmation ne
+    // permettait PAS de restaurer. Même contrat que snapshotExport (version 2).
+    Promise.all([db.ref(DB_ROOT).once("value"), db.ref("classes").once("value")]).then(function(snaps){
+      var snap = snaps[0];
+      var classesSnap = snaps[1];
       var payload = {
-        _meta:{source:DB_ROOT, exportedAt:new Date().toISOString(), version:1, contexte:"snapshot AVANT effacement de session "+sid},
-        data:snap.val() || {}
+        _meta:{source:DB_ROOT, exportedAt:new Date().toISOString(), version:2, contexte:"snapshot AVANT effacement de session "+sid,
+               note:"version 2 (M7) : inclut les classes mutualisées /classes racine"},
+        data:snap.val() || {},
+        classes:classesSnap.val() || {}
       };
       var blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
       var url = URL.createObjectURL(blob);
@@ -7070,7 +7416,7 @@ function OngletResultats(){
   if(sel){
     var sess = sessions[sel];
     if(!sess) return h("div", {className:"card"}, h("p", null, "Session introuvable"));
-    var ev = evals[sess.evalId];
+    var ev = evalDeSession(sess, evals);   // P2
     var cl = classes[sess.classeSlug];
     if(!ev || !cl) return h("div", {className:"card"}, h("p", null, "Données manquantes"));
     return h(Scoresheet, {session:Object.assign({id:sel}, sess), evaluation:ev, classe:cl, onBack:function(){setSel(null)}});
@@ -7095,7 +7441,7 @@ function OngletResultats(){
       ? h("p", {style:{color:"var(--gris)",fontStyle:"italic"}}, "Aucune session.")
       : h("div", {className:"results-eval-list"},
           sessArr.map(function(s){
-            var ev = evals[s.evalId];
+            var ev = evalDeSession(s, evals);   // P2
             var cl = classes[s.classeSlug];
             return h("div", {key:s.id, className:"results-eval-row", onClick:function(){setSel(s.id)}},
               h("div", {style:{flex:1}},
@@ -7485,10 +7831,12 @@ function OngletSnapshot(){
     Promise.all([
       db.ref(DB_ROOT+"/sessionActive").once("value"),
       db.ref(DB_ROOT+"/sessions").once("value"),
-      db.ref("classes").once("value")
+      db.ref("classes").once("value"),
+      db.ref(DB_ROOT+"/evaluations").once("value")   // P2 : de quoi figer les sessions fermées ici
     ]).then(function(results){
       var actives = results[0].val() || {};
       var sessions = results[1].val() || {};
+      var evalsNettoyage = results[3].val() || {};
       // Normalisation : /classes a pour clés les noms complets ("5E Hergé"), or
       // les chemins internes (sessionActive, etc.) utilisent les slugs internes
       // ("5e-herge"). On normalise pour pouvoir indexer par slug ci-dessous.
@@ -7499,7 +7847,7 @@ function OngletSnapshot(){
       // Identifie ce qui doit être nettoyé
       var rapport = {
         sessionActiveASupprimer: [], // entrées de sessionActive à supprimer
-        sessionsAFermer: []          // sessions à passer de "en_cours" à "termine"
+        sessionsAFermer: []          // sessions à passer de "en_cours" à "terminee"
       };
 
       // 1. Parcours sessionActive
@@ -7512,7 +7860,7 @@ function OngletSnapshot(){
         } else if(!classes[slug]){
           // La classe n'existe plus
           rapport.sessionActiveASupprimer.push({slug:slug, raison:"classe inexistante"});
-        } else if(sess.etat === "termine"){
+        } else if(sess.etat === "terminee"){
           // Session déjà terminée mais l'entrée traîne
           rapport.sessionActiveASupprimer.push({slug:slug, raison:"session déjà terminée"});
         } else if(sess.etat === "en_cours" && sess.date && (maintenant - sess.date) > SEUIL_24H){
@@ -7548,7 +7896,9 @@ function OngletSnapshot(){
         msg += "\n• "+rapport.sessionsAFermer.length+" session(s) à marquer comme terminée(s) (>24h, encore \"en_cours\") :\n"+
           rapport.sessionsAFermer.map(function(s){var d=new Date(s.date);var hh=String(d.getHours()).padStart(2,'0');var mm=String(d.getMinutes()).padStart(2,'0');return "    - "+s.sid+" (lancée le "+d.toLocaleDateString()+" à "+hh+":"+mm+")"}).join("\n")+"\n";
       }
-      msg += "\nLes données des sessions et leurs réponses sont CONSERVÉES. Seules les marqueurs « en cours » sont nettoyés.\n\nContinuer ?";
+      msg += "\nLes données des sessions et leurs réponses sont CONSERVÉES. Seuls les marqueurs « en cours » sont nettoyés.\n" +
+             "L'énoncé actuel de chaque évaluation sera figé sur ces sessions, pour que leurs résultats ne bougent plus jamais " +
+             "(marqué « figé au nettoyage » : ce n'est pas forcément l'énoncé du jour de la session).\n\nContinuer ?";
 
       if(!confirm(msg)) return;
 
@@ -7557,8 +7907,23 @@ function OngletSnapshot(){
       rapport.sessionActiveASupprimer.forEach(function(e){
         promesses.push(db.ref(DB_ROOT+"/sessionActive/"+e.slug).remove());
       });
+      // P2 — sessions abandonnées (>24 h, jamais clôturées par le professeur).
+      // DÉCISION : on les fige quand même, mais en DISANT ce qu'on fige.
+      // Pourquoi figer : elles portent de vraies réponses d'élèves, conservées
+      // par ce nettoyage — sans snapshot, elles restaient la dernière porte du
+      // recalcul rétroactif. Pourquoi le marquer : l'énoncé disponible est celui
+      // d'aujourd'hui, qui n'est peut-être plus celui du jour de la session.
+      // Le marqueur permet de ne jamais faire passer ce figement pour un autre.
       rapport.sessionsAFermer.forEach(function(s){
-        promesses.push(db.ref(DB_ROOT+"/sessions/"+s.sid+"/etat").set("termine"));
+        var maj = {};
+        maj["/sessions/"+s.sid+"/etat"] = "terminee";
+        var evNet = evalsNettoyage[(sessions[s.sid]||{}).evalId];
+        var snapNet = construireEvalSnapshot(evNet);
+        if(snapNet){
+          maj["/sessions/"+s.sid+"/evalSnapshot"] = snapNet;
+          maj["/sessions/"+s.sid+"/evalSnapshotOrigine"] = "nettoyage";
+        }
+        promesses.push(db.ref(DB_ROOT).update(maj));
       });
 
       Promise.all(promesses).then(function(){
