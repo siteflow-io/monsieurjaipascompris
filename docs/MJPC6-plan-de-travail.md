@@ -308,10 +308,26 @@ Le mécanisme « durée déclarée → alerte avant la fin → clôture douce pr
 **Ce que chaque app devra définir** : quelles compétences elle alimente · quels textes commentent une performance dans SA logique (un QCM ne se commente pas comme une dictée) · quelles données figurent dans le document.
 **⚠ AVERTISSEMENT DE CADRAGE** : ce n'est **pas** une passe de grille, c'est un **chantier à part entière** par app. Il rejoint la forme de l'archive (décision C1) et le bilan demi-A4 du débat. **À planifier explicitement, jamais à glisser dans une passe.**
 
+## R. LA DICTÉE AUDIO — hébergement et périmètre (tranché 18/07)
+
+**État vérifié le 18/07** : **rien n'existe.** Le dépôt `siteflow-io/mjpc-medias` existe (public, créé le 10/06) mais ne contient que `worktrack/ch07` — **une seule app le consomme** (worktrack, 5 références). Côté dictées : `correction_dictee` n'a que `speechSynthesis` (la voix de synthèse du navigateur, pour dire un mot en mode Rapide) et `dictee_universelle` **n'a aucun audio**. Zéro `<audio>`, zéro `new Audio`, zéro `.mp3` dans les deux. **Il n'y a donc pas un hébergement à corriger mais une fonctionnalité à créer.**
+
+**Décisions de Paul** :
+- **Source des fichiers** : générés par **ElevenLabs** (performant sur la prosodie) ou repris d'existants (YouTube → mp3). Ce n'est pas de la synthèse navigateur : ce sont de vrais fichiers audio.
+- **Hébergement** : dépôt **`siteflow-io/mjpc-medias`**, dans un dossier dédié aux dictées audio (le dépôt est public, donc lisible par les élèves sans authentification — c'est déjà son usage pour worktrack).
+- **Lecteur** : **classique et pausable** (l'élève contrôle : pause, retour en arrière). Pas de découpage en segments.
+- **PÉRIMÈTRE STRICT : rattrapage d'un élève absent UNIQUEMENT** (chantier X). La dictée audio n'est PAS un mode de passation ordinaire.
+- **Le cas « en autonomie » n'appartient pas ici** : il relève de **l'app d'entraînement** (chantier S/M20).
+- Accès élève : via MJPC → correction de dictée → dictée coévaluée.
+
 ## S. LE QCM D'ENTRAÎNEMENT AUTOPORTANT (idée Paul, 18/07 — à élaborer)
 
 *« Le QCM sert en classe pour ÉVALUER, c'est sa nature. Mais on pourrait faire des QCM d'entraînement, AUTOPORTANTS (parce que je ne suis pas là pour cliquer les boutons), qui seraient transversaux à QCM ET à l'app d'entraînement. Il vivrait dans l'app d'entraînement, avec une vue aussi dans QCM. »* — idée déclarée non aboutie, à discuter.
 **Ce que ça implique, première analyse** : le QCM actuel est **piloté** (Paul avance les questions, chrono par question, tableau projeté) ; un QCM d'entraînement est **autoporté** (l'élève avance seul, à son rythme, sans personne). **Ce ne sont pas les mêmes moteurs d'exécution — mais c'est LA MÊME BANQUE DE QUESTIONS.** D'où l'architecture pressentie : **une banque, deux moteurs** (piloté / autonome), ce qui prolonge « un moteur, N contenus » (point 15) et rejoint le pipeline grammaire (screenshot → JSON → banque → moteurs) ainsi que le chantier V (prompt ancré sur les attendus de fin de cycle).
+**PRÉCISIONS DE PAUL (18/07)** : l'app d'entraînement **évalue avec EXACTEMENT LE MÊME MOTEUR que les apps** — ce n'est pas un sous-produit ni une simulation. **La différence est que la note d'entraînement est NEUTRALISÉE dans le compte général du profil : elle n'est qu'un INDICATEUR.** Un entraînement peut donc rester **formatif** (le cas normal) ou devenir **sommatif** — et dans ce cas il suit le **flux étude** (encadré, comme la dictée audio de rattrapage : modalité tracée, conditions connues).
+
+**⚠ POINT DOCTRINAL À REPRENDRE — À L'INITIATIVE DE PAUL, QUAND SON TOUR SERA VENU (signalé le 18/07)** : *« ça remet en cause partiellement le fait que le site est formatif : il y aura bien des notes réelles qui y vivront, donc reprendre ce point doctrinal. »* **La conscience ne tranche pas ce point et ne le contourne pas** : il touche aux fondements (aucun score agrégé unique · on mesure pour comprendre, pas pour classer · la note vient après le travail de correction). Ce qu'il faudra articuler : où passe la ligne entre l'INDICATEUR (entraînement, neutralisé) et la NOTE QUI COMPTE (évaluation) · comment un profil affiche les deux sans les confondre · ce que « formatif » veut dire exactement quand des notes réelles vivent dans le système. *À rouvrir sur décision de Paul, jamais par la conscience.*
+
 **Questions ouvertes** : un QCM d'entraînement compte-t-il (jamais ? autrement ? alimente-t-il d'autres compétences, comme le rattrapage modal) · qui le déclenche (Paul le prescrit, ou l'élève le choisit) · où vivent les résultats (profil longitudinal, mais dans quelle catégorie).
 
 ## V. LE PROMPT DE GÉNÉRATION DES QCM — ancré sur les attendus de fin de cycle (décidé 18/07)
