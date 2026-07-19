@@ -84,80 +84,69 @@ Composer le protocole en **trois blocs par rôle**, jamais plus de 8 étapes au 
 ---
 
 # PROTOCOLES M-TEST — les trois modes test rénovés (promus le 19/07)
-*Composés le 19/07 par la conscience n°2 depuis le rapport de l'exécutant M-TEST (commit `3635a851` du sas), libellés VÉRIFIÉS dans les fichiers de production. À dérouler sur les vraies adresses de production.*
+*v2 du 19/07 — RECOMPOSÉS PAR RÔLE après rappel de Paul : la v1 mélangeait prof et élève dans les mêmes blocs, en violation de la règle n°1 du présent document. Un bloc = un rôle ; l'incarnation élève est regroupée en UNE seule passe par app. Libellés vérifiés en production.*
 
-**⚠ Contrôle de version, particularité de cette passe** : les pastilles n'ont pas été incrémentées en M-TEST — tu verras `v6.0.0` (dictée), `v7.0.0` (QCM), `2026-07-17-1` (débat), les mêmes qu'avant. **Le marqueur que la bonne version est chargée, ce sont les nouveaux boutons ⚡ eux-mêmes** : s'ils manquent, c'est le cache (`?v=N`, N incrémenté).
+**⚠ Contrôle de version** : pastilles non incrémentées en M-TEST (`v6.0.0` dictée · `v7.0.0` QCM · `2026-07-17-1` débat) — le marqueur de la bonne version, ce sont les boutons ⚡ eux-mêmes ; s'ils manquent : cache, recharger avec `?v=N` croissant.
 
-**Déclaration de couverture (héritée de l'audit)** : ces séquences ont été construites sur lecture du code et auditées par harnais — **rien du temps réel n'est prouvé** (multi-appareils, propagation). Le bloc C à deux appareils du QCM reste le seul juge du temps réel.
+**Déclaration de couverture** : séquences construites sur lecture du code + harnais ; rien du temps réel n'est prouvé — le bloc C du QCM (deux appareils) reste le seul juge.
 
-## ① CORRECTION DE DICTÉE — 4 états · éditeur de textes · corbeille (~4 min)
-**Préparer** : accès prof → accueil → **🧪 Créer le bac à sable** (ou **🔄 Regénérer** s'il existe déjà).
+## ① CORRECTION DE DICTÉE (~4 min)
+**Préparer** : accès prof → accueil → **🧪 Créer le bac à sable** (ou **🔄 Regénérer**).
 
-**A. Les 4 états** — 3 clics
-1. Panneau « 🧪 Mode test » → **✓ Vérifier les 4 états**.
-**ON DEVRAIT VOIR** : la liste `Alice → Terminée` · `Lucas → À faire` · `Sacha → Tu étais absent(e)` · `Chloé (dictée B) → Pas encore corrigée`.
-2. « Se mettre à la place d'un élève » → **Alice**, puis **Sacha**, puis **Chloé**.
-**ON DEVRAIT VOIR** : chaque état côté élève, dans « Mes dictées » — jamais de note ni d'« Ouvrir » sur une ligne non corrigée, jamais de mise en cause du professeur.
+**BLOC A — TOUT LE PROF D'ABORD** (6 clics, sans quitter le rôle)
+1. Panneau « 🧪 Mode test » → **✓ Vérifier les 4 états** → ON DEVRAIT VOIR : `Alice → Terminée` · `Lucas → À faire` · `Sacha → Tu étais absent(e)` · `Chloé (dictée B) → Pas encore corrigée`.
+2. **✏️ Tester l'éditeur de textes** → ON DEVRAIT VOIR : message avec le nouveau texte. *(On le laisse basculé : l'élève le vérifiera.)*
+3. **🧹 Tester la corbeille** → confirmer → ON DEVRAIT VOIR : chemin `corbeille/<jour>/suppression-dictee_<HHMMSS>` affiché ET export JSON téléchargé.
+4. **🔄 Regénérer** → ON DEVRAIT VOIR : la dictée B de retour.
 
-**B. Éditeur de textes** — 4 clics
-1. **✏️ Tester l'éditeur de textes**. **ON DEVRAIT VOIR** : un message affichant le nouveau texte.
-2. Incarner **Chloé** → **ON DEVRAIT VOIR** sur sa liste vide : « [test] Ce texte a été modifié depuis le bac à sable. »
-3. Retour prof → **✏️ Tester l'éditeur de textes** (rebascule).
-4. Recharger la vue élève → **ON DEVRAIT VOIR** : le texte d'origine revenu.
+**BLOC B — L'ÉLÈVE EN UNE SEULE PASSE** (« Se mettre à la place d'un élève »)
+1. **Alice** → « Mes dictées » : Terminée, copie ouvrable avec note.
+2. **Sacha** → « Tu étais absent(e) » — jamais de note ni d'« Ouvrir », jamais de mise en cause du professeur.
+3. **Chloé** → SA LISTE PORTE le texte modifié : « [test] Ce texte a été modifié depuis le bac à sable. » *(La preuve de l'éditeur, vue du bon côté.)*
 
-**C. Corbeille** — 3 clics
-1. **🧹 Tester la corbeille** → confirmer.
-**ON DEVRAIT VOIR** : le chemin `corbeille/<jour>/suppression-dictee_<HHMMSS>` affiché, ET un export JSON téléchargé.
-2. **🔄 Regénérer** → **ON DEVRAIT VOIR** : la dictée B de retour.
+**BLOC A' — RETOUR PROF, clôture** (2 clics)
+1. **✏️ Tester l'éditeur de textes** (rebascule vers l'origine). *(Facultatif : ré-incarner Chloé → texte d'origine revenu.)*
+2. **Purger le bac à sable** → ON DEVRAIT VOIR : plus aucune donnée `_test_`.
 
-**Sortir** : purge du bac à sable depuis le panneau de test. **ON DEVRAIT VOIR** : plus aucune donnée `_test_` (la classe de test disparaît des listes).
+## ② DÉBAT (~4 min)
+**Préparer** : accès prof → **Mode test** (classe `_test_pilotage_debat_s3`).
 
-## ② DÉBAT — cours déclaré · injection de documents (~4 min)
-**Préparer** : accès prof → **Mode test** (bac à sable, classe `_test_pilotage_debat_s3`).
+**BLOC A — TOUT LE PROF D'ABORD** (6 clics)
+1. **▶ Démarrer (2 h)** puis **⚡ T-5 maintenant** → ON DEVRAIT VOIR : le toast d'alerte prof tombe immédiatement.
+2. **⚡ Fin atteinte maintenant** → ON DEVRAIT VOIR : modale « clôturer ou prolonger » → **Prolonger** (le cours repart).
+3. **⚡ Fin atteinte maintenant** → **Clôturer**. *(Le cours est clos : l'élève testera le refus.)*
+4. Préparation → « Les 10 documents du parcours » → **Documents de test** (le JSON se colle) → **Injecter les documents** → ON DEVRAIT VOIR : « Documents injectés ✔ ».
 
-**A. T-5 sans attendre** — 3 clics
-1. **▶ Démarrer (2 h)**. 2. **⚡ T-5 maintenant**.
-**ON DEVRAIT VOIR** : le toast d'alerte prof tombe immédiatement (sans attendre une minute).
-3. **Incarner** un élève. **ON DEVRAIT VOIR** : le bandeau T-5 non bloquant sur son écran (recharger la vue élève si elle était déjà ouverte).
+**BLOC B — L'ÉLÈVE EN UNE SEULE PASSE** (Incarner)
+1. Incarner → ON DEVRAIT VOIR : refus « hors cours » (message DISTINCT de « groupes verrouillés »), « Mes débats » consultable.
+2. *(Toujours incarné, après le redémarrage du bloc A' ci-dessous si tu préfères l'ordre strict — sinon :)* les documents « [TEST] Document N » visibles dans son parcours.
 
-**B. Fin de cours** — 2 clics
-1. **⚡ Fin atteinte maintenant**. **ON DEVRAIT VOIR** : la modale « clôturer ou prolonger » s'ouvre.
-2. **Prolonger** (le cours repart) — puis refaire et **Clôturer**.
+**BLOC A' — RETOUR PROF, le second refus + clôture** (4 clics)
+1. **▶ Redémarrer un cours** → **verrouiller les groupes** (geste normal du pilotage).
+2. Incarner une dernière fois → ON DEVRAIT VOIR : le refus « groupes verrouillés », message propre. *(Seule ré-incarnation du protocole — les deux refus ne peuvent pas se produire dans le même état du cours.)*
+3. **↩ Revenir au jeu d'exemple** puis **Purger et sortir** → traces `_test_` effacées, cours de test compris.
 
-**C. Les deux refus** — 2 gestes
-1. Après **■ Clôturer** : incarner un élève. **ON DEVRAIT VOIR** : refus « hors cours » (message distinct de « groupes verrouillés »), et « Mes débats » reste consultable.
-2. Redémarrer un cours, **verrouiller les groupes** (geste normal du pilotage — pas de bouton de test dédié), incarner. **ON DEVRAIT VOIR** : le second refus, avec son message propre.
-
-**D. Injection de documents** — 4 clics
-1. Préparation → « Les 10 documents du parcours ». 2. **Documents de test** — **ON DEVRAIT VOIR** : le JSON se colle dans le champ.
-3. **Injecter les documents** → **ON DEVRAIT VOIR** : « Documents injectés ✔ » (la validation réelle a tourné).
-4. Incarner → **ON DEVRAIT VOIR** : des documents « [TEST] Document N ». Retour : **↩ Revenir au jeu d'exemple**.
-
-**Sortir** : **Purger et sortir**. **ON DEVRAIT VOIR** : traces `_test_` effacées, y compris le cours de test.
-
-## ③ QCM — la preuve P2 · chrono · portail · Mes évaluations (~6 min)
+## ③ QCM (~6 min)
 **Préparer** : accès prof → **🧪 Mode test**.
 
-**A. P2, la démonstration complète** — 7 clics
+**BLOC A — TOUT LE PROF D'ABORD : P2 puis chrono** (10 clics)
 1. Lancer une question → **Tous les élèves répondent**.
-2. **⚖️ Vérifier que les notes n'ont pas bougé** → **ON DEVRAIT VOIR** : « Cette session n'est pas encore clôturée ».
-3. **🔒 Clôturer (chemin réel)** → **ON DEVRAIT VOIR** : l'état passe à « énoncé **conservé ✔** ».
-4. **⚖️ Vérifier…** → **ON DEVRAIT VOIR** : deux totaux **identiques** — « Le jour de l'évaluation : X · avec l'énoncé actuel : X ».
-5. **✏️ Modifier l'éval après coup** → **ON DEVRAIT VOIR** : « version 2 ».
-6. **⚖️ Vérifier…** → **ON DEVRAIT VOIR** : totaux **différents**, et le message dit que l'application affiche **la note du jour**, pas l'autre. *C'est la preuve visible que P2 protège.*
-7. **🔄 Relire l'état** → **ON DEVRAIT VOIR** : l'évaluation en version 2, l'énoncé lu par l'app resté en version 1.
+2. **⚖️ Vérifier que les notes n'ont pas bougé** → « Cette session n'est pas encore clôturée ».
+3. **🔒 Clôturer (chemin réel)** → « énoncé **conservé ✔** ».
+4. **⚖️ Vérifier…** → deux totaux IDENTIQUES (« Le jour de l'évaluation : X · avec l'énoncé actuel : X »).
+5. **✏️ Modifier l'éval après coup** → « version 2 ».
+6. **⚖️ Vérifier…** → totaux DIFFÉRENTS, message : l'app affiche LA NOTE DU JOUR. *La preuve visible que P2 protège.*
+7. **🔄 Relire l'état** → éval en v2, énoncé lu par l'app resté en v1.
+8. Lancer une question AVEC CHRONO → **⏱️ Faire expirer le chrono** → cliquer une réponse dans la zone simulée → ON DEVRAIT VOIR : clic REFUSÉ avec explication — jamais accepté visuellement sans être enregistré.
 
-**B. Le verrou du chrono (bug de Maëva)** — 3 clics
-1. Lancer une question **avec chrono**. 2. **⏱️ Faire expirer le chrono**.
-3. Cliquer une réponse dans la zone élève simulée. **ON DEVRAIT VOIR** : le clic **refusé**, avec un message qui l'explique — jamais un clic accepté visuellement sans être enregistré.
-
-**C. Portail élève et « Mes évaluations »** — 5 clics
-1. **👋 Ouvrir le portail élève** (les codes du bac à sable sont affichés au-dessus).
-2. Classe `_test_evaluation-qcm` → saisir **un code FAUX** d'abord. **ON DEVRAIT VOIR** : refus clair.
-3. Saisir code + prénom + nom corrects → entrée acceptée.
-4. **📊 Mes évaluations** → **ON DEVRAIT VOIR** : la session close (marquée « v2 » si l'éval a été modifiée).
+**BLOC B — L'ÉLÈVE EN UNE SEULE PASSE** (5 clics)
+1. **👋 Ouvrir le portail élève** (codes du bac à sable affichés au-dessus).
+2. Classe `_test_evaluation-qcm` → **code FAUX** d'abord → refus clair.
+3. Code + prénom + nom corrects → entrée acceptée.
+4. **📊 Mes évaluations** → la session close, marquée « v2 ».
 5. **✕ Fermer la vue élève**.
 
-**Sortir** : **🗑️ Sortir et purger**. **ON DEVRAIT VOIR** : classe, éval, sessions, présence **et codes fictifs** purgés.
+**BLOC A' — RETOUR PROF, clôture** (1 clic)
+**🗑️ Sortir et purger** → classe, éval, sessions, présence ET codes fictifs purgés.
 
-**BLOC C (deux appareils, recommandé)** : refaire B avec un vrai téléphone connecté au portail élève pendant que l'ordinateur pilote — c'est le seul test qui éprouve le temps réel, angle mort structurel du harnais.
+**BLOC C — DEUX APPAREILS (recommandé, temps réel)** : refaire le bloc B sur un vrai téléphone pendant que l'ordinateur pilote — seul test du temps réel, angle mort structurel du harnais.
