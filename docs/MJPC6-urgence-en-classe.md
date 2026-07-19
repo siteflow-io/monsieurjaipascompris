@@ -77,3 +77,10 @@ Claude fait le reste : diagnostic sur le code, vérification des données au hub
 - **Perdre une app** : chaque version vit dans l'historique Git, restaurable en quelques secondes.
 - **Casser le hub par un clic d'élève** : les élèves n'ont accès à aucune fonction destructrice.
 - **Être bloqué dehors** : le mot de passe prof vit dans Firebase (nœud préservé par les contrats de purge).
+
+## ÉCRAN BLANC APRÈS UNE MISE À JOUR — le réflexe (constaté le 19/07)
+**Symptôme** : le site ou une app s'ouvre sur une page blanche, juste après une promotion. Le `?v=N` ne suffit pas toujours.
+**Cause** : les onglets DÉJÀ OUVERTS gardent l'ancienne version en mémoire vive ; tant qu'il en reste un, le navigateur peut resservir l'ancien état.
+**Le geste qui marche, dans cet ordre** : ① **fermer TOUS les onglets** du site (pas seulement recharger) ② rouvrir avec l'adresse complète et un `v=` neuf ③ si ça résiste : navigation privée (aucun cache) ④ si ça résiste encore : ce n'est plus le cache — dire `BUG`, la conscience restaure.
+**Vérifié le 19/07** : après promotion M8bis, écran blanc chez Paul ; fichier sain (chargement propre, zéro erreur JS), déploiement Pages `built` et à jour, aucun service worker. **La fermeture de tous les onglets a résolu.**
+**Adresses de référence** : `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=N` (le `?n=` est obligatoire) · `correction_dictee.html?v=N` · `evaluation-qcm.html?v=N` · `pilotage_debat_s3.html?v=N`.
