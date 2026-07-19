@@ -1772,7 +1772,7 @@ function AppProf(p){
             h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"\u00c9diter cette dict\u00e9e",onClick:function(e){e.stopPropagation();setEditing(editing===d.id?null:d.id)}},editing===d.id?"\u2715":"\u270f\ufe0f"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"Dupliquer (copie le texte et le barème, sans les copies élèves)",onClick:function(e){e.stopPropagation();db.ref("correction_dictee/"+d.id+"/config").once("value",function(snap){var cfg=snap.val();if(!cfg){alert("Config introuvable.");return}var copy=Object.assign({},cfg);copy.title="Copie de "+(cfg.title||d.title);copy.published=false;var newId=d.id+"_copie_"+Date.now();db.ref("correction_dictee/"+newId+"/config").set(copy,function(err){if(err){alert("Erreur: "+err.message);return}alert("Dictée dupliquée : "+copy.title+". Réaffecte-la à une classe via le crayon si besoin.");rafraichirDonnees()})})}},"⧉"),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"#b00"},title:"Supprimer (archiv\u00e9 dans la corbeille MJPC + export JSON t\u00e9l\u00e9charg\u00e9)",onClick:function(e){e.stopPropagation();if(!confirm("Supprimer "+d.title+" ?\n\nElle sera archiv\u00e9e dans la corbeille MJPC (r\u00e9cup\u00e9rable un an) et un export JSON sera t\u00e9l\u00e9charg\u00e9.\n\nContinuer ?"))return;db.ref("correction_dictee/"+d.id).once("value",function(snap){var data=snap.val();if(!data){alert("Cette dict\u00e9e est d\u00e9j\u00e0 vide.");return}var payload={_meta:{source:"correction_dictee/"+d.id,exportedAt:new Date().toISOString(),exportedBy:"suppression_auto",version:1},data:data};/* ceinture 1 : le fichier local, immediat et hors ligne */try{var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="dictee_"+d.id+"_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url)}catch(err){}/* ceinture 2 : la corbeille du hub, meme convention que la console MJPC */var now=new Date();var an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1));var jour=now.toISOString().slice(0,10);var hhmmss=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);var chemin="corbeille/"+jour+"/suppression-dictee_"+hhmmss;db.ref(chemin).set({_meta:{motif:"suppression-dictee",annee:an,source:"correction_dictee",dictee:d.id,titre:d.title,le:Date.now()},data:data}).then(function(){return db.ref("correction_dictee/"+d.id).remove()}).then(function(){rafraichirDonnees()}).catch(function(err){if(confirm("L\u2019archivage dans la corbeille MJPC a \u00e9chou\u00e9 ("+(err&&err.message||"raison inconnue")+").\n\nL\u2019export JSON, lui, est bien t\u00e9l\u00e9charg\u00e9.\n\nSupprimer quand m\u00eame ?")){db.ref("correction_dictee/"+d.id).remove().then(function(){rafraichirDonnees()})}});})}},"🗑️"),
+            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"#b00"},title:"Supprimer (archiv\u00e9 dans la corbeille MJPC + export JSON t\u00e9l\u00e9charg\u00e9)",onClick:function(e){e.stopPropagation();supprimerDicteeAvecCorbeille(d,function(){rafraichirDonnees()});}},"🗑️"),
             h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem",cursor:"pointer"},onClick:function(){load(d.id)}},"Ouvrir \u2192")
           )
         ),
@@ -5442,6 +5442,13 @@ function classeDuRegistre(nom,source){
   return undefined;
 }
 
+// M-TEST — Chemin de suppression EXTRAIT tel quel du bouton de l'accueil
+// (déplacement, pas réécriture) : le bac à sable doit pouvoir éprouver la
+// corbeille sans qu'on en recopie la logique ailleurs.
+function supprimerDicteeAvecCorbeille(d, onDone){
+  if(!confirm("Supprimer "+d.title+" ?\n\nElle sera archiv\u00e9e dans la corbeille MJPC (r\u00e9cup\u00e9rable un an) et un export JSON sera t\u00e9l\u00e9charg\u00e9.\n\nContinuer ?"))return;db.ref("correction_dictee/"+d.id).once("value",function(snap){var data=snap.val();if(!data){alert("Cette dict\u00e9e est d\u00e9j\u00e0 vide.");return}var payload={_meta:{source:"correction_dictee/"+d.id,exportedAt:new Date().toISOString(),exportedBy:"suppression_auto",version:1},data:data};/* ceinture 1 : le fichier local, immediat et hors ligne */try{var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="dictee_"+d.id+"_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url)}catch(err){}/* ceinture 2 : la corbeille du hub, meme convention que la console MJPC */var now=new Date();var an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1));var jour=now.toISOString().slice(0,10);var hhmmss=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);var chemin="corbeille/"+jour+"/suppression-dictee_"+hhmmss;db.ref(chemin).set({_meta:{motif:"suppression-dictee",annee:an,source:"correction_dictee",dictee:d.id,titre:d.title,le:Date.now()},data:data}).then(function(){return db.ref("correction_dictee/"+d.id).remove()}).then(function(){rafraichirDonnees()}).catch(function(err){if(confirm("L\u2019archivage dans la corbeille MJPC a \u00e9chou\u00e9 ("+(err&&err.message||"raison inconnue")+").\n\nL\u2019export JSON, lui, est bien t\u00e9l\u00e9charg\u00e9.\n\nSupprimer quand m\u00eame ?")){db.ref("correction_dictee/"+d.id).remove().then(function(){rafraichirDonnees()})}});})
+}
+
 // ═══ D1 — MODE TEST DE LA SOUCHE (patron QCM/débat) ═══
 // Ce que le mode test doit permettre : voir en une minute ce qu'un élève voit
 // vraiment, dans TOUS les états — corrigée et rendue, corrigée non rendue, pas
@@ -5485,6 +5492,9 @@ function genererDonneesTest(){
     classe:classeTestId(), eleves:TEST_ELEVES, codes:TEST_CODES,
     dictees:[
       {id:TEST_DICTEE_A, payload:{
+        // M-TEST — Alice a terminé son autocorrection : sans cela, l'état
+        // « Terminée » n'était pas éprouvable depuis le bac à sable.
+        autocorrection:{"durand_alice":{status:"idle", solved:3, total:3, score:5, timestamp:maintenant}},
         config:Object.assign({},cfgCommun,{title:"Dict\u00e9e test \u2014 rendue",text:texteA,tokens:tokA}),
         results:results, absents:{"moreau_sacha":true},
         copyOptions:{mode:"complet",showBadge:true,showPoints:true,showOverlay:true,linkExercices:true},
@@ -5510,6 +5520,88 @@ function purgerDonneesTest(cb){
     db.ref(c).remove().then(function(){ effaces.push(c); }).catch(function(){})
       .then(function(){ if(--restants===0 && cb) cb(effaces); });
   });
+}
+
+
+// M-TEST — Éprouver depuis le bac à sable ce que M6 a livré. Chaque bouton
+// appelle la fonction RÉELLE (etatDicteeEleve, txt, supprimerDicteeAvecCorbeille) :
+// aucune logique n'est recopiée ici.
+function OutilsTestSouche(p){
+  var s1=useState(""),msg=s1[0],setMsg=s1[1];
+  var s2=useState(null),etats=s2[0],setEtats=s2[1];
+
+  function verifierLesQuatreEtats(){
+    db.ref("correction_dictee").once("value",function(snap){
+      var val=snap.val()||{};
+      var lignes=[];
+      [TEST_DICTEE_A,TEST_DICTEE_B].forEach(function(id){
+        var v=val[id]; if(!v) return;
+        var d={id:id,title:(v.config||{}).title||id,results:v.results||{},
+               autocorrection:v.autocorrection||{},absents:v.absents||{},
+               copyPublishedAt:v.copyPublishedAt||null};
+        TEST_ELEVES.forEach(function(e){
+          var et=etatDicteeEleve(d,san(e));   // LA fonction réelle
+          lignes.push({dictee:d.title,eleve:e.split(" ").pop(),code:et.code,label:et.label});
+        });
+      });
+      setEtats(lignes);
+      var codes={}; lignes.forEach(function(l){codes[l.code]=true});
+      var attendus=["terminee","afaire","attente","absent"];
+      var manquants=attendus.filter(function(c){return !codes[c]});
+      setMsg(manquants.length===0
+        ? "Les 4 états sont présents dans le bac à sable."
+        : "États manquants : "+manquants.join(", ")+" — regénère le bac à sable.");
+    });
+  }
+
+  function testerEditeurDeTextes(){
+    var essai="[test] Ce texte a été modifié depuis le bac à sable.";
+    db.ref("correction_dictee_textes").once("value",function(sn){
+      var v=sn.val()||{};
+      if(v.liste_vide===essai){
+        delete v.liste_vide;
+        db.ref("correction_dictee_textes").set(v).then(function(){
+          setMsg("Texte remis à l'original. Recharge la vue élève pour le constater.");
+        });
+      } else {
+        v.liste_vide=essai;
+        db.ref("correction_dictee_textes").set(v).then(function(){
+          setMsg("Texte modifié. Incarne un élève SANS dictée pour le voir : « "+txt("liste_vide")+" ». Reclique pour revenir à l'original.");
+        });
+      }
+    });
+  }
+
+  function testerLaCorbeille(){
+    db.ref("correction_dictee/"+TEST_DICTEE_B).once("value",function(sn){
+      if(!sn.val()){ setMsg("La dictée de test B n'existe pas : regénère le bac à sable."); return; }
+      supprimerDicteeAvecCorbeille({id:TEST_DICTEE_B,title:"Dictée test — pas encore corrigée"},function(){
+        var j=new Date().toISOString().slice(0,10);
+        db.ref("corbeille/"+j).once("value",function(c){
+          var v=c.val()||{};
+          var ks=Object.keys(v).filter(function(k){return k.indexOf("suppression-dictee_")===0});
+          setMsg(ks.length
+            ? "Archivée : corbeille/"+j+"/"+ks[ks.length-1]+" — et un export JSON a été téléchargé. Regénère le bac à sable pour la retrouver."
+            : "Suppression faite, mais rien trouvé dans corbeille/"+j+" : à instruire.");
+        });
+      });
+    });
+  }
+
+  var b={className:"btn-sm btn-ghost",style:{marginRight:6,marginBottom:6}};
+  return h("div",{style:{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}},
+    h("p",{style:{fontSize:".82rem",color:"var(--text-sub)",margin:"0 0 6px"}},
+      h("b",null,"Éprouver les mécanismes livrés"),
+      " — ces boutons appellent les fonctions réelles de l'app, pas des copies."),
+    h("div",null,
+      h("button",Object.assign({},b,{onClick:verifierLesQuatreEtats,title:"Calcule l'état de chaque élève de test avec etatDicteeEleve(), la fonction qu'utilise « Mes dictées »."}),"\u2713 Vérifier les 4 états"),
+      h("button",Object.assign({},b,{onClick:testerEditeurDeTextes,title:"Modifie le texte « liste vide » puis le remet : le va-et-vient se constate côté élève incarné."}),"\u270f\ufe0f Tester l'éditeur de textes"),
+      h("button",Object.assign({},b,{style:{marginRight:6,marginBottom:6,color:"#b00"},onClick:testerLaCorbeille,title:"Supprime la dictée de test B par le chemin réel (corbeille MJPC + export JSON)."}),"\ud83e\uddf9 Tester la corbeille")
+    ),
+    etats&&h("div",{style:{fontSize:".78rem",marginTop:6}},
+      etats.map(function(l,i){return h("div",{key:i},l.dictee+" \u00b7 "+l.eleve+" \u2192 "+l.label)})),
+    msg&&h("p",{style:{fontSize:".82rem",fontWeight:600,marginTop:6}},msg)
+  );
 }
 
 function ModeTest(p){
@@ -5562,7 +5654,8 @@ function ModeTest(p){
       actif?h("button",{className:"btn-sm btn-ghost",disabled:busy,style:{color:"#b00"},onClick:purger},"\ud83e\uddf9 Tout effacer"):null
     ),
     actif?h("div",null,
-      h("p",{style:{fontSize:".82rem",color:"var(--text-sub)",margin:"0 0 6px"}},"Se mettre \u00e0 la place d\u2019un \u00e9l\u00e8ve (nouvel onglet) :"),
+      h(OutilsTestSouche,null),
+      h("p",{style:{fontSize:".82rem",color:"var(--text-sub)",margin:"12px 0 6px"}},"Se mettre \u00e0 la place d\u2019un \u00e9l\u00e8ve (nouvel onglet) :"),
       h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
         TEST_ELEVES.map(function(e){
           var suffixe = san(e)==="moreau_sacha" ? " (absent)" : (san(e)==="robert_chloe" ? " (sans copie)" : "");
