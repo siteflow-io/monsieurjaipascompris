@@ -63,3 +63,10 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT
 - **Contenu promu** : passe tactile de la console — accordéon exclusif (un seul bloc ouvert), cibles ≥ 44 px, pleine largeur sous 480 px, zéro débordement horizontal
 - **Audit** : parseurs rejoués · diff 3 retirées/51 ajoutées/5 hunks conforme · **les 5 fonctions `_bloc*` identiques md5 avant/après** · `_sitePut`/`_siteDelete`/`fetch`/`PUT` en nombres identiques · mesures au harnais tactile refaites par la conscience (sommaire 3 195 px → 289 px, 24 cibles sous-norme → 0) · desktop non dégradé (boutons internes inchangés) · zéro écriture hub
+
+## Point de retour — PROMOTION M8-FUSION (index.html), 20/07/2026
+- **État AVANT** : md5 `5b6eb7e1aee516da6e04aeb08745d19e`, 356 815 o, v8.2.0
+- **État APRÈS** : md5 `bf6ba1e165640f8ae3f51fb13720f0f3`, 358 720 o, v8.3.0
+- **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT
+- **Contenu promu** : UNE SEULE ADMINISTRATION — la console quitte `page-level` et ses 5 blocs deviennent des sections du Panneau prof (Annonces, Brevet, Taxonomie sous Contenu ; Règles en tête de « Configuration & Firebase », zone dangereuse en bas) ; mode test en bascule d'en-tête + point orange sur le bouton flottant, visible panneau fermé ; « Outils prof » → « 📚 Mes applications » sans ses 3 entrées grisées ; Panneau prof en premier bouton ; première media query `tprof` du fichier (768 px)
+- **Audit conscience** : parseurs rejoués · **5 fonctions `_bloc*` identiques md5** (déplacées, non réécrites) · seules `_m8Accordeon` et `m8ToggleBloc` disparues (périmètre Q1) · 4 orphelines à zéro · diff 50/85/23 avec les 50 lignes retirées classées une par une · mobile : contenu 98 → 364 px, 0 cible sous-norme, 0 débordement · desktop : sidebar 230 px verticale, boutons 229×41 INCHANGÉS · garde admin vérifiée · point orange vérifié (none → inline-block, ambre) · zéro écriture hub
