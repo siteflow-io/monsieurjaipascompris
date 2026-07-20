@@ -109,3 +109,15 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   analyse retenue : dans un fil long, les actes de la conscience sont dans son contexte — ils CONTRAIGNENT. Un document, lui, s'INTERPRÈTE : la même règle lue le matin comme information devient contraignante après avoir été vécue. Et le plan porte les règles quand la conversation porte la casuistique.
   résolution : on ne change de conscience que sur **amnésie avérée**, jamais par précaution — le coût d'un pont est supérieur au coût d'un fil saturé. Et création du présent journal, pour que la casuistique survive aux ponts.
   → mots-clés : conv longues · externalisation ne pallie pas · casuistique
+
+## 2026-07-20 · SUITE DE B3 — M8-FUSION livré et promu
+
+**2026-07-20 ~16:30 [EXÉCUTANT→CONSCIENCE] LIVRAISON — M8-FUSION, une seule administration**
+  fait : la console quitte `page-level` (« Console du site » : 0 occurrence) ; ses 5 blocs deviennent des sections du Panneau prof. Vérifié par la conscience : **les 5 fonctions `_bloc*` sont identiques md5 avant/après** (déplacées, non réécrites) ; seules `_m8Accordeon` et `m8ToggleBloc` ont disparu, exactement le périmètre autorisé ; diff 50/85/23, les 50 lignes retirées classées une par une. Mobile : contenu 98 → 364 px, 0 cible sous-norme. Desktop : sidebar 230 px verticale, boutons 229×41 INCHANGÉS — règle du desktop de plein droit tenue.
+  résolution : promu v8.3.0 (commit 2ef74c102b), point de retour 62f32f7e89. **Une reprise de l'exécutant contre la conscience, fondée** : la conscience avait exigé « au repos, rien du tout » pour la pastille de mode test ; l'exécutant a montré que la pastille est AUSSI le bouton d'activation — sans contrôle au repos, le mode test devient inactivable. Son « 🧪 Mode test » discret et sans état affiché est retenu : seul l'état d'exception s'orne.
+  → mots-clés : une seule administration · _bloc identiques md5 · point orange tprof-testdot · pastille au repos
+
+**2026-07-20 ~16:00 [CONSCIENCE→EXÉCUTANT] SUGGESTION ACCEPTÉE — point orange sur le bouton flottant**
+  fait : l'exécutant a proposé, EN PLUS de la pastille d'en-tête, un point orange sur le bouton flottant lui-même, pour que le mode test reste visible **panneau fermé**.
+  résolution : accepté par la conscience comme meilleur que sa propre spécification — application directe du corollaire de sécurité du plan (une décision de sûreté ne se tranche pas sur un argument d'encombrement). Vérifié au harnais : `display:none` au repos → `inline-block` ambre en mode test.
+  → mots-clés : corollaire de sécurité · panneau fermé · m8RendreIndicateursTest
