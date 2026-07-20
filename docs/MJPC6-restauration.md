@@ -55,3 +55,11 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT
 - **Contenu promu** : ④ éditeur de taxonomie (arborescence 5 domaines / 40 familles / 154 notions, création, renommage prof+élève+niveaux+exemple, désactivation réversible ; aucune suppression, aucun id éditable ; bandeau mode test ; `meta/version` incrémentée à chaque écriture)
 - **Audit** : parseurs rejoués, diff = 2 lignes remplacées + 460 ajoutées, MJPC_PURGE intact au caractère près, interdits vérifiés au navigateur, trafic réseau surveillé (GET seuls en mode test), captures desktop + 390 px
+
+## Point de retour — PROMOTION M8-MOBILE (index.html), 20/07/2026
+- **Fichier** : `index.html` (production)
+- **État AVANT** : md5 `f939e60d0d23fbb4b291f460b3277709`, 352 684 o, v8.1.0
+- **État APRÈS** : md5 `5b6eb7e1aee516da6e04aeb08745d19e`, 356 815 o, v8.2.0
+- **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT
+- **Contenu promu** : passe tactile de la console — accordéon exclusif (un seul bloc ouvert), cibles ≥ 44 px, pleine largeur sous 480 px, zéro débordement horizontal
+- **Audit** : parseurs rejoués · diff 3 retirées/51 ajoutées/5 hunks conforme · **les 5 fonctions `_bloc*` identiques md5 avant/après** · `_sitePut`/`_siteDelete`/`fetch`/`PUT` en nombres identiques · mesures au harnais tactile refaites par la conscience (sommaire 3 195 px → 289 px, 24 cibles sous-norme → 0) · desktop non dégradé (boutons internes inchangés) · zéro écriture hub
