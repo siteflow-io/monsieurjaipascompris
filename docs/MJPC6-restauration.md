@@ -96,3 +96,11 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **État APRÈS** : md5 `c9c3d326d85081a9fce45bfe68158d09`, 363 446 o, v8.4.3
 - **Contenu promu** : M8-BADGE (exécutant : retrait du bandeau dev, badge = pastille de version dynamique, zone tactile ≥44 px) + complément conscience (décision de Paul : plus de témoin « ⚡ ADMIN », le badge reste « v+APP_VERSION » en session prof ; la couture `loginAsProf` restaure aussi la version après le mode test — témoin « 👁 TEST » intact).
 - **Audit** : diff 7 changements (exécutant) + 2 lignes (conscience), double parseur, harnais lecture seule aux deux tailles, cinq tapes deux sens, restoreSession rejouée, zéro écriture partie, captures livrées.
+
+## Points de retour — PROMOTION M10, les jumelles réécriture (21/07/2026)
+### reecriture.html
+- **AVANT** : md5 `a4a731298a28…` (239 262 o, socle 1.0.0) — **APRÈS** : md5 `c2e41fccc1983b758902fa265d671315` (251 985 o, v2.0.0, socle 1.1.0)
+### reecriture_bb4e.html
+- **AVANT** : md5 `5798f2527221…` (108 540 o, socle 1.0.0) — **APRÈS** : md5 `ea93996a3c3b824f191e2909cf4bb8aa` (121 250 o, v2.0.0, socle 1.1.0)
+- **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT (jumelles : restaurer LES DEUX ensemble).
+- **Contenu promu** : portail code+nom+prénom (MENEY retiré, faille `?mode=prof` fermée), socle 1.1.0 + shunt MJPC (§8), « Mes réécritures » multi-lots, pastille 2.0.0 + panneau « ? » (annonces lecture seule), passe tactile ≤480 px, bloc diagnostic, textes élève (5 coutures conscience sur signalement Paul : clôture sur l'effort, attente sans acteur, « ton prof » éradiqué casse-insensible, 1re personne). Moteur de pièges 6/6 md5-intact.
