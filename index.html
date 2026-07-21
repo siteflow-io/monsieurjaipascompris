@@ -186,8 +186,16 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .upload-progress { position: absolute; bottom: 0; left: 0; height: 3px; background: #ffb86c; border-radius: 0 0 10px 10px; width: 0; transition: width 0.3s; }
 .upload-done .upload-indicator { color: #34d399; }
 .upload-done .upload-progress { background: #34d399; }
-.admin-banner { display: none; position: fixed; top: 0; left: 0; right: 0; background: rgba(255,184,108,0.9); color: #1a1030; font-family: 'EB Garamond', serif; font-size: 0.9rem; font-weight: 600; padding: 8px 24px; z-index: 9999; text-align: center; backdrop-filter: blur(10px); }
+/* ═══ M8-IDENTITÉ — témoin de la vue ENVERS (doctrine §I) : liseré ambre,
+   zéro pixel de contenu, non cliquable par construction. Le texte de
+   l'ancien bandeau vit désormais en tête du Tableau de bord. ═══ */
+.admin-banner { display: none; position: fixed; inset: 0; border: 3px solid rgba(255,184,108,0.85); pointer-events: none; background: transparent; z-index: 9998; }
 .admin-mode .admin-banner { display: block; }
+#val-form { display: block; margin: 0; }
+#val-code { margin-top: 0; padding-right: 96px; }
+.val-code-wrap { position: relative; }
+.val-code-toggle { position: absolute; right: 6px; top: 50%; transform: translateY(calc(-50% - 5px)); min-height: 44px; min-width: 44px; padding: 0 12px; background: transparent; border: none; color: rgba(255,255,255,0.45); font-family: 'EB Garamond', serif; font-size: 0.92rem; font-style: italic; cursor: pointer; border-radius: 8px; }
+.val-code-toggle:hover { color: #ffb86c; background: rgba(255,184,108,0.08); }
 
 /* ====== OUTILS PROF (mode admin) ====== */
 .admin-tools-btn { display: none; position: fixed; top: 76px; right: 16px; z-index: 10000; background: rgba(255,184,108,0.9); color: #1a1030; border: none; font-family: 'EB Garamond', serif; font-size: 0.88rem; font-weight: 600; padding: 6px 14px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,184,108,0.3); }
@@ -698,12 +706,18 @@ body.admin-mode .admin-only { display: block; }
     <div class="val-divider"></div>
     <div class="val-level-badge" id="val-badge">—</div>
     <div class="val-label">Identifie-toi pour accéder à tes cours</div>
+    <form id="val-form" autocomplete="on" onsubmit="doLogin();return false;">
     <div class="val-input-pair">
-      <input class="val-input" id="val-nom" type="text" placeholder="Nom" autocomplete="off">
-      <input class="val-input" id="val-prenom" type="text" placeholder="Prénom" autocomplete="off">
+      <input class="val-input" id="val-nom" type="text" placeholder="Nom" autocomplete="username">
+      <input class="val-input" id="val-prenom" type="text" placeholder="Prénom" autocomplete="additional-name">
+    </div>
+    <div class="val-code-wrap">
+      <input class="val-input" id="val-code" type="password" inputmode="numeric" maxlength="5" placeholder="Code personnel" autocomplete="current-password">
+      <button type="button" class="val-code-toggle" id="val-code-toggle" aria-label="Afficher le code" onclick="basculerAffichageCode()">Afficher</button>
     </div>
     <div class="val-status" id="val-status"></div>
-    <button class="val-btn" id="val-btn" onclick="doLogin()">Entrer</button>
+    <button class="val-btn" id="val-btn" type="submit">Entrer</button>
+    </form>
     <div class="val-error" id="val-error"></div>
   </div>
 </div>
@@ -803,7 +817,7 @@ body.admin-mode .admin-only { display: block; }
   </div>
   <div class="bottom-nav"><div class="bnav-info">Niveau : <strong id="bnav-level">3ème</strong></div><div class="bnav-search">⌕ Rechercher</div></div>
 </div>
-<div class="admin-banner" id="admin-banner">📁 MODE ADMIN — Glisse tes fichiers sur les documents. Ctrl+Espace pour quitter.</div>
+<div class="admin-banner" id="admin-banner" aria-hidden="true"></div>
 <button class="admin-tools-btn" id="admin-tools-btn" onclick="toggleAdminTools()">📚 Mes applications</button>
 <button class="tprof-btn" id="tprof-btn" onclick="openProfPanel()"><span id="tprof-testdot"></span>🛠 Panneau prof</button>
 
@@ -956,6 +970,7 @@ var levelThemes={'6e':{bg:'linear-gradient(180deg, #1e1730 0%, #2a1e35 25%, #3d2
      ② ANNONCES : chargerAnnonces, ecrireAnnonce, supprimerAnnonce, apercu…
      ④ TAXONOMIE : éditeur du référentiel /taxonomie (section M8bis, plus bas)
      FUSION     : M8_SECTION, m8RendreIndicateursTest, _profSectionAnnonces/Brevet/Taxo (section M8-FUSION, plus bas)
+     IDENTITÉ   : les trois axes — basculerVue, _lireVueEnvers, _atterrirProf (section M8-IDENTITÉ) ; publication : isPubFor tolérant, _visiblePourSession, _markPub en slug
    ────────────────────────────────────────────────────────────────────── */
 
 /* ─── Mode test : tant qu'il est actif, AUCUNE écriture ne part au hub.
@@ -1889,8 +1904,8 @@ function publierManifeste(db){
 }
 
 /* Pastille de version du site — en dur (M8). Promotion au socle prévue M15. */
-var APP_VERSION="8.3.0";
-var APP_VERSION_DATE="2026-07-20";
+var APP_VERSION="8.4.1";
+var APP_VERSION_DATE="2026-07-21";
 var MJPC_CORE_VERSION="1.0.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
@@ -2060,28 +2075,48 @@ function _pubCtrlToutes(node, level, kind, chnum, snum, itemId){
   return '<span class="pub-dot pub-all '+etat+'" title="'+titre+'" onclick="event.stopPropagation();'+call+'">'+libelle+'</span>';
 }
 
-function _markPub(node,slug,nv){if(!node.published||typeof node.published!=='object')node.published={};node.published[slug]=nv;}
+function _markPub(node,cls,nv){ /* M8-IDENTITÉ : écrit la clé en SLUG (canonique) ; '*' = toutes classes (forme true, conservée en lecture) */
+  if(cls==='*'){node.published=(nv===true)?true:{};return;}
+  if(!node.published||typeof node.published!=='object')node.published={};
+  node.published[_slugifyClass(cls)]=nv;}
 function _applyPubCascade(level,chnum,snum,itemId,slug,nv){
- var d=chapitresData[level];if(!d||!d[chnum])return;var ch=d[chnum];var paths=[];
- function put(p){paths.push(p+'/published/'+slug);}
+ /* M8-IDENTITÉ (I5) : la clé écrite au hub est le SLUG canonique ; toute ancienne
+    clé du même slug (nom brut) est PURGÉE (mémoire + PUT null) — migration douce,
+    une classe = une clé, jamais deux. */
+ var d=chapitresData[level];if(!d||!d[chnum])return;var ch=d[chnum];var paths=[];var nulls=[];
+ var slugCanon=_slugifyClass(slug);
+ function put(p){paths.push(p+'/published/'+slugCanon);}
+ function purge(node,p){if(node&&node.published&&typeof node.published==='object'){Object.keys(node.published).forEach(function(k){if(k!==slugCanon&&_slugifyClass(k)===slugCanon){delete node.published[k];nulls.push(p+'/published/'+k);}});}}
  if(itemId){var sce=ch.seances[snum];if(!sce||!sce.items||!sce.items[itemId])return;var it=sce.items[itemId];
-  _markPub(it,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId);
-  if(nv){_markPub(sce,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);}
+  purge(it,'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId);_markPub(it,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId);
+  if(nv){purge(sce,'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);_markPub(sce,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);purge(ch,'/site/'+level+'/chapitres/'+chnum);_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);}
  }else if(snum){var sce=ch.seances[snum];if(!sce)return;
-  _markPub(sce,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);
-  if(nv){_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);}
-  else{var its=sce.items||{};Object.keys(its).forEach(function(k){if(its[k]&&typeof its[k]==='object'){_markPub(its[k],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+k);}});}
- }else{_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);
-  if(!nv){var ses=ch.seances||{};Object.keys(ses).forEach(function(sk){var sc=ses[sk];if(!sc||typeof sc!=='object')return;_markPub(sc,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk);var its=sc.items||{};Object.keys(its).forEach(function(ik){if(its[ik]&&typeof its[ik]==='object'){_markPub(its[ik],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk+'/items/'+ik);}});});}
+  purge(sce,'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);_markPub(sce,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum);
+  if(nv){purge(ch,'/site/'+level+'/chapitres/'+chnum);_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);}
+  else{var its=sce.items||{};Object.keys(its).forEach(function(k){if(its[k]&&typeof its[k]==='object'){purge(its[k],'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+k);_markPub(its[k],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+k);}});}
+ }else{purge(ch,'/site/'+level+'/chapitres/'+chnum);_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);
+  if(!nv){var ses=ch.seances||{};Object.keys(ses).forEach(function(sk){var sc=ses[sk];if(!sc||typeof sc!=='object')return;purge(sc,'/site/'+level+'/chapitres/'+chnum+'/seances/'+sk);_markPub(sc,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk);var its=sc.items||{};Object.keys(its).forEach(function(ik){if(its[ik]&&typeof its[ik]==='object'){_markPub(its[ik],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk+'/items/'+ik);}});});}
  }
  paths.forEach(function(p){fetch(FIREBASE_BASE+p+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nv)}).catch(function(){});});
+ nulls.forEach(function(p){fetch(FIREBASE_BASE+p+'.json',{method:'DELETE'}).catch(function(){});});
  renderChapitres(level);
 }
 function togglePublishChapterCls(level,num,slug){var d=chapitresData[level];if(!d||!d[num])return;_applyPubCascade(level,num,'','',slug,!isPubFor(d[num],slug));}
 function togglePublishSeanceCls(level,chnum,snum,slug){var d=chapitresData[level];if(!d||!d[chnum]||!d[chnum].seances[snum])return;_applyPubCascade(level,chnum,snum,'',slug,!isPubFor(d[chnum].seances[snum],slug));}
 function togglePublishItemCls(level,chnum,snum,itemId,slug){var d=chapitresData[level];if(!d||!d[chnum]||!d[chnum].seances[snum]||!d[chnum].seances[snum].items[itemId])return;_applyPubCascade(level,chnum,snum,itemId,slug,!isPubFor(d[chnum].seances[snum].items[itemId],slug));}
-function isPubFor(node,cls){if(!node)return false;var p=node.published;if(p===true)return true;if(!p||typeof p!=='object')return false;return !!p[cls];}
-function _eleveClasse(){return (TRACK.eleve&&TRACK.eleve.classe)?_slugifyClass(TRACK.eleve.classe):'';}
+/* ═══ M8-IDENTITÉ (I1+I5) — publication : UN SEUL lecteur, tolérant.
+   Clés historiques = noms bruts ("4E BANKSY") ; clé canonique = slug ("4e_banksy").
+   Les deux formes sont lues ; la clé exactement canonique prime si les deux coexistent.
+   INTERDICTION (doctrine §III) : plus aucun code ne teste .published directement. ═══ */
+function isPubFor(node,cls){if(!node)return false;var p=node.published;if(p===true)return true;if(!p||typeof p!=='object')return false;var s=_slugifyClass(cls||'');if(!s)return false;if(Object.prototype.hasOwnProperty.call(p,s))return !!p[s];var ks=Object.keys(p);for(var i=0;i<ks.length;i++){if(_slugifyClass(ks[i])===s)return !!p[ks[i]];}return false;}
+function _visiblePourSession(node,level){
+  if(TRACK.eleve&&TRACK.eleve.is_prof){
+    if(typeof ADMIN_LENS!=='undefined'&&ADMIN_LENS!=='all')return isPubFor(node,ADMIN_LENS);
+    return _isPubAny(node,level);
+  }
+  return isPubFor(node,_eleveClasse());
+}
+function _eleveClasse(){return (TRACK.eleve&&TRACK.eleve.classe)?TRACK.eleve.classe:'';}   /* M8-IDENTITÉ (I5) : brute — isPubFor normalise, une seule fois */
 function renderChapitres(level){
   var container=document.getElementById('chapters-dynamic');
   if(!container)return;
@@ -2639,7 +2674,7 @@ function uploadFileForChapterItem(file,level,chnum,snum,itemId){
       fetch(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(res.drive_file_id)}),
       fetch(FIREBASE_BASE+basePath+'/published.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
     ]).then(function(){
-      item.source='drive';item.ref=res.drive_file_id;item.published=true;
+      item.source='drive';item.ref=res.drive_file_id;_markPub(item,'*',true);   /* M8-IDENTITÉ : routé — comportement conservé (publié pour toutes les classes) ; l'opportunité de ce défaut reste à arbitrer par Paul */
       showUploadToast('\u2705 Fichier li\u00e9 \u00e0 l\u2019item','ok');
       renderChapitres(level);
     });
@@ -2917,26 +2952,28 @@ function showAccueilBg(){document.getElementById('bg-accueil').style.opacity='1'
 var TRACK={eleve:null,session:null,isActive:true,activeStart:0,activeTotal:0,scrollMax:0,interactions:0,score:'',openTime:0};
 var currentLevel=(new URLSearchParams(window.location.search).get('n')||'').toLowerCase();
 if(!levelLabels[currentLevel])currentLevel=null;
-window.addEventListener('DOMContentLoaded',function(){var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.getElementById('val-btn').style.display='none';document.getElementById('dev-banner').style.display='block';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&TRACK.eleve.niveau===currentLevel){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
+window.addEventListener('DOMContentLoaded',function(){var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(restored&&TRACK.eleve&&TRACK.eleve.is_prof&&!currentLevel){_atterrirProf();return;}if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.querySelector('.val-code-wrap').style.display='none';document.getElementById('val-btn').style.display='none';document.getElementById('dev-banner').style.display='block';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&(TRACK.eleve.is_prof||TRACK.eleve.niveau===currentLevel)){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
 function _normName(s){return String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');}
 function _findEleveByName(full){var t=_normName(full);if(!t)return null;var keys=Object.keys(classesData||{});for(var i=0;i<keys.length;i++){var slug=keys[i];var cl=classesData[slug];if(!cl||typeof cl!=='object'||cl.archivee)continue;var names=extractEleves(cl,[]);for(var j=0;j<names.length;j++){if(_normName(names[j])===t)return{slug:slug,nom:names[j],classe:cl,code:_eleveCode(names[j])};}}return null;}
-function _findEleveByCode(code){var keys=Object.keys(codesData||{});for(var i=0;i<keys.length;i++){var e=codesData[keys[i]];if(!e||e.code!==code)continue;var cl=classesData[e.classe];if(!cl||typeof cl!=='object'||cl.archivee)continue;var nom=e.name||e.nom||e.nomComplet||'';if(!nom)continue;return{slug:e.classe,nom:nom,classe:cl,code:code};}return null;}
 function _loginEleveFound(found,status){var cl=found.classe;var eleve={is_prof:false,nom:found.nom,prenom:'',classe:found.slug,niveau:(cl&&cl.niveau)||currentLevel||'3e',code:found.code||'',display:found.nom,uuid:''};ensureEleveUuid(eleve).then(function(ev){TRACK.eleve=ev;_writeSharedSession(ev);if(typeof notifyConnection==='function')notifyConnection(ev);if(typeof startHeartbeat==='function')startHeartbeat();currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);});}
 function _writeSharedSession(ev){try{var o=Object.assign({},ev||{},{ts:Date.now()});var p=JSON.stringify(o);sessionStorage.setItem('mjpc_eleve',p);try{localStorage.setItem('mjpc_eleve',p);}catch(e){}}catch(e){}}
 function doLogin(){
+  /* M8-IDENTITÉ (I3) : entrée unique code + nom + prénom, comme dans les apps.
+     PORTE PROF (sûreté, arbitrage Q2) : un code de PROF_CODES ouvre la session prof
+     quels que soient nom et prénom (même vides) — c'est l'entrée quotidienne de Paul. */
   var nom=document.getElementById('val-nom').value.trim();var prenom=document.getElementById('val-prenom').value.trim();
+  var codeEl=document.getElementById('val-code');var code=codeEl?codeEl.value.trim():'';
   var err=document.getElementById('val-error');var status=document.getElementById('val-status');var btn=document.getElementById('val-btn');
   err.textContent='';
-  if(/^\d{3,5}$/.test(nom)&&!prenom&&PROF_CODES.indexOf(nom)>=0){loginAsProf();return;}
-  if(!nom){err.textContent='Tape ton nom et ton prénom, ou ton code.';return;}
-  status.textContent='Vérification\u2026';status.classList.remove('connected');btn.disabled=true;
+  if(code&&PROF_CODES.indexOf(code)>=0){loginAsProf();return;}
+  if(!nom||!prenom||!code){err.textContent='\u00c9cris ton nom, ton pr\u00e9nom et ton code personnel.';return;}
+  status.textContent='V\u00e9rification\u2026';status.classList.remove('connected');btn.disabled=true;
   var proceed=function(){
-    btn.disabled=false;var found=null;var isCode=(/^\d{3,5}$/.test(nom)&&!prenom);
-    if(isCode){found=_findEleveByCode(nom);}
-    else if(nom&&prenom){found=_findEleveByName(nom+' '+prenom)||_findEleveByName(prenom+' '+nom);}
-    else{found=_findEleveByName(nom);}
-    if(found){_loginEleveFound(found,status);}
-    else{status.textContent='';err.textContent=isCode?'Code non reconnu. Demande \u00e0 ton professeur.':'Nom non reconnu. V\u00e9rifie l\u2019orthographe ou demande \u00e0 ton professeur.';setTimeout(function(){err.textContent='';},4000);}
+    btn.disabled=false;
+    var found=_findEleveByName(nom+' '+prenom)||_findEleveByName(prenom+' '+nom);
+    if(!found){status.textContent='';err.textContent='Nom non reconnu. V\u00e9rifie l\u2019orthographe, ou vois avec moi en classe.';setTimeout(function(){err.textContent='';},4000);return;}
+    if(!found.code||found.code!==code){status.textContent='';err.textContent='Ce code ne correspond pas. V\u00e9rifie-le, ou vois avec moi en classe.';setTimeout(function(){err.textContent='';},4000);return;}
+    _loginEleveFound(found,status);
   };
   if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(proceed);});}else proceed();
 }
@@ -2947,9 +2984,9 @@ function loginAsProf(){
   _writeSharedSession(TRACK.eleve);
   notifyConnection(TRACK.eleve);
   startHeartbeat();
-  // Bascule en mode admin
-  DEV_MODE=true;ADMIN_MODE=true;
-  document.body.classList.add('admin-mode');
+  /* M8-IDENTITÉ : la VUE (axe ②) est relue au retour — envers par défaut */
+  ADMIN_MODE=_lireVueEnvers();
+  document.body.classList.toggle('admin-mode',ADMIN_MODE);
   if(!currentLevel)currentLevel='3e';
   var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}
   var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\u26a1 ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}
@@ -2957,8 +2994,8 @@ function loginAsProf(){
   document.getElementById('page-home').classList.add('active');
   ['3e','4e','5e','6e'].forEach(function(lvl){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='1';card.style.pointerEvents='auto';card.style.cursor='pointer';}});
   initHome();
-  if(typeof initAdminDragDrop_==='function')initAdminDragDrop_();
-  if(typeof loadDocsList_==='function')loadDocsList_();
+  verifierAlerteRegles();   /* M8-IDENTITÉ : l'alerte J+29 vivait dans activateAdmin, disparu — elle vit à la connexion prof */
+  if(ADMIN_MODE)_initOutilsProf();
 }
 
 function ensureEleveUuid(eleve){
@@ -3020,7 +3057,6 @@ function updatePresence(){
 }
 
 var PRESENCE_CONTEXT={chapter:'',seance:'',item:''};
-document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('page-validation').classList.contains('active'))doLogin();});
 function initHome(){
   showAccueilBg();
   var isAllAccess=TRACK.eleve&&(TRACK.eleve.classe==='TEST'||TRACK.eleve.is_prof);
@@ -3139,14 +3175,14 @@ function collectChapterItems(level,kind){
   var data=chapitresData[level]||{};
   var result=[];
   Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);}).forEach(function(chnum){
-    var ch=data[chnum];if(!ch.published)return;
+    var ch=data[chnum];if(!_visiblePourSession(ch,level))return;   /* M8-IDENTITÉ (I1) */
     var seances=ch.seances||{};
     Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);}).forEach(function(snum){
-      var sce=seances[snum];if(!sce.published)return;
+      var sce=seances[snum];if(!_visiblePourSession(sce,level))return;   /* M8-IDENTITÉ (I1) */
       var items=sce.items||{};
       Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);}).forEach(function(itemId){
         var it=items[itemId];
-        if(!it.published||it.kind!==kind||!it.ref)return;
+        if(!_visiblePourSession(it,level)||it.kind!==kind||!it.ref)return;   /* M8-IDENTITÉ (I1) */
         result.push({chnum:chnum,chapTitle:ch.title||'',seanceTitle:sce.title||'',itemId:itemId,item:it});
       });
     });
@@ -3168,16 +3204,16 @@ function _openDicteeFromList(ref){if(typeof openDicteeById==='function')openDict
 function _openReecritureFromList(ref){if(typeof openReecriture==='function')openReecriture(ref,'');}
 function _openQcmFromList(ref){openViewer('\u00c9valuation QCM','evaluation-qcm.html?mode=eleve&eval='+encodeURIComponent(ref));}
 
-function gotoDictee(){var level=clickedLevel||currentLevel||'';var dictees=collectChapterItems(level,'dictee');var corrUrl=FIREBASE_BASE+'/correction_dictee.json';fetch(corrUrl).then(function(r){return r.json()}).catch(function(){return null}).then(function(corrVal){var corr=[];if(corrVal){corr=Object.keys(corrVal).map(function(id){var cfg=corrVal[id].config||{};return{id:id,title:cfg.title||id,classe:cfg.classe||'',niveau:(cfg.niveau||'').toLowerCase().trim(),published:cfg.published!==false};}).filter(function(d){return d.published&&(!level||d.niveau===level)});}showDicteeList(dictees,corr,level);});}
+function gotoDictee(){var level=clickedLevel||currentLevel||'';var dictees=collectChapterItems(level,'dictee');showDicteeList(dictees,level);}   /* M8-IDENTITÉ (I2) : le site navigue dans le CONTENU — les corrections nominatives s'atteignent par l'identité, dans l'app */
 function openReecriture(id,title){openViewer(title||'Réécriture','reecriture.html?mode=eleve&reecriture='+encodeURIComponent(id));}
-function showDicteeList(dictees,corr,level){var dicteeEl=document.getElementById('tab-dictee');hideAllTabs();dicteeEl.style.display='block';var btn=document.getElementById('tab-btn-dictee');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Dict\u00e9es co\u00e9valu\u00e9es '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Ton voisin dicte, tu \u00e9cris. Puis vous \u00e9changez les r\u00f4les et corrigez ensemble.</div>';html+=renderItemListByChapter(dictees,'_openDicteeFromList','var(--level-accent)','\ud83d\udcdd');html+='<div class="section-label" style="margin-top:28px">Correction de ma dict\u00e9e manuscrite '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Le prof a corrig\u00e9 ta dict\u00e9e sur papier. Retrouve tes erreurs, tape la bonne orthographe et gagne jusqu\u2019\u00e0 5 points bonus.</div>';if(corr.length===0){html+='<div class="chapter-card" style="padding:18px;text-align:center;color:rgba(255,255,255,0.35);font-style:italic;">Aucune correction disponible pour le moment.</div>';}else{html+='<div class="chapters-list">';for(var j=0;j<corr.length;j++){var c=corr[j];html+='<div class="chapter-card" onclick="openCorrectionDictee(\''+c.id+'\',\''+c.title.replace(/\u0027/g,"\\\u0027")+'\')" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:#d4a017;color:#1a1030;">\ud83d\udccb</div><div class="chapter-info"><div class="chapter-title">'+escapeHtml(c.title)+'</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">'+escapeHtml(c.classe)+'</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Corriger</div></div></div>';}html+='</div>';}dicteeEl.innerHTML=html;}
+function showDicteeList(dictees,level){var dicteeEl=document.getElementById('tab-dictee');hideAllTabs();dicteeEl.style.display='block';var btn=document.getElementById('tab-btn-dictee');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Dict\u00e9es co\u00e9valu\u00e9es '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Ton voisin dicte, tu \u00e9cris. Puis vous \u00e9changez les r\u00f4les et corrigez ensemble.</div>';html+=renderItemListByChapter(dictees,'_openDicteeFromList','var(--level-accent)','\ud83d\udcdd');html+='<div class="section-label" style="margin-top:28px">Correction de ma dict\u00e9e manuscrite</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Le prof a corrig\u00e9 ta dict\u00e9e sur papier. Retrouve tes erreurs, tape la bonne orthographe et gagne jusqu\u2019\u00e0 5 points bonus.</div>';html+='<div class="chapters-list"><div class="chapter-card" onclick="openMesDictees()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:#d4a017;color:#1a1030;">\ud83d\udccb</div><div class="chapter-info"><div class="chapter-title">Mes dict\u00e9es corrig\u00e9es</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Identifie-toi et retrouve tes corrections</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Ouvrir</div></div></div></div>';dicteeEl.innerHTML=html;}
 function openDicteeById(id){openViewer('Dictée coévaluée','dictee_universelle.html?dictee='+encodeURIComponent(id));}
-function openCorrectionDictee(id,title){openViewer(title||'Correction dictée','correction_dictee.html?mode=eleve&dictee='+encodeURIComponent(id));}
+function openMesDictees(){openViewer('Mes dict\u00e9es corrig\u00e9es','correction_dictee.html?mode=eleve');}   /* M8-IDENTITÉ (I2) */
 function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}
 function generateSessionId(){return 'ses-'+Date.now().toString(36)+'-'+Math.random().toString(36).substr(2,6);}
 function sendToBackend(data){if(data.action==='close'&&navigator.sendBeacon){var blob=new Blob([JSON.stringify(data)],{type:'application/json'});navigator.sendBeacon(APPS_SCRIPT_URL,blob);return Promise.resolve({status:'beacon_sent'});}return fetch(APPS_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)}).then(function(){return{status:'sent'};}).catch(function(err){console.warn('[Tracking]',err);return{status:'error'};});}
 function trackLogin(nom,prenom,niveau){return fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'login',nom:nom,prenom:prenom,niveau:niveau})}).then(function(r){return r.json();}).then(function(data){if(data.error)return{success:false,error:data.error};TRACK.eleve=data.eleve;_writeSharedSession(data.eleve);return{success:true,eleve:data.eleve};}).catch(function(err){console.warn('[Login]',err);return{success:false,error:'Erreur réseau. Réessaie.'};});}
-function restoreSession(){chargerBrevetDates(function(){});var stored=sessionStorage.getItem('mjpc_eleve');if(stored){try{TRACK.eleve=JSON.parse(stored);if(TRACK.eleve&&TRACK.eleve.is_prof){DEV_MODE=true;ADMIN_MODE=true;document.body.classList.add('admin-mode');var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\u26a1 ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}}startHeartbeat();return true;}catch(e){}}return false;}
+function restoreSession(){chargerBrevetDates(function(){});var stored=sessionStorage.getItem('mjpc_eleve');if(stored){try{TRACK.eleve=JSON.parse(stored);if(TRACK.eleve&&TRACK.eleve.is_prof){ADMIN_MODE=_lireVueEnvers();document.body.classList.toggle('admin-mode',ADMIN_MODE);var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\u26a1 ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}}startHeartbeat();return true;}catch(e){}}return false;}
 function trackOpen(chapitre,doc,type_doc){if(!TRACK.eleve)return;if(TRACK.session)trackClose();var sid=generateSessionId();TRACK.session=sid;TRACK.openTime=Date.now();TRACK.activeStart=Date.now();TRACK.activeTotal=0;TRACK.isActive=true;TRACK.scrollMax=0;TRACK.interactions=0;TRACK.score='';startTracking_();sendToBackend({action:'open',session_id:sid,eleve:TRACK.eleve.display,classe:TRACK.eleve.classe,niveau:TRACK.eleve.niveau,chapitre:chapitre,document:doc,type_doc:type_doc});}
 function trackClose(){if(!TRACK.session)return;if(TRACK.isActive)TRACK.activeTotal+=Date.now()-TRACK.activeStart;sendToBackend({action:'close',session_id:TRACK.session,duree_totale:Math.round((Date.now()-TRACK.openTime)/1000),duree_active:Math.round(TRACK.activeTotal/1000),scroll_max:TRACK.scrollMax,interactions:TRACK.interactions,score:TRACK.score});stopTracking_();TRACK.session=null;}
 function trackScore(s){TRACK.score=String(s);}
@@ -3187,11 +3223,47 @@ function onInteraction_(e){if(!TRACK.session)return;var el=e.target;if(el.tagNam
 var scrollThrottle_=null;
 function startTracking_(){document.addEventListener('visibilitychange',onVisibilityChange_);var sh=function(){if(scrollThrottle_)return;scrollThrottle_=setTimeout(function(){scrollThrottle_=null;onScroll_();},500);};window.addEventListener('scroll',sh,{passive:true});window._trackScrollHandler=sh;document.addEventListener('click',onInteraction_);window.addEventListener('beforeunload',trackClose);window.addEventListener('pagehide',trackClose);}
 function stopTracking_(){document.removeEventListener('visibilitychange',onVisibilityChange_);if(window._trackScrollHandler)window.removeEventListener('scroll',window._trackScrollHandler);document.removeEventListener('click',onInteraction_);window.removeEventListener('beforeunload',trackClose);window.removeEventListener('pagehide',trackClose);}
-var DEV_MODE=false,ADMIN_MODE=false,DOCS_CACHE={};
+var ADMIN_MODE=false,DOCS_CACHE={};   /* M8-IDENTITÉ (I4) : DEV_MODE a disparu — une seule identité prof, celle du code */
 var badgeTapCount=0,badgeTapTimer=null;
-function activateAdmin(){publierManifesteREST();if(!DEV_MODE){DEV_MODE=true;ADMIN_MODE=true;if(!currentLevel)currentLevel='3e';TRACK.eleve={nom:'Dev',prenom:'Test',classe:'DEV',niveau:currentLevel,display:'Dev Mode'};document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');['3e','4e','5e','6e'].forEach(function(lvl){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='1';card.style.pointerEvents='auto';card.style.cursor='pointer';}});var badge=document.getElementById('proto-badge');if(badge){badge.textContent='⚡ ADMIN';badge.style.background='rgba(255,184,108,0.9)';badge.style.color='#1a1030';}var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.body.classList.add('admin-mode');if(clickedLevel)applyPublished(clickedLevel);verifierAlerteRegles();initHome();initAdminDragDrop_();loadDocsList_();}else{ADMIN_MODE=!ADMIN_MODE;document.body.classList.toggle('admin-mode',ADMIN_MODE);if(clickedLevel)applyPublished(clickedLevel);var badge=document.getElementById('proto-badge');if(badge){badge.textContent=ADMIN_MODE?'⚡ ADMIN':'⚡ DEV';badge.style.background=ADMIN_MODE?'rgba(255,184,108,0.9)':'rgba(15,10,30,0.8)';badge.style.color=ADMIN_MODE?'#1a1030':'rgba(255,255,255,0.3)';}}}
-document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.code==='Space'){e.preventDefault();activateAdmin();}});
-function handleBadgeTap(){badgeTapCount++;if(badgeTapTimer)clearTimeout(badgeTapTimer);badgeTapTimer=setTimeout(function(){badgeTapCount=0;},1500);if(badgeTapCount>=5){badgeTapCount=0;clearTimeout(badgeTapTimer);activateAdmin();}}
+/* ═══ M8-IDENTITÉ — LES TROIS AXES (doctrine §I) ═════════════════════════
+   ① QUI JE SUIS : TRACK.eleve (is_prof) — posé à la connexion, jamais par un raccourci.
+   ② CE QUE JE VOIS : ADMIN_MODE, envers/endroit — bascule Ctrl+Espace ou 5 tapes, prof SEULEMENT.
+      Témoin : le liseré ambre (.admin-banner). Mémorisée ET RELUE (clé mjpc_vue_envers).
+   ③ CE QUI S'ENREGISTRE : le mode test (section M8) — intact, témoins pastille + point orange.
+   activateAdmin et DEV_MODE ont disparu (I4). La bascule ne touche NI l'identité NI le mode test (§VII). */
+function basculerAffichageCode(){
+  /* M8-IDENTITÉ 8.4.1 — demande de Paul : un élève doit pouvoir relire son code.
+     Le champ reste type="password" AU CHARGEMENT (c'est lui qui déclenche
+     l'enregistrement navigateur) ; la bascule n'a lieu qu'au clic. */
+  var c=document.getElementById('val-code');var b=document.getElementById('val-code-toggle');if(!c||!b)return;
+  var visible=(c.type==='text');
+  c.type=visible?'password':'text';
+  b.textContent=visible?'Afficher':'Masquer';
+  b.setAttribute('aria-label',visible?'Afficher le code':'Masquer le code');
+}
+function _lireVueEnvers(){try{var v=sessionStorage.getItem('mjpc_vue_envers');return v===null?true:v==='1';}catch(e){return true;}}
+function _memoriserVueEnvers(){try{sessionStorage.setItem('mjpc_vue_envers',ADMIN_MODE?'1':'0');}catch(e){}}
+var _outilsProfInit=false;
+function _initOutilsProf(){if(_outilsProfInit)return;_outilsProfInit=true;if(typeof initAdminDragDrop_==='function')initAdminDragDrop_();if(typeof loadDocsList_==='function')loadDocsList_();}
+function basculerVue(){
+  if(!(TRACK.eleve&&TRACK.eleve.is_prof))return;   /* un élève n'a pas de bascule — et aucun signal qu'elle existe */
+  ADMIN_MODE=!ADMIN_MODE;_memoriserVueEnvers();
+  document.body.classList.toggle('admin-mode',ADMIN_MODE);
+  if(clickedLevel)applyPublished(clickedLevel);
+  if(ADMIN_MODE)_initOutilsProf();
+}
+function _atterrirProf(){
+  /* M8-IDENTITÉ (I6) : un professeur identifié atterrit sur ses niveaux (écran « choisir son niveau »),
+     jamais sur un refus destiné aux élèves. */
+  document.getElementById('page-validation').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+  ['3e','4e','5e','6e'].forEach(function(lvl){var card=document.querySelector('[data-level="'+lvl+'"]');if(card){card.style.opacity='1';card.style.pointerEvents='auto';card.style.cursor='pointer';}});
+  initHome();
+  verifierAlerteRegles();
+  if(ADMIN_MODE)_initOutilsProf();
+}
+document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.code==='Space'){e.preventDefault();basculerVue();}});
+function handleBadgeTap(){badgeTapCount++;if(badgeTapTimer)clearTimeout(badgeTapTimer);badgeTapTimer=setTimeout(function(){badgeTapCount=0;},1500);if(badgeTapCount>=5){badgeTapCount=0;clearTimeout(badgeTapTimer);basculerVue();}}
 function loadDocsList_(){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getdocs',niveau:currentLevel||''})}).then(function(r){return r.json();}).then(function(data){if(data.documents)data.documents.forEach(function(doc){DOCS_CACHE[doc.doc_id]=doc;});applyDocsToUI_();}).catch(function(err){console.warn('[Docs]',err);});}
 function applyDocsToUI_(){document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){var docId=el.getAttribute('data-docid');var doc=DOCS_CACHE[docId];if(doc&&doc.embed_url){el.classList.add('has-file');var a=el.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}});}
 function initAdminDragDrop_(){document.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');document.querySelectorAll('.drag-over').forEach(function(el){if(el!==d)el.classList.remove('drag-over');});if(d)d.classList.add('drag-over');},false);document.addEventListener('dragenter',function(e){e.preventDefault();e.stopPropagation();},false);document.addEventListener('dragleave',function(e){var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');if(d&&!d.contains(e.relatedTarget))d.classList.remove('drag-over');},false);document.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;document.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});var docItem=e.target.closest('.doc-item[data-docid]');var dropZone=e.target.closest('.fiche-drop-zone[data-section]');var files=e.dataTransfer.files;if(!files||files.length===0)return;var file=files[0];var MAX_SIZE=30*1024*1024;if(file.size>MAX_SIZE){showBigFileGuide_(file,docItem,dropZone);return;}if(docItem){uploadFile_(file,docItem,docItem.getAttribute('data-docid'),docItem.getAttribute('data-chapitre')||'',docItem.getAttribute('data-seance')||'','');}else if(dropZone){uploadFileToSection_(file,dropZone,dropZone.getAttribute('data-section'));}},false);document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){if(!el.querySelector('.admin-delete')){var btn=document.createElement('button');btn.className='admin-delete';btn.textContent='✕';btn.onclick=function(ev){ev.stopPropagation();if(confirm('Supprimer ce document ?'))deleteDoc_(el.getAttribute('data-docid'));};el.appendChild(btn);}});document.querySelectorAll('.fiche-drop-zone').forEach(function(dz){var body=dz.closest('.chapter-body');if(body)body.classList.add('open');});}
@@ -3310,7 +3382,7 @@ function _activerProfilTest(slug){
   else{var cl=classesData[slug];if(!cl)return;classe=slug;niveau=cl.niveau||'3e';nomAff=cl.nom||slug;}
   TRACK.eleve={is_prof:false,is_test:true,uuid:'test',nom:'\u00c9l\u00e8ve test',prenom:'',classe:classe,niveau:niveau,code:'',display:'\u00c9l\u00e8ve test \u2014 '+nomAff};
   _writeSharedSession(TRACK.eleve);
-  if(typeof DEV_MODE!=='undefined')DEV_MODE=false;if(typeof ADMIN_MODE!=='undefined')ADMIN_MODE=false;
+  if(typeof ADMIN_MODE!=='undefined')ADMIN_MODE=false;   /* M8-IDENTITÉ : identité élève-test → vue endroit */
   document.body.classList.remove('admin-mode');
   var badge=document.getElementById('proto-badge');if(badge){badge.textContent='\ud83d\udc41 TEST';badge.style.background='rgba(96,165,250,0.92)';badge.style.color='#06121f';}
   closeProfPanel();
@@ -3337,6 +3409,7 @@ function _profSectionDashboard(){
   var prof=TRACK.eleve&&TRACK.eleve.is_prof?'M. Meney (prof)':(TRACK.eleve?TRACK.eleve.display:'aucune session');
   return '<h2>Tableau de bord</h2>'
     +'<div class="tprof-section-sub">\u00c9tat instantan\u00e9 du site et de la session courante.</div>'
+    +'<div class="tprof-info-row"><span class="tir-label">Vue envers</span><span class="tir-value">\ud83d\udcc1 Glisse tes fichiers sur les documents \u00b7 Ctrl+Espace (ou 5 tapes sur la pastille) pour basculer c\u00f4t\u00e9 \u00e9l\u00e8ve</span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Session</span><span class="tir-value">'+escapeHtml(prof)+'</span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">Niveau courant</span><span class="tir-value">'+(clickedLevel||currentLevel||'\u2014')+'</span></div>'
     +lvls;
