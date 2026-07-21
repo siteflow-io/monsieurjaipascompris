@@ -90,3 +90,9 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **État APRÈS** : md5 `c9c3d326d85081a9fce45bfe68158d09`, 363 446 o, v8.4.3
 - **Contenu promu** : M8-BADGE (exécutant) + complément (conscience, décision Paul) — bandeau dev retiré, badge = pastille de version permanente `'v'+APP_VERSION` (plus de témoin « ⚡ ADMIN », y compris via `restoreSession` ; « 👁 TEST » conservé, restauré par la couture `loginAsProf`), zone tactile ≥ 44 px.
 - **Audits** : exécutant (note à preuves) + conscience n°3 (diff re-mesuré, parseurs, harnais deux tailles, cinq tapes deux sens, bottom-nav en vif, session prof + reload). Écritures : zéro (avortées).
+
+## Point de retour — PROMOTION 8.4.3 (index.html), 21/07/2026
+- **État AVANT** : md5 `b1deabcc72ca47efee6eec25eaab7586`, 363 510 o, v8.4.2
+- **État APRÈS** : md5 `c9c3d326d85081a9fce45bfe68158d09`, 363 446 o, v8.4.3
+- **Contenu promu** : M8-BADGE (exécutant : retrait du bandeau dev, badge = pastille de version dynamique, zone tactile ≥44 px) + complément conscience (décision de Paul : plus de témoin « ⚡ ADMIN », le badge reste « v+APP_VERSION » en session prof ; la couture `loginAsProf` restaure aussi la version après le mode test — témoin « 👁 TEST » intact).
+- **Audit** : diff 7 changements (exécutant) + 2 lignes (conscience), double parseur, harnais lecture seule aux deux tailles, cinq tapes deux sens, restoreSession rejouée, zéro écriture partie, captures livrées.
