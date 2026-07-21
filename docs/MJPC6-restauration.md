@@ -84,3 +84,9 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **Restauration si BUG** : commits du fichier → contenu au sha précédant la promotion → PUT
 - **Contenu promu** : correctif de la vue ENDROIT du professeur — les cinq rendus (`renderChapitres` L2144, `renderChapterCard` L2191/L2193, `renderSeance` L2224, `renderItem` L2242) passent de `isPubFor(x,_eleveClasse())` à `_visiblePourSession(x,level)` ; pour un prof, `_eleveClasse()` vaut « PROF » et filtrait tout (écran vide constaté par Paul en production). Diff total : 6 lignes (5 coutures + pastille).
 - **Audit conscience n°3** : diff intégral conforme · double parseur OK · complétude (2 occurrences restantes de `_eleveClasse` : définition + branche élève de `_visiblePourSession`) · **preuve hors navigateur sur données réelles, fonctions extraites verbatim : 5 contextes à 3/3, ancien chemin 0/3 (bug reproduit)** · parcours au navigateur en lecture seule stricte, desktop + 390 px : envers 3 → endroit 3 → envers 3, captures livrées · 4 écritures avortées (manifeste, présence, Apps Script) · pastille 8.4.1→8.4.2.
+
+## Point de retour — PROMOTION 8.4.3 (index.html), 21/07/2026
+- **État AVANT** : md5 `b1deabcc72ca47efee6eec25eaab7586`, 363 510 o, v8.4.2
+- **État APRÈS** : md5 `c9c3d326d85081a9fce45bfe68158d09`, 363 446 o, v8.4.3
+- **Contenu promu** : M8-BADGE (exécutant) + complément (conscience, décision Paul) — bandeau dev retiré, badge = pastille de version permanente `'v'+APP_VERSION` (plus de témoin « ⚡ ADMIN », y compris via `restoreSession` ; « 👁 TEST » conservé, restauré par la couture `loginAsProf`), zone tactile ≥ 44 px.
+- **Audits** : exécutant (note à preuves) + conscience n°3 (diff re-mesuré, parseurs, harnais deux tailles, cinq tapes deux sens, bottom-nav en vif, session prof + reload). Écritures : zéro (avortées).
