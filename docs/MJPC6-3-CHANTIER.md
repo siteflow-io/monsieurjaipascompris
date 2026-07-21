@@ -139,7 +139,7 @@
 **Reste (S2)** : deux niveaux (structure, pas charte) selon décision S0-④ ; retrait de l'onglet classes (→ site) ; connexion MJPC ; « Mes évaluations » (recyclage de son propre bilan) ; Préparation ; Réglages ; « ? » ; dette « niveau écrasé » (3 options connues, B recommandée : déduire du nom).
 
 ### dictee_universelle.html (S3)
-**Rôle** : dictées autonomes (audio TTS, carnets d'erreurs, dictée ciblée, aménagements par élève — nœud classes_amenages).
+**Rôle** : dictée COÉVALUÉE — l'élève écrit sur papier, un camarade-correcteur transcrit et corrige à la tablette (carnets d'erreurs, aménagements par élève, verrou d'identité 30 min, ~17 onglets prof). **AUCUN audio/TTS** — *rectifié le 21/07 sur mesure du cadrage M9 (0 `speechSynthesis`, 0 `new Audio`, confirmé conscience) : la mention « audio TTS » de cette fiche était fausse et a été propagée jusque dans le prompt M9 ; le fichier fait foi, pas la fiche.* Nota D16 : les RÉSULTATS du hub portent bien `timestamp` (vérifié conscience 21/07 sur les 2 dictées réelles) — c'est le bilan HTML exporté qui est muet ; le correctif D16 est d'affichage.
 **Reste (S3, passe complète)** : toute la grille + **dette A②** (suppression d'élève à désarmer via renvoyerVersMJPC) + intégration taxonomie grammaticale (chantier transversal connu). Ses « dates » sont un embryon de chronologie à raccorder à « Mes dictées ».
 
 ### reecriture.html + reecriture_bb4e.html — LES JUMELLES (S3, une passe pour deux)
