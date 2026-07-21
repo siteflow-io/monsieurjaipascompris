@@ -1,4 +1,10 @@
 # MJPC 6 — PLAN DE TRAVAIL GÉNÉRAL (v50, 16/07/2026 — plan FUSIONNÉ par la conscience : dispositif A0 + livraison M2)
+> ⚠ **CE DOCUMENT EST DÉSORMAIS L'ARCHIVE DE RÉFÉRENCE DU DÉCOUPAGE (21/07/2026).**
+> Il reste INTACT et fait foi, mais **ne se lit plus intégralement** : 1 201 lignes denses consomment ce qu'elles devraient servir (constat mesuré le 21/07 — la conscience n°2 a dû en lire 1 000 pour être fiable, et y a découvert que plusieurs « trouvailles » des 20-21/07 étaient déjà consignées depuis le 16/07 : la visionneuse et le critère projection/consultation, le cahier comme profil, le pipeline screenshot→JSON).
+> **COMMENCER PAR `docs/MJPC6-0-INDEX.md`**, qui dit quelle question va dans quel document :
+> ① `MJPC6-1-DISPOSITIF.md` — comment on travaille · ② `MJPC6-2-DOCTRINE.md` — ce que le système doit être · ③ `MJPC6-3-CHANTIER.md` — ce qui reste à faire · ④ `MJPC6-4-ARCHIVES.md` — ce qui est fait et pourquoi · ⑤ `MJPC6-journal.md` — les cas.
+> *Découpage par EXTRACTION PURE : aucune ligne reformulée, aucune perdue (vérifié mécaniquement, seules les deux lignes de titre ont été remplacées par les en-têtes des quatre documents).*
+
 *Document de reprise totale : une conversation vierge doit pouvoir reprendre le chantier avec ce seul document (+ le socle mjpc-core.js et la doctrine mjpc-doctrine.md du dépôt). Toute décision y est consignée AVEC sa raison. Il est mis à jour à CHAQUE session et re-livré à Paul.*
 
 
