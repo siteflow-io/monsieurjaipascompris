@@ -1904,7 +1904,7 @@ function publierManifeste(db){
 }
 
 /* Pastille de version du site — en dur (M8). Promotion au socle prévue M15. */
-var APP_VERSION="8.4.1";
+var APP_VERSION="8.4.2";
 var APP_VERSION_DATE="2026-07-21";
 var MJPC_CORE_VERSION="1.0.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
@@ -2141,7 +2141,7 @@ function renderChapitres(level){
     nums.forEach(function(num,idx){
       var ch=data[num];
       if(!ch)return;
-      if(!isAdmin && !isPubFor(ch,_eleveClasse()))return;
+      if(!isAdmin && !_visiblePourSession(ch,level))return;   /* 8.4.2 : la vue ENDROIT d'un prof passe par la loupe, pas par une classe « PROF » */
       var posNum=idx+1;
       try{
         html+=renderChapterCard(level,num,ch,posNum,isAdmin);
@@ -2188,9 +2188,9 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
   var bodyHtml='';
   snums.forEach(function(snum,idx){
     var sce=seances[snum];if(!sce)return;
-    if(!isAdmin && !isPubFor(sce,_eleveClasse()))return;
+    if(!isAdmin && !_visiblePourSession(sce,level))return;   /* 8.4.2 */
     var items=sce.items||{};
-    var visibleItems=Object.keys(items).filter(function(k){return items[k] && (isAdmin || isPubFor(items[k],_eleveClasse()));});
+    var visibleItems=Object.keys(items).filter(function(k){return items[k] && (isAdmin || _visiblePourSession(items[k],level));});   /* 8.4.2 */
     if(!isAdmin && visibleItems.length===0)return;
     bodyHtml+=renderSeance(level,num,snum,sce,idx+1,isAdmin);
   });
@@ -2221,7 +2221,7 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   var isNotions=(sce.type==='notions');var subDispNum=0,rendered=0,itemsHtml='';
   ikeys.forEach(function(itemId){
     var it=items[itemId];if(!it)return;
-    if(!isAdmin && !isPubFor(it,_eleveClasse()))return;
+    if(!isAdmin && !_visiblePourSession(it,level))return;   /* 8.4.2 */
     subDispNum++;rendered++;
     var subNumStr=isNotions?(dispNum+'.'+subDispNum):'';
     itemsHtml+=renderItem(level,chnum,snum,itemId,it,subNumStr,isAdmin);
@@ -2239,7 +2239,7 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm'||it.kind==='tache'||it.kind==='debat')iconClass='html';
   var icon=it.icon||(isGallery?'\ud83d\uddbc':'\ud83d\udcc4');
   var hasRef=isGallery?imgKeys.length>0:!!it.ref;
-  var pubV=(isAdmin||isPubFor(it,_eleveClasse()));
+  var pubV=(isAdmin||_visiblePourSession(it,level));   /* 8.4.2 */
   var canOpen=hasRef && pubV;
   var subPrefix=subNum?'<span class="item-sub-num">'+subNum+'</span>':'';
   var actionTxt;
