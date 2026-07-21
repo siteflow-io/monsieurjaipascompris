@@ -7,6 +7,10 @@
 >
 > **QUI LIT** : toute conscience entrante (lecture OBLIGATOIRE, avec le plan) ; tout exécutant qui veut se resynchroniser sans que Paul lui recolle l'historique.
 
+### 21/07 soir — [PAUL→CONSCIENCE] Reproche : « Pourquoi tu m'as parlé d'une séance projetée ? » (audit de cadrage M9)
+**fait** : dans son avis Q2, la conscience n°3 a écrit « c'est ta séance vidéo-projetée » — une affirmation sur la PRATIQUE DE CLASSE de Paul. Vérification faite après le reproche : le mot vient du cadrage de l'exécutant M9 (« le chemin propre de l'app, vidéo-projeté »), repris sans vérification et AGGRAVÉ par l'attribution à Paul. Aucune source : le code applicatif n'a aucune vidéoprojection (4 faux positifs : « vue projetée » du manifeste, « Projet Voltaire », « dessein=projet ») ; la doctrine (séance type, L228) liste la vidéoprojection pour le débat, l'applaudimètre et le QCM — PAS la dictée ; et L259 range précisément « la place exacte de la vidéoprojection » dans « ce qui MANQUE ENCORE (à faire dire par Paul) ».
+**résolution** : fait requalifié en invention de l'exécutant amplifiée par la conscience ; Q2 reste posée mais SANS cet argument — le déroulé réel de la séance de dictée coévaluée est à faire dire par Paul (ce que la doctrine attendait déjà). Famille d'erreur : écrire un fait non lu dans le tour (récidive de ⑨⑩⑫⑭ des consciences précédentes), variante la plus grave car portant sur la pratique de classe dont Paul est la seule source. Même tour : l'audit du cadrage avait déjà été repris une première fois (audit des réponses, pas des absences — 5 points de grille manquants identifiés après coup : relevé cardinal « En attente de validation », point 26 dictionnaire, point 22 présence, points 1-4, points 9/12).
+
 ## FORMAT D'UN CAS — trois niveaux, et le troisième n'est pas garanti
 ```
 AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
