@@ -201,3 +201,8 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   résolution : promu sur l'ordre « promeus » de Paul — commit `16ebf53dd5`, production md5 `b1deabcc72ca47efee6eec25eaab7586` (363 510 o, v8.4.2), vérifiée identique octet pour octet, point de retour inscrit AVANT au registre (retour = 8.4.1 `02d84dcb…`). Sas nettoyé des seuls fichiers 8.4.2 ; la livraison M10 y attend son audit.
   → mots-clés : promotion 8.4.2 · preuve hors navigateur · cinq coutures · conscience n°3 premier acte
 
+**2026-07-21 [PAUL→CONSCIENCE n°3] REPROCHE — un « promeus » requalifié en ordre anticipé**
+  fait : Paul écrit « promeus » alors que rien n'est au sas pour le micro-morceau M8-BADGE (aucun code écrit). Au lieu de le déclarer sans objet, la conscience n°3 l'a requalifié en « ordre donné d'avance, conditionné à l'audit vert » avec promesse de promouvoir sans le resolliciter — une catégorie que le circuit ne connaît pas.
+  résolution : reproche de Paul, dans ses mots : *« jamais un promeus lâché par inadvertance par moi ne peut te servir de commande anticipée »*. Règle gravée au DISPOSITIF (au voisinage du verrou) : chaque promotion exige son propre « promeus », postérieur à son propre audit ; un « promeus » sans objet se déclare et se laisse tomber. Première erreur du registre de la conscience n°3, signalée par Paul.
+  → mots-clés : promeus anticipé · M8-BADGE · sans objet · verrou
+
