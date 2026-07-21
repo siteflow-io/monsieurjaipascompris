@@ -88,6 +88,14 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 .info-i.tip-left .info-tip{left:auto;right:-2px;transform:none}
 .info-i.tip-below .info-tip{bottom:auto;top:calc(100% + 6px)}
 .info-i:hover .info-tip,.info-i:focus .info-tip{display:block}
+/* ═══ M10 — passe tactile (mobile de plein droit ; desktop INCHANGÉ au-dessus du seuil) ═══ */
+@media (max-width: 480px){
+  .container{padding-left:10px;padding-right:10px;}
+  .btn,.btn-primary{min-height:44px;}
+  .btn-sm{min-height:44px;padding-top:10px;padding-bottom:10px;}
+  input,select,textarea{min-height:44px;font-size:16px;}
+  .config-field label{font-size:.9rem;}
+}
 </style>
 </head>
 <body>
@@ -98,7 +106,69 @@ firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDom
 var db=firebase.database();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+/* ═══ BLOC DIAGNOSTIC MJPC (point 23) — à lire AVANT de suspecter le code ═══
+# LE BLOC DIAGNOSTIC — à insérer en tête du script de CHAQUE app et du site
+> **VERSION À COMPLÉTER** — créé le 18/07/2026 sur demande de Paul : « tout ça est à inscrire quelque part, et pas seulement dans le plan : aussi dans les apps, dans le site lui-même, et je parle du code. Ainsi, une instance à qui on upload index peut tout de suite vérifier cette piste-là. »
+> **Principe** : le code doit porter son propre mode d'emploi de diagnostic. Une conversation neuve qui reçoit un seul fichier doit pouvoir, sans plan et sans historique, savoir où regarder en premier quand « ça ne marche plus ».
+
+## Le bloc, à recopier VERBATIM en tête du `<script>` (après le socle MJPC-CORE)
+
+```js
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIAGNOSTIC — À LIRE EN PREMIER SI « ÇA NE MARCHE PLUS »
+   Écosystème MJPC — monsieurjaipascompris.com — Paul Meney
+   Avant de suspecter le code de cette app, vérifier CES CAUSES EXTERNES,
+   dans cet ordre. Elles expliquent la quasi-totalité des pannes soudaines
+   d'une app qui fonctionnait la veille.
+
+   1. LES RÈGLES FIREBASE ONT-ELLES EXPIRÉ ?  ← CAUSE N°1, DÉJÀ VÉCUE
+      Symptôme : "permission_denied", données qui ne chargent plus, écrans
+      vides sur TOUTES les apps en même temps.
+      Les règles créées en "mode test" contiennent une DATE D'EXPIRATION en dur.
+      Le jour venu, tout s'arrête d'un coup, sans que rien n'ait changé au code.
+      → console.firebase.google.com > projet mjpc-hub > Realtime Database >
+        onglet "Règles" > chercher une ligne du type
+        `".read": "now < 1234567890000"` ou `request.time < timestamp.date(...)`.
+      → Précédent : diagnostic initial FAUX (on a accusé le protocole file://
+        puis le code) alors que c'étaient les règles expirées. NE PAS REFAIRE.
+
+   2. LE CACHE DU NAVIGATEUR SERT-IL L'ANCIENNE VERSION ?
+      Symptôme : "j'ai poussé mais rien n'a changé".
+      → Comparer la PASTILLE DE VERSION affichée à l'écran avec APP_VERSION
+        ci-dessous. Si elles diffèrent : rouvrir avec ?v=N (N incrémenté).
+
+   3. UNE DÉPENDANCE EXTERNE EST-ELLE INJOIGNABLE ?
+      Cette app charge depuis Internet (hors Firebase) :
+        - React + ReactDOM (unpkg.com)        [si React]
+        - SDK Firebase compat (gstatic.com)
+        - Polices Google (fonts.googleapis.com) — cosmétique seulement
+      Symptôme : page blanche, "React is not defined", app qui ne boote pas.
+      → Vérifier la console réseau. Ces CDN ne tombent quasi jamais, mais un
+        réseau d'établissement filtrant peut les bloquer.
+
+   4. UNE API NAVIGATEUR MANQUE-T-ELLE ?
+      Web Speech API (lecture audio), visualViewport (zoom/clavier mobile),
+      File System Access. Symptôme : une fonction précise muette, le reste OK.
+
+   5. SEULEMENT ALORS : suspecter le code de cette app.
+      Le socle MJPC-CORE est identique partout : s'il "marche ailleurs",
+      le problème est local. Registre des bugs connus, cause par cause :
+      docs/MJPC6-registre-bugs.md (13 sections, ~150 bugs documentés).
+
+   EN CAS D'URGENCE PENDANT UN COURS : docs/MJPC6-urgence-en-classe.md
+   (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
+   RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
+   ═══════════════════════════════════════════════════════════════════════════ * /
+var APP_VERSION = "…";   // ← la pastille affichée à l'écran doit dire ceci
+```
+
+## Où l'insérer
+- **Toutes les apps** (`correction_dictee`, `dictee_universelle`, `evaluation-qcm`, `pilotage_debat_s3`, `worktrack`, `applause_meter`, `reecriture`, `reecriture_bb4e`, `analyse_logique`) : en tête du script, juste après le bloc socle.
+- **`index.html`** : idem, avec en plus la mention que le site porte l'ALERTE RÈGLES FIREBASE (voir ci-dessous).
+- **À chaque passe de la grille** : vérifier que le bloc est présent et à jour (point de grille).
+
+═══ fin bloc diagnostic ═══ */
+// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -256,7 +326,39 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.0.0";
+var MJPC_CORE_VERSION="1.1.0";
+
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
@@ -392,6 +494,8 @@ function buildModifMap(modifs,wordToTokens,tokens){
 
 var CLASSES={};
 db.ref("classes").once("value",function(snap){var val=snap.val();if(val)CLASSES=val});
+var CODES={};   /* M10 (pt 7) : le portail vérifie le code personnel contre /codes */
+db.ref("codes").once("value",function(snap){var val=snap.val();if(val)CODES=val});
 
 // ═══ SNAPSHOT TOOL ═══
 // Export: télécharge un JSON avec toutes les données Firebase
@@ -732,7 +836,7 @@ function generateFichesReecriture(data,corrections,eleveNames){
       html+='<div style="padding:20px;text-align:center;color:#276749;font-size:11pt">\u2705 Aucune erreur. Bravo !</div>';
     }
 
-    html+='<div class="verso-consigne">Avec un camarade, compl\u00e8te chaque ligne en t\'aidant du recto. Si tu s\u00e8ches sur une, marque-la et demande au prof.</div>';
+    html+='<div class="verso-consigne">Avec un camarade, compl\u00e8te chaque ligne en t\'aidant du recto. Si tu s\u00e8ches sur une, marque-la et demande-moi.</div>';
     html+='</div>';
   });
 
@@ -754,7 +858,7 @@ function App(){
   useEffect(function(){
     var p=new URLSearchParams(window.location.search);
     if(p.get("mode")==="eleve")setMode("eleve");
-    else if(p.get("mode")==="prof"){setProfAuth(true);setMode("prof");publierManifeste(db)}
+    else if(p.get("mode")==="prof"){setShowProfLogin(true)}   /* M10 : ?mode=prof n'authentifie plus (doctrine §VI) — il pré-ouvre le champ code */
   },[]);
   function tryProfCode(){
     if(PROF_CODES.indexOf(parseInt(codeInput))>=0){setProfAuth(true);setMode("prof");publierManifeste(db)}
@@ -764,7 +868,7 @@ function App(){
     h("h1",{style:{fontSize:"1.8rem",marginBottom:8}},"R\u00e9\u00e9criture"),
     h("p",{className:"subtitle",style:{marginBottom:30}},"Connecte-toi pour retravailler ta r\u00e9\u00e9criture."),
     h("div",{style:{display:"flex",flexDirection:"column",gap:12,maxWidth:320,margin:"0 auto"}},
-      h("button",{className:"btn btn-primary",style:{fontSize:"1.1rem",padding:18},title:"Acc\u00e9der \u00e0 ta r\u00e9\u00e9criture corrig\u00e9e : connecte-toi avec ton nom et ton pr\u00e9nom.",onClick:function(){setMode("eleve")}},"\ud83c\udf93 Mode \u00e9l\u00e8ve"),
+      h("button",{className:"btn btn-primary",style:{fontSize:"1.1rem",padding:18},title:"Acc\u00e9der \u00e0 ta r\u00e9\u00e9criture corrig\u00e9e : connecte-toi avec ton nom, ton pr\u00e9nom et ton code personnel.",onClick:function(){setMode("eleve")}},"\ud83c\udf93 Mode \u00e9l\u00e8ve"),
       !showProfLogin?h("button",{className:"btn-sm btn-ghost",style:{fontSize:".85rem",marginTop:16,opacity:.5},title:"Acc\u00e8s r\u00e9serv\u00e9 au professeur. Ouvre la saisie du code.",onClick:function(){setShowProfLogin(true)}},"Acc\u00e8s professeur"):
       h("div",{style:{marginTop:16,display:"flex",gap:8,maxWidth:240,margin:"16px auto 0"}},
         h("input",{type:"password",value:codeInput,onChange:function(e){setCodeInput(e.target.value)},placeholder:"Code",title:"Saisis le code professeur \u00e0 4 chiffres.",style:{flex:1,textAlign:"center"},onKeyDown:function(e){if(e.key==="Enter")tryProfCode()}}),
@@ -773,7 +877,7 @@ function App(){
     )
   );
   if(mode==="prof"&&profAuth) return h(AppProf,{onBack:function(){setMode(null);setProfAuth(false);setShowProfLogin(false);setCodeInput("")}});
-  if(mode==="eleve") return h(AppEleve,{onBack:function(){setMode(null)}});
+  if(mode==="eleve") return h(AppEleve,{onBack:function(){setMode(null)},onProf:function(){setProfAuth(true);setMode("prof");publierManifeste(db)}});
   return null;
 }
 
@@ -3159,6 +3263,10 @@ function AppEleve(p){
   var s1=useState("login"),screen=s1[0],setScreen=s1[1];
   var s2=useState([]),reecritures=s2[0],setReecritures=s2[1];
   var s3=useState(""),nomInput=s3[0],setNomInput=s3[1];
+  var sCode=useState(""),codeInput=sCode[0],setCodeInput=sCode[1];
+  var sCodeV=useState(false),codeVisible=sCodeV[0],setCodeVisible=sCodeV[1];
+  var sShunt=useState(false),shuntFait=sShunt[0],setShuntFait=sShunt[1];
+  var sMes=useState(null),mesLots=sMes[0],setMesLots=sMes[1];
   var s4=useState(""),prenomInput=s4[0],setPrenomInput=s4[1];
   var s5=useState(null),eleveData=s5[0],setEleveData=s5[1];
   var s6=useState(""),errMsg=s6[0],setErrMsg=s6[1];
@@ -3206,40 +3314,75 @@ function AppEleve(p){
     return function(){clearInterval(iv)};
   },[eleveData]);
 
+  useEffect(function(){
+    /* M10 — Shunt MJPC (socle \u00a78) : l'\u00e9l\u00e8ve d\u00e9j\u00e0 connect\u00e9 au site n'a rien \u00e0 ressaisir.
+       Patron de correction_dictee : garde anti-double, prof exclu, validation contre /classes. */
+    if(shuntFait||eleveData||!reecritures.length)return;
+    if(typeof CLASSES!=="object"||!Object.keys(CLASSES||{}).length)return;
+    setShuntFait(true);
+    var sess=lireSessionMJPC();
+    if(!sess||sess.is_prof)return;
+    var val=validerEleveMJPC(sess,CLASSES);
+    if(!val)return;
+    var lots=[],full=null;
+    for(var i=0;i<reecritures.length;i++){var r=reecritures[i];
+      for(var j=0;j<r.eleves.length;j++){if(san(r.eleves[j])===val.cle){full=r.eleves[j];lots.push(r);break}}}
+    if(!full)return;
+    if(forcedId)lots=lots.filter(function(r){return r.id===forcedId});
+    if(!lots.length)return;
+    _entrerEleve(full,val.cle,lots);
+  },[reecritures,shuntFait,eleveData]);
+
   function doLogin(){
-    var nom=nomInput.trim().toUpperCase();var prenom=prenomInput.trim();
-    if(!nom||!prenom){setErrMsg("Entre ton nom et ton pr\u00e9nom.");return}
-    if(nom==="MENEY"&&prenom.toLowerCase()==="monsieur"){
-      var testR=reecritures.length>0?reecritures[0]:null;
-      if(!testR){setErrMsg("Aucune r\u00e9\u00e9criture configur\u00e9e.");return}
-      setEleveData({eleve:"MENEY Monsieur",reecriture:testR,key:"meney_monsieur"});
-      setScreen("saisie");return;
-    }
+    /* M10 (grille pt 7) : entrée unique code + nom + prénom, comme partout.
+       PORTE PROF : un code de PROF_CODES ouvre la session prof quels que soient
+       nom et prénom (même vides) — patron du site (M8-IDENTITÉ). La branche
+       MENEY/monsieur (porte sans code) est retirée : Paul entre comme prof. */
+    var nom=nomInput.trim().toUpperCase();var prenom=prenomInput.trim();var code=codeInput.trim();
+    if(code&&PROF_CODES.indexOf(parseInt(code,10))>=0){if(p.onProf)p.onProf();return;}
+    if(!nom||!prenom||!code){setErrMsg("\u00c9cris ton nom, ton pr\u00e9nom et ton code personnel.");return}
     var searchList=forcedId?reecritures.filter(function(r){return r.id===forcedId}):reecritures;
-    var full=null,ree=null,key=null;
+    var lots=[],full=null,key=null;
     for(var i=0;i<searchList.length;i++){
       var r=searchList[i];
       for(var j=0;j<r.eleves.length;j++){
         var e=r.eleves[j],parts=e.split(" ");
         var enom=parts.slice(0,-1).join(" ").toUpperCase();
         var eprenom=parts[parts.length-1];
-        if(enom===nom&&eprenom.toLowerCase()===prenom.toLowerCase()){full=e;ree=r;key=san(e);break}
+        if(enom===nom&&eprenom.toLowerCase()===prenom.toLowerCase()){full=e;key=san(e);lots.push(r);break}
       }
-      if(full)break;
     }
-    if(!full){setErrMsg("Aucune r\u00e9\u00e9criture trouv\u00e9e pour "+nom+" "+prenom+".");return}
-    setEleveData({eleve:full,reecriture:ree,key:key});setScreen("saisie");
+    if(!full){setErrMsg("Nom non reconnu. V\u00e9rifie l\u2019orthographe, ou vois avec moi en classe.");return}
+    var rec=(typeof CODES==="object"&&CODES)?CODES[key]:null;
+    if(!rec||!rec.code||String(rec.code)!==code){setErrMsg("Ce code ne correspond pas. V\u00e9rifie-le, ou vois avec moi en classe.");return}
+    _entrerEleve(full,key,lots);
+  }
+  function _entrerEleve(full,key,lots){
+    /* M10 (grille pt 8) : plusieurs lots → « Mes r\u00e9\u00e9critures » ; un seul → direct. */
+    if(lots.length>1){setMesLots({eleve:full,key:key,lots:lots});setScreen("mes");return}
+    setEleveData({eleve:full,reecriture:lots[0],key:key});setScreen("saisie");
   }
 
-  if(screen==="login") return h("div",{className:"container fade-up",style:{paddingTop:40}},
+  if(screen==="mes"&&mesLots) return h("div",{className:"container fade-up",style:{paddingTop:40}},
+      h("div",{className:"card"},
+        h("h1",null,"Mes r\u00e9\u00e9critures"),
+        h("p",{className:"subtitle"},"Choisis la r\u00e9\u00e9criture sur laquelle tu veux travailler."),
+        mesLots.lots.map(function(r){return h("div",{key:r.id,className:"config-field",style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+          h("div",null,h("b",null,r.title||r.id),h("span",{style:{opacity:.6,marginLeft:8,fontSize:".85rem"}},r.classe||"")),
+          h("button",{className:"btn btn-primary",style:{minHeight:44},onClick:function(){setEleveData({eleve:mesLots.eleve,reecriture:r,key:mesLots.key});setScreen("saisie")}},"\u2192 Ouvrir"));}),
+        h("button",{className:"btn-sm btn-ghost",style:{marginTop:12,minHeight:44},onClick:function(){setMesLots(null);setScreen("login")}},"\u2190 Retour")));
+    if(screen==="login") return h("div",{className:"container fade-up",style:{paddingTop:40}},
     h("div",{className:"card",style:{textAlign:"center"}},
       h("h1",null,"R\u00e9\u00e9criture"),
-      h("p",{className:"subtitle"},"Entre ton nom et pr\u00e9nom pour acc\u00e9der \u00e0 ta r\u00e9\u00e9criture."),
+      h("p",{className:"subtitle"},"Identifie-toi pour retrouver ta r\u00e9\u00e9criture."),
       h("div",{style:{maxWidth:340,margin:"0 auto"}},
         h("div",{className:"config-field"},h("label",null,"Nom"),h("input",{value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",title:"Ton nom de famille, en MAJUSCULES.",style:{textTransform:"uppercase"}})),
         h("div",{className:"config-field"},h("label",null,"Pr\u00e9nom"),h("input",{value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",title:"Ton pr\u00e9nom.",onKeyDown:function(e){if(e.key==="Enter")doLogin()}})),
+        h("div",{className:"config-field",style:{position:"relative"}},h("label",null,"Code personnel"),
+          h("input",{value:codeInput,type:codeVisible?"text":"password",inputMode:"numeric",maxLength:5,onChange:function(e){setCodeInput(e.target.value)},placeholder:"Code",title:"Ton code personnel MJPC.",autoComplete:"current-password",style:{paddingRight:88},onKeyDown:function(e){if(e.key==="Enter")doLogin()}}),
+          h("button",{type:"button","aria-label":codeVisible?"Masquer le code":"Afficher le code",onClick:function(){setCodeVisible(!codeVisible)},style:{position:"absolute",right:4,bottom:2,minHeight:44,minWidth:44,padding:"0 10px",background:"transparent",border:"none",color:"var(--muted)",fontStyle:"italic",cursor:"pointer"}},codeVisible?"Masquer":"Afficher")),
         errMsg&&h("p",{style:{color:"var(--coral)",fontSize:".88rem",marginBottom:8}},errMsg),
-        h("button",{className:"btn btn-primary",onClick:doLogin,title:"Acc\u00e9der \u00e0 ta r\u00e9\u00e9criture. Si ton prof a corrig\u00e9, tu pourras commencer ton autocorrection."},"Acc\u00e9der")
+        h("button",{className:"btn btn-primary",onClick:doLogin,title:"Acc\u00e9der \u00e0 ta r\u00e9\u00e9criture. Si ta copie est corrig\u00e9e, tu pourras commencer ton autocorrection."},"Acc\u00e9der")
       )
     ),
     h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},title:"Revenir \u00e0 l'\u00e9cran d'accueil.",onClick:p.onBack},"\u2190 Retour")
@@ -3258,7 +3401,7 @@ function AppEleve(p){
         h("div",{style:{fontSize:"2.4rem",marginBottom:10}},"\u23f3"),
         h("h2",{style:{marginBottom:8}},"Ta copie n'est pas encore corrig\u00e9e"),
         h("p",{style:{color:"var(--muted)",marginBottom:14}},eleveData.eleve+" \u2014 "+(eleveData.reecriture.title||"")),
-        h("p",{style:{lineHeight:1.6}},"Reviens un peu plus tard, quand ton professeur aura termin\u00e9 la correction.")
+        h("p",{style:{lineHeight:1.6}},"Reviens un peu plus tard : ta copie est en cours de correction.")
       ),
       h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},title:"Revenir \u00e0 l'\u00e9cran de connexion.",onClick:function(){setScreen("login");setEleveData(null)}},"\u2190 Retour")
     );
@@ -3435,7 +3578,7 @@ function EleveAutocorrReecriture(p){
       "\u26a0\ufe0f Tu es l\u00e0 ? Reprends la correction de tes erreurs. Clique ici pour continuer."),
     // Header
     h("div",{className:"card",style:{textAlign:"center"}},
-      h("h1",{style:{marginBottom:4}},allDone?"\ud83c\udf89 Bravo !":"Corrige tes erreurs"),
+      h("h1",{style:{marginBottom:4}},allDone?"\u2705 Autocorrection termin\u00e9e":"Corrige tes erreurs"),
       h("p",{className:"subtitle",style:{marginBottom:12}},d.eleve+" \u2014 "+(ree.title||"")),
       allDone?
         h("div",null,
@@ -3454,7 +3597,7 @@ function EleveAutocorrReecriture(p){
     // Auto-évaluation à la fin
     allDone&&h("div",{className:"card"},
       h("h3",{style:{margin:"0 0 4px 0",fontSize:"1.05rem"}},"Avant de finir, prends un instant\u2026"),
-      h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:14,fontStyle:"italic"}},"Tes r\u00e9ponses sont enregistr\u00e9es automatiquement. Ton prof pourra les lire."),
+      h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:14,fontStyle:"italic"}},"Tes r\u00e9ponses sont enregistr\u00e9es automatiquement. Je pourrai les lire."),
       h("div",{style:{marginBottom:14}},
         h("label",{style:{display:"block",fontWeight:600,fontSize:".95rem",marginBottom:6}},"Qu'est-ce que tu as appris ?"),
         h("textarea",{value:bilanAppris,onChange:function(e){var v=e.target.value;setBilanAppris(v);saveBilanDebounced(v,bilanTravailler)},
@@ -3621,6 +3764,30 @@ function EleveAutocorrReecriture(p){
 
 
 
+var APP_VERSION="2.0.0";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
+/* M10 (pts 5, 6, 10, pastille) — infos globales : version, Réglages, annonces du site (LECTURE seule, filtre du contrat M6). */
+function InfosMJPC(){
+  var s1=useState(false),open_=s1[0],setOpen=s1[1];
+  var s2=useState(null),ann=s2[0],setAnn=s2[1];
+  useEffect(function(){ if(!open_||ann!==null)return;
+    db.ref("site/annonces").once("value",function(snap){var v=snap.val()||{};
+      var L=Object.keys(v).map(function(k){return v[k]}).filter(function(a){return a&&a.texte&&(!a.app||a.app===MJPC_APP.id||a.app==="*")});
+      L.sort(function(a,b){return (b.date||0)-(a.date||0)});setAnn(L.slice(0,5));},function(){setAnn([]);});
+  },[open_,ann]);
+  return h("div",null,
+    h("button",{"aria-label":"Aide et nouveaut\u00e9s",title:"Aide \u00b7 nouveaut\u00e9s \u00b7 version",onClick:function(){setOpen(!open_)},style:{position:"fixed",bottom:10,right:10,minWidth:44,minHeight:44,borderRadius:22,border:"1px solid rgba(255,255,255,.2)",background:"rgba(20,16,40,.85)",color:"#cbd",cursor:"pointer",zIndex:9000,fontSize:"1rem"}},"?"),
+    open_&&h("div",{style:{position:"fixed",bottom:62,right:10,width:300,maxWidth:"calc(100vw - 20px)",maxHeight:"70vh",overflow:"auto",background:"rgba(18,14,36,.97)",border:"1px solid rgba(255,255,255,.15)",borderRadius:12,padding:14,zIndex:9001,fontSize:".9rem",color:"#dcd"}},
+      h("div",{style:{fontWeight:700,marginBottom:6}},"R\u00e9\u00e9criture \u00b7 v"+APP_VERSION),
+      h("div",{style:{opacity:.6,fontSize:".8rem",marginBottom:10}},"Socle MJPC "+MJPC_CORE_VERSION),
+      h("div",{style:{fontWeight:600,margin:"8px 0 4px"}},"Nouveaut\u00e9s"),
+      ann===null?h("div",{style:{opacity:.6}},"Chargement\u2026"):
+      ann.length===0?h("div",{style:{opacity:.6}},"Rien de nouveau pour l\u2019instant."):
+      ann.map(function(a,i){return h("div",{key:i,style:{marginBottom:8,paddingBottom:8,borderBottom:"1px solid rgba(255,255,255,.08)"}},a.texte)}),
+      h("div",{style:{fontWeight:600,margin:"10px 0 4px"}},"R\u00e9glages"),
+      h("div",{style:{opacity:.6,fontSize:".82rem"}},"Tout se pilote depuis le panneau professeur.")));
+}
+var _infosRoot=document.createElement("div");_infosRoot.id="mjpc-infos-root";document.body.appendChild(_infosRoot);
+ReactDOM.createRoot(_infosRoot).render(h(InfosMJPC));
 ReactDOM.createRoot(document.getElementById("root")).render(h(App));
 </script>
 </body>
