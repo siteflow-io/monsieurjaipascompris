@@ -1,6 +1,12 @@
 # « BUG » — LA RESTAURATION D'URGENCE
 *Convention instituée par Paul le 18/07/2026. Mécanisme TESTÉ à blanc le jour même.*
 
+### POINT DE RETOUR — `dictee_universelle.html` AVANT promotion M9 (22/07/2026)
+- **Commit de référence** : `5076cfd6be` (2026-07-14T12:25:33Z)
+- **Fichier** : 1 928 589 o · md5 `ab51c348324b309b8947e200c55e2956` · APP_VERSION 1.x, socle MJPC-CORE 1.0.0
+- **Restauration** : `contents/dictee_universelle.html?ref=5076cfd6beeeef608cfd66e1edb5de19ec6eaeff` (API authentifiée) → PUT du contenu récupéré.
+- **Motif** : promotion M9 (passe complète : socle 1.1.0 + shunt §8, portail identité unique `/codes`, « Mes dictées », garde-corbeille P1 sur les 4 gestes destructeurs, dictionnaire de textes, présence, navigation prof à 2 niveaux, pastille 2.0.0, D16, tactile ≤480px, extrait de texte réservé au professeur).
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
