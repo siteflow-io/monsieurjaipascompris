@@ -37,6 +37,14 @@ Paul : « Pourquoi j'ai la pastille de version au-dessus d'un bouton bleu en bas
 **Circuit** : cadrage → audit (3 points de grille absents + retrait d'un point 16 alors inexistant) → décisions de Paul (Q4, motifs cumulables, mode test obligatoire) → feu vert complet → livraison → audit → **promeus** → point de retour (`8c0daa21ba` / `3f443fb191`) → PUT → bit à bit ✅ → sas nettoyé.
 **Rappel de Paul dans le même tour** : *« il faudra implémenter la visionneuse dont on a parlé pour MJPC »* — le chantier existe au plan depuis le 16/07 (S5-⑦) : la modale iframe Drive rend les diaporamas animés en images figées. Voir ci-dessous.
 
+### DETTE M11 · LE CORRIGÉ IA D'`analyse_logique` EN JSON (intuition de Paul, 22/07 — retenue)
+**Question de Paul** : *« le prompt IA ne marcherait pas mieux en JSON à la réinjection ? »* — **Oui, et c'est le patron de l'écosystème.**
+**État mesuré (`parseCorrige`, app promue v2.0.0)** : le retour attendu est un format à LIGNES et BARRES VERTICALES — `PROP|code|texte`, `ELEM|code|texte|dans:…`, `LIEN|a->b` — analysé ligne à ligne, les lignes commençant par `#` ignorées. **Défaut structurel** : toute ligne que le modèle reformule, ponctue autrement ou tronque part silencieusement dans `nonLocalises` — le corrigé se parse À MOITIÉ sans que rien ne le signale.
+**Ce que le JSON apporte** : ① les modèles suivent bien mieux un SCHÉMA explicite qu'une convention de séparateurs ; ② l'imbrication dit d'elle-même l'appartenance (le `dans:` textuel devient une structure) ; ③ **une erreur de format devient VISIBLE** (le document ne se parse pas du tout, au lieu de se parser partiellement).
+**Précédent maison** : `pilotage_debat_s3` (M5bis) injecte ses documents en JSON avec identifiants de zones figés. La doctrine (§ prompt QCM) montre par ailleurs que le défaut des injections IA vient du PROMPT trop lâche, pas du format : le remède est donc **schéma JSON + prompt strict** (classe, niveau, notion rattachée à la taxonomie, attendus de fin de cycle).
+**Deux précautions pour la mise en œuvre** : ① garder le parseur à lignes EN LECTURE pendant une période de transition — les corrigés déjà déposés doivent continuer de fonctionner ; ② exiger dans le prompt les EMPANS DE TEXTE EXACTS (copie verbatim), jamais des reformulations : c'est la localisation qui casse, pas la nomenclature.
+**Statut** : dette d'`analyse_logique`, à traiter avec les deux autres (mode test à terminer, modifier/supprimer un travail) — Paul choisira le moment.
+
 ## FORMAT D'UN CAS — trois niveaux, et le troisième n'est pas garanti
 ```
 AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
