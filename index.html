@@ -257,6 +257,11 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .class-modal-actions button.cancel:hover { background: rgba(255,255,255,0.12); }
 .admin-delete { display: none; position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(248,113,113,0.8); color: #fff; border: none; font-size: 0.7rem; cursor: pointer; z-index: 10; line-height: 22px; text-align: center; transition: background 0.2s; }
 .admin-delete:hover { background: #ef4444; }
+/* M12 · marqueur autonomie */
+.admin-action-btn.aut-on{background:rgba(110,231,183,.25);border-color:rgba(110,231,183,.6)}
+.chip-autonomie{font-size:.72rem;opacity:.85;margin-left:4px}
+.seance-note-eleve{margin:6px 10px 8px 58px;padding:9px 13px;border-left:3px solid var(--level-accent,#a78bfa);background:rgba(255,255,255,.04);border-radius:0 9px 9px 0;color:rgba(255,255,255,.82);font-size:.9rem;font-style:italic}
+@media (max-width:480px){.seance-note-eleve{margin-left:16px}}
 .admin-mode .doc-item .admin-delete { display: block; }
 .admin-mode .fiche-drop-zone { min-height: 40px; border: 2px dashed rgba(255,184,108,0.3); border-radius: 10px; margin-top: 8px; transition: border-color 0.2s, background 0.2s; padding-bottom: 44px; position: relative; }
 .admin-mode .fiche-drop-zone::after { content: '📁 Glisser un fichier ici'; display: block; text-align: center; padding: 10px; color: rgba(255,184,108,0.5); font-style: italic; font-size: 0.85rem; position: absolute; bottom: 0; left: 0; right: 0; }
@@ -800,6 +805,7 @@ body.admin-mode .admin-only { display: block; }
       </div>
     </div>
     <div id="tab-autonomie" style="display:none;">
+      <div id="autonomie-dyn"></div>
       <div class="section-label">Aller plus loin</div>
       <div class="chapters-list">
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">🚀</div><div class="chapter-info"><div class="chapter-title">Zone autonomie</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-autonomie">0 documents</span></div></div></div><div class="chapter-body" data-section="autonomie"><div class="doc-list fiche-drop-zone" data-section="autonomie"></div></div></div>
@@ -843,6 +849,7 @@ body.admin-mode .admin-only { display: block; }
         <div class="tprof-sidebar-label">Contenu</div>
         <button class="tprof-section-btn" data-section="archi" onclick="showProfSection('archi')"><span class="tps-icon">📂</span>Architecture</button>
         <button class="tprof-section-btn" data-section="archives" onclick="showProfSection('archives')"><span class="tps-icon">📦</span>Archives</button>
+        <button class="tprof-section-btn" data-section="corbeille" onclick="showProfSection('corbeille')"><span class="tps-icon">🗑</span>Corbeille</button>
         <button class="tprof-section-btn" data-section="annonces" onclick="showProfSection('annonces')"><span class="tps-icon">📢</span>Annonces aux élèves</button>
         <button class="tprof-section-btn" data-section="brevet" onclick="showProfSection('brevet')"><span class="tps-icon">🎓</span>Dates du brevet</button>
         <button class="tprof-section-btn" data-section="taxo" onclick="showProfSection('taxo')"><span class="tps-icon">📚</span>Taxonomie</button>
@@ -914,6 +921,18 @@ body.admin-mode .admin-only { display: block; }
   <div class="link-modal-section">
     <div class="link-modal-section-title">🎙️ Débat existant</div>
     <div class="link-modal-row"><select class="link-modal-select" id="link-modal-debat"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('debat')">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">📐 Travail d'analyse logique</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-analyse_logique"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('analyse_logique')">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">👏 Séance d'applaudimètre</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-applaudimetre"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('applaudimetre')">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">📋 Chapitre de plan de travail</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-worktrack"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('worktrack')">Lier</button></div>
   </div>
   <div class="link-modal-footer">
     <button class="link-modal-btn danger" onclick="linkModalUnlink()">Délier</button>
@@ -993,6 +1012,29 @@ function m8BasculerModeTest(){
 }
 
 /* ─── Les trois seuls accès REST de cette section ─── */
+/* M12-R1 · texte de séance sans document : ÉDITABLE (demande de Paul, 22/07 — point 26).
+   Seed en dur = valeur de départ ; surcharge dans Firebase `site/textes/seanceSansDoc`.
+   Lu au démarrage, modifiable depuis Panneau prof > Annonces aux élèves. */
+var TXT_SEANCE_SANS_DOC_SEED='S\u00e9ance faite en classe \u2014 pas de document sur le site.';
+var TXT_SEANCE_SANS_DOC=TXT_SEANCE_SANS_DOC_SEED;
+function _chargerTextesSite(cb){
+  _siteGet('textes/seanceSansDoc', function(v){
+    if(typeof v==='string' && v.trim()) TXT_SEANCE_SANS_DOC=v;
+    if(cb)cb();
+  });
+}
+function _editerTexteSeanceSansDoc(){
+  _modalePrompt('Texte des s\u00e9ances sans document',
+    'Ce texte s\u2019affiche sous une s\u00e9ance publi\u00e9e qui n\u2019a aucun document. Une s\u00e9ance peut aussi avoir son propre texte (bouton \ud83d\udcdd sur la s\u00e9ance), qui a alors la priorit\u00e9.',
+    TXT_SEANCE_SANS_DOC, function(v){
+      var val=String(v||'').trim();
+      TXT_SEANCE_SANS_DOC = val || TXT_SEANCE_SANS_DOC_SEED;
+      _sitePut('textes/seanceSansDoc', val, function(){
+        if(typeof showProfSection==='function') showProfSection('annonces');
+        if(typeof currentLevel!=='undefined' && currentLevel && typeof renderChapitres==='function') renderChapitres(currentLevel);
+      });
+    });
+}
 function _siteGet(chemin, cb){
   if(m8TestOn()){ cb(M8_TEST_STORE[chemin] !== undefined ? M8_TEST_STORE[chemin] : null); return; }
   fetch(FIREBASE_BASE + chemin + '.json')
@@ -1054,9 +1096,10 @@ function ecrireBrevetDate(niveau, valeurISO){
 }
 /* Réversible par nature : on efface la surcharge, le défaut du code revient. */
 function reinitialiserBrevetDates(){
-  if(!confirm("Revenir aux dates inscrites dans le code ?\n\nLes dates que tu as saisies seront effacées. Tu pourras les ressaisir.")) return;
+  _modaleConfirme('Revenir aux dates du code','Les dates que tu as saisies seront effac\u00e9es. Tu pourras les ressaisir.',function(){
   _siteDelete('/site/config/brevetDates', function(){
     chargerBrevetDates(function(){ renderConsoleM8(); if(typeof updateTimers==='function') updateTimers(); });
+  });
   });
 }
 
@@ -1161,9 +1204,10 @@ function supprimerAnnonce(id){
   chargerAnnonces(function(o){
     var a = o[id]; if(!a) return;
     var extrait = (a.texte||'').slice(0,90) + ((a.texte||'').length > 90 ? '\u2026' : '');
-    if(!confirm('Supprimer cette annonce ?\n\n\u00ab ' + extrait + ' \u00bb\n\nLes élèves ne la verront plus dans le « ? » des applications.')) return;
+    _modaleConfirme('Supprimer cette annonce','\u00ab '+escapeHtml(extrait)+' \u00bb<br><br>Les \u00e9l\u00e8ves ne la verront plus dans le \u00ab ? \u00bb des applications.',function(){
     delete o[id];
     _sitePut('/site/annonces', o, function(){ renderConsoleM8(); });
+    });
   });
 }
 /* Aperçu : reproduit EXACTEMENT le filtre et le tri du lecteur de M6, pour
@@ -1201,7 +1245,11 @@ function m8RendreIndicateursTest(){
   if(dot) dot.style.display = on ? 'inline-block' : 'none';
 }
 function _profSectionAnnonces(){
-  return '<h2>\ud83d\udce2 Annonces aux \u00e9l\u00e8ves</h2><div id="m8-console"></div>';
+  return '<h2>\ud83d\udce2 Annonces aux \u00e9l\u00e8ves</h2><div id="m8-console"></div>'+
+    '<div class="m8-bloc"><div class="m8-titre">S\u00e9ances sans document</div>'+
+    '<p class="m8-p">Texte affich\u00e9 \u00e0 l\u2019\u00e9l\u00e8ve sous une s\u00e9ance publi\u00e9e qui n\u2019a aucun document. Une s\u00e9ance peut avoir son propre texte (bouton \ud83d\udcdd), qui a la priorit\u00e9.</p>'+
+    '<p class="m8-p" style="color:rgba(255,255,255,0.8)">\u00ab '+escapeHtml(TXT_SEANCE_SANS_DOC)+' \u00bb</p>'+
+    '<button class="m8-btn" onclick="_editerTexteSeanceSansDoc()">Modifier ce texte</button></div>';
 }
 function _profSectionBrevet(){
   return '<h2>\ud83c\udf93 Dates du brevet</h2><div id="m8-console"></div>';
@@ -1581,15 +1629,16 @@ function taxoBasculer(idNotion){
   taxoCharger(function(t){
     var pos = t ? _taxoTrouverNotion(t, idNotion) : null;
     if(!pos){ alert('Notion introuvable dans le référentiel — recharge et réessaie.'); return; }
-    if(pos.notion.actif !== false){
-      var ok = confirm('Désactiver \u00ab ' + (pos.notion.libelleProf || idNotion) + ' \u00bb ?\n\nElle sortira des choix proposés par les applications. L\u2019historique des élèves qui portent cette étiquette reste lisible, et tu pourras la réactiver à tout moment.');
-      if(!ok) return;
-    }
+    var _basculer=function(){
     _taxoGesteBasculer(idNotion, function(okG, message){
       if(!okG){ alert(message); return; }
       if(message) alert(message);
       taxoRafraichir(true);
     });
+    };
+    if(pos.notion.actif !== false){
+      _modaleConfirme('D\u00e9sactiver la notion','D\u00e9sactiver \u00ab <b>'+escapeHtml(pos.notion.libelleProf || idNotion)+'</b> \u00bb ?<br><br>Elle sortira des choix propos\u00e9s par les applications. L\u2019historique des \u00e9l\u00e8ves qui portent cette \u00e9tiquette reste lisible, et tu pourras la r\u00e9activer \u00e0 tout moment.',_basculer);
+    } else { _basculer(); }
   });
 }
 function taxoToggleDom(idDom){
@@ -1909,8 +1958,54 @@ function publierManifeste(db){
 }
 
 /* Pastille de version du site — en dur (M8). Promotion au socle prévue M15. */
-var APP_VERSION="8.4.3";
-var APP_VERSION_DATE="2026-07-21";
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIAGNOSTIC — À LIRE EN PREMIER SI « ÇA NE MARCHE PLUS »
+   Écosystème MJPC — monsieurjaipascompris.com — Paul Meney
+   Avant de suspecter le code de ce site, vérifier CES CAUSES EXTERNES,
+   dans cet ordre. Elles expliquent la quasi-totalité des pannes soudaines
+   d'un site qui fonctionnait la veille.
+
+   1. LES RÈGLES FIREBASE ONT-ELLES EXPIRÉ ?  ← CAUSE N°1, DÉJÀ VÉCUE
+      Symptôme : "permission_denied", données qui ne chargent plus, écrans
+      vides sur TOUTES les apps en même temps.
+      Les règles créées en "mode test" contiennent une DATE D'EXPIRATION en dur.
+      Le jour venu, tout s'arrête d'un coup, sans que rien n'ait changé au code.
+      → console.firebase.google.com > projet mjpc-hub > Realtime Database >
+        onglet "Règles" > chercher une ligne du type
+        `".read": "now < 1234567890000"` ou `request.time < timestamp.date(...)`.
+      → Précédent : diagnostic initial FAUX (on a accusé le protocole file://
+        puis le code) alors que c'étaient les règles expirées. NE PAS REFAIRE.
+      → LE SITE PORTE L'ALERTE : l'overlay « règles Firebase » (côté prof)
+        compte les jours restants — c'est LUI qui prévient avant l'expiration.
+
+   2. LE CACHE DU NAVIGATEUR SERT-IL L'ANCIENNE VERSION ?
+      Symptôme : "j'ai poussé mais rien n'a changé".
+      → Comparer la PASTILLE DE VERSION affichée à l'écran avec APP_VERSION
+        ci-dessous. Si elles diffèrent : rouvrir avec ?v=N (N incrémenté).
+
+   3. UNE DÉPENDANCE EXTERNE EST-ELLE INJOIGNABLE ?
+      Ce site ne charge AUCUNE bibliothèque de script externe. Restent réseau :
+        - la connexion à la base Firebase (mjpc-hub, europe-west1)
+        - les polices Google (fonts.googleapis.com) — cosmétique seulement
+        - Google Drive / lh3.googleusercontent.com — documents et images des
+          chapitres seulement, le site boote sans eux
+      Symptôme : site affiché mais données absentes → réseau/Firebase, pas CDN.
+
+   4. UNE API NAVIGATEUR MANQUE-T-ELLE ?
+      sendBeacon (présence), sessionStorage/localStorage (session partagée),
+      matchMedia. Symptôme : une fonction précise muette, le reste OK.
+
+   5. SEULEMENT ALORS : suspecter le code de ce fichier.
+      Le socle MJPC-CORE est identique partout : s'il "marche ailleurs",
+      le problème est local. Registre des bugs connus, cause par cause :
+      docs/MJPC6-registre-bugs.md (13 sections, ~150 bugs documentés).
+
+   EN CAS D'URGENCE PENDANT UN COURS : docs/MJPC6-urgence-en-classe.md
+   (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
+   RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var APP_VERSION="8.5.0";
+var APP_VERSION_DATE="2026-07-22";
 var MJPC_CORE_VERSION="1.0.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
@@ -2168,9 +2263,12 @@ function renderChapitres(level){
 }
 
 function resetChapitres(level){
-  if(!confirm('\u26a0 Effacer TOUS les chapitres '+level.toUpperCase()+' de Firebase ?\n\nCette action supprime toutes les donn\u00e9es chapitres/s\u00e9ances/items pour ce niveau. Les onglets et autres r\u00e9glages ne sont pas touch\u00e9s.'))return;
+  _modaleConfirme('Effacer TOUS les chapitres '+level.toUpperCase(),
+    '\u26a0 Cette action supprime toutes les donn\u00e9es chapitres/s\u00e9ances/items du niveau <b>'+level.toUpperCase()+'</b>. Les onglets et autres r\u00e9glages ne sont pas touch\u00e9s.',
+    function(){
   fetch(FIREBASE_BASE+'/site/'+level+'/chapitres.json',{method:'DELETE'})
     .then(function(){chapitresData[level]={};renderChapitres(level);});
+  },'EFFACER');
 }
 
 function renderChapterCard(level,num,ch,dispNum,isAdmin){
@@ -2195,8 +2293,8 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
     var sce=seances[snum];if(!sce)return;
     if(!isAdmin && !_visiblePourSession(sce,level))return;   /* 8.4.2 */
     var items=sce.items||{};
-    var visibleItems=Object.keys(items).filter(function(k){return items[k] && (isAdmin || _visiblePourSession(items[k],level));});   /* 8.4.2 */
-    if(!isAdmin && visibleItems.length===0)return;
+    /* M12 (d\u00e9cision Paul 22/07) : une s\u00e9ance PUBLI\u00c9E s'affiche TOUJOURS, m\u00eame sans item \u2014
+       \u00ab On peut tr\u00e8s bien avoir fait une s\u00e9ance en classe, sans pour autant avoir de docs avec. \u00bb */
     bodyHtml+=renderSeance(level,num,snum,sce,idx+1,isAdmin);
   });
   if(isAdmin){bodyHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addSeance(\''+level+'\',\''+num+'\')">+ Nouvelle s\u00e9ance</button></div>';}
@@ -2204,6 +2302,19 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
   return html;
 }
 
+/* M12-② · Texte libre de s\u00e9ance (c\u00f4t\u00e9 prof), lu par l'\u00e9l\u00e8ve \u00e0 la place des documents.
+   Formulation par d\u00e9faut SOUMISE au rapport, jamais d\u00e9cid\u00e9e. Vide = retir\u00e9. */
+function editNoteSeance(level,chnum,snum){
+  var sce=chapitresData[level]&&chapitresData[level][chnum]&&chapitresData[level][chnum].seances[snum];
+  if(!sce)return;
+  _modalePrompt('Texte de s\u00e9ance (lu par les \u00e9l\u00e8ves)','Ce texte s\u2019affiche dans la s\u00e9ance, avant ou \u00e0 la place des documents. Vide = aucun texte.',sce.noteEleve||'',function(v){
+    if(v===null)return;
+    v=String(v).trim();
+    _sitePut('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/noteEleve',v||null,function(ok){
+      if(ok){if(v)sce.noteEleve=v;else delete sce.noteEleve;renderChapitres(level);}
+    });
+  });
+}
 function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   var pub=isAdmin?_pubCtrl(sce,'sce',level,chnum,snum,''):'';
   var acts='';
@@ -2212,6 +2323,7 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
     acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',-1)">\u2191</button>';
     acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\',1)">\u2193</button>';
     acts+='<button class="admin-action-btn" title="Coller" onclick="event.stopPropagation();pasteIntoSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\ud83d\udccb</button>';
+    acts+='<button class="admin-action-btn'+(sce.noteEleve?' aut-on':'')+'" title="Texte lu par les \u00e9l\u00e8ves \u00e0 la place des documents" onclick="event.stopPropagation();editNoteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\ud83d\udcdd</button>';
     acts+='<button class="admin-action-btn danger" title="Supprimer la s\u00e9ance" onclick="event.stopPropagation();deleteSeance(\''+level+'\',\''+chnum+'\',\''+snum+'\')">\u2715</button>';
   }
   var opacityCls=(isAdmin && _dimNode(sce,level))?' item-unpublished':'';
@@ -2231,6 +2343,8 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
     var subNumStr=isNotions?(dispNum+'.'+subDispNum):'';
     itemsHtml+=renderItem(level,chnum,snum,itemId,it,subNumStr,isAdmin);
   });
+  if(sce.noteEleve&&String(sce.noteEleve).trim()){itemsHtml='<div class="seance-note-eleve">'+escapeHtml(String(sce.noteEleve))+'</div>'+itemsHtml;}
+  else if(rendered===0 && !isAdmin){itemsHtml='<div class="seance-note-eleve" style="opacity:.65">'+escapeHtml(TXT_SEANCE_SANS_DOC)+'</div>'+itemsHtml;}
   if(rendered===0 && isAdmin){itemsHtml+='<div class="seance-empty">(aucun item)</div>';}
   if(isAdmin){itemsHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addItem(\''+level+'\',\''+chnum+'\',\''+snum+'\')">+ Nouvel item</button></div>';}
   html+='<div class="seance-items'+(UI_OPEN_S[skey]?' open':'')+'">'+itemsHtml+'</div></div>';
@@ -2241,7 +2355,7 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   var isGallery=it.kind==='gallery';
   var imgKeys=isGallery?Object.keys(it.images||{}).filter(function(k){return it.images[k]&&typeof it.images[k]==='object';}):[];
   var iconClass='pdf';
-  if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm'||it.kind==='tache'||it.kind==='debat')iconClass='html';
+  if(it.kind==='dictee'||it.kind==='reecriture'||it.kind==='qcm'||it.kind==='tache'||it.kind==='debat'||it.kind==='analyse_logique'||it.kind==='applaudimetre'||it.kind==='worktrack')iconClass='html';
   var icon=it.icon||(isGallery?'\ud83d\uddbc':'\ud83d\udcc4');
   var hasRef=isGallery?imgKeys.length>0:!!it.ref;
   var pubV=(isAdmin||_visiblePourSession(it,level));   /* 8.4.2 */
@@ -2256,6 +2370,7 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   if(isAdmin){
     acts+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u270f</button>';
     if(!isGallery)acts+='<button class="admin-action-btn" title="Lier la ressource" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
+    acts+='<button class="admin-action-btn'+(it.autonomie?' aut-on':'')+'" title="'+(it.autonomie?'Retirer de la zone autonomie':'Marquer pour la zone autonomie')+'" onclick="event.stopPropagation();toggleAutonomie(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\ude80</button>';
     acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',-1)">\u2191</button>';
     acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',1)">\u2193</button>';
     acts+='<button class="admin-action-btn" title="Coller" onclick="event.stopPropagation();pasteIntoItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udccb</button>';
@@ -2266,7 +2381,7 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
   var clickAttr=canOpen?(' onclick="openItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')" style="cursor:pointer"'):' style="cursor:default"';
   var html='<div class="doc-item gr-row'+opacityCls+'" style="--indent:40px" data-item-id="'+itemId+'"'+clickAttr+'>';
   html+='<span class="gc-ind"></span><span class="gc-lead"><span class="doc-icon '+iconClass+'">'+icon+'</span></span>';
-  html+='<span class="gc-ttl"><span class="doc-label">'+subPrefix+escapeHtml(it.title||'')+(it.subtitle?'<small>'+escapeHtml(it.subtitle)+'</small>':'')+'</span></span>';
+  html+='<span class="gc-ttl"><span class="doc-label">'+subPrefix+escapeHtml(it.title||'')+(it.autonomie?' <span class="chip-autonomie" title="Disponible dans la Zone autonomie">\ud83d\ude80</span>':'')+(it.subtitle?'<small>'+escapeHtml(it.subtitle)+'</small>':'')+'</span></span>';
   html+='<span class="gc-stat doc-action">'+actionTxt+'</span><span class="gc-pub">'+pub+'</span><span class="gc-acts">'+acts+'</span></div>';
   if(isAdmin && isGallery && imgKeys.length>0){
     var sortedImg=imgKeys.sort(function(a,b){return (it.images[a].ordre||0)-(it.images[b].ordre||0);});
@@ -2302,6 +2417,12 @@ function openItem(level,chnum,snum,itemId){
   if(item.kind==='reecriture' && src==='firebase_app'){if(typeof openReecriture==='function')openReecriture(ref,item.title);return;}
   if(item.kind==='qcm' && src==='firebase_app'){openViewer(item.title||'\u00c9valuation QCM','evaluation-qcm.html?mode=eleve&eval='+encodeURIComponent(ref));return;}
   if(item.kind==='debat' && src==='firebase_app'){openViewer(item.title||'D\u00e9bat','pilotage_debat_s3.html?debat='+encodeURIComponent(ref));return;}
+  /* M12 · genres c\u00e2bl\u00e9s (S5-\u2464). L'analyse logique n'a plus de param\u00e8tre d'URL (M11 : ?role= supprim\u00e9) :
+     l'\u00e9l\u00e8ve shunt\u00e9 arrive sur \u00ab Mes analyses \u00bb o\u00f9 le travail li\u00e9 figure. Deep-link = dette app d\u00e9clar\u00e9e. */
+  if(item.kind==='analyse_logique' && src==='firebase_app'){openViewer(item.title||'Analyse logique','analyse_logique.html');return;}
+  if(item.kind==='applaudimetre' && src==='firebase_app'){var _lv=clickedLevel||currentLevel||'';openViewer(item.title||'Applaudim\u00e8tre','applause_meter.html'+(_lv?'?n='+_lv:''));return;}
+  if(item.kind==='worktrack' && src==='firebase_app'){var _lw=clickedLevel||currentLevel||'';openViewer(item.title||'Plan de travail','worktrack.html'+(_lw?'?n='+_lw:''));return;}
+  if(item.kind==='tache' && src==='firebase_app'){openViewer(item.title||'T\u00e2che',ref);return;} /* M12 : r\u00e9paration \u2014 tombait sur \u00ab type non support\u00e9 \u00bb */
   if(src==='drive'){openViewer(item.title,'https://drive.google.com/file/d/'+ref+'/preview');return;}
   if(src==='external'){openViewer(item.title,ref);return;}
   if(src==='html'){openViewer(item.title,ref);return;}
@@ -2337,7 +2458,7 @@ function closeGalleryViewer(){
 
 // =========== CRUD chapitres / séances / items ===========
 function addChapter(level){
-  var title=prompt('Titre du nouveau chapitre :');
+  _modalePrompt('Nouveau chapitre','Titre du nouveau chapitre :','',function(title){
   if(title===null)return;
   title=title.trim();
   if(!title)return;
@@ -2352,10 +2473,11 @@ function addChapter(level){
     chapitresData[level][newNum]=newCh;
     renderChapitres(level);
   });
+  });
 }
 
 function addSeance(level,chnum){
-  var title=prompt('Titre de la nouvelle séance :');
+  _modalePrompt('Nouvelle s\u00e9ance','Titre de la nouvelle s\u00e9ance :','',function(title){
   if(title===null)return;
   title=title.trim();
   if(!title)return;
@@ -2371,10 +2493,11 @@ function addSeance(level,chnum){
     ch.seances[newNum]=newSce;
     renderChapitres(level);
   });
+  });
 }
 
 function addItem(level,chnum,snum){
-  var title=prompt('Titre du nouvel item :');
+  _modalePrompt('Nouvel item','Titre du nouvel item :','',function(title){
   if(title===null)return;
   title=title.trim();
   if(!title)return;
@@ -2394,6 +2517,7 @@ function addItem(level,chnum,snum){
     sce.items[itemId]=newItem;
     renderChapitres(level);
   });
+  });
 }
 
 function editTitle(level,chnum,snum,itemId){
@@ -2402,7 +2526,7 @@ function editTitle(level,chnum,snum,itemId){
   if(itemId){currentTitle=d[chnum].seances[snum].items[itemId].title||'';}
   else if(snum){currentTitle=d[chnum].seances[snum].title||'';}
   else{currentTitle=d[chnum].title||'';}
-  var newTitle=prompt('Nouveau titre :',currentTitle);
+  _modalePrompt('Renommer','Nouveau titre :',currentTitle,function(newTitle){
   if(newTitle===null)return;
   newTitle=newTitle.trim();
   if(!newTitle||newTitle===currentTitle)return;
@@ -2418,36 +2542,40 @@ function editTitle(level,chnum,snum,itemId){
     else d[chnum].title=newTitle;
     renderChapitres(level);
   });
+  });
 }
 
 function deleteChapter(level,chnum){
   var ch=chapitresData[level][chnum];if(!ch)return;
-  if(!confirm('Supprimer le chapitre \u00ab '+ch.title+' \u00bb et tout son contenu ?'))return;
+  _modaleConfirme('Supprimer le chapitre','Supprimer le chapitre \u00ab <b>'+escapeHtml(ch.title)+'</b> \u00bb et tout son contenu (s\u00e9ances et items) ?',function(){
   fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'.json',{method:'DELETE'})
     .then(function(){
       delete chapitresData[level][chnum];
       renderChapitres(level);
     });
+  });
 }
 
 function deleteSeance(level,chnum,snum){
   var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
-  if(!confirm('Supprimer la s\u00e9ance \u00ab '+sce.title+' \u00bb et tous ses items ?'))return;
+  _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ?',function(){
   fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json',{method:'DELETE'})
     .then(function(){
       delete chapitresData[level][chnum].seances[snum];
       renderChapitres(level);
     });
+  });
 }
 
 function deleteItem(level,chnum,snum,itemId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
-  if(!confirm('Supprimer l\u2019item \u00ab '+item.title+' \u00bb ?'))return;
+  _modaleConfirme('Supprimer l\u2019item','Supprimer l\u2019item \u00ab <b>'+escapeHtml(item.title)+'</b> \u00bb ?',function(){
   fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{method:'DELETE'})
     .then(function(){
       delete chapitresData[level][chnum].seances[snum].items[itemId];
       renderChapitres(level);
     });
+  });
 }
 
 // Réordonnancement par swap d'ordre avec voisin
@@ -2531,6 +2659,9 @@ function openLinkModal(level,chnum,snum,itemId){
   loadAppList('reecriture');
   loadAppList('qcm');
   loadAppList('debat');
+  loadAppList('analyse_logique');
+  loadAppList('applaudimetre');
+  loadAppList('worktrack');
   document.getElementById('link-modal').classList.add('visible');
 }
 
@@ -2548,12 +2679,17 @@ function loadAppList(kind){
   else if(kind==='reecriture')url=FIREBASE_BASE+'/reecritures.json';
   else if(kind==='qcm')url=QCM_FIREBASE_BASE+'/qcm/evaluations.json';
   else if(kind==='debat')url=FIREBASE_BASE+'/debats.json';
+  else if(kind==='analyse_logique')url=FIREBASE_BASE+'/analyse_logique/travaux.json';
+  else if(kind==='applaudimetre')url=FIREBASE_BASE+'/applaudimetre/seances.json';
+  else if(kind==='worktrack')url=FIREBASE_BASE+'/plan_de_travail/chapitres.json';
   fetch(url).then(function(r){return r.json();}).catch(function(){return null;}).then(function(data){
     sel.innerHTML='<option value="">\u2014 Choisir \u2014</option>';
     if(data){
       Object.keys(data).forEach(function(id){
         var cfg=(data[id]&&data[id].config)||data[id]||{};
-        var title=cfg.title||cfg.titre||id;
+        var title=cfg.title||cfg.titre||cfg.libelle||id;
+        if(kind==='worktrack'&&data[id]&&data[id].meta){var _m=data[id].meta;title=((_m.oeuvre&&_m.oeuvre.titre)||id)+(_m.niveau?(' \u2014 '+_m.niveau):'');}
+        if(kind==='applaudimetre'&&cfg.demarreLe){try{title=(cfg.libelle||id)+' \u2014 '+new Date(cfg.demarreLe).toLocaleDateString('fr-FR');}catch(e){}}
         var opt=document.createElement('option');
         opt.value=id;
         opt.textContent=title;
@@ -2591,8 +2727,9 @@ function linkModalApplyApp(kind){
 
 function linkModalUnlink(){
   if(!LINK_MODAL_CONTEXT)return;
-  if(!confirm('D\u00e9lier cet item ?'))return;
+  _modaleConfirme('D\u00e9lier','D\u00e9lier cet item de sa ressource ? L\u2019item reste, seule la liaison est retir\u00e9e.',function(){
   applyLinkChanges('','',null);
+  });
 }
 
 function applyLinkChanges(newSource,newRef,newKind){
@@ -2784,12 +2921,13 @@ function previewImage(driveId){
 function renameImageInGallery(level,chnum,snum,itemId,imgId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];
   var img=item&&item.images&&item.images[imgId];if(!img)return;
-  var newTitre=prompt('Nouveau titre de l\u2019image :',img.titre||'');
+  _modalePrompt('Renommer l\u2019image','Nouveau titre de l\u2019image :',img.titre||'',function(newTitre){
   if(newTitre===null)return;
   newTitre=newTitre.trim();if(!newTitre)return;
   fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+imgId+'/titre.json',{
     method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newTitre)
   }).then(function(){img.titre=newTitre;renderChapitres(level);});
+  });
 }
 
 function moveImageInGallery(level,chnum,snum,itemId,imgId,dir){
@@ -2811,12 +2949,13 @@ function moveImageInGallery(level,chnum,snum,itemId,imgId,dir){
 function deleteImageInGallery(level,chnum,snum,itemId,imgId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];
   var img=item&&item.images&&item.images[imgId];if(!img)return;
-  if(!confirm('Supprimer cette image de la galerie ?\n\n\u00ab '+(img.titre||imgId)+' \u00bb\n\n(Le fichier Drive reste, seule la liaison est retir\u00e9e.)'))return;
+  _modaleConfirme('Supprimer cette image','\u00ab '+escapeHtml(img.titre||imgId)+' \u00bb<br><br>Le fichier Drive reste, seule la liaison est retir\u00e9e de la galerie.',function(){
   fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+imgId+'.json',{
     method:'DELETE'
   }).then(function(){
     delete item.images[imgId];
     renderChapitres(level);
+  });
   });
 }
 
@@ -2957,7 +3096,7 @@ function showAccueilBg(){document.getElementById('bg-accueil').style.opacity='1'
 var TRACK={eleve:null,session:null,isActive:true,activeStart:0,activeTotal:0,scrollMax:0,interactions:0,score:'',openTime:0};
 var currentLevel=(new URLSearchParams(window.location.search).get('n')||'').toLowerCase();
 if(!levelLabels[currentLevel])currentLevel=null;
-window.addEventListener('DOMContentLoaded',function(){/* M8-BADGE : le badge d'accueil affiche la version — il lit APP_VERSION, il suit donc chaque promotion sans retouche */var _pb=document.getElementById('proto-badge');if(_pb)_pb.textContent='v'+APP_VERSION;var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(restored&&TRACK.eleve&&TRACK.eleve.is_prof&&!currentLevel){_atterrirProf();return;}if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.querySelector('.val-code-wrap').style.display='none';document.getElementById('val-btn').style.display='none';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&(TRACK.eleve.is_prof||TRACK.eleve.niveau===currentLevel)){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
+window.addEventListener('DOMContentLoaded',function(){_chargerTextesSite();/* M8-BADGE : le badge d'accueil affiche la version — il lit APP_VERSION, il suit donc chaque promotion sans retouche */var _pb=document.getElementById('proto-badge');if(_pb)_pb.textContent='v'+APP_VERSION;var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(restored&&TRACK.eleve&&TRACK.eleve.is_prof&&!currentLevel){_atterrirProf();return;}if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.querySelector('.val-code-wrap').style.display='none';document.getElementById('val-btn').style.display='none';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&(TRACK.eleve.is_prof||TRACK.eleve.niveau===currentLevel)){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
 function _normName(s){return String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');}
 function _findEleveByName(full){var t=_normName(full);if(!t)return null;var keys=Object.keys(classesData||{});for(var i=0;i<keys.length;i++){var slug=keys[i];var cl=classesData[slug];if(!cl||typeof cl!=='object'||cl.archivee)continue;var names=extractEleves(cl,[]);for(var j=0;j<names.length;j++){if(_normName(names[j])===t)return{slug:slug,nom:names[j],classe:cl,code:_eleveCode(names[j])};}}return null;}
 function _loginEleveFound(found,status){var cl=found.classe;var eleve={is_prof:false,nom:found.nom,prenom:'',classe:found.slug,niveau:(cl&&cl.niveau)||currentLevel||'3e',code:found.code||'',display:found.nom,uuid:''};ensureEleveUuid(eleve).then(function(ev){TRACK.eleve=ev;_writeSharedSession(ev);if(typeof notifyConnection==='function')notifyConnection(ev);if(typeof startHeartbeat==='function')startHeartbeat();currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);});}
@@ -3175,7 +3314,7 @@ function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;var isOpen=body.classList.toggle('open');var card=header.closest('.chapter-card[data-chapter-id]');if(card){var chId=card.getAttribute('data-chapter-id');var lvl=clickedLevel||currentLevel||'';if(isOpen)UI_OPEN[lvl+'::'+chId]=true;else delete UI_OPEN[lvl+'::'+chId];}}
 function toggleSeanceOpen(h,key){var b=h.nextElementSibling;if(!b||!b.classList.contains('seance-items'))return;var o=b.classList.toggle('open');if(o)UI_OPEN_S[key]=true;else delete UI_OPEN_S[key];}
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction','tab-analyse'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
-function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';var de=document.getElementById('tab-dictee');if(de)de.style.display='none';}
+function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';if(tab==='autonomie'&&typeof renderZoneAutonomie==='function')renderZoneAutonomie();var de=document.getElementById('tab-dictee');if(de)de.style.display='none';}
 function collectChapterItems(level,kind){
   var data=chapitresData[level]||{};
   var result=[];
@@ -3195,6 +3334,61 @@ function collectChapterItems(level,kind){
   return result;
 }
 
+/* ═══ M12 · ZONE AUTONOMIE (S5, périmètre D) — le marqueur se pose côté prof, la vue se lit
+   côté élève. Un item marqué `autonomie:true` est RASSEMBLÉ dans la zone, quel que soit son
+   chapitre d'origine. La publication reste souveraine : `_visiblePourSession` filtre TOUJOURS
+   (le marqueur n'outrepasse jamais isPubFor). L'écriture passe par _sitePut (mode test M8). ═══ */
+function toggleAutonomie(level,chnum,snum,itemId){
+  var it=chapitresData[level]&&chapitresData[level][chnum]&&chapitresData[level][chnum].seances[snum]&&chapitresData[level][chnum].seances[snum].items[itemId];
+  if(!it)return;
+  var nv=!it.autonomie;
+  _sitePut('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/autonomie',nv,function(ok){
+    if(ok){it.autonomie=nv;renderChapitres(level);}
+  });
+}
+function collectAutonomieItems(level){
+  var data=chapitresData[level]||{};
+  var result=[];
+  Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);}).forEach(function(chnum){
+    var ch=data[chnum];if(!_visiblePourSession(ch,level))return;
+    var seances=ch.seances||{};
+    Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);}).forEach(function(snum){
+      var sce=seances[snum];if(!_visiblePourSession(sce,level))return;
+      var items=sce.items||{};
+      Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);}).forEach(function(itemId){
+        var it=items[itemId];
+        if(!it||it.autonomie!==true)return;
+        if(!_visiblePourSession(it,level))return;   /* publication souveraine */
+        result.push({level:level,chnum:chnum,snum:snum,chapTitle:ch.title||'',seanceTitle:sce.title||'',itemId:itemId,item:it});
+      });
+    });
+  });
+  return result;
+}
+function renderZoneAutonomie(){
+  var zone=document.getElementById('autonomie-dyn');if(!zone)return;
+  var level=clickedLevel||currentLevel||'';
+  var items=level?collectAutonomieItems(level):[];
+  if(items.length===0){zone.innerHTML='';return;}
+  var parChap={};var ordre=[];
+  items.forEach(function(x){var k=x.chnum;if(!parChap[k]){parChap[k]={titre:x.chapTitle,items:[]};ordre.push(k);}parChap[k].items.push(x);});
+  var html='<div class="section-label">Rassembl\u00e9s pour toi</div>'
+    +'<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Ces activit\u00e9s viennent de tes chapitres : tu peux les faire en autonomie, dans l\u2019ordre que tu veux.</div>';
+  ordre.forEach(function(chnum){
+    var g=parChap[chnum];
+    html+='<div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">\ud83d\ude80</div><div class="chapter-info"><div class="chapter-title">'+escapeHtml(g.titre||('Chapitre '+chnum))+'</div><div class="chapter-meta"><span class="chip chip-fiche">'+g.items.length+' activit\u00e9'+(g.items.length>1?'s':'')+'</span></div></div></div>';
+    html+='<div class="chapter-body open"><div class="doc-list">';
+    g.items.forEach(function(x){
+      var it=x.item;
+      var icon=it.icon||'\ud83d\udcc4';
+      html+='<div class="doc-item" style="cursor:pointer" onclick="openItem(\''+x.level+'\',\''+x.chnum+'\',\''+x.snum+'\',\''+x.itemId+'\')">'
+        +'<div class="doc-icon html">'+icon+'</div><div class="doc-label">'+escapeHtml(it.title||'')+'<small>'+escapeHtml(x.seanceTitle||'')+'</small></div><div class="doc-action">\u2192 Ouvrir</div></div>';
+    });
+    html+='</div></div></div>';
+  });
+  zone.innerHTML=html;
+}
+
 function renderItemListByChapter(items,onclickFn,bgColor,icon){
   if(items.length===0)return '<div class="chapter-card" style="padding:18px;text-align:center;color:rgba(255,255,255,0.35);font-style:italic;">Aucun \u00e9l\u00e9ment disponible pour le moment.</div>';
   var html='',lastChnum=null;
@@ -3211,7 +3405,7 @@ function _openQcmFromList(ref){openViewer('\u00c9valuation QCM','evaluation-qcm.
 
 function gotoDictee(){var level=clickedLevel||currentLevel||'';var dictees=collectChapterItems(level,'dictee');showDicteeList(dictees,level);}   /* M8-IDENTITÉ (I2) : le site navigue dans le CONTENU — les corrections nominatives s'atteignent par l'identité, dans l'app */
 function openReecriture(id,title){openViewer(title||'Réécriture','reecriture.html?mode=eleve&reecriture='+encodeURIComponent(id));}
-function showDicteeList(dictees,level){var dicteeEl=document.getElementById('tab-dictee');hideAllTabs();dicteeEl.style.display='block';var btn=document.getElementById('tab-btn-dictee');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Dict\u00e9es co\u00e9valu\u00e9es '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Ton voisin dicte, tu \u00e9cris. Puis vous \u00e9changez les r\u00f4les et corrigez ensemble.</div>';html+=renderItemListByChapter(dictees,'_openDicteeFromList','var(--level-accent)','\ud83d\udcdd');html+='<div class="section-label" style="margin-top:28px">Correction de ma dict\u00e9e manuscrite</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Le prof a corrig\u00e9 ta dict\u00e9e sur papier. Retrouve tes erreurs, tape la bonne orthographe et gagne jusqu\u2019\u00e0 5 points bonus.</div>';html+='<div class="chapters-list"><div class="chapter-card" onclick="openMesDictees()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:#d4a017;color:#1a1030;">\ud83d\udccb</div><div class="chapter-info"><div class="chapter-title">Mes dict\u00e9es corrig\u00e9es</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Identifie-toi et retrouve tes corrections</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Ouvrir</div></div></div></div>';dicteeEl.innerHTML=html;}
+function showDicteeList(dictees,level){var dicteeEl=document.getElementById('tab-dictee');hideAllTabs();dicteeEl.style.display='block';var btn=document.getElementById('tab-btn-dictee');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Dict\u00e9es co\u00e9valu\u00e9es '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Ton voisin dicte, tu \u00e9cris. Puis vous \u00e9changez les r\u00f4les et corrigez ensemble.</div>';html+=renderItemListByChapter(dictees,'_openDicteeFromList','var(--level-accent)','\ud83d\udcdd');html+='<div class="section-label" style="margin-top:28px">Correction de ma dict\u00e9e manuscrite</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">J\u2019ai corrig\u00e9 ta dict\u00e9e sur papier. Retrouve tes erreurs, tape la bonne orthographe et gagne jusqu\u2019\u00e0 5 points bonus.</div>';html+='<div class="chapters-list"><div class="chapter-card" onclick="openMesDictees()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:#d4a017;color:#1a1030;">\ud83d\udccb</div><div class="chapter-info"><div class="chapter-title">Mes dict\u00e9es corrig\u00e9es</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Identifie-toi et retrouve tes corrections</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Ouvrir</div></div></div></div>';dicteeEl.innerHTML=html;}
 function openDicteeById(id){openViewer('Dictée coévaluée','dictee_universelle.html?dictee='+encodeURIComponent(id));}
 function openMesDictees(){openViewer('Mes dict\u00e9es corrig\u00e9es','correction_dictee.html?mode=eleve');}   /* M8-IDENTITÉ (I2) */
 function openDoc(chapitre,docName,typeDoc,url){trackOpen(chapitre,docName,typeDoc);var clickedItem=event?event.target.closest('.doc-item[data-docid]'):null;if(!clickedItem)return;var embedFromHtml=clickedItem.getAttribute('data-embed');var docId=clickedItem.getAttribute('data-docid')||'';var doc=docId?DOCS_CACHE[docId]:null;if(embedFromHtml){openViewer(docName,embedFromHtml);}else if(doc&&doc.embed_url){openViewer(docName,doc.embed_url);}else if(url){openViewer(docName,url);}}
@@ -3271,7 +3465,7 @@ document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.code==='Space'){
 function handleBadgeTap(){badgeTapCount++;if(badgeTapTimer)clearTimeout(badgeTapTimer);badgeTapTimer=setTimeout(function(){badgeTapCount=0;},1500);if(badgeTapCount>=5){badgeTapCount=0;clearTimeout(badgeTapTimer);basculerVue();}}
 function loadDocsList_(){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getdocs',niveau:currentLevel||''})}).then(function(r){return r.json();}).then(function(data){if(data.documents)data.documents.forEach(function(doc){DOCS_CACHE[doc.doc_id]=doc;});applyDocsToUI_();}).catch(function(err){console.warn('[Docs]',err);});}
 function applyDocsToUI_(){document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){var docId=el.getAttribute('data-docid');var doc=DOCS_CACHE[docId];if(doc&&doc.embed_url){el.classList.add('has-file');var a=el.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}});}
-function initAdminDragDrop_(){document.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');document.querySelectorAll('.drag-over').forEach(function(el){if(el!==d)el.classList.remove('drag-over');});if(d)d.classList.add('drag-over');},false);document.addEventListener('dragenter',function(e){e.preventDefault();e.stopPropagation();},false);document.addEventListener('dragleave',function(e){var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');if(d&&!d.contains(e.relatedTarget))d.classList.remove('drag-over');},false);document.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;document.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});var docItem=e.target.closest('.doc-item[data-docid]');var dropZone=e.target.closest('.fiche-drop-zone[data-section]');var files=e.dataTransfer.files;if(!files||files.length===0)return;var file=files[0];var MAX_SIZE=30*1024*1024;if(file.size>MAX_SIZE){showBigFileGuide_(file,docItem,dropZone);return;}if(docItem){uploadFile_(file,docItem,docItem.getAttribute('data-docid'),docItem.getAttribute('data-chapitre')||'',docItem.getAttribute('data-seance')||'','');}else if(dropZone){uploadFileToSection_(file,dropZone,dropZone.getAttribute('data-section'));}},false);document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){if(!el.querySelector('.admin-delete')){var btn=document.createElement('button');btn.className='admin-delete';btn.textContent='✕';btn.onclick=function(ev){ev.stopPropagation();if(confirm('Supprimer ce document ?'))deleteDoc_(el.getAttribute('data-docid'));};el.appendChild(btn);}});document.querySelectorAll('.fiche-drop-zone').forEach(function(dz){var body=dz.closest('.chapter-body');if(body)body.classList.add('open');});}
+function initAdminDragDrop_(){document.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');document.querySelectorAll('.drag-over').forEach(function(el){if(el!==d)el.classList.remove('drag-over');});if(d)d.classList.add('drag-over');},false);document.addEventListener('dragenter',function(e){e.preventDefault();e.stopPropagation();},false);document.addEventListener('dragleave',function(e){var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');if(d&&!d.contains(e.relatedTarget))d.classList.remove('drag-over');},false);document.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;document.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});var docItem=e.target.closest('.doc-item[data-docid]');var dropZone=e.target.closest('.fiche-drop-zone[data-section]');var files=e.dataTransfer.files;if(!files||files.length===0)return;var file=files[0];var MAX_SIZE=30*1024*1024;if(file.size>MAX_SIZE){showBigFileGuide_(file,docItem,dropZone);return;}if(docItem){uploadFile_(file,docItem,docItem.getAttribute('data-docid'),docItem.getAttribute('data-chapitre')||'',docItem.getAttribute('data-seance')||'','');}else if(dropZone){uploadFileToSection_(file,dropZone,dropZone.getAttribute('data-section'));}},false);document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){if(!el.querySelector('.admin-delete')){var btn=document.createElement('button');btn.className='admin-delete';btn.textContent='✕';btn.onclick=function(ev){ev.stopPropagation();_modaleConfirme('Supprimer ce document','Le document sera retir\u00e9 de la liste. Le fichier Drive d\u2019origine n\u2019est pas touch\u00e9.',function(){deleteDoc_(el.getAttribute('data-docid'));});};el.appendChild(btn);}});document.querySelectorAll('.fiche-drop-zone').forEach(function(dz){var body=dz.closest('.chapter-body');if(body)body.classList.add('open');});}
 function uploadFile_(file,docItem,docId,chapitre,seance,section){var ind=docItem.querySelector('.upload-indicator');var prog=docItem.querySelector('.upload-progress');if(ind)ind.textContent='Upload...';if(prog)prog.style.width='30%';docItem.classList.remove('upload-done');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];if(prog)prog.style.width='60%';fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:chapitre,seance:seance,section:section,doc_id:docId,doc_title:file.name.replace(/\.[^.]+$/,'')})}).then(function(r){return r.json();}).then(function(data){if(prog)prog.style.width='100%';if(data.error){if(ind)ind.textContent='❌ '+data.error;return;}DOCS_CACHE[data.doc_id||docId]={doc_id:data.doc_id||docId,embed_url:data.embed_url,drive_url:data.drive_url,nom_fichier:data.file_name};docItem.classList.add('upload-done','has-file');if(data.embed_url)docItem.setAttribute('data-embed',data.embed_url);if(ind)ind.textContent='✓ '+file.name;var a=docItem.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}).catch(function(err){if(ind)ind.textContent='❌ Erreur';console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
 function uploadFileToSection_(file,dropZone,section){var placeholder=document.createElement('div');placeholder.className='doc-item';placeholder.style.opacity='0.5';placeholder.innerHTML='<div class="doc-icon pdf">⏳</div><div class="doc-label">Upload de '+file.name+'...<small>En cours</small></div><div class="doc-action">...</div>';dropZone.appendChild(placeholder);var cleanTitle=file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:section,seance:'',section:section,doc_id:'',doc_title:cleanTitle})}).then(function(r){return r.json();}).then(function(data){placeholder.remove();if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+file.name+' uploadé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){placeholder.remove();alert('Erreur réseau');console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
 function deleteDoc_(docId){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'remove_doc',doc_id:docId})}).then(function(r){return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}var el=document.querySelector('[data-docid="'+docId+'"]');if(el)el.remove();alert('✓ Document supprimé. Le site se met à jour sur GitHub (~30s).');}).catch(function(err){alert('Erreur réseau');console.warn('[Delete]',err);});}
@@ -3308,6 +3502,7 @@ function _renderProfSection(id){
   if(id==='profil-test')return _profSectionProfilTest();
   if(id==='archi')return _profSectionArchi();
   if(id==='archives')return _profSectionArchives();
+  if(id==='corbeille')return _profSectionCorbeille();
   if(id==='config')return _profSectionConfig();
   if(id==='presence')return _profSectionPresence();
   if(id==='annonces')return _profSectionAnnonces();
@@ -3358,13 +3553,16 @@ function _importEleves(slug){
 }
 function _genererCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){if(!_eleveCode(nom)){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}});showProfSection('eleves');}
 function _regenCodeEleve(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;var taken=_allCodesTaken();var c=_genCode4(taken);_putCode(nom,slug,c);showProfSection('eleves');}
-function _resetAllCodesClasse(slug){if(!confirm('R\u00e9g\u00e9n\u00e9rer TOUS les codes de cette classe ? Les anciens ne fonctionneront plus.'))return;var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);});showProfSection('eleves');}
-function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;if(!confirm('Retirer '+nom+' de la classe ?'))return;
+function _resetAllCodesClasse(slug){_modaleConfirme('R\u00e9g\u00e9n\u00e9rer tous les codes','\u26a0 TOUS les codes de cette classe seront remplac\u00e9s. <b>Les anciens ne fonctionneront plus</b> \u2014 chaque \u00e9l\u00e8ve devra recevoir son nouveau code.',function(){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);});showProfSection('eleves');},'CODES');}
+function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;
+  _modaleConfirme('Retirer un \u00e9l\u00e8ve','Retirer <b>'+escapeHtml(nom)+'</b> de la classe ? Une copie (\u00e9l\u00e8ve + code) part d\u2019abord en corbeille.',function(){
   var k=san(nom);var extract={classes:{}};extract.classes[slug]={eleves:[nom]};if(codesData[k]){extract.codes={};extract.codes[k]=codesData[k];}
-  _corbeillePuis('retrait-eleve',extract,{eleve:nom,classe:slug},function(){
+  _corbeillePuis('retrait-eleve',extract,{eleve:nom,classe:slug,chemin:''},function(){
     var merged=names.filter(function(e,idx){return idx!==i;});classesData[slug].eleves=merged;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});
     delete codesData[k];fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');
-  });}
+  });
+  });
+}
 function _printCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var cl=classesData[slug]||{};var rows=names.map(function(nom){return '<tr><td>'+escapeHtml(nom)+'</td><td class="c">'+(_eleveCode(nom)||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
 
 var PROF_TEST_CLASSE=null;
@@ -3736,7 +3934,7 @@ function _b2Confirm(savedName){
 }
 function _b2Exec(){
   var list=_b2SelList();
-  _corbeillePuis(_b2.mode==='archive'?'archive-eleves':'suppression-eleves',_b2BuildExtract(list),{eleves:list.length},function(_cb){_b2ExecReel(list,_cb);});
+  _corbeillePuis(_b2.mode==='archive'?'archive-eleves':'suppression-eleves',_b2BuildExtract(list),{eleves:list.length,chemin:''},function(_cb){_b2ExecReel(list,_cb);});
 }
 function _b2ExecReel(list,_cheminCorbeille){
   var leaf=[],classRem={},appRem={};
@@ -3879,7 +4077,7 @@ function _purgeSauvegarde(){
       _saveJSON(_pr.hub,_tsName('sauvegarde-avant-purge')).then(function(ok){
         if(!ok){_purgeDryRun();return;}
         var extract={};_pr.res.plan.forEach(function(x){var v=_b2GetPath(_pr.hub,x.path);if(v!==undefined)_b2SetPath(extract,x.path,v);});
-        _corbeillePuis('purge-rentree',extract,{emplacements:_pr.res.plan.length},function(chemin){_purgeConfirm(chemin);});
+        _corbeillePuis('purge-rentree',extract,{emplacements:_pr.res.plan.length,chemin:''},function(chemin){_purgeConfirm(chemin);});
       });return true;}}
   ]);
 }
@@ -3943,7 +4141,7 @@ function _orphDelete(noeud){
   var extract={};extract[noeud]=hub[noeud];
   _saveJSON(extract,_tsName('orphelin-'+noeud)).then(function(ok){
     if(!ok){_orphRender(hub);return;}
-    _corbeillePuis('orphelin-'+noeud,extract,{noeud:noeud},function(chemin){
+    _corbeillePuis('orphelin-'+noeud,extract,{noeud:noeud,chemin:''},function(chemin){
       var body='<div class="cm-ok">✓ Archivé'+(chemin?(' · corbeille : <code>'+escapeHtml(chemin)+'</code>'):' (fichier seul)')+'</div>'
         +'<div class="cm-sub" style="margin-top:10px">Pour supprimer <b>'+escapeHtml(noeud)+'</b> du hub, retape son nom exact :</div>'
         +'<input class="b2-input" id="orcf" autocomplete="off"><div id="orcferr" class="b2-err"></div>';
@@ -4209,6 +4407,196 @@ function _showConsoleModal(title,bodyHtml,actions){
 }
 function _closeConsoleModal(){var ov=document.getElementById('console-modal');if(ov)ov.style.display='none';}
 
+/* ═══ M12 · MODALES DE SAISIE ET DE CONFIRMATION (charte cm-box, remplaçants des boîtes natives) ═══ */
+function _modalePrompt(titre,label,valeur,cb){
+  var body='<div class="cm-sub">'+escapeHtml(label||'')+'</div>'
+    +'<input type="text" id="cm-prompt-input" class="cm-input" value="'+escapeHtml(valeur==null?'':String(valeur))+'" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font:inherit;font-size:.95rem">';
+  _showConsoleModal(titre,body,[
+    {label:'Annuler',cls:'ghost'},
+    {label:'Valider',cls:'primary',onclick:function(){var v=(document.getElementById('cm-prompt-input')||{}).value;cb(v==null?null:String(v));}}
+  ]);
+  setTimeout(function(){var i=document.getElementById('cm-prompt-input');if(i){i.focus();i.select();
+    i.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();cb(String(i.value));_closeConsoleModal();}});}},50);
+}
+function _modaleConfirme(titre,corpsHtml,cbOui,motConfirmation){
+  var body='<div class="cm-sub">'+corpsHtml+'</div>';
+  if(motConfirmation){
+    body+='<div class="cm-sub" style="margin-top:10px">Pour confirmer, tape <code>'+escapeHtml(motConfirmation)+'</code> :</div>'
+      +'<input type="text" id="cm-confirm-input" class="cm-input" autocomplete="off" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid rgba(251,191,36,.5);background:rgba(255,255,255,.06);color:#fff;font:inherit;font-size:.95rem">';
+  }
+  _showConsoleModal(titre,body,[
+    {label:'Annuler',cls:'ghost'},
+    {label:motConfirmation?'Confirmer':'Oui, continuer',cls:'warn',onclick:function(){
+      if(motConfirmation){var v=((document.getElementById('cm-confirm-input')||{}).value||'').trim();
+        if(v!==motConfirmation){var i=document.getElementById('cm-confirm-input');if(i){i.style.borderColor='#ef4444';i.focus();}return true;}}
+      cbOui();
+    }}
+  ]);
+  if(motConfirmation)setTimeout(function(){var i=document.getElementById('cm-confirm-input');if(i)i.focus();},50);
+}
+/* ═══ M12 · CORBEILLE — canal de restauration UNIQUE, respecte le mode test M8 ═══ */
+function _corbeilleRestaure(chemin,valeur,cb){
+  if(m8TestOn()){ M8_TEST_STORE['/'+chemin]=valeur; if(cb)cb(true); return; }
+  _fbPutPath(chemin,valeur).then(function(){if(cb)cb(true);}).catch(function(){if(cb)cb(false);});
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   M12 · ÉCRAN CORBEILLE (S5-⑥, patron analyse_logique/M11 : consulter · restaurer ·
+   étiquette + chemin + horodatage). La promesse W (« récupérable un an ») gagne sa lecture.
+   TROIS FORMES tolérées : canonique index {_meta,data} · variantes d'apps (champs _meta
+   hétérogènes : `le` pour ts, `dictee`…) · archive brute legacy (ni _meta ni data).
+   RESTAURATION : ① _meta.chemin non vide -> data ENTIER à ce chemin ; ② sinon TABLE par motif
+   (nœuds ENTIERS seulement) ; ③ sinon consultation + export. STRICT (Q4) : rien d'inféré,
+   jamais d'écrasement sans confirmation chiffrée (re-frappe).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var _CORB={data:null};
+function _corbMotifLisible(m){
+  var L={'retrait-eleve':'Retrait d\u2019un \u00e9l\u00e8ve','archive-eleves':'Archivage d\u2019\u00e9l\u00e8ves','suppression-eleves':'Suppression d\u2019\u00e9l\u00e8ves',
+         'purge-rentree':'Purge de rentr\u00e9e','suppression-classe':'Suppression de classe','suppression-dictee':'Suppression de dict\u00e9e'};
+  if(L[m])return L[m];
+  if(/^orphelin-/.test(m||''))return 'N\u0153ud orphelin \u00ab '+m.replace(/^orphelin-/,'')+' \u00bb';
+  if(/^legacy-/.test(m||''))return 'Archive ancienne \u00ab '+m.replace(/^legacy-/,'')+' \u00bb';
+  return m||'(sans motif)';
+}
+/* Plan de restauration : liste de {chemin, valeur, libelle} — nœuds ENTIERS seulement, sinon null. */
+function _corbPlanRestauration(item){
+  var meta=item._meta||{}, data=item.data;
+  if(meta.chemin && data!==undefined && data!==null) return [{chemin:meta.chemin,valeur:data,libelle:meta.chemin}];
+  var motif=String(meta.motif||item.__cle||'');
+  var m;
+  if((m=motif.match(/^orphelin-(.+?)(_\d{6})?$/))){
+    var noeud=meta.noeud||m[1];
+    if(data && Object.prototype.hasOwnProperty.call(data,noeud)) return [{chemin:noeud,valeur:data[noeud],libelle:'/'+noeud+' (n\u0153ud racine entier)'}];
+  }
+  if(motif.indexOf('suppression-classe')===0 && data && data.classes){
+    var plan=[];
+    Object.keys(data.classes).forEach(function(slug){plan.push({chemin:'classes/'+slug,valeur:data.classes[slug],libelle:'classes/'+slug+' (classe enti\u00e8re)'});});
+    if(data.codes)Object.keys(data.codes).forEach(function(k){plan.push({chemin:'codes/'+k,valeur:data.codes[k],libelle:'codes/'+k});});
+    return plan.length?plan:null;
+  }
+  if(motif.indexOf('suppression-dictee')===0 && meta.dictee && data) return [{chemin:'dictees/'+meta.dictee,valeur:data,libelle:'dictees/'+meta.dictee+' (dict\u00e9e enti\u00e8re)'}];
+  return null;   /* retrait-eleve (fragment partiel), archive/suppression-eleves, purge-rentree, legacy : consultation seule */
+}
+function _corbPourquoiPasAuto(motif){
+  if(String(motif).indexOf('retrait-eleve')===0)return 'Archive PARTIELLE : elle ne contient que l\u2019\u00e9l\u00e8ve retir\u00e9 (et son code s\u2019il existait), pas la classe enti\u00e8re. R\u00e9ins\u00e8re l\u2019\u00e9l\u00e8ve depuis \u00ab \u00c9l\u00e8ves & codes \u00bb ; son code archiv\u00e9 est lisible ci-dessous.';
+  if(String(motif).indexOf('purge-rentree')===0)return 'Archive multi-emplacements de la purge : restauration globale par \u00ab Importer \u00bb (Archives) depuis ton fichier de sauvegarde, pas \u00e9l\u00e9ment par \u00e9l\u00e9ment.';
+  if(/^legacy-/.test(String(motif)))return 'Archive d\u2019un ancien format (avant le format unique) : consultation et export seulement.';
+  return 'Cette archive ne d\u00e9signe pas un n\u0153ud entier restituable tel quel : consultation et export seulement.';
+}
+function _profSectionCorbeille(){
+  setTimeout(_corbCharger,30);
+  return '<div class="tprof-section-title">\ud83d\uddd1 Corbeille <span class="tir-value" style="font-weight:400">\u2014 tout ce qui a \u00e9t\u00e9 supprim\u00e9 passe ici avant destruction \u00b7 conserv\u00e9 1 an</span></div>'
+    +'<div id="corb-zone"><div class="tprof-placeholder">Chargement de la corbeille\u2026</div></div>';
+}
+function _corbCharger(){
+  _siteGet('/corbeille',function(v){
+    _CORB.data=v||{};
+    _corbRender();
+  });
+}
+function _corbRender(){
+  var zone=document.getElementById('corb-zone');if(!zone)return;
+  var jours=Object.keys(_CORB.data||{}).sort().reverse();
+  if(jours.length===0){zone.innerHTML='<div class="tprof-placeholder">La corbeille est vide.</div>';return;}
+  var html='';
+  jours.forEach(function(jour){
+    var items=_CORB.data[jour]||{};
+    var cles=Object.keys(items);
+    html+='<div class="cm-sub-h" style="margin-top:14px">'+escapeHtml(jour)+'</div>';
+    cles.sort().reverse().forEach(function(cle){
+      var raw=items[cle]||{};
+      var canonique=(raw&&typeof raw==='object'&&raw._meta!==undefined&&raw.data!==undefined);
+      var item=canonique?{_meta:raw._meta||{},data:raw.data,__cle:cle}:{_meta:null,data:raw,__cle:cle,__brut:true};
+      var meta=item._meta||{};
+      var ts=meta.ts||meta.le||0;
+      var quand=ts?new Date(ts).toLocaleString('fr-FR'):(meta.date||'');
+      var motif=meta.motif||cle.replace(/_\d{6}$/,'');
+      var etiquette=_corbMotifLisible(motif);
+      var detail=[];
+      if(meta.titre)detail.push(meta.titre); if(meta.eleve)detail.push(meta.eleve);
+      if(meta.classe)detail.push(meta.classe); if(meta.dictee)detail.push(meta.dictee);
+      if(meta.noeud)detail.push('/'+meta.noeud); if(meta.eleves)detail.push(meta.eleves+' \u00e9l\u00e8ve(s)');
+      if(meta.emplacements)detail.push(meta.emplacements+' emplacement(s)');
+      var source=meta.source||'(inconnue)';
+      var taille=_humanSize(JSON.stringify(raw).length);
+      var plan=_corbPlanRestauration(item);
+      var id=jour+'/'+cle;
+      html+='<div class="tprof-info-row" style="align-items:flex-start;flex-wrap:wrap;gap:6px">'
+        +'<span class="tir-label" style="min-width:220px"><b>'+escapeHtml(etiquette)+'</b>'
+        +(detail.length?('<br><span style="opacity:.75">'+escapeHtml(detail.join(' \u00b7 '))+'</span>'):'')
+        +'<br><span style="opacity:.5;font-size:.8rem">'+escapeHtml(quand)+' \u00b7 source : '+escapeHtml(source)+' \u00b7 '+escapeHtml(taille)+(item.__brut?' \u00b7 ancien format':'')+'</span></span>'
+        +'<span style="display:flex;gap:8px;flex-wrap:wrap">'
+        +'<button class="cm-btn ghost" style="min-height:44px" title="Voir le contenu de cette archive" onclick="_corbVoir(\''+escapeHtml(id)+'\')">Consulter</button>'
+        +'<button class="cm-btn ghost" style="min-height:44px" title="T\u00e9l\u00e9charger cette archive en JSON" onclick="_corbExport(\''+escapeHtml(id)+'\')">Exporter</button>'
+        +(plan?('<button class="cm-btn warn" style="min-height:44px" title="Restaurer \u00e0 l\u2019emplacement d\u2019origine" onclick="_corbRestaurer(\''+escapeHtml(id)+'\')">Restaurer</button>'):'')
+        +'</span></div>';
+    });
+  });
+  html+='<div class="cm-sub" style="margin-top:16px;opacity:.6">Les archives sans bouton \u00ab Restaurer \u00bb se consultent et s\u2019exportent \u2014 le d\u00e9tail dit pourquoi. Rien n\u2019est jamais restaur\u00e9 sans confirmation.</div>';
+  zone.innerHTML=html;
+}
+function _corbItem(id){
+  var p=id.split('/');var raw=((_CORB.data||{})[p[0]]||{})[p[1]];
+  if(raw===undefined)return null;
+  var canonique=(raw&&typeof raw==='object'&&raw._meta!==undefined&&raw.data!==undefined);
+  return canonique?{_meta:raw._meta||{},data:raw.data,__cle:p[1],__raw:raw}:{_meta:null,data:raw,__cle:p[1],__brut:true,__raw:raw};
+}
+function _corbVoir(id){
+  var item=_corbItem(id);if(!item)return;
+  var meta=item._meta||{};
+  var plan=_corbPlanRestauration(item);
+  var body='';
+  if(item.__brut)body+='<div class="cm-sub">\u26a0 Archive d\u2019un ancien format (donn\u00e9es brutes, sans m\u00e9tadonn\u00e9es).</div>';
+  body+='<div class="cm-sub">'+(plan
+      ?('Restauration possible vers : '+plan.map(function(x){return '<code>'+escapeHtml(x.libelle)+'</code>';}).join(' \u00b7 '))
+      :escapeHtml(_corbPourquoiPasAuto(meta.motif||item.__cle)))+'</div>';
+  body+=_hubDetailHtml?_hubDetailHtml(item.__brut?{archive:item.data}:{archive:item.data}):('<pre style="max-height:40vh;overflow:auto;font-size:.78rem">'+escapeHtml(JSON.stringify(item.data,null,1).slice(0,20000))+'</pre>');
+  _showConsoleModal('Archive \u2014 '+_corbMotifLisible(meta.motif||item.__cle),body,[{label:'Fermer',cls:'ghost'}]);
+}
+function _corbExport(id){
+  var item=_corbItem(id);if(!item)return;
+  _saveJSON(item.__raw,_tsName('corbeille-'+String(id).replace(/[^a-z0-9_-]/gi,'-')));
+}
+function _corbRestaurer(id){
+  var item=_corbItem(id);if(!item)return;
+  var plan=_corbPlanRestauration(item);
+  if(!plan){_corbVoir(id);return;}
+  /* Confirmation chiffr\u00e9e : GET de chaque cible ; occup\u00e9e -> re-frappe obligatoire. */
+  var lus=0, occupees=[];
+  plan.forEach(function(x){
+    _siteGet('/'+x.chemin,function(v){
+      lus++;
+      if(v!==null&&v!==undefined){var n=(typeof v==='object')?Object.keys(v).length:1;occupees.push({chemin:x.chemin,n:n});}
+      if(lus===plan.length)_corbRestaurerConfirme(id,plan,occupees);
+    });
+  });
+}
+function _corbRestaurerConfirme(id,plan,occupees){
+  var corps='La restauration va \u00e9crire :<br>'+plan.map(function(x){return '\u2022 <code>'+escapeHtml(x.libelle)+'</code>';}).join('<br>');
+  if(occupees.length){
+    corps+='<br><br>\u26a0 <b>'+occupees.length+' cible(s) contiennent d\u00e9j\u00e0 des donn\u00e9es</b> qui seront REMPLAC\u00c9ES :<br>'
+      +occupees.map(function(o){return '\u2022 <code>'+escapeHtml(o.chemin)+'</code> \u2014 '+o.n+' \u00e9l\u00e9ment(s) actuels';}).join('<br>');
+    _modaleConfirme('Restaurer \u2014 cible occup\u00e9e',corps,function(){_corbRestaurerExec(id,plan);},'RESTAURER');
+  } else {
+    _modaleConfirme('Restaurer',corps+'<br><br>Les cibles sont vides : rien ne sera \u00e9cras\u00e9.',function(){_corbRestaurerExec(id,plan);});
+  }
+}
+function _corbRestaurerExec(id,plan){
+  var faits=0, echecs=[];
+  plan.forEach(function(x){
+    _corbeilleRestaure(x.chemin,x.valeur,function(ok){
+      faits++;if(!ok)echecs.push(x.chemin);
+      if(faits===plan.length){
+        var body=echecs.length
+          ?'<div class="cm-sub uni-err">\u00c9chec sur : '+echecs.map(function(c){return '<code>'+escapeHtml(c)+'</code>';}).join(', ')+'. L\u2019archive reste en corbeille, rien n\u2019a \u00e9t\u00e9 retir\u00e9.</div>'
+          :'<div class="cm-ok">\u2713 Restaur\u00e9. L\u2019archive RESTE en corbeille (elle n\u2019est jamais supprim\u00e9e automatiquement \u2014 r\u00e9tention 1 an).</div>'
+           +(m8TestOn()?'<div class="cm-sub">Mode test actif : rien n\u2019est parti au hub, l\u2019\u00e9criture est rest\u00e9e locale.</div>':'');
+        _showConsoleModal('Restauration',body,[{label:'Fermer',cls:'ghost',onclick:function(){_corbCharger();}}]);
+      }
+    });
+  });
+}
+
 /* --- EXPORT : aperçu -> Enregistrer sous -> journal --- */
 function _exportHub(){
   _fbReadAll().then(function(data){
@@ -4470,18 +4858,20 @@ function submitCreateClass(){
 
 function renameClass(slug){
   var c=classesData[slug];if(!c)return;
-  var newNom=prompt('Nouveau nom complet de la classe :',c.nom||'');
+  _modalePrompt('Renommer la classe','Nouveau nom complet de la classe :',c.nom||'',function(newNom){
   if(newNom===null)return;newNom=newNom.trim();
-  if(!newNom){alert('Nom vide.');return;}
+  if(!newNom)return;
   fetch(FIREBASE_BASE+'/classes/'+slug+'/nom.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newNom)})
     .then(function(){c.nom=newNom;showProfSection('classes');});
+  });
 }
 
 function archiveClass(slug){
   var c=classesData[slug];if(!c)return;
-  if(!confirm('Archiver \u00ab '+(c.nom||slug)+' \u00bb ?\n\nLa classe sera masqu\u00e9e mais conserv\u00e9e (\u00e9l\u00e8ves, codes, donn\u00e9es). Tu peux la d\u00e9sarchiver \u00e0 tout moment.'))return;
+  _modaleConfirme('Archiver la classe','Archiver \u00ab <b>'+escapeHtml(c.nom||slug)+'</b> \u00bb ? La classe sera masqu\u00e9e mais conserv\u00e9e (\u00e9l\u00e8ves, codes, donn\u00e9es). Tu peux la d\u00e9sarchiver \u00e0 tout moment.',function(){
   fetch(FIREBASE_BASE+'/classes/'+slug+'/archivee.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
     .then(function(){c.archivee=true;showProfSection('classes');});
+  });
 }
 
 function unarchiveClass(slug){
@@ -4492,17 +4882,16 @@ function unarchiveClass(slug){
 
 function deleteClass(slug){
   var c=classesData[slug];if(!c)return;
-  if(!confirm('\u26a0 Supprimer D\u00c9FINITIVEMENT la classe \u00ab '+(c.nom||slug)+' \u00bb ?\n\nCette action est IRR\u00c9VERSIBLE. Toutes les donn\u00e9es associ\u00e9es (\u00e9l\u00e8ves, codes) seront perdues.\n\nPour conserver les donn\u00e9es, pr\u00e9f\u00e8re ARCHIVER (\ud83d\udce6).'))return;
-  // Double confirmation pour éviter les accidents
-  var confirmName=prompt('Pour confirmer la suppression d\u00e9finitive, retape le nom exact de la classe :\n\n\u00ab '+(c.nom||slug)+' \u00bb');
-  if(confirmName===null)return;
-  if(confirmName.trim()!==(c.nom||slug)){alert('Le nom ne correspond pas. Suppression annul\u00e9e.');return;}
+  _modaleConfirme('Supprimer la classe \u00ab '+(c.nom||slug)+' \u00bb',
+    '\u26a0 Cette action est <b>irr\u00e9versible \u00e0 l\u2019\u00e9cran</b> \u2014 une copie compl\u00e8te (classe + codes) part d\u2019abord en corbeille (1 an). Pour conserver la classe visible, pr\u00e9f\u00e8re ARCHIVER (\ud83d\udce6).',
+    function(){
   var extract={classes:{}};extract.classes[slug]=classesData[slug];
   var noms=extractEleves(classesData[slug],[]);extract.codes={};noms.forEach(function(n){var k=san(n);if(codesData[k])extract.codes[k]=codesData[k];});
-  _corbeillePuis('suppression-classe',extract,{classe:slug,eleves:noms.length},function(){
+  _corbeillePuis('suppression-classe',extract,{classe:slug,eleves:noms.length,chemin:''},function(){
     fetch(FIREBASE_BASE+'/classes/'+slug+'.json',{method:'DELETE'})
       .then(function(){delete classesData[slug];showProfSection('classes');});
   });
+  },(c.nom||slug));
 }
 
 function togglePublishTab(level,tabId){
