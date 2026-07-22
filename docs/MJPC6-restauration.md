@@ -7,6 +7,11 @@
 - **Restauration** : `contents/dictee_universelle.html?ref=5076cfd6beeeef608cfd66e1edb5de19ec6eaeff` (API authentifiée) → PUT du contenu récupéré.
 - **Motif** : promotion M9 (passe complète : socle 1.1.0 + shunt §8, portail identité unique `/codes`, « Mes dictées », garde-corbeille P1 sur les 4 gestes destructeurs, dictionnaire de textes, présence, navigation prof à 2 niveaux, pastille 2.0.0, D16, tactile ≤480px, extrait de texte réservé au professeur).
 
+### POINT DE RETOUR — jumelles réécriture AVANT lot micro « métas anti-cache » (22/07/2026)
+- `reecriture.html` : commit `8cc669b46b` · md5 `c2e41fccc1983b758902fa265d671315`
+- `reecriture_bb4e.html` : commit `094b0c8d1e` · md5 `5798f2527221b80679873dd50b5aa546`
+- **Motif** : dette M10 soldée — insertion des 3 métas anti-cache (Cache-Control / Pragma / Expires) après le viewport. Aucun code touché.
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
