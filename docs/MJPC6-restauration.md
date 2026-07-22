@@ -21,6 +21,10 @@
 - `index.html` : commit `3f443fb191` · 363446 o · md5 `c9c3d326d85081a9fce45bfe68158d09`
 - **Motif** : M11 — passe complète `analyse_logique` v2.0.0 (vendorisation, socle 1.1.0 + shunt élève ET prof, identité unique `/codes`, Q4 motifs cumulables, mode test point 16, corbeille, présence, nav 2 niveaux, pastille, ≤480px) + extraction de l'onglet Analyse logique côté site (27 lignes).
 
+### POINT DE RETOUR — `index.html` AVANT promotion M12 (22/07/2026)
+- commit `f82be1360d` · 365 082 o · md5 `f2bfefb648fcd42f3e3b3bddee119824` · v8.4.3
+- **Motif** : M12 — écran corbeille (consulter/exporter/restaurer avec confirmation chiffrée), modales admin (7 prompt + 14 confirm), genres analyse_logique/applaudimetre/worktrack + réparation tache, marqueur et zone autonomie, séances publiées TOUJOURS visibles, texte de séance sans document ÉDITABLE, bloc diagnostic, pastille 8.5.0.
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
