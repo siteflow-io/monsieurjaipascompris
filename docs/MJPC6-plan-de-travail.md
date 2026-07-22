@@ -48,6 +48,16 @@ La première rédaction de ce point (même jour) donnait `pilotage_debat_s3` pou
 **OBLIGATION DE PASSE GRAVÉE (validée par Paul le 22/07)** : à chaque passe d'app, la conscience inspecte AUSSI L'ÉTAT DU HUB, pas seulement le fichier — effectifs par classe, cohérence `/classes` ↔ `/codes`, orphelins, doublons de clé, résidus de test. Ces deux constats étaient invisibles à la lecture du code : ils ne viennent que des données.
 **En attente d'arbitrage de Paul (NON traité)** : réparer les 28 codes sans classe maintenant, ou laisser la purge de fin août s'en charger.
 
+### DÉCISION DE PAUL — LES SÉANCES VIDES (22/07) · versée à M12
+**Bug signalé** : *« on a travaillé sur les chapitres qui étaient invisibles, mais pas sur les séances. J'ai publié des séances en 3e, côté endroit elles n'apparaissent pas. »*
+**Instruction faite sur pièces (code + données réelles du hub)** — DEUX causes cumulées :
+① `renderChapterCard` masque toute séance dont aucun item n'est visible (`if(!isAdmin && visibleItems.length===0) return;`). Or presque toutes les séances de 3e ont ZÉRO item (seul le chapitre 3 en porte). La séance était donc publiée et masquée pour vacuité — règle délibérée devenue piège.
+② **Reste du bug des chapitres, côté DONNÉES** : le chapitre 1 de 3e est publié sous les clés `3e_charles_de_gaulle` / `classe_test` (minuscules, tirets bas) tandis que tous les autres portent `3E Charles de Gaulle` / `CLASSE TEST`. Deux graphies coexistent dans le nœud de publication — même famille que les fossiles d'identité de la 5e. À normaliser (une seule graphie fait foi).
+**DÉCISION DE PAUL** : *« oui je veux qu'une séance apparaisse, même vide. Ça n'a pas de sens si elle n'apparaît pas, même s'il n'y a pas de docs. On peut très bien avoir fait une séance en classe, sans pour autant avoir de docs avec. »*
+→ **Une séance publiée s'affiche TOUJOURS**, avec son titre, qu'elle porte ou non des documents.
+→ **CHAMP NOUVEAU demandé par Paul** : un texte libre par séance, du genre *« séance non disponible sur le site, voir cahier »*, que le professeur renseigne et que l'élève lit à la place des documents. (Formulation exacte à soumettre à Paul ; texte élève, donc jamais décidé par l'exécutant.)
+**PISTE INSCRITE, NON TRAITÉE (Paul : « c'est pour plus tard »)** : relier les séances à la logique du **CAHIER DE RÉFÉRENCE** (défini au plan le 16/07 : la photo du cahier académique de la classe, ajoutée au fil de l'année). Une séance sans document sur le site renverrait alors au cahier, précisément. → à instruire quand le cahier de référence sera lui-même traité.
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
