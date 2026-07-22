@@ -13,6 +13,12 @@
 **DÉJÀ CONFORMES, à ne pas retoucher** : `pilotage_debat_s3` (référence), `evaluation-qcm` (patron d'origine), `worktrack`, `applause_meter`, `index` (côté site).
 **EXIGENCE DE FOND, valable pour tout mode test (décision Paul 22/07, « le mode test doit être BIEN codé »)** : un mode test ne prouve rien s'il ne montre que des cas réussis. Les élèves fictifs doivent COUVRIR TOUS LES ÉTATS que l'app sait produire — réussite, échec partiel, échec total, absence de rendu — et, pour les apps à verdicts, tous les motifs d'erreur. Le jeu de données de test est une DÉMONSTRATION DU MOTEUR, pas une vitrine.
 
+### analyse_logique.html — **M11 PROMU 22/07, v2.0.0**
+Commit `e0a3392fb1`, 522 047 o, md5 `93fb6e32fa4243afd2fc344fc9bca510`, socle 1.1.0, 0 CDN. Adresse de test : `…/analyse_logique.html?v=200`. Site : onglet « 📐 Analyse logique » (commit `f82be1360d`).
+**Règle pédagogique gravée (Paul, 22/07)** : la nomination est constitutive de la réussite — savoir nommer une PSR, pas tracer des crochets rouges en confondant PSR/PSCc/PSCci. « nommé à tort » et « non nommé » valent faux, l'élément reste au total, et les motifs sont CUMULABLES avec « crochets mal placés ».
+**Dettes ouvertes après M11** : ① écrans Copies et Exercices (placeholders assumés) · ② modes élève « phrase imposée / paragraphe » (annoncés côté élève) · ③ Concordance déclarée non codée · ④ **motifs supplémentaires proposés, en attente de Paul** : « crochets absents », « couleur à revoir », « flèche incomplète », « flèche absente » · ⑤ registre-bugs §5 (flèches SVG) non rejouable au harnais — à l'œil de Paul en essai réel · ⑥ verdicts « juste/partiel/faux/absent » des fiches : vocabulaire de classe non arbitré, laissé en l'état.
+**Dette d'écosystème constatée par M11** : le bloc DIAGNOSTIC n'est présent NI dans M9 NI dans la souche — à généraliser (versé au plan).
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
