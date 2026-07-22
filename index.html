@@ -780,6 +780,7 @@ body.admin-mode .admin-only { display: block; }
       <button class="tab" id="tab-btn-image" onclick="gotoImage()">🖼️ Analyse d'image</button>
       <button class="tab" id="tab-btn-etude" onclick="gotoEtude()">📖 Étude de texte</button>
       <button class="tab" id="tab-btn-redaction" onclick="gotoRedaction()">✏️ Rédaction</button>
+      <button class="tab" id="tab-btn-analyse" onclick="gotoAnalyse()">📐 Analyse logique</button>
     </div>
     <div class="admin-tabs-publish" id="admin-tabs-publish"></div>
     <div id="tab-chapitres">
@@ -790,8 +791,6 @@ body.admin-mode .admin-only { display: block; }
     <div id="tab-fiches" style="display:none;">
       <div class="section-label">Langue</div>
       <div class="chapters-list">
-        <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📐</div><div class="chapter-info"><div class="chapter-title">Analyse logique</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-analyse-logique">1 fiches</span></div></div></div><div class="chapter-body" data-section="analyse-logique"><div class="doc-list fiche-drop-zone" data-section="analyse-logique">
-              <div class="doc-item" data-docid="3e-analyse-logique-mmynhk1z" data-chapitre="analyse-logique" data-seance="" data-embed="https://drive.google.com/file/d/1JWzQXIwf2Q9HHVOOp_HEmIpZJv8QzcVa/preview" onclick="openDoc('analyse-logique','Analyse logique 3e','')"><div class="doc-icon pdf">📄</div><div class="doc-label">Analyse logique 3e<small></small></div><div class="doc-action">→ Consulter</div><div class="upload-indicator"></div><div class="upload-progress"></div></div></div></div></div>
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📝</div><div class="chapter-info"><div class="chapter-title">Fiches grammaire</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-fiches-grammaire">0 fiches</span></div></div></div><div class="chapter-body" data-section="fiches-grammaire"><div class="doc-list fiche-drop-zone" data-section="fiches-grammaire"></div></div></div>
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📌</div><div class="chapter-info"><div class="chapter-title">Fiches notions</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-fiches-notions">0 fiches</span></div></div></div><div class="chapter-body" data-section="fiches-notions"><div class="doc-list fiche-drop-zone" data-section="fiches-notions"></div></div></div>
       </div>
@@ -812,6 +811,14 @@ body.admin-mode .admin-only { display: block; }
     <div id="tab-image" style="display:none;"></div>
     <div id="tab-etude" style="display:none;"></div>
     <div id="tab-redaction" style="display:none;"></div>
+    <div id="tab-analyse" style="display:none;">
+      <div id="analyse-dyn"></div>
+      <div class="section-label">Fiches</div>
+      <div class="chapters-list" id="analyse-fiches-static">
+        <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📐</div><div class="chapter-info"><div class="chapter-title">Analyse logique</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-analyse-logique">1 fiches</span></div></div></div><div class="chapter-body" data-section="analyse-logique"><div class="doc-list fiche-drop-zone" data-section="analyse-logique">
+              <div class="doc-item" data-docid="3e-analyse-logique-mmynhk1z" data-chapitre="analyse-logique" data-seance="" data-embed="https://drive.google.com/file/d/1JWzQXIwf2Q9HHVOOp_HEmIpZJv8QzcVa/preview" onclick="openDoc('analyse-logique','Analyse logique 3e','')"><div class="doc-icon pdf">📄</div><div class="doc-label">Analyse logique 3e<small></small></div><div class="doc-action">→ Consulter</div><div class="upload-indicator"></div><div class="upload-progress"></div></div></div></div></div>
+      </div>
+    </div>
   </div>
   <div class="bottom-nav"><div class="bnav-info">Niveau : <strong id="bnav-level">3ème</strong></div><div class="bnav-search">⌕ Rechercher</div></div>
 </div>
@@ -1728,8 +1735,8 @@ function _blocTaxonomie(){
 
 var publishedTabs={};
 var publishedExtras={};
-var PUBLISHABLE_TABS=['dictee','reecriture','evalconn','image','etude','redaction'];
-var TAB_LABELS={dictee:'Dict\u00e9e',reecriture:'R\u00e9\u00e9criture',evalconn:'\u00c9valuation des connaissances',image:'Analyse d\u2019image',etude:'\u00c9tude de texte',redaction:'R\u00e9daction'};
+var PUBLISHABLE_TABS=['dictee','reecriture','evalconn','image','etude','redaction','analyse'];
+var TAB_LABELS={dictee:'Dict\u00e9e',reecriture:'R\u00e9\u00e9criture',evalconn:'\u00c9valuation des connaissances',image:'Analyse d\u2019image',etude:'\u00c9tude de texte',redaction:'R\u00e9daction',analyse:'Analyse logique'};
 var chapitresData={};
 // État UI : chapitres dépliés (clé = level::chnum), survit aux re-renders
 var UI_OPEN={};var UI_OPEN_S={};
@@ -3167,7 +3174,7 @@ function openLevel(code,label,color){if(BLOCKED_LEVELS.indexOf(code)>=0 && !(TRA
 function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval(timerInterval);timerInterval=null;}document.getElementById('page-level').classList.remove('active');document.getElementById('page-home').classList.add('active');document.getElementById('level-timer').classList.remove('visible');var ht=document.getElementById('hero-timer');ht.classList.remove('visible');setTimeout(function(){ht.style.display='none';},600);showAccueilBg();window.scrollTo(0,0);}
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;var isOpen=body.classList.toggle('open');var card=header.closest('.chapter-card[data-chapter-id]');if(card){var chId=card.getAttribute('data-chapter-id');var lvl=clickedLevel||currentLevel||'';if(isOpen)UI_OPEN[lvl+'::'+chId]=true;else delete UI_OPEN[lvl+'::'+chId];}}
 function toggleSeanceOpen(h,key){var b=h.nextElementSibling;if(!b||!b.classList.contains('seance-items'))return;var o=b.classList.toggle('open');if(o)UI_OPEN_S[key]=true;else delete UI_OPEN_S[key];}
-function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
+function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction','tab-analyse'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
 function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';var de=document.getElementById('tab-dictee');if(de)de.style.display='none';}
 function collectChapterItems(level,kind){
   var data=chapitresData[level]||{};
@@ -4527,6 +4534,8 @@ function gotoEtude(){showEmptyTab('etude','📖 Étude de texte');}
 function gotoRedaction(){showEmptyTab('redaction','✏️ Rédaction');}
 function gotoEvalConn(){var level=clickedLevel||currentLevel||'';var qcms=collectChapterItems(level,'qcm');var el=document.getElementById('tab-evalconn');hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-evalconn');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Évaluation des connaissances '+(level?'— '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">QCM en classe avec ton prof, puis consultation de tes résultats à la maison.</div>';html+=renderItemListByChapter(qcms,'_openQcmFromList','var(--level-accent)','🧠');html+='<div class="section-label" style="margin-top:28px">Rejoindre une session en cours</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Si ton prof vient de lancer un QCM, ouvre l’app pour rejoindre.</div>';html+='<div class="chapter-card" onclick="openEvalConn()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">🧠</div><div class="chapter-info"><div class="chapter-title">Ouvrir l’app QCM</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Connexion par classe + nom + prénom</div></div><div class="doc-action" style="font-size:0.85rem;">→ Ouvrir</div></div>';el.innerHTML=html;}
 function openEvalConn(){openViewer('\u00c9valuation des connaissances','evaluation-qcm.html?mode=eleve');}
+function gotoAnalyse(){var level=clickedLevel||currentLevel||'';var el=document.getElementById('tab-analyse');hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-analyse');if(btn)btn.classList.add('active');var dyn=document.getElementById('analyse-dyn');var html='';html+='<div class="section-label">Analyse logique '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Tu analyses des phrases sur papier avec ton prof, puis tu retrouves ici tes travaux corrig\u00e9s.</div>';html+='<div class="chapter-card" onclick="openAnalyse()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">\ud83d\udcd0</div><div class="chapter-info"><div class="chapter-title">Ouvrir l\u2019atelier d\u2019analyse logique</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Mes analyses \u2014 connexion par ton code MJPC (directe si tu es d\u00e9j\u00e0 connect\u00e9 au site)</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Ouvrir</div></div></div>';dyn.innerHTML=html;}
+function openAnalyse(){openViewer('Analyse logique','analyse_logique.html');}
 function openBB4E(){openViewer('Brevet Blanc 4e \u2014 R\u00e9\u00e9criture','reecriture_bb4e.html?mode=eleve');}
 function publishBB4E(){togglePublishExtra('4e','bb4e');}
 function showEmptyTab(tabId,label){var el=document.getElementById('tab-'+tabId);hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-'+tabId);if(btn)btn.classList.add('active');el.innerHTML='<div style="padding:40px 20px;text-align:center"><div style="font-size:3rem;margin-bottom:16px;opacity:0.3">🔧</div><div style="color:rgba(255,255,255,0.4);font-size:1rem;line-height:1.8">Cet outil n\'est pas encore configuré.<br>Tu dois d\'abord le créer avec Claude.</div></div>';}
