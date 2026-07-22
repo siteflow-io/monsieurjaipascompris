@@ -16,6 +16,11 @@
 - commit `6783936dcd` · md5 `afdf2820f1955f288f32d4ad97ca9682`
 - **Motif** : dette M9 soldée — 6 mentions « par le professeur » du bilan exporté passées à la 1re personne (apostrophe typographique, chaînes JS intactes).
 
+### POINT DE RETOUR — AVANT promotion M11 (22/07/2026)
+- `analyse_logique.html` : commit `8c0daa21ba` · 138414 o · md5 `35313d011c6f3522bc4ade6b03d75c6d`
+- `index.html` : commit `3f443fb191` · 363446 o · md5 `c9c3d326d85081a9fce45bfe68158d09`
+- **Motif** : M11 — passe complète `analyse_logique` v2.0.0 (vendorisation, socle 1.1.0 + shunt élève ET prof, identité unique `/codes`, Q4 motifs cumulables, mode test point 16, corbeille, présence, nav 2 niveaux, pastille, ≤480px) + extraction de l'onglet Analyse logique côté site (27 lignes).
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
