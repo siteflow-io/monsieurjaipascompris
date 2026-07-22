@@ -8,6 +8,17 @@
 *Document de reprise totale : une conversation vierge doit pouvoir reprendre le chantier avec ce seul document (+ le socle mjpc-core.js et la doctrine mjpc-doctrine.md du dépôt). Toute décision y est consignée AVEC sa raison. Il est mis à jour à CHAQUE session et re-livré à Paul.*
 
 
+### POINT 16 DE LA GRILLE — LE MODE TEST EST OBLIGATOIRE DANS CHAQUE APP (décidé par Paul, 22/07)
+**Décision** : *« Il faut le mettre au plan et chaque app doit avoir un mode test. »* Le mode test cesse d'être une particularité de quelques apps : il devient un point de la grille de passe, appliqué à CHAQUE app à sa passe, au même titre que le portail ou la pastille.
+**Constat qui a produit la décision (relevé conscience n°3 sur les 13 apps de production, 22/07)** : quatre apps ont un mode test réel — `pilotage_debat_s3` (le plus complet, M5ter, avec purge exhaustive), `evaluation-qcm` (le patron d'origine), `worktrack`, `applause_meter` ; `index` porte le sien côté site ; `correction_dictee` et `reecriture` n'ont que des traces partielles ; **`dictee_universelle`, `analyse_logique`, `reecriture_bb4e`, `Console_ateliers_revisions`, `etude_dugain` et `redaction_dugain_v3` n'en ont aucun**.
+**LE PATRON DE RÉFÉRENCE = `pilotage_debat_s3` (M5ter), lui-même transposé du QCM** — quatre exigences, à reprendre telles quelles :
+① **Convention de nommage** : classe `_test_<nom_app>`, identifiants de test préfixés de même. Aucune donnée de test hors de ce périmètre nommé.
+② **Nettoyage des zombies AVANT génération** : la purge s'exécute à l'ouverture du mode test, pas seulement à sa sortie — sinon les restes d'une session précédente polluent la suivante.
+③ **INCARNATION, pas simulation** : le mode test montre l'ÉCRAN ÉLÈVE RÉEL, avec les vrais composants. Une maquette qui « ressemble » ne vaut rien : elle ne prouve pas l'app.
+④ **Purge exhaustive en sortie**, sur TOUS les nœuds touchés (classe, codes, données de l'app, profils MJPC, routages, cours…) : les données de test ne sont pas des données réelles, elles se suppriment franchement.
+**Élèves fictifs** : six, repris de la liste du débat (AUDEBERT Élise, AUGEREAU Gatien, BOIVIN Eden, BOURREAU Céleste, BRESSIN Titouan, CESBRON Lili), codes séquentiels à partir de 9001.
+**Rattrapage des apps déjà passées** : `dictee_universelle` (M9) et `reecriture`/`reecriture_bb4e` (M10) sont passées SANS mode test — dette ouverte, à solder ; les apps non encore passées le reçoivent à leur passe.
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
