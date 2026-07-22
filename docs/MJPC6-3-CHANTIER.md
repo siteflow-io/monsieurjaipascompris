@@ -2,6 +2,17 @@
 > **LU ET MIS À JOUR À CHAQUE SESSION.** Le seul document qui bouge tous les jours : chronologie, morceaux et leur objet, fiches par app, chantiers W/X/Y/Z, dettes.
 > *Extrait sans reformulation de `MJPC6-plan-de-travail.md` le 21/07/2026.*
 
+### MORCEAU M-TEST · RATTRAPAGE DES MODES TEST (ouvert le 22/07 sur décision de Paul)
+**Objet** : *« Il sera à mettre au plan, ainsi que tous les autres modes test non aboutis ou non codés. »* Chaque app doit porter un mode test conforme au point 16 (patron `pilotage_debat_s3` : nommage `_test_<app>`, purge AVANT génération, incarnation de l'écran élève réel, purge exhaustive en sortie, 6 élèves fictifs, codes 9001+).
+**Place au séquençage** : APRÈS M-SÉCU et AVANT M16 — un mode test écrit dans une app dont les règles Firebase ne sont pas encore posées écrirait des données de test sur une base ouverte. Les apps qui n'ont pas encore eu leur passe reçoivent leur mode test DANS leur passe (M11 et suivantes) : M-TEST ne traite que le rattrapage.
+**À RATTRAPER (relevé du 22/07 sur les 13 apps de production)** :
+- `dictee_universelle` — **aucun** (M9 est passée sans : dette)
+- `reecriture` et `reecriture_bb4e` — **aucun** (M10 est passée sans : dette ; les jumelles se traitent ensemble)
+- `correction_dictee` — partiel (traces `_test_en_attente` seulement) : à porter au patron
+- `Console_ateliers_revisions`, `etude_dugain`, `redaction_dugain_v3` — **aucun** (apps hors séquençage principal : à traiter ici ou à déclarer hors périmètre motivé)
+**DÉJÀ CONFORMES, à ne pas retoucher** : `pilotage_debat_s3` (référence), `evaluation-qcm` (patron d'origine), `worktrack`, `applause_meter`, `index` (côté site).
+**EXIGENCE DE FOND, valable pour tout mode test (décision Paul 22/07, « le mode test doit être BIEN codé »)** : un mode test ne prouve rien s'il ne montre que des cas réussis. Les élèves fictifs doivent COUVRIR TOUS LES ÉTATS que l'app sait produire — réussite, échec partiel, échec total, absence de rendu — et, pour les apps à verdicts, tous les motifs d'erreur. Le jeu de données de test est une DÉMONSTRATION DU MOTEUR, pas une vitrine.
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
