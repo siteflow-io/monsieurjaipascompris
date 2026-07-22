@@ -12,6 +12,10 @@
 - `reecriture_bb4e.html` : commit `094b0c8d1e` · md5 `5798f2527221b80679873dd50b5aa546`
 - **Motif** : dette M10 soldée — insertion des 3 métas anti-cache (Cache-Control / Pragma / Expires) après le viewport. Aucun code touché.
 
+### POINT DE RETOUR — `dictee_universelle.html` AVANT lot micro « bilan à la 1re personne » (22/07)
+- commit `6783936dcd` · md5 `afdf2820f1955f288f32d4ad97ca9682`
+- **Motif** : dette M9 soldée — 6 mentions « par le professeur » du bilan exporté passées à la 1re personne (apostrophe typographique, chaînes JS intactes).
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
