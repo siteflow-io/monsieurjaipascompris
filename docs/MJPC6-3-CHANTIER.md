@@ -44,6 +44,23 @@ L'écran Travaux permet de CRÉER, d'imprimer la feuille élève et de corriger 
 **Deux précautions pour la mise en œuvre** : ① garder le parseur à lignes EN LECTURE pendant une période de transition — les corrigés déjà déposés doivent continuer de fonctionner ; ② exiger dans le prompt les EMPANS DE TEXTE EXACTS (copie verbatim), jamais des reformulations : c'est la localisation qui casse, pas la nomenclature.
 **Statut** : dette d'`analyse_logique`, à traiter avec les deux autres (mode test à terminer, modifier/supprimer un travail) — Paul choisira le moment.
 
+### MORCEAU M-MODETEST · LE MODE TEST DEVIENT UN CHANTIER À PART ENTIÈRE (décidé par Paul, 22/07)
+*« Ce mode test est à terminer parce que là ce n'est pas du tout du tout abouti. » — « Oui, ce sera un chantier à part entière. »*
+**Ce que le point 16bis exige déjà (doctrine, 17/07)** : génération totale EN UN CLIC, nettoyage des zombies au montage, classe `_test_<app>`, test de la CHAÎNE réelle avec incarnation, purge exhaustive. **Ce que la livraison M11 donne** : conforme à la lettre, PAS à l'usage.
+**Défauts relevés sur `analyse_logique` v2.0.0 (22/07, instruits sur pièces)** :
+① **La purge IGNORE LES ERREURS** — défaut de fond, valable pour toutes les apps : chaque suppression appelle la suite sans vérifier si le serveur a refusé. Le jour où les règles Firebase de M-SÉCU bloqueront une suppression, l'app annoncera « purge terminée » sans avoir rien supprimé. C'est le contraire exact de la règle du garde-corbeille (on ne détruit jamais sans preuve, on ne déclare jamais fini ce qu'on n'a pas vérifié). **La purge doit collecter les erreurs, les afficher, et ne se déclarer terminée que si tout a réussi.**
+② **La sortie ne se propage pas aux autres onglets** : le mode test oblige à ouvrir un second onglet pour incarner un élève ; après « Sortir et purger », cet onglet-là (et la modale du site) gardent leur bandeau jusqu'à rechargement manuel. Vérifié le 22/07 : le hub était propre (modeTest null, classe, codes, travail, présence tous absents) alors que l'écran de Paul affichait encore le mode test — **le blocage était d'affichage, pas de données**.
+③ Entrée et incarnation en plusieurs gestes (ouvrir un onglet, saisir un code fictif) : contraire au « un clic » du 16bis.
+④ Aucun retour de l'élève incarné vers l'écran professeur.
+⑤ Aucun guidage : rien ne dit à Paul CE QU'IL DOIT REGARDER une fois le mode test actif.
+⑥ Rangement : sous-onglet « Réglages » homonyme de sa famille « Réglages » — introuvable en pratique.
+**Périmètre du morceau** : reprendre le mode test de TOUTES les apps sur cette base (et non le seul rattrapage des apps qui n'en ont pas — c'était l'objet de M-TEST, qui FUSIONNE ici). Place au séquençage : après M-SÉCU (les règles doivent être posées avant qu'un bac à sable écrive), avant M16.
+### DETTE SITE · RECHARGER UNE APP DANS SA MODALE (demande de Paul, 22/07)
+*« Il faudra vérifier aussi le fonctionnement des apps en modale dans le site. Qu'on puisse recharger une app dans sa modale sans pour autant recharger le site complet. »*
+**Origine** : le bandeau de mode test resté affiché dans la modale alors que les données étaient purgées. Le viewer (`openViewer` → iframe) n'a aucun moyen de recharger son contenu : il faut recharger tout le site, et donc perdre son contexte (niveau, onglet, session d'écran).
+**À livrer** : un bouton de rechargement dans l'en-tête de la modale (à côté de « ✕ Fermer ») qui ne recharge QUE l'iframe. Plus, à instruire : que se passe-t-il pour la session partagée et le shunt quand l'app est en iframe (même origine, `sessionStorage` partagé — vérifié fonctionnel le 22/07 : Paul est reconnu prof sans code), et que voit l'élève si l'app y est trop à l'étroit (tactile, largeur de modale).
+**Rattachement** : chantier du SITE. **NON ajouté à M12 en cours** — l'exécutant a son feu vert, on n'élargit pas un périmètre en cours de route (règle du 22/07 : rapporter au plan, ne pas suivre l'impulsion). À placer au lot suivant du site.
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
