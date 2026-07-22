@@ -2,8 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dictée coévaluée — Les Grandes Découvertes — 5e Hergé</title>
+<title>Dictée coévaluée — MJPC</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -148,6 +151,21 @@ select,input{font-family:inherit}
 .refresh-btn{position:fixed;bottom:16px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--primary);color:#fff;font-size:22px;border:none;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:90;display:flex;align-items:center;justify-content:center;font-family:inherit}
 .refresh-btn:hover{background:var(--coral)}
 .refresh-btn:active{transform:scale(0.92)}
+
+/* M9 · pastille de version — permanente, zone tactile >=44px (Q7) */
+.version-pill-fixe{position:fixed;right:10px;bottom:10px;z-index:1500;display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:4px 12px;border-radius:22px;background:var(--card);border:1.5px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;letter-spacing:.02em;user-select:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.m9-modal-fond{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.m9-modal{background:var(--card);border-radius:14px;border:1.5px solid var(--border);max-width:620px;width:100%;padding:22px 24px;box-shadow:0 12px 40px rgba(0,0,0,.18)}
+@media(max-width:480px){.m9-modal{padding:16px 15px;border-radius:12px}}
+
+/* M9 · passe tactile <=480px — le desktop est INCHANGÉ au-dessus du seuil */
+@media(max-width:480px){
+  .btn{min-height:48px}
+  .btn-sm{min-height:44px}
+  input,select,textarea{font-size:16px !important}
+  .container{padding-left:12px;padding-right:12px}
+  .tbl{display:block;overflow-x:auto}
+}
 </style>
 <script>/**
  * @license React
@@ -509,7 +527,11 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
 var db=firebase.database();
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -667,10 +689,45 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.0.0";
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+var MJPC_CORE_VERSION="1.1.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
+/* Pastille de version — en dur (Q7 M9). APP_VERSION identifie le fichier (doctrine §VIII). */
+var APP_VERSION="2.0.0";
+var APP_VERSION_DATE="2026-07-22";
 var MJPC_APP = {
   id: "dictee_universelle",
   nom: "Dictée universelle",
@@ -687,6 +744,32 @@ var MJPC_PURGE = {
               "dictees/*/autocorrect","dictees/*/correction",
               "students","students_sim"]           // carnets d'erreurs longitudinaux : archive → purge au reset
 };
+// ═══════════════════════════════════════════════════
+// M9 · CORBEILLE — archivage AVANT toute destruction (point 19, chantier W)
+// Format d'archive unique : corbeille/<jour>/<clé> = {_meta:{app,date,motif,annee_scolaire}, data:{...}}
+// Règle absolue : on ne détruit JAMAIS sans archive réussie — l'appelant REFUSE si la promesse échoue.
+// ═══════════════════════════════════════════════════
+function duCorbeilleKey(p){return String(p).replace(/[.#$\[\]\/]/g,"_");}
+function duArchiverCorbeille(motif, paths){
+  var day=new Date().toISOString().slice(0,10);
+  var reads=paths.map(function(p){return db.ref(p).once("value").then(function(s){return {p:p,v:s.val()}})});
+  return Promise.all(reads).then(function(items){
+    var data={},vide=true;
+    items.forEach(function(it){if(it.v!==null&&it.v!==undefined){data[duCorbeilleKey(it.p)]=it.v;vide=false}});
+    if(vide)return {empty:true};
+    var key=duCorbeilleKey(motif)+"_"+Date.now();
+    return db.ref("corbeille/"+day+"/"+key).set({
+      _meta:{app:MJPC_APP.id,date:Date.now(),motif:motif,annee_scolaire:getAnneeScolaire()},
+      data:data
+    }).then(function(){return {empty:false,key:day+"/"+key}});
+  });
+}
+function duCheminsDictee(id){
+  return ["dictees/"+id+"/results","dictees/"+id+"/drafts","dictees/"+id+"/locks",
+          "dictees/"+id+"/contestations","dictees/"+id+"/codes","dictees/"+id+"/autocorrect",
+          "dictees/"+id+"/correction"];
+}
+
 // Firebase refs - initialized after dictee config is loaded
 var dicteeId=null,resultsRef=null,draftsRef=null,locksRef=null,contestRef=null,codesRef=null,contestLockRef=null,distribRef=null;
 function initFirebaseRefs(id){dicteeId=id;var base="dictees/"+id+"/";resultsRef=db.ref(base+"results");draftsRef=db.ref(base+"drafts");locksRef=db.ref(base+"locks");contestRef=db.ref(base+"contestations");codesRef=db.ref(base+"codes");contestLockRef=db.ref(base+"contestLock");distribRef=db.ref(base+"distribution");}
@@ -707,6 +790,7 @@ var ADAPTED_WORDS=[];
 var ADAPTED_WORD_COUNT=0;
 var PROF_CODES=[3141,1312];
 var DICTEE_TITLE="";
+var DICTEE_DATE_SEANCE="";
 var BAREME={base:10,errG:1,errL:0.5,errP:0.5};
 var CUSTOM_WORD_RULES={};
 var ALL_CORRECTEURS=[];
@@ -739,6 +823,7 @@ function loadDicteeConfig(id,callback){
     ADAPTED_WORD_COUNT=ADAPTED_WORDS.length;
     PROF_CODES=cfg.profCodes||[3141,1312];
     DICTEE_TITLE=cfg.title||id;
+    DICTEE_DATE_SEANCE=cfg.dateSeance||"";
     if(cfg.bareme){
       BAREME.base=cfg.bareme.base||10;
       BAREME.errG=cfg.bareme.errG!==undefined?cfg.bareme.errG:1;
@@ -2057,7 +2142,7 @@ function DistributionWait(p){
       h("div",{className:"card",style:{textAlign:"center",padding:30}},
         h("div",{style:{fontSize:48,marginBottom:12}},"\u23f3"),
         h("h2",null,"En attente"),
-        h("p",{style:{color:"var(--text-muted)",fontSize:14,marginBottom:16}},"Le professeur n\u2019a pas encore lanc\u00e9 la distribution des copies."),
+        h("p",{style:{color:"var(--text-muted)",fontSize:14,marginBottom:16}},txt("distribution_attente")),
         h("button",{title:"Continuer sans utiliser la distribution automatique (mode libre)",className:"btn btn-ghost",onClick:function(){p.onReady(null)}},"Continuer sans distribution")
       )
     );
@@ -2664,6 +2749,181 @@ resultsRef.child(eleveKey).update(resultData).then(function(){
 
 
 
+// ═══════════════════════════════════════════════════
+// M9 · IDENTITÉ MJPC — un seul système d'identité (doctrine du site, axes I/VI)
+// Portail code personnel (/codes) + nom + prénom, validation contre le registre /classes,
+// shunt par session MJPC (socle §8). Le portail natif reste le secours si MJPC tombe.
+// ═══════════════════════════════════════════════════
+var classesData=null, codesData=null;
+function chargerRegistreMJPC(cb){
+  var done=0; function fin(){done++; if(done===2&&cb)cb();}
+  db.ref("classes").once("value",function(s){classesData=s.val()||{};fin()},function(){classesData={};fin()});
+  db.ref("codes").once("value",function(s){codesData=s.val()||{};fin()},function(){codesData={};fin()});
+}
+function codeAttendu(cle){
+  if(!codesData)return null;
+  var e=codesData[cle];
+  if(typeof e==="string")return e;
+  if(e&&e.code)return String(e.code);
+  var ks=Object.keys(codesData);
+  for(var i=0;i<ks.length;i++){
+    var v=codesData[ks[i]];
+    if(v&&v.name&&sanMJPC(v.name)===cle) return v.code?String(v.code):null;
+    if(sanMJPC(ks[i])===cle) return (typeof v==="string")?v:(v&&v.code?String(v.code):null);
+  }
+  return null;
+}
+function resoudreClasse(cle){
+  var registre=classesData||{};
+  var kc=Object.keys(registre);
+  for(var ci=0;ci<kc.length;ci++){
+    var rr=extractEleves(registre[kc[ci]],[]);
+    for(var ri=0;ri<rr.length;ri++){ if(san(rr[ri])===cle) return kc[ci]; }
+  }
+  return "";
+}
+// ── Dictionnaire de textes (point 26, patron souche) : les ANNONCES sont éditables,
+// les CONSTATS restent en dur. Seed dans le code + surcharge Firebase (dictee_universelle_textes).
+var TEXTES_DEFAUT = {
+  distribution_attente: "La distribution des copies n\u2019est pas encore lanc\u00e9e.",
+  selecteur_vide: "Aucune dict\u00e9e n\u2019est disponible pour l\u2019instant."
+};
+var TEXTES_CHAMPS = [
+  ["distribution_attente","Quand la distribution n\u2019est pas lanc\u00e9e","Vu par le correcteur qui attend sa copie en mode Rapide."],
+  ["selecteur_vide","Quand aucune dict\u00e9e n\u2019existe","Vu sur l\u2019\u00e9cran de choix des dict\u00e9es quand la liste est vide."]
+];
+var TEXTES_SURCHARGE = {};
+function txt(cle,vars){
+  var v = TEXTES_SURCHARGE[cle];
+  if(typeof v!=="string" || !v.trim()) v = TEXTES_DEFAUT[cle];
+  if(typeof v!=="string") return "";
+  if(vars){ for(var k in vars){ if(Object.prototype.hasOwnProperty.call(vars,k)) v=v.split("{"+k+"}").join(vars[k]); } }
+  return v;
+}
+function chargerTextes(cb){
+  try{
+    db.ref("dictee_universelle_textes").on("value",function(snap){
+      var v=snap.val();
+      TEXTES_SURCHARGE = (v&&typeof v==="object")?v:{};
+      if(cb)cb();
+    },function(){ TEXTES_SURCHARGE={}; if(cb)cb(); });
+  }catch(e){ TEXTES_SURCHARGE={}; if(cb)cb(); }
+}
+// ── Le portail : code personnel + nom + prénom (patron souche). Aucun littéral de code
+// professeur : les PROF_CODES effectifs (seed + surcharge cfg.profCodes) font foi partout.
+function PortailMJPC(p){
+  var s1=useState(""),nomInput=s1[0],setNomInput=s1[1];
+  var s2=useState(""),prenomInput=s2[0],setPrenomInput=s2[1];
+  var s3=useState(""),codeInput=s3[0],setCodeInput=s3[1];
+  var s4=useState(""),errMsg=s4[0],setErrMsg=s4[1];
+  var s5=useState(false),showCode=s5[0],setShowCode=s5[1];
+  function doLogin(){
+    var nom=nomInput.trim().toUpperCase();
+    var prenom=prenomInput.trim();
+    var code=codeInput.trim();
+    if(!nom||!prenom){setErrMsg("Entre ton nom et ton pr\u00e9nom.");return}
+    if(!code){setErrMsg("Entre ton code personnel (4 chiffres).");return}
+    var registre=classesData||{};
+    var rosterComplet=[];
+    Object.keys(registre).forEach(function(c){
+      extractEleves(registre[c],[]).forEach(function(e){ if(rosterComplet.indexOf(e)<0) rosterComplet.push(e); });
+    });
+    (typeof ELEVES!=="undefined"?ELEVES:[]).forEach(function(e){ if(e&&rosterComplet.indexOf(e)<0) rosterComplet.push(e); });
+    (typeof ALL_CORRECTEURS_AVEC_TEST!=="undefined"?ALL_CORRECTEURS_AVEC_TEST:[]).forEach(function(e){ if(e&&rosterComplet.indexOf(e)<0) rosterComplet.push(e); });
+    var res=resolveEleves(rosterComplet,[{nom:nom,prenom:prenom}]);
+    if(res&&res.erreur){setErrMsg("Aucun \u00e9l\u00e8ve \u00e0 ce nom. V\u00e9rifie l\u2019orthographe de ton nom et de ton pr\u00e9nom.");return}
+    var moi=res[0];
+    var estProf=PROF_CODES.map(String).indexOf(String(code))>=0;
+    if(!estProf){
+      var attendu=codeAttendu(moi.cle);
+      if(!attendu){setErrMsg("Ton code n\u2019est pas encore enregistr\u00e9. Viens me voir pour qu\u2019on le mette en place.");return}
+      if(String(code)!==String(attendu)){setErrMsg("Ce code ne correspond pas. V\u00e9rifie tes 4 chiffres.");return}
+    }
+    setErrMsg("");
+    p.onDone({nom:moi.nom,cle:moi.cle,classe:resoudreClasse(moi.cle),via:estProf?"prof":"code",accesProf:estProf});
+  }
+  return h("div",{className:"container fade-up",style:{paddingTop:30}},
+    h("div",{className:"card",style:{textAlign:"center"}},
+      h("h1",null,p.titre||"Qui es-tu ?"),
+      h("p",{style:{fontSize:14,color:"var(--text-sub)",marginBottom:14}},"Entre ton code personnel, ton nom et ton pr\u00e9nom."),
+      h("div",{style:{maxWidth:340,margin:"0 auto",textAlign:"left"}},
+        h("div",{style:{marginBottom:10}},h("label",{style:{fontSize:13,fontWeight:600,display:"block",marginBottom:4}},"Mon code (4 chiffres)"),
+          h("div",{style:{display:"flex",gap:8}},
+            h("input",{className:"qi-input",type:showCode?"text":"password",inputMode:"numeric",maxLength:6,value:codeInput,onChange:function(e){setCodeInput(e.target.value)},placeholder:"1234",style:{textAlign:"center",letterSpacing:".3em",fontWeight:700,flex:1}}),
+            h("button",{type:"button",title:showCode?"Cacher le code":"Afficher le code",className:"btn-sm btn-ghost",style:{minWidth:71,minHeight:44},onClick:function(){setShowCode(!showCode)}},showCode?"Cacher":"Afficher")
+          )),
+        h("div",{style:{marginBottom:10}},h("label",{style:{fontSize:13,fontWeight:600,display:"block",marginBottom:4}},"Nom"),
+          h("input",{className:"qi-input",value:nomInput,onChange:function(e){setNomInput(e.target.value)},placeholder:"DUPONT",style:{textTransform:"uppercase",width:"100%"}})),
+        h("div",{style:{marginBottom:10}},h("label",{style:{fontSize:13,fontWeight:600,display:"block",marginBottom:4}},"Pr\u00e9nom"),
+          h("input",{className:"qi-input",value:prenomInput,onChange:function(e){setPrenomInput(e.target.value)},placeholder:"Marie",onKeyDown:function(e){if(e.key==="Enter")doLogin()},style:{width:"100%"}})),
+        errMsg&&h("p",{style:{color:"var(--coral)",fontSize:14,marginBottom:8}},errMsg),
+        h("button",{title:"Entrer",className:"btn btn-primary",style:{width:"100%"},onClick:doLogin},"Entrer"),
+        h("p",{style:{fontSize:12,color:"var(--text-muted)",marginTop:10,marginBottom:0}},"Ton code est le m\u00eame que sur le site MJPC. Si tu l\u2019as oubli\u00e9, viens me le demander.")
+      )
+    ),
+    p.onBack&&h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},onClick:p.onBack},"\u2190 Retour")
+  );
+}
+// ── « Mes dictées » : les dictées où J'AI une copie, datées (D16). Consultation seule.
+function MesDictees(p){
+  var s1=useState("loading"),status=s1[0],setStatus=s1[1];
+  var s2=useState([]),liste=s2[0],setListe=s2[1];
+  useEffect(function(){
+    db.ref("dictees").once("value").then(function(snap){
+      var all=snap.val()||{};
+      var out=[];
+      Object.keys(all).forEach(function(id){
+        var cfg=(all[id]||{}).config||{};
+        var res=(all[id]||{}).results||{};
+        var pairs=cfg.pairs||[];
+        var estDedans=pairs.some(function(pr){return san(pr.e)===p.identite.cle||san(pr.c)===p.identite.cle});
+        var maCopie=null;
+        Object.keys(res).forEach(function(k){var r=res[k];if(r&&r.eleve&&san(r.eleve)===p.identite.cle)maCopie=r});
+        if(estDedans||maCopie){
+          out.push({id:id,title:cfg.title||id,dateSeance:cfg.dateSeance||"",
+                    corrigee:!!(maCopie&&maCopie.submitted),ts:maCopie?maCopie.timestamp:null,
+                    note:maCopie&&maCopie.submitted?maCopie.note:null});
+        }
+      });
+      out.sort(function(a,b){return (b.dateSeance||"").localeCompare(a.dateSeance||"")});
+      setListe(out);setStatus("ready");
+    }).catch(function(){setStatus("error")});
+  },[]);
+  return h("div",{className:"container fade-up",style:{paddingTop:30}},
+    h("div",{className:"card"},
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}},
+        h("div",null,
+          h("h1",{style:{margin:0}},"Mes dict\u00e9es"),
+          h("p",{style:{fontSize:14,color:"var(--text-sub)",marginBottom:0}},p.identite.nom+(p.identite.accesProf?" \u2014 acc\u00e8s professeur":""))
+        ),
+        h("button",{className:"btn-sm btn-ghost",onClick:p.onDeconnexion},"Me d\u00e9connecter")
+      )
+    ),
+    h("div",{className:"card"},
+      status==="loading"&&h("p",{style:{color:"var(--text-sub)",margin:0}},"Chargement\u2026"),
+      status==="error"&&h("p",{style:{color:"var(--coral)",margin:0}},"Impossible de charger tes dict\u00e9es. R\u00e9essaie dans un instant."),
+      status==="ready"&&liste.length===0&&h("p",{style:{color:"var(--text-sub)",margin:0}},"Tu n\u2019as pas encore de dict\u00e9e. Celles o\u00f9 tu as une copie appara\u00eetront ici."),
+      status==="ready"&&liste.map(function(d){
+        return h("div",{key:d.id,
+          style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"11px 14px",
+                 border:"1.5px solid var(--border)",borderRadius:10,marginBottom:8,cursor:"pointer",flexWrap:"wrap"},
+          onClick:function(){p.onOuvrir(d.id)}},
+          h("div",null,
+            h("div",{style:{fontWeight:600}},d.title),
+            h("div",{style:{fontSize:13,color:"var(--text-sub)"}},
+              d.dateSeance?"Dict\u00e9e du "+formatDateFR(d.dateSeance):"",
+              d.ts?(d.dateSeance?" \u00b7 ":"")+"corrig\u00e9e le "+new Date(d.ts).toLocaleDateString("fr-FR"):""
+            )
+          ),
+          h("span",{className:d.corrigee?"success-box":"info-box",style:{padding:"4px 10px",fontSize:13,borderRadius:8}},
+            d.corrigee?"Corrig\u00e9e":"En cours")
+        );
+      })
+    ),
+    h("button",{className:"btn-sm btn-ghost",style:{marginTop:12},onClick:p.onBack},"\u2190 Retour")
+  );
+}
+
 // === DICTEE LOADER ===
 function DicteeSelector(p){
   var s1=useState(null),dictees=s1[0],setDictees=s1[1];
@@ -2672,6 +2932,11 @@ function DicteeSelector(p){
   var s4=useState(""),profCode=s4[0],setProfCode=s4[1];
   var s5=useState(null),profErr=s5[0],setProfErr=s5[1];
   var s6=useState(false),profAuth=s6[0],setProfAuth=s6[1];
+  // M9-R2 · l'extrait du texte de la dictée est RÉSERVÉ AU PROFESSEUR (décision Paul, 22/07) :
+  // un élève ne doit pas pouvoir lire les premiers mots d'une dictée avant la séance.
+  // Seule preuve d'identité fiable à cet écran : la session MJPC professeur.
+  var _sess=(typeof lireSessionMJPC==="function")?lireSessionMJPC():null;
+  var profSession=!!(_sess&&_sess.is_prof===true);
   var urlNiveau=(new URLSearchParams(window.location.search).get("n")||"").toLowerCase().trim();
   useEffect(function(){
     setLoading(true);
@@ -2702,10 +2967,10 @@ function DicteeSelector(p){
       h("h1",{style:{fontSize:22,fontWeight:700,margin:0}},"Dictées coévaluées"),
       h("p",{style:{color:"var(--text-sub)",marginTop:4}},urlNiveau?"Sélectionne ta dictée \u2014 "+urlNiveau.toUpperCase():"Sélectionne ta dictée")
     ),
+    p.onMesDictees&&h("button",{title:"Retrouver toutes mes dictées avec mon code personnel",className:"btn btn-outline",style:{width:"100%",marginBottom:14},onClick:p.onMesDictees},"\ud83d\udcd4 Mes dictées"),
     loading&&h("div",{style:{textAlign:"center",padding:20}},h("div",{className:"spinner"})),
     !loading&&dictees&&dictees.length===0&&h("div",{className:"card",style:{textAlign:"center"}},
-      h("p",null,"Aucune dictée configurée."),
-      h("p",{style:{fontSize:13,color:"var(--text-sub)"}},"Le professeur doit d'abord créer une dictée dans le panneau prof.")
+      h("p",null,txt("selecteur_vide"))
     ),
     !loading&&dictees&&dictees.map(function(d){
       return h("div",{key:d.id,className:"card",style:{cursor:"pointer",marginBottom:8,transition:"transform 0.15s"},
@@ -2714,7 +2979,7 @@ function DicteeSelector(p){
         onMouseLeave:function(e){e.currentTarget.style.transform="none"}
       },
         h("div",{style:{fontWeight:700,fontSize:16}},d.title,d.dateSeance?h("span",{style:{fontSize:12,color:"var(--text-sub)",marginLeft:8,fontWeight:400}},formatDateFR(d.dateSeance)):null),
-        h("div",{style:{fontSize:13,color:"var(--text-sub)",marginTop:4}},d.text),
+        profSession?h("div",{style:{fontSize:13,color:"var(--text-sub)",marginTop:4}},d.text):null,
         h("div",{style:{fontSize:12,color:"var(--muted)",marginTop:4}},d.nEleves+" paires")
       )
     }),
@@ -2730,10 +2995,121 @@ function DicteeSelector(p){
   )
 }
 
+// ═══ M9 : TEXTES ÉLÈVES ÉDITABLES (point 26, patron M5bis/souche) ═══
+// Les textes qui ANNONCENT sont éditables (seed + surcharge Firebase) ; les CONSTATS restent en dur.
+function ProfTextes(){
+  var s=useState(null),vals=s[0],setVals=s[1];
+  var s2=useState(""),msg=s2[0],setMsg=s2[1];
+  useEffect(function(){
+    db.ref("dictee_universelle_textes").once("value",function(sn){setVals(sn.val()||{})},function(){setVals({})});
+  },[]);
+  function save(){
+    var out={};
+    TEXTES_CHAMPS.forEach(function(ch){var v=(vals&&vals[ch[0]])||"";if(v.trim())out[ch[0]]=v});
+    db.ref("dictee_universelle_textes").set(out).then(function(){setMsg("\u2705 Enregistr\u00e9. Les \u00e9l\u00e8ves voient le nouveau texte imm\u00e9diatement.")}).catch(function(e){setMsg("\u274c "+e.message)});
+  }
+  if(vals===null)return h("div",{className:"card"},h("p",{style:{color:"var(--text-sub)"}},"Chargement\u2026"));
+  return h("div",{className:"card"},
+    h("h2",null,"Textes \u00e9l\u00e8ves",ifo("Champ vide = texte par d\u00e9faut de l\u2019application. Le texte enregistr\u00e9 remplace le d\u00e9faut partout, imm\u00e9diatement.")),
+    TEXTES_CHAMPS.map(function(ch){
+      return h("div",{key:ch[0],style:{marginBottom:14}},
+        h("label",{style:{fontSize:13,fontWeight:600,display:"block"}},ch[1]),
+        h("div",{style:{fontSize:12,color:"var(--text-muted)",marginBottom:4}},ch[2]),
+        h("input",{style:{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid var(--border)",boxSizing:"border-box"},
+          placeholder:TEXTES_DEFAUT[ch[0]]||"",value:(vals&&vals[ch[0]])||"",
+          onChange:function(e){var v=Object.assign({},vals);v[ch[0]]=e.target.value;setVals(v)}})
+      );
+    }),
+    h("button",{className:"btn btn-primary",onClick:save},"Enregistrer"),
+    msg&&h("p",{style:{marginTop:8,fontSize:13}},msg)
+  );
+}
+
+// ═══ M9 : PRÉSENCE (point 22, contrat du site) ═══
+// /presence/<clé> : élève, classe, app, contexte, horodatage ; sendBeacon à la fermeture.
+function signalerPresence(identite, contexte){
+  try{
+    if(!identite||!identite.cle)return;
+    var key=identite.cle+"_"+MJPC_APP.id;
+    db.ref("presence/"+key).set({eleve:identite.nom||"",classe:identite.classe||"",app:MJPC_APP.id,contexte:contexte||"",ts:Date.now()});
+    if(!window._presenceBeaconPose){
+      window._presenceBeaconPose=true;
+      window.addEventListener("beforeunload",function(){
+        try{
+          var base=(firebase.app().options||{}).databaseURL;
+          if(base&&navigator.sendBeacon)navigator.sendBeacon(base+"/presence/"+key+"/sorties.json",JSON.stringify(Date.now()));
+        }catch(e){}
+      });
+    }
+  }catch(e){}
+}
+
+// ═══ M9 : PASTILLE DE VERSION + INFOS (points 24-25, patron souche AideModal) ═══
+// Le lecteur d'annonces lit site/annonces ; le nœud peut ne pas exister encore :
+// l'absence est un cas normal, jamais une erreur.
+function InfosMJPC(p){
+  var sA=useState(null),annonces=sA[0],setAnnonces=sA[1];
+  useEffect(function(){
+    try{
+      db.ref("site/annonces").once("value",function(snap){
+        var v=snap.val();
+        if(!v){setAnnonces([]);return}
+        var list=Array.isArray(v)?v:Object.keys(v).map(function(k){return v[k]});
+        list=list.filter(function(a){return a&&(!a.app||a.app==="dictee_universelle"||a.app==="*")});
+        list.sort(function(a,b){return (b.date||0)-(a.date||0)});
+        setAnnonces(list);
+      },function(){setAnnonces([])});
+    }catch(e){setAnnonces([])}
+  },[]);
+  return h("div",{className:"m9-modal-fond",onClick:p.onClose},
+    h("div",{className:"m9-modal",onClick:function(e){e.stopPropagation()}},
+      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+        h("h2",{style:{margin:0}},"\u00c0 propos"),
+        h("button",{className:"btn-sm btn-ghost",style:{minHeight:44,minWidth:44},onClick:p.onClose},"\u2715")
+      ),
+      h("h3",null,"La dict\u00e9e co\u00e9valu\u00e9e"),
+      h("p",null,"Chacun corrige la copie d\u2019un camarade, mot \u00e0 mot, puis retrouve la sienne corrig\u00e9e. Tu entres avec ton code personnel, ton nom et ton pr\u00e9nom \u2014 le m\u00eame code que sur le site MJPC. Si tu es d\u00e9j\u00e0 connect\u00e9 au site, tu entres directement."),
+      h("h3",null,"Nouveaut\u00e9s"),
+      annonces===null?h("p",null,"Chargement\u2026"):
+      annonces.length===0?h("p",{style:{fontStyle:"italic"}},"Aucune annonce pour le moment."):
+      h("ul",null,annonces.slice(0,8).map(function(a,i){
+        return h("li",{key:i},a.date?h("span",{style:{color:"var(--text-muted)"}},new Date(a.date).toLocaleDateString("fr-FR")+" \u2014 "):null,a.texte||a.titre||"");
+      })),
+      h("p",{style:{marginTop:18,fontSize:12,color:"var(--text-muted)"}},"Dict\u00e9e co\u00e9valu\u00e9e \u2014 version "+APP_VERSION+" ("+APP_VERSION_DATE+") \u00b7 socle MJPC-CORE "+MJPC_CORE_VERSION)
+    )
+  );
+}
+function RacineMJPC(){
+  var s=useState(false),infos=s[0],setInfos=s[1];
+  return h(React.Fragment,null,
+    h(DicteeLoader,null),
+    h("button",{className:"version-pill-fixe",title:"Version de l\u2019application \u00b7 annonces et infos",onClick:function(){setInfos(true)}},"v"+APP_VERSION),
+    infos&&h(InfosMJPC,{onClose:function(){setInfos(false)}})
+  );
+}
+
 function DicteeLoader(){
   var s1=useState("loading"),state=s1[0],setState=s1[1];
   var s2=useState(null),error=s2[0],setError=s2[1];
   var s3=useState(null),selectedId=s3[0],setSelectedId=s3[1];
+  // M9 · identité MJPC — portée par le Loader pour servir toutes les dictées (« Mes dictées »)
+  var sId=useState(null),identite=sId[0],setIdentite=sId[1];
+  var sRg=useState(false),registrePret=sRg[0],setRegistrePret=sRg[1];
+  var sSh=useState(false),shuntFait=sSh[0],setShuntFait=sSh[1];
+  useEffect(function(){
+    chargerRegistreMJPC(function(){setRegistrePret(true)});
+    chargerTextes(null);
+  },[]);
+  // ── Shunt MJPC (socle §8) : l'élève déjà connecté au site n'a rien à ressaisir ──
+  useEffect(function(){
+    if(shuntFait||identite||!registrePret)return;
+    setShuntFait(true);
+    var sess=lireSessionMJPC();
+    if(!sess||sess.is_prof)return;
+    var val=validerEleveMJPC(sess,classesData);
+    if(val) setIdentite({nom:val.nom,cle:val.cle,classe:val.classe,via:"session"});
+  },[registrePret,shuntFait,identite]);
+  function deconnexionMJPC(){setIdentite(null);}
   function pickDictee(id){
     setError(null);setState("loading");setSelectedId(id);
     loadDicteeConfig(id,function(ok){
@@ -2753,16 +3129,20 @@ function DicteeLoader(){
     h("div",{className:"spinner"}),
     h("p",{style:{marginTop:12,color:"var(--text-sub)"}},"Chargement de la dictée...")
   );
-  if(state==="select") return h(DicteeSelector,{onPick:pickDictee});
+  if(state==="select") return h(DicteeSelector,{onPick:pickDictee,onMesDictees:function(){setState("mesdictees")}});
+  if(state==="mesdictees"){
+    if(!identite) return h(PortailMJPC,{titre:"Mes dict\u00e9es",onDone:setIdentite,onBack:function(){setState("select")}});
+    return h(MesDictees,{identite:identite,onOuvrir:function(id){pickDictee(id)},onBack:function(){setState("select")},onDeconnexion:function(){deconnexionMJPC();setState("select")}});
+  }
   if(state==="error") return h("div",{className:"container",style:{textAlign:"center",paddingTop:60}},
     h("div",{style:{fontSize:48,marginBottom:8}},"\u26a0\ufe0f"),
     h("p",{style:{fontWeight:700}},error),
     h("button",{title:"Revenir à la liste",className:"btn btn-primary",onClick:backToList}, "Retour à la liste")
   );
-  return h(App,{onBackToList:backToList});
+  return h(App,{onBackToList:backToList,identite:identite,setIdentite:setIdentite,onDeconnexionMJPC:deconnexionMJPC});
 }
 
-function App(){
+function App(p){
   var s=useState("home"),screen=s[0],setScreen=s[1];
   var s2=useState(null),corrName=s2[0],setCorrName=s2[1];
   var s3=useState(null),results=s3[0],setResults=s3[1];
@@ -2830,14 +3210,14 @@ useEffect(function(){
     return function(){window.removeEventListener("beforeunload",warn)}
   },[screen]);
 
-  function goCorrect(name){setCorrName(name);setScreen("rules")}
+  function goCorrect(name){setCorrName(name);if(p.identite)signalerPresence(p.identite,"seance_correction");setScreen("rules")}
   function goResults(name){setCorrName(name);setScreen("results")}
 
   if(screen==="home") return h(Home,{results:results,onCorrect:function(){setScreen("select")},onResults:function(){setScreen("results-pick")},onProf:function(){setScreen("prof")},absents:absents});
-  if(screen==="select") return h(SelectCorrecteur,{onConfirm:goCorrect,onBack:function(){setScreen("home")},absents:absents});
+  if(screen==="select") return h(SelectCorrecteur,{onConfirm:goCorrect,onBack:function(){setScreen("home")},absents:absents,identite:p.identite,setIdentite:p.setIdentite,onDeconnexionMJPC:p.onDeconnexionMJPC});
   if(screen==="rules") return h(Rules,{corrName:corrName,onStartFull:function(){setDictMode("full");setScreen("dictTranscription")},onStartCompare:function(){setDictMode("compare");setScreen("distributionWait")}});
     
-  if(screen==="results-pick") return h(ResultsPick,{onDone:function(n){setCorrName(n);setScreen("results")},onBack:function(){setScreen("home")},results:results});
+  if(screen==="results-pick") return h(ResultsPick,{onDone:function(n){setCorrName(n);setScreen("results")},onBack:function(){setScreen("home")},results:results,identite:p.identite,setIdentite:p.setIdentite});
   if(screen==="results") return h(DictResults,{corrName:corrName,results:results,onBack:function(){setScreen("home")}});
   if(screen==="dictTranscription")return h(DictTranscription,{onBack:function(){setScreen("home")},onDone:function(text,graphie,adapted){setDictTranscription(text);var tw=cleanTokens(text);if(adapted){var refWords=ADAPTED_WORDS;if(tw.length===refWords.length){var posAlign=[];for(var pi=0;pi<tw.length;pi++){posAlign.push({typedIdx:pi,refIdx:pi,typedWord:tw[pi],refWord:refWords[pi],match:wordOnly(tw[pi])===wordOnly(refWords[pi])})}setDictAlignment(posAlign)}else{setDictAlignment(levenshteinAlign(tw,refWords))}}else{setDictAlignment(levenshteinAlign(tw,DICTEE_WORDS))}window._graphieCorr=graphie||"";window._isAdapted=!!adapted;setScreen("dictDetection")},eleveName:eleveName,corrName:corrName});
   if(screen==="distributionWait")return h(DistributionWait,{corrName:corrName,onReady:function(eName){if(eName)setEleveName(eName);setScreen("dictCompare")}});
@@ -2857,7 +3237,7 @@ function Home(p){
   return h("div",{className:"container fade-up"},
     h("div",{className:"app-hdr"},h("h1",null,"Dictée coévaluée"),h("p",null,DICTEE_TITLE)),
     h("button",{title:"Démarrer la correction de la copie d'un camarade",className:"btn btn-primary",onClick:p.onCorrect},"Corriger une copie"),
-    h("button",{title:"Voir mes résultats avec mon code à 4 chiffres",className:"btn btn-outline",onClick:p.onResults},"Consulter mes résultats"),
+    h("button",{title:"Voir mes résultats avec mon code personnel",className:"btn btn-outline",onClick:p.onResults},"Consulter mes résultats"),
     n>0&&h("div",{className:"info-box",style:{marginTop:16}},h("p",null,n+"/"+ELEVES.length+" copie"+(n>1?"s":"")+" corrigée"+(n>1?"s":"")+".")),
     h("button",{title:"Accéder au panneau professeur (code requis)",className:"btn btn-ghost",style:{marginTop:20},onClick:p.onProf},"Panneau prof"),
     // P2: bouton refresh visible sur la page d'accueil
@@ -2868,8 +3248,16 @@ function Home(p){
 // SELECT CORRECTEUR + IDENTITY LOCK
 // ═══════════════════════════════════════════════════
 function SelectCorrecteur(p){
-  var s=useState(""),name=s[0],setName=s[1];
-  var s2=useState(false),confirming=s2[0],setConfirming=s2[1];
+  // M9 · le correcteur S'IDENTIFIE (portail MJPC, ou session §8 déjà lue par le Loader) —
+  // la liste de prénoms exposée disparaît. Le verrou d'identité 30 min et l'appariement
+  // copie↔correcteur sont INTACTS et s'appuient sur l'identité attestée.
+  function nomCorrecteur(identite){
+    var n=null;
+    (typeof ALL_CORRECTEURS_AVEC_TEST!=="undefined"?ALL_CORRECTEURS_AVEC_TEST:[]).forEach(function(e){if(san(e)===identite.cle)n=e});
+    return n;
+  }
+  var name=p.identite?(nomCorrecteur(p.identite)||""):"";
+  var s2=useState(!!p.identite),confirming=s2[0],setConfirming=s2[1];
   var s3=useState(null),error=s3[0],setError=s3[1];
   var s4=useState(false),locking=s4[0],setLocking=s4[1];
   var s5=useState({}),locks=s5[0],setLocks=s5[1];
@@ -2914,24 +3302,26 @@ function SelectCorrecteur(p){
   }
 
   var lockedNames=Object.values(locks).filter(function(l){return l&&l.locked&&l.name!==TEST_ELEVE}).map(function(l){return l.name});
-  var available=ALL_CORRECTEURS_AVEC_TEST.filter(function(e){return lockedNames.indexOf(e)===-1&&(p.absents||[]).indexOf(e)===-1});
+
+  if(!p.identite) return h(PortailMJPC,{titre:"Qui es-tu ?",onBack:p.onBack,
+    onDone:function(id){ if(p.setIdentite)p.setIdentite(id); setConfirming(true); }});
 
   return h("div",{className:"container fade-up"},
     h("div",{style:{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}},h("span",{className:"back-link",onClick:p.onBack},"← Retour"),h("button",{title:"⇆ Changer de dictée",className:"btn-sm btn-ghost",style:{fontSize:12},onClick:function(){if(_backToSelector){_backToSelector()}else{window.location.search=""}}},"⇆ Changer de dictée")),
-    h("div",{className:"app-hdr"},h("h1",null,"Qui es-tu ?")),
+    h("div",{className:"app-hdr"},h("h1",null,"Corriger une copie")),
     h("div",{className:"card"},
-      h("div",{className:"sel-wrap"},
-        h("select",{value:name,onChange:function(e){setName(e.target.value);setConfirming(false);setError(null)}},
-          h("option",{value:""},"-- Choisis ton prénom --"),
-          available.map(function(e){return h("option",{key:e,value:e},e)})
-        )
+      p.identite.accesProf&&h("div",{className:"info-box",style:{marginBottom:10}},h("p",null,"Acc\u00e8s professeur \u2014 "+p.identite.nom)),
+      !name&&h("div",{className:"warn-box"},
+        h("p",null,"Tu n\u2019es pas dans la liste des correcteurs de cette dict\u00e9e."),
+        h("button",{title:"Changer d'identité",className:"btn btn-ghost",style:{marginTop:8},onClick:function(){if(p.onDeconnexionMJPC)p.onDeconnexionMJPC();}},"Changer d\u2019identit\u00e9")
       ),
-      !confirming&&name&&h("button",{title:"Passer à l'étape suivante",className:"btn btn-primary",onClick:function(){setConfirming(true)}},"Continuer"),
-      confirming&&h("div",{className:"warn-box",style:{marginTop:12}},
+      name&&(p.absents||[]).indexOf(name)>=0&&h("div",{className:"warn-box"},
+        h("p",null,"Tu es not\u00e9(e) absent(e) pour cette dict\u00e9e.")
+      ),
+      name&&(p.absents||[]).indexOf(name)<0&&confirming&&h("div",{className:"warn-box",style:{marginTop:4}},
         h("p",null,"Es-tu bien ",h("strong",null,name)," ? Cette action est définitive. Tu ne pourras pas changer de nom.")
       ),
-      confirming&&h("button",{title:"Verrouiller mon identité de correcteur",className:"btn btn-coral",style:{marginTop:8},disabled:locking,onClick:doConfirm},locking?"Verrouillage...":"Oui, c'est moi — verrouiller"),
-      confirming&&h("button",{title:"Non, je me suis trompé(e)",className:"btn btn-ghost",style:{marginTop:6},onClick:function(){setConfirming(false)}},"Non, je me suis trompé(e)"),
+      name&&(p.absents||[]).indexOf(name)<0&&h("button",{title:"Verrouiller mon identité de correcteur",className:"btn btn-coral",style:{marginTop:8},disabled:locking,onClick:doConfirm},locking?"Verrouillage...":"Oui, c'est moi — verrouiller"),
       error&&h("div",{className:"warn-box",style:{marginTop:8}},h("p",null,error))
     ),
     lockedNames.length>0&&h("div",{className:"info-box",style:{marginTop:12}},h("p",null,lockedNames.length+" correcteur"+(lockedNames.length>1?"s":"")+" déjà connecté"+(lockedNames.length>1?"s":"")+"."))
@@ -2978,86 +3368,20 @@ function Rules(p){
 // ═══════════════════════════════════════════════════
 
 function ResultsPick(p){
-  var s=useState(""),name=s[0],setName=s[1];
-  var s2=useState("init"),step=s2[0],setStep=s2[1]; // init, first_code, ask_code, granted
-  var s3=useState(""),newCode=s3[0],setNewCode=s3[1];
-  var s4=useState(""),inputCode=s4[0],setInputCode=s4[1];
-  var s5=useState(null),error=s5[0],setError=s5[1];
-
-  function checkAndProceed(){
-    if(!name) return;
-    var key=san(name);
-    setError(null);
-    codesRef.child(key).once("value").then(function(snap){
-      var existing=snap.val();
-      if(!existing){
-        // First time: generate unique code
-        codesRef.once("value").then(function(allSnap){
-          var allCodes=allSnap.val()||{};
-          var existingCodes={};
-          Object.keys(allCodes).forEach(function(k){var c=allCodes[k];if(c&&c.code)existingCodes[c.code]=true});
-          var code,attempts=0;
-          do{code=String(1000+Math.floor(Math.random()*9000));attempts++}while(existingCodes[code]&&attempts<50);
-          codesRef.child(key).set({code:code,name:name,createdAt:Date.now()}).then(function(){
-            setNewCode(code);
-            setStep("first_code");
-          }).catch(function(e){setError("Erreur: "+e.message)});
-        }).catch(function(e){setError("Erreur: "+e.message)});
-      } else {
-        // Code exists: ask for it
-        setStep("ask_code");
-      }
-    }).catch(function(e){setError("Erreur réseau: "+e.message)});
+  // M9 · l'identité MJPC (portail /codes ou session §8) remplace la liste de prénoms
+  // exposée et le code par dictée. La génération publique de codes a disparu.
+  function nomPairs(identite){
+    var n=null;
+    (typeof ELEVES!=="undefined"?ELEVES:[]).forEach(function(e){if(san(e)===identite.cle)n=e});
+    return n;
   }
-
-  function verifyCode(){
-    var key=san(name);
-    setError(null);
-    codesRef.child(key).once("value").then(function(snap){
-      var data=snap.val();
-      if(data&&(data.code===inputCode.trim()||inputCode.trim()==="1312")){
-        setStep("granted");
-        p.onDone(name);
-      } else {
-        setError("Code incorrect. Demande à ton professeur si tu l'as oublié.");
-      }
-    }).catch(function(e){setError("Erreur réseau: "+e.message)});
+  function entrer(identite){
+    p.onDone(nomPairs(identite)||identite.nom);
   }
-
-  if(step==="first_code") return h("div",{className:"container fade-up"},
-    h("span",{className:"back-link",onClick:p.onBack},"← Retour"),
-    h("div",{className:"card",style:{textAlign:"center"}},
-      h("h2",null,"Ton code personnel"),
-      h("div",{className:"warn-box"},h("p",null,"Retiens bien ce code ! Il ne sera affiché qu'",h("strong",null,"UNE SEULE FOIS"),".")),
-      h("div",{style:{fontSize:48,fontWeight:700,color:"var(--primary)",letterSpacing:8,margin:"20px 0"}},newCode),
-      h("p",{style:{fontSize:14,color:"var(--text-sub)",margin:"12px 0"}},"Ce code te sera demandé à chaque fois que tu voudras consulter tes résultats ou contester."),
-      h("button",{title:"J'ai retenu mon code — voir mes résultats",className:"btn btn-primary",style:{marginTop:16},onClick:function(){p.onDone(name)}},"J'ai retenu mon code — voir mes résultats")
-    )
-  );
-
-  if(step==="ask_code") return h("div",{className:"container fade-up"},
-    h("span",{className:"back-link",onClick:p.onBack},"← Retour"),
-    h("div",{className:"card",style:{textAlign:"center"}},
-      h("h2",null,"Code personnel"),
-      h("p",{style:{fontSize:14,color:"var(--text-sub)",marginBottom:12}},"Entre ton code à 4 chiffres pour accéder à tes résultats."),
-      h("input",{className:"qi-input",type:"text",inputMode:"numeric",pattern:"[0-9]*",maxLength:4,style:{textAlign:"center",fontSize:28,letterSpacing:8,maxWidth:200,margin:"0 auto"},value:inputCode,onChange:function(e){setInputCode(e.target.value.replace(/[^0-9]/g,""))},onKeyDown:function(e){if(e.key==="Enter")verifyCode()},placeholder:"• • • •"}),
-      h("button",{title:"Valider",className:"btn btn-primary",style:{marginTop:16},disabled:inputCode.length<4,onClick:verifyCode},"Valider"),
-      error&&h("div",{className:"warn-box",style:{marginTop:12}},h("p",null,error))
-    )
-  );
-
-  return h("div",{className:"container fade-up"},
-    h("span",{className:"back-link",onClick:p.onBack},"← Retour"),
-    h("div",{className:"app-hdr"},h("h1",null,"Mon bilan personnalisé")),
-    h("div",{className:"card"},
-      h("div",{className:"sel-wrap"},h("select",{value:name,onChange:function(e){setName(e.target.value);setStep("init");setError(null);setInputCode("")}},
-        h("option",{value:""},"-- Choisis ton prénom --"),
-        ELEVES_AVEC_TEST.map(function(e){return h("option",{key:e,value:e},e)})
-      )),
-      name&&h("button",{title:"Passer à l'étape suivante",className:"btn btn-primary",onClick:checkAndProceed},"Continuer"),
-      error&&h("div",{className:"warn-box",style:{marginTop:12}},h("p",null,error))
-    )
-  );
+  useEffect(function(){ if(p.identite) entrer(p.identite); },[]);
+  if(p.identite) return h("div",{className:"container",style:{textAlign:"center",paddingTop:60}},h("div",{className:"spinner"}));
+  return h(PortailMJPC,{titre:"Mon bilan personnalis\u00e9",onBack:p.onBack,
+    onDone:function(id){ if(p.setIdentite)p.setIdentite(id); entrer(id); }});
 }
 
 function DictResults(p){
@@ -3495,7 +3819,7 @@ function StudentCarnet(p){
       // Mots "bien orthographiés" (infirmés par le prof)
       bienOrthographies.length>0&&h("div",{style:{marginBottom:14}},
         h("h3",{style:{fontSize:15,marginBottom:8,color:"var(--green)"}},"\u2705 Bien orthographi\u00e9s ("+bienOrthographies.length+")"),
-        h("p",{style:{fontSize:12,color:"var(--text-sub)",marginBottom:8,fontStyle:"italic"}},"Le prof a confirm\u00e9 que tu avais bien \u00e9crit ces mots."),
+        h("p",{style:{fontSize:12,color:"var(--text-sub)",marginBottom:8,fontStyle:"italic"}},"J'ai confirm\u00e9 que tu avais bien \u00e9crit ces mots."),
         h("div",{style:{fontSize:12,lineHeight:1.6}},
           bienOrthographies.slice(0,20).map(function(e,i){
             return h("span",{key:i,style:{display:"inline-block",margin:"2px 4px 2px 0",padding:"3px 8px",background:"rgba(39,103,73,0.08)",color:"var(--green)",borderRadius:6,fontWeight:600}},
@@ -3554,6 +3878,7 @@ function dictErrTip(data,type,contests){
 }
 
 function ProfConfig(p){
+  var sDel=useState(null),delGuard=sDel[0],setDelGuard=sDel[1];
   var s1=useState(""),textInput=s1[0],setTextInput=s1[1];
   var s2=useState(""),elevesInput=s2[0],setElevesInput=s2[1];
   var s3=useState(""),adaptedInput=s3[0],setAdaptedInput=s3[1];
@@ -3853,10 +4178,26 @@ IMPORTANT :
   }
 
   function deleteDictee(id){
-    if(!confirm("Supprimer la dictée '"+id+"' et TOUTES ses données (résultats, codes, etc.) ?")) return;
-    db.ref("dictees/"+id).remove().then(function(){
-      setMsg("Dictée '"+id+"' supprimée.");
-      setDictees(dictees.filter(function(d){return d.id!==id}));
+    // M9·P1 — garde-corbeille : dénombrement AVANT (copies soumises et brouillons, séparés), overlay chiffré, archive avant destruction.
+    Promise.all([
+      db.ref("dictees/"+id+"/results").once("value"),
+      db.ref("dictees/"+id+"/drafts").once("value")
+    ]).then(function(snaps){
+      var rv=snaps[0].val()||{},dv=snaps[1].val()||{};
+      var ns=Object.values(rv).filter(function(e){return e&&e.eleve&&e.eleve!==TEST_ELEVE&&e.submitted}).length;
+      var nb=Object.keys(dv).filter(function(k){return k!==san(TEST_ELEVE)}).length;
+      setDelGuard({id:id,ns:ns,nb:nb});
+    }).catch(function(e){setMsg("❌ Vérification impossible ("+e.message+") — suppression refusée par prudence.")});
+  }
+  function _deleteDicteeGo(id){
+    setDelGuard(null);setMsg("Archivage en corbeille...");
+    duArchiverCorbeille("suppression_dictee_"+id, ["dictees/"+id]).then(function(r){
+      return db.ref("dictees/"+id).remove().then(function(){
+        setMsg("Dictée '"+id+"' supprimée"+(r&&!r.empty?" — archivée en corbeille ("+r.key+"), récupérable un an.":"."));
+        setDictees(dictees.filter(function(d){return d.id!==id}));
+      });
+    }).catch(function(e){
+      setMsg("❌ Archivage corbeille impossible ("+e.message+") — suppression REFUSÉE : rien n'a été détruit.");
     });
   }
 
@@ -3866,6 +4207,21 @@ IMPORTANT :
 
   if(view==="list"){
     return h("div",null,
+      delGuard&&h("div",{className:"overlay"},
+        h("div",{className:"card",style:{maxWidth:460,textAlign:"left"}},
+          h("h2",{style:{color:"var(--coral)",marginBottom:8}},"Supprimer la dictée « "+delGuard.id+" » ?"),
+          h("p",{style:{fontSize:14,color:"var(--text-sub)",marginBottom:12}},
+            delGuard.ns+" copie"+(delGuard.ns>1?"s":"")+" soumise"+(delGuard.ns>1?"s":"")+" et "+delGuard.nb+" brouillon"+(delGuard.nb>1?"s":"")+" en cours seront détruits avec la configuration."),
+          h("div",{style:{background:"var(--coral-light)",borderRadius:8,padding:12,marginBottom:16}},
+            h("div",{style:{fontSize:13,color:"var(--coral)",padding:"3px 0"}},"• Tout sera d'abord archivé dans la corbeille MJPC (récupérable un an)."),
+            h("div",{style:{fontSize:13,color:"var(--coral)",padding:"3px 0"}},"• Si l'archivage échoue, la suppression est refusée : rien n'est détruit.")
+          ),
+          h("div",{style:{display:"flex",gap:8}},
+            h("button",{title:"Archiver en corbeille puis supprimer la dictée",className:"btn btn-coral",style:{flex:1},onClick:function(){_deleteDicteeGo(delGuard.id)}},"Archiver puis supprimer"),
+            h("button",{title:"Annuler — rien ne sera détruit",className:"btn btn-ghost",style:{flex:1},onClick:function(){setDelGuard(null)}},"Annuler")
+          )
+        )
+      ),
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}},
         h("h3",{style:{margin:0}},"Dictées configurées",ifo("Liste de toutes les dict\u00e9es enregistr\u00e9es dans Firebase. Clique sur une dict\u00e9e pour la modifier ou cr\u00e9e-en une nouvelle. Le param\u00e8tre URL ?n=ID s\u00e9lectionne la dict\u00e9e active.")),
         h("button",{title:"+ Nouvelle dictée",className:"btn btn-primary",style:{fontSize:13},onClick:function(){setView("edit");setIdInput("");setTitleInput("");setDateCreationInput("");setDateSeanceInput("");setTextInput("");setElevesInput("");setPairsInput("");setAdaptedInput("");setAdaptedStudentsInput("");setPairsMode("");setWordRulesInput("");setTransModeInput("choice");setTimerInput("300");setNiveauInput("");setClasseInput("")}},"+ Nouvelle dictée")
@@ -6038,6 +6394,7 @@ function ProfSim(p){
   var simDecisions=p.simDecisions||"",setSimDecisions=p.setSimDecisions||function(){};
 
   var s4=useState(null),confirmAction=s4[0],setConfirmAction=s4[1];
+  var s4g=useState(null),simGuard=s4g[0],setSimGuard=s4g[1];
 
   var CLEAR_ACTIONS={
     sim:{label:"Effacer la simulation",desc:"Supprime tous les résultats, brouillons, verrous, contestations et codes générés par la simulation.",consequences:["Tous les résultats seront supprimés","Toutes les contestations seront supprimées","Tous les codes seront supprimés","Les brouillons et verrous seront libérés"],refs:function(){return resultsRef.remove().then(function(){return draftsRef.remove()}).then(function(){return locksRef.remove()}).then(function(){return contestRef.remove()}).then(function(){return codesRef.remove()}).then(function(){return db.ref("dictees/"+dicteeId+"/autocorrect").remove()}).then(function(){return db.ref("dictees/"+dicteeId+"/correction").remove()})}},
@@ -6051,18 +6408,45 @@ function ProfSim(p){
     var action=CLEAR_ACTIONS[actionId];if(!action)return;
     setConfirmAction(null);setRunning(true);
     setJournal(["Suppression en cours ("+action.label+")..."]);
+    // M9·P1 — sim et all détruisent copies et brouillons : archivage corbeille AVANT, refus si l'archive échoue.
+    var pre=(actionId==="sim"||actionId==="all")
+      ? duArchiverCorbeille("effacement_"+actionId+"_"+dicteeId, duCheminsDictee(dicteeId))
+      : Promise.resolve(null);
+    pre.catch(function(e){
+      setJournal(["❌ Archivage corbeille impossible ("+e.message+") — suppression REFUSÉE : rien n'a été détruit."]);
+      setRunning(false);
+      throw e;
+    }).then(function(r){
+    if(r&&!r.empty)setJournal(["✅ Données archivées en corbeille ("+r.key+").","Suppression en cours ("+action.label+")..."]);
     action.refs().then(function(){
       setJournal(["✅ "+action.label+" — terminé."]);setSummary(null);setSimDecisions("");if(p.setSharedPaste)p.setSharedPaste("");try{localStorage.removeItem("profxia_progress")}catch(e){}setRunning(false);
     }).catch(function(e){setJournal(["❌ Erreur: "+e.message]);setRunning(false)});
+    }).catch(function(e){});
   }
 
   function runSim(){
-    // Safety check: warn if real data exists
-    var existingEntries=Object.values(p.results||{}).filter(function(e){return e&&e.eleve&&e.eleve!==TEST_ELEVE&&e.submitted});
-    if(existingEntries.length>0){
-      if(!confirm("⚠️ ATTENTION : il y a "+existingEntries.length+" copies RÉELLES en base.\n\nLancer la simulation va TOUT EFFACER.\n\nContinuer ?")){setRunning(false);return}
-      if(!confirm("DERNIÈRE CONFIRMATION :\nToutes les données réelles seront perdues.\n\nAs-tu bien exporté le JSON debug avant ?")){setRunning(false);return}
-    }
+    // M9·P1 — garde-corbeille : dénombrement (copies soumises ET brouillons en cours, comptés séparément),
+    // confirmation chiffrée par overlay de l'app, archivage corbeille AVANT toute destruction.
+    var nSoumises=Object.values(p.results||{}).filter(function(e){return e&&e.eleve&&e.eleve!==TEST_ELEVE&&e.submitted}).length;
+    draftsRef.once("value").then(function(ds){
+      var dv=ds.val()||{};
+      var nBrouillons=Object.keys(dv).filter(function(k){return k!==san(TEST_ELEVE)}).length;
+      if(nSoumises+nBrouillons>0){setSimGuard({ns:nSoumises,nb:nBrouillons});setRunning(false);return}
+      _runSimCore();
+    }).catch(function(e){setJournal(["❌ Vérification des données impossible ("+e.message+") — simulation refusée par prudence : rien n'a été détruit."]);setRunning(false)});
+  }
+  function _runSimGo(){
+    // Archive corbeille PUIS simulation ; un échec d'archive REFUSE la simulation.
+    setSimGuard(null);setRunning(true);setJournal(["Archivage en corbeille avant simulation..."]);
+    duArchiverCorbeille("simulation_"+dicteeId, duCheminsDictee(dicteeId)).then(function(r){
+      setJournal(r&&r.empty?["Corbeille : rien à archiver."]:["✅ Données archivées en corbeille ("+r.key+")."]);
+      _runSimCore();
+    }).catch(function(e){
+      setJournal(["❌ Archivage corbeille impossible ("+e.message+") — simulation REFUSÉE : rien n'a été détruit."]);
+      setRunning(false);
+    });
+  }
+  function _runSimCore(){
     var absents=p.absents||[];
     var log=[];var errors=[];var t0=Date.now();
     setRunning(true);setJournal([]);setSummary(null);setSimDecisions("");if(p.setSharedPaste)p.setSharedPaste("");try{localStorage.removeItem("profxia_progress")}catch(e){}
@@ -6561,6 +6945,21 @@ function ProfSim(p){
         })
       ),
       h("button",{title:"Action de nettoyage des données (irréversible)",className:"btn btn-danger",style:{marginTop:12,width:"100%",fontSize:14,padding:12},disabled:running,onClick:function(){setConfirmAction("all")}},CLEAR_ACTIONS.all.label)
+    ),
+    simGuard&&h("div",{className:"overlay"},
+      h("div",{className:"card",style:{maxWidth:460,textAlign:"left"}},
+        h("h2",{style:{color:"var(--coral)",marginBottom:8}},"⚠️ Données réelles présentes"),
+        h("p",{style:{fontSize:14,color:"var(--text-sub)",marginBottom:12}},
+          simGuard.ns+" copie"+(simGuard.ns>1?"s":"")+" réelle"+(simGuard.ns>1?"s":"")+" soumise"+(simGuard.ns>1?"s":"")+" et "+simGuard.nb+" brouillon"+(simGuard.nb>1?"s":"")+" en cours seront détruits par la simulation."),
+        h("div",{style:{background:"var(--coral-light)",borderRadius:8,padding:12,marginBottom:16}},
+          h("div",{style:{fontSize:13,color:"var(--coral)",padding:"3px 0"}},"• Tout sera d'abord archivé dans la corbeille MJPC (récupérable un an)."),
+          h("div",{style:{fontSize:13,color:"var(--coral)",padding:"3px 0"}},"• Si l'archivage échoue, la simulation est refusée : rien n'est détruit.")
+        ),
+        h("div",{style:{display:"flex",gap:8}},
+          h("button",{title:"Archiver en corbeille puis lancer la simulation",className:"btn btn-coral",style:{flex:1},onClick:_runSimGo},"Archiver puis lancer"),
+          h("button",{title:"Annuler — rien ne sera détruit",className:"btn btn-ghost",style:{flex:1},onClick:function(){setSimGuard(null)}},"Annuler")
+        )
+      )
     ),
     confirmAction&&h("div",{className:"overlay"},
       h("div",{className:"card",style:{maxWidth:440,textAlign:"left"}},
@@ -7144,8 +7543,8 @@ function Prof(p){
     h("span",{className:"back-link",onClick:p.onBack},"← Retour"),
     h("div",{className:"card",style:{textAlign:"center"}},
       h("h2",null,"Panneau professeur"),
-      h("input",{className:"qi-input",type:"password",placeholder:"Code prof",style:{textAlign:"center",marginBottom:12},value:code,onChange:function(e){setCode(e.target.value)},onKeyDown:function(e){if(e.key==="Enter"&&PROF_CODES.indexOf(parseInt(code))>=0){setAuth(true);publierManifeste(db)}}}),
-      h("button",{title:"Accéder",className:"btn btn-primary",onClick:function(){if(PROF_CODES.indexOf(parseInt(code))>=0){setAuth(true);publierManifeste(db)}else alert("Code incorrect")}}, "Accéder")
+      h("input",{className:"qi-input",type:"password",placeholder:"Code prof",style:{textAlign:"center",marginBottom:12},value:code,onChange:function(e){setCode(e.target.value)},onKeyDown:function(e){if(e.key==="Enter"&&PROF_CODES.map(String).indexOf(String(code))>=0){setAuth(true);publierManifeste(db)}}}),
+      h("button",{title:"Accéder",className:"btn btn-primary",onClick:function(){if(PROF_CODES.map(String).indexOf(String(code))>=0){setAuth(true);publierManifeste(db)}else alert("Code incorrect")}}, "Accéder")
     )
   );
 
@@ -7186,9 +7585,28 @@ function Prof(p){
   return h("div",{className:"container fade-up"},
     h("div",{style:{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}},h("span",{className:"back-link",onClick:p.onBack},"← Retour"),h("button",{title:"⇆ Changer de dictée",className:"btn-sm btn-ghost",style:{fontSize:12},onClick:function(){if(_backToSelector){_backToSelector()}else{window.location.search=""}}},"⇆ Changer de dictée")),
     h("div",{className:"app-hdr"},h("h1",null,"Panneau prof")),
-    h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",margin:"8px 0"}},tabs.map(function(t){
-      return h("button",{title:t.tip,key:t.id,className:"btn-sm"+(tab===t.id?" btn-primary":" btn-ghost"),onClick:function(){setTab(t.id)}},t.label);
-    })),
+    // M9 · navigation deux niveaux (points 1-4, patron souche) : Pilotage · Préparation · Données · Réglages · ?
+    // Enveloppe de présentation pure — les composants d'onglets sont INTACTS.
+    (function(){
+      var FAMILLES=[
+        {id:"pilotage",label:"Pilotage",tabs:["dash","distrib","validation","contest","contestlock","absents","livecfg","sim"]},
+        {id:"preparation",label:"Pr\u00e9paration",tabs:["config"]},
+        {id:"donnees",label:"Donn\u00e9es",tabs:["mots","stats","audit","export","carnet","snapshot","codes"]},
+        {id:"reglages",label:"R\u00e9glages",tabs:["reglages_textes","debug"]},
+        {id:"aide",label:"?",tabs:["help"]}
+      ];
+      var famille=FAMILLES.find(function(f){return f.tabs.indexOf(tab)>=0})||FAMILLES[0];
+      function labelDe(id){var tt=tabs.find(function(x){return x.id===id});return tt?tt.label:(id==="config"?"Pr\u00e9paration":id==="reglages_textes"?"Textes \u00e9l\u00e8ves":id)}
+      function tipDe(id){var tt=tabs.find(function(x){return x.id===id});return tt?tt.tip:""}
+      return h("div",null,
+        h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",margin:"8px 0"}},FAMILLES.map(function(f){
+          return h("button",{key:f.id,className:"btn-sm"+(famille.id===f.id?" btn-primary":" btn-ghost"),style:{minHeight:44,fontWeight:600},onClick:function(){setTab(f.tabs[0])}},f.label);
+        })),
+        famille.tabs.length>1&&h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",margin:"0 0 8px 0",paddingLeft:6,borderLeft:"3px solid var(--border)"}},famille.tabs.map(function(id){
+          return h("button",{title:tipDe(id),key:id,className:"btn-sm"+(tab===id?" btn-primary":" btn-ghost"),onClick:function(){setTab(id)}},labelDe(id));
+        }))
+      );
+    })(),
     // Bandeau d'aide contextuel (s'affiche aussi sur mobile, où le title HTML n'apparaît pas)
     (function(){var current=tabs.find(function(t){return t.id===tab});return current&&current.tip?h("div",{style:{padding:"10px 14px",background:"var(--card-alt)",borderRadius:8,marginBottom:12,fontSize:13,color:"var(--text-sub)",borderLeft:"3px solid var(--primary)",lineHeight:1.5}},h("strong",{style:{color:"var(--primary)"}},current.label+" \u2014 "),current.tip):null})(),
 
@@ -7233,6 +7651,7 @@ function Prof(p){
     tab==="audit"&&h(ProfAudit,{results:res}),
     tab==="export"&&h(ProfExport,{results:res}),
     tab==="carnet"&&h(ProfCarnetClasse,{}),
+    tab==="reglages_textes"&&h(ProfTextes,{}),
     tab==="help"&&h(ProfHelp,{}),
     tab==="snapshot"&&h(ProfSnapshot,{}),
     tab==="livecfg"&&h(ProfLiveConfig,{}),
@@ -9749,6 +10168,12 @@ function buildDicteeResultHtml(data,code,contests){
 
   // Header with note (hidden until all comps seen)
   rh+='<div class="header"><h1>'+data.eleve+'</h1><div style="font-size:14px;color:#555;margin-top:4px">Bilan personnalisé — '+(DICTEE_TITLE||'Dictée coévaluée')+'</div>';
+  // M9 · D16 : un document d'archive porte ses dates (dictée, correction, génération).
+  var _d16=[];
+  if(DICTEE_DATE_SEANCE)_d16.push("Dict\u00e9e du "+formatDateFR(DICTEE_DATE_SEANCE));
+  if(data.timestamp)_d16.push("corrig\u00e9e le "+new Date(data.timestamp).toLocaleDateString("fr-FR"));
+  _d16.push("document g\u00e9n\u00e9r\u00e9 le "+new Date().toLocaleDateString("fr-FR"));
+  rh+='<div style="font-size:12px;color:#777;margin-top:3px">'+_d16.join(" \u00b7 ")+'</div>';
   var nc=noteColor(noteFinale);
   rh+='<div class="note-big" id="noteBig" style="color:'+nc+';display:none">'+noteFinale+'/'+BAREME.base+'</div>';
   rh+='<div id="noteHidden" style="font-size:18px;color:#A0AEC0;font-style:italic">Consulte tes compétences pour voir ta note</div>';
@@ -9860,7 +10285,10 @@ function buildDicteeResultHtml(data,code,contests){
   // Script
   rh+='<\script>';
   rh+='var CODE="'+code+'";';
-  rh+='function checkCode(){var v=document.getElementById("codeInput").value.trim();if(v===CODE||v==="1312"){document.getElementById("login").style.display="none";document.getElementById("results").className="shown"}else{document.getElementById("errMsg").textContent="Code incorrect."}}';
+  // M9 · plus aucun littéral de code prof : les PROF_CODES EFFECTIFS au moment de l'export
+  // sont figés dans le fichier autonome (sa nature), et l'accès prof laisse une trace visible.
+  rh+='var PROF_CODES_EXPORT='+JSON.stringify((PROF_CODES||[]).map(String))+';';
+  rh+='function checkCode(){var v=document.getElementById("codeInput").value.trim();var estProf=PROF_CODES_EXPORT.indexOf(v)>=0;if(v===CODE||estProf){document.getElementById("login").style.display="none";document.getElementById("results").className="shown";if(estProf){var b=document.createElement("div");b.style.cssText="background:#FFFFF0;border:1.5px solid #ECC94B;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;color:#B7791F";b.textContent="Acc\\u00e8s professeur \\u2014 '+data.eleve+'";document.getElementById("results").insertBefore(b,document.getElementById("results").firstChild)}}else{document.getElementById("errMsg").textContent="Code incorrect."}}';
   rh+='document.getElementById("codeInput").addEventListener("keydown",function(e){if(e.key==="Enter")checkCode()});';
 
   // Comp data embedded
@@ -10182,7 +10610,7 @@ function ProfExport(p){
 }
 
 
-ReactDOM.createRoot(document.getElementById("root")).render(h(DicteeLoader));
+ReactDOM.createRoot(document.getElementById("root")).render(h(RacineMJPC));
 </script>
 </body>
 </html>
