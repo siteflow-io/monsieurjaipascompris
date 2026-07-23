@@ -25,6 +25,10 @@
 - commit `f82be1360d` · 365 082 o · md5 `f2bfefb648fcd42f3e3b3bddee119824` · v8.4.3
 - **Motif** : M12 — écran corbeille (consulter/exporter/restaurer avec confirmation chiffrée), modales admin (7 prompt + 14 confirm), genres analyse_logique/applaudimetre/worktrack + réparation tache, marqueur et zone autonomie, séances publiées TOUJOURS visibles, texte de séance sans document ÉDITABLE, bloc diagnostic, pastille 8.5.0.
 
+### POINT DE RETOUR — `worktrack.html` AVANT promotion M13 (23/07/2026)
+- commit `167ad67e2e` · 790 029 o · md5 `05b38757b8bd33ff4acba5c2963d47d2` · socle 1.0.0
+- **Motif** : M13 — vendorisation, socle 1.1.0 + shunt élève ET prof, portail par lane sur `/codes`, **verrou de classe du poste LEVÉ** (décision Paul : postes mixtes en étude), chapitre par lane, seed régénéré mécaniquement (S0-⑥), mode test 16bis (portail réel éprouvé, purge vérifiée), corbeille sur delChapter, présence hub, nav 2 niveaux, dictionnaire de textes, diagnostic, tactile 390.
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
