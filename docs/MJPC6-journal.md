@@ -61,6 +61,9 @@ Paul : « Pourquoi j'ai la pastille de version au-dessus d'un bouton bleu en bas
 - **Mode test, cycle complet** : semis → 122 codes deviennent 128, les six fictifs créés (`bernard_emma`…`petit_thomas`), deux classes `_test_worktrack 4e` et `_test_worktrack 3e` ; purge → retour à **122 codes exactement**, zéro fictif, zéro classe de test, **et TOUS les codes réels intacts** (vérification nominative : `aloyeau_elyse`, `audebert_elise`, `alligand_louka`, `antonini_maiwen`, `clement_lylou`), 8 classes réelles préservées. **C'est précisément ce qui avait détruit 7 codes d'élèves avec le bac à sable du QCM : ici, rien n'est touché.** La règle du 22/07 (nom fictif + garde sur la clé `sanMJPC`) tient à l'épreuve.
 **Reproche de Paul** : les captures de l'exécutant n'étaient pas concluantes (le poste mixte montrait un écran de transition). Leçon : **une capture n'est pas une preuve ; ce qui prouve, ce sont les écritures et les états mesurés.** La conscience produira désormais ses propres vérifications fonctionnelles en plus des captures.
 
+### RATTRAPAGE (consigné le 27/07) — promotion NON journalisée du 22/07 sur `dictee_universelle.html`
+Le 22/07, la conscience n°3 a promu les mentions du bilan exporté à la 1re personne (« Copie que j'ai vérifiée », « que j'ai ajoutée / reclassée / confirmée / supprimé / corrigé »), commit `833bdda5a1`, md5 **`f8362a876ceefe1dc1e6d7f668f00848`**, 1 956 829 o — PUT poussé et vérifié bit à bit à l'époque, mais **jamais inscrit au journal**. C'est l'exécutant du LOT-COUTURES qui l'a relevé le 23/07 en mesurant un troisième md5 pour ce fichier. État réel de production à jour : `f8362a876ceefe1dc1e6d7f668f00848`. Famille d'erreur : livraison hors du tour de journalisation — rappel que le PUT et la tenue du journal sont un seul geste, jamais dissociés.
+
 ## FORMAT D'UN CAS — trois niveaux, et le troisième n'est pas garanti
 ```
 AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
