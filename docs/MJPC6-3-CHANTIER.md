@@ -61,6 +61,13 @@ L'écran Travaux permet de CRÉER, d'imprimer la feuille élève et de corriger 
 **À livrer** : un bouton de rechargement dans l'en-tête de la modale (à côté de « ✕ Fermer ») qui ne recharge QUE l'iframe. Plus, à instruire : que se passe-t-il pour la session partagée et le shunt quand l'app est en iframe (même origine, `sessionStorage` partagé — vérifié fonctionnel le 22/07 : Paul est reconnu prof sans code), et que voit l'élève si l'app y est trop à l'étroit (tactile, largeur de modale).
 **Rattachement** : chantier du SITE. **NON ajouté à M12 en cours** — l'exécutant a son feu vert, on n'élargit pas un périmètre en cours de route (règle du 22/07 : rapporter au plan, ne pas suivre l'impulsion). À placer au lot suivant du site.
 
+### MORCEAU DÉDIÉ À VENIR — `analyse_logique` (décidé par Paul, 27/07)
+Paul : *« il y a encore des bugs à corriger sur analyse logique, il faudra une session dédiée pour cette app. »*
+Une passe entière sera consacrée à `analyse_logique` (v2.1.0 en production). Elle n'est PAS le LOT-COUTURES (soldé le 27/07) ni M-MODETEST : c'est un morceau à part, à cadrer, qui rassemblera les dettes déjà ouvertes de l'app ET les bugs que Paul signalera. À la reprise, DEMANDER À PAUL la liste précise des bugs constatés (il en a vu à l'usage, non encore décrits ici).
+**Dettes déjà inventoriées pour cette session** : mode test à terminer (= relève de M-MODETEST, à articuler) · corrigé IA en JSON (format à lignes/barres fragile → schéma JSON + prompt strict, transition en lecture, empans verbatim) · écrans Copies et Exercices (placeholders) · modes « phrase imposée / paragraphe » · Concordance (M19) · motifs supplémentaires à valider (crochets absents / couleur / flèche) · flèches SVG à l'œil · bloc diagnostic présent (posé) mais à éprouver · deep-link « autre classe » non joué à l'écran (prouvé par code seulement, à vérifier en vrai) · anciennes entrées de `analyse_logique/corbeille` locales (extinction naturelle, à surveiller).
+**Bugs signalés par Paul le 27/07, à détailler à la reprise** : [À RENSEIGNER — Paul a constaté des bugs à l'usage après promotion v2.1.0, liste à recueillir].
+**Placement** : morceau à insérer au séquençage — probablement couplé ou adjacent à M-MODETEST (même fichier), après M-SÉCU. À trancher avec Paul selon l'urgence des bugs.
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
