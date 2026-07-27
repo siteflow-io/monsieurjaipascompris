@@ -103,6 +103,21 @@ Paul a demandé si réparer maintenant, « au cas où la situation se représent
 **Q5 — format corbeille : option A** (une entrée par chemin, seule compatible avec `_corbPlanRestauration` du site). **Q6 — les deux reformulations validées** : L3203 → « La séance n'est pas encore ouverte. Reste sur cet écran, elle démarre dans un instant. » ; L3211 → « La séance va commencer. Garde ta tablette prête. »
 **À CORRIGER au CHANTIER** : `applause_meter` était classé « mode test conforme, à ne pas retoucher » — FAUX (purge non exhaustive, non vérifiée, état test en useState perdu au rechargement). **Au REGISTRE** : ~3 474 lignes → 3 944 ; `critereIdx` bloqué à 0 ne se reproduit pas dans les données actuelles ; 4 passages fantômes → 5.
 
+### M14 · MÉCANISME DE DÉNONCIATION-ARBITRAGE (conçu avec Paul, 27/07) — À CODER À LA PASSE DE L'APP
+Contexte : l'app découpe l'écran en zones (une par élève). Un élève peut cliquer dans la zone d'un voisin. La machine NE PEUT PAS le détecter (le but du jeu est de « basher » les boutons de vote : le clic volé est noyé dans le flux). D'où un mécanisme de signalement humain, arbitré par le professeur, qui NE FIGE PAS la séance.
+**Flux arrêté (7 étapes)** :
+1. Un élève clique dans la zone d'un voisin (indétectable).
+2. Le voisin lésé appuie sur SON bouton de dénonciation.
+3. **La séance CONTINUE** — rien ne se fige, rien ne s'affiche devant la classe. Un CONFLIT s'ouvre entre les deux élèves ; le dénoncé est **présumé fautif** et porte une **pénalité « en cours »** en attente d'arbitrage.
+4. Une **ZONE DE PÉNALITÉS** s'ouvre côté professeur — elle n'existe qu'à partir du moment où un conflit a commencé — et rassemble tous les conflits de la séance.
+5. **En fin de séance**, un message affiché **CONVOQUE NOMMÉMENT** les deux élèves concernés pour arbitrage (« comparution »).
+6. **Arbitrage de Paul** : dénonciation fondée → l'intrus porte la pénalité (option B : **fiabilité dégradée / note d'auditeur abaissée sur ce passage**) ; dénonciation abusive → c'est le DÉNONCIATEUR qui porte la pénalité (même forme B). L'arbitrage est HUMAIN : la machine ne tranche jamais le conflit elle-même.
+7. **Non-comparution** : si l'un ou l'autre — ou les deux — ne se présente pas à la convocation, il est **pénalisé automatiquement par Paul sur la compétence `tr-personne`** (« La formation de la personne et du citoyen » — rattachement CANONIQUE trouvé dans `taxonomie_atelier.json`, c'est là que loge « collaborer / rigueur dans le travail de groupe / respect des règles communes »). Si les DEUX manquent : les deux sont pénalisés sur `tr-personne`, et le conflit de départ reste non tranché (pas de pénalité de fiabilité, seule la non-comparution est sanctionnée). *[Points ① double absence et ② affichage par élève : formulés par la conscience, RÉPONSE DE PAUL « voilà » = validation du flux tel que restitué.]*
+**Affichage** : ① pendant la séance, le dénoncé voit sur SA zone un état « pénalité en cours » (signal dissuasif, sans arrêter son jeu) ; ② le tableau projeté n'expose JAMAIS le conflit devant la classe — l'arbitrage est privé, côté prof.
+**Deux fonctionnalités neuves que ce mécanisme implique, à coder** : le **bouton de dénonciation** par zone, et la **zone de pénalités** côté prof (liste des conflits, convocation nominative en fin de séance, arbitrage à deux issues, bascule automatique vers `tr-personne` en cas de non-comparution). Le **degré de fiabilité** d'un vote/évaluation remontant dans MJPC est la donnée qui matérialise l'option B.
+**Rattachement à l'identité attestée (Q1)** : tout ceci n'est possible que parce que le code élève attache chaque zone à une identité — on sait qui devrait taper où. Sans le portail à code, pas de dénonciation qualifiée.
+**Statut** : conçu et consigné le 27/07. **À CODER à la passe de l'app** (M14 lui-même ou session dédiée, selon l'ampleur — voir note d'ampleur ci-dessous).
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
