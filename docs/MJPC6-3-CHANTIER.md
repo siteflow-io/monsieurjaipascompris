@@ -68,6 +68,27 @@ Une passe entière sera consacrée à `analyse_logique` (v2.1.0 en production). 
 **Bugs signalés par Paul le 27/07, à détailler à la reprise** : [À RENSEIGNER — Paul a constaté des bugs à l'usage après promotion v2.1.0, liste à recueillir].
 **Placement** : morceau à insérer au séquençage — probablement couplé ou adjacent à M-MODETEST (même fichier), après M-SÉCU. À trancher avec Paul selon l'urgence des bugs.
 
+### SESSION DÉDIÉE `analyse_logique` — QUATRE BUGS SIGNALÉS PAR PAUL LE 27/07 (analysés sur le code, non corrigés)
+Paul a fait des tests réels sur la v2.1.0 et décrit quatre bugs. Analyse de la conscience sur pièces, sans coder (à la demande de Paul).
+
+**BUG A — les étiquettes de proposition se superposent / cherchent un mot.** Mots de Paul : *« les étiquettes de propositions cherchent un mot pour se mettre, et donc il y a des superpositions, or il faut qu'une étiquette proposition puisse être mise n'importe où sous cette proposition »*. Cause trouvée : `_localiser(content, segText)` ancre chaque étiquette sur une SUITE DE TOKENS retrouvée par correspondance textuelle exacte (`content[s+k].n !== seg[k]`). Deux propositions partageant des mots — ou une reformulation IA — retombent au même ancrage. **Demande de Paul** : découpler l'affichage de l'étiquette de la recherche de tokens — l'étiquette doit se poser à une POSITION LIBRE sous la proposition, pas se coller à un mot. C'est un changement de modèle d'ancrage, pas une retouche.
+
+**BUG B — le bouton « Valider ce corrigé » ne fonctionne pas après import de l'analyse IA.** Cause trouvée (L2606-2612) : le bouton n'agit que si `corrAnalyseRef.current` existe ; ce ref n'est peuplé que si `parseCorrige` a localisé au moins une structure. Quand l'analyse IA importée ne se localise pas (format à barres fragile, empans reformulés), `parseCorrige` renvoie des structures vides, le ref reste nul, **le clic ne fait rien**. Le bouton n'est pas cassé : le parsing a échoué silencieusement en amont.
+
+**BUG C — immense zone blanche sous le corrigé après import (ascenseur révélant un document vide).** Cause trouvée : le conteneur de visualisation (`corrHostRef`, `minHeight:200`) se monte dès qu'un `modele` existe, même PARTIEL (structures vides mais objet non nul) ; il s'étire alors à vide. Même cause racine que B : corrigé à moitié parsé.
+
+**→ A, B et C ont une CAUSE RACINE COMMUNE : `_localiser` / le format à lignes-barres ne se localise pas de façon fiable.** C'est précisément pourquoi le passage du corrigé IA au **JSON avec empans verbatim** (déjà inscrit comme dette) n'est pas un confort mais la réparation de fond : il supprime `_localiser` comme point de rupture. Le nouveau modèle d'ancrage des étiquettes (bug A) doit être conçu dans le même mouvement.
+
+**BUG D — après un test, le travail de test apparaît en « undefined » une fois sorti du mode test.** Cause trouvée : `purgerModeTest` supprime bien le travail du hub (`travaux/_test_analyse_logique_travail`) mais la LISTE AFFICHÉE EN MÉMOIRE n'est pas re-synchronisée — l'écran garde une référence dont les champs sont désormais vides, d'où « undefined ». Même défaut de famille que le mode test de worktrack (la sortie ne se propage pas à l'état de l'écran). **Relève à la fois de la session `analyse_logique` ET de M-MODETEST.**
+
+**Le corrigé IA en JSON reste le point central de cette session** (Paul, 27/07 : *« le corrigé IA d'analyse logique, c'est justement un des points à développer »*) : schéma JSON + prompt strict, transition en lecture du parseur lignes, empans verbatim exigés de l'IA, nouveau modèle d'ancrage des étiquettes à position libre. À cadrer.
+
+### LES TROIS DÉCISIONS DE PAUL — INSTRUITES SUR LE CODE ET LES DONNÉES (27/07), AUCUNE ACTION IMMÉDIATE
+Paul a demandé si réparer maintenant, « au cas où la situation se représenterait plus tard ». Réponses fondées sur le code, pas sur l'intuition :
+- **① 28 codes de 5e sans classe → attendre M17a.** Mesure hub : 29 codes sans champ `classe`, dont 28 vrais élèves de 5e Hergé + 1 profil test (MONSIEUR Meney). **La cause NE PEUT PLUS refrapper** : les apps actuelles (worktrack, analyse_logique) écrivent toujours `set({code,name,classe,…})` — le champ classe est systématique. Les 28 viennent d'un générateur ANCIEN d'avant le socle unifié, disparu. Réparer maintenant ne prévient rien (la cause n'existe plus) et ne fait que nettoyer un résidu que M17a purgera. Fossiles liés, à démêler en M16/M17a : CLÉMENT Lylou et PINEAU Clémence existent EN DOUBLE — avec accent sans classe (`CL_MENT_Lylou` 5808, `PINEAU_Cl_mence` 4383) et sans accent rattachées à 5e Hergé (`clement_lylou` 7791, `pineau_clemence` 1329).
+- **② Deux graphies de publication → attendre M17b.** Le code le prouve inoffensif : `isPubFor` normalise déjà par `_slugifyClass` (minuscules, accents retirés, non-alphanumérique → `_`) ; `3E Charles de Gaulle` et `3e_charles_de_gaulle` donnent la MÊME clé, donc l'app les compare déjà comme égales. Double stockage inélégant mais sans effet tant que les valeurs concordent (elles concordent). L'import M17b repartira d'une graphie unique. Rien à réparer maintenant.
+- **③ Corrigé IA en JSON → c'est le cœur de la session `analyse_logique`** (voir bugs A/B/C ci-dessus), pas une décision isolée.
+
 ## ⏱ LA CHRONOLOGIE — le chantier morceau par morceau (v20, 16/07)
 *Chaque morceau = une conversation (une session de travail). **BUTOIR GLOBAL : TOUT BOUCLÉ LE 15 AOÛT** (M1→M17) ; seuls les M18+ (fil de l'eau) vivent après. Cadence nécessaire : ~4 morceaux/semaine. À chaque session terminée : cocher ici, pousser le plan.*
 
