@@ -1617,8 +1617,8 @@ var MJPC_CORE_VERSION="1.1.0";
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION = "2.0.0";        // ← la pastille affichée à l'écran doit dire ceci
-var APP_VERSION_DATE = "2026-07-22";
+var APP_VERSION = "2.1.0";        // ← la pastille affichée à l'écran doit dire ceci
+var APP_VERSION_DATE = "2026-07-27";
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
 var MJPC_APP = {
@@ -1695,7 +1695,9 @@ function effacerSessionOnglet(){ try{ sessionStorage.removeItem(CLE_SESSION_ONGL
 var TEXTES_DEFAUT = {
   eleve_delimitation: "Pour ce travail, tu fais l\u2019analyse sur la feuille papier que je t\u2019ai remise. Tes r\u00e9sultats corrig\u00e9s appara\u00eetront ici.",
   eleve_modes_avenir: "Les modes o\u00f9 tu r\u00e9diges directement \u00e0 l\u2019\u00e9cran arriveront ici.",
-  eleve_aucun_travail: "Aucun travail n\u2019est publi\u00e9 pour ta classe pour l\u2019instant."
+  eleve_aucun_travail: "Aucun travail n\u2019est publi\u00e9 pour ta classe pour l\u2019instant.",
+  eleve_lien_non_publie: "Ce travail n\u2019est pas encore ouvert. Tu le retrouveras ici d\u00e8s qu\u2019il le sera.",
+  eleve_lien_autre_classe: "Ce travail ne fait pas partie des tiens. Voici tes analyses."
 };
 var TEXTES_CHAMPS = [
   ["eleve_delimitation","Consigne du mode papier","Vu par l\u2019\u00e9l\u00e8ve connect\u00e9 quand le travail est en mode d\u00e9limitation (papier)."],
@@ -1976,20 +1978,42 @@ function evaluer(eleve, modele, bareme, opts){
 }
 // M11 · CORBEILLE (grille pt 19) — aucun geste destructeur direct : la donnée part
 // dans analyse_logique/corbeille AVANT suppression, restaurable depuis Réglages.
+// LOT-COUTURES ④ · la corbeille écrit désormais à la RACINE /corbeille/<jour>/<clé> au format
+// canonique {_meta:{chemin,app,ts,motif}, data} — restaurable depuis l'écran Corbeille du site (M12)
+// ET depuis Réglages de l'app. ABANDON si l'archive échoue (le nœud d'origine reste intact).
+// Les anciennes entrées de analyse_logique/corbeille (format {chemin,etiquette,donnees,ts}) restent
+// lues en tolérance par Réglages ; on ne les migre pas de force.
 function versCorbeille(chemin, etiquette, cb){
   var srcRef=db.ref(chemin);
   srcRef.once("value",function(s){
     var v=s.val();
     if(v==null){ if(cb)cb(); return; }
-    db.ref(ROOT+"/corbeille").push({chemin:chemin,etiquette:etiquette||chemin,donnees:v,ts:Date.now()},function(){
-      srcRef.remove(); if(cb)cb();
+    var jour=new Date().toISOString().slice(0,10);
+    var cle=ekey(chemin)+"_"+Date.now();
+    db.ref("corbeille/"+jour+"/"+cle).set({
+      _meta:{chemin:chemin, app:MJPC_APP.id, ts:Date.now(), motif:(etiquette||chemin), etiquette:(etiquette||chemin)},
+      data:v
+    },function(err){
+      if(err){ if(cb)cb(err); return; }      // archive refusée → on ne détruit RIEN
+      srcRef.remove(); if(cb)cb(null);
     });
   });
 }
+// Restauration unifiée. Nouveau format racine : item.__racine==true, clé = jour/cle,
+// chemin dans item._meta.chemin, données dans item.data. Ancien format local : item.chemin/donnees/id.
 function restaurerCorbeille(item, cb){
-  if(!item||!item.chemin)return;
+  if(!item) return;
+  if(item.__racine){
+    var chemin=(item._meta&&item._meta.chemin)||null;
+    if(!chemin){ if(cb)cb("chemin absent"); return; }
+    db.ref(chemin).set(item.data==null?null:item.data,function(){
+      db.ref("corbeille/"+item.__cle).remove(); if(cb)cb(null);
+    });
+    return;
+  }
+  if(!item.chemin) return;                    // ancien format local
   db.ref(item.chemin).set(item.donnees==null?null:item.donnees,function(){
-    db.ref(ROOT+"/corbeille/"+item.id).remove(); if(cb)cb();
+    db.ref(ROOT+"/corbeille/"+item.id).remove(); if(cb)cb&&cb(null);
   });
 }
 // M11 · MOTIFS AFFICHÉS (Q4) — liste CUMULABLE construite à partir des verdicts déjà
@@ -2157,6 +2181,15 @@ function App(){
   var e2=useState(false),infos=e2[0],setInfos=e2[1];
   var e3=useState(null),modeTest=e3[0],setModeTest=e3[1];
   var e4=useState(true),bandeauOuvert=e4[0],setBandeauOuvert=e4[1];
+  // LOT-COUTURES ③ · DEEP-LINK — préférence d'ouverture, JAMAIS un droit d'accès (une URL est
+  // falsifiable). On lit ?travail=<id> une seule fois et on nettoie l'URL pour ne pas boucler ;
+  // l'accès réel reste tranché par published + classe côté AppEleve, exactement comme sans lien.
+  var e5=useState(function(){
+    try{ var q=new URLSearchParams(location.search); var t=q.get("travail"); return t?String(t):null; }catch(e){ return null; }
+  }),cible=e5[0];
+  useEffect(function(){
+    if(cible){ try{ var u=new URL(location.href); u.searchParams.delete("travail"); history.replaceState(null,"",u.pathname+u.search+u.hash); }catch(e){} }
+  },[]);
   useEffect(function(){
     var mt=db.ref(ROOT+"/modeTest"); mt.on("value",function(s){setModeTest(s.val())});
     seedReferentiel();
@@ -2193,8 +2226,8 @@ function App(){
   return h(React.Fragment,null,
     etape==="chargement"&&h("div",{className:"container fade"},h("p",{className:"sub",style:{textAlign:"center",marginTop:60}},"Chargement\u2026")),
     etape==="portail"&&h(PortailMJPC,{titre:"Atelier d\u2019analyse logique",onDone:surIdentite}),
-    etape==="eleve"&&h(AppEleve,{identite:identite,onQuit:quitter}),
-    etape==="prof"&&h(AppProf,{identite:identite,onQuit:quitter}),
+    etape==="eleve"&&h(AppEleve,{identite:identite,onQuit:quitter,cibleId:cible}),
+    etape==="prof"&&h(AppProf,{identite:identite,onQuit:quitter,cibleId:cible}),
     modeTest&&modeTest.actif&&h(BandeauTest,{ouvert:bandeauOuvert,onReplie:function(){setBandeauOuvert(false)},onDeplie:function(){setBandeauOuvert(true)},onPurge:function(){purgerModeTest(null)}}),
     h("button",{className:"version-pill-fixe",title:"Version de l\u2019application \u00b7 annonces et infos",onClick:function(){setInfos(true)}},"v"+APP_VERSION),
     infos&&h(InfosMJPC,{onClose:function(){setInfos(false)}})
@@ -2208,13 +2241,21 @@ function AppProf(p){
   var r=useState(null),ref=r[0],setRef=r[1];
   var w=useState([]),travaux=w[0],setTravaux=w[1];
   var sel=useState(null),current=sel[0],setCurrent=sel[1];
+  var dlProf=useRef(false);   // LOT-COUTURES ③ · deep-link prof traité une seule fois
 
   useEffect(function(){
     publierManifeste(db);   // vue projetée pour la console MJPC (additive)
     var a=db.ref("classes"); a.on("value",function(s){setClasses(s.val()||{})});
     var b=db.ref(ROOT+"/referentiel"); b.on("value",function(s){setRef(s.val()||SEED)});
     var c2=db.ref(ROOT+"/travaux"); c2.on("value",function(s){
-      var v=s.val()||{}; setTravaux(Object.keys(v).map(function(id){return Object.assign({id:id},v[id].config||{})}));
+      var v=s.val()||{}; var liste=Object.keys(v).map(function(id){return Object.assign({id:id},v[id].config||{})});
+      setTravaux(liste);
+      // Deep-link prof : le professeur a tous les droits, on ouvre directement la correction du
+      // travail ciblé s'il existe (aucune règle d'accès à respecter côté prof — pt : jamais bloqué).
+      if(p.cibleId && !dlProf.current){
+        var vu=liste.filter(function(t){return t.id===p.cibleId})[0];
+        if(vu){ dlProf.current=true; setCurrent(vu); setTab("correction"); setNav1("pilotage"); }
+      }
     });
     return function(){a.off();b.off();c2.off()};
   },[]);
@@ -2224,7 +2265,7 @@ function AppProf(p){
   var NAV = [
     ["pilotage","Pilotage",[["travaux","Travaux"],["correction","Correction"],["bilan","Bilan"]]],
     ["donnees","Donn\u00e9es",[["copies","Copies"],["fiches","Fiches"],["suivi","Suivi"],["exercices","Exercices"]]],
-    ["reglages","R\u00e9glages",[["referentiel","R\u00e9f\u00e9rentiel"],["bareme","Bar\u00e8me"],["reglages_app","R\u00e9glages"],["todo","\ud83d\udee0 D\u00e9veloppement"]]],
+    ["reglages","R\u00e9glages",[["referentiel","R\u00e9f\u00e9rentiel"],["bareme","Bar\u00e8me"],["reglages_app","\ud83e\uddea Outils"],["todo","\ud83d\udee0 D\u00e9veloppement"]]],
     ["aide","?",[]]
   ];
   var n1=useState("pilotage"),nav1=n1[0],setNav1=n1[1];
@@ -2262,6 +2303,11 @@ function AppProf(p){
 function Travaux(p){
   var f=useState({titre:"",classe:"",niveau:"",texte:"",base:20,coef:1,consigne:"",modeCode:"delimitation"}),form=f[0],setForm=f[1];
   var classes=p.classes||{}, ref=p.ref;
+  // LOT-COUTURES ① · gestes de base. edit = travail en cours de modification (nœud complet lu à la
+  // demande) ; sup = travail en attente de confirmation de suppression (avec dénombrement mesuré).
+  var eS=useState(null),edit=eS[0],setEdit=eS[1];
+  var sS=useState(null),sup=sS[0],setSup=sS[1];
+  var oS=useState(false),occupe=oS[0],setOccupe=oS[1];
   function up(k,v){var n=Object.assign({},form);n[k]=v;setForm(n)}
   function creer(){
     if(!form.titre||!form.classe||!form.texte){alert("Titre, classe et texte sont requis.");return}
@@ -2271,6 +2317,74 @@ function Travaux(p){
       texte:form.texte,modeCode:form.modeCode||"delimitation",base:Number(form.base)||20,coef:Number(form.coef)||1,consigne:form.consigne||"",published:true,ts:Date.now()
     });
     setForm({titre:"",classe:"",niveau:"",texte:"",base:20,coef:1,consigne:"",modeCode:"delimitation"});
+  }
+  // MODIFIER — lit le nœud ENTIER pour connaître copies/corrigé (verrou du texte, piège pt 27),
+  // puis ouvre la modale pré-remplie. Le champ texte se verrouille dès qu'une copie ou un corrigé
+  // existe : les corrections sont des index de tokens dans CE découpage (buildTokens).
+  function ouvrirEdition(tw){
+    setOccupe(true);
+    db.ref(ROOT+"/travaux/"+tw.id).once("value",function(s){
+      var n=s.val()||{}; var cfg=n.config||{};
+      var nbCopies=n.results?Object.keys(n.results).length:0;
+      var aCorrige=!!(n.corrige&&(n.corrige.retour||n.corrige.modele));
+      setEdit({id:tw.id,
+        titre:cfg.titre||"",classe:cfg.classe||"",niveau:cfg.niveau||"",texte:cfg.texte||"",
+        base:cfg.base||20,coef:cfg.coef||1,consigne:cfg.consigne||"",modeCode:cfg.modeCode||"delimitation",
+        published:cfg.published!==false,
+        _nbCopies:nbCopies,_aCorrige:aCorrige,_texteVerrou:(nbCopies>0||aCorrige)});
+      setOccupe(false);
+    },function(){ setOccupe(false); alert("Lecture du travail impossible."); });
+  }
+  function editUp(k,v){ setEdit(Object.assign({},edit,(function(){var o={};o[k]=v;return o})())); }
+  function enregistrerEdition(){
+    if(!edit) return;
+    if(!edit.titre||!edit.classe){ alert("Titre et classe sont requis."); return; }
+    var patch={titre:edit.titre,classe:edit.classe,niveau:edit.niveau||deduireNiveauDuNom(edit.classe),
+      modeCode:edit.modeCode||"delimitation",base:Number(edit.base)||20,coef:Number(edit.coef)||1,
+      consigne:edit.consigne||"",published:edit.published!==false};
+    if(!edit._texteVerrou) patch.texte=edit.texte;   // texte modifiable UNIQUEMENT si vierge de copies/corrigé
+    setOccupe(true);
+    db.ref(ROOT+"/travaux/"+edit.id+"/config").update(patch,function(err){
+      setOccupe(false);
+      if(err){ alert("Enregistrement refus\u00e9 par le serveur \u2014 rien n\u2019a \u00e9t\u00e9 modifi\u00e9."); return; }
+      setEdit(null);
+    });
+  }
+  // DUPLIQUER — recopie de config seule (jamais results ni corrige). La copie naît NON publiée et
+  // renommée, pour ne pas surgir telle quelle chez les élèves ni percuter la clé de publication.
+  function dupliquer(tw){
+    setOccupe(true);
+    db.ref(ROOT+"/travaux/"+tw.id+"/config").once("value",function(s){
+      var cfg=s.val()||{};
+      var id=((cfg.titre||"travail")+"-copie").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")+"-"+Date.now().toString(36).slice(-5);
+      var neuf=Object.assign({},cfg,{titre:(cfg.titre||tw.id)+" (copie)",published:false,ts:Date.now()});
+      db.ref(ROOT+"/travaux/"+id+"/config").set(neuf,function(err){
+        setOccupe(false);
+        if(err){ alert("Duplication refus\u00e9e par le serveur."); return; }
+      });
+    },function(){ setOccupe(false); alert("Lecture du travail impossible."); });
+  }
+  // SUPPRIMER — dénombrement AVANT, puis archive du nœud ENTIER en corbeille AVANT destruction,
+  // ABANDON si l'archive échoue (versCorbeille n'ôte la source qu'après un push réussi).
+  function ouvrirSuppression(tw){
+    setOccupe(true);
+    db.ref(ROOT+"/travaux/"+tw.id).once("value",function(s){
+      var n=s.val()||{};
+      setSup({id:tw.id,titre:(n.config&&n.config.titre)||tw.id,classe:(n.config&&n.config.classe)||"",
+        nbCopies:n.results?Object.keys(n.results).length:0,
+        aCorrige:!!(n.corrige&&(n.corrige.retour||n.corrige.modele)),
+        aBareme:!!(n.bareme&&n.bareme.dims)});
+      setOccupe(false);
+    },function(){ setOccupe(false); alert("Lecture du travail impossible."); });
+  }
+  function confirmerSuppression(){
+    if(!sup) return;
+    setOccupe(true);
+    versCorbeille(ROOT+"/travaux/"+sup.id, "Travail supprim\u00e9 \u2014 "+(sup.titre||sup.id), function(err){
+      setOccupe(false);
+      if(err){ alert("Archivage en corbeille REFUS\u00c9 \u2014 suppression abandonn\u00e9e, le travail est intact."); return; }
+      setSup(null);
+    });
   }
   function feuille(tw){ // génère la feuille-texte imprimable (l'élève analyse dessus, sur papier)
     var w=window.open("","_blank");
@@ -2314,14 +2428,72 @@ function Travaux(p){
         ? h("div",{className:"empty"},"Aucun travail pour l'instant.")
         : p.travaux.map(function(tw){return h("div",{key:tw.id,className:"item"},
             h("div",{className:"col",style:{gap:2}},
-              h("span",{className:"title"},tw.titre),
+              h("span",{className:"title"},tw.titre,tw.published===false?h("span",{className:"sub",style:{marginLeft:8,fontStyle:"italic"}},"(non publi\u00e9)"):null),
               h("span",{className:"sub"},tw.classe+(tw.niveau?(" · "+tw.niveau):"")+" · /"+ (tw.base||20))),
             h("div",{className:"spacer"}),
             h("span",{className:"pill"},(p.ref&&p.ref.modes&&p.ref.modes[tw.modeCode]?p.ref.modes[tw.modeCode].libelle:tw.modeCode)),
-            h("button",{className:"btn btn-sm",onClick:function(){feuille(tw)}},"🖨 Feuille élève"),
-            h("button",{className:"btn btn-sm btn-pri",onClick:function(){p.onOpen(tw)}},"Corriger")
+            h("button",{className:"btn btn-sm",title:"Imprimer la feuille \u00e9l\u00e8ve",onClick:function(){feuille(tw)}},"🖨 Feuille élève"),
+            h("button",{className:"btn btn-sm",title:"Modifier ce travail",disabled:occupe,onClick:function(){ouvrirEdition(tw)}},"✎ Modifier"),
+            h("button",{className:"btn btn-sm",title:"Dupliquer ce travail (copie non publi\u00e9e, sans les copies d\u2019\u00e9l\u00e8ves)",disabled:occupe,onClick:function(){dupliquer(tw)}},"⧉ Dupliquer"),
+            h("button",{className:"btn btn-sm",title:"Supprimer ce travail",disabled:occupe,onClick:function(){ouvrirSuppression(tw)}},"🗑 Supprimer"),
+            h("button",{className:"btn btn-sm btn-pri",title:"Corriger les copies",onClick:function(){p.onOpen(tw)}},"Corriger")
           )})
-    )
+    ),
+    // ——— Modale MODIFIER ———
+    edit&&h("div",{className:"m11-modal-fond",onClick:function(){if(!occupe)setEdit(null)}},
+      h("div",{className:"m11-modal",onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+          h("h2",{style:{margin:0}},"Modifier le travail"),
+          h("button",{className:"btn",title:"Fermer",style:{minHeight:44,minWidth:44},disabled:occupe,onClick:function(){setEdit(null)}},"\u2715")),
+        h("div",{className:"col",style:{marginTop:12}},h("label",null,"Titre"),
+          h("input",{value:edit.titre,onChange:function(e){editUp("titre",e.target.value)}})),
+        h("div",{className:"row",style:{marginTop:10}},
+          h("div",{className:"col",style:{flex:1,minWidth:140}},h("label",null,"Classe"),
+            h("select",{value:edit.classe,onChange:function(e){editUp("classe",e.target.value)}},
+              h("option",{value:""},"— choisir —"),
+              Object.keys(classes).filter(function(cn){return !estClasseTest(cn)}).map(function(cn){return h("option",{key:cn,value:cn},cn+" ("+extractEleves(classes[cn],[]).length+")")}),
+              (edit.classe&&Object.keys(classes).indexOf(edit.classe)<0)?h("option",{value:edit.classe},edit.classe+" (classe actuelle)"):null
+            )),
+          h("div",{className:"col",style:{width:90}},h("label",null,"Note sur"),h("input",{type:"number",value:edit.base,onChange:function(e){editUp("base",e.target.value)}})),
+          h("div",{className:"col",style:{width:90}},h("label",null,"Coefficient"),h("input",{type:"number",min:1,step:1,value:edit.coef,onChange:function(e){editUp("coef",e.target.value)}}))
+        ),
+        h("div",{className:"col",style:{marginTop:10}},h("label",null,"Mode de travail"),
+          h("select",{value:edit.modeCode,onChange:function(e){editUp("modeCode",e.target.value)}},
+            Object.keys((ref&&ref.modes)||{delimitation:1}).map(function(mc){var md=(ref&&ref.modes&&ref.modes[mc])||{libelle:mc,statut:"actif"}; return h("option",{key:mc,value:mc}, md.libelle+(md.statut!=="actif"?" — à venir":""));}))),
+        h("div",{className:"col",style:{marginTop:10}},h("label",null,"Consigne (affichée à l'élève)"),
+          h("textarea",{value:edit.consigne,onChange:function(e){editUp("consigne",e.target.value)},style:{minHeight:52}})),
+        h("div",{className:"col",style:{marginTop:10}},
+          h("label",null,"Texte à analyser"),
+          edit._texteVerrou
+            ? h("div",null,
+                h("textarea",{value:edit.texte,readOnly:true,disabled:true,style:{minHeight:72,opacity:.7,background:"var(--card2,#f2efe9)"}}),
+                h("p",{className:"sub",style:{color:"var(--orange,#c97a16)",fontSize:13,marginTop:4}},
+                  "Texte verrouill\u00e9 : "+(edit._nbCopies>0?(edit._nbCopies+" copie(s) \u00e9valu\u00e9e(s)"):"")+((edit._nbCopies>0&&edit._aCorrige)?" et ":"")+(edit._aCorrige?"un corrig\u00e9":"")+" reposent sur ce d\u00e9coupage. Le modifier d\u00e9calerait les corrections. Duplique le travail pour repartir d\u2019un texte neuf."))
+            : h("textarea",{value:edit.texte,onChange:function(e){editUp("texte",e.target.value)},style:{minHeight:72}})),
+        h("div",{className:"row",style:{marginTop:8,alignItems:"center"}},
+          h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}},
+            h("input",{type:"checkbox",checked:edit.published!==false,onChange:function(e){editUp("published",e.target.checked)}}),
+            "Publi\u00e9 (visible des \u00e9l\u00e8ves de la classe)")),
+        h("div",{className:"row",style:{marginTop:16}},h("div",{className:"spacer"}),
+          h("button",{className:"btn",disabled:occupe,onClick:function(){setEdit(null)}},"Annuler"),
+          h("button",{className:"btn btn-pri",disabled:occupe,onClick:enregistrerEdition},occupe?"Enregistrement\u2026":"Enregistrer"))
+      )),
+    // ——— Modale SUPPRIMER ———
+    sup&&h("div",{className:"m11-modal-fond",onClick:function(){if(!occupe)setSup(null)}},
+      h("div",{className:"m11-modal",onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}},
+          h("h2",{style:{margin:0}},"Supprimer le travail"),
+          h("button",{className:"btn",title:"Fermer",style:{minHeight:44,minWidth:44},disabled:occupe,onClick:function(){setSup(null)}},"\u2715")),
+        h("p",{style:{marginTop:12}},"\u00ab ",h("b",null,sup.titre)," \u00bb",sup.classe?(" \u2014 "+sup.classe):""),
+        h("ul",{style:{fontSize:14,lineHeight:1.7}},
+          h("li",null,sup.nbCopies+" copie(s) d\u2019\u00e9l\u00e8ve \u00e9valu\u00e9e(s)"),
+          h("li",null,sup.aCorrige?"un corrig\u00e9 enregistr\u00e9":"aucun corrig\u00e9"),
+          h("li",null,sup.aBareme?"un bar\u00e8me propre au travail":"pas de bar\u00e8me propre")),
+        h("p",{className:"sub",style:{fontSize:13}},"Une copie compl\u00e8te du travail part d\u2019abord \u00e0 la corbeille (restaurable depuis les Outils de l\u2019app et depuis la console du site). Si l\u2019archivage \u00e9choue, la suppression est abandonn\u00e9e."),
+        h("div",{className:"row",style:{marginTop:16}},h("div",{className:"spacer"}),
+          h("button",{className:"btn",disabled:occupe,onClick:function(){setSup(null)}},"Annuler"),
+          h("button",{className:"btn",style:{background:"var(--coral,#c62828)",color:"#fff",borderColor:"var(--coral,#c62828)"},disabled:occupe,onClick:confirmerSuppression},occupe?"Suppression\u2026":"Archiver puis supprimer"))
+      ))
   );
 }
 
@@ -2862,11 +3034,23 @@ function purgerModeTest(cb){
       var reste=TEST_ELEVES.length; if(!reste)return n();
       TEST_ELEVES.forEach(function(e2){ db.ref("presence/"+sanMJPC(e2[0]+" "+e2[1])+"_"+MJPC_APP.id).remove(function(){ reste--; if(reste===0)n(); }); });
     },
-    function(n){ // r\u00e9sidus de test en corbeille
+    function(n){ // r\u00e9sidus de test en corbeille — ANCIEN emplacement local (format {chemin,...})
       db.ref(ROOT+"/corbeille").once("value",function(s){
         var v=s.val()||{}; var ks=Object.keys(v).filter(function(k){return String(v[k].chemin||"").indexOf("_test_analyse_logique")>=0;});
         var reste=ks.length; if(!reste)return n();
         ks.forEach(function(k){ db.ref(ROOT+"/corbeille/"+k).remove(function(){ reste--; if(reste===0)n(); }); });
+      },function(){n()});
+    },
+    function(n){ // LOT-COUTURES ④ · r\u00e9sidus de test en corbeille RACINE (format {_meta:{chemin,app},data})
+      db.ref("corbeille").once("value",function(s){
+        var v=s.val()||{}; var aVider=[];
+        Object.keys(v).forEach(function(jour){ var pj=v[jour]||{};
+          Object.keys(pj).forEach(function(k){ var m=(pj[k]&&pj[k]._meta)||{};
+            if(m.app==="analyse_logique" && String(m.chemin||"").indexOf("_test_analyse_logique")>=0) aVider.push(jour+"/"+k);
+          });
+        });
+        var reste=aVider.length; if(!reste)return n();
+        aVider.forEach(function(c){ db.ref("corbeille/"+c).remove(function(){ reste--; if(reste===0)n(); }); });
       },function(){n()});
     }
   ];
@@ -2958,8 +3142,30 @@ function ReglagesApp(p){
   useEffect(function(){
     var a=db.ref(ROOT+"/modeTest"); a.on("value",function(s){setModeTest(s.val())});
     var b=db.ref("analyse_logique_textes"); b.on("value",function(s){setTextes(s.val()||{})});
-    var c=db.ref(ROOT+"/corbeille"); c.on("value",function(s){var v=s.val()||{};setCorbeille(Object.keys(v).map(function(k){return Object.assign({id:k},v[k])}).sort(function(x,y){return (y.ts||0)-(x.ts||0)}))});
-    return function(){a.off();b.off();c.off()};
+    // LOT-COUTURES ④ · deux sources fusionnées : racine /corbeille (format canonique, filtrée sur
+    // _meta.app) + ancien analyse_logique/corbeille (tolérance, non migré). Chaque item porte de quoi
+    // le restaurer et le vider à son bon emplacement.
+    var racine={}, local={};
+    function recomposer(){
+      var out=[];
+      Object.keys(racine).forEach(function(jour){
+        var parJour=racine[jour]||{};
+        Object.keys(parJour).forEach(function(k){
+          var it=parJour[k]||{}; var meta=it._meta||{};
+          if(meta.app!=="analyse_logique") return;          // on n'affiche QUE nos archives
+          out.push({__racine:true, __cle:jour+"/"+k, _meta:meta, data:it.data,
+                    etiquette:meta.etiquette||meta.motif||meta.chemin, ts:meta.ts||0});
+        });
+      });
+      Object.keys(local).forEach(function(k){
+        out.push(Object.assign({id:k, __racine:false}, local[k]));   // ancien format {chemin,etiquette,donnees,ts}
+      });
+      out.sort(function(x,y){return (y.ts||0)-(x.ts||0)});
+      setCorbeille(out);
+    }
+    var c=db.ref("corbeille"); c.on("value",function(s){racine=s.val()||{};recomposer();});
+    var d=db.ref(ROOT+"/corbeille"); d.on("value",function(s){local=s.val()||{};recomposer();});
+    return function(){a.off();b.off();c.off();d.off()};
   },[]);
   return h("div",{className:"fade"},
     h("div",{className:"card",style:{marginBottom:14}},
@@ -3000,7 +3206,7 @@ function ReglagesApp(p){
           h("span",null,h("b",null,it.etiquette||it.chemin),h("span",{className:"sub"}," \u2014 "+new Date(it.ts||0).toLocaleString("fr-FR"))),
           h("span",{style:{display:"flex",gap:6}},
             h("button",{className:"btn btn-sm",title:"Restaurer \u00e0 l\u2019emplacement d\u2019origine",onClick:function(){restaurerCorbeille(it)}},"Restaurer"),
-            h("button",{className:"btn btn-sm",title:"Supprimer d\u00e9finitivement cet \u00e9l\u00e9ment",onClick:function(){ if(confirm("Supprimer d\u00e9finitivement \u00ab "+(it.etiquette||it.chemin)+" \u00bb ?")) db.ref(ROOT+"/corbeille/"+it.id).remove(); }},"Vider"))
+            h("button",{className:"btn btn-sm",title:"Supprimer d\u00e9finitivement cet \u00e9l\u00e9ment",onClick:function(){ if(confirm("Supprimer d\u00e9finitivement \u00ab "+(it.etiquette||it.chemin||(it._meta&&it._meta.chemin))+" \u00bb ?")){ if(it.__racine) db.ref("corbeille/"+it.__cle).remove(); else db.ref(ROOT+"/corbeille/"+it.id).remove(); } }},"Vider"))
         );
       })
     ),
@@ -3030,6 +3236,9 @@ function AppEleve(p){
   var rf=useState(null),ref=rf[0],setRef=rf[1];
   var df=useState({}),defauts=df[0],setDefauts=df[1];
   var ouv=useState(null),ouvert=ouv[0],setOuvert=ouv[1];
+  // LOT-COUTURES ③ · état du deep-link élève : null | "ouvert" | "non_publie" | "autre_classe".
+  var dl=useState(null),deepMsg=dl[0],setDeepMsg=dl[1];
+  var dlDone=useRef(false);
   useEffect(function(){
     var b=db.ref(ROOT+"/referentiel"); b.on("value",function(s){setRef(s.val()||SEED)});
     var d0=db.ref(ROOT+"/baremeDefauts"); d0.on("value",function(s){setDefauts(s.val()||{})});
@@ -3044,6 +3253,20 @@ function AppEleve(p){
       });
       out.sort(function(a,b2){return (b2.cfg.ts||0)-(a.cfg.ts||0)});
       setTravaux(out);
+      // Deep-link : traité une seule fois, sur la PREMIÈRE liste chargée. On ne s'appuie que sur
+      // ce que l'élève a déjà le droit de voir (out) ; pour distinguer « non publié » de « autre
+      // classe » on lit le seul nœud config du travail ciblé — jamais son contenu.
+      if(p.cibleId && !dlDone.current){
+        dlDone.current=true;
+        var vu=out.filter(function(t){return t.id===p.cibleId})[0];
+        if(vu){ setOuvert(p.cibleId); setDeepMsg("ouvert");
+          setTimeout(function(){ var el=document.getElementById("tw-"+p.cibleId); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"center"}); },120);
+        } else {
+          var cfgCible=(v[p.cibleId]&&v[p.cibleId].config)||null;
+          if(cfgCible && cleClasse(cfgCible.classe)!==cleClasse(idn.classe)) setDeepMsg("autre_classe");
+          else setDeepMsg("non_publie");   // inexistant OU non publié → même message sobre
+        }
+      }
     });
     return function(){b.off();d0.off();r.off()};
   },[idn.cle,idn.classe]);
@@ -3056,7 +3279,7 @@ function AppEleve(p){
   function CarteTravail(t){
     var rr=noteDe(t);
     var estOuvert=(ouvert===t.id);
-    return h("div",{key:t.id,className:"card",style:{marginBottom:12}},
+    return h("div",{key:t.id,id:"tw-"+t.id,className:"card",style:{marginBottom:12}},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}},
         h("div",null,
           h("b",null,t.cfg.titre||t.id),
@@ -3089,6 +3312,9 @@ function AppEleve(p){
       h("div",{style:{maxWidth:680,margin:"14px auto"}},
         h("h2",{style:{marginBottom:2}},"Mes analyses"),
         h("p",{className:"sub",style:{marginBottom:14}},(idn.nom||"")+(idn.classe?" \u2014 "+idn.classe:"")),
+        (deepMsg==="non_publie"||deepMsg==="autre_classe")&&h("div",{className:"card",style:{marginBottom:14,borderLeft:"3px solid var(--orange,#c97a16)"}},
+          h("p",{className:"sub",style:{margin:0}}, txt(deepMsg==="autre_classe"?"eleve_lien_autre_classe":"eleve_lien_non_publie"))
+        ),
         h("div",{className:"card",style:{marginBottom:14,background:"var(--bg-soft,#f6f4ef)"}},
           h("p",{className:"sub",style:{margin:0}},txt("eleve_delimitation")," ",ifo("Tes analyses faites sur papier sont \u00e9valu\u00e9es par ton professeur dans cette app ; d\u00e8s qu\u2019un travail est publi\u00e9, il appara\u00eet ici avec ta note et le d\u00e9tail."))
         ),
