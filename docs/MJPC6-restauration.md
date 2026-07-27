@@ -45,6 +45,10 @@
 - commit `f3e2e9c6df` · 393 791 o · md5 `c09a8bff758ed368b22c4e24c245be46` · v8.5.0
 - **Motif** : filière micro — ① `switchTab` passe par `hideAllTabs` (accumulation de `tab-analyse` sous les autres onglets, constat Paul) ; ② cantonnement par niveau des `.doc-item[data-niveau]` + compteur recalculé (fiche « Analyse logique 3e » en dur visible en 6e).
 
+### POINT DE RETOUR — `index.html` AVANT correctif v8.5.2 (27/07/2026)
+- commit `fd4b44d0de` · 394 508 o · md5 `2af3b0428890f865ec1d4967153b6af8` · v8.5.1
+- **Motif** : micro — rendu initial vide à l'endroit prof/fantôme (personne ne chargeait `/classes` à l'endroit ; `_isPubAny` → `_lvlClasses` → liste vide → aucun chapitre publié par classe visible ; l'aller-retour Ctrl+Espace les chargeait via `_renderLensBar`). `loadPublished` attend désormais `loadClasses` avant le premier `applyPublished`.
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
