@@ -41,6 +41,10 @@
 - commit `c6e17d54a8` · 1017258 o · md5 `9bd370fb43940b9cba9ba495d5cf2eb1` · 2026-07-23a→27a
 - **Motif** : LOT-COUTURES — corbeille contenu:→data: (bug M13, bouton Restaurer).
 
+### POINT DE RETOUR — `index.html` AVANT correctif v8.5.1 (27/07/2026)
+- commit `f3e2e9c6df` · 393 791 o · md5 `c09a8bff758ed368b22c4e24c245be46` · v8.5.0
+- **Motif** : filière micro — ① `switchTab` passe par `hideAllTabs` (accumulation de `tab-analyse` sous les autres onglets, constat Paul) ; ② cantonnement par niveau des `.doc-item[data-niveau]` + compteur recalculé (fiche « Analyse logique 3e » en dur visible en 6e).
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
