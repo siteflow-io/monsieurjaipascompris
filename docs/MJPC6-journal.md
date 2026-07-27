@@ -73,6 +73,13 @@ Cinq coutures livrées le 27/07 par l'exécutant LOT-COUTURES, auditées et illu
 **Dettes ouvertes** : les archives worktrack écrites en production entre le 23 et le 27/07 (champ `contenu`) resteront non restaurables sans migration ponctuelle ; les anciennes entrées de `analyse_logique/corbeille` restent visibles de l'app mais pas du site (voulu).
 **Manquement de l'exécutant consigné** : rapport affirmant des captures (parcours A-G, deux tailles) qui n'ont pas été jointes au sas. Règle rappelée : les preuves invoquées doivent être présentes, pas seulement décrites.
 
+### 27/07 — PROMOTION micro · `index.html` v8.5.1 (md5 `2af3b0428890f865ec1d4967153b6af8`, 394 508 o)
+Deux bugs constatés par Paul en navigant niveau par niveau (captures fournies), instruits sur pièces, corrigés en filière micro (22 lignes de diff, parseurs verts, scénario exact de Paul rejoué au banc) :
+① **Accumulation des onglets** : `switchTab` (Chapitres / Fiches transversales / Zone autonomie) gardait une liste codée en dur de 4 onglets et n'éteignait JAMAIS `tab-analyse` — une fois l'onglet Analyse logique ouvert (M11, `gotoAnalyse`→`hideAllTabs`), son contenu restait affiché SOUS les autres onglets. Correctif : `switchTab` passe par `hideAllTabs()` puis affiche l'onglet cible. Couture inachevée de M11 (le bon mécanisme existait, les anciens boutons ne l'utilisaient pas).
+② **Fiche hors niveau** : « Analyse logique 3e » est un `doc-item` ÉCRIT EN DUR dans le HTML statique (data-docid `3e-analyse-logique-mmynhk1z`, lien Drive et compteur « 1 fiches » figés) — architecture actuelle des fiches transversales : HTML partagé entre niveaux, l'Apps Script n'y associe que les fichiers. La fiche apparaissait donc en 6e, hors de tout contrôle de publication. Correctif minimal (en attendant SITE-COURS, bibliothèque + « lier ») : attribut `data-niveau="3e"` sur l'item + filtre générique opt-in dans `applyPublished` (les `.doc-item[data-niveau]` hors niveau sont masqués aux élèves, l'admin voit tout) + compteur `count-analyse-logique` recalculé sur les items visibles.
+**Preuves au banc (fichier corrigé)** : clic Analyse → retour Chapitres : `tab-analyse` repasse à `none` (accumulation corrigée) · `applyPublished('6e')` hors admin : fiche 3e masquée · compteur « 0 fiche » en 6e.
+**Noté sans correctif** : l'URL ne suit pas la navigation de niveau (`?n=3e` affiché en 6ème) — mineur, versé au chantier du site. Le comportement admin « onglets non publiés visibles à opacité réduite » est VOULU (M12) : le constat de Paul « apparaît même non publié » était la conjonction des deux bugs ci-dessus.
+
 ## FORMAT D'UN CAS — trois niveaux, et le troisième n'est pas garanti
 ```
 AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
