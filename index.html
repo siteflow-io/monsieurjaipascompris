@@ -822,7 +822,7 @@ body.admin-mode .admin-only { display: block; }
       <div class="section-label">Fiches</div>
       <div class="chapters-list" id="analyse-fiches-static">
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📐</div><div class="chapter-info"><div class="chapter-title">Analyse logique</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-analyse-logique">1 fiches</span></div></div></div><div class="chapter-body" data-section="analyse-logique"><div class="doc-list fiche-drop-zone" data-section="analyse-logique">
-              <div class="doc-item" data-docid="3e-analyse-logique-mmynhk1z" data-chapitre="analyse-logique" data-seance="" data-embed="https://drive.google.com/file/d/1JWzQXIwf2Q9HHVOOp_HEmIpZJv8QzcVa/preview" onclick="openDoc('analyse-logique','Analyse logique 3e','')"><div class="doc-icon pdf">📄</div><div class="doc-label">Analyse logique 3e<small></small></div><div class="doc-action">→ Consulter</div><div class="upload-indicator"></div><div class="upload-progress"></div></div></div></div></div>
+              <div class="doc-item" data-docid="3e-analyse-logique-mmynhk1z" data-niveau="3e" data-chapitre="analyse-logique" data-seance="" data-embed="https://drive.google.com/file/d/1JWzQXIwf2Q9HHVOOp_HEmIpZJv8QzcVa/preview" onclick="openDoc('analyse-logique','Analyse logique 3e','')"><div class="doc-icon pdf">📄</div><div class="doc-label">Analyse logique 3e<small></small></div><div class="doc-action">→ Consulter</div><div class="upload-indicator"></div><div class="upload-progress"></div></div></div></div></div>
       </div>
     </div>
   </div>
@@ -2004,7 +2004,7 @@ function publierManifeste(db){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.5.0";
+var APP_VERSION="8.5.1";
 var APP_VERSION_DATE="2026-07-22";
 var MJPC_CORE_VERSION="1.0.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
@@ -3052,6 +3052,16 @@ function _pasteCommon(then){
 
 function applyPublished(level){
   var isAdmin=document.body.classList.contains('admin-mode');
+  /* v8.5.1 — cantonnement par niveau des documents marqués (constat Paul 27/07 :
+     la fiche « Analyse logique 3e », portée par le HTML statique partagé entre
+     niveaux, s'affichait en 6e). Opt-in : seuls les .doc-item[data-niveau]
+     sont filtrés ; l'admin voit tout ; le compteur de la carte est recalculé. */
+  document.querySelectorAll('.doc-item[data-niveau]').forEach(function(el){
+    el.style.display=(isAdmin||el.getAttribute('data-niveau')===level)?'':'none';
+  });
+  var zA=document.querySelector('.fiche-drop-zone[data-section=\"analyse-logique\"]');
+  var cA=document.getElementById('count-analyse-logique');
+  if(zA&&cA){var nb=0;zA.querySelectorAll('.doc-item').forEach(function(el){if(el.style.display!=='none')nb++;});cA.textContent=nb+' fiche'+(nb>1?'s':'');}
   // Tabs publishables
   var pubT=publishedTabs[level]||[];
   PUBLISHABLE_TABS.forEach(function(tabId){
@@ -3314,7 +3324,7 @@ function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;var isOpen=body.classList.toggle('open');var card=header.closest('.chapter-card[data-chapter-id]');if(card){var chId=card.getAttribute('data-chapter-id');var lvl=clickedLevel||currentLevel||'';if(isOpen)UI_OPEN[lvl+'::'+chId]=true;else delete UI_OPEN[lvl+'::'+chId];}}
 function toggleSeanceOpen(h,key){var b=h.nextElementSibling;if(!b||!b.classList.contains('seance-items'))return;var o=b.classList.toggle('open');if(o)UI_OPEN_S[key]=true;else delete UI_OPEN_S[key];}
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction','tab-analyse'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
-function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');document.getElementById('tab-chapitres').style.display=tab==='chapitres'?'block':'none';document.getElementById('tab-fiches').style.display=tab==='fiches'?'block':'none';document.getElementById('tab-autonomie').style.display=tab==='autonomie'?'block':'none';if(tab==='autonomie'&&typeof renderZoneAutonomie==='function')renderZoneAutonomie();var de=document.getElementById('tab-dictee');if(de)de.style.display='none';}
+function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');hideAllTabs();/* v8.5.1 : la liste codée en dur laissait tab-analyse (et tout onglet M8F) affiché sous les autres — accumulation constatée par Paul le 27/07 */var el=document.getElementById('tab-'+tab);if(el)el.style.display='block';if(tab==='autonomie'&&typeof renderZoneAutonomie==='function')renderZoneAutonomie();}
 function collectChapterItems(level,kind){
   var data=chapitresData[level]||{};
   var result=[];
