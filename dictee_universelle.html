@@ -726,8 +726,8 @@ var MJPC_CORE_VERSION="1.1.0";
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
 /* Pastille de version — en dur (Q7 M9). APP_VERSION identifie le fichier (doctrine §VIII). */
-var APP_VERSION="2.0.0";
-var APP_VERSION_DATE="2026-07-22";
+var APP_VERSION="2.0.1";
+var APP_VERSION_DATE="2026-07-27";
 var MJPC_APP = {
   id: "dictee_universelle",
   nom: "Dictée universelle",
@@ -758,10 +758,19 @@ function duArchiverCorbeille(motif, paths){
     items.forEach(function(it){if(it.v!==null&&it.v!==undefined){data[duCorbeilleKey(it.p)]=it.v;vide=false}});
     if(vide)return {empty:true};
     var key=duCorbeilleKey(motif)+"_"+Date.now();
-    return db.ref("corbeille/"+day+"/"+key).set({
-      _meta:{app:MJPC_APP.id,date:Date.now(),motif:motif,annee_scolaire:getAnneeScolaire()},
-      data:data
-    }).then(function(){return {empty:false,key:day+"/"+key}});
+    // LOT-COUTURES ④ (couture MINIMALE) : archive restaurable depuis l'écran Corbeille du site
+    // UNIQUEMENT quand un seul chemin est archivé — le site restaure « data » ENTIER à « _meta.chemin ».
+    // Sur une archive multi-emplacements (7 sous-nœuds aplatis), poser _meta.chemin ferait restaurer
+    // l'enveloppe aplatie SOUS ce chemin : corruption. On laisse alors le format d'origine intact.
+    var meta={app:MJPC_APP.id,date:Date.now(),motif:motif,annee_scolaire:getAnneeScolaire()};
+    var payload;
+    if(paths.length===1 && !vide){
+      meta.chemin=paths[0];
+      payload={_meta:meta, data:items[0].v};   // valeur BRUTE du nœud, pas l'enveloppe {clé:…}
+    } else {
+      payload={_meta:meta, data:data};          // multi-emplacements : format inchangé (consultation/export)
+    }
+    return db.ref("corbeille/"+day+"/"+key).set(payload).then(function(){return {empty:false,key:day+"/"+key}});
   });
 }
 function duCheminsDictee(id){
