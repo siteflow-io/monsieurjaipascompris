@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>L'Applaudimètre — Lecture coévaluée</title>
 <style>
 
@@ -653,6 +656,47 @@ button{font-family:inherit;cursor:pointer;border:none}
 .choice-list .classe-btn{font-size:1.1rem;text-align:center}
 
 </style>
+<style id="mjpc-tactile-480">
+/* ══════════════════════════════════════════════════════════════════════════
+   M14 (27/07/2026) — TACTILE ≤480 px, ÉCRANS PROFESSEUR COMPRIS.
+   Bloc SÉPARÉ et purement additif : la charte CSS propre de l'app (exception
+   du 15/07) n'est pas modifiée. Rien ne s'applique au-dessus de 480 px, donc
+   le rendu ordinateur est inchangé.
+   ══════════════════════════════════════════════════════════════════════════ */
+@media(max-width:480px){
+  /* en-têtes : le titre ne pousse plus les boutons hors de l'écran */
+  .hdr{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .hdr h2{font-size:1rem;flex:1 1 100%;order:3;margin:2px 0 0}
+  .btn-back{padding:8px 12px;font-size:.85rem;min-height:40px}
+  /* onglets du panneau professeur : trois cibles tenables au pouce */
+  .tabs{gap:4px;padding:0 6px}
+  .tab{padding:9px 6px;font-size:.78rem;min-height:42px;flex:1}
+  /* cartes et champs : marges réduites, hauteurs de doigt */
+  .wrap{padding:8px}
+  .card{padding:12px 11px;margin-bottom:10px;border-radius:12px}
+  .card h3{font-size:.98rem}
+  .field label{font-size:.85rem}
+  .field input,.field select,.field textarea{min-height:42px;font-size:.95rem}
+  input[type=range]{height:34px}
+  /* réglages : le plus dense de l'app — une colonne, jamais de débordement */
+  .range-row{gap:8px}
+  .range-val{min-width:56px;font-size:.82rem}
+  .btn-row{flex-wrap:wrap;gap:6px}
+  .btn-row .btn{flex:1 1 auto;min-height:42px}
+  .btn{min-height:42px}
+  /* archives et listes : l'action reste atteignable sans zoom */
+  .seance-row{flex-wrap:wrap;gap:6px}
+  .seance-info{flex:1 1 100%}
+  .seances-list .btn{padding:8px 12px}
+  /* tablette élève : les zones restent empilées et lisibles */
+  .zones-multi{gap:6px;padding:6px}
+  .zones-2,.zones-3{grid-template-columns:1fr}
+  .zone-hdr{font-size:.88rem}
+  .clap-btn .cl{font-size:.6rem}
+  /* le bouton d'aide et la pastille de version ne se chevauchent pas */
+  .help-fab{width:46px;height:46px;font-size:1.1rem}
+}
+</style>
 </head>
 <body>
 <div id="root"></div>
@@ -989,52 +1033,63 @@ firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDom
 
 "use strict";
 
-// ═══════ DEBUG : handler d'erreur global (affiche stack trace en bandeau rouge) ═══════
-// À retirer une fois le bug Cannot read 'slice' localisé.
+// ═══════ DIAGNOSTIC — CAPTURE D'ERREUR HORS DE LA VUE PUBLIQUE ═══════
+// Le bandeau rouge plein écran a été retiré le 27/07/2026 : il se peignait sur le
+// vidéoprojecteur, devant la classe, et sur les tablettes des élèves. La trace n'est
+// pas perdue pour autant — c'était l'objection à un retrait sec, et elle tient : le
+// bug « Cannot read 'slice' » reste traçable. Ce qui change, c'est QUI le voit.
+//   · toute erreur est journalisée (mémoire + nœud de diagnostic)
+//   · l'alerte visible n'apparaît QUE sur un écran professeur, en pastille discrète
+//   · vue tableau projetée et tablette élève : rien, jamais
+window.__AM_VUE = "accueil";                     // renseignée par le routeur : accueil|prof|phone|board|eleve
+window.__AM_ERREURS = [];
+function __amVuePrivee(){ return window.__AM_VUE==="prof" || window.__AM_VUE==="phone"; }
+function __amPastille(rec){
+  try{
+    var n=document.getElementById("__am_diag");
+    if(!n){
+      n=document.createElement("div");
+      n.id="__am_diag";
+      n.style.cssText="position:fixed;bottom:10px;left:10px;z-index:9999;background:#dc2626;color:#fff;border-radius:10px;padding:7px 11px;font:700 12px system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;max-width:min(420px,88vw)";
+      n.title="Incident technique enregistré. Clique pour voir le détail et le copier.";
+      n.onclick=function(){
+        var pre=document.getElementById("__am_diag_pre");
+        if(pre){ pre.remove(); return; }
+        pre=document.createElement("pre");
+        pre.id="__am_diag_pre";
+        pre.style.cssText="white-space:pre-wrap;margin:8px 0 0;font:11px/1.4 monospace;max-height:40vh;overflow:auto;user-select:text;-webkit-user-select:text;background:#991b1b;padding:8px;border-radius:8px";
+        pre.textContent=window.__AM_ERREURS.map(function(r){ return r.ts+" ["+r.vue+"] "+r.type+" : "+r.message+"\n"+r.stack; }).join("\n\n");
+        n.appendChild(pre);
+        if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pre.textContent).catch(function(){});
+      };
+      document.body.appendChild(n);
+    }
+    var lbl=document.getElementById("__am_diag_lbl");
+    if(!lbl){ lbl=document.createElement("span"); lbl.id="__am_diag_lbl"; n.insertBefore(lbl,n.firstChild); }
+    lbl.textContent="\u26a0 "+window.__AM_ERREURS.length+" incident"+(window.__AM_ERREURS.length>1?"s":"")+" technique"+(window.__AM_ERREURS.length>1?"s":"")+" enregistr\u00e9"+(window.__AM_ERREURS.length>1?"s":"");
+  }catch(e){}
+}
+function __amJournaliser(type, message, stack){
+  var rec={type:String(type||"erreur"), message:String(message||"").slice(0,500), stack:String(stack||"").slice(0,2000),
+           vue:window.__AM_VUE, url:String((window.location&&window.location.href)||"").slice(0,300), ts:Date.now()};
+  window.__AM_ERREURS.push(rec);
+  if(window.__AM_ERREURS.length>20) window.__AM_ERREURS.shift();
+  try{ if(window.console&&console.error) console.error("[applaudim\u00e8tre] "+rec.type+" : "+rec.message, rec.stack); }catch(e){}
+  try{
+    if(window.firebase && firebase.apps && firebase.apps.length){
+      firebase.database().ref("applaudimetre/diagnostic").push(rec);   // le bug reste traçable, sans public
+    }
+  }catch(e){}
+  if(__amVuePrivee()) __amPastille(rec);
+  return rec;
+}
 window.onerror = function(msg, src, line, col, err){
-  try {
-    var existing = document.getElementById("__err_overlay");
-    if(existing) existing.remove();
-    var stack = err && err.stack ? err.stack : (src + ":" + line + ":" + col);
-    var full = "🐞 ERREUR JS\n" + msg + "\n\n" + stack;
-    var wrap = document.createElement("div");
-    wrap.id = "__err_overlay";
-    wrap.style.cssText = "position:fixed;top:0;left:0;right:0;background:#dc2626;color:#fff;padding:10px;font-family:monospace;font-size:11px;z-index:99999;max-height:60vh;overflow:auto;border-bottom:3px solid #991b1b";
-    var btnRow = document.createElement("div");
-    btnRow.style.cssText = "display:flex;gap:8px;margin-bottom:8px;position:sticky;top:0;background:#dc2626;padding-bottom:6px";
-    var btnCopy = document.createElement("button");
-    btnCopy.textContent = "📋 Copier l'erreur";
-    btnCopy.style.cssText = "background:#fff;color:#dc2626;border:0;padding:8px 14px;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer";
-    btnCopy.onclick = function(ev){
-      ev.stopPropagation();
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(full).then(function(){ btnCopy.textContent="✓ Copié !"; }, function(){ btnCopy.textContent="❌ Échec"; });
-      } else {
-        // Fallback : sélectionne le texte
-        var pre = document.getElementById("__err_pre");
-        if(pre){
-          var rng = document.createRange(); rng.selectNodeContents(pre);
-          var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rng);
-          btnCopy.textContent = "✓ Texte sélectionné — Cmd/Ctrl+C";
-        }
-      }
-    };
-    var btnClose = document.createElement("button");
-    btnClose.textContent = "✕ Fermer";
-    btnClose.style.cssText = "background:transparent;color:#fff;border:1px solid #fff;padding:8px 14px;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer";
-    btnClose.onclick = function(ev){ ev.stopPropagation(); wrap.remove(); };
-    btnRow.appendChild(btnCopy); btnRow.appendChild(btnClose);
-    var pre = document.createElement("pre");
-    pre.id = "__err_pre";
-    pre.style.cssText = "white-space:pre-wrap;margin:0;font-size:11px;user-select:text;-webkit-user-select:text";
-    pre.textContent = full;
-    wrap.appendChild(btnRow); wrap.appendChild(pre);
-    document.body.appendChild(wrap);
-  } catch(e){}
+  __amJournaliser("erreur JS", msg, (err&&err.stack)? err.stack : (src+":"+line+":"+col));
   return false;
 };
 window.addEventListener("unhandledrejection", function(ev){
-  window.onerror("Promise rejetée : " + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason), "", 0, 0, ev.reason);
+  var r=ev&&ev.reason;
+  __amJournaliser("promesse rejet\u00e9e", (r&&r.message)? r.message : r, (r&&r.stack)||"");
 });
 
 var h = React.createElement;
@@ -1044,7 +1099,10 @@ var DB_ROOT = "applaudimetre";
 var PROF_CODES = ["3141","1312"];   // codes d'acces prof (ranges ici, plus en dur)
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -1202,17 +1260,131 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.0.0";
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+var MJPC_CORE_VERSION="1.1.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
+// ════════════ DICTIONNAIRE DE TEXTES ÉLÈVE (point 26) ════════════
+// Les textes qui ANNONCENT sont éditables par le professeur ; ceux qui CONSTATENT un
+// refus ou un fait restent en dur. Seed ici, surcharge dans applaudimetre/session/textes.
+// Les deux premiers corrigent le principe cardinal : le flux est décrit, jamais l'acteur —
+// un élève qui attend ne doit pas lire que quelqu'un a omis de faire quelque chose.
+var TEXTES_DEFAUT = {
+  eleve_attente_classe:    "La s\u00e9ance n'est pas encore ouverte. Reste sur cet \u00e9cran, elle d\u00e9marre dans un instant.",
+  eleve_attente_demarrage: "La s\u00e9ance va commencer. Garde ta tablette pr\u00eate.",
+  eleve_choix_table:       "Choisis le num\u00e9ro de ta table :",
+  eleve_premier_occupant:  "Le premier \u00e9l\u00e8ve de la table tape son nom, son pr\u00e9nom et son code personnel.",
+  eleve_eval_terminee:     "\u00c9valuation termin\u00e9e",
+  eleve_repassera:         "Tu repasseras d\u00e8s qu'un autre s'inscrit. Tu peux aussi recliquer \u00ab Je veux lire \u00bb plus bas pour relancer la file."
+};
+var TEXTES_LIBELLES = {
+  eleve_attente_classe:    "Attente \u2014 la s\u00e9ance n'est pas ouverte",
+  eleve_attente_demarrage: "Attente \u2014 la s\u00e9ance va d\u00e9marrer",
+  eleve_choix_table:       "Invitation \u00e0 choisir sa table",
+  eleve_premier_occupant:  "Consigne au premier \u00e9l\u00e8ve d'une tablette",
+  eleve_eval_terminee:     "Fin du tour de vote",
+  eleve_repassera:         "Passage report\u00e9 (lecture spontan\u00e9e)"
+};
+var TEXTES_SURCHARGE = {};                       // aliment\u00e9 par le listener de session
+function txt(cle){
+  var v=TEXTES_SURCHARGE[cle];
+  if(typeof v==="string" && v.trim()) return v;
+  return TEXTES_DEFAUT[cle]||"";
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIAGNOSTIC — À LIRE EN PREMIER SI « ÇA NE MARCHE PLUS »
+   Écosystème MJPC — monsieurjaipascompris.com — Paul Meney
+   Avant de suspecter le code de cette app, vérifier CES CAUSES EXTERNES,
+   dans cet ordre. Elles expliquent la quasi-totalité des pannes soudaines
+   d'une app qui fonctionnait la veille.
+
+   1. LES RÈGLES FIREBASE ONT-ELLES EXPIRÉ ?  ← CAUSE N°1, DÉJÀ VÉCUE
+      Symptôme : "permission_denied", données qui ne chargent plus, écrans
+      vides sur TOUTES les apps en même temps.
+      Les règles créées en "mode test" contiennent une DATE D'EXPIRATION en dur.
+      Le jour venu, tout s'arrête d'un coup, sans que rien n'ait changé au code.
+      → console.firebase.google.com > projet mjpc-hub > Realtime Database >
+        onglet "Règles" > chercher une ligne du type
+        `".read": "now < 1234567890000"` ou `request.time < timestamp.date(...)`.
+      → Précédent : diagnostic initial FAUX (on a accusé le protocole file://
+        puis le code) alors que c'étaient les règles expirées. NE PAS REFAIRE.
+
+   2. LE CACHE DU NAVIGATEUR SERT-IL L'ANCIENNE VERSION ?
+      Symptôme : "j'ai poussé mais rien n'a changé".
+      → Comparer la PASTILLE DE VERSION affichée en bas à droite de l'écran
+        avec APP_VERSION ci-dessous. Si elles diffèrent : rouvrir avec ?v=N
+        (N incrémenté). Le <head> porte les métas anti-cache depuis M14.
+
+   3. UNE DÉPENDANCE EXTERNE EST-ELLE INJOIGNABLE ?
+      AUCUNE — mesuré le 27/07/2026 : cette app est INTÉGRALEMENT VENDORISÉE.
+      React 18.2.0, React-DOM et le SDK Firebase 8/9-compat 0.14.4 sont
+      embarqués dans le fichier (zéro src="http", zéro @import distant, zéro CDN).
+      Un réseau d'établissement filtrant ne peut donc pas empêcher le démarrage.
+      Seul Firebase (mjpc-hub, europe-west1) doit être joignable pour les DONNÉES.
+
+   4. UNE API NAVIGATEUR MANQUE-T-ELLE ?
+      Utilisées ici : sessionStorage (table + accès prof — un mode privé strict
+      peut le refuser), navigator.clipboard (copie du diagnostic), sendBeacon
+      (présence à la fermeture), Promise.allSettled (purge du mode test).
+      Symptôme : une fonction précise muette, le reste OK.
+
+   5. SEULEMENT ALORS : suspecter le code de cette app.
+      Le socle MJPC-CORE est identique partout : s'il "marche ailleurs",
+      le problème est local. Registre des bugs connus, cause par cause :
+      docs/MJPC6-registre-bugs.md (13 sections, ~150 bugs documentés).
+      Bug ouvert propre à cette app : « Cannot read 'slice' » — les incidents
+      sont journalisés dans applaudimetre/diagnostic et visibles en pastille
+      sur les écrans PROFESSEUR uniquement (jamais au tableau ni sur tablette).
+
+   EN CAS D'URGENCE PENDANT UN COURS : docs/MJPC6-urgence-en-classe.md
+   (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
+   RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
+   ═══════════════════════════════════════════════════════════════════════════ */
+// Première version portée par l'app : la passe M14 (27/07/2026) la met au niveau des
+// autres apps de l'écosystème (dictee_universelle 2.0.0, analyse_logique 2.0.0).
+var APP_VERSION = "2.0.0";   // ← la pastille affichée à l'écran doit dire ceci
+
 var MJPC_APP = {
   id: "applause_meter",
   nom: "L'Applaudimètre",
   contenant: "aucun"            // chaque passage de lecture appartient à UN élève lecteur
 };
 var MJPC_MANIFESTE = {
-  noeuds: ["applaudimetre"],    // tout vit sous ce nœud (l'app lit /classes racine, partagé, sans le posséder)
+  noeuds: ["applaudimetre","mjpcProfils"],   // + mjpcProfils depuis le 27/07/2026 : les passages
+                                // rejoignent le profil de l'élève (l'app lit /classes racine, partagé, sans le posséder)
   notions: []                   // rattachement aux notions : Phase 3 (Concordance)
 };
 var MJPC_PURGE = {
@@ -1225,7 +1397,9 @@ var MJPC_PURGE = {
   purger:    ["applaudimetre/seances","applaudimetre/historiqueLectures","applaudimetre/qrScans",
               "applaudimetre/live","applaudimetre/liveSnapshot","applaudimetre/file",
               "applaudimetre/compteurLectures","applaudimetre/votes","applaudimetre/tablettes",
-              "applaudimetre/compliments","applaudimetre/session","applaudimetre/classes"]
+              "applaudimetre/compliments","applaudimetre/session","applaudimetre/classes",
+              "applaudimetre/diagnostic",           // ajouté le 27/07/2026 : journal des incidents techniques
+              "applaudimetre/presence"]             // ajouté le 27/07/2026 : qui est en ligne, par séance
 };
 
 // ════════════ CONSTANTES ════════════
@@ -1424,6 +1598,8 @@ function _setReaderImpl(session, nom, opts){
     // Archive immédiatement les métadonnées dans le passage (sinon perdues à la fin de séance)
     var metaArchive={lecteur:nom, startsAt:Date.now(), classeSlug:(session&&session.classeSlug)||""};
     if(opts && opts.nbLignes) metaArchive.nbLignes=opts.nbLignes;
+    if(estSessionTest(session)) metaArchive.test=true;    // passage semé en mode test : historiqueLectures est un nœud PLAT,
+                                                         // sans ce drapeau la purge ne peut pas le distinguer d'un passage réel
     db.ref(DB_ROOT+"/historiqueLectures/"+newPid).update(metaArchive);
   } else {
     upd.passageId=""; upd.startedAt=null;       // FIX : reset startedAt côté nom vide
@@ -1431,14 +1607,267 @@ function _setReaderImpl(session, nom, opts){
   db.ref(DB_ROOT+"/session").update(upd);
 }
 
+// ════════════ MODE TEST — ÉLÈVES FICTIFS ET GARDE SUR LA CLÉ ════════════
+// Liste canonique gravée le 22/07/2026 pour tout l'écosystème. Les 24 noms réels
+// qui figuraient ici jusqu'au 27/07/2026 produisaient de VRAIES clés sanMJPC, et
+// l'app indexe ses nœuds par ces clés (compteurLectures, file, tablettes) : une
+// séance de test incrémentait donc le compteur d'équité d'une élève réelle.
+// Incident fondateur de la règle : le bac à sable du QCM a détruit les codes de
+// 7 élèves réels par collision de clé.
 var TEST_ELEVES = [
-  "AUDEBERT Élise","AUGEREAU Gatien","BOIVIN Eden","BOURREAU Céleste",
-  "BRESSIN Titouan","CALDEIRA Tiago","CESBRON Lili","CHALUMEAU Jules",
-  "CHARRIER Line","CHOLET Pierre","DELACROIX Romain","DESBOIS Auriane",
-  "DITTIERE Romane","HEINRICH Clovis","JAMIN Noé","JUIN Angèle",
-  "KOCK Elisa","LAURY Maël","PAGEOT Elie","PINET Charlotte",
-  "ROLLAND Gabriel","ROULLEAU Candice","TENNEGUIN Arthur","XAVIER Capucine"
+  "BERNARD Emma","DUPONT Marie","LEROY Hugo",
+  "MARTIN Lucas","MOREAU Léa","PETIT Thomas"
 ];
+var TEST_CLES = TEST_ELEVES.map(function(n){ return sanMJPC(n); });
+// Codes des élèves fictifs : ils vivent dans le nœud de l'app (applaudimetre/session/codesTest),
+// JAMAIS dans /codes racine. C'est le point exact où le bac à sable du QCM a fauté : il écrivait
+// ses codes de test dans /codes, et sa purge a emporté ceux de 7 élèves réels. Ici /codes n'est
+// ni écrit ni purgé, jamais : le mode test reste pourtant pleinement jouable, code compris.
+function codesTestMJPC(){
+  var m={};
+  TEST_CLES.forEach(function(c,i){ m[c]=String(1001+i); });
+  return m;
+}
+
+// Vérification AVANT tout semis : aucune clé fictive ne doit être portée par un
+// élève réel. Le contrôle porte sur la CLÉ, jamais sur l'orthographe.
+// Lecture CIBLÉE clé par clé sous /codes (le nœud entier n'est jamais lu : l'écran
+// d'accueil est public). Rend {libres, collisions:[{cle, ou}], refus:[…]}.
+function clesFictivesLibres(db){
+  var jobs = TEST_CLES.map(function(c){
+    return db.ref("codes/"+c).once("value").then(
+      function(s){ return s.exists() ? {cle:c, ou:"codes/"+c} : null; },
+      function(e){ return {cle:c, ou:"codes/"+c, refus:(e&&e.message)||"lecture refusée"}; });
+  });
+  jobs.push(db.ref("classes").once("value").then(
+    function(s){
+      var out=[], data=s.val()||{};
+      Object.keys(data).forEach(function(k){
+        if(estClasseTest(k) || estClasseInterne(k)) return;      // les classes internes ne comptent pas
+        extractEleves(data[k], []).forEach(function(nom){
+          var cle=sanMJPC(nom);
+          if(TEST_CLES.indexOf(cle)!==-1) out.push({cle:cle, ou:"classes/"+k});
+        });
+      });
+      return out;
+    },
+    function(e){ return [{cle:"(toutes)", ou:"classes", refus:(e&&e.message)||"lecture refusée"}]; }));
+  return Promise.all(jobs).then(function(res){
+    var col=[];
+    res.forEach(function(r){
+      if(!r) return;
+      if(Object.prototype.toString.call(r)==="[object Array]") col=col.concat(r);
+      else col.push(r);
+    });
+    return {libres:col.length===0, collisions:col};
+  });
+}
+
+// Un passage/une séance semés en mode test portent test:true. Sans ce drapeau,
+// aucune purge ne peut distinguer un passage de test d'un passage réel dans
+// historiqueLectures, qui est un nœud PLAT.
+// ════════════ PORTAIL À CODE — LECTURE CIBLÉE ════════════
+// Les autres apps chargent /codes ENTIER dans le navigateur (patron M11). Ici l'écran
+// est une TABLETTE ÉLÈVE : y déposer les 122 codes de l'établissement serait une fuite.
+// L'app lit donc UNE clé, celle que l'élève vient lui-même de désigner en tapant son
+// nom. Mesuré sur le hub le 27/07 : les 117 élèves des 4 classes réelles se résolvent
+// tous par clé directe, le repli exhaustif par « name » n'apporterait rien.
+// L'app ne FABRIQUE jamais un code : /codes est créé et géré par le site.
+function lireCodeEleveMJPC(db, cle, codesTest){
+  // en mode test, le code fictif fait foi et /codes n'est même pas consulté
+  if(codesTest && codesTest[cle]!==undefined && codesTest[cle]!==null){
+    return Promise.resolve({etat:"trouve", code:String(codesTest[cle]), test:true});
+  }
+  return db.ref("codes/"+cle).once("value").then(function(s){
+    var v=s.val();
+    if(v===null || v===undefined) return {etat:"absent", code:null};
+    if(typeof v==="string") return {etat:"trouve", code:String(v)};
+    if(v && v.code!==undefined && v.code!==null) return {etat:"trouve", code:String(v.code)};
+    return {etat:"absent", code:null};
+  }, function(e){
+    return {etat:"erreur", code:null, message:(e&&e.message)||"lecture impossible"};
+  });
+}
+
+// Couleur de zone : chaque occupant d'une tablette voit SON espace à SON nom, dans SA
+// couleur. Dérivée de la clé (stable d'un écran à l'autre), en style en ligne — la
+// charte CSS de l'app n'est pas touchée.
+var ZONE_COULEURS=[{trait:"#7c5cff",fond:"rgba(124,92,255,.07)"},{trait:"#0ea5a4",fond:"rgba(14,165,164,.07)"},{trait:"#f59e0b",fond:"rgba(245,158,11,.09)"}];
+function couleurZone(i){ return ZONE_COULEURS[i%ZONE_COULEURS.length]; }
+
+function estSessionTest(session){ return !!(session && session.modeTest===true); }
+
+// ════════════ PURGE DU MODE TEST — EXHAUSTIVE ET VÉRIFIÉE ════════════
+// Ne touche QUE ce qui est reconnaissable comme donnée de test : drapeau test:true,
+// classe de test, ou clé fictive. Tous les nœuds indexés par clé-élève sont couverts
+// (compteurLectures, file, tablettes), pas seulement les quatre d'avant le 27/07.
+// CHAQUE suppression est vérifiée : les refus du serveur sont collectés et rendus.
+// « Terminé » ne se dit jamais sans que tout ait réussi.
+//   opts.volatils : + live / liveSnapshot / compliments (état projeté du test)
+//   opts.classe   : + la classe fictive de /classes
+function purgeTestMJPC(db, opts){
+  opts = opts || {};
+  var refus = [];
+  function lire(chemin){
+    return db.ref(chemin).once("value").then(
+      function(s){ return s.val()||{}; },
+      function(e){ refus.push({chemin:chemin, message:"lecture impossible : "+((e&&e.message)||"refusée")}); return {}; });
+  }
+  // PRÉCAUTION CAPITALE : « MARTIN Lucas » ou « PETIT Thomas » peuvent parfaitement
+  // exister dans une classe réelle. Tant que ce n'est pas écarté, une clé fictive
+  // NE SUFFIT PAS à désigner une donnée de test : seuls le drapeau test:true et la
+  // classe de test font foi. Sinon la purge détruirait le compteur d'équité, la file
+  // ou les passages d'un élève réel homonyme — précisément le sinistre à éviter.
+  return clesFictivesLibres(db).then(function(v){
+  var clesSures = v.libres;
+  if(!clesSures) refus.push({chemin:"(clés fictives)", message:"identité réelle homonyme détectée ("+v.collisions.map(function(c){return c.cle;}).join(", ")+") : purge limitée aux données marquées, les nœuds indexés par clé ne sont pas touchés"});
+  return Promise.all([
+    lire(DB_ROOT+"/seances"), lire(DB_ROOT+"/historiqueLectures"), lire(DB_ROOT+"/file"),
+    lire(DB_ROOT+"/compteurLectures"), lire(DB_ROOT+"/tablettes"), lire(DB_ROOT+"/votes")
+  ]).then(function(r){
+    var seances=r[0], hist=r[1], file=r[2], compteurs=r[3], tablettes=r[4], votes=r[5];
+    var chemins=[], pidsTest={};
+    Object.keys(seances).forEach(function(sid){
+      var s=seances[sid]||{};
+      if(s.test===true || estClasseTest(s.classeSlug)){
+        chemins.push(DB_ROOT+"/seances/"+sid);
+        Object.keys(s.passages||{}).forEach(function(pid){ pidsTest[pid]=1; });
+      }
+    });
+    Object.keys(hist).forEach(function(pid){
+      var pa=hist[pid]||{};
+      if(pa.test===true || estClasseTest(pa.classeSlug)) pidsTest[pid]=1;
+      else if(clesSures && !pa.classeSlug && TEST_CLES.indexOf(sanMJPC(pa.lecteur||""))!==-1) pidsTest[pid]=1;   // passage ancien, sans classe : rattrapé seulement si la clé est sûre
+    });
+    Object.keys(pidsTest).forEach(function(pid){
+      chemins.push(DB_ROOT+"/historiqueLectures/"+pid);
+      if(Object.prototype.hasOwnProperty.call(votes, pid)) chemins.push(DB_ROOT+"/votes/"+pid);
+    });
+    if(clesSures){
+      Object.keys(file).forEach(function(k){ if(TEST_CLES.indexOf(k)!==-1) chemins.push(DB_ROOT+"/file/"+k); });
+      Object.keys(compteurs).forEach(function(k){ if(TEST_CLES.indexOf(k)!==-1) chemins.push(DB_ROOT+"/compteurLectures/"+k); });
+      Object.keys(tablettes).forEach(function(t){
+        var occ=toArr((tablettes[t]||{}).occupants);
+        var fictive = occ.length>0;
+        for(var i=0;i<occ.length;i++){ if(TEST_CLES.indexOf(occ[i]&&occ[i].slug)===-1){ fictive=false; break; } }
+        if(fictive) chemins.push(DB_ROOT+"/tablettes/"+t);
+      });
+    }
+    if(opts.volatils) chemins=chemins.concat([DB_ROOT+"/live", DB_ROOT+"/liveSnapshot", DB_ROOT+"/compliments"]);
+    if(opts.classe) chemins.push("classes/"+TEST_SLUG);
+    // La remontée MJPC des passages de test vit sous le profil de la CLASSE FICTIVE :
+    // sans cette ligne, le mode test laisserait des traces dans les profils élèves.
+    chemins.push("mjpcProfils/"+TEST_SLUG);
+    if(!chemins.length) return {ok:refus.length===0, refus:refus, chemins:[]};
+    return Promise.allSettled(chemins.map(function(c){
+      return db.ref(c).remove().then(function(){ return c; }, function(e){
+        return Promise.reject({chemin:c, message:(e&&e.message)||"refus du serveur"});
+      });
+    })).then(function(res){
+      res.forEach(function(x){ if(x.status==="rejected") refus.push(x.reason||{chemin:"(inconnu)", message:"refus"}); });
+      return {ok:refus.length===0, refus:refus, chemins:chemins};
+    });
+  });
+  });
+}
+
+// ════════════ PRÉSENCE — QUI EST EN LIGNE, ET SUR QUEL ÉCRAN ════════════
+// Mêmes champs que /presence du site (display, classe, niveau, is_prof, current_url,
+// last_seen), plus le contexte propre à cette app (app, version, vue, séance, table).
+// NŒUD PROPRE : applaudimetre/presence/<clé>. Le /presence racine du site est indexé
+// par UUID ; y écrire une clé sanMJPC mêlerait deux conventions de clés dans un nœud
+// partagé — précisément le mélange qui a détruit des codes réels ailleurs. Le
+// branchement éventuel au nœud racine est VERSÉ à la conscience, pas tranché ici.
+var PRESENCE_BATTEMENT_MS = 45000;
+var PRESENCE_FRAIS_MS = 100000;                  // au-delà, on ne dit plus « en ligne »
+function presenceRecord(o){
+  return {display:o.display||"", classe:o.classe||"", niveau:o.niveau||"", is_prof:!!o.is_prof,
+          app:MJPC_APP.id, version:APP_VERSION, vue:o.vue||"", seance:o.seance||"", table:o.table||"",
+          cle:o.cle||"", current_url:String((window.location&&window.location.href)||"").slice(0,300),
+          last_seen:Date.now()};
+}
+// Battement de cœur : écrit tout de suite, puis toutes les 45 s, et poste un dernier
+// signal à la fermeture de l'onglet — sendBeacon survit à la fermeture, un update
+// Firebase ordinaire non. Rend la fonction d'arrêt (à appeler au démontage React).
+function presenceBattement(cle, faireRec){
+  if(!cle) return function(){};
+  var timer=null, vivant=true;
+  function battre(){
+    if(!vivant) return;
+    try{ db.ref(DB_ROOT+"/presence/"+cle).update(presenceRecord(faireRec())).catch(function(){}); }catch(e){}
+  }
+  function adieu(){
+    try{
+      var base=String((firebase.app().options.databaseURL)||"").replace(/\/+$/,"");
+      if(!base || !navigator.sendBeacon) return;
+      var rec=presenceRecord(faireRec()); rec.parti_le=Date.now();
+      navigator.sendBeacon(base+"/"+DB_ROOT+"/presence/"+cle+".json?x-http-method-override=PATCH",
+        new Blob([JSON.stringify(rec)], {type:"application/json"}));
+    }catch(e){}
+  }
+  battre();
+  timer=setInterval(battre, PRESENCE_BATTEMENT_MS);
+  window.addEventListener("pagehide", adieu);
+  window.addEventListener("beforeunload", adieu);
+  return function(){
+    vivant=false;
+    if(timer) clearInterval(timer);
+    window.removeEventListener("pagehide", adieu);
+    window.removeEventListener("beforeunload", adieu);
+    adieu();
+  };
+}
+function presenceEnLigne(presence){
+  var out=[], now=Date.now(), d=presence||{};
+  Object.keys(d).forEach(function(k){
+    var r=d[k]||{};
+    if(r.last_seen && (now-r.last_seen)<PRESENCE_FRAIS_MS && !r.parti_le) out.push(r);
+    else if(r.last_seen && (now-r.last_seen)<PRESENCE_FRAIS_MS && r.parti_le && r.parti_le<r.last_seen) out.push(r);
+  });
+  return out.sort(function(a,b){ return String(a.display||"").localeCompare(String(b.display||"")); });
+}
+
+// ════════════ CORBEILLE — 2e ceinture d'archive (contrat du site MJPC) ════════════
+// AUCUNE destruction sans archive. Format canonique du site, vérifié sur pièces :
+// corbeille/<AAAA-MM-JJ>/<motif>_<HHMMSS> = {_meta:{chemin,app,motif,ts,…}, data}.
+// Le champ est data — JAMAIS contenu (bug de M13 corrigé au LOT-COUTURES).
+// UNE ENTRÉE PAR CHEMIN : le plan de restauration du site ne restaure un nœud entier
+// que si _meta.chemin est renseigné, donc un chemin par entrée, jamais un sous-arbre.
+function _anneeScolaireMJPC(){ var d=new Date(), y=d.getFullYear(); return (d.getMonth()<7)?((y-1)+"-"+y):(y+"-"+(y+1)); }
+function corbeillePutMJPC(db, motif, chemin, valeur, suffixe){
+  var d=new Date();
+  var jour=d.toISOString().slice(0,10);
+  var hms=("0"+d.getHours()).slice(-2)+("0"+d.getMinutes()).slice(-2)+("0"+d.getSeconds()).slice(-2);
+  var cle=String(motif).replace(/[^a-z0-9_-]/gi,"-")+"_"+hms+(suffixe?("_"+suffixe):"");
+  var payload={_meta:{motif:motif, chemin:chemin, app:MJPC_APP.id, source:MJPC_APP.id,
+                      date:d.toISOString(), ts:Date.now(), annee:_anneeScolaireMJPC()},
+               data:(valeur===undefined?null:valeur)};
+  return db.ref("corbeille/"+jour+"/"+cle).set(payload).then(function(){ return "corbeille/"+jour+"/"+cle; });
+}
+// Archive N chemins AVANT toute destruction. Si une seule archive échoue, TOUT est
+// abandonné : rien n'est détruit (patron analyse_logique / LOT-COUTURES).
+function corbeilleArchiverPuisDetruire(db, motif, entrees){
+  var faites=[];
+  return Promise.allSettled(entrees.map(function(e, i){
+    return corbeillePutMJPC(db, motif, e.chemin, e.valeur, String(i+1));
+  })).then(function(res){
+    var echecs=[];
+    res.forEach(function(x, i){
+      if(x.status==="fulfilled") faites.push(x.value);
+      else echecs.push({chemin:entrees[i].chemin, message:(x.reason&&x.reason.message)||"archive refusée"});
+    });
+    if(echecs.length) return {ok:false, phase:"archive", echecs:echecs, archives:faites};
+    return Promise.allSettled(entrees.map(function(e){
+      return db.ref(e.chemin).remove().then(function(){ return e.chemin; }, function(err){
+        return Promise.reject({chemin:e.chemin, message:(err&&err.message)||"suppression refusée"});
+      });
+    })).then(function(res2){
+      var ech2=[];
+      res2.forEach(function(x){ if(x.status==="rejected") ech2.push(x.reason); });
+      return {ok:ech2.length===0, phase:"suppression", echecs:ech2, archives:faites};
+    });
+  });
+}
 
 // Helper format mm:ss partagé (chrono, checkpoints, courbe)
 function fmtSec(s){
@@ -1771,7 +2200,8 @@ function HelpModal(p){
 function HelpFab(p){
   var s=useState(false), o=s[0], set=s[1];
   return h(React.Fragment,null,
-    h("button",{className:"help-fab"+(p.pulse?" pulse":""),title:"Ouvrir le mode d'emploi.",onClick:function(){set(true);}},"?"),
+    h("button",{className:"help-fab"+(p.pulse?" pulse":""),style:{bottom:"64px"},
+      title:"Ouvrir le mode d'emploi.",onClick:function(){set(true);}},"?"),
     o && h(HelpModal,{role:p.role,first:p.first,onClose:function(){set(false);}}));
 }
 
@@ -1798,15 +2228,38 @@ function HelpFab(p){
 
 // ════════════ ACCUEIL ════════════
 function Accueil(p){
+  var sb=useState(false), busy=sb[0], setBusy=sb[1];
+  var se=useState(""), testErr=se[0], setTestErr=se[1];
+  // Le semis n'a lieu QU'APRÈS vérification que les six clés fictives sont libres.
+  // En cas de collision : refus motivé, et rien n'est écrit.
   function lancerTest(){
-    p.onTest();                                   // active le badge + le flag test
-    db.ref(DB_ROOT+"/live").remove();             // anti-télescopage : on repart de barres vides
-    db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/liveSnapshot").remove();
-    db.ref(DB_ROOT+"/tablettes").remove();
-    ecrireClasse(db, TEST_SLUG, TEST_ELEVES.slice(), {nom:"⚙️ Classe TEST"});   // transaction non destructive (socle)
-    db.ref(DB_ROOT+"/session").update({classeSlug:TEST_SLUG, reader:"", reglages:REGLAGES_DEFAUT, startedAt:null, demarreeLe:Date.now(), absents:[], passageId:"", messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null, sessionId:null});
-    p.go("prof");                                 // entre directement dans le panneau prof
+    if(busy) return;
+    setTestErr(""); setBusy(true);
+    clesFictivesLibres(db).then(function(v){
+      if(!v.libres){
+        setBusy(false);
+        setTestErr("Le mode test n'a pas démarré et rien n'a été écrit : "
+          + v.collisions.map(function(c){ return c.cle+" → "+c.ou+(c.refus?" ("+c.refus+")":""); }).join(" · ")
+          + ". Une identité du jeu de test correspond à une identité réelle : le jeu de test doit changer avant tout semis.");
+        return null;
+      }
+      // résidus d'un test précédent : nettoyés AVANT de semer (et pas seulement à la sortie)
+      return purgeTestMJPC(db, {volatils:true}).then(function(pg){
+        if(!pg.ok) throw {message:"nettoyage des résidus incomplet — "+pg.refus.map(function(x){return x.chemin+" : "+x.message;}).join(" · ")};
+        return db.ref(DB_ROOT+"/tablettes").remove();
+      }).then(function(){
+        return ecrireClasse(db, TEST_SLUG, TEST_ELEVES.slice(), {nom:"⚙️ Classe TEST"});   // transaction non destructive (socle)
+      }).then(function(){
+        return db.ref(DB_ROOT+"/session").update({classeSlug:TEST_SLUG, reader:"", reglages:REGLAGES_DEFAUT, startedAt:null, demarreeLe:Date.now(), absents:[], passageId:"", messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null, sessionId:null, modeTest:true, codesTest:codesTestMJPC()});
+      }).then(function(){
+        setBusy(false);
+        p.onTest();                                 // badge + drapeau, alignés sur la session persistée
+        p.go("prof");                               // entre directement dans le panneau prof
+      });
+    }).catch(function(e){
+      setBusy(false);
+      setTestErr("Le mode test n'a pas pu démarrer : "+((e&&e.message)||"erreur inconnue")+".");
+    });
   }
   return h("div",{className:"accueil"},
     h("div",{className:"clap"},"👏"),
@@ -1819,12 +2272,16 @@ function Accueil(p){
     h("button",{className:"btn-accueil btn-board",onClick:function(){p.go("board");},
       title:"Projection au tableau : barres applaudimètre, chrono, paillettes de fin. À mettre sur le vidéoprojecteur. Protégé par code."},
       "📺 Vue tableau (projection)"),
+    h("button",{className:"btn-accueil btn-eleve",style:{marginBottom:10},onClick:function(){p.go("mesLectures");},
+      title:"Hors séance : retrouve les passages que tu as déjà lus. Demande ton nom, ton prénom et ton code personnel."},
+      "📖 Mes lectures"),
     h("button",{className:"btn-accueil btn-eleve",onClick:function(){p.go("eleve");},
       title:"Tablette élève : choisir un numéro de table, taper NOM+Prénom, applaudir pendant la lecture, voter au tour de l'évaluation."},
       "👏 Tablette élève"),
-    h("button",{className:"btn-ghost",style:{marginTop:8,padding:"10px 16px",borderRadius:10},onClick:lancerTest,
-      title:"Crée une classe fictive (24 élèves) et active le mode test : simulation des applaudissements et des votes, sans toucher tes vraies données."},
-      "⚙️ Mode test")
+    h("button",{className:"btn-ghost",style:{marginTop:8,padding:"10px 16px",borderRadius:10,opacity:busy?.6:1},onClick:lancerTest,disabled:busy,
+      title:"Crée une classe fictive de 6 élèves inventés et active le mode test : applaudissements et votes simulés. Les identités fictives sont vérifiées contre les données réelles avant tout enregistrement."},
+      busy? "⏳ Vérification des identités fictives…" : "⚙️ Mode test"),
+    testErr? h("div",{style:{maxWidth:520,margin:"12px auto 0",padding:"11px 13px",background:"rgba(220,38,38,.12)",border:"1.5px solid var(--rouge)",borderRadius:10,fontSize:".86rem",lineHeight:1.45,textAlign:"left"}},testErr) : null
   );
 }
 
@@ -1833,6 +2290,29 @@ function AppProf(p){
   var st=useState("pilot"), tab=st[0], setTab=st[1];
   var sc=useState({}), classes=sc[0], setClasses=sc[1];
   var ss=useState(null), session=ss[0], setSession=ss[1];
+  var sz=useState(""), zombiesInfo=sz[0], setZombiesInfo=sz[1];
+  var sessRef=useRef(null); sessRef.current=session;      // le battement lit l'état courant, pas celui du montage
+  // Présence du professeur : même contrat, clé réservée « prof ».
+  useEffect(function(){
+    return presenceBattement("prof", function(){
+      var sn=sessRef.current;
+      return {display:"Professeur", classe:"PROF", is_prof:true, vue:"panneau",
+              seance:(sn&&sn.sessionId)||"", cle:"prof"};
+    });
+  },[]);
+  // Nettoyage AU MONTAGE : les données fictives qu'un test précédent aurait laissées
+  // partent dès l'ouverture du panneau, sans attendre un passage par « Quitter le test ».
+  // Si un test est en cours, on ne touche à rien. Aucune donnée réelle n'est visée :
+  // la purge ne cible que le drapeau test:true, la classe de test et les clés fictives.
+  useEffect(function(){
+    db.ref(DB_ROOT+"/session/modeTest").once("value").then(function(s){
+      if(s.val()===true) return null;                    // test en cours : intouché
+      return purgeTestMJPC(db, {}).then(function(pg){
+        if(pg.chemins.length && pg.ok) setZombiesInfo("Résidus d'un test précédent nettoyés à l'ouverture ("+pg.chemins.length+" élément"+(pg.chemins.length>1?"s":"")+").");
+        else if(!pg.ok) setZombiesInfo("Des résidus de test n'ont pas pu être supprimés : "+pg.refus.map(function(x){return x.chemin;}).join(", ")+".");
+      });
+    }).catch(function(){});
+  },[]);
   useEffect(function(){
     publierManifeste(db);   // vue projetée pour la console MJPC (additive, ne casse jamais l'app)
     var r1=db.ref("classes"); var f1=r1.on("value",function(s){setClasses(s.val()||{});});
@@ -1845,8 +2325,11 @@ function AppProf(p){
     h("div",{className:"hdr"},
       h("button",{className:"btn-back",onClick:p.onBack,title:"Retour à l'écran d'accueil. La séance reste active en arrière-plan."},"← Accueil"),
       h("h2",null,"Panneau professeur"),
-      p.test && h("button",{className:"btn-back",style:{background:"var(--rose)",color:"#fff"},onClick:p.onQuitTest,
-        title:"Quitter le mode test : supprime la classe fictive et remet la session à zéro."},"⏏ Quitter le test")),
+      p.test && h("button",{className:"btn-back",style:{background:"var(--rose)",color:"#fff",opacity:p.quitBusy?.6:1},onClick:p.onQuitTest,disabled:!!p.quitBusy,
+        title:"Quitter le mode test : supprime toutes les données fictives (séances, passages, votes, files, compteurs, tablettes, classe) et vérifie chaque suppression."},
+        p.quitBusy? "⏳ Suppression des données fictives…" : "⏏ Quitter le test")),
+    p.quitErr? h("div",{style:{margin:"10px 14px 0",padding:"11px 13px",background:"rgba(220,38,38,.12)",border:"1.5px solid var(--rouge)",borderRadius:10,fontSize:".86rem",lineHeight:1.45}},p.quitErr) : null,
+    zombiesInfo? h("div",{style:{margin:"10px 14px 0",padding:"9px 13px",background:"rgba(255,210,63,.16)",border:"1.5px dashed var(--jaune)",borderRadius:10,fontSize:".84rem",lineHeight:1.4}},zombiesInfo) : null,
     h("div",{className:"tabs"},
       ["pilot","classes","reglages"].map(function(t){
         var noms={pilot:"🎛️ Pilotage",classes:"👥 Classes",reglages:"🎚️ Réglages"};
@@ -2001,6 +2484,15 @@ function OngletPilotage(p){
   var sHist=useState({}), historique=sHist[0], setHist=sHist[1];                  // /historiqueLectures (toutes les courbes/votes/checkpoints)
   var sDet=useState(""), passageDetailId=sDet[0], setPassageDetailId=sDet[1];     // passage ouvert en modale détail
   var sFile=useState({}), file=sFile[0], setFile=sFile[1];                        // /file : file d'attente lecture spontanée
+  var sSup=useState(null), suppr=sSup[0], setSuppr=sSup[1];                       // retour de la suppression archivée (corbeille)
+  var sPres=useState({}), presence=sPres[0], setPresence=sPres[1];               // /presence : qui est en ligne, et où
+  var sTick=useState(0), tickPres=sTick[0], setTickPres=sTick[1];                 // rafraîchit la fraîcheur affichée
+  useEffect(function(){
+    var r=db.ref(DB_ROOT+"/presence");
+    var f=r.on("value",function(sn){ setPresence(sn.val()||{}); });
+    var it=setInterval(function(){ setTickPres(function(n){return n+1;}); }, 20000);
+    return function(){ r.off("value",f); clearInterval(it); };
+  },[]);
   var sCompt=useState({}), compteurs=sCompt[0], setCompteurs=sCompt[1];           // /compteurLectures : compteurs par slug
   var sAuto=useState(null), autoNext=sAuto[0], setAutoNext=sAuto[1];              // {slug,nom,nbLignes,startsAt} pour l'overlay enchaînement
   var stk=useState(0), setTickP=stk[1];           // tick 1 s pour rafraîchir fini/paused dans les boutons
@@ -2055,10 +2547,12 @@ function OngletPilotage(p){
     db.ref(DB_ROOT+"/liveSnapshot").remove();
     db.ref(DB_ROOT+"/file").remove();             // ! nouvelle séance : la file part vide
     db.ref(DB_ROOT+"/compteurLectures").remove(); // ! et les compteurs d'équité aussi
-    db.ref(DB_ROOT+"/seances/"+sessionId).set({
+    var seanceRec={
       libelle:libelleFinal, classeSlug:slug, demarreLe:Date.now(), termineLe:null, passages:{},
       criteres:reg.criteres.map(function(c){return {emoji:c.emoji,label:c.label,questionVotant:c.questionVotant||""};})    // snapshot pour récap futur
-    });
+    };
+    if(estSessionTest(session)) seanceRec.test=true;      // séance semée en mode test : reconnaissable par la purge
+    db.ref(DB_ROOT+"/seances/"+sessionId).set(seanceRec);
     db.ref(DB_ROOT+"/session").update({demarreeLe:Date.now(), absents:absentsList||[], sessionId:sessionId,
       reader:"", passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
     setCheckinOpen(false);
@@ -2096,15 +2590,35 @@ function OngletPilotage(p){
       messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null
     });
   }
+  // AUCUNE destruction sans archive : la séance et chacun de ses passages sont d'abord
+  // versés à la corbeille du hub, une entrée par chemin, donc chacun restaurable seul
+  // depuis le site. Si une seule archive échoue, RIEN n'est détruit.
   function supprimerSeance(sId){
     var s=seances[sId]; if(!s) return;
     var lib=s.libelle||sId;
-    var nbP=Object.keys(s.passages||{}).length;
-    if(!confirm("Supprimer définitivement la séance suivante ?\n\n« "+lib+" »\n("+nbP+" passage"+(nbP>1?"s":"")+")\n\nCette action est irréversible et supprime aussi les données des passages associés (courbe, votes, checkpoints).")) return;
     var pids=Object.keys(s.passages||{});
-    var ops=pids.map(function(pid){ return db.ref(DB_ROOT+"/historiqueLectures/"+pid).remove(); });
-    ops.push(db.ref(DB_ROOT+"/seances/"+sId).remove());
-    Promise.all(ops).catch(function(e){ alert("Erreur pendant la suppression : "+e.message); });
+    var nbP=pids.length;
+    if(!confirm("Supprimer la séance suivante ?\n\n« "+lib+" »\n("+nbP+" passage"+(nbP>1?"s":"")+")\n\nLa séance et ses passages sont d'abord archivés dans la corbeille du site, où ils restent récupérables un an. Rien n'est détruit si l'archivage échoue.")) return;
+    setSuppr({sId:sId, etat:"encours", msg:"Archivage de la séance et de ses "+nbP+" passage"+(nbP>1?"s":"")+"…"});
+    Promise.all([db.ref(DB_ROOT+"/seances/"+sId).once("value")].concat(
+      pids.map(function(pid){ return db.ref(DB_ROOT+"/historiqueLectures/"+pid).once("value"); })
+    )).then(function(snaps){
+      var entrees=[{chemin:DB_ROOT+"/seances/"+sId, valeur:snaps[0].val()}];
+      pids.forEach(function(pid, i){
+        var v=snaps[i+1].val();
+        if(v!==null && v!==undefined) entrees.push({chemin:DB_ROOT+"/historiqueLectures/"+pid, valeur:v});
+      });
+      return corbeilleArchiverPuisDetruire(db, "suppression-seance", entrees);
+    }).then(function(r){
+      if(r.ok){ setSuppr({sId:sId, etat:"ok", msg:"Séance supprimée. "+r.archives.length+" élément"+(r.archives.length>1?"s":"")+" archivé"+(r.archives.length>1?"s":"")+" dans la corbeille du site, récupérable"+(r.archives.length>1?"s":"")+" pendant un an."}); return; }
+      if(r.phase==="archive"){
+        setSuppr({sId:sId, etat:"err", msg:"Rien n'a été supprimé : l'archivage a échoué sur "+r.echecs.length+" élément(s) — "+r.echecs.map(function(x){return x.chemin+" ("+x.message+")";}).join(" · ")+"."});
+      } else {
+        setSuppr({sId:sId, etat:"err", msg:"Archivage réussi, mais "+r.echecs.length+" élément(s) n'ont pas pu être supprimés — "+r.echecs.map(function(x){return x.chemin+" ("+x.message+")";}).join(" · ")+". La séance est donc encore là, et la copie est en corbeille."});
+      }
+    }).catch(function(e){
+      setSuppr({sId:sId, etat:"err", msg:"Rien n'a été supprimé : "+((e&&e.message)||"erreur inconnue")+"."});
+    });
   }
   function exportSeance(sId){
     Promise.all([
@@ -2212,6 +2726,19 @@ function OngletPilotage(p){
           bilanTermine:true, finalisedAt:Date.now(), lecteur:reader||"", classeSlug:session.classeSlug||"", votes:votesData
         });
         db.ref(DB_ROOT+"/votes/"+passageId).remove();       // archivés → on libère le nœud actif
+        // ─── Remontée MJPC : le passage rejoint le profil de l'élève, comme les autres
+        // productions de l'écosystème (contrat mjpcProfils/<classe>/<élève>/…, patron QCM).
+        // Non bloquante : un échec ici ne doit jamais empêcher la séance de continuer.
+        if(reader && session.classeSlug){
+          try{
+            var recProfil={date:Date.now(), passageId:passageId, seance:(session.sessionId||""),
+              libelleSeance:((seances[session.sessionId]||{}).libelle||""), lecteur:reader,
+              criteres:(reg.criteres||[]).map(function(c){return c.label;}),
+              app:MJPC_APP.id, version:APP_VERSION};
+            if(estSessionTest(session)) recProfil.test=true;
+            db.ref("mjpcProfils/"+session.classeSlug+"/"+san(reader)+"/lectures/"+passageId).update(recProfil);
+          }catch(e){ __amJournaliser("remontée MJPC", (e&&e.message)||e, ""); }
+        }
         // ─── Incrément compteur lectures du lecteur (mode spontané ou pas, peu importe) ───
         if(reader){
           var slugLec=san(reader);
@@ -2330,6 +2857,28 @@ function OngletPilotage(p){
       slug && demarree ? h("button",{className:"btn btn-ghost",style:{width:"100%",marginTop:10},onClick:function(){setCheckinOpen(true);}},
         "✏️ Modifier les absents",
         ifo("Rouvre la liste pour gérer un retardataire ou une sortie en cours de séance.")) : null),
+
+    (function(){
+      var enLigne=presenceEnLigne(presence);
+      if(!enLigne.length) return null;
+      var eleves_=enLigne.filter(function(r){return !r.is_prof;});
+      var profs_=enLigne.filter(function(r){return !!r.is_prof;});
+      return h("div",{className:"card"},
+        h("h3",null,"📡 En ligne en ce moment",
+          ifo("Qui a une page de l'applaudimètre ouverte, et sur quel écran. Un élève disparaît de cette liste une minute et demie après avoir fermé sa tablette. Sert à repérer une tablette éteinte ou un élève resté sur le mauvais écran.")),
+        h("p",{className:"muted"},
+          eleves_.length+" élève"+(eleves_.length>1?"s":"")+" · "+profs_.length+" écran"+(profs_.length>1?"s":"")+" professeur"),
+        h("div",{style:{display:"flex",flexWrap:"wrap",gap:6,marginTop:6}},
+          enLigne.map(function(r){
+            var det=r.is_prof? (r.vue||"") : ((r.table? "table "+String(r.table).replace(/^t/,"") : "")+(r.vue?(r.table?" · ":"")+r.vue:""));
+            return h("span",{key:(r.cle||r.display)+String(r.last_seen),
+              style:{padding:"4px 10px",borderRadius:20,fontSize:".8rem",fontWeight:700,
+                     background:r.is_prof?"rgba(124,92,255,.14)":"rgba(34,197,94,.14)",
+                     border:"1px solid "+(r.is_prof?"rgba(124,92,255,.4)":"rgba(34,197,94,.4)")},
+              title:(r.display||"")+(det?" — "+det:"")+" · vu à "+new Date(r.last_seen).toLocaleTimeString("fr-FR")},
+              (r.is_prof?"🧑‍🏫 ":"👏 ")+(r.display||r.cle||"?")+(det?" ("+det+")":""));
+          })));
+    })(),
 
     slug && demarree && h("div",{className:"card"},
       h("h3",null,"Lecteur en cours",
@@ -2460,7 +3009,12 @@ function OngletPilotage(p){
         .sort().reverse();                          // plus récent en haut
       if(!archives.length) return null;
       return h("div",{className:"card"},
-        h("h3",null,"📦 Séances archivées",ifo("Toutes les séances précédentes. Clique pour exporter ou imprimer le récap.")),
+        h("h3",null,"📦 Séances archivées",ifo("Toutes les séances précédentes. Clique pour exporter ou imprimer le récap. Une séance supprimée part d'abord dans la corbeille du site, où elle reste récupérable un an.")),
+        suppr? h("div",{style:{margin:"0 0 10px",padding:"10px 12px",borderRadius:10,fontSize:".85rem",lineHeight:1.45,
+            background:suppr.etat==="err"?"rgba(220,38,38,.12)":(suppr.etat==="ok"?"rgba(34,197,94,.12)":"rgba(124,92,255,.10)"),
+            border:"1.5px solid "+(suppr.etat==="err"?"var(--rouge)":(suppr.etat==="ok"?"#22c55e":"var(--violet)"))}},
+          suppr.msg,
+          suppr.etat!=="encours"? h("button",{className:"btn btn-ghost",style:{marginLeft:10,padding:"3px 9px",fontSize:".78rem"},onClick:function(){setSuppr(null);},title:"Masquer ce message."},"OK") : null) : null,
         h("div",{className:"seances-list"},
           archives.slice(0,20).map(function(sId){
             var s=seances[sId];
@@ -2476,7 +3030,7 @@ function OngletPilotage(p){
                 h("button",{className:"btn btn-gris",style:{padding:"6px 10px",fontSize:".85rem"},onClick:function(){exportSeance(sId);},
                   title:"Télécharger la séance archivée en JSON."},"📥"),
                 h("button",{className:"btn btn-rose",style:{padding:"6px 10px",fontSize:".85rem"},onClick:function(){supprimerSeance(sId);},
-                  title:"Supprimer définitivement cette séance archivée (irréversible). Les passages associés sont aussi effacés."},"🗑️")));
+                  title:"Supprimer cette séance archivée. Elle est d'abord copiée dans la corbeille du site (récupérable un an), avec chacun de ses passages, puis retirée d'ici."},"🗑️")));
           })));
     })(),
 
@@ -2630,6 +3184,42 @@ function OngletClasses(p){
     }));
 }
 
+// Les textes que les élèves lisent appartiennent au professeur, pas à l'app (point 26).
+function EditeurTextes(p){
+  var sv=useState(null), brouillon=sv[0], setBrouillon=sv[1];
+  var sm=useState(""), msg=sm[0], setMsg=sm[1];
+  var cles=Object.keys(TEXTES_DEFAUT);
+  function valeur(k){ return (brouillon && brouillon[k]!==undefined) ? brouillon[k] : txt(k); }
+  function modifier(k,v){ var b=Object.assign({},brouillon||{}); b[k]=v; setBrouillon(b); setMsg(""); }
+  function enregistrer(){
+    var patch={};
+    cles.forEach(function(k){ var v=valeur(k); patch[k] = (v===TEXTES_DEFAUT[k]) ? null : v; });
+    db.ref(DB_ROOT+"/session/textes").update(patch).then(function(){
+      setBrouillon(null); setMsg("Textes enregistrés — les tablettes se mettent à jour dans l'instant.");
+    },function(e){ setMsg("Enregistrement impossible : "+((e&&e.message)||"erreur")+"."); });
+  }
+  function reinitialiser(k){ modifier(k, TEXTES_DEFAUT[k]); }
+  return h("div",{className:"card"},
+    h("h3",null,"✍️ Textes affichés aux élèves",
+      ifo("Ce que les élèves lisent sur leur tablette. Tu peux tout réécrire ; un champ laissé au texte d'origine n'est pas enregistré. Les messages qui constatent un refus (nom absent de la liste, code qui ne correspond pas) restent fixes.")),
+    cles.map(function(k){
+      var modifie = valeur(k)!==TEXTES_DEFAUT[k];
+      return h("div",{key:k,className:"field"},
+        h("label",null, TEXTES_LIBELLES[k]||k,
+          modifie? h("span",{style:{marginLeft:8,fontSize:".74rem",fontWeight:700,color:"var(--violet)"}},"modifié") : null),
+        h("textarea",{value:valeur(k),rows:2,onChange:function(e){modifier(k,e.target.value);},
+          style:{width:"100%",boxSizing:"border-box",padding:"7px 9px",borderRadius:8,border:"1px solid var(--bordure)",fontFamily:"inherit",fontSize:".9rem",lineHeight:1.4,resize:"vertical"}}),
+        modifie? h("button",{className:"btn btn-ghost",style:{marginTop:4,padding:"3px 9px",fontSize:".76rem"},
+          onClick:function(){reinitialiser(k);},title:"Revenir au texte d'origine pour cette ligne."},"↩ texte d'origine") : null);
+    }),
+    msg? h("div",{style:{margin:"8px 0",padding:"8px 11px",borderRadius:8,background:"rgba(124,92,255,.10)",border:"1px solid rgba(124,92,255,.3)",fontSize:".84rem"}},msg) : null,
+    h("div",{className:"btn-row"},
+      h("button",{className:"btn btn-violet",onClick:enregistrer,disabled:!brouillon,
+        style:{opacity:brouillon?1:.5},title:"Enregistrer ces textes pour toutes les tablettes."},"💾 Enregistrer les textes"),
+      brouillon? h("button",{className:"btn btn-ghost",onClick:function(){setBrouillon(null);setMsg("");},
+        title:"Abandonner les modifications non enregistrées."},"Annuler") : null));
+}
+
 function OngletReglages(p){
   var reg=p.reg;
   function upd(patch){ db.ref(DB_ROOT+"/session/reglages").update(patch); }
@@ -2642,6 +3232,7 @@ function OngletReglages(p){
     upd({seuilsCheckpoints:arr});
   }
   return h(React.Fragment,null,
+    h(EditeurTextes,{}),
     h("div",{className:"card"},
       h("h3",null,"Comportement des barres"),
       h("div",{className:"field"},
@@ -3113,13 +3704,20 @@ function VueBoard(p){
 
 // ════════════ TABLETTE ÉLÈVE ════════════
 function FormConnexion(p){
-  // Login pattern correction_dictee : NOM + Prénom au clavier, matching strict slugifié
+  // Login pattern correction_dictee : NOM + Prénom au clavier, matching strict slugifié.
+  // 27/07/2026 : + CODE PERSONNEL. Un élève qui vote est évalué sur sa capacité à évaluer,
+  // et son vote est archivé à son nom : l'identité doit donc être attestée, comme dans
+  // toutes les autres apps. Aucune liste de prénoms n'est exposée, aucun code n'est fabriqué ici.
   var sn=useState(""), nom=sn[0], setNom=sn[1];
   var sp=useState(""), pre=sp[0], setPre=sp[1];
+  var sc=useState(""), code=sc[0], setCode=sc[1];
   var se=useState(""), err=se[0], setErr=se[1];
+  var sb=useState(false), busy=sb[0], setBusy=sb[1];
   function valider(){
-    var n=nom.trim(), pr=pre.trim();
+    if(busy) return;
+    var n=nom.trim(), pr=pre.trim(), cd=code.trim();
     if(!n||!pr){ setErr("Saisis ton nom ET ton prénom."); return; }
+    if(!cd){ setErr("Saisis ton code personnel."); return; }
     var saisi=san((n+" "+pr).toLowerCase());
     var found=null;
     for(var i=0;i<p.eleves.length;i++){
@@ -3129,7 +3727,14 @@ function FormConnexion(p){
     var slug=san(found);
     if(p.absents.indexOf(slug)!==-1){ setErr("Tu es marqué absent. Demande au prof si c'est une erreur."); return; }
     if((p.dejaInscrits||[]).indexOf(slug)!==-1){ setErr("Tu es déjà connecté sur cette tablette."); return; }
-    p.onValider({nom:found, slug:slug});
+    setBusy(true);
+    lireCodeEleveMJPC(db, slug, p.codesTest).then(function(r){
+      setBusy(false);
+      if(r.etat==="erreur"){ setErr("Ton code n'a pas pu être vérifié pour l'instant. Réessaie dans un instant."); return; }
+      if(r.etat==="absent"){ setErr("Aucun code personnel n'est enregistré pour ce nom. Signale-le pour qu'on te le remette."); return; }
+      if(String(r.code)!==cd){ setErr("Ce code ne correspond pas à ce nom. Vérifie tes chiffres."); setCode(""); return; }
+      p.onValider({nom:found, slug:slug, atteste:true, ts:Date.now()});
+    });
   }
   return h("div",{className:"form-connect"},
     h("div",{className:"field"},h("label",null,"Nom"),
@@ -3140,11 +3745,34 @@ function FormConnexion(p){
       h("input",{value:pre,onChange:function(e){setPre(e.target.value);setErr("");},
         onKeyDown:function(e){if(e.key==="Enter")valider();},
         placeholder:"Léa",autoCapitalize:"words",inputMode:"text"})),
+    h("div",{className:"field"},h("label",null,"Ton code personnel"),
+      h("input",{type:"password",value:code,onChange:function(e){setCode(e.target.value);setErr("");},
+        onKeyDown:function(e){if(e.key==="Enter")valider();},
+        placeholder:"••••",inputMode:"numeric",autoComplete:"off",
+        style:{letterSpacing:".3em",textAlign:"center"}})),
     err? h("div",{className:"form-err"},err) : null,
     h("div",{className:"btn-row"},
       p.onCancel? h("button",{className:"btn btn-ghost",onClick:p.onCancel,title:"Annuler et revenir en arrière."},"Annuler") : null,
-      h("button",{className:"btn btn-violet btn-lg",style:{flex:1},onClick:valider,
-        title:"Vérifie que NOM+Prénom correspondent à la liste classe. La comparaison est insensible aux accents et à la casse."},"Me connecter")));
+      h("button",{className:"btn btn-violet btn-lg",style:{flex:1,opacity:busy?.6:1},onClick:valider,disabled:busy,
+        title:"Vérifie que NOM+Prénom correspondent à la liste de la classe, et que le code est bien celui de cet élève. La comparaison du nom est insensible aux accents et à la casse."},
+        busy? "Vérification…" : "Me connecter")));
+}
+
+// ── Shunt §8 côté élève (socle 1.1.0) ──
+// L'élève déjà connecté au site MJPC n'a ni nom ni code à retaper. L'entrée n'est
+// pas automatique : cette tablette est PARTAGÉE par deux ou trois élèves, et une
+// validation silencieuse attribuerait la première zone au porteur de la session,
+// qui n'est pas forcément celui qui la tient. Un geste, aucune saisie.
+function ShuntMJPC(p){
+  var idn=p.identite;
+  if(!idn) return null;
+  return h("div",{style:{maxWidth:420,margin:"0 auto 16px",padding:"12px 14px",background:"rgba(124,92,255,.08)",border:"1.5px solid rgba(124,92,255,.35)",borderRadius:12,textAlign:"center"}},
+    h("div",{style:{fontSize:".85rem",color:"var(--gris)",marginBottom:8}},"Tu es déjà identifié sur le site :"),
+    h("button",{className:"btn btn-violet btn-lg",style:{width:"100%"},
+      onClick:function(){ p.onValider({nom:idn.nom, slug:idn.cle, atteste:true, mjpc:true, ts:Date.now()}); },
+      title:"Entrer avec l'identité déjà vérifiée sur le site MJPC, sans retaper ton nom ni ton code."},
+      "✓ C'est moi — "+idn.nom),
+    h("div",{style:{fontSize:".8rem",color:"var(--gris)",marginTop:8}},"Si ce n'est pas toi, tape ton nom et ton code juste en dessous."));
 }
 
 function AppEleve(p){
@@ -3173,6 +3801,24 @@ function AppEleve(p){
   var eleves=classe?extractEleves(classe, []):[];
   var demarree=!!(session&&session.demarreeLe);
   var absents=session?toArr(session.absents):[];
+  var sessRefE=useRef(null); sessRefE.current=session;    // idem côté tablette
+  // Présence : un battement par occupant attesté de cette tablette. Le professeur voit
+  // qui est en ligne et sur quelle table, sans que l'élève ait un geste à faire.
+  var clesPresentes=occupants.map(function(o){return (o&&o.slug)||"";}).filter(Boolean).join(",");
+  useEffect(function(){
+    if(!clesPresentes) return;
+    var cles=clesPresentes.split(",");
+    var arrets=cles.map(function(cle){
+      var occ=null;
+      for(var i=0;i<occupants.length;i++){ if(occupants[i] && occupants[i].slug===cle){ occ=occupants[i]; break; } }
+      return presenceBattement(cle, function(){
+        var sn=sessRefE.current;
+        return {display:(occ&&occ.nom)||cle, classe:slug||"", niveau:(classe&&classe.niveau)||"", is_prof:false,
+                vue:"tablette", seance:(sn&&sn.sessionId)||"", table:table, cle:cle};
+      });
+    });
+    return function(){ arrets.forEach(function(f){ try{ f(); }catch(e){} }); };
+  },[clesPresentes, slug, table]);
 
   // ---- 1. Choix de la table ----
   if(!table){
@@ -3185,7 +3831,7 @@ function AppEleve(p){
           " en bas à droite pour lire le ",h("strong",null,"mode d'emploi"),".",
           h("br"),
           h("span",{style:{fontSize:".82rem",opacity:.78}},"Tu sauras quoi faire avant de toucher à quoi que ce soit.")),
-        h("p",{className:"muted"},"Choisis le numéro de ta table :"),
+        h("p",{className:"muted"},txt("eleve_choix_table")),
         h("div",{className:"choice-list"},
           Array.apply(null,{length:reg.nbTables}).map(function(_,i){
             return h("button",{key:i,className:"classe-btn",onClick:function(){setTable("t"+(i+1));},
@@ -3200,7 +3846,7 @@ function AppEleve(p){
       h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:function(){setTable("");},title:"Changer de tablette."},"← Table"),h("h2",null,"Table "+table.slice(1))),
       h("div",{className:"eleve-wait"},
         h("div",{className:"big"},"⏳"),
-        h("p",{className:"muted"},"Le professeur n'a pas encore choisi la classe. Patiente…")),
+        h("p",{className:"muted"},txt("eleve_attente_classe"))),
       h(HelpFab,{role:"eleve"}));
   }
   if(!demarree){
@@ -3208,7 +3854,7 @@ function AppEleve(p){
       h("div",{className:"hdr"},h("button",{className:"btn-back",onClick:function(){setTable("");},title:"Changer de tablette."},"← Table"),h("h2",null,"Table "+table.slice(1))),
       h("div",{className:"eleve-wait"},
         h("div",{className:"big"},"🚀"),
-        h("p",{className:"muted"},"En attente du démarrage de la séance par le prof.")),
+        h("p",{className:"muted"},txt("eleve_attente_demarrage"))),
       h(HelpFab,{role:"eleve"}));
   }
 
@@ -3230,14 +3876,29 @@ function AppEleve(p){
   }
   var dejaInscrits=occupants.map(function(o){return o.slug;});
 
+  // Identité MJPC utilisable ici : session valide, élève AU REGISTRE de la classe de
+  // la séance, ni absent, ni déjà installé sur cette tablette. Sinon : portail natif.
+  function identiteMJPCDispo(){
+    var sess=null;
+    try{ sess=lireSessionMJPC(); }catch(e){ return null; }
+    if(!sess || sess.is_prof===true) return null;
+    var idn=validerEleveMJPC(sess, classes);
+    if(!idn) return null;
+    if(idn.classe!==slug) return null;                       // identifié, mais pas sur cette séance
+    if(absents.indexOf(idn.cle)!==-1) return null;
+    if(dejaInscrits.indexOf(idn.cle)!==-1) return null;
+    return idn;
+  }
+
   if(occupants.length===0){
     return h("div",{className:"eleve"},
       h("div",{className:"hdr"},
         h("button",{className:"btn-back",onClick:function(){setTable("");},title:"Changer de tablette (annule l'inscription)."},"← Table"),
         h("h2",null,"Table "+table.slice(1)+" — connexion")),
       h("div",{className:"form-wrap"},
-        h("p",{className:"muted",style:{textAlign:"center",marginBottom:14}},"Le premier élève de la table tape son nom + prénom."),
-        h(FormConnexion,{eleves:eleves,absents:absents,dejaInscrits:dejaInscrits,onValider:ajouterOccupant})),
+        h(ShuntMJPC,{identite:identiteMJPCDispo(),onValider:ajouterOccupant}),
+        h("p",{className:"muted",style:{textAlign:"center",marginBottom:14}},txt("eleve_premier_occupant")),
+        h(FormConnexion,{eleves:eleves,absents:absents,dejaInscrits:dejaInscrits,codesTest:session&&session.codesTest,onValider:ajouterOccupant})),
       h(HelpFab,{role:"eleve"}));
   }
 
@@ -3249,11 +3910,12 @@ function AppEleve(p){
         h("h2",null,"Ajouter un élève")),
       h("div",{className:"form-wrap"},
         h("p",{className:"muted",style:{textAlign:"center",marginBottom:14}},"Tape ton nom + prénom. Tu rejoins la Table "+table.slice(1)+".")),
-        h(FormConnexion,{eleves:eleves,absents:absents,dejaInscrits:dejaInscrits,
+        h(ShuntMJPC,{identite:identiteMJPCDispo(),onValider:ajouterOccupant}),
+        h(FormConnexion,{eleves:eleves,absents:absents,dejaInscrits:dejaInscrits,codesTest:session&&session.codesTest,
           onCancel:function(){setAddOpen(false);},onValider:ajouterOccupant}),
       h(HelpFab,{role:"eleve"}));
   }
-  return h(EleveVote,{table:table,occupants:occupants,session:session,reg:reg,absents:absents,
+  return h(EleveVote,{table:table,occupants:occupants,session:session,reg:reg,absents:absents,test:estSessionTest(session),
     onAddOccupant:function(){setAddOpen(true);},
     onRemoveOccupant:retirerOccupant,
     onChangerOccupants:changerOccupants, onBack:p.onBack});
@@ -3381,7 +4043,7 @@ function PhaseBilan(p){
   if(!p.lecteurEstIci){
     return h("div",{className:"eleve-vote-wait"},
       h("div",{className:"big"},"✅"),
-      h("div",{className:"vote-titre"},"Évaluation terminée"),
+      h("div",{className:"vote-titre"},txt("eleve_eval_terminee")),
       h("p",{className:"muted"},prenom(p.reader)+" consulte son bilan."));
   }
   return h("div",{className:"bilan"},
@@ -3448,7 +4110,7 @@ function PanneauSpontane(p){
             seulApresDesist
               ? h(React.Fragment,null,
                   h("div",{style:{fontWeight:700,color:"var(--violet)"}}, "⏸ Tu t'es désisté"),
-                  h("div",{style:{fontSize:".82rem",color:"var(--gris)",marginTop:2}}, "Tu repasseras dès qu'un autre s'inscrit. Tu peux aussi recliquer « Je veux lire » plus bas pour relancer la file."))
+                  h("div",{style:{fontSize:".82rem",color:"var(--gris)",marginTop:2}}, txt("eleve_repassera")))
               : h(React.Fragment,null,
                   h("div",{style:{fontWeight:700,color:"var(--violet)"}}, "⏳ Tu es "+(posFile===1?"le prochain !":(posFile+"e dans la file"))),
                   h("div",{style:{fontSize:".82rem",color:"var(--gris)",marginTop:2}},
@@ -3689,11 +4351,19 @@ function EleveVote(p){
     // 6) Applaudimètre live (par défaut)
     return h(React.Fragment,null,
       h("div",{className:"zones-multi zones-"+occupants.length},
-        occupants.map(function(occ){
+        occupants.map(function(occ,zi){
           var jeLis = reader === occ.nom;
-          return h("div",{className:"zone-occ"+(jeLis?" zone-lecteur":""),key:occ.slug},
-            h("div",{className:"zone-hdr"},
-              h("span",{className:"zone-name"}, prenom(occ.nom)),
+          var coul = couleurZone(zi);
+          // L'élève doit voir SANS AMBIGUÏTÉ qu'il tape dans SON espace : son nom complet,
+          // sa couleur, et la marque que son identité a été vérifiée à l'entrée.
+          return h("div",{className:"zone-occ"+(jeLis?" zone-lecteur":""),key:occ.slug,
+              style:jeLis?null:{borderColor:coul.trait,background:coul.fond}},
+            h("div",{className:"zone-hdr",style:{borderBottom:"1px solid "+coul.trait,paddingBottom:4}},
+              h("span",{className:"zone-name"},
+                h("span",{style:{color:coul.trait,fontWeight:900}},"● "),
+                occ.nom,
+                occ.atteste? h("span",{style:{fontSize:".72rem",fontWeight:700,color:coul.trait,marginLeft:6},
+                  title:"Ton identité a été vérifiée à l'entrée : c'est bien ton espace."},"✓ vérifié") : null),
               h("button",{className:"zone-rm",onClick:function(){
                 if(confirm("Retirer "+prenom(occ.nom)+" de cette tablette ?")) p.onRemoveOccupant(occ.slug);
               },title:"Retirer "+prenom(occ.nom)+" de cette tablette."},"×")),
@@ -3739,6 +4409,19 @@ function EleveVote(p){
       reader
         ? h(React.Fragment,null,h("div",{className:"lbl"},"on écoute"),h("div",{className:"who"},"🎤 "+prenom(reader)))
         : h("div",{className:"who"},"⏳ attends le prof")),
+    p.test? h("div",{style:{margin:"6px 8px 0",padding:"6px 10px",borderRadius:8,background:"rgba(245,158,11,.16)",border:"1.5px dashed #f59e0b",fontSize:".78rem",fontWeight:700,textAlign:"center",color:"var(--noir)"}},
+      "⚙️ MODE TEST — élèves fictifs, rien n'est enregistré pour de vrai") : null,
+    // Q7 (amélioration pédagogique n°4) : on écoute MIEUX quand on sait ce qu'on écoute.
+    // Les critères sont montrés AVANT que quiconque lise, tant qu'aucun lecteur n'est désigné.
+    (!reader && !enVote && !enBilan) ? h("div",{style:{margin:"10px 8px 0",padding:"12px 14px",borderRadius:12,background:"#fff",border:"2px solid var(--bordure)"}},
+      h("div",{style:{fontWeight:800,marginBottom:8,fontSize:".95rem"}},"Ce que tu vas écouter :"),
+      h("div",{style:{display:"flex",flexWrap:"wrap",gap:8}},
+        (reg.criteres||[]).map(function(c,i){
+          return h("div",{key:i,style:{flex:"1 1 45%",minWidth:130,padding:"8px 10px",borderRadius:10,background:"rgba(124,92,255,.06)",border:"1px solid rgba(124,92,255,.25)"}},
+            h("div",{style:{fontSize:"1.2rem"}},c.emoji),
+            h("div",{style:{fontWeight:700,fontSize:".86rem"}},c.label),
+            c.questionVotant? h("div",{style:{fontSize:".78rem",color:"var(--gris)",marginTop:2,lineHeight:1.35}},c.questionVotant) : null);
+        }))) : null,
     renderPhase(),
     // Bouton « ajouter un élève » : uniquement pendant la phase de connexion,
     // c'est-à-dire avant que le 1er lecteur ait été désigné. Après, les élèves restants
@@ -3838,6 +4521,156 @@ function PhonePilot(p){
   return h(AppProf,{onBack:p.onBack, test:p.test, onQuitTest:p.onQuitTest});
 }
 
+// ════════════ « MES LECTURES » — l'élève, hors séance (point 8) ════════════
+// À l'image de « Mes dictées » (dictee_universelle) et de « Mes évaluations » (QCM) :
+// lecture seule, aucun recalcul, aucune écriture. L'accès demande la même identité
+// attestée que la tablette : nom + prénom + code personnel, ou la session MJPC du site.
+function MesLectures(p){
+  var se=useState(null), eleve=se[0], setEleve=se[1];
+  var sc=useState(null), classes=sc[0], setClasses=sc[1];
+  var sn=useState(""), nom=sn[0], setNom=sn[1];
+  var sp=useState(""), pre=sp[0], setPre=sp[1];
+  var scd=useState(""), code=scd[0], setCode=scd[1];
+  var ser=useState(""), err=ser[0], setErr=ser[1];
+  var sb=useState(false), busy=sb[0], setBusy=sb[1];
+  var sl=useState(null), lectures=sl[0], setLectures=sl[1];
+
+  var smt=useState(false), modeTest=smt[0], setModeTest=smt[1];
+  var sct=useState(null), codesTest=sct[0], setCodesTest=sct[1];
+  useEffect(function(){
+    db.ref("classes").once("value").then(function(sn2){ setClasses(sn2.val()||{}); },function(){ setClasses({}); });
+    db.ref(DB_ROOT+"/session").once("value").then(function(sn3){
+      var s=sn3.val()||{};
+      setModeTest(s.modeTest===true);
+      setCodesTest(s.codesTest||null);
+    },function(){});
+  },[]);
+
+  // La classe n'est pas demandée à l'élève : elle est retrouvée au registre (patron M11).
+  // Les classes internes sont ignorées — SAUF en mode test, sans quoi l'écran ne serait
+  // pas éprouvable avec le jeu fictif, alors que le mode test doit incarner les vrais écrans.
+  function trouverClasse(cle){
+    var reg=classes||{};
+    var ks=Object.keys(reg);
+    for(var i=0;i<ks.length;i++){
+      if((estClasseTest(ks[i])||estClasseInterne(ks[i])) && !(ks[i]===TEST_SLUG && modeTest)) continue;
+      var r=extractEleves(reg[ks[i]],[]);
+      for(var j=0;j<r.length;j++){ if(san(r[j])===cle) return {classe:ks[i], nom:r[j]}; }
+    }
+    return null;
+  }
+  function charger(idn){
+    setEleve(idn); setLectures(null);
+    Promise.all([
+      db.ref("mjpcProfils/"+idn.classe+"/"+idn.cle+"/lectures").once("value").then(function(x){return x.val()||{};},function(){return {};}),
+      db.ref(DB_ROOT+"/historiqueLectures").once("value").then(function(x){return x.val()||{};},function(){return {};}),
+      db.ref(DB_ROOT+"/seances").once("value").then(function(x){return x.val()||{};},function(){return {};})
+    ]).then(function(r){
+      var profil=r[0], hist=r[1], seances=r[2];
+      var out={};
+      Object.keys(profil).forEach(function(pid){ out[pid]=Object.assign({}, profil[pid]); });
+      // les passages antérieurs à la remontée restent visibles : ils sont dans l'historique
+      Object.keys(hist).forEach(function(pid){
+        var hp=hist[pid]||{};
+        if(san(hp.lecteur||"")!==idn.cle) return;
+        if(hp.annule) return;
+        out[pid]=Object.assign({date:hp.finalisedAt||hp.startsAt||0, passageId:pid,
+          libelleSeance:"", test:hp.test===true}, out[pid]||{});
+        if(!out[pid].libelleSeance){
+          var sid=Object.keys(seances).filter(function(k){ return (seances[k].passages||{})[pid]; })[0];
+          if(sid) out[pid].libelleSeance=(seances[sid]||{}).libelle||"";
+        }
+        out[pid].termine=hp.bilanTermine===true;
+        out[pid].nbLignes=hp.nbLignes||null;
+      });
+      var arr=Object.keys(out).map(function(pid){ return Object.assign({pid:pid}, out[pid]); });
+      arr.sort(function(a,b){ return (b.date||0)-(a.date||0); });
+      setLectures(arr);
+    });
+  }
+  function valider(){
+    if(busy) return;
+    var n=nom.trim(), pr=pre.trim(), cd=code.trim();
+    if(!n||!pr){ setErr("Saisis ton nom ET ton prénom."); return; }
+    if(!cd){ setErr("Saisis ton code personnel."); return; }
+    var cle=san((n+" "+pr).toLowerCase());
+    var trouve=trouverClasse(cle);
+    if(!trouve){ setErr("Ce nom n'est pas dans les listes de classe. Vérifie l'orthographe."); return; }
+    setBusy(true);
+    lireCodeEleveMJPC(db, cle, codesTest).then(function(r){
+      setBusy(false);
+      if(r.etat==="erreur"){ setErr("Ton code n'a pas pu être vérifié pour l'instant. Réessaie dans un instant."); return; }
+      if(r.etat==="absent"){ setErr("Aucun code personnel n'est enregistré pour ce nom. Signale-le pour qu'on te le remette."); return; }
+      if(String(r.code)!==cd){ setErr("Ce code ne correspond pas à ce nom. Vérifie tes chiffres."); setCode(""); return; }
+      charger({cle:cle, nom:trouve.nom, classe:trouve.classe});
+    });
+  }
+  // Shunt §8 : identité du site, aucun mot à retaper
+  function identiteSite(){
+    var sess=null;
+    try{ sess=lireSessionMJPC(); }catch(e){ return null; }
+    if(!sess || sess.is_prof===true || !classes) return null;
+    return validerEleveMJPC(sess, classes);
+  }
+
+  if(!eleve){
+    var idn=identiteSite();
+    return h("div",{className:"eleve"},
+      h("div",{className:"hdr"},
+        h("button",{className:"btn-back",onClick:p.onBack,title:"Retour à l'accueil."},"← Accueil"),
+        h("h2",null,"Mes lectures")),
+      h("div",{className:"form-wrap"},
+        classes===null? h("p",{className:"muted",style:{textAlign:"center"}},"Un instant…") :
+        h(React.Fragment,null,
+          idn? h("div",{style:{maxWidth:420,margin:"0 auto 16px",padding:"12px 14px",background:"rgba(124,92,255,.08)",border:"1.5px solid rgba(124,92,255,.35)",borderRadius:12,textAlign:"center"}},
+            h("div",{style:{fontSize:".85rem",color:"var(--gris)",marginBottom:8}},"Tu es déjà identifié sur le site :"),
+            h("button",{className:"btn btn-violet btn-lg",style:{width:"100%"},onClick:function(){charger(idn);},
+              title:"Voir tes lectures avec l'identité déjà vérifiée sur le site MJPC."},"✓ C'est moi — "+idn.nom)) : null,
+          h("p",{className:"muted",style:{textAlign:"center",marginBottom:14}},"Retrouve les passages que tu as déjà lus. Tape ton nom, ton prénom et ton code personnel."),
+          h("div",{className:"form-connect"},
+            h("div",{className:"field"},h("label",null,"Nom"),
+              h("input",{value:nom,onChange:function(e){setNom(e.target.value);setErr("");},autoFocus:true,
+                onKeyDown:function(e){if(e.key==="Enter")valider();},placeholder:"DUPONT",autoCapitalize:"characters"})),
+            h("div",{className:"field"},h("label",null,"Prénom"),
+              h("input",{value:pre,onChange:function(e){setPre(e.target.value);setErr("");},
+                onKeyDown:function(e){if(e.key==="Enter")valider();},placeholder:"Léa",autoCapitalize:"words"})),
+            h("div",{className:"field"},h("label",null,"Ton code personnel"),
+              h("input",{type:"password",value:code,onChange:function(e){setCode(e.target.value);setErr("");},
+                onKeyDown:function(e){if(e.key==="Enter")valider();},placeholder:"••••",inputMode:"numeric",
+                autoComplete:"off",style:{letterSpacing:".3em",textAlign:"center"}})),
+            err? h("div",{className:"form-err"},err) : null,
+            h("div",{className:"btn-row"},
+              h("button",{className:"btn btn-violet btn-lg",style:{flex:1,opacity:busy?.6:1},disabled:busy,onClick:valider,
+                title:"Vérifie ton nom au registre de ta classe et ton code personnel."}, busy?"Vérification…":"Voir mes lectures"))))),
+      h(HelpFab,{role:"eleve"}));
+  }
+
+  return h("div",{className:"eleve"},
+    h("div",{className:"hdr"},
+      h("button",{className:"btn-back",onClick:function(){setEleve(null);setLectures(null);setCode("");},title:"Revenir à l'écran d'identification."},"← Retour"),
+      h("h2",null,"Mes lectures")),
+    h("div",{className:"wrap"},
+      h("div",{className:"card"},
+        h("h3",null,"📖 "+eleve.nom),
+        h("div",{style:{fontSize:".85rem",color:"var(--gris)",marginBottom:10}},eleve.classe),
+        lectures===null? h("p",{className:"muted"},"Un instant…") :
+        (lectures.length===0
+          ? h("p",{className:"muted"},"Tu n'as pas encore lu à voix haute ici. Ton premier passage apparaîtra sur cette page.")
+          : h("div",{className:"seances-list"},
+              lectures.map(function(l){
+                return h("div",{key:l.pid,className:"seance-row"},
+                  h("div",{className:"seance-info"},
+                    h("div",{className:"seance-lib"}, l.libelleSeance||"Passage de lecture"),
+                    h("div",{className:"seance-meta"},
+                      (l.date? new Date(l.date).toLocaleDateString("fr-FR") : "date inconnue")
+                      + (l.nbLignes? " · "+l.nbLignes+" ligne"+(l.nbLignes>1?"s":"") : "")
+                      + (l.test? " · essai" : ""))),
+                  h("div",{style:{fontSize:".82rem",fontWeight:700,color:l.termine?"#16a34a":"var(--gris)"}},
+                    l.termine? "✅ évalué" : "en cours"));
+              }))))),
+    h(HelpFab,{role:"eleve"}));
+}
+
 // ════════════ ROUTEUR ════════════
 function CodeGate(p){
   var sc=useState(""), code=sc[0], setCode=sc[1];
@@ -3864,6 +4697,31 @@ function App(){
   var sm=useState(null), mode=sm[0], setMode=sm[1];
   var stt=useState(false), test=stt[0], setTest=stt[1];
   var sa=useState(function(){try{return sessionStorage.getItem("am_auth")==="1";}catch(e){return false;}}), auth=sa[0], setAuth=sa[1];
+  var sqe=useState(""), quitErr=sqe[0], setQuitErr=sqe[1];
+  var sqb=useState(false), quitBusy=sqb[0], setQuitBusy=sqb[1];
+  // Le mode test est porté par la SESSION, plus par un état React seul : il survit
+  // à un rechargement, se voit sur tous les postes et depuis la modale du site.
+  useEffect(function(){
+    var r=db.ref(DB_ROOT+"/session/modeTest");
+    var f=r.on("value",function(s){ setTest(s.val()===true); });
+    return function(){ r.off("value",f); };
+  },[]);
+  // Surcharge des textes élève : ce que le professeur a écrit prime sur le seed.
+  var stx=useState(0), setTextesV=stx[1];
+  useEffect(function(){
+    var r=db.ref(DB_ROOT+"/session/textes");
+    var f=r.on("value",function(s){ TEXTES_SURCHARGE=s.val()||{}; setTextesV(function(n){return n+1;}); });
+    return function(){ r.off("value",f); };
+  },[]);
+  // ── Shunt §8 du socle 1.1.0 : le professeur déjà connecté au site MJPC entre
+  // directement (leçon M9 : is_prof → authentifié, sans repasser par le code).
+  // Sans session MJPC, le portail natif de l'app est inchangé.
+  var ssh=useState(false), shuntProf=ssh[0], setShuntProf=ssh[1];
+  useEffect(function(){
+    var sess=null;
+    try{ sess=lireSessionMJPC(); }catch(e){ sess=null; }
+    if(sess && sess.is_prof===true){ setAuth(true); setShuntProf(true); }
+  },[]);
   useEffect(function(){
     var q=new URLSearchParams(window.location.search);
     var md=q.get("mode"), vw=q.get("view");
@@ -3871,23 +4729,39 @@ function App(){
     else if(vw==="phone") setMode("phone");
     else if(md==="prof") setMode("prof");
     else if(md==="eleve") setMode("eleve");
+    else if(md==="mesLectures"||vw==="mesLectures") setMode("mesLectures");   // ouverture directe depuis le site
   },[]);
+  // La sortie du test ne s'annonce QUE si tout a été supprimé. Un refus du serveur
+  // laisse le mode test actif, affiche les chemins fautifs, et ne remet pas la session
+  // à zéro : mieux vaut un test qui refuse de sortir qu'un résidu invisible.
   function quitterTest(){
-    db.ref("classes/"+TEST_SLUG).remove();
-    db.ref(DB_ROOT+"/live").remove();
-    db.ref(DB_ROOT+"/compliments").remove();
-    db.ref(DB_ROOT+"/liveSnapshot").remove();
-    db.ref(DB_ROOT+"/session").update({classeSlug:"", reader:"", demarreeLe:null, sessionId:null, absents:[], passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null});
-    setTest(false); setMode(null);
+    if(quitBusy) return;
+    setQuitBusy(true); setQuitErr("");
+    purgeTestMJPC(db, {volatils:true, classe:true}).then(function(pg){
+      if(!pg.ok){
+        setQuitBusy(false);
+        setQuitErr("Le mode test n'est pas sorti proprement : "+pg.refus.length+" élément(s) n'ont pas pu être supprimés — "
+          + pg.refus.map(function(x){ return x.chemin+" ("+x.message+")"; }).join(" · ")
+          + ". Les données fictives sont encore présentes : réessaie avant de démarrer une séance réelle.");
+        return null;
+      }
+      return db.ref(DB_ROOT+"/session").update({classeSlug:"", reader:"", demarreeLe:null, sessionId:null, absents:[], passageId:"", startedAt:null, messageFinIdx:null, pauseStartedAt:null, pausedDuration:0, phaseLockee:null, modeTest:null, codesTest:null})
+        .then(function(){ setQuitBusy(false); setTest(false); setMode(null); });
+    }).catch(function(e){
+      setQuitBusy(false);
+      setQuitErr("La sortie du mode test a échoué : "+((e&&e.message)||"erreur inconnue")+". Des données fictives sont peut-être encore présentes.");
+    });
   }
   // Gate code 1312 sur tout accès prof/tableau/téléphone (URL directe ou bouton accueil)
   if((mode==="prof"||mode==="board"||mode==="phone") && !auth){
     return h(CodeGate,{onOk:function(){setAuth(true);},onCancel:function(){setMode(null); try{window.history.replaceState({},"",window.location.pathname);}catch(e){}}});
   }
-  if(mode==="prof") return h(AppProf,{onBack:function(){setMode(null);},test:test,onQuitTest:quitterTest});
+  try{ window.__AM_VUE = mode || "accueil"; }catch(e){}     // décide où une alerte technique peut s'afficher
+  if(mode==="prof") return h(AppProf,{onBack:function(){setMode(null);},test:test,onQuitTest:quitterTest,quitErr:quitErr,quitBusy:quitBusy});
   if(mode==="board") return h(VueBoard,{onBack:function(){setMode(null);}});
-  if(mode==="phone") return h(PhonePilot,{onBack:function(){setMode(null);},test:test,onQuitTest:quitterTest});
+  if(mode==="phone") return h(PhonePilot,{onBack:function(){setMode(null);},test:test,onQuitTest:quitterTest,quitErr:quitErr,quitBusy:quitBusy});
   if(mode==="eleve") return h(AppEleve,{onBack:function(){setMode(null);}});
+  if(mode==="mesLectures") return h(MesLectures,{onBack:function(){setMode(null);}});
   return h(Accueil,{go:setMode,test:test,onTest:function(){setTest(true);}});
 }
 
@@ -3898,7 +4772,12 @@ function FbBanner(){
   return h("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:3000,background:"var(--rouge)",color:"#fff",padding:"9px 14px",fontSize:".84rem",fontWeight:700,textAlign:"center",lineHeight:1.35}},
     "⚠️ Config Firebase non renseignée — remplace les « REMPLACER… » en haut du fichier (puis déploie sur GitHub Pages). Sans ça, rien ne peut être enregistré.");
 }
-function Root(){ return h(React.Fragment,null, h(FbBanner), h(App)); }
+function PastilleVersion(){
+  return h("div",{style:{position:"fixed",bottom:10,right:10,zIndex:2500,background:"rgba(31,31,46,.72)",color:"#fff",
+      borderRadius:8,padding:"3px 8px",font:"700 11px system-ui,sans-serif",letterSpacing:".02em",pointerEvents:"none"},
+    title:"Version de l'application"}, "v"+APP_VERSION);
+}
+function Root(){ return h(React.Fragment,null, h(FbBanner), h(App), h(PastilleVersion)); }
 
 // ═══════ DEBUG : ErrorBoundary React pour capter les erreurs production-build ═══════
 // À retirer une fois le bug Cannot read 'slice' localisé.
@@ -3907,13 +4786,26 @@ ErrorBoundary.prototype = Object.create(React.Component.prototype);
 ErrorBoundary.prototype.constructor = ErrorBoundary;
 ErrorBoundary.getDerivedStateFromError = function(error){ return {err:error, stack:(error&&error.stack)||""}; };
 ErrorBoundary.prototype.componentDidCatch = function(error, info){
-  this.setState({err:error, stack:(error&&error.stack||"")+"\n\n--- React component stack ---"+(info&&info.componentStack||"")});
+  var pile=(error&&error.stack||"")+"\n\n--- React component stack ---"+(info&&info.componentStack||"");
+  __amJournaliser("erreur React", (error&&error.message)||error, pile);
+  this.setState({err:error, stack:pile});
 };
 ErrorBoundary.prototype.render = function(){
   if(this.state.err){
-    var full = "🐞 ERREUR REACT\n" + String(this.state.err && this.state.err.message || this.state.err) + "\n\n" + this.state.stack;
+    var full = "ERREUR REACT\n" + String(this.state.err && this.state.err.message || this.state.err) + "\n\n" + this.state.stack;
+    // Vue tableau ou tablette élève : PAS de trace de pile devant la classe. Un écran
+    // sobre, et l'incident est déjà journalisé dans le nœud de diagnostic.
+    if(!__amVuePrivee()){
+      return h("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,textAlign:"center",background:"var(--fond)",color:"var(--noir)"}},
+        h("div",{style:{fontSize:"2.6rem",marginBottom:10}},"⏸"),
+        h("div",{style:{fontWeight:800,fontSize:"1.05rem",marginBottom:6}},"L'écran s'est arrêté un instant."),
+        h("p",{style:{fontSize:".92rem",lineHeight:1.5,maxWidth:420,color:"var(--gris)"}},"Rien de ce qui a déjà été enregistré n'est perdu. Recharge cette page pour reprendre."),
+        h("button",{className:"btn btn-violet btn-lg",style:{marginTop:16},onClick:function(){window.location.reload();},
+          title:"Recharger la page pour reprendre là où on en était."},"🔄 Recharger"));
+    }
+    // Écran professeur : la trace complète, copiable, parce que c'est ici qu'elle sert.
     return h("div",{style:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"#dc2626",color:"#fff",padding:16,fontFamily:"monospace",fontSize:12,zIndex:99999,overflow:"auto"}},
-      h("div",{style:{fontSize:18,fontWeight:900,marginBottom:8}},"🐞 ERREUR REACT CAPTÉE"),
+      h("div",{style:{fontSize:18,fontWeight:900,marginBottom:8}},"🐞 Incident technique — écran professeur"),
       h("div",{style:{display:"flex",gap:8,marginBottom:12,position:"sticky",top:0,background:"#dc2626",padding:"4px 0"}},
         h("button",{id:"__rb_copy",style:{background:"#fff",color:"#dc2626",border:0,padding:"10px 16px",borderRadius:6,fontWeight:800,fontSize:13,cursor:"pointer"},
           onClick:function(ev){
