@@ -49,6 +49,10 @@
 - commit `fd4b44d0de` · 394 508 o · md5 `2af3b0428890f865ec1d4967153b6af8` · v8.5.1
 - **Motif** : micro — rendu initial vide à l'endroit prof/fantôme (personne ne chargeait `/classes` à l'endroit ; `_isPubAny` → `_lvlClasses` → liste vide → aucun chapitre publié par classe visible ; l'aller-retour Ctrl+Espace les chargeait via `_renderLensBar`). `loadPublished` attend désormais `loadClasses` avant le premier `applyPublished`.
 
+### POINT DE RETOUR — `applause_meter.html` AVANT M14 (27/07/2026)
+- commit `650aa0ec7b` · 565 216 o · md5 `11a8971573b6e27bdde8722fc726f5ec` · socle 1.0.0, sans version d'app
+- **Motif** : M14 « passe + code » — socle 1.1.0+shunt, portail à code par zone, mode test patron QCM (6 fictifs, purge vérifiée), corbeille format A, présence, dictionnaire, diagnostic, mouchard côté prof, pastille 2.0.0, critères en amont, Mes lectures, tactile 480.
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
