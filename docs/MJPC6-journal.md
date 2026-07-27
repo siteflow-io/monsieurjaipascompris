@@ -80,6 +80,13 @@ Deux bugs constatés par Paul en navigant niveau par niveau (captures fournies),
 **Preuves au banc (fichier corrigé)** : clic Analyse → retour Chapitres : `tab-analyse` repasse à `none` (accumulation corrigée) · `applyPublished('6e')` hors admin : fiche 3e masquée · compteur « 0 fiche » en 6e.
 **Noté sans correctif** : l'URL ne suit pas la navigation de niveau (`?n=3e` affiché en 6ème) — mineur, versé au chantier du site. Le comportement admin « onglets non publiés visibles à opacité réduite » est VOULU (M12) : le constat de Paul « apparaît même non publié » était la conjonction des deux bugs ci-dessus.
 
+### 27/07 — PROMOTION micro · `index.html` v8.5.2 (commit `7c8d0a9aab`, md5 `dcbc4afe4d31a0b56bbd11c80cb045fb`, 395 148 o)
+**Bug constaté par Paul (captures)** : à l'arrivée sur `?n=6e`, l'onglet Chapitres est VIDE (pas même le message « aucun chapitre »), alors que le chapitre 1 est publié pour 6e Saint-Michel ; après un aller-retour Ctrl+Espace, le chapitre apparaît. Systématique, pas une course réseau.
+**Cause, prouvée au banc sur le parcours réel (vrai hub, session prof à l'ENDROIT)** : côté prof-endroit (et fantôme), la visibilité passe par `_isPubAny` → `_lvlClasses` → `classesData`. Or PERSONNE ne charge `/classes` à l'endroit — seul l'ENVERS le fait (`_renderLensBar` a un garde `loadClasses`+re-render). Liste de classes vide → aucun chapitre publié PAR CLASSE n'est visible → rendu vide. La bascule Ctrl+Espace charge les classes ; au retour, tout s'affiche. Les ÉLÈVES n'étaient pas touchés (`isPubFor` lit `node.published` directement, sans passer par `classesData`).
+**Correctif (15 lignes)** : `loadPublished` attend `loadClasses` avant le premier `applyPublished` quand `_classesLoaded` est faux.
+**Preuve avant/après, même banc (endroit, vraies données)** : v8.5.1 → conteneur brut, `classes:false`, chapitre INVISIBLE ; v8.5.2 → « Chapitre 1, Le monstre aux limites de l'humain » AFFICHÉ dès l'arrivée, `classes:true`.
+**Leçon de banc consignée** : une réponse interceptée par le harnais doit porter `Access-Control-Allow-Origin:*` (depuis `file://`, sans cet en-tête le fetch échoue et les `.catch` du site masquent tout en silence — le banc avait d'abord conclu à tort).
+
 ## FORMAT D'UN CAS — trois niveaux, et le troisième n'est pas garanti
 ```
 AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
