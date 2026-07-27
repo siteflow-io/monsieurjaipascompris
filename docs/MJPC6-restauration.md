@@ -29,6 +29,18 @@
 - commit `167ad67e2e` · 790 029 o · md5 `05b38757b8bd33ff4acba5c2963d47d2` · socle 1.0.0
 - **Motif** : M13 — vendorisation, socle 1.1.0 + shunt élève ET prof, portail par lane sur `/codes`, **verrou de classe du poste LEVÉ** (décision Paul : postes mixtes en étude), chapitre par lane, seed régénéré mécaniquement (S0-⑥), mode test 16bis (portail réel éprouvé, purge vérifiée), corbeille sur delChapter, présence hub, nav 2 niveaux, dictionnaire de textes, diagnostic, tactile 390.
 
+### POINT DE RETOUR — `analyse_logique.html` AVANT LOT-COUTURES (27/07/2026)
+- commit `e0a3392fb1` · 522047 o · md5 `93fb6e32fa4243afd2fc344fc9bca510` · v2.0.0
+- **Motif** : LOT-COUTURES — gestes de base (Modifier/Supprimer/Dupliquer, verrou texte, archive avant destruction), sous-onglet 🧪 Outils, deep-link ?travail=, corbeille vers racine canonique.
+
+### POINT DE RETOUR — `dictee_universelle.html` AVANT LOT-COUTURES (27/07/2026)
+- commit `833bdda5a1` · 1956829 o · md5 `f8362a876ceefe1dc1e6d7f668f00848` · v2.0.0→2.0.1
+- **Motif** : LOT-COUTURES — corbeille _meta.chemin+data si paths.length===1.
+
+### POINT DE RETOUR — `worktrack.html` AVANT LOT-COUTURES (27/07/2026)
+- commit `c6e17d54a8` · 1017258 o · md5 `9bd370fb43940b9cba9ba495d5cf2eb1` · 2026-07-23a→27a
+- **Motif** : LOT-COUTURES — corbeille contenu:→data: (bug M13, bouton Restaurer).
+
 ## La convention
 **Paul écrit `BUG` (seul, en majuscules) → la conscience restaure IMMÉDIATEMENT l'app concernée dans son état d'avant la dernière promotion, sans poser de question, sans diagnostic préalable.**
 - Le diagnostic vient APRÈS, une fois l'usage rendu.
