@@ -355,6 +355,11 @@ Ces décisions COMBLENT les manques de la doctrine du site §XIII avant passatio
 **MOT DU BOUTON — VALIDÉ PAR PAUL LE 29/07 : « CONSERVER EN L'ÉTAT ».** Le mot « figer » était **interdit** depuis la décision de Paul du 18/07 (trois textes du débat disaient « les évaluations que ton groupe a envoyées (figées) » ; « figé » est devenu « conservé » partout, **y compris côté prof**). Le libellé retenu emploie donc le vocabulaire déjà en production : un vocabulaire cohérent vaut mieux qu'un mot plus juste isolément.
 **RESTE OUVERT sur ce fil** : la PORTÉE du geste — conserver en l'état porte-t-il sur le DOCUMENT ou sur UNE DE SES APPARITIONS ? La question ne se pose pas pour un document ancré (un seul point d'affichage) mais se pose pleinement pour une transversale liée à trois endroits.
 
+### SITE-COURS · QUESTION EN DETTE (posée le 29/07, réponse reportée par Paul : « on garde ça en dette »)
+**LA QUESTION** : quand Paul ouvre une préparation de l'an dernier, **qu'en sort-il** — quel morceau va-t-il chercher parce qu'il sait qu'il est là et qu'il ne veut pas le réécrire ? Les consignes sont acquises ; restent à identifier les autres (critères de réussite, objectifs, « À retenir » de grammaire, rappels de méthode, amorces pour élèves à aménagement, barèmes…). **Et la moitié qui décide de la forme** : ce morceau est-il remis TEL QUEL, ou retouché presque toujours ?
+**POURQUOI ELLE COMMANDE LA FORME DE LA BANQUE** : ce qui revient identique appelle une **liste cliquable** (la banque de consignes telle que conçue). Ce qui est systématiquement retouché appelle autre chose — un **point de départ qu'on modifie**, ce qui suppose que la banque garde la version d'origine ET ne gonfle pas d'une variante à chaque usage. Troisième réponse possible et utile : « je refais tout à chaque fois », qui signifierait que la banque doit rester marginale.
+**À REPRENDRE au cadrage de SITE-COURS-2**, dont la banque de consignes fait partie. Ne pas coder la banque sans cette réponse : on choisirait sa forme à l'aveugle.
+
 ## XII. CE QUI RESTE À TRANCHER
 - La **nature par défaut** des items existants (proposition : `"acte"`).
 - Le **nom du champ** de nature (ni `type` ni `kind` : collision).
