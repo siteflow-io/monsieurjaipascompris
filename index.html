@@ -693,6 +693,89 @@ body.admin-mode .admin-only { display: block; }
 .uni-input{width:100%;padding:8px 10px;border:1px solid rgba(127,127,127,.5);border-radius:6px;font-size:15px;margin-top:4px;box-sizing:border-box;background:transparent;color:inherit}
 .uni-info p{margin:8px 0;font-size:14px;line-height:1.5}
 </style>
+<style>
+/* ═══ ATELIER DE COMPOSITION (SITE-COURS-1) — écran prof plein écran ═══ */
+#atelier-ecran{display:none;position:fixed;inset:0;z-index:7000;background:#12100d;overflow:auto;-webkit-overflow-scrolling:touch}
+#atelier-ecran.at-actif{display:block}
+body.at-corps-fige{overflow:hidden}
+.at-fermer{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;padding:8px 12px;background:linear-gradient(#12100d 60%,transparent)}
+.at-btn{font:inherit;font-size:.86rem;background:#2a2620;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px 14px;min-height:44px;min-width:44px;cursor:pointer}
+.at-btn:hover{background:#37322a}
+.at-btn:disabled{opacity:.4;cursor:default}
+.at-btn-prim{background:#8a6d2f;border-color:#a8874a;color:#fff}
+.at-btn-prim:hover{background:#9d7d38}
+.at-btn-danger{border-color:#8a4a3a;color:#e8b0a0}
+.at-btn-min{padding:10px 12px;font-size:.8rem}
+.at-btn-plus{margin-top:6px;border-style:dashed}
+.at-btn-piston{border-radius:20px}
+.at-piston-actif{background:#5a4a20;border-color:#a8874a}
+.at-zone{padding:0 14px 40px;max-width:1500px;margin:0 auto}
+.at-attente,.at-vide{color:#b8ad93;padding:30px 10px;font-size:.95rem}
+.at-h2{color:#f0e8d8;font-size:1.3rem;margin:6px 0 14px}
+.at-h2-sub{color:#8a7f6a;font-size:.85rem;font-weight:400}
+.at-liste-tete{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.at-bandeau-test{background:#4a3a14;color:#f0d890;border:1px solid #8a6d2f;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:.86rem}
+.at-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.at-carte{background:#1d1a15;border:1px solid #3a352c;border-radius:10px;padding:12px}
+.at-carte-t{color:#f0e8d8;font-weight:600;margin-bottom:3px}
+.at-carte-m{color:#8a7f6a;font-size:.78rem;margin-bottom:10px}
+.at-carte-b{display:flex;gap:8px;flex-wrap:wrap}
+/* — composition : deux colonnes, empilées sous 900px (décision Q2) — */
+.at-compo{display:flex;gap:14px;align-items:flex-start}
+.at-gauche{flex:0 0 46%;max-width:46%}
+.at-droite{flex:1;position:sticky;top:8px}
+@media (max-width:900px){
+  .at-compo{flex-direction:column}
+  .at-gauche,.at-droite{flex:none;max-width:none;width:100%;position:static}
+  .at-apercu{height:70vh}
+}
+.at-barre-haut{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:4px 0 10px}
+.at-titre-doc{flex:1;min-width:150px;font:inherit;font-size:1rem;background:#1d1a15;border:1px solid #4a4438;border-radius:8px;color:#f0e8d8;padding:10px 12px;min-height:44px}
+.at-etat{font-size:.78rem;color:#b8ad93}
+.at-etat-ok{color:#8fc98f}
+.at-etat-echec{color:#e8a090}
+.at-produits{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px}
+.at-prod-lib{color:#8a7f6a;font-size:.82rem}
+.at-ratt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#1d1a15;border:1px solid #3a352c;border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.at-ratt-l{color:#b8ad93;font-size:.85rem}
+.at-sel{font:inherit;font-size:.85rem;background:#2a2620;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px;min-height:44px;max-width:100%}
+.at-ifo{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:#8a7f6a;cursor:pointer;font-size:1rem}
+.at-ifo:hover{color:#d0c5a8}
+.at-groupe{background:#1d1a15;border:1px solid #3a352c;border-radius:10px;padding:10px 12px;margin:0 0 12px}
+.at-groupe-t{color:#f0e8d8;font-weight:700;font-size:.95rem;margin-bottom:6px;display:flex;align-items:center;gap:2px}
+.at-sg{margin:0 0 8px}
+.at-sg-t{color:#8a7f6a;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin:8px 0 2px}
+.at-case{border-radius:8px;padding:2px 4px}
+.at-case.at-cochee{background:#242019}
+.at-case-l{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer;color:#e8e0d0;font-size:.9rem}
+.at-case-l input[type=checkbox]{width:20px;height:20px;accent-color:#a8874a;flex:none}
+.at-grise .at-case-lib{color:#7a7264}
+.at-grise .at-case-l input[type=checkbox]{opacity:.5}
+.at-case-reserve{display:flex;flex-direction:column;padding:8px 6px;opacity:.75}
+.at-case-reserve .at-case-lib{color:#7a7264;font-size:.9rem}
+.at-reserve-m{color:#8a6d2f;font-size:.76rem;margin-top:2px}
+.at-champs{padding:2px 6px 8px 30px}
+.at-champ{margin:6px 0}
+.at-ch-l{display:block;color:#8a7f6a;font-size:.74rem;margin-bottom:3px}
+.at-in{width:100%;font:inherit;font-size:.88rem;background:#12100d;border:1px solid #4a4438;border-radius:8px;color:#f0e8d8;padding:10px;min-height:44px}
+.at-area{min-height:64px;resize:vertical}
+.at-reforme .at-ch-l{color:#7a8aa8}
+.at-reforme .at-in{border-color:#3a4458}
+.at-blocs{padding:2px 6px 8px 30px}
+.at-bloc{border:1px solid #3a352c;border-radius:8px;padding:8px 10px;margin:6px 0;background:#17140f}
+.at-bloc-t{display:flex;justify-content:space-between;align-items:center;color:#b8ad93;font-size:.8rem;margin-bottom:4px}
+.at-bloc-btns{display:flex;gap:6px}
+.at-ap-barre{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 8px}
+.at-ap-t{color:#f0e8d8;font-weight:700;font-size:.92rem}
+.at-ap-sub{color:#8a7f6a;font-weight:400;font-size:.78rem}
+.at-ap-compte{color:#e8e0d0;font-size:.84rem;padding:0 6px}
+.at-apercu{width:100%;height:calc(100vh - 120px);min-height:420px;border:1px solid #3a352c;border-radius:10px;background:#f4f1ea}
+.at-modale{position:fixed;inset:0;z-index:7400;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:18px}
+.at-modale-c{background:#1d1a15;border:1px solid #4a4438;border-radius:12px;max-width:480px;width:100%;padding:18px}
+.at-modale-m{color:#e8e0d0;font-size:.92rem;line-height:1.5;margin-bottom:14px}
+.at-modale-b{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+/* ═══ fin CSS atelier ═══ */
+</style>
 </head>
 <body>
 <div class="stars" id="stars"></div>
@@ -853,6 +936,7 @@ body.admin-mode .admin-only { display: block; }
         <button class="tprof-section-btn" data-section="annonces" onclick="showProfSection('annonces')"><span class="tps-icon">📢</span>Annonces aux élèves</button>
         <button class="tprof-section-btn" data-section="brevet" onclick="showProfSection('brevet')"><span class="tps-icon">🎓</span>Dates du brevet</button>
         <button class="tprof-section-btn" data-section="taxo" onclick="showProfSection('taxo')"><span class="tps-icon">📚</span>Taxonomie</button>
+        <button class="tprof-section-btn" onclick="atelierOuvrir()"><span class="tps-icon">🛠</span>Atelier</button>
         <div class="tprof-sidebar-label">Système</div>
         <button class="tprof-section-btn" data-section="config" onclick="showProfSection('config')"><span class="tps-icon">⚙</span>Configuration &amp; Firebase</button>
         <button class="tprof-section-btn" data-section="presence" onclick="showProfSection('presence')"><span class="tps-icon">📡</span>Présence live</button>
@@ -953,6 +1037,11 @@ body.admin-mode .admin-only { display: block; }
 </div>
 <div class="proto-badge" id="proto-badge" onclick="handleBadgeTap()"></div>
 </body>
+<!-- ═══ ATELIER DE COMPOSITION (SITE-COURS-1) — écran prof ═══ -->
+<div id="atelier-ecran">
+  <div class="at-fermer"><button class="at-btn" onclick="atelierFermer()">✕ Fermer l’atelier</button></div>
+  <div class="at-zone" id="at-zone"></div>
+</div>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // ROADMAP — fonctionnalités à développer
@@ -2004,8 +2093,8 @@ function publierManifeste(db){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.5.2";
-var APP_VERSION_DATE="2026-07-22";
+var APP_VERSION="8.6.0";
+var APP_VERSION_DATE="2026-07-29";
 var MJPC_CORE_VERSION="1.0.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
@@ -2020,7 +2109,7 @@ var MJPC_APP = {
 var MJPC_MANIFESTE = {
   // M8 : les deux nœuds du lot 1 sont nommés explicitement. Ils vivent SOUS "site",
   // déjà déclaré — mais un contrat qui se lit ne se devine pas par l'ancêtre.
-  noeuds: ["site","site/annonces","site/config","eleves_index","codes"],   // /codes rendu par le débat (14/07) : les codes personnels sont créés et gérés ICI
+  noeuds: ["site","site/annonces","site/config","site/atelier","eleves_index","codes"],   // /codes rendu par le débat (14/07) : les codes personnels sont créés et gérés ICI
   notions: []
 };
 var MJPC_PURGE = {
@@ -2028,7 +2117,7 @@ var MJPC_PURGE = {
   // nœuds de conception ajoutés en M8, pour que la purge de rentrée les VOIE.
   // /taxonomie : propriétaire = manifeste dédié « taxonomie » (preserver vérifié
   // au hub le 19/07) ; index CO-ÉCRIT via l'éditeur M8bis — rien à déclarer ici.
-  preserver: ["site","site/annonces","site/config"],   // chapitres publiés par niveau + annonces + réglages : conception pure
+  preserver: ["site","site/annonces","site/config","site/atelier"],   // chapitres publiés par niveau + annonces + réglages : conception pure
   purger:    ["eleves_index","codes"]   // index élèves + codes personnels : nouvelles classes → nouveaux codes à la rentrée
 };
 function publierManifesteREST(){
@@ -4949,5 +5038,1267 @@ function openAdminTool(tool){document.getElementById('admin-tools-menu').classLi
 function closeViewer(){document.getElementById('doc-viewer').classList.remove('visible');document.getElementById('doc-viewer-frame').src='about:blank';trackClose();}
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.getElementById('doc-viewer').classList.contains('visible'))closeViewer();});
 document.addEventListener('click',function(e){var menu=document.getElementById('admin-tools-menu');var btn=document.getElementById('admin-tools-btn');if(menu&&btn&&!menu.contains(e.target)&&!btn.contains(e.target))menu.classList.remove('visible');});
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ATELIER DE COMPOSITION — SITE-COURS-1 · § SCHÉMA DES COMPOSANTES
+   Une source unique décrit chaque composante ; l'éditeur, le rendu écran et
+   le rendu imprimé en DÉCOULENT (patron : EVAL_TYPES de worktrack).
+   Le composant se clone : version propre, publiée au manifeste (§XIII.1ter).
+   LE GABARIT N'ÉCRIT JAMAIS : il compose, il montre, il sort.
+   ══════════════════════════════════════════════════════════════════════════ */
+var ATELIER_VERSION='1.0.0';
+
+/* Constructeur compact d'une composante.
+   fam: A..K | nature: 'donnee'|'structure'|'rendu' | zone: place dans la feuille
+   extra: { champs, defaut, multiple, reforme, exige, depend, forme, reserve,
+            toujours_imprime, allegeable, info } */
+function AC(fam,nature,zone,lib,extra){
+  var o={famille:fam,nature:nature,zone:zone,libelle:lib,depend:[],defaut:false,multiple:false};
+  if(extra){for(var k in extra){if(Object.prototype.hasOwnProperty.call(extra,k))o[k]=extra[k];}}
+  return o;
+}
+/* Raccourcis de champs */
+function CH(k,l,kind){return {k:k,l:l,kind:kind||'text'};}
+
+/* ── Le registre — ~115 composantes, familles A B C D E H I J codées,
+      F G K + strate de niveau RÉSERVÉES (déclarées, visibles, jamais un trou) ── */
+var ATELIER_COMPOSANTES={
+
+/* A · IDENTIFICATION */
+titre:            AC('A','structure','entete',"Afficher le titre de la feuille",{defaut:true,forme:'titre',champs:[CH('texte','Titre')]}),
+sous_titre:       AC('A','structure','entete',"Afficher un sous-titre",{forme:'sous_titre',champs:[CH('texte','Sous-titre')]}),
+nom_eleve:        AC('A','donnee','entete',"Afficher le nom de l’élève",{exige:'eleve',forme:'meta',info:"Va chercher le nom de l’élève rattaché à la feuille."}),
+classe:           AC('A','donnee','entete',"Afficher la classe",{exige:'classe',forme:'meta'}),
+niveau:           AC('A','donnee','entete',"Afficher le niveau",{exige:'niveau',forme:'meta'}),
+groupe:           AC('A','structure','entete',"Afficher le groupe ou le binôme",{forme:'meta',champs:[CH('texte','Groupe / binôme')]}),
+chapitre:         AC('A','structure','entete',"Afficher le chapitre",{forme:'meta',champs:[CH('texte','Chapitre')]}),
+seance:           AC('A','structure','entete',"Afficher le numéro et le titre de la séance",{defaut:true,forme:'meta',champs:[CH('texte','Séance (n° et titre)')]}),
+date_seance:      AC('A','structure','entete',"Afficher la date de la séance",{defaut:true,forme:'meta',champs:[CH('texte','Date de la séance','date')]}),
+date_edition:     AC('A','donnee','pied',"Afficher la date d’édition à l’écran",{defaut:true,toujours_imprime:true,forme:'date_edition',info:"Sur le papier, la date d’édition est toujours imprimée : c’est elle qui date la feuille dans le cahier."}),
+annee_scolaire:   AC('A','donnee','entete',"Afficher l’année scolaire",{forme:'meta'}),
+periode:          AC('A','structure','entete',"Afficher la période (trimestre, séquence)",{forme:'meta',champs:[CH('texte','Période')]}),
+marque_mjpc:      AC('A','structure','pied',"Afficher la marque MJPC",{forme:'marque'}),
+code_personnel:   AC('A','donnee','entete',"Afficher le code personnel de l’élève",{exige:'eleve',forme:'meta',info:"Le code de connexion de l’élève, lu dans les données réelles."}),
+version_document: AC('A','donnee','pied',"Afficher le numéro de version de la feuille",{forme:'meta'}),
+
+/* B · ANCRAGE PÉDAGOGIQUE */
+objectif:         AC('B','structure','ancrage',"Afficher l’objectif de la séance",{defaut:true,forme:'ancrage_ligne',champs:[CH('texte','Objectif (« à la fin de cette séance, tu sauras… »)','area')]}),
+competences:      AC('B','structure','ancrage',"Afficher les compétences travaillées",{forme:'ancrage_liste',champs:[CH('items','Compétences','list')]}),
+notions:          AC('B','structure','ancrage',"Afficher les notions visées",{forme:'ancrage_liste',champs:[CH('items','Notions','list')],info:"Saisie libre pour l’instant ; le rattachement au référentiel des notions viendra avec la Concordance."}),
+domaine_socle:    AC('B','structure','ancrage',"Afficher le domaine du socle",{forme:'ancrage_ligne',champs:[CH('texte','Domaine du socle')]}),
+attendu_cycle:    AC('B','structure','ancrage',"Afficher l’attendu de fin de cycle",{forme:'ancrage_ligne',champs:[CH('texte','Attendu de fin de cycle','area')]}),
+prerequis:        AC('B','structure','ancrage',"Afficher les prérequis",{forme:'ancrage_liste',champs:[CH('items','Prérequis','list')]}),
+evalue:           AC('B','structure','ancrage',"Afficher ce qui sera évalué",{forme:'ancrage_ligne',champs:[CH('texte','Ce qui sera évalué','area')]}),
+criteres_reussite:AC('B','structure','ancrage',"Afficher les critères de réussite",{forme:'ancrage_liste',champs:[CH('items','Critères de réussite','list')]}),
+duree_prevue:     AC('B','structure','ancrage',"Afficher la durée prévue",{forme:'ancrage_ligne',champs:[CH('texte','Durée prévue')]}),
+place_progression:AC('B','structure','ancrage',"Afficher la place dans la progression annuelle",{forme:'ancrage_ligne',champs:[CH('texte','Place dans la progression')]}),
+parcours:         AC('B','structure','ancrage',"Afficher le parcours concerné",{forme:'ancrage_ligne',champs:[CH('texte','Parcours (citoyen, artistique, avenir, santé)')]}),
+
+/* C · CONTEXTE CULTUREL */
+oeuvre:           AC('C','structure','contexte',"Afficher l’œuvre étudiée",{forme:'ctx_ligne',champs:[CH('texte','Œuvre étudiée')]}),
+auteur:           AC('C','structure','contexte',"Afficher l’auteur",{forme:'ctx_ligne',champs:[CH('texte','Auteur')]}),
+siecle_courant:   AC('C','structure','contexte',"Afficher le siècle et le courant",{forme:'ctx_ligne',champs:[CH('texte','Siècle et courant')]}),
+corpus:           AC('C','structure','contexte',"Afficher le corpus (liste de textes)",{forme:'ctx_liste',champs:[CH('items','Textes du corpus','list')]}),
+genre:            AC('C','structure','contexte',"Afficher le genre",{forme:'ctx_ligne',champs:[CH('texte','Genre')]}),
+histoire_arts:    AC('C','structure','contexte',"Afficher le lien avec l’histoire des arts",{forme:'ctx_ligne',champs:[CH('texte','Histoire des arts','area')]}),
+prolongements:    AC('C','structure','contexte',"Afficher les prolongements (lecture, film, musée)",{forme:'ctx_liste',champs:[CH('items','Prolongements','list')]}),
+lexique_seance:   AC('C','structure','contexte',"Afficher le lexique de la séance",{forme:'ctx_lexique',champs:[CH('items','Lexique (mot = définition)','list')]}),
+etymologie:       AC('C','structure','contexte',"Afficher une étymologie",{forme:'ctx_ligne',champs:[CH('texte','Étymologie','area')]}),
+repere_chrono:    AC('C','structure','contexte',"Afficher un repère chronologique",{forme:'ctx_ligne',champs:[CH('texte','Repère chronologique')]}),
+
+/* D · CONTENU — blocs multiples : la case ACTIVE la zone, le « + » ajoute un
+   second bloc du même type (décision de la conscience, Q1) */
+texte_libre:      AC('D','structure','contenu',"Ajouter du texte libre",{multiple:true,forme:'bloc_texte',champs:[CH('texte','Texte','area')]}),
+liste_puces:      AC('D','structure','contenu',"Ajouter une liste à puces",{multiple:true,forme:'bloc_liste',champs:[CH('items','Éléments','list')]}),
+liste_numerotee:  AC('D','structure','contenu',"Ajouter une liste numérotée",{multiple:true,forme:'bloc_liste_num',champs:[CH('items','Éléments','list')]}),
+definition:       AC('D','structure','contenu',"Ajouter une définition",{multiple:true,forme:'bloc_encadre',encadre:'definition',champs:[CH('terme','Terme'),CH('texte','Définition','area')]}),
+a_retenir:        AC('D','structure','contenu',"Ajouter un encadré « À retenir »",{multiple:true,forme:'bloc_encadre',encadre:'retenir',champs:[CH('texte','À retenir','area')]}),
+attention_piege:  AC('D','structure','contenu',"Ajouter un encadré « Attention, piège fréquent »",{multiple:true,forme:'bloc_encadre',encadre:'attention',champs:[CH('texte','Le piège à éviter','area')]}),
+methode:          AC('D','structure','contenu',"Ajouter une méthode (les étapes)",{multiple:true,forme:'bloc_methode',champs:[CH('titre','Titre de la méthode'),CH('items','Étapes, dans l\u2019ordre','list')]}),
+exemple:          AC('D','structure','contenu',"Ajouter un exemple",{multiple:true,forme:'bloc_encadre',encadre:'exemple',champs:[CH('texte','Exemple','area')]}),
+contre_exemple:   AC('D','structure','contenu',"Ajouter un contre-exemple",{multiple:true,forme:'bloc_encadre',encadre:'contre',champs:[CH('texte','Contre-exemple','area')]}),
+citation:         AC('D','structure','contenu',"Ajouter une citation avec sa référence",{multiple:true,forme:'bloc_citation',champs:[CH('texte','Citation','area'),CH('ref','Référence (auteur, œuvre, page)')]}),
+extrait_numerote: AC('D','structure','contenu',"Ajouter un extrait long avec numérotation des lignes",{multiple:true,forme:'bloc_extrait',champs:[CH('texte','Extrait (une ligne du texte par ligne saisie)','area')]}),
+tableau:          AC('D','structure','contenu',"Ajouter un tableau",{multiple:true,forme:'bloc_tableau',champs:[CH('lignes','Lignes du tableau (cellules séparées par |, 1re ligne = en-têtes)','list')]}),
+colonnes_comp:    AC('D','structure','contenu',"Ajouter deux colonnes comparatives",{multiple:true,forme:'bloc_colonnes',champs:[CH('titre_g','Titre de gauche'),CH('texte_g','Colonne de gauche','area'),CH('titre_d','Titre de droite'),CH('texte_d','Colonne de droite','area')]}),
+frise:            AC('D','structure','contenu',"Ajouter une frise chronologique",{multiple:true,forme:'bloc_frise',champs:[CH('items','Repères (date = événement)','list')]}),
+schema:           AC('D','structure','contenu',"Ajouter une zone de schéma (à dessiner à la main)",{multiple:true,forme:'bloc_schema',champs:[CH('legende','Légende du schéma'),CH('hauteur','Hauteur (en lignes, 6 par défaut)')]}),
+image_drive:      AC('D','structure','contenu',"Ajouter une image (lien Drive existant)",{multiple:true,forme:'bloc_image',champs:[CH('url','Adresse de l\u2019image (lien public)'),CH('legende','Légende')],info:"Colle l’adresse d’une image déjà partagée. Le dépôt et le redimensionnement arriveront dans un prochain chantier."}),
+diapositive_json: AC('D','structure','contenu',"Ajouter une diapositive convertie",{reserve:true,mention:"Cette partie arrivera avec le chantier des diapositives : tes PowerPoint entreront ici."}),
+consigne:         AC('D','structure','contenu',"Ajouter une consigne",{multiple:true,forme:'bloc_consigne',reforme:true,champs:[CH('texte','Consigne','area')]}),
+question:         AC('D','structure','contenu',"Ajouter une question",{multiple:true,forme:'bloc_question',reforme:true,champs:[CH('texte','Question','area')]}),
+note_bas_page:    AC('D','structure','contenu',"Ajouter une note de bas de page",{multiple:true,forme:'bloc_note',champs:[CH('texte','Note','area')]}),
+
+/* E · TRAVAIL DE L'ÉLÈVE */
+zone_lignee:      AC('E','structure','travail',"Ajouter une zone lignée pour écrire",{multiple:true,forme:'bloc_zone_lignee',champs:[CH('lignes','Nombre de lignes (4 par défaut)')]}),
+zone_quadrillee:  AC('E','structure','travail',"Ajouter une zone quadrillée",{multiple:true,forme:'bloc_zone_quadri',champs:[CH('hauteur','Hauteur (en lignes, 5 par défaut)')]}),
+zone_vierge:      AC('E','structure','travail',"Ajouter une zone vierge",{multiple:true,forme:'bloc_zone_vierge',champs:[CH('hauteur','Hauteur (en lignes, 5 par défaut)')]}),
+cases_a_cocher:   AC('E','structure','travail',"Ajouter des cases à cocher",{multiple:true,forme:'bloc_cases',champs:[CH('items','Une ligne par case','list')]}),
+texte_a_trous:    AC('E','structure','travail',"Ajouter un texte à trous",{multiple:true,forme:'bloc_trous',allegeable:true,champs:[CH('texte','Texte — note chaque trou entre crochets : [réponse]','area')],info:"Sur le papier, chaque trou devient un blanc à compléter. La réponse entre crochets reste pour toi."}),
+appariement:      AC('E','structure','travail',"Ajouter un appariement (relier les paires)",{multiple:true,forme:'bloc_appariement',allegeable:true,champs:[CH('paires','Paires (gauche = droite, une par ligne)','list')]}),
+tableau_completer:AC('E','structure','travail',"Ajouter un tableau à compléter",{multiple:true,forme:'bloc_tableau_vide',champs:[CH('lignes','Lignes (cellules séparées par | ; laisse vide ce que l\u2019élève remplit)','list')]}),
+brouillon:        AC('E','structure','travail',"Ajouter une zone de brouillon",{multiple:true,forme:'bloc_brouillon',champs:[CH('hauteur','Hauteur (en lignes, 6 par défaut)')]}),
+consigne_transfo: AC('E','structure','travail',"Ajouter une consigne de transformation (réécriture)",{multiple:true,forme:'bloc_consigne',reforme:true,champs:[CH('texte','Consigne de réécriture','area')]}),
+sujet_redaction:  AC('E','structure','travail',"Ajouter un sujet de rédaction",{multiple:true,forme:'bloc_sujet',reforme:true,champs:[CH('texte','Sujet','area')]}),
+nb_mots:          AC('E','structure','travail',"Afficher le nombre de mots attendu",{forme:'trav_ligne',champs:[CH('texte','Nombre de mots attendu')]}),
+materiel:         AC('E','structure','travail',"Afficher le matériel nécessaire",{forme:'trav_liste',champs:[CH('items','Matériel','list')]}),
+modalite:         AC('E','structure','travail',"Afficher la modalité de travail",{forme:'trav_ligne',champs:[CH('texte','Modalité (seul, en binôme, en groupe, à l\u2019oral)')]}),
+bareme:           AC('E','structure','travail',"Afficher le barème",{forme:'bloc_bareme',champs:[CH('items','Critère = points, un par ligne','list')]}),
+note_sur:         AC('E','structure','travail',"Afficher un cadre de note",{depend:['bareme'],forme:'bloc_notecadre',champs:[CH('total','Note sur (20 par défaut)')]}),
+points_bonus:     AC('E','structure','travail',"Afficher les points bonus d’autocorrection",{forme:'trav_ligne',champs:[CH('texte','Points bonus')]}),
+temps_passe:      AC('E','structure','travail',"Afficher un cadre « temps passé »",{forme:'trav_cadre_libre',intitule_defaut:"Temps passé :"}),
+trace_app:        AC('E','structure','travail',"Afficher un cadre « trace du travail dans l’application »",{forme:'trav_cadre_libre',intitule_defaut:"Travail fait dans l\u2019application :"}),
+
+/* F · RÉSULTATS ET RETOUR — RÉSERVÉE (dépend des données des applications) */
+place_resultats:  AC('F','donnee','contenu',"Résultats et retour de l’élève",{reserve:true,mention:"Cette partie arrivera quand la feuille saura lire les résultats des applications (dictées, évaluations, débats)."}),
+
+/* G · ABSENCE ET RATTRAPAGE — RÉSERVÉE (chantier du rattrapage) */
+place_absence:    AC('G','donnee','contenu',"Absence et rattrapage",{reserve:true,mention:"Cette partie arrivera avec le chantier du rattrapage des absents."}),
+
+/* K · COMPOSANTES AGRÉGATIVES — RÉSERVÉE (profil longitudinal + Concordance) */
+place_agregats:   AC('K','donnee','contenu',"Historique et progression de l’élève",{reserve:true,mention:"Cette partie arrivera avec le profil de l’élève : la feuille pourra montrer ses dernières dictées, ses notions travaillées, sa progression."}),
+
+/* STRATE DE NIVEAU — RÉSERVÉE (spiralaire, morceau ④) */
+place_strates:    AC('N','rendu','contenu',"Strates par niveau (fiche spiralaire)",{reserve:true,mention:"Cette partie arrivera avec les fiches spiralaires : une même fiche portera ses strates de 6e, 5e, 4e, 3e."}),
+
+/* H · DIFFÉRENCIATION ET ACCESSIBILITÉ */
+consignes_reformulees:AC('H','rendu','differenciation',"Sortir les consignes reformulées en langage simple",{info:"Chaque consigne, question ou sujet porte un second texte : sa version explicitée. Cette case décide laquelle sort — la même fiche en deux versions d’un seul geste."}),
+explicitation_but:AC('H','structure','differenciation',"Afficher le but réel de la tâche",{forme:'diff_encadre',intitule_defaut:"Ce qu\u2019on te demande vraiment :",champs:[CH('texte','Le but réel, en clair','area')]}),
+une_consigne_par_ligne:AC('H','rendu','differenciation',"Afficher une seule consigne par ligne",{info:"Les consignes à plusieurs phrases sont découpées : une phrase par ligne."}),
+verbe_action:     AC('H','structure','differenciation',"Isoler et surligner le verbe d’action",{forme:'diff_verbe',champs:[CH('texte','Le verbe d\u2019action (ex. « souligne », « transforme »)')]}),
+mots_cles:        AC('H','structure','differenciation',"Mettre en évidence les mots-clés de la consigne",{forme:'diff_mots_cles',champs:[CH('items','Mots-clés','list')]}),
+lexique_marge:    AC('H','structure','differenciation',"Expliquer le lexique difficile en marge",{forme:'diff_lexique',champs:[CH('items','Mot = explication, un par ligne','list')]}),
+double_tache:     AC('H','structure','differenciation',"Supprimer la double tâche (dire ce que l’élève n’a pas à faire)",{forme:'diff_encadre',intitule_defaut:"Pour t\u2019all\u00e9ger :",champs:[CH('texte','Ce que l\u2019élève n\u2019a pas à faire (ex. « tu n\u2019as pas à recopier le texte »)','area')]}),
+sequencage:       AC('H','structure','differenciation',"Séquencer la tâche en étapes numérotées",{forme:'diff_etapes',champs:[CH('items','Étapes, dans l\u2019ordre','list')]}),
+point_verif:      AC('H','structure','differenciation',"Ajouter un point de vérification intermédiaire",{forme:'diff_encadre',intitule_defaut:"Point d\u2019\u00e9tape :",champs:[CH('texte','Ex. « quand tu as fini l\u2019étape 2, montre-moi »','area')]}),
+modelage:         AC('H','structure','differenciation',"Ajouter un exemple traité en entier (modelage)",{forme:'diff_encadre',intitule_defaut:"Un exemple fait en entier :",champs:[CH('texte','L\u2019exemple traité pas à pas','area')]}),
+amorce:           AC('H','structure','differenciation',"Donner une amorce de réponse",{forme:'diff_encadre',intitule_defaut:"Pour commencer :",champs:[CH('texte','Le début de phrase donné','area')]}),
+reduction_items:  AC('H','rendu','differenciation',"Sortir la version allégée des exercices",{info:"Les exercices qui portent une variante allégée (moins d’items, même exigence) sortent dans cette version."}),
+support_rappel:   AC('H','structure','differenciation',"Afficher un support de rappel sous les yeux",{forme:'diff_encadre',intitule_defaut:"Sous tes yeux :",champs:[CH('texte','La règle, la table, le rappel','area')]}),
+aides_graduees:   AC('H','structure','differenciation',"Ajouter une aide graduée en trois coups de pouce",{forme:'diff_aides',champs:[CH('a1','Coup de pouce 1','area'),CH('a2','Coup de pouce 2','area'),CH('a3','Coup de pouce 3','area')]}),
+temps_majore:     AC('H','structure','differenciation',"Signaler le temps majoré",{forme:'diff_ligne',intitule_defaut:"Temps majoré :",champs:[CH('texte','Ex. « tiers-temps »')]}),
+criteres_je:      AC('H','structure','differenciation',"Reformuler les critères de réussite à la première personne",{forme:'diff_criteres_je',intitule_defaut:"J\u2019ai r\u00e9ussi si\u2026",champs:[CH('items','Une ligne par critère (« j\u2019ai\u2026 »)','list')]}),
+case_compris:     AC('H','structure','differenciation',"Ajouter la case « j’ai compris la consigne »",{forme:'diff_case',intitule_defaut:"\u2610 J\u2019ai lu la consigne et je l\u2019ai comprise."}),
+si_je_bloque:     AC('H','structure','differenciation',"Afficher « ce que je fais si je bloque »",{forme:'diff_encadre',intitule_defaut:"Si je bloque :",champs:[CH('texte','Les gestes à faire (relire, demander, passer\u2026)','area')]}),
+police_adaptee:   AC('H','rendu','differenciation',"Sortir la feuille en police adaptée (dyslexie)",{info:"Police droite et large, lettres espacées."}),
+interligne:       AC('H','rendu','differenciation',"Augmenter l’interligne"),
+colonne_etroite:  AC('H','rendu','differenciation',"Présenter le texte en colonne étroite"),
+contraste:        AC('H','rendu','differenciation',"Renforcer le contraste"),
+sans_italique:    AC('H','rendu','differenciation',"Supprimer l’italique"),
+syllabation:      AC('H','rendu','differenciation',"Colorer les syllabes",{reserve:true,mention:"Cette aide arrivera plus tard : un découpage des syllabes approximatif ferait plus de mal que de bien, il sera livré quand il sera juste."}),
+numerotation_lignes:AC('H','rendu','differenciation',"Numéroter les lignes des textes",{info:"Numérote les lignes des extraits et textes à trous."}),
+
+/* I · LIENS ET SUITES */
+renvoi_app:       AC('I','structure','liens',"Afficher un renvoi vers l’application",{forme:'lien_ligne',intitule_defaut:"Sur le site :",champs:[CH('texte','Ce qu\u2019il faut ouvrir (ex. « la dictée du chapitre 3 »)')]}),
+renvoi_remediation:AC('I','structure','liens',"Afficher un renvoi vers la remédiation par notion",{forme:'lien_ligne',intitule_defaut:"Pour t\u2019entra\u00eener :",champs:[CH('texte','La notion et où la retravailler')]}),
+seance_suivante:  AC('I','structure','liens',"Afficher la séance suivante",{forme:'lien_ligne',intitule_defaut:"La prochaine fois :",champs:[CH('texte','Séance suivante')]}),
+travail_a_faire:  AC('I','structure','liens',"Afficher le travail à faire pour la prochaine fois",{forme:'lien_encadre',intitule_defaut:"Pour la prochaine fois :",champs:[CH('texte','Le travail à faire','area')]}),
+echeance:         AC('I','structure','liens',"Afficher une échéance",{forme:'lien_ligne',intitule_defaut:"\u00c0 rendre pour le :",champs:[CH('texte','Date','date')]}),
+qr_code:          AC('I','structure','liens',"Ajouter un QR code",{reserve:true,mention:"Le QR code arrivera plus tard : il sera livré quand il pourra être vérifié par un vrai scan."}),
+lien_en_ligne:    AC('I','structure','liens',"Afficher le lien de consultation en ligne",{forme:'lien_ligne',intitule_defaut:"\u00c0 retrouver en ligne :",champs:[CH('texte','Adresse')]}),
+
+/* J · MISE EN PAGE */
+format_demi:      AC('J','rendu','mise_en_page',"Sortir en demi-A4 (deux par feuille)",{info:"La feuille tient en une demi-page A4 ; à l’impression, deux se découpent par feuille."}),
+deux_par_page:    AC('J','rendu','mise_en_page',"Imprimer deux exemplaires par page",{depend:['format_demi']}),
+marges_larges:    AC('J','rendu','mise_en_page',"Élargir les marges"),
+pointilles:       AC('J','rendu','mise_en_page',"Ajouter les pointillés de découpe",{depend:['format_demi']}),
+saut_de_page:     AC('J','structure','contenu',"Insérer un saut de page",{multiple:true,forme:'bloc_saut',info:"S’insère entre deux blocs : ce qui suit commence sur une nouvelle page."}),
+numerotation_lot: AC('J','rendu','mise_en_page',"Numéroter les exemplaires d’un lot (n / N)",{exige:'classe',info:"Quand la feuille sort pour toute une classe, chaque exemplaire porte son numéro."}),
+pied_de_page:     AC('J','structure','pied',"Afficher un pied de page",{forme:'pied_texte',champs:[CH('texte','Texte du pied de page')]}),
+orientation_paysage:AC('J','rendu','mise_en_page',"Imprimer en paysage"),
+mention_conserver:AC('J','structure','pied',"Afficher la mention « à conserver »",{forme:'pied_mention',intitule_defaut:"\u00c0 conserver dans le cahier."}),
+ecran_seul:       AC('J','rendu','mise_en_page',"Réserver la feuille à l’écran (ne s’imprime pas)"),
+impression_seule: AC('J','rendu','mise_en_page',"Réserver la feuille au papier (masquée à l’écran)")
+};
+
+/* ── LES PRODUITS : des boutons qui pré-cochent des lots de cases (les pistons
+      de combinaison de l'orgue). SEUL « Fiche de séance » est livré ici ;
+      les sept autres viennent au morceau ④. ── */
+var ATELIER_PRODUITS={
+  fiche_seance:{
+    libelle:'Fiche de séance',
+    info:"Prépare la feuille d\u2019une séance : en-tête complet, objectif, contenu de cours, travail de l\u2019élève, suites. Tu peux ensuite ajouter ou retirer ce que tu veux.",
+    cases:{titre:true,seance:true,date_seance:true,classe:true,niveau:true,chapitre:true,
+           date_edition:true,annee_scolaire:true,
+           objectif:true,notions:true,criteres_reussite:true,
+           a_retenir:true,consigne:true,
+           zone_lignee:true,
+           travail_a_faire:true,
+           mention_conserver:true}
+  }
+};
+
+/* ══ § GÉNÉRATEUR — un document HTML AUTONOME (charte sobre : noir sur blanc,
+      serif pour le texte long, patrons buildCopieHtml + bilansPrintHTML).
+      L'aperçu et l'impression sont CE MÊME document (srcdoc → print). ══ */
+
+function atEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"’":'&#39;'}[c];});}
+function atLignes(s){return String(s==null?'':s).split(/\n/);}
+function atMultiligne(s){return atLignes(s).map(atEsc).join('<br>');}
+function atListe(v){ /* champ kind 'list' : tableau ou texte à lignes */
+  if(Array.isArray(v))return v.filter(function(x){return String(x||'').trim();});
+  return atLignes(v).map(function(x){return x.trim();}).filter(Boolean);
+}
+/* Mélange déterministe (appariement statique) — pas de hasard : deux impressions identiques */
+function atOrdreSeme(n,seed){
+  var idx=[],i,h=0,s=String(seed||'x');
+  for(i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;}
+  for(i=0;i<n;i++)idx.push(i);
+  for(i=n-1;i>0;i--){h=(h*1103515245+12345)>>>0;var j=h%(i+1);var t=idx[i];idx[i]=idx[j];idx[j]=t;}
+  return idx;
+}
+/* NB : formatage date robuste */
+function atDateFr(v){
+  if(!v)return '';
+  var m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return m[3]+'/'+m[2]+'/'+m[1];
+  return String(v);
+}
+
+/* Le texte d'une composante 'reforme' : principal ou reformulation selon la bascule H */
+function atTexteOuReforme(vals,refs,cle,reformOn){
+  var p=(vals&&vals[cle])||'';
+  var r=(refs&&refs[cle])||'';
+  return (reformOn&&String(r).trim())?r:p;
+}
+
+/* ── Rendeurs de FORMES — fonctions NOMMÉES et linéaires, une par forme.
+      Chaque sortie porte data-c="<id>" : c'est le marqueur de la table de
+      couverture (prouver qu'une case cochée fait apparaître quelque chose). ── */
+var ATELIER_FORMES={};
+
+ATELIER_FORMES.titre=function(id,c,vals){return '<h1 class="f-titre" data-c="'+id+'">'+atEsc(vals.texte||'Sans titre')+'</h1>';};
+ATELIER_FORMES.sous_titre=function(id,c,vals){return '<div class="f-soustitre" data-c="'+id+'">'+atEsc(vals.texte||'')+'</div>';};
+ATELIER_FORMES.meta=function(id,c,vals,ctx){
+  var lib,val;
+  if(id==='nom_eleve'){lib='\u00c9l\u00e8ve';val=ctx.eleveNom||'';}
+  else if(id==='classe'){lib='Classe';val=ctx.classeNom||'';}
+  else if(id==='niveau'){lib='Niveau';val=ctx.niveau||'';}
+  else if(id==='code_personnel'){lib='Code personnel';val=ctx.eleveCode||'';}
+  else if(id==='annee_scolaire'){lib='Ann\u00e9e scolaire';val=ctx.anneeScolaire||'';}
+  else if(id==='version_document'){lib='Version';val='v'+(ctx.versionDoc||1);}
+  else if(id==='date_seance'){lib='Date de la s\u00e9ance';val=atDateFr(vals.texte);}
+  else if(id==='seance'){lib='S\u00e9ance';val=vals.texte||'';}
+  else if(id==='chapitre'){lib='Chapitre';val=vals.texte||'';}
+  else if(id==='groupe'){lib='Groupe';val=vals.texte||'';}
+  else if(id==='periode'){lib='P\u00e9riode';val=vals.texte||'';}
+  else {lib=id;val=vals.texte||'';}
+  return '<span class="f-meta" data-c="'+id+'"><span class="f-meta-l">'+atEsc(lib)+'</span> '+atEsc(val)+'</span>';
+};
+ATELIER_FORMES.date_edition=function(id,c,vals,ctx){
+  return '<span class="f-date-edition" data-c="'+id+'">\u00c9dit\u00e9e le '+atEsc(ctx.dateEdition||'')+'</span>';
+};
+ATELIER_FORMES.marque=function(id){return '<span class="f-marque" data-c="'+id+'">MJPC \u00b7 monsieurjaipascompris</span>';};
+
+ATELIER_FORMES.ancrage_ligne=function(id,c,vals){
+  var lib={objectif:'Objectif',domaine_socle:'Domaine du socle',attendu_cycle:'Attendu de fin de cycle',evalue:'Ce qui sera \u00e9valu\u00e9',duree_prevue:'Dur\u00e9e pr\u00e9vue',place_progression:'Dans la progression',parcours:'Parcours'}[id]||'';
+  return '<div class="f-ancrage-l" data-c="'+id+'"><b>'+atEsc(lib)+' :</b> '+atMultiligne(vals.texte||'')+'</div>';
+};
+ATELIER_FORMES.ancrage_liste=function(id,c,vals){
+  var lib={competences:'Comp\u00e9tences travaill\u00e9es',notions:'Notions vis\u00e9es',prerequis:'Pr\u00e9requis',criteres_reussite:'Crit\u00e8res de r\u00e9ussite'}[id]||'';
+  var items=atListe(vals.items);
+  return '<div class="f-ancrage-l" data-c="'+id+'"><b>'+atEsc(lib)+' :</b> '+items.map(atEsc).join(' \u00b7 ')+'</div>';
+};
+ATELIER_FORMES.ctx_ligne=function(id,c,vals){
+  var lib={oeuvre:'\u0152uvre',auteur:'Auteur',siecle_courant:'Si\u00e8cle et courant',genre:'Genre',histoire_arts:'Histoire des arts',etymologie:'\u00c9tymologie',repere_chrono:'Rep\u00e8re'}[id]||'';
+  return '<div class="f-ctx-l" data-c="'+id+'"><b>'+atEsc(lib)+' :</b> '+atMultiligne(vals.texte||'')+'</div>';
+};
+ATELIER_FORMES.ctx_liste=function(id,c,vals){
+  var lib={corpus:'Corpus',prolongements:'Pour aller plus loin'}[id]||'';
+  return '<div class="f-ctx-l" data-c="'+id+'"><b>'+atEsc(lib)+' :</b><ul class="f-ul">'+atListe(vals.items).map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ul></div>';
+};
+ATELIER_FORMES.ctx_lexique=function(id,c,vals){
+  var rows=atListe(vals.items).map(function(x){
+    var p=x.split('=');var mot=p.shift();return '<div class="f-lex-row"><b>'+atEsc((mot||'').trim())+'</b> \u2014 '+atEsc(p.join('=').trim())+'</div>';
+  }).join('');
+  return '<div class="f-ctx-lex" data-c="'+id+'"><div class="f-ctx-lex-t">Lexique de la s\u00e9ance</div>'+rows+'</div>';
+};
+
+/* Blocs de contenu (multiples) */
+ATELIER_FORMES.bloc_texte=function(id,c,vals){return '<div class="f-bloc" data-c="'+id+'">'+atMultiligne(vals.texte||'')+'</div>';};
+ATELIER_FORMES.bloc_liste=function(id,c,vals){return '<ul class="f-bloc f-ul" data-c="'+id+'">'+atListe(vals.items).map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ul>';};
+ATELIER_FORMES.bloc_liste_num=function(id,c,vals){return '<ol class="f-bloc f-ol" data-c="'+id+'">'+atListe(vals.items).map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ol>';};
+ATELIER_FORMES.bloc_encadre=function(id,c,vals){
+  var titres={definition:'D\u00e9finition',retenir:'\u00c0 retenir',attention:'\u26a0 Attention',exemple:'Exemple',contre:'Contre-exemple'};
+  var t=titres[c.encadre]||'';
+  var corps=(c.encadre==='definition'&&vals.terme)?('<b>'+atEsc(vals.terme)+'</b> \u2014 '+atMultiligne(vals.texte||'')):atMultiligne(vals.texte||'');
+  return '<div class="f-bloc f-encadre f-enc-'+atEsc(c.encadre)+'" data-c="'+id+'"><div class="f-enc-t">'+t+'</div><div>'+corps+'</div></div>';
+};
+ATELIER_FORMES.bloc_methode=function(id,c,vals){
+  return '<div class="f-bloc f-encadre f-enc-methode" data-c="'+id+'"><div class="f-enc-t">M\u00e9thode'+(vals.titre?' \u00b7 '+atEsc(vals.titre):'')+'</div><ol class="f-ol">'+atListe(vals.items).map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ol></div>';
+};
+ATELIER_FORMES.bloc_citation=function(id,c,vals){
+  return '<div class="f-bloc f-citation" data-c="'+id+'">\u00ab '+atMultiligne(vals.texte||'')+' \u00bb'+(vals.ref?'<div class="f-cit-ref">\u2014 '+atEsc(vals.ref)+'</div>':'')+'</div>';
+};
+ATELIER_FORMES.bloc_extrait=function(id,c,vals,ctx){
+  var lignes=atLignes(vals.texte||'');
+  var num=ctx.numLignes;
+  return '<div class="f-bloc f-extrait" data-c="'+id+'">'+lignes.map(function(l,i){
+    return '<div class="f-ext-l">'+(num?'<span class="f-ext-n">'+(i+1)+'</span>':'')+atEsc(l)+'</div>';
+  }).join('')+'</div>';
+};
+ATELIER_FORMES.bloc_tableau=function(id,c,vals){
+  var lignes=atListe(vals.lignes);
+  var h='<table class="f-bloc f-table" data-c="'+id+'">';
+  lignes.forEach(function(l,i){
+    var cells=l.split('|');
+    h+='<tr>'+cells.map(function(cell){return (i===0?'<th>':'<td>')+atEsc(cell.trim())+(i===0?'</th>':'</td>');}).join('')+'</tr>';
+  });
+  return h+'</table>';
+};
+ATELIER_FORMES.bloc_colonnes=function(id,c,vals){
+  return '<div class="f-bloc f-cols" data-c="'+id+'"><div class="f-col"><div class="f-col-t">'+atEsc(vals.titre_g||'')+'</div>'+atMultiligne(vals.texte_g||'')+'</div><div class="f-col"><div class="f-col-t">'+atEsc(vals.titre_d||'')+'</div>'+atMultiligne(vals.texte_d||'')+'</div></div>';
+};
+ATELIER_FORMES.bloc_frise=function(id,c,vals){
+  var items=atListe(vals.items).map(function(x){var p=x.split('=');var d=p.shift();return {d:(d||'').trim(),t:p.join('=').trim()};});
+  return '<div class="f-bloc f-frise" data-c="'+id+'">'+items.map(function(it){return '<div class="f-frise-it"><div class="f-frise-d">'+atEsc(it.d)+'</div><div class="f-frise-t">'+atEsc(it.t)+'</div></div>';}).join('<div class="f-frise-sep"></div>')+'</div>';
+};
+ATELIER_FORMES.bloc_schema=function(id,c,vals){
+  var h=parseInt(vals.hauteur,10)||6;
+  return '<div class="f-bloc f-schema" data-c="'+id+'" style="height:'+(h*1.6)+'em">'+(vals.legende?'<div class="f-schema-leg">'+atEsc(vals.legende)+'</div>':'')+'</div>';
+};
+ATELIER_FORMES.bloc_image=function(id,c,vals){
+  if(!String(vals.url||'').trim())return '<div class="f-bloc f-img-vide" data-c="'+id+'">[Image \u00e0 lier]</div>';
+  return '<figure class="f-bloc f-img" data-c="'+id+'"><img src="'+atEsc(vals.url)+'" alt="'+atEsc(vals.legende||'')+'">'+(vals.legende?'<figcaption>'+atEsc(vals.legende)+'</figcaption>':'')+'</figure>';
+};
+ATELIER_FORMES.bloc_consigne=function(id,c,vals,ctx,refs){
+  var t=atTexteOuReforme(vals,refs,'texte',ctx.reformOn);
+  var corps=ctx.uneParLigne?atLignes(t).filter(function(x){return x.trim();}).map(function(x){return '<div class="f-cons-l">\u25b8 '+atEsc(x)+'</div>';}).join(''):atMultiligne(t);
+  return '<div class="f-bloc f-consigne" data-c="'+id+'">'+(ctx.verbeAction?'<span class="f-verbe">'+atEsc(ctx.verbeAction)+'</span> ':'')+corps+(ctx.motsClesHtml||'')+'</div>';
+};
+ATELIER_FORMES.bloc_question=function(id,c,vals,ctx,refs){
+  var t=atTexteOuReforme(vals,refs,'texte',ctx.reformOn);
+  return '<div class="f-bloc f-question" data-c="'+id+'"><span class="f-q-p">?</span> '+atMultiligne(t)+'</div>';
+};
+ATELIER_FORMES.bloc_note=function(id,c,vals){return '<div class="f-bloc f-notebp" data-c="'+id+'">'+atMultiligne(vals.texte||'')+'</div>';};
+ATELIER_FORMES.bloc_saut=function(id){return '<div class="f-saut" data-c="'+id+'"></div>';};
+
+/* Zones de travail */
+function atZoneLignes(cls,n){var h='';for(var i=0;i<n;i++)h+='<div class="f-ligne"></div>';return '<div class="'+cls+'">'+h+'</div>';}
+ATELIER_FORMES.bloc_zone_lignee=function(id,c,vals){var n=parseInt(vals.lignes,10)||4;return '<div class="f-bloc" data-c="'+id+'">'+atZoneLignes('f-zl',n)+'</div>';};
+ATELIER_FORMES.bloc_zone_quadri=function(id,c,vals){var n=parseInt(vals.hauteur,10)||5;return '<div class="f-bloc f-zq" data-c="'+id+'" style="height:'+(n*1.6)+'em"></div>';};
+ATELIER_FORMES.bloc_zone_vierge=function(id,c,vals){var n=parseInt(vals.hauteur,10)||5;return '<div class="f-bloc f-zv" data-c="'+id+'" style="height:'+(n*1.6)+'em"></div>';};
+ATELIER_FORMES.bloc_cases=function(id,c,vals){
+  return '<div class="f-bloc" data-c="'+id+'">'+atListe(vals.items).map(function(x){return '<div class="f-case">\u2610 '+atEsc(x)+'</div>';}).join('')+'</div>';
+};
+ATELIER_FORMES.bloc_trous=function(id,c,vals,ctx,refs){
+  var t=(ctx.allegeOn&&String((refs&&refs.allege)||'').trim())?refs.allege:(vals.texte||'');
+  var html=atEsc(t).replace(/\[([^\]]*)\]/g,'<span class="f-trou"></span>');
+  return '<div class="f-bloc f-trous" data-c="'+id+'">'+html.split(/\n/).join('<br>')+'</div>';
+};
+ATELIER_FORMES.bloc_appariement=function(id,c,vals,ctx,refs){
+  var src=(ctx.allegeOn&&String((refs&&refs.allege)||'').trim())?refs.allege:(vals.paires||'');
+  var paires=atListe(src).map(function(x){var p=x.split('=');var g=p.shift();return {g:(g||'').trim(),d:p.join('=').trim()};});
+  var ordre=atOrdreSeme(paires.length,id+paires.length);
+  var h='<div class="f-bloc f-appar" data-c="'+id+'"><div class="f-ap-col">';
+  paires.forEach(function(p){h+='<div class="f-ap-it">'+atEsc(p.g)+' \u2022</div>';});
+  h+='</div><div class="f-ap-col">';
+  ordre.forEach(function(j){h+='<div class="f-ap-it">\u2022 '+atEsc(paires[j]?paires[j].d:'')+'</div>';});
+  return h+'</div></div>';
+};
+ATELIER_FORMES.bloc_tableau_vide=function(id,c,vals){
+  var lignes=atListe(vals.lignes);
+  var h='<table class="f-bloc f-table" data-c="'+id+'">';
+  lignes.forEach(function(l,i){
+    var cells=l.split('|');
+    h+='<tr>'+cells.map(function(cell){var cc=cell.trim();return (i===0?'<th>':'<td'+(cc?'':' class="f-td-vide"')+'>')+atEsc(cc)+(i===0?'</th>':'</td>');}).join('')+'</tr>';
+  });
+  return h+'</table>';
+};
+ATELIER_FORMES.bloc_brouillon=function(id,c,vals){var n=parseInt(vals.hauteur,10)||6;return '<div class="f-bloc f-brouillon" data-c="'+id+'" style="height:'+(n*1.6)+'em"><span class="f-br-t">Brouillon</span></div>';};
+ATELIER_FORMES.bloc_sujet=function(id,c,vals,ctx,refs){
+  var t=atTexteOuReforme(vals,refs,'texte',ctx.reformOn);
+  return '<div class="f-bloc f-encadre f-enc-sujet" data-c="'+id+'"><div class="f-enc-t">Sujet</div><div>'+atMultiligne(t)+'</div></div>';
+};
+ATELIER_FORMES.trav_ligne=function(id,c,vals){
+  var lib={nb_mots:'Longueur attendue',modalite:'Modalit\u00e9',points_bonus:'Points bonus'}[id]||'';
+  return '<div class="f-trav-l" data-c="'+id+'"><b>'+atEsc(lib)+' :</b> '+atEsc(vals.texte||'')+'</div>';
+};
+ATELIER_FORMES.trav_liste=function(id,c,vals){
+  return '<div class="f-trav-l" data-c="'+id+'"><b>Mat\u00e9riel :</b> '+atListe(vals.items).map(atEsc).join(' \u00b7 ')+'</div>';
+};
+ATELIER_FORMES.trav_cadre_libre=function(id,c,vals,ctx,refs,intitule){
+  return '<div class="f-trav-cadre" data-c="'+id+'"><b>'+atEsc(intitule)+'</b><span class="f-tc-blanc"></span></div>';
+};
+ATELIER_FORMES.bloc_bareme=function(id,c,vals){
+  var rows=atListe(vals.items).map(function(x){var p=x.split('=');var cr=p.shift();return '<tr><td>'+atEsc((cr||'').trim())+'</td><td class="f-bar-pts">'+atEsc(p.join('=').trim())+'</td></tr>';}).join('');
+  return '<table class="f-bloc f-table f-bareme" data-c="'+id+'"><tr><th>Bar\u00e8me</th><th>Points</th></tr>'+rows+'</table>';
+};
+ATELIER_FORMES.bloc_notecadre=function(id,c,vals){
+  return '<div class="f-notecadre" data-c="'+id+'"><span class="f-nc-blanc"></span> / '+atEsc(vals.total||'20')+'</div>';
+};
+
+/* Différenciation */
+ATELIER_FORMES.diff_encadre=function(id,c,vals,ctx,refs,intitule){
+  return '<div class="f-bloc f-encadre f-enc-diff" data-c="'+id+'"><div class="f-enc-t">'+atEsc(intitule)+'</div><div>'+atMultiligne(vals.texte||'')+'</div></div>';
+};
+ATELIER_FORMES.diff_ligne=function(id,c,vals,ctx,refs,intitule){
+  return '<div class="f-diff-l" data-c="'+id+'"><b>'+atEsc(intitule)+'</b> '+atEsc(vals.texte||'')+'</div>';
+};
+ATELIER_FORMES.diff_verbe=function(id,c,vals){
+  return '<div class="f-diff-l" data-c="'+id+'">Le geste \u00e0 faire : <span class="f-verbe">'+atEsc(vals.texte||'')+'</span></div>';
+};
+ATELIER_FORMES.diff_mots_cles=function(id,c,vals){
+  return '<div class="f-diff-l" data-c="'+id+'"><b>Les mots importants :</b> '+atListe(vals.items).map(function(x){return '<span class="f-mot-cle">'+atEsc(x)+'</span>';}).join(' ')+'</div>';
+};
+ATELIER_FORMES.diff_lexique=function(id,c,vals){
+  var rows=atListe(vals.items).map(function(x){var p=x.split('=');var mot=p.shift();return '<div class="f-lex-row"><b>'+atEsc((mot||'').trim())+'</b> : '+atEsc(p.join('=').trim())+'</div>';}).join('');
+  return '<div class="f-marge-lex" data-c="'+id+'"><div class="f-ctx-lex-t">Mots expliqu\u00e9s</div>'+rows+'</div>';
+};
+ATELIER_FORMES.diff_etapes=function(id,c,vals){
+  return '<div class="f-bloc f-encadre f-enc-diff" data-c="'+id+'"><div class="f-enc-t">\u00c9tape par \u00e9tape</div><ol class="f-ol">'+atListe(vals.items).map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ol></div>';
+};
+ATELIER_FORMES.diff_aides=function(id,c,vals){
+  var h='';['a1','a2','a3'].forEach(function(k,i){if(String(vals[k]||'').trim())h+='<div class="f-aide"><b>Coup de pouce '+(i+1)+' :</b> '+atMultiligne(vals[k])+'</div>';});
+  return '<div class="f-bloc f-aides" data-c="'+id+'">'+h+'</div>';
+};
+ATELIER_FORMES.diff_criteres_je=function(id,c,vals,ctx,refs,intitule){
+  return '<div class="f-bloc f-encadre f-enc-diff" data-c="'+id+'"><div class="f-enc-t">'+atEsc(intitule)+'</div>'+atListe(vals.items).map(function(x){return '<div class="f-case">\u2610 '+atEsc(x)+'</div>';}).join('')+'</div>';
+};
+ATELIER_FORMES.diff_case=function(id,c,vals,ctx,refs,intitule){
+  return '<div class="f-diff-l f-case" data-c="'+id+'">'+atEsc(intitule)+'</div>';
+};
+
+/* Liens et suites */
+ATELIER_FORMES.lien_ligne=function(id,c,vals,ctx,refs,intitule){
+  var v=(c.champs&&c.champs[0]&&c.champs[0].kind==='date')?atDateFr(vals.texte):atEsc(vals.texte||'');
+  return '<div class="f-lien-l" data-c="'+id+'"><b>'+atEsc(intitule)+'</b> '+v+'</div>';
+};
+ATELIER_FORMES.lien_encadre=function(id,c,vals,ctx,refs,intitule){
+  return '<div class="f-bloc f-encadre f-enc-suite" data-c="'+id+'"><div class="f-enc-t">'+atEsc(intitule)+'</div><div>'+atMultiligne(vals.texte||'')+'</div></div>';
+};
+ATELIER_FORMES.pied_texte=function(id,c,vals){return '<span class="f-pied-t" data-c="'+id+'">'+atEsc(vals.texte||'')+'</span>';};
+ATELIER_FORMES.pied_mention=function(id,c,vals,ctx,refs,intitule){return '<span class="f-pied-mention" data-c="'+id+'">'+atEsc(intitule)+'</span>';};
+
+/* ── LA FEUILLE ENTIÈRE — atelierDocumentHTML(doc, ctxEleve) → HTML autonome.
+      Fonction PURE : aucune écriture, aucune lecture réseau (§XIII.1ter). ── */
+function atelierIntitule(doc,id){
+  var c=ATELIER_COMPOSANTES[id];
+  var v=doc.valeurs&&doc.valeurs[id];
+  if(v&&typeof v.intitule==='string'&&v.intitule.trim())return v.intitule;
+  return (c&&c.intitule_defaut)||'';
+}
+function atelierRenduComposante(doc,id,vals,refs,ctx){
+  var c=ATELIER_COMPOSANTES[id];if(!c||c.reserve)return '';
+  var f=ATELIER_FORMES[c.forme];if(!f)return '';
+  return f(id,c,vals||{},ctx,refs||{},atelierIntitule(doc,id));
+}
+function atelierDocumentHTML(doc,ctxEleve,options){
+  options=options||{};
+  var cases=doc.cases||{};
+  function on(id){return cases[id]===true;}
+  var ctx={
+    eleveNom:(ctxEleve&&ctxEleve.nom)||'',
+    eleveCode:(ctxEleve&&ctxEleve.code)||'',
+    classeNom:(doc.rattachement&&doc.rattachement.classeNom)||(doc.rattachement&&doc.rattachement.classe)||'',
+    niveau:(doc.rattachement&&doc.rattachement.niveau)||'',
+    anneeScolaire:(typeof _anneeScolaire==='function')?_anneeScolaire():'',
+    versionDoc:(doc.dates&&doc.dates.versionDoc)||1,
+    dateEdition:atDateFr((doc.dates&&doc.dates.dateEdition)||'')||atDateFr(new Date().toISOString()),
+    reformOn:on('consignes_reformulees'),
+    allegeOn:on('reduction_items'),
+    uneParLigne:on('une_consigne_par_ligne'),
+    numLignes:on('numerotation_lignes'),
+    verbeAction:on('verbe_action')?((doc.valeurs&&doc.valeurs.verbe_action&&doc.valeurs.verbe_action.texte)||''):'',
+    motsClesHtml:''
+  };
+  if(on('mots_cles')){
+    var mk=atListe(doc.valeurs&&doc.valeurs.mots_cles&&doc.valeurs.mots_cles.items);
+    if(mk.length)ctx.motsClesHtml='<div class="f-diff-l" data-c="mots_cles"><b>Les mots importants :</b> '+mk.map(function(x){return '<span class="f-mot-cle">'+atEsc(x)+'</span>';}).join(' ')+'</div>';
+  }
+  /* Classes de rendu du document (nature 'rendu') */
+  var cls=['feuille'];
+  if(on('police_adaptee'))cls.push('r-dys');
+  if(on('interligne'))cls.push('r-interligne');
+  if(on('colonne_etroite'))cls.push('r-etroite');
+  if(on('contraste'))cls.push('r-contraste');
+  if(on('sans_italique'))cls.push('r-sans-ital');
+  if(on('format_demi'))cls.push('r-demi');
+  if(on('deux_par_page'))cls.push('r-deux');
+  if(on('marges_larges'))cls.push('r-marges');
+  if(on('pointilles'))cls.push('r-pointilles');
+  if(on('ecran_seul'))cls.push('r-ecran-seul');
+  if(on('impression_seule'))cls.push('r-impression-seule');
+  if(on('orientation_paysage'))cls.push('r-paysage');
+
+  /* En-tête (metas cochées) */
+  var enteteIds=['nom_eleve','classe','niveau','groupe','chapitre','seance','date_seance','annee_scolaire','periode','code_personnel'];
+  var metas=enteteIds.filter(on).map(function(id){
+    return atelierRenduComposante(doc,id,doc.valeurs&&doc.valeurs[id],doc.reformulations&&doc.reformulations[id],ctx);
+  }).join('');
+  var h='<div class="'+cls.join(' ')+'">';
+  h+='<div class="f-entete">'+(metas?'<div class="f-metas">'+metas+'</div>':'');
+  if(on('titre'))h+=atelierRenduComposante(doc,'titre',doc.valeurs&&doc.valeurs.titre,null,ctx);
+  if(on('sous_titre'))h+=atelierRenduComposante(doc,'sous_titre',doc.valeurs&&doc.valeurs.sous_titre,null,ctx);
+  h+='</div>';
+
+  /* Ancrage */
+  var ancrageIds=['objectif','competences','notions','domaine_socle','attendu_cycle','prerequis','evalue','criteres_reussite','duree_prevue','place_progression','parcours'];
+  var anc=ancrageIds.filter(on).map(function(id){return atelierRenduComposante(doc,id,doc.valeurs&&doc.valeurs[id],null,ctx);}).join('');
+  if(anc)h+='<div class="f-ancrage">'+anc+'</div>';
+
+  /* Contexte culturel (+ lexique de marge H) */
+  var ctxIds=['oeuvre','auteur','siecle_courant','corpus','genre','histoire_arts','prolongements','lexique_seance','etymologie','repere_chrono'];
+  var cx=ctxIds.filter(on).map(function(id){return atelierRenduComposante(doc,id,doc.valeurs&&doc.valeurs[id],null,ctx);}).join('');
+  if(cx)h+='<div class="f-contexte">'+cx+'</div>';
+  if(on('lexique_marge'))h+=atelierRenduComposante(doc,'lexique_marge',doc.valeurs&&doc.valeurs.lexique_marge,null,ctx);
+
+  /* Différenciation « en tête de tâche » */
+  var diffAvant=['explicitation_but','verbe_action','double_tache','support_rappel','temps_majore'];
+  diffAvant.forEach(function(id){if(on(id)&&id!=='verbe_action')h+=atelierRenduComposante(doc,id,doc.valeurs&&doc.valeurs[id],null,ctx);});
+
+  /* CONTENU : blocs ordonnés — la case active le TYPE, les blocs du type inactif ne sortent pas */
+  var contenu=(doc.contenu||[]).filter(function(b){return b&&on(b.id)&&ATELIER_COMPOSANTES[b.id]&&!ATELIER_COMPOSANTES[b.id].reserve;});
+  if(contenu.length){
+    h+='<div class="f-contenu">'+contenu.map(function(b){
+      return atelierRenduComposante(doc,b.id,b.valeurs,b.reformulations,ctx);
+    }).join('')+'</div>';
+  }
+
+  /* Places réservées cochées : rien ne sort côté feuille (elles n'existent qu'à l'éditeur, grisées) */
+
+  /* Travail (composantes uniques) */
+  var travIds=['sequencage','point_verif','modelage','amorce','aides_graduees','nb_mots','materiel','modalite','bareme','note_sur','points_bonus','temps_passe','trace_app','criteres_je','case_compris','si_je_bloque'];
+  var tv=travIds.filter(on).map(function(id){return atelierRenduComposante(doc,id,doc.valeurs&&doc.valeurs[id],null,ctx);}).join('');
+  if(tv)h+='<div class="f-travail">'+tv+'</div>';
+
+  /* Liens et suites */
+  var lienIds=['renvoi_app','renvoi_remediation','seance_suivante','travail_a_faire','echeance','lien_en_ligne'];
+  var li=lienIds.filter(on).map(function(id){return atelierRenduComposante(doc,id,doc.valeurs&&doc.valeurs[id],null,ctx);}).join('');
+  if(li)h+='<div class="f-liens">'+li+'</div>';
+
+  /* Pied : pied de page + mention à conserver + numérotation de lot + marque +
+     version + DATE D'ÉDITION (invariant : toujours imprimée) */
+  h+='<div class="f-pied">';
+  if(on('pied_de_page'))h+=atelierRenduComposante(doc,'pied_de_page',doc.valeurs&&doc.valeurs.pied_de_page,null,ctx);
+  if(on('mention_conserver'))h+=atelierRenduComposante(doc,'mention_conserver',doc.valeurs&&doc.valeurs.mention_conserver,null,ctx);
+  if(on('numerotation_lot')&&ctxEleve&&ctxEleve.rang)h+='<span class="f-num-lot" data-c="numerotation_lot">'+ctxEleve.rang+' / '+ctxEleve.total+'</span>';
+  if(on('marque_mjpc'))h+=atelierRenduComposante(doc,'marque_mjpc',null,null,ctx);
+  if(on('version_document'))h+=atelierRenduComposante(doc,'version_document',null,null,ctx);
+  /* La date d'édition : à l'écran si cochée ; à l'IMPRESSION toujours (classe f-de-forcee + CSS print) */
+  h+='<span class="'+(on('date_edition')?'':'f-de-ecran-off ')+'f-de-forcee"><span class="f-date-edition" data-c="date_edition">\u00c9dit\u00e9e le '+atEsc(ctx.dateEdition)+'</span></span>';
+  h+='</div></div>';
+  return h;
+}
+
+/* Le DOCUMENT COMPLET autonome (page HTML avec sa charte sobre et son @media print) —
+   c'est LUI que l'aperçu affiche (srcdoc) et que l'impression imprime. */
+function atelierPageHTML(doc,listeCtx,options){
+  options=options||{};
+  var corps='';
+  var lot=listeCtx&&listeCtx.length?listeCtx:[null];
+  lot.forEach(function(ctxE,i){
+    corps+=atelierDocumentHTML(doc,ctxE?Object.assign({},ctxE,{rang:i+1,total:lot.length}):null,options);
+  });
+  return '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    +'<title>'+atEsc((doc.valeurs&&doc.valeurs.titre&&doc.valeurs.titre.texte)||doc.titre||'Feuille')+'</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">'
+    +'<sty'+'le>'+atelierCharteCSS()+'<\/sty'+'le></head><body class="'+(doc.cases&&doc.cases.orientation_paysage?'b-paysage':'')+'">'
+    +corps+'</body></html>';
+}
+
+/* LA CHARTE SOBRE — EN DUR (décision : la charte est une décision de conception).
+   Noir sur blanc, serif pour le texte long, hiérarchie explicite.
+   Patrons : buildCopieHtml (correction) et bilansPrintHTML (débat). */
+function atelierCharteCSS(){
+  return ''
+  +'*{box-sizing:border-box}'
+  +'body{margin:0;background:#f4f1ea;font-family:"EB Garamond",Georgia,"Times New Roman",serif;color:#1c1c1c;line-height:1.45}'
+  +'.feuille{max-width:186mm;margin:14px auto;background:#fff;border:1px solid #d4cbb8;padding:12mm 14mm;box-shadow:0 4px 18px rgba(0,0,0,.07);position:relative}'
+  +'.f-entete{border-bottom:1.6px solid #333;padding-bottom:6px;margin-bottom:10px}'
+  +'.f-metas{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:system-ui,sans-serif;font-size:.72rem;color:#444;margin-bottom:6px}'
+  +'.f-meta-l{color:#8a7a5a;font-weight:600;text-transform:uppercase;font-size:.62rem;letter-spacing:.04em;margin-right:3px}'
+  +'.f-titre{font-size:1.45rem;margin:6px 0 2px;font-weight:600}'
+  +'.f-soustitre{font-style:italic;color:#4a3a1f;font-size:1.02rem}'
+  +'.f-ancrage{background:#faf8f2;border:1px solid #e5dfd0;border-left:3px solid #8a7a5a;padding:7px 11px;margin:0 0 12px;font-size:.9rem}'
+  +'.f-ancrage-l{margin:2px 0}'
+  +'.f-contexte{font-size:.9rem;margin:0 0 12px}'
+  +'.f-ctx-l{margin:2px 0}'
+  +'.f-ctx-lex,.f-marge-lex{border:1px dashed #b8ad93;padding:6px 10px;margin:8px 0;font-size:.88rem}'
+  +'.f-ctx-lex-t{font-family:system-ui,sans-serif;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8a7a5a;margin-bottom:3px}'
+  +'.f-lex-row{margin:1px 0}'
+  +'.f-contenu{margin:0 0 10px}'
+  +'.f-bloc{margin:0 0 10px}'
+  +'.f-ul,.f-ol{margin:4px 0;padding-left:22px}'
+  +'.f-encadre{border:1.4px solid #333;padding:8px 12px}'
+  +'.f-enc-t{font-family:system-ui,sans-serif;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;color:#333}'
+  +'.f-enc-retenir{border-width:2px}'
+  +'.f-enc-attention{border-style:dashed}'
+  +'.f-enc-exemple,.f-enc-contre{border-color:#8a7a5a;background:#faf8f2}'
+  +'.f-enc-diff{border-color:#5a6b8a;background:#f6f8fb}'
+  +'.f-enc-sujet{border-width:2px}'
+  +'.f-enc-suite{border-color:#8a7a5a}'
+  +'.f-citation{font-style:italic;padding-left:14px;border-left:3px solid #b8ad93}'
+  +'.f-cit-ref{font-style:normal;font-size:.85rem;text-align:right;color:#555}'
+  +'.f-extrait{font-size:1rem}'
+  +'.f-ext-l{position:relative;padding-left:30px;min-height:1.4em}'
+  +'.f-ext-n{position:absolute;left:0;width:24px;text-align:right;font-family:system-ui,sans-serif;font-size:.66rem;color:#999;top:.28em}'
+  +'.f-table{border-collapse:collapse;width:100%;font-size:.92rem}'
+  +'.f-table th,.f-table td{border:1px solid #555;padding:4px 8px;text-align:left}'
+  +'.f-table th{font-family:system-ui,sans-serif;font-size:.75rem;background:#f2eee4}'
+  +'.f-td-vide{min-width:60px;height:1.6em}'
+  +'.f-cols{display:flex;gap:12px}'
+  +'.f-col{flex:1;border:1px solid #555;padding:7px 10px}'
+  +'.f-col-t{font-family:system-ui,sans-serif;font-size:.72rem;font-weight:700;text-transform:uppercase;margin-bottom:4px}'
+  +'.f-frise{display:flex;align-items:flex-start;flex-wrap:wrap;gap:0;margin:8px 0}'
+  +'.f-frise-it{min-width:80px;text-align:center;padding:0 6px}'
+  +'.f-frise-d{font-family:system-ui,sans-serif;font-weight:700;font-size:.78rem;border-top:2px solid #333;padding-top:3px}'
+  +'.f-frise-t{font-size:.82rem}'
+  +'.f-frise-sep{flex:0 0 18px;border-top:2px solid #333;margin-top:.62em}'
+  +'.f-schema{border:1px solid #555}'
+  +'.f-schema-leg{font-size:.8rem;font-family:system-ui,sans-serif;color:#666;padding:3px 6px}'
+  +'.f-img img{max-width:100%;display:block;margin:0 auto}'
+  +'.f-img figcaption{text-align:center;font-size:.82rem;color:#555;font-style:italic}'
+  +'.f-img-vide{border:1px dashed #b8ad93;padding:16px;text-align:center;color:#999;font-family:system-ui,sans-serif;font-size:.8rem}'
+  +'.f-consigne{padding-left:10px;border-left:3px solid #333}'
+  +'.f-cons-l{margin:2px 0}'
+  +'.f-question{padding-left:10px}'
+  +'.f-q-p{font-weight:700;font-family:system-ui,sans-serif}'
+  +'.f-notebp{font-size:.8rem;color:#555;border-top:1px solid #ccc;padding-top:4px}'
+  +'.f-verbe{background:#efe9d8;font-weight:700;padding:0 5px;border-radius:3px;text-transform:uppercase;font-family:system-ui,sans-serif;font-size:.85em}'
+  +'.f-mot-cle{background:#efe9d8;padding:0 5px;border-radius:3px;font-weight:600}'
+  +'.f-zl{margin:4px 0}'
+  +'.f-ligne{border-bottom:1px solid #9a8f76;height:1.7em}'
+  +'.f-zq{background:repeating-linear-gradient(0deg,transparent,transparent 15px,#d8d2c2 16px),repeating-linear-gradient(90deg,transparent,transparent 15px,#d8d2c2 16px);border:1px solid #b8ad93}'
+  +'.f-zv{border:1px solid #b8ad93}'
+  +'.f-brouillon{border:1px dashed #b8ad93;position:relative}'
+  +'.f-br-t{position:absolute;top:2px;left:6px;font-family:system-ui,sans-serif;font-size:.66rem;color:#999;text-transform:uppercase}'
+  +'.f-case{margin:3px 0}'
+  +'.f-trou{display:inline-block;min-width:70px;border-bottom:1.4px solid #333;height:1em;vertical-align:baseline}'
+  +'.f-appar{display:flex;gap:40px}'
+  +'.f-ap-col{flex:1}'
+  +'.f-ap-it{margin:5px 0}'
+  +'.f-travail{margin:0 0 10px}'
+  +'.f-trav-l,.f-diff-l,.f-lien-l{margin:3px 0;font-size:.94rem}'
+  +'.f-trav-cadre{border:1px solid #555;padding:6px 10px;margin:6px 0;font-size:.9rem}'
+  +'.f-tc-blanc{display:inline-block;min-width:120px;border-bottom:1px solid #555;height:1em;margin-left:8px}'
+  +'.f-bareme{max-width:70%}'
+  +'.f-bar-pts{text-align:right;font-family:system-ui,sans-serif}'
+  +'.f-notecadre{border:2px solid #333;display:inline-block;padding:8px 16px;font-size:1.2rem;font-family:system-ui,sans-serif;margin:6px 0}'
+  +'.f-nc-blanc{display:inline-block;min-width:46px;border-bottom:1.6px solid #333;height:1.1em}'
+  +'.f-aides .f-aide{margin:4px 0;border-left:3px solid #5a6b8a;padding-left:10px}'
+  +'.f-liens{border-top:1px solid #b8ad93;padding-top:7px;margin-top:6px;font-size:.92rem}'
+  +'.f-pied{border-top:1.6px solid #333;margin-top:14px;padding-top:5px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;font-family:system-ui,sans-serif;font-size:.68rem;color:#555}'
+  +'.f-pied-mention{font-weight:700;text-transform:uppercase;letter-spacing:.05em}'
+  +'.f-marque{color:#8a7a5a}'
+  +'.f-date-edition{font-weight:600}'
+  +'.f-num-lot{font-weight:700}'
+  +'.f-saut{height:0}'
+  /* Variantes de rendu (nature 'rendu') */
+  +'.r-dys{font-family:Verdana,Arial,sans-serif;letter-spacing:.06em;word-spacing:.16em;font-size:1.02rem}'
+  +'.r-interligne{line-height:2.05}'
+  +'.r-etroite .f-contenu,.r-etroite .f-travail{max-width:120mm}'
+  +'.r-contraste{color:#000}.r-contraste .f-metas,.r-contraste .f-pied{color:#000}'
+  +'.r-sans-ital .f-soustitre,.r-sans-ital .f-citation,.r-sans-ital em,.r-sans-ital i{font-style:normal}'
+  +'.r-marges{padding:12mm 24mm}'
+  +'.r-demi{min-height:0}'
+  +'.r-ecran-seul{}'
+  /* impression seule : grisée à l'écran, pleine au papier */
+  +'.r-impression-seule{opacity:.45}'
+  /* ══ IMPRESSION ══ */
+  +'@media print{'
+  +'body{background:#fff;margin:0}'
+  +'.feuille{max-width:none;margin:0;border:none;box-shadow:none;padding:10mm 12mm;page-break-after:always}'
+  +'.feuille:last-of-type{page-break-after:auto}'
+  +'.r-demi{box-sizing:border-box;height:148mm;overflow:hidden;page-break-after:auto;border-bottom:1px dashed #999}'
+  +'.r-demi:nth-of-type(2n){page-break-after:always;border-bottom:none}'
+  +'.r-demi.r-pointilles{border-bottom:1px dashed #999}'
+  +'.r-marges{padding:10mm 22mm}'
+  +'.f-saut{page-break-before:always;height:0}'
+  +'.r-ecran-seul{display:none}'
+  +'.r-impression-seule{opacity:1}'
+  +'.f-de-forcee{display:inline!important}'
+  +'.f-de-ecran-off{display:inline!important}'
+  +'}'
+  /* la date d'édition masquée à l'écran quand décochée — jamais au papier */
+  +'@media screen{.f-de-ecran-off{display:none}}'
+  +'@page{margin:8mm}';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ATELIER DE COMPOSITION — SITE-COURS-1 · § ÉCRAN, ÉDITION, APERÇU, PERSISTANCE
+   « J'ai ma feuille vierge, et au fur et à mesure que je coche des cases,
+   des choses apparaissent sur la feuille. » (Paul)
+   Persistance : nœud `site/atelier/documents/<id>` (français), EXCLUSIVEMENT
+   par _siteGet/_sitePut/_siteDelete → couvert par le mode test PAR CONSTRUCTION.
+   Filet anti-perte (point 19) : brouillon local à chaque frappe, indicateur
+   d'état en français, reprise proposée, échec d'écriture toujours dit.
+   ══════════════════════════════════════════════════════════════════════════ */
+var AT_NOEUD='/site/atelier/documents';
+/* Durcissement local (complément ② du feu vert) : _sitePut/_siteDelete du socle
+   répondent true dès que fetch se résout — un refus HTTP (500, règles de sécurité)
+   y passe pour un succès. L'atelier ne peut pas mentir sur l'enregistrement :
+   mêmes chemins réels, même magasin en mode test, mais r.ok VÉRIFIÉ.
+   (Constat porté au rapport : à corriger un jour dans le socle du site.) */
+function atSitePut(chemin,valeur,cb){
+  if(m8TestOn()){_sitePut(chemin,valeur,cb);return;}
+  fetch(FIREBASE_BASE+chemin+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(valeur)})
+    .then(function(r){if(cb)cb(r.ok===true);})
+    .catch(function(){if(cb)cb(false);});
+}
+function atSiteDelete(chemin,cb){
+  if(m8TestOn()){_siteDelete(chemin,cb);return;}
+  fetch(FIREBASE_BASE+chemin+'.json',{method:'DELETE'})
+    .then(function(r){if(cb)cb(r.ok===true);})
+    .catch(function(){if(cb)cb(false);});
+}
+var AT={doc:null,docId:null,liste:{},previewIdx:0,previewLot:false,timerPut:null,timerRendu:null,
+        etat:'',derniereSauve:0,rosterCache:null,verrouReprise:false};
+
+/* ── clés du brouillon local : préfixe distinct en mode test (confinement nommé) ── */
+function atBrouillonCle(id){return (m8TestOn()?'mjpc_atelier_brouillon__test_':'mjpc_atelier_brouillon_')+id;}
+function atBrouillonEcrire(){
+  if(!AT.doc||!AT.docId)return;
+  try{localStorage.setItem(atBrouillonCle(AT.docId),JSON.stringify(AT.doc));}catch(e){}
+}
+function atBrouillonLire(id){
+  try{var v=localStorage.getItem(atBrouillonCle(id));return v?JSON.parse(v):null;}catch(e){return null;}
+}
+function atBrouillonEffacer(id){try{localStorage.removeItem(atBrouillonCle(id));}catch(e){}}
+function atBrouillonsTestPurger(){ /* nettoyage des zombies du mode test — vérifie ce qu'il fait */
+  var purges=[],restes=[];
+  try{
+    var i,cles=[];for(i=0;i<localStorage.length;i++)cles.push(localStorage.key(i));
+    cles.forEach(function(k){if(k&&k.indexOf('mjpc_atelier_brouillon__test_')===0){localStorage.removeItem(k);purges.push(k);}});
+    for(i=0;i<localStorage.length;i++){var k2=localStorage.key(i);if(k2&&k2.indexOf('mjpc_atelier_brouillon__test_')===0)restes.push(k2);}
+  }catch(e){restes.push('erreur:'+e.message);}
+  return {purges:purges,restes:restes};
+}
+
+/* ── modèle d'un document neuf ── */
+function atDocNeuf(){
+  var d={titre:'Nouvelle feuille',produit:'',cases:{},valeurs:{},reformulations:{},contenu:[],
+    rattachement:{niveau:'',classe:'',classeNom:'',eleve:''},
+    dates:{creeLe:Date.now(),modifieLe:Date.now(),dateEdition:new Date().toISOString().slice(0,10),versionDoc:0},
+    versionAtelier:ATELIER_VERSION};
+  Object.keys(ATELIER_COMPOSANTES).forEach(function(id){if(ATELIER_COMPOSANTES[id].defaut)d.cases[id]=true;});
+  return d;
+}
+
+/* ── ouverture / fermeture de l'écran ── */
+function atelierOuvrir(){
+  var ec=document.getElementById('atelier-ecran');if(!ec)return;
+  if(typeof closeProfPanel==='function')closeProfPanel();  /* l'atelier prend tout l'écran */
+  ec.classList.add('at-actif');
+  document.body.classList.add('at-corps-fige');
+  AT.doc=null;AT.docId=null;
+  if(!m8TestOn())atBrouillonsTestPurger();  /* retour en mode réel : les brouillons de test ne survivent pas */
+  /* le rattachement a besoin des classes et des codes : chargés par les chemins du site */
+  var pret=function(){atChargerListe();};
+  if(typeof loadClasses==='function'){loadClasses(function(){if(typeof loadCodes==='function')loadCodes(pret);else pret();});}
+  else pret();
+}
+function atelierFermer(){
+  atEnregistrerMaintenant(function(){
+    var ec=document.getElementById('atelier-ecran');if(ec)ec.classList.remove('at-actif');
+    document.body.classList.remove('at-corps-fige');
+    if(typeof openProfPanel==='function')openProfPanel();  /* retour d'où l'on vient */
+  });
+}
+
+/* Le magasin du mode test est PLAT par chemin exact : écrire des documents aux
+   chemins enfants puis lire le parent donnerait null. En mode test, la liste
+   reconstitue donc le parent par préfixe — la sémantique même de RTDB. */
+function atSiteGetDocs(cb){
+  if(m8TestOn()){
+    var docs={},pfx=AT_NOEUD+'/';
+    Object.keys(M8_TEST_STORE).forEach(function(k){
+      if(k.indexOf(pfx)===0){var id=k.slice(pfx.length);if(id&&id.indexOf('/')<0&&M8_TEST_STORE[k])docs[id]=M8_TEST_STORE[k];}
+    });
+    cb(docs);return;
+  }
+  _siteGet(AT_NOEUD,cb);
+}
+
+/* ── LA LISTE DES FEUILLES — créer · ouvrir · dupliquer · supprimer ── */
+function atChargerListe(){
+  var z=document.getElementById('at-zone');if(!z)return;
+  z.innerHTML='<div class="at-attente">Chargement des feuilles\u2026</div>';
+  atSiteGetDocs(function(v){
+    AT.liste=(v&&typeof v==='object')?v:{};
+    atRendreListe();
+  });
+}
+function atRendreListe(){
+  var z=document.getElementById('at-zone');if(!z)return;
+  var ids=Object.keys(AT.liste).sort(function(a,b){
+    return ((AT.liste[b].dates||{}).modifieLe||0)-((AT.liste[a].dates||{}).modifieLe||0);
+  });
+  var h='<div class="at-liste-tete"><h2 class="at-h2">\ud83d\udee0 Atelier <span class="at-h2-sub">\u2014 composer les feuilles du cours</span></h2>'
+    +'<button class="at-btn at-btn-prim" onclick="atNouvelleFeuille()">\uff0b Nouvelle feuille</button></div>';
+  if(m8TestOn())h+='<div class="at-bandeau-test">Mode test actif \u2014 compose, coche, imprime, recharge : rien ne part au hub. Les brouillons de test restent sur cet appareil et sont nettoy\u00e9s au retour en mode r\u00e9el.</div>';
+  if(!ids.length){
+    h+='<div class="at-vide">Aucune feuille pour l\u2019instant. \u00ab Nouvelle feuille \u00bb ouvre la feuille vierge : coche des cases, des choses apparaissent.</div>';
+  }else{
+    h+='<div class="at-cartes">'+ids.map(function(id){
+      var d=AT.liste[id]||{};var dm=(d.dates||{}).modifieLe;
+      var quand=dm?new Date(dm).toLocaleDateString('fr-FR')+' '+new Date(dm).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+      var prod=d.produit&&ATELIER_PRODUITS[d.produit]?ATELIER_PRODUITS[d.produit].libelle:'';
+      return '<div class="at-carte">'
+        +'<div class="at-carte-t">'+atEsc(d.titre||'Sans titre')+'</div>'
+        +'<div class="at-carte-m">'+(prod?atEsc(prod)+' \u00b7 ':'')+'modifi\u00e9e le '+atEsc(quand)+'</div>'
+        +'<div class="at-carte-b">'
+        +'<button class="at-btn at-btn-prim" onclick="atOuvrirDoc(\''+atEsc(id)+'\')">Ouvrir</button>'
+        +'<button class="at-btn" onclick="atDupliquerDoc(\''+atEsc(id)+'\')">Dupliquer</button>'
+        +'<button class="at-btn at-btn-danger" onclick="atSupprimerDoc(\''+atEsc(id)+'\')">Supprimer</button>'
+        +'</div></div>';
+    }).join('')+'</div>';
+  }
+  z.innerHTML=h;
+}
+function atNouvelleFeuille(){
+  var id='feuille_'+Date.now();
+  AT.docId=id;AT.doc=atDocNeuf();
+  atEnregistrerMaintenant(function(){atRendreEditeur();});
+}
+function atOuvrirDoc(id){
+  var base=AT.liste[id];if(!base)return;
+  var brouillon=atBrouillonLire(id);
+  var reprendre=function(doc){AT.docId=id;AT.doc=doc;AT.previewIdx=0;atRendreEditeur();};
+  if(brouillon&&brouillon.dates&&base.dates&&brouillon.dates.modifieLe>base.dates.modifieLe){
+    var quand=new Date(brouillon.dates.modifieLe).toLocaleString('fr-FR');
+    atModaleChoix('Une version plus r\u00e9cente de cette feuille existe sur cet appareil (enregistr\u00e9e le '+quand+') : elle n\u2019avait pas pu partir en base. La reprendre ?',
+      [{lib:'Reprendre la version de cet appareil',prim:true,fn:function(){reprendre(brouillon);atMarquerModifie();}},
+       {lib:'Garder la version en base',fn:function(){atBrouillonEffacer(id);reprendre(JSON.parse(JSON.stringify(base)));}}]);
+  }else{
+    reprendre(JSON.parse(JSON.stringify(base)));
+  }
+}
+function atDupliquerDoc(id){
+  var base=AT.liste[id];if(!base)return;
+  var copie=JSON.parse(JSON.stringify(base));
+  copie.titre=(copie.titre||'Feuille')+' (copie)';
+  copie.dates=copie.dates||{};copie.dates.creeLe=Date.now();copie.dates.modifieLe=Date.now();copie.dates.versionDoc=0;
+  var nid='feuille_'+Date.now();
+  atSitePut(AT_NOEUD+'/'+nid,copie,function(ok){
+    if(!ok){atInfo('\u26a0 La copie n\u2019a pas pu \u00eatre enregistr\u00e9e en base. Rien n\u2019a \u00e9t\u00e9 cr\u00e9\u00e9 \u2014 r\u00e9essaie.');return;}
+    atChargerListe();
+  });
+}
+/* Suppression : dénombrement affiché → archive corbeille (via _sitePut : couvert par le
+   mode test, format {_meta,data} de _corbeillePut, lisible par l'écran Corbeille du site)
+   → destruction SEULEMENT si l'archive a réussi. Jamais de suppression sèche. */
+function atCorbeilleCle(motif){
+  var d=new Date();
+  var hms=('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2)+('0'+d.getSeconds()).slice(-2);
+  return '/corbeille/'+d.toISOString().slice(0,10)+'/'+String(motif).replace(/[^a-z0-9_-]/gi,'-')+'_'+hms;
+}
+function atSupprimerDoc(id){
+  var d=AT.liste[id];if(!d)return;
+  var nbBlocs=(d.contenu||[]).length;
+  var nbCases=Object.keys(d.cases||{}).filter(function(k){return d.cases[k];}).length;
+  atModaleChoix('Supprimer la feuille \u00ab '+atEsc(d.titre||'Sans titre')+' \u00bb ? \u2014 '+nbCases+' case(s) coch\u00e9e(s), '+nbBlocs+' bloc(s) de contenu. Elle passera d\u2019abord \u00e0 la corbeille (r\u00e9cup\u00e9rable un an).',
+    [{lib:'Mettre \u00e0 la corbeille puis supprimer',danger:true,fn:function(){
+      var chemin='site/atelier/documents/'+id;
+      var payload={_meta:{motif:'atelier-feuille',chemin:chemin,app:'index',date:(typeof _nowStr==='function'?_nowStr():new Date().toISOString()),ts:Date.now(),annee:(typeof _anneeScolaire==='function'?_anneeScolaire():''),source:'index'},data:d};
+      atSitePut(atCorbeilleCle('atelier-feuille'),payload,function(ok){
+        if(!ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 suppression abandonn\u00e9e, la feuille est intacte.');return;}
+        atSiteDelete(AT_NOEUD+'/'+id,function(ok2){
+          if(!ok2){atInfo('\u26a0 La suppression a \u00e9chou\u00e9 apr\u00e8s archivage. La feuille est toujours l\u00e0, l\u2019archive aussi.');return;}
+          atBrouillonEffacer(id);
+          atChargerListe();
+        });
+      });
+    }},
+    {lib:'Annuler',fn:function(){}}]);
+}
+
+/* ── PERSISTANCE — patron setMeta : l'écran suit immédiatement, la base suit
+      avec un débounce ; le brouillon local part À CHAQUE frappe. ── */
+function atMarquerModifie(){
+  if(!AT.doc)return;
+  AT.doc.dates=AT.doc.dates||{};AT.doc.dates.modifieLe=Date.now();
+  atBrouillonEcrire();                              /* filet immédiat */
+  atEtat('modif');
+  clearTimeout(AT.timerPut);
+  AT.timerPut=setTimeout(function(){atEnregistrerMaintenant();},1400);
+  clearTimeout(AT.timerRendu);
+  AT.timerRendu=setTimeout(atRendreApercu,220);      /* l'aperçu suit en direct */
+}
+function atEnregistrerMaintenant(suite){
+  if(!AT.doc||!AT.docId){if(suite)suite();return;}
+  clearTimeout(AT.timerPut);
+  AT.doc.dates=AT.doc.dates||{};
+  AT.doc.dates.versionDoc=(AT.doc.dates.versionDoc||0)+1;
+  atEtat('encours');
+  atSitePut(AT_NOEUD+'/'+AT.docId,AT.doc,function(ok){
+    if(ok){
+      AT.derniereSauve=Date.now();
+      atBrouillonEffacer(AT.docId);
+      atBrouillonEcrire(); /* le brouillon reflète l'état sauvé (repère de fraîcheur) */
+      AT.liste[AT.docId]=JSON.parse(JSON.stringify(AT.doc));
+      atEtat('ok');
+    }else{
+      AT.doc.dates.versionDoc=Math.max(0,(AT.doc.dates.versionDoc||1)-1);
+      atEtat('echec');
+    }
+    if(suite)suite();
+  });
+}
+function atEtat(mode){
+  AT.etat=mode;
+  var e=document.getElementById('at-etat');if(!e)return;
+  if(mode==='modif'){e.className='at-etat';e.textContent='Modifications en attente\u2026';}
+  else if(mode==='encours'){e.className='at-etat';e.textContent='Enregistrement\u2026';}
+  else if(mode==='ok'){e.className='at-etat at-etat-ok';e.textContent='Enregistr\u00e9 \u00e0 '+new Date(AT.derniereSauve).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
+  else if(mode==='echec'){e.className='at-etat at-etat-echec';e.innerHTML='\u26a0 L\u2019enregistrement a \u00e9chou\u00e9 \u2014 tes modifications sont gard\u00e9es sur cet appareil. <button class="at-btn at-btn-min" onclick="atEnregistrerMaintenant()">R\u00e9essayer</button>';}
+  else {e.className='at-etat';e.textContent='';}
+}
+
+/* ── L'ÉDITEUR — trois groupes en français (décision Q4) :
+      « Ce qui se remplit tout seul » · « Ce que la feuille contient » · « Présentation » ── */
+var AT_GROUPES=[
+  {nature:'donnee',lib:'Ce qui se remplit tout seul',info:'Ces cases vont chercher des donn\u00e9es r\u00e9elles (\u00e9l\u00e8ve, classe, dates).'},
+  {nature:'structure',lib:'Ce que la feuille contient',info:'Ces cases font appara\u00eetre des zones \u00e0 remplir sur la feuille.'},
+  {nature:'rendu',lib:'Pr\u00e9sentation',info:'Ces cases transforment la feuille sans lui ajouter de zone.'}
+];
+var AT_SOUSGROUPES=[
+  {zone:'entete',lib:'L\u2019en-t\u00eate'},
+  {zone:'ancrage',lib:'L\u2019ancrage p\u00e9dagogique'},
+  {zone:'contexte',lib:'Le contexte culturel'},
+  {zone:'contenu',lib:'Le contenu du cours'},
+  {zone:'travail',lib:'Le travail de l\u2019\u00e9l\u00e8ve'},
+  {zone:'differenciation',lib:'La diff\u00e9renciation'},
+  {zone:'liens',lib:'Les liens et les suites'},
+  {zone:'pied',lib:'Le pied de la feuille'},
+  {zone:'mise_en_page',lib:'La mise en page'}
+];
+
+function atRendreEditeur(){
+  var z=document.getElementById('at-zone');if(!z||!AT.doc)return;
+  var h='<div class="at-compo">';
+  /* colonne gauche : composition */
+  h+='<div class="at-gauche">';
+  h+='<div class="at-barre-haut">'
+    +'<button class="at-btn" onclick="atRetourListe()">\u2190 Mes feuilles</button>'
+    +'<input class="at-titre-doc" value="'+atEsc(AT.doc.titre||'')+'" oninput="atSetTitre(this.value)" placeholder="Titre de la feuille (pour toi)">'
+    +'<span id="at-etat" class="at-etat"></span></div>';
+  /* produits (pistons) */
+  h+='<div class="at-produits"><span class="at-prod-lib">Pr\u00e9parer d\u2019un clic :</span>';
+  Object.keys(ATELIER_PRODUITS).forEach(function(pid){
+    var p=ATELIER_PRODUITS[pid];
+    h+='<button class="at-btn at-btn-piston'+(AT.doc.produit===pid?' at-piston-actif':'')+'" onclick="atAppliquerProduit(\''+pid+'\')" title="'+atEsc(p.info||'')+'">'+atEsc(p.libelle)+'</button>';
+  });
+  h+='<span class="at-ifo" onclick="atInfoProduits()">\u24d8</span></div>';
+  /* rattachement */
+  h+=atHtmlRattachement();
+  /* les trois groupes */
+  AT_GROUPES.forEach(function(g){
+    var corps='';
+    AT_SOUSGROUPES.forEach(function(sg){
+      var ids=Object.keys(ATELIER_COMPOSANTES).filter(function(id){
+        var c=ATELIER_COMPOSANTES[id];return c.nature===g.nature&&c.zone===sg.zone;
+      });
+      if(!ids.length)return;
+      corps+='<div class="at-sg"><div class="at-sg-t">'+sg.lib+'</div>'+ids.map(atHtmlCase).join('')+'</div>';
+    });
+    if(corps)h+='<div class="at-groupe"><div class="at-groupe-t">'+g.lib+' <span class="at-ifo" onclick="atInfoGroupe('+AT_GROUPES.indexOf(g)+')">\u24d8</span></div>'+corps+'</div>';
+  });
+  h+='</div>';
+  /* colonne droite : aperçu */
+  h+='<div class="at-droite"><div class="at-ap-barre">'
+    +'<span class="at-ap-t">Aper\u00e7u <span class="at-ap-sub">\u2014 c\u2019est lui qui fait foi : ce que tu vois est ce qui sortira</span></span>'
+    +'<span id="at-ap-nav"></span>'
+    +'<button class="at-btn at-btn-prim" onclick="atImprimer()">\ud83d\udda8 Imprimer</button>'
+    +'<button class="at-btn" onclick="atOuvrirOnglet()">Ouvrir dans un onglet</button>'
+    +'</div><iframe id="at-apercu" class="at-apercu" title="Aper\u00e7u de la feuille"></iframe></div>';
+  h+='</div>';
+  z.innerHTML=h;
+  atEtat(AT.etat||'');
+  atRendreApercu();
+}
+function atRetourListe(){atEnregistrerMaintenant(function(){AT.doc=null;AT.docId=null;atChargerListe();});}
+function atSetTitre(v){if(!AT.doc)return;AT.doc.titre=v;atMarquerModifie();}
+
+/* rattachement niveau / classe / élève (source : classesData du site, extractEleves) */
+function atRoster(slug){
+  if(!slug||typeof classesData==='undefined'||!classesData[slug])return [];
+  try{return extractEleves(classesData[slug],[])||[];}catch(e){return [];}
+}
+function atHtmlRattachement(){
+  var r=AT.doc.rattachement||{};
+  var nivs=['','3e','4e','5e','6e'];
+  var h='<div class="at-ratt"><span class="at-ratt-l">Cette feuille est pour</span>';
+  h+='<select class="at-sel" onchange="atSetRatt(\'niveau\',this.value)">'+nivs.map(function(n){return '<option value="'+n+'"'+(r.niveau===n?' selected':'')+'>'+(n||'\u2014 niveau \u2014')+'</option>';}).join('')+'</select>';
+  var classes=[];
+  if(typeof classesData!=='undefined'&&classesData){
+    Object.keys(classesData).forEach(function(slug){
+      var cl=classesData[slug];if(!cl||typeof cl!=='object'||cl.archivee)return;
+      if(typeof _estClasseInterne==='function'&&_estClasseInterne(slug)&&!m8TestOn())return;  /* classes internes : mode test seulement */
+      if(r.niveau&&cl.niveau&&cl.niveau!==r.niveau)return;
+      classes.push({slug:slug,nom:cl.nom||slug});
+    });
+  }
+  h+='<select class="at-sel" onchange="atSetRatt(\'classe\',this.value)"><option value="">\u2014 classe \u2014</option>'+classes.map(function(c){return '<option value="'+atEsc(c.slug)+'"'+(r.classe===c.slug?' selected':'')+'>'+atEsc(c.nom)+'</option>';}).join('')+'</select>';
+  var roster=atRoster(r.classe);
+  h+='<select class="at-sel" onchange="atSetRatt(\'eleve\',this.value)"><option value="">\u2014 \u00e9l\u00e8ve \u2014</option><option value="*"'+(r.eleve==='*'?' selected':'')+'>Toute la classe (un exemplaire par \u00e9l\u00e8ve)</option>'+roster.map(function(n){return '<option value="'+atEsc(n)+'"'+(r.eleve===n?' selected':'')+'>'+atEsc(n)+'</option>';}).join('')+'</select>';
+  h+='<span class="at-ifo" onclick="atInfoRatt()">\u24d8</span></div>';
+  return h;
+}
+function atSetRatt(k,v){
+  if(!AT.doc)return;
+  AT.doc.rattachement=AT.doc.rattachement||{};
+  AT.doc.rattachement[k]=v;
+  if(k==='classe'){
+    var cl=(typeof classesData!=='undefined'&&classesData&&classesData[v])||null;
+    AT.doc.rattachement.classeNom=(cl&&cl.nom)||v||'';
+    if(cl&&cl.niveau)AT.doc.rattachement.niveau=cl.niveau;
+    AT.doc.rattachement.eleve='';
+  }
+  if(k==='niveau')AT.doc.rattachement.classe='';
+  AT.previewIdx=0;
+  atMarquerModifie();
+  atRendreEditeur();
+}
+
+/* une case du gabarit — grisage qui CONSEILLE (dépendances, rattachement),
+   jamais un verrou : le clic active quand même, avec l'avertissement */
+function atCaseGrisee(id){
+  var c=ATELIER_COMPOSANTES[id];var r=AT.doc.rattachement||{};
+  if(c.reserve)return 'reserve';
+  if(c.exige==='eleve'&&!(r.eleve))return 'exige';
+  if(c.exige==='classe'&&!(r.classe))return 'exige';
+  if(c.exige==='niveau'&&!(r.niveau&&true)&&!(r.classe))return 'exige';
+  if(c.depend&&c.depend.length){
+    for(var i=0;i<c.depend.length;i++)if(!AT.doc.cases[c.depend[i]])return 'depend';
+  }
+  return '';
+}
+function atHtmlCase(id){
+  var c=ATELIER_COMPOSANTES[id];
+  var coche=AT.doc.cases[id]===true;
+  var gris=atCaseGrisee(id);
+  if(c.reserve){
+    return '<div class="at-case at-case-reserve"><span class="at-case-lib">'+atEsc(c.libelle)+'</span>'
+      +'<span class="at-reserve-m">'+atEsc(c.mention||'Cette partie arrivera plus tard.')+'</span></div>';
+  }
+  var h='<div class="at-case'+(gris?' at-grise':'')+(coche?' at-cochee':'')+'">'
+    +'<label class="at-case-l"><input type="checkbox"'+(coche?' checked':'')+' onchange="atToggleCase(\''+id+'\',this.checked)"><span class="at-case-lib">'+atEsc(c.libelle)+'</span></label>'
+    +(c.info?'<span class="at-ifo" onclick="atInfoComposante(\''+id+'\')">\u24d8</span>':'');
+  if(coche&&c.nature==='structure'&&!c.multiple&&(c.champs||c.intitule_defaut))h+=atHtmlChampsUnique(id,c);
+  if(coche&&c.multiple)h+=atHtmlBlocs(id,c);
+  h+='</div>';
+  return h;
+}
+function atToggleCase(id,val){
+  if(!AT.doc)return;
+  var gris=atCaseGrisee(id);
+  AT.doc.cases[id]=!!val;                  /* le professeur a tous les droits : on active D'ABORD */
+  if(val&&gris){
+    var msg=(gris==='exige')
+      ?'Cette case s\u2019appuie sur un rattachement (\u00e9l\u00e8ve ou classe) que la feuille n\u2019a pas encore : regarde l\u2019aper\u00e7u, c\u2019est lui qui fait foi.'
+      :'Cette case va normalement avec \u00ab '+atEsc((ATELIER_COMPOSANTES[(ATELIER_COMPOSANTES[id].depend||[])[0]]||{}).libelle||'')+' \u00bb : regarde l\u2019aper\u00e7u, c\u2019est lui qui fait foi.';
+    atInfo(msg);
+  }
+  if(val&&ATELIER_COMPOSANTES[id].multiple){
+    var deja=(AT.doc.contenu||[]).some(function(b){return b.id===id;});
+    if(!deja)atAjouterBloc(id,true);
+  }
+  atMarquerModifie();
+  atRendreEditeur();
+}
+
+/* champs d'une composante unique (structure non multiple) */
+function atHtmlChampsUnique(id,c){
+  var vals=(AT.doc.valeurs&&AT.doc.valeurs[id])||{};
+  var h='<div class="at-champs">';
+  if(c.intitule_defaut){
+    h+='<div class="at-champ"><label class="at-ch-l">Intitul\u00e9 sur la feuille</label>'
+      +'<input class="at-in" value="'+atEsc(typeof vals.intitule==='string'?vals.intitule:c.intitule_defaut)+'" oninput="atSetValeur(\''+id+'\',\'intitule\',this.value)"></div>';
+  }
+  (c.champs||[]).forEach(function(ch){h+=atHtmlChamp(id,ch,vals,'atSetValeur');});
+  h+='</div>';
+  return h;
+}
+function atHtmlChamp(id,ch,vals,fn,idx){
+  var v=vals[ch.k];
+  var app=(idx===undefined)?('\''+id+'\',\''+ch.k+'\',this.value'):(idx+',\''+ch.k+'\',this.value');
+  if(ch.kind==='area'||ch.kind==='list'){
+    var txt=Array.isArray(v)?v.join('\n'):(v||'');
+    return '<div class="at-champ"><label class="at-ch-l">'+atEsc(ch.l)+'</label><textarea class="at-in at-area" oninput="'+fn+'('+app+')">'+atEsc(txt)+'</textarea></div>';
+  }
+  if(ch.kind==='date'){
+    return '<div class="at-champ"><label class="at-ch-l">'+atEsc(ch.l)+'</label><input type="date" class="at-in" value="'+atEsc(v||'')+'" oninput="'+fn+'('+app+')"></div>';
+  }
+  return '<div class="at-champ"><label class="at-ch-l">'+atEsc(ch.l)+'</label><input class="at-in" value="'+atEsc(v||'')+'" oninput="'+fn+'('+app+')"></div>';
+}
+/* Q6 (décision de la conscience) : un champ de type liste stocke un TABLEAU de
+   valeurs, jamais un texte à lignes — la Concordance n'aura rien à reparser. */
+function atValeurTypee(composanteId,k,v){
+  var c=ATELIER_COMPOSANTES[composanteId];
+  var ch=c&&(c.champs||[]).filter(function(x){return x.k===k;})[0];
+  if(ch&&ch.kind==='list')return String(v).split(/\n/).map(function(x){return x.trim();}).filter(Boolean);
+  return v;
+}
+function atSetValeur(id,k,v){
+  if(!AT.doc)return;
+  AT.doc.valeurs=AT.doc.valeurs||{};
+  AT.doc.valeurs[id]=AT.doc.valeurs[id]||{};
+  AT.doc.valeurs[id][k]=atValeurTypee(id,k,v);
+  atMarquerModifie();
+}
+
+/* blocs multiples : la case a activé la ZONE ; « + » ajoute un second bloc,
+   ↑ ↓ réordonnent, ✕ retire (décision de la conscience, Q1) */
+function atBlocsDe(id){return (AT.doc.contenu||[]).map(function(b,i){return {b:b,i:i};}).filter(function(x){return x.b.id===id;});}
+function atHtmlBlocs(id,c){
+  var blocs=atBlocsDe(id);
+  var h='<div class="at-blocs">';
+  blocs.forEach(function(x,ordinal){
+    var b=x.b;var i=x.i;
+    h+='<div class="at-bloc"><div class="at-bloc-t"><span>'+atEsc(c.libelle.replace(/^Ajouter (un |une |du |des |deux |la |le )?/,''))+' '+(blocs.length>1?('n\u00b0'+(ordinal+1)):'')+'</span>'
+      +'<span class="at-bloc-btns">'
+      +'<button class="at-btn at-btn-min" title="Monter" onclick="atBougerBloc('+i+',-1)">\u2191</button>'
+      +'<button class="at-btn at-btn-min" title="Descendre" onclick="atBougerBloc('+i+',1)">\u2193</button>'
+      +'<button class="at-btn at-btn-min at-btn-danger" title="Retirer ce bloc" onclick="atRetirerBloc('+i+')">\u2715</button></span></div>';
+    (c.champs||[]).forEach(function(ch){h+=atHtmlChamp(null,ch,b.valeurs||{},'atSetBlocValeur',i);});
+    if(c.reforme){
+      h+='<div class="at-champ at-reforme"><label class="at-ch-l">Version reformul\u00e9e (langage simple) \u2014 sort quand la case de reformulation est coch\u00e9e</label>'
+        +'<textarea class="at-in at-area" oninput="atSetBlocReforme('+i+',\'texte\',this.value)">'+atEsc((b.reformulations&&b.reformulations.texte)||'')+'</textarea></div>';
+    }
+    if(c.allegeable){
+      h+='<div class="at-champ at-reforme"><label class="at-ch-l">Variante all\u00e9g\u00e9e (moins d\u2019items, m\u00eame exigence) \u2014 sort quand la case d\u2019all\u00e8gement est coch\u00e9e</label>'
+        +'<textarea class="at-in at-area" oninput="atSetBlocReforme('+i+',\'allege\',this.value)">'+atEsc((b.reformulations&&b.reformulations.allege)||'')+'</textarea></div>';
+    }
+    h+='</div>';
+  });
+  h+='<button class="at-btn at-btn-plus" onclick="atAjouterBloc(\''+id+'\')">\uff0b Ajouter</button></div>';
+  return h;
+}
+function atAjouterBloc(id,silencieux){
+  if(!AT.doc)return;
+  AT.doc.contenu=AT.doc.contenu||[];
+  AT.doc.contenu.push({id:id,valeurs:{},reformulations:{}});
+  if(!silencieux){atMarquerModifie();atRendreEditeur();}
+}
+function atRetirerBloc(i){
+  if(!AT.doc||!AT.doc.contenu||!AT.doc.contenu[i])return;
+  AT.doc.contenu.splice(i,1);
+  atMarquerModifie();atRendreEditeur();
+}
+function atBougerBloc(i,delta){
+  var c=AT.doc.contenu;if(!c)return;
+  var j=i+delta;if(j<0||j>=c.length)return;
+  var t=c[i];c[i]=c[j];c[j]=t;
+  atMarquerModifie();atRendreEditeur();
+}
+function atSetBlocValeur(i,k,v){
+  var b=AT.doc.contenu&&AT.doc.contenu[i];if(!b)return;
+  b.valeurs=b.valeurs||{};b.valeurs[k]=atValeurTypee(b.id,k,v);
+  atMarquerModifie();
+}
+function atSetBlocReforme(i,k,v){
+  var b=AT.doc.contenu&&AT.doc.contenu[i];if(!b)return;
+  b.reformulations=b.reformulations||{};b.reformulations[k]=v;
+  atMarquerModifie();
+}
+
+/* le piston : pré-coche le lot — la main reste entière (on peut tout décocher après) */
+function atAppliquerProduit(pid){
+  var p=ATELIER_PRODUITS[pid];if(!p||!AT.doc)return;
+  AT.doc.produit=pid;
+  Object.keys(p.cases).forEach(function(id){
+    if(p.cases[id]&&!AT.doc.cases[id]){
+      AT.doc.cases[id]=true;
+      var c=ATELIER_COMPOSANTES[id];
+      if(c&&c.multiple&&!(AT.doc.contenu||[]).some(function(b){return b.id===id;}))atAjouterBloc(id,true);
+    }
+  });
+  atMarquerModifie();
+  atRendreEditeur();
+}
+
+/* ── L'APERÇU NAVIGABLE — clone du patron previewIdx de correction_dictee :
+      élève par élève quand la feuille est nominative ; l'iframe srcdoc porte
+      LE document même qui s'imprimera. ── */
+function atLotContextes(){
+  var r=AT.doc.rattachement||{};
+  if(r.eleve&&r.eleve!=='*'){
+    return [{nom:r.eleve,code:atCodeDe(r.eleve)}];
+  }
+  if(r.eleve==='*'&&r.classe){
+    var roster=atRoster(r.classe).slice().sort(function(a,b){return a.localeCompare(b);});
+    return roster.map(function(n){return {nom:n,code:atCodeDe(n)};});
+  }
+  return [];
+}
+function atCodeDe(nom){
+  try{
+    if(typeof codesData!=='undefined'&&codesData){
+      var cle=(typeof sanMJPC==='function')?sanMJPC(nom):nom;
+      var e=codesData[cle];if(e&&e.code)return String(e.code);
+    }
+  }catch(e){}
+  return '';
+}
+function atRendreApercu(){
+  var fr=document.getElementById('at-apercu');if(!fr||!AT.doc)return;
+  var lot=atLotContextes();
+  var nav=document.getElementById('at-ap-nav');
+  if(lot.length>1){
+    AT.previewIdx=Math.min(AT.previewIdx,lot.length-1);
+    if(nav)nav.innerHTML='<button class="at-btn at-btn-min" onclick="atApPrec()"'+(AT.previewIdx===0?' disabled':'')+'>\u2190</button>'
+      +'<span class="at-ap-compte">'+atEsc(lot[AT.previewIdx].nom)+' ('+(AT.previewIdx+1)+' / '+lot.length+')</span>'
+      +'<button class="at-btn at-btn-min" onclick="atApSuiv()"'+(AT.previewIdx>=lot.length-1?' disabled':'')+'>\u2192</button>';
+    try{fr.srcdoc=atelierPageHTML(AT.doc,[Object.assign({},lot[AT.previewIdx],{rang:AT.previewIdx+1,total:lot.length})]);}
+    catch(e){fr.srcdoc='<body style="font-family:serif;color:#a33;padding:20px">Aper\u00e7u impossible : '+atEsc(e.message)+'</body>';}
+  }else{
+    if(nav)nav.innerHTML='';
+    try{fr.srcdoc=atelierPageHTML(AT.doc,lot);}
+    catch(e){fr.srcdoc='<body style="font-family:serif;color:#a33;padding:20px">Aper\u00e7u impossible : '+atEsc(e.message)+'</body>';}
+  }
+}
+function atApPrec(){AT.previewIdx=Math.max(0,AT.previewIdx-1);atRendreApercu();}
+function atApSuiv(){AT.previewIdx=AT.previewIdx+1;atRendreApercu();}
+
+/* Impression : le LOT ENTIER si la feuille est pour toute la classe ; sinon la
+   feuille courante. Même document que l'aperçu (aucune divergence possible). */
+function atImprimer(){
+  var fr=document.getElementById('at-apercu');if(!fr)return;
+  var lot=atLotContextes();
+  if(lot.length>1){
+    try{fr.srcdoc=atelierPageHTML(AT.doc,lot);}catch(e){atInfo('Impression impossible : '+e.message);return;}
+    var tenter=function(){try{fr.contentWindow.focus();fr.contentWindow.print();}catch(e){atInfo('Impression impossible : '+e.message);}
+      setTimeout(atRendreApercu,600);};
+    fr.onload=function(){fr.onload=null;tenter();};
+  }else{
+    try{fr.contentWindow.focus();fr.contentWindow.print();}catch(e){atInfo('Impression impossible : '+e.message);}
+  }
+}
+function atOuvrirOnglet(){
+  var w=window.open('','_blank');
+  if(!w){atInfo('Autorise les fen\u00eatres pop-up pour ouvrir la feuille dans un onglet.');return;}
+  var lot=atLotContextes();
+  try{w.document.write(atelierPageHTML(AT.doc,lot));w.document.close();}
+  catch(e){atInfo('Ouverture impossible : '+e.message);}
+}
+
+/* bulles d'info : le texte vient du schéma, jamais d'un attribut onclick */
+function atInfoComposante(id){var c=ATELIER_COMPOSANTES[id];if(c&&c.info)atInfo(atEsc(c.info));}
+function atInfoGroupe(i){var g=AT_GROUPES[i];if(g)atInfo(atEsc(g.info));}
+function atInfoProduits(){atInfo('Un bouton de produit coche d\u2019un coup les cases habituelles de ce type de feuille. Tu peux ensuite en ajouter ou en retirer librement \u2014 rien n\u2019est verrouill\u00e9.');}
+function atInfoRatt(){atInfo('Sans rattachement, la feuille est g\u00e9n\u00e9rique. Rattach\u00e9e \u00e0 une classe enti\u00e8re, elle sort en un exemplaire par \u00e9l\u00e8ve, et l\u2019aper\u00e7u se feuillette \u00e9l\u00e8ve par \u00e9l\u00e8ve.');}
+
+/* ── petites modales de l'atelier (pas de prompt/confirm natifs) ── */
+function atInfo(msg){
+  atModaleChoix(msg,[{lib:'Compris',prim:true,fn:function(){}}]);
+}
+function atModaleChoix(msg,boutons){
+  var old=document.getElementById('at-modale');if(old)old.parentNode.removeChild(old);
+  var d=document.createElement('div');d.id='at-modale';d.className='at-modale';
+  var bts=boutons.map(function(b,i){return '<button class="at-btn'+(b.prim?' at-btn-prim':'')+(b.danger?' at-btn-danger':'')+'" data-i="'+i+'">'+b.lib+'</button>';}).join('');
+  d.innerHTML='<div class="at-modale-c"><div class="at-modale-m">'+msg+'</div><div class="at-modale-b">'+bts+'</div></div>';
+  d.addEventListener('click',function(ev){
+    var t=ev.target;
+    if(t&&t.getAttribute&&t.getAttribute('data-i')!=null){
+      var fn=boutons[parseInt(t.getAttribute('data-i'),10)].fn;
+      d.parentNode.removeChild(d);
+      if(fn)fn();
+    }else if(t===d){d.parentNode.removeChild(d);}
+  });
+  document.body.appendChild(d);
+}
+/* ═══ fin ATELIER DE COMPOSITION ═══ */
+
 </script>
 </html>
