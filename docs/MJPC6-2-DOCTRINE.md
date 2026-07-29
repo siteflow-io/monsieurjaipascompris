@@ -312,3 +312,38 @@ Le workflow complet, tel qu'acté : ① le prof SCANNE lui-même les copies orig
 9. **Après M2 · Chapitres** : le spiralaire rendu visible — « cette notion, déjà croisée au chapitre 2, reviendra au chapitre 7 » (Bruner ; nécessite la Concordance).
 10. **Fondements · Le modèle de panneau** : sa grammaire (« une chose à la fois, de l'air », atterrissage sur le travail principal) documentée comme gestion de la charge cognitive (Sweller) — l'ancrage du modèle entier.
 
+## ⚠ DOCTRINE PÉDAGOGIQUE RETROUVÉE — conversation du 14/07 « Réduire la dépendance aux notes et au numérique » (exhumée le 29/07 sur ordre de Paul)
+> **Pourquoi ce bloc existe** : le COCKPIT y était, et il manquait au plan. En fouillant plus loin, sept autres décisions de fond s'y trouvaient, également absentes. Elles sont ici verbatim ou au plus près. **Aucune n'est une invention de conscience ; celles qui viennent d'une analyse de Claude sont signalées comme telles.**
+
+### ① LE BILAN DE DÉBUT DE SÉANCE APPARTIENT AU NOYAU — IL NE MANQUE JAMAIS DE DONNÉES
+Sa source minimale est **le cours classique et les évaluations sur table**, indexés aux compétences : elle arrive à **TOUT** élève, par le professeur, **sans dépendre d'aucun usage du site**. Un élève peut traverser l'année sans MJPC (hors les passages obligés imposés, qui font partie de la base) : son bilan de début de séance est déjà parlant, au minimum garanti.
+**L'entraînement libre n'est donc PAS la condition d'existence du bilan, mais son AMPLIFICATEUR DE RÉSOLUTION.** D'où un cercle vertueux **juste par construction** : *l'investissement est récompensé sans que l'abstention soit pénalisée, puisque **le plancher est tenu par le papier, pas par le zèle de l'élève***.
+
+### ② LE CERCLE VERTUEUX VISIBLE (décision et formulation de Paul, 14/07)
+*« Les élèves qui auront fait plus d'entraînement libre sur le site auront forcément des données plus précises, et donc c'est un cercle vertueux qui rend VISIBLE à l'élève l'intérêt de travailler en plus hors séance, et que ça lui sert POUR la séance. »* L'entraînement libre cesse d'être une exhortation dont le bénéfice est différé et abstrait : **il devient un investissement au rendement immédiat et visible.**
+**DEUX TEMPORALITÉS DE PREUVE** qui se renforcent : le **retour rapide** (« mon bilan d'aujourd'hui est plus fin parce que je me suis entraîné hier ») et la **révélation longue** (« mon profil raconte mon année »). La première entretient la motivation pendant que la seconde se construit en silence — *c'est ce qui manquait pour que la maïeutique tienne sur la durée : un signe de vie en cours de route, pas seulement une révélation au bout.*
+
+### ③ LE HALO SUR TOGGLE, ÉTEINT D'ABORD — ET C'EST UN SÉQUENÇAGE PÉDAGOGIQUE, PAS UN RÉGLAGE TECHNIQUE
+Le **halo** = le collatéral des compétences voisines, puisqu'on ne travaille jamais une seule compétence à la fois. **Décision de Paul** : il s'allume quand **DEUX** conditions sont réunies — ① les données voisines sont assez sourcées, **ET** ② l'élève est habitué au rituel du bilan de début de séance. *La seconde condition est aussi importante que la première : un halo allumé trop tôt, sur un élève qui n'a pas intégré ce qu'est un bilan pré-séance, c'est de la richesse qui tombe dans le vide.* **On fait mûrir l'usage avant d'enrichir l'outil.**
+
+### ④ GRADUATION DE LA CONFIANCE
+La compétence centrale de la séance **parle fort** (données récentes et nombreuses) ; le halo **ne signale qu'au-delà d'un volume suffisant**. **JAMAIS de diagnostic sur un ou deux items.**
+
+### ⑤ PRUDENCE ASYMÉTRIQUE SUR LE « RELÂCHE TON ATTENTION »
+*Un « concentre-toi » erroné coûte peu ; un « tu peux souffler » erroné coûte une erreur évitable.* Tant que les données sont minces, ce versant se formule **« tu es à l'aise, vérifie quand même »**.
+**⚠ NE PAS CONFONDRE AVEC L'ASYMÉTRIE CÔTÉ PROFESSEUR, QUI S'INVERSE** (voir le COCKPIT au CHANTIER) : pour l'élève, ne jamais dire « tu peux relâcher » ; pour Paul, dire fermement et sans euphémisme ce qui l'engage. *« Je ne suis pas un élève, je suis un professionnel. »*
+
+### ⑥ SORTIE ÉPURÉE, ORIENTÉE ACTION, JAMAIS ÉTIQUETTE
+Le demi-A4 est **personnel et discret, il ne circule pas**. Jamais d'étiquette de personne. **L'outil pré-trie, le professeur décide** : le hub propose les vigilances, Paul tranche le retour.
+
+### ⑦🔴 LE CENTRE DE GRAVITÉ DU RISQUE S'EST DÉPLACÉ — analyse de Claude validée par la suite de la conversation, à connaître de toute conscience
+Au début, le danger était **le calcul de note** (une soustraction fausse, un demi-point oublié) : risque largement maîtrisé par les moteurs déterministes et la source unique. **Tout ce qui a été construit depuis a déplacé l'enjeu vers L'INDEXATION DES COMPÉTENCES.** Le bilan de séance, le halo, le profil longitudinal, le pilotage en classe : **tout repose désormais sur le fait que chaque évaluation — papier comprise — soit rattachée à la bonne notion, dans le même référentiel, avec assez de volume pour être fiable.**
+**Et ce risque est d'une nature plus retorse que le calcul** : *une note fausse, l'élève la voit et la conteste ; **un diagnostic de compétence mal fondé est invisible, il a l'autorité douce d'un graphique, et personne ne vient le corriger.*** La rigueur mise dans `computeNote` doit être remise **entière dans l'étiquetage** — travail plus ingrat, parce qu'il n'a pas la satisfaction d'une fonction qu'on prouve juste une fois pour toutes.
+→ **C'est la justification de fond du chantier taxonomie/Concordance, et la raison pour laquelle il ne peut pas rester une dette de confort.**
+
+### ⑧⚠ L'AVERTISSEMENT SUR L'AMPLEUR — à relire à chaque conversation de conception
+*« On a commencé par "fiabiliser des apps existantes pour septembre". On termine sur un hub qui croise toutes les évaluations de l'année, papier et numérique, pour produire un bilan individualisé par séance. C'est magnifique et c'est juste — mais regarde la pente. Chaque échange a ajouté une pièce cohérente, et **la cohérence même de ces ajouts les rend irrésistibles** : comme tout s'emboîte, rien ne semble de trop. C'est exactement le mécanisme par lequel un projet juste devient un projet infini. **La beauté de l'emboîtement est précisément ce qui peut t'empêcher de voir où s'arrêter.** »*
+
+### ⑨ LE CLOISONNEMENT DES CANAUX (illustré par `plan_de_travail`)
+**Formatif** (séances socles) : décompte cumulé de réussite par item, partiel valorisé → alimente le profil, **JAMAIS École Directe**. · **Autonomie** : note par séance, **perdue si l'élève ouvre une aide**, rattachée à *Méthodes*. · **Sommatif** : l'évaluation de la **séance de convergence** (dernière séance, verrouillée tant que les socles ne sont pas faits, composée sur papier comme les autres) — **SEULE note susceptible d'aller vers École Directe, par toggle prof, APRÈS VALIDATION MANUELLE**.
+**Ce que le cloisonnement résout par le mécanisme et non par le discours** : *l'autonomie qu'on encourage sans punir ceux qui s'en abstiennent → réglée par le plancher papier ; la note dont on veut désintoxiquer l'élève sans la supprimer → réglée par le cloisonnement des canaux ; la plus-value du numérique qu'on ne peut pas prouver en paroles → réglée par le contraste vécu et le bilan qui s'affine.* **Là où d'autres mettraient une exhortation, Paul met une mécanique qui rend le bon comportement naturel et le mauvais sans conséquence** — sa façon de coder (des moteurs, pas des consignes) appliquée à la pédagogie elle-même.
