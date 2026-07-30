@@ -776,6 +776,18 @@ body.at-corps-fige{overflow:hidden}
 .at-modale-b{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 /* ═══ fin CSS atelier ═══ */
 </style>
+<style>
+/* ═══ ÉCRITURES SANS SILENCE (M-ÉCHECS-1) — bandeau unique de verdicts ═══ */
+#mjpc-echecs-bandeau{display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:8000;pointer-events:auto}
+#mjpc-echecs-bandeau .mjpc-bd-int{max-width:860px;margin:0 auto;border-radius:10px;padding:12px 16px;font-size:.9rem;line-height:1.45;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.mjpc-bandeau-echec .mjpc-bd-int{background:#3a1512;color:#f0c0b5;border:1px solid #8a4a3a}
+.mjpc-bandeau-ok .mjpc-bd-int{background:#12300f;color:#b5e8b0;border:1px solid #3a7a38}
+.mjpc-bd-btn{font:inherit;font-size:.84rem;margin-left:10px;background:rgba(255,255,255,.1);color:inherit;border:1px solid currentColor;border-radius:8px;padding:9px 14px;min-height:44px;min-width:44px;cursor:pointer}
+.mjpc-bd-btn:hover{background:rgba(255,255,255,.18)}
+.mjpc-bd-ligne{margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,.25);font-size:.84rem}
+@media (max-width:480px){#mjpc-echecs-bandeau{left:6px;right:6px;bottom:6px}}
+/* ═══ fin bandeau ═══ */
+</style>
 </head>
 <body>
 <div class="stars" id="stars"></div>
@@ -1132,16 +1144,17 @@ function _siteGet(chemin, cb){
     .catch(function(){ cb(null); });
 }
 function _sitePut(chemin, valeur, cb){
-  if(m8TestOn()){ M8_TEST_STORE[chemin] = valeur; if(cb) cb(true); return; }
-  fetch(FIREBASE_BASE + chemin + '.json', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(valeur)})
-    .then(function(){ if(cb) cb(true); })
-    .catch(function(){ if(cb) cb(false); });
+  /* M-ÉCHECS-1 : cb(ok, issue) — ok n'est vrai QUE sur verdict accepté (socle §9).
+     Les appels historiques qui ne lisent que ok restent justes : refus et panne
+     y redeviennent false au lieu de passer pour un succès. */
+  if(m8TestOn()){ M8_TEST_STORE[chemin] = valeur; if(cb) cb(true,{etat:MJPC_ISSUE.ACCEPTEE,status:0,url:chemin,quand:Date.now()}); return; }
+  mjpcEcrireRest(FIREBASE_BASE + chemin + '.json', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(valeur)},
+    function(issue){ if(cb) cb(issue.etat===MJPC_ISSUE.ACCEPTEE, issue); });
 }
 function _siteDelete(chemin, cb){
-  if(m8TestOn()){ delete M8_TEST_STORE[chemin]; if(cb) cb(true); return; }
-  fetch(FIREBASE_BASE + chemin + '.json', {method:'DELETE'})
-    .then(function(){ if(cb) cb(true); })
-    .catch(function(){ if(cb) cb(false); });
+  if(m8TestOn()){ delete M8_TEST_STORE[chemin]; if(cb) cb(true,{etat:MJPC_ISSUE.ACCEPTEE,status:0,url:chemin,quand:Date.now()}); return; }
+  mjpcEcrireRest(FIREBASE_BASE + chemin + '.json', {method:'DELETE'},
+    function(issue){ if(cb) cb(issue.etat===MJPC_ISSUE.ACCEPTEE, issue); });
 }
 
 /* ══════════ ⑤ DATES DU BREVET — le code garde le défaut, le hub surcharge ══════════
@@ -1888,7 +1901,13 @@ var NTFY_TOPIC='MJPC_NTFY_TOPIC_PLACEHOLDER';
 var PROF_CODES=['1312','3141'];
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.0.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.2.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// v1.2.0 : + §9 écritures, les trois issues (MJPC_ISSUE, mjpcEcrireRest) —
+//          une écriture n'a jamais deux issues (« fait »/« erreur ») mais trois :
+//          acceptée / refusée (définitif) / panne (temporaire). Prérequis M-SÉCU.
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -2046,6 +2065,75 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+// ── 9. Écritures : les trois issues (v1.2.0) ──
+// Une écriture ne connaît JAMAIS deux issues (« fait » / « erreur ») mais TROIS :
+//   ACCEPTEE — la réponse est arrivée ET le serveur a accepté ;
+//   REFUSEE  — la réponse est arrivée et dit non (règle de sécurité, chemin
+//              invalide, charge rejetée) : DÉFINITIF, réessayer n'y changera rien ;
+//   PANNE    — aucune réponse (liaison) : TEMPORAIRE, l'écriture pourra aboutir
+//              plus tard (une file d'attente pourra se brancher sur cet état).
+// Les confondre fait mentir l'écran : « enregistré » pendant que rien n'est parti.
+var MJPC_ISSUE={ACCEPTEE:"acceptee",REFUSEE:"refusee",PANNE:"panne"};
+
+// Le classeur d'issues pour le transport REST (fetch) — la SEULE source de vérité :
+//   la promesse se résout ET r.ok        → ACCEPTEE
+//   la promesse se résout ET !r.ok       → REFUSEE (le status est porté)
+//   la promesse rejette (aucune réponse) → PANNE   (status 0)
+// fetch ne rejette QUE sur panne de liaison : c'est précisément pourquoi un refus
+// HTTP se faisait passer pour un succès partout où seul le then était regardé.
+function mjpcEcrireRest(url,options,cb){
+  /* CORRECTION CONSCIENCE (30/07) — le verdict se CALCULE dans la cha\u00eene, le callback
+     est appel\u00e9 APR\u00c8S, dans un maillon s\u00e9par\u00e9. Avant : `.then(A).catch(B)` avec cb
+     appel\u00e9 DANS A — si quoi que ce soit levait en aval (bug d'affichage, globale
+     manquante), le catch destin\u00e9 aux pannes r\u00e9seau attrapait ce bug et rappelait cb
+     avec un verdict PANNE : callback jou\u00e9 DEUX FOIS et verdict FAUX (prouv\u00e9 : serveur
+     200, cb re\u00e7oit « acceptee » puis « panne »). C'est la famille m\u00eame du d\u00e9faut que
+     ce morceau r\u00e9pare : une erreur qui se d\u00e9guise en une autre.
+     Le second argument de `.then` ne capture QUE le rejet du fetch, jamais le premier
+     handler. Si cb l\u00e8ve, l'erreur reste visible en console et ne falsifie plus rien. */
+  var quand=Date.now();
+  fetch(url,options).then(function(r){
+    return {etat:r.ok?MJPC_ISSUE.ACCEPTEE:MJPC_ISSUE.REFUSEE,status:r.status,url:url,quand:quand};
+  },function(){
+    return {etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:quand};
+  }).then(function(issue){
+    if(cb)cb(issue);
+  });
+}
+
+
 /* Pastille de version du site — en dur (M8). Promotion au socle prévue M15. */
 /* ═══════════════════════════════════════════════════════════════════════════
    DIAGNOSTIC — À LIRE EN PREMIER SI « ÇA NE MARCHE PLUS »
@@ -2093,9 +2181,9 @@ function publierManifeste(db){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.6.1";
-var APP_VERSION_DATE="2026-07-29";
-var MJPC_CORE_VERSION="1.0.0";
+var APP_VERSION="8.7.1";
+var APP_VERSION_DATE="2026-07-30";
+var MJPC_CORE_VERSION="1.2.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
@@ -2123,7 +2211,8 @@ var MJPC_PURGE = {
 function publierManifesteREST(){
   try{
     var payload={app:MJPC_APP,manifeste:MJPC_MANIFESTE,purge:MJPC_PURGE,version:MJPC_CORE_VERSION,publie_le:Date.now()};
-    fetch(FIREBASE_BASE+'/manifestes/'+MJPC_APP.id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).catch(function(){});
+    mjpcEcrireRest(FIREBASE_BASE+'/manifestes/'+MJPC_APP.id+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},
+      function(issue){MJPC_ECRITURES_DIAG.manifeste=issue;});  /* silencieux \u00e0 l'\u00e9cran, consultable (Q3) */
   }catch(e){}
 }
 // Niveaux désactivés pour les élèves (le prof y a accès normalement)
@@ -2293,9 +2382,16 @@ function _applyPubCascade(level,chnum,snum,itemId,slug,nv){
  }else{purge(ch,'/site/'+level+'/chapitres/'+chnum);_markPub(ch,slug,nv);put('/site/'+level+'/chapitres/'+chnum);
   if(!nv){var ses=ch.seances||{};Object.keys(ses).forEach(function(sk){var sc=ses[sk];if(!sc||typeof sc!=='object')return;purge(sc,'/site/'+level+'/chapitres/'+chnum+'/seances/'+sk);_markPub(sc,slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk);var its=sc.items||{};Object.keys(its).forEach(function(ik){if(its[ik]&&typeof its[ik]==='object'){_markPub(its[ik],slug,nv);put('/site/'+level+'/chapitres/'+chnum+'/seances/'+sk+'/items/'+ik);}});});}
  }
- paths.forEach(function(p){fetch(FIREBASE_BASE+p+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nv)}).catch(function(){});});
- nulls.forEach(function(p){fetch(FIREBASE_BASE+p+'.json',{method:'DELETE'}).catch(function(){});});
- renderChapitres(level);
+ /* M-ÉCHECS-1 (complément ① du feu vert) : le défaut était DOUBLE — catch vides
+    ET renderChapitres appelé sans attendre aucune réponse. Désormais l'affichage
+    de publication attend le verdict de TOUTES les écritures de la cascade ; les
+    échecs sont NOMMÉS chemin par chemin, ré-émission ponctuelle offerte. */
+ var lot=[];
+ paths.forEach(function(p){lot.push({url:FIREBASE_BASE+p+'.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(nv)},quoi:p});});
+ nulls.forEach(function(p){lot.push({url:FIREBASE_BASE+p+'.json',options:{method:'DELETE'},quoi:'purge '+p});});
+ mjpcLot(lot,(nv?'Publication':'D\u00e9publication'),
+   function(){renderChapitres(level);},
+   function(echecs){renderChapitres(level);});
 }
 function togglePublishChapterCls(level,num,slug){var d=chapitresData[level];if(!d||!d[num])return;_applyPubCascade(level,num,'','',slug,!isPubFor(d[num],slug));}
 function togglePublishSeanceCls(level,chnum,snum,slug){var d=chapitresData[level];if(!d||!d[chnum]||!d[chnum].seances[snum])return;_applyPubCascade(level,chnum,snum,'',slug,!isPubFor(d[chnum].seances[snum],slug));}
@@ -2362,8 +2458,8 @@ function resetChapitres(level){
   _modaleConfirme('Effacer TOUS les chapitres '+level.toUpperCase(),
     '\u26a0 Cette action supprime toutes les donn\u00e9es chapitres/s\u00e9ances/items du niveau <b>'+level.toUpperCase()+'</b>. Les onglets et autres r\u00e9glages ne sont pas touch\u00e9s.',
     function(){
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres.json',{method:'DELETE'})
-    .then(function(){chapitresData[level]={};renderChapitres(level);});
+  mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres.json','R\u00e9initialisation des chapitres '+level.toUpperCase(),
+    function(){chapitresData[level]={};renderChapitres(level);});
   },'EFFACER');
 }
 
@@ -2562,9 +2658,7 @@ function addChapter(level){
   var nums=Object.keys(data).map(function(n){return parseInt(n)||0});
   var newNum=(nums.length?Math.max.apply(null,nums):0)+1;
   var newCh={title:title,ordre:newNum,published:false,seances:{}};
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+newNum+'.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newCh)
-  }).then(function(){
+  mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+newNum+'.json',newCh,'Cr\u00e9ation du chapitre \u00ab '+title+' \u00bb',function(){
     if(!chapitresData[level])chapitresData[level]={};
     chapitresData[level][newNum]=newCh;
     renderChapitres(level);
@@ -2582,9 +2676,7 @@ function addSeance(level,chnum){
   var nums=Object.keys(seances).map(function(n){return parseInt(n)||0});
   var newNum=(nums.length?Math.max.apply(null,nums):0)+1;
   var newSce={title:title,type:'autre',ordre:newNum,published:true,items:{}};
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+newNum+'.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSce)
-  }).then(function(){
+  mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+newNum+'.json',newSce,'Cr\u00e9ation de la s\u00e9ance \u00ab '+title+' \u00bb',function(){
     if(!ch.seances)ch.seances={};
     ch.seances[newNum]=newSce;
     renderChapitres(level);
@@ -2606,9 +2698,7 @@ function addItem(level,chnum,snum){
   var itemId=slug;var i=2;
   while(items[itemId]){itemId=slug+'-'+i;i++;}
   var newItem={kind:'doc',title:title,subtitle:'',icon:'\ud83d\udcc4',source:'drive',ref:'',ordre:newOrdre,published:false};
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)
-  }).then(function(){
+  mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',newItem,'Cr\u00e9ation de l\u2019item \u00ab '+title+' \u00bb',function(){
     if(!sce.items)sce.items={};
     sce.items[itemId]=newItem;
     renderChapitres(level);
@@ -2630,9 +2720,7 @@ function editTitle(level,chnum,snum,itemId){
   if(snum)path+='/seances/'+snum;
   if(itemId)path+='/items/'+itemId;
   path+='/title.json';
-  fetch(FIREBASE_BASE+path,{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newTitle)
-  }).then(function(){
+  mjpcPutJson(FIREBASE_BASE+path,newTitle,'Renommage en \u00ab '+newTitle+' \u00bb',function(){
     if(itemId)d[chnum].seances[snum].items[itemId].title=newTitle;
     else if(snum)d[chnum].seances[snum].title=newTitle;
     else d[chnum].title=newTitle;
@@ -2644,8 +2732,7 @@ function editTitle(level,chnum,snum,itemId){
 function deleteChapter(level,chnum){
   var ch=chapitresData[level][chnum];if(!ch)return;
   _modaleConfirme('Supprimer le chapitre','Supprimer le chapitre \u00ab <b>'+escapeHtml(ch.title)+'</b> \u00bb et tout son contenu (s\u00e9ances et items) ?',function(){
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'.json',{method:'DELETE'})
-    .then(function(){
+  mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'.json','Suppression du chapitre \u00ab '+ch.title+' \u00bb',function(){
       delete chapitresData[level][chnum];
       renderChapitres(level);
     });
@@ -2655,8 +2742,7 @@ function deleteChapter(level,chnum){
 function deleteSeance(level,chnum,snum){
   var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
   _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ?',function(){
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json',{method:'DELETE'})
-    .then(function(){
+  mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json','Suppression de la s\u00e9ance \u00ab '+sce.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum];
       renderChapitres(level);
     });
@@ -2666,8 +2752,7 @@ function deleteSeance(level,chnum,snum){
 function deleteItem(level,chnum,snum,itemId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
   _modaleConfirme('Supprimer l\u2019item','Supprimer l\u2019item \u00ab <b>'+escapeHtml(item.title)+'</b> \u00bb ?',function(){
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{method:'DELETE'})
-    .then(function(){
+  mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json','Suppression de l\u2019item \u00ab '+item.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum].items[itemId];
       renderChapitres(level);
     });
@@ -2676,10 +2761,12 @@ function deleteItem(level,chnum,snum,itemId){
 
 // Réordonnancement par swap d'ordre avec voisin
 function _swapOrdre(pathA,pathB,oldA,oldB,onDone){
-  Promise.all([
-    fetch(FIREBASE_BASE+pathA+'/ordre.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(oldB)}),
-    fetch(FIREBASE_BASE+pathB+'/ordre.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(oldA)})
-  ]).then(onDone);
+  /* M-ÉCHECS-1 : les deux ordres partent en LOT — l'écran ne bouge que si les
+     DEUX verdicts sont acceptés, sinon les échecs sont nommés (socle §9). */
+  mjpcLot([
+    {url:FIREBASE_BASE+pathA+'/ordre.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(oldB)},quoi:'ordre du premier'},
+    {url:FIREBASE_BASE+pathB+'/ordre.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(oldA)},quoi:'ordre du second'}
+  ],'D\u00e9placement',onDone,null);
 }
 
 function moveChapter(level,chnum,dir){
@@ -2831,14 +2918,17 @@ function linkModalUnlink(){
 function applyLinkChanges(newSource,newRef,newKind){
   var ctx=LINK_MODAL_CONTEXT;if(!ctx)return;
   var basePath='/site/'+ctx.level+'/chapitres/'+ctx.chnum+'/seances/'+ctx.snum+'/items/'+ctx.itemId;
-  var promises=[
-    fetch(FIREBASE_BASE+basePath+'/source.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSource)}),
-    fetch(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newRef)})
+  /* M-ÉCHECS-1 : trois écritures en LOT — la modale ne se ferme et l'état local
+     ne suit QUE si tous les verdicts sont acceptés (avant : aucun catch, l'écran
+     entérinait un lien que le serveur avait pu refuser). */
+  var lot=[
+    {url:FIREBASE_BASE+basePath+'/source.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSource)},quoi:'source'},
+    {url:FIREBASE_BASE+basePath+'/ref.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newRef)},quoi:'r\u00e9f\u00e9rence'}
   ];
   if(newKind){
-    promises.push(fetch(FIREBASE_BASE+basePath+'/kind.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newKind)}));
+    lot.push({url:FIREBASE_BASE+basePath+'/kind.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newKind)},quoi:'type'});
   }
-  Promise.all(promises).then(function(){
+  mjpcLot(lot,'Bouton LIER',function(){
     var item=chapitresData[ctx.level][ctx.chnum].seances[ctx.snum].items[ctx.itemId];
     item.source=newSource;item.ref=newRef;
     if(newKind)item.kind=newKind;
@@ -2863,7 +2953,7 @@ function _uploadBlobToDrive(blob,fileName,level,chnum,snum){
     reader.onload=function(e){
       var b64=e.target.result.split(',')[1];
       var targetPath=level+'/ch'+chnum+'/s'+snum;
-      fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
+      mjpcFetchOk(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({
         action:'upload_drive_only',fileData:b64,fileName:fileName,mimeType:blob.type||'application/octet-stream',target_path:targetPath
       })}).then(function(r){return r.json();}).then(function(res){
         if(res.error){reject(new Error(res.error));return;}
@@ -2908,9 +2998,9 @@ function uploadFileForChapterItem(file,level,chnum,snum,itemId){
   _uploadBlobToDrive(file,file.name||('upload-'+Date.now()),level,chnum,snum).then(function(res){
     var basePath='/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId;
     return Promise.all([
-      fetch(FIREBASE_BASE+basePath+'/source.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('drive')}),
-      fetch(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(res.drive_file_id)}),
-      fetch(FIREBASE_BASE+basePath+'/published.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
+      mjpcFetchOk(FIREBASE_BASE+basePath+'/source.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('drive')}),
+      mjpcFetchOk(FIREBASE_BASE+basePath+'/ref.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(res.drive_file_id)}),
+      mjpcFetchOk(FIREBASE_BASE+basePath+'/published.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
     ]).then(function(){
       item.source='drive';item.ref=res.drive_file_id;_markPub(item,'*',true);   /* M8-IDENTITÉ : routé — comportement conservé (publié pour toutes les classes) ; l'opportunité de ce défaut reste à arbitrer par Paul */
       showUploadToast('\u2705 Fichier li\u00e9 \u00e0 l\u2019item','ok');
@@ -2926,7 +3016,7 @@ function addImageToGallery(file,level,chnum,snum,itemId){
   var ids=_nextImageId(images);
   _uploadBlobToDrive(file,file.name||('image-'+Date.now()+'.png'),level,chnum,snum).then(function(res){
     var newImage={ref:res.drive_file_id,titre:'Image '+ids.ordre,ordre:ids.ordre};
-    return fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+ids.imgId+'.json',{
+    return mjpcFetchOk(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+ids.imgId+'.json',{
       method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newImage)
     }).then(function(){
       if(!item.images)item.images={};
@@ -2943,8 +3033,8 @@ function convertItemToGalleryAndAdd(file,level,chnum,snum,itemId){
   var basePath='/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId;
   showUploadToast('\u23f3 Cr\u00e9ation galerie\u2026');
   Promise.all([
-    fetch(FIREBASE_BASE+basePath+'/kind.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('gallery')}),
-    fetch(FIREBASE_BASE+basePath+'/icon.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('\ud83d\uddbc')})
+    mjpcFetchOk(FIREBASE_BASE+basePath+'/kind.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('gallery')}),
+    mjpcFetchOk(FIREBASE_BASE+basePath+'/icon.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify('\ud83d\uddbc')})
   ]).then(function(){
     item.kind='gallery';item.icon='\ud83d\uddbc';
     addImageToGallery(file,level,chnum,snum,itemId);
@@ -2965,7 +3055,7 @@ function uploadFileForNewItem(file,level,chnum,snum){
     var ext=res.ext||(fileName.split('.').pop()||'').toLowerCase();
     var iconByExt={pdf:'\ud83d\udcc4',pptx:'\ud83d\udcca',ppt:'\ud83d\udcca',docx:'\ud83d\udcdd',doc:'\ud83d\udcdd',html:'\ud83d\udd27',htm:'\ud83d\udd27'};
     var newItem={kind:'doc',title:fileName.replace(/\.[^.]+$/,''),subtitle:'',icon:iconByExt[ext]||'\ud83d\udcc4',source:'drive',ref:res.drive_file_id,ordre:newOrdre,published:true};
-    return fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
+    return mjpcFetchOk(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
       method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)
     }).then(function(){
       if(!sce.items)sce.items={};
@@ -2987,7 +3077,7 @@ function _createGalleryItemWithFirstImage(file,level,chnum,snum){
   var newOrdre=(ordres.length?Math.max.apply(null,ordres):0)+1;
   _uploadBlobToDrive(file,fileName,level,chnum,snum).then(function(res){
     var newItem={kind:'gallery',title:'Galerie',subtitle:'',icon:'\ud83d\uddbc',ordre:newOrdre,published:true,images:{img1:{ref:res.drive_file_id,titre:'Image 1',ordre:1}}};
-    return fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
+    return mjpcFetchOk(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',{
       method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)
     }).then(function(){
       if(!sce.items)sce.items={};
@@ -3020,9 +3110,8 @@ function renameImageInGallery(level,chnum,snum,itemId,imgId){
   _modalePrompt('Renommer l\u2019image','Nouveau titre de l\u2019image :',img.titre||'',function(newTitre){
   if(newTitre===null)return;
   newTitre=newTitre.trim();if(!newTitre)return;
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+imgId+'/titre.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newTitre)
-  }).then(function(){img.titre=newTitre;renderChapitres(level);});
+  mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+imgId+'/titre.json',newTitre,'Renommage de l\u2019image',
+    function(){img.titre=newTitre;renderChapitres(level);});
   });
 }
 
@@ -3046,9 +3135,8 @@ function deleteImageInGallery(level,chnum,snum,itemId,imgId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];
   var img=item&&item.images&&item.images[imgId];if(!img)return;
   _modaleConfirme('Supprimer cette image','\u00ab '+escapeHtml(img.titre||imgId)+' \u00bb<br><br>Le fichier Drive reste, seule la liaison est retir\u00e9e de la galerie.',function(){
-  fetch(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+imgId+'.json',{
-    method:'DELETE'
-  }).then(function(){
+  mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/images/'+imgId+'.json','Retrait de l\u2019image',
+    function(){
     delete item.images[imgId];
     renderChapitres(level);
   });
@@ -3205,7 +3293,10 @@ if(!levelLabels[currentLevel])currentLevel=null;
 window.addEventListener('DOMContentLoaded',function(){_chargerTextesSite();/* M8-BADGE : le badge d'accueil affiche la version — il lit APP_VERSION, il suit donc chaque promotion sans retouche */var _pb=document.getElementById('proto-badge');if(_pb)_pb.textContent='v'+APP_VERSION;var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(restored&&TRACK.eleve&&TRACK.eleve.is_prof&&!currentLevel){_atterrirProf();return;}if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.querySelector('.val-code-wrap').style.display='none';document.getElementById('val-btn').style.display='none';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&(TRACK.eleve.is_prof||TRACK.eleve.niveau===currentLevel)){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
 function _normName(s){return String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');}
 function _findEleveByName(full){var t=_normName(full);if(!t)return null;var keys=Object.keys(classesData||{});for(var i=0;i<keys.length;i++){var slug=keys[i];var cl=classesData[slug];if(!cl||typeof cl!=='object'||cl.archivee)continue;var names=extractEleves(cl,[]);for(var j=0;j<names.length;j++){if(_normName(names[j])===t)return{slug:slug,nom:names[j],classe:cl,code:_eleveCode(names[j])};}}return null;}
-function _loginEleveFound(found,status){var cl=found.classe;var eleve={is_prof:false,nom:found.nom,prenom:'',classe:found.slug,niveau:(cl&&cl.niveau)||currentLevel||'3e',code:found.code||'',display:found.nom,uuid:''};ensureEleveUuid(eleve).then(function(ev){TRACK.eleve=ev;_writeSharedSession(ev);if(typeof notifyConnection==='function')notifyConnection(ev);if(typeof startHeartbeat==='function')startHeartbeat();currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);});}
+function _loginEleveFound(found,status){var cl=found.classe;var eleve={is_prof:false,nom:found.nom,prenom:'',classe:found.slug,niveau:(cl&&cl.niveau)||currentLevel||'3e',code:found.code||'',display:found.nom,uuid:''};ensureEleveUuid(eleve).then(function(ev){TRACK.eleve=ev;_writeSharedSession(ev);if(typeof notifyConnection==='function')notifyConnection(ev);if(typeof startHeartbeat==='function')startHeartbeat();currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);}).catch(function(){
+  /* M-ÉCHECS-1 — texte \u00e9l\u00e8ve au flux impersonnel (principe cardinal) */
+  if(status){status.textContent='La connexion n\u2019a pas abouti. R\u00e9essaie dans un instant.';status.classList.remove('connected');}
+});}
 function _writeSharedSession(ev){try{var o=Object.assign({},ev||{},{ts:Date.now()});var p=JSON.stringify(o);sessionStorage.setItem('mjpc_eleve',p);try{localStorage.setItem('mjpc_eleve',p);}catch(e){}}catch(e){}}
 function doLogin(){
   /* M8-IDENTITÉ (I3) : entrée unique code + nom + prénom, comme dans les apps.
@@ -3251,7 +3342,9 @@ function loginAsProf(){
 function ensureEleveUuid(eleve){
   // Lookup ou création de l'UUID dans /eleves/ + index par slug
   var slug=sanMJPC(eleve.nom+' '+eleve.prenom);   /* canon (accents décomposés) — l'ancienne normalisation locale produisait cl_ment_noe etc. */
-  return fetch(FIREBASE_BASE+'/eleves_index/'+slug+'.json').then(function(r){return r.json()}).catch(function(){return null}).then(function(existingUuid){
+  /* M-ÉCHECS-1 : la panne de LECTURE ne vaut plus « il n'existe pas » — avant,
+     un hub muet faisait créer un DEUXIÈME uuid au même élève, en silence. */
+  return fetch(FIREBASE_BASE+'/eleves_index/'+slug+'.json').then(function(r){if(!r.ok)throw new Error('lecture refus\u00e9e');return r.json()}).then(function(existingUuid){
     if(existingUuid&&typeof existingUuid==='string'){
       eleve.uuid=existingUuid;
       return eleve;
@@ -3260,9 +3353,11 @@ function ensureEleveUuid(eleve){
     var newUuid=(crypto&&crypto.randomUUID)?crypto.randomUUID():('u-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
     var record={uuid:newUuid,nom:eleve.nom||'',prenom:eleve.prenom||'',nom_complet_origine:eleve.display||(eleve.nom+' '+eleve.prenom),inscriptions:[{annee:'2025-2026',niveau:eleve.niveau||'',classe_slug:(eleve.classe||'').toLowerCase().replace(/[^a-z0-9]+/g,'_')}],cree_le:Date.now()};
     return Promise.all([
-      fetch(FIREBASE_BASE+'/eleves/'+newUuid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)}),
-      fetch(FIREBASE_BASE+'/eleves_index/'+slug+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUuid)})
-    ]).then(function(){eleve.uuid=newUuid;return eleve;}).catch(function(){eleve.uuid=newUuid;return eleve;});
+      mjpcFetchOk(FIREBASE_BASE+'/eleves/'+newUuid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)}),
+      mjpcFetchOk(FIREBASE_BASE+'/eleves_index/'+slug+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUuid)})
+    ]).then(function(){eleve.uuid=newUuid;return eleve;});
+    /* M-ÉCHECS-1 : plus de repli silencieux — un uuid jamais écrit au hub rendait
+       invisibles toutes les données rattachées ensuite. L'échec remonte à l'écran. */
   });
 }
 
@@ -3572,14 +3667,14 @@ function handleBadgeTap(){badgeTapCount++;if(badgeTapTimer)clearTimeout(badgeTap
 function loadDocsList_(){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'getdocs',niveau:currentLevel||''})}).then(function(r){return r.json();}).then(function(data){if(data.documents)data.documents.forEach(function(doc){DOCS_CACHE[doc.doc_id]=doc;});applyDocsToUI_();}).catch(function(err){console.warn('[Docs]',err);});}
 function applyDocsToUI_(){document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){var docId=el.getAttribute('data-docid');var doc=DOCS_CACHE[docId];if(doc&&doc.embed_url){el.classList.add('has-file');var a=el.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}});}
 function initAdminDragDrop_(){document.addEventListener('dragover',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');document.querySelectorAll('.drag-over').forEach(function(el){if(el!==d)el.classList.remove('drag-over');});if(d)d.classList.add('drag-over');},false);document.addEventListener('dragenter',function(e){e.preventDefault();e.stopPropagation();},false);document.addEventListener('dragleave',function(e){var d=e.target.closest('.doc-item[data-docid]')||e.target.closest('.fiche-drop-zone[data-section]');if(d&&!d.contains(e.relatedTarget))d.classList.remove('drag-over');},false);document.addEventListener('drop',function(e){e.preventDefault();e.stopPropagation();if(!ADMIN_MODE)return;document.querySelectorAll('.drag-over').forEach(function(el){el.classList.remove('drag-over');});var docItem=e.target.closest('.doc-item[data-docid]');var dropZone=e.target.closest('.fiche-drop-zone[data-section]');var files=e.dataTransfer.files;if(!files||files.length===0)return;var file=files[0];var MAX_SIZE=30*1024*1024;if(file.size>MAX_SIZE){showBigFileGuide_(file,docItem,dropZone);return;}if(docItem){uploadFile_(file,docItem,docItem.getAttribute('data-docid'),docItem.getAttribute('data-chapitre')||'',docItem.getAttribute('data-seance')||'','');}else if(dropZone){uploadFileToSection_(file,dropZone,dropZone.getAttribute('data-section'));}},false);document.querySelectorAll('.doc-item[data-docid]').forEach(function(el){if(!el.querySelector('.admin-delete')){var btn=document.createElement('button');btn.className='admin-delete';btn.textContent='✕';btn.onclick=function(ev){ev.stopPropagation();_modaleConfirme('Supprimer ce document','Le document sera retir\u00e9 de la liste. Le fichier Drive d\u2019origine n\u2019est pas touch\u00e9.',function(){deleteDoc_(el.getAttribute('data-docid'));});};el.appendChild(btn);}});document.querySelectorAll('.fiche-drop-zone').forEach(function(dz){var body=dz.closest('.chapter-body');if(body)body.classList.add('open');});}
-function uploadFile_(file,docItem,docId,chapitre,seance,section){var ind=docItem.querySelector('.upload-indicator');var prog=docItem.querySelector('.upload-progress');if(ind)ind.textContent='Upload...';if(prog)prog.style.width='30%';docItem.classList.remove('upload-done');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];if(prog)prog.style.width='60%';fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:chapitre,seance:seance,section:section,doc_id:docId,doc_title:file.name.replace(/\.[^.]+$/,'')})}).then(function(r){return r.json();}).then(function(data){if(prog)prog.style.width='100%';if(data.error){if(ind)ind.textContent='❌ '+data.error;return;}DOCS_CACHE[data.doc_id||docId]={doc_id:data.doc_id||docId,embed_url:data.embed_url,drive_url:data.drive_url,nom_fichier:data.file_name};docItem.classList.add('upload-done','has-file');if(data.embed_url)docItem.setAttribute('data-embed',data.embed_url);if(ind)ind.textContent='✓ '+file.name;var a=docItem.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}).catch(function(err){if(ind)ind.textContent='❌ Erreur';console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
-function uploadFileToSection_(file,dropZone,section){var placeholder=document.createElement('div');placeholder.className='doc-item';placeholder.style.opacity='0.5';placeholder.innerHTML='<div class="doc-icon pdf">⏳</div><div class="doc-label">Upload de '+file.name+'...<small>En cours</small></div><div class="doc-action">...</div>';dropZone.appendChild(placeholder);var cleanTitle=file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:section,seance:'',section:section,doc_id:'',doc_title:cleanTitle})}).then(function(r){return r.json();}).then(function(data){placeholder.remove();if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+file.name+' uploadé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){placeholder.remove();alert('Erreur réseau');console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
-function deleteDoc_(docId){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'remove_doc',doc_id:docId})}).then(function(r){return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}var el=document.querySelector('[data-docid="'+docId+'"]');if(el)el.remove();alert('✓ Document supprimé. Le site se met à jour sur GitHub (~30s).');}).catch(function(err){alert('Erreur réseau');console.warn('[Delete]',err);});}
+function uploadFile_(file,docItem,docId,chapitre,seance,section){var ind=docItem.querySelector('.upload-indicator');var prog=docItem.querySelector('.upload-progress');if(ind)ind.textContent='Upload...';if(prog)prog.style.width='30%';docItem.classList.remove('upload-done');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];if(prog)prog.style.width='60%';fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:chapitre,seance:seance,section:section,doc_id:docId,doc_title:file.name.replace(/\.[^.]+$/,'')})}).then(function(r){if(!r.ok)throw new Error('envoi refus\u00e9 (HTTP '+r.status+') \u2014 r\u00e9essayer ne changera rien');return r.json();}).then(function(data){if(prog)prog.style.width='100%';if(data.error){if(ind)ind.textContent='❌ '+data.error;return;}DOCS_CACHE[data.doc_id||docId]={doc_id:data.doc_id||docId,embed_url:data.embed_url,drive_url:data.drive_url,nom_fichier:data.file_name};docItem.classList.add('upload-done','has-file');if(data.embed_url)docItem.setAttribute('data-embed',data.embed_url);if(ind)ind.textContent='✓ '+file.name;var a=docItem.querySelector('.doc-action');if(a)a.textContent='→ Ouvrir';}).catch(function(err){if(ind)ind.textContent='\u274c '+(err&&err.message?err.message:'L\u2019envoi n\u2019a pas abouti');console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
+function uploadFileToSection_(file,dropZone,section){var placeholder=document.createElement('div');placeholder.className='doc-item';placeholder.style.opacity='0.5';placeholder.innerHTML='<div class="doc-icon pdf">⏳</div><div class="doc-label">Upload de '+file.name+'...<small>En cours</small></div><div class="doc-action">...</div>';dropZone.appendChild(placeholder);var cleanTitle=file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');var reader=new FileReader();reader.onload=function(e){var b64=e.target.result.split(',')[1];fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload',fileData:b64,fileName:file.name,mimeType:file.type,niveau:currentLevel||'3e',chapitre:section,seance:'',section:section,doc_id:'',doc_title:cleanTitle})}).then(function(r){if(!r.ok)throw new Error('envoi refus\u00e9 (HTTP '+r.status+') \u2014 r\u00e9essayer ne changera rien');return r.json();}).then(function(data){placeholder.remove();if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+file.name+' uploadé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){placeholder.remove();alert(err&&err.message?err.message:'L\u2019envoi n\u2019a pas abouti \u2014 rien n\u2019est parti');console.warn('[Upload]',err);});};reader.readAsDataURL(file);}
+function deleteDoc_(docId){fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'remove_doc',doc_id:docId})}).then(function(r){if(!r.ok)throw new Error('envoi refus\u00e9 (HTTP '+r.status+') \u2014 r\u00e9essayer ne changera rien');return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}var el=document.querySelector('[data-docid="'+docId+'"]');if(el)el.remove();alert('✓ Document supprimé. Le site se met à jour sur GitHub (~30s).');}).catch(function(err){alert(err&&err.message?err.message:'L\u2019envoi n\u2019a pas abouti \u2014 rien n\u2019est parti');console.warn('[Delete]',err);});}
 var BIGFILE_CTX={docItem:null,dropZone:null,fileName:''};var BIGFILE_DISMISSED=localStorage.getItem('mjpc_bigfile_dismissed')==='1';
 function showBigFileGuide_(file,docItem,dropZone){var section=dropZone?dropZone.getAttribute('data-section'):'';var chapitre=docItem?(docItem.getAttribute('data-chapitre')||''):'';var folderName=chapitre||section||'divers';var sizeMB=Math.round(file.size/1024/1024);BIGFILE_CTX={docItem:docItem,dropZone:dropZone,fileName:file.name};if(BIGFILE_DISMISSED){alert('⚠ Fichier trop lourd ('+sizeMB+' Mo, max 30 Mo).\n\n1. Glisse-le dans le dossier Drive > '+(currentLevel||'3e')+' > '+folderName+'\n2. Copie le lien de partage\n3. Reviens ici et réessaie le drop');return;}document.getElementById('bigfile-name').textContent=file.name+' ('+sizeMB+' Mo)';document.getElementById('bigfile-url').value='';document.getElementById('bigfile-folder-link').textContent='Chargement du dossier...';document.getElementById('bigfile-folder-link').href='#';document.getElementById('bigfile-overlay').classList.add('visible');fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'get_folder_url',niveau:currentLevel||'3e',folder_name:folderName})}).then(function(r){return r.json();}).then(function(data){if(data.folder_url){document.getElementById('bigfile-folder-link').textContent='Drive > '+data.folder_path;document.getElementById('bigfile-folder-link').href=data.folder_url;}else{document.getElementById('bigfile-folder-link').textContent='Dossier Drive (erreur)';}}).catch(function(){document.getElementById('bigfile-folder-link').textContent='Dossier Drive (erreur réseau)';});}
 function closeBigFile(){document.getElementById('bigfile-overlay').classList.remove('visible');BIGFILE_CTX={docItem:null,dropZone:null,fileName:''};}
 function dismissBigFileGuide(){localStorage.setItem('mjpc_bigfile_dismissed','1');BIGFILE_DISMISSED=true;closeBigFile();}
-function associateBigFile(){var url=document.getElementById('bigfile-url').value.trim();if(!url){alert('Colle le lien Drive du fichier.');return;}var match=url.match(/\/d\/([a-zA-Z0-9_-]+)/);if(!match)match=url.match(/id=([a-zA-Z0-9_-]+)/);if(!match){alert('Lien Drive invalide. Utilise le lien de partage Google Drive.');return;}var fileId=match[1];var section=BIGFILE_CTX.dropZone?BIGFILE_CTX.dropZone.getAttribute('data-section'):'';var chapitre=BIGFILE_CTX.docItem?(BIGFILE_CTX.docItem.getAttribute('data-chapitre')||''):'';var seance=BIGFILE_CTX.docItem?(BIGFILE_CTX.docItem.getAttribute('data-seance')||''):'';var docId=BIGFILE_CTX.docItem?(BIGFILE_CTX.docItem.getAttribute('data-docid')||''):'';var cleanTitle=BIGFILE_CTX.fileName.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');closeBigFile();fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'associate',drive_file_id:fileId,fileName:BIGFILE_CTX.fileName,niveau:currentLevel||'3e',chapitre:chapitre||section,seance:seance,section:section,doc_id:docId,doc_title:cleanTitle})}).then(function(r){return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+BIGFILE_CTX.fileName+' associé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){alert('Erreur réseau');console.warn('[Associate]',err);});}
+function associateBigFile(){var url=document.getElementById('bigfile-url').value.trim();if(!url){alert('Colle le lien Drive du fichier.');return;}var match=url.match(/\/d\/([a-zA-Z0-9_-]+)/);if(!match)match=url.match(/id=([a-zA-Z0-9_-]+)/);if(!match){alert('Lien Drive invalide. Utilise le lien de partage Google Drive.');return;}var fileId=match[1];var section=BIGFILE_CTX.dropZone?BIGFILE_CTX.dropZone.getAttribute('data-section'):'';var chapitre=BIGFILE_CTX.docItem?(BIGFILE_CTX.docItem.getAttribute('data-chapitre')||''):'';var seance=BIGFILE_CTX.docItem?(BIGFILE_CTX.docItem.getAttribute('data-seance')||''):'';var docId=BIGFILE_CTX.docItem?(BIGFILE_CTX.docItem.getAttribute('data-docid')||''):'';var cleanTitle=BIGFILE_CTX.fileName.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');closeBigFile();fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'associate',drive_file_id:fileId,fileName:BIGFILE_CTX.fileName,niveau:currentLevel||'3e',chapitre:chapitre||section,seance:seance,section:section,doc_id:docId,doc_title:cleanTitle})}).then(function(r){if(!r.ok)throw new Error('envoi refus\u00e9 (HTTP '+r.status+') \u2014 r\u00e9essayer ne changera rien');return r.json();}).then(function(data){if(data.error){alert('Erreur: '+data.error);return;}alert('✓ '+BIGFILE_CTX.fileName+' associé. Le site se met à jour sur GitHub (~30s). Recharge la page ensuite.');}).catch(function(err){alert(err&&err.message?err.message:'L\u2019envoi n\u2019a pas abouti \u2014 rien n\u2019est parti');console.warn('[Associate]',err);});}
 function openViewer(title,url){if(url&&url.indexOf('drive.google.com/file/d/')>=0){url=url.replace(/\/view(\?|$)/,'/preview$1');}document.getElementById('doc-viewer-title').textContent=title;document.getElementById('doc-viewer-frame').src=url;document.getElementById('doc-viewer').classList.add('visible');}
 function toggleAdminTools(){document.getElementById('admin-tools-menu').classList.toggle('visible');}
 
@@ -3623,7 +3718,7 @@ function _allCodesTaken(){var t={};(PROF_CODES||[]).forEach(function(c){t[c]=tru
 function _genCode4(taken){var c,g=0;do{c=String(Math.floor(1000+Math.random()*9000));g++;}while(taken[c]&&g<9999);return c;}
 function _selectProfElClasse(slug){PROF_EL_CLASSE=slug;showProfSection('eleves');}
 function _eleveCode(nom){var k=san(nom);return (codesData[k]&&codesData[k].code)||'';}
-function _putCode(nom,slug,code){var k=san(nom);var rec={code:code,name:nom,classe:slug,createdAt:Date.now()};codesData[k]=rec;fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)}).catch(function(){});}
+function _putCode(nom,slug,code){var k=san(nom);var rec={code:code,name:nom,classe:slug,createdAt:Date.now()};codesData[k]=rec;mjpcPutJson(FIREBASE_BASE+'/codes/'+k+'.json',rec,'Enregistrement du code de '+nom,null);}
 function _profSectionEleves(){
   if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
   var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee&&!_estClasseInterne(k);}).sort(function(a,b){return ((classesData[a].nom)||'').localeCompare((classesData[b].nom)||'');});
@@ -3654,7 +3749,7 @@ function _importEleves(slug){
   if(added===0){alert('Ces \u00e9l\u00e8ves sont d\u00e9j\u00e0 pr\u00e9sents.');showProfSection('eleves');return;}
   if(!classesData[slug]||typeof classesData[slug]!=='object')classesData[slug]={};
   classesData[slug].eleves=merged;
-  fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});
+  mjpcPutJson(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',merged,'Import des \u00e9l\u00e8ves',null);
   showProfSection('eleves');
 }
 function _genererCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){if(!_eleveCode(nom)){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}});showProfSection('eleves');}
@@ -3664,8 +3759,14 @@ function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);v
   _modaleConfirme('Retirer un \u00e9l\u00e8ve','Retirer <b>'+escapeHtml(nom)+'</b> de la classe ? Une copie (\u00e9l\u00e8ve + code) part d\u2019abord en corbeille.',function(){
   var k=san(nom);var extract={classes:{}};extract.classes[slug]={eleves:[nom]};if(codesData[k]){extract.codes={};extract.codes[k]=codesData[k];}
   _corbeillePuis('retrait-eleve',extract,{eleve:nom,classe:slug,chemin:''},function(){
-    var merged=names.filter(function(e,idx){return idx!==i;});classesData[slug].eleves=merged;fetch(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)}).catch(function(){});
-    delete codesData[k];fetch(FIREBASE_BASE+'/codes/'+k+'.json',{method:'DELETE'}).catch(function(){});showProfSection('eleves');
+    var merged=names.filter(function(e,idx){return idx!==i;});
+    /* M-ÉCHECS-1 : l'écran ne retire l'élève que sur verdicts acceptés (lot de 2) */
+    mjpcLot([
+      {url:FIREBASE_BASE+'/classes/'+slug+'/eleves.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)},quoi:'liste de la classe'},
+      {url:FIREBASE_BASE+'/codes/'+k+'.json',options:{method:'DELETE'},quoi:'code personnel'}
+    ],'Retrait de \u00ab '+nom+' \u00bb',
+      function(){classesData[slug].eleves=merged;delete codesData[k];showProfSection('eleves');},
+      function(){showProfSection('eleves');});
   });
   });
 }
@@ -3941,13 +4042,13 @@ function _eleveFootprint(hub,nom,slug){
   return fp;
 }
 /* Suppression Firebase ciblée d'un chemin (REST). Inerte tant que l'écran ne l'appelle pas. */
-function _fbDeletePath(path){return fetch(FIREBASE_BASE+'/'+_b2Url(path)+'.json',{method:'DELETE'}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return true;});}
+function _fbDeletePath(path){return mjpcFetchOk(FIREBASE_BASE+'/'+_b2Url(path)+'.json',{method:'DELETE'}).then(function(){return true;});}
 /* ===== fin BRIQUE 2 (moteur) ===== */
 /* ===== BRIQUE 2 — écran (sélection en lot) + exécution réelle ===== */
 var _b2={hub:null,flat:[],classList:[],sel:{},mode:null};
 var _B2_META={niveau:1,annee:1,id:1,title:1,nom:1,archivee:1,couleur:1};
 function _b2Url(path){return String(path).split('/').map(encodeURIComponent).join('/');}
-function _fbPutPath(path,data){return fetch(FIREBASE_BASE+'/'+_b2Url(path)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){if(!r.ok)throw new Error('http '+r.status);return true;});}
+function _fbPutPath(path,data){return mjpcFetchOk(FIREBASE_BASE+'/'+_b2Url(path)+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(){return true;});}
 function _b2Eleves(slug){return extractEleves(_b2.hub.classes&&_b2.hub.classes[slug])||[];}
 function _b2GetPath(root,path){var p=String(path).split('/'),o=root,i;for(i=0;i<p.length;i++){if(o==null)return undefined;o=o[p[i]];}return o;}
 function _b2SetPath(root,path,val){var p=String(path).split('/'),o=root,i;for(i=0;i<p.length-1;i++){o[p[i]]=o[p[i]]||{};o=o[p[i]];}o[p[p.length-1]]=val;}
@@ -4104,8 +4205,13 @@ function _corbeillePut(motif,extract,meta){
 /* Corbeille puis destruction : si la corbeille échoue, l'utilisateur tranche explicitement
    (le fichier local, lui, est déjà enregistré quand ce chemin est atteint). */
 function _corbeillePuis(motif,extract,meta,suite){
-  _corbeillePut(motif,extract,meta).then(function(chemin){suite(chemin);}).catch(function(){
-    if(confirm('\u26a0 La corbeille cloud n\u2019a pas pu \u00eatre \u00e9crite.\n\nContinuer quand m\u00eame ? (annuler = rien n\u2019est d\u00e9truit)')){suite(null);}
+  _corbeillePut(motif,extract,meta).then(function(chemin){suite(chemin);}).catch(function(err){
+    /* M-ÉCHECS-1 : refus et panne n'appellent pas le même message (socle §9) */
+    var refus=err&&err.mjpcIssue&&err.mjpcIssue.etat===MJPC_ISSUE.REFUSEE;
+    var msg=refus
+      ?('\u26a0 La corbeille a \u00e9t\u00e9 REFUS\u00c9E par la base (HTTP '+err.mjpcIssue.status+') \u2014 r\u00e9essayer ne changera rien.\n\nContinuer SANS archive ? (annuler = rien n\u2019est d\u00e9truit)')
+      :'\u26a0 La corbeille n\u2019a pas r\u00e9pondu \u2014 rien n\u2019est parti.\n\nContinuer sans archive ? (annuler = rien n\u2019est d\u00e9truit)';
+    if(confirm(msg)){suite(null);}
   });
 }
 /* ===== fin CORBEILLE ===== */
@@ -4953,13 +5059,11 @@ function submitCreateClass(){
   if(!slug){alert('Nom invalide (vide apr\u00e8s simplification).');return;}
   if(classesData[slug]){alert('Une classe avec ce nom (slug \u00ab '+slug+' \u00bb) existe d\u00e9j\u00e0.');return;}
   var record={nom:nom,niveau:niveau,annee:annee,couleur:_newClassColor,cree_le:Date.now(),archivee:false};
-  fetch(FIREBASE_BASE+'/classes/'+slug+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)})
-    .then(function(r){if(!r.ok)throw new Error('Firebase '+r.status);return r.json();})
-    .then(function(){
+  mjpcPutJson(FIREBASE_BASE+'/classes/'+slug+'.json',record,'Cr\u00e9ation de la classe \u00ab '+nom+' \u00bb',function(){
       classesData[slug]=record;
       closeCreateClassModal();
       showProfSection('classes');
-    }).catch(function(err){alert('Erreur : '+err.message);});
+    });
 }
 
 function renameClass(slug){
@@ -4967,23 +5071,23 @@ function renameClass(slug){
   _modalePrompt('Renommer la classe','Nouveau nom complet de la classe :',c.nom||'',function(newNom){
   if(newNom===null)return;newNom=newNom.trim();
   if(!newNom)return;
-  fetch(FIREBASE_BASE+'/classes/'+slug+'/nom.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newNom)})
-    .then(function(){c.nom=newNom;showProfSection('classes');});
+  mjpcPutJson(FIREBASE_BASE+'/classes/'+slug+'/nom.json',newNom,'Renommage de la classe en \u00ab '+newNom+' \u00bb',
+    function(){c.nom=newNom;showProfSection('classes');});
   });
 }
 
 function archiveClass(slug){
   var c=classesData[slug];if(!c)return;
   _modaleConfirme('Archiver la classe','Archiver \u00ab <b>'+escapeHtml(c.nom||slug)+'</b> \u00bb ? La classe sera masqu\u00e9e mais conserv\u00e9e (\u00e9l\u00e8ves, codes, donn\u00e9es). Tu peux la d\u00e9sarchiver \u00e0 tout moment.',function(){
-  fetch(FIREBASE_BASE+'/classes/'+slug+'/archivee.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
-    .then(function(){c.archivee=true;showProfSection('classes');});
+  mjpcPutJson(FIREBASE_BASE+'/classes/'+slug+'/archivee.json',true,'Archivage de la classe \u00ab '+(c.nom||slug)+' \u00bb',
+    function(){c.archivee=true;showProfSection('classes');});
   });
 }
 
 function unarchiveClass(slug){
   var c=classesData[slug];if(!c)return;
-  fetch(FIREBASE_BASE+'/classes/'+slug+'/archivee.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(false)})
-    .then(function(){c.archivee=false;showProfSection('classes');});
+  mjpcPutJson(FIREBASE_BASE+'/classes/'+slug+'/archivee.json',false,'D\u00e9sarchivage de la classe \u00ab '+(c.nom||slug)+' \u00bb',
+    function(){c.archivee=false;showProfSection('classes');});
 }
 
 function deleteClass(slug){
@@ -4994,8 +5098,8 @@ function deleteClass(slug){
   var extract={classes:{}};extract.classes[slug]=classesData[slug];
   var noms=extractEleves(classesData[slug],[]);extract.codes={};noms.forEach(function(n){var k=san(n);if(codesData[k])extract.codes[k]=codesData[k];});
   _corbeillePuis('suppression-classe',extract,{classe:slug,eleves:noms.length,chemin:''},function(){
-    fetch(FIREBASE_BASE+'/classes/'+slug+'.json',{method:'DELETE'})
-      .then(function(){delete classesData[slug];showProfSection('classes');});
+    mjpcDeleteJson(FIREBASE_BASE+'/classes/'+slug+'.json','Suppression de la classe \u00ab '+(c.nom||slug)+' \u00bb',
+      function(){delete classesData[slug];showProfSection('classes');});
   });
   },(c.nom||slug));
 }
@@ -5004,9 +5108,7 @@ function togglePublishTab(level,tabId){
   var pub=(publishedTabs[level]||[]).slice();
   var idx=pub.indexOf(tabId);
   if(idx>=0)pub.splice(idx,1);else pub.push(tabId);
-  fetch(FIREBASE_BASE+'/site/'+level+'/published_tabs.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(pub)
-  }).then(function(){
+  mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/published_tabs.json',pub,'Publication des onglets '+level.toUpperCase(),function(){
     publishedTabs[level]=pub;
     applyPublished(level);
   });
@@ -5015,9 +5117,7 @@ function togglePublishExtra(level,extraId){
   var pub=(publishedExtras[level]||[]).slice();
   var idx=pub.indexOf(extraId);
   if(idx>=0)pub.splice(idx,1);else pub.push(extraId);
-  fetch(FIREBASE_BASE+'/site/'+level+'/published_extras.json',{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(pub)
-  }).then(function(){
+  mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/published_extras.json',pub,'Publication des rubriques '+level.toUpperCase(),function(){
     publishedExtras[level]=pub;
     applyPublished(level);
   });
@@ -5750,18 +5850,8 @@ var AT_NOEUD='/site/atelier/documents';
    y passe pour un succès. L'atelier ne peut pas mentir sur l'enregistrement :
    mêmes chemins réels, même magasin en mode test, mais r.ok VÉRIFIÉ.
    (Constat porté au rapport : à corriger un jour dans le socle du site.) */
-function atSitePut(chemin,valeur,cb){
-  if(m8TestOn()){_sitePut(chemin,valeur,cb);return;}
-  fetch(FIREBASE_BASE+chemin+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(valeur)})
-    .then(function(r){if(cb)cb(r.ok===true);})
-    .catch(function(){if(cb)cb(false);});
-}
-function atSiteDelete(chemin,cb){
-  if(m8TestOn()){_siteDelete(chemin,cb);return;}
-  fetch(FIREBASE_BASE+chemin+'.json',{method:'DELETE'})
-    .then(function(r){if(cb)cb(r.ok===true);})
-    .catch(function(){if(cb)cb(false);});
-}
+function atSitePut(chemin,valeur,cb){ _sitePut(chemin,valeur,cb); }   /* M-ÉCHECS-1 : le socle vérifie désormais — délégation pure, cb(ok, issue) */
+function atSiteDelete(chemin,cb){ _siteDelete(chemin,cb); }
 var AT={doc:null,docId:null,liste:{},previewIdx:0,previewLot:false,timerPut:null,timerRendu:null,
         etat:'',derniereSauve:0,rosterCache:null,verrouReprise:false};
 
@@ -6319,6 +6409,143 @@ function atModaleChoix(msg,boutons){
   document.body.appendChild(d);
 }
 /* ═══ fin ATELIER DE COMPOSITION ═══ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ÉCRITURES SANS SILENCE (M-ÉCHECS-1) — l'écran suit le verdict, jamais l'inverse
+   Trois issues (socle §9) : acceptée · refusée (définitif) · panne (temporaire).
+   Jamais « enregistré » avant confirmation. Un échec est un choix offert ou un
+   signal nommé — jamais un silence. Les échecs en rafale se REGROUPENT.
+   Vocabulaire visuel : les classes at-etat / at-etat-ok / at-etat-echec (SITE-COURS-1).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── le collecteur des échecs de la page (prof) — un seul bandeau, jamais une rafale ── */
+var MJPC_ECHECS={liste:[],timerOk:null};
+var MJPC_ECRITURES_DIAG={manifeste:null,total:0,refus:0,pannes:0}; /* consultable console — le bloc DIAGNOSTIC (commentaire) reste intact */
+
+function mjpcHeure(ts){var d=new Date(ts||Date.now());return ('0'+d.getHours()).slice(-2)+' h '+('0'+d.getMinutes()).slice(-2);}
+
+/* Signaler une issue non acceptée.
+   contexte = { ou: libellé français du geste, retenter: function|null } */
+function mjpcSignalerIssue(issue,contexte){
+  MJPC_ECRITURES_DIAG.total++;
+  if(issue.etat===MJPC_ISSUE.REFUSEE)MJPC_ECRITURES_DIAG.refus++;else MJPC_ECRITURES_DIAG.pannes++;
+  MJPC_ECHECS.liste.push({issue:issue,ou:(contexte&&contexte.ou)||'Enregistrement',retenter:(contexte&&contexte.retenter)||null});
+  mjpcRendreBandeau();
+}
+function mjpcBandeauEl(){
+  var b=document.getElementById('mjpc-echecs-bandeau');
+  if(!b){
+    b=document.createElement('div');b.id='mjpc-echecs-bandeau';
+    document.body.appendChild(b);
+  }
+  return b;
+}
+function mjpcRendreBandeau(){
+  var b=mjpcBandeauEl();var n=MJPC_ECHECS.liste.length;
+  clearTimeout(MJPC_ECHECS.timerOk);
+  if(n===0){b.className='';b.innerHTML='';b.style.display='none';return;}
+  b.style.display='block';b.className='mjpc-bandeau-echec';
+  var h;
+  if(n===1){
+    var e=MJPC_ECHECS.liste[0];
+    if(e.issue.etat===MJPC_ISSUE.REFUSEE){
+      h='<b>'+e.ou+' : \u00e9criture refus\u00e9e par la base (HTTP '+e.issue.status+') \u00e0 '+mjpcHeure(e.issue.quand)+' \u2014 rien n\u2019est enregistr\u00e9.</b> Un refus n\u2019est pas une panne : r\u00e9essayer ne changera rien. Cause probable : r\u00e8gles de s\u00e9curit\u00e9 ou chemin invalide.';
+    }else{
+      h='<b>'+e.ou+' : pas de liaison \u00e0 '+mjpcHeure(e.issue.quand)+' \u2014 rien n\u2019est parti.</b> La modification reste sur cet \u00e9cran.';
+    }
+    if(e.retenter)h+=' <button class="mjpc-bd-btn" onclick="mjpcToutRetenter()">R\u00e9essayer</button>';
+  }else{
+    var depuis=MJPC_ECHECS.liste[0].issue.quand;
+    h='<b>'+n+' enregistrements n\u2019ont pas abouti depuis '+mjpcHeure(depuis)+'.</b>'
+     +' <button class="mjpc-bd-btn" onclick="mjpcBasculerDetail()">D\u00e9tail</button>'
+     +(MJPC_ECHECS.liste.some(function(e){return e.retenter;})?' <button class="mjpc-bd-btn" onclick="mjpcToutRetenter()">Tout r\u00e9essayer</button>':'');
+    h+='<div id="mjpc-echecs-detail" style="display:none">'+MJPC_ECHECS.liste.map(function(e){
+      var cause=(e.issue.etat===MJPC_ISSUE.REFUSEE)?('refus\u00e9e (HTTP '+e.issue.status+') \u2014 d\u00e9finitif'):'pas de liaison \u2014 temporaire';
+      return '<div class="mjpc-bd-ligne">'+e.ou+' \u00b7 '+mjpcHeure(e.issue.quand)+' \u00b7 '+cause+'</div>';
+    }).join('')+'</div>';
+  }
+  b.innerHTML='<div class="mjpc-bd-int">'+h+'</div>';
+}
+function mjpcBasculerDetail(){
+  var d=document.getElementById('mjpc-echecs-detail');
+  if(d)d.style.display=(d.style.display==='none')?'block':'none';
+}
+/* Ré-émission PONCTUELLE : chaque écriture rejouée avec sa valeur courante.
+   Aucune mémoire de pannes, rien en arrière-plan, rien qui survive à l'onglet
+   (la file d'attente est un objet distinct, hors de ce morceau — frontière Q4). */
+function mjpcToutRetenter(){
+  var lot=MJPC_ECHECS.liste;MJPC_ECHECS.liste=[];
+  mjpcRendreBandeau();
+  lot.forEach(function(e){if(e.retenter)e.retenter();});
+}
+function mjpcSucces(){ /* un verdict accepté après échec(s) : bref « Enregistré à … » */
+  if(MJPC_ECHECS.liste.length)return; /* d'autres échecs restent affichés */
+  var b=mjpcBandeauEl();
+  b.style.display='block';b.className='mjpc-bandeau-ok';
+  b.innerHTML='<div class="mjpc-bd-int">Enregistr\u00e9 \u00e0 '+mjpcHeure(Date.now())+'</div>';
+  clearTimeout(MJPC_ECHECS.timerOk);
+  MJPC_ECHECS.timerOk=setTimeout(function(){if(!MJPC_ECHECS.liste.length){b.style.display='none';}},2600);
+}
+
+/* ── L'ÉCRITURE NOMMÉE — le geste commun de toutes les écritures REST du site.
+      ou        : libellé français du geste (pour le bandeau)
+      onAccepte : suite normale (rendu, rechargement) — appelée SEULEMENT sur verdict
+      L'échec s'affiche regroupé, le Réessayer ré-émet CETTE écriture (valeur figée
+      dans la fermeture = la valeur courante au moment du geste). ── */
+function mjpcPutJson(url,valeur,ou,onAccepte){
+  var moi=function(){mjpcPutJson(url,valeur,ou,onAccepte);};
+  mjpcEcrireRest(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(valeur)},function(issue){
+    if(issue.etat===MJPC_ISSUE.ACCEPTEE){mjpcSucces();if(onAccepte)onAccepte();}
+    else mjpcSignalerIssue(issue,{ou:ou,retenter:moi});
+  });
+}
+function mjpcDeleteJson(url,ou,onAccepte){
+  var moi=function(){mjpcDeleteJson(url,ou,onAccepte);};
+  mjpcEcrireRest(url,{method:'DELETE'},function(issue){
+    if(issue.etat===MJPC_ISSUE.ACCEPTEE){mjpcSucces();if(onAccepte)onAccepte();}
+    else mjpcSignalerIssue(issue,{ou:ou,retenter:moi});
+  });
+}
+
+/* ── LE LOT À VERDICTS — pour les gestes en plusieurs écritures (cascade de
+      publication, LIER, upload multi-champs) : on attend TOUS les verdicts,
+      l'écran ne parle qu'ensuite ; les échecs sont NOMMÉS un par un. ── */
+function mjpcLot(ecritures,ou,onTousAcceptes,onEchecs){
+  /* ecritures : [{url, options, quoi}] — quoi = libellé du fragment */
+  var verdicts=[],recus=0;
+  if(!ecritures.length){if(onTousAcceptes)onTousAcceptes();return;}
+  ecritures.forEach(function(e,i){
+    mjpcEcrireRest(e.url,e.options,function(issue){
+      verdicts[i]={e:e,issue:issue};recus++;
+      if(recus===ecritures.length){
+        var echecs=verdicts.filter(function(v){return v.issue.etat!==MJPC_ISSUE.ACCEPTEE;});
+        if(!echecs.length){mjpcSucces();if(onTousAcceptes)onTousAcceptes();}
+        else{
+          echecs.forEach(function(v){
+            mjpcSignalerIssue(v.issue,{ou:ou+(v.e.quoi?(' \u2014 '+v.e.quoi):''),
+              retenter:function(){mjpcLot([v.e],ou,onTousAcceptes,onEchecs);}});
+          });
+          if(onEchecs)onEchecs(echecs);
+        }
+      }
+    });
+  });
+}
+
+/* ═══ fin ÉCRITURES SANS SILENCE ═══ */
+
+/* Le fetch à verdict pour les chaînes de promesses existantes : REJETTE sur refus
+   (fetch ne le fait pas) et convertit la panne en message français. Les catch en
+   place affichent alors la vraie cause au lieu de la taire ou de dire « réseau ». */
+function mjpcFetchOk(url,options){
+  return fetch(url,options).then(function(r){
+    if(!r.ok){var e=new Error('\u00e9criture refus\u00e9e par la base (HTTP '+r.status+') \u2014 r\u00e9essayer ne changera rien');e.mjpcIssue={etat:MJPC_ISSUE.REFUSEE,status:r.status,url:url,quand:Date.now()};throw e;}
+    return r;
+  },function(){
+    var e=new Error('pas de liaison \u2014 rien n\u2019est parti');e.mjpcIssue={etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:Date.now()};throw e;
+  });
+}
 
 </script>
 </html>
