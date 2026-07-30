@@ -1,5 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.2.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// v1.2.0 : + §9 écritures, les trois issues (MJPC_ISSUE, mjpcEcrireRest) —
+//          une écriture n'a jamais deux issues (« fait »/« erreur ») mais trois :
+//          acceptée / refusée (définitif) / panne (temporaire). Prérequis M-SÉCU.
 // v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
 //          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
 //          et saute son écran de connexion. Sans session : portail natif inchangé.
@@ -192,5 +195,41 @@ function validerEleveMJPC(session, classesData){
   return null;
 }
 
-var MJPC_CORE_VERSION="1.1.0";
+// ── 9. Écritures : les trois issues (v1.2.0) ──
+// Une écriture ne connaît JAMAIS deux issues (« fait » / « erreur ») mais TROIS :
+//   ACCEPTEE — la réponse est arrivée ET le serveur a accepté ;
+//   REFUSEE  — la réponse est arrivée et dit non (règle de sécurité, chemin
+//              invalide, charge rejetée) : DÉFINITIF, réessayer n'y changera rien ;
+//   PANNE    — aucune réponse (liaison) : TEMPORAIRE, l'écriture pourra aboutir
+//              plus tard (une file d'attente pourra se brancher sur cet état).
+// Les confondre fait mentir l'écran : « enregistré » pendant que rien n'est parti.
+var MJPC_ISSUE={ACCEPTEE:"acceptee",REFUSEE:"refusee",PANNE:"panne"};
+
+// Le classeur d'issues pour le transport REST (fetch) — la SEULE source de vérité :
+//   la promesse se résout ET r.ok        → ACCEPTEE
+//   la promesse se résout ET !r.ok       → REFUSEE (le status est porté)
+//   la promesse rejette (aucune réponse) → PANNE   (status 0)
+// fetch ne rejette QUE sur panne de liaison : c'est précisément pourquoi un refus
+// HTTP se faisait passer pour un succès partout où seul le then était regardé.
+function mjpcEcrireRest(url,options,cb){
+  /* CORRECTION CONSCIENCE (30/07) — le verdict se CALCULE dans la cha\u00eene, le callback
+     est appel\u00e9 APR\u00c8S, dans un maillon s\u00e9par\u00e9. Avant : `.then(A).catch(B)` avec cb
+     appel\u00e9 DANS A — si quoi que ce soit levait en aval (bug d'affichage, globale
+     manquante), le catch destin\u00e9 aux pannes r\u00e9seau attrapait ce bug et rappelait cb
+     avec un verdict PANNE : callback jou\u00e9 DEUX FOIS et verdict FAUX (prouv\u00e9 : serveur
+     200, cb re\u00e7oit « acceptee » puis « panne »). C'est la famille m\u00eame du d\u00e9faut que
+     ce morceau r\u00e9pare : une erreur qui se d\u00e9guise en une autre.
+     Le second argument de `.then` ne capture QUE le rejet du fetch, jamais le premier
+     handler. Si cb l\u00e8ve, l'erreur reste visible en console et ne falsifie plus rien. */
+  var quand=Date.now();
+  fetch(url,options).then(function(r){
+    return {etat:r.ok?MJPC_ISSUE.ACCEPTEE:MJPC_ISSUE.REFUSEE,status:r.status,url:url,quand:quand};
+  },function(){
+    return {etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:quand};
+  }).then(function(issue){
+    if(cb)cb(issue);
+  });
+}
+
+var MJPC_CORE_VERSION="1.2.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
