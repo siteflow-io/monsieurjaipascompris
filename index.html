@@ -788,6 +788,22 @@ body.at-corps-fige{overflow:hidden}
 @media (max-width:480px){#mjpc-echecs-bandeau{left:6px;right:6px;bottom:6px}}
 /* ═══ fin bandeau ═══ */
 </style>
+<style>
+/* ═══ LE COFFRE DES CODES (M-SÉCU-1) — encart et fiches d'appareils ═══ */
+.secu-encart{border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:14px 16px;margin:12px 0 16px;background:rgba(255,255,255,.04)}
+.secu-titre{font-weight:700;margin-bottom:6px}
+.secu-txt{font-size:.92rem;opacity:.92;line-height:1.5}
+.secu-saisie{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.secu-saisie input{flex:1;min-width:200px;min-height:44px}
+.secu-saisie button,.secu-actions button{min-height:44px;min-width:44px}
+.secu-actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.secu-msg{margin-top:8px;font-size:.88rem;color:#f0c0b5;min-height:1.2em}
+.secu-i{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;background:none;border:none;color:inherit;font-size:1.05rem;cursor:pointer;vertical-align:middle;padding:0}
+.secu-app-ligne{padding:8px 0;border-top:1px dashed rgba(255,255,255,.2);font-size:.92rem}
+.el-code .secu-masque{letter-spacing:.18em;opacity:.55}
+@media (max-width:480px){.secu-saisie{flex-direction:column}.secu-saisie input{width:100%}}
+/* ═══ fin coffre ═══ */
+</style>
 </head>
 <body>
 <div class="stars" id="stars"></div>
@@ -1901,7 +1917,10 @@ var NTFY_TOPIC='MJPC_NTFY_TOPIC_PLACEHOLDER';
 var PROF_CODES=['1312','3141'];
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.2.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.3.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
+//          la protection est dans la donnée, pas dans le mur : le hub peut rester
+//          ouvert, il ne montre plus que de l'illisible. Prépare M-SÉCU-2/3.
 // v1.2.0 : + §9 écritures, les trois issues (MJPC_ISSUE, mjpcEcrireRest) —
 //          une écriture n'a jamais deux issues (« fait »/« erreur ») mais trois :
 //          acceptée / refusée (définitif) / panne (temporaire). Prérequis M-SÉCU.
@@ -2137,6 +2156,9 @@ function mjpcEcrireRest(url,options,cb){
 /* Pastille de version du site — en dur (M8). Promotion au socle prévue M15. */
 /* ═══════════════════════════════════════════════════════════════════════════
    DIAGNOSTIC — À LIRE EN PREMIER SI « ÇA NE MARCHE PLUS »
+   COFFRE DES CODES (M-SÉCU-1) : taper MJPC_COFFRE_DIAG en console — dit si la clé
+   est présente sur cet appareil (valide:true) et combien de codes sont préparés
+   (prepares / total, vestiges ignorés). La clé ne quitte jamais l'appareil.
    Écosystème MJPC — monsieurjaipascompris.com — Paul Meney
    Avant de suspecter le code de ce site, vérifier CES CAUSES EXTERNES,
    dans cet ordre. Elles expliquent la quasi-totalité des pannes soudaines
@@ -2181,9 +2203,72 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.7.1";
+var APP_VERSION="8.8.0";
 var APP_VERSION_DATE="2026-07-30";
-var MJPC_CORE_VERSION="1.2.0";
+// ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
+// (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
+//  ici pour ne pas toucher l'existant ; cette section est la 11.)
+// Modèle éprouvé des conventions de stage : le serveur ne stocke que de l'illisible,
+// chiffré SUR L'APPAREIL avec une clé qui n'est JAMAIS envoyée. WebCrypto n'existe
+// que sur https:// et localhost — toute entrée passe par mjpcCryptoDispo(), et
+// l'absence se DIT (jamais d'échec muet).
+// Discipline de promesses (leçon mjpcEcrireRest du 30/07) : jamais un .catch qui
+// avalerait un bug d'aval — les rejets remontent à l'appelant, qui décide.
+var MJPC_COFFRE_SEL_DERIVATION="mjpc-coffre-derivation-v1"; // sel constant : la même clé saisie donne la même clé dérivée sur tout appareil
+var MJPC_COFFRE_ITER_CLE=310000;      // PBKDF2 de la clé de chiffrement
+var MJPC_COFFRE_ITER_EMPREINTE=100000; // PBKDF2 d'une empreinte (sel PAR ENTRÉE fourni par l'appelant)
+
+function mjpcCryptoDispo(){
+  return !!(typeof crypto!=="undefined"&&crypto.subtle&&crypto.getRandomValues);
+}
+function _mjpcTxt(s){return new TextEncoder().encode(String(s));}
+function _mjpcB64(buf){var b="",a=new Uint8Array(buf);for(var i=0;i<a.length;i++)b+=String.fromCharCode(a[i]);return btoa(b);}
+function _mjpcDeB64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+function _mjpcHex(buf){var a=new Uint8Array(buf),h="";for(var i=0;i<a.length;i++)h+=("0"+a[i].toString(16)).slice(-2);return h;}
+
+// Dérive la clé AES-GCM 256 du secret saisi. → Promise<CryptoKey>
+function mjpcDeriverCle(secret){
+  return crypto.subtle.importKey("raw",_mjpcTxt(secret),"PBKDF2",false,["deriveKey"])
+    .then(function(base){
+      return crypto.subtle.deriveKey(
+        {name:"PBKDF2",salt:_mjpcTxt(MJPC_COFFRE_SEL_DERIVATION),iterations:MJPC_COFFRE_ITER_CLE,hash:"SHA-256"},
+        base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+    });
+}
+// Chiffre un texte. → Promise<"v1."+b64(iv)+"."+b64(chiffré)> — IV aléatoire par appel.
+function mjpcChiffrer(cle,texte){
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},cle,_mjpcTxt(texte))
+    .then(function(ct){return "v1."+_mjpcB64(iv)+"."+_mjpcB64(ct);});
+}
+// Déchiffre un paquet "v1.iv.ct". → Promise<texte> — REJETTE si la clé est fausse
+// (AES-GCM est authentifié : c'est ce qui rend le canari fiable) ou le paquet corrompu.
+function mjpcDechiffrer(cle,paquet){
+  var p=String(paquet||"").split(".");
+  if(p.length!==3||p[0]!=="v1")return Promise.reject(new Error("paquet inconnu"));
+  return crypto.subtle.decrypt({name:"AES-GCM",iv:_mjpcDeB64(p[1])},cle,_mjpcDeB64(p[2]))
+    .then(function(buf){return new TextDecoder().decode(buf);});
+}
+// Sel aléatoire d'empreinte (16 octets, hex) — un par entrée, stocké à côté d'elle.
+function mjpcSelAleatoire(){
+  return _mjpcHex(crypto.getRandomValues(new Uint8Array(16)));
+}
+// Empreinte d'un texte : PBKDF2-SHA-256, sel PAR ENTRÉE, 32 octets hex. → Promise<hex>
+// Vérifiable par toute app (le sel est lisible) SANS la clé du coffre. Contre un
+// secret court (code à 4 chiffres), le sel par entrée interdit la table précalculée
+// et le coût par essai ralentit l'essai exhaustif — il ne l'empêche pas : l'objectif
+// est de ne plus EXPOSER le clair, pas de rendre un code de 4 chiffres incassable.
+function mjpcEmpreinte(texte,selHex){
+  return crypto.subtle.importKey("raw",_mjpcTxt(texte),"PBKDF2",false,["deriveBits"])
+    .then(function(base){
+      return crypto.subtle.deriveBits(
+        {name:"PBKDF2",salt:_mjpcTxt("mjpc-empreinte-v1|"+selHex),iterations:MJPC_COFFRE_ITER_EMPREINTE,hash:"SHA-256"},
+        base,256);
+    })
+    .then(function(bits){return _mjpcHex(bits);});
+}
+
+var MJPC_CORE_VERSION="1.3.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
@@ -3290,7 +3375,7 @@ function showAccueilBg(){document.getElementById('bg-accueil').style.opacity='1'
 var TRACK={eleve:null,session:null,isActive:true,activeStart:0,activeTotal:0,scrollMax:0,interactions:0,score:'',openTime:0};
 var currentLevel=(new URLSearchParams(window.location.search).get('n')||'').toLowerCase();
 if(!levelLabels[currentLevel])currentLevel=null;
-window.addEventListener('DOMContentLoaded',function(){_chargerTextesSite();/* M8-BADGE : le badge d'accueil affiche la version — il lit APP_VERSION, il suit donc chaque promotion sans retouche */var _pb=document.getElementById('proto-badge');if(_pb)_pb.textContent='v'+APP_VERSION;var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(restored&&TRACK.eleve&&TRACK.eleve.is_prof&&!currentLevel){_atterrirProf();return;}if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.querySelector('.val-code-wrap').style.display='none';document.getElementById('val-btn').style.display='none';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&(TRACK.eleve.is_prof||TRACK.eleve.niveau===currentLevel)){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
+window.addEventListener('DOMContentLoaded',function(){secuBoot();/* M-SÉCU-1 : restauration de la clé — jamais retapée */_chargerTextesSite();/* M8-BADGE : le badge d'accueil affiche la version — il lit APP_VERSION, il suit donc chaque promotion sans retouche */var _pb=document.getElementById('proto-badge');if(_pb)_pb.textContent='v'+APP_VERSION;var sc=document.getElementById('stars');for(var i=0;i<100;i++){var s=document.createElement('span');s.style.left=Math.random()*100+'%';s.style.top=Math.random()*75+'%';var sz=Math.random()*1.8+0.5;s.style.width=s.style.height=sz+'px';s.style.setProperty('--dur',(Math.random()*4+2)+'s');s.style.setProperty('--del',(Math.random()*4)+'s');var r=Math.random();if(r>0.8)s.style.background='#fbbf24';else if(r>0.65)s.style.background='#fcd34d';else if(r>0.55)s.style.background='#fed7aa';else s.style.background='#fff';sc.appendChild(s);}var shootEl=document.getElementById('shooting-star');function doShoot(){shootEl.style.left=(Math.random()*50+15)+'%';shootEl.style.top=(Math.random()*25+5)+'%';shootEl.classList.remove('active');void shootEl.offsetWidth;shootEl.classList.add('active');setTimeout(function(){shootEl.classList.remove('active')},1200);setTimeout(doShoot,Math.random()*8000+4000);}setTimeout(doShoot,2000);for(var j=0;j<10;j++){var p=document.createElement('div');p.className='particle';var pSize=Math.random()*3+1;p.style.width=p.style.height=pSize+'px';p.style.left=Math.random()*100+'%';p.style.setProperty('--drift',(Math.random()*40-20)+'px');p.style.setProperty('--op',(Math.random()*0.1+0.05).toFixed(2));p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=(Math.random()*10)+'s';var pColors=['#fbbf24','#fb923c','#f87171','#e879a0','rgba(255,255,255,0.3)'];p.style.background=pColors[Math.floor(Math.random()*pColors.length)];document.body.appendChild(p);}var restored=restoreSession();if(restored&&TRACK.eleve&&TRACK.eleve.is_prof&&!currentLevel){_atterrirProf();return;}if(!currentLevel){document.getElementById('val-badge').textContent='Lien invalide';document.getElementById('val-badge').style.color='rgba(255,255,255,0.3)';document.getElementById('val-badge').style.borderColor='rgba(255,255,255,0.1)';document.querySelector('.val-label').textContent='Utilise le lien fourni par M. Meney.';document.getElementById('val-nom').style.display='none';document.getElementById('val-prenom').style.display='none';document.querySelector('.val-code-wrap').style.display='none';document.getElementById('val-btn').style.display='none';}else{var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}document.getElementById('val-badge').textContent=levelLabels[currentLevel];document.getElementById('val-badge').style.color=t?t.accent:'#ffb86c';if(restored&&TRACK.eleve&&(TRACK.eleve.is_prof||TRACK.eleve.niveau===currentLevel)){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');initHome();}else{document.getElementById('val-nom').focus();}}});
 function _normName(s){return String(s||'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');}
 function _findEleveByName(full){var t=_normName(full);if(!t)return null;var keys=Object.keys(classesData||{});for(var i=0;i<keys.length;i++){var slug=keys[i];var cl=classesData[slug];if(!cl||typeof cl!=='object'||cl.archivee)continue;var names=extractEleves(cl,[]);for(var j=0;j<names.length;j++){if(_normName(names[j])===t)return{slug:slug,nom:names[j],classe:cl,code:_eleveCode(names[j])};}}return null;}
 function _loginEleveFound(found,status){var cl=found.classe;var eleve={is_prof:false,nom:found.nom,prenom:'',classe:found.slug,niveau:(cl&&cl.niveau)||currentLevel||'3e',code:found.code||'',display:found.nom,uuid:''};ensureEleveUuid(eleve).then(function(ev){TRACK.eleve=ev;_writeSharedSession(ev);if(typeof notifyConnection==='function')notifyConnection(ev);if(typeof startHeartbeat==='function')startHeartbeat();currentLevel=ev.niveau;var t=levelThemes[currentLevel];if(t){document.documentElement.style.setProperty('--level-accent',t.accent);document.documentElement.style.setProperty('--level-glow',t.glow);}if(status){status.textContent='Bienvenue, '+ev.display+' !';status.classList.add('connected');}setTimeout(function(){document.getElementById('page-validation').classList.remove('active');document.getElementById('page-home').classList.add('active');if(typeof initHome==='function')initHome();},600);}).catch(function(){
@@ -3306,7 +3391,19 @@ function doLogin(){
   var codeEl=document.getElementById('val-code');var code=codeEl?codeEl.value.trim():'';
   var err=document.getElementById('val-error');var status=document.getElementById('val-status');var btn=document.getElementById('val-btn');
   err.textContent='';
-  if(code&&PROF_CODES.indexOf(code)>=0){loginAsProf();return;}
+  if(code&&PROF_CODES.indexOf(code)>=0){loginAsProf();return;}   /* clair prof accepté jusqu'à M-SÉCU-3 */
+  if(code&&code.length>=8&&mjpcCryptoDispo()){
+    /* M-SÉCU-1 : la clé de chiffrement ouvre la porte professeur (validée par le canari EXISTANT ;
+       la toute première pose se fait depuis l'écran Élèves & codes, jamais ici) */
+    status.textContent='V\u00e9rification\u2026';btn.disabled=true;
+    secuValiderSecret(code).then(function(r){
+      btn.disabled=false;status.textContent='';
+      if(r.ok){secuLS('mjpc_coffre_secret',code);SECU.cle=r.cle;SECU.valide=true;SECU.secretPresent=true;secuEnregistrerAppareil();loginAsProf();return;}
+      err.textContent='Cette cl\u00e9 ne correspond pas \u00e0 celle qui a verrouill\u00e9 les codes. V\u00e9rifie la saisie.';
+      setTimeout(function(){err.textContent='';},4000);
+    });
+    return;
+  }
   if(!nom||!prenom||!code){err.textContent='\u00c9cris ton nom, ton pr\u00e9nom et ton code personnel.';return;}
   status.textContent='V\u00e9rification\u2026';status.classList.remove('connected');btn.disabled=true;
   var proceed=function(){
@@ -3718,11 +3815,24 @@ function _allCodesTaken(){var t={};(PROF_CODES||[]).forEach(function(c){t[c]=tru
 function _genCode4(taken){var c,g=0;do{c=String(Math.floor(1000+Math.random()*9000));g++;}while(taken[c]&&g<9999);return c;}
 function _selectProfElClasse(slug){PROF_EL_CLASSE=slug;showProfSection('eleves');}
 function _eleveCode(nom){var k=san(nom);return (codesData[k]&&codesData[k].code)||'';}
-function _putCode(nom,slug,code){var k=san(nom);var rec={code:code,name:nom,classe:slug,createdAt:Date.now()};codesData[k]=rec;mjpcPutJson(FIREBASE_BASE+'/codes/'+k+'.json',rec,'Enregistrement du code de '+nom,null);}
+function _putCode(nom,slug,code){
+  /* M-SÉCU-1 : un code s'écrit AVEC sa préparation (chiffre + sel + empreinte) —
+     sans la clé, l'écriture est refusée par la garde : un clair nu laisserait une
+     empreinte périmée, et au 3e temps l'app refuserait un code pourtant juste. */
+  if(!SECU.valide){secuExigeCle();return;}
+  var k=san(nom);var sel=mjpcSelAleatoire();
+  Promise.all([mjpcChiffrer(SECU.cle,code),mjpcEmpreinte(code,sel)]).then(function(res){
+    var rec={code:code,name:nom,classe:slug,createdAt:Date.now(),chiffre:res[0],sel:sel,empreinte:res[1]};
+    codesData[k]=rec;SECU.cache[k]=code;
+    mjpcPutJson(FIREBASE_BASE+'/codes/'+k+'.json',rec,'Enregistrement du code de '+nom,function(){showProfSection('eleves');});
+  });
+}
 function _profSectionEleves(){
   if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
   var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee&&!_estClasseInterne(k);}).sort(function(a,b){return ((classesData[a].nom)||'').localeCompare((classesData[b].nom)||'');});
   var html='<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-section-sub">Choisis une classe, colle ta liste (un \u00e9l\u00e8ve par ligne, NOM Pr\u00e9nom), puis g\u00e9n\u00e8re les codes. Liste partag\u00e9e avec tes apps (dict\u00e9e, etc.) ; code \u00e0 4 chiffres mutualis\u00e9 (login rapide). R\u00e9g\u00e9n\u00e9rable \u00e9l\u00e8ve par \u00e9l\u00e8ve.</div>';
+  html+=secuEncartHtml();   /* M-SÉCU-1 : l'encart de la clé, en tête — VISIBLE MÊME SANS CLASSE */
+  if(SECU.valide&&!SECU.cacheFait){secuDechiffrerCache(function(){var b=document.querySelector('.tprof-section-btn[data-section="eleves"].active');if(b)showProfSection('eleves');});}
   if(actives.length===0)return html+'<div class="tprof-placeholder">Aucune classe active. Cr\u00e9e d\u2019abord une classe dans \u00ab Classes \u00bb.</div>';
   if(!PROF_EL_CLASSE||actives.indexOf(PROF_EL_CLASSE)<0)PROF_EL_CLASSE=actives[0];
   var slug=PROF_EL_CLASSE;
@@ -3736,8 +3846,9 @@ function _profSectionEleves(){
   html+='<button class="mjpc-act" onclick="_printCodesClasse(\''+slug+'\')">\ud83d\udda8 Imprimer</button>';
   html+='<button class="mjpc-act danger" onclick="_resetAllCodesClasse(\''+slug+'\')">Tout r\u00e9g\u00e9n\u00e9rer</button></div>';
   html+='<div class="el-list">';
-  names.forEach(function(nom,i){var code=_eleveCode(nom);
-    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name">'+escapeHtml(nom)+'</span><span class="el-code">'+(code?code:'<span class="el-nocode">\u2014</span>')+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\','+i+')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\','+i+')">\u2715</button></span></div>';
+  names.forEach(function(nom,i){var code=_eleveCode(nom);var aff=secuCodeAffiche(nom);
+    var codeHtml=code?(aff===null?'<span class="secu-masque">\u273b\u273b\u273b\u273b</span>':escapeHtml(aff)):'<span class="el-nocode">\u2014</span>';
+    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name">'+escapeHtml(nom)+'</span><span class="el-code">'+codeHtml+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\','+i+')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\','+i+')">\u2715</button></span></div>';
   });
   return html+'</div>';
 }
@@ -3752,9 +3863,9 @@ function _importEleves(slug){
   mjpcPutJson(FIREBASE_BASE+'/classes/'+slug+'/eleves.json',merged,'Import des \u00e9l\u00e8ves',null);
   showProfSection('eleves');
 }
-function _genererCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){if(!_eleveCode(nom)){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}});showProfSection('eleves');}
-function _regenCodeEleve(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;var taken=_allCodesTaken();var c=_genCode4(taken);_putCode(nom,slug,c);showProfSection('eleves');}
-function _resetAllCodesClasse(slug){_modaleConfirme('R\u00e9g\u00e9n\u00e9rer tous les codes','\u26a0 TOUS les codes de cette classe seront remplac\u00e9s. <b>Les anciens ne fonctionneront plus</b> \u2014 chaque \u00e9l\u00e8ve devra recevoir son nouveau code.',function(){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);});showProfSection('eleves');},'CODES');}
+function _genererCodesClasse(slug){if(!secuExigeCle())return;var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){if(!_eleveCode(nom)){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}});showProfSection('eleves');}
+function _regenCodeEleve(slug,i){if(!secuExigeCle())return;var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;var taken=_allCodesTaken();var c=_genCode4(taken);_putCode(nom,slug,c);showProfSection('eleves');}
+function _resetAllCodesClasse(slug){if(!secuExigeCle())return;_modaleConfirme('R\u00e9g\u00e9n\u00e9rer tous les codes','\u26a0 TOUS les codes de cette classe seront remplac\u00e9s. <b>Les anciens ne fonctionneront plus</b> \u2014 chaque \u00e9l\u00e8ve devra recevoir son nouveau code.',function(){var names=extractEleves(classesData[slug],[]);var taken=_allCodesTaken();names.forEach(function(nom){var c=_genCode4(taken);taken[c]=true;_putCode(nom,slug,c);});showProfSection('eleves');},'CODES');}
 function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);var nom=names[i];if(!nom)return;
   _modaleConfirme('Retirer un \u00e9l\u00e8ve','Retirer <b>'+escapeHtml(nom)+'</b> de la classe ? Une copie (\u00e9l\u00e8ve + code) part d\u2019abord en corbeille.',function(){
   var k=san(nom);var extract={classes:{}};extract.classes[slug]={eleves:[nom]};if(codesData[k]){extract.codes={};extract.codes[k]=codesData[k];}
@@ -3770,7 +3881,7 @@ function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);v
   });
   });
 }
-function _printCodesClasse(slug){var names=extractEleves(classesData[slug],[]);var cl=classesData[slug]||{};var rows=names.map(function(nom){return '<tr><td>'+escapeHtml(nom)+'</td><td class="c">'+(_eleveCode(nom)||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
+function _printCodesClasse(slug){if(!secuExigeCle())return;/* M-SÉCU-1 : l'impression suit l'écran (Q6) */var names=extractEleves(classesData[slug],[]);var cl=classesData[slug]||{};var rows=names.map(function(nom){return '<tr><td>'+escapeHtml(nom)+'</td><td class="c">'+(_eleveCode(nom)||'\u2014')+'</td></tr>';}).join('');var w=window.open('','_blank');if(!w)return;w.document.write('<html><head><title>Codes '+escapeHtml(cl.nom||slug)+'</title><style>body{font-family:sans-serif;padding:24px;color:#111}h1{font-size:18px}table{border-collapse:collapse;width:100%;margin-top:12px}td,th{border:1px solid #bbb;padding:7px 12px;text-align:left}td.c{font:700 18px ui-monospace,monospace;letter-spacing:.1em}</style></head><body><h1>Codes \u2014 '+escapeHtml(cl.nom||slug)+'</h1><table><thead><tr><th>\u00c9l\u00e8ve</th><th>Code</th></tr></thead><tbody>'+rows+'</tbody></table></body></html>');w.document.close();setTimeout(function(){try{w.print();}catch(e){}},300);}
 
 var PROF_TEST_CLASSE=null;
 function _profSectionProfilTest(){
@@ -6546,6 +6657,254 @@ function mjpcFetchOk(url,options){
     var e=new Error('pas de liaison \u2014 rien n\u2019est parti');e.mjpcIssue={etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:Date.now()};throw e;
   });
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LE COFFRE DES CODES (M-SÉCU-1) — la protection est dans la donnée, pas le mur
+   La clé de chiffrement : saisie UNE FOIS par appareil, restaurée à chaque
+   chargement, jamais envoyée. Canari chiffré en base : une clé fausse est rejetée
+   AVANT tout affichage. Le clair des codes RESTE à ce morceau (les apps le lisent
+   encore) : on PRÉPARE (chiffre + sel + empreinte), la protection devient
+   effective à M-SÉCU-3. Primitives : socle §11. Écritures : verdicts socle §9.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var SECU={cle:null,secretPresent:false,valide:false,raison:'',cache:{},cacheFait:false,prepares:0,aFaire:0,vestiges:0,migrEnCours:false,migrBilan:''};
+var SECU_CANARI_TEXTE='MJPC-CANARI|coffre-v1';
+var SECU_CH_CANARI='/site/config/coffreCanari';
+var SECU_CH_APPAREILS='/site/config/coffreAppareils';
+var SECU_CH_PROF='/site/config/profEmpreintes';
+window.MJPC_COFFRE_DIAG=SECU;   /* consultable en console — le bloc DIAGNOSTIC commenté renvoie ici */
+
+function secuLS(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);return v;}catch(e){return null;}}
+function secuIdAppareil(){var id=secuLS('mjpc_coffre_appareil');if(!id){id='app-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);secuLS('mjpc_coffre_appareil',id);}return id;}
+function secuNomAppareil(){var ua=navigator.userAgent||'';var os=/Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':/iPhone|iPad/.test(ua)?'iPhone/iPad':/Mac/.test(ua)?'Mac':/Linux/.test(ua)?'Linux':'Appareil';var nav=/Edg\//.test(ua)?'Edge':/Chrome\//.test(ua)?'Chrome':/Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'navigateur';return os+' \u00b7 '+nav;}
+
+/* _siteGet promisifié localement (signature cb conservée au socle du site) */
+function secuLire(chemin){return new Promise(function(res){_siteGet(chemin,function(v){res(v);});});}
+function secuEcrire(chemin,valeur){return new Promise(function(res){_sitePut(chemin,valeur,function(ok,issue){res({ok:ok,issue:issue});});});}
+
+/* PATCH fusionnant sur /codes/<k> — routé magasin en mode test (le PATCH y fusionne) */
+function secuPatchCode(k,objet,cb){
+  var chemin='/codes/'+k;
+  if(m8TestOn()){
+    var cour=M8_TEST_STORE[chemin];if(!cour||typeof cour!=='object')cour={};
+    Object.keys(objet).forEach(function(c){cour[c]=objet[c];});
+    M8_TEST_STORE[chemin]=cour;
+    if(cb)cb({etat:MJPC_ISSUE.ACCEPTEE,status:0,url:chemin,quand:Date.now()});
+    return;
+  }
+  mjpcEcrireRest(FIREBASE_BASE+chemin+'.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(objet)},cb);
+}
+
+/* ── validation d'un secret contre le canari — la SEULE voie vers l'affichage ── */
+function secuValiderSecret(secret){
+  if(!mjpcCryptoDispo())return Promise.resolve({ok:false,raison:'crypto'});
+  var cleDerivee;
+  return mjpcDeriverCle(secret).then(function(cle){
+    cleDerivee=cle;
+    return secuLire(SECU_CH_CANARI);
+  }).then(function(canari){
+    if(!canari)return {ok:false,raison:'canari-absent',cle:cleDerivee};
+    return mjpcDechiffrer(cleDerivee,canari).then(function(txt){
+      return (txt===SECU_CANARI_TEXTE)?{ok:true,cle:cleDerivee}:{ok:false,raison:'clef-fausse'};
+    },function(){return {ok:false,raison:'clef-fausse'};});
+  });
+}
+
+/* ── restauration au chargement : la clé mémorisée revient SANS ressaisie ── */
+function secuBoot(){
+  var secret=secuLS('mjpc_coffre_secret');
+  SECU.secretPresent=!!secret;
+  if(!secret||!mjpcCryptoDispo())return;
+  secuValiderSecret(secret).then(function(r){
+    if(r.ok){SECU.cle=r.cle;SECU.valide=true;SECU.raison='';}
+    else if(r.raison==='canari-absent'){SECU.cle=r.cle;SECU.valide=true;SECU.raison='';secuEcrireCanari(r.cle);}
+    else {SECU.valide=false;SECU.raison=r.raison;}
+    var pan=document.getElementById('tprof-content');
+    if(pan&&document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');
+  });
+}
+function secuEcrireCanari(cle){
+  return mjpcChiffrer(cle,SECU_CANARI_TEXTE).then(function(paquet){
+    return secuEcrire(SECU_CH_CANARI,paquet);
+  }).then(function(r){
+    if(!r.ok)mjpcSignalerIssue(r.issue,{ou:'Pose du t\u00e9moin de cl\u00e9',retenter:function(){secuEcrireCanari(cle);}});
+    return r;
+  });
+}
+
+/* ── pose de la clé depuis l'encart (première fois ou nouvel appareil) ── */
+function secuPoserCle(){
+  var inp=document.getElementById('secu-cle-input');if(!inp)return;
+  var secret=inp.value;
+  var msg=document.getElementById('secu-cle-msg');
+  if(!secret||secret.length<8){if(msg)msg.textContent='La cl\u00e9 doit faire au moins 8 caract\u00e8res.';return;}
+  if(msg)msg.textContent='V\u00e9rification\u2026';
+  secuValiderSecret(secret).then(function(r){
+    if(r.raison==='crypto'){if(msg)msg.textContent='Le chiffrement n\u2019est pas disponible sur cette adresse. Ouvre le site en https (adresse habituelle).';return;}
+    if(r.raison==='clef-fausse'){if(msg)msg.textContent='Cette cl\u00e9 ne correspond pas \u00e0 celle qui a verrouill\u00e9 les codes. V\u00e9rifie la saisie \u2014 rien n\u2019a \u00e9t\u00e9 modifi\u00e9.';return;}
+    /* valide, ou toute première clé (canari absent : elle fait foi et le pose) */
+    SECU.cle=r.cle;SECU.valide=true;SECU.raison='';
+    secuLS('mjpc_coffre_secret',secret);SECU.secretPresent=true;
+    var suite=(r.raison==='canari-absent')?secuEcrireCanari(r.cle):Promise.resolve();
+    suite.then(function(){
+      secuEnregistrerAppareil();
+      secuPoserEmpreintesProf();
+      secuMigrerCodes(false);
+      showProfSection('eleves');
+    });
+  });
+}
+
+/* ── oubli local : les codes redeviennent illisibles ICI ── */
+function secuOublier(){
+  _modaleConfirme('Oublier la cl\u00e9 sur cet appareil',
+    'Les codes redeviendront illisibles ici jusqu\u2019\u00e0 la prochaine saisie. Les donn\u00e9es ne bougent pas.<br><br>\u00c0 faire en quittant un poste partag\u00e9 (salle de classe, CDI) : la cl\u00e9 m\u00e9moris\u00e9e y afficherait les codes \u00e0 quiconque s\u2019assoit.',
+    function(){
+      secuLS('mjpc_coffre_secret',null);
+      SECU.cle=null;SECU.valide=false;SECU.secretPresent=false;SECU.cache={};SECU.cacheFait=false;
+      secuEcrire(SECU_CH_APPAREILS+'/'+secuIdAppareil()+'/oublie_le',Date.now()); /* meilleur effort, verdict socle */
+      showProfSection('eleves');
+    });
+}
+
+/* ── fiches d'appareils : que Paul sache ce qu'il a laissé derrière lui ── */
+function secuEnregistrerAppareil(){
+  secuEcrire(SECU_CH_APPAREILS+'/'+secuIdAppareil(),{nom:secuNomAppareil(),pose_le:Date.now(),oublie_le:null})
+    .then(function(r){if(!r.ok)mjpcSignalerIssue(r.issue,{ou:'Fiche d\u2019appareil',retenter:secuEnregistrerAppareil});});
+}
+function secuVoirAppareils(){
+  secuLire(SECU_CH_APPAREILS).then(function(v){
+    var lignes='';var ids=Object.keys(v||{});
+    if(!ids.length)lignes='<div class="cm-sub">Aucun appareil enregistr\u00e9.</div>';
+    ids.forEach(function(id){var a=v[id]||{};var moi=(id===secuIdAppareil())?' <b>(cet appareil)</b>':'';
+      var etat=a.oublie_le?('cl\u00e9 oubli\u00e9e le '+new Date(a.oublie_le).toLocaleDateString('fr-FR')):('cl\u00e9 m\u00e9moris\u00e9e depuis le '+new Date(a.pose_le||0).toLocaleDateString('fr-FR'));
+      lignes+='<div class="secu-app-ligne">'+escapeHtml(a.nom||id)+moi+' \u2014 '+etat+'</div>';});
+    _showConsoleModal('O\u00f9 la cl\u00e9 est m\u00e9moris\u00e9e',
+      '<div class="cm-sub">Sur chacun de ces appareils, les codes s\u2019affichent SANS saisie. Un poste de salle laiss\u00e9 avec la cl\u00e9 montre tous les codes \u00e0 l\u2019\u00e9l\u00e8ve qui s\u2019y assoit pendant l\u2019interclasse : pense au bouton \u00ab Oublier la cl\u00e9 \u00bb en quittant un poste partag\u00e9.</div>'+lignes,
+      [{label:'Fermer',cls:'primary'}]);
+  });
+}
+
+/* ── empreintes des codes prof : posées pour les apps (M-SÉCU-2), idempotent ── */
+function secuPoserEmpreintesProf(){
+  secuLire(SECU_CH_PROF).then(function(v){
+    if(v&&v.length===PROF_CODES.length)return; /* déjà posées */
+    var proms=PROF_CODES.map(function(code){
+      var sel=mjpcSelAleatoire();
+      return mjpcEmpreinte(code,sel).then(function(emp){return {sel:sel,empreinte:emp};});
+    });
+    Promise.all(proms).then(function(fiches){
+      secuEcrire(SECU_CH_PROF,fiches).then(function(r){
+        if(!r.ok)mjpcSignalerIssue(r.issue,{ou:'Empreintes de la porte professeur',retenter:secuPoserEmpreintesProf});
+      });
+    });
+  });
+}
+
+/* ── la migration : 120 codes préparés, dénombrés avant, verdicts TOUS collectés ── */
+function secuMigrerCodes(manuel){
+  if(SECU.migrEnCours||!SECU.cle)return;
+  var ks=Object.keys(codesData||{});
+  var aFaire=[],vestiges=0,dejaFaits=0;
+  ks.forEach(function(k){
+    var e=codesData[k];
+    if(!e||typeof e!=='object'||!e.code){vestiges++;return;}
+    if(e.chiffre&&e.sel&&e.empreinte){dejaFaits++;return;}
+    aFaire.push(k);
+  });
+  SECU.aFaire=aFaire.length;SECU.vestiges=vestiges;SECU.prepares=dejaFaits;SECU.total=ks.length-vestiges;
+  SECU.migrBilan=aFaire.length+' code'+(aFaire.length>1?'s':'')+' \u00e0 pr\u00e9parer, '+dejaFaits+' d\u00e9j\u00e0 pr\u00eat'+(dejaFaits>1?'s':'')+', '+vestiges+' entr\u00e9e'+(vestiges>1?'s':'')+' ancienne'+(vestiges>1?'s':'')+' ignor\u00e9e'+(vestiges>1?'s':'')+'.';
+  if(!aFaire.length){if(manuel)secuMajEncart();return;}
+  SECU.migrEnCours=true;secuMajEncart();
+  var verdicts=[];var recus=0;
+  aFaire.forEach(function(k){
+    var clair=codesData[k].code;var sel=mjpcSelAleatoire();
+    Promise.all([mjpcChiffrer(SECU.cle,clair),mjpcEmpreinte(clair,sel)]).then(function(res){
+      var objet={chiffre:res[0],sel:sel,empreinte:res[1]};
+      secuPatchCode(k,objet,function(issue){
+        verdicts.push({k:k,issue:issue});recus++;
+        if(issue.etat===MJPC_ISSUE.ACCEPTEE){
+          codesData[k].chiffre=objet.chiffre;codesData[k].sel=objet.sel;codesData[k].empreinte=objet.empreinte;
+          SECU.cache[k]=clair;
+        }else{
+          mjpcSignalerIssue(issue,{ou:'Pr\u00e9paration du code de '+(codesData[k].name||k),retenter:function(){secuMigrerCodes(true);}});
+        }
+        if(recus===aFaire.length)secuFinMigration(verdicts,dejaFaits,vestiges);
+      });
+    });
+  });
+}
+function secuFinMigration(verdicts,dejaFaits,vestiges){
+  SECU.migrEnCours=false;
+  var ok=verdicts.filter(function(v){return v.issue.etat===MJPC_ISSUE.ACCEPTEE;}).length;
+  var refus=verdicts.filter(function(v){return v.issue.etat===MJPC_ISSUE.REFUSEE;}).length;
+  var pannes=verdicts.length-ok-refus;
+  SECU.prepares=dejaFaits+ok;
+  SECU.migrBilan=ok+' code'+(ok>1?'s':'')+' pr\u00e9par\u00e9'+(ok>1?'s':'')+', '+refus+' refus\u00e9'+(refus>1?'s':'')+', '+pannes+' en panne, '+vestiges+' entr\u00e9e'+(vestiges>1?'s':'')+' ancienne'+(vestiges>1?'s':'')+' ignor\u00e9e'+(vestiges>1?'s':'')+'.'
+    +((refus+pannes)?' Les \u00e9checs sont d\u00e9taill\u00e9s dans le bandeau \u2014 \u00ab Tout r\u00e9essayer \u00bb les rejouera.':' Le clair reste en place tant que les applications en ont besoin \u2014 la protection sera effective au 3e temps du chantier s\u00e9curit\u00e9.');
+  secuMajEncart();
+}
+
+/* ── le cache des déchiffrés : rendu synchrone, chaîne prouvée à chaque affichage ── */
+function secuDechiffrerCache(cb){
+  var ks=Object.keys(codesData||{}).filter(function(k){var e=codesData[k];return e&&typeof e==='object'&&e.chiffre;});
+  if(!SECU.cle||!ks.length){SECU.cacheFait=true;if(cb)cb();return;}
+  var restants=ks.length;
+  ks.forEach(function(k){
+    mjpcDechiffrer(SECU.cle,codesData[k].chiffre).then(function(clair){SECU.cache[k]=clair;},function(){SECU.cache[k]=null;/* paquet corrompu : repli clair, compté */})
+      .then(function(){restants--;if(!restants){SECU.cacheFait=true;if(cb)cb();}});
+  });
+}
+/* le code affiché : déchiffré prioritaire, repli clair (pré-migration), masqué sans clé */
+function secuCodeAffiche(nom){
+  var k=san(nom);var e=codesData[k];
+  if(!e||!e.code)return '';
+  if(!SECU.valide)return null; /* null = masqué (l'appelant affiche ✻✻✻✻) */
+  if(e.chiffre&&SECU.cache[k])return SECU.cache[k];
+  return e.code;
+}
+/* la garde des gestes qui écrivent un code : cohérence chiffre/clair (Q5) */
+function secuExigeCle(){
+  if(SECU.valide)return true;
+  _showConsoleModal('Cl\u00e9 requise',
+    '<div class="cm-sub">G\u00e9n\u00e9rer ou r\u00e9g\u00e9n\u00e9rer un code exige la cl\u00e9 de chiffrement : sans elle, le code pr\u00e9par\u00e9 (illisible) ne correspondrait plus au code r\u00e9el, et \u00e0 terme l\u2019\u00e9l\u00e8ve serait refus\u00e9 avec un code pourtant juste.<br><br>Saisis ta cl\u00e9 dans l\u2019encart en haut de l\u2019\u00e9cran.</div>',
+    [{label:'Compris',cls:'primary'}]);
+  return false;
+}
+
+/* ── l'encart de l'écran Élèves & codes ── */
+function secuEncartHtml(){
+  var h='<div class="secu-encart" id="secu-encart">';
+  if(!mjpcCryptoDispo()){
+    h+='<div class="secu-titre">\ud83d\udd10 Cl\u00e9 de chiffrement</div><div class="secu-txt">Le chiffrement n\u2019est pas disponible sur cette adresse. Ouvre le site en https (adresse habituelle) pour utiliser la cl\u00e9. Les codes restent affichables tant que le clair existe (jusqu\u2019au 3e temps du chantier s\u00e9curit\u00e9).</div>';
+  }else if(SECU.valide){
+    h+='<div class="secu-titre">\ud83d\udd13 Codes d\u00e9verrouill\u00e9s sur cet appareil</div>'
+      +'<div class="secu-txt">'+(SECU.migrBilan||'')+'</div>'
+      +'<div class="secu-actions">'
+      +'<button class="mjpc-act" onclick="secuOublier()">Oublier la cl\u00e9 sur cet appareil</button>'
+      +'<button class="mjpc-act" onclick="secuVoirAppareils()">O\u00f9 la cl\u00e9 est m\u00e9moris\u00e9e</button>'
+      +'<button class="mjpc-act" onclick="secuMigrerCodes(true)">Relancer la pr\u00e9paration</button>'
+      +'</div>';
+  }else{
+    var msgInit=(SECU.raison==='clef-fausse')?'La cl\u00e9 m\u00e9moris\u00e9e sur cet appareil ne correspond plus \u2014 elle a peut-\u00eatre chang\u00e9. Saisis la bonne cl\u00e9.':'';
+    h+='<div class="secu-titre">\ud83d\udd12 Les codes sont verrouill\u00e9s sur cet appareil</div>'
+      +'<div class="secu-txt">Saisis ta cl\u00e9 de chiffrement pour les afficher. <button class="secu-i" onclick="secuInfo()" aria-label="En savoir plus">\u24d8</button></div>'
+      +'<div class="secu-saisie"><input type="password" id="secu-cle-input" class="cm-input" placeholder="Cl\u00e9 de chiffrement (8 caract\u00e8res ou plus)">'
+      +'<button class="mjpc-act" onclick="secuPoserCle()">Afficher les codes</button></div>'
+      +'<div class="secu-msg" id="secu-cle-msg">'+msgInit+'</div>';
+  }
+  return h+'</div>';
+}
+function secuMajEncart(){
+  var e=document.getElementById('secu-encart');
+  if(e){var d=document.createElement('div');d.innerHTML=secuEncartHtml();e.replaceWith(d.firstChild);}
+}
+function secuInfo(){
+  _showConsoleModal('La cl\u00e9 de chiffrement',
+    '<div class="cm-sub">La cl\u00e9 transforme les codes en donn\u00e9es illisibles pour quiconque n\u2019a pas la cl\u00e9. Elle reste sur cet appareil : elle n\u2019est jamais envoy\u00e9e.<br><br>Saisie une fois, elle est m\u00e9moris\u00e9e ici \u2014 tu n\u2019auras pas \u00e0 la retaper. Sur un poste partag\u00e9, utilise \u00ab Oublier la cl\u00e9 \u00bb en partant.<br><br>\u00c0 ce stade du chantier, le clair reste en place pour les applications : la protection compl\u00e8te arrive au 3e temps.</div>',
+    [{label:'Compris',cls:'primary'}]);
+}
+/* ═══ fin LE COFFRE DES CODES ═══ */
 
 </script>
 </html>
