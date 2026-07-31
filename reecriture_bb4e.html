@@ -78,6 +78,15 @@ h1{font-size:1.5rem;margin-bottom:4px}h2{font-size:1.15rem;margin-bottom:8px}
 }
 </style>
 </head>
+<style>
+/* ═══ M-SÉCU-2 — bandeau « clé mémorisée sur cet appareil » ═══ */
+#mjpc-secu2-profbtn{position:fixed;left:10px;right:10px;bottom:10px;z-index:9500;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#1c1830;color:#f0eadf;border:1px solid rgba(255,255,255,.25);border-radius:12px;padding:10px 14px;font-size:.92rem;box-shadow:0 6px 24px rgba(0,0,0,.45)}
+#mjpc-secu2-profbtn .mjpc-secu2-txt{flex:1;min-width:180px}
+#mjpc-secu2-profbtn .mjpc-secu2-b{min-height:44px;min-width:44px;border-radius:9px;border:1px solid rgba(255,255,255,.35);background:#2e2750;color:#fff;padding:8px 14px;cursor:pointer;font:inherit}
+#mjpc-secu2-profbtn .mjpc-secu2-b.sec{background:transparent;opacity:.85}
+@media (max-width:480px){#mjpc-secu2-profbtn{flex-direction:column;align-items:stretch}}
+/* ═══ fin M-SÉCU-2 ═══ */
+</style>
 <body>
 <div id="root"></div>
 <script>
@@ -148,7 +157,17 @@ var APP_VERSION = "…";   // ← la pastille affichée à l'écran doit dire ce
 - **À chaque passe de la grille** : vérifier que le bloc est présent et à jour (point de grille).
 
 ═══ fin bloc diagnostic ═══ */
-// MJPC-CORE v1.1.0 (2026-07-14) — socle commun de l'écosystème MJPC
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.3.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
+//          la protection est dans la donnée, pas dans le mur : le hub peut rester
+//          ouvert, il ne montre plus que de l'illisible. Prépare M-SÉCU-2/3.
+// v1.2.0 : + §9 écritures, les trois issues (MJPC_ISSUE, mjpcEcrireRest) —
+//          une écriture n'a jamais deux issues (« fait »/« erreur ») mais trois :
+//          acceptée / refusée (définitif) / panne (temporaire). Prérequis M-SÉCU.
+// v1.1.0 : + §8 session partagée MJPC (lireSessionMJPC, validerEleveMJPC) —
+//          l'app reconnaît l'élève ou le prof déjà connecté au site MJPC
+//          et saute son écran de connexion. Sans session : portail natif inchangé.
 // Bloc versionné, IDENTIQUE dans chaque app. Ne jamais le modifier localement :
 // toute évolution passe par une nouvelle version diffusée partout.
 // Seul le bloc « DÉCLARATION DE L'APP » (MJPC_APP / MJPC_MANIFESTE / MJPC_PURGE)
@@ -306,7 +325,280 @@ function publierManifeste(db){
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
-var MJPC_CORE_VERSION="1.1.0";
+// ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
+// Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
+// L'app la LIT ; elle ne l'écrit jamais. Validité : 12 h par défaut (une journée
+// de cours). Une session invalide ou périmée → null → portail natif de l'app.
+function lireSessionMJPC(ttlMs){
+  var ttl = ttlMs || 12*3600*1000;
+  var brut = null;
+  try{ brut = sessionStorage.getItem("mjpc_eleve") || localStorage.getItem("mjpc_eleve"); }catch(e){}
+  if(!brut) return null;
+  var s; try{ s = JSON.parse(brut); }catch(e){ return null; }
+  if(!s || typeof s!=="object") return null;
+  if(!s.ts || (Date.now()-s.ts) > ttl) return null;          /* périmée */
+  if(s.is_prof===true) return {is_prof:true, display:s.display||"Professeur", ts:s.ts};
+  var nom = s.display || ((s.nom||"")+" "+(s.prenom||"")).trim();
+  if(!nom || !s.classe) return null;
+  return {is_prof:false, nom:nom, classe:s.classe, ts:s.ts};
+}
+// La session dit « CLÉMENT Noé, 4e Hugo » — l'app VÉRIFIE contre le registre
+// officiel (/classes) avant d'ouvrir : classe existante, élève au registre.
+// Rend l'identité résolue {nom (celui du registre), classe, cle} ou null.
+function validerEleveMJPC(session, classesData){
+  if(!session || session.is_prof) return null;
+  var cl = (classesData||{})[session.classe];
+  if(!cl || (cl&&cl.archivee)) return null;
+  var roster = extractEleves(cl, []);
+  var cible = sanMJPC(session.nom);
+  for(var i=0;i<roster.length;i++){
+    if(sanMJPC(roster[i])===cible) return {nom:roster[i], classe:session.classe, cle:cible};
+  }
+  return null;
+}
+
+// ── 9. Écritures : les trois issues (v1.2.0) ──
+// Une écriture ne connaît JAMAIS deux issues (« fait » / « erreur ») mais TROIS :
+//   ACCEPTEE — la réponse est arrivée ET le serveur a accepté ;
+//   REFUSEE  — la réponse est arrivée et dit non (règle de sécurité, chemin
+//              invalide, charge rejetée) : DÉFINITIF, réessayer n'y changera rien ;
+//   PANNE    — aucune réponse (liaison) : TEMPORAIRE, l'écriture pourra aboutir
+//              plus tard (une file d'attente pourra se brancher sur cet état).
+// Les confondre fait mentir l'écran : « enregistré » pendant que rien n'est parti.
+var MJPC_ISSUE={ACCEPTEE:"acceptee",REFUSEE:"refusee",PANNE:"panne"};
+
+// Le classeur d'issues pour le transport REST (fetch) — la SEULE source de vérité :
+//   la promesse se résout ET r.ok        → ACCEPTEE
+//   la promesse se résout ET !r.ok       → REFUSEE (le status est porté)
+//   la promesse rejette (aucune réponse) → PANNE   (status 0)
+// fetch ne rejette QUE sur panne de liaison : c'est précisément pourquoi un refus
+// HTTP se faisait passer pour un succès partout où seul le then était regardé.
+function mjpcEcrireRest(url,options,cb){
+  /* CORRECTION CONSCIENCE (30/07) — le verdict se CALCULE dans la cha\u00eene, le callback
+     est appel\u00e9 APR\u00c8S, dans un maillon s\u00e9par\u00e9. Avant : `.then(A).catch(B)` avec cb
+     appel\u00e9 DANS A — si quoi que ce soit levait en aval (bug d'affichage, globale
+     manquante), le catch destin\u00e9 aux pannes r\u00e9seau attrapait ce bug et rappelait cb
+     avec un verdict PANNE : callback jou\u00e9 DEUX FOIS et verdict FAUX (prouv\u00e9 : serveur
+     200, cb re\u00e7oit « acceptee » puis « panne »). C'est la famille m\u00eame du d\u00e9faut que
+     ce morceau r\u00e9pare : une erreur qui se d\u00e9guise en une autre.
+     Le second argument de `.then` ne capture QUE le rejet du fetch, jamais le premier
+     handler. Si cb l\u00e8ve, l'erreur reste visible en console et ne falsifie plus rien. */
+  var quand=Date.now();
+  fetch(url,options).then(function(r){
+    return {etat:r.ok?MJPC_ISSUE.ACCEPTEE:MJPC_ISSUE.REFUSEE,status:r.status,url:url,quand:quand};
+  },function(){
+    return {etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:quand};
+  }).then(function(issue){
+    if(cb)cb(issue);
+  });
+}
+
+// ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
+// (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
+//  ici pour ne pas toucher l'existant ; cette section est la 11.)
+// Modèle éprouvé des conventions de stage : le serveur ne stocke que de l'illisible,
+// chiffré SUR L'APPAREIL avec une clé qui n'est JAMAIS envoyée. WebCrypto n'existe
+// que sur https:// et localhost — toute entrée passe par mjpcCryptoDispo(), et
+// l'absence se DIT (jamais d'échec muet).
+// Discipline de promesses (leçon mjpcEcrireRest du 30/07) : jamais un .catch qui
+// avalerait un bug d'aval — les rejets remontent à l'appelant, qui décide.
+var MJPC_COFFRE_SEL_DERIVATION="mjpc-coffre-derivation-v1"; // sel constant : la même clé saisie donne la même clé dérivée sur tout appareil
+var MJPC_COFFRE_ITER_CLE=310000;      // PBKDF2 de la clé de chiffrement
+var MJPC_COFFRE_ITER_EMPREINTE=100000; // PBKDF2 d'une empreinte (sel PAR ENTRÉE fourni par l'appelant)
+
+function mjpcCryptoDispo(){
+  return !!(typeof crypto!=="undefined"&&crypto.subtle&&crypto.getRandomValues);
+}
+function _mjpcTxt(s){return new TextEncoder().encode(String(s));}
+function _mjpcB64(buf){var b="",a=new Uint8Array(buf);for(var i=0;i<a.length;i++)b+=String.fromCharCode(a[i]);return btoa(b);}
+function _mjpcDeB64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+function _mjpcHex(buf){var a=new Uint8Array(buf),h="";for(var i=0;i<a.length;i++)h+=("0"+a[i].toString(16)).slice(-2);return h;}
+
+// Dérive la clé AES-GCM 256 du secret saisi. → Promise<CryptoKey>
+function mjpcDeriverCle(secret){
+  return crypto.subtle.importKey("raw",_mjpcTxt(secret),"PBKDF2",false,["deriveKey"])
+    .then(function(base){
+      return crypto.subtle.deriveKey(
+        {name:"PBKDF2",salt:_mjpcTxt(MJPC_COFFRE_SEL_DERIVATION),iterations:MJPC_COFFRE_ITER_CLE,hash:"SHA-256"},
+        base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+    });
+}
+// Chiffre un texte. → Promise<"v1."+b64(iv)+"."+b64(chiffré)> — IV aléatoire par appel.
+function mjpcChiffrer(cle,texte){
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},cle,_mjpcTxt(texte))
+    .then(function(ct){return "v1."+_mjpcB64(iv)+"."+_mjpcB64(ct);});
+}
+// Déchiffre un paquet "v1.iv.ct". → Promise<texte> — REJETTE si la clé est fausse
+// (AES-GCM est authentifié : c'est ce qui rend le canari fiable) ou le paquet corrompu.
+function mjpcDechiffrer(cle,paquet){
+  var p=String(paquet||"").split(".");
+  if(p.length!==3||p[0]!=="v1")return Promise.reject(new Error("paquet inconnu"));
+  return crypto.subtle.decrypt({name:"AES-GCM",iv:_mjpcDeB64(p[1])},cle,_mjpcDeB64(p[2]))
+    .then(function(buf){return new TextDecoder().decode(buf);});
+}
+// Sel aléatoire d'empreinte (16 octets, hex) — un par entrée, stocké à côté d'elle.
+function mjpcSelAleatoire(){
+  return _mjpcHex(crypto.getRandomValues(new Uint8Array(16)));
+}
+// Empreinte d'un texte : PBKDF2-SHA-256, sel PAR ENTRÉE, 32 octets hex. → Promise<hex>
+// Vérifiable par toute app (le sel est lisible) SANS la clé du coffre. Contre un
+// secret court (code à 4 chiffres), le sel par entrée interdit la table précalculée
+// et le coût par essai ralentit l'essai exhaustif — il ne l'empêche pas : l'objectif
+// est de ne plus EXPOSER le clair, pas de rendre un code de 4 chiffres incassable.
+function mjpcEmpreinte(texte,selHex){
+  return crypto.subtle.importKey("raw",_mjpcTxt(texte),"PBKDF2",false,["deriveBits"])
+    .then(function(base){
+      return crypto.subtle.deriveBits(
+        {name:"PBKDF2",salt:_mjpcTxt("mjpc-empreinte-v1|"+selHex),iterations:MJPC_COFFRE_ITER_EMPREINTE,hash:"SHA-256"},
+        base,256);
+    })
+    .then(function(bits){return _mjpcHex(bits);});
+}
+
+var MJPC_CORE_VERSION="1.3.0";
+// ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   M-SÉCU-2 — LA VÉRIFICATION PAR EMPREINTE (section commune aux neuf apps)
+   Le login élève vérifie l'EMPREINTE posée par le site (M-SÉCU-1) au lieu du
+   clair. PENDANT CE MORCEAU le clair reste un REPLI : entrée non migrée, crypto
+   absente (http local), ou empreinte discordante (code régénéré sans clé —
+   compté : c'est la liste de ce qui doit être régénéré avant le 3e temps).
+   AUCUN ÉLÈVE DEHORS. La porte professeur accepte : le code (clair effectif de
+   l'app, dur + surcharge, INCHANGÉ jusqu'au 3e temps) · la CLÉ de chiffrement
+   (validée par le canari du coffre) · l'empreinte prof posée au hub.
+   La clé est LUE depuis le localStorage commun (même origine que le site) et
+   n'est JAMAIS envoyée. Lecture seule ici : cette section n'écrit rien au hub.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var MJPC_SECU2={hub:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",discordances:0,voies:{empreinte:0,clair:0}};
+window.MJPC_SECU2_DIAG=MJPC_SECU2; /* consultable en console : voies empruntées, discordances à régénérer */
+
+/* L'ENTRÉE de /codes pour une clé sanMJPC — les QUATRE tolérances historiques de
+   codeAttendu, prolongées : on retourne l'entrée entière (code/chiffre/sel/empreinte),
+   plus seulement le clair. Chaîne nue (vestiges ELIO-*) → {code:chaîne}. */
+function mjpcEntreeCode(codesData,cle){
+  if(!codesData)return null;
+  var e=codesData[cle];
+  if(typeof e==="string")return {code:String(e)};
+  if(e&&e.code!==undefined&&e.code!==null)return e;
+  if(e&&(e.empreinte||e.chiffre))return e; /* préfiguration du 3e temps : entrée sans clair */
+  var ks=Object.keys(codesData);
+  for(var i=0;i<ks.length;i++){
+    var v=codesData[ks[i]];
+    if(v&&v.name&&sanMJPC(v.name)===cle)return (typeof v==="string")?{code:String(v)}:v;
+    if(sanMJPC(ks[i])===cle)return (typeof v==="string")?{code:String(v)}:v;
+  }
+  return null;
+}
+/* La vérification : empreinte prioritaire, repli clair. → Promise {ok, voie} */
+function mjpcVerifierCode(entree,saisie){
+  if(!entree)return Promise.resolve({ok:false,voie:"absent"});
+  var clairOk=(entree.code!==undefined&&entree.code!==null)&&String(entree.code)===String(saisie);
+  if(entree.empreinte&&entree.sel&&mjpcCryptoDispo()){
+    return mjpcEmpreinte(String(saisie),entree.sel).then(function(h){
+      if(h===entree.empreinte){MJPC_SECU2.voies.empreinte++;return {ok:true,voie:"empreinte"};}
+      if(clairOk){
+        MJPC_SECU2.discordances++;MJPC_SECU2.voies.clair++;
+        try{console.warn("MJPC-SECU2 : empreinte discordante pour une entr\u00e9e \u2014 repli clair accept\u00e9. Ce code doit \u00eatre r\u00e9g\u00e9n\u00e9r\u00e9 AVEC la cl\u00e9 avant le retrait du clair (3e temps).");}catch(e){}
+        return {ok:true,voie:"clair-discordant"};
+      }
+      return {ok:false,voie:"empreinte"};
+    },function(){ /* échec local du calcul : repli clair — jamais un élève dehors sur une panne locale */
+      if(clairOk){MJPC_SECU2.voies.clair++;}
+      return {ok:clairOk,voie:"clair"};
+    });
+  }
+  if(clairOk){MJPC_SECU2.voies.clair++;return Promise.resolve({ok:true,voie:"clair"});}
+  return Promise.resolve({ok:false,voie:"clair"});
+}
+/* Lectures REST (le hub est le même pour toutes ; LECTURE SEULE) */
+function mjpcSecuLireJson(chemin){
+  return fetch(MJPC_SECU2.hub+chemin+".json").then(function(r){return r.ok?r.json():null;},function(){return null;});
+}
+/* La clé locale, validée contre le canari du coffre (AES-GCM authentifié) */
+function mjpcValiderCleLocale(secret){
+  if(!secret||!mjpcCryptoDispo())return Promise.resolve(false);
+  var cle;
+  return mjpcDeriverCle(secret).then(function(k){cle=k;return mjpcSecuLireJson("/site/config/coffreCanari");})
+    .then(function(canari){
+      if(!canari)return false;
+      return mjpcDechiffrer(cle,canari).then(function(t){return t==="MJPC-CANARI|coffre-v1";},function(){return false;});
+    });
+}
+/* La porte professeur à trois voies. profCodes = les codes EFFECTIFS de l'app
+   (dur + surcharge éventuelle) — leur régime ne change pas à ce morceau. */
+function mjpcVerifierProf(saisie,profCodes){
+  if((profCodes||[]).map(String).indexOf(String(saisie))>=0)return Promise.resolve({ok:true,voie:"code"});
+  var s=String(saisie||"");
+  var parCle=(s.length>=8&&mjpcCryptoDispo())
+    ? mjpcValiderCleLocale(s).then(function(ok){
+        if(ok){try{localStorage.setItem("mjpc_coffre_secret",s);}catch(e){}return {ok:true,voie:"cle"};}
+        return null;})
+    : Promise.resolve(null);
+  return parCle.then(function(r){
+    if(r)return r;
+    if(!mjpcCryptoDispo())return {ok:false,voie:"code"};
+    return mjpcSecuLireJson("/site/config/profEmpreintes").then(function(fiches){
+      if(!fiches||!fiches.length)return {ok:false,voie:"code"};
+      return Promise.all(fiches.map(function(f){
+        return mjpcEmpreinte(String(saisie),f.sel).then(function(h){return h===f.empreinte;},function(){return false;});
+      })).then(function(rs){return {ok:rs.indexOf(true)>=0,voie:"empreinte-prof"};});
+    });
+  });
+}
+/* La clé est-elle déjà mémorisée ET valide sur cet appareil ? */
+function mjpcProfDejaLa(){
+  var sec=null;try{sec=localStorage.getItem("mjpc_coffre_secret");}catch(e){}
+  if(!sec)return Promise.resolve(false);
+  return mjpcValiderCleLocale(sec);
+}
+/* Oubli local : le même geste que sur le site, atteignable depuis l'app */
+function mjpcOublierCleIci(){
+  try{localStorage.removeItem("mjpc_coffre_secret");}catch(e){}
+  var b=document.getElementById("mjpc-secu2-profbtn");if(b)b.remove();
+}
+/* Le bandeau du portail : visible SEULEMENT si la clé mémorisée est valide.
+   Libellé sans ambiguïté (ce n'est pas une connexion automatique) + l'oubli
+   atteignable ICI — un poste de salle laissé avec la clé est une porte ouverte. */
+/* Par défaut, ouvrir = émettre la session professeur STANDARD (celle que le
+   shunt §8 de chaque app sait lire) puis recharger — la clé validée par le
+   canari est l'autorité ; la session émise est identique à celle du site. */
+function mjpcOuvrirSessionProfParDefaut(){
+  var s={is_prof:true,display:"Professeur",ts:Date.now()};
+  try{sessionStorage.setItem("mjpc_eleve",JSON.stringify(s));}catch(e){}
+  try{localStorage.setItem("mjpc_eleve",JSON.stringify(s));}catch(e){}
+  location.reload();
+}
+function mjpcMonterBoutonProf(ouvrirSessionProf){
+  if(!ouvrirSessionProf)ouvrirSessionProf=mjpcOuvrirSessionProfParDefaut;
+  mjpcProfDejaLa().then(function(ok){
+    if(!ok||document.getElementById("mjpc-secu2-profbtn"))return;
+    var d=document.createElement("div");d.id="mjpc-secu2-profbtn";
+    d.innerHTML='<span class="mjpc-secu2-txt">La cl\u00e9 de chiffrement est m\u00e9moris\u00e9e sur cet appareil.</span>'
+      +'<button type="button" class="mjpc-secu2-b" id="mjpc-secu2-ouvrir">Ouvrir la session professeur</button>'
+      +'<button type="button" class="mjpc-secu2-b sec" id="mjpc-secu2-oublier">Oublier la cl\u00e9 sur cet appareil</button>';
+    document.body.appendChild(d);
+    document.getElementById("mjpc-secu2-ouvrir").onclick=function(){
+      var b=document.getElementById("mjpc-secu2-profbtn");if(b)b.remove();
+      ouvrirSessionProf();
+    };
+    document.getElementById("mjpc-secu2-oublier").onclick=mjpcOublierCleIci;
+  });
+}
+function mjpcRetirerBoutonProf(){var b=document.getElementById("mjpc-secu2-profbtn");if(b)b.remove();}
+/* Auto-montage : au chargement, si aucune session MJPC n'est en cours (le
+   portail est donc à l'écran) et que la clé mémorisée est valide, le bandeau
+   paraît. Identique dans les neuf : aucune dépendance au DOM de l'app. */
+if(typeof window!=="undefined"&&window.addEventListener){
+  window.addEventListener("DOMContentLoaded",function(){
+    var s=null;try{s=lireSessionMJPC();}catch(e){}
+    if(s)return;
+    mjpcMonterBoutonProf();
+  });
+}
+/* ═══ fin M-SÉCU-2 ═══ */
+
 
 // ── 8. Session partagée MJPC : l'app reconnaît qui est déjà connecté au site ──
 // Le site MJPC écrit 'mjpc_eleve' (sessionStorage + localStorage, même origine).
@@ -1147,6 +1439,14 @@ function AppEleve(p){
        MENEY/monsieur (porte sans code) est retirée : Paul entre comme prof. */
     var nom=nomInput.trim().toUpperCase();var prenom=prenomInput.trim();var code=codeInput.trim();
     if(code&&PROF_CODES.indexOf(parseInt(code,10))>=0){if(p.onProf)p.onProf();return;}
+    if(String(code).length>=8&&mjpcCryptoDispo()){ /* M-SÉCU-2 : la clé de chiffrement ouvre aussi */
+      setErrMsg("V\u00e9rification\u2026");
+      mjpcVerifierProf(code,PROF_CODES.map(String)).then(function(rS){
+        if(rS.ok){setErrMsg("");mjpcRetirerBoutonProf();if(p.onProf)p.onProf();}
+        else setErrMsg("Cette cl\u00e9 ne correspond pas \u00e0 celle qui a verrouill\u00e9 les codes. V\u00e9rifie la saisie.");
+      });
+      return;
+    }
     if(!nom||!prenom||!code){setErrMsg("\u00c9cris ton nom, ton pr\u00e9nom et ton code personnel.");return}
     var searchList=forcedId?reecritures.filter(function(r){return r.id===forcedId}):reecritures;
     var lots=[],full=null,key=null;
@@ -1160,9 +1460,14 @@ function AppEleve(p){
       }
     }
     if(!full){setErrMsg("Nom non reconnu. V\u00e9rifie l\u2019orthographe, ou vois avec moi en classe.");return}
-    var rec=(typeof CODES==="object"&&CODES)?CODES[key]:null;
-    if(!rec||!rec.code||String(rec.code)!==code){setErrMsg("Ce code ne correspond pas. V\u00e9rifie-le, ou vois avec moi en classe.");return}
-    _entrerEleve(full,key,lots);
+    /* M-SÉCU-2 : vérification par EMPREINTE, repli clair (aucun élève dehors à ce morceau) */
+    var rec=mjpcEntreeCode((typeof CODES==="object"&&CODES)?CODES:{},key);
+    if(!rec){setErrMsg("Ce code ne correspond pas. V\u00e9rifie-le, ou vois avec moi en classe.");return}
+    mjpcVerifierCode(rec,code).then(function(rOK){
+      if(!rOK.ok){setErrMsg("Ce code ne correspond pas. V\u00e9rifie-le, ou vois avec moi en classe.");return}
+      mjpcRetirerBoutonProf();
+      _entrerEleve(full,key,lots);
+    });
   }
   function _entrerEleve(full,key,lots){
     /* M10 (grille pt 8) : plusieurs lots → « Mes r\u00e9\u00e9critures » ; un seul → direct. */
@@ -1694,7 +1999,7 @@ function EleveSaisie(p){
   );
 }
 
-var APP_VERSION="2.0.1";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
+var APP_VERSION="2.1.0";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
 /* M10 (pts 5, 6, 10, pastille) — infos globales : version, Réglages, annonces du site (LECTURE seule, filtre du contrat M6). */
 function InfosMJPC(){
   var s1=useState(false),open_=s1[0],setOpen=s1[1];
