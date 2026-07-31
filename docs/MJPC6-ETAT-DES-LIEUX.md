@@ -21,6 +21,12 @@ Mesuré le 30/07 sur les 10 fichiers de production, lus authentifiés :
 **Ce qui reste ouvert n'est PAS la connexion, c'est le COFFRE** : voir M-SÉCU ci-dessous. Distinguer les deux est essentiel — la serrure est posée, la porte du coffre n'a jamais existé.
 
 ### Le socle MJPC-CORE
+**Au 31/07 : `index.html` ET les neuf apps sont en 1.3.0.** Le canon `mjpc-core.js` est en production, md5 `f5e81602f8aee1ca17a9721546066efa`, **verbatim identique à l'embarqué dans les dix fichiers** (26 fonctions comparées à l'octet le 31/07). L'écart de version entre le site et les apps, qui durait depuis le 27/07, est résorbé.
+
+### La vérification des codes par empreinte — POSÉE PARTOUT, PAS ENCORE PROTECTRICE
+Les dix fichiers savent vérifier un code par son empreinte, avec repli sur le clair. **Mais le clair est encore là** : tant que M-SÉCU-3 n'a pas eu lieu, `/codes` reste lisible et `PROF_CODES` reste en clair dans huit fichiers. **Ne pas confondre « le mécanisme est en place » et « les élèves sont protégés ».**
+
+### ANCIEN — le socle avant le 31/07
 `index.html` en **1.2.0** (trois issues d'écriture, promu le 30/07) ; les 9 apps en **1.1.0**. Le canon `mjpc-core.js` est en production, **verbatim identique à l'embarqué** (16 fonctions comparées à l'octet le 30/07).
 
 ### Les écritures du site ne mentent plus
