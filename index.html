@@ -2203,7 +2203,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.8.1";
+var APP_VERSION="8.8.2";
 var APP_VERSION_DATE="2026-07-30";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -5229,9 +5229,46 @@ function deleteClass(slug){
   },(c.nom||slug));
 }
 
+/* ── PUBLIER UN ONGLET VIDE : PRÉVENU, PAS BLOQUÉ (Paul, 31/07) ──────────────
+   Constat de Paul à sa recette : un onglet publié sans travaux envoie l'élève sur
+   un écran vide, et rien ne l'en avertit au moment où il publie. Sa règle : « si
+   je publie sur une classe où il n'y a pas de travaux, il faut que le site
+   m'alerte en clair, avec une phrase qui explique précisément ce que l'élève va
+   voir si je poursuis cette action. Principe, toujours pareil : prévenu, mais pas
+   bloqué. » Même famille que le grisage de l'atelier (la machine conseille, elle
+   ne décide jamais) et que `_corbeillePuis` (l'échec est un choix offert, jamais
+   un silence). L'avertissement DÉCRIT L'ÉCRAN DE L'ÉLÈVE — il ne dit pas « c'est
+   vide », il dit ce qui s'affichera. Et il ne paraît QUE sur une publication,
+   jamais sur une dépublication : retirer un outil n'a jamais besoin d'être plaidé. */
+function _apercuOngletVide(level,tabId){
+  var branche={dictee:'dictee',reecriture:'reecriture',evalconn:'qcm'};
+  var porte={dictee:'Mes dict\u00e9es corrig\u00e9es',reecriture:'Mes r\u00e9\u00e9critures',
+             evalconn:'\u00c9valuation des connaissances',analyse:'Analyse logique'};
+  var sansContenu=['image','etude','redaction'];
+  var lib=(typeof TAB_LABELS!=='undefined'&&TAB_LABELS[tabId])?TAB_LABELS[tabId]:tabId;
+  if(sansContenu.indexOf(tabId)>=0){
+    return 'L\u2019onglet \u00ab '+lib+' \u00bb n\u2019est pas encore branch\u00e9 \u00e0 son application.\n\n'
+         + 'Ce que l\u2019\u00e9l\u00e8ve verra en cliquant dessus : une page avec une cl\u00e9 \u00e0 molette et la phrase '
+         + '\u00ab Cet outil ouvrira plus tard. \u00bb\n\nRien d\u2019autre.\n\nPublier quand m\u00eame ?';
+  }
+  var kind=branche[tabId];
+  var n=kind?(collectChapterItems(level,kind)||[]).length:-1;
+  if(n>0)return '';   /* il y a du travail rang\u00e9 : rien \u00e0 signaler */
+  var p=porte[tabId]||'';
+  var txt='L\u2019onglet \u00ab '+lib+' \u00bb ne contient aucun travail rang\u00e9 pour le niveau '+String(level).toUpperCase()+'.\n\n'
+        + 'Ce que l\u2019\u00e9l\u00e8ve verra en cliquant dessus : la mention \u00ab Aucun \u00e9l\u00e9ment disponible pour le moment. \u00bb';
+  if(p)txt+=', puis le bouton \u00ab '+p+' \u00bb qui ouvre l\u2019application. S\u2019il n\u2019y a rien \u00e0 son nom dedans, il y arrivera sur un \u00e9cran vide.';
+  else txt+='.';
+  txt+='\n\nUn travail appara\u00eet ici quand il est reli\u00e9 \u00e0 une s\u00e9ance par le bouton \u00ab LIER \u00bb.\n\nPublier quand m\u00eame ?';
+  return txt;
+}
 function togglePublishTab(level,tabId){
   var pub=(publishedTabs[level]||[]).slice();
   var idx=pub.indexOf(tabId);
+  if(idx<0){   /* on PUBLIE : on pr\u00e9vient. On ne pr\u00e9vient jamais sur un retrait. */
+    var avert=_apercuOngletVide(level,tabId);
+    if(avert&&!window.confirm(avert))return;
+  }
   if(idx>=0)pub.splice(idx,1);else pub.push(tabId);
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/published_tabs.json',pub,'Publication des onglets '+level.toUpperCase(),function(){
     publishedTabs[level]=pub;
