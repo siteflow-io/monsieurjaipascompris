@@ -1883,18 +1883,18 @@ var MJPC_CORE_VERSION="1.3.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   M-SÉCU-2 — LA VÉRIFICATION PAR EMPREINTE (section commune aux neuf apps)
-   Le login élève vérifie l'EMPREINTE posée par le site (M-SÉCU-1) au lieu du
-   clair. PENDANT CE MORCEAU le clair reste un REPLI : entrée non migrée, crypto
-   absente (http local), ou empreinte discordante (code régénéré sans clé —
-   compté : c'est la liste de ce qui doit être régénéré avant le 3e temps).
-   AUCUN ÉLÈVE DEHORS. La porte professeur accepte : le code (clair effectif de
-   l'app, dur + surcharge, INCHANGÉ jusqu'au 3e temps) · la CLÉ de chiffrement
-   (validée par le canari du coffre) · l'empreinte prof posée au hub.
+   M-SÉCU-2/3 — LA VÉRIFICATION PAR EMPREINTE (section commune aux neuf apps)
+   M-SÉCU-3 : LE REPLI SUR LE CLAIR A DISPARU. Un code ne se vérifie plus que
+   par son EMPREINTE ; une entrée qui n'en porte pas est refusée (le code sera
+   renouvelé en classe). La porte professeur n'accepte plus que la CLÉ de
+   chiffrement (validée par le canari) et les empreintes de
+   /site/config/profEmpreintes — plus aucun code en clair, nulle part.
+   Hors https (WebCrypto absent), l'app s'ouvre mais le déclare : ni porte
+   professeur, ni vérification de code — jamais d'écran blanc.
    La clé est LUE depuis le localStorage commun (même origine que le site) et
    n'est JAMAIS envoyée. Lecture seule ici : cette section n'écrit rien au hub.
    ═══════════════════════════════════════════════════════════════════════════ */
-var MJPC_SECU2={hub:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",discordances:0,voies:{empreinte:0,clair:0}};
+var MJPC_SECU2={hub:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",voies:{empreinte:0}};
 window.MJPC_SECU2_DIAG=MJPC_SECU2; /* consultable en console : voies empruntées, discordances à régénérer */
 
 /* L'ENTRÉE de /codes pour une clé sanMJPC — les QUATRE tolérances historiques de
@@ -1914,26 +1914,23 @@ function mjpcEntreeCode(codesData,cle){
   }
   return null;
 }
-/* La vérification : empreinte prioritaire, repli clair. → Promise {ok, voie} */
+/* La vérification : l'EMPREINTE SEULE fait foi (M-SÉCU-3). → Promise {ok, voie}
+   voie "sans-empreinte" : entrée jamais préparée — le code sera renouvelé en
+   classe. voie "indisponible" : WebCrypto absent (hors https). */
 function mjpcVerifierCode(entree,saisie){
   if(!entree)return Promise.resolve({ok:false,voie:"absent"});
-  var clairOk=(entree.code!==undefined&&entree.code!==null)&&String(entree.code)===String(saisie);
-  if(entree.empreinte&&entree.sel&&mjpcCryptoDispo()){
-    return mjpcEmpreinte(String(saisie),entree.sel).then(function(h){
-      if(h===entree.empreinte){MJPC_SECU2.voies.empreinte++;return {ok:true,voie:"empreinte"};}
-      if(clairOk){
-        MJPC_SECU2.discordances++;MJPC_SECU2.voies.clair++;
-        try{console.warn("MJPC-SECU2 : empreinte discordante pour une entr\u00e9e \u2014 repli clair accept\u00e9. Ce code doit \u00eatre r\u00e9g\u00e9n\u00e9r\u00e9 AVEC la cl\u00e9 avant le retrait du clair (3e temps).");}catch(e){}
-        return {ok:true,voie:"clair-discordant"};
-      }
-      return {ok:false,voie:"empreinte"};
-    },function(){ /* échec local du calcul : repli clair — jamais un élève dehors sur une panne locale */
-      if(clairOk){MJPC_SECU2.voies.clair++;}
-      return {ok:clairOk,voie:"clair"};
-    });
-  }
-  if(clairOk){MJPC_SECU2.voies.clair++;return Promise.resolve({ok:true,voie:"clair"});}
-  return Promise.resolve({ok:false,voie:"clair"});
+  if(!(entree.empreinte&&entree.sel))return Promise.resolve({ok:false,voie:"sans-empreinte"});
+  if(!mjpcCryptoDispo())return Promise.resolve({ok:false,voie:"indisponible"});
+  return mjpcEmpreinte(String(saisie),entree.sel).then(function(h){
+    if(h===entree.empreinte){MJPC_SECU2.voies.empreinte++;return {ok:true,voie:"empreinte"};}
+    return {ok:false,voie:"empreinte"};
+  },function(){return {ok:false,voie:"indisponible"};});
+}
+/* Le message élève d'un refus, selon la voie — flux impersonnel, zéro jargon */
+function mjpcMessageRefusEleve(voie){
+  if(voie==="sans-empreinte")return "Ce code n\u2019ouvre pas encore cet espace. Il sera renouvel\u00e9 en classe \u2014 rien \u00e0 faire de ton c\u00f4t\u00e9.";
+  if(voie==="indisponible")return "Cet espace s\u2019ouvre depuis le site publi\u00e9.";
+  return null; /* code faux : chaque app garde son message habituel */
 }
 /* Lectures REST (le hub est le même pour toutes ; LECTURE SEULE) */
 function mjpcSecuLireJson(chemin){
@@ -1949,27 +1946,29 @@ function mjpcValiderCleLocale(secret){
       return mjpcDechiffrer(cle,canari).then(function(t){return t==="MJPC-CANARI|coffre-v1";},function(){return false;});
     });
 }
-/* La porte professeur à trois voies. profCodes = les codes EFFECTIFS de l'app
-   (dur + surcharge éventuelle) — leur régime ne change pas à ce morceau. */
-function mjpcVerifierProf(saisie,profCodes){
-  if((profCodes||[]).map(String).indexOf(String(saisie))>=0)return Promise.resolve({ok:true,voie:"code"});
+/* La porte professeur (M-SÉCU-3) : la CLÉ (canari) et les EMPREINTES du hub.
+   Plus aucun code en clair. Hors https : voie "indisponible", la porte se
+   déclare fermée sans jamais casser l'app. */
+function mjpcVerifierProf(saisie){
+  if(!mjpcCryptoDispo())return Promise.resolve({ok:false,voie:"indisponible"});
   var s=String(saisie||"");
-  var parCle=(s.length>=8&&mjpcCryptoDispo())
+  var parCle=(s.length>=8)
     ? mjpcValiderCleLocale(s).then(function(ok){
         if(ok){try{localStorage.setItem("mjpc_coffre_secret",s);}catch(e){}return {ok:true,voie:"cle"};}
         return null;})
     : Promise.resolve(null);
   return parCle.then(function(r){
     if(r)return r;
-    if(!mjpcCryptoDispo())return {ok:false,voie:"code"};
     return mjpcSecuLireJson("/site/config/profEmpreintes").then(function(fiches){
-      if(!fiches||!fiches.length)return {ok:false,voie:"code"};
+      if(!fiches||!fiches.length)return {ok:false,voie:"empreinte-prof"};
       return Promise.all(fiches.map(function(f){
         return mjpcEmpreinte(String(saisie),f.sel).then(function(h){return h===f.empreinte;},function(){return false;});
       })).then(function(rs){return {ok:rs.indexOf(true)>=0,voie:"empreinte-prof"};});
     });
   });
 }
+/* Le message d'une porte professeur fermée hors https — une ligne, pas d'erreur technique */
+var MJPC_TXT_PROF_HORS_LIGNE="L\u2019espace professeur s\u2019ouvre depuis le site publi\u00e9.";
 /* La clé est-elle déjà mémorisée ET valide sur cet appareil ? */
 function mjpcProfDejaLa(){
   var sec=null;try{sec=localStorage.getItem("mjpc_coffre_secret");}catch(e){}
@@ -2046,7 +2045,7 @@ let ACTIVE = ROOT + "/active";
 let ARCHIVES = ROOT + "/archives";
 let META = ROOT + "/meta";
 let TARCH = ROOT + "/tournamentArchives";
-const DEFAULT_PWD = "1312";
+/* M-SÉCU-3 : plus de mot de passe par défaut — la porte passe par la clé/empreintes. */
 /* ════ M5 — UN DÉBAT ORAL PAR CLASSE (mémo multi-classes exécuté le 17/07) ════
    • État oral par classe : ACTIVE/debats/<slugC(classe)> — la classe est la clé,
      jamais deux débats oraux pour la même classe.
@@ -2710,7 +2709,7 @@ async function purgerEtSortirTest(){
 // ─────────── État global ───────────
 /* ┌─ SOCLE-CANDIDAT : version de l'app (extractible) ─┐
    Bump manuel à chaque livraison ; affichée par la pastille #appVersion. */
-const APP_VERSION = "2026-07-31-1";
+const APP_VERSION = "2026-07-31-2";
 try{ document.addEventListener("DOMContentLoaded", function(){ var e=document.getElementById("appVersion"); if(e) e.textContent="v"+APP_VERSION; }); }catch(e){}
 /* └────────────────────────────────────────────────────┘ */
 let role = null;            // 'student' | 'prof' | null
@@ -2814,7 +2813,6 @@ window.addEventListener("load", async () => {
     watchCours();   /* 2e volet M5ter : le drapeau du cours, en temps réel pour tous */
     await appliquerParamsURL();        /* M5ter fix : ?debat= (habillage rechargé) puis ?test_eleve= — pour TOUS les flux, db prêt */
     if(window._incarne) return;        /* incarnation réussie : l'écran élève réel a pris la main */
-    await ensureProfPassword();
     watchClasses();
   } catch(e) {
     console.error("Firebase init error:", e);
@@ -2857,16 +2855,14 @@ const safeStorage = {
    Avant : un mot de passe PAR débat (meta) → chaque nouveau débat naissait
    verrouillé avec un meta vide. Migration douce : au premier passage, l'ancien
    mot de passe du débat courant est repris ; à défaut, celui d'origine. */
-async function ensureProfPassword(){
-  const snap = await db.ref("debat_config/profPassword").once("value");
-  if(snap.exists()) return;
-  const ancien = await db.ref(META+"/profPassword").once("value");
-  await db.ref("debat_config/profPassword").set(ancien.exists() ? ancien.val() : DEFAULT_PWD);
-}
+/* M-SÉCU-3 : le mot de passe débat en clair (hub debat_config/profPassword,
+   valeur seed) cesse d'être une voie d'entrée — le nœud n'est PAS supprimé
+   (hors mandat), il n'est simplement plus lu. La porte passe par la clé de
+   chiffrement ou les empreintes professeur du hub. */
 async function checkProfPassword(pwd){
-  await ensureProfPassword();
-  const snap = await db.ref("debat_config/profPassword").once("value");
-  return snap.val() === pwd;
+  if(!mjpcCryptoDispo()) return false;
+  const r = await mjpcVerifierProf(pwd);
+  return !!(r && r.ok);
 }
 
 // ─────────── Welcome : login étudiant ───────────
@@ -2885,7 +2881,7 @@ function hideProfLogin(){
 async function doProfLogin(){
   const pwd = $("profPwd").value;
   const ok = await checkProfPassword(pwd);
-  if(!ok){ $("profErr").textContent="Mot de passe incorrect."; return; }
+  if(!ok){ $("profErr").textContent=mjpcCryptoDispo()?"Ce code ou cette cl\u00e9 n\u2019ouvre pas l\u2019espace professeur.":MJPC_TXT_PROF_HORS_LIGNE; return; }
   $("profPwd").value="";
   /* rôle prof non mémorisé (15/07) */
   publierManifeste(db);
@@ -3020,7 +3016,7 @@ async function doStudentLogin(){
     /* M-SÉCU-2 : le code du candidat se vérifie par EMPREINTE (repli clair) */
     var vSecu = await mjpcVerifierCode(trouve, code);
     if(!vSecu.ok){
-      $("loginErr").textContent="Code, nom et prénom ne correspondent pas. Vérifie, ou demande au professeur.";
+      $("loginErr").textContent=mjpcMessageRefusEleve(vSecu.voie)||"Code, nom et prénom ne correspondent pas. Vérifie, ou demande au professeur.";
       $("loginBtn").disabled=false; return;
     }
     mjpcRetirerBoutonProf();
