@@ -1,5 +1,8 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.2.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.3.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
+//          la protection est dans la donnée, pas dans le mur : le hub peut rester
+//          ouvert, il ne montre plus que de l'illisible. Prépare M-SÉCU-2/3.
 // v1.2.0 : + §9 écritures, les trois issues (MJPC_ISSUE, mjpcEcrireRest) —
 //          une écriture n'a jamais deux issues (« fait »/« erreur ») mais trois :
 //          acceptée / refusée (définitif) / panne (temporaire). Prérequis M-SÉCU.
@@ -231,5 +234,68 @@ function mjpcEcrireRest(url,options,cb){
   });
 }
 
-var MJPC_CORE_VERSION="1.2.0";
+// ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
+// (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
+//  ici pour ne pas toucher l'existant ; cette section est la 11.)
+// Modèle éprouvé des conventions de stage : le serveur ne stocke que de l'illisible,
+// chiffré SUR L'APPAREIL avec une clé qui n'est JAMAIS envoyée. WebCrypto n'existe
+// que sur https:// et localhost — toute entrée passe par mjpcCryptoDispo(), et
+// l'absence se DIT (jamais d'échec muet).
+// Discipline de promesses (leçon mjpcEcrireRest du 30/07) : jamais un .catch qui
+// avalerait un bug d'aval — les rejets remontent à l'appelant, qui décide.
+var MJPC_COFFRE_SEL_DERIVATION="mjpc-coffre-derivation-v1"; // sel constant : la même clé saisie donne la même clé dérivée sur tout appareil
+var MJPC_COFFRE_ITER_CLE=310000;      // PBKDF2 de la clé de chiffrement
+var MJPC_COFFRE_ITER_EMPREINTE=100000; // PBKDF2 d'une empreinte (sel PAR ENTRÉE fourni par l'appelant)
+
+function mjpcCryptoDispo(){
+  return !!(typeof crypto!=="undefined"&&crypto.subtle&&crypto.getRandomValues);
+}
+function _mjpcTxt(s){return new TextEncoder().encode(String(s));}
+function _mjpcB64(buf){var b="",a=new Uint8Array(buf);for(var i=0;i<a.length;i++)b+=String.fromCharCode(a[i]);return btoa(b);}
+function _mjpcDeB64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
+function _mjpcHex(buf){var a=new Uint8Array(buf),h="";for(var i=0;i<a.length;i++)h+=("0"+a[i].toString(16)).slice(-2);return h;}
+
+// Dérive la clé AES-GCM 256 du secret saisi. → Promise<CryptoKey>
+function mjpcDeriverCle(secret){
+  return crypto.subtle.importKey("raw",_mjpcTxt(secret),"PBKDF2",false,["deriveKey"])
+    .then(function(base){
+      return crypto.subtle.deriveKey(
+        {name:"PBKDF2",salt:_mjpcTxt(MJPC_COFFRE_SEL_DERIVATION),iterations:MJPC_COFFRE_ITER_CLE,hash:"SHA-256"},
+        base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+    });
+}
+// Chiffre un texte. → Promise<"v1."+b64(iv)+"."+b64(chiffré)> — IV aléatoire par appel.
+function mjpcChiffrer(cle,texte){
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  return crypto.subtle.encrypt({name:"AES-GCM",iv:iv},cle,_mjpcTxt(texte))
+    .then(function(ct){return "v1."+_mjpcB64(iv)+"."+_mjpcB64(ct);});
+}
+// Déchiffre un paquet "v1.iv.ct". → Promise<texte> — REJETTE si la clé est fausse
+// (AES-GCM est authentifié : c'est ce qui rend le canari fiable) ou le paquet corrompu.
+function mjpcDechiffrer(cle,paquet){
+  var p=String(paquet||"").split(".");
+  if(p.length!==3||p[0]!=="v1")return Promise.reject(new Error("paquet inconnu"));
+  return crypto.subtle.decrypt({name:"AES-GCM",iv:_mjpcDeB64(p[1])},cle,_mjpcDeB64(p[2]))
+    .then(function(buf){return new TextDecoder().decode(buf);});
+}
+// Sel aléatoire d'empreinte (16 octets, hex) — un par entrée, stocké à côté d'elle.
+function mjpcSelAleatoire(){
+  return _mjpcHex(crypto.getRandomValues(new Uint8Array(16)));
+}
+// Empreinte d'un texte : PBKDF2-SHA-256, sel PAR ENTRÉE, 32 octets hex. → Promise<hex>
+// Vérifiable par toute app (le sel est lisible) SANS la clé du coffre. Contre un
+// secret court (code à 4 chiffres), le sel par entrée interdit la table précalculée
+// et le coût par essai ralentit l'essai exhaustif — il ne l'empêche pas : l'objectif
+// est de ne plus EXPOSER le clair, pas de rendre un code de 4 chiffres incassable.
+function mjpcEmpreinte(texte,selHex){
+  return crypto.subtle.importKey("raw",_mjpcTxt(texte),"PBKDF2",false,["deriveBits"])
+    .then(function(base){
+      return crypto.subtle.deriveBits(
+        {name:"PBKDF2",salt:_mjpcTxt("mjpc-empreinte-v1|"+selHex),iterations:MJPC_COFFRE_ITER_EMPREINTE,hash:"SHA-256"},
+        base,256);
+    })
+    .then(function(bits){return _mjpcHex(bits);});
+}
+
+var MJPC_CORE_VERSION="1.3.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
