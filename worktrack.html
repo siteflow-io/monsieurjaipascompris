@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-07-31a">
+<meta name="app-version" content="2026-07-31b">
 <!-- ^ marqueur de version — SOURCE UNIQUE : la pastille affichée à l'écran ET le mécanisme
      « Publier la mise à jour » lisent CE meta (APP_VERSION). À incrémenter à CHAQUE livraison
      (format AAAA-MM-JJ + lettre, croissant lexicographiquement — contrat de onAppVersion).
@@ -1299,18 +1299,18 @@ var MJPC_CORE_VERSION="1.3.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   M-SÉCU-2 — LA VÉRIFICATION PAR EMPREINTE (section commune aux neuf apps)
-   Le login élève vérifie l'EMPREINTE posée par le site (M-SÉCU-1) au lieu du
-   clair. PENDANT CE MORCEAU le clair reste un REPLI : entrée non migrée, crypto
-   absente (http local), ou empreinte discordante (code régénéré sans clé —
-   compté : c'est la liste de ce qui doit être régénéré avant le 3e temps).
-   AUCUN ÉLÈVE DEHORS. La porte professeur accepte : le code (clair effectif de
-   l'app, dur + surcharge, INCHANGÉ jusqu'au 3e temps) · la CLÉ de chiffrement
-   (validée par le canari du coffre) · l'empreinte prof posée au hub.
+   M-SÉCU-2/3 — LA VÉRIFICATION PAR EMPREINTE (section commune aux neuf apps)
+   M-SÉCU-3 : LE REPLI SUR LE CLAIR A DISPARU. Un code ne se vérifie plus que
+   par son EMPREINTE ; une entrée qui n'en porte pas est refusée (le code sera
+   renouvelé en classe). La porte professeur n'accepte plus que la CLÉ de
+   chiffrement (validée par le canari) et les empreintes de
+   /site/config/profEmpreintes — plus aucun code en clair, nulle part.
+   Hors https (WebCrypto absent), l'app s'ouvre mais le déclare : ni porte
+   professeur, ni vérification de code — jamais d'écran blanc.
    La clé est LUE depuis le localStorage commun (même origine que le site) et
    n'est JAMAIS envoyée. Lecture seule ici : cette section n'écrit rien au hub.
    ═══════════════════════════════════════════════════════════════════════════ */
-var MJPC_SECU2={hub:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",discordances:0,voies:{empreinte:0,clair:0}};
+var MJPC_SECU2={hub:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",voies:{empreinte:0}};
 window.MJPC_SECU2_DIAG=MJPC_SECU2; /* consultable en console : voies empruntées, discordances à régénérer */
 
 /* L'ENTRÉE de /codes pour une clé sanMJPC — les QUATRE tolérances historiques de
@@ -1330,26 +1330,23 @@ function mjpcEntreeCode(codesData,cle){
   }
   return null;
 }
-/* La vérification : empreinte prioritaire, repli clair. → Promise {ok, voie} */
+/* La vérification : l'EMPREINTE SEULE fait foi (M-SÉCU-3). → Promise {ok, voie}
+   voie "sans-empreinte" : entrée jamais préparée — le code sera renouvelé en
+   classe. voie "indisponible" : WebCrypto absent (hors https). */
 function mjpcVerifierCode(entree,saisie){
   if(!entree)return Promise.resolve({ok:false,voie:"absent"});
-  var clairOk=(entree.code!==undefined&&entree.code!==null)&&String(entree.code)===String(saisie);
-  if(entree.empreinte&&entree.sel&&mjpcCryptoDispo()){
-    return mjpcEmpreinte(String(saisie),entree.sel).then(function(h){
-      if(h===entree.empreinte){MJPC_SECU2.voies.empreinte++;return {ok:true,voie:"empreinte"};}
-      if(clairOk){
-        MJPC_SECU2.discordances++;MJPC_SECU2.voies.clair++;
-        try{console.warn("MJPC-SECU2 : empreinte discordante pour une entr\u00e9e \u2014 repli clair accept\u00e9. Ce code doit \u00eatre r\u00e9g\u00e9n\u00e9r\u00e9 AVEC la cl\u00e9 avant le retrait du clair (3e temps).");}catch(e){}
-        return {ok:true,voie:"clair-discordant"};
-      }
-      return {ok:false,voie:"empreinte"};
-    },function(){ /* échec local du calcul : repli clair — jamais un élève dehors sur une panne locale */
-      if(clairOk){MJPC_SECU2.voies.clair++;}
-      return {ok:clairOk,voie:"clair"};
-    });
-  }
-  if(clairOk){MJPC_SECU2.voies.clair++;return Promise.resolve({ok:true,voie:"clair"});}
-  return Promise.resolve({ok:false,voie:"clair"});
+  if(!(entree.empreinte&&entree.sel))return Promise.resolve({ok:false,voie:"sans-empreinte"});
+  if(!mjpcCryptoDispo())return Promise.resolve({ok:false,voie:"indisponible"});
+  return mjpcEmpreinte(String(saisie),entree.sel).then(function(h){
+    if(h===entree.empreinte){MJPC_SECU2.voies.empreinte++;return {ok:true,voie:"empreinte"};}
+    return {ok:false,voie:"empreinte"};
+  },function(){return {ok:false,voie:"indisponible"};});
+}
+/* Le message élève d'un refus, selon la voie — flux impersonnel, zéro jargon */
+function mjpcMessageRefusEleve(voie){
+  if(voie==="sans-empreinte")return "Ce code n\u2019ouvre pas encore cet espace. Il sera renouvel\u00e9 en classe \u2014 rien \u00e0 faire de ton c\u00f4t\u00e9.";
+  if(voie==="indisponible")return "Cet espace s\u2019ouvre depuis le site publi\u00e9.";
+  return null; /* code faux : chaque app garde son message habituel */
 }
 /* Lectures REST (le hub est le même pour toutes ; LECTURE SEULE) */
 function mjpcSecuLireJson(chemin){
@@ -1365,27 +1362,29 @@ function mjpcValiderCleLocale(secret){
       return mjpcDechiffrer(cle,canari).then(function(t){return t==="MJPC-CANARI|coffre-v1";},function(){return false;});
     });
 }
-/* La porte professeur à trois voies. profCodes = les codes EFFECTIFS de l'app
-   (dur + surcharge éventuelle) — leur régime ne change pas à ce morceau. */
-function mjpcVerifierProf(saisie,profCodes){
-  if((profCodes||[]).map(String).indexOf(String(saisie))>=0)return Promise.resolve({ok:true,voie:"code"});
+/* La porte professeur (M-SÉCU-3) : la CLÉ (canari) et les EMPREINTES du hub.
+   Plus aucun code en clair. Hors https : voie "indisponible", la porte se
+   déclare fermée sans jamais casser l'app. */
+function mjpcVerifierProf(saisie){
+  if(!mjpcCryptoDispo())return Promise.resolve({ok:false,voie:"indisponible"});
   var s=String(saisie||"");
-  var parCle=(s.length>=8&&mjpcCryptoDispo())
+  var parCle=(s.length>=8)
     ? mjpcValiderCleLocale(s).then(function(ok){
         if(ok){try{localStorage.setItem("mjpc_coffre_secret",s);}catch(e){}return {ok:true,voie:"cle"};}
         return null;})
     : Promise.resolve(null);
   return parCle.then(function(r){
     if(r)return r;
-    if(!mjpcCryptoDispo())return {ok:false,voie:"code"};
     return mjpcSecuLireJson("/site/config/profEmpreintes").then(function(fiches){
-      if(!fiches||!fiches.length)return {ok:false,voie:"code"};
+      if(!fiches||!fiches.length)return {ok:false,voie:"empreinte-prof"};
       return Promise.all(fiches.map(function(f){
         return mjpcEmpreinte(String(saisie),f.sel).then(function(h){return h===f.empreinte;},function(){return false;});
       })).then(function(rs){return {ok:rs.indexOf(true)>=0,voie:"empreinte-prof"};});
     });
   });
 }
+/* Le message d'une porte professeur fermée hors https — une ligne, pas d'erreur technique */
+var MJPC_TXT_PROF_HORS_LIGNE="L\u2019espace professeur s\u2019ouvre depuis le site publi\u00e9.";
 /* La clé est-elle déjà mémorisée ET valide sur cet appareil ? */
 function mjpcProfDejaLa(){
   var sec=null;try{sec=localStorage.getItem("mjpc_coffre_secret");}catch(e){}
@@ -1498,7 +1497,7 @@ var MJPC_PURGE = {
 
 const MJPC = {
   ROOT: "plan_de_travail",                 // racine Firebase (à confirmer)
-  PROF_CODES: ["3141", "1312"],       // STRINGS (M13) — surcharge Firebase (plan_de_travail/config/profCodes) fait foi ensuite ; comparaisons en map(String)
+  /* M-SÉCU-3 : plus aucun code prof en clair — ni en dur, ni par surcharge. */
   niveauFiltre: new URLSearchParams(location.search).get("n") || null, // ?n=4e …
   published: true,
   USE_FIREBASE: true,                        // bascule local ↔ Firebase (true = déployé sur GitHub Pages)
@@ -4449,7 +4448,7 @@ function chargerConfigApp(){
   if(!(MJPC.USE_FIREBASE && window.firebase)) return;
   try{ window.firebase.database().ref(MJPC.ROOT+"/config").once("value", s=>{
     const cfg = s.val() || {};
-    if(cfg.profCodes && Array.isArray(cfg.profCodes) && cfg.profCodes.length) MJPC.PROF_CODES = cfg.profCodes.map(String);
+    if(cfg.false) {};
   }); }catch(e){}
 }
 function codeAttendu(cle){
@@ -7221,7 +7220,7 @@ const APP = {
       const entree=mjpcEntreeCode(codesData,cle);
       if(!entree){ toast(txt('portail_code_faux')); return; }
       mjpcVerifierCode(entree,codeI.value.trim()).then((rSecu)=>{
-        if(!rSecu.ok){ toast(txt('portail_code_faux')); return; }
+        if(!rSecu.ok){ toast(mjpcMessageRefusEleve(rSecu.voie)||txt('portail_code_faux')); return; }
         mjpcRetirerBoutonProf();
       if(this.takenKeys().includes(cle)){ toast(txt('portail_deja_connecte')); return; }   // anti-doublon sur la clé sanMJPC attestée (plus sur un nom de liste)
       const mode=(modeBox?modeBox.dataset.mode:'')||'app';
@@ -7822,20 +7821,16 @@ const PROF = {
         <button class="btn primary" onclick="PROF.checkCode()">Entrer</button></div></div>`;
     setTimeout(()=>{const i=$("profCode");i&&i.focus();},50); },
   checkCode(){ const v=String((($("profCode")||{}).value||"")).trim();
-    if((MJPC.PROF_CODES||[]).map(String).includes(v)){ this.authed=true; lsSet("wt_prof_poste", true);
+    /* M-SÉCU-3 : la clé ou l'empreinte prof, seules voies */
+    if(!mjpcCryptoDispo()){ toast(MJPC_TXT_PROF_HORS_LIGNE); return; }
+    const self=this;
+    mjpcVerifierProf(v).then((rSecu)=>{
+      if(!rSecu.ok){ toast("Ce code ou cette cl\u00e9 n\u2019ouvre pas l\u2019espace professeur."); return; }
+      self.authed=true; lsSet("wt_prof_poste", true);
       if(MJPC.USE_FIREBASE && window.firebase){ publierManifeste(window.firebase.database());
-        try{ window.firebase.database().ref(MJPC.ROOT+"/traces/acces_prof").push({via:"code", ts:Date.now()}); }catch(e){} }   // M13 : trace VISIBLE des accès prof (aucun code stocké)
-      this.tab=this.defaultTab(); this.render(); SENTINEL.maybeShow(); APP.refreshTestBtn(); }
-    else if(v.length>=8&&mjpcCryptoDispo()){ /* M-SÉCU-2 : la clé de chiffrement ouvre aussi */
-      const self=this;
-      mjpcVerifierProf(v,(MJPC.PROF_CODES||[]).map(String)).then((rSecu)=>{
-        if(!rSecu.ok){ toast("Code incorrect."); return; }
-        self.authed=true; lsSet("wt_prof_poste", true);
-        if(MJPC.USE_FIREBASE && window.firebase){ publierManifeste(window.firebase.database());
-          try{ window.firebase.database().ref(MJPC.ROOT+"/traces/acces_prof").push({via:"cle", ts:Date.now()}); }catch(e){} }
-        self.tab=self.defaultTab(); self.render(); SENTINEL.maybeShow(); APP.refreshTestBtn();
-      });
-    } else toast("Code incorrect."); },
+        try{ window.firebase.database().ref(MJPC.ROOT+"/traces/acces_prof").push({via:rSecu.voie, ts:Date.now()}); }catch(e){} }   // trace VISIBLE, aucun code stocké
+      self.tab=self.defaultTab(); self.render(); SENTINEL.maybeShow(); APP.refreshTestBtn();
+    }); },
 
   /* ── coquille à onglets ── */
   // ei1 : le panneau se re-rendait à CHAQUE écriture Firebase (heartbeats 30 s × N élèves, signaux, control)
@@ -9339,7 +9334,7 @@ activeStore.subscribe(v=>{ ACTIVE=v||{}; APP.onLibraryUpdate(); });
    SECTION DÉDIÉE — LECTEUR D'OUVERTURE DE CHAPITRE (diaporama)
    Autonome. Déclenché par INTRO.maybePlay(CHAPTER) au login explicite de l'élève (handler de connexion).
    Joué une fois par session de tablette (sessionStorage), tous modes, plein écran (couvre les 2 lanes). Bloquant élève.
-   Sortie prof : taper un code prof (MJPC.PROF_CODES) au clavier pendant l'ouverture -> ferme.
+   Sortie prof : taper le code prof au clavier pendant l'ouverture (vérifié par empreinte) -> ferme.
    Effets : scène 16:9 (image + effets calés, cover/contain selon écran), étoiles + filantes
    MASQUÉES (passent derrière les silhouettes), halos respirants, flammes, flashs.
    ======================================================================== */
@@ -9477,8 +9472,11 @@ const INTRO = {
   play(sb,title){ this.close(); this._sb=sb; this._lastTitle=title; this._started=false; this.build(sb,title); this.preload();
     this._kbuf=""; this._keyh=(e)=>this._onKey(e); document.addEventListener('keydown', this._keyh); },
   _onKey(e){ if(e.key>='0'&&e.key<='9'){ this._kbuf=(this._kbuf+e.key).slice(-6);
-    const codes=((typeof MJPC!=='undefined'&&MJPC.PROF_CODES)?MJPC.PROF_CODES:[]).map(String);   // M13 : plus de littéral de secours — la seule source est MJPC.PROF_CODES (seed strings + surcharge Firebase)
-    for(let i=0;i<codes.length;i++){ if(this._kbuf.endsWith(String(codes[i]))){ this.close(); return; } } } },
+    /* M-SÉCU-3 : la frappe se vérifie par EMPREINTE (les 4 derniers chiffres), jamais par un code en clair. */
+    if(this._kbuf.length>=4 && !this._kchk && typeof mjpcVerifierProf==="function" && mjpcCryptoDispo()){
+      const cand=this._kbuf.slice(-4); const self=this; this._kchk=true;
+      mjpcVerifierProf(cand).then((r)=>{ self._kchk=false; if(r&&r.ok) self.close(); },()=>{ self._kchk=false; });
+    } } },
   build(sb,title){
     const o=document.createElement('div'); o.id='wtIntro';
     o.innerHTML='<div class="wti-bar"></div><div class="wti-flash"></div>'
