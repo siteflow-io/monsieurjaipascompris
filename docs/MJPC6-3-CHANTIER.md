@@ -35,6 +35,13 @@ Clé prof par appareil validée par canari, codes chiffrés et empreintes posés
 **L'ORDRE EST DONC ARRÊTÉ** : ① M-SÉCU-2 puis M-SÉCU-3 (la protection ne prend effet qu'au 3) · ② **SITE-COURS-2, en commençant par la ZONE PROMPT IA → JSON** — c'est elle qui permet à Paul de remplir ses chapitres, et donc de travailler pendant que le codage continue · ③ le reste.
 **RAISON DE FOND, à ne pas perdre** : Paul ne demande pas une fonctionnalité, il demande de **pouvoir travailler en parallèle**. Tout ce qui retarde la zone prompt retarde sa saisie d'été — et le butoir du 15/08 approche. Les décisions la concernant sont déjà prises (doctrine du site, 29/07) : JSON en identifiants d'atelier **générés depuis le schéma**, un prompt par produit, prompts en Firebase, injection dans la feuille au premier plan, validation à messages nommés sur le patron de `validateChapter`.
 
+### 🔴 M-DETTES — LE MÉNAGE, ET SA TÊTE DE LISTE
+**Créé le 31/07 sur constat de méthode** : vingt-cinq dettes étaient consignées, **aucune affectée à un morceau** — donc sans date, sans exécutant, et jamais réglées. C'est le mécanisme de disparition déjà gravé au DISPOSITIF, appliqué aux dettes elles-mêmes. **Toute dette reçoit désormais un morceau ou une date, sinon elle n'existe pas.**
+**① EN TÊTE, ET C'EST DE LA SÉCURITÉ** : *changer le code professeur* — traité par **M-SÉCU-4**, morceau à part.
+**② Purges de données au hub** : `debat_config/profPassword` (vaut encore `1312`, n'est plus lu) · 2 vestiges `ELIO-*` dans `/codes` · 3 classes zombies (`CLASSE TEST`, `_TEST`, `_test_pilotage_debat_s3`) · 28 codes de 5e sans classe · fossiles CLÉMENT Lylou / PINEAU Clémence · `/eleves` hors contrat de purge.
+**③ Textes et interfaces qui mentent** : D-QCM-CLASSE (l'écran « Choisis ta classe » expose la liste des classes à tout visiteur — analysé, solution écrite, jamais affecté) · le bouton LIER non expliqué dans l'interface et sa modale qui dit « une des 4 sections » quand elle en affiche huit · les libellés de boutons non concordants avec leur `onClick` (`reecriture` : « Supprimer cette classe » qui renvoie vers MJPC).
+**④ Nommages et manifestes** : manifestes `reecriture` et `reecriture_bb4e` à republier · doublon §8/§8 au canon du socle.
+
 ### 🔴🔴 LE COCKPIT — RETROUVÉ LE 29/07 SUR ORDRE DE PAUL · **SOURCE : conversation du 14/07 « Réduire la dépendance aux notes et au numérique », §6**
 **Ce que la conscience n°4 avait d'abord remonté (le tableau de bord de pilotage en séance) n'en est qu'une petite partie — Paul l'a dit, et la recherche lui a donné raison.** Voici le COCKPIT tel qu'il a été arrêté le 14/07.
 **SA DÉFINITION EN UNE LIGNE** : *il montre les **ANGLES MORTS** avant qu'ils deviennent des manquements.*
