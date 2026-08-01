@@ -850,6 +850,17 @@ body.at-corps-fige{overflow:hidden}
   .at-ia-actions .at-btn{width:100%}
   .at-ia-zone{font-size:.9rem}
 }
+.at-portes{display:flex;flex-direction:column;gap:10px;margin:14px 0 18px}
+.at-porte{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;
+  padding:13px 15px;min-height:44px;text-align:left;cursor:pointer;
+  border:1px solid rgba(255,255,255,.14);border-radius:11px;
+  background:rgba(255,255,255,.035);color:inherit;font:inherit}
+.at-porte:hover{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.24)}
+.at-porte-ch{border-color:rgba(196,160,90,.42);background:rgba(196,160,90,.09)}
+.at-porte-ch:hover{background:rgba(196,160,90,.15);border-color:rgba(196,160,90,.6)}
+.at-porte-t{font-weight:600;font-size:.95rem}
+.at-porte-s{font-size:.78rem;opacity:.62;line-height:1.35}
+@media(max-width:430px){.at-porte{padding:12px 13px}.at-porte-t{font-size:.9rem}}
 /* ═══ fin § ZONE PROMPT IA ═══ */
 </style>
 <style>
@@ -2274,7 +2285,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.12.0";
+var APP_VERSION="8.12.1";
 var APP_VERSION_DATE="2026-07-30";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -7175,7 +7186,25 @@ function atRendreListe(){
     return ((AT.liste[b].dates||{}).modifieLe||0)-((AT.liste[a].dates||{}).modifieLe||0);
   });
   var h='<div class="at-liste-tete"><h2 class="at-h2">\ud83d\udee0 Atelier <span class="at-h2-sub">\u2014 composer les feuilles du cours</span></h2>'
-    +'<button class="at-btn at-btn-prim" onclick="atNouvelleFeuille()">\uff0b Nouvelle feuille</button></div>';
+    +'<button class="at-btn at-btn-prim" onclick="atNouvelleFeuille()">\uff0b Nouvelle feuille</button></div>'
+    /* MICRO 01/08 — LES DEUX PORTES SONT SUR L'ACCUEIL, PLUS DANS L'EDITEUR.
+       Constat de Paul : « le chemin pour arriver au prompt de chapitre est trop cache, on passe
+       par ouvrir une feuille, c'est etrange ». Le defaut n'etait pas l'ENDROIT mais le MOMENT :
+       SITE-COURS-2a avait pose la zone IA dans l'editeur parce qu'elle garnissait LA FEUILLE
+       OUVERTE ; SITE-COURS-2c y a greffe le chapitre, qui ne produit AUCUNE feuille et n'avait
+       donc rien a faire derriere une feuille ouverte. Decision de Paul : tout reste dans
+       l'atelier (« c'est de l'edition dans les deux cas »), mais les deux prompts sont des
+       POINTS DE DEPART et vivent a l'entree. Le chapitre en premier : c'est le geste le plus
+       large. Le bouton de l'editeur SUBSISTE — garnir une feuille deja commencee est un autre
+       besoin. */
+    +'<div class="at-portes">'
+    +'<button class="at-porte at-porte-ch" onclick="chOuvrir()">'
+    +'<span class="at-porte-t">\u2728 Construire un chapitre avec une IA</span>'
+    +'<span class="at-porte-s">Tu apportes tes documents, l\u2019IA propose la progression, les s\u00e9ances et les notions.</span></button>'
+    +'<button class="at-porte" onclick="atNouvelleFeuilleIA()">'
+    +'<span class="at-porte-t">\u2728 Nouvelle feuille avec une IA</span>'
+    +'<span class="at-porte-s">La feuille na\u00eet remplie : discute d\u2019abord, elle s\u2019\u00e9crit ensuite.</span></button>'
+    +'</div>';
   if(m8TestOn())h+='<div class="at-bandeau-test">Mode test actif \u2014 compose, coche, imprime, recharge : rien ne part au hub. Les brouillons de test restent sur cet appareil et sont nettoy\u00e9s au retour en mode r\u00e9el.</div>';
   if(!ids.length){
     h+='<div class="at-vide">Aucune feuille pour l\u2019instant. \u00ab Nouvelle feuille \u00bb ouvre la feuille vierge : coche des cases, des choses apparaissent.</div>';
@@ -7195,6 +7224,17 @@ function atRendreListe(){
     }).join('')+'</div>';
   }
   z.innerHTML=h;
+}
+function atNouvelleFeuilleIA(){
+  /* MICRO 01/08 — la feuille NAIT REMPLIE. Avant, il fallait creer une feuille vide, l'ouvrir,
+     puis trouver le bouton dedans. La feuille est bien creee d'abord (l'injection ecrit dans
+     AT.doc), mais on enchaine directement sur la zone IA : Paul ne voit pas l'etape vide. */
+  var id='feuille_'+Date.now();
+  AT.docId=id;AT.doc=atDocNeuf();
+  atEnregistrerMaintenant(function(){
+    AT_IA.produit='fiche_seance';AT_IA.tpl=null;AT_IA.charge=false;
+    atIAChargerPrompt(function(){atIARendre();});
+  });
 }
 function atNouvelleFeuille(){
   var id='feuille_'+Date.now();
