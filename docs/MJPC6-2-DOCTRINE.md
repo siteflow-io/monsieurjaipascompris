@@ -10,6 +10,13 @@
 ### DETTE M11 · L'ESSENTIEL QUI MANQUE À `analyse_logique` (constat du 22/07)
 L'écran Travaux permet de CRÉER, d'imprimer la feuille élève et de corriger — **il n'offre AUCUNE commande pour modifier, mettre à jour ou supprimer un travail** (vérifié : le seul « Supprimer » de l'app appartient à la corbeille). Le travail d'essai `qfqfq` est donc inamovible. Ni le cadrage, ni le rapport, ni l'audit de la conscience ne l'ont relevé : **la grille vérifie que ce qui existe est conforme, elle ne demande jamais si l'essentiel manque**. À ajouter au DISPOSITIF comme question d'audit : « les gestes de base du professeur sur les objets de l'app (créer, modifier, supprimer, dupliquer) sont-ils tous là ? » Correctif attendu : modifier + supprimer, la suppression passant par la corbeille, jamais sèche.
 
+## CE QU'ON CANONISE ET CE QU'ON LAISSE — la règle des deux publics (01/08)
+Les passes d'unification posent chaque fois la même question : **faut-il réexprimer avec le canon un code qui marche déjà ?** Deux réponses opposées ont été données le 01/08, et leur différence est la règle.
+**M-PROMPT-2 — `validerDocumentsJSON` de `pilotage` : LAISSÉE.** Elle accumule déjà (22 accumulations, 3 sorties précoces) et **ses messages sont lus par PAUL**. La réexprimer, c'était risquer de dégrader des textes éprouvés pour zéro gain.
+**M-PROMPT-3 — le vocabulaire d'`analyse_logique` : CANONISÉ.** Il génère déjà sa liste depuis `ref.etiquettes`, mais **cette liste n'est lue que par la MACHINE** (l'IA). Le risque est nul, et le gain réel : *la preuve « élément factice → il apparaît » devient vraie partout*, donc plus aucune liste ne peut mentir silencieusement quand le référentiel évolue.
+**LA RÈGLE** : **on ne réexprime pas ce que PAUL lit et qui marche ; on canonise ce que la MACHINE consomme.** Dans le premier cas, la valeur est dans le texte, et le texte éprouvé se conserve. Dans le second, la valeur est dans la mécanique, et une mécanique unique est plus sûre qu'une mécanique juste.
+**Corollaire** : le canon existe **pour rattraper ce qui manque, pas pour uniformiser ce qui marche**. Une conversion qui n'apporte rien à Paul est une prise de risque gratuite.
+
 ## U. LE CHRONO DE SESSION ET LA DÉCISION DE COMPTAGE (conception Paul, 18/07)
 
 **Origine** : la question « que faire des sessions abandonnées ? » a révélé que le nettoyage automatique **décidait à la place de Paul**. Sa réponse : *« il faut coder une nouvelle fonctionnalité, ça permet de ne pas bricoler avec l'existant et d'avoir une solution propre et activable consciemment »*.
