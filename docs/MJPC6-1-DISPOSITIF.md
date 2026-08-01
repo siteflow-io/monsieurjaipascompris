@@ -18,6 +18,20 @@
 ③ **RIEN NE SE RANGE EN « PLUS TARD » SANS ÊTRE INSCRIT À L'INVENTAIRE.** Un objet repoussé au bloc de sa dépendance la plus lourde doit être scindé : ce qui peut partir tôt part tôt (la liste de vigilance de M-PILOTAGE ne dépend de rien), le reste attend en étant nommé.
 **À DIRE FRANCHEMENT À PAUL PLUTÔT QUE DE LE MASQUER** : oui, cela peut se reproduire, et le seul détecteur vraiment fiable reste sa mémoire. Les trois remèdes réduisent le risque, ils ne l'annulent pas. Une conscience qui prétendrait le contraire mentirait.
 
+### ⚠ RÈGLE GRAVÉE (01/08) — LE PLAN EST L'INDEX DU CHANTIER, ET IL SE RELIT À CHAQUE PRISE DE FONCTION
+**LA CONTRADICTION QU'ON A LAISSÉE VIVRE ONZE JOURS.** Deux règles coexistaient dans ce document :
+· **17/07, Paul** : *« LE PLAN EST LE PONT : c'est `docs/MJPC6-plan-de-travail.md` qui relie les conversations, PAS Paul. Toute évolution de méthode, de décision ou de règle transite par le plan. »*
+· **21/07** : *« le plan est l'archive dont les cinq documents sont l'extraction pure. Le relire intégralement à chaque prise de fonction coûte cher pour un rendement quasi nul. »*
+**Chacune avait raison à son heure** — le 17 le plan était le seul document, le 21 il avait grossi au point d'être irrelisable. **L'erreur n'a pas été d'extraire : c'est d'avoir cru que l'extraction dispensait de revenir.** Depuis le 21/07 le plan n'était plus mis à jour (il porte encore « v50, 16/07 ») et **personne ne l'ouvrait — ni conscience, ni exécutant : aucun prompt ne le citait.**
+**CE QUE ÇA A COÛTÉ, MESURÉ LE 01/08** : sur 116 titres, **113 correctement extraits, 3 manqués** — mais ces trois portaient **les réponses de Paul au questionnaire de clôture du 16/07**, soit cinq objets vivants (les deux souches Dugain à universaliser avec la Concordance en prérequis · M20 l'app de révisions et son mécanisme · le nœud `debat_singes` · la date du brevet éditable · la charte visuelle à revoir), plus une règle d'interface (*toute app s'ouvre en modale via MJPC*). **Paul en a reparlé le 01/08 comme de projets futurs : ils étaient au plan depuis quinze jours.**
+**LA RÈGLE, arbitrée par Paul le 01/08** : **le plan redevient LE PONT, mais sous forme d'INDEX.**
+① **Il ne porte plus de contenu propre** : tout vit dans les documents spécialisés (dispositif, doctrine, doctrine du site, chantier, journal, restauration, état des lieux, registre de bugs).
+② **Il porte la LISTE de ce qui existe et l'endroit où c'est écrit** — quelques pages, relisibles à chaque prise de fonction.
+③ **Toute décision s'écrit dans son document ET reçoit sa ligne au plan. Une décision sans ligne au plan n'existe pas.**
+④ **Le plan entre dans les lectures obligatoires de toute prise de fonction** — conscience comme exécutant.
+**LE PRINCIPE GÉNÉRAL** : *ce qui n'est pas relisible finit toujours par ne plus être relu.* Un document de 314 000 caractères déclaré « archive » cesse d'exister en pratique. **L'index est le seul format qui survive à sa propre longueur.**
+**⚠ L'ORIGINAL EST CONSERVÉ** : `MJPC6-plan-de-travail.md` en version intégrale reste dans l'historique Git (dernier état complet : commit précédant la réduction du 01/08). **On ne détruit pas l'archive, on cesse de la faire passer pour un pont.**
+
 ### ⚠ RÈGLE GRAVÉE (01/08) — UN INVENTAIRE DE CAPACITÉS SE FAIT EN LISANT LES FONCTIONS, JAMAIS EN COMPTANT DES MOTIFS
 **Deux erreurs de la CONSCIENCE, le même jour, de la même cause.**
 ① **M-PROMPT-2** : son prompt rangeait `validateCarnetForDictee` parmi les pièces de la chaîne prompt de `dictee_universelle`. **C'est une validation prof d'un carnet d'élève** (`orderByChild("dicteeId")` → `profValidated`), sans rapport. L'exécutant l'a vu et sourcé.
