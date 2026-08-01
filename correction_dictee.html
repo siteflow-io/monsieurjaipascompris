@@ -286,7 +286,9 @@ function EleveSearchBar(p){
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.3.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.4.0 (2026-08-01) — socle commun de l'écosystème MJPC
+// v1.4.0 : + §12 zone prompt IA (composition, persistance, validation, injection) —
 // v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
 //          la protection est dans la donnée, pas dans le mur : le hub peut rester
 //          ouvert, il ne montre plus que de l'illisible. Prépare M-SÉCU-2/3.
@@ -584,7 +586,155 @@ function mjpcEmpreinte(texte,selHex){
     .then(function(bits){return _mjpcHex(bits);});
 }
 
-var MJPC_CORE_VERSION="1.3.0";
+
+// ── 12. Zone prompt IA : composition, persistance, validation, injection (v1.4.0) ──
+//   EXTRAIT des quatre chaînes existantes, pas inventé :
+//   · la composition en pièces assemblées à la volée vient de correction_dictee
+//     (assemblePrompt(directives, format)) — le cadrage change souvent, le format jamais ;
+//   · l'interpolation par jetons {{…}} vient d'elle aussi ({{JSON_DICTEE}}) ;
+//   · le vocabulaire GÉNÉRÉ depuis une source vient de l'atelier du site (SITE-COURS-2a) :
+//     une entrée ajoutée à la source y paraît sans qu'aucune liste soit retouchée ;
+//   · le cadrage imposé (« NE PRODUIS AUCUN JSON TOUT DE SUITE… ») vient de worktrack ;
+//   · les trois exigences de validation RATTRAPENT ce qu'aucune app ne fait entièrement :
+//     l'élément fautif CITÉ, le message qui dit QUOI CORRIGER, les refus qui S'ACCUMULENT ;
+//   · l'archive-avant-écrasement n'est dans AUCUNE des quatre : elle vient du chantier
+//     (M-SÉCU-3/-4, atCorbeilleCle) et le canon la rend disponible à toutes.
+//   NOTE DE NUMÉROTATION : ce canon porte DEUX sections « 8 » (Manifeste, Session partagée)
+//   et n'a PAS de §10. Rien n'est renuméroté ici — la dette est signalée, pas rangée.
+
+var MJPC_PROMPT_CADRAGE =
+  "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
+  "Commence par une discussion de cadrage, un point \u00e0 la fois. Proc\u00e8de par allers-retours : "+
+  "reformule, propose, mais attends mes validations.\n"+
+  "QUAND, ET SEULEMENT QUAND, JE TE DIS \u00ab produis le JSON \u00bb, tu produis le r\u00e9sultat SEUL, "+
+  "sans commentaire ni texte autour, sans balises de code.";
+
+/* Le vocabulaire, GÉNÉRÉ depuis une source fournie par l'app (jamais écrit à la main).
+   source : { id: { libelle, champs:[{k,l,kind}], reserve, groupe, note } }
+   options : { titre, groupes:{cle:'Libellé'}, exclureReserve (défaut true) } */
+function mjpcPromptVocabulaire(source, options){
+  var o=options||{};
+  var exclure=(o.exclureReserve===undefined)?true:!!o.exclureReserve;
+  var groupes=o.groupes||null;
+  var par={},ordre=[];
+  Object.keys(source||{}).forEach(function(id){
+    var e=source[id]||{};
+    if(exclure&&e.reserve)return;
+    var g=e.groupe||'';
+    if(!par[g]){par[g]=[];ordre.push(g);}
+    par[g].push({id:id,e:e});
+  });
+  var out=[];
+  if(o.titre)out.push(o.titre);
+  var cles=groupes?Object.keys(groupes).filter(function(g){return par[g]&&par[g].length;}):ordre;
+  cles.forEach(function(g){
+    if(g&&groupes&&groupes[g])out.push('### '+groupes[g]);
+    else if(g)out.push('### '+g);
+    (par[g]||[]).forEach(function(x){
+      var e=x.e;var l='- '+x.id+(e.libelle?(' : '+e.libelle):'');
+      if(e.note)l+=' ['+e.note+']';
+      var ch=e.champs||[];
+      if(ch.length){
+        l+=' \u2192 champs : '+ch.map(function(f){
+          var t=(f.kind==='list')?'liste de lignes':((f.kind==='area')?'texte long':((f.kind==='date')?'date AAAA-MM-JJ':'texte court'));
+          return f.k+(f.l?(' ('+f.l+', '+t+')'):(' ('+t+')'));
+        }).join(', ');
+      }
+      out.push(l);
+    });
+  });
+  return out.join('\n');
+}
+/* L'assemblage à la volée. pieces : {directives, vocabulaire, format, donnees:{JETON:valeur}}
+   Les jetons {{NOM}} sont remplacés en dernier, dans le texte entier. */
+function mjpcPromptComposer(pieces){
+  var p=pieces||{};
+  var bouts=[];
+  if(p.directives)bouts.push(p.directives);
+  if(p.cadrage!==false)bouts.push(MJPC_PROMPT_CADRAGE);
+  if(p.format)bouts.push(p.format);
+  if(p.vocabulaire)bouts.push(p.vocabulaire);
+  var t=bouts.join("\n\n");
+  var d=p.donnees||{};
+  Object.keys(d).forEach(function(k){
+    t=t.split('{{'+k+'}}').join(d[k]==null?'':String(d[k]));
+  });
+  return t;
+}
+/* La persistance : chemin par app ET par produit, défaut en dur qui fait foi si la base
+   est muette. Lecture REST (le mode test de l'app la court-circuite si elle en a un). */
+function mjpcPromptChemin(app,produit,piece){
+  return '/'+String(app)+'_prompts/'+String(produit)+'/'+String(piece);
+}
+function mjpcPromptCharger(base,app,produit,defauts,cb){
+  var pieces=Object.keys(defauts||{});
+  var res={},reste=pieces.length;
+  if(!reste){cb({});return;}
+  pieces.forEach(function(piece){
+    var url=String(base)+mjpcPromptChemin(app,produit,piece)+'.json';
+    var fini=function(v){
+      res[piece]=(typeof v==='string'&&v.length)?v:defauts[piece];   /* la base, sinon le défaut */
+      if(--reste===0)cb(res);
+    };
+    try{
+      fetch(url).then(function(r){return r.ok?r.json():null;}).then(fini,function(){fini(null);});
+    }catch(e){fini(null);}
+  });
+}
+/* L'écriture passe par les verdicts du socle (§9) : trois issues, jamais un succès supposé. */
+function mjpcPromptEnregistrer(base,app,produit,piece,texte,cb){
+  /* mjpcEcrireRest rend UNE issue (cb(issue)) — le canon la traduit en (ok, issue)
+     pour ses appelants : un verdict autre qu'ACCEPTEE n'est JAMAIS un succès. */
+  mjpcEcrireRest(String(base)+mjpcPromptChemin(app,produit,piece)+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(String(texte))},
+    function(issue){cb(mjpcVerdictOk(issue),issue);});
+}
+/* Le verdict, lu d'UNE façon partout : accepté, ou pas. */
+function mjpcVerdictOk(issue){
+  return !!(issue&&issue.etat===MJPC_ISSUE.ACCEPTEE);
+}
+
+/* LA VALIDATION — un accumulateur. Les refus s'ADDITIONNENT, chacun CITE l'élément
+   fautif et dit QUOI CORRIGER. (validateChapter et validateItems s'arrêtent au premier ;
+   validateDebatImport ne rend qu'un booléen : c'est ce que ceci remplace.) */
+function mjpcValidation(max){
+  var motifs=[],plafond=max||8;
+  return {
+    exige:function(condition,message){ if(!condition&&motifs.length<plafond)motifs.push(String(message)); return this; },
+    cite:function(element,message){ if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb '+String(message)); return this; },
+    inconnu:function(element,ou,quoiFaire){
+      if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb'+(ou?(' ('+ou+')'):'')+' n\u2019existe pas'+(quoiFaire?(' \u2014 '+quoiFaire):'.'));
+      return this;
+    },
+    ok:function(){ return motifs.length===0; },
+    motifs:function(){ return motifs.slice(); },
+    texte:function(){ return motifs.join('\n'); }
+  };
+}
+/* L'INJECTION : archive AVANT s'il y a quelque chose à remplacer, ABANDON si l'archive
+   échoue, écriture ensuite, verdict rendu. Rien n'écrit sans que l'appelant ait confirmé.
+   opts : {base, chemin, donnees, ancien (null si rien à remplacer), cheminArchive, app} */
+function mjpcInjecterAvecArchive(opts,cb){
+  var o=opts||{};
+  var ecrire=function(){
+    mjpcEcrireRest(String(o.base)+o.chemin+'.json',
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(o.donnees)},
+      function(issue){cb(mjpcVerdictOk(issue),issue,{archive:!!o.ancien});});
+  };
+  if(o.ancien==null){ecrire();return;}                 /* rien à remplacer : pas d'archive de rien */
+  var ts=Date.now();
+  var payload={_meta:{chemin:o.chemin,app:o.app||'',ts:ts},data:o.ancien};
+  mjpcEcrireRest(String(o.base)+(o.cheminArchive||('/corbeille/'+String(o.app||'app')+'-'+ts))+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},
+    function(issue){
+      if(!mjpcVerdictOk(issue)){cb(false,issue,{archive:false,abandon:true});return;}   /* ABANDON : rien n'est remplacé */
+      ecrire();
+    });
+}
+
+var MJPC_CORE_VERSION="1.4.0";
+// ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -730,8 +880,8 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.2.0";
-var APP_VERSION_DATE="2026-07-31";
+var APP_VERSION="6.3.0";
+var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
   nom: "Correction de dict\u00e9e",
@@ -3544,10 +3694,8 @@ function PromptIaModal(p){
   var s3 = useState(""), draft = s3[0], setDraft = s3[1];
   var s4 = useState(""), msg = s4[0], setMsg = s4[1];
   React.useEffect(function(){
-    db.ref("dictee_settings/promptIaBanque").once("value").then(function(snap){
-      var v = snap.val();
-      setPromptText(v && typeof v === "string" ? v : PROMPT_IA_BANQUE_DEFAUT);
-    }).catch(function(){setPromptText(PROMPT_IA_BANQUE_DEFAUT)});
+    /* M-PROMPT-1 : lecture par le canon — la base, sinon le défaut en dur qui fait foi */
+    cdChargerPrompt(CD_PIECES.banque.prompt, PROMPT_IA_BANQUE_DEFAUT, function(v){setPromptText(v);});
   }, []);
   var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents), null, 2);
   var fullPrompt = (promptText || "").replace("{{JSON_DICTEE}}", jsonStr);
@@ -3563,10 +3711,16 @@ function PromptIaModal(p){
   }
   function ouvrirEdition(){setDraft(promptText); setEditing(true)}
   function enregistrer(){
-    db.ref("dictee_settings/promptIaBanque").set(draft).then(function(){
-      setPromptText(draft); setEditing(false);
-      setMsg("\u2705 Template enregistr\u00e9 dans Firebase");
-      setTimeout(function(){setMsg("")},3000);
+    /* M-PROMPT-1 : écriture à VERDICT (§9) — un échec ne passe plus pour un succès */
+    setMsg("Enregistrement\u2026");
+    cdEnregistrerPrompt(CD_PIECES.banque.prompt, draft, function(ok){
+      if(ok){
+        setPromptText(draft); setEditing(false);
+        setMsg("\u2705 Consignes enregistr\u00e9es \u2014 elles te suivent d\u2019un appareil \u00e0 l\u2019autre.");
+      }else{
+        setMsg("\u26a0 L\u2019enregistrement n\u2019a pas abouti \u2014 ton texte est toujours \u00e0 l\u2019\u00e9cran. R\u00e9essaie quand la connexion est stable.");
+      }
+      setTimeout(function(){setMsg("")},5000);
     });
   }
   function annuler(){setDraft(promptText); setEditing(false); setMsg("")}
@@ -6316,6 +6470,103 @@ var PROMPT_DIRECTIVES_DEFAULT = "Tu es un professeur de fran\u00e7ais expert en 
 var PROMPT_FORMAT_DEFAULT = "=== FORMAT JSON DE SORTIE ===\n\n{\n  \"exercices_classe\": [\n    {\n      \"id\": \"ex_classe_1\",\n      \"titre\": \"Titre court\",\n      \"regle\": \"Rappel de r\u00e8gle (max 4 lignes)\",\n      \"items\": [ ... voir types ci-dessous ... ]\n    }\n  ],\n  \"exercices_personnels\": {\n    \"prenom_eleve_normalise\": [ { ... m\u00eame structure ... } ]\n  }\n}\n\n=== TYPES D'ITEMS DISPONIBLES (5 types) ===\n\n1. QCM : un seul bon choix\n{\n  \"type\": \"qcm\",\n  \"enonce\": \"Consigne courte (ex: Choisis la bonne orthographe)\",\n  \"phrase\": \"Phrase avec ___ \u00e0 la place du mot manquant\",\n  \"propositions\": [\"proposition 1\", \"proposition 2\", \"proposition 3\"],\n  \"reponse\": 1\n}\n(reponse = index 0-bas\u00e9 de la bonne proposition)\n\n2. TROUS : phrase \u00e0 trous, un champ par mot\n{\n  \"type\": \"trous\",\n  \"enonce\": \"Compl\u00e8te avec le verbe au bon temps\",\n  \"segments\": [\"Le chat \", null, \" la souris et \", null, \" sur le toit.\"],\n  \"reponses\": [\"attrape\", \"saute\"]\n}\n(segments = tableau alternant cha\u00eenes et null ; null = case \u00e0 remplir ; reponses align\u00e9 sur l'ordre des null. Un null = UN seul mot \u00e0 remplir).\n\n3. R\u00c9\u00c9CRITURE : transformer une phrase\n{\n  \"type\": \"reecriture\",\n  \"enonce\": \"R\u00e9\u00e9cris au pass\u00e9 compos\u00e9\",\n  \"phrase\": \"Phrase de d\u00e9part\",\n  \"reponse_exacte\": \"Phrase attendue\",\n  \"reponses_acceptees\": [\"Variante 1 accept\u00e9e\", \"Variante 2\"]\n}\n(reponses_acceptees facultatif, pour les variantes)\n\n4. COPIE : recopier une phrase en focalisant sur un point pr\u00e9cis\n{\n  \"type\": \"copie\",\n  \"enonce\": \"Recopie cette phrase en faisant bien attention aux accents\",\n  \"phrase\": \"La phrase \u00e0 recopier exactement (souvent contenant le mot/expression cibl\u00e9).\",\n  \"lignes\": 2\n}\n(lignes = nombre de lignes blanches pour la recopie, par d\u00e9faut 2)\n\n5. \u00c9CRITURE : production \u00e9crite libre avec crit\u00e8res\n{\n  \"type\": \"ecriture\",\n  \"enonce\": \"\u00c9cris 3 phrases utilisant les pronoms relatifs lequel et laquelle\",\n  \"criteres\": [\"Au moins 3 phrases\", \"Utiliser lequel et laquelle\", \"Sujet libre\"],\n  \"lignes\": 5\n}\n(criteres = liste de points \u00e0 respecter ; lignes = nombre de lignes blanches pour \u00e9crire)\n\nN.B. : qcm/trous/reecriture sont auto-corrig\u00e9s c\u00f4t\u00e9 \u00e9l\u00e8ve dans l'app. copie/ecriture sont saisis en texte libre c\u00f4t\u00e9 \u00e9l\u00e8ve, et corrig\u00e9s manuellement par le prof.\n\n=== JSON DE LA DICT\u00c9E ===\n{{JSON_DICTEE}}";
 
 // Concatène directives + format en respectant {{DIRECTIVES}} et {{FORMAT}} si présents dans un prompt legacy
+/* ═══════════════════════════════════════════════════════════════════════════
+   § PROMPTS — passage au canon §12 (M-PROMPT-1).
+   Ce que l'app garde : ses DEUX jeux de prompts (banque d'exercices / exercices
+   personnalisés), ses trois défauts en dur, son interpolation {{JSON_DICTEE}},
+   ses contrôles métier (qcm, trous), et le format écrit au hub — INCHANGÉ.
+   Ce que le canon apporte : la persistance à VERDICT (§9) au lieu d'une écriture
+   SDK sans garde, la validation qui ACCUMULE et NOMME, l'aperçu avant écriture
+   et l'archive AVANT remplacement (seulement s'il y a quelque chose à perdre).
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* La base REST de l'app : correction_dictee n'a PAS de constante FIREBASE_BASE
+   (elle est propre à index.html) — mesuré. On reprend le hub déjà déclaré par la
+   section M-SÉCU-2, seule adresse du hub écrite dans ce fichier. */
+var CD_BASE=(typeof MJPC_SECU2==='object'&&MJPC_SECU2&&MJPC_SECU2.hub)?MJPC_SECU2.hub:'https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app';
+var CD_APP='dictee';                       /* l'axe app du canon */
+var CD_PRODUITS={banque:'banque',exos:'exercices'};
+/* Les chemins historiques restent maîtres : dictee_settings/* est lu et écrit
+   comme avant (aucun format de données déplacé) — seul le MÉCANISME change. */
+var CD_PIECES={
+  banque:{prompt:'promptIaBanque'},
+  exos:{directives:'promptDirectives',format:'promptFormat'}
+};
+function cdCheminPrompt(piece){return '/dictee_settings/'+piece;}
+/* Lecture : la base, sinon le défaut en dur qui FAIT FOI. */
+function cdChargerPrompt(piece,defaut,cb){
+  if(typeof m8TestOn==='function'&&m8TestOn()&&typeof M8_TEST_STORE==='object'){
+    var v=M8_TEST_STORE[cdCheminPrompt(piece)];
+    cb((typeof v==='string'&&v.length)?v:defaut);return;
+  }
+  try{
+    fetch(CD_BASE+cdCheminPrompt(piece)+'.json')
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(v){cb((typeof v==='string'&&v.length)?v:defaut);},function(){cb(defaut);});
+  }catch(e){cb(defaut);}
+}
+/* Écriture : par le VERDICT du socle (§9) — trois issues, jamais un succès supposé.
+   Le mode test est gratuit : il écrit dans le magasin de test, jamais au hub. */
+function cdEnregistrerPrompt(piece,texte,cb){
+  if(typeof m8TestOn==='function'&&m8TestOn()&&typeof M8_TEST_STORE==='object'){
+    M8_TEST_STORE[cdCheminPrompt(piece)]=String(texte);cb(true,{etat:MJPC_ISSUE.ACCEPTEE});return;
+  }
+  /* chemin HISTORIQUE conservé (aucune donnée déplacée) ; seul le mécanisme change */
+  mjpcEcrireRest(CD_BASE+cdCheminPrompt(piece)+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(String(texte))},
+    function(issue){cb(mjpcVerdictOk(issue),issue);});   /* cb(issue) : un seul argument — mesuré au canon */
+}
+/* La validation des exercices — MÊMES contrôles métier qu'avant, mais les motifs
+   S'ACCUMULENT et CITENT l'élément fautif au lieu de s'arrêter au premier. */
+function cdValiderExercices(parsed){
+  var V=mjpcValidation(8);
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)){
+    V.exige(false,'La r\u00e9ponse doit \u00eatre un ensemble d\u2019exercices, pas une simple liste ni un texte.');
+    return V;
+  }
+  V.exige(Array.isArray(parsed.exercices_classe),'Il manque les exercices pour toute la classe (\u00ab exercices_classe \u00bb, une liste).');
+  V.exige(parsed.exercices_personnels&&typeof parsed.exercices_personnels==='object'&&!Array.isArray(parsed.exercices_personnels),
+          'Il manque les exercices personnels (\u00ab exercices_personnels \u00bb, un ensemble par \u00e9l\u00e8ve).');
+  var TYPES=['qcm','trous','reecriture','ordre','paires','libre'];
+  function exercices(list,ou){
+    if(!Array.isArray(list)){V.cite(ou,'devrait contenir une liste d\u2019exercices.');return;}
+    list.forEach(function(ex,n){
+      var titre=(ex&&(ex.titre||ex.id))||('n\u00b0 '+(n+1));
+      if(!ex||!Array.isArray(ex.items)){V.cite(ou+', exercice '+titre,'n\u2019a pas de questions (\u00ab items \u00bb, une liste).');return;}
+      items(ex.items,ou+', exercice '+titre);
+    });
+  }
+  function items(list,ou){
+    if(!Array.isArray(list)){V.cite(ou,'devrait contenir une liste de questions.');return;}
+    list.forEach(function(it,i){
+      var ref=ou+', question '+(i+1);
+      if(!it||!it.type){V.cite(ref,'n\u2019indique pas son type. Types possibles : '+TYPES.join(', ')+'.');return;}
+      if(TYPES.indexOf(it.type)<0)V.cite(ref,'utilise un type inconnu (\u00ab '+it.type+' \u00bb). Types possibles : '+TYPES.join(', ')+'.');
+      if(it.type==='qcm'){
+        if(!Array.isArray(it.propositions)||it.propositions.length<2)V.cite(ref,'est un choix multiple : il lui faut au moins deux propositions.');
+        if(typeof it.reponse!=='number')V.cite(ref,'est un choix multiple : indique le num\u00e9ro de la bonne proposition (0 pour la premi\u00e8re).');
+      }else if(it.type==='trous'){
+        if(!Array.isArray(it.segments))V.cite(ref,'est un texte \u00e0 trous : il lui faut la liste des morceaux de phrase (\u00ab segments \u00bb).');
+        if(!Array.isArray(it.reponses))V.cite(ref,'est un texte \u00e0 trous : il lui faut la liste des r\u00e9ponses.');
+        if(Array.isArray(it.segments)&&Array.isArray(it.reponses)){
+          var n=it.segments.filter(function(x){return x===null;}).length;
+          if(n!==it.reponses.length)V.cite(ref,'a '+n+' trou(s) mais '+it.reponses.length+' r\u00e9ponse(s) : il en faut autant.');
+        }
+      }else if(it.type==='reecriture'||it.type==='ordre'||it.type==='paires'){
+        if(it.type==='ordre'&&!Array.isArray(it.elements))V.cite(ref,'demande de remettre en ordre : il lui faut la liste des \u00e9l\u00e9ments.');
+        if(it.type==='paires'&&!Array.isArray(it.paires))V.cite(ref,'demande d\u2019associer : il lui faut la liste des paires.');
+        if(it.type==='reecriture'&&!it.consigne)V.cite(ref,'est une r\u00e9\u00e9criture : il lui faut une consigne.');
+      }
+    });
+  }
+  if(parsed.exercices_classe)exercices(parsed.exercices_classe,'Exercices de la classe');
+  if(parsed.exercices_personnels&&typeof parsed.exercices_personnels==='object'){
+    Object.keys(parsed.exercices_personnels).forEach(function(cle){
+      var bloc=parsed.exercices_personnels[cle];
+      exercices(Array.isArray(bloc)?bloc:[bloc],'Exercices de '+cle);
+    });
+  }
+  return V;
+}
 function assemblePrompt(directives, format){
   return (directives||PROMPT_DIRECTIVES_DEFAULT) + "\n\n" + (format||PROMPT_FORMAT_DEFAULT);
 }
@@ -6836,12 +7087,20 @@ function ExercicesAdmin(p){
   function injecter(){
     setErrMsg("");
     var parsed;
-    try{ parsed = JSON.parse(jsonInput); }
-    catch(e){ setErrMsg("JSON invalide : "+e.message); return; }
-    // Validation structurelle minimale
-    if(!parsed || typeof parsed!=="object"){setErrMsg("Le JSON doit \u00eatre un objet.");return}
-    if(!Array.isArray(parsed.exercices_classe)){setErrMsg("Champ 'exercices_classe' manquant ou invalide (doit \u00eatre un tableau).");return}
-    if(!parsed.exercices_personnels || typeof parsed.exercices_personnels!=="object"){setErrMsg("Champ 'exercices_personnels' manquant ou invalide (doit \u00eatre un objet).");return}
+    var brut = String(jsonInput||"").trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+    try{ parsed = JSON.parse(brut); }
+    catch(e){ setErrMsg("Je ne peux pas lire cette r\u00e9ponse : elle est incompl\u00e8te ou mal ferm\u00e9e ("+e.message+"). Demande \u00e0 l\u2019IA de redonner le r\u00e9sultat en entier, sans rien autour."); return; }
+    /* M-PROMPT-1 : les motifs de refus S'ACCUMULENT et CITENT l'exercice fautif */
+    var V = cdValiderExercices(parsed);
+    if(!V.ok()){ setErrMsg("Je ne peux pas utiliser cette r\u00e9ponse :\n\u2022 "+V.motifs().join("\n\u2022 ")); return; }
+    setApercu(parsed); return;
+  }
+  /* L'écriture n'a lieu qu'APRÈS confirmation de l'aperçu. */
+  function injecterConfirme(parsed){
+    setApercu(null);
+    var ancien = exercices || null;   /* rien à remplacer → pas d'archive de rien */
+    /* M-PROMPT-1 : ces contrôles vivent désormais dans cdValiderExercices (§12),
+       où ils s'accumulent au lieu de s'arrêter au premier. */
     // Validation des types d'items
     function validateItems(items, ctx){
       if(!Array.isArray(items))return ctx+" : items doit \u00eatre un tableau";
@@ -6878,12 +7137,24 @@ function ExercicesAdmin(p){
         if(err2){setErrMsg(err2);return}
       }
     }
-    // OK, on enregistre
-    db.ref("correction_dictee/"+p.dicteeId+"/exercices").set(parsed).then(function(){
-      setMsg("\u2705 Exercices inject\u00e9s avec succ\u00e8s");
-      setJsonInput("");setShowInject(false);
-      setTimeout(function(){setMsg("")},3000);
-    }).catch(function(e){setErrMsg("Erreur Firebase : "+e.message)});
+    /* M-PROMPT-1 : l'archive part AVANT — mais seulement s'il y a quelque chose à
+       perdre. ABANDON si elle échoue : jamais d'écrasement sec. */
+    function ecrire(){
+      db.ref("correction_dictee/"+p.dicteeId+"/exercices").set(parsed).then(function(){
+        setMsg("\u2705 Exercices inject\u00e9s"+(ancien?" \u2014 la version pr\u00e9c\u00e9dente est \u00e0 la corbeille.":"."));
+        setJsonInput("");setShowInject(false);
+        setTimeout(function(){setMsg("")},4000);
+      }).catch(function(e){setErrMsg("L\u2019enregistrement n\u2019a pas abouti : "+e.message+". Rien n\u2019a \u00e9t\u00e9 perdu.")});
+    }
+    if(!ancien){ ecrire(); return; }
+    var ts=Date.now();
+    var chemin="correction_dictee/"+p.dicteeId+"/exercices";
+    var payload={_meta:{motif:"dictee-exercices",chemin:chemin,app:"correction_dictee",ts:ts},data:ancien};
+    db.ref("corbeille/"+new Date(ts).toISOString().slice(0,10)+"/dictee-exercices_"+ts).set(payload).then(function(){
+      ecrire();
+    }).catch(function(e){
+      setErrMsg("La mise \u00e0 la corbeille a \u00e9chou\u00e9 \u2014 rien n\u2019a \u00e9t\u00e9 remplac\u00e9. R\u00e9essaie quand la connexion est stable.");
+    });
   }
 
   function supprimer(){
@@ -6896,6 +7167,8 @@ function ExercicesAdmin(p){
 
   // Hook DOIT être avant tout return early (règle des hooks React)
   var sQe = useState(""), exQuery = sQe[0], setExQuery = sQe[1];
+  /* M-PROMPT-1 : l'aperçu avant écriture — rien ne s'écrit tant qu'il est ouvert */
+  var sAp = useState(null), apercu = sAp[0], setApercu = sAp[1];
 
   if(loading)return h("div",{className:"card"},"Chargement\u2026");
 
@@ -6905,7 +7178,30 @@ function ExercicesAdmin(p){
   var classeExs = exercices?toArr(exercices.exercices_classe||[]):[];
   var personnels = exercices?(exercices.exercices_personnels||{}):{};
 
+  /* M-PROMPT-1 : l'aperçu — ce qui sera écrit, et ce qui sera perdu (ou rien) */
+  function apercuHtml(){
+    if(!apercu)return null;
+    var nbC=(apercu.exercices_classe||[]).length;
+    var perso=apercu.exercices_personnels||{};
+    var nbP=Object.keys(perso).length;
+    var ancienne=exercices||null;
+    var nbAncC=ancienne?toArr(ancienne.exercices_classe||[]).length:0;
+    var nbAncP=ancienne?Object.keys(ancienne.exercices_personnels||{}).length:0;
+    return h("div",{className:"modal-overlay",style:{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999,padding:"1rem"}},
+      h("div",{className:"card",style:{maxWidth:560,width:"100%",maxHeight:"86vh",overflow:"auto"}},
+        h("h3",{style:{marginTop:0}},"Voici ce qui sera enregistr\u00e9"),
+        h("p",{style:{margin:"6px 0"}},nbC+" exercice(s) pour toute la classe, et des exercices personnels pour "+nbP+" \u00e9l\u00e8ve(s)."),
+        h("p",{style:{margin:"6px 0",fontWeight:600}},
+          ancienne
+            ? ("Cette banque remplacera la pr\u00e9c\u00e9dente ("+nbAncC+" exercice(s) de classe, "+nbAncP+" \u00e9l\u00e8ve(s)). L\u2019ancienne part d\u2019abord \u00e0 la corbeille, tu pourras la retrouver.")
+            : "Cette banque est vide pour l\u2019instant : rien ne sera perdu."),
+        h("p",{style:{margin:"6px 0",opacity:.8,fontSize:".9rem"}},"Rien n\u2019est \u00e9crit tant que tu n\u2019as pas confirm\u00e9."),
+        h("div",{style:{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}},
+          h("button",{className:"btn-sm btn-ghost",style:{minHeight:44,minWidth:44},onClick:function(){setApercu(null)}},"Annuler"),
+          h("button",{className:"btn-sm",style:{minHeight:44,minWidth:44},onClick:function(){injecterConfirme(apercu)}},"Enregistrer ces exercices"))));
+  }
   return h("div",{className:"fade-up"},
+    apercuHtml(),
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}},
       h("h2",{style:{margin:0,fontSize:"1.4rem"}},"\ud83c\udfaf Banque d'exercices personnalis\u00e9s"),
       h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
@@ -7238,10 +7534,8 @@ function PromptIaExoModal(p){
 
   React.useEffect(function(){
     // Charger les directives personnalisées (et le format si modifié)
-    db.ref("dictee_settings/promptDirectives").once("value").then(function(snap){
-      var v = snap.val();
-      setDirectives(v && typeof v === "string" ? v : PROMPT_DIRECTIVES_DEFAULT);
-    }).catch(function(){setDirectives(PROMPT_DIRECTIVES_DEFAULT)});
+    /* M-PROMPT-1 : les deux pièces se chargent par le canon (défauts en repli) */
+    cdChargerPrompt(CD_PIECES.exos.directives, PROMPT_DIRECTIVES_DEFAULT, function(v){setDirectives(v);});
     db.ref("dictee_settings/promptFormat").once("value").then(function(snap){
       var v = snap.val();
       setFormatSpec(v && typeof v === "string" ? v : PROMPT_FORMAT_DEFAULT);
@@ -7265,11 +7559,18 @@ function PromptIaExoModal(p){
     setDraft(formatSpec);setEditMode("format");
   }
   function enregistrer(){
-    var path = editMode === "directives" ? "dictee_settings/promptDirectives" : "dictee_settings/promptFormat";
-    db.ref(path).set(draft).then(function(){
-      if(editMode === "directives") setDirectives(draft); else setFormatSpec(draft);
-      setEditMode("none");
-      setMsg("\u2705 Enregistr\u00e9");setTimeout(function(){setMsg("")},3000);
+    /* M-PROMPT-1 : écriture à VERDICT (§9) */
+    var piece = editMode === "directives" ? CD_PIECES.exos.directives : CD_PIECES.exos.format;
+    setMsg("Enregistrement\u2026");
+    cdEnregistrerPrompt(piece, draft, function(ok){
+      if(ok){
+        if(editMode === "directives") setDirectives(draft); else setFormatSpec(draft);
+        setEditMode("none");
+        setMsg("\u2705 Enregistr\u00e9 \u2014 \u00e7a te suit d\u2019un appareil \u00e0 l\u2019autre.");
+      }else{
+        setMsg("\u26a0 L\u2019enregistrement n\u2019a pas abouti \u2014 ton texte est toujours \u00e0 l\u2019\u00e9cran.");
+      }
+      setTimeout(function(){setMsg("")},5000);
     });
   }
   function annuler(){setEditMode("none");setMsg("")}
