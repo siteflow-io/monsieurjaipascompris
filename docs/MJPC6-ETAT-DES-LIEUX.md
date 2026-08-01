@@ -20,6 +20,10 @@ Mesuré le 30/07 sur les 10 fichiers de production, lus authentifiés :
 - **MJPC bypasse les portails, il ne les remplace jamais** ; chaque app reste autonome.
 **Ce qui reste ouvert n'est PAS la connexion, c'est le COFFRE** : voir M-SÉCU ci-dessous. Distinguer les deux est essentiel — la serrure est posée, la porte du coffre n'a jamais existé.
 
+### La zone prompt — CANONIQUE dans 7 fichiers sur 10 (01/08)
+`index.html`, `correction_dictee`, `worktrack`, `dictee_universelle`, `pilotage_debat_s3`, `evaluation-qcm`, `analyse_logique`, `applause_meter` portent le canon **§12** : prompt composé de pièces (directives éditables + cadrage imposé + format + vocabulaire **généré** + jetons de données), **persisté avec défaut en dur en repli**, validation **accumulatrice qui cite l'élément fautif**, injection avec **archive avant et abandon si elle échoue**. **ACQUIS — ne pas redécouvrir.**
+**RESTENT HORS CANON** : `reecriture` et `reecriture_bb4e` (chantier réécriture). **Les chemins de prompts ne sont PAS uniformes** et c'est assumé : le mécanisme est canonique, l'adresse reste locale — uniformiser coûterait une migration pour rien.
+
 ### Le socle MJPC-CORE
 **Au 31/07 : `index.html` ET les neuf apps sont en 1.3.0.** Le canon `mjpc-core.js` est en production, md5 `f5e81602f8aee1ca17a9721546066efa`, **verbatim identique à l'embarqué dans les dix fichiers** (26 fonctions comparées à l'octet le 31/07). L'écart de version entre le site et les apps, qui durait depuis le 27/07, est résorbé.
 
