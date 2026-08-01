@@ -852,6 +852,30 @@ body.at-corps-fige{overflow:hidden}
 }
 /* ═══ fin § ZONE PROMPT IA ═══ */
 </style>
+<style>
+/* ═══ § PROMPT MAÎTRE DE CHAPITRE (SITE-COURS-2c) ═══ */
+.ch-ligne{display:flex;gap:10px;align-items:center;margin:10px 0}
+.ch-ligne select{min-height:44px;max-width:160px}
+.ch-inv{margin-top:14px}
+.ch-face{display:flex;gap:16px;flex-wrap:wrap}
+.ch-col{flex:1;min-width:260px}
+.ch-col h4{margin:0 0 8px 0}
+.ch-se{border:1px solid rgba(0,0,0,.15);border-radius:10px;padding:10px;margin-bottom:8px}
+.ch-it{font-size:.9rem;margin:4px 0 4px 6px}
+.ch-type{font-size:.78rem;opacity:.7}
+.ch-tags{font-size:.78rem;opacity:.85;margin-left:10px}
+.ch-etat{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1px solid rgba(0,0,0,.2)}
+.ch-neuf{background:#e6f4ea}.ch-deja{background:#eee}.ch-diff{background:#fdf0d5}
+.ch-alier{font-size:.75rem;background:#fdf0d5;border-radius:6px;padding:1px 6px}
+.ch-vide{font-size:.85rem;opacity:.7;margin:4px 0}
+.ch-travail{margin-top:14px;border:1px solid rgba(0,0,0,.2);border-radius:10px;padding:12px}
+.ch-travail h4{margin:0 0 6px 0}
+.ch-note{border:1px solid rgba(0,0,0,.2);border-radius:10px;padding:10px;margin-bottom:12px;font-size:.88rem}
+.ch-choix{margin-top:16px;border-top:1px solid rgba(0,0,0,.12);padding-top:12px}
+.ch-choix .at-btn{min-height:44px;min-width:44px}
+@media (max-width:480px){.ch-face{flex-direction:column}.ch-choix .at-ia-actions{flex-direction:column;align-items:stretch}}
+/* ═══ fin § PROMPT MAÎTRE DE CHAPITRE ═══ */
+</style>
 <body>
 <div class="stars" id="stars"></div>
 <div class="shooting-star" id="shooting-star"></div>
@@ -2250,7 +2274,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.11.0";
+var APP_VERSION="8.12.0";
 var APP_VERSION_DATE="2026-07-30";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -2315,7 +2339,152 @@ function mjpcEmpreinte(texte,selHex){
     .then(function(bits){return _mjpcHex(bits);});
 }
 
-var MJPC_CORE_VERSION="1.3.0";
+// ── 12. Zone prompt IA : composition, persistance, validation, injection (v1.4.0) ──
+//   EXTRAIT des quatre chaînes existantes, pas inventé :
+//   · la composition en pièces assemblées à la volée vient de correction_dictee
+//     (assemblePrompt(directives, format)) — le cadrage change souvent, le format jamais ;
+//   · l'interpolation par jetons {{…}} vient d'elle aussi ({{JSON_DICTEE}}) ;
+//   · le vocabulaire GÉNÉRÉ depuis une source vient de l'atelier du site (SITE-COURS-2a) :
+//     une entrée ajoutée à la source y paraît sans qu'aucune liste soit retouchée ;
+//   · le cadrage imposé (« NE PRODUIS AUCUN JSON TOUT DE SUITE… ») vient de worktrack ;
+//   · les trois exigences de validation RATTRAPENT ce qu'aucune app ne fait entièrement :
+//     l'élément fautif CITÉ, le message qui dit QUOI CORRIGER, les refus qui S'ACCUMULENT ;
+//   · l'archive-avant-écrasement n'est dans AUCUNE des quatre : elle vient du chantier
+//     (M-SÉCU-3/-4, atCorbeilleCle) et le canon la rend disponible à toutes.
+//   NOTE DE NUMÉROTATION : ce canon porte DEUX sections « 8 » (Manifeste, Session partagée)
+//   et n'a PAS de §10. Rien n'est renuméroté ici — la dette est signalée, pas rangée.
+
+var MJPC_PROMPT_CADRAGE =
+  "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
+  "Commence par une discussion de cadrage, un point \u00e0 la fois. Proc\u00e8de par allers-retours : "+
+  "reformule, propose, mais attends mes validations.\n"+
+  "QUAND, ET SEULEMENT QUAND, JE TE DIS \u00ab produis le JSON \u00bb, tu produis le r\u00e9sultat SEUL, "+
+  "sans commentaire ni texte autour, sans balises de code.";
+
+/* Le vocabulaire, GÉNÉRÉ depuis une source fournie par l'app (jamais écrit à la main).
+   source : { id: { libelle, champs:[{k,l,kind}], reserve, groupe, note } }
+   options : { titre, groupes:{cle:'Libellé'}, exclureReserve (défaut true) } */
+function mjpcPromptVocabulaire(source, options){
+  var o=options||{};
+  var exclure=(o.exclureReserve===undefined)?true:!!o.exclureReserve;
+  var groupes=o.groupes||null;
+  var par={},ordre=[];
+  Object.keys(source||{}).forEach(function(id){
+    var e=source[id]||{};
+    if(exclure&&e.reserve)return;
+    var g=e.groupe||'';
+    if(!par[g]){par[g]=[];ordre.push(g);}
+    par[g].push({id:id,e:e});
+  });
+  var out=[];
+  if(o.titre)out.push(o.titre);
+  var cles=groupes?Object.keys(groupes).filter(function(g){return par[g]&&par[g].length;}):ordre;
+  cles.forEach(function(g){
+    if(g&&groupes&&groupes[g])out.push('### '+groupes[g]);
+    else if(g)out.push('### '+g);
+    (par[g]||[]).forEach(function(x){
+      var e=x.e;var l='- '+x.id+(e.libelle?(' : '+e.libelle):'');
+      if(e.note)l+=' ['+e.note+']';
+      var ch=e.champs||[];
+      if(ch.length){
+        l+=' \u2192 champs : '+ch.map(function(f){
+          var t=(f.kind==='list')?'liste de lignes':((f.kind==='area')?'texte long':((f.kind==='date')?'date AAAA-MM-JJ':'texte court'));
+          return f.k+(f.l?(' ('+f.l+', '+t+')'):(' ('+t+')'));
+        }).join(', ');
+      }
+      out.push(l);
+    });
+  });
+  return out.join('\n');
+}
+/* L'assemblage à la volée. pieces : {directives, vocabulaire, format, donnees:{JETON:valeur}}
+   Les jetons {{NOM}} sont remplacés en dernier, dans le texte entier. */
+function mjpcPromptComposer(pieces){
+  var p=pieces||{};
+  var bouts=[];
+  if(p.directives)bouts.push(p.directives);
+  if(p.cadrage!==false)bouts.push(MJPC_PROMPT_CADRAGE);
+  if(p.format)bouts.push(p.format);
+  if(p.vocabulaire)bouts.push(p.vocabulaire);
+  var t=bouts.join("\n\n");
+  var d=p.donnees||{};
+  Object.keys(d).forEach(function(k){
+    t=t.split('{{'+k+'}}').join(d[k]==null?'':String(d[k]));
+  });
+  return t;
+}
+/* La persistance : chemin par app ET par produit, défaut en dur qui fait foi si la base
+   est muette. Lecture REST (le mode test de l'app la court-circuite si elle en a un). */
+function mjpcPromptChemin(app,produit,piece){
+  return '/'+String(app)+'_prompts/'+String(produit)+'/'+String(piece);
+}
+function mjpcPromptCharger(base,app,produit,defauts,cb){
+  var pieces=Object.keys(defauts||{});
+  var res={},reste=pieces.length;
+  if(!reste){cb({});return;}
+  pieces.forEach(function(piece){
+    var url=String(base)+mjpcPromptChemin(app,produit,piece)+'.json';
+    var fini=function(v){
+      res[piece]=(typeof v==='string'&&v.length)?v:defauts[piece];   /* la base, sinon le défaut */
+      if(--reste===0)cb(res);
+    };
+    try{
+      fetch(url).then(function(r){return r.ok?r.json():null;}).then(fini,function(){fini(null);});
+    }catch(e){fini(null);}
+  });
+}
+/* L'écriture passe par les verdicts du socle (§9) : trois issues, jamais un succès supposé. */
+function mjpcPromptEnregistrer(base,app,produit,piece,texte,cb){
+  /* mjpcEcrireRest rend UNE issue (cb(issue)) — le canon la traduit en (ok, issue)
+     pour ses appelants : un verdict autre qu'ACCEPTEE n'est JAMAIS un succès. */
+  mjpcEcrireRest(String(base)+mjpcPromptChemin(app,produit,piece)+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(String(texte))},
+    function(issue){cb(mjpcVerdictOk(issue),issue);});
+}
+/* Le verdict, lu d'UNE façon partout : accepté, ou pas. */
+function mjpcVerdictOk(issue){
+  return !!(issue&&issue.etat===MJPC_ISSUE.ACCEPTEE);
+}
+
+/* LA VALIDATION — un accumulateur. Les refus s'ADDITIONNENT, chacun CITE l'élément
+   fautif et dit QUOI CORRIGER. (validateChapter et validateItems s'arrêtent au premier ;
+   validateDebatImport ne rend qu'un booléen : c'est ce que ceci remplace.) */
+function mjpcValidation(max){
+  var motifs=[],plafond=max||8;
+  return {
+    exige:function(condition,message){ if(!condition&&motifs.length<plafond)motifs.push(String(message)); return this; },
+    cite:function(element,message){ if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb '+String(message)); return this; },
+    inconnu:function(element,ou,quoiFaire){
+      if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb'+(ou?(' ('+ou+')'):'')+' n\u2019existe pas'+(quoiFaire?(' \u2014 '+quoiFaire):'.'));
+      return this;
+    },
+    ok:function(){ return motifs.length===0; },
+    motifs:function(){ return motifs.slice(); },
+    texte:function(){ return motifs.join('\n'); }
+  };
+}
+/* L'INJECTION : archive AVANT s'il y a quelque chose à remplacer, ABANDON si l'archive
+   échoue, écriture ensuite, verdict rendu. Rien n'écrit sans que l'appelant ait confirmé.
+   opts : {base, chemin, donnees, ancien (null si rien à remplacer), cheminArchive, app} */
+function mjpcInjecterAvecArchive(opts,cb){
+  var o=opts||{};
+  var ecrire=function(){
+    mjpcEcrireRest(String(o.base)+o.chemin+'.json',
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(o.donnees)},
+      function(issue){cb(mjpcVerdictOk(issue),issue,{archive:!!o.ancien});});
+  };
+  if(o.ancien==null){ecrire();return;}                 /* rien à remplacer : pas d'archive de rien */
+  var ts=Date.now();
+  var payload={_meta:{chemin:o.chemin,app:o.app||'',ts:ts},data:o.ancien};
+  mjpcEcrireRest(String(o.base)+(o.cheminArchive||('/corbeille/'+String(o.app||'app')+'-'+ts))+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},
+    function(issue){
+      if(!mjpcVerdictOk(issue)){cb(false,issue,{archive:false,abandon:true});return;}   /* ABANDON : rien n'est remplacé */
+      ecrire();
+    });
+}
+
+var MJPC_CORE_VERSION="1.4.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
@@ -5681,6 +5850,51 @@ function atPromptComposantes(){
 /* ── Le seed en dur : il fait foi si la base ne répond pas (patron PROMPT_CHAPTER).
       Table indexée par produit : ajouter un des sept autres = UNE entrée de plus. ── */
 var ATELIER_PROMPT_SEED={
+  /* SITE-COURS-2c : le CHAPITRE — une entrée de plus, la mécanique de la fiche
+     de séance n'est pas touchée (atPromptTexte, atIAChargerPrompt, l'édition et
+     la persistance sont partagées telles quelles). */
+  chapitre:
+    "Tu vas m\u2019aider \u00e0 mettre en forme un CHAPITRE de mon cours de fran\u00e7ais au coll\u00e8ge.\n\n"+
+    "CE QUE JE T\u2019APPORTE, ET CE QUE TU FAIS : la progression vient de MOI. Tu ne l\u2019inventes pas : "+
+    "tu la structures, tu la tagues, et tu me signales ses trous.\n\n"+
+    "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
+    "Commence par une discussion de cadrage, un point \u00e0 la fois. Proc\u00e8de par allers-retours : "+
+    "reformule, propose, mais attends mes validations. Demande-moi d\u2019abord :\n"+
+    "  1. de quels documents je dispose pour ce chapitre (textes, diaporamas, fiches, \u00e9valuations d\u00e9j\u00e0 faites) ;\n"+
+    "  2. le niveau, le titre du chapitre et son rang dans l\u2019ann\u00e9e ;\n"+
+    "  3. l\u2019\u0153uvre ou le corpus, et la probl\u00e9matique ;\n"+
+    "  4. ce qui existe d\u00e9j\u00e0 s\u00e9ance par s\u00e9ance, et ce qui manque ;\n"+
+    "  5. les travaux d\u2019\u00e9l\u00e8ves pr\u00e9vus (dict\u00e9e, r\u00e9\u00e9criture, \u00e9tude de texte, r\u00e9daction, QCM) et \u00e0 quel moment.\n\n"+
+    "MISE EN COH\u00c9RENCE \u2014 c\u2019est le c\u0153ur de ton travail. Signale-moi, en le disant clairement :\n"+
+    "  \u2022 une s\u00e9ance sans aucune comp\u00e9tence travaill\u00e9e ;\n"+
+    "  \u2022 une notion qui d\u00e9borde des attendus du niveau (chaque notion porte ses niveaux entre crochets) ;\n"+
+    "  \u2022 un trou dans la progression (une notion annonc\u00e9e nulle part reprise, une \u00e9tape qui saute) ;\n"+
+    "  \u2022 un doublon (deux s\u00e9ances qui font la m\u00eame chose).\n"+
+    "Ces signalements, tu me les donnes EN DISCUSSION, pas dans le JSON.\n\n"+
+    "TYPES DE S\u00c9ANCE disponibles (n\u2019en invente aucun autre) :\n"+
+    "@@TYPES_SEANCE@@\n\n"+
+    "NOTIONS ET COMP\u00c9TENCES \u2014 tu ne peux utiliser QUE les identifiants de la liste ci-dessous, "+
+    "exactement orthographi\u00e9s. N\u2019en invente aucun. Entre crochets, les niveaux o\u00f9 la notion est attendue.\n"+
+    "@@TAXONOMIE@@\n\n"+
+    "QUAND, ET SEULEMENT QUAND, JE TE DIS \u00ab produis le JSON \u00bb, tu produis un objet JSON SEUL, "+
+    "sans commentaire ni texte autour, sans balises de code, \u00e0 ce format :\n"+
+    "{\n"+
+    "  \"produit\": \"chapitre\",\n"+
+    "  \"niveau\": \"3e\",\n"+
+    "  \"chapitre\": { \"title\": \"titre du chapitre\", \"ordre\": 3, \"seances\": [\n"+
+    "    { \"title\": \"titre de la s\u00e9ance\", \"type\": \"etude_texte\", \"ordre\": 2,\n"+
+    "      \"notions\": [\"identifiant\"], \"competences\": [\"identifiant\"],\n"+
+    "      \"items\": { \"cle-courte\": { \"title\": \"\u2026\", \"subtitle\": \"\u2026\", \"kind\": \"doc\",\n"+
+    "          \"source\": \"drive\", \"ref\": \"\", \"ordre\": 1, \"icon\": \"\ud83d\udcc4\",\n"+
+    "          \"notions\": [\"identifiant\"], \"competences\": [\"identifiant\"] } } } ] },\n"+
+    "  \"aLier\": [ { \"seance\": \"titre de la s\u00e9ance\", \"item\": \"cle-courte\", \"outil\": \"dictee\", \"pourquoi\": \"\u2026\" } ]\n"+
+    "}\n"+
+    "R\u00e8gles du JSON, imp\u00e9ratives :\n"+
+    "  \u2022 \"kind\" vaut doc, dictee, reecriture, analyse_logique, qcm ou tache ; \"source\" vaut drive, html, external ou firebase_app.\n"+
+    "  \u2022 un travail \u00e0 faire dans une autre application se d\u00e9clare \"source\": \"firebase_app\" avec \"ref\": \"\" "+
+    "et une phrase de sous-titre disant \u00e0 quoi le lier ; ajoute-le AUSSI dans \"aLier\".\n"+
+    "  \u2022 tu n\u2019\u00e9cris JAMAIS \"published\" : la publication est mon geste, pas le tien.\n"+
+    "  \u2022 les cl\u00e9s d\u2019items sont courtes, en minuscules, sans accent ni espace (ex. \"etude-de-texte\").\n",
   fiche_seance:
     "Tu vas m\u2019aider \u00e0 pr\u00e9parer une FICHE DE S\u00c9ANCE pour mon cours de fran\u00e7ais au coll\u00e8ge.\n\n"+
     "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
@@ -5712,7 +5926,12 @@ var ATELIER_PROMPT_SEED={
 };
 function atPromptTexte(){
   var brut=(AT_IA.tpl!=null?AT_IA.tpl:ATELIER_PROMPT_SEED[AT_IA.produit])||'';
-  return brut.replace('@@COMPOSANTES@@',atPromptComposantes());
+  /* SITE-COURS-2c : chaque produit apporte ses jetons ; la fiche de séance garde
+     exactement le sien (@@COMPOSANTES@@), le chapitre ajoute les siens. */
+  var t=brut.replace('@@COMPOSANTES@@',atPromptComposantes());
+  if(t.indexOf('@@TYPES_SEANCE@@')>=0)t=t.replace('@@TYPES_SEANCE@@',chVocabulaireTypes());
+  if(t.indexOf('@@TAXONOMIE@@')>=0)t=t.replace('@@TAXONOMIE@@',chVocabulaireTaxo(CH.taxo));
+  return t;
 }
 function atIAChargerPrompt(suite){
   if(AT_IA.charge){if(suite)suite();return;}
@@ -5734,6 +5953,7 @@ function atIARendre(){
     +'<h3 class="at-ia-titre">\u2728 \u00c9crire avec une IA</h3></div>'
     +'<div class="at-ia-sous">Discute d\u2019abord avec l\u2019IA, elle pr\u00e9pare la feuille, tu gardes la main sur tout. '
     +'<button class="at-i" onclick="atIAInfo()" aria-label="En savoir plus">\u24d8</button></div>'
+    +'<div class="at-ia-actions"><button class="at-btn" onclick="chOuvrir()">\ud83d\udcda Construire un chapitre\u2026</button></div>'
     +'<div class="at-ia-etape"><b>1.</b> Copie ce texte et colle-le dans ton IA. Elle te posera des questions avant d\u2019\u00e9crire quoi que ce soit.</div>'
     +'<div class="at-ia-actions">'
     +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
@@ -5947,6 +6167,406 @@ function atIARemplacerConfirme(){
   });
 }
 /* ═══ fin § ZONE PROMPT IA ═══ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   § PROMPT MAÎTRE DE CHAPITRE (SITE-COURS-2c) — le second produit de la zone.
+   PREUVE DE L'ARCHITECTURE : le chapitre s'ajoute par UNE entrée de plus dans
+   ATELIER_PROMPT_SEED et une source de vocabulaire ; atPromptTexte,
+   atIAChargerPrompt, l'édition et la persistance sont partagées SANS RETOUCHE.
+   La progression vient de Paul : l'IA structure, tague et signale les trous.
+   La taxonomie (154 notions, 5 domaines, 40 familles + les compétences) est
+   GÉNÉRÉE depuis /taxonomie, jamais recopiée — et donnée ENTIÈRE : 10 900 c.,
+   moins que le prompt de worktrack, et borner priverait Paul du spiralaire.
+   L'injection ÉCRIT PAR INDEX (/site/<niveau>/chapitres/<i>/…), jamais la liste
+   entière : la réécrire ferait disparaître le trou d'index 0 et décalerait les
+   neuf chapitres d'un rang, donc tous les `ordre` et les liens qui en dépendent.
+   `published` n'est JAMAIS écrit : publier reste le geste de Paul.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var CH_TYPES_SEANCE=[
+  {id:'intro_image',libelle:'Introduction et analyse d\u2019image'},
+  {id:'etude_texte',libelle:'\u00c9tude de texte'},
+  {id:'notions',libelle:'Le\u00e7on de notions'},
+  {id:'dictee_reecriture',libelle:'Dict\u00e9e et r\u00e9\u00e9criture'},
+  {id:'atelier_ecriture',libelle:'Atelier d\u2019\u00e9criture'},
+  {id:'remediation',libelle:'Rem\u00e9diation'},
+  {id:'tache_finale',libelle:'T\u00e2che finale'}
+];
+var CH_KINDS=['doc','dictee','reecriture','analyse_logique','qcm','tache'];
+var CH_SOURCES=['drive','html','external','firebase_app'];
+var CH={taxo:null,niveau:'3e',chapIdx:null,json:null,inventaire:null,voie:null};
+
+/* Le vocabulaire de la taxonomie, GÉNÉRÉ (mjpcPromptVocabulaire du canon §12).
+   Chaque notion porte ses niveaux entre crochets : l'IA peut signaler elle-même
+   un débordement d'attendus. Les notions inactives sont exclues. */
+function chVocabulaireTaxo(taxo){
+  if(!taxo)return '(taxonomie indisponible)';
+  var out=[];
+  (taxo.domaines||[]).forEach(function(dom){
+    var src={};
+    (dom.familles||[]).forEach(function(f){
+      (f.notions||[]).forEach(function(n){
+        if(n.actif===false)return;                       /* réservées/inactives exclues */
+        src[n.id]={libelle:n.libelleProf||n.libelleEleve||'',note:(n.niveaux?String(n.niveaux):'')};
+      });
+    });
+    if(!Object.keys(src).length)return;
+    out.push('### '+(dom.libelle||dom.id));
+    out.push(mjpcPromptVocabulaire(src,{}));
+  });
+  var comp={};
+  ['francaisC4','transversales'].forEach(function(bloc){
+    ((taxo.competences||{})[bloc]||[]).forEach(function(b){
+      (b.items||[]).forEach(function(i){
+        if(i.actif===false)return;
+        comp[i.id]={libelle:i.libelle||''};
+      });
+    });
+  });
+  if(Object.keys(comp).length){
+    out.push('### Comp\u00e9tences');
+    out.push(mjpcPromptVocabulaire(comp,{}));
+  }
+  return out.join('\n');
+}
+function chVocabulaireTypes(){
+  var src={};CH_TYPES_SEANCE.forEach(function(t){src[t.id]={libelle:t.libelle};});
+  return mjpcPromptVocabulaire(src,{});
+}
+/* Les identifiants valides, à plat — pour refuser une notion inventée EN LA NOMMANT. */
+function chIdsTaxo(taxo){
+  var n={},c={};
+  ((taxo||{}).domaines||[]).forEach(function(dom){
+    (dom.familles||[]).forEach(function(f){(f.notions||[]).forEach(function(x){n[x.id]=x.libelleProf||x.libelleEleve||x.id;});});
+  });
+  ['francaisC4','transversales'].forEach(function(bloc){
+    (((taxo||{}).competences||{})[bloc]||[]).forEach(function(b){(b.items||[]).forEach(function(i){c[i.id]=i.libelle||i.id;});});
+  });
+  return {notions:n,competences:c};
+}
+function chChargerTaxo(cb){
+  if(CH.taxo){cb(CH.taxo);return;}
+  secuLire('/taxonomie').then(function(v){CH.taxo=v||null;cb(CH.taxo);});
+}
+
+/* LA VALIDATION — motifs ACCUMULÉS, élément CITÉ, message qui dit quoi corriger. */
+function chValiderChapitre(o,taxo){
+  var V=mjpcValidation(8);
+  var ids=chIdsTaxo(taxo);
+  if(!o||typeof o!=='object'||Array.isArray(o)){V.exige(false,'La r\u00e9ponse doit \u00eatre un chapitre complet.');return V;}
+  V.exige(o.chapitre&&o.chapitre.title,'Il manque le titre du chapitre.');
+  V.exige(o.niveau&&/^[3-6]e$/.test(String(o.niveau)),'Il manque le niveau (6e, 5e, 4e ou 3e).');
+  var ses=(o.chapitre&&o.chapitre.seances)||[];
+  V.exige(Array.isArray(ses)&&ses.length,'Il manque les s\u00e9ances (une liste non vide).');
+  function verifTags(objet,ref){
+    (objet.notions||[]).forEach(function(id){
+      if(!ids.notions[id])V.cite(ref,'utilise une notion qui n\u2019existe pas (\u00ab '+id+' \u00bb). Reprends un identifiant de la liste du prompt.');
+    });
+    (objet.competences||[]).forEach(function(id){
+      if(!ids.competences[id])V.cite(ref,'utilise une comp\u00e9tence qui n\u2019existe pas (\u00ab '+id+' \u00bb). Reprends un identifiant de la liste du prompt.');
+    });
+  }
+  (Array.isArray(ses)?ses:[]).forEach(function(se,i){
+    var ref=(se&&se.title)||('s\u00e9ance n\u00b0 '+(i+1));
+    if(!se||!se.title){V.cite('s\u00e9ance n\u00b0 '+(i+1),'n\u2019a pas de titre.');return;}
+    if(!se.type||CH_TYPES_SEANCE.map(function(t){return t.id;}).indexOf(se.type)<0)
+      V.cite(ref,'a un type de s\u00e9ance inconnu (\u00ab '+(se.type||'')+' \u00bb). Types possibles : '+CH_TYPES_SEANCE.map(function(t){return t.id;}).join(', ')+'.');
+    verifTags(se,ref);
+    var it=se.items||{};
+    if(typeof it!=='object'||Array.isArray(it)){V.cite(ref,'a des \u00e9l\u00e9ments mal form\u00e9s : il faut un ensemble de cl\u00e9s courtes.');return;}
+    Object.keys(it).forEach(function(k){
+      var x=it[k]||{};var r2=ref+' \u00b7 '+k;
+      if(!/^[a-z0-9-]+$/.test(k))V.cite(r2,'a une cl\u00e9 non conforme : minuscules, chiffres et tirets seulement.');
+      if(!x.title)V.cite(r2,'n\u2019a pas de titre.');
+      if(x.kind&&CH_KINDS.indexOf(x.kind)<0)V.cite(r2,'a un type inconnu (\u00ab '+x.kind+' \u00bb). Types possibles : '+CH_KINDS.join(', ')+'.');
+      if(x.source&&CH_SOURCES.indexOf(x.source)<0)V.cite(r2,'a une provenance inconnue (\u00ab '+x.source+' \u00bb). Possibles : '+CH_SOURCES.join(', ')+'.');
+      if(Object.prototype.hasOwnProperty.call(x,'published'))V.cite(r2,'ne doit pas d\u00e9cider de la publication : retire \u00ab published \u00bb, c\u2019est mon geste.');
+      verifTags(x,r2);
+    });
+  });
+  return V;
+}
+
+/* L'INVENTAIRE FACE À FACE — l'existant PRÉCIS, pas un compte. */
+function chInventaire(existant,propose,taxo){
+  var ids=chIdsTaxo(taxo);
+  var lignes=[],aLier=[];
+  var parTitre={};
+  ((existant&&existant.seances)||[]).forEach(function(se,i){
+    if(!se)return;
+    parTitre[String(se.title||'').toLowerCase()]={se:se,i:i};
+  });
+  ((propose&&propose.seances)||[]).forEach(function(np){
+    var cle=String(np.title||'').toLowerCase();
+    var m=parTitre[cle];
+    var etatSe=m?'DÉJÀ LÀ':'NOUVEAU';
+    var items=[];
+    Object.keys(np.items||{}).forEach(function(k){
+      var x=np.items[k];
+      var dejaLa=!!(m&&m.se.items&&m.se.items[k]);
+      var etat=dejaLa?(String((m.se.items[k]||{}).title||'')===String(x.title||'')?'DÉJÀ LÀ':'DIFFÉRENT'):'NOUVEAU';
+      items.push({cle:k,titre:x.title,kind:x.kind,source:x.source,etat:etat,
+        notions:(x.notions||[]).map(function(id){return ids.notions[id]||id;}),
+        competences:(x.competences||[]).map(function(id){return ids.competences[id]||id;})});
+      if(x.source==='firebase_app'&&!x.ref)aLier.push({seance:np.title,item:k,titre:x.title,outil:x.kind||'?',pourquoi:x.subtitle||''});
+    });
+    lignes.push({seance:np.title,type:np.type,etat:etatSe,idx:m?m.i:null,items:items,
+      notions:(np.notions||[]).map(function(id){return ids.notions[id]||id;}),
+      competences:(np.competences||[]).map(function(id){return ids.competences[id]||id;})});
+  });
+  (propose&&propose.aLier||[]).forEach(function(a){
+    if(!aLier.some(function(x){return x.seance===a.seance&&x.item===a.item;}))
+      aLier.push({seance:a.seance,item:a.item,titre:a.item,outil:a.outil||'?',pourquoi:a.pourquoi||''});
+  });
+  var exist=[];
+  ((existant&&existant.seances)||[]).forEach(function(se,i){
+    if(!se)return;
+    var its=Object.keys(se.items||{}).map(function(k){
+      var x=se.items[k]||{};
+      return {cle:k,titre:x.title,kind:x.kind,source:x.source,
+        lie:!(x.source==='firebase_app'&&!x.ref),
+        notions:(x.notions||[]).map(function(id){return ids.notions[id]||id;})};
+    });
+    exist.push({i:i,titre:se.title,type:se.type,items:its});
+  });
+  return {existant:exist,propose:lignes,aLier:aLier};
+}
+
+/* ── L'ÉCRAN — accès depuis la zone « Écrire avec une IA » ── */
+function chOuvrir(){
+  if(!secuExigeCle())return;
+  AT_IA.produit='chapitre';AT_IA.tpl=null;AT_IA.charge=false;
+  chChargerTaxo(function(){ atIAChargerPrompt(function(){ chRendre(); }); });
+}
+function chRendre(){
+  var z=document.getElementById('at-zone');if(!z)return;
+  var niv=['6e','5e','4e','3e'].map(function(n){
+    return '<option value="'+n+'"'+(CH.niveau===n?' selected':'')+'>'+n+'</option>';}).join('');
+  z.innerHTML='<div class="at-ia">'
+    +'<div class="at-ia-haut"><button class="at-btn" onclick="atIAOuvrir()">\u2190 Retour</button>'
+    +'<h3 class="at-ia-titre">\ud83d\udcda Construire un chapitre avec une IA</h3></div>'
+    +'<div class="at-ia-sous">Tu apportes ta progression, l\u2019IA la met en forme, la relie \u00e0 tes notions et te dit ce qui manque. Rien ne s\u2019\u00e9crit sans toi. '
+    +'<button class="at-i" onclick="chInfo()" aria-label="En savoir plus">\u24d8</button></div>'
+    +'<div class="ch-ligne"><label for="ch-niveau">Niveau</label> <select id="ch-niveau" class="cm-input" onchange="CH.niveau=this.value;chRendre()">'+niv+'</select></div>'
+    +'<div class="at-ia-etape"><b>1.</b> Copie ce texte et colle-le dans ton IA, avec tes documents. Elle te posera des questions avant d\u2019\u00e9crire.</div>'
+    +'<div class="at-ia-actions">'
+    +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
+    +'<button class="at-btn" onclick="atIAModifier()">Modifier le prompt</button></div>'
+    +'<div id="at-ia-copie" class="at-ia-flash" aria-live="polite"></div>'
+    +'<div class="at-ia-etape"><b>2.</b> Quand le chapitre te convient, demande-lui le r\u00e9sultat et colle-le ici.</div>'
+    +'<textarea id="ch-coller" class="at-ia-zone" placeholder="Colle ici la r\u00e9ponse de l\u2019IA"></textarea>'
+    +'<div class="at-ia-actions"><button class="at-btn at-btn-prim" onclick="chVerifier()">V\u00e9rifier</button></div>'
+    +'<div id="ch-msg" class="at-ia-msg" aria-live="polite"></div>'
+    +'<div id="ch-inv" class="ch-inv"></div>'
+    +'</div>';
+  chAlerteGraphies();
+}
+function chInfo(){
+  atModaleChoix('Tu donnes \u00e0 l\u2019IA ce que tu as d\u00e9j\u00e0 : tes textes, tes s\u00e9ances, tes documents. Elle ne l\u2019invente pas \u2014 elle le met en ordre, le relie \u00e0 tes notions et \u00e0 tes comp\u00e9tences, et te dit ce qui manque.<br><br>'
+    +'Ensuite tu vois, s\u00e9ance par s\u00e9ance, ce qui existe d\u00e9j\u00e0 et ce qu\u2019elle apporte. Tu choisis : <b>compl\u00e9ter</b> (rien n\u2019est touch\u00e9, seuls les manques s\u2019ajoutent), <b>remplacer</b> (l\u2019ancien part \u00e0 la corbeille), ou <b>garder \u00e0 c\u00f4t\u00e9</b> comme proposition.<br><br>'
+    +'La publication reste ton geste : rien n\u2019est montr\u00e9 aux \u00e9l\u00e8ves par cette op\u00e9ration.',
+    [{lib:'Compris',prim:true,fn:function(){}}]);
+}
+/* Signalement discret des deux graphies de classes (dette, SANS bouton de correction) */
+function chAlerteGraphies(){
+  secuLire('/site/'+CH.niveau).then(function(n){
+    var ch=(n&&n.chapitres)||[];var vues={};
+    ch.forEach(function(c){ if(c&&c.published&&typeof c.published==='object')Object.keys(c.published).forEach(function(k){vues[k]=(vues[k]||0)+1;}); });
+    var cles=Object.keys(vues);
+    var doublons=cles.filter(function(a){return cles.some(function(b){return b!==a&&b.toLowerCase().replace(/[^a-z0-9]/g,'')===a.toLowerCase().replace(/[^a-z0-9]/g,'');});});
+    if(doublons.length<2)return;
+    var d=document.getElementById('ch-inv');if(!d)return;
+    d.innerHTML='<div class="ch-note">\u2139 Deux \u00e9critures d\u2019un m\u00eame nom de classe coexistent dans ce niveau ('
+      +doublons.map(function(x){return '\u00ab '+atEsc(x)+' \u00bb';}).join(' et ')
+      +'). Rien n\u2019est cass\u00e9, et cette op\u00e9ration n\u2019y touche pas \u2014 c\u2019est \u00e0 revoir quand tu voudras.</div>'+d.innerHTML;
+  });
+}
+function chVerifier(){
+  var brut=(document.getElementById('ch-coller')||{}).value||'';
+  var msg=document.getElementById('ch-msg'),inv=document.getElementById('ch-inv');
+  CH.json=null;if(inv)inv.innerHTML='';
+  var t=String(brut).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+  if(!t){if(msg){msg.className='at-ia-msg at-ia-ko';msg.textContent='Colle d\u2019abord la r\u00e9ponse de l\u2019IA.';}return;}
+  var o;
+  try{o=JSON.parse(t);}
+  catch(e){ if(msg){msg.className='at-ia-msg at-ia-ko';
+    msg.innerHTML='Je ne peux pas lire cette r\u00e9ponse : elle est incompl\u00e8te ou mal ferm\u00e9e ('+atEsc(String(e.message))+'). Demande \u00e0 l\u2019IA de redonner le r\u00e9sultat en entier, sans rien autour.';}
+    return; }
+  var V=chValiderChapitre(o,CH.taxo);
+  if(!V.ok()){ if(msg){msg.className='at-ia-msg at-ia-ko';
+    msg.innerHTML='Je ne peux pas utiliser cette r\u00e9ponse :<ul>'+V.motifs().map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ul>';}
+    return; }
+  CH.json=o;if(o.niveau)CH.niveau=String(o.niveau);
+  if(msg){msg.className='at-ia-msg at-ia-ok';msg.textContent='R\u00e9ponse comprise. Voici ce que tu as d\u00e9j\u00e0, et ce qu\u2019elle apporte.';}
+  chAfficherInventaire();
+}
+/* L'INVENTAIRE FACE À FACE, puis les trois voies */
+function chAfficherInventaire(){
+  var o=CH.json;if(!o)return;
+  secuLire('/site/'+CH.niveau).then(function(niv){
+    var chaps=(niv&&niv.chapitres)||[];
+    var cible=null,idx=null;
+    chaps.forEach(function(c,i){
+      if(!c)return;                                  /* le trou d'index 0 se traverse */
+      if(String(c.title||'').toLowerCase()===String(o.chapitre.title||'').toLowerCase()){cible=c;idx=i;}
+    });
+    CH.chapIdx=idx;
+    var inventaire=chInventaire(cible,o.chapitre,CH.taxo);
+    CH.inventaire=inventaire;
+    var d=document.getElementById('ch-inv');if(!d)return;
+    var h='<div class="ch-face">';
+    h+='<div class="ch-col"><h4>Ce que tu as d\u00e9j\u00e0'+(cible?(' \u2014 \u00ab '+atEsc(cible.title)+' \u00bb'):' \u2014 aucun chapitre \u00e0 ce titre')+'</h4>';
+    if(!inventaire.existant.length)h+='<p class="ch-vide">Rien pour l\u2019instant.</p>';
+    inventaire.existant.forEach(function(se){
+      h+='<div class="ch-se"><b>'+atEsc(se.titre||'')+'</b> <span class="ch-type">'+atEsc(se.type||'')+'</span>';
+      if(!se.items.length)h+='<div class="ch-vide">aucun \u00e9l\u00e9ment</div>';
+      se.items.forEach(function(x){
+        h+='<div class="ch-it">\u2022 '+atEsc(x.titre||x.cle)+' <span class="ch-type">'+atEsc(x.kind||'')+' \u00b7 '+atEsc(x.source||'')+'</span>'
+          +(x.lie?'':' <span class="ch-alier">\u00e0 lier</span>')
+          +(x.notions.length?('<div class="ch-tags">'+x.notions.map(atEsc).join(' \u00b7 ')+'</div>'):'')+'</div>';
+      });
+      h+='</div>';
+    });
+    h+='</div><div class="ch-col"><h4>Ce que l\u2019IA apporte</h4>';
+    inventaire.propose.forEach(function(se){
+      h+='<div class="ch-se"><b>'+atEsc(se.seance||'')+'</b> <span class="ch-type">'+atEsc(se.type||'')+'</span> <span class="ch-etat ch-'+(se.etat==='NOUVEAU'?'neuf':'deja')+'">'+se.etat+'</span>';
+      if(se.notions.length)h+='<div class="ch-tags">'+se.notions.map(atEsc).join(' \u00b7 ')+'</div>';
+      se.items.forEach(function(x){
+        h+='<div class="ch-it">\u2022 '+atEsc(x.titre||x.cle)+' <span class="ch-type">'+atEsc(x.kind||'')+'</span> <span class="ch-etat ch-'+(x.etat==='NOUVEAU'?'neuf':(x.etat==='DIFFÉRENT'?'diff':'deja'))+'">'+x.etat+'</span>'
+          +(x.notions.length?('<div class="ch-tags">'+x.notions.map(atEsc).join(' \u00b7 ')+'</div>'):'')+'</div>';
+      });
+      h+='</div>';
+    });
+    h+='</div></div>';
+    /* LA LISTE DE TRAVAIL — ce qui reste à lier à la main */
+    if(inventaire.aLier.length){
+      h+='<div class="ch-travail"><h4>\u00c0 lier toi-m\u00eame ('+inventaire.aLier.length+')</h4><ul>';
+      inventaire.aLier.forEach(function(a){
+        h+='<li>Dans <b>'+atEsc(a.seance)+'</b> : \u00ab '+atEsc(a.titre||a.item)+' \u00bb \u2014 \u00e0 relier \u00e0 '+atEsc(a.outil)
+          +(a.pourquoi?(' ('+atEsc(a.pourquoi)+')'):'')+'.</li>';
+      });
+      h+='</ul><p class="ch-vide">Ces \u00e9l\u00e9ments s\u2019\u00e9crivent quand m\u00eame : ils apparaissent marqu\u00e9s \u00ab \u00e0 lier \u00bb tant que tu ne les as pas rattach\u00e9s.</p></div>';
+    }
+    h+='<div class="ch-choix"><div class="at-ia-choix-lib">Que veux-tu faire ?</div><div class="at-ia-actions">'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'completer\')">Compl\u00e9ter (ne touche \u00e0 rien)</button>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'remplacer\')">Remplacer ce chapitre</button>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'jumeau\')">Garder \u00e0 c\u00f4t\u00e9 (proposition)</button>'
+      +'</div><p class="ch-vide">Rien n\u2019est \u00e9crit tant que tu n\u2019as pas choisi. La publication reste ton geste : cette op\u00e9ration ne montre rien aux \u00e9l\u00e8ves.</p></div>';
+    d.innerHTML=h;
+  });
+}
+/* LES TROIS VOIES. Écriture PAR INDEX, jamais la liste entière, jamais push. */
+function chInjecter(voie){
+  var o=CH.json;if(!o)return;
+  CH.voie=voie;
+  if(voie==='remplacer'&&CH.chapIdx===null){
+    var d=document.getElementById('ch-msg');
+    if(d){d.className='at-ia-msg at-ia-ko';d.textContent='Il n\u2019y a pas de chapitre \u00e0 ce titre : utilise \u00ab Compl\u00e9ter \u00bb ou \u00ab Garder \u00e0 c\u00f4t\u00e9 \u00bb.';}
+    return;
+  }
+  var lib={completer:'Compl\u00e9ter le chapitre',remplacer:'Remplacer le chapitre',jumeau:'Garder \u00e0 c\u00f4t\u00e9'}[voie];
+  var det;
+  if(voie==='completer')det='Seuls les \u00e9l\u00e9ments absents seront \u00e9crits. Rien de ce qui existe ne sera modifi\u00e9.';
+  else if(voie==='remplacer')det='Le chapitre actuel part d\u2019abord \u00e0 la corbeille, puis il est remplac\u00e9. Les travaux des \u00e9l\u00e8ves ne sont pas touch\u00e9s (ils vivent \u00e0 part).';
+  else det='Le chapitre est ajout\u00e9 en fin de liste, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9. Rien de l\u2019existant n\u2019est touch\u00e9.';
+  atModaleChoix(lib+' ? '+det,
+    [{lib:'Annuler',fn:function(){}},
+     {lib:lib,prim:true,danger:(voie==='remplacer'),fn:function(){chInjecterConfirme(voie);}}]);
+}
+function chInjecterConfirme(voie){
+  var o=CH.json;var msg=document.getElementById('ch-msg');
+  var base='/site/'+CH.niveau+'/chapitres';
+  var dire=function(t,ok){if(msg){msg.className='at-ia-msg '+(ok?'at-ia-ok':'at-ia-ko');msg.innerHTML=t;}};
+  dire('\u00c9criture en cours\u2026',true);
+  secuLire(base).then(function(chaps){
+    chaps=chaps||[];
+    var idx=CH.chapIdx;
+    /* JUMEAU : un rang neuf en FIN de liste, jamais push, jamais la liste entière */
+    if(voie==='jumeau'){
+      var neuf=JSON.parse(JSON.stringify(o.chapitre));
+      neuf.title=String(neuf.title||'')+' (proposition)';
+      neuf.ordre=(chaps.filter(function(c){return !!c;}).length)+1;
+      delete neuf.published;
+      chNettoyerPublished(neuf);
+      secuEcrire(base+'/'+chaps.length,neuf).then(function(r){
+        dire(r.ok?('Chapitre ajout\u00e9 \u00e0 c\u00f4t\u00e9, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9.'):'L\u2019\u00e9criture n\u2019a pas abouti \u2014 rien n\u2019a chang\u00e9.',r.ok);
+      });
+      return;
+    }
+    /* REMPLACER : ARCHIVE AVANT, ABANDON si elle échoue */
+    if(voie==='remplacer'){
+      var ancien=chaps[idx];
+      var ts=Date.now();
+      var payload={_meta:{motif:'site-chapitre',chemin:base+'/'+idx,app:'site',ts:ts},data:ancien};
+      secuEcrire(atCorbeilleCle('site-chapitre'),payload).then(function(a){
+        if(!a.ok){dire('La mise \u00e0 la corbeille a \u00e9chou\u00e9 \u2014 <b>rien n\u2019a \u00e9t\u00e9 remplac\u00e9</b>. R\u00e9essaie quand la connexion est stable.',false);return;}
+        var neuf=JSON.parse(JSON.stringify(o.chapitre));
+        neuf.ordre=(ancien&&ancien.ordre)||neuf.ordre;
+        if(ancien&&ancien.published)neuf.published=ancien.published;   /* la publication existante est CONSERVÉE, jamais décidée ici */
+        chNettoyerPublished(neuf,true);
+        secuEcrire(base+'/'+idx,neuf).then(function(r){
+          dire(r.ok?('Chapitre remplac\u00e9. L\u2019ancien est \u00e0 la corbeille.'):'L\u2019\u00e9criture n\u2019a pas abouti \u2014 l\u2019ancien est \u00e0 la corbeille, rien n\u2019a \u00e9t\u00e9 perdu.',r.ok);
+        });
+      });
+      return;
+    }
+    /* COMPLÉTER : n'écrit QUE ce qui manque, élément par élément, par index */
+    var cible=(idx!==null)?chaps[idx]:null;
+    var ecritures=[];
+    if(!cible){                                        /* le chapitre n'existe pas : il s'ajoute en fin */
+      var n2=JSON.parse(JSON.stringify(o.chapitre));
+      delete n2.published;chNettoyerPublished(n2);
+      ecritures.push({chemin:base+'/'+chaps.length,val:n2,quoi:'chapitre \u00ab '+n2.title+' \u00bb'});
+    }else{
+      var parTitre={};
+      (cible.seances||[]).forEach(function(se,i){ if(se)parTitre[String(se.title||'').toLowerCase()]={se:se,i:i}; });
+      (o.chapitre.seances||[]).forEach(function(np){
+        var m=parTitre[String(np.title||'').toLowerCase()];
+        if(!m){
+          var se2=JSON.parse(JSON.stringify(np));delete se2.published;chNettoyerPublished(se2);
+          var rang=(cible.seances||[]).length+ecritures.filter(function(e){return e.quoi.indexOf('s\u00e9ance')===0;}).length;
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+rang,val:se2,quoi:'s\u00e9ance \u00ab '+np.title+' \u00bb'});
+          return;
+        }
+        /* la séance existe : on n'ajoute QUE les items absents, et les tags manquants */
+        Object.keys(np.items||{}).forEach(function(k){
+          if(m.se.items&&m.se.items[k])return;         /* jamais un item existant */
+          var it=JSON.parse(JSON.stringify(np.items[k]));delete it.published;
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k,val:it,quoi:'\u00e9l\u00e9ment \u00ab '+(it.title||k)+' \u00bb'});
+        });
+        if((np.notions||[]).length&&!(m.se.notions||[]).length)
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/notions',val:np.notions,quoi:'notions de \u00ab '+np.title+' \u00bb'});
+        if((np.competences||[]).length&&!(m.se.competences||[]).length)
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/competences',val:np.competences,quoi:'comp\u00e9tences de \u00ab '+np.title+' \u00bb'});
+      });
+    }
+    if(!ecritures.length){dire('Rien \u00e0 ajouter : tout ce que l\u2019IA propose existe d\u00e9j\u00e0.',true);return;}
+    Promise.allSettled(ecritures.map(function(e){
+      return secuEcrire(e.chemin,e.val).then(function(r){ if(!r.ok)throw e; return e; });
+    })).then(function(vs){
+      var ok=vs.filter(function(v){return v.status==='fulfilled';}).length;
+      var ko=vs.filter(function(v){return v.status==='rejected';});
+      var t='\u00c9crit : <b>'+ok+'/'+ecritures.length+'</b>.';
+      if(ko.length){
+        t+='<br>\u26a0 '+ko.length+' \u00e9criture(s) n\u2019ont pas abouti \u2014 <b>le geste n\u2019est pas termin\u00e9</b>. Relance : seuls les manques seront repris.';
+      }else{
+        t+=' Rien de ce qui existait n\u2019a \u00e9t\u00e9 modifi\u00e9.';
+      }
+      if(CH.inventaire&&CH.inventaire.aLier.length)t+='<br>Il te reste <b>'+CH.inventaire.aLier.length+'</b> \u00e9l\u00e9ment(s) \u00e0 lier \u00e0 la main (liste ci-dessus).';
+      dire(t,!ko.length);
+    });
+  });
+}
+/* `published` n'est JAMAIS écrit par l'injection — nettoyage récursif. */
+function chNettoyerPublished(o,garderRacine){
+  if(!o||typeof o!=='object')return o;
+  if(!garderRacine)delete o.published;
+  (o.seances||[]).forEach(function(se){
+    if(!se)return;delete se.published;
+    Object.keys(se.items||{}).forEach(function(k){ if(se.items[k])delete se.items[k].published; });
+  });
+  return o;
+}
+/* ═══ fin § PROMPT MAÎTRE DE CHAPITRE ═══ */
+
 
 /* ══ § GÉNÉRATEUR — un document HTML AUTONOME (charte sobre : noir sur blanc,
       serif pour le texte long, patrons buildCopieHtml + bilansPrintHTML).
