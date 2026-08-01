@@ -1388,7 +1388,9 @@ var ROOT = "analyse_logique";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.3.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.4.0 (2026-08-01) — socle commun de l'écosystème MJPC
+// v1.4.0 : + §12 zone prompt IA (composition, persistance, validation, injection) —
 // v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
 //          la protection est dans la donnée, pas dans le mur : le hub peut rester
 //          ouvert, il ne montre plus que de l'illisible. Prépare M-SÉCU-2/3.
@@ -1686,7 +1688,225 @@ function mjpcEmpreinte(texte,selHex){
     .then(function(bits){return _mjpcHex(bits);});
 }
 
-var MJPC_CORE_VERSION="1.3.0";
+
+// ── 12. Zone prompt IA : composition, persistance, validation, injection (v1.4.0) ──
+//   EXTRAIT des quatre chaînes existantes, pas inventé :
+//   · la composition en pièces assemblées à la volée vient de correction_dictee
+//     (assemblePrompt(directives, format)) — le cadrage change souvent, le format jamais ;
+//   · l'interpolation par jetons {{…}} vient d'elle aussi ({{JSON_DICTEE}}) ;
+//   · le vocabulaire GÉNÉRÉ depuis une source vient de l'atelier du site (SITE-COURS-2a) :
+//     une entrée ajoutée à la source y paraît sans qu'aucune liste soit retouchée ;
+//   · le cadrage imposé (« NE PRODUIS AUCUN JSON TOUT DE SUITE… ») vient de worktrack ;
+//   · les trois exigences de validation RATTRAPENT ce qu'aucune app ne fait entièrement :
+//     l'élément fautif CITÉ, le message qui dit QUOI CORRIGER, les refus qui S'ACCUMULENT ;
+//   · l'archive-avant-écrasement n'est dans AUCUNE des quatre : elle vient du chantier
+//     (M-SÉCU-3/-4, atCorbeilleCle) et le canon la rend disponible à toutes.
+//   NOTE DE NUMÉROTATION : ce canon porte DEUX sections « 8 » (Manifeste, Session partagée)
+//   et n'a PAS de §10. Rien n'est renuméroté ici — la dette est signalée, pas rangée.
+
+var MJPC_PROMPT_CADRAGE =
+  "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
+  "Commence par une discussion de cadrage, un point \u00e0 la fois. Proc\u00e8de par allers-retours : "+
+  "reformule, propose, mais attends mes validations.\n"+
+  "QUAND, ET SEULEMENT QUAND, JE TE DIS \u00ab produis le JSON \u00bb, tu produis le r\u00e9sultat SEUL, "+
+  "sans commentaire ni texte autour, sans balises de code.";
+
+/* Le vocabulaire, GÉNÉRÉ depuis une source fournie par l'app (jamais écrit à la main).
+   source : { id: { libelle, champs:[{k,l,kind}], reserve, groupe, note } }
+   options : { titre, groupes:{cle:'Libellé'}, exclureReserve (défaut true) } */
+function mjpcPromptVocabulaire(source, options){
+  var o=options||{};
+  var exclure=(o.exclureReserve===undefined)?true:!!o.exclureReserve;
+  var groupes=o.groupes||null;
+  var par={},ordre=[];
+  Object.keys(source||{}).forEach(function(id){
+    var e=source[id]||{};
+    if(exclure&&e.reserve)return;
+    var g=e.groupe||'';
+    if(!par[g]){par[g]=[];ordre.push(g);}
+    par[g].push({id:id,e:e});
+  });
+  var out=[];
+  if(o.titre)out.push(o.titre);
+  var cles=groupes?Object.keys(groupes).filter(function(g){return par[g]&&par[g].length;}):ordre;
+  cles.forEach(function(g){
+    if(g&&groupes&&groupes[g])out.push('### '+groupes[g]);
+    else if(g)out.push('### '+g);
+    (par[g]||[]).forEach(function(x){
+      var e=x.e;var l='- '+x.id+(e.libelle?(' : '+e.libelle):'');
+      if(e.note)l+=' ['+e.note+']';
+      var ch=e.champs||[];
+      if(ch.length){
+        l+=' \u2192 champs : '+ch.map(function(f){
+          var t=(f.kind==='list')?'liste de lignes':((f.kind==='area')?'texte long':((f.kind==='date')?'date AAAA-MM-JJ':'texte court'));
+          return f.k+(f.l?(' ('+f.l+', '+t+')'):(' ('+t+')'));
+        }).join(', ');
+      }
+      out.push(l);
+    });
+  });
+  return out.join('\n');
+}
+/* L'assemblage à la volée. pieces : {directives, vocabulaire, format, donnees:{JETON:valeur}}
+   Les jetons {{NOM}} sont remplacés en dernier, dans le texte entier. */
+function mjpcPromptComposer(pieces){
+  var p=pieces||{};
+  var bouts=[];
+  if(p.directives)bouts.push(p.directives);
+  if(p.cadrage!==false)bouts.push(MJPC_PROMPT_CADRAGE);
+  if(p.format)bouts.push(p.format);
+  if(p.vocabulaire)bouts.push(p.vocabulaire);
+  var t=bouts.join("\n\n");
+  var d=p.donnees||{};
+  Object.keys(d).forEach(function(k){
+    t=t.split('{{'+k+'}}').join(d[k]==null?'':String(d[k]));
+  });
+  return t;
+}
+/* La persistance : chemin par app ET par produit, défaut en dur qui fait foi si la base
+   est muette. Lecture REST (le mode test de l'app la court-circuite si elle en a un). */
+function mjpcPromptChemin(app,produit,piece){
+  return '/'+String(app)+'_prompts/'+String(produit)+'/'+String(piece);
+}
+function mjpcPromptCharger(base,app,produit,defauts,cb){
+  var pieces=Object.keys(defauts||{});
+  var res={},reste=pieces.length;
+  if(!reste){cb({});return;}
+  pieces.forEach(function(piece){
+    var url=String(base)+mjpcPromptChemin(app,produit,piece)+'.json';
+    var fini=function(v){
+      res[piece]=(typeof v==='string'&&v.length)?v:defauts[piece];   /* la base, sinon le défaut */
+      if(--reste===0)cb(res);
+    };
+    try{
+      fetch(url).then(function(r){return r.ok?r.json():null;}).then(fini,function(){fini(null);});
+    }catch(e){fini(null);}
+  });
+}
+/* L'écriture passe par les verdicts du socle (§9) : trois issues, jamais un succès supposé. */
+function mjpcPromptEnregistrer(base,app,produit,piece,texte,cb){
+  /* mjpcEcrireRest rend UNE issue (cb(issue)) — le canon la traduit en (ok, issue)
+     pour ses appelants : un verdict autre qu'ACCEPTEE n'est JAMAIS un succès. */
+  mjpcEcrireRest(String(base)+mjpcPromptChemin(app,produit,piece)+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(String(texte))},
+    function(issue){cb(mjpcVerdictOk(issue),issue);});
+}
+/* Le verdict, lu d'UNE façon partout : accepté, ou pas. */
+function mjpcVerdictOk(issue){
+  return !!(issue&&issue.etat===MJPC_ISSUE.ACCEPTEE);
+}
+
+/* LA VALIDATION — un accumulateur. Les refus s'ADDITIONNENT, chacun CITE l'élément
+   fautif et dit QUOI CORRIGER. (validateChapter et validateItems s'arrêtent au premier ;
+   validateDebatImport ne rend qu'un booléen : c'est ce que ceci remplace.) */
+function mjpcValidation(max){
+  var motifs=[],plafond=max||8;
+  return {
+    exige:function(condition,message){ if(!condition&&motifs.length<plafond)motifs.push(String(message)); return this; },
+    cite:function(element,message){ if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb '+String(message)); return this; },
+    inconnu:function(element,ou,quoiFaire){
+      if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb'+(ou?(' ('+ou+')'):'')+' n\u2019existe pas'+(quoiFaire?(' \u2014 '+quoiFaire):'.'));
+      return this;
+    },
+    ok:function(){ return motifs.length===0; },
+    motifs:function(){ return motifs.slice(); },
+    texte:function(){ return motifs.join('\n'); }
+  };
+}
+/* L'INJECTION : archive AVANT s'il y a quelque chose à remplacer, ABANDON si l'archive
+   échoue, écriture ensuite, verdict rendu. Rien n'écrit sans que l'appelant ait confirmé.
+   opts : {base, chemin, donnees, ancien (null si rien à remplacer), cheminArchive, app} */
+function mjpcInjecterAvecArchive(opts,cb){
+  var o=opts||{};
+  var ecrire=function(){
+    mjpcEcrireRest(String(o.base)+o.chemin+'.json',
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(o.donnees)},
+      function(issue){cb(mjpcVerdictOk(issue),issue,{archive:!!o.ancien});});
+  };
+  if(o.ancien==null){ecrire();return;}                 /* rien à remplacer : pas d'archive de rien */
+  var ts=Date.now();
+  var payload={_meta:{chemin:o.chemin,app:o.app||'',ts:ts},data:o.ancien};
+  mjpcEcrireRest(String(o.base)+(o.cheminArchive||('/corbeille/'+String(o.app||'app')+'-'+ts))+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},
+    function(issue){
+      if(!mjpcVerdictOk(issue)){cb(false,issue,{archive:false,abandon:true});return;}   /* ABANDON : rien n'est remplacé */
+      ecrire();
+    });
+}
+
+var MJPC_CORE_VERSION="1.4.0";
+/* ═══════════════════════════════════════════════════════════════════════════
+   § PROMPTS — passage au canon §12 (M-PROMPT-3).
+   MESURE QUI CORRIGE L'INVENTAIRE : parseCorrige EST la validation du collage
+   (format à lignes PROP|CODE|texte, pas du JSON), et promptCorrige générait déjà
+   son vocabulaire depuis ref.etiquettes.
+   Ce qui est RATTRAPÉ : les directives sont désormais PERSISTÉES (elles ne
+   l'étaient nulle part), la phrase et les codes passent par des JETONS, le
+   vocabulaire est canonisé (mjpcPromptVocabulaire) À SORTIE IDENTIQUE, et les
+   lignes fautives du collage sont NOMMÉES avant d'être ignorées.
+   CE QUI N'EST PAS AJOUTÉ : aucune injection — cette app AFFICHE une analyse,
+   elle n'écrit rien au hub. Poser une injection serait inventer un usage.
+   parseCorrige et le rendu du noyau ne sont PAS touchés : la validation s'ajoute
+   à côté (patron wtValiderChapitre / validateChapter de M-PROMPT-2).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var AL_BASE=(typeof MJPC_SECU2==='object'&&MJPC_SECU2&&MJPC_SECU2.hub)?MJPC_SECU2.hub:'https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app';
+/* Le vocabulaire des étiquettes, par le canon. SORTIE IDENTIQUE à l'ancienne
+   ligne « - CODE : libellé » (comparée avant/après au banc). */
+function alVocabulaireCodes(ref){
+  var et=(ref&&ref.etiquettes)||{};
+  var src={};
+  Object.keys(et).forEach(function(id){src[id]={libelle:et[id].libelle};});
+  return mjpcPromptVocabulaire(src,{});
+}
+function alPromptDefaut(){
+  return [
+    "Tu es professeur de fran\u00e7ais. Fais l'ANALYSE LOGIQUE compl\u00e8te de la phrase ci-dessous.",
+    "",
+    "PHRASE :",
+    "\u00ab {{PHRASE}} \u00bb",
+    "",
+    "Codes d'analyse \u00e0 utiliser EXACTEMENT (n'en invente pas d'autres) :",
+    "{{CODES}}"
+  ].join("\n");
+}
+function alChargerPrompt(cb){
+  mjpcPromptCharger(AL_BASE,'analyse_logique','corrige',{directives:alPromptDefaut()},function(p){cb(p.directives);});
+}
+function alEnregistrerPrompt(texte,cb){
+  mjpcPromptEnregistrer(AL_BASE,'analyse_logique','corrige','directives',texte,function(ok){cb(ok);});
+}
+/* Les lignes du collage : NOMMÉES quand elles ne peuvent pas servir, au lieu
+   d'être comptées en silence. Les motifs s'accumulent. */
+function alValiderCorrige(retour,ref){
+  var V=mjpcValidation(8);
+  var codes=Object.keys((ref&&ref.etiquettes)||{});
+  var lignes=String(retour||'').split(/\r?\n/);
+  var utiles=0;
+  lignes.forEach(function(l,i){
+    var t=l.trim();if(!t||t.charAt(0)==='#')return;
+    var parts=t.split('|').map(function(x){return x.trim();});
+    var kind=(parts[0]||'').toUpperCase();
+    if(kind!=='PROP'&&kind!=='ELEM'&&kind!=='LIEN'){
+      V.cite('ligne '+(i+1),'ne commence pas par PROP, ELEM ou LIEN : elle ne peut pas \u00eatre utilis\u00e9e.');return;
+    }
+    if((kind==='PROP'||kind==='ELEM')&&parts.length<3){
+      V.cite('ligne '+(i+1),'est incompl\u00e8te : il faut '+kind+' | CODE | texte exact.');return;
+    }
+    if((kind==='PROP'||kind==='ELEM')&&codes.length&&codes.indexOf(parts[1])<0){
+      V.cite('ligne '+(i+1),'utilise un code inconnu (\u00ab '+parts[1]+' \u00bb). Codes possibles : '+codes.join(', ')+'.');return;
+    }
+    if(kind==='LIEN'&&parts.slice(1).join('|').indexOf('->')<0){
+      V.cite('ligne '+(i+1),'est un lien sans fl\u00e8che : il faut LIEN | subordonnant -> ant\u00e9c\u00e9dent.');return;
+    }
+    utiles++;
+  });
+  V.exige(utiles>0,'Aucune ligne exploitable : demande \u00e0 l\u2019IA le format PROP | CODE | texte.');
+  return V;
+}
+/* ═══ fin § PROMPTS ═══ */
+
+// ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1873,7 +2093,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION = "2.3.0";        // ← la pastille affichée à l'écran doit dire ceci
+var APP_VERSION = "2.4.0";        // ← la pastille affichée à l'écran doit dire ceci
 var APP_VERSION_DATE = "2026-07-31";
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
@@ -2393,8 +2613,11 @@ function montNoyau(host, opts){
 //   L'app fabrique un prompt -> le prof dialogue dehors -> colle le retour -> le moteur prendra le relais.
 //   Servira aussi à l'OCR et à la banque d'exercices.
 function promptCorrige(texte, ref){
-  var et = (ref && ref.etiquettes) || {};
-  var lignesEt = Object.keys(et).map(function(id){ return "  - " + et[id].code + " : " + et[id].libelle; }).join("\n");
+  /* M-PROMPT-3 : le vocabulaire passe par le canon (mjpcPromptVocabulaire).
+     La sortie est IDENTIQUE à l'ancienne ligne « - CODE : libellé » — comparée
+     avant/après au banc. Le reste du prompt est inchangé. */
+  var lignesEt = (typeof alVocabulaireCodes==='function') ? alVocabulaireCodes(ref)
+                 : Object.keys((ref&&ref.etiquettes)||{}).map(function(id){ return "- " + id + " : " + ref.etiquettes[id].libelle; }).join("\n");
   return [
     "Tu es professeur de français. Fais l'ANALYSE LOGIQUE complète de la phrase ci-dessous.",
     "",
