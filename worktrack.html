@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plan de travail — Les Misérables</title>
-<meta name="app-version" content="2026-07-31b">
+<meta name="app-version" content="2026-08-01a">
 <!-- ^ marqueur de version — SOURCE UNIQUE : la pastille affichée à l'écran ET le mécanisme
      « Publier la mise à jour » lisent CE meta (APP_VERSION). À incrémenter à CHAQUE livraison
      (format AAAA-MM-JJ + lettre, croissant lexicographiquement — contrat de onAppVersion).
@@ -997,7 +997,9 @@
    sans toucher au moteur ni à l'UI. */
 // ═══════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.3.0 (2026-07-30) — socle commun de l'écosystème MJPC
+// ═══════════════════════════════════════════════════════════════════════════
+// MJPC-CORE v1.4.0 (2026-08-01) — socle commun de l'écosystème MJPC
+// v1.4.0 : + §12 zone prompt IA (composition, persistance, validation, injection) —
 // v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
 //          la protection est dans la donnée, pas dans le mur : le hub peut rester
 //          ouvert, il ne montre plus que de l'illisible. Prépare M-SÉCU-2/3.
@@ -1295,7 +1297,155 @@ function mjpcEmpreinte(texte,selHex){
     .then(function(bits){return _mjpcHex(bits);});
 }
 
-var MJPC_CORE_VERSION="1.3.0";
+
+// ── 12. Zone prompt IA : composition, persistance, validation, injection (v1.4.0) ──
+//   EXTRAIT des quatre chaînes existantes, pas inventé :
+//   · la composition en pièces assemblées à la volée vient de correction_dictee
+//     (assemblePrompt(directives, format)) — le cadrage change souvent, le format jamais ;
+//   · l'interpolation par jetons {{…}} vient d'elle aussi ({{JSON_DICTEE}}) ;
+//   · le vocabulaire GÉNÉRÉ depuis une source vient de l'atelier du site (SITE-COURS-2a) :
+//     une entrée ajoutée à la source y paraît sans qu'aucune liste soit retouchée ;
+//   · le cadrage imposé (« NE PRODUIS AUCUN JSON TOUT DE SUITE… ») vient de worktrack ;
+//   · les trois exigences de validation RATTRAPENT ce qu'aucune app ne fait entièrement :
+//     l'élément fautif CITÉ, le message qui dit QUOI CORRIGER, les refus qui S'ACCUMULENT ;
+//   · l'archive-avant-écrasement n'est dans AUCUNE des quatre : elle vient du chantier
+//     (M-SÉCU-3/-4, atCorbeilleCle) et le canon la rend disponible à toutes.
+//   NOTE DE NUMÉROTATION : ce canon porte DEUX sections « 8 » (Manifeste, Session partagée)
+//   et n'a PAS de §10. Rien n'est renuméroté ici — la dette est signalée, pas rangée.
+
+var MJPC_PROMPT_CADRAGE =
+  "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
+  "Commence par une discussion de cadrage, un point \u00e0 la fois. Proc\u00e8de par allers-retours : "+
+  "reformule, propose, mais attends mes validations.\n"+
+  "QUAND, ET SEULEMENT QUAND, JE TE DIS \u00ab produis le JSON \u00bb, tu produis le r\u00e9sultat SEUL, "+
+  "sans commentaire ni texte autour, sans balises de code.";
+
+/* Le vocabulaire, GÉNÉRÉ depuis une source fournie par l'app (jamais écrit à la main).
+   source : { id: { libelle, champs:[{k,l,kind}], reserve, groupe, note } }
+   options : { titre, groupes:{cle:'Libellé'}, exclureReserve (défaut true) } */
+function mjpcPromptVocabulaire(source, options){
+  var o=options||{};
+  var exclure=(o.exclureReserve===undefined)?true:!!o.exclureReserve;
+  var groupes=o.groupes||null;
+  var par={},ordre=[];
+  Object.keys(source||{}).forEach(function(id){
+    var e=source[id]||{};
+    if(exclure&&e.reserve)return;
+    var g=e.groupe||'';
+    if(!par[g]){par[g]=[];ordre.push(g);}
+    par[g].push({id:id,e:e});
+  });
+  var out=[];
+  if(o.titre)out.push(o.titre);
+  var cles=groupes?Object.keys(groupes).filter(function(g){return par[g]&&par[g].length;}):ordre;
+  cles.forEach(function(g){
+    if(g&&groupes&&groupes[g])out.push('### '+groupes[g]);
+    else if(g)out.push('### '+g);
+    (par[g]||[]).forEach(function(x){
+      var e=x.e;var l='- '+x.id+(e.libelle?(' : '+e.libelle):'');
+      if(e.note)l+=' ['+e.note+']';
+      var ch=e.champs||[];
+      if(ch.length){
+        l+=' \u2192 champs : '+ch.map(function(f){
+          var t=(f.kind==='list')?'liste de lignes':((f.kind==='area')?'texte long':((f.kind==='date')?'date AAAA-MM-JJ':'texte court'));
+          return f.k+(f.l?(' ('+f.l+', '+t+')'):(' ('+t+')'));
+        }).join(', ');
+      }
+      out.push(l);
+    });
+  });
+  return out.join('\n');
+}
+/* L'assemblage à la volée. pieces : {directives, vocabulaire, format, donnees:{JETON:valeur}}
+   Les jetons {{NOM}} sont remplacés en dernier, dans le texte entier. */
+function mjpcPromptComposer(pieces){
+  var p=pieces||{};
+  var bouts=[];
+  if(p.directives)bouts.push(p.directives);
+  if(p.cadrage!==false)bouts.push(MJPC_PROMPT_CADRAGE);
+  if(p.format)bouts.push(p.format);
+  if(p.vocabulaire)bouts.push(p.vocabulaire);
+  var t=bouts.join("\n\n");
+  var d=p.donnees||{};
+  Object.keys(d).forEach(function(k){
+    t=t.split('{{'+k+'}}').join(d[k]==null?'':String(d[k]));
+  });
+  return t;
+}
+/* La persistance : chemin par app ET par produit, défaut en dur qui fait foi si la base
+   est muette. Lecture REST (le mode test de l'app la court-circuite si elle en a un). */
+function mjpcPromptChemin(app,produit,piece){
+  return '/'+String(app)+'_prompts/'+String(produit)+'/'+String(piece);
+}
+function mjpcPromptCharger(base,app,produit,defauts,cb){
+  var pieces=Object.keys(defauts||{});
+  var res={},reste=pieces.length;
+  if(!reste){cb({});return;}
+  pieces.forEach(function(piece){
+    var url=String(base)+mjpcPromptChemin(app,produit,piece)+'.json';
+    var fini=function(v){
+      res[piece]=(typeof v==='string'&&v.length)?v:defauts[piece];   /* la base, sinon le défaut */
+      if(--reste===0)cb(res);
+    };
+    try{
+      fetch(url).then(function(r){return r.ok?r.json():null;}).then(fini,function(){fini(null);});
+    }catch(e){fini(null);}
+  });
+}
+/* L'écriture passe par les verdicts du socle (§9) : trois issues, jamais un succès supposé. */
+function mjpcPromptEnregistrer(base,app,produit,piece,texte,cb){
+  /* mjpcEcrireRest rend UNE issue (cb(issue)) — le canon la traduit en (ok, issue)
+     pour ses appelants : un verdict autre qu'ACCEPTEE n'est JAMAIS un succès. */
+  mjpcEcrireRest(String(base)+mjpcPromptChemin(app,produit,piece)+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(String(texte))},
+    function(issue){cb(mjpcVerdictOk(issue),issue);});
+}
+/* Le verdict, lu d'UNE façon partout : accepté, ou pas. */
+function mjpcVerdictOk(issue){
+  return !!(issue&&issue.etat===MJPC_ISSUE.ACCEPTEE);
+}
+
+/* LA VALIDATION — un accumulateur. Les refus s'ADDITIONNENT, chacun CITE l'élément
+   fautif et dit QUOI CORRIGER. (validateChapter et validateItems s'arrêtent au premier ;
+   validateDebatImport ne rend qu'un booléen : c'est ce que ceci remplace.) */
+function mjpcValidation(max){
+  var motifs=[],plafond=max||8;
+  return {
+    exige:function(condition,message){ if(!condition&&motifs.length<plafond)motifs.push(String(message)); return this; },
+    cite:function(element,message){ if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb '+String(message)); return this; },
+    inconnu:function(element,ou,quoiFaire){
+      if(motifs.length<plafond)motifs.push('\u00ab '+String(element)+' \u00bb'+(ou?(' ('+ou+')'):'')+' n\u2019existe pas'+(quoiFaire?(' \u2014 '+quoiFaire):'.'));
+      return this;
+    },
+    ok:function(){ return motifs.length===0; },
+    motifs:function(){ return motifs.slice(); },
+    texte:function(){ return motifs.join('\n'); }
+  };
+}
+/* L'INJECTION : archive AVANT s'il y a quelque chose à remplacer, ABANDON si l'archive
+   échoue, écriture ensuite, verdict rendu. Rien n'écrit sans que l'appelant ait confirmé.
+   opts : {base, chemin, donnees, ancien (null si rien à remplacer), cheminArchive, app} */
+function mjpcInjecterAvecArchive(opts,cb){
+  var o=opts||{};
+  var ecrire=function(){
+    mjpcEcrireRest(String(o.base)+o.chemin+'.json',
+      {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(o.donnees)},
+      function(issue){cb(mjpcVerdictOk(issue),issue,{archive:!!o.ancien});});
+  };
+  if(o.ancien==null){ecrire();return;}                 /* rien à remplacer : pas d'archive de rien */
+  var ts=Date.now();
+  var payload={_meta:{chemin:o.chemin,app:o.app||'',ts:ts},data:o.ancien};
+  mjpcEcrireRest(String(o.base)+(o.cheminArchive||('/corbeille/'+String(o.app||'app')+'-'+ts))+'.json',
+    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},
+    function(issue){
+      if(!mjpcVerdictOk(issue)){cb(false,issue,{archive:false,abandon:true});return;}   /* ABANDON : rien n'est remplacé */
+      ecrire();
+    });
+}
+
+var MJPC_CORE_VERSION="1.4.0";
+// ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
+
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -7544,6 +7694,48 @@ const DASH = {
     this._open=false; this._frozen=false; this._archiveMeta=null; this._engines={}; this._sess={}; this._prog={}; this._sommatifs={}; this._detailUid=null;
     const o=$("dashOverlay"); if(o) o.classList.remove("show"); const b=$("dashBody"); if(b) b.innerHTML=""; }
 };
+/* ═══════════════════════════════════════════════════════════════════════════
+   § PROMPTS — passage au canon §12 (M-PROMPT-2).
+   DETTE FERMÉE : saveTpl() n'écrivait NULLE PART (ni Firebase, ni localStorage :
+   une variable de session et un toast) alors que l'infobulle annonçait « mémorisées
+   sur ce poste ». Le prompt de Paul mourait au rechargement. Il vit désormais au hub.
+   Ce que l'app GARDE : PROMPT_CHAPTER comme défaut en dur, validateChapter et
+   chapterDefaults PARTAGÉES avec le garde-fou seed↔production (aucune divergence),
+   loadChapter et le format écrit au hub (/chapitres) — INCHANGÉS.
+   Ce que le canon APPORTE : la persistance à verdict, la validation qui ACCUMULE
+   et NOMME, l'aperçu avant écriture et l'archive AVANT remplacement.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var WT_BASE=(typeof MJPC_SECU2==='object'&&MJPC_SECU2&&MJPC_SECU2.hub)?MJPC_SECU2.hub:'https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app';
+var WT_PROMPT_PRODUIT='chapitre';
+function wtPromptDefauts(){return {directives:PROMPT_CHAPTER};}
+/* Lecture : le hub, sinon le défaut en dur qui FAIT FOI. */
+function wtChargerPrompt(cb){
+  mjpcPromptCharger(WT_BASE,'worktrack',WT_PROMPT_PRODUIT,wtPromptDefauts(),function(pieces){
+    PROF.tpl=pieces.directives;if(cb)cb(pieces.directives);
+  });
+}
+/* Écriture : par VERDICT (§9) — mjpcEcrireRest rend cb(issue), un seul argument. */
+function wtEnregistrerPrompt(texte,cb){
+  mjpcPromptEnregistrer(WT_BASE,'worktrack',WT_PROMPT_PRODUIT,'directives',texte,function(ok){cb(ok);});
+}
+/* La validation du chapitre — mêmes règles que validateChapter, mais les motifs
+   S'ACCUMULENT et CITENT la séance fautive. validateChapter reste EN PLACE et
+   INCHANGÉE : elle est partagée avec le garde-fou seed↔production (dr). */
+function wtValiderChapitre(o){
+  var V=mjpcValidation(8);
+  if(!o||typeof o!=='object'||Array.isArray(o)){V.exige(false,'La r\u00e9ponse doit \u00eatre un chapitre complet, pas une liste ni un texte.');return V;}
+  V.exige(o.meta&&o.meta.titre,'Il manque le titre du chapitre (\u00ab meta.titre \u00bb).');
+  V.exige(Array.isArray(o.seances)&&o.seances.length,'Il manque les s\u00e9ances (\u00ab seances \u00bb, une liste non vide).');
+  (Array.isArray(o.seances)?o.seances:[]).forEach(function(s,i){
+    var ref=(s&&(s.titre||s.id))||('s\u00e9ance n\u00b0 '+(i+1));
+    if(!s||!s.id||!s.titre){V.cite(ref,'n\u2019a pas d\u2019identifiant ou de titre : il lui faut les deux.');return;}
+    if(!s.carte||typeof s.carte.x!=='number'||typeof s.carte.y!=='number')V.cite(ref,'n\u2019a pas de position sur la carte (deux nombres, x et y).');
+    if(!s.aretes)V.cite(ref,'n\u2019a pas de liens vers les autres s\u00e9ances (\u00ab aretes \u00bb).');
+    if(!s.evaluation||!Array.isArray(s.evaluation.items))V.cite(ref,'n\u2019a pas de questions d\u2019\u00e9valuation (\u00ab evaluation.items \u00bb, une liste).');
+  });
+  return V;
+}
+/* ═══ fin § PROMPTS ═══ */
 const PROMPT_CHAPTER =
 "Tu vas m'aider à concevoir un CHAPITRE PLAN DE TRAVAIL pour ma classe.\n\n"+
 "NE PRODUIS AUCUN JSON TOUT DE SUITE.\n"+
@@ -7762,7 +7954,7 @@ const SENTINEL = {
     else if(id==='chap_livrer'){ PROF.tab='reglages'; PROF.render(); } }
 };
 const PROF = {
-  authed:false, tab:"creation", tpl:PROMPT_CHAPTER,
+  authed:false, tab:"creation", tpl:PROMPT_CHAPTER,   /* défaut en dur ; wtChargerPrompt() lit le hub */
   _prog:{}, _engines:{}, _depth:{}, _progUnsub:null,   // suivi : progress de la classe + moteurs hydratés (lazy) + profondeur de chaque carte
   // abonne le progress quand le panneau prof est ouvert ; sert au détail des cartes dépliables du Suivi
   watchProgress(){ if(this._progUnsub) return; const chap=CHAPTER.meta.id||"chapitre";
@@ -8036,7 +8228,7 @@ const PROF = {
       <div class="prof-sec"><div class="d">Impose d'abord une discussion cadrée, puis sort le JSON injectable au format du moule (séances, chemins idéaux, aides, fiche 4D et QCM compris).</div>
         <div class="prof-row">
           <button class="btn primary" title="Copie dans le presse-papier le prompt complet à coller dans une IA pour générer un chapitre au bon format JSON" onclick="PROF.copyTpl()">📋 Copier le prompt</button>
-          <button class="btn ghost" title="Édite le texte du prompt IA (le modèle de consignes envoyé à l'IA) — tes modifications sont mémorisées sur ce poste" onclick="PROF.editTpl()">✏️ Modifier le template</button></div>
+          <button class="btn ghost" title="Modifie les consignes envoyées à l'IA — elles te suivent d'un appareil à l'autre" onclick="PROF.editTpl()">✏️ Modifier le template</button></div>
         <pre class="prof-pre" id="promptPre">${esc(tpl)}</pre></div>`; },
   editTpl(){ const tpl=this.tpl;
     $("profModal").innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -8046,7 +8238,14 @@ const PROF = {
         <div class="prof-row"><button class="btn primary" title="Enregistre tes modifications du prompt IA sur ce poste" onclick="PROF.saveTpl()">💾 Enregistrer</button>
           <button class="btn ghost" title="Remet le prompt IA dans sa version d'origine (annule tes modifications du template)" onclick="PROF.resetTpl()">🔄 Restaurer par défaut</button></div>
         <div class="d">La persistance Firebase du template viendra au branchement ; pour l'instant, valable le temps de la session.</div></div>`; },
-  saveTpl(){ this.tpl=($("tplEdit")||{}).value||this.tpl; toast("Template enregistré."); this.promptView(); },
+  saveTpl(){ const t=($("tplEdit")||{}).value||this.tpl;
+    toast("Enregistrement\u2026");
+    wtEnregistrerPrompt(t,(ok)=>{                       /* M-PROMPT-2 : le prompt vit au hub */
+      if(ok){ this.tpl=t; toast("Consignes enregistr\u00e9es \u2014 elles te suivent d\u2019un appareil \u00e0 l\u2019autre."); }
+      else  { toast("L\u2019enregistrement n\u2019a pas abouti \u2014 ton texte est toujours \u00e0 l\u2019\u00e9cran."); }
+      this.promptView();
+    });
+  },
   resetTpl(){ this.tpl=PROMPT_CHAPTER; toast("Template par défaut restauré."); this.editTpl(); },
   copyTpl(){ const t=this.tpl;
     navigator.clipboard?navigator.clipboard.writeText(t).then(()=>toast("Prompt copié."),()=>toast("Copie indisponible, sélectionne le texte.")):toast("Copie indisponible."); },
@@ -8058,10 +8257,41 @@ const PROF = {
         <textarea id="profInject" class="txtin" style="width:100%;min-height:240px;font-family:ui-monospace,monospace;font-size:.78rem" placeholder='{ "meta": { "titre": … }, "seances": [ … ] }'></textarea>
         <div id="injErr" style="color:var(--fire2);font-size:.82rem;margin-top:6px"></div>
         <div class="prof-row"><button class="btn primary" title="Remplace le chapitre actif par ce JSON — les progressions des élèves sont conservées" onclick="PROF.doInject()">✓ Valider et injecter</button></div></div>`; },
-  doInject(){ const raw=($("profInject")||{}).value||""; let obj;
-    try{ obj=JSON.parse(raw); }catch(e){ $("injErr").textContent="JSON illisible : "+e.message; return; }
-    const err=validateChapter(obj); if(err){ $("injErr").textContent="Refusé : "+err; return; }
-    loadChapter(obj); },
+  doInject(){ const raw=String(($("profInject")||{}).value||"").trim().replace(/^```(?:json)?/i,"").replace(/```$/,"").trim();
+    let obj;
+    try{ obj=JSON.parse(raw); }
+    catch(e){ $("injErr").textContent="Je ne peux pas lire cette r\u00e9ponse : elle est incompl\u00e8te ou mal ferm\u00e9e ("+e.message+"). Demande \u00e0 l\u2019IA de redonner le r\u00e9sultat en entier, sans rien autour."; return; }
+    /* M-PROMPT-2 : les motifs S'ACCUMULENT et CITENT la séance fautive */
+    const V=wtValiderChapitre(obj);
+    if(!V.ok()){ $("injErr").innerHTML="Je ne peux pas utiliser cette r\u00e9ponse :<br>\u2022 "+V.motifs().map(x=>String(x).replace(/</g,"&lt;")).join("<br>\u2022 "); return; }
+    this._injObj=obj; this.injApercu(); },
+  /* L'APERÇU : rien ne s'écrit avant confirmation. */
+  injApercu(){ const o=this._injObj; if(!o) return;
+    const ancien=(typeof CHAPTER==="object"&&CHAPTER&&CHAPTER.meta)?CHAPTER:null;
+    const nb=(o.seances||[]).length;
+    $("injErr").innerHTML='<div class="prof-sec"><b>Voici ce qui sera enregistr\u00e9</b><br>'
+      +'Chapitre \u00ab '+String(o.meta.titre).replace(/</g,"&lt;")+' \u00bb, '+nb+' s\u00e9ance(s).<br>'
+      +(ancien
+        ? ('Il remplacera \u00ab '+String(ancien.meta.titre||"").replace(/</g,"&lt;")+' \u00bb, qui part d\u2019abord \u00e0 la corbeille. <b>Les progressions des \u00e9l\u00e8ves ne sont pas touch\u00e9es</b> (elles vivent \u00e0 part).')
+        : 'Aucun chapitre n\u2019est charg\u00e9 : rien ne sera perdu.')
+      +'<br>Rien n\u2019est \u00e9crit tant que tu n\u2019as pas confirm\u00e9.'
+      +'<div class="prof-row" style="margin-top:10px">'
+      +'<button class="btn ghost" onclick="PROF.injAnnuler()">Annuler</button>'
+      +'<button class="btn primary" onclick="PROF.injConfirmer()">Enregistrer ce chapitre</button></div></div>'; },
+  injAnnuler(){ this._injObj=null; $("injErr").textContent=""; },
+  injConfirmer(){ const o=this._injObj; if(!o) return;
+    const ancien=(typeof CHAPTER==="object"&&CHAPTER&&CHAPTER.meta)?JSON.parse(JSON.stringify(CHAPTER)):null;
+    const fin=()=>{ this._injObj=null; $("injErr").textContent=""; loadChapter(o); };
+    if(!ancien){ fin(); return; }                      /* rien à perdre : pas d'archive de rien */
+    const ts=Date.now();
+    const chemin=MJPC.ROOT+"/chapitres/"+(ancien.meta.id||"chapitre");
+    mjpcEcrireRest(WT_BASE+"/corbeille/"+new Date(ts).toISOString().slice(0,10)+"/worktrack-chapitre_"+ts+".json",
+      {method:"PUT",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({_meta:{motif:"worktrack-chapitre",chemin:chemin,app:"worktrack",ts:ts},data:ancien})},
+      (issue)=>{
+        if(!mjpcVerdictOk(issue)){ $("injErr").textContent="La mise \u00e0 la corbeille a \u00e9chou\u00e9 \u2014 rien n\u2019a \u00e9t\u00e9 remplac\u00e9. R\u00e9essaie quand la connexion est stable."; return; }
+        fin();
+      }); },
 
   /* ── Snapshot / Restaurer par fichier ── */
   snapshot(){ const blob=new Blob([JSON.stringify(CHAPTER,null,2)],{type:"application/json"});
