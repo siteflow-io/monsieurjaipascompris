@@ -707,6 +707,28 @@ button{font-family:inherit;cursor:pointer;border:none}
 @media (max-width:480px){#mjpc-secu2-profbtn{flex-direction:column;align-items:stretch}}
 /* ═══ fin M-SÉCU-2 ═══ */
 </style>
+<style>
+/* ═══ § DESCRIPTIF PROF (M-DOC-1) — forme du canon worktrack, zéro JavaScript ═══ */
+.doc-sec{margin-top:28px;padding-top:14px;border-top:1px solid rgba(0,0,0,.15)}
+.doc-sec h4{margin:0 0 6px 0;font-size:1.05rem}
+.doc-sec .d{font-size:.88rem;opacity:.8;line-height:1.5;margin-bottom:10px}
+.doc-sec details{border:1px solid rgba(0,0,0,.15);border-radius:10px;margin:6px 0;background:rgba(255,255,255,.5)}
+.doc-sec summary{cursor:pointer;padding:10px 12px;font-weight:600;min-height:44px;display:flex;align-items:center}
+.doc-sec summary::marker{color:#7c5cff}
+.doc-sec .db{padding:0 12px 12px;font-size:.92rem;line-height:1.6}
+.doc-sec .why{font-style:italic;opacity:.85}
+.doc-sec .ref{display:block;margin-top:8px;font-size:.84rem;opacity:.75}
+.doc-sec .db b{font-weight:700}
+.doc-sec .db ul{margin:6px 0 6px 18px}
+@media (max-width:480px){.doc-sec .db{font-size:.9rem}.doc-sec summary{padding:12px 10px}}
+@media print{
+  .doc-sec details{break-inside:avoid;page-break-inside:avoid;border:1px solid #999;background:#fff}
+  .doc-sec details>div.db{display:block !important}
+  .doc-sec summary{font-weight:700}
+  .doc-sec .why{color:#333}
+}
+/* ═══ fin § DESCRIPTIF PROF ═══ */
+</style>
 <body>
 <div id="root"></div>
 <script>/**
@@ -1924,7 +1946,7 @@ function txt(cle){
    ═══════════════════════════════════════════════════════════════════════════ */
 // Première version portée par l'app : la passe M14 (27/07/2026) la met au niveau des
 // autres apps de l'écosystème (dictee_universelle 2.0.0, analyse_logique 2.0.0).
-var APP_VERSION = "2.4.0";   // ← la pastille affichée à l'écran doit dire ceci
+var APP_VERSION = "2.5.0";   // ← la pastille affichée à l'écran doit dire ceci
 
 var MJPC_APP = {
   id: "applause_meter",
@@ -2494,6 +2516,8 @@ function parseCriteresJSON(txt){
 }
 
 // ════════════ Carte « Générer 4 critères avec une IA » (étape 9) ════════════
+var DOC_PROF_HTML = "<div class=\"prof-sec doc-sec\"><h4>📖 Comment l’app fonctionne — pédagogie et mécanique</h4><div class=\"d\">Chaque dispositif : l’intention d’abord, puis la mécanique exacte, au chiffre près. Aucun terme technique sans définition (lexique en bas).</div><details><summary>Ce que la classe évalue</summary><div class=\"db\"><span class=\"why\">Intention : faire écouter vraiment — on ne juge pas l’élève, on juge une lecture, sur des points annoncés d’avance.</span><br>Un passage est évalué sur <b>3 critères au minimum, 8 au maximum</b>. Par défaut il y en a <b>quatre</b> : « On t’entend bien », « C’est clair », « Le rythme est agréable », « C’est vivant ». Chaque critère porte trois choses : un emoji, un <b>libellé pour le lecteur</b>, et la <b>question posée aux votants</b> (par exemple : « Est-ce qu’on l’entendait bien ? »). Les critères se modifient avant la séance ; les votants voient la question, pas le libellé.</div></details><details><summary>Les quatre réponses possibles</summary><div class=\"db\"><span class=\"why\">Intention : une échelle courte et sans note — l’élève dit ce qu’il a perçu, il ne met pas un chiffre.</span><br>Pour chaque critère, un votant choisit entre <b>quatre réponses</b> : 😕 <b>Pas vraiment</b> · 🙂 <b>Un peu</b> · 😊 <b>Plutôt</b> · 🤩 <b>Tout à fait</b>. Il n’y a pas de réponse neutre : l’échelle a un nombre pair de paliers, donc chaque votant penche d’un côté.</div></details><details><summary>L’applaudimètre pendant la lecture</summary><div class=\"db\"><span class=\"why\">Intention : rendre l’écoute active — la classe réagit en direct, et l’enthousiasme retombe s’il n’est pas nourri.</span><br>Pendant le passage, chaque tap ajoute <b>6 points</b> à la jauge, et la jauge <b>perd 35 % de sa valeur par seconde</b>. Un passage dure <b>60 secondes</b> par défaut. <b>Cette durée est figée au lancement</b> : la modifier pendant qu’un élève lit n’a aucun effet sur le passage en cours. La jauge s’affiche au tableau sur <b>64 segments</b>.</div></details><details><summary>Comment le bilan du lecteur est calculé</summary><div class=\"db\"><span class=\"why\">Intention : un repère robuste, que deux votes extrêmes ne renversent pas.</span><br>Pour chaque critère, le bilan retient <b>la médiane des votes, et non leur moyenne</b> : on range les votes par ordre croissant et on prend celui du milieu. <b>Quand le nombre de votes est pair</b>, il n’y a pas de milieu : l’app prend alors <b>la moyenne des deux votes centraux, arrondie</b>. Conséquence à connaître : un vote très bas isolé ne fait pas chuter le bilan — c’est voulu, et c’est ce qui distingue cette mesure d’une moyenne.</div></details><details><summary>Les quatre niveaux de maîtrise</summary><div class=\"db\"><span class=\"why\">Intention : parler la langue du bulletin, pour que l’élève et sa famille s’y retrouvent.</span><br>Le bilan se traduit en <b>quatre niveaux</b>, ceux du bulletin : <b>Maîtrise insuffisante</b>, <b>Maîtrise fragile</b>, <b>Maîtrise satisfaisante</b>, <b>Très bonne maîtrise</b>, avec une couleur chacun. Les quatre réponses de vote et les quatre niveaux se correspondent rang pour rang.</div></details><details><summary>Les points de contrôle</summary><div class=\"db\"><span class=\"why\">Intention : fixer un seuil avant d’écouter, pour ne pas juger après coup.</span><br>Le mode « points de contrôle » est <b>désactivé par défaut</b>. Activé, il compare le résultat de chaque critère à un <b>seuil exprimé en pourcentage, réglable critère par critère</b> — <b>70 % pour les quatre</b> à l’installation. Le tableau affiche alors un compteur de critères atteints.</div></details><details><summary>Le mode test</summary><div class=\"db\"><span class=\"why\">Intention : éprouver l’app sans toucher aux données d’une vraie classe.</span><br>En mode test, les codes de test <b>priment sur les codes réels</b> : l’app ne consulte pas la liste des codes du site. Rien de ce qui est fait en mode test n’atteint les données des élèves.</div></details><details><summary>Lexique</summary><div class=\"db\"><span class=\"why\">Intention : aucun mot technique ne doit rester sans définition.</span><br><ul><li><b>Passage</b> : la lecture à voix haute d’un élève, minutée.</li><li><b>Critère</b> : un point précis sur lequel la classe se prononce (la voix, le rythme…).</li><li><b>Votant</b> : un élève qui évalue le passage d’un camarade.</li><li><b>Médiane</b> : la valeur du milieu quand on range les votes par ordre croissant — à ne pas confondre avec la moyenne.</li><li><b>Jauge</b> : la barre affichée au tableau, qui monte quand la classe tape et redescend toute seule.</li><li><b>Seuil</b> : le pourcentage à atteindre pour qu’un critère soit considéré comme réussi.</li><li><b>Niveau de maîtrise</b> : la traduction du bilan dans les quatre niveaux du bulletin.</li></ul></div></details></div>";
+/* M-DOC-1 : le descriptif prof, en QUEUE des réglages — la doc ne pousse pas les actions. */
 function CarteIACriteres(p){
   var s1=useState(""), theme=s1[0], setTheme=s1[1];
   var sN=useState(p.nbActuel||4), nb=sN[0], setNb=sN[1];
@@ -2842,7 +2866,8 @@ function Accueil(p){
     h("button",{className:"btn-ghost",style:{marginTop:8,padding:"10px 16px",borderRadius:10,opacity:busy?.6:1},onClick:lancerTest,disabled:busy,
       title:"Crée une classe fictive de 6 élèves inventés et active le mode test : applaudissements et votes simulés. Les identités fictives sont vérifiées contre les données réelles avant tout enregistrement."},
       busy? "⏳ Vérification des identités fictives…" : "⚙️ Mode test"),
-    testErr? h("div",{style:{maxWidth:520,margin:"12px auto 0",padding:"11px 13px",background:"rgba(220,38,38,.12)",border:"1.5px solid var(--rouge)",borderRadius:10,fontSize:".86rem",lineHeight:1.45,textAlign:"left"}},testErr) : null
+    testErr? h("div",{style:{maxWidth:520,margin:"12px auto 0",padding:"11px 13px",background:"rgba(220,38,38,.12)",border:"1.5px solid var(--rouge)",borderRadius:10,fontSize:".86rem",lineHeight:1.45,textAlign:"left"}},testErr) : null,
+    h("div",{className:"prof-sec doc-sec",dangerouslySetInnerHTML:{__html:DOC_PROF_HTML}})
   );
 }
 
