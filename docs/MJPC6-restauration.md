@@ -454,3 +454,22 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **DETTE ANNULÉE AU PASSAGE** : `debat_singes` vaut **`null`** au hub — supprimé le 17/07 comme le déclarait le manifeste de `pilotage_debat_s3`. Le signalement de l'exécutant était juste.
 - **LES SEPT TEXTES `usage`, validés par Paul** (le huitième et le neuvième — les réécritures — restent « usage à décrire »). Ils sont dans `MJPC_APP.usage` de chaque app et **se corrigent en une ligne**.
 - **Restauration en cas de `BUG`** : par fichier, le commit précédent ramène à l'état AVANT du tableau.
+
+## Point de retour — PROMOTION M-DOC-1 · LE DESCRIPTIF PROF, PREMIER LOT, 01/08/2026
+| app | AVANT (md5 · o) | blob sha AVANT | APRÈS (md5 · o) | pastille |
+|---|---|---|---|---|
+| `applause_meter` | `77d24e20f0831de2d30985db1fa507cd` · 659 222 | `494c91c2b8034749210f79091ee11f14f5da37ec` | `62cee16d74e95662e14354d6651199a6` · 665 724 | 2.5.0 |
+| `analyse_logique` | `ca3fb3d1f326bb600eb0256d0ae335fa` · 575 400 | `b345569b172f910ed74fe0fb4e47d05d63c0985a` | `5e3663bf86625a581a7468fae31d6dd5` · 581 601 | 2.6.0 |
+| `evaluation-qcm` | `8e65e5183b34951c6b6e8486e8b2a173` · 541 240 | `0e41b0ba7c547154a63ee3996f09dc5f134ddb63` | `2588a35aa077f02796dab999cce55652` · 547 444 | 7.5.0 |
+
+- **LE CANON EST `worktrack`** (demande de Paul du 11/06, confirmée le 01/08). Forme reproduite : section **« 📖 Comment l'app fonctionne — pédagogie et mécanique »** en **queue des réglages prof**, volets **`<details>` NATIFS, zéro JavaScript**, **intention en italique D'ABORD puis mécanique chiffrée**, **lexique en dernier volet**.
+- **RAISON D'ÊTRE** : *mémoire institutionnelle — pour soi-même dans six mois, pour répondre aux contestations d'élèves AU CHIFFRE PRÈS, pour les tiers : collègues, parents, inspection.* **Pendant PROF du « ? » élève** : l'aide élève reste intacte à l'octet dans les trois.
+- **22 VOLETS** : 8 · 7 · 7.
+- **TROIS NUANCES DÉBUSQUÉES PAR LA VÉRIFICATION AU CODE — c'est l'objet même du morceau** : ① `applause_meter` calcule **une MÉDIANE, pas une moyenne** — *un descriptif naïf aurait écrit « moyenne », et Paul aurait répondu FAUX à un élève qui conteste* ; ② `evaluation-qcm` en mode partiel a **un plancher à 0 ET un plafond** — *un élève qui coche une bonne et trois mauvaises obtient 0, pas moins 2* ; ③ `analyse_logique` : **une dimension de poids zéro ne compte pas dans le total possible**, donc **ne pénalise pas** — nuance trouvée en rédigeant, dans aucun cadrage.
+- **🔴 CE QUE LE BANC ÉCRAN A TROUVÉ, ET QUE LE STATIQUE NE POUVAIT PAS VOIR** : `evaluation-qcm` n'avait que **SIX volets** alors que le rapport en annonçait sept — le septième portait *« à préciser au moment de la rédaction »* et **n'avait jamais été écrit**. **Comblé** : « Le déroulé d'une passation », écrit depuis les boutons mesurés, intention *« le professeur garde la main sur le rythme — le chronomètre cadence, il ne commande pas »*. **C'est exactement l'exigence de Paul : « on ne peut pas décrire une app partiellement ».**
+- **PREUVE D'ÉCRAN — 21/21** : volets rendus en `<details>` natifs (8, 7, 7 comptés dans le DOM) · **un clic ouvre le volet sans aucun JavaScript** · intention en tête · lexique en dernier · **390 px tous volets ouverts : zéro débordement**, cibles ≥ 44 px · **impression** : tous les contenus visibles même volets fermés, chaque volet non coupé.
+- **AUDIT** : diffs 4, 4 et 5 hunks · **0 fonction supprimée ×3** · une seule fonction modifiée par app · **l'aide ÉLÈVE intacte à l'octet ×3** · les **cinq `valider` d'`applause_meter` inchangées** · parseurs verts.
+- **CORRECTIF HORS MANDAT, prouvé** : le gabarit qui **ÉCRASAIT la pastille** d'`evaluation-qcm` est retiré — elle dit enfin sa version.
+- **NON PROUVÉ, déclaré** : que Paul CONNECTÉ voie la section à sa place exacte (pose vérifiée statiquement, **pas cliquée**) · Chrome Windows · l'impression papier réelle.
+- **DETTE OUVERTE, décidée par Paul le 01/08** : **`DOC_PROF_HTML` est entièrement EN DUR.** Or ce descriptif est **la source de l'IA de conception de chapitre** : figé dans le code, chaque précision exigerait un morceau de développement, **donc il vieillira**. **À rendre ÉDITABLE ET PERSISTÉ, volet par volet**, sur le mécanisme du canon §12. **Morceau suivant.**
+- **Restauration en cas de `BUG`** : par app, le commit précédent ramène à l'état AVANT du tableau.
