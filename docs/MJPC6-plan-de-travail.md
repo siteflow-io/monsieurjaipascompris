@@ -1,3 +1,22 @@
+# ⚠ AVERTISSEMENT — À LIRE AVANT TOUTE CHOSE, CONSCIENCE COMME EXÉCUTANT
+
+**Posé par Paul le 01/08 : *« à partir de maintenant, toute conscience et tout exécutant doit avoir ça comme information en tout premier. Tant pis si ça consomme des tokens supplémentaires. Là on arrive à un niveau où le soin pédagogique doit être extrême. »***
+
+**PAS DE CODAGE SANS VUE D'ENSEMBLE.** Ce chantier n'est pas une suite de fonctionnalités : c'est **une chaîne**, et chaque morceau en est un maillon. Un champ qui paraît local commande souvent tout ce qui vient après.
+
+**LA CHAÎNE, telle qu'elle est déjà écrite dans les documents** :
+**le CHAPITRE** déclare ses notions et ses compétences → **la CONCORDANCE** les rend canoniques d'une app à l'autre (*« une erreur d'accord en dictée, une faute d'accord en réécriture et une carte "accords" de worktrack deviennent LA MÊME notion, mesurable dans le temps »* — DOCTRINE) → **le PROFIL LONGITUDINAL** agrège (M15 pour l'élève, M-PILOTAGE pour le professeur) → **le CONSEIL** devient possible (*« tu as eu 12 à ton étude de texte ; tu avais travaillé cette notion en séance 3 du chapitre 2 ; ta réponse à telle question portait dessus ; va consolider ici »* — Paul, 01/08) → **M20** reçoit l'entraînement prescrit.
+**Le COCKPIT et la famille K des composantes agrégatives lisent la même chaîne.**
+
+**L'INCIDENT QUI A FAIT POSER CET AVERTISSEMENT (01/08)** : la conscience allait faire ajouter un champ `notions` au chapitre **comme une simple étiquette**, sans voir qu'il devient **le point d'entrée de M15, M20, du COCKPIT et de la famille K** — puisque les neuf apps portent toutes `notions: []` en attente de la Concordance. **On code un maillon en croyant faire une pièce.**
+
+**CE QUE ÇA IMPOSE** :
+① **Avant tout morceau touchant la taxonomie, les notions, les compétences, le chapitre ou le profil : chercher CE QUI EN DÉPEND EN AVAL, et le dire dans le prompt.** L'index ci-dessous donne où chercher.
+② **Tout est déjà écrit** — la DOCTRINE porte le sens, le CHANTIER les dépendances, le JOURNAL les décisions. **Cet avertissement ne remplace rien : il oblige à les lire ensemble.**
+③ **Un champ qu'on ajoute est un champ dont quelqu'un dépendra.** S'il n'est pas rempli, ou pas écrit au hub, **l'aval lira son absence comme une information** — c'est ce qui est arrivé le 01/08 : la validation du chapitre contrôlait `notions`, l'injection ne les écrivait pas.
+
+---
+
 # MJPC 6 — INDEX DU CHANTIER
 **Le plan est le PONT entre les conversations, sous forme d'index (règle du 01/08).**
 Il ne porte **aucun contenu propre** : il dit ce qui existe et **où c'est écrit**.
