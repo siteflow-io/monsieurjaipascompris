@@ -20,6 +20,10 @@ Mesuré le 30/07 sur les 10 fichiers de production, lus authentifiés :
 - **MJPC bypasse les portails, il ne les remplace jamais** ; chaque app reste autonome.
 **Ce qui reste ouvert n'est PAS la connexion, c'est le COFFRE** : voir M-SÉCU ci-dessous. Distinguer les deux est essentiel — la serrure est posée, la porte du coffre n'a jamais existé.
 
+### La taxonomie — 7 DOMAINES, 210 NOTIONS, dont un pan littéraire sourcé (02/08)
+**v1.4.0** : 5 domaines de langue (154 notions, audit Éduscol du 20/07) **+ `dom-litterature` et `dom-versification`** (56 notions). **Chaque notion littéraire porte un champ `source`** : soit la citation verbatim d'un attendu de fin d'année (28), soit `CHOIX DE PROGRESSION DE PAUL` (28). **Les deux supports — `taxonomie_atelier.json` au dépôt et `/taxonomie` au hub — sont identiques, garantis par construction** (une seule chaîne sérialisée, écrite deux fois). **ACQUIS — ne pas redécouvrir.**
+**Ce qui reste vrai et important** : **aucune app ne remonte encore de notion** (les neuf portent `notions: []`). Le chapitre tague, rien ne lit — **c'est la Concordance qui fermera la chaîne.**
+
 ### La zone prompt — CANONIQUE dans 7 fichiers sur 10 (01/08)
 `index.html`, `correction_dictee`, `worktrack`, `dictee_universelle`, `pilotage_debat_s3`, `evaluation-qcm`, `analyse_logique`, `applause_meter` portent le canon **§12** : prompt composé de pièces (directives éditables + cadrage imposé + format + vocabulaire **généré** + jetons de données), **persisté avec défaut en dur en repli**, validation **accumulatrice qui cite l'élément fautif**, injection avec **archive avant et abandon si elle échoue**. **ACQUIS — ne pas redécouvrir.**
 **RESTENT HORS CANON** : `reecriture` et `reecriture_bb4e` (chantier réécriture). **Les chemins de prompts ne sont PAS uniformes** et c'est assumé : le mécanisme est canonique, l'adresse reste locale — uniformiser coûterait une migration pour rien.
