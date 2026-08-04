@@ -861,6 +861,7 @@ body.at-corps-fige{overflow:hidden}
 .at-porte-t{font-weight:600;font-size:.95rem}
 .at-porte-s{font-size:.78rem;opacity:.62;line-height:1.35}
 @media(max-width:430px){.at-porte{padding:12px 13px}.at-porte-t{font-size:.9rem}}
+.at-ia-sous-min{font-size:.78rem;opacity:.62;margin:-2px 0 8px;line-height:1.4}
 /* ═══ fin § ZONE PROMPT IA ═══ */
 </style>
 <style>
@@ -2476,7 +2477,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.22.0";
+var APP_VERSION="8.24.0";
 var APP_VERSION_DATE="2026-07-30";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -2706,18 +2707,50 @@ function mjpcInjecterAvecArchive(opts,cb){
 var MJPC_OUTILS_CACHE=null;   /* rempli par mjpcChargerOutils ; jamais inventé */
 
 /* La liste, GÉNÉRÉE. entrees : {id:{nom,usage,quandPas}} — telles que les apps les déclarent. */
+/* M-USAGES-2 ② : le site et la taxonomie ne sont pas des outils pédagogiques.
+   La taxonomie est déjà donnée EN ENTIER dans le prompt (210 notions) ; le site
+   est le lieu, pas un outil. Ils restent au hub — l'écran d'écart les suit. */
+var MJPC_OUTILS_HORS_LISTE=['index','taxonomie'];
+/* M-USAGES-2 ③ : les applications À VENIR. Décision de Paul : elles entrent dans
+   le prompt COMME SI ELLES EXISTAIENT (« ça arrivera assez tôt ; au pire je
+   préciserai dans la discussion à quel stade je suis dans le dév »).
+   ⚠ Elles n'ont PAS de fichier, donc pas de MJPC_APP : elles ne peuvent pas venir
+   du hub. Elles sont donc déclarées ICI, marquées « à venir », et
+   MJPC_OUTILS_HORS_LISTE les tient hors de l'écran d'écart — qui ne compte que ce
+   que le hub porte. Ce que la méthode NE COUVRE PAS : le jour où l'une d'elles
+   naîtra, il faudra RETIRER son entrée d'ici, sinon elle paraîtra deux fois. */
+var MJPC_OUTILS_A_VENIR={
+  etude_texte:{nom:'\u00c9tude de texte',aVenir:true,
+    usage:'L\u2019\u00e9l\u00e8ve r\u00e9pond aux questions d\u2019analyse sur un texte, avec le texte sous les yeux ; le professeur corrige et rend les r\u00e9ponses annot\u00e9es.',
+    quandPas:'Pas pour la r\u00e9daction longue : pour cela, c\u2019est R\u00e9daction.'},
+  redaction:{nom:'R\u00e9daction',aVenir:true,
+    usage:'L\u2019\u00e9l\u00e8ve r\u00e9dige un devoir long selon un sujet et une grille de crit\u00e8res ; le professeur \u00e9value crit\u00e8re par crit\u00e8re et rend un bilan d\u00e9taill\u00e9.',
+    quandPas:'Pas pour des r\u00e9ponses courtes \u00e0 un texte : pour cela, c\u2019est \u00c9tude de texte.'},
+  entrainement:{nom:'Entra\u00eenement',aVenir:true,
+    usage:'L\u2019\u00e9l\u00e8ve s\u2019entra\u00eene seul sur les notions qu\u2019il ma\u00eetrise mal, en choisissant lui-m\u00eame ce qu\u2019il r\u00e9vise ; les exercices viennent de ses erreurs r\u00e9elles.',
+    quandPas:'Pas pour une \u00e9valuation not\u00e9e : c\u2019est un entra\u00eenement, pas un contr\u00f4le.'}
+};
 function mjpcPromptOutils(entrees){
-  var ids=Object.keys(entrees||{});
+  var tous={};
+  Object.keys(entrees||{}).forEach(function(k){tous[k]=entrees[k];});
+  Object.keys(MJPC_OUTILS_A_VENIR).forEach(function(k){if(!tous[k])tous[k]=MJPC_OUTILS_A_VENIR[k];});
+  entrees=tous;
+  var ids=Object.keys(entrees||{}).filter(function(id){return MJPC_OUTILS_HORS_LISTE.indexOf(id)<0;});
   if(!ids.length)return "  (la liste de mes applications n\u2019a pas pu \u00eatre lue : demande-la-moi avant de me conseiller une activit\u00e9.)";
   var out=[];
   ids.sort().forEach(function(id){
-    var e=entrees[id]||{};
+    /* M-USAGES-2 ① : publierManifeste écrit {app:{id,nom,usage,quandPas}, version,
+       publie_le} — la déclaration vit sous `app`. On lisait un niveau trop haut,
+       si bien que les onze entrées affichaient « usage à décrire », y compris
+       celles qui portaient le leur. La forme plate reste tolérée. */
+    var brut=entrees[id]||{};
+    var e=brut.app||brut;
     var nom=e.nom||id;
     if(!e.usage){
       out.push("  \u2022 "+nom+" \u2014 (usage \u00e0 d\u00e9crire : cette application existe mais personne n\u2019a dit quand la proposer)");
       return;
     }
-    var l="  \u2022 "+nom+" : "+e.usage;
+    var l="  \u2022 "+nom+(brut.aVenir||e.aVenir?" (\u00e0 venir)":"")+" : "+e.usage;
     if(e.quandPas)l+=" \u2014 "+e.quandPas;
     out.push(l);
   });
@@ -2739,6 +2772,14 @@ var MJPC_PRESENTATION=
   "  \u2022 \u00ab La m\u00e9canique me permet de d\u00e9velopper l\u2019humain \u00bb : ce qui est r\u00e9p\u00e9titif se m\u00e9canise pour lib\u00e9rer du temps d\u2019enseignement.\n"+
   "  \u2022 C\u2019est le professeur qui d\u00e9cide. Tu proposes, tu signales, tu argumentes \u2014 tu ne tranches pas, et tu ne "+
   "combles jamais un manque en l\u2019inventant sans le dire.\n\n"+
+  "CE QUE CES DESCRIPTIONS DISENT, ET CE QU\u2019ELLES NE DISENT PAS. Elles te disent QUAND proposer un outil, "+
+  "pas comment il fonctionne en d\u00e9tail. Si tu as besoin du d\u00e9tail, va lire l\u2019application elle-m\u00eame : "+
+  "elles sont \u00e0 l\u2019adresse siteflow-io.github.io/monsieurjaipascompris/<identifiant>.html (par exemple "+
+  "worktrack.html). Quatre d\u2019entre elles portent en plus un descriptif professeur int\u00e9gr\u00e9, dans leurs "+
+  "r\u00e9glages, sous le titre \u00ab Comment l\u2019app fonctionne \u2014 p\u00e9dagogie et m\u00e9canique \u00bb : "+
+  "worktrack, applause_meter, analyse_logique et evaluation-qcm. Il donne la m\u00e9canique au chiffre pr\u00e8s.\n"+
+  "ET SI UN POINT RESTE FLOU APR\u00c8S CETTE LECTURE, POSE-MOI LA QUESTION. Ne suppose pas, n\u2019invente pas : "+
+  "une pr\u00e9cision demand\u00e9e co\u00fbte une phrase, une erreur reprise co\u00fbte une s\u00e9ance.\n\n"+
   "TU PEUX \u00caTRE CONSULT\u00c9 EN COURS DE ROUTE. S\u2019il te demande conseil \u2014 combler un trou de progression, choisir "+
   "une activit\u00e9, r\u00e9partir un travail \u2014, r\u00e9ponds AVEC LES OUTILS CI-DESSUS et avec sa taxonomie, en nommant ce "+
   "qui existe d\u00e9j\u00e0. Un conseil hors sol lui fait perdre du temps.";
@@ -6335,9 +6376,19 @@ function atIARendre(){
     +'<div class="at-ia-actions"><button class="at-btn" onclick="chOuvrir()">\ud83d\udcda Construire un chapitre\u2026</button>'
     +'<button class="at-btn" onclick="diapoOuvrir()">\ud83d\uddbc\ufe0f Transformer un diaporama\u2026</button></div>'
     +'<div class="at-ia-etape"><b>1.</b> Copie ce texte et colle-le dans ton IA. Elle te posera des questions avant d\u2019\u00e9crire quoi que ce soit.</div>'
+    /* MICRO 04/08 — LE PROMPT EST VISIBLE ET ÉDITABLE SUR PLACE. Demande de Paul :
+       « mettre le champ éditable du prompt directement apparent, et pas seulement
+       accessible via modifier ». Le champ montre les DIRECTIVES (ce que Paul écrit) ;
+       la présentation MJPC, le vocabulaire et l'état de l'année s'y ajoutent à la copie
+       et ne s'éditent pas — ils sont générés. « Modifier le prompt » subsiste : c'est le
+       même champ en pleine hauteur, avec le retour au texte d'origine. */
+    +'<textarea id="at-ia-tpl-vue" class="at-ia-zone at-ia-zone-haute" '
+    +'oninput="atIATplTouche()" aria-label="Le texte du prompt, modifiable">'+atEsc(atPromptDirectives())+'</textarea>'
+    +'<div class="at-ia-sous at-ia-sous-min">Tu peux le modifier ici. La pr\u00e9sentation de MJPC, tes notions et l\u2019\u00e9tat de ton ann\u00e9e s\u2019ajoutent tout seuls au moment de la copie.</div>'
     +'<div class="at-ia-actions">'
     +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
-    +'<button class="at-btn" onclick="atIAModifier()">Modifier le prompt</button>'
+    +'<button class="at-btn" id="at-ia-enr" onclick="atIAEnregistrerTplVue()" disabled>Enregistrer mes modifications</button>'
+    +'<button class="at-btn" onclick="atIAModifier()">Retravailler le prompt\u2026</button>'
     +'</div>'
     +'<div id="at-ia-copie" class="at-ia-flash" aria-live="polite"></div>'
     +'<div class="at-ia-etape"><b>2.</b> Quand la discussion te convient, demande-lui de produire le r\u00e9sultat, puis colle sa r\u00e9ponse ici.</div>'
@@ -6354,8 +6405,41 @@ function atIAInfo(){
     +'une nouvelle feuille, ou remplacer celle qui est ouverte. Rien n\u2019est enregistr\u00e9 avant ce choix.',
     [{lib:'Compris',prim:true,fn:function(){}}]);
 }
+/* MICRO 04/08 — les trois pièces du champ visible. */
+function atPromptDirectives(){
+  /* Le texte QUE PAUL ÉCRIT, sans les pièces générées. C'est ce qu'il édite. */
+  return (AT_IA.tpl!=null?AT_IA.tpl:ATELIER_PROMPT_SEED[AT_IA.produit])||'';
+}
+function atIATplTouche(){
+  /* Le bouton d'enregistrement ne s'allume qu'après une vraie modification :
+     un bouton actif sans rien à enregistrer apprend à cliquer sans regarder. */
+  var t=document.getElementById('at-ia-tpl-vue'), b=document.getElementById('at-ia-enr');
+  if(!t||!b)return;
+  b.disabled=(t.value===atPromptDirectives());
+}
+function atIAEnregistrerTplVue(){
+  var t=document.getElementById('at-ia-tpl-vue');if(!t)return;
+  /* On passe par le MÊME chemin qu'atIAEnregistrerTpl (atSitePut, callback (ok)) :
+     réimplémenter une écriture qui marche serait prendre un risque pour rien. */
+  var val=t.value;
+  var d=document.getElementById('at-ia-copie');
+  if(d)d.textContent='Enregistrement\u2026';
+  atSitePut(AT_IA_NOEUD+'/'+AT_IA.produit,val,function(ok){
+    if(ok){
+      AT_IA.tpl=val;
+      if(d)d.textContent='Modifications enregistr\u00e9es. Elles te suivront sur tes autres appareils.';
+      var b=document.getElementById('at-ia-enr');if(b)b.disabled=true;
+    }else if(d)d.textContent='Enregistrement impossible \u2014 ton texte reste \u00e0 l\u2019\u00e9cran, r\u00e9essaie.';
+  });
+}
 function atIACopier(){
+  /* MICRO 04/08 — si Paul a modifié le champ sans enregistrer, on copie CE QU'IL VOIT.
+     Copier autre chose que ce qui est à l'écran serait un mensonge d'interface. */
+  var vue=document.getElementById('at-ia-tpl-vue');
+  var memo=AT_IA.tpl;
+  if(vue&&vue.value!==atPromptDirectives())AT_IA.tpl=vue.value;
   var t=atPromptTexte();
+  AT_IA.tpl=memo;
   var fin=function(ok){
     var d=document.getElementById('at-ia-copie');
     if(d){d.textContent=ok?'Prompt copi\u00e9.':'La copie automatique a \u00e9chou\u00e9 \u2014 le texte est ouvert, copie-le \u00e0 la main.';}
@@ -6370,7 +6454,7 @@ function atIAModifier(){
   var brut=(AT_IA.tpl!=null?AT_IA.tpl:ATELIER_PROMPT_SEED[AT_IA.produit])||'';
   z.innerHTML='<div class="at-ia">'
     +'<div class="at-ia-haut"><button class="at-btn" onclick="atIARendre()">\u2190 Retour</button>'
-    +'<h3 class="at-ia-titre">Modifier le prompt</h3></div>'
+    +'<h3 class="at-ia-titre">Retravailler le prompt</h3></div>'
     +'<div class="at-ia-sous">Tes modifications te suivent d\u2019un appareil \u00e0 l\u2019autre. La liste des \u00e9l\u00e9ments disponibles s\u2019ajoute automatiquement \u00e0 la fin : garde le rep\u00e8re @@COMPOSANTES@@ o\u00f9 tu veux qu\u2019elle apparaisse.</div>'
     +'<textarea id="at-ia-tpl" class="at-ia-zone at-ia-zone-haute">'+atEsc(brut)+'</textarea>'
     +'<div class="at-ia-actions">'
