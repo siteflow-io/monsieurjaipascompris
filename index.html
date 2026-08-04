@@ -1079,6 +1079,38 @@ body.at-corps-fige{overflow:hidden}
 }
 /* ═══ fin § OVERLAY DES FICHES ═══ */
 </style>
+<style>
+/* ═══ § ARCHIVES ET DIFFÉRENTIEL (M-PROMPT-ARCHIVES) ═══ */
+.ar-diff{margin-top:12px;border:1px solid rgba(0,0,0,.2);border-radius:10px;padding:12px;font-size:.9rem}
+.ar-crit{border:1px solid rgba(230,57,70,.5);background:rgba(230,57,70,.10);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.ar-crit ul{margin:6px 0 6px 18px}
+.ar-note{font-size:.85rem;opacity:.8;margin:6px 0 0}
+.ar-chiffres{font-weight:600;margin-bottom:8px}
+.ar-bloc{margin:8px 0}
+.ar-plus li,.ar-moins li{font-family:ui-monospace,monospace;font-size:.8rem;word-break:break-word;margin:2px 0;padding:2px 6px;border-radius:4px}
+.ar-plus li{background:rgba(46,125,79,.12)}
+.ar-moins li{background:rgba(230,57,70,.10)}
+.ar-liste{margin-top:10px}
+.ar-arch{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid rgba(0,0,0,.18);border-radius:8px;padding:8px 10px;margin:6px 0}
+.ar-arch .at-btn{min-height:44px;min-width:44px}
+.ar-arch-date{font-weight:600;font-size:.9rem}
+.ar-arch-ap{font-size:.82rem;opacity:.75;flex:1;min-width:160px}
+@media (max-width:480px){.ar-arch{flex-direction:column;align-items:stretch}.ar-arch .at-btn{width:100%}}
+/* ═══ fin § ARCHIVES ET DIFFÉRENTIEL ═══ */
+</style>
+<style>
+.ar-bloc-arch{margin-top:18px;border-top:1px solid rgba(0,0,0,.18);padding-top:12px}
+.ar-bloc-arch h4{margin:0 0 8px 0;font-size:1rem}
+.ar-tete{margin-bottom:8px;font-size:.92rem}
+.ar-coche{display:flex;align-items:center;gap:8px;min-height:44px}
+.ar-coche input{width:20px;height:20px}
+.ar-actions-cmp{margin:10px 0}
+.ar-actions-cmp .at-btn{min-height:44px}
+.ar-actions-cmp .at-btn[disabled]{opacity:.45;cursor:not-allowed}
+.ar-relire textarea,.ar-cmp{margin-top:8px}
+.ar-liste{max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:480px){.ar-liste{max-height:40vh}}
+</style>
 <body>
 <div class="stars" id="stars"></div>
 <div class="shooting-star" id="shooting-star"></div>
@@ -2477,7 +2509,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.24.0";
+var APP_VERSION="8.27.0";
 var APP_VERSION_DATE="2026-07-30";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -2772,6 +2804,10 @@ var MJPC_PRESENTATION=
   "  \u2022 \u00ab La m\u00e9canique me permet de d\u00e9velopper l\u2019humain \u00bb : ce qui est r\u00e9p\u00e9titif se m\u00e9canise pour lib\u00e9rer du temps d\u2019enseignement.\n"+
   "  \u2022 C\u2019est le professeur qui d\u00e9cide. Tu proposes, tu signales, tu argumentes \u2014 tu ne tranches pas, et tu ne "+
   "combles jamais un manque en l\u2019inventant sans le dire.\n\n"+
+  "UN CAS QUE TU RISQUES DE MANQUER : les diaporamas. Quand une s\u00e9ance s\u2019appuie sur un diaporama, "+
+  "ne le traite pas comme un fichier \u00e0 d\u00e9poser sur Drive : j\u2019ai un outil qui transforme les diapositives "+
+  "en texte, et c\u2019est ce texte que les \u00e9l\u00e8ves lisent \u2014 il se lit au t\u00e9l\u00e9phone sans zoom, se cherche et "+
+  "se corrige. Propose-le-moi chaque fois qu\u2019un diaporama entre dans une s\u00e9ance.\n\n"+
   "CE QUE CES DESCRIPTIONS DISENT, ET CE QU\u2019ELLES NE DISENT PAS. Elles te disent QUAND proposer un outil, "+
   "pas comment il fonctionne en d\u00e9tail. Si tu as besoin du d\u00e9tail, va lire l\u2019application elle-m\u00eame : "+
   "elles sont \u00e0 l\u2019adresse siteflow-io.github.io/monsieurjaipascompris/<identifiant>.html (par exemple "+
@@ -6375,25 +6411,7 @@ function atIARendre(){
     +'<button class="at-i" onclick="atIAInfo()" aria-label="En savoir plus">\u24d8</button></div>'
     +'<div class="at-ia-actions"><button class="at-btn" onclick="chOuvrir()">\ud83d\udcda Construire un chapitre\u2026</button>'
     +'<button class="at-btn" onclick="diapoOuvrir()">\ud83d\uddbc\ufe0f Transformer un diaporama\u2026</button></div>'
-    +'<div class="at-ia-etape"><b>1.</b> Copie ce texte et colle-le dans ton IA. Elle te posera des questions avant d\u2019\u00e9crire quoi que ce soit.</div>'
-    /* MICRO 04/08 — LE PROMPT EST VISIBLE ET ÉDITABLE SUR PLACE. Demande de Paul :
-       « mettre le champ éditable du prompt directement apparent, et pas seulement
-       accessible via modifier ». Le champ montre les DIRECTIVES (ce que Paul écrit) ;
-       la présentation MJPC, le vocabulaire et l'état de l'année s'y ajoutent à la copie
-       et ne s'éditent pas — ils sont générés. « Modifier le prompt » subsiste : c'est le
-       même champ en pleine hauteur, avec le retour au texte d'origine. */
-    +'<textarea id="at-ia-tpl-vue" class="at-ia-zone at-ia-zone-haute" '
-    +'oninput="atIATplTouche()" aria-label="Le texte du prompt, modifiable">'+atEsc(atPromptDirectives())+'</textarea>'
-    +'<div class="at-ia-sous at-ia-sous-min">Tu peux le modifier ici. La pr\u00e9sentation de MJPC, tes notions et l\u2019\u00e9tat de ton ann\u00e9e s\u2019ajoutent tout seuls au moment de la copie.</div>'
-    +'<div class="at-ia-actions">'
-    +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
-    +'<button class="at-btn" id="at-ia-enr" onclick="atIAEnregistrerTplVue()" disabled>Enregistrer mes modifications</button>'
-    +'<button class="at-btn" onclick="atIAModifier()">Retravailler le prompt\u2026</button>'
-    +'</div>'
-    +'<div id="at-ia-copie" class="at-ia-flash" aria-live="polite"></div>'
-    +'<div class="at-ia-etape"><b>2.</b> Quand la discussion te convient, demande-lui de produire le r\u00e9sultat, puis colle sa r\u00e9ponse ici.</div>'
-    +'<textarea id="at-ia-coller" class="at-ia-zone" placeholder="Colle ici la r\u00e9ponse de l\u2019IA"></textarea>'
-    +'<div class="at-ia-actions"><button class="at-btn at-btn-prim" onclick="atIAVerifier()">V\u00e9rifier</button></div>'
+    +atBlocEdition()
     +'<div id="at-ia-msg" class="at-ia-msg" aria-live="polite"></div>'
     +'<div id="at-ia-apercu" class="at-ia-apercu"></div>'
     +'</div>';
@@ -6460,7 +6478,15 @@ function atIAModifier(){
     +'<div class="at-ia-actions">'
     +'<button class="at-btn at-btn-prim" onclick="atIAEnregistrerTpl()">Enregistrer</button>'
     +'<button class="at-btn" onclick="atIARestaurerTpl()">Revenir au texte d\u2019origine</button></div>'
-    +'<div id="at-ia-msg" class="at-ia-msg" aria-live="polite"></div></div>';
+    +'<div id="at-ia-msg" class="at-ia-msg" aria-live="polite"></div>'
+    /* M-PROMPT-ARCHIVES-2 ⑤ : la zone des archives est posée ICI, dans l'écran qui
+       s'affiche. Elle était écrite dans atArchivesRendre — la fonction qui a besoin
+       qu'elle existe déjà : elle se cherchait elle-même, ne se trouvait pas, et
+       sortait. Le bloc existait, dans du code qui ne s'exécutait jamais. */
+    +'<div class="ar-bloc-arch"><h4>\ud83d\udcda Les versions pr\u00e9c\u00e9dentes</h4>'
+    +'<div id="at-arch-zone"><p class="ar-note">Lecture des archives\u2026</p></div></div>'
+    +'</div>';
+  try{atArchivesOuvrir();}catch(e){}   /* APRÈS l'écriture du HTML, jamais avant */
 }
 function atIAEnregistrerTpl(){
   var t=(document.getElementById('at-ia-tpl')||{}).value||'';
@@ -6631,6 +6657,255 @@ function atIARemplacerConfirme(){
   });
 }
 /* ═══ fin § ZONE PROMPT IA ═══ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   § PROMPT : ÉDITION COMPLÈTE, ARCHIVES ET DIFFÉRENTIEL (M-PROMPT-ARCHIVES)
+   ① Le champ vit dans LES TROIS écrans (fiche de séance, chapitre, diaporama) —
+      il n'était que dans celui des feuilles, d'où deux versions empilées.
+   ② Il montre le PROMPT COMPLET, repères remplis : Paul lisait « @@TAXONOMIE@@ »
+      et croyait que le prompt ne disait rien de MJPC. Ce qu'il voit part.
+   ③ Chaque enregistrement ARCHIVE D'ABORD. Abandon si l'archive échoue : c'est la
+      règle du chantier depuis M-SÉCU-3. Paul peut tout modifier — c'est l'archive
+      qui protège, pas l'interdiction.
+   ④ Le DIFFÉRENTIEL dit ce qui a changé, et SIGNALE les zones critiques (notion
+      ou compétence disparue, type de séance retiré, règle de format perdue).
+      Ce n'est jamais un refus : Paul décide.
+   NŒUD : /site/atelier/prompts_archives/<produit>/<horodatage>. Pourquoi celui-là :
+   il est FRÈRE de /site/atelier/prompts (même parent, même sauvegarde, même purge),
+   et séparé par produit pour que la liste et le différentiel n'aient jamais à
+   filtrer. Aucun plafond : quelques kilo-octets par archive, et c'est l'historique
+   qui intéresse Paul — un plafond effacerait justement ce qu'il veut voir.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var AT_ARCH_NOEUD='/site/atelier/prompts_archives';
+
+/* Le texte tel qu'il PARTIRA : repères remplis. C'est ce que le champ montre. */
+function atPromptComplet(){
+  try{ return atPromptTexte(); }catch(e){ return (AT_IA.tpl!=null?AT_IA.tpl:(ATELIER_PROMPT_SEED[AT_IA.produit]||'')); }
+}
+/* ── ④ LE DIFFÉRENTIEL — par lignes, sans dépendance ── */
+function atDiffLignes(av,ap){
+  var A=String(av||'').split('\n'), B=String(ap||'').split('\n');
+  var setA={},setB={};
+  A.forEach(function(l){setA[l]=(setA[l]||0)+1;});
+  B.forEach(function(l){setB[l]=(setB[l]||0)+1;});
+  var retirees=[],ajoutees=[];
+  Object.keys(setA).forEach(function(l){ var n=(setA[l]||0)-(setB[l]||0); for(var k=0;k<n;k++)retirees.push(l); });
+  Object.keys(setB).forEach(function(l){ var n=(setB[l]||0)-(setA[l]||0); for(var k=0;k<n;k++)ajoutees.push(l); });
+  return {retirees:retirees.filter(function(l){return l.trim();}),
+          ajoutees:ajoutees.filter(function(l){return l.trim();}),
+          lignesAv:A.length,lignesAp:B.length};
+}
+/* Les identifiants structurels : ce qui, disparu, casse l'aval. */
+function atIdsStructurels(t){
+  t=String(t||'');
+  var out={notions:{},competences:{},types:{},entrees:{}};
+  (t.match(/^- ([a-z0-9_-]+) :/gm)||[]).forEach(function(l){
+    var id=l.replace(/^- /,'').replace(/ :$/,'');
+    if(/^c4-/.test(id))out.competences[id]=1;
+    else if(/^(recit|poesie|theatre|discours_essai|articles_essai)$/.test(id))out.entrees[id]=1;
+    else if(/^(intro_image|etude_texte|notions|dictee_reecriture|atelier_ecriture|remediation|tache_finale|sommaire)$/.test(id))out.types[id]=1;
+    else out.notions[id]=1;
+  });
+  return out;
+}
+/* ④ LES ZONES CRITIQUES — on NOMME ce qui manque. Jamais un refus. */
+function atZonesCritiques(av,ap){
+  var A=atIdsStructurels(av),B=atIdsStructurels(ap);
+  var alertes=[];
+  [['notions','notion','notions'],['competences','comp\u00e9tence','comp\u00e9tences'],
+   ['types','type de s\u00e9ance','types de s\u00e9ance'],['entrees','entr\u00e9e du programme','entr\u00e9es du programme']].forEach(function(t){
+    var manque=Object.keys(A[t[0]]).filter(function(id){return !B[t[0]][id];});
+    if(manque.length)alertes.push({quoi:manque.length>1?t[2]:t[1],n:manque.length,ids:manque});
+  });
+  /* les règles de format : des phrases sans lesquelles l'IA ne rend plus un JSON exploitable */
+  [['NE PRODUIS AUCUN JSON TOUT DE SUITE','la consigne qui impose la discussion de cadrage'],
+   ['produis le JSON','la consigne qui lib\u00e8re le JSON sur ton ordre'],
+   ['n\u2019invente aucun','la r\u00e8gle qui interdit d\u2019inventer des identifiants'],
+   ['published','la r\u00e8gle qui r\u00e9serve la publication \u00e0 toi seul']].forEach(function(r){
+    if(String(av||'').indexOf(r[0])>=0&&String(ap||'').indexOf(r[0])<0)
+      alertes.push({quoi:'r\u00e8gle',n:1,ids:[],phrase:r[1]});
+  });
+  return alertes;
+}
+function atDiffHtml(av,ap){
+  var d=atDiffLignes(av,ap), z=atZonesCritiques(av,ap), e=atEsc;
+  var h='<div class="ar-diff">';
+  if(z.length){
+    h+='<div class="ar-crit"><b>\u26a0 \u00c0 v\u00e9rifier avant d\u2019enregistrer</b><ul>';
+    z.forEach(function(a){
+      h+='<li>'+(a.phrase
+        ? ('Tu as retir\u00e9 '+e(a.phrase)+'.')
+        : (a.n+' '+e(a.quoi)+' '+(a.n>1?'ont':'a')+' disparu : '+a.ids.map(e).join(', ')+'.'))+'</li>';
+    });
+    h+='</ul><p class="ar-note">Ce n\u2019est pas un refus : tu peux enregistrer. C\u2019est toi qui d\u00e9cides \u2014 l\u2019ancienne version part \u00e0 l\u2019archive de toute fa\u00e7on.</p></div>';
+  }
+  if(!d.retirees.length&&!d.ajoutees.length){
+    return h+'<p class="ar-note">Aucune diff\u00e9rence de texte.</p></div>';
+  }
+  h+='<div class="ar-chiffres">'+d.ajoutees.length+' ligne(s) ajout\u00e9e(s) \u00b7 '+d.retirees.length+' retir\u00e9e(s)</div>';
+  var lim=function(l,cl,signe){
+    if(!l.length)return '';
+    var x='<div class="ar-bloc"><b>'+(signe==='+'?'Ajout\u00e9':'Retir\u00e9')+'</b><ul class="'+cl+'">';
+    l.slice(0,40).forEach(function(t){x+='<li>'+e(t.length>160?t.slice(0,160)+'\u2026':t)+'</li>';});
+    if(l.length>40)x+='<li class="ar-note">\u2026 et '+(l.length-40)+' autre(s)</li>';
+    return x+'</ul></div>';
+  };
+  return h+lim(d.ajoutees,'ar-plus','+')+lim(d.retirees,'ar-moins','-')+'</div>';
+}
+/* ── ③ ARCHIVE AVANT, ABANDON SI ELLE ÉCHOUE ── */
+function atArchiverPuisEcrire(produit,ancien,nouveau,cb){
+  var ts=Date.now();
+  var cle=AT_ARCH_NOEUD+'/'+produit+'/'+ts;
+  var payload={ts:ts,produit:produit,texte:String(ancien==null?'':ancien),
+               taille:String(ancien==null?'':ancien).length};
+  atSitePut(cle,payload,function(ok){
+    if(!ok){cb(false,'archive');return;}                 /* ABANDON : rien n'est écrasé */
+    atSitePut(AT_IA_NOEUD+'/'+produit,nouveau,function(ok2){cb(!!ok2,ok2?null:'ecriture');});
+  });
+}
+/* ── ⑤ LA LISTE DES ARCHIVES ── */
+function atArchivesLire(produit,cb){
+  _siteGet(AT_ARCH_NOEUD+'/'+produit,function(v){
+    var l=[];
+    Object.keys(v||{}).forEach(function(k){ var a=v[k]||{}; l.push({ts:Number(a.ts||k),texte:a.texte||'',taille:a.taille||0}); });
+    l.sort(function(a,b){return b.ts-a.ts;});
+    cb(l);
+  });
+}
+function atArchiveDate(ts){
+  var d=new Date(Number(ts));
+  if(isNaN(d.getTime()))return 'date inconnue';
+  return d.toLocaleDateString('fr-FR')+' \u00e0 '+d.getHours()+' h '+String(d.getMinutes()).padStart(2,'0');
+}
+
+/* ① Le bloc d'édition, UN SEUL, appelé par les TROIS écrans. Trois copies auraient
+   divergé — c'est précisément ce qui a produit « deux versions empilées ». */
+function atBlocEdition(){
+  var t=atPromptComplet();
+  return '<div class="at-ia-etape"><b>1.</b> Voici le prompt tel qu\u2019il partira. Tu peux le modifier ici, puis le copier ou l\u2019enregistrer.</div>'
+    +'<textarea id="at-ia-tpl-vue" class="at-ia-zone at-ia-zone-haute" oninput="atSignalerModif()">'+atEsc(t)+'</textarea>'
+    +'<div class="at-ia-actions">'
+    +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
+    +'<button class="at-btn" id="at-ia-enr" onclick="atEnregistrerAvecDiff()" disabled>Enregistrer mes modifications</button>'
+    +'<button class="at-btn" onclick="atIAModifier()">Retravailler le prompt\u2026</button></div>'
+    +'<div id="at-ia-copie" class="at-ia-flash" aria-live="polite"></div>'
+    +'<div id="at-ia-diff"></div>';
+}
+/* Le bouton reste gris tant que rien n'a changé : un bouton actif sans rien à
+   enregistrer apprend à cliquer sans regarder. */
+function atSignalerModif(){
+  var t=document.getElementById('at-ia-tpl-vue'),b=document.getElementById('at-ia-enr');
+  if(!t||!b)return;
+  b.disabled=(t.value===atPromptComplet());
+}
+/* ③ + ④ : le différentiel s'affiche, l'archive part AVANT, Paul décide. */
+function atEnregistrerAvecDiff(){
+  var t=document.getElementById('at-ia-tpl-vue');if(!t)return;
+  var av=atPromptComplet(), ap=t.value;
+  var d=document.getElementById('at-ia-diff');
+  if(d)d.innerHTML=atDiffHtml(av,ap)
+    +'<div class="at-ia-actions"><button class="at-btn" onclick="atAnnulerEnr()">Annuler</button>'
+    +'<button class="at-btn at-btn-prim" onclick="atConfirmerEnr()">Enregistrer quand m\u00eame</button></div>';
+}
+function atAnnulerEnr(){ var d=document.getElementById('at-ia-diff'); if(d)d.innerHTML=''; }
+function atConfirmerEnr(){
+  var t=document.getElementById('at-ia-tpl-vue');if(!t)return;
+  var ap=t.value, av=atPromptComplet();
+  var f=document.getElementById('at-ia-copie');
+  if(f)f.textContent='Archivage puis enregistrement\u2026';
+  atArchiverPuisEcrire(AT_IA.produit,av,ap,function(ok,quoi){
+    if(ok){
+      AT_IA.tpl=ap;
+      if(f)f.textContent='Enregistr\u00e9. La version pr\u00e9c\u00e9dente est dans les archives.';
+      atAnnulerEnr();atSignalerModif();
+    }else if(quoi==='archive'){
+      if(f)f.textContent='L\u2019archive n\u2019a pas abouti \u2014 rien n\u2019a \u00e9t\u00e9 remplac\u00e9. R\u00e9essaie quand la connexion est stable.';
+    }else{
+      if(f)f.textContent='L\u2019enregistrement n\u2019a pas abouti \u2014 l\u2019ancienne version est archiv\u00e9e, rien n\u2019est perdu.';
+    }
+  });
+}
+
+/* ── ⑤ L'ÉCRAN DES ARCHIVES (M-PROMPT-ARCHIVES-2) ──
+   C'est la pièce qui rend l'archive utile : Paul doit VOIR ce qu'il améliore.
+   Trois gestes : relire · restaurer (qui archive à son tour) · comparer deux
+   archives avec LE MÊME différentiel qu'à l'enregistrement — une seconde
+   implémentation aurait divergé de la première. */
+var AT_ARCH={liste:[],sel:[],ouvert:null};
+function atArchivesOuvrir(){
+  var z=document.getElementById('at-arch-zone');if(!z)return;
+  z.innerHTML='<p class="ar-note">Lecture des archives\u2026</p>';
+  atArchivesLire(AT_IA.produit,function(l){
+    AT_ARCH.liste=l;AT_ARCH.sel=[];AT_ARCH.ouvert=null;
+    atArchivesRendre();
+  });
+}
+function atArchivesRendre(){
+  var z=document.getElementById('at-arch-zone');if(!z)return;
+  var l=AT_ARCH.liste,e=atEsc;
+  if(!l.length){
+    z.innerHTML='<p class="ar-note">Aucune archive pour ce produit. La premi\u00e8re sera cr\u00e9\u00e9e \u00e0 ton prochain enregistrement.</p>';
+    return;
+  }
+  var h='<div class="ar-liste"><div class="ar-tete"><b>'+l.length+' version'+(l.length>1?'s':'')+' archiv\u00e9e'+(l.length>1?'s':'')+'</b>'
+    +'<span class="ar-note"> \u2014 coche deux versions pour voir ce qui a chang\u00e9 entre elles.</span></div>';
+  l.forEach(function(a,i){
+    var ap=String(a.texte||'').replace(/\s+/g,' ').slice(0,90);
+    h+='<div class="ar-arch">'
+      +'<label class="ar-coche"><input type="checkbox" onchange="atArchivesCocher('+i+',this.checked)"'
+      +(AT_ARCH.sel.indexOf(i)>=0?' checked':'')+'> <span class="ar-arch-date">'+e(atArchiveDate(a.ts))+'</span></label>'
+      +'<span class="ar-arch-ap">'+e(ap)+(String(a.texte||'').length>90?'\u2026':'')+' <i>('+a.taille+' c.)</i></span>'
+      +'<button class="at-btn" onclick="atArchiveRelire('+i+')">Relire</button>'
+      +'<button class="at-btn" onclick="atArchiveRestaurer('+i+')">Restaurer</button></div>';
+  });
+  h+='</div><div class="ar-actions-cmp"><button class="at-btn at-btn-prim" id="ar-cmp" onclick="atArchivesComparer()"'
+    +(AT_ARCH.sel.length===2?'':' disabled')+'>Comparer les deux versions coch\u00e9es</button></div>'
+    +'<div id="at-arch-vue"></div>';
+  z.innerHTML=h;
+}
+function atArchivesCocher(i,on){
+  var p=AT_ARCH.sel.indexOf(i);
+  if(on&&p<0)AT_ARCH.sel.push(i);
+  if(!on&&p>=0)AT_ARCH.sel.splice(p,1);
+  if(AT_ARCH.sel.length>2)AT_ARCH.sel=AT_ARCH.sel.slice(-2);   /* deux au plus : on compare deux versions */
+  var b=document.getElementById('ar-cmp');if(b)b.disabled=(AT_ARCH.sel.length!==2);
+}
+function atArchiveRelire(i){
+  var a=AT_ARCH.liste[i];if(!a)return;
+  var v=document.getElementById('at-arch-vue');if(!v)return;
+  v.innerHTML='<div class="ar-relire"><b>Version du '+atEsc(atArchiveDate(a.ts))+'</b>'
+    +'<textarea class="at-ia-zone at-ia-zone-haute" readonly>'+atEsc(a.texte||'')+'</textarea></div>';
+}
+/* ⑤ RESTAURER : archive l'état actuel AVANT de le remplacer — on ne perd jamais
+   l'état d'avant, exactement comme à l'enregistrement. */
+function atArchiveRestaurer(i){
+  var a=AT_ARCH.liste[i];if(!a)return;
+  var v=document.getElementById('at-arch-vue');
+  var actuel=atPromptComplet();
+  if(v)v.innerHTML='<p class="ar-note">Archivage de la version actuelle, puis restauration\u2026</p>';
+  atArchiverPuisEcrire(AT_IA.produit,actuel,a.texte||'',function(ok,quoi){
+    if(ok){
+      AT_IA.tpl=a.texte||'';
+      var t=document.getElementById('at-ia-tpl-vue');if(t)t.value=AT_IA.tpl;
+      if(v)v.innerHTML='<p class="ar-note">Version du '+atEsc(atArchiveDate(a.ts))+' restaur\u00e9e. La pr\u00e9c\u00e9dente vient d\u2019\u00eatre archiv\u00e9e.</p>';
+      atArchivesOuvrir();
+    }else if(quoi==='archive'){
+      if(v)v.innerHTML='<p class="ar-note">L\u2019archive de la version actuelle n\u2019a pas abouti \u2014 <b>rien n\u2019a \u00e9t\u00e9 restaur\u00e9</b>.</p>';
+    }else{
+      if(v)v.innerHTML='<p class="ar-note">La restauration n\u2019a pas abouti \u2014 la version actuelle est archiv\u00e9e, rien n\u2019est perdu.</p>';
+    }
+  });
+}
+/* ⑤ COMPARER deux archives — le MÊME atDiffHtml qu'à l'enregistrement. */
+function atArchivesComparer(){
+  if(AT_ARCH.sel.length!==2)return;
+  var i=AT_ARCH.sel.slice().sort(function(a,b){return b-a;});   /* la plus ancienne d'abord */
+  var av=AT_ARCH.liste[i[0]],ap=AT_ARCH.liste[i[1]];
+  var v=document.getElementById('at-arch-vue');if(!v)return;
+  v.innerHTML='<div class="ar-cmp"><b>Ce qui a chang\u00e9 entre le '+atEsc(atArchiveDate(av.ts))
+    +' et le '+atEsc(atArchiveDate(ap.ts))+'</b>'+atDiffHtml(av.texte||'',ap.texte||'')+'</div>';
+}
+/* ═══ fin § PROMPT : ÉDITION, ARCHIVES ET DIFFÉRENTIEL ═══ */
+
 /* ═══════════════════════════════════════════════════════════════════════════
    § PROMPT MAÎTRE DE CHAPITRE (SITE-COURS-2c) — le second produit de la zone.
    PREUVE DE L'ARCHITECTURE : le chapitre s'ajoute par UNE entrée de plus dans
@@ -6810,11 +7085,7 @@ function chRendre(){
     +'<div class="at-ia-sous">Tu apportes ta progression, l\u2019IA la met en forme, la relie \u00e0 tes notions et te dit ce qui manque. Rien ne s\u2019\u00e9crit sans toi. '
     +'<button class="at-i" onclick="chInfo()" aria-label="En savoir plus">\u24d8</button></div>'
     +'<div class="ch-ligne"><label for="ch-niveau">Niveau</label> <select id="ch-niveau" class="cm-input" onchange="CH.niveau=this.value;chChargerEtatAnnee(function(){chRendre();})">'+niv+'</select></div>'
-    +'<div class="at-ia-etape"><b>1.</b> Copie ce texte et colle-le dans ton IA, avec tes documents. Elle te posera des questions avant d\u2019\u00e9crire.</div>'
-    +'<div class="at-ia-actions">'
-    +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
-    +'<button class="at-btn" onclick="atIAModifier()">Modifier le prompt</button></div>'
-    +'<div id="at-ia-copie" class="at-ia-flash" aria-live="polite"></div>'
+    +atBlocEdition()   /* M-PROMPT-ARCHIVES ① : le MÊME bloc que les deux autres écrans */
     +'<div class="at-ia-etape"><b>2.</b> Quand le chapitre te convient, demande-lui le r\u00e9sultat et colle-le ici.</div>'
     +'<textarea id="ch-coller" class="at-ia-zone" placeholder="Colle ici la r\u00e9ponse de l\u2019IA"></textarea>'
     +'<div class="at-ia-actions"><button class="at-btn at-btn-prim" onclick="chVerifier()">V\u00e9rifier</button></div>'
@@ -7722,11 +7993,7 @@ function diapoRendreEcran(){
     +'<div class="at-ia-sous">Tes diapositives deviennent du texte : lisibles au t\u00e9l\u00e9phone sans zoom, cherchables, corrigeables, et toutes dans la m\u00eame pr\u00e9sentation. '
     +'<button class="at-i" onclick="diapoInfo()" aria-label="En savoir plus">\u24d8</button></div>'
     +'<div class="dp-critere"><b>Ce qui passe en texte, ce qui reste une image :</b> si tu pouvais le <i>dicter</i> \u00e0 quelqu\u2019un qui le retaperait, c\u2019est du texte. Si tu devais le lui <i>d\u00e9crire</i> (une \u0153uvre, une photo, une frise, un sch\u00e9ma fl\u00e9ch\u00e9), c\u2019est une image : tu la d\u00e9poseras toi-m\u00eame.</div>'
-    +'<div class="at-ia-etape"><b>1.</b> Copie ce texte, colle-le dans ton IA avec tes captures d\u2019\u00e9cran.</div>'
-    +'<div class="at-ia-actions">'
-    +'<button class="at-btn at-btn-prim" onclick="atIACopier()">Copier le prompt</button>'
-    +'<button class="at-btn" onclick="atIAModifier()">Modifier le prompt</button></div>'
-    +'<div id="at-ia-copie" class="at-ia-flash" aria-live="polite"></div>'
+    +atBlocEdition()   /* M-PROMPT-ARCHIVES ① */
     +'<div class="at-ia-etape"><b>2.</b> Colle sa r\u00e9ponse ici, puis relis chaque bloc avant d\u2019enregistrer.</div>'
     +'<textarea id="dp-coller" class="at-ia-zone" placeholder="Colle ici la r\u00e9ponse de l\u2019IA"></textarea>'
     +'<div class="at-ia-actions"><button class="at-btn at-btn-prim" onclick="diapoVerifier()">V\u00e9rifier</button></div>'
