@@ -538,3 +538,27 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **AUDIT FINAL** : 16/16 · parseurs verts (seul KO le gabarit `@@ENDSCRIPT@@` d'`analyse_logique`, pré-existant) · socle **1.6.0** dans les neuf apps et le site ; `reecriture` et `reecriture_bb4e` restent en **1.3.0** (hors canon §12) · **deux écritures réseau**, attendues.
 - **⚠ CE QUI RESTE À FAIRE CÔTÉ PAUL** : **ouvrir le panneau prof et cliquer UNE FOIS sur « Mettre les fiches à jour »**. C'est le mécanisme qu'il a demandé — *le site ne met jamais à jour tout seul* — et non un bricolage. Le geste ne se répète qu'après une promotion touchant le socle.
 - **Restauration en cas de `BUG`** : par fichier, le commit précédent ramène à l'état AVANT du tableau.
+
+## Point de retour — PROMOTION M-USAGES · LES DESCRIPTIFS D'APPS DISENT LE VRAI, 04/08/2026
+| fichier | APRÈS |
+|---|---|
+| `index.html` | 713 866 o · 8.24.0 |
+| `dictee_universelle.html` | 1 995 155 o · 2.6.0 |
+| `reecriture.html` | 274 114 o · 2.4.0 |
+| `reecriture_bb4e.html` | 143 238 o · 2.4.0 |
+| `worktrack.html` | 1 057 796 o · 2026-08-01d |
+*(blob sha AVANT : voir le commit de promotion, un par fichier.)*
+
+- **POURQUOI** : les `usage` posés par M-PROMPT-4 étaient **faux ou incomplets**. Paul les a relus un par un. **Cas fondateur** : `dictee_universelle` déclarait « chaque élève écrit sur son appareil » alors que **l'app dit d'elle-même « il écrit la dictée sur papier au stylo bleu »** et porte une section « Copies papier ». **Le descriptif contredisait le principe cardinal — le papier premier pour ce que l'élève produit.**
+- **LA CAUSE, identifiée au mot près** : l'app contient « Complète = il retape tout le texte », phrase qui décrit **LE CORRECTEUR** — le commentaire du code le dit : « le correcteur retape ce qu'il VOIT sur la copie ». **L'exécutant a lu la phrase SANS SON SUJET et a inféré.** Paul : *« tu vas lire les apps précisément, et ne pas inférer un fonctionnement en supputant probablement que c'est tel fonctionnement. »*
+- **QUATRE DESCRIPTIFS RÉÉCRITS, chacun attesté par une phrase de l'app** : `dictee_universelle` (dictée sur papier, correction en binômes sur l'appareil) · `reecriture` (**correction prof à l'écran, pièges détectés par l'app, PUIS autocorrection élève et suivi** — la première version était réductrice, Paul l'a relevé) · `reecriture_bb4e` (format brevet blanc) · `worktrack` (**un chapitre entier**, pas « une séquence longue » ; l'élève choisit écran ou cahier par séance).
+- **⚠ NON ATTESTÉ, DÉCLARÉ** : pour `reecriture_bb4e`, « le professeur y reporte aussi la note de rédaction » **n'est confirmé par aucune phrase lue dans l'app**. L'exécutant a posé le texte de Paul tel quel **et l'a signalé**.
+- **TROIS APPS À VENIR entrent dans la liste** (`etude_texte`, `redaction`, `entrainement`), **posées en dur** puisqu'elles n'ont ni fichier ni fiche. Décision de Paul : *« on met dans le prompt comme si elles existaient »*. **Marquées « (à venir) »** — ajout de l'exécutant, retenu. **Elles n'entrent PAS dans l'écran d'écart**, prouvé.
+- **DEUX RETRAITS** : `taxonomie` et `index` quittent la liste des outils — ce ne sont pas des outils pédagogiques, et **le prompt donne déjà les 210 notions**. Leurs fiches restent au hub.
+- **LE PARAGRAPHE DU DOUTE**, demandé par Paul : les descriptions disent **QUAND** proposer, pas **COMMENT** ça marche ; les adresses des neuf apps sont données ; les **quatre descriptifs prof intégrés** sont nommés (vérifiés app par app) ; conclusion : *« une précision demandée coûte une phrase, une erreur reprise coûte une séance ».*
+- **LE MICRO `mjpcPromptOutils`** : elle lisait `e.usage` alors que `publierManifeste` écrit `{app:{nom,usage,quandPas},…}` — **un niveau trop haut**, donc **les onze entrées affichaient « usage à décrire »**. Corrigé. *Cause : les deux fonctions ont été écrites dans deux morceaux séparés **sans que personne vérifie qu'elles s'emboîtent**.*
+- **MICRO DE LA CONSCIENCE, sur demande de Paul** : **le prompt est VISIBLE ET ÉDITABLE sur place**. Bouton d'enregistrement **grisé tant que rien n'a changé** (*un bouton actif sans rien à enregistrer apprend à cliquer sans regarder*) · l'ancien écran devient **« Retravailler le prompt… »** (nom demandé par Paul) et garde le retour au texte d'origine · **si Paul modifie sans enregistrer puis copie, C'EST CE QU'IL VOIT QUI PART** (*copier autre chose serait un mensonge d'interface*) · écriture par `atSitePut`, **le chemin déjà éprouvé**.
+- **AUDIT** : diff `index` **8 hunks / 47+ / 3−** · invariants **650 communes, 2 modifiées, 0 supprimée, 3 ajoutées** · parseurs verts ×5 · **8/8** verdicts · **390 px sans débordement** · bouton « Copier le prompt » **éprouvé dans un navigateur réel**.
+- **NON PROUVÉ, déclaré** : le presse-papiers avec les usages et la taxonomie RÉELS (banc ne servant pas ces nœuds) · le hub réel.
+- **⚠ CE QUI RESTE À FAIRE CÔTÉ PAUL** : **ouvrir le panneau prof et cliquer une fois sur « Mettre les fiches à jour »**. **Sans ce clic, les quatre descriptifs corrigés ne remontent pas.**
+- **Restauration en cas de `BUG`** : par fichier, le commit précédent ramène à l'état AVANT.
