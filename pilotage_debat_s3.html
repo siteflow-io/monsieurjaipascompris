@@ -1739,14 +1739,32 @@ function resolveEleves(roster, saisies){
 // n'est qu'une photographie publiée pour MJPC. Incapable de diverger : republiée
 // à chaque chargement prof.
 function publierManifeste(db){
+  /* ═══ M-MANIFESTE (02/08) — LA PUBLICATION NE S'EXÉCUTE QUE S'IL Y A UN ÉCART.
+     Constat qui l'exige : le hub portait des manifestes vieux de deux semaines et
+     de quatre versions de socle (evaluation-qcm : 19/07 ; pilotage : 17/07), sans
+     que rien le signale. La cause n'était pas le code — `app: MJPC_APP` remonte
+     déjà l'objet entier — mais le fait qu'il n'avait pas tourné.
+     ⚠ Et cette version ÉCRIT MOINS que la précédente : avant, chaque ouverture
+     réécrivait le manifeste même identique ; désormais on ne réécrit qu'en cas
+     d'écart, soit une fois par promotion. Le geste de Paul reste inutile. ═══ */
   try{
-    db.ref("manifestes/"+MJPC_APP.id).set({
+    var _payload=function(){ return {
       version: MJPC_CORE_VERSION,
       app: MJPC_APP,
       manifeste: MJPC_MANIFESTE||{},
       purge: MJPC_PURGE||{preserver:[],purger:[]},
       publie_le: Date.now()
-    });
+    }; };
+    var ref=db.ref("manifestes/"+MJPC_APP.id);
+    var ecrire=function(){ try{ ref.set(_payload()); }catch(e){} };
+    var lu=ref.once("value");
+    if(lu&&typeof lu.then==="function"){
+      lu.then(function(snap){
+        var publie=snap&&snap.val?snap.val():null;
+        if(mjpcManifesteAJour(publie,MJPC_CORE_VERSION,MJPC_APP,MJPC_MANIFESTE))return;  /* rien à republier */
+        ecrire();
+      },ecrire);
+    }else ecrire();                                  /* pas de promesse : on publie comme avant */
   }catch(e){ /* le manifeste ne doit jamais casser l'app */ }
 }
 
@@ -2125,7 +2143,26 @@ function mjpcChargerOutils(base,cb){
   }catch(e){if(cb)cb(null);}
 }
 
-var MJPC_CORE_VERSION="1.5.0";
+/* ── M-MANIFESTE : le manifeste publié est-il celui du code qui tourne ? ──
+   Compare la version du socle, la déclaration de l'app (nom, usage, quandPas,
+   contenant) et les nœuds déclarés. Toute divergence => republication.
+   Motif : rien ne garantissait qu'un manifeste au hub corresponde au code promu ;
+   l'aval (le prompt maître) raisonnait alors sur du périmé sans le savoir. */
+function mjpcManifesteAJour(publie,versionSocle,app,manifeste){
+  if(!publie||typeof publie!=='object')return false;
+  if(String(publie.version||'')!==String(versionSocle||''))return false;
+  var a=publie.app||{};
+  var champs=['id','nom','contenant','usage','quandPas'];
+  for(var i=0;i<champs.length;i++){
+    if(String(a[champs[i]]||'')!==String((app||{})[champs[i]]||''))return false;
+  }
+  try{
+    if(JSON.stringify(publie.manifeste||{})!==JSON.stringify(manifeste||{}))return false;
+  }catch(e){return false;}
+  return true;
+}
+
+var MJPC_CORE_VERSION="1.6.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
@@ -2959,7 +2996,7 @@ async function purgerEtSortirTest(){
 // ─────────── État global ───────────
 /* ┌─ SOCLE-CANDIDAT : version de l'app (extractible) ─┐
    Bump manuel à chaque livraison ; affichée par la pastille #appVersion. */
-const APP_VERSION = "2026-08-01-2";
+const APP_VERSION = "2026-08-01-3";
 try{ document.addEventListener("DOMContentLoaded", function(){ var e=document.getElementById("appVersion"); if(e) e.textContent="v"+APP_VERSION; }); }catch(e){}
 /* └────────────────────────────────────────────────────┘ */
 let role = null;            // 'student' | 'prof' | null
