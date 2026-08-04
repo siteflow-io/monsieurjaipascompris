@@ -698,6 +698,10 @@ body.admin-mode .admin-only { display: block; }
 #atelier-ecran{display:none;position:fixed;inset:0;z-index:7000;background:#12100d;overflow:auto;-webkit-overflow-scrolling:touch}
 #atelier-ecran.at-actif{display:block}
 body.at-corps-fige{overflow:hidden}
+/* SITE-COURS-2b · complément superposition — l'atelier prend tout l'écran : les boutons
+   flottants du site s'effacent tant qu'il est actif (atelierOuvrir ferme déjà le panneau,
+   atelierFermer le rouvre — aucun flux n'a besoin d'eux ici) et reviennent à la fermeture. */
+body.at-corps-fige #tprof-btn,body.at-corps-fige #admin-tools-btn,body.at-corps-fige #admin-tools-menu{display:none}
 .at-fermer{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;padding:8px 12px;background:linear-gradient(#12100d 60%,transparent)}
 .at-btn{font:inherit;font-size:.86rem;background:#2a2620;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px 14px;min-height:44px;min-width:44px;cursor:pointer}
 .at-btn:hover{background:#37322a}
@@ -739,6 +743,10 @@ body.at-corps-fige{overflow:hidden}
 .at-ratt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#1d1a15;border:1px solid #3a352c;border-radius:10px;padding:10px 12px;margin:0 0 12px}
 .at-ratt-l{color:#b8ad93;font-size:.85rem}
 .at-sel{font:inherit;font-size:.85rem;background:#2a2620;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px;min-height:44px;max-width:100%}
+/* SITE-COURS-2b — la cascade d'adresse et les champs qui la suivent */
+.at-ratt-note{color:#b8ad93;font-size:.82rem}
+.at-in-adresse{opacity:.75;cursor:default;background:#241f18}
+.at-ch-note{color:#b8ad93;font-size:.78rem;margin-top:3px;line-height:1.35}
 .at-ifo{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:#8a7f6a;cursor:pointer;font-size:1rem}
 .at-ifo:hover{color:#d0c5a8}
 .at-groupe{background:#1d1a15;border:1px solid #3a352c;border-radius:10px;padding:10px 12px;margin:0 0 12px}
@@ -954,6 +962,17 @@ body.at-corps-fige{overflow:hidden}
 .dp-viewer-titre{flex:1;font-weight:700;font-size:1rem}
 .dp-viewer-x,.dp-viewer-imp{min-width:44px;min-height:44px;border:0;background:transparent;color:#fff;font-size:1.1rem;cursor:pointer}
 .dp-viewer-corps{padding:14px 10px 40px}
+/* ═══ SITE-COURS-2b — viewer d'un document de l'atelier (patron dp-viewer) ═══ */
+.atdoc-viewer{position:fixed;inset:0;z-index:9600;background:#faf7f2;display:flex;flex-direction:column}
+.atdoc-viewer-barre{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#2e2750;color:#fff;flex:0 0 auto}
+.atdoc-viewer-titre{flex:1;font-weight:700;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.atdoc-viewer-x,.atdoc-viewer-imp{min-width:44px;min-height:44px;border:0;background:transparent;color:#fff;font-size:1.1rem;cursor:pointer}
+.atdoc-viewer-frame{flex:1;width:100%;border:0;background:#fff}
+/* SITE-COURS-2b — la modale LIER passe au standard tactile du site (cibles 44 px) :
+   la 3e section arrive avec le composant, tout le composant monte au standard. */
+.link-modal-btn{min-height:44px}
+.link-modal-select{min-height:44px}
+.link-modal-input{min-height:44px}
 @media (max-width:480px){.dp-rel-bloc{flex-direction:column}}
 /* ── l'impression : c'est un cours ── */
 @media print{
@@ -1351,6 +1370,10 @@ body.at-corps-fige{overflow:hidden}
   <div class="link-modal-section">
     <div class="link-modal-section-title">📋 Chapitre de plan de travail</div>
     <div class="link-modal-row"><select class="link-modal-select" id="link-modal-worktrack"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyApp('worktrack')">Lier</button></div>
+  </div>
+  <div class="link-modal-section">
+    <div class="link-modal-section-title">📄 Document de l’atelier</div>
+    <div class="link-modal-row"><select class="link-modal-select" id="link-modal-atelier"><option value="">Chargement…</option></select><button class="link-modal-btn" onclick="linkModalApplyAtelier()">Lier</button></div>
   </div>
   <div class="link-modal-footer">
     <button class="link-modal-btn danger" onclick="linkModalUnlink()">Délier</button>
@@ -2509,8 +2532,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.27.1";
-var APP_VERSION_DATE="2026-07-30";
+var APP_VERSION="8.28.0";
+var APP_VERSION_DATE="2026-08-04";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -3327,6 +3350,7 @@ function openItem(level,chnum,snum,itemId){
   if(item.kind==='applaudimetre' && src==='firebase_app'){var _lv=clickedLevel||currentLevel||'';openViewer(item.title||'Applaudim\u00e8tre','applause_meter.html'+(_lv?'?n='+_lv:''));return;}
   if(item.kind==='worktrack' && src==='firebase_app'){var _lw=clickedLevel||currentLevel||'';openViewer(item.title||'Plan de travail','worktrack.html'+(_lw?'?n='+_lw:''));return;}
   if(item.kind==='tache' && src==='firebase_app'){openViewer(item.title||'T\u00e2che',ref);return;} /* M12 : r\u00e9paration \u2014 tombait sur \u00ab type non support\u00e9 \u00bb */
+  if(src==='atelier'){openAtelierItem(ref,item.title);return;}   /* SITE-COURS-2b : document de l'atelier */
   if(src==='drive'){openViewer(item.title,'https://drive.google.com/file/d/'+ref+'/preview');return;}
   if(src==='external'){openViewer(item.title,ref);return;}
   if(src==='html'){openViewer(item.title,ref);return;}
@@ -3537,13 +3561,14 @@ function openLinkModal(level,chnum,snum,itemId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
   LINK_MODAL_CONTEXT={level:level,chnum:chnum,snum:snum,itemId:itemId};
   document.getElementById('link-modal-title').textContent='Lier : '+(item.title||'');
-  document.getElementById('link-modal-sub').textContent='Lie cet item \u00e0 une ressource via une des 4 sections ci-dessous : fichier Drive / URL externe, dict\u00e9e existante, r\u00e9\u00e9criture existante, ou \u00e9valuation QCM. La nouvelle liaison \u00e9crase l\u2019ancienne.';
+  document.getElementById('link-modal-sub').textContent='Lie cet item \u00e0 une ressource : un fichier Drive ou une adresse web, un travail d\u2019une application (dict\u00e9e, r\u00e9\u00e9criture, QCM, d\u00e9bat\u2026), ou un document de l\u2019atelier. La nouvelle liaison remplace l\u2019ancienne.';
   var currentEl=document.getElementById('link-modal-current');
   if(item.ref){
     var label='';
     if(item.source==='drive')label='\ud83d\udcce Drive : '+item.ref;
     else if(item.source==='external')label='\ud83c\udf10 '+item.ref;
     else if(item.source==='firebase_app')label=(item.kind||'App')+' : '+item.ref;
+    else if(item.source==='atelier')label='\ud83d\udcc4 Feuille : '+item.ref; /* le titre remplace la r\u00e9f\u00e9rence d\u00e8s que la liste est charg\u00e9e */
     else label=(item.source||'?')+' : '+item.ref;
     currentEl.textContent='Liaison actuelle \u2014 '+label;
   } else {
@@ -3557,6 +3582,7 @@ function openLinkModal(level,chnum,snum,itemId){
   loadAppList('analyse_logique');
   loadAppList('applaudimetre');
   loadAppList('worktrack');
+  loadAtelierDocList();   /* SITE-COURS-2b : 3e source */
   document.getElementById('link-modal').classList.add('visible');
 }
 
@@ -6045,8 +6071,8 @@ nom_eleve:        AC('A','donnee','entete',"Afficher le nom de l’élève",{exi
 classe:           AC('A','donnee','entete',"Afficher la classe",{exige:'classe',forme:'meta'}),
 niveau:           AC('A','donnee','entete',"Afficher le niveau",{exige:'niveau',forme:'meta'}),
 groupe:           AC('A','structure','entete',"Afficher le groupe ou le binôme",{forme:'meta',champs:[CH('texte','Groupe / binôme')]}),
-chapitre:         AC('A','structure','entete',"Afficher le chapitre",{forme:'meta',champs:[CH('texte','Chapitre')]}),
-seance:           AC('A','structure','entete',"Afficher le numéro et le titre de la séance",{defaut:true,forme:'meta',champs:[CH('texte','Séance (n° et titre)')]}),
+chapitre:         AC('A','structure','entete',"Afficher le chapitre",{forme:'meta',adresse:true,champs:[CH('texte','Chapitre')]}),
+seance:           AC('A','structure','entete',"Afficher le numéro et le titre de la séance",{defaut:true,forme:'meta',adresse:true,champs:[CH('texte','Séance (n° et titre)')]}),
 date_seance:      AC('A','structure','entete',"Afficher la date de la séance",{defaut:true,forme:'meta',champs:[CH('texte','Date de la séance','date')]}),
 date_edition:     AC('A','donnee','pied',"Afficher la date d’édition à l’écran",{defaut:true,toujours_imprime:true,forme:'date_edition',info:"Sur le papier, la date d’édition est toujours imprimée : c’est elle qui date la feuille dans le cahier."}),
 annee_scolaire:   AC('A','donnee','entete',"Afficher l’année scolaire",{forme:'meta'}),
@@ -6235,6 +6261,7 @@ function atPromptComposantes(){
       var c=x.c;var ligne='- '+x.id+' : '+c.libelle;
       if(c.multiple)ligne+=' [peut se r\u00e9p\u00e9ter : utilise "blocs"]';
       if(c.exige)ligne+=' [se remplit tout seul depuis la fiche : ne mets pas de valeur]';
+      if(c.adresse)ligne+=' [ne mets une valeur que si tu la CONNAIS exactement : l\u2019adresse d\u2019une feuille se choisit normalement dans la feuille, par ses menus \u2014 une adresse fausse sera refus\u00e9e]';
       var ch=(c.champs||[]);
       if(ch.length){
         ligne+=' \u2192 champs : '+ch.map(function(f){
@@ -6559,7 +6586,7 @@ function atIAVerifier(){
   var brut=(document.getElementById('at-ia-coller')||{}).value||'';
   var msg=document.getElementById('at-ia-msg'),ap=document.getElementById('at-ia-apercu');
   if(ap)ap.innerHTML='';
-  AT_IA.json=null;
+  AT_IA.json=null;AT_IA.adresse=null;
   var t=String(brut).trim().replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
   if(!t){if(msg){msg.className='at-ia-msg at-ia-ko';msg.textContent='Colle d\u2019abord la r\u00e9ponse de l\u2019IA.';}return;}
   var o;
@@ -6570,15 +6597,29 @@ function atIAVerifier(){
         +'Demande \u00e0 l\u2019IA de redonner le r\u00e9sultat en entier, sans rien autour.';}
     return;
   }
-  var errs=atIAValider(o);
-  if(errs.length){
-    if(msg){msg.className='at-ia-msg at-ia-ko';
-      msg.innerHTML='Je ne peux pas \u00e9crire cette feuille :<ul>'+errs.map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ul>';}
-    return;
+  /* SITE-COURS-2b : une adresse venue de l'IA se VALIDE contre les données réelles
+     du hub avant tout verdict — refus nommé si elle n'existe pas. */
+  var finir=function(errsAdresse,adresse){
+    var errs=atIAValider(o).concat(errsAdresse||[]).slice(0,8);
+    if(errs.length){
+      AT_IA.adresse=null;
+      if(msg){msg.className='at-ia-msg at-ia-ko';
+        msg.innerHTML='Je ne peux pas \u00e9crire cette feuille :<ul>'+errs.map(function(x){return '<li>'+atEsc(x)+'</li>';}).join('')+'</ul>';}
+      return;
+    }
+    AT_IA.json=o;AT_IA.adresse=adresse||null;
+    if(msg){msg.className='at-ia-msg at-ia-ok';msg.textContent='R\u00e9ponse comprise. Voici ce qui sera \u00e9crit.';}
+    atIAApercu();
+  };
+  var aAdresse=o&&o.valeurs&&(o.valeurs.chapitre||o.valeurs.seance);
+  var niveauRef=(AT.doc&&AT.doc.rattachement&&AT.doc.rattachement.niveau)||'';
+  if(aAdresse&&niveauRef){
+    atChargerChapitres(niveauRef,function(){var r=atIAValiderAdresse(o,niveauRef);finir(r.errs,r.adresse);});
+  }else if(aAdresse){
+    var r0=atIAValiderAdresse(o,'');finir(r0.errs,null);
+  }else{
+    finir([],null);
   }
-  AT_IA.json=o;
-  if(msg){msg.className='at-ia-msg at-ia-ok';msg.textContent='R\u00e9ponse comprise. Voici ce qui sera \u00e9crit.';}
-  atIAApercu();
 }
 
 /* ── L'APERÇU, puis LE CHOIX (deux boutons de même poids, aucun pré-choisi) ── */
@@ -6589,6 +6630,7 @@ function atIAApercu(){
   var h='<div class="at-ia-apercu-boite"><div class="at-ia-apercu-titre">Voici ce qui sera \u00e9crit. Rien n\u2019est enregistr\u00e9 tant que tu n\u2019as pas choisi.</div>';
   h+='<div class="at-ia-ap-l"><b>Titre de la feuille :</b> '+atEsc(o.titre||'(sans titre)')+'</div>';
   if(o.produit&&ATELIER_PRODUITS[o.produit])h+='<div class="at-ia-ap-l"><b>Type :</b> '+atEsc(ATELIER_PRODUITS[o.produit].libelle)+'</div>';
+  if(AT_IA.adresse){var _aa=AT_IA.adresse;h+='<div class="at-ia-ap-l"><b>Adresse v\u00e9rifi\u00e9e :</b> '+atEsc(_aa.niveau+(_aa.chapitre?(' \u00b7 Chapitre '+_aa.chapitreOrdre+' \u2014 '+_aa.chapitreTitre):'')+(_aa.seance?(' \u00b7 S\u00e9ance '+_aa.seanceOrdre+' \u2014 '+_aa.seanceTitre):''))+'</div>';}
   h+='<div class="at-ia-ap-l"><b>\u00c9l\u00e9ments qui appara\u00eetront ('+cases.length+') :</b><ul>';
   cases.forEach(function(id){h+='<li>'+atEsc(ATELIER_COMPOSANTES[id].libelle)+'</li>';});
   h+='</ul></div>';
@@ -6632,6 +6674,16 @@ function atIAAppliquer(doc,o){
     Object.keys(b.valeurs||{}).forEach(function(k){bloc.valeurs[k]=atValeurTypee(b.id,k,Array.isArray(b.valeurs[k])?b.valeurs[k].join('\n'):b.valeurs[k]);});
     doc.contenu.push(bloc);
   });
+  /* SITE-COURS-2b : l'adresse VALIDÉE s'écrit — libellés du HUB, jamais ceux de l'IA. */
+  if(typeof AT_IA!=='undefined'&&AT_IA.adresse){
+    var _a=AT_IA.adresse;
+    doc.rattachement=doc.rattachement||{};
+    doc.rattachement.niveau=_a.niveau;
+    doc.rattachement.chapitre=_a.chapitre;doc.rattachement.chapitreTitre=_a.chapitreTitre;
+    doc.rattachement.seance=_a.seance;doc.rattachement.seanceTitre=_a.seanceTitre;
+    if(_a.chapitre){doc.cases.chapitre=true;doc.valeurs.chapitre={texte:'Chapitre '+_a.chapitreOrdre+' \u2014 '+_a.chapitreTitre};}
+    if(_a.seance){doc.cases.seance=true;doc.valeurs.seance={texte:'S\u00e9ance '+_a.seanceOrdre+' \u2014 '+_a.seanceTitre};}
+  }
   doc.dates=doc.dates||{};doc.dates.modifieLe=Date.now();
   return doc;
 }
@@ -8209,8 +8261,8 @@ ATELIER_FORMES.meta=function(id,c,vals,ctx){
   else if(id==='annee_scolaire'){lib='Ann\u00e9e scolaire';val=ctx.anneeScolaire||'';}
   else if(id==='version_document'){lib='Version';val='v'+(ctx.versionDoc||1);}
   else if(id==='date_seance'){lib='Date de la s\u00e9ance';val=atDateFr(vals.texte);}
-  else if(id==='seance'){lib='S\u00e9ance';val=vals.texte||'';}
-  else if(id==='chapitre'){lib='Chapitre';val=vals.texte||'';}
+  else if(id==='seance'){lib='S\u00e9ance';val=(ctx&&ctx.seanceAff)||vals.texte||'';}   /* SITE-COURS-2b : le hub prime, le stocké fait secours */
+  else if(id==='chapitre'){lib='Chapitre';val=(ctx&&ctx.chapitreAff)||vals.texte||'';}
   else if(id==='groupe'){lib='Groupe';val=vals.texte||'';}
   else if(id==='periode'){lib='P\u00e9riode';val=vals.texte||'';}
   else {lib=id;val=vals.texte||'';}
@@ -8451,6 +8503,10 @@ function atelierDocumentHTML(doc,ctxEleve,options){
     uneParLigne:on('une_consigne_par_ligne'),
     numLignes:on('numerotation_lignes'),
     verbeAction:on('verbe_action')?((doc.valeurs&&doc.valeurs.verbe_action&&doc.valeurs.verbe_action.texte)||''):'',
+    /* SITE-COURS-2b : l'adresse affichée se recalcule depuis le hub quand il est
+       chargé (Q1) — sinon le rendu retombe sur la valeur stockée, plus bas. */
+    chapitreAff:(typeof atAdresseAffichage==='function')?atAdresseAffichage(doc,'chapitre'):'',
+    seanceAff:(typeof atAdresseAffichage==='function')?atAdresseAffichage(doc,'seance'):'',
     motsClesHtml:''
   };
   if(on('mots_cles')){
@@ -8982,6 +9038,210 @@ function atRetourListe(){atEnregistrerMaintenant(function(){AT.doc=null;AT.docId
 function atSetTitre(v){if(!AT.doc)return;AT.doc.titre=v;atMarquerModifie();}
 
 /* rattachement niveau / classe / élève (source : classesData du site, extractEleves) */
+/* ═════════════════════════════════════════════════════════════════════
+   § SITE-COURS-2b — L'ADRESSE DES FEUILLES ET LA 3e SOURCE DU BOUTON LIER
+   Décisions de Paul du 29/07 : ① niveau → chapitre → séance devient une cascade
+   de menus alimentée par les données réelles du hub — la feuille CONNAÎT son
+   adresse ; ② FLUX WINDOWS, sens unique — les chapitres et séances se créent et
+   se renomment dans l'arborescence du panneau prof, jamais depuis une feuille ;
+   ③ le bouton LIER gagne une source « document de l'atelier » ; une adresse
+   injectée par IA se VALIDE contre les données réelles (refus nommé sinon) ;
+   `published` n'est JAMAIS écrit par ce chantier.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* L'état de chargement des chapitres, par niveau : ''|'enCours'|'charge'|'erreur'.
+   chapitresData reste LE cache, partagé avec la navigation du site (même
+   normalisation par sanitizeChapitres — aucun second parseur). */
+var AT_CHAP_ETAT={};
+function atChargerChapitres(niveau,cb){
+  if(!niveau){if(cb)cb(false);return;}
+  if(chapitresData[niveau]&&Object.keys(chapitresData[niveau]).length){AT_CHAP_ETAT[niveau]='charge';if(cb)cb(true);return;}
+  if(AT_CHAP_ETAT[niveau]==='enCours'){if(cb)cb(false);return;}
+  AT_CHAP_ETAT[niveau]='enCours';
+  fetch(FIREBASE_BASE+'/site/'+niveau+'/chapitres.json')   /* LECTURE SEULE — ce chantier n'écrit jamais dans l'arborescence */
+    .then(function(rp){if(!rp.ok)throw new Error('HTTP '+rp.status);return rp.json();})
+    .then(function(v){chapitresData[niveau]=sanitizeChapitres(v||{});AT_CHAP_ETAT[niveau]='charge';if(cb)cb(true);})
+    .catch(function(){AT_CHAP_ETAT[niveau]='erreur';if(cb)cb(false);});
+}
+function atRattRecharger(niveau){AT_CHAP_ETAT[niveau]='';atChargerChapitres(niveau,function(){atRendreEditeur();});}
+/* Les chapitres d'un niveau, triés par ordre — [{num,titre,ordre}] */
+function atChapitresDe(niveau){
+  var d=(niveau&&typeof chapitresData!=='undefined'&&chapitresData[niveau])||{};
+  return Object.keys(d).map(function(k){var c=d[k]||{};return {num:String(k),titre:c.title||('Chapitre '+k),ordre:(c.ordre!=null?Number(c.ordre):(parseInt(k,10)||0))};})
+    .sort(function(a,b){return a.ordre-b.ordre;});
+}
+/* Les séances d'un chapitre, triées par ordre — [{num,titre,ordre}] */
+function atSeancesDe(niveau,chnum){
+  var d=(niveau&&typeof chapitresData!=='undefined'&&chapitresData[niveau])||{};
+  var ch=d[chnum];if(!ch||!ch.seances)return [];
+  var out=[];
+  Object.keys(ch.seances).forEach(function(k){var s=ch.seances[k];if(!s)return;out.push({num:String(k),titre:s.title||('Séance '+k),ordre:(s.ordre!=null?Number(s.ordre):(parseInt(k,10)||0))});});
+  return out.sort(function(a,b){return a.ordre-b.ordre;});
+}
+/* Poser ou effacer l'adresse : les libellés viennent du HUB, jamais retapés. */
+function atRattPoserChapitre(r,num){
+  r.chapitre=num?String(num):'';r.seance='';r.seanceTitre='';
+  var c=r.chapitre?atChapitresDe(r.niveau).filter(function(x){return x.num===r.chapitre;})[0]:null;
+  r.chapitreTitre=c?c.titre:'';
+  atAdresseVersValeurs(r);
+}
+function atRattPoserSeance(r,num){
+  r.seance=num?String(num):'';
+  var s=r.seance?atSeancesDe(r.niveau,r.chapitre).filter(function(x){return x.num===r.seance;})[0]:null;
+  r.seanceTitre=s?s.titre:'';
+  atAdresseVersValeurs(r);
+}
+/* Les champs d'affichage `chapitre`/`seance` suivent l'adresse (flux Windows). */
+function atAdresseVersValeurs(r){
+  if(!AT.doc)return;
+  AT.doc.valeurs=AT.doc.valeurs||{};AT.doc.cases=AT.doc.cases||{};
+  var tc=atAdresseAffichage(AT.doc,'chapitre'), ts=atAdresseAffichage(AT.doc,'seance');
+  if(r.chapitre){AT.doc.cases.chapitre=true;AT.doc.valeurs.chapitre={texte:tc};}
+  else{delete AT.doc.cases.chapitre;delete AT.doc.valeurs.chapitre;}
+  if(r.seance){AT.doc.cases.seance=true;AT.doc.valeurs.seance={texte:ts};}
+  else{delete AT.doc.cases.seance;delete AT.doc.valeurs.seance;}
+}
+/* Le libellé à l'écran se recalcule depuis le hub quand il est chargé (l'écran
+   est à jour) ; sinon le libellé stocké à la sélection fait secours ; une feuille
+   d'avant la cascade garde son ancien texte libre (traité par l'appelant). */
+function atAdresseAffichage(doc,quoi){
+  var r=doc&&doc.rattachement;if(!r||!r.niveau)return '';
+  if(quoi==='chapitre'){
+    if(!r.chapitre)return '';
+    var c=atChapitresDe(r.niveau).filter(function(x){return x.num===String(r.chapitre);})[0];
+    if(c)return 'Chapitre '+c.ordre+' — '+c.titre;
+    return r.chapitreTitre?('Chapitre '+r.chapitre+' — '+r.chapitreTitre):'';
+  }
+  if(!r.seance)return '';
+  var s=atSeancesDe(r.niveau,r.chapitre).filter(function(x){return x.num===String(r.seance);})[0];
+  if(s)return 'Séance '+s.ordre+' — '+s.titre;
+  return r.seanceTitre?('Séance '+r.seance+' — '+r.seanceTitre):'';
+}
+/* ── L'ADRESSE VENUE D'UNE IA SE VALIDE — refus NOMMÉS, libellés du hub ──
+   Comparaisons STRICTES en codepoints (une apostrophe courbe n'est pas une droite,
+   « XIXème » n'est pas « XIXe ») : la machine ne devine pas, elle refuse en nommant. */
+function atIAValiderAdresse(o,niveau){
+  var res={errs:[],adresse:null};
+  var vc=o&&o.valeurs&&o.valeurs.chapitre, vs=o&&o.valeurs&&o.valeurs.seance;
+  var tc=(vc&&typeof vc.texte==='string')?vc.texte.trim():'';
+  var ts=(vs&&typeof vs.texte==='string')?vs.texte.trim():'';
+  if(vc&&!tc&&vc.texte!=null)tc=String(vc.texte).trim();
+  if(vs&&!ts&&vs.texte!=null)ts=String(vs.texte).trim();
+  if(!tc&&!ts)return res;
+  if(!niveau){res.errs.push('L’adresse d’une feuille (chapitre, séance) se choisit dans la feuille, par ses menus — pas par l’IA. Retire « chapitre » et « seance » de la réponse.');return res;}
+  var chs=atChapitresDe(niveau);
+  if(!chs.length){res.errs.push('La liste des chapitres de '+niveau+' n’a pas pu être lue — réessaie quand la connexion est stable, ou choisis l’adresse dans la feuille.');return res;}
+  var ch=null;
+  if(tc){
+    ch=atTrouverChapitre(chs,tc);
+    if(!ch){res.errs.push('Le chapitre « '+tc+' » n’existe pas en '+niveau+'. Chapitres existants : '+chs.map(function(c){return c.ordre+'. '+c.titre;}).join(' · ')+'.');return res;}
+  }
+  var se=null;
+  if(ts){
+    if(!ch){res.errs.push('La séance « '+ts+' » ne peut pas se vérifier sans son chapitre : ajoute aussi « chapitre » dans la réponse, ou choisis l’adresse dans la feuille.');return res;}
+    var ss=atSeancesDe(niveau,ch.num);
+    se=atTrouverSeance(ss,ts);
+    if(!se){res.errs.push('La séance « '+ts+' » n’existe pas dans « '+ch.titre+' » ('+niveau+'). '+(ss.length?('Séances existantes : '+ss.map(function(s){return s.ordre+'. '+s.titre;}).join(' · ')+'.'):'Ce chapitre n’a pas encore de séance : elle se crée dans l’arborescence du site.'));return res;}
+  }
+  res.adresse={niveau:niveau,
+    chapitre:ch?ch.num:'',chapitreTitre:ch?ch.titre:'',chapitreOrdre:ch?ch.ordre:'',
+    seance:se?se.num:'',seanceTitre:se?se.titre:'',seanceOrdre:se?se.ordre:''};
+  return res;
+}
+function atTrouverChapitre(chs,t){
+  var m=/^\s*[Cc]hapitre\s+(\d+)\s*(?:[\u2014\u2013\-:.,]\s*(.+))?$/.exec(t)||/^\s*(\d+)\s*$/.exec(t);
+  if(m){
+    var n=parseInt(m[1],10);
+    var c=chs.filter(function(x){return Number(x.ordre)===n;})[0]||chs.filter(function(x){return x.num===String(n);})[0];
+    if(!c)return null;
+    if(m[2]&&m[2].trim()!==c.titre)return null;   /* titre annoncé ≠ titre réel : refus */
+    return c;
+  }
+  return chs.filter(function(x){return x.titre===t;})[0]||null;
+}
+function atTrouverSeance(ss,t){
+  var m=/^\s*[Ss][e\u00e9]ance\s+(\d+)\s*(?:[\u2014\u2013\-:.,]\s*(.+))?$/.exec(t)||/^\s*(\d+)\s*$/.exec(t);
+  if(m){
+    var n=parseInt(m[1],10);
+    var s=ss.filter(function(x){return Number(x.ordre)===n;})[0]||ss.filter(function(x){return x.num===String(n);})[0];
+    if(!s)return null;
+    if(m[2]&&m[2].trim()!==s.titre)return null;
+    return s;
+  }
+  return ss.filter(function(x){return x.titre===t;})[0]||null;
+}
+/* ── 3e SOURCE DU BOUTON LIER : un document de l'atelier ──
+   Un document, plusieurs points d'affichage (décision ④ du 27/07). */
+var LINK_ATELIER_DOCS=null;
+function loadAtelierDocList(){
+  var sel=document.getElementById('link-modal-atelier');if(!sel)return;
+  sel.innerHTML='<option value="">Chargement…</option>';
+  atSiteGetDocs(function(docs){
+    LINK_ATELIER_DOCS=docs||{};
+    var sel2=document.getElementById('link-modal-atelier');if(!sel2)return;
+    var ids=Object.keys(LINK_ATELIER_DOCS);
+    if(!ids.length){sel2.innerHTML='<option value="">Aucune feuille dans l’atelier pour l’instant</option>';return;}
+    ids.sort(function(a,b){var da=((LINK_ATELIER_DOCS[a]||{}).dates||{}).modifieLe||0,db=((LINK_ATELIER_DOCS[b]||{}).dates||{}).modifieLe||0;return db-da;});
+    sel2.innerHTML='<option value="">— choisir une feuille —</option>'+ids.map(function(id){
+      var d=LINK_ATELIER_DOCS[id]||{};
+      var prod=(d.produit&&typeof ATELIER_PRODUITS!=='undefined'&&ATELIER_PRODUITS[d.produit])?ATELIER_PRODUITS[d.produit].libelle:'';
+      var quand=(d.dates&&d.dates.modifieLe)?new Date(d.dates.modifieLe).toLocaleDateString('fr-FR'):'';
+      return '<option value="'+atEsc(id)+'">'+atEsc((d.titre||'Sans titre')+(prod?' · '+prod:'')+(quand?' · '+quand:''))+'</option>';
+    }).join('');
+    /* le libellé de la liaison actuelle gagne son titre quand la liste est là */
+    if(LINK_MODAL_CONTEXT){
+      var ctx=LINK_MODAL_CONTEXT;
+      var it=chapitresData[ctx.level]&&chapitresData[ctx.level][ctx.chnum]&&chapitresData[ctx.level][ctx.chnum].seances[ctx.snum]&&chapitresData[ctx.level][ctx.chnum].seances[ctx.snum].items[ctx.itemId];
+      if(it&&it.source==='atelier'&&it.ref&&LINK_ATELIER_DOCS[it.ref]){
+        var cur=document.getElementById('link-modal-current');
+        if(cur)cur.textContent='Liaison actuelle — 📄 Feuille : '+(LINK_ATELIER_DOCS[it.ref].titre||it.ref);
+      }
+    }
+  });
+}
+function linkModalApplyAtelier(){
+  if(!LINK_MODAL_CONTEXT)return;
+  var sel=document.getElementById('link-modal-atelier');
+  var ref=sel?sel.value:'';
+  if(!ref){alert('Choisis une feuille dans la liste.');return;}
+  var d=(LINK_ATELIER_DOCS||{})[ref]||{};
+  var r=d.rattachement||{};
+  if(r.eleve&&r.eleve!=='*'){
+    /* Prévenu, pas bloqué : un objet nominatif ne s'expose pas sans que le professeur le sache. */
+    _modaleConfirme('Lier','Cette feuille est au nom de '+escapeHtml(r.eleve)+'. Si la séance est publiée, toute la classe pourra l’ouvrir et lire ce document à son nom. Lier quand même ?',function(){
+      applyLinkChanges('atelier',ref,null);
+    });
+    return;
+  }
+  applyLinkChanges('atelier',ref,null);
+}
+/* ── L'OUVERTURE d'un item lié à un document de l'atelier (patron du diaporama).
+   Le rendu est CELUI de l'atelier (atelierPageHTML) : aucune divergence possible
+   entre ce que le professeur compose et ce que l'élève ouvre. ── */
+function openAtelierItem(ref,titre){
+  var ex=document.getElementById('atdoc-viewer');if(ex)ex.remove();
+  var ov=document.createElement('div');ov.id='atdoc-viewer';ov.className='atdoc-viewer';
+  ov.innerHTML='<div class="atdoc-viewer-barre">'
+    +'<button class="atdoc-viewer-x" onclick="var e=document.getElementById(\'atdoc-viewer\');if(e)e.remove();" aria-label="Fermer">\u2715</button>'
+    +'<span class="atdoc-viewer-titre">'+atEsc(titre||'Document')+'</span>'
+    +'<button class="atdoc-viewer-imp" onclick="var f=document.getElementById(\'atdoc-viewer-frame\');if(f&&f.contentWindow){f.contentWindow.focus();f.contentWindow.print();}" aria-label="Imprimer">\ud83d\udda8\ufe0f</button></div>'
+    +'<iframe id="atdoc-viewer-frame" class="atdoc-viewer-frame" title="Document"></iframe>';
+  document.body.appendChild(ov);
+  secuLire(AT_NOEUD+'/'+ref).then(function(doc){
+    var f=document.getElementById('atdoc-viewer-frame');if(!f)return;
+    if(!doc){f.srcdoc='<body style="font-family:serif;padding:24px">Ce document n\u2019est plus disponible.</body>';return;}
+    var lot=[];
+    try{
+      var rt=doc.rattachement||{};
+      if(rt.eleve&&rt.eleve!=='*'){lot=[{nom:rt.eleve,code:''}];}
+      else if(rt.eleve==='*'&&typeof TRACK!=='undefined'&&TRACK.eleve&&!TRACK.eleve.is_prof&&TRACK.eleve.nom){lot=[{nom:TRACK.eleve.nom,code:''}];}
+    }catch(e){}
+    try{f.srcdoc=atelierPageHTML(doc,lot);}
+    catch(e){f.srcdoc='<body style="font-family:serif;padding:24px">Affichage impossible pour l\u2019instant.</body>';}
+  });
+}
+/* ═══ fin § SITE-COURS-2b ═══ */
+
 function atRoster(slug){
   if(!slug||typeof classesData==='undefined'||!classesData[slug])return [];
   try{return extractEleves(classesData[slug],[])||[];}catch(e){return [];}
@@ -9003,20 +9263,51 @@ function atHtmlRattachement(){
   h+='<select class="at-sel" onchange="atSetRatt(\'classe\',this.value)"><option value="">\u2014 classe \u2014</option>'+classes.map(function(c){return '<option value="'+atEsc(c.slug)+'"'+(r.classe===c.slug?' selected':'')+'>'+atEsc(c.nom)+'</option>';}).join('')+'</select>';
   var roster=atRoster(r.classe);
   h+='<select class="at-sel" onchange="atSetRatt(\'eleve\',this.value)"><option value="">\u2014 \u00e9l\u00e8ve \u2014</option><option value="*"'+(r.eleve==='*'?' selected':'')+'>Toute la classe (un exemplaire par \u00e9l\u00e8ve)</option>'+roster.map(function(n){return '<option value="'+atEsc(n)+'"'+(r.eleve===n?' selected':'')+'>'+atEsc(n)+'</option>';}).join('')+'</select>';
+  /* SITE-COURS-2b · L'ADRESSE : niveau → chapitre → séance, menus alimentés par les
+     données réelles du hub. La feuille CONNAÎT son adresse ; rien ne se retape. */
+  if(r.niveau){
+    var etatCh=AT_CHAP_ETAT[r.niveau]||'';
+    var chsDispo=chapitresData[r.niveau]&&Object.keys(chapitresData[r.niveau]).length;
+    if(chsDispo){
+      var chs=atChapitresDe(r.niveau);
+      h+='<select class="at-sel" onchange="atSetRatt(\'chapitre\',this.value)"><option value="">\u2014 chapitre \u2014</option>'+chs.map(function(c){return '<option value="'+atEsc(c.num)+'"'+(r.chapitre===c.num?' selected':'')+'>'+atEsc(c.ordre+'. '+c.titre)+'</option>';}).join('')+'</select>';
+      if(r.chapitre){
+        var ss=atSeancesDe(r.niveau,r.chapitre);
+        if(ss.length){
+          h+='<select class="at-sel" onchange="atSetRatt(\'seance\',this.value)"><option value="">\u2014 s\u00e9ance \u2014</option>'+ss.map(function(s){return '<option value="'+atEsc(s.num)+'"'+(r.seance===s.num?' selected':'')+'>'+atEsc('S\u00e9ance '+s.ordre+' \u2014 '+s.titre)+'</option>';}).join('')+'</select>';
+        }else{
+          h+='<span class="at-ratt-note">\u2014 aucune s\u00e9ance dans ce chapitre pour l\u2019instant \u2014</span>';
+        }
+      }
+    }else if(etatCh==='erreur'){
+      h+='<span class="at-ratt-note">La liste des chapitres n\u2019a pas pu \u00eatre lue. <button type="button" class="at-btn at-btn-min" onclick="atRattRecharger(\''+atEsc(r.niveau)+'\')">R\u00e9essayer</button></span>';
+    }else{
+      h+='<span class="at-ratt-note">Chargement des chapitres\u2026</span>';
+      atChargerChapitres(r.niveau,function(){atRendreEditeur();});
+    }
+  }
   h+='<span class="at-ifo" onclick="atInfoRatt()">\u24d8</span></div>';
   return h;
 }
 function atSetRatt(k,v){
   if(!AT.doc)return;
   AT.doc.rattachement=AT.doc.rattachement||{};
-  AT.doc.rattachement[k]=v;
+  var r=AT.doc.rattachement;
+  r[k]=v;
   if(k==='classe'){
     var cl=(typeof classesData!=='undefined'&&classesData&&classesData[v])||null;
-    AT.doc.rattachement.classeNom=(cl&&cl.nom)||v||'';
-    if(cl&&cl.niveau)AT.doc.rattachement.niveau=cl.niveau;
-    AT.doc.rattachement.eleve='';
+    r.classeNom=(cl&&cl.nom)||v||'';
+    if(cl&&cl.niveau&&cl.niveau!==r.niveau){r.niveau=cl.niveau;atRattPoserChapitre(r,'');if(cl.niveau)atChargerChapitres(cl.niveau,function(){atRendreEditeur();});}
+    r.eleve='';
   }
-  if(k==='niveau')AT.doc.rattachement.classe='';
+  if(k==='niveau'){
+    r.classe='';
+    /* SITE-COURS-2b : l'adresse suit le niveau — chapitre et séance repartent de zéro */
+    atRattPoserChapitre(r,'');
+    if(v)atChargerChapitres(v,function(){atRendreEditeur();});
+  }
+  if(k==='chapitre')atRattPoserChapitre(r,v);
+  if(k==='seance')atRattPoserSeance(r,v);
   AT.previewIdx=0;
   atMarquerModifie();
   atRendreEditeur();
@@ -9073,6 +9364,16 @@ function atToggleCase(id,val){
 function atHtmlChampsUnique(id,c){
   var vals=(AT.doc.valeurs&&AT.doc.valeurs[id])||{};
   var h='<div class="at-champs">';
+  if(c.adresse){
+    /* SITE-COURS-2b · flux Windows : ce champ suit l'adresse de la feuille, il ne se tape plus.
+       Les feuilles d'avant la cascade gardent leur ancien texte affiché tant que l'adresse
+       n'est pas posée par les menus. */
+    var aff=atAdresseAffichage(AT.doc,id)||(typeof vals.texte==='string'?vals.texte:'');
+    h+='<div class="at-champ"><label class="at-ch-l">'+atEsc((c.champs&&c.champs[0]&&c.champs[0].l)||c.libelle)+'</label>'
+      +'<input class="at-in at-in-adresse" value="'+atEsc(aff)+'" readonly>'
+      +'<div class="at-ch-note">Cette ligne suit l\u2019adresse de la feuille \u2014 elle se r\u00e8gle dans les menus ci-dessus\u00a0; les titres se renomment dans l\u2019arborescence du site.</div></div>';
+    return h+'</div>';
+  }
   if(c.intitule_defaut){
     h+='<div class="at-champ"><label class="at-ch-l">Intitul\u00e9 sur la feuille</label>'
       +'<input class="at-in" value="'+atEsc(typeof vals.intitule==='string'?vals.intitule:c.intitule_defaut)+'" oninput="atSetValeur(\''+id+'\',\'intitule\',this.value)"></div>';
