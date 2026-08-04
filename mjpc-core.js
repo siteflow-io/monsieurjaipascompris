@@ -1,5 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// MJPC-CORE v1.5.0 (2026-08-01) — socle commun de l'écosystème MJPC
+// MJPC-CORE v1.6.0 (2026-08-02) — socle commun de l'écosystème MJPC
+// v1.6.0 : + §8 manifeste à jour (publication seulement en cas d'écart) —
 // v1.5.0 : + §12 présentation de MJPC (pièce commune en tête de tous les prompts) —
 // v1.4.0 : + §12 zone prompt IA (composition, persistance, validation, injection) —
 // v1.3.0 : + §11 coffre (dérivation de clé, chiffrement, empreinte — WebCrypto) —
@@ -543,5 +544,25 @@ function mjpcChargerOutils(base,cb){
   }catch(e){if(cb)cb(null);}
 }
 
-var MJPC_CORE_VERSION="1.5.0";
+
+/* ── M-MANIFESTE : le manifeste publié est-il celui du code qui tourne ? ──
+   Compare la version du socle, la déclaration de l'app (nom, usage, quandPas,
+   contenant) et les nœuds déclarés. Toute divergence => republication.
+   Motif : rien ne garantissait qu'un manifeste au hub corresponde au code promu ;
+   l'aval (le prompt maître) raisonnait alors sur du périmé sans le savoir. */
+function mjpcManifesteAJour(publie,versionSocle,app,manifeste){
+  if(!publie||typeof publie!=='object')return false;
+  if(String(publie.version||'')!==String(versionSocle||''))return false;
+  var a=publie.app||{};
+  var champs=['id','nom','contenant','usage','quandPas'];
+  for(var i=0;i<champs.length;i++){
+    if(String(a[champs[i]]||'')!==String((app||{})[champs[i]]||''))return false;
+  }
+  try{
+    if(JSON.stringify(publie.manifeste||{})!==JSON.stringify(manifeste||{}))return false;
+  }catch(e){return false;}
+  return true;
+}
+
+var MJPC_CORE_VERSION="1.6.0";
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
