@@ -510,3 +510,31 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **POIDS REMESURÉ, non estimé** : vocabulaire 13 226 → **15 610 c.**, prompt de chapitre 14 346 → **≈16 730 c.** — **sous l'estimation du cadrage** (17 550) et du même ordre que le `PROMPT_CHAPTER` de `worktrack` qui tourne depuis juillet. **Aucun bornage nécessaire** : *une notion absente du prompt ne peut pas être taguée.*
 - **NON VALIDÉ PAR LA CONSCIENCE, et dit** : les `libelleEleve` et les `exemple` relèvent du **jugement pédagogique de Paul**, pas d'une vérification documentaire. Paul les a validés.
 - **Restauration en cas de `BUG`** : le commit précédent ramène le dépôt à v1.3.1 ; **le hub doit être ramené séparément** — les deux supports se restaurent ensemble ou pas du tout.
+
+## Point de retour — PROMOTION M-MANIFESTE · LES FICHES ARRIVENT AU HUB SANS GESTE CACHÉ, 04/08/2026
+| fichier | blob sha AVANT | APRÈS (o) |
+|---|---|---|
+| `mjpc-core.js` | `ac8cf6a8fc3e02c832b5c978c8f8db5d09bc78c7` | 33062 |
+| `index.html` | `b3c776bcb144b40a38734e9df6da95321f0b375c` | 707335 |
+| `correction_dictee.html` | `09821dcc2dd186277ba6df006fe89c52991db9ec` | 586505 |
+| `worktrack.html` | `40b4cc9c40eb85c1c27b869b8c9dd876fea27da4` | 1057685 |
+| `dictee_universelle.html` | `bb2a3a48386fab75b87be5e8e8f4b51635890a59` | 1995074 |
+| `pilotage_debat_s3.html` | `b69f16c4d32c663890302145e24ccbb86b4a8c0a` | 488609 |
+| `evaluation-qcm.html` | `14e6307ea68832838989565843c8bf41330814e1` | 549568 |
+| `analyse_logique.html` | `8ac7805713fbb385089e38fc4b6dc491c7740149` | 583725 |
+| `applause_meter.html` | `84f101423d7971c4380920f750fda59df1674339` | 667848 |
+| `reecriture.html` | `6c0ac0fb535cf3af5a122b107e6b34e2f3055fda` | 273567 |
+| `reecriture_bb4e.html` | `0a1be24b78f4b63e11aa63caa4e83b94d8434fa4` | 142832 |
+
+- **CANON 1.5.0 → 1.6.0** (`mjpcManifesteAJour`) · **`index` 8.15.0 → 8.21.0** · les neuf apps reçoivent la publication conditionnelle.
+- **LE DÉFAUT D'ORIGINE** : `publierManifeste` vit dans un `useEffect` d'un composant **qui ne se monte qu'APRÈS le portail prof**. **Ouvrir une app ne publiait rien : il fallait y entrer avec le code prof.** Fiches du hub datées du **17/07 au 31/07** pour un socle 1.6.0 — jusqu'à quatre versions de retard, **sans que rien ne le signale**, et le prompt maître de chapitre lisait ces déclarations périmées.
+- **PAUL A REFUSÉ LE CONTOURNEMENT** (ouvrir les neuf apps à la main) : *« je n'ai pas à bricoler. Ce n'est pas parce que faire un chapitre est une priorité qu'il faut bâcler les étapes. »* → **règle gravée : un geste manuel de Paul est un défaut de conception, pas une étape.**
+- **LIVRÉ** : ① **publication conditionnelle** — l'app compare et **ne republie que s'il y a écart** (*elle RÉDUIT les écritures : avant, elles réécrivaient à chaque ouverture*) ② **un BOUTON au TABLEAU DE BORD** qui lit les neuf fichiers **à la source, même origine**, extrait `MJPC_APP` et publie — **aucune copie embarquée, donc aucune divergence** ③ **un OVERLAY BLOQUANT** à l'ouverture du panneau prof quand un écart existe ④ **l'écran des fiches** déménagé de l'atelier vers le tableau de bord.
+- **LE BUG `atEsc`, TROUVÉ PAR UNE CAPTURE** : l'expression cherchait l'apostrophe **droite** (U+0027), la table déclarait la **courbe** (U+2019), **sans garde-fou** → toute apostrophe droite rendait **`undefined`**. **133 appels concernés.** Corrigé : les deux formes couvertes, `\u2019` écrit **en échappement**, `||c` posé. **Éprouvé sur 11 cas rendus DANS LA PAGE, zéro `undefined`.**
+- **⚠ DEUX MESURES FAUSSES PUBLIÉES AVANT LA BONNE** — conscience et exécutant ont chacun lu une apostrophe pour l'autre. **Constat de Paul, sur huit mois** : *« l'apostrophe, les tokens, c'est le symptôme permanent. Quand ça bugue, quand vous dérapez, le symptôme est toujours l'apostrophe ou les tokens. »* → **règle gravée : toute manipulation de chaîne s'éprouve EN CODEPOINTS, jamais à l'œil.**
+- **🔴 CE QUE LES CAPTURES ONT RÉVÉLÉ, ET QU'AUCUN AUDIT SUR PIÈCES N'AVAIT VU** : ① **`index.html` était resté au socle 1.5.0 sans `mjpcManifesteAJour`** — l'écran comparait à un socle périmé ② **à 390 px le bouton était HORS ÉCRAN** : sept apps sur neuf, liste coupée — **un overlay bloquant dont le bouton de sortie est inatteignable est un piège** ③ un « Fermer » présent **avant** le clic ④ `reecriture_bb4e` en **identifiant technique** ⑤ *« date illisible »* pour une app **jamais publiée** ⑥ *« peut-être périmée »*, qui affaiblissait une alerte que le socle tranche.
+- **TOUS CORRIGÉS ET PROUVÉS PAR CAPTURE** : boutons **ancrés en bas**, la liste défile au-dessus (390 px et 360 px) · **aucun « Fermer » avant clic**, il apparaît après **quel que soit le résultat** · nom lisible partout · *« jamais publiée »* seul · raison réécrite : *« sa fiche date d'une version antérieure du socle : le prompt de chapitre travaille avec cette version-là, pas avec celle qui tourne »*.
+- **PAUL NE PROMEUT QUE SUR CAPTURES** — décidé pendant ce morceau : *« là ça fait trop de bugs de vous deux »*. **Trois séries ont été nécessaires, et chacune a trouvé ce que l'audit sur pièces avait manqué.** → **règle gravée : les captures se livrent EN CONVERSATION, d'office.**
+- **AUDIT FINAL** : 16/16 · parseurs verts (seul KO le gabarit `@@ENDSCRIPT@@` d'`analyse_logique`, pré-existant) · socle **1.6.0** dans les neuf apps et le site ; `reecriture` et `reecriture_bb4e` restent en **1.3.0** (hors canon §12) · **deux écritures réseau**, attendues.
+- **⚠ CE QUI RESTE À FAIRE CÔTÉ PAUL** : **ouvrir le panneau prof et cliquer UNE FOIS sur « Mettre les fiches à jour »**. C'est le mécanisme qu'il a demandé — *le site ne met jamais à jour tout seul* — et non un bricolage. Le geste ne se répète qu'après une promotion touchant le socle.
+- **Restauration en cas de `BUG`** : par fichier, le commit précédent ramène à l'état AVANT du tableau.
