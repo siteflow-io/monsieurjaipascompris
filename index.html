@@ -982,6 +982,16 @@ body.at-corps-fige #tprof-btn,body.at-corps-fige #admin-tools-btn,body.at-corps-
 /* la modale d'envoi */
 .at-envoi-zone{width:100%;min-height:110px;font:inherit;font-size:.9rem;background:#241f18;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px;margin:10px 0 6px;box-sizing:border-box}
 .at-envoi-case{display:flex;align-items:center;gap:8px;color:#b8ad93;font-size:.83rem;margin-bottom:8px;min-height:44px}
+/* SITE-COURS-2d — les sections d'éditeur en accordéons */
+.at-sec{border:1px solid #3a3428;border-radius:10px;margin:0 0 10px;background:rgba(255,255,255,.02)}
+.at-sec-t{display:flex;align-items:center;gap:8px;min-height:44px;padding:2px 12px;cursor:pointer;color:#f0e8d8;font-weight:700;font-size:.95rem;user-select:none}
+.at-sec-ch{display:inline-block;transition:transform .18s ease;color:#c9b568;font-size:1.1rem}
+.at-sec-o>.at-sec-t .at-sec-ch{transform:rotate(90deg)}
+.at-sec-c{display:none;padding:0 12px 12px}
+.at-sec-o>.at-sec-c{display:block}
+/* le halo d'atterrissage sur la case d'éditeur (même décroissance que l'aperçu) */
+@keyframes atHalo{0%{box-shadow:0 0 0 3px rgba(212,160,23,.85);background:rgba(212,160,23,.16)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0);background:transparent}}
+.at-halo{animation:atHalo 5s ease-out forwards;border-radius:8px}
 /* SITE-COURS-2b — la modale LIER passe au standard tactile du site (cibles 44 px) :
    la 3e section arrive avec le composant, tout le composant monte au standard. */
 .link-modal-btn{min-height:44px}
@@ -2546,7 +2556,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.29.0";
+var APP_VERSION="8.30.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -7300,9 +7310,9 @@ function chAfficherInventaire(){
         : '<p class="ch-vide">\u26a0 Il manque \u00e0 ce sommaire : '+suf.manque.map(atEsc).join(', ')+'. Il sera cr\u00e9\u00e9 quand m\u00eame, mais le chapitre suivant en saura moins.</p>')
       +'</div>';
     h+='<div class="ch-choix"><div class="at-ia-choix-lib">Que veux-tu faire ?</div><div class="at-ia-actions">'
-      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'completer\')">Compl\u00e9ter (ne touche \u00e0 rien)</button>'
-      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'remplacer\')">Remplacer ce chapitre</button>'
-      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'jumeau\')">Garder \u00e0 c\u00f4t\u00e9 (proposition)</button>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'completer\')">Compl\u00e9ter (ne touche \u00e0 rien)</button><span class="at-ifo" onclick="atInfoInjection(\'completer\')">\u24d8</span>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'remplacer\')">Remplacer ce chapitre</button><span class="at-ifo" onclick="atInfoInjection(\'remplacer\')">\u24d8</span>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'jumeau\')">Garder \u00e0 c\u00f4t\u00e9 (proposition)</button><span class="at-ifo" onclick="atInfoInjection(\'jumeau\')">\u24d8</span>'
       +'</div><p class="ch-vide">Rien n\u2019est \u00e9crit tant que tu n\u2019as pas choisi. La publication reste ton geste : cette op\u00e9ration ne montre rien aux \u00e9l\u00e8ves.</p></div>';
     d.innerHTML=h;
   });
@@ -8634,8 +8644,22 @@ function atelierPageHTML(doc,listeCtx,options){
   return '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
     +'<title>'+atEsc((doc.valeurs&&doc.valeurs.titre&&doc.valeurs.titre.texte)||doc.titre||'Feuille')+'</title>'
     +'<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">'
-    +'<sty'+'le>'+atelierCharteCSS()+'<\/sty'+'le></head><body class="'+(doc.cases&&doc.cases.orientation_paysage?'b-paysage':'')+'">'
-    +corps+'</body></html>';
+    +'<sty'+'le>'+atelierCharteCSS()+'<\/sty'+'le>'
+    /* SITE-COURS-2d · aperçu seulement : keyframe edPulse reprise de worktrack
+       (mêmes valeurs, 5 s ease-out forwards), granularité SECTION (data-c) ;
+       les clics remontent au parent par postMessage type 'at-va'. La feuille
+       élève (openAtelierItem) ne reçoit RIEN de tout cela. */
+    +(options.apercu?('<sty'+'le>@keyframes edPulse{0%{box-shadow:0 0 0 3px rgba(212,160,23,.85);background:rgba(212,160,23,.20)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0);background:transparent}}'
+      +'[data-c]{scroll-margin-top:14px;border-radius:6px}'
+      +'.at-pulse{animation:edPulse 5s ease-out forwards}'
+      +'[data-c]:hover{outline:1px dashed rgba(212,160,23,.4);cursor:pointer}<\/sty'+'le>'):'')
+    +'</head><body class="'+(doc.cases&&doc.cases.orientation_paysage?'b-paysage':'')+'">'
+    +corps
+    +(options.apercu?('<scr'+'ipt>try{'
+      +(options.pulse?('var P='+JSON.stringify(String(options.pulse))+';var L=document.querySelectorAll(\'[data-c="\'+P+\'"]\');for(var i=0;i<L.length;i++)L[i].classList.add("at-pulse");if(L[0])L[0].scrollIntoView({block:"nearest"});'):'')
+      +'document.addEventListener("click",function(ev){var t=ev.target&&ev.target.closest?ev.target.closest("[data-c]"):null;if(!t)return;parent.postMessage({type:"at-va",comp:t.getAttribute("data-c")},"*");});'
+      +'}catch(e){}<\/scr'+'ipt>'):'')
+    +'</body></html>';
 }
 
 /* LA CHARTE SOBRE — EN DUR (décision : la charte est une décision de conception).
@@ -8918,14 +8942,28 @@ function atOuvrirDoc(id){
   /* SITE-COURS-2c : la version envoyée se charge UNE fois à l'ouverture (mesure d'écart
      sans lecture réseau à chaque enregistrement) ; drapeaux de proposition remis à zéro. */
   AT.envoiDoc=null;AT.propositionDepotFaite=false;AT.propositionEnvoiFaite=false;
+  AT.sectionsOuvertes={};   /* SITE-COURS-2d : les sections repartent repliées à chaque ouverture */
   if(base.depot){_siteGet(AT_ENVOIS_NOEUD+'/'+id+'/doc',function(v){AT.envoiDoc=v||null;});}
   var brouillon=atBrouillonLire(id);
   var reprendre=function(doc){AT.docId=id;AT.doc=doc;AT.previewIdx=0;atRendreEditeur();};
   if(brouillon&&brouillon.dates&&base.dates&&brouillon.dates.modifieLe>base.dates.modifieLe){
-    var quand=new Date(brouillon.dates.modifieLe).toLocaleString('fr-FR');
-    atModaleChoix('Une version plus r\u00e9cente de cette feuille existe sur cet appareil (enregistr\u00e9e le '+quand+') : elle n\u2019avait pas pu partir en base. La reprendre ?',
-      [{lib:'Reprendre la version de cet appareil',prim:true,fn:function(){reprendre(brouillon);atMarquerModifie();}},
-       {lib:'Garder la version en base',fn:function(){atBrouillonEffacer(id);reprendre(JSON.parse(JSON.stringify(base)));}}]);
+    /* SITE-COURS-2d · l'horodatage ne décide plus seul : on compare les CONTENUS.
+       Identiques → aucune question, le faux orphelin d'horloge disparaît en silence.
+       Différents → un conseil argumenté, zones nommées. (Résorbe la dette
+       « comparaison par horloge d'appareil ».) */
+    var det=atEcartDetail(brouillon,base);
+    var nb=det.nb;var zones=det.zones.slice();
+    if((brouillon.titre||'')!==(base.titre||'')){nb++;zones.unshift('le titre de la feuille');}
+    if(nb===0){
+      try{console.log('[atelier] filet local identique à la base — effacé en silence ('+id+')');}catch(e){}
+      atBrouillonEffacer(id);
+      reprendre(JSON.parse(JSON.stringify(base)));
+    }else{
+      var courte=zones.slice(0,3).join(', ')+(zones.length>3?'\u2026':'');
+      atModaleChoix('La version de cet appareil contient '+nb+' modification'+(nb>1?'s':'')+' absente'+(nb>1?'s':'')+' de la base ('+atEsc(courte)+') \u2014 je conseille de la reprendre.',
+        [{lib:'Reprendre la version de cet appareil',prim:true,fn:function(){reprendre(brouillon);atMarquerModifie();}},
+         {lib:'Garder la version en base',fn:function(){atBrouillonEffacer(id);reprendre(JSON.parse(JSON.stringify(base)));}}]);
+    }
   }else{
     reprendre(JSON.parse(JSON.stringify(base)));
   }
@@ -9090,8 +9128,8 @@ function atRendreEditeur(){
     h+='<button class="at-btn at-btn-piston'+(AT.doc.produit===pid?' at-piston-actif':'')+'" onclick="atAppliquerProduit(\''+pid+'\')" title="'+atEsc(p.info||'')+'">'+atEsc(p.libelle)+'</button>';
   });
   h+='<span class="at-ifo" onclick="atInfoProduits()">\u24d8</span></div>';
-  /* rattachement */
-  h+=atHtmlRattachement();
+  /* rattachement — SITE-COURS-2d : en accordéon, replié par défaut */
+  h+=atHtmlSection('ratt','Cette feuille est pour\u2026',atHtmlRattachement(),'');
   /* les trois groupes */
   AT_GROUPES.forEach(function(g){
     var corps='';
@@ -9102,7 +9140,8 @@ function atRendreEditeur(){
       if(!ids.length)return;
       corps+='<div class="at-sg"><div class="at-sg-t">'+sg.lib+'</div>'+ids.map(atHtmlCase).join('')+'</div>';
     });
-    if(corps)h+='<div class="at-groupe"><div class="at-groupe-t">'+g.lib+' <span class="at-ifo" onclick="atInfoGroupe('+AT_GROUPES.indexOf(g)+')">\u24d8</span></div>'+corps+'</div>';
+    if(corps)h+=atHtmlSection('g'+AT_GROUPES.indexOf(g),g.lib,corps,
+      '<span class="at-ifo" onclick="event.stopPropagation();atInfoGroupe('+AT_GROUPES.indexOf(g)+')">\u24d8</span>');
   });
   h+='</div>';
   /* colonne droite : aperçu */
@@ -9118,7 +9157,7 @@ function atRendreEditeur(){
   atRendreApercu();
 }
 function atRetourListe(){atEnregistrerMaintenant(function(){AT.doc=null;AT.docId=null;atChargerListe();});}
-function atSetTitre(v){if(!AT.doc)return;AT.doc.titre=v;atMarquerModifie();}
+function atSetTitre(v){if(!AT.doc)return;AT.doc.titre=v;AT.pulseComp='titre';atMarquerModifie();}
 
 /* rattachement niveau / classe / élève (source : classesData du site, extractEleves) */
 /* ═════════════════════════════════════════════════════════════════════
@@ -9399,28 +9438,41 @@ function atDeposerFeuille(docId,doc,cb){
    À RATTACHER AU COCKPIT (M-PILOTAGE).
    ÉVOLUTION PRÉVUE : identifier précisément ce qui a changé (champ par champ) et
    classer l'alerte par degrés d'importance — pour l'instant, mesure globale seulement. ── */
-function atEnvoiEcart(vivant,envoye){
-  if(!vivant||!envoye)return 0;
-  var nb=0;
+/* SITE-COURS-2d · le cœur de la mesure d'écart, désormais DÉTAILLÉ : il compte ET
+   nomme les zones touchées, au niveau de la SECTION (libellés que la feuille
+   connaît d'elle-même). atEnvoiEcart (2c) en devient l'enveloppe numérique —
+   une seule mesure d'écart dans toute l'application. */
+function atEcartDetail(vivant,envoye){
+  if(!vivant||!envoye)return {nb:0,zones:[]};
+  var nb=0;var zonesVues={};var zones=[];
+  function libelle(k){return (ATELIER_COMPOSANTES[k]&&ATELIER_COMPOSANTES[k].libelle)||k;}
+  function noter(z){if(!zonesVues[z]){zonesVues[z]=1;zones.push(z);}}
   var ids={};
   Object.keys(vivant.valeurs||{}).forEach(function(k){ids[k]=1;});
   Object.keys(envoye.valeurs||{}).forEach(function(k){ids[k]=1;});
   Object.keys(ids).forEach(function(k){
     var a=JSON.stringify((vivant.valeurs||{})[k]||null), b=JSON.stringify((envoye.valeurs||{})[k]||null);
-    if(a!==b)nb++;                                    /* comparaison stricte, codepoints */
+    if(a!==b){nb++;noter(libelle(k));}                /* comparaison stricte, codepoints */
   });
   var cases={};
   Object.keys(vivant.cases||{}).forEach(function(k){cases[k]=1;});
   Object.keys(envoye.cases||{}).forEach(function(k){cases[k]=1;});
   Object.keys(cases).forEach(function(k){
-    if(!!(vivant.cases||{})[k]!==!!(envoye.cases||{})[k])nb++;
+    if(!!(vivant.cases||{})[k]!==!!(envoye.cases||{})[k]){nb++;noter(libelle(k));}
   });
   var ca=vivant.contenu||[], cb=envoye.contenu||[];
   var n=Math.max(ca.length,cb.length);
   for(var i=0;i<n;i++){
-    if(JSON.stringify(ca[i]||null)!==JSON.stringify(cb[i]||null))nb++;
+    if(JSON.stringify(ca[i]||null)!==JSON.stringify(cb[i]||null)){
+      nb++;
+      var bloc=ca[i]||cb[i];
+      noter(bloc&&bloc.id?libelle(bloc.id)+' (bloc '+(i+1)+')':'bloc '+(i+1));
+    }
   }
-  return nb;
+  return {nb:nb,zones:zones};
+}
+function atEnvoiEcart(vivant,envoye){
+  return atEcartDetail(vivant,envoye).nb;
 }
 var AT_ENVOI_SEUIL=3;   /* proposé — Paul valide sur captures */
 /* Le message par défaut vit en /site/atelier/config/messageEnvoiDefaut ; défaut codé sinon. */
@@ -9546,6 +9598,70 @@ function atDeposerToutes(niveau,chnum,snum){
 }
 /* ═══ fin § SITE-COURS-2c ═══ */
 
+/* ═════════════════════════════════════════════════════════════════════
+   § SITE-COURS-2d — LE CONFORT D'ÉDITEUR : conseil du filet (dans atOuvrirDoc),
+   sections en accordéons, navigation aperçu↔éditeur (pulse repris de worktrack,
+   adapté à la section), ⓘ des voies d'injection. ÉCRAN et LOCAL uniquement :
+   aucune écriture nouvelle vers le hub, `published` jamais écrit.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* Une section d'éditeur en accordéon — l'état tient la session d'édition
+   (AT.sectionsOuvertes), remis à zéro par atOuvrirDoc. */
+function atHtmlSection(cle,titre,corps,extra){
+  var ouvert=!!(AT.sectionsOuvertes&&AT.sectionsOuvertes[cle]);
+  return '<div class="at-sec'+(ouvert?' at-sec-o':'')+'" data-sec="'+cle+'">'
+    +'<div class="at-sec-t" onclick="atSectionToggle(\''+cle+'\')"><span class="at-sec-ch">\u203a</span>'+titre+(extra||'')+'</div>'
+    +'<div class="at-sec-c">'+corps+'</div></div>';
+}
+function atSectionToggle(cle){
+  if(!AT.sectionsOuvertes)AT.sectionsOuvertes={};
+  AT.sectionsOuvertes[cle]=!AT.sectionsOuvertes[cle];
+  atRendreEditeur();
+}
+/* Le clic dans l'aperçu mène à la section d'éditeur correspondante. */
+function atAllerComposante(comp){
+  var cle=null;
+  var c=ATELIER_COMPOSANTES[comp];
+  if(c){
+    for(var i=0;i<AT_GROUPES.length;i++){if(AT_GROUPES[i].nature===c.nature){cle='g'+i;break;}}
+  }
+  if(!cle)return;
+  if(!AT.sectionsOuvertes)AT.sectionsOuvertes={};
+  AT.sectionsOuvertes[cle]=true;
+  atRendreEditeur();
+  requestAnimationFrame(function(){
+    var el=document.querySelector('[data-case-id="'+comp+'"]');
+    if(!el)return;
+    el.scrollIntoView({block:'center',behavior:'smooth'});
+    el.classList.remove('at-halo');void el.offsetWidth;
+    el.classList.add('at-halo');
+  });
+}
+/* L'écouteur du message d'aperçu — STRICT : seul le type 'at-va' venant de
+   l'iframe d'aperçu est entendu, tout le reste est ignoré ; aucun geste
+   d'écriture ni d'état ne peut être déclenché par message — une navigation
+   d'accordéon au maximum. */
+function atMessageApercu(e){
+  if(!e||!e.data||e.data.type!=='at-va')return;
+  if(typeof e.data.comp!=='string')return;
+  if(!AT.doc)return;
+  var fr=document.getElementById('at-apercu');
+  if(!fr||e.source!==fr.contentWindow)return;
+  atAllerComposante(e.data.comp);
+}
+window.addEventListener('message',atMessageApercu);
+/* ⓘ des voies d'injection — la substance que les modales de chInjecter disent
+   déjà, mais AVANT le clic. */
+function atInfoInjection(voie){
+  var t={
+    completer:'Compl\u00e9ter le chapitre : seuls les \u00e9l\u00e9ments absents seront \u00e9crits. Rien de ce qui existe ne sera modifi\u00e9.',
+    remplacer:'Remplacer le chapitre : le chapitre actuel part d\u2019abord \u00e0 la corbeille (items compris), puis il est remplac\u00e9. Les feuilles de l\u2019atelier et les travaux des \u00e9l\u00e8ves ne sont pas touch\u00e9s (ils vivent \u00e0 part).',
+    jumeau:'Garder \u00e0 c\u00f4t\u00e9 : le chapitre est ajout\u00e9 en fin de liste, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9. Rien de l\u2019existant n\u2019est touch\u00e9.'
+  }[voie];
+  if(t)atInfo(t);
+}
+/* ═══ fin § SITE-COURS-2d ═══ */
+
 function atRoster(slug){
   if(!slug||typeof classesData==='undefined'||!classesData[slug])return [];
   try{return extractEleves(classesData[slug],[])||[];}catch(e){return [];}
@@ -9635,10 +9751,10 @@ function atHtmlCase(id){
   var coche=AT.doc.cases[id]===true;
   var gris=atCaseGrisee(id);
   if(c.reserve){
-    return '<div class="at-case at-case-reserve"><span class="at-case-lib">'+atEsc(c.libelle)+'</span>'
+    return '<div class="at-case at-case-reserve" data-case-id="'+id+'"><span class="at-case-lib">'+atEsc(c.libelle)+'</span>'
       +'<span class="at-reserve-m">'+atEsc(c.mention||'Cette partie arrivera plus tard.')+'</span></div>';
   }
-  var h='<div class="at-case'+(gris?' at-grise':'')+(coche?' at-cochee':'')+'">'
+  var h='<div class="at-case'+(gris?' at-grise':'')+(coche?' at-cochee':'')+'" data-case-id="'+id+'">'
     +'<label class="at-case-l"><input type="checkbox"'+(coche?' checked':'')+' onchange="atToggleCase(\''+id+'\',this.checked)"><span class="at-case-lib">'+atEsc(c.libelle)+'</span></label>'
     +(c.info?'<span class="at-ifo" onclick="atInfoComposante(\''+id+'\')">\u24d8</span>':'');
   if(coche&&c.nature==='structure'&&!c.multiple&&(c.champs||c.intitule_defaut))h+=atHtmlChampsUnique(id,c);
@@ -9649,6 +9765,7 @@ function atHtmlCase(id){
 function atToggleCase(id,val){
   if(!AT.doc)return;
   var gris=atCaseGrisee(id);
+  AT.pulseComp=id;   /* SITE-COURS-2d */
   AT.doc.cases[id]=!!val;                  /* le professeur a tous les droits : on active D'ABORD */
   if(val&&gris){
     var msg=(gris==='exige')
@@ -9711,6 +9828,7 @@ function atSetValeur(id,k,v){
   AT.doc.valeurs=AT.doc.valeurs||{};
   AT.doc.valeurs[id]=AT.doc.valeurs[id]||{};
   AT.doc.valeurs[id][k]=atValeurTypee(id,k,v);
+  AT.pulseComp=id;   /* SITE-COURS-2d : la zone d'aperçu correspondante pulsera */
   atMarquerModifie();
 }
 
@@ -9809,6 +9927,8 @@ function atCodeDe(nom){
 }
 function atRendreApercu(){
   var fr=document.getElementById('at-apercu');if(!fr||!AT.doc)return;
+  /* SITE-COURS-2d : la zone touchée pulse une fois, puis se consomme */
+  var opAp={apercu:true,pulse:AT.pulseComp||''};AT.pulseComp=null;
   var lot=atLotContextes();
   var nav=document.getElementById('at-ap-nav');
   if(lot.length>1){
@@ -9816,11 +9936,11 @@ function atRendreApercu(){
     if(nav)nav.innerHTML='<button class="at-btn at-btn-min" onclick="atApPrec()"'+(AT.previewIdx===0?' disabled':'')+'>\u2190</button>'
       +'<span class="at-ap-compte">'+atEsc(lot[AT.previewIdx].nom)+' ('+(AT.previewIdx+1)+' / '+lot.length+')</span>'
       +'<button class="at-btn at-btn-min" onclick="atApSuiv()"'+(AT.previewIdx>=lot.length-1?' disabled':'')+'>\u2192</button>';
-    try{fr.srcdoc=atelierPageHTML(AT.doc,[Object.assign({},lot[AT.previewIdx],{rang:AT.previewIdx+1,total:lot.length})]);}
+    try{fr.srcdoc=atelierPageHTML(AT.doc,[Object.assign({},lot[AT.previewIdx],{rang:AT.previewIdx+1,total:lot.length})],opAp);}
     catch(e){fr.srcdoc='<body style="font-family:serif;color:#a33;padding:20px">Aper\u00e7u impossible : '+atEsc(e.message)+'</body>';}
   }else{
     if(nav)nav.innerHTML='';
-    try{fr.srcdoc=atelierPageHTML(AT.doc,lot);}
+    try{fr.srcdoc=atelierPageHTML(AT.doc,lot,opAp);}
     catch(e){fr.srcdoc='<body style="font-family:serif;color:#a33;padding:20px">Aper\u00e7u impossible : '+atEsc(e.message)+'</body>';}
   }
 }
