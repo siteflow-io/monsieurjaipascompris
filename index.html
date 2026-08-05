@@ -968,6 +968,20 @@ body.at-corps-fige #tprof-btn,body.at-corps-fige #admin-tools-btn,body.at-corps-
 .atdoc-viewer-titre{flex:1;font-weight:700;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .atdoc-viewer-x,.atdoc-viewer-imp{min-width:44px;min-height:44px;border:0;background:transparent;color:#fff;font-size:1.1rem;cursor:pointer}
 .atdoc-viewer-frame{flex:1;width:100%;border:0;background:#fff}
+/* SITE-COURS-2c — le bandeau du message élève (écran seulement, hors iframe) */
+.atdoc-bandeau{flex:0 0 auto;background:#f6edd8;color:#4a3d20;border-bottom:2px solid #d9c896;padding:10px 14px;font-size:.95rem;line-height:1.4}
+/* les statuts des cartes de « Mes feuilles » */
+.at-carte-st{font-size:.78rem;margin:-4px 0 10px;line-height:1.35}
+.at-st-sans{color:#8a7f6a}
+.at-st-adresse{color:#c9b568}
+.at-st-depose{color:#7fae7f}
+.at-st-diverge{color:#d99a5b}
+.at-st-flou{color:#8a7f6a;font-style:italic}
+/* le rappel de séance (mode admin) */
+.seance-rappel-atelier{margin:8px 0 2px;padding:8px 10px;border:1px dashed #c9b568;border-radius:8px;color:#c9b568;font-size:.85rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* la modale d'envoi */
+.at-envoi-zone{width:100%;min-height:110px;font:inherit;font-size:.9rem;background:#241f18;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px;margin:10px 0 6px;box-sizing:border-box}
+.at-envoi-case{display:flex;align-items:center;gap:8px;color:#b8ad93;font-size:.83rem;margin-bottom:8px;min-height:44px}
 /* SITE-COURS-2b — la modale LIER passe au standard tactile du site (cibles 44 px) :
    la 3e section arrive avec le composant, tout le composant monte au standard. */
 .link-modal-btn{min-height:44px}
@@ -2532,8 +2546,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.28.0";
-var APP_VERSION_DATE="2026-08-04";
+var APP_VERSION="8.29.0";
+var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -3271,6 +3285,17 @@ function renderSeance(level,chnum,snum,sce,dispNum,isAdmin){
   if(sce.noteEleve&&String(sce.noteEleve).trim()){itemsHtml='<div class="seance-note-eleve">'+escapeHtml(String(sce.noteEleve))+'</div>'+itemsHtml;}
   else if(rendered===0 && !isAdmin){itemsHtml='<div class="seance-note-eleve" style="opacity:.65">'+escapeHtml(TXT_SEANCE_SANS_DOC)+'</div>'+itemsHtml;}
   if(rendered===0 && isAdmin){itemsHtml+='<div class="seance-empty">(aucun item)</div>';}
+  /* SITE-COURS-2c · le rappel : des feuilles adressées à cette séance ne sont pas déposées */
+  if(isAdmin){
+    if(AT.liste&&Object.keys(AT.liste).length){
+      var attendues=atFeuillesAdresseesA(level,chnum,snum);
+      if(attendues.length){
+        itemsHtml+='<div class="seance-rappel-atelier">'+attendues.length+' feuille'+(attendues.length>1?'s':'')+' de l\u2019atelier adress\u00e9e'+(attendues.length>1?'s':'')+' \u00e0 cette s\u00e9ance \u2014 <button class="at-btn at-btn-min" onclick="atDeposerToutes(\''+level+'\',\''+chnum+'\',\''+snum+'\')">Les d\u00e9poser</button></div>';
+      }
+    }else{
+      atDocsAssurer(function(){renderChapitres(level);});   /* une lecture par session admin ; le rendu suit dès qu'elles arrivent (UI_OPEN conserve l'état des accordéons) */
+    }
+  }
   if(isAdmin){itemsHtml+='<div class="admin-add-row"><button class="admin-action-add" onclick="addItem(\''+level+'\',\''+chnum+'\',\''+snum+'\')">+ Nouvel item</button></div>';}
   html+='<div class="seance-items'+(UI_OPEN_S[skey]?' open':'')+'">'+itemsHtml+'</div></div>';
   return html;
@@ -3420,12 +3445,12 @@ function addSeance(level,chnum){
   });
 }
 
-function addItem(level,chnum,snum){
-  _modalePrompt('Nouvel item','Titre du nouvel item :','',function(title){
-  if(title===null)return;
-  title=title.trim();
-  if(!title)return;
-  var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
+/* SITE-COURS-2c · le cœur d'addItem devient itemCreer, l'ÉCRIVAIN UNIQUE des items
+   (slug, ordre, écriture, mise à jour locale) — le dépôt d'une feuille de l'atelier
+   passe par LUI, jamais par un second écrivain. addItem garde son geste à l'identique. */
+function itemCreer(level,chnum,snum,title,props,cb){
+  var sce=chapitresData[level]&&chapitresData[level][chnum]&&chapitresData[level][chnum].seances[snum];
+  if(!sce){if(cb)cb(null);return;}
   var items=sce.items||{};
   var ordres=Object.keys(items).map(function(k){return items[k].ordre||0});
   var newOrdre=(ordres.length?Math.max.apply(null,ordres):0)+1;
@@ -3434,11 +3459,20 @@ function addItem(level,chnum,snum){
   var itemId=slug;var i=2;
   while(items[itemId]){itemId=slug+'-'+i;i++;}
   var newItem={kind:'doc',title:title,subtitle:'',icon:'\ud83d\udcc4',source:'drive',ref:'',ordre:newOrdre,published:false};
+  if(props)Object.keys(props).forEach(function(k){newItem[k]=props[k];});
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',newItem,'Cr\u00e9ation de l\u2019item \u00ab '+title+' \u00bb',function(){
     if(!sce.items)sce.items={};
     sce.items[itemId]=newItem;
     renderChapitres(level);
+    if(cb)cb(itemId);
   });
+}
+function addItem(level,chnum,snum){
+  _modalePrompt('Nouvel item','Titre du nouvel item :','',function(title){
+  if(title===null)return;
+  title=title.trim();
+  if(!title)return;
+  itemCreer(level,chnum,snum,title,null,null);
   });
 }
 
@@ -8849,9 +8883,11 @@ function atRendreListe(){
       var d=AT.liste[id]||{};var dm=(d.dates||{}).modifieLe;
       var quand=dm?new Date(dm).toLocaleDateString('fr-FR')+' '+new Date(dm).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
       var prod=d.produit&&ATELIER_PRODUITS[d.produit]?ATELIER_PRODUITS[d.produit].libelle:'';
+      var st=atStatutFeuille(d,id);   /* SITE-COURS-2c : le statut d'arrivée */
       return '<div class="at-carte">'
         +'<div class="at-carte-t">'+atEsc(d.titre||'Sans titre')+'</div>'
         +'<div class="at-carte-m">'+(prod?atEsc(prod)+' \u00b7 ':'')+'modifi\u00e9e le '+atEsc(quand)+'</div>'
+        +'<div class="at-carte-st '+st.cls+'">'+atEsc(st.txt)+'</div>'
         +'<div class="at-carte-b">'
         +'<button class="at-btn at-btn-prim" onclick="atOuvrirDoc(\''+atEsc(id)+'\')">Ouvrir</button>'
         +'<button class="at-btn" onclick="atDupliquerDoc(\''+atEsc(id)+'\')">Dupliquer</button>'
@@ -8879,6 +8915,10 @@ function atNouvelleFeuille(){
 }
 function atOuvrirDoc(id){
   var base=AT.liste[id];if(!base)return;
+  /* SITE-COURS-2c : la version envoyée se charge UNE fois à l'ouverture (mesure d'écart
+     sans lecture réseau à chaque enregistrement) ; drapeaux de proposition remis à zéro. */
+  AT.envoiDoc=null;AT.propositionDepotFaite=false;AT.propositionEnvoiFaite=false;
+  if(base.depot){_siteGet(AT_ENVOIS_NOEUD+'/'+id+'/doc',function(v){AT.envoiDoc=v||null;});}
   var brouillon=atBrouillonLire(id);
   var reprendre=function(doc){AT.docId=id;AT.doc=doc;AT.previewIdx=0;atRendreEditeur();};
   if(brouillon&&brouillon.dates&&base.dates&&brouillon.dates.modifieLe>base.dates.modifieLe){
@@ -8913,20 +8953,43 @@ function atSupprimerDoc(id){
   var d=AT.liste[id];if(!d)return;
   var nbBlocs=(d.contenu||[]).length;
   var nbCases=Object.keys(d.cases||{}).filter(function(k){return d.cases[k];}).length;
-  atModaleChoix('Supprimer la feuille \u00ab '+atEsc(d.titre||'Sans titre')+' \u00bb ? \u2014 '+nbCases+' case(s) coch\u00e9e(s), '+nbBlocs+' bloc(s) de contenu. Elle passera d\u2019abord \u00e0 la corbeille (r\u00e9cup\u00e9rable un an).',
-    [{lib:'Mettre \u00e0 la corbeille puis supprimer',danger:true,fn:function(){
-      var chemin='site/atelier/documents/'+id;
-      var payload={_meta:{motif:'atelier-feuille',chemin:chemin,app:'index',date:(typeof _nowStr==='function'?_nowStr():new Date().toISOString()),ts:Date.now(),annee:(typeof _anneeScolaire==='function'?_anneeScolaire():''),source:'index'},data:d};
-      atSitePut(atCorbeilleCle('atelier-feuille'),payload,function(ok){
-        if(!ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 suppression abandonn\u00e9e, la feuille est intacte.');return;}
-        atSiteDelete(AT_NOEUD+'/'+id,function(ok2){
-          if(!ok2){atInfo('\u26a0 La suppression a \u00e9chou\u00e9 apr\u00e8s archivage. La feuille est toujours l\u00e0, l\u2019archive aussi.');return;}
-          atBrouillonEffacer(id);
-          atChargerListe();
+  /* SITE-COURS-2c : la version envoyée SUIT la feuille (jamais de version fantôme) ;
+     si la feuille est déposée, on prévient (jamais bloqué) : l'item deviendra mort. */
+  var finir=function(gardeCopie){
+    var apresEnvoiLu=function(envoiSauve){
+      var faireSuppr=function(){
+        atSiteDelete(AT_ENVOIS_NOEUD+'/'+id,function(){
+          atSiteDelete(AT_NOEUD+'/'+id,function(ok2){
+            if(!ok2){atInfo('\u26a0 La suppression a \u00e9chou\u00e9. La feuille est toujours l\u00e0'+(gardeCopie?', l\u2019archive aussi':'')+'.');return;}
+            atBrouillonEffacer(id);
+            atChargerListe();
+          });
         });
-      });
-    }},
-    {lib:'Annuler',fn:function(){}}]);
+      };
+      if(gardeCopie){
+        var chemin='site/atelier/documents/'+id;
+        var payload={_meta:{motif:'atelier-feuille',chemin:chemin,app:'index',date:(typeof _nowStr==='function'?_nowStr():new Date().toISOString()),ts:Date.now(),annee:(typeof _anneeScolaire==='function'?_anneeScolaire():''),source:'index'},
+                     data:{doc:d,envoi:envoiSauve||null}};
+        atSitePut(atCorbeilleCle('atelier-feuille'),payload,function(ok){
+          if(!ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 suppression abandonn\u00e9e, la feuille est intacte.');return;}
+          faireSuppr();
+        });
+      }else faireSuppr();
+    };
+    if(d.depot){_siteGet(AT_ENVOIS_NOEUD+'/'+id,function(v){apresEnvoiLu(v);});}
+    else apresEnvoiLu(null);
+  };
+  var ouvrirChoix=function(){
+    atModaleChoix('Supprimer la feuille \u00ab '+atEsc(d.titre||'Sans titre')+' \u00bb ? \u2014 '+nbCases+' case(s) coch\u00e9e(s), '+nbBlocs+' bloc(s) de contenu.',
+      [{lib:'Mettre \u00e0 la corbeille puis supprimer',danger:true,fn:function(){finir(true);}},
+       {lib:'Supprimer sans garder de copie',danger:true,fn:function(){finir(false);}},
+       {lib:'Annuler',fn:function(){}}]);
+  };
+  if(d.depot&&atItemPointant(id,d.depot.niveau,d.depot.chapitre,d.depot.seance)){
+    _modaleConfirme('Supprimer','Cette feuille est déposée dans '+escapeHtml(atAdresseLisible(d.depot))+'. La supprimer retire aussi la version que voient les élèves : l’item du cours affichera « document plus disponible ». Supprimer quand même ?',ouvrirChoix);
+    return;
+  }
+  ouvrirChoix();
 }
 
 /* ── PERSISTANCE — patron setMeta : l'écran suit immédiatement, la base suit
@@ -8954,6 +9017,25 @@ function atEnregistrerMaintenant(suite){
       atBrouillonEcrire(); /* le brouillon reflète l'état sauvé (repère de fraîcheur) */
       AT.liste[AT.docId]=JSON.parse(JSON.stringify(AT.doc));
       atEtat('ok');
+      /* SITE-COURS-2c · les PROPOSITIONS (jamais automatiques, une par session d'édition) :
+         dépôt si l'adresse est complète et qu'aucun item ne pointe la feuille ;
+         envoi si la feuille déposée a bien changé depuis la version que voient les élèves. */
+      try{
+        var _r=AT.doc.rattachement||{};
+        if(!AT.doc.depot&&_r.niveau&&_r.chapitre&&_r.seance
+           &&chapitresData[_r.niveau]&&Object.keys(chapitresData[_r.niveau]).length
+           &&!atItemPointant(AT.docId,_r.niveau,_r.chapitre,_r.seance)
+           &&!AT.propositionDepotFaite){
+          AT.propositionDepotFaite=true;
+          atProposerDepot();
+        }else if(AT.doc.depot&&AT.envoiDoc&&!AT.propositionEnvoiFaite
+           &&atEnvoiEcart(AT.doc,AT.envoiDoc)>=AT_ENVOI_SEUIL){
+          AT.propositionEnvoiFaite=true;
+          atModaleChoix('Cette fiche a bien changé depuis la version que voient les élèves — leur envoyer la nouvelle ?',
+            [{lib:'Envoyer…',prim:true,fn:function(){atEnvoyer();}},
+             {lib:'Plus tard',fn:function(){}}]);
+        }
+      }catch(e){}
     }else{
       AT.doc.dates.versionDoc=Math.max(0,(AT.doc.dates.versionDoc||1)-1);
       atEtat('echec');
@@ -8998,6 +9080,7 @@ function atRendreEditeur(){
   h+='<div class="at-barre-haut">'
     +'<button class="at-btn" onclick="atRetourListe()">\u2190 Mes feuilles</button>'
     +'<button class="at-btn at-btn-ia" onclick="atIAOuvrir()">\u2728 \u00c9crire avec une IA</button>'
+    +'<button class="at-btn" onclick="atEnvoyerClic()">\ud83d\udce4 Envoyer aux \u00e9l\u00e8ves</button>'
     +'<input class="at-titre-doc" value="'+atEsc(AT.doc.titre||'')+'" oninput="atSetTitre(this.value)" placeholder="Titre de la feuille (pour toi)">'
     +'<span id="at-etat" class="at-etat"></span></div>';
   /* produits (pistons) */
@@ -9227,9 +9310,17 @@ function openAtelierItem(ref,titre){
     +'<button class="atdoc-viewer-imp" onclick="var f=document.getElementById(\'atdoc-viewer-frame\');if(f&&f.contentWindow){f.contentWindow.focus();f.contentWindow.print();}" aria-label="Imprimer">\ud83d\udda8\ufe0f</button></div>'
     +'<iframe id="atdoc-viewer-frame" class="atdoc-viewer-frame" title="Document"></iframe>';
   document.body.appendChild(ov);
-  secuLire(AT_NOEUD+'/'+ref).then(function(doc){
+  /* SITE-COURS-2c : ce que l'élève ouvre est LA VERSION ENVOYÉE, jamais le brouillon
+     vivant du professeur. Une seule lecture, vers /site/atelier/envois/<ref>. */
+  secuLire(AT_ENVOIS_NOEUD+'/'+ref).then(function(envoi){
+    var doc=envoi&&envoi.doc;
     var f=document.getElementById('atdoc-viewer-frame');if(!f)return;
     if(!doc){f.srcdoc='<body style="font-family:serif;padding:24px">Ce document n\u2019est plus disponible.</body>';return;}
+    if(envoi.meta&&envoi.meta.message){
+      var bd=document.createElement('div');bd.className='atdoc-bandeau';
+      bd.textContent=envoi.meta.message;   /* daté à l'envoi ; écran seulement, ne s'imprime pas */
+      ov.insertBefore(bd,f);
+    }
     var lot=[];
     try{
       var rt=doc.rattachement||{};
@@ -9241,6 +9332,219 @@ function openAtelierItem(ref,titre){
   });
 }
 /* ═══ fin § SITE-COURS-2b ═══ */
+
+/* ═════════════════════════════════════════════════════════════════════
+   § SITE-COURS-2c — L'ARRIVÉE DES FEUILLES : dépôt, statut, envoi aux élèves.
+   Décisions de Paul du 05/08 : ① une feuille adressée se PROPOSE au dépôt (jamais
+   automatique) ; ② les séances rappellent les feuilles adressées non déposées ;
+   ③ les cartes disent le statut ; ④ la suppression peut ne pas archiver ;
+   ⑤ ce que l'élève ouvre est LA VERSION ENVOYÉE (/site/atelier/envois/<ref>),
+   jamais le brouillon vivant. Chaque dépôt et chaque envoi est un clic de Paul.
+   `published` des séances n'est JAMAIS écrit ici.
+   ═════════════════════════════════════════════════════════════════════ */
+
+var AT_ENVOIS_NOEUD='/site/atelier/envois';
+var AT_ENVOI_MSG_DEFAUT='Cette fiche a changé le <date> — reporte les changements sur ta fiche du cahier.';
+
+/* L'adresse en toutes lettres — « 3e › Chapitre 1 › Séance 8 » (ordres du hub si chargés) */
+function atAdresseLisible(r){
+  if(!r||!r.niveau)return '';
+  var out=r.niveau;
+  if(r.chapitre){
+    var c=atChapitresDe(r.niveau).filter(function(x){return x.num===String(r.chapitre);})[0];
+    out+=' › Chapitre '+(c?c.ordre:r.chapitre);
+  }
+  if(r.seance){
+    var s=atSeancesDe(r.niveau,r.chapitre).filter(function(x){return x.num===String(r.seance);})[0];
+    out+=' › Séance '+(s?s.ordre:r.seance);
+  }
+  return out;
+}
+/* L'item de la séance qui pointe cette feuille, s'il existe — {itemId,item}|null */
+function atItemPointant(ref,niveau,chnum,snum){
+  var sce=chapitresData[niveau]&&chapitresData[niveau][chnum]&&chapitresData[niveau][chnum].seances&&chapitresData[niveau][chnum].seances[snum];
+  if(!sce||!sce.items)return null;
+  var ids=Object.keys(sce.items);
+  for(var i=0;i<ids.length;i++){
+    var it=sce.items[ids[i]];
+    if(it&&it.source==='atelier'&&it.ref===ref)return {itemId:ids[i],item:it};
+  }
+  return null;
+}
+/* ── LE DÉPÔT — item par l'écrivain unique + PREMIER ENVOI (un item déposé n'est
+   jamais vide pour l'élève). Ordre d'écriture : la vérité d'abord (envois, puis
+   l'item), la méta dénormalisée ensuite (depot/envoi dans le vivant). ── */
+function atDeposerFeuille(docId,doc,cb){
+  var r=doc&&doc.rattachement;
+  if(!r||!r.niveau||!r.chapitre||!r.seance){if(cb)cb(false);return;}
+  if(atItemPointant(docId,r.niveau,r.chapitre,r.seance)){atInfo('Cette feuille est déjà déposée dans cette séance.');if(cb)cb(false);return;}
+  var envoi={meta:{envoyeLe:Date.now(),versionDoc:(doc.dates&&doc.dates.modifieLe)||Date.now(),message:'',premier:true},
+             doc:JSON.parse(JSON.stringify(doc))};
+  atSitePut(AT_ENVOIS_NOEUD+'/'+docId,envoi,function(ok){
+    if(!ok){atInfo('⚠ L’envoi n’a pas pu s’écrire — dépôt abandonné, rien n’a été fait.');if(cb)cb(false);return;}
+    itemCreer(r.niveau,r.chapitre,r.seance,doc.titre||'Sans titre',{source:'atelier',ref:docId,kind:'doc'},function(itemId){
+      if(!itemId){atInfo('⚠ L’item n’a pas pu se créer. La version envoyée est écrite ; réessaie le dépôt.');if(cb)cb(false);return;}
+      doc.depot={niveau:r.niveau,chapitre:r.chapitre,seance:r.seance,itemId:itemId,le:Date.now()};
+      doc.envoi={envoyeLe:envoi.meta.envoyeLe,versionDoc:envoi.meta.versionDoc};
+      atSitePut(AT_NOEUD+'/'+docId,doc,function(ok2){
+        if(!ok2)atInfo('⚠ Le dépôt est fait mais la feuille n’a pas pu noter son statut — il s’affichera après un prochain enregistrement.');
+        if(AT.liste&&AT.liste[docId])AT.liste[docId]=JSON.parse(JSON.stringify(doc));
+        if(AT.docId===docId&&AT.doc){AT.envoiDoc=envoi.doc;}
+        if(cb)cb(true);
+      });
+    });
+  });
+}
+/* ── LA MESURE DES CHANGEMENTS depuis la version envoyée.
+   À RATTACHER AU COCKPIT (M-PILOTAGE).
+   ÉVOLUTION PRÉVUE : identifier précisément ce qui a changé (champ par champ) et
+   classer l'alerte par degrés d'importance — pour l'instant, mesure globale seulement. ── */
+function atEnvoiEcart(vivant,envoye){
+  if(!vivant||!envoye)return 0;
+  var nb=0;
+  var ids={};
+  Object.keys(vivant.valeurs||{}).forEach(function(k){ids[k]=1;});
+  Object.keys(envoye.valeurs||{}).forEach(function(k){ids[k]=1;});
+  Object.keys(ids).forEach(function(k){
+    var a=JSON.stringify((vivant.valeurs||{})[k]||null), b=JSON.stringify((envoye.valeurs||{})[k]||null);
+    if(a!==b)nb++;                                    /* comparaison stricte, codepoints */
+  });
+  var cases={};
+  Object.keys(vivant.cases||{}).forEach(function(k){cases[k]=1;});
+  Object.keys(envoye.cases||{}).forEach(function(k){cases[k]=1;});
+  Object.keys(cases).forEach(function(k){
+    if(!!(vivant.cases||{})[k]!==!!(envoye.cases||{})[k])nb++;
+  });
+  var ca=vivant.contenu||[], cb=envoye.contenu||[];
+  var n=Math.max(ca.length,cb.length);
+  for(var i=0;i<n;i++){
+    if(JSON.stringify(ca[i]||null)!==JSON.stringify(cb[i]||null))nb++;
+  }
+  return nb;
+}
+var AT_ENVOI_SEUIL=3;   /* proposé — Paul valide sur captures */
+/* Le message par défaut vit en /site/atelier/config/messageEnvoiDefaut ; défaut codé sinon. */
+function atEnvoiDefautLire(cb){
+  _siteGet('/site/atelier/config/messageEnvoiDefaut',function(v){
+    cb((typeof v==='string'&&v.trim())?v:AT_ENVOI_MSG_DEFAUT);
+  });
+}
+/* ── L'ENVOI — modale au message éditable (le défaut se conserve, ne s'écrase que
+   sur demande explicite par la case). La date du jour remplace <date>. ── */
+function atEnvoyerClic(){
+  if(!AT.doc||!AT.docId)return;
+  var r=AT.doc.rattachement||{};
+  if(!AT.doc.depot){
+    if(r.niveau&&r.chapitre&&r.seance){atProposerDepot();return;}
+    atInfo('La feuille n’a pas d’adresse : choisis niveau, chapitre et séance d’abord.');
+    return;
+  }
+  atEnvoyer();
+}
+function atEnvoyer(){
+  if(!AT.doc||!AT.docId||!AT.doc.depot)return;
+  atEnvoiDefautLire(function(defaut){
+    var dateFr=new Date().toLocaleDateString('fr-FR');
+    var prerempli=defaut.split('<date>').join(dateFr);
+    var old=document.getElementById('at-modale');if(old)old.parentNode.removeChild(old);
+    var d=document.createElement('div');d.id='at-modale';d.className='at-modale';
+    d.innerHTML='<div class="at-modale-c"><div class="at-modale-m"><b>Envoyer aux élèves</b> — ils verront cette version de la fiche, avec ce message daté :</div>'
+      +'<textarea id="at-envoi-msg" class="at-envoi-zone">'+atEsc(prerempli)+'</textarea>'
+      +'<label class="at-envoi-case"><input type="checkbox" id="at-envoi-defaut"> Faire de ce texte le nouveau message par défaut</label>'
+      +'<div class="at-modale-b"><button class="at-btn at-btn-prim" id="at-envoi-ok">Envoyer</button><button class="at-btn" id="at-envoi-non">Annuler</button></div></div>';
+    document.body.appendChild(d);
+    document.getElementById('at-envoi-non').onclick=function(){d.parentNode.removeChild(d);};
+    document.getElementById('at-envoi-ok').onclick=function(){
+      var msg=(document.getElementById('at-envoi-msg').value||'').trim();
+      var garderDefaut=document.getElementById('at-envoi-defaut').checked;
+      d.parentNode.removeChild(d);
+      var envoi={meta:{envoyeLe:Date.now(),versionDoc:(AT.doc.dates&&AT.doc.dates.modifieLe)||Date.now(),message:msg,premier:false},
+                 doc:JSON.parse(JSON.stringify(AT.doc))};
+      atSitePut(AT_ENVOIS_NOEUD+'/'+AT.docId,envoi,function(ok){
+        if(!ok){atInfo('⚠ L’envoi n’a pas pu s’écrire — les élèves voient toujours l’ancienne version.');return;}
+        AT.doc.envoi={envoyeLe:envoi.meta.envoyeLe,versionDoc:envoi.meta.versionDoc};
+        AT.envoiDoc=envoi.doc;
+        atSitePut(AT_NOEUD+'/'+AT.docId,AT.doc,function(){
+          if(AT.liste&&AT.liste[AT.docId])AT.liste[AT.docId]=JSON.parse(JSON.stringify(AT.doc));
+          atEtat('ok');atRendreEditeur();
+        });
+        if(garderDefaut){
+          var nouveau=msg.split(dateFr).join('<date>');   /* la date du jour redevient le jeton */
+          atSitePut('/site/atelier/config/messageEnvoiDefaut',nouveau,function(){});
+        }
+        atInfo('Envoyé — les élèves voient désormais cette version.');
+      });
+    };
+  });
+}
+/* La proposition de dépôt (①) — jamais automatique, jamais insistante. */
+function atProposerDepot(){
+  if(!AT.doc||!AT.docId)return;
+  var r=AT.doc.rattachement||{};
+  atModaleChoix('Cette feuille est adressée à <b>'+atEsc(atAdresseLisible(r))+'</b> — la déposer dans la séance ?',
+    [{lib:'Déposer',prim:true,fn:function(){atDeposerFeuille(AT.docId,AT.doc,function(ok){if(ok){atInfo('Déposée — l’item est créé dans la séance, les élèves verront cette version quand la séance sera publiée.');atRendreEditeur();}});}},
+     {lib:'Plus tard',fn:function(){}}]);
+}
+/* Le STATUT d'une feuille (③) — croisé avec la vérité terrain (chapitresData). */
+function atStatutFeuille(d,ref){
+  var r=d&&d.rattachement;
+  var adresseComplete=r&&r.niveau&&r.chapitre&&r.seance;
+  if(!d||(!adresseComplete&&!d.depot))return {txt:'Sans adresse',cls:'at-st-sans'};
+  var niveauRef=(d.depot&&d.depot.niveau)||(r&&r.niveau);
+  var charge=niveauRef&&chapitresData[niveauRef]&&Object.keys(chapitresData[niveauRef]).length;
+  if(!charge){
+    if(niveauRef&&AT_CHAP_ETAT[niveauRef]!=='enCours')atChargerChapitres(niveauRef,function(){atRendreListe();});
+    return {txt:'adresse non vérifiable pour l’instant',cls:'at-st-flou'};
+  }
+  var suffixe=(d.envoi&&d.dates&&d.dates.modifieLe>d.envoi.versionDoc)?' · modifiée depuis l’envoi aux élèves':'';
+  if(d.depot){
+    var la=atItemPointant(ref,d.depot.niveau,d.depot.chapitre,d.depot.seance);
+    var ouDepot=atAdresseLisible(d.depot);
+    var ouActuel=adresseComplete?atAdresseLisible(r):'';
+    var meme=ouActuel===ouDepot;
+    if(la&&meme)return {txt:'Déposée dans '+ouDepot+suffixe,cls:'at-st-depose'};
+    if(la&&!meme)return {txt:'Déposée dans '+ouDepot+' · adresse actuelle '+(ouActuel||'— sans adresse —')+suffixe,cls:'at-st-diverge'};
+    return {txt:'Déposée dans '+ouDepot+' (l’item n’y est plus)'+suffixe,cls:'at-st-diverge'};
+  }
+  return {txt:'Adressée à '+atAdresseLisible(r)+' — pas encore déposée',cls:'at-st-adresse'};
+}
+/* Les feuilles adressées à une séance et non déposées (②). */
+function atFeuillesAdresseesA(niveau,chnum,snum){
+  var out=[];
+  Object.keys(AT.liste||{}).forEach(function(id){
+    var d=AT.liste[id];var r=d&&d.rattachement;
+    if(!r||r.niveau!==niveau||String(r.chapitre)!==String(chnum)||String(r.seance)!==String(snum))return;
+    if(atItemPointant(id,niveau,chnum,snum))return;
+    out.push({id:id,doc:d});
+  });
+  return out;
+}
+/* Une lecture des feuilles par session admin (cache partagé avec l'atelier). */
+var AT_DOCS_DEMANDE=false;
+function atDocsAssurer(cb){
+  if(AT.liste&&Object.keys(AT.liste).length){if(cb)cb();return;}
+  if(AT_DOCS_DEMANDE)return;   /* un chargement est en route : son cb re-rendra — rappeler ici ferait boucler le rendu */
+  AT_DOCS_DEMANDE=true;
+  atSiteGetDocs(function(v){
+    AT.liste=(v&&typeof v==='object')?v:{};
+    if(cb)cb();
+  });
+}
+/* [Les déposer] du rappel — enchaîne les dépôts, garde nominative de 2b réutilisée. */
+function atDeposerToutes(niveau,chnum,snum){
+  var feuilles=atFeuillesAdresseesA(niveau,chnum,snum);
+  if(!feuilles.length)return;
+  var suivant=function(i){
+    if(i>=feuilles.length){renderChapitres(niveau);return;}
+    var f=feuilles[i];var r=f.doc.rattachement||{};
+    var faire=function(){atDeposerFeuille(f.id,f.doc,function(){suivant(i+1);});};
+    if(r.eleve&&r.eleve!=='*'){
+      _modaleConfirme('Déposer','Cette feuille est au nom de '+escapeHtml(r.eleve)+'. Si la séance est publiée, toute la classe pourra l’ouvrir et lire ce document à son nom. Déposer quand même ?',faire);
+    }else faire();
+  };
+  suivant(0);
+}
+/* ═══ fin § SITE-COURS-2c ═══ */
 
 function atRoster(slug){
   if(!slug||typeof classesData==='undefined'||!classesData[slug])return [];
