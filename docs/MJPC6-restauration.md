@@ -608,3 +608,16 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **AUDIT INDÉPENDANT** : 685 → 698 fonctions, 0 supprimée, 677 intactes, seule décroissance = extraction déclarée d'`addItem` · destinations d'écriture inventoriées : items, envois, métas, message par défaut, corbeille — rien d'autre · `published` seulement posé à `false` · parseurs verts · banc 25/25 au chemin réel (l'exécutant y a attrapé et corrigé un bug de chemins sans slash initial, banc durci).
 - **VALIDATIONS DE PAUL en circulation** : seuil (3) et libellé du message par défaut — modifiables d'un mot après usage réel.
 - **Restauration en cas de `BUG`** : revenir au blob AVANT (`6a9300e5…`, commit `fd0b1a2f3001`, 8.28.0).
+
+## ⚠ NOTE DE DÉSAMBIGUÏSATION — DEUX SÉRIES « SITE-COURS-2x » DISTINCTES (consignée le 05/08)
+Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience n°4 (le « SITE-COURS-2c » du 01/08 = LE PROMPT MAÎTRE DE CHAPITRE, site 8.12.0 ; un « SITE-COURS-2e » vit dans le code : la déclaration du chapitre). La conscience n°5 a RÉUTILISÉ par erreur 2b/2c/2d pour ses trois morceaux des 04-05/08 (cascade d'adresse 8.28.0 · dépôt/statut/envoi 8.29.0 · confort d'éditeur 8.30.0). Dans CE registre, les entrées du 04-05/08 désignent les morceaux de la n°5. **Les morceaux suivants passent en série SITE-COURS-3x.**
+
+## Point de retour — PROMOTION SITE-COURS-2d · LE CONFORT D'ÉDITEUR, 05/08/2026
+| fichier | blob sha AVANT | AVANT | APRÈS |
+|---|---|---|---|
+| `index.html` | `a66492f6b1a2eb137b3fdc295f0f3d1b1bad94e6` (commit `618c1427d543`) | 767 559 o · 8.29.0 · md5 `3cf2d409bf62d0b4d318a1605b95ed84` | 775 489 o · **8.30.0** · md5 `cde79195ffc264b15bbc6621a780c5ce` |
+
+- **LIVRÉ** : ① conseil argumenté du filet local — les CONTENUS tranchent (cœur `atEcartDetail` extrait de la mesure 2c, une seule mesure), contenus identiques → silence + filet effacé + trace console, différents → « N modification(s) (…zones…) — je conseille de la reprendre » ; **dette « comparaison par horloge d'appareil » RÉSORBÉE** ② navigation aperçu↔éditeur : sections repliées à l'ouverture (état de session), pulse d'aperçu au patron worktrack (granularité composante), clic-aperçu → section ouverte + halo, mobile = remontée de page ③ les trois ⓘ d'injection disent la substance AVANT le clic.
+- **AUDIT INDÉPENDANT** : 698 → 706 fonctions, 0 supprimée, 688 intactes, seule décroissance = extraction déclarée · AUCUNE écriture réseau ajoutée (morceau écran/local) · écouteur postMessage strict (type + source iframe, navigation d'accordéon seulement) · aller-retour IA rejoué intact · banc 25/25 · captures livrées en pièces jointes en conversation (règle de livraison des captures réintégrée à cette occasion : d'office, en pièces jointes, avec chaque verdict).
+- **Écart favorable** : les enveloppes `data-c` existaient déjà partout (0 édition d'`atelierDocumentHTML`).
+- **Restauration en cas de `BUG`** : revenir au blob AVANT (`a66492f6…`, commit `618c1427d543`, 8.29.0).
