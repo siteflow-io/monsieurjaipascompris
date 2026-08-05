@@ -992,6 +992,26 @@ body.at-corps-fige #tprof-btn,body.at-corps-fige #admin-tools-btn,body.at-corps-
 /* le halo d'atterrissage sur la case d'éditeur (même décroissance que l'aperçu) */
 @keyframes atHalo{0%{box-shadow:0 0 0 3px rgba(212,160,23,.85);background:rgba(212,160,23,.16)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0);background:transparent}}
 .at-halo{animation:atHalo 5s ease-out forwards;border-radius:8px}
+/* [C5-3a] — onglets des tableaux de bord, cartes ②③, pulse du LIER, éditeur de chapitre */
+.at-onglets{display:flex;gap:8px;margin:2px 0 14px;flex-wrap:wrap}
+.at-onglet{min-height:44px;padding:8px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#d8cfba;font:inherit;font-size:.9rem;cursor:pointer}
+.at-onglet-actif{border-color:rgba(196,160,90,.6);background:rgba(196,160,90,.13);color:#f0e8d8;font-weight:700}
+.at-tb-tete{display:flex;align-items:center;gap:10px;color:#b8ad93;font-size:.9rem;margin:0 0 12px}
+.at-tb-niveau{min-height:40px}
+.at-btn-danger{border-color:rgba(210,110,90,.5);color:#d99a8a}
+@keyframes atLierPulse{0%,100%{box-shadow:0 0 0 0 rgba(212,160,23,0)}50%{box-shadow:0 0 0 4px rgba(212,160,23,.45)}}
+.at-lier-pulse{animation:atLierPulse 1.8s ease-in-out infinite;border-color:rgba(212,160,23,.7)}
+.ch-atterrissage{margin-top:8px;font-size:.86rem;line-height:1.5;color:#d8cfba;text-align:left}
+.at-edch{border:1px solid #3a3428;border-radius:10px;padding:12px;margin:0 0 12px;background:rgba(255,255,255,.02)}
+.at-edch-se{border-color:#46402f}
+.at-edch-set{font-weight:700;color:#f0e8d8;margin-bottom:6px}
+.at-edch-lib{display:block;color:#b8ad93;font-size:.78rem;margin:8px 0 3px}
+.at-edch-in{width:100%;min-height:44px;font:inherit;font-size:.9rem;background:#241f18;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:8px 10px;box-sizing:border-box}
+.at-edch-ta{width:100%;min-height:64px;font:inherit;font-size:.9rem;background:#241f18;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:8px 10px;box-sizing:border-box}
+.at-edch-ta-p{min-height:44px}
+.at-edch-num{max-width:110px}
+.at-edch-it{border-top:1px dashed #3a3428;margin-top:10px;padding-top:6px}
+.at-edch-itt{color:#d8cfba;font-size:.85rem}
 /* SITE-COURS-2b — la modale LIER passe au standard tactile du site (cibles 44 px) :
    la 3e section arrive avec le composant, tout le composant monte au standard. */
 .link-modal-btn{min-height:44px}
@@ -2556,7 +2576,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.30.0";
+var APP_VERSION="8.31.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -3227,6 +3247,7 @@ function renderChapterCard(level,num,ch,dispNum,isAdmin){
     acts+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+num+'\')">\u270f</button>';
     acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',-1)">\u2191</button>';
     acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveChapter(\''+level+'\',\''+num+'\',1)">\u2193</button>';
+    acts+='<button class="admin-action-btn" onclick="event.stopPropagation();atelierOuvrir();AT.onglet=String(\'chapitres\');atEditerChapitre(\''+level+'\',\''+num+'\')" title="Modifier dans l\u2019atelier">\u270f\ufe0f</button>';
     acts+='<button class="admin-action-btn danger" title="Supprimer le chapitre" onclick="event.stopPropagation();deleteChapter(\''+level+'\',\''+num+'\')">\u2715</button>';
   }
   var opacityStyle=(isAdmin && _dimNode(ch,level))?' style="opacity:0.55"':'';
@@ -3326,10 +3347,11 @@ function renderItem(level,chnum,snum,itemId,it,subNum,isAdmin){
     if(imgKeys.length===0)actionTxt=pubV?'\u26a0 Galerie vide':'\ud83d\udd12';
     else actionTxt=canOpen?'\u2192 Ouvrir ('+imgKeys.length+')':'\ud83d\udd12 ('+imgKeys.length+')';
   } else { actionTxt=canOpen?'\u2192 Ouvrir':(pubV?'\u26a0 Non li\u00e9':'\ud83d\udd12'); }
+  var lierPulse=(!it.ref)?' at-lier-pulse':'';   /* [C5-3a] le LIER d'un item non lié respire, jusqu'à la liaison */
   var acts='';
   if(isAdmin){
     acts+='<button class="admin-action-btn" title="Modifier le titre" onclick="event.stopPropagation();editTitle(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\u270f</button>';
-    if(!isGallery)acts+='<button class="admin-action-btn" title="Lier la ressource" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
+    if(!isGallery)acts+='<button class="admin-action-btn'+lierPulse+'" title="Lier la ressource" onclick="event.stopPropagation();linkItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\udd17</button>';
     acts+='<button class="admin-action-btn'+(it.autonomie?' aut-on':'')+'" title="'+(it.autonomie?'Retirer de la zone autonomie':'Marquer pour la zone autonomie')+'" onclick="event.stopPropagation();toggleAutonomie(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\')">\ud83d\ude80</button>';
     acts+='<button class="admin-action-btn" title="Monter" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',-1)">\u2191</button>';
     acts+='<button class="admin-action-btn" title="Descendre" onclick="event.stopPropagation();moveItem(\''+level+'\',\''+chnum+'\',\''+snum+'\',\''+itemId+'\',1)">\u2193</button>';
@@ -3510,13 +3532,9 @@ function editTitle(level,chnum,snum,itemId){
 }
 
 function deleteChapter(level,chnum){
-  var ch=chapitresData[level][chnum];if(!ch)return;
-  _modaleConfirme('Supprimer le chapitre','Supprimer le chapitre \u00ab <b>'+escapeHtml(ch.title)+'</b> \u00bb et tout son contenu (s\u00e9ances et items) ?',function(){
-  mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'.json','Suppression du chapitre \u00ab '+ch.title+' \u00bb',function(){
-      delete chapitresData[level][chnum];
-      renderChapitres(level);
-    });
-  });
+  /* [C5-3a] le panneau prof et la carte de l'atelier partagent le MÊME geste :
+     corbeille d'abord (l'échec abandonne tout) ou sans copie, garde si publié. */
+  atSupprimerChapitre(level,chnum);
 }
 
 function deleteSeance(level,chnum,snum){
@@ -3628,6 +3646,22 @@ function openLinkModal(level,chnum,snum,itemId){
   loadAppList('worktrack');
   loadAtelierDocList();   /* SITE-COURS-2b : 3e source */
   document.getElementById('link-modal').classList.add('visible');
+  /* [C5-3a] pré-orientation : l'info d'outil vit dans item.kind — quand un bloc
+     de la modale lui correspond, on y va et il se signale. Sans kind exploitable,
+     rien ne change. */
+  if(item.kind&&!item.ref){
+    var sel=document.getElementById('link-modal-'+item.kind);
+    if(sel){
+      requestAnimationFrame(function(){
+        var bloc=sel.closest('.link-modal-section')||sel.parentNode;
+        if(bloc){
+          bloc.scrollIntoView({block:'center',behavior:'smooth'});
+          bloc.classList.remove('at-halo');void bloc.offsetWidth;
+          bloc.classList.add('at-halo');
+        }
+      });
+    }
+  }
 }
 
 function closeLinkModal(){
@@ -6480,9 +6514,8 @@ function atIARendre(){
     +'<h3 class="at-ia-titre">\u2728 \u00c9crire avec une IA</h3></div>'
     +'<div class="at-ia-sous">Discute d\u2019abord avec l\u2019IA, elle pr\u00e9pare la feuille, tu gardes la main sur tout. '
     +'<button class="at-i" onclick="atIAInfo()" aria-label="En savoir plus">\u24d8</button></div>'
-    +'<div class="at-ia-actions"><button class="at-btn" onclick="chOuvrir()">\ud83d\udcda Construire un chapitre\u2026</button>'
-    +'<button class="at-btn" onclick="diapoOuvrir()">\ud83d\uddbc\ufe0f Transformer un diaporama\u2026</button></div>'
-    +atBlocEdition()
+    /* [C5-3a] Q1 : les flux chapitre et diaporama ont leurs PORTES à l'accueil —
+       plus aucun écran étranger au milieu d'une feuille (étanchéité voulue par Paul). */    +atBlocEdition()
     /* BUG 04/08 — L'ÉTAPE 2 AVAIT DISPARU DE CET ÉCRAN. En posant atBlocEdition(),
        le remplacement a emporté le bas de la fonction : la zone de collage, le bouton
        « Vérifier », et donc TOUTE possibilité d'injecter une fiche de séance. Signalé
@@ -7185,7 +7218,7 @@ function chRendre(){
   var niv=['6e','5e','4e','3e'].map(function(n){
     return '<option value="'+n+'"'+(CH.niveau===n?' selected':'')+'>'+n+'</option>';}).join('');
   z.innerHTML='<div class="at-ia">'
-    +'<div class="at-ia-haut"><button class="at-btn" onclick="atIAOuvrir()">\u2190 Retour</button>'
+    +'<div class="at-ia-haut"><button class="at-btn" onclick="atRendreListe()">\u2190 Atelier</button>'
     +'<h3 class="at-ia-titre">\ud83d\udcda Construire un chapitre avec une IA</h3></div>'
     +'<div class="at-ia-sous">Tu apportes ta progression, l\u2019IA la met en forme, la relie \u00e0 tes notions et te dit ce qui manque. Rien ne s\u2019\u00e9crit sans toi. '
     +'<button class="at-i" onclick="chInfo()" aria-label="En savoir plus">\u24d8</button></div>'
@@ -7327,13 +7360,32 @@ function chInjecter(voie){
     return;
   }
   var lib={completer:'Compl\u00e9ter le chapitre',remplacer:'Remplacer le chapitre',jumeau:'Garder \u00e0 c\u00f4t\u00e9'}[voie];
-  var det;
-  if(voie==='completer')det='Seuls les \u00e9l\u00e9ments absents seront \u00e9crits. Rien de ce qui existe ne sera modifi\u00e9.';
-  else if(voie==='remplacer')det='Le chapitre actuel part d\u2019abord \u00e0 la corbeille, puis il est remplac\u00e9. Les travaux des \u00e9l\u00e8ves ne sont pas touch\u00e9s (ils vivent \u00e0 part).';
-  else det='Le chapitre est ajout\u00e9 en fin de liste, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9. Rien de l\u2019existant n\u2019est touch\u00e9.';
-  atModaleChoix(lib+' ? '+det,
-    [{lib:'Annuler',fn:function(){}},
-     {lib:lib,prim:true,danger:(voie==='remplacer'),fn:function(){chInjecterConfirme(voie);}}]);
+  /* [C5-3a] GARDE D'ATTERRISSAGE : avant d'écrire, montrer CE QUI VA SE PASSER
+     sur les données réelles — l'appariement par titre devient visible. */
+  secuLire('/site/'+CH.niveau+'/chapitres').then(function(chaps){
+    chaps=chaps||[];
+    var det='';
+    if(voie==='remplacer'){
+      var ancien=chaps[CH.chapIdx];
+      var nbSe=atSeances(ancien||{}).length;
+      var nbIt=0;atSeances(ancien||{}).forEach(function(p){nbIt+=Object.keys(p.se.items||{}).length;});
+      det='\u00ab '+atEsc((ancien&&ancien.title)||'')+' \u00bb \u2014 <b>'+nbSe+' s\u00e9ance'+(nbSe>1?'s':'')+' et '+nbIt+' item'+(nbIt>1?'s':'')+'</b> partent \u00e0 la corbeille d\u2019abord, puis le chapitre est remplac\u00e9. Les feuilles de l\u2019atelier et les travaux des \u00e9l\u00e8ves ne sont pas touch\u00e9s.';
+    }else{
+      var calc=chCalculerEcritures(voie,chaps);
+      if(voie==='jumeau'){
+        det='Ajout\u00e9 en <b>position '+calc.position+'</b>, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9. Rien de l\u2019existant n\u2019est touch\u00e9.';
+      }else{
+        var morceaux=[];
+        if(calc.appariees.length)morceaux.push('S\u00e9ances APPARI\u00c9ES par titre (compl\u00e9t\u00e9es en place) : '+calc.appariees.map(function(a){return '\u00ab '+atEsc(a.titre)+' \u00bb ('+a.ajouts+' ajout'+(a.ajouts>1?'s':'')+')';}).join(' \u00b7 '));
+        if(calc.ajoutees.length)morceaux.push('S\u00e9ances AJOUT\u00c9ES : '+calc.ajoutees.map(function(t){return '\u00ab '+atEsc(t)+' \u00bb';}).join(' \u00b7 '));
+        if(!morceaux.length)morceaux.push('Rien \u00e0 \u00e9crire : tout ce que l\u2019IA propose existe d\u00e9j\u00e0.');
+        det=morceaux.join('<br>')+'<br>Seuls les \u00e9l\u00e9ments absents seront \u00e9crits.';
+      }
+    }
+    atModaleChoix(lib+' ? <div class="ch-atterrissage">'+det+'</div>',
+      [{lib:'Annuler',fn:function(){}},
+       {lib:lib,prim:true,danger:(voie==='remplacer'),fn:function(){chInjecterConfirme(voie);}}]);
+  });
 }
 function chInjecterConfirme(voie){
   var o=CH.json;var msg=document.getElementById('ch-msg');
@@ -7372,68 +7424,18 @@ function chInjecterConfirme(voie){
       });
       return;
     }
-    /* COMPLÉTER : n'écrit QUE ce qui manque, élément par élément, par index */
+    /* COMPLÉTER : n'écrit QUE ce qui manque — [C5-3a] le calcul vit désormais
+       dans chCalculerEcritures (montré par la garde d'atterrissage AVANT le clic,
+       recalculé ici sur la vérité du moment T — même code, une seule mesure). */
     var cible=(idx!==null)?chaps[idx]:null;
-    var ecritures=[];
-    /* SITE-COURS-2e : la DÉCLARATION du chapitre (entrée, compétences majeures et
-       mineures) s'écrit aussi en voie « compléter » — sinon elle ne survivrait qu'au
-       remplacement, et l'aval lirait son absence comme une information. */
-    if(cible){
-      ['entree','competencesMajeures','competencesMineures'].forEach(function(ch2){
-        var v=o.chapitre[ch2];
-        var vide=(v==null)||(Array.isArray(v)&&!v.length)||(v==='');
-        var dejaLa=cible[ch2];
-        var dejaRempli=(dejaLa!=null)&&(!Array.isArray(dejaLa)||dejaLa.length);
-        if(!vide&&!dejaRempli)
-          ecritures.push({chemin:base+'/'+idx+'/'+ch2,val:v,quoi:'d\u00e9claration du chapitre ('+ch2+')'});
-      });
-    }
-    if(!cible){                                        /* le chapitre n'existe pas : il s'ajoute en fin */
-      var n2=JSON.parse(JSON.stringify(o.chapitre));
-      delete n2.published;chNettoyerPublished(n2);
-      ecritures.push({chemin:base+'/'+chaps.length,val:n2,quoi:'chapitre \u00ab '+n2.title+' \u00bb'});
-    }else{
-      var parTitre={};
-      (cible.seances||[]).forEach(function(se,i){ if(se)parTitre[String(se.title||'').toLowerCase()]={se:se,i:i}; });
-      (o.chapitre.seances||[]).forEach(function(np){
-        var m=parTitre[String(np.title||'').toLowerCase()];
-        if(!m){
-          var se2=JSON.parse(JSON.stringify(np));delete se2.published;chNettoyerPublished(se2);
-          var rang=(cible.seances||[]).length+ecritures.filter(function(e){return e.quoi.indexOf('s\u00e9ance')===0;}).length;
-          ecritures.push({chemin:base+'/'+idx+'/seances/'+rang,val:se2,quoi:'s\u00e9ance \u00ab '+np.title+' \u00bb'});
-          return;
-        }
-        /* la séance existe : on n'ajoute QUE les items absents, et les tags manquants */
-        Object.keys(np.items||{}).forEach(function(k){
-          var dejaLa=m.se.items&&m.se.items[k];
-          if(!dejaLa){
-            var it=JSON.parse(JSON.stringify(np.items[k]));delete it.published;
-            ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k,val:it,quoi:'\u00e9l\u00e9ment \u00ab '+(it.title||k)+' \u00bb'});
-            return;
-          }
-          /* SITE-COURS-2e — RÉPARATION : un item EXISTANT n'était jamais retouché,
-             donc il ne recevait JAMAIS ses notions. Or c'est le cas le plus fréquent.
-             « Compléter ne touche à rien » vaut pour ce qui EST écrit : un champ absent
-             n'est pas un champ qu'on protège, c'est un champ qu'on remplit.
-             Le reste de l'item (titre, kind, source, ref) n'est jamais modifié. */
-          var np2=np.items[k]||{};
-          if((np2.notions||[]).length&&!((dejaLa.notions)||[]).length)
-            ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k+'/notions',val:np2.notions,quoi:'notions de l\u2019\u00e9l\u00e9ment \u00ab '+(np2.title||k)+' \u00bb'});
-          if((np2.competences||[]).length&&!((dejaLa.competences)||[]).length)
-            ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k+'/competences',val:np2.competences,quoi:'comp\u00e9tences de l\u2019\u00e9l\u00e9ment \u00ab '+(np2.title||k)+' \u00bb'});
-        });
-        if((np.notions||[]).length&&!(m.se.notions||[]).length)
-          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/notions',val:np.notions,quoi:'notions de \u00ab '+np.title+' \u00bb'});
-        if((np.competences||[]).length&&!(m.se.competences||[]).length)
-          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/competences',val:np.competences,quoi:'comp\u00e9tences de \u00ab '+np.title+' \u00bb'});
-      });
-    }
+    var ecritures=chCalculerEcritures(voie,chaps).ecritures;
     /* SITE-COURS-2e : la feuille sommaire, si Paul l'a laissée cochée. Séance de
        rang 0, publiable à part — `published` n'est JAMAIS écrit ici. */
     var veutSom=(document.getElementById('ch-som-oui')||{}).checked;
     if(veutSom&&cible){
-      var dejaSom=(cible.seances||[]).some(function(se){return se&&se.type==='sommaire';});
-      var rangSom=dejaSom?((cible.seances||[]).map(function(se,i2){return se&&se.type==='sommaire'?i2:-1;}).filter(function(x){return x>=0;})[0]):((cible.seances||[]).length+ecritures.filter(function(e){return e.quoi.indexOf('s\u00e9ance')===0;}).length);
+      var somSe=atSeances(cible);   /* [C5-3a] la forme objet des seances (trou d'index 0) est la r\u00e9alit\u00e9 du chapitre 1 */
+      var dejaSom=somSe.some(function(p){return p.se.type==='sommaire';});
+      var rangSom=dejaSom?(somSe.filter(function(p){return p.se.type==='sommaire';})[0].j):(atSeancesRangSuivant(cible)+ecritures.filter(function(e){return e.quoi.indexOf('s\u00e9ance')===0;}).length);
       var somObj=chSommaireObjet(chSommaire(Object.assign({},cible,o.chapitre),CH.niveau,CH.taxo,o.chapitre));
       ecritures.push({chemin:base+'/'+idx+'/seances/'+rangSom,val:somObj,quoi:'feuille sommaire'});
     }
@@ -7444,6 +7446,7 @@ function chInjecterConfirme(voie){
       var ok=vs.filter(function(v){return v.status==='fulfilled';}).length;
       var ko=vs.filter(function(v){return v.status==='rejected';});
       var t='\u00c9crit : <b>'+ok+'/'+ecritures.length+'</b>.';
+      if(ok&&CH.chapIdx!==null)setTimeout(function(){atProposerSommaire(CH.niveau,CH.chapIdx,null);},400);   /* [C5-3a] proposé, jamais automatique */
       if(ko.length){
         t+='<br>\u26a0 '+ko.length+' \u00e9criture(s) n\u2019ont pas abouti \u2014 <b>le geste n\u2019est pas termin\u00e9</b>. Relance : seuls les manques seront repris.';
       }else{
@@ -8093,7 +8096,7 @@ function diapoOuvrir(){
 function diapoRendreEcran(){
   var z=document.getElementById('at-zone');if(!z)return;
   z.innerHTML='<div class="at-ia">'
-    +'<div class="at-ia-haut"><button class="at-btn" onclick="atIAOuvrir()">\u2190 Retour</button>'
+    +'<div class="at-ia-haut"><button class="at-btn" onclick="atRendreListe()">\u2190 Atelier</button>'
     +'<h3 class="at-ia-titre">\ud83d\uddbc\ufe0f Transformer un diaporama en texte</h3></div>'
     +'<div class="at-ia-sous">Tes diapositives deviennent du texte : lisibles au t\u00e9l\u00e9phone sans zoom, cherchables, corrigeables, et toutes dans la m\u00eame pr\u00e9sentation. '
     +'<button class="at-i" onclick="diapoInfo()" aria-label="En savoir plus">\u24d8</button></div>'
@@ -8876,6 +8879,7 @@ function atChargerListe(){
 }
 function atRendreListe(){
   var z=document.getElementById('at-zone');if(!z)return;
+  if(AT.edChap){atEditerChapitreRendre();return;}   /* [C5-3a] l'\u00e9diteur de chapitre reste ma\u00eetre jusqu'\u00e0 sa sortie */
   var ids=Object.keys(AT.liste).sort(function(a,b){
     return ((AT.liste[b].dates||{}).modifieLe||0)-((AT.liste[a].dates||{}).modifieLe||0);
   });
@@ -8892,13 +8896,24 @@ function atRendreListe(){
        large. Le bouton de l'editeur SUBSISTE — garnir une feuille deja commencee est un autre
        besoin. */
     +'<div class="at-portes">'
-    +'<button class="at-porte at-porte-ch" onclick="chOuvrir()">'
-    +'<span class="at-porte-t">\u2728 Construire un chapitre avec une IA</span>'
-    +'<span class="at-porte-s">Tu apportes tes documents, l\u2019IA propose la progression, les s\u00e9ances et les notions.</span></button>'
     +'<button class="at-porte" onclick="atNouvelleFeuilleIA()">'
-    +'<span class="at-porte-t">\u2728 Nouvelle feuille avec une IA</span>'
+    +'<span class="at-porte-t">\u2728 Nouvelle feuille</span>'
     +'<span class="at-porte-s">La feuille na\u00eet remplie : discute d\u2019abord, elle s\u2019\u00e9crit ensuite.</span></button>'
+    +'<button class="at-porte at-porte-ch" onclick="chOuvrir()">'
+    +'<span class="at-porte-t">\ud83d\udcda Nouveau chapitre</span>'
+    +'<span class="at-porte-s">Tu apportes tes documents, l\u2019IA propose la progression, les s\u00e9ances et les notions.</span></button>'
+    +'<button class="at-porte" onclick="diapoOuvrir()">'
+    +'<span class="at-porte-t">\ud83d\uddbc\ufe0f Nouveau diaporama \u00e0 convertir</span>'
+    +'<span class="at-porte-s">Un diaporama devient un \u00e9cran de cours lisible au t\u00e9l\u00e9phone, reli\u00e9 \u00e0 une s\u00e9ance.</span></button>'
+    +'</div>'
+    /* [C5-3a] les trois tableaux de bord — chaque objet a sa liste, sa réouverture, ses gestes */
+    +'<div class="at-onglets">'
+    +'<button class="at-onglet'+(AT.onglet!=='chapitres'&&AT.onglet!=='diapos'?' at-onglet-actif':'')+'" onclick="atOnglet(\'feuilles\')">Mes feuilles</button>'
+    +'<button class="at-onglet'+(AT.onglet==='chapitres'?' at-onglet-actif':'')+'" onclick="atOnglet(\'chapitres\')">Mes chapitres</button>'
+    +'<button class="at-onglet'+(AT.onglet==='diapos'?' at-onglet-actif':'')+'" onclick="atOnglet(\'diapos\')">Mes diaporamas</button>'
     +'</div>';
+  if(AT.onglet==='chapitres'){h+=atRendreChapitres();document.getElementById('at-zone').innerHTML=h;atChapitresAssurer();return;}
+  if(AT.onglet==='diapos'){h+=atRendreDiapos();document.getElementById('at-zone').innerHTML=h;atDiaposAssurer();return;}
   if(m8TestOn())h+='<div class="at-bandeau-test">Mode test actif \u2014 compose, coche, imprime, recharge : rien ne part au hub. Les brouillons de test restent sur cet appareil et sont nettoy\u00e9s au retour en mode r\u00e9el.</div>';
   if(!ids.length){
     h+='<div class="at-vide">Aucune feuille pour l\u2019instant. \u00ab Nouvelle feuille \u00bb ouvre la feuille vierge : coche des cases, des choses apparaissent.</div>';
@@ -9661,6 +9676,426 @@ function atInfoInjection(voie){
   if(t)atInfo(t);
 }
 /* ═══ fin § SITE-COURS-2d ═══ */
+
+/* ═════════════════════════════════════════════════════════════════════
+   [C5-3a] — L'ATELIER EN TROIS ÉDITEURS ÉTANCHES.
+   Trois portes, trois tableaux de bord (feuilles / chapitres / diaporamas), un
+   éditeur de chapitre EN PLACE (écritures fines, jamais un nœud entier, jamais
+   `published`), la liaison guidée (pulse des LIER, modale pré-orientée par kind,
+   garde d'atterrissage avant chaque injection). Règle de Paul : « Rien ne doit
+   ne pas être modifiable. » Rien d'automatique, jamais.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* [C5-3a] la réalité Firebase : `seances` arrive en TABLEAU quand les index
+   sont denses, en OBJET quand l'index 0 manque (le trou du chapitre 1 réel).
+   Une seule lecture pour tout le morceau : des paires {j:index RÉEL, se:séance},
+   parce que l'éditeur écrit /seances/<j>/… et que j doit être la clé vraie. */
+function atSeances(ch){
+  var s=ch&&ch.seances;if(!s)return [];
+  if(Array.isArray(s))return s.map(function(se,j){return {j:String(j),se:se};}).filter(function(p){return !!p.se;});
+  return Object.keys(s).sort(function(a,b){return (+a)-(+b);}).map(function(k){return {j:k,se:s[k]};}).filter(function(p){return !!p.se;});
+}
+function atSeancesRangSuivant(ch){
+  var s=ch&&ch.seances;if(!s)return 0;
+  if(Array.isArray(s))return s.length;
+  var m=-1;Object.keys(s).forEach(function(k){var n=+k;if(n>m)m=n;});
+  return m+1;
+}
+function atOnglet(o){
+  AT.onglet=o;
+  if(AT_CHAP_ETAT[atTbNiveau()]==='erreur')AT_CHAP_ETAT[atTbNiveau()]='';   /* nouvelle chance au clic */
+  atRendreListe();
+}
+/* le niveau des tableaux ②③ — celui de la page, changeable en tête d'onglet */
+function atTbNiveau(){return AT.tbNiveau||currentLevel||'3e';}
+function atTbNiveauChange(v){AT.tbNiveau=v;atRendreListe();}
+function atTbSelecteur(){
+  var n=atTbNiveau();
+  return '<select class="at-sel at-tb-niveau" onchange="atTbNiveauChange(this.value)">'
+    +['3e','4e','5e','6e'].map(function(x){return '<option value="'+x+'"'+(x===n?' selected':'')+'>'+x+'</option>';}).join('')
+    +'</select>';
+}
+function atChapitresAssurer(){
+  var n=atTbNiveau();
+  if(chapitresData[n]&&Object.keys(chapitresData[n]).length)return;
+  if(AT_CHAP_ETAT[n]==='enCours')return;
+  if(AT_CHAP_ETAT[n]==='erreur')return;   /* pas de recharge en boucle sur un hub muet : le bouton Réessayer réarme */
+  atChargerChapitres(n,function(){if(AT.onglet==='chapitres'||AT.onglet==='diapos')atRendreListe();});
+}
+function atChapitresRecharger(){
+  AT_CHAP_ETAT[atTbNiveau()]='';
+  atChapitresAssurer();
+  atRendreListe();
+}
+/* le compteur qui s'apaise : les items sans liaison d'un chapitre */
+function atChapitreLiaisons(ch){
+  var n=0;
+  atSeances(ch).forEach(function(p){
+    Object.keys(p.se.items||{}).forEach(function(k){var it=p.se.items[k];if(it&&!it.ref)n++;});
+  });
+  return n;
+}
+function atRendreChapitres(){
+  var n=atTbNiveau();
+  var h='<div class="at-tb-tete">Chapitres de '+atTbSelecteur()+'</div>';
+  var data=chapitresData[n];
+  if(!data||!Object.keys(data).length){
+    return h+'<div class="at-vide">'+(AT_CHAP_ETAT[n]==='erreur'?'Les chapitres ne répondent pas pour l’instant. <button class="at-btn" onclick="atChapitresRecharger()">Réessayer</button>':'Chargement des chapitres\u2026')+'</div>';
+  }
+  var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+  nums.forEach(function(num){
+    var ch=data[num];if(!ch)return;
+    var nbSe=atSeances(ch).length;
+    var nbIt=0;atSeances(ch).forEach(function(p){nbIt+=Object.keys(p.se.items||{}).length;});
+    var pub=!!ch.published&&(typeof ch.published!=='object'||Object.keys(ch.published).some(function(k){return ch.published[k];}));
+    var li=atChapitreLiaisons(ch);
+    h+='<div class="at-carte"><div class="at-carte-t">'+atEsc(ch.title||('Chapitre '+num))+'</div>'
+      +'<div class="at-carte-m">'+(ch.ordre?('n\u00b0'+ch.ordre+' \u00b7 '):'')+nbSe+' s\u00e9ance'+(nbSe>1?'s':'')+' \u00b7 '+nbIt+' item'+(nbIt>1?'s':'')+' \u00b7 '+(pub?'publi\u00e9 (au moins une classe)':'non publi\u00e9')+'</div>'
+      +'<div class="at-carte-st '+(li?'at-st-adresse':'at-st-depose')+'">'+(li?(li+' liaison'+(li>1?'s':'')+' restante'+(li>1?'s':'')):'Tout est li\u00e9.')+'</div>'
+      +'<div class="at-carte-b">'
+      +'<button class="at-btn at-btn-prim" onclick="atEditerChapitre(\''+n+'\',\''+num+'\')">Modifier</button>'
+      +'<button class="at-btn" onclick="atVoirPanneau(\''+n+'\',\''+num+'\')">Voir dans le panneau prof</button>'
+      +'<button class="at-btn at-btn-danger" onclick="atSupprimerChapitre(\''+n+'\',\''+num+'\')">Supprimer</button>'
+      +'</div></div>';
+  });
+  return h;
+}
+/* passerelle atelier → panneau : fermer l'atelier, déplier le chapitre, y aller */
+function atVoirPanneau(level,chnum){
+  atelierFermer();
+  UI_OPEN[level+'::'+chnum]=true;   /* la clé PLATE du panneau (mesurée), pas un objet emboîté */
+  renderChapitres(level);
+  requestAnimationFrame(function(){
+    var el=document.querySelector('.chapter-card[data-chapter="'+chnum+'"]');
+    if(el){el.scrollIntoView({block:'start',behavior:'smooth'});}
+  });
+}
+/* ── L'ÉDITEUR DE CHAPITRE, EN PLACE — chaque champ écrit SON chemin précis,
+   jamais un nœud entier, jamais `published`. Le chapitre du site reste l'unique
+   objet : pas de copie parallèle. ── */
+function atEditerChapitre(level,chnum){
+  AT.flux='chapitre';AT.edChap={level:level,chnum:chnum,modifie:false};
+  if(!chapitresData[level]||!chapitresData[level][chnum]){
+    /* la passerelle du panneau peut arriver avant tout chargement atelier */
+    atChargerChapitres(level,function(){atEditerChapitreRendre();});
+    atEditerChapitreRendre();
+    return;
+  }
+  atEditerChapitreRendre();
+}
+function atEditerChapitreRendre(){
+  var ec=AT.edChap;if(!ec)return;
+  var ch=chapitresData[ec.level]&&chapitresData[ec.level][ec.chnum];
+  var z=document.getElementById('at-zone');if(!z)return;
+  if(!ch){z.innerHTML='<div class="at-vide">Ce chapitre n\u2019est plus l\u00e0.</div>';return;}
+  var h='<div class="at-ia-haut"><button class="at-btn" onclick="atEditerChapitreSortie()">\u2190 Mes chapitres</button>'
+    +'<h3 class="at-ia-titre">Modifier \u00ab '+atEsc(ch.title||'')+' \u00bb</h3></div>'
+    +'<div class="at-ia-sous">Chaque champ s\u2019enregistre d\u00e8s que tu le quittes \u2014 directement dans le chapitre du site. La publication ne change pas ici.</div>';
+  h+='<div class="at-edch"><label class="at-edch-lib">Titre du chapitre</label>'
+    +'<input class="at-edch-in" value="'+atEsc(ch.title||'')+'" onchange="atChampChapitre(\'title\',this.value)">'
+    +'<label class="at-edch-lib">Entr\u00e9e du chapitre (ce qu\u2019on va apprendre)</label>'
+    +'<textarea class="at-edch-ta" onchange="atChampChapitre(\'entree\',this.value)">'+atEsc(ch.entree||'')+'</textarea>'
+    +'<label class="at-edch-lib">Comp\u00e9tences majeures (une par ligne)</label>'
+    +'<textarea class="at-edch-ta" onchange="atChampChapitre(\'competencesMajeures\',this.value.split(String.fromCharCode(10)).map(function(x){return x.trim();}).filter(Boolean))">'+atEsc((ch.competencesMajeures||[]).join(String.fromCharCode(10)))+'</textarea>'
+    +'<label class="at-edch-lib">Comp\u00e9tences mineures (une par ligne)</label>'
+    +'<textarea class="at-edch-ta" onchange="atChampChapitre(\'competencesMineures\',this.value.split(String.fromCharCode(10)).map(function(x){return x.trim();}).filter(Boolean))">'+atEsc((ch.competencesMineures||[]).join(String.fromCharCode(10)))+'</textarea>'
+    +'</div>';
+  atSeances(ch).forEach(function(p){
+    var se=p.se,j=p.j;
+    var somNote=(se.type==='sommaire')?' <span class="ch-type">sommaire \u2014 le contenu se r\u00e9g\u00e9n\u00e8re, il ne s\u2019\u00e9dite pas ici</span>':'';
+    h+='<div class="at-edch at-edch-se"><div class="at-edch-set">S\u00e9ance '+(j)+somNote+'</div>'
+      +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(se.title||'')+'" onchange="atChampSeance('+j+',\'title\',this.value)">'
+      +'<label class="at-edch-lib">Type</label><input class="at-edch-in" value="'+atEsc(se.type||'')+'" onchange="atChampSeance('+j+',\'type\',this.value)">'
+      +'<label class="at-edch-lib">Note \u00e9l\u00e8ve</label><textarea class="at-edch-ta at-edch-ta-p" onchange="atChampSeance('+j+',\'noteEleve\',this.value)">'+atEsc(se.noteEleve||'')+'</textarea>';
+    Object.keys(se.items||{}).sort(function(a,b){return (se.items[a].ordre||0)-(se.items[b].ordre||0);}).forEach(function(k){
+      var it=se.items[k];if(!it)return;
+      h+='<div class="at-edch-it"><div class="at-edch-itt">\u2022 '+atEsc(k)+(it.ref?'':' <span class="at-st-adresse">non li\u00e9</span>')+'</div>'
+        +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(it.title||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'title\',this.value)">'
+        +'<label class="at-edch-lib">Sous-titre</label><input class="at-edch-in" value="'+atEsc(it.subtitle||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'subtitle\',this.value)">'
+        +'<label class="at-edch-lib">Type (kind)</label><input class="at-edch-in" value="'+atEsc(it.kind||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'kind\',this.value)">'
+        +'<label class="at-edch-lib">Ordre</label><input class="at-edch-in at-edch-num" type="number" value="'+(it.ordre||0)+'" onchange="atChampItem('+j+',\''+k+'\',\'ordre\',parseInt(this.value,10)||0)">'
+        +'</div>';
+    });
+    h+='</div>';
+  });
+  z.innerHTML=h;
+  window.scrollTo(0,0);
+}
+/* les trois écrivains fins — UN chemin par champ, la mémoire locale suit, le
+   panneau prof reste vrai à son prochain rendu */
+function atChampChapitre(champ,val){
+  var ec=AT.edChap;if(!ec)return;
+  var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/'+champ;
+  secuEcrire(chemin,val).then(function(r){
+    if(!r.ok){atInfo('\u26a0 Le champ n\u2019a pas pu s\u2019enregistrer \u2014 il garde son ancienne valeur en base.');return;}
+    chapitresData[ec.level][ec.chnum][champ]=val;ec.modifie=true;
+  });
+}
+function atChampSeance(j,champ,val){
+  var ec=AT.edChap;if(!ec)return;
+  var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+j+'/'+champ;
+  secuEcrire(chemin,val).then(function(r){
+    if(!r.ok){atInfo('\u26a0 Le champ n\u2019a pas pu s\u2019enregistrer \u2014 il garde son ancienne valeur en base.');return;}
+    chapitresData[ec.level][ec.chnum].seances[j][champ]=val;ec.modifie=true;
+  });
+}
+function atChampItem(j,k,champ,val){
+  var ec=AT.edChap;if(!ec)return;
+  var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+j+'/items/'+k+'/'+champ;
+  secuEcrire(chemin,val).then(function(r){
+    if(!r.ok){atInfo('\u26a0 Le champ n\u2019a pas pu s\u2019enregistrer \u2014 il garde son ancienne valeur en base.');return;}
+    chapitresData[ec.level][ec.chnum].seances[j].items[k][champ]=val;ec.modifie=true;
+  });
+}
+function atEditerChapitreSortie(){
+  var ec=AT.edChap;
+  AT.onglet='chapitres';
+  var suite=function(){AT.edChap=null;atRendreListe();};
+  if(ec&&ec.modifie){
+    atProposerSommaire(ec.level,ec.chnum,suite);
+  }else suite();
+}
+/* le sommaire PROPOSÉ — jamais automatique */
+function atProposerSommaire(level,chnum,apres){
+  var ch=chapitresData[level]&&chapitresData[level][chnum];
+  var aSom=!!ch&&atSeances(ch).some(function(p){return p.se.type==='sommaire';});
+  if(!ch||!aSom){if(apres)apres();return;}
+  atModaleChoix('Le chapitre a chang\u00e9 \u2014 r\u00e9g\u00e9n\u00e9rer la feuille sommaire ?',
+    [{lib:'R\u00e9g\u00e9n\u00e9rer',prim:true,fn:function(){atRegenererSommaire(level,chnum,apres);}},
+     {lib:'Plus tard',fn:function(){if(apres)apres();}}]);
+}
+function atRegenererSommaire(level,chnum,apres){
+  var ch=chapitresData[level][chnum];
+  var rang=-1;atSeances(ch).forEach(function(p){if(p.se.type==='sommaire'&&rang<0)rang=p.j;});
+  if(rang<0){if(apres)apres();return;}
+  chChargerTaxo(function(){
+    var somObj=chSommaireObjet(chSommaire(ch,level,CH.taxo,ch));
+    secuEcrire('/site/'+level+'/chapitres/'+chnum+'/seances/'+rang,somObj).then(function(r){
+      atInfo(r.ok?'Feuille sommaire r\u00e9g\u00e9n\u00e9r\u00e9e.':'\u26a0 La r\u00e9g\u00e9n\u00e9ration n\u2019a pas abouti \u2014 l\u2019ancien sommaire est intact.');
+      if(r.ok&&ch.seances[rang])ch.seances[rang]=somObj;
+      if(apres)apres();
+    });
+  });
+}
+/* ── SUPPRESSION D'UN CHAPITRE — patron feuille : corbeille D'ABORD (l'échec
+   abandonne tout), ou sans copie ; garde « prévenu, pas bloqué » si publié. ── */
+function atSupprimerChapitre(level,chnum){
+  var ch=chapitresData[level]&&chapitresData[level][chnum];if(!ch)return;
+  var nbSe=atSeances(ch).length;
+  var nbIt=0;atSeances(ch).forEach(function(p){nbIt+=Object.keys(p.se.items||{}).length;});
+  var pub=!!ch.published&&(typeof ch.published!=='object'||Object.keys(ch.published).some(function(k){return ch.published[k];}));
+  var finir=function(gardeCopie){
+    var faireSuppr=function(){
+      mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'.json','Suppression du chapitre \u00ab '+ch.title+' \u00bb',function(){
+        delete chapitresData[level][chnum];
+        atRendreListe();
+      });
+    };
+    if(gardeCopie){
+      var payload={_meta:{motif:'site-chapitre',chemin:'/site/'+level+'/chapitres/'+chnum,app:'index',ts:Date.now()},data:ch};
+      secuEcrire(atCorbeilleCle('site-chapitre'),payload).then(function(a){
+        if(!a.ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 rien n\u2019a \u00e9t\u00e9 supprim\u00e9, le chapitre est intact.');return;}
+        faireSuppr();
+      });
+    }else faireSuppr();
+  };
+  var ouvrirChoix=function(){
+    atModaleChoix('Supprimer le chapitre \u00ab '+atEsc(ch.title||'')+' \u00bb ? \u2014 '+nbSe+' s\u00e9ance'+(nbSe>1?'s':'')+', '+nbIt+' item'+(nbIt>1?'s':'')+'.',
+      [{lib:'Mettre \u00e0 la corbeille puis supprimer',danger:true,fn:function(){finir(true);}},
+       {lib:'Supprimer sans garder de copie',danger:true,fn:function(){finir(false);}},
+       {lib:'Annuler',fn:function(){}}]);
+  };
+  if(pub){
+    _modaleConfirme('Supprimer','Des s\u00e9ances de ce chapitre sont publi\u00e9es : les \u00e9l\u00e8ves les perdront. Supprimer quand m\u00eame\u00a0?',ouvrirChoix);
+    return;
+  }
+  ouvrirChoix();
+}
+/* ── ③ MES DIAPORAMAS — liste + statut + liaison (le minimum de bout en bout). ── */
+var AT_DIAPOS=null;var AT_DIAPOS_ETAT='';
+function atDiaposAssurer(){
+  if(AT_DIAPOS!==null){atChapitresAssurer();return;}
+  if(AT_DIAPOS_ETAT==='enCours')return;
+  AT_DIAPOS_ETAT='enCours';
+  secuLire(DIAPO_NOEUD).then(function(v){
+    AT_DIAPOS=(v&&typeof v==='object')?v:{};
+    AT_DIAPOS_ETAT='ok';
+    if(AT.onglet==='diapos')atRendreListe();
+  });
+  atChapitresAssurer();
+}
+/* où ce diaporama est-il lié ? — croisé avec les chapitres du niveau sélectionné */
+function diapoStatutLiaison(id){
+  var n=atTbNiveau();var data=chapitresData[n];
+  if(!data||!Object.keys(data).length)return {txt:'liaison non v\u00e9rifiable pour l\u2019instant',cls:'at-st-flou',lie:false};
+  var out=null;
+  Object.keys(data).forEach(function(num){
+    var ch=data[num];if(!ch||out)return;
+    atSeances(ch).forEach(function(p){
+      if(out)return;
+      Object.keys(p.se.items||{}).forEach(function(k){
+        var it=p.se.items[k];
+        if(it&&it.kind==='diaporama'&&it.ref===id&&!out)out={ch:ch.title||('Chapitre '+num),se:p.se.title||('S\u00e9ance '+p.j)};
+      });
+    });
+  });
+  if(out)return {txt:'Li\u00e9 dans '+out.ch+' \u203a '+out.se,cls:'at-st-depose',lie:true,ou:out};
+  return {txt:'Pas encore li\u00e9 \u2014 invisible des \u00e9l\u00e8ves',cls:'at-st-adresse',lie:false};
+}
+function atRendreDiapos(){
+  var h='<div class="at-tb-tete">Diaporamas \u00b7 liaisons dans '+atTbSelecteur()+'</div>';
+  if(AT_DIAPOS===null)return h+'<div class="at-vide">Chargement des diaporamas\u2026</div>';
+  var ids=Object.keys(AT_DIAPOS);
+  if(!ids.length)return h+'<div class="at-vide">Aucun diaporama pour l\u2019instant \u2014 la porte \u00ab Nouveau diaporama \u00e0 convertir \u00bb en fabrique.</div>';
+  ids.sort(function(a,b){return (AT_DIAPOS[b].maj||0)-(AT_DIAPOS[a].maj||0);});
+  ids.forEach(function(id){
+    var dp=AT_DIAPOS[id];if(!dp)return;
+    var st=diapoStatutLiaison(id);
+    var nbD=(dp.diapos||[]).length;
+    h+='<div class="at-carte"><div class="at-carte-t">'+atEsc(dp.titre||id)+'</div>'
+      +'<div class="at-carte-m">'+nbD+' diapositive'+(nbD>1?'s':'')+(dp.maj?(' \u00b7 modifi\u00e9 le '+new Date(dp.maj).toLocaleDateString('fr-FR')):'')+'</div>'
+      +'<div class="at-carte-st '+st.cls+'">'+st.txt+'</div>'
+      +'<div class="at-carte-b">'
+      +'<button class="at-btn at-btn-prim" onclick="openDiaporamaById(\''+id+'\',\''+atEsc(dp.titre||id).replace(/'/g,'\\u2019')+'\')">Ouvrir</button>'
+      +'<button class="at-btn" onclick="diapoLierModal(\''+id+'\')">Lier</button>'
+      +'<button class="at-btn at-btn-danger" onclick="atSupprimerDiapo(\''+id+'\')">Supprimer</button>'
+      +'</div></div>';
+  });
+  return h;
+}
+/* la liaison : deux menus (chapitre → séance), l'item naît par l'ÉCRIVAIN UNIQUE
+   itemCreer — published:false comme tous les autres. */
+function diapoLierModal(id){
+  var n=atTbNiveau();var data=chapitresData[n];
+  if(!data||!Object.keys(data).length){atInfo('Les chapitres de '+n+' ne sont pas encore l\u00e0 \u2014 r\u00e9essaie dans un instant.');return;}
+  var dp=AT_DIAPOS&&AT_DIAPOS[id];if(!dp)return;
+  var old=document.getElementById('at-modale');if(old)old.parentNode.removeChild(old);
+  var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
+  var d=document.createElement('div');d.id='at-modale';d.className='at-modale';
+  var optCh=nums.map(function(num){return '<option value="'+num+'">'+atEsc(data[num].title||('Chapitre '+num))+'</option>';}).join('');
+  d.innerHTML='<div class="at-modale-c"><div class="at-modale-m">Lier \u00ab <b>'+atEsc(dp.titre||id)+'</b> \u00bb \u00e0 une s\u00e9ance de '+n+' :</div>'
+    +'<select class="at-sel" id="at-dl-ch">'+optCh+'</select>'
+    +'<select class="at-sel" id="at-dl-se"></select>'
+    +'<div class="at-modale-b"><button class="at-btn at-btn-prim" id="at-dl-ok">Lier</button><button class="at-btn" id="at-dl-non">Annuler</button></div></div>';
+  document.body.appendChild(d);
+  var majSe=function(){
+    var num=document.getElementById('at-dl-ch').value;
+    document.getElementById('at-dl-se').innerHTML=atSeances(data[num]).map(function(p){return '<option value="'+p.j+'">'+atEsc(p.se.title||('S\u00e9ance '+p.j))+'</option>';}).join('');
+  };
+  document.getElementById('at-dl-ch').onchange=majSe;majSe();
+  document.getElementById('at-dl-non').onclick=function(){d.parentNode.removeChild(d);};
+  document.getElementById('at-dl-ok').onclick=function(){
+    var num=document.getElementById('at-dl-ch').value;
+    var j=document.getElementById('at-dl-se').value;
+    d.parentNode.removeChild(d);
+    itemCreer(n,num,j,dp.titre||id,{kind:'diaporama',source:'firebase_app',ref:id,icon:'\ud83d\uddbc\ufe0f'},function(itemId){
+      if(!itemId){atInfo('\u26a0 La liaison n\u2019a pas pu se cr\u00e9er.');return;}
+      atInfo('Li\u00e9 \u2014 l\u2019item est cr\u00e9\u00e9 dans la s\u00e9ance, non publi\u00e9 : la publication reste ton geste.');
+      if(AT.onglet==='diapos')atRendreListe();
+    });
+  };
+}
+function atSupprimerDiapo(id){
+  var dp=AT_DIAPOS&&AT_DIAPOS[id];if(!dp)return;
+  var st=diapoStatutLiaison(id);
+  var nbD=(dp.diapos||[]).length;
+  var finir=function(gardeCopie){
+    var faireSuppr=function(){
+      secuEcrire(DIAPO_NOEUD+'/'+id,null).then(function(r){
+        if(!r.ok){atInfo('\u26a0 La suppression a \u00e9chou\u00e9. Le diaporama est toujours l\u00e0'+(gardeCopie?', l\u2019archive aussi':'')+'.');return;}
+        delete AT_DIAPOS[id];
+        atRendreListe();
+      });
+    };
+    if(gardeCopie){
+      var payload={_meta:{motif:'site-diaporama',chemin:DIAPO_NOEUD+'/'+id,app:'index',ts:Date.now()},data:dp};
+      secuEcrire(atCorbeilleCle('site-diaporama'),payload).then(function(a){
+        if(!a.ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 rien n\u2019a \u00e9t\u00e9 supprim\u00e9, le diaporama est intact.');return;}
+        faireSuppr();
+      });
+    }else faireSuppr();
+  };
+  var ouvrirChoix=function(){
+    atModaleChoix('Supprimer le diaporama \u00ab '+atEsc(dp.titre||id)+' \u00bb ? \u2014 '+nbD+' diapositive'+(nbD>1?'s':'')+'.',
+      [{lib:'Mettre \u00e0 la corbeille puis supprimer',danger:true,fn:function(){finir(true);}},
+       {lib:'Supprimer sans garder de copie',danger:true,fn:function(){finir(false);}},
+       {lib:'Annuler',fn:function(){}}]);
+  };
+  if(st.lie){
+    _modaleConfirme('Supprimer','Cet \u00e9cran est li\u00e9 dans '+escapeHtml(st.ou.ch+' \u203a '+st.ou.se)+' : l\u2019item du cours affichera \u00ab\u00a0document plus disponible\u00a0\u00bb. Supprimer quand m\u00eame\u00a0?',ouvrirChoix);
+    return;
+  }
+  ouvrirChoix();
+}
+/* ── LA GARDE D'ATTERRISSAGE — le calcul des écritures, extrait de
+   chInjecterConfirme, MONTRÉ avant le clic. L'appariement par titre (celui qui
+   a mélangé le chapitre 1 le 05/08) devient VISIBLE. ── */
+function chCalculerEcritures(voie,chaps){
+  var o=CH.json;var idx=CH.chapIdx;var base='/site/'+CH.niveau+'/chapitres';
+  var out={ecritures:[],appariees:[],ajoutees:[],position:null};
+  if(voie==='jumeau'){
+    out.position=(chaps.filter(function(c){return !!c;}).length)+1;
+    return out;
+  }
+  if(voie==='remplacer')return out;
+  var cible=(idx!==null)?chaps[idx]:null;
+  var ecritures=out.ecritures;
+  if(cible){
+    ['entree','competencesMajeures','competencesMineures'].forEach(function(ch2){
+      var v=o.chapitre[ch2];
+      var vide=(v==null)||(Array.isArray(v)&&!v.length)||(v==='');
+      var dejaLa=cible[ch2];
+      var dejaRempli=(dejaLa!=null)&&(!Array.isArray(dejaLa)||dejaLa.length);
+      if(!vide&&!dejaRempli)
+        ecritures.push({chemin:base+'/'+idx+'/'+ch2,val:v,quoi:'d\u00e9claration du chapitre ('+ch2+')'});
+    });
+  }
+  if(!cible){
+    var n2=JSON.parse(JSON.stringify(o.chapitre));
+    delete n2.published;chNettoyerPublished(n2);
+    ecritures.push({chemin:base+'/'+chaps.length,val:n2,quoi:'chapitre \u00ab '+n2.title+' \u00bb'});
+    (o.chapitre.seances||[]).forEach(function(np){if(np)out.ajoutees.push(np.title||'');});
+  }else{
+    var parTitre={};
+    atSeances(cible).forEach(function(p){ parTitre[String(p.se.title||'').toLowerCase()]={se:p.se,i:p.j}; });
+    (o.chapitre.seances||[]).forEach(function(np){
+      var m=parTitre[String(np.title||'').toLowerCase()];
+      if(!m){
+        var se2=JSON.parse(JSON.stringify(np));delete se2.published;chNettoyerPublished(se2);
+        var rang=atSeancesRangSuivant(cible)+ecritures.filter(function(e){return e.quoi.indexOf('s\u00e9ance')===0;}).length;
+        ecritures.push({chemin:base+'/'+idx+'/seances/'+rang,val:se2,quoi:'s\u00e9ance \u00ab '+np.title+' \u00bb'});
+        out.ajoutees.push(np.title||'');
+        return;
+      }
+      var ajouts=0;
+      Object.keys(np.items||{}).forEach(function(k){
+        var dejaLa=m.se.items&&m.se.items[k];
+        if(!dejaLa){
+          var it=JSON.parse(JSON.stringify(np.items[k]));delete it.published;
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k,val:it,quoi:'\u00e9l\u00e9ment \u00ab '+(it.title||k)+' \u00bb'});
+          ajouts++;
+          return;
+        }
+        var np2=np.items[k]||{};
+        if((np2.notions||[]).length&&!((dejaLa.notions)||[]).length){
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k+'/notions',val:np2.notions,quoi:'notions de l\u2019\u00e9l\u00e9ment \u00ab '+(np2.title||k)+' \u00bb'});ajouts++;
+        }
+        if((np2.competences||[]).length&&!((dejaLa.competences)||[]).length){
+          ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/items/'+k+'/competences',val:np2.competences,quoi:'comp\u00e9tences de l\u2019\u00e9l\u00e9ment \u00ab '+(np2.title||k)+' \u00bb'});ajouts++;
+        }
+      });
+      if((np.notions||[]).length&&!(m.se.notions||[]).length){
+        ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/notions',val:np.notions,quoi:'notions de \u00ab '+np.title+' \u00bb'});ajouts++;
+      }
+      if((np.competences||[]).length&&!(m.se.competences||[]).length){
+        ecritures.push({chemin:base+'/'+idx+'/seances/'+m.i+'/competences',val:np.competences,quoi:'comp\u00e9tences de \u00ab '+np.title+' \u00bb'});ajouts++;
+      }
+      out.appariees.push({titre:np.title||'',ajouts:ajouts});
+    });
+  }
+  return out;
+}
+/* ═══ fin [C5-3a] ═══ */
 
 function atRoster(slug){
   if(!slug||typeof classesData==='undefined'||!classesData[slug])return [];
