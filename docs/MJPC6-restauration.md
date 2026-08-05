@@ -598,3 +598,13 @@ Avant toute promotion, la conscience relève le md5 et le sha du fichier en plac
 - **SYMPTÔME SIGNALÉ PENDANT L'AUDIT** (« la zone d'injection de la feuille a re-disparu ») : **prouvé absent du code** — parcours au clic sur la production 8.27.1 fraîche ET le livré, après F5 : zone présente partout, console vide (captures `sympt_feuille_*`). L'écran amputé était une page restée en mémoire depuis la fenêtre du bug du matin.
 - **DETTE CONSIGNÉE (décision de Paul)** : à 390 px hors atelier, les boutons flottants chevauchent le bord haut de la modale LIER — famille superpositions, à régler dans la passe mobile rétroactive.
 - **Restauration en cas de `BUG`** : revenir au blob AVANT (`2367856…`, commit `3c3408bd44`, 8.27.1).
+
+## Point de retour — PROMOTION SITE-COURS-2c · DÉPÔT, STATUT, ENVOI AUX ÉLÈVES, 05/08/2026
+| fichier | blob sha AVANT | AVANT | APRÈS |
+|---|---|---|---|
+| `index.html` | `6a9300e5e54888586389b88c2c6df677241aa24c` (commit `fd0b1a2f3001`) | 749 771 o · 8.28.0 · md5 `9f13a070e024aa41530ec140dd09971d` | 767 559 o · **8.29.0** · md5 `3cf2d409bf62d0b4d318a1605b95ed84` |
+
+- **LIVRÉ** : ① proposition de dépôt à l'enregistrement d'une feuille adressée (item créé par l'écrivain unique `itemCreer`, extrait du cœur d'`addItem` — geste ordinaire rejoué à l'identique) + premier envoi dans le même geste ② rappel côté séance « N feuille(s) adressée(s) — [Les déposer] » ③ statuts sur les cartes (6 états) ④ « Supprimer sans garder de copie » à côté du chemin corbeille (qui archive désormais vivant + envoi ensemble) ⑤ ENVOI AUX ÉLÈVES : le viewer lit `/site/atelier/envois/<ref>` (la version envoyée), le vivant reste au prof ; proposition d'envoi à ≥ 3 changements (`atEnvoiEcart`, commentaires COCKPIT + ÉVOLUTION posés) ; message élève daté éditable, défaut conservé (`/site/atelier/config/messageEnvoiDefaut`).
+- **AUDIT INDÉPENDANT** : 685 → 698 fonctions, 0 supprimée, 677 intactes, seule décroissance = extraction déclarée d'`addItem` · destinations d'écriture inventoriées : items, envois, métas, message par défaut, corbeille — rien d'autre · `published` seulement posé à `false` · parseurs verts · banc 25/25 au chemin réel (l'exécutant y a attrapé et corrigé un bug de chemins sans slash initial, banc durci).
+- **VALIDATIONS DE PAUL en circulation** : seuil (3) et libellé du message par défaut — modifiables d'un mot après usage réel.
+- **Restauration en cas de `BUG`** : revenir au blob AVANT (`6a9300e5…`, commit `fd0b1a2f3001`, 8.28.0).
