@@ -702,6 +702,11 @@ body.at-corps-fige{overflow:hidden}
    flottants du site s'effacent tant qu'il est actif (atelierOuvrir ferme déjà le panneau,
    atelierFermer le rouvre — aucun flux n'a besoin d'eux ici) et reviennent à la fermeture. */
 body.at-corps-fige #tprof-btn,body.at-corps-fige #admin-tools-btn,body.at-corps-fige #admin-tools-menu{display:none}
+/* [C5-3a-c] ② la modale LIER ouverte (son état existant .visible) efface les
+   flottants — pur CSS, ils reviennent d'eux-mêmes à la fermeture. */
+body:has(#link-modal.visible) #tprof-btn,body:has(#link-modal.visible) #admin-tools-btn,body:has(#link-modal.visible) #admin-tools-menu{display:none}
+.at-sel-mini{min-height:34px;font-size:.8rem;padding:2px 6px;margin-left:6px}
+.at-st-flou{color:#8f8672}
 .at-fermer{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;padding:8px 12px;background:linear-gradient(#12100d 60%,transparent)}
 .at-btn{font:inherit;font-size:.86rem;background:#2a2620;color:#e8e0d0;border:1px solid #4a4438;border-radius:8px;padding:10px 14px;min-height:44px;min-width:44px;cursor:pointer}
 .at-btn:hover{background:#37322a}
@@ -2576,7 +2581,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.31.0";
+var APP_VERSION="8.32.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -7461,9 +7466,9 @@ function chInjecterConfirme(voie){
 function chNettoyerPublished(o,garderRacine){
   if(!o||typeof o!=='object')return o;
   if(!garderRacine)delete o.published;
-  (o.seances||[]).forEach(function(se){
-    if(!se)return;delete se.published;
-    Object.keys(se.items||{}).forEach(function(k){ if(se.items[k])delete se.items[k].published; });
+  atSeances(o).forEach(function(p){   /* [C5-3a-c] la forme objet (trou d'index 0) est la r\u00e9alit\u00e9 du chapitre 1 */
+    delete p.se.published;
+    Object.keys(p.se.items||{}).forEach(function(k){ if(p.se.items[k])delete p.se.items[k].published; });
   });
   return o;
 }
@@ -8162,6 +8167,9 @@ function diapoRelecture(){
   });
   h+='<div class="dp-choix"><div class="at-ia-choix-lib">Enregistrer ce diaporama</div>'
     +'<input type="text" id="dp-id" class="cm-input" placeholder="nom court, sans accent (ex. portrait-seance-2)" value="'+atEsc(diapoIdPropose(o.titre))+'">'
+    /* [C5-3a-c] ① le niveau du diaporama — pré-rempli avec celui de la page */
+    +'<label class="at-edch-lib">Niveau</label>'
+    +'<select id="dp-niveau" class="at-sel">'+['3e','4e','5e','6e'].map(function(x){return '<option value="'+x+'"'+(x===(currentLevel||'3e')?' selected':'')+'>'+x+'</option>';}).join('')+'</select>'
     +'<div class="at-ia-actions">'
     +'<button class="at-btn at-btn-prim" id="dp-btn-ecrire" onclick="diapoEnregistrer()"'+(faits<total?' disabled':'')+'>Enregistrer</button></div>'
     +'<p class="dp-vide" id="dp-garde">'+(faits<total?('Il reste '+(total-faits)+' bloc(s) \u00e0 relire avant d\u2019enregistrer.'):'Tout est relu. Rien n\u2019est \u00e9crit tant que tu n\u2019as pas cliqu\u00e9.')+'</p></div>';
@@ -8201,6 +8209,8 @@ function diapoEnregistrer(){
   var total=diapoCles().length,faits=Object.keys(DP.relus).filter(function(x){return DP.relus[x];}).length;
   if(faits<total)return;                                  /* garde : jamais d'écriture non relue */
   var id=String((document.getElementById('dp-id')||{}).value||'').trim()||diapoIdPropose(o.titre);
+  var niv=String((document.getElementById('dp-niveau')||{}).value||'').trim();
+  if(niv)o.niveau=niv;   /* [C5-3a-c] ① : seule addition au payload */
   DP.id=id;
   var msg=document.getElementById('dp-msg');
   secuLire(DIAPO_NOEUD+'/'+id).then(function(ancien){
@@ -9460,7 +9470,7 @@ function atDeposerFeuille(docId,doc,cb){
 function atEcartDetail(vivant,envoye){
   if(!vivant||!envoye)return {nb:0,zones:[]};
   var nb=0;var zonesVues={};var zones=[];
-  function libelle(k){return (ATELIER_COMPOSANTES[k]&&ATELIER_COMPOSANTES[k].libelle)||k;}
+  function libelle(k){return AT_NOMS_COURTS[k]||(ATELIER_COMPOSANTES[k]&&ATELIER_COMPOSANTES[k].libelle)||k;}   /* [C5-3a-c] ③ */
   function noter(z){if(!zonesVues[z]){zonesVues[z]=1;zones.push(z);}}
   var ids={};
   Object.keys(vivant.valeurs||{}).forEach(function(k){ids[k]=1;});
@@ -9729,11 +9739,12 @@ function atChapitresRecharger(){
 }
 /* le compteur qui s'apaise : les items sans liaison d'un chapitre */
 function atChapitreLiaisons(ch){
-  var n=0;
+  /* [C5-3a-c] ⑤ trois états : un chapitre VIDE ne dit plus « Tout est lié ». */
+  var total=0,sans=0;
   atSeances(ch).forEach(function(p){
-    Object.keys(p.se.items||{}).forEach(function(k){var it=p.se.items[k];if(it&&!it.ref)n++;});
+    Object.keys(p.se.items||{}).forEach(function(k){var it=p.se.items[k];if(!it)return;total++;if(!it.ref)sans++;});
   });
-  return n;
+  return {total:total,sans:sans};
 }
 function atRendreChapitres(){
   var n=atTbNiveau();
@@ -9748,13 +9759,16 @@ function atRendreChapitres(){
     var nbSe=atSeances(ch).length;
     var nbIt=0;atSeances(ch).forEach(function(p){nbIt+=Object.keys(p.se.items||{}).length;});
     var pub=!!ch.published&&(typeof ch.published!=='object'||Object.keys(ch.published).some(function(k){return ch.published[k];}));
-    var li=atChapitreLiaisons(ch);
+    var li0=atChapitreLiaisons(ch);   /* [C5-3a-c] ⑤ */
+    var liTxt=(li0.total===0)?'Aucun item pour l\u2019instant.':(li0.sans?(li0.sans+' liaison'+(li0.sans>1?'s':'')+' restante'+(li0.sans>1?'s':'')):'Tout est li\u00e9.');
+    var liCls=(li0.total===0)?'at-st-flou':(li0.sans?'at-st-adresse':'at-st-depose');
     h+='<div class="at-carte"><div class="at-carte-t">'+atEsc(ch.title||('Chapitre '+num))+'</div>'
       +'<div class="at-carte-m">'+(ch.ordre?('n\u00b0'+ch.ordre+' \u00b7 '):'')+nbSe+' s\u00e9ance'+(nbSe>1?'s':'')+' \u00b7 '+nbIt+' item'+(nbIt>1?'s':'')+' \u00b7 '+(pub?'publi\u00e9 (au moins une classe)':'non publi\u00e9')+'</div>'
-      +'<div class="at-carte-st '+(li?'at-st-adresse':'at-st-depose')+'">'+(li?(li+' liaison'+(li>1?'s':'')+' restante'+(li>1?'s':'')):'Tout est li\u00e9.')+'</div>'
+      +'<div class="at-carte-st '+liCls+'">'+liTxt+'</div>'
       +'<div class="at-carte-b">'
       +'<button class="at-btn at-btn-prim" onclick="atEditerChapitre(\''+n+'\',\''+num+'\')">Modifier</button>'
       +'<button class="at-btn" onclick="atVoirPanneau(\''+n+'\',\''+num+'\')">Voir dans le panneau prof</button>'
+      +'<button class="at-btn" onclick="atDupliquerChapitre(\''+n+'\',\''+num+'\')">Dupliquer</button>'
       +'<button class="at-btn at-btn-danger" onclick="atSupprimerChapitre(\''+n+'\',\''+num+'\')">Supprimer</button>'
       +'</div></div>';
   });
@@ -9948,16 +9962,25 @@ function atRendreDiapos(){
   var ids=Object.keys(AT_DIAPOS);
   if(!ids.length)return h+'<div class="at-vide">Aucun diaporama pour l\u2019instant \u2014 la porte \u00ab Nouveau diaporama \u00e0 convertir \u00bb en fabrique.</div>';
   ids.sort(function(a,b){return (AT_DIAPOS[b].maj||0)-(AT_DIAPOS[a].maj||0);});
+  /* [C5-3a-c] ① : le sélecteur de niveau FILTRE les diaporamas qui en portent un ;
+     ceux qui n'en ont pas restent visibles partout, badge + « Poser le niveau ». */
+  var nTb=atTbNiveau();
+  ids=ids.filter(function(id){var dp=AT_DIAPOS[id];return dp&&(!dp.niveau||dp.niveau===nTb);});
+  if(!ids.length)return h+'<div class="at-vide">Aucun diaporama pour '+nTb+' \u2014 la porte \u00ab Nouveau diaporama \u00e0 convertir \u00bb en fabrique.</div>';
   ids.forEach(function(id){
     var dp=AT_DIAPOS[id];if(!dp)return;
     var st=diapoStatutLiaison(id);
     var nbD=(dp.diapos||[]).length;
+    var nivHtml=dp.niveau
+      ?(' \u00b7 niveau '+atEsc(dp.niveau))
+      :(' \u00b7 <span class="at-st-adresse">niveau non renseign\u00e9</span> <select class="at-sel at-sel-mini" onchange="atDiapoPoserNiveau(\''+id+'\',this.value)"><option value="">Poser le niveau\u2026</option>'+['3e','4e','5e','6e'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>');
     h+='<div class="at-carte"><div class="at-carte-t">'+atEsc(dp.titre||id)+'</div>'
-      +'<div class="at-carte-m">'+nbD+' diapositive'+(nbD>1?'s':'')+(dp.maj?(' \u00b7 modifi\u00e9 le '+new Date(dp.maj).toLocaleDateString('fr-FR')):'')+'</div>'
+      +'<div class="at-carte-m">'+nbD+' diapositive'+(nbD>1?'s':'')+(dp.maj?(' \u00b7 modifi\u00e9 le '+new Date(dp.maj).toLocaleDateString('fr-FR')):'')+nivHtml+'</div>'
       +'<div class="at-carte-st '+st.cls+'">'+st.txt+'</div>'
       +'<div class="at-carte-b">'
       +'<button class="at-btn at-btn-prim" onclick="openDiaporamaById(\''+id+'\',\''+atEsc(dp.titre||id).replace(/'/g,'\\u2019')+'\')">Ouvrir</button>'
       +'<button class="at-btn" onclick="diapoLierModal(\''+id+'\')">Lier</button>'
+      +'<button class="at-btn" onclick="atDupliquerDiapo(\''+id+'\')">Dupliquer</button>'
       +'<button class="at-btn at-btn-danger" onclick="atSupprimerDiapo(\''+id+'\')">Supprimer</button>'
       +'</div></div>';
   });
@@ -10096,6 +10119,82 @@ function chCalculerEcritures(voie,chaps){
   return out;
 }
 /* ═══ fin [C5-3a] ═══ */
+
+/* ── [C5-3a-c] — COMPLÉMENT : niveau des diaporamas, duplication, compteur à
+   trois états, noms courts du conseil. Aucune écriture ailleurs que l'objet
+   nouveau ou le champ posé ; published jamais écrit à true. ── */
+/* ① l'étiquetage de l'existant : UNE écriture fine, rien d'autre */
+function atDiapoPoserNiveau(id,v){
+  if(!v)return;
+  var dp=AT_DIAPOS&&AT_DIAPOS[id];if(!dp)return;
+  secuEcrire(DIAPO_NOEUD+'/'+id+'/niveau',v).then(function(r){
+    if(!r.ok){atInfo('\u26a0 Le niveau n\u2019a pas pu s\u2019enregistrer.');return;}
+    dp.niveau=v;
+    if(AT.onglet==='diapos')atRendreListe();
+  });
+}
+/* ④ dupliquer un chapitre : copie complète en fin de liste, ENTIÈREMENT
+   dépubliée à tous les étages — chNettoyerPublished RETIRE les clés published
+   (le patron de la voie « garder à côté » : une clé absente ne publie rien,
+   et published:true n'est jamais écrit). UNE écriture : le nouvel objet. */
+function atDupliquerChapitre(level,chnum){
+  var ch=chapitresData[level]&&chapitresData[level][chnum];if(!ch)return;
+  var copie=JSON.parse(JSON.stringify(ch));
+  copie.title=(copie.title||('Chapitre '+chnum))+' (copie)';
+  delete copie.published;chNettoyerPublished(copie);
+  var maxO=0,maxK=0;
+  Object.keys(chapitresData[level]).forEach(function(k){
+    var c=chapitresData[level][k];if(!c)return;
+    if((+c.ordre||0)>maxO)maxO=+c.ordre||0;
+    if((+k||0)>maxK)maxK=+k||0;
+  });
+  copie.ordre=maxO+1;
+  var nk=String(maxK+1);
+  secuEcrire('/site/'+level+'/chapitres/'+nk,copie).then(function(r){
+    if(!r.ok){atInfo('\u26a0 La copie n\u2019a pas pu \u00eatre enregistr\u00e9e. Rien n\u2019a \u00e9t\u00e9 cr\u00e9\u00e9.');return;}
+    chapitresData[level][nk]=copie;
+    atInfo('Chapitre dupliqu\u00e9 en fin de liste \u2014 la copie est un brouillon, invisible des \u00e9l\u00e8ves.');
+    atRendreListe();
+  });
+}
+/* ④ dupliquer un diaporama : id neuf, titre « (copie) », sans liaison
+   (la liaison vit dans les items du cours, pas dans le diaporama). */
+function atDupliquerDiapo(id){
+  var dp=AT_DIAPOS&&AT_DIAPOS[id];if(!dp)return;
+  var copie=JSON.parse(JSON.stringify(dp));
+  copie.titre=(copie.titre||id)+' (copie)';
+  copie.maj=Date.now();
+  var nid=id+'-copie-'+Date.now();
+  secuEcrire(DIAPO_NOEUD+'/'+nid,copie).then(function(r){
+    if(!r.ok){atInfo('\u26a0 La copie n\u2019a pas pu \u00eatre enregistr\u00e9e. Rien n\u2019a \u00e9t\u00e9 cr\u00e9\u00e9.');return;}
+    AT_DIAPOS[nid]=copie;
+    atInfo('Diaporama dupliqu\u00e9 \u2014 la copie n\u2019est li\u00e9e \u00e0 aucune s\u00e9ance.');
+    if(AT.onglet==='diapos')atRendreListe();
+  });
+}
+/* ③ les noms courts du conseil du filet — à défaut d'entrée, le libellé
+   de la composante (jamais de trou). */
+var AT_NOMS_COURTS={
+  titre:'le titre', sous_titre:'le sous-titre', nom_eleve:'le nom de l\u2019\u00e9l\u00e8ve',
+  classe:'la classe', niveau:'le niveau', groupe:'le groupe', chapitre:'le chapitre',
+  seance:'la s\u00e9ance', date_seance:'la date de la s\u00e9ance', date_edition:'la date d\u2019\u00e9dition',
+  annee_scolaire:'l\u2019ann\u00e9e scolaire', periode:'la p\u00e9riode',
+  objectif:'l\u2019objectif', competences:'les comp\u00e9tences', notions:'les notions',
+  domaine_socle:'le domaine du socle', attendu_cycle:'l\u2019attendu de cycle',
+  prerequis:'les pr\u00e9requis', evalue:'ce qui sera \u00e9valu\u00e9',
+  criteres_reussite:'les crit\u00e8res de r\u00e9ussite', duree_prevue:'la dur\u00e9e',
+  place_progression:'la place dans la progression', parcours:'le parcours',
+  oeuvre:'l\u2019\u0153uvre', auteur:'l\u2019auteur', siecle_courant:'le si\u00e8cle et le courant',
+  corpus:'le corpus', genre:'le genre', histoire_arts:'l\u2019histoire des arts',
+  prolongements:'les prolongements', lexique_seance:'le lexique', etymologie:'l\u2019\u00e9tymologie',
+  repere_chrono:'le rep\u00e8re chronologique', consigne:'la consigne', question:'la question',
+  sujet_redaction:'le sujet de r\u00e9daction', nb_mots:'le nombre de mots',
+  materiel:'le mat\u00e9riel', modalite:'la modalit\u00e9 de travail', bareme:'le bar\u00e8me',
+  note_sur:'le cadre de note', temps_passe:'le temps pass\u00e9',
+  travail_a_faire:'le travail \u00e0 faire', echeance:'l\u2019\u00e9ch\u00e9ance',
+  seance_suivante:'la s\u00e9ance suivante'
+};
+/* ═══ fin [C5-3a-c] ═══ */
 
 function atRoster(slug){
   if(!slug||typeof classesData==='undefined'||!classesData[slug])return [];
