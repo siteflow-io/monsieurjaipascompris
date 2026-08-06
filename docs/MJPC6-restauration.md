@@ -649,3 +649,14 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **AUDIT** : 735 → 738 fonctions, 0 supprimée, seule décroissance = extraction Drive déclarée · bloc média contrôlé indépendamment : 8 règles filles, AUCUNE règle géométrique restée dehors · 4 sélecteurs `:has` · aucune écriture réseau ajoutée · `published` jamais · banc 15/15 + 8/8, **vue élève rejouée et capturée (règle nouvelle du dispositif)**.
 - **Déclarés, préexistants, hors périmètre** : l'animation d'entrée des cartes écrase déjà le survol (le ⑥ vaut pour les autres cibles, dont Publier et les documents) · `cursor:default` inline jamais appliqué (second attribut `style` ignoré).
 - **Restauration en cas de `BUG`** : revenir au blob du commit `f4da94d9cd82` (8.32.0, md5 `ad1f72c4…`).
+
+## Point de retour — PROMOTION SITE-MOBILE · LA PASSE TACTILE DU SITE (dette D-M8M-2), 06/08/2026
+| fichier | AVANT | APRÈS |
+|---|---|---|
+| `index.html` | 815 207 o · 8.33.0 · md5 `deef60b9099c1de4e131226c8c089b6c` (commit `bf203b7629e2`) | 818 372 o · **8.34.0** · md5 `ac02bd59ab0a7d4fecadab8fd5e0cc3d` |
+
+- **LIVRÉ** : un bloc CSS de 3 063 o sous `@media (max-width:480px)`, 18 sélecteurs tous préfixés `#page-level` — ① bandeau haut en deux rangs (le compte à rebours n'écrase plus le titre), « ← Accueil » à 44 px ② onglets à 44 px dans une bande scrollable DÉDIÉE (le défilement horizontal vit dans la bande, jamais dans la page) ③ la grille `gr-row` s'empile : icône + titre pleine largeur, puis état, pastilles de classe et actions dessous en `flex-wrap` ④ `.pub-dot`, `.admin-action-btn`, `.ch-publish-btn`, `.item-pub-btn`, `.admin-action-add` à ≥ 44 px (la zone tactile grandit par rembourrage, l'icône garde sa taille).
+- **RÉSULTATS MESURÉS** : cibles sous-norme **8 → 0** (vue élève) et **166 → 0** (vue prof) · débordement de page **458/390 → 390/390** · cas de Paul : titre **64 px de large sur 6 lignes → 238 px sur 2 lignes**, aucune pastille coupée, carte `324/324`.
+- **AUDIT — PREUVE D'AJOUT UNIQUE** : le livré PRIVÉ de ce seul bloc redevient exactement la base (818 Ko comparés, écart résiduel = 2 sauts de ligne, mesuré) — donc rien d'autre n'a bougé · 0 fonction touchée (livraison purement CSS) · desktop : mesure croisée 39 points, 0 écart (le bloc est structurellement invisible au-dessus de 480 px) · banc 8/8, vue élève rejouée et capturée.
+- **SUITE POSSIBLE, non retenue par Paul pour l'instant** : les 7 actions d'item à 44 px s'étalent sur deux rangs ; regroupement derrière un bouton « ⋯ » consigné à D-M8M-2 (voir CHANTIER).
+- **Restauration en cas de `BUG`** : revenir au blob du commit `bf203b7629e2` (8.33.0, md5 `deef60b9…`).
