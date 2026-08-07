@@ -2359,6 +2359,40 @@ var publishedTabs={};
 var publishedExtras={};
 var PUBLISHABLE_TABS=['dictee','reecriture','evalconn','image','etude','redaction','analyse'];
 var TAB_LABELS={dictee:'Dict\u00e9e',reecriture:'R\u00e9\u00e9criture',evalconn:'\u00c9valuation des connaissances',image:'Analyse d\u2019image',etude:'\u00c9tude de texte',redaction:'R\u00e9daction',analyse:'Analyse logique'};
+/* [C5-AR] — CES LIBELLÉS SONT LUS PAR LES ÉLÈVES : ils cessent d'être en dur.
+   Le hub porte les remplacements (`/site/libelles/onglets/<tabId>`), TAB_LABELS
+   reste le REPLI — rien de posé = le libellé d'origine, jamais de trou. */
+var TAB_LABELS_HUB={};
+function tabLibelle(tabId){
+  var h=TAB_LABELS_HUB[tabId];
+  if(h&&String(h).trim())return String(h);
+  return (typeof TAB_LABELS!=='undefined'&&TAB_LABELS[tabId])?TAB_LABELS[tabId]:tabId;
+}
+function tabLibellesCharger(cb){
+  fetch(FIREBASE_BASE+'/site/libelles/onglets.json')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(v){TAB_LABELS_HUB=v||{};if(cb)cb(true);})
+    .catch(function(){if(cb)cb(false);});
+}
+function tabLibellePoser(tabId,valeur){
+  var v=String(valeur||'').trim();
+  _sitePut('/site/libelles/onglets/'+tabId,v||null,function(ok){
+    if(!ok){alert('Le libell\u00e9 n\u2019a pas pu s\u2019enregistrer.');return;}
+    if(v)TAB_LABELS_HUB[tabId]=v; else delete TAB_LABELS_HUB[tabId];
+    tabLibellesAppliquer();
+    if(typeof showProfSection==='function')showProfSection('archi');
+  });
+}
+/* les boutons d'onglets portent le libellé courant (le texte seul — l'icône reste) */
+function tabLibellesAppliquer(){
+  document.querySelectorAll('.tab[onclick*="switchTab"]').forEach(function(b){
+    var m=/switchTab\(this,'([a-z]+)'\)/.exec(b.getAttribute('onclick')||'');
+    if(!m)return;
+    var id=m[1];
+    if(!TAB_LABELS_HUB[id])return;
+    b.textContent=TAB_LABELS_HUB[id];
+  });
+}
 var chapitresData={};
 // État UI : chapitres dépliés (clé = level::chnum), survit aux re-renders
 var UI_OPEN={};var UI_OPEN_S={};
@@ -2658,7 +2692,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.34.0";
+var APP_VERSION="8.35.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -4468,7 +4502,8 @@ function goHome(){trackClose();clickedLevel=null;if(timerInterval){clearInterval
 function toggleChapter(header){var body=header.nextElementSibling;if(!body||!body.classList.contains('chapter-body'))return;var isOpen=body.classList.toggle('open');var card=header.closest('.chapter-card[data-chapter-id]');if(card){var chId=card.getAttribute('data-chapter-id');var lvl=clickedLevel||currentLevel||'';if(isOpen)UI_OPEN[lvl+'::'+chId]=true;else delete UI_OPEN[lvl+'::'+chId];}}
 function toggleSeanceOpen(h,key){var b=h.nextElementSibling;if(!b||!b.classList.contains('seance-items'))return;var o=b.classList.toggle('open');if(o)UI_OPEN_S[key]=true;else delete UI_OPEN_S[key];}
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction','tab-analyse'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
-function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');hideAllTabs();/* v8.5.1 : la liste codée en dur laissait tab-analyse (et tout onglet M8F) affiché sous les autres — accumulation constatée par Paul le 27/07 */var el=document.getElementById('tab-'+tab);if(el)el.style.display='block';if(tab==='autonomie'&&typeof renderZoneAutonomie==='function')renderZoneAutonomie();}
+function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');hideAllTabs();
+  if(tab==='fiches'&&typeof gotoFiches==='function')setTimeout(function(){gotoFiches();},0);   /* [C5-AR] les rayons se remplissent à l'ouverture *//* v8.5.1 : la liste codée en dur laissait tab-analyse (et tout onglet M8F) affiché sous les autres — accumulation constatée par Paul le 27/07 */var el=document.getElementById('tab-'+tab);if(el)el.style.display='block';if(tab==='autonomie'&&typeof renderZoneAutonomie==='function')renderZoneAutonomie();}
 function collectChapterItems(level,kind){
   var data=chapitresData[level]||{};
   var result=[];
@@ -4486,6 +4521,62 @@ function collectChapterItems(level,kind){
     });
   });
   return result;
+}
+
+/* [C5-AR] — LES RAYONS : ce qui vit éclaté dans les chapitres se retrouve PAR TYPE.
+   Aucun second moteur : `collectChapterItems(level,'atelier')` fait la collecte et
+   son filtre de publication à trois étages reste la seule vérité élève ; ici on ne
+   fait que RANGER le résultat par rayon, d'après le produit que la feuille déclare
+   (`/site/atelier/documents/<id>/produit`, lu par atSiteGetDocs → LINK_ATELIER_DOCS).
+   Une feuille dont le produit est ANCRÉ (fiche de séance, support de cours, bilan,
+   point d'étape) ne remonte PAS : elle vit dans sa séance. */
+function collectRayons(level){
+  var tout=collectChapterItems(level,'atelier');
+  var out={langue:[],brevet:[],loin:[],ancres:0,sansProduit:0};
+  tout.forEach(function(e){
+    var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[e.item.ref]:null;
+    if(!d){out.sansProduit++;return;}          /* feuille inconnue du cache : on ne devine pas */
+    var r=atProduitRayon(d.produit);
+    if(!r){out.ancres++;return;}
+    e.produitLib=(ATELIER_PRODUITS[d.produit]||{}).libelle||'';
+    e.docTitre=d.titre||'';
+    out[r].push(e);
+  });
+  return out;
+}
+/* le rendu d'un rayon : les cartes PAR CHAPITRE (patron renderItemListByChapter),
+   précédées du compteur réel — les compteurs du HTML existent déjà, on les remplit. */
+function _rayonPoser(idCompteur,n,mot){
+  var el=document.getElementById(idCompteur);
+  if(el)el.textContent=n+' '+mot+(n>1?'s':'');
+}
+function renderRayons(level){
+  var r=collectRayons(level);
+  var gram=r.langue.filter(function(e){return /grammaire/i.test(e.produitLib);});
+  var noti=r.langue.filter(function(e){return !/grammaire/i.test(e.produitLib);});
+  _rayonPoser('count-fiches-grammaire',gram.length,'fiche');
+  _rayonPoser('count-fiches-notions',noti.length,'fiche');
+  _rayonPoser('count-prepa-brevet',r.brevet.length,'fiche');
+  _rayonPoser('count-analyse-logique',r.loin.length,'fiche');
+  function zone(sec,items,icone){
+    var z=document.querySelector('.fiche-drop-zone[data-section="'+sec+'"]');
+    if(!z)return;
+    z.innerHTML=renderItemListByChapter(items,'_openAtelierFromList','var(--level-accent)',icone);
+  }
+  zone('fiches-grammaire',gram,'\ud83d\udcdd');
+  zone('fiches-notions',noti,'\ud83d\udccc');
+  zone('prepa-brevet',r.brevet,'\ud83c\udfaf');
+  zone('analyse-logique',r.loin,'\ud83d\ude80');
+  return r;
+}
+function _openAtelierFromList(ref){ if(typeof atOuvrirFeuilleEleve==='function')atOuvrirFeuilleEleve(ref); else openViewer('Feuille','?feuille='+encodeURIComponent(ref)); }
+function gotoFiches(level){
+  var n=level||clickedLevel||currentLevel||'';
+  if(typeof atSiteGetDocs==='function'&&(typeof LINK_ATELIER_DOCS==='undefined'||!LINK_ATELIER_DOCS||!Object.keys(LINK_ATELIER_DOCS).length)){
+    atSiteGetDocs(function(docs){LINK_ATELIER_DOCS=docs||{};renderRayons(n);});
+    return;
+  }
+  renderRayons(n);
 }
 
 /* ═══ M12 · ZONE AUTONOMIE (S5, périmètre D) — le marqueur se pose côté prof, la vue se lit
@@ -4555,6 +4646,7 @@ function renderItemListByChapter(items,onclickFn,bgColor,icon){
 
 function _openDicteeFromList(ref){if(typeof openDicteeById==='function')openDicteeById(ref);}
 function _openReecritureFromList(ref){if(typeof openReecriture==='function')openReecriture(ref,'');}
+function _openAnalyseFromList(ref){ if(typeof openAnalyseById==='function')openAnalyseById(ref); else openViewer('Analyse logique','analyse_logique.html?mode=eleve&analyse='+encodeURIComponent(ref)); }   /* [C5-AR] */
 function _openQcmFromList(ref){openViewer('\u00c9valuation QCM','evaluation-qcm.html?mode=eleve&eval='+encodeURIComponent(ref));}
 
 function gotoDictee(){var level=clickedLevel||currentLevel||'';var dictees=collectChapterItems(level,'dictee');showDicteeList(dictees,level);}   /* M8-IDENTITÉ (I2) : le site navigue dans le CONTENU — les corrections nominatives s'atteignent par l'identité, dans l'app */
@@ -4874,6 +4966,15 @@ function _profSectionArchi(){
     +'<div class="tprof-section-sub">Acc\u00e8s rapide aux niveaux pour \u00e9diter chapitres / s\u00e9ances / items. L\u2019\u00e9dition d\u00e9taill\u00e9e se fait dans la vue niveau elle-m\u00eame.</div>'
     +'<div class="tprof-info-row"><span class="tir-label">3e</span><span class="tir-value"><button class="tprof-close" style="width:auto;padding:5px 12px;font-size:0.85rem;font-weight:600" onclick="closeProfPanel();clickedLevel=\'3e\';clickedLevel=\'\';openLevel(\'3e\',\'3\xe8me\',\'#ef4444\');setTimeout(function(){openLevel(\'3e\',\'3\xe8me\',\'#ef4444\');},50);">Aller \u00e0 3e</button></span></div>'
     +'<div class="tprof-info-row"><span class="tir-label">4e</span><span class="tir-value"><button class="tprof-close" style="width:auto;padding:5px 12px;font-size:0.85rem;font-weight:600" onclick="closeProfPanel();clickedLevel=\'\';openLevel(\'4e\',\'4\xe8me\',\'#a855f7\');setTimeout(function(){openLevel(\'4e\',\'4\xe8me\',\'#a855f7\');},50);">Aller \u00e0 4e</button></span></div>'
+    +'<h2 style="margin-top:26px">Libell\u00e9s des onglets</h2>'
+    +'<div class="tprof-section-sub">Ces mots sont lus par les \u00e9l\u00e8ves. Change-les quand tu veux : vide = le libell\u00e9 d\u2019origine revient.</div>'
+    +Object.keys(TAB_LABELS).map(function(id){
+      var cour=(TAB_LABELS_HUB[id]||''),ori=TAB_LABELS[id];
+      return '<div class="tprof-info-row"><span class="tir-label">'+atEsc(ori)+'</span><span class="tir-value">'
+        +'<input class="m8-input" id="lab-'+id+'" value="'+atEsc(cour)+'" placeholder="'+atEsc(ori)+'" style="max-width:230px">'
+        +'<button class="tprof-close" style="width:auto;padding:5px 12px;font-size:0.85rem;font-weight:600;margin-left:6px" onclick="tabLibellePoser(\''+id+'\',document.getElementById(\'lab-'+id+'\').value)">Enregistrer</button>'
+        +'</span></div>';
+    }).join('')
     +'<div class="tprof-placeholder">\u2728 <strong>\u00c0 venir.</strong> Une vue d\u2019arborescence compl\u00e8te (chapitres / s\u00e9ances / items) avec recherche, d\u00e9placement crois\u00e9 entre niveaux, duplication, etc.</div>';
 }
 /* ===== CONSOLE MJPC — moteur export/import global (brique 1) =====
@@ -6206,12 +6307,27 @@ function togglePublishExtra(level,extraId){
 }
 function gotoReecriture(){var level=clickedLevel||currentLevel||'';var ree=collectChapterItems(level,'reecriture');showReecritureList(ree,level);}
 function showReecritureList(ree,level){var reeEl=document.getElementById('tab-reecriture');hideAllTabs();reeEl.style.display='block';var btn=document.getElementById('tab-btn-reecriture');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Réécriture '+(level?'— '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Retrouve les modifications que tu as faites sur ta copie.</div>';html+=renderItemListByChapter(ree,'_openReecritureFromList','#7c3aed','✍️');if(_niveauOutils(level)==='4e'){var isAdminBB=document.body.classList.contains('admin-mode');var pubE=publishedExtras['4e']||[];var bbPub=pubE.indexOf('bb4e')>=0;if(isAdminBB||bbPub){html+='<div class="section-label" style="margin-top:28px">Brevet blanc</div>';if(bbPub){html+='<div class="chapter-card" onclick="openBB4E()" style="cursor:pointer;position:relative"><div class="chapter-header"><div class="chapter-num" style="background:#7c3aed;color:#fff;">🎯</div><div class="chapter-info"><div class="chapter-title">Brevet Blanc 4e — Réécriture</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Réécriture spéciale</div></div>'+(isAdminBB?'<button class="ch-publish-btn published" onclick="event.stopPropagation();publishBB4E()">✅ Publié</button>':'<div class="doc-action" style="font-size:0.85rem;">→ Ouvrir</div>')+'</div></div>';}else if(isAdminBB){html+='<div class="chapter-card" style="opacity:0.55;position:relative"><div class="chapter-header"><div class="chapter-num" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);">🎯</div><div class="chapter-info"><div class="chapter-title">Brevet Blanc 4e — Réécriture</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Non publié — invisible pour les élèves</div></div><button class="ch-publish-btn" onclick="event.stopPropagation();publishBB4E()">Publier pour les élèves</button></div></div>';}}}/* PORTE DE L'OUTIL (Paul, 31/07), PLACEE EN DERNIER comme chez la dictee (decision du 31/07 : « le placement du bloc doit etre comme les autres ») — la porte CLOT l'onglet, apres tout le contenu range. Placee avant le bloc Brevet blanc, elle mettait cote a cote deux cartes de meme aspect aux comportements differents. : UN SEUL MODELE pour tous les outils — (1) le travail range par chapitre, (2) la porte vers l'app. La dictee, le QCM et l'analyse logique l'avaient ; la reecriture universelle non. Cause trouvee a l'historique : M8-IDENTITE (21/07, v8.4.0) formulait I2 comme un RETRAIT (le site ne liste plus d'objet nominatif) ; les portes en furent la CONSEQUENCE, jamais l'objet — et la reecriture, n'ayant aucune liste nominative a retirer, est passee a travers. */html+='<div class="section-label" style="margin-top:28px">Mes réécritures</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Identifie-toi et retrouve tes réécritures.</div>';html+='<div class="chapters-list"><div class="chapter-card" onclick="openMesReecritures()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:#7c3aed;color:#fff;">✍️</div><div class="chapter-info"><div class="chapter-title">Mes réécritures</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Identifie-toi et retrouve ton travail</div></div><div class="doc-action" style="font-size:0.85rem;">→ Ouvrir</div></div></div></div>';reeEl.innerHTML=html;}
+/* [C5-AR] À BRANCHER — ANALYSE D'IMAGE. Quand l'app existera, remplacer le corps par
+   le patron EXACT de showDicteeList (l. « showDicteeList ») :
+     var level=clickedLevel||currentLevel||'';
+     var items=collectChapterItems(level,'image');        // <- le kind à poser par la modale LIER
+     ... section-label + phrase + renderItemListByChapter(items,'_openImageFromList',…)
+     ... puis la PORTE de l'app EN DERNIER (règle du 31/07)
+   Aujourd'hui : aucun item ne porte ce kind — l'onglet le dit sobrement. */
 function gotoImage(){showEmptyTab('image','🖼️ Analyse d\'image');}
+/* [C5-AR] À BRANCHER — ÉTUDE DE TEXTE. Même patron (showDicteeList),
+   collectChapterItems(level,'etude'), ouvreur _openEtudeFromList, porte en dernier. */
 function gotoEtude(){showEmptyTab('etude','📖 Étude de texte');}
+/* [C5-AR] À BRANCHER — RÉDACTION. Même patron (showDicteeList),
+   collectChapterItems(level,'redaction'), ouvreur _openRedactionFromList, porte en dernier. */
 function gotoRedaction(){showEmptyTab('redaction','✏️ Rédaction');}
 function gotoEvalConn(){var level=clickedLevel||currentLevel||'';var qcms=collectChapterItems(level,'qcm');var el=document.getElementById('tab-evalconn');hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-evalconn');if(btn)btn.classList.add('active');var html='';html+='<div class="section-label">Évaluation des connaissances '+(level?'— '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">QCM en classe avec ton prof, puis consultation de tes résultats à la maison.</div>';html+=renderItemListByChapter(qcms,'_openQcmFromList','var(--level-accent)','🧠');html+='<div class="section-label" style="margin-top:28px">Rejoindre une session en cours</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Si ton prof vient de lancer un QCM, ouvre l’app pour rejoindre.</div>';html+='<div class="chapter-card" onclick="openEvalConn()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">🧠</div><div class="chapter-info"><div class="chapter-title">Ouvrir l’app QCM</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Connexion par classe + nom + prénom</div></div><div class="doc-action" style="font-size:0.85rem;">→ Ouvrir</div></div>';el.innerHTML=html;}
 function openEvalConn(){openViewer('\u00c9valuation des connaissances','evaluation-qcm.html?mode=eleve');}
-function gotoAnalyse(){var level=clickedLevel||currentLevel||'';var el=document.getElementById('tab-analyse');hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-analyse');if(btn)btn.classList.add('active');var dyn=document.getElementById('analyse-dyn');var html='';html+='<div class="section-label">Analyse logique '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Tu analyses des phrases sur papier avec ton prof, puis tu retrouves ici tes travaux corrig\u00e9s.</div>';html+='<div class="chapter-card" onclick="openAnalyse()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">\ud83d\udcd0</div><div class="chapter-info"><div class="chapter-title">Ouvrir l\u2019atelier d\u2019analyse logique</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Mes analyses \u2014 connexion par ton code MJPC (directe si tu es d\u00e9j\u00e0 connect\u00e9 au site)</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Ouvrir</div></div></div>';dyn.innerHTML=html;}
+function gotoAnalyse(){var level=clickedLevel||currentLevel||'';var el=document.getElementById('tab-analyse');hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-analyse');if(btn)btn.classList.add('active');var dyn=document.getElementById('analyse-dyn');var html='';html+='<div class="section-label">Analyse logique '+(level?'\u2014 '+level.toUpperCase():'')+'</div>';html+='<div style="padding:0 4px 10px;color:rgba(255,255,255,0.4);font-size:0.78rem;font-style:italic;">Tu analyses des phrases sur papier avec ton prof, puis tu retrouves ici tes travaux corrig\u00e9s.</div>';
+  /* [C5-AR] la collecte, sur le patron exact de showDicteeList : le travail rang\u00e9
+     par chapitre D'ABORD, la porte de l'app EN DERNIER (r\u00e8gle du 31/07). */
+  html+=renderItemListByChapter(collectChapterItems(level,'analyse_logique'),'_openAnalyseFromList','var(--level-accent)','\ud83d\udcd0');
+  html+='<div class="section-label" style="margin-top:28px">Ouvrir l\u2019atelier</div>';html+='<div class="chapter-card" onclick="openAnalyse()" style="cursor:pointer"><div class="chapter-header"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">\ud83d\udcd0</div><div class="chapter-info"><div class="chapter-title">Ouvrir l\u2019atelier d\u2019analyse logique</div><div style="font-size:0.78rem;opacity:0.5;margin-top:2px">Mes analyses \u2014 connexion par ton code MJPC (directe si tu es d\u00e9j\u00e0 connect\u00e9 au site)</div></div><div class="doc-action" style="font-size:0.85rem;">\u2192 Ouvrir</div></div></div>';dyn.innerHTML=html;}
 function openAnalyse(){openViewer('Analyse logique','analyse_logique.html');}
 function openBB4E(){openViewer('Brevet Blanc 4e \u2014 R\u00e9\u00e9criture','reecriture_bb4e.html?mode=eleve');}
 function publishBB4E(){togglePublishExtra('4e','bb4e');}
@@ -6396,7 +6512,12 @@ impression_seule: AC('J','rendu','mise_en_page',"Réserver la feuille au papier 
 /* ── LES PRODUITS : des boutons qui pré-cochent des lots de cases (les pistons
       de combinaison de l'orgue). SEUL « Fiche de séance » est livré ici ;
       les sept autres viennent au morceau ④. ── */
-var ATELIER_PRODUITS={
+var /* [C5-AR] — LES PRODUITS SONT DES PISTONS, JAMAIS DES VERROUS : le lot pré-coche,
+   Paul ajoute ou retire ensuite librement (aucun grisage dans ce morceau — déclaré).
+   `rayon` dit où la feuille atterrit dans l'onglet des transversales :
+   'langue' | 'brevet' | 'loin' — et ABSENT = produit ANCRÉ (il vit dans la
+   séance, il ne remonte pas : ligne ancré/transversal du 29/07). */
+ATELIER_PRODUITS={
   fiche_seance:{
     libelle:'Fiche de séance',
     info:"Prépare la feuille d\u2019une séance : en-tête complet, objectif, contenu de cours, travail de l\u2019élève, suites. Tu peux ensuite ajouter ou retirer ce que tu veux.",
@@ -6407,8 +6528,95 @@ var ATELIER_PRODUITS={
            zone_lignee:true,
            travail_a_faire:true,
            mention_conserver:true}
+  },
+  support_cours:{
+    libelle:'Support de cours',
+    info:"Le cours projet\u00e9 : titre, objectif, contenu, exemples. Pens\u00e9 pour l\u2019\u00e9cran, sans zone d\u2019\u00e9criture.",
+    cases:{titre:true,seance:true,chapitre:true,niveau:true,
+           objectif:true,notions:true,
+           a_retenir:true,definition:true,exemple:true,citation:true,
+           ecran_seul:true}
+  },
+  bilan:{
+    libelle:'Bilan (retour \u00e9l\u00e8ve)',
+    info:"Le retour remis \u00e0 l\u2019\u00e9l\u00e8ve : ce qu\u2019il r\u00e9ussit, ce sur quoi il bute, son objectif. La date d\u2019\u00e9dition est obligatoire.",
+    cases:{titre:true,nom_eleve:true,classe:true,niveau:true,periode:true,
+           date_edition:true,annee_scolaire:true,
+           competences:true,notions:true,
+           place_agregats:true,place_resultats:true,place_absence:true,
+           criteres_je:true,a_retenir:true,
+           mention_conserver:true}
+  },
+  fiche_grammaire:{
+    libelle:'Fiche grammaire',
+    rayon:'langue',
+    info:"Une r\u00e8gle de langue, sa d\u00e9finition, ses exemples et ses piges. Elle ne se colle pas dans le cahier : elle va au porte-vue.",
+    cases:{titre:true,niveau:true,notions:true,
+           definition:true,a_retenir:true,attention_piege:true,
+           exemple:true,contre_exemple:true,methode:true,
+           cases_a_cocher:true,
+           mention_conserver:true}
+  },
+  fiche_notion:{
+    libelle:'Fiche notion',
+    rayon:'langue',
+    info:"Une notion travaill\u00e9e, reprise d\u2019ann\u00e9e en ann\u00e9e. Sa place \u00e0 strates est pr\u00e9vue (`place_strates`) pour le morceau des strates par niveau, \u00e0 venir.",
+    cases:{titre:true,niveau:true,notions:true,domaine_socle:true,
+           definition:true,a_retenir:true,exemple:true,lexique_seance:true,
+           methode:true,prolongements:true,
+           place_strates:true,
+           mention_conserver:true}
+  },
+  prepa_brevet:{
+    libelle:'Pr\u00e9pa brevet',
+    rayon:'brevet',
+    info:"Une pr\u00e9paration \u00e0 l\u2019\u00e9preuve : m\u00e9thode, sujet, bar\u00e8me et crit\u00e8res.",
+    cases:{titre:true,niveau:true,
+           objectif:true,methode:true,criteres_reussite:true,
+           consigne:true,sujet_redaction:true,nb_mots:true,
+           bareme:true,note_sur:true,duree_prevue:true,
+           zone_lignee:true,
+           mention_conserver:true}
+  },
+  fiche_analyse_logique:{
+    libelle:'Fiche analyse logique',
+    rayon:'loin',
+    info:"Le support d\u2019analyse logique : rappel de m\u00e9thode, phrases \u00e0 analyser, place pour le travail.",
+    cases:{titre:true,niveau:true,notions:true,
+           methode:true,definition:true,exemple:true,
+           consigne:true,extrait_numerote:true,
+           zone_lignee:true,
+           mention_conserver:true}
   }
+  /* [C5-AR] À BRANCHER — PRODUIT 8 « Point d'étape » (agrégatif) : RÉSERVÉ.
+     Il dépend de M15 + Concordance (fenêtre glissante par type, agrégats à la date).
+     Quand ils existeront, l'ajouter ICI sur le patron ci-dessus, cases pivots :
+     place_agregats, place_resultats, place_absence, periode, date_edition. */
 };
+/* [C5-AR] le rayon d'un produit — lecture unique, réutilisée par la collecte
+   et par les compteurs ; un produit sans rayon est ANCRÉ. */
+/* [C5-AR] requalifier une feuille existante : les six feuilles de Paul portent
+   toutes `fiche_seance`. UNE écriture fine, le seul champ produit. */
+function atFeuilleProduitPoser(id,prod){
+  if(!prod)return;
+  secuEcrire(AT_NOEUD+'/'+id+'/produit',prod).then(function(r){
+    if(!r.ok){atInfo('\u26a0 Le produit n\u2019a pas pu s\u2019enregistrer.');return;}
+    if(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[id])LINK_ATELIER_DOCS[id].produit=prod;
+    if(typeof AT_DOCS!=='undefined'&&AT_DOCS&&AT_DOCS[id])AT_DOCS[id].produit=prod;
+    if(typeof atRendreListe==='function')atRendreListe();
+  });
+}
+function atProduitMenu(id,prodCourant){
+  return '<select class="at-sel at-sel-mini" onchange="atFeuilleProduitPoser(\''+id+'\',this.value)">'
+    +'<option value="">Produit\u2026</option>'
+    +Object.keys(ATELIER_PRODUITS).map(function(p){
+       return '<option value="'+p+'"'+(p===prodCourant?' selected':'')+'>'+atEsc(ATELIER_PRODUITS[p].libelle)+'</option>';
+     }).join('')+'</select>';
+}
+function atProduitRayon(prod){
+  var p=ATELIER_PRODUITS[prod||''];
+  return (p&&p.rayon)?p.rayon:'';
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    § ZONE PROMPT IA → JSON (SITE-COURS-2a) — le patron worktrack, porté à
@@ -9073,7 +9281,7 @@ function atRendreListe(){
       var st=atStatutFeuille(d,id);   /* SITE-COURS-2c : le statut d'arrivée */
       return '<div class="at-carte">'
         +'<div class="at-carte-t">'+atEsc(d.titre||'Sans titre')+'</div>'
-        +'<div class="at-carte-m">'+(prod?atEsc(prod)+' \u00b7 ':'')+'modifi\u00e9e le '+atEsc(quand)+'</div>'
+        +'<div class="at-carte-m">'+(prod?atEsc(prod)+' \u00b7 ':'')+'modifi\u00e9e le '+atEsc(quand)+' '+atProduitMenu(id,d.produit||'')+'</div>'   /* [C5-AR] requalifier le produit sur place */
         +'<div class="at-carte-st '+st.cls+'">'+atEsc(st.txt)+'</div>'
         +'<div class="at-carte-b">'
         +'<button class="at-btn at-btn-prim" onclick="atOuvrirDoc(\''+atEsc(id)+'\')">Ouvrir</button>'
