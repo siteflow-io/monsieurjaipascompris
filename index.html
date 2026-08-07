@@ -2692,7 +2692,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.35.0";
+var APP_VERSION="8.36.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -3049,7 +3049,10 @@ function mjpcChargerOutils(base,cb){
    contenant) et les nœuds déclarés. Toute divergence => republication.
    Motif : rien ne garantissait qu'un manifeste au hub corresponde au code promu ;
    l'aval (le prompt maître) raisonnait alors sur du périmé sans le savoir. */
-function mjpcManifesteAJour(publie,versionSocle,app,manifeste){
+/* [C5-M16a] ④ `purge` entre dans la comparaison (4e argument, optionnel : aucun
+   appelant existant n'est cassé). Sans lui, le site annonçait « tout est à jour »
+   à Paul alors que neuf contrats manquaient, puis lui demandait de cliquer. */
+function mjpcManifesteAJour(publie,versionSocle,app,manifeste,purge){
   if(!publie||typeof publie!=='object')return false;
   if(String(publie.version||'')!==String(versionSocle||''))return false;
   var a=publie.app||{};
@@ -3059,6 +3062,10 @@ function mjpcManifesteAJour(publie,versionSocle,app,manifeste){
   }
   try{
     if(JSON.stringify(publie.manifeste||{})!==JSON.stringify(manifeste||{}))return false;
+    if(arguments.length>4){
+      var pv=publie.purge||{preserver:[],purger:[]},pn=purge||{preserver:[],purger:[]};
+      if(JSON.stringify(pv)!==JSON.stringify(pn))return false;   /* [C5-M16a] ④ */
+    }
   }catch(e){return false;}
   return true;
 }
@@ -8021,6 +8028,52 @@ var FICHES_APPS=['correction_dictee','worktrack','dictee_universelle','pilotage_
    Ce que la méthode NE COUVRE PAS : une déclaration construite dynamiquement,
    une valeur calculée, ou un objet écrit sur une seule ligne avec des accolades
    dans une chaîne — dans ces cas l'extraction rend null et l'app est signalée. */
+/* [C5-M16a] — LE NORMALISEUR CONSCIENT DES CHAÎNES.
+   Cause racine du bouton qui amputait les fiches (mesurée sur les fichiers réels
+   des apps, 06/08) : l'ancienne normalisation travaillait à coups de regex
+   globales sur un texte qui contient des COMMENTAIRES et des APOSTROPHES
+   FRANÇAISES. Deux ruines indépendantes :
+     • les commentaires restaient dans le texte (JSON.parse cassait dessus) et,
+       pire, la clé qui SUIVAIT un commentaire de fin de ligne n'était plus
+       précédée d'une accolade ni d'une virgule : la mise entre guillemets ne
+       s'y appliquait pas (« purger: » restait nu) ;
+     • .replace(/'/g,'"') remplaçait les apostrophes À L'INTÉRIEUR des chaînes :
+       « l'app » devenait l"app, qui referme la chaîne et invalide tout.
+   Ici : UN SEUL PASSAGE qui sait où il est. Dans une chaîne, on recopie
+   (apostrophes françaises, tirets, guillemets typographiques compris) en
+   échappant les guillemets doubles internes ; hors chaîne, on jette les
+   commentaires, on met les clés nues entre guillemets, on retire les virgules
+   traînantes. Rien d'autre ne change : le repérage du bloc et le comptage
+   d'accolades sont ceux d'avant. */
+function fichesNormaliserJS(txt){
+  var out='',i=0,n=txt.length;
+  while(i<n){
+    var c=txt[i];
+    if(c==='"'||c==="'"||c==='`'){
+      var q=c,s='';i++;
+      while(i<n){
+        var d=txt[i];
+        if(d==='\\'){                       /* échappement : recopié tel quel */
+          s+=d+(txt[i+1]||'');i+=2;continue;
+        }
+        if(d===q){i++;break;}
+        if(d==='"')s+='\\"';                 /* guillemet interne : échappé */
+        else if(d==='\n')s+='\\n';
+        else if(d==='\r'){}
+        else if(d==='\t')s+='\\t';
+        else s+=d;                          /* l'apostrophe française passe intacte */
+        i++;
+      }
+      out+='"'+s+'"';continue;
+    }
+    if(c==='/'&&txt[i+1]==='/'){var f=txt.indexOf('\n',i);i=(f<0)?n:f;continue;}
+    if(c==='/'&&txt[i+1]==='*'){var g=txt.indexOf('*/',i);i=(g<0)?n:g+2;continue;}
+    out+=c;i++;
+  }
+  out=out.replace(/([{,\[]\s*)([A-Za-z_$][\w$]*)\s*:/g,'$1"$2":');   /* clés nues */
+  out=out.replace(/,(\s*[}\]])/g,'$1');                              /* virgule traînante */
+  return out;
+}
 function fichesExtraireObjet(src,nom){
   var re=new RegExp('(?:^|\\n)\\s*(?:var|const|let)\\s+'+nom+'\\s*=\\s*\\{','g');
   var m,deb=-1;
@@ -8041,7 +8094,7 @@ function fichesExtraireObjet(src,nom){
     else if(c==='}'){p--;if(p===0)break;}
   }
   var txt=src.slice(deb,i+1);
-  try{ return JSON.parse(txt.replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g,'$1"$2":').replace(/'/g,'"').replace(/,(\s*[}\]])/g,'$1')); }
+  try{ return JSON.parse(fichesNormaliserJS(txt)); }
   catch(e){
     /* repli : les champs simples, un par un — suffit pour id/nom/contenant/usage/quandPas */
     var o={},f=['id','nom','contenant','usage','quandPas'];
@@ -8058,15 +8111,39 @@ function fichesMajUne(id,socle,cb){
     return r.text();
   }).then(function(src){
     var app=fichesExtraireObjet(src,'MJPC_APP');
-    var man=fichesExtraireObjet(src,'MJPC_MANIFESTE')||{};
+    var man=fichesExtraireObjet(src,'MJPC_MANIFESTE');
+    var pur=fichesExtraireObjet(src,'MJPC_PURGE');
     if(!app||!app.id)throw new Error('d\u00e9claration illisible');
-    var payload={version:socle,app:app,manifeste:man,
-                 purge:fichesExtraireObjet(src,'MJPC_PURGE')||{preserver:[],purger:[]},
-                 publie_le:Date.now()};
     return secuLire('/manifestes/'+id).then(function(publie){
-      if(mjpcManifesteAJour(publie,socle,app,man)){cb({id:id,etat:'deja',nom:app.nom});return;}
+      /* [C5-M16a] ② GARDE DE NON-DÉGRADATION, universelle : une valeur extraite
+         nulle ou VIDE n'écrase JAMAIS ce qui est publié. On lit, on fusionne, on
+         n'écrit que ce qu'on a vraiment. Vaut même si l'extraction échouait un jour
+         sur une app inconnue — c'est sa raison d'être. */
+      var anc=(publie&&typeof publie==='object')?publie:{};
+      /* un contrat de purge dont les deux listes sont vides est VIDE, même s'il a
+         ses clés : c'est le contenu qui compte, pas la forme (mesuré au banc). */
+      function plein(o){
+        if(!o||typeof o!=='object')return false;
+        if(('preserver' in o)||('purger' in o))
+          return !!(((o.preserver||[]).length)+((o.purger||[]).length));
+        return !!Object.keys(o).length;
+      }
+      function garder(neuf,ancien,vide){
+        if(plein(neuf))return {v:neuf,conserve:false};
+        if(plein(ancien))return {v:ancien,conserve:true};
+        return {v:vide,conserve:false};
+      }
+      var gApp=garder(app,anc.app,null),
+          gMan=garder(man,anc.manifeste,{}),
+          gPur=garder(pur,anc.purge,{preserver:[],purger:[]});
+      var conserves=[];
+      if(gMan.conserve)conserves.push('manifeste');
+      if(gPur.conserve)conserves.push('purge');
+      var payload={version:socle,app:gApp.v,manifeste:gMan.v,purge:gPur.v,publie_le:Date.now()};
+      if(mjpcManifesteAJour(publie,socle,gApp.v,gMan.v,gPur.v)){cb({id:id,etat:'deja',nom:app.nom});return;}
       return secuEcrire('/manifestes/'+id,payload).then(function(r2){
-        cb(r2.ok?{id:id,etat:'publiee',nom:app.nom}:{id:id,etat:'echec',nom:app.nom,pourquoi:'l\u2019\u00e9criture n\u2019a pas abouti'});
+        cb(r2.ok?{id:id,etat:'publiee',nom:app.nom,conserves:conserves}
+                :{id:id,etat:'echec',nom:app.nom,pourquoi:'l\u2019\u00e9criture n\u2019a pas abouti'});
       });
     });
   }).catch(function(e){ cb({id:id,etat:'echec',nom:id,pourquoi:String(e&&e.message||e)}); });
@@ -8096,9 +8173,19 @@ function fichesEtat(entree,socle){
      PAS DE DATE. On ne rend donc aucune date, et l'affichage n'en cherche pas. */
   if(!entree)return {aJour:false,libelle:'jamais publi\u00e9e',declare:'\u2014',date:null,jamais:true};
   var v=String(entree.version||'');
-  var aJour=(v===String(socle));
-  return {aJour:aJour,
-    libelle:aJour?'conforme au socle en cours':'d\u00e9clare '+(v||'?')+', socle actuel '+socle,
+  /* [C5-M16a] ④ le contrat fait partie de l'état : une fiche amputeée (sans
+     manifeste ou sans purge) n'est PAS à jour, quelle que soit sa version. */
+  var p=entree.purge||{},m=entree.manifeste||{};
+  var aPurge=!!(p&&((p.preserver&&p.preserver.length)||(p.purger&&p.purger.length)));
+  var aMan=!!(m&&Object.keys(m).length);
+  var manque=[];
+  if(!aMan)manque.push('manifeste');
+  if(!aPurge)manque.push('contrat de purge');
+  var aJour=(v===String(socle))&&!manque.length;
+  return {aJour:aJour,manque:manque,
+    libelle:aJour?'conforme au socle en cours'
+      :(manque.length?('fiche incompl\u00e8te \u2014 '+manque.join(' et ')+' \u00e0 republier')
+                     :('d\u00e9clare '+(v||'?')+', socle actuel '+socle)),
     declare:v||'\u2014',date:entree.publie_le};
 }
 /* M-MANIFESTE-3 ③ : les noms lisibles, pour les apps qui n'ont AUCUNE fiche au hub.
