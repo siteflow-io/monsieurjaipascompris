@@ -2692,7 +2692,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.36.0";
+var APP_VERSION="8.37.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -3144,6 +3144,13 @@ function loadPublished(level){
       publishedTabs[level]=v.published_tabs||[];
       publishedExtras[level]=v.published_extras||[];
       chapitresData[level]=sanitizeChapitres(v.chapitres||{});
+      /* [C5-ORD] ④ normalisation SILENCIEUSE (pas de bouton — décision de Paul) :
+         doublons, trous et ordres absents sont renumérotés dans l'ordre où les
+         choses apparaissent déjà. Idempotent : rien à corriger = rien à écrire.
+         CÔTÉ PROF SEULEMENT : l'écran élève n'écrit jamais. */
+      if(typeof TRACK!=='undefined'&&TRACK.eleve&&TRACK.eleve.is_prof){
+        try{ ordNormaliserNiveau(level); }catch(e){ console.warn('[ordre]',e); }
+      }
       /* v8.5.2 — le premier rendu attendait les classes nulle part : côté prof à l'endroit
          (et fantôme), _isPubAny → _lvlClasses → classesData ; si les classes n'étaient pas
          encore chargées, la liste était vide et AUCUN chapitre publié par classe ne
@@ -3572,8 +3579,8 @@ function addChapter(level){
   if(!title)return;
   var data=chapitresData[level]||{};
   var nums=Object.keys(data).map(function(n){return parseInt(n)||0});
-  var newNum=(nums.length?Math.max.apply(null,nums):0)+1;
-  var newCh={title:title,ordre:newNum,published:false,seances:{}};
+  var newNum=(nums.length?Math.max.apply(null,nums):0)+1;       /* la CLÉ : un rangement */
+  var newCh={title:title,ordre:ordSuivant(data),published:false,seances:{}};   /* [C5-ORD] ① le RANG : max(ordre)+1 — le chapitre arrive en fin de liste */
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+newNum+'.json',newCh,'Cr\u00e9ation du chapitre \u00ab '+title+' \u00bb',function(){
     if(!chapitresData[level])chapitresData[level]={};
     chapitresData[level][newNum]=newCh;
@@ -3590,8 +3597,8 @@ function addSeance(level,chnum){
   var ch=chapitresData[level][chnum];if(!ch)return;
   var seances=ch.seances||{};
   var nums=Object.keys(seances).map(function(n){return parseInt(n)||0});
-  var newNum=(nums.length?Math.max.apply(null,nums):0)+1;
-  var newSce={title:title,type:'autre',ordre:newNum,published:true,items:{}};
+  var newNum=(nums.length?Math.max.apply(null,nums):0)+1;       /* la CLÉ */
+  var newSce={title:title,type:'autre',ordre:ordSuivant(seances),published:true,items:{}};   /* [C5-ORD] ① */
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+newNum+'.json',newSce,'Cr\u00e9ation de la s\u00e9ance \u00ab '+title+' \u00bb',function(){
     if(!ch.seances)ch.seances={};
     ch.seances[newNum]=newSce;
@@ -3665,6 +3672,8 @@ function deleteSeance(level,chnum,snum){
   _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ?',function(){
   mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json','Suppression de la s\u00e9ance \u00ab '+sce.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum];
+      /* [C5-ORD] ③ le resserrement dans le MÊME geste : 1,2,3… sans trou */
+      ordResserrer(chapitresData[level][chnum].seances,'/site/'+level+'/chapitres/'+chnum+'/seances');
       renderChapitres(level);
     });
   });
@@ -3675,12 +3684,78 @@ function deleteItem(level,chnum,snum,itemId){
   _modaleConfirme('Supprimer l\u2019item','Supprimer l\u2019item \u00ab <b>'+escapeHtml(item.title)+'</b> \u00bb ?',function(){
   mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json','Suppression de l\u2019item \u00ab '+item.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum].items[itemId];
+      ordResserrer(chapitresData[level][chnum].seances[snum].items,'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items');   /* [C5-ORD] ③ */
       renderChapitres(level);
     });
   });
 }
 
 // Réordonnancement par swap d'ordre avec voisin
+/* ═══ [C5-ORD] — `ordre` EST LA SEULE VÉRITÉ. La clé n'est qu'un rangement
+   technique, jamais un rang. Trois défauts mesurés le 07/08 : addChapter/addSeance
+   posaient `ordre = plus grande CLÉ + 1` (deux numérotations concurrentes),
+   atSeances triait sur la CLÉ quand renderChapitres triait sur `ordre` (deux ordres
+   affichés pour les mêmes séances), et rien ne resserrait après suppression.
+   Ici : une seule lecture d'ordre, un seul rang suivant, un seul resserrement. ═══ */
+function ordDe(o,repli){
+  var v=(o&&o.ordre!==undefined&&o.ordre!==null&&o.ordre!=='')?parseInt(o.ordre,10):NaN;
+  return isNaN(v)?(repli||0):v;
+}
+/* les paires {k:clé RÉELLE, o:objet} triées par ORDRE ; à égalité (données
+   abîmées), la clé départage — l'affichage reste stable, jamais aléatoire. */
+function ordPaires(coll){
+  if(!coll)return [];
+  var cles;
+  if(Array.isArray(coll)){cles=[];coll.forEach(function(v,i){if(v)cles.push(String(i));});}
+  else cles=Object.keys(coll).filter(function(k){return !!coll[k];});
+  return cles.map(function(k){return {k:k,o:coll[k]};})
+    .sort(function(a,b){
+      var oa=ordDe(a.o,999999),ob=ordDe(b.o,999999);
+      if(oa!==ob)return oa-ob;
+      return (+a.k)-(+b.k);
+    });
+}
+function ordSuivant(coll){
+  var m=0;
+  ordPaires(coll).forEach(function(p){var v=ordDe(p.o,0);if(v>m)m=v;});
+  return m+1;
+}
+/* ③ le resserrement : 1, 2, 3… sans trou, dans l'ordre OÙ LES CHOSES SONT DÉJÀ.
+   Écritures FINES (un chemin par `ordre`), jamais de nœud entier ; idempotent :
+   si tout est déjà juste, AUCUNE écriture ne part. `published` n'est jamais touché. */
+function ordResserrer(coll,basePath,cb){
+  var paires=ordPaires(coll),n=0,restent=0,fini=false;
+  paires.forEach(function(p,i){
+    var voulu=i+1;
+    if(ordDe(p.o,-1)===voulu)return;
+    p.o.ordre=voulu;n++;restent++;
+    secuEcrire(basePath+'/'+p.k+'/ordre',voulu).then(function(){
+      if(--restent===0&&!fini){fini=true;if(cb)cb(n);}
+    });
+  });
+  if(!restent&&!fini){fini=true;if(cb)cb(n);}
+  return n;
+}
+/* ④ la normalisation SILENCIEUSE d'un niveau : chapitres, puis séances de chaque
+   chapitre, puis items de chaque séance. Aucun bouton (décision de Paul), aucun
+   message : Paul retrouve sa liste telle quelle, assainie. */
+function ordNormaliserNiveau(level,cb){
+  var data=chapitresData[level];
+  if(!data||!Object.keys(data).length){if(cb)cb(0);return;}
+  var base='/site/'+level+'/chapitres',total=0;
+  total+=ordResserrer(data,base);
+  ordPaires(data).forEach(function(pc){
+    var ch=pc.o;
+    if(ch.seances){
+      total+=ordResserrer(ch.seances,base+'/'+pc.k+'/seances');
+      ordPaires(ch.seances).forEach(function(ps){
+        if(ps.o.items)total+=ordResserrer(ps.o.items,base+'/'+pc.k+'/seances/'+ps.k+'/items');
+      });
+    }
+  });
+  if(cb)cb(total);
+  return total;
+}
 function _swapOrdre(pathA,pathB,oldA,oldB,onDone){
   /* M-ÉCHECS-1 : les deux ordres partent en LOT — l'écran ne bouge que si les
      DEUX verdicts sont acceptés, sinon les échecs sont nommés (socle §9). */
@@ -6585,6 +6660,15 @@ ATELIER_PRODUITS={
            zone_lignee:true,
            mention_conserver:true}
   },
+  fiche_methode:{
+    libelle:'Fiche m\u00e9thode',
+    rayon:'langue',   /* [C5-ORD] ⑧ avec les fiches notion, en attendant l'onglet M\u00e9thode */
+    info:"Une m\u00e9thode en \u00e9tapes, avec un exemple trait\u00e9 et ses crit\u00e8res de r\u00e9ussite \u2014 le \u00ab comment on fait \u00bb, gard\u00e9 au porte-vue.",
+    cases:{titre:true,niveau:true,notions:true,
+           objectif:true,methode:true,exemple:true,
+           criteres_reussite:true,attention_piege:true,
+           mention_conserver:true}
+  },
   fiche_analyse_logique:{
     libelle:'Fiche analyse logique',
     rayon:'loin',
@@ -6610,6 +6694,11 @@ function atFeuilleProduitPoser(id,prod){
     if(!r.ok){atInfo('\u26a0 Le produit n\u2019a pas pu s\u2019enregistrer.');return;}
     if(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[id])LINK_ATELIER_DOCS[id].produit=prod;
     if(typeof AT_DOCS!=='undefined'&&AT_DOCS&&AT_DOCS[id])AT_DOCS[id].produit=prod;
+    /* [C5-ORD] ⑤ AT.liste est LE cache que lit le rendu : sans lui, l'écran
+       revenait à l'ancienne valeur alors que le hub portait la bonne. */
+    if(AT&&AT.liste&&AT.liste.length){
+      AT.liste.forEach(function(d){ if(d&&d.id===id)d.produit=prod; });
+    }
     if(typeof atRendreListe==='function')atRendreListe();
   });
 }
@@ -7609,8 +7698,11 @@ function chAfficherInventaire(){
   var o=CH.json;if(!o)return;
   secuLire('/site/'+CH.niveau).then(function(niv){
     var chaps=(niv&&niv.chapitres)||[];
+    /* [C5-ORD] le hub livre les chapitres en OBJET d\u00e8s qu'il y a des trous :
+       on parcourt par cl\u00e9s r\u00e9elles, jamais par forEach de tableau. */
+    var _cl=Array.isArray(chaps)?chaps.map(function(_,i){return String(i);}):Object.keys(chaps);
     var cible=null,idx=null;
-    chaps.forEach(function(c,i){
+    _cl.forEach(function(i){var c=chaps[i];
       if(!c)return;                                  /* le trou d'index 0 se traverse */
       if(String(c.title||'').toLowerCase()===String(o.chapitre.title||'').toLowerCase()){cible=c;idx=i;}
     });
@@ -7661,6 +7753,15 @@ function chAfficherInventaire(){
         ? '<p class="ch-vide">Ce sommaire se suffit \u00e0 lui-m\u00eame : il dit ce que le chapitre travaille sans qu\u2019on relise les s\u00e9ances.</p>'
         : '<p class="ch-vide">\u26a0 Il manque \u00e0 ce sommaire : '+suf.manque.map(atEsc).join(', ')+'. Il sera cr\u00e9\u00e9 quand m\u00eame, mais le chapitre suivant en saura moins.</p>')
       +'</div>';
+    /* [C5-ORD] \u2466 aucun chapitre ne porte ce titre ni ce rang : les trois voies n'ont
+       aucun sens \u2014 un seul bouton. Elles restent inchang\u00e9es d\u00e8s qu'un chapitre existe. */
+    if(CH.chapIdx===null||CH.chapIdx===undefined){
+      h+='<div class="ch-choix"><div class="at-ia-choix-lib">Que veux-tu faire ?</div><div class="at-ia-actions">'
+        +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'jumeau\')">Cr\u00e9er ce chapitre</button>'
+        +'</div><p class="ch-vide">Rien n\u2019existe encore sous ce titre : le chapitre sera cr\u00e9\u00e9 en fin de liste, non publi\u00e9. Rien n\u2019est \u00e9crit tant que tu n\u2019as pas cliqu\u00e9.</p></div>';
+      d.innerHTML=h;
+      return;
+    }
     h+='<div class="ch-choix"><div class="at-ia-choix-lib">Que veux-tu faire ?</div><div class="at-ia-actions">'
       +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'completer\')">Compl\u00e9ter (ne touche \u00e0 rien)</button><span class="at-ifo" onclick="atInfoInjection(\'completer\')">\u24d8</span>'
       +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'remplacer\')">Remplacer ce chapitre</button><span class="at-ifo" onclick="atInfoInjection(\'remplacer\')">\u24d8</span>'
@@ -7718,10 +7819,11 @@ function chInjecterConfirme(voie){
     if(voie==='jumeau'){
       var neuf=JSON.parse(JSON.stringify(o.chapitre));
       neuf.title=String(neuf.title||'')+' (proposition)';
-      neuf.ordre=(chaps.filter(function(c){return !!c;}).length)+1;
+      neuf.ordre=ordSuivant(chaps);   /* [C5-ORD] \u2460 le rang, pas le compte */
       delete neuf.published;
       chNettoyerPublished(neuf);
-      secuEcrire(base+'/'+chaps.length,neuf).then(function(r){
+      var _cleNeuve=(function(){var m=-1;(Array.isArray(chaps)?chaps.map(function(_,i){return i;}):Object.keys(chaps).map(Number)).forEach(function(n){if(n>m)m=n;});return m+1;})();
+      secuEcrire(base+'/'+_cleNeuve,neuf).then(function(r){
         dire(r.ok?('Chapitre ajout\u00e9 \u00e0 c\u00f4t\u00e9, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9.'):'L\u2019\u00e9criture n\u2019a pas abouti \u2014 rien n\u2019a chang\u00e9.',r.ok);
       });
       return;
@@ -7764,7 +7866,25 @@ function chInjecterConfirme(voie){
     })).then(function(vs){
       var ok=vs.filter(function(v){return v.status==='fulfilled';}).length;
       var ko=vs.filter(function(v){return v.status==='rejected';});
-      var t='\u00c9crit : <b>'+ok+'/'+ecritures.length+'</b>.';
+      /* [C5-ORD] ⑤ le cache du niveau est rafraîchi PUIS la progression redessinée :
+         le chapitre créé apparaît immédiatement, sans recharger le site. */
+      if(ok&&typeof atChargerChapitres==='function'){
+        AT_CHAP_ETAT[CH.niveau]='';
+        atChargerChapitres(CH.niveau,function(){
+          if(typeof renderChapitres==='function')renderChapitres(CH.niveau);
+          if(typeof atRendreListe==='function'&&AT&&AT.onglet==='chapitres')atRendreListe();
+        });
+      }
+      /* [C5-ORD] ⑥ une écriture réussie muette est indistinguable d'un échec :
+         on dit ce qui a été créé, et on donne le geste pour aller le voir. */
+      var nSe=ecritures.filter(function(e){return e.quoi.indexOf('s\u00e9ance')===0;}).length;
+      var nIt=ecritures.filter(function(e){return e.quoi.indexOf('item')===0;}).length;
+      var t='';
+      if(ok&&!ko.length&&voie!=='completer'){
+        t+='<b>Chapitre cr\u00e9\u00e9</b> : '+nSe+' s\u00e9ance'+(nSe>1?'s':'')+', '+nIt+' item'+(nIt>1?'s':'')+' \u2014 <b>non publi\u00e9</b>.<br>';
+        t+='<button class="at-btn at-btn-prim" onclick="atVoirPanneau(\''+CH.niveau+'\',\''+(CH.chapIdx!==null?CH.chapIdx:'')+'\')">Voir le chapitre</button><br>';
+      }
+      t+='\u00c9crit : <b>'+ok+'/'+ecritures.length+'</b>.';
       if(ok&&CH.chapIdx!==null)setTimeout(function(){atProposerSommaire(CH.niveau,CH.chapIdx,null);},400);   /* [C5-3a] proposé, jamais automatique */
       if(ko.length){
         t+='<br>\u26a0 '+ko.length+' \u00e9criture(s) n\u2019ont pas abouti \u2014 <b>le geste n\u2019est pas termin\u00e9</b>. Relance : seuls les manques seront repris.';
@@ -10134,11 +10254,14 @@ function atInfoInjection(voie){
    Une seule lecture pour tout le morceau : des paires {j:index RÉEL, se:séance},
    parce que l'éditeur écrit /seances/<j>/… et que j doit être la clé vraie. */
 function atSeances(ch){
+  /* [C5-ORD] ② le tri se fait sur `ordre` — comme renderChapitres. L'atelier et
+     l'arborescence ne peuvent plus afficher deux ordres pour les mêmes séances.
+     La clé RÉELLE reste rendue en `j` : les écrivains fins n'ont pas bougé. */
   var s=ch&&ch.seances;if(!s)return [];
-  if(Array.isArray(s))return s.map(function(se,j){return {j:String(j),se:se};}).filter(function(p){return !!p.se;});
-  return Object.keys(s).sort(function(a,b){return (+a)-(+b);}).map(function(k){return {j:k,se:s[k]};}).filter(function(p){return !!p.se;});
+  return ordPaires(s).map(function(p){return {j:p.k,se:p.o};});
 }
 function atSeancesRangSuivant(ch){
+  /* la CLÉ libre suivante (rangement technique) — le RANG, lui, se prend par ordSuivant */
   var s=ch&&ch.seances;if(!s)return 0;
   if(Array.isArray(s))return s.length;
   var m=-1;Object.keys(s).forEach(function(k){var n=+k;if(n>m)m=n;});
@@ -10490,7 +10613,7 @@ function chCalculerEcritures(voie,chaps){
   var o=CH.json;var idx=CH.chapIdx;var base='/site/'+CH.niveau+'/chapitres';
   var out={ecritures:[],appariees:[],ajoutees:[],position:null};
   if(voie==='jumeau'){
-    out.position=(chaps.filter(function(c){return !!c;}).length)+1;
+    out.position=ordSuivant(chaps);   /* [C5-ORD] \u2460 */
     return out;
   }
   if(voie==='remplacer')return out;
