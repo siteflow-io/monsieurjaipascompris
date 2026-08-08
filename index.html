@@ -2692,7 +2692,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.37.0";
+var APP_VERSION="8.38.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -3580,7 +3580,7 @@ function addChapter(level){
   var data=chapitresData[level]||{};
   var nums=Object.keys(data).map(function(n){return parseInt(n)||0});
   var newNum=(nums.length?Math.max.apply(null,nums):0)+1;       /* la CLÉ : un rangement */
-  var newCh={title:title,ordre:ordSuivant(data),published:false,seances:{}};   /* [C5-ORD] ① le RANG : max(ordre)+1 — le chapitre arrive en fin de liste */
+  var newCh={title:title,uid:uidNeuf('ch'),ordre:ordSuivant(data),published:false,seances:{}};   /* [C5-UID] ① */   /* [C5-ORD] ① le RANG : max(ordre)+1 — le chapitre arrive en fin de liste */
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+newNum+'.json',newCh,'Cr\u00e9ation du chapitre \u00ab '+title+' \u00bb',function(){
     if(!chapitresData[level])chapitresData[level]={};
     chapitresData[level][newNum]=newCh;
@@ -3598,7 +3598,7 @@ function addSeance(level,chnum){
   var seances=ch.seances||{};
   var nums=Object.keys(seances).map(function(n){return parseInt(n)||0});
   var newNum=(nums.length?Math.max.apply(null,nums):0)+1;       /* la CLÉ */
-  var newSce={title:title,type:'autre',ordre:ordSuivant(seances),published:true,items:{}};   /* [C5-ORD] ① */
+  var newSce={title:title,uid:uidNeuf('sce'),type:'autre',ordre:ordSuivant(seances),published:true,items:{}};   /* [C5-UID] ① */   /* [C5-ORD] ① */
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+newNum+'.json',newSce,'Cr\u00e9ation de la s\u00e9ance \u00ab '+title+' \u00bb',function(){
     if(!ch.seances)ch.seances={};
     ch.seances[newNum]=newSce;
@@ -3620,7 +3620,7 @@ function itemCreer(level,chnum,snum,title,props,cb){
   var slug=title.toLowerCase().replace(/[\u00e0-\u00e6]/g,'a').replace(/[\u00e8-\u00eb]/g,'e').replace(/[\u00ec-\u00ef]/g,'i').replace(/[\u00f2-\u00f6]/g,'o').replace(/[\u00f9-\u00fc]/g,'u').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,40)||'item';
   var itemId=slug;var i=2;
   while(items[itemId]){itemId=slug+'-'+i;i++;}
-  var newItem={kind:'doc',title:title,subtitle:'',icon:'\ud83d\udcc4',source:'drive',ref:'',ordre:newOrdre,published:false};
+  var newItem={kind:'doc',uid:uidNeuf('itm'),title:title,subtitle:'',icon:'\ud83d\udcc4',source:'drive',ref:'',ordre:newOrdre,published:false};   /* [C5-UID] ① */
   if(props)Object.keys(props).forEach(function(k){newItem[k]=props[k];});
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json',newItem,'Cr\u00e9ation de l\u2019item \u00ab '+title+' \u00bb',function(){
     if(!sce.items)sce.items={};
@@ -3667,9 +3667,42 @@ function deleteChapter(level,chnum){
   atSupprimerChapitre(level,chnum);
 }
 
+/* [C5-UID] \u2463 QUI POINTE VERS CET OBJET ? On regarde les feuilles de l'atelier
+   (adresse ET d\u00e9p\u00f4t), par identit\u00e9 d'abord, par rang ensuite. Pr\u00e9venu, pas bloqu\u00e9. */
+function uidReferents(level,chnum,snum){
+  var out=[];
+  var docs=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)||{};
+  var ch=(chapitresData[level]||{})[chnum]||{};
+  var chUid=ch.uid||'';
+  var sce=(snum!==null&&snum!==undefined)?((ch.seances||{})[snum]||{}):null;
+  var sUid=sce?(sce.uid||''):'';
+  Object.keys(docs).forEach(function(id){
+    var d=docs[id];if(!d)return;
+    [d.rattachement,d.depot].forEach(function(r){
+      if(!r||r.niveau!==level)return;
+      var viseCh=(chUid&&r.chapitreUid===chUid)||(!r.chapitreUid&&String(r.chapitre)===String(chnum));
+      if(!viseCh)return;
+      if(sce){
+        var viseSe=(sUid&&r.seanceUid===sUid)||(!r.seanceUid&&String(r.seance)===String(snum));
+        if(!viseSe)return;
+      }
+      if(out.indexOf(id)<0)out.push(id);
+    });
+  });
+  return out.map(function(id){return {id:id,titre:(docs[id]&&docs[id].titre)||id};});
+}
+function uidPhraseReferents(refs,quoi){
+  if(!refs.length)return '';
+  var n=refs.length;
+  return '<br><b>'+n+' feuille'+(n>1?'s':'')+'</b> point'+(n>1?'ent':'e')+' vers cette '+quoi+' : '
+    +refs.slice(0,4).map(function(r){return atEsc(r.titre);}).join(', ')
+    +(n>4?(' et '+(n-4)+' autre'+(n-4>1?'s':'')):'')
+    +'. Elles resteront <b>sans adresse</b> \u2014 tu pourras les r\u00e9adresser depuis l\u2019atelier. Rien n\u2019est effac\u00e9 de leur c\u00f4t\u00e9.';
+}
 function deleteSeance(level,chnum,snum){
   var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
-  _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ?',function(){
+  var _refs=uidReferents(level,chnum,snum);   /* [C5-UID] \u2463 */
+  _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ?'+uidPhraseReferents(_refs,'s\u00e9ance'),function(){
   mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json','Suppression de la s\u00e9ance \u00ab '+sce.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum];
       /* [C5-ORD] ③ le resserrement dans le MÊME geste : 1,2,3… sans trou */
@@ -3697,6 +3730,41 @@ function deleteItem(level,chnum,snum,itemId){
    atSeances triait sur la CLÉ quand renderChapitres triait sur `ordre` (deux ordres
    affichés pour les mêmes séances), et rien ne resserrait après suppression.
    Ici : une seule lecture d'ordre, un seul rang suivant, un seul resserrement. ═══ */
+/* ═══ [C5-UID] — TOUT OBJET RÉFÉRENÇABLE PORTE UNE IDENTITÉ QUI NE CHANGE
+   JAMAIS. Sa place, son nom, son rang et sa date ne sont que des ATTRIBUTS.
+   Défaut mesuré le 08/08 : l'adresse d'une feuille enregistrait « séance numéro 3 »
+   — un RANG. À la réinjection, la position 3 n'abritait plus la même séance : le
+   lien se rompait seul, en silence, et pointait vers la nouvelle occupante.
+   Ici : `uid` opaque, posé à la création, jamais réutilisé, jamais recopié par une
+   duplication. Le rang RESTE (rangement technique, repli de lecture et libellé). ═══ */
+function uidNeuf(prefixe){
+  var t=Date.now().toString(36);
+  var a=Math.random().toString(36).slice(2,7);
+  return (prefixe||'obj')+'-'+t+'-'+a;
+}
+/* la lecture : par IDENTITÉ d'abord, par rang seulement si l'uid manque — les
+   objets anciens (et les feuilles adressées au rang) continuent de fonctionner. */
+function uidTrouver(coll,uid){
+  if(!coll||!uid)return null;
+  var cles=Array.isArray(coll)?coll.map(function(_,i){return String(i);}):Object.keys(coll);
+  for(var i=0;i<cles.length;i++){
+    var o=coll[cles[i]];
+    if(o&&o.uid===uid)return {k:cles[i],o:o};
+  }
+  return null;
+}
+/* le couple (uid, rang) résolu en UNE lecture : l'uid gagne, le rang est le repli. */
+function uidResoudre(coll,uid,rang){
+  var par=uidTrouver(coll,uid);
+  if(par)return {k:par.k,o:par.o,par:'uid'};
+  /* une identité ENREGISTRÉE mais introuvable = l'objet a disparu. On ne retombe
+     PAS sur le rang : ce serait désigner la nouvelle occupante de la place —
+     exactement le mensonge que ce morceau répare. Le repli par rang ne vaut que
+     pour les objets anciens, qui n'ont aucun uid enregistré. */
+  if(uid)return null;
+  if(rang!==undefined&&rang!==null&&coll&&coll[rang])return {k:String(rang),o:coll[rang],par:'rang'};
+  return null;
+}
 function ordDe(o,repli){
   var v=(o&&o.ordre!==undefined&&o.ordre!==null&&o.ordre!=='')?parseInt(o.ordre,10):NaN;
   return isNaN(v)?(repli||0):v;
@@ -3753,8 +3821,36 @@ function ordNormaliserNiveau(level,cb){
       });
     }
   });
+  total+=uidMigrerNiveau(level);   /* [C5-UID] ② le même passage pose les identités manquantes */
   if(cb)cb(total);
   return total;
+}
+/* [C5-UID] ② LA MIGRATION, silencieuse et une seule fois : tout objet sans `uid`
+   en reçoit un. Écritures FINES (un chemin par `uid`), idempotent (rien à poser =
+   rien à écrire), `published` jamais touché, aucun bouton. */
+function uidMigrerNiveau(level){
+  var data=chapitresData[level];
+  if(!data)return 0;
+  var base='/site/'+level+'/chapitres',n=0;
+  function poser(o,chemin,prefixe){
+    if(!o||o.uid)return;
+    o.uid=uidNeuf(prefixe);n++;
+    secuEcrire(chemin+'/uid',o.uid);
+  }
+  ordPaires(data).forEach(function(pc){
+    var cch=base+'/'+pc.k;
+    poser(pc.o,cch,'ch');
+    if(!pc.o.seances)return;
+    ordPaires(pc.o.seances).forEach(function(ps){
+      var cse=cch+'/seances/'+ps.k;
+      poser(ps.o,cse,'sce');
+      if(!ps.o.items)return;
+      Object.keys(ps.o.items).forEach(function(ki){
+        poser(ps.o.items[ki],cse+'/items/'+ki,'itm');
+      });
+    });
+  });
+  return n;
 }
 function _swapOrdre(pathA,pathB,oldA,oldB,onDone){
   /* M-ÉCHECS-1 : les deux ordres partent en LOT — l'écran ne bouge que si les
@@ -7166,6 +7262,10 @@ function atIAAppliquer(doc,o){
     doc.rattachement.niveau=_a.niveau;
     doc.rattachement.chapitre=_a.chapitre;doc.rattachement.chapitreTitre=_a.chapitreTitre;
     doc.rattachement.seance=_a.seance;doc.rattachement.seanceTitre=_a.seanceTitre;
+    /* [C5-UID] ③ l'identité s'écrit À CÔTÉ du rang : on AJOUTE, on ne remplace pas.
+       Le rang reste le repli de lecture et le libellé lisible. */
+    if(_a.chapitreUid)doc.rattachement.chapitreUid=_a.chapitreUid;
+    if(_a.seanceUid)doc.rattachement.seanceUid=_a.seanceUid;
     if(_a.chapitre){doc.cases.chapitre=true;doc.valeurs.chapitre={texte:'Chapitre '+_a.chapitreOrdre+' \u2014 '+_a.chapitreTitre};}
     if(_a.seance){doc.cases.seance=true;doc.valeurs.seance={texte:'S\u00e9ance '+_a.seanceOrdre+' \u2014 '+_a.seanceTitre};}
   }
@@ -9767,7 +9867,7 @@ function atRattRecharger(niveau){AT_CHAP_ETAT[niveau]='';atChargerChapitres(nive
 /* Les chapitres d'un niveau, triés par ordre — [{num,titre,ordre}] */
 function atChapitresDe(niveau){
   var d=(niveau&&typeof chapitresData!=='undefined'&&chapitresData[niveau])||{};
-  return Object.keys(d).map(function(k){var c=d[k]||{};return {num:String(k),titre:c.title||('Chapitre '+k),ordre:(c.ordre!=null?Number(c.ordre):(parseInt(k,10)||0))};})
+  return Object.keys(d).map(function(k){var c=d[k]||{};return {num:String(k),uid:c.uid||'',titre:c.title||('Chapitre '+k),ordre:(c.ordre!=null?Number(c.ordre):(parseInt(k,10)||0))};})   /* [C5-UID] \u2462 */
     .sort(function(a,b){return a.ordre-b.ordre;});
 }
 /* Les séances d'un chapitre, triées par ordre — [{num,titre,ordre}] */
@@ -9845,7 +9945,9 @@ function atIAValiderAdresse(o,niveau){
   }
   res.adresse={niveau:niveau,
     chapitre:ch?ch.num:'',chapitreTitre:ch?ch.titre:'',chapitreOrdre:ch?ch.ordre:'',
-    seance:se?se.num:'',seanceTitre:se?se.titre:'',seanceOrdre:se?se.ordre:''};
+    chapitreUid:(ch&&ch.uid)||'',   /* [C5-UID] \u2462 l'identit\u00e9 \u00c0 C\u00d4T\u00c9 du rang */
+    seance:se?se.num:'',seanceTitre:se?se.titre:'',seanceOrdre:se?se.ordre:'',
+    seanceUid:(se&&se.uid)||''};
   return res;
 }
 function atTrouverChapitre(chs,t){
@@ -9965,17 +10067,36 @@ var AT_ENVOI_MSG_DEFAUT='Cette fiche a changé le <date> — reporte les changem
 
 /* L'adresse en toutes lettres — « 3e › Chapitre 1 › Séance 8 » (ordres du hub si chargés) */
 function atAdresseLisible(r){
+  /* [C5-UID] \u2464 l'adresse se calcule depuis l'IDENTIT\u00c9 : le libell\u00e9 suit la s\u00e9ance
+     m\u00eame si elle change de rang. Le rang ne sert que de repli (feuilles anciennes),
+     et si l'objet n'existe plus on le DIT au lieu d'afficher un rang qui d\u00e9signe
+     d\u00e9sormais autre chose. */
   if(!r||!r.niveau)return '';
   var out=r.niveau;
-  if(r.chapitre){
-    var c=atChapitresDe(r.niveau).filter(function(x){return x.num===String(r.chapitre);})[0];
-    out+=' › Chapitre '+(c?c.ordre:r.chapitre);
+  var data=(typeof chapitresData!=='undefined'&&chapitresData[r.niveau])||{};
+  var cRes=null;
+  if(r.chapitre||r.chapitreUid){
+    cRes=uidResoudre(data,r.chapitreUid,r.chapitre);
+    if(!cRes&&r.chapitreUid)return out+' \u203a le chapitre a \u00e9t\u00e9 supprim\u00e9';
+    out+=' \u203a Chapitre '+(cRes?ordDe(cRes.o,cRes.k):r.chapitre);
   }
-  if(r.seance){
-    var s=atSeancesDe(r.niveau,r.chapitre).filter(function(x){return x.num===String(r.seance);})[0];
-    out+=' › Séance '+(s?s.ordre:r.seance);
+  if(r.seance||r.seanceUid){
+    var ses=(cRes&&cRes.o&&cRes.o.seances)||null;
+    var sRes=ses?uidResoudre(ses,r.seanceUid,r.seance):null;
+    if(!sRes&&r.seanceUid)return out+' \u203a la s\u00e9ance a \u00e9t\u00e9 supprim\u00e9e';
+    out+=' \u203a S\u00e9ance '+(sRes?ordDe(sRes.o,sRes.k):r.seance);
   }
   return out;
+}
+/* [C5-UID] \u2464 la CL\u00c9 courante d'une adresse : par identit\u00e9 d'abord, par rang ensuite.
+   Les lectures qui ont besoin de la place r\u00e9elle (d\u00e9p\u00f4t, item pointant) passent par l\u00e0. */
+function atAdresseCles(r){
+  if(!r||!r.niveau)return null;
+  var data=(typeof chapitresData!=='undefined'&&chapitresData[r.niveau])||{};
+  var c=uidResoudre(data,r.chapitreUid,r.chapitre);
+  if(!c)return null;
+  var s=c.o.seances?uidResoudre(c.o.seances,r.seanceUid,r.seance):null;
+  return {niveau:r.niveau,chapitre:c.k,seance:s?s.k:null,parUid:(c.par==='uid')};
 }
 /* L'item de la séance qui pointe cette feuille, s'il existe — {itemId,item}|null */
 function atItemPointant(ref,niveau,chnum,snum){
@@ -10001,7 +10122,9 @@ function atDeposerFeuille(docId,doc,cb){
     if(!ok){atInfo('⚠ L’envoi n’a pas pu s’écrire — dépôt abandonné, rien n’a été fait.');if(cb)cb(false);return;}
     itemCreer(r.niveau,r.chapitre,r.seance,doc.titre||'Sans titre',{source:'atelier',ref:docId,kind:'doc'},function(itemId){
       if(!itemId){atInfo('⚠ L’item n’a pas pu se créer. La version envoyée est écrite ; réessaie le dépôt.');if(cb)cb(false);return;}
-      doc.depot={niveau:r.niveau,chapitre:r.chapitre,seance:r.seance,itemId:itemId,le:Date.now()};
+      doc.depot={niveau:r.niveau,chapitre:r.chapitre,seance:r.seance,
+                 chapitreUid:r.chapitreUid||'',seanceUid:r.seanceUid||'',   /* [C5-UID] \u2462 \u00e0 c\u00f4t\u00e9 du rang */
+                 itemId:itemId,le:Date.now()};
       doc.envoi={envoyeLe:envoi.meta.envoyeLe,versionDoc:envoi.meta.versionDoc};
       atSitePut(AT_NOEUD+'/'+docId,doc,function(ok2){
         if(!ok2)atInfo('⚠ Le dépôt est fait mais la feuille n’a pas pu noter son statut — il s’affichera après un prochain enregistrement.');
@@ -10128,7 +10251,10 @@ function atStatutFeuille(d,ref){
   }
   var suffixe=(d.envoi&&d.dates&&d.dates.modifieLe>d.envoi.versionDoc)?' · modifiée depuis l’envoi aux élèves':'';
   if(d.depot){
-    var la=atItemPointant(ref,d.depot.niveau,d.depot.chapitre,d.depot.seance);
+    /* [C5-UID] \u2464 la place actuelle se r\u00e9sout par identit\u00e9 (le d\u00e9p\u00f4t garde son rang
+       comme repli) : une r\u00e9injection qui d\u00e9place les s\u00e9ances ne rompt plus le lien. */
+    var _cl=atAdresseCles(d.depot)||{chapitre:d.depot.chapitre,seance:d.depot.seance};
+    var la=atItemPointant(ref,d.depot.niveau,_cl.chapitre,_cl.seance);
     var ouDepot=atAdresseLisible(d.depot);
     var ouActuel=adresseComplete?atAdresseLisible(r):'';
     var meme=ouActuel===ouDepot;
@@ -10470,7 +10596,8 @@ function atSupprimerChapitre(level,chnum){
     }else faireSuppr();
   };
   var ouvrirChoix=function(){
-    atModaleChoix('Supprimer le chapitre \u00ab '+atEsc(ch.title||'')+' \u00bb ? \u2014 '+nbSe+' s\u00e9ance'+(nbSe>1?'s':'')+', '+nbIt+' item'+(nbIt>1?'s':'')+'.',
+    var _refsCh=uidPhraseReferents(uidReferents(level,chnum,null),'chapitre');   /* [C5-UID] \u2463 */
+  atModaleChoix(_refsCh+'Supprimer le chapitre \u00ab '+atEsc(ch.title||'')+' \u00bb ? \u2014 '+nbSe+' s\u00e9ance'+(nbSe>1?'s':'')+', '+nbIt+' item'+(nbIt>1?'s':'')+'.',
       [{lib:'Mettre \u00e0 la corbeille puis supprimer',danger:true,fn:function(){finir(true);}},
        {lib:'Supprimer sans garder de copie',danger:true,fn:function(){finir(false);}},
        {lib:'Annuler',fn:function(){}}]);
@@ -10693,9 +10820,24 @@ function atDiapoPoserNiveau(id,v){
    dépubliée à tous les étages — chNettoyerPublished RETIRE les clés published
    (le patron de la voie « garder à côté » : une clé absente ne publie rien,
    et published:true n'est jamais écrit). UNE écriture : le nouvel objet. */
+/* [C5-UID] ① une COPIE n'est pas l'original : elle reçoit des identités NEUVES à
+   tous les étages. Recopier l'uid ferait pointer les références de l'un sur l'autre. */
+function uidRenouveler(ch){
+  if(!ch)return ch;
+  ch.uid=uidNeuf('ch');
+  var s=ch.seances;
+  if(s){
+    (Array.isArray(s)?s.map(function(_,i){return String(i);}):Object.keys(s)).forEach(function(k){
+      var se=s[k];if(!se)return;
+      se.uid=uidNeuf('sce');
+      Object.keys(se.items||{}).forEach(function(ki){ if(se.items[ki])se.items[ki].uid=uidNeuf('itm'); });
+    });
+  }
+  return ch;
+}
 function atDupliquerChapitre(level,chnum){
   var ch=chapitresData[level]&&chapitresData[level][chnum];if(!ch)return;
-  var copie=JSON.parse(JSON.stringify(ch));
+  var copie=uidRenouveler(JSON.parse(JSON.stringify(ch)));   /* [C5-UID] ① identités neuves, jamais celles de l'original */
   copie.title=(copie.title||('Chapitre '+chnum))+' (copie)';
   delete copie.published;chNettoyerPublished(copie);
   var maxO=0,maxK=0;
