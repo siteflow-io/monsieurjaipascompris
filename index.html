@@ -777,6 +777,23 @@ body:has(#link-modal.visible) #tprof-btn,body:has(#link-modal.visible) #admin-to
 /* [C5-3ac2b] ② le panneau prof ouvert (son état existant .visible) efface ses
    boutons d'entrée — le ✕ Fermer cesse d'être recouvert ; même patron. */
 body:has(#tprof-overlay.visible) #tprof-btn,body:has(#tprof-overlay.visible) #admin-tools-btn,body:has(#tprof-overlay.visible) #admin-tools-menu,body:has(#tprof-overlay.visible) #vue-btn{display:none}
+/* [C5-ED1] ③ les `option` héritaient du blanc du thème sur le fond blanc du
+   menu natif : illisible dans la modale LIER (et partout ailleurs). */
+select.at-sel option,select.cm-input option,#link-modal select option,select.at-sel-mini option{background:#1d1a15;color:#e8e0d0}
+/* [C5-ED1b] le fil des feuilles du chapitre, en tête de l'éditeur de feuille */
+.ed-fil{border:1px solid #4a4438;border-radius:12px;padding:10px 12px;margin-bottom:12px;background:rgba(212,160,23,.05)}
+.ed-fil-haut{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.ed-fil-tit{color:#c9b568;font-size:.9rem}
+.ed-fil-liste{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ed-fil-se{color:#8f8672;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;margin-left:4px}
+.ed-fil-btn{min-height:44px;display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:6px 12px;font-size:.86rem}
+.ed-fil-btn.ed-fil-actif{border-color:rgba(212,160,23,.9);background:rgba(212,160,23,.16)}
+.ed-fil-prod{font-size:.72rem;color:#c9b568}
+@media (max-width:480px){.ed-fil-liste{flex-direction:column;align-items:stretch}.ed-fil-btn{width:100%}}
+.at-edch-barre{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.at-edch-actes{float:right;display:inline-flex;gap:6px;flex-wrap:wrap}
+.at-btn-min{min-height:44px;padding:6px 10px;font-size:.82rem}
+@media (max-width:480px){.at-edch-actes{float:none;display:flex;margin-top:8px}}
 .at-sel-mini{min-height:34px;font-size:.8rem;padding:2px 6px;margin-left:6px}
 .at-st-flou{color:#8f8672}
 /* [C5-3ac2] — le dépôt d'image côté prof */
@@ -2692,7 +2709,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.38.0";
+var APP_VERSION="8.39.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -8849,9 +8866,10 @@ function diapoEcrire(id,o,ancien){
   var payload=JSON.parse(JSON.stringify(o));
   payload.maj=Date.now();
   var ecrire=function(){
+    var _titreDp=payload.titre||id,_nDp=(payload.diapos||[]).length;   /* [C5-ED1] \u2461 */
     secuEcrire(DIAPO_NOEUD+'/'+id,payload).then(function(r){
       if(!r.ok){dire('L\u2019enregistrement n\u2019a pas abouti'+(ancien?' \u2014 l\u2019ancien est \u00e0 la corbeille, rien n\u2019a \u00e9t\u00e9 perdu.':' \u2014 rien n\u2019a chang\u00e9.'),false);return;}
-      dire('Diaporama enregistr\u00e9 sous \u00ab '+atEsc(id)+' \u00bb.'+(ancien?' L\u2019ancien est \u00e0 la corbeille.':'')
+      dire('<b>Diaporama cr\u00e9\u00e9</b> : \u00ab '+atEsc(_titreDp)+' \u00bb, '+_nDp+' diapositive'+(_nDp>1?'s':'')+' \u2014 <b>pas encore ouvert aux \u00e9l\u00e8ves</b>.<br>Enregistr\u00e9 sous \u00ab '+atEsc(id)+' \u00bb.'+(ancien?' L\u2019ancien est \u00e0 la corbeille.':'')
         +'<br>Pour que les \u00e9l\u00e8ves le voient : ajoute-le \u00e0 une s\u00e9ance comme \u00e9l\u00e9ment de type <b>diaporama</b>, avec ce nom comme r\u00e9f\u00e9rence.',true);
     });
   };
@@ -8865,7 +8883,16 @@ function diapoEcrire(id,o,ancien){
 }
 /* ── LE VIEWER ÉLÈVE — sans lui, le morceau produirait des données que rien ne lit.
       Branché dans openItem par kind:'diaporama' + source:'firebase_app'. ── */
+/* [C5-ED1] ① LE TITRE NE VOYAGE PLUS DANS UN `onclick`. Le titre « Français —
+   Attendus de fin d'année de 3e » cassait l'attribut (seule l'apostrophe DROITE
+   était échappée) et le bouton Ouvrir était mort. Désormais on passe l'IDENTIFIANT
+   SEUL et le titre se LIT dans les données — c'est aussi ce que fait le reste du
+   site (les items passent leur clé, jamais leur libellé). */
 function openDiaporamaById(ref,titre){
+  if(titre===undefined||titre===null||titre===''){
+    var _d=(typeof AT_DIAPOS!=='undefined'&&AT_DIAPOS)?AT_DIAPOS[ref]:null;
+    titre=(_d&&_d.titre)||ref;
+  }
   var ex=document.getElementById('dp-viewer');if(ex)ex.remove();
   var ov=document.createElement('div');ov.id='dp-viewer';ov.className='dp-viewer';
   ov.innerHTML='<div class="dp-viewer-barre">'
@@ -9790,7 +9817,8 @@ var AT_SOUSGROUPES=[
 
 function atRendreEditeur(){
   var z=document.getElementById('at-zone');if(!z||!AT.doc)return;
-  var h='<div class="at-compo">';
+  var h=edBarreFil();   /* [C5-ED1b] le fil des feuilles du chapitre, s'il y a lieu */
+  h+='<div class="at-compo">';
   /* colonne gauche : composition */
   h+='<div class="at-gauche">';
   h+='<div class="at-barre-haut">'
@@ -10479,6 +10507,204 @@ function atEditerChapitre(level,chnum){
   }
   atEditerChapitreRendre();
 }
+/* \u2550\u2550\u2550 [C5-ED1] \u2014 LES GESTES DE L'\u00c9DITEUR. Aucun \u00e9crivain nouveau : on r\u00e9utilise
+   ceux du site (deleteSeance et deleteItem \u2014 corbeille et gardes comprises \u2014,
+   addSeance, itemCreer, _swapOrdre, openLinkModal, atProduitMenu). \u2550\u2550\u2550 */
+/* ═══ [C5-ED1b] — « exactement la même chose que mon éditeur de feuille, mais avec
+   l'ensemble des feuilles du chapitre dans l'ordre » (Paul). On NE RÉÉCRIT PAS
+   l'éditeur : `atOuvrirDoc` + `atRendreEditeur` sont invoqués tels quels — donc les
+   cases du PRODUIT à gauche, l'aperçu à droite, les accordéons, le pulse et le
+   clic-aperçu de 2d. Ce morceau n'ajoute que LE FIL : la liste ordonnée des feuilles
+   du chapitre en tête, pour passer de l'une à l'autre sans ressortir. ═══ */
+var AT_FIL=null;   /* {level, chnum, ref} quand on édite une feuille DEPUIS un chapitre */
+/* les feuilles du chapitre, dans l'ordre des séances puis des items (`ordre` fait foi) */
+function edFeuillesDuChapitre(level,chnum){
+  var ch=(chapitresData[level]||{})[chnum];
+  var out=[];
+  if(!ch)return out;
+  atSeances(ch).forEach(function(p){
+    ordPaires(p.se.items||{}).forEach(function(q){
+      var it=q.o;
+      if(!it||!it.ref)return;
+      if(!(it.kind==='atelier'||it.source==='atelier'))return;   /* seules les feuilles s'éditent */
+      var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[it.ref]:null;
+      out.push({seance:p.j,seanceTitre:p.se.title||('S\u00e9ance '+p.j),item:q.k,ref:it.ref,
+                titre:(d&&d.titre)||it.title||it.ref,
+                produit:(d&&d.produit)||'',
+                produitLib:((typeof ATELIER_PRODUITS!=='undefined'&&ATELIER_PRODUITS[(d&&d.produit)||''])||{}).libelle||''});
+    });
+  });
+  return out;
+}
+/* la barre de fil, posée en tête de l'éditeur de feuille quand on vient d'un chapitre */
+function edBarreFil(){
+  if(!AT_FIL)return '';
+  var l=edFeuillesDuChapitre(AT_FIL.level,AT_FIL.chnum);
+  if(!l.length)return '';
+  var ch=(chapitresData[AT_FIL.level]||{})[AT_FIL.chnum]||{};
+  var h='<div class="ed-fil"><div class="ed-fil-haut">'
+    +'<button class="at-btn" onclick="edRetourChapitre()">\u2190 Le chapitre</button>'
+    +'<span class="ed-fil-tit">'+atEsc(ch.title||'')+' \u2014 '+l.length+' feuille'+(l.length>1?'s':'')+'</span></div>'
+    +'<div class="ed-fil-liste">';
+  var seanceVue='';
+  l.forEach(function(f){
+    if(f.seance!==seanceVue){seanceVue=f.seance;h+='<span class="ed-fil-se">'+atEsc(f.seanceTitre)+'</span>';}
+    var actif=(f.ref===AT.docId);
+    h+='<button class="at-btn ed-fil-btn'+(actif?' ed-fil-actif':'')+'" onclick="edEditerFeuille(\''+f.seance+'\',\''+f.item+'\')">'
+      +atEsc(f.titre)+(f.produitLib?('<span class="ed-fil-prod">'+atEsc(f.produitLib)+'</span>'):'')
+      +'</button>';
+  });
+  return h+'</div></div>';
+}
+/* entrer dans l'éditeur de feuille depuis le fil : même éditeur, mêmes cases, même
+   aperçu — le produit de la feuille ouverte commande le panneau. */
+function edEditerFeuille(j,k){
+  var ec=AT.edChap||AT_FIL;if(!ec)return;
+  var level=ec.level,chnum=ec.chnum;
+  var it=((((chapitresData[level]||{})[chnum]||{}).seances||{})[j]||{}).items;
+  it=it?it[k]:null;
+  if(!it||!it.ref){atInfo('Cet \u00e9l\u00e9ment n\u2019est pas une feuille de l\u2019atelier.');return;}
+  AT_FIL={level:level,chnum:chnum,ref:it.ref};
+  AT.edChap=null;                       /* on quitte le fil brut : l'éditeur de feuille prend l'écran */
+  if(!AT.liste||!AT.liste[it.ref]){
+    /* la liste des feuilles n'est pas encore là : on la lit puis on ouvre
+       (atChargerListe ne prend pas de rappel — mesuré) */
+    atSiteGetDocs(function(v){
+      AT.liste=(v&&typeof v==='object')?v:{};
+      if(AT.liste[it.ref])atOuvrirDoc(it.ref);
+      else atInfo('Cette feuille n’a pas pu être lue — réessaie dans un moment.');
+    });
+    return;
+  }
+  atOuvrirDoc(it.ref);
+}
+function edRetourChapitre(){
+  var f=AT_FIL;if(!f)return;
+  AT_FIL=null;AT.doc=null;AT.docId=null;
+  AT.flux='chapitre';AT.edChap={level:f.level,chnum:f.chnum,modifie:false};
+  atEditerChapitreRendre();
+}
+function _estPublieItem(it){
+  var p=it&&it.published;
+  if(!p)return false;
+  if(p===true)return true;
+  return Object.keys(p).some(function(k){return !!p[k];});
+}
+function _edCh(){
+  var ec=AT.edChap;if(!ec)return null;
+  var ch=(chapitresData[ec.level]||{})[ec.chnum];
+  return ch?{ec:ec,ch:ch}:null;
+}
+function edAjouterSeance(){
+  var c=_edCh();if(!c)return;
+  addSeance(c.ec.level,c.ec.chnum);
+  setTimeout(atEditerChapitreRendre,900);
+}
+function edAjouterItem(j){
+  var c=_edCh();if(!c)return;
+  _modalePrompt('Nouvel item','Titre de l\u2019item :','',function(t){
+    if(!t||!t.trim())return;
+    itemCreer(c.ec.level,c.ec.chnum,j,t.trim(),null,function(){atEditerChapitreRendre();});
+  });
+}
+function edSupprimerSeance(j){
+  var c=_edCh();if(!c)return;
+  deleteSeance(c.ec.level,c.ec.chnum,j);      /* garde d'IDENTIT\u00c9S + corbeille du site */
+  setTimeout(atEditerChapitreRendre,1200);
+}
+function edSupprimerItem(j,k){
+  var c=_edCh();if(!c)return;
+  deleteItem(c.ec.level,c.ec.chnum,j,k);
+  setTimeout(atEditerChapitreRendre,1200);
+}
+function edDeplacerSeance(j,sens){
+  var c=_edCh();if(!c)return;
+  var l=atSeances(c.ch),i=-1;
+  l.forEach(function(p,n){if(p.j===String(j))i=n;});
+  var v=i+sens;if(i<0||v<0||v>=l.length)return;
+  var base='/site/'+c.ec.level+'/chapitres/'+c.ec.chnum+'/seances/';
+  _swapOrdre(base+l[i].j,base+l[v].j,ordDe(l[i].se,i+1),ordDe(l[v].se,v+1),function(){
+    var a=c.ch.seances[l[i].j],b=c.ch.seances[l[v].j];
+    var oa=ordDe(a,i+1);a.ordre=ordDe(b,v+1);b.ordre=oa;
+    atEditerChapitreRendre();
+  });
+}
+function edDeplacerItem(j,k,sens){
+  var c=_edCh();if(!c)return;
+  var se=c.ch.seances[j];if(!se||!se.items)return;
+  var l=ordPaires(se.items),i=-1;
+  l.forEach(function(p,n){if(p.k===String(k))i=n;});
+  var v=i+sens;if(i<0||v<0||v>=l.length)return;
+  var base='/site/'+c.ec.level+'/chapitres/'+c.ec.chnum+'/seances/'+j+'/items/';
+  _swapOrdre(base+l[i].k,base+l[v].k,ordDe(l[i].o,i+1),ordDe(l[v].o,v+1),function(){
+    var a=se.items[l[i].k],b=se.items[l[v].k];
+    var oa=ordDe(a,i+1);a.ordre=ordDe(b,v+1);b.ordre=oa;
+    atEditerChapitreRendre();
+  });
+}
+function edOuvrirItem(j,k){
+  var c=_edCh();if(!c)return;
+  var it=((c.ch.seances[j]||{}).items||{})[k];if(!it||!it.ref)return;
+  if(it.kind==='diaporama'){openDiaporamaById(it.ref);return;}
+  if(it.kind==='atelier'||it.source==='atelier'){atOuvrirDoc(it.ref);return;}
+  atInfo('Ce document s\u2019ouvre du c\u00f4t\u00e9 \u00e9l\u00e8ve : il n\u2019est pas modifiable ici.');
+}
+function edPublierItem(j,k){
+  var c=_edCh();if(!c)return;
+  /* la publication reste le geste de Paul : on ouvre le contr\u00f4le existant du
+     panneau plut\u00f4t que d'\u00e9crire `published` ici. */
+  atVoirPanneau(c.ec.level,c.ec.chnum);
+}
+function edCreerFeuilleIci(j){
+  var c=_edCh();if(!c)return;
+  var se=c.ch.seances[j]||{};
+  _modalePrompt('Nouvelle feuille','Titre de la feuille :','',function(t){
+    if(!t||!t.trim())return;
+    var titre=t.trim();
+    var id='feuille_'+Date.now();
+    var doc=atDocNeuf();
+    doc.titre=titre;
+    doc.rattachement={niveau:c.ec.level,chapitre:c.ec.chnum,seance:j,
+                      chapitreTitre:c.ch.title||'',seanceTitre:se.title||'',
+                      chapitreUid:c.ch.uid||'',seanceUid:se.uid||''};   /* [C5-UID] l'identit\u00e9 \u00e0 c\u00f4t\u00e9 du rang */
+    doc.dates=doc.dates||{};doc.dates.modifieLe=Date.now();
+    secuEcrire(AT_NOEUD+'/'+id,doc).then(function(r){
+      if(!r.ok){atInfo('\u26a0 La feuille n\u2019a pas pu \u00eatre cr\u00e9\u00e9e \u2014 rien n\u2019a \u00e9t\u00e9 \u00e9crit.');return;}
+      if(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)LINK_ATELIER_DOCS[id]=doc;
+      if(typeof AT_DOCS!=='undefined'&&AT_DOCS)AT_DOCS[id]=doc;
+      if(AT&&AT.liste)AT.liste[id]=doc;   /* [C5-ED1b] AT.liste est un OBJET index\u00e9 par id (mesur\u00e9) */
+      /* la confirmation ne d\u00e9pend pas du rappel de l'\u00e9crivain d'item : la feuille
+         EST cr\u00e9\u00e9e, on le dit tout de suite ; l'item se pose en parall\u00e8le. */
+      atModaleChoix('<b>Feuille cr\u00e9\u00e9e</b> : \u00ab '+atEsc(titre)+' \u00bb, adress\u00e9e \u00e0 \u00ab '+atEsc(se.title||('S\u00e9ance '+j))+' \u00bb \u2014 <b>pas encore ouverte aux \u00e9l\u00e8ves</b>.',
+        [{lib:'Plus tard',fn:function(){}},
+         {lib:'Ouvrir la feuille',prim:true,fn:function(){atOuvrirDoc(id);}}]);
+      itemCreer(c.ec.level,c.ec.chnum,j,titre,{kind:'atelier',source:'atelier',ref:id,published:false},function(){
+        atEditerChapitreRendre();
+      });
+    });
+  });
+}
+function edDupliquerVers(j,k){
+  var c=_edCh();if(!c)return;
+  var it=((c.ch.seances[j]||{}).items||{})[k];if(!it||!it.ref)return;
+  var data=chapitresData[c.ec.level]||{};
+  var choix=ordPaires(data).map(function(p){
+    return '<option value="'+p.k+'">'+atEsc(p.o.title||('Chapitre '+p.k))+'</option>';
+  }).join('');
+  atModaleChoix('Dupliquer \u00ab '+atEsc(it.title||k)+' \u00bb vers un autre chapitre :<br>'
+    +'<select class="at-sel" id="ed-dup-ch">'+choix+'</select><br>'
+    +'La copie arrive en fin de premi\u00e8re s\u00e9ance du chapitre choisi, <b>non publi\u00e9e</b>.',
+    [{lib:'Annuler',fn:function(){}},
+     {lib:'Dupliquer',prim:true,fn:function(){
+       var cible=(document.getElementById('ed-dup-ch')||{}).value;
+       var chC=data[cible];if(!chC)return;
+       var pr=atSeances(chC)[0];
+       if(!pr){atInfo('Ce chapitre n\u2019a pas encore de s\u00e9ance.');return;}
+       itemCreer(c.ec.level,cible,pr.j,(it.title||k),
+         {kind:it.kind,source:it.source,ref:it.ref,subtitle:it.subtitle||'',published:false},
+         function(){atInfo('Copie plac\u00e9e dans \u00ab '+atEsc(chC.title||cible)+' \u203a '+atEsc(pr.se.title||'')+' \u00bb \u2014 non publi\u00e9e.');});
+     }}]);
+}
 function atEditerChapitreRendre(){
   var ec=AT.edChap;if(!ec)return;
   var ch=chapitresData[ec.level]&&chapitresData[ec.level][ec.chnum];
@@ -10487,6 +10713,12 @@ function atEditerChapitreRendre(){
   var h='<div class="at-ia-haut"><button class="at-btn" onclick="atEditerChapitreSortie()">\u2190 Mes chapitres</button>'
     +'<h3 class="at-ia-titre">Modifier \u00ab '+atEsc(ch.title||'')+' \u00bb</h3></div>'
     +'<div class="at-ia-sous">Chaque champ s\u2019enregistre d\u00e8s que tu le quittes \u2014 directement dans le chapitre du site. La publication ne change pas ici.</div>';
+  /* [C5-ED1] la barre de gestes du chapitre : lier par les titres, ajouter une
+     s\u00e9ance \u2014 et le rappel que tout s'enregistre en quittant le champ. */
+  h+='<div class="at-edch-barre">'
+    +'<button class="at-btn" onclick="edProposerLiaisons(\''+ec.level+'\',\''+ec.chnum+'\')">Lier par les titres\u2026</button>'
+    +'<button class="at-btn" onclick="edAjouterSeance()">+ S\u00e9ance</button>'
+    +'</div>';
   h+='<div class="at-edch"><label class="at-edch-lib">Titre du chapitre</label>'
     +'<input class="at-edch-in" value="'+atEsc(ch.title||'')+'" onchange="atChampChapitre(\'title\',this.value)">'
     +'<label class="at-edch-lib">Entr\u00e9e du chapitre (ce qu\u2019on va apprendre)</label>'
@@ -10499,13 +10731,42 @@ function atEditerChapitreRendre(){
   atSeances(ch).forEach(function(p){
     var se=p.se,j=p.j;
     var somNote=(se.type==='sommaire')?' <span class="ch-type">sommaire \u2014 le contenu se r\u00e9g\u00e9n\u00e8re, il ne s\u2019\u00e9dite pas ici</span>':'';
-    h+='<div class="at-edch at-edch-se"><div class="at-edch-set">S\u00e9ance '+(j)+somNote+'</div>'
+    /* [C5-ED1] les gestes de la s\u00e9ance : monter, descendre, ajouter un item,
+       supprimer (garde d'IDENTIT\u00c9S incluse : deleteSeance pr\u00e9vient qui pointe). */
+    var _ordSe=ordDe(se,j);
+    h+='<div class="at-edch at-edch-se"><div class="at-edch-set">S\u00e9ance '+_ordSe+somNote
+      +'<span class="at-edch-actes">'
+      +'<button class="at-btn at-btn-min" title="Monter" onclick="edDeplacerSeance(\''+j+'\',-1)">\u2191</button>'
+      +'<button class="at-btn at-btn-min" title="Descendre" onclick="edDeplacerSeance(\''+j+'\',1)">\u2193</button>'
+      +'<button class="at-btn at-btn-min" onclick="edAjouterItem(\''+j+'\')">+ Item</button>'
+      +'<button class="at-btn at-btn-min" onclick="edCreerFeuilleIci(\''+j+'\')">+ Feuille</button>'
+      +'<button class="at-btn at-btn-min at-btn-danger" onclick="edSupprimerSeance(\''+j+'\')">\u2715</button>'
+      +'</span></div>'
       +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(se.title||'')+'" onchange="atChampSeance('+j+',\'title\',this.value)">'
       +'<label class="at-edch-lib">Type</label><input class="at-edch-in" value="'+atEsc(se.type||'')+'" onchange="atChampSeance('+j+',\'type\',this.value)">'
       +'<label class="at-edch-lib">Note \u00e9l\u00e8ve</label><textarea class="at-edch-ta at-edch-ta-p" onchange="atChampSeance('+j+',\'noteEleve\',this.value)">'+atEsc(se.noteEleve||'')+'</textarea>';
     Object.keys(se.items||{}).sort(function(a,b){return (se.items[a].ordre||0)-(se.items[b].ordre||0);}).forEach(function(k){
       var it=se.items[k];if(!it)return;
-      h+='<div class="at-edch-it"><div class="at-edch-itt">\u2022 '+atEsc(k)+(it.ref?'':' <span class="at-st-adresse">non li\u00e9</span>')+'</div>'
+      /* [C5-ED1] LE FIL COMPLET : tout item est VISIBLE. Les feuilles de l'atelier
+         et les diaporamas s'\u00e9ditent (bouton Ouvrir l'\u00e9diteur) ; les documents Drive
+         et les activit\u00e9s d'apps s'affichent en LECTURE \u2014 fig\u00e9s, mais l\u00e0. */
+      var _edtb=(it.kind==='atelier'||it.source==='atelier'||it.kind==='diaporama');
+      var _stat=it.ref
+        ? (_estPublieItem(it)?'<span class="at-st-depose">ouverte aux \u00e9l\u00e8ves</span>'
+                             :'<span class="at-st-adresse">pas encore ouverte aux \u00e9l\u00e8ves</span>')
+        : '<span class="at-st-adresse">non li\u00e9</span>';
+      h+='<div class="at-edch-it"><div class="at-edch-itt">\u2022 '+atEsc(it.title||k)+' '+_stat
+        +' <span class="ch-type">'+atEsc(it.kind||'doc')+(_edtb?'':' \u00b7 lecture seule')+'</span>'
+        +'<span class="at-edch-actes">'
+        +'<button class="at-btn at-btn-min" title="Monter" onclick="edDeplacerItem(\''+j+'\',\''+k+'\',-1)">\u2191</button>'
+        +'<button class="at-btn at-btn-min" title="Descendre" onclick="edDeplacerItem(\''+j+'\',\''+k+'\',1)">\u2193</button>'
+        +(((it.kind==='atelier'||it.source==='atelier')&&it.ref)?('<button class="at-btn at-btn-min at-btn-prim" onclick="edEditerFeuille(\''+j+'\',\''+k+'\')">\u00c9diter</button>'):'')
+        +(it.ref?('<button class="at-btn at-btn-min" onclick="edOuvrirItem(\''+j+'\',\''+k+'\')">Ouvrir</button>'):'')
+        +'<button class="at-btn at-btn-min" onclick="openLinkModal(\''+ec.level+'\',\''+ec.chnum+'\',\''+j+'\',\''+k+'\')">Lier</button>'
+        +'<button class="at-btn at-btn-min" onclick="edPublierItem(\''+j+'\',\''+k+'\')">Publier\u2026</button>'
+        +(_edtb&&it.ref?('<button class="at-btn at-btn-min" onclick="edDupliquerVers(\''+j+'\',\''+k+'\')">Dupliquer vers\u2026</button>'):'')
+        +'<button class="at-btn at-btn-min at-btn-danger" onclick="edSupprimerItem(\''+j+'\',\''+k+'\')">\u2715</button>'
+        +'</span></div>'
         +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(it.title||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'title\',this.value)">'
         +'<label class="at-edch-lib">Sous-titre</label><input class="at-edch-in" value="'+atEsc(it.subtitle||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'subtitle\',this.value)">'
         +'<label class="at-edch-lib">Type (kind)</label><input class="at-edch-in" value="'+atEsc(it.kind||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'kind\',this.value)">'
@@ -10519,6 +10780,113 @@ function atEditerChapitreRendre(){
 }
 /* les trois écrivains fins — UN chemin par champ, la mémoire locale suit, le
    panneau prof reste vrai à son prochain rendu */
+/* ═══ [C5-ED1] — LA LIAISON PAR LES TITRES : l'app PROPOSE, Paul CONFIRME.
+   C'est l'appariement silencieux par titre qui a mélangé le chapitre 1 le 05/08 :
+   ici rien ne s'écrit avant le clic, et ce qui est douteux n'est pas proposé. ═══ */
+/* la normalisation FRANÇAISE, en codepoints : accents, apostrophes droite ET
+   courbe, tirets de toutes sortes, ponctuation collée, casse, espaces multiples. */
+function edTitreNorm(t){
+  var s=String(t==null?'':t);
+  s=s.normalize?s.normalize('NFD').replace(/[\u0300-\u036f]/g,''):s;
+  s=s.toLowerCase();
+  s=s.replace(/[\u2018\u2019\u02bc\u0027]/g,"'");          /* toutes les apostrophes → une seule */
+  s=s.replace(/[\u2010-\u2015\u2212\u002d]/g,'-');         /* tous les tirets → un seul */
+  s=s.replace(/[\u00ab\u00bb\u201c\u201d"]/g,' ');
+  s=s.replace(/[.,;:!?\u2026]/g,' ');
+  s=s.replace(/\s+/g,' ').trim();
+  return s;
+}
+/* le préfixe de produit (« Fiche notion — », « Prépa brevet : »…) est ignoré */
+function edTitreCoeur(t){
+  var s=edTitreNorm(t);
+  var libs=[];
+  if(typeof ATELIER_PRODUITS!=='undefined')Object.keys(ATELIER_PRODUITS).forEach(function(p){
+    libs.push(edTitreNorm(ATELIER_PRODUITS[p].libelle||''));
+  });
+  libs.sort(function(a,b){return b.length-a.length;});
+  for(var i=0;i<libs.length;i++){
+    if(!libs[i])continue;
+    if(s.indexOf(libs[i])===0){
+      var reste=s.slice(libs[i].length).replace(/^[\s\-:]+/,'');
+      if(reste)return reste;
+    }
+  }
+  return s;
+}
+/* les correspondances : égales après normalisation (cœur ou titre entier).
+   Rien d'approximatif : dans le doute on ne lie pas, on le MONTRE. */
+function edAppariements(level,chnum){
+  var ch=(chapitresData[level]||{})[chnum];
+  var docs=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)||{};
+  var out={proposes:[],doutes:[]};
+  if(!ch)return out;
+  var parTitre={};
+  Object.keys(docs).forEach(function(id){
+    var d=docs[id];if(!d)return;
+    [edTitreNorm(d.titre),edTitreCoeur(d.titre)].forEach(function(cle){
+      if(!cle)return;
+      parTitre[cle]=parTitre[cle]||[];
+      if(parTitre[cle].indexOf(id)<0)parTitre[cle].push(id);
+    });
+  });
+  atSeances(ch).forEach(function(p){
+    Object.keys(p.se.items||{}).forEach(function(k){
+      var it=p.se.items[k];
+      if(!it||it.ref)return;                       /* déjà lié : on ne touche pas */
+      var cand=parTitre[edTitreNorm(it.title)]||parTitre[edTitreCoeur(it.title)]||[];
+      var ligne={seance:p.j,seanceTitre:p.se.title||('Séance '+p.j),item:k,itemTitre:it.title||k};
+      if(cand.length===1){
+        ligne.doc=cand[0];ligne.docTitre=(docs[cand[0]]&&docs[cand[0]].titre)||cand[0];
+        out.proposes.push(ligne);
+      }else if(cand.length>1){
+        ligne.combien=cand.length;
+        ligne.pourquoi='plusieurs feuilles portent ce titre';
+        out.doutes.push(ligne);
+      }
+    });
+  });
+  return out;
+}
+/* la MODALE : ce qui va être lié, nommé un par un, AVANT toute écriture. */
+function edProposerLiaisons(level,chnum){
+  var a=edAppariements(level,chnum);
+  if(!a.proposes.length&&!a.doutes.length){atInfo('Aucune feuille de l\u2019atelier ne porte le titre d\u2019un item non li\u00e9.');return;}
+  var h='';
+  if(a.proposes.length){
+    h+='<b>'+a.proposes.length+' liaison'+(a.proposes.length>1?'s':'')+'</b> à poser :<br>';
+    h+=a.proposes.map(function(l){
+      return '• '+atEsc(l.seanceTitre)+' › '+atEsc(l.itemTitre)+' ← <b>'+atEsc(l.docTitre)+'</b>';
+    }).join('<br>');
+  }
+  if(a.doutes.length){
+    h+=(h?'<br><br>':'')+'<b>'+a.doutes.length+' cas douteux</b>, <b>non proposés</b> — à lier à la main :<br>'
+      +a.doutes.map(function(l){return '• '+atEsc(l.itemTitre)+' — '+atEsc(l.pourquoi)+' ('+l.combien+')';}).join('<br>');
+  }
+  h+='<br><br>Rien n\u2019est écrit tant que tu n\u2019as pas confirmé.';
+  atModaleChoix(h,[{lib:'Annuler',fn:function(){}}].concat(a.proposes.length?[{lib:'Lier ces '+a.proposes.length,prim:true,fn:function(){
+    edLierConfirme(level,chnum,a.proposes);
+  }}]:[]));
+}
+function edLierConfirme(level,chnum,lignes){
+  var base='/site/'+level+'/chapitres/'+chnum+'/seances/';
+  var restent=lignes.length,faits=0;
+  lignes.forEach(function(l){
+    var chemin=base+l.seance+'/items/'+l.item;
+    Promise.all([secuEcrire(chemin+'/ref',l.doc),
+                 secuEcrire(chemin+'/source','atelier'),
+                 secuEcrire(chemin+'/kind','atelier')]).then(function(rs){
+      if(rs.every(function(r){return r.ok;})){
+        faits++;
+        var it=(((chapitresData[level]||{})[chnum]||{}).seances||{})[l.seance];
+        if(it&&it.items&&it.items[l.item]){it.items[l.item].ref=l.doc;it.items[l.item].source='atelier';it.items[l.item].kind='atelier';}
+      }
+      if(--restent===0){
+        atInfo(faits+' liaison'+(faits>1?'s':'')+' posée'+(faits>1?'s':'')+(faits<lignes.length?(' — '+(lignes.length-faits)+' n\u2019ont pas abouti'):'')+'.');
+        atEditerChapitreRendre();
+      }
+    });
+  });
+}
 function atChampChapitre(champ,val){
   var ec=AT.edChap;if(!ec)return;
   var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/'+champ;
@@ -10661,7 +11029,7 @@ function atRendreDiapos(){
       +'<div class="at-carte-m">'+nbD+' diapositive'+(nbD>1?'s':'')+(dp.maj?(' \u00b7 modifi\u00e9 le '+new Date(dp.maj).toLocaleDateString('fr-FR')):'')+nivHtml+'</div>'
       +'<div class="at-carte-st '+st.cls+'">'+st.txt+'</div>'
       +'<div class="at-carte-b">'
-      +'<button class="at-btn at-btn-prim" onclick="openDiaporamaById(\''+id+'\',\''+atEsc(dp.titre||id).replace(/'/g,'\\u2019')+'\')">Ouvrir</button>'
+      +'<button class="at-btn at-btn-prim" onclick="openDiaporamaById(\''+id+'\')">Ouvrir</button>'
       +'<button class="at-btn" onclick="diapoLierModal(\''+id+'\')">Lier</button>'
       +'<button class="at-btn" onclick="atDupliquerDiapo(\''+id+'\')">Dupliquer</button>'
       +'<button class="at-btn at-btn-danger" onclick="atSupprimerDiapo(\''+id+'\')">Supprimer</button>'
