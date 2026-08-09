@@ -1048,8 +1048,10 @@ var MJPC_PURGE = {
 function tokenize(text){if(!text)return[];var t=[],re=/(\s+)|([.,;:!?\u2026\u00ab\u00bb\u201c\u201d()\-\u2013\u2014]+)|([^\s.,;:!?\u2026\u00ab\u00bb\u201c\u201d()'\u2019\-\u2013\u2014]+['\u2019]?)/g,m;while((m=re.exec(text))!==null){if(!m[1])t.push(m[2]||m[3])}return t}
 function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019()\-\u2013\u2014]+$/.test(w)}
 // Espacement entre token courant et suivant — règles françaises :
-// pas d'espace avant ponctuation, pas d'espace après un mot finissant par apostrophe
-function tokSp(curW,nextW){if(!nextW)return "";if(isPunct(nextW))return "";if(/['\u2019]$/.test(curW))return "";return " "}
+// pas d'espace avant ponctuation, pas d'espace après un mot finissant par apostrophe.
+// Exception mesurée (748 c réels, une seule divergence) : une parenthèse OUVRANTE
+// prend un espace avant elle — « fourrure (…) », pas « fourrure(…) ».
+function tokSp(curW,nextW){if(!nextW)return "";if(/^\(/.test(nextW))return " ";if(isPunct(nextW))return "";if(/['\u2019]$/.test(curW))return "";return " "}
 function computeNote(errors,extras,base){
   errors=errors||[];extras=extras||[];base=base||20;
   var ded=0;errors.forEach(function(e){ded+=(TYPE_COST[e.type]||0)});extras.forEach(function(){ded+=TYPE_COST.X});
@@ -5179,22 +5181,33 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   var extras = toArr(c.extras||[]).filter(function(e){return e!=null});
   var bilan = (bilanOverride !== undefined) ? bilanOverride : (c.bilanComment || generateBilan(c, data.base));
   var tokens = data.tokens || tokenize(data.text||"");
-  var errMap = {}; errors.forEach(function(e){if(e&&e.idx!=null)errMap[e.idx]=e});
+  /* L'idx enregistré fait foi tel quel : les positions des dictées anciennes
+     sont corrigées DANS LES DONNÉES (réinjection des snapshots corrigés),
+     pas compensées dans le code — décision de Paul, 09/08/2026. */
+  var errMap = {}; errors.forEach(function(e, i){ if (e && e.idx != null) errMap[e.idx] = {e: e, i: i}; });
   var extraMap = {}; extras.forEach(function(e){if(!extraMap[e.afterIdx])extraMap[e.afterIdx]=[];extraMap[e.afterIdx].push(e)});
 
-  // Récupère ce que l'élève a écrit (transcript prof > historique autocorrection > null)
+  // ── Trous numérotés ──
+  // Quand le professeur n'a pas saisi ce que l'élève a écrit (mode de correction
+  // rapide — un choix voulu, qu'on accompagne), la copie ne révèle RIEN : ni le
+  // mot correct, ni un pseudo-essai tiré de l'autocorrection. À la place : un
+  // espace pointillé numéroté (1, 2, 3… dans l'ordre du texte). Le numéro est un
+  // point d'accroche : M16 y branchera, en bas de copie, la question qui guide
+  // l'élève — pas la réponse. Ne rien coder d'autre ici que la numérotation.
+  var trouParErr = {};   // index du tableau errors → numéro de trou
+  var nTrous = 0;
+  Object.keys(errMap).map(Number).sort(function(a,b){return a-b}).forEach(function(ti){
+    var e = errMap[ti].e;
+    if (e.type !== "M" && e.type !== "P" && !e.fautif) trouParErr[errMap[ti].i] = ++nTrous;
+  });
+
+  // Ce que l'élève a écrit : SEUL le transcript saisi par le professeur fait foi.
+  // L'historique d'autocorrection n'est plus une source : son dernier essai est
+  // presque toujours le mot juste (l'autocorrection s'achève quand l'élève
+  // trouve) — le présenter comme « ce que l'élève a écrit » était faux, et
+  // révélait la réponse. Sans fautif : on ne prétend pas savoir (→ trou numéroté).
   function displayTranscript(err, errIdx){
     if (err.fautif) return {text: err.fautif, source: "prof"};
-    if (ac && ac.history) {
-      var hist = ac.history[errIdx] || ac.history[String(errIdx)];
-      if (hist) {
-        var entries = toArr(hist);
-        if (entries.length > 0) {
-          var chain = entries.map(function(e){return typeof e==="object"?e.typed:e}).filter(function(x){return x});
-          if (chain.length > 0) return {text: chain[chain.length-1], source: "history"};
-        }
-      }
-    }
     return null;
   }
 
@@ -5218,37 +5231,44 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     }
     var nextW = tokens[ti+1] || "";
     var sp = tokSp(w, nextW);
-    var ev = errMap[ti];
-    if (!ev) {
+    if (!errMap[ti]) {
       textHtml += escapeHtml(w) + sp;
       continue;
     }
     // Mot fautif : on construit toutes les couches, le CSS décidera ce qui s'affiche
-    var errIdx = -1;
-    for (var i = 0; i < errors.length; i++) {
-      if (errors[i] && errors[i].idx === ti) { errIdx = i; break; }
-    }
+    var em = errMap[ti];
+    var ev = em.e;
+    var errIdx = em.i;
     var typeClass = "type-" + ev.type;
     var disp = displayTranscript(ev, errIdx);
     var origText = (disp && disp.text) ? disp.text : "";  // mode brut = exactement ce que l'élève a écrit ; si pas connu, rien
     var correctText = ev.word;
+    var numTrou = trouParErr[errIdx];
 
     // Construction conditionnelle des couches
     var baseHtml = '';
-    if (ev.type === "M" || ev.type === "P") {
+    var topHtml = '';
+    if (numTrou) {
+      // Trou numéroté : le mot correct n'apparaît NULLE PART dans le corps du
+      // texte (ni barré, ni en vert, ni au-dessus) — seul le badge de type et
+      // les points restent. data-trou : point d'accroche stable pour M16.
+      baseHtml = '<span class="trou">' + numTrou + '</span>';
+    } else if (ev.type === "M" || ev.type === "P") {
       // Pour M et P : pas de mot brut, juste la correction en vert si mode=vert
       baseHtml = '<span class="vert">' + escapeHtml(correctText) + '</span>';
+      topHtml = '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
     } else {
       baseHtml = '<span class="orig">' + escapeHtml(origText) + '</span>' +
                  '<span class="placeholder"></span>' +
                  '<span class="vert">' + escapeHtml(correctText) + '</span>';
+      topHtml = '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
     }
-    var topHtml = '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
     var afterHtml = '<span class="badge">' + ev.type + '</span>' +
                     (POINTS[ev.type] ? '<span class="points-perdus">' + POINTS[ev.type] + '</span>' : '');
     var aDataAttr = (ev.type === "A") ? ' data-att="1"' : '';
+    var trouAttr = numTrou ? ' data-trou="' + numTrou + '"' : '';
 
-    textHtml += '<span class="mot faux ' + typeClass + '"' + aDataAttr + '>' +
+    textHtml += '<span class="mot faux' + (numTrou ? ' sans-fautif' : '') + ' ' + typeClass + '"' + aDataAttr + trouAttr + '>' +
                 '<span class="layer-base">' + baseHtml + '</span>' +
                 (topHtml ? '<span class="layer-top">' + topHtml + '</span>' : '') +
                 '<span class="layer-after">' + afterHtml + '</span>' +
@@ -5267,21 +5287,27 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     if (!err) return;
     var lab = err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":err.type==="P"?"Ponctuation manquante":err.type==="A"?"Attention graphie":"Illisible";
     var disp = displayTranscript(err, i);
+    var numTrou = trouParErr[i];
     var transcriptHtml = "";
     if (disp) {
-      if (disp.source === "history") {
-        transcriptHtml = '<div class="err-trans hist">Essai retenu : <code>'+escapeHtml(disp.text)+'</code></div>';
-      } else {
-        transcriptHtml = '<div class="err-trans"><span class="wrong-inline">« '+escapeHtml(disp.text)+' »</span> → <strong>'+escapeHtml(err.word)+'</strong></div>';
-      }
-    } else if (err.type !== "M" && err.type !== "P" && err.type !== "A") {
-      transcriptHtml = '';   /* Principe cardinal : un détail de saisie interne ne se
-                                raconte jamais à l'élève, et jamais en désignant quelqu'un. */
+      transcriptHtml = '<div class="err-trans"><span class="wrong-inline">« '+escapeHtml(disp.text)+' »</span> → <strong>'+escapeHtml(err.word)+'</strong></div>';
     }
+    /* Sans fautif : rien — on ne prétend pas savoir ce qui a été écrit.
+       (L'ancien « Essai retenu : … » recopiait le dernier essai d'autocorrection,
+       c'est-à-dire presque toujours le mot juste : c'était faux et révélateur.) */
     var comment = gramComment(err);
     var ptStr = POINTS[err.type] ? ' <span class="err-points">'+POINTS[err.type]+' pt</span>' : '';
-    analyseHtml += '<div class="err-item err-'+err.type.toLowerCase()+'">' +
-      '<div class="err-head"><span class="err-num">'+(i+1)+'</span>' +
+    // Une erreur à trou porte LE numéro de son trou (même numérotation que le
+    // texte). Dans une copie qui contient des trous, les autres erreurs prennent
+    // une puce neutre : leur rang de liste (1, 2, 3…) entrerait en collision
+    // avec les numéros de trous — deux « 3 » différents dans la même liste.
+    // Copie sans trou : rang i+1, comme avant. data-trou : accroche M16.
+    var numHtml = numTrou
+      ? '<span class="err-num err-num-trou">'+numTrou+'</span>'
+      : (nTrous > 0 ? '<span class="err-num">·</span>'
+                    : '<span class="err-num">'+(i+1)+'</span>');
+    analyseHtml += '<div class="err-item err-'+err.type.toLowerCase()+'"'+(numTrou?' data-trou="'+numTrou+'"':'')+'>' +
+      '<div class="err-head">'+numHtml +
       '<span class="err-word">« '+escapeHtml(err.word)+' »</span>' +
       '<span class="err-type">'+lab+'</span>' + ptStr + '</div>' +
       transcriptHtml +
@@ -5372,6 +5398,12 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     'body.mode-vert .mot.faux.type-P .layer-base .vert{display:inline !important;color:#c53030;font-weight:bold;font-size:1.05em;background:rgba(197,48,48,.08);padding:0 3px;border-radius:3px}' +
     /* Extras (mots en trop) */
     '.mot.extra-w .extra-orig{display:inline;color:#2563eb;text-decoration:line-through;text-decoration-color:#2563eb;text-decoration-thickness:2px;font-style:italic}' +
+    /* Trou numéroté (fautif non saisi — mode de correction rapide) : un espace
+       pointillé portant le numéro, identique dans TOUS les modes — le mot correct
+       n'apparaît jamais dans le corps du texte. */
+    '.mot.faux.sans-fautif .layer-base .trou{display:inline-block;min-width:2.6em;padding:0 6px;border-bottom:2px dotted #8a7a5a;text-align:center;color:#6b5d3f;font-family:system-ui,sans-serif;font-size:.66em;font-weight:700;line-height:1.6;vertical-align:baseline}' +
+    'body.mode-rien .mot.faux.sans-fautif .layer-base::before{content:none}' +
+    '.err-num-trou{border:2px dotted #8a7a5a;background:transparent !important;color:#6b5d3f !important}' +
     /* Bilan */
     '.bilan{margin-top:34px;padding:18px 22px;background:#f5ecd6;border-left:4px solid #8a7a5a;border-radius:4px;font-size:1rem;line-height:1.6;white-space:pre-wrap}' +
     '.bilan-title{font-family:system-ui,sans-serif;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:#6b5d3f;font-weight:700;margin-bottom:8px}' +
