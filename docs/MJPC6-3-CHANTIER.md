@@ -288,6 +288,20 @@ Le périmètre de M14 avait trop grossi (passe standard + portail à code + dén
 
 **TROIS QUESTIONS EN ATTENTE DE PAUL, bloquantes pour le module** : ⑴ **les dates des périodes P1 à PFIN** (absentes du calendrier annuel) — sans elles, impossible de savoir quel créneau vaut quand ⑵ **la nature des créneaux partagés avec « X Français »** : demi-groupe de ses classes ou classes entières qui ne sont pas les siennes ? comptent-ils dans sa progression MJPC ? ⑶ **4 BANKSY et 4 PYTHAGORE doivent-elles exister comme classes dans MJPC**, ou n'y voit-il que des séances ponctuelles ?
 
+### 🔴 M16 ÉLARGI — LE RETOUR À L'ÉLÈVE : LA QUESTION PLUTÔT QUE LA RÉPONSE (principe de Paul, 09/08/2026)
+
+**Le principe, dans ses mots** : *« Ce serait extrêmement intéressant de faire jouer le mode cognitif de l'élève. Un champ à pointillés numéroté, et en bas de la copie les numéros avec la ou les questions qu'il faut se poser pour trouver comment écrire ce mot. »* Et son élargissement, décisif : *« tout peut être mis en M16, parce que c'est un raisonnement qu'on a sur la dictée mais qu'il faudra aussi avoir sur réécriture, étude de texte, rédaction, etc. »*
+
+**LA RÈGLE** : partout où une erreur d'élève est repérée, **on ne lui donne pas la réponse — on lui donne la QUESTION qui permet de la trouver**, et on le renvoie à ce qui la lui a déjà enseignée. « Ce participe s'accorde-t-il avec le sujet, ou avec le complément placé avant ? » plutôt que « il fallait écrire *traversée* ». L'élève RECONSTRUIT au lieu de recopier.
+
+**CE QUE CELA CHANGE POUR M16** : la Concordance cesse d'être un outil de pilotage POUR PAUL et devient **ce qui parle à l'élève**. Le même mécanisme sert alors deux publics : le cockpit du professeur, et le retour à l'élève sur sa copie.
+
+**LES DEUX SOURCES À CONJUGUER** (question ouverte de Paul : « l'app le sait, et elle peut faire jouer la taxo — et son interne aussi, elle en a une, à voir comment les deux se conjuguent ») : ⓐ **la catégorisation interne de l'app** — la dictée sait déjà de quel ORDRE est la faute (grammaire, lexique, accord, conjugaison, accents, doubles consonnes) et porte des règles par mot ⓑ **la taxonomie MJPC** — la notion NOMMÉE (`vers-008`, « accord du participe passé »), et par elle : les séances où elle a été vue, les exercices d'autonomie qui l'entraînent, le niveau où elle a été introduite. **C'est le point de jonction à concevoir.**
+
+**LES CINQ APPS CONCERNÉES** : dictée · réécriture · étude de texte · rédaction · analyse logique. Le retour se conçoit **une fois pour toutes les cinq**, pas app par app.
+
+**CE QUI EST DÉJÀ FAIT, ET QUI ATTEND** : le correctif de la copie de dictée (09/08) pose **un trou NUMÉROTÉ** là où la faute de l'élève n'a pas été saisie. Le numéro est en place et vide : **M16 n'aura qu'à le remplir**. Aucun travail perdu, aucune forme à défaire.
+
 ### 🔶 LES BUGS DES APPLICATIONS — inventaire tenu par Paul (ouvert le 09/08, à régler plus tard)
 
 *Ces défauts vivent dans les fichiers des APPS, pas dans `index.html` : chacun peut donc se traiter par un exécutant dédié, en parallèle du site, sans risque de collision (la collision se produit à la promotion d'un même fichier).*
