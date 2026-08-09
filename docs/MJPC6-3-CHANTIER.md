@@ -310,6 +310,21 @@ Le périmètre de M14 avait trop grossi (passe standard + portail à code + dén
 
 **LA LIMITE, posée par Paul et non négociable** : *« une donnée élève par exemple ne devra pas en hériter »*. Ne sont éligibles que les objets de **composition** — chapitres, séances, items, feuilles, diaporamas, onglets, rayons… **Jamais** : une copie d'élève, une note, un résultat, une trace d'activité, un code personnel. Ces objets se consultent, ils ne se manipulent pas d'un clic droit. *(Raison : un geste destructeur sur une donnée d'élève doit rester délibéré et passer par un écran qui nomme ce qu'il fait — cf. le patron des suppressions du chantier : corbeille d'abord, frappe du nom pour l'irréversible.)*
 
+**LES CINQ GESTES INVARIABLES (arrêtés par Paul le 09/08)** — le menu est un **miroir de l'existant**, il n'invente rien : *« toutes les fonctionnalités du menu contextuel doivent être des miroirs des fonctionnalités déjà en place, ce sont simplement des raccourcis là où vit un élément ou un autre »*. Conséquences tenues : un geste qui n'existe nulle part ne peut pas y apparaître · un geste modifié dans son écran d'origine change automatiquement au clic droit, **car c'est la même fonction** · un geste supprimé disparaît du menu, sans survivance.
+**SAUF cinq gestes FONDAMENTAUX ET INVARIABLES**, qui doivent exister sur tout objet éligible — donc à créer là où ils manquent, plutôt que de refléter du vide :
+1. **Ouvrir / Modifier** — atteindre l'objet là où il s'édite (sans lui, le menu n'est qu'une liste de gestes destructeurs) ;
+2. **Supprimer** — au patron du chantier : corbeille d'abord, jamais d'irréversible sans nommer ;
+3. **Renommer** — le geste le plus fréquent, qui oblige aujourd'hui à ouvrir un écran entier pour un mot ;
+4. **Dupliquer** — déjà présent sur les feuilles et les chapitres, à généraliser ;
+5. **« Où est-ce ? »** — depuis une feuille, savoir dans quels chapitres et séances elle est déposée ; depuis une séance, ce qu'elle contient. *(Le geste qui manque le plus : Paul a passé la journée du 09/08 à chercher des feuilles orphelines.)*
+**Écartés d'office, et pourquoi** : **Publier** (trop conséquent pour un clic droit, et déjà bien logé dans le fil) · **Déplacer vers…** (dépend du type d'objet, donc pas universel — voir ci-dessous).
+
+**LE COPIER-COLLER — question ouverte, passe de confort, à reprendre plus tard (Paul, 09/08)**
+Le « Déplacer vers… » actuel est un **menu de destinations** : praticable dans un même chapitre, impraticable dès que la cible est ailleurs (autre chapitre, autre niveau). Un **copier-coller** — prendre ici, aller là-bas, déposer — traverserait les écrans.
+**MAIS la remarque de Paul retourne le problème, et elle est juste** : *« normalement tout vit dans l'éditeur. Donc un copier-coller n'en est pas vraiment un : c'est juste l'affichage d'un document autre part dans le site. »* **Dans MJPC, un document n'est jamais dupliqué — il est AFFICHÉ à plusieurs endroits.** Une feuille vit dans l'atelier ; un chapitre ne fait que la montrer. « Coller » n'copierait donc rien : cela ajouterait un affichage. C'est déjà ce que fait **« Prendre une feuille existante… »**, dont le libellé le dit : *« la feuille reste UNE : la déposer ici ne la copie pas. »*
+**Questions à trancher le jour venu** : couper (même `uid`, déplacé) ou copier (`uid` neuf, autre document) — la différence est réelle sur une feuille · **que peut-on coller où** (un item dans une séance, une séance dans un chapitre… mais un item de dictée 3e dans une séance de 6e ?) · le presse-papiers **survit-il aux écrans**, et alors comment Paul voit-il ce qu'il tient ?
+**Statut : passe de confort, non urgente.** À rouvrir si le besoin devient pressant à l'usage.
+
 **ÉTAT MESURÉ (09/08)** : **aucun menu contextuel n'existe aujourd'hui dans le site** — c'est une fonctionnalité neuve, pas une réparation.
 
 **CE QUE LE MORCEAU DEVRA TENIR** : ⓐ un seul mécanisme, réutilisé partout (pas un menu par écran) ⓑ **une table d'éligibilité explicite** — quel type d'objet, quels gestes, et ce qui est exclu ⓒ le menu **ne propose jamais une action impossible** dans l'état courant (règle du chantier) ⓓ il reste atteignable sans clic droit (les gestes existants ne disparaissent pas) ⓔ **il ne s'affiche pas côté élève** ⓕ au tactile, un équivalent (appui long) — à trancher avec la passe d'UI.
