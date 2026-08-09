@@ -2765,7 +2765,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.40.0";
+var APP_VERSION="8.41.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -7306,9 +7306,13 @@ function atIAApercu(){
     h+='</ul></div>';
   }
   if((o.blocs||[]).length)h+='<div class="at-ia-ap-l"><b>\u00c9l\u00e9ments r\u00e9p\u00e9t\u00e9s :</b> '+o.blocs.length+'</div>';
+  /* [LOT1-④] aucun bouton ne propose une action impossible — le même défaut a
+     été soldé côté CHAPITRES le 07/08 ; le voici soldé côté feuille. Sans
+     feuille ouverte : un seul bouton. Avec : « Remplacer » NOMME la feuille. */
+  var _feuilleOuverte=(AT.doc&&AT.docId)?String(AT.doc.titre||'Sans titre'):null;
   h+='<div class="at-ia-choix"><div class="at-ia-choix-lib">Que veux-tu faire ?</div><div class="at-ia-actions">'
     +'<button class="at-btn at-btn-prim" onclick="atIAInjecterNeuve()">Cr\u00e9er une nouvelle feuille</button>'
-    +'<button class="at-btn at-btn-prim" onclick="atIARemplacer()">Remplacer la feuille ouverte</button>'
+    +(_feuilleOuverte?('<button class="at-btn at-btn-prim" onclick="atIARemplacer()">Remplacer \u00ab '+atEsc(_feuilleOuverte)+' \u00bb</button>'):'')
     +'</div></div></div>';
   ap.innerHTML=h;
 }
@@ -7879,7 +7883,10 @@ function chAfficherInventaire(){
     var cible=null,idx=null;
     _cl.forEach(function(i){var c=chaps[i];
       if(!c)return;                                  /* le trou d'index 0 se traverse */
-      if(String(c.title||'').toLowerCase()===String(o.chapitre.title||'').toLowerCase()){cible=c;idx=i;}
+      /* [LOT1-⑤] la casse seule ne suffisait pas : accents, apostrophes droite/
+         courbe et espaces multiples faisaient rater — ou trouver à tort. Même
+         normalisation que la liaison par les titres : edTitreNorm, en codepoints. */
+      if(edTitreNorm(c.title)===edTitreNorm(o.chapitre.title)){cible=c;idx=i;}
     });
     CH.chapIdx=idx;
     var inventaire=chInventaire(cible,o.chapitre,CH.taxo);
@@ -10557,6 +10564,14 @@ function atVoirPanneau(level,chnum){
    objet : pas de copie parallèle. ── */
 function atEditerChapitre(level,chnum){
   AT.flux='chapitre';AT.edChap={level:level,chnum:chnum,modifie:false};
+  /* [LOT1-②] les feuilles de l'atelier se chargent À L'ENTRÉE de l'écran :
+     titres, hauteurs du papier (ed2HauteurDoc) et « Lier par les titres »
+     lisaient LINK_ATELIER_DOCS encore null (mesuré : la variable n'était
+     affectée que par loadAtelierDocList et gotoFiches). Même chemin de
+     chargement qu'elles : atSiteGetDocs — aucun second chargeur. */
+  if(typeof LINK_ATELIER_DOCS==='undefined'||!LINK_ATELIER_DOCS||!Object.keys(LINK_ATELIER_DOCS).length){
+    atSiteGetDocs(function(docs){LINK_ATELIER_DOCS=docs||{};if(AT.edChap)atEditerChapitreRendre();});
+  }
   if(!chapitresData[level]||!chapitresData[level][chnum]){
     /* la passerelle du panneau peut arriver avant tout chargement atelier */
     atChargerChapitres(level,function(){atEditerChapitreRendre();});
@@ -10835,7 +10850,7 @@ function ed2Sommaire(level,chnum,docs){
       seanceVue=d.seance;
       h+='<div class="ed2-sce"><span class="ed2-n" style="background:'+d.teinte+'"></span>'+atEsc(d.seanceTitre)+'</div>';
     }
-    h+='<div class="ed2-it'+(d.attendu?' ed2-attendu':'')+(ED2.courant===d.item?' ed2-ici':'')+'"'
+    h+='<div class="ed2-it'+(d.attendu?' ed2-attendu':'')+(ED2.courant===d.item?' ed2-ici':'')+'" data-item="'+atEsc(d.item)+'"'
       +(d.attendu?'':(' onclick="ed2Aller(\''+d.item+'\')"'))+'>'
       +'<span class="ed2-p'+(d.attendu?' ed2-creux':'')+'"></span>'+atEsc(d.titre)+'</div>';
   });
@@ -10867,16 +10882,31 @@ function ed2Pile(level,chnum,docs){
   });
   return h+'</div>';
 }
-/* poser la feuille courante : le sommaire l'allume, le panneau se recompose */
+/* [LOT1-①] SÉLECTION ≠ DONNÉES : poser la feuille courante ne redessine RIEN.
+   La trace du banc a montré la boucle : clic au sommaire → rendu complet →
+   défilement posé par ed2Aller → l'écouteur → ed2Suivre posait UNE AUTRE feuille
+   → second rendu qui écrasait le choix de Paul (et remettait la pile à zéro).
+   Ici : classes basculées en place, réf courante mise à jour — seul un
+   changement de DONNÉES appelle atEditerChapitreRendre. */
 function ed2Poser(item){
   if(ED2.courant===item)return;
   ED2.courant=item;
-  atEditerChapitreRendre();
+  var ec=AT.edChap;
+  if(ec){
+    var _cd=ed2Documents(ec.level,ec.chnum).filter(function(d){return d.item===item;})[0];
+    ED2.refCourant=_cd?_cd.ref:'';
+  }
+  document.querySelectorAll('.ed2-halo').forEach(function(x){x.classList.remove('ed2-halo');});
+  document.querySelectorAll('.ed2-pdoc[data-item="'+item+'"], .ed2-doc[data-item="'+item+'"]').forEach(function(x){x.classList.add('ed2-halo');});
+  document.querySelectorAll('.ed2-som .ed2-ici').forEach(function(x){x.classList.remove('ed2-ici');});
+  var _li=document.querySelector('.ed2-som .ed2-it[data-item="'+item+'"]');
+  if(_li)_li.classList.add('ed2-ici');
 }
 function ed2Aller(item){
   ed2Poser(item);
   var el=document.querySelector('.ed2-pdoc[data-item="'+item+'"]');
   var pile=document.querySelector('.ed2-papier');
+  ED2.gel=Date.now()+400;   /* [LOT1-①] un défilement POSÉ ne vaut pas un suivi */
   if(el&&pile)pile.scrollTop=pile.scrollTop+el.getBoundingClientRect().top-pile.getBoundingClientRect().top-24;
 }
 /* \u2462a LA FEUILLE COURANTE SUIT LE D\u00c9FILEMENT : celle dont le centre est le plus
@@ -11078,14 +11108,15 @@ function ed2Selectionner(item,champ,depuis){
 }
 /* ③b clic dans le document → le point d'édition ; ③c clic sur un champ → la zone */
 function ed2ClicDocument(item,champ){
-  if(ED2.courant!==item){ED2.courant=item;atEditerChapitreRendre();}
-  setTimeout(function(){ed2Selectionner(item,champ||'title','document');},60);
+  ed2Poser(item);   /* [LOT1-①] sélection seule — plus de rendu complet ici */
+  ed2Selectionner(item,champ||'title','document');
 }
 function ed2ClicChamp(champ){
   ed2Selectionner(ED2.courant,champ,'panneau');
 }
 function ed2Suivre(){
   if(!AT.edChap)return;
+  if(ED2.gel&&Date.now()<ED2.gel)return;   /* [LOT1-①] pas de suivi juste après un geste */
   var ae=document.activeElement;
   if(ae&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName))return;
   var pile=document.querySelector('.ed2-papier');if(!pile)return;   /* [C5-ED2] la 3e colonne est l'atelier papier */
@@ -11101,6 +11132,10 @@ function atEditerChapitreRendre(){
   var ch=chapitresData[ec.level]&&chapitresData[ec.level][ec.chnum];
   var z=document.getElementById('at-zone');if(!z)return;
   if(!ch){z.innerHTML='<div class="at-vide">Ce chapitre n\u2019est plus l\u00e0.</div>';return;}
+  /* [LOT1-①] un redessin de DONNÉES ne perd pas la lecture : la position de la
+     pile est reprise telle quelle, et la feuille courante est reposée par le rendu. */
+  var _pileAvant=document.querySelector('.ed2-papier');
+  var _scAvant=_pileAvant?_pileAvant.scrollTop:null;
   /* [C5-ED2] l'\u00e9cran du chapitre : une t\u00eate, puis TROIS colonnes. */
   var _docs=ed2Documents(ec.level,ec.chnum);
   if(!ED2.courant||!_docs.some(function(d){return d.item===ED2.courant&&!d.attendu;})){
@@ -11126,7 +11161,10 @@ function atEditerChapitreRendre(){
     +'<label class="at-edch-lib">Comp\u00e9tences mineures (une par ligne)</label>'
     +'<textarea class="at-edch-ta" onchange="atChampChapitre(\'competencesMineures\',this.value.split(String.fromCharCode(10)).map(function(x){return x.trim();}).filter(Boolean))">'+atEsc((ch.competencesMineures||[]).join(String.fromCharCode(10)))+'</textarea>'
     +'</div>';
-  atSeances(ch).forEach(function(p){
+  var _nbSe=atSeances(ch).length;   /* [LOT1-⑥] les flèches de bordure se désactivent :
+     un ↑ sur la première séance (ou ↓ sur la dernière) proposait une action
+     impossible, en silence — même règle que ④. */
+  atSeances(ch).forEach(function(p,_rangSe){
     var se=p.se,j=p.j;
     var somNote=(se.type==='sommaire')?' <span class="ch-type">sommaire \u2014 le contenu se r\u00e9g\u00e9n\u00e8re, il ne s\u2019\u00e9dite pas ici</span>':'';
     /* [C5-ED1] les gestes de la s\u00e9ance : monter, descendre, ajouter un item,
@@ -11134,8 +11172,8 @@ function atEditerChapitreRendre(){
     var _ordSe=ordDe(se,j);
     h+='<div class="at-edch at-edch-se"><div class="at-edch-set">S\u00e9ance '+_ordSe+somNote
       +'<span class="at-edch-actes">'
-      +'<button class="at-btn at-btn-min" title="Monter" onclick="edDeplacerSeance(\''+j+'\',-1)">\u2191</button>'
-      +'<button class="at-btn at-btn-min" title="Descendre" onclick="edDeplacerSeance(\''+j+'\',1)">\u2193</button>'
+      +'<button class="at-btn at-btn-min" title="Monter"'+(_rangSe===0?' disabled':'')+' onclick="edDeplacerSeance(\''+j+'\',-1)">\u2191</button>'
+      +'<button class="at-btn at-btn-min" title="Descendre"'+(_rangSe===_nbSe-1?' disabled':'')+' onclick="edDeplacerSeance(\''+j+'\',1)">\u2193</button>'
       +'<button class="at-btn at-btn-min" onclick="edAjouterItem(\''+j+'\')">+ Item</button>'
       +'<button class="at-btn at-btn-min" onclick="edCreerFeuilleIci(\''+j+'\')">+ Feuille</button>'
       +'<button class="at-btn at-btn-min at-btn-danger" onclick="edSupprimerSeance(\''+j+'\')">\u2715</button>'
@@ -11143,7 +11181,8 @@ function atEditerChapitreRendre(){
       +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(se.title||'')+'" onchange="atChampSeance('+j+',\'title\',this.value)">'
       +'<label class="at-edch-lib">Type</label><input class="at-edch-in" value="'+atEsc(se.type||'')+'" onchange="atChampSeance('+j+',\'type\',this.value)">'
       +'<label class="at-edch-lib">Note \u00e9l\u00e8ve</label><textarea class="at-edch-ta at-edch-ta-p" onchange="atChampSeance('+j+',\'noteEleve\',this.value)">'+atEsc(se.noteEleve||'')+'</textarea>';
-    Object.keys(se.items||{}).sort(function(a,b){return (se.items[a].ordre||0)-(se.items[b].ordre||0);}).forEach(function(k){
+    var _clesIt=Object.keys(se.items||{}).sort(function(a,b){return (se.items[a].ordre||0)-(se.items[b].ordre||0);});
+    _clesIt.forEach(function(k,_rangIt){
       var it=se.items[k];if(!it)return;
       /* [C5-ED1] LE FIL COMPLET : tout item est VISIBLE. Les feuilles de l'atelier
          et les diaporamas s'\u00e9ditent (bouton Ouvrir l'\u00e9diteur) ; les documents Drive
@@ -11156,8 +11195,8 @@ function atEditerChapitreRendre(){
       h+='<div class="at-edch-it" data-champ="item-'+k+'" onclick="ed2ClicChamp(\'item-'+k+'\')"><div class="at-edch-itt">\u2022 '+atEsc(it.title||k)+' '+_stat
         +' <span class="ch-type">'+atEsc(it.kind||'doc')+(_edtb?'':' \u00b7 lecture seule')+'</span>'
         +'<span class="at-edch-actes">'
-        +'<button class="at-btn at-btn-min" title="Monter" onclick="edDeplacerItem(\''+j+'\',\''+k+'\',-1)">\u2191</button>'
-        +'<button class="at-btn at-btn-min" title="Descendre" onclick="edDeplacerItem(\''+j+'\',\''+k+'\',1)">\u2193</button>'
+        +'<button class="at-btn at-btn-min" title="Monter"'+(_rangIt===0?' disabled':'')+' onclick="edDeplacerItem(\''+j+'\',\''+k+'\',-1)">\u2191</button>'
+        +'<button class="at-btn at-btn-min" title="Descendre"'+(_rangIt===_clesIt.length-1?' disabled':'')+' onclick="edDeplacerItem(\''+j+'\',\''+k+'\',1)">\u2193</button>'
         +(((it.kind==='atelier'||it.source==='atelier')&&it.ref)?('<button class="at-btn at-btn-min at-btn-prim" onclick="edEditerFeuille(\''+j+'\',\''+k+'\')">\u00c9diter</button>'):'')
         +(it.ref?('<button class="at-btn at-btn-min" onclick="edOuvrirItem(\''+j+'\',\''+k+'\')">Ouvrir</button>'):'')
         +'<button class="at-btn at-btn-min" onclick="openLinkModal(\''+ec.level+'\',\''+ec.chnum+'\',\''+j+'\',\''+k+'\')">Lier</button>'
@@ -11181,8 +11220,11 @@ function atEditerChapitreRendre(){
   /* \u2462a le d\u00e9filement de la PILE seule d\u00e9cide de la feuille courante (jamais la page) */
   var _pile=document.querySelector('.ed2-papier');
   if(_pile&&!_pile._ed2){_pile._ed2=true;
-    _pile.addEventListener('scroll',function(){clearTimeout(ED2._t);ED2._t=setTimeout(ed2Suivre,140);});}
-  window.scrollTo(0,0);
+    _pile.addEventListener('scroll',function(){
+      if(ED2.gel&&Date.now()<ED2.gel)return;   /* [LOT1-①] */
+      clearTimeout(ED2._t);ED2._t=setTimeout(ed2Suivre,140);});}
+  if(_scAvant!==null&&_pile){ED2.gel=Date.now()+400;_pile.scrollTop=_scAvant;}
+  else window.scrollTo(0,0);   /* [LOT1-①] seul le PREMIER rendu de l'écran remonte la page */
 }
 /* les trois écrivains fins — UN chemin par champ, la mémoire locale suit, le
    panneau prof reste vrai à son prochain rendu */
@@ -11255,6 +11297,25 @@ function edAppariements(level,chnum){
 }
 /* la MODALE : ce qui va être lié, nommé un par un, AVANT toute écriture. */
 function edProposerLiaisons(level,chnum){
+  /* [LOT1-②③] comparer APRÈS un chargement RÉUSSI : le bouton répondait
+     « aucune feuille… » sur un cache jamais chargé — un message vrai sur des
+     données absentes — et ne disait rien pendant qu'il lisait. */
+  var _pret=(typeof LINK_ATELIER_DOCS!=='undefined')&&LINK_ATELIER_DOCS&&Object.keys(LINK_ATELIER_DOCS).length;
+  if(!_pret){
+    atInfo('Je relis les feuilles de l’atelier…');
+    atSiteGetDocs(function(docs){
+      LINK_ATELIER_DOCS=docs||{};
+      if(!Object.keys(LINK_ATELIER_DOCS).length){
+        atInfo('Impossible de lire les feuilles de l’atelier (ou l’atelier est vide) — les correspondances n’ont pas été cherchées.');
+        return;
+      }
+      edProposerLiaisonsPrete(level,chnum);
+    });
+    return;
+  }
+  edProposerLiaisonsPrete(level,chnum);
+}
+function edProposerLiaisonsPrete(level,chnum){
   var a=edAppariements(level,chnum);
   if(!a.proposes.length&&!a.doutes.length){atInfo('Aucune feuille de l\u2019atelier ne porte le titre d\u2019un item non li\u00e9.');return;}
   var h='';
