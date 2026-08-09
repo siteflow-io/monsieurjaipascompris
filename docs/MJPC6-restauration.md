@@ -738,6 +738,20 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **AUDIT** : couches en position absolue vérifiées, couche fautive retirée, point de rendu unique, **aucune écriture réseau ajoutée** · banc : une faute de chaque type + un mot en trop, cinq modes, trois contextes, copie sans faute, copie longue.
 - **Restauration en cas de `BUG`** : revenir au blob md5 `acf79d92f48c69e7babdf8a8f3b3cefe` (586 505 o).
 
+## Point de retour — PROMOTION correction_dictee ② · LE TROU NUMÉROTÉ, 09/08/2026
+| fichier | AVANT | APRÈS |
+|---|---|---|
+| `correction_dictee.html` | 589 922 o · md5 `f62be8d5f89c5a5a9d3729ada5b7aaa9` (commit `9444e1f79df2`) | 592 783 o · md5 `a52eb5fc481302688391312f0a3ec98e` |
+
+- **LE DÉFAUT, trouvé par Paul** : la copie affichait « il se tortilla en tremblant ~~Hors~~ *hors* du sac » — le mot CORRECT barré et réaffiché, la phrase incompréhensible, et au détail « Essai retenu : *Hors* ».
+- **LA CAUSE, mesurée** : `fautif` (ce que l'élève a écrit) est **facultatif** — Paul a codé un **mode de correction rapide**, légitime et voulu, où il note seulement quel mot est faux. Quand il manque, l'app piochait **le dernier essai de l'autocorrection**, qui est presque toujours le mot juste (l'autocorrection s'arrête quand l'élève trouve). *(Deux hypothèses de la conscience avaient été fausses avant : le CSS des couches, puis le découpage des mots — c'est Paul qui a désigné la vraie piste, connaissant son propre mode de correction.)*
+- **LIVRÉ** : ① **un TROU NUMÉROTÉ** là où `fautif` est absent — le mot correct **n'apparaît jamais dans le corps du texte**, dans aucun mode ; badge de type et points conservés ② `data-trou="N"`, numérotation stable dans l'ordre du texte — **point d'accroche laissé VIDE pour M16** ③ « Essai retenu » **supprimé** (on ne prétend plus savoir ce qui a été écrit) ; les erreurs à trou portent leur numéro ; collision de numérotation traitée (puce neutre pour les items sans trou dans une copie qui en a) ④ espace avant parenthèse rétabli (« fourrure (…) »).
+- **`alignerErreurs` RETIRÉE avant promotion** (−1 612 o, 0 occurrence) : l'exécutant l'avait ajoutée pour compenser des `idx` décalés, mais **Paul a décidé de corriger les DONNÉES** (« ce sont des données martyres »). Elle retrouvait le mot **par contenu en avançant** — or le texte du brevet 4e contient quatre « caddie » : rien ne garantissait la bonne occurrence. **Une compensation permanente pour un problème supprimé à la source n'a pas lieu d'être.**
+- **LES DONNÉES CORRIGÉES ET INJECTÉES LE MÊME JOUR** : un exécutant a établi que le décalage n'était **pas constant** mais par paliers — trois découpages successifs de l'apostrophe d'élision (`s'approchèrent` d'un bloc → `s` · `'` · `approchèrent` → `s'` · `approchèrent`). Traduction **par plages de caractères**, jamais par recherche de mot (les quatre « caddie » ne pouvaient pas être confondus). **1 073 positions écrites au hub par la conscience, position par position, vérifiées par relecture** : 5e Utopie 547/547 (intacte, non touchée) · brevet 3e 262/262 · 4e Pythagore 353/353 · 4e Banksy 357/358 · Grandes découvertes 163/169. **Les 7 restantes sont signalées, pas devinées** : la correction visait un mot depuis coupé ou fusionné. Les JSON d'export restent le filet de sécurité.
+- **AUDIT** : parseur vert · trous présents · « Essai retenu » n'apparaît plus que dans un commentaire expliquant son retrait · aucune écriture réseau modifiée.
+- **SUITE** : le morceau **apostrophe et guillemets cliquables** (Paul veut marquer une élision manquée comme une faute singulière — sa taxonomie a déjà la famille « Apostrophes et élisions », distincte de la ponctuation). **Il changera le découpage, donc les positions : la migration doit être DANS LE MÊME LOT.** Sur les 7 positions restantes, il en réglera **une** (le `qu` de Mathis) ; les six autres seront à trancher.
+- **Restauration en cas de `BUG`** : revenir au blob md5 `f62be8d5f89c5a5a9d3729ada5b7aaa9` (589 922 o).
+
 ## Point de retour — PROMOTION LOT ③ · LE CONTENU DES FEUILLES DANS L'ATELIER PAPIER, 09/08/2026
 | fichier | AVANT | APRÈS |
 |---|---|---|
