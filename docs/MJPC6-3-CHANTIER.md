@@ -325,6 +325,17 @@ Le « Déplacer vers… » actuel est un **menu de destinations** : praticable d
 **Questions à trancher le jour venu** : couper (même `uid`, déplacé) ou copier (`uid` neuf, autre document) — la différence est réelle sur une feuille · **que peut-on coller où** (un item dans une séance, une séance dans un chapitre… mais un item de dictée 3e dans une séance de 6e ?) · le presse-papiers **survit-il aux écrans**, et alors comment Paul voit-il ce qu'il tient ?
 **Statut : passe de confort, non urgente.** À rouvrir si le besoin devient pressant à l'usage.
 
+**LES CINQ GESTES FONDAMENTAUX, arrêtés par Paul le 09/08** — la règle du miroir souffre UNE exception : ces gestes-là doivent exister sur **tout objet manipulable**, donc être créés là où ils manquent plutôt que de refléter du vide.
+1. **Ouvrir / Modifier** — atteindre l'objet là où il s'édite. Sans lui, le menu n'est qu'une liste de gestes destructeurs.
+2. **Supprimer** — au patron du chantier : corbeille d'abord, jamais d'irréversible sans nommer.
+3. **Renommer** — le geste le plus fréquent, qui oblige aujourd'hui à ouvrir un écran entier pour un mot.
+4. **Dupliquer** — déjà présent sur les feuilles et les chapitres, à généraliser.
+5. **Où est-ce ?** — depuis une feuille : dans quels chapitres et séances elle est déposée ; depuis une séance : ce qu'elle contient. *(C'est le geste qui manquait le plus : Paul a passé le 08/08 à chercher des feuilles orphelines.)*
+**Écartés d'office** : **Publier** (trop conséquent pour un clic droit, et bien logé dans le fil) · **Déplacer vers…** (voir ci-dessous).
+
+**LE « DÉPLACER VERS… » — REQUALIFIÉ PAR PAUL, MIS EN ATTENTE (09/08)** : le menu de destinations actuel ne sait pas traverser les écrans (un autre chapitre, un autre niveau). Paul a d'abord pensé à un **copier-coller**, puis a déplacé la question : *« normalement tout vit dans l'éditeur. Donc un copier-coller n'en est pas vraiment un : c'est juste l'affichage d'un document autre part dans le site. »* — **le bon geste n'est donc pas « copier », c'est « déposer aussi ici »** : le document reste UN, il gagne un lieu d'affichage. *(À rapprocher de « Prendre une feuille existante… », qui fait déjà cela dans l'autre sens : depuis la destination plutôt que depuis la source.)*
+**Décision de Paul : mis de côté, à traiter dans une passe de confort ultérieure** — sauf si le besoin devient urgent avant. **Trois questions restent ouvertes** pour ce jour-là : ⓐ déposer ailleurs ou déplacer (le premier garde l'`uid`, le second aussi mais retire la source) ⓑ **quelles cibles sont légitimes** (un item de dictée 3e dans une séance de 6e ? une feuille dans un chapitre d'un autre niveau ?) — sans règle, le geste produira des incohérences ⓒ si un presse-papiers survit d'un écran à l'autre, **il faut le montrer**, sans quoi Paul ne saura plus ce qu'il tient.
+
 **ÉTAT MESURÉ (09/08)** : **aucun menu contextuel n'existe aujourd'hui dans le site** — c'est une fonctionnalité neuve, pas une réparation.
 
 **CE QUE LE MORCEAU DEVRA TENIR** : ⓐ un seul mécanisme, réutilisé partout (pas un menu par écran) ⓑ **une table d'éligibilité explicite** — quel type d'objet, quels gestes, et ce qui est exclu ⓒ le menu **ne propose jamais une action impossible** dans l'état courant (règle du chantier) ⓓ il reste atteignable sans clic droit (les gestes existants ne disparaissent pas) ⓔ **il ne s'affiche pas côté élève** ⓕ au tactile, un équivalent (appui long) — à trancher avec la passe d'UI.
