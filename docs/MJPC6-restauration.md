@@ -725,6 +725,19 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **SUITE IMMÉDIATE — les cinq compléments validés par Paul** : insérer une séance ENTRE deux (le « + Feuille ici » livré ne comble qu'une séance vide EXISTANTE) · déplacer un document d'une séance à l'autre (menu, `uid` conservé) · **écran IA ouvert depuis un trou avec contexte pré-rempli** · héritage des notions séance → feuille · **annuler la dernière modification**.
 - **Restauration en cas de `BUG`** : revenir au blob du commit `19d1c2003a5a` (8.39.0, md5 `6ccec065…`).
 
+## Point de retour — PROMOTION correction_dictee · LES COUCHES ET L'APERÇU, 09/08/2026
+| fichier | AVANT | APRÈS |
+|---|---|---|
+| `correction_dictee.html` | 586 505 o · md5 `acf79d92f48c69e7babdf8a8f3b3cefe` | 589 922 o · md5 `f62be8d5f89c5a5a9d3729ada5b7aaa9` (commit `9444e1f79df2`) |
+
+- **LE BUG, trouvé par Paul en usage réel** (copie de l'élève ALOYEAU Elyse, vue depuis un compte élève en navigation privée) : les corrections s'affichaient DANS le flux du texte — « il se tortilla en tremblant **Hors** hors », « du caddie **Caddie** caddie ».
+- **L'HYPOTHÈSE DE LA CONSCIENCE ÉTAIT FAUSSE, et l'exécutant l'a INFIRMÉE preuve à l'appui** : le CSS des couches est **strictement identique** du 12 juin à aujourd'hui, unification du 18 juillet comprise — la copie n'a jamais changé de contenant, elle a toujours emporté son CSS. *(À retenir : une hypothèse plausible et datée n'est pas une cause ; c'est le diff de l'historique qui tranche.)*
+- **LA VRAIE CAUSE, mesurée** : en mode par défaut (« Souligné »), une règle activait `vert-after` — **la correction dans la ligne** — tandis que `layer-top` (le « au-dessus ») n'était activé que dans les autres modes. Et **les mots en trop** (`.mot.extra-w`, sans la classe `faux`) n'étaient gouvernés par AUCUN sélecteur : leur badge et leurs points s'affichaient toujours en clair, quels que soient les réglages.
+- **RÉPARÉ** : mot correct AU-DESSUS (`layer-top` absolu, dans tous les modes non-verts) · mot de l'élève BARRÉ dessous (le mode devient « Barré ») · type et points EN DESSOUS (`layer-after` absolu) · règles généralisées à `.mot` (les extras sont couverts) · `vert-after` n'est plus ni générée ni activée · filet sur un mode inconnu (qui rendait la copie invisible). **Les trois contextes d'un coup** — le générateur `buildCopieHtml` produit un document autonome que consomment l'onglet Copies, la modale élève et l'export.
+- **L'APERÇU À DROITE** (demande de Paul) : deux colonnes, la copie collante à l'écran pendant que la gauche défile, **un seul point de rendu** (`renderApercu`), diff minimal sur un même élève (cocher = un changement de classe, zéro reconstruction), **position de lecture jamais perdue** (mesuré : 8 points → 0 → 8, `scrollTop` intact). **HONNÊTETÉ DE L'EXÉCUTANT : l'ancienne version n'a jamais existé** — l'historique montre un onglet toujours vertical ; il le dit et construit sur le patron des éditeurs du site, comme Paul le décrivait.
+- **AUDIT** : couches en position absolue vérifiées, couche fautive retirée, point de rendu unique, **aucune écriture réseau ajoutée** · banc : une faute de chaque type + un mot en trop, cinq modes, trois contextes, copie sans faute, copie longue.
+- **Restauration en cas de `BUG`** : revenir au blob md5 `acf79d92f48c69e7babdf8a8f3b3cefe` (586 505 o).
+
 ## Point de retour — PROMOTION LOT ① · LES BUGS DE L'ÉDITEUR, 09/08/2026
 | fichier | AVANT | APRÈS |
 |---|---|---|
