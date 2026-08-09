@@ -302,6 +302,20 @@ Le périmètre de M14 avait trop grossi (passe standard + portail à code + dén
 
 **CE QUI EST DÉJÀ FAIT, ET QUI ATTEND** : le correctif de la copie de dictée (09/08) pose **un trou NUMÉROTÉ** là où la faute de l'élève n'a pas été saisie. Le numéro est en place et vide : **M16 n'aura qu'à le remplir**. Aucun travail perdu, aucune forme à défaire.
 
+### 🔴 LE MENU CONTEXTUEL — UN PRINCIPE POUR TOUT LE SITE ET TOUTES LES APPS (décision de Paul, 09/08/2026)
+
+**L'énoncé, né dans l'éditeur de chapitre** : *« il faut que je puisse, en faisant clic droit sur un élément dans la colonne de gauche, accéder aux options de modification/suppression de document, de séance, etc. »* — **puis étendu par lui séance tenante : « ce doit être étendu à l'ensemble du site et des apps, pour les éléments qui y sont éligibles ».**
+
+**LA RÈGLE** : tout objet **manipulable par le professeur** offre ses gestes au clic droit, là où il est affiché — sans qu'il faille redescendre dans une arborescence ou rouvrir un écran. Les gestes proposés sont **ceux qui existent déjà** pour cet objet (modifier, supprimer, déplacer, ordonner, publier, dupliquer, lier…) : le menu contextuel est **un raccourci vers l'existant, jamais une seconde implantation**.
+
+**LA LIMITE, posée par Paul et non négociable** : *« une donnée élève par exemple ne devra pas en hériter »*. Ne sont éligibles que les objets de **composition** — chapitres, séances, items, feuilles, diaporamas, onglets, rayons… **Jamais** : une copie d'élève, une note, un résultat, une trace d'activité, un code personnel. Ces objets se consultent, ils ne se manipulent pas d'un clic droit. *(Raison : un geste destructeur sur une donnée d'élève doit rester délibéré et passer par un écran qui nomme ce qu'il fait — cf. le patron des suppressions du chantier : corbeille d'abord, frappe du nom pour l'irréversible.)*
+
+**ÉTAT MESURÉ (09/08)** : **aucun menu contextuel n'existe aujourd'hui dans le site** — c'est une fonctionnalité neuve, pas une réparation.
+
+**CE QUE LE MORCEAU DEVRA TENIR** : ⓐ un seul mécanisme, réutilisé partout (pas un menu par écran) ⓑ **une table d'éligibilité explicite** — quel type d'objet, quels gestes, et ce qui est exclu ⓒ le menu **ne propose jamais une action impossible** dans l'état courant (règle du chantier) ⓓ il reste atteignable sans clic droit (les gestes existants ne disparaissent pas) ⓔ **il ne s'affiche pas côté élève** ⓕ au tactile, un équivalent (appui long) — à trancher avec la passe d'UI.
+
+**PREMIÈRE APPLICATION** : le sommaire de l'éditeur de chapitre. **Puis, à instruire app par app** : atelier (feuilles, diaporamas, chapitres), arborescence du panneau prof, rayons, taxonomie, banque d'exercices. À rapprocher de la **passe sur les 9 apps** déjà consignée (identité, écran d'aide, « que montre-t-on quand il n'y a rien »).
+
 ### 🔶 LES BUGS DES APPLICATIONS — inventaire tenu par Paul (ouvert le 09/08, à régler plus tard)
 
 *Ces défauts vivent dans les fichiers des APPS, pas dans `index.html` : chacun peut donc se traiter par un exécutant dédié, en parallèle du site, sans risque de collision (la collision se produit à la promotion d'un même fichier).*
