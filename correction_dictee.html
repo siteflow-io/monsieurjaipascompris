@@ -210,6 +210,12 @@ textarea{resize:vertical;min-height:120px}
 .info-i.tip-left .info-tip{left:0;right:auto;transform:none}
 .info-i.tip-below .info-tip{bottom:auto;top:calc(100% + 6px)}
 .info-i:hover .info-tip,.info-i:focus .info-tip,.info-i:active .info-tip{display:block}
+/* Onglet Copies — deux colonnes : le travail à gauche, la copie de l'élève à droite,
+   collante à l'écran pendant que la colonne de gauche défile. Sous 1100px : une colonne. */
+.copies-2col{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,46%);gap:14px;align-items:start}
+.copies-left{min-width:0}
+.copies-right{position:sticky;top:10px}
+@media (max-width:1100px){.copies-2col{display:block}.copies-right{position:static;margin-top:4px}}
 </style>
 </head>
 <style>
@@ -5158,6 +5164,9 @@ function setCopyOptions(opts){
 function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   options = options || {};
   var mode = options.mode || "barre";
+  /* Filet : un mode inconnu (donnée ancienne ou de test) laissait le mot sans aucune
+     règle d'affichage — la copie devenait illisible. On retombe sur le mode par défaut. */
+  if (["rien","brut","barre","placeholder","vert"].indexOf(mode) < 0) mode = "barre";
   var showOverlay = options.showOverlay !== false;
   var showBadge = options.showBadge !== false;
   var showPoints = options.showPoints !== false;
@@ -5198,10 +5207,13 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   var textHtml = "";
   for (var ti = 0; ti < tokens.length; ti++) {
     var w = tokens[ti];
-    // Extras (mots en trop) insérés AVANT le token courant
+    // Extras (mots en trop) insérés AVANT le token courant.
+    // Espacement : un espace AVANT le mot en trop (les espaces HTML successifs
+    // s'effondrent), et après lui la règle française normale (rien devant une
+    // ponctuation) — fini le « soufflealors . » collé puis troué.
     if (extraMap[ti-1]) {
       extraMap[ti-1].forEach(function(ex){
-        textHtml += '<span class="mot extra-w"><span class="layer-base"><span class="extra-orig">'+escapeHtml(ex.word)+'</span></span><span class="layer-after"><span class="badge badge-extra">+</span><span class="points-perdus">−0,5</span></span></span> ';
+        textHtml += ' <span class="mot extra-w"><span class="layer-base"><span class="extra-orig">'+escapeHtml(ex.word)+'</span></span><span class="layer-after"><span class="badge badge-extra">+</span><span class="points-perdus">−0,5</span></span></span>' + tokSp(ex.word, w);
       });
     }
     var nextW = tokens[ti+1] || "";
@@ -5231,9 +5243,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
                  '<span class="placeholder"></span>' +
                  '<span class="vert">' + escapeHtml(correctText) + '</span>';
     }
-    var topHtml = (ev.type !== "P") ? '<span class="vert-top">' + escapeHtml(correctText) + '</span>' : '';
-    var afterHtml = '<span class="vert-after">' + escapeHtml(correctText) + '</span>' +
-                    '<span class="badge">' + ev.type + '</span>' +
+    var topHtml = '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
+    var afterHtml = '<span class="badge">' + ev.type + '</span>' +
                     (POINTS[ev.type] ? '<span class="points-perdus">' + POINTS[ev.type] + '</span>' : '');
     var aDataAttr = (ev.type === "A") ? ' data-att="1"' : '';
 
@@ -5307,53 +5318,57 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     '.copie-header .meta{font-size:.78rem;color:#8a7a5a;text-align:right;line-height:1.4}' +
     '.copie-title{font-family:"EB Garamond",serif;font-size:1.5rem;text-align:center;margin:22px 0 26px;font-style:italic;color:#4a3a1f}' +
     '.texte{font-size:1.2rem;line-height:3.4;text-align:justify;padding:18px 0}' +
-    /* Architecture des mots */
-    '.mot{position:relative;display:inline-block;vertical-align:baseline;white-space:nowrap;margin-right:2px}' +
-    '.mot.faux .layer-base>span,.mot.faux .layer-top>span,.mot.faux .layer-after>span{display:none}' +
-    '.mot.faux .layer-base{display:inline-block;min-width:.5em}' +
-    '.mot.faux .layer-top{position:absolute;left:50%;transform:translateX(-50%);top:-1.4em;font-family:"EB Garamond",serif;font-size:.72em;line-height:1;pointer-events:none;white-space:nowrap;max-width:150%;overflow:visible}' +
-    '.mot.faux .layer-after{display:inline-block;margin-left:2px;white-space:nowrap}' +
+    /* Architecture des mots — réparée 08/2026 : le mot correct AU-DESSUS (layer-top),
+       le mot de l'élève barré DESSOUS (layer-base), le type et les points SOUS le mot
+       (layer-after, en position absolue) — aucune annotation n'entre dans le flux du texte.
+       Les règles de masquage et de badges couvrent aussi les mots en trop (.extra-w),
+       qui n'ont pas la classe .faux : c'est par là que badges et points fuyaient en clair. */
+    '.mot{position:relative;display:inline-block;vertical-align:baseline;white-space:nowrap;margin-right:2px;line-height:1.2}' +
+    '.mot .layer-base>span,.mot .layer-top>span,.mot .layer-after>span{display:none}' +
+    '.mot .layer-base{display:inline-block;min-width:.5em}' +
+    '.mot .layer-top{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + .1em);font-family:"EB Garamond",serif;font-size:.72em;line-height:1;pointer-events:none;white-space:nowrap;max-width:150%;overflow:visible}' +
+    '.mot .layer-after{position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + .12em);line-height:1;pointer-events:none;white-space:nowrap}' +
     /* Modes radio (un seul actif) */
     'body.mode-rien .mot.faux .layer-base::before{content:"·";color:#c8bda3}' +
     'body.mode-brut .mot.faux .layer-base .orig{display:inline}' +
-    'body.mode-barre .mot.faux .layer-base .orig{display:inline;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}' +
+    'body.mode-barre .mot.faux .layer-base .orig{display:inline;text-decoration:line-through;text-decoration-thickness:2px}' +
     'body.mode-barre .mot.faux.type-G .layer-base .orig{color:#c53030;text-decoration-color:#c53030}' +
     'body.mode-barre .mot.faux.type-L .layer-base .orig{color:#2b6cb0;text-decoration-color:#2b6cb0}' +
     'body.mode-barre .mot.faux.type-I .layer-base .orig{color:#7c3aed;text-decoration-color:#7c3aed}' +
     'body.mode-placeholder .mot.faux .layer-base .placeholder{display:inline-block}' +
     'body.mode-vert .mot.faux .layer-base .vert{display:inline}' +
-    /* Toggle overlay : correction verte ajoutée */
-    'body.show-overlay.mode-barre .mot.faux .layer-after .vert-after{display:inline}' +
+    /* Toggle overlay : correction verte AU-DESSUS du mot, dans tous les modes sauf vert direct */
+    'body.show-overlay.mode-barre .mot.faux .layer-top .vert-top{display:inline}' +
     'body.show-overlay.mode-brut .mot.faux .layer-top .vert-top{display:inline}' +
     'body.show-overlay.mode-placeholder .mot.faux .layer-top .vert-top{display:inline}' +
     'body.show-overlay.mode-rien .mot.faux .layer-top .vert-top{display:inline}' +
-    /* Toggle badge */
-    'body.show-badge .mot.faux .layer-after .badge{display:inline-block}' +
-    '.mot.faux .badge{font-family:system-ui,sans-serif;font-size:.62em;font-weight:700;padding:1px 4px;border-radius:3px;vertical-align:super;margin-left:2px;line-height:1}' +
+    /* Toggle badge (extras compris) */
+    'body.show-badge .mot .layer-after .badge{display:inline-block}' +
+    '.mot .badge{font-family:system-ui,sans-serif;font-size:.62em;font-weight:700;padding:1px 4px;border-radius:3px;line-height:1}' +
     '.mot.faux.type-G .badge{background:#fee2e2;color:#c53030}' +
     '.mot.faux.type-L .badge{background:#dbeafe;color:#2b6cb0}' +
     '.mot.faux.type-M .badge{background:#fef3c7;color:#975a16}' +
     '.mot.faux.type-P .badge{background:#fee2e2;color:#c53030}' +
     '.mot.faux.type-I .badge{background:#ede9fe;color:#7c3aed}' +
-    '.mot.faux .badge-extra{background:#dbeafe;color:#2563eb}' +
-    /* Toggle points perdus */
-    'body.show-points .mot.faux .layer-after .points-perdus{display:inline-block}' +
-    '.mot.faux .points-perdus{font-family:system-ui,sans-serif;font-size:.62em;font-weight:700;padding:1px 4px;border-radius:3px;vertical-align:super;margin-left:2px;line-height:1;background:#fef0f0;color:#9b2c2c;border:1px solid #f5d4d4}' +
-    '.mot.faux[data-att="1"] .points-perdus{display:none !important}' +
+    '.mot .badge-extra{background:#dbeafe;color:#2563eb}' +
+    /* Toggle points perdus (extras compris) */
+    'body.show-points .mot .layer-after .points-perdus{display:inline-block}' +
+    '.mot .points-perdus{font-family:system-ui,sans-serif;font-size:.62em;font-weight:700;padding:1px 4px;border-radius:3px;margin-left:2px;line-height:1;background:#fef0f0;color:#9b2c2c;border:1px solid #f5d4d4}' +
+    '.mot[data-att="1"] .points-perdus{display:none !important}' +
     /* Apparence verts */
-    '.mot.faux .vert,.mot.faux .vert-top,.mot.faux .vert-after{color:#2d8659;font-weight:600;font-style:italic}' +
-    '.mot.faux .vert-after::before{content:"→ ";color:#8a7a5a;font-weight:normal;font-style:normal;padding-right:2px}' +
+    '.mot.faux .vert,.mot.faux .vert-top{color:#2d8659;font-weight:600;font-style:italic}' +
     /* Placeholder */
-    '.mot.faux .placeholder{border-bottom:1.5px solid #8a7a5a;min-width:60px;height:1.1em;vertical-align:-2px;display:inline-block}' +
+    '.mot.faux .placeholder{border-bottom:1.5px solid #8a7a5a;min-width:60px;height:1.1em;vertical-align:-2px}' +
     /* Cas spéciaux M (mot manquant) : l'élève n'a rien écrit → RIEN dans la base en modes
-       brut/souligné/placeholder/rien (la correction passe par le mode vert ou la sur-impression). */
+       barré/brut/placeholder/rien (la correction passe par le mode vert ou la sur-impression). */
     '.mot.faux.type-M .orig{display:none !important}' +
     'body.mode-vert .mot.faux.type-M .layer-base .vert{background:rgba(151,90,22,.08);padding:0 4px;border-radius:3px}' +
-    'body.show-overlay.mode-brut .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-placeholder .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-rien .mot.faux.type-M .layer-top .vert-top{background:rgba(151,90,22,.12);padding:0 4px;border-radius:3px}' +
+    'body.show-overlay.mode-barre .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-brut .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-placeholder .mot.faux.type-M .layer-top .vert-top,body.show-overlay.mode-rien .mot.faux.type-M .layer-top .vert-top{background:rgba(151,90,22,.12);padding:0 4px;border-radius:3px}' +
     /* Cas spéciaux P (ponctuation) : l'élève n'a rien écrit → RIEN dans la base en modes
-       brut/souligné/placeholder/rien. Le signe manquant apparaît uniquement en mode vert direct
-       (en rouge encadré pour bien le distinguer d'un signe normal). */
+       barré/brut/placeholder/rien. Le signe manquant apparaît AU-DESSUS (couche layer-top,
+       en rouge encadré), et en mode vert direct dans la ligne (même code couleur). */
     '.mot.faux.type-P .orig,.mot.faux.type-P .placeholder{display:none !important}' +
+    '.mot.faux.type-P .layer-top .vert-top{color:#c53030;font-weight:bold;font-style:normal;background:rgba(197,48,48,.08);padding:0 3px;border-radius:3px}' +
     'body.mode-vert .mot.faux.type-P .layer-base .vert{display:inline !important;color:#c53030;font-weight:bold;font-size:1.05em;background:rgba(197,48,48,.08);padding:0 3px;border-radius:3px}' +
     /* Extras (mots en trop) */
     '.mot.extra-w .extra-orig{display:inline;color:#2563eb;text-decoration:line-through;text-decoration-color:#2563eb;text-decoration-thickness:2px;font-style:italic}' +
@@ -5641,7 +5656,47 @@ function Copies(p){
   var curEditErr=editMode&&queue.length>0&&editIdx<queue.length?queue[editIdx]:null;
   var tokens=data.tokens||tokenize(data.text||"");
 
+  // ── Aperçu permanent (colonne de droite) — UN SEUL point de rendu ──
+  // Appelé après chaque rendu React. Au changement d'élève : document réécrit.
+  // Pour le même élève : diff minimal (classe du body pour les options, sections
+  // de la copie une à une) — cocher ou décocher ne reconstruit que ce qui a
+  // changé et ne fait jamais sauter la position de lecture dans la copie.
+  var apercuRef=React.useRef(null);
+  var apercuEtatRef=React.useRef({key:null});
+  function renderApercu(){
+    var node=apercuRef.current;
+    if(!node)return;
+    if(!selectedKey){apercuEtatRef.current.key=null;return}
+    var r=buildHtmlFor(selectedKey,true);
+    if(!r)return;
+    var doc=node.contentDocument;
+    if(!doc)return;
+    var etat=apercuEtatRef.current;
+    if(etat.key!==selectedKey||!doc.body||!doc.querySelector(".copie")){
+      doc.open();doc.write(r.html);doc.close();
+      etat.key=selectedKey;
+      return;
+    }
+    var neuf=new DOMParser().parseFromString(r.html,"text/html");
+    if(doc.body.className!==neuf.body.className)doc.body.className=neuf.body.className;
+    var aS=doc.querySelector("head style"),bS=neuf.querySelector("head style");
+    if(aS&&bS&&aS.textContent!==bS.textContent)aS.textContent=bS.textContent;
+    var aC=doc.querySelector(".copie"),bC=neuf.querySelector(".copie");
+    if(aC&&bC){
+      var structure=function(root){return [].map.call(root.children,function(x){return x.className}).join("|")};
+      if(structure(aC)!==structure(bC)){ aC.innerHTML=bC.innerHTML; }
+      else{
+        for(var ci=0;ci<aC.children.length;ci++){
+          if(aC.children[ci].innerHTML!==bC.children[ci].innerHTML)aC.children[ci].innerHTML=bC.children[ci].innerHTML;
+        }
+      }
+    }
+  }
+  React.useEffect(function(){ renderApercu(); });
+
   return h("div",{className:"fade-up"},
+   h("div",{className:selectedKey?"copies-2col":undefined},
+   h("div",{className:"copies-left"},
     // Sélection élève + boutons export
     h("div",{className:"card"},
       h("h2",null,"\ud83d\udcc4 Copies \u00e0 envoyer aux familles"),
@@ -5667,7 +5722,7 @@ function Copies(p){
         h("div",{style:{display:"flex",gap:14,flexWrap:"wrap",alignItems:"center",marginBottom:8}},
           h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}},
             h("span",{style:{fontSize:".78rem",color:"var(--muted)",fontWeight:600,marginRight:4}},"Mode :"),
-            [["rien","Rien"],["brut","Brut"],["barre","Soulign\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
+            [["rien","Rien"],["brut","Brut"],["barre","Barr\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
               var v=pair[0],lab=pair[1],isSel=copyOpts.mode===v;
               return h("label",{key:v,title:"Mode d\u2019affichage du mot fautif : "+lab,style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:6,cursor:"pointer",background:isSel?"var(--primary-light)":"var(--card)",fontSize:".78rem",fontWeight:isSel?700:400}},
                 h("input",{type:"radio",name:"copyMode",value:v,checked:isSel,onChange:function(){updCopyOpts({mode:v})},style:{margin:0}}),
@@ -5758,7 +5813,7 @@ function Copies(p){
         h("div",{style:{background:"var(--card)",borderRadius:10,padding:"8px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap",fontSize:".78rem"}},
           h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
             h("span",{style:{color:"var(--muted)",fontWeight:600}},"Mode :"),
-            [["rien","Rien"],["brut","Brut"],["barre","Soulign\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
+            [["rien","Rien"],["brut","Brut"],["barre","Barr\u00e9"],["placeholder","Placeholder"],["vert","Vert direct"]].map(function(pair){
               var v=pair[0],lab=pair[1],isSel=copyOpts.mode===v;
               return h("label",{key:v,style:{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:5,cursor:"pointer",background:isSel?"var(--primary-light)":"var(--card)",fontWeight:isSel?700:400}},
                 h("input",{type:"radio",name:"copyMode_modal",value:v,checked:isSel,onChange:function(){updCopyOpts({mode:v})},style:{margin:0}}),
@@ -5870,21 +5925,24 @@ function Copies(p){
               h("button",{className:"btn-sm btn-primary",onClick:saveBilan,disabled:!bilanDirty},"\u2713 Valider le bilan")
             )
           )
-        ),
-        // Aperçu : iframe avec le HTML généré (= exactement ce qui sera exporté, avec bilan en cours)
-        !editMode&&(function(){
-          var rPrev=buildHtmlFor(selectedKey,true);
-          return h("div",{className:"card",style:{padding:10}},
-            h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,padding:"0 4px"}},
-              h("h3",{style:{margin:0,fontSize:"1rem"}},"Aper\u00e7u (= fichier export\u00e9)",
-                ifo("L\u2019aper\u00e7u utilise les options s\u00e9lectionn\u00e9es en haut et le bilan en cours d\u2019\u00e9dition (m\u00eame non valid\u00e9).",{below:true})),
-              h("button",{className:"btn-sm btn-ghost",style:{fontSize:".74rem"},onClick:function(){exportHtml(selectedKey)},title:"T\u00e9l\u00e9charge cette copie individuellement (selon les options actuelles)"},"\u2b07 T\u00e9l\u00e9charger cette copie")
-            ),
-            rPrev?h("iframe",{srcDoc:rPrev.html,style:{width:"100%",height:580,border:"1px solid var(--border)",borderRadius:6,background:"#faf6ee"},sandbox:""}):h("p",null,"Aucun aper\u00e7u disponible.")
-          );
-        })()
+        )
       );
     })()
+   ),
+   // ── Colonne de droite : la copie de l'élève, visible en permanence ──
+   // (patron des éditeurs du site : le travail à gauche, le rendu à droite,
+   //  mis à jour à chaque clic sans jamais perdre la position de lecture)
+   selectedKey?h("div",{className:"copies-right"},
+     h("div",{className:"card",style:{padding:10}},
+       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,padding:"0 4px"}},
+         h("h3",{style:{margin:0,fontSize:"1rem"}},"Aper\u00e7u (= fichier export\u00e9)",
+           ifo("L\u2019aper\u00e7u suit tout ce que tu changes \u00e0 gauche (mode, annotations, bilan, transcriptions), avec le bilan en cours d\u2019\u00e9dition m\u00eame non valid\u00e9.",{below:true})),
+         h("button",{className:"btn-sm btn-ghost",style:{fontSize:".74rem"},onClick:function(){exportHtml(selectedKey)},title:"T\u00e9l\u00e9charge cette copie individuellement (selon les options actuelles)"},"\u2b07 T\u00e9l\u00e9charger cette copie")
+       ),
+       h("iframe",{ref:apercuRef,title:"Aper\u00e7u de la copie",sandbox:"allow-same-origin",style:{width:"100%",height:"calc(100vh - 130px)",minHeight:420,border:"1px solid var(--border)",borderRadius:6,background:"#faf6ee"}})
+     )
+   ):null
+   )
   );
 }
 
@@ -6049,7 +6107,7 @@ function genererDonneesTest(){
         autocorrection:{"durand_alice":{status:"idle", solved:3, total:3, score:5, timestamp:maintenant}},
         config:Object.assign({},cfgCommun,{title:"Dict\u00e9e test \u2014 rendue",text:texteA,tokens:tokA}),
         results:results, absents:{"moreau_sacha":true},
-        copyOptions:{mode:"complet",showBadge:true,showPoints:true,showOverlay:true,linkExercices:true},
+        copyOptions:{mode:"barre",showBadge:true,showPoints:true,showOverlay:true,linkExercices:true},
         copyPublishedAt:maintenant
       }},
       {id:TEST_DICTEE_B, payload:{
