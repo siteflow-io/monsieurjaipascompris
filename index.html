@@ -2780,8 +2780,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.44.2";
-var APP_VERSION_DATE="2026-08-05";
+var APP_VERSION="8.45.0";
+var APP_VERSION_DATE="2026-08-09";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -11161,15 +11161,23 @@ function edDupliquerVers(j,k){
   var c=_edCh();if(!c)return;
   var it=((c.ch.seances[j]||{}).items||{})[k];if(!it||!it.ref)return;
   var data=chapitresData[c.ec.level]||{};
-  var choix=ordPaires(data).map(function(p){
-    return '<option value="'+p.k+'">'+atEsc(p.o.title||('Chapitre '+p.k))+'</option>';
+  /* [LOT5-\u2460] LE PATRON DU LOT \u2461, appliqu\u00e9 ici aussi : la valeur se capture
+     \u00c0 LA S\u00c9LECTION (ED_SEL + onchange, valeur initiale pos\u00e9e \u00e0 l'ouverture),
+     plus aucune lecture du DOM de la modale dans le rappel. Le rappel courait
+     d\u00e9j\u00e0 avant le retrait ([LOT4-\u2462]) \u2014 le geste aboutissait \u2014 mais quatre
+     modales \u00e0 menu, trois patrons ED_SEL et un getElementById : le quatri\u00e8me
+     s'aligne, et un rappel devenu asynchrone un jour ne cassera rien. */
+  var paires=ordPaires(data);
+  ED_SEL.v=paires.length?paires[0].k:null;
+  var choix=paires.map(function(p){
+    return '<option value="'+p.k+'"'+((String(ED_SEL.v)===String(p.k))?' selected':'')+'>'+atEsc(p.o.title||('Chapitre '+p.k))+'</option>';
   }).join('');
   atModaleChoix('Dupliquer \u00ab '+atEsc(it.title||k)+' \u00bb vers un autre chapitre :<br>'
-    +'<select class="at-sel" id="ed-dup-ch">'+choix+'</select><br>'
+    +'<select class="at-sel" id="ed-dup-ch" onchange="ED_SEL.v=this.value">'+choix+'</select><br>'
     +'La copie arrive en fin de premi\u00e8re s\u00e9ance du chapitre choisi, <b>non publi\u00e9e</b>.',
     [{lib:'Annuler',fn:function(){}},
      {lib:'Dupliquer',prim:true,fn:function(){
-       var cible=(document.getElementById('ed-dup-ch')||{}).value;
+       var cible=ED_SEL.v;
        var chC=data[cible];if(!chC)return;
        var pr=atSeances(chC)[0];
        if(!pr){atInfo('Ce chapitre n\u2019a pas encore de s\u00e9ance.');return;}
