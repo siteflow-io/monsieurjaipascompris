@@ -288,6 +288,20 @@ Le périmètre de M14 avait trop grossi (passe standard + portail à code + dén
 
 **TROIS QUESTIONS EN ATTENTE DE PAUL, bloquantes pour le module** : ⑴ **les dates des périodes P1 à PFIN** (absentes du calendrier annuel) — sans elles, impossible de savoir quel créneau vaut quand ⑵ **la nature des créneaux partagés avec « X Français »** : demi-groupe de ses classes ou classes entières qui ne sont pas les siennes ? comptent-ils dans sa progression MJPC ? ⑶ **4 BANKSY et 4 PYTHAGORE doivent-elles exister comme classes dans MJPC**, ou n'y voit-il que des séances ponctuelles ?
 
+### 🔶 LES BUGS DES APPLICATIONS — inventaire tenu par Paul (ouvert le 09/08, à régler plus tard)
+
+*Ces défauts vivent dans les fichiers des APPS, pas dans `index.html` : chacun peut donc se traiter par un exécutant dédié, en parallèle du site, sans risque de collision (la collision se produit à la promotion d'un même fichier).*
+
+**`reecriture.html` — quatre constats de Paul, 09/08, en usage réel (compte élève ALOYEAU Elyse, 4e)**
+1. ⚠ **L'IDENTITÉ MJPC N'EST PAS TRANSMISE** — le défaut le plus grave. Elyse, connectée au site, **tombe sur l'écran de connexion de « Mes réécritures »** alors qu'elle est reconnue sans rien saisir pour la dictée ET pour la réécriture de brevet blanc. C'est contraire à la doctrine : *MJPC BYPASSE les portails d'identité des apps, il ne les remplace pas.* Défaut de socle, pas d'affichage. (À vérifier : le contournement marche pour `reecriture_bb4e` mais pas pour `reecriture` — comparer les deux, l'un des deux porte la bonne implantation.)
+2. ⚠ **L'ÉCRAN « ? » EXPOSE DES INFORMATIONS DE PROF À L'ÉLÈVE** : « Réécriture v2.4.0 · Socle MJPC 1.3.0 · Nouveautés : Site MJPC en cours de construction · Réglages : Tout se pilote depuis le panneau professeur ». Un élève n'a que faire de la version et du socle, et « en cours de construction » n'inspire pas confiance. Même famille que les affichages menteurs du panneau prof : *un écran dit à chacun ce qui le concerne*.
+3. **Les deux réécritures s'affichent ensemble et ne peuvent pas être séparées** — Paul ne peut pas en montrer une seule.
+4. **Libellé à corriger** (celui-ci est dans `index.html`, au titre du site) : l'avertissement de publication dit « L'onglet Réécriture ne contient aucun travail rangé pour le niveau 4E ». Le message DIT VRAI — aucune réécriture n'est liée à une séance — mais « aucun travail rangé » prête à confusion alors que les réécritures existent bien dans l'app. Dire plutôt : « aucune réécriture rangée dans une séance ».
+
+**`pilotage_debat_s3.html` — soupçon du même ordre (Paul, 09/08)** : *« il me semble que pilotage débat est aussi dans ce cas »* — à VÉRIFIER, non mesuré. Rappel : ce fichier porte déjà un **CHANTIER À REPRENDRE** (refonte multi-classe : une seule séance sous `active/debat`, le sélecteur de classe ne change pas de débat ; cible : un débat par classe sous `active/debats/<classe>` + pointeur `active/classeEnCours` ; en suspens : code commun ou un code par classe). Traiter les deux ensemble le jour venu.
+
+**LA VÉRIFICATION À MENER SUR LES NEUF APPS, une fois pour toutes** : le contournement d'identité MJPC fonctionne-t-il partout ? l'écran d'aide dit-il à l'élève ce qui le concerne, et rien d'autre ? Ce sont deux questions qui se posent identiquement à chaque app, et deux réponses qui se mesurent en quelques minutes par app. **À faire en une passe, pas app par app au fil des découvertes de Paul.**
+
 ### 🔶 PANNEAU PROF — LES AFFICHAGES MENTEURS (inventaire du 08/08, sur demande de Paul · à traiter plus tard)
 
 **Le fond, et c'est le plus grave** : le Tableau de bord annonce *« état instantané du SITE »* alors qu'il décrit **l'état de la SESSION en cours** — ce qui est chargé dans ce navigateur, à cet instant. Ce n'est pas un détail de vocabulaire : **c'est ce qui a fait cliquer Paul sur « Mettre les fiches à jour » le 07/08**, l'écran affirmant un état qu'il n'avait pas vérifié.
