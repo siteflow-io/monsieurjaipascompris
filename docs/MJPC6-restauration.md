@@ -738,6 +738,17 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **AUDIT** : couches en position absolue vérifiées, couche fautive retirée, point de rendu unique, **aucune écriture réseau ajoutée** · banc : une faute de chaque type + un mot en trop, cinq modes, trois contextes, copie sans faute, copie longue.
 - **Restauration en cas de `BUG`** : revenir au blob md5 `acf79d92f48c69e7babdf8a8f3b3cefe` (586 505 o).
 
+## Point de retour — PROMOTION LOT ⑤, 09/08/2026
+| fichier | AVANT | APRÈS |
+|---|---|---|
+| `index.html` | 940 936 o · 8.44.2 · md5 `427b8905eb02c4776523f604dc6b4e82` (commit `1738a494f6a3`) | 941 574 o · **8.45.0** · md5 `35e0c5b4894dfc0aeb8ce9f8cc7bbe44` |
+
+- **① LA PRÉMISSE DU MANDAT ÉTAIT PÉRIMÉE, et l'exécutant l'a démontré** : la conscience avait écrit que `edDupliquerVers` ne pouvait pas aboutir (`getElementById` lu après le retrait de la modale). **Or `atModaleChoix` fait `if(fn)fn();` PUIS le retrait** depuis le LOT ④ — la conscience avait oublié la réparation qu'elle venait elle-même de promouvoir. **Le geste aboutissait déjà.** *(Vérifié indépendamment.)* Le geste est néanmoins aligné sur le patron commun `ED_SEL` — un seul canal pour lire un menu de modale — et **les 25 appels d'`atModaleChoix` sont balayés** : 3 déjà au bon patron, celui-ci les rejoint, 21 ne lisent rien de la modale.
+- **② LES TROIS POSITIONS D'IMPRESSION — TRANCHÉ PAR LA MESURE, huit maillons vérifiés** : clic reçu · mode mémorisé (`ED2_PAG` + `localStorage`) · **exactement un rendu par clic** · coûts recalculés · **pages A4 qui passent de 5 à 7 à 11** · réglage retenu après rechargement complet · le papier garde le dernier mot · clic sur le bouton déjà actif inoffensif. **Aucun maillon ne manque.** → **C'est un cache de navigateur chez Paul.** Test qui tranche en une seconde : **les boutons doivent porter un nombre de feuilles** (« Au plus serré 5 f. ») ; sans nombre, c'est une copie antérieure au LOT ③ → Ctrl+F5.
+- **AUDIT** : 853 → 853 fonctions, **0 supprimée, une seule modifiée** (`edDupliquerVers`) · `published` jamais écrit · aucune écriture réseau ajoutée · vue élève **identique à l'octet** (22 264 o) · décor de banc à taille réelle · dual parser vert.
+- **Dette cosmétique réglée au titre de la règle du jour** : `APP_VERSION_DATE` datait la pastille de quatre jours en arrière.
+- **Restauration en cas de `BUG`** : revenir au blob du commit `1738a494f6a3` (8.44.2, md5 `427b8905…`).
+
 ## Point de retour — PROMOTION LOT ④ · L'ÉDITEUR RÉPARÉ, 09/08/2026
 | fichier | AVANT | APRÈS |
 |---|---|---|
