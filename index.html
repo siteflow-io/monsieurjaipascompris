@@ -811,6 +811,13 @@ select.at-sel option,select.cm-input option,#link-modal select option,select.at-
 .ed2-doc-ref{font-size:.66rem;color:#8a7f6a;letter-spacing:.06em}
 .ed2-doc-t{font-weight:700;margin:2px 0 4px}
 .ed2-doc-m{font-size:.74rem;color:#6a6152}
+.ed2-fcadre{background:#f4f1ea;border-radius:8px;padding:2px;margin-top:6px}
+.ed2-fcadre .feuille{margin:6px auto;box-shadow:0 2px 10px rgba(0,0,0,.10)}
+@keyframes ed2ZPulse{0%{outline:3px solid rgba(212,160,23,.9);background:rgba(212,160,23,.18)}100%{outline:3px solid rgba(212,160,23,0);background:transparent}}
+.ed2-zpulse{animation:ed2ZPulse 1.6s ease-out forwards;border-radius:6px}
+.ed2-fcadre [data-c]:hover{outline:1px dashed rgba(212,160,23,.55);cursor:pointer;border-radius:6px}
+.at-edch-fz{margin-left:14px;border-left:2px solid rgba(212,160,23,.25);padding-left:10px}
+.at-edch-fz .at-edch-lib{font-size:.72rem}
 .ed2-inserer{display:block;width:100%;text-align:center;font-size:.72rem;color:#8f8672;background:none;border:none;border-top:1px dashed rgba(143,134,114,.4);padding:3px 0;cursor:pointer;margin:2px 0}
 .ed2-inserer:hover{color:#d4a017;border-top-color:#d4a017}
 .ed2-trou{border:1px dashed #8f8672;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(143,134,114,.06)}
@@ -2767,7 +2774,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.42.0";
+var APP_VERSION="8.43.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -9253,7 +9260,7 @@ ATELIER_FORMES.bloc_image=function(id,c,vals){
 ATELIER_FORMES.bloc_consigne=function(id,c,vals,ctx,refs){
   var t=atTexteOuReforme(vals,refs,'texte',ctx.reformOn);
   var corps=ctx.uneParLigne?atLignes(t).filter(function(x){return x.trim();}).map(function(x){return '<div class="f-cons-l">\u25b8 '+atEsc(x)+'</div>';}).join(''):atMultiligne(t);
-  return '<div class="f-bloc f-consigne" data-c="'+id+'">'+(ctx.verbeAction?'<span class="f-verbe">'+atEsc(ctx.verbeAction)+'</span> ':'')+corps+(ctx.motsClesHtml||'')+'</div>';
+  return '<div class="f-bloc f-consigne" data-c="'+id+'">'+(ctx.verbeAction?'<span class="f-verbe" data-c="verbe_action">'+atEsc(ctx.verbeAction)+'</span> ':'')+corps+(ctx.motsClesHtml||'')+'</div>';   /* [LOT3b] le repère du verbe inline */
 };
 ATELIER_FORMES.bloc_question=function(id,c,vals,ctx,refs){
   var t=atTexteOuReforme(vals,refs,'texte',ctx.reformOn);
@@ -11218,6 +11225,46 @@ function ed2Aller(item){
    imposé par la place, et rien n'est coupé en deux. ═══ */
 var ED2_A4={h:1123,utile:1123-2*64};
 var ED2_PAG={mode:null};
+/* [LOT3] LA CHARTE, SCOPÉE POUR L'ÉCRAN — le rendu réutilisé est
+   atelierDocumentHTML, le CORPS COMMUN de l'aperçu et de l'impression ;
+   sa charte (atelierCharteCSS) est écrite pour une page autonome (body, *).
+   Ici on la sert DANS la page de l'éditeur : la partie écran (avant
+   @media print) est transformée — `body` devient `.ed2-fcadre`, `*` devient
+   `.ed2-fcadre *`, tout autre sélecteur est préfixé. L'impression du papier
+   (ed2ImprimerHTML) continue de prendre la charte INTACTE : rien du rendu
+   d'impression n'est modifié. Cache : var ED2_CHARTE (nulle puis chaîne). */
+var ED2_CHARTE=null;
+function ed2CharteScopee(){
+  if(ED2_CHARTE!=null)return ED2_CHARTE;
+  var brut=atelierCharteCSS();
+  var i=brut.indexOf('@media print{');
+  if(i>=0)brut=brut.slice(0,i);
+  ED2_CHARTE=brut.split('}').filter(function(r){return r.trim();}).map(function(r){
+    var p=r.indexOf('{');if(p<0)return '';
+    var sels=r.slice(0,p).split(',').map(function(s){
+      s=s.trim();
+      if(s==='*')return '.ed2-fcadre *';
+      if(s==='body')return '.ed2-fcadre';
+      return '.ed2-fcadre '+s;
+    }).join(',');
+    return sels+'{'+r.slice(p+1)+'}';
+  }).join('');
+  return ED2_CHARTE;
+}
+/* [LOT3] le contenu d'une feuille — le document tel qu'il sortira, RENDU RÉUTILISÉ */
+function ed2FeuilleHtml(doc){
+  try{return atelierDocumentHTML(doc,null,{});}
+  catch(e){return '<div class="ed2-pt">'+atEsc(doc.titre||'')+'</div><div class="ed2-pm">rendu impossible : '+atEsc(e.message)+'</div>';}
+}
+/* [LOT3] un diaporama affiche ses TITRES de diapositives (simple) si le cache
+   des diaporamas est là ; sinon sa carte suffit — choix dit au rapport. */
+function ed2DiapoHtml(ref){
+  var dp=(typeof AT_DIAPOS!=='undefined'&&AT_DIAPOS)?AT_DIAPOS[ref]:null;
+  if(!dp||!Array.isArray(dp.diapos)||!dp.diapos.length)return null;
+  return '<ol class="ed2-dp-titres">'+dp.diapos.map(function(d){
+    return '<li>'+atEsc((d&&d.titre)||'(diapositive sans titre)')+'</li>';
+  }).join('')+'</ol>';
+}
 function ed2PagModeLu(){
   if(ED2_PAG.mode)return ED2_PAG.mode;
   try{ED2_PAG.mode=localStorage.getItem('mjpc_ed2_pagination')||'serre';}catch(e){ED2_PAG.mode='serre';}
@@ -11228,8 +11275,37 @@ function ed2PagPoser(mode){
   try{localStorage.setItem('mjpc_ed2_pagination',mode);}catch(e){}
   atEditerChapitreRendre();
 }
-/* estimation de hauteur : chaque zone cochée occupe de la place (patron maquette) */
+/* [LOT3] LA HAUTEUR VRAIE : mesurée sur le rendu (offsetHeight du .ed2-pdoc,
+   relevée après chaque rendu par ed2Mesurer) ; l'estimation d'avant ne sert
+   plus que de PREMIER JET, avant la première mesure. Cache : var ED2_MESURES
+   (objet {item:pixels}, déclaré ci-dessous). */
+var ED2_MESURES={};
+function ed2Mesurer(){
+  document.querySelectorAll('.ed2-pdoc').forEach(function(el){
+    var it=el.getAttribute('data-item');
+    if(it)ED2_MESURES[it]=el.offsetHeight;
+  });
+}
+function ed2PagSignature(docs,mode){
+  return ed2Pages(docs,mode).map(function(p){return p.map(function(d){return d.item;}).join(',');}).join('|');
+}
+/* la repagination MESURÉE : si la découpe réelle diffère de celle à l'écran,
+   UN rendu (changement de données de mise en page) — garde anti-boucle par
+   signature cible. */
+function ed2Repaginer(){
+  var ec=AT.edChap;if(!ec)return;
+  ed2Mesurer();
+  var docs=ed2Documents(ec.level,ec.chnum);
+  var cible=ed2PagSignature(docs,ed2PagModeLu());
+  if(cible===ED2_PAG.affichee){ED2_PAG.reflow=null;return;}   /* stable : la garde se libère */
+  if(cible!==ED2_PAG.reflow){
+    ED2_PAG.reflow=cible;
+    atEditerChapitreRendre();
+  }
+}
+/* estimation de hauteur : PREMIER JET avant mesure (patron maquette) */
 function ed2HauteurDoc(d){
+  if(ED2_MESURES[d.item])return ED2_MESURES[d.item];   /* [LOT3] le rendu fait foi */
   var h=76;   /* référence + titre + sous-titre */
   var doc=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&d.ref)?LINK_ATELIER_DOCS[d.ref]:null;
   var cases=(doc&&doc.cases)||{};
@@ -11279,6 +11355,7 @@ function ed2CoupeRetirer(a,b,ev){
    les lignes de partage et les emplacements toujours proposables. */
 function ed2Papier(level,chnum,docs){
   var mode=ed2PagModeLu(),pages=ed2Pages(docs,mode),total=pages.length;
+  ED2_PAG.affichee=pages.map(function(p){return p.map(function(d){return d.item;}).join(',');}).join('|');   /* [LOT3] */
   var couts={serre:ed2CoutFeuilles(docs,'serre'),seance:ed2CoutFeuilles(docs,'seance'),document:ed2CoutFeuilles(docs,'document')};
   var h='<div class="ed2-papier">'
     +'<div class="ed2-pbarre">'
@@ -11319,11 +11396,22 @@ function ed2Papier(level,chnum,docs){
         derSeance=d.seance;
         h+='<div class="ed2-pse" style="border-color:'+d.teinte+';color:'+d.teinte+'">'+atEsc(d.seanceTitre)+'</div>';
       }
-      h+='<div class="ed2-pdoc'+(ED2.courant===d.item?' ed2-halo':'')+'" data-item="'+d.item+'" onclick="ed2ClicDocument(\''+d.item+'\',\'item-'+d.item+'\')">'
-        +'<div class="ed2-pref">Ch. '+atEsc(chnum)+' · S. '+atEsc(String(d.rang+1))+'</div>'
-        +'<div class="ed2-pt">'+atEsc(d.titre)+'</div>'
-        +'<div class="ed2-pm">'+atEsc(d.produit?(((ATELIER_PRODUITS[d.produit]||{}).libelle)||d.produit):d.kind)+'</div>'
-        +'</div>';
+      /* [LOT3] CHAQUE FEUILLE AFFICHE CE QUE L'ÉLÈVE LIRA — le corps commun du
+         rendu (atelierDocumentHTML), sous la charte scopée ; les zones [data-c]
+         deviennent le point de clic (ed2ClicPapier). Documents non éditables :
+         carte d'avant ; diaporama : ses titres de diapositives si le cache est là. */
+      var _doc=(d.feuille&&typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&d.ref)?LINK_ATELIER_DOCS[d.ref]:null;
+      var _dpH=(!_doc&&d.kind==='diaporama'&&d.ref)?ed2DiapoHtml(d.ref):null;
+      h+='<div class="ed2-pdoc'+(ED2.courant===d.item?' ed2-halo':'')+'" data-item="'+d.item+'" onclick="ed2ClicPapier(event,\''+d.item+'\')">'
+        +'<div class="ed2-pref">Ch. '+atEsc(chnum)+' · S. '+atEsc(String(d.rang+1))+'</div>';
+      if(_doc){
+        h+='<div class="ed2-fcadre" data-ref="'+atEsc(d.ref)+'">'+ed2FeuilleHtml(_doc)+'</div>';
+      }else{
+        h+='<div class="ed2-pt">'+atEsc(d.titre)+'</div>'
+          +'<div class="ed2-pm">'+atEsc(d.produit?(((ATELIER_PRODUITS[d.produit]||{}).libelle)||d.produit):d.kind)+'</div>'
+          +(_dpH||'');
+      }
+      h+='</div>';
       var suiv=pg[id+1];
       if(suiv){
         var k=ed2CoupeCle(d.item,suiv.item);
@@ -11408,6 +11496,119 @@ function ed2Selectionner(item,champ,depuis){
     zone.classList.add('ed2-sel');
     if(depuis==='panneau')ed2PapierVers(zone);
   }
+}
+/* ═══ [LOT3] LES CHAMPS DE LA FEUILLE DANS LE PANNEAU ═══
+   Pour chaque item-feuille : une ligne par CASE COCHÉE qui porte des champs
+   (data-champ="c-<id>" — la cible du clic de zone). Les cases se cochent dans
+   l'éditeur de feuille (bouton Éditer) : ici on ÉDITE LES VALEURS, on ne
+   compose pas. Écrire passe par le typage de l'atelier (atValeurTypee), met à
+   jour LA SEULE ZONE concernée (jamais le papier entier à la frappe), et
+   sauve la feuille en différé par l'écrivain du nœud (secuEcrire, verdict). */
+function ed2ChampFHtml(ref,id,ch,vals,idx){
+  var v=vals?vals[ch.k]:undefined;
+  var app=(idx===undefined)
+    ?('\''+ref+'\',\''+id+'\',\''+ch.k+'\',this.value')
+    :('\''+ref+'\','+idx+',\''+ch.k+'\',this.value');
+  var fn=(idx===undefined)?'ed2SetValeurFeuille':'ed2SetBlocFeuille';
+  if(ch.kind==='area'||ch.kind==='list'){
+    var txt=Array.isArray(v)?v.join('\n'):(v||'');
+    return '<label class="at-edch-lib">'+atEsc(ch.l)+'</label><textarea class="at-edch-ta" oninput="'+fn+'('+app+')">'+atEsc(txt)+'</textarea>';
+  }
+  if(ch.kind==='date')return '<label class="at-edch-lib">'+atEsc(ch.l)+'</label><input type="date" class="at-edch-in" value="'+atEsc(v||'')+'" oninput="'+fn+'('+app+')">';
+  return '<label class="at-edch-lib">'+atEsc(ch.l)+'</label><input class="at-edch-in" value="'+atEsc(v||'')+'" oninput="'+fn+'('+app+')">';
+}
+function ed2PanneauFeuille(ref){
+  var doc=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[ref]:null;
+  if(!doc)return '';
+  var cases=doc.cases||{},vals=doc.valeurs||{};
+  var h='';
+  Object.keys(ATELIER_COMPOSANTES).forEach(function(id){
+    var c=ATELIER_COMPOSANTES[id];
+    if(cases[id]!==true||c.reserve||c.multiple)return;
+    if(c.adresse){
+      h+='<div class="at-edch-fz" data-champ="c-'+id+'" onclick="ed2ClicChamp(\'c-'+id+'\')">'
+        +'<label class="at-edch-lib">'+atEsc(c.libelle)+'</label>'
+        +'<input class="at-edch-in" value="'+atEsc((typeof atAdresseAffichage==='function'?atAdresseAffichage(doc,id):'')||(vals[id]&&vals[id].texte)||'')+'" readonly title="Cette ligne suit l\u2019adresse de la feuille.">'
+        +'</div>';
+      return;
+    }
+    if(!c.champs&&!c.intitule_defaut){
+      /* [LOT3b] la maquette fait foi : UNE CASE COCHÉE = UNE LIGNE, même sans
+         champ. Le clic de zone y atterrit ; la valeur, elle, se remplit toute
+         seule ou se règle par sa case (éditeur de feuille — cochage différé). */
+      h+='<div class="at-edch-fz" data-champ="c-'+id+'" onclick="ed2ClicChamp(\'c-'+id+'\')">'
+        +'<label class="at-edch-lib"><b>'+atEsc(c.libelle)+'</b> <span class="ch-type">'
+        +(c.nature==='rendu'?'r\u00e9glage de rendu \u2014 il porte sur toute la feuille':'se remplit tout seul')
+        +'</span></label></div>';
+      return;
+    }
+    h+='<div class="at-edch-fz" data-champ="c-'+id+'" onclick="ed2ClicChamp(\'c-'+id+'\')">'
+      +'<label class="at-edch-lib"><b>'+atEsc(c.libelle)+'</b></label>';
+    if(c.intitule_defaut)h+=ed2ChampFHtml(ref,id,{k:'intitule',l:'Intitul\u00e9 sur la feuille',kind:'texte'},{intitule:(vals[id]&&typeof vals[id].intitule==='string')?vals[id].intitule:c.intitule_defaut});
+    (c.champs||[]).forEach(function(ch){h+=ed2ChampFHtml(ref,id,ch,vals[id]||{});});
+    h+='</div>';
+  });
+  (doc.contenu||[]).forEach(function(b,i){
+    if(!b||cases[b.id]!==true)return;
+    var c=ATELIER_COMPOSANTES[b.id];if(!c||c.reserve)return;
+    var prem=!(doc.contenu.slice(0,i).some(function(x){return x&&x.id===b.id&&cases[b.id]===true;}));
+    var champAttr=prem?('c-'+b.id):('c-'+b.id+'-'+i);
+    h+='<div class="at-edch-fz" data-champ="'+champAttr+'" onclick="ed2ClicChamp(\''+champAttr+'\')">'
+      +'<label class="at-edch-lib"><b>'+atEsc(c.libelle)+(prem?'':' ('+(i+1)+')')+'</b></label>';
+    (c.champs||[]).forEach(function(ch){h+=ed2ChampFHtml(ref,b.id,ch,b.valeurs||{},i);});
+    h+='</div>';
+  });
+  return h?('<div class="at-edch-lib" style="margin-top:8px;color:#d4a017">Le contenu de la feuille</div>'+h):'';
+}
+var ED2_TIMERS={};
+function ed2SetValeurFeuille(ref,id,k,v){
+  var doc=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc)return;
+  doc.valeurs=doc.valeurs||{};doc.valeurs[id]=doc.valeurs[id]||{};
+  doc.valeurs[id][k]=atValeurTypee(id,k,v);
+  doc.dates=doc.dates||{};doc.dates.modifieLe=Date.now();
+  ed2MajZone(ref,id);
+  ed2SauverFeuille(ref);
+}
+function ed2SetBlocFeuille(ref,i,k,v){
+  var doc=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc||!doc.contenu||!doc.contenu[i])return;
+  var b=doc.contenu[i];
+  b.valeurs=b.valeurs||{};
+  b.valeurs[k]=atValeurTypee(b.id,k,v);
+  doc.dates=doc.dates||{};doc.dates.modifieLe=Date.now();
+  ed2MajZone(ref,b.id);
+  ed2SauverFeuille(ref);
+}
+/* la MAJ CIBLÉE : seul le cadre de CETTE feuille est re-rendu (une même feuille
+   déposée deux fois se met à jour partout), la zone touchée pulse. */
+function ed2MajZone(ref,comp){
+  var doc=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc)return;
+  document.querySelectorAll('.ed2-fcadre[data-ref="'+ref+'"]').forEach(function(cadre){
+    cadre.innerHTML=ed2FeuilleHtml(doc);
+    var z=comp?cadre.querySelector('[data-c="'+comp+'"]'):null;
+    if(z){z.classList.add('ed2-zpulse');setTimeout(function(){z.classList.remove('ed2-zpulse');},1700);}
+  });
+}
+function ed2SauverFeuille(ref){
+  clearTimeout(ED2_TIMERS[ref]);
+  ED2_TIMERS[ref]=setTimeout(function(){
+    var doc=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc)return;
+    doc.dates=doc.dates||{};doc.dates.versionDoc=(doc.dates.versionDoc||0)+1;
+    secuEcrire(AT_NOEUD+'/'+ref,doc).then(function(r){
+      if(!r.ok){atInfo('\u26a0 La feuille n\u2019a pas pu s\u2019enregistrer \u2014 tes derniers changements ne sont pas en base.');return;}
+      if(typeof AT_DOCS!=='undefined'&&AT_DOCS)AT_DOCS[ref]=doc;
+      if(AT&&AT.liste)AT.liste[ref]=JSON.parse(JSON.stringify(doc));   /* même copie qu'atEnregistrerMaintenant */
+      ed2Repaginer();   /* le coût d'impression suit la vraie hauteur — UN rendu si la découpe change */
+    });
+  },1200);
+}
+/* [LOT3] LE GESTE DE PAUL : un clic sur une ZONE de la feuille rendue va à la
+   ligne de SON champ dans le panneau (data-champ="c-<composante>"), curseur
+   dedans ; un clic hors zone garde le comportement d'avant (bloc de l'item). */
+function ed2ClicPapier(ev,item){
+  var z=ev&&ev.target&&ev.target.closest?ev.target.closest('[data-c]'):null;
+  var pd=ev&&ev.target&&ev.target.closest?ev.target.closest('.ed2-pdoc'):null;
+  var champ=(z&&pd&&pd.contains(z))?('c-'+z.getAttribute('data-c')):('item-'+item);
+  ed2ClicDocument(item,champ);
 }
 /* ③b clic dans le document → le point d'édition ; ③c clic sur un champ → la zone */
 function ed2ClicDocument(item,champ){
@@ -11514,6 +11715,7 @@ function atEditerChapitreRendre(){
         +'<label class="at-edch-lib">Sous-titre</label><input class="at-edch-in" value="'+atEsc(it.subtitle||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'subtitle\',this.value)">'
         +'<label class="at-edch-lib">Type (kind)</label><input class="at-edch-in" value="'+atEsc(it.kind||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'kind\',this.value)">'
         +'<label class="at-edch-lib">Ordre</label><input class="at-edch-in at-edch-num" type="number" value="'+(it.ordre||0)+'" onchange="atChampItem('+j+',\''+k+'\',\'ordre\',parseInt(this.value,10)||0)">'
+        +(((it.kind==='atelier'||it.source==='atelier')&&it.ref)?ed2PanneauFeuille(it.ref):'')   /* [LOT3] */
         +'</div>';
     });
     h+='</div>';
@@ -11524,6 +11726,15 @@ function atEditerChapitreRendre(){
   h+='</div>'+ed2Papier(ec.level,ec.chnum,_docs)+'</div>';
   z.innerHTML=h;
   /* \u2462a le d\u00e9filement de la PILE seule d\u00e9cide de la feuille courante (jamais la page) */
+  /* [LOT3] la charte scopée se pose UNE fois, dans <head> — hors du innerHTML
+     du papier pour ne pas se re-parser à chaque rendu. */
+  if(!document.getElementById('ed2-charte')){
+    var _st=document.createElement('style');_st.id='ed2-charte';
+    _st.textContent=ed2CharteScopee();
+    document.head.appendChild(_st);
+  }
+  /* [LOT3] mesurer le rendu, puis UNE repagination si la découpe réelle diffère */
+  requestAnimationFrame(function(){ed2Repaginer();});
   var _pile=document.querySelector('.ed2-papier');
   if(_pile&&!_pile._ed2){_pile._ed2=true;
     _pile.addEventListener('scroll',function(){
