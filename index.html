@@ -811,6 +811,8 @@ select.at-sel option,select.cm-input option,#link-modal select option,select.at-
 .ed2-doc-ref{font-size:.66rem;color:#8a7f6a;letter-spacing:.06em}
 .ed2-doc-t{font-weight:700;margin:2px 0 4px}
 .ed2-doc-m{font-size:.74rem;color:#6a6152}
+.ed2-inserer{display:block;width:100%;text-align:center;font-size:.72rem;color:#8f8672;background:none;border:none;border-top:1px dashed rgba(143,134,114,.4);padding:3px 0;cursor:pointer;margin:2px 0}
+.ed2-inserer:hover{color:#d4a017;border-top-color:#d4a017}
 .ed2-trou{border:1px dashed #8f8672;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(143,134,114,.06)}
 .ed2-trou-t{color:#c9c0ae;font-style:italic}
 .ed2-trou-q{font-size:.76rem;color:#8f8672;margin-bottom:8px}
@@ -2765,7 +2767,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.41.0";
+var APP_VERSION="8.42.0";
 var APP_VERSION_DATE="2026-08-05";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -7054,6 +7056,33 @@ var ATELIER_PROMPT_SEED={
     "\u00c9L\u00c9MENTS DISPONIBLES (la liste fait foi) :\n"+
     "@@COMPOSANTES@@\n"
 };
+/* [LOT2-⑧] LA PIÈCE D'ADRESSE — assemblée comme la présentation MJPC, jamais
+   fondue dans le texte persisté. Elle se déduit de LA FEUILLE OUVERTE (son
+   rattachement, ses notions héritées) : aucun état nouveau, aucune fuite d'une
+   feuille à l'autre. Vide dès que la feuille n'est pas adressée. */
+var AT_ADRESSE_DEBUT='── ADRESSE DE LA FEUILLE (pièce assemblée — ne s’enregistre pas avec le prompt) ──';
+var AT_ADRESSE_FIN='── fin de l’adresse ──';
+function atPromptSansAdresse(t){
+  t=String(t==null?'':t);
+  var a=t.indexOf(AT_ADRESSE_DEBUT);if(a<0)return t;
+  var b=t.indexOf(AT_ADRESSE_FIN,a);if(b<0)return t;
+  return (t.slice(0,a)+t.slice(b+AT_ADRESSE_FIN.length)).replace(/^\n+/,'');
+}
+function atPromptPieceAdresse(){
+  var d=AT.doc,ra=d&&d.rattachement;
+  if(!ra||!ra.chapitre||AT_IA.produit==='chapitre')return '';
+  var l=[AT_ADRESSE_DEBUT,'MON CONTEXTE — la feuille est déjà adressée, tiens-en compte sans que je le répète :'];
+  l.push('• Chapitre : « '+(ra.chapitreTitre||ra.chapitre)+' » ('+(ra.niveau||'?')+')');
+  l.push('• Séance '+ra.seance+' : « '+(ra.seanceTitre||'')+' »');
+  var n=(d.valeurs&&d.valeurs.notions&&d.valeurs.notions.items)||[];
+  if(n.length)l.push('• Notions visées : '+n.join(', '));
+  var co=(d.valeurs&&d.valeurs.competences&&d.valeurs.competences.items)||[];
+  if(co.length)l.push('• Compétences : '+co.join(', '));
+  var pr=ATELIER_PRODUITS[AT_IA.produit];
+  if(pr)l.push('• Produit attendu : '+pr.libelle);
+  l.push(AT_ADRESSE_FIN);
+  return l.join('\n')+'\n\n';
+}
 function atPromptTexte(){
   var brut=(AT_IA.tpl!=null?AT_IA.tpl:ATELIER_PROMPT_SEED[AT_IA.produit])||'';
   /* SITE-COURS-2c : chaque produit apporte ses jetons ; la fiche de séance garde
@@ -7068,7 +7097,7 @@ function atPromptTexte(){
   if(t.indexOf('@@BLOCS@@')>=0)t=t.replace('@@BLOCS@@',diapoVocabulaireBlocs());
   /* M-PROMPT-4 : la présentation de MJPC en tête — pièce ASSEMBLÉE, jamais fondue
      dans le texte persisté (un prompt édité par Paul reste intact en base). */
-  return mjpcPromptAvecPresentation(t,{});
+  return mjpcPromptAvecPresentation(atPromptPieceAdresse()+t,{});   /* [LOT2-⑧] */
 }
 /* M-PROMPT-4 : la liste des outils vient du hub, où les apps l'ont publiée. */
 function atChargerOutils(){ mjpcChargerOutils(FIREBASE_BASE,function(){}); }
@@ -7353,9 +7382,61 @@ function atIAAppliquer(doc,o){
 }
 function atIAInjecterNeuve(){
   var o=AT_IA.json;if(!o)return;
+  /* [LOT2-⑪] SANS feuille ouverte, la feuille neuve saurait où aller : on
+     DEMANDE la séance de dépôt au lieu de créer une orpheline à ré-adresser.
+     Le chapitre courant : l'adresse VALIDÉE du JSON si elle existe, sinon le
+     fil du dernier chapitre travaillé (AT_FIL, posé par l'éditeur de chapitre).
+     Sans chapitre identifiable : comportement d'avant, mais NOMMÉ. */
+  if(!AT.doc||!AT.docId){atIAInjecterAvecDestination(o);return;}
   var id='feuille_'+Date.now();
   AT.docId=id;AT.doc=atIAAppliquer(atDocNeuf(),o);AT.previewIdx=0;
   atEnregistrerMaintenant(function(){atRendreEditeur();});
+}
+function atIAInjecterAvecDestination(o){
+  var lvl=null,chn=null;
+  if(AT_IA.adresse&&AT_IA.adresse.chapitre){lvl=AT_IA.adresse.niveau;chn=AT_IA.adresse.chapitre;}
+  else if(typeof AT_FIL!=='undefined'&&AT_FIL&&AT_FIL.chnum){lvl=AT_FIL.level;chn=AT_FIL.chnum;}
+  var ch=lvl&&chn?((chapitresData[lvl]||{})[chn]||null):null;
+  if(!ch){
+    var id0='feuille_'+Date.now();
+    AT.docId=id0;AT.doc=atIAAppliquer(atDocNeuf(),o);AT.previewIdx=0;
+    atEnregistrerMaintenant(function(){
+      atInfo('Feuille cr\u00e9\u00e9e SANS adresse \u2014 d\u00e9pose-la depuis un chapitre (\u00ab Prendre une feuille existante\u2026 \u00bb).');
+      atRendreEditeur();
+    });
+    return;
+  }
+  var l=atSeances(ch);
+  ED_SEL.v=(AT_IA.adresse&&AT_IA.adresse.seance!=null&&l.some(function(p){return String(p.j)===String(AT_IA.adresse.seance);}))?String(AT_IA.adresse.seance):(l[0]&&l[0].j);
+  var choix=l.map(function(p){
+    return '<option value="'+atEsc(p.j)+'"'+((String(ED_SEL.v)===String(p.j))?' selected':'')+'>S\u00e9ance '+ordDe(p.se,p.j)+' \u2014 '+atEsc(p.se.title||'')+'</option>';
+  }).join('');
+  atModaleChoix('Dans quelle s\u00e9ance de \u00ab '+atEsc(ch.title||chn)+' \u00bb ('+atEsc(lvl)+') d\u00e9poser la feuille ?<br>'
+    +'<select class="at-sel" id="at-inj-se" onchange="ED_SEL.v=this.value">'+choix+'</select>',
+    [{lib:'Sans adresse (je la d\u00e9poserai plus tard)',fn:function(){
+       var id1='feuille_'+Date.now();
+       AT.docId=id1;AT.doc=atIAAppliquer(atDocNeuf(),o);AT.previewIdx=0;
+       atEnregistrerMaintenant(function(){atRendreEditeur();});
+     }},
+     {lib:'Cr\u00e9er la feuille ici',prim:true,fn:function(){
+       var j=ED_SEL.v;
+       if(!j){return;}
+       var se=ch.seances[j]||{};
+       var id='feuille_'+Date.now();
+       var doc=atIAAppliquer(atDocNeuf(),o);
+       edHeriterSeance(doc,se);   /* [LOT2-⑨] sans écraser ce que l'IA a rempli */
+       doc.rattachement={niveau:lvl,chapitre:chn,seance:j,
+                         chapitreTitre:ch.title||'',seanceTitre:se.title||'',
+                         chapitreUid:ch.uid||'',seanceUid:se.uid||''};
+       AT.docId=id;AT.doc=doc;AT.previewIdx=0;
+       atEnregistrerMaintenant(function(){
+         if(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)LINK_ATELIER_DOCS[id]=doc;
+         if(AT.liste)AT.liste[id]=doc;
+         itemCreer(lvl,chn,j,doc.titre||'Feuille',{kind:'atelier',source:'atelier',ref:id,published:false},null);
+         atInfo('Feuille d\u00e9pos\u00e9e dans \u00ab '+atEsc(se.title||('S\u00e9ance '+j))+' \u00bb \u2014 pas encore ouverte aux \u00e9l\u00e8ves.');
+         atRendreEditeur();
+       });
+     }}]);
 }
 function atIARemplacer(){
   var o=AT_IA.json;if(!o||!AT.doc||!AT.docId)return;
@@ -7537,6 +7618,10 @@ function atConfirmerEnr(){
   var ap=t.value, av=atPromptComplet();
   var f=document.getElementById('at-ia-copie');
   if(f)f.textContent='Archivage puis enregistrement\u2026';
+  /* [LOT2-⑧] la pièce d'adresse ne se PERSISTE jamais : elle est propre à LA
+     feuille ouverte — figée dans le prompt enregistré, elle polluerait toutes
+     les suivantes. Retirée ici, à la porte, par ses sentinelles. */
+  av=atPromptSansAdresse(av);ap=atPromptSansAdresse(ap);
   atArchiverPuisEcrire(AT_IA.produit,av,ap,function(ok,quoi){
     if(ok){
       AT_IA.tpl=ap;
@@ -10673,6 +10758,40 @@ function edAjouterSeance(){
   addSeance(c.ec.level,c.ec.chnum);
   setTimeout(atEditerChapitreRendre,900);
 }
+/* [LOT2-⑥] INSÉRER UNE SÉANCE ICI — à une place choisie, AVANT la séance j.
+   Distinct de « + Séance » (fin de liste) et de « + Feuille ici » (séance existante).
+   Le SOCLE ordre fait tout : la neuve prend l'ordre de j, les suivantes se
+   décalent en mémoire, ordResserrer écrit les ordres fins (1..n, aucun trou).
+   Même écrivain qu'addSeance (mjpcPutJson), mêmes valeurs de séance neuve. */
+function edInsererSeanceAvant(j){
+  var c=_edCh();if(!c)return;
+  edUndoVider();
+  var l=atSeances(c.ch),cible=null,rang=-1;
+  l.forEach(function(p,i){if(p.j===String(j)){cible=p;rang=i;}});
+  if(!cible)return;
+  _modalePrompt('Insérer une séance','Titre de la séance à insérer :','',function(t){
+    if(!t||!t.trim())return;
+    var titre=t.trim(),ch=c.ch,seances=ch.seances||{};
+    var nums=Object.keys(seances).map(function(n){return parseInt(n)||0;});
+    var cle=(nums.length?Math.max.apply(null,nums):0)+1;       /* la CLÉ, comme addSeance */
+    var ordVoulu=ordDe(cible.se,rang+1);                        /* la neuve prend SA place */
+    var neuve={title:titre,uid:uidNeuf('sce'),type:'autre',ordre:ordVoulu,published:true,items:{}};
+    mjpcPutJson(FIREBASE_BASE+'/site/'+c.ec.level+'/chapitres/'+c.ec.chnum+'/seances/'+cle+'.json',neuve,
+      'Insertion de la séance « '+titre+' »',function(){
+      /* la neuve prend en MÉMOIRE un rang intercalaire (−0,5) : le tri la place,
+         et ordResserrer ÉCRIT tous les ordres vrais — le sien ET ceux des
+         suivantes. (Premier jet : décaler la mémoire à la main — le resserrement,
+         idempotent, ne voyait plus rien à écrire : les ordres décalés ne partaient
+         JAMAIS en base. Mesuré au banc, corrigé ici.) */
+      if(!ch.seances)ch.seances={};
+      neuve.ordre=ordVoulu-0.5;
+      ch.seances[cle]=neuve;
+      ordResserrer(ch.seances,'/site/'+c.ec.level+'/chapitres/'+c.ec.chnum+'/seances',function(){
+        atEditerChapitreRendre();
+      });
+    });
+  });
+}
 function edAjouterItem(j){
   var c=_edCh();if(!c)return;
   _modalePrompt('Nouvel item','Titre de l\u2019item :','',function(t){
@@ -10682,11 +10801,13 @@ function edAjouterItem(j){
 }
 function edSupprimerSeance(j){
   var c=_edCh();if(!c)return;
+  edUndoVider();   /* [LOT2-⑩] un autre geste : le cran d'annulation tombe */
   deleteSeance(c.ec.level,c.ec.chnum,j);      /* garde d'IDENTIT\u00c9S + corbeille du site */
   setTimeout(atEditerChapitreRendre,1200);
 }
 function edSupprimerItem(j,k){
   var c=_edCh();if(!c)return;
+  edUndoVider();   /* [LOT2-⑩] */
   deleteItem(c.ec.level,c.ec.chnum,j,k);
   setTimeout(atEditerChapitreRendre,1200);
 }
@@ -10752,15 +10873,36 @@ function edPublierClasse(j,k,slug,btn){
     btn.textContent=(on?'\u2713 ':'')+btn.textContent.replace(/^\u2713\s*/,'');
   }
 }
+/* [LOT2-⑨] L'HÉRITAGE — une feuille créée DANS une séance reçoit ses notions
+   et compétences, PRÉ-REMPLIES et modifiables, jamais imposées : cases cochables,
+   valeurs éditables, rien d'écrasé si déjà rempli. Les libellés viennent de la
+   taxonomie si elle est chargée (CH.taxo), sinon les identifiants restent lisibles. */
+function edLibellesTaxo(ids){
+  var m=(typeof CH!=='undefined'&&CH.taxo)?chIdsTaxo(CH.taxo):{notions:{},competences:{}};
+  return (ids||[]).map(function(id){return m.notions[id]||m.competences[id]||id;});
+}
+function edHeriterSeance(doc,se){
+  var n=edLibellesTaxo(se&&se.notions),co=edLibellesTaxo(se&&se.competences);
+  doc.valeurs=doc.valeurs||{};doc.cases=doc.cases||{};
+  if(n.length&&!(doc.valeurs.notions&&(doc.valeurs.notions.items||[]).length)){
+    doc.cases.notions=true;doc.valeurs.notions={items:n};
+  }
+  if(co.length&&!(doc.valeurs.competences&&(doc.valeurs.competences.items||[]).length)){
+    doc.cases.competences=true;doc.valeurs.competences={items:co};
+  }
+  return doc;
+}
 function edCreerFeuilleIci(j){
   var c=_edCh();if(!c)return;
   var se=c.ch.seances[j]||{};
   _modalePrompt('Nouvelle feuille','Titre de la feuille :','',function(t){
     if(!t||!t.trim())return;
+    chChargerTaxo(function(){   /* [LOT2-⑨] les libellés des notions héritées */
     var titre=t.trim();
     var id='feuille_'+Date.now();
     var doc=atDocNeuf();
     doc.titre=titre;
+    edHeriterSeance(doc,se);   /* [LOT2-⑨] */
     doc.rattachement={niveau:c.ec.level,chapitre:c.ec.chnum,seance:j,
                       chapitreTitre:c.ch.title||'',seanceTitre:se.title||'',
                       chapitreUid:c.ch.uid||'',seanceUid:se.uid||''};   /* [C5-UID] l'identit\u00e9 \u00e0 c\u00f4t\u00e9 du rang */
@@ -10779,7 +10921,160 @@ function edCreerFeuilleIci(j){
         atEditerChapitreRendre();
       });
     });
+    });   /* [LOT2-⑨] fin chChargerTaxo */
   });
+}
+/* [LOT2-⑫] PRENDRE UNE FEUILLE EXISTANTE — le geste inverse de l'adressage
+   depuis la feuille. Le cache LINK_ATELIER_DOCS est chargé à l'ENTRÉE de
+   l'écran (LOT ①) : on s'en SERT, on ne le recharge pas (filet une seule fois
+   s'il est encore vide, par le même chemin atSiteGetDocs). Le repère « déjà
+   déposée » se MESURE dans chapitresData du niveau (refs existantes).
+   L'attache d'un item attendu passe par edLierConfirme — l'écrivain existant,
+   uid de l'item INCHANGÉ ; une séance sans item passe par itemCreer. */
+function edFeuilleDepots(level,ref){
+  var out=[];
+  ordPaires(chapitresData[level]||{}).forEach(function(pc){
+    atSeances(pc.o).forEach(function(ps,rg){
+      ordPaires(ps.se.items||{}).forEach(function(q){
+        if(q.o&&q.o.ref===ref)out.push('Ch. '+ordDe(pc.o,pc.k)+' · S. '+(rg+1));
+      });
+    });
+  });
+  return out;
+}
+function edPrendreFeuille(j,k){
+  var c=_edCh();if(!c)return;
+  var pret=(typeof LINK_ATELIER_DOCS!=='undefined')&&LINK_ATELIER_DOCS&&Object.keys(LINK_ATELIER_DOCS).length;
+  if(!pret){
+    atInfo('Je relis les feuilles de l’atelier…');
+    atSiteGetDocs(function(docs){
+      LINK_ATELIER_DOCS=docs||{};
+      if(!Object.keys(LINK_ATELIER_DOCS).length){atInfo('Impossible de lire les feuilles de l’atelier (ou l’atelier est vide).');return;}
+      edPrendreFeuille(j,k);
+    });
+    return;
+  }
+  edUndoVider();   /* [LOT2-⑩] */
+  var lvl=c.ec.level,chn=c.ec.chnum,se=c.ch.seances[j]||{};
+  var ids=Object.keys(LINK_ATELIER_DOCS).sort(function(a,b){
+    var da=LINK_ATELIER_DOCS[a],db=LINK_ATELIER_DOCS[b];
+    return (((db.dates||{}).modifieLe)||0)-(((da.dates||{}).modifieLe)||0);
+  });
+  ED_SEL.v=ids[0]||null;
+  var choix=ids.map(function(id){
+    var d=LINK_ATELIER_DOCS[id];
+    var ou=edFeuilleDepots(lvl,id);
+    return '<option value="'+atEsc(id)+'">'+atEsc(d.titre||id)+(ou.length?(' — déjà : '+atEsc(ou.join(', '))):'')+'</option>';
+  }).join('');
+  atModaleChoix('Prendre une feuille existante pour « '+atEsc(se.title||('Séance '+j))+' » :<br>'
+    +'<select class="at-sel" id="ed-prendre-f" onchange="ED_SEL.v=this.value">'+choix+'</select><br>'
+    +'La feuille reste UNE : la déposer ici ne la copie pas, elle est simplement liée.',
+    [{lib:'Annuler',fn:function(){}},
+     {lib:'La déposer ici',prim:true,fn:function(){
+       var id=ED_SEL.v;
+       if(!id||!LINK_ATELIER_DOCS[id])return;
+       if(k){edLierConfirme(lvl,chn,[{seance:j,item:k,doc:id}]);return;}
+       itemCreer(lvl,chn,j,(LINK_ATELIER_DOCS[id].titre||id),
+         {kind:'atelier',source:'atelier',ref:id,published:false},
+         function(){atEditerChapitreRendre();});
+     }}]);
+}
+/* [LOT2-⑧] ÉCRIRE AVEC UNE IA DEPUIS UN TROU — la feuille se crée ADRESSÉE
+   (rattachement complet), hérite de la séance (⑨), se LIE à l'item attendu par
+   les MÊMES écritures que « Lier par les titres » (edLierConfirme), puis l'écran
+   IA EXISTANT s'ouvre (atIAChargerPrompt → atIARendre — rien de réécrit) avec
+   le produit ATTENDU tel que le chapitre l'a déclaré. Seule déclaration portée
+   par le schéma du chapitre : le TYPE de la séance — mesuré : les items déclarent
+   un kind d'app (doc, dictee…), jamais un produit d'atelier. type 'notions' →
+   fiche_notion ; tout autre type → fiche_seance (le produit par défaut du flux).
+   On QUITTE l'éditeur de chapitre comme edEditerFeuille : AT_FIL garde le fil. */
+function edProduitDeclare(se){
+  return (se&&se.type==='notions')?'fiche_notion':'fiche_seance';
+}
+function edIAdepuisTrou(j,k){
+  var c=_edCh();if(!c)return;
+  edUndoVider();
+  var se=c.ch.seances[j]||{};
+  var it=k?(((se.items||{})[k])||null):null;
+  var lvl=c.ec.level,chn=c.ec.chnum;
+  chChargerTaxo(function(){                       /* les libellés des notions héritées */
+    var titre=(it&&it.title)||se.title||('Séance '+j);
+    var id='feuille_'+Date.now();
+    var doc=atDocNeuf();
+    doc.titre=titre;
+    doc.produit=edProduitDeclare(se);
+    edHeriterSeance(doc,se);                      /* [LOT2-⑨] */
+    doc.rattachement={niveau:lvl,chapitre:chn,seance:j,
+                      chapitreTitre:c.ch.title||'',seanceTitre:se.title||'',
+                      chapitreUid:c.ch.uid||'',seanceUid:se.uid||''};
+    doc.dates=doc.dates||{};doc.dates.modifieLe=Date.now();
+    secuEcrire(AT_NOEUD+'/'+id,doc).then(function(r){
+      if(!r.ok){atInfo('⚠ La feuille n’a pas pu être créée — rien n’a été écrit.');return;}
+      if(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)LINK_ATELIER_DOCS[id]=doc;
+      if(typeof AT_DOCS!=='undefined'&&AT_DOCS)AT_DOCS[id]=doc;
+      if(AT&&AT.liste)AT.liste[id]=doc;
+      if(it)edLierConfirme(lvl,chn,[{seance:j,item:k,doc:id}]);   /* l'écrivain existant */
+      else itemCreer(lvl,chn,j,titre,{kind:'atelier',source:'atelier',ref:id,published:false},null);
+      AT_FIL={level:lvl,chnum:chn,ref:id};        /* le fil du chapitre, comme edEditerFeuille */
+      AT.edChap=null;
+      AT.docId=id;AT.doc=doc;
+      AT_IA.produit=doc.produit;AT_IA.tpl=null;AT_IA.charge=false;
+      atIAChargerPrompt(function(){atIARendre();});
+    });
+  });
+}
+/* [LOT2-⑦] DÉPLACER UN DOCUMENT vers une autre séance. L'item part TEL QUEL
+   (même uid, même contenu) : on change son rattachement, on ne le recrée pas.
+   Les deux écritures partent en LOT (PUT cible + DELETE source) — le pattern
+   de _swapOrdre : l'écran ne bouge que si les DEUX verdicts sont acceptés.
+   Pas de corbeille : c'est un déplacement, pas une suppression. Le glisser-
+   déposer (différé) pourra appeler edDeplacerVersSeanceFaire directement. */
+/* atModaleChoix RETIRE la modale du DOM avant d'appeler fn : un getElementById
+   dans fn rend null (mesuré au banc — le même défaut dort dans edDupliquerVers,
+   dette signalée). La valeur du select se capture donc À LA SÉLECTION. */
+var ED_SEL={v:null};
+function edDeplacerVersSeance(j,k){
+  var c=_edCh();if(!c)return;
+  var it=((c.ch.seances[j]||{}).items||{})[k];if(!it)return;
+  var autres=atSeances(c.ch).filter(function(p){return p.j!==String(j);});
+  if(!autres.length){atInfo('Le chapitre n’a pas d’autre séance.');return;}
+  ED_SEL.v=autres[0].j;
+  var choix=autres.map(function(p){
+    return '<option value="'+atEsc(p.j)+'">Séance '+ordDe(p.se,p.j)+' — '+atEsc(p.se.title||'')+'</option>';
+  }).join('');
+  atModaleChoix('Déplacer « '+atEsc(it.title||k)+' » vers :<br>'
+    +'<select class="at-sel" id="ed-depl-se" onchange="ED_SEL.v=this.value">'+choix+'</select><br>'
+    +'Le document arrive en fin de séance choisie, tel quel (même identité, même liaison, même publication).',
+    [{lib:'Annuler',fn:function(){}},
+     {lib:'Déplacer',prim:true,fn:function(){
+       if(ED_SEL.v)edDeplacerVersSeanceFaire(j,k,ED_SEL.v);
+     }}]);
+}
+function edDeplacerVersSeanceFaire(j,k,jc){
+  var c=_edCh();if(!c)return;
+  var seS=c.ch.seances[j],seC=c.ch.seances[jc];
+  if(!seS||!seS.items||!seS.items[k]||!seC)return;
+  edUndoVider();
+  var it=seS.items[k];
+  var copie=JSON.parse(JSON.stringify(it));           /* même uid, même contenu */
+  copie.ordre=ordSuivant(seC.items||{});               /* fin de la séance cible */
+  var kc=k,i=2;                                        /* même clé si libre */
+  while(seC.items&&seC.items[kc]){kc=k+'-'+i;i++;}
+  var base='/site/'+c.ec.level+'/chapitres/'+c.ec.chnum+'/seances/';
+  mjpcLot([
+    {url:FIREBASE_BASE+base+jc+'/items/'+kc+'.json',
+     options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(copie)},
+     quoi:'dépôt dans la séance cible'},
+    {url:FIREBASE_BASE+base+j+'/items/'+k+'.json',options:{method:'DELETE'},quoi:'retrait de la séance d’origine'}
+  ],'Déplacement du document',function(){
+    if(!seC.items)seC.items={};
+    seC.items[kc]=copie;
+    delete seS.items[k];
+    ordResserrer(seS.items,base.slice(0,-1)+'/'+j+'/items',function(){
+      atInfo('« '+atEsc(copie.title||kc)+' » déplacé vers « '+atEsc(seC.title||('Séance '+jc))+' ».');
+      atEditerChapitreRendre();
+    });
+  },null);
 }
 function edDupliquerVers(j,k){
   var c=_edCh();if(!c)return;
@@ -10847,6 +11142,8 @@ function ed2Sommaire(level,chnum,docs){
   var seanceVue=null;
   docs.forEach(function(d){
     if(d.seance!==seanceVue){
+      /* [LOT2-⑥] entre deux séances : insérer une séance AVANT celle-ci */
+      if(seanceVue!==null)h+='<button class="ed2-inserer" onclick="edInsererSeanceAvant(\''+d.seance+'\')">+ insérer une séance ici</button>';
       seanceVue=d.seance;
       h+='<div class="ed2-sce"><span class="ed2-n" style="background:'+d.teinte+'"></span>'+atEsc(d.seanceTitre)+'</div>';
     }
@@ -10870,6 +11167,8 @@ function ed2Pile(level,chnum,docs){
         +'<div class="ed2-trou-t">'+atEsc(d.titre)+'</div>'
         +'<div class="ed2-trou-q">attendu \u2014 aucun document li\u00e9</div>'
         +'<button class="at-btn at-btn-min" onclick="edCreerFeuilleIci(\''+d.seance+'\')">+ Feuille ici</button>'
+        +'<button class="at-btn at-btn-min at-btn-ia" onclick="edIAdepuisTrou(\''+d.seance+'\',\''+(d.item||'')+'\')">\u2728 \u00c9crire avec une IA</button>'
+        +'<button class="at-btn at-btn-min" onclick="edPrendreFeuille(\''+d.seance+'\',\''+(d.item||'')+'\')">Prendre une feuille existante\u2026</button>'
         +(d.item?('<button class="at-btn at-btn-min" onclick="openLinkModal(\''+level+'\',\''+chnum+'\',\''+d.seance+'\',\''+d.item+'\')">Lier\u2026</button>'):('<button class="at-btn at-btn-min" onclick="edAjouterItem(\''+d.seance+'\')">+ Item</button>'))
         +'</div>';
       return;
@@ -11002,6 +11301,8 @@ function ed2Papier(level,chnum,docs){
         +'<div class="ed2-trou-t">'+atEsc(d.seanceTitre)+' › '+atEsc(d.titre)+'</div>'
         +'<div class="ed2-trou-q">rien à imprimer pour l’instant</div>'
         +'<button class="at-btn at-btn-min" onclick="edCreerFeuilleIci(\''+d.seance+'\')">+ Feuille ici</button>'
+        +'<button class="at-btn at-btn-min at-btn-ia" onclick="edIAdepuisTrou(\''+d.seance+'\',\''+(d.item||'')+'\')">✨ Écrire avec une IA</button>'
+        +'<button class="at-btn at-btn-min" onclick="edPrendreFeuille(\''+d.seance+'\',\''+(d.item||'')+'\')">Prendre une feuille existante…</button>'
         +(d.item?('<button class="at-btn at-btn-min" onclick="openLinkModal(\''+level+'\',\''+chnum+'\',\''+d.seance+'\',\''+d.item+'\')">Lier…</button>')
                 :('<button class="at-btn at-btn-min" onclick="edAjouterItem(\''+d.seance+'\')">+ Item</button>'))
         +'</div>';
@@ -11013,6 +11314,8 @@ function ed2Papier(level,chnum,docs){
     h+='<div class="ed2-a4">';
     pg.forEach(function(d,id){
       if(d.seance!==derSeance){
+        /* [LOT2-⑥] le même geste dans le papier : entre deux séances */
+        if(derSeance!==null)h+='<button class="ed2-inserer" onclick="edInsererSeanceAvant(\''+d.seance+'\')">+ insérer une séance ici</button>';
         derSeance=d.seance;
         h+='<div class="ed2-pse" style="border-color:'+d.teinte+';color:'+d.teinte+'">'+atEsc(d.seanceTitre)+'</div>';
       }
@@ -11151,6 +11454,7 @@ function atEditerChapitreRendre(){
   h+='<div class="at-edch-barre">'
     +'<button class="at-btn" onclick="edProposerLiaisons(\''+ec.level+'\',\''+ec.chnum+'\')">Lier par les titres\u2026</button>'
     +'<button class="at-btn" onclick="edAjouterSeance()">+ S\u00e9ance</button>'
+    +'<button class="at-btn" id="ed-undo" onclick="edUndoJouer()"'+(ED_UNDO?(' title="R\u00e9tablir '+atEsc(ED_UNDO.desc)+'"'):' disabled title="Rien \u00e0 annuler pour l\u2019instant"')+'>\u21a9 Annuler</button>'
     +'</div>';
   h+='<div class="at-edch"><label class="at-edch-lib">Titre du chapitre</label>'
     +'<input class="at-edch-in" value="'+atEsc(ch.title||'')+'" onchange="atChampChapitre(\'title\',this.value)">'
@@ -11176,6 +11480,7 @@ function atEditerChapitreRendre(){
       +'<button class="at-btn at-btn-min" title="Descendre"'+(_rangSe===_nbSe-1?' disabled':'')+' onclick="edDeplacerSeance(\''+j+'\',1)">\u2193</button>'
       +'<button class="at-btn at-btn-min" onclick="edAjouterItem(\''+j+'\')">+ Item</button>'
       +'<button class="at-btn at-btn-min" onclick="edCreerFeuilleIci(\''+j+'\')">+ Feuille</button>'
+      +'<button class="at-btn at-btn-min" onclick="edPrendreFeuille(\''+j+'\',\'\')">Prendre une feuille…</button>'
       +'<button class="at-btn at-btn-min at-btn-danger" onclick="edSupprimerSeance(\''+j+'\')">\u2715</button>'
       +'</span></div>'
       +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(se.title||'')+'" onchange="atChampSeance('+j+',\'title\',this.value)">'
@@ -11200,6 +11505,7 @@ function atEditerChapitreRendre(){
         +(((it.kind==='atelier'||it.source==='atelier')&&it.ref)?('<button class="at-btn at-btn-min at-btn-prim" onclick="edEditerFeuille(\''+j+'\',\''+k+'\')">\u00c9diter</button>'):'')
         +(it.ref?('<button class="at-btn at-btn-min" onclick="edOuvrirItem(\''+j+'\',\''+k+'\')">Ouvrir</button>'):'')
         +'<button class="at-btn at-btn-min" onclick="openLinkModal(\''+ec.level+'\',\''+ec.chnum+'\',\''+j+'\',\''+k+'\')">Lier</button>'
+        +'<button class="at-btn at-btn-min" onclick="edDeplacerVersSeance(\''+j+'\',\''+k+'\')">Déplacer vers…</button>'
         +'<button class="at-btn at-btn-min" onclick="edPublierItem(\''+j+'\',\''+k+'\')">Publier\u2026</button>'
         +(_edtb&&it.ref?('<button class="at-btn at-btn-min" onclick="edDupliquerVers(\''+j+'\',\''+k+'\')">Dupliquer vers\u2026</button>'):'')
         +'<button class="at-btn at-btn-min at-btn-danger" onclick="edSupprimerItem(\''+j+'\',\''+k+'\')">\u2715</button>'
@@ -11354,28 +11660,67 @@ function edLierConfirme(level,chnum,lignes){
     });
   });
 }
+/* [LOT2-⑩] ANNULER LA DERNIÈRE MODIFICATION — sûreté, pas confort.
+   L'enregistrement des champs est silencieux : un champ vidé partait sans filet.
+   UN cran : le dernier champ touché (les trois écrivains fins ci-dessous — seuls
+   enregistrements silencieux de cet écran), NOMMÉ, disponible tant qu'aucun autre
+   geste n'est fait. Rétablir passe par le MÊME écrivain — l'annulation devient
+   elle-même annulable — puis UN rendu (changement de données, règle du LOT ①). */
+var ED_UNDO=null;
+function edUndoVider(){ED_UNDO=null;edUndoMaj();}
+function edUndoMaj(){
+  var b=document.getElementById('ed-undo');if(!b)return;
+  b.disabled=!ED_UNDO;
+  b.title=ED_UNDO?('R\u00e9tablir '+ED_UNDO.desc):'Rien \u00e0 annuler pour l\u2019instant';
+}
+function edUndoCourt(v){
+  var t=Array.isArray(v)?v.join(' \u00b7 '):String(v==null?'':v);
+  return t.length>40?(t.slice(0,40)+'\u2026'):(t||'(vide)');
+}
+function edUndoPoser(desc,anc,rejouer){
+  ED_UNDO={desc:desc,anc:anc,rejouer:rejouer};
+  edUndoMaj();
+}
+function edUndoJouer(){
+  if(!ED_UNDO)return;
+  var u=ED_UNDO;ED_UNDO=null;edUndoMaj();
+  u.rejouer(u.anc);
+  atInfo('R\u00e9tabli : '+u.desc+' \u2192 \u00ab '+atEsc(edUndoCourt(u.anc))+' \u00bb.');
+  atEditerChapitreRendre();
+}
 function atChampChapitre(champ,val){
   var ec=AT.edChap;if(!ec)return;
   var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/'+champ;
+  var anc=chapitresData[ec.level][ec.chnum][champ];   /* [LOT2-⑩] avant écrasement */
   secuEcrire(chemin,val).then(function(r){
     if(!r.ok){atInfo('\u26a0 Le champ n\u2019a pas pu s\u2019enregistrer \u2014 il garde son ancienne valeur en base.');return;}
     chapitresData[ec.level][ec.chnum][champ]=val;ec.modifie=true;
+    edUndoPoser('le champ \u00ab '+champ+' \u00bb du chapitre',anc===undefined?'':anc,
+      function(v){atChampChapitre(champ,v);});
   });
 }
 function atChampSeance(j,champ,val){
   var ec=AT.edChap;if(!ec)return;
   var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+j+'/'+champ;
+  var se=chapitresData[ec.level][ec.chnum].seances[j];
+  var anc=se?se[champ]:undefined;   /* [LOT2-⑩] */
   secuEcrire(chemin,val).then(function(r){
     if(!r.ok){atInfo('\u26a0 Le champ n\u2019a pas pu s\u2019enregistrer \u2014 il garde son ancienne valeur en base.');return;}
     chapitresData[ec.level][ec.chnum].seances[j][champ]=val;ec.modifie=true;
+    edUndoPoser('le champ \u00ab '+champ+' \u00bb de la s\u00e9ance \u00ab '+((se&&se.title)||j)+' \u00bb',anc===undefined?'':anc,
+      function(v){atChampSeance(j,champ,v);});
   });
 }
 function atChampItem(j,k,champ,val){
   var ec=AT.edChap;if(!ec)return;
   var chemin='/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+j+'/items/'+k+'/'+champ;
+  var it=((chapitresData[ec.level][ec.chnum].seances[j]||{}).items||{})[k];
+  var anc=it?it[champ]:undefined;   /* [LOT2-⑩] */
   secuEcrire(chemin,val).then(function(r){
     if(!r.ok){atInfo('\u26a0 Le champ n\u2019a pas pu s\u2019enregistrer \u2014 il garde son ancienne valeur en base.');return;}
     chapitresData[ec.level][ec.chnum].seances[j].items[k][champ]=val;ec.modifie=true;
+    edUndoPoser('le champ \u00ab '+champ+' \u00bb de \u00ab '+((it&&it.title)||k)+' \u00bb',anc===undefined?'':anc,
+      function(v){atChampItem(j,k,champ,v);});
   });
 }
 function atEditerChapitreSortie(){
