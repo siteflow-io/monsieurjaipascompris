@@ -738,6 +738,21 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **AUDIT** : couches en position absolue vérifiées, couche fautive retirée, point de rendu unique, **aucune écriture réseau ajoutée** · banc : une faute de chaque type + un mot en trop, cinq modes, trois contextes, copie sans faute, copie longue.
 - **Restauration en cas de `BUG`** : revenir au blob md5 `acf79d92f48c69e7babdf8a8f3b3cefe` (586 505 o).
 
+## Point de retour — PROMOTION LOT ③ · LE CONTENU DES FEUILLES DANS L'ATELIER PAPIER, 09/08/2026
+| fichier | AVANT | APRÈS |
+|---|---|---|
+| `index.html` | 917 693 o · 8.42.0 · md5 `8fa33ef53c953179df48a668212e8255` (commit `782074f345fa`) | 929 628 o · **8.43.0** · md5 `48371deab3b875c45c3ac71c0a59adc0` |
+
+- **LA PIÈCE QUI MANQUAIT DEPUIS L'ÉDITEUR ②, trouvée par Paul** : l'atelier papier n'affichait que des CARTES (référence, titre, produit). **Sans contenu, rien à cliquer** — et son geste de travail, dans ses mots : *« je clique un élément, ça me met le champ d'édition en doré, et j'avance ainsi très vite »*, ne pouvait pas exister.
+- **LIVRÉ** : chaque feuille affiche **le document que l'élève lira** — en-tête adressé, objectif, notions, consignes, zones lignées, mention à conserver, pied daté. Le rendu **réutilise `atelierDocumentHTML`**, le corps commun de l'aperçu et de l'impression, servi inline (le rendu d'impression `atelierPageHTML` reste INTACT, vérifié au caractère près). Charte scopée à l'écran (`ed2CharteScopee`, `body`→`.ed2-fcadre`), posée une fois dans `<head>`.
+- **LE POINTAGE FIN** : **98 composantes distinctes portent leur repère** (sur 114 cases cochées ; l'écart de 16 = les réglages de rendu, sans zone propre) — objectif, notions, compétences, définition, méthode, exemple traité, attention/piège, contre-exemple, consigne, zone lignée, domaine du socle, citation, mention à conserver… Le chemin est **structurel** : `ed2ClicPapier` compose `c-<id>` → `ed2Selectionner` cherche `[data-champ="c-<id>"]` → le panneau la pose **depuis la MÊME table `ATELIER_COMPOSANTES` que le rendu**. Cliquer « Notions visées » ouvre nécessairement sa ligne.
+- **LA FRAPPE** : `ed2MajZone` re-rend **le seul cadre** concerné, sauvegarde débouncée (1 200 ms) par l'écrivain du nœud, caches synchronisés, repagination mesurée. Prouvé au banc : **0 appel à `atEditerChapitreRendre` pendant la frappe et après la sauvegarde**, focus conservé, UNE écriture.
+- **LE COMPTEUR DEVIENT VRAI** : hauteurs relevées par `offsetHeight` après chaque rendu (705, 395, 1 981 px mesurés), les trois positions affichent des coûts réels (4 / 4 / 6 feuilles). **Contrat conservé : le papier ne coupe jamais à l'intérieur d'un document.**
+- **AUDIT** : 834 → 847 fonctions, **0 supprimée**, 13 ajoutées, 3 modifiées — conforme au rapport · `published` jamais écrit · aucune écriture réseau ajoutée · règle du LOT ① tenue (`ed2Poser` ne redessine pas) · **`atelierPageHTML` et `atelierDocumentHTML` inchangés** : réutilisés, jamais modifiés.
+- **ERREUR D'AUDIT DE LA CONSCIENCE, consignée au DISPOSITIF (commit `680dc230e48a`)** : elle a cherché `data-c="<nom>"` en clair, en a trouvé quatre, et a rendu un verdict « non promu, le travail n'est pas fait » — **faux** : le repère est posé sur une VARIABLE (`data-c="'+id+'"`), invisible à une recherche littérale. **Un tour perdu pour Paul.** Règle tirée : *mesurer le mécanisme, jamais sa trace littérale — suivre le chemin, pas chercher le texte.* Deuxième erreur du même ordre dans la journée.
+- **DÉCLARÉS** : la hauteur mesurée est celle de la maquette écran, pas d'un rendu d'imprimante · **les cases se cochent toujours dans l'éditeur de feuille** : ici on édite les valeurs, on ne compose pas la feuille · captures non jointes au verdict final par la conscience (manquement à la règle du dispositif, relevé par Paul).
+- **Restauration en cas de `BUG`** : revenir au blob du commit `782074f345fa` (8.42.0, md5 `8fa33ef5…`).
+
 ## Point de retour — PROMOTION LOT ② · LES GESTES DE L'ÉDITEUR, 09/08/2026
 | fichier | AVANT | APRÈS |
 |---|---|---|
