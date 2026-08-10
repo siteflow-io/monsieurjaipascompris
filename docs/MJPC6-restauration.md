@@ -738,6 +738,22 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **AUDIT** : couches en position absolue vérifiées, couche fautive retirée, point de rendu unique, **aucune écriture réseau ajoutée** · banc : une faute de chaque type + un mot en trop, cinq modes, trois contextes, copie sans faute, copie longue.
 - **Restauration en cas de `BUG`** : revenir au blob md5 `acf79d92f48c69e7babdf8a8f3b3cefe` (586 505 o).
 
+## Point de retour — PROMOTION LOT ⑥ · LE CLIC DROIT, LE TROISIÈME TRAJET, LE DÉPÔT DRIVE, 09/08/2026
+| fichier | AVANT | APRÈS |
+|---|---|---|
+| `index.html` | 941 574 o · 8.45.0 · md5 `35e0c5b4894dfc0aeb8ce9f8cc7bbe44` (commit `309cf21c52ac`) | 954 985 o · **8.46.0** · md5 `042ebfa1416b25d1936f25ab7f115810` |
+
+- **① LE TROISIÈME TRAJET COMPLÉTÉ** : `ed2Aller` posait le halo et défilait le papier, **sans aucune sélection** — le panneau restait sur l'ancienne ligne. Réparé par le même chemin que les deux autres trajets (`ed2Selectionner` + `ed2Cle`), avec la clé du bloc d'item : elle existe pour TOUT objet du sommaire et son premier champ est le titre. **Les trois trajets sont désormais complets** : papier→panneau (LOT ④), panneau→papier (correctif ⑦), sommaire→les deux (ici).
+- **② LE MENU CONTEXTUEL — le premier du site**, construit pour être réutilisé (Paul a étendu le principe à tout le site et aux apps : chantier, commits `70fda4558b4b` et `7270561e2c28`). **Trois étages séparés** : le moteur (`ctxOuvrir`/`ctxFermer`, position clampée, fermeture par Échap / clic ailleurs / défilement), la table (`ctxEntreesItem`/`ctxEntreesSeance`, chaque entrée portant son `dispo()`), le branchement (délégation `contextmenu` + **appui long tactile** 550 ms).
+  **LA RÈGLE DU MIROIR, TENUE ET VÉRIFIÉE** — les neuf fonctions d'origine sont appelées telles quelles : `edEditerFeuille` · `openDiaporamaById` · `ed2Aller` · `editTitle` · `edDupliquerVers` · `sceDupliquer` · `edFeuilleDepots` · `edSupprimerItem` · `edSupprimerSeance`. **« Renommer » existait déjà** (le crayon de l'arborescence) : reflété, pas réécrit — complété d'une ligne pour que l'éditeur suive.
+  **LA LIMITE TENUE** : table limitée aux objets de composition · branchement au seul sommaire de l'éditeur (écran professeur) · **les attendus (trous) ne portent aucun objet → aucun menu** · rien côté élève.
+  **`sceDupliquer` CRÉÉ** (le fondamental « Dupliquer » généralisé aux séances) : patron d'`edInsererSeanceAvant`, **uids neufs**, items recréés par `itemCreer` l'écrivain unique, **`published:false` sur tous les items — rien ne change côté élève** ; la séance copie porte `published:true` comme toute séance née d'`addSeance`.
+- **UNE TROUVAILLE MAJEURE, hors mandat** : `deleteSeance` et `deleteItem` **promettaient la corbeille dans leur commentaire et ne la faisaient pas** — DELETE direct après confirmation. Mis au patron d'`atSupprimerChapitre` : archive `{_meta,data}` vers la corbeille d'abord, **échec d'archivage = abandon nommé, rien n'est supprimé**. **Le menu ET les × des écrans d'origine en héritent ensemble** (même fonction).
+- **③ LE DÉPÔT DRIVE DANS LA MODALE « LIER »** — un branchement, pas une invention : la row du champ reçoit `dragover`/`drop` et emprunte **`uploadFileForChapterItem`**, le trajet même de l'arborescence, avec le contexte que la modale porte déjà. Survol signalé, envoi annoncé, résultat nommé (« ✅ Document lié : <nom> »), **le fil montre le document sans rechargement**. Le champ garde son usage (coller un lien).
+- **AUDIT** : 853 → 860 fonctions, **0 supprimée**, 7 ajoutées, 8 modifiées · **aucune écriture réseau ajoutée** · vue élève **identique à l'octet** (22 264 o) · dual parser vert.
+- **DEUX POINTS DÉCLARÉS, À ARBITRER PAR PAUL** : `sceDupliquer` pose `published:true` sur la séance copiée (héritage `addSeance`, items à `false`) · **le dépôt Drive écrit `published:true` sur l'item lié** — comportement hérité du trajet de l'arborescence, conservé à l'identique ; le code portait déjà la mention « opportunité à arbitrer » (M8-IDENTITÉ).
+- **Restauration en cas de `BUG`** : revenir au blob du commit `309cf21c52ac` (8.45.0, md5 `35e0c5b4…`).
+
 ## Point de retour — PROMOTION LOT ⑤, 09/08/2026
 | fichier | AVANT | APRÈS |
 |---|---|---|
