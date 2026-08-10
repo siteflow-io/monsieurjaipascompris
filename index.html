@@ -299,6 +299,8 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .link-modal-select { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); color: #fff; font-family: inherit; font-size: 0.9rem; box-sizing: border-box; cursor: pointer; }
 .link-modal-select:disabled { opacity: 0.5; cursor: wait; }
 .link-modal-row { display: flex; gap: 8px; align-items: center; }
+#link-modal-droprow { border: 2px dashed transparent; border-radius: 9px; padding: 3px; transition: border-color .15s, background .15s; }
+#link-modal-droprow.link-drop-actif { border-color: #ffb86c; background: rgba(255,184,108,0.08); }
 .link-modal-row .link-modal-input, .link-modal-row .link-modal-select { flex: 1; }
 .link-modal-btn { padding: 7px 14px; border-radius: 7px; border: 1px solid rgba(255,184,108,0.4); background: rgba(255,184,108,0.15); color: #ffb86c; cursor: pointer; font-family: inherit; font-size: 0.84rem; font-weight: 600; flex-shrink: 0; }
 .link-modal-btn:hover { background: rgba(255,184,108,0.25); }
@@ -851,6 +853,12 @@ select.at-sel option,select.cm-input option,#link-modal select option,select.at-
 @media print{.ed2-coupe{border-top:2px dashed #333}.ed2-cx{display:none}.ed2-pbarre{display:none}.ed2-trou{display:none}.ed2-inserer{display:none}.ed2-pse{display:none}}
 .ed2-sel{outline:2px solid rgba(212,160,23,.85);outline-offset:2px;background:rgba(212,160,23,.10)}
 .ed2-zsel{outline:2px solid rgba(212,160,23,.85);outline-offset:1px;background:rgba(212,160,23,.08);border-radius:6px}
+/* [LOT6-②] le menu contextuel — au-dessus de tout écran (atelier 7000, Lier 7500) */
+.ctx-menu{position:fixed;z-index:8000;background:#241f16;border:1px solid #6b5d3f;border-radius:10px;padding:6px;min-width:220px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.ctx-menu button{display:block;width:100%;text-align:left;background:none;border:0;color:#e8e0d0;padding:9px 12px;min-height:40px;border-radius:6px;font:inherit;font-size:.88rem;cursor:pointer}
+.ctx-menu button:hover{background:rgba(212,160,23,.14)}
+.ctx-menu button.ctx-danger{color:#e8a090}
+.ctx-titre{font-size:.75rem;color:#8f8672;padding:4px 12px 6px;border-bottom:1px solid #3a3428;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
 .ed-pub{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 .ed-pub-b{min-height:44px}
 .ed-pub-on{background:rgba(126,200,169,.2);border-color:rgba(126,200,169,.7)}
@@ -1551,7 +1559,7 @@ button.dp-img-btn:hover,button.dp-img-btn:focus-visible{border-color:rgba(212,16
   <div class="link-modal-current" id="link-modal-current"></div>
   <div class="link-modal-section">
     <div class="link-modal-section-title">📎 Fichier Drive ou URL externe</div>
-    <div class="link-modal-row"><input type="text" class="link-modal-input" id="link-modal-url" placeholder="Coller un lien Drive, une URL https://… ou un ID Drive"><button class="link-modal-btn" onclick="linkModalApplyUrl()">Lier</button></div>
+    <div class="link-modal-row" id="link-modal-droprow"><input type="text" class="link-modal-input" id="link-modal-url" placeholder="Coller un lien Drive, une URL https://… ou un ID Drive — ou glisse un fichier ici"><button class="link-modal-btn" onclick="linkModalApplyUrl()">Lier</button></div>
   </div>
   <div class="link-modal-section">
     <div class="link-modal-section-title">📝 Dictée existante</div>
@@ -2780,7 +2788,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.45.0";
+var APP_VERSION="8.46.0";
 var APP_VERSION_DATE="2026-08-09";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -3745,6 +3753,7 @@ function editTitle(level,chnum,snum,itemId){
     else if(snum)d[chnum].seances[snum].title=newTitle;
     else d[chnum].title=newTitle;
     renderChapitres(level);
+    if(AT.edChap)atEditerChapitreRendre();   /* [LOT6-②] appelé depuis l'éditeur (clic droit) : il suit */
   });
   });
 }
@@ -3790,7 +3799,14 @@ function uidPhraseReferents(refs,quoi){
 function deleteSeance(level,chnum,snum){
   var sce=chapitresData[level][chnum].seances[snum];if(!sce)return;
   var _refs=uidReferents(level,chnum,snum);   /* [C5-UID] \u2463 */
-  _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ?'+uidPhraseReferents(_refs,'s\u00e9ance'),function(){
+  _modaleConfirme('Supprimer la s\u00e9ance','Supprimer la s\u00e9ance \u00ab <b>'+escapeHtml(sce.title)+'</b> \u00bb et tous ses items ? Elle partira d\u2019abord \u00e0 la corbeille.'+uidPhraseReferents(_refs,'s\u00e9ance'),function(){
+  /* [LOT6-②] LE FONDAMENTAL « corbeille d'abord », au patron d'atSupprimerChapitre :
+     l'archive part AVANT, son échec ABANDONNE tout (mesuré : la séance se
+     supprimait sans copie — le commentaire de l'appelant edSupprimerSeance
+     promettait « corbeille du site », le corps ne la faisait pas). */
+  var _payl={_meta:{motif:'site-seance',chemin:'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum,app:'index',ts:Date.now()},data:sce};
+  secuEcrire(atCorbeilleCle('site-seance'),_payl).then(function(_a){
+  if(!_a.ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 rien n\u2019a \u00e9t\u00e9 supprim\u00e9, la s\u00e9ance est intacte.');return;}
   mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'.json','Suppression de la s\u00e9ance \u00ab '+sce.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum];
       /* [C5-ORD] ③ le resserrement dans le MÊME geste : 1,2,3… sans trou */
@@ -3798,16 +3814,22 @@ function deleteSeance(level,chnum,snum){
       renderChapitres(level);
     });
   });
+  });
 }
 
 function deleteItem(level,chnum,snum,itemId){
   var item=chapitresData[level][chnum].seances[snum].items[itemId];if(!item)return;
-  _modaleConfirme('Supprimer l\u2019item','Supprimer l\u2019item \u00ab <b>'+escapeHtml(item.title)+'</b> \u00bb ?',function(){
+  _modaleConfirme('Supprimer l\u2019item','Supprimer l\u2019item \u00ab <b>'+escapeHtml(item.title)+'</b> \u00bb ? Il partira d\u2019abord \u00e0 la corbeille.',function(){
+  /* [LOT6-②] même patron que la séance : archive avant, échec = abandon. */
+  var _payl={_meta:{motif:'site-item',chemin:'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId,app:'index',ts:Date.now()},data:item};
+  secuEcrire(atCorbeilleCle('site-item'),_payl).then(function(_a){
+  if(!_a.ok){atInfo('\u26a0 L\u2019archivage en corbeille a \u00c9CHOU\u00c9 \u2014 rien n\u2019a \u00e9t\u00e9 supprim\u00e9, l\u2019item est intact.');return;}
   mjpcDeleteJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'.json','Suppression de l\u2019item \u00ab '+item.title+' \u00bb',function(){
       delete chapitresData[level][chnum].seances[snum].items[itemId];
       ordResserrer(chapitresData[level][chnum].seances[snum].items,'/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items');   /* [C5-ORD] ③ */
       renderChapitres(level);
     });
+  });
   });
 }
 
@@ -4050,6 +4072,33 @@ function closeLinkModal(){
   document.getElementById('link-modal').classList.remove('visible');
   LINK_MODAL_CONTEXT=null;
 }
+/* [LOT6-③] GLISSER UN FICHIER DANS LE CHAMP « FICHIER DRIVE » DE LA MODALE LIER.
+   Un BRANCHEMENT, pas une invention : le fichier déposé emprunte LE MÊME TRAJET
+   que le glisser-déposer de l'arborescence — uploadFileForChapterItem(file,
+   level, chnum, snum, itemId), avec le contexte que la modale porte déjà
+   (LINK_MODAL_CONTEXT). Le champ garde son usage (coller un lien). La zone se
+   signale au survol (.link-drop-actif), l'envoi s'annonce (toast « Upload en
+   cours… » du trajet), le résultat est nommé (« Document lié : <nom> ») ou
+   l'échec l'est — tout cela vit déjà dans le trajet. Écouteurs posés UNE fois
+   (l'élément est statique). */
+(function(){
+  var row=document.getElementById('link-modal-droprow');
+  if(!row)return;
+  ['dragenter','dragover'].forEach(function(n){
+    row.addEventListener(n,function(ev){ev.preventDefault();ev.stopPropagation();row.classList.add('link-drop-actif');});
+  });
+  row.addEventListener('dragleave',function(ev){ev.preventDefault();row.classList.remove('link-drop-actif');});
+  row.addEventListener('drop',function(ev){
+    ev.preventDefault();ev.stopPropagation();
+    row.classList.remove('link-drop-actif');
+    var ctx=LINK_MODAL_CONTEXT;
+    if(!ctx)return;
+    var f=ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files[0];
+    if(!f){atInfo('Aucun fichier reçu — glisse un fichier depuis ton dossier Windows.');return;}
+    closeLinkModal();
+    uploadFileForChapterItem(f,ctx.level,ctx.chnum,ctx.snum,ctx.itemId);
+  });
+})();
 
 function loadAppList(kind){
   var sel=document.getElementById('link-modal-'+kind);if(!sel)return;
@@ -4210,8 +4259,9 @@ function uploadFileForChapterItem(file,level,chnum,snum,itemId){
       mjpcFetchOk(FIREBASE_BASE+basePath+'/published.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(true)})
     ]).then(function(){
       item.source='drive';item.ref=res.drive_file_id;_markPub(item,'*',true);   /* M8-IDENTITÉ : routé — comportement conservé (publié pour toutes les classes) ; l'opportunité de ce défaut reste à arbitrer par Paul */
-      showUploadToast('\u2705 Fichier li\u00e9 \u00e0 l\u2019item','ok');
+      showUploadToast('\u2705 Document li\u00e9 : '+(file.name||item.title||''),'ok');   /* [LOT6-③] le résultat est nommé */
       renderChapitres(level);
+      if(AT.edChap)atEditerChapitreRendre();   /* [LOT6-③] déposé depuis la modale Lier de l'éditeur : le fil suit */
     });
   }).catch(function(err){showUploadToast('\u26a0 '+err.message,'err');});
 }
@@ -11234,7 +11284,7 @@ function ed2Sommaire(level,chnum,docs){
       /* [LOT2-⑥] entre deux séances : insérer une séance AVANT celle-ci */
       if(seanceVue!==null)h+='<button class="ed2-inserer" onclick="edInsererSeanceAvant(\''+d.seance+'\')">+ insérer une séance ici</button>';
       seanceVue=d.seance;
-      h+='<div class="ed2-sce"><span class="ed2-n" style="background:'+d.teinte+'"></span>'+atEsc(d.seanceTitre)+'</div>';
+      h+='<div class="ed2-sce" data-seance="'+atEsc(d.seance)+'"><span class="ed2-n" style="background:'+d.teinte+'"></span>'+atEsc(d.seanceTitre)+'</div>';
     }
     h+='<div class="ed2-it'+(d.attendu?' ed2-attendu':'')+(ED2.courant===d.item?' ed2-ici':'')+'" data-item="'+atEsc(d.item)+'"'
       +(d.attendu?'':(' onclick="ed2Aller(\''+d.item+'\')"'))+'>'
@@ -11296,7 +11346,172 @@ function ed2Aller(item){
   var pile=document.querySelector('.ed2-papier');
   ED2.gel=Date.now()+400;   /* [LOT1-①] un défilement POSÉ ne vaut pas un suivi */
   if(el&&pile)pile.scrollTop=pile.scrollTop+el.getBoundingClientRect().top-pile.getBoundingClientRect().top-24;
+  /* [LOT6-①] LE TROISIÈME TRAJET COMPLÉTÉ (sommaire → milieu + droite) : le clic
+     au sommaire posait le halo et défilait le papier, mais le panneau restait
+     sur l'ancienne ligne (mesuré : aucune sélection posée). Même chemin que les
+     deux autres trajets : ed2Selectionner, sur la clé du BLOC d'item
+     ('item-<k>') — elle existe pour TOUT objet du sommaire (feuille, document,
+     diaporama, app) et son premier champ est le TITRE. Le sens 'sommaire'
+     défile le panneau et focalise, comme venir du papier. */
+  ed2Selectionner(item,'item-'+item,'sommaire');
 }
+/* ═══ [LOT6-②] LE MENU CONTEXTUEL — LE PREMIER DU SITE, construit pour être
+   repris partout (principe consigné au plan par Paul, commits 70fda4558b4b et
+   7270561e2c28). LA RÈGLE DU MIROIR : le menu n'ajoute AUCUN geste — chaque
+   entrée appelle la fonction existante de l'écran d'origine, même confirmation,
+   même corbeille, même résultat. Un geste modifié là-bas change ici tout seul ;
+   supprimé là-bas, il disparaît d'ici. L'UNIQUE exception : les cinq gestes
+   fondamentaux, créés là où ils manquaient (ce lot : sceDupliquer ; les autres
+   existaient — editTitle, edSupprimerItem/Seance, edDupliquerVers,
+   edFeuilleDepots, edEditerFeuille/openDiaporamaById/ed2Aller).
+   LA LIMITE, non négociable : JAMAIS sur une donnée d'élève — la table
+   d'éligibilité ne connaît que les objets de COMPOSITION (items, séances ; les
+   feuilles et diaporamas s'atteignent par leurs items). Rien côté élève : le
+   branchement ne vit que dans le sommaire de l'éditeur de chapitre, un écran
+   professeur ; les trous « attendus » ne portent aucun objet, donc aucun menu.
+   TROIS ÉTAGES SÉPARÉS : le MOTEUR (ctxOuvrir/ctxFermer — position, clavier,
+   fermeture), la TABLE (ctxEntreesItem/ctxEntreesSeance — quel objet, quels
+   gestes, chaque geste dit s'il est possible via dispo()), le BRANCHEMENT
+   (contextmenu + appui long sur le sommaire). Un futur écran rebranche le
+   moteur et sa propre table, sans réécrire. ═══ */
+var CTX={el:null,ne:0};
+function ctxFermer(){if(CTX.el&&CTX.el.parentNode)CTX.el.parentNode.removeChild(CTX.el);CTX.el=null;}
+function ctxOuvrir(x,y,titre,entrees){
+  ctxFermer();
+  var vivantes=(entrees||[]).filter(function(e){return e&&(!e.dispo||e.dispo());});
+  if(!vivantes.length)return;
+  var d=document.createElement('div');d.className='ctx-menu';
+  d.innerHTML='<div class="ctx-titre">'+atEsc(titre||'')+'</div>';
+  vivantes.forEach(function(e){
+    var b=document.createElement('button');
+    b.textContent=e.lib;if(e.danger)b.className='ctx-danger';
+    b.addEventListener('click',function(ev){ev.stopPropagation();ctxFermer();e.faire();});
+    d.appendChild(b);
+  });
+  document.body.appendChild(d);CTX.el=d;CTX.ne=Date.now();
+  var r=d.getBoundingClientRect();
+  d.style.left=Math.max(8,Math.min(x,window.innerWidth-r.width-8))+'px';
+  d.style.top=Math.max(8,Math.min(y,window.innerHeight-r.height-8))+'px';
+}
+document.addEventListener('click',function(){if(Date.now()-CTX.ne>350)ctxFermer();});
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape')ctxFermer();});
+window.addEventListener('scroll',function(){if(Date.now()-CTX.ne>350)ctxFermer();},true);
+/* la TABLE — items : d = la ligne d'ed2Documents (objet réel, jamais un attendu) */
+function ctxEntreesItem(d){
+  var c=_edCh();if(!c)return [];
+  var j=d.seance,k=d.item;
+  var it=((c.ch.seances[j]||{}).items||{})[k]||{};
+  var feuille=!!d.feuille,diapo=(d.kind==='diaporama');
+  return [
+    {lib:'Ouvrir / Modifier',faire:function(){
+      if(feuille)edEditerFeuille(j,k);
+      else if(diapo&&it.ref)openDiaporamaById(it.ref,it.title||'');
+      else ed2Aller(k);   /* sa ligne d'édition : le panneau, sélection posée ([LOT6-①]) */
+    }},
+    {lib:'Renommer\u2026',faire:function(){editTitle(c.ec.level,c.ec.chnum,j,k);}},
+    {lib:'Dupliquer vers\u2026',dispo:function(){return !!it.ref;},faire:function(){edDupliquerVers(j,k);}},
+    {lib:'O\u00f9 est-ce ?',dispo:function(){return !!it.ref;},faire:function(){
+      var ou=edFeuilleDepots(c.ec.level,it.ref);
+      atInfo('\u00ab '+atEsc(it.title||k)+' \u00bb se trouve : '+(ou.length?ou.join(' \u00b7 '):'nulle part \u2014 aucune s\u00e9ance ne porte cette r\u00e9f\u00e9rence.'));
+    }},
+    {lib:'Supprimer\u2026',danger:true,faire:function(){edSupprimerItem(j,k);}}
+  ];
+}
+function ctxEntreesSeance(j){
+  var c=_edCh();if(!c)return [];
+  var se=c.ch.seances[j];if(!se)return [];
+  return [
+    {lib:'Ouvrir / Modifier',faire:function(){
+      var prem=ordPaires(se.items||{})[0];
+      if(prem){ed2Aller(prem.k);return;}
+      var bloc=document.querySelector('#ed2-pan [data-sce="'+j+'"]');
+      if(bloc)ed2PanVers(bloc);   /* séance vide : sa section du panneau */
+    }},
+    {lib:'Renommer\u2026',faire:function(){editTitle(c.ec.level,c.ec.chnum,j);}},
+    {lib:'Dupliquer la s\u00e9ance',faire:function(){sceDupliquer(j);}},
+    {lib:'O\u00f9 est-ce ? (contenu)',faire:function(){
+      var its=ordPaires(se.items||{});
+      atInfo('\u00ab '+atEsc(se.title||('S\u00e9ance '+j))+' \u00bb contient '+(its.length?(its.length+' \u00e9l\u00e9ment'+(its.length>1?'s':'')+' : '+its.map(function(p){return atEsc(p.o.title||p.k);}).join(' \u00b7 ')):'\u2014 aucun \u00e9l\u00e9ment pour l\u2019instant.'));
+    }},
+    {lib:'Supprimer\u2026',danger:true,faire:function(){edSupprimerSeance(j);}}
+  ];
+}
+/* [LOT6-②] CRÉÉ — le fondamental « Dupliquer » généralisé aux séances (il
+   existait pour les feuilles et les chapitres). Au patron d'edInsererSeanceAvant
+   (clé = max+1, uid NEUF, published:true comme toute séance née d'addSeance —
+   héritage documenté LOT ②) ; chaque item recréé par itemCreer, l'écrivain
+   unique (uid NEUFS, published:false — RIEN ne change côté élève ; la copie
+   d'item pointe la même ressource, même conception qu'edDupliquerVers).
+   La copie arrive EN FIN de chapitre (ordSuivant). */
+function sceDupliquer(j){
+  var c=_edCh();if(!c)return;
+  var se=c.ch.seances[j];if(!se)return;
+  edUndoVider();   /* [LOT2-⑩] un autre geste : le cran d'annulation tombe */
+  var seances=c.ch.seances||{};
+  var nums=Object.keys(seances).map(function(n){return parseInt(n)||0;});
+  var cle=(nums.length?Math.max.apply(null,nums):0)+1;
+  var neuve={title:(se.title||('S\u00e9ance '+j))+' (copie)',uid:uidNeuf('sce'),type:se.type||'autre',ordre:ordSuivant(seances),published:true,items:{}};
+  mjpcPutJson(FIREBASE_BASE+'/site/'+c.ec.level+'/chapitres/'+c.ec.chnum+'/seances/'+cle+'.json',neuve,
+    'Duplication de la s\u00e9ance \u00ab '+(se.title||j)+' \u00bb',function(){
+    seances[cle]=neuve;c.ec.modifie=true;
+    var paires=ordPaires(se.items||{}),idx=0;
+    var suivant=function(){
+      if(idx>=paires.length){
+        atInfo('S\u00e9ance \u00ab '+atEsc(se.title||j)+' \u00bb dupliqu\u00e9e en fin de chapitre \u2014 ses \u00e9l\u00e9ments n\u2019y sont pas publi\u00e9s.');
+        atEditerChapitreRendre();return;
+      }
+      var p=paires[idx++];
+      itemCreer(c.ec.level,c.ec.chnum,String(cle),(p.o.title||p.k),
+        {kind:p.o.kind,source:p.o.source,ref:p.o.ref||'',subtitle:p.o.subtitle||'',published:false},
+        function(){suivant();});
+    };
+    suivant();
+  });
+}
+/* le BRANCHEMENT de ce lot : le sommaire de l'éditeur. Délégation (le sommaire
+   se re-rend) ; l'objet se retrouve dans les DONNÉES, jamais déduit du DOM. */
+function ctxSommaireCible(t){
+  if(!t||!t.closest)return null;
+  var li=t.closest('.ed2-som .ed2-it');
+  if(li&&!li.classList.contains('ed2-attendu')&&li.getAttribute('data-item'))return {type:'item',id:li.getAttribute('data-item')};
+  var sc=t.closest('.ed2-som .ed2-sce');
+  if(sc&&sc.getAttribute('data-seance'))return {type:'seance',id:sc.getAttribute('data-seance')};
+  return null;
+}
+function ctxSommaireOuvrir(x,y,cible){
+  var c=_edCh();if(!c)return;
+  if(cible.type==='item'){
+    var d=ed2Documents(c.ec.level,c.ec.chnum).filter(function(q){return q.item===cible.id&&!q.attendu;})[0];
+    if(!d)return;
+    ctxOuvrir(x,y,d.titre||cible.id,ctxEntreesItem(d));
+  }else{
+    var se=c.ch.seances[cible.id];if(!se)return;
+    ctxOuvrir(x,y,se.title||('S\u00e9ance '+cible.id),ctxEntreesSeance(cible.id));
+  }
+}
+document.addEventListener('contextmenu',function(ev){
+  var cible=ctxSommaireCible(ev.target);
+  if(!cible)return;
+  ev.preventDefault();
+  ctxSommaireOuvrir(ev.clientX,ev.clientY,cible);
+});
+/* l'appui long (tactile) : 550 ms sans bouger de plus de 8 px ouvre le même menu */
+var CTX_LONG={t:null,x:0,y:0};
+document.addEventListener('pointerdown',function(ev){
+  if(ev.pointerType!=='touch')return;
+  var cible=ctxSommaireCible(ev.target);
+  if(!cible)return;
+  CTX_LONG.x=ev.clientX;CTX_LONG.y=ev.clientY;
+  CTX_LONG.t=setTimeout(function(){CTX_LONG.t=null;ctxSommaireOuvrir(CTX_LONG.x,CTX_LONG.y,cible);},550);
+});
+['pointerup','pointermove','pointercancel'].forEach(function(n){
+  document.addEventListener(n,function(ev){
+    if(!CTX_LONG.t)return;
+    if(n==='pointermove'&&Math.abs(ev.clientX-CTX_LONG.x)<8&&Math.abs(ev.clientY-CTX_LONG.y)<8)return;
+    clearTimeout(CTX_LONG.t);CTX_LONG.t=null;
+  });
+});
+/* ═══ fin [LOT6-②] menu contextuel ═══ */
 /* \u2462a LA FEUILLE COURANTE SUIT LE D\u00c9FILEMENT : celle dont le centre est le plus
    proche du milieu de la zone de lecture. GARDE : jamais pendant une saisie. */
 /* ═══ [C5-ED2] ④ L'ATELIER PAPIER — la visionneuse EST l'impression.
@@ -11835,7 +12050,7 @@ function atEditerChapitreRendre(){
     /* [C5-ED1] les gestes de la s\u00e9ance : monter, descendre, ajouter un item,
        supprimer (garde d'IDENTIT\u00c9S incluse : deleteSeance pr\u00e9vient qui pointe). */
     var _ordSe=ordDe(se,j);
-    h+='<div class="at-edch at-edch-se"><div class="at-edch-set">S\u00e9ance '+_ordSe+somNote
+    h+='<div class="at-edch at-edch-se" data-sce="'+atEsc(j)+'"><div class="at-edch-set">S\u00e9ance '+_ordSe+somNote
       +'<span class="at-edch-actes">'
       +'<button class="at-btn at-btn-min" title="Monter"'+(_rangSe===0?' disabled':'')+' onclick="edDeplacerSeance(\''+j+'\',-1)">\u2191</button>'
       +'<button class="at-btn at-btn-min" title="Descendre"'+(_rangSe===_nbSe-1?' disabled':'')+' onclick="edDeplacerSeance(\''+j+'\',1)">\u2193</button>'
