@@ -288,6 +288,22 @@ Le périmètre de M14 avait trop grossi (passe standard + portail à code + dén
 
 **TROIS QUESTIONS EN ATTENTE DE PAUL, bloquantes pour le module** : ⑴ **les dates des périodes P1 à PFIN** (absentes du calendrier annuel) — sans elles, impossible de savoir quel créneau vaut quand ⑵ **la nature des créneaux partagés avec « X Français »** : demi-groupe de ses classes ou classes entières qui ne sont pas les siennes ? comptent-ils dans sa progression MJPC ? ⑶ **4 BANKSY et 4 PYTHAGORE doivent-elles exister comme classes dans MJPC**, ou n'y voit-il que des séances ponctuelles ?
 
+### 🔴 LES PROMPTS MJPC — DISCUSSION EN COURS, INTERROMPUE LE 09/08 (à reprendre)
+
+**Ce que Paul veut** : reprendre les prompts que le site donne aux IA, parce que **ce qu'ils produisent alimente tout ce qui a été construit cette semaine** — sans titres canoniques ni produits déclarés, le sommaire de l'éditeur n'a rien à griser et « Lier par les titres » reste fragile. *(C'est la DETTE PRIMORDIALE, ouverte depuis le 08/08.)*
+
+**CE QUI A ÉTÉ MESURÉ AVANT L'INTERRUPTION — état réel, à ne pas remesurer** :
+- **Trois écrans IA distincts, donc trois prompts** : la FEUILLE (`atIAOuvrir`, `atIAChargerPrompt`, `atIARendre`…), le CHAPITRE (`chOuvrir`, `chVerifier`, `chInjecter` — avec ses quatre voies : créer · compléter · remplacer · garder à côté), et le DIAPORAMA (troisième produit, ajouté par SITE-COURS-3a).
+- **Les prompts vivent au hub, sous `/site/atelier/prompts/<produit>`** (`AT_IA_NOEUD`), éditables par « Retravailler le prompt… » et « Enregistrer ». **MAIS CE NŒUD EST VIDE (`null`)** : personne n'a jamais rien enregistré, donc **tout le monde tombe sur les textes en dur du code** (`PROMPT_SEED`, ~2 400 caractères pour le seul diaporama). *Conséquence : retravailler les prompts, c'est retravailler `PROMPT_SEED`, ou décider d'écrire enfin au hub.*
+- Les boutons IA inventoriés : `atIAOuvrir` · `atIAVerifier` · `atIACopier` · `atIAModifier` · `atIAEnregistrerTpl` · `atIARestaurerTpl` · `atIAInjecterNeuve` · `atIARemplacer` · `atNouvelleFeuilleIA` · `chOuvrir` · `chVerifier` · `chInjecter` · `atIAInfo` / `chInfo`.
+
+**LES TROIS EXIGENCES DE PAUL, posées et non encore traitées** :
+1. **LES PROMPTS DOIVENT ÊTRE CORRÉLÉS** — *« une feuille n'est pas juste une feuille : elle s'affiche dans un chapitre ou dans plusieurs chapitres. »* Le prompt de feuille et celui de chapitre ignorent aujourd'hui l'existence l'un de l'autre. **Question restée ouverte : le prompt de feuille doit-il connaître TOUS ses lieux d'affichage, ou seulement celui pour lequel on la crée ?**
+2. **LE DIAPORAMA DOIT ÊTRE RECONSTRUIT EN HTML** — *« actuellement il ne rend que des textes, alors que j'ai des diapos complets dont le visuel a une vraie importance en termes pédagogiques. »* **Le prompt actuel assume explicitement le contraire** : « une diapositive n'est pas une image, c'est du texte mis en page » — c'était le choix de SITE-COURS-3a, **et c'est celui que Paul remet en cause**. **Question restée ouverte : reproduire la MISE EN PAGE (positions, images, colonnes), ou garder les IMAGES dans un rendu MJPC propre ?** Deux travaux différents.
+3. **RIEN D'INVENTÉ** — *« tu pars des documents (plan, etc.) et du site. Rien qu'on vienne plaquer par-dessus l'existant, sauf si besoin de créer quelque chose de nouveau. »*
+
+**CE QUI RESTE À FAIRE POUR REPRENDRE** : lire les trois prompts EN ENTIER (`PROMPT_SEED` et ses variantes), obtenir les deux arbitrages ci-dessus, puis rédiger. **Et ne pas oublier la dette primordiale elle-même** : le prompt de chapitre doit déclarer, séance par séance, les documents prévus avec leur **produit** et leur **titre canonique**, même ceux qu'il ne fournit pas — plus, à trancher, une **clé de rapprochement** posée par l'IA (la même dans le JSON du chapitre et dans celui de la feuille), plus sûre qu'une comparaison de titres.
+
 ### 🔴 M16 ÉLARGI — LE RETOUR À L'ÉLÈVE : LA QUESTION PLUTÔT QUE LA RÉPONSE (principe de Paul, 09/08/2026)
 
 **Le principe, dans ses mots** : *« Ce serait extrêmement intéressant de faire jouer le mode cognitif de l'élève. Un champ à pointillés numéroté, et en bas de la copie les numéros avec la ou les questions qu'il faut se poser pour trouver comment écrire ce mot. »* Et son élargissement, décisif : *« tout peut être mis en M16, parce que c'est un raisonnement qu'on a sur la dictée mais qu'il faudra aussi avoir sur réécriture, étude de texte, rédaction, etc. »*
