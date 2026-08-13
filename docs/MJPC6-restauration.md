@@ -846,3 +846,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **DEUX PREUVES CREUSES DÉBUSQUÉES** — leçon majeure du morceau : ⓐ les captures d'injection de la première livraison étaient **fausses dans leur méthode** (zone d'aperçu fabriquée par le banc, posée sur le portail élève — le « LIEN INVALIDE » que **Paul a repéré**) ; reprises par gestes réels ⓑ l'exécutant a trouvé de lui-même que sa preuve « l'écran élève ne change pas » **comparait deux chaînes VIDES** (chapitre non publié : rien ne se rendait des deux côtés) — refaite avec chapitre publié : 3 591 octets identiques. **Une comparaison « identique » sur deux vides ne prouve rien.**
 - **DÉCLARÉS** : hauteur des documents estimée · décor de banc inventé, jamais les données réelles de Paul · pied « Niveau : 3ème » sur les captures élève (artefact de banc, des deux côtés) · **note pour un lot futur : avec deux chapitres de même titre, « Remplacer » vise le DERNIER jumeau.**
 - **Restauration en cas de `BUG`** : revenir au blob du commit `c7b9df2ab3ff` (8.40.0, md5 `fe991006…`).
+
+## 2026-08-12 — point de retour avant promotion LOT ⑧ (8.53.1)
+- Production quittée : **8.48.0** — 961 711 o, md5 `8c84942a43bd6fb6f8f95f16ea2e8317`, blob `77403cd6598dc72013b2703754b4586bf95734c5` (promotion ⑦ `ec6f950d70f3`).
+- Restauration si « BUG » : PUT de ce blob sur index.html.
+- Promu : **8.53.1** — 985 386 o, md5 `efde88a2414cea12a1cd2e09f2451984` (LOT ⑧ : abyme, rayons parlants, ressources externes, textes de Paul ; sas LOT8/).
