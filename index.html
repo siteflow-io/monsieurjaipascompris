@@ -278,12 +278,16 @@ body { font-family: 'EB Garamond', Georgia, serif; background: #141024; color: #
 .admin-mode .fiche-drop-zone { min-height: 40px; border: 2px dashed rgba(255,184,108,0.3); border-radius: 10px; margin-top: 8px; transition: border-color 0.2s, background 0.2s; padding-bottom: 44px; position: relative; }
 .admin-mode .fiche-drop-zone::after { content: '📁 Glisser un fichier ici'; display: block; text-align: center; padding: 10px; color: rgba(255,184,108,0.5); font-style: italic; font-size: 0.85rem; position: absolute; bottom: 0; left: 0; right: 0; }
 .admin-mode .fiche-drop-zone.drag-over { border-color: #ffb86c !important; background: rgba(255,184,108,0.06) !important; }
-.doc-viewer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 5000; align-items: center; justify-content: center; padding: 24px; }
+.doc-viewer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9500; /* [LOT8-⑧] au-dessus de l'atelier (7000) et de Lier (7500), sous le viewer de feuille (9600) : « Ouvrir en modale » depuis le fil ouvrait DERRIÈRE l'écran — le défaut LOT4-③ sur un autre overlay */ align-items: center; justify-content: center; padding: 24px; }
 .doc-viewer-overlay.visible { display: flex; }
 .doc-viewer-box { background: #1a1030; border-radius: 16px; overflow: hidden; width: 90vw; height: 85vh; max-width: 1100px; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); }
 .doc-viewer-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: rgba(0,0,0,0.3); color: #fff; }
+.doc-viewer-actions { display:flex; align-items:center; gap:12px; flex:none; }
+/* [LOT8c-②] la modale n'est jamais un cul-de-sac : pour toute URL web, une issue */
+.doc-viewer-newtab { color:#ffd479; text-decoration:none; font-size:0.85rem; padding:6px 10px; min-height:44px; display:inline-flex; align-items:center; border:1px solid rgba(255,212,121,.45); border-radius:8px; }
+.doc-viewer-newtab:hover { background:rgba(255,212,121,.12); }
 .doc-viewer-title { font-size: 1rem; font-weight: 600; }
-.doc-viewer-close { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; padding: 4px 14px; font-family: 'EB Garamond', serif; font-size: 0.9rem; cursor: pointer; }
+.doc-viewer-close { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 8px; padding: 4px 14px; font-family: 'EB Garamond', serif; font-size: 0.9rem; cursor: pointer; min-height: 44px; /* [LOT8c-①] cible tactile mesurée 27px au banc 390 — la règle des conteneurs bornés exige ≥44 */ }
 .doc-viewer-close:hover { background: rgba(255,255,255,0.15); }
 .doc-viewer-frame { flex: 1; border: none; width: 100%; }
 .link-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.78); z-index: 7500; /* [LOT4-③] au-dessus de l'atelier (7000) : « Lier » s'ouvrait DERRIÈRE l'écran */ align-items: center; justify-content: center; padding: 24px; }
@@ -540,7 +544,7 @@ body.admin-mode .admin-only { display: block; }
 .item-unpublished { opacity: 0.5; }
 .dnd-over { outline: 2px dashed #ffb86c !important; outline-offset: -2px; background: rgba(255,184,108,0.12) !important; transition: outline 0.1s, background 0.1s; }
 .dnd-over.spring-pending { outline-style: solid; background: rgba(255,184,108,0.22) !important; }
-#mjpc-upload-toast { position: fixed; top: 20px; right: 20px; background: rgba(255,184,108,0.95); color: #1a1030; padding: 10px 18px; border-radius: 8px; font-family: 'EB Garamond', serif; font-weight: 600; font-size: 0.92rem; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+#mjpc-upload-toast { position: fixed; top: 20px; right: 20px; background: rgba(255,184,108,0.95); color: #1a1030; padding: 10px 18px; border-radius: 8px; font-family: 'EB Garamond', serif; font-weight: 600; font-size: 0.92rem; z-index: 10500; /* [LOT8c-52①] au-dessus des boutons flottants (10000) : la fin du message passait dessous (cap-14) — un verdict d'échec se lit en entier */ box-shadow: 0 4px 16px rgba(0,0,0,0.3); max-width: min(72vw, 560px); }
 #mjpc-upload-toast.ok { background: rgba(52,211,153,0.95); }
 #mjpc-upload-toast.err { background: rgba(248,113,113,0.95); color: #fff; }
 .gallery-admin-list { margin: 4px 0 10px 60px; padding: 6px 10px; background: rgba(255,255,255,0.03); border-left: 2px solid rgba(255,184,108,0.3); border-radius: 0 6px 6px 0; }
@@ -620,7 +624,7 @@ body.admin-mode .admin-only { display: block; }
 .cm-title{font:700 1.15rem 'EB Garamond',serif;color:#fff;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
 .cm-body{padding:16px 20px;color:rgba(255,255,255,.86);font-size:.92rem}
 .cm-actions{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);flex-wrap:wrap}
-.cm-btn{padding:9px 16px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font:600 .9rem 'EB Garamond',serif}
+.cm-btn{padding:9px 16px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font:600 .9rem 'EB Garamond',serif;min-height:44px} /* [LOT8c-①] cible mesurée 37px au banc 390 — ≥44 */
 .cm-btn.primary{background:rgba(110,231,183,.16);border-color:rgba(110,231,183,.5);color:#6ee7b7}
 .cm-btn.warn{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.5);color:#fbbf24}
 .cm-btn.danger{background:rgba(248,113,113,.16);border-color:rgba(248,113,113,.55);color:#f87171}
@@ -764,6 +768,9 @@ body.at-corps-fige #tprof-btn,body.at-corps-fige #admin-tools-btn,body.at-corps-
 /* [C5-3a-c] ② la modale LIER ouverte (son état existant .visible) efface les
    flottants — pur CSS, ils reviennent d'eux-mêmes à la fermeture. */
 body:has(#link-modal.visible) #tprof-btn,body:has(#link-modal.visible) #admin-tools-btn,body:has(#link-modal.visible) #admin-tools-menu{display:none}
+/* [LOT8c-①] même patron pour la modale des documents : les flottants passaient
+   PAR-DESSUS l'en-tête (z 10000 > 9500), recouvrant « Fermer » — vu à la capture. */
+body:has(#doc-viewer.visible) #tprof-btn,body:has(#doc-viewer.visible) #admin-tools-btn,body:has(#doc-viewer.visible) #admin-tools-menu,body:has(#doc-viewer.visible) #vue-btn{display:none}
 /* [C5-3ac2b] ② le panneau prof ouvert (son état existant .visible) efface ses
    boutons d'entrée — le ✕ Fermer cesse d'être recouvert ; même patron. */
 body:has(#tprof-overlay.visible) #tprof-btn,body:has(#tprof-overlay.visible) #admin-tools-btn,body:has(#tprof-overlay.visible) #admin-tools-menu,body:has(#tprof-overlay.visible) #vue-btn{display:none}
@@ -838,7 +845,14 @@ select.at-sel option,select.cm-input option,#link-modal select option,select.at-
 .ed2-coupe-or .ed2-cis{color:#b8860b}
 .ed2-cx{margin-left:auto;color:#8a8a8a;font-size:.78rem;padding:0 8px;opacity:0}
 .ed2-coupe:hover .ed2-cx{opacity:1}
-@media print{.ed2-coupe{border-top:2px dashed #333}.ed2-cx{display:none}.ed2-pbarre{display:none}.ed2-trou{display:none}.ed2-inserer{display:none}.ed2-pse{display:none}}
+/* [LOT8-\u2467] le cadre des ressources externes du fil */
+.ed2-xcadre{margin-top:8px;border:1px solid #cdc4ae;border-radius:8px;overflow:hidden;background:#faf8f2}
+.ed2-xbarre{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#efe9da;border-bottom:1px solid #cdc4ae;cursor:pointer;font-size:.8rem;color:#4a4436}
+.ed2-xbarre:hover{background:#e6dec9}
+.ed2-xadr{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:.74rem}
+.ed2-xouvre{font-size:.72rem;color:#8a7a4a;white-space:nowrap}
+.ed2-xapercu{width:100%;height:260px;border:0;background:#fff}
+@media print{.ed2-coupe{border-top:2px dashed #333}.ed2-cx{display:none}.ed2-pbarre{display:none}.ed2-trou{display:none}.ed2-inserer{display:none}.ed2-pse{display:none}.ed2-xcadre{display:none}}
 .ed2-sel{outline:2px solid rgba(212,160,23,.85);outline-offset:2px;background:rgba(212,160,23,.10)}
 .ed2-zsel{outline:2px solid rgba(212,160,23,.85);outline-offset:1px;background:rgba(212,160,23,.08);border-radius:6px}
 /* [LOT6-②] le menu contextuel — au-dessus de tout écran (atelier 7000, Lier 7500) */
@@ -1130,6 +1144,14 @@ button.dp-img-btn.dp-img-drop{border-color:#d4a017;background:rgba(212,160,23,.2
 .atdoc-viewer-titre{flex:1;font-weight:700;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .atdoc-viewer-x,.atdoc-viewer-imp{min-width:44px;min-height:44px;border:0;background:transparent;color:#fff;font-size:1.1rem;cursor:pointer}
 .atdoc-viewer-frame{flex:1;width:100%;border:0;background:#fff}
+/* [LOT8-②] le bloc prof des feuilles non rangées, sous les rayons */
+.rayons-ignores-bloc{margin-top:22px;border:1px dashed rgba(255,200,80,0.55);border-radius:10px;padding:12px 14px;background:rgba(255,200,80,0.06)}
+.ri-titre{font-size:0.82rem;font-weight:600;color:#ffd77a;margin-bottom:8px}
+.rayons-ignore-l{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-top:1px solid rgba(255,255,255,0.07)}
+.rayons-ignore-l .ri-t{font-weight:600;font-size:0.85rem}
+.rayons-ignore-l .ri-c{color:rgba(255,255,255,0.55);font-size:0.78rem;font-style:italic;flex:1;min-width:180px}
+/* [LOT8-\u2466] la trace du remplac\u00e9 au panneau */
+.at-edch-rempl{font-size:0.74rem;color:rgba(255,255,255,0.45);font-style:italic;margin:2px 0 6px;padding-left:14px}
 /* SITE-COURS-2c — le bandeau du message élève (écran seulement, hors iframe) */
 .atdoc-bandeau{flex:0 0 auto;background:#f6edd8;color:#4a3d20;border-bottom:2px solid #d9c896;padding:10px 14px;font-size:.95rem;line-height:1.4}
 /* les statuts des cartes de « Mes feuilles » */
@@ -1445,13 +1467,14 @@ button.dp-img-btn.dp-img-drop{border-color:#d4a017;background:rgba(212,160,23,.2
       <div class="chapters-list">
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">🎯</div><div class="chapter-info"><div class="chapter-title">Prépa brevet</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-prepa-brevet">0 fiches</span></div></div></div><div class="chapter-body" data-section="prepa-brevet"><div class="doc-list fiche-drop-zone" data-section="prepa-brevet"></div></div></div>
       </div>
+      <div id="rayons-ignores"></div>   <!-- [LOT8-②] rempli côté prof seulement, vide côté élève -->
     </div>
     <div id="tab-autonomie" style="display:none;">
       <div id="autonomie-dyn"></div>
-      <div class="section-label">Aller plus loin</div>
-      <div class="chapters-list">
-        <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">🚀</div><div class="chapter-info"><div class="chapter-title">Zone autonomie</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-autonomie">0 documents</span></div></div></div><div class="chapter-body" data-section="autonomie"><div class="doc-list fiche-drop-zone" data-section="autonomie"></div></div></div>
-      </div>
+      <!-- [LOT8-③] la carte figée « Aller plus loin / Zone autonomie » (drop-zone autonomie,
+           compteur count-autonomie) est RETIRÉE : rien ne l'alimentait (mesuré : aucun code ne remplit cette zone
+           ni ne lit ce compteur), et Paul a tranché « la zone autonomie n'accueille que l'app d'entraînement ;
+           analyse logique dans analyse logique ». -->
     </div>
     <div id="tab-dictee" style="display:none;"></div>
     <div id="tab-reecriture" style="display:none;"></div>
@@ -1464,7 +1487,7 @@ button.dp-img-btn.dp-img-drop{border-color:#d4a017;background:rgba(212,160,23,.2
       <div class="section-label">Fiches</div>
       <div class="chapters-list" id="analyse-fiches-static">
         <div class="chapter-card"><div class="chapter-header" onclick="toggleChapter(this)"><div class="chapter-num" style="background:var(--level-accent);color:#1a1030;">📐</div><div class="chapter-info"><div class="chapter-title">Analyse logique</div><div class="chapter-meta"><span class="chip chip-fiche" id="count-analyse-logique">1 fiches</span></div></div></div><div class="chapter-body" data-section="analyse-logique"><div class="doc-list fiche-drop-zone" data-section="analyse-logique">
-              <div class="doc-item" data-docid="3e-analyse-logique-mmynhk1z" data-niveau="3e" data-chapitre="analyse-logique" data-seance="" data-embed="https://drive.google.com/file/d/1JWzQXIwf2Q9HHVOOp_HEmIpZJv8QzcVa/preview" onclick="openDoc('analyse-logique','Analyse logique 3e','')"><div class="doc-icon pdf">📄</div><div class="doc-label">Analyse logique 3e<small></small></div><div class="doc-action">→ Consulter</div><div class="upload-indicator"></div><div class="upload-progress"></div></div></div></div></div>
+              <!-- [LOT8c-⑨] la fiche Drive statique « Analyse logique 3e » est retirée : zone() l’écrasait à chaque rendu des rayons (mesure ☇5/☇8b) — elle revit proprement par le mécanisme ⑨ dès que Paul qualifie l’item Drive correspondant. --></div></div></div></div>
       </div>
     </div>
   </div>
@@ -1540,7 +1563,7 @@ button.dp-img-btn.dp-img-drop{border-color:#d4a017;background:rgba(212,160,23,.2
   <a href="#" onclick="openAdminTool('debat_s3');return false"><span class="atm-icon">🗣️</span> Pilotage du débat — Le triomphe simien</a>
 </div>
 <!-- [LOT7-①] l’overlay « gros fichier » retiré : son unique entrée (showBigFileGuide_, ancien circuit de dépôt) est morte — voir rapport. -->
-<div class="doc-viewer-overlay" id="doc-viewer"><div class="doc-viewer-box"><div class="doc-viewer-header"><div class="doc-viewer-title" id="doc-viewer-title">Document</div><button class="doc-viewer-close" onclick="closeViewer()">✕ Fermer</button></div><iframe class="doc-viewer-frame" id="doc-viewer-frame" src="about:blank"></iframe></div></div>
+<div class="doc-viewer-overlay" id="doc-viewer"><div class="doc-viewer-box"><div class="doc-viewer-header"><div class="doc-viewer-title" id="doc-viewer-title">Document</div><div class="doc-viewer-actions"><a class="doc-viewer-newtab" id="doc-viewer-newtab" target="_blank" rel="noopener" style="display:none">Ouvrir dans un onglet ↗</a><button class="doc-viewer-close" onclick="closeViewer()">✕ Fermer</button></div></div><iframe class="doc-viewer-frame" id="doc-viewer-frame" src="about:blank"></iframe></div></div>
 
 <div class="link-modal-overlay" id="link-modal"><div class="link-modal-box">
   <div class="link-modal-title" id="link-modal-title">Lier l'item</div>
@@ -2783,8 +2806,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.48.0";
-var APP_VERSION_DATE="2026-08-09";
+var APP_VERSION="8.53.1";
+var APP_VERSION_DATE="2026-08-11";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -4042,6 +4065,10 @@ function openLinkModal(level,chnum,snum,itemId){
   } else {
     currentEl.textContent='Aucune liaison actuelle.';
   }
+  /* [LOT8-\u2466] l'historique simple : le dernier remplac\u00e9, lisible ici aussi */
+  if(item.remplace&&item.remplace.ref){
+    currentEl.textContent+=' \u00b7 Ancien document : '+_resLibelle(item.remplace.source,item.remplace.ref,item.remplace.kind)+' \u2014 remplac\u00e9 le '+new Date(item.remplace.le||0).toLocaleDateString('fr-FR')+'.';   /* [LOT8c-53.1] le m\u00eame vocabulaire que la trace du panneau */
+  }
   document.getElementById('link-modal-url').value='';
   loadAppList('dictee');
   loadAppList('reecriture');
@@ -4173,12 +4200,40 @@ function linkModalUnlink(){
   });
 }
 
+/* [LOT8-\u2466] LE LIBELL\u00c9 LISIBLE D'UNE RESSOURCE \u2014 pour nommer l'ancienne et la
+   nouvelle dans l'avertissement, et l'historique au panneau. */
+function _resLibelle(source,ref,kind){
+  if(!ref)return '(aucune)';
+  if(source==='atelier'){var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[ref]:null;return 'feuille \u00ab '+((d&&d.titre)||ref)+' \u00bb';}
+  if(source==='drive')return 'fichier Drive '+ref;
+  if(source==='external')return 'site '+ref;
+  if(source==='firebase_app')return (kind||'activit\u00e9')+' '+ref;
+  return (source||'?')+' '+ref;
+}
 function applyLinkChanges(newSource,newRef,newKind){
   var ctx=LINK_MODAL_CONTEXT;if(!ctx)return;
+  var item=chapitresData[ctx.level][ctx.chnum].seances[ctx.snum].items[ctx.itemId];
+  /* [LOT8-\u2466] UN ITEM NE PORTE QU'UNE RESSOURCE, ET IL LE DIT : si l'item est
+     d\u00e9j\u00e0 li\u00e9 \u00e0 AUTRE CHOSE, le geste AVERTIT (l'ancienne et la nouvelle nomm\u00e9es)
+     et TRACE le remplac\u00e9 (champ `remplace` sur l'item, lisible au panneau et \u00e0 la
+     modale Lier). Jamais d'\u00e9crasement silencieux \u2014 le site jeromeswifteasteregg
+     de Paul a \u00e9t\u00e9 perdu ainsi. Le d\u00e9lier (newRef vide) a d\u00e9j\u00e0 sa confirmation
+     (linkModalUnlink) : il trace sans redemander. */
+  var _remplace=!!(item&&item.ref&&(item.ref!==newRef||String(item.source||'')!==String(newSource||'')));
+  var _ecrire=function(){_applyLinkEcrire(ctx,item,newSource,newRef,newKind,_remplace);};
+  if(_remplace&&newRef){
+    _modaleConfirme('Remplacer la ressource',
+      'Cet item porte d\u00e9j\u00e0 : <b>'+escapeHtml(_resLibelle(item.source,item.ref,item.kind))+'</b>.<br>'
+      +'Le remplacer par : <b>'+escapeHtml(_resLibelle(newSource,newRef,newKind))+'</b>\u00a0? Tu retrouveras l\u2019ancienne adresse sous l\u2019item, dans l\u2019\u00e9diteur.',
+      _ecrire);
+    return;
+  }
+  _ecrire();
+}
+function _applyLinkEcrire(ctx,item,newSource,newRef,newKind,tracer){
   var basePath='/site/'+ctx.level+'/chapitres/'+ctx.chnum+'/seances/'+ctx.snum+'/items/'+ctx.itemId;
-  /* M-ÉCHECS-1 : trois écritures en LOT — la modale ne se ferme et l'état local
-     ne suit QUE si tous les verdicts sont acceptés (avant : aucun catch, l'écran
-     entérinait un lien que le serveur avait pu refuser). */
+  /* M-\u00c9CHECS-1 : \u00e9critures en LOT \u2014 la modale ne se ferme et l'\u00e9tat local
+     ne suit QUE si tous les verdicts sont accept\u00e9s. */
   var lot=[
     {url:FIREBASE_BASE+basePath+'/source.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newSource)},quoi:'source'},
     {url:FIREBASE_BASE+basePath+'/ref.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newRef)},quoi:'r\u00e9f\u00e9rence'}
@@ -4186,11 +4241,15 @@ function applyLinkChanges(newSource,newRef,newKind){
   if(newKind){
     lot.push({url:FIREBASE_BASE+basePath+'/kind.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newKind)},quoi:'type'});
   }
+  var anc=tracer?{source:item.source||'',ref:item.ref||'',kind:item.kind||'',le:Date.now()}:null;
+  if(anc){lot.push({url:FIREBASE_BASE+basePath+'/remplace.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(anc)},quoi:'trace du remplac\u00e9'});}
   mjpcLot(lot,'Bouton LIER',function(){
-    var item=chapitresData[ctx.level][ctx.chnum].seances[ctx.snum].items[ctx.itemId];
-    item.source=newSource;item.ref=newRef;
-    if(newKind)item.kind=newKind;
+    var it2=chapitresData[ctx.level][ctx.chnum].seances[ctx.snum].items[ctx.itemId];
+    it2.source=newSource;it2.ref=newRef;
+    if(newKind)it2.kind=newKind;
+    if(anc)it2.remplace=anc;
     var lvl=ctx.level;closeLinkModal();renderChapitres(lvl);
+    if(AT.edChap)atEditerChapitreRendre();   /* [LOT8-\u2466] le panneau montre la trace sans rechargement */
   });
 }
 
@@ -4227,7 +4286,7 @@ function _uploadBlobToDrive(blob,fileName,level,chnum,snum){
      L'ancienne action upload_drive_only et son target_path en clés Firebase
      (« 3e/ch10/s1 », illisible au Drive) n'existent plus. */
   return new Promise(function(resolve,reject){
-    if(blob.size>30*1024*1024){reject(new Error('Fichier > 30 Mo \u2014 d\u00e9pose-le \u00e0 la main sur Drive puis colle son lien (bouton Lier).'));return;}
+    if(blob.size>30*1024*1024){console.error('MJPC d\u00e9p\u00f4t \u2014 fichier trop lourd :',blob.size,'octets');reject(new Error('Fichier trop lourd (plus de 30 Mo) \u2014 d\u00e9pose-le toi-m\u00eame sur Drive puis colle son lien (bouton Lier\u2026).'));return;}
     var reader=new FileReader();
     reader.onload=function(e){
       var b64=e.target.result.split(',')[1];
@@ -4235,12 +4294,19 @@ function _uploadBlobToDrive(blob,fileName,level,chnum,snum){
         action:'deposer',fichier:b64,nom:fileName,type:blob.type||'application/octet-stream',
         chemin:_cheminDriveLisible(level,chnum,snum)
       })}).then(function(r){return r.json();}).then(function(res){
-        if(!res||res.error||res.status==='erreur'){reject(new Error((res&&(res.error||res.message))||'Le d\u00e9p\u00f4t a \u00e9chou\u00e9.'));return;}
-        if(!res.id){reject(new Error('Le d\u00e9p\u00f4t n\u2019a pas rendu d\u2019identifiant \u2014 rien n\u2019est li\u00e9.'));return;}
+        /* [LOT8c-53\u2460] LA R\u00c8GLE : la cause dans le langage de Paul \u00e0 l'\u00e9cran,
+           le d\u00e9tail technique en console \u2014 jamais de jargon dans un toast. */
+        if(!res||res.error||res.status==='erreur'){console.error('MJPC d\u00e9p\u00f4t \u2014 script muet ou en erreur :',res);reject(new Error('Le fichier n\u2019est pas arriv\u00e9 sur Drive. R\u00e9essaie ; si \u00e7a continue, d\u00e9pose-le toi-m\u00eame sur Drive puis colle son lien (bouton Lier\u2026).'));return;}
+        if(!res.id){console.error('MJPC d\u00e9p\u00f4t \u2014 r\u00e9ponse sans identifiant :',res);reject(new Error('Drive n\u2019a pas confirm\u00e9 le d\u00e9p\u00f4t \u2014 le fichier n\u2019est pas li\u00e9 \u00e0 la ligne. R\u00e9essaie ; si \u00e7a continue, d\u00e9pose-le toi-m\u00eame sur Drive puis colle son lien (bouton Lier\u2026).'));return;}
         resolve({drive_file_id:res.id,file_name:res.nom||fileName,ext:res.ext||'',url:res.url||'',affichage:res.affichage||'',dossier:res.dossier||'',dossier_url:res.dossier_url||''});
-      }).catch(reject);
+      }).catch(function(err){
+        /* [LOT8-\u2464] la cause ET le geste, pour chaque famille d'\u00e9chec */
+        if(err&&err.mjpcIssue&&err.mjpcIssue.etat===MJPC_ISSUE.PANNE){console.error('MJPC d\u00e9p\u00f4t \u2014 panne de liaison :',err.mjpcIssue);reject(new Error('Pas de connexion internet \u2014 le fichier n\u2019est pas parti sur Drive. V\u00e9rifie ta connexion, puis reglisse le fichier.'));return;}
+        if(err&&err.mjpcIssue&&err.mjpcIssue.etat===MJPC_ISSUE.REFUSEE){console.error('MJPC d\u00e9p\u00f4t \u2014 refus HTTP '+err.mjpcIssue.status+' :',err.mjpcIssue);reject(new Error('Le fichier n\u2019est pas arriv\u00e9 sur Drive. R\u00e9essaie ; si \u00e7a continue, d\u00e9pose-le toi-m\u00eame sur Drive puis colle son lien (bouton Lier\u2026).'));return;}
+        reject(err);
+      });
     };
-    reader.onerror=function(){reject(new Error('Lecture fichier impossible'));};
+    reader.onerror=function(e){console.error('MJPC d\u00e9p\u00f4t \u2014 lecture du fichier impossible :',e);reject(new Error('Impossible de lire ce fichier \u2014 reprends-le depuis ton ordinateur et reglisse-le.'));};
     reader.readAsDataURL(blob);
   });
 }
@@ -4844,19 +4910,36 @@ function toggleSeanceOpen(h,key){var b=h.nextElementSibling;if(!b||!b.classList.
 function hideAllTabs(){var ids=['tab-chapitres','tab-fiches','tab-autonomie','tab-dictee','tab-reecriture','tab-evalconn','tab-image','tab-etude','tab-redaction','tab-analyse'];ids.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});}
 function switchTab(btn,tab){document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});btn.classList.add('active');hideAllTabs();
   if(tab==='fiches'&&typeof gotoFiches==='function')setTimeout(function(){gotoFiches();},0);   /* [C5-AR] les rayons se remplissent à l'ouverture *//* v8.5.1 : la liste codée en dur laissait tab-analyse (et tout onglet M8F) affiché sous les autres — accumulation constatée par Paul le 27/07 */var el=document.getElementById('tab-'+tab);if(el)el.style.display='block';if(tab==='autonomie'&&typeof renderZoneAutonomie==='function')renderZoneAutonomie();}
-function collectChapterItems(level,kind){
+function collectChapterItems(level,kind,avecInvisibles){
+  /* [LOT8-\u2461] `avecInvisibles` (PROF SEULEMENT, pos\u00e9 par collectRayons) : les items
+     du kind demand\u00e9 \u00e9cart\u00e9s par le filtre de publication sont RENDUS AUSSI, marqu\u00e9s
+     `invisible:'chapitre'|'seance'|'ligne'` \u2014 pour que les rayons puissent DIRE ce
+     que la publication \u00e9carte au lieu d'un silence. Sans ce 3e argument, comportement
+     STRICTEMENT identique \u00e0 avant : la publication reste la seule v\u00e9rit\u00e9 \u00e9l\u00e8ve. */
   var data=chapitresData[level]||{};
   var result=[];
   Object.keys(data).filter(function(k){return data[k]&&typeof data[k]==='object';}).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);}).forEach(function(chnum){
-    var ch=data[chnum];if(!_visiblePourSession(ch,level))return;   /* M8-IDENTITÉ (I1) */
+    var ch=data[chnum];
+    var chVis=_visiblePourSession(ch,level);   /* M8-IDENTIT\u00c9 (I1) */
+    if(!chVis&&!avecInvisibles)return;
     var seances=ch.seances||{};
     Object.keys(seances).filter(function(k){return seances[k]&&typeof seances[k]==='object';}).sort(function(a,b){return (seances[a].ordre||0)-(seances[b].ordre||0);}).forEach(function(snum){
-      var sce=seances[snum];if(!_visiblePourSession(sce,level))return;   /* M8-IDENTITÉ (I1) */
+      var sce=seances[snum];
+      var seVis=_visiblePourSession(sce,level);   /* M8-IDENTIT\u00c9 (I1) */
+      if(!seVis&&!avecInvisibles)return;
       var items=sce.items||{};
       Object.keys(items).filter(function(k){return items[k]&&typeof items[k]==='object';}).sort(function(a,b){return (items[a].ordre||0)-(items[b].ordre||0);}).forEach(function(itemId){
         var it=items[itemId];
-        if(!_visiblePourSession(it,level)||it.kind!==kind||!it.ref)return;   /* M8-IDENTITÉ (I1) */
-        result.push({chnum:chnum,chapTitle:ch.title||'',seanceTitle:sce.title||'',itemId:itemId,item:it});
+        /* [LOT8c-\u2468] kind='@externes' : la m\u00eame collecte (m\u00eames trois \u00e9tages de
+           publication) sert les ressources externes \u2014 filtre par SOURCE au lieu du
+           kind. Aucun appel existant ne passe cette valeur : comportement inchang\u00e9. */
+        if(kind==='@externes'){ if(!((it.source==='drive'||it.source==='external')&&it.ref))return; }
+        else if(it.kind!==kind||!it.ref)return;
+        var itVis=_visiblePourSession(it,level);   /* M8-IDENTIT\u00c9 (I1) */
+        if(!itVis&&!avecInvisibles)return;
+        var e={chnum:chnum,snum:snum,chapTitle:ch.title||'',seanceTitle:sce.title||'',itemId:itemId,item:it};   /* [LOT8c-\u2468] snum expos\u00e9 (le menu produit des externes en a besoin) */
+        if(!(chVis&&seVis&&itVis))e.invisible=(!chVis?'chapitre':(!seVis?'seance':'ligne'));
+        result.push(e);
       });
     });
   });
@@ -4871,16 +4954,39 @@ function collectChapterItems(level,kind){
    Une feuille dont le produit est ANCRÉ (fiche de séance, support de cours, bilan,
    point d'étape) ne remonte PAS : elle vit dans sa séance. */
 function collectRayons(level){
-  var tout=collectChapterItems(level,'atelier');
-  var out={langue:[],brevet:[],loin:[],ancres:0,sansProduit:0};
+  var _prof=!!(typeof TRACK!=='undefined'&&TRACK.eleve&&TRACK.eleve.is_prof);
+  var tout=collectChapterItems(level,'atelier',_prof);
+  /* [LOT8-\u2461\u2462] le rayon 'loin' devient 'analyse' (d\u00e9cision de Paul : \u00ab analyse
+     logique dans analyse logique \u00bb \u2014 le vocabulaire de la Zone autonomie ne d\u00e9signe
+     plus ce rayon) ; et la collecte GARDE LE D\u00c9TAIL de ce qu'elle \u00e9carte (ignores),
+     pour que le professeur puisse le lire sous les rayons au lieu d'un silence. */
+  var out={langue:[],brevet:[],analyse:[],ancres:0,sansProduit:0,ignores:[]};
   tout.forEach(function(e){
     var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[e.item.ref]:null;
-    if(!d){out.sansProduit++;return;}          /* feuille inconnue du cache : on ne devine pas */
-    var r=atProduitRayon(d.produit);
-    if(!r){out.ancres++;return;}
+    if(e.invisible){out.ignores.push({cause:'nonPubliee',ref:e.item.ref,titre:(d&&d.titre)||e.item.title||e.item.ref,produit:(d&&d.produit)||'',etage:e.invisible});return;}
+    if(!d){out.sansProduit++;out.ignores.push({cause:'pasCache',ref:e.item.ref,titre:e.item.title||e.item.ref,produit:''});return;}          /* feuille inconnue du cache : on ne devine pas */
     e.produitLib=(ATELIER_PRODUITS[d.produit]||{}).libelle||'';
     e.docTitre=d.titre||'';
+    if(!d.produit||!ATELIER_PRODUITS[d.produit]){out.ancres++;out.ignores.push({cause:'sansProduit',ref:e.item.ref,titre:d.titre||e.item.ref,produit:''});return;}
+    var r=atProduitRayon(d.produit);
+    if(!r){out.ancres++;out.ignores.push({cause:'ancre',ref:e.item.ref,titre:d.titre||e.item.ref,produit:d.produit});return;}
     out[r].push(e);
+  });
+  /* [LOT8c-\u2468] LA SECONDE PASSE : les ressources EXTERNES (drive/external) entrent
+     aux rayons PAR LEUR PRODUIT d\u00e9clar\u00e9 sur l'item (option A) \u2014 identit\u00e9 = uid
+     d'item, la ref reste l'id Drive/l'URL. Sans produit d\u00e9clar\u00e9, elles paraissent
+     aux ignor\u00e9es C\u00d4T\u00c9 PROF (cause sansProduitExt) avec le menu pour les ranger.
+     M\u00eame moteur, m\u00eames trois \u00e9tages de publication : rien de parall\u00e8le. */
+  collectChapterItems(level,'@externes',_prof).forEach(function(e){
+    var it=e.item;
+    if(e.invisible){out.ignores.push({cause:'nonPubliee',ref:it.ref,titre:it.title||it.ref,produit:it.produit||'',etage:e.invisible,ext:{level:level,chnum:e.chnum,snum:e.snum||'',itemId:e.itemId}});return;}
+    if(!it.produit||!ATELIER_PRODUITS[it.produit]){out.sansProduit++;out.ignores.push({cause:'sansProduitExt',ref:it.ref,titre:it.title||it.ref,produit:'',ext:{level:level,chnum:e.chnum,snum:e.snum||'',itemId:e.itemId}});return;}
+    var r2=atProduitRayon(it.produit);
+    if(!r2){out.ancres++;out.ignores.push({cause:'ancre',ref:it.ref,titre:it.title||it.ref,produit:it.produit,ext:{level:level,chnum:e.chnum,snum:e.snum||'',itemId:e.itemId}});return;}
+    e.produitLib=(ATELIER_PRODUITS[it.produit]||{}).libelle||'';
+    e.docTitre=it.title||'';
+    e.externe=true;
+    out[r2].push(e);
   });
   return out;
 }
@@ -4897,7 +5003,7 @@ function renderRayons(level){
   _rayonPoser('count-fiches-grammaire',gram.length,'fiche');
   _rayonPoser('count-fiches-notions',noti.length,'fiche');
   _rayonPoser('count-prepa-brevet',r.brevet.length,'fiche');
-  _rayonPoser('count-analyse-logique',r.loin.length,'fiche');
+  _rayonPoser('count-analyse-logique',r.analyse.length,'fiche');
   function zone(sec,items,icone){
     var z=document.querySelector('.fiche-drop-zone[data-section="'+sec+'"]');
     if(!z)return;
@@ -4906,10 +5012,49 @@ function renderRayons(level){
   zone('fiches-grammaire',gram,'\ud83d\udcdd');
   zone('fiches-notions',noti,'\ud83d\udccc');
   zone('prepa-brevet',r.brevet,'\ud83c\udfaf');
-  zone('analyse-logique',r.loin,'\ud83d\ude80');
+  zone('analyse-logique',r.analyse,'\ud83d\ude80');
+  /* [LOT8-\u2461] C\u00d4T\u00c9 PROF SEULEMENT : les rayons DISENT ce qu'ils \u00e9cartent, pourquoi,
+     et donnent le geste (ouvrir la feuille, requalifier le produit \u2014 le menu
+     existant). L'\u00e9l\u00e8ve ne voit rien : le bloc n'est rendu qu'en mode admin. */
+  var zi=document.getElementById('rayons-ignores');
+  if(zi){
+    if(document.body.classList.contains('admin-mode')&&r.ignores.length){
+      var CAUSES={nonPubliee:'\u00e9cart\u00e9e par la publication (chapitre, s\u00e9ance ou ligne non publi\u00e9s) \u2014 publie-la depuis le chapitre',
+                  pasCache:'la feuille n\u2019a pas pu \u00eatre lue dans l\u2019atelier \u2014 recharge la page, ou v\u00e9rifie qu\u2019elle existe encore',
+                  sansProduit:'aucun type de feuille d\u00e9clar\u00e9 \u2014 choisis-le ici pour la ranger',
+                  sansProduitExt:'fichier ou site d\u00e9pos\u00e9 sans type d\u00e9clar\u00e9 \u2014 choisis-le ici pour le ranger dans un onglet',
+                  ancre:'son type vit dans sa s\u00e9ance, pas dans un onglet \u2014 change-le si elle doit para\u00eetre ici'};
+      var hh='<div class="rayons-ignores-bloc"><div class="ri-titre">\u26a0 Non rang\u00e9es dans les onglets \u2014 visible par toi seul</div>';
+      r.ignores.forEach(function(x){
+        /* [LOT8c-\u2468] une EXTERNE porte son menu d'ITEM (\u00e9crivain itemProduitPoser) ;
+           une feuille garde le menu de feuille. M\u00eame geste, deux \u00e9crivains d\u00e9clar\u00e9s. */
+        var _menu=x.ext?itemProduitMenu(x.ext.level,x.ext.chnum,x.ext.snum,x.ext.itemId,x.produit):atProduitMenu(x.ref,x.produit);
+        hh+='<div class="rayons-ignore-l">'
+          +'<span class="ri-t">'+escapeHtml(x.titre||'')+'</span>'
+          +'<span class="ri-c">'+CAUSES[x.cause]+'</span>'
+          +(x.cause!=='pasCache'?('<button class="at-btn at-btn-min" onclick="_openAtelierFromList(\''+atEsc(x.ref)+'\')">Ouvrir</button>'+_menu):'')
+          +'</div>';
+      });
+      zi.innerHTML=hh+'</div>';
+    } else zi.innerHTML='';
+  }
   return r;
 }
-function _openAtelierFromList(ref){ if(typeof atOuvrirFeuilleEleve==='function')atOuvrirFeuilleEleve(ref); else openViewer('Feuille','?feuille='+encodeURIComponent(ref)); }
+function _openAtelierFromList(ref){
+  /* [LOT8-\u2460] LE CHEMIN SAIN : openAtelierItem lit la VERSION ENVOY\u00c9E et pose
+     TOUJOURS un srcdoc (feuille, message prof, message \u00e9l\u00e8ve). L'ancien repli
+     (atOuvrirFeuilleEleve, jamais d\u00e9finie \u2192 openViewer avec une URL RELATIVE)
+     rechargeait LE SITE ENTIER dans l'iframe de la modale \u2014 la mise en abyme
+     v\u00e9cue par Paul. */
+  var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[ref]:null;
+  if(d){openAtelierItem(ref,d.titre||'Feuille');return;}
+  /* [LOT8c-\u2468] une ressource EXTERNE rang\u00e9e aux rayons n'est pas une feuille :
+     elle s'ouvre par openViewer (la garde \u2460 et l'issue \u00ab Ouvrir dans un onglet \u00bb
+     s'appliquent). URL http(s) \u2192 telle quelle ; id Drive \u2192 preview. */
+  if(/^https?:\/\//i.test(ref)){openViewer('Ressource',ref);return;}
+  if(/^[A-Za-z0-9_-]{20,}$/.test(ref)){openViewer('Document','https://drive.google.com/file/d/'+ref+'/preview');return;}
+  openAtelierItem(ref,'Feuille');
+}
 function gotoFiches(level){
   var n=level||clickedLevel||currentLevel||'';
   if(typeof atSiteGetDocs==='function'&&(typeof LINK_ATELIER_DOCS==='undefined'||!LINK_ATELIER_DOCS||!Object.keys(LINK_ATELIER_DOCS).length)){
@@ -4954,7 +5099,12 @@ function renderZoneAutonomie(){
   var zone=document.getElementById('autonomie-dyn');if(!zone)return;
   var level=clickedLevel||currentLevel||'';
   var items=level?collectAutonomieItems(level):[];
-  if(items.length===0){zone.innerHTML='';return;}
+  if(items.length===0){
+    /* [LOT8c-52\u2462] le vide se DIT (constat cap-17 : page d\u00e9serte) \u2014 le texte de
+       Paul, au gabarit des messages de vide du site, \u00e9l\u00e8ve ET prof, sans condition. */
+    zone.innerHTML='<div class="chapter-card" style="padding:18px;text-align:center;color:rgba(255,255,255,0.35);font-style:italic;">Rien \u00e0 signaler ici</div>';
+    return;
+  }
   var parChap={};var ordre=[];
   items.forEach(function(x){var k=x.chnum;if(!parChap[k]){parChap[k]={titre:x.chapTitle,items:[]};ordre.push(k);}parChap[k].items.push(x);});
   var html='<div class="section-label">Rassembl\u00e9s pour toi</div>'
@@ -5073,7 +5223,35 @@ function handleBadgeTap(){badgeTapCount++;if(badgeTapTimer)clearTimeout(badgeTap
 /* [LOT7-①] closeBigFile retirée (code mort, ancien script) — voir rapport. */
 /* [LOT7-①] dismissBigFileGuide retirée (code mort, ancien script) — voir rapport. */
 /* [LOT7-①] associateBigFile retirée (code mort, ancien script) — voir rapport. */
-function openViewer(title,url){if(url&&url.indexOf('drive.google.com/file/d/')>=0){url=url.replace(/\/view(\?|$)/,'/preview$1');}document.getElementById('doc-viewer-title').textContent=title;document.getElementById('doc-viewer-frame').src=url;document.getElementById('doc-viewer').classList.add('visible');}
+function openViewer(title,url){
+  /* [LOT8-\u2460] AUCUNE IFRAME NE RECHARGE LE SITE : une URL vide ou relative \u00e0 la
+     page courante ('?\u2026', '#\u2026', index.html) rechargerait index.html dans le cadre.
+     Un contenu invalide re\u00e7oit un srcdoc de message \u2014 jamais le vide, jamais le site. */
+  var f=document.getElementById('doc-viewer-frame');
+  document.getElementById('doc-viewer-title').textContent=title;
+  var u=String(url==null?'':url).trim();
+  if(!u||u.charAt(0)==='?'||u.charAt(0)==='#'||/^(\.\/)?index\.html/i.test(u)){
+    f.removeAttribute('src');
+    f.srcdoc='<body style="font-family:serif;padding:24px">Ce document n\u2019est pas disponible pour l\u2019instant.</body>';
+    var _nt0=document.getElementById('doc-viewer-newtab');
+    if(_nt0){_nt0.style.display='none';_nt0.removeAttribute('href');}
+    document.getElementById('doc-viewer').classList.add('visible');
+    return;
+  }
+  if(u.indexOf('drive.google.com/file/d/')>=0){u=u.replace(/\/view(\?|$)/,'/preview$1');}
+  f.removeAttribute('srcdoc');   /* un srcdoc r\u00e9siduel PRIME sur src */
+  f.src=u;
+  /* [LOT8c-②] JAMAIS UN CUL-DE-SAC : un site peut refuser l'embarquement
+     (X-Frame-Options / CSP frame-ancestors) et la d\u00e9tection du refus n'est pas
+     fiable cross-origin \u2014 alors pour TOUTE URL web, l'issue est offerte
+     syst\u00e9matiquement dans l'en-t\u00eate, \u00e0 c\u00f4t\u00e9 de Fermer. */
+  var _nt=document.getElementById('doc-viewer-newtab');
+  if(_nt){
+    if(/^https?:\/\//i.test(u)){_nt.href=u;_nt.style.display='inline-flex';}
+    else{_nt.style.display='none';_nt.removeAttribute('href');}
+  }
+  document.getElementById('doc-viewer').classList.add('visible');
+}
 function toggleAdminTools(){document.getElementById('admin-tools-menu').classList.toggle('visible');}
 
 // =========== Panneau prof — configuration totale ===========
@@ -6673,7 +6851,7 @@ function openBB4E(){openViewer('Brevet Blanc 4e \u2014 R\u00e9\u00e9criture','re
 function publishBB4E(){togglePublishExtra('4e','bb4e');}
 function showEmptyTab(tabId,label){var el=document.getElementById('tab-'+tabId);hideAllTabs();el.style.display='block';var btn=document.getElementById('tab-btn-'+tabId);if(btn)btn.classList.add('active');el.innerHTML='<div style="padding:40px 20px;text-align:center"><div style="font-size:3rem;margin-bottom:16px;opacity:0.3">🔧</div><div style="color:rgba(255,255,255,0.4);font-size:1rem;line-height:1.8">'+(document.body.classList.contains('admin-mode')?'Cet outil n’est pas encore branché.<br>Il faut le brancher avant de le publier.':'Cet outil ouvrira plus tard.')+'</div></div>';}
 function openAdminTool(tool){document.getElementById('admin-tools-menu').classList.remove('visible');var level=clickedLevel||currentLevel||'';if(tool==='dictee'){window.open('dictee_universelle.html'+(level?'?n='+level:''),'_blank');}if(tool==='correction'){window.open('correction_dictee.html?mode=prof','_blank');}if(tool==='reecriture'){window.open('reecriture.html','_blank');}if(tool==='reecriture_bb4e'){window.open('reecriture_bb4e.html','_blank');}if(tool==='evaluation_qcm'){window.open('evaluation-qcm.html?mode=prof','_blank');}if(tool==='applause'){window.open('applause_meter.html'+(level?'?n='+level:''),'_blank');}if(tool==='debat_s3'){window.open('pilotage_debat_s3.html'+(level?'?n='+level:''),'_blank');}}
-function closeViewer(){document.getElementById('doc-viewer').classList.remove('visible');document.getElementById('doc-viewer-frame').src='about:blank';trackClose();}
+function closeViewer(){document.getElementById('doc-viewer').classList.remove('visible');var f=document.getElementById('doc-viewer-frame');f.removeAttribute('srcdoc');f.src='about:blank';var _nt=document.getElementById('doc-viewer-newtab');if(_nt){_nt.style.display='none';_nt.removeAttribute('href');}trackClose();}   /* [LOT8-\u2460] le srcdoc r\u00e9siduel primerait sur src */
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.getElementById('doc-viewer').classList.contains('visible'))closeViewer();});
 document.addEventListener('click',function(e){var menu=document.getElementById('admin-tools-menu');var btn=document.getElementById('admin-tools-btn');if(menu&&btn&&!menu.contains(e.target)&&!btn.contains(e.target))menu.classList.remove('visible');});
 
@@ -6855,7 +7033,7 @@ impression_seule: AC('J','rendu','mise_en_page',"Réserver la feuille au papier 
 var /* [C5-AR] — LES PRODUITS SONT DES PISTONS, JAMAIS DES VERROUS : le lot pré-coche,
    Paul ajoute ou retire ensuite librement (aucun grisage dans ce morceau — déclaré).
    `rayon` dit où la feuille atterrit dans l'onglet des transversales :
-   'langue' | 'brevet' | 'loin' — et ABSENT = produit ANCRÉ (il vit dans la
+   'langue' | 'brevet' | 'analyse' — et ABSENT = produit ANCRÉ (il vit dans la
    séance, il ne remonte pas : ligne ancré/transversal du 29/07). */
 ATELIER_PRODUITS={
   fiche_seance:{
@@ -6929,7 +7107,7 @@ ATELIER_PRODUITS={
   },
   fiche_analyse_logique:{
     libelle:'Fiche analyse logique',
-    rayon:'loin',
+    rayon:'analyse',   /* [LOT8-\u2462] \u00ab analyse logique dans analyse logique \u00bb \u2014 plus le vocabulaire de la Zone autonomie */
     info:"Le support d\u2019analyse logique : rappel de m\u00e9thode, phrases \u00e0 analyser, place pour le travail.",
     cases:{titre:true,niveau:true,notions:true,
            methode:true,definition:true,exemple:true,
@@ -6960,14 +7138,41 @@ function atFeuilleProduitPoser(id,prod){
        et le menu de produit revenait en arri\u00e8re. */
     if(AT&&AT.liste&&AT.liste[id])AT.liste[id].produit=prod;
     if(typeof atRendreListe==='function')atRendreListe();
+    /* [LOT8-\u2461] requalifi\u00e9e depuis le bloc des rayons : l'\u00e9cran suit SANS rechargement */
+    var _tf=document.getElementById('tab-fiches');
+    if(_tf&&_tf.style.display!=='none'&&typeof renderRayons==='function')renderRayons(clickedLevel||currentLevel||'');
   });
 }
-function atProduitMenu(id,prodCourant){
-  return '<select class="at-sel at-sel-mini" onchange="atFeuilleProduitPoser(\''+id+'\',this.value)">'
+/* [LOT8c-\u2468] UNE SEULE SOURCE D'OPTIONS pour la requalification : le m\u00eame menu
+   sert les feuilles de l'atelier (\u00e9crivain atFeuilleProduitPoser) et les items
+   drive/external (\u00e9crivain itemProduitPoser) \u2014 aucun \u00e9cran neuf, le m\u00eame geste. */
+function _produitSelectHTML(onchange,prodCourant){
+  return '<select class="at-sel at-sel-mini" onchange="'+onchange+'">'
     +'<option value="">Produit\u2026</option>'
     +Object.keys(ATELIER_PRODUITS).map(function(p){
        return '<option value="'+p+'"'+(p===prodCourant?' selected':'')+'>'+atEsc(ATELIER_PRODUITS[p].libelle)+'</option>';
      }).join('')+'</select>';
+}
+function atProduitMenu(id,prodCourant){
+  return _produitSelectHTML('atFeuilleProduitPoser(\''+id+'\',this.value)',prodCourant);
+}
+function itemProduitMenu(level,chnum,snum,itemId,prodCourant){
+  return _produitSelectHTML('itemProduitPoser(\''+atEsc(level)+'\',\''+atEsc(chnum)+'\',\''+atEsc(snum)+'\',\''+atEsc(itemId)+'\',this.value)',prodCourant);
+}
+/* [LOT8c-\u2468] L'\u00c9CRIVAIN UNIQUE du produit d'un ITEM (drive/external) : le champ
+   vit SUR L'ITEM \u2014 jamais de n\u0153ud parall\u00e8le. L'identit\u00e9 du rangement est l'uid
+   de l'item ; l'id Drive reste la ref. Aucune migration : Paul qualifie \u00e0 la
+   main, item par item, par ce menu. */
+function itemProduitPoser(level,chnum,snum,itemId,prod){
+  if(!prod)return;
+  _sitePut('/site/'+level+'/chapitres/'+chnum+'/seances/'+snum+'/items/'+itemId+'/produit',prod,function(ok){
+    if(!ok){atInfo('\u26a0 Le produit n\u2019a pas pu s\u2019enregistrer.');return;}
+    var it=chapitresData[level]&&chapitresData[level][chnum]&&chapitresData[level][chnum].seances[snum]&&chapitresData[level][chnum].seances[snum].items[itemId];
+    if(it)it.produit=prod;
+    var _tf=document.getElementById('tab-fiches');
+    if(_tf&&_tf.style.display!=='none'&&typeof renderRayons==='function')renderRayons(clickedLevel||currentLevel||'');
+    if(typeof AT!=='undefined'&&AT.edChap&&typeof atEditerChapitreRendre==='function')atEditerChapitreRendre();
+  });
 }
 function atProduitRayon(prod){
   var p=ATELIER_PRODUITS[prod||''];
@@ -11302,7 +11507,11 @@ function edPrendreFeuille(j,k){
        if(k){edLierConfirme(lvl,chn,[{seance:j,item:k,doc:id}]);return;}
        itemCreer(lvl,chn,j,(LINK_ATELIER_DOCS[id].titre||id),
          {kind:'atelier',source:'atelier',ref:id,published:false},
-         function(){atEditerChapitreRendre();});
+         function(itemId){
+           /* [LOT8-\u2469] le lien \u00e9crit le d\u00e9p\u00f4t \u2014 m\u00eame \u00e9crivain que la voie edLierConfirme */
+           if(itemId)atFeuilleDepotPoser(id,lvl,chn,j,itemId,function(){atEditerChapitreRendre();});
+           else atEditerChapitreRendre();
+         });
      }}]);
 }
 /* [LOT2-⑧] ÉCRIRE AVEC UNE IA DEPUIS UN TROU — la feuille se crée ADRESSÉE
@@ -11351,7 +11560,10 @@ function edIAdepuisTrou(j,k){
          sinon le rendu de sortie de l'écrivain écrasait l'écran IA (course
          mesurée au banc à taille réelle). */
       if(it)edLierConfirme(lvl,chn,[{seance:j,item:k,doc:id}],ouvrirIA);   /* l'écrivain existant, sortie séquencée */
-      else itemCreer(lvl,chn,j,titre,{kind:'atelier',source:'atelier',ref:id,published:false},ouvrirIA);
+      else itemCreer(lvl,chn,j,titre,{kind:'atelier',source:'atelier',ref:id,published:false},function(itemId){
+        if(itemId)atFeuilleDepotPoser(id,lvl,chn,j,itemId,function(){ouvrirIA();});   /* [LOT8-\u2469] */
+        else ouvrirIA();
+      });
       /* [LOT4-⑤] ON NE QUITTE PLUS L'ÉDITEUR : AT.edChap reste posé, l'écran IA
          EXISTANT prend l'écran (aucun troisième écran réécrit) et son retour
          revient AU CHAPITRE — à la même place : la position de la pile est
@@ -11470,7 +11682,7 @@ function ed2Documents(level,chnum){
       var it=q.o;
       var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&it.ref)?LINK_ATELIER_DOCS[it.ref]:null;
       out.push({seance:p.j,seanceTitre:se.title||('S\u00e9ance '+p.j),rang:rang,teinte:ed2Teinte(rang),
-                item:q.k,uid:it.uid||'',ref:it.ref||'',kind:it.kind||'doc',
+                item:q.k,uid:it.uid||'',ref:it.ref||'',kind:it.kind||'doc',src:it.source||'',   /* [LOT8-\u2467] la source pour le cadre externe */
                 titre:(d&&d.titre)||it.title||q.k,
                 produit:(d&&d.produit)||'',
                 feuille:!!(d&&(it.kind==='atelier'||it.source==='atelier')),
@@ -11929,6 +12141,21 @@ function ed2Papier(level,chnum,docs){
         h+='<div class="ed2-pt">'+atEsc(d.titre)+'</div>'
           +'<div class="ed2-pm">'+atEsc(d.produit?(((ATELIER_PRODUITS[d.produit]||{}).libelle)||d.produit):d.kind)+'</div>'
           +(_dpH||'');
+        /* [LOT8-\u2467] LES RESSOURCES EXTERNES SE VOIENT : un document Drive ou un
+           lien web re\u00e7oit un CADRE dans le fil \u2014 barre d'adresse identifiable
+           (jamais une page blanche) + aper\u00e7u, et le clic sur la barre l'ouvre EN
+           MODALE (openViewer, le chemin \u00e9l\u00e8ve existant). Le papier imprim\u00e9 ne
+           l'imprime pas (r\u00e8gle @media print, avec les trous). */
+        if(!_dpH&&d.ref&&(d.src==='drive'||d.src==='external')){
+          var _xurl=(d.src==='drive')?('https://drive.google.com/file/d/'+d.ref+'/preview'):d.ref;
+          var _xlib=(d.src==='drive')?('Fichier Drive \u00b7 '+d.ref):d.ref;
+          h+='<div class="ed2-xcadre">'
+            +'<div class="ed2-xbarre" onclick="event.stopPropagation();openViewer(\''+atEsc((d.titre||'Document').replace(/'/g,''))+'\',\''+atEsc(_xurl)+'\')">'
+            +(d.src==='drive'?'\ud83d\udcce ':'\ud83c\udf10 ')+'<span class="ed2-xadr">'+atEsc(_xlib)+'</span>'
+            +'<span class="ed2-xouvre">Ouvrir en modale \u2192</span></div>'
+            +'<iframe class="ed2-xapercu" src="'+atEsc(_xurl)+'" title="Aper\u00e7u" loading="lazy" sandbox="allow-scripts allow-same-origin"></iframe>'
+            +'</div>';
+        }
       }
       h+='</div>';
     })(d);
@@ -12301,6 +12528,12 @@ function atEditerChapitreRendre(){
       }
       else _stat=(_estPublieItem(it)?'<span class="at-st-depose">ouverte aux \u00e9l\u00e8ves</span>'
                                     :'<span class="at-st-adresse">pas encore ouverte aux \u00e9l\u00e8ves</span>');
+      /* [LOT8c-\u2468] un item drive/external li\u00e9 porte le menu de requalification AU
+         PANNEAU (le m\u00eame menu que le bloc des ignor\u00e9es \u2014 \u00e9crivain itemProduitPoser) :
+         son produit d\u00e9cide de son rayon aux onglets transversaux. */
+      if((it.source==='drive'||it.source==='external')&&it.ref){
+        _stat+=' '+itemProduitMenu(ec.level,ec.chnum,j,k,it.produit||'');
+      }
       h+='<div class="at-edch-it" data-champ="item-'+k+'" onclick="ed2ClicChamp(\'item-'+k+'\')"><div class="at-edch-itt">\u2022 '+atEsc(it.title||k)+' '+_stat
         +' <span class="ch-type">'+atEsc(it.kind||'doc')+(_edtb?'':' \u00b7 lecture seule')+'</span>'
         +'<span class="at-edch-actes">'
@@ -12314,6 +12547,7 @@ function atEditerChapitreRendre(){
         +(_edtb&&it.ref?('<button class="at-btn at-btn-min" onclick="edDupliquerVers(\''+j+'\',\''+k+'\')">Dupliquer vers\u2026</button>'):'')
         +'<button class="at-btn at-btn-min at-btn-danger" onclick="edSupprimerItem(\''+j+'\',\''+k+'\')">\u2715</button>'
         +'</span></div>'
+        +(it.remplace&&it.remplace.ref?('<div class="at-edch-rempl">Ancien document : '+atEsc(_resLibelle(it.remplace.source,it.remplace.ref,it.remplace.kind))+' \u2014 remplac\u00e9 le '+new Date(it.remplace.le||0).toLocaleDateString('fr-FR')+'.</div>'):'')   /* [LOT8-\u2466] l'ancien couple reste lisible */
         +'<label class="at-edch-lib">Titre</label><input class="at-edch-in" value="'+atEsc(it.title||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'title\',this.value)">'
         +'<label class="at-edch-lib">Sous-titre</label><input class="at-edch-in" value="'+atEsc(it.subtitle||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'subtitle\',this.value)">'
         +'<label class="at-edch-lib">Type (kind)</label><input class="at-edch-in" value="'+atEsc(it.kind||'')+'" onchange="atChampItem('+j+',\''+k+'\',\'kind\',this.value)">'
@@ -12457,27 +12691,91 @@ function edProposerLiaisonsPrete(level,chnum){
   }}]:[]));
 }
 function edLierConfirme(level,chnum,lignes,apres){
-  /* [LOT4-⑤] « apres » (optionnel) remplace le rendu de sortie : mesuré au banc,
-     le atEditerChapitreRendre de ce then ÉCRASAIT l'écran IA ouvert par
-     edIAdepuisTrou maintenant que l'éditeur reste posé. Même écrivain, mêmes
-     écritures, même message — seule la suite est séquencée par l'appelant. */
+  /* [LOT4-\u2464] \u00ab apres \u00bb (optionnel) remplace le rendu de sortie. */
+  /* [LOT8-\u2466] LA GARDE DE REMPLACEMENT : toute ligne dont l'item porte D\u00c9J\u00c0 une
+     ressource diff\u00e9rente est nomm\u00e9e (ancienne \u2192 nouvelle) AVANT d'\u00e9crire, et le
+     remplac\u00e9 est TRAC\u00c9 sur l'item (champ `remplace`). Jamais d'\u00e9crasement muet. */
+  var occupees=[];
+  lignes.forEach(function(l){
+    var it=((((chapitresData[level]||{})[chnum]||{}).seances||{})[l.seance]||{}).items;
+    it=it&&it[l.item];
+    if(it&&it.ref&&(it.ref!==l.doc||String(it.source||'')!=='atelier'))occupees.push({l:l,it:it});
+  });
+  var _ecrire=function(){_edLierEcrire(level,chnum,lignes,apres);};
+  if(occupees.length){
+    var corps=occupees.map(function(o){
+      return '\u2022 \u00ab '+escapeHtml(o.it.title||o.l.item)+' \u00bb : <b>'+escapeHtml(_resLibelle(o.it.source,o.it.ref,o.it.kind))+'</b> \u2192 <b>'+escapeHtml(_resLibelle('atelier',o.l.doc,''))+'</b>';
+    }).join('<br>');
+    _modaleConfirme('Remplacer la ressource',
+      (occupees.length>1?occupees.length+' items portent d\u00e9j\u00e0 une ressource :':'Cet item porte d\u00e9j\u00e0 une ressource :')
+      +'<br>'+corps+'<br>Remplacer\u00a0? Tu retrouveras les anciennes adresses sous chaque item, dans l\u2019\u00e9diteur.',
+      _ecrire);
+    return;
+  }
+  _ecrire();
+}
+function _edLierEcrire(level,chnum,lignes,apres){
   var base='/site/'+level+'/chapitres/'+chnum+'/seances/';
   var restent=lignes.length,faits=0;
   lignes.forEach(function(l){
     var chemin=base+l.seance+'/items/'+l.item;
-    Promise.all([secuEcrire(chemin+'/ref',l.doc),
-                 secuEcrire(chemin+'/source','atelier'),
-                 secuEcrire(chemin+'/kind','atelier')]).then(function(rs){
+    var itAv=((((chapitresData[level]||{})[chnum]||{}).seances||{})[l.seance]||{}).items;
+    itAv=itAv&&itAv[l.item];
+    var anc=(itAv&&itAv.ref&&(itAv.ref!==l.doc||String(itAv.source||'')!=='atelier'))
+      ?{source:itAv.source||'',ref:itAv.ref||'',kind:itAv.kind||'',le:Date.now()}:null;   /* [LOT8-\u2466] */
+    var ecrits=[secuEcrire(chemin+'/ref',l.doc),
+                secuEcrire(chemin+'/source','atelier'),
+                secuEcrire(chemin+'/kind','atelier')];
+    if(anc)ecrits.push(secuEcrire(chemin+'/remplace',anc));
+    Promise.all(ecrits).then(function(rs){
       if(rs.every(function(r){return r.ok;})){
         faits++;
         var it=(((chapitresData[level]||{})[chnum]||{}).seances||{})[l.seance];
-        if(it&&it.items&&it.items[l.item]){it.items[l.item].ref=l.doc;it.items[l.item].source='atelier';it.items[l.item].kind='atelier';}
+        if(it&&it.items&&it.items[l.item]){it.items[l.item].ref=l.doc;it.items[l.item].source='atelier';it.items[l.item].kind='atelier';if(anc)it.items[l.item].remplace=anc;}
+        /* [LOT8-\u2469] LE D\u00c9P\u00d4T S'\u00c9CRIT AU MOMENT DU LIEN \u2014 la correction \u00e0 la source
+           du \u00ab cas fant\u00f4me \u00bb (registre \u2466b) : la feuille vivante note o\u00f9 elle est
+           li\u00e9e (depot) et re\u00e7oit son adresse (rattachement) si elle n'en a pas.
+           UN SEUL \u00e9crivain de ce champ par liaison : atFeuilleDepotPoser. */
+        atFeuilleDepotPoser(l.doc,level,chnum,l.seance,l.item);
       }
       if(--restent===0){
-        atInfo(faits+' liaison'+(faits>1?'s':'')+' posée'+(faits>1?'s':'')+(faits<lignes.length?(' — '+(lignes.length-faits)+' n\u2019ont pas abouti'):'')+'.');
+        atInfo(faits+' liaison'+(faits>1?'s':'')+' pos\u00e9e'+(faits>1?'s':'')+(faits<lignes.length?(' \u2014 '+(lignes.length-faits)+' n\u2019ont pas abouti'):'')+'.');
         if(apres)apres();else atEditerChapitreRendre();
       }
     });
+  });
+}
+/* [LOT8-\u2469] L'\u00c9CRIVAIN UNIQUE du champ depot pos\u00e9 par une LIAISON : la feuille
+   vivante note {niveau, chapitre, s\u00e9ance, uids, itemId, le} \u2014 et re\u00e7oit son
+   adresse (rattachement) SEULEMENT si elle n'en a pas (une adresse divergente
+   reste dite par atStatutFeuille, jamais \u00e9cras\u00e9e). Les caches suivent. */
+function atFeuilleDepotPoser(docId,level,chnum,snum,itemId,cb){
+  var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[docId]:null;
+  var ch=(chapitresData[level]||{})[chnum]||{};
+  var se=(ch.seances||{})[snum]||{};
+  var depot={niveau:level,chapitre:chnum,seance:snum,
+             chapitreUid:ch.uid||'',seanceUid:se.uid||'',   /* [C5-UID] l'identit\u00e9 \u00e0 c\u00f4t\u00e9 du rang */
+             itemId:itemId,le:Date.now()};
+  var ecrits=[secuEcrire(AT_NOEUD+'/'+docId+'/depot',depot)];
+  var ratt=null;
+  var rAv=d&&d.rattachement;
+  if(!rAv||!rAv.niveau||!rAv.chapitre||!rAv.seance){
+    ratt={niveau:level,chapitre:chnum,seance:snum,
+          chapitreTitre:ch.title||'',seanceTitre:se.title||'',
+          chapitreUid:ch.uid||'',seanceUid:se.uid||''};
+    ecrits.push(secuEcrire(AT_NOEUD+'/'+docId+'/rattachement',ratt));
+  }
+  Promise.all(ecrits).then(function(rs){
+    var ok=rs.every(function(r){return r.ok;});
+    if(ok){
+      [typeof LINK_ATELIER_DOCS!=='undefined'?LINK_ATELIER_DOCS:null,
+       typeof AT_DOCS!=='undefined'?AT_DOCS:null,
+       (AT&&AT.liste)?AT.liste:null].forEach(function(cache){
+        if(cache&&cache[docId]){cache[docId].depot=depot;if(ratt)cache[docId].rattachement=ratt;}
+      });
+      if(AT.docId===docId&&AT.doc){AT.doc.depot=depot;if(ratt)AT.doc.rattachement=ratt;}
+    }
+    if(cb)cb(ok);
   });
 }
 /* [LOT2-⑩] ANNULER LA DERNIÈRE MODIFICATION — sûreté, pas confort.
