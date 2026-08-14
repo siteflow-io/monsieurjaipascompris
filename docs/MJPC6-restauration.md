@@ -851,3 +851,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - Production quittée : **8.48.0** — 961 711 o, md5 `8c84942a43bd6fb6f8f95f16ea2e8317`, blob `77403cd6598dc72013b2703754b4586bf95734c5` (promotion ⑦ `ec6f950d70f3`).
 - Restauration si « BUG » : PUT de ce blob sur index.html.
 - Promu : **8.53.1** — 985 386 o, md5 `efde88a2414cea12a1cd2e09f2451984` (LOT ⑧ : abyme, rayons parlants, ressources externes, textes de Paul ; sas LOT8/).
+
+## 2026-08-14 — point de retour avant promotion LOT ⑨ (8.55.1)
+- Production quittée : **8.53.1** — 985 386 o, md5 `efde88a2414cea12a1cd2e09f2451984`, blob `6f43b83012178758844ce16140333ce85dacda67`.
+- Restauration si « BUG » : PUT de ce blob sur index.html.
+- Promu : **8.55.1** — 1 003 600 o, md5 `3a34823d3c8b087186b6c747541d7bb7` (LOT ⑨ : loi des trois colonnes, titre de séance vivant et paginé, page de garde éditable, menu du chapitre, code mort retiré, panneau de contrôle « À classer », intercalaire d'impression, textes de Paul ; sas LOT9/).
