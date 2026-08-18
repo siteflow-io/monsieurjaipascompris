@@ -856,3 +856,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - Production quittée : **8.53.1** — 985 386 o, md5 `efde88a2414cea12a1cd2e09f2451984`, blob `6f43b83012178758844ce16140333ce85dacda67`.
 - Restauration si « BUG » : PUT de ce blob sur index.html.
 - Promu : **8.55.1** — 1 003 600 o, md5 `3a34823d3c8b087186b6c747541d7bb7` (LOT ⑨ : loi des trois colonnes, titre de séance vivant et paginé, page de garde éditable, menu du chapitre, code mort retiré, panneau de contrôle « À classer », intercalaire d'impression, textes de Paul ; sas LOT9/).
+
+## 2026-08-18 — point de retour avant promotion DICTEE5 (correction_dictee.html)
+- Production quittée : **DICTEE4** — 596 956 o, md5 `05f33fde6379fd15052e2b99f17005d1`, blob `dec9cca1648f45006ec77d3fdfcc92cae3ad281b`.
+- Restauration si « BUG » : PUT de ce blob sur correction_dictee.html.
+- Promu : **DICTEE5** — 596 070 o, md5 `be0dbf9e742a605707a13e5e934ea15a` (unification TYPE_STYLE : P magenta au lieu du rouge de G, M/I désinversés, badge A, E au popup, colonne E au bilan ; TYPE_COST et computeNote intouchés, 145 copies recalculées sans divergence ; sas DICTEE5/).
