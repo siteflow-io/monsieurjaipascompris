@@ -861,3 +861,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - Production quittée : **DICTEE4** — 596 956 o, md5 `05f33fde6379fd15052e2b99f17005d1`, blob `dec9cca1648f45006ec77d3fdfcc92cae3ad281b`.
 - Restauration si « BUG » : PUT de ce blob sur correction_dictee.html.
 - Promu : **DICTEE5** — 596 070 o, md5 `be0dbf9e742a605707a13e5e934ea15a` (unification TYPE_STYLE : P magenta au lieu du rouge de G, M/I désinversés, badge A, E au popup, colonne E au bilan ; TYPE_COST et computeNote intouchés, 145 copies recalculées sans divergence ; sas DICTEE5/).
+
+## 2026-08-18 — point de retour avant promotion LOT ⑪ (8.56.2)
+- Production quittée : **8.55.1** — 1 003 600 o, md5 `3a34823d3c8b087186b6c747541d7bb7`, blob `2a5551ba2b630a25b5629ee8b33504e6c65b9284`.
+- Restauration si « BUG » : PUT de ce blob sur index.html.
+- Promu : **8.56.2** — 1001473 o, md5 `660956e0dc121c9d8e0a84c9ad98e690` (LOT ⑪ : cul-de-sac de l'envoi corrigé, écrivain unique atEnvoyerVersion, zone « À classer » retirée, menu de type ré-émetteur, vocabulaire ligne→document ; micro-retouche 8.56.2 des textes d'échec faite par la conscience sur ordre de Paul — 14 lignes, chaînes seules, dual parser vert).
