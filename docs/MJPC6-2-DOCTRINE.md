@@ -419,3 +419,13 @@ Plus : l'état complet vit dans `localStorage` (`STORAGE_KEY`) et se recharge au
 **À UNIFIER AU CHANTIER CEINTURE LOCALE** : les quatre apps qui se fient à `navigator.onLine` passent à `.info/connected`. `pilotage_debat_s3` est déjà conforme et sert de patron.
 
 **INVENTAIRE** : `redaction_dugain_v3.html` (348 Ko) et `etude_dugain.html` (316 Ko) sont branchées au site par les onglets `redaction` et `etude` de `PUBLISHABLE_TABS`. **Elles n'étaient dans aucune fiche du CHANTIER** — pas plus que `Console_ateliers_revisions.html` (434 Ko), `deploy-monitor.html` (29 Ko) et `mjpc-bench.js` (83 Ko), découverts le 30/07 à l'inventaire du dépôt. Le chantier raisonnait sur 10 fichiers ; **il y en a 15**. À instruire.
+
+---
+
+## ADDENDUM DU 20/08/2026 — legs de la bifurcation déroulé (report conscience n°7, source PASSATION-C6-C7 §⑩)
+
+① **La vidéoprojection n'est plus un manque.** E7 déclarait manquante « la place exacte de la vidéoprojection des documents » : le mode déroulé la comble — la fenêtre Tableau est la projection, le pilotage reste au professeur, le gel découple les deux.
+
+② **L'EDT vivant a désormais sa justification.** La règle « sans usage retenu : ne pas coder » tenait l'EDT à distance ; le cadrage du temps lui retient deux usages : le panneau du jour, et l'alimentation des dates de séance. Il peut être codé pour ces deux usages, pas au-delà.
+
+③ **Principes nouveaux issus du cadrage du temps** : le bilan clôt la séance (la coche du bilan est l'acte de clôture, pas la sonnerie) · trois natures de travail, et rien d'autre · règle générale des alertes : T−5 agenda non négociable — fin fixe, début lancé.
