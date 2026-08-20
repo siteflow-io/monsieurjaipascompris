@@ -460,3 +460,15 @@ Le point 25 vise les textes FAUX (qui ne disent pas le flux réel). Il ne suffit
   → **LA VERSION FAIT PARTIE DE L'IDENTITÉ DE L'INSTRUMENT.** Ce n'est pas seulement un snapshot à la clôture : une évaluation modifiée devient **une autre évaluation**, avec ses propres résultats, ses propres statistiques, sa propre ligne dans le profil longitudinal. **Interdiction d'agréger les résultats de deux versions**, même à base de questions commune. Conséquences à porter en M7 : ① snapshot de l'énoncé + du barème à la clôture (voie A) ; ② **identité versionnée** de l'évaluation (`evalId` + version, ou nouvel `evalId` à la modification si des résultats existent) ; ③ les statistiques par question et le profil longitudinal ne cumulent JAMAIS deux versions ; ④ côté prof, l'historique doit montrer les versions distinctement.
   **CAUSE RACINE IDENTIFIÉE PAR PAUL — le vrai correctif est en amont** : *« ce qui m'oblige à modifier un QCM, c'est que l'IA me sort un JSON trop lâche par rapport à ce que je peux attendre. Donc ça se joue sur la rédaction du prompt. Et ce prompt doit dire à l'IA de prendre en compte réellement le niveau attendu dans telle classe sur telle notion — et là, on va se servir des documents Éduscol : ATTENDUS DE FIN DE CYCLE. »* → **chantier V ci-dessous.**
 
+
+---
+
+## ADDENDUM DU 20/08/2026 — règles nouvelles du chantier déroulé (report conscience n°7, source PASSATION-C6-C7 §⑩)
+
+① **Cloisonnement par régime.** Chaque type d'écran a ses gestes : schéma/image relèvent des gestes de maquette, consigne/question/fiche des gestes de déroulé ; seuls la navigation, le gel, le chrono, la projection et le zoom sont communs. Un test ou un audit qui applique les gestes d'un régime à l'autre produit des faux verdicts.
+
+② **La matrice actions × état est un contrat de test.** copier/dupliquer → identifiant neuf, dévoilement à zéro, fragment effacé · couper/coller → identifiant neuf au collage · déplacer → tout conservé, les marques suivent le bloc et non son rang · supprimer → marques purgées, zéro résidu d'identifiant · ajouter → neuf à zéro · zoom/dézoom → dévoilement transmis aux morceaux, recollé au retour · fiche → état interne conservé à l'ouverture/fermeture. Toute évolution du module se re-prouve ligne à ligne contre cette matrice, par l'état et jamais par la réponse des boutons.
+
+③ **Relevé de collisions préalable.** Avant tout import d'un module dans `index.html` : relevé des noms de fonctions, variables globales et classes CSS en collision, renommage AVANT import, jamais après. Relevé du 19/08 pour le déroulé : fonctions `fin`, `lire` · variable `t` · classes CSS `feuille`, `liste`, `sel`.
+
+④ **Un contrôle mécanique s'éprouve sur un cas connu avant d'être cru** (rappel gravé après la faille de l'invariant 1, 20/08) : tout harnais reçu d'une session antérieure se re-éprouve sur des états cassés volontairement avant sa première campagne — un vert uniforme non éprouvé est une mesure suspecte, pas un résultat.
