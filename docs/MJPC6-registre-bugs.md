@@ -261,3 +261,15 @@ Paul a demandé si réparer maintenant, « au cas où la situation se représent
 6. **Lister les cas limites AVANT de coder, les tester APRÈS** — pas de version dégradée.
 7. **Le double parseur valide la syntaxe, jamais la sémantique** : seul un banc d'exécution sur données réelles attrape l'amputation, la fonction manquante, le format inattendu.
 8. **Tout chemin d'activation doit être inventorié** avant de placer un appel (code tapé, `?mode=`, reprise localStorage, raccourci clavier, badge-tap) — deux incidents avant que la leçon devienne règle.
+
+## Chantier PONT/déroulé — conscience n°8, 21/08/2026 (report depuis le sas)
+1. **« Neuf » éternel des blocs visuels** (moteur 86→87) : schémas/images jamais projetables
+   une fois insérés en direct ; le drapeau se gravait dans les trames.
+2. **Ids fantômes bgras/bsoul** (86→88) : le masquage visait des ids inexistants — G/S inertes
+   affichés sur les écrans visuels.
+3. **Filet « suite vide » : trois faux positifs** (86→89) : lire() tuait `neuf` par simple
+   existence du champ ; scinde() perdait `neuf` au report ; la vacuité ignorait src/ref.
+4. **Reboot du cadre en pleine séance** (pont) : la trame de démonstration embarquée reprenait
+   la main (écran noir/incohérent au retour d'atelier, clôture attribuant au professeur des
+   modifications de la démo, position perdue). Clos : garde à double détente + marqueur de
+   trame + ré-ouverture de la copie de classe ; la démo ne peut plus s'afficher en usage réel.
