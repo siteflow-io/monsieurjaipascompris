@@ -893,6 +893,11 @@ select.at-sel option,select.cm-input option,#link-modal select option,select.at-
 .at-liste-tete{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .at-bandeau-test{background:#4a3a14;color:#f0d890;border:1px solid #8a6d2f;border-radius:8px;padding:10px 14px;margin:0 0 14px;font-size:.86rem}
 .at-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+/* [PONT-F] impression groupée */
+.at-imp-barre{display:flex;gap:12px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+.at-imp-lab{display:flex;gap:6px;align-items:center;color:#d8cfba;font-size:.86rem;min-height:44px;cursor:pointer}
+.at-imp-case{display:flex;gap:6px;align-items:center;color:#b8ad93;font-size:.8rem;min-height:32px;cursor:pointer}
+.at-imp-barre .at-btn[disabled]{opacity:.45;cursor:default}
 .at-carte{background:#1d1a15;border:1px solid #3a352c;border-radius:10px;padding:12px}
 .at-carte-t{color:#f0e8d8;font-weight:600;margin-bottom:3px}
 .at-carte-m{color:#8a7f6a;font-size:.78rem;margin-bottom:10px}
@@ -2733,7 +2738,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.58.1";
+var APP_VERSION="8.59.0";
 var APP_VERSION_DATE="2026-08-20";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -3580,7 +3585,7 @@ function openItem(level,chnum,snum,itemId){
   if(item.kind==='applaudimetre' && src==='firebase_app'){var _lv=clickedLevel||currentLevel||'';openViewer(item.title||'Applaudim\u00e8tre','applause_meter.html'+(_lv?'?n='+_lv:''));return;}
   if(item.kind==='worktrack' && src==='firebase_app'){var _lw=clickedLevel||currentLevel||'';openViewer(item.title||'Plan de travail','worktrack.html'+(_lw?'?n='+_lw:''));return;}
   if(item.kind==='tache' && src==='firebase_app'){openViewer(item.title||'T\u00e2che',ref);return;} /* M12 : r\u00e9paration \u2014 tombait sur \u00ab type non support\u00e9 \u00bb */
-  if(src==='atelier'){openAtelierItem(ref,item.title);return;}   /* SITE-COURS-2b : document de l'atelier */
+  if(src==='atelier'){openAtelierItem(ref,item.title,{niveau:level,chapitre:chnum,seance:snum,classeNom:(typeof TRACK!=='undefined'&&TRACK.eleve&&!TRACK.eleve.is_prof)?_eleveClasse():''});return;}   /* [PONT-D] le contexte de navigation voyage avec l'item */
   if(src==='drive'){openViewer(item.title,'https://drive.google.com/file/d/'+ref+'/preview');return;}
   if(src==='external'){openViewer(item.title,ref);return;}
   if(src==='html'){openViewer(item.title,ref);return;}
@@ -7401,6 +7406,17 @@ function atIARestaurerTpl(){
 function atIAValider(o){
   var e=[];
   if(!o||typeof o!=='object'||Array.isArray(o)){return ['Le texte coll\u00e9 n\u2019est pas une r\u00e9ponse exploitable : attendu un objet, avec des \u00e9l\u00e9ments \u00e0 cocher et leurs contenus.'];}
+  /* [PONT-E] LA GARDE DÉCLARÉE (arbitrage Paul 22/08 : « sinon c'est le genre de
+     chose invisible que je ne vérifie pas ») : un JSON de feuille qui porte
+     `rattachement` ou `niveau` est REFUSÉ NOMMÉMENT — visible ici même, ET
+     journalisé. Jamais une ignorance silencieuse : le niveau ne peut pas
+     renaître par un import. */
+  ['rattachement','niveau'].forEach(function(champ){
+    if(o[champ]!==undefined){
+      e.push('Le champ « '+champ+' » n’a pas sa place dans une feuille : le niveau et l’adresse appartiennent au site, jamais au JSON. Retire-le de la réponse.');
+      try{console.warn('[atelier] injection refusée — champ interdit « '+champ+' » présent dans le JSON de feuille.');}catch(err){}
+    }
+  });
   if(o.produit&&!ATELIER_PRODUITS[o.produit])e.push('Le type de feuille \u00ab '+String(o.produit)+' \u00bb n\u2019existe pas. Attendu : '+Object.keys(ATELIER_PRODUITS).join(', ')+'.');
   var cases=o.cases||{},valeurs=o.valeurs||{},blocs=o.blocs||[];
   var nb=Object.keys(cases).length+Object.keys(valeurs).length+(Array.isArray(blocs)?blocs.length:0);
@@ -7521,6 +7537,11 @@ function atIAApercu(){
 }
 /* la recopie contrôlée — le JSON épouse atDocNeuf, aucun traducteur */
 function atIAAppliquer(doc,o){
+  /* [PONT-E] filet : quel que soit le chemin d'appel, ces champs ne s'appliquent
+     JAMAIS — et leur présence se journalise (le refus visible vit dans atIAValider). */
+  if(o&&(o.rattachement!==undefined||o.niveau!==undefined)){
+    try{console.warn('[atelier] atIAAppliquer — champs interdits ignorés (rattachement/niveau) : ils ne s’appliquent jamais depuis un JSON.');}catch(err){}
+  }
   if(o.titre)doc.titre=String(o.titre);
   if(o.produit&&ATELIER_PRODUITS[o.produit])doc.produit=o.produit;
   Object.keys(o.cases||{}).forEach(function(id){if(o.cases[id])doc.cases[id]=true;else delete doc.cases[id];});
@@ -7530,10 +7551,18 @@ function atIAAppliquer(doc,o){
     doc.valeurs[id]=doc.valeurs[id]||{};
     Object.keys(o.valeurs[id]).forEach(function(k){doc.valeurs[id][k]=atValeurTypee(id,k,Array.isArray(o.valeurs[id][k])?o.valeurs[id][k].join('\n'):o.valeurs[id][k]);});
   });
+  doc.reformulations=doc.reformulations||{};
+  Object.keys(o.reformulations||{}).forEach(function(id2){
+    var c3=ATELIER_COMPOSANTES[id2];
+    if(!c3||c3.reserve||c3.adresse)return;
+    doc.reformulations[id2]=doc.reformulations[id2]||{};
+    Object.keys(o.reformulations[id2]||{}).forEach(function(k){doc.reformulations[id2][k]=String(o.reformulations[id2][k]);});
+  });   /* [PONT-B2] */
   doc.contenu=doc.contenu||[];
   (o.blocs||[]).forEach(function(b){
     doc.cases[b.id]=true;
     var bloc={id:b.id,valeurs:{},reformulations:{}};
+    Object.keys(b.reformulations||{}).forEach(function(k){bloc.reformulations[k]=String(b.reformulations[k]);});   /* [PONT-B2] */
     Object.keys(b.valeurs||{}).forEach(function(k){bloc.valeurs[k]=atValeurTypee(b.id,k,Array.isArray(b.valeurs[k])?b.valeurs[k].join('\n'):b.valeurs[k]);});
     doc.contenu.push(bloc);
   });
@@ -9227,6 +9256,35 @@ function atelierRenduComposante(doc,id,vals,refs,ctx){
   var f=ATELIER_FORMES[c.forme];if(!f)return '';
   return f(id,c,vals||{},ctx,refs||{},atelierIntitule(doc,id));
 }
+/* ═══ [PONT-D] L'ANCRAGE CONTEXTUEL — quand une feuille est rendue DEPUIS un
+   contexte (niveau/chapitre/séance de la navigation), l'en-tête se résout DU
+   CONTEXTE ; le rattachement gravé ne sert que de repli (feuille ouverte nue).
+   C'est la clé de l'incident fondateur : plus jamais « 3E » imprimé pour la 4e. */
+function atCtxDeChapitre(ref){
+  var ec=AT.edChap;if(!ec||!ref)return null;
+  var ch=chapitresData[ec.level]&&chapitresData[ec.level][ec.chnum];if(!ch)return null;
+  var snum=null;
+  Object.keys(ch.seances||{}).forEach(function(sk){
+    if(snum!==null)return;
+    var its=(ch.seances[sk]&&ch.seances[sk].items)||{};
+    Object.keys(its).forEach(function(ik){
+      var it=its[ik];
+      if(it&&it.source==='atelier'&&it.ref===ref)snum=sk;
+    });
+  });
+  return {niveau:ec.level,chapitre:ec.chnum,seance:snum,classeNom:''};
+}
+function atCtxAffichage(ctxVue,quoi){
+  if(!ctxVue||!ctxVue.niveau)return '';
+  if(quoi==='chapitre'){
+    if(!ctxVue.chapitre)return '';
+    var c=atChapitresDe(ctxVue.niveau).filter(function(x){return x.num===String(ctxVue.chapitre);})[0];
+    return c?('Chapitre '+c.ordre+' — '+c.titre):'';
+  }
+  if(!ctxVue.seance)return '';
+  var s=atSeancesDe(ctxVue.niveau,ctxVue.chapitre).filter(function(x){return x.num===String(ctxVue.seance);})[0];
+  return s?('Séance '+s.ordre+' — '+s.titre):'';
+}
 function atelierDocumentHTML(doc,ctxEleve,options){
   options=options||{};
   var cases=doc.cases||{};
@@ -9234,8 +9292,9 @@ function atelierDocumentHTML(doc,ctxEleve,options){
   var ctx={
     eleveNom:(ctxEleve&&ctxEleve.nom)||'',
     eleveCode:(ctxEleve&&ctxEleve.code)||'',
-    classeNom:(doc.rattachement&&doc.rattachement.classeNom)||(doc.rattachement&&doc.rattachement.classe)||'',
-    niveau:(doc.rattachement&&doc.rattachement.niveau)||'',
+    /* [PONT-D] le CONTEXTE de la vue prime ; le rattachement gravé = repli (feuille nue) */
+    classeNom:(options.ctxVue&&options.ctxVue.classeNom)||(doc.rattachement&&doc.rattachement.classeNom)||(doc.rattachement&&doc.rattachement.classe)||'',
+    niveau:(options.ctxVue&&options.ctxVue.niveau)||(doc.rattachement&&doc.rattachement.niveau)||'',
     anneeScolaire:(typeof _anneeScolaire==='function')?_anneeScolaire():'',
     versionDoc:(doc.dates&&doc.dates.versionDoc)||1,
     dateEdition:atDateFr((doc.dates&&doc.dates.dateEdition)||'')||atDateFr(new Date().toISOString()),
@@ -9246,8 +9305,8 @@ function atelierDocumentHTML(doc,ctxEleve,options){
     verbeAction:on('verbe_action')?((doc.valeurs&&doc.valeurs.verbe_action&&doc.valeurs.verbe_action.texte)||''):'',
     /* SITE-COURS-2b : l'adresse affichée se recalcule depuis le hub quand il est
        chargé (Q1) — sinon le rendu retombe sur la valeur stockée, plus bas. */
-    chapitreAff:(typeof atAdresseAffichage==='function')?atAdresseAffichage(doc,'chapitre'):'',
-    seanceAff:(typeof atAdresseAffichage==='function')?atAdresseAffichage(doc,'seance'):'',
+    chapitreAff:(options.ctxVue?atCtxAffichage(options.ctxVue,'chapitre'):'')||((typeof atAdresseAffichage==='function')?atAdresseAffichage(doc,'chapitre'):''),   /* [PONT-D] */
+    seanceAff:(options.ctxVue?atCtxAffichage(options.ctxVue,'seance'):'')||((typeof atAdresseAffichage==='function')?atAdresseAffichage(doc,'seance'):''),   /* [PONT-D] */
     motsClesHtml:''
   };
   if(on('mots_cles')){
@@ -9571,11 +9630,111 @@ function atChargerListe(){
     atRendreListe();
   });
 }
+/* ═══ [PONT-B] EXPORT DE FEUILLE POUR L'IA DE RECR\u00c9ATION ═══
+   Le JSON AU FORMAT D'INJECTION (round-trip) : EXACTEMENT les champs
+   qu'atIAAppliquer accepte \u2014 titre, produit, cases, valeurs, blocs \u2014 RIEN
+   d'autre : ni rattachement, ni depot, ni dates. Les composantes d'ADRESSE
+   (chapitre, s\u00e9ance \u2014 adresse:true) sont exclues : une adresse est une
+   r\u00e9f\u00e9rence de niveau, et l'import la refuserait (atIAValiderAdresse) \u2014
+   le niveau ne peut pas rena\u00eetre par un export. */
+function atExporterDoc(id){
+  var d=AT.liste[id];if(!d)return;
+  var out={titre:String(d.titre||''),produit:d.produit||'',cases:{},valeurs:{},blocs:[]};
+  /* [PONT-B2] les consignes reformulées (différenciation) SURVIVENT au round-trip
+     — arbitrage Paul 22/08 : des fiches en ont et en auront. */
+  var _refR={};
+  Object.keys(d.reformulations||{}).forEach(function(k){
+    var c2=ATELIER_COMPOSANTES[k];
+    if(!c2||c2.reserve||c2.adresse)return;
+    if(d.reformulations[k]&&Object.keys(d.reformulations[k]).length)_refR[k]=JSON.parse(JSON.stringify(d.reformulations[k]));
+  });
+  if(Object.keys(_refR).length)out.reformulations=_refR;
+  /* les cases s'\u00e9mettent dans L'ORDRE CANONIQUE DU SCH\u00c9MA (ATELIER_COMPOSANTES),
+     jamais dans l'ordre de vie du document : deux feuilles identiques produisent
+     le M\u00caME JSON \u2014 le round-trip se v\u00e9rifie \u00e0 l'octet. true = coch\u00e9e ;
+     false = case par d\u00e9faut de naissance que CETTE feuille n'a pas (sinon la
+     recr\u00e9ation porterait des \u00e9l\u00e9ments en trop). Les composantes d'ADRESSE
+     (chapitre, s\u00e9ance) ne s'exportent jamais en true \u2014 une adresse est une
+     r\u00e9f\u00e9rence de niveau, et le niveau ne rena\u00eet pas par un export. */
+  Object.keys(ATELIER_COMPOSANTES).forEach(function(k){
+    var c=ATELIER_COMPOSANTES[k];
+    if(!c||c.reserve)return;
+    var cochee=!!(d.cases&&d.cases[k]===true);
+    if(cochee&&!c.adresse)out.cases[k]=true;
+    else if(!cochee&&c.defaut)out.cases[k]=false;
+  });
+  Object.keys(d.valeurs||{}).forEach(function(k){
+    var c=ATELIER_COMPOSANTES[k];
+    if(!c||c.reserve||c.adresse)return;
+    out.valeurs[k]=JSON.parse(JSON.stringify(d.valeurs[k]));
+  });
+  (d.contenu||[]).forEach(function(b){
+    if(!b||!b.id)return;
+    var c=ATELIER_COMPOSANTES[b.id];
+    if(!c||c.reserve||c.adresse)return;
+    var _bl={id:b.id,valeurs:JSON.parse(JSON.stringify(b.valeurs||{}))};
+    if(b.reformulations&&Object.keys(b.reformulations).length)_bl.reformulations=JSON.parse(JSON.stringify(b.reformulations));   /* [PONT-B2] */
+    out.blocs.push(_bl);
+  });
+  var nom=atChSlug(d.titre)+'.json';
+  _saveJSON(out,nom).then(function(fait){
+    if(fait)atInfo('Feuille export\u00e9e : '+nom);
+  });
+}
+/* ═══ [PONT-F] IMPRESSION GROUPÉE DE « MES FEUILLES » — patron maison worktrack
+   (sélection → aperçu → print, déjà appliqué au débat en M5ter) : une case par
+   carte, « tout cocher », impression totale, partielle ou unique. Pendant
+   l'impression : document.title = le titre de la fiche (unique) ou
+   « Fiches MJPC — <date> » (groupée), restauré après. */
+var AT_IMP_SEL={};
+function atImpCocher(id,val){AT_IMP_SEL[id]=!!val;atImpBarreMaj();}
+function atImpToutCocher(val){
+  Object.keys(AT.liste).forEach(function(id){AT_IMP_SEL[id]=!!val;});
+  atRendreListe();
+}
+function atImpBarreMaj(){
+  var n=Object.keys(AT_IMP_SEL).filter(function(k){return AT_IMP_SEL[k]&&AT.liste[k];}).length;
+  var b=document.getElementById('at-imp-btn');
+  if(b){b.textContent='\ud83d\udda8 Imprimer la s\u00e9lection ('+n+')';b.disabled=!n;}
+  var t=document.getElementById('at-imp-tout');
+  if(t){var tot=Object.keys(AT.liste).length;t.checked=!!tot&&n===tot;}
+}
+function atImprimerSelection(){
+  var ids=Object.keys(AT.liste).filter(function(k){return AT_IMP_SEL[k];})
+    .sort(function(a,b){return ((AT.liste[b].dates||{}).modifieLe||0)-((AT.liste[a].dates||{}).modifieLe||0);});
+  if(!ids.length)return;
+  var unique=(ids.length===1);
+  var titre=unique?String((AT.liste[ids[0]]||{}).titre||'Feuille')
+                  :('Fiches MJPC \u2014 '+new Date().toLocaleDateString('fr-FR'));
+  var corps='';
+  ids.forEach(function(id){
+    try{corps+=atelierDocumentHTML(AT.liste[id],null,{});}catch(e){}
+  });
+  var html='<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>'+atEsc(titre)+'</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">'
+    +'<sty'+'le>'+atelierCharteCSS()+'<\/sty'+'le></head><body>'+corps+'</body></html>';
+  var w=window.open('','_blank');
+  if(!w){atInfo('Autorise les fen\u00eatres pop-up pour imprimer.');return;}
+  w.document.write(html);w.document.close();
+  var avant=document.title;
+  document.title=titre;   /* le PDF prend le titre voulu, quel que soit le navigateur */
+  setTimeout(function(){
+    try{w.focus();w.print();}catch(e){}
+    setTimeout(function(){document.title=avant;},1200);   /* restaur\u00e9 apr\u00e8s */
+  },500);
+}
 function atRendreListe(){
   var z=document.getElementById('at-zone');if(!z)return;
   if(AT.edChap){atEditerChapitreRendre();return;}   /* [C5-3a] l'\u00e9diteur de chapitre reste ma\u00eetre jusqu'\u00e0 sa sortie */
   var ids=Object.keys(AT.liste).sort(function(a,b){
     return ((AT.liste[b].dates||{}).modifieLe||0)-((AT.liste[a].dates||{}).modifieLe||0);
+  });
+  /* [PONT-C] la v\u00e9rit\u00e9 des d\u00e9p\u00f4ts se lit sur les QUATRE niveaux : ceux qui
+     manquent se chargent (lecture seule) et la liste se redessine \u00e0 l'arriv\u00e9e. */
+  ['3e','4e','5e','6e'].forEach(function(n){
+    var e=AT_CHAP_ETAT[n]||'';
+    if(e==='charge'||e==='enCours'||e==='erreur')return;   /* jamais de boucle : l'échec ne se retente pas tout seul */
+    atChargerChapitres(n,function(){if(!AT.edChap)atRendreListe();});
   });
   var h='<div class="at-liste-tete"><h2 class="at-h2">\ud83d\udee0 Atelier <span class="at-h2-sub">\u2014 composer les feuilles du cours</span></h2>'
     +'<button class="at-btn at-btn-prim" onclick="atNouvelleFeuille()">\uff0b Nouvelle feuille</button></div>'
@@ -9603,6 +9762,14 @@ function atRendreListe(){
     +'<button class="at-onglet'+(AT.onglet==='chapitres'?' at-onglet-actif':'')+'" onclick="atOnglet(\'chapitres\')">Mes chapitres</button>'
     +'</div>';
   if(AT.onglet==='chapitres'){h+=atRendreChapitres();document.getElementById('at-zone').innerHTML=h;atChapitresAssurer();return;}
+  /* [PONT-F] la barre d'impression groupée — visible dès qu'il y a des feuilles */
+  if(ids.length){
+    var _nsel=ids.filter(function(id){return AT_IMP_SEL[id];}).length;
+    h+='<div class="at-imp-barre">'
+      +'<label class="at-imp-lab"><input type="checkbox" id="at-imp-tout"'+(_nsel===ids.length&&ids.length?' checked':'')+' onchange="atImpToutCocher(this.checked)"> Tout cocher</label>'
+      +'<button class="at-btn at-btn-prim" id="at-imp-btn" onclick="atImprimerSelection()"'+(_nsel?'':' disabled')+'>\ud83d\udda8 Imprimer la s\u00e9lection ('+_nsel+')</button>'
+      +'</div>';
+  }
   if(m8TestOn())h+='<div class="at-bandeau-test">Mode test actif \u2014 compose, coche, imprime, recharge : rien ne part au hub. Les brouillons de test restent sur cet appareil et sont nettoy\u00e9s au retour en mode r\u00e9el.</div>';
   if(!ids.length){
     h+='<div class="at-vide">Aucune feuille pour l\u2019instant. \u00ab Nouvelle feuille \u00bb ouvre la feuille vierge : coche des cases, des choses apparaissent.</div>';
@@ -9613,12 +9780,14 @@ function atRendreListe(){
       var prod=d.produit&&ATELIER_PRODUITS[d.produit]?ATELIER_PRODUITS[d.produit].libelle:'';
       var st=atStatutFeuille(d,id);   /* SITE-COURS-2c : le statut d'arrivée */
       return '<div class="at-carte">'
+        +'<label class="at-imp-case"><input type="checkbox"'+(AT_IMP_SEL[id]?' checked':'')+' onchange="atImpCocher(\''+atEsc(id)+'\',this.checked)"> \u00c0 imprimer</label>'   /* [PONT-F] */
         +'<div class="at-carte-t">'+atEsc(d.titre||'Sans titre')+'</div>'
         +'<div class="at-carte-m">'+(prod?atEsc(prod)+' \u00b7 ':'')+'modifi\u00e9e le '+atEsc(quand)+' '+atProduitMenu(id,d.produit||'')+'</div>'   /* [C5-AR] requalifier le produit sur place */
         +'<div class="at-carte-st '+st.cls+'">'+atEsc(st.txt)+'</div>'
         +'<div class="at-carte-b">'
         +'<button class="at-btn at-btn-prim" onclick="atOuvrirDoc(\''+atEsc(id)+'\')">Ouvrir</button>'
         +'<button class="at-btn" onclick="atDupliquerDoc(\''+atEsc(id)+'\')">Dupliquer</button>'
+        +'<button class="at-btn" onclick="atExporterDoc(\''+atEsc(id)+'\')">Exporter</button>'   /* [PONT-B] */
         +'<button class="at-btn at-btn-danger" onclick="atSupprimerDoc(\''+atEsc(id)+'\')">Supprimer</button>'
         +'</div></div>';
     }).join('')+'</div>';
@@ -9648,7 +9817,7 @@ function atOuvrirDoc(id){
      sans lecture réseau à chaque enregistrement) ; drapeaux de proposition remis à zéro. */
   AT.envoiDoc=null;AT.propositionDepotFaite=false;AT.propositionEnvoiFaite=false;
   AT.sectionsOuvertes={};   /* SITE-COURS-2d : les sections repartent repliées à chaque ouverture */
-  if(base.depot){_siteGet(AT_ENVOIS_NOEUD+'/'+id+'/doc',function(v){AT.envoiDoc=v||null;});}
+  if(base.envoi||base.depot){_siteGet(AT_ENVOIS_NOEUD+'/'+id+'/doc',function(v){AT.envoiDoc=v||null;});}   /* [PONT-C] l'envoi se lit d'après la feuille, la note depot n'est qu'un repli de cache */
   var brouillon=atBrouillonLire(id);
   var reprendre=function(doc){AT.docId=id;AT.doc=doc;AT.previewIdx=0;atRendreEditeur();};
   if(brouillon&&brouillon.dates&&base.dates&&brouillon.dates.modifieLe>base.dates.modifieLe){
@@ -9728,8 +9897,14 @@ function atSupprimerDoc(id){
        {lib:'Supprimer sans garder de copie',danger:true,fn:function(){finir(false);}},
        {lib:'Annuler',fn:function(){}}]);
   };
-  if(d.depot&&atItemPointant(id,d.depot.niveau,d.depot.chapitre,d.depot.seance)){
-    _modaleConfirme('Supprimer','Cette feuille est déposée dans '+escapeHtml(atAdresseLisible(d.depot))+'. La supprimer retire aussi la version que voient les élèves : l’item du cours affichera « document plus disponible ». Supprimer quand même ?',ouvrirChoix);
+  /* [PONT-C] l'avertissement dit les lieux RÉELS (tous), plus jamais la note `depot` */
+  var _lieux=[];
+  ['3e','4e','5e','6e'].forEach(function(n){
+    if((AT_CHAP_ETAT[n]||'')!=='charge')return;
+    edFeuilleDepots(n,id).forEach(function(x){_lieux.push(n+' › '+x);});
+  });
+  if(_lieux.length){
+    _modaleConfirme('Supprimer','Cette feuille est déposée dans '+escapeHtml(_lieux.join(' · '))+'. La supprimer retire aussi la version que voient les élèves : l’item du cours affichera « document plus disponible ». Supprimer quand même ?',ouvrirChoix);
     return;
   }
   ouvrirChoix();
@@ -10070,7 +10245,7 @@ function linkModalApplyAtelier(){
 /* ── L'OUVERTURE d'un item lié à un document de l'atelier (patron du diaporama).
    Le rendu est CELUI de l'atelier (atelierPageHTML) : aucune divergence possible
    entre ce que le professeur compose et ce que l'élève ouvre. ── */
-function openAtelierItem(ref,titre){
+function openAtelierItem(ref,titre,ctxVue){
   var ex=document.getElementById('atdoc-viewer');if(ex)ex.remove();
   var ov=document.createElement('div');ov.id='atdoc-viewer';ov.className='atdoc-viewer';
   ov.innerHTML='<div class="atdoc-viewer-barre">'
@@ -10124,7 +10299,7 @@ function openAtelierItem(ref,titre){
       if(rt.eleve&&rt.eleve!=='*'){lot=[{nom:rt.eleve,code:''}];}
       else if(rt.eleve==='*'&&typeof TRACK!=='undefined'&&TRACK.eleve&&!TRACK.eleve.is_prof&&TRACK.eleve.nom){lot=[{nom:TRACK.eleve.nom,code:''}];}
     }catch(e){}
-    try{f.srcdoc=atelierPageHTML(doc,lot);}
+    try{f.srcdoc=atelierPageHTML(doc,lot,{ctxVue:ctxVue||null});}   /* [PONT-D] l'en-tête suit la vue, jamais le gravage */
     catch(e){f.srcdoc='<body style="font-family:serif;padding:24px">Affichage impossible pour l\u2019instant.</body>';}
   });
 }
@@ -10381,46 +10556,39 @@ function atProposerDepot(suite){
 }
 /* Le STATUT d'une feuille (③) — croisé avec la vérité terrain (chapitresData). */
 function atStatutFeuille(d,ref){
-  var r=d&&d.rattachement;
-  var adresseComplete=r&&r.niveau&&r.chapitre&&r.seance;
-  if(!d||(!adresseComplete&&!d.depot)){
-    /* [LOT7b-⑤] « Sans adresse » mentait pour les feuilles LIÉES par
-       « Prendre une feuille existante » ou « Lier par les titres » (itemCreer
-       seul — ni depot ni rattachement écrits, mesuré) : la feuille EST en
-       place. On cherche le lien réel dans les niveaux chargés. */
-    if(ref){
-      for(var _n in chapitresData){
-        if(!chapitresData[_n]||!Object.keys(chapitresData[_n]).length)continue;
-        var _ou=edFeuilleDepots(_n,ref);
-        if(_ou.length){
-          var _sfx=(d&&!d.envoi)?' · jamais envoyée aux élèves':'';
-          return {txt:'Liée dans '+_ou.join(' · ')+' ('+_n+') — sans adresse enregistrée'+_sfx,cls:'at-st-diverge'};
-        }
-      }
+  /* ═══ [PONT-C] LA V\u00c9RIT\u00c9 DES D\u00c9P\u00d4TS — la carte ne lit PLUS la note `depot`
+     (l'incident fondateur : 30 fiches \u00ab 3E \u00bb imprim\u00e9es pour la 4e parce que la
+     note mentait). Elle dit TOUS les lieux R\u00c9ELS : parcours des items pointants
+     (source==='atelier' && ref===docId) sur TOUS les niveaux charg\u00e9s. Le champ
+     `depot` n'est plus jamais une source d'affichage. Les mentions
+     \u00ab (l'item n'y est plus) \u00bb disparaissent avec leur m\u00e9canisme. */
+  var lieux=[], enAttente=[];
+  ['3e','4e','5e','6e'].forEach(function(n){
+    var etat=AT_CHAP_ETAT[n]||'';
+    if(etat!=='charge'){
+      /* périmètre déclaré : ce niveau n'est pas (encore) vérifiable — la liste
+         se redessine quand son chargement (lancé par atRendreListe) aboutit. */
+      enAttente.push(n+(etat==='erreur'?' injoignable':' en cours de v\u00e9rification'));
+      return;
     }
-    return {txt:'Sans adresse',cls:'at-st-sans'};
-  }
-  var niveauRef=(d.depot&&d.depot.niveau)||(r&&r.niveau);
-  var charge=niveauRef&&chapitresData[niveauRef]&&Object.keys(chapitresData[niveauRef]).length;
-  if(!charge){
-    if(niveauRef&&AT_CHAP_ETAT[niveauRef]!=='enCours')atChargerChapitres(niveauRef,function(){atRendreListe();});
-    return {txt:'adresse non vérifiable pour l’instant',cls:'at-st-flou'};
-  }
-  var suffixe=(d.envoi&&d.dates&&d.dates.modifieLe>d.envoi.versionDoc)?' · modifiée depuis l’envoi aux élèves'
-             :(!d.envoi?' · jamais envoyée aux élèves':'');   /* [LOT7b-⑤] l'état d'envoi se dit toujours */
-  if(d.depot){
-    /* [C5-UID] \u2464 la place actuelle se r\u00e9sout par identit\u00e9 (le d\u00e9p\u00f4t garde son rang
-       comme repli) : une r\u00e9injection qui d\u00e9place les s\u00e9ances ne rompt plus le lien. */
-    var _cl=atAdresseCles(d.depot)||{chapitre:d.depot.chapitre,seance:d.depot.seance};
-    var la=atItemPointant(ref,d.depot.niveau,_cl.chapitre,_cl.seance);
-    var ouDepot=atAdresseLisible(d.depot);
-    var ouActuel=adresseComplete?atAdresseLisible(r):'';
-    var meme=ouActuel===ouDepot;
-    if(la&&meme)return {txt:'Déposée dans '+ouDepot+suffixe,cls:'at-st-depose'};
-    if(la&&!meme)return {txt:'Déposée dans '+ouDepot+' · adresse actuelle '+(ouActuel||'— sans adresse —')+suffixe,cls:'at-st-diverge'};
-    return {txt:'Déposée dans '+ouDepot+' (l’item n’y est plus)'+suffixe,cls:'at-st-diverge'};
-  }
-  return {txt:'Adressée à '+atAdresseLisible(r)+' — pas encore déposée',cls:'at-st-adresse'};
+    if(!chapitresData[n]||!Object.keys(chapitresData[n]).length)return;   /* niveau chargé et vide : vérifié, rien à dire */
+    if(!ref)return;
+    /* [PONT-C2] regroupement (Paul, 22/08) : un m\u00eame niveau\u203achapitre ne se
+       r\u00e9p\u00e8te pas \u2014 \u00ab 3e \u203a Ch.1 \u203a S.2 \u203a S.5 \u203a S.7 \u00bb. */
+    var _grp={};
+    edFeuilleDepots(n,ref).forEach(function(x){
+      var _m=x.match(/Ch\. ([^\u00b7]+) \u00b7 S\. (.+)$/);
+      var _ch=_m?_m[1].trim():x, _s=_m?_m[2].trim():'';
+      var _k=n+' \u203a Ch.'+_ch;
+      (_grp[_k]=_grp[_k]||[]).push('S.'+_s);
+    });
+    Object.keys(_grp).forEach(function(_k){lieux.push(_k+' \u203a '+_grp[_k].join(' \u203a '));});
+  });
+  var suffixe=(d&&d.envoi&&d.dates&&d.dates.modifieLe>d.envoi.versionDoc)?' \u00b7 modifi\u00e9e depuis l\u2019envoi aux \u00e9l\u00e8ves'
+             :((d&&!d.envoi)?' \u00b7 jamais envoy\u00e9e aux \u00e9l\u00e8ves':'');
+  var attente=enAttente.length?' \u00b7 ('+enAttente.join(' \u00b7 ')+')':'';
+  if(lieux.length)return {txt:'D\u00e9pos\u00e9e dans : '+lieux.join(' \u00b7 ')+suffixe+attente,cls:'at-st-depose'};
+  return {txt:'Aucun d\u00e9p\u00f4t'+suffixe+attente,cls:'at-st-sans'};
 }
 /* Les feuilles adressées à une séance et non déposées (②). */
 function atFeuillesAdresseesA(niveau,chnum,snum){
@@ -11487,8 +11655,8 @@ function ed2CharteScopee(){
   return ED2_CHARTE;
 }
 /* [LOT3] le contenu d'une feuille — le document tel qu'il sortira, RENDU RÉUTILISÉ */
-function ed2FeuilleHtml(doc){
-  try{return atelierDocumentHTML(doc,null,{});}
+function ed2FeuilleHtml(doc,ref){
+  try{return atelierDocumentHTML(doc,null,{ctxVue:atCtxDeChapitre(ref)});}   /* [PONT-D] la feuille du fil se rend dans SON chapitre */
   catch(e){return '<div class="ed2-pt">'+atEsc(doc.titre||'')+'</div><div class="ed2-pm">rendu impossible : '+atEsc(e.message)+'</div>';}
 }
 function ed2PagModeLu(){
@@ -11607,6 +11775,7 @@ function ed2Papier(level,chnum,docs){
           +lib+' <span class="ed2-cout">'+couts[m]+' f.</span></button>';
       }).join('')
     +'<button class="at-btn at-btn-prim" onclick="ed2Imprimer()">🖨 Imprimer</button>'
+    +'<button class="at-btn" onclick="atChExporter()">Exporter chapitre pour relecture et coh\u00e9rence finale</button>'   /* [PONT-A] */
     +'<button class="at-btn" onclick="ed2OuvrirOnglet()">Ouvrir dans un onglet</button>'
     +'</div>';
   /* [LOT4-④] UN SEUL FIL, séance après séance — la maquette fait foi. Le bloc
@@ -11696,7 +11865,7 @@ function ed2Papier(level,chnum,docs){
       h+='<div class="ed2-pdoc'+(ED2.courant===d.item?' ed2-halo':'')+'" data-item="'+d.item+'" onclick="ed2ClicPapier(event,\''+d.item+'\')">'
         +'<div class="ed2-pref">Ch. '+atEsc(chnum)+' · S. '+atEsc(String(d.rang+1))+'</div>';
       if(_doc){
-        h+='<div class="ed2-fcadre" data-ref="'+atEsc(d.ref)+'">'+ed2FeuilleHtml(_doc)+'</div>';
+        h+='<div class="ed2-fcadre" data-ref="'+atEsc(d.ref)+'">'+ed2FeuilleHtml(_doc,d.ref)+'</div>';
       }else{
         h+='<div class="ed2-pt">'+atEsc(d.titre)+'</div>'
           +'<div class="ed2-pm">'+atEsc(d.produit?(((ATELIER_PRODUITS[d.produit]||{}).libelle)||d.produit):d.kind)+'</div>';
@@ -11729,7 +11898,7 @@ function ed2Imprimer(){
   var d=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&ED2.refCourant)?LINK_ATELIER_DOCS[ED2.refCourant]:null;
   if(!d){atInfo('Ouvre une feuille du chapitre pour l’imprimer.');return;}
   atModaleChoix('Imprimer <b>'+atEsc(d.titre||'')+'</b> ou tout le chapitre ?',
-    [{lib:'Cette feuille',prim:true,fn:function(){ed2ImprimerHTML(atelierPageHTML(d,null,{}));}},
+    [{lib:'Cette feuille',prim:true,fn:function(){ed2ImprimerHTML(atelierPageHTML(d,null,{ctxVue:atCtxDeChapitre(ED2.refCourant)}));}},   /* [PONT-D] */
      {lib:'Tout le chapitre',fn:function(){ed2ImprimerChapitre();}}]);
 }
 function ed2ImprimerChapitre(){
@@ -11744,7 +11913,7 @@ function ed2ImprimerChapitre(){
        tout finit sur la feuille). Style d\u00e9di\u00e9 ci-dessous \u2014 atelierCharteCSS n'est
        pas touch\u00e9e (charte partag\u00e9e). */
     if(docs.length>1&&x.seance!==_seVue){_seVue=x.seance;corps+='<div class="imp-sce">'+atEsc(x.seanceTitre)+'</div>';}   /* [LOT9-8.55.1-\u2460] l'intercalaire organise une liasse */
-    try{corps+=atelierDocumentHTML(d,null,{});}catch(e){}
+    try{corps+=atelierDocumentHTML(d,null,{ctxVue:{niveau:ec.level,chapitre:ec.chnum,seance:x.seance,classeNom:''}});}catch(e){}   /* [PONT-D] */
   });
   ed2ImprimerHTML('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>'+atEsc((chapitresData[ec.level][ec.chnum]||{}).title||'Chapitre')+'</title>'
     +'<sty'+'le>'+atelierCharteCSS()
@@ -11762,7 +11931,7 @@ function ed2OuvrirOnglet(){
   if(!d){atInfo('Ouvre une feuille du chapitre.');return;}
   var w=window.open('','_blank');
   if(!w){atInfo('Autorise les fenêtres pop-up.');return;}
-  w.document.write(atelierPageHTML(d,null,{}));w.document.close();
+  w.document.write(atelierPageHTML(d,null,{ctxVue:atCtxDeChapitre(ED2.refCourant)}));w.document.close();   /* [PONT-D] */
 }
 /* [C5-ED2] ③b/③c LES DEUX SYNCHRONISATIONS. Paul : « chaque endroit où je clique
    doit me montrer EXACTEMENT le point d'édition », et « ça ne devrait s'éteindre que
@@ -11995,7 +12164,7 @@ function ed2SetBlocFeuille(ref,i,k,v){
 function ed2MajZone(ref,comp){
   var doc=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc)return;
   document.querySelectorAll('.ed2-fcadre[data-ref="'+ref+'"]').forEach(function(cadre){
-    cadre.innerHTML=ed2FeuilleHtml(doc);
+    cadre.innerHTML=ed2FeuilleHtml(doc,ref);
     var z=comp?cadre.querySelector('[data-c="'+comp+'"]'):null;
     if(z){z.classList.add('ed2-zpulse');setTimeout(function(){z.classList.remove('ed2-zpulse');},1700);}
   });
@@ -12074,6 +12243,24 @@ function ed2Suivre(){
     if(r.bottom>rp.top+40&&r.top<rp.bottom-30&&d<d0){d0=d;best=el;}
   });
   if(best&&best.getAttribute('data-item')!==ED2.courant)ed2Poser(best.getAttribute('data-item'));
+}
+/* ═══ [PONT-A] P3ter — EXPORT CHAPITRE POUR L'IA DE RELECTURE ═══
+   Le chapitre TEL QU'IL EST (titre, entrée, compétences, séances complètes :
+   ordre, cle, notions, compétences, deroule/écrans/blocs, items/aLier) — pour
+   rétro-ingénierie et recréation complète par une instance IA. Lecture seule. */
+function atChSlug(t){
+  return String(t||'chapitre').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'chapitre';
+}
+function atChExporter(){
+  var ec=AT.edChap;if(!ec)return;
+  var ch=chapitresData[ec.level]&&chapitresData[ec.level][ec.chnum];
+  if(!ch){atInfo('Ce chapitre n\u2019est plus l\u00e0.');return;}
+  var out={niveau:ec.level,numero:ec.chnum,exporteLe:new Date().toISOString(),chapitre:JSON.parse(JSON.stringify(ch))};
+  var nom='chapitre-'+ec.level+'-'+atChSlug(ch.title)+'.json';
+  _saveJSON(out,nom).then(function(fait){
+    if(fait)atInfo('Chapitre export\u00e9 : '+nom);
+  });
 }
 function atEditerChapitreRendre(){
   var ec=AT.edChap;if(!ec)return;
@@ -13001,6 +13188,11 @@ function atApSuiv(){AT.previewIdx=AT.previewIdx+1;atRendreApercu();}
    feuille courante. Même document que l'aperçu (aucune divergence possible). */
 function atImprimer(){
   var fr=document.getElementById('at-apercu');if(!fr)return;
+  /* [PONT-F] pendant l'impression, le document hôte porte le titre de la fiche
+     (le PDF le reprend selon le navigateur), restauré après. */
+  var _avant=document.title;
+  document.title=String((AT.doc&&AT.doc.titre)||'Feuille');
+  setTimeout(function(){document.title=_avant;},1600);
   var lot=atLotContextes();
   if(lot.length>1){
     try{fr.srcdoc=atelierPageHTML(AT.doc,lot);}catch(e){atInfo('Impression impossible : '+e.message);return;}
