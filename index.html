@@ -2738,7 +2738,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.59.0";
+var APP_VERSION="8.59.1";
 var APP_VERSION_DATE="2026-08-20";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -10080,6 +10080,11 @@ function atSetTitre(v){if(!AT.doc)return;AT.doc.titre=v;AT.pulseComp='titre';atM
 var AT_CHAP_ETAT={};
 function atChargerChapitres(niveau,cb){
   if(!niveau){if(cb)cb(false);return;}
+  /* [8.59.1] UN NIVEAU CHARGÉ NE SE RECHARGE JAMAIS TOUT SEUL — même vide.
+     Avant la purge de Paul, « chargé » se devinait à « a des chapitres » : un
+     niveau à zéro chapitre refetchait en boucle (573 requêtes en 5 s au banc)
+     et chaque retour redessinait, tuant le menu déroulant à peine ouvert. */
+  if(AT_CHAP_ETAT[niveau]==='charge'&&chapitresData[niveau]){if(cb)cb(true);return;}
   if(chapitresData[niveau]&&Object.keys(chapitresData[niveau]).length){AT_CHAP_ETAT[niveau]='charge';if(cb)cb(true);return;}
   if(AT_CHAP_ETAT[niveau]==='enCours'){if(cb)cb(false);return;}
   AT_CHAP_ETAT[niveau]='enCours';
@@ -10768,7 +10773,7 @@ function atRendreChapitres(){
   var h='<div class="at-tb-tete">Chapitres de '+atTbSelecteur()+'</div>';
   var data=chapitresData[n];
   if(!data||!Object.keys(data).length){
-    return h+'<div class="at-vide">'+(AT_CHAP_ETAT[n]==='erreur'?'Les chapitres ne répondent pas pour l’instant. <button class="at-btn" onclick="atChapitresRecharger()">Réessayer</button>':'Chargement des chapitres\u2026')+'</div>';
+    return h+'<div class="at-vide">'+(AT_CHAP_ETAT[n]==='erreur'?'Les chapitres ne répondent pas pour l’instant. <button class="at-btn" onclick="atChapitresRecharger()">Réessayer</button>':(AT_CHAP_ETAT[n]==='charge'?'Aucun chapitre \u00e0 ce niveau pour l\u2019instant.':'Chargement des chapitres\u2026'))+'</div>';
   }
   var nums=Object.keys(data).sort(function(a,b){return (data[a].ordre||0)-(data[b].ordre||0);});
   nums.forEach(function(num){
