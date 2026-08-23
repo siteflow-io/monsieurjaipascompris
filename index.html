@@ -2738,7 +2738,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.59.3";
+var APP_VERSION="8.59.4";
 var APP_VERSION_DATE="2026-08-20";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -7596,6 +7596,12 @@ function atIARemplacerConfirme(){
       if(msg){msg.className='at-ia-msg at-ia-ko';msg.textContent='La mise \u00e0 la corbeille a \u00e9chou\u00e9 \u2014 rien n\u2019a \u00e9t\u00e9 remplac\u00e9. R\u00e9essaie quand la connexion est stable.';}
       return;
     }
+    /* [8.59.4] REMPLACER REMET À NEUF AVANT D'APPLIQUER. atIAAppliquer est écrit
+       pour un document VIDE : appliqué sur l'existant, il EMPILAIT les blocs —
+       trois fiches de Paul portaient deux versions bout à bout (36=18+18…).
+       L'identité et les dates restent ; cases, valeurs, contenu et reformulations
+       repartent de zéro : le JSON round-trip porte tout, la fidélité est totale. */
+    AT.doc.cases={};AT.doc.valeurs={};AT.doc.contenu=[];AT.doc.reformulations={};
     AT.doc=atIAAppliquer(AT.doc,o);AT.previewIdx=0;
     atEnregistrerMaintenant(function(){
       if(AT_IA.chap){atInfo('Feuille remplie — te revoilà dans ton chapitre.');edIARetourChapitre();return;}   /* [LOT4-⑤] */
@@ -9712,7 +9718,7 @@ function atRendreListe(){
     var _nsel=ids.filter(function(id){return AT_IMP_SEL[id];}).length;
     h+='<div class="at-imp-barre">'
       +'<label class="at-imp-lab"><input type="checkbox" id="at-imp-tout"'+(_nsel===ids.length&&ids.length?' checked':'')+' onchange="atImpToutCocher(this.checked)"> Tout cocher</label>'
-      +'<button class="at-btn at-btn-prim" id="at-imp-btn" onclick="atImprimerSelection()"'+(_nsel?'':' disabled')+'>\ud83d\udda8 Imprimer la s\u00e9lection ('+_nsel+')</button>'
+      +'<button class="at-btn at-btn-prim" id="at-imp-btn" onclick="atImprimerSelection()"'+(_nsel?'':' disabled')+'>\ud83d\udda8 Imprimer la s\u00e9lection ('+_nsel+')</button><div id=\"at-imp-note\" class=\"at-imp-note\" aria-live=\"polite\"></div>'
       +'</div>';
   }
   if(m8TestOn())h+='<div class="at-bandeau-test">Mode test actif \u2014 compose, coche, imprime, recharge : rien ne part au hub. Les brouillons de test restent sur cet appareil et sont nettoy\u00e9s au retour en mode r\u00e9el.</div>';
