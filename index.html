@@ -762,6 +762,12 @@ body.admin-mode .admin-only { display: block; }
 .ses-part-nom{min-height:56px;border-radius:12px;border:1px solid #4a4038;background:#3a3128;color:#fff;font-family:inherit;font-size:1.05rem;cursor:pointer}
 .ses-part-nom b{color:#c99a4e}
 .ses-part-vide{grid-column:1/-1;color:#c9b79a;text-align:center}
+
+/* [LOT A ②] l'incident : discret, côté professeur, jamais projeté */
+.ses-incident{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:100002;max-width:520px;
+  background:#3a2a1e;color:#f0e2cf;border:1px solid #7a5a34;border-radius:10px;padding:9px 14px;font-size:.86rem;
+  box-shadow:0 8px 26px rgba(0,0,0,.45);display:none}
+.ses-incident.on{display:block}
 </style>
 <style id="b2-styles">
 .b2-legend{display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 12px;font-size:.8rem}
@@ -2799,8 +2805,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.60.0";
-var APP_VERSION_DATE="2026-08-20";
+var APP_VERSION="8.61.0";
+var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -3693,7 +3699,16 @@ function addChapter(level){
   mjpcPutJson(FIREBASE_BASE+'/site/'+level+'/chapitres/'+newNum+'.json',newCh,'Cr\u00e9ation du chapitre \u00ab '+title+' \u00bb',function(){
     if(!chapitresData[level])chapitresData[level]={};
     chapitresData[level][newNum]=newCh;
+    /* [LOT A \u2465] le patron d\u00e9j\u00e0 \u00e9prouv\u00e9 pour les feuilles : le cache du niveau est
+       invalid\u00e9 et relu, PUIS les deux listes se redessinent \u2014 le chapitre para\u00eet
+       tout de suite, sans rechargement de page. Et le geste se CONFIRME. */
     renderChapitres(level);
+    AT_CHAP_ETAT[level]='';
+    if(typeof atChargerChapitres==='function')atChargerChapitres(level,function(){
+      if(typeof renderChapitres==='function')renderChapitres(level);
+      if(typeof atRendreListe==='function'&&typeof AT!=='undefined'&&AT&&AT.onglet==='chapitres'&&!AT.edChap)atRendreListe();
+    });
+    if(typeof atInfo==='function')atInfo('Chapitre \u00ab '+title+' \u00bb cr\u00e9\u00e9 \u2014 non publi\u00e9. Il appara\u00eet dans la liste.');
   });
   });
 }
@@ -12294,6 +12309,10 @@ function atEditerChapitreRendre(){
      pile est reprise telle quelle, et la feuille courante est reposée par le rendu. */
   var _pileAvant=document.querySelector('.ed2-papier');
   var _scAvant=_pileAvant?_pileAvant.scrollTop:null;
+  /* [LOT A ⑤] la COLONNE du chapitre garde sa place, comme la pile (patron 8.59.2) :
+     un repeint de donn\u00e9es ne renvoie pas Paul en haut d'une liste de 30 documents. */
+  var _somAvant=document.querySelector('#at-arbre .ed2-som')||document.querySelector('.ed2-som');
+  var _scSom=_somAvant?_somAvant.scrollTop:null;
   /* [C5-ED2] l'\u00e9cran du chapitre : une t\u00eate, puis TROIS colonnes. */
   var _docs=ed2Documents(ec.level,ec.chnum);
   if(!ED2.courant||!_docs.some(function(d){return d.item===ED2.courant&&!d.attendu;})){
@@ -12428,8 +12447,11 @@ function atEditerChapitreRendre(){
       if(ED2.gel&&Date.now()<ED2.gel)return;   /* [LOT1-①] */
       clearTimeout(ED2._t);ED2._t=setTimeout(ed2Suivre,140);});}
   if(_scAvant!==null&&_pile){ED2.gel=Date.now()+400;_pile.scrollTop=_scAvant;}
-  else window.scrollTo(0,0);   /* [LOT1-①] seul le PREMIER rendu de l'écran remonte la page */
-  atVuesMonter();   /* [PONT-É2] la couture unique */
+  else window.scrollTo(0,0);   /* [LOT1-①] seul le PREMIER rendu de l'écran remonte la page */  atVuesMonter();   /* [PONT-É2] la couture unique */
+  if(_scSom!==null){   /* [LOT A ⑤] la colonne reprend sa place APRÈS la couture qui la reconstruit */
+    var _somApres=document.querySelector('#at-arbre .ed2-som')||document.querySelector('.ed2-som');
+    if(_somApres){ ED2.gel=Date.now()+400; _somApres.scrollTop=_scSom; }
+  }
 }
 /* les trois écrivains fins — UN chemin par champ, la mémoire locale suit, le
    panneau prof reste vrai à son prochain rendu */
@@ -14570,12 +14592,26 @@ function atDrJouer(classeSlug, classeNom){
   var ec=AT.edChap, sk=ATVUES.snum; if(!ec||!sk)return null;
   var ch=chapitresData[ec.level][ec.chnum], sce=ch.seances[sk];
   if(!sce.deroule_joue) sce.deroule_joue={};
+  /* [LOT A ④] LA COPIE REPART DE LA PR\u00c9PARATION \u00c0 JOUR (d\u00e9cision de Paul, 24/08).
+     Une copie pr\u00e9existante rejouait telle quelle, quelle que soit la pr\u00e9paration :
+     le pilote jouait une trame p\u00e9rim\u00e9e pendant que le t\u00e9l\u00e9phone et le tableau
+     lisaient la fra\u00eeche. On \u00e9crit d\u00e9sormais LA TRAME et l'heure de d\u00e9part, et
+     RIEN d'autre : `part`, `scene` et `vecu` sont des branches s\u0153urs, jamais touch\u00e9es. */
+  var tr=atDrTrame(sk);
+  var _ecrans=JSON.parse(JSON.stringify((tr&&tr.ecrans)||[]));
+  var _dep=Date.now();
   if(!sce.deroule_joue[classeSlug]){
-    var tr=atDrTrame(sk);
     sce.deroule_joue[classeSlug]={ classe:classeNom||classeSlug,      /* [T1-crochet] la s\u00e9ance jou\u00e9e retient sa classe */
-      demarreLe:Date.now(), ecrans:JSON.parse(JSON.stringify(tr.ecrans)) };
+      demarreLe:_dep, ecrans:_ecrans };
     mjpcPutJson(FIREBASE_BASE+'/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+sk+'/deroule_joue/'+classeSlug+'.json',
       sce.deroule_joue[classeSlug],'D\u00e9marrage du d\u00e9roul\u00e9 avec '+(classeNom||classeSlug),null);
+  } else {
+    var _cop=sce.deroule_joue[classeSlug];
+    _cop.classe=classeNom||classeSlug; _cop.demarreLe=_dep; _cop.ecrans=_ecrans;
+    var _base=FIREBASE_BASE+'/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+sk+'/deroule_joue/'+classeSlug;
+    mjpcPutJson(_base+'/ecrans.json',_ecrans,'Trame jou\u00e9e \u2014 reprise de la pr\u00e9paration',null);
+    mjpcPutJson(_base+'/demarreLe.json',_dep,'Heure de d\u00e9part du d\u00e9roul\u00e9',null);
+    mjpcPutJson(_base+'/classe.json',classeNom||classeSlug,'Classe du d\u00e9roul\u00e9',null);
   }
   return sce.deroule_joue[classeSlug];
 }
@@ -14758,6 +14794,66 @@ function drDoc(){ var W=drWin(); try{ return W&&W.document; }catch(e){ return nu
    rechargerait le document : le jeu mourrait devant la classe). Il SUIT la zone
    #at-dr-hote-zone à l'écran, par-dessus. */
 var _drZoneSuivie=null, _drRaf=null, _drFileAttente=[];
+/* ═══ [LOT A ①] LA NORMALISATION DES TRAMES — le rempart d'entrée ═══
+   Le moteur lit `b.etapes.length` SANS garde (L586 du moteur, quand ses trois
+   autres lectures du même champ sont protégées) : un bloc consigne sans `etapes`
+   fait LEVER rendre() au milieu de la boucle des vignettes — #contenu est à jour,
+   mais #vgs, #etat, majVues() et surtout envoie() sont perdus, et l'exception est
+   avalée. Le contrat d'injection (prompt v3) n'impose ni `etapes:[]`, ni `pic`,
+   et demande `ref` là où le moteur lit `src`.
+   Cette fonction n'écrit JAMAIS au hub : elle assainit ce qui ENTRE dans le
+   moteur, à tous les points d'entrée sans exception. */
+/* ═══ [LOT A ②] LA CEINTURE — un échec se DIT, il ne s'avale pas ═══
+   Le 24/08, un défaut de données a rendu le pilotage muet en pleine classe :
+   l'exception était absorbée par les try/catch, zéro erreur remontée. Désormais
+   tout échec de geste s'affiche au professeur — discrètement, jamais au tableau —
+   et se journalise. Le message décrit LE FLUX, jamais le professeur. */
+function sesIncident(ou,err){
+  try{ console.warn('[session] '+ou+' \u2014 '+String(err&&err.message||err)); }catch(e){}
+  try{
+    if(SES&&SES.mode==='tableau')return;            /* la vue ne montre jamais rien d'interne */
+    var z=document.getElementById('ses-incident');
+    if(!z){ z=document.createElement('div'); z.id='ses-incident'; z.className='ses-incident'; document.body.appendChild(z); }
+    z.textContent='Ce geste n\u2019a pas pu aboutir (\u2039 '+ou+' \u203a). L\u2019\u00e9cran suivant peut ne pas suivre \u2014 le d\u00e9tail est dans la console.';
+    z.classList.add('on');
+    clearTimeout(z._t); z._t=setTimeout(function(){ z.classList.remove('on'); },6000);
+  }catch(e){}
+}
+/* ═══ [LOT A ③] L'EMPREINTE DE TRAME — le jeton disait le LIEU, jamais le CONTENU
+   (level|chnum|snum|classe|joué) : une trame changée à jeton identique n'était
+   jamais rechargée, et le moteur restait indéfiniment sur l'ancienne (mesuré :
+   trame de vérité à 13 écrans, moteur à 15, même après aller-retour d'onglet).
+   L'empreinte est courte et stable : le nombre d'écrans, puis les titres. */
+function _drEmpreinteTrame(ecrans){
+  if(!Array.isArray(ecrans))return '0';
+  var s=ecrans.length+':';
+  for(var k=0;k<ecrans.length;k++){ var e=ecrans[k]||{}; s+=String(e.act||'')+'|'+String(e.h||'')+'|'+((e.blocs||[]).length)+';'; }
+  var h=0; for(var j=0;j<s.length;j++){ h=((h<<5)-h+s.charCodeAt(j))|0; }
+  return ecrans.length+'-'+(h>>>0).toString(36);
+}
+function _drNormaliserTrame(ecrans){
+  if(!Array.isArray(ecrans))return ecrans;
+  ecrans.forEach(function(e){
+    if(!e||typeof e!=='object')return;
+    if(!Array.isArray(e.blocs))e.blocs=[];
+    e.blocs.forEach(function(b){
+      if(!b||typeof b!=='object')return;
+      if(b.t==='consigne'){
+        if(!Array.isArray(b.etapes))b.etapes=[];
+        if(typeof b.pic!=='string')b.pic='';
+      }
+      if(b.t==='question'){
+        if(!Array.isArray(b.reps))b.reps=[];
+        b.reps.forEach(function(r){ if(r&&typeof r==='object'){ if(typeof r.i!=='string')r.i=''; if(typeof r.r!=='string')r.r=''; } });
+      }
+      if(b.t==='image'||b.t==='schema'){
+        if(typeof b.src!=='string')b.src=(typeof b.ref==='string'?b.ref:'');
+      }
+      if(b.vues!==undefined)b.vues=b.vues|0;
+    });
+  });
+  return ecrans;
+}
 function _drAssurerCadre(){
   if(document.getElementById('at-dr-iframe'))return;
   var brut, texte;
@@ -14777,7 +14873,7 @@ function _drAssurerCadre(){
 /* intégrité au boot : le texte chargé EST deroule86.html, prouvé par empreinte */
 function _drVerifier(texte){
   var fin=function(ok,det){ AT_PONT.ecart=ok?null:det; try{ var Wv=drWin();
-    if(Wv && !Wv.__pontCharge){ Wv.ECRANS=[{act:"Nouvelle activité",h:"—",dur:0,blocs:[]}]; Wv.i=0; Wv.rendre(); }
+    if(Wv && !Wv.__pontCharge){ Wv.ECRANS=_drNormaliserTrame([{act:"Nouvelle activité",h:"—",dur:0,blocs:[]}]); Wv.i=0; Wv.rendre(); }   /* [LOT A ①] */
   }catch(e){}                                        /* [garde] la démo embarquée ne s'affiche jamais dans le cadre */
   AT_PONT.pret=true; _drPontEtat();
     _drEnvelopper(); var q=_drFileAttente.splice(0); q.forEach(function(fn){ try{fn();}catch(e){} }); };
@@ -14921,7 +15017,7 @@ var DR={
        (lecture de ECRANS[i] au rendu). Le message ① garantit un état jouable, avec
        LA forme d'écran neuf du moteur lui-même (celle de nouvelEcran). */
     if(!t.length)t=[{act:"Nouvelle activité",h:"—",dur:0,blocs:[]}];
-    W.ECRANS=t;
+    W.ECRANS=_drNormaliserTrame(t);   /* [LOT A ①] toute trame entre assainie */
     W.__pontCharge=true;                       /* le marqueur de trame : tout reboot l'efface */
     W.i=0; W.ficheOuverte=null; W.rendre(); },
   /* ouverture : le cadre paraît sur la zone, la trame n'est rechargée QUE si elle change
@@ -14932,7 +15028,7 @@ var DR={
        load propre, jamais à chaud pendant le boot (course prouvée au banc). */
     if(!_drSain() || (AT_PONT.pret && !((drWin()||{}).__pontCharge))){ _drReconstruire(); }
     _drAssurerCadre(); _drAfficher(true);
-    var jeton=[ctx&&ctx.level,ctx&&ctx.chnum,ctx&&ctx.snum,(ctx&&ctx.classe)||'',(ctx&&ctx.joue)?'j':''].join('|');
+    var jeton=[ctx&&ctx.level,ctx&&ctx.chnum,ctx&&ctx.snum,(ctx&&ctx.classe)||'',(ctx&&ctx.joue)?'j':'',_drEmpreinteTrame(ecrans)].join('|');   /* [LOT A ③] le jeton dit aussi le CONTENU */
     _drQuandPret(function(){
       if(DR.__charge&&DR.__charge!==jeton)_drFlushTrame(DR.__charge);   /* l'édition des 900 dernières ms part vers SA séance */
       try{ setTimeout(_drPoserContexteMoteur,60); }catch(e){}
@@ -14950,7 +15046,8 @@ var DR={
       }
     }catch(e){} },700); } }catch(e){}
     if(DR.__charge!==jeton){
-        var posMem=(AT_PONT.dernierJeton===jeton)?(AT_PONT.dernierEcran||0):0;   /* AVANT le chargement : son rendre écrase la mémoire */
+        var _lieu=function(j){ return String(j||'').split('|').slice(0,5).join('|'); };   /* [LOT A ③] la place se garde au LIEU, pas au contenu */
+        var posMem=(_lieu(AT_PONT.dernierJeton)===_lieu(jeton))?(AT_PONT.dernierEcran||0):0;   /* AVANT le chargement : son rendre écrase la mémoire */
         DR.__charge=jeton; DR.dr_chargerTrame(ecrans);
         if(posMem>0){   /* reconstruction : on revient où l'on était */
           try{ var Wp=drWin(); if(Wp&&Wp.ECRANS&&posMem<Wp.ECRANS.length){ Wp.i=posMem; Wp.rendre(); } }catch(e){}
@@ -14962,7 +15059,11 @@ var DR={
         var J=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],
             M=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
             dj=new Date();
-        Wm.META.classe=(AT_DR_REGIME==='classe'&&AT_DR_COURS&&AT_DR_COURS.classe&&classesData[AT_DR_COURS.classe])?(classesData[AT_DR_COURS.classe].nom||''):'';
+        /* [LOT A \u2466] le champ s'appelle `classeSlug` \u2014 `AT_DR_COURS.classe` n'a jamais
+           exist\u00e9 : META.classe restait vide, et le moteur gardait le libell\u00e9 en dur
+           de sa maquette (« Participation \u00b7 3e Franklin Aretha ») ou affichait « \u00b7 \u2014 ». */
+        var _cs=AT_DR_COURS&&(AT_DR_COURS.classeSlug||AT_DR_COURS.classe);
+        Wm.META.classe=(AT_DR_REGIME==='classe'&&AT_DR_COURS)?(((_cs&&classesData[_cs]&&classesData[_cs].nom))||AT_DR_COURS.classeNom||''):'';
         Wm.META.chapitre=(chpm&&chpm.title)||''; Wm.META.chapitreCourt=(chpm&&chpm.title)||'';
         Wm.META.seance=(scem&&(scem.title||scem.titre))||String(xm.snum||'');
         Wm.META.seanceCourt=Wm.META.seance;
@@ -15006,6 +15107,24 @@ function _drFlushTrame(ancienJeton){
 /* [contextualisation] la maquette était MONO-séance : « Écrans · séance 3 » est en dur
    dans son HTML. Le moteur reste agnostique ; le PONT écrit le vrai libellé à chaque
    ouverture. Ouvert nu, le moteur garde son texte d'origine. */
+/* ═══ [LOT A \u2466] LES DEUX LIBELL\u00c9S DE LA MAQUETTE \u2014 pourquoi ils ne prenaient pas ═══
+   Le moteur porte en dur « \u00c9crans \u00b7 s\u00e9ance 3 » (.vgt) et « Participation \u00b7 3e
+   Franklin Aretha » (#h3part) : les valeurs de sa maquette mono-s\u00e9ance, pos\u00e9es \u00e0
+   son chargement. Le pont les r\u00e9\u00e9crivait UNE SEULE FOIS, dans dr_ouvrir \u2014 donc
+   jamais apr\u00e8s un rechargement du cadre, une reconstruction, ou un changement de
+   classe ; et #h3part lisait un champ qui n'existe pas. Ils se reposent d\u00e9sormais
+   \u00e0 chaque pose de contexte, laquelle suit toutes ces reconstructions. */
+function _drLibelles(){
+  try{
+    var W=drWin(); if(!W)return;
+    _drTitrerColonne(AT_PONT.ctx||{});
+    var cs=AT_DR_COURS&&(AT_DR_COURS.classeSlug||AT_DR_COURS.classe);
+    var nom=(AT_DR_REGIME==='classe'&&AT_DR_COURS)?(((cs&&classesData[cs]&&classesData[cs].nom))||AT_DR_COURS.classeNom||''):'';
+    if(W.META)W.META.classe=nom;
+    var h3=W.document.getElementById('h3part');
+    if(h3)h3.textContent='Participation \u00b7 '+(nom||'\u2014');
+  }catch(e){}
+}
 function _drTitrerColonne(ctx){
   try{
     var D=drDoc(); var v=D&&D.querySelector('.vgt'); if(!v)return;
@@ -15478,6 +15597,7 @@ function _drProchainCreneau(){
   }catch(e){return '';}
 }
 function _drPoserContexteMoteur(){
+  try{ setTimeout(_drLibelles,0); }catch(e){}   /* [LOT A \u2466] les libell\u00e9s suivent le contexte, toujours */
   try{
     var W=drWin(); if(!W)return;
     var slug=(AT_DR_COURS&&AT_DR_COURS.classeSlug)||(AT_PONT.classeVue)||((document.getElementById('at-dr-classe')||{}).value)||'';
@@ -15831,9 +15951,9 @@ function sesBrancherPilote(reprise){
   var W=drWin(); if(!W){ _drQuandPret(function(){sesBrancherPilote(reprise);}); return; }
   if(!W.__sesCrochets){
     W.__sesCrochets=true;
-    var vRendre=W.rendre; W.rendre=function(){ var r=vRendre.apply(W,arguments); sesEmettre(); return r; };
-    var vEnvoie=W.envoie; W.envoie=function(){ var r=vEnvoie.apply(W,arguments); sesEmettre(); return r; };
-    var vQui=W.quiParle; W.quiParle=function(){ var r=vQui.apply(W,arguments); sesEmettre(); return r; };
+    var vRendre=W.rendre; W.rendre=function(){ var r; try{ r=vRendre.apply(W,arguments); }catch(e){ sesIncident('affichage de l\u2019\u00e9cran',e); } sesEmettre(); return r; };   /* [LOT A ②] l'\u00e9mission part M\u00caME si le rendu a bronch\u00e9 */
+    var vEnvoie=W.envoie; W.envoie=function(){ var r; try{ r=vEnvoie.apply(W,arguments); }catch(e){ sesIncident('envoi au tableau',e); } sesEmettre(); return r; };
+    var vQui=W.quiParle; W.quiParle=function(){ var r; try{ r=vQui.apply(W,arguments); }catch(e){ sesIncident('qui a particip\u00e9',e); } sesEmettre(); return r; };
     var vSauve=W.sauve; W.sauve=function(){ var r=vSauve.apply(W,arguments);
       if(AT_DR_REGIME==='classe'){ clearTimeout(SES.trameT);
         SES.trameT=setTimeout(function(){ SES.trameMaj=Date.now(); sesEmettre(); },950); }   /* APRÈS la poussée réelle de la copie (débounce 900 de _drCopieAuto) — jamais une annonce avant la marchandise */
@@ -15900,7 +16020,7 @@ function sesPollPilote(){
     if(o.trameMaj&&o.trameMaj>SES.trameMaj){
       SES.trameMaj=o.trameMaj;
       sesGet(ch.ecrans,function(ecr){ if(Array.isArray(ecr)){ var W=drWin();
-        if(W){ SES.applique=true; try{ W.ECRANS=ecr; W.__pontCharge=true; }catch(e){} SES.applique=false; } }
+        if(W){ SES.applique=true; try{ W.ECRANS=_drNormaliserTrame(ecr); W.__pontCharge=true; }catch(e){} SES.applique=false; } }   /* [LOT A ①] */
         fini(); });
     } else fini();
   });
@@ -16053,7 +16173,7 @@ function sesTabMonter(){
     try{ W.META=W.META||{}; W.META.classe=SES.ctx.classeNom||''; }catch(e){}
     var ch=sesChemins(SES.ctx);
     sesGet(ch.ecrans,function(ecr){
-      if(Array.isArray(ecr)&&ecr.length){ try{ W.ECRANS=ecr; W.__pontCharge=true; W.i=0; }catch(e){} }
+      if(Array.isArray(ecr)&&ecr.length){ try{ W.ECRANS=_drNormaliserTrame(ecr); W.__pontCharge=true; W.i=0; }catch(e){} }   /* [LOT A ①] */
       try{ W.tableau(); }catch(e){}
       document.getElementById('ses-tab-att').style.display='none';
       SES._tabTrame=0; SES._tabTs=0;
@@ -16091,7 +16211,7 @@ function sesTabPoll(){
     };
     if(o.trameMaj&&o.trameMaj>SES._tabTrame){
       SES._tabTrame=o.trameMaj;
-      sesGet(ch.ecrans,function(ecr){ if(Array.isArray(ecr)){ try{ W.ECRANS=ecr; }catch(e){} } applique(); });
+      sesGet(ch.ecrans,function(ecr){ if(Array.isArray(ecr)){ try{ W.ECRANS=_drNormaliserTrame(ecr); }catch(e){} } applique(); });   /* [LOT A ①] la sixième porte */
     } else applique();
   });
 }
@@ -16169,7 +16289,7 @@ function sesTelChercherCours(){
             var W=drWin(); if(!W)return;
             var ch=sesChemins(SES.ctx);
             sesGet(ch.ecrans,function(ecr){
-              try{ W.ECRANS=(Array.isArray(ecr)&&ecr.length)?ecr:[{act:'Nouvelle activit\u00e9',h:'\u2014',dur:0,blocs:[]}];
+              try{ W.ECRANS=_drNormaliserTrame((Array.isArray(ecr)&&ecr.length)?ecr:[{act:'Nouvelle activit\u00e9',h:'\u2014',dur:0,blocs:[]}]);   /* [LOT A ①] */
                    W.__pontCharge=true; W.i=0; }catch(e){}
               try{ _drPoserContexteMoteur(); }catch(e){}
               sesGet(ch.part,function(p){ if(p&&p.participation){ try{ W.PARTICIPATION=p.participation; }catch(e){} SES._partVu=p.maj||0; }
@@ -16189,9 +16309,9 @@ function sesBrancherPiloteTel(W){
   SES.actif=true;
   if(!W.__sesCrochets){
     W.__sesCrochets=true;
-    var vRendre=W.rendre; W.rendre=function(){ var r=vRendre.apply(W,arguments); sesEmettre(); sesTelPeindre(); return r; };
-    var vEnvoie=W.envoie; W.envoie=function(){ var r=vEnvoie.apply(W,arguments); sesEmettre(); return r; };
-    var vQui=W.quiParle; W.quiParle=function(){ var r=vQui.apply(W,arguments); sesEmettre(); return r; };
+    var vRendre=W.rendre; W.rendre=function(){ var r; try{ r=vRendre.apply(W,arguments); }catch(e){ sesIncident('affichage de l\u2019\u00e9cran',e); } sesEmettre(); sesTelPeindre(); return r; };   /* [LOT A ②] */
+    var vEnvoie=W.envoie; W.envoie=function(){ var r; try{ r=vEnvoie.apply(W,arguments); }catch(e){ sesIncident('envoi au tableau',e); } sesEmettre(); return r; };
+    var vQui=W.quiParle; W.quiParle=function(){ var r; try{ r=vQui.apply(W,arguments); }catch(e){ sesIncident('qui a particip\u00e9',e); } sesEmettre(); return r; };
     var vSauve=W.sauve; W.sauve=function(){ var r=vSauve.apply(W,arguments);
       clearTimeout(SES.trameT);
       SES.trameT=setTimeout(function(){ SES.trameMaj=Date.now(); sesEmettre(true); },950);
@@ -16203,7 +16323,7 @@ function sesBrancherPiloteTel(W){
 }
 function sesTelGeste(g){
   var W=drWin(); if(!W)return;
-  try{
+  try{   /* [LOT A ②] l'\u00e9chec est d\u00e9clar\u00e9 (voir le catch) */
     if(g==='devoile')W.devoile();
     else if(g==='replie')W.replie();
     else if(g==='prec')W.pas(-1);
@@ -16212,8 +16332,8 @@ function sesTelGeste(g){
     else if(g==='stylo'){ W.stylo&&W.stylo(); document.getElementById('ses-pb-stylo').classList.toggle('ses-pb-on'); }
     else if(g==='chrono'){ W.chrono&&W.chrono(); }
     else if(g==='qui'){ W.quiParle(); document.getElementById('ses-pb-qui').classList.toggle('ses-pb-on',W.quiOn); }
-  }catch(e){}
-  sesTelPeindre();
+  }catch(e){ sesIncident(g,e); }
+  try{ sesTelPeindre(); }catch(e2){ sesIncident('affichage du prompteur',e2); }
 }
 /* le PROMPTEUR : l'écran courant, le dévoilé NET + l'à-venir GRISÉ « À VENIR » — c'est
    la lecture pilote (html(n,false)) refaite en cartes tactiles, avec l'ÉDITION AU DOIGT
