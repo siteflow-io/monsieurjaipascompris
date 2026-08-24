@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.62.0";
+var APP_VERSION="8.63.0";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -14444,6 +14444,7 @@ function atT5Modale(){
 
 function atT5Choix(n,quoi){
   AT_T5_CHOIX[n]=quoi;
+  try{ _drTraceAuto(); }catch(e){}   /* [LOT C1 \u2461] une d\u00e9cision de fin d'heure ne se perd plus */
   var f=document.querySelector('.cm-fond, .cm-modale, #cm-fond'); if(f&&f.remove) f.remove();
   var e=atT5Etat(); if(e) atT5Appel(e);
   setTimeout(atT5Modale,60);
@@ -14556,9 +14557,119 @@ function atDrReprendre(indices){
 }
 
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   [LOT C1 ①] LA TRACE DE L'HEURE — l'horaire est l'identifiant
+   Décision de Paul (24/08) : « c'est l'horaire qui tranche […] l'horaire doit être
+   mentionné, aussi simple que ça : heure de tant à tant, puis heure de tant à tant. »
+   Le nœud `vecu`, UNIQUE sous la classe, écrasait la première heure dès qu'une
+   seconde heure jouait la même séance — et une heure non close perdait ses durées
+   ET les décisions du T-5. Il devient une COLLECTION sous `heures/`, une entrée par
+   créneau. La clé porte le jour ET le créneau : sans le jour, deux mardis au même
+   horaire s'écraseraient l'un l'autre, et la règle de reprise (« relance dans le
+   même créneau = même heure ») ne se juge que dans la même journée.
+   `ecrans`, `scene` et `part` NE BOUGENT PAS : ils restent sous la classe. Seuls le
+   temps et les décisions appartiennent à l'heure.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* LE CR\u00c9NEAU, PAS L'HEURE DE LANCEMENT. `AT_DR_COURS.debut` porte l'heure R\u00c9ELLE du
+   lancement (Paul lance en retard, c'est pr\u00e9vu : \u00ab le d\u00e9marrage, c'est moi qui lance \u00bb,
+   CADRAGE \u00a74). B\u00e2tir la cl\u00e9 dessus la ferait changer \u00e0 chaque relance \u2014 une coupure \u00e0
+   10h30 aurait cr\u00e9\u00e9 une seconde trace au lieu de reprendre la premi\u00e8re. La fin, elle,
+   est FIXE et vient de l'emploi du temps : elle d\u00e9signe le cr\u00e9neau sans ambigu\u00eft\u00e9. */
+function _drCreneauHeure(){
+  if(!AT_DR_COURS)return null;
+  var fin=String(AT_DR_COURS.fin||'');
+  for(var k=0;k<AT_EDT.length;k++){ if(AT_EDT[k].split('-')[1]===fin)return AT_EDT[k]; }
+  return String(AT_DR_COURS.debut||'')+'-'+fin;   /* hors emploi du temps : le cr\u00e9neau reste ce qu'il est */
+}
+function _drCleHeure(){
+  if(!AT_DR_COURS)return null;
+  var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
+  var jour=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+  return jour+'_'+String(_drCreneauHeure()||'').replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'');
+}
+function _drBaseHeure(){
+  var ec=AT.edChap, sk=ATVUES.snum;
+  if(!ec||!sk||!AT_DR_COURS)return null;
+  var cle=_drCleHeure(); if(!cle)return null;
+  return FIREBASE_BASE+'/site/'+ec.level+'/chapitres/'+ec.chnum+'/seances/'+sk
+    +'/deroule_joue/'+AT_DR_COURS.classeSlug+'/heures/'+cle;
+}
+/* le paquet de l'heure — EXACTEMENT celui que composait atVecuEcrire, extrait pour
+   être poussé au fil de l'eau comme à la clôture. Rien n'y est inventé. */
+function _drPaquetHeure(clos){
+  if(!AT_DR_VECU||!AT_DR_COURS)return null;
+  var ecr=[]; try{ ecr=DR.dr_exporterTrame()||[]; }catch(e){}
+  var enCours=AT_DR_VECU.courant;
+  var lignes=Object.keys(AT_DR_VECU.activites).map(function(k){
+    var e=ecr[k]||{}, a=AT_DR_VECU.activites[k];
+    var ms=a.ms+((enCours&&enCours.n===+k)?(Date.now()-enCours.depuis):0);
+    return { n:+k, act:e.act||('\u00e9cran '+(+k+1)), prevu:+(e.dur||0),
+             reel:Math.round(ms/60000), passages:a.passages,
+             comp:Array.isArray(e.comp)?e.comp:[] };
+  });
+  if(enCours&&!AT_DR_VECU.activites[enCours.n]){          /* l'activit\u00e9 en cours compte d\u00e9j\u00e0 */
+    var e2=ecr[enCours.n]||{};
+    lignes.push({ n:enCours.n, act:e2.act||('\u00e9cran '+(enCours.n+1)), prevu:+(e2.dur||0),
+      reel:Math.round((Date.now()-enCours.depuis)/60000), passages:1,
+      comp:Array.isArray(e2.comp)?e2.comp:[] });
+  }
+  var fin=clos?(AT_DR_VECU.finReel||Date.now()):null;
+  return {
+    classe:AT_DR_COURS.classeNom, creneau:_drCreneauHeure(),
+    lanceA:AT_DR_COURS.debut, fin:AT_DR_COURS.fin,
+    debutReel:AT_DR_VECU.debutReel, finReel:fin,
+    tempsUtilePrevu:atTempsUtile(),
+    minutesJouees:Math.round(((fin||Date.now())-AT_DR_VECU.debutReel)/60000),
+    activites:lignes,
+    decisions:JSON.parse(JSON.stringify(AT_T5_CHOIX||{})),
+    clos:!!clos, maj:Date.now()
+  };
+}
+/* [LOT C1 \u2461] LA TRACE S'\u00c9CRIT AU FIL — sur le m\u00e9canisme de `_drCopieAuto` :
+   m\u00eame d\u00e9bounce de 900 ms, m\u00eame fonction d'\u00e9criture, m\u00eame chemin de base.
+   Aucun second m\u00e9canisme n'est b\u00e2ti. Apr\u00e8s ce lot, fermer l'atelier ou perdre la
+   page en pleine heure ne perd plus rien. */
+function _drTraceAuto(){
+  if(AT_DR_REGIME!=='classe'||!AT_DR_COURS||!AT_DR_VECU)return;
+  clearTimeout(AT_PONT._traceT);
+  AT_PONT._traceT=setTimeout(function(){
+    try{
+      var base=_drBaseHeure(); if(!base)return;
+      var paquet=_drPaquetHeure(false); if(!paquet)return;
+      mjpcPutJson(base+'.json', paquet,
+        'Heure de cours \u2014 '+paquet.creneau+' ('+AT_DR_COURS.classeNom+')');
+    }catch(e){}
+  },900);
+}
+/* la RELANCE dans le m\u00eame cr\u00e9neau REPREND la trace en cours (patron du chrono
+   accumul\u00e9 de worktrack, CADRAGE-TEMPS \u00a72) : le d\u00e9but r\u00e9el et les minutes d\u00e9j\u00e0
+   compt\u00e9es sont conserv\u00e9s, les d\u00e9cisions du T-5 reviennent. Deux cr\u00e9neaux dans la
+   journ\u00e9e = deux cl\u00e9s = deux traces : aucune n'\u00e9crase l'autre. */
+function _drTraceReprendre(){
+  var base=_drBaseHeure(); if(!base||!AT_DR_VECU)return;
+  fetch(base+'.json').then(function(r){return r.json();}).then(function(t){
+    if(!t||!AT_DR_VECU)return;
+    if(t.debutReel)AT_DR_VECU.debutReel=t.debutReel;
+    (t.activites||[]).forEach(function(l){
+      if(!l||l.n===undefined)return;
+      var a=AT_DR_VECU.activites[l.n]||(AT_DR_VECU.activites[l.n]={ms:0,passages:0});
+      a.ms=Math.max(a.ms,(+l.reel||0)*60000);
+      a.passages=Math.max(a.passages,(+l.passages||0));
+    });
+    if(t.decisions&&typeof AT_T5_CHOIX==='object'){
+      Object.keys(t.decisions).forEach(function(k){ if(AT_T5_CHOIX[k]===undefined)AT_T5_CHOIX[k]=t.decisions[k]; });
+    }
+    try{ atVecuAfficher(); }catch(e){}
+    atInfo('Heure de '+t.creneau+' reprise \u2014 '+(t.minutesJouees||0)+' min d\u00e9j\u00e0 compt\u00e9es'
+      +(Object.keys(t.decisions||{}).length?' et tes d\u00e9cisions de fin d\u2019heure':'')+'.');
+    _drTraceAuto();
+  }).catch(function(){});
+}
 function atVecuDemarrer(){
   AT_DR_VECU={ debutReel:Date.now(), finReel:null, activites:{}, decisions:{}, courant:null };
   atVecuEntrer(0);
+  try{ _drTraceReprendre(); }catch(e){}   /* [LOT C1 \u2460] m\u00eame cr\u00e9neau \u2192 m\u00eame heure : on reprend */
+  try{ _drTraceAuto(); }catch(e){}        /* [LOT C1 \u2461] la trace na\u00eet tout de suite */
 }
 
 
@@ -14567,6 +14678,7 @@ function atVecuEntrer(n){
   if(AT_DR_VECU.courant && AT_DR_VECU.courant.n===n) return;
   atVecuSortir();
   AT_DR_VECU.courant={n:n, depuis:Date.now()};
+  try{ _drTraceAuto(); }catch(e){}   /* [LOT C1 \u2461] */
 }
 
 
@@ -14576,6 +14688,7 @@ function atVecuSortir(){
   var a=AT_DR_VECU.activites[c.n]||(AT_DR_VECU.activites[c.n]={ms:0, passages:0});
   a.ms+=ms; a.passages++;
   AT_DR_VECU.courant=null;
+  try{ _drTraceAuto(); }catch(e){}   /* [LOT C1 \u2461] */
 }
 
 
@@ -14607,6 +14720,17 @@ function atVecuEcrire(){
     minutesJouees:Math.round((AT_DR_VECU.finReel-AT_DR_VECU.debutReel)/60000),
     activites:lignes, decisions:AT_DR_VECU.decisions
   };
+  /* [LOT C1 \u2460] la m\u00eame trace, rang\u00e9e sous son HORAIRE. `vecu` continue d'exister
+     \u00e0 l'identique (l'affichage des minutes le lit) : rien de ce qui marchait ne bouge,
+     la collection s'ajoute \u00e0 c\u00f4t\u00e9. */
+  try{
+    var _b=_drBaseHeure();
+    if(_b){
+      var _p=_drPaquetHeure(true);
+      if(_p){ _p.finReel=AT_DR_VECU.finReel; _p.clos=true;
+        mjpcPutJson(_b+'.json', _p, 'Heure close \u2014 '+_p.creneau+' ('+AT_DR_COURS.classeNom+')', function(){}); }
+    }
+  }catch(e){}
   var ch=chapitresData[ec.level][ec.chnum], sce=ch.seances[sk];
   if(sce.deroule_joue && sce.deroule_joue[AT_DR_COURS.classeSlug]){
     sce.deroule_joue[AT_DR_COURS.classeSlug].vecu=paquet;
