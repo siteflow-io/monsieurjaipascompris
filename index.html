@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.63.0";
+var APP_VERSION="8.64.0";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -14483,8 +14483,20 @@ function atDrModifsDeLaSeance(){
   var prep=(sce.deroule||{}).ecrans||[];
   var vus=[]; try{ vus=DR.dr_exporterTrame()||[]; }catch(x){ vus=joue.ecrans||[]; }
   var out=[];
+  /* [LOT C2 \u2462.1] L'APPARIEMENT PAR IDENTIT\u00c9. Cette comparaison lisait `prep[n]` :
+     d\u00e8s que les rangs glissaient \u2014 un zoom qui scinde suffit \u2014 elle inventait une
+     modification que Paul n'avait pas faite. C'est le \u00ab Tu as modifi\u00e9 1 chose \u00bb de son
+     test r\u00e9el du 23/08, dont la modale montrait un titre d'\u00e9cran remplac\u00e9 par celui
+     d'un voisin. On apparie d\u00e9sormais par identit\u00e9 ; \u00e0 d\u00e9faut (pr\u00e9paration ant\u00e9rieure
+     \u00e0 ce lot, jamais pass\u00e9e par le moteur) on retombe sur le rang, comme avant. */
+  var _parEid={};
+  prep.forEach(function(p,k){ if(p&&p.eid)_parEid[p.eid]=p; });
+  var _aDesEid=Object.keys(_parEid).length>0;
   vus.forEach(function(e,n){
-    var av=prep[n]||null;
+    var av=null;
+    if(_aDesEid&&e&&e.eid)av=_parEid[e.eid]||null;
+    else av=prep[n]||null;
+    if(!av&&!_aDesEid)av=prep[n]||null;
     if(!av){ out.push({n:n, activite:(e&&(e.act||e.h))||('\u00c9cran '+(n+1)), quoi:'\u00e9cran ajout\u00e9 pendant le cours',
       detail:_drCoupe((e.blocs||[]).map(_drTexteBloc).filter(Boolean).join(' \u00b7 '),110), neuf:true}); return; }
     /* [C1-CONSCIENCE] on compare le CONTENU SIGNIFIANT (titre + textes des blocs).
@@ -14585,7 +14597,13 @@ function _drCleHeure(){
   if(!AT_DR_COURS)return null;
   var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
   var jour=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
-  return jour+'_'+String(_drCreneauHeure()||'').replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'');
+  /* [LOT C2 \u2463] LA CLASSE ENTRE DANS LA CL\u00c9. L'emploi du temps encha\u00eene deux classes
+     en DEUX MINUTES (8h55\u21928h57, 11h02\u219211h04) et le cadrage l'exige : \u00ab le d\u00e9roul\u00e9 de
+     l'une ne doit pas contaminer l'autre \u00bb. Avec la classe dans la cl\u00e9, deux classes ne
+     peuvent plus se confondre \u2014 quoi qu'il advienne du calcul de cr\u00e9neau. C'est
+     impossible par construction, non pas improbable. */
+  var cls=String(AT_DR_COURS.classeSlug||AT_DR_COURS.classeNom||'').replace(/[.#$\[\]\/\s]/g,'_');
+  return jour+'_'+String(_drCreneauHeure()||'').replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'')+'_'+cls;
 }
 function _drBaseHeure(){
   var ec=AT.edChap, sk=ATVUES.snum;
@@ -14603,13 +14621,14 @@ function _drPaquetHeure(clos){
   var lignes=Object.keys(AT_DR_VECU.activites).map(function(k){
     var e=ecr[k]||{}, a=AT_DR_VECU.activites[k];
     var ms=a.ms+((enCours&&enCours.n===+k)?(Date.now()-enCours.depuis):0);
-    return { n:+k, act:e.act||('\u00e9cran '+(+k+1)), prevu:+(e.dur||0),
+    return { n:+k, eid:_drEidDuRang(+k,ecr)||null,   /* [LOT C2 \u2462.3] le rang reste lisible, l'identit\u00e9 fait foi */
+             act:e.act||('\u00e9cran '+(+k+1)), prevu:+(e.dur||0),
              reel:Math.round(ms/60000), passages:a.passages,
              comp:Array.isArray(e.comp)?e.comp:[] };
   });
   if(enCours&&!AT_DR_VECU.activites[enCours.n]){          /* l'activit\u00e9 en cours compte d\u00e9j\u00e0 */
     var e2=ecr[enCours.n]||{};
-    lignes.push({ n:enCours.n, act:e2.act||('\u00e9cran '+(enCours.n+1)), prevu:+(e2.dur||0),
+    lignes.push({ n:enCours.n, eid:_drEidDuRang(enCours.n,ecr)||null, act:e2.act||('\u00e9cran '+(enCours.n+1)), prevu:+(e2.dur||0),
       reel:Math.round((Date.now()-enCours.depuis)/60000), passages:1,
       comp:Array.isArray(e2.comp)?e2.comp:[] });
   }
@@ -14622,6 +14641,15 @@ function _drPaquetHeure(clos){
     minutesJouees:Math.round(((fin||Date.now())-AT_DR_VECU.debutReel)/60000),
     activites:lignes,
     decisions:JSON.parse(JSON.stringify(AT_T5_CHOIX||{})),
+    /* [LOT C2 \u2462.2] les d\u00e9cisions de fin d'heure, \u00c9CRITES PAR IDENTIT\u00c9. `AT_T5_CHOIX`
+       reste index\u00e9 par rang EN M\u00c9MOIRE VIVE \u2014 le T-5 lui-m\u00eame n'est pas touch\u00e9, ses
+       corps sont compar\u00e9s au rapport \u2014 mais ce qui se M\u00c9MORISE ne parle plus en rangs :
+       \u00ab ce qui pourrait se tromper se v\u00e9rifie \u00e0 l'\u00e9criture, jamais \u00e0 la lecture \u00bb. */
+    decisionsParEcran:(function(){ var d={};
+      Object.keys(AT_T5_CHOIX||{}).forEach(function(k){
+        var id=null; try{ id=_drEidDuRang(+k,ecr); }catch(e){}
+        if(id)d[id]=AT_T5_CHOIX[k];
+      }); return d; })(),
     clos:!!clos, maj:Date.now()
   };
 }
@@ -14649,6 +14677,14 @@ function _drTraceReprendre(){
   var base=_drBaseHeure(); if(!base||!AT_DR_VECU)return;
   fetch(base+'.json').then(function(r){return r.json();}).then(function(t){
     if(!t||!AT_DR_VECU)return;
+    /* [LOT C2 \u2463] LE LANCEMENT REFUSE UNE TRACE INCOH\u00c9RENTE. Si la trace trouv\u00e9e porte
+       une autre classe ou un autre cr\u00e9neau, on ouvre une trace neuve au lieu d'y \u00e9crire :
+       une trace de trop se voit et se corrige, une trace m\u00eal\u00e9e ment en silence. */
+    var crAttendu=_drCreneauHeure();
+    if((t.classe&&AT_DR_COURS.classeNom&&t.classe!==AT_DR_COURS.classeNom)||(t.creneau&&crAttendu&&t.creneau!==crAttendu)){
+      atInfo('Une trace d\u2019heure existait sous cette cl\u00e9 mais portait \u00ab '+escapeHtml(String(t.classe||'?'))+' \u00b7 '+escapeHtml(String(t.creneau||'?'))+' \u00bb : elle n\u2019est pas reprise, cette heure part \u00e0 neuf.');
+      _drTraceAuto(); return;
+    }
     if(t.debutReel)AT_DR_VECU.debutReel=t.debutReel;
     (t.activites||[]).forEach(function(l){
       if(!l||l.n===undefined)return;
@@ -14675,6 +14711,10 @@ function atVecuDemarrer(){
 
 function atVecuEntrer(n){
   if(!AT_DR_VECU) return;
+  /* [LOT C2 \u2462.3 / \u2461] un fils du zoom n'est jamais une ancre : le temps se compte
+     sur le P\u00c8RE. Sans cela, zoomer pendant une activit\u00e9 la couperait en deux lignes
+     de v\u00e9cu dont l'une mourrait au d\u00e9zoom. */
+  try{ n=_drRangPere(n); }catch(e){}
   if(AT_DR_VECU.courant && AT_DR_VECU.courant.n===n) return;
   atVecuSortir();
   AT_DR_VECU.courant={n:n, depuis:Date.now()};
@@ -14890,6 +14930,27 @@ function atDrMonter(){
 }
 
 
+function _drCloreHeureRestee(slugNeuf,nomNeuf){
+  /* [LOT C2 \u2463] la clôture de l'heure pr\u00e9c\u00e9dente est CERTAINE, m\u00eame apr\u00e8s un
+     rechargement : `cours_actif` fait foi. Le professeur n'est jamais bloqu\u00e9 \u2014 on
+     avertit d'une ligne, on ne demande rien, et le lancement continue. */
+  fetch(FIREBASE_BASE+'/site/cours_actif.json').then(function(r){return r.json();}).then(function(c){
+    if(!c||!c.ts||(Date.now()-c.ts)>4*3600*1000)return;
+    if(c.classeSlug===slugNeuf&&c.seance===ATVUES.snum&&c.chapitre===(AT.edChap||{}).chnum)return;  /* c'est la m\u00eame heure : rien \u00e0 clore */
+    var d=new Date(c.ts), p=function(n){return (n<10?'0':'')+n;};
+    var jour=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+    var cr=String(c.debut||'')+'-'+String(c.fin||'');
+    for(var k=0;k<AT_EDT.length;k++){ if(AT_EDT[k].split('-')[1]===String(c.fin||''))cr=AT_EDT[k]; }
+    var cls=String(c.classeSlug||c.classeNom||'').replace(/[.#$\[\]\/\s]/g,'_');
+    var cle=jour+'_'+cr.replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'')+'_'+cls;
+    var base=FIREBASE_BASE+'/site/'+c.niveau+'/chapitres/'+c.chapitre+'/seances/'+c.seance
+      +'/deroule_joue/'+c.classeSlug+'/heures/'+cle;
+    mjpcPutJson(base+'/clos.json',true,'Cl\u00f4ture certaine de l\u2019heure pr\u00e9c\u00e9dente',function(){});
+    mjpcPutJson(base+'/finReel.json',Date.now(),'Fin r\u00e9elle de l\u2019heure pr\u00e9c\u00e9dente',function(){});
+    mjpcPutJson(base+'/closPar.json','lancement de '+(nomNeuf||slugNeuf),'Motif de cl\u00f4ture',function(){});
+    atInfo('L\u2019heure de '+escapeHtml(String(c.classeNom||c.classeSlug||''))+' ('+escapeHtml(cr)+') n\u2019\u00e9tait pas close : elle vient de l\u2019\u00eatre. Rien de cette heure n\u2019entre dans la suivante.');
+  }).catch(function(){});
+}
 function atDrJouerClic(){
   var sel=document.getElementById('at-dr-classe'); if(!sel)return;
   var slug=sel.value, nom=sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].text:slug;
@@ -14897,6 +14958,27 @@ function atDrJouerClic(){
   var _deb=(_e&&_e.value)||_c.split('-')[0], _fin=_c.split('-')[1];
   /* [C1-CONSCIENCE] le professeur a TOUS les droits : on avertit, on ne bloque JAMAIS. */
   if(atMn(_fin)-atMn(_deb)-5<=0){ atInfo('Attention : ce d\u00e9but ne laisse aucun temps utile avant '+_fin+' \u2014 la s\u00e9ance se lance quand m\u00eame.'); }
+  /* [LOT C2 \u2463] LA CL\u00d4TURE DE L'HEURE PR\u00c9C\u00c9DENTE EST CERTAINE. Deux minutes s\u00e9parent
+     deux classes : si Paul lance la suivante sans avoir clos, l'heure en cours se clôt
+     proprement d'abord \u2014 sa trace est scell\u00e9e sous SA cl\u00e9 \u2014 et le site le dit d'une
+     ligne, sans rien lui demander. Le professeur n'est jamais bloqu\u00e9 : on avertit. */
+  /* [LOT C2 \u2463] \u2014 et le cas R\u00c9EL : entre deux classes, Paul ferme l'atelier ou la page.
+     La m\u00e9moire vive a disparu, mais `cours_actif` au hub dit qu'une heure tourne encore.
+     On la clôt alors PAR \u00c9CRITURES CIBL\u00c9ES sur SA trace (`clos`, `finReel`), sans jamais
+     r\u00e9\u00e9crire son paquet \u2014 on n'a pas ses donn\u00e9es, et on n'invente rien. */
+  try{ _drCloreHeureRestee(slug,nom); }catch(e){}
+  try{
+    if(AT_DR_REGIME==='classe'&&AT_DR_COURS&&AT_DR_VECU){
+      var _av=AT_DR_COURS.classeNom, _cr=_drCreneauHeure();
+      atVecuSortir();
+      AT_DR_VECU.finReel=Date.now();
+      var _b=_drBaseHeure(), _p=_drPaquetHeure(true);
+      if(_b&&_p){ _p.finReel=AT_DR_VECU.finReel; _p.clos=true; _p.closPar='lancement suivant';
+        mjpcPutJson(_b+'.json',_p,'Heure close \u00e0 l\u2019ouverture de la suivante \u2014 '+_p.creneau,function(){}); }
+      atInfo('L\u2019heure pr\u00e9c\u00e9dente ('+escapeHtml(String(_av||''))+' \u00b7 '+escapeHtml(String(_cr||''))+') n\u2019\u00e9tait pas close : elle vient de l\u2019\u00eatre, sa trace est enregistr\u00e9e.');
+      AT_DR_VECU=null;
+    }
+  }catch(e){}
   var copie=atDrJouer(slug,nom); if(!copie)return;
   AT_DR_COURS={debut:_deb, fin:_fin, classeSlug:slug, classeNom:nom};   /* l'objet partagé, écrit au lancement */
   AT_DR_REGIME='classe';
@@ -15023,8 +15105,58 @@ function _drEmpreinteTrame(ecrans){
   var h=0; for(var j=0;j<s.length;j++){ h=((h<<5)-h+s.charCodeAt(j))|0; }
   return ecrans.length+'-'+(h>>>0).toString(36);
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   [LOT C2 ①] L'IDENTITÉ DES ÉCRANS — le principe du 08/08 enfin étendu
+   « chaque bloc porte un identifiant propre ; les marques et annotations le
+   référencent par cet identifiant, JAMAIS par son rang » (PASSATION §⑦). Les blocs
+   l'ont depuis longtemps (`idBloc`), les ÉCRANS ne l'avaient pas — d'où les rangs
+   qui glissent entre trois appareils dès que le zoom scinde.
+   Patron `idBloc` : l'identité s'attribue AU PASSAGE, si elle manque, jamais à la
+   création — de sorte que les treize fonctions du moteur qui créent ou déplacent
+   des écrans la reçoivent sans qu'AUCUNE ne soit modifiée. Identité OPAQUE et
+   IMMUABLE (doctrine) ; le libellé (`act`) reste séparé.
+   [LOT C2 ②] LES FILS DU ZOOM N'ONT PAS D'IDENTITÉ PROPRE — règle de Paul (24/08) :
+   « qu'ils n'aient pas d'autre existence que celle de porter le zoom ». Un écran de
+   suite porte celle de son père (via `grp`) et meurt au dézoom. Lui donner une
+   identité stable fabriquerait de la fausse mémoire : le vécu, la participation et
+   les décisions s'ancrent TOUJOURS sur le père.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function _drEidNeuf(){ return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function _drIdentifierEcrans(ecrans){
+  if(!Array.isArray(ecrans))return ecrans;
+  ecrans.forEach(function(e){
+    if(!e||typeof e!=='object')return;
+    if(e.suite){ if(e.eid)delete e.eid; return; }   /* un fils du zoom n'a JAMAIS d'identité propre */
+    if(!e.eid)e.eid=_drEidNeuf();
+  });
+  return ecrans;
+}
+/* l'identité D'USAGE d'un rang : celle du PÈRE si le rang désigne un fils du zoom. */
+function _drEidDuRang(n,ecrans){
+  var t=ecrans||((drWin()||{}).ECRANS)||[];
+  var e=t[n]; if(!e)return null;
+  if(!e.suite)return e.eid||null;
+  for(var k=n-1;k>=0;k--){ if(t[k]&&!t[k].suite&&t[k].grp===e.grp)return t[k].eid||null; }
+  for(var j=0;j<t.length;j++){ if(t[j]&&!t[j].suite&&t[j].grp===e.grp)return t[j].eid||null; }
+  return null;
+}
+/* le rang LOCAL d'une identité — chaque appareil a le sien, et c'est tout l'objet du lot. */
+function _drRangDeLEid(eid,ecrans){
+  if(!eid)return null;
+  var t=ecrans||((drWin()||{}).ECRANS)||[];
+  for(var k=0;k<t.length;k++){ if(t[k]&&!t[k].suite&&t[k].eid===eid)return k; }
+  return null;
+}
+/* le rang du PÈRE : le vécu, la participation et les décisions s'y ancrent toujours. */
+function _drRangPere(n,ecrans){
+  var t=ecrans||((drWin()||{}).ECRANS)||[];
+  var e=t[n]; if(!e||!e.suite)return n;
+  for(var k=n-1;k>=0;k--){ if(t[k]&&!t[k].suite&&t[k].grp===e.grp)return k; }
+  return n;
+}
 function _drNormaliserTrame(ecrans){
   if(!Array.isArray(ecrans))return ecrans;
+  _drIdentifierEcrans(ecrans);   /* [LOT C2 \u2460] toute trame qui entre est identifi\u00e9e */
   ecrans.forEach(function(e){
     if(!e||typeof e!=='object')return;
     if(!Array.isArray(e.blocs))e.blocs=[];
@@ -15731,6 +15863,11 @@ function _drRefusionner(t){
     }
     out.push(e);
   }
+  /* [LOT C2 \u2461] PI\u00c8GE NOMM\u00c9 : \u00e0 la refusion, le p\u00e8re GARDE son identit\u00e9 et les
+     morceaux n'en fabriquent aucune \u2014 deux \u00e9crans partageant une identit\u00e9 seraient
+     pires que pas d'identit\u00e9 du tout. Les fils n'en ont jamais eu (\u2460) ; on s'assure
+     seulement qu'aucune ne survit \u00e0 l'absorption. */
+  out.forEach(function(e){ if(e&&e.suite&&e.eid)delete e.eid; });
   out.forEach(function(e){ delete e.grp; delete e.suite;
     (e.blocs||[]).forEach(function(b){ delete b.frag; delete b.suiteRep; }); });
   return out;
@@ -16143,7 +16280,8 @@ function sesBrancherPilote(reprise){
   var W=drWin(); if(!W){ _drQuandPret(function(){sesBrancherPilote(reprise);}); return; }
   if(!W.__sesCrochets){
     W.__sesCrochets=true;
-    var vRendre=W.rendre; W.rendre=function(){ var r; try{ r=vRendre.apply(W,arguments); }catch(e){ sesIncident('affichage de l\u2019\u00e9cran',e); } sesEmettre(); return r; };   /* [LOT A ②] l'\u00e9mission part M\u00caME si le rendu a bronch\u00e9 */
+    var vRendre=W.rendre; W.rendre=function(){ try{ _drIdentifierEcrans(W.ECRANS); }catch(e0){}   /* [LOT C2 \u2460] le point de passage unique : un \u00e9cran n\u00e9 de n'importe laquelle des treize fonctions du moteur re\u00e7oit son identit\u00e9 ici, sans qu'aucune ne soit modifi\u00e9e */
+      var r; try{ r=vRendre.apply(W,arguments); }catch(e){ sesIncident('affichage de l\u2019\u00e9cran',e); } sesEmettre(); return r; };   /* [LOT A ②] l'\u00e9mission part M\u00caME si le rendu a bronch\u00e9 */
     var vEnvoie=W.envoie; W.envoie=function(){ var r; try{ r=vEnvoie.apply(W,arguments); }catch(e){ sesIncident('envoi au tableau',e); } sesEmettre(); return r; };
     var vQui=W.quiParle; W.quiParle=function(){ var r; try{ r=vQui.apply(W,arguments); }catch(e){ sesIncident('qui a particip\u00e9',e); } sesEmettre(); return r; };
     var vSauve=W.sauve; W.sauve=function(){ var r=vSauve.apply(W,arguments);
@@ -16179,8 +16317,15 @@ function sesPhoto(){
                           .filter(function(o){return o.n>0;});
     qui={total:(W.ELEVES||[]).length, ont:ont};
   }
-  var p2={ecran:n, rev:(e.rev===undefined?(e.suite?2:0):e.rev), vues:vues, gele:!!W.gele,
-          fiche:ficheMontree?[n,jf]:null, chrono:chr, quiOn:!!W.quiOn, qui:qui,
+  /* [LOT C2 \u2462.5] LA SC\u00c8NE CIRCULE ENTRE TROIS APPAREILS \u2014 elle transporte d\u00e9sormais
+     l'IDENTIT\u00c9 du p\u00e8re, plus le num\u00e9ro du morceau quand le pilote est scind\u00e9. Le rang
+     reste \u00e9mis pour le repli (appareil sur une trame non identifi\u00e9e), mais l'identit\u00e9
+     fait foi : le pilote peut avoir 13 \u00e9crans et le tableau 11, les trois d\u00e9signent le
+     m\u00eame. C'est le point le plus \u00e0 risque du lot, donc le dernier bascul\u00e9. */
+  var p2={ecran:n, eid:_drEidDuRang(n,W.ECRANS)||null, morceau:(e.suite||0),
+          rev:(e.rev===undefined?(e.suite?2:0):e.rev), vues:vues, gele:!!W.gele,
+          fiche:ficheMontree?[n,jf]:null, ficheEid:(ficheMontree?(_drEidDuRang(n,W.ECRANS)||null):null),
+          chrono:chr, quiOn:!!W.quiOn, qui:qui,
           trameMaj:SES.trameMaj, origine:SES.id, ts:Date.now()};
   SES.gelePhoto=p2;
   return p2;
@@ -16197,7 +16342,21 @@ function sesEmettre(vite){
 function sesPartEmettre(){
   var W=drWin(); if(!W||!SES.actif)return;
   SES.partMaj=Date.now();
-  sesPut(sesChemins(SES.ctx).part,{participation:W.PARTICIPATION||{},maj:SES.partMaj,origine:SES.id});
+  /* [LOT C2 \u2462.4] le moteur \u00e9crit `ecran:i` (un RANG) dans la participation \u2014 il n'est
+     pas touch\u00e9. L'identit\u00e9 voyage donc avec, pos\u00e9e \u00c0 L'\u00c9CRITURE, et toujours celle du
+     P\u00c8RE : une prise de parole pendant un zoom appartient \u00e0 l'activit\u00e9, pas au morceau
+     qui mourra au d\u00e9zoom. */
+  var _part={};
+  try{
+    Object.keys(W.PARTICIPATION||{}).forEach(function(ini){
+      _part[ini]=(W.PARTICIPATION[ini]||[]).map(function(o){
+        var c=Object.assign({},o);
+        if(c&&c.ecran!==undefined&&c.ecran!==null){ var id=_drEidDuRang(+c.ecran,W.ECRANS); if(id)c.eid=id; }
+        return c;
+      });
+    });
+  }catch(e){ _part=W.PARTICIPATION||{}; }
+  sesPut(sesChemins(SES.ctx).part,{participation:_part,maj:SES.partMaj,origine:SES.id});
   sesEmettre();   /* l'agrégat « qui » suit, si la modale est ouverte */
 }
 function sesPollPilote(){
@@ -16225,12 +16384,21 @@ function sesPollPilote(){
     } else if(p&&p.maj)SES._partVu=Math.max(SES._partVu,p.maj);
   });
 }
+/* [LOT C2 \u2462.5] la r\u00e9solution locale : chaque appareil traduit l'identit\u00e9 re\u00e7ue en
+   SON propre rang. \u00c0 d\u00e9faut d'identit\u00e9 (\u00e9metteur ant\u00e9rieur au lot), le rang re\u00e7u sert
+   de repli \u2014 exactement le comportement d'avant, jamais pire. */
+function _sesRangLocal(o,W){
+  if(!o)return 0;
+  if(o.eid){ var r=_drRangDeLEid(o.eid,W&&W.ECRANS); if(r!==null)return r; }
+  return o.ecran|0;
+}
 function sesAppliquer(o){
   var W=drWin(); if(!W)return;
   SES.applique=true;
   try{
-    var e=W.ECRANS&&W.ECRANS[o.ecran];
-    if(e){ W.i=o.ecran; e.rev=o.rev;
+    var _n=_sesRangLocal(o,W);   /* [LOT C2 \u2462.5] */
+    var e=W.ECRANS&&W.ECRANS[_n];
+    if(e){ W.i=_n; e.rev=o.rev;
       Object.keys(o.vues||{}).forEach(function(j){ if(e.blocs[j])e.blocs[j].vues=o.vues[j]; }); }
     W.gele=!!o.gele;
     try{ W.document.getElementById('bgel').classList.toggle('on',W.gele); }catch(e2){}
@@ -16425,8 +16593,9 @@ function sesTabPoll(){
       SES.applique=true;
       try{
         if(!o.gele){
-          var e=W.ECRANS&&W.ECRANS[o.ecran];
-          if(e){ W.i=o.ecran; e.rev=o.rev;
+          var _n2=_sesRangLocal(o,W);   /* [LOT C2 \u2462.5] la vue tableau r\u00e9sout aussi */
+          var e=W.ECRANS&&W.ECRANS[_n2];
+          if(e){ W.i=_n2; e.rev=o.rev;
             Object.keys(o.vues||{}).forEach(function(j){ if(e.blocs[j])e.blocs[j].vues=o.vues[j]; }); }
           W.ficheOuverte=o.fiche||null; W.ficheAnime=false;
           W.gele=false;
@@ -16555,7 +16724,8 @@ function sesBrancherPiloteTel(W){
   SES.actif=true;
   if(!W.__sesCrochets){
     W.__sesCrochets=true;
-    var vRendre=W.rendre; W.rendre=function(){ var r; try{ r=vRendre.apply(W,arguments); }catch(e){ sesIncident('affichage de l\u2019\u00e9cran',e); } sesEmettre(); sesTelPeindre(); return r; };   /* [LOT A ②] */
+    var vRendre=W.rendre; W.rendre=function(){ try{ _drIdentifierEcrans(W.ECRANS); }catch(e0){}   /* [LOT C2 \u2460] le point de passage unique : un \u00e9cran n\u00e9 de n'importe laquelle des treize fonctions du moteur re\u00e7oit son identit\u00e9 ici, sans qu'aucune ne soit modifi\u00e9e */
+      var r; try{ r=vRendre.apply(W,arguments); }catch(e){ sesIncident('affichage de l\u2019\u00e9cran',e); } sesEmettre(); sesTelPeindre(); return r; };   /* [LOT A ②] */
     var vEnvoie=W.envoie; W.envoie=function(){ var r; try{ r=vEnvoie.apply(W,arguments); }catch(e){ sesIncident('envoi au tableau',e); } sesEmettre(); return r; };
     var vQui=W.quiParle; W.quiParle=function(){ var r; try{ r=vQui.apply(W,arguments); }catch(e){ sesIncident('qui a particip\u00e9',e); } sesEmettre(); return r; };
     var vSauve=W.sauve; W.sauve=function(){ var r=vSauve.apply(W,arguments);
