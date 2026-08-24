@@ -752,6 +752,7 @@ body.admin-mode .admin-only { display: block; }
 .ses-pb-sombre{background:#2b241d;color:#fff;border-color:#2b241d}
 .ses-pb-large{}
 .ses-pb-on{outline:3px solid #c99a4e}
+.ses-pb#ses-pb-qui{grid-column:1/-1;flex-direction:row;gap:8px}   /* [LOT B ① A-4] le neuvième bouton prend la largeur : cible franche, palette qui reste lisible */
 .ses-pb-part{grid-column:1/-1;min-height:52px;border:0;border-radius:14px;background:#c99a4e;color:#2b241d;font-weight:800;font-size:1.02rem;letter-spacing:.03em;cursor:pointer}
 .ses-saisie .ses-hors-saisie{display:none}
 .ses-tel-vide{color:#a99a86;text-align:center;margin-top:30vh}
@@ -768,6 +769,29 @@ body.admin-mode .admin-only { display: block; }
   background:#3a2a1e;color:#f0e2cf;border:1px solid #7a5a34;border-radius:10px;padding:9px 14px;font-size:.86rem;
   box-shadow:0 8px 26px rgba(0,0,0,.45);display:none}
 .ses-incident.on{display:block}
+
+/* [LOT B ① A-6] la liste dense : 30 noms sans défiler, cibles ≥ 44 px */
+.ses-part-liste{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-content:start;padding:0 12px 14px}
+.ses-pl{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:6px;
+  border-radius:9px;border:1px solid #4a4038;background:#3a3128;color:#fff;font-family:inherit;
+  font-size:.98rem;padding:0 10px;cursor:pointer;text-align:left;-webkit-user-select:none;user-select:none}
+.ses-pl-nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ses-pl-c{font-style:normal;font-weight:700;font-size:.78rem;border-radius:999px;padding:1px 7px}
+.ses-pl-v{background:#2a3d31;color:#8fe3b4}    /* vert : réponses retenues */
+.ses-pl-b{background:#243447;color:#8fc4e3}    /* bleu : prises sans réponse */
+.ses-pmot{position:fixed;inset:0;background:rgba(13,11,10,.82);z-index:100003;display:flex;align-items:flex-end}
+.ses-pmot-boite{background:#241d17;border-top:2px solid #c99a4e;width:100%;padding:14px;color:#f0e7db;
+  display:flex;flex-direction:column;gap:8px;max-height:82vh;overflow:auto}
+.ses-pmot-tete{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:1.05rem}
+.ses-pmot-tete button{background:none;border:0;color:#c9b79a;font-size:1.1rem}
+.ses-pmot-b{min-height:52px;border-radius:12px;border:1px solid #4a4038;background:#3a3128;color:#fff;
+  font-family:inherit;font-size:1.02rem;cursor:pointer}
+.ses-pmot-note{min-height:46px;border-radius:10px;border:1px solid #4a4038;background:#1c1712;color:#f0e7db;
+  font-family:inherit;font-size:.98rem;padding:0 10px}
+.ses-pmot-hist{border-top:1px solid #4a4038;padding-top:8px;display:flex;flex-direction:column;gap:5px;font-size:.86rem;color:#c9b79a}
+.ses-pmot-l{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ses-pmot-l button{background:none;border:0;color:#e08a7a;font-size:.82rem;min-height:34px}
+.ses-chr-pause{opacity:.65}
 </style>
 <style id="b2-styles">
 .b2-legend{display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 12px;font-size:.8rem}
@@ -2805,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.61.0";
+var APP_VERSION="8.62.0";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -8208,8 +8232,18 @@ function chAfficherInventaire(){
          courbe et espaces multiples faisaient rater — ou trouver à tort. Même
          normalisation que la liaison par les titres : edTitreNorm, en codepoints. */
       if(edTitreNorm(c.title)===edTitreNorm(o.chapitre.title)){cible=c;idx=i;memesTitres.push(i);}
+      /* [LOT B \u2463a] LA D\u00c9TECTION R\u00c9PAR\u00c9E. Le jumeau porte, par d\u00e9cision, un titre
+         suffix\u00e9 (\u00ab \u2026 (proposition) \u00bb) : l'appariement strict ne le reconnaissait plus
+         comme descendant de son original. Cons\u00e9quence mesur\u00e9e sur le hub : le seul
+         chapitre 3e s'intitulant \u00ab \u2026 (proposition) \u00bb, l'injection suivante annon\u00e7ait
+         \u00ab aucun chapitre \u00e0 ce titre \u00bb, les trois voies ne s'affichaient jamais, chaque
+         injection cr\u00e9ait un doublon de plus, et l'avertissement des titres jumeaux
+         restait aveugle. Le suffixe n'est PAS retir\u00e9 (c'est une d\u00e9cision) : c'est la
+         reconnaissance qui l'ignore. */
+      else if(_chSouche(c.title)===_chSouche(o.chapitre.title)){ if(cible===null){cible=c;idx=i;} memesTitres.push(i); }
     });
     CH.chapIdx=idx;
+    CH.memesTitres=memesTitres;
     var inventaire=chInventaire(cible,o.chapitre,CH.taxo);
     CH.inventaire=inventaire;
     var d=document.getElementById('ch-inv');if(!d)return;
@@ -8273,9 +8307,9 @@ function chAfficherInventaire(){
       return;
     }
     h+='<div class="ch-choix"><div class="at-ia-choix-lib">Que veux-tu faire ?</div><div class="at-ia-actions">'
-      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'completer\')">Compl\u00e9ter (ne touche \u00e0 rien)</button><span class="at-ifo" onclick="atInfoInjection(\'completer\')">\u24d8</span>'
-      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'remplacer\')">Remplacer ce chapitre</button><span class="at-ifo" onclick="atInfoInjection(\'remplacer\')">\u24d8</span>'
-      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'jumeau\')">Garder \u00e0 c\u00f4t\u00e9 (proposition)</button><span class="at-ifo" onclick="atInfoInjection(\'jumeau\')">\u24d8</span>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'completer\')">Compl\u00e9ter</button><span class="at-ifo" onclick="atInfoInjection(\'completer\')">\u24d8</span>'   /* [LOT B \u2463c] libell\u00e9s arbitr\u00e9s par Paul le 24/08 */
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'remplacer\')">Remplacer</button><span class="at-ifo" onclick="atInfoInjection(\'remplacer\')">\u24d8</span>'
+      +'<button class="at-btn at-btn-prim" onclick="chInjecter(\'jumeau\')">Cr\u00e9er un double</button><span class="at-ifo" onclick="atInfoInjection(\'jumeau\')">\u24d8</span>'
       +'</div><p class="ch-vide">Rien n\u2019est \u00e9crit tant que tu n\u2019as pas choisi. La publication reste ton geste : cette op\u00e9ration ne montre rien aux \u00e9l\u00e8ves.</p></div>';
     d.innerHTML=h;
   });
@@ -8286,10 +8320,14 @@ function chInjecter(voie){
   CH.voie=voie;
   if(voie==='remplacer'&&CH.chapIdx===null){
     var d=document.getElementById('ch-msg');
-    if(d){d.className='at-ia-msg at-ia-ko';d.textContent='Il n\u2019y a pas de chapitre \u00e0 ce titre : utilise \u00ab Compl\u00e9ter \u00bb ou \u00ab Garder \u00e0 c\u00f4t\u00e9 \u00bb.';}
+    if(d){d.className='at-ia-msg at-ia-ko';d.textContent='Il n\u2019y a pas de chapitre \u00e0 ce titre : utilise \u00ab Compl\u00e9ter \u00bb ou \u00ab Cr\u00e9er un double \u00bb.';}   /* [LOT B \u2463c] */
     return;
   }
-  var lib={completer:'Compl\u00e9ter le chapitre',remplacer:'Remplacer le chapitre',jumeau:'Garder \u00e0 c\u00f4t\u00e9'}[voie];
+  /* [LOT B \u2463b/c] la confirmation dit LE GESTE R\u00c9ELLEMENT DEMAND\u00c9 : le bouton unique
+     du cas \u00ab rien n'existe \u00bb d\u00e9clenchait la modale du double (\u00ab position 3 \u00bb, \u00ab marqu\u00e9
+     proposition \u00bb) alors que Paul avait cliqu\u00e9 \u00ab Cr\u00e9er ce chapitre \u00bb. */
+  var _neuf=(CH.chapIdx===null||CH.chapIdx===undefined);
+  var lib={completer:'Compl\u00e9ter',remplacer:'Remplacer',jumeau:(_neuf?'Cr\u00e9er ce chapitre':'Cr\u00e9er un double')}[voie];
   /* [C5-3a] GARDE D'ATTERRISSAGE : avant d'écrire, montrer CE QUI VA SE PASSER
      sur les données réelles — l'appariement par titre devient visible. */
   secuLire('/site/'+CH.niveau+'/chapitres').then(function(chaps){
@@ -8303,7 +8341,9 @@ function chInjecter(voie){
     }else{
       var calc=chCalculerEcritures(voie,chaps);
       if(voie==='jumeau'){
-        det='Ajout\u00e9 en <b>position '+calc.position+'</b>, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9. Rien de l\u2019existant n\u2019est touch\u00e9.';
+        det=_neuf
+          ?('Le chapitre est cr\u00e9\u00e9 en <b>fin de liste</b> (position '+calc.position+'), <b>non publi\u00e9</b>. Rien n\u2019existe encore sous ce titre : rien d\u2019autre n\u2019est touch\u00e9.')
+          :('Un <b>double</b> est ajout\u00e9 en <b>position '+calc.position+'</b>, titre suffix\u00e9 \u00ab (proposition) \u00bb, non publi\u00e9. L\u2019original reste intact.');   /* [LOT B \u2463b] */
       }else{
         var morceaux=[];
         if(calc.appariees.length)morceaux.push('S\u00e9ances APPARI\u00c9ES par titre (compl\u00e9t\u00e9es en place) : '+calc.appariees.map(function(a){return '\u00ab '+atEsc(a.titre)+' \u00bb ('+a.ajouts+' ajout'+(a.ajouts>1?'s':'')+')';}).join(' \u00b7 '));
@@ -8317,7 +8357,22 @@ function chInjecter(voie){
        {lib:lib,prim:true,danger:(voie==='remplacer'),fn:function(){chInjecterConfirme(voie);}}]);
   });
 }
+/* [LOT B \u2463d] APR\u00c8S L'\u00c9CRITURE : la liste dit vrai, sans rechargement de page.
+   Le LOT A avait trait\u00e9 `addChapter` (le bouton du panneau prof) ; ce chemin-ci \u2014
+   l'injection de JSON \u2014 est celui que Paul emprunte r\u00e9ellement. M\u00eame patron. */
+function chApresEcriture(){
+  try{
+    var niv=CH&&CH.niveau; if(!niv)return;
+    if(typeof AT_CHAP_ETAT!=='undefined')AT_CHAP_ETAT[niv]='';
+    if(typeof atChargerChapitres==='function')atChargerChapitres(niv,function(){
+      if(typeof renderChapitres==='function')renderChapitres(niv);
+      if(typeof AT!=='undefined'&&AT&&AT.onglet==='chapitres'&&!AT.edChap&&typeof atRendreListe==='function')atRendreListe();
+      if(typeof chAfficherInventaire==='function'&&document.getElementById('ch-inv'))chAfficherInventaire();
+    });
+  }catch(e){}
+}
 function chInjecterConfirme(voie){
+  var _neufIci=(CH.chapIdx===null||CH.chapIdx===undefined);   /* [LOT B \u2463b] le geste r\u00e9ellement demand\u00e9 */
   var o=CH.json;var msg=document.getElementById('ch-msg');
   var base='/site/'+CH.niveau+'/chapitres';
   var dire=function(t,ok){if(msg){msg.className='at-ia-msg '+(ok?'at-ia-ok':'at-ia-ko');msg.innerHTML=t;}};
@@ -8334,7 +8389,8 @@ function chInjecterConfirme(voie){
       chNettoyerPublished(neuf);
       var _cleNeuve=(function(){var m=-1;(Array.isArray(chaps)?chaps.map(function(_,i){return i;}):Object.keys(chaps).map(Number)).forEach(function(n){if(n>m)m=n;});return m+1;})();
       secuEcrire(base+'/'+_cleNeuve,neuf).then(function(r){
-        dire(r.ok?('Chapitre ajout\u00e9 \u00e0 c\u00f4t\u00e9, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9.'):'L\u2019\u00e9criture n\u2019a pas abouti \u2014 rien n\u2019a chang\u00e9.',r.ok);
+        dire(r.ok?((_neufIci?'Chapitre cr\u00e9\u00e9':'Double cr\u00e9\u00e9')+' \u2014 <b>non publi\u00e9</b>. Il appara\u00eet dans la liste.'):'L\u2019\u00e9criture n\u2019a pas abouti \u2014 rien n\u2019a chang\u00e9.',r.ok);
+        if(r.ok)chApresEcriture();   /* [LOT B \u2463d] */
       });
       return;
     }
@@ -8403,6 +8459,7 @@ function chInjecterConfirme(voie){
       }
       if(CH.inventaire&&CH.inventaire.aLier.length)t+='<br>Il te reste <b>'+CH.inventaire.aLier.length+'</b> \u00e9l\u00e9ment(s) \u00e0 lier \u00e0 la main (liste ci-dessus).';
       dire(t,!ko.length);
+      if(ok)chApresEcriture();   /* [LOT B \u2463d] compl\u00e9ter / remplacer : la liste dit vrai tout de suite */
     });
   });
 }
@@ -10727,7 +10784,9 @@ function atInfoInjection(voie){
   var t={
     completer:'Compl\u00e9ter le chapitre : seuls les \u00e9l\u00e9ments absents seront \u00e9crits. Rien de ce qui existe ne sera modifi\u00e9.',
     remplacer:'Remplacer le chapitre : le chapitre actuel part d\u2019abord \u00e0 la corbeille (items compris), puis il est remplac\u00e9. Les feuilles de l\u2019atelier et les travaux des \u00e9l\u00e8ves ne sont pas touch\u00e9s (ils vivent \u00e0 part).',
-    jumeau:'Garder \u00e0 c\u00f4t\u00e9 : le chapitre est ajout\u00e9 en fin de liste, marqu\u00e9 \u00ab proposition \u00bb et non publi\u00e9. Rien de l\u2019existant n\u2019est touch\u00e9.'
+    jumeau:((CH&&(CH.chapIdx===null||CH.chapIdx===undefined))
+      ?'Cr\u00e9er ce chapitre : rien n\u2019existe encore sous ce titre. Il est cr\u00e9\u00e9 en fin de liste, non publi\u00e9 \u2014 la publication reste ton geste.'
+      :'Cr\u00e9er un double : un second chapitre est ajout\u00e9 en fin de liste, son titre suffix\u00e9 \u00ab (proposition) \u00bb, non publi\u00e9. L\u2019original n\u2019est pas touch\u00e9, et il reste reconnu comme son original.')   /* [LOT B \u2463c] */
   }[voie];
   if(t)atInfo(t);
 }
@@ -12460,6 +12519,15 @@ function atEditerChapitreRendre(){
    ici rien ne s'écrit avant le clic, et ce qui est douteux n'est pas proposé. ═══ */
 /* la normalisation FRANÇAISE, en codepoints : accents, apostrophes droite ET
    courbe, tirets de toutes sortes, ponctuation collée, casse, espaces multiples. */
+/* [LOT B \u2463a] LA SOUCHE D'UN TITRE \u2014 le titre normalis\u00e9, priv\u00e9 de ses suffixes de
+   jumeau successifs (\u00ab (proposition) \u00bb, \u00ab (proposition 2) \u00bb\u2026). Sert UNIQUEMENT \u00e0
+   reconna\u00eetre une parent\u00e9 : rien n'est renomm\u00e9, rien n'est \u00e9crit. */
+function _chSouche(t){
+  var s=edTitreNorm(t);
+  var av;
+  do{ av=s; s=s.replace(/\s*\((?:proposition|copie|double)(?:\s*\d+)?\)\s*$/,'').trim(); }while(s!==av);
+  return s;
+}
 function edTitreNorm(t){
   var s=String(t==null?'':t);
   s=s.normalize?s.normalize('NFD').replace(/[\u0300-\u036f]/g,''):s;
@@ -15597,7 +15665,7 @@ function _drProchainCreneau(){
   }catch(e){return '';}
 }
 function _drPoserContexteMoteur(){
-  try{ setTimeout(_drLibelles,0); }catch(e){}   /* [LOT A \u2466] les libell\u00e9s suivent le contexte, toujours */
+  try{ setTimeout(_drLibelles,0); }catch(e){}
   try{
     var W=drWin(); if(!W)return;
     var slug=(AT_DR_COURS&&AT_DR_COURS.classeSlug)||(AT_PONT.classeVue)||((document.getElementById('at-dr-classe')||{}).value)||'';
@@ -16055,6 +16123,7 @@ function sesBandeau(){
   var t=document.getElementById('at-dr-tete'); if(!t||document.getElementById('ses-etat'))return;
   t.insertAdjacentHTML('beforeend',
     '<span class="ses-etat" id="ses-etat" title="Session multi-appareils">\u25cf session</span>'
+   +'<button class="at-btn ses-tab-btn" onclick="sesOuvrirTableau()" title="Ouvre la vue tableau dans une NOUVELLE FEN\u00caTRE (pas un onglet), \u00e0 glisser sur l\u2019\u00e9cran qui projette. Windows+P en mode \u00ab \u00c9tendre \u00bb, puis F11 pour le plein \u00e9cran. Cette vue n\u2019affiche que le tableau : le pilotage ne peut jamais \u00eatre projet\u00e9 par erreur.">\ud83d\udcfa Ouvrir la vue tableau</button>'   /* [LOT B \u2461] */
    +'<button class="at-btn ses-qr-btn" onclick="sesQROuvrir()">\ud83d\udcf1 T\u00e9l\u00e9phone</button>');
 }
 function sesBandeauEtat(ok,muet){
@@ -16066,6 +16135,20 @@ function sesBandeauEtat(ok,muet){
 }
 
 /* ═══ LE QR — le pattern d'evaluation-qcm, à l'identique : nonce, image, écoute, fermeture au scan ═══ */
+/* ═══ [LOT B \u2461] LE CHEMIN D'ACC\u00c8S AU TABLEAU \u2014 au patron d'evaluation-qcm ═══
+   La page autonome `?vue=tableau` ne change pas : c'est son ACC\u00c8S qui cesse d'\u00eatre une
+   URL \u00e0 mettre en favori. Comme dans le QCM (\u00ab \ud83d\udcfa Ouvrir vue tableau \u00bb) : une
+   NOUVELLE FEN\u00caTRE, dimensionn\u00e9e, sans barres, \u00e0 glisser sur l'\u00e9cran qui projette ;
+   elle se rattache seule d\u00e8s qu'un cours est lanc\u00e9. L'ancienne adresse continue de
+   fonctionner \u2014 un favori d\u00e9j\u00e0 pos\u00e9 n'est pas cass\u00e9. */
+function sesOuvrirTableau(){
+  var w=Math.min(1280,screen.width), h=Math.min(800,screen.height);
+  var url=window.location.pathname+'?vue=tableau';
+  var f=window.open(url,'TableauMJPC',
+    'width='+w+',height='+h+',toolbar=no,menubar=no,location=no,status=no,scrollbars=yes,resizable=yes');
+  if(!f){ atInfo('La fen\u00eatre n\u2019a pas pu s\u2019ouvrir \u2014 autorise les fen\u00eatres pop-up pour ce site, ou ouvre l\u2019adresse \u00ab ?vue=tableau \u00bb sur l\u2019ordinateur de la classe.'); return; }
+  try{ f.focus(); }catch(e){}
+}
 function sesQROuvrir(){
   var nonce='qr_'+Date.now()+'_'+Math.random().toString(36).substr(2,6);
   var url=window.location.origin+window.location.pathname+'?vue=tel&qr='+nonce;
@@ -16145,6 +16228,27 @@ function sesBootTableau(){
     sesTabChercherCours();
   });
 }
+/* ═══ [LOT B \u2462] LE TABLEAU SURVIT \u2014 il TIENT, puis il REPREND ═══
+   La demande de Paul (v\u00e9rifi\u00e9e, et longtemps prise \u00e0 l'envers) : \u00ab que le tableau
+   survive \u00e0 la fermeture d'une session classe \u2014 si je ferme l'atelier, si je ferme la
+   page, que le tableau continue \u00e0 tenir, le temps que je me reconnecte \u00e0 la session
+   en cours \u00bb. Donc : AUCUN retour automatique \u00e0 l'attente, jamais. Le pointeur
+   dispara\u00eet ? l'image reste. Le pilote revient sur LE M\u00caME cours ? la sc\u00e8ne reprend
+   d'elle-m\u00eame. Il revient sur UN AUTRE cours (autre s\u00e9ance, autre classe) ? le tableau
+   se rattache au nouveau \u2014 sans quoi il resterait fig\u00e9 sur l'ancien, et Paul devrait
+   actualiser, ce qui est pr\u00e9cis\u00e9ment ce qu'il ne veut plus faire. */
+function sesTabCle(c){ return c?[c.niveau,c.chapitre,c.seance,c.classeSlug].join('|'):''; }
+function sesTabVeillePointeur(){
+  sesGet(FIREBASE_BASE+'/site/cours_actif.json',function(c){
+    if(!c||!c.ts||(Date.now()-c.ts)>4*3600*1000)return;   /* plus de cours : l'image RESTE */
+    var cle=sesTabCle(c);
+    if(!cle||cle===SES.tabPointeur)return;                /* m\u00eame cours : rien \u00e0 faire */
+    SES.tabPointeur=cle; SES.ctx=c; SES._tabTs=0; SES._tabTrame=0;
+    var n=document.getElementById('ses-tab-c'); if(n)n.textContent=(c.classeNom||c.classeSlug||'');
+    try{ var W=drWin(); if(W){ W.META=W.META||{}; W.META.classe=c.classeNom||''; } }catch(e){}
+    sesTabPoll();                                          /* le nouveau cours prend la main */
+  });
+}
 function sesTabChercherCours(){
   var t=setInterval(function(){
     sesGet(FIREBASE_BASE+'/site/cours_actif.json',function(c){
@@ -16153,7 +16257,7 @@ function sesTabChercherCours(){
         return;
       }
       clearInterval(t);
-      SES.ctx=c;
+      SES.ctx=c; SES.tabPointeur=sesTabCle(c);
       var el=document.getElementById('ses-tab-c');
       if(el)el.textContent=[c.classeNom,''].filter(Boolean).join(' \u00b7 ');
       sesTabMonter();
@@ -16178,6 +16282,7 @@ function sesTabMonter(){
       document.getElementById('ses-tab-att').style.display='none';
       SES._tabTrame=0; SES._tabTs=0;
       setInterval(sesTabPoll,900);
+      setInterval(sesTabVeillePointeur,3000);   /* [LOT B \u2462] la reprise, sans jamais se vider */
     });
   });
 }
@@ -16186,7 +16291,7 @@ function sesTabPoll(){
   sesGet(ch.scene,function(o,err){
     var perdu=document.getElementById('ses-tab-perdu');
     if(!o){ if(!SES.perduDepuis)SES.perduDepuis=Date.now();
-      perdu.textContent='Liaison perdue \u00e0 '+new Date(SES.perduDepuis).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+' \u2014 l\u2019image reste.';
+      perdu.textContent='Pilotage interrompu \u00e0 '+new Date(SES.perduDepuis).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})+' \u2014 le tableau tient, il reprendra tout seul.';   /* [LOT B \u2462] */
       perdu.classList.add('on'); return; }
     SES.perduDepuis=0; perdu.classList.remove('on');
     if(!(o.ts>SES._tabTs))return;
@@ -16251,16 +16356,33 @@ function sesBootTel(){
       +'<button class="ses-pb ses-hors-saisie" onclick="sesTelGeste(\'prec\')">\u23ee<span>\u00e9cran pr\u00e9c.</span></button>'
       +'<button class="ses-pb ses-hors-saisie" onclick="sesTelGeste(\'suiv\')">\u23ed<span>\u00e9cran suiv.</span></button>'
       +'<button class="ses-pb ses-hors-saisie" id="ses-pb-gel" onclick="sesTelGeste(\'gel\')">\u2744<span>gel</span></button>'
-      +'<button class="ses-pb ses-hors-saisie" id="ses-pb-stylo" onclick="sesTelGeste(\'stylo\')">\u270f\ufe0f<span>stylo</span></button>'
+      +'<button class="ses-pb ses-hors-saisie" id="ses-pb-ecrire" onclick="sesTelGeste(\'marquer\')">\u270d\ufe0f<span>\u00e0 \u00e9crire</span></button>'   /* [LOT B \u2460 A-5] le bouton dit ce qu'il fait */
       +'<button class="ses-pb ses-hors-saisie" id="ses-pb-chr" onclick="sesTelGeste(\'chrono\')">\u23f1<span>chrono</span></button>'
+      +'<button class="ses-pb ses-hors-saisie" id="ses-pb-chrtab" onclick="sesTelGeste(\'chronoTableau\')">\ud83d\udcfa<span>au tableau</span></button>'   /* [LOT B \u2460 A-4] deux gestes distincts, comme sur l'ordi */
       +'<button class="ses-pb ses-hors-saisie" id="ses-pb-qui" onclick="sesTelGeste(\'qui\')">\ud83d\ude4b<span>qui a particip\u00e9</span></button>'
       +'<button class="ses-pb-part" onclick="sesTelPart()">\uff0b PARTICIPATION \u2014 la classe</button>'
       +'</div>'
       +'<div class="ses-tel-classe" id="ses-tel-cl"></div>';
     document.body.appendChild(z);
     /* la palette se réduit pendant la saisie : le clavier prend la place */
-    document.addEventListener('focusin',function(ev){ if(ev.target.closest&&ev.target.closest('[contenteditable]'))z.classList.add('ses-saisie'); });
-    document.addEventListener('focusout',function(){ setTimeout(function(){ if(!document.activeElement||!document.activeElement.closest||!document.activeElement.closest('[contenteditable]'))z.classList.remove('ses-saisie'); },150); });
+    /* [LOT B \u2460 A-0] LA CAUSE DES SIX BOUTONS DISPARUS. Le retrait d\u00e9pendait de
+       `focusout` \u2014 mais le gestionnaire `blur` d'un champ repeint le prompteur
+       (`innerHTML` remplac\u00e9) : l'\u00e9l\u00e9ment qui perdait le focus \u00e9tait d\u00e9truit dans le
+       m\u00eame tour, l'\u00e9v\u00e9nement ne remontait jamais, et `.ses-saisie` restait coll\u00e9e \u2014
+       masquant \u00e9cran pr\u00e9c./suiv., gel, stylo, chrono et \u00ab qui a particip\u00e9 \u00bb (mesur\u00e9 :
+       6 boutons sur 9). D\u00e9sormais l'\u00e9tat ne D\u00c9PEND que d'un champ r\u00e9ellement focalis\u00e9,
+       v\u00e9rifi\u00e9 \u00e0 l'instant, et un battement de s\u00fbret\u00e9 le rattrape en toute hypoth\u00e8se. */
+    window.sesSaisieMaj=function(){
+      try{
+        var a=document.activeElement;
+        var dedans=!!(a&&a.closest&&a.closest('#ses-tel-pr [contenteditable]'));
+        z.classList.toggle('ses-saisie',dedans);
+      }catch(e){ z.classList.remove('ses-saisie'); }
+    };
+    document.addEventListener('focusin',sesSaisieMaj);
+    document.addEventListener('focusout',function(){ setTimeout(sesSaisieMaj,150); });
+    setInterval(sesSaisieMaj,900);   /* le filet : aucune commande ne peut rester masqu\u00e9e */
+    setInterval(sesTelChrono,1000);  /* [LOT B \u2460 A-4] le temps s'affiche \u00e0 la seconde, sans attendre un repeint */
     /* le handshake QR : le pattern d'evaluation-qcm — écrire qrScans/<nonce> au montage */
     var qr=(location.search.match(/[?&]qr=([\w]+)/)||[])[1];
     if(qr) sesPut(FIREBASE_BASE+'/qrScans/'+qr+'.json',Date.now());
@@ -16329,8 +16451,23 @@ function sesTelGeste(g){
     else if(g==='prec')W.pas(-1);
     else if(g==='suiv')W.pas(1);
     else if(g==='gel'){ W.gel(); document.getElementById('ses-pb-gel').classList.toggle('ses-pb-on',W.gele); }
-    else if(g==='stylo'){ W.stylo&&W.stylo(); document.getElementById('ses-pb-stylo').classList.toggle('ses-pb-on'); }
-    else if(g==='chrono'){ W.chrono&&W.chrono(); }
+    else if(g==='marquer'){
+      /* [LOT B \u2460 A-5] CE QUE LE \u00ab STYLO \u00bb FAIT R\u00c9ELLEMENT (moteur L2044) : il n'\u00e9crit rien,
+         il ARME un mode o\u00f9 un clic sur un bloc l'ajoute \u00e0 `e.ecrire` \u2014 \u00ab ce que les \u00e9l\u00e8ves
+         doivent \u00e9crire \u00bb, le trait dor\u00e9. Au t\u00e9l\u00e9phone ce mode \u00e9tait INOP\u00c9RANT : sa surface
+         cliquable est `#ecran`, dans le cadre invisible. Le geste devient donc direct \u2014 le
+         bloc dont on parle est marqu\u00e9 \u2014 et le bouton porte enfin son nom. */
+      var _e=W.ECRANS[W.i]; if(!_e)return;
+      var _rv=(_e.rev===undefined?0:_e.rev);
+      var _j=Math.max(0,Math.min((_e.blocs||[]).length-1,_rv-2));
+      _e.ecrire=_e.ecrire||[];
+      var _p=_e.ecrire.indexOf(_j);
+      if(_p>=0)_e.ecrire.splice(_p,1); else _e.ecrire.push(_j);
+      W.sauve(); W.rendre();
+      atInfo(_p>=0?'Ce bloc n\u2019est plus marqu\u00e9 \u00ab \u00e0 \u00e9crire \u00bb.':'Bloc marqu\u00e9 \u00ab \u00e0 \u00e9crire \u00bb \u2014 les \u00e9l\u00e8ves le recopient.');
+    }
+    else if(g==='chrono'){ W.chrono&&W.chrono(); }            /* [LOT B \u2460 A-4] d\u00e9part / pause, comme le bouton \u00ab D\u00e9part \u00bb de l'ordi */
+    else if(g==='chronoTableau'){ var _b=W.document.getElementById('bmon'); if(_b)_b.click(); }   /* et l'envoi au tableau, le second geste, comme \u00ab Chrono au tableau \u00bb */
     else if(g==='qui'){ W.quiParle(); document.getElementById('ses-pb-qui').classList.toggle('ses-pb-on',W.quiOn); }
   }catch(e){ sesIncident(g,e); }
   try{ sesTelPeindre(); }catch(e2){ sesIncident('affichage du prompteur',e2); }
@@ -16338,6 +16475,29 @@ function sesTelGeste(g){
 /* le PROMPTEUR : l'écran courant, le dévoilé NET + l'à-venir GRISÉ « À VENIR » — c'est
    la lecture pilote (html(n,false)) refaite en cartes tactiles, avec l'ÉDITION AU DOIGT
    des réponses (le format du moteur : b.reps=[{i,r,refo}], persisté par W.sauve() routé). */
+function sesTelChrono(){
+  /* [LOT B \u2460 A-4] L'AFFICHEUR DISAIT LE MAUVAIS T\u00c9MOIN. Il lisait `bmon` \u2014 \u00ab chrono
+     au tableau \u00bb \u2014 et non l'\u00e9tat du compte : le chrono partait (mesur\u00e9 : t 420\u2192418)
+     et le t\u00e9l\u00e9phone n'en montrait RIEN. Il dit maintenant le temps d\u00e8s qu'il tourne,
+     \u00e0 la seconde, et signale s\u00e9par\u00e9ment qu'il est projet\u00e9. */
+  var W=drWin(); var ch=document.getElementById('ses-tel-chr'); if(!W||!ch)return;
+  try{
+    var D=W.document;
+    var auTableau=D.getElementById('bmon').classList.contains('on');
+    var enMarche=!!W.run;
+    var txt=D.getElementById('cmin').value+':'+D.getElementById('csec').value;
+    ch.textContent=(enMarche||auTableau)?((auTableau?'\ud83d\udcfa ':'\u23f1 ')+txt):'';
+    ch.classList.toggle('ses-chr-pause',!enMarche&&auTableau);
+    var bc=document.getElementById('ses-pb-chr'); if(bc)bc.classList.toggle('ses-pb-on',enMarche);
+    var bt=document.getElementById('ses-pb-chrtab'); if(bt)bt.classList.toggle('ses-pb-on',auTableau);
+  }catch(e){}
+}
+function sesCurseurFin(el){
+  /* [LOT B \u2460 A-3] au doigt le curseur se pose o\u00f9 l'on touche : la frappe s'ins\u00e9rait au
+     milieu d'un mot (mesur\u00e9). Il va d\u00e9sormais toujours en fin de champ. */
+  try{ var r=document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){}
+}
 function sesTelPeindre(){
   var W=drWin(); if(!W||typeof W.i!=='number')return;
   var n=W.i, e=W.ECRANS&&W.ECRANS[n]; if(!e)return;
@@ -16370,45 +16530,124 @@ function sesTelPeindre(){
     }
   });
   pr.innerHTML=h;
+  try{ if(window.sesSaisieMaj)sesSaisieMaj(); }catch(e){}   /* [LOT B \u2460 A-0] le repeint ne laisse jamais l'\u00e9tat \u00ab saisie \u00bb derri\u00e8re lui */
   var s=W.ECRANS[n+1];
   document.getElementById('ses-tel-suiv').textContent=s?('\u00c9cran suivant \u2192 \u00ab '+(s.act||'\u2026')+' \u00bb'):'Dernier \u00e9cran.';
   document.getElementById('ses-pb-gel').classList.toggle('ses-pb-on',!!W.gele);
   document.getElementById('ses-pb-qui').classList.toggle('ses-pb-on',!!W.quiOn);
-  try{ var D=W.document, on=D.getElementById('bmon').classList.contains('on');
-    document.getElementById('ses-tel-chr').textContent=on?('\u23f1 '+D.getElementById('cmin').value+':'+D.getElementById('csec').value):''; }catch(e){}
+  try{ sesTelChrono(); }catch(e){}   /* [LOT B ① A-4] */
   /* l'ÉDITION AU DOIGT : la frappe écrit la trame du moteur puis part par sauve() (routé) */
   pr.querySelectorAll('[data-ses-q]').forEach(function(el){
     el.addEventListener('blur',function(){ var b=W.ECRANS[W.i].blocs[+el.dataset.sesQ]; if(b&&b.q!==el.innerHTML){ b.q=el.innerHTML; W.sauve(); } });
   });
   pr.querySelectorAll('[data-ses-i]').forEach(function(el){
+    el.addEventListener('focus',function(){ sesCurseurFin(el); });   /* [LOT B \u2460 A-3] */
     el.addEventListener('blur',function(){ var p=el.dataset.sesI.split('.'), b=W.ECRANS[W.i].blocs[+p[0]];
       if(b&&b.reps[+p[1]]&&b.reps[+p[1]].i!==el.textContent.trim()){ b.reps[+p[1]].i=el.textContent.trim().toUpperCase().slice(0,3); W.sauve(); sesTelPeindre(); } });
   });
   pr.querySelectorAll('[data-ses-r]').forEach(function(el){
+    el.addEventListener('focus',function(){ sesCurseurFin(el); });   /* [LOT B \u2460 A-3] le curseur en FIN, jamais au point du tap */
     el.addEventListener('blur',function(){ var p=el.dataset.sesR.split('.'), b=W.ECRANS[W.i].blocs[+p[0]];
       if(b&&b.reps[+p[1]]&&b.reps[+p[1]].r!==el.innerHTML){ b.reps[+p[1]].r=el.innerHTML;
         var e2=W.ECRANS[W.i]; if((b.vues|0)<=+p[1])b.vues=+p[1]+1;   /* une réponse tapée est montrée */
         W.sauve(); W.rendre(); } });
   });
+  /* [LOT B \u2460 A-3] l'INITIALE D'ABORD : c'est `r.i` qui attribue la réponse à un élève
+     (`histoire()` filtre dessus) — sans elle, un rond vide au tableau. Un appui sur une
+     réponse VIDE pose le focus sur les initiales. Rien n'est refusé pour autant. */
+  pr.querySelectorAll('.ses-rep-vide').forEach(function(li){
+    li.addEventListener('click',function(ev){
+      if(ev.target.closest&&ev.target.closest('[data-ses-i]'))return;
+      var ini=li.querySelector('[data-ses-i]');
+      if(ini&&!ini.textContent.trim()){ ev.preventDefault(); ini.focus(); sesCurseurFin(ini); }
+    });
+  });
 }
 function sesTelPart(){
+  /* ═══ [LOT B \u2460 A-6] LA LISTE DENSE \u2014 elle sert le mod\u00e8le d\u00e9j\u00e0 d\u00e9cid\u00e9
+     (PASSATION \u00a7 participation), elle n'en invente pas un autre : trois motifs
+     (a particip\u00e9 \u00b7 a propos\u00e9 une piste \u00b7 on y reviendra avec lui) + note priv\u00e9e,
+     compteurs pour tous \u2014 vert = r\u00e9ponses retenues, bleu = prises sans r\u00e9ponse \u2014
+     historique par \u00e9l\u00e8ve, avec retrait. Mesur\u00e9 en cartes : 385 px par nom \u00e0 trois
+     \u00e9l\u00e8ves, 994 px de d\u00e9filement \u00e0 trente. En lignes de 44 px sur deux colonnes,
+     trente noms tiennent sans d\u00e9filer. Le professeur n'est jamais bloqu\u00e9 : un appui
+     compte, un appui long ouvre les motifs, rien n'exige de regarder. */
   var W=drWin(); if(!W)return;
   var anc=document.getElementById('ses-part'); if(anc){ anc.remove(); return; }
   var d=document.createElement('div'); d.id='ses-part'; d.className='ses-part';
-  var h='<div class="ses-part-tete">Un appui sur un nom = +1 participation<button onclick="document.getElementById(\'ses-part\').remove()">\u2715</button></div><div class="ses-part-liste">';
-  (W.ELEVES||[]).forEach(function(x){
-    var nb=((W.PARTICIPATION&&W.PARTICIPATION[x])||[]).length;
-    h+='<button class="ses-part-nom" onclick="sesTelPlus1(\''+x+'\')">'+escapeHtml((W.PRENOMS&&W.PRENOMS[x])||x)+(nb?' <b>\u00d7'+nb+'</b>':'')+'</button>';
-  });
-  if(!(W.ELEVES||[]).length)h+='<div class="ses-part-vide">Aucun \u00e9l\u00e8ve extrait pour cette classe.</div>';
-  d.innerHTML=h+'</div>';
+  d.innerHTML='<div class="ses-part-tete"><span>Un appui = +1 \u00b7 appui long = motif</span>'
+    +'<button onclick="document.getElementById(\'ses-part\').remove()">\u2715</button></div>'
+    +'<div class="ses-part-liste" id="ses-part-liste"></div>';
   document.body.appendChild(d);
+  sesPartPeindre();
+}
+function sesPartPeindre(){
+  var W=drWin(); var z=document.getElementById('ses-part-liste'); if(!W||!z)return;
+  var h='';
+  (W.ELEVES||[]).forEach(function(x){
+    var hist=[]; try{ hist=W.histoire(x)||[]; }catch(e){}
+    var rep=hist.filter(function(o){return o.genre==='r\u00e9ponse';}).length;
+    var oral=((W.PARTICIPATION&&W.PARTICIPATION[x])||[]).length;
+    h+='<button class="ses-pl" data-ini="'+x+'" onclick="sesTelPlus1(\''+x+'\')">'
+      +'<span class="ses-pl-nom">'+escapeHtml((W.PRENOMS&&W.PRENOMS[x])||x)+'</span>'
+      +(rep?'<i class="ses-pl-c ses-pl-v">'+rep+'</i>':'')
+      +(oral?'<i class="ses-pl-c ses-pl-b">'+oral+'</i>':'')
+      +'</button>';
+  });
+  if(!(W.ELEVES||[]).length)h='<div class="ses-part-vide">Aucun \u00e9l\u00e8ve extrait pour cette classe.</div>';
+  z.innerHTML=h;
+  /* l'appui long ouvre les motifs \u2014 sans jamais emp\u00eacher l'appui simple */
+  [].slice.call(z.querySelectorAll('.ses-pl')).forEach(function(b){
+    var t=null;
+    var lance=function(){ t=setTimeout(function(){ t=null; sesPartMotifs(b.dataset.ini); },520); };
+    var stop=function(){ if(t){clearTimeout(t);t=null;} };
+    b.addEventListener('touchstart',lance,{passive:true});
+    b.addEventListener('mousedown',lance);
+    ['touchend','touchmove','touchcancel','mouseup','mouseleave'].forEach(function(ev){ b.addEventListener(ev,stop); });
+  });
+}
+function sesPartMotifs(ini){
+  var W=drWin(); if(!W||!ini)return;
+  var anc=document.getElementById('ses-pmot'); if(anc)anc.remove();
+  var hist=((W.PARTICIPATION&&W.PARTICIPATION[ini])||[]);
+  var m=document.createElement('div'); m.id='ses-pmot'; m.className='ses-pmot';
+  var h='<div class="ses-pmot-boite"><div class="ses-pmot-tete">'+escapeHtml((W.PRENOMS&&W.PRENOMS[ini])||ini)
+    +'<button onclick="document.getElementById(\'ses-pmot\').remove()">\u2715</button></div>';
+  (W.MOTIFS_PART||[]).forEach(function(o){
+    h+='<button class="ses-pmot-b" onclick="sesPartMotif(\''+ini+'\',\''+o.c+'\')">'+escapeHtml(o.l)+'</button>';
+  });
+  h+='<input id="ses-pmot-note" class="ses-pmot-note" placeholder="pourquoi (pour toi seul)">';
+  if(hist.length){
+    h+='<div class="ses-pmot-hist">';
+    hist.slice(-6).forEach(function(o){
+      var lib=((W.MOTIFS_PART||[]).filter(function(x){return x.c===o.type;})[0]||{l:o.type}).l;
+      h+='<div class="ses-pmot-l"><span>'+escapeHtml(o.h||'')+' \u00b7 '+escapeHtml(lib)+(o.note?' \u2014 '+escapeHtml(o.note):'')+'</span>'
+        +'<button onclick="sesPartRetirer(\''+ini+'\',\''+o.id+'\')">retirer</button></div>';
+    });
+    h+='</div>';
+  }
+  m.innerHTML=h+'</div>';
+  m.addEventListener('click',function(ev){ if(ev.target===m)m.remove(); });
+  document.body.appendChild(m);
+}
+function sesPartMotif(ini,type){
+  var W=drWin(); if(!W)return;
+  var n=document.getElementById('ses-pmot-note');
+  try{ W.partAjoute(ini,type,n?n.value.trim():''); }catch(e){ sesIncident('participation',e); }
+  var m=document.getElementById('ses-pmot'); if(m)m.remove();
+  sesPartPeindre();
+}
+function sesPartRetirer(ini,id){
+  var W=drWin(); if(!W)return;
+  try{ W.partRetire(ini,id); }catch(e){ sesIncident('retrait de participation',e); }
+  sesPartMotifs(ini); sesPartPeindre();
 }
 function sesTelPlus1(ini){
   var W=drWin(); if(!W)return;
-  try{ W.partAjoute(ini,'participe',''); }catch(e){}
-  var p=document.getElementById('ses-part'); if(p){ p.remove(); sesTelPart(); }
+  try{ W.partAjoute(ini,'participe',''); }catch(e){ sesIncident('participation',e); }   /* [LOT B \u2460 A-6] motif par d\u00e9faut ; l'appui long en choisit un autre */
+  sesPartPeindre();
 }
+
 
 /* ═══ L'AUTO-BOOT — la même page, trois rôles ═══ */
 if(SES.mode==='tableau')sesBootTableau();
