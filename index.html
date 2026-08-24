@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.64.0";
+var APP_VERSION="8.65.1";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -14587,23 +14587,60 @@ function atDrReprendre(indices){
    CADRAGE \u00a74). B\u00e2tir la cl\u00e9 dessus la ferait changer \u00e0 chaque relance \u2014 une coupure \u00e0
    10h30 aurait cr\u00e9\u00e9 une seconde trace au lieu de reprendre la premi\u00e8re. La fin, elle,
    est FIXE et vient de l'emploi du temps : elle d\u00e9signe le cr\u00e9neau sans ambigu\u00eft\u00e9. */
-function _drCreneauHeure(){
-  if(!AT_DR_COURS)return null;
-  var fin=String(AT_DR_COURS.fin||'');
+/* [LOT C3a \u2460] LE CR\u00c9NEAU ET LA CL\u00c9 D'UNE HEURE \u2014 UNE SEULE FABRIQUE, pour
+   `AT_DR_COURS` comme pour le pointeur `cours_actif` lu au hub. Deux fabriques
+   divergentes seraient deux v\u00e9rit\u00e9s sur le m\u00eame objet : c'est exactement le d\u00e9faut
+   que ce lot ferme. La cl\u00f4ture automatique en avait une copie en ligne : elle appelle
+   d\u00e9sormais celle-ci. */
+function _drCreneauDe(c){
+  if(!c)return null;
+  var fin=String(c.fin||'');
   for(var k=0;k<AT_EDT.length;k++){ if(AT_EDT[k].split('-')[1]===fin)return AT_EDT[k]; }
-  return String(AT_DR_COURS.debut||'')+'-'+fin;   /* hors emploi du temps : le cr\u00e9neau reste ce qu'il est */
+  return String(c.debut||'')+'-'+fin;   /* hors emploi du temps : le cr\u00e9neau reste ce qu'il est */
 }
-function _drCleHeure(){
-  if(!AT_DR_COURS)return null;
-  var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
+function _drCleHeureDe(c,ts){
+  if(!c)return null;
+  var d=new Date(ts||Date.now()), p=function(n){return (n<10?'0':'')+n;};
   var jour=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
-  /* [LOT C2 \u2463] LA CLASSE ENTRE DANS LA CL\u00c9. L'emploi du temps encha\u00eene deux classes
+  var cls=String(c.classeSlug||c.classeNom||'').replace(/[.#$\[\]\/\s]/g,'_');
+  return jour+'_'+String(_drCreneauDe(c)||'').replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'')+'_'+cls;
+}
+function _drBaseHeureDe(c,ts){
+  if(!c||!c.niveau||!c.chapitre||!c.seance||!c.classeSlug)return null;
+  var cle=_drCleHeureDe(c,ts); if(!cle)return null;
+  return FIREBASE_BASE+'/site/'+c.niveau+'/chapitres/'+c.chapitre+'/seances/'+c.seance
+    +'/deroule_joue/'+c.classeSlug+'/heures/'+cle;
+}
+/* la SIGNATURE d'une heure : ce qui la distingue de toute autre. Elle sert au
+   compare-et-efface du pointeur (\u2460) et \u00e0 la banni\u00e8re (\u2461). */
+function _drSignatureCours(c){
+  if(!c)return '';
+  return [c.niveau,c.chapitre,c.seance,c.classeSlug,c.debut,c.fin].join('|');
+}
+/* `cours_actif` CESSE D'\u00caTRE UNE SECONDE SOURCE : il ne peut \u00eatre que le REFLET de la
+   trace ouverte. Toute cl\u00f4ture le retire \u2014 mais SEULEMENT s'il d\u00e9signe encore l'heure
+   close : si un cours neuf a d\u00e9j\u00e0 pris la place, on n'y touche pas. L'incoh\u00e9rence
+   devient impossible par construction, sans d\u00e9pendre de l'ordre des r\u00e9ponses du hub. */
+function _drCoursActifEffacerSi(sig){
+  if(!sig)return;
+  fetch(FIREBASE_BASE+'/site/cours_actif.json').then(function(r){return r.json();}).then(function(c){
+    if(!c||_drSignatureCours(c)!==sig)return;   /* un autre cours occupe la place : rien \u00e0 faire */
+    return sesPut(FIREBASE_BASE+'/site/cours_actif.json',null);
+  }).catch(function(){});
+}
+/* LA TRACE FAIT FOI : une heure close ne se reprend plus, par aucun chemin. */
+function _drHeureCloseAu(c,cb){
+  var base=_drBaseHeureDe(c,c&&c.ts); if(!base){ cb(false); return; }
+  fetch(base+'/clos.json').then(function(r){return r.json();})
+    .then(function(v){ cb(v===true); }).catch(function(){ cb(false); });
+}
+function _drCreneauHeure(){ return _drCreneauDe(AT_DR_COURS); }
+function _drCleHeure(){
+  /* [LOT C2 \u2463] LA CLASSE ENTRE DANS LA CL\u00c9 \u2014 l'emploi du temps encha\u00eene deux classes
      en DEUX MINUTES (8h55\u21928h57, 11h02\u219211h04) et le cadrage l'exige : \u00ab le d\u00e9roul\u00e9 de
-     l'une ne doit pas contaminer l'autre \u00bb. Avec la classe dans la cl\u00e9, deux classes ne
-     peuvent plus se confondre \u2014 quoi qu'il advienne du calcul de cr\u00e9neau. C'est
-     impossible par construction, non pas improbable. */
-  var cls=String(AT_DR_COURS.classeSlug||AT_DR_COURS.classeNom||'').replace(/[.#$\[\]\/\s]/g,'_');
-  return jour+'_'+String(_drCreneauHeure()||'').replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'')+'_'+cls;
+     l'une ne doit pas contaminer l'autre \u00bb. [LOT C3a \u2460] le calcul vit d\u00e9sormais dans
+     `_drCleHeureDe`, partag\u00e9 avec le pointeur : une seule fabrique, une seule v\u00e9rit\u00e9. */
+  return AT_DR_COURS?_drCleHeureDe(AT_DR_COURS):null;
 }
 function _drBaseHeure(){
   var ec=AT.edChap, sk=ATVUES.snum;
@@ -14937,17 +14974,15 @@ function _drCloreHeureRestee(slugNeuf,nomNeuf){
   fetch(FIREBASE_BASE+'/site/cours_actif.json').then(function(r){return r.json();}).then(function(c){
     if(!c||!c.ts||(Date.now()-c.ts)>4*3600*1000)return;
     if(c.classeSlug===slugNeuf&&c.seance===ATVUES.snum&&c.chapitre===(AT.edChap||{}).chnum)return;  /* c'est la m\u00eame heure : rien \u00e0 clore */
-    var d=new Date(c.ts), p=function(n){return (n<10?'0':'')+n;};
-    var jour=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
-    var cr=String(c.debut||'')+'-'+String(c.fin||'');
-    for(var k=0;k<AT_EDT.length;k++){ if(AT_EDT[k].split('-')[1]===String(c.fin||''))cr=AT_EDT[k]; }
-    var cls=String(c.classeSlug||c.classeNom||'').replace(/[.#$\[\]\/\s]/g,'_');
-    var cle=jour+'_'+cr.replace(/:/g,'h').replace(/[.#$\[\]\/\s]/g,'')+'_'+cls;
-    var base=FIREBASE_BASE+'/site/'+c.niveau+'/chapitres/'+c.chapitre+'/seances/'+c.seance
-      +'/deroule_joue/'+c.classeSlug+'/heures/'+cle;
+    var cr=_drCreneauDe(c)||'';
+    var base=_drBaseHeureDe(c,c.ts); if(!base)return;   /* [LOT C3a \u2460] la M\u00caME fabrique de cl\u00e9 */
     mjpcPutJson(base+'/clos.json',true,'Cl\u00f4ture certaine de l\u2019heure pr\u00e9c\u00e9dente',function(){});
     mjpcPutJson(base+'/finReel.json',Date.now(),'Fin r\u00e9elle de l\u2019heure pr\u00e9c\u00e9dente',function(){});
     mjpcPutJson(base+'/closPar.json','lancement de '+(nomNeuf||slugNeuf),'Motif de cl\u00f4ture',function(){});
+    /* [LOT C3a \u2460] et le POINTEUR suit : une heure close ne peut plus \u00eatre d\u00e9sign\u00e9e comme
+       tournante. L'effacement est CONDITIONNEL \u2014 si le cours neuf a d\u00e9j\u00e0 pris la place,
+       il n'y touche pas : aucune course ne peut effacer le pointeur du cours en cours. */
+    _drCoursActifEffacerSi(_drSignatureCours(c));
     atInfo('L\u2019heure de '+escapeHtml(String(c.classeNom||c.classeSlug||''))+' ('+escapeHtml(cr)+') n\u2019\u00e9tait pas close : elle vient de l\u2019\u00eatre. Rien de cette heure n\u2019entre dans la suivante.');
   }).catch(function(){});
 }
@@ -15320,7 +15355,92 @@ function _drEnvelopper(){
       if(cible)cible.scrollBy({top:ev.deltaY}); else parent.scrollBy({top:ev.deltaY});
     }catch(e){}
   },{passive:true});
+
+  /* \u2550\u2550\u2550 [LOT C3a \u2462] CE QUI A \u00c9T\u00c9 SCIND\u00c9 PAR LA TAILLE EST R\u00c9ABSORB\u00c9 QUAND LA TAILLE
+     REVIENT. Le moteur redessine \u00e0 chaque `resize` et le redessin scinde quand \u00e7a
+     d\u00e9borde ; la r\u00e9absorption, elle, n'avait que DEUX appelants \u2014 le d\u00e9zoom et le menu
+     contextuel. On lui donne le troisi\u00e8me, sans toucher au moteur : on appelle SA
+     fonction `reabsorbe()`, telle quelle. Si la place ne suffit toujours pas, le rendu
+     re-scinde de lui-m\u00eame : l'\u00e9tat final reste celui que la taille autorise. \u2550\u2550\u2550 */
+  /* ═══ [MICRO C3a-⑥] LA SCISSION NE DÉPLACE PLUS LE PROFESSEUR QUAND IL NE TAPE PAS.
+     Bug vécu par Paul (24/08) : « quand un fils est créé sur une diapo, la vue tableau
+     saute directement à la diapo suivante, elle ignore le fils ». REPRODUIT sur sa trame
+     réelle par la conscience : à la scission, le pilote passe de l'écran 14/15 à 15/16 —
+     c'est-à-dire SUR LE FILS — puis, au premier dévoilement, quitte le fils pour l'écran
+     d'après. Deux déplacements, aucun demandé. Le tableau reste sur le père : d'où
+     l'impression qu'il saute au suivant.
+     LA CAUSE, une ligne du moteur, dans `degorge` : elle incrémente la position courante,
+     avec pour commentaire « passage automatique sur la suite ». Elle est VOULUE quand Paul
+     ÉCRIT — le texte déborde, la fin part sur l'écran neuf, le curseur doit l'y suivre
+     (`verifDeborde` restaure d'ailleurs le champ et la position du curseur juste après).
+     Elle est SUBIE quand la scission naît du zoom ou d'un changement de taille : Paul ne
+     demandait rien.
+     LE CORRECTIF, depuis le PONT — le moteur n'est pas touché : on enveloppe `degorge`,
+     on retient la position d'avant, et on la RESTITUE si aucune saisie n'était en cours.
+     Une saisie en cours = un champ éditable focalisé dans la scène, le même critère que
+     `verifDeborde` emploie pour retrouver son curseur. ═══ */
+  if(!W.__scissionGarde && typeof W.degorge==='function'){
+    W.__scissionGarde=true;
+    var _vraiDegorge=W.degorge;
+    W.degorge=function(auto){
+      var avant=W.i, tapait=false;
+      try{ var a=W.document.activeElement, z=W.document.getElementById('contenu');
+        tapait=!!(a && z && z.contains(a)
+                    && (a.isContentEditable || /^(input|textarea)$/i.test(a.tagName||''))); }catch(e){}
+      var r=_vraiDegorge.apply(W,arguments);
+      if(!tapait && W.i!==avant && avant<W.ECRANS.length){
+        W.i=avant;
+        try{ W.rendre(); }catch(e){}
+      }
+      return r;
+    };
+  }
+
+  AT_PONT._tailleCadre=_drTailleCadre();
+  var _reabsSiPlace=function(){
+    clearTimeout(AT_PONT._reszT);
+    AT_PONT._reszT=setTimeout(function(){
+      var t=_drTailleCadre(), a=AT_PONT._tailleCadre||{w:0,h:0};
+      AT_PONT._tailleCadre=t;
+      if(!(t.w>a.w+2||t.h>a.h+2))return;        /* la place n'a pas grandi : rien \u00e0 recoller */
+      try{
+        var W2=drWin(); if(!W2||!W2.ECRANS||typeof W2.reabsorbe!=='function')return;
+        if(!W2.ECRANS.some(function(e){return e&&e.suite;}))return;   /* rien n'avait \u00e9t\u00e9 scind\u00e9 */
+        W2.reabsorbe(); W2.rendre();
+      }catch(e){}
+    },260);
+  };
+  window.addEventListener('resize',_reabsSiPlace);
+  try{ if(window.ResizeObserver){ var _f=document.getElementById('at-dr-iframe');
+    if(_f){ AT_PONT._rObs=new ResizeObserver(_reabsSiPlace); AT_PONT._rObs.observe(_f); } } }catch(e){}
+
+  /* \u2550\u2550\u2550 [LOT C3a \u2464] UN \u00c9CRAN DUPLIQU\u00c9 EST UN \u00c9CRAN NEUF PAR NATURE (Paul, 24/08) :
+     il re\u00e7oit son identit\u00e9 AU GESTE, \u00e0 sa naissance \u2014 jamais plus tard par d\u00e9tection de
+     collision. Le geste du moteur s'enveloppe ici (le moteur n'est pas touch\u00e9) : ses
+     propres bornes disent EXACTEMENT o\u00f9 naissent les copies, donc rien n'est devin\u00e9.
+     L'original garde la sienne ; un fils du zoom n'en a jamais. \u2550\u2550\u2550 */
+  var vraiCtxDup=W.ctxDup;
+  if(typeof vraiCtxDup==='function'){
+    W.ctxDup=function(){
+      var b=null; try{ b=W.bornes(W.ctxEcran); }catch(e){}
+      var r=vraiCtxDup.apply(W,arguments);
+      try{
+        if(b){ var deb=b[0]+b[1], t=W.ECRANS||[];
+          for(var k=deb;k<deb+b[1]&&k<t.length;k++){ var x=t[k]; if(!x||typeof x!=='object')continue;
+            if(x.suite){ if(x.eid)delete x.eid; }   /* un fils ne porte jamais d'identit\u00e9 propre */
+            else x.eid=_drEidNeuf();                /* la copie na\u00eet avec la sienne */
+          } }
+      }catch(e){}
+      return r; };
+  }
   W.__pontEnv=true;
+}
+/* la bo\u00eete du cadre, mesur\u00e9e : c'est elle qui grandit ou r\u00e9tr\u00e9cit quand Paul partage
+   son \u00e9cran en deux, et c'est d'elle que d\u00e9pend le d\u00e9bordement. */
+function _drTailleCadre(){
+  try{ var f=document.getElementById('at-dr-iframe'); if(!f)return {w:0,h:0};
+    var r=f.getBoundingClientRect(); return {w:Math.round(r.width),h:Math.round(r.height)}; }
+  catch(e){ return {w:0,h:0}; }
 }
 
 /* ═══ L'ADAPTATEUR — les sept prises du cadre, emballant les cinq messages ═══ */
@@ -16298,6 +16418,30 @@ function sesBrancherPilote(reprise){
   else sesEmettre();
 }
 
+/* ═══ [LOT C3a ④] LE TABLEAU NE MONTRE JAMAIS PLUS QUE CE QUE LE PROFESSEUR A DÉVOILÉ.
+   Quand le pilote est sur un FILS du zoom, il désigne le PÈRE (l'identité de C2 est juste) ;
+   mais le tableau, qui n'a pas scindé, affichait ce père EN ENTIER — donc la suite du texte,
+   que Paul n'avait pas encore montrée : l'effet était l'inverse du prompteur. On émet donc
+   le dévoilement CUMULÉ, exprimé dans le référentiel du père : on REFUSIONNE le groupe
+   JUSQU'AU MORCEAU COURANT avec `_drRefusionner`, la fonction qui fait déjà exactement ce
+   recollement (étapes concaténées, réponse coupée recollée, fiches réunies, `vues`
+   additionnées). Les morceaux SUIVANTS sont exclus du calcul : ce qui n'a pas été montré
+   ne peut pas être compté. Rien n'est créé ici : on réutilise. ═══ */
+function _drVuePere(W,n){
+  var t=(W&&W.ECRANS)||[], e=t[n];
+  if(!e||!e.suite)return null;
+  var deb=n; while(deb>0&&t[deb-1]&&t[deb-1].grp===e.grp)deb--;
+  if(deb===n)return null;                       /* aucun père trouvé : on ne devine pas */
+  var cp=function(x){ return JSON.parse(JSON.stringify(x)); };
+  var lot=[]; for(var k=deb;k<=n;k++)lot.push(t[k]);
+  var out=_drRefusionner(cp(lot)), pere=out&&out[0];
+  if(!pere||!Array.isArray(pere.blocs))return null;
+  var off=0;
+  if(n-deb>0){ var av=[]; for(var k2=deb;k2<n;k2++)av.push(t[k2]);
+    var o2=_drRefusionner(cp(av)); off=(o2&&o2[0]&&o2[0].blocs)?o2[0].blocs.length:0; }
+  var vues={}; pere.blocs.forEach(function(b,j){ if(b&&b.vues!==undefined)vues[j]=b.vues|0; });
+  return { rev:(pere.rev===undefined?0:pere.rev), vues:vues, off:off };
+}
 /* la PHOTO DE SCÈNE : l'équivalent exact d'envoie() côté données — c'est ELLE qui
    décide ce que voit le tableau. Gel : la photo n'est plus renouvelée, seul le
    drapeau part (le tableau garde son image, les pilotes naviguent librement). */
@@ -16322,9 +16466,11 @@ function sesPhoto(){
      reste \u00e9mis pour le repli (appareil sur une trame non identifi\u00e9e), mais l'identit\u00e9
      fait foi : le pilote peut avoir 13 \u00e9crans et le tableau 11, les trois d\u00e9signent le
      m\u00eame. C'est le point le plus \u00e0 risque du lot, donc le dernier bascul\u00e9. */
+  var _vp=null; try{ if(e.suite)_vp=_drVuePere(W,n); }catch(e8){}   /* [LOT C3a ④] */
   var p2={ecran:n, eid:_drEidDuRang(n,W.ECRANS)||null, morceau:(e.suite||0),
-          rev:(e.rev===undefined?(e.suite?2:0):e.rev), vues:vues, gele:!!W.gele,
-          fiche:ficheMontree?[n,jf]:null, ficheEid:(ficheMontree?(_drEidDuRang(n,W.ECRANS)||null):null),
+          rev:(_vp?_vp.rev:(e.rev===undefined?(e.suite?2:0):e.rev)),
+          vues:(_vp?_vp.vues:vues), gele:!!W.gele,
+          fiche:ficheMontree?[n,(_vp?(_vp.off+jf):jf)]:null, ficheEid:(ficheMontree?(_drEidDuRang(n,W.ECRANS)||null):null),
           chrono:chr, quiOn:!!W.quiOn, qui:qui,
           trameMaj:SES.trameMaj, origine:SES.id, ts:Date.now()};
   SES.gelePhoto=p2;
@@ -16402,7 +16548,9 @@ function sesAppliquer(o){
       Object.keys(o.vues||{}).forEach(function(j){ if(e.blocs[j])e.blocs[j].vues=o.vues[j]; }); }
     W.gele=!!o.gele;
     try{ W.document.getElementById('bgel').classList.toggle('on',W.gele); }catch(e2){}
-    W.ficheOuverte=o.fiche||null;
+    /* [LOT C3a ④] la fiche se pose sur MON rang, pas sur celui de l'émetteur : les deux
+       appareils n'ont pas le même nombre d'écrans quand le pilote est scindé. */
+    W.ficheOuverte=o.fiche?[_n,o.fiche[1]]:null;
     try{ W.quiOn=!!o.quiOn; W.document.getElementById('bqui').classList.toggle('on',W.quiOn); }catch(e3){}
     try{ W.rendre(); }catch(e4){}
     try{ if(!W.gele)W.envoie(); }catch(e5){}
@@ -16463,39 +16611,68 @@ function sesQROuvrir(){
 function sesQRFermer(){ clearInterval(SES._qrT); var d=document.getElementById('ses-qr'); if(d)d.remove(); }
 
 /* ═══ LA REPRISE — « un cours est en cours » sur tout appareil du professeur ═══ */
+/* [LOT C3a \u2461] LA BANNI\u00c8RE V\u00c9RIFIE \u00c0 CHAQUE PASSAGE, et DISPARA\u00ceT D'ELLE-M\u00caME d\u00e8s que
+   l'heure qu'elle propose n'est plus ouverte. Elle ne se pose plus une fois pour toutes :
+   elle est le REFLET du m\u00eame \u00e9tat que \u2460 \u2014 pointeur retir\u00e9, ou trace close. \u00ab Plus tard \u00bb
+   la tait POUR CE COURS ; elle revient si un AUTRE cours est lanc\u00e9. */
+function sesRepriseRetirer(){
+  var b=document.getElementById('ses-reprise'); if(b)b.remove(); SES._reprise=null;
+}
+function sesReprisePeindre(c){
+  var txt='Un cours est en cours avec <b>'+escapeHtml(c.classeNom||c.classeSlug)+'</b>.';
+  var b=document.getElementById('ses-reprise');
+  if(!b){
+    b=document.createElement('div'); b.className='ses-reprise'; b.id='ses-reprise';
+    b.innerHTML='<span id="ses-reprise-txt">'+txt+'</span>'
+      +'<button class="at-btn at-btn-prim" onclick="sesReprendre()">Reprendre le cours</button>'
+      +'<button class="at-btn" onclick="sesRepriseSilence()">Plus tard</button>';
+    document.body.appendChild(b);
+  } else { var t=document.getElementById('ses-reprise-txt'); if(t)t.innerHTML=txt; }
+  SES._reprise=c;
+}
+function sesRepriseSilence(){ SES._repriseTue=_drSignatureCours(SES._reprise); sesRepriseRetirer(); }
 function sesReprisePoser(){
   if(SES.mode)return;
-  var essais=0;
-  var t=setInterval(function(){
-    essais++;
+  setInterval(function(){
     var prof=document.body.classList.contains('admin-mode')||(window.TRACK&&TRACK.eleve&&TRACK.eleve.is_prof);
-    if(!prof){ if(essais>60)clearInterval(t); return; }
-    clearInterval(t);
+    if(!prof){ sesRepriseRetirer(); return; }
+    if(SES.actif){ sesRepriseRetirer(); return; }              /* c'est d\u00e9j\u00e0 nous */
     sesGet(FIREBASE_BASE+'/site/cours_actif.json',function(c){
-      if(!c||!c.ts||(Date.now()-c.ts)>4*3600*1000)return;
-      if(SES.actif)return;   /* c'est déjà nous */
-      var b=document.createElement('div'); b.className='ses-reprise'; b.id='ses-reprise';
-      b.innerHTML='<span>Un cours est en cours avec <b>'+escapeHtml(c.classeNom||c.classeSlug)+'</b>.</span>'
-        +'<button class="at-btn at-btn-prim" onclick="sesReprendre()">Reprendre le cours</button>'
-        +'<button class="at-btn" onclick="document.getElementById(\'ses-reprise\').remove()">Plus tard</button>';
-      document.body.appendChild(b);
-      SES._reprise=c;
+      if(!c||!c.ts||(Date.now()-c.ts)>4*3600*1000){ sesRepriseRetirer(); return; }
+      if(SES._repriseTue&&SES._repriseTue===_drSignatureCours(c))return;   /* \u00ab plus tard \u00bb, pour CE cours */
+      _drHeureCloseAu(c,function(close){
+        if(close){ sesRepriseRetirer(); return; }               /* close \u2192 plus reprenable */
+        sesReprisePeindre(c);
+      });
     });
   },5000);
 }
 function sesReprendre(){
   var c=SES._reprise; if(!c)return;
-  var b=document.getElementById('ses-reprise'); if(b)b.remove();
-  atelierOuvrir();
-  atEditerChapitre(c.niveau,c.chapitre);
-  setTimeout(function(){
-    ATVUES.snum=c.seance;
-    AT_DR_COURS={debut:c.debut,fin:c.fin,classeSlug:c.classeSlug,classeNom:c.classeNom};
-    AT_DR_REGIME='classe';
-    SES.ctx={niveau:c.niveau,chapitre:c.chapitre,seance:c.seance,classeSlug:c.classeSlug,classeNom:c.classeNom};
-    atVuesAller('deroule');
-    setTimeout(function(){ sesBrancherPilote('froid'); },600);
-  },400);
+  /* [LOT C3a \u2460] DERNI\u00c8RE V\u00c9RIFICATION AVANT D'AGIR : le pointeur et la trace font foi.
+     Le professeur n'est pas bloqu\u00e9 \u2014 on lui dit ce qui s'est pass\u00e9, d'une ligne. */
+  sesGet(FIREBASE_BASE+'/site/cours_actif.json',function(p){
+    if(!p||!p.ts||_drSignatureCours(p)!==_drSignatureCours(c)){
+      sesRepriseRetirer();
+      atInfo('Ce cours n\u2019est plus celui qui tourne : il a \u00e9t\u00e9 clos ou remplac\u00e9 par un autre. Rien n\u2019est repris.');
+      return; }
+    _drHeureCloseAu(c,function(close){
+      if(close){ sesRepriseRetirer();
+        atInfo('Cette heure a \u00e9t\u00e9 close : elle ne se reprend pas. Lance la classe pour ouvrir une heure neuve.');
+        return; }
+      sesRepriseRetirer();
+      atelierOuvrir();
+      atEditerChapitre(c.niveau,c.chapitre);
+      setTimeout(function(){
+        ATVUES.snum=c.seance;
+        AT_DR_COURS={debut:c.debut,fin:c.fin,classeSlug:c.classeSlug,classeNom:c.classeNom};
+        AT_DR_REGIME='classe';
+        SES.ctx={niveau:c.niveau,chapitre:c.chapitre,seance:c.seance,classeSlug:c.classeSlug,classeNom:c.classeNom};
+        atVuesAller('deroule');
+        setTimeout(function(){ sesBrancherPilote('froid'); },600);
+      },400);
+    });
+  });
 }
 
 /* ═══ LA VUE TABLEAU (?vue=tableau) — un terminal muet : elle PEINT, elle n'écrit JAMAIS ═══ */
@@ -16597,7 +16774,7 @@ function sesTabPoll(){
           var e=W.ECRANS&&W.ECRANS[_n2];
           if(e){ W.i=_n2; e.rev=o.rev;
             Object.keys(o.vues||{}).forEach(function(j){ if(e.blocs[j])e.blocs[j].vues=o.vues[j]; }); }
-          W.ficheOuverte=o.fiche||null; W.ficheAnime=false;
+          W.ficheOuverte=o.fiche?[_n2,o.fiche[1]]:null; W.ficheAnime=false;   /* [LOT C3a ④] mon rang */
           W.gele=false;
           try{ W.envoie(); }catch(e2){}
         }
