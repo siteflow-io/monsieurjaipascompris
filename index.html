@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.67.0";
+var APP_VERSION="8.67.1";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -15017,6 +15017,7 @@ function atDrJouerClic(){
   var copie=atDrJouer(slug,nom); if(!copie)return;
   AT_DR_COURS={debut:_deb, fin:_fin, classeSlug:slug, classeNom:nom};   /* l'objet partagé, écrit au lancement */
   AT_DR_REGIME='classe';
+  try{ chChargerTaxo(function(){}); }catch(e){}   /* [8.67.1] la taxonomie se charge au lancement : le T-5 nomme les notions, jamais leurs codes */
   try{ sesCoursEcrire(); }catch(e){}   /* [SESSION] le cours s'annonce : les autres appareils peuvent le rejoindre */
   atVecuDemarrer();
   atDrMonter();
@@ -15065,11 +15066,12 @@ function atTaxoLibelle(code){
      ni au professeur ni à l'inspecteur (règle de Paul, 22/08). */
   try{
     code=String(code||'').trim(); if(!code)return code;
-    /* ① les COMPÉTENCES du cycle 4 (c4-…), via la taxonomie chargée */
+    /* ① notions ET compétences (francaisC4, transversales), via la taxonomie chargée
+       — [8.67.1] chIdsTaxo couvre les trois blocs ; chCompetencesC4 ne couvrait que francaisC4 */
     try{
-      if(typeof chCompetencesC4==='function'&&window.CH&&CH.taxo){
-        var cc=chCompetencesC4(CH.taxo)||{};
-        if(cc[code]&&cc[code].libelle)return cc[code].libelle+' ('+code+')';
+      if(typeof chIdsTaxo==='function'&&window.CH&&CH.taxo){
+        var ids=chIdsTaxo(CH.taxo)||{}, lib=(ids.notions||{})[code]||(ids.competences||{})[code];
+        if(lib&&lib!==code)return lib+' ('+code+')';
       }
     }catch(e){}
     /* ② les NOTIONS grammaticales, via le cache existant */
