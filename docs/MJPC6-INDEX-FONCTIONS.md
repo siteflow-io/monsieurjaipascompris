@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**1142 fonctions** — site : 993 · moteur : 149
+**1149 fonctions** — site : 1000 · moteur : 149
 
 
 ## SOMMAIRE DES FAMILLES
@@ -23,11 +23,11 @@
 - **ATELIER — prompts et écrans IA** — 19 fonctions
 - **CHAPITRE — injection JSON, inventaire, les quatre voies** — 30 fonctions
 - **DIVERS — socle du site** — 233 fonctions
-- **DIVERS — utilitaires internes** — 245 fonctions
+- **DIVERS — utilitaires internes** — 247 fonctions
 - **MOTEUR — le déroulé (fichier autonome encodé, JAMAIS modifié)** — 149 fonctions
-- **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 52 fonctions
+- **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 55 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 20 fonctions
-- **SESSION — les trois appareils (pilote, tableau, téléphone)** — 44 fonctions
+- **SESSION — les trois appareils (pilote, tableau, téléphone)** — 46 fonctions
 - **SOCLE — hub, écriture, lecture** — 31 fonctions
 - **SÉCURITÉ — coffre, clé, empreintes (M-SÉCU) — corps à ne jamais modifier** — 29 fonctions
 - **TEMPS — le T-5, fin d’heure et ses quatre choix** — 9 fonctions
@@ -198,7 +198,7 @@
 | `atStatutFeuille` | d,ref | 2123 o | Le STATUT d'une feuille (③) — croisé avec la vérité terrain (chapitresData). | atRendreListe |
 | `atSupprimerChapitre` | level,chnum | 1827 o | SUPPRESSION D'UN CHAPITRE — patron feuille : corbeille D'ABORD (l'échec abandonne tout), ou sans copie ; garde « prévenu, pas bloqué » si publié. | atRendreChapitres, ctxEntreesChapitre, deleteChapter |
 | `atSupprimerDoc` | id | 2616 o | (sans commentaire) affiche/emploie : « +id,function(){           atSiteDelete(AT_NOEUD+ · +id,function(ok2){             if(!ok2){atInfo( » — hub site/atelier/documents/ | atRendreListe |
-| `atTaxoLibelle` | code | 900 o | [11e adaptation · 支] le libellé d'une notion depuis la même source que la datalist | — |
+| `atTaxoLibelle` | code | 1036 o | [11e adaptation · 支] le libellé d'une notion depuis la même source que la datalist | — |
 | `atTbNiveau` | — | 41 o | le niveau des tableaux ②③ — celui de la page, changeable en tête d'onglet | atChapitresAssurer, atChapitresRecharger, atOnglet, atRendreChapitres (+1) |
 | `atTbNiveauChange` | v | 32 o | (sans commentaire ni indice) | atTbSelecteur |
 | `atTbSelecteur` | — | 258 o | (sans commentaire) affiche/emploie : « <select class= ·  onchange= » | atRendreChapitres |
@@ -254,11 +254,11 @@
 | `chApresEcriture` | — | 521 o | [LOT B \u2463d] APR\u00c8S L'\u00c9CRITURE : la liste dit vrai, sans rechargement de page. Le LOT A avait trait\u00e9 `addChapter` (le bouton du panneau prof) ; | chInjecterConfirme |
 | `chCalculerEcritures` | voie,chaps | 3331 o | LA GARDE D'ATTERRISSAGE — le calcul des écritures, extrait de chInjecterConfirme, MONTRÉ avant le clic. L'appariement par titre (celui qui a mélangé le chapitre 1 le 05/08) devient VISIBLE. | chInjecter, chInjecterConfirme |
 | `chChargerEtatAnnee` | cb | 162 o | SITE-COURS-2e : l'état de l'année, lu pour le niveau visé. | chOuvrir, chRendre |
-| `chChargerTaxo` | cb | 112 o | (sans commentaire ni indice) | atRegenererSommaire, chOuvrir, edCreerFeuilleIci, edIAdepuisTrou |
-| `chCompetencesC4` | taxo | 224 o | Les compétences du cycle 4, LUES dans la taxonomie (jamais recopiées). | atTaxoLibelle, chEtatAnnee, chSommaire, chValiderDeclaration (+1) |
+| `chChargerTaxo` | cb | 112 o | (sans commentaire ni indice) | atDrJouerClic, atRegenererSommaire, chOuvrir, edCreerFeuilleIci (+1) |
+| `chCompetencesC4` | taxo | 224 o | Les compétences du cycle 4, LUES dans la taxonomie (jamais recopiées). | chEtatAnnee, chSommaire, chValiderDeclaration, chVocabulaireCompetences |
 | `chEntreesDuNiveau` | niv | 39 o | (sans commentaire ni indice) | atPromptTexte, chEtatAnnee, chSommaire, chValiderDeclaration (+1) |
 | `chEtatAnnee` | chaps,niv,taxo | 1533 o | L'ÉTAT DE L'ANNÉE — GÉNÉRÉ depuis la liste des chapitres du niveau. chInventaire regarde UN chapitre ; ici on lit la LISTE, parce que l'alternance ne se décide qu'en voyant l'année. | chChargerEtatAnnee |
-| `chIdsTaxo` | taxo | 436 o | Les identifiants valides, à plat — pour refuser une notion inventée EN LA NOMMANT. | chInventaire, chValiderChapitre, edLibellesTaxo |
+| `chIdsTaxo` | taxo | 436 o | Les identifiants valides, à plat — pour refuser une notion inventée EN LA NOMMANT. | atTaxoLibelle, chInventaire, chValiderChapitre, edLibellesTaxo |
 | `chInfo` | — | 774 o | (sans commentaire ni indice) | chRendre |
 | `chInjecter` | voie | 3106 o | LES TROIS VOIES. Écriture PAR INDEX, jamais la liste entière, jamais push. | chAfficherInventaire |
 | `chInjecterConfirme` | voie | 6223 o | (sans commentaire) affiche/emploie : « \u00c9criture en cours\u2026 ·  (proposition) » — touche #ch-msg, #ch-som-oui | chInjecter |
@@ -326,7 +326,7 @@
 | `deleteSeance` | level,chnum,snum | 1506 o | (sans commentaire) affiche/emploie : « Supprimer la s\u00e9ance · Supprimer la s\u00e9ance \u00ab <b> » | edSupprimerSeance, renderSeance |
 | `doLogin` | — | 3415 o | (sans commentaire) affiche/emploie : « ;   var err=document.getElementById( · );var status=document.getElementById( » — touche #val-btn, #val-code, #val-error | — |
 | `drDoc` | — | 71 o | (sans commentaire ni indice) | _drHabiller, _drTitrerColonne, atDrSuiviAppliquer, atVecuAfficher |
-| `drWin` | — | 77 o | la fenêtre du jeu — seul point d'accès | _drEidDuRang, _drEnvelopper, _drLibelles, _drPaletteOuvrir (+25) |
+| `drWin` | — | 77 o | la fenêtre du jeu — seul point d'accès | _drEidDuRang, _drEnvelopper, _drLibelles, _drPaletteOuvrir (+26) |
 | `driveExtraireId` | texte | 248 o | [C5-3ac2] l'extraction d'id Drive, UNE fois pour toute l'application — le cœur de linkModalApplyUrl, partagé avec le dépôt d'image du diaporama. | linkModalApplyUrl |
 | `ecartDate` | ts | 290 o | (sans commentaire) affiche/emploie : « jamais publi\u00e9 · date illisible » | ecartLigne |
 | `ecartInfo` | — | 744 o | (sans commentaire ni indice) | ecartRendre |
@@ -719,7 +719,9 @@
 | `_secuVerifCodeEleveSite` | found,saisie | 678 o | M-SÉCU-5 : la vérification du code élève au portail du site — empreinte prioritaire (aucune clé requise), clair résiduel puis cache en replis. | doLogin |
 | `_selectProfElClasse` | slug | 48 o | (sans commentaire ni indice) | _profSectionEleves |
 | `_selectTestClasse` | k | 52 o | (sans commentaire ni indice) | _profSectionProfilTest |
-| `_sesRangLocal` | o,W | 118 o | [LOT C2 \u2462.5] la r\u00e9solution locale : chaque appareil traduit l'identit\u00e9 re\u00e7ue en SON propre rang. | sesAppliquer, sesTabPoll |
+| `_sesRangLocal` | o,W | 118 o | [LOT C2 \u2462.5] la r\u00e9solution locale : chaque appareil traduit l'identit\u00e9 re\u00e7ue en SON propre rang. | _sesTabComposer, sesAppliquer |
+| `_sesTabBoite` | r | 1386 o | [LOT E] LE MUR SE DÉCOUPE LUI-MÊME À QUOI ÇA SERT EN CLASSE : | sesTabMonter, sesTabPoll |
+| `_sesTabComposer` | W,o,essai | 2562 o | la composition du mur : on repart TOUJOURS du père recollé, on pose le dévoilement, on laisse le moteur scinder à sa boîte, puis on va au bon morceau. | sesTabPoll |
 | `_showConsoleModal` | title,bodyHtml,actions | 900 o | ===== fin UNIFIER ===== | _b2Check, _b2Confirm, _b2DoSave, _b2ExecReel (+31) |
 | `_showTestBanner` | nomAff | 321 o | (sans commentaire) touche #test-banner | _activerProfilTest |
 | `_siteDelete` | chemin, cb | 289 o | (sans commentaire) affiche/emploie : « , {method: » | atSiteDelete, reinitialiserBrevetDates |
@@ -949,13 +951,14 @@
 | `_drEmpreinte` | ecran | 171 o | (sans commentaire) affiche/emploie : « +_drTexteBloc(bl); });   return (ecran.act·· » | atDrModifsDeLaSeance |
 | `_drEmpreinteTrame` | ecrans | 325 o | [LOT A ③] L'EMPREINTE DE TRAME — le jeton disait le LIEU, jamais le CONTENU (level·chnum·snum·classe·joué) : | — |
 | `_drEntreesEcran` | sk,n | 1130 o | (sans commentaire) affiche/emploie : « Dupliquer ici · Envoyer vers «  » | — |
-| `_drEnvelopper` | — | 11831 o | les enveloppes runtime (le fichier du jeu n'est jamais modifié) : · rendre() → suivi de l'écran courant (colonne, vécu) — couvre va, pas, annuler, vignettes ; | _drVerifier |
+| `_drEnvelopper` | — | 18638 o | les enveloppes runtime (le fichier du jeu n'est jamais modifié) : · rendre() → suivi de l'écran courant (colonne, vécu) — couvre va, pas, annuler, vignettes ; | _drVerifier |
 | `_drFlushTrame` | ancienJeton | 749 o | [flush de bascule] un enregistrement automatique en attente (debounce 900 ms) au moment de changer de séance serait détourné vers la NOUVELLE (perte silencieuse de la dernière édition — prouvé au banc | — |
 | `_drHabiller` | — | 538 o | [É3] dans le CADRE, la barre du haut et la colonne vignettes du moteur font DOUBLON avec la barre MJPC et le sommaire natif : | atDrVueInterne |
 | `_drHeureCloseAu` | c,cb | 209 o | LA TRACE FAIT FOI : une heure close ne se reprend plus, par aucun chemin. | sesReprendre, sesReprisePoser |
-| `_drIdentifierEcrans` | ecrans | 275 o | (sans commentaire) affiche/emploie : « a JAMAIS d » | _drNormaliserTrame, sesBrancherPilote, sesBrancherPiloteTel |
+| `_drIdentifierEcrans` | ecrans | 275 o | (sans commentaire) affiche/emploie : « a JAMAIS d » | _drNormaliserTrame, atDrJouer, sesBrancherPilote, sesBrancherPiloteTel |
 | `_drInitialesDe` | nom | 255 o | [reléve-en-dur · les trois branchements] la maquette n'a plus le dernier mot : | — |
 | `_drLibelles` | — | 442 o | [LOT A \u2466] LES DEUX LIBELL\u00c9S DE LA MAQUETTE \u2014 pourquoi ils ne prenaient pas Le moteur porte en dur « \u00c9crans \u00b7 s\u00e9ance 3 » (.vgt) et « Participation \u00b7 3e Franklin Areth | — |
+| `_drMorceauDuDevoilement` | W,n | 946 o | LE SENS QUI MANQUAIT : du dévoilement cumulé VERS le morceau. `_drVuePere` sait aller du morceau au père ; ici on fait le chemin inverse. | _sesTabComposer |
 | `_drNormaliserTrame` | ecrans | 878 o | (sans commentaire) affiche/emploie : « ; if(typeof r.r!== · ){         if(typeof b.src!== » | _drVerifier, sesPollPilote, sesTabMonter, sesTabPoll (+1) |
 | `_drPaletteBrancher` | d | 269 o | (sans commentaire ni indice) | — |
 | `_drPaletteOuvrir` | d | 6888 o | [palette Maj+Espace — la touche de Paul] d'où que vienne le geste (champ de consigne, réponse au tableau, nulle part), Maj+Espace fait surgir la palette en surimpression : | _drPaletteBrancher |
@@ -967,9 +970,11 @@
 | `_drQuandPret` | fn | 55 o | (sans commentaire ni indice) | atDrVueInterne, sesBrancherPilote, sesTabMonter, sesTelChercherCours |
 | `_drRangDeLEid` | eid,ecrans | 165 o | le rang LOCAL d'une identité — chaque appareil a le sien, et c'est tout l'objet du lot. | _sesRangLocal |
 | `_drRangPere` | n,ecrans | 177 o | le rang du PÈRE : le vécu, la participation et les décisions s'y ancrent toujours. | atVecuEntrer |
+| `_drRatioEcran` | W | 173 o | (sans commentaire) touche #ecran | sesPhoto |
 | `_drRechargerSi` | sk | 172 o | (sans commentaire ni indice) | atEcranDupliquer, atEcranEnvoyer, atEcranSupprimer |
+| `_drRecollerEtapes` | t | 1753 o | [LOT E · COMPLÉMENT 2] recolle les fragments d'étape (`suiteEt`) dans la trame, du dernier vers le premier — une étape coupée en trois se recolle de proche en proche. | _drEnvelopper, _drRefusionner |
 | `_drReconstruire` | — | 165 o | (sans commentaire) touche #at-dr-iframe | _drAfficher |
-| `_drRefusionner` | t | 1933 o | [refusion à l'export] scinde() coupe pour la PROJECTION (« rien n'est jamais refusé ») : écran-fragment grp+suite, dur:0, blocs frag. L'artifice ne doit pas fuir dans la donnée : | _drVuePere |
+| `_drRefusionner` | t | 2504 o | [refusion à l'export] scinde() coupe pour la PROJECTION (« rien n'est jamais refusé ») : écran-fragment grp+suite, dur:0, blocs frag. L'artifice ne doit pas fuir dans la donnée : | _drVuePere |
 | `_drSain` | — | 234 o | [garde] la santé du cadre : le jeu répond et la scène existe. | _drAfficher |
 | `_drSignatureCours` | c | 100 o | la SIGNATURE d'une heure : ce qui la distingue de toute autre. Elle sert au compare-et-efface du pointeur (\u2460) et \u00e0 la banni\u00e8re (\u2461). | _drCloreHeureRestee, _drCoursActifEffacerSi, sesReprendre, sesReprisePoser (+1) |
 | `_drTailleCadre` | — | 207 o | la bo\u00eete du cadre, mesur\u00e9e : c'est elle qui grandit ou r\u00e9tr\u00e9cit quand Paul partage son \u00e9cran en deux, et c'est d'elle que d\u00e9pend le d\u00e9bordement. | _drEnvelopper |
@@ -981,7 +986,7 @@
 | `_drVerifier` | texte | 1141 o | intégrité au boot : le texte chargé EST deroule86.html, prouvé par empreinte | _drAssurerCadre |
 | `_drVifAller` | ev | 223 o | [vif · accès d'un seul appui] ² ou F2, DEPUIS N'IMPORTE OÙ (page ou cadre), amène le curseur dans le champ des initiales — zéro clic, zéro visée. | — |
 | `_drVifInstaller` | — | 6960 o | [participation au vif] la décharge cognitive du direct : un champ de frappe en tête du panneau — taper les initiales (ou le début du prénom) ouvre la fiche de l'élève ; | — |
-| `_drVuePere` | W,n | 781 o | [LOT C3a ④] LE TABLEAU NE MONTRE JAMAIS PLUS QUE CE QUE LE PROFESSEUR A DÉVOILÉ. Quand le pilote est sur un FILS du zoom, il désigne le PÈRE (l'identité de C2 est juste) ; | sesPhoto |
+| `_drVuePere` | W,n | 781 o | (sans commentaire ni indice) | sesPhoto |
 
 
 ## PONT DÉROULÉ — pilotage, lancement, clôture, reprise
@@ -995,8 +1000,8 @@
 | `atDrCompChange` | v | 238 o | (sans commentaire ni indice) | atDrMonter |
 | `atDrEnrAuto` | — | 203 o | (sans commentaire ni indice) | _drEnvelopper |
 | `atDrEnrConfirme` | ok | 407 o | (sans commentaire) affiche/emploie : « at-dr-etat at-dr-enr-ok · Enregistr\u00e9 \u00e0  » — touche #at-dr-etat | _drFlushTrame, atDrReprendre |
-| `atDrJouer` | classeSlug, classeNom | 2028 o | (sans commentaire) affiche/emploie : « heure de d\u00e9part, et      RIEN d · ,       sce.deroule_joue[classeSlug], » — ECRIT au hub | atDrJouerClic |
-| `atDrJouerClic` | — | 2847 o | (sans commentaire) affiche/emploie : « )[0], _fin=_c.split( · Attention : ce d\u00e9but ne laisse aucun temps utile avant  » — touche #at-dr-classe, #at-dr-debut, #at-dr-etat — ECRIT au hub | atDrMonter |
+| `atDrJouer` | classeSlug, classeNom | 3040 o | (sans commentaire) affiche/emploie : « heure de d\u00e9part, et      RIEN d · ici les `eid` ne      naissaient qu » — ECRIT au hub | atDrJouerClic |
+| `atDrJouerClic` | — | 2995 o | (sans commentaire) affiche/emploie : « )[0], _fin=_c.split( · Attention : ce d\u00e9but ne laisse aucun temps utile avant  » — touche #at-dr-classe, #at-dr-debut, #at-dr-etat — ECRIT au hub | atDrMonter |
 | `atDrMaintenant` | — | 151 o | (sans commentaire) touche #at-dr-debut | atDrMonter |
 | `atDrMajUtile` | — | 400 o | (sans commentaire) affiche/emploie : « )-5;   u.innerHTML=(t>0)? ·  min utiles</b> <span class= » — touche #at-dr-debut, #at-dr-utile | atDrMaintenant, atDrMonter, atDrSynchroDebut |
 | `atDrModifsDeLaSeance` | — | 2858 o | (sans commentaire) affiche/emploie : « avait pas faite. C · \u00e9cran remplac\u00e9 par celui      d » | atDrClotureModale |
@@ -1014,19 +1019,19 @@
 
 | fonction | args | taille | ce qu'elle fait | appelée par |
 |---|---|---|---|---|
-| `sesAppliquer` | o | 875 o | (sans commentaire) affiche/emploie : « émetteur : les deux        appareils n » — touche #bgel, #bqui | sesPollPilote, sesTelChercherCours |
+| `sesAppliquer` | o | 2282 o | (sans commentaire) affiche/emploie : « avait poussée) : c · est pas un tableau. Pas d » — touche #bgel, #bqui, #rz | sesPollPilote, sesTelChercherCours |
 | `sesArreter` | — | 62 o | (sans commentaire ni indice) | sesCoursFermer |
 | `sesBandeau` | — | 792 o | le bandeau du pilote : l'état de la session, sobre, dans la tête du déroulé | sesBrancherPilote |
 | `sesBandeauEtat` | ok,muet | 392 o | (sans commentaire) affiche/emploie : « \u25cf session · ses-etat ses-etat-ko » — touche #ses-etat | sesEmettre, sesPollPilote |
 | `sesBootTableau` | — | 1325 o | LA VUE TABLEAU (?vue=tableau) — un terminal muet : elle PEINT, elle n'écrit JAMAIS | — |
-| `sesBootTel` | — | 4001 o | LE TÉLÉPHONE (?vue=tel) — le pilote de poche : prompteur + palette (maquettes 23/08) | — |
+| `sesBootTel` | — | 4761 o | LE TÉLÉPHONE (?vue=tel) — le pilote de poche : prompteur + palette (maquettes 23/08) | — |
 | `sesBrancherPilote` | reprise | 1983 o | (sans commentaire) affiche/emploie : « affichage de l\u2019\u00e9cran · envoi au tableau » | atDrMonter, sesCoursEcrire, sesReprendre |
 | `sesBrancherPiloteTel` | W | 1408 o | (sans commentaire) affiche/emploie : « affichage de l\u2019\u00e9cran · envoi au tableau » | sesTelChercherCours |
 | `sesChemins` | c | 294 o | (sans commentaire) hub /site/cours_actif | sesCoursEcrire, sesEmettre, sesPartEmettre, sesPollPilote (+3) |
 | `sesCoursEcrire` | — | 778 o | CÔTÉ PILOTE — le cours annoncé, la scène émise, les gestes des autres appliqués | atDrJouerClic |
 | `sesCoursFermer` | — | 74 o | (sans commentaire) hub /site/cours_actif | atDrCloreFin |
 | `sesCurseurFin` | el | 355 o | (sans commentaire) affiche/emploie : « on touche : la frappe s » | sesTelPeindre |
-| `sesEmettre` | vite | 277 o | (sans commentaire ni indice) | sesBrancherPilote, sesBrancherPiloteTel, sesPartEmettre |
+| `sesEmettre` | vite | 277 o | (sans commentaire ni indice) | sesBrancherPilote, sesBrancherPiloteTel, sesPartEmettre, sesTelCran |
 | `sesGet` | url,cb | 114 o | (sans commentaire ni indice) | sesPollPilote, sesQROuvrir, sesReprendre, sesReprisePoser (+5) |
 | `sesIncident` | ou,err | 669 o | [LOT A ②] LA CEINTURE — un échec se DIT, il ne s'avale pas Le 24/08, un défaut de données a rendu le pilotage muet en pleine classe : l'exception était absorbée par les try/catch, zéro erreur remontée. | sesBrancherPilote, sesBrancherPiloteTel, sesPartMotif, sesPartRetirer (+2) |
 | `sesOuvrirTableau` | — | 516 o | [LOT B \u2461] LE CHEMIN D'ACC\u00c8S AU TABLEAU \u2014 au patron d'evaluation-qcm La page autonome `?vue=tableau` ne change pas : | sesBandeau |
@@ -1035,7 +1040,7 @@
 | `sesPartMotifs` | ini | 1302 o | (sans commentaire) affiche/emploie : « ; m.className= · +escapeHtml((W.PRENOMS&&W.PRENOMS[ini])··ini)     + » — touche #ses-pmot | sesPartPeindre, sesPartRetirer |
 | `sesPartPeindre` | — | 1344 o | (sans commentaire) affiche/emploie : « <button class= ·  data-ini= » — touche #ses-part-liste | sesPartMotif, sesPartRetirer, sesTelPart, sesTelPlus1 |
 | `sesPartRetirer` | ini,id | 159 o | (sans commentaire) affiche/emploie : « retrait de participation » | sesPartMotifs |
-| `sesPhoto` | — | 2006 o | la PHOTO DE SCÈNE : l'équivalent exact d'envoie() côté données — c'est ELLE qui décide ce que voit le tableau. Gel : | sesEmettre |
+| `sesPhoto` | — | 2486 o | la PHOTO DE SCÈNE : l'équivalent exact d'envoie() côté données — c'est ELLE qui décide ce que voit le tableau. Gel : | sesEmettre |
 | `sesPollPilote` | — | 1026 o | l'agrégat « qui » suit, si la modale est ouverte | sesBrancherPilote |
 | `sesPut` | url,val | 309 o | (sans commentaire) affiche/emploie : « indicateur d · échecs */   return fetch(url,{method: » — ECRIT au hub | _drCoursActifEffacerSi, sesBootTel, sesCoursEcrire, sesCoursFermer (+2) |
 | `sesQRFermer` | — | 86 o | (sans commentaire) touche #ses-qr | sesQROuvrir |
@@ -1048,13 +1053,15 @@
 | `sesTabChercherCours` | — | 513 o | (sans commentaire) affiche/emploie : « Aucun cours en cours » — touche #ses-tab-c — hub /site/cours_actif | sesBootTableau |
 | `sesTabChrono` | chr | 237 o | (sans commentaire) affiche/emploie : « ); if(!c)return;     c.style.display=(chr&&chr.visible)? » — touche #c, #ses-tab-toile | sesTabPoll |
 | `sesTabCle` | c | 70 o | [LOT B \u2462] LE TABLEAU SURVIT \u2014 il TIENT, puis il REPREND La demande de Paul (v\u00e9rifi\u00e9e, et longtemps prise \u00e0 l'envers) : | sesTabChercherCours, sesTabVeillePointeur |
-| `sesTabMonter` | — | 1163 o | (sans commentaire) touche #ses-tab-att, #ses-tab-toile | sesTabChercherCours |
-| `sesTabPoll` | — | 1598 o | (sans commentaire) affiche/emploie : « Pilotage interrompu \u00e0  ·  \u2014 le tableau tient, il reprendra tout seul. » — touche #ses-tab-perdu | sesTabVeillePointeur |
+| `sesTabMonter` | — | 1263 o | (sans commentaire) touche #ses-tab-att, #ses-tab-toile | sesTabChercherCours |
+| `sesTabPoll` | — | 1810 o | (sans commentaire) affiche/emploie : « Pilotage interrompu \u00e0  ·  \u2014 le tableau tient, il reprendra tout seul. » — touche #ses-tab-perdu | sesTabVeillePointeur |
 | `sesTabQui` | o | 840 o | (sans commentaire) affiche/emploie : « );     if(!d){ d=D.createElement( · ; d.className= » — touche #qui, #ses-tab-toile | sesTabPoll |
 | `sesTabVeillePointeur` | — | 648 o | (sans commentaire) touche #ses-tab-c — hub /site/cours_actif | — |
 | `sesTelChercherCours` | — | 1699 o | (sans commentaire) affiche/emploie : « Aucun cours en cours · Nouvelle activit\u00e9 » — touche #ses-tel-titre — hub /site/cours_actif | sesBootTel |
-| `sesTelChrono` | — | 1056 o | le PROMPTEUR : | sesTelPeindre |
+| `sesTelChrono` | — | 1056 o | (sans commentaire) affiche/emploie : « en montrait RIEN. Il dit maintenant le temps d\u00e8s qu · );     var enMarche=!!W.run;     var txt=D.getElementById( » — touche #bmon, #cmin, #csec | sesTelPeindre |
+| `sesTelCran` | v | 139 o | [LOT E] le geste de la télécommande : il pose le cran DANS LA SCÈNE, rien d'autre. Aucun appel à `W.zoom()`, aucun `rendre()` local : | sesBootTel |
 | `sesTelGeste` | g | 2018 o | (sans commentaire) affiche/emploie : « )W.pas(-1);     else if(g=== · )W.pas(1);     else if(g=== » — touche #bmon, #ses-pb-gel, #ses-pb-qui | sesBootTel |
+| `sesTelMajCran` | — | 321 o | l'étiquette et le point suivent le cran de session, d'où qu'il vienne | sesAppliquer, sesTelCran |
 | `sesTelPart` | — | 1274 o | (sans commentaire) affiche/emploie : « ; d.className= · ;   d.innerHTML= » — touche #ses-part | sesBootTel |
 | `sesTelPeindre` | — | 4441 o | (sans commentaire) affiche/emploie : « <div class= · >\u00c9CRAN  » — touche #ses-pb-gel, #ses-pb-qui, #ses-tel-pr | sesAppliquer, sesBrancherPiloteTel, sesPollPilote, sesTelChercherCours (+1) |
 | `sesTelPlus1` | ini | 224 o | (sans commentaire) affiche/emploie : « ); }catch(e){ sesIncident( · ,e); }   /* [LOT B \u2460 A-6] motif par d\u00e9faut ; l » | sesPartPeindre |
