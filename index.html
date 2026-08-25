@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.66.0";
+var APP_VERSION="8.65.1";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -15306,184 +15306,6 @@ function _drAfficher(on){
 /* les enveloppes runtime (le fichier du jeu n'est jamais modifié) :
    · rendre() → suivi de l'écran courant (colonne, vécu) — couvre va, pas, annuler, vignettes ;
    · sauve() → enregistrement automatique de la trame (tout geste d'édition commence par lui). */
-/* ═════════════════════════════════════════════════════════════════════════════
-   LOT TABLEAU-ÉCRITURE — le mur suit ce que Paul écrit.
-   Tout ce qui suit APPELLE des fonctions déjà écrites : `deborde` et `zoom` et `degorge`
-   du moteur, `scinde` par leur intermédiaire, `_drCopieAuto` et `atDrEnrAuto` pour les
-   écritures, `sesEmettre` pour l'annonce. Rien n'est réécrit à côté : le moteur n'est pas
-   touché d'un octet, on l'enveloppe.
-   ════════════════════════════════════════════════════════════════════════════ */
-
-/* [TE ①] L'ANNONCE DU CONTENU — extraite de l'enveloppe de `sauve`, inchangée (même
-   temporisation de 950 ms, postérieure au débounce de 900 de `_drCopieAuto` : jamais une
-   annonce avant la marchandise). Elle a désormais DEUX déclencheurs : le geste qui sauve,
-   et la frappe — c'est tout ce qui manquait au tableau distant. */
-function _drAnnoncerTrame(vite){
-  clearTimeout(SES.trameT);
-  SES.trameT=setTimeout(function(){ SES.trameMaj=Date.now(); sesEmettre(!!vite); },950);
-}
-
-/* [TE ②] LA SURFACE PROJETÉE, quand elle est joignable : la fenêtre tableau ouverte par
-   le moteur (le poste de Paul), et — sur la page `?vue=tableau` — sa propre toile, où
-   `win` est le stub posé par `sesTabMonter`. Le tableau d'un AUTRE appareil n'est pas
-   joignable : il ne peut pas être mesuré d'ici, et c'est dit au rapport. */
-function _drSurfaceProjetee(){
-  try{ var W=drWin(); if(!W)return null;
-    var w=W.win; if(!w||w.closed)return null;
-    var d=w.document; if(!d)return null;
-    return d.getElementById('t')||null;
-  }catch(e){ return null; }
-}
-/* le débordement du mur — MÊME LOI que `deborde()` du moteur (scrollHeight ment en flex),
-   appliquée à la surface projetée, dont les proportions ne sont pas celles de la scène. */
-function _drDebordeSurface(t){
-  if(!t)return false;
-  var H=t.clientHeight; if(!H)return false;
-  var bas=0;
-  for(var k=0;k<t.children.length;k++){ var el=t.children[k];
-    if(el.classList&&(el.classList.contains('plein')||el.classList.contains('img-plein')
-       ||el.classList.contains('sch')))continue;
-    var b=el.offsetTop+el.offsetHeight; if(b>bas)bas=b; }
-  return bas>H+4;
-}
-function _drDebordeQuelquePart(){
-  var W=drWin(); if(!W)return false;
-  var sc=false; try{ sc=!!AT_ZOOM.vraiDeborde.call(W); }catch(e){}
-  return sc||_drDebordeSurface(_drSurfaceProjetee());
-}
-
-/* ═══ [TE ③④⑤] LE ZOOM — crans du moteur, PT=[24,32,38,44,52].
-   Le plancher du dézoom AUTOMATIQUE est 32 pt (cran 1) : c'est le minimum de Paul au
-   tableau. Le cran 24 existe et reste accessible À LA MAIN — c'est celui qu'il choisit
-   pour redonner la vue d'ensemble ; l'automatique ne l'emploie jamais. ═══ */
-var DR_PLANCHER_AUTO=1;
-var AT_ZOOM={plafond:null, auto:false, ajuste:false, vraiDeborde:null};
-function _drPoserCran(n){
-  var W=drWin(); if(!W)return false;
-  var r=W.document.getElementById('rz'); if(!r)return false;
-  n=Math.max(0,Math.min(4,n));
-  if(n===(W.iz|0))return false;
-  r.value=String(n);
-  AT_ZOOM.auto=true;
-  try{ W.zoom(); }catch(e){}
-  AT_ZOOM.auto=false;
-  return true;
-}
-function _drAjusterZoom(){
-  var W=drWin(); if(!W||typeof W.iz!=='number')return;
-  if(W.ficheOuverte&&W.ficheOuverte[0]===W.i)return;   /* la fiche ouverte a son propre ajustement, par pas de 5 % */
-  if(AT_ZOOM.plafond===null)AT_ZOOM.plafond=W.iz|0;
-  var garde=0;
-  /* ③ ça déborde : on descend d'UN cran, on REMESURE, on redescend s'il le faut */
-  while(_drDebordeQuelquePart()&&(W.iz|0)>DR_PLANCHER_AUTO&&garde++<8){
-    if(!_drPoserCran((W.iz|0)-1))break;
-  }
-  /* ④ LA REMONTÉE EST SYMÉTRIQUE : cran par cran, JAMAIS au-dessus de celui d'où l'on
-     est parti — le cran choisi à la main reste le plafond (⑤). */
-  garde=0;
-  while(!_drDebordeQuelquePart()&&(W.iz|0)<AT_ZOOM.plafond&&garde++<8){
-    var av=W.iz|0;
-    if(!_drPoserCran(av+1))break;
-    if(_drDebordeQuelquePart()){ _drPoserCran(av); break; }   /* on ne remonte pas dans le vide */
-  }
-}
-
-/* ═══ [TE ⑥] À 32, LA COUPURE OPÈRE — et elle vaut pour TOUT champ.
-   On ne réécrit pas la coupure : `scinde()` sait déjà couper une consigne, ses étapes,
-   des réponses, LE TEXTE d'une réponse unique (initiale conservée, `suiteRep` posé), le
-   texte d'un bloc et les blocs d'une fiche. On élargit seulement CE QUI LA DÉCLENCHE :
-   `deborde()` du moteur répond désormais aussi du mur. Deux précautions tiennent l'ordre
-   voulu — dézoomer d'abord, couper ensuite :
-     • pendant la séquence de dézoom (`AT_ZOOM.ajuste`), le mur ne parle pas : sinon on
-       couperait avant d'avoir réduit ;
-     • au-dessus du plancher, le mur ne parle pas non plus : il reste du zoom à rendre.
-   Au plancher — ou à 24 quand Paul l'a choisi — le mur commande, et `verifDeborde` du
-   moteur coupe EN RESTAURANT le champ et le curseur, comme il le fait déjà. ═══ */
-function _drEnvelopperDeborde(W){
-  if(AT_ZOOM.vraiDeborde||typeof W.deborde!=='function')return;
-  AT_ZOOM.vraiDeborde=W.deborde;
-  W.deborde=function(){
-    var sc=false; try{ sc=!!AT_ZOOM.vraiDeborde.apply(W,arguments); }catch(e){}
-    if(sc)return true;
-    if(AT_ZOOM.ajuste)return false;
-    if((W.iz|0)>DR_PLANCHER_AUTO)return false;
-    return _drDebordeSurface(_drSurfaceProjetee());
-  };
-}
-
-/* ═══ [TE ⑦] LA PULSATION DU DERNIER MOT — spécification arrêtée par Paul :
-   UNE seule pulsation, UNE seule couleur, sur LE DERNIER MOT TAPÉ · dix secondes puis
-   elle s'éteint · elle SAUTE au nouveau mot dès la reprise de la frappe. Aucun
-   historique, aucun code de couleurs, AUCUNE MARQUE FIGÉE : la marque est retirée du
-   document, pas seulement décolorée — un repère qui doit être déchiffré n'est plus un
-   repère. Elle vit sur LE TABLEAU (c'est l'élève qui en a besoin), doucement. ═══ */
-function _drCssPulsation(d){
-  try{
-    if(!d||d.getElementById('dr-puls-css'))return;
-    var st=d.createElement('style'); st.id='dr-puls-css';
-    st.textContent='.dr-puls{border-radius:.14em;padding:0 .06em;'
-      +'animation:drpuls 2.2s ease-in-out infinite}'
-      +'@keyframes drpuls{0%,100%{background:rgba(201,154,78,0)}50%{background:rgba(201,154,78,.32)}}'
-      +'@media (prefers-reduced-motion:reduce){.dr-puls{animation:none;background:rgba(201,154,78,.24)}}';
-    (d.head||d.body).appendChild(st);
-  }catch(e){}
-}
-function _drDepulser(d){
-  try{ if(!d)return;
-    var z=d.querySelectorAll('.dr-puls');
-    for(var q=0;q<z.length;q++){ var v=z[q];
-      if(v.parentNode)v.parentNode.replaceChild(d.createTextNode(v.textContent),v); }
-  }catch(e){}
-}
-/* on marque le mot compté DEPUIS LA FIN : l'élément du tableau porte souvent un préfixe
-   que le champ n'a pas (l'initiale de l'élève, la pastille de consigne). Compter à
-   l'envers rend le repère juste dans les deux cas. */
-function _drPulser(racine,cle,depuisFin){
-  try{
-    if(!racine||!cle)return false;
-    var d=racine.ownerDocument||racine; if(!d)return false;
-    _drCssPulsation(d); _drDepulser(d);
-    var el=racine.querySelector('[data-s="'+cle+'"]'); if(!el)return false;
-    var mots=[], w=d.createTreeWalker(el,4,null,false), n;
-    while((n=w.nextNode())){
-      if(n.parentNode&&n.parentNode.classList&&n.parentNode.classList.contains('ini'))continue;
-      var re=/\S+/g, m;
-      while((m=re.exec(n.nodeValue||'')))mots.push({n:n,d:m.index,f:m.index+m[0].length});
-    }
-    if(!mots.length)return false;
-    var k=mots.length-1-(depuisFin|0);
-    if(k<0)k=0; if(k>mots.length-1)k=mots.length-1;
-    var c=mots[k], apres=c.n.splitText(c.d); apres.splitText(c.f-c.d);
-    var sp=d.createElement('span'); sp.className='dr-puls';
-    apres.parentNode.replaceChild(sp,apres); sp.appendChild(apres);
-    clearTimeout(AT_PONT._pulsT);
-    AT_PONT._pulsT=setTimeout(function(){ _drDepulser(d); },10000);   /* dix secondes, puis elle s'éteint */
-    return true;
-  }catch(e){ return false; }
-}
-/* combien de mots séparent le curseur de la fin du champ : 0 = le dernier mot est celui
-   qu'on tape. C'est ce compte, et non une position en pixels, qui survit à un changement
-   de taille — raison d'être de la pulsation. */
-function _drMotDepuisFin(W,champ){
-  try{
-    var s=W.getSelection(); if(!s||!s.rangeCount)return 0;
-    var r=s.getRangeAt(0).cloneRange();
-    var fin=W.document.createRange(); fin.selectNodeContents(champ);
-    fin.setStart(r.endContainer,r.endOffset);
-    var apres=fin.toString();
-    var n=(apres.match(/\S+/g)||[]).length;
-    if(n&&/^\S/.test(apres))n--;    /* le fragment collé au curseur appartient au mot courant */
-    return n;
-  }catch(e){ return 0; }
-}
-function _drPulsationFrappe(W,champ){
-  var h=champ.closest?champ.closest('[data-s]'):null; if(!h)return;
-  var cle=h.dataset&&h.dataset.s; if(!cle)return;
-  var k=_drMotDepuisFin(W,champ);
-  AT_PONT._mot={s:cle,k:k,ts:Date.now()};              /* pour le tableau distant, via la scène */
-  _drPulser(_drSurfaceProjetee(),cle,k);
-}
-
 function _drEnvelopper(){
   var W=drWin(); if(!W||W.__pontEnv)return;
   var _lastI=null;
@@ -15611,38 +15433,6 @@ function _drEnvelopper(){
       }catch(e){}
       return r; };
   }
-  /* ═══ [LOT TABLEAU-ÉCRITURE] LA FRAPPE — un seul point d'entrée pour les sept points.
-     Le moteur écoute déjà `input` (il fait `lire`, `envoie`, `majVignette`, puis
-     `verifDeborde` à 220 ms) mais il n'appelle JAMAIS `sauve()` : c'est pourquoi le
-     tableau distant restait au dernier état enregistré. Notre écouteur passe après le
-     sien, dans cet ordre : on ajuste le zoom (②③④⑤), on pose la pulsation (⑦), puis on
-     annonce le contenu (①). La coupure (⑥) vient ensuite, par `verifDeborde` du moteur,
-     qui restaure le champ et le curseur. VAUT DANS LES DEUX RÉGIMES : Paul teste ses
-     séances en préparation et doit y voir le comportement réel. ═══ */
-  _drEnvelopperDeborde(W);
-  var vraiZoom=W.zoom;
-  if(typeof vraiZoom==='function'){
-    W.zoom=function(){
-      var r=vraiZoom.apply(W,arguments);
-      /* ⑤ LE ZOOM MANUEL EST SOUVERAIN : le geste de Paul fixe le plafond, et rien ne le
-         contrarie. S'il monte alors que ça déborde, on ne refuse pas — la coupure prendra
-         le relais, et dès qu'il effacera, ④ lui rendra son cran. */
-      if(!AT_ZOOM.auto)AT_ZOOM.plafond=W.iz|0;
-      return r; };
-  }
-  W.document.addEventListener('input',function(ev){
-    var champ=ev.target; if(!champ||!champ.isContentEditable)return;
-    if(champ.id==='recit'||(champ.closest&&champ.closest('#recit')))return;
-    var z=W.document.getElementById('contenu');
-    if(!z||!champ.closest||!z.contains(champ))return;
-    AT_ZOOM.ajuste=true;
-    try{ _drAjusterZoom(); }catch(e){}
-    AT_ZOOM.ajuste=false;
-    try{ _drPulsationFrappe(W,champ); }catch(e){}
-    try{ atDrEnrAuto(); }catch(e){}    /* préparation : la trame s'enregistre (débounce 900) */
-    try{ _drCopieAuto(); }catch(e){}   /* en classe : la copie au fil de l'eau (débounce 900) */
-    _drAnnoncerTrame(false);           /* ① puis l'annonce, à 950 : le tableau distant recharge */
-  });
   W.__pontEnv=true;
 }
 /* la bo\u00eete du cadre, mesur\u00e9e : c'est elle qui grandit ou r\u00e9tr\u00e9cit quand Paul partage
@@ -16615,7 +16405,8 @@ function sesBrancherPilote(reprise){
     var vEnvoie=W.envoie; W.envoie=function(){ var r; try{ r=vEnvoie.apply(W,arguments); }catch(e){ sesIncident('envoi au tableau',e); } sesEmettre(); return r; };
     var vQui=W.quiParle; W.quiParle=function(){ var r; try{ r=vQui.apply(W,arguments); }catch(e){ sesIncident('qui a particip\u00e9',e); } sesEmettre(); return r; };
     var vSauve=W.sauve; W.sauve=function(){ var r=vSauve.apply(W,arguments);
-      if(AT_DR_REGIME==='classe')_drAnnoncerTrame(false);   /* [TE \u2460] l'annonce est EXTRAITE : m\u00eame code pour le geste qui sauve et pour la frappe */
+      if(AT_DR_REGIME==='classe'){ clearTimeout(SES.trameT);
+        SES.trameT=setTimeout(function(){ SES.trameMaj=Date.now(); sesEmettre(); },950); }   /* APRÈS la poussée réelle de la copie (débounce 900 de _drCopieAuto) — jamais une annonce avant la marchandise */
       return r; };
     var vPA=W.partAjoute; W.partAjoute=function(){ var r=vPA.apply(W,arguments); sesPartEmettre(); return r; };
     var vPR=W.partRetire; W.partRetire=function(){ var r=vPR.apply(W,arguments); sesPartEmettre(); return r; };
@@ -16681,7 +16472,6 @@ function sesPhoto(){
           vues:(_vp?_vp.vues:vues), gele:!!W.gele,
           fiche:ficheMontree?[n,(_vp?(_vp.off+jf):jf)]:null, ficheEid:(ficheMontree?(_drEidDuRang(n,W.ECRANS)||null):null),
           chrono:chr, quiOn:!!W.quiOn, qui:qui,
-          mot:((AT_PONT._mot&&(Date.now()-AT_PONT._mot.ts)<10000)?AT_PONT._mot:null),   /* [TE ⑦] la pulsation voyage */
           trameMaj:SES.trameMaj, origine:SES.id, ts:Date.now()};
   SES.gelePhoto=p2;
   return p2;
@@ -16987,9 +16777,6 @@ function sesTabPoll(){
           W.ficheOuverte=o.fiche?[_n2,o.fiche[1]]:null; W.ficheAnime=false;   /* [LOT C3a ④] mon rang */
           W.gele=false;
           try{ W.envoie(); }catch(e2){}
-          /* [TE ⑦] la pulsation se repose APRÈS la repeinture (envoie() régénère la toile) */
-          try{ if(o.mot&&(Date.now()-o.mot.ts)<10000)_drPulser(_drSurfaceProjetee(),o.mot.s,o.mot.k);
-               else _drDepulser(((_drSurfaceProjetee()||{}).ownerDocument)||null); }catch(e6){}
         }
         /* le gel : on ne repeint RIEN — l'image reste, c'est le contrat d'envoie() */
         sesTabChrono(o.chrono);
@@ -17119,7 +16906,8 @@ function sesBrancherPiloteTel(W){
     var vEnvoie=W.envoie; W.envoie=function(){ var r; try{ r=vEnvoie.apply(W,arguments); }catch(e){ sesIncident('envoi au tableau',e); } sesEmettre(); return r; };
     var vQui=W.quiParle; W.quiParle=function(){ var r; try{ r=vQui.apply(W,arguments); }catch(e){ sesIncident('qui a particip\u00e9',e); } sesEmettre(); return r; };
     var vSauve=W.sauve; W.sauve=function(){ var r=vSauve.apply(W,arguments);
-      _drAnnoncerTrame(true);   /* [TE \u2460] */
+      clearTimeout(SES.trameT);
+      SES.trameT=setTimeout(function(){ SES.trameMaj=Date.now(); sesEmettre(true); },950);
       return r; };
     var vPA=W.partAjoute; W.partAjoute=function(){ var r=vPA.apply(W,arguments); sesPartEmettre(); sesTelPeindre(); return r; };
     var vPR=W.partRetire; W.partRetire=function(){ var r=vPR.apply(W,arguments); sesPartEmettre(); sesTelPeindre(); return r; };
