@@ -725,6 +725,10 @@ body.admin-mode .admin-only { display: block; }
 .ses-corps-tel{background:#fbf7ee}
 .ses-tel{position:fixed;inset:0;display:flex;flex-direction:column;background:#fbf7ee;z-index:99998;font-family:"EB Garamond",Garamond,serif;color:#22303f}
 .ses-tel-chr:empty{display:none}
+.ses-tel-zoom{display:flex;align-items:center;gap:10px;background:#241d18;border-top:1px solid #3a2f26;padding:10px 14px}
+.ses-tel-zoom input[type=range]{flex:1;accent-color:#c99a4e;height:34px}
+.ses-tel-zt{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#8a7a5a;white-space:nowrap}
+.ses-tel-zl{font-size:.95rem;color:#f0e7db;font-variant-numeric:tabular-nums;min-width:3.4em;text-align:right}
 .ses-tel-bandeau{background:#2b241d;color:#fff;padding:12px 14px;font-weight:700;font-size:1.05rem;display:flex;justify-content:space-between;align-items:center}
 .ses-tel-chr{background:#c99a4e;color:#2b241d;border-radius:999px;padding:2px 10px;font-variant-numeric:tabular-nums}
 .ses-tel-prompteur{flex:1;overflow:auto;padding:12px 12px 4px}
@@ -2829,7 +2833,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.68.0";
+var APP_VERSION="8.69.0";
 var APP_VERSION_DATE="2026-08-25";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -15450,6 +15454,127 @@ function _drEnvelopper(){
       return r;
     };
   }
+  /* ═══ [LOT E · COMPLÉMENT 2] AUCUN BLOC NE DÉBORDE — L'ÉTAPE SEULE SE COUPE AUSSI ═══
+     À QUOI ÇA SERT EN CLASSE : une consigne dont l'unique étape est longue ne doit
+     jamais sortir de l'écran — ni au mur, ni sur l'écran de contrôle du professeur.
+     « Rien n'est jamais refusé : on coupe » vaut aussi pour une étape seule.
+     LE TROU, SUR PIÈCES (moteur, `scinde`) : la cascade coupe les étapes par moitié
+     SI ELLES SONT PLUS D'UNE, les réponses, le texte d'une réponse unique, les blocs
+     d'une fiche, le `txt` d'une consigne sans étapes. Une consigne à UNE étape longue
+     tombe dans le dernier `else`, qui coupe le `txt` — court, donc `coupeTexte` rend
+     `null` — et rien ne se passe. Mesuré : 115 px hors de l'écran du professeur.
+     LA PARADE, SANS TOUCHER AU MOTEUR : on coupe l'étape en deux AVANT d'appeler
+     `scinde`, ce qui la fait tomber dans sa propre branche « plus d'une étape » —
+     le moteur fait alors tout le reste (frag, groupe, rang de suite) comme pour les
+     autres cas. Le fragment reçoit `suiteEt`, du même patron que `suiteRep`, et se
+     recolle au dézoom et à l'export : l'artifice ne fuit jamais dans la donnée. ═══ */
+  if(!W.__scindeEtape && typeof W.scinde==='function'){
+    W.__scindeEtape=true;
+    var _scindeNu=W.scinde;
+    W.scinde=function(e){
+      var _marque=null, _q=null;
+      try{
+        var _b=e&&e.blocs&&e.blocs[0];
+        /* MÊME TROU, MÊME PATRON : une question dont l'énoncé est long et qui n'a
+           qu'UNE réponse (ou aucune). La branche « plus d'une réponse » ne prend pas ;
+           celle de la réponse unique coupe le TEXTE DE LA RÉPONSE, qui est court, donc
+           elle échoue — et le `else if` empêche de retomber sur la coupe de `q`.
+           Mesuré : 91 px hors de l'écran du professeur.
+           On retire donc les réponses le temps de l'appel : le moteur tombe alors dans
+           sa propre branche `else`, coupe `q`, et fabrique le fragment. Les réponses
+           suivent le morceau reporté — exactement ce que le moteur fait déjà de la
+           ligne vide quand il coupe des réponses. */
+        if(_b&&_b.t==='question'&&_b.q&&typeof W.coupeTexte==='function'){
+          var _pl=(_b.reps||[]).filter(function(r){return r&&(r.i||r.r);});
+          if(_pl.length<=1 && W.coupeTexte(_b.q)
+             && (_pl.length===0 || !W.coupeTexte(_pl[0].r))){
+            _q={reps:_b.reps, vues:(_b.vues|0)};
+            _b.reps=[]; _b.vues=0;
+          }
+        }
+        if(_b&&_b.t==='consigne'&&_b.etapes&&_b.etapes.length===1&&_b.etapes[0]
+           &&typeof W.coupeTexte==='function'){
+          var _c=W.coupeTexte(_b.etapes[0]);
+          if(_c){
+            _marque={vu:(_b.vues|0)};
+            _b.etapes=[_c[0],_c[1]];
+            /* DÉVOILEMENT : une étape montrée reste montrée des deux côtés de la coupe.
+               `2` ici donne, par la formule du moteur, 1 au père et 1 au fragment. */
+            _b.vues=(_marque.vu>=1)?2:0;
+          }
+        }
+      }catch(x1){}
+      var _r=_scindeNu.apply(W,arguments);
+      try{
+        if(_marque){
+          var _f=W.ECRANS[W.i], _fb=_f&&_f.blocs&&_f.blocs[0];
+          if(_fb&&_fb.t==='consigne'&&_fb.etapes&&_fb.etapes.length===1)_fb.suiteEt=true;
+        }
+        if(_q){
+          var _f2=W.ECRANS[W.i], _fb2=_f2&&_f2.blocs&&_f2.blocs[0];
+          if(_fb2&&_fb2.t==='question'){ _fb2.reps=_q.reps; _fb2.vues=_q.vues; _fb2.suiteQ=true; }
+          else if(_b){ _b.reps=_q.reps; _b.vues=_q.vues; }   /* rien n'a été coupé : on rend ce qu'on a pris */
+        }
+      }catch(x2){ if(_q&&e&&e.blocs&&e.blocs[0]){ e.blocs[0].reps=_q.reps; e.blocs[0].vues=_q.vues; } }
+      return _r;
+    };
+  }
+  /* LE RECOLLEMENT — au dézoom. Une étape coupée redevient UNE étape, jamais deux.
+     Les `vues` ne s'additionnent pas : deux fragments d'une même étape ne font pas
+     deux étapes dévoilées, sinon le mur (« dévoilement cumulé → morceau ») et la
+     reprise à froid se tromperaient d'un cran. On prend le MAX, borné au nombre
+     réel d'étapes. */
+  if(!W.__reabsEtape && typeof W.reabsorbe==='function'){
+    W.__reabsEtape=true;
+    var _reabsNu=W.reabsorbe;
+    W.reabsorbe=function(){
+      try{ _drRecollerEtapes(W.ECRANS); }catch(x3){}
+      return _reabsNu.apply(W,arguments);
+    };
+  }
+  /* ═══ [LOT E · COMPLÉMENT] LE FILET DE LA FENÊTRE TABLEAU LOCALE (Windows+K) ═══
+     À QUOI ÇA SERT EN CLASSE : la fenêtre projetée ne doit JAMAIS couper une étape.
+     Le mur distant a ce filet depuis ce lot ; la fenêtre locale ne l'avait pas, et
+     c'était une dette déclarée — Paul ne promeut pas avec une dette.
+     DEUX CAUSES, DEUX PARADES, ni l'une ni l'autre dans le moteur :
+     ① la fenêtre n'est pas en 16/9 (glissée, pas en plein écran, écran 16/10) : le
+        gabarit `.e` a une hauteur ET une largeur imposées, il se DÉFORME, le texte
+        se recompose sur moins de largeur et déborde. On le CONTIENT au format de
+        l'écran de contrôle — des bandes, comme un diaporama, jamais de déformation.
+        Sur une fenêtre déjà 16/9, cette règle ne change rien : mesuré.
+     ② la cascade de `degorge` ne vérifie que l'écran courant (la garde ci-dessous le
+        ramène au père à chaque tour) : un morceau suivant peut déborder. On MESURE
+        CE QUI EST PEINT dans la fenêtre — pas ce que compose le cadre, qui rend
+        l'écran entier, grisé compris — et on ne recoupe que si la classe perdrait
+        vraiment quelque chose. Le professeur ne bouge pas : la garde restaure son
+        rang. La vue distante est exclue : elle a déjà son propre filet. ═══════════ */
+  if(!W.__filetTableau && typeof W.envoie==='function' && SES.mode!=='tableau'){
+    W.__filetTableau=true;
+    var _envoieNu2=W.envoie;
+    W.envoie=function(){
+      var r=_envoieNu2.apply(W,arguments);
+      try{
+        var _wi=W.win;
+        if(_wi && !_wi.closed && !W.gele){
+          var _D=_wi.document, _t=_D&&_D.getElementById('t');
+          if(_t){
+            if(!_D.getElementById('mjpc-contenir')){
+              var _st=_D.createElement('style'); _st.id='mjpc-contenir';
+              _st.textContent='.e{height:auto;width:min(100vw,calc(100vh*16/9));max-width:100vw;max-height:100vh}';
+              (_D.head||_D.body).appendChild(_st);
+            }
+            var _bas=0, _en=_t.children;
+            for(var _k=0;_k<_en.length;_k++){ var _b=_en[_k].offsetTop+_en[_k].offsetHeight; if(_b>_bas)_bas=_b; }
+            if(_bas>_t.clientHeight+4 && !W.__filetEnCours && (W.__filetTours|0)<8){
+              W.__filetEnCours=true; W.__filetTours=(W.__filetTours|0)+1;
+              setTimeout(function(){ try{ W.degorge(true); }catch(e1){} W.__filetEnCours=false; },0);
+            } else if(_bas<=_t.clientHeight+4){ W.__filetTours=0; }
+          }
+        }
+      }catch(e2){}
+      return r;
+    };
+  }
   if(!W.__scissionGarde && typeof W.degorge==='function'){
     W.__scissionGarde=true;
     var _vraiDegorge=W.degorge;
@@ -16038,6 +16163,10 @@ function _drCopieAuto(){
    réponses recombinées (y compris un texte coupé, suiteRep), fiches réunies,
    durées rendues au père. La colonne, la copie et le récit voient l'écran ENTIER. */
 function _drRefusionner(t){
+  /* [LOT E · COMPLÉMENT 2] les fragments d'étape se recollent AVANT la refusion :
+     l'export, la copie au hub, la relecture et le récit ne doivent jamais voir
+     deux moitiés là où le professeur a écrit une étape. */
+  try{ _drRecollerEtapes(t); }catch(eE){}
   var out=[];
   for(var k=0;k<t.length;k++){
     var e=t[k];
@@ -16051,6 +16180,10 @@ function _drRefusionner(t){
               if(b.etapes&&b.etapes.length){ d.etapes=(d.etapes||[]).concat(b.etapes); }
               else if(b.txt&&b.txt!==d.txt){ d.txt=(d.txt||'')+' '+b.txt; }
               d.vues=(d.vues||0)+(b.vues||0);
+              /* [LOT E · COMPLÉMENT 2] le compte ne dépasse jamais le nombre réel
+                 d'étapes : sans cette borne, une étape recollée en compterait deux
+                 et le mur se tromperait d'un cran. */
+              if(d.etapes&&d.etapes.length)d.vues=Math.min(d.vues,d.etapes.length);
             } else if(b.t==='question'){
               if(b.reps&&b.reps.length&&b.reps[0].suiteRep&&d.reps&&d.reps.length){
                 var dr=d.reps[d.reps.length-1]; dr.r=(dr.r||'')+(b.reps[0].r||'');
@@ -16434,7 +16567,15 @@ atVuesRappeler();
 var SES={ id:'ap_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7),
   mode:(location.search.match(/[?&]vue=(tableau|tel)/)||[])[1]||null,
   actif:false, base:'', ctx:null, ts:0, trameMaj:0, partMaj:0,
-  applique:false, emT:null, pollT:null, okDepuis:0, perduDepuis:0, gelePhoto:null };
+  applique:false, emT:null, pollT:null, okDepuis:0, perduDepuis:0, gelePhoto:null,
+  /* [LOT E] LE CRAN DE ZOOM EST UN ÉTAT DE SESSION, PAS UN ÉTAT D'APPAREIL.
+     Il sert la CLASSE : c'est la taille du texte au mur. Chaque appareil peut le
+     poser (la réglette du PC, la télécommande du téléphone) et TOUS l'adoptent en
+     le recevant, sans toucher à leur propre affichage — sans quoi deux pilotes
+     se le voleraient à chaque geste. `ratio` : les proportions de l'écran de
+     contrôle du PC, pour que le mur découpe comme lui. Absent quand la source est
+     le téléphone (son cadre n'a pas de taille) : le mur prend alors sa boîte réelle. */
+  cran:null, izVu:null, ratio:null, boiteVue:null };
 
 /* ── la garde de la VUE : première ligne de défense, AVANT tout — la page tableau
       ne laisse partir AUCUNE requête d'écriture, et les compte pour le prouver ── */
@@ -16514,6 +16655,59 @@ function sesBrancherPilote(reprise){
    recollement (étapes concaténées, réponse coupée recollée, fiches réunies, `vues`
    additionnées). Les morceaux SUIVANTS sont exclus du calcul : ce qui n'a pas été montré
    ne peut pas être compté. Rien n'est créé ici : on réutilise. ═══ */
+/* [LOT E] Les proportions de l'écran de contrôle du pilote. Mesurées, jamais
+   supposées : au téléphone le cadre est en display:none, donc la mesure est nulle
+   et la fonction rend `null` — c'est exactement le signal dont le mur a besoin. */
+/* [LOT E · COMPLÉMENT 2] recolle les fragments d'étape (`suiteEt`) dans la trame,
+   du dernier vers le premier — une étape coupée en trois se recolle de proche en
+   proche. Utilisée au dézoom (enveloppe de `reabsorbe`) et à l'export
+   (`_drRefusionner`). Rien n'est ajouté : on concatène et on efface la marque. */
+function _drRecollerEtapes(t){
+  if(!Array.isArray(t))return t;
+  for(var k=t.length-1;k>=1;k--){
+    var e=t[k]; if(!(e&&e.suite&&e.grp))continue;
+    var fb=e.blocs&&e.blocs[0];
+    if(!fb||!fb.suiteEt||!fb.etapes||!fb.etapes.length)continue;
+    var pr=t[k-1]; if(!pr||pr.grp!==e.grp)continue;      /* le morceau précédent du MÊME groupe */
+    var pb=null, j;
+    for(j=(pr.blocs||[]).length-1;j>=0;j--){
+      if(pr.blocs[j]&&pr.blocs[j].t==='consigne'
+         &&(!fb.frag||pr.blocs[j].frag===fb.frag)
+         &&pr.blocs[j].etapes&&pr.blocs[j].etapes.length){ pb=pr.blocs[j]; break; }
+    }
+    if(!pb)continue;
+    var vuP=(pb.vues|0), vuF=(fb.vues|0);
+    pb.etapes[pb.etapes.length-1]=String(pb.etapes[pb.etapes.length-1]||'')+' '+String(fb.etapes[0]||'');
+    fb.etapes=fb.etapes.slice(1);
+    delete fb.suiteEt;
+    pb.vues=Math.min(Math.max(vuP,vuF), pb.etapes.length);   /* MAX, pas somme */
+  }
+  /* et l'énoncé de question coupé (`suiteQ`) : il se recolle de la même façon, et
+     les réponses, parties avec le morceau reporté, reviennent à leur question. */
+  for(var k2=t.length-1;k2>=1;k2--){
+    var e2=t[k2]; if(!(e2&&e2.suite&&e2.grp))continue;
+    var fq=e2.blocs&&e2.blocs[0];
+    if(!fq||!fq.suiteQ)continue;
+    var pr2=t[k2-1]; if(!pr2||pr2.grp!==e2.grp)continue;
+    var pq=null, j2;
+    for(j2=(pr2.blocs||[]).length-1;j2>=0;j2--){
+      if(pr2.blocs[j2]&&pr2.blocs[j2].t==='question'
+         &&(!fq.frag||pr2.blocs[j2].frag===fq.frag)){ pq=pr2.blocs[j2]; break; }
+    }
+    if(!pq)continue;
+    pq.q=String(pq.q||'')+' '+String(fq.q||'');
+    var plq=(pq.reps||[]).filter(function(r){return r&&(r.i||r.r);});
+    pq.reps=plq.concat(fq.reps||[]);
+    pq.vues=Math.max(pq.vues|0, fq.vues|0);
+    fq.reps=[]; fq.q=''; delete fq.suiteQ;
+  }
+  return t;
+}
+function _drRatioEcran(W){
+  try{ var b=W.document.getElementById('ecran').getBoundingClientRect();
+    if(b.height>40&&b.width>40)return +(b.width/b.height).toFixed(4); }catch(e){}
+  return null;
+}
 function _drVuePere(W,n){
   var t=(W&&W.ECRANS)||[], e=t[n];
   if(!e||!e.suite)return null;
@@ -16554,7 +16748,15 @@ function sesPhoto(){
      fait foi : le pilote peut avoir 13 \u00e9crans et le tableau 11, les trois d\u00e9signent le
      m\u00eame. C'est le point le plus \u00e0 risque du lot, donc le dernier bascul\u00e9. */
   var _vp=null; try{ if(e.suite)_vp=_drVuePere(W,n); }catch(e8){}   /* [LOT C3a ④] */
+  /* [LOT E] LE CRAN VOYAGE. La réglette locale fait foi dès qu'elle bouge ; sinon
+     on réémet le cran de session (adopté d'un autre appareil). Les proportions ne
+     s'émettent que si on a un écran de contrôle à mesurer. */
+  var _cl=(W.iz|0);
+  if(SES.mode!=='tel' && SES.izVu!==_cl){ SES.izVu=_cl; SES.cran=_cl; }
+  if(SES.cran===null||SES.cran===undefined)SES.cran=_cl;
+  var _rl=_drRatioEcran(W); if(_rl)SES.ratio=_rl;
   var p2={ecran:n, eid:_drEidDuRang(n,W.ECRANS)||null, morceau:(e.suite||0),
+          iz:(SES.cran|0), ratio:(SES.ratio||null),
           rev:(_vp?_vp.rev:(e.rev===undefined?(e.suite?2:0):e.rev)),
           vues:(_vp?_vp.vues:vues), gele:!!W.gele,
           fiche:ficheMontree?[n,(_vp?(_vp.off+jf):jf)]:null, ficheEid:(ficheMontree?(_drEidDuRang(n,W.ECRANS)||null):null),
@@ -16628,6 +16830,30 @@ function _sesRangLocal(o,W){
 function sesAppliquer(o){
   var W=drWin(); if(!W)return;
   SES.applique=true;
+  /* ═══ [LOT E · COMPLÉMENT] LA RÈGLE DU ZOOM ENTRE PLUSIEURS PILOTES ═══
+     LE DERNIER GESTE GAGNE, D'OÙ QU'IL VIENNE : toute surface adopte le cran reçu
+     et le montre sur sa réglette, personne ne réimpose le sien.
+     Ce que ça change en classe : Paul est au fond de la salle, il pousse la réglette
+     du téléphone ; le mur grossit ET la réglette du PC resté sur le bureau affiche
+     le même cran — son écran de contrôle ne ment jamais sur ce que voit la classe.
+     Le PC applique donc le cran adopté à son propre rendu (par sa réglette, comme si
+     la main l'avait poussée) : c'est « ce que je vois dans mon écran de contrôle est
+     ce qui est au tableau, tel quel ». Le TÉLÉPHONE, lui, ne bouge que son étiquette :
+     son prompteur n'est pas un tableau. Pas d'oscillation possible : chaque surface
+     ADOPTE au lieu de réimposer, donc la valeur reçue est celle qu'elle réémettra. */
+  try{
+    if(o&&o.iz!==undefined&&o.iz!==null){
+      SES.cran=o.iz|0;
+      if(SES.mode==='tel')sesTelMajCran();
+      else if((W.iz|0)!==(SES.cran|0)){
+        var _rz=W.document.getElementById('rz');
+        SES.izVu=SES.cran|0;                      /* adopté, pas un geste local : la réglette ne « re-gagne » pas */
+        if(_rz){ _rz.value=String(SES.cran|0); try{ W.zoom(); }catch(e0){} }
+        else { W.iz=SES.cran|0; }
+      }
+    }
+    if(o&&o.ratio)SES.ratio=o.ratio;
+  }catch(eZ){}
   try{
     var _n=_sesRangLocal(o,W);   /* [LOT C2 \u2462.5] */
     var e=W.ECRANS&&W.ECRANS[_n];
@@ -16834,6 +17060,7 @@ function sesTabMonter(){
     var ch=sesChemins(SES.ctx);
     sesGet(ch.ecrans,function(ecr){
       if(Array.isArray(ecr)&&ecr.length){ try{ W.ECRANS=_drNormaliserTrame(ecr); W.__pontCharge=true; W.i=0; }catch(e){} }   /* [LOT A ①] */
+      try{ _sesTabBoite(SES.ratio); }catch(e){}   /* [LOT E] la boîte avant la première peinture */
       try{ W.tableau(); }catch(e){}
       document.getElementById('ses-tab-att').style.display='none';
       SES._tabTrame=0; SES._tabTs=0;
@@ -16841,6 +17068,122 @@ function sesTabMonter(){
       setInterval(sesTabVeillePointeur,3000);   /* [LOT B \u2462] la reprise, sans jamais se vider */
     });
   });
+}
+/* ═══ [LOT E] LE MUR SE DÉCOUPE LUI-MÊME ═══════════════════════════════════════
+   À QUOI ÇA SERT EN CLASSE : l'élève du fond lit au cran que le professeur choisit,
+   et il voit TOUT ce que le professeur voit — jamais une étape coupée en deux,
+   jamais une étape perdue.
+   POURQUOI PAS AUTREMENT (mesuré en phase 0) : le moteur de la vue ne peut pas
+   scinder, son cadre est en display:none, donc à 0 px — au cran 5 le mur rognait
+   666 px en silence. Et on ne peut pas lui envoyer le morceau tout fait du pilote :
+   quand c'est le TÉLÉPHONE qui pilote, son cadre est nul lui aussi, il n'a jamais
+   découpé, il n'a rien à envoyer. On donne donc au mur une boîte RÉELLE aux
+   proportions de l'écran de contrôle, et il refait la découpe avec le moteur qu'il
+   embarque déjà. Mesuré : à boîte homothétique et cran égal, la découpe est
+   IDENTIQUE à celle du pilote, aux quatre crans essayés. La scène reste une
+   position et un état — jamais un fragment : la doctrine tient. ═════════════════ */
+function _sesTabBoite(r){
+  var z=document.getElementById('ses-tab'), toile=document.getElementById('ses-tab-toile'),
+      f=document.getElementById('at-dr-iframe');
+  if(!toile)return null;
+  var LW=(z&&z.clientWidth)||window.innerWidth||1360,
+      LH=(z&&z.clientHeight)||window.innerHeight||768;
+  var rr=(+r>0)?+r:(LW/LH);
+  var h=LH, w=Math.round(h*rr);
+  if(w>LW){ w=LW; h=Math.round(w/rr); }        /* on CONTIENT : bandes plutôt que déformation */
+  var g=Math.round((LW-w)/2), t=Math.round((LH-h)/2);
+  var cle=w+'x'+h;
+  if(SES.boiteVue===cle)return {w:w,h:h,change:false};
+  SES.boiteVue=cle;
+  /* la toile prend les proportions du pilote : le moteur y peint `100vh` sans
+     déformer, et `cale()` calcule sa police sur CETTE hauteur */
+  toile.style.inset='auto'; toile.style.left=g+'px'; toile.style.top=t+'px';
+  toile.style.width=w+'px'; toile.style.height=h+'px';
+  /* le CADRE DE DÉCOUPE : même boîte, hors champ, invisible, hors du doigt et du
+     clavier. Il ne sert qu'à mesurer un débordement — il n'est jamais montré. */
+  if(f){ f.style.display='block'; f.style.position='fixed';
+         f.style.left='-30000px'; f.style.top='0px';
+         f.style.width=w+'px'; f.style.height=h+'px';
+         f.style.opacity='0'; f.style.pointerEvents='none'; f.style.zIndex='-1';
+         f.setAttribute('aria-hidden','true'); f.setAttribute('tabindex','-1'); }
+  return {w:w,h:h,change:true};
+}
+/* LE SENS QUI MANQUAIT : du dévoilement cumulé VERS le morceau. `_drVuePere` sait
+   aller du morceau au père ; ici on fait le chemin inverse. Le morceau à projeter
+   est le DERNIER du groupe qui a quelque chose de montré — car ce qui est gris chez
+   le professeur est absent du tableau, et un morceau sans rien de dévoilé n'a rien
+   à dire à la classe. On lit ce que le moteur peindrait, on ne le devine pas. */
+function _drMorceauDuDevoilement(W,n){
+  var t=(W&&W.ECRANS)||[], e=t[n]; if(!e)return n;
+  var grp=e.grp; if(!grp)return n;
+  var lot=[]; for(var k=0;k<t.length;k++){ if(t[k]&&t[k].grp===grp)lot.push(k); }
+  if(lot.length<2)return n;
+  /* ENTAMÉ : ce morceau a-t-il quelque chose que la classe n'avait pas déjà ?
+     On lit l'ÉTAT, pas le rendu — piège payé au banc : sur un morceau de suite, le
+     rendu « classe » réaffiche toujours l'activité et le titre HÉRITÉS, donc un test
+     de page vide y répond « plein » alors que rien n'a été montré. Le seuil hérité
+     vaut 2 pour un fils (activité + titre) et 1 pour le père (activité seule). */
+  var entame=function(x){
+    if(!x)return false;
+    var rv=(x.rev===undefined?(x.suite?2:0):x.rev);
+    if(rv-(x.suite?2:1)>0)return true;
+    return (x.blocs||[]).some(function(b){ return (b&&(b.vues|0)>0); });
+  };
+  var dernier=lot[0];
+  for(var j=0;j<lot.length;j++){ if(entame(t[lot[j]]))dernier=lot[j]; }
+  return dernier;
+}
+/* la composition du mur : on repart TOUJOURS du père recollé, on pose le
+   dévoilement, on laisse le moteur scinder à sa boîte, puis on va au bon morceau.
+   Aucun état résiduel ne survit d'un cycle à l'autre — deux états ne peuvent pas
+   coexister par construction. La scission du moteur est asynchrone (cascade de
+   `degorge` en setTimeout) : on attend qu'elle se taise avant de peindre. */
+function _sesTabComposer(W,o,essai){
+  var n=_sesRangLocal(o,W), e=W.ECRANS&&W.ECRANS[n];
+  if(!e){ try{ W.envoie(); }catch(x){} return; }
+  if(essai===0){
+    try{ if(W.ECRANS.some(function(x){return x&&x.suite;}))W.reabsorbe(); }catch(x){}
+    n=_sesRangLocal(o,W); e=W.ECRANS&&W.ECRANS[n];
+    if(!e)return;
+    /* [LOT E] on REMET À ZÉRO avant d'appliquer : la trame relue au hub peut porter
+       des `vues` d'un état antérieur (reprise à froid), et un bloc que la scène ne
+       mentionne pas resterait dévoilé — la classe verrait ce que le professeur a
+       replié. Rien ne survit d'un cycle à l'autre. Piège attrapé au banc 4/3. */
+    (e.blocs||[]).forEach(function(b0){ if(b0)b0.vues=0; });
+    e.rev=o.rev;
+    Object.keys(o.vues||{}).forEach(function(j){ if(e.blocs[j])e.blocs[j].vues=o.vues[j]; });
+    W.ficheOuverte=o.fiche?[n,o.fiche[1]]:null; W.ficheAnime=false;
+    W.i=n;
+    try{ W.rendre(); }catch(x){}
+  }
+  var encore=false;
+  try{ encore=!!W.enCoursDeDegorgement; }catch(x){}
+  if(encore && essai<12){ setTimeout(function(){ _sesTabComposer(W,o,essai+1); },40); return; }
+  var cible=_drMorceauDuDevoilement(W,n);
+  if(W.ECRANS[cible]&&W.i!==cible){ W.i=cible;
+    if(W.ficheOuverte)W.ficheOuverte=[cible,W.ficheOuverte[1]]; }
+  /* [LOT E] LE DERNIER MORCEAU AUSSI DOIT TENIR. La cascade de `degorge` ne vérifie
+     que l'écran courant, et la garde de position du pont le ramène au père à chaque
+     tour : les morceaux SUIVANTS ne sont donc jamais re-mesurés. Au mur, le dernier
+     morceau pouvait déborder et la classe perdait la fin — mesuré au banc
+     « téléphone seul » : 822 px de contenu dans 765 px.
+     ON MESURE CE QUI EST PROJETÉ, PAS CE QUI EST COMPOSÉ. Piège payé au banc : le
+     `deborde()` du moteur mesure le CADRE, qui rend l'écran ENTIER, grisé compris ;
+     la toile, elle, ne peint que le dévoilé. Se fier au cadre faisait rescinder des
+     morceaux qui tenaient, et le mur montrait alors MOINS que la fenêtre locale
+     (151 signes contre 201, cran 5). On peint, on mesure la toile, et on ne
+     recoupe que si la classe perdrait vraiment quelque chose. */
+  try{ W.envoie(); }catch(x){}
+  var rogne=false;
+  try{
+    var D0=document.getElementById('ses-tab-toile').contentDocument,
+        t0=D0&&D0.getElementById('t');
+    if(t0){ var bas=0, en=t0.children;
+      for(var q=0;q<en.length;q++){ var bb=en[q].offsetTop+en[q].offsetHeight; if(bb>bas)bas=bb; }
+      rogne = bas > t0.clientHeight+4; }
+  }catch(x){}
+  if(rogne && essai<8){ try{ W.rendre(); }catch(x){}
+    setTimeout(function(){ _sesTabComposer(W,o,essai+1); },40); }
 }
 function sesTabPoll(){
   var ch=sesChemins(SES.ctx);
@@ -16857,13 +17200,17 @@ function sesTabPoll(){
       SES.applique=true;
       try{
         if(!o.gele){
-          var _n2=_sesRangLocal(o,W);   /* [LOT C2 \u2462.5] la vue tableau r\u00e9sout aussi */
-          var e=W.ECRANS&&W.ECRANS[_n2];
-          if(e){ W.i=_n2; e.rev=o.rev;
-            Object.keys(o.vues||{}).forEach(function(j){ if(e.blocs[j])e.blocs[j].vues=o.vues[j]; }); }
-          W.ficheOuverte=o.fiche?[_n2,o.fiche[1]]:null; W.ficheAnime=false;   /* [LOT C3a ④] mon rang */
+          /* [LOT E] LE CRAN D'ABORD : la boîte de découpe se règle sur les
+             proportions de l'écran de contrôle (ou sur la sienne quand la source
+             est le téléphone), puis le cran s'applique au moteur de la vue. */
+          _sesTabBoite(o.ratio);
+          var _c=(o.iz===undefined||o.iz===null)?W.iz:(o.iz|0);
+          if(_c!==W.iz){
+            try{ if(_c<W.iz)W.reabsorbe(); }catch(e9){}   /* dézoom : on recolle avant de recomposer, comme `zoom()` du moteur */
+            W.iz=_c;
+          }
           W.gele=false;
-          try{ W.envoie(); }catch(e2){}
+          _sesTabComposer(W,o,0);   /* [LOT E] pose le dévoilement, scinde à SA boîte, va au bon morceau, peint */
         }
         /* le gel : on ne repeint RIEN — l'image reste, c'est le contrat d'envoie() */
         sesTabChrono(o.chrono);
@@ -16918,6 +17265,16 @@ function sesBootTel(){
       +'<button class="ses-pb ses-hors-saisie" id="ses-pb-chrtab" onclick="sesTelGeste(\'chronoTableau\')">\ud83d\udcfa<span>au tableau</span></button>'   /* [LOT B \u2460 A-4] deux gestes distincts, comme sur l'ordi */
       +'<button class="ses-pb ses-hors-saisie" id="ses-pb-qui" onclick="sesTelGeste(\'qui\')">\ud83d\ude4b<span>qui a particip\u00e9</span></button>'
       +'<button class="ses-pb-part" onclick="sesTelPart()">\uff0b PARTICIPATION \u2014 la classe</button>'
+      +'</div>'
+      /* [LOT E] LA TÉLÉCOMMANDE DE ZOOM DU TABLEAU. À quoi ça sert en classe : quand
+         le professeur pilote au téléphone, il est AU FOND de la salle — il voit le mur
+         comme les élèves, et c'est le mur qu'il doit pouvoir grossir. La réglette est
+         celle du moteur, reprise telle quelle : cinq crans, un point, « NN pt ». Elle
+         ne passe PAS par `W.zoom()` : l'affichage du téléphone ne bouge pas d'un pixel. */
+      +'<div class="ses-tel-zoom ses-hors-saisie" id="ses-tel-zoom">'
+      +'<span class="ses-tel-zt">zoom du tableau</span>'
+      +'<input type="range" id="ses-tel-rz" min="0" max="4" step="1" value="1" oninput="sesTelCran(this.value)">'
+      +'<span class="ses-tel-zl" id="ses-tel-zl">32 pt</span>'
       +'</div>'
       +'<div class="ses-tel-classe" id="ses-tel-cl"></div>';
     document.body.appendChild(z);
@@ -17033,6 +17390,23 @@ function sesTelGeste(g){
 /* le PROMPTEUR : l'écran courant, le dévoilé NET + l'à-venir GRISÉ « À VENIR » — c'est
    la lecture pilote (html(n,false)) refaite en cartes tactiles, avec l'ÉDITION AU DOIGT
    des réponses (le format du moteur : b.reps=[{i,r,refo}], persisté par W.sauve() routé). */
+/* [LOT E] le geste de la télécommande : il pose le cran DANS LA SCÈNE, rien d'autre.
+   Aucun appel à `W.zoom()`, aucun `rendre()` local : le prompteur du téléphone est
+   inchangé, et c'est la demande explicite du professeur. */
+function sesTelCran(v){
+  var c=Math.max(0,Math.min(4,parseInt(v,10)||0));
+  SES.cran=c; SES.izVu=null;
+  sesTelMajCran();
+  try{ sesEmettre(true); }catch(e){}
+}
+/* l'étiquette et le point suivent le cran de session, d'où qu'il vienne */
+function sesTelMajCran(){
+  if(SES.mode!=='tel')return;
+  var c=(SES.cran===null||SES.cran===undefined)?1:(SES.cran|0);
+  var W=drWin(), pt=(W&&W.PT&&W.PT[c])||[24,32,38,44,52][c];
+  var l=document.getElementById('ses-tel-zl'); if(l)l.textContent=pt+' pt';
+  var r=document.getElementById('ses-tel-rz'); if(r&&(+r.value)!==c)r.value=String(c);
+}
 function sesTelChrono(){
   /* [LOT B \u2460 A-4] L'AFFICHEUR DISAIT LE MAUVAIS T\u00c9MOIN. Il lisait `bmon` \u2014 \u00ab chrono
      au tableau \u00bb \u2014 et non l'\u00e9tat du compte : le chrono partait (mesur\u00e9 : t 420\u2192418)
