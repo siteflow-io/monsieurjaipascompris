@@ -879,3 +879,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - commit `5c21283e24` (blob `2471de62ae`) · 1 491 450 o · md5 `868477343d4375d7be4d820ab8eb2630` · v8.68.0
 - **Motif** : LOT E — le zoom traverse jusqu'au mur (voie iii, boîte au ratio du pilote, télécommande téléphone, dernier geste gagne, filet Win+K, aucun bloc ne déborde : `suiteEt`, `_drRecollerEtapes`). Promu : commit `a019db378f`, 1 513 609 o, md5 `3b945b55daee272a1809a638ed170531`.
 - **Restauration en cas de `BUG`** : `contents/index.html?ref=5c21283e24e90edb4fbe50613b32fa42df14ce5d` → PUT du contenu récupéré, puis vérification bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `index.html` AVANT promotion LOT F 8.70.0 (25/08/2026, conscience n°10)
+- commit `a019db378f` (blob `63f62e5d52`) · 1 513 609 o · md5 `3b945b55daee272a1809a638ed170531` · v8.69.0
+- **Motif** : LOT F — dévoilement du groupe entier dans la scène, position déclarée, mur qui suit la position, − / + au téléphone. Promu : commit `7bca058af0`, 1 522 285 o, md5 `2cbd75cd4d0a6262a71adf1d9106c975`. Dette résiduelle connue (découpe au cran 5 en montant cran par cran), promue sur décision de Paul ; LOT G (moteur) après la première semaine de classe.
+- **Restauration en cas de `BUG`** : `contents/index.html?ref=a019db378f930cb4f7a3595fc9b6116393194d1c` → PUT, puis bit à bit contre le md5 ci-dessus.
