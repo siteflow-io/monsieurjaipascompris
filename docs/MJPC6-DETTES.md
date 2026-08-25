@@ -5,7 +5,7 @@
 
 ## LES DETTES, dans l'ordre où elles se soldent
 
-1. **LOT D — le tableau distant suit le pilote scindé** · mandat `sas/PONT/TABLEAU-DISTANT/lotD/` · en cours (exécutant). Absorbe : le `rev` cumulé sur un père non scindé · la reprise à froid de la vue tableau en cours de séance.
+1. ✔ **LOT D — le tableau distant suit le pilote scindé** · promu **8.68.0** le 25/08 (commit `5c21283e`, md5 `868477343d4375d7be4d820ab8eb2630`) · reste à Paul : le test sur ses deux machines (`sas/PONT/TABLEAU-DISTANT/lotD/SEQUENCE-TEST-PAUL.md`) ; une séance lancée sous 8.67.1 se relance. Absorbe : le `rev` cumulé sur un père non scindé · la reprise à froid de la vue tableau en cours de séance.
 2. **LE TÉLÉPHONE** : le VIF porté depuis `_drVifInstaller` (champ d'initiales, liste qui se réduit, ouverture automatique, motifs 1/2/3, note, Ctrl+Z — LE PORTER, pas en inventer un autre) · le T-5 au téléphone · la version visible sur le tableau et le téléphone. Absorbe : les trois questions ouvertes de l'exécutant tableau (chrono `txt`, `cours_actif` unique ou par classe, boot allégé de la vue). **À trancher par Paul avant le mandat** : pilotage téléphone à palette réduite ou complète (question du 23/08).
 3. **LE TEMPS RÉEL** : descendre la latence (sondage à 900 ms aujourd'hui, `sesPollPilote` / `sesTabPoll`) **sans télescopage** — le garde d'ordonnancement `ts` / `trameMaj` est conservé. Paul, 25/08 : « 900 ms c'est quasi une seconde, c'est trop comme latence… et c'est encore pire pour les animations. »
 4. **LA PULSATION SEULE + LA FUSION DES PAROLES SUCCESSIVES** : une couleur, dernier mot, dix secondes, saute au mot suivant, sans recomposer le champ ; deux prises de parole successives du même élève = une réponse ; le mur ajuste en direct pendant la frappe.
@@ -25,4 +25,84 @@ UI de la progression « construire puis ouvrir » (trois questions à Paul, `CHA
 Prod : `docs/MJPC6-3-CHANTIER.md` (registre historique, à garder) · `docs/MJPC6-OU-TROUVER-QUOI.md` (ce qui n'existe pas). Sas : `PONT/DETTES-VIVANTES.md` · `PONT/MEMOIRE-VIVE-RENTREE.md` §③ · `PONT/DETTE-VUE-TABLEAU-DISTANTE.md` · `PONT/LOT-C-CADRAGE.md` · `PONT/CHANTIER-PROMPTS.md` · `PASSATION-C9-C10-etat-et-file.md`. La liste « 30+6 » de la conscience n°8 n'a jamais été mise sur GitHub (elle vivait dans sa conversation, morte) ; ce registre repart de ce que les documents portent.
 
 ## ÉTAT DE PRODUCTION
-v8.67.1 · commit `0a954df` · md5 `d93207f7d49fbd673955a9567a010bfe` · 1 490 438 octets (25/08/2026).
+v8.68.0 · commit `5c21283e` · md5 `868477343d4375d7be4d820ab8eb2630` · 1 491 450 octets (25/08/2026). Retour : 8.67.1 `d93207f7d49fbd673955a9567a010bfe`.
+
+---
+
+# INVENTAIRE EXHAUSTIF — tout ce qui a été laissé pour compte depuis début juillet, par document
+> Extraction faite le 25/08/2026 sur les **138 documents md/txt des deux dépôts** (35 en production, 103 au sas), par recherche mécanique des marques de dette (« dette », « non fait », « jamais », « à instruire », « suspendu », « à trancher », « question ouverte », 🔶, D-…), puis lecture des 264 lignes retenues. **Chaque ligne cite son document** ; le statut est celui que le document déclare — « ouverte » sauf mention contraire. Ce qui est déjà dans un lot du programme ci-dessus est marqué → n°. Rien n'est reformulé au-delà du résumé nécessaire.
+> **Angle mort déclaré** : la liste « 30+6 » de la conscience n°8 (23/08) n'a jamais été mise sur GitHub ; seule sa consolidation (`MEMOIRE-VIVE-RENTREE.md` §③) est reprise ici. Les conversations mortes ne sont pas lisibles.
+
+## A · Registre historique — `docs/MJPC6-3-CHANTIER.md` (production)
+- **M-DETTES (31/07)** — « vingt-cinq dettes consignées, aucune affectée à un morceau » ; règle : toute dette reçoit un morceau ou une date. Tête de liste : changer le code professeur → M-SÉCU-4 (→ 11). Purges au hub : 3 fossiles d'avril dans `/codes` (laisser, décision Paul) · 2 vestiges `ELIO-1381`/`ELIO-8378` (à instruire : `pilotage_debat_s3` s'en sert-il ?) · `debat_config/profPassword` vaut encore `1312` · 3 classes zombies · `/eleves` hors contrat de purge · 4 élèves de CLASSE TEST sans code (→ 11/12). Textes qui mentent : distinction code professeur / clé de chiffrement expliquée nulle part · D-QCM-CLASSE · bouton LIER non expliqué, modale « 4 sections » qui en affiche huit · libellés de boutons non concordants avec leur onClick (`reecriture`) (→ 10). Nommages : manifestes `reecriture`/`reecriture_bb4e` à republier · doublon §8/§8 au canon du socle.
+- **Journal (17/08) : « le littéral est mort, PAS la valeur »** — les empreintes dérivent des codes historiques, `1312` et `3141` ouvrent encore la session prof pour qui les a déjà vus → M-SÉCU-4 (→ 11).
+- **Première saisie de la clé non confirmée par double saisie** (M-SÉCU-1) — journal dit FERMÉE ensuite ; à re-vérifier sur pièces.
+- **DÉCISION D'USAGE À INSTRUIRE (31/07)** : régénération des codes une fois par période.
+- **🔴 CHANTIER RÉÉCRITURE (31/07)** : les deux jumelles `reecriture.html` / `reecriture_bb4e.html` ont divergé (→ 10, à cadrer).
+- **`debat_singes`** : le journal dit DETTE ANNULÉE (nœud `null`, supprimé le 17/07) — clos.
+- **La date du brevet doit devenir éditable** (B5, 16/07) — « petit item, jamais codé » ; à vérifier si M8 l'a livré (le plan M8 le prévoyait).
+- **Onglets « Étude de texte » et « Rédaction » vides** parce que les apps génériques (Dugain) n'existent pas → MD, conditionnel à Paul.
+- **Trois fichiers hors chantier à instruire** : `Console_ateliers_revisions.html`, `deploy-monitor.html`, `mjpc-bench.js`.
+- **Question de Paul, injection de chapitre** : écrase ou jumeau ? — TRANCHÉE (quatre voies, 8.62.0). Clos.
+- **M-ÉCHECS-2** : diffusion du socle 1.2.0 aux 9 apps (écritures SDK presque sans `.catch`) — reste à faire. Dettes ouvertes au passage : doublon §8/§8 · `loadDocsList_` sans état de lecture en panne · `_siteGet` confond nœud vide et panne · mode test limité à `_site*`.
+- **M-MODETEST** : modes test absents ou non aboutis — `dictee_universelle` (aucun) · `reecriture` et `bb4e` (aucun) · `analyse_logique` (« pas du tout abouti », Paul 22/07) · bb4e n'a jamais reçu de mode test (point 16bis) · mode test du déroulé (question ouverte, 21/08).
+- **DETTES M11 · `analyse_logique`** : écrans Copies et Exercices en placeholders · modes élève « phrase imposée / paragraphe » annoncés non faits · Concordance déclarée non codée · motifs supplémentaires · l'essentiel qui manque (constat 22/07) · corrigé IA en JSON avec empans verbatim (intuition de Paul) · modifier/supprimer un travail · cause racine `_localiser`.
+- **DETTE SITE · recharger une app dans sa modale** (Paul, 22/07) — bouton de rechargement de l'iframe seule ; à instruire : session partagée et shunt.
+- **DETTE M9 · boucle de connexion prof** (`dictee_universelle`, Paul 22/07) : `auth` local jamais mémorisé. Autres dettes M9 : profil « MONSIEUR Meney » structurel au mode simulation · re-skin non fait · D16 le bilan HTML autonome n'a aucune date.
+- **Souche `correction_dictee`, dettes hors souche** : D2 (K.1, après M15) · D5 arbitrage des 26 alias Concordance · D7 · D9 deux registres en mémoire · D12 absence (M15) · D14 textes au socle · dette A② (suppression d'élève à désarmer) · D6 tableaux Bilan/Suivi qui débordent en mobile · D17 date de passation (→ 9) · D11 absence ignorée / chantier X (→ 9).
+- **Point 22 de la grille** : présence temps réel (qui est connecté) — n'existe dans aucune app (`test-de-paul` L40).
+- **Dettes ouvertes par M14 (`applause_meter`)** : points 4/13 (renommer/dupliquer une séance, navigation deux niveaux) → M14bis · branchement `/presence` racine à trancher · bouton « Mode test » dans M-SÉCU.
+- **D-APPSCRIPT-RESIDUEL** (20/07) : deux `POST` vers `script.google.com` au chargement ; le même Apps Script porte l'upload des fichiers — à instruire avant de retirer.
+- **D-QCM-CLASSE** : écran « Choisis ta classe » redondant et exposant (→ 10).
+- **D-PORTAILS-MANQUANTS** : `reecriture_bb4e`, `reecriture`, `applause_meter`, `worktrack` sans portail à code — à re-vérifier après M10-M14.
+- **D-M8M-1** : le bloc Annonces croît sans repli · **D-M8M-2** : journal dit SOLDÉE · **D-M8F-3** : section Classes déborde de 64 px, 15 cibles sur 16 sous-norme (→ passe mobile).
+- **M8-MOBILE-2 SUSPENDU** (B5/B6) : liseré, bouton unique en barre basse, Accueil en grille, passe tactile des sections — « aucun élément soldé ».
+- **M8ter** : injection JSON de la taxonomie (créer familles/domaines) — proposition non validée, ancrage `source` ; ordonnancé après M8bis, jamais fait.
+- **🔶 Résumés de niveau de l'accueil mensongers et en dur** (07/08) (→ 10) · **point 26 TAB_LABELS** même famille.
+- **🔶 UI de la progression « construire puis ouvrir »** — non terminé, trois questions à Paul.
+- **🔶 Calendrier annuel et EDT** (08/08) — module autonome à coder ; « LE TEMPS DU COURS » (07/08) : morceaux ② CLÔTURE (dates par classe, rituel, séance non faite), ③ CALENDRIER (calendrier scolaire, barres, vue élève), ④ CAHIER DE TEXTES (import ED) — non faits ; ① ORDRE : à vérifier.
+- **🔶 Bugs des apps (Paul, 09/08)** : `reecriture` (écran vide qui exige l'identification · écran « ? » expose infos prof · deux réécritures inséparables · libellé de publication) · `pilotage_debat_s3` (soupçon) · vérification en une passe sur les neuf apps (→ 10).
+- **🔶 Affichages menteurs du panneau prof (08/08)** : sept constats (→ 10).
+- **Chantier W** (corbeille « récupérable un an » — promesse à garantir) · **X** (rattrapage modal de l'absent, → 9) · **Y** (débogage général, lecture intégrale + tests réels) · **Z** (refonte mobile différée, en dernier).
+- **Copier-coller inter-écrans / presse-papiers** — question ouverte (09/08), trois questions non tranchées.
+- **Le COCKPIT (14/07, retrouvé le 29/07)** : couverture classes × compétences, échéances institutionnelles, charge prévisionnelle, santé de l'outil — jamais construit ; avec lui, absents du plan : la strate/bilan de séance (§7), le cahier auto de référence (§8), le calendrier annuel, le conseiller de planification. **`DOC_PROF_HTML` entièrement en dur** (source de l'IA de conception) — dette ouverte décidée par Paul.
+- **Pilotage débat multi-classes** — « chantier à reprendre » (un débat par classe sous `active/debats/<classe>`) ; suspens : code commun ou par classe.
+- **Nœuds orphelins (M16-0)** : aucun étiquetage garder/purger/instruire · **M16** concordance des identités + export imprimable des profils (bloque M17) · **M17b**.
+- **M18-M22** : fondements, concordance déployée, **M20 app de révisions** (jamais codée), M21 pipeline copies, M22 clôtures/CLAUDE.md.
+- **MC** : chapitre 4e (Paul, hors site) · **MD** : branchement Dugain (conditionnel).
+- **Dettes de mode test** (`ETAT-DES-LIEUX` L57) : trou de mode test à instruire.
+
+## B · Moteur et pont du déroulé — sas `PONT/`, `DEROULE/`, `CHANTIER-T1.md`
+- `PONT/DETTES-VIVANTES.md` (21/08) : bloc image sans menu contextuel (→ 6) · resynchronisation différée de la colonne chapitre (rapport dit soldée au lot 91→94 ; rapport-reprise-phase0 l'a vue « refaire surface » — à re-vérifier) · dépôt zone haute et premier clic « + Fiche » à confirmer à la main (→ 6) · les 4 décisions de Paul · MODE TEST du déroulé (reporté sur son ordre) · vérification à l'œil Ctrl+B/U · position exacte perdue à la reconstruction du cadre (retour écran 1, déclaré).
+- `CHANTIER-T1.md` : mode test du déroulé (question ouverte, 21/08) · rendu complet dans l'éditeur, à vérifier ailleurs (clic document du sommaire, séance, retour du papier).
+- `DEROULE/CADRAGE-INTEGRATION.md` : sort d'une séance close (à trancher au T3).
+- `DEROULE/CADRAGE-TEMPS.md` §6 bloc bilan (→ 5) · §7-8 natures de travail, « pas de travail à faire » (→ 5).
+- `DEROULE/NOTE-90.md` : ligne de contexte du Papier à vérifier visuellement.
+- `PONT/BUG-FEUILLES-SCHEMA.md` : schémas dans les feuilles (→ 6).
+- `PONT/TABLEAU-DISTANT/rapport.md` : séquence de test 3 appareils (Paul l'a faite le 25/08 — c'est l'origine du LOT D) · trois hypothèses de Paul instruites · les 3 questions ouvertes de l'exécutant (chrono `txt`, `cours_actif` unique/par classe, boot allégé) (→ 2) · `rapport-reprise-phase0-bis` : écart 13/15 écrans pilote/téléphone-hub, point resté ouvert (à re-vérifier après LOT D).
+- `PONT/TABLEAU-DISTANT/lotB-rapport.md` : en régime classe `degorge`/`reabsorbe` suspendues (voie retenue, à connaître).
+- `PONT/DETTE-VUE-TABLEAU-DISTANTE.md` : palette téléphone réduite ou complète (→ 2, à trancher par Paul).
+- `PONT/LOT-C-CADRAGE.md` (→ 7). `PONT/LOTC/c2-rapport.md` §⑦ et `c3a-rapport.md` §④ : « ce qui reste à trancher » (à relire au lot 7). `PONT/LOTC/tableau-ecriture-rapport.md` : arbitrage ③/⑤ zoom pendant la frappe (à relire au lot 4).
+- `PONT/CHANTIER-PROMPTS.md` (→ 8) : écriture au hub différée à la promotion (script prêt) · **seed natif embarqué resté v1** (repli hors hub) — dette immédiate assumée · P2b export Word .docx natif (tranché 22/08, non fait) · deux arbitrages (diaporama : transposition vs adaptation ; corrélation).
+- `PONT/MEMOIRE-VIVE-RENTREE.md` §③ : graine d'image morte et miniature blanche (soldées 90/94) · 4 règles CSS inertes + mention `diapositive_json` (ménage) · libellé nœud-vide de la liasse · flux « Enregistrer » du prompt (→ 8) · carte à double titre (cosmétique) · inventaire « push-sans-vider » · `deduireNiveauDuNom` (QCM) · Banque d'exercices à extraire · 6 fiches à réinjecter + pied « stylo vert » Réécriture 1 · alignement taxo (« citer un vers », « lecture expressive ») · strates par niveau (SITE-COURS-4) · EDT hebdo · réécriture→global · jalon Toussaint · lacune du journal 22/07→18/08.
+- `DICTEE6/MANDAT-EXECUTION.md` (versé en dette le 23/08) : §8 à instruire — choix élève numérique/papier, liasse d'impression. `DICTEE6` lui-même : à vérifier s'il a été exécuté.
+
+## C · Rapports de lots — sas `LOT*/`
+- `LOT4/rapport_correctif.md`, `LOT5` : différés de mandat — cocher/décocher depuis le panneau · ↩ Annuler sur champs de feuille · hauteur = maquette écran · présentation persistée (M-PROMPT-…) · glisser-déposer (flèches en attendant) · navigation élève abrégée du banc (outil).
+- `LOT7/rapport.md` : ⑦b attend son mandat — condition d'envoi d'`atDeposerFeuille`, les quatre états aux deux endroits, messages d'`openAtelierItem`, « Sans adresse », UI d'adressage (à vérifier si LOT 8/9 l'ont livré ; `OU-TROUVER-QUOI` dit « quatre états à vérifier si en place »).
+- `LOT8/rapport.md` : divergence de mesure avec le registre (`zone('analyse-logique')`) à trancher · ⑨ option A/B (à vérifier si tranché à 8.52/8.53).
+- `LOT9/rapport.md` : `atRegenererSommaire`/`chSommaire` échoue en silence sur les chapitres à séances-objet (préexiste 8.53.1) — à instruire · un document plus haut qu'une page déborde comme avant.
+- `LOT12/RAPPORT.md` : mention `diapositive_json` caduque · pilotage débat multi-classes.
+- `PASSATION-C5-C6.md` : copier-coller inter-écrans à instruire · dette primordiale PROMPTS. `PASSATION-C6-C7.md` : types de schémas à trancher à l'usage · dette QCM (branchement seul) · **étanchéité à rétablir à la régénération (signalé depuis la n°5, jamais fait)**. `PASSATION-C7-C8.md` : questions EDT (dates P1→PFIN, « X Français », BANKSY/PYTHAGORE) · Banque d'exercices.
+
+## D · Satellites de la production — `docs/`
+- `MJPC6-cadrage.md` : `CLAUDE.md` très périmé (dette ⑭) · `/results` 29 corrections en ancienne clé à récupérer (dette ④) · `applause_meter` set destructif + suppression d'élève (2 dettes) — à vérifier après M14.
+- `MJPC6-registre-bugs.md` (source secondaire, non vérifiée) : « le tableau n'atteint jamais 100 % » (agrégation) — différé, non résolu.
+- `MJPC6-test-de-paul.md` : présence temps réel (point 22) · bloc C deux appareils = angle mort du harnais · génération du lien famille à surveiller.
+- `MJPC6-rapport-tests-conscience.md` : écart du banc P2 à instruire.
+- `MJPC6-audit-classification.md` : `analyse_logique` seule à mentionner la taxonomie — à instruire.
+- `mjpc-session-recap-2026-06-12.md` : 8 `catch` vides · file de report persistante · une dette de décision.
+- `MJPC6-OU-TROUVER-QUOI.md` : VIF téléphone (→ 2) · T-5 téléphone (→ 2) · schémas dans les feuilles (→ 6) · profil de classe (→ 7) · profil élève (→ 9) · temps réel (→ 3) · version visible (→ 2) · bloc bilan (→ 5).
+
+## E · Constats de la conscience n°10 (25/08), déjà réglés ou ordonnancés
+- ✔ T-5 en codes bruts → 8.67.1. ✔ Tableau distant → 8.68.0. Vignette de groupe : mesurée conforme dans les deux formats, tombée sauf capture contraire. Outil correspondant au type de séance `oral` : non mesuré. Traversée du site non finie : récit/papier joué, choix T-5 + vécu, injection de chapitre, côté élève (code test attendu), apps sœurs.
