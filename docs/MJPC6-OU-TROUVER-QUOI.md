@@ -8,6 +8,11 @@
 > alors conclus que ça n'existe pas.
 >
 > Chaque ligne a été **mesurée sur la production** par la conscience n°9 les 24-25/08/2026.
+>
+> **Un avertissement de méthode, payé cher.** La n°9 a écrit ici que le type `oral` « n'existait pas », sur la foi
+> d'une phrase de Paul commençant par « je pense que… ». Vérification faite : **il existe**, c'est un type de
+> séance né du chantier 3e. *Une hypothèse de Paul reste une hypothèse tant qu'elle n'est pas mesurée* — et une
+> hypothèse écrite dans un index se propage de conscience en conscience.
 
 | Paul dit… | ÇA EXISTE, c'est… | où |
 |---|---|---|
@@ -40,10 +45,13 @@
 | « les classes », « la classe test » | gestion, codes élèves, classe test interne | `loadClasses` `cleClasse` `classeTestId` `estClasseTest` `_genererCodesClasse` — site |
 | « l'emploi du temps » | huit créneaux 2026-27 : 08:00-08:55 · 08:57-09:52 · 10:07-11:02 · 11:04-11:59 · 13:00-13:55 · 13:57-14:52 · 15:07-16:02 · 16:04-16:59 | `AT_EDT` — site |
 
+| « oral », « récitation » | **EXISTE** : `{id:'oral', libelle:'Oral et récitation'}` — **type de SÉANCE**, né du chantier chapitre 3e (récitation coévaluée), tranché par Paul, ajouté en 8.59.5. Les huit types : intro_image · etude_texte · notions · dictee_reecriture · atelier_ecriture · remediation · **oral** · tache_finale | `CH_TYPES_SEANCE` `chVocabulaireTypes` — site |
+| « les kinds », « les outils d'un item » | `doc` · `dictee` · `reecriture` · `analyse_logique` · `qcm` · `tache` · `diaporama` | `CH_KINDS` — site |
+
 ## CE QUI N'EXISTE PAS — vérifié, ne cherche pas
 | Paul en parle | état réel |
 |---|---|
-| **le bloc bilan** (l'acte de clôture de la séance, avec sa coche) | **n'existe ni au prompt ni au moteur.** Le prompt ne connaît que cinq types : consigne, question, fiche, schéma, image. Le cadrage du 19/08 le décide pourtant. **C'est probablement ce que Paul appelait le type `oral`** : un type d'élément décidé, jamais créé |
+| **le bloc bilan** (l'acte de clôture de la séance, avec sa coche) | **n'existe ni au prompt ni au moteur.** Le prompt ne connaît que cinq types de blocs : consigne, question, fiche, schéma, image. Le cadrage du 19/08 le décide pourtant. **À créer.** |
 | **les schémas, frises, cartes mentales dans les FEUILLES** | l'atelier n'a qu'une composante `schema` = **rectangle vide à hauteur réglable**. Le vrai rendu à cinq formes est dans le moteur du déroulé, jamais porté aux feuilles |
 | **le VIF au téléphone** | existe au pilotage ordi, pas au mobile |
 | **le T-5 au téléphone** | zéro mention dans tout le rendu mobile |
