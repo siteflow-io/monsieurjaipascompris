@@ -884,3 +884,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - commit `a019db378f` (blob `63f62e5d52`) · 1 513 609 o · md5 `3b945b55daee272a1809a638ed170531` · v8.69.0
 - **Motif** : LOT F — dévoilement du groupe entier dans la scène, position déclarée, mur qui suit la position, − / + au téléphone. Promu : commit `7bca058af0`, 1 522 285 o, md5 `2cbd75cd4d0a6262a71adf1d9106c975`. Dette résiduelle connue (découpe au cran 5 en montant cran par cran), promue sur décision de Paul ; LOT G (moteur) après la première semaine de classe.
 - **Restauration en cas de `BUG`** : `contents/index.html?ref=a019db378f930cb4f7a3595fc9b6116393194d1c` → PUT, puis bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `index.html` AVANT promotion micro 8.70.1 (26/08/2026, conscience n°10)
+- commit `7bca058af0` · 1 522 285 o · md5 `2cbd75cd4d0a6262a71adf1d9106c975` · v8.70.0
+- **Motif** : micro 8.70.1 — le chapitre créé en double apparaît sans recharger. Promu : commit `75c8b77f439e5cc5989f19bd7205261fdfde5449`, 1 522 853 o, md5 `6c7560afa9e431f23f89aa6fe167bb6b`.
+- **Restauration en cas de `BUG`** : `contents/index.html?ref=7bca058af00279a6088181a080647c2a06edc45a` → PUT, puis bit à bit contre le md5 ci-dessus.
