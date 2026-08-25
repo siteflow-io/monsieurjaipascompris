@@ -2829,8 +2829,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.67.1";
-var APP_VERSION_DATE="2026-08-24";
+var APP_VERSION="8.68.0";
+var APP_VERSION_DATE="2026-08-25";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -14868,6 +14868,18 @@ function atDrJouer(classeSlug, classeNom){
      RIEN d'autre : `part`, `scene` et `vecu` sont des branches s\u0153urs, jamais touch\u00e9es. */
   var tr=atDrTrame(sk);
   var _ecrans=JSON.parse(JSON.stringify((tr&&tr.ecrans)||[]));
+  /* [LOT D \u2460] LA COPIE JOU\u00c9E NA\u00ceT IDENTIFI\u00c9E. Jusqu'ici les `eid` ne
+     naissaient qu'au crochet de `rendre()` c\u00f4t\u00e9 pilote, et ne remontaient au hub
+     qu'\u00e0 la prochaine `_drCopieAuto` : tant que rien n'\u00e9tait modifi\u00e9 en s\u00e9ance,
+     la vue distante lisait une trame NUE, s'en fabriquait de neuves, ne retrouvait
+     jamais l'identit\u00e9 \u00e9mise et se repliait sur le RANG du pilote \u2014 lequel compte
+     les fils du zoom. D'o\u00f9 le d\u00e9calage d'un cran par fil.
+     On identifie donc AVANT l'\u00e9criture, avec la fonction existante : le pilote
+     recevra ce M\u00caME tableau par `dr_ouvrir` (`_drNormaliserTrame` n'ajoute une
+     identit\u00e9 qu'\u00e0 celui qui n'en a pas), donc les deux appareils d\u00e9signent le
+     m\u00eame objet. La trame de PR\u00c9PARATION n'est pas touch\u00e9e : `_ecrans` en est une
+     copie profonde \u2014 l'identit\u00e9 vit dans le JOU\u00c9. */
+  try{ _drIdentifierEcrans(_ecrans); }catch(e){}
   var _dep=Date.now();
   if(!sce.deroule_joue[classeSlug]){
     sce.deroule_joue[classeSlug]={ classe:classeNom||classeSlug,      /* [T1-crochet] la s\u00e9ance jou\u00e9e retient sa classe */
