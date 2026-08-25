@@ -1,6 +1,6 @@
 # MJPC 6 — DETTES · ce qui reste à faire, dans l'ordre, jusqu'à M-SÉCU
 > Établi avec Paul le 25/08/2026 (conscience n°10). **Règle de Paul** : ces dettes se soldent jusqu'au bout, sans laisser traîner de dettes ni en créer de nouvelles ; chaque lot n'est promu que sur mandat exécuté jusqu'au bout, avec preuves, jamais sur non-réalisation de l'exécutant ni de la conscience.
-> **Règle proposée le 25/08 (exécutant LOT D, à valider par Paul)** : tout mandat commence par « CE QUE ÇA CHANGE POUR LA CLASSE » ; l'exécutant qui ne peut pas dire à quoi ça sert en classe ne code pas, il demande ; une colonne « pour la classe » à ajouter à `OU-TROUVER-QUOI.md`, **dans les mots de Paul**, jamais déduits.
+> **Règle validée par Paul le 25/08 (« ok ») — gravée au DISPOSITIF, addendum du 25/08** : tout mandat commence par « CE QUE ÇA CHANGE POUR LA CLASSE » ; l'exécutant qui ne peut pas dire à quoi ça sert en classe ne code pas, il demande ; une colonne « pour la classe » à ajouter à `OU-TROUVER-QUOI.md`, **dans les mots de Paul**, jamais déduits.
 > **Tenue** : mis à jour par la conscience à chaque promotion et à chaque décision de Paul. Un lot promu est marqué ✔ avec sa version ; une dette soldée est barrée avec la version qui l'a soldée. Rien ne se supprime.
 > **Décisions de cadre (Paul, 25/08)** : les données au hub restent MARTYRES jusqu'à la fin du codage — M17a (import des vraies classes) vient en tout dernier, c'est une sécurité · le chapitre 3e et le premier chapitre 4e sont produits HORS SITE (JSON + diaporama) comme filets de rentrée.
 
