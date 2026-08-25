@@ -866,3 +866,16 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - Production quittée : **8.55.1** — 1 003 600 o, md5 `3a34823d3c8b087186b6c747541d7bb7`, blob `2a5551ba2b630a25b5629ee8b33504e6c65b9284`.
 - Restauration si « BUG » : PUT de ce blob sur index.html.
 - Promu : **8.56.2** — 1001473 o, md5 `660956e0dc121c9d8e0a84c9ad98e690` (LOT ⑪ : cul-de-sac de l'envoi corrigé, écrivain unique atEnvoyerVersion, zone « À classer » retirée, menu de type ré-émetteur, vocabulaire ligne→document ; micro-retouche 8.56.2 des textes d'échec faite par la conscience sur ordre de Paul — 14 lignes, chaînes seules, dual parser vert).
+
+### POINT DE RETOUR — `index.html` AVANT promotion micro 8.67.1 (25/08/2026, conscience n°10)
+- commit `3a4dfbf` (blob `4cc5073ceae4`) · 1 490 154 o · md5 `9968969807aae52052ca0e6254d3daf9` · v8.67.0
+- **Motif** : micro 8.67.1 — le T-5 nomme les notions (taxonomie chargée au lancement, `atTaxoLibelle` par `chIdsTaxo`). Promu : commit `0a954dfbc7`, 1 490 438 o, md5 `d93207f7d49fbd673955a9567a010bfe`.
+
+### POINT DE RETOUR — `index.html` AVANT promotion LOT D 8.68.0 (25/08/2026)
+- commit `0a954dfbc7` · 1 490 438 o · md5 `d93207f7d49fbd673955a9567a010bfe` · v8.67.1
+- **Motif** : LOT D — la copie jouée naît identifiée (`_drIdentifierEcrans` dans `atDrJouer`), le tableau distant suit la position du pilote scindé. Promu : commit `5c21283e24`, 1 491 450 o, md5 `868477343d4375d7be4d820ab8eb2630`.
+
+### POINT DE RETOUR — `index.html` AVANT promotion LOT E 8.69.0 (25/08/2026)
+- commit `5c21283e24` (blob `2471de62ae`) · 1 491 450 o · md5 `868477343d4375d7be4d820ab8eb2630` · v8.68.0
+- **Motif** : LOT E — le zoom traverse jusqu'au mur (voie iii, boîte au ratio du pilote, télécommande téléphone, dernier geste gagne, filet Win+K, aucun bloc ne déborde : `suiteEt`, `_drRecollerEtapes`). Promu : commit `a019db378f`, 1 513 609 o, md5 `3b945b55daee272a1809a638ed170531`.
+- **Restauration en cas de `BUG`** : `contents/index.html?ref=5c21283e24e90edb4fbe50613b32fa42df14ce5d` → PUT du contenu récupéré, puis vérification bit à bit contre le md5 ci-dessus.
