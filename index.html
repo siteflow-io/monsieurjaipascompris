@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.65.1";
+var APP_VERSION="8.66.0";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -15379,6 +15379,50 @@ function _drEnvelopper(){
      on retient la position d'avant, et on la RESTITUE si aucune saisie n'était en cours.
      Une saisie en cours = un champ éditable focalisé dans la scène, le même critère que
      `verifDeborde` emploie pour retrouver son curseur. ═══ */
+  /* ═══ [LOT SUITES ①] LE MORCEAU SE POSE APRÈS LE DERNIER MORCEAU DE SON GROUPE.
+     Ce qui s'est passé dans la classe de Paul : sa bande affichait SUITE 4, SUITE 3,
+     SUITE 2. Le moteur insère toujours en `i+1` (deux endroits : le texte coupé et les
+     parties de bloc). Dans le comportement d'origine, la position avançait sur le fils,
+     donc le morceau suivant se posait DERRIÈRE lui et l'ordre était juste. Le micro
+     [MICRO C3a-⑥] ramène la position sur le père — il a raison de le faire, et il reste —
+     mais alors chaque nouveau morceau se glisse AU MÊME ENDROIT et repousse les
+     précédents : l'ordre s'inverse à partir du deuxième.
+     LE CORRECTIF, depuis le pont : on n'empêche pas l'insertion, on REPLACE le morceau
+     né de cet appel après le dernier morceau de son groupe. On ne touche ni au moteur, ni
+     au micro, ni au rang (`suite`) que le moteur a calculé — seul l'ORDRE PHYSIQUE change,
+     et il redevient celui des rangs. La position courante suit l'objet où elle était :
+     si Paul tapait, elle reste sur SON morceau ; sinon, elle reste sur le père. ═══ */
+  if(!W.__ordreSuites && typeof W.degorge==='function'){
+    W.__ordreSuites=true;
+    var _vraiDegorgeOrdre=W.degorge;
+    W.degorge=function(){
+      if(W.__ordreEnCours)return _vraiDegorgeOrdre.apply(W,arguments);   /* pas de récursion */
+      var avant=(W.ECRANS||[]).slice();
+      var r=_vraiDegorgeOrdre.apply(W,arguments);
+      try{
+        var t=W.ECRANS||[], neufs=[];
+        for(var q=0;q<t.length;q++){ if(avant.indexOf(t[q])<0)neufs.push(t[q]); }
+        if(neufs.length===1){
+          var e=neufs[0], idx=t.indexOf(e);
+          if(e&&e.grp&&e.suite&&idx>=0){
+            var dernier=-1;
+            for(var k=0;k<t.length;k++){ if(k!==idx&&t[k]&&t[k].grp===e.grp)dernier=k; }
+            if(dernier>idx){
+              var courant=t[W.i];                 /* l'objet où est la position, pas son rang */
+              t.splice(idx,1);
+              t.splice(dernier,0,e);              /* juste après l'ancien dernier du groupe */
+              var nn=t.indexOf(courant); if(nn>=0)W.i=nn;
+              W.__ordreEnCours=true;
+              try{ W.horaires(); }catch(e2){}
+              try{ W.rendre(); }catch(e3){}
+              W.__ordreEnCours=false;
+            }
+          }
+        }
+      }catch(e4){ W.__ordreEnCours=false; }
+      return r;
+    };
+  }
   if(!W.__scissionGarde && typeof W.degorge==='function'){
     W.__scissionGarde=true;
     var _vraiDegorge=W.degorge;
