@@ -2838,7 +2838,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.70.0";
+var APP_VERSION="8.70.1";
 var APP_VERSION_DATE="2026-08-25";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -8373,6 +8373,12 @@ function chApresEcriture(){
   try{
     var niv=CH&&CH.niveau; if(!niv)return;
     if(typeof AT_CHAP_ETAT!=='undefined')AT_CHAP_ETAT[niv]='';
+    /* [8.70.1] la garde de 8.59.1 (« un niveau chargé ne se recharge jamais tout seul ») rendait
+       cette invalidation sans effet dès que le niveau avait un chapitre en mémoire : la liste
+       était redessinée depuis le cache, sans le chapitre qui venait d'être écrit (constat de Paul,
+       25/08 : « il faut que je recharge la page pour que le nouveau chapitre apparaisse »).
+       On vide le cache du niveau AVANT la relecture : une lecture, pas une boucle. */
+    if(typeof chapitresData!=='undefined'&&chapitresData)delete chapitresData[niv];
     if(typeof atChargerChapitres==='function')atChargerChapitres(niv,function(){
       if(typeof renderChapitres==='function')renderChapitres(niv);
       if(typeof AT!=='undefined'&&AT&&AT.onglet==='chapitres'&&!AT.edChap&&typeof atRendreListe==='function')atRendreListe();
