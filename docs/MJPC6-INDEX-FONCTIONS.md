@@ -251,7 +251,7 @@
 |---|---|---|---|---|
 | `chAfficherInventaire` | — | 7580 o | (sans commentaire) affiche/emploie : « intitulant \u00ab \u2026 (proposition) \u00bb, l · est PAS retir\u00e9 (c » — touche #ch-inv | chApresEcriture, chVerifier |
 | `chAlerteGraphies` | — | 919 o | Signalement discret des deux graphies de classes (dette, SANS bouton de correction) | chRendre |
-| `chApresEcriture` | — | 521 o | [LOT B \u2463d] APR\u00c8S L'\u00c9CRITURE : la liste dit vrai, sans rechargement de page. Le LOT A avait trait\u00e9 `addChapter` (le bouton du panneau prof) ; | chInjecterConfirme |
+| `chApresEcriture` | — | 1078 o | [LOT B \u2463d] APR\u00c8S L'\u00c9CRITURE : la liste dit vrai, sans rechargement de page. Le LOT A avait trait\u00e9 `addChapter` (le bouton du panneau prof) ; | chInjecterConfirme |
 | `chCalculerEcritures` | voie,chaps | 3331 o | LA GARDE D'ATTERRISSAGE — le calcul des écritures, extrait de chInjecterConfirme, MONTRÉ avant le clic. L'appariement par titre (celui qui a mélangé le chapitre 1 le 05/08) devient VISIBLE. | chInjecter, chInjecterConfirme |
 | `chChargerEtatAnnee` | cb | 162 o | SITE-COURS-2e : l'état de l'année, lu pour le niveau visé. | chOuvrir, chRendre |
 | `chChargerTaxo` | cb | 112 o | (sans commentaire ni indice) | atDrJouerClic, atRegenererSommaire, chOuvrir, edCreerFeuilleIci (+1) |
