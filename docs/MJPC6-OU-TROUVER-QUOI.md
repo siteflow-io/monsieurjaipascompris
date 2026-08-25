@@ -59,3 +59,15 @@
 | **le profil élève** | le nœud `mjpcProfils` existe et est alimenté ; **jamais lu** |
 | **le temps réel** | interrogation toutes les 900 ms, pas d'écoute — décision de Paul du 23/08, jamais faite |
 | **la version visible sur le tableau et le téléphone** | la pastille est un enfant du corps de page, **masqué par ces vues** |
+
+## AJOUTS DU 25/08/2026 (conscience n°10, après les promotions 8.67.1 · 8.68.0 · 8.69.0) — mesurés sur la production
+| les mots de Paul | ce qui existe, où | pour la classe (mots de Paul) |
+|---|---|---|
+| « le T-5 nomme les notions » | `atTaxoLibelle` résout par `chIdsTaxo` (notions + compétences + transversales) ; `chChargerTaxo` au passage en régime classe (8.67.1) | la modale de fin d'heure dit « Décrire une image fixe ou mobile », plus `litt-036` |
+| « le tableau distant saute d'une diapo » | la copie jouée naît identifiée : `_drIdentifierEcrans(_ecrans)` dans `atDrJouer` (8.68.0) ; le mur résout `eid` | « les élèves voient une autre activité que celle dont je leur parle » — plus jamais |
+| « le zoom doit se transmettre » | la scène porte `iz` + ratio du pilote ; le mur se découpe dans une boîte à ce ratio (`_sesTabBoite`, `_sesTabComposer`, `_drMorceauDuDevoilement`) (8.69.0) | « le zoom sert pour la classe, pas pour moi… sinon il ne sert à rien » |
+| « le téléphone est une télécommande de zoom » | la réglette du moteur reprise au téléphone (`sesTelCran`, `sesTelMajCran`), branchée sur la scène, jamais sur `W.zoom()` | « je suis au fond de la classe… je vois le tableau comme les élèves » |
+| « deux réglettes » | le dernier geste gagne, sans oscillation (`sesAppliquer`) | — |
+| « rien ne déborde » (Win+K, étape unique longue) | filet « ce qui est projeté tient » sur la fenêtre locale ; enveloppe de `scinde` : une étape ou un énoncé long se coupe en fragment `suiteEt`/`suiteQ`, recollé au dézoom et à l'export (`_drRecollerEtapes`) — moteur intact | « je ne promeus pas sur dette » |
+
+**Ce qui n'existe toujours pas (mis à jour)** : le VIF au téléphone · le T-5 au téléphone · la version visible sur tableau et téléphone · la vue emploi du temps · le profil de classe (et le récit rangé dans la trace de l'heure) · le profil élève · le bloc bilan · l'absence saisie en classe · le temps réel (sondage 900 ms). Registre : `MJPC6-DETTES.md`.
