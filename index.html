@@ -2829,7 +2829,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.66.0";
+var APP_VERSION="8.67.0";
 var APP_VERSION_DATE="2026-08-24";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -15379,47 +15379,60 @@ function _drEnvelopper(){
      on retient la position d'avant, et on la RESTITUE si aucune saisie n'était en cours.
      Une saisie en cours = un champ éditable focalisé dans la scène, le même critère que
      `verifDeborde` emploie pour retrouver son curseur. ═══ */
-  /* ═══ [LOT SUITES ①] LE MORCEAU SE POSE APRÈS LE DERNIER MORCEAU DE SON GROUPE.
-     Ce qui s'est passé dans la classe de Paul : sa bande affichait SUITE 4, SUITE 3,
-     SUITE 2. Le moteur insère toujours en `i+1` (deux endroits : le texte coupé et les
-     parties de bloc). Dans le comportement d'origine, la position avançait sur le fils,
-     donc le morceau suivant se posait DERRIÈRE lui et l'ordre était juste. Le micro
-     [MICRO C3a-⑥] ramène la position sur le père — il a raison de le faire, et il reste —
-     mais alors chaque nouveau morceau se glisse AU MÊME ENDROIT et repousse les
-     précédents : l'ordre s'inverse à partir du deuxième.
-     LE CORRECTIF, depuis le pont : on n'empêche pas l'insertion, on REPLACE le morceau
-     né de cet appel après le dernier morceau de son groupe. On ne touche ni au moteur, ni
-     au micro, ni au rang (`suite`) que le moteur a calculé — seul l'ORDRE PHYSIQUE change,
-     et il redevient celui des rangs. La position courante suit l'objet où elle était :
-     si Paul tapait, elle reste sur SON morceau ; sinon, elle reste sur le père. ═══ */
-  if(!W.__ordreSuites && typeof W.degorge==='function'){
-    W.__ordreSuites=true;
-    var _vraiDegorgeOrdre=W.degorge;
+  /* ═══ [LOT CASCADE ①] L'ORDRE DU CONTENU — on laisse la cascade se dérouler.
+     Ce mécanisme a été cassé trois fois. Voici ce que chaque tentative a appris :
+       • le MOTEUR SEUL est juste : il insère le morceau en `i+1` ET fait avancer la
+         position dessus, si bien que le morceau suivant se pose DERRIÈRE SON PARENT
+         IMMÉDIAT — c'est ce qui tient l'ordre du contenu dans une cascade ;
+       • le micro [MICRO C3a-⑥] restaure la position après CHAQUE coupure, et son rendu
+         de restauration re-scinde le père : la cascade perd son fil, tous les morceaux
+         se posent au même endroit ;
+       • le LOT SUITES déplaçait ensuite chaque morceau en FIN de groupe : l'ordre des
+         écrans redevenait juste et l'ordre du CONTENU devenait faux (E6 devant E5).
+     LE CORRECTIF : pendant la cascade, le moteur travaille SEUL — on remplace
+     temporairement `degorge` par sa version nue, donc le micro ne s'interpose plus à
+     chaque coupure et rien n'est déplacé après coup. La position n'est ramenée QU'UNE
+     FOIS, à la fin, sur l'écran où Paul était, RETROUVÉ PAR SON IDENTITÉ (LOT C2) et
+     jamais par son rang. L'intention du micro est donc tenue — Paul n'est pas emporté
+     sur un fils quand il ne tape pas — mais au bon moment. Le micro n'est pas touché :
+     quand il reprend la main, la position est déjà celle qu'il aurait posée, il ne fait
+     rien. S'il tapait, on ne restaure pas : le curseur suit son morceau. ═══ */
+  if(!W.__cascade && typeof W.degorge==='function'){
+    W.__cascade=true;
+    var _degorgeNu=W.degorge;                 /* le moteur, avant toute enveloppe */
     W.degorge=function(){
-      if(W.__ordreEnCours)return _vraiDegorgeOrdre.apply(W,arguments);   /* pas de récursion */
-      var avant=(W.ECRANS||[]).slice();
-      var r=_vraiDegorgeOrdre.apply(W,arguments);
+      if(W.__cascEnCours)return _degorgeNu.apply(W,arguments);   /* dans la cascade : le moteur seul */
+      var tapait=false;
+      try{ var a=W.document.activeElement, z=W.document.getElementById('contenu');
+        tapait=!!(a&&z&&z.contains(a)
+                  &&(a.isContentEditable||/^(input|textarea)$/i.test(a.tagName||''))); }catch(e){}
+      var t=W.ECRANS||[], obj=t[W.i]||null, eid=obj?obj.eid:null;
+      var chaine=W.degorge;                   /* la chaîne complète, micro compris */
+      W.__cascEnCours=true; W.degorge=_degorgeNu;
+      var r;
+      try{ r=_degorgeNu.apply(W,arguments); }
+      finally{ W.degorge=chaine; W.__cascEnCours=false; }
+      /* LES RANGS SUIVENT L'ORDRE PHYSIQUE. La cascade crée le morceau de la seconde
+         moitié EN PREMIER : il porte le rang 1 et finit pourtant en dernier, si bien que
+         la bande lisait « suite 4, suite 3, suite 2, suite 1 » alors que le CONTENU était
+         juste. On renumérote donc à la fin, avec LE MÊME MOTIF que `supprimeSuite` du
+         moteur — rien n'est inventé — et `suiteDe`, qui porte le libellé « suite N »
+         dans le contenu lui-même, est aligné dessus. */
       try{
-        var t=W.ECRANS||[], neufs=[];
-        for(var q=0;q<t.length;q++){ if(avant.indexOf(t[q])<0)neufs.push(t[q]); }
-        if(neufs.length===1){
-          var e=neufs[0], idx=t.indexOf(e);
-          if(e&&e.grp&&e.suite&&idx>=0){
-            var dernier=-1;
-            for(var k=0;k<t.length;k++){ if(k!==idx&&t[k]&&t[k].grp===e.grp)dernier=k; }
-            if(dernier>idx){
-              var courant=t[W.i];                 /* l'objet où est la position, pas son rang */
-              t.splice(idx,1);
-              t.splice(dernier,0,e);              /* juste après l'ancien dernier du groupe */
-              var nn=t.indexOf(courant); if(nn>=0)W.i=nn;
-              W.__ordreEnCours=true;
-              try{ W.horaires(); }catch(e2){}
-              try{ W.rendre(); }catch(e3){}
-              W.__ordreEnCours=false;
-            }
-          }
-        }
-      }catch(e4){ W.__ordreEnCours=false; }
+        var u0=W.ECRANS||[], cpt={};
+        for(var m=0;m<u0.length;m++){ var x=u0[m];
+          if(x&&x.grp&&x.suite){ cpt[x.grp]=(cpt[x.grp]||0)+1; x.suite=cpt[x.grp];
+            (x.blocs||[]).forEach(function(bb){ if(bb&&bb.suiteDe!==undefined)bb.suiteDe=x.suite; }); } }
+      }catch(e5){}
+      var rendu=false;
+      if(!tapait){
+        /* UNE SEULE restauration, par l'IDENTITÉ de l'écran, jamais par son rang */
+        var n=-1, u=W.ECRANS||[];
+        if(eid){ for(var k=0;k<u.length;k++){ if(u[k]&&u[k].eid===eid){ n=k; break; } } }
+        if(n<0&&obj)n=u.indexOf(obj);
+        if(n>=0&&n!==W.i){ W.i=n; try{ W.rendre(); rendu=true; }catch(e2){} }
+      }
+      if(!rendu){ try{ W.rendre(); }catch(e3){} }   /* les libellés renumérotés s'affichent */
       return r;
     };
   }
@@ -15477,6 +15490,22 @@ function _drEnvelopper(){
       }catch(e){}
       return r; };
   }
+  /* ═══ [LOT CASCADE ②] L'ÉTIQUETTE DE GROUPE S'EMPILE AU LIEU DE CHEVAUCHER.
+     Prouvé par l'image, pas par un compteur : sur la vignette du père, deux textes se
+     superposent — l'étiquette « ACTIVITÉ · SUR PLUSIEURS ÉCRANS » et le libellé
+     « 10:07 · ACTIVITÉ ». Deux informations justes, mal placées : l'étiquette est en
+     `position:absolute`, donc elle ne pousse rien et passe sous le libellé dès qu'elle
+     tient sur deux lignes. On la remet dans le flux — elle prend sa place, rien n'est
+     perdu, Paul continue de voir que l'activité s'étale sur plusieurs écrans. ═══ */
+  try{
+    if(!W.document.getElementById('dr-vgs-css')){
+      var st=W.document.createElement('style'); st.id='dr-vgs-css';
+      st.textContent='#vgs .grp{padding-top:4px}'
+        +'#vgs .grp .gl{position:static;display:block;white-space:normal;line-height:1.25;'
+        +'padding:1px 2px 5px;margin:0}';
+      (W.document.head||W.document.body).appendChild(st);
+    }
+  }catch(e){}
   W.__pontEnv=true;
 }
 /* la bo\u00eete du cadre, mesur\u00e9e : c'est elle qui grandit ou r\u00e9tr\u00e9cit quand Paul partage
