@@ -586,3 +586,32 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 **④ QUATRE FICHIERS SONT HORS DU SOCLE** : `Console_ateliers_revisions.html` (431 Ko), `etude_dugain.html` (313 Ko), `redaction_dugain_v3.html` (343 Ko), `deploy-monitor.html` (29 Ko) — aucun `MJPC_APP`, aucun `mjpc-hub`, aucun `sanMJPC`. Hors unification, volontairement ou non. **A trancher par Paul.**
 
 **⑤ ERREUR DE METHODE DE LA CONSCIENCE n°11, declaree.** Premiere passe : j'ai compte des motifs au lieu de lire, et conclu que `MJPC_APP` etait un gabarit vide dans les dix apps — ma regex prenait la **premiere** occurrence, celle du commentaire d'exemple du socle, pas la declaration reelle. Le signal etait sous mes yeux : dix apps annoncant toutes `id:"correction_dictee"`. **REGLE GRAVEE (01/08) : « une uniformite parfaite est une mesure suspecte »**, et **« un inventaire de capacites se fait en LISANT le corps des fonctions, jamais en comptant des motifs »**. Corrige par lecture avant tout rapport a Paul ; aucune fausse alerte ne lui a ete transmise.
+
+**Tour 200 — AUDIT DE LA LIVRAISON ①bis-a (candidat `7156f7f9`, 8.73.0-①bis-a). VERDICT : ÇA VA. Aucune dette. La suite est ①bis-b.**
+
+**Candidat** : 1 659 907 o, md5 `ae243de30613db108d3af5a810ce3bdf`, 149 `function edt*`. Base annoncee = base reelle (`b322540e…`), verifiee.
+
+**PORTEE REELLE DU DIFF, mesuree** : **6 blocs**, 49 lignes ajoutees, 12 supprimees. Cinq blocs dans `edtMettreANiveau` et `edtCharger`, un sixieme = `APP_VERSION` (`8.73.0-①` → `8.73.0-①bis-a`), exige par la decoupe §⑱. **Aucune modification ailleurs.** Le rapport annonce « trois modifications » : ce sont trois modifications de fond ; la mesure en compte quatre plus la version. Precision, pas faute.
+
+**NON-REGRESSION, remesuree par la conscience** : `function edt*` **149** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur `AT_DR_B64` **309 812 caracteres / `2ba70f9ef8aacb6f81962ea4e1b62944`**, identique bit a bit · trois portes inchangees · **`edtApparier` toujours 0 appel** (ses deux autres occurrences sont `edtApparierNom`, fonction distincte preexistante) · **correctif ③ intact bit a bit** (md5 du segment identique) · **node --check VERT** et **acorn ES2020 VERT**.
+
+**GARDE, rejouee par la conscience** : **VERTE** sur le candidat · **ROUGE sur trois pieges qu'elle a poses elle-meme** (et non ceux de l'executant) : `loginAsProf` dans le bloc → « ① appelle hors contrat » · `edtMettreANiveau` appelee hors du bloc → « ② appele hors du bloc sans etre une porte » · ecriture `/site/classes/y.json` → « ③ ecriture hub hors de /site/edt/ ».
+
+**LES QUATRE PREUVES, REJOUEES SUR UN BANC INDEPENDANT** (noyau extrait du candidat, stubs de la conscience, **sans le banc de l'executant**) :
+| scenario | archives | ecritures | ordre | id dans l'archive | id ecrits | memoire | message |
+|---|---|---|---|---|---|---|---|
+| hub vide | 0 | 0 | — | — | — | 0 | non |
+| hub sans `id` | 1 | 1 | **archive puis ecriture** | **0** | **122** | 122 | non |
+| hub deja complet | 0 | 0 | — | — | — | 122 | non |
+| archivage en echec | 1 tentee | **0** | — | 0 | — | **122** | **OUI** |
+
+**LES DEUX DETTES QU'IL DECLARE AVOIR FERMEES, EPROUVEES PAR LA CONSCIENCE :**
+- **Dette 1 — l'archive porte l'etat d'AVANT** : mesure, `id dans l'archive = 0` pendant que l'ecriture en porte 122. Ferme.
+- **Dette 2 — abandon GLOBAL** : trois objets, archivage tombant sur `grille` seule → journal `A:calendrier | A:grille | A:creneaux`, **0 ecriture**, message affiche. Et sur trois objets sains : **AAA puis EEE** — les deux temps ne sont jamais entremeles. Ferme.
+- **Verrou** : deux appels concurrents → 3 archives, 3 ecritures, **une seule passe**. Tient.
+
+**AUDIT ADVERSE DE LA CONSCIENCE — hypothese posee, puis ECARTEE par la mesure** : le verrou `EDT.miseANiveauEnCours` est leve dans `edtBilanArchives` ; si la promesse d'archivage restait pendante, il resterait pose pour toujours et le site ne dirait rien. Chaine remontee : `edtArchiver` → `secuEcrire` → `new Promise` autour de `_sitePut` → `mjpcEcrireRest`, **corrige le 30/07 pour rappeler son callback une fois avec le bon verdict, panne comprise**. Et une levee synchrone de `_sitePut` rejette la promesse, que le `.catch` ajoute par l'executant attrape. **Le verrou ne peut pas rester bloque.** Rien a signaler.
+
+**LE SEUL POINT A REGLER AVANT LE PROMEUS FINAL — declare par l'executant lui-meme, et il a raison de le declarer** : ses captures sont celles du **parcours de chargement**, pas d'un **parcours par clics dans l'ecran EDT** — le banc charge le fichier en `file://` sans session professeur, et il n'a pas le code d'acces. Or la regle est : **Paul promeut sur captures, avant/apres du meme parcours par clics**. Non bloquant pour ①bis-a (il reste ①bis-b), **bloquant pour le promeus**. A trancher par Paul : lui donner de quoi entrer en session prof au banc, ou jouer le parcours lui-meme au moment des captures.
+
+**SUITE** : ①bis-b — `edtFusionnerPeriodes` et la revue de toutes les reconstructions d'objet. Paul relance par « continuer ».
