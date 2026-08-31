@@ -667,3 +667,32 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 **Ce qui reste vrai quelle que soit sa reponse** — remesure : en forme datee, `edtPoserIdsObjet('grille', o)` pose **0 identifiant** (elle ne lit que `o.creneaux`, que `edtNormaliserGrille` **supprime**). Une case creee ensuite par `edtChangerEmploiDuTemps` nait donc **sans identite du tout**. C'est un defaut mecanique, independant du cadrage.
 
 **Le verdict du tour 201 sur la livraison ①bis elle-meme est INCHANGE : ca va, aucune dette dans le perimetre.** Seule la ligne « captures bloquees » est retiree : elles ne sont pas bloquees, elles sont dues.
+
+**Tour 203 — AUDIT DE LA LIVRAISON ①ter-a (candidat `efbc1958`, 8.73.0-①ter-a). VERDICT : ÇA VA. Aucune dette. Reste la livraison ①ter (captures).**
+
+**Candidat** : 1 662 509 o, md5 `a6d2469cb79a45328ae36955c28aa70a`. Base annoncee = base reelle (`e6e8836f…`), verifiee.
+
+**PORTEE DU DIFF** : quatre blocs — `APP_VERSION` et les **trois** modifications annoncees. Rien ailleurs. La pose est bien appelee **AVANT** `edtEcrireGrille` (lu ligne a ligne).
+
+**NON-REGRESSION, remesuree** : `function edt*` **149** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif ③ **identique bit a bit** (`668cda27…`) · `edtApparier` **0 appel** · `edtMettreANiveau` **1 appel** · `edtPoserIdsObjet` 4 → **6 appels** (les deux ajoutes sont nommes) · trois portes inchangees · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, **ROUGE sur trois pieges poses par la conscience** (`loginAsProf` hors contrat · `edtPoserIds` appelee hors du bloc · ecriture `/site/grille/w.json`).
+
+**REJOUE SUR BANC INDEPENDANT** (noyau extrait du candidat + `edtChangerEmploiDuTemps`, stubs de la conscience, sans son banc) :
+| scenario | resultat |
+|---|---|
+| forme simple | **30 id poses** sur 30 creneaux |
+| deux versions, rien retire | v1 **30/30 distincts, 0 suffixe** · v2 **30/30 distincts, 0 suffixe** |
+| 3 id retires **dans chaque** version | **6 reposes**, 0 sans id, **0 suffixe** |
+| reconduction entre versions | listes **IDENTIQUES**, aucun `#2` — et les 6 id retires **reviennent a l'identique** (amorce deterministe) |
+| meme id **deux fois dans une version** | **1 repose**, 30 distincts, **0 suffixe** — le second reprend une identite propre |
+| **geste reel : heure deplacee** | `crn:1a22nwk` lundi 08:57 → **`crn:1a22nwk`** jeudi 15:07 : **identifiant CONSERVE** · version d'arrivee 30 creneaux, 30 distincts, 0 sans id |
+| **geste reel : source introuvable (creneau neuf)** | **`crn:3o5qwn`** · 31 creneaux, **31 distincts, 0 sans id** |
+
+*Note d'honnetete de la conscience : au premier passage, son test a affiche « identifiant NEUF » sur le creneau deplace. **C'est l'assertion de la conscience qui visait le mauvais creneau** (trois creneaux partagent l'horaire d'arrivee), pas le code. Remesure en ciblant la classe : identifiant conserve, exactement le chiffre du rapport.*
+
+**SA MODIFICATION N°2, QU'IL A AJOUTEE DE LUI-MEME ET QUE LE MANDAT NE DEMANDAIT PAS — EPROUVEE PAR LA CONSCIENCE, ELLE EST JUSTE ET NECESSAIRE.** La charge de mise a niveau ne lisait que `gr.creneaux`, absent des qu'une version existe : **au chargement, une grille datee n'aurait jamais recu la moindre identite**, et le §① aurait ete vrai a l'injection et faux au chargement. Mesure : grille datee sans id au chargement → **archive puis ecriture, 30/30 identifiants poses**, le site dit « 30 identifiants posés à la grille » ; grille datee **deja complete** → **aucune ecriture**. Bonne prise.
+
+**LES ACQUIS DE ①bis, REJOUES SUR CE CANDIDAT** : hub vide **0 ecriture** · hub sans id **archive puis ecriture, 122 en memoire** · hub complet **0 ecriture** · archivage en echec **0 ecriture, message affiche** · periodes entrant sans id **3/3 conserves** · periode ajoutee a la main **4/4 portent un id**. **Aucune regression.**
+
+**Vrai hub** : `/site/edt` toujours `null`. Production inchangee.
+
+**SUITE** : livraison **①ter** — les captures par clics du parcours (panneau prof → emploi du temps → grille → creer une version → deplacer une heure → revenir), l'audit adverse complet, le rapport final. Puis promeus de Paul sur captures.
