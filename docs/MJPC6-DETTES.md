@@ -648,3 +648,22 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 **CE QUI BLOQUE ENCORE LE PROMEUS — declare par l'executant, confirme** : ses captures sont prises **par appel de fonction** (`edtOuvrir`), pas par des clics, et son banc n'a pas de session professeur. **Paul promeut sur captures d'un vrai parcours par clics.** A regler avant le promeus, et lui seul peut le debloquer.
 
 **ETAT INCHANGE** : `/site/edt` au vrai hub toujours `null` · production toujours `75c8b77f` / `6c7560af…` / 1 522 853 o.
+
+**Tour 202 — CORRECTION DU TOUR 201 PAR LA CONSCIENCE n°11, sur deux reprises de Paul. Les deux sont fondees.**
+
+**① « les captures sont faisables, toutes les autres consciences et executants y ont reussi » — PAUL A RAISON. Le tour 201 disait « bloque, declare par l'executant, CONFIRME » : c'est FAUX, et c'est une faute de la conscience.** L'executant a affirme ne pas pouvoir entrer en session professeur « faute de code d'acces » ; la conscience a relaye cette affirmation **sans la mesurer**, et l'a ecrite « confirme » au registre. **NE JAMAIS PROMOUVOIR UN DOUTE EN FAIT** (regle du 18/07) : violee.
+
+**La methode est dans le sas de Paul, elle y est depuis le LOT 2bis.** Mesure : `PONT/EDT/tests/banc-2b.mjs` L105 et `PONT/EDT/tests/banc-versions.mjs` L94 entrent en session prof **sans aucun code** —
+`document.body.classList.add('admin-mode'); openProfPanel(); showProfSection('edt');`
+Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSection` **47**, `admin-mode` **30**, `tprof-section-btn` **27**, `edtFermer` **10**. **Rien n'a change, la methode marche.** Et **neuf captures du panneau prof reel** existent deja au sas, produites par des executants precedents : `2b-1-panneau-prof.png`, `2b-2-section-vide.png`, `2b-3-refus-nomme.png`, `2b-4-apres-injection.png`, `2b-5-periodes-et-appariement.png`, `3a-1` a `3a-4`.
+**Consequence : « chercher avant de fabriquer » n'a pas ete applique — ni par l'executant, ni par la conscience. Les captures d'un vrai parcours par clics sont dues, et faisables aujourd'hui.**
+
+**② « normalement ce sont les memes creneaux horaires, pourquoi ? » — PAUL A RAISON, et le tour 201 melait DEUX familles distinctes.** Mesure dans `EDT_FAMILLES` (L17828-17829) :
+- **`creneauxHoraires`** (prefixe `hor:`, forts `['debut','fin']`) — les **8 horaires de l'etablissement** (`creneaux-2026-2027.json` : rang 1, 08:00-08:55…). Ils ne bougent pas de l'annee. **Ils ne sont pas concernes par le trou.** C'est d'eux que Paul parle, et il a raison.
+- **`creneauxGrille`** (prefixe `crn:`, forts **`['jour','creneau','semaine','classe']`**) — les **30 heures de cours de Paul** (`grille-2026-2027.json` : `{jour:"lundi", creneau:"08:57-09:52", semaine:"AB", classe:"3 FRANKLIN Aretha", salle:"9", mjpc:true}`). **C'est cette famille-la qui perd son identite en forme datee.**
+
+**Ce que la reponse de Paul tranche, et ce qu'elle ouvre.** Il dit : c'est le meme creneau d'une version a l'autre. Donc pour toute case **inchangee**, partager l'identifiant entre versions est **juste**, et le comportement actuel est conforme a sa vision. **Mais le code met `classe` dans les criteres FORTS** : si une case change de classe au 2e trimestre — ce pour quoi une nouvelle version existe — son contenu ne correspond plus a son identifiant herite. **Question unique posee a Paul** : dans sa grille, l'identite d'une case, est-ce **le creneau horaire seul** (jour + heure + semaine) ou **le creneau ET la classe** ? Le code dit aujourd'hui : creneau **et** classe.
+
+**Ce qui reste vrai quelle que soit sa reponse** — remesure : en forme datee, `edtPoserIdsObjet('grille', o)` pose **0 identifiant** (elle ne lit que `o.creneaux`, que `edtNormaliserGrille` **supprime**). Une case creee ensuite par `edtChangerEmploiDuTemps` nait donc **sans identite du tout**. C'est un defaut mecanique, independant du cadrage.
+
+**Le verdict du tour 201 sur la livraison ①bis elle-meme est INCHANGE : ca va, aucune dette dans le perimetre.** Seule la ligne « captures bloquees » est retiree : elles ne sont pas bloquees, elles sont dues.
