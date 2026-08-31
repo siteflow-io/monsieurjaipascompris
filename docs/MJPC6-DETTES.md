@@ -615,3 +615,36 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 **LE SEUL POINT A REGLER AVANT LE PROMEUS FINAL — declare par l'executant lui-meme, et il a raison de le declarer** : ses captures sont celles du **parcours de chargement**, pas d'un **parcours par clics dans l'ecran EDT** — le banc charge le fichier en `file://` sans session professeur, et il n'a pas le code d'acces. Or la regle est : **Paul promeut sur captures, avant/apres du meme parcours par clics**. Non bloquant pour ①bis-a (il reste ①bis-b), **bloquant pour le promeus**. A trancher par Paul : lui donner de quoi entrer en session prof au banc, ou jouer le parcours lui-meme au moment des captures.
 
 **SUITE** : ①bis-b — `edtFusionnerPeriodes` et la revue de toutes les reconstructions d'objet. Paul relance par « continuer ».
+
+**Tour 201 — AUDIT DE LA LIVRAISON ①bis FINALE (candidat `b09299b1`, 8.73.0-①bis). VERDICT : ÇA VA. Aucune dette dans le perimetre. Le mandat ①bis est fini.**
+
+**Candidat** : 1 660 869 o, md5 `e6e8836f3ee6d1b93d1f4e2c0ca68637`. Base annoncee = base reelle (`ae243de3…`), verifiee.
+
+**PORTEE REELLE DU DIFF** : **trois modifications, pas une de plus** — `APP_VERSION`, `edtFusionnerPeriodes` (+11 lignes), `edtPeriodesEcrire` (+4 lignes). Le code de conservation lu ligne a ligne : `var id=p.id||a.id; if(id&&!pris[id]){f.id=id;pris[id]=true;}` — l'entrant fait foi, sinon l'ancienne retrouvee par son nom transmet le sien, et **un id retenu n'est jamais redonne a un second objet**. Aucun appariement nouveau fabrique.
+
+**NON-REGRESSION, remesuree** : `function edt*` **149** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur `AT_DR_B64` **309 812 / `2ba70f9e…`** identique · correctif ③ **identique bit a bit** (`668cda27…`) · `edtApparier` **0 appel** · `edtMettreANiveau` **1 appel** · trois portes inchangees · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, et **ROUGE sur trois pieges poses par la conscience** (`mjpcSucces` hors contrat · `edtFusionnerPeriodes` appelee hors du bloc · ecriture `/site/periodes/z.json`).
+
+**LES PREUVES, REJOUEES SUR BANC INDEPENDANT** (noyau extrait du candidat, stubs de la conscience, sans le banc de l'executant) — hub de depart : trois periodes portant `per:POSEE1/2/3`, volontairement differents de ce que leur contenu produirait :
+| scenario | resultat |
+|---|---|
+| entrant SANS `id`, memes noms | **3/3 conserves**, aucun neuf |
+| entrant AVEC `id`, noms retouches | **3/3** — l'entrant fait foi |
+| dates deplacees, entrant sans `id` | **3/3** |
+| deux periodes **homonymes** | 1 conservee + 1 neuve, **2 id distincts** |
+| **meme `id` porte deux fois** par l'entrant | le premier le garde, le second recoit un neuf, **2 id distincts** |
+| premiere injection, hub vide (l'etat reel) | 2 id neufs distincts, inchange |
+| **periode ajoutee A LA MAIN puis ecrite** | **4/4 portent un id** (`Stage → per:103zxl4`, meme valeur que son rapport) |
+
+**LA DETTE QU'IL A TROUVEE SEUL PENDANT LA REVUE, ET FERMEE** : `edtPeriodeAjouter` poussait `{rang,nom,debut,fin}` et `edtPeriodesEcrire` ecrivait `id:undefined`, supprime par `JSON.stringify` — **une periode creee a la main naissait sans identite**, alors que les cinq fonctions livrees en ① la designent **par son `id`**. Corrige, remesure par la conscience : 4/4. Bonne prise.
+
+**LA REVUE DES 15 ECRITURES DU BLOC est faite et publiee**, chaque objet remonte jusqu'a sa fabrication, avec « conserve l'id » ou non pour chacune.
+
+**LES DEUX TROUS QU'IL SIGNALE SANS LES OUVRIR — VERIFIES VRAIS PAR LA CONSCIENCE :**
+
+**① L'identite des creneaux a travers les versions datees de la grille.** Rejoue independamment : forme simple → `edtPoserIdsObjet('grille')` pose **2 id** ; apres `edtNormaliserGrille`, `o.creneaux` est **supprime** (`delete`) et tout passe dans `o.versions[].creneaux` → `edtPoserIdsObjet('grille')` pose **0 id** ; apres `edtVersionAjouter`, **2 versions, 4 creneaux, 2 identifiants distincts** — `crn:810b94` et `crn:1i5qlg8` **portes chacun par deux creneaux**. Mesure complementaire de la conscience : `edtNormaliserGrille` n'est appelee que par **quatre gestes** (ajouter/modifier une version, changer l'emploi du temps), **pas au chargement** — le trou est donc **latent**, il naît au premier geste de version. **C'est une question de cadrage, pas une correction mecanique** : un creneau du lundi 8h qui existe au trimestre 1 et au trimestre 2 est-il **le meme objet** ou **deux objets** ? **Seul Paul tranche.** Tant que ce n'est pas tranche, la famille `creneauxGrille` echappe en pratique a la regle « objet, donc id » des que la grille est datee.
+
+**② Les photos naissent sans identifiant.** Verifie : `edtPhoto` pousse `{prise, depuis, cellules}`, sans `id`. Range en livraisons ⑤ a ⑧ par le mandat. Signale, non ouvert : conforme.
+
+**CE QUI BLOQUE ENCORE LE PROMEUS — declare par l'executant, confirme** : ses captures sont prises **par appel de fonction** (`edtOuvrir`), pas par des clics, et son banc n'a pas de session professeur. **Paul promeut sur captures d'un vrai parcours par clics.** A regler avant le promeus, et lui seul peut le debloquer.
+
+**ETAT INCHANGE** : `/site/edt` au vrai hub toujours `null` · production toujours `75c8b77f` / `6c7560af…` / 1 522 853 o.
