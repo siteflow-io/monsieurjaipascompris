@@ -755,3 +755,29 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 **SES ECARTS, VERIFIES** : ① le calendrier de reference portait **15 `justifie:false`, aucun `true`** — la preuve de migration exigee au §⑥.3 demandait donc une piece qui n'existait pas ; il l'a fabriquee (`tests/calendrier-herite-justifie.json`) et pose les `true` en ②b. ② decocher ne retire que ce que **cet** evenement avait pose : une heure dont le motif a ete remplace n'est pas effacee — consequence directe de « une heure, une cle, un seul motif », dite plutot que tue.
 
 **SUITE** : **②b** — la migration, `decisions` d'abord et `calendrier` ensuite, idempotence et reprise. Paul relance par « continuer ».
+
+**Tour 207 — AUDIT DE LA LIVRAISON ②b (candidat `11425f73`, 8.73.0-②b). VERDICT : ÇA VA. Aucune dette. La reinjection ne perd plus les coches.**
+
+**Candidat** : 1 670 478 o, md5 `4af687cf86bac6dc5a4875d6ae35ea03`. Base annoncee = base reelle, verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **152**, aucune ajoutee, **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **0 appel** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**.
+
+**LA MIGRATION, REJOUEE SUR BANC INDEPENDANT** (noyau + magasin extraits du candidat, stubs de la conscience, **sans son banc**) :
+| scenario | journal des ecritures | resultat |
+|---|---|---|
+| **premier chargement**, 3 coches heritees | `ARCH:calendrier > ARCH:decisions > ECRIT:calendrier > ECRIT:decisions > ARCH:calendrier > ECRIT:calendrier` | **6 decisions, journal 6, champ 0** |
+| **second chargement** | **aucune ecriture** | inchange — idempotent |
+| **le hub REFUSE le calendrier** | `ARCH:calendrier > ARCH:decisions > REFUS:calendrier > ECRIT:decisions` | **6 decisions posees**, **champ reste (15, dont 3 coches)** → **la coche existe en double, rien n'est perdu** |
+| **reprise, hub retabli** | `ARCH:calendrier > ECRIT:calendrier` | **0 nouvelle decision**, champ **0** — la migration aboutit |
+
+**L'ordre exige par le mandat est tenu** : `decisions` est ecrit **avant** le calendrier ampute. L'ecart qu'il signale est confirme : le noeud `calendrier` parait **deux fois** — la premiere ecriture est celle de la charge `identite` et porte l'objet **avec** le champ (aucune coche perdue), la seconde seulement est celle qui retire le champ.
+
+**L'ECART N°1, EXAMINE ET ACCEPTE** : `edtMettreANiveau` passe de **1 a 2 appels**, contre le §⑤ du mandat. Le second est **dans le rappel de succes du premier** (L18147-18151) et **ne porte pas de rappel lui-meme** : **la relance ne peut pas boucler** — verifie en lisant le code, le drapeau `EDT.miseANiveauSuite` est remis a `false` avant la relance et rien ne peut le relire. Sans ce second appel, l'ordre « `calendrier` ensuite, et seulement si `decisions` a ete accepte » ne pouvait pas etre tenu sans reprendre l'ecriture, **ce que le mandat interdisait**. Il l'a signale au lieu de le cacher : **conforme a l'esprit, l'ecart est accepte par la conscience**.
+
+**SON BANC A ETE LU AVANT D'ETRE CRU** : `banc-migration-02b.mjs` mesure **`window.__HUB.site.edt`**, c'est-a-dire le faux hub, **jamais la memoire de la page**. La methode est honnete. Il n'a pas ete rejoue (puppeteer + chromium, non installes) : la preuve indepandante est celle du banc de la conscience ci-dessus.
+
+**TROIS ECHECS DE BANC DE LA CONSCIENCE, DECLARES.** Le contre-audit a demande trois montages : le premier sans `EDT_CLASSES`, le deuxieme avec un stub d'heures inoperant, le troisieme sans `edtDecisions` — **absente de l'extrait**, ce qui faisait lever la charge `coches` et la rendait silencieuse. **Aucune conclusion n'a ete tiree de ces echecs** ; le banc a ete corrige jusqu'a reproduire la migration. **Effet de bord mesure au passage, a garder** : une charge qui leve est avalee par le `try/catch` de `edtMettreANiveau` et **ne dit rien** — le repli protege l'affichage, mais un echec de charge est silencieux. Point mineur, signale, non ouvert.
+
+**SES AUTRES ECARTS, VERIFIES** : le champ `justifie` subsiste **dans la charge de reprise seule** (L18041, 18067, 18068, 18069 — il en annonce 3, il y en a 4, sans portee) : une migration doit lire le champ pour le faire disparaitre · une coche que rien ne peut reprendre **garde son champ et le site le dit** · sans les classes chargees, la reprise **attend** et ne retire rien · la reprise horodate au moment de la migration, `reprise:true` au journal pour les distinguer.
+
+**SUITE** : livraison **②** — ce que devient une coche quand les choses bougent (§④), captures par clics, audit adverse, rapport final.
