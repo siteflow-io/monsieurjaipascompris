@@ -696,3 +696,26 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 **Vrai hub** : `/site/edt` toujours `null`. Production inchangee.
 
 **SUITE** : livraison **①ter** — les captures par clics du parcours (panneau prof → emploi du temps → grille → creer une version → deplacer une heure → revenir), l'audit adverse complet, le rapport final. Puis promeus de Paul sur captures.
+
+**Tour 204 — AUDIT DE LA LIVRAISON ①ter FINALE (candidat `59954c24`, 8.73.0-①ter). VERDICT : ÇA VA. Le mandat ①ter est fini, aucune dette. Le LOT 2ter, lui, n'en est qu'à sa livraison ① sur huit.**
+
+**Candidat** : 1 662 507 o, md5 `cb20546e7abe9b4c32e322a5b03f7c60`. **Diff avec ①ter-a : un seul bloc, le numero de version.** Verifie autrement par la conscience : les deux fichiers, numero de version neutralise, sont **identiques bit a bit** — donc tout l'audit du tour 203 vaut pour ce candidat.
+
+**NON-REGRESSION remesuree sur le fichier final** : `function edt*` **149** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif ③ **`668cda27…` intact** · `edtApparier` **0 appel** · `edtMettreANiveau` **1 appel** · `edtPoserIdsObjet` **6 appels** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, **ROUGE sur trois nouveaux pieges de la conscience** (`mjpcSignalerIssue` hors contrat · `edtNormaliserGrille` hors du bloc · ecriture `/site/config/v.json`).
+
+**LES CAPTURES EXISTENT ET LE PARCOURS EST REEL — verifie fichier par fichier.** 8 captures `AVANT-01bis-clic-*` + 8 `APRES-01ter-clic-*` au sas, plus les deux journaux de clics. **Le journal `APRES-01ter-clics-journal.txt` prouve le parcours geste par geste**, et notamment le point qui compte, releve par la conscience dans le journal lui-meme :
+> LE CRÉNEAU DÉPLACÉ, suivi par son identifiant : version **2026-08-01** → `crn:1a22nwk`, lundi **08:57**, 3 FRANKLIN Aretha · version **2026-08-31** → `crn:1a22nwk`, lundi **08:00**, 3 FRANKLIN Aretha. Les deux versions : 30 creneaux, **0 sans identifiant, 30 distincts**.
+
+**Le passe reste vrai avant, le changement vaut a partir de la date, et l'identifiant suit l'objet.** C'est la regle de Paul, verifiee par un vrai glisser-deposer souris.
+
+**Preuve supplementaire, non annoncee par l'executant et relevee par la conscience dans son journal** : le parcours declenche la **mise a niveau au chargement** en conditions reelles — ecritures du parcours : trois archives `/corbeille/2026-08-31/edt-mise-a-niveau-{calendrier,grille,creneaux}` **puis** `/site/edt/{calendrier,grille,creneaux}`. Archive avant ecriture, dans l'ordre, par un parcours de clics et non par un banc.
+
+**CE QUE LA CONSCIENCE RELEVE — un ecart entre le rapport et les fichiers.** Le rapport annonce **huit** ecrans captures ; **`APRES-01ter-clic-7-heure-deplacee.png` et `APRES-01ter-clic-8-retour-grille.png` sont le meme fichier, bit a bit** (96 846 o, md5 `b42b3d7697cad382db2827c49bf8d3a8`). Il y a donc **sept ecrans distincts**, pas huit : le retour sur la grille n'a rien change a l'ecran. Ce n'est pas une preuve falsifiee — l'etat mesure au ⑧ est bien relu au hub — mais le tableau presente ⑧ comme une etape distincte. **Sans consequence sur le verdict.**
+
+**HONNETETE DE L'EXECUTANT, A PORTER A SON CREDIT** : il declare lui-meme que son avant/apres **prouve la non-regression et non le correctif** (dans ce parcours, tous les creneaux recoivent leur identifiant au chargement en forme simple, avant toute version : le defaut corrige ne s'y montre pas). Les preuves du correctif sont celles du tour 203, remesurees par la conscience sur banc independant.
+
+**SON ECART N°1, VERIFIE PAR LA CONSCIENCE** : un identifiant en service n'est jamais recalcule, donc une periode a qui l'on donne `crn:1xd6hig` **le garde** (mesure : `P1=crn:1xd6hig`, `P2=per:10pkwh2`). L'unicite ne vaut qu'a l'interieur d'une famille. Sans consequence a l'usage — familles et chemins hub distincts — et le mandat lui interdisait d'y toucher. **Signale, non ajuste : conforme.** A trancher par Paul s'il le juge utile.
+
+**Vrai hub** : `/site/edt` et `/corbeille/2026-08-31` toujours `null`. Production toujours `75c8b77f` / `6c7560af…`.
+
+**CE QUI RESTE — a dire clairement a Paul** : le mandat ①ter est clos, **mais le LOT 2ter compte huit livraisons et seule la ① est faite**. Promouvoir maintenant mettrait en production tout le bloc EDT (149 fonctions, absentes de la production) avec l'identite posee mais **sans** les decisions sorties de l'objet (②), sans l'appariement gradue (③), sans le bloc bilan ni la vue Annee (⑤ a ⑧). **En revanche, la dette de PRODUCTION — le mode test qui n'arrete ni `mjpcPutJson` ni `mjpcDeleteJson`, 40 ecritures dans 34 fonctions — n'est reparee en production qu'au moment ou ce candidat est promu.** Paul avait tranche le 31/08 : « avec le reste, et a faire en premier ». **L'arbitrage lui appartient : promouvoir maintenant, ou rester expose jusqu'a la fin du lot.**
