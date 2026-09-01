@@ -1352,3 +1352,24 @@ Boutons : « Ne rien faire » · « Échanger les deux heures » · « Prendre l
 **LE REFUS SEC SUBSISTE LA OU IL DOIT** : il ne part plus quand la classe est **appariee**, mais **reste** pour une classe que le site ne connait pas encore — conforme au §④ du mandat (« une classe non appariee ne recoit aucune decision »).
 
 **SUITE** : **⑥b** — l'heure a replacer, son rappel dans la vue de la classe et au bandeau, la perte seche.
+
+**n°11 · 37 — AUDIT DE LA LIVRAISON ⑥b (candidat `9623ecea`, 8.73.0-⑥b). VERDICT : ÇA VA — voici les mesures. UN POINT DE VIGILANCE POUR ⑥c.**
+
+**Candidat** : 1 737 659 o, md5 `aeb8a9d72f0aea22dbfd0de68144a9f3`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **198**, **quatre** ajoutees et nommees (`edtHeuresAReplacer`, `edtRappelAReplacerHtml`, `edtHeureReplacee`, `edtPerteSeche`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1** · `edtMettreANiveau` **2** · **`EDT_CATEGORIES` et `EDT_MOTIFS` inchanges** · **node --check** et **acorn VERTS** · garde **VERTE**, contrat inchange.
+
+**LE CYCLE D'UNE HEURE A REPLACER, REJOUE SUR BANC INDEPENDANT** :
+| etape | a replacer | heures perdues |
+|---|---|---|
+| apres ecrasement | **1**, listee « pris par 3E Charles de Gaulle » | **1 perdue / 0 justifiee** — conforme : `aReplacer` porte `justifiee:false` |
+| Paul la replace | **0** — elle sort du rappel | 1 / 0 |
+| **perte seche declaree** | **0** | **1 perdue / 1 justifiee**, motif devenu **`priseAutreClasse`** — conforme au §②.3 |
+
+**ERREUR DE BANC DE LA CONSCIENCE, DECLAREE — la troisieme du genre.** Premier essai : la conscience avait pose la decision **a la main**, sans le champ `justifiee` que `edtEcraserHeure` ecrit reellement (`justifiee: EDT_MOTIFS.aReplacer.justifiee`). Resultat fausse : « 1 perdue / **1** justifiee » au lieu de « 1 / **0** ». **Le code etait juste, le banc etait infidele.** Corrige par lecture du code puis nouvel essai. **C'est exactement la faute que Paul a fait graver le 01/09 : un banc doit reproduire le motif reel.**
+
+**POINT DE VIGILANCE POUR ⑥c, mesure par la conscience** : apres « Paul la replace », l'heure **sort du rappel mais reste comptee comme perdue** (1 / 0). L'executant le declare : *« "Je l'ai replacée" est une declaration de Paul, pas une pose. Poser l'heure depuis la liste des destinations est la livraison ⑥c. »* **A EXIGER EN ⑥c : quand l'heure est reellement posee sur un creneau, elle cesse de compter comme perdue.** Sinon le total de juin sera faux.
+
+**SES AUTRES ECARTS, LUS** : la bascule automatique de fin d'annee (« jamais replacee » au 30 juin) **n'est pas faite** — elle depend de `finAnnee`, qui arrive en ⑥ finale : declare, hors perimetre · une heure declaree perdue seche **reste comptee**, en passant de non justifiee a justifiee : c'est ce que le §②.3 demande.
+
+**SUITE** : **⑥c** — la liste des destinations elargie, `edtVerifierCoherence`, **et le point de vigilance ci-dessus**.
