@@ -865,3 +865,33 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 **SES ECARTS, VERIFIES** : le rattachement ne se propose que si l'ancien nom a **disparu** de `/classes` — si Paul cree le nouveau sans supprimer l'ancien, rien n'est propose et les decisions restent sur une classe valide : comportement sur, declare · les candidates sont les classes appariees **sans aucune decision** (on ne melange pas deux histoires) et **toutes** sont proposees s'il y en a plusieurs : le site ne tranche pas · un refus n'est pas memorise, l'encart reapparait — il informe, il ne force rien.
 
 **SUITE** : livraison **③** finale — l'archivage generalise aux **15** ecritures, les captures par clics de bout en bout, l'audit adverse, le rapport final.
+
+**Tour 212 — AUDIT DE LA LIVRAISON ③ FINALE (candidat `87ad5f44`, 8.73.0-③). VERDICT : ÇA VA. Le mandat ③ est fini, aucune dette. Trois livraisons du lot sur huit sont closes.**
+
+**Candidat** : 1 686 881 o, md5 `efb57889867c5a968ba6da1949bfe851`. Base verifiee.
+
+**LA CONCEPTION EST MEILLEURE QUE CE QUE LE MANDAT DEMANDAIT.** Le mandat exigeait d'ajouter l'archivage a quinze ecritures. Il a fait l'inverse : **un point de passage unique**, `edtEcrireArchive(motif, chemin, avant, valeur, libelle, apres)`, par ou passent desormais **treize fonctions** (via `edtEcrireObjet`). Mesure de la conscience sur les bornes reelles du bloc : il ne reste que **trois appels directs** a `mjpcPutJson` — le point lui-meme, `edtEcrireBrevet` (hors `/site/edt`, ecart declare) et `edtMettreANiveau` (qui archive deja par son propre chemin, groupe, avec abandon global).
+
+**LE POINT DE PASSAGE, REJOUE SUR BANC INDEPENDANT** (stub fidele au site : `secuEcrire = new Promise(...)`) :
+| scenario | journal | message |
+|---|---|---|
+| archivage OK, il y a un etat d'avant | **ARCHIVE puis ECRITURE**, et l'archive porte `{data:{v:'AVANT'}}` — **l'etat d'AVANT** | non |
+| archivage **en echec** | ARCHIVE tentee, **0 ECRITURE** | **OUI** |
+| archivage qui **leve** | ARCHIVE tentee, **0 ECRITURE** | **OUI** |
+| **rien a remplacer** (`avant` null) | ECRITURE seule, **aucune archive inutile** | non |
+
+*Note : le premier essai de la conscience a fait lever `secuEcrire` de facon **synchrone**, ce qui remontait l'exception. Le vrai `secuEcrire` est un `new Promise(...)` : une levee interne y devient un **rejet**, capte par le `.catch`. **Banc infidele, refait** ; aucune conclusion tiree du premier essai. Quatrieme banc mal monte par la conscience sur ce lot, declare a chaque fois.*
+
+**LE CONTRAT DE LA GARDE A ETE ELARGI — c'est conforme, et c'est un AFFAIBLISSEMENT REEL A SURVEILLER.**
+- **Ancienne garde sur le candidat : ROUGE** (« ③ ecriture hub hors de /site/edt/ : `chemin+'.json'` ») — attendu.
+- **Nouvelle garde : VERTE** sur le candidat, **ROUGE sur les trois pieges de la conscience** (`deleteClass` hors contrat · `edtEcrireArchive` appelee hors du bloc · ecriture `/site/config/w.json`).
+- **Ce qui a change** : l'exception passe de la forme **specifique** `"t.chemin+'/absents.json'"` a la forme **generique** `"chemin+'.json'"`. **La garde ne controle donc plus le chemin de l'ecriture centrale.** Verifie par la conscience : les **deux seuls appelants** sont surs aujourd'hui — `edtEcrireObjet` → `edtChemin(nom)` → `/site/edt/<nom>`, et `edtAbsence` → `edtCheminTrace(...)+'/absents'`, l'exception d'origine. **A INSCRIRE DANS TOUS LES MANDATS SUIVANTS : relire les appelants de `edtEcrireArchive` a chaque livraison, la garde ne le fera plus.**
+- **Son affirmation est imprecise** : « la forme `chemin+'.json'` n'apparait qu'UNE fois **dans le fichier** » — mesure : **3 occurrences** (L3055, L13576 `secuPatchCode`, L18109). Une seule **dans le bloc EDT**, ce que la garde examine. Vrai pour la garde, faux pour le fichier.
+
+**NON-REGRESSION remesuree** : `function edt*` **167**, deux ajoutees et nommees (`edtEcrireArchive`, `edtEcrireObjet`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS**.
+
+**SES ECARTS** : `edtEcrireBrevet` n'archive pas — noeud **hors EDT**, etat d'avant jamais charge en memoire, valeur **derivee du calendrier** qui, lui, est archive a la meme injection. Il signale et attend : **a trancher par Paul** · l'ordre du tableau tranche quand deux entrants visent le meme existant (deterministe, deja signale en ①ter) · **apres une injection, la page se detache et la septieme capture n'a pas pu etre prise** : aucun `location.reload` dans le fichier, cause **non identifiee et anterieure au lot** — signale sans correction, hors perimetre.
+
+**ETAT** : `/site/edt` au vrai hub toujours `null`. Production toujours `75c8b77f` / `6c7560af…`.
+
+**SUITE** : livraison **④**. Restent ④ a ⑧ avant le promeus de Paul.
