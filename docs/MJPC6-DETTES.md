@@ -1028,3 +1028,25 @@ Paul, 01/09 : « **du coup c'est une dette qui rejoint les autres, mais avec son
 **CAP RAPPELE PAR PAUL, a garder en tete par toute conscience** : « **on continue pour arriver enfin a la promotion et pouvoir passer ensuite au reste du chantier afin que l'injection de chapitre soit enfin operationnelle.** » Le lot 2ter n'est pas une fin : **il debloque l'injection de chapitre**, qui est le vrai objectif. Restent **④ a ⑧**, puis le promeus.
 
 **MANDAT ④ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-04.md`. Base **8.73.0-③bis**, 1 690 354 o, `a04a8e58…`. Deux livraisons : ④-a le bouton et le collage unique · ④ les deux prompts reecrits. **Mesures de cadrage** : aucune fonction de prompt n'existe dans le bloc EDT · le patron du site est `ATELIER_PROMPT_SEED` + la famille `atIA*` · `navigator.clipboard` n'a **qu'une occurrence** dans tout le fichier (L4615) · les deux prompts (6 573 o et 7 494 o) **ne parlent pas d'identifiants** · aucune fonction de copie n'est au contrat de la garde.
+
+**Tour 220 — AUDIT DE LA LIVRAISON ④a (candidat `929670d1`, 8.73.0-④a). VERDICT : ÇA VA. Aucune dette.**
+
+**Candidat** : 1 708 032 o, md5 `9ac8e8a8b1ed55abe5d80258e2a4a943`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **171**, **deux** ajoutees et nommees (`edtPromptComplet`, `edtCopierPrompt`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, **contrat inchange**.
+
+**REJOUE SUR BANC INDEPENDANT** (`edtPromptComplet` extraite du candidat) :
+| cas | resultat |
+|---|---|
+| **hub VIDE — l'etat reel** | 255 caracteres · consigne presente · **« aucun calendrier en service — c'est une première injection »**, jamais un vide muet |
+| **hub GARNI** (calendrier reel) | 17 616 caracteres · consigne presente · **le JSON du hub inclus TEL QUEL** (retrouve a l'identique dans le texte copie) · **un seul bloc**, consigne d'abord, JSON ensuite |
+| le texte impose-t-il la reconduction ? | **oui** — « Reconduis les identifiants de tout ce que tu reconnais ; n'en invente aucun » |
+| voie inconnue | chaine vide, aucun plantage |
+
+**LE REPLI EST MEILLEUR QUE DEMANDE** : si le presse-papier refuse, le texte **s'ouvre dans le panneau** (`EDT_INJ.promptTexte`) et le site dit « la copie automatique a echoue — le texte est ouvert dessous, selectionne-le et copie-le a la main ». Jamais un bouton muet.
+
+**ERREUR DE MESURE DE LA CONSCIENCE DANS SON PROPRE MANDAT, DECLAREE.** Le mandat ④ affirmait : « `navigator.clipboard` — **une seule occurrence** dans tout le fichier (L4615) ». **Faux** : la base en portait **cinq lignes** — L4615-4616 (`_pasteCommon`), L7407-7408 (`atIACopier`), **et L19615 (`edtSortirJson`, deja dans le bloc EDT)**. Le `sort -u` de la conscience avait dedoublonne par contenu. **Sans consequence** : l'executant est alle lire le patron `atIACopier` malgre tout.
+
+**IL N'A PAS ELARGI LE CONTRAT, ET C'EST JUSTIFIE** : appeler `atIACopier` aurait exige d'ajouter une fonction de copie au contrat de la garde. Il a ecrit `edtCopierPrompt` **dans le bloc**, sur la meme structure (`clipboard.writeText` puis repli `execCommand`), comme `edtSortirJson` le faisait deja depuis longtemps. Le bloc passe donc de **une** a **deux** copies — ce n'est pas une nouveaute d'architecture.
+
+**SUITE** : **④** finale — les deux prompts reecrits, l'epreuve de bout en bout (le calendrier reel passe par le prompt et reinjecte : tous les identifiants reconduits), captures, audit adverse.
