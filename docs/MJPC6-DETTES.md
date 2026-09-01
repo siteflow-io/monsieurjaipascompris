@@ -1004,3 +1004,15 @@ Paul, 01/09 : « **il faudra faire une immense passe de simplification des terme
 **SES ECARTS, LUS** : en mode test les ecritures ne sortent pas — Paul peut donc **eprouver une injection sans rien ecrire au hub**, mais ce qu'il fait en mode test **ne se retrouve pas au hub** en quittant · la modale d'une case se referme quand on bascule le mode test (la grille est repeinte) · **un creneau d'essai et une vraie classe peuvent occuper le meme creneau** si Paul remplit plus tard un des quatre trous : les deux cohabitent, rien n'est masque ni ecrase — **choisir un autre trou serait une decision de Paul, pas une correction** · une famille sans prefixe declare ne serait pas controlee par le mecanisme de ③bis-b.
 
 **ETAT DU LOT 2ter** : livraisons **①, ②, ③ et ③bis closes et auditees**. Restent **④ a ⑧** avant le promeus.
+
+**Tour 218 — REGLE DE TENUE DES DETTES, POSEE PAR PAUL.**
+
+Paul, 01/09 : « **pour les dettes, ce sera à l'IA de confronter le code à la liste des dettes et de vérifier ce qui a été fait, ce qui peut être rayé, et ce qui est à garder.** »
+
+**La proposition de la conscience (une liste des dettes ouvertes tenue a la main en tete du registre) est ECARTEE par cette regle, et Paul a raison** : une liste tenue a la main se desynchronise du code, et c'est exactement le defaut qu'elle pretendait corriger. **Une confrontation se refait a volonte ; une liste, non.**
+
+**REGLE RETENUE — a appliquer par toute conscience, sans que Paul ait a le demander** : **la liste des dettes se verifie CONTRE LE CODE, pas contre le souvenir.** Pour chaque dette du registre : la mesurer dans le code d'aujourd'hui, puis la classer en **① faite → rayee, avec la mesure qui le prouve** · **② toujours ouverte → gardee** · **③ devenue sans objet → rayee, en disant pourquoi**. **Aucune dette n'est rayee sur parole ni sur souvenir : seulement sur mesure.**
+
+**Quand** : au moins **a chaque promotion** et **a chaque passation**. C'est aussi ce qui rend une passation sure — la conscience suivante herite d'une liste verifiee, pas d'une liste recopiee.
+
+**Etat au 01/09** : le registre fait **983 lignes**, la file ordonnee de tete date du **25/08** et n'a pas ete rejouee ; les 18 entrees de la conscience n°11 s'empilent des lignes 590 a 985. **La confrontation reste donc a faire** — sur l'ordre de Paul, ou au prochain jalon.
