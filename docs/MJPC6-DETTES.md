@@ -1327,3 +1327,28 @@ Paul, 01/09 : « **j'avais motivé ma règle du 31. vérifie.** »
 **ETAT DU LOT 2ter** : **①, ②, ③, ③bis, ④ et ⑤ closes et auditees.** Restent **⑥, ⑦, ⑧** avant le promeus.
 
 **FORMULATION** : ce verdict porte sur ce qui a ete eprouve — les mesures ci-dessus. Il ne dit pas « il n'y a rien » (regle changee au `n°11 · 26`).
+
+**n°11 · 36 — AUDIT DE LA LIVRAISON ⑥a (candidat `e8cad248`, 8.73.0-⑥a). VERDICT : ÇA VA — voici les mesures qui le fondent.**
+
+**Candidat** : 1 734 473 o, md5 `bc02c791eb2506fb9d25dc8c46d06721`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **194**, **quatre** ajoutees et nommees (`edtOccupantDe`, `edtTroisIssues`, `edtEchangerHeures`, `edtEcraserHeure`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1** · `edtMettreANiveau` **2** · **`EDT_CATEGORIES` et `EDT_MOTIFS` inchanges** · **node --check** et **acorn VERTS** · garde **VERTE sur ses cinq questions**, contrat inchange.
+
+**« HORAIRE TOUJOURS, PAS CONTENU » — VERIFIE PAR LECTURE, pas par confiance.** `edtEchangerHeures` et `edtEcraserHeure` n'ecrivent **que par `edtEcrireDecisionsGroupe`** : le magasin des decisions, rien d'autre. **Aucune touche a `EDT_CHAP`, aux seances, aux activites, aux traces.** Et une seule ecriture par geste — donc archive de l'etat d'avant et journal par heure, tout ce que ③ et ⑤c-bis ont pose.
+
+**REJOUE SUR BANC INDEPENDANT — la question qui compte : qui perd une heure ?**
+| geste | total mesure |
+|---|---|
+| **echange** entre 3E et 4E | **aucune heure perdue** — les deux departs portent `deplaceeVers`, le compteur les ignore (regle de ⑤c §④), et les deux arrivees sont epinglees. **Personne ne perd rien**, comme Paul l'exige |
+| **ecrasement** | **4E : 1 heure perdue, 0 justifiee** — motif **`aReplacer`**, statut non justifie, basculable. La classe evincee ne perd pas son heure en silence : elle devient **une heure a replacer** |
+
+**LE PRIX EST DIT AVANT — texte mesure par l'executant, au glisser-deposer reel (souris)** :
+> lundi 31 août à 15:07-16:02, c'est **4E BANKSY**.
+> **Échanger** : 3E Charles de Gaulle et 4E BANKSY permutent leurs deux heures — personne ne perd rien.
+> **Prendre le créneau** : 4E BANKSY perd son heure du lundi 31 août — elle devient une heure à replacer, et le site te la rappellera.
+
+Boutons : « Ne rien faire » · « Échanger les deux heures » · « Prendre le créneau ». **Ecritures avant la reponse : `[]`.**
+
+**LE REFUS SEC SUBSISTE LA OU IL DOIT** : il ne part plus quand la classe est **appariee**, mais **reste** pour une classe que le site ne connait pas encore — conforme au §④ du mandat (« une classe non appariee ne recoit aucune decision »).
+
+**SUITE** : **⑥b** — l'heure a replacer, son rappel dans la vue de la classe et au bandeau, la perte seche.
