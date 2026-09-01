@@ -956,3 +956,28 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 **PAUL EST PREVENU, NOMMEMENT, AVANT LE GESTE — verifie dans `edtDifferentielHtml`** : une liste a part, en alerte (`edt-diff-alerte`), intitulee **« Identifiants d'une autre famille, refusés »**, chaque ligne portant l'etiquette, l'identifiant refuse, **et le nombre d'heures cochees qui ne le suivront pas** : « Sortie B (2026-11-21) — identifiant « per:MENTEUR » d'une autre famille, refuse · 2 heures cochees ne le suivront pas ». **Jamais en silence.**
 
 **SUITE** : **③bis** finale — la garde reprend la surveillance du chemin de l'ecriture centrale, captures, audit adverse, rapport final.
+
+**Tour 216 — DETTE DECLAREE PAR PAUL : le vocabulaire technique de l'ecran.**
+
+Paul, 01/09 : « **il faudra faire une immense passe de simplification des termes techniques. Sinon dans 3 mois je lirai famille et je ne saurai pas ce que ca veut dire.** »
+
+**MESURE DE LA CONSCIENCE — l'ampleur reelle, dans le bloc EDT du candidat `8.73.0-③bis-b`** : **258 phrases visibles** relevees (chaines de 20 a 200 caracteres adressees a l'ecran, commentaires exclus) ; **23 portent un mot technique**, dedoublonnees :
+- **« identifiant » — 8 phrases** : « Identifiants d'une autre famille, refuses » · « … identifiants poses au calendrier / a la grille / aux creneaux horaires / aux periodes / aux photos » · « … a recu un identifiant distinct ».
+- **« decision » — 5** : « Ce qui garde ses decisions » · « … coche(s) heritee(s) reprises dans les decisions » · « Decisions rattachees a « … » » · « Decisions horaires » · « Annuler cette decision ».
+- **« apparie / appariement » — 5** : « Tant qu'une classe de la grille n'est pas appariee, sa case s'affiche mais ne projette rien » · « aucune classe appariee » · « Grille — appariement des classes ».
+- **« famille » — 3** · **« candidats identiques : traite comme un objet neuf » — 1** · **« La mise a niveau n'a pas ete enregistree » — 1**.
+
+**Le compte est un PLANCHER, pas un total** : la mesure ne couvre que le bloc EDT, seulement les chaines litterales, et rate les textes assembles en morceaux. **Le vrai chiffre est plus eleve.**
+
+**CE QU'IL FAUT DISTINGUER — et la conscience le dit avant qu'on melange les deux :**
+1. **Ce que le site DIT A PAUL a l'ecran.** C'est ca qui compte : c'est ce qu'il lira dans trois mois, en classe, sans personne a cote. **C'est la vraie dette.**
+2. **Le vocabulaire du code et des documents** (noms de fonctions, mandats, registre). Paul ne les lit pas en classe — sauf le registre, qu'il relit lui-meme. **Renommer le code est un chantier a risque** (167 fonctions `edt*`, une garde qui compte les noms) pour un benefice nul en classe : **a ne PAS confondre avec le point 1**.
+
+**PROPOSITION DE LA CONSCIENCE, en attente d'un mot de Paul** : une livraison **⑨ « les mots de Paul »**, qui ne touche **que les textes affiches** — aucun renommage de fonction, aucun changement de comportement, donc **un risque tres faible et une preuve simple** : le site fait exactement la meme chose, il le dit autrement. Exemples de reecriture, dans ses mots :
+- « Identifiants d'une autre famille, refuses » → **« Ces lignes portaient une etiquette qui n'est pas la leur : je les prends comme nouvelles »**
+- « Ce qui garde ses decisions » → **« Ce que tu avais coche et qui reste »**
+- « Tant qu'une classe de la grille n'est pas appariee… » → **« Tant que tu n'as pas dit a quelle classe correspond cette case… »**
+- « La mise a niveau n'a pas ete enregistree » → **« Je n'ai pas pu completer tes donnees — rien n'a ete ecrit, le site fonctionne en lecture »**
+- « … candidats identiques : traite comme un objet neuf » → **« Il y a plusieurs lignes identiques : je ne devine pas laquelle est laquelle, je les prends comme nouvelles »**
+
+**A trancher par Paul** : quand (avant ou apres le promeus, avant ou apres ④ a ⑧) et jusqu'ou (le bloc EDT seul, ou tout le site).
