@@ -1016,3 +1016,15 @@ Paul, 01/09 : « **pour les dettes, ce sera à l'IA de confronter le code à la 
 **Quand** : au moins **a chaque promotion** et **a chaque passation**. C'est aussi ce qui rend une passation sure — la conscience suivante herite d'une liste verifiee, pas d'une liste recopiee.
 
 **Etat au 01/09** : le registre fait **983 lignes**, la file ordonnee de tete date du **25/08** et n'a pas ete rejouee ; les 18 entrees de la conscience n°11 s'empilent des lignes 590 a 985. **La confrontation reste donc a faire** — sur l'ordre de Paul, ou au prochain jalon.
+
+**Tour 219 — LA DETTE SUR LA DETTE, statut pose par Paul.**
+
+Paul, 01/09 : « **du coup c'est une dette qui rejoint les autres, mais avec son statut propre: c'est une dette sur la dette.** »
+
+**DETTE À STATUT PROPRE — « LA DETTE SUR LA DETTE »** : *confronter la liste des dettes au code, dette par dette, et dire pour chacune ce qui est fait (raye, avec la mesure qui le prouve), ce qui reste ouvert, ce qui est devenu sans objet.* Elle ne se solde pas comme les autres : **elle se rejoue**, au moins a chaque promotion et a chaque passation (regle du tour 218). Elle n'est jamais « faite une fois pour toutes ».
+
+**Etat au 01/09** : registre **985 lignes**, file ordonnee de tete du **25/08** non rejouee, 19 entrees de la conscience n°11 empilees en fin de fichier. **La confrontation reste a faire.**
+
+**CAP RAPPELE PAR PAUL, a garder en tete par toute conscience** : « **on continue pour arriver enfin a la promotion et pouvoir passer ensuite au reste du chantier afin que l'injection de chapitre soit enfin operationnelle.** » Le lot 2ter n'est pas une fin : **il debloque l'injection de chapitre**, qui est le vrai objectif. Restent **④ a ⑧**, puis le promeus.
+
+**MANDAT ④ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-04.md`. Base **8.73.0-③bis**, 1 690 354 o, `a04a8e58…`. Deux livraisons : ④-a le bouton et le collage unique · ④ les deux prompts reecrits. **Mesures de cadrage** : aucune fonction de prompt n'existe dans le bloc EDT · le patron du site est `ATELIER_PROMPT_SEED` + la famille `atIA*` · `navigator.clipboard` n'a **qu'une occurrence** dans tout le fichier (L4615) · les deux prompts (6 573 o et 7 494 o) **ne parlent pas d'identifiants** · aucune fonction de copie n'est au contrat de la garde.
