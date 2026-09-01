@@ -1101,3 +1101,32 @@ Plus le cas de Paul aujourd'hui : « Si rien ne t'est donné sous CE QUI EST EN 
 **OBSERVATION MINEURE DE LA CONSCIENCE, non bloquante** : dans la branche « decoche » de `edtHeurePerdue`, un `delete edtD[classe].heures[cle]` est fait **sur l'etat en memoire AVANT l'ecriture**, puis `edtEcrireDecisionsGroupe([... valeur:null ...])` est appele — **qui fait deja le retrait**. Le `delete` est donc **redondant**, et il modifie la memoire avant que l'archivage ait reussi : si l'archive echoue, l'ecriture est abandonnee (c'est la regle de ③) mais **la memoire a deja oublie la decision** — divergence memoire/hub jusqu'au rechargement suivant. **Sans consequence sur les donnees** (le hub reste juste, un rechargement corrige l'affichage), **mais c'est un `delete` a retirer** : signale, a porter a la livraison ⑤b.
 
 **SUITE** : **⑤b** — les quatre motifs, **une heure ne compte jamais deux fois**, ↶ Annuler. **Y ajouter le `delete` redondant ci-dessus.**
+
+**Tour 223 — AUDIT DE LA LIVRAISON ⑤b (candidat `7541a139`, 8.73.0-⑤b). VERDICT : ÇA VA. Aucune dette. LA FAUTE LA PLUS COUTEUSE DU LOT EST FERMEE.**
+
+**Candidat** : 1 719 497 o, md5 `f871fb05aa584d11dbcbd35e582b847c`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **182**, **quatre** ajoutees et nommees (`edtMotifDe`, `edtBasculable`, `edtMotifEnClair`, `edtDatePose`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **les dix categories inchangees** · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, contrat inchange.
+
+**LA PREUVE QUI COMPTE, REJOUEE SUR BANC INDEPENDANT** (`edtTotauxPerdues`, `edtMotifDe`, `edtBasculable` extraites ; cas poses par la conscience) :
+| cas | total | basculable |
+|---|---|---|
+| 1 heure cochee, motif `calendrier` | **1 perdue / 1 justifiee** | **false** — ce qui vient de l'etablissement ne se bascule pas |
+| **LA MEME heure, motif remplace par `banalisee`** | **1 perdue / 1 justifiee — TOUJOURS UNE** | **true** — *le motif qui gagne apporte ses regles* |
+| deux heures differentes | 2 perdues / 1 justifiee | — |
+| **1 heure DEPLACEE** (`deplaceeVers`) | **0** — une heure deplacee n'est pas une heure perdue | — |
+| **decision ANCIENNE, sans champ `motif`** | 1 perdue / 1 justifiee, **motif deduit `calendrier`** | false — retrocompatible |
+| banalisee **non justifiee** | 1 perdue / **0 justifiee** | true |
+| motif inconnu, ni coche ni banalisation | **0**, motif `null` — rien n'est compte par erreur | — |
+
+**SES PREUVES, LUES — l'annonce s'affiche AVANT l'ecriture, dans les DEUX sens, `ecritures avant la reponse : []`** :
+> Cette heure est deja comptee perdue — evenement du calendrier — Sejour Verdun 3e. La banaliser remplacera ce motif. **L'heure ne sera comptee qu'une fois**, et son statut deviendra modifiable.
+
+et le sens inverse :
+> Cette heure est deja comptee perdue — heure banalisee (Evenement d'etablissement). La compter perdue a cause de « Sejour Verdun 3e » remplacera ce motif. **L'heure ne sera comptee qu'une fois**, et son statut ne sera plus modifiable.
+
+**↶ Annuler rend le motif d'origine**, relu au hub, avec la meme `pose` qu'au depart. La fiche de l'evenement montre l'heure decochee avec « heure banalisee (…) le 1 septembre ».
+
+**UNE FAUTE DE LA CONSCIENCE, DECLAREE** : l'observation du tour 222 — le `delete` redondant de `edtHeurePerdue`, qui modifie la memoire avant l'ecriture — **subsiste dans ce candidat** (mesure : la ligne est toujours la). **Ce n'est pas un manquement de l'executant** : la conscience l'a ecrite au registre et dite a Paul, **mais le mandat ⑤ etait deja depose et elle ne l'y a pas portee**. Il ne pouvait pas la connaitre. **A porter explicitement au mandat ⑥**, ou en complement de la livraison ⑤ finale.
+
+**SUITE** : **⑤c** — « Banaliser cette heure », les dix categories et leur classement, la bascule qui survit, l'heure deplacee.
