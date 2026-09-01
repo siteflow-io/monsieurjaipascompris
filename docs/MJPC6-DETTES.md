@@ -817,3 +817,29 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 **Raison** : la case repond a « cet evenement a-t-il des heures marquees ? ». La vider quand deux heures le sont encore dirait quelque chose de faux, et obligerait Paul a recocher des heures **deja cochees** — le site sortirait alors l'avertissement « cette heure porte deja un motif », pour rien.
 
 **Le cas n'est pas hypothetique, mesure sur son calendrier reel** : sur **15 evenements de classe**, **5 durent plusieurs jours** — Sejour Verdun 3e (14→16/10), Stages 3e (17→18/11), Stages 3e horizon Pro (13→15/01), Stage 4 (24→25/03), **Sejour Pays-Bas 4e (12→17/04, six jours)**. Un decalage d'un jour, ou une seule heure changee de jour, suffit a produire le cas.
+
+**Tour 210 — AUDIT DE LA LIVRAISON ③a (candidat `e70b5ca9`, 8.73.0-③a). VERDICT : ÇA VA. Aucune dette. L'appariement tourne avant toute ecriture.**
+
+**Candidat** : 1 678 220 o, md5 `afb31fc8438ea16c21e7d7ef19b3e4af`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **160**, six ajoutees et nommees (`edtListesFamilles`, `edtReconduire`, `edtQuestionsFaibles`, `edtPhraseFaible`, `edtNomCritere`, `edtEtiquette`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtMettreANiveau` **2 appels** (inchange) · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, contrat **non elargi**.
+
+**`edtApparier` N'A PAS ETE REECRITE — verifie par la conscience** : son corps est **identique bit a bit** a celui de la base. Elle est desormais appelee **une fois**, dans `edtReconduire`, elle-meme appelee depuis `edtInjInjecter` **avant `edtPoserIdsObjet`**, donc avant toute ecriture.
+
+**REJOUE SUR BANC INDEPENDANT** (noyau d'appariement extrait du candidat, cas poses par la conscience) :
+| cas | resultat |
+|---|---|
+| **quatre evenements jumeaux** (meme libelle, meme date), reinjectes **sans `id`** | **0 fort, 0 faible, 4 AMBIGUITES nommees, 4 disparaissants** — aucune ne se departage, **aucune permutation possible** |
+| l'un des quatre porte `evc:JUM0`, les trois autres non | **1 fort `par:'id'`** — l'identifiant fait foi — et **3 ambiguites** : les autres ne se departagent pas |
+| **ferie renomme ET deplace** (critere unique : la date) | **0 faible**, 1 arrivant + 1 disparaissant — conforme au §①.3 |
+| **audit adverse de la conscience : deux entrants portant le MEME `id` connu** | **1 fort seulement, 1 ambiguite, 0 arrivant** — un existant ne sert **qu'une fois**, la biunivocite tient sur ce cas tordu |
+
+**C'est la preuve qui protege les decisions de Paul** : quatre « Sortie jumelle 3e » identiques ne s'apparient pas au hasard, donc les coches ne permutent pas.
+
+**SON ECART N°1, VERIFIE, ET L'AVIS DE LA CONSCIENCE** : le §①.4 du mandat v2 prevoit, pour les creneaux horaires, un **second recours par le rang** si le nombre de creneaux est inchange. Mesure : `EDT_FAMILLES.creneauxHoraires` porte **`forts:['debut','fin']` et rien d'autre** — le rang n'est utilise **nulle part**. L'executant refuse de l'ajouter parce que le mandat declare `edtApparier` complete, et **il a raison de ne pas inventer**. **Avis de la conscience : garder tel quel.** Sans rang, aucune permutation n'est possible ; avec lui, un rang decale pourrait rattacher une decision au mauvais horaire. Le prix est qu'un creneau dont **l'horaire entier** change devient un arrivant — mais un creneau qui change entierement d'horaire **est** un autre creneau. **A trancher par Paul s'il n'est pas d'accord.**
+
+**SES AUTRES ECARTS** : les faibles ne sont pas proposes dans `edtInjecterAvecLaGrille` (fort seulement, jamais de conservation silencieuse) — il renvoie la question a l'ecran de verification de ③b, ce qui est juste · le differentiel est **calcule et memorise** (`EDT.diffInjection`) mais pas encore montre : c'est ③b · pour la grille, l'existant compare est **la version datee la plus recente**, coherent avec « on ne modifie pas le passe ».
+
+**LA MEME FAUTE POUR LA DEUXIEME FOIS EN DEUX LIVRAISONS** : la garde a refuse une premiere version parce qu'une variable locale s'appelait `suite`, et `function suite(` existe hors du bloc — comme `poser` en ②a. **Regle a inscrire dans les mandats suivants : tout nom de variable locale du bloc EDT commence par `edt`.**
+
+**SUITE** : **③b** — le differentiel nominatif dans l'ecran de verification et la classe renommee.
