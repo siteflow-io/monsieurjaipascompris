@@ -1152,3 +1152,25 @@ et le sens inverse :
 **LE `delete` REDONDANT SUBSISTE** (mesure : la ligne est toujours dans `edtHeurePerdue`). **Faute de transmission de la conscience**, deja declaree au tour 223 : le mandat ⑤ etait depose avant qu'elle le trouve. **A transmettre a l'executant pour la livraison ⑤ finale** — une phrase suffit : *« Dans `edtHeurePerdue`, branche « decoche » : retire le `delete edtD[edtF.classe].heures[edtF.cle]`. Il est redondant — `edtEcrireDecisionsGroupe` avec `valeur:null` fait deja le retrait — et il modifie la memoire AVANT que l'archivage ait reussi. »*
 
 **SUITE** : **⑤** finale — l'alerte mensuelle, la cinquieme question de la garde, les captures, l'audit adverse, **plus le `delete` ci-dessus**.
+
+**Tour 225 — AUDIT DE ⑤c-bis (candidat `52437fd3`, 8.73.0-⑤c-bis). VERDICT : ÇA VA pour son perimetre. MAIS L'AUDIT ADVERSE DE LA CONSCIENCE TROUVE LA MEME FAUTE SUR QUATRE AUTRES ECRITURES.**
+
+**Candidat** : 1 725 303 o, md5 `a397e48a206b70b965648d77c4e9d0b5`. Base verifiee. `function edt*` **186**, une ajoutee (`edtPhotoDecisions`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · dix categories inchangees · **node --check** et **acorn VERTS** · garde **VERTE**, contrat inchange. **Le `delete` redondant est retire.**
+
+**SA TROUVAILLE EST BIEN PLUS GRANDE QUE MON SIGNALEMENT, ET ELLE EST JUSTE.** Verifie par la conscience en lisant `edtEcrireDecision` dans la version ⑤c :
+`var d=edtDecisions();` rend **la reference vivante `EDT.decisions`** · on mute `d` · puis `edtEcrireObjet('decisions', d, …)` appelle `edtEcrireArchive(…, **EDT['decisions']**, d, …)` — **mais `EDT.decisions` EST `d`, deja mute**. **L'archive portait donc l'etat d'APRES.** Depuis la livraison ③, **l'archivage des decisions ne protegeait rien**. Sa preuve avant/apres : *heures dans l'archive* **0 → 1** · *journal, `avant` du dernier geste* **`null` → la decision entiere**.
+**Corrige aux trois ecritures du magasin** : `edtPhotoDecisions()` prend la photo **avant toute mutation** (L19799 `edtEcrireDecision`, L20617 `edtEcrireDecisionsGroupe`, L19244 `edtRattacherDecisions`), et rend `null` quand il n'y a rien a remplacer.
+
+**AUDIT ADVERSE DE LA CONSCIENCE — LA FAUTE N'EST PAS CIRCONSCRITE AUX DECISIONS. Quatre autres ecritures portent EXACTEMENT le meme motif**, mesurees en lisant leurs premieres lignes :
+| fonction | motif mesure | consequence |
+|---|---|---|
+| **`edtCreneauPoser`** | `var o=EDT.creneaux;` puis `t[champ]=…` (mutation de l'objet vivant) puis `edtEcrireObjet('creneaux',o,…)` | **l'archive porte l'etat d'APRES** |
+| **`edtApparierNom`** | `var o=EDT.grille;` puis `c.classeMjpc=…` sur toutes les cases puis `edtEcrireObjet('grille',o,…)` | **idem** |
+| **`edtReglagePoser`** | `var r=EDT.reglages…` puis `r[nom]=valeur` puis ecriture | **idem** |
+| **`edtPhoto`** | `var o=EDT.photos…` puis `o.photos.push(…)` puis ecriture | **idem** |
+**Sont SAINES** : `edtPeriodesEcrire` (construit un objet **neuf**) · `edtInjInjecter` et `edtInjecterAvecLaGrille` (objets neufs issus de l'injection). **`edtEcrireGrille` recoit son objet en argument : sain ou non selon l'appelant — `edtApparierNom` lui passe la reference vivante.**
+
+**C'est une dette de la livraison ③** (l'archivage generalise), **revelee par ⑤c-bis**, et **elle n'est pas dans le perimetre de ⑤**. Consequence concrete : pour ces quatre gestes, **la corbeille ne contient pas ce qu'il faudrait pour revenir en arriere**. Rien n'est perdu au hub — l'ecriture est juste — mais **le filet ne retient rien**.
+**A PORTER A LA LIVRAISON ⑤ FINALE** : le remede existe deja et il est ecrit, c'est celui de `edtPhotoDecisions` — **prendre la photo avant toute mutation**. Quatre endroits, meme geste.
+
+**SUITE** : **⑤** finale — l'alerte mensuelle, la cinquieme question de la garde, les captures, l'audit adverse, **plus les quatre photos manquantes ci-dessus**.
