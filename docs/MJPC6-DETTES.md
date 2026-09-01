@@ -933,3 +933,26 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 *Note : la conscience a monte son banc **trois fois** (dependances manquantes dans l'extrait : `edtVersions`, puis `edtDebutAnnee`). Aucune conclusion tiree avant que le banc tourne.*
 
 **SUITE** : **③bis-b** — l'identifiant qui dit sa famille et que le site verifie.
+
+**Tour 215 — AUDIT DE LA LIVRAISON ③bis-b (candidat `eeaf4579`, 8.73.0-③bis-b). VERDICT : ÇA VA. Aucune dette.**
+
+**Candidat** : 1 689 863 o, md5 `d8f66035387aad74bfb25f3865c00924`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **169**, **une** ajoutee et nommee (`edtIdMenteur`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, **contrat inchange** (aucun elargissement pour cette livraison — verifie par diff).
+
+**LE MECANISME, LU** : `edtIdMenteur(el,famille)` compare le prefixe de l'identifiant a celui de la famille (`EDT_FAMILLES[famille].prefixe`). **Un seul appel**, dans `edtReconduire`, **avant l'appariement**.
+
+**REJOUE SUR BANC INDEPENDANT** (noyau + `edtReconduire` extraits du candidat, cas poses par la conscience) — hub : deux evenements `evc:VRAI1` et `evc:VRAI2` ; entrant : un identifiant correct, un `per:MENTEUR`, un `crn:MENTEUR2` :
+| | resultat |
+|---|---|
+| menteurs detectes | **2**, avec famille, etiquette, identifiant **et nombre de coches** : `{famille:'evenementsClasse', etiquette:'Sortie B (2026-11-21)', id:'per:MENTEUR', coches:0}` |
+| l'identifiant **correct** | **intact** — `evc:VRAI1`, aucun recalcul |
+| « Sortie B », dont l'identifiant mentait | identifiant **retire**, puis **appariee FORTEMENT** par son contenu → elle recupere **`evc:VRAI2`**, le bon |
+| « Sortie C », inconnue du hub | identifiant **retire**, devient **arrivante** → recevra un identifiant neuf correct a la pose |
+| comptes | forts **2** · arrivants **1** · disparaissants **0** |
+
+**C'est mieux que ce que le mandat demandait** : retirer le menteur n'empeche pas l'appariement par le contenu de faire son travail — l'objet retrouve **sa vraie identite** au lieu d'en recevoir une neuve.
+
+**PAUL EST PREVENU, NOMMEMENT, AVANT LE GESTE — verifie dans `edtDifferentielHtml`** : une liste a part, en alerte (`edt-diff-alerte`), intitulee **« Identifiants d'une autre famille, refusés »**, chaque ligne portant l'etiquette, l'identifiant refuse, **et le nombre d'heures cochees qui ne le suivront pas** : « Sortie B (2026-11-21) — identifiant « per:MENTEUR » d'une autre famille, refuse · 2 heures cochees ne le suivront pas ». **Jamais en silence.**
+
+**SUITE** : **③bis** finale — la garde reprend la surveillance du chemin de l'ecriture centrale, captures, audit adverse, rapport final.
