@@ -1130,3 +1130,25 @@ et le sens inverse :
 **UNE FAUTE DE LA CONSCIENCE, DECLAREE** : l'observation du tour 222 — le `delete` redondant de `edtHeurePerdue`, qui modifie la memoire avant l'ecriture — **subsiste dans ce candidat** (mesure : la ligne est toujours la). **Ce n'est pas un manquement de l'executant** : la conscience l'a ecrite au registre et dite a Paul, **mais le mandat ⑤ etait deja depose et elle ne l'y a pas portee**. Il ne pouvait pas la connaitre. **A porter explicitement au mandat ⑥**, ou en complement de la livraison ⑤ finale.
 
 **SUITE** : **⑤c** — « Banaliser cette heure », les dix categories et leur classement, la bascule qui survit, l'heure deplacee.
+
+**Tour 224 — AUDIT DE LA LIVRAISON ⑤c (candidat `6a62b3b2`, 8.73.0-⑤c). VERDICT : ÇA VA. Aucune dette.**
+
+**Candidat** : 1 724 157 o, md5 `c1c997e5c934914d7be4a7ffc060b9c0`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **185**, **trois** ajoutees et nommees (`edtClassementDe`, `edtBasculerClassement`, `edtBasculerStatut`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · **les dix categories inchangees, caractere par caractere** · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, contrat inchange.
+
+**LE LIBELLE FAUTIF A DISPARU** : « ne plus compter cette séance » = **0 occurrence** · « Banaliser cette heure » = **2**.
+
+**LES DIX CATEGORIES, REJOUEES UNE PAR UNE SUR BANC INDEPENDANT** (`EDT_CLASSEMENT` extrait comme le navigateur le lit, `edtClassementDe` executee, resultat compare au tableau du mandat) — **10/10 CONFORMES** :
+| categorie | classement obtenu |
+|---|---|
+| Évaluation hors séance · Reprise ou rattrapage · Gestion de classe | **temps de classe** |
+| Événement d'établissement · Sortie, voyage, projet · Orientation et vie de classe · Absence du professeur · Absence massive d'élèves | **heure perdue · justifiée** |
+| Temps libre choisi · Autre | **heure perdue · non justifiée** |
+**Categorie inconnue → `{tempsDeClasse:false, justifiee:false}`** : perdue, non justifiee, **et Paul tranche**. Le choix prudent.
+
+**LA BASCULE SURVIT — verifie dans le code par la conscience** : `edtBasculerClassement` et `edtBasculerStatut` **copient** la decision (`JSON.parse(JSON.stringify)`), inversent le champ, et **ECRIVENT la decision entiere** par `edtEcrireDecision`. Le classement retenu est donc **dans la decision**, jamais recalcule depuis la categorie : **le choix de Paul survit a tout**. Les deux refusent si le motif n'est pas basculable (`if(!edtBasculable(edtV))return;`) — ce qui vient de l'etablissement reste non basculable.
+
+**LE `delete` REDONDANT SUBSISTE** (mesure : la ligne est toujours dans `edtHeurePerdue`). **Faute de transmission de la conscience**, deja declaree au tour 223 : le mandat ⑤ etait depose avant qu'elle le trouve. **A transmettre a l'executant pour la livraison ⑤ finale** — une phrase suffit : *« Dans `edtHeurePerdue`, branche « decoche » : retire le `delete edtD[edtF.classe].heures[edtF.cle]`. Il est redondant — `edtEcrireDecisionsGroupe` avec `valeur:null` fait deja le retrait — et il modifie la memoire AVANT que l'archivage ait reussi. »*
+
+**SUITE** : **⑤** finale — l'alerte mensuelle, la cinquieme question de la garde, les captures, l'audit adverse, **plus le `delete` ci-dessus**.
