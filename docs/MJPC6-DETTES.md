@@ -981,3 +981,26 @@ Paul, 01/09 : « **il faudra faire une immense passe de simplification des terme
 - « … candidats identiques : traite comme un objet neuf » → **« Il y a plusieurs lignes identiques : je ne devine pas laquelle est laquelle, je les prends comme nouvelles »**
 
 **A trancher par Paul** : quand (avant ou apres le promeus, avant ou apres ④ a ⑧) et jusqu'ou (le bloc EDT seul, ou tout le site).
+
+**Tour 217 — AUDIT DE LA LIVRAISON ③bis FINALE (candidat `3bd71136`, 8.73.0-③bis). VERDICT : ÇA VA. Le mandat ③bis est fini, aucune dette. LE CRAN PERDU EST REPRIS.**
+
+**Candidat** : 1 690 354 o, md5 `a04a8e5855172efd2f4fddb0a186237f`. Base verifiee. **+491 octets seulement dans le code** : l'essentiel de cette livraison est dans la garde, pas dans le site.
+
+**NON-REGRESSION remesuree** : `function edt*` **169**, **aucune ajoutee, aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS**.
+
+**LA GARDE A MAINTENANT QUATRE QUESTIONS — la quatrieme est exactement celle qui manquait.** Elle **analyse le deuxieme argument de chaque appel a `edtEcrireArchive`** (parcours des parenthesantes, declaration exclue) et exige un chemin **fabrique par le site** — `edtChemin(...)`, `edtCheminTrace(...)`, ou la trace d'une heure jouee. **Sortie sur le candidat** :
+> VERT — ① le bloc EDT n'appelle que le contrat · ② rien hors du bloc n'appelle edt* sauf les portes declarees · ③ tous ses noeuds sont sous /site/edt/, hors les exceptions nommees · **④ l'ecriture centrale n'ecrit que la ou le site l'envoie**
+
+**EPROUVEE PAR LES PIEGES DE LA CONSCIENCE** (poses par elle, pas par l'executant) :
+| piege | refus |
+|---|---|
+| `edtEcrireArchive('m','/site/classes/y',…)` — adresse ecrite a la main | **④ chemin qui n'est pas fabrique par le site : '/site/classes/y'** |
+| `edtEcrireArchive('m','/site/'+'edt/x',…)` — concatenation libre, **cible pourtant legitime** | **④ refuse aussi** — plus strict que necessaire, et c'est bien |
+| `deleteClass('z')` dans le bloc | ① hors contrat |
+| `edtIdMenteur()` appelee hors du bloc | ② appele hors du bloc sans etre une porte |
+
+**Consequence, et c'est la reponse a la question de Paul du tour 213 (« qu'est-ce qui fera la surveillance plus tard ? ») : plus rien ne repose sur la memoire d'une conscience.** La garde le fait elle-meme, a chaque livraison, pour toujours.
+
+**SES ECARTS, LUS** : en mode test les ecritures ne sortent pas — Paul peut donc **eprouver une injection sans rien ecrire au hub**, mais ce qu'il fait en mode test **ne se retrouve pas au hub** en quittant · la modale d'une case se referme quand on bascule le mode test (la grille est repeinte) · **un creneau d'essai et une vraie classe peuvent occuper le meme creneau** si Paul remplit plus tard un des quatre trous : les deux cohabitent, rien n'est masque ni ecrase — **choisir un autre trou serait une decision de Paul, pas une correction** · une famille sans prefixe declare ne serait pas controlee par le mecanisme de ③bis-b.
+
+**ETAT DU LOT 2ter** : livraisons **①, ②, ③ et ③bis closes et auditees**. Restent **④ a ⑧** avant le promeus.
