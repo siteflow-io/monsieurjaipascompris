@@ -1174,3 +1174,23 @@ et le sens inverse :
 **A PORTER A LA LIVRAISON ⑤ FINALE** : le remede existe deja et il est ecrit, c'est celui de `edtPhotoDecisions` — **prendre la photo avant toute mutation**. Quatre endroits, meme geste.
 
 **SUITE** : **⑤** finale — l'alerte mensuelle, la cinquieme question de la garde, les captures, l'audit adverse, **plus les quatre photos manquantes ci-dessus**.
+
+**Tour 226 — REPONSE A PAUL : OUI, UNE DETTE EST PASSEE. Comment, et ce que ca change.**
+
+Paul, 01/09 : « **tu es en train de me dire que des dettes sont passées malgré vos affirmations de zéro dettes ?** »
+
+**OUI. Une dette est passee a travers l'audit de la livraison ③, et la conscience en porte la responsabilite.**
+
+**COMMENT.** Le §③ du mandat ③ exigeait « archive avant ecriture, abandon si l'archivage echoue ». La conscience a mesure, au tour 212, sur banc independant : archive **puis** ecriture · archive en echec → **0 ecriture** · rien a remplacer → pas d'archive inutile. **Ces trois preuves sont vraies. Aucune ne prouvait ce qu'il fallait.**
+Le banc de la conscience appelait `edtEcrireObjet('calendrier', {v:'APRES'})` avec `EDT.calendrier={v:'AVANT'}` — **deux objets distincts**. Le vrai code passe **le meme objet, deja mute**. La conscience a verifie **qu'une archive partait**, jamais **ce qu'elle contenait dans les conditions reelles**. **Un banc trop propre ne mesure rien.**
+
+**CE QUE CA A COUTE** : rien au hub — les ecritures sont justes, les donnees de Paul sont bonnes. **C'est le filet qui ne retenait rien** : la corbeille et ↶ Annuler. Une dette de securite, pas de donnees.
+
+**COMBIEN, ET CE QU'ON NE PEUT PAS GARANTIR.** Une faute, **cinq points d'application connus** : les trois ecritures du magasin des decisions (corrigees en ⑤c-bis) et **quatre autres** trouvees par la conscience au tour 225 (`edtCreneauPoser`, `edtApparierNom`, `edtReglagePoser`, `edtPhoto`). **Et l'exhaustivite n'est PAS garantie** : une recherche automatique du motif sur tout le bloc n'en trouve que **2 sur les 4** que la lecture avait trouvees — parce que la mutation peut passer par une variable derivee (`t` dans `edtCreneauPoser`) ou par une fonction intermediaire (`edtToutesLesCases()` dans `edtApparierNom`). **Le seul moyen fiable reste la lecture des neuf appelants, un par un.**
+
+**CE QUE LA CONSCIENCE CHANGE, A PARTIR DE MAINTENANT.**
+1. **Ne plus ecrire « aucune dette » mais « aucune dette trouvee par ces mesures : … », la liste a l'appui.** Un verdict tranche porte sur ce qui est mesure, **jamais au-dela**. « Ca va » repond a « ce que j'ai eprouve tient », pas a « il n'y a rien ».
+2. **Un banc doit reproduire le motif reel, pas une version propre du motif.** Quand le vrai code passe une reference, le banc passe une reference.
+3. **Une preuve d'existence n'est pas une preuve de contenu.** « Une archive part » ne dit rien de ce qu'elle porte.
+
+**ET CELA CONFIRME LA DETTE SUR LA DETTE POSEE PAR PAUL (tour 219)** : la confrontation du code au registre n'est pas un rangement, **c'est le seul moyen de rattraper ce qui est passe**. **Proposition de la conscience** : avant le promeus, une passe qui relit **chaque preuve des audits ① a ⑤** et se demande, pour chacune, *ce qu'elle prouve vraiment*. C'est le meme geste que Paul demande pour les dettes, applique aux preuves.
