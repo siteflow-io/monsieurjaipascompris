@@ -1282,3 +1282,21 @@ Paul, 01/09 : « **donc en fait le banc doit être élargi. il doit tout tester,
 4. `banc-tout` juge sur des **chaines** : un banc qui changerait sa mise en forme sans changer ses chiffres passerait pour casse. Prix assume d'un banc qui n'invente rien.
 
 **CE QUI RESTE POUR CLORE ⑤** : l'alerte mensuelle · **la cinquieme question de la garde** · les captures · l'audit adverse · le rapport final.
+
+**n°11 · 34 — LA REGLE DU 31/08 TRANCHEE PAR SA PROPRE MOTIVATION, sans nouvelle question a Paul.**
+
+Paul, 01/09 : « **j'avais motivé ma règle du 31. vérifie.** »
+
+**VERIFICATION AU TRANSCRIPT, mot pour mot** (`TRANSCRIPTS/C11/TRANSCRIPT-C11.md`, tours 20 a 23). Les seuls mots de Paul sur ce sujet sont : « Livré » · « Je n'ai pas compris ta question » · « **C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypothétique...** » · « Ok continue ». **La motivation etait celle de la CONSCIENCE, pas celle de Paul** — il avait demande un avis, la conscience l'a donne, il a repondu « Ok continue ». C'est deja ce que le registre disait au `n°11 · 13` : « il a demande l'avis de la conscience et n'a pas impose de reponse ».
+
+**MAIS LA CONSIGNE DE PAUL EST JUSTE : une regle motivee se tranche par sa motivation, pas par une nouvelle question.** La motivation consignee le 31/08 avait **deux jambes** :
+1. « La case repond a *cet evenement a-t-il des heures marquees ?* — la vider quand deux heures le sont encore **dirait quelque chose de faux**. »
+2. « …et **obligerait Paul a recocher des heures deja cochees**, le site sortant l'avertissement "cette heure porte deja un motif", pour rien. »
+
+**CONFRONTEES AU CODE D'AUJOURD'HUI** :
+- **La jambe 2 est TOMBEE** : depuis ⑤a il n'y a plus de case unique par evenement, donc plus rien a decocher ni a recocher. Sans objet.
+- **La jambe 1 TIENT, et elle suffit** : `edtEvenementJustifie` a **un seul appelant, `edtPeindreAnnee`** — la pastille de la vue Annee, qui repond exactement a la question « cet evenement a-t-il des heures marquees ? ». **La vider quand une heure l'est encore dirait toujours quelque chose de faux.**
+
+**DECISION, prise par la conscience sur la motivation existante, sans redemander a Paul** : **la regle survit, portee desormais par la pastille de la vue Annee** — elle s'allume des qu'**une** heure recouverte par l'evenement est marquee, et s'eteint quand plus aucune ne l'est. **A appliquer telle quelle en livraison ⑦.** Paul corrige s'il n'est pas d'accord ; il n'a rien a trancher pour que le travail continue.
+
+**LECON DE METHODE, a garder** : quand une decision est **motivee**, la motivation se confronte au code et tranche seule les cas nouveaux. **Reposer la question a Paul quand la motivation suffit, c'est lui faire refaire un travail deja fait.**
