@@ -1237,3 +1237,22 @@ Paul, 01/09 : « **donc en fait le banc doit être élargi. il doit tout tester,
 2. **UNE PREUVE DIT CE QU'ELLE CONTIENT, PAS SEULEMENT QU'ELLE EXISTE.** « Une archive est partie » ne prouve rien : il faut **ce qu'il y a dedans**, compte a l'appui, dans les conditions reelles.
 
 **PROPOSITION DE LA CONSCIENCE, en attente d'un mot de Paul** : **un banc unique — `banc-tout.mjs` — qui enchaine les 34 d'une seule commande et ECHOUE si un seul echoue.** C'est exactement « il doit tout tester » : non pas un banc qui grossit, mais **un seul point d'entree qui ne laisse rien de cote**. A exiger dans chaque mandat a partir de ⑥, et a rejouer avant chaque promeus.
+
+**n°11 · 32 — AUDIT DE ⑤c-ter (candidat `e81effda`, 8.73.0-⑤c-ter). VERDICT : ÇA VA pour son perimetre. La dette que la conscience avait trouvee au n°11 · 25 est fermee.**
+
+**Candidat** : 1 727 359 o, md5 `885ae067afe7025d1213efe85930fbe3`. Base verifiee.
+
+**LES QUATRE PHOTOS MANQUANTES SONT POSEES — verifie une par une en lisant le code** :
+| fonction | mesure |
+|---|---|
+| `edtCreneauPoser` | `var edtAvant=edtPhotoDe('creneaux');` **en PREMIERE ligne**, avant `var o=EDT.creneaux` et avant `t[champ]=…` |
+| `edtApparierNom` | `var edtAvant=edtPhotoDe('grille');` **avant** la mutation par `edtToutesLesCases()` |
+| `edtReglagePoser` | photo prise |
+| `edtPhoto` | photo prise |
+**Le remede est generique** : `edtPhotoDe(nom)` rend une **copie profonde** de `EDT[nom]` (`JSON.parse(JSON.stringify)`), et `edtPhotoDecisions()` n'est plus qu'un appel a `edtPhotoDe('decisions')`. **Une seule fonction, quatre plus un usages** — meme geste que la porte d'ecriture unique de ③.
+
+**NON-REGRESSION remesuree** : `function edt*` **187**, **une** ajoutee et nommee (`edtPhotoDe`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · dix categories inchangees · **node --check VERT** · garde **VERTE sur ses quatre questions**, contrat inchange.
+
+**CE QUI RESTE POUR CLORE ⑤** : l'alerte mensuelle · **la cinquieme question de la garde** (comparer `EDT_PROMPTS` aux fichiers `prompts/*.md`) · les captures · l'audit adverse · le rapport final. **Et, decide par Paul le 01/09 : le banc unique `banc-tout.mjs`** qui enchaine les 34 bancs d'une commande et echoue si un seul echoue — a exiger a partir du mandat ⑥, mais **il peut deja etre demande ici**.
+
+**FORMULATION DES VERDICTS, changee depuis le n°11 · 26** : « ca va » signifie **« ce que j'ai eprouve tient »**, jamais « il n'y a rien ». Les mesures qui fondent ce verdict sont listees ci-dessus.
