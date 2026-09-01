@@ -1194,3 +1194,28 @@ Le banc de la conscience appelait `edtEcrireObjet('calendrier', {v:'APRES'})` av
 3. **Une preuve d'existence n'est pas une preuve de contenu.** « Une archive part » ne dit rien de ce qu'elle porte.
 
 **ET CELA CONFIRME LA DETTE SUR LA DETTE POSEE PAR PAUL (tour 219)** : la confrontation du code au registre n'est pas un rangement, **c'est le seul moyen de rattraper ce qui est passe**. **Proposition de la conscience** : avant le promeus, une passe qui relit **chaque preuve des audits ① a ⑤** et se demande, pour chacune, *ce qu'elle prouve vraiment*. C'est le meme geste que Paul demande pour les dettes, applique aux preuves.
+
+**Tour 227 — LE BANC : ce que Paul tranche, et ce que la mesure precise.**
+
+Paul, 01/09 : « **donc en fait le banc doit être élargi. il doit tout tester, c'est tout.** »
+
+**IL A RAISON, ET LA MESURE DIT EXACTEMENT OU LE BANC A MANQUE.**
+
+**ETAT MESURE — 34 bancs au sas** (`PONT/EDT/tests/*.mjs`). **Tous tournent dans un vrai navigateur** (puppeteer) : ce ne sont pas des reconstructions. **Mais le chemin differe d'un banc a l'autre** :
+| banc | clics reels | appels de fonction |
+|---|---|---|
+| **`banc-archivage-03`** — celui par ou la dette est passee | **0** | 6 |
+| `banc-mise-a-niveau-01bis-a` | **0** | 4 |
+| `banc-coche-02a` | 1 | 16 |
+| `banc-archive-decisions-05cbis` | 2 | 6 |
+| `banc-motifs-05b` | **4** | 13 |
+
+**LE DEFAUT N'ETAIT PAS LA QUANTITE DE CAS, C'ETAIT LE CHEMIN.** `banc-archivage-03` faisait **zero clic** : il appelait `edtEcrireObjet` directement, avec des objets fabriques pour l'occasion — donc **deux objets distincts**, la ou le geste reel passe **la meme reference deja mutee**. Le banc prouvait que la porte marche, pas que le geste de Paul est protege. Les livraisons recentes cliquent (4 clics en ⑤b) : **la pratique s'est corrigee d'elle-meme, sans que la regle soit ecrite.**
+
+**CE QUI MANQUE VRAIMENT : IL N'Y A AUCUN BANC QUI REJOUE TOUT.** Verifie : `banc-tous`, `banc-complet`, `banc-regression`, `banc-suite` → **404**. **34 bancs separes, rejoues a la main a chaque livraison** : un executant qui en oublie un ne le voit pas, et personne ne le voit non plus.
+
+**DEUX REGLES A GRAVER DANS TOUS LES MANDATS SUIVANTS :**
+1. **UN BANC PASSE PAR LE GESTE, JAMAIS PAR LA FONCTION.** Ce qui n'est pas atteignable par un clic n'est pas prouve : c'est declare comme tel. Un banc qui appelle la fonction teste la porte, pas le geste de Paul.
+2. **UNE PREUVE DIT CE QU'ELLE CONTIENT, PAS SEULEMENT QU'ELLE EXISTE.** « Une archive est partie » ne prouve rien : il faut **ce qu'il y a dedans**, compte a l'appui, dans les conditions reelles.
+
+**PROPOSITION DE LA CONSCIENCE, en attente d'un mot de Paul** : **un banc unique — `banc-tout.mjs` — qui enchaine les 34 d'une seule commande et ECHOUE si un seul echoue.** C'est exactement « il doit tout tester » : non pas un banc qui grossit, mais **un seul point d'entree qui ne laisse rien de cote**. A exiger dans chaque mandat a partir de ⑥, et a rejouer avant chaque promeus.
