@@ -1050,3 +1050,34 @@ Paul, 01/09 : « **du coup c'est une dette qui rejoint les autres, mais avec son
 **IL N'A PAS ELARGI LE CONTRAT, ET C'EST JUSTIFIE** : appeler `atIACopier` aurait exige d'ajouter une fonction de copie au contrat de la garde. Il a ecrit `edtCopierPrompt` **dans le bloc**, sur la meme structure (`clipboard.writeText` puis repli `execCommand`), comme `edtSortirJson` le faisait deja depuis longtemps. Le bloc passe donc de **une** a **deux** copies — ce n'est pas une nouveaute d'architecture.
 
 **SUITE** : **④** finale — les deux prompts reecrits, l'epreuve de bout en bout (le calendrier reel passe par le prompt et reinjecte : tous les identifiants reconduits), captures, audit adverse.
+
+**Tour 221 — AUDIT DE LA LIVRAISON ④ FINALE (candidat `b25cd29f`, 8.73.0-④). VERDICT : ÇA VA. Le mandat ④ est fini, aucune dette. UNE DETTE NEUVE EST NEE, DECLAREE PAR L'EXECUTANT.**
+
+**Candidat** : 1 711 939 o, md5 `8736d113d9f92827ba46d73b3fa4a6e1`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **171**, **aucune ajoutee, aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, **contrat inchange**.
+
+**LES DEUX PROMPTS REECRITS — les sept consignes du §② sont la, LUES une par une** (`prompts/calendrier.md` 6 573 → 8 513 o, `prompts/grille.md` 7 494 → 9 434 o) :
+1. « **Reconduis l'`id` de tout ce que tu reconnais.** Même si le libellé a été retouché, même si la date a bougé d'un jour : c'est le même événement, il garde son `id`. »
+2. « **N'en invente aucun.** Un élément vraiment nouveau sort **sans `id`** — c'est mon site qui lui en donnera un. »
+3. « **Ne reformule jamais un libellé.** Je reconnais mes sorties à leur nom. Une reformulation, pour moi, c'est un objet perdu. Recopie ce qui est écrit, même maladroit. »
+4. « **Ne renumérote rien** : ni les rangs, ni l'ordre des éléments, ni les périodes. »
+5. « **Ne produis aucun champ `justifie`.** Il n'existe plus dans mon site. » — **deux fois** dans `calendrier.md` : ce sont **deux interdits**, pas un residu.
+6. « **Les préfixes disent la famille**, et tu n'en changes jamais » — **les huit sont enumeres**.
+7. « **Dis-moi ce que tu as fait.** À la fin, en dehors du JSON : ce que tu as ajouté, déplacé (avec l'ancien et le nouveau), supprimé, et ce dont tu n'étais pas sûre. »
+Plus le cas de Paul aujourd'hui : « Si rien ne t'est donné sous CE QUI EST EN SERVICE AUJOURD'HUI, c'est ma **première injection** : aucun élément n'a d'`id`, et tu n'en mets aucun. »
+**Le ton est celui de Paul, a la premiere personne** (« LES IDENTIFIANTS — c'est ma mémoire, ne la casse pas »). Il vient de demander une passe de simplification : ces prompts n'en creent pas de nouveau besoin.
+
+*Note : quatre motifs de recherche de la conscience ont rendu **0** sur des consignes **pourtant presentes** (syntaxe `\|` dans un `grep -E`). **Corrige par la LECTURE avant toute conclusion.** Enieme rappel de la regle du 01/08 : on lit le corps, on ne compte pas des motifs.*
+
+**LA DETTE NEUVE, DECLAREE PAR L'EXECUTANT ET VERIFIEE PAR LA CONSCIENCE — LES CONSIGNES EXISTENT EN DEUX EXEMPLAIRES.** Le site ne peut pas lire un fichier du depot : le collage unique impose une **copie embarquee** (`EDT_PROMPTS`) a cote des fichiers `prompts/*.md`. **Mesure de la conscience, extraction faite comme le navigateur la lit** :
+| voie | embarque | depot | identiques |
+|---|---|---|---|
+| calendrier | 8 272 car., md5 `c6ef9d23d4fb` | 8 272 car., md5 `c6ef9d23d4fb` | **OUI** |
+| grille | 9 201 car., md5 `e9823409e47e` | 9 201 car., md5 `e9823409e47e` | **OUI** |
+**Sous controle aujourd'hui, dangereux demain** : la prochaine main qui modifie l'un sans l'autre cree une divergence **silencieuse** — et Paul lira un prompt qui n'est pas celui que le bouton copie.
+**PROPOSITION DE LA CONSCIENCE, en attente d'un mot de Paul** : **une cinquieme question a la garde** — comparer `EDT_PROMPTS` aux fichiers `prompts/*.md` et refuser s'ils different. C'est mecanique, c'est deux md5, et c'est exactement ce que Paul demandait le 01/09 : « **le systeme doit etre solide et ne pas me bloquer dans 3 mois** ».
+
+**SES AUTRES ECARTS** : le role de l'IA est tenu par le banc, pas par une vraie IA — l'epreuve prouve que **le site tient sa part**, pas ce qu'une IA fera des consignes ; il le declare · il n'y a de bouton que pour les deux voies qui ont une consigne · le site pese **21,6 ko de plus**, ce sont les deux consignes embarquees.
+
+**ETAT DU LOT 2ter** : **①, ②, ③, ③bis et ④ closes et auditees**. Restent **⑤ a ⑧** avant le promeus.
