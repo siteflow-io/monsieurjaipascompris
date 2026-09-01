@@ -807,3 +807,13 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 **ETAT** : `/site/edt` au vrai hub toujours `null`. Production toujours `75c8b77f` / `6c7560af…`.
 
 **SUITE** : livraison **③** — appariement gradue et biunivoque, differentiel nominatif, archivage avant ecrasement generalise. **A y porter** : la classe renommee (ecart ①) et, si Paul tranche, le cas partiel du §④.
+
+**Tour 209 — CADRAGE TRANCHE : la case d'un evenement partiellement deplace RESTE COCHEE.**
+
+Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypothetique... » — il a demande l'avis de la conscience et n'a pas impose de reponse.
+
+**Regle retenue, a appliquer telle quelle dans les livraisons suivantes** : **la case d'un evenement est cochee tant qu'au moins une des heures qu'il recouvre aujourd'hui est marquee** ; le message compte les heures **sorties**. Quand plus aucune heure marquee ne tient sous l'evenement, la case se vide. C'est le comportement du candidat `8.73.0-②` : **rien a changer**. Le §④ du mandat ② disait « cases VIDES » sans distinguer le cas partiel : **c'est le mandat qui etait imprecis**, l'ecart n°2 de l'executant etait fonde.
+
+**Raison** : la case repond a « cet evenement a-t-il des heures marquees ? ». La vider quand deux heures le sont encore dirait quelque chose de faux, et obligerait Paul a recocher des heures **deja cochees** — le site sortirait alors l'avertissement « cette heure porte deja un motif », pour rien.
+
+**Le cas n'est pas hypothetique, mesure sur son calendrier reel** : sur **15 evenements de classe**, **5 durent plusieurs jours** — Sejour Verdun 3e (14→16/10), Stages 3e (17→18/11), Stages 3e horizon Pro (13→15/01), Stage 4 (24→25/03), **Sejour Pays-Bas 4e (12→17/04, six jours)**. Un decalage d'un jour, ou une seule heure changee de jour, suffit a produire le cas.
