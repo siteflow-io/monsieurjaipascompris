@@ -1373,3 +1373,26 @@ Boutons : « Ne rien faire » · « Échanger les deux heures » · « Prendre l
 **SES AUTRES ECARTS, LUS** : la bascule automatique de fin d'annee (« jamais replacee » au 30 juin) **n'est pas faite** — elle depend de `finAnnee`, qui arrive en ⑥ finale : declare, hors perimetre · une heure declaree perdue seche **reste comptee**, en passant de non justifiee a justifiee : c'est ce que le §②.3 demande.
 
 **SUITE** : **⑥c** — la liste des destinations elargie, `edtVerifierCoherence`, **et le point de vigilance ci-dessus**.
+
+**n°11 · 38 — AUDIT DE LA LIVRAISON ⑥c (candidat `3008a3c9`, 8.73.0-⑥c). VERDICT : ÇA VA — voici les mesures. UNE FUITE DE VARIABLE A CORRIGER EN ⑥ FINALE.**
+
+**Candidat** : 1 742 164 o, md5 `8977a8a59b07cf0e31d9336e5d8c76d9`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **203**, **cinq** ajoutees et nommees (`edtDestinationsPour`, `edtProjeterJour`, `edtQuiEstEn`, `edtReplacerHeure`, `edtVerifierCoherence`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1** · `edtMettreANiveau` **2** · **`EDT_CATEGORIES` et `EDT_MOTIFS` inchanges** · **node --check VERT** · garde **VERTE**, contrat inchange.
+
+**LE POINT DE VIGILANCE DU `n°11 · 37` EST TRAITE — rejoue sur banc independant** :
+| etape | a replacer | heures perdues |
+|---|---|---|
+| apres ecrasement | 1 | **1 perdue / 0 justifiee** |
+| **heure REELLEMENT POSEE** le 07/09 a 10h07 | **0** | **0 — elle ne compte plus du tout** |
+`edtReplacerHeure` pose `deplaceeVers` sur la decision d'origine et `{ajoutee, epingle, venantDe}` a l'arrivee : **le compteur l'ignore** par la regle de ⑤c §④. **Le total de juin sera juste.** Et tout part en **une seule ecriture** groupee — donc archive et journal.
+
+**UNE FUITE DE VARIABLE GLOBALE, TROUVEE PAR LA CONSCIENCE — a corriger en ⑥ finale.**
+`edtVerifierCoherence` (L20169) ecrit :
+`var edtOut=[],edtD=edtDepart=depuis||edtAujourdhui();`
+**`edtDepart` n'est declare NULLE PART** — mesure : **0 occurrence de `var edtDepart`**, et le fichier n'a **aucun `'use strict'`**. Chaque appel de la fonction cree donc **une variable globale implicite**. Et `edtD`, lui, **est declare mais jamais relu** (1 seule occurrence, sa declaration) : le corps utilise `edtDepart`. **C'est une faute de frappe** — l'intention etait `var edtDepart=depuis||edtAujourdhui();`.
+**Consequences** : une globale de plus, susceptible de collision ; et si le fichier passait un jour en mode strict, **la fonction leverait**. **Sans effet mesurable aujourd'hui**, mais c'est exactement le genre de chose que Paul ne pourra pas diagnostiquer dans trois mois. **Correction : une ligne.**
+
+**`edtVerifierCoherence` fait ce qu'on lui demande** : elle projette chaque jour de la periode et rend la **liste** des telescopages — deux fois la meme classe au meme creneau, deux classes au meme creneau, heure a la fois au depart et a l'arrivee. Elle saute les jours sans cours.
+
+**SUITE** : **⑥** finale — les dates de l'annee, les captures, l'audit adverse, `banc-tout` en entier, **et la fuite `edtDepart` ci-dessus**.
