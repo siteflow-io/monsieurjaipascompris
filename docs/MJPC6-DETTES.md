@@ -546,7 +546,7 @@ Prouvé par l'exécutant : **versions datées** (compatibilité de la forme anci
 ## F · CONSCIENCE n°11 — 31/08 au 01/09/2026
 
 > **Prise de fonction** : passation C10 → C11 du 27/08, état recompté sur pièces avant tout geste (tour 196).
-> **Ce que cette conscience a fait** : corrigé la passation au sas (une ligne fausse) · audité **quinze livraisons** du LOT 2ter — ①, ①bis-a, ①bis, ①ter-a, ①ter, ②a, ②b, ②, ③a, ③b, ③, ③bis-a, ③bis-b, ③bis, ④a, ④, ⑤a, ⑤b, ⑤c, ⑤c-bis — chacune sur pièces et sur **banc indépendant** · écrit et déposé **six mandats d'exécutant** (①bis, ①ter, ②, ③, ③bis, ④, ⑤) · tenu le transcript mot pour mot au sas (`TRANSCRIPTS/C11/`).
+> **Ce que cette conscience a fait** : corrigé la passation au sas (une ligne fausse) · audité **vingt livraisons** du LOT 2ter — ①, ①bis-a, ①bis, ①ter-a, ①ter, ②a, ②b, ②, ③a, ③b, ③, ③bis-a, ③bis-b, ③bis, ④a, ④, ⑤a, ⑤b, ⑤c, ⑤c-bis — chacune sur pièces et sur **banc indépendant** · écrit et déposé **sept mandats d'exécutant** (①bis, ①ter, ②, ③, ③bis, ④, ⑤) · tenu le transcript mot pour mot au sas (`TRANSCRIPTS/C11/`).
 > **Ce qu'elle a manqué, et qu'elle déclare** : une dette est passée à travers son audit de la livraison ③ — l'archivage portait l'état d'**après**, parce que son banc passait deux objets distincts là où le vrai geste passe la même référence (tour 226). Cinq points d'application connus, quatre encore ouverts.
 > **Ses erreurs de méthode, déclarées au fil des tours** : comptage de motifs pris pour une lecture (tours 199, 220, 221) · pièges de garde invalides (tour 206) · bancs mal montés, corrigés avant conclusion (tours 207, 212, 214) · une observation trouvée mais non portée au mandat (tour 223).
 > **Les entrées qui suivent sont les siennes, tour par tour, du 197 au 227.**
