@@ -1081,3 +1081,23 @@ Plus le cas de Paul aujourd'hui : « Si rien ne t'est donné sous CE QUI EST EN 
 **SES AUTRES ECARTS** : le role de l'IA est tenu par le banc, pas par une vraie IA — l'epreuve prouve que **le site tient sa part**, pas ce qu'une IA fera des consignes ; il le declare · il n'y a de bouton que pour les deux voies qui ont une consigne · le site pese **21,6 ko de plus**, ce sont les deux consignes embarquees.
 
 **ETAT DU LOT 2ter** : **①, ②, ③, ③bis et ④ closes et auditees**. Restent **⑤ a ⑧** avant le promeus.
+
+**Tour 222 — AUDIT DE LA LIVRAISON ⑤a (candidat `b96376e6`, 8.73.0-⑤a). VERDICT : ÇA VA. Aucune dette. Une observation mineure.**
+
+**Candidat** : 1 716 493 o, md5 `20dc0ca1a8d271e0777056f1dd0e0f64`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **178**, **sept** ajoutees et nommees (`edtCoutParNiveau`, `edtDatesEnClair`, `edtHeurePerdue`, `edtJourEnClair`, `edtNiveauxConnus`, `edtPhraseCout`, `edtTotauxPerdues`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **les dix categories INCHANGEES, comparees caractere par caractere** · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, contrat inchange.
+
+**SES PREUVES, LUES** : **6 fiches**, une par evenement — un stage de trois jours donne **une seule fiche** avec **une case par heure** · **10 cases, 0 cochee, 0 heure retiree** au depart · le conditionnel est la (« perdraient ») · **9 evenements ne tombent sur aucune heure : aucune fiche pour eux** · **6 en-tetes de fiche, 0 nom de classe** — ils parlent en niveaux (« tes 3e perdraient 2 heures »), comme le §① l'exige · coche → 1 ecriture avec `{ecartJustifie, motif:'calendrier', justifiee:true, evenement, libelle}` · decoche → **1 archive puis 1 ecriture**.
+
+**REJOUE SUR BANC INDEPENDANT** (`edtCoutParNiveau` et `edtPhraseCout` extraites, cas poses par la conscience) :
+| cas | resultat |
+|---|---|
+| evenement 3e couvrant 3 heures | `{3e:3}` · phrase **« tes 3e perdraient 3 heures »** |
+| evenement d'un niveau **inconnu des classes** (6e) | `{6e:2}` — le repli fonctionne, rien n'est perdu |
+| evenement **sans niveau** | `{}` — rien n'est invente |
+| le meme evenement **sans aucune heure** | `{3e:0}` · phrase **« tes 3e zéro »** — bancale, mais **jamais affichee** : un evenement qui ne coute rien n'a pas de fiche (mesure de l'executant : 9 dans ce cas) |
+
+**OBSERVATION MINEURE DE LA CONSCIENCE, non bloquante** : dans la branche « decoche » de `edtHeurePerdue`, un `delete edtD[classe].heures[cle]` est fait **sur l'etat en memoire AVANT l'ecriture**, puis `edtEcrireDecisionsGroupe([... valeur:null ...])` est appele — **qui fait deja le retrait**. Le `delete` est donc **redondant**, et il modifie la memoire avant que l'archivage ait reussi : si l'archive echoue, l'ecriture est abandonnee (c'est la regle de ③) mais **la memoire a deja oublie la decision** — divergence memoire/hub jusqu'au rechargement suivant. **Sans consequence sur les donnees** (le hub reste juste, un rechargement corrige l'affichage), **mais c'est un `delete` a retirer** : signale, a porter a la livraison ⑤b.
+
+**SUITE** : **⑤b** — les quatre motifs, **une heure ne compte jamais deux fois**, ↶ Annuler. **Y ajouter le `delete` redondant ci-dessus.**
