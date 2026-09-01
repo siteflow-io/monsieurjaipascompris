@@ -552,14 +552,20 @@ Prouvé par l'exécutant : **versions datées** (compatibilité de la forme anci
 > **Les entrées qui suivent sont les siennes, tour par tour, du 197 au 227.**
 
 
-**Tour 197 — le chiffre du transport, corrige, et un fait neuf sur la PRODUCTION.**
+
+## F · CONSCIENCE n°11 — 31/08 au 01/09/2026 · LOT 2ter, livraisons ① à ⑤
+> Entrées numérotées **n°11 · 01** à **n°11 · 31**, dans l'ordre où elles ont été écrites.
+> Le détail mot pour mot des échanges avec Paul est au sas : `TRANSCRIPTS/C11/TRANSCRIPT-C11.md`.
+> **Règle rappelée par Paul le 01/09** : le registre se tient **conscience par conscience** — une section par conscience, sa propre numérotation, sinon il devient inexploitable pour tout le monde.
+
+**n°11 · 01 — le chiffre du transport, corrige, et un fait neuf sur la PRODUCTION.**
 Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3 en commentaire** ; **48** suivies d'une parenthese, **declaration comprise** ; donc **47 appels reels — 14 dans le bloc EDT, 33 hors**. Le commentaire du correctif ③ annonce 15 pour l'EDT : il compte une occurrence qui est elle-meme dans un commentaire. C'est **14**.
 - **FAIT NEUF, mesure sur la production v8.70.1** : `mjpcPutJson` et `mjpcDeleteJson` **n'honorent pas le mode test** — ils appellent `mjpcEcrireRest` directement, et `mjpcEcrireRest` n'avait aucun garde-fou avant le correctif ③. Donc **en production aujourd'hui, le mode test ne retient pas 40 ecritures reparties dans 34 fonctions** : `_importEleves`, `submitCreateClass`, `renameClass`, `archiveClass`, `deleteClass`, `_putCode`, `togglePublishTab`, `addChapter`, `deleteSeance`, `resetChapitres`, `deleteImageInGallery`, et tout le deroule (`atDrJouer`, `_drEcrireTrame`, `_drCopieAuto`, `_drCloreHeureRestee`). Ce qui reste couvert passe par `_siteGet` / `_sitePut` / `_siteDelete`, qui testent `m8TestOn()` en premiere ligne et **retournent avant** d'atteindre le transport — le correctif ③ ne les double donc pas.
 - **Ce n'est pas une dette de l'emploi du temps : c'est une dette de la PRODUCTION.** Le correctif existe, il est au sas (`2c26017e`), il n'a jamais ete promu. **A trancher par Paul : il sort seul, ou il attend la fin du lot 2ter ?**
 - **La garde ne pouvait voir aucune des deux dettes du lot** : `verif_edt.py` mesure le contrat d'appels, les portes et les chemins hub — une fonction du bloc que personne n'appelle passe en vert, une modification du tronc commun aussi. Rejouee par la conscience n°11 le 31/08 : **VERTE** sur `2c26017e`, **ROUGE** sur un piege pose par elle (`loginAsProf` hors contrat + ecriture `/site/classes/x.json`).
 - **Etat recompte le 31/08 par la n°11, inchange** : production `75c8b77f` / `6c7560afa9e431f23f89aa6fe167bb6b` / 1 522 853 o, `function edt*` = 0 · `/site/edt` = null · moteur `AT_DR_B64` identique bit a bit entre production et sas (309 812 caracteres, md5 `2ba70f9ef8aacb6f81962ea4e1b62944`).
 
-**Tour 198 — AUDIT DE LA LIVRAISON ① (candidat `2c26017e`, sas), sur pieces, par la conscience n°11. VERDICT : ON NE PROMEUT PAS. Deux dettes, a regler par un complement de la meme livraison.**
+**n°11 · 02 — AUDIT DE LA LIVRAISON ① (candidat `2c26017e`, sas), sur pieces, par la conscience n°11. VERDICT : ON NE PROMEUT PAS. Deux dettes, a regler par un complement de la meme livraison.**
 
 **Decisions de Paul du 31/08** : le correctif ③ (mode test) **part avec le lot 2ter**, et **en premier** dans le lot · la **classe d'essai 3E Charles de Gaulle en mode test entre dans ce lot** · l'audit est ordonne, on reprend le flux normal.
 
@@ -585,7 +591,7 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 
 **SUITE** : complement a la meme livraison — ① brancher la mise a niveau, ② fermer la perte d'identite de `edtFusionnerPeriodes` — puis nouvel audit, puis promeus de Paul sur captures. Le mandat v2 se relit ligne a ligne et se fige avant d'aller a un executant neuf ; la classe d'essai (dimensionnement) reste a trancher par Paul.
 
-**Tour 199 — LECTURE DE L'ÉCOSYSTÈME (ordre de Paul, 31/08) : inventaire complet + sections déclaratives des apps. Constats mesurés, aucun tranché par Paul.**
+**n°11 · 03 — LECTURE DE L'ÉCOSYSTÈME (ordre de Paul, 31/08) : inventaire complet + sections déclaratives des apps. Constats mesurés, aucun tranché par Paul.**
 
 **Perimetre couvert** : depot de production entier (54 fichiers, 11 045 387 o) — 13 apps `.html` en racine + `mjpc-core.js` + `mjpc-bench.js` + `taxonomie_atelier.json` + 35 documents dans `docs/`. Lu : `CLAUDE.md`, `MJPC6-OU-TROUVER-QUOI.md`, `verif_edt.py`, l'addendum 25/08 du DISPOSITIF, `PROTOCOLE-AJOUTS-25-08.md`, les dix declarations `MJPC_APP`. **Reste a lire** : les cinq gros documents (`journal` 234 Ko, `DETTES` 205 Ko, `restauration` 201 Ko, `3-CHANTIER` 201 Ko, `INDEX-FONCTIONS` 178 Ko), `2-DOCTRINE`, `doctrine-du-site`, `SPEC_ATELIER`, et le corps des apps au-dela des declarations.
 
@@ -599,7 +605,7 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 
 **⑤ ERREUR DE METHODE DE LA CONSCIENCE n°11, declaree.** Premiere passe : j'ai compte des motifs au lieu de lire, et conclu que `MJPC_APP` etait un gabarit vide dans les dix apps — ma regex prenait la **premiere** occurrence, celle du commentaire d'exemple du socle, pas la declaration reelle. Le signal etait sous mes yeux : dix apps annoncant toutes `id:"correction_dictee"`. **REGLE GRAVEE (01/08) : « une uniformite parfaite est une mesure suspecte »**, et **« un inventaire de capacites se fait en LISANT le corps des fonctions, jamais en comptant des motifs »**. Corrige par lecture avant tout rapport a Paul ; aucune fausse alerte ne lui a ete transmise.
 
-**Tour 200 — AUDIT DE LA LIVRAISON ①bis-a (candidat `7156f7f9`, 8.73.0-①bis-a). VERDICT : ÇA VA. Aucune dette. La suite est ①bis-b.**
+**n°11 · 04 — AUDIT DE LA LIVRAISON ①bis-a (candidat `7156f7f9`, 8.73.0-①bis-a). VERDICT : ÇA VA. Aucune dette. La suite est ①bis-b.**
 
 **Candidat** : 1 659 907 o, md5 `ae243de30613db108d3af5a810ce3bdf`, 149 `function edt*`. Base annoncee = base reelle (`b322540e…`), verifiee.
 
@@ -628,7 +634,7 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 
 **SUITE** : ①bis-b — `edtFusionnerPeriodes` et la revue de toutes les reconstructions d'objet. Paul relance par « continuer ».
 
-**Tour 201 — AUDIT DE LA LIVRAISON ①bis FINALE (candidat `b09299b1`, 8.73.0-①bis). VERDICT : ÇA VA. Aucune dette dans le perimetre. Le mandat ①bis est fini.**
+**n°11 · 05 — AUDIT DE LA LIVRAISON ①bis FINALE (candidat `b09299b1`, 8.73.0-①bis). VERDICT : ÇA VA. Aucune dette dans le perimetre. Le mandat ①bis est fini.**
 
 **Candidat** : 1 660 869 o, md5 `e6e8836f3ee6d1b93d1f4e2c0ca68637`. Base annoncee = base reelle (`ae243de3…`), verifiee.
 
@@ -661,7 +667,7 @@ Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3
 
 **ETAT INCHANGE** : `/site/edt` au vrai hub toujours `null` · production toujours `75c8b77f` / `6c7560af…` / 1 522 853 o.
 
-**Tour 202 — CORRECTION DU TOUR 201 PAR LA CONSCIENCE n°11, sur deux reprises de Paul. Les deux sont fondees.**
+**n°11 · 06 — CORRECTION DU TOUR 201 PAR LA CONSCIENCE n°11, sur deux reprises de Paul. Les deux sont fondees.**
 
 **① « les captures sont faisables, toutes les autres consciences et executants y ont reussi » — PAUL A RAISON. Le tour 201 disait « bloque, declare par l'executant, CONFIRME » : c'est FAUX, et c'est une faute de la conscience.** L'executant a affirme ne pas pouvoir entrer en session professeur « faute de code d'acces » ; la conscience a relaye cette affirmation **sans la mesurer**, et l'a ecrite « confirme » au registre. **NE JAMAIS PROMOUVOIR UN DOUTE EN FAIT** (regle du 18/07) : violee.
 
@@ -680,7 +686,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **Le verdict du tour 201 sur la livraison ①bis elle-meme est INCHANGE : ca va, aucune dette dans le perimetre.** Seule la ligne « captures bloquees » est retiree : elles ne sont pas bloquees, elles sont dues.
 
-**Tour 203 — AUDIT DE LA LIVRAISON ①ter-a (candidat `efbc1958`, 8.73.0-①ter-a). VERDICT : ÇA VA. Aucune dette. Reste la livraison ①ter (captures).**
+**n°11 · 07 — AUDIT DE LA LIVRAISON ①ter-a (candidat `efbc1958`, 8.73.0-①ter-a). VERDICT : ÇA VA. Aucune dette. Reste la livraison ①ter (captures).**
 
 **Candidat** : 1 662 509 o, md5 `a6d2469cb79a45328ae36955c28aa70a`. Base annoncee = base reelle (`e6e8836f…`), verifiee.
 
@@ -709,7 +715,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **SUITE** : livraison **①ter** — les captures par clics du parcours (panneau prof → emploi du temps → grille → creer une version → deplacer une heure → revenir), l'audit adverse complet, le rapport final. Puis promeus de Paul sur captures.
 
-**Tour 204 — AUDIT DE LA LIVRAISON ①ter FINALE (candidat `59954c24`, 8.73.0-①ter). VERDICT : ÇA VA. Le mandat ①ter est fini, aucune dette. Le LOT 2ter, lui, n'en est qu'à sa livraison ① sur huit.**
+**n°11 · 08 — AUDIT DE LA LIVRAISON ①ter FINALE (candidat `59954c24`, 8.73.0-①ter). VERDICT : ÇA VA. Le mandat ①ter est fini, aucune dette. Le LOT 2ter, lui, n'en est qu'à sa livraison ① sur huit.**
 
 **Candidat** : 1 662 507 o, md5 `cb20546e7abe9b4c32e322a5b03f7c60`. **Diff avec ①ter-a : un seul bloc, le numero de version.** Verifie autrement par la conscience : les deux fichiers, numero de version neutralise, sont **identiques bit a bit** — donc tout l'audit du tour 203 vaut pour ce candidat.
 
@@ -732,7 +738,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **CE QUI RESTE — a dire clairement a Paul** : le mandat ①ter est clos, **mais le LOT 2ter compte huit livraisons et seule la ① est faite**. Promouvoir maintenant mettrait en production tout le bloc EDT (149 fonctions, absentes de la production) avec l'identite posee mais **sans** les decisions sorties de l'objet (②), sans l'appariement gradue (③), sans le bloc bilan ni la vue Annee (⑤ a ⑧). **En revanche, la dette de PRODUCTION — le mode test qui n'arrete ni `mjpcPutJson` ni `mjpcDeleteJson`, 40 ecritures dans 34 fonctions — n'est reparee en production qu'au moment ou ce candidat est promu.** Paul avait tranche le 31/08 : « avec le reste, et a faire en premier ». **L'arbitrage lui appartient : promouvoir maintenant, ou rester expose jusqu'a la fin du lot.**
 
-**Tour 205 — Paul tranche : « Continue le lot. Je promeus a la fin. » RELECTURE LIGNE A LIGNE DU MANDAT v2 PAR LA CONSCIENCE, ET MANDAT DE LA LIVRAISON ② ecrit et depose.**
+**n°11 · 09 — Paul tranche : « Continue le lot. Je promeus a la fin. » RELECTURE LIGNE A LIGNE DU MANDAT v2 PAR LA CONSCIENCE, ET MANDAT DE LA LIVRAISON ② ecrit et depose.**
 
 **DECISION DE PAUL, 31/08** : le lot 2ter va jusqu'au bout des huit livraisons, **le promeus se fait a la fin**. La dette de production (mode test absent de `mjpcPutJson`/`mjpcDeleteJson`) reste donc ouverte en production jusque-la : c'est son arbitrage, pose en connaissance de cause.
 
@@ -748,7 +754,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **MANDAT DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-02.md`. Base **8.73.0-①ter**, 1 662 507 o, `cb20546e…`, STOP si different. **Trois livraisons courtes** (②-a la coche sort de l'objet · ②-b la migration · ② les regles de deplacement, captures, audit adverse), chacune close par un arret. **La preuve du lot est exigee en premier dans le rapport final** : calendrier migre, coches posees, **reinjection du calendrier → les coches sont toujours la**. C'est pour cela que tout ce lot existe.
 
-**Tour 206 — AUDIT DE LA LIVRAISON ②a (candidat `f4560565`, 8.73.0-②a). VERDICT : ÇA VA. Aucune dette. La coche est sortie de l'objet injecte.**
+**n°11 · 10 — AUDIT DE LA LIVRAISON ②a (candidat `f4560565`, 8.73.0-②a). VERDICT : ÇA VA. Aucune dette. La coche est sortie de l'objet injecte.**
 
 **Candidat** : 1 667 148 o, md5 `64908545b78f0749f87c225d10e072be`. Base annoncee = base reelle (`cb20546e…`), verifiee. Diff : **10 blocs, +114 / -26**, tous dans `edtJustifier`, la vue Annee, le calendrier, `edtDivergence` et le bloc des trois fonctions neuves. Rien ailleurs.
 
@@ -768,7 +774,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **SUITE** : **②b** — la migration, `decisions` d'abord et `calendrier` ensuite, idempotence et reprise. Paul relance par « continuer ».
 
-**Tour 207 — AUDIT DE LA LIVRAISON ②b (candidat `11425f73`, 8.73.0-②b). VERDICT : ÇA VA. Aucune dette. La reinjection ne perd plus les coches.**
+**n°11 · 11 — AUDIT DE LA LIVRAISON ②b (candidat `11425f73`, 8.73.0-②b). VERDICT : ÇA VA. Aucune dette. La reinjection ne perd plus les coches.**
 
 **Candidat** : 1 670 478 o, md5 `4af687cf86bac6dc5a4875d6ae35ea03`. Base annoncee = base reelle, verifiee.
 
@@ -794,7 +800,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **SUITE** : livraison **②** — ce que devient une coche quand les choses bougent (§④), captures par clics, audit adverse, rapport final.
 
-**Tour 208 — AUDIT DE LA LIVRAISON ② FINALE (candidat `544d4438`, 8.73.0-②). VERDICT : ÇA VA. Le mandat ② est fini, aucune dette. Une question de cadrage revient a Paul.**
+**n°11 · 12 — AUDIT DE LA LIVRAISON ② FINALE (candidat `544d4438`, 8.73.0-②). VERDICT : ÇA VA. Le mandat ② est fini, aucune dette. Une question de cadrage revient a Paul.**
 
 **Candidat** : 1 673 446 o, md5 `92880802422d67c825e4dbd95313cac0`. Diff : **7 blocs, +60/-7**, deux fonctions ajoutees (`edtCochesDeLEvenement`, `edtCochesDeplacees`), **aucune disparue**, `edtEvenementJustifie` modifiee.
 
@@ -820,7 +826,7 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 
 **SUITE** : livraison **③** — appariement gradue et biunivoque, differentiel nominatif, archivage avant ecrasement generalise. **A y porter** : la classe renommee (ecart ①) et, si Paul tranche, le cas partiel du §④.
 
-**Tour 209 — CADRAGE TRANCHE : la case d'un evenement partiellement deplace RESTE COCHEE.**
+**n°11 · 13 — CADRAGE TRANCHE : la case d'un evenement partiellement deplace RESTE COCHEE.**
 
 Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypothetique... » — il a demande l'avis de la conscience et n'a pas impose de reponse.
 
@@ -830,7 +836,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **Le cas n'est pas hypothetique, mesure sur son calendrier reel** : sur **15 evenements de classe**, **5 durent plusieurs jours** — Sejour Verdun 3e (14→16/10), Stages 3e (17→18/11), Stages 3e horizon Pro (13→15/01), Stage 4 (24→25/03), **Sejour Pays-Bas 4e (12→17/04, six jours)**. Un decalage d'un jour, ou une seule heure changee de jour, suffit a produire le cas.
 
-**Tour 210 — AUDIT DE LA LIVRAISON ③a (candidat `e70b5ca9`, 8.73.0-③a). VERDICT : ÇA VA. Aucune dette. L'appariement tourne avant toute ecriture.**
+**n°11 · 14 — AUDIT DE LA LIVRAISON ③a (candidat `e70b5ca9`, 8.73.0-③a). VERDICT : ÇA VA. Aucune dette. L'appariement tourne avant toute ecriture.**
 
 **Candidat** : 1 678 220 o, md5 `afb31fc8438ea16c21e7d7ef19b3e4af`. Base verifiee.
 
@@ -856,7 +862,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **SUITE** : **③b** — le differentiel nominatif dans l'ecran de verification et la classe renommee.
 
-**Tour 211 — AUDIT DE LA LIVRAISON ③b (candidat `37f33cd2`, 8.73.0-③b). VERDICT : ÇA VA. Aucune dette. Paul voit avant d'appuyer, et la classe renommee ne se fait jamais toute seule.**
+**n°11 · 15 — AUDIT DE LA LIVRAISON ③b (candidat `37f33cd2`, 8.73.0-③b). VERDICT : ÇA VA. Aucune dette. Paul voit avant d'appuyer, et la classe renommee ne se fait jamais toute seule.**
 
 **Candidat** : 1 685 752 o, md5 `0ba3822ff6719e0e4b30599e3dc1d19e`. Base verifiee.
 
@@ -878,7 +884,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **SUITE** : livraison **③** finale — l'archivage generalise aux **15** ecritures, les captures par clics de bout en bout, l'audit adverse, le rapport final.
 
-**Tour 212 — AUDIT DE LA LIVRAISON ③ FINALE (candidat `87ad5f44`, 8.73.0-③). VERDICT : ÇA VA. Le mandat ③ est fini, aucune dette. Trois livraisons du lot sur huit sont closes.**
+**n°11 · 16 — AUDIT DE LA LIVRAISON ③ FINALE (candidat `87ad5f44`, 8.73.0-③). VERDICT : ÇA VA. Le mandat ③ est fini, aucune dette. Trois livraisons du lot sur huit sont closes.**
 
 **Candidat** : 1 686 881 o, md5 `efb57889867c5a968ba6da1949bfe851`. Base verifiee.
 
@@ -908,7 +914,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **SUITE** : livraison **④**. Restent ④ a ⑧ avant le promeus de Paul.
 
-**Tour 213 — DEUX DECISIONS DE PAUL, ET TROIS PRECISIONS MESUREES.**
+**n°11 · 17 — DEUX DECISIONS DE PAUL, ET TROIS PRECISIONS MESUREES.**
 
 **Tranche par Paul le 01/09** : **pas d'archive pour les dates du brevet** (`edtEcrireBrevet` reste sans archivage, ecart n°1 de la livraison ③ **clos**) · **pas de rattrapage par rang** pour les creneaux horaires (le comportement de ③a reste, ecart n°1 de ③a **clos**).
 
@@ -919,7 +925,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 **③ LA GARDE NE PART PAS EN PRODUCTION — et c'est la vraie question de Paul.** Mesure : `verif_edt.py` = **0 occurrence dans `index.html`**. C'est un outil **du sas**, lance sur le candidat avant chaque promotion ; la promotion n'emporte que `index.html`. La garde continuera donc de servir a chaque livraison. **Mais depuis la livraison ③ elle ne controle plus le chemin de l'ecriture centrale** (`edtEcrireArchive`) : aujourd'hui, **c'est la conscience qui le fait a la main a chaque audit**. **C'est fragile : une conscience change, la suivante ne le saura pas.**
 **AVIS TRANCHE DE LA CONSCIENCE : remettre ce controle DANS la garde.** C'est mecanique — verifier que `edtEcrireArchive` n'est jamais appelee qu'avec un chemin fabrique par le site (`edtChemin(...)` ou `edtCheminTrace(...)`), jamais avec une chaine ecrite a la main. **A porter au mandat ④ sur un mot de Paul.**
 
-**Tour 214 — AUDIT DE LA LIVRAISON ③bis-a (candidat `5546cbee`, 8.73.0-③bis-a). VERDICT : ÇA VA. Aucune dette.**
+**n°11 · 18 — AUDIT DE LA LIVRAISON ③bis-a (candidat `5546cbee`, 8.73.0-③bis-a). VERDICT : ÇA VA. Aucune dette.**
 
 **Candidat** : 1 687 952 o, md5 `cc353aceb20a572e9af1990dc3ab9b23`. Base verifiee.
 
@@ -946,7 +952,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **SUITE** : **③bis-b** — l'identifiant qui dit sa famille et que le site verifie.
 
-**Tour 215 — AUDIT DE LA LIVRAISON ③bis-b (candidat `eeaf4579`, 8.73.0-③bis-b). VERDICT : ÇA VA. Aucune dette.**
+**n°11 · 19 — AUDIT DE LA LIVRAISON ③bis-b (candidat `eeaf4579`, 8.73.0-③bis-b). VERDICT : ÇA VA. Aucune dette.**
 
 **Candidat** : 1 689 863 o, md5 `d8f66035387aad74bfb25f3865c00924`. Base verifiee.
 
@@ -969,7 +975,7 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **SUITE** : **③bis** finale — la garde reprend la surveillance du chemin de l'ecriture centrale, captures, audit adverse, rapport final.
 
-**Tour 216 — DETTE DECLAREE PAR PAUL : le vocabulaire technique de l'ecran.**
+**n°11 · 20 — DETTE DECLAREE PAR PAUL : le vocabulaire technique de l'ecran.**
 
 Paul, 01/09 : « **il faudra faire une immense passe de simplification des termes techniques. Sinon dans 3 mois je lirai famille et je ne saurai pas ce que ca veut dire.** »
 
@@ -994,7 +1000,7 @@ Paul, 01/09 : « **il faudra faire une immense passe de simplification des terme
 
 **A trancher par Paul** : quand (avant ou apres le promeus, avant ou apres ④ a ⑧) et jusqu'ou (le bloc EDT seul, ou tout le site).
 
-**Tour 217 — AUDIT DE LA LIVRAISON ③bis FINALE (candidat `3bd71136`, 8.73.0-③bis). VERDICT : ÇA VA. Le mandat ③bis est fini, aucune dette. LE CRAN PERDU EST REPRIS.**
+**n°11 · 21 — AUDIT DE LA LIVRAISON ③bis FINALE (candidat `3bd71136`, 8.73.0-③bis). VERDICT : ÇA VA. Le mandat ③bis est fini, aucune dette. LE CRAN PERDU EST REPRIS.**
 
 **Candidat** : 1 690 354 o, md5 `a04a8e5855172efd2f4fddb0a186237f`. Base verifiee. **+491 octets seulement dans le code** : l'essentiel de cette livraison est dans la garde, pas dans le site.
 
@@ -1017,7 +1023,7 @@ Paul, 01/09 : « **il faudra faire une immense passe de simplification des terme
 
 **ETAT DU LOT 2ter** : livraisons **①, ②, ③ et ③bis closes et auditees**. Restent **④ a ⑧** avant le promeus.
 
-**Tour 218 — REGLE DE TENUE DES DETTES, POSEE PAR PAUL.**
+**n°11 · 22 — REGLE DE TENUE DES DETTES, POSEE PAR PAUL.**
 
 Paul, 01/09 : « **pour les dettes, ce sera à l'IA de confronter le code à la liste des dettes et de vérifier ce qui a été fait, ce qui peut être rayé, et ce qui est à garder.** »
 
@@ -1029,7 +1035,7 @@ Paul, 01/09 : « **pour les dettes, ce sera à l'IA de confronter le code à la 
 
 **Etat au 01/09** : le registre fait **983 lignes**, la file ordonnee de tete date du **25/08** et n'a pas ete rejouee ; les 18 entrees de la conscience n°11 s'empilent des lignes 590 a 985. **La confrontation reste donc a faire** — sur l'ordre de Paul, ou au prochain jalon.
 
-**Tour 219 — LA DETTE SUR LA DETTE, statut pose par Paul.**
+**n°11 · 23 — LA DETTE SUR LA DETTE, statut pose par Paul.**
 
 Paul, 01/09 : « **du coup c'est une dette qui rejoint les autres, mais avec son statut propre: c'est une dette sur la dette.** »
 
@@ -1041,7 +1047,7 @@ Paul, 01/09 : « **du coup c'est une dette qui rejoint les autres, mais avec son
 
 **MANDAT ④ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-04.md`. Base **8.73.0-③bis**, 1 690 354 o, `a04a8e58…`. Deux livraisons : ④-a le bouton et le collage unique · ④ les deux prompts reecrits. **Mesures de cadrage** : aucune fonction de prompt n'existe dans le bloc EDT · le patron du site est `ATELIER_PROMPT_SEED` + la famille `atIA*` · `navigator.clipboard` n'a **qu'une occurrence** dans tout le fichier (L4615) · les deux prompts (6 573 o et 7 494 o) **ne parlent pas d'identifiants** · aucune fonction de copie n'est au contrat de la garde.
 
-**Tour 220 — AUDIT DE LA LIVRAISON ④a (candidat `929670d1`, 8.73.0-④a). VERDICT : ÇA VA. Aucune dette.**
+**n°11 · 24 — AUDIT DE LA LIVRAISON ④a (candidat `929670d1`, 8.73.0-④a). VERDICT : ÇA VA. Aucune dette.**
 
 **Candidat** : 1 708 032 o, md5 `9ac8e8a8b1ed55abe5d80258e2a4a943`. Base verifiee.
 
@@ -1063,7 +1069,7 @@ Paul, 01/09 : « **du coup c'est une dette qui rejoint les autres, mais avec son
 
 **SUITE** : **④** finale — les deux prompts reecrits, l'epreuve de bout en bout (le calendrier reel passe par le prompt et reinjecte : tous les identifiants reconduits), captures, audit adverse.
 
-**Tour 221 — AUDIT DE LA LIVRAISON ④ FINALE (candidat `b25cd29f`, 8.73.0-④). VERDICT : ÇA VA. Le mandat ④ est fini, aucune dette. UNE DETTE NEUVE EST NEE, DECLAREE PAR L'EXECUTANT.**
+**n°11 · 25 — AUDIT DE LA LIVRAISON ④ FINALE (candidat `b25cd29f`, 8.73.0-④). VERDICT : ÇA VA. Le mandat ④ est fini, aucune dette. UNE DETTE NEUVE EST NEE, DECLAREE PAR L'EXECUTANT.**
 
 **Candidat** : 1 711 939 o, md5 `8736d113d9f92827ba46d73b3fa4a6e1`. Base verifiee.
 
@@ -1094,7 +1100,7 @@ Plus le cas de Paul aujourd'hui : « Si rien ne t'est donné sous CE QUI EST EN 
 
 **ETAT DU LOT 2ter** : **①, ②, ③, ③bis et ④ closes et auditees**. Restent **⑤ a ⑧** avant le promeus.
 
-**Tour 222 — AUDIT DE LA LIVRAISON ⑤a (candidat `b96376e6`, 8.73.0-⑤a). VERDICT : ÇA VA. Aucune dette. Une observation mineure.**
+**n°11 · 26 — AUDIT DE LA LIVRAISON ⑤a (candidat `b96376e6`, 8.73.0-⑤a). VERDICT : ÇA VA. Aucune dette. Une observation mineure.**
 
 **Candidat** : 1 716 493 o, md5 `20dc0ca1a8d271e0777056f1dd0e0f64`. Base verifiee.
 
@@ -1114,7 +1120,7 @@ Plus le cas de Paul aujourd'hui : « Si rien ne t'est donné sous CE QUI EST EN 
 
 **SUITE** : **⑤b** — les quatre motifs, **une heure ne compte jamais deux fois**, ↶ Annuler. **Y ajouter le `delete` redondant ci-dessus.**
 
-**Tour 223 — AUDIT DE LA LIVRAISON ⑤b (candidat `7541a139`, 8.73.0-⑤b). VERDICT : ÇA VA. Aucune dette. LA FAUTE LA PLUS COUTEUSE DU LOT EST FERMEE.**
+**n°11 · 27 — AUDIT DE LA LIVRAISON ⑤b (candidat `7541a139`, 8.73.0-⑤b). VERDICT : ÇA VA. Aucune dette. LA FAUTE LA PLUS COUTEUSE DU LOT EST FERMEE.**
 
 **Candidat** : 1 719 497 o, md5 `f871fb05aa584d11dbcbd35e582b847c`. Base verifiee.
 
@@ -1143,7 +1149,7 @@ et le sens inverse :
 
 **SUITE** : **⑤c** — « Banaliser cette heure », les dix categories et leur classement, la bascule qui survit, l'heure deplacee.
 
-**Tour 224 — AUDIT DE LA LIVRAISON ⑤c (candidat `6a62b3b2`, 8.73.0-⑤c). VERDICT : ÇA VA. Aucune dette.**
+**n°11 · 28 — AUDIT DE LA LIVRAISON ⑤c (candidat `6a62b3b2`, 8.73.0-⑤c). VERDICT : ÇA VA. Aucune dette.**
 
 **Candidat** : 1 724 157 o, md5 `c1c997e5c934914d7be4a7ffc060b9c0`. Base verifiee.
 
@@ -1165,7 +1171,7 @@ et le sens inverse :
 
 **SUITE** : **⑤** finale — l'alerte mensuelle, la cinquieme question de la garde, les captures, l'audit adverse, **plus le `delete` ci-dessus**.
 
-**Tour 225 — AUDIT DE ⑤c-bis (candidat `52437fd3`, 8.73.0-⑤c-bis). VERDICT : ÇA VA pour son perimetre. MAIS L'AUDIT ADVERSE DE LA CONSCIENCE TROUVE LA MEME FAUTE SUR QUATRE AUTRES ECRITURES.**
+**n°11 · 29 — AUDIT DE ⑤c-bis (candidat `52437fd3`, 8.73.0-⑤c-bis). VERDICT : ÇA VA pour son perimetre. MAIS L'AUDIT ADVERSE DE LA CONSCIENCE TROUVE LA MEME FAUTE SUR QUATRE AUTRES ECRITURES.**
 
 **Candidat** : 1 725 303 o, md5 `a397e48a206b70b965648d77c4e9d0b5`. Base verifiee. `function edt*` **186**, une ajoutee (`edtPhotoDecisions`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · dix categories inchangees · **node --check** et **acorn VERTS** · garde **VERTE**, contrat inchange. **Le `delete` redondant est retire.**
 
@@ -1187,7 +1193,7 @@ et le sens inverse :
 
 **SUITE** : **⑤** finale — l'alerte mensuelle, la cinquieme question de la garde, les captures, l'audit adverse, **plus les quatre photos manquantes ci-dessus**.
 
-**Tour 226 — REPONSE A PAUL : OUI, UNE DETTE EST PASSEE. Comment, et ce que ca change.**
+**n°11 · 30 — REPONSE A PAUL : OUI, UNE DETTE EST PASSEE. Comment, et ce que ca change.**
 
 Paul, 01/09 : « **tu es en train de me dire que des dettes sont passées malgré vos affirmations de zéro dettes ?** »
 
@@ -1207,7 +1213,7 @@ Le banc de la conscience appelait `edtEcrireObjet('calendrier', {v:'APRES'})` av
 
 **ET CELA CONFIRME LA DETTE SUR LA DETTE POSEE PAR PAUL (tour 219)** : la confrontation du code au registre n'est pas un rangement, **c'est le seul moyen de rattraper ce qui est passe**. **Proposition de la conscience** : avant le promeus, une passe qui relit **chaque preuve des audits ① a ⑤** et se demande, pour chacune, *ce qu'elle prouve vraiment*. C'est le meme geste que Paul demande pour les dettes, applique aux preuves.
 
-**Tour 227 — LE BANC : ce que Paul tranche, et ce que la mesure precise.**
+**n°11 · 31 — LE BANC : ce que Paul tranche, et ce que la mesure precise.**
 
 Paul, 01/09 : « **donc en fait le banc doit être élargi. il doit tout tester, c'est tout.** »
 
