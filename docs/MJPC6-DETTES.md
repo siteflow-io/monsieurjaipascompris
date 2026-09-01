@@ -781,3 +781,29 @@ Verifie sur le candidat `8.73.0-①bis` : `openProfPanel` **4**, `showProfSectio
 **SES AUTRES ECARTS, VERIFIES** : le champ `justifie` subsiste **dans la charge de reprise seule** (L18041, 18067, 18068, 18069 — il en annonce 3, il y en a 4, sans portee) : une migration doit lire le champ pour le faire disparaitre · une coche que rien ne peut reprendre **garde son champ et le site le dit** · sans les classes chargees, la reprise **attend** et ne retire rien · la reprise horodate au moment de la migration, `reprise:true` au journal pour les distinguer.
 
 **SUITE** : livraison **②** — ce que devient une coche quand les choses bougent (§④), captures par clics, audit adverse, rapport final.
+
+**Tour 208 — AUDIT DE LA LIVRAISON ② FINALE (candidat `544d4438`, 8.73.0-②). VERDICT : ÇA VA. Le mandat ② est fini, aucune dette. Une question de cadrage revient a Paul.**
+
+**Candidat** : 1 673 446 o, md5 `92880802422d67c825e4dbd95313cac0`. Diff : **7 blocs, +60/-7**, deux fonctions ajoutees (`edtCochesDeLEvenement`, `edtCochesDeplacees`), **aucune disparue**, `edtEvenementJustifie` modifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **154** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **0 appel** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**.
+
+**LES QUATRE CAS DU §④, REJOUES SUR BANC INDEPENDANT** (les cinq fonctions extraites du candidat, decisions posees a la main sur des cles que le contenu ne reproduirait pas) :
+| situation | case cochee | coches de l'evenement | coches deplacees |
+|---|---|---|---|
+| l'evenement **ne bouge pas** | **oui** | 2 | **0** — les coches restent, sans un mot |
+| l'evenement **se deplace** (aucune de ses heures cochee) | **NON — case vide** | 2 (au magasin) | **2** — nommees, jamais reportees |
+| **une heure sur deux tient encore** | **oui** | 2 | **1** |
+| plus **aucune** heure recouverte | **NON** | 2 | 2 |
+
+**SON ECART N°2 EST REEL, MESURE, ET C'EST LE MANDAT QUI ETAIT IMPRECIS.** Le §④ ecrivait « cases VIDES » sans distinguer le cas partiel. Mesure : la case se vide quand **toutes** les heures ont change ; elle **reste cochee** quand une partie tient encore, et le message ne compte que les heures sorties. Son argument : vider la case alors qu'une heure reste effectivement marquee **effacerait une information vraie**. **QUESTION UNIQUE POSEE A PAUL** : quand la moitie des heures d'un evenement a bouge, veut-il la case **cochee** avec le decompte des heures sorties, ou **vide** comme dans le cas total ? Tant qu'il n'a pas tranche, le comportement actuel reste.
+
+**SON ECART N°1, LA CLASSE RENOMMEE** : la cle d'heure contient le nom de la classe, donc apres un renommage les decisions restent lisibles **sous l'ancien nom** et la nouvelle classe compte 0. **Rien n'est perdu, rien ne suit.** Il a raison de ne pas l'ouvrir : reapparier des decisions a un nouveau nom **est** de l'appariement, donc **livraison ③**. A porter au mandat ③.
+
+**SON AUDIT ADVERSE, LU** : sept cas, aucune casse, aucune erreur de page — dont la coche sur un evenement sans classe appariee (0 ecriture, message), deux evenements sur la meme heure (**2 heures comptees, pas 4**), le calendrier a moitie migre, le magasin absent, la decision orpheline (elle **reste** et compte).
+
+**LES CAPTURES** : `tests/captures-coche-02.mjs` joue **deux fois le meme parcours**, sur `8.73.0-①ter` (`AVANT-01ter-coche-*`) et sur le candidat (`APRES-02-coche-*`), quatre ecrans entiers chacun + journal. Le clic ecrivait **`/site/edt/calendrier`**, il ecrit desormais **`/site/edt/decisions`** ; champ dans l'objet **1 → 0** ; heures justifiees **2 = 2**. Une seule ligne du parcours n'est pas un clic, declaree.
+
+**ETAT** : `/site/edt` au vrai hub toujours `null`. Production toujours `75c8b77f` / `6c7560af…`.
+
+**SUITE** : livraison **③** — appariement gradue et biunivoque, differentiel nominatif, archivage avant ecrasement generalise. **A y porter** : la classe renommee (ecart ①) et, si Paul tranche, le cas partiel du §④.
