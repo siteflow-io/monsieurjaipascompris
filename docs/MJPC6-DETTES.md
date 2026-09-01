@@ -843,3 +843,25 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 **LA MEME FAUTE POUR LA DEUXIEME FOIS EN DEUX LIVRAISONS** : la garde a refuse une premiere version parce qu'une variable locale s'appelait `suite`, et `function suite(` existe hors du bloc — comme `poser` en ②a. **Regle a inscrire dans les mandats suivants : tout nom de variable locale du bloc EDT commence par `edt`.**
 
 **SUITE** : **③b** — le differentiel nominatif dans l'ecran de verification et la classe renommee.
+
+**Tour 211 — AUDIT DE LA LIVRAISON ③b (candidat `37f33cd2`, 8.73.0-③b). VERDICT : ÇA VA. Aucune dette. Paul voit avant d'appuyer, et la classe renommee ne se fait jamais toute seule.**
+
+**Candidat** : 1 685 752 o, md5 `0ba3822ff6719e0e4b30599e3dc1d19e`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **165**, cinq ajoutees et nommees (`edtChangementsDe`, `edtDifferentielHtml`, `edtDecisionsOrphelines`, `edtRattacherDecisions`, `edtRattacherGeste`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** et **corps toujours identique bit a bit a la base** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS** · garde **VERTE**, contrat **toujours non elargi**.
+
+**LE RATTACHEMENT D'UNE CLASSE RENOMMEE, REJOUE SUR BANC INDEPENDANT** — c'est le geste qui pourrait perdre des decisions, il a ete eprouve sur le cas le plus dangereux :
+| cas pose par la conscience | resultat |
+|---|---|
+| 3 decisions sous l'ancien nom, dont **une cle d'une autre forme** | **4 avant, 4 apres — aucune perdue** · la cle non reconnue **reste** sous l'ancien nom · le site le dit : « 2 heures rattachees — 1 est restee sous ANCIEN, je ne l'ai pas deplacee » |
+| **COLLISION REELLE** : une heure **deja decidee** sous le nouveau nom, avec la forme de cle exacte (`2026-10-14_10h07-11h02_NOUVEAU`) | **3 avant, 3 apres — aucune perdue** · celle qui etait deja la est **INTACTE** (`sansSeance` conserve, jamais ecrase) · celle qui n'a pas pu suivre **reste** sous l'ancien nom, et le site le dit |
+
+*Note d'honnetete : le premier essai de la conscience n'a pas teste la collision — la cle qu'elle avait fabriquee n'avait pas la forme reelle (`10:07` au lieu de `10h07`). Elle a mesure la forme exacte par `edtCleHeure`, refait l'essai, et seulement ensuite conclu.*
+
+**LE DIFFERENTIEL** : l'appariement tourne desormais **a la verification** (`edtInjVerifier`), pas seulement a l'injection — Paul appuie sur « Verifier », lit ce que ca va changer, et **rien n'est ecrit** (mesure : `ecritures a la verification : []`). Quatre listes **nominatives** : ce qui arrive · ce qui a seulement bouge, avec le detail du changement (`debut : 2026-11-16 → 2026-11-17`) · **ce qui disparait EN EMPORTANT DES COCHES, nomme a part avec son nombre d'heures** · ce qui garde ses decisions. Plus la liste des questions a poser. Les ambiguites ont leur propre ligne (« Impossible de trancher — 4 candidats identiques »).
+
+**A PORTER AU MANDAT ③ FINAL — mesure de la conscience** : les ecritures du bloc EDT passent de **14 a 15**. `edtRattacherDecisions`, creee par cette livraison, **ecrit le noeud `decisions` sans archiver l'etat d'avant**. Ce n'est pas une dette de ③b — l'archivage generalise **est** le perimetre de ③ — mais le tableau exige au §③.4 doit compter **15 lignes, pas 14**.
+
+**SES ECARTS, VERIFIES** : le rattachement ne se propose que si l'ancien nom a **disparu** de `/classes` — si Paul cree le nouveau sans supprimer l'ancien, rien n'est propose et les decisions restent sur une classe valide : comportement sur, declare · les candidates sont les classes appariees **sans aucune decision** (on ne melange pas deux histoires) et **toutes** sont proposees s'il y en a plusieurs : le site ne tranche pas · un refus n'est pas memorise, l'encart reapparait — il informe, il ne force rien.
+
+**SUITE** : livraison **③** finale — l'archivage generalise aux **15** ecritures, les captures par clics de bout en bout, l'audit adverse, le rapport final.
