@@ -540,6 +540,18 @@ Prouvé par l'exécutant : **versions datées** (compatibilité de la forme anci
 - **② `edtMettreANiveau` est MORTE — vérifié : une seule occurrence dans 1,6 Mo, sa déclaration.** Aucun appel. Ce qui tourne à la fin d'`edtCharger`, ce sont les charges en mémoire ; les identifiants sont recalculés à chaque affichage, jamais écrits par ce chemin. Le mandat l'exige en mise à niveau ; les livraisons ②, ⑤ et ⑨ doivent y brancher trois charges de plus — elles brancheraient sur une fonction que personne n'appelle. **Dette à régler par un complément de la même livraison, avant tout promeus.**
 - **③ Le rapport de l'exécutant se contredit** : son tableau dit « 10 ajoutés », ses écarts disent 11 et en listent 11 ; mesuré 149 − 138 = **11**.
 
+
+---
+
+## F · CONSCIENCE n°11 — 31/08 au 01/09/2026
+
+> **Prise de fonction** : passation C10 → C11 du 27/08, état recompté sur pièces avant tout geste (tour 196).
+> **Ce que cette conscience a fait** : corrigé la passation au sas (une ligne fausse) · audité **quinze livraisons** du LOT 2ter — ①, ①bis-a, ①bis, ①ter-a, ①ter, ②a, ②b, ②, ③a, ③b, ③, ③bis-a, ③bis-b, ③bis, ④a, ④, ⑤a, ⑤b, ⑤c, ⑤c-bis — chacune sur pièces et sur **banc indépendant** · écrit et déposé **six mandats d'exécutant** (①bis, ①ter, ②, ③, ③bis, ④, ⑤) · tenu le transcript mot pour mot au sas (`TRANSCRIPTS/C11/`).
+> **Ce qu'elle a manqué, et qu'elle déclare** : une dette est passée à travers son audit de la livraison ③ — l'archivage portait l'état d'**après**, parce que son banc passait deux objets distincts là où le vrai geste passe la même référence (tour 226). Cinq points d'application connus, quatre encore ouverts.
+> **Ses erreurs de méthode, déclarées au fil des tours** : comptage de motifs pris pour une lecture (tours 199, 220, 221) · pièges de garde invalides (tour 206) · bancs mal montés, corrigés avant conclusion (tours 207, 212, 214) · une observation trouvée mais non portée au mandat (tour 223).
+> **Les entrées qui suivent sont les siennes, tour par tour, du 197 au 227.**
+
+
 **Tour 197 — le chiffre du transport, corrige, et un fait neuf sur la PRODUCTION.**
 Mesure au sas (`2c26017e`) : `mjpcPutJson` = **51 occurrences brutes**, dont **3 en commentaire** ; **48** suivies d'une parenthese, **declaration comprise** ; donc **47 appels reels — 14 dans le bloc EDT, 33 hors**. Le commentaire du correctif ③ annonce 15 pour l'EDT : il compte une occurrence qui est elle-meme dans un commentaire. C'est **14**.
 - **FAIT NEUF, mesure sur la production v8.70.1** : `mjpcPutJson` et `mjpcDeleteJson` **n'honorent pas le mode test** — ils appellent `mjpcEcrireRest` directement, et `mjpcEcrireRest` n'avait aucun garde-fou avant le correctif ③. Donc **en production aujourd'hui, le mode test ne retient pas 40 ecritures reparties dans 34 fonctions** : `_importEleves`, `submitCreateClass`, `renameClass`, `archiveClass`, `deleteClass`, `_putCode`, `togglePublishTab`, `addChapter`, `deleteSeance`, `resetChapitres`, `deleteImageInGallery`, et tout le deroule (`atDrJouer`, `_drEcrireTrame`, `_drCopieAuto`, `_drCloreHeureRestee`). Ce qui reste couvert passe par `_siteGet` / `_sitePut` / `_siteDelete`, qui testent `m8TestOn()` en premiere ligne et **retournent avant** d'atteindre le transport — le correctif ③ ne les double donc pas.
