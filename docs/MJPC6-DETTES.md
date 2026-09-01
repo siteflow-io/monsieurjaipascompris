@@ -1300,3 +1300,30 @@ Paul, 01/09 : « **j'avais motivé ma règle du 31. vérifie.** »
 **DECISION, prise par la conscience sur la motivation existante, sans redemander a Paul** : **la regle survit, portee desormais par la pastille de la vue Annee** — elle s'allume des qu'**une** heure recouverte par l'evenement est marquee, et s'eteint quand plus aucune ne l'est. **A appliquer telle quelle en livraison ⑦.** Paul corrige s'il n'est pas d'accord ; il n'a rien a trancher pour que le travail continue.
 
 **LECON DE METHODE, a garder** : quand une decision est **motivee**, la motivation se confronte au code et tranche seule les cas nouveaux. **Reposer la question a Paul quand la motivation suffit, c'est lui faire refaire un travail deja fait.**
+
+**n°11 · 35 — AUDIT DE LA LIVRAISON ⑤ FINALE (candidat `8dcc2308`, 8.73.0-⑤). VERDICT : ÇA VA — au sens ou tout ce qui a ete eprouve tient, et voici les mesures qui le fondent. Le mandat ⑤ est fini.**
+
+**Candidat** : 1 729 825 o, md5 `b0be8f4d62dbb7b53d3f6f0579ec702c`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **190**, **trois** ajoutees et nommees (`edtAlerteInjection`, `edtJoursDepuis`, `edtRappelPlusTard`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · dix categories inchangees · **node --check** et **acorn ES2020 VERTS**.
+
+**LA CINQUIEME QUESTION DE LA GARDE EXISTE ET ELLE MORD — eprouvee par la conscience.**
+- Sans les fichiers `prompts/` a cote, elle rend **ROUGE** : « ⑤ prompts/calendrier.md introuvable : impossible de comparer ». **Elle refuse plutot que de passer en silence** — c'est le bon comportement, et c'est ce qui a d'abord fait croire a un rouge du candidat.
+- Avec les fichiers : **VERTE sur ses cinq questions** — « ⑤ les consignes du site et les fichiers prompts/ disent la même chose ».
+- **PIEGE POSE PAR LA CONSCIENCE** : un seul caractere change dans `prompts/calendrier.md` (« Reconduis » → « Reconduit ») → **ROUGE**, et elle ne dit pas seulement « ils different » : **« premier écart au caractère 6523 : fichier "t l'`id` de tout c", site "s l'`id` de tout c" »**. Elle nomme l'endroit exact. Fichier remis : **VERTE**.
+
+**L'ALERTE MENSUELLE, REJOUEE SUR BANC INDEPENDANT — neuf cas poses par la conscience** :
+| cas | resultat |
+|---|---|
+| calendrier **sans date d'injection** | **pas d'alerte** — jamais d'alerte immediate |
+| injecte il y a 5 jours · il y a **29** jours | pas d'alerte |
+| injecte il y a **30** jours | **ALERTE** — le seuil exact |
+| il y a 60 jours | ALERTE |
+| 60 jours **mais « Plus tard » actif** | **silence** |
+| 60 jours, **« Plus tard » expire** | **l'alerte revient** |
+| pas de calendrier · date absurde | rien, **aucun plantage** |
+**Et le site ne lit rien a l'exterieur** : **0 `fetch`, 0 `XMLHttpRequest`** dans la zone de l'alerte. Il compte les jours, comme le §⑤ l'exige.
+
+**ETAT DU LOT 2ter** : **①, ②, ③, ③bis, ④ et ⑤ closes et auditees.** Restent **⑥, ⑦, ⑧** avant le promeus.
+
+**FORMULATION** : ce verdict porte sur ce qui a ete eprouve — les mesures ci-dessus. Il ne dit pas « il n'y a rien » (regle changee au `n°11 · 26`).
