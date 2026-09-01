@@ -1256,3 +1256,29 @@ Paul, 01/09 : « **donc en fait le banc doit être élargi. il doit tout tester,
 **CE QUI RESTE POUR CLORE ⑤** : l'alerte mensuelle · **la cinquieme question de la garde** (comparer `EDT_PROMPTS` aux fichiers `prompts/*.md`) · les captures · l'audit adverse · le rapport final. **Et, decide par Paul le 01/09 : le banc unique `banc-tout.mjs`** qui enchaine les 34 bancs d'une commande et echoue si un seul echoue — a exiger a partir du mandat ⑥, mais **il peut deja etre demande ici**.
 
 **FORMULATION DES VERDICTS, changee depuis le n°11 · 26** : « ca va » signifie **« ce que j'ai eprouve tient »**, jamais « il n'y a rien ». Les mesures qui fondent ce verdict sont listees ci-dessus.
+
+**n°11 · 33 — AUDIT DE ⑤d (le banc unique). VERDICT : ÇA VA. ET LE BANC UNIQUE A TROUVE UN BANC MORT DU PREMIER COUP.**
+
+**`index.html` n'a PAS bouge** — toujours `e81effda`, 1 727 359 o, md5 `885ae067afe7025d1213efe85930fbe3`, version `8.73.0-⑤c-ter`. **Verifie par la conscience** : aucune fonction ajoutee ni disparue, moteur et correctif du mode test identiques, dix categories inchangees, **node --check et acorn VERTS**, garde **VERTE sur ses quatre questions**. Cette livraison ne porte que sur les bancs.
+
+**`tests/banc-tout.mjs`** — 111 lignes, **22 bancs enchaines**, une ligne par banc, **sortie ≠ 0 si un seul echoue**, et **refus si un banc est introuvable** (`process.exit(1)`). Compte-rendu publie : **22 bancs, 62 reperes, tous verts**, environ 13 minutes.
+
+**CE QUE LE BANC UNIQUE A TROUVE DU PREMIER COUP — c'est la preuve de son utilite** : **`banc-coches-bougent-02` etait MORT sans que personne le sache.** Il cherchait la case unique d'un evenement, **supprimee en ⑤a au profit d'une case par heure** : il rendait « (ligne absente) » partout et **passait sans rien tester**. Un banc vert qui ne testait rien. **C'est exactement ce que Paul cherchait en demandant que le banc teste tout.**
+
+**REGLE 1 APPLIQUEE, mesuree par la conscience** : `banc-archivage-03` passe de **0 a 8 clics**. Ses six gestes passent desormais par la case « arriver sur l'emploi du temps » et le bouton « + Ajouter une periode », **cliques** dans le panneau prof ouvert par clics. `banc-mise-a-niveau-01bis-a` reste a **0 clic** : la mise a niveau se declenche **au chargement**, aucun clic ne l'atteint — **declare comme tel**, conforme a la regle.
+
+**REGLE 2 APPLIQUEE** : le banc ne dit plus « une archive est partie ». Il **relit l'archive ecrite a la corbeille** et publie son contenu a cote de celui du hub :
+| geste, par clic | archive | hub |
+|---|---|---|
+| la case, second clic | `{"annee":"2026-2027","arriverSurEdt":false}` | `…"arriverSurEdt":true}` |
+| « + Ajouter une periode », 2e fois | `["P1"]` | `["P1","P2"]` |
+| corbeille en panne | inchangee | **inchange** |
+| premier geste sur un noeud vide | **`(aucune archive)`**, 1 ecriture | — |
+
+**SES ECARTS, ET UN QUI REVIENT A PAUL** :
+1. Son environnement **coupe toute commande au-dela de ~90 s** : il a joue `banc-tout` **en douze tranches**. Declare.
+2. **UNE DECISION DE PAUL EST DEVENUE SANS OBJET, ET IL FAUT LE LUI DIRE.** La regle tranchee le 31/08 — « la case d'un evenement reste cochee tant qu'au moins une de ses heures est marquee » — **ne s'applique plus telle quelle** : depuis ⑤a il n'y a **plus de case unique par evenement**, mais **une case par heure**. Verifie par la conscience : `edtEvenementJustifie` n'a plus qu'**un seul appelant, `edtPeindreAnnee`** — la vue Annee, pas la fiche. **A trancher par Paul** : la regle vaut-elle encore pour la pastille de la vue Annee, ou tombe-t-elle ?
+3. Les cinq scripts de captures restent hors du banc unique (ils produisent des images, pas des verdicts).
+4. `banc-tout` juge sur des **chaines** : un banc qui changerait sa mise en forme sans changer ses chiffres passerait pour casse. Prix assume d'un banc qui n'invente rien.
+
+**CE QUI RESTE POUR CLORE ⑤** : l'alerte mensuelle · **la cinquieme question de la garde** · les captures · l'audit adverse · le rapport final.
