@@ -906,3 +906,30 @@ Paul : « C'est quoi le plus logique ? Par ailleurs c'est un cas vraiment hypoth
 
 **③ LA GARDE NE PART PAS EN PRODUCTION — et c'est la vraie question de Paul.** Mesure : `verif_edt.py` = **0 occurrence dans `index.html`**. C'est un outil **du sas**, lance sur le candidat avant chaque promotion ; la promotion n'emporte que `index.html`. La garde continuera donc de servir a chaque livraison. **Mais depuis la livraison ③ elle ne controle plus le chemin de l'ecriture centrale** (`edtEcrireArchive`) : aujourd'hui, **c'est la conscience qui le fait a la main a chaque audit**. **C'est fragile : une conscience change, la suivante ne le saura pas.**
 **AVIS TRANCHE DE LA CONSCIENCE : remettre ce controle DANS la garde.** C'est mecanique — verifier que `edtEcrireArchive` n'est jamais appelee qu'avec un chemin fabrique par le site (`edtChemin(...)` ou `edtCheminTrace(...)`), jamais avec une chaine ecrite a la main. **A porter au mandat ④ sur un mot de Paul.**
+
+**Tour 214 — AUDIT DE LA LIVRAISON ③bis-a (candidat `5546cbee`, 8.73.0-③bis-a). VERDICT : ÇA VA. Aucune dette.**
+
+**Candidat** : 1 687 952 o, md5 `cc353aceb20a572e9af1990dc3ab9b23`. Base verifiee.
+
+**LA PREUVE LA PLUS IMPORTANTE, REJOUEE PAR LA CONSCIENCE SUR LA GRILLE REELLE DE PAUL** (`edtCasesA` extraite des DEUX versions et comparee, semaine du 16/11) :
+| | 8.73.0-③ (avant) | ③bis-a, test **eteint** | ③bis-a, test **allume** |
+|---|---|---|---|
+| creneaux lus | **30** | **30** | **34** |
+| dont fictifs | 0 | **0** | **4** |
+| comptes par classe | 3 DYLAN 6 · 3 FRANKLIN 7 · 4 HUGO 6 · 4 TURING 6 · Concertation 1 · X Francais ×4 | **identiques, ligne a ligne** | **vraies classes INCHANGEES** + 3E Charles de Gaulle 4 |
+
+**Hors mode test, la grille de Paul est exactement celle d'hier.** C'est ce que le mandat exigeait en premier.
+
+**LES QUATRE CRENEAUX**, verifies dans `json/grille-2026-2027.json` au sas : `lundi 08:00-08:55` · `mardi 08:00-08:55` · `jeudi 10:07-11:02` · `vendredi 13:00-13:55`, tous `semaine:"AB"`, `classeMjpc:"3E Charles de Gaulle"`, `fictif:true`. **Les 30 creneaux reels sont intacts.**
+
+**NON-REGRESSION remesuree** : `function edt*` **168**, **une** ajoutee et nommee (`edtEnEssai`), **aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **`668cda27…` intact** · `edtApparier` **1 appel** · `edtMettreANiveau` **2 appels** · trois portes · **node --check** et **acorn ES2020 VERTS**.
+
+**LE CONTRAT DE LA GARDE : UNE SEULE ENTREE DE PLUS, EN LECTURE.** Diff verifie par la conscience — **`'m8TestOn'`**, avec sa raison en commentaire (« LECTURE SEULE : le bloc demande "suis-je en mode test ?" … Il n'ecrit rien par ce biais »). **Rien d'autre n'a bouge dans le contrat.** Garde **VERTE** sur le candidat. `edtEnEssai` est ecrite defensivement : `(typeof m8TestOn==='function') && m8TestOn()===true`, `false` si la question n'a pas de reponse.
+
+**UN POINT DE CONCEPTION A PORTER AU CREDIT DE L'EXECUTANT** : il a branche la lecture dans **`edtCasesA`**, le point de passage unique de toutes les lectures de la grille — **une seule branche a ajouter, une seule a verifier**. Meme geste que l'ecriture centrale de ③.
+
+**ET UNE DECISION JUSTE, DECLAREE** : les creneaux fictifs recoivent leur identifiant `crn:` **meme hors mode test** — « une identite ne depend pas de l'ecran qui la regarde ». 30 reels + 4 fictifs = **34 identifiants distincts**.
+
+*Note : la conscience a monte son banc **trois fois** (dependances manquantes dans l'extrait : `edtVersions`, puis `edtDebutAnnee`). Aucune conclusion tiree avant que le banc tourne.*
+
+**SUITE** : **③bis-b** — l'identifiant qui dit sa famille et que le site verifie.
