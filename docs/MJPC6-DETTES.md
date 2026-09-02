@@ -1599,3 +1599,22 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **MANDAT ⑨ CORRIGE ET REDEPOSE** : 10 687 → **13 113 o**, commit `6aad7ed2`, verifie bit a bit.
 
 **LECON POUR LA CONSCIENCE, la seconde en deux mandats** : **une mesure a zero ne prouve pas une absence — elle prouve que le nom cherche n'est pas la.** `filtreMois` a zero ne veut pas dire « aucune recherche » : la recherche existait sous `edtFiltrerOu`. **Chercher un nom, c'est supposer le nom. Il faut lire l'ecran.**
+
+**n°11 · 50 — SECONDE EPREUVE DU MANDAT ⑨ : UNE CONTRADICTION INTERNE REELLE, TROIS CHIFFRES FAUX. TRANCHEE ET CORRIGE.**
+
+**L'executant a re-eprouve le mandat corrige et rendu son verdict : « LA CONSCIENCE N'A PAS DERIVE. Le mandat corrige tient. »** Il releve **une contradiction bloquante** et **trois imprecisions**. **Verifie par la conscience : il a raison quatre fois.**
+
+**LA CONTRADICTION, REELLE ET BLOQUANTE.** Le **§⓪⑤** exigeait **deux libelles differents** pour `aReplacer`. Le **§②** exigeait **`EDT_MOTIFS` inchange, mot pour mot**. **Or le libelle vit precisement dans `EDT_MOTIFS.aReplacer.libelle`.** Un executant lisant les deux aurait du **desobeir a l'un ou renoncer a l'autre**.
+**TRANCHEE, et sa sortie est la bonne — verifiee dans le code par la conscience** : `edtMotifEnClair` **compose deja selon l'etat** — mesure : elle ajoute `v.libelle` pour `calendrier` et `v.categorie` pour `banalisee`. **Le remede : la table reste intacte, le texte se compose dans `edtMotifEnClair` selon `finAnnee`.** Ecrit dans le mandat, avec la mention explicite qu'il n'y a **aucune contradiction** entre les deux sections.
+
+**TROIS CHIFFRES FAUX DE LA CONSCIENCE, RECOMPTES EXACTEMENT.** Comptage refait nom par nom sous `PONT/EDT/tests/` :
+| lot 2ter | captures |
+|---|---|
+| ①bis **14** · ①ter **12** · ② **4** · **③ 6** · ③bis **3** · ④ **3** · **⑤ 0** · **⑥ 0** · **⑦ 11** · ⑧ **4** | **55 en tout** |
+**Sur les 95 png du dossier, 40 viennent du LOT 2bis** (`2b-*`, `3a-*`, `5-1-mois.png`, `8-1-…`) et n'ont rien a voir avec ce lot. **Les erreurs de la conscience** : ③ comptait ③bis **deux fois** (9 au lieu de 6) · ⑦ oubliait `T-7a-*`, `07b-*` et `ancienne-vue-annee.png` (7 au lieu de 11) · ⑧ attrapait trois captures du 2bis (5 au lieu de 4). **Le constat central est intact et c'est le seul qui compte : ZERO capture du lot 2ter pour ⑤ et ⑥.**
+
+**DEUX SECTIONS QUI N'AVAIENT PAS SUIVI LA CORRECTION PRECEDENTE** : le **§①.6** parlait encore d'**un seul drapeau** alors que le §⓪⑥ en exigeait deux — **et le §① est la premiere chose qu'un executant lit**. Corrige. Et le **§③.4** demandait le nombre d'entrees « avant, avec la limite de 120 jours » alors que **ce que Paul voit a l'ecran, c'est la coupe a 60**. **Les deux chiffres sont desormais exiges.**
+
+**MANDAT ⑨ REDEPOSE** : 13 113 → **14 345 o**, commit `5f0e6feb`, verifie bit a bit.
+
+**CE QUE CETTE SEQUENCE ETABLIT, ET QU'IL FAUT GARDER** : **faire eprouver un mandat par l'executant avant de le lancer a rapporte, en deux passes, onze corrections** — dont deux qui auraient casse quelque chose (renommer les classes du plein ecran ; corriger une liste deja conforme) et une qui aurait **bloque l'executant** (la contradiction). **Cette etape doit entrer au dispositif : un mandat se fait eprouver avant d'etre lance, et c'est la conscience qui corrige.**
