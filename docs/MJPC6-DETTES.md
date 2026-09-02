@@ -1440,3 +1440,21 @@ Le remede suit sa doctrine : **on ne refuse pas, on dit le prix** —
 **`EDT_ANNEE` RECALCULE, REJOUE** : debut au **01/09/2026** → `2026-2027` · debut au **05/01/2027** → `2026-2027` (janvier appartient a l'annee scolaire commencee en septembre) · **sans dates**, les valeurs de repli restent `2026-08-01 → 2027-07-31`.
 
 **ETAT DU LOT 2ter** : **①, ②, ③, ③bis, ④, ⑤ et ⑥ closes et auditees.** Restent **⑦ (la vue Annee)** et **⑧ (les photos du prevu, la matrice)** avant le promeus de Paul.
+
+**n°11 · 41 — AUDIT DE ⑦-a (le rendu statique). VERDICT : LA METHODE EST RESPECTEE. **C'est a Paul de juger l'ecran, pas a la conscience.**
+
+**LE POINT LE PLUS IMPORTANT, MESURE** : **`index.html` N'A PAS BOUGE.** md5 **`966eaafd1e1f260c2cdef9e3826aebca`**, version 8.73.0-⑥, identique a la base. **La methode « maquette avant code » a ete tenue a la lettre** — l'executant n'a ecrit aucune ligne dans le site.
+
+**LIVRE AU SAS** : `PONT/EDT/T-7a-annee.html` (**32 212 o**, autonome, calendrier reel embarque — verifie : « Séjour Verdun 3e » y est) · **trois captures** : `tests/T-7a-annee-dezoome.png` (259 349 o), `T-7a-annee-zoome.png` (209 186 o), `T-7a-annee-a-cheval.png` (262 032 o) · `rapport-2ter-07a.md`.
+
+**CE QUE LA CONSCIENCE A PU MESURER** : le JSON reel porte bien **59 evenements d'etablissement · 15 de classe · 30 jalons · 11 feries · 7 periodes de vacances** — exactement les chiffres que le rapport annonce a l'ecran (104 bandeaux au total).
+
+**CE QU'ELLE N'A PAS PU MESURER, ET ELLE LE DIT** : **les bandeaux n'existent pas dans le fichier source** — le rendu se construit au chargement, en JavaScript. Compter `class="bd "` dans le HTML rend **0**. **La conscience ne peut donc pas verifier les 104 bandeaux sans executer la page**, ce qu'elle n'a pas les moyens de faire ici. **Les comptes annonces reposent sur la mesure de l'executant, pas sur la sienne.** C'est declare.
+
+**SES PREUVES, LUES** : un sejour de trois jours = **1 bandeau, 152 px** · **0 element `hr`/barre/trait** et **0 bandeau qui deborde de sa colonne** sur les 104 · dezoome, **document 900 px pour une fenetre de 900 px, aucun defilement vertical** · zoome, defilement horizontal actif (4 015 px pour 1 576 px) et le libelle long se lit en entier · **samedi 10 px, mardi de cours 32 px, « 1 S » lisible dans les deux cas** · pastilles quatre au maximum, trois couleurs.
+
+**UNE MESURE HONNETE DE SA PART, A PORTER AU CREDIT** : « **le calendrier reel ne contient AUCUN evenement a cheval sur deux mois** (0 sur 104) ». Plutot que d'affirmer que le cas marche, il a ajoute `?demo=cheval` — un evenement du 29 octobre au 3 novembre — et **capture le resultat**. Il ne prouve pas sur une donnee qui n'existe pas.
+
+**SES ECARTS DECLARES** : les hauteurs de bandeau sont **calculees apres peinture** (les maquettes les posaient en dur, ce qui ne tient pas sur des lignes de hauteurs differentes) · **les etats des pastilles sont fictifs** dans ce rendu — un fichier statique n'a pas de hub, trois decisions de demonstration sont ecrites en clair · les vacances marquent **118 jours de fond**, week-ends compris · le zoom est **a deux etats**, pas continu, « les maquettes montraient deux etats, je n'ai pas invente de niveaux intermediaires ».
+
+**ARRET CONFORME** : il s'arrete et attend. **C'est Paul qui compare aux quatre maquettes et relance.**
