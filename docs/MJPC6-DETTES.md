@@ -1759,3 +1759,20 @@ Paul, 02/09 : « **tu dois me livrer les captures avant promotion. attention à 
 **CE QUI EST DONC LIVRE A PAUL** : **les onze captures des livraisons ⑤ a ⑨a**, qui seules montrent l'etat qu'il va promouvoir — plus **l'avant/apres de la vue Annee**, le seul couple avant/apres du lot sur le meme ecran.
 
 **CE QUI MANQUE ET QUE LA CONSCIENCE DECLARE** : **il n'existe aucune capture avant/apres du meme parcours sur le candidat FINAL.** Le lot a ete capture livraison par livraison, sur des etats successifs du site. **Paul promeut sur captures : il doit savoir que ce qu'il regarde est un assemblage d'etats, pas un parcours unique.**
+
+**n°11 · 58 — PAUL DEMANDE LE PARCOURS COMPLET. MANDAT ⑩ DEPOSE — ET UNE MESURE QUI CHANGE CE QUE « AVANT/APRES » VEUT DIRE.**
+
+Paul, 02/09 : « **il faut le parcours complet.** »
+
+**MESURE FAITE AVANT D'ECRIRE LE MANDAT — IL N'Y A PAS D'« AVANT ».** La production (`index.html`, 1 522 853 o, `6c7560af…`, **8.70.1**) porte : **`function edt*` 0** · « Emploi du temps » **0** · `edtOuvrir` **0** · « Semaine » **0** · « Heures perdues » **0**.
+**L'emploi du temps N'EXISTE PAS en production. Le lot 2ter le cree de toutes pieces.** Il n'y a donc **aucun avant/apres a capturer** : l'avant, c'est **rien**. Et la capture `ancienne-vue-annee.png` que la conscience a regardee au `n°11 · 57` montre **une vue intermediaire du candidat**, pas la production — **elle aurait pu le laisser croire a Paul**.
+
+**LE MANDAT DEMANDE DONC UN PARCOURS COMPLET DU CANDIDAT FINAL**, plus **une seule** capture de la production pour montrer d'ou Paul part. **Quinze etapes**, dans l'ordre de ce qu'il verra : l'entree · la semaine · une case ouverte · **les trois issues** · apres echange et apres ecrasement · le rappel de l'heure a replacer · la liste et ses trois filtres · **Heures perdues avec la banalisation par-dessus** · le mois · l'annee dezoomee, zoomee, un evenement clique · **les dates de l'annee et un refus** · la photo du prevu · **le mode test eteint puis allume** · le prompt.
+
+**LE POINT QUE LA CONSCIENCE FAIT PORTER EXPLICITEMENT** : au §①.14, *« la classe d'essai DOIT y apparaitre — c'est le point que la conscience n'a jamais pu voir sur aucune capture : elle doit etre visible ici, ou tu declares qu'elle ne l'est pas »*. C'est le trou releve au `n°11 · 57`.
+
+**AUCUNE LIGNE DE CODE** : le §③ exige que `index.html` reste **1 762 154 o / `45337e4f…`** a la fin, remesure et publie. **Tout passe par le clic** — un ecran inatteignable **est un defaut a declarer, pas a contourner**.
+
+**LES DEUX PASSES DU `n°11 · 51` ONT ETE APPLIQUEES AVANT LE DEPOT, pour la premiere fois** : (1) **aucune affirmation chiffree sans lecture** — les cinq comptages de la production ont ete mesures, pas supposes, et c'est ce qui a revele qu'il n'y a pas d'avant ; (2) **relecture du mandat contre lui-meme** — les deux md5 cites verifies coherents, les trois occurrences de « corrige » verifiees toutes prohibitives, le §③ et le §④ verifies non contradictoires. **Aucun trou trouve a la relecture.**
+
+**MANDAT ⑩ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-10.md`, 5 585 o.
