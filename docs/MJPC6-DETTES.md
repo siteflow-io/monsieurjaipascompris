@@ -1486,3 +1486,20 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **SES PREUVES, LUES** : cinq captures par clics avec journal, parcours entierement cliqué (panneau prof → Emploi du temps → Ouvrir → Annee) · audit adverse `banc-pastille-audit-07.mjs` : mois a 31 et 28 jours (mars **31** lignes, fevrier **28**, **104 bandeaux, 0 debordement**), **aucune casse dans aucun cas** · l'ancienne vue capturee avant remplacement (`tests/ancienne-vue-annee.png`), a la demande de Paul.
 
 **ETAT DU LOT 2ter** : **①, ②, ③, ③bis, ④, ⑤, ⑥ et ⑦ closes et auditees.** **Reste ⑧** — les photos du prevu, la matrice — avant le promeus de Paul.
+
+**n°11 · 44 — L'EXECUTANT ⑧ RELEVE DEUX TROUS DANS LE MANDAT DE LA CONSCIENCE. IL A RAISON DEUX FOIS. MANDAT CORRIGE.**
+
+**Paul a lance un executant neuf « pour limiter la derive ».** Avant de coder, il a lu le mandat ⑧ et **signale deux trous sans les corriger lui-meme** — c'est exactement ce que le protocole demande d'un executant (« il SIGNALE, il ne reecrit pas »). **Verifie par la conscience, il a raison sur les deux.**
+
+**TROU ① — `edtDebutAnnee` EST DECLAREE DEUX FOIS.** Mesure de la conscience : **L17823** et **L18734**, les deux en colonne 0, **aucune balise `<script>` entre elles** → **la seconde ecrase la premiere**, la premiere est du code mort.
+- morte (L17823) : `return String(EDT_ANNEE).split('-')[0]+'-08-01'` — « l'annee commence le 1er aout »
+- vivante (L18734) : `return EDT_DATES.debutAnnee||(…'-08-01')` — « d'abord la date que Paul a declaree »
+**Deux consequences que la conscience n'avait pas vues** : (a) son compte de controle « **217 fonctions** » compte **deux fois le meme nom** — il y a **217 declarations pour 216 NOMS DISTINCTS** ; un executant qui nettoie le doublon tomberait a 216 et **croirait avoir perdu une fonction** ; (b) **la photo automatique se declenche sur les dates de debut** — un executant qui lit la version morte se tromperait de regle. **Le mandat exige desormais le nettoyage, avec les deux chiffres publies.**
+
+**TROU ② — « FIGER A ZERO » ENVOYAIT L'EXECUTANT CASSER LE PLEIN ECRAN.** Mesure de la conscience : **24 occurrences de `fig*`**, et **aucune dans un texte affiche de l'EDT**. Ce sont : **les classes CSS `edt-fige` et `at-corps-fige`** — celles qui masquent les boutons quand l'emploi du temps prend tout l'ecran —, des **commentaires**, et **une** phrase du **canal d'annonces** (« l'envoi fige la version a lire »), qui n'est pas l'EDT. Le code porte meme deja le commentaire : *« la photo du prevu — jamais le mot "figer" : on ne fige pas un prevu »*. **La regle de Paul est deja tenue.** Le §⑥.5 ecrit par la conscience (« compte avant, compte apres, zero ») aurait envoye l'executant **renommer ces classes et casser le plein ecran**. **Corrige : il ne renomme rien, il doit seulement ne pas introduire le mot dans un texte neuf.**
+
+**TROISIEME POINT, MATERIEL** : il ne trouvait ni `banc-tout.mjs` ni `verif_edt.py` — sept chemins essayes, tous en 404, et l'API GitHub lui a refuse la liste des fichiers (limite sans jeton). **Chemins exacts ajoutes au mandat** : `PONT/EDT/tests/banc-tout.mjs` et `PONT/EDT/outils/verif_edt.py`, avec leurs adresses brutes, **et l'avertissement sur la limite de l'API**.
+
+**MANDAT ⑧ CORRIGE ET REDEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-08.md`, 9 836 → **12 222 o**, commit `017493a3`, verifie bit a bit. Une section **⓪ter** porte les deux mesures.
+
+**LECON POUR LA CONSCIENCE, a garder** : **un compte de non-regression compte des OCCURRENCES, pas des NOMS.** « 217 fonctions » etait faux depuis le debut du lot — la conscience l'a repete a chaque audit sans jamais verifier que les noms etaient distincts. **Un compteur qui ne distingue pas les deux peut cacher un doublon pendant tout un lot.**
