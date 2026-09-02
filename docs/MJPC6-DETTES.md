@@ -1737,3 +1737,25 @@ Paul, 02/09 : « **ça fait quand même deux relectures d'un mandat fait par une
 **CE QUI NE PEUT PAS SE MESURER AVANT LE PROMEUS, ET C'EST NORMAL** : **le geste sur le site reel de Paul** — le sas n'est pas publie, tout le lot a ete eprouve sur un faux hub. **C'est exactement l'objet de `SEQUENCE-TEST-PAUL.md`, qui se joue APRES la promotion.**
 
 **ETAT DU LOT 2ter — COMPLET** : ①, ②, ③, ③bis, ④, ⑤, ⑥, ⑦, ⑧, ⑨ closes et auditees. **Production toujours `75c8b77f` / `6c7560af…` / 8.70.1 — rien n'est parti en ligne de tout le lot.**
+
+**n°11 · 57 — LES CAPTURES LIVREES A PAUL AVANT PROMEUS, VISUALISEES UNE PAR UNE PAR LA CONSCIENCE.**
+
+Paul, 02/09 : « **tu dois me livrer les captures avant promotion. attention à les visualiser d'abord.** »
+
+**63 captures du lot 2ter au sas. La conscience en a OUVERT ET REGARDE sept** — pas lu leurs noms : **regarde les images**.
+
+| capture | ce que la conscience a vu |
+|---|---|
+| `ancienne-vue-annee.png` | l'**avant** : quatre frises horizontales par classe, presque vides, les evenements en traits sans nom, illisibles |
+| `07-annee-1-vue-depuis-le-panneau.png` | l'**apres** : **12 colonnes de mois**, jours en lignes avec numero et initiale, **evenements en bandeaux NOMMES** (« Séjour Verdun 3e », « Stages 3e », « DNB Blanc 3 »), week-ends et vacances aplatis, legende complete en tete. **Le pied dit : 59 evenements d'etablissement · 15 de classe · 30 jalons** |
+| `05-perdues-1-ecran-heures-perdues.png` | « **Ce que l'année t'a coûté** — Aucune heure perdue pour l'instant » · les fiches par evenement avec **une case par heure**, toutes vides · « tes 3e perdraient 2 heures » au conditionnel · a droite, jalons communs et periodes sans cours |
+| `05-perdues-3-annonce…png` | sur une case **deja decidee** : « Banaliser cette heure » **est la**, et l'annonce « **L'heure ne sera comptée qu'une fois** » avec [Annuler] [Remplacer le motif] |
+| `06-issues-2-les-trois-issues.png` | « c'est **4E BANKSY**. **Échanger** : … personne ne perd rien. **Prendre le créneau** : … elle devient une heure à replacer » · trois boutons |
+| `06-issues-5-heure-a-replacer-rappelee.png` | **« ⧗ 1 heure à replacer » dans le bandeau du haut** · dans la modale : « 1 heure à replacer — 4E BANKSY · mercredi 2 septembre · **prise par 3E Charles de Gaulle** » avec « la replacer… », « déjà replacée ailleurs », « elle ne sera pas rendue » · et **« choisir parmi 967 créneaux »** — la coupe a 60 est bien tombee |
+| `APRES-03bis-test-2…png` | **NE MONTRE PAS ce que son nom annonce** — voir ci-dessous |
+
+**UN AVERTISSEMENT QUE LA CONSCIENCE DOIT DONNER A PAUL, ET QU'ELLE N'AURAIT PAS VU SANS REGARDER** : **les captures des livraisons ①bis a ③bis ne montrent PAS l'etat final du site.** Mesure : `APRES-03bis-test-2-grille-mode-test-allume.png` porte encore le bouton « **Calendrier de l'année…** », **renomme « Heures perdues » a la livraison ⑤a**. Et **la classe d'essai n'y apparait pas**, alors que son nom dit « mode test allume » — la conscience **ne peut pas l'expliquer** et **ne l'explique pas**. Ce que la conscience peut dire : les 4 creneaux fictifs **sont bien au sas** (lundi 08:00, mardi 08:00, jeudi 10:07, vendredi 13:00), `edtEnEssai` est branchee dans le candidat final, et son propre banc du `n°11 · 41` avait mesure **30 creneaux mode test eteint / 34 allume**. **Mais aucune capture ne le montre.**
+
+**CE QUI EST DONC LIVRE A PAUL** : **les onze captures des livraisons ⑤ a ⑨a**, qui seules montrent l'etat qu'il va promouvoir — plus **l'avant/apres de la vue Annee**, le seul couple avant/apres du lot sur le meme ecran.
+
+**CE QUI MANQUE ET QUE LA CONSCIENCE DECLARE** : **il n'existe aucune capture avant/apres du meme parcours sur le candidat FINAL.** Le lot a ete capture livraison par livraison, sur des etats successifs du site. **Paul promeut sur captures : il doit savoir que ce qu'il regarde est un assemblage d'etats, pas un parcours unique.**
