@@ -1470,3 +1470,19 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **Etat mesure au moment de la validation** : `index.html` au sas toujours **`966eaafd1e1f260c2cdef9e3826aebca`** (8.73.0-⑥) — **la methode « maquette avant code » a tenu jusqu'au bout** : rien n'a ete ecrit dans le site avant le mot de Paul.
 
 **RAPPEL POUR ⑦-b, deja au mandat** : la pastille de l'evenement s'allume **des qu'une seule** heure recouverte est marquee et s'eteint a zero — la regle tranchee par Paul le 31/08, portee par cette vue (`n°11 · 34`).
+
+**n°11 · 43 — AUDIT DES LIVRAISONS ⑦b ET ⑦ (candidats `66c809b8` puis `00460e7e`, 8.73.0-⑦). VERDICT : ÇA VA — voici les mesures. Le mandat ⑦ est fini.**
+
+**AUDIT GROUPE, ET LA CONSCIENCE LE DIT** : ⑦b (06h15) et ⑦ (06h39) ont ete livrees **sans arret d'audit entre les deux** — Paul a relance directement. **L'audit porte donc sur l'ecart complet ⑥ → ⑦**, pas sur chaque etape. Aucune consequence ici, la non-regression etant mesuree de bout en bout, mais la decoupe du mandat prevoyait deux arrets.
+
+**Candidat** : 1 750 002 o, md5 `47cb5add128eea6fdcb241cf70cc3dd0`. Base ⑥ verifiee.
+
+**NON-REGRESSION remesuree de ⑥ a ⑦** : `function edt*` **217**, **sept** ajoutees et nommees (`edtAnneeColonnes`, `edtAnneeEvenements`, `edtAnneeHauteurs`, `edtAnneeZoom`, `edtAnneeDetail`, `edtAnneeVacance`, `edtAnneeFerie`), **aucune disparue** · `secu*` **29** · `published` **97** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1** · `edtMettreANiveau` **2** · `EDT_CATEGORIES` et `EDT_MOTIFS` **inchanges** · **node --check** et **acorn VERTS** · garde **VERTE sur ses cinq questions**, contrat inchange.
+
+**« CETTE VUE AFFICHE, ELLE NE RECALCULE RIEN » — VERIFIE PAR LA CONSCIENCE, fonction par fonction.** Les huit fonctions de la vue Annee (`edtAnnee*` et `edtPeindreAnnee`, 115 lignes au total) contiennent **ZERO ecriture** : aucun `edtEcrireObjet`, aucun `edtEcrireDecision`, aucun `mjpcPutJson`, aucun `edtEcrireArchive`. **La vue lit et peint, elle ne touche a rien.** C'etait l'exigence du §⑤ du mandat, elle est tenue au sens strict.
+
+**LA REGLE DU 31/08 EST PORTEE PAR CETTE VUE** : `edtEvenementJustifie` a desormais **un seul appelant, `edtPeindreAnnee`** (L20625) — exactement ce que le `n°11 · 34` avait tranche en confrontant la motivation au code. Eprouve par l'executant **par clics reels** sur l'ecran Heures perdues : aucune heure marquee → bandeau **eteint** · **une seule** heure sur deux → bandeau **allume (✓)** · decochee → **eteint**.
+
+**SES PREUVES, LUES** : cinq captures par clics avec journal, parcours entierement cliqué (panneau prof → Emploi du temps → Ouvrir → Annee) · audit adverse `banc-pastille-audit-07.mjs` : mois a 31 et 28 jours (mars **31** lignes, fevrier **28**, **104 bandeaux, 0 debordement**), **aucune casse dans aucun cas** · l'ancienne vue capturee avant remplacement (`tests/ancienne-vue-annee.png`), a la demande de Paul.
+
+**ETAT DU LOT 2ter** : **①, ②, ③, ③bis, ④, ⑤, ⑥ et ⑦ closes et auditees.** **Reste ⑧** — les photos du prevu, la matrice — avant le promeus de Paul.
