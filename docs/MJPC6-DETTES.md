@@ -1396,3 +1396,23 @@ Boutons : « Ne rien faire » · « Échanger les deux heures » · « Prendre l
 **`edtVerifierCoherence` fait ce qu'on lui demande** : elle projette chaque jour de la periode et rend la **liste** des telescopages — deux fois la meme classe au meme creneau, deux classes au meme creneau, heure a la fois au depart et a l'arrivee. Elle saute les jours sans cours.
 
 **SUITE** : **⑥** finale — les dates de l'annee, les captures, l'audit adverse, `banc-tout` en entier, **et la fuite `edtDepart` ci-dessus**.
+
+**n°11 · 39 — AUDIT DE ⑥c-bis (candidat `8aac408e`, 8.73.0-⑥c-bis). VERDICT : ÇA VA — voici les mesures. `edtVerifierCoherence` a trouve un trou dans la livraison qui l'a creee.**
+
+**Candidat** : 1 743 164 o, md5 `3bbc12e64edbb1a75091358e4a86d1c0`. Base verifiee. **Trois modifications, pas une de plus** : la version, le garde-fou, la fuite.
+
+**LA FUITE EST CORRIGEE** : L20186 porte desormais `var edtOut=[],edtDepart=depuis||edtAujourdhui();` — **un seul `var` declare les deux**, la globale implicite a disparu.
+
+**LE GARDE-FOU, ET COMMENT IL A ETE TROUVE.** La livraison ⑥c faisait deux choses : elle a **elargi la liste des destinations aux creneaux deja pris**, et elle a ecrit **`edtVerifierCoherence`**. En jouant la seconde sur la premiere, l'executant a vu que **replacer une heure sur un creneau pris mettait deux classes au meme moment** — un telescopage que sa propre livraison venait d'ouvrir. **L'outil de verification a trouve le trou de la livraison qui l'a cree.** C'est exactement ce que Paul cherchait en exigeant `edtVerifierCoherence`.
+
+Le remede suit sa doctrine : **on ne refuse pas, on dit le prix** —
+> lundi 7 septembre à 10:07-11:02, c'est **4E BANKSY**. Y poser l'heure de 3E Charles de Gaulle mettrait **deux classes au même moment**.
+> « Choisir un autre créneau » · « La poser quand même »
+
+**VERIFIE PAR LA CONSCIENCE — le marqueur de confirmation ne part JAMAIS au hub.** Le drapeau `__confirme` est pose en memoire pour le second passage, et **`delete edtV.__confirme` s'execute AVANT `JSON.parse(JSON.stringify(edtV))`** : la decision ecrite ne le porte pas. Lu ligne a ligne, l'ordre est bon.
+
+**NON-REGRESSION remesuree** : `function edt*` **203**, **aucune ajoutee, aucune disparue** · `secu*` **29** · `published` **97** · `EDT_ANNEE` **12** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1** · `edtMettreANiveau` **2** · `EDT_CATEGORIES` et `EDT_MOTIFS` **inchanges** · **`brevetDates` toujours 28 occurrences — le noeud n'a pas change de nom** · **node --check** et **acorn VERTS** · garde **VERTE**, contrat inchange.
+
+**RECTIFICATION DE TRACABILITE** : le commentaire du code dit « le correctif de Paul du 01/09 ». **La fuite a ete trouvee par la conscience n°11** (`n°11 · 38`), Paul l'a transmise. Sans importance pour le code, mais le registre doit dire qui a mesure quoi.
+
+**CE QUI RESTE POUR CLORE ⑥** : **les dates de l'annee** — mesure : `debutAnnee` et `finAnnee` sont a **0 occurrence** dans le candidat · les captures · l'audit adverse · **`banc-tout` en entier** · le rapport final.
