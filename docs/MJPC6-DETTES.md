@@ -1700,3 +1700,17 @@ Paul, 02/09 : « **ça fait quand même deux relectures d'un mandat fait par une
 **SES DEUX AUTRES ECARTS** : les sept cas de l'audit adverse passent par des appels de fonction — **chacun declare avec son geste equivalent et le fait qu'il soit atteignable** · le bloc « Banaliser » reste exclu sur une heure deplacee : **signale, non tranche** (la conscience a valide ce raisonnement au `n°11 · 53`).
 
 **SEPT CAS DE L'AUDIT ADVERSE DE ⑥, joues** : ecrasement d'une heure deja a replacer → **1 avant, 1 apres, pas de doublon, 0 telescopage** · trois classes qui tournent → **5 decisions, 1 a replacer, 0 telescopage** · classe qui disparait de la grille → **l'heure reste au magasin, le rappel l'affiche par son nom, aucune exception**.
+
+**n°11 · 55 — « LIVRE » MAIS RIEN N'EST AU SAS : LA LIVRAISON ⑨ FINALE N'EXISTE PAS. AUCUN AUDIT POSSIBLE.**
+
+**MESURE DE LA CONSCIENCE, faite avant toute parole** : `PONT/EDT/index.html` au sas est **toujours `9393639ee38f0819ab0a9e52b4f35e4b`**, version **8.73.0-⑨b** — **celle que la conscience a deja auditee au `n°11 · 54`**. Dernier commit touchant le fichier : **`55f88e79`, 16h27**, celui de ⑨-b. **`rapport-2ter-09.md` : 404.** Les cinq derniers commits du depot sont **trois poussees de ⑨-b** puis **deux de la conscience** (le mandat complete, le transcript). **Rien de l'executant depuis 16h27.**
+
+**ET LES TROIS POINTS DE ⑨ SONT ABSENTS DU CODE, mesures** : `jamaisReplacee` **0** · `edtBasculeFinAnnee` **0** · aucun verrou par cle (`edtVerrou` **0**) · `photoAutoEnCours` **0**, `photoAutoFaite` **0**. **Aucune fonction ajoutee, aucune disparue depuis ⑨-b** — le fichier est **identique** a celui deja audite.
+
+**CONSEQUENCE, DITE SANS DETOUR : AUCUN VERDICT N'EST RENDU.** Il n'y a rien de neuf a auditer. Ce n'est pas un refus, c'est un constat : **le candidat ⑨ n'existe pas.**
+
+**DEUXIEME FOIS DANS CE LOT** — meme situation qu'au `n°11 · 45` pour ⑧-a, ou l'executant avait tout fait mais **sans le jeton du sas**. **La cause la plus probable est la meme.** **A verifier avec Paul** : l'executant a-t-il encore le jeton ? A-t-il pousse ailleurs ? A-t-il livre dans sa conversation ?
+
+**RAPPEL DE LA REGLE, qui vaut ici exactement** : **un executant livre AU SAS, jamais dans la conversation.** Le sas fait foi, et **c'est le md5 relu apres poussee qui prouve qu'on audite le fichier qui sera promu**. Tant que le candidat n'est pas au sas, **il n'existe pas pour l'audit** — quel que soit le contenu de son rapport.
+
+**CE QUI RESTE A FAIRE POUR RENDRE LE PROMEUS POSSIBLE**, inchange : le **verrou par cle** (§⓪quater) · la **bascule de fin d'annee** avec ses deux libelles · la **photo retentee** a deux drapeaux · **`banc-tout` en entier** · le rapport final.
