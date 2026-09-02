@@ -1503,3 +1503,25 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **MANDAT ⑧ CORRIGE ET REDEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-08.md`, 9 836 → **12 222 o**, commit `017493a3`, verifie bit a bit. Une section **⓪ter** porte les deux mesures.
 
 **LECON POUR LA CONSCIENCE, a garder** : **un compte de non-regression compte des OCCURRENCES, pas des NOMS.** « 217 fonctions » etait faux depuis le debut du lot — la conscience l'a repete a chaque audit sans jamais verifier que les noms etaient distincts. **Un compteur qui ne distingue pas les deux peut cacher un doublon pendant tout un lot.**
+
+**n°11 · 45 — ⑧-a EST FAITE MAIS N'EST NULLE PART : L'EXECUTANT N'A PAS LE JETON. AUCUN AUDIT POSSIBLE.**
+
+**MESURE DE LA CONSCIENCE** : `PONT/EDT/index.html` au sas est **toujours `47cb5add128eea6fdcb241cf70cc3dd0`** (8.73.0-⑦) · `tests/banc-photo-auto-08a.mjs` **404** · `rapport-2ter-08a.md` **404**. **Rien n'a ete pousse.** Le candidat annonce (1 753 527 o, md5 `5a30c271d86c808e9954adf376a4ecac`) **n'existe que dans la conversation de l'executant**.
+
+**CONSEQUENCE, DITE SANS DETOUR : LA CONSCIENCE NE PEUT PAS AUDITER.** Un audit se fait **sur pieces** ; sans le fichier, il n'y a pas de pieces. Le rapport de l'executant peut etre excellent — **il ne remplace pas le candidat**. Et le md5 relu apres poussee, qui est ce qui prouve qu'on audite bien ce qui sera promu, n'existe pas non plus. **Aucun verdict n'est rendu sur ⑧-a a ce stade.**
+
+**LE DEBLOCAGE EST UNIQUE ET IL APPARTIENT A PAUL** : lui donner **le jeton du sas**, dans SA conversation, une fois — jamais dans un fichier. C'est le meme jeton que celui remis a la conscience le 31/08, etancheite prouvee par ecriture croisee (sas→prod 403, prod→sas 403), a renouveler fin novembre.
+
+**LES CINQ JEUX DE DONNEES QU'IL CHERCHE EXISTENT — la conscience les a trouves, il cherchait les mauvais noms** :
+| il cherchait | le vrai chemin |
+|---|---|
+| `hub-classes.json` | **`PONT/EDT/tests/hub/classes.json`** |
+| `hub-site3e.json` | **`PONT/EDT/tests/hub/site_3e.json`** |
+| `hub-siteconfig.json` | **`PONT/EDT/tests/hub/site_config.json`** |
+| `calendrier-2026-2027.json` | **`PONT/EDT/json/calendrier-2026-2027.json`** |
+| `creneaux-2026-2027.json` | **`PONT/EDT/json/creneaux-2026-2027.json`** |
+**Les trois premiers sont dans un sous-dossier `hub/`, avec des tirets bas et sans prefixe.** Les sept 404 qu'il a essuyes viennent de la, pas d'une absence.
+
+**CE QUE SON RAPPORT ANNONCE ET QUI RESTE A VERIFIER** — a auditer des que le candidat sera au sas : la dette du faux vert levee **par le geste** (mode test allume, echeance due, **1 photo avant / 1 apres, aucune ecriture**) · **le controle negatif qui compte** — pastille non basculee, meme manoeuvre, **une photo part au hub (1 → 2)** : *ce n'est donc pas l'absence de chemin qui protege, c'est le garde-fou* · la photo a la main pendant le mode test **n'est pas un trou** (le transport honore le mode test depuis la dette ③ du 27/08) · **le compte de fonctions : 217/216 avant, 216/216 apres retrait de la morte, 221/221 avec les cinq neuves** · banc `banc-photo-auto-08a.mjs` 14 reperes verts, parcours entierement clique · `pho:20260902080255`, « Trimestre 1 », 26 cases · deux clics le meme jour → **3 photos, rien n'ecrase rien** · archive a 2 photos quand le hub en porte 3 · vingt photos → **21 identifiants distincts** · hub qui refuse → **0 photo, l'ecran tient** · « figer » zero dans les textes, `edt-fige` intacte.
+
+**REGLE RAPPELEE** : un executant **livre au sas**, pas dans la conversation. Le sas fait foi, et **le md5 relu apres poussee est ce qui prouve qu'on audite le fichier qui sera promu**.
