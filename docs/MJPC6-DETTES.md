@@ -1557,3 +1557,21 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **DECLARE ET JAMAIS TRANCHE** : la vue Annee ne se repeint pas d'elle-meme quand le calendrier change sous elle · le cas « calendrier reinjecte pendant que la vue Annee est ouverte » est reste **non prouve**.
 
 **ETAT DU LOT 2ter — TERMINE** : **①, ②, ③, ③bis, ④, ⑤, ⑥, ⑦, ⑧ closes et auditees.** Candidat final **1 753 661 o / `c6d62dc787682d86ba60159c7a699c93`**, 8.73.0-⑧. **Production toujours intacte : rien n'est parti en ligne de tout le lot.**
+
+**n°11 · 48 — PAUL REFUSE DE PROMOUVOIR : « pas de promotion avec dettes et non complétion du mandat ». MANDAT ⑨ DE FINALISATION, ECRIT SUR MESURE.**
+
+**LE TRI, FAIT PAR LA CONSCIENCE, MESURE DANS LE CODE.** Des sept dettes laissees par ⑧ plus les captures manquantes, **six points bloquent** et **trois ne bloquent pas**.
+
+**CE QUI BLOQUE — chaque point mesure, pas suppose :**
+1. **Captures du lot ⑤ : ZERO png au sas** (exigees au §⑧.13 du mandat ⑤).
+2. **Captures ET audit adverse du lot ⑥ : ZERO** (exiges aux §⑦.14 et §⑦.15).
+3. **La liste des destinations s'arrete a 120 JOURS** — mesure : `edtDestinationsPour` appelle `edtCreneauxOu(…,120)`, alors que le §③.1 du mandat ⑥ exigeait **entiere jusqu'a la fin de l'annee** — **et n'a AUCUNE recherche** : `filtreMois`, `typeSemaine`, `rechercheDest` → **0 occurrence**. Deux manquements dans le meme point.
+4. **Le refus de deplacer une heure dont la trace existe : ABSENT** — `edtTraceExiste`, `traceExiste`, `dejaLancee`, `edtDeplacable` → **0 occurrence**. C'etait une decision de Paul.
+5. **La bascule de fin d'annee : ABSENTE** — `jamaisReplacee`, `edtBasculeFinAnnee` → **0 occurrence**. Le motif est **declare** dans `EDT_MOTIFS`, **rien ne le pose**.
+6. **La photo automatique n'est pas retentee apres un echec** — L19892-19893 : `EDT.photoAutoEmise` est pose **avant** l'ecriture.
+
+**CE QUI NE BLOQUE PAS, ET POURQUOI** : la **simplification des textes affiches** — **Paul l'a lui-meme mise en livraison a part** le 01/09 · le **message du mode test apres une photo** — **comportement de TOUS les gestes du site en mode test**, pas de l'EDT, et la pastille l'annonce en permanence · **la vue Annee qui ne se repeint pas** et **le cas de reinjection non prouve** — ce sont **des questions pour Paul, pas des dettes d'executant**.
+
+**MANDAT ⑨ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-09.md`. Base **8.73.0-⑧**, 1 753 661 o, `c6d62dc7…`. **Trois livraisons** : ⑨-a les captures et l'audit adverse manquants — **et l'ordre exprès de s'arreter si un ecran ne fait pas ce que le rapport annoncait** · ⑨-b la liste et le refus · ⑨ la bascule, la photo, `banc-tout` en entier.
+
+**UN POINT DE METHODE QUE LA CONSCIENCE PORTE AU MANDAT** : la bascule de fin d'annee **ne doit ecraser aucune decision deja prise par Paul** — une heure qu'il a tranchee reste comme il l'a laissee. Sans cette clause, un mecanisme automatique reecrirait ses choix en juin.
