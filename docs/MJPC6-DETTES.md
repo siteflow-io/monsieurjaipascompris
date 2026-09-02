@@ -1680,3 +1680,23 @@ Paul, 02/09 : « **ça fait quand même deux relectures d'un mandat fait par une
 **NON-REGRESSION remesuree** : `edt*` **222 declarations / 222 noms, aucun doublon**, **une** ajoutee et nommee, **aucune disparue** · `secu*` **29** · `published` **97** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edt-fige` **9** · `EDT_CATEGORIES` et `EDT_MOTIFS` **inchanges** · **node --check VERT** · garde **VERTE**.
 
 **CE QUI MANQUE : `rapport-2ter-09a.md` EST EN 404.** Il a pousse le code et les captures, **pas son rapport**. **La conscience ne peut donc pas verifier** : l'**audit adverse du lot ⑥** exige au §①.2 (les sept cas) · ses autres mesures · le journal des clics. **Verdict rendu uniquement sur ce qui est visible au sas.**
+
+**n°11 · 54 — AUDIT DE ⑨-a (rapport) ET ⑨-b (candidat `55f88e79`, 8.73.0-⑨b). VERDICT : ÇA VA. UNE DETTE TROUVEE PAR SON PROPRE AUDIT — PORTEE AU MANDAT ⑨ FINALE.**
+
+**Audit groupe, la conscience le dit** : ⑨-b a ete livree **sans arret d'audit apres ⑨-a**. L'ecart mesure va donc de ⑨a a ⑨b.
+
+**Candidat** : 1 758 505 o, md5 `9393639ee38f0819ab0a9e52b4f35e4b`. **NON-REGRESSION** : `edt*` **225 declarations / 225 noms, aucun doublon**, **trois** ajoutees et nommees (`edtTraceExiste`, `edtQuoiChercher`, `edtSemaineDe`), **aucune disparue** · `secu*` **29** · `published` **97** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · **node --check VERT** · garde **VERTE**.
+
+**LES DEUX COUPES SONT TOMBEES — verifie par la conscience** : `edtCreneauxOu` est desormais appelee **sans plafond aux DEUX endroits** (L20365 la modale, L20396 `edtDestinationsPour`) · et les **4 `slice(0,60)` restants sont tous AILLEURS** — `atChSlug`, `_drAssurerCadre`, `edtPeindreCalendrier`, `_analyzeNode` — **aucun sur la liste**.
+
+**LA RECHERCHE EXISTE, LUE** : `edtQuoiChercher` reconnait **A/B** (`^[ab]$`), **le numero de semaine** (`s12` ou `12`), **le mois** par prefixe, et le texte libre avec `/`. Elle complete le filtre par date qui existait deja.
+
+**LE REFUS « TRACE EXISTE », LU** : `edtTraceExiste` s'appuie sur `edtChercherTrace`, qui parcourt les seances des chapitres du niveau. **Un seul appelant : `edtGlisserDebut` (L21199)** — donc le refus tombe **au depart du glisser**, avant tout geste. C'est le bon endroit.
+
+**LA DETTE QUE SON AUDIT ADVERSE A TROUVEE, ET QU'IL A DECLAREE** : **deux gestes concurrents sur la meme case → 2 ecritures, 0 archive, et le journal ne garde que le second.** **C'est le filet de Paul qui saute** — l'archive et le journal sont ce que ↶ Annuler relit. Un double-clic rapide, deux onglets, et **le geste precedent devient irrecuperable**. **Paul a tranche : pas de promotion avec dettes. PORTEE AU MANDAT ⑨ FINALE (§⓪quater)**, avec le remede : **un verrou par cle**, sur le patron de `EDT.miseANiveauEnCours` qui existe deja depuis ①bis.
+
+**A PORTER A SON CREDIT — IL A APPLIQUE LA REGLE GRAVEE AU TOUR PRECEDENT.** Sur la derniere modale du script de captures ⑥, il ecrit : *« Plutot que de l'ecrire "declare" et de passer, j'ai verifie si le geste etait atteignable : il l'est — 18 cases a l'ecran, 18 elements cliquables. C'est mon selecteur qui rate apres le repeint, pas le site. »* **C'est exactement ce que la conscience n'avait pas fait sur le banc ⑤b.**
+
+**SES DEUX AUTRES ECARTS** : les sept cas de l'audit adverse passent par des appels de fonction — **chacun declare avec son geste equivalent et le fait qu'il soit atteignable** · le bloc « Banaliser » reste exclu sur une heure deplacee : **signale, non tranche** (la conscience a valide ce raisonnement au `n°11 · 53`).
+
+**SEPT CAS DE L'AUDIT ADVERSE DE ⑥, joues** : ecrasement d'une heure deja a replacer → **1 avant, 1 apres, pas de doublon, 0 telescopage** · trois classes qui tournent → **5 decisions, 1 a replacer, 0 telescopage** · classe qui disparait de la grille → **l'heure reste au magasin, le rappel l'affiche par son nom, aucune exception**.
