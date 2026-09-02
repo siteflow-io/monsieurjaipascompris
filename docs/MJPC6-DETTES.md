@@ -1658,3 +1658,25 @@ Paul, 02/09 : « **ça fait quand même deux relectures d'un mandat fait par une
 **DECISION : « Banaliser cette heure » doit etre propose sur une case qui porte deja une decision**, avec l'annonce du remplacement qui existe et fonctionne. **Le passage par « ↶ Annuler » n'est PAS le bon geste** : il fait repasser le compte de Paul par zero, ce que le §② interdit en substance. **Paul corrige s'il n'est pas d'accord ; le travail continue sans qu'il ait a trancher.**
 
 **⑨-a devient donc une livraison de CODE** : une ligne dans la modale, plus la troisieme capture, version **8.73.0-⑨a**.
+
+**n°11 · 53 — AUDIT DE ⑨-a (candidat `18b19f1a`, 8.73.0-⑨a). VERDICT : ÇA VA sur ce que la conscience a pu VOIR — et elle a vu les deux ecrans elle-meme. MAIS LE RAPPORT MANQUE.**
+
+**Candidat** : 1 754 915 o, md5 `2134aab32e45755d8669fcd4dd95529a`.
+
+**LE GESTE EST DEVENU ATTEIGNABLE — ET LA CONSCIENCE A REGARDE LA CAPTURE ELLE-MEME**, au lieu de croire un rapport. `PONT/EDT/tests/05-perdues-3-annonce-avant-de-remplacer-le-motif.png` (1600×900) montre, sur une case **qui porte deja une decision** (« ↶ Annuler cette décision » visible) : **« Banaliser cette heure » est la**, et l'annonce s'affiche :
+> **Cette heure est déjà comptée perdue — événement du calendrier — Séjour Verdun 3e.**
+> **La banaliser remplacera ce motif. L'heure ne sera comptée qu'une fois, et son statut deviendra modifiable.**
+> [ Annuler ] [ **Remplacer le motif** ]
+**C'est exactement le texte que le banc ⑤b prouvait « par appel de fonction ». Il est desormais atteignable par le clic. Le trou est ferme.**
+
+**LA SECONDE CAPTURE, REGARDEE AUSSI** — `06-issues-2-les-trois-issues.png` : les trois sorties s'affichent avec leur prix dit avant :
+> mercredi 2 septembre à 11:04-11:59, c'est **4E BANKSY**. · **Échanger** : … permutent leurs deux heures — **personne ne perd rien**. · **Prendre le créneau** : 4E BANKSY perd son heure — elle devient une heure à replacer, et le site te la rappellera.
+> [ Ne rien faire ] [ Échanger les deux heures ] [ Prendre le créneau ]
+
+**LES NEUF CAPTURES MANQUANTES SONT LA** : `05-perdues-1` a `-4` (ecran, une coche, l'annonce, le total apres remplacement) et `06-issues-1` a `-5` (liste des destinations, les trois issues, apres echange, apres ecrasement, heure a replacer rappelee). **⑤ passe de 0 a 4, ⑥ de 0 a 5.**
+
+**UNE DECISION D'ARCHITECTURE QU'IL A PRISE SEUL, ET QUI EST JUSTE** : le bloc est factorise en **`edtBlocBanaliser`** (une fonction, deux appels), et il **refuse la banalisation sur une heure prise dans un deplacement** — `if(!(dec.deplaceeVers||dec.venantDe))` — avec sa raison ecrite : *« l'ecrire effacerait le lien avec son autre bout et laisserait une heure epinglee orpheline a l'autre extremite »*. **La conscience n'y avait pas pense ; le raisonnement tient.**
+
+**NON-REGRESSION remesuree** : `edt*` **222 declarations / 222 noms, aucun doublon**, **une** ajoutee et nommee, **aucune disparue** · `secu*` **29** · `published` **97** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edt-fige` **9** · `EDT_CATEGORIES` et `EDT_MOTIFS` **inchanges** · **node --check VERT** · garde **VERTE**.
+
+**CE QUI MANQUE : `rapport-2ter-09a.md` EST EN 404.** Il a pousse le code et les captures, **pas son rapport**. **La conscience ne peut donc pas verifier** : l'**audit adverse du lot ⑥** exige au §①.2 (les sept cas) · ses autres mesures · le journal des clics. **Verdict rendu uniquement sur ce qui est visible au sas.**
