@@ -1618,3 +1618,24 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **MANDAT ⑨ REDEPOSE** : 13 113 → **14 345 o**, commit `5f0e6feb`, verifie bit a bit.
 
 **CE QUE CETTE SEQUENCE ETABLIT, ET QU'IL FAUT GARDER** : **faire eprouver un mandat par l'executant avant de le lancer a rapporte, en deux passes, onze corrections** — dont deux qui auraient casse quelque chose (renommer les classes du plein ecran ; corriger une liste deja conforme) et une qui aurait **bloque l'executant** (la contradiction). **Cette etape doit entrer au dispositif : un mandat se fait eprouver avant d'etre lance, et c'est la conscience qui corrige.**
+
+**n°11 · 51 — LES ONZE CORRECTIONS : LA CAUSE, ET CE QUE LA CONSCIENCE CHANGE.**
+
+Paul, 02/09 : « **ça fait quand même deux relectures d'un mandat fait par une conscience, qui était censé être correct dès le départ.** »
+
+**Il a raison. Deux causes, et une aggravante.**
+
+**CAUSE A — CHERCHER UN NOM AU LIEU DE LIRE (sept des onze).** Toutes ces affirmations du mandat venaient d'un `grep`, pas d'une lecture : « `filtreMois` a zero donc aucune recherche » — elle existait sous `edtFiltrerOu` · « `jamaisReplacee` a zero donc rien ne pose le motif » — deux endroits le posaient · « la liste s'arrete a 120 » — sans regarder **qui appelle** la fonction, donc sans voir qu'il y avait **deux** listes et que l'une allait deja bien · « figer : 24 occurrences donc a nettoyer » — sans regarder que c'etaient des classes CSS portant le plein ecran. **Une mesure a zero ne prouve pas une absence : elle prouve que le nom cherche n'est pas la.** C'est la regle gravee du 01/08 — « un inventaire se fait en LISANT le corps des fonctions, jamais en comptant des motifs » — **et la conscience l'a violee dans un document destine a etre execute**.
+
+**CAUSE B — NE PAS RELIRE LE MANDAT CONTRE LUI-MEME (quatre des onze).** La contradiction §⓪⑤ / §② (deux libelles exiges d'un cote, table inchangee de l'autre) · le §①.6 restee a un drapeau quand le §⓪⑥ en exigeait deux · le §③.4 demandant le mauvais « avant » · les chiffres de captures non repris. **Toutes nees APRES une correction : la conscience a corrige un passage sans propager aux autres.** Un mandat n'est pas une liste de points, c'est **un document qui doit tenir ensemble**.
+
+**L'AGGRAVANTE** : le dispositif exige deja qu'**un mandat se relise ligne a ligne avant d'etre lance**. La conscience l'a fait **pour le mandat ①bis** — et y avait trouve **deux trous qu'elle a bouches elle-meme** (l'archivage generalise confondu avec celui de la mise a niveau ; l'absence de section « hors perimetre »). **Elle a ensuite abandonne cette passe.** La regle n'a pas manque : **son application a manque.**
+
+**CE QUE LA CONSCIENCE CHANGE, ET QUI NE SE DELEGUE PAS :**
+1. **Aucune affirmation chiffree dans un mandat sans une LECTURE.** Un `grep` sert a **trouver ou lire**, jamais a conclure. Toute phrase du type « X est absent » exige d'avoir lu la fonction ou l'ecran concerne, et de **nommer les appelants**.
+2. **Relecture du mandat CONTRE LUI-MEME avant depot**, section par section : chaque exigence confrontee a « ce qui ne doit pas bouger », chaque correction propagee partout ou elle porte.
+3. **Ces deux passes precedent le depot. Elles ne se remplacent pas par l'epreuve de l'executant.**
+
+**CE QUE L'EPREUVE PAR L'EXECUTANT RESTE** : un filet utile — il a le code sous les yeux et il a rapporte onze corrections, dont deux qui auraient casse quelque chose et une qui l'aurait bloque. **Mais un filet n'est pas une methode.** Il aurait du n'avoir rien a trouver. **A garder comme etape du dispositif, jamais comme substitut au travail de la conscience.**
+
+**COUT REEL, dit sans le minimiser** : deux allers-retours de Paul, et un mandat depose trois fois au lieu d'une.
