@@ -1639,3 +1639,22 @@ Paul, 02/09 : « **ça fait quand même deux relectures d'un mandat fait par une
 **CE QUE L'EPREUVE PAR L'EXECUTANT RESTE** : un filet utile — il a le code sous les yeux et il a rapporte onze corrections, dont deux qui auraient casse quelque chose et une qui l'aurait bloque. **Mais un filet n'est pas une methode.** Il aurait du n'avoir rien a trouver. **A garder comme etape du dispositif, jamais comme substitut au travail de la conscience.**
 
 **COUT REEL, dit sans le minimiser** : deux allers-retours de Paul, et un mandat depose trois fois au lieu d'une.
+
+**n°11 · 52 — ⑨-a S'ARRETE SUR UN VRAI TROU : LA BANALISATION PAR-DESSUS UNE COCHE N'EST ATTEIGNABLE PAR AUCUN CLIC. TRANCHE PAR LA MOTIVATION EXISTANTE.**
+
+**L'executant s'est arrete comme le mandat le lui demandait.** Il a pris les deux premiers ecrans de ⑤ — 6 fiches, 10 cases, aucune cochee, en-tete « Ce que l'année t'a coûté — Aucune heure perdue pour l'instant » ; puis apres un clic sur « Séjour Verdun 3e » : « 3E Charles de Gaulle · cette année, 1 heure perdue, dont 1 déclarée justifiée ». **Le troisieme ne peut pas exister.**
+
+**VERIFIE PAR LA CONSCIENCE, dans le code** : `edtSansSeance` a **UN SEUL appelant** — le bouton de la modale, **L20334** — et ce bouton vit dans une branche qui ne s'ouvre **que si la case ne porte aucune decision**. Sa mesure par le geste, sur la meme case :
+- **sans decision** : `▶ Ouvrir le pilotage et lancer` · **`Banaliser cette heure`**
+- **avec la coche** : `▶ Ouvrir le pilotage et lancer` · `↶ Annuler cette décision`
+**Le bouton disparait des que Paul coche.**
+
+**CE QUE CA COUTE A PAUL** : une heure justifiee par un evenement du calendrier **ne peut plus etre requalifiee**. Si le sejour est annule et qu'il a fait cours autrement, il doit **annuler la coche puis banaliser** — deux gestes, et **entre les deux le compte repasse par zero**.
+
+**FAUTE DE LA CONSCIENCE, LA PLUS COUTEUSE DE LA SERIE.** Le banc ⑤b prouvait l'annonce « cette heure est deja comptee perdue — la banaliser remplacera ce motif » **en appelant la fonction directement**, et l'executant de l'epoque **l'avait ecrit noir sur blanc dans son propre banc : « appel de fonction : déclaré »**. **La conscience a lu cette mention et n'a pas releve ce qu'elle voulait dire.** Pire : **son propre banc de contre-audit faisait la meme chose** — elle posait les decisions a la main dans `edtTotauxPerdues`. **Ni l'executant ni la conscience n'ont prouve le geste.** Le code est juste ; **Paul ne peut pas le faire.**
+**REGLE A GRAVER** : **« appel de fonction : déclaré » dans un banc est une ALERTE, pas une formalite.** Quand un executant l'ecrit, il dit : *ce geste n'est peut-etre atteignable par aucun clic*. **Toute mention de ce genre se verifie par le geste, immediatement.**
+
+**TRANCHE PAR LA CONSCIENCE, SANS NOUVELLE QUESTION A PAUL — la motivation existe deja.** Le mandat ⑤ §②, **tranche par Paul le 01/09**, dit : *« Jamais de refus : Paul n'est jamais bloqué sur un geste de classe »* · *« le geste le plus récent remplace le motif, et le site le dit AVANT »* · et le §⑧.5 decrivait **explicitement ce geste comme le sien** : *« coche une heure depuis la fiche d'un événement, puis banalise la même heure »*. **Ce n'est donc pas une decision nouvelle : c'est le §② non applique jusqu'au bout.**
+**DECISION : « Banaliser cette heure » doit etre propose sur une case qui porte deja une decision**, avec l'annonce du remplacement qui existe et fonctionne. **Le passage par « ↶ Annuler » n'est PAS le bon geste** : il fait repasser le compte de Paul par zero, ce que le §② interdit en substance. **Paul corrige s'il n'est pas d'accord ; le travail continue sans qu'il ait a trancher.**
+
+**⑨-a devient donc une livraison de CODE** : une ligne dans la modale, plus la troisieme capture, version **8.73.0-⑨a**.
