@@ -1575,3 +1575,27 @@ Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air
 **MANDAT ⑨ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-09.md`. Base **8.73.0-⑧**, 1 753 661 o, `c6d62dc7…`. **Trois livraisons** : ⑨-a les captures et l'audit adverse manquants — **et l'ordre exprès de s'arreter si un ecran ne fait pas ce que le rapport annoncait** · ⑨-b la liste et le refus · ⑨ la bascule, la photo, `banc-tout` en entier.
 
 **UN POINT DE METHODE QUE LA CONSCIENCE PORTE AU MANDAT** : la bascule de fin d'annee **ne doit ecraser aucune decision deja prise par Paul** — une heure qu'il a tranchee reste comme il l'a laissee. Sans cette clause, un mecanisme automatique reecrirait ses choix en juin.
+
+**n°11 · 49 — L'EXECUTANT EPROUVE LE MANDAT ⑨ ET RELEVE SEPT POINTS. IL A RAISON SEPT FOIS. MANDAT CORRIGE — DEUXIEME FOIS EN DEUX MANDATS.**
+
+**Paul a fait eprouver le mandat avant de le lancer.** L'executant a **signale sans reecrire** — conforme. **Verifie par la conscience, point par point, dans le code du sas.**
+
+**① DEUX LISTES, UNE SEULE EN CAUSE.** Mesure : `edtCreneauxOu` est appelee **deux fois** — L20321 **sans plafond** (400 par defaut) pour la modale, qui s'arrete d'elle-meme a `edtFinAnnee()` (`if(iso>fin)break`) : **elle est deja conforme** · L20353 **avec 120** dans `edtDestinationsPour`, le rappel des heures a replacer. **Le mandat ne les distinguait pas et aurait envoye corriger un ecran qui va bien.**
+
+**② UNE SECONDE COUPE QUE LE MANDAT NE VOYAIT PAS.** Mesure : **L21040, `.slice(0,60)`** sur `edtDestinationsPour`. **Un executant qui aurait corrige les 120 jours aurait laisse la coupe a 60 et cru avoir fini.**
+
+**③ « AUCUNE RECHERCHE » ETAIT INEXACT.** Mesure : `edtFiltrerOu` **2 occurrences**, « filtrer par date » **1** — **la modale a deja un filtre**. Ce qui manque : **mois / numero de semaine / type A-B**. Et le rappel des heures a replacer, lui, **n'a aucun filtre**. **Le mandat ne disait pas ou poser la recherche** : c'est desormais ecrit — dans la modale, a cote du filtre existant.
+
+**④ « RIEN NE POSE LE MOTIF » ETAIT FAUX — ET LE VRAI DEFAUT EST AILLEURS.** Mesure : **deux endroits posent `aReplacer`** — l'ecrasement (**L21265**) et les heures repoussees quand Paul avance la fin d'annee (**L18797**). Ce qui manque est bien la bascule automatique. **MAIS SA TROUVAILLE EST MEILLEURE QUE MON POINT** : le libelle du motif est **« heure à replacer jamais replacée »** et il **s'affiche des l'ecrasement** — **une heure prise ce matin dit deja a Paul « jamais replacée », alors qu'il peut la replacer demain**. Poser la bascule sans traiter ca laisserait **les deux etats impossibles a distinguer**, or c'est exactement ce que la bascule sert a distinguer. **Deux libelles desormais exiges** : *en attente de replacement* / *jamais replacée*.
+
+**⑤ LE REMEDE DE LA PHOTO DEMANDE DEUX DRAPEAUX, PAS UNE LIGNE DEPLACEE.** Mesure : **`edtEcrireArchive` n'a aucun rappel d'echec** — son `apres` n'est appele que dans le succes, un archivage rate n'appelle que `perdu()`. On ne peut donc poser le drapeau **que dans `apres`** — **mais alors deux ouvertures rapprochees feraient partir deux photos** entre l'emission et le retour. **Il faut un drapeau « en cours » et un drapeau « faite ».** Le mandat disait « le drapeau se pose apres une ecriture reussie » **sans voir ce piege**.
+
+**⑥ UN CHIFFRE DE LA CONSCIENCE ETAIT FAUX** : **⑧ a 4 captures, pas 5.** Son comptage attrapait `8-1-question-du-depot.png`, **du lot 2bis**. Verifie : les captures ⑧ sont `08-photo-a1`, `b1`, `b2`, `b3`.
+
+**⑦ ET SON COMPTAGE ETAIT FRAGILE** : sur les **95 png** de `PONT/EDT/tests/`, beaucoup viennent du **lot 2bis** (`5-1-mois.png`, `5-2-annee.png`, `8-1-…`) et **peuvent faire croire a tort que ⑤ en a**. **Le constat central tient : aucune capture du LOT 2ter pour ⑤ et ⑥.**
+
+**POINT NON OUTILLE, AJOUTE AU MANDAT** : la bascule ne se declenche qu'apres `finAnnee`, **soit juin 2027**. Pour la prouver aujourd'hui, il faut **declarer une `finAnnee` dans le passe** — sinon l'executant cherchera. C'est ecrit.
+
+**MANDAT ⑨ CORRIGE ET REDEPOSE** : 10 687 → **13 113 o**, commit `6aad7ed2`, verifie bit a bit.
+
+**LECON POUR LA CONSCIENCE, la seconde en deux mandats** : **une mesure a zero ne prouve pas une absence — elle prouve que le nom cherche n'est pas la.** `filtreMois` a zero ne veut pas dire « aucune recherche » : la recherche existait sous `edtFiltrerOu`. **Chercher un nom, c'est supposer le nom. Il faut lire l'ecran.**
