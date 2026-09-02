@@ -1416,3 +1416,27 @@ Le remede suit sa doctrine : **on ne refuse pas, on dit le prix** —
 **RECTIFICATION DE TRACABILITE** : le commentaire du code dit « le correctif de Paul du 01/09 ». **La fuite a ete trouvee par la conscience n°11** (`n°11 · 38`), Paul l'a transmise. Sans importance pour le code, mais le registre doit dire qui a mesure quoi.
 
 **CE QUI RESTE POUR CLORE ⑥** : **les dates de l'annee** — mesure : `debutAnnee` et `finAnnee` sont a **0 occurrence** dans le candidat · les captures · l'audit adverse · **`banc-tout` en entier** · le rapport final.
+
+**n°11 · 40 — AUDIT DE LA LIVRAISON ⑥ FINALE (candidat `2bb3d513`, 8.73.0-⑥). VERDICT : ÇA VA — voici les mesures. Le mandat ⑥ est fini.**
+
+**Candidat** : 1 748 712 o, md5 `966eaafd1e1f260c2cdef9e3826aebca`. Base verifiee.
+
+**NON-REGRESSION remesuree** : `function edt*` **210**, **six** ajoutees et nommees (`edtChargerDatesAnnee`, `edtPoserDateAnnee`, `edtValiderDatesAnnee`, `edtRecalerAnnee`, `edtFinAnnee`, `edtHeuresApres`), **aucune disparue** · `secu*` **29** · `published` **97** · moteur **309 812 / `2ba70f9e…`** · correctif du mode test **intact** · `edtApparier` **1** · `edtMettreANiveau` **2** · `EDT_CATEGORIES` et `EDT_MOTIFS` **inchanges** · **node --check** et **acorn VERTS** · garde **VERTE sur ses cinq questions**, contrat inchange.
+**Ecart attendu et conforme** : `EDT_ANNEE` passe de **12 a 17** occurrences — c'est exactement ce que le §⑤.4 du mandat demandait (« il cesse d'etre devine, il devient une valeur recalculee »).
+**Le noeud n'a pas change de nom** : `brevetDates` **33 occurrences**, `debutAnnee` **9**, `finAnnee` **9** — deux champs de plus au meme endroit, comme exige.
+
+**LES TROIS REFUS, REJOUES SUR BANC INDEPENDANT AVEC LE VRAI CALENDRIER DE PAUL** :
+| dates soumises | resultat |
+|---|---|
+| **01/09/2026 → 26/06/2027** (son repere reel) | **ACCEPTE** |
+| fin avant le debut | refuse — « la fin de l'année (2026-09-01) tombe avant son début (2027-06-26) » |
+| 01/09/2026 → 30/11/2027 | refuse — « **l'année ferait 455 jours, soit plus de treize mois** » **et** « la fin est hors du calendrier injecté (2026-08-01 → 2027-07-31, un mois de marge) » |
+| debut au 01/01/2025 | refuse, deux motifs, bornes affichees |
+| fin au 01/01/2028 | refuse, deux motifs, bornes affichees |
+**Les refus sont nommes ET chiffres, et ils citent les bornes du calendrier reellement injecte.**
+
+**LE RECALAGE, REJOUE** : `finAnnee` avancee au 26/06 → **2 heures posees au-dela trouvees** (29/06 et 06/07), nommees avec leur classe et leur creneau. **Une heure banalisee et une heure deplacee au-dela sont ECARTEES** — normal : seules les heures **posees** (`ajoutee`/`epingle`) sont a replacer. **Aucune ne disparait.**
+
+**`EDT_ANNEE` RECALCULE, REJOUE** : debut au **01/09/2026** → `2026-2027` · debut au **05/01/2027** → `2026-2027` (janvier appartient a l'annee scolaire commencee en septembre) · **sans dates**, les valeurs de repli restent `2026-08-01 → 2027-07-31`.
+
+**ETAT DU LOT 2ter** : **①, ②, ③, ③bis, ④, ⑤ et ⑥ closes et auditees.** Restent **⑦ (la vue Annee)** et **⑧ (les photos du prevu, la matrice)** avant le promeus de Paul.
