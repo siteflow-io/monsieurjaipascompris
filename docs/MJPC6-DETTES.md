@@ -1458,3 +1458,15 @@ Le remede suit sa doctrine : **on ne refuse pas, on dit le prix** —
 **SES ECARTS DECLARES** : les hauteurs de bandeau sont **calculees apres peinture** (les maquettes les posaient en dur, ce qui ne tient pas sur des lignes de hauteurs differentes) · **les etats des pastilles sont fictifs** dans ce rendu — un fichier statique n'a pas de hub, trois decisions de demonstration sont ecrites en clair · les vacances marquent **118 jours de fond**, week-ends compris · le zoom est **a deux etats**, pas continu, « les maquettes montraient deux etats, je n'ai pas invente de niveaux intermediaires ».
 
 **ARRET CONFORME** : il s'arrete et attend. **C'est Paul qui compare aux quatre maquettes et relance.**
+
+**n°11 · 42 — PAUL VALIDE LE RENDU DE LA VUE ANNEE.**
+
+Paul, 02/09, apres avoir ouvert le rendu et les captures : « **ok ça m'a l'air pas mal. on continue** »
+
+**LE RENDU `PONT/EDT/T-7a-annee.html` DEVIENT LA REFERENCE DE L'ECRAN**, aux cotes des quatre maquettes du `TRANSCRIPTS/C10/pieces/`. La livraison ⑦-b s'y conforme : **elle porte cet ecran dans le site, elle ne le redessine pas.**
+
+**Les quatre ecarts declares par l'executant sont valides de fait** : les hauteurs de bandeau calculees apres peinture · les pastilles fictives dans le rendu statique (elles deviennent reelles en ⑦-b, branchees sur le magasin des decisions) · le fond de vacances qui couvre aussi les week-ends · le zoom **a deux etats**, pas continu.
+
+**Etat mesure au moment de la validation** : `index.html` au sas toujours **`966eaafd1e1f260c2cdef9e3826aebca`** (8.73.0-⑥) — **la methode « maquette avant code » a tenu jusqu'au bout** : rien n'a ete ecrit dans le site avant le mot de Paul.
+
+**RAPPEL POUR ⑦-b, deja au mandat** : la pastille de l'evenement s'allume **des qu'une seule** heure recouverte est marquee et s'eteint a zero — la regle tranchee par Paul le 31/08, portee par cette vue (`n°11 · 34`).
