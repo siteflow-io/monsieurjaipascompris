@@ -2119,3 +2119,17 @@ Paul, 03/09 : « **et pourquoi ne pas modifier le json d'injection ?** »
 **CE QUE LA CONSCIENCE REPOND, ET C'EST TOUT** : **la modification du JSON est un depannage qui marche ce soir**, et Paul peut la vouloir pour ce soir — **c'est son droit et c'est reversible**. Mais **ce n'est pas le correctif** : il rendrait faux un calendrier qui est juste, pour compenser un champ qui ne fait pas son travail.
 
 **AUCUN MANDAT N'EST REDIGE. AUCUN FICHIER N'EST MODIFIE. La conscience mesure, rapporte, et attend l'ordre de Paul** — comme il l'a exige au `n°11 · 71`.
+
+**n°11 · 76 — PAUL TRANCHE ET DONNE LA LOGIQUE : `debutAnnee` DOIT BORNER LE PREVU. C'EST LE CORRECTIF, PAS LE DEPANNAGE.**
+
+Paul, 03/09, mot pour mot : « **oui mais mjpc c'est pour les cours, c'est les cours qui sont importants. je dois pouvoir déclarer mon début d'année tel jour et puis le reste se cale, c'est tout. c'est ça la logique. l'année prochaine ça se trouve j'aurai des cours dès le mercredi, on ne sait pas.** »
+
+**LA REGLE, DANS SES MOTS, A GRAVER** : **« mjpc c'est pour les cours »** · **« je déclare mon début d'année, et le reste se cale »**. **Le calendrier de l'etablissement dit ce qui occupe les journees ; c'est PAUL qui dit quand ses cours commencent.** Les deux ne se deduisent pas l'un de l'autre.
+
+**ET SON ARGUMENT DECISIF, QUE LA CONSCIENCE N'AVAIT PAS** : *« l'année prochaine ça se trouve j'aurai des cours dès le mercredi, on ne sait pas. »* **La date de debut n'est PAS deductible du calendrier** — ni des vacances, ni de la rentree des eleves. **Elle ne peut venir que d'une declaration de Paul.** C'est exactement pourquoi le champ existe, et exactement pourquoi le remplir par un bricolage des vacances serait une impasse.
+
+**LE DEPANNAGE PAR LE JSON EST DONC ECARTE PAR PAUL.** Ce qui reste : **le prevu ne pose aucune seance avant `debutAnnee` ni apres `finAnnee`.**
+
+**CE QUE CA VAUT COTE CODE, mesure au `n°11 · 74`** : `edtDebutAnnee()` a **trois appelants** — `edtVersions`, `edtNormaliserGrille`, `edtEcheancesPhoto` — **aucun dans le calcul du prevu**, qui n'est borne que par `edtJourSansCours` (vacances et feries). **Il manque une borne, pas une fonction.**
+
+**LA CONSCIENCE N'A RIEN REDIGE.** Elle a consigne la decision et **demande a Paul s'il veut le mandat** — apres avoir ete reprise au `n°11 · 71` pour avoir produit et amende des mandats sans son mot.
