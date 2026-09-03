@@ -1,4 +1,20 @@
 # « BUG » — LA RESTAURATION D'URGENCE
+
+## 03/09 — POINT DE RETOUR AVANT LA PROMOTION DU LOT 2ter
+
+**Si le site en ligne pose problème, voici où revenir.**
+
+| | |
+|---|---|
+| **état d'avant** | `index.html` **1 522 853 o**, md5 **`6c7560afa9e431f23f89aa6fe167bb6b`**, version **8.70.1** |
+| **commit d'avant** | **`75c8b77f`** — c'est celui à restaurer |
+| **état d'après** | `index.html` **1 769 457 o**, md5 **`8837063de4466afb71622e89181ae44a`**, version **8.73.0-⑪** |
+| **commit de promotion** | **`c5e893bbc208`**, blob `a260fef9d13e` |
+
+**Ce que revenir en arrière ferait perdre** : tout l'emploi du temps (il n'existait pas avant), **et le correctif du mode test du 27/08** — sans lui, quarante écritures repartent au vrai hub quand le mode test est allumé.
+
+**Le candidat est aussi au sas**, intact : `siteflow-io/mjpc-chantier`, `PONT/EDT/index.html`.
+
 *Convention instituée par Paul le 18/07/2026. Mécanisme TESTÉ à blanc le jour même.*
 
 ### POINT DE RETOUR — `dictee_universelle.html` AVANT promotion M9 (22/07/2026)
