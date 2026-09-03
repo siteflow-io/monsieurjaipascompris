@@ -1960,3 +1960,26 @@ Paul, 03/09 : « **en fait il faut juste que je puisse déclarer que ces heures 
 **CE QUI RESTE, ET QUI EST REEL** : **le chemin est indirect.** Pour donner une heure de francais sur son creneau du lundi 10:07, Paul doit **partir d'une autre case** et parcourir la liste — il ne peut pas **cliquer la case hors MJPC elle-meme**, dont la fenetre n'offre rien. **Ce n'est pas une impossibilite, c'est un detour.** **A trancher par Paul** : lui suffit-il, ou veut-il un bouton **sur la case elle-meme** ?
 
 **ET UN POINT DE VOCABULAIRE QUI DEVIENT PLUS IMPORTANT** : l'infobulle « **hors français, jamais compté** » et la phrase de la modale « **groupe partagé, hors français. Cette heure ne compte jamais dans la progression.** » sont **doublement fausses** — c'est du francais (4 des 5 creneaux), **et elle PEUT compter** des que Paul y ajoute une heure. **A corriger dans la passe de vocabulaire.**
+
+**n°11 · 68 — PAUL EXIGE QUE LA CONSCIENCE FASSE LE TEST ELLE-MEME. FAIT. LE MECANISME MARCHE, PROUVE SUR SA VRAIE GRILLE.**
+
+Paul, 03/09 : « **non tu dois faire le test toi même. et oui pour la reformulation du vocab** »
+
+**IL A RAISON DE REFUSER LA DELEGATION** : la conscience lui avait renvoye le test manuel apres avoir seulement **lu** le code. **Un test se fait, il ne se demande pas.**
+
+**BANC MONTE PAR LA CONSCIENCE — 29 fonctions extraites du candidat du sas, jouees sur la VRAIE grille de Paul** (`json/grille-2026-2027.json`, 30 creneaux, ses 5 hors MJPC) **et son vrai calendrier**. Case de depart : une heure de **4 HUGO**, mercredi 14/9 a 11:04. **638 destinations proposees.**
+
+**LA PREUVE CIBLEE** :
+| date | ce qu'il y a a 10:07-11:02 | propose dans la liste ? |
+|---|---|---|
+| **lundi 21/9** (semaine B) | **X Français X. — 4 TURING · `mjpc=false`** | **OUI — « créneau libre, heure ajoutée »** |
+| **lundi 28/9** (semaine A) | **X Français X. — 4 HUGO · `mjpc=false`** | **OUI — « créneau libre, heure ajoutée »** |
+| **lundi 5/10** (semaine B) | **X Français X. — 4 TURING · `mjpc=false`** | **OUI — « créneau libre, heure ajoutée »** |
+
+**64 entrees de la liste tombent sur le creneau 10:07-11:02**, toutes marquees « heure ajoutee ». **Le mecanisme que Paul decrit existe et fonctionne : ses heures hors MJPC sont deja proposees comme des trous ou poser une heure de francais.**
+
+**CE QUE CE BANC PROUVE, ET CE QU'IL NE PROUVE PAS — declare** : il **appelle `edtCreneauxOu` directement**, il ne clique pas. **Il prouve que la liste CONTIENT le creneau** ; il ne prouve pas que le geste complet — ouvrir la case, choisir, valider — aboutit a l'ecran. **Le geste par clics reste a faire, et c'est a l'executant, banc a l'appui.**
+
+**MONTAGE : QUATRE ESSAIS AVANT D'ABOUTIR** — `edtEntre`, `EDT_JOURS`, `edtSemaineLettre`, `edtPeriodeA` manquaient tour a tour a l'extraction. **Aucune conclusion tiree avant que le banc tourne.**
+
+**PAUL VALIDE LA PASSE DE VOCABULAIRE** : « **oui pour la reformulation du vocab** ». **Le mandat ⑬ peut etre ecrit** — les sept points, **et la correction de l'infobulle « hors français, jamais compté », qui est fausse deux fois** : c'est du francais, **et cette heure PEUT compter** des que Paul y ajoute une heure, ce que le banc ci-dessus vient de prouver.
