@@ -1797,3 +1797,21 @@ Paul, 02/09 : « **il faut le parcours complet.** »
 **ET UNE LECON DE SON PARCOURS, A GARDER** : **la touche Echap ne ferme pas une fenetre — elle ferme tout l'emploi du temps.** Trois ecrans perdus au premier passage.
 
 **ETAT : LE PROMEUS EST BLOQUE PAR LE DEFAUT ①.** Paul a tranche le 02/09 : *« pas de promotion avec dettes et non completion du mandat »*. **Le §⑤.2 du mandat ⑥ n'est pas complet.**
+
+**n°11 · 60 — PAUL TRANCHE TROIS POINTS. MANDAT ⑪ DEPOSE — ET LE REMEDE DU MODE TEST EXISTE DEJA DANS SON SITE.**
+
+Paul, 02/09 : « **il faut que mes demandes initiales soient exécutées de bout en bout** » · « **Pour la classe test il faut simplement qu'elle soit en couleur** » · « **pour le mode test qui vide tout à la sortie, il faut régler le problème** ».
+
+**MESURE FAITE AVANT D'ECRIRE — POURQUOI LE MODE TEST VIDE TOUT.** `_siteGet`, **L1789** : en mode test, il fait `cb(M8_TEST_STORE[chemin] !== undefined ? M8_TEST_STORE[chemin] : null)` — **il rend `null` des que la cle n'est pas au magasin de test**. Le magasin partant vide, **tout est nul au premier chargement** : plus de chapitres, plus de seances. C'est ce que montre `p28`. **Ce n'est pas un defaut de l'emploi du temps : c'est le mode test du site entier.**
+
+**ET LE REMEDE EST DEJA DANS SON SITE, L2153-2157.** `taxoCharger`, en mode test, **va chercher la valeur au vrai hub quand elle n'est pas au magasin, et la met en cache** : `.then(function(v){ M8_TEST_STORE['/taxonomie'] = v; cb(v); })`. **Lire le vrai, ecrire dans le faux.** Le mandat le donne comme patron — **l'executant branche, il n'invente pas.**
+
+**LES TROIS POINTS DU MANDAT ⑪** : ① **les deux champs de dates saisissables** — `edtPoserDateAnnee` existe, valide, ecrit : **il la BRANCHE**, avec les trois refus a l'ecran par le geste · ② **la classe d'essai en couleur**, dans les trois vues, **une couleur et rien d'autre**, comme Paul l'a dit · ③ **le mode test qui ne vide plus**, avec **l'ecriture au vrai hub toujours interdite** — le correctif `668cda2757a5` remesure, exige **deux fois** dans le mandat.
+
+**UN POINT QUE LA CONSCIENCE A FAIT PORTER EXPLICITEMENT** : `_siteGet` **appartient au socle, pas au bloc EDT**. La garde ne le couvre pas, **et le mandat interdit de l'y faire entrer** : modification hors bloc, **declaree nommement**, garde remesuree verte sur ses cinq questions.
+
+**ET LA LECON DES DEUX TROUS, ECRITE DANS LE MANDAT A L'INTENTION DE L'EXECUTANT** : *« la banalisation par-dessus une coche et les dates de l'annee existaient toutes deux dans le code, prouvees par des bancs qui appelaient la fonction — et n'etaient atteignables par aucun clic. **Une fonction sans chemin n'existe pas pour Paul.** Pour chaque point de ce mandat : le geste d'abord, la fonction ensuite. »*
+
+**LES DEUX PASSES APPLIQUEES AVANT LE DEPOT** : (1) chaque affirmation mesuree — `_siteGet` et `taxoCharger` **lues**, pas cherchees par nom ; (2) relecture contre lui-meme — les trois md5 verifies coherents, le §④ verifie **non contradictoire** avec le §③ (il ne declare pas `_siteGet` intouchable, et il precise « **hors** mode test » pour la grille), le correctif exige **aux deux endroits**.
+
+**MANDAT ⑪ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-11.md`, 9 154 o.
