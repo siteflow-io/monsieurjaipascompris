@@ -2057,3 +2057,23 @@ Paul, 03/09 : « **oui promeus.** » — ordre explicite, execute.
 **PROTOCOLE D'APRES-PROMOTION, ETAPES FAITES** : ✔ verification bit a bit · ✔ **journal** (`docs/MJPC6-journal.md`, commit `46d8a6a9`, 237 486 o) — l'entree porte les douze livraisons, les preuves, **et les deux trous trouves par le geste comme lecon du lot** · ✔ **point de retour** (`docs/MJPC6-restauration.md`, commit `1e747e9f`) — avec ce que revenir en arriere ferait perdre.
 
 **RESTE DU PROTOCOLE** : l'index des fonctions · `MJPC6-OU-TROUVER-QUOI.md` · **l'adresse avec `&v=` et les tests geste par geste donnes a Paul**.
+
+**n°11 · 73 — PREMIER USAGE REEL APRES LA PROMOTION. LA PHOTO AUTOMATIQUE S'EST DECLENCHEE TOUTE SEULE.**
+
+Paul, 03/09 : « **livre moi les json mis à jour. j'ai déjà l'heure de demain matin (turing) qui a été déplacée à aujourd'hui à 14h (vérifie horaires exacts)** »
+
+**HORAIRES VERIFIES SUR SA GRILLE REELLE** : aujourd'hui **jeudi 3 septembre, semaine A** · demain **vendredi 4 septembre, semaine A**.
+- **L'heure de demain matin : `4 TURING`, vendredi 4/9, `08:00-08:55`** — c'est la premiere de sa journee.
+- **« 14h » tombe dans le creneau `13:57-14:52`**, pas 13:00. Et ce creneau est **LIBRE** aujourd'hui : jeudi 3/9 ne porte que `3 DYLAN Bob` a 15:07 et `Concertation` (hors MJPC) a 16:04.
+
+**LA PREUVE LA PLUS FORTE DE LA JOURNEE, ET ELLE N'A ETE DEMANDEE PAR PERSONNE — LE HUB REEL :**
+`/site/edt` portait `null` depuis le debut du lot. **Il porte maintenant** :
+`photos: { "2026-2027": { photos: [{ id:"pho:20260903095842", nom:"Rentrée", prise:"2026-09-03", depuis:"2026-08-31", echeance:"annee:2026-2027" }] } }`
+**La photo automatique de la livraison ⑧ s'est prise TOUTE SEULE, au premier chargement apres la promotion, sans que Paul y pense** — nommee **« Rentrée »**, avec son identifiant de la famille `pho:`. **C'etait exactement l'objet du mandat ⑧ : « a la rentree, une photo du prevu est prise sans que Paul ait a y penser ».** **Eprouvee en conditions reelles, sur son vrai site.**
+Le hub porte aussi `reglages: { arriverSurEdt:false }`.
+
+**MAIS LE CALENDRIER ET LA GRILLE NE SONT PAS ENCORE AU HUB.** Mesure : `/site/edt` ne porte **que** `photos` et `reglages`. **Paul doit encore injecter** — c'est la premiere injection, celle que tout le lot a preparee.
+
+**UN POINT QUE LA CONSCIENCE DIT AVANT QU'IL PERDE DU TEMPS : son deplacement d'heure NE SE FAIT PAS DANS LES JSON.** Les JSON portent **la grille theorique de l'annee** — ce que l'etablissement a fixe. **Un deplacement est une DECISION**, qui vit dans `/site/edt/decisions` et s'ecrit **par le geste dans le site** : ouvrir la case du vendredi 8h, « Déplacer cette heure… », choisir jeudi 13:57. **C'est precisement le mecanisme de la livraison ⑥ qui vient d'etre promu.** **Modifier les JSON pour ca serait une faute** : ca reecrirait sa grille de reference au lieu d'enregistrer une decision, et le deplacement serait perdu a la prochaine reinjection.
+
+**LES TROIS JSON, A JOUR AU SAS** : `calendrier-2026-2027.json` **17 197 o** (52 semaines · 7 vacances · 11 feries · 30 jalons · 59 evenements d'etablissement · 15 de classe) · `grille-2026-2027.json` **8 229 o** (30 creneaux reels · **4 fictifs** · 5 periodes) · `creneaux-2026-2027.json` **1 604 o** (8 creneaux · 5 jours).
