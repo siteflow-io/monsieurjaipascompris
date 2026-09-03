@@ -1776,3 +1776,24 @@ Paul, 02/09 : « **il faut le parcours complet.** »
 **LES DEUX PASSES DU `n°11 · 51` ONT ETE APPLIQUEES AVANT LE DEPOT, pour la premiere fois** : (1) **aucune affirmation chiffree sans lecture** — les cinq comptages de la production ont ete mesures, pas supposes, et c'est ce qui a revele qu'il n'y a pas d'avant ; (2) **relecture du mandat contre lui-meme** — les deux md5 cites verifies coherents, les trois occurrences de « corrige » verifiees toutes prohibitives, le §③ et le §④ verifies non contradictoires. **Aucun trou trouve a la relecture.**
 
 **MANDAT ⑩ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-10.md`, 5 585 o.
+
+**n°11 · 59 — LE PARCOURS COMPLET (livraison ⑩). LE CODE N'A PAS BOUGE. DEUX DEFAUTS VUS, DONT UN QUI BLOQUE LE PROMEUS — ET C'EST ENCORE UNE FAUTE D'AUDIT DE LA CONSCIENCE.**
+
+**LE CODE N'A PAS BOUGE — verifie** : `PONT/EDT/index.html` au sas, **1 762 154 o, md5 `45337e4f5722d6fb118e918bcd792be2`**, exactement la valeur exigee au §③. **29 captures** dans `PONT/EDT/tests/parcours/` plus `journal-des-clics.txt` (13 150 o). **Deux rechargements seulement**, tous deux justifies.
+
+**DEFAUT ① — PAUL NE PEUT PAS SAISIR SES DATES D'ANNEE. CELA BLOQUE LE PROMEUS.**
+**Mesure de la conscience** : `edtPoserDateAnnee` — la fonction qui pose `debutAnnee` et `finAnnee` **et qui refuse une fin anterieure au debut** — **a UNE SEULE occurrence dans tout le fichier : sa propre declaration. Aucun appelant.**
+**Et la conscience a REGARDE l'ecran** (`p24`) : « 🎓 Dates de l'année » ne porte que **quatre champs, un par niveau** — 3e 26/06/2027, 4e 25/06/2028, 5e 23/06/2029, 6e 22/06/2030 — et « Revenir aux dates par défaut ». **Ce sont les dates du BREVET. Il n'y a ni champ « début de l'année », ni champ « fin de l'année ».**
+**Le mandat ⑥ §⑤.2 exigeait : « Produits par le prompt du calendrier, injectés avec lui, MODIFIABLES A LA MAIN ».** Les deux premiers sont faits. **Le troisieme n'existe pas.**
+**Consequence** : `finAnnee` ne peut venir **que** de l'injection. **La bascule de fin d'annee de la livraison ⑨ repose dessus** — si le prompt ne la produit pas, ou si Paul veut la corriger, **il n'a aucun endroit ou le faire**.
+**FAUTE DE LA CONSCIENCE, LA DEUXIEME DU MEME TYPE.** Elle a audite ⑥ en rendant « ça va » sur les trois refus — **qu'elle avait prouves en appelant `edtValiderDatesAnnee` DIRECTEMENT dans son propre banc, jamais par le chemin**. **Exactement la faute de la banalisation au `n°11 · 52`.** La regle etait gravee depuis. **Elle ne l'a pas appliquee a son propre banc.**
+
+**DEFAUT ② — LA CLASSE D'ESSAI APPARAIT, MAIS RIEN NE LA NOMME.** **Regarde par la conscience** (`p28`) : mode test allume, « 3E Charles de Gaulle » occupe bien **lundi 08:00, mardi 08:00, jeudi 10:07, vendredi 13:00** — les quatre creneaux fictifs. **Mais elle est affichee comme une classe ordinaire** : aucune mention « classe d'essai », aucune marque. Le libelle existe **dans la donnee**, pas a l'ecran. **Et le mode test vide la grille de ses seances** — toutes les cases passent a « aucune séance prête ». **Coherent** (le mode test lit un magasin vide) **mais Paul verra son emploi du temps vide sans que rien ne le lui dise.**
+
+**CE QUI VA, ET QUE LA CONSCIENCE A VU** : `p01` la production **sans emploi du temps** — le point de depart est bien « rien » · le parcours complet atteint **par clics**, **aucun ecran du §① hors de portee**.
+
+**SES DEUX LIMITES, DECLAREES HONNETEMENT** : la saisie d'une date dans un champ `date` **echoue sur son banc, pas sur le site** — il l'a essayee de trois facons et le declare ; le refus « fin avant debut » **sur une periode** n'est donc pas prouve par le geste, il l'a obtenu **sur le calendrier colle** · une liste deroulante deployee **ne se capture pas** (dessinee par le systeme, hors page).
+
+**ET UNE LECON DE SON PARCOURS, A GARDER** : **la touche Echap ne ferme pas une fenetre — elle ferme tout l'emploi du temps.** Trois ecrans perdus au premier passage.
+
+**ETAT : LE PROMEUS EST BLOQUE PAR LE DEFAUT ①.** Paul a tranche le 02/09 : *« pas de promotion avec dettes et non completion du mandat »*. **Le §⑤.2 du mandat ⑥ n'est pas complet.**
