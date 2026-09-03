@@ -1876,3 +1876,24 @@ Paul, 03/09 : « **ok pour rejouer.** »
 **ET LA LECON DE SON PROPRE PARCOURS ⑩, REPORTEE DANS LE MANDAT** : *« la touche Echap ne ferme pas une fenetre — elle ferme tout l'emploi du temps. Tu y avais perdu trois ecrans. »*
 
 **LES DEUX PASSES APPLIQUEES AVANT LE DEPOT** : (1) les trois nouveautes **mesurees** entre les deux candidats, pas supposees — `edtPoserDateAnnee` 1 → 3 occurrences, la couleur, le GET pur de `_siteGet` ; (2) relecture contre lui-meme — **un seul md5 cite, present aux trois endroits attendus**, le §③ verifie exigeant, l'etape 14 verifiee couvrant **les deux** points. **Aucun trou trouve.**
+
+**n°11 · 64 — LE PARCOURS REJOUE (livraison ⑫). LE CODE N'A PAS BOUGE. AUCUN DEFAUT. LE PROMEUS EST POSSIBLE.**
+
+**LE CODE N'A PAS BOUGE — verifie en premier** : `PONT/EDT/index.html` au sas, **1 769 457 o, md5 `8837063de4466afb71622e89181ae44a`**, exactement la valeur exigee au §③. **31 captures** dans `tests/parcours-2/` plus `journal-des-clics.txt` (14 229 o). **Deux rechargements**, tous deux justifies — la production pour `q01`, puis **un seul chargement du candidat tenu jusqu'au bout**, six allers-retours ecran/panneau compris.
+
+**REGARDE PAR LA CONSCIENCE — `q29`, LA CAPTURE QUI PORTE LES DEUX POINTS A LA FOIS** : mode test **allume**, et :
+- **la grille est GARNIE** — « Étude de texte accompagnée : « L'Albatros » · heure 1/3 » et « heure 2/3 » et « heure 3/3 », « Interro de cours et analyse logique — les bases (1) », « Le poème sans vers : dictée et réécriture » ;
+- **les quatre cases de la classe d'essai sont EN VIOLET**, fond et liseret, detachees du brun des vraies classes ;
+- la carte du bas porte **« 3E Charles de Gaulle · expérimentale »** avec sa barre d'avancement ;
+- et le bandeau du haut porte **« ⧗ 1 heure à replacer »**.
+**A comparer a `p28` du parcours ⑩, ou TOUTES les cases disaient « aucune séance prête » et rien n'etait colore.**
+
+**REGARDE AUSSI — `q26`, LE REFUS DES DATES** : une modale, sur l'ecran des dates, portant **deux motifs a la fois** : *« Date refusée — la fin de l'année (lundi 1 juin) tombe avant son début (lundi 24 août) ; la fin, lundi 1 juin, est hors du calendrier injecté (samedi 1 août → samedi 31 juillet, un mois de marge). »* **Les refus s'affichent bien par le geste**, avec les bornes reelles.
+
+**AUCUN DEFAUT DECLARE.** Son §③ dit : **« Rien de ce que le mandat demande »** n'est resté hors de portee d'un clic. Deux limites de banc, les memes qu'en ⑩ : une liste deroulante deployee **ne se capture pas** (dessinee par le systeme, hors page) · le **format d'affichage** des champs date est celui de la locale du banc (`08/24/2026`), Chrome en francais affichera `24/08/2026` — **il ne peut pas le prouver, et il le dit**.
+
+**ET UNE CORRECTION DE SA PROPRE DECLARATION DE ⑩, A PORTER A SON CREDIT** : *« la saisie d'une date au clavier, que j'avais déclarée impossible dans mon banc, l'était bel et bien — le clic tombait sur l'icône du calendrier. »* **Il revient sur une limite qu'il avait annoncee, apres l'avoir reeprouvee.**
+
+**ETAT — LE PROMEUS EST POSSIBLE.** Le lot 2ter compte **douze livraisons closes et auditees**. Le candidat **`8837063de4466afb71622e89181ae44a`** est celui qui a ete parcouru **de bout en bout, par clics, d'un seul chargement**. **Production toujours `6c7560af…` / 8.70.1 — rien n'est jamais parti en ligne de tout le lot.**
+
+**CE QUE LA CONSCIENCE N'A PAS VERIFIE ELLE-MEME** : 29 des 31 captures. **Elle en a regarde deux** — celles des points que Paul avait tranches et qu'elle n'avait jamais pu voir. Le reste repose sur le rapport et le journal des clics.
