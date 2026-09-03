@@ -2096,3 +2096,26 @@ Paul, 03/09 : « **ok va vérifier l'injection. par ailleurs j'ai mes séances q
 **A REGLER — la conscience ne redige RIEN et attend l'ordre de Paul** (regle rappelee au `n°11 · 71`). **Ce que ca demande, en une phrase** : le prevu ne pose aucune seance **avant `debutAnnee` ni apres `finAnnee`**. **Et le geste par clics doit le prouver**, pas un appel de fonction.
 
 **LE RESTE VA — dans ses mots : « sinon pour le reste ça a l'air d'aller. »** Premier usage reel du lot : l'injection complete, les dates saisies, la photo automatique prise seule.
+
+**n°11 · 75 — « ET POURQUOI NE PAS MODIFIER LE JSON D'INJECTION ? » — MESURE : CA MARCHERAIT, ET CA MENTIRAIT SUR HUIT JOURNEES REELLES.**
+
+Paul, 03/09 : « **et pourquoi ne pas modifier le json d'injection ?** »
+
+**LA CONSCIENCE A MESURE AVANT DE REPONDRE, au lieu de trancher d'instinct.** Etendre les vacances d'ete du **26/08** au **02/09** **ferait bien disparaitre les seances en trop** — le prevu ne pose rien sur un jour sans cours. **Techniquement, ca marche.**
+
+**MAIS VOICI CE QUE PORTENT CES SEPT JOURS DANS SON PROPRE CALENDRIER — huit evenements d'etablissement :**
+| date | ce qu'il y a |
+|---|---|
+| **27/08** | **9h30 CODIR** · **12h déjeuner de l'équipe** · **13h45 photo, 14h30-18h pré-rentrée** |
+| **28/08** | **8h30-17h pré-rentrée** |
+| **31/08** | **préparation rentrée** |
+| **01/09** | **Rentrée scolaire des élèves de 6e** · **après-midi jeux cohésion** |
+| **02/09** | **Rentrée scolaire des élèves de 5e, 4e et 3e** |
+
+**CES JOURS-LA, PAUL EST A L'ETABLISSEMENT. Ce ne sont pas des vacances.** Les declarer tels **ferait mentir son calendrier** : la vue Annee les peindrait en fond gris « vacances » alors qu'ils portent la rentree des eleves, et **huit evenements reels tomberaient sur des jours dits sans cours**.
+
+**ET LE FOND RESTERAIT ENTIER** : `debutAnnee` continuerait a ne servir a rien. **L'an prochain, meme bricolage.** Le champ que la livraison ⑪a vient de rendre saisissable resterait un champ qui ne fait rien pour le prevu — **et Paul ne s'en souviendrait pas dans trois mois.**
+
+**CE QUE LA CONSCIENCE REPOND, ET C'EST TOUT** : **la modification du JSON est un depannage qui marche ce soir**, et Paul peut la vouloir pour ce soir — **c'est son droit et c'est reversible**. Mais **ce n'est pas le correctif** : il rendrait faux un calendrier qui est juste, pour compenser un champ qui ne fait pas son travail.
+
+**AUCUN MANDAT N'EST REDIGE. AUCUN FICHIER N'EST MODIFIE. La conscience mesure, rapporte, et attend l'ordre de Paul** — comme il l'a exige au `n°11 · 71`.
