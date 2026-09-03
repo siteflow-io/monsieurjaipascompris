@@ -1860,3 +1860,19 @@ Son commentaire porte le diagnostic complet et la formule de Paul : **« LIRE LE
 **ETAT** : **les trois demandes de Paul sont executees de bout en bout.** Le lot 2ter compte desormais **onze livraisons closes et auditees**. **Production toujours `6c7560af…` / 8.70.1 — rien n'est jamais parti en ligne.**
 
 **AVANT LE PROMEUS, IL RESTE UNE CHOSE** : **le parcours complet de la livraison ⑩ a ete joue sur le candidat `45337e4f…`, qui n'est plus celui-la.** Le candidat porte depuis **trois livraisons de plus** (⑪a, ⑪b, ⑪). **Les 29 captures du parcours ne montrent plus le fichier que Paul promouvrait.** A trancher par lui : rejouer le parcours sur `8837063d…`, ou promouvoir sur les captures ciblees de ⑪.
+
+**n°11 · 63 — PAUL VALIDE LE REJEU. MANDAT ⑫ DEPOSE.**
+
+Paul, 03/09 : « **ok pour rejouer.** »
+
+**RAISON, MESUREE** : les 29 captures du parcours ⑩ ont ete prises sur le candidat **`45337e4f…`**. Le candidat actuel est **`8837063de4466afb71622e89181ae44a`** — **trois livraisons plus loin** (⑪a les dates, ⑪b la couleur, ⑪ le mode test). **Les captures ne montrent plus le fichier que Paul promouvrait.**
+
+**MANDAT ⑫ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-12.md`, 5 789 o. **Quinze etapes**, les memes que ⑩, **avec deux enrichies** :
+- **etape 12** : l'ecran des dates **avec les deux nouveaux champs**, une date saisie **au clavier**, et un refus a l'ecran ;
+- **etape 14** : le mode test allume doit montrer **les DEUX choses a la fois** — **la grille reste GARNIE de ses seances** *et* **les quatre cases de la classe d'essai sont EN COULEUR** — puis reeteint : plus de couleur, vraies donnees **sans rechargement**.
+
+**AUCUNE LIGNE DE CODE** : le §③ exige que `index.html` reste **1 769 457 o / `8837063d…`** a la fin, remesure et publie. **Un ecran inatteignable par un clic est un defaut a declarer, pas a contourner.**
+
+**ET LA LECON DE SON PROPRE PARCOURS ⑩, REPORTEE DANS LE MANDAT** : *« la touche Echap ne ferme pas une fenetre — elle ferme tout l'emploi du temps. Tu y avais perdu trois ecrans. »*
+
+**LES DEUX PASSES APPLIQUEES AVANT LE DEPOT** : (1) les trois nouveautes **mesurees** entre les deux candidats, pas supposees — `edtPoserDateAnnee` 1 → 3 occurrences, la couleur, le GET pur de `_siteGet` ; (2) relecture contre lui-meme — **un seul md5 cite, present aux trois endroits attendus**, le §③ verifie exigeant, l'etape 14 verifiee couvrant **les deux** points. **Aucun trou trouve.**
