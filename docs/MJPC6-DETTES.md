@@ -2077,3 +2077,22 @@ Le hub porte aussi `reglages: { arriverSurEdt:false }`.
 **UN POINT QUE LA CONSCIENCE DIT AVANT QU'IL PERDE DU TEMPS : son deplacement d'heure NE SE FAIT PAS DANS LES JSON.** Les JSON portent **la grille theorique de l'annee** — ce que l'etablissement a fixe. **Un deplacement est une DECISION**, qui vit dans `/site/edt/decisions` et s'ecrit **par le geste dans le site** : ouvrir la case du vendredi 8h, « Déplacer cette heure… », choisir jeudi 13:57. **C'est precisement le mecanisme de la livraison ⑥ qui vient d'etre promu.** **Modifier les JSON pour ca serait une faute** : ca reecrirait sa grille de reference au lieu d'enregistrer une decision, et le deplacement serait perdu a la prochaine reinjection.
 
 **LES TROIS JSON, A JOUR AU SAS** : `calendrier-2026-2027.json` **17 197 o** (52 semaines · 7 vacances · 11 feries · 30 jalons · 59 evenements d'etablissement · 15 de classe) · `grille-2026-2027.json` **8 229 o** (30 creneaux reels · **4 fictifs** · 5 periodes) · `creneaux-2026-2027.json` **1 604 o** (8 creneaux · 5 jours).
+
+**n°11 · 74 — L'INJECTION EST FAITE. ET LA CAUSE DES SEANCES DEPUIS LE 27 AOUT EST TROUVEE : `debutAnnee` NE BORNE PAS LE PREVU.**
+
+Paul, 03/09 : « **ok va vérifier l'injection. par ailleurs j'ai mes séances qui apparaissent depuis le 27 aout, or c'est faux. mes premières séances sont aujourd'hui. j'ai changé les dates de l'année en pensant que ça allait effacer les séances en trop depuis le 27 aout, mais ça n'a pas fonctionné. sinon pour le reste ça a l'air d'aller.** »
+
+**L'INJECTION A REUSSI — mesuree au hub reel.** `/site/edt` porte desormais **six noeuds** : `calendrier` (59 evenements d'etablissement · 15 de classe · 11 feries · 30 jalons · 52 semaines · 7 vacances) · `creneaux` (8 · 5 jours) · `grille` (**30 creneaux reels · 4 fictifs** · 5 periodes) · `periodes` (5) · `photos` (1) · `reglages`. **24 635 octets.** **C'est la premiere injection reelle du lot, et elle est complete.**
+
+**SES DATES SONT BIEN POSEES** : `/site/config/brevetDates` porte **`debutAnnee: 2026-09-03`** et **`finAnnee: 2027-06-26`**, a cote des quatre dates du brevet. **Le mecanisme de ⑪a a fonctionne : il a saisi, ca s'est ecrit.**
+
+**LA CAUSE DU 27 AOUT, TROUVEE — ET CE N'EST PAS UNE PANNE, C'EST UN MANQUE.**
+- **D'ou vient le 27/08** : le calendrier porte **« d'été (avant la rentrée) : 2026-08-01 → 2026-08-26 »**. **Le 26 aout est le dernier jour sans cours ; le 27 est donc le premier jour ou le site s'autorise a poser une seance.**
+- **Pourquoi changer les dates n'a rien fait** : **`edtDebutAnnee()` n'a que TROIS appelants — `edtVersions`, `edtNormaliserGrille`, `edtEcheancesPhoto`. AUCUN dans le calcul du prevu.** Ce qui borne le prevu, c'est **`edtJourSansCours`** (5 appelants), qui ne connait que les vacances et les feries. **`debutAnnee` ne borne pas le prevu. Il ne l'a jamais borne.**
+- **Consequence pour Paul** : entre le **27 aout** et le **2 septembre**, le site pose des seances sur des jours qui ne sont ni vacances ni feries **mais qui sont avant sa rentree**. **Ses seances sont decalees d'une semaine.**
+
+**RESPONSABILITE : C'EST UNE DETTE DE LA CONSCIENCE, PAS DE L'EXECUTANT.** Le mandat ⑥ §⑤.3 disait : *« Tout se recale dessus : fin de la liste des destinations, bascule des heures a replacer, appartenance d'une date a l'annee scolaire. »* **Il ne disait PAS « le prevu ne commence pas avant `debutAnnee` ».** L'executant a fait ce qui etait ecrit. **Le trou est dans le mandat.**
+
+**A REGLER — la conscience ne redige RIEN et attend l'ordre de Paul** (regle rappelee au `n°11 · 71`). **Ce que ca demande, en une phrase** : le prevu ne pose aucune seance **avant `debutAnnee` ni apres `finAnnee`**. **Et le geste par clics doit le prouver**, pas un appel de fonction.
+
+**LE RESTE VA — dans ses mots : « sinon pour le reste ça a l'air d'aller. »** Premier usage reel du lot : l'injection complete, les dates saisies, la photo automatique prise seule.
