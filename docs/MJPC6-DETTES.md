@@ -1836,3 +1836,27 @@ Paul, 02/09 : « **il faut que mes demandes initiales soient exécutées de bout
 **LA CONSCIENCE N'A PAS ENCORE VERIFIE** : les cinq autres captures de ⑪-a et les cinq de ⑪-b — elle en a **regarde deux**, celles des deux points que Paul avait tranches. Les autres reposent sur les rapports.
 
 **RESTE POUR CLORE ⑪** : **le mode test qui ne vide plus** (§③) — le patron de `taxoCharger`, l'ecriture au vrai hub toujours interdite, la garde remesuree · les captures · l'audit adverse · `banc-tout` en entier · le rapport final.
+
+**n°11 · 62 — AUDIT DE LA LIVRAISON ⑪ FINALE (candidat `eb4374f8`, 8.73.0-⑪). VERDICT : ÇA VA. LES TROIS DEMANDES DE PAUL SONT EXECUTEES DE BOUT EN BOUT.**
+
+**Candidat** : **1 769 457 o, md5 `8837063de4466afb71622e89181ae44a`**.
+
+**LE POINT INTANGIBLE, VERIFIE EN PREMIER** : **le correctif du mode test dans `mjpcEcrireRest` est INTACT — `668cda2757a5`**, exactement la valeur exigee. `_sitePut` et `_siteDelete` **restent isoles** en mode test. **Aucune ecriture ne peut partir au vrai hub.**
+
+**LA LECTURE, LUE LIGNE A LIGNE.** En mode test, `_siteGet` :
+- si la cle est au magasin → il la rend ;
+- sinon → **un `fetch(FIREBASE_BASE + chemin + '.json')` SANS aucune option — donc un GET pur**, aucune ecriture possible — puis `M8_TEST_STORE[chemin] = v` et il rend ;
+- **en cas d'echec → `cb(null, true)` SANS mettre en cache**. **La panne ne devient pas definitive** : c'est une precaution que le mandat ne demandait pas et que l'executant a ajoutee, avec sa raison ecrite : *« elle rendrait le vide definitif »*.
+Son commentaire porte le diagnostic complet et la formule de Paul : **« LIRE LE VRAI, ÉCRIRE DANS LE FAUX — le patron de `taxoCharger`, appliqué à toutes les lectures du site. »**
+
+**REGARDE PAR LA CONSCIENCE — `tests/11/c02-mode-test-allume-la-grille-reste-garnie.png`** : mode test **allume**, et la grille **est garnie** — « Étude de texte accompagnée : « L'Albatros » · heure 1/3 », « Interro de cours et analyse logique — les bases (1) · heure 2/3 », « Le poème sans vers : dictée et réécriture · heure 1/3 ». **Les quatre cases de la classe d'essai sont en violet** et la carte du bas porte **« 3E Charles de Gaulle · expérimentale »** avec sa barre d'avancement. **A comparer a `p28` du parcours ⑩, ou TOUTES les cases disaient « aucune séance prête ».** Le probleme que Paul a signale est ferme.
+
+**NON-REGRESSION remesuree** : `edt*` **229 declarations / 229 noms**, **aucune ajoutee, aucune disparue** — **la modification est bien HORS du bloc EDT**, comme le §③.4 l'exigeait · `secu*` **29** · `published` **97** · moteur **`2ba70f9e…`** · `edt-fige` **9** · `EDT_CATEGORIES` et `EDT_MOTIFS` **inchanges** · **node --check VERT** · garde **VERTE sur ses cinq questions**.
+
+**LIVRABLES** : `tests/11/` — **8 captures** (hors mode test garnie · **mode test garnie** · un geste qui ecrit, rien ne sort · apres extinction, les vraies donnees **sans rechargement** · et quatre d'audit adverse : hub injoignable, injection en mode test, classe d'essai un jour sans cours, date saisie puis effacee) · `journal-11.txt` (92 lignes) · `banc-mode-test-11.mjs` (304 lignes) · `banc-tout.mjs` enrichi.
+
+**CE QUE LA CONSCIENCE N'A PAS VERIFIE ELLE-MEME** : les sept autres captures de ⑪ et les dix de ⑪a/⑪b. **Elle en a regarde trois au total sur ce mandat** — celles des trois points que Paul avait tranches. Le reste repose sur les rapports.
+
+**ETAT** : **les trois demandes de Paul sont executees de bout en bout.** Le lot 2ter compte desormais **onze livraisons closes et auditees**. **Production toujours `6c7560af…` / 8.70.1 — rien n'est jamais parti en ligne.**
+
+**AVANT LE PROMEUS, IL RESTE UNE CHOSE** : **le parcours complet de la livraison ⑩ a ete joue sur le candidat `45337e4f…`, qui n'est plus celui-la.** Le candidat porte depuis **trois livraisons de plus** (⑪a, ⑪b, ⑪). **Les 29 captures du parcours ne montrent plus le fichier que Paul promouvrait.** A trancher par lui : rejouer le parcours sur `8837063d…`, ou promouvoir sur les captures ciblees de ⑪.
