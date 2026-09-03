@@ -2192,3 +2192,27 @@ Paul, 03/09, mot pour mot : « **oui la seconde. comme ça l'injection respecte 
 **SA CONCLUSION EST RETENUE : CE N'EST PAS UN MICRO.** Une borne qui doit tenir dans **dix appelants**, respecter le passe joue, s'ordonner avec trois autres natures et porter ses infobulles **est un mandat d'executant en regle**. **La conscience avait juge sur la taille du geste (« une garde, une ligne ») au lieu de juger sur sa portee.**
 
 **AUCUN PROMPT N'EST DEPOSE. La conscience rapporte a Paul et attend son mot** — le prompt micro est **retire**.
+
+**n°11 · 80 — « QUEL EST LE PLUS LOGIQUE ? » — AVIS TRANCHE DE LA CONSCIENCE, TIRE DE LA LOGIQUE DE PAUL LUI-MEME.**
+
+**LA REPONSE EST DANS SA PROPRE PHRASE, `n°11 · 76`** : « *je dois pouvoir déclarer mon début d'année tel jour et puis **le reste se cale**, c'est tout.* » — **« le reste », c'est tout** : l'affichage, **les comptes**, **les propositions**. Une borne qui ne porterait que sur l'affichage **serait un mensonge d'un autre genre** : la grille dirait « avant ta rentrée » pendant que le bilan de juin compterait ces heures.
+
+**AVIS DE LA CONSCIENCE : LA BORNE VA PARTOUT — sauf sur le passe pose.** Formule en une phrase, dans ses mots :
+> **Le calendrier de l'etablissement s'affiche toujours. Les COURS, eux, n'existent qu'entre tes deux dates.**
+
+**CE QUE CA DONNE, FONCTION PAR FONCTION** (les neuf appelants de `edtCasesDuJour`) :
+| | |
+|---|---|
+| `edtProjeter` — semaine, mois | **bornee** : la case reste, grisee, sans seance |
+| `edtPeindreAnnee` (×2) | **bornee** : meme regle, l'annee doit dire la meme chose que la semaine |
+| **`edtHeuresDeLEvenement`** — **la photo du prevu ET les heures perdues** | **bornee — c'est le point qui compte le plus.** Sans elle, **le bilan de juin est faux** : des heures d'avant la rentree entreraient dans « ce que l'annee t'a coute » |
+| `edtCreneauxOu`, `edtCreneauxLibresLe` — la liste des destinations | **bornee** : proposer de replacer une heure **avant la rentree** n'a aucun sens |
+| `edtRefusDepot`, `edtOccupantDe`, `edtQuiEstEn`, `edtProjeterJour` | **suivent** : ce sont des derives des precedentes |
+
+**L'EXCEPTION, ET ELLE EST INTANGIBLE — celle que l'executant a vue** : **une case qui porte une decision de Paul ou une heure REELLEMENT JOUEE n'est jamais bornee.** Le code le dit deja pour le reel : *« une heure jouee colore sa case meme quand le chapitre est fini, depublie ou supprime »*. **Le passe ne se reecrit pas.** Si Paul a lance une seance le 1er septembre et declare ensuite le 3, **cette heure reste, avec sa trace**.
+
+**ET LA BORNE NE TOUCHE JAMAIS LE CALENDRIER** : les huit evenements du 27/08 au 02/09 — CODIR, pre-rentree, rentree des eleves — **restent affiches**. C'est le pendant que Paul a nomme lui-meme : *« il peut aussi y avoir des choses après le dernier jour »*.
+
+**POURQUOI CE N'EST DONC PAS UN MICRO, ET LA CONSCIENCE LE REDIT** : borner **neuf fonctions** avec **une exception sur le passe pose**, plus les preuves sur les trois vues **et** sur les comptes, **c'est un mandat d'executant en regle**. L'executant l'avait dit avant elle.
+
+**AUCUN MANDAT N'EST REDIGE. La conscience donne son avis et attend l'ordre de Paul.**
