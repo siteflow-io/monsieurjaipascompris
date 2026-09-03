@@ -1920,3 +1920,23 @@ Paul, 03/09 : « **bon maintenant il faut faire une passe de vocabulaire. est ce
 **TRANCHE PAR LA CONSCIENCE SUR LA MOTIVATION EXISTANTE** : Paul, 01/09 — *« le système doit être solide et ne pas me bloquer dans 3 mois quand je ne saurai même plus cette histoire d'identifiants »*. Sa regle de tenue : *« formuler simplement les communications adressées à Paul : dire les choses dans ses mots »*. **Les infobulles sont donc pour PAUL DANS TROIS MOIS** : quelqu'un qui connait son metier et son site, mais qui a oublie le detail. **Ni telegraphique, ni manuel pour inconnu.** Une phrase qui dit **ce que le geste fait et ce qu'il coute**, dans ses mots. **Paul corrige s'il n'est pas d'accord.**
 
 **LA SEULE CHOSE QUE LA CONSCIENCE NE TRANCHE PAS ET POSE A PAUL** : le point ②. Sur la capture, on lit « X Français X. — 4 HUGO · hors MJPC » : c'est **du francais, mais assure par un autre professeur**. Donc **ni « hors MJPC » (nomme le site) ni « hors français » (faux : c'en est) ne conviennent**. **Une seule question a Paul : quel mot pour cette case ?**
+
+**n°11 · 66 — PAUL CONFIRME LE DESTINATAIRE DES INFOBULLES, CORRIGE LA CONSCIENCE SUR « HORS MJPC », ET OUVRE UN BESOIN NEUF : REASSIGNER UNE HEURE.**
+
+Paul, 03/09 : « **oui elles sont pour moi.** » → **la decision du `n°11 · 65` est confirmee** : les infobulles sont pour Paul dans trois mois.
+
+**LA CONSCIENCE AVAIT TORT SUR « HORS MJPC », ET PAUL LA CORRIGE** : « **hors mjpc c'est bien. c'est bien des heures que je fais, mais non fléchées dans l'edt mjpc.** » **Le mot affiche est JUSTE** — il nomme exactement ce que c'est : une heure que Paul assure, **non suivie dans son site**. **C'est l'INFOBULLE qui est fausse** : elle dit « hors français, jamais compté », et **la modale repete la meme erreur** — « groupe partagé, **hors français**. Cette heure ne compte jamais dans la progression. » **Mesure : les cinq creneaux concernes s'appellent « X Français X. — 4 HUGO », « — 4 TURING », « — 4 BANKSY », « — 4 PYTHAGORE » : c'est bien du francais.** Seule « Concertation » n'en est pas. **A corriger dans la passe de vocabulaire : l'infobulle et la phrase de la modale, pas le libelle de la case.**
+**Lecon pour la conscience** : elle a conteste un mot **sans savoir ce qu'il designait**, et a propose de le remplacer. **Le mot de Paul etait le bon ; c'est le texte qui l'explique qui etait faux.**
+
+**LE BESOIN NEUF, DANS SES MOTS** : « **existe-t-il une possibilité de les réassigner comme du français ? en effet, la respo edt peut très bien me dire que ça devient une heure de français, si ma collègue en coanimation est absente par exemple, ou tout autre raison.** »
+
+**REPONSE MESUREE : NON, AUJOURD'HUI C'EST IMPOSSIBLE.**
+- La nature vient de **`c.mjpc === false`** (L19747), un champ **du creneau de la grille**, pose **a l'injection**.
+- **Aucun geste n'est propose** : la branche `horsMjpc` de la modale (L20479) n'affiche **qu'une phrase**, **aucun bouton** — ni deplacer, ni banaliser, ni rien.
+- **Le seul moyen de changer ce champ est de reinjecter la grille.**
+
+**CE QUE CA COUTE A PAUL, EN CLASSE** : **cinq creneaux** sont dans ce cas — lundi 10:07 (A) 4 HUGO · lundi 10:07 (B) 4 TURING · mardi 11:04 (B) 4 BANKSY · mercredi 11:04 (B) 4 PYTHAGORE · jeudi 16:04 (A) Concertation. **Les quatre premiers sont du francais en coanimation.** Si sa collegue est absente et que l'heure lui revient, **il ne peut pas la faire entrer dans sa progression** : elle reste « jamais comptee ». **Une heure de cours reelle, perdue pour le suivi.**
+
+**A CADRER AVEC PAUL AVANT TOUT MANDAT — la conscience ne tranche pas** : le geste est-il **reversible** (elle redevient hors MJPC quand la collegue revient) ou **definitif** ? · **a quelle classe** l'heure est-elle rattachee — « X Français X. — 4 HUGO » nomme deja une classe, mais n'est pas appariee · l'heure **compte-t-elle dans la progression de cette classe** des la reassignation, ou seulement une fois jouee ? · et **que devient « Concertation »**, qui n'est pas du francais du tout et ne devrait jamais etre reassignable ?
+
+**PLACE DANS LA FILE** : ce n'est **ni du vocabulaire ni une infobulle** — c'est un **mecanisme neuf**. Il ne doit pas entrer dans le mandat ⑬, qui ne touche que les mots et les bulles. **Livraison a part, apres ⑬.**
