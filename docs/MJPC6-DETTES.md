@@ -2171,3 +2171,24 @@ Paul, 03/09, mot pour mot : « **oui la seconde. comme ça l'injection respecte 
 **LE CADRAGE EST COMPLET.** Ce qui reste a ecrire tient en une phrase : **le prevu ne pose aucune seance avant `debutAnnee` ni apres `finAnnee` ; la case reste, grisee, avec son mot.**
 
 **LA CONSCIENCE ECRIT LE PROMPT MICRO ET LE SOUMET A PAUL DANS LA CONVERSATION — elle ne le depose pas au sas.** C'est ce qu'elle a annonce au `n°11 · 76` (« je te le soumets avant de le déposer, pas après ») et ce que Paul a exige au `n°11 · 71`.
+
+**n°11 · 79 — L'EXECUTANT AUDITE LE PROMPT MICRO ET TROUVE QUATRE DEFAUTS. IL A RAISON SUR LES QUATRE. ET IL A RAISON DE DIRE QUE CE N'EST PAS UN MICRO.**
+
+**VERIFIE PAR LA CONSCIENCE, POINT PAR POINT, DANS LE CODE — rien accepte sur parole.**
+
+**① LA GARDE N'AURAIT BORNE QUE LA SEMAINE ET LE MOIS. C'EST LE DEFAUT GRAVE, ET IL EST REEL.** Mesure : **`edtCasesDuJour` a DIX appelants**, et `edtProjeter` n'en est **qu'un** :
+`edtProjeter` (L19729) · `edtQuiEstEn` · **`edtCreneauxOu`** et **`edtCreneauxLibresLe`** (la liste des destinations) · `edtProjeterJour` · **`edtPeindreAnnee` ×2** (la vue Annee) · **`edtHeuresDeLEvenement`** · `edtRefusDepot` · `edtOccupantDe`.
+**Consequence exacte** : la grille aurait dit « avant ta rentree » **pendant que la vue Annee, la photo du prevu et la liste des destinations auraient continue a compter et proposer ces heures**.
+**ET C'EST PIRE QUE CE QU'IL DIT** : **`edtHeuresDeLEvenement` sert aussi aux HEURES PERDUES.** Un evenement du 27 aout aurait continue a **coûter des heures perdues a Paul** sur des journees qui ne sont pas dans son annee. **La borne aurait ete un decor.**
+
+**② UNE HEURE DEJA JOUEE AURAIT ETE EFFACEE — verifie.** Dans `edtProjeter`, les natures se posent dans cet ordre : **`horsTemps` (+22), `horsMjpc` (+23), `nonImportee` (+24)… et `jouee` seulement a +45**, apres la recherche de la trace. **Une garde `horsAnnee` posee « a cote des deux premieres » passerait AVANT `jouee` et effacerait la trace d'une heure reellement faite.** Le commentaire du code dit pourtant : *« le reel ne depend JAMAIS de ce qui attend »*. **La conscience aurait fait mentir le passe de Paul.**
+
+**③ L'ORDRE DES GARDES N'ETAIT PAS DIT.** « A cote des deux deja la » — avant ou apres ? **Si `horsAnnee` passe avant `horsTemps`, un jour de vacances d'ete dirait « avant ta rentree » au lieu de « vacances d'ete ».** L'executant propose `horsTemps` → `horsMjpc` → `horsAnnee` : **c'est juste, et il faut y ajouter `jouee` en tete de tout.**
+
+**④ UN CHIFFRE FAUX DE LA CONSCIENCE** : elle a ecrit **« banc-tout VERT EN ENTIER (32 bancs) »**. **Mesure : `banc-tout.mjs` en liste 35.** Le 32 venait du rapport ⑧ et **n'a pas ete remesure** depuis les livraisons ⑨, ⑨a, ⑨b. **Un executant qui en joue 32 et ecrit « entier » livre une preuve fausse.**
+
+**SES DEUX REMARQUES DE METHODE, JUSTES AUSSI** : la preuve n°5 (forcer une `finAnnee` passee) **ne peut pas passer par le geste** — l'ecran la refuse, **et c'est tant mieux** ; **et il manque la passe de tooltips** que Paul a posee ce matin, alors que ce correctif **ajoute une nature de case nouvelle**. **La conscience a ecrit ce prompt le jour meme ou Paul a grave cette regle, et l'a oubliee.**
+
+**SA CONCLUSION EST RETENUE : CE N'EST PAS UN MICRO.** Une borne qui doit tenir dans **dix appelants**, respecter le passe joue, s'ordonner avec trois autres natures et porter ses infobulles **est un mandat d'executant en regle**. **La conscience avait juge sur la taille du geste (« une garde, une ligne ») au lieu de juger sur sa portee.**
+
+**AUCUN PROMPT N'EST DEPOSE. La conscience rapporte a Paul et attend son mot** — le prompt micro est **retire**.
