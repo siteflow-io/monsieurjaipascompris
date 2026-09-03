@@ -2133,3 +2133,24 @@ Paul, 03/09, mot pour mot : « **oui mais mjpc c'est pour les cours, c'est les c
 **CE QUE CA VAUT COTE CODE, mesure au `n°11 · 74`** : `edtDebutAnnee()` a **trois appelants** — `edtVersions`, `edtNormaliserGrille`, `edtEcheancesPhoto` — **aucun dans le calcul du prevu**, qui n'est borne que par `edtJourSansCours` (vacances et feries). **Il manque une borne, pas une fonction.**
 
 **LA CONSCIENCE N'A RIEN REDIGE.** Elle a consigne la decision et **demande a Paul s'il veut le mandat** — apres avoir ete reprise au `n°11 · 71` pour avoir produit et amende des mandats sans son mot.
+
+**n°11 · 77 — « CA PASSE EN MICRO OU PAS ? » — OUI, A TROIS CONDITIONS, ET UNE DECISION DE PAUL MANQUE.**
+
+**MESURE AVANT DE REPONDRE.** `edtProjeter` — la fonction qui produit **toutes les cases de toutes les vues** — est batie sur **des gardes en cascade**, deux existent deja :
+`if(off){ cel.nature='horsTemps'; cel.libelle=off.libelle||off.motif; cellules[cle]=cel; continue; }`
+`if(c.mjpc===false){ cel.nature='horsMjpc'; cellules[cle]=cel; continue; }`
+**La borne demandee est une TROISIEME garde du meme patron**, au meme endroit. Et son rendu existe deja au meme patron : `if(c.nature==='horsTemps')return '<div class="edt-b edt-b-off">…</div>'`.
+
+**TAILLE REELLE : une garde dans `edtProjeter`, une ligne dans `edtCelluleCorps`.** **C'est un calibre micro.**
+
+**MAIS LA CONSCIENCE POSE TROIS CONDITIONS, et elles ne sont pas de forme :**
+1. **L'endroit est le plus sensible du bloc.** `edtProjeter` produit **toutes** les cases — semaine, mois, annee. Une garde mal placee **fait disparaitre des cases entieres**. La preuve doit etre chiffree **avant/apres, sur les trois vues**.
+2. **Paul promeut sur captures, et ceci change ce qu'il voit.** Une micro **ne dispense pas des captures**.
+3. **`banc-tout.mjs` rejoue en entier** — 32 bancs. La borne touche ce que tous mesurent.
+
+**ET IL MANQUE UNE DECISION QUE LA CONSCIENCE NE PREND PAS** : **que voit Paul sur ses cases du 27 aout au 2 septembre ?**
+- **rien du tout** — la case disparait, comme si le jour n'existait pas ;
+- **ou la case reste, grisee, avec un mot** — « avant ta rentree » — sur le modele exact de ce qui se fait deja pour les vacances (`horsTemps`).
+**La seconde est coherente avec le reste du site** : le 27 aout **porte huit evenements reels** (CODIR, pre-rentree, rentree des eleves) — **les faire disparaitre serait mentir dans l'autre sens**. **Mais c'est a Paul de trancher, pas a la conscience.**
+
+**AUCUN PROMPT N'EST REDIGE.** La conscience mesure, rapporte, pose **une** question, et attend.
