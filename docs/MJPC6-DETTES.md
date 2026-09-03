@@ -1940,3 +1940,23 @@ Paul, 03/09 : « **oui elles sont pour moi.** » → **la decision du `n°11 · 
 **A CADRER AVEC PAUL AVANT TOUT MANDAT — la conscience ne tranche pas** : le geste est-il **reversible** (elle redevient hors MJPC quand la collegue revient) ou **definitif** ? · **a quelle classe** l'heure est-elle rattachee — « X Français X. — 4 HUGO » nomme deja une classe, mais n'est pas appariee · l'heure **compte-t-elle dans la progression de cette classe** des la reassignation, ou seulement une fois jouee ? · et **que devient « Concertation »**, qui n'est pas du francais du tout et ne devrait jamais etre reassignable ?
 
 **PLACE DANS LA FILE** : ce n'est **ni du vocabulaire ni une infobulle** — c'est un **mecanisme neuf**. Il ne doit pas entrer dans le mandat ⑬, qui ne touche que les mots et les bulles. **Livraison a part, apres ⑬.**
+
+**n°11 · 67 — « VERIFIE. » — PAUL AVAIT RAISON : LE MECANISME EXISTE DEJA, ET IL TRAITE DEJA LES HEURES HORS MJPC COMME DES TROUS. RIEN A CONSTRUIRE.**
+
+Paul, 03/09 : « **en fait il faut juste que je puisse déclarer que ces heures sont comptabilisées comme faisant partie de mon edt. C'est tout. ainsi, ça crée une heure de français, au même titre que si on me donnait une heure autre part dans l'edt, sur un de mes trous par exemple. vérifie.** »
+
+**VERIFIE. LE MECANISME EXISTE, ET IL EST DEJA OUVERT AUX HEURES HORS MJPC — trois mesures qui se recoupent :**
+
+**① `edtCreneauxOu` IGNORE deliberement les cases hors MJPC quand elle calcule ce qui est pris** :
+`edtCasesDuJour(iso).forEach(function(x){ if(!x||x.mjpc===false)return; … })`
+**Une case hors MJPC n'entre donc ni dans `pris` ni dans `sien`.** Elle tombe dans la branche `else if(!pris[k])` et **elle est proposee dans la liste des destinations**, avec le libelle **« créneau libre, heure ajoutée »**.
+
+**② `edtRefusDepot` NE LA REFUSE PAS** : sa recherche d'occupant filtre **`x.mjpc!==false`** — une case hors MJPC **n'est jamais vue comme occupee**. Aucun des cinq refus (passe, jour sans cours, apres-midi ferme, classe inconnue) ne s'y applique.
+
+**③ LE GESTE EST CELUI QUE PAUL DECRIT, MOT POUR MOT** — *« au même titre que si on me donnait une heure autre part dans l'edt, sur un de mes trous »* : il ouvre une case de sa classe, « Déplacer cette heure, ou en ajouter une… », choisit le creneau — et l'heure est **ajoutee, epinglee, comptee dans la prevision**. C'est exactement `{ajoutee:true, epingle:true}` que `edtReplacerHeure` pose.
+
+**DONC : IL N'Y A RIEN A CONSTRUIRE.** La conscience avait repondu **« non, c'est impossible »** au `n°11 · 66` **apres avoir regarde la seule modale de la case hors MJPC** — qui, elle, n'offre effectivement aucun bouton. **Elle n'avait pas regarde le chemin par lequel Paul y arrive reellement : la liste des destinations, depuis une case de SA classe.** **Encore une conclusion tiree d'un seul endroit du code.**
+
+**CE QUI RESTE, ET QUI EST REEL** : **le chemin est indirect.** Pour donner une heure de francais sur son creneau du lundi 10:07, Paul doit **partir d'une autre case** et parcourir la liste — il ne peut pas **cliquer la case hors MJPC elle-meme**, dont la fenetre n'offre rien. **Ce n'est pas une impossibilite, c'est un detour.** **A trancher par Paul** : lui suffit-il, ou veut-il un bouton **sur la case elle-meme** ?
+
+**ET UN POINT DE VOCABULAIRE QUI DEVIENT PLUS IMPORTANT** : l'infobulle « **hors français, jamais compté** » et la phrase de la modale « **groupe partagé, hors français. Cette heure ne compte jamais dans la progression.** » sont **doublement fausses** — c'est du francais (4 des 5 creneaux), **et elle PEUT compter** des que Paul y ajoute une heure. **A corriger dans la passe de vocabulaire.**
