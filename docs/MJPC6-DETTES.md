@@ -1983,3 +1983,22 @@ Paul, 03/09 : « **non tu dois faire le test toi même. et oui pour la reformula
 **MONTAGE : QUATRE ESSAIS AVANT D'ABOUTIR** — `edtEntre`, `EDT_JOURS`, `edtSemaineLettre`, `edtPeriodeA` manquaient tour a tour a l'extraction. **Aucune conclusion tiree avant que le banc tourne.**
 
 **PAUL VALIDE LA PASSE DE VOCABULAIRE** : « **oui pour la reformulation du vocab** ». **Le mandat ⑬ peut etre ecrit** — les sept points, **et la correction de l'infobulle « hors français, jamais compté », qui est fausse deux fois** : c'est du francais, **et cette heure PEUT compter** des que Paul y ajoute une heure, ce que le banc ci-dessus vient de prouver.
+
+**n°11 · 69 — MANDAT ⑬ DEPOSE, APRES LECTURE DE CE QUE PAUL AVAIT DEJA DIT. IL AVAIT DEJA PAYE CE CHANTIER.**
+
+Paul, 03/09 : « **ok fais le prompt pour les info bulles. va lire d'abord ce que j'avais déjà dit à propos de ces infos bulles par le passé. j'ai déjà fait plusieurs fois ce chantier dans les apps et dans le site lui-même.** »
+
+**LA CONSCIENCE A CHERCHE AVANT D'ECRIRE — et sa demande etait fondee.** Registre des dettes (410 Ko) : **rien d'anterieur**, seulement ses propres entrees du jour. Les 34 documents de `docs/` : **`MJPC6-journal.md` (234 Ko) porte trois choses decisives.**
+
+**① LE BUG DU SURVOL TACTILE — journal du 05-06/08, et c'est le coeur du mandat.** Paul signale *« les clics des boutons de l'atelier ne fonctionnent plus »*, puis affine : *« je dois appuyer plusieurs fois sur Ouvrir »*, *« quand je clique sur Publier je suis obligé d'aller cliquer plus haut dans le vide »*. **Diagnostic : au tactile, le premier tap declenche `:hover`**, et huit regles de survol deplacaient la cible sous son doigt. **Resolution encore dans le code — mesuree par la conscience : UNE occurrence de `@media (hover: hover) and (pointer: fine)`.**
+**CONSEQUENCE POUR UNE PASSE D'INFOBULLES : une bulle mal posee est un piege tactile.** Sur le telephone de Paul, **le premier tap peut afficher la bulle au lieu de declencher le bouton**. **Le mandat l'interdit explicitement et exige la preuve.**
+
+**② PAUL TRAVAILLE AU TELEPHONE — journal du 06/08, « la passe tactile du site ».** Il testait la vue eleve **au telephone** ; la vue prof comptait alors **192 cibles dont 166 sous la norme**. **Ce n'est pas une hypothese : c'est son usage.**
+
+**③ UNE PREUVE QUE SON JOURNAL DEMANDE DE GENERALISER** — 06/08 : *« la conscience a isole le bloc ajoute et verifie que le livre prive de ce seul bloc redevient exactement la base. C'est la preuve la plus forte possible d'un ajout non invasif : a generaliser chaque fois qu'un morceau se presente comme un ajout isole. »* **Une passe d'infobulles est exactement ce cas. Le mandat l'exige au §⑤.5.**
+
+**MANDAT ⑬ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-13.md`, **10 158 o**. Deux livraisons : **⑬-a les mots** (les sept points, renommages seuls) · **⑬ les infobulles** (les 94, plus **un banc qui ECHOUE si un cliquable visible n'en porte pas**, ajoute a `banc-tout` — sans lui la dette revient a la livraison suivante).
+
+**CE QUE LE MANDAT PROTEGE EXPLICITEMENT** : le libelle **« hors MJPC » de la case — « TU N'Y TOUCHES PAS »**, Paul l'a tranche ; c'est **l'infobulle et la phrase de la modale** qui sont fausses deux fois, et le mandat dit pourquoi, **preuve du banc de la conscience a l'appui** : ces creneaux sont deja proposes « creneau libre, heure ajoutee ».
+
+**LES DEUX PASSES APPLIQUEES AVANT LE DEPOT** : (1) tout est mesure — le journal lu, les occurrences de `@media (hover…)` comptees dans le candidat, les 5 creneaux hors MJPC verifies ; (2) relecture contre lui-meme — les trois md5 coherents, le §④ verifie exigeant `@media (hover…)` intact, le §⓪ et le §⑤.4 verifies se repondre sur le tactile, **et la contradiction potentielle levee d'avance** : le §① change des mots, le §④ exige que **les chiffres** ne bougent pas — la phrase « cette livraison change des mots, pas des chiffres » est ecrite.
