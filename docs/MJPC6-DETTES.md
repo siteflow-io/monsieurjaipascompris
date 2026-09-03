@@ -2002,3 +2002,20 @@ Paul, 03/09 : « **ok fais le prompt pour les info bulles. va lire d'abord ce qu
 **CE QUE LE MANDAT PROTEGE EXPLICITEMENT** : le libelle **« hors MJPC » de la case — « TU N'Y TOUCHES PAS »**, Paul l'a tranche ; c'est **l'infobulle et la phrase de la modale** qui sont fausses deux fois, et le mandat dit pourquoi, **preuve du banc de la conscience a l'appui** : ces creneaux sont deja proposes « creneau libre, heure ajoutee ».
 
 **LES DEUX PASSES APPLIQUEES AVANT LE DEPOT** : (1) tout est mesure — le journal lu, les occurrences de `@media (hover…)` comptees dans le candidat, les 5 creneaux hors MJPC verifies ; (2) relecture contre lui-meme — les trois md5 coherents, le §④ verifie exigeant `@media (hover…)` intact, le §⓪ et le §⑤.4 verifies se repondre sur le tactile, **et la contradiction potentielle levee d'avance** : le §① change des mots, le §④ exige que **les chiffres** ne bougent pas — la phrase « cette livraison change des mots, pas des chiffres » est ecrite.
+
+**n°11 · 70 — PAUL RELEVE UN FAUX LIEN DE LA CONSCIENCE. IL A RAISON. MANDAT ⑬ CORRIGE.**
+
+Paul, 03/09 : « **tu as fait le lien avec un problème qui n'avait pas grand chose à voir, si ?** »
+
+**IL A RAISON, ET LE CODE LE PROUVE.** La conscience avait bati le §⓪ du mandat ⑬ sur **le bug du survol tactile** d'aout, en concluant qu'une infobulle pouvait le recreer. **Verification faite, au lieu de defendre** : ce bug venait de **regles CSS qui DEPLACENT la cible** — mesure dans le code : `.level-card:hover { transform: translateY(-12px) scale(1.03) rotate(-0.5deg); }`, et le bouton Publier de 1 px. **Un attribut `title` n'ajoute aucune regle CSS, ne deplace rien, et ne peut pas faire rater un clic. Les deux sujets n'ont pas de rapport.**
+
+**COMMENT LA CONSCIENCE S'EST TROMPEE** : elle a vu **« survol » + « tactile » + « Paul a paye »** et a construit une these dessus. **Elle avait pourtant le diagnostic complet sous les yeux** — « huit regles de survol **deplacent la cible** sous le doigt » — **et ne l'a pas lu jusqu'au bout.** **Meme faute que les trois autres du lot : conclure d'un rapprochement au lieu de lire ce qui est ecrit.**
+
+**CE QUI RESTE VRAI DE SA RECHERCHE, ET QUI EST PLUS UTILE QUE CE QU'ELLE AVAIT CRU** : **Paul travaille au telephone** (journal du 06/08, la passe tactile : il testait la vue eleve au telephone, 192 cibles cote prof dont 166 sous la norme). **Et un `title` NE S'AFFICHE PAS au tactile — il n'y a pas de survol sur un telephone.**
+**DONC : 94 infobulles posees en `title` ne serviront a rien a Paul quand il est sur son telephone.** **C'est la vraie question, et elle est plus grave que le faux lien.**
+
+**MESURE DE LA CONSCIENCE, faite avant de proposer** : **le site n'a AUCUN dispositif de bulle maison** — `data-bulle` 0 · `data-tip` 0 · `tooltip` 0 · `.bulle` 0 · `popover` 0. **Tout repose sur `title`.**
+
+**MANDAT ⑬ CORRIGE ET REDEPOSE** (10 158 → **11 237 o**, commit `4a3d1424`) : le faux lien est **retire et nomme comme faux** — *« N'en tiens aucun compte »* · la vraie question est posee, avec **trois voies** (title seul · title + aria-label · un dispositif maison sur appui long) **et l'ordre de la poser a Paul avant d'ecrire 94 bulles** · la preuve d'ajout non invasif est gardee · et le §⑤.4 demande desormais **« ce que Paul voit AU TELEPHONE, ecran par ecran — si la reponse est zero, ecris-le en toutes lettres »**.
+
+**LECON, LA QUATRIEME DU MEME TYPE** : **un rapprochement n'est pas une cause.** Avant d'appuyer un mandat sur un precedent, **lire le diagnostic du precedent jusqu'au bout** — il etait ecrit noir sur blanc.
