@@ -1897,3 +1897,26 @@ Paul, 03/09 : « **ok pour rejouer.** »
 **ETAT — LE PROMEUS EST POSSIBLE.** Le lot 2ter compte **douze livraisons closes et auditees**. Le candidat **`8837063de4466afb71622e89181ae44a`** est celui qui a ete parcouru **de bout en bout, par clics, d'un seul chargement**. **Production toujours `6c7560af…` / 8.70.1 — rien n'est jamais parti en ligne de tout le lot.**
 
 **CE QUE LA CONSCIENCE N'A PAS VERIFIE ELLE-MEME** : 29 des 31 captures. **Elle en a regarde deux** — celles des points que Paul avait tranches et qu'elle n'avait jamais pu voir. Le reste repose sur le rapport et le journal des clics.
+
+**n°11 · 65 — REGLE POSEE PAR PAUL : TOUT CODAGE S'ACCOMPAGNE D'UNE PASSE D'INFOBULLES. DETTE DU SITE, CHIFFREE.**
+
+Paul, 03/09 : « **bon maintenant il faut faire une passe de vocabulaire. est ce que tout est compréhensible ? et par ailleurs, il faut faire une passe de tooltips. je signale au passage que c'est une des dettes du site. tout codage doit être accompagné d'une passe de tooltips.** »
+
+**REGLE, a appliquer a tous les mandats a venir** : **UNE LIVRAISON N'EST PAS CLOSE TANT QUE LES GESTES QU'ELLE AJOUTE NE PORTENT PAS LEUR INFOBULLE.** Et l'existant se rattrape.
+
+**L'ETAT, MESURE PAR L'EXECUTANT PAR CLICS, ECRAN PAR ECRAN** : panneau Emploi du temps **33 cliquables / 6 bulles** · barre du haut **9 / 0** · modale d'une case **9 / 0** · Heures perdues **29 / 0** · vue Annee **8 / 0** · Dates de l'annee **12 / 0**. **TOTAL : 100 cliquables, 6 bulles, 94 SANS.**
+
+**REMESURE PAR LA CONSCIENCE DANS LE CODE** : bloc EDT **35 boutons rendus, 12 `title=`, 3 `aria-label`** — **exactement ses chiffres**. Reste du site : **275 boutons, 88 `title=`** — il annoncait 65 ; **ecart de 23, sans effet sur le constat**, qui tient : **l'EDT est le pire endroit du site.**
+
+**A PORTER A SON CREDIT — IL SE VISE LUI-MEME EN PREMIER** : *« les livraisons ⑪a et ⑪b que je viens de livrer N'ONT AJOUTE AUCUNE INFOBULLE — ni sur "début de l'année" et "fin de l'année", ni sur la couleur de la classe d'essai. La règle de Paul me vise en premier. »*
+
+**LES SEPT POINTS DE VOCABULAIRE QU'IL RELEVE** : ① « Les objets vivent au hub sous `/site/edt/` » — **de la plomberie affichee au professeur** · ② **« hors MJPC » et son infobulle « hors français, jamais compté » NE DISENT PAS LA MEME CHOSE** — l'un nomme le site, l'autre la matiere · ③ « classe appariée », « ne projette rien » — mots du chantier · ④ « jalon » n'est pas un mot d'emploi du temps · ⑤ le filtre « 37 · A ou B » n'est explique nulle part · ⑥ « ⤓ Sortir le JSON » alors que son infobulle dit « copier », **qui est le mot juste** · ⑦ « expérimentale » et « classe d'essai » — deux mots proches pour deux choses.
+
+**CE QU'IL DIT DE NE PAS TOUCHER, ET LA CONSCIENCE LE SUIT** : « Ce que l'année t'a coûté », « aucune séance prête », « classe non encore importée », « heure 1/3 », « 50 min utiles », « dans les temps », les trois issues du depot, l'annonce de la banalisation. **Tout cela est deja dans les mots de Paul.**
+
+**LE BLOCAGE MATERIEL, ET LA CONSCIENCE LE LEVE** : l'executant a **redige** cette entree mais **n'a pas pu la pousser** — mesure : le jeton du sas **lit** la production (200) mais **n'y ecrit pas** (403, « Resource not accessible by personal access token »). **C'est normal et c'est voulu : l'etancheite a ete prouvee le 31/08.** **Le registre est tenu par la conscience, qui a le jeton de production — c'est elle qui pousse, et elle vient de le faire.** Rien a changer au dispositif.
+
+**LA QUESTION QU'IL REFUSE DE TRANCHER SEUL, ET IL A RAISON** : *« ces infobulles sont-elles POUR PAUL EN CLASSE — un rappel d'une ligne — ou POUR QUELQU'UN QUI DECOUVRE LE SITE, et alors elles doivent expliquer ? »*
+**TRANCHE PAR LA CONSCIENCE SUR LA MOTIVATION EXISTANTE** : Paul, 01/09 — *« le système doit être solide et ne pas me bloquer dans 3 mois quand je ne saurai même plus cette histoire d'identifiants »*. Sa regle de tenue : *« formuler simplement les communications adressées à Paul : dire les choses dans ses mots »*. **Les infobulles sont donc pour PAUL DANS TROIS MOIS** : quelqu'un qui connait son metier et son site, mais qui a oublie le detail. **Ni telegraphique, ni manuel pour inconnu.** Une phrase qui dit **ce que le geste fait et ce qu'il coute**, dans ses mots. **Paul corrige s'il n'est pas d'accord.**
+
+**LA SEULE CHOSE QUE LA CONSCIENCE NE TRANCHE PAS ET POSE A PAUL** : le point ②. Sur la capture, on lit « X Français X. — 4 HUGO · hors MJPC » : c'est **du francais, mais assure par un autre professeur**. Donc **ni « hors MJPC » (nomme le site) ni « hors français » (faux : c'en est) ne conviennent**. **Une seule question a Paul : quel mot pour cette case ?**
