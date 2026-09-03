@@ -2038,3 +2038,22 @@ Paul, 03/09 : « **attention, tu dérives là. tu produis des mandats sans mon m
 - **CANDIDAT** : `PONT/EDT/index.html`, **1 769 457 o**, md5 **`8837063de4466afb71622e89181ae44a`**, version **8.73.0-⑪** — **celui qui a ete audite, parcouru de bout en bout par clics (31 vues), et dont les captures ont ete regardees par la conscience.**
 
 **LA PROMOTION N'A PAS ETE FAITE, ET LA CONSCIENCE A DEMANDE CONFIRMATION AVANT.** Raison : le dispositif reserve **ce seul geste** a Paul — *« seule la promotion d'`index.html` en production reste le geste de Paul »*. **Apres s'etre fait reprendre pour avoir agi sans son mot, la conscience ne prend pas de sa propre initiative le geste irreversible qui touche la production.** **Ce n'est pas un refus : c'est une confirmation demandee en une ligne.**
+
+**n°11 · 72 — PROMOTION FAITE ET VERIFIEE. LE LOT 2ter EST EN LIGNE. ✔ DETTES FERMEES.**
+
+Paul, 03/09 : « **oui promeus.** » — ordre explicite, execute.
+
+**LA PROMOTION** : commit **`c5e893bbc208`**, 03/09 09h51 UTC, `index.html` **+3 880 / −6**, blob `a260fef9d13e`.
+**VERIFICATION BIT A BIT, PAR LE BLOB DU COMMIT** (pas par le CDN, qui servait encore l'ancien fichier plusieurs minutes apres) : **1 769 457 o, md5 `8837063de4466afb71622e89181ae44a` — IDENTIQUE au candidat audite.**
+
+**DEUX GARDES ONT TOURNE AVANT L'ECRITURE, et la premiere a arrete la conscience** : ① le candidat local devait porter `8837063d…` — verifie ; ② **la production devait porter `6c7560af…`** — au premier essai, l'API `contents` a rendu **0 octet** (elle ne rend pas le contenu au-dela d'1 Mo) et **l'assertion a bloque la promotion**. **La conscience n'a pas contourne la garde : elle a change de source de mesure** (lecture brute), reverifie `6c7560af…`, puis pousse. **Une garde qui s'arrete sur une limite technique doit etre comprise, jamais desarmee.**
+
+**✔ DETTES FERMEES PAR CETTE PROMOTION :**
+- **✔ LE MODE TEST DE LA PRODUCTION** — ouverte le 27/08, la plus lourde du registre : **quarante ecritures** (`mjpcPutJson`/`mjpcDeleteJson`) echappaient au mode test — creer, renommer, archiver, supprimer une classe · importer des eleves · changer le code prof · publier un onglet · creer ou supprimer une seance ou un chapitre · tout ce que le deroule enregistre pendant une heure. **Le correctif `668cda2757a5` est en ligne.**
+- **✔ LE LOT 2ter** — douze livraisons, closes et auditees.
+
+**ETAT EN LIGNE** : `index.html` **1 769 457 o / `8837063de4466afb71622e89181ae44a` / 8.73.0-⑪**. **Point de retour : `75c8b77f` / `6c7560afa9e431f23f89aa6fe167bb6b` / 8.70.1.**
+
+**PROTOCOLE D'APRES-PROMOTION, ETAPES FAITES** : ✔ verification bit a bit · ✔ **journal** (`docs/MJPC6-journal.md`, commit `46d8a6a9`, 237 486 o) — l'entree porte les douze livraisons, les preuves, **et les deux trous trouves par le geste comme lecon du lot** · ✔ **point de retour** (`docs/MJPC6-restauration.md`, commit `1e747e9f`) — avec ce que revenir en arriere ferait perdre.
+
+**RESTE DU PROTOCOLE** : l'index des fonctions · `MJPC6-OU-TROUVER-QUOI.md` · **l'adresse avec `&v=` et les tests geste par geste donnes a Paul**.
