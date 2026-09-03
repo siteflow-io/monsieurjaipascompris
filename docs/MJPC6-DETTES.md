@@ -2154,3 +2154,20 @@ Paul, 03/09, mot pour mot : « **oui mais mjpc c'est pour les cours, c'est les c
 **La seconde est coherente avec le reste du site** : le 27 aout **porte huit evenements reels** (CODIR, pre-rentree, rentree des eleves) — **les faire disparaitre serait mentir dans l'autre sens**. **Mais c'est a Paul de trancher, pas a la conscience.**
 
 **AUCUN PROMPT N'EST REDIGE.** La conscience mesure, rapporte, pose **une** question, et attend.
+
+**n°11 · 78 — PAUL TRANCHE L'AFFICHAGE, ET AJOUTE LE PENDANT INVERSE. LE CADRAGE DE LA MICRO EST COMPLET.**
+
+Paul, 03/09, mot pour mot : « **oui la seconde. comme ça l'injection respecte bien le calendrier fourni, et je peux quand même poser librement mon premier jour de cours et mon dernier jour (sachant qu'il peut aussi y avoir des choses après le dernier jour, c'est le pendant inverse).** »
+
+**DECISION** : **la case RESTE, grisee, avec un mot** — sur le patron exact de `horsTemps` (les vacances). **Elle ne disparait pas.**
+
+**SA RAISON, ET ELLE SEPARE PROPREMENT DEUX CHOSES QUI N'AVAIENT JAMAIS ETE SEPAREES** : *« l'injection respecte bien le calendrier fourni, et je peux quand même poser librement mon premier jour de cours et mon dernier jour »*.
+- **le calendrier de l'etablissement** : injecte tel quel, **jamais retouche** — c'est lui qui dit ce qui occupe les journees ;
+- **ses dates de cours** : posees librement par Paul — c'est lui qui dit quand ses cours commencent et finissent.
+**Les deux coexistent sans se contredire. C'est pour ca que le depannage par le JSON etait une impasse : il melangeait les deux.**
+
+**LE PENDANT INVERSE, QU'IL AJOUTE ET QUE LA CONSCIENCE N'AVAIT PAS DEMANDE** : *« il peut aussi y avoir des choses après le dernier jour »*. **La borne vaut des DEUX cotes** : avant `debutAnnee` **et** apres `finAnnee`, **et dans les deux cas la case reste visible, sans seance**. Un CODIR de fin juin, un conseil de classe apres le dernier cours : **ils s'affichent, ils ne portent simplement plus de seance.**
+
+**LE CADRAGE EST COMPLET.** Ce qui reste a ecrire tient en une phrase : **le prevu ne pose aucune seance avant `debutAnnee` ni apres `finAnnee` ; la case reste, grisee, avec son mot.**
+
+**LA CONSCIENCE ECRIT LE PROMPT MICRO ET LE SOUMET A PAUL DANS LA CONVERSATION — elle ne le depose pas au sas.** C'est ce qu'elle a annonce au `n°11 · 76` (« je te le soumets avant de le déposer, pas après ») et ce que Paul a exige au `n°11 · 71`.
