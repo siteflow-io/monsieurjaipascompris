@@ -1815,3 +1815,24 @@ Paul, 02/09 : « **il faut que mes demandes initiales soient exécutées de bout
 **LES DEUX PASSES APPLIQUEES AVANT LE DEPOT** : (1) chaque affirmation mesuree — `_siteGet` et `taxoCharger` **lues**, pas cherchees par nom ; (2) relecture contre lui-meme — les trois md5 verifies coherents, le §④ verifie **non contradictoire** avec le §③ (il ne declare pas `_siteGet` intouchable, et il precise « **hors** mode test » pour la grille), le correctif exige **aux deux endroits**.
 
 **MANDAT ⑪ DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-11.md`, 9 154 o.
+
+**n°11 · 61 — AUDIT DE ⑪-a ET ⑪-b (candidat `fb177000`, 8.73.0-⑪ᵇ). VERDICT : ÇA VA. LE POINT QUI BLOQUAIT LE PROMEUS EST FERME — LA CONSCIENCE L'A VU.**
+
+**Audit groupe** : ⑪-a (05h45, plus son rapport a 06h05) et ⑪-b (06h30) livrees **sans arret entre**. Ecart mesure de ⑨ a ⑪ᵇ.
+
+**Candidat** : **1 767 472 o, md5 `4a5aa3d23d2e0eac38cf55ebd5a5fec7`**.
+
+**LE POINT QUI BLOQUAIT EST FERME — mesure PUIS regarde :**
+- **Mesure** : `edtPoserDateAnnee` a desormais **un appelant** — `edtSaisirDateAnnee` (L18890). Elle est passee de **1 occurrence (sa declaration seule)** a **3**.
+- **REGARDE** (`tests/11a/a01-ecran-avec-debut-et-fin-de-lannee.png`) : sous les quatre dates du brevet, l'ecran porte desormais **« début de l'année »** et **« fin de l'année »**, deux champs date, **et une phrase dans les mots de Paul** : *« Le début et la fin de l'année scolaire. Ils arrivent avec le calendrier injecté ; ici, tu les corriges à la main. Avancer la fin renvoie les heures posées au-delà dans les heures à replacer, et te les nomme. »*
+**Le §⑤.2 du mandat ⑥ — « modifiables à la main » — est enfin complet.**
+
+**LA CLASSE D'ESSAI EST EN COULEUR — REGARDE** (`tests/11b/b03-mode-test-allume-semaine-en-couleur.png`) : les quatre cases de « 3E Charles de Gaulle » — **lundi 08:00, mardi 08:00, jeudi 10:07, vendredi 13:00** — portent un **fond violet** et un **liseret violet**, nettement distinct du brun des vraies classes. **Les vraies classes de la meme grille ne changent pas.** C'est exactement ce que Paul a demande : *« il faut simplement qu'elle soit en couleur »* — **une couleur, aucun texte de plus**.
+
+**NON-REGRESSION remesuree** : `edt*` **229 declarations / 229 noms, aucun doublon**, **trois** ajoutees et nommees (`edtBlocDatesAnnee`, `edtSaisirDateAnnee`, `edtCelluleCorps`), **aucune disparue** · `secu*` **29** · `published` **97** · moteur **`2ba70f9e…`** · **CORRECTIF DU MODE TEST `668cda2757a5` INTACT** · `edt-fige` **9** · **node --check VERT** · garde **VERTE**.
+
+**LIVRABLES COMPLETS, ranges** : `tests/11a/` — **7 captures** (l'ecran, les deux dates saisies et relues au hub, **les trois refus un par un**, une heure posee loin dans l'annee, la fin avancee et les heures au-dela devenues a replacer) plus `journal-11a.txt` (65 lignes) et `banc-dates-annee-11a.mjs` (231 lignes) · `tests/11b/` — **6 captures** (mode test eteint : **aucune couleur** ; allume : semaine, mois, annee ; **reeteint : plus de couleur**) plus son journal et son banc. **`banc-tout.mjs` enrichi des deux.**
+
+**LA CONSCIENCE N'A PAS ENCORE VERIFIE** : les cinq autres captures de ⑪-a et les cinq de ⑪-b — elle en a **regarde deux**, celles des deux points que Paul avait tranches. Les autres reposent sur les rapports.
+
+**RESTE POUR CLORE ⑪** : **le mode test qui ne vide plus** (§③) — le patron de `taxoCharger`, l'ecriture au vrai hub toujours interdite, la garde remesuree · les captures · l'audit adverse · `banc-tout` en entier · le rapport final.
