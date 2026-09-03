@@ -1,5 +1,34 @@
 # OÙ TROUVER QUOI — table d'entrée de l'index des fonctions
 
+
+## L'EMPLOI DU TEMPS — en ligne depuis le 03/09/2026 (8.73.0)
+
+**Où c'est dans le fichier** : entre les bornes `EDT — début` et `EDT — fin` de `index.html`. **229 fonctions `edt*`**. On y entre par **trois portes seulement** : `edtArriveeProf`, `edtSectionPanneau`, `edtOuvrir`.
+
+**Où c'est au hub** : tout sous **`/site/edt/`** — `calendrier`, `grille`, `creneaux`, `periodes`, `photos`, `reglages`, `decisions`. Deux exceptions nommées, et deux seulement : les **dates de l'année** vivent avec les dates du brevet sous `/site/config/brevetDates`, et les **absents** sous le chemin de la trace de l'heure.
+
+**Ce qu'on cherche le plus souvent :**
+
+| je cherche… | c'est là |
+|---|---|
+| ce que l'année m'a coûté | `edtTotauxPerdues`, `edtHeurePerdue` — écran « Heures perdues… » |
+| pourquoi une heure est comptée perdue | `EDT_MOTIFS` (4 motifs), `edtMotifDe`, `edtMotifEnClair` |
+| banaliser une heure | `edtSansSeance`, `edtBlocBanaliser`, `EDT_CATEGORIES` (10 catégories) |
+| déplacer, échanger, prendre un créneau | `edtDeplacerVers`, `edtTroisIssues`, `edtEchangerHeures`, `edtEcraserHeure` |
+| une heure à replacer | `edtHeuresAReplacer`, `edtReplacerHeure`, `edtPerteSeche` |
+| la liste des destinations et ses filtres | `edtCreneauxOu`, `edtDestinationsPour`, `edtQuoiChercher` |
+| la vue Année | `edtPeindreAnnee`, `edtAnnee*` — **aucune écriture, elle affiche seulement** |
+| les dates de l'année | `edtPoserDateAnnee`, `edtValiderDatesAnnee`, `edtSaisirDateAnnee` |
+| la photo du prévu | `edtPhoto`, `edtPhotoAuto`, `edtEcheancesPhoto` |
+| l'identité d'un objet | `EDT_FAMILLES` (9 préfixes), `edtPoserIdsObjet`, `edtApparier`, `edtIdMenteur` |
+| **toute écriture** | **`edtEcrireArchive`** — la porte unique : elle archive l'état d'avant et **abandonne si l'archivage échoue** |
+| la photo d'avant une écriture | `edtPhotoDe` — **prise AVANT toute mutation** |
+| la classe d'essai | `edtEnEssai`, `creneauxFictifs` dans le JSON de la grille — **visible au seul mode test, en violet** |
+
+**Les outils, au sas** (`siteflow-io/mjpc-chantier`) : la garde `PONT/EDT/outils/verif_edt.py` — **cinq questions**, dont « l'écriture centrale n'écrit que là où le site l'envoie » et « les consignes du site et les fichiers `prompts/` disent la même chose ». Les bancs : `PONT/EDT/tests/`, **tous rejoués par `banc-tout.mjs`** (32 bancs, 93 repères).
+
+**Ce qu'il faut savoir avant d'y toucher** — les deux trous du lot 2ter : **la banalisation par-dessus une coche** et **les dates de l'année** existaient dans le code, prouvées par des bancs qui **appelaient la fonction**, et **n'étaient atteignables par aucun clic**. **Une fonction sans chemin n'existe pas pour Paul.**
+
 > **Lis ceci AVANT `INDEX-FONCTIONS.md`.** L'index répond aux noms techniques ; cette table répond aux mots
 > qu'emploie Paul. Elle existe parce que la conscience n°9 a proposé **trois fois** de créer ce qui existait déjà.
 >
