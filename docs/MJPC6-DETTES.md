@@ -2216,3 +2216,25 @@ Paul, 03/09, mot pour mot : « **oui la seconde. comme ça l'injection respecte 
 **POURQUOI CE N'EST DONC PAS UN MICRO, ET LA CONSCIENCE LE REDIT** : borner **neuf fonctions** avec **une exception sur le passe pose**, plus les preuves sur les trois vues **et** sur les comptes, **c'est un mandat d'executant en regle**. L'executant l'avait dit avant elle.
 
 **AUCUN MANDAT N'EST REDIGE. La conscience donne son avis et attend l'ordre de Paul.**
+
+**n°11 · 81 — MANDAT ⑭ ECRIT ET SOUMIS. TOUT CE QU'IL AFFIRME A ETE REMESURE CE JOUR, ET DEUX ERREURS DE L'AUDIT PRECEDENT SONT CORRIGEES.**
+
+Paul, 03/09 : « **ok écris et fais attention à ne pas rédiger le mandat avec des erreurs, comme auparavant.** »
+
+**AVANT D'ECRIRE UNE LIGNE, LA CONSCIENCE A TOUT REMESURE — 22 chiffres, aucun recopie :**
+base **1 769 457 o / `8837063d…`**, **production et sas identiques bit a bit** · moteur **309 812 / `2ba70f9e…`** · correctif **`668cda2757a5`** · **`edt*` 229/229 sans doublon** · `secu*` **29** · `published` **97** · `edt-fige` **9** · `EDT_CATEGORIES` **248 car**, `EDT_MOTIFS` **404 car** · **`banc-tout` 35 bancs** · fin des vacances d'ete **2026-08-26** · les appelants de `edtDebutAnnee` (**L17855, L19031, L20002**) et `edtFinAnnee` (**4**) · les dix appels de `edtCasesDuJour` avec leurs lignes · les offsets des gardes dans `edtProjeter` (**1323, 1440**) et du reel (**2649**).
+
+**UN COMPTE QUE LA CONSCIENCE REPETAIT ET QUI ETAIT PERIME** : **`edtSectionPanneau` n'a pas 2 occurrences mais 4.** La livraison ⑪a lui a donne **un second appelant hors bloc — `_blocBrevet` (L2115)** — pour poser les deux champs de dates dans l'ecran du brevet. **C'est legitime, la garde est verte, et le mandat le dit pour qu'aucun executant ne cherche a le « corriger ».** **La conscience aurait ecrit « 2 » une neuvieme fois si elle n'avait pas remesure.**
+
+**DEUX ERREURS DE L'AUDIT DE L'EXECUTANT, CORRIGEES DANS LE MANDAT** — la conscience ne les a pas recopiees :
+1. **La photo du prevu NE passe PAS par `edtHeuresDeLEvenement`.** Mesure : `edtPhotoPrendre` fait `edtProjeter(edtLundi,5)`. **Elle passe par `edtProjeter`** — donc une borne posee la la borne aussi. L'executant avait range la photo au mauvais endroit.
+2. **`edtHeuresDeLEvenement` sert aux HEURES PERDUES**, pas a la photo — six appelants mesures : `edtCoutParNiveau`, `edtJustifier`, `edtEvenementJustifie`, `edtCochesDeplacees`, `edtPeindreCalendrier`, `edtChargeInscrire`.
+**Et une precision sur le `depuis:"2026-08-31"` de la photo** : il vient de `edtLundiCourant()` — **la photo photographie la semaine affichee**, pas depuis le debut de l'annee. **Le fait tient quand meme** : prise le 3/9, elle couvre la semaine du 31/8, donc **trois jours d'avant la rentree**.
+
+**CE QUE LE MANDAT EXIGE** : **une seule fonction** qui dit si une date est dans l'annee — *« ne recopie pas la comparaison a neuf endroits : un jour Paul changera la regle »* — et **un effet different selon l'endroit** : la case **reste** a l'affichage · l'heure **ne compte pas** · le creneau **n'est pas propose** · le depot est **refuse avec son motif** · la photo ne prend que des cases de l'annee.
+**Et deux protections** : **une heure jouee ou une decision n'est JAMAIS bornee** (le reel est traite **apres** les gardes, offset 2649 — une garde mal placee effacerait le passe de Paul) · **l'ordre `horsTemps` → `horsMjpc` → `horsAnnee`**, pour que le mot le plus precis gagne.
+**Plus la regle de Paul de ce matin** : la nature de case nouvelle **porte son infobulle**.
+
+**RELECTURE CONTRE LUI-MEME, faite avant le depot** : 22 chiffres verifies presents · six paires de sections verifiees coherentes (la case reste / aucune case ne disparait · le passe protege / prouve · l'ordre donne / explique · 35 bancs deux fois · le 4 explique · l'infobulle exigee / prouvee) · les cinq interdictions presentes. **Aucun trou trouve.**
+
+**LE MANDAT EST SOUMIS A PAUL DANS LA CONVERSATION. IL N'EST PAS DEPOSE AU SAS.**
