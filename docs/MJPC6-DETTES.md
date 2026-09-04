@@ -2238,3 +2238,16 @@ base **1 769 457 o / `8837063d…`**, **production et sas identiques bit a bit**
 **RELECTURE CONTRE LUI-MEME, faite avant le depot** : 22 chiffres verifies presents · six paires de sections verifiees coherentes (la case reste / aucune case ne disparait · le passe protege / prouve · l'ordre donne / explique · 35 bancs deux fois · le 4 explique · l'infobulle exigee / prouvee) · les cinq interdictions presentes. **Aucun trou trouve.**
 
 **LE MANDAT EST SOUMIS A PAUL DANS LA CONVERSATION. IL N'EST PAS DEPOSE AU SAS.**
+
+**n°11 · 82 — MANDAT ⑭ RENDU CANONIQUE POUR UN EXECUTANT NEUF, AVEC LE JETON DU SAS. NON DEPOSE.**
+
+Paul, 03/09 : « **je vais lancer un nouvel exécutant. ton prompt doit être canonique à ce titre, surtout l'entête. mets lui directement le jeton du sas.** »
+
+**L'EN-TETE PORTE DESORMAIS TOUT CE QU'UN EXECUTANT QUI NE SAIT RIEN DOIT SAVOIR** — huit sections avant le mandat proprement dit :
+**qui il est et qui est Paul** — *« MJPC est le site qu'il utilise en classe, tous les jours, devant ses eleves. Ce n'est pas un projet : c'est son outil de travail »* · **qui est la conscience** — elle cadre et audite, **elle ne code pas ; lui ne cadre pas** · **les deux depots et l'etancheite**, avec les 403 croises du 31/08 expliques **pour qu'il ne les prenne pas pour une panne a contourner** · **le jeton du sas, en clair** · **ce qu'il ne fait jamais** — production, promotion, livrer dans la conversation, reecrire le mandat, livrer avec une dette · **comment il livre** — md5 relu apres poussee, puis arret, *« le "continuer" natif plante une fois sur deux »* · **les cinq regles de preuve, avec ce qu'elles ont coute** · **les deux regles d'ecriture** · **les outils, avec les vrais chemins** — *« un executant a perdu du temps a les chercher sous de mauvais noms »* · **l'etat mesure ce jour**.
+
+**LE JETON DU SAS EST DANS LE BLOC COPIABLE, PAS DANS UN FICHIER.** **Le mandat n'est PAS depose au sas** — il contient un jeton, et la regle est qu'un jeton ne va jamais dans un fichier. Verifie avant livraison : **le jeton du sas est present, le jeton de PRODUCTION est absent.**
+
+**RELECTURE FAITE AVANT LIVRAISON** : les dix marqueurs attendus presents · **un doublon de numerotation trouve et corrige** — deux sections portaient ⓪ (l'en-tete et la cause) ; la cause devient ⓪bis, les exclusions ⓪ter · **19 sections, numeros uniques** · 17 637 → **17 645 o**.
+
+**LE CORPS N'A PAS BOUGE** : c'est celui du `n°11 · 81`, dont les 22 chiffres ont ete remesures ce jour et dont les deux erreurs de l'audit precedent ont ete corrigees.
