@@ -2263,3 +2263,24 @@ Paul, 03/09 : « **mets le mandat sur github mais sans le jeton du coup** »
 **VERIFICATION ELARGIE, QUE PAUL N'AVAIT PAS DEMANDEE** : la conscience a relu **les dix-neuf mandats presents au sas**, un par un, contenu telecharge — **`MANDAT-LOT-2bis-EDT`, les seize du lot 2ter, `MANDAT-LOT-2ter-v2`, `MANDAT-LOT-2ter`**. **Aucun ne porte de jeton.** La regle a tenu sur tout le lot.
 
 **LE MANDAT CANONIQUE EXISTE DESORMAIS EN DEUX ETATS, ET LES DEUX SONT JUSTES** : **au sas**, sans jeton, avec la consigne — c'est la version qui reste, celle que la conscience n°12 relira ; **dans la conversation de Paul**, avec le jeton en clair, c'est celle qu'il colle a l'executant. **Le jeton ne vit que dans le fil.**
+
+**n°11 · 84 — LE MANDAT ⑭ AUDITE PAR UNE AUTRE INSTANCE : QUATRE TROUS, TOUS VRAIS. CORRIGE. ET UNE QUESTION DE ROLE QUI APPARTIENT A PAUL.**
+
+**Verifie point par point par la conscience n°11, avant d'accepter :**
+
+**① LA CONTRADICTION §③ / §② — VRAIE, ET C'ETAIT LE PLUS GRAVE.** Mesure : dans `edtProjeter`, **les trois gardes du haut COUPENT la suite** (`continue`) — `horsTemps` (offset **1323**), `horsMjpc` (**1440**), `nonImportee` (**1521**) — **et le reel n'est cherche qu'a l'offset 2649** (`edtChercherTrace`). **Un executant qui suivait le §③ a la lettre posait sa garde en haut et effacait les heures que Paul a reellement jouees avant sa rentree.** Le §② l'interdisait, **et le mandat ne disait nulle part ou poser la garde.**
+**Corrige** : le §③ est refondu en **deux points explicitement separes** — ⑴ **quel mot gagne** (vocabulaire) ; ⑵ **ou la garde se pose** : *« LA BORNE REMPLACE LE PREVU, JAMAIS LE REEL NI UNE DECISION. Elle se pose APRES la recherche de trace, pas avec les trois gardes du haut. »* Avec l'avertissement en tete : *« lue de travers, elle te ferait effacer les heures que Paul a reellement faites »*.
+
+**② LA GARDE `nonImportee` OUBLIEE — VRAIE.** Mesure : `if(!cel.classeMjpc){ cel.nature='nonImportee'; … continue; }` a l'offset **1521**. **Le mandat n'en parlait pas** — personne ne savait ce que devenait la case d'une classe non importee un jour hors annee.
+**Corrige** : un point ⓪ ajoute au §① — *« aucune des trois natures existantes ne change… tu n'ajoutes qu'un cas : celui qui n'en avait aucun »* — et `nonImportee` est nommee dans le §②.
+
+**③ LA PREUVE N°12 INFAISABLE — VRAIE, ET FINEMENT VUE.** Mesure : `edtDebutAnnee()` rend `EDT_DATES.debutAnnee||(annee+'-08-01')` et `edtFinAnnee()` `…||(annee+'-07-31')`. **Elles INVENTENT une date quand Paul n'a rien pose.** Une borne qui les appelle **bornerait toujours**, et la preuve « sans dates, rien ne change » serait impossible a produire.
+**Corrige** : *« Ta borne lit `EDT_DATES.debutAnnee` et `EDT_DATES.finAnnee` BRUTES, et ne borne que du cote ou Paul a effectivement pose une date. »*
+
+**④ `edtFinAnnee` : TROIS APPELANTS, PAS QUATRE — VRAI.** Verifie en lisant le contexte : la mention de la **L20563** est **a l'interieur d'un commentaire** ouvert L20562 et ferme L20565. **La conscience avait compte une occurrence textuelle sans regarder si c'etait du code** — la meme faute que « compter des motifs », en plus petit.
+
+**MANDAT CORRIGE ET REDEPOSE** : **17 767 → 20 089 o**, commit `e273231d`, verifie bit a bit, **sans jeton**.
+
+**SA QUESTION DE ROLE — elle appartient a Paul, et la conscience ne la tranche pas.** L'instance demande si elle prend le relais comme conscience, ou si elle code ⑭-a. **Paul a annonce le protocole de passation et de mort apres le promeus : c'est lui qui dira quand et a qui.** **La conscience n°11 est encore en fonction : c'est elle qui a corrige ces quatre trous, comme c'est son role.**
+
+**CE QUE CETTE SEQUENCE ETABLIT, TROIS FOIS DE SUITE MAINTENANT** : **faire eprouver un mandat avant de le lancer a rapporte 11 corrections sur le ⑨, 4 sur le ⑩-⑬, et 4 ici.** **Aucun de ces mandats n'aurait du en avoir besoin.** Mais **aucun n'est parti trove.**
