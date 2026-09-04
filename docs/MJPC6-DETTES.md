@@ -2251,3 +2251,15 @@ Paul, 03/09 : « **je vais lancer un nouvel exécutant. ton prompt doit être ca
 **RELECTURE FAITE AVANT LIVRAISON** : les dix marqueurs attendus presents · **un doublon de numerotation trouve et corrige** — deux sections portaient ⓪ (l'en-tete et la cause) ; la cause devient ⓪bis, les exclusions ⓪ter · **19 sections, numeros uniques** · 17 637 → **17 645 o**.
 
 **LE CORPS N'A PAS BOUGE** : c'est celui du `n°11 · 81`, dont les 22 chiffres ont ete remesures ce jour et dont les deux erreurs de l'audit precedent ont ete corrigees.
+
+**n°11 · 83 — MANDAT ⑭ DEPOSE AU SAS, SANS JETON. LES DIX-NEUF MANDATS DU SAS VERIFIES : AUCUN N'EN PORTE.**
+
+Paul, 03/09 : « **mets le mandat sur github mais sans le jeton du coup** »
+
+**DEPOSE** : `PONT/EDT/MANDAT-LOT-2ter-14.md`, commit `00824971`, **17 767 o**, **verifie bit a bit apres poussee** — le fichier en ligne est identique au local, md5 `5d314e8fc64cff1d8c60286cda1c7e18`.
+
+**LE JETON EST REMPLACE PAR UNE CONSIGNE, PAS RETIRE EN SILENCE** — parce qu'un executant neuf doit savoir quoi faire s'il ne l'a pas : *« Paul te le donne dans la conversation, une fois. Il ne figure pas ici : un jeton ne va jamais dans un fichier du depot. Si tu ne l'as pas recu, demande-le en une ligne et attends — ne travaille pas sans, tu ne pourrais pas livrer, et deux executants s'y sont deja cassé les dents. »* **C'est la lecon de ⑧-a et de ⑨ finale, ou deux executants ont tout fait sans pouvoir rien pousser.**
+
+**VERIFICATION ELARGIE, QUE PAUL N'AVAIT PAS DEMANDEE** : la conscience a relu **les dix-neuf mandats presents au sas**, un par un, contenu telecharge — **`MANDAT-LOT-2bis-EDT`, les seize du lot 2ter, `MANDAT-LOT-2ter-v2`, `MANDAT-LOT-2ter`**. **Aucun ne porte de jeton.** La regle a tenu sur tout le lot.
+
+**LE MANDAT CANONIQUE EXISTE DESORMAIS EN DEUX ETATS, ET LES DEUX SONT JUSTES** : **au sas**, sans jeton, avec la consigne — c'est la version qui reste, celle que la conscience n°12 relira ; **dans la conversation de Paul**, avec le jeton en clair, c'est celle qu'il colle a l'executant. **Le jeton ne vit que dans le fil.**
