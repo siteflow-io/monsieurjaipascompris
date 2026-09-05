@@ -2,6 +2,20 @@
 
 ## 03/09 — POINT DE RETOUR AVANT LA PROMOTION DU LOT 2ter
 
+
+## 05/09 — POINT DE RETOUR AVANT LA BORNE DES DATES DE L'ANNÉE
+
+| | |
+|---|---|
+| **état d'avant** | `index.html` **1 769 457 o**, md5 **`8837063de4466afb71622e89181ae44a`**, version **8.73.0-⑪** |
+| **commit d'avant** | **`c5e893bbc208`** — c'est celui à restaurer |
+| **état d'après** | `index.html` **1 774 212 o**, md5 **`a841534fce9661bad089af862900b9a9`**, version **8.73.0-⑭** |
+| **commit de promotion** | **`8a95be5ffbe7`**, blob `13ac6c351fa2` |
+
+**Ce que revenir en arrière ferait perdre** : la borne des dates de l'année — le prévu reposerait des séances **avant la rentrée déclarée de Paul**, ses heures perdues et sa photo du prévu recompteraient ces heures, et la liste des destinations les reproposerait.
+
+**Ce que revenir en arrière ne toucherait PAS** : les heures jouées et les décisions — **elles n'ont jamais été bornées**, c'est la règle du mandat.
+
 **Si le site en ligne pose problème, voici où revenir.**
 
 | | |
