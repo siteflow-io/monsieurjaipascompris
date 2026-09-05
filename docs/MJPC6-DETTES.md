@@ -2284,3 +2284,28 @@ Paul, 03/09 : « **mets le mandat sur github mais sans le jeton du coup** »
 **SA QUESTION DE ROLE — elle appartient a Paul, et la conscience ne la tranche pas.** L'instance demande si elle prend le relais comme conscience, ou si elle code ⑭-a. **Paul a annonce le protocole de passation et de mort apres le promeus : c'est lui qui dira quand et a qui.** **La conscience n°11 est encore en fonction : c'est elle qui a corrige ces quatre trous, comme c'est son role.**
 
 **CE QUE CETTE SEQUENCE ETABLIT, TROIS FOIS DE SUITE MAINTENANT** : **faire eprouver un mandat avant de le lancer a rapporte 11 corrections sur le ⑨, 4 sur le ⑩-⑬, et 4 ici.** **Aucun de ces mandats n'aurait du en avoir besoin.** Mais **aucun n'est parti trove.**
+
+**n°11 · 85 — AUDIT DE ⑭-a ET ⑭ (candidat `010f1cbe`, 8.73.0-⑭). VERDICT : ÇA VA. LE POINT GRAVE EST TRAITE JUSTE, ET L'EXECUTANT A FAIT MIEUX QUE LE MANDAT SUR UN POINT.**
+
+**Audit groupe** : ⑭-a livree le **04/09 a 06h18** (`2495b5de`), ⑭ le meme jour a **20h32** (`010f1cbe`) — **⑭-a n'a pas ete auditee**, Paul ne l'a pas transmise (les deux pannes Anthropic du 03/09 expliquent probablement le trou). **L'audit porte sur l'ecart complet.**
+
+**Candidat** : 1 774 212 o, md5 `a841534fce9661bad089af862900b9a9`.
+
+**LE POINT GRAVE — CELUI QUI AURAIT EFFACE LES HEURES JOUEES — EST TRAITE JUSTE.** Mesure des offsets dans `edtProjeter` : `horsTemps` **1323** · `horsMjpc` **1440** · `nonImportee` **1521** — **les trois gardes du haut sont INCHANGEES et coupent toujours** · `edtChercherTrace` (le reel) **2649** · `jouee` **2713** · **`horsAnnee` 3852 — APRES le reel.** **La correction du `n°11 · 84` a ete suivie a la lettre.**
+
+**LA FONCTION UNIQUE, LUE — ET ELLE LIT LES DATES BRUTES, comme le mandat corrige l'exigeait** :
+`var edtDeb=EDT_DATES&&EDT_DATES.debutAnnee, edtFin=EDT_DATES&&EDT_DATES.finAnnee;`
+`if(edtDeb&&String(iso)<edtDeb)return {cote:'avant',…}` · `if(edtFin&&String(iso)>edtFin)return {cote:'apres',…}`
+**Elle ne borne que du cote ou Paul a pose une date.** Le piege des replis (`-08-01`, `-07-31`) est evite.
+
+**IL A FAIT MIEUX QUE LE MANDAT SUR UN POINT** : le mandat demandait de borner **`edtCreneauxOu` ET `edtCreneauxLibresLe`**. Mesure de l'executant, verifiee par la conscience : **les deux passent par `edtRefusDepot`** — `if(edtRefusDepot(c,{iso:iso,creneau:k}))return;`. **Borner ce seul endroit borne les deux listes.** **Quatre appelants au total** — `edtProjeter`, `edtPeindreAnnee`, `edtHeuresDeLEvenement`, `edtRefusDepot` — **au lieu de six.**
+
+**NON-REGRESSION** : `edt*` **230 declarations / 230 noms, aucun doublon**, **une** ajoutee et nommee (`edtHorsAnnee`), **aucune disparue** · `secu*` **29** · `published` **97** · `edt-fige` **9** · moteur **`2ba70f9e…`** · **correctif du mode test `668cda2757a5` intact** · `EDT_CATEGORIES` **248** · `EDT_MOTIFS` **404** · **node --check VERT** · garde **VERTE**.
+
+**SES CHIFFRES, LUS** : heures perdues **13 fiches / 21 heures → 12 / 20** — la fiche de l'evenement d'avant la rentree a disparu · liste des destinations depuis une case du 28 aout : **957 creneaux → 0** · photo du prevu : **18 cases avant et apres — rien ne disparait — mais 3 seances prevues → 1, et 6 cases enregistrees « hors annee »** · refus du depot, par un vrai glisser-deposer : **« Dépôt refusé : ce jour est après ton dernier jour du mercredi 9 septembre. »**
+
+**REGARDE PAR LA CONSCIENCE — `a08`, le pendant inverse** : semaine du 7 septembre, dernier jour pose au **mercredi 9**. **Lundi 7 et mardi 8 portent leurs seances** (« 3E Charles de Gaulle · 3 activités · 1 reportée », « Étude de texte accompagnée : L'Albatros · heure 1/3 »), **mercredi 9 aussi** (heure 2/3) — **et jeudi 10 et vendredi 11 portent des cases GRISEES disant « après ton dernier jour »**, sans seance. **Les cases restent. C'est exactement ce que Paul avait tranche.**
+
+**ET UNE PREUVE QU'IL A REUSSI SANS FORCER** : le mandat l'autorisait a forcer une `finAnnee` passee dans son banc. **Il ne l'a pas fait** — il a pose le dernier jour au **9 septembre**, a un clic de la semaine courante, **et la semaine porte les deux cotes a la fois**. Plus fort que ce qui etait demande.
+
+**SES DEUX DECLARATIONS D'HONNETETE** : ⑴ il a **pose une donnee** pour rendre le §①.2 mesurable — le calendrier reel **ne porte aucun evenement de classe avant la rentree** — et il le declare ; ⑵ **« APPEL DE FONCTION : DECLARE »** pour l'audit adverse : l'ecran refuse une fin anterieure au debut, donc ces cas **ne sont pas atteignables au clic** et **ne sont pas prouves au sens du mandat**. **Il applique la regle gravee au `n°11 · 52`.**
