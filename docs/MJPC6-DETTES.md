@@ -2326,3 +2326,22 @@ Paul, 05/09 : « **promeus** » — ordre explicite, execute.
 **PROTOCOLE D'APRES-PROMOTION, JOUE EN ENTIER** : ✔ verification bit a bit · ✔ **journal** (`docs/MJPC6-journal.md`, commit `4244f5b2`, 240 875 o) — l'entree porte le constat de Paul, la cause mesuree, sa regle dans ses mots, **le depannage ecarte et pourquoi**, le risque evite et **le fait qu'un audit avant lancement l'a rattrape** · ✔ **point de retour** (`docs/MJPC6-restauration.md`, commit `beb50c22`) — avec ce que revenir ferait perdre **et ce que ca ne toucherait pas** : *« les heures jouees et les decisions n'ont jamais ete bornees »* · ✔ **index des fonctions regenere** (`commit 9ba33f80`) — il porte desormais une section sur `edtHorsAnnee` et **la regle du placement : elle se pose APRES la recherche de trace**.
 
 **LE LOT 2ter COMPTE MAINTENANT QUATORZE LIVRAISONS, TOUTES AUDITEES, DEUX PROMOTIONS.**
+
+**n°11 · 87 — LES CAPTURES DE PAUL APRES LA PROMOTION ⑭ : LE SITE FAIT CE QU'ON LUI A DEMANDE. CE QUI MANQUE, C'EST L'APPARIEMENT.**
+
+Paul, 05/09, deux captures de son site reel : semaine du **24-28 aout** et semaine du **31/8-4/9**. « **j'ai ça.** »
+
+**CE QUE LA CONSCIENCE A VU SUR LES DEUX IMAGES** : semaine du 24/8 — les cases du lundi au mercredi disent **« d'été (avant la rentrée) »** (la nature `horsTemps`, les vacances jusqu'au 26/08), **et jeudi 27 et vendredi 28 portent des classes** marquees **« classe non encore importee »**. Semaine du 31/8 — **toutes les cases** portent des classes marquees **« classe non encore importee »**, et le pied de page dit **« aucune classe appariée »**.
+
+**MESURE AU HUB REEL, faite avant de conclure :**
+- **`/site/edt/grille` : 30 creneaux, ZERO porte `classeMjpc`.** **Aucun appariement.**
+- **`/site/classes` : `null`.** Ses classes ne sont pas la — elles sont a **`/classes`** : **3E Charles de Gaulle (29 eleves), 4E BANKSY (29), 4E PYTHAGORE (28), 5e HERGÉ (31)**, plus des classes de test.
+- **Les noms ne coincident pas** : la grille de l'etablissement dit **« 3 DYLAN Bob », « 3 FRANKLIN Aretha », « 4 HUGO », « 4 TURING »** ; le site connait **« 3E Charles de Gaulle », « 4E BANKSY », « 4E PYTHAGORE »**. **Ce sont deux nomenclatures differentes — c'est exactement ce que l'appariement sert a relier**, et c'est pour ca que le lot ⑤/⑥ a construit `edtApparierNom`.
+
+**LE SITE FAIT DONC EXACTEMENT CE QU'ON LUI A DEMANDE.** La garde **`nonImportee`** est **en tete** et **coupe la suite** (offset 1521) ; **`horsAnnee` est en bas** (3852), apres le reel. **Le mot le plus precis gagne — et « je ne connais pas cette classe » est plus precis que « c'est avant ta rentree ».** C'est l'ordre que le mandat ⑭ §③ prescrivait, et **la conscience a fait poser cet ordre elle-meme**.
+
+**MAIS LE RESULTAT N'EST PAS CE QUE PAUL ATTEND, ET C'EST LA CONSEQUENCE QUE PERSONNE N'AVAIT DITE** : **tant qu'aucune classe n'est appariee, la borne des dates ne se VOIT nulle part** — elle est masquee partout par « classe non encore importee ». **Paul a promu un correctif dont il ne peut pas voir l'effet.**
+
+**CE QUI MANQUE N'EST PAS DANS LE CODE : c'est un geste de Paul.** Apparier ses quatre classes — relier « 3 DYLAN Bob » a l'une des siennes, « 4 HUGO » a une autre. Le mecanisme existe (`edtApparierNom`, promu au lot ⑤/⑥) et **la conscience ne l'a jamais vu joue par Paul**.
+
+**A VERIFIER AVANT TOUTE CONCLUSION SUPPLEMENTAIRE — la conscience ne tranche pas** : les captures montrent aussi que **les seances n'apparaissent nulle part**, ce qui est coherent (sans appariement, pas de prevu). **Une fois les classes appariees, il faudra regarder si la borne se voit.** **C'est un test de Paul, pas une mesure de la conscience.**
