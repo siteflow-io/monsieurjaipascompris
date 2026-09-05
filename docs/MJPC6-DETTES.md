@@ -2309,3 +2309,20 @@ Paul, 03/09 : « **mets le mandat sur github mais sans le jeton du coup** »
 **ET UNE PREUVE QU'IL A REUSSI SANS FORCER** : le mandat l'autorisait a forcer une `finAnnee` passee dans son banc. **Il ne l'a pas fait** — il a pose le dernier jour au **9 septembre**, a un clic de la semaine courante, **et la semaine porte les deux cotes a la fois**. Plus fort que ce qui etait demande.
 
 **SES DEUX DECLARATIONS D'HONNETETE** : ⑴ il a **pose une donnee** pour rendre le §①.2 mesurable — le calendrier reel **ne porte aucun evenement de classe avant la rentree** — et il le declare ; ⑵ **« APPEL DE FONCTION : DECLARE »** pour l'audit adverse : l'ecran refuse une fin anterieure au debut, donc ces cas **ne sont pas atteignables au clic** et **ne sont pas prouves au sens du mandat**. **Il applique la regle gravee au `n°11 · 52`.**
+
+**n°11 · 86 — PROMOTION ⑭ FAITE ET VERIFIEE. LA BORNE DES DATES DE L'ANNEE EST EN LIGNE.**
+
+Paul, 05/09 : « **promeus** » — ordre explicite, execute.
+
+**LA PROMOTION** : commit **`8a95be5ffbe7`**, 05/09 11h05 UTC, `index.html` **+70 / −6**, blob `13ac6c351fa2`.
+**VERIFICATION BIT A BIT, PAR LE BLOB DU COMMIT** — jamais par le CDN, qui retarde de plusieurs minutes : **1 774 212 o, md5 `a841534fce9661bad089af862900b9a9` — IDENTIQUE au candidat audite.**
+
+**LES DEUX GARDES ONT TOURNE AVANT L'ECRITURE** : le candidat local devait porter `a841534f…` ✔ · la production devait porter `8837063d…` ✔ (lue en brut, pas par l'API qui ne rend pas les fichiers de plus d'1 Mo — lecon de la promotion precedente, appliquee sans hesiter cette fois).
+
+**CE QUI CHANGE POUR PAUL, EN LIGNE** : ses seances ne commencent plus le 27 aout mais **le jour qu'il a declare**. Les cases d'avant restent, **grisees**, avec « avant ta rentree » — ses huit evenements d'etablissement de la pre-rentree y sont toujours. Ses heures perdues et sa photo du prevu ne comptent plus ces heures. La liste des destinations ne les propose plus. **Et ses heures deja jouees n'ont pas bouge.**
+
+**ETAT EN LIGNE** : `index.html` **1 774 212 o / `a841534fce9661bad089af862900b9a9` / 8.73.0-⑭**. **Point de retour : commit `c5e893bbc208` / `8837063de4466afb71622e89181ae44a` / 8.73.0-⑪.**
+
+**PROTOCOLE D'APRES-PROMOTION, JOUE EN ENTIER** : ✔ verification bit a bit · ✔ **journal** (`docs/MJPC6-journal.md`, commit `4244f5b2`, 240 875 o) — l'entree porte le constat de Paul, la cause mesuree, sa regle dans ses mots, **le depannage ecarte et pourquoi**, le risque evite et **le fait qu'un audit avant lancement l'a rattrape** · ✔ **point de retour** (`docs/MJPC6-restauration.md`, commit `beb50c22`) — avec ce que revenir ferait perdre **et ce que ca ne toucherait pas** : *« les heures jouees et les decisions n'ont jamais ete bornees »* · ✔ **index des fonctions regenere** (`commit 9ba33f80`) — il porte desormais une section sur `edtHorsAnnee` et **la regle du placement : elle se pose APRES la recherche de trace**.
+
+**LE LOT 2ter COMPTE MAINTENANT QUATORZE LIVRAISONS, TOUTES AUDITEES, DEUX PROMOTIONS.**
