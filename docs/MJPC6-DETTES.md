@@ -2345,3 +2345,23 @@ Paul, 05/09, deux captures de son site reel : semaine du **24-28 aout** et semai
 **CE QUI MANQUE N'EST PAS DANS LE CODE : c'est un geste de Paul.** Apparier ses quatre classes — relier « 3 DYLAN Bob » a l'une des siennes, « 4 HUGO » a une autre. Le mecanisme existe (`edtApparierNom`, promu au lot ⑤/⑥) et **la conscience ne l'a jamais vu joue par Paul**.
 
 **A VERIFIER AVANT TOUTE CONCLUSION SUPPLEMENTAIRE — la conscience ne tranche pas** : les captures montrent aussi que **les seances n'apparaissent nulle part**, ce qui est coherent (sans appariement, pas de prevu). **Une fois les classes appariees, il faudra regarder si la borne se voit.** **C'est un test de Paul, pas une mesure de la conscience.**
+
+**n°11 · 88 — « QUELLE CONSEQUENCE SUR LES DONNEES ? » — MESURE : L'APPARIEMENT ECRIT UN SEUL CHAMP, DANS UN SEUL NOEUD, ARCHIVE, ET NE TOUCHE RIEN D'AUTRE.**
+
+Paul, 05/09 : « **si je fais ça, quelle conséquence sur les données, le profil longitudinal etc ?** » — **question prudente, et la conscience a mesure au lieu de rassurer.**
+
+**① CE QUE L'APPARIEMENT ECRIT, LU LIGNE A LIGNE.** `edtApparierNom(nomGrille, nomHub)` :
+- **prend la photo de l'etat d'avant** — `var edtAvant=edtPhotoDe('grille')`, **avant toute mutation** (c'est le correctif de ⑤c-bis) ;
+- **pose UN SEUL champ** : `c.classeMjpc = nomHub` sur les cases dont `c.classe === nomGrille` — *« l'appariement vaut pour TOUTES les versions : une classe reste la meme quand l'emploi du temps change »* ;
+- **ecrit UNE SEULE FOIS**, par la porte unique : `edtEcrireArchive('grille', …, edtAvant, o, 'Grille — appariement des classes', …)`.
+**Un seul noeud touche : `/site/edt/grille`. L'etat d'avant part a la corbeille. Rien d'autre n'est ecrit.**
+
+**② LE PREVU N'EST STOCKE NULLE PART.** Mesure : `edtProjeter` contient **ZERO ecriture** — aucun `edtEcrire*`, aucun `mjpcPutJson`. Le code le dit en tete : *« LE PREVU — calcule a chaque affichage, ecrit nulle part »*. **Les seances qui vont apparaitre ne sont pas creees : elles sont calculees. Rien ne s'ajoute au hub.**
+
+**③ LE PROFIL LONGITUDINAL ET LES DONNEES D'ELEVES NE SONT PAS DANS L'EMPLOI DU TEMPS.** Mesure au hub : les classes et leurs eleves vivent a **`/classes`** (3E Charles de Gaulle 29, 4E BANKSY 29, 4E PYTHAGORE 28, 5e HERGE 31) ; les chapitres a **`/site/<niveau>/chapitres`**. **L'emploi du temps n'ecrit QUE sous `/site/edt/`** — c'est la troisieme question de la garde, verte a chaque livraison du lot. **Il ne peut pas les toucher.**
+
+**④ ET RIEN NE PEUT ETRE ECRASE, PARCE QU'IL N'Y A ENCORE RIEN.** Mesure : **`/site/3e/traces` : `null`** · **`/traces/3e` : `null`** · le chapitre publie en 3e porte **9 seances, ZERO trace**. **Aucune heure n'a encore ete jouee dans le site.** Donc **aucun passe a proteger aujourd'hui** — et la regle du lot ⑭ le protegera quand il existera : **le reel et les decisions ne sont jamais bornes.**
+
+**REPONSE, EN UNE LIGNE** : **le geste est reversible, archive, limite a un champ, et il ne cree aucune donnee.** Le seul effet visible sera que **ses seances apparaitront** — parce qu'elles sont calculees, pas stockees.
+
+**CE QUE LA CONSCIENCE NE PEUT PAS GARANTIR, ET QU'ELLE DIT** : elle n'a **jamais vu ce geste joue par Paul**, ni par un banc **par le clic**. `edtApparierNom` a ete lue, son archivage a ete corrige en ⑤c-ter et prouve — **mais l'appariement lui-meme n'a jamais figure dans une preuve par le geste.** **C'est un trou du lot que personne n'avait releve.**
