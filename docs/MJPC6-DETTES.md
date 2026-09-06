@@ -2384,3 +2384,20 @@ Paul, 05/09 : « **j'avais dit que je voulais apparier mes classes uniquement ap
 **ET IL Y A UNE RAISON DE LE FAIRE QUAND MEME, QUE LA CONSCIENCE POSE SANS TRANCHER** : **l'appariement n'a jamais ete prouve par le geste** (`n°11 · 88`). **Paul est aujourd'hui le seul a pouvoir l'eprouver**, sur des classes martyres — **exactement ce a quoi les donnees martyres servent depuis le 25/08**. Le faire maintenant **sur les classes de l'an dernier, c'est le tester sans rien risquer** ; le decouvrir en octobre sur ses vraies classes serait pire.
 
 **LA CONSCIENCE NE TRANCHE PAS : c'est la decision de Paul, et elle est sienne depuis le 25/08.**
+
+**n°11 · 90 — PAUL PARLE D'IMPORTER UNE CLASSE ; CE QU'ON PROPOSAIT EST UN APPARIEMENT. LA CONSCIENCE CLARIFIE AVANT DE DONNER UNE MARCHE A SUIVRE.**
+
+Paul, 05/09 : « **donc j'importe une classe 26 27 ? donne moi la marche à suivre précise.** »
+
+**DEUX GESTES DIFFERENTS, ET LA CONSCIENCE NE LAISSE PAS PAUL FAIRE CELUI QU'IL NE VEUT PAS :**
+- **APPARIER** — relier un nom de la grille de l'etablissement (« 3 DYLAN Bob ») a une classe **qui existe deja** dans son site (« 3E Charles de Gaulle »). **Aucune classe n'est creee, aucun eleve n'est touche.** C'est ce dont on parlait.
+- **IMPORTER** — creer une classe avec ses eleves : **c'est M17a**, que Paul a place « en tout dernier de tout dernier » le 25/08. **Ce n'est PAS ce qui est propose.**
+
+**L'ECRAN, LU DANS LE CODE — la conscience ne l'a jamais vu, elle le decrit d'apres ce qu'il produit** : panneau prof → **Emploi du temps** → un bloc **« 🔗 Classes de la grille et classes du site »**, precede de la phrase *« Tant qu'une classe de la grille n'est pas appariée, sa case s'affiche mais ne projette rien : elle dit "classe non encore importée". »* Puis **une ligne par nom de grille**, chacune avec **une liste deroulante** : `— non encore importée —` puis les classes du site.
+
+**MESURE — CE QUE LE MENU PROPOSE** : `edtClassesDuHub` rend **toutes les classes non archivees**, triees. Aujourd'hui : **3E Charles de Gaulle, 4E BANKSY, 4E PYTHAGORE, 5e HERGÉ, 6e_saint_michel, CLASSE TEST, _TEST, _test_pilotage_debat_s3** — **les martyres y sont aussi.**
+**Et `edtNomsDeGrille`** rend les noms de la grille **en excluant `mjpc===false`** — donc **les quatre « X Français X. » et « Concertation » n'apparaissent pas**. Restent **quatre lignes** : **3 DYLAN Bob · 3 FRANKLIN Aretha · 4 HUGO · 4 TURING**.
+
+**LE GESTE EST UN SEUL CHANGEMENT DE MENU DEROULANT**, et il ecrit aussitot : `onchange="edtApparierNom(nom, this.value)"`. **Pas de bouton de confirmation.** La conscience le dit a Paul : **le choix s'applique des qu'il est fait** — mais l'etat d'avant part a la corbeille (mesure au `n°11 · 88`).
+
+**CE QUE LA CONSCIENCE N'A PAS PU VERIFIER, ET QU'ELLE DECLARE** : **elle n'a jamais vu cet ecran**, ni sur une capture du parcours ⑫, ni joue par un banc. **La marche a suivre est deduite du code, pas d'une image.** Si l'ecran ne ressemble pas a ca, **c'est Paul qui le verra le premier.**
