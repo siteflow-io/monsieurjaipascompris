@@ -2365,3 +2365,22 @@ Paul, 05/09 : « **si je fais ça, quelle conséquence sur les données, le prof
 **REPONSE, EN UNE LIGNE** : **le geste est reversible, archive, limite a un champ, et il ne cree aucune donnee.** Le seul effet visible sera que **ses seances apparaitront** — parce qu'elles sont calculees, pas stockees.
 
 **CE QUE LA CONSCIENCE NE PEUT PAS GARANTIR, ET QU'ELLE DIT** : elle n'a **jamais vu ce geste joue par Paul**, ni par un banc **par le clic**. `edtApparierNom` a ete lue, son archivage a ete corrige en ⑤c-ter et prouve — **mais l'appariement lui-meme n'a jamais figure dans une preuve par le geste.** **C'est un trou du lot que personne n'avait releve.**
+
+**n°11 · 89 — « EST-CE GRAVE D'APPARIER MAINTENANT ? » — NON, MAIS IL FAUDRA REFAIRE. MESURE ET DECISION RETROUVEE.**
+
+Paul, 05/09 : « **j'avais dit que je voulais apparier mes classes uniquement après la purge des classes martyres. Est ce que c'est grave si je fais l'import maintenant ?** »
+
+**SA DECISION EST RETROUVEE, AU REGISTRE, LIGNE 5 — decision de cadre du 25/08** : *« les données au hub restent **MARTYRES** jusqu'à la fin du codage — **M17a (import des vraies classes) vient en tout dernier, c'est une sécurité** »*. Et point **12** de la file : *« **M17a** — en tout dernier de tout dernier : **purge des 2025-2026, import des quatre classes réelles** + la classe test, codes et liens. »*
+
+**CE QUE SES CLASSES SONT AUJOURD'HUI, MESURE AU HUB** : **3E Charles de Gaulle** (29 eleves, AUDEBERT Elise…), **4E BANKSY** (29), **4E PYTHAGORE** (28), **5e HERGÉ** (31), plus **6e_saint_michel** (0), **CLASSE TEST** (4), **_TEST** (30), **_test_pilotage_debat_s3** (6). **Le registre le dit ligne 242 : « 3E Charles de Gaulle = classe EXPERIMENTALE, eleves reels de 2025-2026 ».** **Ce sont les classes de l'an dernier. Les vraies 2026-2027 n'existent pas encore.**
+
+**CE QUE LA PURGE FERA, MESURE ET DEJA VERIFIE AU REGISTRE ligne 239** : *« la purge (`_purgePlan`) est pilotée par les contrats des manifestes au hub ; **`/site` est préservé intégralement** (les traces d'heures survivent) ; **`/classes` n'est dans aucun contrat** »*.
+
+**DONC, LA REPONSE EN TROIS POINTS :**
+1. **Rien ne casse, rien ne se perd.** `/site/edt/grille` est **sous `/site`, donc preserve integralement**. L'appariement pose **un nom** dans la grille ; la purge ne touche pas la grille.
+2. **Mais l'appariement pointera dans le vide.** Il relie un creneau a un **nom de classe**. Apres M17a, **les classes de 2025-2026 seront remplacees par celles de 2026-2027** — d'autres noms, d'autres eleves. **Les cases redeviendront « classe non encore importee ».**
+3. **Donc : ce n'est pas grave, c'est du travail a refaire.** Un geste par classe, **et la corbeille garde l'etat d'avant a chaque fois.**
+
+**ET IL Y A UNE RAISON DE LE FAIRE QUAND MEME, QUE LA CONSCIENCE POSE SANS TRANCHER** : **l'appariement n'a jamais ete prouve par le geste** (`n°11 · 88`). **Paul est aujourd'hui le seul a pouvoir l'eprouver**, sur des classes martyres — **exactement ce a quoi les donnees martyres servent depuis le 25/08**. Le faire maintenant **sur les classes de l'an dernier, c'est le tester sans rien risquer** ; le decouvrir en octobre sur ses vraies classes serait pire.
+
+**LA CONSCIENCE NE TRANCHE PAS : c'est la decision de Paul, et elle est sienne depuis le 25/08.**
