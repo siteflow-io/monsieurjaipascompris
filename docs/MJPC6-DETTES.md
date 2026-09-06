@@ -2401,3 +2401,19 @@ Paul, 05/09 : « **donc j'importe une classe 26 27 ? donne moi la marche à suiv
 **LE GESTE EST UN SEUL CHANGEMENT DE MENU DEROULANT**, et il ecrit aussitot : `onchange="edtApparierNom(nom, this.value)"`. **Pas de bouton de confirmation.** La conscience le dit a Paul : **le choix s'applique des qu'il est fait** — mais l'etat d'avant part a la corbeille (mesure au `n°11 · 88`).
 
 **CE QUE LA CONSCIENCE N'A PAS PU VERIFIER, ET QU'ELLE DECLARE** : **elle n'a jamais vu cet ecran**, ni sur une capture du parcours ⑫, ni joue par un banc. **La marche a suivre est deduite du code, pas d'une image.** Si l'ecran ne ressemble pas a ca, **c'est Paul qui le verra le premier.**
+
+**n°11 · 91 — « ET CE SERA DEFAISABLE ? » — OUI, DE DEUX FACONS, ET LA PREMIERE EST UN SEUL GESTE.**
+
+Paul, 05/09 : « **et ce sera défaisable comme geste ?** »
+
+**① LE MENU PORTE UNE OPTION VIDE — LU DANS LE CODE** :
+`'<option value="">— non encore importée —</option>'` **en premiere position, avant la liste des classes**. La choisir appelle `edtApparierNom(nom, '')`, et la fonction pose `c.classeMjpc = String(nomHub||'')` — **donc une chaine vide**. **La case redevient « classe non encore importee ».**
+**Defaire, c'est donc le meme geste que faire : rouvrir le menu, choisir la premiere ligne.** Aucun bouton special, aucune manipulation.
+
+**② ET L'ETAT D'AVANT EST A LA CORBEILLE — le filet, en plus du geste.** `edtApparierNom` prend `edtPhotoDe('grille')` **avant toute mutation**, puis passe par `edtEcrireArchive`, qui **archive d'abord et n'ecrit que si l'archivage a reussi** : `edtArchiver(motif, chemin, photo).then(…)`, et si ca echoue — *« Impossible de mettre l'etat d'avant a l'abri — rien n'a ete ecrit. Le site continue en lecture. »* **L'archive part dans la corbeille du site** (`secuEcrire(atCorbeilleCle('edt-grille'), {_meta:{motif, chemin, app:'site', ts}, data})`), **avec son chemin d'origine dedans**.
+
+**DONC : DEUX NIVEAUX.** Le geste inverse, immediat, par le menu. **Et**, si quelque chose tourne mal, **la grille entiere d'avant est recuperable a la corbeille**, avec l'adresse ou la remettre.
+
+**UNE PRECISION QUE LA CONSCIENCE AJOUTE SANS QU'ON LA DEMANDE** : le commentaire du code dit *« apparier toutes les cases qui portent le meme nom de grille, d'un seul geste »*. **Un choix de menu apparie TOUS les creneaux de ce nom** — pour « 3 DYLAN Bob », toutes ses heures de la semaine A et de la semaine B, sur toute l'annee. **Le defaire les defait toutes de meme.** C'est voulu : *« l'appariement vaut pour TOUTES les versions : une classe reste la meme quand l'emploi du temps change »*.
+
+**CE QUE LA CONSCIENCE NE PEUT TOUJOURS PAS GARANTIR, ET QU'ELLE REPETE** : **elle n'a jamais vu cet ecran ni ce geste joue.** Tout ce qui precede est lu dans le code. **Le premier a le voir sera Paul.**
