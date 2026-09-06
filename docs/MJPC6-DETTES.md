@@ -2417,3 +2417,27 @@ Paul, 05/09 : « **et ce sera défaisable comme geste ?** »
 **UNE PRECISION QUE LA CONSCIENCE AJOUTE SANS QU'ON LA DEMANDE** : le commentaire du code dit *« apparier toutes les cases qui portent le meme nom de grille, d'un seul geste »*. **Un choix de menu apparie TOUS les creneaux de ce nom** — pour « 3 DYLAN Bob », toutes ses heures de la semaine A et de la semaine B, sur toute l'annee. **Le defaire les defait toutes de meme.** C'est voulu : *« l'appariement vaut pour TOUTES les versions : une classe reste la meme quand l'emploi du temps change »*.
 
 **CE QUE LA CONSCIENCE NE PEUT TOUJOURS PAS GARANTIR, ET QU'ELLE REPETE** : **elle n'a jamais vu cet ecran ni ce geste joue.** Tout ce qui precede est lu dans le code. **Le premier a le voir sera Paul.**
+
+**n°11 · 92 — L'APPARIEMENT EST FAIT, ET LA CONSCIENCE L'A MESURE AU HUB REEL. LE MECANISME MARCHE — ET IL EST ENFIN PROUVE PAR LE GESTE, PAR PAUL.**
+
+Paul, 05/09 : « **c'est bon j'ai apparié banksy et pythagore** »
+
+**MESURE AU HUB — `/site/edt/grille`** : **30 creneaux, 12 apparies.**
+| nom de la grille | classe du site | creneaux |
+|---|---|---|
+| **4 HUGO** | **4E BANKSY** | **6** |
+| **4 TURING** | **4E PYTHAGORE** | **6** |
+**Restent non apparies : `3 DYLAN Bob`, `3 FRANKLIN Aretha`.**
+
+**LE COMPORTEMENT ANNONCE EST CONFIRME PAR LA MESURE** : la conscience avait dit au `n°11 · 91` — *« un seul choix apparie TOUS les creneaux de ce nom »*. **Six creneaux par nom, semaine A et semaine B confondues. C'est exactement ce qui s'est ecrit.**
+
+**LES DEUX ARCHIVES SONT LA, ET ELLES DISENT CE QU'ELLES CONTIENNENT.** La conscience les a d'abord cherchees au **05/09** — **zero entree** — puis trouvees au **06/09**, parce que `atCorbeilleCle` range par **date UTC** :
+- **`edt-grille_091125`**, 06/09 07:11:25 UTC, chemin `/site/edt/grille/2026-2027` — **30 creneaux, 0 apparie** : l'etat AVANT le premier geste ;
+- **`edt-grille_091127`**, deux secondes plus tard — **30 creneaux, 6 apparies : `4 HUGO → 4E BANKSY`** : l'etat entre les deux gestes.
+**Les deux photos s'enchainent exactement. Le filet a fonctionne, et son contenu le prouve — pas seulement son existence.**
+
+**CE QUE CET EVENEMENT VAUT POUR LE LOT** : la conscience declarait au `n°11 · 88` que **l'appariement n'avait jamais ete prouve par le geste** — ni par elle, ni par un banc, ni par une capture. **C'est desormais fait, par Paul, sur son site reel, sur des donnees martyres — exactement l'usage prevu le 25/08.** **Le trou est ferme par l'usage, pas par un banc.**
+
+**ET UN DETAIL DE RANGEMENT QUE LA CONSCIENCE N'AVAIT PAS VU** : la corbeille classe **par date UTC**, pas par date locale. **A 21h en France en ete, une archive part au lendemain.** Sans importance pour le fonctionnement, **mais Paul cherchera au mauvais jour s'il ne le sait pas.**
+
+**RESTE A VERIFIER PAR PAUL, ET LA CONSCIENCE NE PEUT PAS LE FAIRE** : **la borne des dates se voit-elle maintenant** sur les cases de 4 HUGO et 4 TURING avant le 3 septembre ? **C'etait la question de depart.**
