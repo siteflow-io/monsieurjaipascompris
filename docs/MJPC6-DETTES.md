@@ -2549,3 +2549,21 @@ Paul, 07/09 : « **donc fais les vérifications toi même. ton prompt doit perme
 **PASSATION v4 : 13 206 → 15 289 o.** Le §⑧ ne s'appelle plus « ce que je n'ai pas verifie » comme une liste d'excuses : **il distingue ce qui reste vraiment inconnu (quatre points) de ce qui EST mesure et date du 07/09 (huit points)**, avec cette consigne a la n°12 : *« ne les remesure pas sans raison ; remesure-les si tu t'apprêtes a ecrire un chiffre dans un mandat. »*
 
 **NON DEPOSEE. Elle attend le mot de Paul.**
+
+**n°11 · 99 — RELECTURE COMPLETE DE LA PASSATION. TOUT CONCORDE, SAUF UN ECART DE DATE QUI ETAIT PIEGEUX.**
+
+Paul, 07/09 : « **relis toi encore et vérifie tout.** »
+
+**TROIS PASSES DE RELECTURE, TOUTES LES MESURES REFAITES A CET INSTANT :**
+
+**PASSE ① — chaque chiffre du document, remesure contre le code et le hub** : production **1 774 212 o / `a841534f…` / 8.73.0-⑭**, **sas identique bit a bit** ✔ · **`ed*` 38, `ed2*` 43** ✔ · « diaporama » **14**, « diapo » **20** ✔ · **L3745 `item.kind`** et **L11162 `it.kind`**, aux lignes exactes ✔ · hub : **30 creneaux, 12 apparies**, `4 HUGO → 4E BANKSY` **6**, `4 TURING → 4E PYTHAGORE` **6** ✔ · `debutAnnee 2026-09-03`, `finAnnee 2027-06-26` ✔.
+
+**PASSE ② — les pieces exterieures** : les deux commits de promotion **existent, dates justes** (`8a95be5ffbe7` du 05/09, `c5e893bbc208` du 03/09) ✔ · **19 mandats au sas, le ⑬ present** ✔ · les chiffres du mandat ⑬ verifies **dans le mandat lui-meme** : « 100 cliquables, 6 bulles, 94 sans » ✔ · registre : **98 entrees, de 1 a 98, AUCUN TROU** ✔.
+
+**PASSE ③ — le document contre lui-meme** : **neuf sections, aucun numero en double** ✔ · aucune contradiction : il ne dit **nulle part** « quatorze livraisons », ni « absente de 4 apps », ni « je ne l'ai pas rejouee » ✔ · **le §⑧ ne contredit pas le §③** sur l'etancheite ✔.
+
+**LE SEUL ECART TROUVE, ET IL ETAIT PIEGEUX** : **le message du commit du 03/09 dit « 12 livraisons auditees »**, la passation dit **13**. **Les deux sont justes — a leur date** : ⑭ est venue le 05/09. **Mais une conscience n°12 qui lirait le commit croirait la passation fausse, ou l'inverse.** **Explique dans la passation**, avec la lecon : *« Verifie toujours la date d'un chiffre avant de le croire perime — ou de le recopier. »*
+
+**PASSATION v5 : 15 289 → 15 700 o. NON DEPOSEE.**
+
+**CE QUE LA RELECTURE N'A PAS TROUVE, ET QUI EST DIT** : aucune autre erreur. **Ce qui ne veut pas dire qu'il n'y en a pas** — trois audits successifs en ont trouve a chaque fois, et la conscience a ete la derniere a les voir.
