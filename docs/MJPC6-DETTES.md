@@ -2497,3 +2497,18 @@ Paul, 07/09, mot pour mot : « **je veux que les prompts passent obligatoirement
 **CE QUE CA CHANGE POUR LA SUITE, ET QUI EST PORTE A LA PASSATION** : **le depot n'est jamais un canal de transmission entre instances. Il est une archive de ce qui a deja ete lu.** L'ordre est : **ecrire → soumettre dans la conversation → attendre son mot → deposer.** Jamais l'inverse, jamais en parallele.
 
 **LA PASSATION EST DONC LIVREE EN ENTIER DANS LA CONVERSATION, TEXTE COMPLET**, pour que Paul la lise, la corrige ou la refuse. **Le fichier depose ne vaut rien tant qu'il ne l'a pas lu.**
+
+**n°11 · 96 — AUDIT DE LA PASSATION : LE FICHIER DEPOSE N'ETAIT PAS CELUI MONTRE A PAUL. VERIFIE, ET C'EST VRAI.**
+
+**LE POINT SERIEUX, CONFIRME PAR LA MESURE** : `TRANSCRIPTS/C11/PASSATION-C11-C12.md` au sas — **« prompts » : 0 occurrence** · **derniere entree citee : `n°11 · 93`**. **Le fichier depose au tour 94 n'a JAMAIS ete mis a jour** : les corrections du tour 95 — le paragraphe sur la regle des prompts, et la renumerotation — **ont ete livrees dans la conversation et jamais ecrites dans le fichier local**. **Une conscience n°12 qui aurait lu le depot aurait lu une version amputee de l'avertissement le plus important du document. C'est la faute denoncee, commise dans le texte qui la denonce.**
+
+**TROIS AUTRES ECARTS, VERIFIES :**
+- **La section F du registre est ecrite DEUX FOIS** — L546 « ## F · CONSCIENCE n°11 — 31/08 au 01/09/2026 » et L556 « … · LOT 2ter, livraisons ① à ⑤ ». **Et les deux datent du 01/09 alors que la n°11 a travaille jusqu'au 07/09.**
+- **`CLAUDE.md` est plus perime que la passation ne le disait** : ligne 7 « **Five self-contained HTML files** » (il y en a **14** a la racine) **et ligne 25 : `project dictee-5e-ch4`** — **l'ancien Firebase**, alors que tout est sur `mjpc-hub`. **Un executant neuf partirait sur le mauvais serveur.**
+- **La citation du code : l'auditeur a MOITIE raison, et la conscience le mesure.** Il annoncait que `item.kind` etait faux et que le code disait `it.kind`. **Les DEUX existent** : **L3745 dans `openItem` : `if(item.kind==='diaporama')return;`** · **L11162 dans `edOuvrirItem` : `if(it.kind==='diaporama')return;`**. **La citation de la passation n'etait pas fausse — elle etait incomplete** : elle attribuait a `edOuvrirItem` la ligne de `openItem`. **Le refus est pose a DEUX endroits, et c'est plus utile a savoir que la correction d'une variable.**
+
+**CE QUE L'AUDIT DECLARE NE PAS AVOIR PU VERIFIER, ET QUI ENTRE DANS LA PASSATION** : que le lot soit « eprouve en conditions reelles » (c'est le temoignage de Paul, pas une mesure) · l'etancheite dans les deux sens (un seul sens teste) · les dettes hors lot (jamais remesurees) · si `edOuvrirItem` est bien le defaut de Paul. **Une section ⑧ neuve porte desormais ces quatre reserves, pour que la n°12 ne les prenne pas pour des mesures.**
+
+**PASSATION CORRIGEE : 10 291 → 12 549 o.** Les deux lignes du diaporama avec leurs numeros · le paragraphe sur les prompts **et** l'aveu que le depot lui-meme etait faux · `CLAUDE.md` avec son ancien Firebase nomme · la numerotation a `n°11 · 96` · la section ⑧.
+
+**ELLE N'EST PAS DEPOSEE. Elle est soumise a Paul dans la conversation, et la conscience attend son mot** — c'est la regle qu'il a gravee au tour precedent, et **c'est justement en ne l'appliquant pas qu'elle a produit cette faute.**
