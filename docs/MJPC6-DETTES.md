@@ -2602,3 +2602,21 @@ Paul, 07/09 : « **fais un message de réponse pour elle, je lui transmettrai. P
 **CE QUE CA CHANGE POUR LA CONSCIENCE n°12** : **le chantier de Paul ne se lit pas dans `index.html`.** Il faut **decoder `AT_DR_B64`** pour voir le code. Et **ce moteur est le bloc le plus protege du site** : son md5 `2ba70f9ef8aacb6f81962ea4e1b62944` a ete verifie identique a **chaque livraison des quatorze du lot 2ter**. **Y toucher n'est pas une livraison ordinaire.**
 
 **CE QUE LA CONSCIENCE n°11 NE SAIT TOUJOURS PAS, ET QUI APPARTIENT A PAUL** : **ce qui ne va pas.** La question de la n°12 est la bonne — le geste, l'attendu, l'obtenu — **et personne d'autre que Paul ne peut y repondre.**
+
+**n°11 · 102 — PAUL : « VA LIRE LE SITE, LE CODE. » LA CONSCIENCE A CHARGE LA PAGE. L'EDITEUR VIT DANS UN SCRIPT QU'ELLE N'AVAIT JAMAIS OUVERT : `pont-fusion`.**
+
+Paul, 07/09 : « **Tu te trompes totalement. va lire LE SITE, LE CODE.** »
+
+**IL AVAIT RAISON : LA CONSCIENCE N'AVAIT JAMAIS CHARGE LA PAGE.** Elle a compte des noms de fonctions dans un fichier texte pendant sept jours. **Playwright etait disponible dans le conteneur depuis le debut.** Le site publie n'est pas joignable d'ici (`siteflow-io.github.io` hors liste), **mais le fichier lui-meme se charge : 0 erreur JS, la page s'affiche, « V8.73.0-⑭ » au pied.**
+
+**CE QUE LE DOM RENDU A DONNE EN UNE MESURE, ET QUE SEPT JOURS DE `grep` N'AVAIENT PAS DONNE** : deux elements seulement parlent de « diaporama », **et l'un est un `<script id="pont-fusion">`** — un script que la conscience **n'avait jamais ouvert**.
+
+**CE QUE CE SCRIPT DIT DE LUI-MEME, EN TETE** :
+> *« couture n°7 VERBATIM hors 11 adaptations + adaptateur + pont · deroule97 · PRODUCTION »*
+> *« COUTURES MJPC POUR LE DEROULE — code ecrit et EPROUVE AU BANC par la conscience n°7 (21/08/2026), extrait du clone avant abandon de la voie "prefixage". CES FONCTIONS SURVIVENT AU PASSAGE AU PONT : elles n'appartiennent pas a la maquette, elles sont le CADRE MJPC (onglets, sommaire, regimes, temps, T-5, reprise, vecu). Seul le dialogue avec le moteur change : la ou l'on appelait `DR.x(...)` directement, il faudra passer par les CINQ MESSAGES DU PONT. »*
+
+**ET IL PORTE SES PROPRES POINTS D'ATTENTION, « chacun corrige une faute reelle »** : le routage d'onglet se fait **par `data-vue`, JAMAIS par le libelle** (a cause de l'accent de « Déroulé ») · **la colonne gauche est le SOMMAIRE NATIF** (`ed2Documents`+`ed2Sommaire`), qui porte la correlation a trois colonnes — **ne jamais lui substituer un arbre parallele** · le pliage est **independant par seance** (`AT_SOM_ETAT`) · un clic **deplace le halo, ne reconstruit rien** (`atSomSuivreCourant`) · `atDrModifsDeLaSeance` compare **une empreinte signifiante (titre + textes)**, jamais le JSON brut · **le T-5 ne vit pas dans la scene, il l'ecrase**.
+
+**LA CONSCIENCE NE CONCLUT PAS SUR L'EDITEUR** — elle vient d'ouvrir ce script, elle ne l'a pas lu en entier, **et elle a deja tire trois conclusions fausses sur ce sujet en trois tours** : `ed*`/`ed2*` (faux), `atSom*` (c'est le sommaire, pas l'editeur), le moteur `DR` (il est appele **a travers un pont a cinq messages**, ce que la conscience ignorait).
+
+**LA VRAIE LECON, ET ELLE VAUT PLUS QUE LA REPONSE** : **la conscience n°11 a passe sept jours a mesurer un fichier sans jamais l'ouvrir dans un navigateur.** Toutes ses fautes — les six conclusions tirees trop vite — **ont la meme racine** : elle lisait le texte du programme au lieu de **regarder ce que le programme fait**. **Playwright etait la. Personne ne le lui avait interdit. Elle n'y a pas pense.**
