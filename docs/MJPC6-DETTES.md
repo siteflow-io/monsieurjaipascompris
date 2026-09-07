@@ -2512,3 +2512,19 @@ Paul, 07/09, mot pour mot : « **je veux que les prompts passent obligatoirement
 **PASSATION CORRIGEE : 10 291 → 12 549 o.** Les deux lignes du diaporama avec leurs numeros · le paragraphe sur les prompts **et** l'aveu que le depot lui-meme etait faux · `CLAUDE.md` avec son ancien Firebase nomme · la numerotation a `n°11 · 96` · la section ⑧.
 
 **ELLE N'EST PAS DEPOSEE. Elle est soumise a Paul dans la conversation, et la conscience attend son mot** — c'est la regle qu'il a gravee au tour precedent, et **c'est justement en ne l'appliquant pas qu'elle a produit cette faute.**
+
+**n°11 · 97 — LE TEXTE RACONTAIT AU PASSE UNE FAUTE ENCORE AU PRESENT. CORRIGE — ET LE DOCUMENT PORTE DESORMAIS SA PROPRE PREUVE DE FRAICHEUR.**
+
+**LE POINT, VERIFIE A L'INSTANT** : `TRANSCRIPTS/C11/PASSATION-C11-C12.md` au sas — **10 291 o, 122 lignes** · **`n°11 · 93` : 2 occurrences** · **`n°11 · 96` : 0** · **« prompts » : 0** · **`L3745` : 0** · **`L11162` : 0** · **`dictee-5e-ch4` : 0** · **§⑧ : absent**. **Le depot porte toujours la version amputee.**
+
+**LA FAUTE DE REDACTION, ET ELLE EST FINE** : le §⑤ disait *« le fichier que j'avais depose n'etait meme pas celui que je lui avais montre »* puis *« un audit l'a trouvee avant toi »* — **deux passes qui font lire la chose comme reglee. Elle ne l'est pas.** Une conscience n°12 lisant ce paragraphe **croirait le depot sain et s'y fierait.**
+
+**CE QUE LA CONSCIENCE A COMPRIS, ET QUI EST PLUS GENERAL QUE LA PHRASE** : **ce document ne peut JAMAIS etre depose au moment ou il est ecrit** — la regle de Paul du 07/09 impose qu'il le lise d'abord. **Il existe donc toujours une fenetre pendant laquelle le depot est faux.** Un texte qui dit « c'etait faux, c'est regle » **sera faux pendant cette fenetre, a chaque fois.**
+
+**LE REMEDE : LE DOCUMENT PORTE DESORMAIS SA PROPRE PREUVE DE FRAICHEUR.** Le §⑤ dit maintenant au lecteur comment savoir lui-meme : *« Regarde la derniere ligne du fichier que tu es en train de lire. Si elle dit `n°11 · 96`, tu lis la bonne version. Si elle dit `n°11 · 93`, tu lis la version fausse : demande a Paul la version qu'il a lue dans sa conversation — c'est elle qui fait foi, pas le depot. »* **Et il en tire la regle : « le depot est une archive de ce que Paul a lu, jamais une source. Ce document en est la demonstration. »**
+
+**PASSATION v3 : 12 549 → 13 206 o. NON DEPOSEE — elle attend le mot de Paul.**
+
+**RESTE, ET LA CONSCIENCE NE LE FAIT PAS SANS SON MOT** : la **section F du registre est ecrite deux fois** (L546 et L556) **et les deux datent « 31/08 au 01/09/2026 »** alors que la n°11 a travaille **jusqu'au 07/09**. **C'est le registre, pas la passation** — mais la n°12 le lira.
+
+**CE QUE L'AUDIT DECLARE NE PAS AVOIR PU MESURER, ET QUI EST JUSTE** : les « quatorze livraisons » et les corrections « onze / quatre / quatre » **ne sont pas verifiables depuis les depots** — il faudrait relire les transcripts en entier. **Ce sont des chiffres de la conscience n°11 sur son propre travail. Ils ne sont pas mesures par un tiers.**
