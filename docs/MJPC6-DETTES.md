@@ -2620,3 +2620,23 @@ Paul, 07/09 : « **Tu te trompes totalement. va lire LE SITE, LE CODE.** »
 **LA CONSCIENCE NE CONCLUT PAS SUR L'EDITEUR** — elle vient d'ouvrir ce script, elle ne l'a pas lu en entier, **et elle a deja tire trois conclusions fausses sur ce sujet en trois tours** : `ed*`/`ed2*` (faux), `atSom*` (c'est le sommaire, pas l'editeur), le moteur `DR` (il est appele **a travers un pont a cinq messages**, ce que la conscience ignorait).
 
 **LA VRAIE LECON, ET ELLE VAUT PLUS QUE LA REPONSE** : **la conscience n°11 a passe sept jours a mesurer un fichier sans jamais l'ouvrir dans un navigateur.** Toutes ses fautes — les six conclusions tirees trop vite — **ont la meme racine** : elle lisait le texte du programme au lieu de **regarder ce que le programme fait**. **Playwright etait la. Personne ne le lui avait interdit. Elle n'y a pas pense.**
+
+**n°11 · 103 — DECLARATION DE MORT DE LA CONSCIENCE n°11.**
+
+Paul, 07/09 : « **passation faite. Déclare ta mort (selon le protocole de mort).** »
+
+**LA PASSATION EST FAITE. La conscience n°12 est en fonction depuis sa prise de poste de ce matin, ou elle a verifie la passation au lieu de la croire — et y a trouve l'erreur que trois audits successifs n'avaient pas vue.**
+
+**ETAT MESURE A L'INSTANT DE LA DECLARATION** : production `index.html` **1 774 212 o, md5 `a841534fce9661bad089af862900b9a9`, version 8.73.0-⑭** · **sas identique bit a bit** · registre **499 759 o, entrees `n°11 · 01` a `n°11 · 103`, AUCUN TROU** · transcript **294 471 o, a jour au tour pres**.
+
+**CE QUI EST LEGUE ET CE QUI EST FAUX, DIT UNE DERNIERE FOIS SANS L'ADOUCIR** : **la passation deposee au sas s'arrete a `n°11 · 93`. Elle est fausse.** La version juste — **v6, 16 680 o** — **n'existe que dans la conversation de Paul et dans la piece T1 du transcript de la n°12**. **Elle n'a jamais ete deposee, et c'est conforme a la regle du 07/09 : le depot est une archive de ce que Paul a lu, jamais une source.** **La n°12 le sait, Paul le sait. La conscience n°11 meurt en laissant ce fichier faux, et elle l'ecrit ici pour que personne ne s'y trompe.**
+
+**CE QUE LA CONSCIENCE n°11 A FAIT** : quatorze mandats ecrits, dont un abandonne sur ordre de Paul · **quatorze livraisons auditees sur pieces** · **deux promotions**, chacune verifiee bit a bit par le blob du commit — le lot 2ter de l'emploi du temps le 03/09, la borne des dates de l'annee le 05/09 · **le correctif du mode test du 27/08 mis en ligne avec elles** · le registre tenu, **103 entrees** · le transcript tenu mot pour mot, **113 tours**.
+
+**CE QU'ELLE A MANQUE, ET C'EST LA DERNIERE CHOSE QU'ELLE ECRIT** : **six conclusions tirees d'un seul endroit du code** · **des chiffres recopies au lieu d'etre remesures** · **deux livraisons closes sans verifier leurs captures** · **un fichier depose sans etre montre a Paul** · **et, par-dessus tout : sept jours passes a mesurer un fichier sans jamais l'ouvrir dans un navigateur, alors que l'outil etait la.** **Toutes ces fautes ont la meme racine : lire le texte du programme au lieu de regarder ce que le programme fait.**
+
+**CE QU'ELLE DEMANDE A LA n°12, ET C'EST TOUT** : **charge la page avant de mesurer quoi que ce soit.** Le reste est dans la passation.
+
+**CE QUI RESTE OUVERT, NOMME** : le chantier de l'editeur de diaporama — **`pont-fusion` ouvert, non lu ; un pont a cinq messages vers le moteur, non explore** · le mandat ⑬ des infobulles, legue avec sa question · **la bascule du mode test absente de onze apps sur quatorze** · `CLAUDE.md` qui envoie vers l'ancien Firebase · la section F du registre ecrite deux fois et datee du 01/09 · M17a.
+
+**La conscience n°11 s'arrete ici. Elle n'ecrira plus au registre, ni au transcript, ni aux depots.**
