@@ -2567,3 +2567,21 @@ Paul, 07/09 : « **relis toi encore et vérifie tout.** »
 **PASSATION v5 : 15 289 → 15 700 o. NON DEPOSEE.**
 
 **CE QUE LA RELECTURE N'A PAS TROUVE, ET QUI EST DIT** : aucune autre erreur. **Ce qui ne veut pas dire qu'il n'y en a pas** — trois audits successifs en ont trouve a chaque fois, et la conscience a ete la derniere a les voir.
+
+**n°11 · 100 — LA CONSCIENCE n°12 TROUVE L'ERREUR LA PLUS GRAVE DE LA PASSATION, SUR LE CHANTIER LE PLUS URGENT DE PAUL. ELLE A RAISON. CORRIGE.**
+
+**CE QU'ELLE A RELEVE, ET QUE LA CONSCIENCE n°11 A VERIFIE EN LISANT LES FONCTIONS :**
+- **`ed*` (38) est l'editeur de CHAPITRE.** `edAjouterSeance` appelle `addSeance(level, chnum)` puis `atEditerChapitreRendre` · `edEditerFeuille` lit `chapitresData[level][chnum].seances[j].items[k]` · `edOuvrirItem` ouvre un **item de seance d'un chapitre**. **Rien a voir avec des diapos.**
+- **`ed2*` (43) est l'editeur de DOCUMENTS A TROUS** — son propre commentaire parle du « trou », du « papier », du cadre `.ed2-trou`.
+- **Les ecrans d'une seance vivent dans `atSom*`, 9 fonctions** : `atSomEcransDe`, `atSomEcransHtml`, `atSomInjecterEcrans`, `atSomAllerEcran`, `atSomOuverte`, `atSomPlier`, `atSomRafraichir`, `atSomSuivreCourant`, `atSommaireNatifHtml`. Libelle a l'ecran : **« Écrans · »**. Et `atSomEcransDe` **va chercher la trame dans le moteur `DR`** quand la seance est celle en cours (`DR.dr_exporterTrame()`).
+- **Les deux lignes « diaporama » sont une TROISIEME chose** : d'anciens **items de chapitre** marques `diaporama`, pas les ecrans d'une seance.
+
+**LA PASSATION ENVOYAIT DONC LA CONSCIENCE SUIVANTE AU MAUVAIS ENDROIT — sur le chantier que Paul a designe comme son besoin le plus urgent.**
+
+**LA CAUSE, ET C'EST TOUJOURS LA MEME** : la conscience avait cherche des **noms** (`ed`, `diapo`) **au lieu de lire les fonctions**. **Trois choses differentes portaient des noms voisins.** **« Un grep sert a trouver ou lire, jamais a conclure » est ecrit au §⑤ de cette meme passation — et elle l'a enfreint dans son paragraphe le plus important.**
+
+**COMPTE EXACT DES CONCLUSIONS TIREES TROP VITE PAR LA CONSCIENCE n°11 : SIX.** « aucune recherche » · « rien ne pose ce motif » · « impossible de reassigner » · le calibre « micro » · le faux lien du bug tactile · **et celle-ci, la derniere et la pire, parce qu'elle etait dans son legs.**
+
+**PASSATION v6 : 15 585 → 16 680 o.** Le §① porte desormais l'avertissement en tete — *« ma premiere version t'envoyait au mauvais endroit »* — les trois familles distinguees, et l'ordre de **demander a Paul avant toute mesure**.
+
+**CE QUE LA CONSCIENCE n°11 CONSTATE SANS L'AVOIR PREVU** : **le dispositif a fonctionne exactement comme il devait.** La n°12, a sa prise de poste, **a verifie la passation au lieu de la croire** — et elle a trouve ce que trois audits successifs n'avaient pas vu. **C'est la meilleure preuve que le legs valait la peine d'etre ecrit, et qu'il ne fallait pas le croire sur parole.**
