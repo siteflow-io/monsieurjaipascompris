@@ -2441,3 +2441,30 @@ Paul, 05/09 : « **c'est bon j'ai apparié banksy et pythagore** »
 **ET UN DETAIL DE RANGEMENT QUE LA CONSCIENCE N'AVAIT PAS VU** : la corbeille classe **par date UTC**, pas par date locale. **A 21h en France en ete, une archive part au lendemain.** Sans importance pour le fonctionnement, **mais Paul cherchera au mauvais jour s'il ne le sait pas.**
 
 **RESTE A VERIFIER PAR PAUL, ET LA CONSCIENCE NE PEUT PAS LE FAIRE** : **la borne des dates se voit-elle maintenant** sur les cases de 4 HUGO et 4 TURING avant le 3 septembre ? **C'etait la question de depart.**
+
+**n°11 · 93 — LA BORNE SE VOIT. LA CONSCIENCE A CONFRONTE LA CAPTURE DE PAUL A SA GRILLE, CASE PAR CASE : DIX-HUIT SUR DIX-HUIT.**
+
+Paul, 07/09, une capture : la semaine du **31 aout au 4 septembre**, rentree declaree au **3 septembre**.
+
+**LA CONSCIENCE A CALCULE CE QUE L'ECRAN DEVAIT DIRE, depuis la grille du hub, puis l'a compare a l'image. Les dix-huit creneaux de la semaine A concordent :**
+
+| ce que la grille porte | ce qui devait s'afficher | ce que la capture montre |
+|---|---|---|
+| **lun 31/8 16:04 · 4 TURING → 4E PYTHAGORE** | avant ta rentree | **« avant ta rentrée »** ✔ |
+| **mar 1/9 13:00 · 4 HUGO → 4E BANKSY** | avant ta rentree | **« avant ta rentrée »** ✔ |
+| **mar 1/9 13:57 · 4 TURING → 4E PYTHAGORE** | avant ta rentree | **« avant ta rentrée »** ✔ |
+| **mer 2/9 08:00 · 4 HUGO → 4E BANKSY** | avant ta rentree | **« avant ta rentrée »** ✔ |
+| **mer 2/9 08:57 · 4 TURING → 4E PYTHAGORE** | avant ta rentree | **« avant ta rentrée »** ✔ |
+| lun 31/8 10:07 · X Français X. — 4 HUGO | hors MJPC | **« hors MJPC »** ✔ |
+| jeu 3/9 16:04 · Concertation | hors MJPC | **« hors MJPC »** ✔ |
+| **ven 4/9 08:00 · 4 TURING → 4E PYTHAGORE** | dans l'annee | **« 4E PYTHAGORE · aucune séance prête »** ✔ |
+| **ven 4/9 08:57 · 4 HUGO → 4E BANKSY** | dans l'annee | **« 4E BANKSY · aucune séance prête »** ✔ |
+| les 8 creneaux de 3 DYLAN Bob et 3 FRANKLIN Aretha | non appariees | **« classe non encore importée »** ✔ |
+
+**CE QUE CETTE CONCORDANCE PROUVE, ET C'ETAIT LA QUESTION DE DEPART :**
+1. **LA BORNE DE LA LIVRAISON ⑭ FONCTIONNE SUR LE SITE REEL DE PAUL.** Ses cases d'avant le 3 septembre disent « avant ta rentree », grisees. **Elles n'ont pas disparu** — c'est ce qu'il avait tranche.
+2. **L'ORDRE DES MOTS TIENT EXACTEMENT** comme le mandat ⑭ §③ le prescrivait : **hors MJPC** gagne · **classe non encore importee** gagne · **avant ta rentree** ne s'affiche **que** s'il n'y a rien d'autre a dire. **Les trois natures coexistent dans la meme image, chacune a sa place.**
+3. **L'APPARIEMENT A CHANGE CE QUE PAUL VOIT** : les memes cases disaient « classe non encore importee » le 05/09 ; **elles disent « avant ta rentree » aujourd'hui.** Le diagnostic du `n°11 · 87` etait juste — **ce n'etait pas la borne qui manquait, c'etait l'appariement.**
+4. **Le vendredi 4/9 — le premier jour d'annee de la semaine — porte bien ses deux classes appariees**, avec « aucune seance prete » : normal, **le chapitre de 3e est publie, pas ceux de 4e**.
+
+**LE LOT 2ter EST DESORMAIS EPROUVE EN CONDITIONS REELLES, PAR PAUL, SUR SON SITE** — l'injection, les dates de l'annee, l'appariement, la photo automatique, la borne. **Plus rien de ce lot ne repose seulement sur un banc.**
