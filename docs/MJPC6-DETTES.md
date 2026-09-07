@@ -2528,3 +2528,24 @@ Paul, 07/09, mot pour mot : « **je veux que les prompts passent obligatoirement
 **RESTE, ET LA CONSCIENCE NE LE FAIT PAS SANS SON MOT** : la **section F du registre est ecrite deux fois** (L546 et L556) **et les deux datent « 31/08 au 01/09/2026 »** alors que la n°11 a travaille **jusqu'au 07/09**. **C'est le registre, pas la passation** — mais la n°12 le lira.
 
 **CE QUE L'AUDIT DECLARE NE PAS AVOIR PU MESURER, ET QUI EST JUSTE** : les « quatorze livraisons » et les corrections « onze / quatre / quatre » **ne sont pas verifiables depuis les depots** — il faudrait relire les transcripts en entier. **Ce sont des chiffres de la conscience n°11 sur son propre travail. Ils ne sont pas mesures par un tiers.**
+
+**n°11 · 98 — TOUT CE QUI ETAIT « NON VERIFIE » A ETE MESURE. QUATRE CHIFFRES DE LA PASSATION ETAIENT FAUX, DONT UNE DETTE TROIS FOIS PLUS LOURDE QUE DECLAREE.**
+
+Paul, 07/09 : « **donc fais les vérifications toi même. ton prompt doit permettre à la conscience suivante d'avoir TOUTES les informations à jour pour ne pas se tromper.** »
+
+**① « QUATORZE LIVRAISONS » ETAIT FAUX. Compte aux rapports du sas** : **43 rapports**, couvrant **13 livraisons numerotees — ① a ⑫ et ⑭**. **Il n'y a pas de ⑬** : ce mandat a ete arrete par Paul. La conscience comptait de memoire.
+
+**② L'ETANCHEITE, REJOUEE PAR LA CONSCIENCE ELLE-MEME, DANS LES DEUX SENS, LE 07/09** : **jeton du sas → production : 403** · **jeton de production → sas : 403**. **Aucun des deux ne peut ecrire chez l'autre.** Elle n'etait consignee que depuis le 31/08 ; **elle est desormais mesuree, pas heritee.**
+
+**③ LES COMPTES « ONZE / QUATRE / QUATRE » SONT EXACTS, ET DESORMAIS SOURCES ENTREE PAR ENTREE** : mandat ⑨ — **sept points** (`n°11 · 49`) puis **une contradiction interne et trois chiffres faux** (`n°11 · 50`) = **onze** · prompt micro — **quatre defauts** (`n°11 · 79`) · mandat ⑭ — **quatre trous** (`n°11 · 84`). **La passation ne dit plus « onze » : elle dit d'ou vient le onze.**
+
+**④ LA DETTE LA PLUS LOURDE ETAIT TROIS FOIS SOUS-ESTIMEE.** Le registre disait *« bascule du mode test absente de 4 apps »*. **Mesure sur les 14 fichiers HTML de la production : elle est absente de ONZE.** Seules **`index.html`, `correction_dictee.html` et `evaluation-qcm.html`** la portent. **Sans elle, une app ecrit au vrai hub meme quand Paul croit etre en test.** **C'est la dette la plus lourde qui reste apres le lot 2ter, et personne ne le savait.**
+
+**⑤ LES 4 FICHIERS HORS SOCLE : CONFIRME, ET NOMMES** — `Console_ateliers_revisions.html`, `deploy-monitor.html`, `etude_dugain.html`, `redaction_dugain_v3.html` : ils ne connaissent pas `mjpc-hub`.
+**Et une bonne nouvelle mesuree au passage** : **AUCUN des 14 fichiers ne pointe vers l'ancien Firebase `dictee-5e-ch4`.** **Le probleme de `CLAUDE.md` est donc dans le DOCUMENT, pas dans le code** — la passation le disait deja, mais sans le savoir.
+
+**⑥ `usage`/`quandPas` : LA DETTE PARAIT PERIMEE.** Mesure dans `index.html` : **3 occurrences de chaque, aucune vide.** **La conscience ne conclut pas** — elle n'a pas cherche dans les 13 autres apps — **et l'ecrit ainsi dans la passation.**
+
+**PASSATION v4 : 13 206 → 15 289 o.** Le §⑧ ne s'appelle plus « ce que je n'ai pas verifie » comme une liste d'excuses : **il distingue ce qui reste vraiment inconnu (quatre points) de ce qui EST mesure et date du 07/09 (huit points)**, avec cette consigne a la n°12 : *« ne les remesure pas sans raison ; remesure-les si tu t'apprêtes a ecrire un chiffre dans un mandat. »*
+
+**NON DEPOSEE. Elle attend le mot de Paul.**
