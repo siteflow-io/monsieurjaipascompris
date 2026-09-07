@@ -2585,3 +2585,20 @@ Paul, 07/09 : « **relis toi encore et vérifie tout.** »
 **PASSATION v6 : 15 585 → 16 680 o.** Le §① porte desormais l'avertissement en tete — *« ma premiere version t'envoyait au mauvais endroit »* — les trois familles distinguees, et l'ordre de **demander a Paul avant toute mesure**.
 
 **CE QUE LA CONSCIENCE n°11 CONSTATE SANS L'AVOIR PREVU** : **le dispositif a fonctionne exactement comme il devait.** La n°12, a sa prise de poste, **a verifie la passation au lieu de la croire** — et elle a trouve ce que trois audits successifs n'avaient pas vu. **C'est la meilleure preuve que le legs valait la peine d'etre ecrit, et qu'il ne fallait pas le croire sur parole.**
+
+**n°11 · 101 — MESURE POUR LA CONSCIENCE n°12 : L'EDITEUR DE DIAPORAMA EST DANS LE MOTEUR `DR`, PAS DANS `index.html`. ET LE JOURNAL LE DISAIT DEPUIS LE 01/08.**
+
+Paul, 07/09 : « **fais un message de réponse pour elle, je lui transmettrai. Pour sa question, tu sais y répondre normalement. mesure.** »
+
+**LA CONSCIENCE EST ALLEE LIRE AVANT DE MESURER — ce qu'elle aurait du faire des le depart.** Le journal porte, au **01/08** : **« PROMOTION SITE-COURS-3a · site 8.13.0 — LES DIAPOSITIVES DEVIENNENT DU TEXTE »**, avec la phrase de cadrage : ***« une diapositive n'est pas une image, c'est du texte mis en page »***. **ONZE BLOCS generes**, l'IA ne choisit **jamais** la forme, **alternative textuelle obligatoire sur `image`**, **relecture BLOQUANTE** — bouton desactive tant que tout n'est pas relu, avec l'avertissement *« c'est toi qui reponds de ce qui sera publie »*. Rendu mesure a l'epoque : **390 px, onze blocs, zero debordement**.
+
+**ET LE JOURNAL PORTE AUSSI UN AVERTISSEMENT QUI VISE EXACTEMENT L'ERREUR D'AUJOURD'HUI** — entree du 05/08 : *« son premier diagnostic etait partiellement faux : elle annoncait le diaporama touche lui aussi. Non — **sa zone s'appelle `dp-coller`, son test cherchait `diapo-coller`**. Un test qui cherche le mauvais nom… »* **Une conscience precedente s'etait deja trompee de nom sur le diaporama. La n°11 vient de refaire la meme faute, en plus large.**
+
+**OU EST REELLEMENT L'EDITEUR — MESURE :**
+- **`dp*` dans `index.html` : ZERO fonction, ZERO classe `dp-`.** La zone `dp-coller` du journal **n'existe plus** dans le fichier d'aujourd'hui.
+- **`atSom*` (9 fonctions) n'est PAS l'editeur : c'est le SOMMAIRE**, l'arbre de navigation. `atSomEcransDe(seance)` **va chercher** les ecrans — elle ne les edite pas.
+- **L'editeur est DANS LE MOTEUR `DR`**, embarque en base64 dans `AT_DR_B64` : **229 960 caracteres decodes, 157 fonctions**, dont **`nouvelEcran`, `dessineEcran`, `ecranDuMoment`, `menuEcran`, `blocImg`, `idBloc`** — et **230 occurrences de « bloc »**. **`index.html` ne fait que l'appeler** : `DR.dr_exporterTrame()` dans `atSomEcransDe`, quand la seance affichee est celle en cours.
+
+**CE QUE CA CHANGE POUR LA CONSCIENCE n°12** : **le chantier de Paul ne se lit pas dans `index.html`.** Il faut **decoder `AT_DR_B64`** pour voir le code. Et **ce moteur est le bloc le plus protege du site** : son md5 `2ba70f9ef8aacb6f81962ea4e1b62944` a ete verifie identique a **chaque livraison des quatorze du lot 2ter**. **Y toucher n'est pas une livraison ordinaire.**
+
+**CE QUE LA CONSCIENCE n°11 NE SAIT TOUJOURS PAS, ET QUI APPARTIENT A PAUL** : **ce qui ne va pas.** La question de la n°12 est la bonne — le geste, l'attendu, l'obtenu — **et personne d'autre que Paul ne peut y repondre.**
