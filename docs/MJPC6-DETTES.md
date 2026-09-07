@@ -2468,3 +2468,18 @@ Paul, 07/09, une capture : la semaine du **31 aout au 4 septembre**, rentree dec
 4. **Le vendredi 4/9 — le premier jour d'annee de la semaine — porte bien ses deux classes appariees**, avec « aucune seance prete » : normal, **le chapitre de 3e est publie, pas ceux de 4e**.
 
 **LE LOT 2ter EST DESORMAIS EPROUVE EN CONDITIONS REELLES, PAR PAUL, SUR SON SITE** — l'injection, les dates de l'annee, l'appariement, la photo automatique, la borne. **Plus rien de ce lot ne repose seulement sur un banc.**
+
+**n°11 · 94 — PASSATION ECRITE ET DEPOSEE. LE CAP EST DONNE PAR PAUL.**
+
+Paul, 07/09 : « **ok pour la passation et la mort. la passation doit se faire maintenant sur la correction de l'éditeur de diaporama, c'est mon besoin le plus urgent, puis enfin sur le profil longitudinal.** »
+
+**LE CAP, DANS SES MOTS, PORTE EN TETE DE LA PASSATION** : **⑴ la correction de l'editeur de diaporama** — son besoin le plus urgent · **⑵ le profil longitudinal** — ensuite. **Le reste attend.**
+
+**CE QUE LA CONSCIENCE A MESURE POUR SITUER LA n°12, ET RIEN DE PLUS — elle n'a PAS cadre l'editeur** : il vit **dans `index.html`**, pas dans une app separee · les familles autour sont **`ed*` (38 fonctions)** et **`ed2*` (43)** · « diaporama » **14 occurrences**, « diapo » **20**.
+**Un indice trouve, et donne comme indice, pas comme diagnostic** : `edOuvrirItem` porte **`if(item.kind==='diaporama')return;`** avec le commentaire **`/* [LOT12] donnée historique : visible, muette */`**. **Un diaporama s'affiche mais ne s'ouvre pas.** **La conscience ne sait pas si c'est le defaut de Paul ou un choix ancien, et elle l'ecrit ainsi** : *« La premiere chose a faire n'est pas de mesurer : c'est de lui demander ce qui ne va pas, dans ses mots. »*
+
+**LA PASSATION PORTE SEPT SECTIONS** : ⓪ ce qu'est une conscience — **et en tete, la reprise de Paul du 03/09 sur la derive, mot pour mot** · ① le cap · ② l'etat mesure ce jour (production et sas identiques, `a841534f…`, 8.73.0-⑭ ; 12 creneaux apparies ; les dates posees) · ③ le dispositif — deux depots, jetons jamais dans un fichier, **la promotion est le geste de Paul**, registre par conscience, transcript mot pour mot, protocole d'apres-promotion · ④ **les cinq regles de preuve, avec ce qu'elles ont coute** · ⑤ **mes fautes, nommees une par une** — les cinq conclusions tirees d'un seul endroit du code, les chiffres recopies, les deux livraisons closes sans captures · ⑥ ce qui reste ouvert, **dont le mandat ⑬ legue avec sa question non tranchee** · ⑦ comment lui parler.
+
+**DEPOSEE** : `TRANSCRIPTS/C11/PASSATION-C11-C12.md`, **verifiee bit a bit, sans jeton**.
+
+**CE QUE LA CONSCIENCE A REFUSE DE FAIRE, ET QU'ELLE DIT** : **elle n'a pas ecrit de mandat sur l'editeur de diaporama.** Paul n'a pas dit ce qui ne va pas ; **cadrer sans sa parole serait exactement la derive qu'il a arretee le 03/09.** **La n°12 commencera par lui poser la question.**
