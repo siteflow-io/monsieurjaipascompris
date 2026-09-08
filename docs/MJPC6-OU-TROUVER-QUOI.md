@@ -103,3 +103,20 @@
 | **dette connue du moteur (8.70.0)** | au cran 5, en montant cran par cran, la découpe du mur peut différer d'un morceau du pilote (`zoom()` ne recolle qu'au dézoom) — aller directement au cran voulu l'évite ; LOT G | « s'il faut refaire le moteur, il faut » |
 
 **Ce qui n'existe toujours pas (mis à jour)** : le VIF au téléphone · le T-5 au téléphone · la version visible sur tableau et téléphone · la vue emploi du temps · le profil de classe (et le récit rangé dans la trace de l'heure) · le profil élève · le bloc bilan · l'absence saisie en classe · le temps réel (sondage 900 ms). Registre : `MJPC6-DETTES.md`.
+
+## AJOUTS DU 08/09/2026 (conscience n°12) — REFONTE DU DÉROULÉ : où sont les choses, rien n'est promu
+
+**Le chantier** : cadrage en cours, dans la conversation, tour par tour ; le transcript mot pour mot est au sas `TRANSCRIPTS/C12/TRANSCRIPT-C12.md`, ses pièces dans `TRANSCRIPTS/C12/pieces/` (préfixe `Tn-` = tour n).
+
+| je cherche… | c'est là |
+|---|---|
+| la passation C11 → C12 dans la version que Paul a lue | sas `TRANSCRIPTS/C12/pieces/T1-PASSATION-C11-C12-version-lue-par-Paul.md` (celle de `TRANSCRIPTS/C11/` est la version fausse, `n°11 · 93`) |
+| le bug de l'éditeur, vu par le geste | pièces `T3-edit.mjs`, `T3-edit-journal.txt`, captures `T3-e01-*`, `T3-e04-*` ; registre n°12 · 03 |
+| le lancement depuis l'emploi du temps qui ne montre pas le pilotage | pièces `T5-*` ; registre n°12 · 05 |
+| les maquettes | figées : `T7-*` (v1), `T8-*` (v2), `T9b-*` (v3) ; manipulables : `T10-*` (v4), `T14-*` (v5, garde), `T16-*` (v6, relecture), `T17-*` (v7, relecture en onglet), `T18-*` (v8, tient dans la fenêtre) — chaque manipulable a son gabarit (`*-template.html`), son générateur (`gen-*.py`, données du hub simulé `PONT/EDT/tests/hub/`) et son banc (`*.mjs`) |
+| l'inventaire complet du moteur et du pont (ce qui existe aujourd'hui) | pièces `T31-inventaire-moteur.txt` (157 fonctions, interface, raccourcis) et `T31-inventaire-pont.txt` (130 fonctions) |
+| les cadrages du 25/08 toujours valables (temps, intégration) | sas `DEROULE/CADRAGE-TEMPS.md`, `DEROULE/CADRAGE-INTEGRATION.md` |
+| les décisions de Paul et les dettes de ce chantier | registre `docs/MJPC6-DETTES.md`, section G (n°12 · 01 à 13) |
+| comment charger la page dans un navigateur sans rien écrire | les bancs `Tn-*.mjs` : Chromium du conteneur + Playwright, faux hub par `addInitScript`, `route` qui coupe tout ce qui n'est pas `file:` |
+
+**Ce qui n'existe pas — vérifié le 07-08/09** : aucune branche ni dossier du LOT G (le moteur `AT_DR_B64` est identique au 25/08, md5 `2ba70f9ef8aacb6f81962ea4e1b62944`) ; aucune heure jouée dans le hub réel (`deroule_joue` vide partout) ; aucune app d'entraînement perso des élèves ; aucun cockpit prof ; aucun document de cadrage de la base saine déposé (il s'écrit dans la conversation d'abord).
