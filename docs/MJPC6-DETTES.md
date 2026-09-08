@@ -2640,3 +2640,47 @@ Paul, 07/09 : « **passation faite. Déclare ta mort (selon le protocole de mort
 **CE QUI RESTE OUVERT, NOMME** : le chantier de l'editeur de diaporama — **`pont-fusion` ouvert, non lu ; un pont a cinq messages vers le moteur, non explore** · le mandat ⑬ des infobulles, legue avec sa question · **la bascule du mode test absente de onze apps sur quatorze** · `CLAUDE.md` qui envoie vers l'ancien Firebase · la section F du registre ecrite deux fois et datee du 01/09 · M17a.
 
 **La conscience n°11 s'arrete ici. Elle n'ecrira plus au registre, ni au transcript, ni aux depots.**
+
+## G · CONSCIENCE n°12 — depuis le 07/09/2026 · REFONTE DU DÉROULÉ SUR BASE SAINE (cadrage, pas de promotion)
+> Entrées numérotées **n°12 · 01** et suivantes, dans l'ordre où elles ont été écrites. Numérotation propre à cette conscience, comme la règle du 01/09 l'impose.
+> Le détail mot pour mot des échanges avec Paul est au sas : `TRANSCRIPTS/C12/TRANSCRIPT-C12.md` (pièces dans `TRANSCRIPTS/C12/pieces/`).
+> Aucune promotion depuis le 05/09 : la production est restée à **8.73.0-⑭** (`8a95be5ffbe7`, md5 `a841534fce9661bad089af862900b9a9`, 1 774 212 o), identique bit à bit au sas `PONT/EDT/index.html`.
+
+**n°12 · 01 — LA PASSATION AU SAS ÉTAIT LA VERSION FAUSSE ; LA VRAIE EST EN PIÈCE T1 DU TRANSCRIPT.**
+Mesuré le 07/09 : `TRANSCRIPTS/C11/PASSATION-C11-C12.md` se termine par `n°11 · 93`, sans le §⑧ ni les deux lignes du diaporama — c'est la version que la n°11 avait elle-même déclarée fausse. La version lue par Paul (`n°11 · 99`) est recopiée telle quelle en `TRANSCRIPTS/C12/pieces/T1-PASSATION-C11-C12-version-lue-par-Paul.md`. Le fichier du sas n'a pas été remplacé (pas d'ordre). Règle confirmée : le dépôt est une archive de ce que Paul a lu, jamais une source.
+
+**n°12 · 02 — ÉTAT VÉRIFIÉ AU DÉPART, SANS RIEN ÉCRIRE.**
+Étanchéité rejouée dans les deux sens par un PUT à sha faux (rien ne peut s'écrire) : sas → production 403, production → sas 403, chacun chez soi 409. Production et sas : le même `index.html` par le blob du commit. Le statut Anthropic est injoignable depuis l'environnement (403) : la conscience ne peut pas le surveiller, elle l'a dit.
+
+**n°12 · 03 — LE BUG DE L'ÉDITEUR DE DIAPORAMA, VU PAR LE GESTE, DANS LE CHROMIUM DU CONTENEUR.**
+La page chargée (faux hub des bancs du sas, réseau coupé, zéro écriture), parcours par clics jusqu'à la vue Déroulé. Clic dans l'étape 3 de l'écran 1, frappe d'une phrase : dès que l'écran est plein, le moteur coupe l'écran en deux par étapes entières (`scinde`), passe le professeur sur l'écran de suite (`degorge` → `i=i+1`) et remet le curseur sur `[data-p="0.et.2"]` — qui est maintenant l'étape 6. Les phrases suivantes s'écrivent dans l'étape 6. À la quatrième, nouvelle coupe, curseur perdu. Rien n'est effacé, tout est au mauvais endroit. Cause lue après l'avoir vue : `verifDeborde` (moteur L1601) suit le curseur par un repère de position dans l'écran, pas par identité d'étape ; la garde de scission du pont ([MICRO C3a-⑥], L15660) laisse passer le déplacement quand le professeur tape. Pièces : `T3-edit.mjs`, `T3-edit-journal.txt`, captures `T3-e01`, `T3-e04`.
+
+**n°12 · 04 — LE LOT G N'A JAMAIS ÉTÉ LANCÉ. LE MOTEUR EST INTACT DEPUIS LE 25/08.**
+Aucune branche au sas (`main` seule), aucun dossier, aucun mandat : seul le message de l'exécutant du LOT F (pièce T58 de la C10) le cadre. `AT_DR_B64` en production : md5 `2ba70f9ef8aacb6f81962ea4e1b62944`, identique au 25/08 ; les six enveloppes du pont sont en place. Décision de Paul (07-08/09) : le LOT G tombe — voir n°12 · 12.
+
+**n°12 · 05 — LANCER LE PILOTAGE DEPUIS L'EMPLOI DU TEMPS LANCE LE COURS MAIS NE LE MONTRE PAS.**
+Joué le 07/09 (mardi 15:07, 3 FRANKLIN → 3E Charles de Gaulle, heure figée 15:10) : « ▶ Ouvrir le pilotage et lancer » écrit au hub `deroule_joue`, `cours_actif`, `scene`, `heures/…` — le cours tourne — et l'écran reste sur le panneau prof, section Emploi du temps ; `#at-zone` porte le déroulé mais est invisible (`edtLancer` n'ouvre pas l'atelier) ; fermer le panneau ramène à l'accueil. Dette de la production. En plus, le voile « n fiches d'applications ne sont pas à jour » (`#fi-overlay`) recouvre l'écran EDT dès l'ouverture d'une case (dans le banc : faux hub sans fiches ; chez Paul : non mesuré). Pièces `T5-*`.
+
+**n°12 · 06 — LA RELECTURE EST CORRÉLÉE AU GESTE DU PROFESSEUR, PAS À CE QUE LA CLASSE A VU — LU DANS LE MOTEUR.**
+`devoile()` L1516 modifie `vues`/`rev` (un état, pas un historique) ; `replie()` L1529 rend l'écran précédent entier et `pas()` L1451 remet l'écran suivant à zéro (un aller-retour efface le dévoilement réel) ; `gel()` L1547 ne pose que `gele`, seul `envoie()` L1063 le regarde ; `W.rendre` → `atVecuEntrer` L14834 compte passages et minutes sur chaque écran traversé, gel compris. Confirmé par Paul : « c'est précisément la source des nombreux bugs du moteur actuel ». Fondement des règles de la base saine (journal du tableau, cumul, gardes).
+
+**n°12 · 07 — LE NOMBRE D'HEURES D'UNE SÉANCE EST UN QUOTIENT, PAS LA STRUCTURE DE PAUL.**
+`edtHeuresPour` L19635 : somme des durées / temps utile, arrondi au-dessus (110 / 50 → « heure 1 sur 3 ») alors que la séance est bâtie sur deux heures, frontière marquée par les rituels « Question-bilan » / « Où en sommes-nous ? » (diapos 8-9 des séances 1 à 3 de la trame test). La base saine porte la frontière d'heure dans la trame.
+
+**n°12 · 08 — LES QUATRE SORTS DU T-5 SONT NOTÉS, PAS SUIVIS.**
+`atT5Modale` propose reportée / donnée à la maison / annulée / laissée sans suite ; `atT5Choix` écrit dans la trace ; `_drTraceReprendre` L14818 ne relit les décisions que dans le même créneau ; « donnée à la maison » n'a aucun consommateur côté élève ; « laissée sans suite » est une perte acceptée. Principe posé par Paul (07/09) : « une activité prévue doit être utilisée, quel que soit son environnement d'utilisation ».
+
+**n°12 · 09 — EN MISE EN COMMUN, LA CLASSE NE VOIT PAS LA RÉPONSE PENDANT LA FRAPPE.**
+Moteur L652 : une réponse n'est rendue pour la classe que si son rang est sous `vues` ; `ligne()` L1442 ne fait monter `vues` qu'à Entrée ; et le bloc doit être dévoilé (`rev`). Deux gestes de trop, dits par Paul. Base saine : seule une réponse écrite dans une question paraît au tableau au fil de la frappe.
+
+**n°12 · 10 — TÉLESCOPAGE AU DÉPÔT : DEUX INSTANCES DE LA n°12 ONT RÉPONDU AU TOUR 9.**
+Une première instance a poussé à 11:33 UTC un transcript « tour 9 » et trois pièces (`T9-maquette-pilotage-ordi-v3.html`, `.png`, `-carnet.png`) ; la seconde (celle qui écrit ici) a remplacé le transcript à 11:37 et déposé ses pièces sous `T9b-`. Consigné au transcript. La réponse lue par Paul fait foi.
+
+**n°12 · 11 — MAQUETTES v1 À v8, ET LEURS BANCS.**
+v1 à v3 figées (HTML + PNG), v4 à v8 manipulables (données réelles du chapitre 3e test, fenêtre du tableau par `postMessage`, journal du tableau, relecture en onglet, deux gardes). Bug signalé par Paul sur la v7 (écran qui glisse, notes qui s'étirent) reproduit à sa taille d'écran : 422 défauts sur le banc large (cinq tailles, 95 diapos, 9 séances) ; cause : écran sans hauteur, colonnes sans `min-height:0`, `focus()` qui fait défiler ; v8 : 0 défaut sur les deux bancs. Pièces `T10-*`, `T14-*`, `T16-*`, `T17-*`, `T18-*`.
+
+**n°12 · 12 — DÉCISION DE PAUL (07-08/09) : LE CHANTIER DU DÉROULÉ SE REFAIT DE ZÉRO, SUR UNE BASE SAINE.**
+Dans ses mots : « il faut que le chantier soit refait depuis zéro (avec possibilité de recyclage de l'ancien déroulé) mais il faut vraiment partir sur une base saine. les patchs successifs ont ajouté beaucoup de complexité ». Conséquences : le LOT G tombe ; le zoom-texte du moteur, la scission, `vues`/`rev`, le cadre et ses enveloppes tombent ; les dettes de l'ancien moteur tombent avec lui (poignée du champ contenu du 26/08, saut d'image à « suivant », père/fils). La maquette manipulable est la spécification exécutable du mandat : **ce qui est codé doit être fidèle, geste par geste, à ce que Paul aura joué dans la maquette — pas de piochage au jugé** (Paul, 08/09). Le cadrage se tient dans la conversation, un point par tour, chaque idée mise en tension avec ce qui est déjà cadré (règle posée par Paul le 08/09).
+
+**n°12 · 13 — DETTES REPRISES DE LA PASSATION, NON TRAITÉES, TOUJOURS OUVERTES.**
+La bascule du mode test absente de onze apps sur quatorze · `CLAUDE.md` périmé (ligne 7 « Five self-contained HTML files », ligne 25 vers l'ancien Firebase) · le mandat ⑬ des mots et infobulles, légué avec sa question sur le tactile · le rafraîchissement après injection, cause inconnue · M17a. Aucune n'est entrée dans ce chantier ; la conscience les rappellera quand Paul ordonnancera.
