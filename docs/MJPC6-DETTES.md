@@ -2684,3 +2684,21 @@ Dans ses mots : « il faut que le chantier soit refait depuis zéro (avec possib
 
 **n°12 · 13 — DETTES REPRISES DE LA PASSATION, NON TRAITÉES, TOUJOURS OUVERTES.**
 La bascule du mode test absente de onze apps sur quatorze · `CLAUDE.md` périmé (ligne 7 « Five self-contained HTML files », ligne 25 vers l'ancien Firebase) · le mandat ⑬ des mots et infobulles, légué avec sa question sur le tactile · le rafraîchissement après injection, cause inconnue · M17a. Aucune n'est entrée dans ce chantier ; la conscience les rappellera quand Paul ordonnancera.
+
+**n°12 · 14 — LE CADRAGE DE LA BASE SAINE EST ÉCRIT ET DÉPOSÉ, TROIS DOCUMENTS, VALIDÉS LIGNE À LIGNE PAR PAUL DANS LA CONVERSATION.**
+`DEROULE/CADRAGE-1-LA-CLASSE.md` (validé le 09/09, corrigé les 10 et 11/09), `DEROULE/CADRAGE-2-LA-RELECTURE.md` (09/09, complété les 09-10/09), `DEROULE/CADRAGE-3-LES-NOTIONS.md` (12/09). Règle appliquée à chaque point : lecture du code d'abord, mise en tension avec ce qui est déjà cadré, une question par tour, dépôt après le mot de Paul. Les versions soumises sont en pièces du transcript (`T43-`, `T48-`, `T76-`).
+
+**n°12 · 15 — MAQUETTE v9a.1 (L'HEURE) LIVRÉE ET JOUÉE PAR PAUL ; TROIS BUGS TROUVÉS PAR LES BANCS AVANT LIVRAISON.**
+Pièces `T44-*`, `T45-*`. Bugs corrigés avant livraison : les raccourcis (N, G, R, L, T, P) déclenchés depuis le champ de réponse (un contenteditable n'était pas reconnu comme champ) ; une garde fantôme au ◀ en début de séance ; la ligne d'écriture hors page après un changement de page à la main. Retiré sur remarque de Paul : ⏸ et ↺ du chrono de l'heure (une heure de cours ne se met pas en pause, 6.2). Bancs : `T44-test-v9a.mjs`, `T18-bancs-v7.mjs` (5 tailles d'écran, 95 diapos), `T44-bancs2-v9a.mjs` — 0 défaut.
+
+**n°12 · 16 — LA CONSCIENCE AVAIT MAL LU « APPOINT » : C'EST UN TAG DE NOTION, PAS UNE DIAPO INSÉRÉE.**
+`index.html` L15005 : le champ `at-dr-comp`, placeholder « appoint — une notion imprévue surgie du cours », déclare une notion sur l'écran en cours. Les maquettes v4 à v9a insèrent une « diapo d'appoint » : c'est faux, retiré du cadrage le 11/09 (9.1, 9.3, 6.4, 6.5). Le mot lui-même n'est pas de Paul (« l'appoint ne veut rien dire ») : remplacé par « notion imprévue ». À corriger dans la v9b.
+
+**n°12 · 17 — DETTES DE LA PRODUCTION TROUVÉES EN CADRANT, NON TRAITÉES (elles tombent avec la base saine ou attendent leur chantier).**
+`_drProchainCreneau` L16340 donne le prochain jour ouvré, pas la prochaine heure de la classe (« à défaut d'EDT hebdo » — commentaire d'avant l'emploi du temps) · les absents saisis dans la case EDT (`edtAbsence` L20785) ne sont relus par rien · le récit du moteur dit « le professeur » (L1177, L1300) et le cadrage d'intégration « le prof » : Paul est « M. Meney » devant les élèves (règle écrite le 10/09) · le T-5 demande le report à la fin de l'heure alors que Paul l'avait tranché fin août (fin de séance seulement, C10 L4406, L4854) · aucun type « bilan » ni coche d'attestation n'a jamais été codé (§6 du 25/08).
+
+**n°12 · 18 — DEUX PRÉALABLES HORS DU CHANTIER, À MANDATER À PART.**
+Les attendus de fin d'année du collège (5e, 4e, 3e) au hub, découpés en items et enrichis (mots-clés, synonymes, formulations scolaires) : sans eux, la garde Éduscol du cadrage 3 (§6) n'existe pas · le volet littérature de la taxonomie (des familles nouvelles) : l'éditeur du panneau prof ne crée que des notions dans une famille existante ; les attendus lus en juillet ne sont pas au dépôt.
+
+**n°12 · 19 — MÉTHODE : UN SCRIPT DE MISE À JOUR S'EST ARRÊTÉ AVANT D'ÉCRIRE (10/09).**
+Une assertion mal posée a fait pousser deux fichiers inchangés (commits `82070124d2b3`, `c614662511ed`) ; rien de faux n'est parti ; rejoué et vérifié bit à bit le tour même. Règle rappelée à soi : vérifier le contenu poussé, pas seulement le commit.
