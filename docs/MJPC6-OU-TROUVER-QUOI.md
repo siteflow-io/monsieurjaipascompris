@@ -120,3 +120,16 @@
 | comment charger la page dans un navigateur sans rien écrire | les bancs `Tn-*.mjs` : Chromium du conteneur + Playwright, faux hub par `addInitScript`, `route` qui coupe tout ce qui n'est pas `file:` |
 
 **Ce qui n'existe pas — vérifié le 07-08/09** : aucune branche ni dossier du LOT G (le moteur `AT_DR_B64` est identique au 25/08, md5 `2ba70f9ef8aacb6f81962ea4e1b62944`) ; aucune heure jouée dans le hub réel (`deroule_joue` vide partout) ; aucune app d'entraînement perso des élèves ; aucun cockpit prof ; aucun document de cadrage de la base saine déposé (il s'écrit dans la conversation d'abord).
+
+## AJOUTS DU 12/09/2026 (conscience n°12) — les cadrages de la base saine sont au sas
+
+| je cherche… | c'est là |
+|---|---|
+| **le cadrage de la classe** (tableau, gel, gardes, journal, mise en commun, pages, heures et bilan, travail à faire et décisions, immuabilité, clic droit, notes, commentaires, appel) | sas `DEROULE/CADRAGE-1-LA-CLASSE.md` — règles numérotées, à citer dans le mandat et les bancs |
+| **le cadrage de la relecture** (le récit, « ce qui s'est passé », les notes versées, le travail à faire en entier, les prénoms, l'échéance) | sas `DEROULE/CADRAGE-2-LA-RELECTURE.md` |
+| **le cadrage des notions** (apprendre, coût et alertes, notion imprévue, créer une notion, garde Éduscol, compléter / réécrire) | sas `DEROULE/CADRAGE-3-LES-NOTIONS.md` |
+| les versions de ces cadrages telles que Paul les a lues avant dépôt | pièces `T43-`, `T48-`, `T76-` du transcript C12 |
+| la maquette v9a.1 (l'heure), manipulable | pièces `T45-maquette-pilotage-ordi-v9a1-manipulable.html`, gabarit `T45-v9a-template.html`, générateur `T45-gen-v9a1.py`, bancs `T44-test-v9a.mjs`, `T44-bancs2-v9a.mjs` |
+| ce que Paul a dit fin août sur le report (fin de séance, pas fin d'heure) | transcript C10, L4406 et L4854 |
+| ce que le site sait de la taxonomie et de sa création de notions | `index.html` L2160-2556 (éditeur M8bis) ; l'audit Éduscol `docs/MJPC6-audit-eduscol.md` ; le journal du 02/08 (M-TAXO-LIT) |
+| les préalables à mandater à part | registre n°12 · 18 (les attendus au hub ; le volet littérature) |
