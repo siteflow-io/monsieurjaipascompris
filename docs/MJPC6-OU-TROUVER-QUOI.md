@@ -145,3 +145,4 @@
 | l'éditeur de taxonomie et la création de notions | `index.html` L2160-2556 (M8bis) ; cadrage 3 §5-6 |
 | les espaces de travail École Directe de Paul (pour les vidéos à la maison) | pièce `T101-espaces-de-travail-ED.png` ; cadrage 4, 4b.6 |
 | ce qui reste avant le mandat | v9b, v9c, la maquette de la préparation, la séquence de test ; à part : les attendus au hub (cadrage 3 §6) |
+| **le protocole à suivre dès qu'on travaille sur une maquette** (ce qu'elle est, les règles apprises, les preuves, la livraison, quand s'arrêter, le passage au mandat) | **`PROTOCOLE-MAQUETTE.md`, à la racine du dépôt de production** (Paul, 15/09) |
