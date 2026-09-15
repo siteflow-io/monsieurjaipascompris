@@ -22,6 +22,7 @@
 - **Ce qu'elle simule est déclaré** dans la livraison (une vidéo sans fichier, une garde sans ses attendus, un tableau par injection) — jamais présenté comme fait.
 
 ## 3 · Les règles techniques apprises (chacune est un piège déjà payé)
+- **Une maquette doit être au moins ce que le site sait faire** (Paul, 15/09) : avant d'écrire un geste, vérifier si l'existant l'a — ² / F2, la palette, l'historique par élève, Ctrl+Z, les couleurs de surlignage, le T-5 réel existaient et manquaient à la v9c.1. **Toujours vérifier l'existant** : un nombre, une règle, une touche se mesurent dans le code et en jouant, jamais de mémoire (le plancher « 26 pt » ne se trouvait qu'en confrontant le moteur : crans 24 · 32 · 38 · 44 · 52, loi 32 pt = 5,6 %).
 - **Pas de reconstruction au clic** : le pilotage met à jour ce qui change, nœud par nœud ; il ne refait jamais l'écran (l'image qui saute, le défilement perdu, la vignette agrandie qui se referme, la poignée qui revient en mini). Le champ où Paul écrit n'est jamais touché par un rendu.
 - **Le texte n'est jamais coupé**, la donnée jamais modifiée par l'affichage : la police du bloc se réduit, puis des pages ; jamais de scission de diapo.
 - **Le rang n'est pas une identité** : tout ce qui s'enregistre porte l'identité de la diapo et du bloc ; déplacer ne change pas l'identité, dupliquer ou coller en crée une.
@@ -34,7 +35,7 @@
 
 ## 4 · Les preuves, avant toute livraison
 - **Un banc par le geste** : clic, clavier, souris — jamais un appel de fonction par script (« appel de fonction : déclaré » est une alerte) ; jamais un `dialog.accept` global.
-- **Un banc unique** qui rejoue tout d'une commande et échoue si un seul geste échoue ; **les tailles d'écran** (au moins 1366 × 768 et 1920 × 1080, l'écran de décision à 1280 × 720) ; **tous les types d'objets** (consigne, question, image avec une image réelle, fiche, schéma, vidéo, deux blocs) ; **l'épreuve des pièges** (réseau, méta, codes, Échap, chevauchements, reconstruction, faux verts, identités, caractères, chiffres recomptés).
+- **Un banc unique** qui rejoue tout d'une commande et échoue si un seul geste échoue ; **les tailles d'écran** (au moins 1366 × 768, 1536 × 864 — l'écran de Paul à 125 % — et 1920 × 1080, l'écran de décision à 1280 × 720 ; colonnes ouvertes et repliées) ; **tous les types d'objets** (consigne, question, image avec une image réelle, fiche, schéma, vidéo, deux blocs) ; **l'épreuve des pièges** (réseau, méta, codes, Échap, chevauchements, reconstruction, faux verts, identités, caractères, chiffres recomptés).
 - **Une preuve dit ce qu'elle contient** : « 40 vérifications » est recompté dans le fichier ; une mesure à zéro n'est pas une absence.
 - **Une capture n'est livrée que regardée**, pour ce qu'elle prouve — pas pour ce qu'elle montre. Une capture illisible seule est accompagnée de son pendant.
 - **0 défaut** aux bancs avant livraison ; **les défauts trouvés et corrigés sont listés** dans la livraison, avec leur cause.
