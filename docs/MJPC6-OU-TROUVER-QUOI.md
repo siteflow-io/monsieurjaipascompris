@@ -133,3 +133,15 @@
 | ce que Paul a dit fin août sur le report (fin de séance, pas fin d'heure) | transcript C10, L4406 et L4854 |
 | ce que le site sait de la taxonomie et de sa création de notions | `index.html` L2160-2556 (éditeur M8bis) ; l'audit Éduscol `docs/MJPC6-audit-eduscol.md` ; le journal du 02/08 (M-TAXO-LIT) |
 | les préalables à mandater à part | registre n°12 · 18 (les attendus au hub ; le volet littérature) |
+
+## AJOUTS DU 15/09/2026 (conscience n°12) — le cadrage est complet
+
+| je cherche… | c'est là |
+|---|---|
+| **le cadrage de la préparation** (l'écran, les objets et leurs gardes, texte, page, vidéo, documents, le prompt d'injection, le mode d'emploi) | sas `DEROULE/CADRAGE-4-LA-PREPARATION.md` |
+| le cadrage vérifié contre l'existant, joué, section par section (✔ / ✘ / ∅) | pièce `T81-RAPPORT-cadrage-contre-existant-corrige.md` ; bancs `T80-existant*.mjs`, `T81-existant3.mjs`, `T83-blocs.mjs`, `T79-vif.mjs` ; captures `T79-`, `T80-ex-`, `T81-ex-`, `T83-bl-` |
+| les manques de l'éditeur décrits par le consultant du chapitre « Poésie et peinture » | sas `CONSULTANT/CHAPITRE-1/LISEZ-MOI.md` (« les gestes empêchés »), `registre-chapitre-3e.md` (dettes 25, 29, 30, amendement du 26/08), `retro-ingenierie-prompt-chapitre.md` |
+| le prompt du déroulé tel qu'il est au hub | `site/atelier/prompts/deroule` (chargé par `mjpcPromptCharger`) ; copie lue en pièce du tour 91 |
+| l'éditeur de taxonomie et la création de notions | `index.html` L2160-2556 (M8bis) ; cadrage 3 §5-6 |
+| les espaces de travail École Directe de Paul (pour les vidéos à la maison) | pièce `T101-espaces-de-travail-ED.png` ; cadrage 4, 4b.6 |
+| ce qui reste avant le mandat | v9b, v9c, la maquette de la préparation, la séquence de test ; à part : les attendus au hub (cadrage 3 §6) |
