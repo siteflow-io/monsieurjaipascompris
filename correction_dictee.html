@@ -2076,7 +2076,8 @@ function phraseARecopier(errors,extras){
   if(n===0)return "Pour cette dict\u00e9e, je n\u2019ai fait aucune erreur, et pour la prochaine, je devrai relire avec le m\u00eame soin.";
   var parType={};errs.forEach(function(e){parType[e.type]=(parType[e.type]||0)+1});if(nX)parType.X=nX;
   var tMax=null;TYPE_ORDRE.forEach(function(t){if(parType[t]&&(tMax===null||parType[t]>parType[tMax]))tMax=t});
-  var parEng={},ordre=[];errs.forEach(function(e){var g=engagementPourAstuce(generateIndice(e.word,e.type));if(!g)return;if(!parEng[g]){parEng[g]=0;ordre.push(g)}parEng[g]++});
+  // Point 234 : l'engagement est cherché parmi les erreurs du type le plus fréquent (celui que la phrase annonce)
+  var parEng={},ordre=[];errs.forEach(function(e){if(e.type!==tMax)return;var g=engagementPourAstuce(generateIndice(e.word,e.type));if(!g)return;if(!parEng[g]){parEng[g]=0;ordre.push(g)}parEng[g]++});
   var eng=null;ordre.forEach(function(g){if(eng===null||parEng[g]>parEng[eng])eng=g});
   if(!eng)eng=ENGAGEMENTS_TYPE[tMax]||ENGAGEMENTS_TYPE.G;
   var debut=n===1?"j\u2019ai fait une seule erreur":"j\u2019ai fait "+n+" erreurs, surtout "+(ERREURS_SURTOUT[tMax]||"");
@@ -2650,7 +2651,7 @@ function AppProf(p){
       )
     )
   );
-  if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){setScreen("config")}});
+  if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){setScreen("config");rafraichirDonnees()}});
   return null;
 }
 
@@ -2995,6 +2996,9 @@ function CorrScreen(p){
     window.addEventListener("keydown",onKey);
     return function(){window.removeEventListener("keydown",onKey)};
   },[tab,cur]);
+  var sEf=useState({}),effacees=sEf[0],setEffacees=sEf[1];
+  useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/effacees");function f(sn){setEffacees(sn.val()||{})}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
+  function derniereEffacee(k){var e=effacees[k]||{};var l=Object.keys(e).map(function(t){return e[t]}).filter(function(x){return x&&!x.restauree}).sort(function(a,b){return b.le-a.le});return l[0]||null}
   var nAbs=Object.keys(p.absents||{}).length;
   var nTotal=data.eleves.length-nAbs;
   var nDone=data.eleves.filter(function(e){var k=san(e);return!p.absents[k]&&p.corrections[k]}).length;
@@ -3007,6 +3011,18 @@ function CorrScreen(p){
     var effectiveBase=(curIsAmen&&dAmen)?(dAmen.base||10):data.base;
     return h(CorrEleve,{key:curKey,data:data,eleve:cur,
     existing:p.corrections[curKey]||null,
+    effacee:p.corrections[curKey]?null:derniereEffacee(curKey),
+    onRestaurer:function(ent){
+      var base="correction_dictee/"+p.dicteeId;
+      db.ref(ent.chemin).once("value").then(function(sn){
+        var v=sn.val();if(!v||!v.data||!v.data.results){alert("Copie introuvable dans la corbeille : "+ent.chemin);return}
+        db.ref(base+"/results/"+curKey).set(v.data.results);
+        if(v.data.autocorrection)db.ref(base+"/autocorrection/"+curKey).once("value").then(function(a){if(!a.val())db.ref(base+"/autocorrection/"+curKey).set(v.data.autocorrection)});
+        db.ref(base+"/effacees/"+curKey+"/"+ent.le+"/restauree").set(Date.now());
+        var c=Object.assign({},p.corrections);c[curKey]=v.data.results;p.onResetCorrections(c);
+        setMsg("\u21ba Copie de "+cur.split(" ").pop()+" restaur\u00e9e");setTimeout(function(){setMsg(null)},2500);
+      });
+    },
     corrections:p.corrections,
     absents:p.absents,
     amenagee:dAmen,
@@ -3019,6 +3035,7 @@ function CorrScreen(p){
       var sCorr=p.corrections[sek];
       var tCorr=p.corrections[tek];
       if(!sCorr)return;
+      archiverCopies(p.dicteeId,data.title,mode==="swap"?"echanger":mode==="replace"?"remplacer":"transferer",[sek,tek],function(){
       var newCorr=Object.assign({},p.corrections);
       var dRef="correction_dictee/"+p.dicteeId;
       if(mode==="swap"&&tCorr){
@@ -3038,6 +3055,7 @@ function CorrScreen(p){
       setCur(null);
       setMsg("\u21ad "+(mode==="swap"?"\u00c9chang\u00e9 avec ":mode==="replace"?"Remplac\u00e9 sur ":"Transf\u00e9r\u00e9 vers ")+targetName.split(" ").pop());
       setTimeout(function(){setMsg(null)},3000);
+      });
     },
     onSave:function(err,ext){
       p.onSave(san(cur),err,ext);
@@ -3048,11 +3066,13 @@ function CorrScreen(p){
     },
     onReset:function(){
       var k=san(cur);
+      archiverCopies(p.dicteeId,data.title,"reinitialiser",[k],function(){
       db.ref("correction_dictee/"+p.dicteeId+"/results/"+k).remove();
       db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+k).remove();
       var c=Object.assign({},p.corrections);delete c[k];p.onResetCorrections(c);
       setCur(null);
       setMsg("\u21bb "+cur.split(" ").pop()+" r\u00e9initialis\u00e9");setTimeout(function(){setMsg(null)},2000);
+      });
     },
     onAutoSave:function(err,ext,fastIdxVal){
       // Sauvegarde silencieuse + persistance fastIdx via save()
@@ -3495,6 +3515,9 @@ function RapideGlobal(p){
    ═════════════════════════════════════════════════════════════════════════ */
 function CorrEleve(p){
   var data=p.data,tokens=data.tokens;
+  // Coût affiché sur les boutons de type : celui du barème de LA dictée (brevet : oubli et illisible à −0,5,
+  // ponctuation au forfait). Avant, les boutons affichaient toujours les coûts de la dictée préparée.
+  function coutType(t){var b=data.bareme==="brevet";if(b&&t==="P")return "forfait";var c=(b?TYPE_COST_BREVET:TYPE_COST)[t];return c?"\u2212"+String(c).replace(".",","):"0"}
   var _ee=p.existing&&p.existing.errors?toArr(p.existing.errors):[];
   var _ex=p.existing&&p.existing.extras?toArr(p.existing.extras):[];
   var s1=useState(_ee),errors=s1[0],setErrors=s1[1];
@@ -3833,14 +3856,14 @@ function CorrEleve(p){
             existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear,title:"Supprimer cette erreur et passer au suivant"},"\u2715 Annuler l\u2019erreur"),
             existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Changer en Grammaire (accord, conjugaison, homophone)"},"Changer \u2192 G"),
             existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer en Lexique (orthographe pure)"},"Changer \u2192 L"),
-            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire (\u22121 pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
+            !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire ("+coutType("G")+" pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
             !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Saisie demand\u00e9e. Raccourci : L"},"L Lexique"),
             !existingErr&&(curWord&&estApostrophe(curWord.text)
               ?h("button",{className:"fast-btn fast-e",onClick:function(){fastMark("E")},title:"\u00c9lision oubli\u00e9e ou fautive \u2014 orthographe, famille \u00ab Apostrophes et \u00e9lisions \u00bb (\u22120,5 pt), sans saisie. Raccourci : E"},"' \u00c9lision (E)")
               :curWord&&isPunct(curWord.text)
-              ?h("button",{className:"fast-btn fast-p",onClick:function(){fastMark("P")},title:"Ponctuation manquante (\u22120,5 pt). Raccourci : P"},"\u00b7 Ponct. manqu.")
-              :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 (\u22121 pt). Raccourci : \u00d8 ou /"},"\u2205 Manquant")),
-            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible (\u22121 pt). Saisie de transcription demand\u00e9e. Raccourci : I ou ?"},"? Illisible"),
+              ?h("button",{className:"fast-btn fast-p",onClick:function(){fastMark("P")},title:"Ponctuation manquante ("+coutType("P")+(coutType("P")==="forfait"?" : \u22120,5 par tranche de 4":" pt")+"). Raccourci : P"},"\u00b7 Ponct. manqu.")
+              :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 ("+coutType("M")+" pt). Raccourci : \u00d8 ou /"},"\u2205 Manquant")),
+            !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible ("+coutType("I")+" pt). Raccourci : I ou ?"},"? Illisible"),
             !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")},title:"Attention graphie : signalement sans p\u00e9nalit\u00e9. Raccourci : A"},"\u26a0 Attention")
           ),
           h("div",{style:{display:"flex",justifyContent:"space-between",marginTop:12}},
@@ -3857,6 +3880,9 @@ function CorrEleve(p){
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
   return h("div",{className:"container fade-up"},
+    p.effacee&&h("div",{className:"card",style:{marginBottom:10,border:"2px solid #dd6b20",background:"#fff7ed",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
+      h("span",null,"\ud83d\uddd1 Une copie de "+p.eleve+" a \u00e9t\u00e9 effac\u00e9e le "+new Date(p.effacee.le).toLocaleDateString("fr-FR")+" \u00e0 "+new Date(p.effacee.le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+" ("+(GESTES_EFFACEMENT[p.effacee.geste]||p.effacee.geste)+(p.effacee.note!=null?", note "+String(p.effacee.note).replace(".",",")+"/"+(p.data.base||20):"")+")."),
+      h("button",{className:"btn btn-primary",style:{width:"auto",marginLeft:"auto"},onClick:function(){p.onRestaurer(p.effacee)},title:"Remet cette copie telle qu\u2019elle \u00e9tait avant d\u2019\u00eatre effac\u00e9e, avec son autocorrection si l\u2019\u00e9l\u00e8ve n\u2019en a pas refait une. La copie reste aussi dans la corbeille."},"\u21ba La restaurer")),
     // Sticky score bar with eleve name
     h("div",{className:"score-bar",style:{position:"sticky",top:0,zIndex:50}},
       h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},noteFr(sc.note)),
@@ -3872,7 +3898,7 @@ function CorrEleve(p){
           sc.counts.I>0&&h("span",{className:"badge badge-i"},sc.counts.I+"?"),
           sc.counts.A>0&&h("span",{className:"badge badge-a"},sc.counts.A+"\u26a0"),
           sc.counts.X>0&&h("span",{className:"badge badge-x"},sc.counts.X+"+"),
-          " \u00b7 \u2212"+sc.deduction
+          " \u00b7 \u2212"+String(sc.deduction).replace(".",",")
         )
       ),
       h("div",{style:{position:"relative"}},
@@ -3996,14 +4022,14 @@ function CorrEleve(p){
         h("div",{className:"popup-word"},"\u00ab "+tokens[popupIdx]+" \u00bb"),
         h("div",{className:"popup-hint"},"Type d\u2019erreur ?"),
         h("div",{className:"popup-grid"},
-          h("button",{className:"popup-btn popup-btn-g",onClick:function(){selectType("G")}},h("div",{style:{fontSize:"1.3rem"}},"G"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Grammaire (\u22121)")),
-          h("button",{className:"popup-btn popup-btn-l",onClick:function(){selectType("L")}},h("div",{style:{fontSize:"1.3rem"}},"L"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Lexique (\u22120.5)")),
+          h("button",{className:"popup-btn popup-btn-g",onClick:function(){selectType("G")}},h("div",{style:{fontSize:"1.3rem"}},"G"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Grammaire ("+coutType("G")+")")),
+          h("button",{className:"popup-btn popup-btn-l",onClick:function(){selectType("L")}},h("div",{style:{fontSize:"1.3rem"}},"L"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Lexique ("+coutType("L")+")")),
           estApostrophe(tokens[popupIdx])
-            ?h("button",{className:"popup-btn popup-btn-e",onClick:function(){selectType("E")}},h("div",{style:{fontSize:"1.3rem"}},"'"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"\u00c9lision (\u22120.5)"))
+            ?h("button",{className:"popup-btn popup-btn-e",onClick:function(){selectType("E")}},h("div",{style:{fontSize:"1.3rem"}},"'"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"\u00c9lision ("+coutType("E")+")"))
             :isPunct(tokens[popupIdx])
-            ?h("button",{className:"popup-btn popup-btn-p",onClick:function(){selectType("P")}},h("div",{style:{fontSize:"1.3rem"}},"\u00b7"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Ponct. manquante (\u22120.5)"))
-            :h("button",{className:"popup-btn popup-btn-m",onClick:function(){selectType("M")}},h("div",{style:{fontSize:"1.3rem"}},"\u2205"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Manquant (\u22121)")),
-          h("button",{className:"popup-btn popup-btn-i",onClick:function(){selectType("I")}},h("div",{style:{fontSize:"1.3rem"}},"?"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Illisible (\u22121)")),
+            ?h("button",{className:"popup-btn popup-btn-p",onClick:function(){selectType("P")}},h("div",{style:{fontSize:"1.3rem"}},"\u00b7"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Ponct. manquante ("+coutType("P")+")"))
+            :h("button",{className:"popup-btn popup-btn-m",onClick:function(){selectType("M")}},h("div",{style:{fontSize:"1.3rem"}},"\u2205"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Manquant ("+coutType("M")+")")),
+          h("button",{className:"popup-btn popup-btn-i",onClick:function(){selectType("I")}},h("div",{style:{fontSize:"1.3rem"}},"?"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Illisible ("+coutType("I")+")")),
           h("button",{className:"popup-btn popup-btn-a",onClick:function(){selectType("A")}},h("div",{style:{fontSize:"1.3rem"}},"\u26a0"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Attention graphie (0)"))
         ),
         h("button",{className:"popup-cancel",onClick:function(){setPopupIdx(null)}},"Annuler")
@@ -4015,7 +4041,7 @@ function CorrEleve(p){
         h("div",{className:"popup-hint"},"Apr\u00e8s \u00ab "+(insertIdx>=0?tokens[insertIdx]:"d\u00e9but")+" \u00bb"),
         h("input",{ref:inputRef,value:insertWord,onChange:function(e){setInsertWord(e.target.value)},placeholder:"Le mot en trop...",style:{marginBottom:12},onKeyDown:function(e){if(e.key==="Enter")confirmInsert()}}),
         h("div",{style:{display:"flex",gap:8}},
-          h("button",{className:"btn-sm btn-primary",onClick:confirmInsert,style:{flex:1}},"Ajouter (\u22120.5)"),
+          h("button",{className:"btn-sm btn-primary",onClick:confirmInsert,style:{flex:1}},"Ajouter (\u22120,5)"),
           h("button",{className:"btn-sm btn-ghost",onClick:function(){setInsertIdx(null)},style:{flex:1}},"Annuler")
         )
       )
@@ -4241,6 +4267,7 @@ function Suivi(p){
   var sHe=useState(null),heure=sHe[0],setHeure=sHe[1];
   var sFs=useState(function(){var d=new Date(Date.now()+55*60000);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}),finSaisie=sFs[0],setFinSaisie=sFs[1];
   var sAv=useState(""),avisHeure=sAv[0],setAvisHeure=sAv[1];
+  var sFm=useState(null),finMasquee=sFm[0],setFinMasquee=sFm[1];   // fin d'heure dont la fenêtre a été refermée « plus tard »
   var sBn=useState({}),binomesS=sBn[0],setBinomesS=sBn[1];
   var sDi=useState(null),enDirect=sDi[0],setEnDirect=sDi[1];   // lot 3d : clés des élèves regardés en direct
   useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/binomes");function f(sn){setBinomesS(sn.val()||{})}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
@@ -4400,21 +4427,19 @@ function Suivi(p){
   }
   function prolonger(){if(!heure)return;db.ref("correction_dictee/"+p.dicteeId+"/heure/fin").set(Math.max(heure.fin,Date.now())+10*60000)}
   function cloturer(){db.ref("correction_dictee/"+p.dicteeId+"/heure").update({cloture:true,clotureA:Date.now()})}
+  // Où en est la classe : compté sur l'étape affichée dans la colonne « Statut » (une seule règle).
+  // Avant, un élève qui avait fini l'an dernier avec des essais ratés comptait « répond à ses questions ».
   function etatClasse(){
     var fini=0,questions=0,encore=[];
     rows.forEach(function(r){
-      if(r.status==="absent")return;
-      var ac=autoCorr[r.key];if(!ac)return;
-      var cc=(p.corrections||{})[r.key];var errs=cc?toArr(cc.errors):[];
-      var N=errs.filter(function(e){return e&&e.type!=="A"}).length;
-      if(r.status==="done"){
-        var crans=acRatesChrono(ac.history,ac.attempts,ac.results,errs,N),n=0,qs=ac.questions||{};
-        for(var i=0;i<crans.length;i++)if(acQuestionFinie(qs[i]))n++;
-        if(crans.length-n>0)questions++;else fini++;
-      } else encore.push(r.name);
+      var et=etapeDe(r);if(!et)return;
+      if(/^Corrige|^Pas fini/.test(et.t))encore.push(r.name);
+      else if(/^Questions/.test(et.t))questions++;
+      else fini++;
     });
     return {fini:fini,questions:questions,encore:encore};
   }
+
   function carteHeure(){
     var nomClasse=data.classe||"";
     var actif=heure&&!heure.cloture&&NOW<heure.fin;
@@ -4429,15 +4454,25 @@ function Suivi(p){
             h("button",{className:"btn",style:{width:"auto",background:"#c53030",color:"#fff"},onClick:cloturer,title:"Ferme les questions pour toute la classe et lib\u00e8re les tablettes. Les corrections non finies restent ouvertes : ces \u00e9l\u00e8ves les termineront plus tard."},"\u25a0 Cl\u00f4turer l\u2019heure"))),
         alerte?h("div",{style:{marginTop:8,fontWeight:700,color:"#9c4221"}},"\u23f0 La s\u00e9ance se termine dans "+Math.max(1,Math.ceil(reste/60000))+" minute"+(reste>60000?"s":"")+"."):null);
     }
+    if(depasse&&finMasquee===heure.fin){
+      return h("div",{className:"card",style:{marginBottom:12,border:"2px solid #c53030"}},
+        h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
+          h("b",{style:{color:"#9b2c2c"}},"\u23f0 L\u2019heure est d\u00e9pass\u00e9e \u2014 "+nomClasse),h("span",{style:{color:"var(--muted)"}},"fin pr\u00e9vue \u00e0 "+hhmm(heure.fin)),
+          h("span",{style:{marginLeft:"auto",display:"flex",gap:8}},
+            h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:prolonger,title:"Repousse la fin de l\u2019heure de 10 minutes pour toute la classe."},"+10 min"),
+            h("button",{className:"btn",style:{width:"auto",background:"#c53030",color:"#fff"},onClick:cloturer,title:"Ferme les questions pour toute la classe et lib\u00e8re les tablettes."},"\u25a0 Cl\u00f4turer l\u2019heure"))));
+    }
+    if(depasse&&(selectedEleve||enDirect))return null;   // elle attend que vous reveniez au suivi
     if(depasse){
       var e=etatClasse();
       return h("div",{className:"popup-overlay",style:{zIndex:600}},h("div",{className:"card",style:{maxWidth:560,width:"100%",border:"2px solid #c53030"}},
         h("div",{style:{fontWeight:800,fontSize:"1.05rem",marginBottom:8}},"\u23f0 Fin de l\u2019heure \u2014 "+nomClasse),
-        h("div",{style:{marginBottom:10}},"O\u00f9 en est la classe : ",h("b",null,e.fini)," "+(e.fini>1?"ont":"a")+" fini \u00b7 ",h("b",null,e.questions)," "+(e.questions>1?"r\u00e9pondent":"r\u00e9pond")+" \u00e0 leurs questions \u00b7 ",h("b",null,e.encore.length)," "+(e.encore.length>1?"corrigent":"corrige")+" encore"+(e.encore.length?" ("+e.encore.join(", ")+")":"")+"."),
+        h("div",{style:{marginBottom:10}},"O\u00f9 en est la classe : ",h("b",null,e.fini)," "+(e.fini===1?"a":"ont")+" fini \u00b7 ",h("b",null,e.questions)," "+(e.questions===1?"r\u00e9pond \u00e0 ses questions":"r\u00e9pondent \u00e0 leurs questions")+" \u00b7 ",h("b",null,e.encore.length)," "+(e.encore.length===1?"corrige":"corrigent")+" encore"+(e.encore.length?" ("+e.encore.join(", ")+")":"")+"."),
         h("div",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:12}},"Cl\u00f4turer ferme les questions pour toute la classe et lib\u00e8re les tablettes. Les corrections non finies restent ouvertes : ces \u00e9l\u00e8ves les termineront plus tard."),
         h("div",{style:{display:"flex",gap:8}},
           h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:prolonger,title:"Repousse la fin de l\u2019heure de 10 minutes pour toute la classe."},"+10 min"),
-          h("button",{className:"btn",style:{width:"auto",background:"#c53030",color:"#fff"},onClick:cloturer,title:"Ferme les questions pour toute la classe et lib\u00e8re les tablettes."},"\u25a0 Cl\u00f4turer l\u2019heure"))));
+          h("button",{className:"btn",style:{width:"auto",background:"#c53030",color:"#fff"},onClick:cloturer,title:"Ferme les questions pour toute la classe et lib\u00e8re les tablettes."},"\u25a0 Cl\u00f4turer l\u2019heure"),
+          h("button",{className:"btn btn-ghost",style:{width:"auto",marginLeft:"auto"},onClick:function(){setFinMasquee(heure.fin)},title:"Referme cette fen\u00eatre sans rien d\u00e9cider : l\u2019heure reste d\u00e9pass\u00e9e, la carte en haut du suivi garde les deux boutons."},"Plus tard"))));
     }
     return h("div",{className:"card",style:{marginBottom:12}},
       heure&&heure.cloture?h("div",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:6}},"Derni\u00e8re heure close \u00e0 "+hhmm(heure.clotureA||heure.fin)+"."):null,
@@ -5547,7 +5582,7 @@ function setCopyOptions(opts){
    plupart a un ou deux mots pres. */
 function saisieIncomplete(errs){
   var attendent = (errs||[]).filter(function(e){
-    return e && e.type!=="M" && e.type!=="P" && e.type!=="E";
+    return e && (e.type==="G" || e.type==="L");   // point 322 : seules G et L demandent ce qu'a écrit l'élève
   });
   var faites = attendent.filter(function(e){ return e.fautif && String(e.fautif).trim()!==""; });
   if (!attendent.length || !faites.length || faites.length===attendent.length) return null;
@@ -5657,7 +5692,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
      manque, TOUTE la copie passe en trous. L'eleve ne doit pas croire que le
      professeur a fait la moitie du travail ; corriger en ne pointant que les
      fautes recurrentes est un choix pedagogique, pas un travail inacheve. */
-  function attendSaisie(e){ return e.type !== "M" && e.type !== "P" && e.type !== "E"; }
+  /* point 322 : seules G et L attendent la forme écrite ; A et I sans forme ont leur propre rendu */
+  function attendSaisie(e){ return e.type === "G" || e.type === "L"; }
   /* Repetitions non facturees (bareme type brevet) : l'eleve doit VOIR qu'il a
      refait la meme faute — sinon il croit que la seconde est juste — mais elle
      ne lui est comptee qu'une fois. Il devra quand meme la corriger a chaque
@@ -5680,7 +5716,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
        jamais (mot oublie, ponctuation oubliee, elision oubliee) montrent la
        correction : sans cela leur boite est vide, de hauteur nulle, et tout ce
        qui s'y accroche part en l'air (mesure : 227 annotations flottantes). */
-    if (!attendSaisie(e)) return "vert";
+    if (!attendSaisie(e) && e.type !== "A" && e.type !== "I") return "vert";
     if (modeEffectif === "placeholder") return "placeholder";
     return "orig";
   }
@@ -5704,7 +5740,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
 
   // Barème des points perdus selon le type
-  var POINTS = {G:"−1", L:"−0,5", M:"−1", P:"−0,5", I:"−1", A:"", E:"−0,5"};
+  var POINTS = (data.bareme === "brevet") ? {G:"−1", L:"−0,5", M:"−0,5", P:"", I:"−0,5", A:"", E:"−0,5"}   /* brevet : oubli et illisible à −0,5, ponctuation au forfait (voir le tableau) */
+                                           : {G:"−1", L:"−0,5", M:"−1", P:"−0,5", I:"−1", A:"", E:"−0,5"};
 
   // Construction du texte avec spans en couches
   var textHtml = "";
@@ -5741,6 +5778,9 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     var typeClass = "type-" + ev.type;
     var disp = displayTranscript(ev, errIdx);
     var origText = (disp && disp.text) ? disp.text : "";  // mode brut = exactement ce que l'élève a écrit ; si pas connu, rien
+    // point 322 : « Attention graphie » sans forme = le mot tel que l'élève l'a écrit (juste) ; « Illisible » sans forme = illisible
+    var sansForme = !(disp && disp.text);
+    if (sansForme && ev.type === "A") origText = ev.word;
     var correctText = ev.word;
     var numTrou = trouParErr[errIdx];
 
@@ -5759,8 +5799,9 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
       baseHtml = '<span class="placeholder"></span>';
       topHtml  = '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
     } else {
-      baseHtml = '<span class="orig">' + escapeHtml(origText) + '</span>';
-      topHtml  = '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
+      baseHtml = (sansForme && ev.type === "I") ? '<span class="orig" style="font-style:italic;opacity:.75">illisible</span>'
+                                                : '<span class="orig">' + escapeHtml(origText) + '</span>';
+      topHtml  = (sansForme && ev.type === "A") ? '' : '<span class="vert-top">' + escapeHtml(correctText) + '</span>';
     }
     var estRep = estRepetee(ev);
     var afterHtml = '<span class="badge">' + ev.type + '</span>' +
@@ -6094,6 +6135,9 @@ function Copies(p){
 
   // Publication : sauvegarde des options actuelles côté Firebase
   function publierCopies(){
+    // Garde du 29/09 : un élève présent sans copie corrigée est signalé avant de rendre les copies
+    var sansCopie=(data.eleves||[]).filter(function(n){var k=san(n);return !abs[k]&&!corr[k]});
+    if(sansCopie.length&&!confirm("\u26a0 "+sansCopie.length+" \u00e9l\u00e8ve"+(sansCopie.length>1?"s pr\u00e9sents n\u2019ont":" pr\u00e9sent n\u2019a")+" pas de copie corrig\u00e9e : "+sansCopie.join(", ")+".\n\nS\u2019il"+(sansCopie.length>1?"s \u00e9taient absents, cochez-les absents":" \u00e9tait absent, cochez-le absent")+" ; sinon, corrigez "+(sansCopie.length>1?"leurs copies":"sa copie")+" d\u2019abord.\n\nRendre les copies quand m\u00eame ?"))return;
     var opts={
       mode:copyOpts.mode,
       showOverlay:copyOpts.showOverlay,
@@ -6665,6 +6709,26 @@ function classeDuRegistre(nom,source){
 // M-TEST — Chemin de suppression EXTRAIT tel quel du bouton de l'accueil
 // (déplacement, pas réécriture) : le bac à sable doit pouvoir éprouver la
 // corbeille sans qu'on en recopie la logique ailleurs.
+/* Garde du 29/09 (copie de CHARRIER Line effacée sans trace) : toute copie effacée — réinitialiser,
+   transférer, remplacer, échanger — part D'ABORD dans la corbeille MJPC, rangée comme la suppression
+   d'une dictée (corbeille/<jour>/effacement-copie_<heure>_<élève>). Si l'archivage échoue, rien n'est effacé.
+   Un index dans la dictée (effacees/<élève>/<date>) permet de la restaurer depuis l'écran de correction. */
+function archiverCopies(dicteeId,titre,geste,cles,suite){
+  var now=new Date();var an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1));
+  var jour=now.toISOString().slice(0,10);var hhmmss=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);
+  var base="correction_dictee/"+dicteeId;
+  Promise.all(cles.map(function(k){return Promise.all([db.ref(base+"/results/"+k).once("value"),db.ref(base+"/autocorrection/"+k).once("value")]).then(function(v){return {k:k,results:v[0].val(),autocorrection:v[1].val()}})}))
+  .then(function(lots){
+    return Promise.all(lots.filter(function(l){return l.results||l.autocorrection}).map(function(l){
+      var chemin="corbeille/"+jour+"/effacement-copie_"+hhmmss+"_"+l.k,le=Date.now();
+      return db.ref(chemin).set({_meta:{motif:"effacement-copie",geste:geste,annee:an,source:"correction_dictee",dictee:dicteeId,titre:titre||"",cle:l.k,le:le},data:{results:l.results,autocorrection:l.autocorrection}})
+        .then(function(){if(l.results)return db.ref(base+"/effacees/"+l.k+"/"+le).set({chemin:chemin,geste:geste,le:le,note:l.results.note==null?null:l.results.note})});
+    }));
+  })
+  .then(function(){suite()})
+  .catch(function(err){alert("L\u2019archivage dans la corbeille a \u00e9chou\u00e9 : rien n\u2019a \u00e9t\u00e9 effac\u00e9.\n\n"+((err&&err.message)||err))});
+}
+var GESTES_EFFACEMENT={reinitialiser:"R\u00e9initialiser",transferer:"Transf\u00e9rer",remplacer:"Remplacer",echanger:"\u00c9changer"};
 function supprimerDicteeAvecCorbeille(d, onDone){
   if(!confirm("Supprimer "+d.title+" ?\n\nElle sera archiv\u00e9e dans la corbeille MJPC (r\u00e9cup\u00e9rable un an) et un export JSON sera t\u00e9l\u00e9charg\u00e9.\n\nContinuer ?"))return;db.ref("correction_dictee/"+d.id).once("value",function(snap){var data=snap.val();if(!data){alert("Cette dict\u00e9e est d\u00e9j\u00e0 vide.");return}var payload={_meta:{source:"correction_dictee/"+d.id,exportedAt:new Date().toISOString(),exportedBy:"suppression_auto",version:1},data:data};/* ceinture 1 : le fichier local, immediat et hors ligne */try{var blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="dictee_"+d.id+"_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url)}catch(err){}/* ceinture 2 : la corbeille du hub, meme convention que la console MJPC */var now=new Date();var an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1));var jour=now.toISOString().slice(0,10);var hhmmss=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);var chemin="corbeille/"+jour+"/suppression-dictee_"+hhmmss;db.ref(chemin).set({_meta:{motif:"suppression-dictee",annee:an,source:"correction_dictee",dictee:d.id,titre:d.title,le:Date.now()},data:data}).then(function(){return db.ref("correction_dictee/"+d.id).remove()}).then(function(){if(typeof onDone==="function")onDone()}).catch(function(err){if(confirm("L\u2019archivage dans la corbeille MJPC a \u00e9chou\u00e9 ("+(err&&err.message||"raison inconnue")+").\n\nL\u2019export JSON, lui, est bien t\u00e9l\u00e9charg\u00e9.\n\nSupprimer quand m\u00eame ?")){db.ref("correction_dictee/"+d.id).remove().then(function(){if(typeof onDone==="function")onDone()})}});})
 }
@@ -6918,7 +6982,11 @@ var TEXTES_DEFAUT = {
   fin_phrase_13: "Tr\u00e8s bonne dict\u00e9e et autocorrection parfaite. Rien \u00e0 redire.",
   fin_phrase_14: "Tr\u00e8s bonne dict\u00e9e, et tu as su retrouver tes rares erreurs.",
   fin_phrase_15: "Tr\u00e8s bonne dict\u00e9e. Tu avais peu d\u2019erreurs : prends le temps de les regarder de pr\u00e8s, ce sont elles qui te font perdre tes derniers points.",
-  fin_phrase_16: "Tr\u00e8s bonne dict\u00e9e. Tu avais peu d\u2019erreurs, mais tu ne les as pas retrouv\u00e9es \u2014 ce sont justement celles-l\u00e0 qu\u2019il faut comprendre."
+  fin_phrase_16: "Tr\u00e8s bonne dict\u00e9e. Tu avais peu d\u2019erreurs, mais tu ne les as pas retrouv\u00e9es \u2014 ce sont justement celles-l\u00e0 qu\u2019il faut comprendre.",
+  fin_titre_parfaite: "Autocorrection parfaite, {prenom}.",
+  fin_phrase_1_parfaite: "Ta dict\u00e9e a \u00e9t\u00e9 tr\u00e8s difficile. Mais tu as retrouv\u00e9 toutes tes erreurs toi-m\u00eame : tu sais les voir, il te reste \u00e0 les \u00e9viter en \u00e9crivant.",
+  fin_phrase_9_presque: "Bonne dict\u00e9e, et une autocorrection presque sans faute. Tu ma\u00eetrises ce que tu relis.",
+  fin_phrase_13_presque: "Tr\u00e8s bonne dict\u00e9e et autocorrection presque parfaite. Encore un peu d\u2019attention et ce sera parfait."
 };
 // Libellés de l'éditeur (Réglages) — l'ordre fixe l'ordre d'affichage.
 var TEXTES_CHAMPS = [
@@ -6947,7 +7015,11 @@ var TEXTES_CHAMPS = [
   ["fin_phrase_14","Fin de l\u2019autocorrection \u2014 Phrase \u2014 dict\u00e9e solide (7,5 \u00e0 10), autocorrection bonne","Choisie selon la note de dict\u00e9e (ramen\u00e9e sur 10) et la note d\u2019autocorrection."],
   ["fin_phrase_15","Fin de l\u2019autocorrection \u2014 Phrase \u2014 dict\u00e9e solide (7,5 \u00e0 10), autocorrection moyenne","Choisie selon la note de dict\u00e9e (ramen\u00e9e sur 10) et la note d\u2019autocorrection."],
   ["fin_phrase_16","Fin de l\u2019autocorrection \u2014 Phrase \u2014 dict\u00e9e solide (7,5 \u00e0 10), autocorrection faible","Choisie selon la note de dict\u00e9e (ramen\u00e9e sur 10) et la note d\u2019autocorrection."],
-  ["fin_parcours_emoji","Fin de l\u2019autocorrection \u2014 symbole","Laisser vide pour n\u2019afficher aucun symbole."]
+  ["fin_parcours_emoji","Fin de l\u2019autocorrection \u2014 symbole","Laisser vide pour n\u2019afficher aucun symbole."],
+  ["fin_titre_parfaite","Fin de l\u2019autocorrection \u2014 Titre \u2014 autocorrection parfaite (5/5)","{prenom} sera remplac\u00e9 par son pr\u00e9nom."],
+  ["fin_phrase_1_parfaite","Fin de l\u2019autocorrection \u2014 Phrase \u2014 dict\u00e9e tr\u00e8s faible (0 \u00e0 2), autocorrection parfaite (5/5)","Choisie selon la note de dict\u00e9e (ramen\u00e9e sur 10) et la note d\u2019autocorrection."],
+  ["fin_phrase_9_presque","Fin de l\u2019autocorrection \u2014 Phrase \u2014 dict\u00e9e correcte (5 \u00e0 7,5), autocorrection presque parfaite (4,5 \u00e0 4,99)","Choisie selon la note de dict\u00e9e (ramen\u00e9e sur 10) et la note d\u2019autocorrection."],
+  ["fin_phrase_13_presque","Fin de l\u2019autocorrection \u2014 Phrase \u2014 dict\u00e9e solide (7,5 \u00e0 10), autocorrection presque parfaite (4,5 \u00e0 4,99)","Choisie selon la note de dict\u00e9e (ramen\u00e9e sur 10) et la note d\u2019autocorrection."]
 ];
 var TEXTES_SURCHARGE = {};
 // txt(cle, remplacements) — jamais d'accès direct au dictionnaire ailleurs dans le code.
@@ -7062,11 +7134,11 @@ function TabletteDeux(p){
   var sE=useState({1:{},2:{}}),etats=sE[0],setEtats=sE[1];
   var sN=useState(Date.now()),now=sN[0],setNow=sN[1];
   function onEtat(n){return function(patch){setEtats(function(prev){var o={};o[1]=prev[1];o[2]=prev[2];o[n]=Object.assign({},prev[n],patch);return o})}}
-  var enJeu=!!(etats[1].finished||etats[2].finished);
+  var enJeu=!!(etats[1].finished||etats[2].finished||etats[1].identite||etats[2].identite);
   useEffect(function(){if(!enJeu)return;var t=setInterval(function(){setNow(Date.now())},1000);return function(){clearInterval(t)}},[enJeu]);
   function prenom(n){var i=etats[n].identite;return i?String(i.nom).split(" ").pop():""}
   function corrigeEncore(n){var e=etats[n];return !!(e.identite&&e.dicteeId&&!e.finished)}
-  function verrou(n){var e=etats[n],m=n===1?2:1;return !!(e.finished&&e.styloFin>0&&now>=e.styloFin+30000&&corrigeEncore(m))}
+  function verrou(n){var e=etats[n],m=n===1?2:1;return !!(e.finished&&!(e.styloFin>0&&now<e.styloFin+30000)&&corrigeEncore(m))}
   // les deux élèves connectés sur la même dictée : leur binôme réel est rangé (votre suivi le lit)
   useEffect(function(){
     var a=etats[1],b=etats[2];
@@ -9402,7 +9474,7 @@ function EleveCorrection(p){
         h("div",{className:"saisie-moitie",style:{flex:1,border:"2px solid "+(feedback?(feedback.correct?"var(--green)":"var(--coral)"):"#2563eb"),borderRadius:10,padding:"9px 12px",fontSize:"1.15rem",background:"#fff",minHeight:24}},inputVal,h("span",{style:{borderLeft:"2px solid #2563eb",marginLeft:1}})),
         h("button",{className:"btn btn-primary",style:{width:"auto",padding:"0 16px"},onClick:tryAnswer},"\u2713 Valider")),
       feedback&&h("div",{style:{marginTop:6,fontSize:".88rem",fontWeight:600,color:feedback.correct?"var(--green)":"var(--coral)",textAlign:"center"}},feedback.correct?"\u2713 Correct ! \u00ab "+feedback.answer+" \u00bb":"\u2717 R\u00e9essaie !"),
-      h(ClavierTablette,{onTouche:function(t){if(t==="OK"){tryAnswer();return}var v=t==="BACK"?inputVal.slice(0,-1):inputVal+t;setInputVal(v);frappeGarder(activeErr,v)}}));
+      h(ClavierTablette,{onTouche:function(t){recordAction();if(t==="OK"){tryAnswer();return}var v=t==="BACK"?inputVal.slice(0,-1):inputVal+t;setInputVal(v);frappeGarder(activeErr,v)}}));
   }
   // ═══ Lot 2 : l'encart « Regagner des points » et la fenêtre de question ═══
   var crans=acRatesChrono(history,attempts,results,errors,totalErrors);
@@ -9423,6 +9495,8 @@ function EleveCorrection(p){
     }
   }
   function repondre(i,idQ,choix){
+    // L'heure ferme les questions : une réponse donnée après la fin (ou la clôture) ne compte pas
+    if(finSession&&Date.now()>=finSession){setNow(Date.now());return}   // la fenêtre affiche alors « plus comptée »
     var qb=acQuestionParId(idQ);var ok=!!qb&&choix===qb.rep;
     var nq=Object.assign({},questions[i]||{},{ok:ok,choix:choix,t:Date.now()});
     var tout=Object.assign({},questions);tout[i]=nq;
@@ -9456,12 +9530,15 @@ function EleveCorrection(p){
     return h("div",{className:"card",style:{marginBottom:12}},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}},h("b",null,"Regagner des points"),
         nQ>0?h("span",null,h("b",{style:{color:"#2563eb",fontSize:"1.15rem"}},dispo)," question"+(dispo>1?"s":"")+" \u00b7 "+prixTexte()+" chacune"):null),
-      h("div",{style:{margin:"4px 0 10px"}},perdu>0?h("span",null,"Tu as perdu ",h("b",null,acNoteTexte(perdu)+" point"+(perdu>=2?"s":""))," sur tes essais rat\u00e9s."):"Tu n\u2019as rien perdu pour l\u2019instant."),
+      h("div",{style:{margin:"4px 0 10px"}},perdu>0?h("span",null,"Tu as perdu ",h("b",null,acNoteTexte(perdu)+" point"+(perdu>=2?"s":""))," sur tes essais rat\u00e9s."):finished?"Tu n\u2019as rien perdu.":"Tu n\u2019as rien perdu pour l\u2019instant."),
       bouton,estimation());
   }
   function fenetreQuestion(){
     if(!aq)return null;
     var i=aq.i,q=questions[i];if(!q||!q.id)return null;
+    if(finSession&&Date.now()>=finSession&&q.ok==null)return h("div",{className:"popup-overlay",style:{zIndex:450}},h("div",{className:"card",style:{maxWidth:460,width:"100%",textAlign:"center"}},
+      h("div",{style:{fontWeight:700,marginBottom:12}},"L\u2019heure est termin\u00e9e : cette question n\u2019est plus compt\u00e9e."),
+      h("button",{className:"btn btn-primary",style:{width:"auto"},onClick:function(){setAq(null)}},"Fermer")));
     var qb=acQuestionParId(q.id);if(!qb)return null;
     var err=errors[q.err]||{};var t=err.type||"G";
     var ordre=acMelanger(qb.choix.length,q.id+"|"+d.key);
@@ -9498,6 +9575,9 @@ function EleveCorrection(p){
   var styloActif=finished&&styloFin>0&&now<styloFin;
   var questionsOuvertes=finished&&styloFin>0&&now>=styloFin&&!!finSession&&now<finSession;
   var pasLeTemps=finished&&styloFin===0;
+  // Point 232 : pendant l'heure lancée, un élève qui a fini aide peut-être son voisin (même sur un autre appareil) :
+  // la dictée corrigée, l'analyse et « 📄 Ma dictée autocorrigée » attendent la fin de l'heure.
+  var cacheCorrige=dansHeureLancee(sessionDebut,heure)&&!heureFinie;
   function mmss(ms){ms=Math.max(0,ms);var s=Math.ceil(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
   var GENERIQUES=[generateIndice("xqzw","G"),generateIndice("xqzw","L"),generateIndice("x","M")];
   function astucesRouge(){
@@ -9550,6 +9630,7 @@ function EleveCorrection(p){
   function trancheAc(x){return x>=4.5?0:x>=3.5?1:x>=2?2:3}
   function titreFin(){
     if(sansFaute)return txt("fin_titre_sans_faute",{prenom:prenomEleve});
+    if(score>=5-1e-9)return txt("fin_titre_parfaite",{prenom:prenomEleve});   // point 295 : 5/5 n'est pas « presque parfaite »
     return txt("fin_titre_"+(trancheAc(score)+1),{prenom:prenomEleve});
   }
   function phraseFin(){
@@ -9557,7 +9638,12 @@ function EleveCorrection(p){
     if(!liveConfig.showNote)return "";   // la phrase dit la tranche de la note : pas de phrase si la note est cachée
     var sur10=(Number(noteDictee)||0)/(d.base||10)*10;
     var td=sur10<2?0:sur10<5?1:sur10<7.5?2:3;
-    return txt("fin_phrase_"+(td*4+trancheAc(score)+1));
+    var parfaite=score>=5-1e-9,n=td*4+trancheAc(score)+1;
+    // point 295 : dans la tranche 4,5 à 5, la phrase dit « parfaite » à 5/5 et « presque » en dessous
+    if(n===1&&parfaite)return txt("fin_phrase_1_parfaite");
+    if(n===9&&!parfaite)return txt("fin_phrase_9_presque");
+    if(n===13&&!parfaite)return txt("fin_phrase_13_presque");
+    return txt("fin_phrase_"+n);
   }
   function ecranAttestation(){
     return h("div",{className:"container fade-up",style:{paddingTop:30}},
@@ -9584,6 +9670,7 @@ function EleveCorrection(p){
     return h("div",{className:"card",style:{marginBottom:14,borderLeft:"4px solid #276749"}},
       h("div",{style:{fontWeight:700,marginBottom:6}},"\u00c0 recopier chez toi, sur ta copie :"),
       h("div",{style:{fontStyle:"italic",lineHeight:1.55,marginBottom:12}},"\u00ab "+phraseARecopier(errors,extras)+" \u00bb"),
+      cacheCorrige?h("div",{style:{fontSize:".85rem",color:"var(--muted)"}},"\ud83d\udcc4 Ta dict\u00e9e autocorrig\u00e9e sera disponible \u00e0 la fin de l\u2019heure."):
       p.onCopie?h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:p.onCopie,title:"Ouvre ta dict\u00e9e corrig\u00e9e. Tu peux la rouvrir quand tu veux, m\u00eame depuis chez toi."},"\ud83d\udcc4 Ma dict\u00e9e autocorrig\u00e9e"):null);
   }
   /* Tableau des points : même calcul que la note de dictée (computeNote) — barème, répétitions, forfait. */
@@ -9668,11 +9755,8 @@ function EleveCorrection(p){
     alerteHeure(),encartRegain(),fenetreQuestion(),fenetreStylo(),blocARecopier(),
     // Détail de la note (si note révélée)
     liveConfig.showNote&&tableauNote(),
-    // Consigne
-    h("div",{style:{padding:"12px 16px",background:"var(--primary-light)",borderRadius:10,marginBottom:14,borderLeft:"4px solid var(--primary)"}},
-      h("p",{style:{fontWeight:700,marginBottom:4,fontSize:".95rem"}},"\u270d\ufe0f Maintenant, corrige sur ta copie au stylo vert."),
-      h("p",{style:{fontSize:".88rem",color:"var(--text-sub)"}},"Pour chaque erreur, \u00e9cris la bonne orthographe et note le type d\u2019erreur (G = grammaire, L = lexique).")
-    ),
+    cacheCorrige?h("div",{className:"card",style:{marginBottom:14,textAlign:"center",color:"var(--text-sub)"}},"Ta dict\u00e9e corrig\u00e9e et l\u2019analyse de tes erreurs s\u2019afficheront \u00e0 la fin de l\u2019heure."):h(React.Fragment,null,
+    // Point 233 : l'ancienne consigne « Maintenant, corrige sur ta copie au stylo vert… (G/L) » est retirée — la fenêtre du stylo vert la remplace.
     // Texte corrigé — copie annotée
     h("div",{className:"card",style:{marginBottom:14}},
       h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:8,fontWeight:600,textTransform:"uppercase"}},"Ta dict\u00e9e corrig\u00e9e"),
@@ -9743,6 +9827,7 @@ function EleveCorrection(p){
         );
       })
     ),
+    ),
     // Boutons
     h("div",{style:{display:"flex",gap:8,marginTop:12,justifyContent:"center",paddingBottom:30,flexWrap:"wrap"}},
       h("button",{className:"btn btn-ghost",onClick:p.onBack},"\u2190 Retour"),
@@ -9761,9 +9846,7 @@ function EleveCorrection(p){
 
   return h("div",{className:"container fade-up",ref:racineRef,style:(p.moitie&&activeErr!==null)?{paddingBottom:420}:undefined},
     // Idle warning
-    idleWarning&&h("div",{style:{position:"fixed",top:0,left:0,right:0,zIndex:400,padding:"14px 20px",background:"#c53030",color:"#fff",textAlign:"center",fontWeight:700,fontSize:"1.1rem",boxShadow:"0 4px 20px rgba(197,48,48,.4)",animation:"fadeUp .3s ease"},onClick:function(){recordAction()}},
-      "\u26a0\ufe0f Reprends le travail ! Clique ici pour continuer."
-    ),
+    // Bandeau rouge « Reprends le travail » retiré (demande de Paul, 29/09) : votre suivi garde l'état « inactif ».
     // Header sticky
     h("div",{className:"score-bar",style:{flexWrap:"wrap"}},
       legendeTypes(),
@@ -9852,7 +9935,7 @@ function EleveCorrection(p){
           (attempts[activeErr]||0)>0&&h("span",{style:{fontSize:".78rem",color:"var(--muted)",marginLeft:"auto"}},(attempts[activeErr]||0)+" essai"+(((attempts[activeErr]||0)>1)?"s":""))
         ),
         h("div",{style:{display:"flex",gap:8}},
-          h("input",{ref:inputRef,value:inputVal,onChange:function(e){setInputVal(e.target.value)},
+          h("input",{ref:inputRef,value:inputVal,onChange:function(e){recordAction();setInputVal(e.target.value)},
             placeholder:"Tape le mot correct\u2026",
             style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderColor:feedback?feedback.correct?"var(--green)":"var(--coral)":"var(--border)",background:feedback?feedback.correct?"var(--green-light)":"var(--coral-light)":"var(--card)",borderRadius:10},
             onKeyDown:function(e){if(e.key==="Enter")tryAnswer()}}),
