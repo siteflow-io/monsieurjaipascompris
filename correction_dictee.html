@@ -1127,7 +1127,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.6.3";
+var APP_VERSION="6.7.0-L1";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -2438,7 +2438,7 @@ function AppProf(p){
     setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:classeName,eleves:eleves,base:cfg.base||20,bareme:cfg.bareme||"preparee"});
     setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
   })}
-  function save(ek,errors,extras,fastIdxVal,trace){
+  function save(ek,errors,extras,fastIdxVal,trace,posTexte){
     /* [ELEVE-1 ④] la note s'enregistre sur la base avec laquelle la copie est corrigée (Paul, 01/10) ; la trace dit d'où elle vient */
     var tr=(trace&&typeof trace==="object")?trace:{amenagee:false};
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,(tr.amenagee&&tr.base)?tr.base:(tr.baseDictee||dicteeData.base),dicteeData.bareme);
@@ -2446,6 +2446,9 @@ function AppProf(p){
     if(tr.amenagee){c[ek].mode=tr.mode;c[ek].base=tr.base;}
     if(typeof fastIdxVal==="number")c[ek].fastIdx=fastIdxVal;
     else if(corrections[ek]&&typeof corrections[ek].fastIdx==="number")c[ek].fastIdx=corrections[ek].fastIdx;
+    /* [L1] la position du mode texte (le dernier mot touché) : gardée avec la copie, reprise à la réouverture */
+    if(typeof posTexte==="number")c[ek].texteIdx=posTexte;
+    else if(corrections[ek]&&typeof corrections[ek].texteIdx==="number")c[ek].texteIdx=corrections[ek].texteIdx;
     setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
     // Remap student autocorrection if errors changed
     var acPath="correction_dictee/"+dicteeId+"/autocorrection/"+ek;
@@ -3142,9 +3145,10 @@ function CorrScreen(p){
       setMsg("\u21bb "+cur.split(" ").pop()+" r\u00e9initialis\u00e9");setTimeout(function(){setMsg(null)},2000);
       });
     },
-    onAutoSave:function(err,ext,fastIdxVal){
+    onAutoSave:function(err,ext,fastIdxVal,posTexte){
       // Sauvegarde silencieuse + persistance fastIdx via save()
-      p.onSave(curKey,err,ext,fastIdxVal);
+      /* [L1] à chaque geste (mode texte comme mode rapide) ; la trace de la copie (aménagée ou non, sa base) — elle manquait ici */
+      p.onSave(curKey,err,ext,fastIdxVal,traceCopie(curIsAmen,dAmen,data.base),posTexte);
     },
     onCancel:function(){setCur(null)}
   });
@@ -3304,8 +3308,8 @@ function CorrScreen(p){
       return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,effectiveBase:baseDeCopie(traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),data.base),   /* [ELEVE-1 ④] */
         existing:p.corrections[san(rapideEleve)]||null,
         startFast:true,
-        onAutoSave:function(err,ext,fastIdxVal){
-          p.onSave(san(rapideEleve),err,ext,fastIdxVal,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base));   /* [ELEVE-1 ④] */
+        onAutoSave:function(err,ext,fastIdxVal,posTexte){
+          p.onSave(san(rapideEleve),err,ext,fastIdxVal,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),posTexte);   /* [ELEVE-1 ④] */
         },
         onExitFast:function(){setTab("correct")},
         onSave:function(err,ext){
@@ -3593,7 +3597,9 @@ function CorrEleve(p){
   var s3=useState(null),popupIdx=s3[0],setPopupIdx=s3[1];
   var s4=useState(null),insertIdx=s4[0],setInsertIdx=s4[1];
   var s5=useState(""),insertWord=s5[0],setInsertWord=s5[1];
-  var s6=useState(-1),lastTouched=s6[0],setLastTouched=s6[1];
+  var s6=useState(p.existing&&typeof p.existing.texteIdx==="number"?p.existing.texteIdx:-1),lastTouched=s6[0],setLastTouched=s6[1];   /* [L1] reprise exacte */
+  /* [L1] mode texte : chaque geste s'enregistre aussitôt, avec la position (Paul, 01/10 : « l'enregistrement doit être instantané ») */
+  function autoTexte(ne,nx,pos){if(p.onAutoSave)p.onAutoSave(ne,nx,undefined,(typeof pos==="number"&&pos>=0)?pos:undefined);}
   var wordGridRef=React.useRef(null);
   var sFs=useState(1),fontScale=sFs[0],setFontScale=sFs[1];
   var s7=useState(p.startFast||false),fastMode=s7[0],setFastMode=s7[1];
@@ -3636,7 +3642,7 @@ function CorrEleve(p){
 
   function clickWord(idx){
     var ei=errors.findIndex(function(e){return e.idx===idx});
-    if(ei>=0){var ne=errors.slice();ne.splice(ei,1);setErrors(ne);setLastTouched(idx);return}
+    if(ei>=0){var ne=errors.slice();ne.splice(ei,1);setErrors(ne);setLastTouched(idx);autoTexte(ne,extras,idx);return}
     setPopupIdx(idx);
   }
   var s14=useState(null),askFautifTexte=s14[0],setAskFautifTexte=s14[1];
@@ -3645,17 +3651,17 @@ function CorrEleve(p){
   React.useEffect(function(){if(askFautifTexte&&fautifTexteRef.current)fautifTexteRef.current.focus()},[askFautifTexte]);
   function selectType(type){
     if(type==="G"||type==="L"){setAskFautifTexte({type:type,idx:popupIdx});setFautifTexteVal("");setPopupIdx(null);return}
-    setErrors(errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]));setLastTouched(popupIdx);setPopupIdx(null)
+    var neT=errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]);setErrors(neT);setLastTouched(popupIdx);autoTexte(neT,extras,popupIdx);setPopupIdx(null)
   }
   function confirmFautifTexte(){
     var ft=askFautifTexte;if(!ft)return;
     var errObj={idx:ft.idx,type:ft.type,word:tokens[ft.idx]};
     if(fautifTexteVal.trim())errObj.fautif=fautifTexteVal.trim();
-    setErrors(errors.concat([errObj]));setLastTouched(ft.idx);
+    var neF=errors.concat([errObj]);setErrors(neF);setLastTouched(ft.idx);autoTexte(neF,extras,ft.idx);
     setAskFautifTexte(null);setFautifTexteVal("");
   }
-  function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}setExtras(extras.concat([{afterIdx:insertIdx,word:insertWord.trim()}]));setInsertIdx(null);setInsertWord("")}
-  function removeExtra(i){var ne=extras.slice();ne.splice(i,1);setExtras(ne)}
+  function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}var nxI=extras.concat([{afterIdx:insertIdx,word:insertWord.trim()}]);setExtras(nxI);autoTexte(errors,nxI,insertIdx);setInsertIdx(null);setInsertWord("")}
+  function removeExtra(i){var ne=extras.slice();ne.splice(i,1);setExtras(ne);autoTexte(errors,ne,lastTouched)}
 
   var errMap={};errors.forEach(function(e){errMap[e.idx]=e.type});
   var extraMap={};extras.forEach(function(e,i){var k=e.afterIdx;if(!extraMap[k])extraMap[k]=[];extraMap[k].push({word:e.word,gi:i})});
@@ -3832,6 +3838,11 @@ function CorrEleve(p){
     overlay.style.top=top+"px";
     overlay.style.height=height+"px";
   },[lastTouched,errors,extras,fastMode]);
+  useEffect(function(){   /* [L1] la réouverture reprend exactement là : la page est défilée sur le mot repris */
+    if(fastMode||lastTouched<0)return;
+    var t=setTimeout(function(){var g=wordGridRef.current;var el=g&&g.querySelector('[data-word-idx="'+lastTouched+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});},80);
+    return function(){clearTimeout(t)};
+  },[]);
 
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
@@ -4009,7 +4020,7 @@ function CorrEleve(p){
       }))
     ),
     h("div",{style:{display:"flex",gap:8,marginBottom:20}},
-      h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"Enregistrer ("+noteFr(sc.note)+"/"+(p.effectiveBase||data.base)+") \u2192 suivant")
+      h("button",{className:"btn btn-primary",style:{flex:1},title:"Tout est d\u00e9j\u00e0 enregistr\u00e9, \u00e0 chaque geste. Ce bouton passe \u00e0 l\u2019\u00e9l\u00e8ve suivant (apr\u00e8s le contr\u00f4le des mots recopi\u00e9s).",onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"Enregistrer ("+noteFr(sc.note)+"/"+(p.effectiveBase||data.base)+") \u2192 suivant")
     ),
     // Popup transfert
     xferOpen&&(function(){
@@ -6769,7 +6780,7 @@ function classeDuRegistre(nom,source){
 // M-TEST — Chemin de suppression EXTRAIT tel quel du bouton de l'accueil
 // (déplacement, pas réécriture) : le bac à sable doit pouvoir éprouver la
 // corbeille sans qu'on en recopie la logique ailleurs.
-/* Garde du 29/09 (copie de CHARRIER Line effacée sans trace) : toute copie effacée — réinitialiser,
+/* Garde du 29/09 (une copie effacée sans trace) : toute copie effacée — réinitialiser,
    transférer, remplacer, échanger — part D'ABORD dans la corbeille MJPC, rangée comme la suppression
    d'une dictée (corbeille/<jour>/effacement-copie_<heure>_<élève>). Si l'archivage échoue, rien n'est effacé.
    Un index dans la dictée (effacees/<élève>/<date>) permet de la restaurer depuis l'écran de correction. */
@@ -6852,8 +6863,8 @@ function genererDonneesTest(){
       {idx:idx("caressa"),type:"A",word:"caressa",fautif:"caressa"},
       {idx:idx("ronronna"),type:"G",word:"ronronna",fautif:"ronrona"}
     ],extras:[],note:5,deduction:5,counts:{G:3,L:1,M:0,I:0,P:0,A:1,E:0,X:0},timestamp:maintenant};
-  /* ROBERT Chloé : corrigée aussi — sert au cas « copie non rendue » sur la dictée B */
-  /* MOREAU Sacha : ABSENT sur la dictée A — il ne doit voir ni note ni « Ouvrir » */
+  /* ZZTEST ROBERT Chloé : corrigée aussi — sert au cas « copie non rendue » sur la dictée B */
+  /* ZZTEST MOREAU Sacha : ABSENT sur la dictée A — il ne doit voir ni note ni « Ouvrir » */
   var cfgCommun={classe:classeTestId(),niveau:"5e",base:10,published:true,showNote:true,peerHelp:true,eleves:TEST_ELEVES};
   return {
     classe:classeTestId(), eleves:TEST_ELEVES, codes:TEST_CODES,
