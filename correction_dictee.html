@@ -189,6 +189,10 @@ textarea{resize:vertical;min-height:120px}
 .copies-left{min-width:0}
 .copies-right{position:sticky;top:10px}
 @media (max-width:1100px){.copies-2col{display:block}.copies-right{position:static;margin-top:4px}}
+
+/* [L3] le bouton mis en avant (Entrée le valide) ; la garde du mot juste */
+.fast-btn.fast-preselect{box-shadow:0 0 0 3px rgba(37,99,235,.55);transform:scale(1.04);font-weight:800}
+.garde-mot{color:#c53030;font-size:.85rem;font-weight:600;margin-top:6px}
 </style>
 </head>
 <style>
@@ -1127,7 +1131,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L2";
+var APP_VERSION="6.7.0-L3";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1159,6 +1163,12 @@ var MJPC_PURGE = {
    indistinct. Les autres ponctuations consécutives restent groupées. */
 function tokenize(text){if(!text)return[];var t=[],re=/(\s+)|(['\u2019"\u00ab\u00bb\u201c\u201d])|([.,;:!?\u2026()\-\u2013\u2014]+)|([^\s.,;:!?\u2026\u00ab\u00bb\u201c\u201d()'\u2019"\-\u2013\u2014]+)/g,m;while((m=re.exec(text))!==null){if(!m[1])t.push(m[2]||m[3]||m[4])}return t}
 function estApostrophe(w){return/^['\u2019]$/.test(w)}
+/* [L3] la touche M s'adapte au mot courant : un mot → Manquant ; un signe de ponctuation → Ponctuation ; une apostrophe → Élision */
+function typeAdapteM(wt){if(!wt)return "M";if(estApostrophe(wt.text))return "E";if(isPunct(wt.text))return "P";return "M";}
+/* [L3] le bouton mis en avant (Entrée le valide) : Ponctuation sur un signe, Élision sur une apostrophe, rien sur un mot */
+function preselectionRapide(wt){if(!wt)return null;if(estApostrophe(wt.text))return "E";if(isPunct(wt.text))return "P";return null;}
+/* [L3] la garde du mot juste : ce qui est tapé est-il le mot attendu (sans la casse) ? */
+function motJuste(saisie,attendu){var a=String(saisie||"").trim(),b=String(attendu||"").trim();return !!a&&!!b&&a.toLowerCase()===b.toLowerCase();}
 function estGuillemet(w){return/^["\u00ab\u00bb\u201c\u201d]$/.test(w)}
 function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019'"()\-\u2013\u2014]+$/.test(w)}
 // Espacement entre token courant et suivant — règles françaises :
@@ -3660,10 +3670,13 @@ function CorrEleve(p){
     if(type==="G"||type==="L"){setAskFautifTexte({type:type,idx:popupIdx});setFautifTexteVal("");setPopupIdx(null);return}
     var neT=errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]);setErrors(neT);setLastTouched(popupIdx);autoTexte(neT,extras,popupIdx);setPopupIdx(null)
   }
-  function confirmFautifTexte(){
+  function confirmFautifTexte(overrideVal){
     var ft=askFautifTexte;if(!ft)return;
+    var vT=(overrideVal!==undefined)?overrideVal:fautifTexteVal;
+    if(motJuste(vT,tokens[ft.idx])){setGardeMot(true);return}   /* [L3] le mot juste est refusé ; le champ reste ouvert */
+    setGardeMot(false);
     var errObj={idx:ft.idx,type:ft.type,word:tokens[ft.idx]};
-    if(fautifTexteVal.trim())errObj.fautif=fautifTexteVal.trim();
+    if(String(vT).trim())errObj.fautif=String(vT).trim();
     var neF=errors.concat([errObj]);setErrors(neF);setLastTouched(ft.idx);autoTexte(neF,extras,ft.idx);
     setAskFautifTexte(null);setFautifTexteVal("");
   }
@@ -3688,6 +3701,7 @@ function CorrEleve(p){
   var wordTokens=tokens.map(function(t,i){return{text:t,idx:i}});
 
   var s10=useState(null),askFautifI=s10[0],setAskFautifI=s10[1];
+  var sGM=useState(false),gardeMot=sGM[0],setGardeMot=sGM[1];   /* [L3] la garde du mot juste */
   var s11=useState(""),fautifValI=s11[0],setFautifValI=s11[1];
   var fautifRefI=React.useRef(null);
   React.useEffect(function(){if(askFautifI&&fautifRefI.current)fautifRefI.current.focus()},[askFautifI]);
@@ -3704,12 +3718,14 @@ function CorrEleve(p){
     if(p.onAutoSave)p.onAutoSave(ne,extras,newIdx);
   }
   function cancelFautifI(){
-    setAskFautifI(null);
+    setAskFautifI(null);setGardeMot(false);
     setFautifValI("");
   }
   function confirmFautifI(overrideVal){
     var wt=wordTokens[fastIdx];if(!wt)return;
     var vv=overrideVal!==undefined?overrideVal:fautifValI;
+    if(motJuste(vv,wt.text)){setGardeMot(true);return}   /* [L3] le mot juste est refusé ; le champ reste ouvert */
+    setGardeMot(false);
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     var obj={idx:wt.idx,type:askFautifI,word:wt.text};
     if(vv.trim())obj.fautif=vv.trim();
@@ -3753,17 +3769,12 @@ function CorrEleve(p){
     function onKey(e){
       if(e.key==="g"||e.key==="G"){e.preventDefault();fastMark("G")}
       else if(e.key==="l"||e.key==="L"){e.preventDefault();fastMark("L")}
-      else if(e.key==="m"||e.key==="M"||e.key==="/"){e.preventDefault();fastMark("M")}
+      else if(e.key==="m"||e.key==="M"||e.key==="/"){e.preventDefault();fastMark(typeAdapteM(wordTokens[fastIdx]))}   /* [L3] M s'adapte */
       else if(e.key==="i"||e.key==="I"||e.key==="?"){e.preventDefault();fastMark("I")}
-      else if(e.key==="p"||e.key==="P"){
-        var wtP=wordTokens[fastIdx];
-        if(wtP&&isPunct(wtP.text)&&!estApostrophe(wtP.text)){e.preventDefault();fastMark("P")}/* apostrophe : élision = orthographe (E), pas ponctuation */}
-      else if(e.key==="e"||e.key==="E"){
-        var wtE=wordTokens[fastIdx];
-        if(wtE&&estApostrophe(wtE.text)){e.preventDefault();fastMark("E")}
-      }
+      /* [L3] les touches P et E sont retirées : M s'adapte, et Entrée valide le bouton mis en avant */
       else if(e.key==="a"||e.key==="A"){e.preventDefault();fastMark("A")}
-      else if(e.key===" "||e.key==="Enter"){e.preventDefault();fastSkip()}
+      else if(e.key===" "){e.preventDefault();fastSkip()}
+      else if(e.key==="Enter"){e.preventDefault();var wtN=wordTokens[fastIdx],dejaN=wtN&&errors.some(function(x){return x&&x.idx===wtN.idx}),preN=dejaN?null:preselectionRapide(wtN);if(preN)fastMark(preN);else fastSkip()}   /* [L3] */
       else if(e.key==="Backspace"){e.preventDefault();fastBack()}
     }
     window.addEventListener("keydown",onKey);
@@ -3916,14 +3927,15 @@ function CorrEleve(p){
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourcis : Retour (champ vide) ou \u00c9chap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
             ),
             h("div",{style:{display:"flex",gap:8}},
-              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
+              h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value);setGardeMot(false)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
                 if(e.key==="Enter"){e.preventDefault();e.stopPropagation();confirmFautifI()}
                 else if(e.key==="Escape"){e.preventDefault();e.stopPropagation();cancelFautifI()}
                 else if(e.key==="Backspace"&&!fautifValI){e.preventDefault();e.stopPropagation();cancelFautifI()}
               }}),
               h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()},title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e"},"\u2713 Valider"),
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")},title:"Valider sans saisir le mot fautif"},"Passer")
-            )
+            ),
+            gardeMot&&h("div",{className:"garde-mot",id:"garde-mot"},"C\u2019est le mot juste : recopie ce que l\u2019\u00e9l\u00e8ve a \u00e9crit.")   /* [L3] */
           ),
           !askFautifI&&h("div",{className:"fast-btns"},
             existingErr?
@@ -3935,10 +3947,10 @@ function CorrEleve(p){
             !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire ("+coutType("G")+" pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
             !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Saisie demand\u00e9e. Raccourci : L"},"L Lexique"),
             !existingErr&&(curWord&&estApostrophe(curWord.text)
-              ?h("button",{className:"fast-btn fast-e",onClick:function(){fastMark("E")},title:"\u00c9lision oubli\u00e9e ou fautive \u2014 orthographe, famille \u00ab Apostrophes et \u00e9lisions \u00bb (\u22120,5 pt), sans saisie. Raccourci : E"},"' \u00c9lision (E)")
+              ?h("button",{className:"fast-btn fast-e fast-preselect",id:"fast-preselect",onClick:function(){fastMark("E")},title:"\u00c9lision oubli\u00e9e ou fautive \u2014 orthographe, famille \u00ab Apostrophes et \u00e9lisions \u00bb (\u22120,5 pt), sans saisie. Mis en avant sur une apostrophe : Entr\u00e9e le valide (ou M)."},"' \u00c9lision \u21b5")
               :curWord&&isPunct(curWord.text)
-              ?h("button",{className:"fast-btn fast-p",onClick:function(){fastMark("P")},title:"Ponctuation manquante ("+coutType("P")+(coutType("P")==="forfait"?" : \u22120,5 par tranche de 4":" pt")+"). Raccourci : P"},"\u00b7 Ponct. manqu.")
-              :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 ("+coutType("M")+" pt). Raccourci : \u00d8 ou /"},"\u2205 Manquant")),
+              ?h("button",{className:"fast-btn fast-p fast-preselect",id:"fast-preselect",onClick:function(){fastMark("P")},title:"Ponctuation manquante ("+coutType("P")+(coutType("P")==="forfait"?" : \u22120,5 par tranche de 4":" pt")+"). Mis en avant sur un signe : Entr\u00e9e le valide (ou M)."},"\u00b7 Ponct. manqu. \u21b5")
+              :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 ("+coutType("M")+" pt). Raccourci : M (ou /) \u2014 sur un signe, M marque la ponctuation ; sur une apostrophe, l\u2019\u00e9lision."},"\u2205 Manquant")),
             !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible ("+coutType("I")+" pt). Raccourci : I ou ?"},"? Illisible"),
             !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")},title:"Attention graphie : signalement sans p\u00e9nalit\u00e9. Raccourci : A"},"\u26a0 Attention")
           ),
@@ -3948,7 +3960,7 @@ function CorrEleve(p){
             p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext,title:"\u00c9l\u00e8ve suivant (position sauvegard\u00e9e)"},"\u00c9l\u00e8ve suiv. \u2192"),
             h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)},title:"Sauter \u00e0 la fin (sans marquer le reste)"},"Terminer \u2192")
           ),
-          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 / = manquant \u00b7 P = ponct. \u00b7 E = \u00e9lision \u00b7 ? = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Retour = pr\u00e9c.")
+          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 M = manquant (sur un signe : ponctuation ; sur une apostrophe : \u00e9lision) \u00b7 I = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Entr\u00e9e = valide le bouton mis en avant \u00b7 Retour = pr\u00e9c. \u00b7 \u21e7R = mode texte")
         )
     })()
     );
@@ -4086,10 +4098,11 @@ function CorrEleve(p){
         ),
         h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
         h("div",{style:{display:"flex",gap:8}},
-          h("input",{ref:fautifTexteRef,value:fautifTexteVal,onChange:function(e){setFautifTexteVal(e.target.value)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautifTexte()}}),
-          h("button",{className:"btn-sm btn-primary",onClick:confirmFautifTexte},"\u2713"),
-          h("button",{className:"btn-sm btn-ghost",onClick:function(){setFautifTexteVal("");confirmFautifTexte()}},"Passer")
-        )
+          h("input",{ref:fautifTexteRef,value:fautifTexteVal,onChange:function(e){setFautifTexteVal(e.target.value);setGardeMot(false)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){if(e.key==="Enter")confirmFautifTexte()}}),
+          h("button",{className:"btn-sm btn-primary",title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e",onClick:function(){confirmFautifTexte()}},"\u2713"),
+          h("button",{className:"btn-sm btn-ghost",title:"Passer sans saisir le mot de l\u2019\u00e9l\u00e8ve (le trou num\u00e9rot\u00e9).",onClick:function(){setFautifTexteVal("");confirmFautifTexte("")}},"Passer")
+        ),
+        gardeMot&&h("div",{className:"garde-mot",id:"garde-mot-texte"},"C\u2019est le mot juste : recopie ce que l\u2019\u00e9l\u00e8ve a \u00e9crit.")
       )
     ),
     // Popups
