@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**1383 fonctions** — site : 1234 · moteur : 149
+**1405 fonctions** — site : 1256 · moteur : 149
 
 
 ## SOMMAIRE DES FAMILLES
@@ -22,8 +22,8 @@
 - **ATELIER — feuilles, documents, impression** — 177 fonctions
 - **ATELIER — prompts et écrans IA** — 19 fonctions
 - **CHAPITRE — injection JSON, inventaire, les quatre voies** — 30 fonctions
-- **DIVERS — socle du site** — 233 fonctions
-- **DIVERS — utilitaires internes** — 247 fonctions
+- **DIVERS — socle du site** — 254 fonctions
+- **DIVERS — utilitaires internes** — 248 fonctions
 - **MOTEUR — le déroulé (fichier autonome encodé, JAMAIS modifié)** — 149 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 58 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 20 fonctions
@@ -336,11 +336,32 @@
 | `ecrireAnnonce` | id, texte, app | 799 o | (sans commentaire) affiche/emploie : « ).trim();   if(!texte){ alert( ·  + Date.now() +  » — hub /site/annonces | _blocAnnonces |
 | `ecrireBrevetDate` | niveau, valeurISO | 590 o | (sans commentaire) affiche/emploie : « Date incompréhensible :  · La date n » — hub /site/config/brevetDates | _blocBrevet |
 | `ecrireClasse` | db, nomClasse, eleves, meta, cb | 1213 o | 5. Écriture NON destructive d'une classe : ecrireClasse Remplace UNIQUEMENT la liste d'élèves ; préserve toute métadonnée existante (archivee, niveau, couleur, …) ; | — |
+| `eliAnalyser` | lignes,source | 2438 o | (sans commentaire ni indice) | eliLireFichier, eliSurCollage |
+| `eliAnnuler` | — | 28 o | (sans commentaire ni indice) | eliApercuHtml |
+| `eliApercuHtml` | E | 6728 o | ① : ne fait encore rien d'autre que le dire | eliRendre, eliSectionHtml |
+| `eliApparier` | nomLu | 322 o | (sans commentaire ni indice) | eliAnalyser |
+| `eliChargerSheetJS` | — | 495 o | (sans commentaire) affiche/emploie : « lecteur absent · lecteur non chargé » | eliLireFichier |
+| `eliChoisirClasse` | v | 78 o | (sans commentaire ni indice) | eliApercuHtml |
+| `eliChoisirFichier` | — | 62 o | (sans commentaire) touche #eli-fichier | eliSectionHtml |
+| `eliDate` | brut | 591 o | Une date de naissance → « AAAA-MM-JJ », ou '' si elle ne se lit pas. | eliAnalyser |
+| `eliDateAff` | iso | 81 o | (sans commentaire) affiche/emploie : « );return p.length===3?p[2]+ » | eliApercuHtml |
+| `eliDepot` | ev | 136 o | (sans commentaire ni indice) | eliSectionHtml |
+| `eliFichierChoisi` | inp | 68 o | (sans commentaire ni indice) | eliSectionHtml |
+| `eliLireFichier` | f | 1007 o | (sans commentaire) affiche/emploie : « Lecture de «  · les eleves » | eliDepot, eliFichierChoisi |
+| `eliMemeClasse` | a,b | 46 o | (sans commentaire ni indice) | eliApercuHtml, eliApparier |
+| `eliMessage` | t | 124 o | (sans commentaire) affiche/emploie : « <div class= » — touche #eli-apercu | eliLireFichier |
+| `eliMots` | t | 172 o | La classe : mêmes mots, dans n'importe quel ordre ; « 3 » vaut « 3e » (de même 4, 5, 6). | eliMemeClasse |
+| `eliNom` | t | 50 o | (sans commentaire ni indice) | eliAnalyser |
+| `eliRendre` | — | 99 o | (sans commentaire) touche #eli-apercu | eliAnalyser, eliAnnuler, eliChoisirClasse, eliValider |
+| `eliSectionHtml` | — | 1120 o | (sans commentaire) affiche/emploie : « <div class= ·  title= » | _profSectionEleves |
+| `eliSurCollage` | ev | 473 o | Le collé : n'importe où sur la page « Élèves & codes », sauf dans un champ (le cadre de secours garde son collage). | — |
+| `eliSurvol` | ev,oui | 104 o | (sans commentaire) touche #eli-zone | eliDepot, eliSectionHtml |
+| `eliValider` | — | 55 o | (sans commentaire ni indice) | eliApercuHtml |
 | `ensureEleveUuid` | eleve | 1661 o | [EDT] porte n°1 — l'arrivée du professeur, par-dessus l'accueil | _loginEleveFound |
-| `escapeHtml` | s | 122 o | (sans commentaire) affiche/emploie : « ;return String(s).replace(/&/g, » | _b2Check, _b2Confirm, _b2ExecReel, _b2RenderPick (+98) |
+| `escapeHtml` | s | 122 o | (sans commentaire) affiche/emploie : « ;return String(s).replace(/&/g, » | _b2Check, _b2Confirm, _b2ExecReel, _b2RenderPick (+99) |
 | `estClasseInterne` | nom | 48 o | (sans commentaire ni indice) | estClasseTest |
 | `estClasseTest` | nom | 88 o | (sans commentaire) affiche/emploie : « CLASSE TEST » | — |
-| `extractEleves` | fbClasse, cfgEleves | 993 o | 4. Lecture robuste d'un roster : extractEleves Tolère les 3 formats rencontrés dans les données réelles : | _b2Eleves, _deleteEleveCls, _drPrenomsDeLaClasse, _findEleveByName (+8) |
+| `extractEleves` | fbClasse, cfgEleves | 993 o | 4. Lecture robuste d'un roster : extractEleves Tolère les 3 formats rencontrés dans les données réelles : | _b2Eleves, _deleteEleveCls, _drPrenomsDeLaClasse, _findEleveByName (+9) |
 | `fichesAvancement` | n,total,id | 372 o | (sans commentaire) affiche/emploie : « en trouver qu · Lecture des fiches\u2026  » | fichesCliqueMaj, fichesMettreAJour |
 | `fichesCharger` | — | 367 o | (sans commentaire) affiche/emploie : « ;   secuLire( · ).then(function(m){     var z=document.getElementById( » — touche #fiches-zone | fichesCliqueMaj, showProfSection |
 | `fichesCliqueMaj` | — | 1214 o | (sans commentaire) affiche/emploie : « ;});   fichesAvancement(0,FICHES_APPS.length, · );     var pub=res.filter(function(r){return r.etat=== » — touche #fi-overlay | fichesOverlayMaj, fichesRendre |
@@ -386,13 +407,13 @@
 | `lireSessionMJPC` | ttlMs | 618 o | (sans commentaire ni indice) | — |
 | `loadAppList` | kind | 1637 o | (sans commentaire) affiche/emploie : « <option value= · ;   if(kind=== » — touche #link-modal- | openLinkModal |
 | `loadAtelierDocList` | — | 1725 o | (sans commentaire) affiche/emploie : « <option value= · <option value= » — touche #link-modal-atelier, #link-modal-current | openLinkModal |
-| `loadClasses` | callback | 235 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionClasses, _profSectionEleves (+8) |
-| `loadCodes` | cb | 168 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionEleves, _uniExec (+2) |
+| `loadClasses` | callback | 294 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionClasses, _profSectionEleves (+8) |
+| `loadCodes` | cb | 225 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionEleves, _uniExec (+2) |
 | `loadPublished` | level | 1458 o | (sans commentaire) affiche/emploie : « écran élève n » | openLevel |
 | `loginAsProf` | — | 1568 o | (sans commentaire) affiche/emploie : « ].forEach(function(lvl){var card=document.querySelector( · arrivée du professeur, par-dessus l » — touche #page-home, #page-validation, #proto-badge | _quitterProfilTest, doLogin |
 | `m8BasculerModeTest` | — | 239 o | (sans commentaire ni indice) | _blocModeTest |
 | `m8RendreIndicateursTest` | — | 474 o | (sans commentaire) affiche/emploie : « );     pill.innerHTML = on       ?  · ;   }   var dot = document.getElementById( » — touche #tprof-testdot, #tprof-testpill | renderConsoleM8, showProfSection |
-| `m8TestOn` | — | 28 o | (sans commentaire ni indice) | _blocModeTest, _corbRestaurerExec, _corbeilleRestaure, _siteDelete (+16) |
+| `m8TestOn` | — | 28 o | (sans commentaire ni indice) | _blocModeTest, _corbRestaurerExec, _corbeilleRestaure, _m8Superposer (+17) |
 | `majPastilleVue` | — | 374 o | [C5-3ac2b] ④ la pastille de bascule : visible si l'IDENTITÉ est prof (pas la vue — elle doit rester là en vue élève pour le retour) ; son icône dit la vue. | basculerVue, loginAsProf, restoreSession |
 | `moveChapter` | level,chnum,dir | 598 o | (sans commentaire ni indice) | renderChapterCard |
 | `moveImageInGallery` | level,chnum,snum,itemId,imgId,dir | 744 o | (sans commentaire ni indice) | renderItem |
@@ -449,7 +470,7 @@
 | `resetChapitres` | level | 487 o | (sans commentaire) affiche/emploie : « Effacer TOUS les chapitres  · ,     function(){   mjpcDeleteJson(FIREBASE_BASE+ » | renderChapitres |
 | `resolveEleves` | roster, saisies | 1138 o | 7. Identification nominative : le portail commun (logique) Toute identification produit des élèves SINGULIERS (clé canonique), que le travail soit individuel ou en groupe. | — |
 | `restoreSession` | — | 589 o | (sans commentaire) touche #proto-badge | — |
-| `sanMJPC` | s | 144 o | l'app reconnaît l'élève ou le prof déjà connecté au site MJPC et saute son écran de connexion. Sans session : portail natif inchangé. Bloc versionné, IDENTIQUE dans chaque app. | atCodeDe, edtSlugEleve, ensureEleveUuid, resolveEleves (+1) |
+| `sanMJPC` | s | 144 o | l'app reconnaît l'élève ou le prof déjà connecté au site MJPC et saute son écran de connexion. Sans session : portail natif inchangé. Bloc versionné, IDENTIQUE dans chaque app. | atCodeDe, edtSlugEleve, eliAnalyser, eliApercuHtml (+3) |
 | `sanitizeChapitres` | chapitres | 982 o | (sans commentaire ni indice) | atChargerChapitres, loadPublished |
 | `saveIntent` | id,label,levelClicked | 520 o | (sans commentaire) affiche/emploie : « ,{       method: » — ECRIT au hub | showIntentSurvey |
 | `sceDupliquer` | j | 1266 o | [LOT6-②] CRÉÉ — le fondamental « Dupliquer » généralisé aux séances (il existait pour les feuilles et les chapitres). | ctxEntreesSeance |
@@ -603,7 +624,7 @@
 | `_eleveFootprint` | hub,nom,slug | 3787 o | (sans commentaire ni indice) | _b2BuildExtract, _b2Check, _b2Confirm, _b2ExecReel |
 | `_entryEffectif` | val | 448 o | (sans commentaire) affiche/emploie : «  \u00e9l\u00e9ments » | _pvRow |
 | `_entryLabel` | key,val | 377 o | (sans commentaire ni indice) | _pvRow |
-| `_estClasseInterne` | slug | 42 o | Classe interne (test d'une app) : slug prefixe par "_" -> jamais comptee comme classe reelle | _profSectionClasses, _profSectionEleves, _profSectionProfilTest, _uniNoms (+1) |
+| `_estClasseInterne` | slug | 42 o | Classe interne (test d'une app) : slug prefixe par "_" -> jamais comptee comme classe reelle | _profSectionClasses, _profSectionEleves, _profSectionProfilTest, _uniNoms (+3) |
 | `_estCodeProf` | c | 455 o | (sans commentaire ni indice) | _genCode4 |
 | `_estPublieItem` | it | 137 o | (sans commentaire ni indice) | atEditerChapitreRendre |
 | `_exportDiagnostic` | data, diff, mode, current | 358 o | (sans commentaire ni indice) | _importPreview |
@@ -643,6 +664,7 @@
 | `_logBackup` | entry | 156 o | (sans commentaire ni indice) | _b2DoSave, _doImport, _exportDiagnostic, _exportHub (+1) |
 | `_loginEleveFound` | found,status | 1116 o | (sans commentaire) affiche/emploie : « Bienvenue,  · );if(typeof initHome=== » — touche #page-home, #page-validation | doLogin |
 | `_lvlClasses` | level | 269 o | (sans commentaire ni indice) | _isPubAny, _pubCtrl, _pubCtrlToutes, _pubEtatNiveau (+4) |
+| `_m8Superposer` | racine,val | 723 o | [ELEVE-1 ① — complément : dette préexistante rencontrée au banc] EN MODE TEST, CE QUI A ÉTÉ ÉCRIT AU MAGASIN SE SUPERPOSE À LA LECTURE DU VRAI HUB. Mesuré le 01/10 : | loadClasses, loadCodes |
 | `_markPub` | node,cls,nv | 288 o | (sans commentaire ni indice) | _applyPubCascade, uploadFileForChapterItem |
 | `_memoriserBrevetDefaut` | — | 159 o | (sans commentaire ni indice) | chargerBrevetDates |
 | `_memoriserVueEnvers` | — | 78 o | (sans commentaire ni indice) | basculerVue |
@@ -681,7 +703,7 @@
 | `_profSectionConfig` | — | 2628 o | (sans commentaire) affiche/emploie : « \u2705 actif (<code> · \u26a0 placeholder (notifs d\u00e9sactiv\u00e9es) » | _renderProfSection |
 | `_profSectionCorbeille` | — | 369 o | (sans commentaire) affiche/emploie : « <div class= · >\ud83d\uddd1 Corbeille <span class= » | _renderProfSection |
 | `_profSectionDashboard` | — | 1268 o | (sans commentaire) affiche/emploie : « <div class= · ><span class= » | _renderProfSection |
-| `_profSectionEleves` | — | 3677 o | (sans commentaire) affiche/emploie : « <h2>\u00c9l\u00e8ves &amp; codes</h2><div class= · >\u23f3 Chargement\u2026</div> » | _renderProfSection |
+| `_profSectionEleves` | — | 3784 o | (sans commentaire) affiche/emploie : « <h2>\u00c9l\u00e8ves &amp; codes</h2><div class= · >\u23f3 Chargement\u2026</div> » | _renderProfSection |
 | `_profSectionFiches` | — | 101 o | l'écran, dans le TABLEAU DE BORD | _renderProfSection |
 | `_profSectionPresence` | — | 548 o | (sans commentaire) affiche/emploie : « <h2>Pr\u00e9sence live</h2> · <div class= » | _renderProfSection |
 | `_profSectionProfilTest` | — | 2242 o | (sans commentaire) affiche/emploie : « <h2>Profil test</h2><div class= · >\u23f3 Chargement\u2026</div> » | _renderProfSection |
@@ -1402,7 +1424,7 @@
 | `edtNomCritere` | c | 53 o | (sans commentaire ni indice) | edtChangementsDe |
 | `edtNomDuJour` | iso | 86 o | (sans commentaire ni indice) | edtCasesDuJour, edtChangerEmploiDuTemps, edtCreneauxOu, edtJourEnClair (+2) |
 | `edtNomsDeGrille` | — | 164 o | (sans commentaire ni indice) | edtPeindrePanneau |
-| `edtNormaliser` | t | 161 o | libellé normalisé : minuscules, accents retirés, espaces réduits, ponctuation ôtée | edtAmorce, edtEcheancesPhoto, edtValeurCritere |
+| `edtNormaliser` | t | 161 o | libellé normalisé : minuscules, accents retirés, espaces réduits, ponctuation ôtée | edtAmorce, edtEcheancesPhoto, edtValeurCritere, eliAnalyser (+2) |
 | `edtNormaliserGrille` | — | 244 o | passer à la forme datée sans rien demander à Paul : la grille actuelle devient la première version, à la date du 1er août. | edtChangerEmploiDuTemps, edtVersionAjouter, edtVersionPoser, edtVersionSupprimer |
 | `edtOccupantDe` | c,dst | 364 o | [⑥a] QUI OCCUPE LA CASE VISÉE ? Une classe appariée, et une autre que la sienne : c'est le cas où le site proposait un refus sec, et où il propose maintenant trois sorties. | edtDepot, edtEchangerHeures, edtEcraserHeure, edtRefusDepot (+1) |
 | `edtOptionsOu` | l | 585 o | (sans commentaire) affiche/emploie : « <optgroup label= · ; sem=x.sem; }     var edtIso=String(x.v).split( » | edtPeindreModale, edtRappelAReplacerHtml |
