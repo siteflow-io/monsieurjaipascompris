@@ -939,3 +939,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `40e6d4313f9d` · 549 568 o · md5 `e6820219815db7aba89a4ff97411cce7` · v7.6.0
 - **Motif** : le QCM lit le sexe dans `amenagements` et n'écrit plus `qcm/eleveSexes`. Promu : commit `f6def710ae96`, 550 410 o, md5 `9d6df9f4f349172f210e23d9c8da6f55` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `40e6d4313f9d…` → PUT sur `contents/evaluation-qcm.html`, puis bit à bit contre le md5 ci-dessus (la 7.6.0 relirait `qcm/eleveSexes`, dont les restes des classes supprimées sont partis en corbeille au premier import).
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.74.0-③ (01/10/2026, conscience n°12)
+- blob `308f8d356bb8` (commit `7c58bef49aba`) · 1 813 946 o · md5 `80d454863a1b1ae4a741222b7cfdf1eb` · v8.74.0-②
+- **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
