@@ -971,3 +971,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `bf774b4f297d` (commit `69d9b105a406`) · 737 047 o · md5 `be6e2481d8b6f850c7eb88b5f72c4ac5` · v6.6.3
 - **Motif** : mandat « L'écran de correction », L1 — l'enregistrement à chaque geste du mode texte, la position reprise. Promu : 738 687 o, md5 `913f8b5caefef4c712dfae55fa263af4` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `bf774b4f297d…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus (la 6.6.3 reperd les erreurs non enregistrées à la sortie d'une copie ; `texteIdx` déjà écrit au hub est ignoré par elle).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L2 (01/10/2026, conscience n°12)
+- blob `f7b517271ee1` (commit `3a438e0da854`) · 738 687 o · md5 `913f8b5caefef4c712dfae55fa263af4` · v6.7.0-L1
+- **Motif** : L2 — ⇧R bascule. Promu : 739 572 o, md5 `9053962b97f967e1894ed2751aff422b` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `f7b517271ee1…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus.
