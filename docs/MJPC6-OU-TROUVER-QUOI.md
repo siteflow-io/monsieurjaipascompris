@@ -218,3 +218,11 @@
 | Quoi | Où |
 |---|---|
 | dupliquer une dictée | le bouton ⧉ de la liste → `dupliquerDicteeEntiere(d, cb)` : copie `DUP_REGLAGES` (`config` → « Copie de … », non publiée ; `dictee` ; `copyOptions` ; `exercices` ; `exercices_html` ; `binomes` ; `heure`), jamais `DUP_ETAT_ELEVES` (`results`, `absents`, `amenages`, `autocorrection`, `effacees`, `exercices_results`, `exercices_consultes`, `exercices_imprimes`, `copyPublishedAt`) |
+
+## AJOUT DU 01/10/2026 — correction_dictee 6.7.0-L1 : jamais de perte en mode texte
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| l'enregistrement à chaque geste du mode texte | `autoTexte(ne, nx, pos)` dans `CorrEleve`, appelée par `clickWord`, `selectType`, `confirmFautifTexte`, `confirmInsert`, `removeExtra` → `p.onAutoSave` (dans `CorrScreen`, les deux `onAutoSave` : trace + position) → `save` |
+| la position reprise | `results/<clé>/texteIdx` (le dernier mot touché) ; `lastTouched` initialisé depuis `texteIdx`, un effet de défilement à l'ouverture ; `fastIdx` reste celle du mode rapide |
+| ce qui reste du bouton | « Enregistrer (…) → suivant » : contrôle « mots recopiés » puis l'élève suivant ; tout est déjà au hub |
