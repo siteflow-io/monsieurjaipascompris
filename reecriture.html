@@ -225,6 +225,11 @@ function cleClasse(nom){ return String(nom||"").trim(); }
 // reconnues comme héritage le temps de leur nettoyage (dette B).
 function classeTestId(){ return "_test_"+MJPC_APP.id; }
 function estClasseInterne(nom){ return !!nom && String(nom).charAt(0)==="_"; }
+/* [ELEVE-1 ② bis — dette n°12 · 90] la liste « Classe » d'un niveau : par le champ niveau de la classe (les classes importées ont
+   pour clé sanMJPC(nom), « 3_dylan_bob »…, qui ne commence pas par « 3e ») ; repli sur le début de la clé pour une classe sans niveau.
+   La liste affiche le NOM de la classe. */
+function classeDuNiveau(c,niv){var o=CLASSES&&CLASSES[c];if(o&&typeof o==="object"&&o.niveau)return String(o.niveau).toLowerCase()===String(niv||"").toLowerCase();return String(c).toLowerCase().indexOf(String(niv||"").toLowerCase())===0;}
+function nomDeClasse(c){var o=CLASSES&&CLASSES[c];return (o&&typeof o==="object"&&o.nom)?o.nom:c;}
 function estClasseTest(nom){
   return estClasseInterne(nom) || nom==="CLASSE TEST"; // héritage toléré en lecture
 }
@@ -1624,7 +1629,7 @@ function AppProf(p){
       h("div",{className:"config-field"},h("label",null,"Titre",ifo("Court nom pour identifier la r\u00e9\u00e9criture (ex : « Marguerite Vargas »). C'est ce que les \u00e9l\u00e8ves verront en haut de leur \u00e9cran.",{right:true})),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: R\u00e9\u00e9criture singulier \u2192 pluriel"})),
       h("div",{style:{display:"flex",gap:10}},
         h("div",{className:"config-field",style:{flex:1}},h("label",null,"Niveau",ifo("Filtre les classes disponibles. Optionnel.",{right:true})),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
-        h("div",{className:"config-field",style:{flex:2}},h("label",null,"Classe",ifo("Classe concern\u00e9e. La liste de ses \u00e9l\u00e8ves servira au Suivi et au login des \u00e9l\u00e8ves.",{right:true})),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"\u2014 Choisir \u2014"),Object.keys(CLASSES).filter(function(c){return !estClasseTest(c)&&(!niveauInput||c.toLowerCase().indexOf(niveauInput)===0)}).map(function(c){return h("option",{key:c,value:c},c+" ("+extractEleves(CLASSES[c]).length+")")})))
+        h("div",{className:"config-field",style:{flex:2}},h("label",null,"Classe",ifo("Classe concern\u00e9e. La liste de ses \u00e9l\u00e8ves servira au Suivi et au login des \u00e9l\u00e8ves.",{right:true})),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"\u2014 Choisir \u2014"),Object.keys(CLASSES).filter(function(c){return !estClasseTest(c)&&(!niveauInput||classeDuNiveau(c,niveauInput))}).map(function(c){return h("option",{key:c,value:c},nomDeClasse(c)+" ("+extractEleves(CLASSES[c]).length+")")})))
       ),
       h("div",{className:"config-field"},h("label",null,"Consigne (affich\u00e9e \u00e0 l\u2019\u00e9l\u00e8ve)",ifo("Phrase explicative qui appara\u00eetra \u00e0 l'\u00e9l\u00e8ve. Facultatif.",{right:true})),h("input",{value:consigneInput,onChange:function(e){setConsigneInput(e.target.value)},placeholder:"Ex: R\u00e9\u00e9crivez en rempla\u00e7ant \u00ab une femme \u00bb par \u00ab des femmes \u00bb."})),
       h("div",{className:"config-field",style:{maxWidth:200}},
@@ -4117,7 +4122,7 @@ function EleveAutocorrReecriture(p){
 
 
 
-var APP_VERSION="2.4.0";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
+var APP_VERSION="2.4.1";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
 /* M10 (pts 5, 6, 10, pastille) — infos globales : version, Réglages, annonces du site (LECTURE seule, filtre du contrat M6). */
 function InfosMJPC(){
   var s1=useState(false),open_=s1[0],setOpen=s1[1];
