@@ -976,3 +976,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `f7b517271ee1` (commit `3a438e0da854`) · 738 687 o · md5 `913f8b5caefef4c712dfae55fa263af4` · v6.7.0-L1
 - **Motif** : L2 — ⇧R bascule. Promu : 739 572 o, md5 `9053962b97f967e1894ed2751aff422b` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `f7b517271ee1…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L3 (01/10/2026, conscience n°12)
+- blob `2e7a338d583a` (commit `c79c6b57a1f6`) · 739 572 o · md5 `9053962b97f967e1894ed2751aff422b` · v6.7.0-L2
+- **Motif** : L3 — M adaptée, clavier réduit, garde du mot juste. Promu : 741 928 o, md5 `f5d7685b07b847d707952bbb536fb510` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `2e7a338d583a…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus.
