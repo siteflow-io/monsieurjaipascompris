@@ -1885,7 +1885,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* Pastille de version — en dur (M7). Promotion au socle prévue M15. */
-var APP_VERSION="7.6.0";
+var APP_VERSION="7.7.0";
 var APP_VERSION_DATE="2026-07-31";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -2161,10 +2161,14 @@ function surveillerClassesAvecSexes(onUpdate){
     if(classesData === null) return; // pas encore chargé
     var out = normaliserClassesQCM(classesData);
     Object.keys(out).forEach(function(slug){
-      var sexesClasse = sexesData[out[slug].nom] || {};
+      /* [ELEVE-1 ②] le sexe se lit dans ce que la console MJPC écrit à l'import (ou dans la fiche) :
+         /classes/<clé de la classe>/amenagements/<clé de l'élève>/sexe — la classe est trouvée par SA CLÉ
+         (out[slug].nom est la clé de /classes), jamais par un nom retapé ; plus aucune lecture de qcm/eleveSexes. */
+      var amenClasse = ((classesData[out[slug].nom] || {}).amenagements) || {};
       out[slug].eleves = out[slug].eleves.map(function(el){
         var slugEl = slugify(el.nomComplet);
-        var sex = sexesClasse[slugEl];
+        var am = amenClasse[slugEl];
+        var sex = (am && (am.sexe === "m" || am.sexe === "f")) ? am.sexe : null;
         if(sex) return Object.assign({}, el, {sexe: sex});
         // Si pas de sexe dans le nœud séparé mais un sexe legacy dans /classes,
         // on le conserve (sera migré la 1re fois qu'on l'édite via setSexeEleve).
@@ -2176,10 +2180,10 @@ function surveillerClassesAvecSexes(onUpdate){
   function onC(snap){ classesData = snap.val() || {}; combine(); }
   function onS(snap){ sexesData = snap.val() || {}; combine(); }
   db.ref("classes").on("value", onC);
-  db.ref("qcm/eleveSexes").on("value", onS);
+  /* [ELEVE-1 ②] plus d'écoute de qcm/eleveSexes : le sexe vient de /classes (ci-dessus) */
   return function(){
     db.ref("classes").off("value", onC);
-    db.ref("qcm/eleveSexes").off("value", onS);
+    /* [ELEVE-1 ②] */
   };
 }
 
@@ -2217,8 +2221,7 @@ function migrerClassesUneFois(onDone){
           var slugEl = slugify(e.nomComplet);
           var sexClasse = sexesExistants[c.nom] || {};
           if(!sexClasse[slugEl]){
-            promises.push(db.ref("qcm/eleveSexes/"+c.nom+"/"+slugEl).set(e.sexe));
-            nbSexesMigres++;
+            /* [ELEVE-1 ②] le QCM n'écrit plus dans qcm/eleveSexes (le sexe vit dans la fiche de la console) */
           }
         }
       });
@@ -2247,8 +2250,7 @@ function migrerClassesUneFois(onDone){
           var slugEl = slugify(e.nomComplet);
           var sexClasse = sexesExistants[nom] || {};
           if(!sexClasse[slugEl]){
-            promises.push(db.ref("qcm/eleveSexes/"+nom+"/"+slugEl).set(e.sexe));
-            nbSexesMigres++;
+            /* [ELEVE-1 ②] le QCM n'écrit plus dans qcm/eleveSexes */
           }
         }
       });
@@ -4697,8 +4699,11 @@ function AppTest(p){
       var sexesTest = {};
       TEST_ELEVES.forEach(function(e){ if(e.sexe) sexesTest[slugify(e.nomComplet)] = e.sexe; });
       return Promise.all([
-        new Promise(function(resolve){ ecrireClasse(db, TEST_CLASSE_NOM, classeData.eleves, {nom:TEST_CLASSE_NOM}, function(){ resolve(); }); }),
-        db.ref("qcm/eleveSexes/"+TEST_CLASSE_NOM).set(sexesTest),
+        /* [ELEVE-1 ②] les sexes des élèves fictifs vont là où le QCM les lit désormais : l'aménagement de la classe
+           de test, écrit APRÈS la classe (ecrireClasse réécrit la classe entière) ; partent avec elle à la purge. */
+        new Promise(function(resolve){ ecrireClasse(db, TEST_CLASSE_NOM, classeData.eleves, {nom:TEST_CLASSE_NOM}, function(){
+          var amenTest = {}; Object.keys(sexesTest).forEach(function(k){ amenTest[k] = {sexe: String(sexesTest[k]).toLowerCase()}; });
+          db.ref("classes/"+TEST_CLASSE_NOM+"/amenagements").set(amenTest).then(resolve, resolve); }); }),
         db.ref(DB_ROOT+"/evaluations/"+TEST_EVAL_ID).set(evalData),
       // M7 — codes des élèves fictifs : sans eux, le portail d'identité refuse
       // le bac à sable. Purgés à la sortie (voir purgerEtSortir).
