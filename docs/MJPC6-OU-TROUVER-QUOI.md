@@ -146,3 +146,14 @@
 | les espaces de travail École Directe de Paul (pour les vidéos à la maison) | pièce `T101-espaces-de-travail-ED.png` ; cadrage 4, 4b.6 |
 | ce qui reste avant le mandat | v9b, v9c, la maquette de la préparation, la séquence de test ; à part : les attendus au hub (cadrage 3 §6) |
 | **le protocole à suivre dès qu'on travaille sur une maquette** (ce qu'elle est, les règles apprises, les preuves, la livraison, quand s'arrêter, le passage au mandat) | **`PROTOCOLE-MAQUETTE.md`, à la racine du dépôt de production** (Paul, 15/09) |
+
+## AJOUTS DU 01/10/2026 (conscience n°12) — PROMOTION 8.74.0-⓪ : le mode test est étanche
+
+| Quoi | Où |
+|---|---|
+| le transport routé par le mode test | `mjpcFetchOk(url, options)` : en `m8TestOn()`, toute écriture non-GET vers `FIREBASE_BASE` va au magasin `M8_TEST_STORE` (clé `/chemin`, un DELETE pose `null`, un PATCH éclate ses clés) ; hors hub (Drive) : inchangé |
+| ce qui passe par ce transport | `_fbPutPath` / `_fbDeletePath` → `_corbeillePut` (la corbeille), `_purgeExec` (la purge), `ensureEleveUuid` (`/eleves`, `/eleves_index`), les dépôts d'atelier |
+| la purge de rentrée du site | `MJPC_PURGE.purger` de `index` = `["eleves_index","codes","eleves"]` ; le contrat publié au hub (`/manifestes/index`) se republie à la connexion prof (`publierManifesteREST`) |
+| l'année de l'inscription d'un élève | `ensureEleveUuid` → `_anneeScolaire()` (bascule en août), plus d'année en dur |
+| le chantier « l'élève » | cadrage `DEROULE/CADRAGE-6-L-ELEVE.md` (sas) ; mandats `MANDATS/MANDAT-ELEVE-1.md` (livraisons ⓪ → ④, ⓪ promue) et `MANDATS/MANDAT-ELEVE-2.md` (attend la refonte du déroulé) ; livraisons `LIVRAISONS/ELEVE-1/<n>/` |
+| ce qui n'existe pas encore (vérifié) | le profil élève (`/classes/<slug>/profils`), l'aménagement (`amenagements`), `nbDispositifs`, la fiche élève, l'import du fichier .xlsx, le rappel des équipes éducatives — livraisons ① → ③ à venir |
