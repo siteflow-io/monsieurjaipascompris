@@ -226,3 +226,9 @@
 | l'enregistrement à chaque geste du mode texte | `autoTexte(ne, nx, pos)` dans `CorrEleve`, appelée par `clickWord`, `selectType`, `confirmFautifTexte`, `confirmInsert`, `removeExtra` → `p.onAutoSave` (dans `CorrScreen`, les deux `onAutoSave` : trace + position) → `save` |
 | la position reprise | `results/<clé>/texteIdx` (le dernier mot touché) ; `lastTouched` initialisé depuis `texteIdx`, un effet de défilement à l'ouverture ; `fastIdx` reste celle du mode rapide |
 | ce qui reste du bouton | « Enregistrer (…) → suivant » : contrôle « mots recopiés » puis l'élève suivant ; tout est déjà au hub |
+
+## AJOUT DU 01/10/2026 — correction_dictee 6.7.0-L2 : ⇧R bascule
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| ⇧R dans les deux sens | l'écoute du clavier de `CorrScreen` (`onKey` : ignore INPUT / TEXTAREA / SELECT ; `tab==="correct"&&cur` → `setTab("rapide")` ; `tab==="rapide"` → `setCur(cur||eleveRapideParDefaut())`, `setTab("correct")`) ; `eleveRapideParDefaut` = la règle de l'onglet Rapide ; `onExitFast` revient à la même copie |
