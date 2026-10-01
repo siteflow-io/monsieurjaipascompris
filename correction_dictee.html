@@ -1127,7 +1127,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.6.0";
+var APP_VERSION="6.6.1";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1947,6 +1947,11 @@ function isEleveAmenage(eleveKey,dicteeAmenages,classeAmenages){
 }
 /* [ELEVE-1 ④] L'aménagement vient de la FICHE de l'élève (console MJPC) : /classes/<clé>/amenagements/<élève>/dicteeAmenagee
    (= la case pap-15). La classe est trouvée par SA CLÉ (comme classeDuRegistre), jamais par le nom brut. */
+/* [ELEVE-1 ② bis — dette n°12 · 90] la liste « Classe » d'un niveau : par le champ niveau de la classe (les classes importées ont
+   pour clé sanMJPC(nom), « 3_dylan_bob »…, qui ne commence pas par « 3e ») ; repli sur le début de la clé pour une classe sans niveau.
+   La liste affiche le NOM de la classe. */
+function classeDuNiveau(c,niv){var o=CLASSES&&CLASSES[c];if(o&&typeof o==="object"&&o.niveau)return String(o.niveau).toLowerCase()===String(niv||"").toLowerCase();return String(c).toLowerCase().indexOf(String(niv||"").toLowerCase())===0;}
+function nomDeClasse(c){var o=CLASSES&&CLASSES[c];return (o&&typeof o==="object"&&o.nom)?o.nom:c;}
 function cleDuRegistre(nom,source){
   var reg=source||CLASSES||{};if(!nom)return "";if(reg[nom])return nom;
   var c=sanMJPC(nom),ks=Object.keys(reg);for(var i=0;i<ks.length;i++){if(sanMJPC(ks[i])===c)return ks[i];}
@@ -2561,7 +2566,7 @@ function AppProf(p){
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
       h("div",{className:"config-field"},h("label",null,"Niveau"),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"— Choisir —"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
-      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).filter(function(c){return !niveauInput||c.toLowerCase().indexOf(niveauInput)===0}).map(function(c){return h("option",{key:c,value:c},c+" ("+extractEleves(CLASSES[c],[]).length+")")}))),
+      h("div",{className:"config-field"},h("label",null,"Classe"),h("select",{value:classeInput,onChange:function(e){setClasseInput(e.target.value)}},h("option",{value:""},"— Choisir —"),Object.keys(CLASSES).filter(function(c){return !niveauInput||classeDuNiveau(c,niveauInput)}).map(function(c){return h("option",{key:c,value:c},nomDeClasse(c)+" ("+extractEleves(CLASSES[c],[]).length+")")}))),
       h("div",{className:"config-field"},h("label",null,"Texte correct"),h("textarea",{value:textInput,onChange:function(e){setTextInput(e.target.value)},placeholder:"Colle le texte correct..."})),
       // Analyse automatique des pièges
       textInput.trim().length>10&&(function(){
@@ -2870,7 +2875,7 @@ function EditionDictee(p){
           h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
           h("div",{style:{display:"flex",gap:10,flexWrap:"wrap"}},
             h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Niveau"),h("select",{value:editForm.niveau||"",onChange:function(e){setEditForm(Object.assign({},editForm,{niveau:e.target.value}))}},h("option",{value:""},"\u2014"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
-            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Classe"),h("select",{value:editForm.classe||"",onChange:function(e){setEditForm(Object.assign({},editForm,{classe:e.target.value}))}},h("option",{value:""},"\u2014"),Object.keys(CLASSES).filter(function(c){return !editForm.niveau||c.toLowerCase().indexOf(editForm.niveau)===0}).map(function(c){return h("option",{key:c,value:c},c)}))),
+            h("div",{className:"config-field",style:{minWidth:100}},h("label",null,"Classe"),h("select",{value:editForm.classe||"",onChange:function(e){setEditForm(Object.assign({},editForm,{classe:e.target.value}))}},h("option",{value:""},"\u2014"),Object.keys(CLASSES).filter(function(c){return !editForm.niveau||classeDuNiveau(c,editForm.niveau)}).map(function(c){return h("option",{key:c,value:c},nomDeClasse(c)+" ("+extractEleves(CLASSES[c],[]).length+")")}))),
             h("div",{className:"config-field",style:{minWidth:80}},h("label",null,"Note sur"),h("input",{type:"number",value:editForm.base||20,onChange:function(e){setEditForm(Object.assign({},editForm,{base:parseInt(e.target.value)||20}))},style:{width:70}})),
             /* Bareme range AVEC la dictee : changer ici ne touche qu'elle. */
             h("div",{className:"config-field",style:{minWidth:210}},
