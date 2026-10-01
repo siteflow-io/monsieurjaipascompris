@@ -2906,8 +2906,8 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.73.0-⑭";
-var APP_VERSION_DATE="2026-08-27";
+var APP_VERSION="8.74.0-⓪";
+var APP_VERSION_DATE="2026-09-30";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
 //  ici pour ne pas toucher l'existant ; cette section est la 11.)
@@ -3294,7 +3294,7 @@ var MJPC_APP = {
 var MJPC_MANIFESTE = {
   // M8 : les deux nœuds du lot 1 sont nommés explicitement. Ils vivent SOUS "site",
   // déjà déclaré — mais un contrat qui se lit ne se devine pas par l'ancêtre.
-  noeuds: ["site","site/annonces","site/config","site/atelier","eleves_index","codes"],   // /codes rendu par le débat (14/07) : les codes personnels sont créés et gérés ICI
+  noeuds: ["site","site/annonces","site/config","site/atelier","eleves_index","codes","eleves"],   // /codes rendu par le débat (14/07) : les codes personnels sont créés et gérés ICI
   notions: []
 };
 var MJPC_PURGE = {
@@ -3303,7 +3303,7 @@ var MJPC_PURGE = {
   // /taxonomie : propriétaire = manifeste dédié « taxonomie » (preserver vérifié
   // au hub le 19/07) ; index CO-ÉCRIT via l'éditeur M8bis — rien à déclarer ici.
   preserver: ["site","site/annonces","site/config","site/atelier"],   // chapitres publiés par niveau + annonces + réglages : conception pure
-  purger:    ["eleves_index","codes"]   // index élèves + codes personnels : nouvelles classes → nouveaux codes à la rentrée
+  purger:    ["eleves_index","codes","eleves"]   // index élèves + codes personnels : nouvelles classes → nouveaux codes à la rentrée
 };
 function publierManifesteREST(){
   try{
@@ -4849,7 +4849,7 @@ function ensureEleveUuid(eleve){
     }
     // Création nouveau UUID
     var newUuid=(crypto&&crypto.randomUUID)?crypto.randomUUID():('u-'+Date.now()+'-'+Math.random().toString(36).slice(2,10));
-    var record={uuid:newUuid,nom:eleve.nom||'',prenom:eleve.prenom||'',nom_complet_origine:eleve.display||(eleve.nom+' '+eleve.prenom),inscriptions:[{annee:'2025-2026',niveau:eleve.niveau||'',classe_slug:(eleve.classe||'').toLowerCase().replace(/[^a-z0-9]+/g,'_')}],cree_le:Date.now()};
+    var record={uuid:newUuid,nom:eleve.nom||'',prenom:eleve.prenom||'',nom_complet_origine:eleve.display||(eleve.nom+' '+eleve.prenom),inscriptions:[{annee:_anneeScolaire(),niveau:eleve.niveau||'',classe_slug:(eleve.classe||'').toLowerCase().replace(/[^a-z0-9]+/g,'_')}],cree_le:Date.now()};
     return Promise.all([
       mjpcFetchOk(FIREBASE_BASE+'/eleves/'+newUuid+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(record)}),
       mjpcFetchOk(FIREBASE_BASE+'/eleves_index/'+slug+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUuid)})
@@ -13583,6 +13583,29 @@ function mjpcLot(ecritures,ou,onTousAcceptes,onEchecs){
    (fetch ne le fait pas) et convertit la panne en message français. Les catch en
    place affichent alors la vraie cause au lieu de la taire ou de dire « réseau ». */
 function mjpcFetchOk(url,options){
+  /* [ELEVE-1 ⓪ — dette n°12 · 77] LE MODE TEST COUVRE AUSSI CE TRANSPORT.
+     Mesuré le 30/09 : `mjpcFetchOk` faisait un `fetch` direct, sans regarder
+     `m8TestOn()` ; or la corbeille (`_corbeillePut` → `_fbPutPath`), la purge
+     (`_purgeExec` → `_fbDeletePath`) et l'identifiant élève (`ensureEleveUuid`)
+     passent par lui : mode test activé, ils écrivaient ou effaçaient au VRAI hub.
+     Maintenant, en mode test, toute écriture vers le hub va au magasin, comme
+     `_sitePut` et `mjpcEcrireRest` ; un effacement y laisse `null` (la lecture
+     suivante voit donc le vide, au lieu de relire le vrai hub). Les adresses hors
+     du hub (le dépôt Drive) ne sont pas touchées. */
+  if(typeof m8TestOn==='function' && m8TestOn() && options && options.method && options.method!=='GET'
+     && String(url).indexOf(FIREBASE_BASE)===0){
+    var cheminM8=String(url).slice(FIREBASE_BASE.length).replace(/\.json.*$/,'');
+    try{ cheminM8=decodeURIComponent(cheminM8); }catch(e){}
+    try{
+      if(options.method==='DELETE') M8_TEST_STORE[cheminM8]=null;
+      else if(options.method==='PATCH'){
+        var lot=JSON.parse(options.body||'{}')||{};
+        Object.keys(lot).forEach(function(k){ M8_TEST_STORE[(cheminM8==='/'?'':cheminM8)+'/'+k]=lot[k]; });
+      }
+      else M8_TEST_STORE[cheminM8]=JSON.parse(options.body||'null');
+    }catch(e){}
+    return Promise.resolve({ok:true,status:0,test:true,json:function(){return Promise.resolve(null);},text:function(){return Promise.resolve('null');}});
+  }
   return fetch(url,options).then(function(r){
     if(!r.ok){var e=new Error('\u00e9criture refus\u00e9e par la base (HTTP '+r.status+') \u2014 r\u00e9essayer ne changera rien');e.mjpcIssue={etat:MJPC_ISSUE.REFUSEE,status:r.status,url:url,quand:Date.now()};throw e;}
     return r;
