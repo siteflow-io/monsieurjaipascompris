@@ -157,3 +157,14 @@
 | l'année de l'inscription d'un élève | `ensureEleveUuid` → `_anneeScolaire()` (bascule en août), plus d'année en dur |
 | le chantier « l'élève » | cadrage `DEROULE/CADRAGE-6-L-ELEVE.md` (sas) ; mandats `MANDATS/MANDAT-ELEVE-1.md` (livraisons ⓪ → ④, ⓪ promue) et `MANDATS/MANDAT-ELEVE-2.md` (attend la refonte du déroulé) ; livraisons `LIVRAISONS/ELEVE-1/<n>/` |
 | ce qui n'existe pas encore (vérifié) | le profil élève (`/classes/<slug>/profils`), l'aménagement (`amenagements`), `nbDispositifs`, la fiche élève, l'import du fichier .xlsx, le rappel des équipes éducatives — livraisons ① → ③ à venir |
+
+## AJOUTS DU 01/10/2026 — PROMOTION 8.74.0-① : l'import du fichier de classe (l'aperçu)
+
+| Quoi | Où |
+|---|---|
+| le bloc « Importer la liste d'une classe » | en tête d'« Élèves & codes » (`_profSectionEleves` → `eliSectionHtml`) ; ids `eli-zone`, `eli-fichier`, `eli-apercu`, `eli-valider`, `eli-annuler` |
+| la lecture du .xlsx | `eliLireFichier` (SheetJS 0.18.5, `ELI_SHEETJS_URL`, chargé à la demande par `eliChargerSheetJS`) ; le collé tabulé : `eliSurCollage` ; feuille « Les élèves », en-têtes du logiciel sautées (`ELI_ENTETES_LOGICIEL`), ligne des colonnes par ses mots |
+| l'analyse et l'aperçu | `eliAnalyser` (clé `sanMJPC`, doublons, anomalies, déjà présents / nouveaux / absents), `eliApercuHtml`, `eliRendre` ; l'état dans `ELI_ETAT` |
+| l'appariement de classe | `eliMots` (mots nettoyés par `edtNormaliser`, « 3 » = « 3e »), `eliMemeClasse`, `eliApparier`, `eliChoisirClasse` (la liste « classe visée », Paul confirme) |
+| « Valider » | `eliValider` — à ① ne fait que le dire ; l'écriture arrive à ② |
+| le mode test et la lecture des classes | `_m8Superposer(racine, val)` : en mode test, le magasin se superpose à `loadClasses` / `loadCodes` (dette n°12 · 82 ✔) |
