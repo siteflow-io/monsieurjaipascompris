@@ -956,3 +956,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - `evaluation-qcm.html` : blob `84c9c421f9bf` (commit `f6def710ae96`) · 550 410 o · md5 `9d6df9f4f349172f210e23d9c8da6f55` · v7.7.0 → promu 7.7.1 : commit `2287da6be81f`, 550 571 o, md5 `ecae65624855a1a877708986a8e984e5`.
 - **Motif** : la liste « Classe » par le niveau (dette 90) ; le QCM ne crée plus de classe, « Ranger l'ancien carnet », les noms (83, 91).
 - **Restauration en cas de `BUG`** : le blob d'avant → PUT sur `contents/<fichier>`, puis bit à bit contre le md5. Attention : une 7.7.0 restaurée recréerait les classes de `qcm/classes` tant que le carnet n'a pas été rangé.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion micro 6.6.2 (01/10/2026, conscience n°12)
+- blob `f3abec79b8c3` (commit `ca5b5b23ba3c`) · 736 690 o · md5 `ebf6fdc82bf032eb5f98fe54f9ea3fde` · v6.6.1
+- **Motif** : micro — la duplication est totale (dette 92). Promu : 738 095 o, md5 `0aeb77123b356a2529dbe3751a3911c6` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `f3abec79b8c3…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus.
