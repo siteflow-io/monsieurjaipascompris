@@ -919,3 +919,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - commit `7bca058af0` · 1 522 285 o · md5 `2cbd75cd4d0a6262a71adf1d9106c975` · v8.70.0
 - **Motif** : micro 8.70.1 — le chapitre créé en double apparaît sans recharger. Promu : commit `75c8b77f439e5cc5989f19bd7205261fdfde5449`, 1 522 853 o, md5 `6c7560afa9e431f23f89aa6fe167bb6b`.
 - **Restauration en cas de `BUG`** : `contents/index.html?ref=7bca058af00279a6088181a080647c2a06edc45a` → PUT, puis bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.74.0-⓪ (01/10/2026, conscience n°12)
+- commit `13ac6c351fa2fe4849a1cf3ece3e106e24fd8803` (blob) · 1 774 212 o · md5 `a841534fce9661bad089af862900b9a9` · v8.73.0-⑭
+- **Motif** : ELEVE-1 livraison ⓪ — le mode test étanche (`mjpcFetchOk` routé), `/eleves` à la purge, l'année scolaire calculée dans `ensureEleveUuid`. Promu : commit `0444c8197acf`, blob `401c53d5f357`, 1 775 768 o, md5 `c54b1c332b71…` (vérifié bit à bit).
+- **Restauration en cas de `BUG`** : `git/blobs/13ac6c351fa2fe4849a1cf3ece3e106e24fd8803` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. Attention : le contrat de purge publié au hub (`/manifestes/index/purge/purger`) garderait `"eleves"` jusqu'à la prochaine connexion prof sur la version restaurée, qui le republie.
