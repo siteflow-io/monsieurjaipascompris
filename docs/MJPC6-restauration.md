@@ -929,3 +929,13 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `401c53d5f357` (commit `0444c8197acf`) · 1 775 768 o · md5 `c54b1c332b7191ffe0e1383b4195cedf` · v8.74.0-⓪
 - **Motif** : ELEVE-1 livraison ① — l'import du fichier de classe (l'aperçu, rien n'est écrit) ; `_m8Superposer` dans `loadClasses` / `loadCodes` (mode test). Promu : 1 796 109 o, md5 `c9af8e31c6d93d3651095b9600d665e3` (bit à bit vérifié).
 - **Restauration en cas de `BUG`** : `git/blobs/401c53d5f357…` (le blob complet est dans le commit `0444c8197acf`) → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.74.0-② (01/10/2026, conscience n°12)
+- blob `75f3b7de9473` (commit `6024b2c4c966`) · 1 796 109 o · md5 `c9af8e31c6d93d3651095b9600d665e3` · v8.74.0-①
+- **Motif** : ELEVE-1 livraison ② — l'import écrit (liste, profil chiffré, aménagement, nbDispositifs, reprise, restes). Promu : commit `7c58bef49aba`, 1 813 946 o, md5 `80d454863a1b1ae4a741222b7cfdf1eb` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob du commit `6024b2c4c966` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. Attention : les profils, aménagements et `nbDispositifs` déjà écrits restent au hub (inoffensifs pour la version restaurée, qui les ignore).
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 7.7.0 (01/10/2026, conscience n°12)
+- blob `40e6d4313f9d` · 549 568 o · md5 `e6820219815db7aba89a4ff97411cce7` · v7.6.0
+- **Motif** : le QCM lit le sexe dans `amenagements` et n'écrit plus `qcm/eleveSexes`. Promu : commit `f6def710ae96`, 550 410 o, md5 `9d6df9f4f349172f210e23d9c8da6f55` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `40e6d4313f9d…` → PUT sur `contents/evaluation-qcm.html`, puis bit à bit contre le md5 ci-dessus (la 7.6.0 relirait `qcm/eleveSexes`, dont les restes des classes supprimées sont partis en corbeille au premier import).
