@@ -1127,7 +1127,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.5.0";
+var APP_VERSION="6.6.0";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1945,6 +1945,23 @@ function isEleveAmenage(eleveKey,dicteeAmenages,classeAmenages){
   // Sinon, suit le registre classe
   return !!(classeAmenages&&classeAmenages[eleveKey]);
 }
+/* [ELEVE-1 ④] L'aménagement vient de la FICHE de l'élève (console MJPC) : /classes/<clé>/amenagements/<élève>/dicteeAmenagee
+   (= la case pap-15). La classe est trouvée par SA CLÉ (comme classeDuRegistre), jamais par le nom brut. */
+function cleDuRegistre(nom,source){
+  var reg=source||CLASSES||{};if(!nom)return "";if(reg[nom])return nom;
+  var c=sanMJPC(nom),ks=Object.keys(reg);for(var i=0;i<ks.length;i++){if(sanMJPC(ks[i])===c)return ks[i];}
+  return c;
+}
+function registreDepuisAmenagements(v){var o={};Object.keys(v||{}).forEach(function(k){if(v[k]&&v[k].dicteeAmenagee===true)o[k]=true;});return o;}
+function dAmenDe(data){return data&&data.amenagee&&data.amenagee.enabled?data.amenagee:null;}
+/* les modes réellement employés par les trous (« A », « A+C »…), le mode par défaut si aucun trou n'en précise */
+function modesAmenagee(amen){if(!amen)return "";var d=amen.defaultMode||"A",m={};(amen.lacunes||[]).forEach(function(l){m[(l&&l.mode)||d]=true;});var ks=Object.keys(m).sort();return ks.length?ks.join("+"):d;}
+/* la trace d'une copie, posée au moment de la correction : d'où vient la note */
+function traceCopie(isAmen,amen,baseDictee){return (isAmen&&amen)?{amenagee:true,mode:modesAmenagee(amen),base:amen.base||10}:{amenagee:false,baseDictee:baseDictee};}   /* baseDictee : la base actuelle de la dictée, pour le calcul seulement (jamais écrite) */
+function traceDe(r){return (r&&r.amenagee===true)?{amenagee:true,mode:r.mode||"",base:r.base}:{amenagee:false};}
+/* la note d'une copie se lit sur SA base : la base aménagée si la copie est tracée aménagée, la base de la dictée sinon — jamais convertie */
+function baseDeCopie(r,baseDictee){return (r&&r.amenagee===true&&r.base)?r.base:baseDictee;}
+
 
 // Génère 2 distracteurs orthographiques plausibles pour un mot correct
 // Stratégie : permutations d'accents, doublement/dé-doublement de consonnes,
@@ -2416,9 +2433,12 @@ function AppProf(p){
     setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:classeName,eleves:eleves,base:cfg.base||20,bareme:cfg.bareme||"preparee"});
     setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
   })}
-  function save(ek,errors,extras,fastIdxVal){
-    var c=Object.assign({},corrections),sc=computeNote(errors,extras,dicteeData.base,dicteeData.bareme);
-    c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
+  function save(ek,errors,extras,fastIdxVal,trace){
+    /* [ELEVE-1 ④] la note s'enregistre sur la base avec laquelle la copie est corrigée (Paul, 01/10) ; la trace dit d'où elle vient */
+    var tr=(trace&&typeof trace==="object")?trace:{amenagee:false};
+    var c=Object.assign({},corrections),sc=computeNote(errors,extras,(tr.amenagee&&tr.base)?tr.base:(tr.baseDictee||dicteeData.base),dicteeData.bareme);
+    c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now(),amenagee:!!tr.amenagee};
+    if(tr.amenagee){c[ek].mode=tr.mode;c[ek].base=tr.base;}
     if(typeof fastIdxVal==="number")c[ek].fastIdx=fastIdxVal;
     else if(corrections[ek]&&typeof corrections[ek].fastIdx==="number")c[ek].fastIdx=corrections[ek].fastIdx;
     setCorrections(c);db.ref("correction_dictee/"+dicteeId+"/results/"+ek).set(c[ek]);
@@ -2886,10 +2906,15 @@ function EditionDictee(p){
               db.ref("correction_dictee/"+p.dicteeId+"/config").update(updates);
               // Recalculate all notes if base changed
               var newBase=editForm.base||20;
-              db.ref("correction_dictee/"+p.dicteeId+"/results").once("value",function(rSnap){
-                var rVal=rSnap.val()||{};
+              /* [ELEVE-1 ④] avant tout recalcul : les copies d'avant la 6.6.0 sont tracées (override, puis l'ancien registre) ; une copie aménagée garde sa base */
+              Promise.all([db.ref("correction_dictee/"+p.dicteeId+"/results").once("value"),db.ref("correction_dictee/"+p.dicteeId+"/amenages").once("value"),
+                db.ref("classes_amenages/"+(editForm.classe||"_default")).once("value"),db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee").once("value")]).then(function(snR){
+                var rSnap=snR[0],ovR=snR[1].val()||{},regR=snR[2].val()||{},dAR=snR[3].val()||null;
+                var rVal=rSnap.val()||{},majR={};
                 Object.keys(rVal).forEach(function(ek){
                   var r=rVal[ek];if(!r)return;
+                  if(r.amenagee===undefined){var a0=(ovR[ek]!==undefined)?!!ovR[ek]:(regR[ek]===true);if(a0){var t0={amenagee:true,mode:modesAmenagee(dAR)||"A",base:(dAR&&dAR.base)||10};db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek).update(t0);majR[ek]=t0;return;}}
+                  if(r.amenagee===true)return;   /* [ELEVE-1 ④] */
                   var errs=toArr(r.errors||[]).filter(function(e){return e!=null});
                   var exts=toArr(r.extras||[]).filter(function(e){return e!=null});
                   var sc=computeNote(errs,exts,newBase,editForm.bareme);
@@ -2897,8 +2922,10 @@ function EditionDictee(p){
                     db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/note").set(sc.note);
                     db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/deduction").set(sc.deduction);
                     db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/counts").set(sc.counts);
+                    majR[ek]={note:sc.note,deduction:sc.deduction,counts:sc.counts};
                   }
                 });
+                try{window.dispatchEvent(new CustomEvent("cd-recalcul",{detail:{dicteeId:p.dicteeId,maj:majR}}));}catch(e){}   /* [ELEVE-1 ④] l'écran ouvert se met à jour */
               });
               if(typeof p.onMaj==="function")p.onMaj();
               p.onClose();
@@ -2940,6 +2967,18 @@ function EditionDictee(p){
 // ═══ ÉCRAN CORRECTION ═══
 function CorrScreen(p){
   var data=p.data,s1=useState("correct"),tab=s1[0],setTab=s1[1];
+  /* [ELEVE-1 ④ — complément : défaut rencontré] l'écran de correction ne lisait JAMAIS la version aménagée de la dictée
+     (data.amenagee restait vide) : la base aménagée n'était jamais employée. Il l'écoute désormais. */
+  var sAC=useState(null),amenCfg=sAC[0],setAmenCfg=sAC[1];
+  var sBC=useState(null),baseCfg=sBC[0],setBaseCfg=sBC[1];
+  useEffect(function(){var rA=db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee");function fA(sn){setAmenCfg(sn.val()||null)}rA.on("value",fA);
+    var rB=db.ref("correction_dictee/"+p.dicteeId+"/config/base");function fB(sn){var v=sn.val();setBaseCfg(typeof v==="number"?v:(v?Number(v):null))}rB.on("value",fB);   /* [ELEVE-1 ④ — complément] la base suit le réglage, sans rouvrir */
+    return function(){rA.off("value",fA);rB.off("value",fB)};},[p.dicteeId]);
+  data=Object.assign({},p.data,{amenagee:amenCfg||p.data.amenagee||null,base:baseCfg||p.data.base});
+  useEffect(function(){   /* [ELEVE-1 ④ — complément : défaut rencontré] après un changement de base, l'écran montrait les anciennes notes jusqu'à la réouverture */
+    function fR(ev){var d=ev&&ev.detail;if(!d||d.dicteeId!==p.dicteeId)return;var c=Object.assign({},p.corrections);Object.keys(d.maj||{}).forEach(function(k){if(c[k])c[k]=Object.assign({},c[k],d.maj[k]);});p.onResetCorrections(c);}
+    window.addEventListener("cd-recalcul",fR);return function(){window.removeEventListener("cd-recalcul",fR)};
+  },[p.dicteeId,p.corrections]);
   // M6 — navigation deux niveaux : le groupe coiffe l'onglet, sans rien rouvrir.
   var sG=useState("pilotage"),groupe=sG[0],setGroupe=sG[1];
   var sH=useState(false),showAide=sH[0],setShowAide=sH[1];
@@ -2951,18 +2990,48 @@ function CorrScreen(p){
   var sA1=useState({}),amenagesDictee=sA1[0],setAmenagesDictee=sA1[1];
   var sA2=useState({}),classeAmenages=sA2[0],setClasseAmenages=sA2[1];
   var sA3=useState(null),ctxMenu=sA3[0],setCtxMenu=sA3[1]; // {x,y,eleveKey,name}
+  var sA4=useState(null),ancienRegistre=sA4[0],setAncienRegistre=sA4[1];   /* [ELEVE-1 ④] lu une fois, pour les copies d'avant la 6.6.0 */
+  useEffect(function(){   /* [ELEVE-1 ④] les copies aménagées d'avant la 6.6.0 reçoivent leur trace, UNE fois (override, puis l'ancien registre) */
+    var id=p.dicteeId,classe=data.classe||"_default";
+    Promise.all([db.ref("correction_dictee/"+id+"/results").once("value"),db.ref("correction_dictee/"+id+"/amenages").once("value"),
+      db.ref("classes_amenages/"+classe).once("value"),db.ref("correction_dictee/"+id+"/dictee/amenagee").once("value")]).then(function(sn){
+      var res=sn[0].val()||{},ov=sn[1].val()||{},reg=sn[2].val()||{},dA=sn[3].val()||null,u={};setAncienRegistre(reg);
+      Object.keys(res).forEach(function(k){var r=res[k];if(!r||typeof r!=="object"||r.amenagee!==undefined)return;
+        var a=(ov[k]!==undefined)?!!ov[k]:(reg[k]===true);if(a){u[k+"/amenagee"]=true;u[k+"/mode"]=modesAmenagee(dA)||"A";u[k+"/base"]=(dA&&dA.base)||10;}});
+      if(Object.keys(u).length){db.ref("correction_dictee/"+id+"/results").update(u);
+        var c2=Object.assign({},p.corrections);Object.keys(u).forEach(function(kp){var k=kp.split("/")[0],f=kp.split("/")[1];if(c2[k]){c2[k]=Object.assign({},c2[k]);c2[k][f]=u[kp];}});p.onResetCorrections(c2);}   /* l'écran voit aussitôt la trace */
+    });
+  },[p.dicteeId]);
+  function traceAncienne(k){var a=(amenagesDictee[k]!==undefined)?!!amenagesDictee[k]:!!(ancienRegistre&&ancienRegistre[k]===true);var dA=data.amenagee||null;return a?{amenagee:true,mode:modesAmenagee(dA)||"A",base:(dA&&dA.base)||10}:{amenagee:false};}
+  function traceSiAbsente(r,k){if(!r||typeof r!=="object"||r.amenagee!==undefined)return r;return Object.assign({},r,traceAncienne(k));}
+  /* [ELEVE-1 ④] la ligne PAP de l'écran de la dictée (capture T284-e4) : le bloc pour cette dictée, élève par élève par le clic droit */
+  function lignePapDictee(){
+    var dA=dAmenDe(data);if(!dA)return null;
+    var cles=data.eleves.map(san).filter(function(k){return classeAmenages[k];});if(!cles.length)return null;
+    var tousNon=cles.every(function(k){return amenagesDictee[k]===false;}),n=cles.length;
+    return h("div",{id:"pap-ligne",style:{border:"1px solid #f59e0b",background:"#fffbeb",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#1f2937"}},
+      h("span",{style:{background:"#e0f2fe",color:"#0369a1",borderRadius:6,padding:"1px 7px",fontWeight:800,marginRight:6,fontSize:".78rem"}},"PAP"),
+      h("b",null,n+" \u00e9l\u00e8ve"+(n>1?"s":"")+" pap-15"),
+      " (dict\u00e9es am\u00e9nag\u00e9es) : "+(tousNon?"non am\u00e9nag\u00e9s pour cette dict\u00e9e.":"am\u00e9nag\u00e9s pour cette dict\u00e9e, d\u2019apr\u00e8s leur fiche.")+" ",
+      h("button",{className:"btn-sm btn-ghost",id:"pap-bloc",title:tousNon?"Rend \u00e0 chacun l\u2019am\u00e9nagement de sa fiche, pour cette dict\u00e9e seulement.":"Pour cette dict\u00e9e seulement (une dict\u00e9e pr\u00e9par\u00e9e, par exemple) : leurs fiches ne changent pas.",
+        onClick:function(){var u={};cles.forEach(function(k){u[k]=tousNon?null:false;});db.ref("correction_dictee/"+p.dicteeId+"/amenages").update(u);}},
+        tousNon?"Tout repasser en am\u00e9nag\u00e9 (leur fiche)":"Tout passer en non am\u00e9nag\u00e9 pour cette dict\u00e9e"),
+      h("span",{style:{color:"#6b7280",fontSize:".82rem"}}," \u2014 ou \u00e9l\u00e8ve par \u00e9l\u00e8ve, par le clic droit"));
+  }
   useEffect(function(){
     var r1=db.ref("correction_dictee/"+p.dicteeId+"/amenages");
     function f1(s){setAmenagesDictee(s.val()||{})}r1.on("value",f1);
     var classe=data.classe||"_default";
-    var r2=db.ref("classes_amenages/"+classe);
-    function f2(s){setClasseAmenages(s.val()||{})}r2.on("value",f2);
+    /* [ELEVE-1 ④] la fiche de l'élève, plus le registre classes_amenages (plus aucun repli) */
+    var r2=db.ref("classes/"+cleDuRegistre(classe)+"/amenagements");
+    function f2(s){setClasseAmenages(registreDepuisAmenagements(s.val()))}r2.on("value",f2);
     return function(){r1.off("value",f1);r2.off("value",f2)};
   },[p.dicteeId,data.classe]);
   function toggleAmenageDictee(eleveKey){
     var cur=amenagesDictee[eleveKey];
     var path="correction_dictee/"+p.dicteeId+"/amenages/"+eleveKey;
-    // Logique override : si elem dans registre classe → on stocke false pour le retirer ici ; sinon true
+    // [ELEVE-1 ④] Le « registre » est la fiche (case pap-15). Sans choix, l'élève suit sa fiche ; un clic l'inverse pour cette dictée ;
+    // un second clic revient à la fiche (l'override est effacé).
     var inReg=!!classeAmenages[eleveKey];
     if(cur===undefined){
       // Aucun override : on en ajoute un (inverse du registre)
@@ -2976,13 +3045,6 @@ function CorrScreen(p){
         db.ref(path).set(!cur);
       }
     }
-    setCtxMenu(null);
-  }
-  function toggleAmenageClasse(eleveKey){
-    var cur=!!classeAmenages[eleveKey];
-    var classe=data.classe||"_default";
-    var path="classes_amenages/"+classe+"/"+eleveKey;
-    if(cur)db.ref(path).remove();else db.ref(path).set(true);
     setCtxMenu(null);
   }
   useEffect(function(){
@@ -3016,10 +3078,11 @@ function CorrScreen(p){
       var base="correction_dictee/"+p.dicteeId;
       db.ref(ent.chemin).once("value").then(function(sn){
         var v=sn.val();if(!v||!v.data||!v.data.results){alert("Copie introuvable dans la corbeille : "+ent.chemin);return}
-        db.ref(base+"/results/"+curKey).set(v.data.results);
+        var rr=traceSiAbsente(v.data.results,curKey);   /* [ELEVE-1 ④] */
+        db.ref(base+"/results/"+curKey).set(rr);
         if(v.data.autocorrection)db.ref(base+"/autocorrection/"+curKey).once("value").then(function(a){if(!a.val())db.ref(base+"/autocorrection/"+curKey).set(v.data.autocorrection)});
         db.ref(base+"/effacees/"+curKey+"/"+ent.le+"/restauree").set(Date.now());
-        var c=Object.assign({},p.corrections);c[curKey]=v.data.results;p.onResetCorrections(c);
+        var c=Object.assign({},p.corrections);c[curKey]=rr;p.onResetCorrections(c);
         setMsg("\u21ba Copie de "+cur.split(" ").pop()+" restaur\u00e9e");setTimeout(function(){setMsg(null)},2500);
       });
     },
@@ -3058,7 +3121,7 @@ function CorrScreen(p){
       });
     },
     onSave:function(err,ext){
-      p.onSave(san(cur),err,ext);
+      p.onSave(san(cur),err,ext,undefined,traceCopie(curIsAmen,dAmen,data.base));   /* [ELEVE-1 ④] */
       var keys=data.eleves.map(san),ci=data.eleves.indexOf(cur),next=null;
       for(var i=1;i<data.eleves.length;i++){var ni=(ci+i)%data.eleves.length;if(!p.corrections[keys[ni]]&&!p.absents[keys[ni]]){next=data.eleves[ni];break}}
       setMsg("\u2705 "+cur.split(" ").pop()+(next?" \u2192 "+next.split(" ").pop():" \u2014 termin\u00e9 !"));
@@ -3153,8 +3216,8 @@ function CorrScreen(p){
             });
             if(hasConv){
               var exts=toArr(c.extras||[]).filter(function(e){return e!=null});
-              var sc=computeNote(newErrs,exts,data.base,data.bareme);
-              newCorr[ek]={errors:newErrs,extras:exts,note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()};
+              var sc=computeNote(newErrs,exts,baseDeCopie(c,data.base),data.bareme);   /* [ELEVE-1 ④] la base de la copie */
+              newCorr[ek]=Object.assign({errors:newErrs,extras:exts,note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()},traceDe(c));
             }
           });
           if(conversions.length===0){alert("Aucune erreur M sur ponctuation \u00e0 reclasser.");return}
@@ -3188,6 +3251,7 @@ function CorrScreen(p){
       var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
       return h("div",null,
         h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
+        lignePapDictee(),   /* [ELEVE-1 ④] */
         h(EleveSearchBar,{query:eleveQuery,onChange:setEleveQuery,count:filteredEleves.length,placeholder:"Recherche \u00e9l\u00e8ve (initiales : DM pour Dupont Marie)"}),
         h("div",{className:"eleve-grid"},filteredEleves.map(function(e){
       var key=san(e),c=p.corrections[key],done=!!c,isAbs=!!p.absents[key];
@@ -3199,8 +3263,10 @@ function CorrScreen(p){
         h("span",{className:"eleve-name"},e.split(" ")[0].charAt(0)+". "+e.split(" ").pop(),
           isAmen&&h("span",{className:"pap-badge",title:"\u00c9l\u00e8ve am\u00e9nag\u00e9 (PAP/DYS)"},"\ud83d\udcd8")
         ),
+        dAmenDe(data)&&(isAmen||classeAmenages[key])&&h("span",{className:"amen-etat",style:{fontSize:".7rem",color:isAmen?"#0369a1":"var(--muted)",display:"block"}},
+          isAmen?(classeAmenages[key]?"am\u00e9nag\u00e9":"am\u00e9nag\u00e9 (cette dict\u00e9e)"):"non am\u00e9nag\u00e9 (cette dict\u00e9e)"),   /* [ELEVE-1 ④] */
         isAbs?h("span",{style:{fontSize:".78rem",fontWeight:700,color:"var(--muted)"}},"ABS"):
-        done?h("span",{className:"eleve-note",style:{color:noteColor(c.note,data.base)}},noteFr(c.note)+"/"+data.base):h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"—")
+        done?h("span",{className:"eleve-note",style:{color:noteColor(c.note,baseDeCopie(c,data.base))}},noteFr(c.note)+"/"+baseDeCopie(c,data.base)):h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"—")
       )
     })),
       ctxMenu&&h("div",{style:{position:"fixed",inset:0,zIndex:1000},onClick:function(){setCtxMenu(null)},onContextMenu:function(ev){ev.preventDefault();setCtxMenu(null)}},
@@ -3212,10 +3278,7 @@ function CorrScreen(p){
           h("button",{className:"btn-sm btn-ghost",style:{width:"100%",justifyContent:"flex-start",fontSize:".85rem",padding:"7px 10px",border:"none",textAlign:"left"},onClick:function(){toggleAmenageDictee(ctxMenu.eleveKey)}},
             isEleveAmenage(ctxMenu.eleveKey,amenagesDictee,classeAmenages)?"\u2713 Retirer am\u00e9nag\u00e9 (cette dict\u00e9e)":"\ud83d\udcd8 Am\u00e9nag\u00e9 (cette dict\u00e9e)"
           ),
-          h("button",{className:"btn-sm btn-ghost",style:{width:"100%",justifyContent:"flex-start",fontSize:".85rem",padding:"7px 10px",borderTop:"1px solid #eee",border:"none",borderTop:"1px solid #eee",textAlign:"left"},onClick:function(){toggleAmenageClasse(ctxMenu.eleveKey)}},
-            classeAmenages[ctxMenu.eleveKey]?"\u2713 Retirer du registre PAP de la classe":"\ud83d\udccc Inscrire au registre PAP de la classe"
-          ),
-          h("p",{style:{fontSize:".68rem",color:"#999",padding:"4px 10px 6px",margin:0,fontStyle:"italic"}},"Le registre s\u2019applique \u00e0 toutes les dict\u00e9es. L\u2019override par dict\u00e9e n\u2019affecte que celle-ci.")
+                    h("p",{style:{fontSize:".68rem",color:"#999",padding:"4px 10px 6px",margin:0,fontStyle:"italic"}},"Sans choix ici, l\u2019\u00e9l\u00e8ve suit sa fiche (case pap-15, dans la console). Un clic l\u2019inverse pour cette dict\u00e9e ; un second clic revient \u00e0 sa fiche.")
         )
       )
       );
@@ -3233,15 +3296,15 @@ function CorrScreen(p){
         rapideEleve=uncorr.length>0?uncorr[0]:data.eleves[0];
       }
       if(!rapideEleve)return h("div",{className:"card",style:{textAlign:"center",padding:30}},h("p",null,"\u2705 Aucun \u00e9l\u00e8ve \u00e0 corriger."));
-      return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,
+      return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,effectiveBase:baseDeCopie(traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),data.base),   /* [ELEVE-1 ④] */
         existing:p.corrections[san(rapideEleve)]||null,
         startFast:true,
         onAutoSave:function(err,ext,fastIdxVal){
-          p.onSave(san(rapideEleve),err,ext,fastIdxVal);
+          p.onSave(san(rapideEleve),err,ext,fastIdxVal,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base));   /* [ELEVE-1 ④] */
         },
         onExitFast:function(){setTab("correct")},
         onSave:function(err,ext){
-          p.onSave(san(rapideEleve),err,ext);
+          p.onSave(san(rapideEleve),err,ext,undefined,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base));   /* [ELEVE-1 ④] */
           // Move to next uncorrected
           var keys=data.eleves.map(san),ci=data.eleves.indexOf(rapideEleve),next=null;
           for(var i2=1;i2<data.eleves.length;i2++){var ni=(ci+i2)%data.eleves.length;if(!p.corrections[keys[ni]]&&!p.absents[keys[ni]]){next=data.eleves[ni];break}}
@@ -3921,7 +3984,7 @@ function CorrEleve(p){
                 opacity:isAbs?0.5:1}},
               h("span",{style:{fontWeight:name===p.eleve?700:500}},name),
               isAbs?h("span",{style:{fontSize:".7rem",color:"var(--muted)"}},"ABS"):
-              done?h("span",{style:{fontSize:".75rem",fontWeight:700,color:noteColor(c.note,data.base)}},noteFr(c.note)+"/"+data.base):
+              done?h("span",{style:{fontSize:".75rem",fontWeight:700,color:noteColor(c.note,baseDeCopie(c,data.base))}},noteFr(c.note)+"/"+baseDeCopie(c,data.base)):
               h("span",{style:{fontSize:".75rem",color:"var(--muted)"}},"\u2014")
             );
           })
@@ -3951,7 +4014,7 @@ function CorrEleve(p){
       }))
     ),
     h("div",{style:{display:"flex",gap:8,marginBottom:20}},
-      h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"Enregistrer ("+noteFr(sc.note)+"/"+data.base+") \u2192 suivant")
+      h("button",{className:"btn btn-primary",style:{flex:1},onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"Enregistrer ("+noteFr(sc.note)+"/"+(p.effectiveBase||data.base)+") \u2192 suivant")
     ),
     // Popup transfert
     xferOpen&&(function(){
@@ -3972,7 +4035,7 @@ function CorrEleve(p){
               h("div",{style:{flex:1,minWidth:0}},
                 h("div",{style:{fontWeight:600,fontSize:".95rem"}},name),
                 h("div",{style:{fontSize:".78rem",color:"var(--muted)"}},
-                  isAbs?"Absent":tCorr?("D\u00e9j\u00e0 corrig\u00e9 : "+noteFr(tCorr.note)+"/"+data.base):"Non corrig\u00e9"
+                  isAbs?"Absent":tCorr?("D\u00e9j\u00e0 corrig\u00e9 : "+noteFr(tCorr.note)+"/"+baseDeCopie(tCorr,data.base)):"Non corrig\u00e9"
                 )
               ),
               tCorr?
@@ -3984,7 +4047,7 @@ function CorrEleve(p){
                   }},"\u21c4 \u00c9changer"),
                   h("button",{className:"btn-sm btn-ghost",style:{fontSize:".78rem",padding:"5px 10px",color:"var(--coral)",borderColor:"rgba(197,48,48,.2)"},onClick:function(){
                     if(isAbs&&!confirm("\u26a0 "+name+" est marqu\u00e9 ABSENT. Vraiment continuer ?"))return;
-                    if(!confirm("Remplacer la correction de "+name+" ("+noteFr(tCorr.note)+"/"+data.base+") par celle de "+p.eleve+" ?\n\n"+p.eleve+" redeviendra non corrig\u00e9. La correction actuelle de "+name+" sera perdue."))return;
+                    if(!confirm("Remplacer la correction de "+name+" ("+noteFr(tCorr.note)+"/"+baseDeCopie(tCorr,data.base)+") par celle de "+p.eleve+" ?\n\n"+p.eleve+" redeviendra non corrig\u00e9. La correction actuelle de "+name+" sera perdue."))return;
                     setXferOpen(false);p.onTransfer(name,"replace");
                   }},"\u26a0\ufe0f Remplacer")
                 ):
@@ -4077,7 +4140,7 @@ function buildDicteeJSON(data, corrections, absents){
     var c = corrections[k];
     var elObj = {prenom: prenomOnly(e), nom_complet: e, corrige: !!c};
     if (c) {
-      elObj.note = c.note;
+      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20);   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
       elObj.compteurs = c.counts || {};
       elObj.erreurs = toArr(c.errors).map(function(err){
         var o = {position: err.idx, mot_correct: err.word || null, type: err.type};
@@ -4085,7 +4148,7 @@ function buildDicteeJSON(data, corrections, absents){
         return o;
       });
       elObj.mots_ajoutes_en_trop = toArr(c.extras).map(function(ex){return ex.word});
-      notes.push(c.note);
+      if (baseDeCopie(c, data.base || 20) === (data.base || 20)) notes.push(c.note);   /* la moyenne et la médiane : les copies sur la base de la dictée, rien n'est mêlé */
       toArr(c.errors).forEach(function(err){
         var w = err.word || "?";
         if (!wordFreq[w]) wordFreq[w] = {mot: w, total: 0, par_type: {}, eleves_concernes: []};
@@ -4097,7 +4160,7 @@ function buildDicteeJSON(data, corrections, absents){
     out.eleves.push(elObj);
   });
   out.bilan_classe.effectif = out.eleves.length;
-  out.bilan_classe.corriges = notes.length;
+  out.bilan_classe.corriges = notes.length; out.bilan_classe.moyenne_sur = data.base || 20;   /* [ELEVE-1 ④] la moyenne dit sa base */
   if (notes.length) {
     out.bilan_classe.moyenne = Math.round(notes.reduce(function(a,b){return a+b},0) / notes.length * 10) / 10;
     var s = notes.slice().sort(function(a,b){return a-b}), m = Math.floor(s.length/2);
@@ -4180,7 +4243,7 @@ function Bilan(p){
   var data=p.data,corr=p.corrections,abs=p.absents||{};
   var sQb=useState(""),bilanQuery=sQb[0],setBilanQuery=sQb[1];
   var sortMode=useState("nom"),sortBy=sortMode[0],setSortBy=sortMode[1];
-  var entries=data.eleves.filter(function(e){return!abs[san(e)]}).map(function(e){var k=san(e),c=corr[k];return{name:e,done:!!c,note:c?c.note:null,counts:c&&c.counts?c.counts:{G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:0},errors:c?toArr(c.errors):[]}});
+  var entries=data.eleves.filter(function(e){return!abs[san(e)]}).map(function(e){var k=san(e),c=corr[k];return{name:e,done:!!c,note:c?c.note:null,base:c?baseDeCopie(c,data.base):data.base,amen:!!(c&&c.amenagee===true),counts:c&&c.counts?c.counts:{G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:0},errors:c?toArr(c.errors):[]}});
   // Tri selon mode choisi (nom alpha par défaut)
   if(sortBy==="nom"){
     entries.sort(function(a,b){return getEleveNomPrenom(a.name).nom.localeCompare(getEleveNomPrenom(b.name).nom,"fr",{sensitivity:"base"})});
@@ -4189,8 +4252,10 @@ function Bilan(p){
   }
   var entriesFiltered=bilanQuery.trim()?entries.filter(function(e){return matchEleveInitials(e.name,bilanQuery)}):entries;
   var done=entries.filter(function(e){return e.done});
-  var avg=done.length?Math.round(done.reduce(function(a,e){return a+e.note},0)/done.length*10)/10:0;
-  var med=done.length?(function(){var s=done.map(function(e){return e.note}).sort(function(a,b){return a-b}),m=Math.floor(s.length/2);return s.length%2?s[m]:Math.round((s[m-1]+s[m])*5)/10})():0;
+  var doneN=done.filter(function(e){return !e.amen}),doneA=done.filter(function(e){return e.amen});   /* [ELEVE-1 ④] rien n'est mêlé : la moyenne de la dictée sur sa base, les copies aménagées à part sur la leur */
+var avg=doneN.length?Math.round(doneN.reduce(function(a,e){return a+e.note},0)/doneN.length*10)/10:0;
+var amenGroupes={};doneA.forEach(function(e){var b=e.base||data.base;(amenGroupes[b]=amenGroupes[b]||[]).push(e.note);});
+  var med=doneN.length?(function(){var s=doneN.map(function(e){return e.note}).sort(function(a,b){return a-b}),m=Math.floor(s.length/2);return s.length%2?s[m]:Math.round((s[m-1]+s[m])*5)/10})():0;
   var wf={};done.forEach(function(e){e.errors.forEach(function(err){var w=err.word||"?";if(!wf[w])wf[w]={w:w,n:0,t:{},eleves:[]};wf[w].n++;wf[w].t[err.type]=(wf[w].t[err.type]||0)+1;wf[w].eleves.push({name:e.name,type:err.type,fautif:err.fautif||null})})});
   var top=Object.values(wf).sort(function(a,b){return b.n-a.n}).slice(0,15);
   function prenomOnly(n){var p=n.split(/\s+/);return p.length>1?p[p.length-1]:n}
@@ -4203,7 +4268,7 @@ function Bilan(p){
     showPrompt && h(PromptIaModal,{data:data,corrections:corr,absents:abs,dicteeId:p.dicteeId,onClose:function(){setShowPrompt(false)}}),
     h("div",{className:"card"},h("div",{style:{display:"flex",gap:16,flexWrap:"wrap",textAlign:"center"}},
       h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Corrig\u00e9es"),h("div",{style:{fontSize:"1.6rem",fontWeight:700}},done.length+"/"+data.eleves.length)),
-      h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Moyenne"),h("div",{style:{fontSize:"1.6rem",fontWeight:700,color:noteColor(avg,data.base)}},avg)),
+      h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Moyenne"),h("div",{style:{fontSize:"1.6rem",fontWeight:700,color:noteColor(avg,data.base)}},noteFr(avg)+"/"+data.base),Object.keys(amenGroupes).map(function(b){var l=amenGroupes[b],m=Math.round(l.reduce(function(a,x){return a+x},0)/l.length*10)/10;return h("div",{key:"am"+b,className:"moy-amen",style:{fontSize:".78rem",color:"var(--muted)",marginTop:2}},l.length+" copie"+(l.length>1?"s":"")+" am\u00e9nag\u00e9e"+(l.length>1?"s":"")+" \u2014 moyenne "+noteFr(m)+"/"+b);})),
       h("div",{style:{flex:1,padding:12}},h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"M\u00e9diane"),h("div",{style:{fontSize:"1.6rem",fontWeight:700}},med))
     )),
     top.length>0&&h("div",{className:"card"},
@@ -4250,7 +4315,7 @@ function Bilan(p){
       h("div",{className:"table-scroll"},h("table",{className:"bilan-table"},
       h("thead",null,h("tr",null,h("th",null,"\u00c9l\u00e8ve"),h("th",null,"Note"),h("th",{title:typeLibelle("G")},"G"),h("th",{title:typeLibelle("L")},"L"),h("th",{title:typeLibelle("M")},"\u2205"),h("th",{title:typeLibelle("P")},"P"),h("th",{title:typeLibelle("E")},"E"),h("th",{title:typeLibelle("I")},"?"),h("th",{title:typeLibelle("A")},"\u26a0"),h("th",{title:typeLibelle("X")},"+"))),
       h("tbody",null,entriesFiltered.map(function(e){var c=e.counts;return h("tr",{key:e.name},h("td",null,e.name),
-        h("td",{style:{fontWeight:700,color:e.done?noteColor(e.note,data.base):"var(--muted)"}},e.done?noteFr(e.note)+"/"+data.base:"\u2014"),
+        h("td",{style:{fontWeight:700,color:e.done?noteColor(e.note,e.base||data.base):"var(--muted)"}},e.done?noteFr(e.note)+"/"+(e.base||data.base):"\u2014"),
         h("td",null,e.done?c.G:"\u2014"),h("td",null,e.done?c.L:"\u2014"),h("td",null,e.done?(c.M||0):"\u2014"),h("td",null,e.done?(c.P||0):"\u2014"),h("td",null,e.done?(c.E||0):"\u2014"),h("td",null,e.done?(c.I||0):"\u2014"),h("td",null,e.done?(c.A||0):"\u2014"),h("td",null,e.done?(c.X||0):"\u2014")
       )}))
     )))
@@ -4377,7 +4442,7 @@ function Suivi(p){
     else if(ac&&lastSeen) status="idle";
     else if(!ac) status="waiting";
     else status="waiting";
-    return{name:e,key:k,isTest:isTest,noteDictee:c?c.note:null,nErrors:nErr,
+    return{name:e,key:k,isTest:isTest,noteDictee:c?c.note:null,baseDictee:c?baseDeCopie(c,data.base):data.base,nErrors:nErr,
       solved:solved,total:total,score:ac&&(ac.attempts||ac.score!=null)?acNoteArrondie(acNote(ac.attempts,ac.results,total,errsCopie,ac.questions)):null,
       totalAttempts:totalAtt,wrongAttempts:wrongAtt,
       status:status,timestamp:ac?ac.timestamp:0,lastSeen:lastSeen};
@@ -4606,7 +4671,7 @@ function Suivi(p){
                 r.isTest?h("span",{className:"badge",style:{marginLeft:4,background:"var(--orange-light)",color:"var(--orange)",fontSize:".7rem"}},"TEST"):null
               ),
               // Note dictée
-              h("td",null,r.noteDictee!==null?h("span",{style:{color:noteColor(r.noteDictee,data.base),fontWeight:600}},noteFr(r.noteDictee)+"/"+data.base):"\u2014"),
+              h("td",null,r.noteDictee!==null?h("span",{style:{color:noteColor(r.noteDictee,r.baseDictee||data.base),fontWeight:600}},noteFr(r.noteDictee)+"/"+(r.baseDictee||data.base)):"\u2014"),
               // Progression autocorrection
               h("td",{style:{minWidth:120}},
                 r.status!=="waiting"?h("div",{style:{display:"flex",alignItems:"center",gap:6}},
@@ -5112,7 +5177,7 @@ function Fiches(p){
     done.length>0&&h("div",{className:"card"},
       h("h2",null,"\u00c9l\u00e8ves pr\u00eats ("+done.length+")"),
       h(EleveSearchBar,{query:fQuery,onChange:setFQuery,count:doneF.length}),
-      h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},doneF.map(function(e){var c=corr[san(e)];return h("span",{key:e,style:{padding:"4px 10px",borderRadius:8,fontSize:".85rem",background:"var(--green-light)",color:"var(--green)",fontWeight:500}},e.split(" ").pop()+" "+noteFr(c.note)+"/"+data.base)}))
+      h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},doneF.map(function(e){var c=corr[san(e)];return h("span",{key:e,style:{padding:"4px 10px",borderRadius:8,fontSize:".85rem",background:"var(--green-light)",color:"var(--green)",fontWeight:500}},e.split(" ").pop()+" "+noteFr(c.note)+"/"+baseDeCopie(c,data.base))}))
     )
   );
 }
@@ -5410,7 +5475,7 @@ function buildAmenageePapierHtml(data,amen,dicteeId){
   var subtitle=competencesSubtitle(data.competences||[]);
   var niveau=(data.niveau||"").toUpperCase();
   var matiere="FRAN\u00c7AIS";
-  var headerLine=matiere+(niveau?" \u00b7 "+niveau:"")+" \u00b7 PR\u00c9PARATION \u00c0 LA DICT\u00c9E AM\u00c9NAG\u00c9E";
+  var headerLine=matiere+(niveau?" \u00b7 "+niveau:"")+" \u00b7 PR\u00c9PARATION \u00c0 LA DICT\u00c9E";
 
   function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
 
@@ -5453,11 +5518,11 @@ function buildAmenageePapierHtml(data,amen,dicteeId){
     notesHtml+='</ol></div>';
   }
 
-  var titre=data.title||"Dict\u00e9e am\u00e9nag\u00e9e";
+  var titre=data.title||"Dict\u00e9e";   /* [ELEVE-1 ④] le mot « aménagée » nulle part sur la feuille de l'élève (Paul, point 87) */
 
   return '<!DOCTYPE html>\n<html lang="fr">\n<head>\n<meta charset="UTF-8">\n'+
 '<meta name="viewport" content="width=device-width,initial-scale=1">\n'+
-'<title>'+escapeHtml(titre)+' \u2014 Version am\u00e9nag\u00e9e</title>\n'+
+'<title>'+escapeHtml(titre)+'</title>\n'+
 '<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">\n'+
 '<style>\n'+
 '@page{size:A4;margin:16mm 18mm}\n'+
@@ -5497,7 +5562,7 @@ function buildAmenageePapierHtml(data,amen,dicteeId){
 (consigne?'<div class="consigne-box">'+escapeHtml(consigne)+'</div>\n':'')+
 '<div class="texte">'+textHtml+'</div>\n'+
 notesHtml+'\n'+
-'<div class="footer">Version am\u00e9nag\u00e9e \u2014 '+escapeHtml(dicteeId)+'</div>\n'+
+'<div class="footer">'+escapeHtml(data.title||"")+'</div>\n'+   /* [ELEVE-1 ④] ni le mot, ni un identifiant technique sur la feuille de l\'élève */
 '</body>\n</html>';
 }
 
@@ -6364,7 +6429,7 @@ function Copies(p){
               background:isSel?"var(--primary-light)":"var(--card2)",fontFamily:"inherit",cursor:"pointer",
               fontWeight:isSel?700:500,fontSize:".85rem",position:"relative"}},
             e.split(" ")[0].charAt(0)+". "+e.split(" ").pop(),
-            h("span",{style:{marginLeft:6,color:noteColor(c.note,data.base),fontWeight:700}},noteFr(c.note)+"/"+data.base),
+            h("span",{style:{marginLeft:6,color:noteColor(c.note,baseDeCopie(c,data.base)),fontWeight:700}},noteFr(c.note)+"/"+baseDeCopie(c,data.base)),
             hasBilan&&h("span",{style:{marginLeft:4,color:"var(--green)",fontSize:".75rem"}},"\u2713")
           );
         })
@@ -6513,7 +6578,7 @@ function Copies(p){
               h("div",{style:{fontSize:".8rem",color:"var(--muted)",marginTop:4,fontFamily:"monospace"}},"Code : "+code)
             ),
             h("div",{style:{textAlign:"right"}},
-              h("div",{style:{fontSize:"1.6rem",fontWeight:800,color:noteColor(c.note,data.base)}},noteFr(c.note)+"/"+data.base)
+              h("div",{style:{fontSize:"1.6rem",fontWeight:800,color:noteColor(c.note,baseDeCopie(c,data.base))}},noteFr(c.note)+"/"+baseDeCopie(c,data.base))
             )
           ),
           h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",marginTop:12,borderTop:"1px solid var(--border)",paddingTop:10}},
@@ -6739,9 +6804,11 @@ function supprimerDicteeAvecCorbeille(d, onDone){
 // encore corrigée, absent. Génération en un clic, incarnation, purge exhaustive.
 var TEST_DICTEE_A = "dictee_test_rendue";      /* corrigée ET rendue */
 var TEST_DICTEE_B = "dictee_test_en_attente";  /* pas encore corrigée */
-var TEST_ELEVES = ["DURAND Alice","MARTIN Lucas","BERNARD Emma","PETIT Thomas","ROBERT Chlo\u00e9","MOREAU Sacha"];
-var TEST_CODES = {"durand_alice":"2581","martin_lucas":"4426","bernard_emma":"3413",
-                  "petit_thomas":"4516","robert_chloe":"7204","moreau_sacha":"8137"};
+/* [ELEVE-1 ④ — complément : point 16] un élève de test porte un nom IMPOSSIBLE (préfixe ZZTEST), jamais un nom qui puisse être réel */
+var TEST_ELEVES = ["ZZTEST DURAND Alice","ZZTEST MARTIN Lucas","ZZTEST BERNARD Emma","ZZTEST PETIT Thomas","ZZTEST ROBERT Chlo\u00e9","ZZTEST MOREAU Sacha"];
+var TEST_CODES_ANCIENS = ["durand_alice","martin_lucas","bernard_emma","petit_thomas","robert_chloe","moreau_sacha"];   /* les clés d'avant, effacées une fois par « Tout effacer » */
+var TEST_CODES = {"zztest_durand_alice":"2581","zztest_martin_lucas":"4426","zztest_bernard_emma":"3413",
+                  "zztest_petit_thomas":"4516","zztest_robert_chloe":"7204","zztest_moreau_sacha":"8137"};
 
 function testTokens(txt){ return tokenize(txt); } /* align\u00e9 sur le d\u00e9coupage de production \u2014 le bac \u00e0 sable doit se comporter comme une vraie dict\u00e9e (apostrophes et guillemets cliquables compris) */
 
@@ -6752,17 +6819,17 @@ function genererDonneesTest(){
   function idx(w){ for(var i=0;i<tokA.length;i++){ if(tokA[i]===w) return i; } return -1; }
   var maintenant=Date.now();
   var results={};
-  results[san("DURAND Alice")]={errors:[],extras:[],note:10,deduction:0,counts:{G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:0},timestamp:maintenant};
-  results[san("MARTIN Lucas")]={errors:[
+  results[san("ZZTEST DURAND Alice")]={errors:[],extras:[],note:10,deduction:0,counts:{G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:0},timestamp:maintenant};
+  results[san("ZZTEST MARTIN Lucas")]={errors:[
       {idx:idx("dormait"),type:"G",word:"dormait",fautif:"dormer"},
       {idx:idx("r\u00eavait"),type:"L",word:"r\u00eavait",fautif:"r\u00e9vait"},
       {idx:idx("caressa"),type:"G",word:"caressa",fautif:"car\u00e8ssa"}
     ],extras:[],note:7,deduction:3,counts:{G:2,L:1,M:0,I:0,P:0,A:0,E:0,X:0},timestamp:maintenant};
-  results[san("BERNARD Emma")]={errors:[
+  results[san("ZZTEST BERNARD Emma")]={errors:[
       {idx:idx("souris"),type:"L",word:"souris",fautif:"sourit"},
       {idx:idx("poissons"),type:"L",word:"poissons",fautif:"poisons"}
     ],extras:[],note:8,deduction:2,counts:{G:0,L:2,M:0,I:0,P:0,A:0,E:0,X:0},timestamp:maintenant};
-  results[san("PETIT Thomas")]={errors:[
+  results[san("ZZTEST PETIT Thomas")]={errors:[
       {idx:0,type:"G",word:"Le",fautif:"le"},
       {idx:idx("dormait"),type:"G",word:"dormait",fautif:"dormais"},
       {idx:idx("r\u00eavait"),type:"L",word:"r\u00eavait",fautif:"revait"},
@@ -6778,9 +6845,9 @@ function genererDonneesTest(){
       {id:TEST_DICTEE_A, payload:{
         // M-TEST — Alice a terminé son autocorrection : sans cela, l'état
         // « Terminée » n'était pas éprouvable depuis le bac à sable.
-        autocorrection:{"durand_alice":{status:"idle", solved:3, total:3, score:5, timestamp:maintenant}},
+        autocorrection:{"zztest_durand_alice":{status:"idle", solved:3, total:3, score:5, timestamp:maintenant}},
         config:Object.assign({},cfgCommun,{title:"Dict\u00e9e test \u2014 rendue",text:texteA,tokens:tokA}),
-        results:results, absents:{"moreau_sacha":true},
+        results:results, absents:{"zztest_moreau_sacha":true},
         copyOptions:{mode:"barre",showBadge:true,showPoints:true,showOverlay:true,linkExercices:true},
         copyPublishedAt:maintenant
       }},
@@ -6799,6 +6866,7 @@ function purgerDonneesTest(cb){
   d.dictees.forEach(function(x){ chemins.push("correction_dictee/"+x.id); });
   chemins.push("classes/"+d.classe);
   Object.keys(d.codes).forEach(function(k){ chemins.push("codes/"+k); });
+  TEST_CODES_ANCIENS.forEach(function(k){ chemins.push("codes/"+k); });   /* [ELEVE-1 ④] les codes fictifs d'avant le renommage */
   var restants=chemins.length, effaces=[];
   chemins.forEach(function(c){
     db.ref(c).remove().then(function(){ effaces.push(c); }).catch(function(){})
@@ -6904,7 +6972,8 @@ function ModeTest(p){
     var d=genererDonneesTest();
     /* Nettoyage des zombies AVANT de générer : un bac à sable ne s'empile jamais. */
     purgerDonneesTest(function(){
-      ecrireClasse(db, d.classe, d.eleves, {nom:d.classe, niveau:"5e"});
+      ecrireClasse(db, d.classe, d.eleves, {nom:d.classe, niveau:"5e"}, function(){   /* [ELEVE-1 ④] le 2e élève fictif est aménagé d'après sa « fiche » ; partira avec la classe de test */
+        var am={};d.eleves.forEach(function(e,i){am[san(e)]={sexe:i%2?"m":"f",dicteeAmenagee:i===1};});db.ref("classes/"+d.classe+"/amenagements").set(am);});
       var maj={};
       Object.keys(d.codes).forEach(function(k){
         maj["codes/"+k]={code:d.codes[k],name:(function(){ for(var i=0;i<d.eleves.length;i++){ if(san(d.eleves[i])===k) return d.eleves[i]; } return k; })(),classe:d.classe,createdAt:Date.now()};
@@ -6942,7 +7011,7 @@ function ModeTest(p){
       h("p",{style:{fontSize:".82rem",color:"var(--text-sub)",margin:"12px 0 6px"}},"Se mettre \u00e0 la place d\u2019un \u00e9l\u00e8ve (nouvel onglet) :"),
       h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
         TEST_ELEVES.map(function(e){
-          var suffixe = san(e)==="moreau_sacha" ? " (absent)" : (san(e)==="robert_chloe" ? " (sans copie)" : "");
+          var suffixe = san(e)==="zztest_moreau_sacha" ? " (absent)" : (san(e)==="zztest_robert_chloe" ? " (sans copie)" : "");
           return h("button",{key:e,className:"btn-sm btn-ghost",style:{fontSize:".8rem"},onClick:function(){incarner(e)}},
             e.split(" ").pop()+suffixe);
         })
@@ -7312,7 +7381,7 @@ function AppEleve(p){
     if(!et.ouvrable){setAttente(d);setErrMsg("");setScreen("attente");return}
     var nomRegistre=identite.nom;
     for(var i=0;i<d.eleves.length;i++){ if(san(d.eleves[i])===identite.cle) nomRegistre=d.eleves[i]; }
-    setEleveData({eleve:nomRegistre,dictee:d,key:identite.cle,errors:toArr(corr.errors||[]),extras:toArr(corr.extras||[]),note:corr.note,base:d.base});
+    setEleveData({eleve:nomRegistre,dictee:d,key:identite.cle,errors:toArr(corr.errors||[]),extras:toArr(corr.extras||[]),note:corr.note,base:baseDeCopie(corr,d.base)});
     setErrMsg("");
     if(forcedScreenUrl==="exercices")setScreen("exercices");
     else if(forcedScreenUrl==="copie")setScreen("copie");
@@ -7478,7 +7547,7 @@ function AppEleve(p){
               h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
                 h("span",{className:"etat-dictee etat-"+et.code},et.label),
                 (et.montrerNote&&d.showNote!==false&&c&&typeof c.note!=="undefined")?
-                  h("span",{style:{fontWeight:700,color:noteColor(c.note,d.base)}},noteFr(c.note)+"/"+d.base):null,
+                  h("span",{style:{fontWeight:700,color:noteColor(c.note,baseDeCopie(c,d.base))}},noteFr(c.note)+"/"+baseDeCopie(c,d.base)):null,
                 et.ouvrable?h("span",{style:{color:"var(--primary)",fontWeight:600,fontSize:".9rem"}},"Ouvrir \u2192"):null
               )
             );
