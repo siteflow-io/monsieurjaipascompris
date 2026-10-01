@@ -837,5 +837,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - **01/10/2026 13:15 — PROMOTION micro correction_dictee 6.6.3 (« sauter à la fin » en correction rapide) — conscience n°12, filière micro**
   problème : « Sauter à la fin » sur un élève non corrigé faisait tomber la page (`ReferenceError: editForm is not defined`) : l'écran « Terminé ! » du mode Rapide portait un bloc « Barème » lisant une variable de l'édition de la dictée — bloc hérité, présent dans la 6.5.0 (dette n°12 · 93).
-  résolution : le bloc mort est retiré (le barème se règle dans Préparation) ; −1 014 o (737 081 o, md5 `a1c4d162…`). Banc par le geste sur faux Firebase VERT 3/0 (6.6.2 tombe, 6.6.3 « Terminé ! »). Promu bit à bit. Dette 93 ✔. Point de retour (6.6.2 `5f0b9b6b5343`). Dette vivante inchangée : ③ bis (UI du panneau prof) → purge de rentrée → appariement de l'emploi du temps.
+  résolution : le bloc mort est retiré (le barème se règle dans Préparation) ; −1 048 o (737 047 o, md5 `be6e2481…`). Banc par le geste sur faux Firebase VERT 3/0 (6.6.2 tombe, 6.6.3 « Terminé ! »). Promu bit à bit. Dette 93 ✔. Point de retour (6.6.2 `5f0b9b6b5343`). Dette vivante inchangée : ③ bis (UI du panneau prof) → purge de rentrée → appariement de l'emploi du temps.
   → mots-clés : correction rapide · sauter à la fin · editForm · micro 6.6.3 · conscience n°12
