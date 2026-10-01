@@ -1127,7 +1127,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L1";
+var APP_VERSION="6.7.0-L2";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -2716,7 +2716,7 @@ function Nav2(p){
     ),
     h("div",{className:"nav2-sous"},
       courant.tabs.length>1?courant.tabs.map(function(t){
-        var extra=t[0]==="rapide"?{title:"Raccourci : Maj+R depuis le mode Correction"}:{};
+        var extra=t[0]==="rapide"?{title:"Correction au clavier, mot \u00e0 mot. \u21e7R (Maj+R) bascule entre le mode texte et le mode rapide, sur la m\u00eame copie, sans rien perdre."}:{};
         return h("button",Object.assign({key:t[0],className:"tab"+(p.tab===t[0]?" active":""),onClick:function(){p.onTab(t[0])}},extra),
           t[1],
           t[0]==="rapide"?h("span",{style:{fontSize:".7em",opacity:.6,marginLeft:4}},"(\u21e7R)"):null
@@ -3059,13 +3059,20 @@ function CorrScreen(p){
     function onKey(e){
       var t=e.target&&e.target.tagName;
       if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
-      if(e.shiftKey&&(e.key==="R"||e.key==="r")&&tab==="correct"&&cur){
-        e.preventDefault();setTab("rapide");
+      /* [L2] ⇧R est une bascule : du mode texte au mode rapide ET du mode rapide au mode texte, sur la même copie ;
+         rien n'est perdu (L1 : tout est déjà enregistré) ; inactif dans un champ de saisie (ci-dessus) */
+      if(e.shiftKey&&(e.key==="R"||e.key==="r")){
+        if(tab==="correct"&&cur){e.preventDefault();setTab("rapide");}
+        else if(tab==="rapide"){e.preventDefault();var re=cur||eleveRapideParDefaut();if(re)setCur(re);setTab("correct");}
       }
     }
     window.addEventListener("keydown",onKey);
     return function(){window.removeEventListener("keydown",onKey)};
-  },[tab,cur]);
+  },[tab,cur,p.corrections,p.absents]);
+  function eleveRapideParDefaut(){   /* [L2] l'élève que montre l'onglet Rapide quand aucune copie n'est ouverte (même règle que lui) */
+    var uncorr=data.eleves.filter(function(e){return!p.corrections[san(e)]&&!p.absents[san(e)]});
+    return uncorr.length>0?uncorr[0]:data.eleves[0];
+  }
   var sEf=useState({}),effacees=sEf[0],setEffacees=sEf[1];
   useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/effacees");function f(sn){setEffacees(sn.val()||{})}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
   function derniereEffacee(k){var e=effacees[k]||{};var l=Object.keys(e).map(function(t){return e[t]}).filter(function(x){return x&&!x.restauree}).sort(function(a,b){return b.le-a.le});return l[0]||null}
@@ -3311,7 +3318,7 @@ function CorrScreen(p){
         onAutoSave:function(err,ext,fastIdxVal,posTexte){
           p.onSave(san(rapideEleve),err,ext,fastIdxVal,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),posTexte);   /* [ELEVE-1 ④] */
         },
-        onExitFast:function(){setTab("correct")},
+        onExitFast:function(){setCur(rapideEleve);setTab("correct")},   /* [L2] la même copie, en mode texte */
         onSave:function(err,ext){
           p.onSave(san(rapideEleve),err,ext,undefined,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base));   /* [ELEVE-1 ④] */
           // Move to next uncorrected
@@ -3867,8 +3874,8 @@ function CorrEleve(p){
             h("input",{type:"range",min:.7,max:3,step:.05,value:speechRate,onChange:function(e){var r=parseFloat(e.target.value);changeSpeechRate(r)},style:{width:80,accentColor:"#2b6cb0"}})
           )
         ):h("span",{style:{fontSize:".7rem",color:"#999"},title:"Web Speech API non disponible dans ce navigateur"},"\ud83d\udd07 \u2014"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9)"},"\u23f8 Pause"),
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9)"},"\u2190 Texte")
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9) \u2014 \u21e7R"},"\u23f8 Pause"),
+        h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9) \u2014 \u21e7R"},"\u2190 Texte")
       ),
       h("div",{style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
         wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
@@ -3886,7 +3893,7 @@ function CorrEleve(p){
             /* [MICRO 6.6.3 — dette n°12 · 93] le choix du barème n'existe pas ici : ce bloc hérité lisait une variable qui n'appartient qu'à l'édition de la dictée — ReferenceError à « sauter à la fin ». Le barème se règle dans Préparation. */
           h("button",{className:"btn btn-primary",onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"\u2705 Enregistrer"),
             h("button",{className:"btn btn-ghost",onClick:function(){setWasAlreadyDone(false);setFastIdx(0);if(p.onAutoSave)p.onAutoSave(errors,extras,0)}},"\u21bb Relire"),
-            h("button",{className:"btn btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (la position est sauvegard\u00e9e)"},"\u270f\ufe0f V\u00e9rifier en mode texte")
+            h("button",{className:"btn btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (la position est sauvegard\u00e9e) \u2014 \u21e7R"},"\u270f\ufe0f V\u00e9rifier en mode texte")
           )
         ):
         (function(){
