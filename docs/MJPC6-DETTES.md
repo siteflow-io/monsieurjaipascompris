@@ -2894,3 +2894,8 @@ Cadrage 4 · 3.2, 1.4 — sur l'existant mesuré dans `index.html` (Paul, 29/09 
 
 **n°12 · 86 — ✔ RÉGLÉE ET PROMUE le 01/10/2026 (ELEVE-1 livraison ④, correction_dictee 6.6.0) — les élèves fictifs du bac à sable de la dictée portaient des noms possibles** (« DURAND Alice »…, contre le point 16 ; rencontrée au banc de ④) — ⏳ **réglé au sas : ELEVE-1 ④ (6.6.0) : `ZZTEST …`, anciens codes effacés une fois par « Tout effacer » ; attend le promeus ; ✔ après promotion.**
 
+**n°12 · 87 — UI DU PANNEAU PROF (Paul, 01/10, capture) : LA MODALE EST TROP ÉTROITE.** « Il faudrait que mon pilotage prenne la largeur complète de l'écran, parce que la modale c'est bien mais tout est entassé, je dois scroller en permanence. » Le panneau prof s'ouvre dans une modale à largeur bornée ; à régler : le panneau prend toute la largeur (et la hauteur) de l'écran, sans changer ses sections.
+
+**n°12 · 88 — UI « ÉLÈVES & CODES » (Paul, 01/10, capture) : LES BOUTONS ↻ / ✕ DE CHAQUE ÉLÈVE SORTENT DU CADRE** de la carte (ils flottent à gauche, hors de la ligne de l'élève). À régler : les boutons dans la carte, alignés.
+
+**n°12 · 89 — « OUVRIR LES FICHES » DU RAPPEL DES ÉQUIPES ÉDUCATIVES (Paul, 01/10) : IL BASCULE SUR LA LISTE COMPLÈTE.** « Quand je suis dans Classes et que je vois l'alerte ESS, et que je clique sur Ouvrir les fiches, il faudrait que je n'aie que les élèves adaptés, plutôt que d'être rebasculé sur l'onglet Élèves complet. » À régler : « Ouvrir les fiches » ouvre « Élèves & codes » de la classe filtré sur les élèves fléchés (avec la clé), avec un lien « tous les élèves ».
