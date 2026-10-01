@@ -180,3 +180,14 @@
 | la classe absente ou sans année | `eliModaleClasse` → la fenêtre « Nouvelle classe » existante pré-remplie (`submitCreateClass`, `closeCreateClassModal`), puis l'import continue (`ELI_SUITE`) |
 | le retrait et l'archivage | `_deleteEleveCls` + `eliOpsRetrait` (profil + aménagement en corbeille, `eliRecompterDispositifs`) ; `_b2BuildExtract` : l'archive transmissible ne porte jamais la fiche ; `_eleveFootprint` |
 | le sexe dans le QCM | `evaluation-qcm.html` 7.7.0 : `surveillerClassesAvecSexes` lit `amenagements` par la clé de classe ; n'écrit plus `qcm/eleveSexes` (le contrat de purge le garde tant qu'il n'est pas vide) |
+
+## AJOUTS DU 01/10/2026 — PROMOTION 8.74.0-③ : la fiche élève et le rappel des équipes éducatives
+
+| Quoi | Où |
+|---|---|
+| la fiche élève (fiche d'identité, première page du profil) | « Élèves & codes » → clic sur un nom → `elfOuvrir` / `elfFicheHtml` ; état `ELF` ; les quinze libellés `ELF_PAP` (pap-01 … pap-15, mot pour mot) ; `elfCase`, `elfRemarque`, `elfSynthese`, `elfDispositif`, `elfSexe` ; styles `elf-*` |
+| l'enregistrement chiffré | `elfEnregistrer` (clé exigée, fenêtre propre) → `_elfChif` (= `mjpcChiffrer(SECU.cle, JSON)`) pour `dispositif`, `pap`, `remarques`, `synthese` ; `majLe` ; `amenagements/<clé>/dicteeAmenagee` ; `nbDispositifs` ; via `mjpcLot` |
+| la lecture d'une fiche | `elfProfil`, `elfLire` (déchiffrement avec la clé ; sans clé : sexe seul) ; `elfRedessiner` ne touche pas la saisie en cours |
+| le ◆ dans la liste | `elfChargerFleches` / `elfMarquerListe` (avec la clé seulement) |
+| le rappel des équipes éducatives | page des classes : `elfRappel`, `elfEssDuNiveau` (motif `/[ée]quipes?\s+[ée]duc/` + niveau dans `edtAnneeEvenements`, première date), `elfRappelClasseHtml`, `elfOuvrirClasse` ; la case de l'heure : `elfPremieresCases`, `elfRappelCaseHtml` dans `edtPeindreSemaine` (un nombre, jamais un nom) |
+| la place réservée du longitudinal | le commentaire « PROFIL ÉLÈVE — suivi longitudinal » (feuille de route) pointe vers la fiche ; la composante `place_agregats` « Historique et progression de l'élève » reste réservée (dans l'année seulement, cadrage 6 · 1.7) |
