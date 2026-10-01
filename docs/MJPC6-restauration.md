@@ -966,3 +966,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `5f0b9b6b5343` (commit `31090d39746f`) · 738 095 o · md5 `0aeb77123b356a2529dbe3751a3911c6` · v6.6.2
 - **Motif** : micro — « sauter à la fin » en correction rapide (dette 93). Promu : 737 047 o, md5 `be6e2481d8b6f850c7eb88b5f72c4ac5` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `5f0b9b6b5343…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus (la 6.6.2 retombe à « Sauter à la fin »).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L1 (01/10/2026, conscience n°12)
+- blob `bf774b4f297d` (commit `69d9b105a406`) · 737 047 o · md5 `be6e2481d8b6f850c7eb88b5f72c4ac5` · v6.6.3
+- **Motif** : mandat « L'écran de correction », L1 — l'enregistrement à chaque geste du mode texte, la position reprise. Promu : 738 687 o, md5 `913f8b5caefef4c712dfae55fa263af4` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `bf774b4f297d…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus (la 6.6.3 reperd les erreurs non enregistrées à la sortie d'une copie ; `texteIdx` déjà écrit au hub est ignoré par elle).
