@@ -949,3 +949,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `197aff17d735` (commit b815d1dc, poussé par Paul le 30/09) · 724 656 o · md5 `75f48e2dbf0b86698c27ca27aacf8e35` · v6.5.0
 - **Motif** : ELEVE-1 livraison ④ — la dictée lit l'aménagement de la fiche, chaque copie garde sa base. Promu : 735 974 o, md5 `f4cdfbef85cf557a4a91e5900ef6c5b4` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `197aff17d735…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus. Attention : la 6.5.0 relirait `classes_amenages` (vide après le premier import réel) et recalculerait les copies aménagées sur la base de la dictée.
+
+### POINTS DE RETOUR — AVANT promotion du complément ② bis (01/10/2026, conscience n°12)
+- `correction_dictee.html` : blob `d2bf940113f0` (commit `089486a23102`) · 735 974 o · md5 `f4cdfbef85cf557a4a91e5900ef6c5b4` · v6.6.0 → promu 6.6.1 : commit `ca5b5b23ba3c`, 736 690 o, md5 `ebf6fdc82bf032eb5f98fe54f9ea3fde`.
+- `reecriture.html` : blob `e5a6083f0c4f` · 274 114 o · md5 `ad25cee93216ee9d4e5a60fe10389b96` · v2.4.0 → promu 2.4.1 : commit `c6193c8ffcd8`, 274 783 o, md5 `3f50419de528a664afbfec403f3dfa9d`.
+- `evaluation-qcm.html` : blob `84c9c421f9bf` (commit `f6def710ae96`) · 550 410 o · md5 `9d6df9f4f349172f210e23d9c8da6f55` · v7.7.0 → promu 7.7.1 : commit `2287da6be81f`, 550 571 o, md5 `ecae65624855a1a877708986a8e984e5`.
+- **Motif** : la liste « Classe » par le niveau (dette 90) ; le QCM ne crée plus de classe, « Ranger l'ancien carnet », les noms (83, 91).
+- **Restauration en cas de `BUG`** : le blob d'avant → PUT sur `contents/<fichier>`, puis bit à bit contre le md5. Attention : une 7.7.0 restaurée recréerait les classes de `qcm/classes` tant que le carnet n'a pas été rangé.
