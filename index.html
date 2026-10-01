@@ -859,6 +859,35 @@ body.admin-mode .admin-only { display: block; }
 .eli-btn.prim{background:#2563eb;border-color:#2563eb}
 .eli-btn:disabled{opacity:.45;cursor:not-allowed}
 .eli-msg{margin-top:12px;color:rgba(255,255,255,.78);font-size:.9rem}
+/* [ELEVE-1 ③] la fiche élève et le rappel des équipes éducatives (captures T284-e2, T284-e4) */
+.elf{padding-bottom:4px}
+.elf-retour{background:none;border:none;color:#93c5fd;cursor:pointer;font-size:.9rem;padding:0;margin-bottom:10px}
+.elf-tete{font-weight:700;font-size:1.25rem;color:#fff}
+.elf-sous{color:rgba(255,255,255,.72);font-size:.9rem;margin:6px 0 12px;line-height:1.9}
+.elf-cle{color:#fbbf24}.elf-cadenas{color:#fbbf24;font-size:.84rem}
+.elf-seg{display:inline-flex;gap:3px;vertical-align:middle}
+.elf-segb{min-width:34px;min-height:30px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.05);color:#fff;border-radius:7px;cursor:pointer;font-weight:700;font-size:.82rem}
+.elf-segb.on{background:#2563eb;border-color:#2563eb}
+.elf-bloc{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:rgba(255,255,255,.03)}
+.elf-bloc-t{letter-spacing:.06em;text-transform:uppercase;font-size:.78rem;color:rgba(255,255,255,.6);font-weight:700;margin-bottom:8px}
+.elf-ligne{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.06)}
+.elf-lab{flex:1;color:rgba(255,255,255,.92);font-size:.9rem;cursor:pointer}
+.elf-lab input{width:18px;height:18px;vertical-align:middle}
+.elf-id{color:rgba(255,255,255,.45);font-size:.74rem}
+.elf-rem{flex:0 0 38%;background:#1b1530;color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:7px;padding:6px 8px;font-size:.86rem}
+.elf-syn{width:100%;min-height:80px;background:#1b1530;color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:7px;padding:8px;font-size:.9rem;box-sizing:border-box}
+.elf-apps{font-size:.86rem;color:rgba(255,255,255,.72);margin:6px 0 4px}
+.elf-pied{position:sticky;bottom:0;display:flex;gap:10px;flex-wrap:wrap;padding:10px 0;background:linear-gradient(rgba(23,15,40,.6),#170f28 40%);z-index:2}
+.elf-reserve{border:1px dashed rgba(255,255,255,.2);border-radius:12px;padding:12px 14px;margin-top:8px;color:rgba(255,255,255,.5);font-size:.86rem}
+.elf-flag{color:#fbbf24;margin-left:4px}
+.el-name.elf-cliquable{cursor:pointer;text-decoration:underline dotted rgba(255,255,255,.35)}
+.elf-rappel{margin-top:8px;border:1px solid rgba(251,191,36,.55);background:rgba(251,191,36,.08);border-radius:10px;padding:8px 12px;color:#fde68a;font-size:.88rem;line-height:1.5}
+.elf-rappel.elf-rien{border:none;background:none;color:rgba(255,255,255,.5);padding:2px 0;text-align:right}
+.elf-ouvrir{margin-left:6px;background:none;border:1px solid rgba(251,191,36,.7);color:#fbbf24;border-radius:7px;padding:2px 8px;cursor:pointer;font-size:.82rem}
+.elf-nom{color:rgba(255,255,255,.85);font-size:.84rem;margin-left:22px}
+.elf-marge{color:rgba(255,255,255,.5);font-size:.78rem;margin-top:4px}
+.elf-case{font-size:.7rem;color:#fbbf24;margin-top:2px;line-height:1.2}
+@media (max-width:520px){.elf-ligne{flex-direction:column;align-items:stretch}.elf-rem{flex:1 1 auto}}
 </style>
 <style id="b2-styles">
 .b2-legend{display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 12px;font-size:.8rem}
@@ -1725,8 +1754,10 @@ select.at-sel option,select.cm-input option,#link-modal select option,select.at-
 // ═══════════════════════════════════════════════════════════════
 // ROADMAP — fonctionnalités à développer
 // ═══════════════════════════════════════════════════════════════
-// TODO: PROFIL ÉLÈVE — suivi longitudinal
-//   - Modèle /eleves/{id} avec profil persistant multi-années
+// PROFIL ÉLÈVE — suivi longitudinal : sa PREMIÈRE PAGE EXISTE (ELEVE-1 ③ : elfFicheHtml — la fiche d'identité, le dispositif, les cases PAP),
+//   ouverte d'un clic sur un nom dans « Élèves & codes » ; l'historique viendra DESSOUS (« Historique et progression de l'élève »,
+//   réservé dans la fiche) — dans l'année seulement (cadrage 6 · 1.7 : jamais d'une année sur l'autre)
+//   - [NON OUVERT, par choix — cadrage 6 · 1.7] Modèle /eleves/{id} avec profil persistant multi-années
 //   - Tableau de bord par élève : toutes dictées, évaluations, évolution
 //   - Graphiques de progression (orthographe, grammaire, lexique)
 //   - Lien avec les compétences École Directe (C4 Langue, Écrire, etc.)
@@ -2933,7 +2964,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.74.0-②";
+var APP_VERSION="8.74.0-③";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -5475,6 +5506,7 @@ function _putCode(nom,slug,code){
 }
 function _profSectionEleves(){
   if(!_classesLoaded||!_codesLoaded){loadClasses(function(){loadCodes(function(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');});});return '<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-placeholder">\u23f3 Chargement\u2026</div>';}
+  if(ELF.ouverte&&classesData[ELF.slug])return '<h2>\u00c9l\u00e8ves &amp; codes</h2>'+secuEncartHtml()+elfFicheHtml();   /* [ELEVE-1 ③] la fiche de l'élève, mode de cette section */
   var actives=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object'&&!classesData[k].archivee&&!_estClasseInterne(k);}).sort(function(a,b){return ((classesData[a].nom)||'').localeCompare((classesData[b].nom)||'');});
   var html='<h2>\u00c9l\u00e8ves &amp; codes</h2><div class="tprof-section-sub">Choisis une classe, colle ta liste (un \u00e9l\u00e8ve par ligne, NOM Pr\u00e9nom), puis g\u00e9n\u00e8re les codes. Liste partag\u00e9e avec tes apps (dict\u00e9e, etc.) ; code \u00e0 4 chiffres mutualis\u00e9 (login rapide). R\u00e9g\u00e9n\u00e9rable \u00e9l\u00e8ve par \u00e9l\u00e8ve.</div>';
   html+=secuEncartHtml();   html+=eliSectionHtml();   /* [ELEVE-1 ①] l'import du fichier de classe, avant tout (même sans classe) */   /* M-SÉCU-1 : l'encart de la clé, en tête — VISIBLE MÊME SANS CLASSE */
@@ -5494,8 +5526,9 @@ function _profSectionEleves(){
   html+='<div class="el-list">';
   names.forEach(function(nom,i){var code=_eleveAUnCode(nom);var aff=secuCodeAffiche(nom);
     var codeHtml=code?(aff===null?'<span class="secu-masque">\u273b\u273b\u273b\u273b</span>':escapeHtml(aff)):'<span class="el-nocode">\u2014</span>';
-    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name">'+escapeHtml(nom)+'</span><span class="el-code" id="code-aff-'+san(nom)+'">'+codeHtml+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\','+i+')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\','+i+')">\u2715</button></span></div>';
+    html+='<div class="el-row"><span class="el-num">'+(i+1)+'</span><span class="el-name elf-cliquable" title="Ouvre la fiche de l\u2019\u00e9l\u00e8ve : sexe, dispositif, cases PAP. Rien n\u2019est \u00e9crit tant que tu n\u2019enregistres pas." onclick="elfOuvrir(\''+slug+'\','+i+')">'+escapeHtml(nom)+'</span><span class="elf-flag" id="elf-flag-'+san(nom)+'"></span><span class="el-code" id="code-aff-'+san(nom)+'">'+codeHtml+'</span><span class="el-acts"><button class="admin-action-btn" title="R\u00e9g\u00e9n\u00e9rer le code" onclick="_regenCodeEleve(\''+slug+'\','+i+')">\u21bb</button><button class="admin-action-btn danger" title="Retirer l\u2019\u00e9l\u00e8ve" onclick="_deleteEleveCls(\''+slug+'\','+i+')">\u2715</button></span></div>';
   });
+  setTimeout(function(){elfMarquerListe(slug);},0);   /* [ELEVE-1 ③] le ◆ des fléchés, posé sans redessiner */
   return html+'</div>';
 }
 function _importEleves(slug){
@@ -5806,7 +5839,7 @@ function eliFini(E,slug,C,rep,nR,nb){
       +(E.modeNoms?'':' · '+C.profils+' profil'+(C.profils>1?'s':'')+' · '+nb+' dispositif'+(nb>1?'s':'')+' dans la classe · reprise : '+rep.nS+' sexe'+(rep.nS>1?'s':'')+' du QCM, '+rep.nA+' aménagement'+(rep.nA>1?'s':'')+' de dictée')
       +(nR?' · restes de l’an dernier : '+nR+' en corbeille':'')
       +(C.attente?'<br>🔒 '+C.attente+' fiche'+(C.attente>1?'s':'')+' attend'+(C.attente>1?'ent':'')+' ta clé (date de naissance, dispositif) : saisis-la dans l’encart en haut. Si tu fermes la page avant, réimporte le fichier avec ta clé.':'');
-    PROF_EL_CLASSE=slug;showProfSection('eleves');
+    PROF_EL_CLASSE=slug;if(typeof ELF_FLECHES!=='undefined')delete ELF_FLECHES[slug];showProfSection('eleves');
   });
 }
 /* La clé vient d'être saisie : ce qui attendait en mémoire se chiffre et s'écrit ; les comptes se vérifient. */
@@ -5848,6 +5881,202 @@ function eliAttenteHtml(){
   return h;
 }
 /* ══ fin [ELEVE-1 ②] ══ */
+/* ══ [ELEVE-1 ③] LA FICHE ÉLÈVE — la fiche d'identité, en tête du profil longitudinal (cadrage 6 · 3.1, 3.1 bis,
+   3.2, 3.4 ter ; capture T284-e2), et LE RAPPEL DES ÉQUIPES ÉDUCATIVES (3.4 quater ; capture T284-e4).
+   La fiche est un mode de la section « Élèves & codes » : tout redessin la redessine depuis ELF (ce qui est
+   en train d'être saisi vit dans ELF.brouillon et n'est jamais effacé par un redessin). ══ */
+var ELF_PAP=[
+ ['pap-01',"Proposer des supports écrits aérés et agrandis (exemple : ARIAL 14)"],
+ ['pap-02',"Limiter la copie (synthèse du cours photocopiée, placée sur École Directe…)"],
+ ['pap-03',"Lecture par un tiers ou lecture immersive (prévoir MPA)"],
+ ['pap-04',"Décomposer les consignes, hiérarchiser"],
+ ['pap-05',"Aider à la mise en place de méthodes de travail (systèmes d'organisation répétitifs, accompagnement personnalisé)"],
+ ['pap-06',"Prendre en compte les contraintes associées (fatigue, lenteur…)"],
+ ['pap-07',"Utilisation de l'informatique : MPA"],
+ ['pap-08',"Accorder un temps majoré"],
+ ['pap-09',"Privilégier les évaluations sur le mode oral"],
+ ['pap-10',"Diminuer le nombre d'exercices, de questions quand la mise en place du temps majoré n'est pas possible ou peu souhaitable"],
+ ['pap-11',"Limiter la quantité d'écrit (recours possible aux QCM, exercices à trous, schémas…)"],
+ ['pap-12',"Ne pas pénaliser les erreurs (orthographe grammaticale, d'usage) et le soin dans les travaux écrits"],
+ ['pap-13',"Ne pas pénaliser le manque de participation à l'oral"],
+ ['pap-14',"Limiter le « par cœur », demander à ce que les notions clés uniquement soient retenues"],
+ ['pap-15',"Proposer des dictées aménagées (à trous, avec un choix parmi plusieurs propositions…)"]
+];
+var ELF={ouverte:false};          /* la fiche ouverte */
+var ELF_FLECHES={};               /* {slug:[{cle,nom,majLe}]} — avec la clé seulement (dispositif déchiffré) */
+var ELF_FLECHES_EN_COURS=false;
+function _elfP2(n){return (n<10?'0':'')+n;}
+function elfAujourdhui(){var d=new Date();return d.getFullYear()+'-'+_elfP2(d.getMonth()+1)+'-'+_elfP2(d.getDate());}
+function elfPlusJours(iso,n){var p=String(iso).split('-'),d=new Date(+p[0],+p[1]-1,+p[2]+n);return d.getFullYear()+'-'+_elfP2(d.getMonth()+1)+'-'+_elfP2(d.getDate());}
+function elfDateCourte(iso){var p=String(iso||'').split('-');return p.length===3?p[2]+'/'+p[1]:'';}
+function elfDateLongue(iso){var p=String(iso||'').split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:'';}
+function elfJour(iso){var p=String(iso).split('-');try{return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('fr-FR',{weekday:'long'});}catch(e){return '';}}
+function _elfChif(v){return mjpcChiffrer(SECU.cle,JSON.stringify(v));}
+function _elfDech(p){if(!p)return Promise.resolve(undefined);return mjpcDechiffrer(SECU.cle,p).then(function(t){try{return JSON.parse(t);}catch(e){return undefined;}},function(){return undefined;});}
+/* ── la fiche ── */
+function elfOuvrir(slug,i){
+  var nom=extractEleves(classesData[slug],[])[i];if(!nom)return;
+  ELF={ouverte:true,slug:slug,cle:sanMJPC(nom),nom:nom,lu:null,brouillon:null,message:'',enCours:false};
+  showProfSection('eleves');
+}
+function elfFermer(){ELF={ouverte:false};showProfSection('eleves');}
+function elfProfil(){var c=classesData[ELF.slug]||{};return (c.profils&&c.profils[ELF.cle])||null;}
+function elfLire(){
+  var p=elfProfil()||{};var cle=!!(SECU&&SECU.valide);
+  ELF.luCle=cle;ELF.lu={sexe:p.sexe||'',majLe:p.majLe||null,attente:p.attente===true,aProfil:!!elfProfil()};
+  if(!cle){elfRedessiner();return;}
+  Promise.all([_elfDech(p.naissance),_elfDech(p.dispositif),_elfDech(p.pap),_elfDech(p.remarques),_elfDech(p.synthese)]).then(function(v){
+    if(!ELF.ouverte)return;
+    ELF.lu.naissance=v[0]||'';ELF.lu.dispositif=v[1]===true;ELF.lu.pap=Array.isArray(v[2])?v[2]:[];ELF.lu.remarques=(v[3]&&typeof v[3]==='object')?v[3]:{};ELF.lu.synthese=typeof v[4]==='string'?v[4]:'';
+    if(!ELF.brouillon){var pp={};ELF.lu.pap.forEach(function(id){pp[id]=true;});ELF.brouillon={dispositif:ELF.lu.dispositif,pap:pp,remarques:Object.assign({},ELF.lu.remarques),synthese:ELF.lu.synthese};}
+    ELF.lu.dechiffre=true;elfRedessiner();
+  });
+}
+function elfRedessiner(){if(document.querySelector('.tprof-section-btn[data-section="eleves"].active'))showProfSection('eleves');}
+function elfFicheHtml(){
+  var esc=escapeHtml,c=classesData[ELF.slug]||{},cle=!!(SECU&&SECU.valide);
+  if(!ELF.lu||ELF.luCle!==cle){setTimeout(elfLire,0);}
+  var L=ELF.lu||{},B=ELF.brouillon,lisible=cle&&L.dechiffre&&B;
+  var disp=lisible?B.dispositif:null;
+  var h='<div class="elf" id="elf">';
+  h+='<button class="elf-retour" title="Revient à la liste de la classe. Ce qui n’est pas enregistré est perdu." onclick="elfFermer()">← '+esc(c.nom||ELF.slug)+' · Élèves &amp; codes</button>';
+  h+='<div class="elf-tete">'+(disp?'◆ ':'')+esc(ELF.nom)+' — '+esc(c.nom||ELF.slug)+'</div>';
+  var ne=!cle?'<span class="elf-cle">né le … : saisis ta clé</span>':(L.naissance?'né le '+esc(elfDateLongue(L.naissance)):'date de naissance inconnue');
+  var sx='<span class="elf-seg" title="Le sexe, lu par les apps (le QCM). Un clic l’enregistre aussitôt, sans ta clé : il n’est pas chiffré.">'
+    +['f','m'].map(function(v){return '<button class="elf-segb'+(L.sexe===v?' on':'')+'" id="elf-sexe-'+v+'" onclick="elfSexe(\''+v+'\')">'+v.toUpperCase()+'</button>';}).join('')+'</span>';
+  var ds=lisible?('<span class="elf-seg" title="Élève à dispositif (PAP). Le choix s’écrit quand tu enregistres la fiche ; le nombre de la classe suit.">'
+      +[['oui',true],['non',false]].map(function(o){return '<button class="elf-segb'+(B.dispositif===o[1]?' on':'')+'" id="elf-disp-'+o[0]+'" onclick="elfDispositif('+o[1]+')">'+o[0]+'</button>';}).join('')+'</span>')
+    :'<span class="elf-cle">saisis ta clé</span>';
+  h+='<div class="elf-sous">Fiche élève · '+ne+' · sexe '+sx+' · dispositif : '+ds+' · cases cochées le '+(L.majLe?'<b id="elf-majle">'+esc(elfDateLongue(L.majLe))+'</b>':'<b id="elf-majle">jamais</b>')
+    +' · <span class="elf-cadenas">🔒 la fiche est chiffrée avec ta clé — '+(cle?'saisie ✔':'à saisir (encart en haut)')+'</span></div>';
+  if(L.attente)h+='<div class="eli-msg">Cette fiche attend encore sa date de naissance et son dispositif : réimporte le fichier de la classe avec ta clé saisie.</div>';
+  [['Pour toutes les disciplines — la fiche PAP de l’établissement, ligne à ligne',0,7],['Évaluations',7,15]].forEach(function(bl){
+    h+='<div class="elf-bloc"><div class="elf-bloc-t">'+bl[0]+'</div>';
+    ELF_PAP.slice(bl[1],bl[2]).forEach(function(r){var id=r[0],on=lisible&&B.pap[id];
+      h+='<div class="elf-ligne"><label class="elf-lab"><input type="checkbox" id="elf-c-'+id+'"'+(on?' checked':'')+(lisible?'':' disabled')+' onchange="elfCase(\''+id+'\',this.checked)"> <span>'+esc(r[1])+'</span> <span class="elf-id">'+id+'</span></label>'
+        +'<input class="elf-rem" id="elf-r-'+id+'" placeholder="remarque (facultatif)"'+(lisible?'':' disabled')+' value="'+(lisible?esc(B.remarques[id]||''):'')+'" oninput="elfRemarque(\''+id+'\',this.value)"></div>';});
+    h+='</div>';
+  });
+  h+='<div class="elf-bloc"><div class="elf-bloc-t">Synthèse — remarques, points de vigilance</div><textarea class="elf-syn" id="elf-syn"'+(lisible?'':' disabled')+' oninput="elfSynthese(this.value)" placeholder="'+(lisible?'synthèse (facultatif)':'saisis ta clé pour lire et écrire la fiche')+'">'+(lisible?esc(B.synthese||''):'')+'</textarea></div>';
+  h+='<div class="elf-apps">Ce que les apps liront : dictée aménagée '+(lisible?(B.pap['pap-15']?'<b>oui</b>':'<b>non</b>'):'…')+', sexe '+(L.sexe?'<b>'+L.sexe.toUpperCase()+'</b>':'—')+' — jamais la fiche.</div>';
+  if(ELF.message)h+='<div class="eli-msg" id="elf-msg">'+ELF.message+'</div>';
+  h+='<div class="elf-pied"><button class="eli-btn prim" id="elf-enregistrer" title="Chiffre avec ta clé et écrit : le dispositif, les cases, les remarques, la synthèse et la date du jour ; publie pour les apps « dictée aménagée » (la case pap-15). Ta clé est nécessaire." onclick="elfEnregistrer()"'+(ELF.enCours?' disabled':'')+'>Enregistrer la fiche</button>'
+    +'<button class="eli-btn" title="Revient à la liste de la classe. Ce qui n’est pas enregistré est perdu." onclick="elfFermer()">Fermer</button></div>';
+  h+='<div class="elf-reserve" title="Réservé : rien ne s’y écrit encore."><div class="elf-bloc-t">Historique et progression de l’élève</div>Cette partie arrivera avec le profil de l’élève : ses dictées et résultats, ses évaluations, ses carnets d’erreurs, sa progression notion par notion — dans l’année seulement.</div>';
+  return h+'</div>';
+}
+function elfCase(id,v){if(!ELF.brouillon)return;ELF.brouillon.pap[id]=!!v;if(id==='pap-15'){var a=document.querySelector('.elf-apps b');if(a)a.textContent=v?'oui':'non';}}
+function elfRemarque(id,v){if(ELF.brouillon)ELF.brouillon.remarques[id]=v;}
+function elfSynthese(v){if(ELF.brouillon)ELF.brouillon.synthese=v;}
+function elfDispositif(v){if(!ELF.brouillon)return;ELF.brouillon.dispositif=!!v;['oui','non'].forEach(function(o){var b=document.getElementById('elf-disp-'+o);if(b)b.classList.toggle('on',(o==='oui')===!!v);});var t=document.querySelector('.elf-tete');if(t)t.textContent=(v?'◆ ':'')+ELF.nom+' — '+((classesData[ELF.slug]||{}).nom||ELF.slug);}
+function elfSexe(v){
+  var slug=ELF.slug,k=ELF.cle,racine='classes/'+slug+'/';
+  var ops=[_eliPut(racine+'amenagements/'+k+'/sexe',v,'sexe (pour les apps)')];if(elfProfil())ops.push(_eliPut(racine+'profils/'+k+'/sexe',v,'sexe (fiche)'));
+  mjpcLot(ops,'Sexe de « '+ELF.nom+' »',function(){var c=classesData[slug];if(c){c.amenagements=c.amenagements||{};c.amenagements[k]=Object.assign({},c.amenagements[k]||{},{sexe:v});if(c.profils&&c.profils[k])c.profils[k].sexe=v;}if(ELF.lu)ELF.lu.sexe=v;
+    ['f','m'].forEach(function(o){var b=document.getElementById('elf-sexe-'+o);if(b)b.classList.toggle('on',o===v);});});
+}
+function elfEnregistrer(){
+  if(!(SECU&&SECU.valide)){_showConsoleModal('Ta clé est nécessaire','<div class="cm-sub">Ta clé est nécessaire pour enregistrer la fiche : le dispositif, les cases, les remarques et la synthèse sont chiffrés avec elle. Saisis-la dans l’encart en haut, puis enregistre. Rien n’a été écrit.</div>',[{label:'Compris',cls:'primary'}]);return;}
+  if(!ELF.brouillon||ELF.enCours)return;
+  var B=ELF.brouillon,L=ELF.lu||{},slug=ELF.slug,k=ELF.cle,racine='classes/'+slug+'/',c=classesData[slug]||{};
+  var pap=ELF_PAP.map(function(r){return r[0];}).filter(function(id){return B.pap[id];});
+  var rem={};Object.keys(B.remarques||{}).forEach(function(id){var t=String(B.remarques[id]||'').trim();if(t)rem[id]=t;});
+  var auj=elfAujourdhui();ELF.enCours=true;elfRedessiner();
+  Promise.all([_elfChif(!!B.dispositif),_elfChif(pap),_elfChif(rem),_elfChif(String(B.synthese||''))]).then(function(x){
+    var ops=[_eliPut(racine+'profils/'+k+'/dispositif',x[0],'dispositif'),_eliPut(racine+'profils/'+k+'/pap',x[1],'cases'),_eliPut(racine+'profils/'+k+'/remarques',x[2],'remarques'),
+      _eliPut(racine+'profils/'+k+'/synthese',x[3],'synthèse'),_eliPut(racine+'profils/'+k+'/majLe',auj,'date des cases'),_eliPut(racine+'amenagements/'+k+'/dicteeAmenagee',pap.indexOf('pap-15')>=0,'dictée aménagée (pour les apps)')];
+    var avant=L.dispositif===true,apres=!!B.dispositif,nb=typeof c.nbDispositifs==='number'?c.nbDispositifs:0;
+    if(avant!==apres)ops.push(_eliPut(racine+'nbDispositifs',Math.max(0,nb+(apres?1:-1)),'nombre de dispositifs'));
+    mjpcLot(ops,'Fiche de « '+ELF.nom+' »',function(){
+      c.profils=c.profils||{};var p=c.profils[k]=Object.assign({},c.profils[k]||{});p.dispositif=x[0];p.pap=x[1];p.remarques=x[2];p.synthese=x[3];p.majLe=auj;
+      c.amenagements=c.amenagements||{};c.amenagements[k]=Object.assign({},c.amenagements[k]||{},{dicteeAmenagee:pap.indexOf('pap-15')>=0});
+      if(avant!==apres)c.nbDispositifs=Math.max(0,nb+(apres?1:-1));
+      Object.assign(ELF.lu,{dispositif:apres,pap:pap,remarques:rem,synthese:String(B.synthese||''),majLe:auj});
+      ELF.enCours=false;ELF.message='✔ Fiche enregistrée — cases cochées le '+elfDateLongue(auj)+' ; les apps liront : dictée aménagée '+(pap.indexOf('pap-15')>=0?'oui':'non')+'.';
+      delete ELF_FLECHES[slug];elfRedessiner();
+    },function(){ELF.enCours=false;ELF.message='⚠ La fiche n’a pas été enregistrée en entier (voir les messages) : tu peux relancer « Enregistrer la fiche ».';elfRedessiner();});
+  });
+}
+/* ── qui est fléché (avec la clé) : pour le ◆ de la liste et le rappel nominatif ── */
+function elfChargerFleches(suite){
+  if(!(SECU&&SECU.valide)||ELF_FLECHES_EN_COURS){return;}
+  var aFaire=Object.keys(classesData||{}).filter(function(s){var c=classesData[s];return c&&typeof c==='object'&&c.profils&&!ELF_FLECHES[s]&&!_estClasseInterne(s);});
+  if(!aFaire.length)return;   /* rien de neuf : la suite n'est pas rappelée (sinon la page des classes se redessinerait sans fin) */
+  ELF_FLECHES_EN_COURS=true;
+  Promise.all(aFaire.map(function(s){var c=classesData[s],noms={};extractEleves(c,[]).forEach(function(n){noms[sanMJPC(n)]=n;});
+    return Promise.all(Object.keys(c.profils).map(function(k){return _elfDech(c.profils[k].dispositif).then(function(d){return d===true?{cle:k,nom:noms[k]||k,majLe:c.profils[k].majLe||null}:null;});}))
+      .then(function(l){ELF_FLECHES[s]=l.filter(Boolean).sort(function(a,b){return a.nom.localeCompare(b.nom);});});
+  })).then(function(){ELF_FLECHES_EN_COURS=false;if(suite)suite();},function(){ELF_FLECHES_EN_COURS=false;});
+}
+function elfMarquerListe(slug){   /* ◆ à côté des fléchés, posé sans redessiner (la saisie du cadre de secours n'est pas touchée) */
+  var poser=function(){(ELF_FLECHES[slug]||[]).forEach(function(f){var e=document.getElementById('elf-flag-'+f.cle);if(e){e.textContent='◆';e.title='élève à dispositif — cases cochées le '+(f.majLe?elfDateLongue(f.majLe):'jamais');}});};
+  poser();elfChargerFleches(poser);
+}
+/* ── le rappel des équipes éducatives ── */
+function elfNiveau(c){var n=String(c.niveau||'');if(/^[3-6]e$/.test(n))return n;var w=(typeof eliMots==='function'?eliMots(c.nom||''):'').split(' ').filter(function(x){return /^[3-6]e$/.test(x);});return w[0]||'';}
+function elfEssDuNiveau(niv){
+  if(!niv||typeof edtAnneeEvenements!=='function')return null;var best=null;
+  edtAnneeEvenements().forEach(function(x){if(x.n!=='etab'&&x.n!=='classe')return;var re=/[ée]quipes?\s+[ée]duc\S*\s+(\S+)/gi,m;
+    while((m=re.exec(x.t))){var w=edtNormaliser(m[1]).split(' ')[0],k=w.match(/^([3-6])(e|eme)?$/);if(k&&(k[1]+'e')===niv&&(!best||String(x.d)<best.date))best={date:String(x.d).slice(0,10),libelle:x.t};}});
+  return best;
+}
+function elfRappel(slug){
+  var c=classesData[slug]||{},nb=typeof c.nbDispositifs==='number'?c.nbDispositifs:0,ess=elfEssDuNiveau(elfNiveau(c)),auj=elfAujourdhui();
+  var r={slug:slug,nb:nb,ess:ess,etat:null,cle:!!(SECU&&SECU.valide)};
+  if(!nb){r.rien=true;return r;}
+  var sept=auj.slice(5,7)==='09'&&+auj.slice(8,10)<=21;
+  if(ess){
+    if(auj===elfPlusJours(ess.date,-1))r.etat='demain';
+    else if(auj===ess.date)r.etat='jour';
+    else if(auj>ess.date){
+      r.etat='apres';
+      if(r.cle&&ELF_FLECHES[slug]){r.fleches=ELF_FLECHES[slug];if(r.fleches.length&&r.fleches.every(function(f){return f.majLe&&f.majLe>=ess.date;}))r.etat=null;}
+    }
+    else if(sept)r.etat='avant';
+  } else if(sept)r.etat='sansdate';
+  if(r.cle&&ELF_FLECHES[slug])r.fleches=ELF_FLECHES[slug];
+  return r;
+}
+function elfRappelClasseHtml(slug){
+  var r=elfRappel(slug),c=classesData[slug]||{},esc=escapeHtml,nomC=esc(c.nom||slug),niv=esc(elfNiveau(c)||'');
+  var marge=r.ess?'<div class="elf-marge">lu dans le calendrier annuel : « '+esc(r.ess.libelle)+' »</div>':'';
+  if(r.rien)return '<div class="elf-rappel elf-rien">rien à signaler'+marge+'</div>';
+  if(!r.etat)return marge?'<div class="elf-rappel elf-rien">'+marge+'</div>':'';
+  var jour=r.ess?('ESS de la '+niv+' : '+esc(elfJour(r.ess.date))+' '+esc(elfDateCourte(r.ess.date))):'';
+  var n=r.fleches?r.fleches.length:r.nb,qui=n+' élève'+(n>1?'s':'')+(r.fleches?' fléché'+(n>1?'s':''):' à dispositif');
+  var t;
+  if(r.etat==='demain')t='<b>'+jour+' — c’est demain.</b> '+qui+' : leurs cases PAP sont à mettre à jour après l’équipe éducative.';
+  else if(r.etat==='jour')t='<b>'+jour+' — aujourd’hui.</b> '+qui+' : leurs cases PAP sont à mettre à jour après l’équipe éducative.';
+  else if(r.etat==='apres')t='<b>'+jour+'.</b> Les cases de '+nomC+' sont-elles à jour ? ('+qui+')';
+  else if(r.etat==='avant')t='<b>'+jour+'.</b> '+qui+' en '+nomC+' : leurs cases PAP sont à mettre à jour après l’équipe éducative.';
+  else t=qui+' en '+nomC+' : leurs cases PAP sont à mettre à jour après l’équipe éducative.';
+  var h='<div class="elf-rappel"><div>🗂 '+t+' <button class="elf-ouvrir" title="Ouvre la liste de la classe ; les élèves à dispositif y portent ◆ (avec ta clé). Un clic sur un nom ouvre sa fiche." onclick="elfOuvrirClasse(\''+slug+'\')">Ouvrir les fiches</button></div>';
+  if(r.fleches)h+=r.fleches.map(function(f){var vieux=!f.majLe||(r.ess&&f.majLe<r.ess.date);return '<div class="elf-nom">◆ '+esc(f.nom)+' — '+(f.majLe?'cochées le '+esc(elfDateCourte(f.majLe))+(vieux&&r.ess?' (avant l’ESS)':''):'jamais cochées')+'</div>';}).join('');
+  else h+='<div class="elf-nom">saisis ta clé pour ouvrir leurs fiches (encart d’« Élèves &amp; codes »)</div>';
+  return h+marge+'</div>';
+}
+function elfOuvrirClasse(slug){PROF_EL_CLASSE=slug;ELF={ouverte:false};showProfSection('eleves');}
+function elfPreparerRappels(){   /* le calendrier et les fléchés, lus une fois ; la page des classes se redessine ensuite (aucun champ de saisie) */
+  var rd=function(){if(document.querySelector('.tprof-section-btn[data-section="classes"].active'))showProfSection('classes');};
+  if(!EDT.calendrier&&!elfPreparerRappels.lu){elfPreparerRappels.lu=true;try{_siteGet(edtChemin('calendrier'),function(v){if(v&&!EDT.calendrier){EDT.calendrier=v;rd();}});}catch(e){}}
+  if(SECU&&SECU.valide)elfChargerFleches(rd);
+}
+/* la case de la première heure de chaque classe, dans la semaine affichée : un nombre, jamais un nom */
+function elfSlugCellule(x){var k=x&&(x.classeMjpc||x.classe);if(!k)return '';if(classesData&&classesData[k])return k;var nom=String(k);
+  var t=Object.keys(classesData||{}).filter(function(s){return classesData[s]&&(classesData[s].nom===nom||(typeof eliMemeClasse==='function'&&eliMemeClasse(classesData[s].nom||s,nom)));});return t[0]||'';}
+function elfPremieresCases(cel,creneaux){
+  if(typeof _classesLoaded!=='undefined'&&!_classesLoaded&&!elfPremieresCases.lu){elfPremieresCases.lu=true;loadClasses(function(){if(document.getElementById('edt-ecran'))edtPeindreSemaine();});}   /* l'emploi du temps ouvert avant la page des classes */
+  var prem={};Object.keys(cel||{}).forEach(function(k){var x=cel[k];if(!x||x.nature==='horsMjpc')return;var s=elfSlugCellule(x);if(!s)return;
+    var rang=x.iso+'|'+_elfP2(creneaux.indexOf(x.creneau)+1);if(!prem[s]||rang<prem[s].rang)prem[s]={rang:rang,cle:x.iso+'|'+x.creneau+'|'+(x.classe||'')};});
+  var out={};Object.keys(prem).forEach(function(s){out[prem[s].cle]=s;});return out;
+}
+function elfRappelCaseHtml(slug){
+  var r=elfRappel(slug);if(r.rien||!r.etat)return '';
+  var n=r.fleches?r.fleches.length:r.nb;
+  return '<div class="elf-case" title="Rappel des équipes éducatives : les cases PAP de cette classe sont à mettre à jour (Panneau prof → Classes)">🗂 '+n+' fléché'+(n>1?'s':'')+' · cases PAP'+(r.ess?' (ESS '+escapeHtml(elfDateCourte(r.ess.date))+')':'')+'</div>';
+}
+/* ══ fin [ELEVE-1 ③] ══ */
+
 
 
 async function _genererCodesClasse(slug){if(!secuExigeCle())return;var names=extractEleves(classesData[slug],[]);var taken=await _allCodesTaken();for(var i=0;i<names.length;i++){var nom=names[i];if(!_eleveAUnCode(nom)){var c=await _genCode4(taken);taken[c]=true;_putCode(nom,slug,c);}}showProfSection('eleves');}
@@ -5864,7 +6093,7 @@ function _deleteEleveCls(slug,i){var names=extractEleves(classesData[slug],[]);v
       {url:FIREBASE_BASE+'/classes/'+slug+'/eleves.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(merged)},quoi:'liste de la classe'},
       {url:FIREBASE_BASE+'/codes/'+k+'.json',options:{method:'DELETE'},quoi:'code personnel'}
     ]),'Retrait de \u00ab '+nom+' \u00bb',
-      function(){classesData[slug].eleves=merged;delete codesData[k];if(classesData[slug].profils)delete classesData[slug].profils[k];if(classesData[slug].amenagements)delete classesData[slug].amenagements[k];showProfSection('eleves');},
+      function(){classesData[slug].eleves=merged;delete codesData[k];if(classesData[slug].profils)delete classesData[slug].profils[k];if(classesData[slug].amenagements)delete classesData[slug].amenagements[k];delete ELF_FLECHES[slug];showProfSection('eleves');},
       function(){showProfSection('eleves');});});
   });
   });
@@ -7120,6 +7349,7 @@ function _profSectionClasses(){
     loadClasses(function(){if(document.querySelector('.tprof-section-btn[data-section="classes"].active'))showProfSection('classes');});
     return '<h2>Classes</h2><div class="tprof-section-sub">Chargement des classes depuis Firebase\u2026</div><div class="tprof-placeholder">\u23f3</div>';
   }
+  elfPreparerRappels();   /* [ELEVE-1 ③] le calendrier et les fléchés, lus une fois */
   var entries=Object.keys(classesData).filter(function(k){return classesData[k]&&typeof classesData[k]==='object';});
   entries=entries.filter(function(k){return !_estClasseInterne(k);});   /* classes de test des apps : masquees */
   var active=entries.filter(function(k){return !classesData[k].archivee;}).sort(function(a,b){return (classesData[a].nom||'').localeCompare(classesData[b].nom||'');});
@@ -7145,6 +7375,7 @@ function _profSectionClasses(){
       html+='<button title="Archiver" onclick="archiveClass(\''+slug+'\')">\ud83d\udce6</button>';
       html+='<button class="danger" title="Supprimer d\u00e9finitivement" onclick="deleteClass(\''+slug+'\')">\u2715</button>';
       html+='</div></div>';
+      html+=elfRappelClasseHtml(slug);   /* [ELEVE-1 ③] le rappel des équipes éducatives (T284-e4) */
     });
   }
   if(archived.length>0){
@@ -20300,6 +20531,7 @@ function edtPeindreSemaine(){
   var lundi=edtLundiCourant(), auj=edtAujourdhui(), maintenant=edtCreneauMaintenant();
   var cel=edtProjeter(lundi,5);
   EDT_VUE.cellules=cel;
+  var elfPrem=(typeof elfPremieresCases==='function')?elfPremieresCases(cel,(typeof AT_EDT!=='undefined')?AT_EDT:[]):{};   /* [ELEVE-1 ③] */
   var creneaux=(typeof AT_EDT!=='undefined')?AT_EDT:[];
   var lettre=edtSemaineLettre(lundi);
 
@@ -20330,7 +20562,7 @@ function edtPeindreSemaine(){
              var k=x.iso+'|'+x.creneau+'|'+(x.classe||'');
              var ks=JSON.stringify(k).replace(/"/g,'&quot;');
              return '<div class="edt-clic" onclick="edtCaseClic('+ks+')" onpointerdown="edtGlisserDebut(event,'+ks+')">'
-               +edtCelluleHtml(x)+'</div>';
+               +edtCelluleHtml(x)+(elfPrem[k]?elfRappelCaseHtml(elfPrem[k]):'')+'</div>';
            }).join('')+'</div>';
     }
   }
