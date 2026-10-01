@@ -1885,7 +1885,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 // ═══════════════════════════════ fin MJPC-CORE ══════════════════════════════
 
 /* Pastille de version — en dur (M7). Promotion au socle prévue M15. */
-var APP_VERSION="7.7.0";
+var APP_VERSION="7.7.1";
 var APP_VERSION_DATE="2026-07-31";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1949,7 +1949,7 @@ var MJPC_MANIFESTE = {
 };
 var MJPC_PURGE = {
   preserver: ["qcm/evaluations","qcm/settings","qcm/textes"],                            // corpus de conception : survit aux ann\u00e9es
-  purger:    ["qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes","qcm/classes",
+  purger:    ["qcm/sessions","qcm/sessionActive","qcm/presence","qcm/qrScans","qcm/eleveSexes",   /* [② bis] qcm/classes sorti : rangé une fois, plus jamais écrit */
               "mjpcProfils"]  // donn\u00e9es d'\u00e9l\u00e8ves : archive \u2192 purge au reset. mjpcProfils : r\u00e9tention 1 an
                               // (d\u00e9cision ant\u00e9rieure) \u2014 EXPORT IMPRIMABLE de fin d'ann\u00e9e AVANT la purge (garde-fou console)
 };
@@ -2123,6 +2123,7 @@ function normaliserElevesQCM(elevesBrut){
 
 // Transforme le snapshot /classes racine (clés = noms complets) en l'objet
 // indexé par slug interne {slug: {nom, eleves}} que QCM consomme.
+function libClasseQCM(c){ return (c && (c.libelle || c.nom)) || ""; }   /* [ELEVE-1 ② bis] le nom d'une classe à l'écran */
 function normaliserClassesQCM(snapVal){
   var out = {};
   if(!snapVal || typeof snapVal !== "object") return out;
@@ -2132,7 +2133,9 @@ function normaliserClassesQCM(snapVal){
     var fb = snapVal[nomComplet];
     var elevesNormalises = normaliserElevesQCM(extractEleves(fb, []));
     var niveau = (fb && typeof fb === "object" && !Array.isArray(fb)) ? (fb.niveau || "") : "";
-    out[slug] = { slug: slug, nom: nomComplet, eleves: elevesNormalises, niveau: niveau };
+    /* [ELEVE-1 ② bis — défaut rencontré] « nom » reste la CLÉ de /classes (les lectures s'y fient) ; « libelle » est le nom à montrer :
+       les classes importées ont pour clé « 3_dylan_bob », que le QCM affichait jusque sur le tableau projeté et le badge de l'élève. */
+    out[slug] = { slug: slug, nom: nomComplet, libelle: (fb && typeof fb === "object" && !Array.isArray(fb) && fb.nom) ? fb.nom : nomComplet, eleves: elevesNormalises, niveau: niveau };
   });
   return out;
 }
@@ -2193,79 +2196,11 @@ function surveillerClassesAvecSexes(onUpdate){
 // stockés dans /classes/{nom}/eleves[i].sexe vers /qcm/eleveSexes/{nom}/{slugEl}.
 // Appelle onDone(nbCopiees, nbSexesMigres) une fois terminé.
 function migrerClassesUneFois(onDone){
-  Promise.all([
-    db.ref("qcm/classes").once("value"),
-    db.ref("classes").once("value"),
-    db.ref("qcm/eleveSexes").once("value")
-  ]).then(function(snaps){
-    var anciennes = snaps[0].val() || {};
-    var dejaRacine = snaps[1].val() || {};
-    var sexesExistants = snaps[2].val() || {};
-    var existantsParNom = {};
-    Object.keys(dejaRacine).forEach(function(k){ existantsParNom[k.toLowerCase()] = true; });
-    var nbCopiees = 0, nbSexesMigres = 0;
-    var promises = [];
-
-    // 1) Pour CHAQUE classe ancienne sous qcm/classes/{slug}, on migre :
-    //    - La classe elle-même vers /classes/{nom} SI elle n'existe pas déjà à la racine
-    //    - Les sexes M/F (eleves[i].sexe) vers qcm/eleveSexes (TOUJOURS, même si la classe
-    //      existe déjà à la racine — sinon on perdrait les sexes en restant sur la version
-    //      ancienne qui les avait sauvegardés).
-    Object.keys(anciennes).forEach(function(slug){
-      var c = anciennes[slug];
-      if(!c || !c.nom) return;
-      var dejaPresente = !!existantsParNom[c.nom.toLowerCase()];
-      // Migration des sexes (toujours, indépendamment de la présence à la racine)
-      (c.eleves||[]).forEach(function(e){
-        if(typeof e === "object" && e && e.nomComplet && e.sexe){
-          var slugEl = slugify(e.nomComplet);
-          var sexClasse = sexesExistants[c.nom] || {};
-          if(!sexClasse[slugEl]){
-            /* [ELEVE-1 ②] le QCM n'écrit plus dans qcm/eleveSexes (le sexe vit dans la fiche de la console) */
-          }
-        }
-      });
-      // Si la classe existe déjà à la racine, on ne re-copie pas (évite l'écrasement
-      // d'une éventuelle version mise à jour par une autre app).
-      if(dejaPresente) return;
-      // Copie de la classe vers /classes/{nom} SANS les sexes (les sexes vivent
-      // désormais dans qcm/eleveSexes, séparément, pour éviter qu'une autre app les écrase).
-      // MJPC-CORE : la classe absente est créée via ecrireClasse — format
-      // canonique {eleves:[chaînes], nom, niveau?, archivee:false} d'emblée.
-      var metaCl = c.niveau ? {nom:c.nom, niveau:c.niveau} : {nom:c.nom};
-      promises.push(new Promise(function(resolve){
-        ecrireClasse(db, c.nom, c.eleves||[], metaCl, function(){ resolve(); });
-      }));
-      nbCopiees++;
-    });
-
-    // 2) Pour les classes déjà à la racine, migrer les sexes legacy qui pourraient
-    //    y être encore stockés (eleves[i].sexe), vers qcm/eleveSexes
-    Object.keys(dejaRacine).forEach(function(nom){
-      var fb = dejaRacine[nom];
-      if(!fb || typeof fb !== "object" || Array.isArray(fb)) return;
-      if(!Array.isArray(fb.eleves)) return;
-      fb.eleves.forEach(function(e){
-        if(typeof e === "object" && e && e.nomComplet && e.sexe){
-          var slugEl = slugify(e.nomComplet);
-          var sexClasse = sexesExistants[nom] || {};
-          if(!sexClasse[slugEl]){
-            /* [ELEVE-1 ②] le QCM n'écrit plus dans qcm/eleveSexes */
-          }
-        }
-      });
-    });
-
-    Promise.all(promises).then(function(){
-      onDone(nbCopiees, nbSexesMigres);
-    }).catch(function(err){
-      console.warn("Migration classes : écriture partielle échouée", err);
-      onDone(nbCopiees, nbSexesMigres);
-    });
-  }).catch(function(err){
-    console.warn("Migration classes : lecture échouée", err);
-    onDone(0, 0);
-  });
+  /* [ELEVE-1 ② bis — dette n°12 · 83] NE CRÉE PLUS JAMAIS DE CLASSE. Avant : à chaque ouverture, cette migration recopiait dans
+     /classes toute classe de l'ancien carnet qcm/classes absente de la racine — elle ressuscitait les classes que Paul supprimait
+     (« 4E Banksy », « 4e Pythagore », « 5E Hergé »…). Le QCM ne lit plus qcm/classes ; l'ancien carnet se range (corbeille puis
+     effacement) par « Ranger l'ancien carnet de classes » (💾 Sauvegarde → Maintenance). Le rappel reste appelé : il rend 0, 0. */
+  if(typeof onDone==="function")setTimeout(function(){onDone(0,0);},0);
 }
 
 function parseListe(texte){
@@ -2821,7 +2756,7 @@ function EleveLogin(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe)),
       h("h1", null, "👋 Identifie-toi"),
       h("div", {className:"eleve-form"},
         h("input", {value:code, inputMode:"numeric", maxLength:6, onChange:function(e){setCode(e.target.value)}, placeholder:"Mon code (4 chiffres)", autoFocus:true, style:{textAlign:"center", letterSpacing:".3em", fontWeight:700}}),
@@ -2912,7 +2847,7 @@ function EleveSession(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe)),
       h("h1", null, "👋 Salut "+p.eleve.nomComplet+" !"),
       h("p", {className:"eleve-nom"}, "Tu es bien connecté."),
       h("div", {className:"etat-attente"}, "⏳ En attente d'une évaluation..."),
@@ -3044,7 +2979,7 @@ function EleveResultats(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-results"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe) + " · " + p.eleve.nomComplet),
       h("h2", null, "📊 "+evaluation.titre),
       h("p", {style:{color:"var(--gris)",fontSize:".9rem",marginBottom:"1rem"}}, "Évaluation du "+new Date(session.date||0).toLocaleDateString("fr-FR")),
 
@@ -3173,7 +3108,7 @@ function EleveSaisieBeta(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-results"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe) + " · " + p.eleve.nomComplet),
       h("h2", null, "📝 Saisis tes réponses papier",
         h(InfoI, null, "Tu as passé cette évaluation sur papier en classe ? Saisis ici les lettres que tu avais cochées question par question. C'est utile pour avoir ton bilan personnel (combien de bonnes réponses, comparaison à la classe) même si l'éval n'a pas été passée sur ton téléphone.")
       ),
@@ -3319,7 +3254,7 @@ function EleveEval(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe) + " · " + p.eleve.nomComplet),
       h("h1", null, ev.titre),
       // État
       phase === "idle" && h(React.Fragment, null,
@@ -3772,7 +3707,7 @@ function archiverDansProfilsMJPC(sess, ev, classe, reponses){
     try {
       bilanHTML = genererBilanHTML({
         nomComplet: e.nomComplet,
-        classeNom: classe.nom || classeSlug,
+        classeNom: libClasseQCM(classe) || classeSlug,
         evalTitre: ev.titre || "Évaluation",
         dateFr: dateFr,
         scoreBrut: scoreBrut,
@@ -4034,7 +3969,7 @@ function EleveAutoeval(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe) + " · " + p.eleve.nomComplet),
       h("h1", null, "🎯 Ton estimation"),
       h("p", {className:"autoeval-intro"}, "Combien de bonnes réponses penses-tu avoir données ? Choisis la fourchette qui correspond à ton estimation.",
         h(InfoI, null, "C'est ton estimation, pas ton vrai score. À la fin de la correction, tu compareras ce que tu pensais avec ce que tu as vraiment obtenu. C'est utile pour apprendre à mieux te connaître : sais-tu juger ton propre travail avant de voir la correction ?")
@@ -4219,13 +4154,13 @@ function EleveBilan(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe) + " · " + p.eleve.nomComplet),
       h("h1", null, "🎯 Bilan personnel"),
       // Bouton export / impression du bilan (style copie corrigée)
       h("button", {className:"bilan-export-btn", onClick:function(){
         var html = genererBilanHTML({
           nomComplet: p.eleve.nomComplet,
-          classeNom: p.classe.nom,
+          classeNom: libClasseQCM(p.classe),
           evalTitre: ev.titre || "Évaluation",
           dateFr: (function(){ var d = new Date(sess.date || Date.now()); return d.getDate()+" "+["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"][d.getMonth()]+" "+d.getFullYear(); })(),
           scoreBrut: monScoreBrut,
@@ -4394,7 +4329,7 @@ function EleveCorrection(p){
   return h("div", {className:"eleve-page"},
     ["⭐","🎯","✨","💡","🎲","🔥"].map(function(em,i){return h("span",{key:i,className:"deco"},em)}),
     h("div", {className:"eleve-card"},
-      h("div", {className:"eleve-classe-badge"}, p.classe.nom + " · " + p.eleve.nomComplet),
+      h("div", {className:"eleve-classe-badge"}, libClasseQCM(p.classe) + " · " + p.eleve.nomComplet),
       h("h1", null, "📝 Correction"),
       h("div", {className:"correction-banner-peda"}, "💡 On corrige d'abord les questions les plus ratées par la classe."),
       h("div", {className:"correction-compteur"},
@@ -5182,7 +5117,7 @@ function VueBoard(p){
   // ─── Phase IDLE / état non couvert : message d'attente sobre ───
   if(phase === "idle" || !question){
     return h("div", {className:"board-active board-idle"},
-      h("div", {className:"board-classe"}, classe.nom),
+      h("div", {className:"board-classe"}, libClasseQCM(classe)),
       h("div", {className:"board-titre-eval"}, evaluation.titre),
       h("div", {className:"board-attente-msg"}, "📋 Préparation… La première question va arriver.")
     );
@@ -5194,7 +5129,7 @@ function VueBoard(p){
     var nbQuestions = evaluation.questions.length;
     return withEleves(h("div", {className:"board-active board-reflexion"},
       h("div", {className:"board-bandeau-haut"},
-        h("span", {className:"board-classe-mini"}, classe.nom),
+        h("span", {className:"board-classe-mini"}, libClasseQCM(classe)),
         h("span", {className:"board-niveau-pastille", style:{background:niv.color}}, niv.label),
         h("span", {className:"board-q-count"}, "Question "+(qIdx+1)+" / "+nbQuestions)
       ),
@@ -5235,7 +5170,7 @@ function VueBoard(p){
     var dureeR = session.chronoReponse || 5;
     return withEleves(h("div", {className:"board-active board-reponse"},
       h("div", {className:"board-bandeau-haut"},
-        h("span", {className:"board-classe-mini"}, classe.nom),
+        h("span", {className:"board-classe-mini"}, libClasseQCM(classe)),
         h("span", {className:"board-niveau-pastille", style:{background:nivR.color}}, nivR.label),
         h("span", {className:"board-q-count"}, "Question "+(qIdx+1)+" / "+nbQuestionsR),
         h("span", {className:"board-progress"}, "✋ "+nbReponses+" / "+nbAttendu+" ont répondu")
@@ -5274,7 +5209,7 @@ function VueBoard(p){
     var nbReponsesA = Object.keys(repsQA).length;
     return withEleves(h("div", {className:"board-active board-attente-anim"},
       h("div", {className:"board-bandeau-haut"},
-        h("span", {className:"board-classe-mini"}, classe.nom),
+        h("span", {className:"board-classe-mini"}, libClasseQCM(classe)),
         h("span", {className:"board-niveau-pastille", style:{background:nivA.color}}, nivA.label),
         h("span", {className:"board-q-count"}, "Question "+(qIdx+1)+" / "+nbQuestionsA),
         h("span", {className:"board-progress"}, "📋 "+nbReponsesA+" / "+nbAttenduA+" réponses")
@@ -5318,7 +5253,7 @@ function VueBoard(p){
     var revealedB = session.corrRevealed === true;
     return withEleves(h("div", {className:"board-active board-correction"},
       h("div", {className:"board-bandeau-haut"},
-        h("span", {className:"board-classe-mini"}, classe.nom),
+        h("span", {className:"board-classe-mini"}, libClasseQCM(classe)),
         h("span", {className:"board-niveau-pastille", style:{background:nivC.color}}, nivC.label),
         h("span", {className:"board-q-count"}, "Correction — Q"+(qIdx+1)+" / "+nbQuestionsC)
       ),
@@ -5384,14 +5319,14 @@ function VueBoard(p){
     return withEleves(h("div", {className:"board-active board-finie"},
       h("div", {className:"board-finie-emoji"}, "🏁"),
       h("div", {className:"board-finie-titre"}, "Session terminée"),
-      h("div", {className:"board-finie-sub"}, classe.nom + " — " + evaluation.titre),
+      h("div", {className:"board-finie-sub"}, libClasseQCM(classe) + " — " + evaluation.titre),
       h("div", {className:"board-finie-msg"}, "Les élèves consultent leur bilan personnel sur leur téléphone.")
     ));
   }
 
   // Placeholder pour phase non couverte (sécurité)
   return h("div", {className:"board-active"},
-    h("div", {className:"board-classe"}, classe.nom+" — "+evaluation.titre),
+    h("div", {className:"board-classe"}, libClasseQCM(classe)+" — "+evaluation.titre),
     h("div", {className:"board-phase"}, "Phase : "+phase+" — Q"+(qIdx != null ? (qIdx+1) : "—")),
     h("div", {style:{marginTop:"2rem",fontSize:"1.2rem",color:"#94A3B8"}}, "(En cours de développement — phase non encore implémentée pour la vue tableau)")
   );
@@ -5599,7 +5534,7 @@ function VuePhone(p){
   return h("div", {style:{padding:".7rem .7rem 0",color:"#fff",height:"100vh",display:"flex",flexDirection:"column",boxSizing:"border-box"}},
     // Bandeau (flex-shrink:0)
     h("div", {style:{background:"rgba(0,0,0,.35)",borderRadius:"10px",padding:".55rem .8rem",marginBottom:".5rem",flexShrink:0}},
-      h("div", {style:{fontWeight:"900",fontSize:".95rem"}}, classe.nom),
+      h("div", {style:{fontWeight:"900",fontSize:".95rem"}}, libClasseQCM(classe)),
       h("div", {style:{fontSize:".75rem",opacity:.85}}, ev.titre),
       h("div", {style:{marginTop:".3rem",fontSize:".8rem",fontWeight:"bold"}}, "Phase : "+phase+" — Q "+(qIdx != null ? (qIdx+1) : "—")+"/"+totalQ)
     ),
@@ -6046,7 +5981,7 @@ function AppProf(p){
       sid:sid,
       sess:sess,
       isTest:classeSlug === TEST_CLASSE_SLUG,
-      classeNom:classeSlug === TEST_CLASSE_SLUG ? "🧪 Test" : ((classesData[classeSlug] && classesData[classeSlug].nom) || classeSlug)
+      classeNom:classeSlug === TEST_CLASSE_SLUG ? "🧪 Test" : ((classesData[classeSlug] && libClasseQCM(classesData[classeSlug])) || classeSlug)
     });
   });
 
@@ -7091,7 +7026,7 @@ function OngletPilotage(){
           h("select", {value:classeSlug, onChange:function(e){setClasseSlug(e.target.value);setEvalId("")}},
             h("option", {value:""}, "— Choisir —"),
             Object.keys(classes).filter(function(k){return !estClasseInterneObj(classes[k])}).map(function(k){
-              return h("option", {key:k, value:k}, classes[k].nom + " ("+(classes[k].eleves||[]).length+" élèves)");
+              return h("option", {key:k, value:k}, libClasseQCM(classes[k]) + " ("+(classes[k].eleves||[]).length+" élèves)");
             })
           )
         ),
@@ -7125,7 +7060,7 @@ function OngletPilotage(){
                 h("h3", null, "📋 Check-in : qui est absent aujourd'hui ?",
                   h(InfoI, null, "Coche les élèves absents avant de lancer la session. Les absences sont enregistrées avec la date pour permettre le suivi longitudinal des présences (compté dans le profil MJPC). Si tout le monde est là, clique « Tout le monde présent »."),
                 ),
-                h("div", {className:"checkin-sub"}, classe.nom+" — "+eleves.length+" élèves")
+                h("div", {className:"checkin-sub"}, libClasseQCM(classe)+" — "+eleves.length+" élèves")
               ),
               h("div", {className:"checkin-list"},
                 eleves.map(function(e){
@@ -7160,7 +7095,7 @@ function OngletPilotage(){
         })()
       ),
       classeSlug && sessionsClasse.length > 0 && h("div", {className:"card"},
-        h("h2", null, "📚 Sessions précédentes — "+(classes[classeSlug] ? classes[classeSlug].nom : ""),
+        h("h2", null, "📚 Sessions précédentes — "+(classes[classeSlug] ? libClasseQCM(classes[classeSlug]) : ""),
           h(InfoI, null, "Liste de toutes les sessions déjà passées par cette classe. Tu peux relancer une évaluation déjà passée (utile pour faire un rattrapage avec un élève absent, par exemple) ou consulter le bilan classe d'une session terminée.")
         ),
         h("div", {className:"results-eval-list"},
@@ -7354,7 +7289,7 @@ function BilanClasse(p){
   return h("div", null,
     h("div", {className:"card"},
       h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
-        h("h2", {style:{margin:0}}, "🏁 Bilan classe — "+ev.titre+" — "+classe.nom,
+        h("h2", {style:{margin:0}}, "🏁 Bilan classe — "+ev.titre+" — "+libClasseQCM(classe),
           h(InfoI, null, "Synthèse complète à la fin de la session : statistiques agrégées (moyenne, médiane, plage), distribution des élèves dans les 4 fourchettes, calibration des autoévaluations, questions remarquables et détail par élève. Les statistiques principales sont exprimées en nombre de bonnes réponses (comme pour l'autoévaluation). Le score pondéré (Facile×1, Standard×2, Approfondi×3, Expert×4) est affiché en complément.")
         ),
         h("button", {className:"btn btn-rouge btn-sm", onClick:p.onTerminer, title:"Termine la session définitivement."}, "🛑 Terminer la session")
@@ -7730,7 +7665,7 @@ function SessionLive(p){
     return h("div", null,
       h("div", {className:"card"},
         h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
-          h("h2", {style:{margin:0}}, "📊 Autoévaluation — "+ev.titre+" — "+classe.nom,
+          h("h2", {style:{margin:0}}, "📊 Autoévaluation — "+ev.titre+" — "+libClasseQCM(classe),
             h(InfoI, null, "Phase intermédiaire avant la correction : chaque élève estime son score (fourchette de couleur). À la fin, tu compareras leur estimation à leur résultat réel — c'est ce qui permet le travail métacognitif (« est-ce que je me connais ? »). Tu peux lancer la correction dès que tu juges suffisant, même si tous n'ont pas répondu.")
           ),
           h("button", {className:"btn btn-rouge btn-sm", onClick:p.onTerminer, title:"Termine la session définitivement."}, "🛑 Terminer la session")
@@ -7762,7 +7697,7 @@ function SessionLive(p){
     return h("div", null,
       h("div", {className:"card"},
         h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
-          h("h2", {style:{margin:0}}, "📝 Correction — "+ev.titre+" — "+classe.nom,
+          h("h2", {style:{margin:0}}, "📝 Correction — "+ev.titre+" — "+libClasseQCM(classe),
             h(InfoI, null, "Phase de correction collective : les questions sont triées par taux d'erreur décroissant (les plus ratées d'abord). Pour chaque question, tu commentes, puis tu cliques sur « 💡 Révéler » quand tu veux faire apparaître la bonne réponse. Tu passes à la suivante quand c'est prêt.")
           ),
           h("button", {className:"btn btn-rouge btn-sm", onClick:p.onTerminer, title:"Termine la session définitivement. Les élèves verront un écran de fin. Tu peux toujours consulter les résultats dans l'onglet Résultats."}, "🛑 Terminer la session")
@@ -7809,7 +7744,7 @@ function SessionLive(p){
   return h("div", null,
     h("div", {className:"card"},
       h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem",marginBottom:".5rem"}},
-        h("h2", {style:{margin:0,fontSize:"1.05rem"}}, "🎯 "+ev.titre+" — "+classe.nom),
+        h("h2", {style:{margin:0,fontSize:"1.05rem"}}, "🎯 "+ev.titre+" — "+libClasseQCM(classe)),
         h("div", {className:"row"},
           h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setDepartDialogOpen(true)}, title:"Marque un élève comme parti en cours de session. Ses réponses déjà données restent enregistrées (sa note sera calculée au prorata des questions auxquelles il a participé). L'absence est tracée pour le suivi longitudinal MJPC."}, "🚫 Départ d'un élève"),
           (sess.absents || []).length > 0 && h("button", {className:"btn btn-ghost btn-sm", onClick:function(){setRetourDialogOpen(true)}, title:"Marque un élève absent comme revenu (retard ou réintégration). Il peut répondre aux questions à venir. Sa note finale tiendra compte des questions auxquelles il a effectivement participé."}, "↩️ Retour d'un élève"),
@@ -8227,7 +8162,7 @@ function OngletResultats(){
     if(!s) return;
     var ev = evalDeSession(s, evals);   // P2
     var cl = classes[s.classeSlug];
-    var titre = (ev ? ev.titre : "(éval supprimée)") + " — " + (cl ? cl.nom : "(classe supprimée)") + " — " + new Date(s.date||0).toLocaleString("fr-FR");
+    var titre = (ev ? ev.titre : "(éval supprimée)") + " — " + (cl ? libClasseQCM(cl) : "(classe supprimée)") + " — " + new Date(s.date||0).toLocaleString("fr-FR");
 
     if(!confirm("Tu vas effacer définitivement cette session de l'historique :\n\n"+titre+"\n\nUn snapshot complet de la base va d'abord être téléchargé pour pouvoir récupérer les données si besoin (cherche le fichier qcm_AVANT-effacement_*.json dans tes téléchargements).\n\nAprès effacement :\n- L'évaluation ne sera plus considérée comme « déjà passée » par cette classe (s'il s'agissait de la dernière session)\n- Aucun tableau de résultats ne sera généré pour cette session\n- Le suivi longitudinal n'en tiendra pas compte\n\nCette action est IRRÉVERSIBLE (sauf via le snapshot). Continuer ?")) return;
 
@@ -8303,7 +8238,7 @@ function OngletResultats(){
               h("div", {style:{flex:1}},
                 h("div", {className:"titre"}, ev ? ev.titre : "(évaluation supprimée)"),
                 h("div", {className:"meta"},
-                  (cl ? cl.nom : "(classe supprimée)") + " · " +
+                  (cl ? libClasseQCM(cl) : "(classe supprimée)") + " · " +
                   new Date(s.date||0).toLocaleString("fr-FR") + " · " +
                   (s.etat || "?")
                 )
@@ -8444,7 +8379,7 @@ function Scoresheet(p){
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = (ev.titre.replace(/[^a-z0-9]+/gi,"_"))+"_"+cl.nom.replace(/[^a-z0-9]+/gi,"_")+".csv";
+    a.download = (ev.titre.replace(/[^a-z0-9]+/gi,"_"))+"_"+libClasseQCM(cl).replace(/[^a-z0-9]+/gi,"_")+".csv";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -8452,7 +8387,7 @@ function Scoresheet(p){
   return h("div", null,
     h("div", {className:"card"},
       h("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:".5rem"}},
-        h("h2", {style:{margin:0}}, "📊 "+ev.titre+" — "+cl.nom),
+        h("h2", {style:{margin:0}}, "📊 "+ev.titre+" — "+libClasseQCM(cl)),
         h("div", {className:"row"},
           h("button", {className:"btn btn-or btn-sm", onClick:exportCSV, title:"Télécharge le scoresheet complet en CSV (lisible Excel/LibreOffice). Inclut les lettres app, les lettres papier, les scores et l'écart par élève."}, "📥 Export CSV"),
           h("button", {className:"btn btn-ghost btn-sm", onClick:p.onBack, title:"Retour à la liste des sessions."}, "← Retour")
@@ -8790,6 +8725,20 @@ function OngletSnapshot(){
     });
   }
 
+  function rangerAncienCarnet(){   /* [ELEVE-1 ② bis — dette n°12 · 83] l'ancien carnet qcm/classes : corbeille (compté), puis effacé */
+    db.ref("qcm/classes").once("value").then(function(snap){
+      var v=snap.val();
+      if(!v||typeof v!=="object"||!Object.keys(v).length){alert("\u2705 L\u2019ancien carnet de classes du QCM est d\u00e9j\u00e0 vide : rien \u00e0 ranger.");return;}
+      var ks=Object.keys(v),nEl=0;ks.forEach(function(k){nEl+=extractEleves(v[k],[]).length;});
+      if(!confirm("L\u2019ancien carnet de classes du QCM porte "+ks.length+" classe(s) et "+nEl+" \u00e9l\u00e8ve(s).\n\nC\u2019est lui qui recr\u00e9ait les classes que tu supprimes.\n\nIl part en corbeille (gard\u00e9 un an), puis il est effac\u00e9. Tes classes du site ne sont pas touch\u00e9es.\n\nContinuer ?"))return;
+      var ts=Date.now();
+      db.ref("corbeille/qcm-classes-legacy-"+ts).set({_meta:{motif:"qcm-classes-legacy",chemin:"/qcm/classes",app:"evaluation-qcm",ts:ts,classes:ks.length,eleves:nEl},data:{qcm:{classes:v}}})
+        .then(function(){return db.ref("qcm/classes").remove();})
+        .then(function(){try{publierManifeste(db);}catch(e){}alert("\u2705 Rang\u00e9 : "+ks.length+" classe(s) et "+nEl+" \u00e9l\u00e8ve(s) en corbeille ; l\u2019ancien carnet est effac\u00e9. Les classes que tu supprimes ne reviendront plus.");})
+        .catch(function(err){alert("Rien n\u2019a \u00e9t\u00e9 effac\u00e9 : la corbeille n\u2019a pas pu \u00eatre \u00e9crite ("+((err&&err.message)||err)+").");});
+    });
+  }
+
   return h("div", {className:"card"},
     h("h2", null, "💾 Sauvegarde",
       h(InfoI, null, "Snapshot = copie complète de toutes les données de l'app à un instant T (classes, évaluations, sessions, réponses, scans). Pratique pour faire un export régulier au cas où, ou pour revenir en arrière en cas de fausse manip.")
@@ -8816,7 +8765,10 @@ function OngletSnapshot(){
       ),
       h("button", {className:"btn btn-ghost btn-sm", onClick:nettoyerSessionsZombies, title:"Détecte et nettoie les sessions « zombies » : entrées sessionActive qui pointent vers une session inexistante, classe disparue, ou session encore marquée « en_cours » alors qu'elle date de plus de 24h. Un rapport détaillé te sera affiché AVANT exécution, et tu pourras annuler. Les données des sessions (réponses, scans) sont préservées : seul l'état « en_cours » est corrigé en « termine »."}, "🧹 Nettoyer les sessions zombies",
         h(InfoI, null, "Détecte les sessions \"zombies\" et propose un rapport avant nettoyage : (1) entrées de sessionActive qui pointent vers une session inexistante ou une classe disparue, (2) sessions marquées \"en_cours\" alors qu'elles datent de plus de 24h. Aucune donnée de réponse ou de scan n'est supprimée — seulement les marqueurs techniques. Tu vois le rapport AVANT et peux annuler.")
-      )
+      ),
+      h("button", {className:"btn btn-ghost btn-sm", id:"ranger-ancien-carnet", style:{marginLeft:".5rem"}, onClick:rangerAncienCarnet,
+        title:"L\u2019ancien carnet de classes du QCM (de l\u2019\u00e9poque o\u00f9 il avait ses propres classes) recr\u00e9ait les classes que tu supprimes. Ce bouton le met en corbeille (gard\u00e9 un an), compt\u00e9, puis l\u2019efface. Tes classes du site ne sont pas touch\u00e9es."},
+        "\ud83e\uddf9 Ranger l\u2019ancien carnet de classes")   /* [② bis] */
     ),
 
     // Zone purge — séparée et visuellement distincte
