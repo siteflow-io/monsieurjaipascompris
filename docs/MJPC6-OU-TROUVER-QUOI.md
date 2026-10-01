@@ -212,3 +212,9 @@
 | le QCM et l'ancien carnet `qcm/classes` | `migrerClassesUneFois` ne fait plus rien (rend 0, 0) ; `rangerAncienCarnet` (bouton « Ranger l'ancien carnet de classes », Données → Sauvegarde → Maintenance, professeur) : corbeille `qcm-classes-legacy-<ts>` compté, puis effacement ; `qcm/classes` hors de `MJPC_PURGE` du QCM |
 | le nom des classes dans le QCM | `libClasseQCM` / `libelle` — listes, tableau projeté, badge de l'élève (la clé reste ce que le QCM lit et écrit) |
 | ce qui reste à faire par Paul | ranger l'ancien carnet ; supprimer « 4E Banksy », « 4e Pythagore », « 5E Hergé » ; « compléter » une classe (les restes `qcm/eleveSexes` / `classes_amenages` partent en corbeille) ; la purge de rentrée ; l'appariement de l'emploi du temps |
+
+## AJOUT DU 01/10/2026 — micro correction_dictee 6.6.2 : la duplication est totale
+
+| Quoi | Où |
+|---|---|
+| dupliquer une dictée | le bouton ⧉ de la liste → `dupliquerDicteeEntiere(d, cb)` : copie `DUP_REGLAGES` (`config` → « Copie de … », non publiée ; `dictee` ; `copyOptions` ; `exercices` ; `exercices_html` ; `binomes` ; `heure`), jamais `DUP_ETAT_ELEVES` (`results`, `absents`, `amenages`, `autocorrection`, `effacees`, `exercices_results`, `exercices_consultes`, `exercices_imprimes`, `copyPublishedAt`) |
