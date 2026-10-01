@@ -168,3 +168,15 @@
 | l'appariement de classe | `eliMots` (mots nettoyés par `edtNormaliser`, « 3 » = « 3e »), `eliMemeClasse`, `eliApparier`, `eliChoisirClasse` (la liste « classe visée », Paul confirme) |
 | « Valider » | `eliValider` — à ① ne fait que le dire ; l'écriture arrive à ② |
 | le mode test et la lecture des classes | `_m8Superposer(racine, val)` : en mode test, le magasin se superpose à `loadClasses` / `loadCodes` (dette n°12 · 82 ✔) |
+
+## AJOUTS DU 01/10/2026 — PROMOTION 8.74.0-② + QCM 7.7.0 : l'import écrit, le profil existe
+
+| Quoi | Où |
+|---|---|
+| le profil d'un élève | `/classes/<slug>/profils/<sanMJPC(nom)>` = { sexe (clair), naissance / dispositif / pap (paquets `mjpcChiffrer`), remarques, synthese (③), majLe, attente } — écrit par `eliEcrire` / `_eliPut` via `mjpcLot` |
+| ce que les apps lisent | `/classes/<slug>/amenagements/<clé>` = { sexe, dicteeAmenagee } ; `/classes/<slug>/nbDispositifs` (entier, aucun nom) ; jamais `profils` |
+| l'attente de la clé | `ELI_ATTENTE` (dans la page, jamais au hub) ; `eliChiffrerEnAttente` à la saisie de la clé (`secuPoserCle`) ; `eliAttenteHtml` la ligne « n fiches attendent ta clé » |
+| la reprise au premier import | `eliPremier`, `eliReprise` (sexes du QCM là où le fichier n'en donne pas ; `classes_amenages` → pap-15 + dicteeAmenagee), `eliRestes` / `eliRestesEnCorbeille` (restes des classes supprimées → corbeille `restes-eleve-1`, puis effacés) |
+| la classe absente ou sans année | `eliModaleClasse` → la fenêtre « Nouvelle classe » existante pré-remplie (`submitCreateClass`, `closeCreateClassModal`), puis l'import continue (`ELI_SUITE`) |
+| le retrait et l'archivage | `_deleteEleveCls` + `eliOpsRetrait` (profil + aménagement en corbeille, `eliRecompterDispositifs`) ; `_b2BuildExtract` : l'archive transmissible ne porte jamais la fiche ; `_eleveFootprint` |
+| le sexe dans le QCM | `evaluation-qcm.html` 7.7.0 : `surveillerClassesAvecSexes` lit `amenagements` par la clé de classe ; n'écrit plus `qcm/eleveSexes` (le contrat de purge le garde tant qu'il n'est pas vide) |
