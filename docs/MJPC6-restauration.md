@@ -964,5 +964,5 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion micro 6.6.3 (01/10/2026, conscience n°12)
 - blob `5f0b9b6b5343` (commit `31090d39746f`) · 738 095 o · md5 `0aeb77123b356a2529dbe3751a3911c6` · v6.6.2
-- **Motif** : micro — « sauter à la fin » en correction rapide (dette 93). Promu : 737 081 o, md5 `a1c4d16207242dab9b63dfa882ab93ee` (bit à bit).
+- **Motif** : micro — « sauter à la fin » en correction rapide (dette 93). Promu : 737 047 o, md5 `be6e2481d8b6f850c7eb88b5f72c4ac5` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `5f0b9b6b5343…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus (la 6.6.2 retombe à « Sauter à la fin »).
