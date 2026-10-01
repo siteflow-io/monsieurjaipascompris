@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**1405 fonctions** — site : 1256 · moteur : 149
+**1420 fonctions** — site : 1271 · moteur : 149
 
 
 ## SOMMAIRE DES FAMILLES
@@ -22,8 +22,8 @@
 - **ATELIER — feuilles, documents, impression** — 177 fonctions
 - **ATELIER — prompts et écrans IA** — 19 fonctions
 - **CHAPITRE — injection JSON, inventaire, les quatre voies** — 30 fonctions
-- **DIVERS — socle du site** — 254 fonctions
-- **DIVERS — utilitaires internes** — 248 fonctions
+- **DIVERS — socle du site** — 268 fonctions
+- **DIVERS — utilitaires internes** — 249 fonctions
 - **MOTEUR — le déroulé (fichier autonome encodé, JAMAIS modifié)** — 149 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 58 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 20 fonctions
@@ -300,7 +300,7 @@
 | `basculerVue` | — | 416 o | [LOT7-①] l'ancien circuit de dépôt (initAdminDragDrop_) et le registre getdocs (loadDocsList_) sont retirés — le dépôt vit dans initChapterDragDrop et la modale Lier. | handleBadgeTap |
 | `classeTestId` | — | 32 o | 3. Classes de test (bac à sable) : convention unique "_test_<app>" Préfixe "_" = classe interne : jamais montrée aux élèves, jamais archivée dans les profils, nettoyable sans risque. | — |
 | `cleClasse` | nom | 34 o | 2. Identité classe : la clé du hub EST l'identifiant Décision du 14/07/2026 : aucune app ne transforme le nom de classe. La clé de /classes (ex. "4E BANKSY") est l'unique étiquette de rangement. | ecrireClasse |
-| `closeCreateClassModal` | — | 73 o | (sans commentaire) touche #class-modal | submitCreateClass |
+| `closeCreateClassModal` | — | 278 o | (sans commentaire) affiche/emploie : « + Nouvelle classe » — touche #class-modal, #class-modal-nom, #class-modal-title | submitCreateClass |
 | `closeGalleryViewer` | — | 116 o | (sans commentaire) touche #gallery-viewer-overlay | openGalleryViewer |
 | `closeIntentSurvey` | skipped | 626 o | (sans commentaire) affiche/emploie : « ;     fetch(FIREBASE_BASE+ · ,{       method: » — touche #intent-overlay — ECRIT au hub | — |
 | `closeLinkModal` | — | 99 o | (sans commentaire) touche #link-modal | _applyLinkEcrire |
@@ -336,32 +336,46 @@
 | `ecrireAnnonce` | id, texte, app | 799 o | (sans commentaire) affiche/emploie : « ).trim();   if(!texte){ alert( ·  + Date.now() +  » — hub /site/annonces | _blocAnnonces |
 | `ecrireBrevetDate` | niveau, valeurISO | 590 o | (sans commentaire) affiche/emploie : « Date incompréhensible :  · La date n » — hub /site/config/brevetDates | _blocBrevet |
 | `ecrireClasse` | db, nomClasse, eleves, meta, cb | 1213 o | 5. Écriture NON destructive d'une classe : ecrireClasse Remplace UNIQUEMENT la liste d'élèves ; préserve toute métadonnée existante (archivee, niveau, couleur, …) ; | — |
-| `eliAnalyser` | lignes,source | 2438 o | (sans commentaire ni indice) | eliLireFichier, eliSurCollage |
+| `eliAnalyser` | lignes,source | 2458 o | (sans commentaire ni indice) | eliLireFichier, eliSurCollage |
 | `eliAnnuler` | — | 28 o | (sans commentaire ni indice) | eliApercuHtml |
-| `eliApercuHtml` | E | 6728 o | ① : ne fait encore rien d'autre que le dire | eliRendre, eliSectionHtml |
+| `eliApercuHtml` | E | 7339 o | (sans commentaire) affiche/emploie : « <div class= · ><div class= » | eliRendre, eliSectionHtml |
 | `eliApparier` | nomLu | 322 o | (sans commentaire ni indice) | eliAnalyser |
+| `eliAttenteHtml` | — | 785 o | (sans commentaire) affiche/emploie : « ;   if(parPage)h+= ·  attend » | eliSectionHtml |
 | `eliChargerSheetJS` | — | 495 o | (sans commentaire) affiche/emploie : « lecteur absent · lecteur non chargé » | eliLireFichier |
+| `eliChargerSources` | — | 518 o | la suite de l'import après la fenêtre de la classe (création, année) | eliAnalyser |
+| `eliChiffrerEnAttente` | — | 1048 o | La clé vient d'être saisie : ce qui attendait en mémoire se chiffre et s'écrit ; les comptes se vérifient. | secuPoserCle |
+| `eliChipsEcriture` | E,s,ch | 1336 o | (sans commentaire) affiche/emploie : « ;if(E.modeNoms··!s)return h;   if(!E.sourcesLues)return ch( · );   if(E.sourcesKo)return ch( » | eliApercuHtml |
 | `eliChoisirClasse` | v | 78 o | (sans commentaire ni indice) | eliApercuHtml |
 | `eliChoisirFichier` | — | 62 o | (sans commentaire) touche #eli-fichier | eliSectionHtml |
 | `eliDate` | brut | 591 o | Une date de naissance → « AAAA-MM-JJ », ou '' si elle ne se lit pas. | eliAnalyser |
 | `eliDateAff` | iso | 81 o | (sans commentaire) affiche/emploie : « );return p.length===3?p[2]+ » | eliApercuHtml |
 | `eliDepot` | ev | 136 o | (sans commentaire ni indice) | eliSectionHtml |
+| `eliEcrire` | slug | 3348 o | (sans commentaire) affiche/emploie : « ;   var ops=[_eliPut(racine+ · nombre de dispositifs » | eliModaleClasse, eliValider |
 | `eliFichierChoisi` | inp | 68 o | (sans commentaire ni indice) | eliSectionHtml |
+| `eliFini` | E,slug,C,rep,nR,nb | 863 o | (sans commentaire) affiche/emploie : « ✔ Écrit dans «  ·  » : la liste ( » | eliEcrire |
 | `eliLireFichier` | f | 1007 o | (sans commentaire) affiche/emploie : « Lecture de «  · les eleves » | eliDepot, eliFichierChoisi |
-| `eliMemeClasse` | a,b | 46 o | (sans commentaire ni indice) | eliApercuHtml, eliApparier |
+| `eliMemeClasse` | a,b | 46 o | (sans commentaire ni indice) | eliApercuHtml, eliApparier, eliReprise, eliRestes |
 | `eliMessage` | t | 124 o | (sans commentaire) affiche/emploie : « <div class= » — touche #eli-apercu | eliLireFichier |
-| `eliMots` | t | 172 o | La classe : mêmes mots, dans n'importe quel ordre ; « 3 » vaut « 3e » (de même 4, 5, 6). | eliMemeClasse |
+| `eliModaleClasse` | mode,slug | 753 o | (sans commentaire) affiche/emploie : « ).filter(function(w){return /^[3-6]e$/.test(w);})[0])·· · ;   if(mode=== » — touche #class-modal-niveau, #class-modal-nom, #class-modal-title | eliValider |
+| `eliMots` | t | 172 o | La classe : mêmes mots, dans n'importe quel ordre ; « 3 » vaut « 3e » (de même 4, 5, 6). | eliMemeClasse, eliModaleClasse |
 | `eliNom` | t | 50 o | (sans commentaire ni indice) | eliAnalyser |
-| `eliRendre` | — | 99 o | (sans commentaire) touche #eli-apercu | eliAnalyser, eliAnnuler, eliChoisirClasse, eliValider |
-| `eliSectionHtml` | — | 1120 o | (sans commentaire) affiche/emploie : « <div class= ·  title= » | _profSectionEleves |
+| `eliNomCible` | E,slug | 98 o | (sans commentaire ni indice) | eliEcrire, eliFini, eliModaleClasse, eliReprise (+1) |
+| `eliOpsRetrait` | slug,k | 725 o | Le retrait d'un élève emporte aussi sa fiche et son aménagement ; avec la clé, le compte suit. | _deleteEleveCls |
+| `eliPremier` | slug | 78 o | (sans commentaire ni indice) | eliChipsEcriture, eliEcrire, eliReprise |
+| `eliRecompterDispositifs` | — | 625 o | Avec la clé, le nombre en clair de chaque classe se recompte sur les fiches (après un retrait fait sans la clé). | eliChiffrerEnAttente |
+| `eliRendre` | — | 99 o | (sans commentaire) touche #eli-apercu | eliAnalyser, eliAnnuler, eliChargerSources, eliChoisirClasse (+1) |
+| `eliReprise` | E,slug | 773 o | (sans commentaire ni indice) | eliChipsEcriture, eliEcrire |
+| `eliRestes` | E,slug | 796 o | Les restes de l'an dernier : les classes du QCM et de la dictée qui ne sont plus aucune de tes classes. | eliChipsEcriture, eliEcrire |
+| `eliRestesEnCorbeille` | res,suite | 823 o | (sans commentaire ni indice) | eliEcrire |
+| `eliSectionHtml` | — | 1137 o | (sans commentaire) affiche/emploie : « <div class= ·  title= » | _profSectionEleves |
 | `eliSurCollage` | ev | 473 o | Le collé : n'importe où sur la page « Élèves & codes », sauf dans un champ (le cadre de secours garde son collage). | — |
 | `eliSurvol` | ev,oui | 104 o | (sans commentaire) touche #eli-zone | eliDepot, eliSectionHtml |
-| `eliValider` | — | 55 o | (sans commentaire ni indice) | eliApercuHtml |
+| `eliValider` | — | 341 o | (sans commentaire ni indice) | eliApercuHtml |
 | `ensureEleveUuid` | eleve | 1661 o | [EDT] porte n°1 — l'arrivée du professeur, par-dessus l'accueil | _loginEleveFound |
-| `escapeHtml` | s | 122 o | (sans commentaire) affiche/emploie : « ;return String(s).replace(/&/g, » | _b2Check, _b2Confirm, _b2ExecReel, _b2RenderPick (+99) |
+| `escapeHtml` | s | 122 o | (sans commentaire) affiche/emploie : « ;return String(s).replace(/&/g, » | _b2Check, _b2Confirm, _b2ExecReel, _b2RenderPick (+100) |
 | `estClasseInterne` | nom | 48 o | (sans commentaire ni indice) | estClasseTest |
 | `estClasseTest` | nom | 88 o | (sans commentaire) affiche/emploie : « CLASSE TEST » | — |
-| `extractEleves` | fbClasse, cfgEleves | 993 o | 4. Lecture robuste d'un roster : extractEleves Tolère les 3 formats rencontrés dans les données réelles : | _b2Eleves, _deleteEleveCls, _drPrenomsDeLaClasse, _findEleveByName (+9) |
+| `extractEleves` | fbClasse, cfgEleves | 993 o | 4. Lecture robuste d'un roster : extractEleves Tolère les 3 formats rencontrés dans les données réelles : | _b2Eleves, _deleteEleveCls, _drPrenomsDeLaClasse, _findEleveByName (+10) |
 | `fichesAvancement` | n,total,id | 372 o | (sans commentaire) affiche/emploie : « en trouver qu · Lecture des fiches\u2026  » | fichesCliqueMaj, fichesMettreAJour |
 | `fichesCharger` | — | 367 o | (sans commentaire) affiche/emploie : « ;   secuLire( · ).then(function(m){     var z=document.getElementById( » — touche #fiches-zone | fichesCliqueMaj, showProfSection |
 | `fichesCliqueMaj` | — | 1214 o | (sans commentaire) affiche/emploie : « ;});   fichesAvancement(0,FICHES_APPS.length, · );     var pub=res.filter(function(r){return r.etat=== » — touche #fi-overlay | fichesOverlayMaj, fichesRendre |
@@ -407,7 +421,7 @@
 | `lireSessionMJPC` | ttlMs | 618 o | (sans commentaire ni indice) | — |
 | `loadAppList` | kind | 1637 o | (sans commentaire) affiche/emploie : « <option value= · ;   if(kind=== » — touche #link-modal- | openLinkModal |
 | `loadAtelierDocList` | — | 1725 o | (sans commentaire) affiche/emploie : « <option value= · <option value= » — touche #link-modal-atelier, #link-modal-current | openLinkModal |
-| `loadClasses` | callback | 294 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionClasses, _profSectionEleves (+8) |
+| `loadClasses` | callback | 294 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionClasses, _profSectionEleves (+10) |
 | `loadCodes` | cb | 225 o | (sans commentaire ni indice) | _b2ExecReel, _doImport, _profSectionEleves, _uniExec (+2) |
 | `loadPublished` | level | 1458 o | (sans commentaire) affiche/emploie : « écran élève n » | openLevel |
 | `loginAsProf` | — | 1568 o | (sans commentaire) affiche/emploie : « ].forEach(function(lvl){var card=document.querySelector( · arrivée du professeur, par-dessus l » — touche #page-home, #page-validation, #proto-badge | _quitterProfilTest, doLogin |
@@ -427,7 +441,7 @@
 | `openAnalyse` | — | 55 o | (sans commentaire) affiche/emploie : « Analyse logique » | gotoAnalyse |
 | `openAtelierItem` | ref,titre,ctxVue | 3890 o | L'OUVERTURE d'un item lié à un document de l'atelier (patron du diaporama). Le rendu est CELUI de l'atelier (atelierPageHTML) : | _openAtelierFromList, openItem |
 | `openBB4E` | — | 94 o | (sans commentaire) affiche/emploie : « Brevet Blanc 4e \u2014 R\u00e9\u00e9criture » | showReecritureList |
-| `openCreateClassModal` | — | 398 o | (sans commentaire) affiche/emploie : « ;   document.getElementById( · ;   document.getElementById( » — touche #class-modal, #class-modal-annee, #class-modal-niveau | _profSectionClasses |
+| `openCreateClassModal` | — | 398 o | (sans commentaire) affiche/emploie : « ;   document.getElementById( · ;   document.getElementById( » — touche #class-modal, #class-modal-annee, #class-modal-niveau | _profSectionClasses, eliModaleClasse |
 | `openDicteeById` | id | 90 o | (sans commentaire) affiche/emploie : « Dictée coévaluée » | _openDicteeFromList, openItem |
 | `openDoc` | chapitre,docName,typeDoc,url | 435 o | M8-IDENTITÉ (I2) | — |
 | `openEvalConn` | — | 83 o | (sans commentaire) affiche/emploie : « \u00c9valuation des connaissances » | gotoEvalConn |
@@ -470,7 +484,7 @@
 | `resetChapitres` | level | 487 o | (sans commentaire) affiche/emploie : « Effacer TOUS les chapitres  · ,     function(){   mjpcDeleteJson(FIREBASE_BASE+ » | renderChapitres |
 | `resolveEleves` | roster, saisies | 1138 o | 7. Identification nominative : le portail commun (logique) Toute identification produit des élèves SINGULIERS (clé canonique), que le travail soit individuel ou en groupe. | — |
 | `restoreSession` | — | 589 o | (sans commentaire) touche #proto-badge | — |
-| `sanMJPC` | s | 144 o | l'app reconnaît l'élève ou le prof déjà connecté au site MJPC et saute son écran de connexion. Sans session : portail natif inchangé. Bloc versionné, IDENTIQUE dans chaque app. | atCodeDe, edtSlugEleve, eliAnalyser, eliApercuHtml (+3) |
+| `sanMJPC` | s | 144 o | l'app reconnaît l'élève ou le prof déjà connecté au site MJPC et saute son écran de connexion. Sans session : portail natif inchangé. Bloc versionné, IDENTIQUE dans chaque app. | _eleveFootprint, atCodeDe, edtSlugEleve, eliAnalyser (+5) |
 | `sanitizeChapitres` | chapitres | 982 o | (sans commentaire ni indice) | atChargerChapitres, loadPublished |
 | `saveIntent` | id,label,levelClicked | 520 o | (sans commentaire) affiche/emploie : « ,{       method: » — ECRIT au hub | showIntentSurvey |
 | `sceDupliquer` | j | 1266 o | [LOT6-②] CRÉÉ — le fondamental « Dupliquer » généralisé aux séances (il existait pour les feuilles et les chapitres). | ctxEntreesSeance |
@@ -481,14 +495,14 @@
 | `showEmptyTab` | tabId,label | 551 o | (sans commentaire) affiche/emploie : « ;var btn=document.getElementById( · padding:40px 20px;text-align:center » — touche #tab-, #tab-btn- | gotoEtude, gotoImage, gotoRedaction |
 | `showIntentSurvey` | levelCode,levelLabel | 1303 o | (sans commentaire) affiche/emploie : « ;   var overlay=document.getElementById( · );   overlay.setAttribute( » — touche #intent-buttons, #intent-overlay, #intent-timer-name | openLevel |
 | `showLevelBlockedDialog` | code | 1640 o | (sans commentaire) affiche/emploie : « );   overlay.id= · ;   overlay.style.cssText= » — touche #lbd-close, #level-blocked-overlay | openLevel |
-| `showProfSection` | id | 629 o | (sans commentaire) touche #tprof-content | _deleteEleveCls, _doImport, _editerTexteSeanceSansDoc, _exportHub (+22) |
+| `showProfSection` | id | 629 o | (sans commentaire) touche #tprof-content | _deleteEleveCls, _doImport, _editerTexteSeanceSansDoc, _exportHub (+24) |
 | `showReecritureList` | ree,level | 3436 o | (sans commentaire) affiche/emploie : « ;var btn=document.getElementById( · );var html= » — touche #tab-btn-reecriture, #tab-reecriture | gotoReecriture |
 | `showUploadToast` | msg,kind | 303 o | (sans commentaire) affiche/emploie : « ;   if(kind=== » — touche #mjpc-upload-toast | _createGalleryItemWithFirstImage, _pasteCommon, _routeFileToTarget, addImageToGallery (+3) |
 | `simulerJ29` | — | 142 o | Accélérateur de test : pose une date ancienne et déclenche l'overlay tout de suite. Réversible d'un clic (le bouton de levée réarme le compteur). | _blocRegles |
 | `startHeartbeat` | — | 498 o | (sans commentaire ni indice) | _loginEleveFound, loginAsProf, restoreSession |
 | `startTracking_` | — | 422 o | (sans commentaire ni indice) | trackOpen |
 | `stopTracking_` | — | 322 o | (sans commentaire ni indice) | trackClose |
-| `submitCreateClass` | — | 887 o | (sans commentaire) affiche/emploie : « Le nom est obligatoire. · L\u2019ann\u00e9e est obligatoire. » — touche #class-modal-annee, #class-modal-niveau, #class-modal-nom — ECRIT au hub | — |
+| `submitCreateClass` | — | 1724 o | (sans commentaire) affiche/emploie : « ){   /* [ELEVE-1 ②] la classe existe : on n · L\u2019ann\u00e9e est obligatoire. » — touche #class-modal-annee, #class-modal-niveau, #class-modal-nom — ECRIT au hub | — |
 | `supprimerAnnonce` | id | 447 o | Geste destructeur → neutralisé : confirmation qui CITE le texte supprimé. | _blocAnnonces |
 | `switchTab` | btn,tab | 581 o | (sans commentaire) affiche/emploie : « );hideAllTabs();   if(tab=== · &&typeof gotoFiches=== » — touche #tab- | applyPublished |
 | `tabLibelle` | tabId | 164 o | (sans commentaire ni indice) | — |
@@ -554,16 +568,16 @@
 | `_applyLinkEcrire` | ctx,item,newSource,newRef,newKind,tracer | 1482 o | (sans commentaire) affiche/emploie : « });   }   var anc=tracer?{source:item.source·· · trace du remplac\u00e9 » — ECRIT au hub | applyLinkChanges |
 | `_applyPubCascade` | level,chnum,snum,itemId,slug,nv | 3119 o | (sans commentaire) affiche/emploie : « +p});});  mjpcLot(lot,(nv? » — ECRIT au hub | _togglePubNiveau, togglePublishChapterCls, togglePublishItemCls, togglePublishSeanceCls |
 | `_atterrirProf` | — | 569 o | (sans commentaire) affiche/emploie : « ].forEach(function(lvl){var card=document.querySelector( » — touche #page-home, #page-validation | — |
-| `_b2BuildExtract` | list | 693 o | (sans commentaire ni indice) | _b2DoSave, _b2Exec |
+| `_b2BuildExtract` | list,sansPrive | 742 o | (sans commentaire ni indice) | _b2DoSave, _b2Exec |
 | `_b2Check` | — | 1512 o | (sans commentaire) affiche/emploie : « ;}),hasTr=fp.some(function(x){return x.fam=== · ;});     var tags=(hasNc? » | _b2RenderPick, _b2Save |
 | `_b2ClassRebuild` | node,removeSet | 429 o | (sans commentaire ni indice) | _b2ExecReel |
 | `_b2Confirm` | savedName | 1214 o | (sans commentaire) affiche/emploie : « <div class= · >✓ Enregistré :  » — touche #b2cf, #b2cferr | _b2DoSave |
-| `_b2DoSave` | — | 916 o | (sans commentaire) affiche/emploie : « );   }else{obj=_b2.hub;name=_tsName( · Enregistrement annulé » | _b2Save |
+| `_b2DoSave` | — | 996 o | (sans commentaire) affiche/emploie : « );   }else{obj=_b2.hub;name=_tsName( · Enregistrement annulé » | _b2Save |
 | `_b2Eleves` | slug | 67 o | (sans commentaire ni indice) | _b2RenderPick |
 | `_b2Exec` | — | 197 o | (sans commentaire ni indice) | _b2Confirm |
 | `_b2ExecReel` | list,_cheminCorbeille | 2364 o | (sans commentaire) affiche/emploie : « <div class= · >Effacement en cours sur  » | _b2Exec |
 | `_b2GetPath` | root,path | 113 o | (sans commentaire ni indice) | _b2BuildExtract, _b2ExecReel, _purgeExpand, _purgePlan (+2) |
-| `_b2Label` | node | 495 o | (sans commentaire) affiche/emploie : « Codes élèves · Corrections de dictées » | _b2Check |
+| `_b2Label` | node | 568 o | (sans commentaire) affiche/emploie : « Codes élèves · Corrections de dictées » | _b2Check |
 | `_b2Legend` | — | 272 o | (sans commentaire) affiche/emploie : « <div class= · ><span class= » | _b2Check, _b2RenderPick |
 | `_b2Open` | — | 380 o | (sans commentaire) affiche/emploie : « <div class= · >Lecture du hub en cours…</div> » | _profSectionConfig |
 | `_b2Refresh` | — | 138 o | (sans commentaire) affiche/emploie : «  élève ·  sélectionné » — touche #b2selc | _b2ToggleClass, _b2ToggleIdx |
@@ -597,7 +611,7 @@
 | `_corbRestaurerConfirme` | id,plan,occupees | 738 o | (sans commentaire) affiche/emploie : « La restauration va \u00e9crire :<br> · \u2022 <code> » | _corbRestaurer |
 | `_corbRestaurerExec` | id,plan | 905 o | (sans commentaire) affiche/emploie : « <div class= · >\u00c9chec sur :  » | _corbRestaurerConfirme |
 | `_corbVoir` | id | 855 o | (sans commentaire) affiche/emploie : « ;   if(item.__brut)body+= · ;   body+= » | _corbRender, _corbRestaurer |
-| `_corbeillePuis` | motif,extract,meta,suite | 682 o | Corbeille puis destruction : si la corbeille échoue, l'utilisateur tranche explicitement (le fichier local, lui, est déjà enregistré quand ce chemin est atteint). | _b2Exec, _deleteEleveCls, _orphDelete, _purgeSauvegarde (+1) |
+| `_corbeillePuis` | motif,extract,meta,suite | 682 o | Corbeille puis destruction : si la corbeille échoue, l'utilisateur tranche explicitement (le fichier local, lui, est déjà enregistré quand ce chemin est atteint). | _b2Exec, _deleteEleveCls, _orphDelete, _purgeSauvegarde (+2) |
 | `_corbeillePut` | motif,extract,meta | 504 o | (sans commentaire) affiche/emploie : « },meta··{}),data:extract··{}};   return _fbPutPath( · +cle,payload).then(function(){return  » | _corbeillePuis |
 | `_corbeilleRestaure` | chemin,valeur,cb | 180 o | M12 · CORBEILLE — canal de restauration UNIQUE, respecte le mode test M8 | _corbRestaurerExec |
 | `_cpArchive` | fiches | 132 o | (sans commentaire ni indice) | secuCpAjouter, secuCpRemplacer, secuCpRetirer |
@@ -608,7 +622,7 @@
 | `_cpLireFiches` | — | 81 o | (sans commentaire ni indice) | _cpConcordance, secuCpAjouter, secuCpRafraichir, secuCpRemplacer (+1) |
 | `_cpMsg` | t,ok | 106 o | (sans commentaire) touche #cp-msg | _cpDouble, secuCpAjouter, secuCpRemplacer, secuCpRetirer |
 | `_createGalleryItemWithFirstImage` | file,level,chnum,snum | 1255 o | (sans commentaire) affiche/emploie : « \u23f3 Cr\u00e9ation galerie\u2026 · );   var itemId= » — ECRIT au hub | uploadFileForNewItem |
-| `_deleteEleveCls` | slug,i | 1127 o | (sans commentaire) affiche/emploie : « Retirer un \u00e9l\u00e8ve · Retirer <b> » — ECRIT au hub | _profSectionEleves |
+| `_deleteEleveCls` | slug,i | 1658 o | (sans commentaire) affiche/emploie : « Retirer un \u00e9l\u00e8ve · Retirer <b> » — ECRIT au hub | _profSectionEleves |
 | `_describeHub` | data | 124 o | (sans commentaire ni indice) | _exportHub, _hubDetailHtml, _importPreview |
 | `_diffHub` | fileData,current | 275 o | (sans commentaire ni indice) | _importPreview |
 | `_dimNode` | node,level | 88 o | (sans commentaire ni indice) | renderChapterCard, renderItem, renderSeance |
@@ -621,15 +635,16 @@
 | `_eleveAUnCode` | nom | 70 o | M-SÉCU-5 : après le retrait du clair, deux questions distinctes. _eleveAUnCode : « cet élève a-t-il un code ? » — clair OU chiffré (répare le compteur, la colonne et le bouton « Générer N manquants »). | _profSectionEleves |
 | `_eleveClasse` | — | 65 o | (sans commentaire ni indice) | _visiblePourSession, openItem |
 | `_eleveCode` | nom | 205 o | (sans commentaire) affiche/emploie : « ;   if(e.code!==undefined&&e.code!==null&&e.code!== » | _findEleveByName, _printCodesClasse |
-| `_eleveFootprint` | hub,nom,slug | 3787 o | (sans commentaire ni indice) | _b2BuildExtract, _b2Check, _b2Confirm, _b2ExecReel |
+| `_eleveFootprint` | hub,nom,slug | 4240 o | (sans commentaire) affiche/emploie : « aménagement : supprimés avec l » | _b2BuildExtract, _b2Check, _b2Confirm, _b2ExecReel |
+| `_eliPut` | chemin,v,quoi | 148 o | (sans commentaire) ECRIT au hub | eliChiffrerEnAttente, eliEcrire, eliOpsRetrait, eliRecompterDispositifs (+1) |
 | `_entryEffectif` | val | 448 o | (sans commentaire) affiche/emploie : «  \u00e9l\u00e9ments » | _pvRow |
 | `_entryLabel` | key,val | 377 o | (sans commentaire ni indice) | _pvRow |
-| `_estClasseInterne` | slug | 42 o | Classe interne (test d'une app) : slug prefixe par "_" -> jamais comptee comme classe reelle | _profSectionClasses, _profSectionEleves, _profSectionProfilTest, _uniNoms (+3) |
+| `_estClasseInterne` | slug | 42 o | Classe interne (test d'une app) : slug prefixe par "_" -> jamais comptee comme classe reelle | _profSectionClasses, _profSectionEleves, _profSectionProfilTest, _uniNoms (+5) |
 | `_estCodeProf` | c | 455 o | (sans commentaire ni indice) | _genCode4 |
 | `_estPublieItem` | it | 137 o | (sans commentaire ni indice) | atEditerChapitreRendre |
 | `_exportDiagnostic` | data, diff, mode, current | 358 o | (sans commentaire ni indice) | _importPreview |
 | `_exportHub` | — | 875 o | --- EXPORT : aperçu -> Enregistrer sous -> journal --- | _profSectionArchives |
-| `_fbDeletePath` | path | 110 o | Suppression Firebase ciblée d'un chemin (REST). Inerte tant que l'écran ne l'appelle pas. | _b2ExecReel, _orphDelete, _purgeExec |
+| `_fbDeletePath` | path | 110 o | Suppression Firebase ciblée d'un chemin (REST). Inerte tant que l'écran ne l'appelle pas. | _b2ExecReel, _orphDelete, _purgeExec, eliRestesEnCorbeille |
 | `_fbPutPath` | path,data | 177 o | (sans commentaire) ECRIT au hub | _b2ExecReel, _corbeillePut, _corbeilleRestaure |
 | `_fbReadAll` | — | 108 o | --- Lecture intégrale du hub (REST) --- | _b2Open, _exportHub, _importHubStart, _orphOpen (+2) |
 | `_fbWriteRoot` | data,method | 200 o | (sans commentaire ni indice) | _doImport, _uniExec |
@@ -664,7 +679,7 @@
 | `_logBackup` | entry | 156 o | (sans commentaire ni indice) | _b2DoSave, _doImport, _exportDiagnostic, _exportHub (+1) |
 | `_loginEleveFound` | found,status | 1116 o | (sans commentaire) affiche/emploie : « Bienvenue,  · );if(typeof initHome=== » — touche #page-home, #page-validation | doLogin |
 | `_lvlClasses` | level | 269 o | (sans commentaire ni indice) | _isPubAny, _pubCtrl, _pubCtrlToutes, _pubEtatNiveau (+4) |
-| `_m8Superposer` | racine,val | 723 o | [ELEVE-1 ① — complément : dette préexistante rencontrée au banc] EN MODE TEST, CE QUI A ÉTÉ ÉCRIT AU MAGASIN SE SUPERPOSE À LA LECTURE DU VRAI HUB. Mesuré le 01/10 : | loadClasses, loadCodes |
+| `_m8Superposer` | racine,val | 723 o | [ELEVE-1 ① — complément : dette préexistante rencontrée au banc] EN MODE TEST, CE QUI A ÉTÉ ÉCRIT AU MAGASIN SE SUPERPOSE À LA LECTURE DU VRAI HUB. Mesuré le 01/10 : | eliChargerSources, loadClasses, loadCodes |
 | `_markPub` | node,cls,nv | 288 o | (sans commentaire ni indice) | _applyPubCascade, uploadFileForChapterItem |
 | `_memoriserBrevetDefaut` | — | 159 o | (sans commentaire ni indice) | chargerBrevetDates |
 | `_memoriserVueEnvers` | — | 78 o | (sans commentaire ni indice) | basculerVue |
@@ -747,7 +762,7 @@
 | `_showConsoleModal` | title,bodyHtml,actions | 900 o | ===== fin UNIFIER ===== | _b2Check, _b2Confirm, _b2DoSave, _b2ExecReel (+31) |
 | `_showTestBanner` | nomAff | 321 o | (sans commentaire) touche #test-banner | _activerProfilTest |
 | `_siteDelete` | chemin, cb | 289 o | (sans commentaire) affiche/emploie : « , {method: » | atSiteDelete, reinitialiserBrevetDates |
-| `_siteGet` | chemin, cb | 1674 o | (sans commentaire) affiche/emploie : « évapore      à l » | _chargerTextesSite, _corbCharger, _corbRestaurer, atArchivesLire (+17) |
+| `_siteGet` | chemin, cb | 1674 o | (sans commentaire) affiche/emploie : « évapore      à l » | _chargerTextesSite, _corbCharger, _corbRestaurer, atArchivesLire (+18) |
 | `_sitePut` | chemin, valeur, cb | 590 o | (sans commentaire) affiche/emploie : « , {method: · , headers:{ » — ECRIT au hub | _editerTexteSeanceSansDoc, _taxoEcrire, atSitePut, ecrireAnnonce (+9) |
 | `_slugifyClass` | nom | 127 o | (sans commentaire ni indice) | _applyPubCascade, _markPub, isPubFor, submitCreateClass |
 | `_swapOrdre` | pathA,pathB,oldA,oldB,onDone | 531 o | (sans commentaire) affiche/emploie : « ordre du premier · ordre du second » — ECRIT au hub | edDeplacerItem, edDeplacerSeance, moveChapter, moveImageInGallery (+2) |
@@ -1100,9 +1115,9 @@
 | `mjpcBandeauEl` | — | 183 o | (sans commentaire) touche #mjpc-echecs-bandeau | mjpcRendreBandeau, mjpcSucces |
 | `mjpcBasculerDetail` | — | 124 o | (sans commentaire) touche #mjpc-echecs-detail | mjpcRendreBandeau |
 | `mjpcChargerOutils` | base,cb | 565 o | La source : ce que les apps DÉCLARENT, publié au hub par publierManifeste. Rien n'est inventé : une app absente du hub n'apparaît pas, une app sans usage apparaît en le disant. | atChargerOutils |
-| `mjpcChiffrer` | cle,texte | 201 o | Chiffre un texte. → Promise<"v1."+b64(iv)+"."+b64(chiffré)> — IV aléatoire par appel. | _putCode, secuEcrireCanari, secuMigrerCodes |
+| `mjpcChiffrer` | cle,texte | 201 o | Chiffre un texte. → Promise<"v1."+b64(iv)+"."+b64(chiffré)> — IV aléatoire par appel. | _putCode, eliChiffrerEnAttente, eliEcrire, secuEcrireCanari (+1) |
 | `mjpcCryptoDispo` | — | 84 o | (sans commentaire ni indice) | _secuVerifCodeEleveSite, doLogin, secuBoot, secuEncartHtml (+1) |
-| `mjpcDechiffrer` | cle,paquet | 280 o | Déchiffre un paquet "v1.iv.ct". → Promise<texte> — REJETTE si la clé est fausse (AES-GCM est authentifié : c'est ce qui rend le canari fiable) ou le paquet corrompu. | _allCodesTaken, _printCodesClasse, secuCodeAffiche, secuDechiffrerCache (+1) |
+| `mjpcDechiffrer` | cle,paquet | 280 o | Déchiffre un paquet "v1.iv.ct". → Promise<texte> — REJETTE si la clé est fausse (AES-GCM est authentifié : c'est ce qui rend le canari fiable) ou le paquet corrompu. | _allCodesTaken, _printCodesClasse, eliOpsRetrait, eliRecompterDispositifs (+3) |
 | `mjpcDeleteJson` | url,ou,onAccepte | 259 o | (sans commentaire ni indice) | atSupprimerChapitre, deleteClass, deleteImageInGallery, deleteItem (+2) |
 | `mjpcDeriverCle` | secret | 346 o | Dérive la clé AES-GCM 256 du secret saisi. → Promise<CryptoKey> | secuValiderSecret |
 | `mjpcEcrireRest` | url,options,cb | 2036 o | Le classeur d'issues pour le transport REST (fetch) — la SEULE source de vérité : | _siteDelete, _sitePut, mjpcDeleteJson, mjpcInjecterAvecArchive (+5) |
@@ -1110,7 +1125,7 @@
 | `mjpcFetchOk` | url,options | 1964 o | Le fetch à verdict pour les chaînes de promesses existantes : REJETTE sur refus (fetch ne le fait pas) et convertit la panne en message français. | _createGalleryItemWithFirstImage, _fbDeletePath, _fbPutPath, _uploadBlobToDrive (+5) |
 | `mjpcHeure` | ts | 106 o | consultable console — le bloc DIAGNOSTIC (commentaire) reste intact | mjpcRendreBandeau, mjpcSucces |
 | `mjpcInjecterAvecArchive` | opts,cb | 842 o | L'INJECTION : archive AVANT s'il y a quelque chose à remplacer, ABANDON si l'archive échoue, écriture ensuite, verdict rendu. Rien n'écrit sans que l'appelant ait confirmé. opts : | — |
-| `mjpcLot` | ecritures,ou,onTousAcceptes,onEchecs | 809 o | LE LOT À VERDICTS — pour les gestes en plusieurs écritures (cascade de publication, LIER, upload multi-champs) : on attend TOUS les verdicts, l'écran ne parle qu'ensuite ; | _applyLinkEcrire, _applyPubCascade, _deleteEleveCls, _swapOrdre (+1) |
+| `mjpcLot` | ecritures,ou,onTousAcceptes,onEchecs | 809 o | LE LOT À VERDICTS — pour les gestes en plusieurs écritures (cascade de publication, LIER, upload multi-champs) : on attend TOUS les verdicts, l'écran ne parle qu'ensuite ; | _applyLinkEcrire, _applyPubCascade, _deleteEleveCls, _swapOrdre (+5) |
 | `mjpcManifesteAJour` | publie,versionSocle,app,manifeste,purge | 676 o | [C5-M16a] ④ `purge` entre dans la comparaison (4e argument, optionnel : aucun appelant existant n'est cassé). | fichesMajUne |
 | `mjpcPromptAvecPresentation` | texte,options | 216 o | Le texte d'un prompt, précédé de la présentation. Un seul point d'entrée pour les neuf apps et le site : la pièce ne se recopie nulle part. | atPromptTexte |
 | `mjpcPromptCharger` | base,app,produit,defauts,cb | 513 o | (sans commentaire) affiche/emploie : « ;     var fini=function(v){       res[piece]=(typeof v=== » | — |
@@ -1158,7 +1173,7 @@
 | `secuNomAppareil` | — | 351 o | (sans commentaire) affiche/emploie : « ;var os=/Windows/.test(ua)? » | secuEnregistrerAppareil |
 | `secuOublier` | — | 662 o | oubli local : les codes redeviennent illisibles ICI | secuEncartHtml |
 | `secuPatchCode` | k,objet,cb | 454 o | PATCH fusionnant sur /codes/<k> — routé magasin en mode test (le PATCH y fusionne) | _secuPurgerClair, secuMigrerCodes |
-| `secuPoserCle` | — | 2023 o | pose de la clé depuis l'encart (première fois ou nouvel appareil) | secuEncartHtml |
+| `secuPoserCle` | — | 2134 o | pose de la clé depuis l'encart (première fois ou nouvel appareil) | secuEncartHtml |
 | `secuPoserEmpreintesProf` | — | 235 o | M-SÉCU-3 : plus de source claire pour les poser — CONSTAT seulement. Si les empreintes manquent au hub, la porte ne s'ouvre plus que par la clé, et le professeur doit le savoir. | secuPoserCle |
 | `secuRetirerClair` | — | 3084 o | M-SÉCU-3 — LE RETRAIT DU CLAIR. Un seul geste, explicite, jamais automatique. Séquence de Paul : promotion → déploiement → vérification → CE bouton. | secuEncartHtml |
 | `secuValiderSecret` | secret | 534 o | validation d'un secret contre le canari — la SEULE voie vers l'affichage | doLogin, secuBoot, secuPoserCle |
