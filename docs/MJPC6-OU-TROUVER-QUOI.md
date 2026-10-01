@@ -191,3 +191,15 @@
 | le ◆ dans la liste | `elfChargerFleches` / `elfMarquerListe` (avec la clé seulement) |
 | le rappel des équipes éducatives | page des classes : `elfRappel`, `elfEssDuNiveau` (motif `/[ée]quipes?\s+[ée]duc/` + niveau dans `edtAnneeEvenements`, première date), `elfRappelClasseHtml`, `elfOuvrirClasse` ; la case de l'heure : `elfPremieresCases`, `elfRappelCaseHtml` dans `edtPeindreSemaine` (un nombre, jamais un nom) |
 | la place réservée du longitudinal | le commentaire « PROFIL ÉLÈVE — suivi longitudinal » (feuille de route) pointe vers la fiche ; la composante `place_agregats` « Historique et progression de l'élève » reste réservée (dans l'année seulement, cadrage 6 · 1.7) |
+
+## AJOUTS DU 01/10/2026 — PROMOTION correction_dictee 6.6.0 : la dictée lit la fiche (le mandat « L'ÉLÈVE — 1 » est complet)
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| d'où vient l'aménagement d'un élève | `isEleveAmenage(clé, override, registre)` — l'override par dictée (`/correction_dictee/<id>/amenages/<clé>`) prime, sinon la fiche : `registreDepuisAmenagements(/classes/<clé de classe>/amenagements)` (`dicteeAmenagee === true`), la classe par `cleDuRegistre` ; `classes_amenages` n'est plus lu que pour tracer une fois les copies d'avant |
+| la ligne PAP et le bloc | `lignePapDictee` dans `CorrScreen` (« Tout passer en non aménagé pour cette dictée » / « Tout repasser en aménagé (leur fiche) ») ; clic droit `toggleAmenageDictee` (aller / retour) |
+| la trace d'une copie | `traceCopie`, `traceDe`, `modesAmenagee` → `results/<clé> = { …, amenagee, mode, base }` ; `baseDeCopie(r, baseDictee)` lit la base ; `traceAncienne` / `traceSiAbsente` pour les copies d'avant |
+| les cinq écritures qui posent une copie | `save` (normal et rapide), la restauration depuis la corbeille, l'échange / le transfert, le reclassement M → P, le recalcul (`EditionDictee`, épargne `amenagee === true`) |
+| la moyenne | encart Moyenne de `CorrScreen` (copies sur la base de la dictée + « n copies aménagées — moyenne m/base ») ; `buildDicteeJSON` (bilan exporté, chaque note avec `note_sur`) |
+| ce que voit l'élève | sa note sur la base de sa copie, aucun mot ; la feuille papier `buildAmenageePapierHtml` sans « aménagée » |
+| le bac à sable | `genererDonneesTest` (élèves `ZZTEST …`, aménagement du 2e), `purgerDonneesTest` |
