@@ -924,3 +924,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - commit `13ac6c351fa2fe4849a1cf3ece3e106e24fd8803` (blob) · 1 774 212 o · md5 `a841534fce9661bad089af862900b9a9` · v8.73.0-⑭
 - **Motif** : ELEVE-1 livraison ⓪ — le mode test étanche (`mjpcFetchOk` routé), `/eleves` à la purge, l'année scolaire calculée dans `ensureEleveUuid`. Promu : commit `0444c8197acf`, blob `401c53d5f357`, 1 775 768 o, md5 `c54b1c332b71…` (vérifié bit à bit).
 - **Restauration en cas de `BUG`** : `git/blobs/13ac6c351fa2fe4849a1cf3ece3e106e24fd8803` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. Attention : le contrat de purge publié au hub (`/manifestes/index/purge/purger`) garderait `"eleves"` jusqu'à la prochaine connexion prof sur la version restaurée, qui le republie.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.74.0-① (01/10/2026, conscience n°12)
+- blob `401c53d5f357` (commit `0444c8197acf`) · 1 775 768 o · md5 `c54b1c332b7191ffe0e1383b4195cedf` · v8.74.0-⓪
+- **Motif** : ELEVE-1 livraison ① — l'import du fichier de classe (l'aperçu, rien n'est écrit) ; `_m8Superposer` dans `loadClasses` / `loadCodes` (mode test). Promu : 1 796 109 o, md5 `c9af8e31c6d93d3651095b9600d665e3` (bit à bit vérifié).
+- **Restauration en cas de `BUG`** : `git/blobs/401c53d5f357…` (le blob complet est dans le commit `0444c8197acf`) → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus.
