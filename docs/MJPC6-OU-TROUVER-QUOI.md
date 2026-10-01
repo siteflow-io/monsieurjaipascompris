@@ -203,3 +203,12 @@
 | la moyenne | encart Moyenne de `CorrScreen` (copies sur la base de la dictée + « n copies aménagées — moyenne m/base ») ; `buildDicteeJSON` (bilan exporté, chaque note avec `note_sur`) |
 | ce que voit l'élève | sa note sur la base de sa copie, aucun mot ; la feuille papier `buildAmenageePapierHtml` sans « aménagée » |
 | le bac à sable | `genererDonneesTest` (élèves `ZZTEST …`, aménagement du 2e), `purgerDonneesTest` |
+
+## AJOUTS DU 01/10/2026 — PROMOTION ② bis : les nouvelles classes dans les apps, le QCM ne ressuscite plus les classes
+
+| Quoi | Où |
+|---|---|
+| la liste « Classe » d'un niveau dans la dictée et la réécriture | `classeDuNiveau(c, niveau)` (le champ `niveau` du nœud `/classes/<clé>`, repli sur le début de la clé sans niveau), `nomDeClasse(c)` — `correction_dictee.html` (création et édition), `reecriture.html` (création) |
+| le QCM et l'ancien carnet `qcm/classes` | `migrerClassesUneFois` ne fait plus rien (rend 0, 0) ; `rangerAncienCarnet` (bouton « Ranger l'ancien carnet de classes », Données → Sauvegarde → Maintenance, professeur) : corbeille `qcm-classes-legacy-<ts>` compté, puis effacement ; `qcm/classes` hors de `MJPC_PURGE` du QCM |
+| le nom des classes dans le QCM | `libClasseQCM` / `libelle` — listes, tableau projeté, badge de l'élève (la clé reste ce que le QCM lit et écrit) |
+| ce qui reste à faire par Paul | ranger l'ancien carnet ; supprimer « 4E Banksy », « 4e Pythagore », « 5E Hergé » ; « compléter » une classe (les restes `qcm/eleveSexes` / `classes_amenages` partent en corbeille) ; la purge de rentrée ; l'appariement de l'emploi du temps |
