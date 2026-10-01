@@ -944,3 +944,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `308f8d356bb8` (commit `7c58bef49aba`) · 1 813 946 o · md5 `80d454863a1b1ae4a741222b7cfdf1eb` · v8.74.0-②
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.6.0 (01/10/2026, conscience n°12)
+- blob `197aff17d735` (commit b815d1dc, poussé par Paul le 30/09) · 724 656 o · md5 `75f48e2dbf0b86698c27ca27aacf8e35` · v6.5.0
+- **Motif** : ELEVE-1 livraison ④ — la dictée lit l'aménagement de la fiche, chaque copie garde sa base. Promu : 735 974 o, md5 `f4cdfbef85cf557a4a91e5900ef6c5b4` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `197aff17d735…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus. Attention : la 6.5.0 relirait `classes_amenages` (vide après le premier import réel) et recalculerait les copies aménagées sur la base de la dictée.
