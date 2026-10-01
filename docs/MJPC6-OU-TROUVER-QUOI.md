@@ -232,3 +232,13 @@
 | Quoi | Où (`correction_dictee.html`) |
 |---|---|
 | ⇧R dans les deux sens | l'écoute du clavier de `CorrScreen` (`onKey` : ignore INPUT / TEXTAREA / SELECT ; `tab==="correct"&&cur` → `setTab("rapide")` ; `tab==="rapide"` → `setCur(cur||eleveRapideParDefaut())`, `setTab("correct")`) ; `eleveRapideParDefaut` = la règle de l'onglet Rapide ; `onExitFast` revient à la même copie |
+
+## AJOUT DU 01/10/2026 — correction_dictee 6.7.0-L3 : M adaptée, garde du mot juste
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| la touche M qui s'adapte | `typeAdapteM(wt)` (E sur apostrophe, P sur signe, sinon M) dans l'écoute du clavier de `CorrEleve` ; alias « / » |
+| le bouton mis en avant + Entrée | `preselectionRapide(wt)` → `.fast-preselect` sur « Ponct. manqu. ↵ » / « Élision ↵ » ; Entrée le valide (sur un mot ordinaire, Entrée passe au suivant) |
+| la garde du mot juste | `motJuste(saisie, attendu)` dans `confirmFautifI` (rapide) et `confirmFautifTexte` (texte) ; état `gardeMot`, message `.garde-mot` « C'est le mot juste : recopie ce que l'élève a écrit. » |
+| le clavier du mode rapide | G, L, M (/), I (?), A, Espace, Retour, Entrée, ⇧R — P et E retirées (boutons gardés) |
+| code mort | `RapideGlobal` (ancien écran) : jamais appelé — dette n°12 · 97 |
