@@ -24,6 +24,9 @@
 body{font-family:'Literata',Georgia,serif;background:var(--bg);color:var(--text);min-height:100vh}
 .container{max-width:760px;margin:0 auto;padding:20px 16px 80px}
 .container-wide{max-width:1300px;margin:0 auto;padding:20px 16px 80px}
+/* [L7] les écrans de correction du professeur (mode texte et mode rapide) : 1100 px (décision de Paul, 01/10) — les écrans élèves gardent .container (760) */
+.container.corr-prof{max-width:1100px}
+.ctx-phrase{white-space:nowrap;overflow:hidden}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
 h1{font-size:1.5rem;font-weight:700;margin-bottom:4px}
 h2{font-size:1.2rem;font-weight:700;margin-bottom:8px}
@@ -1134,7 +1137,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L6b";
+var APP_VERSION="6.7.0-L7b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -3874,10 +3877,16 @@ function CorrEleve(p){
     var propFin=(p.onOuvrirRapide&&rechFin.trim())?(p.elevesRecherche||[]).filter(function(n){return n!==p.eleve&&matchEleveInitials(n,rechFin)}).slice(0,6):[];   /* [L6] */
     var pct=Math.round(fastIdx/wordTokens.length*100);
     var curWord=fastDone?null:wordTokens[fastIdx];
-    var ctxStart=Math.max(0,fastIdx-3);
-    var ctxEnd=Math.min(wordTokens.length,fastIdx+4);
+    /* [L7] la ligne de contexte montre la PHRASE entière, bornée par les ponctuations fortes (. ! ? …), le mot courant en gras ;
+       si elle dépasse la ligne, elle est tronquée aux bords (…) autour du mot courant */
+    var FORTE=/^[.!?\u2026]+$/,ctxStart=Math.min(fastIdx,wordTokens.length),ctxEnd=Math.min(wordTokens.length,fastIdx+1);
+    while(ctxStart>0&&!FORTE.test(String(wordTokens[ctxStart-1].text)))ctxStart--;
+    while(ctxEnd<wordTokens.length&&!(ctxEnd>0&&FORTE.test(String(wordTokens[ctxEnd-1].text))))ctxEnd++;
+    var BUDGET=118,ctxA=Math.min(fastIdx,ctxEnd),ctxB=Math.min(fastIdx+1,ctxEnd),lg=function(i){return String(wordTokens[i].text).length+1;},tot=(ctxB>ctxA?lg(ctxA):0);
+    while(true){var g2=ctxA>ctxStart&&tot+lg(ctxA-1)<=BUDGET,d2=ctxB<ctxEnd&&tot+lg(ctxB)<=BUDGET;if(!g2&&!d2)break;if(g2){ctxA--;tot+=lg(ctxA);}if(d2&&tot+lg(ctxB)<=BUDGET){tot+=lg(ctxB);ctxB++;}}
+    var coupeG=ctxA>ctxStart,coupeD=ctxB<ctxEnd;ctxStart=ctxA;ctxEnd=ctxB;
 
-    return h("div",{className:"container fade-up",style:{maxWidth:480}},
+    return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 480) */
       h("div",{className:"score-bar"},
         h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},noteFr(sc.note)),
         h("div",{style:{flex:1}},
@@ -3896,12 +3905,14 @@ function CorrEleve(p){
         h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9) \u2014 \u21e7R"},"\u23f8 Pause"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9) \u2014 \u21e7R"},"\u2190 Texte")
       ),
-      h("div",{style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
+      h("div",{className:"ctx-phrase",style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
+        coupeG&&h("span",{style:{margin:"0 3px"}},"\u2026"),
         wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
           var realI=ctxStart+ci;var isCur=realI===fastIdx;
           var isErr=errors.find(function(e){return e.idx===wt.idx});
           return h("span",{key:ci,style:{fontWeight:isCur?800:400,color:isCur?"var(--text)":isErr?"#c53030":"var(--muted)",fontSize:isCur?"1.1rem":".85rem",margin:"0 3px",textDecoration:isErr?"underline":"none"}},wt.text)
-        })
+        }),
+        coupeD&&h("span",{style:{margin:"0 3px"}},"\u2026")
       ),
       fastDone?
         h("div",{className:"card",style:{textAlign:"center",padding:30}},
@@ -3986,7 +3997,7 @@ function CorrEleve(p){
   }
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
-  return h("div",{className:"container fade-up"},
+  return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 760) */
     p.effacee&&h("div",{className:"card",style:{marginBottom:10,border:"2px solid #dd6b20",background:"#fff7ed",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
       h("span",null,"\ud83d\uddd1 Une copie de "+p.eleve+" a \u00e9t\u00e9 effac\u00e9e le "+new Date(p.effacee.le).toLocaleDateString("fr-FR")+" \u00e0 "+new Date(p.effacee.le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+" ("+(GESTES_EFFACEMENT[p.effacee.geste]||p.effacee.geste)+(p.effacee.note!=null?", note "+String(p.effacee.note).replace(".",",")+"/"+(p.data.base||20):"")+")."),
       h("button",{className:"btn btn-primary",style:{width:"auto",marginLeft:"auto"},onClick:function(){p.onRestaurer(p.effacee)},title:"Remet cette copie telle qu\u2019elle \u00e9tait avant d\u2019\u00eatre effac\u00e9e, avec son autocorrection si l\u2019\u00e9l\u00e8ve n\u2019en a pas refait une. La copie reste aussi dans la corbeille."},"\u21ba La restaurer")),
