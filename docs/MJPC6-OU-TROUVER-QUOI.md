@@ -251,3 +251,11 @@
 | l'application une fois à l'ouverture | l'effet d'ouverture de `CorrScreen` (après la trace de ④) : corbeille `corbeille/<jour>/reclassement-ponctuation_<hhmmss>_<clé>` (`_meta.chemin` = `correction_dictee/<id>/results/<clé>`, `data` = copie d'avant) puis `results.update` ; la ligne « ✓ n copies reclassées (ponctuation) » |
 | un signe posé en plus | `confirmInsert` : `extras[] = {afterIdx, word, type:"P"}` ; affichage « +, P » (`.extra-p`) ; `computeNote` compte un extra `P` au forfait ponctuation (brevet) ou au coût P (préparée), `counts.P` l'inclut |
 | ce qui a disparu | le bouton « M→P » et `hasConv` (patch d'il y a un an) |
+
+## AJOUT DU 02/10/2026 — correction_dictee 6.7.0-L6 : la copie suivante par initiales
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| le champ en fin de copie rapide | `CorrEleve` : état `rechFin` + référence, effet de focus quand `fastDone` ; la liste (6 au plus) avec « absent » / « ✔ corrigée » ; Entrée / clic → `p.onOuvrirRapide(clé)` |
+| l'ouverture en mode rapide | `CorrScreen` : `onOuvrirRapide` (l'élève choisi devient celui de l'onglet Rapide) |
+| le clavier qui se tait dans un champ | la garde au début de l'écoute du clavier de `CorrEleve` (INPUT / TEXTAREA / SELECT / contentEditable) |
