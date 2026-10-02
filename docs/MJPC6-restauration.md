@@ -1021,3 +1021,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `1f0032423f5b` (commit `b8ae096e3fd7`) · 773 563 o · md5 `4f0ecbca3b9041f76c89b92d8d9a07e9` · v6.7.0-L9
 - **Motif** : L11 — les formes acceptées. Promu : 795 799 o, md5 `fe8f030b0f402f0cb8bcf031d91799bb` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `1f0032423f5b…` → PUT, puis bit à bit. Attention : les règles `correction_dictee_textes/*/formesAcceptees` et les `sansCout` posés sur les copies restent au hub ; la L9 relit `sansCout` comme une erreur ordinaire (le coût revient) — rien de perdu, les règles réapparaissent à la re-promotion.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L12 (02/10/2026, conscience n°12)
+- blob `70d21b5f6bb4` (commit `458756cd94e9`) · 795 799 o · md5 `fe8f030b0f402f0cb8bcf031d91799bb` · v6.7.0-L11
+- **Motif** : L12 — l'aide « ? » contextuelle. Promu : 809 581 o, md5 `89a82a824077066e82823dda85353cfe` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `70d21b5f6bb4…` → PUT, puis bit à bit.
