@@ -991,3 +991,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `6b16696d7ec7` (commit `a9c379ce2688`) · 743 864 o · md5 `5c743058ab0a5d8d6287e7a31f2931fa` · v6.7.0-L5
 - **Motif** : L6 — recherche par initiales en fin de copie rapide. Promu : 746 811 o, md5 `c28534fac49660fde55a51c2623a4324` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `6b16696d7ec7…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion micro 6.7.0-L6b (02/10/2026, conscience n°12)
+- blob `026e07bc7772` (commit `3503e364a654`) · 746 811 o · md5 `c28534fac49660fde55a51c2623a4324` · v6.7.0-L6
+- **Motif** : Entrée avance même sur un signe (dette 98). Promu : 746 933 o, md5 `dd66cd92f7d1208178dc9987eec83b28` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `026e07bc7772…` → PUT, puis bit à bit (la L6 remarque P à chaque Entrée sur un signe).
