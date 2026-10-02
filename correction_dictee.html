@@ -224,6 +224,14 @@ textarea{resize:vertical;min-height:120px}
 .liste-formes .forme .acc.ailleurs{color:#7c5610;background:#fef0d6;font-weight:600}
 .fa-mot{cursor:pointer;padding:0 3px;border-radius:6px}.fa-mot:hover{background:#f3f4f6}.fa-mot.tol{text-decoration:underline;text-decoration-color:#16a34a;text-decoration-thickness:2px}
 .fa-mot.ouvert{background:#e6f4ec}.btn-accepter-ici{font-size:.7rem;padding:1px 6px;border-radius:6px;border:1px solid #16a34a;background:#fff;color:#1e6042;cursor:pointer}.btn-accepter[disabled]{opacity:.45;cursor:not-allowed}.fa-pastille{display:inline-block;margin:0 6px 4px 0;padding:2px 8px;border-radius:8px;background:#e6f4ec;color:#1e6042}
+
+/* [L12] l'aide « ? » : toujours en haut à droite, jamais sous une autre couche */
+.aide-btn{position:fixed;top:8px;right:8px;z-index:30000;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);font-weight:800;font-size:1rem;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.aide-voile{position:fixed;inset:0;z-index:30001;background:rgba(15,23,42,.35);display:flex;align-items:flex-start;justify-content:center;padding:60px 14px}
+.aide-carte{background:var(--card);border-radius:14px;max-width:720px;width:100%;padding:16px 18px;box-shadow:0 14px 40px rgba(0,0,0,.25);max-height:80vh;overflow:auto}
+.aide-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.aide-ou{font-weight:700;color:var(--primary);margin:6px 0 8px}
+.aide-onglets{display:flex;gap:6px;margin-bottom:6px}.aide-onglets button{border:1px solid var(--border);background:transparent;border-radius:8px;padding:3px 10px;cursor:pointer}.aide-onglets button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.aide-table{width:100%;border-collapse:collapse;font-size:.9rem}.aide-table td{padding:5px 8px;border-top:1px solid var(--border);vertical-align:top}.aide-table td.k{font-weight:700;white-space:nowrap;width:1%}
 </style>
 </head>
 <style>
@@ -1162,7 +1170,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L11";
+var APP_VERSION="6.7.0-L12";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1282,6 +1290,132 @@ function poserRegle(tk,mot,forme,origine,dicteeId,sauf){var r={mot:mot,forme:Str
 function retirerRegle(tk,mot,forme,sauf){regleRetireeEnMemoire(tk,mot,forme);return db.ref(cheminRegle(tk,mot,forme)).remove().then(function(){return recalculerTexte(tk,sauf);});}
 function phraseRecalc(r,id){var autres=Object.keys(r.compte).filter(function(x){return x!==id&&r.compte[x].n>0}).map(function(x){return "\u00ab "+r.compte[x].titre+" \u00bb"});
   return r.total+" copie"+(r.total>1?"s":"")+" recalcul\u00e9e"+(r.total>1?"s":"")+(autres.length?" (ici et dans "+autres.join(", ")+")":"");}
+/* [L12] L'AIDE « ? » QUI SUIT L'ÉCRAN — chaque écran dit où l'on est (niveau 1 l'accueil, 2 l'onglet de la dictée, 3 la copie ou le sous-écran) ;
+   le plus profond l'emporte. Les lignes ne disent que ce qui est possible ici, mesuré dans le code ; toute livraison qui ajoute un geste ajoute sa ligne. */
+var AIDE={niveaux:{},ouverte:false};
+function aidePoser(niveau,ctx){var x=JSON.stringify(AIDE.niveaux[niveau]||null),y=JSON.stringify(ctx||null);if(x===y)return;if(ctx)AIDE.niveaux[niveau]=ctx;else delete AIDE.niveaux[niveau];try{window.dispatchEvent(new Event("aide-contexte"))}catch(e){}}
+function aideContexte(){var ks=Object.keys(AIDE.niveaux).map(Number).sort(function(x,y){return y-x});return ks.length?AIDE.niveaux[ks[0]]:{cle:"accueil"};}
+function useAide(niveau,ctx){var k=JSON.stringify(ctx||null);useEffect(function(){aidePoser(niveau,ctx);},[k]);useEffect(function(){return function(){aidePoser(niveau,null)}},[]);}
+var AIDE_FERMER=["? ou F1","cette aide ; \u00c9chap la ferme"];
+var AIDES={
+  accueil:{ou:"Accueil \u2014 la liste des dict\u00e9es",l:[
+    ["clic sur une dict\u00e9e (ou \u00ab Ouvrir \u2192 \u00bb)","l\u2019ouvrir : Pr\u00e9paration, Correction, Rapide, Donn\u00e9es, R\u00e9glages"],
+    ["\u270f\ufe0f","\u00e9diter la dict\u00e9e : texte, bar\u00e8me, classe, comp\u00e9tences, publication, version am\u00e9nag\u00e9e, formes accept\u00e9es"],
+    ["\u29c9","dupliquer la dict\u00e9e enti\u00e8re (texte, bar\u00e8me, version am\u00e9nag\u00e9e, options, exercices) \u2014 sans les copies des \u00e9l\u00e8ves"],
+    ["\ud83d\uddd1\ufe0f","supprimer la dict\u00e9e (archiv\u00e9e dans la corbeille, avec un export JSON t\u00e9l\u00e9charg\u00e9)"],
+    ["\ud83e\uddea Mode test \u2014 \u00ab Cr\u00e9er le bac \u00e0 sable \u00bb","une classe fictive, deux dict\u00e9es, six \u00e9l\u00e8ves avec leurs codes : voir ce que voit un \u00e9l\u00e8ve"],
+    ["\ud83e\uddea \u00ab \ud83e\uddf9 Tout effacer \u00bb","supprimer le bac \u00e0 sable (aucune donn\u00e9e r\u00e9elle n\u2019est touch\u00e9e)"],
+    AIDE_FERMER]},
+  grille:{ou:"Correction \u2014 la grille des \u00e9l\u00e8ves",l:[
+    ["lettres dans \u00ab Recherche \u00e9l\u00e8ve \u00bb","trouver un \u00e9l\u00e8ve par ses initiales (DM pour Dupont Marie)"],
+    ["clic sur un \u00e9l\u00e8ve","ouvrir sa copie en mode texte"],
+    ["clic droit sur un \u00e9l\u00e8ve","le marquer absent, ou am\u00e9nag\u00e9"],
+    ["onglet \u00ab \u26a1 Rapide \u00bb","corriger au clavier, mot \u00e0 mot"],
+    AIDE_FERMER]},
+  texte:{ou:"Mode texte \u2014 le menu ferm\u00e9",l:[
+    ["lettres (minuscules)","chercher un mot du texte : ceux qui commencent ainsi clignotent ; s\u2019il n\u2019en reste qu\u2019un, son menu s\u2019ouvre"],
+    ["\u2190 \u2192","mot pr\u00e9c\u00e9dent / suivant (la ponctuation est saut\u00e9e)"],
+    ["\u2191 \u2193","ligne du dessus / du dessous"],
+    ["Entr\u00e9e","ouvrir le menu du mot courant"],
+    ["\u00c9chap","effacer la recherche"],
+    ["Retour","effacer la derni\u00e8re lettre de la recherche"],
+    ["Ctrl+Z","annuler la derni\u00e8re erreur pos\u00e9e"],
+    ["\u21e7R","passer en mode rapide, sur la m\u00eame copie"],
+    ["clic sur un mot","son menu ; sur un mot d\u00e9j\u00e0 marqu\u00e9 : retirer l\u2019erreur"],
+    ["clic entre deux mots","un mot (ou un signe) en trop"],
+    AIDE_FERMER]},
+  "texte-menu":{ou:"Mode texte \u2014 le menu ouvert",l:[
+    ["G","erreur de grammaire \u2192 la case \u00ab ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u00bb"],
+    ["L","erreur de lexique \u2192 la case"],
+    ["M","manquant (sur un signe : ponctuation ; sur une apostrophe : \u00e9lision)"],
+    ["I","illisible"],
+    ["A","attention (sans retrait)"],
+    ["\u00c9chap","fermer le menu"],
+    ["Ctrl+Z","annuler la derni\u00e8re erreur pos\u00e9e"],
+    AIDE_FERMER]},
+  "case":{ou:"La case \u00ab ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u00bb",l:[
+    ["pav\u00e9 num\u00e9rique","choisir une forme d\u00e9j\u00e0 vue : les chiffres se composent (1 puis 2 = la 12e) ; prise d\u00e8s que le num\u00e9ro est s\u00fbr"],
+    ["Entr\u00e9e","valider ce qui est tap\u00e9, ou le num\u00e9ro en cours"],
+    ["\u00c9chap","effacer le num\u00e9ro en cours ; puis fermer la case"],
+    ["rang\u00e9e du haut","\u00e9crire un chiffre dans la case (\u00ab 3 \u00bb pour \u00ab trois \u00bb)"],
+    ["clic sur une ligne de la liste","prendre cette forme"],
+    ["\u00ab \u2713 forme accept\u00e9e (ce texte) \u00bb","au clic seulement : l\u2019erreur reste visible chez l\u2019\u00e9l\u00e8ve, sans retrait, pour toutes les dict\u00e9es de ce texte ; \u00ab \u2715 ne plus accepter \u00bb l\u2019annule"],
+    ["\u00ab accepter ici \u00bb","au clic : accepter pour ce texte une forme d\u00e9j\u00e0 accept\u00e9e ailleurs"],
+    ["\u00ab Passer \u00bb","poser l\u2019erreur sans le mot de l\u2019\u00e9l\u00e8ve"],
+    ["F1","cette aide (ici, la touche ? s\u2019\u00e9crit dans la case) ; \u00c9chap la ferme"]]},
+  rapide:{ou:"Mode rapide \u2014 sur un mot",l:[
+    ["G / L","erreur de grammaire / de lexique \u2192 la case \u00ab ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u00bb"],
+    ["M (ou /)","manquant ; sur un signe : ponctuation ; sur une apostrophe : \u00e9lision"],
+    ["i","illisible"],
+    ["A","attention (sans retrait)"],
+    ["Espace / Entr\u00e9e","correct, mot suivant"],
+    ["Retour","mot pr\u00e9c\u00e9dent"],
+    ["\u21e7R","passer en mode texte, sur la m\u00eame copie"],
+    AIDE_FERMER]},
+  fin:{ou:"Mode rapide \u2014 fin de copie",l:[
+    ["lettres","les initiales de l\u2019\u00e9l\u00e8ve suivant (DM pour Dupont Marie)"],
+    ["Entr\u00e9e","ouvrir le premier \u00e9l\u00e8ve propos\u00e9, en mode rapide"],
+    ["clic sur un nom","l\u2019ouvrir en mode rapide"],
+    ["\u00ab \u2705 Enregistrer \u00bb","enregistrer et passer \u00e0 l\u2019\u00e9l\u00e8ve suivant"],
+    ["\u00ab \u21bb Relire \u00bb","revenir au d\u00e9but de la copie"],
+    ["\u00ab Ver\u00adifier en mode texte \u00bb","la m\u00eame copie, en mode texte"],
+    ["F1","cette aide (dans le champ, ? s\u2019\u00e9crit) ; \u00c9chap la ferme"]]},
+  preparation:{ou:"Pr\u00e9paration",l:[
+    ["\u00ab Enregistrer \u00bb","enregistrer le texte, le bar\u00e8me, la classe, les comp\u00e9tences, la publication"],
+    ["\u00ab \ud83d\udcd8 Param\u00e9trer une version am\u00e9nag\u00e9e \u00bb","les mots \u00e0 compl\u00e9ter de la version am\u00e9nag\u00e9e (PAP/DYS)"],
+    ["\u00ab \u2713 Formes accept\u00e9es \u00bb","dire d\u2019avance les formes que tu acceptes, mot par mot"],
+    AIDE_FERMER]},
+  amenagee:{ou:"Pr\u00e9paration \u2014 version am\u00e9nag\u00e9e",l:[
+    ["clic sur un mot du texte","en faire un mot \u00e0 compl\u00e9ter (une lacune) ; reclique pour la retirer"],
+    ["modes A / B / C","la forme du mot \u00e0 compl\u00e9ter (propositions \u00e0 cocher, trou, trou + indice)"],
+    ["\u00ab \u21bb Reg\u00e9n\u00e9rer \u00bb","refaire les propositions, l\u2019indice ou le raisonnement"],
+    ["\u00ab \ud83d\uddd1 Supprimer cette lacune \u00bb","rendre le mot au texte"],
+    ["\u00ab \ud83d\udcc4 G\u00e9n\u00e9rer le document papier \u00bb","la feuille am\u00e9nag\u00e9e \u00e0 imprimer"],
+    AIDE_FERMER]},
+  "formes-acceptees":{ou:"Pr\u00e9paration \u2014 formes accept\u00e9es",l:[
+    ["clic sur un mot","ouvrir ses formes accept\u00e9es"],
+    ["Entr\u00e9e","ajouter la forme tap\u00e9e : pour toutes les dict\u00e9es de ce texte, copies d\u00e9j\u00e0 corrig\u00e9es recalcul\u00e9es"],
+    ["\u2715","retirer une forme : elle co\u00fbte \u00e0 nouveau, partout"],
+    ["\u00c9chap","fermer la fen\u00eatre du mot"],
+    AIDE_FERMER]},
+  reglages:{ou:"R\u00e9glages de la dict\u00e9e",l:[
+    ["la date de correction","celle que voient les \u00e9l\u00e8ves, une seule pour toute la dict\u00e9e"],
+    ["\u00ab = le jour de la premi\u00e8re copie corrig\u00e9e \u00bb","prendre ce jour-l\u00e0"],
+    ["\u00ab Effacer la date \u00bb","revenir au jour r\u00e9el de chaque copie"],
+    ["\u00ab retirer \u00bb (formes accept\u00e9es)","la forme co\u00fbte \u00e0 nouveau, pour toutes les copies de toutes les dict\u00e9es du texte"],
+    AIDE_FERMER]},
+  donnees:{ou:"Donn\u00e9es de la dict\u00e9e",l:[
+    ["\u00ab Bilan \u00bb, \u00ab \ud83d\udcc4 Copies \u00bb, \u00ab Fiches \u00e9l\u00e8ves \u00bb, \u00ab Suivi \u00bb, \u00ab \ud83c\udfaf Exercices \u00bb","les onglets des donn\u00e9es"],
+    ["\u00ab \ud83e\udd16 Prompt IA \u00bb (Bilan)","le prompt et le JSON de la dict\u00e9e, \u00e0 copier"],
+    AIDE_FERMER]}
+};
+function lignesAide(ctx){var x=AIDES[ctx.cle]||AIDES.accueil,l=x.l.slice();
+  if(ctx.bandeau)l.unshift(["\u00ab \u21ba La restaurer \u00bb / \u00ab Non, laisser dans la corbeille \u00bb","le bandeau d\u2019une copie effac\u00e9e : la remettre, ou la laisser dans la corbeille (le bandeau ne revient plus)"]);
+  return {ou:x.ou,l:l};}
+function AideContextuelle(){
+  var sO=useState(false),ouverte=sO[0],setOuverte=sO[1],sT=useState("ici"),onglet=sT[0],setOnglet=sT[1],sR=useState(0),setR=sR[1];
+  useEffect(function(){function maj(){setR(function(x){return x+1})}window.addEventListener("aide-contexte",maj);return function(){window.removeEventListener("aide-contexte",maj)};},[]);
+  useEffect(function(){
+    function onKey(e){var tg=e.target&&e.target.tagName,champ=tg==="INPUT"||tg==="TEXTAREA"||tg==="SELECT"||(e.target&&e.target.isContentEditable);
+      if(e.key==="F1"){e.preventDefault();e.stopImmediatePropagation();setOuverte(function(o){return !o});return;}   /* F1 partout, champ ou pas ; le navigateur n'ouvre pas la sienne */
+      if(e.key==="?"&&!champ&&!AIDE.ouverte||(e.key==="?"&&AIDE.ouverte)){e.preventDefault();e.stopImmediatePropagation();setOuverte(function(o){return !o});return;}   /* ? hors d'un champ (dans un champ, ? s'écrit) */
+      if(AIDE.ouverte){e.stopImmediatePropagation();e.preventDefault();if(e.key==="Escape")setOuverte(false);}   /* même les autres écoutes de la fenêtre ne la voient pas */   /* l'aide d'abord : rien ne fuit vers l'écran dessous */
+    }
+    window.addEventListener("keydown",onKey,true);return function(){window.removeEventListener("keydown",onKey,true)};},[]);
+  AIDE.ouverte=ouverte;
+  var c=lignesAide(aideContexte());
+  return h(React.Fragment,null,
+    h("button",{id:"aide-btn",className:"aide-btn",title:"Ce que tu peux faire ici \u2014 la touche ? (ou F1). \u00c9chap ferme.",onClick:function(){setOuverte(!ouverte)}},"?"),
+    ouverte&&h("div",{className:"aide-voile",id:"aide-voile",onClick:function(e){if(e.target===e.currentTarget)setOuverte(false)}},
+      h("div",{className:"aide-carte",role:"dialog",id:"aide-carte"},
+        h("div",{className:"aide-tete"},h("b",null,"Ce que tu peux faire ici"),h("button",{className:"btn-sm btn-ghost",onClick:function(){setOuverte(false)},title:"Fermer (\u00c9chap)"},"\u2715")),
+        h("div",{className:"aide-onglets"},
+          h("button",{className:onglet==="ici"?"on":"",onClick:function(){setOnglet("ici")},title:"Les gestes possibles \u00e0 l\u2019endroit o\u00f9 tu es"},"Ici"),
+          h("button",{className:onglet==="nouv"?"on":"",onClick:function(){setOnglet("nouv")},title:"L\u2019ancien panneau : aide g\u00e9n\u00e9rale et nouveaut\u00e9s"},"Nouveaut\u00e9s")),
+        onglet==="ici"?h("div",null,h("div",{className:"aide-ou",id:"aide-ou"},c.ou),
+            h("table",{className:"aide-table",id:"aide-table"},h("tbody",null,c.l.map(function(r,i){return h("tr",{key:i},h("td",{className:"k"},r[0]),h("td",null,r[1]))}))))
+          :h(AideModal,{onClose:function(){setOnglet("ici")}}))));
+}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -2711,6 +2845,7 @@ function AppProf(p){
         editing===d.id&&h(EditionDictee,{dicteeId:d.id,onMaj:function(){rafraichirDonnees()},onClose:function(){setEditing(null)}})
       )})
     ),
+    h(AideContextuelle,null),   /* [L12] l'aide, sur l'accueil */
     h(ModeTest,{onGenere:function(){rafraichirDonnees()},onPurge:function(){rafraichirDonnees()}}),
     h("div",{className:"card"},
       h("h2",null,"Nouvelle dict\u00e9e"),
@@ -2859,7 +2994,7 @@ function Nav2(p){
           if(!dedans) p.onTab(g.tabs[0][0]);
         }},g.label);
       }),
-      h("button",{className:"nav2-aide",title:"Aide et nouveaut\u00e9s",onClick:p.onAide},"?")
+      null   /* [L12] le « ? » de la barre est remplacé par l'aide de l'endroit où tu es (en haut à droite, sur tous les écrans) */
     ),
     h("div",{className:"nav2-sous"},
       courant.tabs.length>1?courant.tabs.map(function(t){
@@ -3049,6 +3184,7 @@ function EditionDictee(p){
           return cl+" exercice"+(cl>1?"s":"")+" de classe, "+pe+" \u00e9l\u00e8ve"+(pe>1?"s":"")+" avec des exercices personnels";})()});
     });
   },[p.dicteeId]);
+  useAide(3,editForm&&editForm.showAmen?{cle:"amenagee"}:(editForm&&editForm.showFA?{cle:"formes-acceptees"}:null));   /* [L12] */
   if(!editForm) return h("div",{style:{padding:"14px",color:"var(--muted)",fontSize:".9rem"}},"Chargement\u2026");
   return h("div",{style:{padding:"14px",border:"1.5px solid var(--primary)",borderTop:"none",borderRadius:"0 0 10px 10px",background:"var(--primary-light)"}},
           h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:editForm.title||"",onChange:function(e){setEditForm(Object.assign({},editForm,{title:e.target.value}))}})),
@@ -3197,6 +3333,7 @@ function FormesAccepteesPrep(pF){
 // ═══ ÉCRAN CORRECTION ═══
 function CorrScreen(p){
   var data=p.data,s1=useState("correct"),tab=s1[0],setTab=s1[1];
+  useAide(2,{cle:tab==="preparation"?"preparation":tab==="correct"?"grille":tab==="rapide"?"rapide":tab==="reglages"?"reglages":"donnees",onglet:tab});   /* [L12] */
   /* [ELEVE-1 ④ — complément : défaut rencontré] l'écran de correction ne lisait JAMAIS la version aménagée de la dictée
      (data.amenagee restait vide) : la base aménagée n'était jamais employée. Il l'écoute désormais. */
   var sAC=useState(null),amenCfg=sAC[0],setAmenCfg=sAC[1];
@@ -3338,7 +3475,7 @@ function CorrScreen(p){
     var curIsAmen=isEleveAmenage(curKey,amenagesDictee,classeAmenages);
     var dAmen=data.amenagee&&data.amenagee.enabled?data.amenagee:null;
     var effectiveBase=(curIsAmen&&dAmen)?(dAmen.base||10):data.base;
-    return h(CorrEleve,{key:curKey,data:data,eleve:cur,dicteeId:p.dicteeId,   /* [L11] */
+    return h(CorrEleve,{key:curKey,data:data,eleve:cur,dicteeId:p.dicteeId,aideIci:true,   /* [L11] ; [L12] l'écran de la copie porte l'aide (la grille n'est plus dessous) */
     existing:p.corrections[curKey]||null,
     effacee:p.corrections[curKey]?null:derniereEffacee(curKey),
     onCopiesRecalc:function(cp){if(cp&&Object.keys(cp).length)p.onResetCorrections(Object.assign({},p.corrections,cp));},   /* [L11] */
@@ -3479,6 +3616,7 @@ function CorrScreen(p){
     ),
     msg&&h("div",{style:{padding:"10px 16px",background:"var(--green-light)",borderRadius:10,marginBottom:12,color:"var(--green)",fontWeight:600,fontSize:".9rem",animation:"fadeUp .3s ease"}},msg),
     h(Nav2,{groupe:groupe,tab:tab,onGroupe:setGroupe,onTab:setTab,onAide:function(){setShowAide(true)}}),
+    h(AideContextuelle,null),   /* [L12] */
     showAide&&h(AideModal,{onClose:function(){setShowAide(false)}}),
     tab==="preparation"&&h(PreparationDictee,{dicteeId:p.dicteeId,onDone:function(){setTab("correct")}}),
     tab==="reglages"&&h(Reglages,{dicteeId:p.dicteeId,dateCorrection:dateCorr,corrections:p.corrections,texte:data.text}),   /* [L9] la date de correction de cette dictée */
@@ -4071,7 +4209,7 @@ function CorrEleve(p){
       if(e.key==="g"||e.key==="G"){e.preventDefault();fastMark("G")}
       else if(e.key==="l"||e.key==="L"){e.preventDefault();fastMark("L")}
       else if(e.key==="m"||e.key==="M"||e.key==="/"){e.preventDefault();fastMark(typeAdapteM(wordTokens[fastIdx]))}   /* [L3] M s'adapte */
-      else if(e.key==="i"||e.key==="I"||e.key==="?"){e.preventDefault();fastMark("I")}
+      else if(e.key==="i"||e.key==="I"){e.preventDefault();fastMark("I")}   /* [L12] « ? » sert à l'aide, plus à Illisible */
       /* [L3] les touches P et E sont retirées : M s'adapte, et Entrée valide le bouton mis en avant */
       else if(e.key==="a"||e.key==="A"){e.preventDefault();fastMark("A")}
       else if(e.key===" "){e.preventDefault();fastSkip()}
@@ -4199,6 +4337,7 @@ function CorrEleve(p){
     return function(){clearTimeout(t)};
   },[]);
 
+  useAide(3,fastMode?(askFautifI?{cle:"case"}:(fastIdx>=wordTokens.length?{cle:"fin"}:{cle:"rapide"})):(askFautifTexte?{cle:"case"}:(popupIdx!==null?{cle:"texte-menu"}:{cle:"texte",bandeau:!!p.effacee})));   /* [L12] */
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
     var wtF=wordTokens[fastIdx],listeFormesI=(askFautifI&&wtF)?formesPour(motCleForme(tokens,wtF.idx),wtF.text):[];   /* [L10] */
@@ -4216,6 +4355,7 @@ function CorrEleve(p){
     var coupeG=ctxA>ctxStart,coupeD=ctxB<ctxEnd;ctxStart=ctxA;ctxEnd=ctxB;
 
     return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 480) */
+      p.aideIci&&h(AideContextuelle,null),   /* [L12] */
       msgAccept&&h("div",{id:"msg-accept",className:"card",style:{marginBottom:10,border:"1.5px solid #16a34a",background:"#f0fdf4",color:"#14532d",fontSize:".9rem",display:"flex",gap:10,alignItems:"center"}},h("span",{style:{flex:1}},msgAccept),h("button",{className:"btn-sm btn-ghost",onClick:function(){setMsgAccept("")},title:"Fermer ce message"},"\u2715")),   /* [L11] */
       h("div",{className:"score-bar"},
         h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},noteFr(sc.note)),
@@ -4325,7 +4465,7 @@ function CorrEleve(p){
             p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext,title:"\u00c9l\u00e8ve suivant (position sauvegard\u00e9e)"},"\u00c9l\u00e8ve suiv. \u2192"),
             h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)},title:"Sauter \u00e0 la fin (sans marquer le reste)"},"Terminer \u2192")
           ),
-          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 M = manquant (sur un signe : ponctuation ; sur une apostrophe : \u00e9lision) \u00b7 I = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Entr\u00e9e = correct, mot suivant \u00b7 Retour = pr\u00e9c. \u00b7 \u21e7R = mode texte \u00b7 pav\u00e9 num\u00e9rique = choisir une forme d\u00e9j\u00e0 vue")
+          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 M = manquant (sur un signe : ponctuation ; sur une apostrophe : \u00e9lision) \u00b7 i = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Entr\u00e9e = correct, mot suivant \u00b7 Retour = pr\u00e9c. \u00b7 \u21e7R = mode texte \u00b7 pav\u00e9 num\u00e9rique = choisir une forme d\u00e9j\u00e0 vue \u00b7 ? (ou F1) = l\u2019aide")
         )
     })()
     );
@@ -4333,6 +4473,7 @@ function CorrEleve(p){
 
   var extraMapEleve={};extras.forEach(function(e,ei){var k=e.afterIdx;if(!extraMapEleve[k])extraMapEleve[k]=[];extraMapEleve[k].push({word:e.word,gi:ei})});
   return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 760) */
+    p.aideIci&&h(AideContextuelle,null),   /* [L12] */
     p.effacee&&h("div",{className:"card",style:{marginBottom:10,border:"2px solid #dd6b20",background:"#fff7ed",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
       h("span",null,"\ud83d\uddd1 Une copie de "+p.eleve+" a \u00e9t\u00e9 effac\u00e9e le "+new Date(p.effacee.le).toLocaleDateString("fr-FR")+" \u00e0 "+new Date(p.effacee.le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+" ("+(GESTES_EFFACEMENT[p.effacee.geste]||p.effacee.geste)+(p.effacee.note!=null?", note "+String(p.effacee.note).replace(".",",")+"/"+(p.data.base||20):"")+")."),
       h("button",{className:"btn btn-primary",style:{width:"auto",marginLeft:"auto"},onClick:function(){p.onRestaurer(p.effacee)},title:"Remet cette copie telle qu\u2019elle \u00e9tait avant d\u2019\u00eatre effac\u00e9e, avec son autocorrection si l\u2019\u00e9l\u00e8ve n\u2019en a pas refait une. La copie reste aussi dans la corbeille."},"\u21ba La restaurer"),
