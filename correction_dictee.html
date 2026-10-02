@@ -1134,7 +1134,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L6";
+var APP_VERSION="6.7.0-L6b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -3781,7 +3781,7 @@ function CorrEleve(p){
       /* [L3] les touches P et E sont retirées : M s'adapte, et Entrée valide le bouton mis en avant */
       else if(e.key==="a"||e.key==="A"){e.preventDefault();fastMark("A")}
       else if(e.key===" "){e.preventDefault();fastSkip()}
-      else if(e.key==="Enter"){e.preventDefault();var wtN=wordTokens[fastIdx],dejaN=wtN&&errors.some(function(x){return x&&x.idx===wtN.idx}),preN=dejaN?null:preselectionRapide(wtN);if(preN)fastMark(preN);else fastSkip()}   /* [L3] */
+      else if(e.key==="Enter"){e.preventDefault();fastSkip()}   /* [L6b — dette n°12 · 98] Entrée = correct, mot suivant, comme Espace et comme avant L3 : sur un signe, Entrée AVANCE (le bouton mis en avant se valide par M, qui s'adapte) — L3 faisait marquer « ponctuation manquante » à chaque Entrée sur un signe (Paul, 02/10 : « gros télescopage »). */
       else if(e.key==="Backspace"){e.preventDefault();fastBack()}
     }
     window.addEventListener("keydown",onKey);
@@ -3966,9 +3966,9 @@ function CorrEleve(p){
             !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire ("+coutType("G")+" pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
             !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Saisie demand\u00e9e. Raccourci : L"},"L Lexique"),
             !existingErr&&(curWord&&estApostrophe(curWord.text)
-              ?h("button",{className:"fast-btn fast-e fast-preselect",id:"fast-preselect",onClick:function(){fastMark("E")},title:"\u00c9lision oubli\u00e9e ou fautive \u2014 orthographe, famille \u00ab Apostrophes et \u00e9lisions \u00bb (\u22120,5 pt), sans saisie. Mis en avant sur une apostrophe : Entr\u00e9e le valide (ou M)."},"' \u00c9lision \u21b5")
+              ?h("button",{className:"fast-btn fast-e fast-preselect",id:"fast-preselect",onClick:function(){fastMark("E")},title:"\u00c9lision oubli\u00e9e ou fautive \u2014 orthographe, famille \u00ab Apostrophes et \u00e9lisions \u00bb (\u22120,5 pt), sans saisie. Mis en avant sur une apostrophe : Entr\u00e9e le valide (ou M)."},"' \u00c9lision (M)")
               :curWord&&isPunct(curWord.text)
-              ?h("button",{className:"fast-btn fast-p fast-preselect",id:"fast-preselect",onClick:function(){fastMark("P")},title:"Ponctuation manquante ("+coutType("P")+(coutType("P")==="forfait"?" : \u22120,5 par tranche de 4":" pt")+"). Mis en avant sur un signe : Entr\u00e9e le valide (ou M)."},"\u00b7 Ponct. manqu. \u21b5")
+              ?h("button",{className:"fast-btn fast-p fast-preselect",id:"fast-preselect",onClick:function(){fastMark("P")},title:"Ponctuation manquante ("+coutType("P")+(coutType("P")==="forfait"?" : \u22120,5 par tranche de 4":" pt")+"). Mis en avant sur un signe : Entr\u00e9e le valide (ou M)."},"\u00b7 Ponct. manqu. (M)")
               :h("button",{className:"fast-btn fast-m",onClick:function(){fastMark("M")},title:"Mot manquant ou oubli\u00e9 ("+coutType("M")+" pt). Raccourci : M (ou /) \u2014 sur un signe, M marque la ponctuation ; sur une apostrophe, l\u2019\u00e9lision."},"\u2205 Manquant")),
             !existingErr&&h("button",{className:"fast-btn fast-i",onClick:function(){fastMark("I")},title:"Mot illisible ("+coutType("I")+" pt). Raccourci : I ou ?"},"? Illisible"),
             !existingErr&&h("button",{className:"fast-btn fast-a",onClick:function(){fastMark("A")},title:"Attention graphie : signalement sans p\u00e9nalit\u00e9. Raccourci : A"},"\u26a0 Attention")
@@ -3979,7 +3979,7 @@ function CorrEleve(p){
             p.onNext&&h("button",{className:"btn-sm btn-ghost",onClick:p.onNext,title:"\u00c9l\u00e8ve suivant (position sauvegard\u00e9e)"},"\u00c9l\u00e8ve suiv. \u2192"),
             h("button",{className:"btn-sm btn-ghost",style:{color:"var(--primary)"},onClick:function(){setFastIdx(wordTokens.length)},title:"Sauter \u00e0 la fin (sans marquer le reste)"},"Terminer \u2192")
           ),
-          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 M = manquant (sur un signe : ponctuation ; sur une apostrophe : \u00e9lision) \u00b7 I = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Entr\u00e9e = valide le bouton mis en avant \u00b7 Retour = pr\u00e9c. \u00b7 \u21e7R = mode texte")
+          h("p",{style:{textAlign:"center",fontSize:".75rem",color:"var(--muted)",marginTop:8}},"G / L = erreur + saisie \u00b7 M = manquant (sur un signe : ponctuation ; sur une apostrophe : \u00e9lision) \u00b7 I = illisible \u00b7 A = attention \u00b7 Espace = correct \u00b7 Entr\u00e9e = correct, mot suivant \u00b7 Retour = pr\u00e9c. \u00b7 \u21e7R = mode texte")
         )
     })()
     );
