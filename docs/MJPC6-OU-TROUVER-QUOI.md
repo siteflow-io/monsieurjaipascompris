@@ -285,3 +285,11 @@
 | l'écriture / la reconstruction | `formesSynchroniser` (à chaque `save` : écrit, met à jour, retire tant que la copie existe) ; `formesOuverture` + `finOuvertureL10` (une fois : « ✓ n formes retenues », `formeId` dans les erreurs relues) |
 | la liste et le pavé | `FORMES` (en mémoire), `formesPour(mot)` ; dans `CorrEleve` : `listeFormesHtml`, `numeroHtml`, `numFormes`, `toucheFormes` (Numpad par `e.code`, composition, préfixe, Entrée, Échap) ; `listeFormesTexte` pour le mode texte ; styles `.liste-formes`, `.num-formes`, `.forme-cand`, `.forme-exact` |
 | ce qui a été retiré en L10b | « Ctrl + chiffre » (code et textes) — le pavé seul choisit ; sans pavé : le clic |
+
+## AJOUT DU 02/10/2026 — correction_dictee 6.7.0-L9 : l'identité des copies, la date de correction
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| l'identité d'une copie | `results/<clé>/{id, creeLe, modifieLe}` ; `idCopie()` ; posée dans `save`, le reclassement, le recalcul, la restauration ; les copies d'avant : l'effet d'ouverture de `CorrScreen` (une fois, `creeLeInconnu`) |
+| la date vue par l'élève | `config.dateCorrection` (Réglages, `dateCorrectionTs`) → `dateVueCopie(d, corr)` : la liste de l'élève (`etatDicteeEleve`) et la feuille (`buildCopieHtml`) |
+| le bandeau | `derniereEffacee` (exclut `geste === "echanger"`, saute `ignoree`) ; « Non, laisser dans la corbeille » → `effacees/<clé>/<date>/ignoree = true` |
