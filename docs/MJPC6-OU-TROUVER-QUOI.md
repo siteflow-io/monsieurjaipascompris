@@ -242,3 +242,12 @@
 | la garde du mot juste | `motJuste(saisie, attendu)` dans `confirmFautifI` (rapide) et `confirmFautifTexte` (texte) ; état `gardeMot`, message `.garde-mot` « C'est le mot juste : recopie ce que l'élève a écrit. » |
 | le clavier du mode rapide | G, L, M (/), I (?), A, Espace, Retour, Entrée, ⇧R — P et E retirées (boutons gardés) |
 | code mort | `RapideGlobal` (ancien écran) : jamais appelé — dette n°12 · 97 |
+
+## AJOUT DU 02/10/2026 — correction_dictee 6.7.0-L5 : le reclassement ponctuation
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| la règle | `estSigne(w)` (ponctuation hors apostrophe) ; `reclassementPonctuation(copie, tokens, baseDictee, bareme)` → `{champs, n, mVersP}` ou `null` |
+| l'application une fois à l'ouverture | l'effet d'ouverture de `CorrScreen` (après la trace de ④) : corbeille `corbeille/<jour>/reclassement-ponctuation_<hhmmss>_<clé>` (`_meta.chemin` = `correction_dictee/<id>/results/<clé>`, `data` = copie d'avant) puis `results.update` ; la ligne « ✓ n copies reclassées (ponctuation) » |
+| un signe posé en plus | `confirmInsert` : `extras[] = {afterIdx, word, type:"P"}` ; affichage « +, P » (`.extra-p`) ; `computeNote` compte un extra `P` au forfait ponctuation (brevet) ou au coût P (préparée), `counts.P` l'inclut |
+| ce qui a disparu | le bouton « M→P » et `hasConv` (patch d'il y a un an) |
