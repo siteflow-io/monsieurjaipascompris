@@ -981,3 +981,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `2e7a338d583a` (commit `c79c6b57a1f6`) · 739 572 o · md5 `9053962b97f967e1894ed2751aff422b` · v6.7.0-L2
 - **Motif** : L3 — M adaptée, clavier réduit, garde du mot juste. Promu : 741 928 o, md5 `f5d7685b07b847d707952bbb536fb510` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `2e7a338d583a…` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L5 (02/10/2026, conscience n°12)
+- blob `a1515f770c36` (commit `e2bb6bc346f2`) · 741 928 o · md5 `f5d7685b07b847d707952bbb536fb510` · v6.7.0-L3
+- **Motif** : L5 — reclassement ponctuation, signe en plus au forfait, M→P retiré. Promu : 743 864 o, md5 `5c743058ab0a5d8d6287e7a31f2931fa` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `a1515f770c36…` → PUT sur `contents/correction_dictee.html`, puis bit à bit. Attention : les copies déjà reclassées au hub le restent (leur état d'avant est dans la corbeille, entrée par entrée : « Restaurer » les remet) ; la L3 restaurée relit un extra `type:"P"` comme un mot en trop (−0,5).
