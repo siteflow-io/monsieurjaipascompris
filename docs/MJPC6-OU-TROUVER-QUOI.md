@@ -266,3 +266,13 @@
 |---|---|
 | la largeur des écrans de correction du professeur | `.container.corr-prof{max-width:1100px}` sur les deux racines de `CorrEleve` (mode texte, mode rapide) ; `.container` (760 px, partagé par les écrans élèves) inchangé |
 | la phrase en mode rapide | `.ctx-phrase` : bornée par les ponctuations fortes, le mot courant en gras, coupée « … » aux bords |
+
+## AJOUT DU 02/10/2026 — correction_dictee 6.7.0-L8 : le clavier du mode texte
+
+| Quoi | Où (`correction_dictee.html`, `CorrEleve`) |
+|---|---|
+| la recherche permanente | états `rechTexte`, `candIdx` ; `motsTexteL8`, `candidatsL8`, `premierDepuis` ; classes `cand-blink`, `cand-courant` ; la bande `.bande-recherche` ; Échap efface, Retour efface une lettre |
+| le curseur | état `curseur` (suit le dernier mot corrigé) ; `boiteMot`, `deplacerL8` (← → sautent la ponctuation, ↑ ↓ par la géométrie) ; classe `curseur-blink` ; la page suit le mot ; Entrée ouvre |
+| menu ouvert au clavier | l'écoute du clavier du mode texte : G, L, M (`typeAdapteM`), I, A → `selectType` (le type remplace l'ancien) ; G/L → champ avec `motJuste` ; Entrée valide, Échap annule |
+| Ctrl+Z | `annulerDerniereL8` (la pile des erreurs posées dans cette ouverture) → `autoTexte` |
+| ce qui ne bouge pas | le mode rapide (`fastMark`, `fastSkip`, `confirmFautifI` identiques à l'octet), ⇧R, les champs, les écrans élèves |
