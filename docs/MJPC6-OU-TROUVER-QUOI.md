@@ -293,3 +293,13 @@
 | l'identité d'une copie | `results/<clé>/{id, creeLe, modifieLe}` ; `idCopie()` ; posée dans `save`, le reclassement, le recalcul, la restauration ; les copies d'avant : l'effet d'ouverture de `CorrScreen` (une fois, `creeLeInconnu`) |
 | la date vue par l'élève | `config.dateCorrection` (Réglages, `dateCorrectionTs`) → `dateVueCopie(d, corr)` : la liste de l'élève (`etatDicteeEleve`) et la feuille (`buildCopieHtml`) |
 | le bandeau | `derniereEffacee` (exclut `geste === "echanger"`, saute `ignoree`) ; « Non, laisser dans la corbeille » → `effacees/<clé>/<date>/ignoree = true` |
+
+## AJOUT DU 02/10/2026 — correction_dictee 6.7.0-L11 : les formes acceptées
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| la règle du texte | `correction_dictee_textes/<texteKey>/formesAcceptees/<motClé>/<formeClé>` = { mot, forme, creeLe, origine, dicteeId } ; `ACCEPT` (en mémoire), `cleFb`, `accepteesDe`, `estAcceptee`, `accepteesAilleurs`, `autresDicteesDuTexte`, `accepteesCharger`, `cheminRegle`, `poserRegle`, `retirerRegle` |
+| l'effet et le rétroactif | `marquerSansCout` (erreur `sansCout: true`), `computeNote` (saute, `counts.sansCout`), `recalculerTexte` + `phraseRecalc` (« n copies recalculées (ici et dans « … ») »), l'ouverture de `CorrScreen` (ligne « ✓ Formes acceptées : … ») |
+| en correction | `CorrEleve` : `boutonAccepterL11` (« ✓ forme acceptée (ce texte) » / « ✕ ne plus accepter », inactif case vide), `formeEnCoursL11`, `accepterCourantL11` ; aucun raccourci ; `listeFormesHtml` : « acceptée » / « acceptée dans « titre » » + « accepter ici » |
+| Préparation / Réglages | `FormesAccepteesPrep` (bouton « ✓ Formes acceptées », texte cliquable, pastilles, garde) ; `Reglages` (section « partagées avec », retirer) |
+| l'élève | `buildCopieHtml` (« forme acceptée » à la place du coût, répétitions sans les acceptées), les deux cartes d'erreur de l'autocorrection, le tableau de points ; le bilan exporté (`sans_cout`) |
