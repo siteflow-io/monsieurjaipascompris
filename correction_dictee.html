@@ -199,6 +199,12 @@ textarea{resize:vertical;min-height:120px}
 
 /* [L5] un signe en trop compté au forfait ponctuation */
 .extra-word.extra-ponct{border-style:dashed}
+
+/* [L8] le mode texte au clavier : les candidats clignotent ; le candidat courant et le curseur se voient */
+@keyframes clignoteL8{0%,100%{box-shadow:0 0 0 2px rgba(37,99,235,.15)}50%{box-shadow:0 0 0 3px rgba(37,99,235,.65)}}
+.word-btn.cand-blink{animation:clignoteL8 1s ease-in-out infinite}
+.word-btn.cand-courant{animation:clignoteL8 .6s ease-in-out infinite;outline:2px solid #2563eb;outline-offset:1px}
+.word-btn.curseur-blink{animation:clignoteL8 1.1s ease-in-out infinite;outline:2px dashed #2563eb;outline-offset:1px}
 </style>
 </head>
 <style>
@@ -1137,7 +1143,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L7b";
+var APP_VERSION="6.7.0-L8";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -3639,6 +3645,11 @@ function CorrEleve(p){
   var s9=useState(null),fastFlash=s9[0],setFastFlash=s9[1];
   var sSearch=useState(""),searchVal=sSearch[0],setSearchVal=sSearch[1];
   var sXfer=useState(false),xferOpen=sXfer[0],setXferOpen=sXfer[1];
+  /* [L8] le mode texte au clavier : la recherche permanente, le curseur, le menu, Ctrl+Z */
+  var sRT=useState(""),rechTexte=sRT[0],setRechTexte=sRT[1];
+  var sCI=useState(null),candIdx=sCI[0],setCandIdx=sCI[1];
+  var sCU=useState(null),curseur=sCU[0],setCurseur=sCU[1];
+  var pileZ=React.useRef([]);var candListeL8=[],candSetL8={};
   var sXferQ=useState(""),xferQ=sXferQ[0],setXferQ=sXferQ[1];
   var xferRef=React.useRef(null);
   React.useEffect(function(){if(xferOpen&&xferRef.current)xferRef.current.focus()},[xferOpen]);
@@ -3662,6 +3673,25 @@ function CorrEleve(p){
   }
   var searchMatches=searchVal?(p.data.eleves||[]).filter(function(e){return matchInit(e,searchVal)}):[];
 
+  /* [L8] les mots du texte (la ponctuation reste au clic) ; les candidats d'une recherche ; le déplacement */
+  function motsTexteL8(){var o=[];for(var i=0;i<tokens.length;i++){if(!isPunct(tokens[i]))o.push(i);}return o;}
+  function candidatsL8(r){r=String(r||"").toLowerCase();if(!r)return[];return motsTexteL8().filter(function(i){return String(tokens[i]).toLowerCase().indexOf(r)===0});}
+  function boiteMot(i){var g=wordGridRef.current;var el=g&&g.querySelector('[data-word-idx="'+i+'"]');return el?el.getBoundingClientRect():null;}
+  function premierDepuis(liste,depuis){if(!liste.length)return null;if(depuis==null||depuis<0)return liste[0];for(var k=0;k<liste.length;k++){if(liste[k]>=depuis)return liste[k];}return liste[0];}
+  function deplacerL8(liste,cur,touche){
+    if(!liste.length)return cur;var pos=liste.indexOf(cur);if(pos<0){var d=premierDepuis(liste,cur);pos=liste.indexOf(d);if(touche==="ArrowLeft"||touche==="ArrowRight")return d;}
+    if(touche==="ArrowRight")return liste[Math.min(liste.length-1,pos+1)];
+    if(touche==="ArrowLeft")return liste[Math.max(0,pos-1)];
+    var b0=boiteMot(liste[pos]);if(!b0)return liste[pos];var cy=b0.top+b0.height/2,cx=b0.left+b0.width/2,bas=touche==="ArrowDown",meilleur=null,dyMin=Infinity;
+    liste.forEach(function(i){var b=boiteMot(i);if(!b)return;var y=b.top+b.height/2,dy=y-cy;if(bas?dy>b0.height/2:dy<-b0.height/2){var ay=Math.abs(dy);if(ay<dyMin-1){dyMin=ay;}}});
+    if(dyMin===Infinity)return liste[pos];
+    var dx=Infinity;liste.forEach(function(i){var b=boiteMot(i);if(!b)return;var y=b.top+b.height/2,ay=Math.abs(y-cy);if(Math.abs(ay-dyMin)<=b0.height/2){var x=Math.abs(b.left+b.width/2-cx);if(x<dx){dx=x;meilleur=i;}}});
+    return meilleur==null?liste[pos]:meilleur;
+  }
+  function annulerDerniereL8(){   /* [L8] Ctrl+Z : la dernière erreur posée (dans cette ouverture de la copie) est retirée, et l'enregistrement suit */
+    var pile=pileZ.current;while(pile.length){var i=pile.pop();var ei=errors.findIndex(function(e){return e&&e.idx===i});if(ei>=0){var ne=errors.slice();ne.splice(ei,1);setErrors(ne);setLastTouched(i);setCurseur(i);autoTexte(ne,extras,i);return true;}}
+    return false;
+  }
   function clickWord(idx){
     var ei=errors.findIndex(function(e){return e.idx===idx});
     if(ei>=0){var ne=errors.slice();ne.splice(ei,1);setErrors(ne);setLastTouched(idx);autoTexte(ne,extras,idx);return}
@@ -3673,7 +3703,7 @@ function CorrEleve(p){
   React.useEffect(function(){if(askFautifTexte&&fautifTexteRef.current)fautifTexteRef.current.focus()},[askFautifTexte]);
   function selectType(type){
     if(type==="G"||type==="L"){setAskFautifTexte({type:type,idx:popupIdx});setFautifTexteVal("");setPopupIdx(null);return}
-    var neT=errors.concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]);setErrors(neT);setLastTouched(popupIdx);autoTexte(neT,extras,popupIdx);setPopupIdx(null)
+    var neT=errors.filter(function(x){return x&&x.idx!==popupIdx}).concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]);setErrors(neT);setLastTouched(popupIdx);autoTexte(neT,extras,popupIdx);pileZ.current.push(popupIdx);setPopupIdx(null)   /* [L8] remplace, et Ctrl+Z */
   }
   function confirmFautifTexte(overrideVal){
     var ft=askFautifTexte;if(!ft)return;
@@ -3682,7 +3712,7 @@ function CorrEleve(p){
     setGardeMot(false);
     var errObj={idx:ft.idx,type:ft.type,word:tokens[ft.idx]};
     if(String(vT).trim())errObj.fautif=String(vT).trim();
-    var neF=errors.concat([errObj]);setErrors(neF);setLastTouched(ft.idx);autoTexte(neF,extras,ft.idx);
+    var neF=errors.filter(function(x){return x&&x.idx!==ft.idx}).concat([errObj]);setErrors(neF);setLastTouched(ft.idx);autoTexte(neF,extras,ft.idx);pileZ.current.push(ft.idx);   /* [L8] */
     setAskFautifTexte(null);setFautifTexteVal("");
   }
   function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}var wI=insertWord.trim(),exI={afterIdx:insertIdx,word:wI};if(estSigne(wI))exI.type="P";var nxI=extras.concat([exI]);   /* [L5] un signe en plus : au forfait ponctuation */setExtras(nxI);autoTexte(errors,nxI,insertIdx);setInsertIdx(null);setInsertWord("")}
@@ -3866,6 +3896,41 @@ function CorrEleve(p){
     overlay.style.top=top+"px";
     overlay.style.height=height+"px";
   },[lastTouched,errors,extras,fastMode]);
+  useEffect(function(){if(!fastMode&&lastTouched>=0)setCurseur(lastTouched);},[lastTouched,fastMode]);   /* [L8] le dernier mot corrigé devient le curseur */
+  useEffect(function(){   /* [L8] la page suit le mot courant (curseur ou candidat) */
+    if(fastMode)return;var i=rechTexte?candIdx:curseur;if(i==null)return;var g=wordGridRef.current;var el=g&&g.querySelector('[data-word-idx="'+i+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"nearest"});
+  },[curseur,candIdx,rechTexte,fastMode]);
+  useEffect(function(){   /* [L8] le mode texte au clavier (N5, N6) — lettres : menu fermé ; types : menu ouvert ; un champ ouvert garde tout */
+    if(fastMode)return;
+    function onKey(e){
+      var tg=e.target&&e.target.tagName;if(tg==="INPUT"||tg==="TEXTAREA"||tg==="SELECT"||(e.target&&e.target.isContentEditable))return;
+      if(askFautifTexte||insertIdx!==null||xferOpen)return;
+      if((e.ctrlKey||e.metaKey)&&!e.altKey&&(e.key==="z"||e.key==="Z")){e.preventDefault();if(popupIdx!==null)setPopupIdx(null);annulerDerniereL8();return}
+      if(e.ctrlKey||e.metaKey||e.altKey)return;
+      if(popupIdx!==null){   /* le menu ouvert : les types au clavier */
+        if(e.shiftKey)return;var k=String(e.key).toLowerCase();
+        if(k==="g"){e.preventDefault();selectType("G")}
+        else if(k==="l"){e.preventDefault();selectType("L")}
+        else if(k==="m"){e.preventDefault();selectType(typeAdapteM({text:tokens[popupIdx]}))}
+        else if(k==="i"){e.preventDefault();selectType("I")}
+        else if(k==="a"){e.preventDefault();selectType("A")}
+        else if(e.key==="Escape"){e.preventDefault();setPopupIdx(null)}
+        return;
+      }
+      if(e.key==="Escape"){if(rechTexte){e.preventDefault();setRechTexte("");}return}
+      if(e.key&&e.key.length===1&&!e.shiftKey&&e.key===e.key.toLowerCase()&&/[a-z\u00e0-\u00ff'\u2019-]/.test(e.key)){   /* la recherche : une lettre minuscule (Maj : ignorée — ⇧R reste la bascule) */
+        e.preventDefault();var r=rechTexte+e.key,c=candidatsL8(r);if(!c.length)return;
+        if(c.length===1){setRechTexte("");setCurseur(c[0]);setPopupIdx(c[0]);return}
+        setRechTexte(r);setCandIdx(premierDepuis(c,lastTouched>=0?lastTouched:curseur));return;
+      }
+      if(e.key==="Backspace"&&rechTexte){e.preventDefault();var r2=rechTexte.slice(0,-1);setRechTexte(r2);if(r2){var c2=candidatsL8(r2);setCandIdx(premierDepuis(c2,candIdx));}return}
+      var liste=rechTexte?candidatsL8(rechTexte):motsTexteL8(),cur=rechTexte?candIdx:(curseur!=null?curseur:(lastTouched>=0?lastTouched:liste[0]));
+      if(e.key==="ArrowLeft"||e.key==="ArrowRight"||e.key==="ArrowUp"||e.key==="ArrowDown"){e.preventDefault();var nv=deplacerL8(liste,cur,e.key);if(rechTexte)setCandIdx(nv);else setCurseur(nv);return}
+      if(e.key==="Enter"&&cur!=null&&cur>=0){e.preventDefault();setRechTexte("");setCurseur(cur);setPopupIdx(cur);return}
+    }
+    window.addEventListener("keydown",onKey);
+    return function(){window.removeEventListener("keydown",onKey)};
+  },[fastMode,popupIdx,askFautifTexte,insertIdx,xferOpen,rechTexte,candIdx,curseur,lastTouched,errors,extras]);
   useEffect(function(){   /* [L1] la réouverture reprend exactement là : la page est défilée sur le mot repris */
     if(fastMode||lastTouched<0)return;
     var t=setTimeout(function(){var g=wordGridRef.current;var el=g&&g.querySelector('[data-word-idx="'+lastTouched+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"center"});},80);
@@ -4055,6 +4120,7 @@ function CorrEleve(p){
       )
     ),
     // Text
+    (function(){candListeL8=rechTexte?candidatsL8(rechTexte):[];candSetL8={};candListeL8.forEach(function(i){candSetL8[i]=1});return null;})(),
     h("div",{className:"card"},
       h("div",{className:"word-grid",ref:wordGridRef,style:{fontSize:(fontScale*1).toFixed(3)+"rem"}},
         // Overlay pulsant de la ligne du dernier mot touché
@@ -4065,8 +4131,13 @@ function CorrEleve(p){
         var cls="word-btn";if(isPunct(d.w))cls+=" punct";
         if(errMap[d.idx]==="G")cls+=" err-g";else if(errMap[d.idx]==="L")cls+=" err-l";else if(errMap[d.idx]==="M")cls+=" err-m";else if(errMap[d.idx]==="I")cls+=" err-i";else if(errMap[d.idx]==="P")cls+=" err-p";else if(errMap[d.idx]==="A")cls+=" err-a";else if(errMap[d.idx]==="E")cls+=" err-e";
         if(d.idx===lastTouched)cls+=" last-touched";
+        if(rechTexte&&candSetL8[d.idx])cls+=(d.idx===candIdx?" cand-courant":" cand-blink");else if(!rechTexte&&d.idx===curseur)cls+=" curseur-blink";   /* [L8] */
         return h("button",{key:d.k,"data-word-idx":d.idx,className:cls,onClick:function(){clickWord(d.idx)}},d.w,errMap[d.idx]?h("sup",{style:{fontSize:9,marginLeft:2}},errMap[d.idx]):null);
-      }))
+      })),
+      rechTexte&&h("div",{id:"bande-recherche",style:{marginTop:10,padding:"6px 10px",borderTop:"1px dashed var(--border)",fontSize:".85rem",color:"var(--muted)"},title:"La recherche au clavier : tape les premi\u00e8res lettres d\u2019un mot. Les fl\u00e8ches passent d\u2019un mot propos\u00e9 \u00e0 l\u2019autre ; Entr\u00e9e ouvre le mot ; \u00c9chap efface."},   /* [L8] */
+        h("b",null,"\u00ab "+rechTexte+" \u00bb : "),
+        candListeL8.map(function(i){return h("span",{key:i,className:"bande-cand",style:{margin:"0 6px",fontWeight:i===candIdx?800:400,color:i===candIdx?"var(--text)":"var(--muted)"}},tokens[i])}),
+        h("span",{style:{marginLeft:8,fontSize:".75rem"}},"\u2190 \u2192 \u2191 \u2193 \u00b7 Entr\u00e9e ouvre \u00b7 \u00c9chap efface"))
     ),
     h("div",{style:{display:"flex",gap:8,marginBottom:20}},
       h("button",{className:"btn btn-primary",style:{flex:1},title:"Tout est d\u00e9j\u00e0 enregistr\u00e9, \u00e0 chaque geste. Ce bouton passe \u00e0 l\u2019\u00e9l\u00e8ve suivant (apr\u00e8s le contr\u00f4le des mots recopi\u00e9s).",onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"Enregistrer ("+noteFr(sc.note)+"/"+(p.effectiveBase||data.base)+") \u2192 suivant")
