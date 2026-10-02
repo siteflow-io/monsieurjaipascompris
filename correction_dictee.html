@@ -218,6 +218,12 @@ textarea{resize:vertical;min-height:120px}
 .fautif-texte-box .num-formes{display:none}.fautif-texte-box .num-formes.on{display:inline-block}   /* dans la fenêtre du mode texte, la case garde sa largeur */
 .fautif-texte-box .liste-formes{grid-template-columns:repeat(2,minmax(0,1fr))}
 .fautif-texte-box .liste-formes .forme{min-width:0}.fautif-texte-box .liste-formes .forme .f{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* [L11] la marque « acceptée » dans la liste des formes */
+.liste-formes .forme .acc{font-size:.72rem;font-weight:700;color:#1e6042;background:#e6f4ec;border-radius:6px;padding:1px 6px}
+.liste-formes .forme .acc.ailleurs{color:#7c5610;background:#fef0d6;font-weight:600}
+.fa-mot{cursor:pointer;padding:0 3px;border-radius:6px}.fa-mot:hover{background:#f3f4f6}.fa-mot.tol{text-decoration:underline;text-decoration-color:#16a34a;text-decoration-thickness:2px}
+.fa-mot.ouvert{background:#e6f4ec}.btn-accepter-ici{font-size:.7rem;padding:1px 6px;border-radius:6px;border:1px solid #16a34a;background:#fff;color:#1e6042;cursor:pointer}.btn-accepter[disabled]{opacity:.45;cursor:not-allowed}.fa-pastille{display:inline-block;margin:0 6px 4px 0;padding:2px 8px;border-radius:8px;background:#e6f4ec;color:#1e6042}
 </style>
 </head>
 <style>
@@ -1156,7 +1162,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L9";
+var APP_VERSION="6.7.0-L11";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1241,6 +1247,41 @@ function formesOuverture(dId,corr){
 function idCopie(){return "copie_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);}
 function dateCorrectionTs(iso){var x=String(iso||"").split("-");return x.length===3?new Date(+x[0],+x[1]-1,+x[2],12).getTime():null;}
 function dateVueCopie(d,corr){return (d&&d.dateCorrection)?dateCorrectionTs(d.dateCorrection):((corr&&corr.timestamp)||null);}   /* ce que voit l'élève */
+/* [L11] LES FORMES ACCEPTÉES — une règle du TEXTE, partagée par toutes les dictées qui ont ce texte :
+   correction_dictee_textes/<texteKey>/formesAcceptees/<motClé>/<formeClé> = { mot, forme, creeLe, origine, dicteeId } */
+var ACCEPT={charge:false,parTexte:{},titres:{},parCle:{}};
+function cleFb(x){return encodeURIComponent(String(x)).replace(/\./g,"%2E");}
+function accepteesDe(tk,mot){var t=ACCEPT.parTexte[tk]||{};return t[cleFb(mot)]||{};}
+function estAcceptee(tk,mot,forme){var f=String(forme||"").trim().toLowerCase();return !!f&&!!accepteesDe(tk,mot)[cleFb(f)];}
+function marquerSansCout(errs,tk,tokens){var ch=false;var r=(errs||[]).map(function(e){if(!e)return e;var acc=estAcceptee(tk,motCleForme(tokens,e.idx),e.fautif);
+  if(acc&&!e.sansCout){ch=true;return Object.assign({},e,{sansCout:true});}
+  if(!acc&&e.sansCout&&e.motifSansCout!=="amenage"){ch=true;var e2=Object.assign({},e);delete e2.sansCout;return e2;}return e;});return {errs:r,change:ch};}
+function accepteesAilleurs(tk,mot){var o=[],vus={};Object.keys(ACCEPT.parTexte).forEach(function(t){if(t===tk)return;var x=accepteesDe(t,mot);Object.keys(x).forEach(function(k){var r=x[k];if(!r)return;var fl=String(r.forme||"").toLowerCase();if(vus[fl])return;vus[fl]=1;
+  o.push({forme:r.forme,titre:(r.dicteeId&&ACCEPT.titres[r.dicteeId])?ACCEPT.titres[r.dicteeId]:null});});});return o;}
+function autresDicteesDuTexte(tk,id){return (ACCEPT.parCle[tk]||[]).filter(function(x){return x!==id}).map(function(x){return ACCEPT.titres[x]||x});}
+function accepteesCharger(force){if(ACCEPT.charge&&!force)return Promise.resolve();
+  return Promise.all([db.ref("correction_dictee_textes").once("value"),db.ref("correction_dictee").once("value")]).then(function(sn){var t=sn[0].val()||{},d=sn[1].val()||{};
+    ACCEPT.parTexte={};Object.keys(t).forEach(function(tk){if(t[tk]&&t[tk].formesAcceptees)ACCEPT.parTexte[tk]=t[tk].formesAcceptees;});
+    ACCEPT.titres={};ACCEPT.parCle={};Object.keys(d).forEach(function(id){var c=(d[id]||{}).config||{};ACCEPT.titres[id]=c.title||id;if(String(id).charAt(0)==="_")return;var tk=empreinteTexte(c.text);(ACCEPT.parCle[tk]=ACCEPT.parCle[tk]||[]).push(id);});
+    ACCEPT.charge=true;});}
+/* rétroactif : toutes les copies de toutes les dictées du texte (sauf la copie ouverte, que son enregistrement marque lui-même) */
+function recalculerTexte(tk,sauf){return db.ref("correction_dictee").once("value").then(function(sn){var all=sn.val()||{},maj={},compte={},tot=0,mL=Date.now(),copies={};
+  Object.keys(all).forEach(function(id){if(String(id).charAt(0)==="_")return;var d=all[id]||{},cfg=d.config||{};if(empreinteTexte(cfg.text)!==tk)return;var tok=tokenize(cfg.text||""),res=d.results||{},n=0;
+    Object.keys(res).forEach(function(k){if(sauf&&sauf.dicteeId===id&&sauf.cle===k)return;var c=res[k];if(!c||typeof c!=="object")return;
+      var m=marquerSansCout(toArr(c.errors||[]).filter(function(e){return e!=null}),tk,tok);if(!m.change)return;
+      var sc=computeNote(m.errs,toArr(c.extras||[]).filter(function(e){return e!=null}),baseDeCopie(c,cfg.base||20),cfg.bareme||"preparee");
+      var b="correction_dictee/"+id+"/results/"+k+"/";maj[b+"errors"]=m.errs;maj[b+"note"]=sc.note;maj[b+"deduction"]=sc.deduction;maj[b+"counts"]=sc.counts;maj[b+"modifieLe"]=mL;n++;tot++;
+      (copies[id]=copies[id]||{})[k]=Object.assign({},c,{errors:m.errs,note:sc.note,deduction:sc.deduction,counts:sc.counts,modifieLe:mL});});
+    compte[id]={titre:cfg.title||id,n:n};});
+  return (Object.keys(maj).length?db.ref().update(maj):Promise.resolve()).then(function(){return {total:tot,compte:compte,copies:copies};});});}
+function cheminRegle(tk,mot,forme){return "correction_dictee_textes/"+tk+"/formesAcceptees/"+cleFb(mot)+"/"+cleFb(String(forme).trim().toLowerCase());}
+function regleEnMemoire(tk,mot,r){var t=(ACCEPT.parTexte[tk]=ACCEPT.parTexte[tk]||{});var m=(t[cleFb(mot)]=t[cleFb(mot)]||{});if(r)m[cleFb(String(r.forme).toLowerCase())]=r;}
+function regleRetireeEnMemoire(tk,mot,forme){var t=ACCEPT.parTexte[tk]||{};if(t[cleFb(mot)])delete t[cleFb(mot)][cleFb(String(forme).trim().toLowerCase())];}
+function poserRegle(tk,mot,forme,origine,dicteeId,sauf){var r={mot:mot,forme:String(forme).trim(),creeLe:Date.now(),origine:origine,dicteeId:dicteeId||null};regleEnMemoire(tk,mot,r);
+  return db.ref(cheminRegle(tk,mot,r.forme)).set(r).then(function(){return recalculerTexte(tk,sauf);});}
+function retirerRegle(tk,mot,forme,sauf){regleRetireeEnMemoire(tk,mot,forme);return db.ref(cheminRegle(tk,mot,forme)).remove().then(function(){return recalculerTexte(tk,sauf);});}
+function phraseRecalc(r,id){var autres=Object.keys(r.compte).filter(function(x){return x!==id&&r.compte[x].n>0}).map(function(x){return "\u00ab "+r.compte[x].titre+" \u00bb"});
+  return r.total+" copie"+(r.total>1?"s":"")+" recalcul\u00e9e"+(r.total>1?"s":"")+(autres.length?" (ici et dans "+autres.join(", ")+")":"");}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -1307,6 +1348,7 @@ function bonusRepetitions(errors){
 }
 function computeNote(errors,extras,base,bareme){
   errors=errors||[];extras=extras||[];base=base||20;
+  var nSC=0;errors=errors.filter(function(e){if(e&&e.sansCout){nSC++;return false}return true});   /* [L11] une forme acceptée : visible, sans coût */
   var brevet = (bareme==="brevet");
   var COST = brevet ? TYPE_COST_BREVET : TYPE_COST;
   var horsCompte = brevet ? bonusRepetitions(errors) : [];
@@ -1320,7 +1362,7 @@ function computeNote(errors,extras,base,bareme){
   var nXP=0;extras.forEach(function(x){if(x&&x.type==="P"){nXP++;if(brevet)nP++;else ded+=(COST.P||0);}else ded+=COST.X});
   if(brevet) ded += Math.floor(nP/4) * 0.5 * (base/10);
   var counts={G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:extras.length-nXP};
-  errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});counts.P+=nXP;
+  errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});counts.P+=nXP;if(nSC)counts.sansCout=nSC;   /* [L11] comptées à part */
   return{note:Math.round(Math.max(0,base-ded)*10)/10,deduction:Math.round(ded*10)/10,
          counts:counts,total:errors.length+extras.length,
          repetees:horsCompte.length,bareme:brevet?"brevet":"preparee"}
@@ -2544,6 +2586,7 @@ function AppProf(p){
     /* [ELEVE-1 ④] la note s'enregistre sur la base avec laquelle la copie est corrigée (Paul, 01/10) ; la trace dit d'où elle vient */
     var tr=(trace&&typeof trace==="object")?trace:{amenagee:false};
     errors=formesSynchroniser(dicteeId,dicteeData,corrections[ek],errors);   /* [L10] */
+    errors=marquerSansCout(errors,empreinteTexte(dicteeData.text),dicteeData.tokens||tokenize(dicteeData.text||"")).errs;   /* [L11] une forme acceptée : sans coût */
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,(tr.amenagee&&tr.base)?tr.base:(tr.baseDictee||dicteeData.base),dicteeData.bareme);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now(),amenagee:!!tr.amenagee};
     if(tr.amenagee){c[ek].mode=tr.mode;c[ek].base=tr.base;}
@@ -2884,6 +2927,10 @@ function Reglages(pR){
   pR=pR||{};
   var sA=useState(getSpeechEnabled()),audio=sA[0],setAudio=sA[1];
   function poserDate(v){db.ref("correction_dictee/"+pR.dicteeId+"/config/dateCorrection").set(v||null);}   /* [L9] */
+  var sFA=useState(0),setFA=sFA[1],sFM=useState(""),msgFA=sFM[0],setMsgFA=sFM[1];   /* [L11] */
+  useEffect(function(){if(pR.dicteeId)accepteesCharger(true).then(function(){setFA(function(x){return x+1})});},[pR.dicteeId]);
+  var tkR=pR.texte?empreinteTexte(pR.texte):null,reglesR=[];
+  if(tkR){var tR=ACCEPT.parTexte[tkR]||{};Object.keys(tR).forEach(function(mk){var m=tR[mk]||{};Object.keys(m).forEach(function(fk){if(m[fk])reglesR.push(m[fk]);});});}
   function premiereCopie(){var m=null;Object.keys(pR.corrections||{}).forEach(function(k){var c=pR.corrections[k];var t=c&&(c.creeLe||c.timestamp);if(t&&(m===null||t<m))m=t;});
     if(m===null)return;var d=new Date(m),z=function(n){return (n<10?"0":"")+n};poserDate(d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()));}
   var sV=useState(getSpeechRate()),vitesse=sV[0],setVitesse=sV[1];
@@ -2894,6 +2941,15 @@ function Reglages(pR){
       h("input",{type:"checkbox",checked:checked,onChange:onChange}),label,aide?ifo(aide):null);
   }
   return h("div",null,
+    pR.dicteeId&&tkR&&h("div",{className:"card",id:"carte-formes-acceptees"},   /* [L11] */
+      h("h2",null,"Formes accept\u00e9es de ce texte"+(function(){var a=autresDicteesDuTexte(tkR,pR.dicteeId);return a.length?" \u2014 partag\u00e9es avec : "+a.map(function(t){return "\u00ab "+t+" \u00bb"}).join(", "):"";})()),
+      msgFA&&h("div",{id:"msg-fa-reglages",style:{margin:"0 0 8px",padding:"6px 10px",borderRadius:8,background:"#f0fdf4",border:"1px solid #16a34a",color:"#14532d",fontSize:".85rem"}},msgFA),
+      reglesR.length?h("div",null,reglesR.map(function(r,i){return h("div",{key:i,className:"ligne-fa",style:{display:"flex",alignItems:"center",gap:10,padding:"4px 0",fontSize:".9rem"}},
+          h("span",{style:{flex:1}},"sur \u00ab "+r.mot+" \u00bb : ",h("i",null,r.forme)," \u2014 ",r.origine==="preparation"?"dite d\u2019avance (Pr\u00e9paration)":"accept\u00e9e en correction"),
+          h("button",{className:"btn-sm btn-ghost",title:"Cette forme co\u00fbte \u00e0 nouveau, pour toutes les copies, dans toutes les dict\u00e9es de ce texte.",
+            onClick:function(){retirerRegle(tkR,r.mot,r.forme).then(function(rr){setMsgFA("\u00ab "+r.forme+" \u00bb n\u2019est plus accept\u00e9e : elle co\u00fbte \u00e0 nouveau, partout \u2014 "+phraseRecalc(rr,pR.dicteeId)+".");setFA(function(x){return x+1});});setFA(function(x){return x+1});}},"retirer"));}))
+        :h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:0}},"Aucune pour l\u2019instant. On les ajoute en Pr\u00e9paration (\u00ab \u2713 Formes accept\u00e9es \u00bb) ou en correction (0 du pav\u00e9).")
+    ),
     pR.dicteeId&&h("div",{className:"card",id:"carte-date-correction"},   /* [L9] */
       h("h2",null,"Date de correction"),
       h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",marginTop:0}},"Celle que voient les \u00e9l\u00e8ves, sur leur feuille (\u00ab Corrig\u00e9 le \u2026 \u00bb) et dans leur liste de dict\u00e9es (\u00ab corrig\u00e9e le \u2026 \u00bb), pour toutes les copies de cette dict\u00e9e. Vide : chaque copie montre le jour o\u00f9 elle a \u00e9t\u00e9 corrig\u00e9e."),
@@ -3088,8 +3144,54 @@ function EditionDictee(p){
                 onClose:function(){setEditForm(Object.assign({},editForm,{showAmen:false}))}
               })
             )
+          ),
+          h("div",{style:{marginTop:12,padding:"12px 14px",background:"rgba(22,163,74,.06)",borderRadius:8,border:"1.5px solid rgba(22,163,74,.25)"}},   /* [L11] */
+            h("button",{className:"btn-sm btn-ghost",id:"btn-formes-acceptees",onClick:function(){setEditForm(Object.assign({},editForm,{showFA:!editForm.showFA}))},
+              title:"Dire d\u2019avance quels mots tu tol\u00e8res \u00e9crits autrement : clique un mot du texte, tape la forme accept\u00e9e. Elle vaut pour toutes les dict\u00e9es de ce texte ; l\u2019erreur reste visible chez l\u2019\u00e9l\u00e8ve, sans retrait de points."},"\u2713 Formes accept\u00e9es"+(editForm.showFA?" \u25b4":" \u25be")),
+            editForm.showFA&&h(FormesAccepteesPrep,{texte:editForm.text,dicteeId:p.dicteeId})
           )
   );
+}
+
+/* [L11] Préparation → « Formes acceptées » : le texte mot par mot, à ses places ; un clic ouvre les formes acceptées du mot */
+function FormesAccepteesPrep(pF){
+  var tk=empreinteTexte(pF.texte),toks=tokenize(pF.texte||"");
+  var sR=useState(0),setRev=sR[1],sO=useState(null),ouvert=sO[0],setOuvert=sO[1],sV=useState(""),val=sV[0],setVal=sV[1],sG=useState(""),garde=sG[0],setGarde=sG[1],sM=useState(""),msg=sM[0],setMsg=sM[1];
+  var inRef=React.useRef(null);
+  useEffect(function(){accepteesCharger(true).then(function(){setRev(function(x){return x+1})});},[]);
+  useEffect(function(){if(ouvert!=null&&inRef.current)inRef.current.focus();},[ouvert]);
+  useEffect(function(){if(ouvert==null)return;function onEsc(e){if(e.key==="Escape"){e.preventDefault();setOuvert(null);}}window.addEventListener("keydown",onEsc);return function(){window.removeEventListener("keydown",onEsc)};},[ouvert]);   /* Échap ferme la fenêtre, où que soit le curseur */
+  function motDe(i){return motCleForme(toks,i);}
+  function ajouter(){var f=val.trim(),i=ouvert;if(!f||i==null)return;
+    if(motJuste(f,toks[i])){setGarde("C\u2019est le mot juste : une forme accept\u00e9e est une autre graphie.");return;}
+    setVal("");setGarde("");
+    poserRegle(tk,motDe(i),f,"preparation",pF.dicteeId).then(function(rr){setMsg("D\u2019avance : \u00ab "+f+" \u00bb accept\u00e9e pour \u00ab "+toks[i]+" \u00bb, dans toutes les dict\u00e9es de ce texte \u2014 "+phraseRecalc(rr,pF.dicteeId)+".");setRev(function(x){return x+1});});
+    setRev(function(x){return x+1});}
+  function retirer(i,f){retirerRegle(tk,motDe(i),f).then(function(rr){setMsg("\u00ab "+f+" \u00bb n\u2019est plus accept\u00e9e pour \u00ab "+toks[i]+" \u00bb : elle co\u00fbte \u00e0 nouveau, partout \u2014 "+phraseRecalc(rr,pF.dicteeId)+".");setRev(function(x){return x+1});});setRev(function(x){return x+1});}
+  return h("div",{id:"formes-acceptees-prep",style:{marginTop:10}},
+    h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"0 0 8px"}},"Clique un mot pour dire d\u2019avance les formes que tu acceptes : visibles chez l\u2019\u00e9l\u00e8ve, sans retrait de points, pour toutes les dict\u00e9es de ce texte."),
+    msg&&h("div",{id:"msg-fa-prep",style:{margin:"0 0 8px",padding:"6px 10px",borderRadius:8,background:"#f0fdf4",border:"1px solid #16a34a",color:"#14532d",fontSize:".85rem"}},msg),
+    h("div",{className:"fa-texte",style:{lineHeight:2.1,fontSize:"1rem"}},
+      toks.map(function(w,i){
+        if(isPunct(w))return h("span",{key:i,style:{color:"var(--muted)",margin:"0 3px"}},w);
+        var acc=accepteesDe(tk,motDe(i)),n=Object.keys(acc).length;
+        return h("span",{key:i,className:"fa-mot"+(n?" tol":"")+(ouvert===i?" ouvert":""),"data-idx":i,
+          title:n?"Formes accept\u00e9es : "+Object.keys(acc).map(function(k){return acc[k].forme}).join(", "):"Clique pour ajouter une forme accept\u00e9e",
+          onClick:function(){setOuvert(i);setVal("");setGarde("")}},w,n?h("sup",{style:{color:"#16a34a",fontSize:".7rem",marginLeft:2}},String(n)):null," ");})),
+    ouvert!=null&&h("div",{className:"popup-overlay",onClick:function(){setOuvert(null)}},
+      h("div",{id:"fenetre-fa",style:{background:"var(--card)",borderRadius:16,padding:"18px 20px",maxWidth:480,width:"100%",boxSizing:"border-box"},onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{fontWeight:700,marginBottom:8}},"Formes accept\u00e9es pour \u00ab "+toks[ouvert]+" \u00bb"),
+        (function(){var acc=accepteesDe(tk,motDe(ouvert)),ks=Object.keys(acc);
+          return ks.length?h("div",null,ks.map(function(k){var r=acc[k];return h("span",{key:k,className:"fa-pastille"},h("i",null,r.forme)," ",
+              h("b",{style:{cursor:"pointer"},className:"fa-retirer",title:"Retirer : elle co\u00fbte \u00e0 nouveau, partout (toutes les dict\u00e9es de ce texte, copies recalcul\u00e9es).",onClick:function(){retirer(ouvert,r.forme)}},"\u2715"))}))
+            :h("div",{style:{color:"var(--muted)",fontSize:".85rem"}},"aucune \u2014 tape la forme que tu accepteras");})(),
+        h("div",{style:{display:"flex",gap:8,marginTop:10}},
+          h("input",{ref:inRef,id:"fa-champ",value:val,placeholder:"ajouter une forme accept\u00e9e",title:"Entr\u00e9e ajoute la forme (pour toutes les dict\u00e9es de ce texte, copies d\u00e9j\u00e0 corrig\u00e9es recalcul\u00e9es) ; \u00c9chap ferme.",
+            onChange:function(e){setVal(e.target.value);setGarde("")},onKeyDown:function(e){if(e.key==="Enter"){e.preventDefault();ajouter()}else if(e.key==="Escape"){e.preventDefault();setOuvert(null)}},
+            style:{flex:1,padding:"8px 10px",border:"1.5px solid var(--border)",borderRadius:8}}),
+          h("button",{className:"btn-sm btn-primary",onClick:ajouter,title:"Ajouter cette forme accept\u00e9e"},"Ajouter"),
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){setOuvert(null)},title:"Fermer (\u00c9chap)"},"Fermer")),
+        garde&&h("div",{className:"garde-mot",id:"fa-garde"},garde))));
 }
 
 // ═══ ÉCRAN CORRECTION ═══
@@ -3150,9 +3252,14 @@ function CorrScreen(p){
   },[p.dicteeId]);
   var sRc=useState(0),reclasses=sRc[0],setReclasses=sRc[1];   /* [L5] la ligne « n copies reclassées » */
   var sCI9=useState(0),copiesIdentifiees=sCI9[0],setCopiesIdentifiees=sCI9[1];   /* [L9] */
+  var sMAO=useState(""),msgAccepteesOuv=sMAO[0],setMsgAccepteesOuv=sMAO[1];   /* [L11] */
   var sFR=useState(0),formesRetenues=sFR[0],setFormesRetenues=sFR[1],sFP=useState(0),formesPret=sFP[0],setFormesPret=sFP[1];   /* [L10] */
   function finOuvertureL10(c2,changees){
-    formesOuverture(p.dicteeId,c2).then(function(r){if(r.c)p.onResetCorrections(r.c);else if(changees)p.onResetCorrections(c2);if(r.n)setFormesRetenues(r.n);setFormesPret(function(x){return x+1});},
+    formesOuverture(p.dicteeId,c2).then(function(r){var c3=r.c||c2,ch=!!r.c||changees;if(r.n)setFormesRetenues(r.n);
+      return accepteesCharger().then(function(){var tk=empreinteTexte(data.text);   /* [L11] une règle a-t-elle changé depuis ? */
+        var aRecalc=Object.keys(c3).some(function(k){var c=c3[k];return c&&typeof c==="object"&&marquerSansCout(toArr(c.errors||[]).filter(function(e){return e!=null}),tk,data.tokens||tokenize(data.text||"")).change;});
+        if(!aRecalc){if(ch)p.onResetCorrections(c3);setFormesPret(function(x){return x+1});return;}
+        return recalculerTexte(tk).then(function(rr){p.onResetCorrections(Object.assign({},c3,rr.copies[p.dicteeId]||{}));setMsgAccepteesOuv(phraseRecalc(rr,p.dicteeId));setFormesPret(function(x){return x+1});});});},
       function(){if(changees)p.onResetCorrections(c2);});
   }
   function traceAncienne(k){var a=(amenagesDictee[k]!==undefined)?!!amenagesDictee[k]:!!(ancienRegistre&&ancienRegistre[k]===true);var dA=data.amenagee||null;return a?{amenagee:true,mode:modesAmenagee(dA)||"A",base:(dA&&dA.base)||10}:{amenagee:false};}
@@ -3231,9 +3338,10 @@ function CorrScreen(p){
     var curIsAmen=isEleveAmenage(curKey,amenagesDictee,classeAmenages);
     var dAmen=data.amenagee&&data.amenagee.enabled?data.amenagee:null;
     var effectiveBase=(curIsAmen&&dAmen)?(dAmen.base||10):data.base;
-    return h(CorrEleve,{key:curKey,data:data,eleve:cur,
+    return h(CorrEleve,{key:curKey,data:data,eleve:cur,dicteeId:p.dicteeId,   /* [L11] */
     existing:p.corrections[curKey]||null,
     effacee:p.corrections[curKey]?null:derniereEffacee(curKey),
+    onCopiesRecalc:function(cp){if(cp&&Object.keys(cp).length)p.onResetCorrections(Object.assign({},p.corrections,cp));},   /* [L11] */
     onIgnorer:function(ent){db.ref("correction_dictee/"+p.dicteeId+"/effacees/"+curKey+"/"+ent.le+"/ignoree").set(Date.now());},   /* [L9] « Non » : la version reste dans la corbeille */
     onRestaurer:function(ent){
       var base="correction_dictee/"+p.dicteeId;
@@ -3373,12 +3481,13 @@ function CorrScreen(p){
     h(Nav2,{groupe:groupe,tab:tab,onGroupe:setGroupe,onTab:setTab,onAide:function(){setShowAide(true)}}),
     showAide&&h(AideModal,{onClose:function(){setShowAide(false)}}),
     tab==="preparation"&&h(PreparationDictee,{dicteeId:p.dicteeId,onDone:function(){setTab("correct")}}),
-    tab==="reglages"&&h(Reglages,{dicteeId:p.dicteeId,dateCorrection:dateCorr,corrections:p.corrections}),   /* [L9] la date de correction de cette dictée */
+    tab==="reglages"&&h(Reglages,{dicteeId:p.dicteeId,dateCorrection:dateCorr,corrections:p.corrections,texte:data.text}),   /* [L9] la date de correction de cette dictée */
     tab==="correct"&&(function(){
       var sortedEleves=sortElevesByNom(data.eleves);
       var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
       return h("div",null,
         h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
+        msgAccepteesOuv&&h("div",{id:"ligne-acceptees",style:{border:"1px solid #16a34a",background:"#f0fdf4",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#14532d"},title:"Une forme accept\u00e9e a \u00e9t\u00e9 pos\u00e9e ou retir\u00e9e pour ce texte depuis la derni\u00e8re ouverture : les copies concern\u00e9es ont \u00e9t\u00e9 recalcul\u00e9es."},"\u2713 Formes accept\u00e9es : "+msgAccepteesOuv+"."),   /* [L11] */
         copiesIdentifiees>0&&h("div",{id:"ligne-identites",style:{border:"1px solid #94a3b8",background:"#f8fafc",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#334155"},title:"Chaque copie porte d\u00e9sormais une identit\u00e9 interne (sa cr\u00e9ation, sa derni\u00e8re modification). L\u2019\u00e9l\u00e8ve ne la voit jamais."},
           "\u2713 "+copiesIdentifiees+" copie"+(copiesIdentifiees>1?"s ont":" a")+" re\u00e7u leur identit\u00e9 (interne, invisible pour l\u2019\u00e9l\u00e8ve)."),   /* [L9] */
         formesRetenues>0&&h("div",{id:"ligne-formes",style:{border:"1px solid #2563eb",background:"#eff6ff",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#1e3a8a"},title:"Les formes fautives d\u00e9j\u00e0 recopi\u00e9es dans toutes tes copies corrig\u00e9es (G et L) : elles servent d\u00e9sormais de liste, choisie au pav\u00e9 num\u00e9rique. Elles survivent \u00e0 la purge ; aucun nom d\u2019\u00e9l\u00e8ve n\u2019y est gard\u00e9."},
@@ -3430,7 +3539,7 @@ function CorrScreen(p){
         rapideEleve=uncorr.length>0?uncorr[0]:data.eleves[0];
       }
       if(!rapideEleve)return h("div",{className:"card",style:{textAlign:"center",padding:30}},h("p",null,"\u2705 Aucun \u00e9l\u00e8ve \u00e0 corriger."));
-      return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,effectiveBase:baseDeCopie(traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),data.base),   /* [ELEVE-1 ④] */
+      return h(CorrEleve,{key:san(rapideEleve)+"_fast",data:data,eleve:rapideEleve,dicteeId:p.dicteeId,onCopiesRecalc:function(cp){if(cp&&Object.keys(cp).length)p.onResetCorrections(Object.assign({},p.corrections,cp));},   /* [L11] */effectiveBase:baseDeCopie(traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),data.base),   /* [ELEVE-1 ④] */
         existing:p.corrections[san(rapideEleve)]||null,
         startFast:true,
         onAutoSave:function(err,ext,fastIdxVal,posTexte){
@@ -3840,6 +3949,32 @@ function CorrEleve(p){
   /* [L10] la liste des formes : le numéro composé au pavé (le ref pour les frappes rapides, l'état pour l'affichage), le message */
   var sNF=useState(""),numFormes=sNF[0],setNumFormesE=sNF[1];var numRef=React.useRef("");function setNumFormes(v){numRef.current=v;setNumFormesE(v);}
   var sMF=useState(""),msgFormes=sMF[0],setMsgFormes=sMF[1];
+  var sMA=useState(""),msgAccept=sMA[0],setMsgAccept=sMA[1];   /* [L11] le message d'une forme acceptée */
+  function boutonAccepterL11(mode){
+    var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx),f=formeEnCoursL11(mode),deja=!!f&&idx!=null&&estAcceptee(empreinteTexte(data.text),motCleForme(tokens,idx),f);
+    return h("button",{className:"btn-sm btn-ghost btn-accepter",disabled:!f,onMouseDown:function(e){e.preventDefault()},onClick:function(e){e.stopPropagation();accepterCourantL11(mode)},
+      title:!f?"Tape ou choisis d\u2019abord la forme.":(deja?"\u00ab "+f+" \u00bb est une forme accept\u00e9e pour ce texte : ce bouton l\u2019annule \u2014 elle co\u00fbte \u00e0 nouveau, pour toutes les copies de toutes les dict\u00e9es de ce texte.":"Accepte \u00ab "+f+" \u00bb pour toutes les dict\u00e9es de ce texte : l\u2019erreur reste visible chez l\u2019\u00e9l\u00e8ve, sans retrait de points ; les copies d\u00e9j\u00e0 corrig\u00e9es sont recalcul\u00e9es. Aucun raccourci : un clic seulement.")},
+      deja?"\u2715 ne plus accepter":"\u2713 forme accept\u00e9e (ce texte)");}
+  function formeEnCoursL11(mode){   /* la forme en cours : le numéro composé, sinon ce qui est tapé */
+    var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx);if(idx==null)return "";
+    var nC=numRef.current||numFormes;if(nC){var o=formesPour(motCleForme(tokens,idx),tokens[idx])[+nC-1];return o?o.forme:"";}
+    return String(mode==="I"?fautifValI:fautifTexteVal).trim();}
+  function accepterCourantL11(mode,formeImposee){   /* [L11 — Paul, 02/10] un BOUTON, aucun raccourci : la forme en cours devient une forme acceptée pour ce texte ; le même bouton l'annule */
+    var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx);if(idx==null)return;
+    var mot=motCleForme(tokens,idx),tk=empreinteTexte(data.text);
+    var f=formeImposee?String(formeImposee).trim():formeEnCoursL11(mode);setNumFormes("");
+    if(!f)return;
+    if(motJuste(f,tokens[idx])){setGardeMot(true);return}
+    var deja=estAcceptee(tk,mot,f),r={mot:mot,forme:f,creeLe:Date.now(),origine:"correction",dicteeId:p.dicteeId};
+    if(deja)regleRetireeEnMemoire(tk,mot,f);else regleEnMemoire(tk,mot,r);
+    if(mode==="I")confirmFautifI(f);else confirmFautifTexte(f);   /* l'erreur est posée ; son enregistrement la marque (ou non) sans coût */
+    var autres=autresDicteesDuTexte(tk,p.dicteeId),sauf={dicteeId:p.dicteeId,cle:san(p.eleve)};
+    (deja?db.ref(cheminRegle(tk,mot,f)).remove():db.ref(cheminRegle(tk,mot,f)).set(r)).then(function(){return recalculerTexte(tk,sauf);}).then(function(rr){
+      if(p.onCopiesRecalc)p.onCopiesRecalc(rr.copies[p.dicteeId]||{});
+      setMsgAccept(deja?"\u00ab "+f+" \u00bb n\u2019est plus une forme accept\u00e9e pour ce texte : elle co\u00fbte \u00e0 nouveau, partout ; "+phraseRecalc(rr,p.dicteeId)+"."
+        :"\u00ab "+f+" \u00bb est maintenant une forme accept\u00e9e pour ce texte : visible chez tous, sans retrait, dans cette dict\u00e9e"+(autres.length?" et dans "+autres.map(function(t){return "\u00ab "+t+" \u00bb"}).join(", ")+" (m\u00eame texte)":"")+" ; "+phraseRecalc(rr,p.dicteeId)+".");
+    });
+  }
   function toucheFormes(e,liste,prendreN){   /* le pavé choisit ; Entrée prend le numéro en cours ; Échap l'efface */
     var mP=/^Numpad(\d)$/.exec(e.code||""),cTouche=mP?mP[1]:null;   /* [L10b — Paul, 02/10] le pavé seul choisit ; Ctrl + chiffre retiré (sans pavé, c'est le téléphone : le clic sur la ligne) */   /* le pavé par sa place (même verrou numérique éteint) */
     if(cTouche){e.preventDefault();e.stopPropagation();
@@ -3850,12 +3985,18 @@ function CorrEleve(p){
     if(e.key==="Enter"&&numRef.current){e.preventDefault();e.stopPropagation();var n2=+numRef.current;setNumFormes("");if(n2>=1&&n2<=liste.length)prendreN(n2);else setMsgFormes("Pas de forme n\u00b0 "+n2+".");return true;}
     if(e.key==="Escape"&&numRef.current){e.preventDefault();e.stopPropagation();setNumFormes("");setMsgFormes("");return true;}
     return false;}
-  function listeFormesHtml(liste,prendreN){
+  function listeFormesHtml(liste,prendreN,ctx){
     if(!liste.length)return null;
+    var tkL=ctx?empreinteTexte(data.text):null,ail=ctx?accepteesAilleurs(tkL,ctx.mot):[];   /* [L11] les marques */
     return h("div",{className:"liste-formes",title:"Les formes d\u00e9j\u00e0 vues sur ce mot dans toutes tes dict\u00e9es, de la plus fr\u00e9quente \u00e0 la plus rare, avec leur nombre. Le pav\u00e9 num\u00e9rique choisit (les chiffres se composent : 1 puis 2 = la 12e) ; un chiffre de la rang\u00e9e du haut s\u2019\u00e9crit dans la case."},
       liste.map(function(f,i){var n=i+1,cand=numFormes&&String(n).indexOf(numFormes)===0,exact=numFormes&&String(n)===numFormes;
         return h("div",{key:n,className:"forme"+(cand?" candidat":"")+(exact?" exact":""),title:"Clic : prendre cette forme. Au pav\u00e9 : "+n,onMouseDown:function(e){e.preventDefault()},onClick:function(){prendreN(n)}},
-          h("span",{className:"n"},n),h("span",{className:"f"},f.forme),h("span",{className:"c"},"\u00d7"+f.compte));}));}
+          h("span",{className:"n"},n),h("span",{className:"f"},f.forme),h("span",{className:"c"},"\u00d7"+f.compte),
+          (function(){if(!ctx)return null;if(estAcceptee(tkL,ctx.mot,f.forme))return h("span",{className:"acc",title:"Forme accept\u00e9e pour ce texte : visible chez l\u2019\u00e9l\u00e8ve, sans retrait. Le bouton \u00ab \u2715 ne plus accepter \u00bb l\u2019annule."},"accept\u00e9e");
+            var a=ail.filter(function(x){return String(x.forme).toLowerCase()===String(f.forme).toLowerCase()})[0];
+            return a?h("span",{style:{display:"inline-flex",gap:4,alignItems:"baseline"}},h("span",{className:"acc ailleurs",title:"Accept\u00e9e pour un autre texte."},"accept\u00e9e dans "+(a.titre?"\u00ab "+a.titre+" \u00bb":"une dict\u00e9e supprim\u00e9e")),
+              ctx.accepterIci?h("button",{className:"btn-accepter-ici",onMouseDown:function(e){e.preventDefault();e.stopPropagation()},onClick:function(e){e.stopPropagation();ctx.accepterIci(f.forme)},
+                title:"Accepte aussi cette forme pour ce texte : l\u2019erreur est pos\u00e9e, visible chez l\u2019\u00e9l\u00e8ve, sans retrait ; les copies d\u00e9j\u00e0 corrig\u00e9es de ce texte sont recalcul\u00e9es."},"accepter ici"):null):null;})());}));}
   function numeroHtml(){return h("span",{className:"num-formes"+(numFormes?" on":""),title:"Le num\u00e9ro en cours de composition au pav\u00e9 : la forme est prise d\u00e8s qu\u2019aucun autre num\u00e9ro ne peut commencer ainsi, ou \u00e0 Entr\u00e9e."},numFormes?"n\u00b0 "+numFormes:"");}
   var sRF=useState(""),rechFin=sRF[0],setRechFin=sRF[1];var rechFinRef=React.useRef(null);   /* [L6] la recherche par initiales en fin de copie */
   var s11=useState(""),fautifValI=s11[0],setFautifValI=s11[1];
@@ -4075,6 +4216,7 @@ function CorrEleve(p){
     var coupeG=ctxA>ctxStart,coupeD=ctxB<ctxEnd;ctxStart=ctxA;ctxEnd=ctxB;
 
     return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 480) */
+      msgAccept&&h("div",{id:"msg-accept",className:"card",style:{marginBottom:10,border:"1.5px solid #16a34a",background:"#f0fdf4",color:"#14532d",fontSize:".9rem",display:"flex",gap:10,alignItems:"center"}},h("span",{style:{flex:1}},msgAccept),h("button",{className:"btn-sm btn-ghost",onClick:function(){setMsgAccept("")},title:"Fermer ce message"},"\u2715")),   /* [L11] */
       h("div",{className:"score-bar"},
         h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},noteFr(sc.note)),
         h("div",{style:{flex:1}},
@@ -4144,7 +4286,7 @@ function CorrEleve(p){
               h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",fontWeight:600}},"Marquage "+askFautifI+" \u2014 Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourcis : Retour (champ vide) ou \u00c9chap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
             ),
-            listeFormesHtml(listeFormesI,prendreFormeI),   /* [L10] la liste, au-dessus de la case */
+            listeFormesHtml(listeFormesI,prendreFormeI,{mot:wtF?motCleForme(tokens,wtF.idx):"",accepterIci:function(f){accepterCourantL11("I",f)}}),   /* [L10] la liste, au-dessus de la case ; [L11] ses marques */
             h("div",{style:{display:"flex",gap:8}},
               numeroHtml(),
               h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value);setGardeMot(false)},placeholder:listeFormesI.length?"recopie ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u2014 ou choisis au pav\u00e9":"Mot fautif...",title:"Ce que l\u2019\u00e9l\u00e8ve a \u00e9crit, tel quel. Le mot juste est refus\u00e9. Un chiffre de la rang\u00e9e du haut est du texte ; le pav\u00e9 num\u00e9rique choisit dans la liste.",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
@@ -4154,6 +4296,7 @@ function CorrEleve(p){
                 else if(e.key==="Backspace"&&!fautifValI){e.preventDefault();e.stopPropagation();cancelFautifI()}
               }}),
               h("button",{className:"btn-sm btn-primary",onClick:function(e){e.stopPropagation();confirmFautifI()},title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e"},"\u2713 Valider"),
+              boutonAccepterL11("I"),   /* [L11] un bouton, aucun raccourci */
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();confirmFautifI("")},title:"Valider sans saisir le mot fautif"},"Passer")
             ),
             msgFormes&&h("div",{className:"garde-mot",id:"msg-formes"},msgFormes),
@@ -4194,6 +4337,7 @@ function CorrEleve(p){
       h("span",null,"\ud83d\uddd1 Une copie de "+p.eleve+" a \u00e9t\u00e9 effac\u00e9e le "+new Date(p.effacee.le).toLocaleDateString("fr-FR")+" \u00e0 "+new Date(p.effacee.le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+" ("+(GESTES_EFFACEMENT[p.effacee.geste]||p.effacee.geste)+(p.effacee.note!=null?", note "+String(p.effacee.note).replace(".",",")+"/"+(p.data.base||20):"")+")."),
       h("button",{className:"btn btn-primary",style:{width:"auto",marginLeft:"auto"},onClick:function(){p.onRestaurer(p.effacee)},title:"Remet cette copie telle qu\u2019elle \u00e9tait avant d\u2019\u00eatre effac\u00e9e, avec son autocorrection si l\u2019\u00e9l\u00e8ve n\u2019en a pas refait une. La copie reste aussi dans la corbeille."},"\u21ba La restaurer"),
       h("button",{className:"btn btn-ghost",id:"bandeau-non",style:{width:"auto"},onClick:function(){if(p.onIgnorer)p.onIgnorer(p.effacee)},title:"La version reste dans la corbeille ; ce bandeau ne reviendra plus pour cette copie."},"Non, laisser dans la corbeille")),   /* [L9] dette n\u00b012 \u00b7 99 */
+    msgAccept&&h("div",{id:"msg-accept",className:"card",style:{marginBottom:10,border:"1.5px solid #16a34a",background:"#f0fdf4",color:"#14532d",fontSize:".9rem",display:"flex",gap:10,alignItems:"center"}},h("span",{style:{flex:1}},msgAccept),h("button",{className:"btn-sm btn-ghost",onClick:function(){setMsgAccept("")},title:"Fermer ce message"},"\u2715")),   /* [L11] */
     // Sticky score bar with eleve name
     h("div",{className:"score-bar",style:{position:"sticky",top:0,zIndex:50}},
       h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},noteFr(sc.note)),
@@ -4326,12 +4470,13 @@ function CorrEleve(p){
           h("span",{style:{marginLeft:8,padding:"2px 8px",borderRadius:6,fontSize:".85rem",fontWeight:600,background:typeRgba(askFautifTexte.type,.08),color:typeCouleur(askFautifTexte.type)}},askFautifTexte.type)
         ),
         h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
-        (function(){var lT=listeFormesTexte();return listeFormesHtml(lT,function(n){var f=lT[n-1];if(f)confirmFautifTexte(f.forme);});})(),   /* [L10] */
+        (function(){var lT=listeFormesTexte();return listeFormesHtml(lT,function(n){var f=lT[n-1];if(f)confirmFautifTexte(f.forme);},{mot:askFautifTexte?motCleForme(tokens,askFautifTexte.idx):"",accepterIci:function(f){accepterCourantL11("T",f)}});})(),   /* [L10] ; [L11] */
         h("div",{style:{display:"flex",gap:8}},
           numeroHtml(),
           h("input",{ref:fautifTexteRef,value:fautifTexteVal,onChange:function(e){setFautifTexteVal(e.target.value);setGardeMot(false)},placeholder:"Mot fautif...",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){var lT=listeFormesTexte();if(toucheFormes(e,lT,function(n){var f=lT[n-1];if(f)confirmFautifTexte(f.forme);}))return;   /* [L10] */
             if(e.key==="Enter")confirmFautifTexte();else if(e.key==="Escape"){e.preventDefault();setAskFautifTexte(null);setFautifTexteVal("");setGardeMot(false);setNumFormes("");setMsgFormes("");}}}),
           h("button",{className:"btn-sm btn-primary",title:"Valider avec le mot saisi. Raccourci : Entr\u00e9e",onClick:function(){confirmFautifTexte()}},"\u2713"),
+          boutonAccepterL11("T"),   /* [L11] un bouton, aucun raccourci */
           h("button",{className:"btn-sm btn-ghost",title:"Passer sans saisir le mot de l\u2019\u00e9l\u00e8ve (le trou num\u00e9rot\u00e9).",onClick:function(){setFautifTexteVal("");confirmFautifTexte("")}},"Passer")
         ),
         msgFormes&&h("div",{className:"garde-mot",id:"msg-formes-texte"},msgFormes),
@@ -4399,7 +4544,7 @@ function buildDicteeJSON(data, corrections, absents){
     var c = corrections[k];
     var elObj = {prenom: prenomOnly(e), nom_complet: e, corrige: !!c};
     if (c) {
-      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
+      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.sans_cout = (c.counts && c.counts.sansCout) || 0;   /* [L11] */ elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
       elObj.compteurs = c.counts || {};
       elObj.erreurs = toArr(c.errors).map(function(err){
         var o = {position: err.idx, mot_correct: err.word || null, type: err.type};
@@ -6022,7 +6167,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
      refait la meme faute — sinon il croit que la seconde est juste — mais elle
      ne lui est comptee qu'une fois. Il devra quand meme la corriger a chaque
      occurrence en autocorrection, pour memoriser l'orthographe. */
-  var repeteesIdx = (data.bareme === "brevet") ? bonusRepetitions(errors) : [];
+  var errsCoutL11 = errors.filter(function(e){return e && !e.sansCout;});   /* [L11] les répétitions comme computeNote : sans les formes acceptées */
+  var repeteesIdx = (data.bareme === "brevet") ? bonusRepetitions(errsCoutL11).map(function(i){return errors.indexOf(errsCoutL11[i]);}) : [];
   function estRepetee(e){ var i = errors.indexOf(e); return i >= 0 && repeteesIdx.indexOf(i) >= 0; }
   var copieRecopieeIci = errors.every(function(e){
     return !attendSaisie(e) || (e.fautif && String(e.fautif).trim() !== "");
@@ -6129,7 +6275,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     }
     var estRep = estRepetee(ev);
     var afterHtml = '<span class="badge">' + ev.type + '</span>' +
-                    (estRep ? '<span class="deja-compte" title="Tu as d\u00e9j\u00e0 fait cette faute sur ce mot : elle n\u2019est compt\u00e9e qu\u2019une fois.">d\u00e9j\u00e0 compt\u00e9</span>'
+                    (ev.sansCout ? '<span class="points-perdus forme-acc" style="background:#e6f4ec;color:#1e6042">forme accept\u00e9e</span>' :   /* [L11] la mention remplace le coût */
+                     estRep ? '<span class="deja-compte" title="Tu as d\u00e9j\u00e0 fait cette faute sur ce mot : elle n\u2019est compt\u00e9e qu\u2019une fois.">d\u00e9j\u00e0 compt\u00e9</span>'
                             : (POINTS[ev.type] ? '<span class="points-perdus">' + POINTS[ev.type] + '</span>' : ''));
     var aDataAttr = (ev.type === "A") ? ' data-att="1"' : '';
     if (estRep) aDataAttr += ' data-repetee="1"';
@@ -6166,7 +6313,9 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     var ptStr = POINTS[err.type] ? ' <span class="err-points">'+POINTS[err.type]+' pt</span>' : '';
     /* Repetition : on le dit en clair, avec la regle, et on retire le cout. */
     var nFoisMot = errors.filter(function(x){return x && String(x.word||"").toLowerCase()===String(err.word||"").toLowerCase() && x.type===err.type}).length;
-    if (estRepetee(err)) {
+    if (err.sansCout) {   /* [L11] */
+      ptStr = ' <span class="err-points" style="background:#e6f4ec;color:#1e6042">forme accept\u00e9e</span>';
+    } else if (estRepetee(err)) {
       ptStr = ' <span class="err-points" style="background:#f0e9d8;color:#6b5d3f">d\u00e9j\u00e0 compt\u00e9</span>';
       comment = 'Tu as \u00e9crit ' + nFoisMot + ' fois ce mot avec la m\u00eame faute. Je ne l\u2019ai compt\u00e9e qu\u2019une fois, comme au brevet \u2014 mais tu dois quand m\u00eame la corriger \u00e0 chaque fois, pour que tu m\u00e9morises l\u2019orthographe. ' + comment;
     }
@@ -9818,6 +9967,7 @@ function EleveCorrection(p){
       h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
         h("span",{className:"badge badge-"+String(e.type||"I").toLowerCase(),style:{padding:"3px 10px"}},e.type),
         h("b",null,"Erreur n\u00b0"+(activeErr+1)),
+        e.sansCout?h("span",{className:"forme-acc",style:{fontSize:".78rem",padding:"2px 8px",borderRadius:6,background:"#e6f4ec",color:"#1e6042",fontWeight:600}},"forme accept\u00e9e"):null,   /* [L11] */
         h("span",{style:{marginLeft:"auto",color:"var(--muted)",fontSize:".85rem"}},n>0?(n+" essai"+(n>1?"s":"")):"premier essai"),
         h("button",{type:"button",onClick:fermerFeuille,title:"Fermer",style:{border:"none",background:"none",fontSize:"1.3rem",color:"var(--muted)",cursor:"pointer",marginLeft:8,width:"auto"}},"\u2715")),
       h("div",{style:{display:"flex",gap:8}},
@@ -10026,9 +10176,10 @@ function EleveCorrection(p){
   /* Tableau des points : même calcul que la note de dictée (computeNote) — barème, répétitions, forfait. */
   function tableauNote(){
     var brevet=((d.dictee&&d.dictee.bareme)||d.bareme)==="brevet";var COST=brevet?TYPE_COST_BREVET:TYPE_COST;   // le barème est porté par la dictée
-    var hors=brevet?bonusRepetitions(errors):[];
+    var errsCo=errors.filter(function(e){return e&&!e.sansCout});   /* [L11] la note sans les formes acceptées, comme computeNote */
+    var hors=brevet?bonusRepetitions(errsCo):[];
     var cnt={},nRep=0,coutRep=0,nPb=0,nA=0;
-    errors.forEach(function(e,i){
+    errsCo.forEach(function(e,i){
       if(!e)return;
       if(e.type==="A"){nA++;return}
       if(hors.indexOf(i)>=0){nRep++;coutRep+=(brevet&&e.type==="P")?0:(COST[e.type]||0);return}
@@ -10282,6 +10433,7 @@ function EleveCorrection(p){
         h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}},
           h("span",{className:"badge badge-"+String(errors[activeErr].type||"I").toLowerCase(),style:{fontSize:".85rem",padding:"3px 10px"}},errors[activeErr].type),
           h("span",{style:{fontWeight:600,fontSize:".95rem"}},"Erreur n\u00b0"+(activeErr+1)),
+          errors[activeErr].sansCout?h("span",{className:"forme-acc",style:{fontSize:".78rem",padding:"2px 8px",borderRadius:6,background:"#e6f4ec",color:"#1e6042",fontWeight:600}},"forme accept\u00e9e"):null,   /* [L11] la carte de l'erreur, sur ordinateur */
           (attempts[activeErr]||0)>0&&h("span",{style:{fontSize:".78rem",color:"var(--muted)",marginLeft:"auto"}},(attempts[activeErr]||0)+" essai"+(((attempts[activeErr]||0)>1)?"s":""))
         ),
         h("div",{style:{display:"flex",gap:8}},
