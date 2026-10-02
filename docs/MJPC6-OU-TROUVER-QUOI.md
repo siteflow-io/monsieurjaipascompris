@@ -276,3 +276,12 @@
 | menu ouvert au clavier | l'écoute du clavier du mode texte : G, L, M (`typeAdapteM`), I, A → `selectType` (le type remplace l'ancien) ; G/L → champ avec `motJuste` ; Entrée valide, Échap annule |
 | Ctrl+Z | `annulerDerniereL8` (la pile des erreurs posées dans cette ouverture) → `autoTexte` |
 | ce qui ne bouge pas | le mode rapide (`fastMark`, `fastSkip`, `confirmFautifI` identiques à l'octet), ⇧R, les champs, les écrans élèves |
+
+## AJOUT DU 02/10/2026 — correction_dictee 6.7.0-L10b : la capitalisation des formes fautives
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| les objets « forme » | `correction_dictee_erreurs/<id>` = { id, creeLe, mot, forme, type, dicteeId, texteKey, niveau } ; `idForme`, `motCleForme` (majuscule de début de phrase ignorée), `empreinteTexte` ; dans `MJPC_PURGE.preserver` et `MJPC_MANIFESTE.noeuds` |
+| l'écriture / la reconstruction | `formesSynchroniser` (à chaque `save` : écrit, met à jour, retire tant que la copie existe) ; `formesOuverture` + `finOuvertureL10` (une fois : « ✓ n formes retenues », `formeId` dans les erreurs relues) |
+| la liste et le pavé | `FORMES` (en mémoire), `formesPour(mot)` ; dans `CorrEleve` : `listeFormesHtml`, `numeroHtml`, `numFormes`, `toucheFormes` (Numpad par `e.code`, composition, préfixe, Entrée, Échap) ; `listeFormesTexte` pour le mode texte ; styles `.liste-formes`, `.num-formes`, `.forme-cand`, `.forme-exact` |
+| ce qui a été retiré en L10b | « Ctrl + chiffre » (code et textes) — le pavé seul choisit ; sans pavé : le clic |
