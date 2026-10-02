@@ -1156,7 +1156,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L10b";
+var APP_VERSION="6.7.0-L9";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1237,6 +1237,10 @@ function formesOuverture(dId,corr){
     });
   });
 }
+/* [L9] L'IDENTITÉ D'UNE COPIE (interne, jamais montrée à l'élève) et LA DATE DE CORRECTION réglée pour toute la dictée */
+function idCopie(){return "copie_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);}
+function dateCorrectionTs(iso){var x=String(iso||"").split("-");return x.length===3?new Date(+x[0],+x[1]-1,+x[2],12).getTime():null;}
+function dateVueCopie(d,corr){return (d&&d.dateCorrection)?dateCorrectionTs(d.dateCorrection):((corr&&corr.timestamp)||null);}   /* ce que voit l'élève */
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -2543,6 +2547,7 @@ function AppProf(p){
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,(tr.amenagee&&tr.base)?tr.base:(tr.baseDictee||dicteeData.base),dicteeData.bareme);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now(),amenagee:!!tr.amenagee};
     if(tr.amenagee){c[ek].mode=tr.mode;c[ek].base=tr.base;}
+    var ancC=corrections[ek]||{};c[ek].id=ancC.id||idCopie();if(ancC.creeLe)c[ek].creeLe=ancC.creeLe;else if(ancC.creeLeInconnu)c[ek].creeLeInconnu=true;else c[ek].creeLe=Date.now();c[ek].modifieLe=Date.now();   /* [L9] l'identité de la copie */
     if(typeof fastIdxVal==="number")c[ek].fastIdx=fastIdxVal;
     else if(corrections[ek]&&typeof corrections[ek].fastIdx==="number")c[ek].fastIdx=corrections[ek].fastIdx;
     /* [L1] la position du mode texte (le dernier mot touché) : gardée avec la copie, reprise à la réouverture */
@@ -2875,8 +2880,12 @@ function EditeurTextes(){
 }
 
 // ═══ M6 : RÉGLAGES (principe « doter ») — préférences locales, aucun nœud Firebase ═══
-function Reglages(){
+function Reglages(pR){
+  pR=pR||{};
   var sA=useState(getSpeechEnabled()),audio=sA[0],setAudio=sA[1];
+  function poserDate(v){db.ref("correction_dictee/"+pR.dicteeId+"/config/dateCorrection").set(v||null);}   /* [L9] */
+  function premiereCopie(){var m=null;Object.keys(pR.corrections||{}).forEach(function(k){var c=pR.corrections[k];var t=c&&(c.creeLe||c.timestamp);if(t&&(m===null||t<m))m=t;});
+    if(m===null)return;var d=new Date(m),z=function(n){return (n<10?"0":"")+n};poserDate(d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()));}
   var sV=useState(getSpeechRate()),vitesse=sV[0],setVitesse=sV[1];
   var sC=useState(getCopyOptions()),copt=sC[0],setCopt=sC[1];
   function majCopt(patch){ var o=Object.assign({},copt,patch); setCopt(o); setCopyOptions(o); }
@@ -2885,6 +2894,18 @@ function Reglages(){
       h("input",{type:"checkbox",checked:checked,onChange:onChange}),label,aide?ifo(aide):null);
   }
   return h("div",null,
+    pR.dicteeId&&h("div",{className:"card",id:"carte-date-correction"},   /* [L9] */
+      h("h2",null,"Date de correction"),
+      h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",marginTop:0}},"Celle que voient les \u00e9l\u00e8ves, sur leur feuille (\u00ab Corrig\u00e9 le \u2026 \u00bb) et dans leur liste de dict\u00e9es (\u00ab corrig\u00e9e le \u2026 \u00bb), pour toutes les copies de cette dict\u00e9e. Vide : chaque copie montre le jour o\u00f9 elle a \u00e9t\u00e9 corrig\u00e9e."),
+      h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
+        h("label",{htmlFor:"date-correction",style:{fontSize:".9rem"}},"Date de correction (celle que voient les \u00e9l\u00e8ves)"),
+        h("input",{type:"date",id:"date-correction",value:pR.dateCorrection||"",style:{padding:"6px 8px",borderRadius:8,border:"1px solid var(--border)"},
+          title:"Une seule date pour toute la dict\u00e9e : les \u00e9l\u00e8ves ne d\u00e9duisent rien du jour o\u00f9 leur copie a \u00e9t\u00e9 corrig\u00e9e. Elle s\u2019enregistre aussit\u00f4t.",
+          onChange:function(e){poserDate(e.target.value)}}),
+        h("button",{className:"btn-sm btn-ghost",id:"date-premiere",title:"Prend le jour o\u00f9 la premi\u00e8re copie de cette dict\u00e9e a \u00e9t\u00e9 corrig\u00e9e.",onClick:premiereCopie},"= le jour de la premi\u00e8re copie corrig\u00e9e"),
+        pR.dateCorrection&&h("button",{className:"btn-sm btn-ghost",id:"date-effacer",title:"Revenir au jour r\u00e9el de chaque copie.",onClick:function(){poserDate(null)}},"Effacer la date")
+      )
+    ),
     h("div",{className:"card"},
       h("h2",null,"Lecture audio"),
       h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",marginTop:0}},"Utilis\u00e9e par le mode Rapide pour dire le mot \u00e0 corriger."),
@@ -3028,7 +3049,7 @@ function EditionDictee(p){
                   if(sc.note!==r.note){
                     db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/note").set(sc.note);
                     db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/deduction").set(sc.deduction);
-                    db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/counts").set(sc.counts);
+                    db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/counts").set(sc.counts);db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek+"/modifieLe").set(Date.now());   /* [L9] */
                     majR[ek]={note:sc.note,deduction:sc.deduction,counts:sc.counts};
                   }
                 });
@@ -3077,11 +3098,12 @@ function CorrScreen(p){
   /* [ELEVE-1 ④ — complément : défaut rencontré] l'écran de correction ne lisait JAMAIS la version aménagée de la dictée
      (data.amenagee restait vide) : la base aménagée n'était jamais employée. Il l'écoute désormais. */
   var sAC=useState(null),amenCfg=sAC[0],setAmenCfg=sAC[1];
-  var sBC=useState(null),baseCfg=sBC[0],setBaseCfg=sBC[1];
+  var sBC=useState(null),baseCfg=sBC[0],setBaseCfg=sBC[1];var sDC=useState(""),dateCorr=sDC[0],setDateCorr=sDC[1];   /* [L9] */
   useEffect(function(){var rA=db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee");function fA(sn){setAmenCfg(sn.val()||null)}rA.on("value",fA);
     var rB=db.ref("correction_dictee/"+p.dicteeId+"/config/base");function fB(sn){var v=sn.val();setBaseCfg(typeof v==="number"?v:(v?Number(v):null))}rB.on("value",fB);   /* [ELEVE-1 ④ — complément] la base suit le réglage, sans rouvrir */
-    return function(){rA.off("value",fA);rB.off("value",fB)};},[p.dicteeId]);
-  data=Object.assign({},p.data,{amenagee:amenCfg||p.data.amenagee||null,base:baseCfg||p.data.base});
+    var rD=db.ref("correction_dictee/"+p.dicteeId+"/config/dateCorrection");function fD(sn){setDateCorr(sn.val()||"")}rD.on("value",fD);   /* [L9] la date de correction réglée */
+    return function(){rA.off("value",fA);rB.off("value",fB);rD.off("value",fD)};},[p.dicteeId]);
+  data=Object.assign({},p.data,{amenagee:amenCfg||p.data.amenagee||null,base:baseCfg||p.data.base,dateCorrection:dateCorr||null});
   useEffect(function(){   /* [ELEVE-1 ④ — complément : défaut rencontré] après un changement de base, l'écran montrait les anciennes notes jusqu'à la réouverture */
     function fR(ev){var d=ev&&ev.detail;if(!d||d.dicteeId!==p.dicteeId)return;var c=Object.assign({},p.corrections);Object.keys(d.maj||{}).forEach(function(k){if(c[k])c[k]=Object.assign({},c[k],d.maj[k]);});p.onResetCorrections(c);}
     window.addEventListener("cd-recalcul",fR);return function(){window.removeEventListener("cd-recalcul",fR)};
@@ -3105,6 +3127,8 @@ function CorrScreen(p){
       var res=sn[0].val()||{},ov=sn[1].val()||{},reg=sn[2].val()||{},dA=sn[3].val()||null,u={};setAncienRegistre(reg);
       Object.keys(res).forEach(function(k){var r=res[k];if(!r||typeof r!=="object"||r.amenagee!==undefined)return;
         var a=(ov[k]!==undefined)?!!ov[k]:(reg[k]===true);if(a){u[k+"/amenagee"]=true;u[k+"/mode"]=modesAmenagee(dA)||"A";u[k+"/base"]=(dA&&dA.base)||10;}});
+      var nId=0;Object.keys(res).forEach(function(k){var r=res[k];if(!r||typeof r!=="object"||r.id)return;u[k+"/id"]=idCopie();if(r.timestamp)u[k+"/creeLe"]=r.timestamp;else u[k+"/creeLeInconnu"]=true;nId++;});   /* [L9] l'identité des copies d'avant, une fois */
+      if(nId)setCopiesIdentifiees(nId);
       if(Object.keys(u).length)db.ref("correction_dictee/"+id+"/results").update(u);
       var c2=Object.assign({},p.corrections);Object.keys(u).forEach(function(kp){var k=kp.split("/")[0],f=kp.split("/")[1];if(c2[k]){c2[k]=Object.assign({},c2[k]);c2[k][f]=u[kp];}if(res[k]&&typeof res[k]==="object")res[k][f]=u[kp];});
       /* [L5] le reclassement de la ponctuation, UNE fois : seules les copies qui portent encore l'un des deux cas ; l'état d'avant en corbeille d'abord */
@@ -3114,7 +3138,7 @@ function CorrScreen(p){
       var now=new Date(),an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1)),jour=now.toISOString().slice(0,10),hh=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2),le=Date.now();
       Promise.all(cles.map(function(k){return db.ref("corbeille/"+jour+"/reclassement-ponctuation_"+hh+"_"+k).set({_meta:{motif:"reclassement-ponctuation",chemin:"correction_dictee/"+id+"/results/"+k,source:"correction_dictee",dictee:id,titre:data.title||"",cle:k,annee:an,le:le},data:res[k]});}))
       .then(function(){
-        var w={};cles.forEach(function(k){var ch=rc[k].champs;Object.keys(ch).forEach(function(f){w[k+"/"+f]=ch[f];});if(c2[k])c2[k]=Object.assign({},c2[k],ch);});
+        var w={},mL=Date.now();cles.forEach(function(k){var ch=rc[k].champs;Object.keys(ch).forEach(function(f){w[k+"/"+f]=ch[f];});w[k+"/modifieLe"]=mL;if(c2[k])c2[k]=Object.assign({},c2[k],ch,{modifieLe:mL});});   /* [L9] modifieLe */
         return db.ref("correction_dictee/"+id+"/results").update(w).then(function(){
           cles.forEach(function(k){if(!rc[k].mVersP.length)return;var ar=db.ref("correction_dictee/"+id+"/autocorrection/"+k+"/errorRefs");   /* l'autocorrection de l'élève voit le même type */
             ar.once("value").then(function(sn){var v=sn.val();if(!v)return;var m=false;Object.keys(v).forEach(function(i){var x=v[i];if(x&&x.type==="M"&&rc[k].mVersP.indexOf(x.idx)>=0){x.type="P";m=true;}});if(m)ar.set(v);});});
@@ -3125,6 +3149,7 @@ function CorrScreen(p){
     });
   },[p.dicteeId]);
   var sRc=useState(0),reclasses=sRc[0],setReclasses=sRc[1];   /* [L5] la ligne « n copies reclassées » */
+  var sCI9=useState(0),copiesIdentifiees=sCI9[0],setCopiesIdentifiees=sCI9[1];   /* [L9] */
   var sFR=useState(0),formesRetenues=sFR[0],setFormesRetenues=sFR[1],sFP=useState(0),formesPret=sFP[0],setFormesPret=sFP[1];   /* [L10] */
   function finOuvertureL10(c2,changees){
     formesOuverture(p.dicteeId,c2).then(function(r){if(r.c)p.onResetCorrections(r.c);else if(changees)p.onResetCorrections(c2);if(r.n)setFormesRetenues(r.n);setFormesPret(function(x){return x+1});},
@@ -3195,7 +3220,7 @@ function CorrScreen(p){
   }
   var sEf=useState({}),effacees=sEf[0],setEffacees=sEf[1];
   useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/effacees");function f(sn){setEffacees(sn.val()||{})}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
-  function derniereEffacee(k){var e=effacees[k]||{};var l=Object.keys(e).map(function(t){return e[t]}).filter(function(x){return x&&!x.restauree}).sort(function(a,b){return b.le-a.le});return l[0]||null}
+  function derniereEffacee(k){var e=effacees[k]||{};var l=Object.keys(e).map(function(t){return e[t]}).filter(function(x){return x&&!x.restauree&&!x.ignoree&&x.geste!=="echanger"})   /* [L9] ni ignorée, ni rangée par un échange */.sort(function(a,b){return b.le-a.le});return l[0]||null}
   var nAbs=Object.keys(p.absents||{}).length;
   var nTotal=data.eleves.length-nAbs;
   var nDone=data.eleves.filter(function(e){var k=san(e);return!p.absents[k]&&p.corrections[k]}).length;
@@ -3209,11 +3234,13 @@ function CorrScreen(p){
     return h(CorrEleve,{key:curKey,data:data,eleve:cur,
     existing:p.corrections[curKey]||null,
     effacee:p.corrections[curKey]?null:derniereEffacee(curKey),
+    onIgnorer:function(ent){db.ref("correction_dictee/"+p.dicteeId+"/effacees/"+curKey+"/"+ent.le+"/ignoree").set(Date.now());},   /* [L9] « Non » : la version reste dans la corbeille */
     onRestaurer:function(ent){
       var base="correction_dictee/"+p.dicteeId;
       db.ref(ent.chemin).once("value").then(function(sn){
         var v=sn.val();if(!v||!v.data||!v.data.results){alert("Copie introuvable dans la corbeille : "+ent.chemin);return}
-        var rr=traceSiAbsente(v.data.results,curKey);   /* [ELEVE-1 ④] */
+        var rr=Object.assign({},traceSiAbsente(v.data.results,curKey),{modifieLe:Date.now()});   /* [ELEVE-1 ④] ; [L9] modifieLe */
+        if(!rr.id){rr.id=idCopie();if(rr.timestamp)rr.creeLe=rr.timestamp;else rr.creeLeInconnu=true;}
         db.ref(base+"/results/"+curKey).set(rr);
         if(v.data.autocorrection)db.ref(base+"/autocorrection/"+curKey).once("value").then(function(a){if(!a.val())db.ref(base+"/autocorrection/"+curKey).set(v.data.autocorrection)});
         db.ref(base+"/effacees/"+curKey+"/"+ent.le+"/restauree").set(Date.now());
@@ -3346,12 +3373,14 @@ function CorrScreen(p){
     h(Nav2,{groupe:groupe,tab:tab,onGroupe:setGroupe,onTab:setTab,onAide:function(){setShowAide(true)}}),
     showAide&&h(AideModal,{onClose:function(){setShowAide(false)}}),
     tab==="preparation"&&h(PreparationDictee,{dicteeId:p.dicteeId,onDone:function(){setTab("correct")}}),
-    tab==="reglages"&&h(Reglages,null),
+    tab==="reglages"&&h(Reglages,{dicteeId:p.dicteeId,dateCorrection:dateCorr,corrections:p.corrections}),   /* [L9] la date de correction de cette dictée */
     tab==="correct"&&(function(){
       var sortedEleves=sortElevesByNom(data.eleves);
       var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
       return h("div",null,
         h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
+        copiesIdentifiees>0&&h("div",{id:"ligne-identites",style:{border:"1px solid #94a3b8",background:"#f8fafc",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#334155"},title:"Chaque copie porte d\u00e9sormais une identit\u00e9 interne (sa cr\u00e9ation, sa derni\u00e8re modification). L\u2019\u00e9l\u00e8ve ne la voit jamais."},
+          "\u2713 "+copiesIdentifiees+" copie"+(copiesIdentifiees>1?"s ont":" a")+" re\u00e7u leur identit\u00e9 (interne, invisible pour l\u2019\u00e9l\u00e8ve)."),   /* [L9] */
         formesRetenues>0&&h("div",{id:"ligne-formes",style:{border:"1px solid #2563eb",background:"#eff6ff",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#1e3a8a"},title:"Les formes fautives d\u00e9j\u00e0 recopi\u00e9es dans toutes tes copies corrig\u00e9es (G et L) : elles servent d\u00e9sormais de liste, choisie au pav\u00e9 num\u00e9rique. Elles survivent \u00e0 la purge ; aucun nom d\u2019\u00e9l\u00e8ve n\u2019y est gard\u00e9."},
           "\u2713 "+formesRetenues+" forme"+(formesRetenues>1?"s":"")+" retenue"+(formesRetenues>1?"s":"")+" \u2014 la liste des formes d\u00e9j\u00e0 vues est pr\u00eate."),   /* [L10] */
         reclasses>0&&h("div",{id:"ligne-reclassement",style:{border:"1px solid #16a34a",background:"#f0fdf4",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#14532d"},title:"La ponctuation d\u2019avant : une erreur \u00ab M \u00bb pos\u00e9e sur un signe est devenue \u00ab P \u00bb ; un signe \u00ab en trop \u00bb compte au forfait ponctuation. L\u2019\u00e9tat d\u2019avant de chaque copie est dans la corbeille (restaurable)."},
@@ -4163,7 +4192,8 @@ function CorrEleve(p){
   return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 760) */
     p.effacee&&h("div",{className:"card",style:{marginBottom:10,border:"2px solid #dd6b20",background:"#fff7ed",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
       h("span",null,"\ud83d\uddd1 Une copie de "+p.eleve+" a \u00e9t\u00e9 effac\u00e9e le "+new Date(p.effacee.le).toLocaleDateString("fr-FR")+" \u00e0 "+new Date(p.effacee.le).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})+" ("+(GESTES_EFFACEMENT[p.effacee.geste]||p.effacee.geste)+(p.effacee.note!=null?", note "+String(p.effacee.note).replace(".",",")+"/"+(p.data.base||20):"")+")."),
-      h("button",{className:"btn btn-primary",style:{width:"auto",marginLeft:"auto"},onClick:function(){p.onRestaurer(p.effacee)},title:"Remet cette copie telle qu\u2019elle \u00e9tait avant d\u2019\u00eatre effac\u00e9e, avec son autocorrection si l\u2019\u00e9l\u00e8ve n\u2019en a pas refait une. La copie reste aussi dans la corbeille."},"\u21ba La restaurer")),
+      h("button",{className:"btn btn-primary",style:{width:"auto",marginLeft:"auto"},onClick:function(){p.onRestaurer(p.effacee)},title:"Remet cette copie telle qu\u2019elle \u00e9tait avant d\u2019\u00eatre effac\u00e9e, avec son autocorrection si l\u2019\u00e9l\u00e8ve n\u2019en a pas refait une. La copie reste aussi dans la corbeille."},"\u21ba La restaurer"),
+      h("button",{className:"btn btn-ghost",id:"bandeau-non",style:{width:"auto"},onClick:function(){if(p.onIgnorer)p.onIgnorer(p.effacee)},title:"La version reste dans la corbeille ; ce bandeau ne reviendra plus pour cette copie."},"Non, laisser dans la corbeille")),   /* [L9] dette n\u00b012 \u00b7 99 */
     // Sticky score bar with eleve name
     h("div",{className:"score-bar",style:{position:"sticky",top:0,zIndex:50}},
       h("div",{className:"score-val",style:{color:noteColor(sc.note,data.base)}},noteFr(sc.note)),
@@ -4369,7 +4399,7 @@ function buildDicteeJSON(data, corrections, absents){
     var c = corrections[k];
     var elObj = {prenom: prenomOnly(e), nom_complet: e, corrige: !!c};
     if (c) {
-      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20);   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
+      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
       elObj.compteurs = c.counts || {};
       elObj.erreurs = toArr(c.errors).map(function(err){
         var o = {position: err.idx, mot_correct: err.word || null, type: err.type};
@@ -6173,7 +6203,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   if (showPoints) bodyClasses += " show-points";
 
   var classeLib = data.classe || "";
-  var dateStr = c.timestamp ? new Date(c.timestamp).toLocaleDateString("fr-FR") : "";
+  var tsVu = (data && data.dateCorrection) ? dateCorrectionTs(data.dateCorrection) : c.timestamp;   /* [L9] la date réglée pour toute la dictée, sinon le jour réel */
+  var dateStr = tsVu ? new Date(tsVu).toLocaleDateString("fr-FR") : "";
 
   return '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">' +
     '<title>Copie corrigée — '+escapeHtml(eleveName)+'</title>' +
@@ -7375,13 +7406,13 @@ function etatDicteeEleve(d,cle){
   var corr=d.results?d.results[cle]:null;
   if(!corr) return {code:"attente",label:"Pas encore corrig\u00e9e",ouvrable:false,montrerNote:false,rattrapage:null};
   if(!d.copyPublishedAt) return {code:"nonrendue",label:"Disponible apr\u00e8s la s\u00e9ance",
-                                 ouvrable:false,montrerNote:false,rattrapage:null,date:corr.timestamp||null};
+                                 ouvrable:false,montrerNote:false,rattrapage:null,date:dateVueCopie(d,corr)};
   var ac=(d.autocorrection||{})[cle]||null;
   var total=ac&&typeof ac.total==="number"?ac.total:null;
   var solved=ac&&typeof ac.solved==="number"?ac.solved:0;
   if(total!==null&&total>0&&solved>=total)
-    return {code:"terminee",label:"Termin\u00e9e",ouvrable:true,montrerNote:true,rattrapage:null,date:corr.timestamp||null};
-  return {code:"afaire",label:"\u00c0 faire",ouvrable:true,montrerNote:true,rattrapage:null,date:corr.timestamp||null,
+    return {code:"terminee",label:"Termin\u00e9e",ouvrable:true,montrerNote:true,rattrapage:null,date:dateVueCopie(d,corr)};
+  return {code:"afaire",label:"\u00c0 faire",ouvrable:true,montrerNote:true,rattrapage:null,date:dateVueCopie(d,corr),
           reste:(total!==null&&total>0)?(total-solved):null};
 }
 
@@ -7545,7 +7576,7 @@ function AppEleve(p){
         return{id:id,title:cfg.title||id,classe:classeName,niveau:cfg.niveau||"",published:cfg.published!==false,exercicesOuverts:cfg.exercicesOuverts===true,
                showNote:cfg.showNote!==false,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,bareme:cfg.bareme||"preparee",
                results:val[id].results||{},autocorrection:val[id].autocorrection||{},
-               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:val[id].heure||null,binomes:val[id].binomes||null};
+               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:val[id].heure||null,binomes:val[id].binomes||null,dateCorrection:cfg.dateCorrection||null};   /* [L9] */
       });
       setDictees(list);
       if(forcedDicteeId){
