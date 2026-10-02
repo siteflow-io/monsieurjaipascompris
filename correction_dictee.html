@@ -193,6 +193,9 @@ textarea{resize:vertical;min-height:120px}
 /* [L3] le bouton mis en avant (Entrée le valide) ; la garde du mot juste */
 .fast-btn.fast-preselect{box-shadow:0 0 0 3px rgba(37,99,235,.55);transform:scale(1.04);font-weight:800}
 .garde-mot{color:#c53030;font-size:.85rem;font-weight:600;margin-top:6px}
+
+/* [L5] un signe en trop compté au forfait ponctuation */
+.extra-word.extra-ponct{border-style:dashed}
 </style>
 </head>
 <style>
@@ -1131,7 +1134,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L3";
+var APP_VERSION="6.7.0-L5";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1163,6 +1166,19 @@ var MJPC_PURGE = {
    indistinct. Les autres ponctuations consécutives restent groupées. */
 function tokenize(text){if(!text)return[];var t=[],re=/(\s+)|(['\u2019"\u00ab\u00bb\u201c\u201d])|([.,;:!?\u2026()\-\u2013\u2014]+)|([^\s.,;:!?\u2026\u00ab\u00bb\u201c\u201d()'\u2019"\-\u2013\u2014]+)/g,m;while((m=re.exec(text))!==null){if(!m[1])t.push(m[2]||m[3]||m[4])}return t}
 function estApostrophe(w){return/^['\u2019]$/.test(w)}
+/* [L5] signe de ponctuation (hors apostrophe) ? */
+function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
+/* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
+   reste où l'élève l'a écrit, marqué ponctuation (type P), compté au forfait. Rend les champs changés, ou null si rien n'est à reclasser. */
+function reclassementPonctuation(c,tokens,baseDictee,bareme){
+  if(!c||typeof c!=="object")return null;
+  var errs=toArr(c.errors||[]).filter(function(e){return e!=null}),exts=toArr(c.extras||[]).filter(function(e){return e!=null}),n=0,mp=[];
+  var ne=errs.map(function(e){var t=tokens[e.idx];if(e.type==="M"&&t&&estSigne(t)){n++;mp.push(e.idx);return Object.assign({},e,{type:"P"});}return e;});
+  var nx=exts.map(function(x){if(x.type!=="P"&&estSigne(x.word)){n++;return Object.assign({},x,{type:"P"});}return x;});
+  if(!n)return null;
+  var sc=computeNote(ne,nx,baseDeCopie(c,baseDictee),bareme);
+  return {champs:{errors:ne,extras:nx,note:sc.note,deduction:sc.deduction,counts:sc.counts},n:n,mVersP:mp};
+}
 /* [L3] la touche M s'adapte au mot courant : un mot → Manquant ; un signe de ponctuation → Ponctuation ; une apostrophe → Élision */
 function typeAdapteM(wt){if(!wt)return "M";if(estApostrophe(wt.text))return "E";if(isPunct(wt.text))return "P";return "M";}
 /* [L3] le bouton mis en avant (Entrée le valide) : Ponctuation sur un signe, Élision sur une apostrophe, rien sur un mot */
@@ -1225,10 +1241,11 @@ function computeNote(errors,extras,base,bareme){
     if(brevet && e.type==="P"){ nP++; return; }   /* ponctuation : au forfait */
     ded+=(COST[e.type]||0);
   });
-  extras.forEach(function(){ded+=COST.X});
+  /* [L5] un signe de ponctuation « en trop » (marqué type P) est compté au forfait ponctuation, plus comme un mot en trop */
+  var nXP=0;extras.forEach(function(x){if(x&&x.type==="P"){nXP++;if(brevet)nP++;else ded+=(COST.P||0);}else ded+=COST.X});
   if(brevet) ded += Math.floor(nP/4) * 0.5 * (base/10);
-  var counts={G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:extras.length};
-  errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});
+  var counts={G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:extras.length-nXP};
+  errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});counts.P+=nXP;
   return{note:Math.round(Math.max(0,base-ded)*10)/10,deduction:Math.round(ded*10)/10,
          counts:counts,total:errors.length+extras.length,
          repetees:horsCompte.length,bareme:brevet?"brevet":"preparee"}
@@ -3016,10 +3033,26 @@ function CorrScreen(p){
       var res=sn[0].val()||{},ov=sn[1].val()||{},reg=sn[2].val()||{},dA=sn[3].val()||null,u={};setAncienRegistre(reg);
       Object.keys(res).forEach(function(k){var r=res[k];if(!r||typeof r!=="object"||r.amenagee!==undefined)return;
         var a=(ov[k]!==undefined)?!!ov[k]:(reg[k]===true);if(a){u[k+"/amenagee"]=true;u[k+"/mode"]=modesAmenagee(dA)||"A";u[k+"/base"]=(dA&&dA.base)||10;}});
-      if(Object.keys(u).length){db.ref("correction_dictee/"+id+"/results").update(u);
-        var c2=Object.assign({},p.corrections);Object.keys(u).forEach(function(kp){var k=kp.split("/")[0],f=kp.split("/")[1];if(c2[k]){c2[k]=Object.assign({},c2[k]);c2[k][f]=u[kp];}});p.onResetCorrections(c2);}   /* l'écran voit aussitôt la trace */
+      if(Object.keys(u).length)db.ref("correction_dictee/"+id+"/results").update(u);
+      var c2=Object.assign({},p.corrections);Object.keys(u).forEach(function(kp){var k=kp.split("/")[0],f=kp.split("/")[1];if(c2[k]){c2[k]=Object.assign({},c2[k]);c2[k][f]=u[kp];}if(res[k]&&typeof res[k]==="object")res[k][f]=u[kp];});
+      /* [L5] le reclassement de la ponctuation, UNE fois : seules les copies qui portent encore l'un des deux cas ; l'état d'avant en corbeille d'abord */
+      var rc={};Object.keys(res).forEach(function(k){var r=reclassementPonctuation(res[k],data.tokens||tokenize(data.text||""),data.base,data.bareme);if(r)rc[k]=r;});
+      var cles=Object.keys(rc);
+      if(!cles.length){if(Object.keys(u).length)p.onResetCorrections(c2);return;}
+      var now=new Date(),an=(now.getMonth()<7)?((now.getFullYear()-1)+"-"+now.getFullYear()):(now.getFullYear()+"-"+(now.getFullYear()+1)),jour=now.toISOString().slice(0,10),hh=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2),le=Date.now();
+      Promise.all(cles.map(function(k){return db.ref("corbeille/"+jour+"/reclassement-ponctuation_"+hh+"_"+k).set({_meta:{motif:"reclassement-ponctuation",chemin:"correction_dictee/"+id+"/results/"+k,source:"correction_dictee",dictee:id,titre:data.title||"",cle:k,annee:an,le:le},data:res[k]});}))
+      .then(function(){
+        var w={};cles.forEach(function(k){var ch=rc[k].champs;Object.keys(ch).forEach(function(f){w[k+"/"+f]=ch[f];});if(c2[k])c2[k]=Object.assign({},c2[k],ch);});
+        return db.ref("correction_dictee/"+id+"/results").update(w).then(function(){
+          cles.forEach(function(k){if(!rc[k].mVersP.length)return;var ar=db.ref("correction_dictee/"+id+"/autocorrection/"+k+"/errorRefs");   /* l'autocorrection de l'élève voit le même type */
+            ar.once("value").then(function(sn){var v=sn.val();if(!v)return;var m=false;Object.keys(v).forEach(function(i){var x=v[i];if(x&&x.type==="M"&&rc[k].mVersP.indexOf(x.idx)>=0){x.type="P";m=true;}});if(m)ar.set(v);});});
+          p.onResetCorrections(c2);setReclasses(cles.length);
+        });
+      })
+      .catch(function(err){alert("Le reclassement de la ponctuation n\u2019a pas \u00e9t\u00e9 fait : la corbeille n\u2019a pas pu \u00eatre \u00e9crite. Rien n\u2019a chang\u00e9.\n\n"+((err&&err.message)||err));});
     });
   },[p.dicteeId]);
+  var sRc=useState(0),reclasses=sRc[0],setReclasses=sRc[1];   /* [L5] la ligne « n copies reclassées » */
   function traceAncienne(k){var a=(amenagesDictee[k]!==undefined)?!!amenagesDictee[k]:!!(ancienRegistre&&ancienRegistre[k]===true);var dA=data.amenagee||null;return a?{amenagee:true,mode:modesAmenagee(dA)||"A",base:(dA&&dA.base)||10}:{amenagee:false};}
   function traceSiAbsente(r,k){if(!r||typeof r!=="object"||r.amenagee!==undefined)return r;return Object.assign({},r,traceAncienne(k));}
   /* [ELEVE-1 ④] la ligne PAP de l'écran de la dictée (capture T284-e4) : le bloc pour cette dictée, élève par élève par le clic droit */
@@ -3225,42 +3258,7 @@ function CorrScreen(p){
           });
         }},"\ud83d\udd04 Recalculer",ifo("V\u00e9rifie tous les essais des \u00e9l\u00e8ves et corrige les erreurs de comptage (probl\u00e8mes d\u2019apostrophe par exemple).",{below:true})),
         
-        h("button",{className:"btn-sm btn-ghost",onClick:function(){
-          var conversions=[];
-          var newCorr=Object.assign({},p.corrections);
-          Object.keys(p.corrections).forEach(function(ek){
-            var c=p.corrections[ek];if(!c||!c.errors)return;
-            var errs=toArr(c.errors).filter(function(e){return e!=null});
-            var hasConv=false;
-            var newErrs=errs.map(function(e){
-              if(e.type==="M"&&data.tokens[e.idx]&&isPunct(data.tokens[e.idx])&&!estApostrophe(data.tokens[e.idx])){/* l'apostrophe n'est pas de la ponctuation (taxonomie : Apostrophes et élisions) */
-                hasConv=true;
-                conversions.push({ek:ek,word:data.tokens[e.idx]});
-                return Object.assign({},e,{type:"P"});
-              }
-              return e;
-            });
-            if(hasConv){
-              var exts=toArr(c.extras||[]).filter(function(e){return e!=null});
-              var sc=computeNote(newErrs,exts,baseDeCopie(c,data.base),data.bareme);   /* [ELEVE-1 ④] la base de la copie */
-              newCorr[ek]=Object.assign({errors:newErrs,extras:exts,note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now()},traceDe(c));
-            }
-          });
-          if(conversions.length===0){alert("Aucune erreur M sur ponctuation \u00e0 reclasser.");return}
-          var copiesCount=Object.keys(newCorr).filter(function(ek){return newCorr[ek]!==p.corrections[ek]}).length;
-          var gain=Math.round(conversions.length*0.5*10)/10;
-          if(!confirm(conversions.length+" erreur"+(conversions.length>1?"s":"")+" M \u00e0 reclasser en P sur "+copiesCount+" copie"+(copiesCount>1?"s":"")+" (gain total +"+gain+" pts). Confirmer ?"))return;
-          Object.keys(newCorr).forEach(function(ek){
-            if(newCorr[ek]===p.corrections[ek])return;
-            db.ref("correction_dictee/"+p.dicteeId+"/results/"+ek).set(newCorr[ek]);
-            var nErrs=newCorr[ek].errors;
-            // total = erreurs corrigibles (exclut type A = signalements graphie)
-            db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/total").set(nErrs.filter(function(e){return e&&e.type!=="A"}).length);
-            db.ref("correction_dictee/"+p.dicteeId+"/autocorrection/"+ek+"/errorRefs").set(nErrs.map(function(e){return{word:e.word,type:e.type,idx:e.idx}}));
-          });
-          p.onResetCorrections(newCorr);
-          alert(conversions.length+" reclassement"+(conversions.length>1?"s":"")+" effectu\u00e9"+(conversions.length>1?"s":"")+".");
-        }},"\ud83d\udd04 M\u2192P",ifo("Convertit les erreurs M (manquant -1) port\u00e9es sur des signes de ponctuation en erreurs P (-0.5). Les vrais mots manquants ne sont pas touch\u00e9s. \u00c0 utiliser en une fois apr\u00e8s avoir corrig\u00e9 les copies.",{below:true})),
+        /* [L5] le bouton « M→P » est retiré : la touche M s'adapte (L3), le menu au clic l'était déjà, et la reprise à l'ouverture a tout reclassé */
 
         h("button",{className:"btn-sm btn-ghost",onClick:function(){snapshotExport("correction_dictee/"+p.dicteeId,"dictee_"+p.dicteeId)}},"\ud83d\udcf8 Snapshot",ifo("T\u00e9l\u00e9charge les donn\u00e9es de cette dict\u00e9e dans un fichier.",{below:true,right:true})),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){var i=document.createElement("input");i.type="file";i.accept=".json";i.onchange=function(){if(i.files[0])snapshotImport("correction_dictee/"+p.dicteeId,i.files[0],function(){window.location.reload()})};i.click()}},"\ud83d\udce4 Restaurer",ifo("Recharge les donn\u00e9es d\u2019une dict\u00e9e depuis un fichier sauvegard\u00e9.",{below:true,right:true})),
@@ -3277,6 +3275,8 @@ function CorrScreen(p){
       var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
       return h("div",null,
         h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
+        reclasses>0&&h("div",{id:"ligne-reclassement",style:{border:"1px solid #16a34a",background:"#f0fdf4",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#14532d"},title:"La ponctuation d\u2019avant : une erreur \u00ab M \u00bb pos\u00e9e sur un signe est devenue \u00ab P \u00bb ; un signe \u00ab en trop \u00bb compte au forfait ponctuation. L\u2019\u00e9tat d\u2019avant de chaque copie est dans la corbeille (restaurable)."},
+          "\u2713 "+reclasses+" copie"+(reclasses>1?"s":"")+" reclass\u00e9e"+(reclasses>1?"s":"")+" (ponctuation) \u2014 l\u2019\u00e9tat d\u2019avant est dans la corbeille."),   /* [L5] */
         lignePapDictee(),   /* [ELEVE-1 ④] */
         h(EleveSearchBar,{query:eleveQuery,onChange:setEleveQuery,count:filteredEleves.length,placeholder:"Recherche \u00e9l\u00e8ve (initiales : DM pour Dupont Marie)"}),
         h("div",{className:"eleve-grid"},filteredEleves.map(function(e){
@@ -3680,7 +3680,7 @@ function CorrEleve(p){
     var neF=errors.concat([errObj]);setErrors(neF);setLastTouched(ft.idx);autoTexte(neF,extras,ft.idx);
     setAskFautifTexte(null);setFautifTexteVal("");
   }
-  function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}var nxI=extras.concat([{afterIdx:insertIdx,word:insertWord.trim()}]);setExtras(nxI);autoTexte(errors,nxI,insertIdx);setInsertIdx(null);setInsertWord("")}
+  function confirmInsert(){if(!insertWord.trim()){setInsertIdx(null);return}var wI=insertWord.trim(),exI={afterIdx:insertIdx,word:wI};if(estSigne(wI))exI.type="P";var nxI=extras.concat([exI]);   /* [L5] un signe en plus : au forfait ponctuation */setExtras(nxI);autoTexte(errors,nxI,insertIdx);setInsertIdx(null);setInsertWord("")}
   function removeExtra(i){var ne=extras.slice();ne.splice(i,1);setExtras(ne);autoTexte(errors,ne,lastTouched)}
 
   var errMap={};errors.forEach(function(e){errMap[e.idx]=e.type});
@@ -4031,7 +4031,7 @@ function CorrEleve(p){
         h("div",{className:"word-line-pulse","data-line-overlay":"1",style:{display:"none"}}),
         display.map(function(d){
         if(d.t==="ins")return h("span",{key:d.k,className:"insert-zone",onClick:function(){setInsertIdx(d.ai)}});
-        if(d.t==="ex")return h("span",{key:d.k,className:"extra-word",onClick:function(){removeExtra(d.gi)},title:"Supprimer"},"+"+d.w);
+        if(d.t==="ex"){var exP=extras[d.gi]&&extras[d.gi].type==="P";return h("span",{key:d.k,className:"extra-word"+(exP?" extra-ponct":""),onClick:function(){removeExtra(d.gi)},title:exP?"Ponctuation en trop \u2014 compt\u00e9e au forfait ponctuation. Clic : la retirer.":"Mot en trop. Clic : le retirer."},"+"+d.w,exP?h("sup",{style:{fontSize:9,marginLeft:2}},"P"):null);}   /* [L5] */
         var cls="word-btn";if(isPunct(d.w))cls+=" punct";
         if(errMap[d.idx]==="G")cls+=" err-g";else if(errMap[d.idx]==="L")cls+=" err-l";else if(errMap[d.idx]==="M")cls+=" err-m";else if(errMap[d.idx]==="I")cls+=" err-i";else if(errMap[d.idx]==="P")cls+=" err-p";else if(errMap[d.idx]==="A")cls+=" err-a";else if(errMap[d.idx]==="E")cls+=" err-e";
         if(d.idx===lastTouched)cls+=" last-touched";
