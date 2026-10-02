@@ -1011,3 +1011,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `8f6ca8ffe640` (commit `16368f9d77cf`) · 755 719 o · md5 `a6c0ce567fc92617be2ce0f6d613fff7` · v6.7.0-L8
 - **Motif** : L10b — la capitalisation des formes fautives. Promu : 768 116 o, md5 `bf3f2c03737957bcbff2d36aca32052c` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `8f6ca8ffe640…` → PUT, puis bit à bit. Les objets `correction_dictee_erreurs` et les `formeId` posés dans les erreurs relues restent au hub (ignorés par la L8).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L9 (02/10/2026, conscience n°12)
+- blob `d92641e54d43` (commit `c80f54e4e58c`) · 768 116 o · md5 `bf3f2c03737957bcbff2d36aca32052c` · v6.7.0-L10b
+- **Motif** : L9 — identité des copies, date de correction, « Non » du bandeau. Promu : 773 563 o, md5 `4f0ecbca3b9041f76c89b92d8d9a07e9` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `d92641e54d43…` → PUT, puis bit à bit (les champs `id`/`creeLe`/`modifieLe`, `config.dateCorrection` et `effacees/*/ignoree` restent au hub, ignorés par la L10b).
