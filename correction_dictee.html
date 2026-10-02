@@ -1134,7 +1134,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L5";
+var APP_VERSION="6.7.0-L6";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -3329,6 +3329,8 @@ function CorrScreen(p){
           p.onSave(san(rapideEleve),err,ext,fastIdxVal,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),posTexte);   /* [ELEVE-1 ④] */
         },
         onExitFast:function(){setCur(rapideEleve);setTab("correct")},   /* [L2] la même copie, en mode texte */
+        elevesRecherche:sortElevesByNom(data.eleves),corrigees:p.corrections,absentsRecherche:p.absents,   /* [L6] la recherche en fin de copie */
+        onOuvrirRapide:function(nom){setCur(nom);},   /* [L6] l'élève choisi s'ouvre directement en mode rapide (l'onglet reste Rapide) */
         onSave:function(err,ext){
           p.onSave(san(rapideEleve),err,ext,undefined,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base));   /* [ELEVE-1 ④] */
           // Move to next uncorrected
@@ -3702,6 +3704,7 @@ function CorrEleve(p){
 
   var s10=useState(null),askFautifI=s10[0],setAskFautifI=s10[1];
   var sGM=useState(false),gardeMot=sGM[0],setGardeMot=sGM[1];   /* [L3] la garde du mot juste */
+  var sRF=useState(""),rechFin=sRF[0],setRechFin=sRF[1];var rechFinRef=React.useRef(null);   /* [L6] la recherche par initiales en fin de copie */
   var s11=useState(""),fautifValI=s11[0],setFautifValI=s11[1];
   var fautifRefI=React.useRef(null);
   React.useEffect(function(){if(askFautifI&&fautifRefI.current)fautifRefI.current.focus()},[askFautifI]);
@@ -3764,9 +3767,13 @@ function CorrEleve(p){
     }
   }
 
+  React.useEffect(function(){   /* [L6] la copie finie : le curseur va dans la recherche */
+    if(fastMode&&fastIdx>=wordTokens.length&&rechFinRef.current){try{rechFinRef.current.focus()}catch(e){}}
+  },[fastMode,fastIdx]);
   React.useEffect(function(){
     if(!fastMode||askFautifI)return;
     function onKey(e){
+      var tgK=e.target&&e.target.tagName;if(tgK==="INPUT"||tgK==="TEXTAREA"||tgK==="SELECT"||(e.target&&e.target.isContentEditable))return;   /* [L6] une lettre tapée dans un champ ne déclenche aucun raccourci */
       if(e.key==="g"||e.key==="G"){e.preventDefault();fastMark("G")}
       else if(e.key==="l"||e.key==="L"){e.preventDefault();fastMark("L")}
       else if(e.key==="m"||e.key==="M"||e.key==="/"){e.preventDefault();fastMark(typeAdapteM(wordTokens[fastIdx]))}   /* [L3] M s'adapte */
@@ -3864,6 +3871,7 @@ function CorrEleve(p){
 
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
+    var propFin=(p.onOuvrirRapide&&rechFin.trim())?(p.elevesRecherche||[]).filter(function(n){return n!==p.eleve&&matchEleveInitials(n,rechFin)}).slice(0,6):[];   /* [L6] */
     var pct=Math.round(fastIdx/wordTokens.length*100);
     var curWord=fastDone?null:wordTokens[fastIdx];
     var ctxStart=Math.max(0,fastIdx-3);
@@ -3900,6 +3908,17 @@ function CorrEleve(p){
           h("div",{style:{fontSize:"2rem",marginBottom:8}},wasAlreadyDone?"\u2714\ufe0f":"\u2705"),
           h("div",{style:{fontSize:"1.2rem",fontWeight:700,marginBottom:8}},wasAlreadyDone?"\u00c9l\u00e8ve d\u00e9j\u00e0 corrig\u00e9":"Termin\u00e9 !"),
           h("div",{style:{fontSize:".9rem",color:"var(--text-sub)"}},errors.length+" erreur"+(errors.length>1?"s":"")+" trouv\u00e9e"+(errors.length>1?"s":"")),
+          p.onOuvrirRapide&&h("div",{id:"recherche-fin",style:{margin:"10px auto 4px",maxWidth:340,textAlign:"left"}},   /* [L6] N1 */
+            h("div",{style:{fontSize:".8rem",color:"var(--muted)",marginBottom:4}},"Copie suivante \u2014 tape les initiales (DM pour Dupont Marie), puis Entr\u00e9e :"),
+            h("input",{ref:rechFinRef,type:"text",value:rechFin,autoFocus:true,id:"recherche-fin-champ",title:"Les initiales de l\u2019\u00e9l\u00e8ve (DM pour Dupont Marie). Entr\u00e9e ouvre le premier propos\u00e9, directement en mode rapide. Les lettres tap\u00e9es ici ne marquent aucune erreur.",
+              onChange:function(e){setRechFin(e.target.value)},onKeyDown:function(e){if(e.key==="Enter"){e.preventDefault();e.stopPropagation();if(propFin.length){var n0=propFin[0];setRechFin("");p.onOuvrirRapide(n0);}}else if(e.key==="Escape"){setRechFin("")}},
+              placeholder:"DM\u2026",style:{width:"100%",padding:"8px 10px",border:"2px solid var(--primary)",borderRadius:8,fontSize:"1rem",boxSizing:"border-box"}}),
+            propFin.map(function(n,ii){var kN=san(n),abs=p.absentsRecherche&&p.absentsRecherche[kN],fait=p.corrigees&&p.corrigees[kN];
+              return h("div",{key:n,className:"recherche-fin-prop",onClick:function(){setRechFin("");p.onOuvrirRapide(n)},title:"Ouvrir en mode rapide",
+                style:{padding:"5px 10px",marginTop:3,borderRadius:6,cursor:"pointer",background:ii===0?"var(--primary-light,#dbeafe)":"transparent",fontWeight:ii===0?700:500,fontSize:".9rem",display:"flex",justifyContent:"space-between",gap:8}},
+                h("span",null,n),h("span",{style:{fontSize:".75rem",color:abs?"#c53030":"var(--muted)"}},abs?"absent":(fait?"\u2714 corrig\u00e9e":"")));}),
+            rechFin.trim()&&!propFin.length&&h("div",{style:{fontSize:".8rem",color:"var(--muted)",marginTop:4}},"Aucun \u00e9l\u00e8ve ne correspond.")
+          ),
           h("div",{style:{display:"flex",gap:8,justifyContent:"center",marginTop:14,flexWrap:"wrap"}},
             /* [MICRO 6.6.3 — dette n°12 · 93] le choix du barème n'existe pas ici : ce bloc hérité lisait une variable qui n'appartient qu'à l'édition de la dictée — ReferenceError à « sauter à la fin ». Le barème se règle dans Préparation. */
           h("button",{className:"btn btn-primary",onClick:function(){var inc=saisieIncomplete(errors);if(inc&&window.confirm(phraseSaisieIncomplete(inc,p.eleveName||""))){var ci=wordTokens.findIndex(function(w){return inc.index.indexOf(w.idx)>=0});if(ci>=0){setFastIdx(ci);return}}p.onSave(errors,extras)}},"\u2705 Enregistrer"),
