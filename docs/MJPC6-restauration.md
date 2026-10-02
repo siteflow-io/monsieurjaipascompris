@@ -996,3 +996,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `026e07bc7772` (commit `3503e364a654`) · 746 811 o · md5 `c28534fac49660fde55a51c2623a4324` · v6.7.0-L6
 - **Motif** : Entrée avance même sur un signe (dette 98). Promu : 746 933 o, md5 `dd66cd92f7d1208178dc9987eec83b28` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `026e07bc7772…` → PUT, puis bit à bit (la L6 remarque P à chaque Entrée sur un signe).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L7b (02/10/2026, conscience n°12)
+- blob `3624cf93d388` (commit `bfef40d1a605`) · 746 933 o · md5 `dd66cd92f7d1208178dc9987eec83b28` · v6.7.0-L6b
+- **Motif** : L7b — largeur 1100 px, phrase entière. Promu : 748 284 o, md5 `65d6bd9fdb1f72e73a254c450007bcb5` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `3624cf93d388…` → PUT, puis bit à bit contre le md5 ci-dessus.
