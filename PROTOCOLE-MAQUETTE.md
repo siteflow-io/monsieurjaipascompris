@@ -51,3 +51,9 @@
 
 ## 7 · Ce qui ne se fait jamais dans une maquette
 Écrire au hub · porter un jeton ou une clé · afficher du méta ou un code · un bouton qui ne fait rien · un faux vert · deux fichiers différents sous un même nom · livrer une capture sans l'avoir regardée · prouver par un appel de fonction · reconstruire l'écran au clic · couper un texte · s'appuyer sur un rang · mesurer une image sans image.
+
+## RÈGLE AJOUTÉE LE 03/10/2026 (Paul, C12 tour 416) — UNE MAQUETTE PART DE L'EXISTANT
+« Une maquette ne doit jamais être retravaillée pour qu'on lui ajoute des fonctionnalités existant déjà. Sinon, c'est une perte de temps. »
+- Une maquette de cadrage **part de l'écran réel** tel qu'il est en production : soit **l'app elle-même, branchée sur un faux hub** (l'instantané anonymisé du kit, embarqué dans un seul fichier HTML que Paul ouvre chez lui), soit, pour un écran qui n'existe pas encore, une reproduction fidèle de l'écran voisin ; **on n'y ajoute que la nouveauté à cadrer**, rien d'autre.
+- Avant de dessiner quoi que ce soit, la conscience mesure l'existant (quel écran, quels gestes, quelles données) et le dit ; si la maquette ne peut pas partir de l'app réelle, elle le déclare et explique pourquoi.
+- Une maquette qui oblige Paul à redemander l'existant (le type d'erreur, la case, le pavé…) est fautive et se refait depuis l'app.
