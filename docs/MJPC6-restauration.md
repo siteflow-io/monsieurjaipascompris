@@ -1040,3 +1040,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L14b (03/10/2026, conscience n°12)
 - blob `36c1d3220d95` (commit `5cd02805a301`) · 819 640 o · md5 `6516ce917a5bfe0a94663b252582086c` · v6.7.0-L14
 - **Motif** : micro L14b — la modale du mode texte. Promu : 819 835 o, md5 `66e0ab5a4bacc5eff9a9c6ce244fa2c9` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15-0b (03/10/2026, conscience n°12)
+- blob `bed2dda88562` (commit `07e13a893c5b`) · 819 835 o · md5 `66e0ab5a4bacc5eff9a9c6ce244fa2c9` · v6.7.0-L14b
+- **Motif** : L15-0b — forme acceptée par place, majuscule, aménagé après correction, ⇧R. Promu : 828 806 o, md5 `f58664d49a00228e3ac7d4c181e42817` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `bed2dda88562…` → PUT, puis bit à bit. Attention : les règles converties par place (`formesAcceptees/<place>/…`) ne sont pas lues par la L14b (qui lit par mot) ; l'état d'avant est en corbeille (`conversion-regles-par-place…`).
