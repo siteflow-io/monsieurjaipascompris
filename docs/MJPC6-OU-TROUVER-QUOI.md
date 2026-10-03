@@ -319,3 +319,11 @@
 | le verrou | `heureLue` / `heureRef` (écoute de `correction_dictee/<id>/heure`) ; sans heure jamais lancée → l'écran d'attente (deux phrases + « ← Mes dictées ») ; la session posée seulement quand une séance existe |
 | hors classe | `horsClasseL13` (séance close ou passée, aucune en cours), `ouvHC` (le moment de l'ouverture), `finEffL13` (45 min) à la place de `finDeFenetre` ; le bandeau ; à zéro → « Mes dictées » |
 | la fenêtre | `finDeFenetre` : 55 → 45 min hors heure |
+
+## AJOUT DU 03/10/2026 — correction_dictee 6.7.0-L14 : la note des élèves aménagés
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| la règle | `computeNote` : pour une copie `amenagee:true`, les erreurs hors `lacunes[].tokenIdx` sont `sansCout` (motif `amenage`) ; `counts.sansCout` |
+| le rétroactif | l'effet d'ouverture de `CorrScreen` (corbeille `recalcul-amenage` puis `results.update`) ; recalcul quand `dictee/amenagee.lacunes` change |
+| l'élève | `EleveCorrection` : l'encart avec la phrase de Paul ; l'écran de fin « (sur les k mots à compléter) » ; `buildCopieHtml` : la phrase, la note aménagée, coût sous les mots des trous seulement |
