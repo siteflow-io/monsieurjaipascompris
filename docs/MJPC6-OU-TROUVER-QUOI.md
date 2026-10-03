@@ -336,3 +336,10 @@
 | la majuscule | `motJuste` : identique casse comprise seulement ; les objets de L10 gardent la casse |
 | l'élève marqué aménagé après coup | `CorrScreen` : `amenLus` (les trois sources), l'effet « la trace suit le marquage » → `recalcul-amenage_…` en corbeille, message « copie recalculée : n erreurs comptées sur k mots à compléter » |
 | ⇧R depuis le mot courant | `CorrEleve` : `__posL15` (position publiée), reprise à l'ouverture de l'autre mode ; « ← Texte », Pause |
+
+## AJOUT DU 03/10/2026 — correction_dictee 6.7.0-L15a : le paramétrage de la version aménagée
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| les propositions crédibles | `propositionsPourL15a` (les formes de L10 d'abord, puis `reglesCibleesL15a`, `HOMOPHONES_L15A` ; jamais vide ni le mot) ; `indiceEcartL15a` (mode C) ; `suggestDistracteurs` ne reste que dans `addLacune` (morte — code mort, dette 97) |
+| le paramétrage | `ConfigAmenagee` : écoute en direct du hub, `setDefaultMode` + `completerPourMode` (suivi d'effets, message compté), la fenêtre d'un mot (`ouvrirFenL15a`, `enregistrerFenL15a`, `retirerFenL15a`, `autresFormesL15a`, Entrée / Échap) ; `EditionDictee` (`resteIci`) |
