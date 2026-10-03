@@ -2937,3 +2937,5 @@ Cadrage 4 · 3.2, 1.4 — sur l'existant mesuré dans `index.html` (Paul, 29/09 
 **n°12 · 112 — « Regagner des points » : la consigne est en infobulle (l'élève est au tactile) et il n'y a pas de bouton pour refuser** : la consigne en clair, un bouton « je garde ma note » (mots à valider par Paul). L15.
 **n°12 · 113 — Le regain des points n'apparaît pas dans le bilan** (détail de la note, commentaires) : « sinon ça fausse les commentaires ». L15.
 **n°12 · 114 — Masquer les copies après les avoir rendues : l'élève qui ne recharge pas y a toujours accès** (pas d'écoute de `copyPublishedAt` côté élève) : actualisation en direct, comme l'heure (L13). L15.
+
+**n°12 · 115 — Les modes d'affichage Brut / Barré / Placeholder (onglet Copies) sont grisés alors que toutes les recopies sont faites** (Paul, 03/10). Mesuré : `copieRecopiee` exige une recopie pour toute erreur sauf M — or P, I, A, E n'en ont jamais ; dès qu'une copie porte une ponctuation manquante ou un illisible, les trois modes tombent. Règle à poser : recopie attendue pour G et L seulement (comme le contrôle « mots recopiés », point 322). L15d.
