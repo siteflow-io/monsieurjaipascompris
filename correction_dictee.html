@@ -1170,7 +1170,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L13";
+var APP_VERSION="6.7.0-L14";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1373,6 +1373,7 @@ var AIDES={
     ["\u00ab \u21bb Reg\u00e9n\u00e9rer \u00bb","refaire les propositions, l\u2019indice ou le raisonnement"],
     ["\u00ab \ud83d\uddd1 Supprimer cette lacune \u00bb","rendre le mot au texte"],
     ["\u00ab \ud83d\udcc4 G\u00e9n\u00e9rer le document papier \u00bb","la feuille am\u00e9nag\u00e9e \u00e0 imprimer"],
+    ["la note de l\u2019\u00e9l\u00e8ve am\u00e9nag\u00e9","seuls les mots \u00e0 compl\u00e9ter comptent dans la note de l\u2019\u00e9l\u00e8ve am\u00e9nag\u00e9 ; tu corriges toute sa copie, ses autres erreurs restent visibles, sans co\u00fbt"],
     AIDE_FERMER]},
   "formes-acceptees":{ou:"Pr\u00e9paration \u2014 formes accept\u00e9es",l:[
     ["clic sur un mot","ouvrir ses formes accept\u00e9es"],
@@ -1419,6 +1420,29 @@ function AideContextuelle(){
             h("table",{className:"aide-table",id:"aide-table"},h("tbody",null,c.l.map(function(r,i){return h("tr",{key:i},h("td",{className:"k"},r[0]),h("td",null,r[1]))}))))
           :h(AideModal,{onClose:function(){setOnglet("ici")}}))));
 }
+/* [L14] LA NOTE DES ÉLÈVES AMÉNAGÉS : pour une copie aménagée (trace amenagee: true), seules les erreurs posées sur les mots des trous
+   (dictee/amenagee.lacunes[].tokenIdx) comptent ; toutes les autres erreurs et les mots en trop restent visibles, sans coût (motif « amenage »). */
+var AMEN_LAC={};
+function lacunesDe(amen){return (amen&&amen.enabled&&Array.isArray(amen.lacunes))?amen.lacunes.filter(Boolean).map(function(l){return l.tokenIdx}).filter(function(x){return typeof x==="number"}):null;}
+function marquerAmenage(errs,extras,estAmen,lac){var set={};(lac||[]).forEach(function(i){set[i]=1});var ch=false,actif=!!(estAmen&&lac);
+  var e2=(errs||[]).map(function(e){if(!e)return e;var hors=actif&&!set[e.idx];
+    if(hors&&!(e.sansCout&&e.motifSansCout==="amenage")){ch=true;return Object.assign({},e,{sansCout:true,motifSansCout:"amenage"});}
+    if(!hors&&e.motifSansCout==="amenage"){ch=true;var x=Object.assign({},e);delete x.sansCout;delete x.motifSansCout;return x;}
+    return e;});
+  var x2=(extras||[]).map(function(x){if(!x)return x;
+    if(actif&&!(x.sansCout&&x.motifSansCout==="amenage")){ch=true;return Object.assign({},x,{sansCout:true,motifSansCout:"amenage"});}
+    if(!actif&&x.motifSansCout==="amenage"){ch=true;var y=Object.assign({},x);delete y.sansCout;delete y.motifSansCout;return y;}
+    return x;});
+  return {errs:e2,extras:x2,change:ch};}
+/* les copies aménagées d'une dictée, recalculées (l'état d'avant en corbeille d'abord, comme le reclassement) */
+function recalculerAmenagees(id,corr,lac,base,bareme,titre){
+  var cles=[],nouv={};Object.keys(corr||{}).forEach(function(k){var c=corr[k];if(!c||typeof c!=="object")return;
+    var m=marquerAmenage(toArr(c.errors||[]).filter(function(e){return e!=null}),toArr(c.extras||[]).filter(function(e){return e!=null}),c.amenagee===true,lac);if(!m.change)return;
+    var sc=computeNote(m.errs,m.extras,baseDeCopie(c,base),bareme);nouv[k]={errors:m.errs,extras:m.extras,note:sc.note,deduction:sc.deduction,counts:sc.counts,modifieLe:Date.now()};cles.push(k);});
+  if(!cles.length)return Promise.resolve({n:0,copies:{}});
+  var now=new Date(),jour=now.toISOString().slice(0,10),hh=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);
+  return Promise.all(cles.map(function(k){return db.ref("corbeille/"+jour+"/recalcul-amenage_"+hh+"_"+k).set({_meta:{motif:"recalcul-amenage",chemin:"correction_dictee/"+id+"/results/"+k,source:"correction_dictee",dictee:id,titre:titre||"",cle:k,le:Date.now()},data:corr[k]});}))
+    .then(function(){var w={},cp={};cles.forEach(function(k){Object.keys(nouv[k]).forEach(function(f){w[k+"/"+f]=nouv[k][f];});cp[k]=Object.assign({},corr[k],nouv[k]);});return db.ref("correction_dictee/"+id+"/results").update(w).then(function(){return {n:cles.length,copies:cp};});});}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -1496,9 +1520,9 @@ function computeNote(errors,extras,base,bareme){
     ded+=(COST[e.type]||0);
   });
   /* [L5] un signe de ponctuation « en trop » (marqué type P) est compté au forfait ponctuation, plus comme un mot en trop */
-  var nXP=0;extras.forEach(function(x){if(x&&x.type==="P"){nXP++;if(brevet)nP++;else ded+=(COST.P||0);}else ded+=COST.X});
+  var nXP=0,nXS=0;extras.forEach(function(x){if(x&&x.sansCout){nXS++;return}if(x&&x.type==="P"){nXP++;if(brevet)nP++;else ded+=(COST.P||0);}else ded+=COST.X});nSC+=nXS;   /* [L14] un mot en trop « sans coût » (copie aménagée) : rien */
   if(brevet) ded += Math.floor(nP/4) * 0.5 * (base/10);
-  var counts={G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:extras.length-nXP};
+  var counts={G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:extras.length-nXP-nXS};
   errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});counts.P+=nXP;if(nSC)counts.sansCout=nSC;   /* [L11] comptées à part */
   return{note:Math.round(Math.max(0,base-ded)*10)/10,deduction:Math.round(ded*10)/10,
          counts:counts,total:errors.length+extras.length,
@@ -2724,6 +2748,7 @@ function AppProf(p){
     var tr=(trace&&typeof trace==="object")?trace:{amenagee:false};
     errors=formesSynchroniser(dicteeId,dicteeData,corrections[ek],errors);   /* [L10] */
     errors=marquerSansCout(errors,empreinteTexte(dicteeData.text),dicteeData.tokens||tokenize(dicteeData.text||"")).errs;   /* [L11] une forme acceptée : sans coût */
+    var mA14=marquerAmenage(errors,extras,!!(trace&&trace.amenagee),AMEN_LAC[dicteeId]);errors=mA14.errs;extras=mA14.extras;   /* [L14] copie aménagée : seuls les trous comptent */
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,(tr.amenagee&&tr.base)?tr.base:(tr.baseDictee||dicteeData.base),dicteeData.bareme);
     c[ek]={errors:errors,extras:extras||[],note:sc.note,deduction:sc.deduction,counts:sc.counts,timestamp:Date.now(),amenagee:!!tr.amenagee};
     if(tr.amenagee){c[ek].mode=tr.mode;c[ek].base=tr.base;}
@@ -3341,7 +3366,7 @@ function CorrScreen(p){
      (data.amenagee restait vide) : la base aménagée n'était jamais employée. Il l'écoute désormais. */
   var sAC=useState(null),amenCfg=sAC[0],setAmenCfg=sAC[1];
   var sBC=useState(null),baseCfg=sBC[0],setBaseCfg=sBC[1];var sDC=useState(""),dateCorr=sDC[0],setDateCorr=sDC[1];   /* [L9] */
-  useEffect(function(){var rA=db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee");function fA(sn){setAmenCfg(sn.val()||null)}rA.on("value",fA);
+  useEffect(function(){var rA=db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee");function fA(sn){AMEN_LAC[p.dicteeId]=lacunesDe(sn.val());setAmenCfg(sn.val()||null)}   /* [L14] */rA.on("value",fA);
     var rB=db.ref("correction_dictee/"+p.dicteeId+"/config/base");function fB(sn){var v=sn.val();setBaseCfg(typeof v==="number"?v:(v?Number(v):null))}rB.on("value",fB);   /* [ELEVE-1 ④ — complément] la base suit le réglage, sans rouvrir */
     var rD=db.ref("correction_dictee/"+p.dicteeId+"/config/dateCorrection");function fD(sn){setDateCorr(sn.val()||"")}rD.on("value",fD);   /* [L9] la date de correction réglée */
     return function(){rA.off("value",fA);rB.off("value",fB);rD.off("value",fD)};},[p.dicteeId]);
@@ -3393,7 +3418,15 @@ function CorrScreen(p){
   var sRc=useState(0),reclasses=sRc[0],setReclasses=sRc[1];   /* [L5] la ligne « n copies reclassées » */
   var sCI9=useState(0),copiesIdentifiees=sCI9[0],setCopiesIdentifiees=sCI9[1];   /* [L9] */
   var sMAO=useState(""),msgAccepteesOuv=sMAO[0],setMsgAccepteesOuv=sMAO[1];   /* [L11] */
+  var sMAM=useState(""),msgAmen=sMAM[0],setMsgAmen=sMAM[1];var lacPrecRef=React.useRef(undefined);   /* [L14] */
   var sFR=useState(0),formesRetenues=sFR[0],setFormesRetenues=sFR[1],sFP=useState(0),formesPret=sFP[0],setFormesPret=sFP[1];   /* [L10] */
+  useEffect(function(){   /* [L14] les copies aménagées : recalculées une fois à l'ouverture, puis chaque fois que les trous changent */
+    if(!formesPret)return;var lac=lacunesDe(data.amenagee),cle=JSON.stringify(lac);if(lacPrecRef.current===cle)return;
+    var premier=lacPrecRef.current===undefined;lacPrecRef.current=cle;AMEN_LAC[p.dicteeId]=lac;
+    recalculerAmenagees(p.dicteeId,p.corrections,lac,data.base,data.bareme,data.title).then(function(r){if(!r.n)return;
+      p.onResetCorrections(Object.assign({},p.corrections,r.copies));
+      setMsgAmen(r.n+" copie"+(r.n>1?"s":"")+" am\u00e9nag\u00e9e"+(r.n>1?"s":"")+" recalcul\u00e9e"+(r.n>1?"s":"")+(premier?"":" \u2014 la version am\u00e9nag\u00e9e a chang\u00e9")+" ; l\u2019\u00e9tat d\u2019avant est dans la corbeille.");});
+  },[formesPret,JSON.stringify(lacunesDe(data.amenagee))]);
   function finOuvertureL10(c2,changees){
     formesOuverture(p.dicteeId,c2).then(function(r){var c3=r.c||c2,ch=!!r.c||changees;if(r.n)setFormesRetenues(r.n);
       return accepteesCharger().then(function(){var tk=empreinteTexte(data.text);   /* [L11] une règle a-t-elle changé depuis ? */
@@ -3628,6 +3661,7 @@ function CorrScreen(p){
       var filteredEleves=eleveQuery.trim()?sortedEleves.filter(function(e){return matchEleveInitials(e,eleveQuery)}):sortedEleves;
       return h("div",null,
         h("p",{style:{fontSize:".82rem",color:"var(--muted)",marginBottom:8}},"Clic droit sur un \u00e9l\u00e8ve pour ouvrir le menu (absent / am\u00e9nag\u00e9). Le badge \ud83d\udcd8 PAP indique un \u00e9l\u00e8ve am\u00e9nag\u00e9."),
+        msgAmen&&h("div",{id:"ligne-amenage",style:{border:"1px solid #b45309",background:"#fffbeb",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#78350f"},title:"Pour un \u00e9l\u00e8ve am\u00e9nag\u00e9, seuls les mots \u00e0 compl\u00e9ter comptent dans la note ; toutes ses autres erreurs restent visibles, sans co\u00fbt."},"\u2713 "+msgAmen),   /* [L14] */
         msgAccepteesOuv&&h("div",{id:"ligne-acceptees",style:{border:"1px solid #16a34a",background:"#f0fdf4",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#14532d"},title:"Une forme accept\u00e9e a \u00e9t\u00e9 pos\u00e9e ou retir\u00e9e pour ce texte depuis la derni\u00e8re ouverture : les copies concern\u00e9es ont \u00e9t\u00e9 recalcul\u00e9es."},"\u2713 Formes accept\u00e9es : "+msgAccepteesOuv+"."),   /* [L11] */
         copiesIdentifiees>0&&h("div",{id:"ligne-identites",style:{border:"1px solid #94a3b8",background:"#f8fafc",borderRadius:10,padding:"8px 12px",margin:"0 0 10px",fontSize:".88rem",color:"#334155"},title:"Chaque copie porte d\u00e9sormais une identit\u00e9 interne (sa cr\u00e9ation, sa derni\u00e8re modification). L\u2019\u00e9l\u00e8ve ne la voit jamais."},
           "\u2713 "+copiesIdentifiees+" copie"+(copiesIdentifiees>1?"s ont":" a")+" re\u00e7u leur identit\u00e9 (interne, invisible pour l\u2019\u00e9l\u00e8ve)."),   /* [L9] */
@@ -4688,7 +4722,7 @@ function buildDicteeJSON(data, corrections, absents){
     var c = corrections[k];
     var elObj = {prenom: prenomOnly(e), nom_complet: e, corrige: !!c};
     if (c) {
-      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.sans_cout = (c.counts && c.counts.sansCout) || 0;   /* [L11] */ elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
+      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.sans_cout = (c.counts && c.counts.sansCout) || 0;   /* [L11] ; [L14] y compris, pour un élève aménagé, tout ce qui est hors des mots à compléter */ elObj.erreurs_comptees = toArr(c.errors || []).filter(function(e){return e && !e.sansCout;}).length; elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
       elObj.compteurs = c.counts || {};
       elObj.erreurs = toArr(c.errors).map(function(err){
         var o = {position: err.idx, mot_correct: err.word || null, type: err.type};
@@ -6419,7 +6453,8 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     }
     var estRep = estRepetee(ev);
     var afterHtml = '<span class="badge">' + ev.type + '</span>' +
-                    (ev.sansCout ? '<span class="points-perdus forme-acc" style="background:#e6f4ec;color:#1e6042">forme accept\u00e9e</span>' :   /* [L11] la mention remplace le coût */
+                    ((ev.sansCout && ev.motifSansCout === "amenage") ? '' :   /* [L14] hors des trous : le mot garde son type, sans coût affiché, sans autre marque */
+                     ev.sansCout ? '<span class="points-perdus forme-acc" style="background:#e6f4ec;color:#1e6042">forme accept\u00e9e</span>' :   /* [L11] la mention remplace le coût */
                      estRep ? '<span class="deja-compte" title="Tu as d\u00e9j\u00e0 fait cette faute sur ce mot : elle n\u2019est compt\u00e9e qu\u2019une fois.">d\u00e9j\u00e0 compt\u00e9</span>'
                             : (POINTS[ev.type] ? '<span class="points-perdus">' + POINTS[ev.type] + '</span>' : ''));
     var aDataAttr = (ev.type === "A") ? ' data-att="1"' : '';
@@ -6457,7 +6492,9 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     var ptStr = POINTS[err.type] ? ' <span class="err-points">'+POINTS[err.type]+' pt</span>' : '';
     /* Repetition : on le dit en clair, avec la regle, et on retire le cout. */
     var nFoisMot = errors.filter(function(x){return x && String(x.word||"").toLowerCase()===String(err.word||"").toLowerCase() && x.type===err.type}).length;
-    if (err.sansCout) {   /* [L11] */
+    if (err.sansCout && err.motifSansCout === "amenage") {   /* [L14] */
+      ptStr = '';
+    } else if (err.sansCout) {   /* [L11] */
       ptStr = ' <span class="err-points" style="background:#e6f4ec;color:#1e6042">forme accept\u00e9e</span>';
     } else if (estRepetee(err)) {
       ptStr = ' <span class="err-points" style="background:#f0e9d8;color:#6b5d3f">d\u00e9j\u00e0 compt\u00e9</span>';
@@ -6642,6 +6679,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     (dateStr ? 'Corrigé le ' + dateStr + '<br>' : '') +
     'Note : <strong>' + noteFr(c.note) + ' / ' + data.base + '</strong>' +
     '</div></div>' +
+    (c.amenagee === true ? '<div class="phrase-amenage" style="margin:4px 0 10px;font-size:.95em">J\u2019ai corrig\u00e9 toute ta copie : tu dois faire l\u2019autocorrection compl\u00e8te, mais la note ne compte que pour les mots que tu avais \u00e0 compl\u00e9ter le jour de la dict\u00e9e.</div>' : '') +   /* [L14] la même phrase, sous l'en-tête */
     (data.title ? '<div class="copie-title">' + escapeHtml(data.title) + '</div>' : '') +
     '<div class="texte">' + textHtml + '</div>' +
     (bilan ? '<div class="bilan"><div class="bilan-title">Bilan</div>' + escapeHtml(bilan) + '</div>' : '') +
@@ -7869,7 +7907,7 @@ function AppEleve(p){
         return{id:id,title:cfg.title||id,classe:classeName,niveau:cfg.niveau||"",published:cfg.published!==false,exercicesOuverts:cfg.exercicesOuverts===true,
                showNote:cfg.showNote!==false,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,bareme:cfg.bareme||"preparee",
                results:val[id].results||{},autocorrection:val[id].autocorrection||{},
-               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:val[id].heure||null,binomes:val[id].binomes||null,dateCorrection:cfg.dateCorrection||null};   /* [L9] */
+               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:val[id].heure||null,binomes:val[id].binomes||null,dateCorrection:cfg.dateCorrection||null,amenagee:((val[id].dictee||{}).amenagee)||null};   /* [L14] */   /* [L9] */
       });
       setDictees(list);
       if(forcedDicteeId){
@@ -7955,7 +7993,8 @@ function AppEleve(p){
     if(!et.ouvrable){setAttente(d);setErrMsg("");setScreen("attente");return}
     var nomRegistre=identite.nom;
     for(var i=0;i<d.eleves.length;i++){ if(san(d.eleves[i])===identite.cle) nomRegistre=d.eleves[i]; }
-    setEleveData({eleve:nomRegistre,dictee:d,key:identite.cle,errors:toArr(corr.errors||[]),extras:toArr(corr.extras||[]),note:corr.note,base:baseDeCopie(corr,d.base)});
+    setEleveData({eleve:nomRegistre,dictee:d,key:identite.cle,errors:toArr(corr.errors||[]),extras:toArr(corr.extras||[]),note:corr.note,base:baseDeCopie(corr,d.base),
+      amenagee:corr.amenagee===true,nbTrous:(lacunesDe(d.amenagee)||[]).length});   /* [L14] */
     setErrMsg("");
     if(forcedScreenUrl==="exercices")setScreen("exercices");
     else if(forcedScreenUrl==="copie")setScreen("copie");
@@ -10119,7 +10158,7 @@ function EleveCorrection(p){
       h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
         h("span",{className:"badge badge-"+String(e.type||"I").toLowerCase(),style:{padding:"3px 10px"}},e.type),
         h("b",null,"Erreur n\u00b0"+(activeErr+1)),
-        e.sansCout?h("span",{className:"forme-acc",style:{fontSize:".78rem",padding:"2px 8px",borderRadius:6,background:"#e6f4ec",color:"#1e6042",fontWeight:600}},"forme accept\u00e9e"):null,   /* [L11] */
+        (e.sansCout&&e.motifSansCout!=="amenage")?h("span",{className:"forme-acc",style:{fontSize:".78rem",padding:"2px 8px",borderRadius:6,background:"#e6f4ec",color:"#1e6042",fontWeight:600}},"forme accept\u00e9e"):null,   /* [L11] */
         h("span",{style:{marginLeft:"auto",color:"var(--muted)",fontSize:".85rem"}},n>0?(n+" essai"+(n>1?"s":"")):"premier essai"),
         h("button",{type:"button",onClick:fermerFeuille,title:"Fermer",style:{border:"none",background:"none",fontSize:"1.3rem",color:"var(--muted)",cursor:"pointer",marginLeft:8,width:"auto"}},"\u2715")),
       h("div",{style:{display:"flex",gap:8}},
@@ -10376,11 +10415,13 @@ function EleveCorrection(p){
       h("div",{style:{fontWeight:700,fontSize:"1.1rem",marginBottom:8}},"\u23f3 Ta correction s\u2019ouvrira quand ton professeur lancera la s\u00e9ance."),
       h("p",{style:{margin:"0 0 14px"}},"Tu as lu et coch\u00e9 les consignes. Reste sur cette page : elle s\u2019ouvrira toute seule, sans rien recharger."),
       h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:p.onBack},"\u2190 Mes dict\u00e9es")));
+  var encartAmen=d.amenagee?h("div",{className:"card",id:"encart-amenage",style:{marginBottom:12,border:"1.5px solid #b45309",background:"#fffbeb",fontSize:".95rem",lineHeight:1.5}},"J\u2019ai corrig\u00e9 toute ta copie : tu dois faire l\u2019autocorrection compl\u00e8te, mais la note ne compte que pour les mots que tu avais \u00e0 compl\u00e9ter le jour de la dict\u00e9e."):null;   /* [L14] la phrase de Paul, mot pour mot ; rien dans le corps du texte */
   var bandeauHC=horsClasseL13()?h("div",{className:"card",id:"bandeau-hors-classe",style:{marginBottom:12,border:"1.5px solid #b7791f",background:"#fef9ec",fontSize:".95rem"}},
     "\ud83c\udfe0 ",h("b",null,"Tu es hors classe : tu as 45 minutes.")," Il te reste ",h("b",null,Math.max(0,Math.floor((ouvHC+45*60000-now-1)/60000))+" min"),"."):null;   /* [L13] */
 
   if(finished) return h("div",{className:"container fade-up",style:{paddingTop:30}},
     bandeauHC,   /* [L13] */
+    encartAmen,   /* [L14] */
     // Note de dictée du prof
     h("div",{className:"card",style:{textAlign:"center",marginBottom:14}},
       txt("fin_parcours_emoji")?h("div",{style:{fontSize:"2rem",marginBottom:4}},txt("fin_parcours_emoji")):null,
@@ -10388,7 +10429,8 @@ function EleveCorrection(p){
       h("div",{style:{display:"flex",justifyContent:"center",gap:30,marginBottom:10}},
         liveConfig.showNote?h("div",null,
           h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Note de dict\u00e9e"),
-          h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(noteDictee,d.base)}},noteFr(noteDictee)+"/"+d.base)
+          h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(noteDictee,d.base)}},noteFr(noteDictee)+"/"+d.base),
+          d.amenagee?h("div",{id:"note-amenage",style:{fontSize:".85rem",color:"var(--muted)"}},"(sur les "+d.nbTrous+" mots \u00e0 compl\u00e9ter)"):null   /* [L14] */
         ):h("div",null,
           h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Note de dict\u00e9e"),
           h("div",{style:{fontSize:"1.2rem",fontWeight:600,color:"var(--muted)",padding:"8px 0"}},"Tu iras voir ta note sur \u00c9cole Directe.")
@@ -10508,6 +10550,7 @@ function EleveCorrection(p){
 
   return h("div",{className:"container fade-up",ref:racineRef,style:(p.moitie&&activeErr!==null)?{paddingBottom:420}:undefined},
     bandeauHC,   /* [L13] */
+    encartAmen,   /* [L14] */
     // Idle warning
     // Bandeau rouge « Reprends le travail » retiré (demande de Paul, 29/09) : votre suivi garde l'état « inactif ».
     // Header sticky
@@ -10595,7 +10638,7 @@ function EleveCorrection(p){
         h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}},
           h("span",{className:"badge badge-"+String(errors[activeErr].type||"I").toLowerCase(),style:{fontSize:".85rem",padding:"3px 10px"}},errors[activeErr].type),
           h("span",{style:{fontWeight:600,fontSize:".95rem"}},"Erreur n\u00b0"+(activeErr+1)),
-          errors[activeErr].sansCout?h("span",{className:"forme-acc",style:{fontSize:".78rem",padding:"2px 8px",borderRadius:6,background:"#e6f4ec",color:"#1e6042",fontWeight:600}},"forme accept\u00e9e"):null,   /* [L11] la carte de l'erreur, sur ordinateur */
+          (errors[activeErr].sansCout&&errors[activeErr].motifSansCout!=="amenage")?h("span",{className:"forme-acc",style:{fontSize:".78rem",padding:"2px 8px",borderRadius:6,background:"#e6f4ec",color:"#1e6042",fontWeight:600}},"forme accept\u00e9e"):null,   /* [L11] la carte de l'erreur, sur ordinateur */
           (attempts[activeErr]||0)>0&&h("span",{style:{fontSize:".78rem",color:"var(--muted)",marginLeft:"auto"}},(attempts[activeErr]||0)+" essai"+(((attempts[activeErr]||0)>1)?"s":""))
         ),
         h("div",{style:{display:"flex",gap:8}},
