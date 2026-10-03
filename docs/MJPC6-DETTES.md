@@ -2948,3 +2948,6 @@ Cadrage 4 · 3.2, 1.4 — sur l'existant mesuré dans `index.html` (Paul, 29/09 
 
 **n°12 · 119 — MODE RAPIDE, MOT DÉJÀ MARQUÉ : « Changer → G » proposé sur une erreur déjà G** (Paul, 03/10 : « G changé en G, ça n'a pas de sens ») : ne proposer que l'autre type. L16.
 **n°12 · 120 — MODE RAPIDE : « Annuler l'erreur » n'a pas de raccourci** (Paul, 03/10 : « ça serait bien que ce soit la touche Suppr ») : Suppr annule l'erreur posée sur le mot courant, hors champ de saisie. L16.
+
+**n°12 · 121 — MODE RAPIDE : la ligne du texte au-dessus du mot n'est pas centrée sur le mot courant** (Paul, 03/10) : le mot doit être aligné sous le gros mot, « … » de chaque côté, un défilement fluide droite → gauche, pour voir ce qui suit et avancer à la flèche droite. L16.
+**n°12 · 122 — L'épellation des formes par la voix native ne fonctionne pas bien** (Paul, 03/10 : « je ne sais pas si ça vaut le coup, ou alors il faut trouver autre chose que la voix native ») : à trancher — signal seul + l'écran, ou des lettres enregistrées une fois par Paul (natif, gratuit). L16.
