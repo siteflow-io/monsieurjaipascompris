@@ -1034,5 +1034,5 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L14 (03/10/2026, conscience n°12)
 - blob `0aa0eda53949` (commit `0da433f5ae8f`) · 813 092 o · md5 `4ce6fa98b97c959856fc00d8227e300f` · v6.7.0-L13
-- **Motif** : L14 — la note des élèves aménagés. Promu : 819 640 o, md5 `6516ce917a5b16a8ff9b45e8ef3c6a0e` (bit à bit).
+- **Motif** : L14 — la note des élèves aménagés. Promu : 819 640 o, md5 `6516ce917a5bfe0a94663b252582086c` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `0aa0eda53949…` → PUT, puis bit à bit (les copies aménagées recalculées ont leur état d'avant en corbeille, motif `recalcul-amenage`).
