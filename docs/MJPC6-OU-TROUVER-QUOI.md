@@ -311,3 +311,11 @@
 | l'aide | `AIDE` (état global), `aidePoser`, `aideContexte`, `useAide` (dans `CorrScreen`, `CorrEleve`, `EditionDictee`), `AIDES` (les neuf contextes : les lignes), `lignesAide`, `AideContextuelle` (fenêtre, onglets « Ici » / « Nouveautés ») ; rendue par `AppProf`, `CorrScreen`, `CorrEleve` — jamais côté élève |
 | les touches | « ? » hors champ, F1 (interceptée) partout, Échap ferme l'aide seule ; « i » seul = Illisible (l'alias « ? » retiré) |
 | la règle | toute livraison qui ajoute ou change un geste ajoute ou corrige sa ligne dans `AIDES` |
+
+## AJOUT DU 03/10/2026 — correction_dictee 6.7.0-L13 : l'attente de la première séance, 45 min hors classe
+
+| Quoi | Où (`correction_dictee.html`, `EleveCorrection`) |
+|---|---|
+| le verrou | `heureLue` / `heureRef` (écoute de `correction_dictee/<id>/heure`) ; sans heure jamais lancée → l'écran d'attente (deux phrases + « ← Mes dictées ») ; la session posée seulement quand une séance existe |
+| hors classe | `horsClasseL13` (séance close ou passée, aucune en cours), `ouvHC` (le moment de l'ouverture), `finEffL13` (45 min) à la place de `finDeFenetre` ; le bandeau ; à zéro → « Mes dictées » |
+| la fenêtre | `finDeFenetre` : 55 → 45 min hors heure |
