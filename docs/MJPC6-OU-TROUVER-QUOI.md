@@ -327,3 +327,12 @@
 | la règle | `computeNote` : pour une copie `amenagee:true`, les erreurs hors `lacunes[].tokenIdx` sont `sansCout` (motif `amenage`) ; `counts.sansCout` |
 | le rétroactif | l'effet d'ouverture de `CorrScreen` (corbeille `recalcul-amenage` puis `results.update`) ; recalcul quand `dictee/amenagee.lacunes` change |
 | l'élève | `EleveCorrection` : l'encart avec la phrase de Paul ; l'écran de fin « (sur les k mots à compléter) » ; `buildCopieHtml` : la phrase, la note aménagée, coût sous les mots des trous seulement |
+
+## AJOUT DU 03/10/2026 — correction_dictee 6.7.0-L15-0b
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| la règle par place | `cheminRegle(tk, idx, forme)` = `correction_dictee_textes/<tk>/formesAcceptees/<place>/<forme>` ; `regleEnMemoire`, `ACCEPT.parTexte[tk][place]` ; la conversion une fois à l'ouverture (corbeille) |
+| la majuscule | `motJuste` : identique casse comprise seulement ; les objets de L10 gardent la casse |
+| l'élève marqué aménagé après coup | `CorrScreen` : `amenLus` (les trois sources), l'effet « la trace suit le marquage » → `recalcul-amenage_…` en corbeille, message « copie recalculée : n erreurs comptées sur k mots à compléter » |
+| ⇧R depuis le mot courant | `CorrEleve` : `__posL15` (position publiée), reprise à l'ouverture de l'autre mode ; « ← Texte », Pause |
