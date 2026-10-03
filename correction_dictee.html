@@ -232,6 +232,9 @@ textarea{resize:vertical;min-height:120px}
 .aide-tete{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}.aide-ou{font-weight:700;color:var(--primary);margin:6px 0 8px}
 .aide-onglets{display:flex;gap:6px;margin-bottom:6px}.aide-onglets button{border:1px solid var(--border);background:transparent;border-radius:8px;padding:3px 10px;cursor:pointer}.aide-onglets button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
 .aide-table{width:100%;border-collapse:collapse;font-size:.9rem}.aide-table td{padding:5px 8px;border-top:1px solid var(--border);vertical-align:top}.aide-table td.k{font-weight:700;white-space:nowrap;width:1%}
+
+/* [L15-0] la forme reste lisible quand ses marques (« acceptée ailleurs », « accepter ici ») prennent de la place : elles passent à la ligne */
+.liste-formes .forme{flex-wrap:wrap}.fautif-texte-box .liste-formes .forme .f{flex:0 0 auto;overflow:visible;text-overflow:clip}
 </style>
 </head>
 <style>
@@ -1170,7 +1173,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L14b";
+var APP_VERSION="6.7.0-L15-0b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1214,7 +1217,7 @@ function empreinteTexte(t){var x=String(t||"").toLowerCase().replace(/\s+/g," ")
 function idForme(){return "fe_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);}
 /* la liste d'un mot : toutes les dictées confondues, dédoublonnée sans la casse (la première graphie gardée), du plus fréquent au plus rare */
 function formesPour(mot,attendu){var acc={},ordre=[];Object.keys(FORMES.parId).forEach(function(id){var o=FORMES.parId[id];if(!o||o.mot!==mot)return;var f=String(o.forme||"").trim();if(!f||motJuste(f,attendu))return;
-  var k=f.toLowerCase();if(!acc[k]){acc[k]={forme:f,compte:0};ordre.push(k);}acc[k].compte++;});
+  var k=f;if(!acc[k]){acc[k]={forme:f,compte:0};ordre.push(k);}acc[k].compte++;});   /* [L15-0] la casse est gardée : « Empereur » et « empereur » sont deux formes */
   return ordre.map(function(k){return acc[k]}).sort(function(x,y){return y.compte-x.compte||x.forme.localeCompare(y.forme)});}
 /* à chaque enregistrement d'une copie : les erreurs G/L recopiées gardent ou reçoivent leur objet ; un objet dont l'erreur est retirée est retiré */
 function formesSynchroniser(dId,dData,ancien,nouveaux){
@@ -1259,35 +1262,41 @@ function dateVueCopie(d,corr){return (d&&d.dateCorrection)?dateCorrectionTs(d.da
    correction_dictee_textes/<texteKey>/formesAcceptees/<motClé>/<formeClé> = { mot, forme, creeLe, origine, dicteeId } */
 var ACCEPT={charge:false,parTexte:{},titres:{},parCle:{}};
 function cleFb(x){return encodeURIComponent(String(x)).replace(/\./g,"%2E");}
-function accepteesDe(tk,mot){var t=ACCEPT.parTexte[tk]||{};return t[cleFb(mot)]||{};}
-function estAcceptee(tk,mot,forme){var f=String(forme||"").trim().toLowerCase();return !!f&&!!accepteesDe(tk,mot)[cleFb(f)];}
-function marquerSansCout(errs,tk,tokens){var ch=false;var r=(errs||[]).map(function(e){if(!e)return e;var acc=estAcceptee(tk,motCleForme(tokens,e.idx),e.fautif);
+function accepteesDe(tk,idx){var t=ACCEPT.parTexte[tk]||{};return t[String(idx)]||{};}   /* [L15-0] une place du texte */
+function estAcceptee(tk,idx,forme){var f=String(forme||"").trim();return !!f&&idx!=null&&!!accepteesDe(tk,idx)[cleFb(f)];}   /* [L15-0] à cette place, casse comprise */
+function marquerSansCout(errs,tk,tokens){var ch=false;var r=(errs||[]).map(function(e){if(!e)return e;var acc=estAcceptee(tk,e.idx,e.fautif);   /* [L15-0] la place de l'erreur */
   if(acc&&!e.sansCout){ch=true;return Object.assign({},e,{sansCout:true});}
   if(!acc&&e.sansCout&&e.motifSansCout!=="amenage"){ch=true;var e2=Object.assign({},e);delete e2.sansCout;return e2;}return e;});return {errs:r,change:ch};}
-function accepteesAilleurs(tk,mot){var o=[],vus={};Object.keys(ACCEPT.parTexte).forEach(function(t){if(t===tk)return;var x=accepteesDe(t,mot);Object.keys(x).forEach(function(k){var r=x[k];if(!r)return;var fl=String(r.forme||"").toLowerCase();if(vus[fl])return;vus[fl]=1;
-  o.push({forme:r.forme,titre:(r.dicteeId&&ACCEPT.titres[r.dicteeId])?ACCEPT.titres[r.dicteeId]:null});});});return o;}
+function accepteesAilleurs(tk,idx,mot){var o=[],vus={};   /* [L15-0] le même mot accepté à une AUTRE place de ce texte, ou dans un autre texte */
+  Object.keys(ACCEPT.parTexte).forEach(function(t){var pl=ACCEPT.parTexte[t]||{};Object.keys(pl).forEach(function(p){if(t===tk&&String(p)===String(idx))return;var x=pl[p]||{};
+    Object.keys(x).forEach(function(k){var r=x[k];if(!r||r.mot!==mot)return;var f=String(r.forme||"");if(vus[f])return;vus[f]=1;o.push({forme:r.forme,titre:(r.dicteeId&&ACCEPT.titres[r.dicteeId])?ACCEPT.titres[r.dicteeId]:null});});});});
+  return o;}
 function autresDicteesDuTexte(tk,id){return (ACCEPT.parCle[tk]||[]).filter(function(x){return x!==id}).map(function(x){return ACCEPT.titres[x]||x});}
 function accepteesCharger(force){if(ACCEPT.charge&&!force)return Promise.resolve();
   return Promise.all([db.ref("correction_dictee_textes").once("value"),db.ref("correction_dictee").once("value")]).then(function(sn){var t=sn[0].val()||{},d=sn[1].val()||{};
+    var cv=convertirAnciennesRegles(t,d);   /* [L15-0] */
     ACCEPT.parTexte={};Object.keys(t).forEach(function(tk){if(t[tk]&&t[tk].formesAcceptees)ACCEPT.parTexte[tk]=t[tk].formesAcceptees;});
     ACCEPT.titres={};ACCEPT.parCle={};Object.keys(d).forEach(function(id){var c=(d[id]||{}).config||{};ACCEPT.titres[id]=c.title||id;if(String(id).charAt(0)==="_")return;var tk=empreinteTexte(c.text);(ACCEPT.parCle[tk]=ACCEPT.parCle[tk]||[]).push(id);});
-    ACCEPT.charge=true;});}
+    ACCEPT.charge=true;
+    if(!cv.n)return;
+    return db.ref().update(cv.maj).then(function(){var tot=0;return cv.tks.reduce(function(pr,tk){return pr.then(function(){return recalculerTexte(tk,null,"recalcul-forme-acceptee").then(function(rr){tot+=rr.total;});});},Promise.resolve()).then(function(){ACCEPT.conversion={regles:cv.n,copies:tot,premieres:cv.premieres};});});});}
 /* rétroactif : toutes les copies de toutes les dictées du texte (sauf la copie ouverte, que son enregistrement marque lui-même) */
-function recalculerTexte(tk,sauf){return db.ref("correction_dictee").once("value").then(function(sn){var all=sn.val()||{},maj={},compte={},tot=0,mL=Date.now(),copies={};
+function recalculerTexte(tk,sauf,motifCorbeille){return db.ref("correction_dictee").once("value").then(function(sn){var all=sn.val()||{},maj={},compte={},tot=0,mL=Date.now(),copies={},corb={};
   Object.keys(all).forEach(function(id){if(String(id).charAt(0)==="_")return;var d=all[id]||{},cfg=d.config||{};if(empreinteTexte(cfg.text)!==tk)return;var tok=tokenize(cfg.text||""),res=d.results||{},n=0;
     Object.keys(res).forEach(function(k){if(sauf&&sauf.dicteeId===id&&sauf.cle===k)return;var c=res[k];if(!c||typeof c!=="object")return;
       var m=marquerSansCout(toArr(c.errors||[]).filter(function(e){return e!=null}),tk,tok);if(!m.change)return;
       var sc=computeNote(m.errs,toArr(c.extras||[]).filter(function(e){return e!=null}),baseDeCopie(c,cfg.base||20),cfg.bareme||"preparee");
+      if(motifCorbeille){var j0=new Date().toISOString().slice(0,10);corb["corbeille/"+j0+"/"+motifCorbeille+"_"+mL+"_"+id.slice(-12)+"_"+k]={_meta:{motif:motifCorbeille,chemin:"correction_dictee/"+id+"/results/"+k,source:"correction_dictee",dictee:id,cle:k,le:mL},data:c};}   /* [L15-0] la corbeille d'abord */
       var b="correction_dictee/"+id+"/results/"+k+"/";maj[b+"errors"]=m.errs;maj[b+"note"]=sc.note;maj[b+"deduction"]=sc.deduction;maj[b+"counts"]=sc.counts;maj[b+"modifieLe"]=mL;n++;tot++;
       (copies[id]=copies[id]||{})[k]=Object.assign({},c,{errors:m.errs,note:sc.note,deduction:sc.deduction,counts:sc.counts,modifieLe:mL});});
     compte[id]={titre:cfg.title||id,n:n};});
-  return (Object.keys(maj).length?db.ref().update(maj):Promise.resolve()).then(function(){return {total:tot,compte:compte,copies:copies};});});}
-function cheminRegle(tk,mot,forme){return "correction_dictee_textes/"+tk+"/formesAcceptees/"+cleFb(mot)+"/"+cleFb(String(forme).trim().toLowerCase());}
-function regleEnMemoire(tk,mot,r){var t=(ACCEPT.parTexte[tk]=ACCEPT.parTexte[tk]||{});var m=(t[cleFb(mot)]=t[cleFb(mot)]||{});if(r)m[cleFb(String(r.forme).toLowerCase())]=r;}
-function regleRetireeEnMemoire(tk,mot,forme){var t=ACCEPT.parTexte[tk]||{};if(t[cleFb(mot)])delete t[cleFb(mot)][cleFb(String(forme).trim().toLowerCase())];}
-function poserRegle(tk,mot,forme,origine,dicteeId,sauf){var r={mot:mot,forme:String(forme).trim(),creeLe:Date.now(),origine:origine,dicteeId:dicteeId||null};regleEnMemoire(tk,mot,r);
-  return db.ref(cheminRegle(tk,mot,r.forme)).set(r).then(function(){return recalculerTexte(tk,sauf);});}
-function retirerRegle(tk,mot,forme,sauf){regleRetireeEnMemoire(tk,mot,forme);return db.ref(cheminRegle(tk,mot,forme)).remove().then(function(){return recalculerTexte(tk,sauf);});}
+  return (Object.keys(corb).length?db.ref().update(corb):Promise.resolve()).then(function(){return Object.keys(maj).length?db.ref().update(maj):null;}).then(function(){return {total:tot,compte:compte,copies:copies};});});}
+function cheminRegle(tk,idx,forme){return "correction_dictee_textes/"+tk+"/formesAcceptees/"+String(idx)+"/"+cleFb(String(forme).trim());}
+function regleEnMemoire(tk,idx,r){var t=(ACCEPT.parTexte[tk]=ACCEPT.parTexte[tk]||{});var m=(t[String(idx)]=t[String(idx)]||{});if(r)m[cleFb(String(r.forme).trim())]=r;}
+function regleRetireeEnMemoire(tk,idx,forme){var t=ACCEPT.parTexte[tk]||{};if(t[String(idx)])delete t[String(idx)][cleFb(String(forme).trim())];}
+function poserRegle(tk,idx,mot,forme,origine,dicteeId,sauf){var r={mot:mot,forme:String(forme).trim(),tokenIdx:idx,creeLe:Date.now(),origine:origine,dicteeId:dicteeId||null};regleEnMemoire(tk,idx,r);
+  return db.ref(cheminRegle(tk,idx,r.forme)).set(r).then(function(){return recalculerTexte(tk,sauf);});}
+function retirerRegle(tk,idx,forme,sauf){regleRetireeEnMemoire(tk,idx,forme);return db.ref(cheminRegle(tk,idx,forme)).remove().then(function(){return recalculerTexte(tk,sauf);});}
 function phraseRecalc(r,id){var autres=Object.keys(r.compte).filter(function(x){return x!==id&&r.compte[x].n>0}).map(function(x){return "\u00ab "+r.compte[x].titre+" \u00bb"});
   return r.total+" copie"+(r.total>1?"s":"")+" recalcul\u00e9e"+(r.total>1?"s":"")+(autres.length?" (ici et dans "+autres.join(", ")+")":"");}
 /* [L12] L'AIDE « ? » QUI SUIT L'ÉCRAN — chaque écran dit où l'on est (niveau 1 l'accueil, 2 l'onglet de la dictée, 3 la copie ou le sous-écran) ;
@@ -1443,6 +1452,24 @@ function recalculerAmenagees(id,corr,lac,base,bareme,titre){
   var now=new Date(),jour=now.toISOString().slice(0,10),hh=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);
   return Promise.all(cles.map(function(k){return db.ref("corbeille/"+jour+"/recalcul-amenage_"+hh+"_"+k).set({_meta:{motif:"recalcul-amenage",chemin:"correction_dictee/"+id+"/results/"+k,source:"correction_dictee",dictee:id,titre:titre||"",cle:k,le:Date.now()},data:corr[k]});}))
     .then(function(){var w={},cp={};cles.forEach(function(k){Object.keys(nouv[k]).forEach(function(f){w[k+"/"+f]=nouv[k][f];});cp[k]=Object.assign({},corr[k],nouv[k]);});return db.ref("correction_dictee/"+id+"/results").update(w).then(function(){return {n:cles.length,copies:cp};});});}
+/* [L15-0] une place du texte, dite en clair : « 2e mot de la phrase 7 / place 119 » */
+function placeLisible(tokens,idx){var ph=1,mot=0;for(var i=0;i<tokens.length&&i<=idx;i++){var w=String(tokens[i]);if(/^[.!?\u2026]+$/.test(w)){if(i<idx){ph++;mot=0;}continue;}if(!isPunct(w))mot++;}
+  return (mot===1?"1er":mot+"e")+" mot de la phrase "+ph+" / place "+idx;}
+/* [L15-0] les règles d'avant (rangées par mot) sont mises à leur place une fois : la place où des copies portent cette forme ;
+   sans copie : la seule occurrence du mot, sinon la première (dite dans la ligne) */
+function convertirAnciennesRegles(textes,dictees){var maj={},n=0,tks={},premieres=[];
+  Object.keys(textes||{}).forEach(function(tk){var fa=(textes[tk]||{}).formesAcceptees||{};
+    Object.keys(fa).forEach(function(k){if(/^\d+$/.test(k))return;var m=fa[k]||{};
+      Object.keys(m).forEach(function(fk){var r=m[fk];if(!r)return;var places={},occ=[],toks=null;
+        Object.keys(dictees||{}).forEach(function(id){if(String(id).charAt(0)==="_")return;var d=dictees[id]||{},cfg=d.config||{};if(empreinteTexte(cfg.text)!==tk)return;var tok=tokenize(cfg.text||"");toks=toks||tok;
+          var res=d.results||{};Object.keys(res).forEach(function(kk){var c=res[kk];if(!c||typeof c!=="object")return;toArr(c.errors||[]).forEach(function(e){if(e&&motCleForme(tok,e.idx)===r.mot&&String(e.fautif||"").trim().toLowerCase()===String(r.forme).trim().toLowerCase())places[e.idx]=1;});});});
+        if(toks)toks.forEach(function(w,i){if(motCleForme(toks,i)===r.mot)occ.push(i);});
+        var ps=Object.keys(places).map(Number);if(!ps.length&&occ.length){ps=[occ[0]];if(occ.length>1)premieres.push(r.mot);}
+        ps.forEach(function(p){var nr={mot:r.mot,forme:String(r.forme).trim(),tokenIdx:p,creeLe:r.creeLe||Date.now(),origine:r.origine||"correction",dicteeId:r.dicteeId||null};
+          maj["correction_dictee_textes/"+tk+"/formesAcceptees/"+p+"/"+cleFb(nr.forme)]=nr;var t=(textes[tk].formesAcceptees[p]=textes[tk].formesAcceptees[p]||{});t[cleFb(nr.forme)]=nr;});
+        n++;tks[tk]=1;});
+      maj["correction_dictee_textes/"+tk+"/formesAcceptees/"+k]=null;delete textes[tk].formesAcceptees[k];});});
+  return {maj:maj,n:n,tks:Object.keys(tks),premieres:premieres};}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -1461,7 +1488,7 @@ function typeAdapteM(wt){if(!wt)return "M";if(estApostrophe(wt.text))return "E";
 /* [L3] le bouton mis en avant (Entrée le valide) : Ponctuation sur un signe, Élision sur une apostrophe, rien sur un mot */
 function preselectionRapide(wt){if(!wt)return null;if(estApostrophe(wt.text))return "E";if(isPunct(wt.text))return "P";return null;}
 /* [L3] la garde du mot juste : ce qui est tapé est-il le mot attendu (sans la casse) ? */
-function motJuste(saisie,attendu){var a=String(saisie||"").trim(),b=String(attendu||"").trim();return !!a&&!!b&&a.toLowerCase()===b.toLowerCase();}
+function motJuste(saisie,attendu){var a=String(saisie||"").trim(),b=String(attendu||"").trim();return !!a&&!!b&&a===b;}   /* [L15-0] casse comprise : « Empereur » pour « empereur » est une erreur de majuscule, acceptée */
 function estGuillemet(w){return/^["\u00ab\u00bb\u201c\u201d]$/.test(w)}
 function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019'"()\-\u2013\u2014]+$/.test(w)}
 // Espacement entre token courant et suivant — règles françaises :
@@ -3093,7 +3120,8 @@ function Reglages(pR){
   var sFA=useState(0),setFA=sFA[1],sFM=useState(""),msgFA=sFM[0],setMsgFA=sFM[1];   /* [L11] */
   useEffect(function(){if(pR.dicteeId)accepteesCharger(true).then(function(){setFA(function(x){return x+1})});},[pR.dicteeId]);
   var tkR=pR.texte?empreinteTexte(pR.texte):null,reglesR=[];
-  if(tkR){var tR=ACCEPT.parTexte[tkR]||{};Object.keys(tR).forEach(function(mk){var m=tR[mk]||{};Object.keys(m).forEach(function(fk){if(m[fk])reglesR.push(m[fk]);});});}
+  if(tkR){var tR=ACCEPT.parTexte[tkR]||{};Object.keys(tR).forEach(function(mk){var m=tR[mk]||{};Object.keys(m).forEach(function(fk){if(m[fk])reglesR.push(Object.assign({tokenIdx:Number(mk)},m[fk]));});});}
+  var toksR=pR.texte?tokenize(pR.texte):[];   /* [L15-0] */
   function premiereCopie(){var m=null;Object.keys(pR.corrections||{}).forEach(function(k){var c=pR.corrections[k];var t=c&&(c.creeLe||c.timestamp);if(t&&(m===null||t<m))m=t;});
     if(m===null)return;var d=new Date(m),z=function(n){return (n<10?"0":"")+n};poserDate(d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate()));}
   var sV=useState(getSpeechRate()),vitesse=sV[0],setVitesse=sV[1];
@@ -3108,9 +3136,9 @@ function Reglages(pR){
       h("h2",null,"Formes accept\u00e9es de ce texte"+(function(){var a=autresDicteesDuTexte(tkR,pR.dicteeId);return a.length?" \u2014 partag\u00e9es avec : "+a.map(function(t){return "\u00ab "+t+" \u00bb"}).join(", "):"";})()),
       msgFA&&h("div",{id:"msg-fa-reglages",style:{margin:"0 0 8px",padding:"6px 10px",borderRadius:8,background:"#f0fdf4",border:"1px solid #16a34a",color:"#14532d",fontSize:".85rem"}},msgFA),
       reglesR.length?h("div",null,reglesR.map(function(r,i){return h("div",{key:i,className:"ligne-fa",style:{display:"flex",alignItems:"center",gap:10,padding:"4px 0",fontSize:".9rem"}},
-          h("span",{style:{flex:1}},"sur \u00ab "+r.mot+" \u00bb : ",h("i",null,r.forme)," \u2014 ",r.origine==="preparation"?"dite d\u2019avance (Pr\u00e9paration)":"accept\u00e9e en correction"),
+          h("span",{style:{flex:1}},"sur \u00ab "+(toksR[r.tokenIdx]||r.mot)+" \u00bb ("+placeLisible(toksR,r.tokenIdx)+") : ",h("i",null,r.forme)," \u2014 ",r.origine==="preparation"?"dite d\u2019avance (Pr\u00e9paration)":"accept\u00e9e en correction"),
           h("button",{className:"btn-sm btn-ghost",title:"Cette forme co\u00fbte \u00e0 nouveau, pour toutes les copies, dans toutes les dict\u00e9es de ce texte.",
-            onClick:function(){retirerRegle(tkR,r.mot,r.forme).then(function(rr){setMsgFA("\u00ab "+r.forme+" \u00bb n\u2019est plus accept\u00e9e : elle co\u00fbte \u00e0 nouveau, partout \u2014 "+phraseRecalc(rr,pR.dicteeId)+".");setFA(function(x){return x+1});});setFA(function(x){return x+1});}},"retirer"));}))
+            onClick:function(){retirerRegle(tkR,r.tokenIdx,r.forme).then(function(rr){setMsgFA("\u00ab "+r.forme+" \u00bb n\u2019est plus accept\u00e9e : elle co\u00fbte \u00e0 nouveau, partout \u2014 "+phraseRecalc(rr,pR.dicteeId)+".");setFA(function(x){return x+1});});setFA(function(x){return x+1});}},"retirer"));}))
         :h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:0}},"Aucune pour l\u2019instant. On les ajoute en Pr\u00e9paration (\u00ab \u2713 Formes accept\u00e9es \u00bb) ou en correction (0 du pav\u00e9).")
     ),
     pR.dicteeId&&h("div",{className:"card",id:"carte-date-correction"},   /* [L9] */
@@ -3329,23 +3357,23 @@ function FormesAccepteesPrep(pF){
   function ajouter(){var f=val.trim(),i=ouvert;if(!f||i==null)return;
     if(motJuste(f,toks[i])){setGarde("C\u2019est le mot juste : une forme accept\u00e9e est une autre graphie.");return;}
     setVal("");setGarde("");
-    poserRegle(tk,motDe(i),f,"preparation",pF.dicteeId).then(function(rr){setMsg("D\u2019avance : \u00ab "+f+" \u00bb accept\u00e9e pour \u00ab "+toks[i]+" \u00bb, dans toutes les dict\u00e9es de ce texte \u2014 "+phraseRecalc(rr,pF.dicteeId)+".");setRev(function(x){return x+1});});
+    poserRegle(tk,i,motDe(i),f,"preparation",pF.dicteeId).then(function(rr){setMsg("D\u2019avance : \u00ab "+f+" \u00bb accept\u00e9e pour \u00ab "+toks[i]+" \u00bb, dans toutes les dict\u00e9es de ce texte \u2014 "+phraseRecalc(rr,pF.dicteeId)+".");setRev(function(x){return x+1});});
     setRev(function(x){return x+1});}
-  function retirer(i,f){retirerRegle(tk,motDe(i),f).then(function(rr){setMsg("\u00ab "+f+" \u00bb n\u2019est plus accept\u00e9e pour \u00ab "+toks[i]+" \u00bb : elle co\u00fbte \u00e0 nouveau, partout \u2014 "+phraseRecalc(rr,pF.dicteeId)+".");setRev(function(x){return x+1});});setRev(function(x){return x+1});}
+  function retirer(i,f){retirerRegle(tk,i,f).then(function(rr){setMsg("\u00ab "+f+" \u00bb n\u2019est plus accept\u00e9e pour \u00ab "+toks[i]+" \u00bb : elle co\u00fbte \u00e0 nouveau, partout \u2014 "+phraseRecalc(rr,pF.dicteeId)+".");setRev(function(x){return x+1});});setRev(function(x){return x+1});}
   return h("div",{id:"formes-acceptees-prep",style:{marginTop:10}},
     h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"0 0 8px"}},"Clique un mot pour dire d\u2019avance les formes que tu acceptes : visibles chez l\u2019\u00e9l\u00e8ve, sans retrait de points, pour toutes les dict\u00e9es de ce texte."),
     msg&&h("div",{id:"msg-fa-prep",style:{margin:"0 0 8px",padding:"6px 10px",borderRadius:8,background:"#f0fdf4",border:"1px solid #16a34a",color:"#14532d",fontSize:".85rem"}},msg),
     h("div",{className:"fa-texte",style:{lineHeight:2.1,fontSize:"1rem"}},
       toks.map(function(w,i){
         if(isPunct(w))return h("span",{key:i,style:{color:"var(--muted)",margin:"0 3px"}},w);
-        var acc=accepteesDe(tk,motDe(i)),n=Object.keys(acc).length;
+        var acc=accepteesDe(tk,i),n=Object.keys(acc).length;   /* [L15-0] seulement la place acceptée */
         return h("span",{key:i,className:"fa-mot"+(n?" tol":"")+(ouvert===i?" ouvert":""),"data-idx":i,
           title:n?"Formes accept\u00e9es : "+Object.keys(acc).map(function(k){return acc[k].forme}).join(", "):"Clique pour ajouter une forme accept\u00e9e",
           onClick:function(){setOuvert(i);setVal("");setGarde("")}},w,n?h("sup",{style:{color:"#16a34a",fontSize:".7rem",marginLeft:2}},String(n)):null," ");})),
     ouvert!=null&&h("div",{className:"popup-overlay",onClick:function(){setOuvert(null)}},
       h("div",{id:"fenetre-fa",style:{background:"var(--card)",borderRadius:16,padding:"18px 20px",maxWidth:480,width:"100%",boxSizing:"border-box"},onClick:function(e){e.stopPropagation()}},
         h("div",{style:{fontWeight:700,marginBottom:8}},"Formes accept\u00e9es pour \u00ab "+toks[ouvert]+" \u00bb"),
-        (function(){var acc=accepteesDe(tk,motDe(ouvert)),ks=Object.keys(acc);
+        (function(){var acc=accepteesDe(tk,ouvert),ks=Object.keys(acc);
           return ks.length?h("div",null,ks.map(function(k){var r=acc[k];return h("span",{key:k,className:"fa-pastille"},h("i",null,r.forme)," ",
               h("b",{style:{cursor:"pointer"},className:"fa-retirer",title:"Retirer : elle co\u00fbte \u00e0 nouveau, partout (toutes les dict\u00e9es de ce texte, copies recalcul\u00e9es).",onClick:function(){retirer(ouvert,r.forme)}},"\u2715"))}))
             :h("div",{style:{color:"var(--muted)",fontSize:".85rem"}},"aucune \u2014 tape la forme que tu accepteras");})(),
@@ -3366,7 +3394,7 @@ function CorrScreen(p){
      (data.amenagee restait vide) : la base aménagée n'était jamais employée. Il l'écoute désormais. */
   var sAC=useState(null),amenCfg=sAC[0],setAmenCfg=sAC[1];
   var sBC=useState(null),baseCfg=sBC[0],setBaseCfg=sBC[1];var sDC=useState(""),dateCorr=sDC[0],setDateCorr=sDC[1];   /* [L9] */
-  useEffect(function(){var rA=db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee");function fA(sn){AMEN_LAC[p.dicteeId]=lacunesDe(sn.val());setAmenCfg(sn.val()||null)}   /* [L14] */rA.on("value",fA);
+  useEffect(function(){var rA=db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee");function fA(sn){AMEN_LAC[p.dicteeId]=lacunesDe(sn.val());setAmenCfg(sn.val()||null);setAmenLus(function(x){return Object.assign({},x,{version:true})})}   /* [L14] */rA.on("value",fA);
     var rB=db.ref("correction_dictee/"+p.dicteeId+"/config/base");function fB(sn){var v=sn.val();setBaseCfg(typeof v==="number"?v:(v?Number(v):null))}rB.on("value",fB);   /* [ELEVE-1 ④ — complément] la base suit le réglage, sans rouvrir */
     var rD=db.ref("correction_dictee/"+p.dicteeId+"/config/dateCorrection");function fD(sn){setDateCorr(sn.val()||"")}rD.on("value",fD);   /* [L9] la date de correction réglée */
     return function(){rA.off("value",fA);rB.off("value",fB);rD.off("value",fD)};},[p.dicteeId]);
@@ -3385,6 +3413,7 @@ function CorrScreen(p){
   // Aménagée : registre par classe + override par dictée
   var sA1=useState({}),amenagesDictee=sA1[0],setAmenagesDictee=sA1[1];
   var sA2=useState({}),classeAmenages=sA2[0],setClasseAmenages=sA2[1];
+  var sAL=useState({}),amenLus=sAL[0],setAmenLus=sAL[1];   /* [L15-0b] les trois sources lues avant d'oser recalculer */
   var sA3=useState(null),ctxMenu=sA3[0],setCtxMenu=sA3[1]; // {x,y,eleveKey,name}
   var sA4=useState(null),ancienRegistre=sA4[0],setAncienRegistre=sA4[1];   /* [ELEVE-1 ④] lu une fois, pour les copies d'avant la 6.6.0 */
   useEffect(function(){   /* [ELEVE-1 ④] les copies aménagées d'avant la 6.6.0 reçoivent leur trace, UNE fois (override, puis l'ancien registre) */
@@ -3420,6 +3449,24 @@ function CorrScreen(p){
   var sMAO=useState(""),msgAccepteesOuv=sMAO[0],setMsgAccepteesOuv=sMAO[1];   /* [L11] */
   var sMAM=useState(""),msgAmen=sMAM[0],setMsgAmen=sMAM[1];var lacPrecRef=React.useRef(undefined);   /* [L14] */
   var sFR=useState(0),formesRetenues=sFR[0],setFormesRetenues=sFR[1],sFP=useState(0),formesPret=sFP[0],setFormesPret=sFP[1];   /* [L10] */
+  useEffect(function(){   /* [L15-0b] dette 118 : la trace d'une copie suit le marquage de l'élève (clic droit, fiche) ; recalcul, la corbeille d'abord */
+    if(!formesPret||!amenLus.dictee||!amenLus.classe||!amenLus.version)return;
+    var amen=dAmenDe(data),lac=lacunesDe(data.amenagee),cles=[],nouv={};
+    Object.keys(p.corrections||{}).forEach(function(k){var c=p.corrections[k];if(!c||typeof c!=="object")return;
+      var veut=isEleveAmenage(k,amenagesDictee,classeAmenages)&&!!amen;if(veut===(c.amenagee===true))return;
+      var tr=veut?traceCopie(true,amen,data.base):{amenagee:false};var c2=Object.assign({},c,{amenagee:!!tr.amenagee,mode:tr.amenagee?tr.mode:null,base:tr.amenagee?tr.base:null});
+      var m=marquerAmenage(toArr(c.errors||[]).filter(function(e){return e!=null}),toArr(c.extras||[]).filter(function(e){return e!=null}),veut,lac);
+      var sc=computeNote(m.errs,m.extras,baseDeCopie(c2,data.base),data.bareme);
+      nouv[k]={amenagee:c2.amenagee,mode:c2.mode,base:c2.base,errors:m.errs,extras:m.extras,note:sc.note,deduction:sc.deduction,counts:sc.counts,modifieLe:Date.now()};cles.push(k);});
+    if(!cles.length)return;
+    var now=new Date(),jour=now.toISOString().slice(0,10),hh=("0"+now.getHours()).slice(-2)+("0"+now.getMinutes()).slice(-2)+("0"+now.getSeconds()).slice(-2);
+    Promise.all(cles.map(function(k){return db.ref("corbeille/"+jour+"/recalcul-amenage_"+hh+"_"+k).set({_meta:{motif:"recalcul-amenage",chemin:"correction_dictee/"+p.dicteeId+"/results/"+k,source:"correction_dictee",dictee:p.dicteeId,cle:k,le:Date.now()},data:p.corrections[k]});}))
+      .then(function(){var w={},cp={};cles.forEach(function(k){Object.keys(nouv[k]).forEach(function(f){w[k+"/"+f]=nouv[k][f];});cp[k]=Object.assign({},p.corrections[k],nouv[k]);});
+        return db.ref("correction_dictee/"+p.dicteeId+"/results").update(w).then(function(){p.onResetCorrections(Object.assign({},p.corrections,cp));
+          if(cles.length===1){var n0=nouv[cles[0]],nc=toArr(n0.errors).filter(function(e){return e&&!e.sansCout}).length;
+            setMsgAmen(n0.amenagee?"copie recalcul\u00e9e : "+nc+" erreur"+(nc>1?"s":"")+" compt\u00e9e"+(nc>1?"s":"")+" sur "+((lac||[]).length)+" mots \u00e0 compl\u00e9ter ; l\u2019\u00e9tat d\u2019avant est dans la corbeille.":"copie recalcul\u00e9e en version ordinaire : "+nc+" erreur"+(nc>1?"s":"")+" compt\u00e9e"+(nc>1?"s":"")+" ; l\u2019\u00e9tat d\u2019avant est dans la corbeille.");}
+          else setMsgAmen(cles.length+" copies recalcul\u00e9es (l\u2019am\u00e9nagement de leur \u00e9l\u00e8ve a chang\u00e9) ; l\u2019\u00e9tat d\u2019avant est dans la corbeille.");});});
+  },[formesPret,amenLus.dictee,amenLus.classe,amenLus.version,JSON.stringify(amenagesDictee),JSON.stringify(classeAmenages),JSON.stringify(lacunesDe(data.amenagee)),data.amenagee&&data.amenagee.enabled]);
   useEffect(function(){   /* [L14] les copies aménagées : recalculées une fois à l'ouverture, puis chaque fois que les trous changent */
     if(!formesPret)return;var lac=lacunesDe(data.amenagee),cle=JSON.stringify(lac);if(lacPrecRef.current===cle)return;
     var premier=lacPrecRef.current===undefined;lacPrecRef.current=cle;AMEN_LAC[p.dicteeId]=lac;
@@ -3431,6 +3478,7 @@ function CorrScreen(p){
     formesOuverture(p.dicteeId,c2).then(function(r){var c3=r.c||c2,ch=!!r.c||changees;if(r.n)setFormesRetenues(r.n);
       return accepteesCharger().then(function(){var tk=empreinteTexte(data.text);   /* [L11] une règle a-t-elle changé depuis ? */
         var aRecalc=Object.keys(c3).some(function(k){var c=c3[k];return c&&typeof c==="object"&&marquerSansCout(toArr(c.errors||[]).filter(function(e){return e!=null}),tk,data.tokens||tokenize(data.text||"")).change;});
+        if(ACCEPT.conversion&&!ACCEPT.conversionDite){ACCEPT.conversionDite=true;var cvd=ACCEPT.conversion;setMsgAccepteesOuv(cvd.regles+" r\u00e8gle"+(cvd.regles>1?"s":"")+" mise"+(cvd.regles>1?"s":"")+" \u00e0 sa place dans le texte ; "+cvd.copies+" copie"+(cvd.copies>1?"s":"")+" recalcul\u00e9e"+(cvd.copies>1?"s":"")+" (l\u2019\u00e9tat d\u2019avant dans la corbeille)"+(cvd.premieres.length?" ; sans copie pour le dire, \u00ab "+cvd.premieres.join(" \u00bb, \u00ab ")+" \u00bb est accept\u00e9 \u00e0 sa premi\u00e8re place \u2014 v\u00e9rifie-le dans R\u00e9glages":""));}   /* [L15-0] */
         if(!aRecalc){if(ch)p.onResetCorrections(c3);setFormesPret(function(x){return x+1});return;}
         return recalculerTexte(tk).then(function(rr){p.onResetCorrections(Object.assign({},c3,rr.copies[p.dicteeId]||{}));setMsgAccepteesOuv(phraseRecalc(rr,p.dicteeId));setFormesPret(function(x){return x+1});});});},
       function(){if(changees)p.onResetCorrections(c2);});
@@ -3453,11 +3501,11 @@ function CorrScreen(p){
   }
   useEffect(function(){
     var r1=db.ref("correction_dictee/"+p.dicteeId+"/amenages");
-    function f1(s){setAmenagesDictee(s.val()||{})}r1.on("value",f1);
+    function f1(s){setAmenagesDictee(s.val()||{});setAmenLus(function(x){return Object.assign({},x,{dictee:true})})}   /* [L15-0b] */r1.on("value",f1);
     var classe=data.classe||"_default";
     /* [ELEVE-1 ④] la fiche de l'élève, plus le registre classes_amenages (plus aucun repli) */
     var r2=db.ref("classes/"+cleDuRegistre(classe)+"/amenagements");
-    function f2(s){setClasseAmenages(registreDepuisAmenagements(s.val()))}r2.on("value",f2);
+    function f2(s){setClasseAmenages(registreDepuisAmenagements(s.val()));setAmenLus(function(x){return Object.assign({},x,{classe:true})})}   /* [L15-0b] */r2.on("value",f2);
     return function(){r1.off("value",f1);r2.off("value",f2)};
   },[p.dicteeId,data.classe]);
   function toggleAmenageDictee(eleveKey){
@@ -3487,8 +3535,8 @@ function CorrScreen(p){
       /* [L2] ⇧R est une bascule : du mode texte au mode rapide ET du mode rapide au mode texte, sur la même copie ;
          rien n'est perdu (L1 : tout est déjà enregistré) ; inactif dans un champ de saisie (ci-dessus) */
       if(e.shiftKey&&(e.key==="R"||e.key==="r")){
-        if(tab==="correct"&&cur){e.preventDefault();setTab("rapide");}
-        else if(tab==="rapide"){e.preventDefault();var re=cur||eleveRapideParDefaut();if(re)setCur(re);setTab("correct");}
+        if(tab==="correct"&&cur){e.preventDefault();window.__basculeL15=Object.assign({t:Date.now()},window.__posL15||{});setTab("rapide");}   /* [L15-0b] le mot où l'on est */
+        else if(tab==="rapide"){e.preventDefault();window.__basculeL15=Object.assign({t:Date.now()},window.__posL15||{});var re=cur||eleveRapideParDefaut();if(re)setCur(re);setTab("correct");}
       }
     }
     window.addEventListener("keydown",onKey);
@@ -3720,7 +3768,7 @@ function CorrScreen(p){
         onAutoSave:function(err,ext,fastIdxVal,posTexte){
           p.onSave(san(rapideEleve),err,ext,fastIdxVal,traceCopie(isEleveAmenage(san(rapideEleve),amenagesDictee,classeAmenages),dAmenDe(data),data.base),posTexte);   /* [ELEVE-1 ④] */
         },
-        onExitFast:function(){setCur(rapideEleve);setTab("correct")},   /* [L2] la même copie, en mode texte */
+        onExitFast:function(){window.__basculeL15=Object.assign({t:Date.now()},window.__posL15||{});setCur(rapideEleve);setTab("correct")},   /* [L15-0b] « ← Texte » / Pause : le même mot */   /* [L2] la même copie, en mode texte */
         elevesRecherche:sortElevesByNom(data.eleves),corrigees:p.corrections,absentsRecherche:p.absents,   /* [L6] la recherche en fin de copie */
         onOuvrirRapide:function(nom){setCur(nom);},   /* [L6] l'élève choisi s'ouvre directement en mode rapide (l'onglet reste Rapide) */
         onSave:function(err,ext){
@@ -4126,7 +4174,7 @@ function CorrEleve(p){
   var sMF=useState(""),msgFormes=sMF[0],setMsgFormes=sMF[1];
   var sMA=useState(""),msgAccept=sMA[0],setMsgAccept=sMA[1];   /* [L11] le message d'une forme acceptée */
   function boutonAccepterL11(mode){
-    var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx),f=formeEnCoursL11(mode),deja=!!f&&idx!=null&&estAcceptee(empreinteTexte(data.text),motCleForme(tokens,idx),f);
+    var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx),f=formeEnCoursL11(mode),deja=!!f&&idx!=null&&estAcceptee(empreinteTexte(data.text),idx,f);   /* [L15-0] */
     return h("button",{className:"btn-sm btn-ghost btn-accepter",disabled:!f,onMouseDown:function(e){e.preventDefault()},onClick:function(e){e.stopPropagation();accepterCourantL11(mode)},
       title:!f?"Tape ou choisis d\u2019abord la forme.":(deja?"\u00ab "+f+" \u00bb est une forme accept\u00e9e pour ce texte : ce bouton l\u2019annule \u2014 elle co\u00fbte \u00e0 nouveau, pour toutes les copies de toutes les dict\u00e9es de ce texte.":"Accepte \u00ab "+f+" \u00bb pour toutes les dict\u00e9es de ce texte : l\u2019erreur reste visible chez l\u2019\u00e9l\u00e8ve, sans retrait de points ; les copies d\u00e9j\u00e0 corrig\u00e9es sont recalcul\u00e9es. Aucun raccourci : un clic seulement.")},
       deja?"\u2715 ne plus accepter":"\u2713 forme accept\u00e9e (ce texte)");}
@@ -4140,11 +4188,11 @@ function CorrEleve(p){
     var f=formeImposee?String(formeImposee).trim():formeEnCoursL11(mode);setNumFormes("");
     if(!f)return;
     if(motJuste(f,tokens[idx])){setGardeMot(true);return}
-    var deja=estAcceptee(tk,mot,f),r={mot:mot,forme:f,creeLe:Date.now(),origine:"correction",dicteeId:p.dicteeId};
-    if(deja)regleRetireeEnMemoire(tk,mot,f);else regleEnMemoire(tk,mot,r);
+    var deja=estAcceptee(tk,idx,f),r={mot:mot,forme:f,tokenIdx:idx,creeLe:Date.now(),origine:"correction",dicteeId:p.dicteeId};   /* [L15-0] cette place */
+    if(deja)regleRetireeEnMemoire(tk,idx,f);else regleEnMemoire(tk,idx,r);
     if(mode==="I")confirmFautifI(f);else confirmFautifTexte(f);   /* l'erreur est posée ; son enregistrement la marque (ou non) sans coût */
     var autres=autresDicteesDuTexte(tk,p.dicteeId),sauf={dicteeId:p.dicteeId,cle:san(p.eleve)};
-    (deja?db.ref(cheminRegle(tk,mot,f)).remove():db.ref(cheminRegle(tk,mot,f)).set(r)).then(function(){return recalculerTexte(tk,sauf);}).then(function(rr){
+    (deja?db.ref(cheminRegle(tk,idx,f)).remove():db.ref(cheminRegle(tk,idx,f)).set(r)).then(function(){return recalculerTexte(tk,sauf);}).then(function(rr){
       if(p.onCopiesRecalc)p.onCopiesRecalc(rr.copies[p.dicteeId]||{});
       setMsgAccept(deja?"\u00ab "+f+" \u00bb n\u2019est plus une forme accept\u00e9e pour ce texte : elle co\u00fbte \u00e0 nouveau, partout ; "+phraseRecalc(rr,p.dicteeId)+"."
         :"\u00ab "+f+" \u00bb est maintenant une forme accept\u00e9e pour ce texte : visible chez tous, sans retrait, dans cette dict\u00e9e"+(autres.length?" et dans "+autres.map(function(t){return "\u00ab "+t+" \u00bb"}).join(", ")+" (m\u00eame texte)":"")+" ; "+phraseRecalc(rr,p.dicteeId)+".");
@@ -4162,14 +4210,14 @@ function CorrEleve(p){
     return false;}
   function listeFormesHtml(liste,prendreN,ctx){
     if(!liste.length)return null;
-    var tkL=ctx?empreinteTexte(data.text):null,ail=ctx?accepteesAilleurs(tkL,ctx.mot):[];   /* [L11] les marques */
+    var tkL=ctx?empreinteTexte(data.text):null,ail=ctx?accepteesAilleurs(tkL,ctx.idx,ctx.mot):[];   /* [L11] les marques ; [L15-0] la place */
     return h("div",{className:"liste-formes",title:"Les formes d\u00e9j\u00e0 vues sur ce mot dans toutes tes dict\u00e9es, de la plus fr\u00e9quente \u00e0 la plus rare, avec leur nombre. Le pav\u00e9 num\u00e9rique choisit (les chiffres se composent : 1 puis 2 = la 12e) ; un chiffre de la rang\u00e9e du haut s\u2019\u00e9crit dans la case."},
       liste.map(function(f,i){var n=i+1,cand=numFormes&&String(n).indexOf(numFormes)===0,exact=numFormes&&String(n)===numFormes;
         return h("div",{key:n,className:"forme"+(cand?" candidat":"")+(exact?" exact":""),title:"Clic : prendre cette forme. Au pav\u00e9 : "+n,onMouseDown:function(e){e.preventDefault()},onClick:function(){prendreN(n)}},
           h("span",{className:"n"},n),h("span",{className:"f"},f.forme),h("span",{className:"c"},"\u00d7"+f.compte),
-          (function(){if(!ctx)return null;if(estAcceptee(tkL,ctx.mot,f.forme))return h("span",{className:"acc",title:"Forme accept\u00e9e pour ce texte : visible chez l\u2019\u00e9l\u00e8ve, sans retrait. Le bouton \u00ab \u2715 ne plus accepter \u00bb l\u2019annule."},"accept\u00e9e");
-            var a=ail.filter(function(x){return String(x.forme).toLowerCase()===String(f.forme).toLowerCase()})[0];
-            return a?h("span",{style:{display:"inline-flex",gap:4,alignItems:"baseline"}},h("span",{className:"acc ailleurs",title:"Accept\u00e9e pour un autre texte."},"accept\u00e9e dans "+(a.titre?"\u00ab "+a.titre+" \u00bb":"une dict\u00e9e supprim\u00e9e")),
+          (function(){if(!ctx)return null;if(estAcceptee(tkL,ctx.idx,f.forme))return h("span",{className:"acc",title:"Forme accept\u00e9e pour ce texte : visible chez l\u2019\u00e9l\u00e8ve, sans retrait. Le bouton \u00ab \u2715 ne plus accepter \u00bb l\u2019annule."},"accept\u00e9e");
+            var a=ail.filter(function(x){return String(x.forme)===String(f.forme)})[0];   /* [L15-0] casse comprise */
+            return a?h("span",{style:{display:"inline-flex",gap:4,alignItems:"baseline"}},h("span",{className:"acc ailleurs",title:"Accept\u00e9e \u00e0 une autre place de ce texte, ou dans un autre texte"+(a.titre?" (\u00ab "+a.titre+" \u00bb)":"")+" : pas ici."},"accept\u00e9e ailleurs"),   /* [L15-0] */
               ctx.accepterIci?h("button",{className:"btn-accepter-ici",onMouseDown:function(e){e.preventDefault();e.stopPropagation()},onClick:function(e){e.stopPropagation();ctx.accepterIci(f.forme)},
                 title:"Accepte aussi cette forme pour ce texte : l\u2019erreur est pos\u00e9e, visible chez l\u2019\u00e9l\u00e8ve, sans retrait ; les copies d\u00e9j\u00e0 corrig\u00e9es de ce texte sont recalcul\u00e9es."},"accepter ici"):null):null;})());}));}
   function numeroHtml(){return h("span",{className:"num-formes"+(numFormes?" on":""),title:"Le num\u00e9ro en cours de composition au pav\u00e9 : la forme est prise d\u00e8s qu\u2019aucun autre num\u00e9ro ne peut commencer ainsi, ou \u00e0 Entr\u00e9e."},numFormes?"n\u00b0 "+numFormes:"");}
@@ -4333,7 +4381,12 @@ function CorrEleve(p){
     overlay.style.top=top+"px";
     overlay.style.height=height+"px";
   },[lastTouched,errors,extras,fastMode]);
-  useEffect(function(){if(!fastMode&&lastTouched>=0)setCurseur(lastTouched);},[lastTouched,fastMode]);   /* [L8] le dernier mot corrigé devient le curseur */
+  useEffect(function(){if(!fastMode&&lastTouched>=0)setCurseur(lastTouched);},[lastTouched,fastMode]);
+  useEffect(function(){   /* [L15-0b] la bascule ⇧R reprend LE MOT OÙ L'ON ÉTAIT (dette 124) : texte → rapide sur le mot du curseur ; rapide → texte, le curseur sur le mot du rapide */
+    var b=window.__basculeL15;if(!b||b.eleve!==p.eleve||Date.now()-b.t>5000||b.idx==null)return;window.__basculeL15=null;
+    if(fastMode){var k=wordTokens.findIndex(function(w){return w&&w.idx>=b.idx});if(k>=0)setFastIdx(k);}else{setCurseur(b.idx);}
+  },[]);
+  useEffect(function(){var ti=fastMode?((wordTokens[fastIdx]||{}).idx):(curseur!=null?curseur:(lastTouched>=0?lastTouched:null));window.__posL15={eleve:p.eleve,idx:(ti==null?null:ti)};},[fastMode,fastIdx,curseur,lastTouched]);   /* [L15-0b] le mot où l'on est, pour la bascule */   /* [L8] le dernier mot corrigé devient le curseur */
   useEffect(function(){   /* [L8] la page suit le mot courant (curseur ou candidat) */
     if(fastMode)return;var i=rechTexte?candIdx:curseur;if(i==null)return;var g=wordGridRef.current;var el=g&&g.querySelector('[data-word-idx="'+i+'"]');if(el&&el.scrollIntoView)el.scrollIntoView({block:"nearest"});
   },[curseur,candIdx,rechTexte,fastMode]);
@@ -4463,7 +4516,7 @@ function CorrEleve(p){
               h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",fontWeight:600}},"Marquage "+askFautifI+" \u2014 Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourcis : Retour (champ vide) ou \u00c9chap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
             ),
-            listeFormesHtml(listeFormesI,prendreFormeI,{mot:wtF?motCleForme(tokens,wtF.idx):"",accepterIci:function(f){accepterCourantL11("I",f)}}),   /* [L10] la liste, au-dessus de la case ; [L11] ses marques */
+            listeFormesHtml(listeFormesI,prendreFormeI,{mot:wtF?motCleForme(tokens,wtF.idx):"",idx:wtF?wtF.idx:null,accepterIci:function(f){accepterCourantL11("I",f)}}),   /* [L10] la liste, au-dessus de la case ; [L11] ses marques */
             h("div",{style:{display:"flex",gap:8}},
               numeroHtml(),
               h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value);setGardeMot(false)},placeholder:listeFormesI.length?"recopie ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u2014 ou choisis au pav\u00e9":"Mot fautif...",title:"Ce que l\u2019\u00e9l\u00e8ve a \u00e9crit, tel quel. Le mot juste est refus\u00e9. Un chiffre de la rang\u00e9e du haut est du texte ; le pav\u00e9 num\u00e9rique choisit dans la liste.",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
@@ -4648,7 +4701,7 @@ function CorrEleve(p){
           h("span",{style:{marginLeft:8,padding:"2px 8px",borderRadius:6,fontSize:".85rem",fontWeight:600,background:typeRgba(askFautifTexte.type,.08),color:typeCouleur(askFautifTexte.type)}},askFautifTexte.type)
         ),
         h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve ? (facultatif)"),
-        (function(){var lT=listeFormesTexte();return listeFormesHtml(lT,function(n){var f=lT[n-1];if(f)confirmFautifTexte(f.forme);},{mot:askFautifTexte?motCleForme(tokens,askFautifTexte.idx):"",accepterIci:function(f){accepterCourantL11("T",f)}});})(),   /* [L10] ; [L11] */
+        (function(){var lT=listeFormesTexte();return listeFormesHtml(lT,function(n){var f=lT[n-1];if(f)confirmFautifTexte(f.forme);},{mot:askFautifTexte?motCleForme(tokens,askFautifTexte.idx):"",idx:askFautifTexte?askFautifTexte.idx:null,accepterIci:function(f){accepterCourantL11("T",f)}});})(),   /* [L10] ; [L11] */
         h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},   /* [micro L11c — 03/10] la modale du mode texte : le champ garde sa largeur, le bouton « forme acceptée » passe à la ligne s'il manque de place */
           numeroHtml(),
           h("input",{ref:fautifTexteRef,value:fautifTexteVal,onChange:function(e){setFautifTexteVal(e.target.value);setGardeMot(false)},placeholder:"Mot fautif...",style:{flex:"1 1 200px",minWidth:200,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){var lT=listeFormesTexte();if(toucheFormes(e,lT,function(n){var f=lT[n-1];if(f)confirmFautifTexte(f.forme);}))return;   /* [L10] */
