@@ -312,7 +312,7 @@ function finDeFenetre(sessionDebut,heure){
   if(!sessionDebut)return null;
   if(heure&&heure.debut&&heure.fin&&sessionDebut<=heure.fin&&sessionDebut>=heure.debut-6*3600000)
     return heure.cloture?Math.min(heure.fin,heure.clotureA||heure.fin):heure.fin;
-  return sessionDebut+55*60000;
+  return sessionDebut+45*60000;   /* [L13] hors classe : 45 minutes (était 55) */
 }
 function dansHeureLancee(sessionDebut,heure){return !!(sessionDebut&&heure&&heure.debut&&heure.fin&&sessionDebut<=heure.fin&&sessionDebut>=heure.debut-6*3600000)}
 function acRegagnees(questions){var n=0;questions=questions||{};Object.keys(questions).forEach(function(k){if(questions[k]&&questions[k].ok===true)n++});return n}
@@ -1170,7 +1170,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L12";
+var APP_VERSION="6.7.0-L13";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1303,6 +1303,7 @@ var AIDES={
     ["\u270f\ufe0f","\u00e9diter la dict\u00e9e : texte, bar\u00e8me, classe, comp\u00e9tences, publication, version am\u00e9nag\u00e9e, formes accept\u00e9es"],
     ["\u29c9","dupliquer la dict\u00e9e enti\u00e8re (texte, bar\u00e8me, version am\u00e9nag\u00e9e, options, exercices) \u2014 sans les copies des \u00e9l\u00e8ves"],
     ["\ud83d\uddd1\ufe0f","supprimer la dict\u00e9e (archiv\u00e9e dans la corbeille, avec un export JSON t\u00e9l\u00e9charg\u00e9)"],
+["\u00ab \u25b6 Lancer l\u2019autocorrection \u00bb (Donn\u00e9es \u2192 Suivi)","ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : avant la premi\u00e8re s\u00e9ance, ils attendent apr\u00e8s avoir coch\u00e9 les consignes ; hors classe ensuite, 45 minutes par ouverture"],
     ["\ud83e\uddea Mode test \u2014 \u00ab Cr\u00e9er le bac \u00e0 sable \u00bb","une classe fictive, deux dict\u00e9es, six \u00e9l\u00e8ves avec leurs codes : voir ce que voit un \u00e9l\u00e8ve"],
     ["\ud83e\uddea \u00ab \ud83e\uddf9 Tout effacer \u00bb","supprimer le bac \u00e0 sable (aucune donn\u00e9e r\u00e9elle n\u2019est touch\u00e9e)"],
     AIDE_FERMER]},
@@ -1351,6 +1352,7 @@ var AIDES={
     ["Espace / Entr\u00e9e","correct, mot suivant"],
     ["Retour","mot pr\u00e9c\u00e9dent"],
     ["\u21e7R","passer en mode texte, sur la m\u00eame copie"],
+    ["\u00ab \u25b6 Lancer l\u2019autocorrection \u00bb (Donn\u00e9es \u2192 Suivi)","ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : avant la premi\u00e8re s\u00e9ance, ils attendent apr\u00e8s avoir coch\u00e9 les consignes ; hors classe ensuite, 45 minutes par ouverture"],
     AIDE_FERMER]},
   fin:{ou:"Mode rapide \u2014 fin de copie",l:[
     ["lettres","les initiales de l\u2019\u00e9l\u00e8ve suivant (DM pour Dupont Marie)"],
@@ -1387,6 +1389,7 @@ var AIDES={
   donnees:{ou:"Donn\u00e9es de la dict\u00e9e",l:[
     ["\u00ab Bilan \u00bb, \u00ab \ud83d\udcc4 Copies \u00bb, \u00ab Fiches \u00e9l\u00e8ves \u00bb, \u00ab Suivi \u00bb, \u00ab \ud83c\udfaf Exercices \u00bb","les onglets des donn\u00e9es"],
     ["\u00ab \ud83e\udd16 Prompt IA \u00bb (Bilan)","le prompt et le JSON de la dict\u00e9e, \u00e0 copier"],
+    ["\u00ab \u25b6 Lancer l\u2019autocorrection \u00bb (Donn\u00e9es \u2192 Suivi)","ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : avant la premi\u00e8re s\u00e9ance, ils attendent apr\u00e8s avoir coch\u00e9 les consignes ; hors classe ensuite, 45 minutes par ouverture"],
     AIDE_FERMER]}
 };
 function lignesAide(ctx){var x=AIDES[ctx.cle]||AIDES.accueil,l=x.l.slice();
@@ -5090,7 +5093,7 @@ function Suivi(p){
         h("b",null,"\u25b6 Lancer l\u2019autocorrection \u2014 "+nomClasse),
         h("span",null,"Fin de l\u2019heure :"),
         h("input",{type:"time",value:finSaisie,onChange:function(ev){setFinSaisie(ev.target.value)},style:{width:"auto",padding:"4px 8px"}}),
-        h("button",{className:"btn btn-primary",style:{width:"auto"},onClick:lancerHeure,title:"D\u00e9marre l\u2019heure pour la classe : l\u2019estimation, les alertes et la fermeture des questions suivent l\u2019heure de fin choisie. Je t\u2019alerte 5 minutes avant, puis je t\u2019am\u00e8ne \u00e0 la cl\u00f4ture."},"\u25b6 Lancer l\u2019autocorrection")),
+        h("button",{className:"btn btn-primary",style:{width:"auto"},onClick:lancerHeure,title:"Ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : tant qu\u2019aucune s\u00e9ance n\u2019a \u00e9t\u00e9 lanc\u00e9e, ils attendent apr\u00e8s avoir coch\u00e9 les consignes, et leur \u00e9cran s\u2019ouvre seul \u00e0 ce clic ; ensuite, hors classe, chaque ouverture leur donne 45 minutes. D\u00e9marre l\u2019heure pour la classe : l\u2019estimation, les alertes et la fermeture des questions suivent l\u2019heure de fin choisie. Je t\u2019alerte 5 minutes avant, puis je t\u2019am\u00e8ne \u00e0 la cl\u00f4ture."},"\u25b6 Lancer l\u2019autocorrection")),
       avisHeure?h("div",{style:{color:"#9b2c2c",fontSize:".85rem",marginTop:6}},avisHeure):null,
       h("div",{style:{fontSize:".8rem",color:"var(--muted)",marginTop:6}},"Tu choisis l\u2019heure de fin ; je t\u2019alerte 5 minutes avant, puis je t\u2019am\u00e8ne \u00e0 la cl\u00f4ture."));
   }
@@ -9738,7 +9741,11 @@ function EleveCorrection(p){
   var sNow=useState(Date.now()),now=sNow[0],setNow=sNow[1];
   var sessionPoseeRef=React.useRef(false),styloDecideRef=React.useRef(false);
   var sHe=useState(null),heure=sHe[0],setHeure=sHe[1];
-  useEffect(function(){var r=db.ref("correction_dictee/"+d.dictee.id+"/heure");function f(sn){setHeure(sn.val()||null)}r.on("value",f);return function(){r.off("value",f)}},[d.dictee.id]);
+  var sHL=useState(false),heureLue=sHL[0],setHeureLue=sHL[1];var heureRef=React.useRef(null);   /* [L13] */
+  useEffect(function(){var r=db.ref("correction_dictee/"+d.dictee.id+"/heure");function f(sn){heureRef.current=sn.val()||null;setHeure(sn.val()||null);setHeureLue(true)}r.on("value",f);return function(){r.off("value",f)}},[d.dictee.id]);   /* [L13] l'écran écoute l'heure : il s'ouvre dès qu'elle est lancée, sans recharger */
+  var sOHC=useState(Date.now()),ouvHC=sOHC[0];   /* [L13] le moment de CETTE ouverture */
+  function horsClasseL13(){return !!(heureLue&&heure&&!heureActive(heure)&&(heure.cloture||(heure.fin&&Date.now()>=heure.fin)));}   /* une séance a eu lieu et s'est close, aucune en cours */
+  function finEffL13(){return horsClasseL13()?ouvHC+45*60000:finDeFenetre(sessionDebut,heure);}   /* hors classe : 45 minutes à chaque ouverture */
   // Lot 2c : attestation (fiche : autocorrection/<élève>/attestation = {t})
   var sAt=useState(null),attestation=sAt[0],setAttestation=sAt[1];
   var sAc=useState(false),attestCoche=sAc[0],setAttestCoche=sAc[1];
@@ -9836,7 +9843,7 @@ function EleveCorrection(p){
       // Ignore the Firebase echo of our own save (avoids stomping on local state mid-typing)
       if(savingRef.current){savingRef.current=false;if(isFirstFireRef.current){isFirstFireRef.current=false;setLoading(false)}return}
       if(!val){
-        if(!sessionPoseeRef.current){sessionPoseeRef.current=true;db.ref(acRef+"/sessionDebut").set(Date.now())}
+        if(!sessionPoseeRef.current&&heureRef.current){sessionPoseeRef.current=true;db.ref(acRef+"/sessionDebut").set(Date.now())}   /* [L13] pas de session avant une séance */
         if(isFirstFireRef.current){isFirstFireRef.current=false;setLoading(false)}
         return;
       }
@@ -9917,7 +9924,7 @@ function EleveCorrection(p){
         if(!finishedRef.current){finishedRef.current=true;db.ref(acRef+"/status").set("done");}
       }
       // Lot 2b : la session commence à la première ouverture d'une autocorrection non terminée
-      if(!val.sessionDebut&&!sessionPoseeRef.current&&!finishedRef.current){sessionPoseeRef.current=true;db.ref(acRef+"/sessionDebut").set(Date.now())}
+      if(!val.sessionDebut&&!sessionPoseeRef.current&&!finishedRef.current&&heureRef.current){sessionPoseeRef.current=true;db.ref(acRef+"/sessionDebut").set(Date.now())}   /* [L13] */
       if(val.sessionDebut)sessionPoseeRef.current=true;
     }
     db.ref(acRef).on("value",onAcChange);
@@ -10078,7 +10085,11 @@ function EleveCorrection(p){
   },[activeErr]);
   // Lot 2b — hooks placés avant tout « return » anticipé (l'ordre des hooks doit rester fixe)
   // horloge : chaque seconde pendant le stylo vert et les 5 dernières minutes, sinon toutes les 10 s
-  var _fin=finDeFenetre(sessionDebut,heure);
+  useEffect(function(){   /* [L13] la séance lancée pendant que l'élève attend : sa session commence alors */
+    if(!loading&&heure&&!sessionPoseeRef.current&&!finishedRef.current){sessionPoseeRef.current=true;db.ref(acRef+"/sessionDebut").set(Date.now())}
+  },[heure,loading]);
+  useEffect(function(){if(horsClasseL13()&&now>=ouvHC+45*60000&&p.onBack)p.onBack();},[now,heure,heureLue]);   /* [L13] à zéro : « Mes dictées », sans phrase */
+  var _fin=finEffL13();
   var rapide=(finished&&styloFin>0&&now<styloFin+(p.voisinCorrige?30000:0))||(!!_fin&&now<_fin&&_fin-now<=5*60000);
   useEffect(function(){var t=setInterval(function(){setNow(Date.now())},rapide?1000:10000);return function(){clearInterval(t)}},[rapide]);
   // fin de la correction : 2 minutes de stylo vert s'il reste au moins 4 minutes, sinon pas de questions
@@ -10086,7 +10097,7 @@ function EleveCorrection(p){
     if(!finished||!sessionDebut||styloFin!=null||styloDecideRef.current)return;
     styloDecideRef.current=true;
     var t=Date.now();
-    db.ref(acRef+"/styloFin").set(totalErrors>0&&finDeFenetre(sessionDebut,heure)-t>=4*60000?t+2*60000:0);
+    db.ref(acRef+"/styloFin").set(totalErrors>0&&finEffL13()-t>=4*60000?t+2*60000:0);
   },[finished,sessionDebut,styloFin,heure]);
   // Lot 2c : une copie sans aucune erreur à retrouver arrive directement sur sa page de fin
   // (avant, elle restait sur un texte sans mot à corriger, sans jamais atteindre « Bravo pour tout »).
@@ -10211,7 +10222,7 @@ function EleveCorrection(p){
   // La session commence à la première ouverture d'une autocorrection NON terminée (fiche : sessionDebut).
   // Lot 3 : une heure lancée par le professeur remplacera cette fenêtre pour sa classe.
   var HEURE_MS=55*60000, STYLO_MS=2*60000;
-  var finSession=finDeFenetre(sessionDebut,heure);
+  var finSession=finEffL13();   /* [L13] */
   var heureFinie=finished&&!sessionDebut?true:(finSession?now>=finSession:false);
   var styloActif=finished&&styloFin>0&&now<styloFin;
   var questionsOuvertes=finished&&styloFin>0&&now>=styloFin&&!!finSession&&now<finSession;
@@ -10359,8 +10370,17 @@ function EleveCorrection(p){
 
   // l'attestation, cochée une fois, avant de commencer
   if(!finished&&!attestation) return ecranAttestation();
+  /* [L13] aucune séance encore lancée sur cette dictée : l'élève attend ; l'écran s'ouvre seul quand l'heure est lancée */
+  if(!finished&&attestation&&(!heureLue||!heure)) return h("div",{className:"container fade-up",style:{paddingTop:30}},
+    h("div",{className:"card",id:"attente-seance"},
+      h("div",{style:{fontWeight:700,fontSize:"1.1rem",marginBottom:8}},"\u23f3 Ta correction s\u2019ouvrira quand ton professeur lancera la s\u00e9ance."),
+      h("p",{style:{margin:"0 0 14px"}},"Tu as lu et coch\u00e9 les consignes. Reste sur cette page : elle s\u2019ouvrira toute seule, sans rien recharger."),
+      h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:p.onBack},"\u2190 Mes dict\u00e9es")));
+  var bandeauHC=horsClasseL13()?h("div",{className:"card",id:"bandeau-hors-classe",style:{marginBottom:12,border:"1.5px solid #b7791f",background:"#fef9ec",fontSize:".95rem"}},
+    "\ud83c\udfe0 ",h("b",null,"Tu es hors classe : tu as 45 minutes.")," Il te reste ",h("b",null,Math.max(0,Math.floor((ouvHC+45*60000-now-1)/60000))+" min"),"."):null;   /* [L13] */
 
   if(finished) return h("div",{className:"container fade-up",style:{paddingTop:30}},
+    bandeauHC,   /* [L13] */
     // Note de dictée du prof
     h("div",{className:"card",style:{textAlign:"center",marginBottom:14}},
       txt("fin_parcours_emoji")?h("div",{style:{fontSize:"2rem",marginBottom:4}},txt("fin_parcours_emoji")):null,
@@ -10487,6 +10507,7 @@ function EleveCorrection(p){
   // aucun point rendu) est retirée — décision de Paul. Sa banque sert au lot 2.
 
   return h("div",{className:"container fade-up",ref:racineRef,style:(p.moitie&&activeErr!==null)?{paddingBottom:420}:undefined},
+    bandeauHC,   /* [L13] */
     // Idle warning
     // Bandeau rouge « Reprends le travail » retiré (demande de Paul, 29/09) : votre suivi garde l'état « inactif ».
     // Header sticky
