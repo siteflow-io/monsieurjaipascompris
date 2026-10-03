@@ -1026,3 +1026,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `70d21b5f6bb4` (commit `458756cd94e9`) · 795 799 o · md5 `fe8f030b0f402f0cb8bcf031d91799bb` · v6.7.0-L11
 - **Motif** : L12 — l'aide « ? » contextuelle. Promu : 809 581 o, md5 `89a82a824077066e82823dda85353cfe` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `70d21b5f6bb4…` → PUT, puis bit à bit.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L13 (03/10/2026, conscience n°12)
+- blob `87f5abd78619` (commit `9280243a0d0f`) · 809 581 o · md5 `89a82a824077066e82823dda85353cfe` · v6.7.0-L12
+- **Motif** : L13 — attente de la première séance, 45 min hors classe. Promu : 813 092 o, md5 `4ce6fa98b97c959856fc00d8227e300f` (bit à bit).
+- **Restauration en cas de `BUG`** : le blob `87f5abd78619…` → PUT, puis bit à bit (la L12 rouvre l'autocorrection dès la publication, fenêtre 55 min).
