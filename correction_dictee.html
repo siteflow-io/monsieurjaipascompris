@@ -1173,7 +1173,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15-0b";
+var APP_VERSION="6.7.0-L15a";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1377,10 +1377,10 @@ var AIDES={
     ["\u00ab \u2713 Formes accept\u00e9es \u00bb","dire d\u2019avance les formes que tu acceptes, mot par mot"],
     AIDE_FERMER]},
   amenagee:{ou:"Pr\u00e9paration \u2014 version am\u00e9nag\u00e9e",l:[
-    ["clic sur un mot du texte","en faire un mot \u00e0 compl\u00e9ter (une lacune) ; reclique pour la retirer"],
+    ["clic sur un mot du texte","sa fen\u00eatre : les trois propositions (la bonne coch\u00e9e), \u00ab \u21bb Proposer d\u2019autres formes \u00bb, son mode, \u00ab \ud83d\uddd1 Retirer ce mot \u00bb"],
+    ["Entr\u00e9e / \u00c9chap","dans la fen\u00eatre d\u2019un mot : enregistrer / annuler"],
+    ["\u00ab Mode par d\u00e9faut \u00bb","change le mode de tous les mots qui n\u2019en ont pas \u00e0 eux ; leurs propositions ou leur indice suivent, la consigne aussi"],
     ["modes A / B / C","la forme du mot \u00e0 compl\u00e9ter (propositions \u00e0 cocher, trou, trou + indice)"],
-    ["\u00ab \u21bb Reg\u00e9n\u00e9rer \u00bb","refaire les propositions, l\u2019indice ou le raisonnement"],
-    ["\u00ab \ud83d\uddd1 Supprimer cette lacune \u00bb","rendre le mot au texte"],
     ["\u00ab \ud83d\udcc4 G\u00e9n\u00e9rer le document papier \u00bb","la feuille am\u00e9nag\u00e9e \u00e0 imprimer"],
     ["la note de l\u2019\u00e9l\u00e8ve am\u00e9nag\u00e9","seuls les mots \u00e0 compl\u00e9ter comptent dans la note de l\u2019\u00e9l\u00e8ve am\u00e9nag\u00e9 ; tu corriges toute sa copie, ses autres erreurs restent visibles, sans co\u00fbt"],
     AIDE_FERMER]},
@@ -1470,6 +1470,33 @@ function convertirAnciennesRegles(textes,dictees){var maj={},n=0,tks={},premiere
         n++;tks[tk]=1;});
       maj["correction_dictee_textes/"+tk+"/formesAcceptees/"+k]=null;delete textes[tk].formesAcceptees[k];});});
   return {maj:maj,n:n,tks:Object.keys(tks),premieres:premieres};}
+/* [L15a] LES PROPOSITIONS D'UN MOT À COMPLÉTER : d'abord les vraies formes fautives des copies (L10), par fréquence ;
+   puis seulement des règles que le mot permet (accord, terminaison, accent, consonne double existante) ; jamais vide, jamais le mot. */
+var HOMOPHONES_L15A={"a":["\u00e0"],"\u00e0":["a"],"et":["est"],"est":["et","ai"],"ou":["o\u00f9"],"o\u00f9":["ou"],"son":["sont"],"sont":["son"],"on":["ont"],"ont":["on"],"ce":["se"],"se":["ce"],"ces":["ses","c\u2019est"],"ses":["ces"],"leur":["leurs"],"leurs":["leur"],"la":["l\u00e0"],"l\u00e0":["la"],"ma":["m\u2019a"],"ta":["t\u2019a"],"mes":["m\u2019es"],"peu":["peut"],"peut":["peu"],"quand":["quant"],"sans":["s\u2019en"],"plus":["plu"],"tout":["tous"],"tous":["tout"],"c\u2019est":["s\u2019est"]};
+function reglesCibleesL15a(w){var o=[],lw=w.toLowerCase();function ajoute(x){if(x&&x!==w&&o.indexOf(x)<0)o.push(x);}
+  (HOMOPHONES_L15A[lw]||[]).forEach(ajoute);
+  if(/s$/.test(w)&&w.length>2)ajoute(w.slice(0,-1));if(/x$/.test(w)&&w.length>2)ajoute(w.slice(0,-1));   /* accord */
+  if(/\u00e9s$/.test(w)){ajoute(w.slice(0,-1));ajoute(w.slice(0,-2)+"\u00e9es");}else if(/\u00e9e$/.test(w)){ajoute(w.slice(0,-1));ajoute(w+"s");}else if(/\u00e9$/.test(w)){ajoute(w+"s");ajoute(w+"e");}
+  else if(/e$/.test(w)&&w.length>2){ajoute(w+"s");}else if(!/[sx]$/.test(w)&&w.length>2){ajoute(w+"s");}
+  if(/er$/.test(w)){ajoute(w.slice(0,-2)+"\u00e9");ajoute(w.slice(0,-2)+"ez");}else if(/\u00e9$/.test(w)){ajoute(w.slice(0,-1)+"er");ajoute(w.slice(0,-1)+"ait");}   /* terminaison */
+  if(/ait$/.test(w)){ajoute(w.slice(0,-3)+"ais");ajoute(w.slice(0,-3)+"\u00e9");}else if(/ais$/.test(w)){ajoute(w.slice(0,-3)+"ait");}
+  if(/ent$/.test(w)&&w.length>4)ajoute(w.slice(0,-3)+"e");
+  var acc={"\u00e9":["\u00e8","e"],"\u00e8":["\u00e9","e"],"\u00ea":["e","\u00e8"],"\u00e0":["a"],"\u00f9":["u"],"\u00e2":["a"],"\u00ee":["i"],"\u00f4":["o"]};   /* accent */
+  for(var i=0;i<w.length;i++){var c=w.charAt(i);if(acc[c])acc[c].forEach(function(r){ajoute(w.slice(0,i)+r+w.slice(i+1));});}
+  var m=/([bcdfglmnprstz])\1/.exec(w);if(m)ajoute(w.slice(0,m.index)+w.slice(m.index+1));   /* une consonne double existante, dédoublée — jamais un doublement au hasard */
+  return o;}
+function propositionsPourL15a(tokens,idx,n,deja){var w=String(tokens[idx]||""),vues=formesPour(motCleForme(tokens,idx),w).map(function(f){return f.forme}),o=[];deja=deja||[];
+  vues.concat(reglesCibleesL15a(w)).forEach(function(x){x=String(x||"").trim();if(x&&x!==w&&o.indexOf(x)<0&&deja.indexOf(x)<0&&!isPunct(x))o.push(x);});
+  return o.slice(0,n);}
+/* l'indice du mode C : d'après l'écart entre la forme fautive la plus fréquente et le mot ; sinon un indice honnête */
+function indiceEcartL15a(tokens,idx){var w=String(tokens[idx]||""),f=(formesPour(motCleForme(tokens,idx),w)[0]||{}).forme||"",sa=function(x){return x.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();};
+  if(f){if(f===w.slice(0,-1)&&/[sx]$/.test(w))return {indice:"Ce mot est au pluriel : cherche \u00e0 quoi il se rapporte.",raisonnement:"Je cherche le mot auquel il se rapporte ; il est au pluriel, donc j\u2019ajoute la marque du pluriel."};
+    if(f===w+"s")return {indice:"Ce mot est au singulier : pas de marque du pluriel ici.",raisonnement:"Je cherche le mot auquel il se rapporte ; il est au singulier."};
+    if(f===w.slice(0,-1)&&/e$/.test(w))return {indice:"Ce mot s\u2019accorde au f\u00e9minin : cherche \u00e0 quoi il se rapporte.",raisonnement:"Je cherche le mot auquel il se rapporte ; il est f\u00e9minin, donc j\u2019ajoute un -e."};
+    if(/(er|\u00e9|ez|ait|ais)$/.test(w)&&/(er|\u00e9|ez|ait|ais)$/.test(f)&&f.replace(/(er|\u00e9|ez|ait|ais)$/,"")===w.replace(/(er|\u00e9|ez|ait|ais)$/,""))return {indice:"Terminaison du verbe : remplace-le par \u00ab vendre \u00bb ou \u00ab vendu \u00bb pour entendre la bonne forme.",raisonnement:"Je remplace par un verbe comme \u00ab vendre \u00bb : j\u2019entends la forme qu\u2019il faut \u00e9crire."};
+    if(sa(f)===sa(w))return {indice:"Attention \u00e0 l\u2019accent.",raisonnement:"Je v\u00e9rifie l\u2019accent du mot."};
+    if(f.replace(/([bcdfglmnprstz])\1/g,"$1")===w.replace(/([bcdfglmnprstz])\1/g,"$1"))return {indice:"Attention aux consonnes doubles.",raisonnement:"Je v\u00e9rifie s\u2019il faut une ou deux consonnes."};}
+  return {indice:"Regarde bien l\u2019orthographe de ce mot dans la phrase.",raisonnement:"Je relis la phrase et je v\u00e9rifie lettre \u00e0 lettre."};}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -3070,7 +3097,7 @@ function PreparationDictee(p){
       h("h2",{style:{margin:0}},"Pr\u00e9paration"),
       h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"4px 0 0"}},"Texte, bar\u00e8me, classe, comp\u00e9tences, publication et version am\u00e9nag\u00e9e de cette dict\u00e9e.")
     ),
-    h(EditionDictee,{dicteeId:p.dicteeId,onMaj:p.onDone,onClose:p.onDone})
+    h(EditionDictee,{dicteeId:p.dicteeId,onMaj:p.onDone,onClose:p.onDone,resteIci:true})   /* [L15a] */
   );
 }
 
@@ -3323,8 +3350,8 @@ function EditionDictee(p){
                     if(existing)db.ref("correction_dictee/"+p.dicteeId+"/dictee/amenagee/enabled").set(false);
                   }
                 });
-                // Met à jour le badge dans la liste saved
-                if(typeof p.onMaj==="function")p.onMaj();
+                // Met à jour le badge dans la liste saved — [L15a] en Préparation, on reste sur Préparation (102)
+                if(!p.resteIci&&typeof p.onMaj==="function")p.onMaj();
               },style:{width:18,height:18}}),
               "\ud83d\udcd8 Param\u00e9trer une version am\u00e9nag\u00e9e (PAP/DYS) pour cette dict\u00e9e",
               ifo("Ouvre le panneau de configuration des lacunes (mots \u00e0 trous, modes A/B/C, distracteurs, indices, raisonnements). G\u00e9n\u00e8re aussi le document papier imprimable au design pr\u00e9d\u00e9fini.",{below:true,right:true})
@@ -5831,9 +5858,11 @@ function ConfigAmenagee(p){
   var s2=useState(false),loaded=s2[0],setLoaded=s2[1];
   var s3=useState(""),msg=s3[0],setMsg=s3[1];
 
+  var sFen=useState(null),fen=sFen[0],setFen=sFen[1];var sMsgA=useState(""),msgAmenL15a=sMsgA[0],setMsgAmenL15a=sMsgA[1];var premierL15a=React.useRef(true);   /* [L15a] la fenêtre d'un mot ; le message */
+  useEffect(function(){if(!FORMES.charge)db.ref("correction_dictee_erreurs").once("value").then(function(sn){var v=sn.val()||{};Object.keys(v).forEach(function(id){if(v[id]&&!FORMES.parId[id])FORMES.parId[id]=v[id];});});},[]);   /* [L15a] les vraies formes, pour les propositions */
   useEffect(function(){
-    db.ref("correction_dictee/"+dicteeId+"/dictee/amenagee").once("value",function(snap){
-      var v=snap.val();
+    var refA=db.ref("correction_dictee/"+dicteeId+"/dictee/amenagee");function surA(snap){   /* [L15a] écoutée en direct (105) */
+      var v=snap.val();if(!premierL15a.current){setAmen(v||{enabled:false,defaultMode:"A",base:10,lacunes:[]});return;}premierL15a.current=false;
       if(v){
         // Auto-fix des indices après changement éventuel de tokenisation
         var fixed=fixLacunesIndices(v.lacunes||[],tokens);
@@ -5847,15 +5876,25 @@ function ConfigAmenagee(p){
         }
       } else {setAmen({enabled:false,defaultMode:"A",base:10,lacunes:[]})}
       setLoaded(true);
-    });
+    }
+    refA.on("value",surA);return function(){refA.off("value",surA)};
   },[dicteeId]);
 
   function saveAmen(newAmen){
     setAmen(newAmen);
     db.ref("correction_dictee/"+dicteeId+"/dictee/amenagee").set(newAmen);
   }
+  /* [L15a] un mot prêt pour son mode : A ses propositions, C son indice et son raisonnement */
+  function completerPourMode(l,mode){var nl=Object.assign({},l);
+    if(mode==="A"){var ps=(nl.propositions||[]).filter(function(x){return x&&String(x).trim()&&x!==tokens[l.tokenIdx]});
+      if(ps.length<2)ps=ps.concat(propositionsPourL15a(tokens,l.tokenIdx,2-ps.length,ps));nl.propositions=[tokens[l.tokenIdx]].concat(ps.slice(0,2));}
+    if(mode==="C"&&(!nl.indice||!nl.raisonnement)){var ie=indiceEcartL15a(tokens,l.tokenIdx);nl.indice=nl.indice||ie.indice;nl.raisonnement=nl.raisonnement||ie.raisonnement;}
+    return nl;}
   function toggleEnabled(){saveAmen(Object.assign({},amen,{enabled:!amen.enabled}))}
-  function setDefaultMode(m){saveAmen(Object.assign({},amen,{defaultMode:m}))}
+  function setDefaultMode(m){   /* [L15a] suivi d'effets : les mots sans mode à eux sont recalculés, la consigne suit (si elle n'a pas été écrite à la main) */
+    var n=0,lac=(amen.lacunes||[]).map(function(l){if(!l||l.mode)return l;var nl=completerPourMode(l,m);if(JSON.stringify(nl)!==JSON.stringify(l))n++;return nl;});
+    var na=Object.assign({},amen,{defaultMode:m,lacunes:lac});var auto=!amen.consigne||amen.consigne===generateConsigne(amen);if(auto)na.consigne=generateConsigne(na);
+    saveAmen(na);setMsgAmenL15a("Mode "+m+" : "+(lac.filter(Boolean).filter(function(l){return !l.mode}).length)+" mot"+((lac.filter(function(l){return l&&!l.mode}).length>1)?"s":"")+" \u00e0 compl\u00e9ter suivent ce mode ("+n+" recalcul\u00e9"+(n>1?"s":"")+")"+(auto?" ; la consigne suit":"")+".");}
   function setBase(b){saveAmen(Object.assign({},amen,{base:parseInt(b)||10}))}
 
   function effectiveLacunes(){return amen&&amen.lacunes?fixLacunesIndices(amen.lacunes,tokens):[]}
@@ -5886,6 +5925,21 @@ function ConfigAmenagee(p){
     saveAmen(Object.assign({},amen,{lacunes:newLacunes}));
   }
 
+  function ouvrirFenL15a(ti){var l=getLacune(ti),mode=l?(l.mode||null):null,eff=mode||amen.defaultMode||"A";
+    var base=l||{tokenIdx:ti,word:tokens[ti],mode:null,type:"L",propositions:[tokens[ti]]};base=completerPourMode(completerPourMode(base,"A"),"C");
+    setFen({idx:ti,nouveau:!l,mode:mode,propositions:(base.propositions||[]).slice(0,3),indice:base.indice||"",raisonnement:base.raisonnement||"",decalage:0});setSelectedTokenIdx(ti);}
+  function enregistrerFenL15a(){if(!fen)return;var ti=fen.idx,eff=fen.mode||amen.defaultMode||"A";
+    var props=fen.propositions.map(function(x){return String(x||"").trim()}).filter(Boolean);
+    var l=Object.assign({},getLacune(ti)||{tokenIdx:ti,word:tokens[ti],type:"L"},{mode:fen.mode||null,propositions:[tokens[ti]].concat(props.slice(1).filter(function(x){return x!==tokens[ti]})).slice(0,3),indice:fen.indice,raisonnement:fen.raisonnement});
+    l=completerPourMode(l,eff);
+    var autres=(amen.lacunes||[]).filter(function(x){return x&&x.tokenIdx!==ti});var na=Object.assign({},amen,{lacunes:autres.concat([l]).sort(function(x,y){return x.tokenIdx-y.tokenIdx})});
+    var auto=!amen.consigne||amen.consigne===generateConsigne(amen);if(auto)na.consigne=generateConsigne(na);
+    saveAmen(na);setFen(null);}
+  function retirerFenL15a(){if(!fen)return;if(!fen.nouveau)removeLacune(fen.idx);setFen(null);}   /* 104 : le mot est rendu au texte */
+  function autresFormesL15a(){if(!fen)return;var deja=fen.propositions.slice(1),nouv=propositionsPourL15a(tokens,fen.idx,2,deja);
+    if(nouv.length<2){var tout=propositionsPourL15a(tokens,fen.idx,12,[]),dec=(fen.decalage+2)%Math.max(2,tout.length);nouv=tout.slice(dec,dec+2);if(nouv.length<2)nouv=nouv.concat(tout.slice(0,2-nouv.length));setFen(Object.assign({},fen,{propositions:[tokens[fen.idx]].concat(nouv),decalage:dec}));return;}
+    setFen(Object.assign({},fen,{propositions:[tokens[fen.idx]].concat(nouv)}));}
+  useEffect(function(){if(!fen)return;function onK(e){var tg=e.target&&e.target.tagName;if(e.key==="Escape"){e.preventDefault();setFen(null);}else if(e.key==="Enter"&&tg!=="TEXTAREA"&&tg!=="SELECT"){e.preventDefault();enregistrerFenL15a();}}window.addEventListener("keydown",onK);return function(){window.removeEventListener("keydown",onK)};});
   if(!loaded)return h("div",{className:"card",style:{padding:20,textAlign:"center"}},h("p",{style:{color:"var(--muted)"}},"Chargement\u2026"));
 
   var lacunesCount=(amen.lacunes||[]).length;
@@ -5921,7 +5975,7 @@ function ConfigAmenagee(p){
     // Texte avec mots sélectionnables
     amen.enabled&&h("div",{className:"card"},
       h("h3",{style:{margin:"0 0 8px 0",fontSize:".95rem"}},"S\u00e9lection des lacunes",
-        ifo("Clique sur un mot du texte pour en faire une lacune. Reclique pour la retirer. Les lacunes sont surlign\u00e9es en jaune.",{below:true})),
+        ifo("Clique sur un mot du texte : sa fen\u00eatre s\u2019ouvre (ses propositions, son mode, le retirer). Les mots \u00e0 compl\u00e9ter sont surlign\u00e9s en jaune.",{below:true})),
       h("div",{style:{lineHeight:2.6,fontSize:"1rem",padding:"6px 0"}},
         tokens.map(function(w,ti){
           var sp=tokSp(w,tokens[ti+1]||"");
@@ -5931,13 +5985,8 @@ function ConfigAmenagee(p){
           return h("span",{key:"t"+ti,
             className:(lac?"lacune-hl"+(isSel?" lacune-hl-active":""):"")+"",
             style:{cursor:"pointer",padding:lac?"2px 4px":"2px",margin:"0 1px"},
-            title:lac?"Cliquer pour s\u00e9lectionner / re-cliquer pour retirer":"Cliquer pour ajouter une lacune",
-            onClick:function(){
-              if(lac){
-                if(isSel){if(confirm("Retirer la lacune sur \u00ab "+w+" \u00bb ?"))removeLacune(ti)}
-                else setSelectedTokenIdx(ti);
-              } else addLacune(ti);
-            }
+            "data-idx":ti,title:lac?"Ouvrir ce mot \u00e0 compl\u00e9ter : ses propositions, son mode, le retirer":"En faire un mot \u00e0 compl\u00e9ter (sa fen\u00eatre s\u2019ouvre ; rien n\u2019est enregistr\u00e9 avant \u00ab Enregistrer \u00bb)",
+            onClick:function(){ouvrirFenL15a(ti)}   /* [L15a] */
           },w,sp);
         })
       ),
@@ -5946,109 +5995,29 @@ function ConfigAmenagee(p){
       )
     ),
     // Panneau d'édition de la lacune sélectionnée
-    amen.enabled&&selectedLac&&h("div",{className:"card"},
-      h("h3",{style:{margin:"0 0 10px 0",fontSize:".95rem"}},
-        "\u270f\ufe0f Lacune \u00ab ",h("span",{style:{color:"#b45309"}},tokens[selectedLac.tokenIdx])," \u00bb"
-      ),
-      // Mode (override)
-      h("div",{style:{marginBottom:12}},
-        h("label",{style:{display:"block",fontWeight:600,fontSize:".85rem",marginBottom:4}},"Mode :",
-          ifo("Si vide, utilise le mode par d\u00e9faut de la dict\u00e9e. Sinon, override pour cette lacune.",{below:true,right:true})),
-        h("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
-          [["","Par d\u00e9faut"],["A","A \u2014 3 props"],["B","B \u2014 trou"],["C","C \u2014 trou+indice"]].map(function(opt){
-            var v=opt[0],lab=opt[1];
-            var active=(selectedLac.mode||"")===v;
-            return h("button",{key:v||"default",onClick:function(){updateLacune(selectedLac.tokenIdx,{mode:v||null})},
-              style:{padding:"4px 12px",borderRadius:6,border:"1.5px solid "+(active?"var(--primary)":"var(--border)"),
-                background:active?"var(--primary-light)":"#fff",fontFamily:"inherit",cursor:"pointer",fontSize:".82rem",fontWeight:active?700:500}},lab);
-          })
-        )
-      ),
-      // Type G/L
-      h("div",{style:{marginBottom:12}},
-        h("label",{style:{display:"block",fontWeight:600,fontSize:".85rem",marginBottom:4}},"Type d'erreur :",
-          ifo("Pr\u00e9-d\u00e9tect\u00e9 par l'app : G = grammaire (accord, conjugaison, homophone), L = lexique (orthographe pure). Modifie si besoin.",{below:true,right:true})),
-        h("div",{style:{display:"flex",gap:6}},
-          ["G","L"].map(function(t){
-            var active=selectedLac.type===t;
-            return h("button",{key:t,onClick:function(){
-              var indice=generateIndice(tokens[selectedLac.tokenIdx],t);
-              var raison=generateRaisonnement(tokens[selectedLac.tokenIdx],t);
-              updateLacune(selectedLac.tokenIdx,{type:t,indice:indice,raisonnement:raison});
-            },
-            style:{padding:"4px 14px",borderRadius:6,border:"1.5px solid "+(active?(t==="G"?"#c53030":"#2b6cb0"):"var(--border)"),
-              background:active?(t==="G"?"rgba(197,48,48,.1)":"rgba(43,108,203,.1)"):"#fff",
-              color:active?(t==="G"?"#c53030":"#2b6cb0"):"var(--text)",
-              fontFamily:"inherit",cursor:"pointer",fontWeight:active?700:500}},t+(t==="G"?" \u2014 Grammaire":" \u2014 Lexique"));
-          })
-        )
-      ),
-      // Propositions (mode A)
-      ((selectedLac.mode||amen.defaultMode)==="A")&&h("div",{style:{marginBottom:12}},
-        h("label",{style:{display:"block",fontWeight:600,fontSize:".85rem",marginBottom:4}},"3 propositions (1\u00e8re = correcte) :",
-          ifo("La premi\u00e8re proposition est toujours la bonne. Les deux autres sont des distracteurs plausibles, auto-sugg\u00e9r\u00e9s mais \u00e9ditables.",{below:true,right:true})),
-        [0,1,2].map(function(pi){
-          var val=selectedLac.propositions&&selectedLac.propositions[pi]||"";
-          return h("div",{key:"p"+pi,style:{display:"flex",gap:6,alignItems:"center",marginBottom:4}},
-            h("span",{style:{width:24,height:24,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",
-              background:pi===0?"rgba(39,103,73,.12)":"#f3f4f6",
-              color:pi===0?"#276749":"#666",fontWeight:700,fontSize:".82rem"}},pi===0?"\u2713":pi+1),
-            h("input",{value:val,onChange:function(e){
-              var nps=(selectedLac.propositions||["","",""]).slice();nps[pi]=e.target.value;
-              updateLacune(selectedLac.tokenIdx,{propositions:nps});
-            },style:{flex:1,padding:"5px 10px",fontSize:".9rem",borderRadius:6,border:"1.5px solid var(--border)",fontFamily:"Georgia,serif"}})
-          );
-        }),
-        h("button",{className:"btn-sm btn-ghost",style:{marginTop:4,fontSize:".75rem"},onClick:function(){
-          var w=tokens[selectedLac.tokenIdx];
-          var distr=suggestDistracteurs(w,2);
-          updateLacune(selectedLac.tokenIdx,{propositions:[w,distr[0],distr[1]]});
-        }},"\u21bb Reg\u00e9n\u00e9rer les distracteurs")
-      ),
-      // Indice (mode C)
-      ((selectedLac.mode||amen.defaultMode)==="C")&&h("div",{style:{marginBottom:12}},
-        h("label",{style:{display:"block",fontWeight:600,fontSize:".85rem",marginBottom:4}},"Indice grammatical :",
-          ifo("Question / piste affich\u00e9e \u00e0 l'\u00e9l\u00e8ve pour l'aider \u00e0 trouver le mot. Auto-sugg\u00e9r\u00e9 selon le mot et le type, \u00e9ditable.",{below:true,right:true})),
-        h("textarea",{value:selectedLac.indice||"",onChange:function(e){updateLacune(selectedLac.tokenIdx,{indice:e.target.value})},
-          style:{width:"100%",minHeight:60,padding:"6px 10px",fontSize:".88rem",borderRadius:6,border:"1.5px solid var(--border)",fontFamily:"inherit",lineHeight:1.5}}),
-        h("button",{className:"btn-sm btn-ghost",style:{marginTop:4,fontSize:".75rem"},onClick:function(){
-          updateLacune(selectedLac.tokenIdx,{indice:generateIndice(tokens[selectedLac.tokenIdx],selectedLac.type)});
-        }},"\u21bb Reg\u00e9n\u00e9rer l'indice")
-      ),
-      // Raisonnement (toujours utile pour l'autocorrection élève)
-      h("div",{style:{marginBottom:12}},
-        h("label",{style:{display:"block",fontWeight:600,fontSize:".85rem",marginBottom:4}},"Raisonnement guid\u00e9 (autocorrection \u00e9l\u00e8ve) :",
-          ifo("Liste d'\u00e9tapes pour aider l'\u00e9l\u00e8ve \u00e0 trouver la bonne r\u00e9ponse pendant son autocorrection. Auto-g\u00e9n\u00e9r\u00e9, \u00e9ditable ligne par ligne.",{below:true,right:true})),
-        (selectedLac.raisonnement||[]).map(function(step,si){
-          return h("div",{key:"s"+si,style:{display:"flex",gap:6,alignItems:"center",marginBottom:4}},
-            h("span",{style:{minWidth:24,textAlign:"center",color:"var(--muted)",fontWeight:700,fontSize:".82rem"}},si+1+"."),
-            h("input",{value:step,onChange:function(e){
-              var nsteps=(selectedLac.raisonnement||[]).slice();nsteps[si]=e.target.value;
-              updateLacune(selectedLac.tokenIdx,{raisonnement:nsteps});
-            },style:{flex:1,padding:"5px 10px",fontSize:".88rem",borderRadius:6,border:"1.5px solid var(--border)",fontFamily:"inherit"}}),
-            h("button",{className:"btn-sm btn-ghost",style:{fontSize:".7rem",padding:"3px 7px"},title:"Supprimer cette \u00e9tape",onClick:function(){
-              var nsteps=(selectedLac.raisonnement||[]).filter(function(_,i){return i!==si});
-              updateLacune(selectedLac.tokenIdx,{raisonnement:nsteps});
-            }},"\u00d7")
-          );
-        }),
-        h("div",{style:{display:"flex",gap:6,marginTop:4}},
-          h("button",{className:"btn-sm btn-ghost",style:{fontSize:".75rem"},onClick:function(){
-            var nsteps=(selectedLac.raisonnement||[]).concat([""]);
-            updateLacune(selectedLac.tokenIdx,{raisonnement:nsteps});
-          }},"+ Ajouter une \u00e9tape"),
-          h("button",{className:"btn-sm btn-ghost",style:{fontSize:".75rem"},onClick:function(){
-            updateLacune(selectedLac.tokenIdx,{raisonnement:generateRaisonnement(tokens[selectedLac.tokenIdx],selectedLac.type)});
-          }},"\u21bb Reg\u00e9n\u00e9rer")
-        )
-      ),
-      // Suppression
-      h("div",{style:{borderTop:"1px solid var(--border)",paddingTop:10,marginTop:10,display:"flex",justifyContent:"flex-end"}},
-        h("button",{className:"btn-sm btn-ghost",style:{color:"var(--coral)",borderColor:"rgba(197,48,48,.2)"},onClick:function(){
-          if(confirm("Retirer la lacune sur \u00ab "+tokens[selectedLac.tokenIdx]+" \u00bb ?"))removeLacune(selectedLac.tokenIdx);
-        }},"\ud83d\uddd1 Supprimer cette lacune")
-      )
-    ),
+    msgAmenL15a&&h("div",{id:"msg-amenagee",className:"card",style:{border:"1.5px solid #b45309",background:"#fffbeb",fontSize:".88rem",color:"#78350f"}},msgAmenL15a),   /* [L15a] */
+    fen&&h("div",{className:"popup-overlay",id:"fenetre-mot",onClick:function(){setFen(null)}},   /* [L15a] la fenêtre d'un mot (visuel D1) */
+      h("div",{style:{background:"var(--card)",borderRadius:16,padding:"18px 22px",maxWidth:600,width:"100%",boxSizing:"border-box"},onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{fontWeight:700,fontSize:"1.05rem",marginBottom:6}},"\u00ab "+tokens[fen.idx]+" \u00bb \u2014 mot \u00e0 compl\u00e9ter n\u00b0 "+(fen.nouveau?((amen.lacunes||[]).filter(function(x){return x&&x.tokenIdx<fen.idx}).length+1):((amen.lacunes||[]).filter(function(x){return x&&x.tokenIdx<fen.idx}).length+1))),
+        (function(){var eff=fen.mode||amen.defaultMode||"A";
+          if(eff==="A")return h("div",null,h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:8}},"Les trois propositions que verra l\u2019\u00e9l\u00e8ve (la bonne est coch\u00e9e). Modifie, remplace, ou retire ce mot."),
+            [0,1,2].map(function(pi){var bonne=pi===0;return h("div",{key:pi,className:"prop-l15a"+(bonne?" bonne":""),style:{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",marginBottom:6,borderRadius:10,border:"1.5px solid "+(bonne?"#16a34a":"var(--border)"),background:bonne?"#f0fdf4":"transparent"}},
+              h("input",{type:"radio",checked:bonne,readOnly:true,title:bonne?"La bonne r\u00e9ponse : le mot du texte":"Une proposition fausse"}),
+              h("input",{value:fen.propositions[pi]||"",readOnly:bonne,placeholder:bonne?"":"une forme fausse",onChange:function(e){var np=fen.propositions.slice();np[pi]=e.target.value;setFen(Object.assign({},fen,{propositions:np}))},style:{flex:1,padding:"6px 10px",border:"none",background:"transparent",fontFamily:"Georgia,serif",fontSize:"1rem"}}),
+              bonne?h("span",{style:{color:"#16a34a",fontSize:".85rem"}},"\u2713 la bonne"):null);}));
+          if(eff==="C")return h("div",null,h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"Le trou et son indice (ce que lira l\u2019\u00e9l\u00e8ve), puis son raisonnement."),
+            h("textarea",{value:fen.indice,onChange:function(e){setFen(Object.assign({},fen,{indice:e.target.value}))},style:{width:"100%",minHeight:50,boxSizing:"border-box",padding:"6px 10px",borderRadius:8,border:"1.5px solid var(--border)"}}),
+            h("textarea",{value:fen.raisonnement,onChange:function(e){setFen(Object.assign({},fen,{raisonnement:e.target.value}))},style:{width:"100%",minHeight:44,boxSizing:"border-box",padding:"6px 10px",borderRadius:8,border:"1.5px solid var(--border)",marginTop:6}}));
+          return h("div",{style:{fontSize:".9rem",color:"var(--text-sub)",margin:"6px 0 10px"}},"Un trou simple : l\u2019\u00e9l\u00e8ve \u00e9crit le mot.");})(),
+        h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",margin:"8px 0 12px"}},
+          ((fen.mode||amen.defaultMode||"A")==="A")&&h("button",{className:"btn-sm btn-ghost",id:"autres-formes",onClick:autresFormesL15a,title:"D\u2019abord les vraies formes fautives des copies sur ce mot (les plus fr\u00e9quentes), puis des formes cibl\u00e9es (accord, terminaison, accent, consonne double) ; jamais une proposition vide ni le mot lui-m\u00eame."},"\u21bb Proposer d\u2019autres formes (depuis les copies)"),
+          h("label",{style:{display:"inline-flex",alignItems:"center",gap:6,fontSize:".9rem"}},"Mode pour ce mot :",
+            h("select",{id:"mode-mot",value:fen.mode||"",title:"Le mode de ce mot ; \u00ab par d\u00e9faut \u00bb suit le mode de la dict\u00e9e.",onChange:function(e){var m=e.target.value||null,eff=m||amen.defaultMode||"A",nl=completerPourMode({tokenIdx:fen.idx,propositions:fen.propositions,indice:fen.indice,raisonnement:fen.raisonnement},eff);setFen(Object.assign({},fen,{mode:m,propositions:nl.propositions||fen.propositions,indice:nl.indice||fen.indice,raisonnement:nl.raisonnement||fen.raisonnement}))}},
+              h("option",{value:""},"par d\u00e9faut ("+(amen.defaultMode||"A")+")"),h("option",{value:"A"},"A"),h("option",{value:"B"},"B"),h("option",{value:"C"},"C"))),
+          h("button",{className:"btn-sm btn-ghost",id:"retirer-mot",style:{color:"#b91c1c"},onClick:retirerFenL15a,title:"Rendre ce mot au texte : il n\u2019est plus \u00e0 compl\u00e9ter."},"\ud83d\uddd1 Retirer ce mot")),
+        h("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){setFen(null)},title:"Fermer sans rien changer (\u00c9chap)"},"Annuler (\u00c9chap)"),
+          h("button",{className:"btn-sm btn-primary",id:"enregistrer-mot",onClick:enregistrerFenL15a,title:"Enregistrer ce mot \u00e0 compl\u00e9ter (Entr\u00e9e)"},"Enregistrer (Entr\u00e9e)")))),
     // Liste compacte des lacunes (navigation)
     amen.enabled&&lacunesCount>0&&h("div",{className:"card"},
       h("h3",{style:{margin:"0 0 8px 0",fontSize:".95rem"}},"Toutes les lacunes ("+lacunesCount+")",
