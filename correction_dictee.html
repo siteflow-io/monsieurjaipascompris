@@ -1181,7 +1181,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15c-d";
+var APP_VERSION="6.7.0-L15d-b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -6367,10 +6367,11 @@ function copieRecopiee(c){
      seulement sont recopiees au hub. */
   if(!c) return false;
   var errs = toArr(c.errors||[]).filter(function(e){return e!=null});
-  var besoin = errs.filter(function(e){return e.type!=="M"});
+  var besoin = errs.filter(function(e){return e.type==="G"||e.type==="L"});   /* [L15d] dette 115 : une recopie est attendue pour G et L seulement (P, I, A, E, M n'en ont jamais) */
   if(!besoin.length) return true;
   return besoin.every(function(e){return e.fautif && String(e.fautif).trim()!==""});
 }
+function recopiesManquantes(c){if(!c)return 0;return toArr(c.errors||[]).filter(function(e){return e&&(e.type==="G"||e.type==="L")&&!(e.fautif&&String(e.fautif).trim()!=="")}).length;}   /* [L15d] le compte dit dans l'infobulle */
 function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   options = options || {};
   var mode = options.mode || "barre";
@@ -7115,7 +7116,7 @@ function Copies(p){
             [["brut","Brut"],["barre","Barr\u00e9"],["placeholder","Placeholder"],["trous","Trous num\u00e9rot\u00e9s"],["vert","Texte corrig\u00e9 complet"]].map(function(pair){
               var v=pair[0],lab=pair[1],isSel=copyOpts.mode===v;
               var dispo=(["brut","barre","placeholder"].indexOf(v)<0)||copieRecopiee(corr[selectedKey]);
-              return h("label",{key:v,title:dispo?("Mode d\u2019affichage du mot fautif : "+lab):"Indisponible ici : tu n\u2019as pas recopi\u00e9 ce que l\u2019\u00e9l\u00e8ve avait \u00e9crit (correction en mode rapide). La copie s\u2019affiche en trous num\u00e9rot\u00e9s.",style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:6,cursor:dispo?"pointer":"not-allowed",background:isSel?"var(--primary-light)":"var(--card)",fontSize:".78rem",fontWeight:isSel?700:400,opacity:dispo?1:.45}},
+              return h("label",{key:v,title:dispo?("Mode d\u2019affichage du mot fautif : "+lab):("Indisponible ici : il manque la recopie de "+recopiesManquantes(corr[selectedKey])+" mot"+(recopiesManquantes(corr[selectedKey])>1?"s":"")+" (G ou L). La copie s\u2019affiche en trous num\u00e9rot\u00e9s."),style:{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:6,cursor:dispo?"pointer":"not-allowed",background:isSel?"var(--primary-light)":"var(--card)",fontSize:".78rem",fontWeight:isSel?700:400,opacity:dispo?1:.45}},
                 h("input",{type:"radio",name:"copyMode",value:v,checked:isSel,disabled:!dispo,onChange:function(){if(dispo)updCopyOpts({mode:v})},style:{margin:0}}),
                 h("span",null,lab)
               );
@@ -7204,7 +7205,7 @@ function Copies(p){
             [["brut","Brut"],["barre","Barr\u00e9"],["placeholder","Placeholder"],["trous","Trous num\u00e9rot\u00e9s"],["vert","Texte corrig\u00e9 complet"]].map(function(pair){
               var v=pair[0],lab=pair[1],isSel=copyOpts.mode===v;
               var dispo=(["brut","barre","placeholder"].indexOf(v)<0)||copieRecopiee(corr[selectedKey]);
-              return h("label",{key:v,title:dispo?lab:"Indisponible ici : tu n\u2019as pas recopi\u00e9 ce que l\u2019\u00e9l\u00e8ve avait \u00e9crit (correction en mode rapide). La copie s\u2019affiche en trous num\u00e9rot\u00e9s.",style:{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:5,cursor:dispo?"pointer":"not-allowed",background:isSel?"var(--primary-light)":"var(--card)",fontWeight:isSel?700:400,opacity:dispo?1:.45}},
+              return h("label",{key:v,title:dispo?lab:("Indisponible ici : il manque la recopie de "+recopiesManquantes(corr[selectedKey])+" mot"+(recopiesManquantes(corr[selectedKey])>1?"s":"")+" (G ou L). La copie s\u2019affiche en trous num\u00e9rot\u00e9s."),style:{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",border:"1.5px solid "+(isSel?"var(--primary)":"var(--border)"),borderRadius:5,cursor:dispo?"pointer":"not-allowed",background:isSel?"var(--primary-light)":"var(--card)",fontWeight:isSel?700:400,opacity:dispo?1:.45}},
                 h("input",{type:"radio",name:"copyMode_modal",value:v,checked:isSel,disabled:!dispo,onChange:function(){if(dispo)updCopyOpts({mode:v})},style:{margin:0}}),
                 h("span",null,lab)
               );
@@ -7560,7 +7561,7 @@ function purgerDonneesTest(cb){
   d.dictees.forEach(function(x){ chemins.push("correction_dictee/"+x.id); });
   chemins.push("classes/"+d.classe);
   Object.keys(d.codes).forEach(function(k){ chemins.push("codes/"+k); });
-  TEST_CODES_ANCIENS.forEach(function(k){ chemins.push("codes/"+k); });   /* [ELEVE-1 ④] les codes fictifs d'avant le renommage */
+  /* [L15d] dette 110 : les anciennes clés (durand_alice…) sont celles de la classe de test de MJPC ; « Tout effacer » ne les touche plus */
   var restants=chemins.length, effaces=[];
   chemins.forEach(function(c){
     db.ref(c).remove().then(function(){ effaces.push(c); }).catch(function(){})
@@ -7665,12 +7666,13 @@ function ModeTest(p){
     purgerDonneesTest(function(){
       ecrireClasse(db, d.classe, d.eleves, {nom:d.classe, niveau:"5e"}, function(){   /* [ELEVE-1 ④] le 2e élève fictif est aménagé d'après sa « fiche » ; partira avec la classe de test */
         var am={};d.eleves.forEach(function(e,i){am[san(e)]={sexe:i%2?"m":"f",dicteeAmenagee:i===1};});db.ref("classes/"+d.classe+"/amenagements").set(am);});
-      var maj={};
-      Object.keys(d.codes).forEach(function(k){
-        maj["codes/"+k]={code:d.codes[k],name:(function(){ for(var i=0;i<d.eleves.length;i++){ if(san(d.eleves[i])===k) return d.eleves[i]; } return k; })(),classe:d.classe,createdAt:Date.now()};
+      var maj={},attente=[];
+      Object.keys(d.codes).forEach(function(k){   /* [L15d] dette 110 : l'empreinte, comme un vrai code MJPC (le code en clair était refusé à l'entrée) */
+        var nomK=(function(){ for(var i=0;i<d.eleves.length;i++){ if(san(d.eleves[i])===k) return d.eleves[i]; } return k; })(),sel=mjpcSelAleatoire();
+        attente.push(mjpcEmpreinte(String(d.codes[k]),sel).then(function(emp){maj["codes/"+k]={empreinte:emp,sel:sel,name:nomK,classe:d.classe,createdAt:Date.now()};}));
       });
       d.dictees.forEach(function(x){ maj["correction_dictee/"+x.id]=x.payload; });
-      db.ref().update(maj).then(function(){ setBusy(false); rafraichirEtat(); p.onGenere&&p.onGenere(); })
+      Promise.all(attente).then(function(){return db.ref().update(maj);}).then(function(){ setBusy(false); rafraichirEtat(); p.onGenere&&p.onGenere(); })
         .catch(function(e){ setBusy(false); alert("La g\u00e9n\u00e9ration a \u00e9chou\u00e9 : "+(e&&e.message||"raison inconnue")); });
     });
   }
