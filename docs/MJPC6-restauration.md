@@ -1062,3 +1062,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15c (04/10/2026, conscience n°12)
 - blob `68108bddbafd` (commit `166f935bf819`) · 840 104 o · md5 `b4df61131ce844895f31588407a4f9eb` · v6.7.0-L15b
 - **Motif** : L15c — l'accueil rangé. Promu : 846 361 o, md5 `681911171bc92fa07862f61c2713585a` (bit à bit). Les `config.creeLe` posés aux dictées restent au hub (ignorés par la L15b).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15c-b (04/10/2026, conscience n°12)
+- blob `9e60d4ca3c7b` (commit `f582908fe8d6`) · 846 361 o · md5 `681911171bc92fa07862f61c2713585a` · v6.7.0-L15c
+- **Motif** : micro L15c-b — l'accueil élargi, deux lignes par dictée. Promu : 846 601 o, md5 `bc6c67d515c3e767441e88b78485a85c` (bit à bit).
