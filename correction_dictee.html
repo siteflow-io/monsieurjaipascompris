@@ -1181,7 +1181,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15c-b";
+var APP_VERSION="6.7.0-L15c-c";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -2782,6 +2782,7 @@ function AppProf(p){
   var s16=useState(""),niveauInput=s16[0],setNiveauInput=s16[1];
   var s17=useState(true),publishedInput=s17[0],setPublishedInput=s17[1];
   var s18=useState(null),editing=s18[0],setEditing=s18[1];
+  var sNiv=useState({}),nivOuverts=sNiv[0],setNivOuverts=sNiv[1];   /* [micro L15c-c — 04/10, Paul] chaque niveau est un dépliant, replié par défaut */
 
   // Load classes from Firebase
   useEffect(function(){
@@ -2947,8 +2948,12 @@ function AppProf(p){
     h("div",{className:"card",id:"mes-dictees"},h("h2",null,"Mes dict\u00e9es"),   /* [L15c] rangées par niveau, puis par date de création */
       NIVEAUX_L15C.concat(saved.some(function(d){return NIVEAUX_L15C.indexOf(d.niveau)<0})?["autres"]:[]).map(function(nv){
         var ds=saved.filter(function(d){return nv==="autres"?NIVEAUX_L15C.indexOf(d.niveau)<0:d.niveau===nv}).sort(function(x,y){return (x.creeLe||0)-(y.creeLe||0)});
-        return h("div",{key:nv,className:"niveau-l15c","data-niveau":nv},h("h3",{style:{margin:"14px 0 8px",fontSize:"1rem"}},nv==="autres"?"Autres":nv),
-          ds.length?ds.map(function(d){return h("div",{key:d.id,className:"ligne-dictee-l15c","data-id":d.id,style:{marginBottom:8}},
+        var ouvertNv=!!nivOuverts[nv],basculer=function(){setNivOuverts(function(prev){var o=Object.assign({},prev);o[nv]=!prev[nv];return o})};
+        return h("div",{key:nv,className:"niveau-l15c","data-niveau":nv,"data-ouvert":ouvertNv?"1":"0"},
+          h("h3",{className:"niveau-titre-l15c",role:"button",tabIndex:0,style:{margin:"10px 0 6px",fontSize:"1rem",cursor:"pointer",userSelect:"none",display:"flex",alignItems:"center",gap:8},title:ouvertNv?"Replier ce niveau":"D\u00e9plier ce niveau",onClick:basculer,onKeyDown:function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();basculer()}}},
+            h("span",{style:{display:"inline-block",width:14,color:"var(--text-sub)"}},ouvertNv?"\u25be":"\u25b8"),nv==="autres"?"Autres":nv,
+            h("span",{style:{fontWeight:400,fontSize:".82rem",color:"var(--text-sub)"}},ds.length?ds.length+" dict\u00e9e"+(ds.length>1?"s":""):"vide pour l\u2019instant")),
+          !ouvertNv?null:ds.length?ds.map(function(d){return h("div",{key:d.id,className:"ligne-dictee-l15c","data-id":d.id,style:{marginBottom:8}},
         h("div",{style:{display:"flex",flexDirection:"column",gap:6,padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10}},   /* [micro L15c-b — 04/10, Paul] deux lignes : le titre et ses infos sur une ligne ; en dessous la progression, le statut, la coche, ✏️ ⧉ 🗑️, Ouvrir ; l'accueil à 1100 px */
           h("div",{style:{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",cursor:"pointer"},onClick:function(){load(d.id)}},h("span",{style:{fontWeight:600}},d.title),
             h("span",{className:"sous-ligne-l15c",style:{fontSize:".82rem",color:"var(--text-sub)"}},[d.classeLisible,d.creeLe?"cr\u00e9\u00e9e le "+dateCourteL15c(d.creeLe):null,d.nLac>0?"\ud83d\udcd8 "+d.nLac+" mot"+(d.nLac>1?"s":"")+" \u00e0 compl\u00e9ter":null].filter(Boolean).join(" \u00b7 ")),   /* [L15c] */
