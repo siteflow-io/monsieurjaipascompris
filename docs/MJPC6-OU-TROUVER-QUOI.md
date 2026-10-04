@@ -366,3 +366,11 @@
 | l'accueil | `NIVEAUX_L15C`, `nomClasseLisibleL15c` (libellé MJPC → « 3e Dylan Bob »), `dateCourteL15c` ; `chargerDictees` (niveau, classe lisible, `config.creeLe` posé une fois, copies corrigées / attendues, rendues) ; la liste par niveaux, la ligne C1 (taux, statut, coche « publiée » → `config.published`), le pied (« ＋ Nouvelle dictée » replié), le mode test replié |
 | l'atelier | `OutilsTestSouche` (« Éprouver » retiré, boutons renommés) |
 | « rendre les copies ▸ » | ouvre `CorrScreen` sur Données → Copies avec le bouton « Rendre les copies » prêt (focus, pulse) |
+
+## AJOUT DU 04/10/2026 — correction_dictee 6.7.0-L15d-b
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| les codes du bac à sable | `ModeTest` (création : `{classe, createdAt, empreinte, name, sel}` via `mjpcSelAleatoire` / `mjpcEmpreinte`) ; `purgerDonneesTest` (les clés de la classe de test de MJPC épargnées) |
+| les modes des copies | `copieRecopiee` (G et L), `recopiesManquantes`, les deux listes de modes (infobulle et compte) |
+| l'onglet Rapide | `CorrScreen` : l'effet « [micro L15c-d] » pose l'élève une fois |
