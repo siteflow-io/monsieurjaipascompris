@@ -1181,7 +1181,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15d-b";
+var APP_VERSION="6.7.0-L15e";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1324,6 +1324,7 @@ var AIDES={
     ["la coche \u00ab publi\u00e9e \u00bb","d\u00e9cocher retire la dict\u00e9e de la liste des \u00e9l\u00e8ves tout de suite ; cocher la publie"],
     ["\u00ab rendre les copies \u25b8 \u00bb","d\u00e8s que toutes les copies attendues sont corrig\u00e9es : ouvre l\u2019onglet Copies, son bouton pr\u00eat ; un second clic l\u00e0 les rend"],
     ["\u00ab \uff0b Nouvelle dict\u00e9e \u00bb","ouvre le formulaire d\u2019une nouvelle dict\u00e9e"],
+    ["\u00ab \ud83d\udcc4 Importer depuis un PDF \u00bb","lire une dict\u00e9e dans un PDF (classique, adapt\u00e9e ou les deux) ; tu v\u00e9rifies le texte et les mots \u00e0 compl\u00e9ter ; rien ne s\u2019\u00e9crit avant \u00ab Enregistrer la dict\u00e9e \u00bb"],
     ["\ud83e\uddea Mode test \u2014 \u00ab Cr\u00e9er le bac \u00e0 sable \u00bb","une classe fictive, deux dict\u00e9es, six \u00e9l\u00e8ves avec leurs codes : voir ce que voit un \u00e9l\u00e8ve"],
     ["\ud83e\uddea \u00ab \ud83e\uddf9 Tout effacer \u00bb","supprimer le bac \u00e0 sable (aucune donn\u00e9e r\u00e9elle n\u2019est touch\u00e9e)"],
     ["\ud83e\uddea \u00ab Ouvrir \u25be \u00bb (en bas)","d\u00e9plie le mode test : le bac \u00e0 sable et trois v\u00e9rifications (les 4 \u00e9tats de copie, l\u2019\u00e9diteur de textes, la corbeille)"],
@@ -1491,6 +1492,7 @@ function reglesCibleesL15a(w){var o=[],lw=w.toLowerCase();function ajoute(x){if(
   if(/s$/.test(w)&&w.length>2)ajoute(w.slice(0,-1));if(/x$/.test(w)&&w.length>2)ajoute(w.slice(0,-1));   /* accord */
   if(/\u00e9s$/.test(w)){ajoute(w.slice(0,-1));ajoute(w.slice(0,-2)+"\u00e9es");}else if(/\u00e9e$/.test(w)){ajoute(w.slice(0,-1));ajoute(w+"s");}else if(/\u00e9$/.test(w)){ajoute(w+"s");ajoute(w+"e");}
   else if(/e$/.test(w)&&w.length>2){ajoute(w+"s");}else if(!/[sx]$/.test(w)&&w.length>2){ajoute(w+"s");}
+  if(/al$/.test(w))ajoute(w.slice(0,-2)+"aux");if(/[bcdfghjklmnpqrstvwxz]$/.test(w)&&w.length>2)ajoute(w+"e");   /* [L15e] le pluriel en -aux ; le -e d'un mot qui finit par une consonne (féminin, verbe) */
   if(/er$/.test(w)){ajoute(w.slice(0,-2)+"\u00e9");ajoute(w.slice(0,-2)+"ez");}else if(/\u00e9$/.test(w)){ajoute(w.slice(0,-1)+"er");ajoute(w.slice(0,-1)+"ait");}   /* terminaison */
   if(/ait$/.test(w)){ajoute(w.slice(0,-3)+"ais");ajoute(w.slice(0,-3)+"\u00e9");}else if(/ais$/.test(w)){ajoute(w.slice(0,-3)+"ait");}
   if(/ent$/.test(w)&&w.length>4)ajoute(w.slice(0,-3)+"e");
@@ -2760,6 +2762,133 @@ function App(){
 }
 
 // ═══ APP PROF (ancien App) ═══
+/* [L15e] L'IMPORT DEPUIS N'IMPORTE QUEL PDF (dette 108 ; visuels E1 et B2) — le texte est lu DANS LE NAVIGATEUR par pdf.js (Mozilla, libre),
+   chargé depuis unpkg comme React ; rien de payant, rien ne part ailleurs. Rien ne s'écrit avant « Enregistrer la dictée ». */
+var PDFJS_L15E="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js",PDFJS_WORKER_L15E="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js",pdfjsPromesseL15e=null;
+function chargerPdfjsL15e(){if(pdfjsPromesseL15e)return pdfjsPromesseL15e;
+  pdfjsPromesseL15e=new Promise(function(ok,ko){if(window.pdfjsLib)return ok(window.pdfjsLib);var sc=document.createElement("script");sc.src=PDFJS_L15E;sc.onload=function(){ok(window.pdfjsLib)};sc.onerror=function(){pdfjsPromesseL15e=null;ko(new Error("pdf.js"))};document.head.appendChild(sc);})
+    .then(function(lib){return fetch(PDFJS_WORKER_L15E).then(function(r){return r.text()}).then(function(t){lib.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([t],{type:"text/javascript"}));return lib;},function(){return lib;});});
+  return pdfjsPromesseL15e;}
+function lirePdfL15e(file){return chargerPdfjsL15e().then(function(lib){return file.arrayBuffer().then(function(buf){return lib.getDocument({data:new Uint8Array(buf)}).promise;});})
+  .then(function(doc){var pages=[];for(var i=1;i<=doc.numPages;i++)pages.push(i);
+    return pages.reduce(function(pr,n){return pr.then(function(acc){return doc.getPage(n).then(function(pg){return pg.getTextContent();}).then(function(tc){var l="",y=null;tc.items.forEach(function(it){var yy=it.transform?it.transform[5]:null;if(y!==null&&yy!==null&&Math.abs(yy-y)>2&&l&&l.slice(-1)!=="\n")l+="\n";l+=it.str;if(it.hasEOL)l+="\n";if(yy!==null)y=yy;});return acc+l+"\n";});});},Promise.resolve(""));});}
+/* les groupes : [a / b / c], (a / b / c), a / b / c ; « sur n points » */
+var MOT_L15E="[A-Za-z\u00c0-\u00ff\u0153\u0152\u2019'\\-]+";
+function groupesL15e(txt){var gr=[],t=String(txt||"");
+  t=t.replace(/\[\s*([^\[\]]+?)\s*\]/g,function(m,in1){var o=in1.split(/\s*\/\s*/).map(function(x){return x.trim()}).filter(Boolean);if(o.length<2)return m;gr.push({options:o,forme:"crochets"});return " \u27e6"+(gr.length-1)+"\u27e7 ";});
+  t=t.replace(/\(\s*([^()]+?\/[^()]+?)\s*\)/g,function(m,in1){var o=in1.split(/\s*\/\s*/).map(function(x){return x.trim()}).filter(Boolean);if(o.length<2||o.some(function(x){return !new RegExp("^"+MOT_L15E+"$").test(x)}))return m;gr.push({options:o,forme:"parenth\u00e8ses"});return " \u27e6"+(gr.length-1)+"\u27e7 ";});
+  t=t.replace(new RegExp("(^|[\\s\u00a0])("+MOT_L15E+"(?:\\s*\\/\\s*"+MOT_L15E+")+)(?=[\\s\u00a0.,;:!?\u2026]|$)","g"),function(m,a,in1){var o=in1.split(/\s*\/\s*/).map(function(x){return x.trim()}).filter(Boolean);if(o.length<2)return m;gr.push({options:o,forme:"barres"});return a+"\u27e6"+(gr.length-1)+"\u27e7";});
+  var b=/sur\s+(\d{1,3})\s*points?/i.exec(t);return {texte:t,groupes:gr,base:b?+b[1]:null};}
+var NOTE_L15E=/^\s*(\*|\(\d+\)|\d+\s*[.)]\s|note|remarque|\u2192)/i,GRAM_L15E=/(accord|participe|sujet|infinitif|pluriel|singulier|f\u00e9minin|masculin|conjug|homophone|compl\u00e9ment)/i;
+/* un PDF lu → titre, texte (sans titre ni notes), notes, groupes */
+var CONSIGNE_L15E=/^\s*(consigne|nom\b|pr\u00e9nom|classe\s*:|date\s*:)/i,FORMULAIRE_L15E=/^(nom|pr\u00e9nom|classe|date)[\s:]/i;
+function analyserPdfL15e(brut,nomFichier){var lignes=String(brut||"").split(/\n/).map(function(l){return l.replace(/\s+/g," ").trim()}).filter(Boolean);
+  if(!lignes.length)return {vide:true};
+  var tout=lignes.join(" "),base=(/sur\s+(\d{1,3})\s*points?/i.exec(tout)||[])[1]||null;
+  lignes=lignes.filter(function(l){return !CONSIGNE_L15E.test(l)&&!FORMULAIRE_L15E.test(l)&&!(/sur\s+\d{1,3}\s*points?/i.test(l)&&l.length<60)&&!/^\s*(nom\s+pr\u00e9nom|date)\s*:?/i.test(l);});   /* la consigne, le formulaire (Nom, Classe, Date), « sur n points » */
+  var titre=null;if(lignes.length>1&&lignes[0].length<=70&&!/[\[\]\/]/.test(lignes[0])&&!/[.!?\u2026,;]$/.test(lignes[0])&&/^[A-Z\u00c0-\u00dc\u00ab"]/.test(lignes[1])){titre=lignes[0];lignes=lignes.slice(1);}   /* un titre : la ligne suivante commence une phrase (sinon c'est la suite du texte) */
+  var notes=[],corps=[],dansNotes=false;lignes.forEach(function(l){if(!dansNotes&&(NOTE_L15E.test(l)||/\u00b7|\u2192/.test(l)||(GRAM_L15E.test(l)&&/:/.test(l))))dansNotes=true;(dansNotes?notes:corps).push(l);});   /* le bloc des notes : dès sa première ligne, tout ce qui suit */
+  notes=notes.join(" ").replace(/\s+/g," ").split(/\s*\u00b7\s*|\s*;\s*|\n/).map(function(x){return x.replace(NOTE_L15E,"").trim()}).filter(function(x){return x.length>3});
+  var g=groupesL15e(corps.join(" "));
+  return {vide:false,titre:titre||String(nomFichier||"").replace(/\.pdf$/i,"").replace(/[_-]+/g," ").trim(),texte:g.texte.replace(/\s+/g," ").trim(),groupes:g.groupes,notes:notes,base:base?+base:null,nom:nomFichier};}
+function normMotL15e(w){return String(w||"").toLowerCase().replace(/[^a-z\u00e0-\u00ff\u0153]/g,"");}
+/* le texte final et ses mots à compléter : la bonne forme est celle du texte classique (alignement mot à mot), sinon la première du groupe */
+function assemblerL15e(adaptee,classique){var toks=adaptee.texte.split(/\s+/).filter(Boolean),lac=[];
+  if(!classique){var multi0=[];var mots=toks.map(function(t){var m=/^\u27e6(\d+)\u27e7([.,;:!?\u2026]*)$/.exec(t);if(!m)return t;var gr=adaptee.groupes[+m[1]];if(gr.options.some(function(o){return /\s/.test(o)})){multi0.push({premiere:gr.options[0],options:gr.options});return gr.options[0]+(m[2]||"");}lac.push({options:gr.options.slice(),bonne:gr.options[0],n:lac.length});return "\u27e6L"+(lac.length-1)+"\u27e7"+(m[2]||"");});
+    return {mots:mots,lacunes:lac,multi:multi0};}
+  var cl=classique.texte.split(/\s+/).filter(Boolean),i=0,mots=[],multi=[];
+  toks.forEach(function(t){var m=/^\u27e6(\d+)\u27e7([.,;:!?\u2026]*)$/.exec(t);
+    if(m&&adaptee.groupes[+m[1]].options.some(function(o){return /\s/.test(o)})){var g0=adaptee.groupes[+m[1]],pr=g0.options[0];multi.push({premiere:pr,options:g0.options});pr.split(/\s+/).forEach(function(x){mots.push(x)});mots[mots.length-1]+=(m[2]||"");i+=pr.split(/\s+/).length;return;}   /* [L15e — règle C12 447] un crochet sur plusieurs mots */
+    if(m){var gr=adaptee.groupes[+m[1]],w=cl[i]||gr.options[0],nw=normMotL15e(w),bonne=gr.options.filter(function(o){return normMotL15e(o)===nw})[0]||w.replace(/[.,;:!?\u2026]+$/,"");
+      lac.push({options:gr.options.slice(),bonne:bonne,n:lac.length});mots.push("\u27e6L"+(lac.length-1)+"\u27e7"+((w.match(/[.,;:!?\u2026]+$/)||[""])[0]));i++;return;}
+    var nt=normMotL15e(t),k=-1;for(var j=i;j<Math.min(cl.length,i+4);j++){if(normMotL15e(cl[j])===nt){k=j;break;}}
+    if(k>=0){for(var x=i;x<k;x++)mots.push(cl[x]);mots.push(cl[k]);i=k+1;}else{mots.push(t);}});
+  for(;i<cl.length;i++)mots.push(cl[i]);
+  return {mots:mots,lacunes:lac,multi:multi};}
+function ImportPdfL15e(p){
+  var sP=useState([]),pdfs=sP[0],setPdfs=sP[1];   /* [{nom, etat, analyse}] */
+  var sT=useState(""),texte=sT[0],setTexte=sT[1],sL=useState([]),lacs=sL[0],setLacs=sL[1];   /* lacs : [{tokenIdx, bonne, options, mode, indice}] */
+  var sTi=useState(""),titre=sTi[0],setTitre=sTi[1],sC=useState(""),classe=sC[0],setClasse=sC[1],sB=useState("preparee"),bareme=sB[0],setBareme=sB[1];
+  var sAm=useState(true),amen=sAm[0],setAmen=sAm[1],sBa=useState(10),baseAm=sBa[0],setBaseAm=sBa[1],sNo=useState([]),notes=sNo[0],setNotes=sNo[1];
+  var sMu=useState([]),multiL=sMu[0],setMultiL=sMu[1];var sEd=useState(false),edition=sEd[0],setEdition=sEd[1],sF=useState(null),fen=sF[0],setFen=sF[1],sMsg=useState(""),msg=sMsg[0],setMsg=sMsg[1];
+  var toks=tokenize(texte||"");
+  function recomposer(liste){var ad=null,cl=null;liste.forEach(function(x){if(!x.analyse||x.analyse.vide)return;if(!ad||x.analyse.groupes.length>ad.groupes.length){if(ad&&!cl)cl=ad;ad=x.analyse;}else if(!cl)cl=x.analyse;});
+    if(!ad)return;if(ad===cl)cl=null;if(cl&&cl.groupes.length&&ad.groupes.length<=cl.groupes.length){var z=ad;ad=cl;cl=z;}
+    var as=assemblerL15e(ad,cl&&cl!==ad?cl:null);
+    var t=as.mots.map(function(m){var q=/^\u27e6L(\d+)\u27e7(.*)$/.exec(m);return q?as.lacunes[+q[1]].bonne+q[2]:m}).join(" ").replace(/\s+([.,;:!?\u2026])/g,"$1");
+    var tk=tokenize(t),l2=[],pos=0;as.mots.forEach(function(m){var q=/^\u27e6L(\d+)\u27e7(.*)$/.exec(m);   /* chaque morceau donne ses mots (« Saint-Laurent » en donne trois) : on avance d'autant */
+      var morceau=q?as.lacunes[+q[1]].bonne+q[2]:m,n=tokenize(morceau).length;
+      if(q&&pos<tk.length){var lc=as.lacunes[+q[1]];l2.push({tokenIdx:pos,bonne:tk[pos],options:lc.options,mode:null,indice:""});}pos+=n;});
+    var nts=(cl||ad).notes||[];   /* une note va au mot qu'elle nomme : « couchés : … », « amenés → … », ou dans la liste après « : » (« … avec avoir : entendu, vu, passé → … ») */
+    l2.forEach(function(l){var w=String(l.bonne).toLowerCase(),re=new RegExp("(^|[^a-z\u00e0-\u00ff])"+w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"($|[^a-z\u00e0-\u00ff])");
+      var n=nts.filter(function(x){var lx=x.toLowerCase(),c=lx.search(/[:\u2192]/),tete=c>=0?lx.slice(0,c).trim():"",queue=c>=0?lx.slice(c+1):"";return tete===w||re.test(queue);})[0];if(n)l.indice=n;});
+    setTexte(t);setLacs(l2);setNotes(nts);setMultiL(as.multi||[]);if(!titre)setTitre(ad.titre||"");if(ad.base||(cl&&cl.base))setBaseAm(ad.base||cl.base);
+    if(/brevet/i.test((ad.titre||"")+" "+(ad.nom||"")+" "+t))setBareme("brevet");}
+  function deposer(i,file){if(!file)return;var l=pdfs.slice();l[i]={nom:file.name,etat:"lecture\u2026"};setPdfs(l);
+    lirePdfL15e(file).then(function(brut){var an=analyserPdfL15e(brut,file.name);var l2=pdfs.slice();l2[i]={nom:file.name,analyse:an,etat:an.vide?"vide":(an.groupes.length?"groupes":"rien")};setPdfs(l2);recomposer(l2);},
+      function(){var l2=pdfs.slice();l2[i]={nom:file.name,etat:"erreur"};setPdfs(l2);});}
+  function zone(i,libelle){var x=pdfs[i];
+    return h("label",{className:"zone-pdf-l15e",id:"zone-pdf-"+i,style:{flex:1,minWidth:240,border:"2px dashed #94a3b8",borderRadius:12,padding:"14px",textAlign:"center",cursor:"pointer",display:"block"},title:"D\u00e9pose ou choisis un PDF : son texte est lu ici, dans ton navigateur (rien n\u2019est envoy\u00e9 ailleurs)."},
+      h("input",{type:"file",accept:"application/pdf,.pdf",style:{display:"none"},onChange:function(e){deposer(i,e.target.files&&e.target.files[0]);e.target.value="";}}),
+      h("div",{style:{fontWeight:700}},"\ud83d\udcc4 "+(x?x.nom:libelle)),
+      x?h("div",{className:"etat-pdf-l15e",style:{fontSize:".85rem",marginTop:4,color:x.etat==="groupes"||(x.etat==="rien"&&pdfs.some(function(y){return y&&y.etat==="groupes"}))?"#166534":(x.etat==="rien"?"#9a3412":(x.etat==="vide"||x.etat==="erreur"?"#b91c1c":"var(--muted)"))}},
+        x.etat==="groupes"?"\u2713 texte lu \u00b7 "+x.analyse.groupes.length+" groupe"+(x.analyse.groupes.length>1?"s":"")+" \u00ab "+(x.analyse.groupes[0].forme==="crochets"?"[a / b / c]":x.analyse.groupes[0].forme==="parenth\u00e8ses"?"(a / b / c)":"a / b / c")+" \u00bb reconnu"+(x.analyse.groupes.length>1?"s":""):
+        x.etat==="rien"&&pdfs.some(function(y){return y&&y.etat==="groupes"})?"\u2713 texte lu \u00b7 le texte classique : il donne les bonnes formes"+((x.analyse.notes||[]).length?" et les notes":""):
+        x.etat==="rien"?"texte lu \u00b7 rien de reconnu \u2192 tu choisis les mots \u00e0 la main":
+        x.etat==="vide"?"je n\u2019ai trouv\u00e9 aucun texte dans ce PDF (sans doute une image scann\u00e9e) : il me faut un PDF avec du texte, ou tu recopies le texte \u00e0 la main":
+        x.etat==="erreur"?"je n\u2019ai pas pu lire ce PDF":x.etat):h("div",{style:{fontSize:".82rem",color:"var(--muted)",marginTop:4}},i===0?"le PDF adapt\u00e9 (avec ses propositions), ou n\u2019importe quel PDF":"le PDF classique, s\u2019il y en a un"));}
+  function ouvrir(ti){var l=lacs.filter(function(x){return x.tokenIdx===ti})[0],w=toks[ti];
+    var ps=l?[l.bonne].concat(l.options.filter(function(o){return o!==l.bonne})).slice(0,3):[w].concat(propositionsPourL15a(toks,ti,2,[]));while(ps.length<3)ps.push("");
+    setFen({idx:ti,nouveau:!l,propositions:ps,mode:l?l.mode:null,indice:l?l.indice:""});}
+  function enregistrerFen(){if(!fen)return;var autres=lacs.filter(function(x){return x.tokenIdx!==fen.idx});var ps=fen.propositions.map(function(x){return String(x||"").trim()}).filter(Boolean);
+    autres.push({tokenIdx:fen.idx,bonne:toks[fen.idx],options:[toks[fen.idx]].concat(ps.slice(1).filter(function(x){return x!==toks[fen.idx]})),mode:fen.mode||null,indice:fen.indice||""});
+    setLacs(autres.sort(function(a,b){return a.tokenIdx-b.tokenIdx}));setFen(null);}
+  useEffect(function(){if(!fen)return;function k(e){var tg=e.target&&e.target.tagName;if(e.key==="Escape"){e.preventDefault();setFen(null);}else if(e.key==="Enter"&&tg!=="TEXTAREA"&&tg!=="SELECT"){e.preventDefault();enregistrerFen();}}window.addEventListener("keydown",k);return function(){window.removeEventListener("keydown",k)};});
+  function enregistrer(){if(!texte.trim()||!titre.trim()||!classe){setMsg("Il manque le texte, le titre ou la classe.");return;}
+    var reg=(CLASSES&&CLASSES[classe])||{},niveau=reg.niveau||"",id=san(titre)+"-"+san(classe);
+    db.ref("correction_dictee/"+id+"/config").once("value").then(function(sn){if(sn.exists())id=id+"-"+Date.now().toString(36);
+      var maj={};maj["correction_dictee/"+id+"/config"]={title:titre.trim(),text:texte.trim(),classe:classe,base:20,niveau:niveau,published:true,bareme:bareme,creeLe:Date.now(),importePdf:true};
+      if(amen&&lacs.length)maj["correction_dictee/"+id+"/dictee/amenagee"]={enabled:true,defaultMode:"A",base:baseAm||10,lacunes:lacs.map(function(l){var o={tokenIdx:l.tokenIdx,word:l.bonne,mode:l.mode||null,type:"L",propositions:[l.bonne].concat(l.options.filter(function(x){return x!==l.bonne})).slice(0,3)};if(l.indice){o.indice=l.indice;o.raisonnement="";}return o;})};
+      return db.ref().update(maj).then(function(){if(p.onEnregistre)p.onEnregistre(id);});});}
+  var noms=Object.keys(CLASSES||{}).filter(function(k){return k&&k.charAt(0)!=="_"}).sort();
+  return h("div",{className:"card",id:"carte-import-pdf"},
+    h("h2",{style:{marginTop:0}},"\ud83d\udcc4 Importer une dict\u00e9e depuis un PDF \u2014 n\u2019importe quel PDF"),
+    h("p",{style:{fontSize:".88rem",color:"var(--text-sub)",margin:"0 0 10px"}},"D\u00e9pose ton PDF. L\u2019app lit le texte ; elle reconna\u00eet ce qu\u2019elle peut (des crochets, des parenth\u00e8ses, des barres\u2026) et te montre ce qu\u2019elle a compris. Tu corriges directement dans le texte : rien ne s\u2019enregistre avant \u00ab Enregistrer la dict\u00e9e \u00bb."),
+    h("div",{style:{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12}},zone(0,"d\u00e9pose un PDF"),zone(1,"un autre PDF")),
+    texte?h("div",null,
+      h("div",{style:{fontWeight:600,marginBottom:6}},"Le texte, tel que lu ",h("span",{style:{fontWeight:400,color:"var(--muted)",fontSize:".85rem"}},"(clique un mot pour en faire un mot \u00e0 compl\u00e9ter ; un groupe reconnu est d\u00e9j\u00e0 surlign\u00e9) "),
+        h("button",{className:"btn-sm btn-ghost",id:"modifier-texte-l15e",onClick:function(){setEdition(!edition)},title:"Corriger le texte lu (les mots \u00e0 compl\u00e9ter sont gard\u00e9s s\u2019ils sont toujours l\u00e0)."},edition?"\u2713 fini":"\u270e modifier le texte")),
+      edition?h("textarea",{value:texte,onChange:function(e){var nt=e.target.value,nk=tokenize(nt);setLacs(lacs.map(function(l){var w=toks[l.tokenIdx];var j=nk.indexOf(w);return j>=0?Object.assign({},l,{tokenIdx:j,bonne:w}):null}).filter(Boolean));setTexte(nt);},style:{width:"100%",minHeight:120,boxSizing:"border-box",padding:10,borderRadius:10,border:"1.5px solid var(--border)",fontFamily:"Georgia,serif",fontSize:"1rem"}}):
+      h("div",{id:"texte-lu-l15e",style:{border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px",lineHeight:2.1,fontFamily:"Georgia,serif",fontSize:"1rem"}},
+        toks.map(function(w,i){var est=lacs.some(function(l){return l.tokenIdx===i}),prev=i?toks[i-1]:"",esp=i&&!/^[.,;:!?\u2026)\]\u2019'\u00bb-]$/.test(w)&&!/^[\u2019'(\[\u00ab-]$/.test(prev)?" ":"";
+          if(isPunct(w))return h("span",{key:i},(w==="\u00bb"||w==="?"||w==="!"||w===":"||w===";"?"\u00a0":"")+w);
+          return h("span",{key:i},esp,h("span",{className:"mot-l15e"+(est?" lacune":""),"data-idx":i,onClick:function(){ouvrir(i)},title:est?"Un mot \u00e0 compl\u00e9ter : ses propositions, son mode":"En faire un mot \u00e0 compl\u00e9ter",style:{cursor:"pointer",padding:est?"1px 3px":0,borderRadius:5,background:est?"#dbeafe":"transparent",borderBottom:est?"2px solid #2563eb":"none"}},w));})),
+      multiL.length?h("div",{id:"multi-l15e",style:{fontSize:".85rem",color:"#9a3412",margin:"8px 0"}},multiL.map(function(x,i){return h("div",{key:i},"Le crochet \u00ab ["+x.options.join(" / ")+"] \u00bb couvre plusieurs mots : j\u2019ai pris la premi\u00e8re forme (\u00ab "+x.premiere+" \u00bb), sans en faire un mot \u00e0 compl\u00e9ter \u2014 v\u00e9rifie-le.")})):null,
+      notes.length?h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"8px 0"}},(function(){var n0=lacs.filter(function(l){return l.indice})[0];var t0=n0?n0.indice:(notes.filter(function(x){return GRAM_L15E.test(x)})[0]||notes[0]);return "Les notes de grammaire du PDF classique (\u00ab "+t0.slice(0,70)+(t0.length>70?"\u2026":"")+" \u00bb) sont gard\u00e9es comme indices pour le mode C"+(lacs.some(function(l){return l.indice})?" ("+lacs.filter(function(l){return l.indice}).length+" mots \u00e0 compl\u00e9ter en ont une).":".");})()):null,
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}},
+        h("label",null,h("div",{style:{fontWeight:600}},"Titre"),h("input",{id:"titre-l15e",value:titre,onChange:function(e){setTitre(e.target.value)},style:{width:"100%",boxSizing:"border-box"}})),
+        h("label",null,h("div",{style:{fontWeight:600}},"Classe"),h("select",{id:"classe-l15e",value:classe,onChange:function(e){setClasse(e.target.value)},style:{width:"100%"}},h("option",{value:""},"\u2014 choisis \u2014"),noms.map(function(k){return h("option",{key:k,value:k},nomClasseLisibleL15c(k))}))),
+        h("label",null,h("div",{style:{fontWeight:600}},"Bar\u00e8me"),h("select",{id:"bareme-l15e",value:bareme,onChange:function(e){setBareme(e.target.value)},style:{width:"100%"}},h("option",{value:"preparee"},"Dict\u00e9e pr\u00e9par\u00e9e"),h("option",{value:"brevet"},"Type brevet"))),
+        h("label",null,h("div",{style:{fontWeight:600}},"Version am\u00e9nag\u00e9e"),h("div",{style:{display:"flex",alignItems:"center",gap:8}},h("input",{type:"checkbox",id:"amen-l15e",checked:amen,onChange:function(e){setAmen(e.target.checked)}}),
+          h("span",null,lacs.length+" mot"+(lacs.length>1?"s":"")+" \u00b7 mode A \u00b7 sur "),h("input",{type:"number",value:baseAm,min:1,onChange:function(e){setBaseAm(+e.target.value||10)},style:{width:60}})))),
+      msg?h("div",{style:{color:"#b91c1c",fontSize:".88rem",marginTop:8}},msg):null,
+      h("div",{style:{display:"flex",gap:8,marginTop:12}},
+        h("button",{className:"btn btn-primary",id:"enregistrer-import-l15e",style:{width:"auto"},onClick:enregistrer,title:"Cr\u00e9e la dict\u00e9e (et sa version am\u00e9nag\u00e9e) : c\u2019est le seul moment o\u00f9 quelque chose s\u2019\u00e9crit."},"Enregistrer la dict\u00e9e"),
+        h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:function(){if(p.onFermer)p.onFermer()},title:"Fermer sans rien enregistrer."},"Annuler"))):
+    h("div",{style:{display:"flex",justifyContent:"flex-end"}},h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:function(){if(p.onFermer)p.onFermer()}},"Annuler")),
+    fen&&h("div",{className:"popup-overlay",id:"fenetre-mot-l15e",onClick:function(){setFen(null)}},
+      h("div",{style:{background:"var(--card)",borderRadius:16,padding:"18px 22px",maxWidth:600,width:"100%",boxSizing:"border-box"},onClick:function(e){e.stopPropagation()}},
+        h("div",{style:{fontWeight:700,fontSize:"1.05rem",marginBottom:6}},"\u00ab "+toks[fen.idx]+" \u00bb \u2014 mot \u00e0 compl\u00e9ter n\u00b0 "+(lacs.filter(function(x){return x.tokenIdx<fen.idx}).length+1)),
+        h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:8}},"Les trois propositions que verra l\u2019\u00e9l\u00e8ve (la bonne est coch\u00e9e). Modifie, remplace, ou retire ce mot."),
+        [0,1,2].map(function(pi){var bonne=pi===0;return h("div",{key:pi,className:"prop-l15e",style:{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",marginBottom:6,borderRadius:10,border:"1.5px solid "+(bonne?"#16a34a":"var(--border)"),background:bonne?"#f0fdf4":"transparent"}},
+          h("input",{type:"radio",checked:bonne,readOnly:true}),h("input",{value:fen.propositions[pi]||"",readOnly:bonne,onChange:function(e){var np=fen.propositions.slice();np[pi]=e.target.value;setFen(Object.assign({},fen,{propositions:np}))},style:{flex:1,padding:"6px 10px",border:"none",background:"transparent",fontFamily:"Georgia,serif",fontSize:"1rem"}}),bonne?h("span",{style:{color:"#16a34a",fontSize:".85rem"}},"\u2713 la bonne"):null);}),
+        h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",margin:"8px 0 12px"}},
+          h("button",{className:"btn-sm btn-ghost",onClick:function(){var nv=propositionsPourL15a(toks,fen.idx,2,fen.propositions.slice(1));if(nv.length)setFen(Object.assign({},fen,{propositions:[toks[fen.idx]].concat(nv).concat(["",""]).slice(0,3)}))},title:"D\u2019autres formes que le mot permet (accord, terminaison, accent, consonne double)."},"\u21bb Proposer d\u2019autres formes"),
+          h("label",{style:{display:"inline-flex",alignItems:"center",gap:6,fontSize:".9rem"}},"Mode pour ce mot :",h("select",{value:fen.mode||"",onChange:function(e){setFen(Object.assign({},fen,{mode:e.target.value||null}))}},h("option",{value:""},"par d\u00e9faut (A)"),h("option",{value:"A"},"A"),h("option",{value:"B"},"B"),h("option",{value:"C"},"C"))),
+          h("button",{className:"btn-sm btn-ghost",style:{color:"#b91c1c"},onClick:function(){setLacs(lacs.filter(function(x){return x.tokenIdx!==fen.idx}));setFen(null)},title:"Rendre ce mot au texte."},"\ud83d\uddd1 Retirer ce mot")),
+        h("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},h("button",{className:"btn-sm btn-ghost",onClick:function(){setFen(null)}},"Annuler (\u00c9chap)"),h("button",{className:"btn-sm btn-primary",id:"enregistrer-mot-l15e",onClick:enregistrerFen},"Enregistrer (Entr\u00e9e)")))));
+}
+
 function AppProf(p){
   var s1=useState("config"),screen=s1[0],setScreen=s1[1];
   var s2=useState(""),textInput=s2[0],setTextInput=s2[1];
@@ -2827,7 +2956,7 @@ function AppProf(p){
     db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
   }
   var sRes=useState(null),restaurerL15b=sRes[0],setRestaurerL15b=sRes[1];var restaureFait=React.useRef(false);   /* [L15b] */
-  var sNv=useState(false),nouvelleL15c=sNv[0],setNouvelleL15c=sNv[1];var sMt=useState(false),modeTestL15c=sMt[0],setModeTestL15c=sMt[1];   /* [L15c] */
+  var sNv=useState(false),nouvelleL15c=sNv[0],setNouvelleL15c=sNv[1];var sImp=useState(false),importL15e=sImp[0],setImportL15e=sImp[1];   /* [L15e] */var sMt=useState(false),modeTestL15c=sMt[0],setModeTestL15c=sMt[1];   /* [L15c] */
   useEffect(function(){if(restaureFait.current||!classesLoaded)return;restaureFait.current=true;var r=lireAdresseProfL15b();if(r)load(r.dictee,r);},[classesLoaded]);
   function load(id,restaurer){db.ref("correction_dictee/"+id).once("value",function(snap){
     if(!snap.exists()||!(snap.val()||{}).config){adresseProfL15b(null);return;}   /* [L15b] une dictée qui n'existe pas : on reste à l'accueil */
@@ -2979,7 +3108,9 @@ function AppProf(p){
     ),
     h(AideContextuelle,null),   /* [L12] l'aide, sur l'accueil */
     h("div",{id:"pied-accueil",style:{display:"flex",gap:8,flexWrap:"wrap",margin:"0 0 14px"}},   /* [L15c] le pied */
-      h("button",{className:"btn btn-primary",id:"btn-nouvelle-dictee",style:{width:"auto"},onClick:function(){setNouvelleL15c(!nouvelleL15c)},title:"Ouvre (ou referme) le formulaire d\u2019une nouvelle dict\u00e9e."},"\uff0b Nouvelle dict\u00e9e")),
+      h("button",{className:"btn btn-primary",id:"btn-nouvelle-dictee",style:{width:"auto"},onClick:function(){setNouvelleL15c(!nouvelleL15c)},title:"Ouvre (ou referme) le formulaire d\u2019une nouvelle dict\u00e9e."},"\uff0b Nouvelle dict\u00e9e"),
+      h("button",{className:"btn btn-ghost",id:"btn-import-pdf",style:{width:"auto"},onClick:function(){setImportL15e(!importL15e)},title:"Lire une dict\u00e9e dans un PDF (classique, adapt\u00e9e, ou les deux) : tu v\u00e9rifies avant que rien ne s\u2019enregistre."},"\ud83d\udcc4 Importer depuis un PDF")),   /* [L15e] */
+    importL15e&&h(ImportPdfL15e,{onFermer:function(){setImportL15e(false)},onEnregistre:function(id){setImportL15e(false);rafraichirDonnees();load(id,{tab:"preparation"});}}),
     nouvelleL15c&&h("div",{className:"card",id:"carte-nouvelle-dictee"},
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
