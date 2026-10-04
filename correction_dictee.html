@@ -1177,7 +1177,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L13b";
+var APP_VERSION="6.7.0-L15b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1502,6 +1502,16 @@ function indiceEcartL15a(tokens,idx){var w=String(tokens[idx]||""),f=(formesPour
     if(sa(f)===sa(w))return {indice:"Attention \u00e0 l\u2019accent.",raisonnement:"Je v\u00e9rifie l\u2019accent du mot."};
     if(f.replace(/([bcdfglmnprstz])\1/g,"$1")===w.replace(/([bcdfglmnprstz])\1/g,"$1"))return {indice:"Attention aux consonnes doubles.",raisonnement:"Je v\u00e9rifie s\u2019il faut une ou deux consonnes."};}
   return {indice:"Regarde bien l\u2019orthographe de ce mot dans la phrase.",raisonnement:"Je relis la phrase et je v\u00e9rifie lettre \u00e0 lettre."};}
+/* [L15b] LA DICTÉE, L'ONGLET ET LA COPIE DANS L'ADRESSE (dette 103) : mise à jour à chaque changement, sans recharger ;
+   F5 ou un lien copié rouvre au même endroit ; « ← Retour » nettoie. Les autres paramètres (mode, v…) sont gardés. */
+var ONGLETS_DONNEES_L15B=["bilan","copies","fiches","suivi","exercices"];
+function ongletVersUrlL15b(tab){return tab==="correct"?"correction":(tab==="preparation"||tab==="rapide"||tab==="reglages")?tab:"donnees";}
+function urlVersOngletL15b(o,vue){if(o==="correction")return "correct";if(o==="preparation"||o==="rapide"||o==="reglages")return o;if(o==="donnees")return ONGLETS_DONNEES_L15B.indexOf(vue)>=0?vue:"bilan";return null;}
+function adresseProfL15b(maj){try{var u=new URL(window.location.href);["dictee","onglet","vue","copie"].forEach(function(k){u.searchParams.delete(k)});
+  if(maj)Object.keys(maj).forEach(function(k){if(maj[k]!=null&&maj[k]!=="")u.searchParams.set(k,maj[k]);});
+  var q=u.searchParams.toString();window.history.replaceState(window.history.state,"",u.pathname+(q?"?"+q:"")+u.hash);}catch(e){}}
+function lireAdresseProfL15b(){try{var p=new URLSearchParams(window.location.search);if(p.get("eleveKey")||!p.get("dictee")||!p.get("onglet"))return null;
+  var t=urlVersOngletL15b(p.get("onglet"),p.get("vue"));return t?{dictee:p.get("dictee"),tab:t,copie:p.get("copie")||null}:null;}catch(e){return null;}}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -2706,6 +2716,8 @@ function App(){
     var p=new URLSearchParams(window.location.search);
     if(p.get("mode")==="eleve")setMode("eleve");
     else if(p.get("mode")==="prof"){setProfAuth(true);setMode("prof")}
+    else if(lireAdresseProfL15b()&&mjpcCryptoDispo()){var secL=null;try{secL=localStorage.getItem("mjpc_coffre_secret");}catch(e){}   /* [L15b] */
+      if(secL)mjpcValiderCleLocale(secL).then(function(ok){if(ok){setProfAuth(true);setMode("prof")}},function(){});}
   },[]);
   function tryProfCode(){
     if(!mjpcCryptoDispo()){alert(MJPC_TXT_PROF_HORS_LIGNE)}
@@ -2794,7 +2806,11 @@ function AppProf(p){
     db.ref("correction_dictee/"+id+"/results").once("value",function(snap){setCorrections(snap.val()||{})});
     db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
   }
-  function load(id){db.ref("correction_dictee/"+id).once("value",function(snap){
+  var sRes=useState(null),restaurerL15b=sRes[0],setRestaurerL15b=sRes[1];var restaureFait=React.useRef(false);   /* [L15b] */
+  useEffect(function(){if(restaureFait.current||!classesLoaded)return;restaureFait.current=true;var r=lireAdresseProfL15b();if(r)load(r.dictee,r);},[classesLoaded]);
+  function load(id,restaurer){db.ref("correction_dictee/"+id).once("value",function(snap){
+    if(!snap.exists()||!(snap.val()||{}).config){adresseProfL15b(null);return;}   /* [L15b] une dictée qui n'existe pas : on reste à l'accueil */
+    setRestaurerL15b(restaurer||null);
     var val=snap.val()||{},cfg=val.config||{};
     var classeName=cfg.classe||"";
     // Dynamic class reference: use /classes/{name} if available, fallback to config/eleves
@@ -3049,7 +3065,7 @@ function AppProf(p){
       )
     )
   );
-  if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){setScreen("config");rafraichirDonnees()}});
+  if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,restaurer:restaurerL15b,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){adresseProfL15b(null);setRestaurerL15b(null);setScreen("config");rafraichirDonnees()}});   /* [L15b] « ← Retour » nettoie l'adresse */
   return null;
 }
 
@@ -3421,7 +3437,7 @@ function FormesAccepteesPrep(pF){
 
 // ═══ ÉCRAN CORRECTION ═══
 function CorrScreen(p){
-  var data=p.data,s1=useState("correct"),tab=s1[0],setTab=s1[1];
+  var data=p.data,s1=useState((p.restaurer&&p.restaurer.tab)||"correct"),tab=s1[0],setTab=s1[1];   /* [L15b] */
   useAide(2,{cle:tab==="preparation"?"preparation":tab==="correct"?"grille":tab==="rapide"?"rapide":tab==="reglages"?"reglages":"donnees",onglet:tab});   /* [L12] */
   /* [ELEVE-1 ④ — complément : défaut rencontré] l'écran de correction ne lisait JAMAIS la version aménagée de la dictée
      (data.amenagee restait vide) : la base aménagée n'était jamais employée. Il l'écoute désormais. */
@@ -3440,7 +3456,9 @@ function CorrScreen(p){
   var sG=useState("pilotage"),groupe=sG[0],setGroupe=sG[1];
   var sH=useState(false),showAide=sH[0],setShowAide=sH[1];
   useEffect(function(){ var g=groupeDeTab(tab); if(g&&g!==groupe) setGroupe(g); },[tab]);
-  var s2=useState(null),cur=s2[0],setCur=s2[1];
+  var s2=useState(function(){var c=p.restaurer&&p.restaurer.copie;if(!c)return null;var e=(data.eleves||[]).filter(function(x){return san(x)===c})[0];return e||null;}),cur=s2[0],setCur=s2[1];   /* [L15b] la copie de l'adresse */
+  useEffect(function(){var re=cur||(tab==="rapide"?eleveRapideParDefaut():null);   /* [L15b] l'adresse suit l'onglet et la copie, sans recharger */
+    adresseProfL15b({dictee:p.dicteeId,onglet:ongletVersUrlL15b(tab),vue:ongletVersUrlL15b(tab)==="donnees"?tab:null,copie:(tab==="correct"||tab==="rapide")&&re?san(re):null});},[tab,cur,p.dicteeId]);
   var s3=useState(null),msg=s3[0],setMsg=s3[1];
   var sQ=useState(""),eleveQuery=sQ[0],setEleveQuery=sQ[1];
   // Aménagée : registre par classe + override par dictée
