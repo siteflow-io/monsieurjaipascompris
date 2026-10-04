@@ -1070,3 +1070,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15c-c (04/10/2026, conscience n°12)
 - blob `8ae807a3db3a` (commit `9f92a9d4c446`) · 846 601 o · md5 `bc6c67d515c3e767441e88b78485a85c` · v6.7.0-L15c-b
 - **Motif** : micro L15c-c — les niveaux en dépliants. Promu : 847 544 o, md5 `de07a02a47d4e173673f3043127e757f` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15c-d (04/10/2026, conscience n°12)
+- blob `c9010ed5c65f` (commit `7a74e8c1bea3`) · 847 544 o · md5 `de07a02a47d4e173673f3043127e757f` · v6.7.0-L15c-c
+- **Motif** : micro L15c-d — l'onglet Rapide pose l'élève une fois. Promu : 847 984 o, md5 `0ddd51e04147b78339cd7987f34c7ea5` (bit à bit).
