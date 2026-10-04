@@ -374,3 +374,12 @@
 | les codes du bac à sable | `ModeTest` (création : `{classe, createdAt, empreinte, name, sel}` via `mjpcSelAleatoire` / `mjpcEmpreinte`) ; `purgerDonneesTest` (les clés de la classe de test de MJPC épargnées) |
 | les modes des copies | `copieRecopiee` (G et L), `recopiesManquantes`, les deux listes de modes (infobulle et compte) |
 | l'onglet Rapide | `CorrScreen` : l'effet « [micro L15c-d] » pose l'élève une fois |
+
+## AJOUT DU 04/10/2026 — correction_dictee 6.7.0-L15e : l'import depuis un PDF
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| pdf.js | `PDFJS_L15E`, `PDFJS_WORKER_L15E`, `chargerPdfjsL15e` (le module de travail copié en blob), `lirePdfL15e` |
+| la reconnaissance | `groupesL15e` (crochets, parenthèses, barres), `analyserPdfL15e` (texte, groupes, « sur n points », consigne / formulaire / notes écartés, titre), `assemblerL15e` (bonnes formes du classique, notes → indices, crochet multi-mots), `normMotL15e` |
+| l'écran | `ImportPdfL15e` (deux zones, états, le texte lu, la fenêtre de L15a, les champs, « Enregistrer la dictée » → la dictée et sa version aménagée, ouverture sur Préparation) ; le pied de l'accueil (`AppProf`) ; l'aide « ? » |
+| les propositions | `reglesCibleesL15a` : + pluriel en -aux, + -e final |
