@@ -944,3 +944,7 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   problème : l'accueil L15c restait dans un conteneur de 760 px ; un titre long se repliait sur 7 lignes (dette 127).
   résolution : `container corr-prof` (1100 px) ; chaque dictée en colonne : ligne 1 = titre + sous-ligne (classe · créée le · mots à compléter · heure fermée seule) ; ligne 2 = progression, statut des copies, coche « publiée », ✏️ ⧉ 🗑️, Ouvrir. +240 o (846 601 o, md5 `bc6c67d515c3e767441e88b78485a85c`). Banc par le geste : 1100 px, 72 px par dictée (titre long) contre 126-160 avant ; L15c, L15b verts. Promu bit à bit. Point de retour (L15c `9e60d4ca3c7b`).
   → mots-clés : accueil 1100 px · deux lignes · correction_dictee 6.7.0-L15c-b · conscience n°12
+
+- **04/10/2026 08:15 — PROMOTION correction_dictee 6.7.0-L15c-c (micro : l'accueil, chaque niveau en dépliant replié par défaut) — conscience n°12, filière micro sur ordre de Paul**
+  résolution : chaque niveau (3e, 4e, 5e, 6e) est un dépliant, replié par défaut ; son titre dit « n dictées » ou « vide pour l'instant » ; clic (ou Entrée / Espace) déplie, un second clic replie ; l'état ne survit pas au rechargement (replié par défaut, comme demandé). +943 o (847 544 o, md5 `de07a02a47d4e173673f3043127e757f`). Bancs : L15c-c par le geste VERT ; L15c, L15b, L15c-b accordés (dépliage avant lecture) verts. Promu bit à bit. Point de retour (L15c-b `8ae807a3db3a`).
+  → mots-clés : accueil dépliants · niveaux repliés · correction_dictee 6.7.0-L15c-c · conscience n°12
