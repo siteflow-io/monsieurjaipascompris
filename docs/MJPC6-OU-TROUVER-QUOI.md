@@ -343,3 +343,11 @@
 |---|---|
 | les propositions crédibles | `propositionsPourL15a` (les formes de L10 d'abord, puis `reglesCibleesL15a`, `HOMOPHONES_L15A` ; jamais vide ni le mot) ; `indiceEcartL15a` (mode C) ; `suggestDistracteurs` ne reste que dans `addLacune` (morte — code mort, dette 97) |
 | le paramétrage | `ConfigAmenagee` : écoute en direct du hub, `setDefaultMode` + `completerPourMode` (suivi d'effets, message compté), la fenêtre d'un mot (`ouvrirFenL15a`, `enregistrerFenL15a`, `retirerFenL15a`, `autresFormesL15a`, Entrée / Échap) ; `EditionDictee` (`resteIci`) |
+
+## AJOUT DU 04/10/2026 — correction_dictee 6.7.0-L13b : l'heure close à fin + 10
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| la règle de l'heure | `GRACE_HEURE`, `heureActive`, `heureClose`, `heureFinEffective`, `heureFermeeSeule`, `dansHeureLancee` (T3), `finDeFenetre` |
+| côté élève | `EleveCorrection` : `horsClasseL13` (après la clôture), `finEffL13` |
+| côté professeur | le Suivi (colonne « Pas fini », la carte de l'heure), l'accueil (la ligne « heure fermée seule à … (non clôturée) »), l'aide (Données) |
