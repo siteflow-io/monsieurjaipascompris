@@ -235,6 +235,10 @@ textarea{resize:vertical;min-height:120px}
 
 /* [L15-0] la forme reste lisible quand ses marques (« acceptée ailleurs », « accepter ici ») prennent de la place : elles passent à la ligne */
 .liste-formes .forme{flex-wrap:wrap}.fautif-texte-box .liste-formes .forme .f{flex:0 0 auto;overflow:visible;text-overflow:clip}
+
+/* [L15c] « rendre les copies ▸ » pulse dès 100 % */
+@keyframes pulseL15c{0%{box-shadow:0 0 0 0 rgba(194,120,3,.55)}70%{box-shadow:0 0 0 9px rgba(194,120,3,0)}100%{box-shadow:0 0 0 0 rgba(194,120,3,0)}}
+.pulse-l15c{animation:pulseL15c 1.6s ease-out infinite}
 </style>
 </head>
 <style>
@@ -1177,7 +1181,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15b";
+var APP_VERSION="6.7.0-L15c";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1317,8 +1321,12 @@ var AIDES={
     ["\u29c9","dupliquer la dict\u00e9e enti\u00e8re (texte, bar\u00e8me, version am\u00e9nag\u00e9e, options, exercices) \u2014 sans les copies des \u00e9l\u00e8ves"],
     ["\ud83d\uddd1\ufe0f","supprimer la dict\u00e9e (archiv\u00e9e dans la corbeille, avec un export JSON t\u00e9l\u00e9charg\u00e9)"],
 ["\u00ab \u25b6 Lancer l\u2019autocorrection \u00bb (Donn\u00e9es \u2192 Suivi)","ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : avant la premi\u00e8re s\u00e9ance, ils attendent apr\u00e8s avoir coch\u00e9 les consignes ; hors classe ensuite, 45 minutes par ouverture"],
+    ["la coche \u00ab publi\u00e9e \u00bb","d\u00e9cocher retire la dict\u00e9e de la liste des \u00e9l\u00e8ves tout de suite ; cocher la publie"],
+    ["\u00ab rendre les copies \u25b8 \u00bb","d\u00e8s que toutes les copies attendues sont corrig\u00e9es : ouvre l\u2019onglet Copies, son bouton pr\u00eat ; un second clic l\u00e0 les rend"],
+    ["\u00ab \uff0b Nouvelle dict\u00e9e \u00bb","ouvre le formulaire d\u2019une nouvelle dict\u00e9e"],
     ["\ud83e\uddea Mode test \u2014 \u00ab Cr\u00e9er le bac \u00e0 sable \u00bb","une classe fictive, deux dict\u00e9es, six \u00e9l\u00e8ves avec leurs codes : voir ce que voit un \u00e9l\u00e8ve"],
     ["\ud83e\uddea \u00ab \ud83e\uddf9 Tout effacer \u00bb","supprimer le bac \u00e0 sable (aucune donn\u00e9e r\u00e9elle n\u2019est touch\u00e9e)"],
+    ["\ud83e\uddea \u00ab Ouvrir \u25be \u00bb (en bas)","d\u00e9plie le mode test : le bac \u00e0 sable et trois v\u00e9rifications (les 4 \u00e9tats de copie, l\u2019\u00e9diteur de textes, la corbeille)"],
     AIDE_FERMER]},
   grille:{ou:"Correction \u2014 la grille des \u00e9l\u00e8ves",l:[
     ["lettres dans \u00ab Recherche \u00e9l\u00e8ve \u00bb","trouver un \u00e9l\u00e8ve par ses initiales (DM pour Dupont Marie)"],
@@ -1512,6 +1520,12 @@ function adresseProfL15b(maj){try{var u=new URL(window.location.href);["dictee",
   var q=u.searchParams.toString();window.history.replaceState(window.history.state,"",u.pathname+(q?"?"+q:"")+u.hash);}catch(e){}}
 function lireAdresseProfL15b(){try{var p=new URLSearchParams(window.location.search);if(p.get("eleveKey")||!p.get("dictee")||!p.get("onglet"))return null;
   var t=urlVersOngletL15b(p.get("onglet"),p.get("vue"));return t?{dictee:p.get("dictee"),tab:t,copie:p.get("copie")||null}:null;}catch(e){return null;}}
+/* [L15c] L'ACCUEIL RANGÉ (dette 109, visuel C1) : le nom lisible d'une classe (le libellé du registre MJPC, sinon la clé rendue lisible) */
+var NIVEAUX_L15C=["3e","4e","5e","6e"];
+function nomClasseLisibleL15c(cle){var reg=(typeof CLASSES!=="undefined"&&CLASSES&&CLASSES[cle])||null,nom=reg&&reg.nom?String(reg.nom):"";if(nom&&/[a-z]/.test(nom))return nom;
+  var src=(nom||String(cle||"")).replace(/_/g," ").trim().toLowerCase();if(!src)return "";
+  src=src.replace(/(^|\s)([a-z\u00e0-\u00ff])/g,function(m,a,b){return a+b.toUpperCase()});return src.replace(/^(\d)\s/,"$1e ").replace(/^(\d)E\s/,"$1e ");}
+function dateCourteL15c(t){if(!t)return "";var d=new Date(t);return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -2782,8 +2796,13 @@ function AppProf(p){
   // détruit l'état React, donc profAuth — il déconnectait le professeur.
   function chargerDictees(cb){
     db.ref("correction_dictee").once("value",function(snap){
-      var val=snap.val()||{};
-      setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(classeDuRegistre(cn), d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac,bareme:d.bareme||"preparee",heure:val[id].heure||null}}));   /* [L13b] */
+      var val=snap.val()||{};var creesL15c={};
+      setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(classeDuRegistre(cn), d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;var res=val[id].results||{},abs=val[id].absents||{},elv=extractEleves(classeDuRegistre(cn),d.eleves),attendus=elv.filter(function(e){return !abs[san(e)]}),faits=attendus.filter(function(e){var c=res[san(e)];return c&&typeof c==="object"}).length;   /* [L15c] */
+        var cree=d.creeLe||null;if(!cree){var ts=Object.keys(res).map(function(k){var c=res[k]||{};return c.creeLe||c.timestamp||null}).filter(Boolean);cree=ts.length?Math.min.apply(null,ts):Date.now();creesL15c["correction_dictee/"+id+"/config/creeLe"]=cree;}
+        var reg=(CLASSES&&CLASSES[cn])||{};
+        return{id:id,title:d.title||id,classe:cn,classeLisible:nomClasseLisibleL15c(cn),n:nE,niveau:d.niveau||reg.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac,bareme:d.bareme||"preparee",heure:val[id].heure||null,
+          creeLe:cree,faits:faits,attendus:attendus.length,copiesRendues:val[id].copyPublishedAt||null}}));   /* [L13b] ; [L15c] */
+      if(Object.keys(creesL15c).length)db.ref().update(creesL15c);   /* [L15c] la date de création posée une fois (la copie la plus ancienne, sinon l'ouverture) */
       if(cb)cb();
     });
   }
@@ -2807,6 +2826,7 @@ function AppProf(p){
     db.ref("correction_dictee/"+id+"/absents").once("value",function(snap){setAbsents(snap.val()||{})});
   }
   var sRes=useState(null),restaurerL15b=sRes[0],setRestaurerL15b=sRes[1];var restaureFait=React.useRef(false);   /* [L15b] */
+  var sNv=useState(false),nouvelleL15c=sNv[0],setNouvelleL15c=sNv[1];var sMt=useState(false),modeTestL15c=sMt[0],setModeTestL15c=sMt[1];   /* [L15c] */
   useEffect(function(){if(restaureFait.current||!classesLoaded)return;restaureFait.current=true;var r=lireAdresseProfL15b();if(r)load(r.dictee,r);},[classesLoaded]);
   function load(id,restaurer){db.ref("correction_dictee/"+id).once("value",function(snap){
     if(!snap.exists()||!(snap.val()||{}).config){adresseProfL15b(null);return;}   /* [L15b] une dictée qui n'existe pas : on reste à l'accueil */
@@ -2924,22 +2944,25 @@ function AppProf(p){
         h("span",{className:"version-pill",title:"Version de l\u2019application \u00b7 socle MJPC-CORE "+MJPC_CORE_VERSION},"v"+APP_VERSION)
       ),
       h("p",{className:"subtitle",style:{marginBottom:0}},"Corrige les copies en cliquant sur les mots fautifs.")),
-    saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es existantes"),
-      saved.map(function(d){return h("div",{key:d.id,style:{marginBottom:8}},
+    h("div",{className:"card",id:"mes-dictees"},h("h2",null,"Mes dict\u00e9es"),   /* [L15c] rangées par niveau, puis par date de création */
+      NIVEAUX_L15C.concat(saved.some(function(d){return NIVEAUX_L15C.indexOf(d.niveau)<0})?["autres"]:[]).map(function(nv){
+        var ds=saved.filter(function(d){return nv==="autres"?NIVEAUX_L15C.indexOf(d.niveau)<0:d.niveau===nv}).sort(function(x,y){return (x.creeLe||0)-(y.creeLe||0)});
+        return h("div",{key:nv,className:"niveau-l15c","data-niveau":nv},h("h3",{style:{margin:"14px 0 8px",fontSize:"1rem"}},nv==="autres"?"Autres":nv),
+          ds.length?ds.map(function(d){return h("div",{key:d.id,className:"ligne-dictee-l15c","data-id":d.id,style:{marginBottom:8}},
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10}},
-          h("div",{style:{flex:1,cursor:"pointer"},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),
-            heureFermeeSeule(d.heure)?h("div",{className:"heure-fermee-seule",style:{fontSize:".8rem",color:"#9c4221"},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(d.heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null,   /* [L13b] T4 (C1) */h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l. \u00b7 "+(d.niveau?d.niveau.toUpperCase():"\u26a0\ufe0f pas de niveau"))),
+          h("div",{style:{flex:1,cursor:"pointer",minWidth:0},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),
+            h("div",{className:"sous-ligne-l15c",style:{fontSize:".82rem",color:"var(--text-sub)"}},[d.classeLisible,d.creeLe?"cr\u00e9\u00e9e le "+dateCourteL15c(d.creeLe):null,d.nLac>0?"\ud83d\udcd8 "+d.nLac+" mot"+(d.nLac>1?"s":"")+" \u00e0 compl\u00e9ter":null].filter(Boolean).join(" \u00b7 ")),   /* [L15c] */
+            heureFermeeSeule(d.heure)?h("div",{className:"heure-fermee-seule",style:{fontSize:".8rem",color:"#9c4221"},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(d.heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null),
           h("div",{style:{display:"flex",alignItems:"center",gap:6}},
-            d.amenEnabled&&h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:"rgba(252,211,77,.18)",color:"#92400e",fontWeight:600},title:"Cette dict\u00e9e a une version am\u00e9nag\u00e9e param\u00e9tr\u00e9e ("+d.nLac+" lacune"+(d.nLac>1?"s":"")+")"},"\ud83d\udcd8 Am\u00e9nag\u00e9e · "+d.nLac),
-            /* Bareme visible d'un coup d'oeil dans la liste, comme « Amenagee ». */
-            h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,
-              background:d.bareme==="brevet"?"rgba(184,50,128,.12)":"rgba(43,108,203,.10)",
-              color:d.bareme==="brevet"?"#b83280":"#2b6cb0",fontWeight:600},
-              title:d.bareme==="brevet"
-                ?"Bar\u00e8me type brevet : mot oubli\u00e9 et illisible \u00e0 \u22120,5, ponctuation au forfait (\u22120,5 par tranche de 4), et une m\u00eame faute r\u00e9p\u00e9t\u00e9e sur un m\u00eame mot n'est compt\u00e9e qu'une fois."
-                :"Bar\u00e8me dict\u00e9e pr\u00e9par\u00e9e : le plus exigeant, chaque faute compte m\u00eame r\u00e9p\u00e9t\u00e9e (grammaire \u22121, lexique \u22120,5, mot oubli\u00e9 \u22121, illisible \u22121, ponctuation \u22120,5 par signe)."},
-              d.bareme==="brevet"?"\ud83d\udcdd Type brevet":"\ud83d\udcda Pr\u00e9par\u00e9e"),
-            h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:d.published?"var(--green-light)":"rgba(197,48,48,.08)",color:d.published?"var(--green)":"var(--coral)"}},d.published?"Publi\u00e9e":"Non publi\u00e9e"),
+            (function(){var pct=d.attendus?Math.round(100*d.faits/d.attendus):0;   /* [L15c] le taux de correction */
+              return h("span",{className:"taux-l15c",title:d.faits+" copie"+(d.faits>1?"s":"")+" corrig\u00e9e"+(d.faits>1?"s":"")+" sur "+d.attendus+" attendue"+(d.attendus>1?"s":"")+" (les absents ne comptent pas).",style:{display:"inline-flex",alignItems:"center",gap:6,fontSize:".85rem",color:"var(--text-sub)"}},
+                h("span",{style:{display:"inline-block",width:90,height:7,borderRadius:4,background:"var(--border)",overflow:"hidden"}},h("span",{style:{display:"block",height:"100%",width:pct+"%",background:"#5a8f29"}})),pct+" %");})(),
+            (function(){var pct=d.attendus?Math.round(100*d.faits/d.attendus):0;   /* [L15c] le statut des copies */
+              if(d.copiesRendues)return h("span",{className:"statut-l15c rendues",style:{fontSize:".75rem",padding:"3px 9px",borderRadius:8,background:"#e0e7ff",color:"#3730a3",fontWeight:600,cursor:"pointer"},title:"Les copies sont rendues aux \u00e9l\u00e8ves. Clic : l\u2019onglet Donn\u00e9es \u2192 Copies.",onClick:function(e){e.stopPropagation();load(d.id,{tab:"copies"})}},"copies rendues le "+dateCourteL15c(d.copiesRendues).slice(0,5));
+              if(pct>=100&&d.attendus>0)return h("button",{className:"statut-l15c rendre pulse-l15c",style:{fontSize:".75rem",padding:"3px 9px",borderRadius:8,border:"1.5px solid #c27803",background:"#fef3c7",color:"#92400e",fontWeight:700,cursor:"pointer"},title:"Toutes les copies attendues sont corrig\u00e9es. Clic : l\u2019onglet Copies s\u2019ouvre, son bouton \u00ab Rendre les copies \u00bb pr\u00eat ; un second clic l\u00e0 les rend aux \u00e9l\u00e8ves.",onClick:function(e){e.stopPropagation();load(d.id,{tab:"copies",rendre:true})}},"rendre les copies \u25b8");
+              return h("span",{className:"statut-l15c non-rendues",style:{fontSize:".75rem",padding:"3px 9px",borderRadius:8,background:"#f1f1f1",color:"#888",fontWeight:600},title:"Toutes les copies attendues ne sont pas encore corrig\u00e9es."},"copies non rendues");})(),
+            h("label",{className:"coche-publiee-l15c",onClick:function(e){e.stopPropagation()},style:{display:"inline-flex",alignItems:"center",gap:5,fontSize:".8rem",fontWeight:600,padding:"3px 9px",borderRadius:8,background:d.published?"var(--green-light)":"#f1f1f1",color:d.published?"var(--green)":"#666",cursor:"pointer"},title:d.published?"Publi\u00e9e : les \u00e9l\u00e8ves la voient. D\u00e9cocher la retire tout de suite de leur liste.":"Non publi\u00e9e : les \u00e9l\u00e8ves ne la voient pas. Cocher la publie tout de suite."},
+              h("input",{type:"checkbox",checked:d.published,onChange:function(e){var v=e.target.checked;db.ref("correction_dictee/"+d.id+"/config/published").set(v);setSaved(saved.map(function(x){return x.id===d.id?Object.assign({},x,{published:v}):x}));}}),d.published?"publi\u00e9e":"non publi\u00e9e"),   /* [L15c] sur-le-champ */
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"\u00c9diter cette dict\u00e9e",onClick:function(e){e.stopPropagation();setEditing(editing===d.id?null:d.id)}},editing===d.id?"\u2715":"\u270f\ufe0f"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px"},title:"Dupliquer la dictée entière : le texte, le barème, la version aménagée (trous, modes, base, consigne), les options de copie, les exercices — sans rien de ce que les élèves ont fait (copies, absents, choix pour cette dictée, autocorrection, résultats d'exercices, date de remise). La copie n'est pas publiée.",onClick:function(e){e.stopPropagation();dupliquerDicteeEntiere(d,function(){rafraichirDonnees()})}},"⧉"),
             h("button",{className:"btn-sm btn-ghost",style:{fontSize:".8rem",padding:"4px 10px",color:"#b00"},title:"Supprimer (archiv\u00e9 dans la corbeille MJPC + export JSON t\u00e9l\u00e9charg\u00e9)",onClick:function(e){e.stopPropagation();supprimerDicteeAvecCorbeille(d,function(){rafraichirDonnees()});}},"🗑️"),
@@ -2947,11 +2970,12 @@ function AppProf(p){
           )
         ),
         editing===d.id&&h(EditionDictee,{dicteeId:d.id,onMaj:function(){rafraichirDonnees()},onClose:function(){setEditing(null)}})
-      )})
+      )}):h("div",{className:"vide-l15c",style:{fontStyle:"italic",color:"var(--muted)",padding:"4px 12px 8px"}},"vide pour l\u2019instant"));})
     ),
     h(AideContextuelle,null),   /* [L12] l'aide, sur l'accueil */
-    h(ModeTest,{onGenere:function(){rafraichirDonnees()},onPurge:function(){rafraichirDonnees()}}),
-    h("div",{className:"card"},
+    h("div",{id:"pied-accueil",style:{display:"flex",gap:8,flexWrap:"wrap",margin:"0 0 14px"}},   /* [L15c] le pied */
+      h("button",{className:"btn btn-primary",id:"btn-nouvelle-dictee",style:{width:"auto"},onClick:function(){setNouvelleL15c(!nouvelleL15c)},title:"Ouvre (ou referme) le formulaire d\u2019une nouvelle dict\u00e9e."},"\uff0b Nouvelle dict\u00e9e")),
+    nouvelleL15c&&h("div",{className:"card",id:"carte-nouvelle-dictee"},
       h("h2",null,"Nouvelle dict\u00e9e"),
       h("div",{className:"config-field"},h("label",null,"Titre"),h("input",{value:titleInput,onChange:function(e){setTitleInput(e.target.value)},placeholder:"Ex: Dict\u00e9e Maupassant ch.4"})),
       h("div",{className:"config-field"},h("label",null,"Niveau"),h("select",{value:niveauInput,onChange:function(e){setNiveauInput(e.target.value)}},h("option",{value:""},"— Choisir —"),h("option",{value:"6e"},"6e"),h("option",{value:"5e"},"5e"),h("option",{value:"4e"},"4e"),h("option",{value:"3e"},"3e"))),
@@ -3063,7 +3087,12 @@ function AppProf(p){
           }
         }},"Ajouter / Mettre \u00e0 jour la classe")
       )
-    )
+    ),
+    h("div",{className:"card",id:"mode-test-replie",style:{padding:"10px 16px"}},   /* [L15c] le mode test : une ligne repliée en bas */
+      h("div",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer"},onClick:function(){setModeTestL15c(!modeTestL15c)},title:"Le bac \u00e0 sable : une classe fictive pour voir ce que voit un \u00e9l\u00e8ve, et trois v\u00e9rifications."},
+        h("span",{style:{fontWeight:600}},"\ud83e\uddea Mode test"+((typeof CLASSES!=="undefined"&&CLASSES&&CLASSES[classeTestId()])?" \u2014 bac \u00e0 sable actif":"")),
+        h("span",{style:{marginLeft:"auto",color:"var(--primary)",fontWeight:600}},modeTestL15c?"Fermer \u25b4":"Ouvrir \u25be")),
+      modeTestL15c&&h("div",{style:{marginTop:10}},h(ModeTest,{onGenere:function(){rafraichirDonnees()},onPurge:function(){rafraichirDonnees()}})))
   );
   if(screen==="correct") return h(CorrScreen,{data:dicteeData,dicteeId:dicteeId,restaurer:restaurerL15b,corrections:corrections,absents:absents,onSave:save,onResetCorrections:setCorrections,onToggleAbsent:function(ek){var a=Object.assign({},absents);if(a[ek]){delete a[ek];db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).remove()}else{a[ek]=true;db.ref("correction_dictee/"+dicteeId+"/absents/"+ek).set(true)}setAbsents(a)},onBack:function(){adresseProfL15b(null);setRestaurerL15b(null);setScreen("config");rafraichirDonnees()}});   /* [L15b] « ← Retour » nettoie l'adresse */
   return null;
@@ -3801,7 +3830,7 @@ function CorrScreen(p){
       );
     })(),
     tab==="bilan"&&h(Bilan,{data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId}),
-    tab==="copies"&&h(Copies,{data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId,onLocalUpdate:function(k,newC){if(p.onResetCorrections){var nc=Object.assign({},p.corrections);nc[k]=newC;p.onResetCorrections(nc)}}}),
+    tab==="copies"&&h(Copies,{rendreArme:!!(p.restaurer&&p.restaurer.rendre),data:data,corrections:p.corrections,absents:p.absents,dicteeId:p.dicteeId,onLocalUpdate:function(k,newC){if(p.onResetCorrections){var nc=Object.assign({},p.corrections);nc[k]=newC;p.onResetCorrections(nc)}}}),
     tab==="exercices"&&h(ExercicesAdmin,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents}),
     tab==="fiches"&&h(Fiches,{data:data,corrections:p.corrections,absents:p.absents}),
     tab==="suivi"&&h(Suivi,{data:data,dicteeId:p.dicteeId,corrections:p.corrections,absents:p.absents}),
@@ -7123,7 +7152,7 @@ function Copies(p){
             "Au lieu d\u2019envoyer un fichier par \u00e9l\u00e8ve, publie un lien unique sur \u00c9cole Directe (cahier de textes ou messagerie). Chaque \u00e9l\u00e8ve clique, saisit son nom/pr\u00e9nom et voit SA copie avec le rendu ci-dessus."
           ),
           h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-            h("button",{className:"btn btn-primary",onClick:publierCopies,disabled:done.length===0,title:copyPublishedAt?"Rendre \u00e0 nouveau (les modifications faites depuis seront visibles)":"Rendre les copies aux \u00e9l\u00e8ves (avec les options et le bilan actuels)"},copyPublishedAt?"\ud83d\udd04 Rendre \u00e0 nouveau":"\ud83d\udce4 Rendre les copies ("+done.length+" copies)"),
+            h("button",{className:"btn btn-primary"+(p.rendreArme&&!copyPublishedAt?" pulse-l15c":""),id:"btn-rendre-copies",ref:function(el){if(el&&p.rendreArme&&!el.__vuL15c){el.__vuL15c=true;setTimeout(function(){try{el.scrollIntoView({block:"center"});el.focus();}catch(e){}},300);}},onClick:publierCopies,disabled:done.length===0,title:copyPublishedAt?"Rendre \u00e0 nouveau (les modifications faites depuis seront visibles)":"Rendre les copies aux \u00e9l\u00e8ves (avec les options et le bilan actuels)"},copyPublishedAt?"\ud83d\udd04 Rendre \u00e0 nouveau":"\ud83d\udce4 Rendre les copies ("+done.length+" copies)"),
             copyPublishedAt&&h("button",{className:"btn btn-ghost",onClick:copierLienPartage,title:"Copier le lien \u00e0 coller dans \u00c9cole Directe"},"\ud83d\udd17 Copier le lien"),
             copyPublishedAt&&h("button",{className:"btn btn-ghost",onClick:depublierCopies,style:{color:"#c53030",borderColor:"rgba(197,48,48,.2)",fontSize:".82rem"},title:"Masquer les copies (les \u00e9l\u00e8ves perdront l\u2019acc\u00e8s)"},"\ud83d\ude48 Masquer les copies")
           ),
@@ -7601,11 +7630,8 @@ function OutilsTestSouche(p){
 
   var b={className:"btn-sm btn-ghost",style:{marginRight:6,marginBottom:6}};
   return h("div",{style:{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}},
-    h("p",{style:{fontSize:".82rem",color:"var(--text-sub)",margin:"0 0 6px"}},
-      h("b",null,"Éprouver les mécanismes livrés"),
-      " — ces boutons appellent les fonctions réelles de l'app, pas des copies."),
     h("div",null,
-      h("button",Object.assign({},b,{onClick:verifierLesQuatreEtats,title:"Calcule l'état de chaque élève de test avec etatDicteeEleve(), la fonction qu'utilise « Mes dictées »."}),"\u2713 Vérifier les 4 états"),
+      h("button",Object.assign({},b,{onClick:verifierLesQuatreEtats,title:"Calcule l'état de chaque élève de test avec etatDicteeEleve(), la fonction qu'utilise « Mes dictées »."}),"\u2713 V\u00e9rifier les 4 \u00e9tats de copie"),
       h("button",Object.assign({},b,{onClick:testerEditeurDeTextes,title:"Modifie le texte « liste vide » puis le remet : le va-et-vient se constate côté élève incarné."}),"\u270f\ufe0f Tester l'éditeur de textes"),
       h("button",Object.assign({},b,{style:{marginRight:6,marginBottom:6,color:"#b00"},onClick:testerLaCorbeille,title:"Supprime la dictée de test B par le chemin réel (corbeille MJPC + export JSON)."}),"\ud83e\uddf9 Tester la corbeille")
     ),
