@@ -1077,4 +1077,4 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15d-b (04/10/2026, conscience n°12)
 - blob `b25015b40acd` (commit `b251092f8ed3`) · 847 984 o · md5 `0ddd51e04147b78339cd7987f34c7ea5` · v6.7.0-L15c-d
-- **Motif** : L15d-b — codes de test en empreinte, modes des copies. Promu : 848 699 o, md5 `dfde1522b3e7b22c7ad5f0a4c8abc7f6` (bit à bit). Les codes du bac à sable recréés en empreinte ne sont pas lus par une version antérieure du bac à sable (qui les écrivait en clair) : « Tout effacer » puis « Créer » les refait.
+- **Motif** : L15d-b — codes de test en empreinte, modes des copies. Promu : 848 699 o, md5 `dfde1522b3e7f7cec144aea892bc10c6` (bit à bit). Les codes du bac à sable recréés en empreinte ne sont pas lus par une version antérieure du bac à sable (qui les écrivait en clair) : « Tout effacer » puis « Créer » les refait.
