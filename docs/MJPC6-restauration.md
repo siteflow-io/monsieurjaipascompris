@@ -1050,3 +1050,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `c754e13cf0a5` (commit `c6e1a57fe6ec`) · 828 806 o · md5 `f58664d49a00228e3ac7d4c181e42817` · v6.7.0-L15-0b
 - **Motif** : L15a — le paramétrage de la version aménagée. Promu : 834 940 o, md5 `022bd99d02197698bbb9a2a001ba0d74` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob `c754e13cf0a5…` → PUT, puis bit à bit.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L13b (04/10/2026, conscience n°12)
+- blob `85b84d4dfde7` (commit `6b8ac5818dcd`) · 834 940 o · md5 `022bd99d02197698bbb9a2a001ba0d74` · v6.7.0-L15a
+- **Motif** : L13b — l'heure close à fin + 10, la session à son heure. Promu : 837 270 o, md5 `1f1593e42222d7ded743b1c0a984bf2f` (bit à bit).
