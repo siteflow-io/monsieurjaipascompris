@@ -310,14 +310,18 @@ function calculerBinomes(corrections,absents){
   var b={};for(var i=0,j=l.length-1;i<j;i++,j--){b[l[i].k]=l[j].k;b[l[j].k]=l[i].k}
   return b;
 }
-function heureActive(heure){return !!(heure&&!heure.cloture&&heure.fin&&Date.now()<heure.fin)}
+var GRACE_HEURE=10*60000;   /* [L13b] l'heure se ferme seule à fin + 10 min (Paul, 03/10 : « ça ne me coupe pas en plein milieu, si on prend un peu de retard ») */
+function heureFinEffective(heure){if(!heure||!heure.fin)return null;return heure.cloture?Math.min(heure.fin+GRACE_HEURE,heure.clotureA||heure.fin):heure.fin+GRACE_HEURE;}   /* le moment où l'heure est close */
+function heureClose(heure){return !!(heure&&heure.fin&&(heure.cloture||Date.now()>=heure.fin+GRACE_HEURE));}
+function heureFermeeSeule(heure){return !!(heure&&heure.fin&&!heure.cloture&&Date.now()>=heure.fin+GRACE_HEURE);}
+function hhMinL13b(t){var d=new Date(t);return d.getHours()+" h "+String(d.getMinutes()).padStart(2,"0");}
+function heureActive(heure){return !!(heure&&!heure.cloture&&heure.fin&&Date.now()<heure.fin+GRACE_HEURE)}   /* [L13b] dans l'heure jusqu'à fin + 10 min */
 function finDeFenetre(sessionDebut,heure){
   if(!sessionDebut)return null;
-  if(heure&&heure.debut&&heure.fin&&sessionDebut<=heure.fin&&sessionDebut>=heure.debut-6*3600000)
-    return heure.cloture?Math.min(heure.fin,heure.clotureA||heure.fin):heure.fin;
+  if(dansHeureLancee(sessionDebut,heure))return heureFinEffective(heure);   /* [L13b] fin + 10 min, ou la clôture */
   return sessionDebut+45*60000;   /* [L13] hors classe : 45 minutes (était 55) */
 }
-function dansHeureLancee(sessionDebut,heure){return !!(sessionDebut&&heure&&heure.debut&&heure.fin&&sessionDebut<=heure.fin&&sessionDebut>=heure.debut-6*3600000)}
+function dansHeureLancee(sessionDebut,heure){return !!(sessionDebut&&heure&&heure.debut&&heure.fin&&sessionDebut>=heure.debut-GRACE_HEURE&&sessionDebut<=heure.fin+GRACE_HEURE)}   /* [L13b] T3 : une session appartient à l'heure pendant laquelle elle a commencé (−10 / +10 min ; plus de fenêtre de 6 h) */
 function acRegagnees(questions){var n=0;questions=questions||{};Object.keys(questions).forEach(function(k){if(questions[k]&&questions[k].ok===true)n++});return n}
 function acQuestionFinie(q){return !!q&&(q.ok===true||q.ok===false||q.ok==="passe")}
 /* Les ratés comptés, dans l'ordre où ils ont eu lieu (le premier est offert) : un cran de question chacun. */
@@ -1173,7 +1177,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15a";
+var APP_VERSION="6.7.0-L13b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1399,6 +1403,7 @@ var AIDES={
   donnees:{ou:"Donn\u00e9es de la dict\u00e9e",l:[
     ["\u00ab Bilan \u00bb, \u00ab \ud83d\udcc4 Copies \u00bb, \u00ab Fiches \u00e9l\u00e8ves \u00bb, \u00ab Suivi \u00bb, \u00ab \ud83c\udfaf Exercices \u00bb","les onglets des donn\u00e9es"],
     ["\u00ab \ud83e\udd16 Prompt IA \u00bb (Bilan)","le prompt et le JSON de la dict\u00e9e, \u00e0 copier"],
+    ["l\u2019heure non cl\u00f4tur\u00e9e","elle se ferme seule 10 minutes apr\u00e8s sa fin ; le Suivi et l\u2019accueil le disent (\u00ab heure ferm\u00e9e seule \u00e0 \u2026 \u00bb)"],
     ["\u00ab \u25b6 Lancer l\u2019autocorrection \u00bb (Donn\u00e9es \u2192 Suivi)","ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : avant la premi\u00e8re s\u00e9ance, ils attendent apr\u00e8s avoir coch\u00e9 les consignes ; hors classe ensuite, 45 minutes par ouverture"],
     AIDE_FERMER]}
 };
@@ -2766,7 +2771,7 @@ function AppProf(p){
   function chargerDictees(cb){
     db.ref("correction_dictee").once("value",function(snap){
       var val=snap.val()||{};
-      setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(classeDuRegistre(cn), d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac,bareme:d.bareme||"preparee"}}));
+      setSaved(Object.keys(val).map(function(id){var d=val[id].config||{};var cn=d.classe||"";var nE=extractEleves(classeDuRegistre(cn), d.eleves).length;var dic=val[id].dictee||{};var amenEnabled=!!(dic.amenagee&&dic.amenagee.enabled);var nLac=(dic.amenagee&&dic.amenagee.lacunes||[]).length;return{id:id,title:d.title||id,classe:cn,n:nE,niveau:d.niveau||"",published:d.published!==false,amenEnabled:amenEnabled,nLac:nLac,bareme:d.bareme||"preparee",heure:val[id].heure||null}}));   /* [L13b] */
       if(cb)cb();
     });
   }
@@ -2906,7 +2911,8 @@ function AppProf(p){
     saved.length>0&&h("div",{className:"card"},h("h2",null,"Dict\u00e9es existantes"),
       saved.map(function(d){return h("div",{key:d.id,style:{marginBottom:8}},
         h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",border:"1.5px solid var(--border)",borderRadius:10}},
-          h("div",{style:{flex:1,cursor:"pointer"},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l. \u00b7 "+(d.niveau?d.niveau.toUpperCase():"\u26a0\ufe0f pas de niveau"))),
+          h("div",{style:{flex:1,cursor:"pointer"},onClick:function(){load(d.id)}},h("div",{style:{fontWeight:600}},d.title),
+            heureFermeeSeule(d.heure)?h("div",{className:"heure-fermee-seule",style:{fontSize:".8rem",color:"#9c4221"},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(d.heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null,   /* [L13b] T4 (C1) */h("div",{style:{fontSize:".85rem",color:"var(--text-sub)"}},d.classe+" \u00b7 "+d.n+" \u00e9l. \u00b7 "+(d.niveau?d.niveau.toUpperCase():"\u26a0\ufe0f pas de niveau"))),
           h("div",{style:{display:"flex",alignItems:"center",gap:6}},
             d.amenEnabled&&h("span",{style:{fontSize:".75rem",padding:"2px 8px",borderRadius:6,background:"rgba(252,211,77,.18)",color:"#92400e",fontWeight:600},title:"Cette dict\u00e9e a une version am\u00e9nag\u00e9e param\u00e9tr\u00e9e ("+d.nLac+" lacune"+(d.nLac>1?"s":"")+")"},"\ud83d\udcd8 Am\u00e9nag\u00e9e · "+d.nLac),
             /* Bareme visible d'un coup d'oeil dans la liste, comme « Amenagee ». */
@@ -5170,7 +5176,7 @@ function Suivi(p){
   function carteHeure(){
     var nomClasse=data.classe||"";
     var actif=heure&&!heure.cloture&&NOW<heure.fin;
-    var depasse=heure&&!heure.cloture&&NOW>=heure.fin;
+    var depasse=heure&&!heure.cloture&&NOW>=heure.fin&&NOW<heure.fin+GRACE_HEURE;   /* [L13b] dépassée pendant les 10 minutes de grâce ; ensuite, fermée seule */
     if(actif){
       var reste=heure.fin-NOW,alerte=reste<=5*60000;
       return h("div",{className:"card",style:{marginBottom:12,border:alerte?"2px solid #dd6b20":undefined}},
@@ -5203,6 +5209,7 @@ function Suivi(p){
     }
     return h("div",{className:"card",style:{marginBottom:12}},
       heure&&heure.cloture?h("div",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:6}},"Derni\u00e8re heure close \u00e0 "+hhmm(heure.clotureA||heure.fin)+"."):null,
+      heureFermeeSeule(heure)?h("div",{id:"heure-fermee-seule",style:{fontSize:".85rem",color:"#9c4221",marginBottom:6},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin. Les \u00e9l\u00e8ves qui rouvrent ensuite ont 45 minutes."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null,   /* [L13b] T4 */
       h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
         h("b",null,"\u25b6 Lancer l\u2019autocorrection \u2014 "+nomClasse),
         h("span",null,"Fin de l\u2019heure :"),
@@ -5218,7 +5225,7 @@ function Suivi(p){
     var cc=(p.corrections||{})[r.key],errs=cc?toArr(cc.errors):[],N=errs.filter(function(e){return e&&e.type!=="A"}).length;
     var fenetre=finDeFenetre(ac.sessionDebut,heure);
     if(r.status!=="done"){
-      if((heure&&heure.cloture&&ac.sessionDebut&&dansHeureLancee(ac.sessionDebut,heure))||(fenetre&&NOW>=fenetre))return {t:"Pas fini, \u00e0 terminer",c:"#9b2c2c",f:"#fee2e2"};
+      if((heureClose(heure)&&ac.sessionDebut&&dansHeureLancee(ac.sessionDebut,heure))||(fenetre&&NOW>=fenetre))   /* [L13b] */return {t:"Pas fini, \u00e0 terminer",c:"#9b2c2c",f:"#fee2e2"};
       return {t:"Corrige "+r.solved+"/"+r.total,c:"#075985",f:"#e0f2fe"};
     }
     if(ac.styloFin>NOW){var s=Math.ceil((ac.styloFin-NOW)/1000);return {t:"Stylo vert "+Math.floor(s/60)+":"+String(s%60).padStart(2,"0"),c:"#166534",f:"#dcfce7"}}
@@ -9805,8 +9812,8 @@ function EleveCorrection(p){
   var sHL=useState(false),heureLue=sHL[0],setHeureLue=sHL[1];var heureRef=React.useRef(null);   /* [L13] */
   useEffect(function(){var r=db.ref("correction_dictee/"+d.dictee.id+"/heure");function f(sn){heureRef.current=sn.val()||null;setHeure(sn.val()||null);setHeureLue(true)}r.on("value",f);return function(){r.off("value",f)}},[d.dictee.id]);   /* [L13] l'écran écoute l'heure : il s'ouvre dès qu'elle est lancée, sans recharger */
   var sOHC=useState(Date.now()),ouvHC=sOHC[0];   /* [L13] le moment de CETTE ouverture */
-  function horsClasseL13(){return !!(heureLue&&heure&&!heureActive(heure)&&(heure.cloture||(heure.fin&&Date.now()>=heure.fin)));}   /* une séance a eu lieu et s'est close, aucune en cours */
-  function finEffL13(){return horsClasseL13()?ouvHC+45*60000:finDeFenetre(sessionDebut,heure);}   /* hors classe : 45 minutes à chaque ouverture */
+  function horsClasseL13(){var fe=heureFinEffective(heure);return !!(heureLue&&heure&&heureClose(heure)&&fe!=null&&ouvHC>=fe);}   /* [L13b] l'ouverture est postérieure à la clôture (ou à fin + 10) */   /* une séance a eu lieu et s'est close, aucune en cours */
+  function finEffL13(){if(horsClasseL13())return ouvHC+45*60000;if(heureActive(heure)&&!dansHeureLancee(sessionDebut,heure))return heureFinEffective(heure);return finDeFenetre(sessionDebut,heure);}   /* [L13b] dans une heure en cours, l'élève travaille jusqu'à sa fin, même si sa session date d'une heure d'avant */   /* hors classe : 45 minutes à chaque ouverture */
   // Lot 2c : attestation (fiche : autocorrection/<élève>/attestation = {t})
   var sAt=useState(null),attestation=sAt[0],setAttestation=sAt[1];
   var sAc=useState(false),attestCoche=sAc[0],setAttestCoche=sAc[1];
