@@ -351,3 +351,10 @@
 | la règle de l'heure | `GRACE_HEURE`, `heureActive`, `heureClose`, `heureFinEffective`, `heureFermeeSeule`, `dansHeureLancee` (T3), `finDeFenetre` |
 | côté élève | `EleveCorrection` : `horsClasseL13` (après la clôture), `finEffL13` |
 | côté professeur | le Suivi (colonne « Pas fini », la carte de l'heure), l'accueil (la ligne « heure fermée seule à … (non clôturée) »), l'aide (Données) |
+
+## AJOUT DU 04/10/2026 — correction_dictee 6.7.0-L15b : l'adresse tient la dictée, l'onglet et la copie
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| l'adresse | `ONGLETS_DONNEES_L15B`, `ongletVersUrlL15b`, `urlVersOngletL15b`, `adresseProfL15b` (replaceState), `lireAdresseProfL15b` (jamais quand `eleveKey` est présent) |
+| la réouverture | `App` (au rechargement), `AppProf` (rouvrir l'endroit une fois les classes lues ; la garde dictée inexistante ; « ← Retour » nettoie), `CorrScreen` (l'onglet et la copie de départ) |
