@@ -1054,3 +1054,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L13b (04/10/2026, conscience n°12)
 - blob `85b84d4dfde7` (commit `6b8ac5818dcd`) · 834 940 o · md5 `022bd99d02197698bbb9a2a001ba0d74` · v6.7.0-L15a
 - **Motif** : L13b — l'heure close à fin + 10, la session à son heure. Promu : 837 270 o, md5 `1f1593e42222d7ded743b1c0a984bf2f` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15b (04/10/2026, conscience n°12)
+- blob `345aeafac67a` (commit `8c730c8fa43d`) · 837 270 o · md5 `1f1593e42222d7ded743b1c0a984bf2f` · v6.7.0-L13b
+- **Motif** : L15b — l'adresse porte la dictée, l'onglet, la copie. Promu : 840 104 o, md5 `b4df61131ce844895f31588407a4f9eb` (bit à bit).
