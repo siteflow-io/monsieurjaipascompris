@@ -982,3 +982,7 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 - **05/10/2026 14:40 — PROMOTION correction_dictee 6.7.0-L15g-b (micro : les libellés des modes A/B/C à l'import PDF) — conscience n°12, filière micro sur ordre de Paul**
   problème : à l'import, le mode d'un mot s'appelait « A », « B », « C » (dette 134). résolution : les libellés de Préparation repris (A — 3 propositions à cocher · B — Trou simple · C — Trou + indice grammatical) dans le sélecteur de la fenêtre de mot et la ligne « n mots · mode A (…) par défaut ». (899 808 o, md5 `e7e7ac6a2b5f9e9dc8d339ce65d5b053`). Bancs : L15e (tes PDF) vert ; preuve visible (le sélecteur porte les trois libellés). Promu bit à bit. Point de retour (L15g `03a910e02848`).
   → mots-clés : import PDF · modes A B C libellés · correction_dictee 6.7.0-L15g-b
+
+- **05/10/2026 15:20 — PROMOTION correction_dictee 6.7.0-L15g-c (micro : la prévisualisation suit l'élève feuilleté) — conscience n°12, filière micro sur ordre de Paul**
+  problème : dans « 👁 Prévisualiser toutes », la disponibilité des modes Brut / Barré / Placeholder se calculait sur `corr[selectedKey]` (l'élève sélectionné dans l'onglet Copies) et non sur l'élève feuilleté (dette 135). résolution : `corr[k]` (3 occurrences). (899 929 o, md5 `4b5ad28ffb0013594730dd7222947cd0`). Banc par le geste : A recopié sélectionné, B non recopié feuilleté → les trois modes grisés pour B (avant : disponibles). Promu bit à bit. Point de retour (L15g-b `449b4cbdc396`).
+  → mots-clés : prévisualiser toutes · modes copie · correction_dictee 6.7.0-L15g-c
