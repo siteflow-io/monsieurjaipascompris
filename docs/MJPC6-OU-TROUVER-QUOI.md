@@ -411,3 +411,10 @@
 | les recalculs | `recalculerDicteeL15g` (profil ou base d'une dictée), `recalculerProfilL15g` (toutes les dictées du profil), la version aménagée (`setBase`), `toastRecalculL15g` ; corbeille `recalcul-preparation_…` / `recalcul-profil_…` |
 | le bilan, l'accueil | le Bilan (deux moyennes nommées), la ligne de l'accueil (« barème … ») |
 | le branchement MJPC | `heureDeLaDictee(heure)` (seul point d'entrée), « Lancer » (`source`, `seanceId`), le marqueur `[BRANCHEMENT MJPC — déroulé]`, l'aide du Suivi |
+
+## AJOUT DU 05/10/2026 — correction_dictee 6.7.0-L15h : le type C
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| le type C | `TYPE_STYLE.C`, `TYPE_ORDRE`, `TYPE_COST`, `TYPE_COST_BREVET` (forfait) ; `reclassableEnC`, `signesCL15h`, `sousTypeCL15h`, `HOMOPHONES_GRAMMATICAUX_L15H` ; la touche C (`fastMark`, `selectType`), le bouton « C Accent / maj. », l'entrée du menu texte ; `copieRecopiee` / `recopiesManquantes` (C recopié) ; la fiche de l'élève (« Accent », « Majuscule », « Trait d'union ») ; l'aide |
+| le reclassement à blanc | `bancs/rapport_L15h1.py` (lecture seule) → `RAPPORT-A-BLANC-L15h1.md` ; L15h-2 à venir : `reclassement-accents_<hhmmss>_<clé>` en corbeille |
