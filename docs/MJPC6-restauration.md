@@ -1106,3 +1106,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15h (05/10/2026, conscience n°12)
 - blob `c6778975a118` (commit `7083a09c439f`) · 899 929 o · md5 `4b5ad28ffb0013594730dd7222947cd0` · v6.7.0-L15g-c
 - **Motif** : L15h-1 — le type C. Promu : 903 274 o, md5 `a5d6a057018c61a741a518568998a1c7` (bit à bit). Aucune copie reclassée : un retour est sans effet sur les données ; une erreur posée en C par la L15h serait lue par une version antérieure comme un type inconnu (elle n'en crée pas tant que L15h-2 n'a pas tourné, hors celles que Paul pose à la main).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15h-b (05/10/2026, conscience n°12)
+- blob `8cc3ae640960` (commit `aa159eefba33`) · 903 274 o · md5 `a5d6a057018c61a741a518568998a1c7` · v6.7.0-L15h
+- **Motif** : micro L15h-b — libellés des modes, message. Promu : 903 883 o, md5 `1a154f3810fa5c9a1ba7ca411f3c9a78` (bit à bit).
