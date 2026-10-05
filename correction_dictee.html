@@ -1182,7 +1182,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15h-b";
+var APP_VERSION="6.7.0-L15.1b-1";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1235,9 +1235,10 @@ function formesSynchroniser(dId,dData,ancien,nouveaux){
   toArr((ancien&&ancien.errors)||[]).forEach(function(e){if(e&&e.formeId)anc[e.idx]=e;});
   var res=(nouveaux||[]).map(function(e){if(!e)return e;var f=String(e.fautif||"").trim(),av=anc[e.idx];
     if((e.type==="G"||e.type==="L"||e.type==="C")&&f){var id=(av&&av.formeId)||e.formeId||idForme();   /* [L15h] */gardes[id]=1;var ex=FORMES.parId[id];
-      var o={id:id,creeLe:(ex&&ex.creeLe)||Date.now(),mot:motCleForme(tok,e.idx),forme:f,type:e.type,dicteeId:dId,texteKey:tk,niveau:dData.niveau||""};
-      if(!ex||ex.forme!==o.forme||ex.type!==o.type||ex.mot!==o.mot){maj[id]=o;FORMES.parId[id]=o;}
-      return Object.assign({},e,{formeId:id});}
+      var anC=analyseErreurL151(e,tok),catC=anC?anC.categorie:"cat-autre";   /* [L15.1b-1] la catégorie, calculée à la correction */
+      var o={id:id,creeLe:(ex&&ex.creeLe)||Date.now(),mot:motCleForme(tok,e.idx),forme:f,type:e.type,dicteeId:dId,texteKey:tk,niveau:dData.niveau||"",categorie:catC};
+      if(!ex||ex.forme!==o.forme||ex.type!==o.type||ex.mot!==o.mot||ex.categorie!==o.categorie){maj[id]=o;FORMES.parId[id]=o;}
+      return Object.assign({},e,{formeId:id,categorie:catC});}
     if(e.formeId){var e2=Object.assign({},e);delete e2.formeId;return e2;}return e;});
   Object.keys(anc).forEach(function(i){var id=anc[i].formeId;if(!gardes[id]){maj[id]=null;delete FORMES.parId[id];}});
   if(Object.keys(maj).length)db.ref("correction_dictee_erreurs").update(maj);
@@ -1411,6 +1412,8 @@ var AIDES={
     ["\u00c9chap","fermer la fen\u00eatre du mot"],
     AIDE_FERMER]},
   reglages:{ou:"R\u00e9glages de la dict\u00e9e",l:[
+    ["Les commentaires de l\u2019analyse","le commentaire de chaque cat\u00e9gorie d\u2019erreur, dans tes mots ; commun \u00e0 toutes les dict\u00e9es (enregistr\u00e9 en quittant le champ)"],
+    ["\u00ab Ajouter la paire \u00bb","une paire d\u2019homophones, pour toutes les dict\u00e9es, avec la r\u00e8gle que l\u2019\u00e9l\u00e8ve lira"],
     ["la date de correction","celle que voient les \u00e9l\u00e8ves, une seule pour toute la dict\u00e9e"],
     ["\u00ab = le jour de la premi\u00e8re copie corrig\u00e9e \u00bb","prendre ce jour-l\u00e0"],
     ["\u00ab Effacer la date \u00bb","revenir au jour r\u00e9el de chaque copie"],
@@ -2281,13 +2284,183 @@ function renderSnapshotPanel(h, dbRef, label) {
 function ifo(text,opts){var cls="info-i";if(opts){if(opts.right)cls+=" tip-right";if(opts.left)cls+=" tip-left";if(opts.below)cls+=" tip-below"}return h("span",{className:cls,tabIndex:0},"i",h("span",{className:"info-tip"},text))}
 
 // Generate grammatical comment for an error (used by both EleveCorrection final recap and Copies tab)
-function gramComment(err){
+/* ═══ [L15.1b-1] L'ANALYSE DES ERREURS PAR L'ÉCART (dette 107 ; C12 tours 469 → 479, relecture du 05/10) ═══ */
+/* [L15.1] L'ANALYSE DES ERREURS PAR L'ÉCART — le moteur (générique) et ses types de motif ; les catégories sont des OBJETS (seed embarqué,
+   synchronisé au hub site/analyses/categories/<id> à la première ouverture) ; les commentaires, éditables par Paul, vivent au hub. */
+var VOY_L151="aeiouyàâäéèêëîïôöùûüœæ";
+function estVoyL151(c){return VOY_L151.indexOf(String(c||"").toLowerCase())>=0;}
+/* syllabes(mot, {vers:false}) — la césure de la langue parlée (Paul, 05/10) : une consonne entre deux voyelles part avec la suivante ;
+   deux consonnes se séparent sauf les groupes indissociables ; trois : après la première sauf groupe ; voyelles composées et nasales ensemble ;
+   le -e muet final ne fait pas de syllabe (belle = 1) ; apostrophes et traits d'union coupent ; jamais de découpe par nombre de lettres. */
+var GROUPES_INDISS_L151=["bl","br","cl","cr","dr","fl","fr","gl","gr","pl","pr","tr","vr","ch","ph","th","gn","qu","gu"];
+function syllabes(mot,opts){var vers=!!(opts&&opts.vers),w=String(mot||"");if(!w)return [];
+  if(/[-'\u2019 ]/.test(w)){var out=[];w.split(/([-'\u2019 ])/).forEach(function(x){if(!x)return;if(/^[-'\u2019 ]$/.test(x)){if(out.length)out[out.length-1]+=x;return;}syllabes(x,opts).forEach(function(y){out.push(y)});});
+    var fus=[];out.forEach(function(x){if(fus.length&&!/[aeiouyàâäéèêëîïôöùûüœæ]/i.test(fus[fus.length-1].replace(/qu|gu/gi,"")))fus[fus.length-1]+=x;else fus.push(x);});return fus;}   /* d'eux, l'autre, qu'on : l'élision ne fait pas de syllabe */
+  var low=w.toLowerCase(),n=low.length,noyaux=[],i=0;
+  while(i<n){if(low[i]==="e"&&i>0&&(low[i-1]==="g"||low[i-1]==="c")&&"aouâàôû".indexOf(low[i+1]||"")>=0&&i+1<n){i++;continue;}   /* ge·a, ge·o : le e ne se prononce pas (changeant, mangeons) */
+    if(estVoyL151(low[i])){var d=i;
+      /* gu / qu + voyelle : le u appartient à la consonne */
+      if(low[i]==="u"&&i>0&&(low[i-1]==="q"||low[i-1]==="g")&&i+1<n&&estVoyL151(low[i+1])){i++;continue;}
+      while(i+1<n&&estVoyL151(low[i+1])){var duo=low[i]+low[i+1];
+        /* deux voyelles qui ne font qu'un son : on reste dans le même noyau ; sinon (hiatus : é-a, o-é…) on coupe */
+        var apresCR=i>=2&&!estVoyL151(low[i-2])&&(low[i-1]==="r"||low[i-1]==="l");   /* consonne + r/l puis i/u + voyelle : deux syllabes (ou·vri·er, cru·el) */
+        if(/^(oy|ay|ey|uy)$/.test(duo)&&estVoyL151(low[i+2]||""))break;   /* le y entre deux voyelles ouvre la syllabe suivante (lo·yer) */
+        if(((low[i]==="i"||low[i]==="y"||(low[i]==="u"&&low[i+1]!=="e"))&&!apresCR)||/^(ou|oi|ai|ei|au|eu|œu|oy|ay|ey|uy|ée)$/.test(duo)||((duo==="ue"||duo==="ie"||duo==="iè"||duo==="ié")&&!apresCR)||(duo==="ea"&&low[i+2]==="u")||(low[i]==="e"&&low[i+1]==="a"&&low[i+2]==="u")||/^(oe|œ)/.test(duo)){i++;continue;}
+        break;}   /* deux voyelles qui ne forment pas un seul son : hiatus, on coupe (ex·tra·or·di·naire, pré·oc·cu·pa·tion) */
+      noyaux.push([d,i]);}i++;}
+  /* le -e muet final (et -es, -ent verbal après consonne) ne fait pas de syllabe — hors versification */
+  if(!vers&&noyaux.length>1){var der=noyaux[noyaux.length-1],fin=low.slice(der[0]);
+    var avantE=low[der[0]-1],uCons=avantE==="u"&&(low[der[0]-2]==="q"||low[der[0]-2]==="g");   /* -que, -gue : le u est une consonne */
+    if((/^e$|^es$/.test(fin)||(/^ent$/.test(fin)&&n>4))&&der[0]===der[1]&&(!estVoyL151(avantE)||uCons))noyaux.pop();}
+  if(noyaux.length<=1)return [w];
+  var coupes=[];
+  for(var k=0;k<noyaux.length-1;k++){var a=noyaux[k][1]+1,b=noyaux[k+1][0],cons=low.slice(a,b),c;
+    /* les nasales : an/en/in/on/un (+ ain, ein, oin) restent avec la voyelle si suivies d'une consonne */
+    if(/[gc]e$/.test(cons)&&cons.length>=2){c=a+cons.length-2;}   /* « ge », « ce » devant a/o/u : une seule consonne (chan·geant, man·geons) */
+    else if(cons.length===0)c=a;
+    else if(cons.length===1)c=a;
+    else if(cons.length===2)c=(GROUPES_INDISS_L151.indexOf(cons)>=0)?a:a+1;
+    else{var fin2=cons.slice(-2);c=(GROUPES_INDISS_L151.indexOf(fin2)>=0)?b-2:b-1;}   /* trois consonnes ou plus : avant la dernière, ou avant le groupe (ins·truire, comp·ter, ar·bre) */
+    coupes.push(c);}
+  var res=[],p=0;coupes.forEach(function(c){res.push(w.slice(p,c));p=c;});res.push(w.slice(p));return res.filter(Boolean);}
+/* ── le moteur d'écart ── */
+/* le mot attendu est-il un verbe ? le mot d'avant le dit (un pronom sujet → verbe ; un déterminant → nom) ; sinon sa fin (-e, -ent, -ait, -ais) */
+var SUJETS_L151=["je","j","tu","il","elle","on","nous","vous","ils","elles","qui","ne","n","se","s","me","m","te","t"],DETS_L151=["le","la","les","l","un","une","des","du","au","aux","ce","cet","cette","ces","mon","ma","mes","ton","ta","tes","son","sa","ses","notre","nos","votre","vos","leur","leurs","quelque","quelques","chaque","plusieurs"];
+function estVerbeL151(w,ctx){var av=String((ctx&&ctx.avant)||"").toLowerCase().replace(/['\u2019]$/,"");if(SUJETS_L151.indexOf(av)>=0)return true;if(DETS_L151.indexOf(av)>=0)return false;return /(e|ent|ait|ais|ons|ez)$/i.test(w);}
+function sansAccL151(x){return String(x||"").normalize("NFD").replace(/[\u0300\u0301\u0302\u0308]/g,"").normalize("NFC");}
+function sansDoublesL151(x){return String(x||"").replace(/([bcdfghjklmnpqrstvwxz])\1/gi,"$1");}
+var NORMALISEURS_L151=[["accent",sansAccL151],["consonne-double",sansDoublesL151],["majuscule",function(x){return String(x||"").toLowerCase()}],["tiret",function(x){return String(x||"").replace(/-/g,"")}]];
+function motifL151(m,f,w,ctx){var t=m.type;if(m.sauf&&new RegExp(m.sauf,"i").test(w))return null;if(m.siMot&&!new RegExp(m.siMot,"i").test(w))return null;
+  if(m.siVerbe&&!estVerbeL151(w,ctx))return null;if(m.siNom&&estVerbeL151(w,ctx))return null;
+  if(t==="ajout"){for(var q=0;q<m.suffixes.length;q++)if(f.toLowerCase()===(w+m.suffixes[q]).toLowerCase())return {lettre:m.suffixes[q]};return null;}
+  if(t==="casse")return f!==w&&f.toLowerCase()===w.toLowerCase()?{}:null;
+  if(t==="tiret")return f!==w&&f.replace(/-/g," ")===w.replace(/-/g," ")||(f.replace(/-/g,"")===w.replace(/-/g,"")&&f!==w)?{}:null;
+  if(t==="collage")return f!==w&&f.replace(/[ '\u2019]/g,"")===w.replace(/[ '\u2019]/g,"")&&(/[ ]/.test(f)!==/[ ]/.test(w))?{}:null;
+  if(t==="apostrophe")return f!==w&&f.replace(/['\u2019]/g,"")===w.replace(/['\u2019]/g,"")&&(/['\u2019]/.test(f)!==/['\u2019]/.test(w))?{}:null;
+  if(t==="chiffre")return /\d/.test(f)&&!/\d/.test(w)?{}:null;
+  if(t==="cedille")return f!==w&&f.replace(/ç/g,"c")===w.replace(/ç/g,"c")?{}:null;
+  if(t==="homophone"){var hl=(ctx.homophones||{})[w.toLowerCase()]||[];if(!Array.isArray(hl))hl=[hl];var hw=hl.filter(function(g){return g.forms.indexOf(f.toLowerCase())>=0})[0];return hw&&f.toLowerCase()!==w.toLowerCase()?{regle:hw.regle||"",groupe:hw.groupe}:null;}
+  if(t==="accent"){if(f===w||sansAccL151(f)!==sansAccL151(w))return null;for(var i=0;i<Math.max(f.length,w.length);i++){if(f[i]!==w[i]){var bw=sansAccL151(w[i]||""),fa=f[i],wa=w[i];
+        var nom=function(c){return /[éÉ]/.test(c)?"aigu":/[èàùÈ]/.test(c)?"grave":/[êâîôûÊ]/.test(c)?"circonflexe":/[ëïüÿ]/.test(c)?"tréma":""};
+        return {lettre:bw,accent:nom(wa)||nom(fa),sens:sansAccL151(wa)===wa?"en trop":(sansAccL151(fa)===fa?"manquant":"change"),ecrit:fa,attendu:wa};}}return {};}
+  if(t==="double"){if(f===w||sansDoublesL151(f).toLowerCase()!==sansDoublesL151(w).toLowerCase())return null;var dbl=(w.match(/([bcdfghjklmnpqrstvwxz])\1/i)||f.match(/([bcdfghjklmnpqrstvwxz])\1/i)||[])[1]||"";
+    var sens=f.length>w.length?"doublee":"dedoublee";if(m.sens&&m.sens!==sens)return null;return {lettre:dbl,sens:sens};}
+  if(t==="suffixe"){var A=m.attendu,E=m.ecrit;if(!(w.slice(w.length-A.length)===A&&f.slice(f.length-E.length)===E))return null;var rw=w.slice(0,w.length-A.length),rf=f.slice(0,f.length-E.length);if(rw===rf&&rw.length>=1)return {attendu:A,ecrit:E,lettre:A||E};return null;}
+  if(t==="terminaisons"){var L=m.liste;for(var a2=0;a2<L.length;a2++)for(var b2=0;b2<L.length;b2++){if(a2===b2)continue;var A2=L[a2],E2=L[b2];if(w.slice(-A2.length)===A2&&f.slice(-E2.length)===E2&&w.slice(0,-A2.length)===f.slice(0,-E2.length)&&w.length>A2.length)return {attendu:A2,ecrit:E2};}return null;}
+  if(t==="lettre"){var de=m.de,ve=m.vers;var idx=w.indexOf(de);while(idx>=0){var cand=w.slice(0,idx)+ve+w.slice(idx+de.length);if(cand===f)return {attendu:de,ecrit:ve};idx=w.indexOf(de,idx+1);}return null;}
+  if(t==="inversion"){if(f.length!==w.length)return null;for(var j=0;j<w.length-1;j++){if(w[j]!==f[j]){if(w[j]===f[j+1]&&w[j+1]===f[j]&&w.slice(j+2)===f.slice(j+2)&&w.slice(0,j)===f.slice(0,j))return {lettre:w[j]+w[j+1]};return null;}}return null;}
+  if(t==="omise"){if(w.length!==f.length+1)return null;for(var k2=0;k2<w.length;k2++){if(w.slice(0,k2)+w.slice(k2+1)===f)return {lettre:w[k2]};}return null;}
+  if(t==="ajoutee"){if(f.length!==w.length+1)return null;for(var k3=0;k3<f.length;k3++){if(f.slice(0,k3)+f.slice(k3+1)===w)return {lettre:f[k3]};}return null;}
+  if(t==="changee"){if(f.length!==w.length)return null;var dif=[];for(var k4=0;k4<w.length;k4++)if(w[k4]!==f[k4])dif.push(k4);return dif.length===1?{attendu:w[dif[0]],ecrit:f[dif[0]]}:null;}
+  if(t==="regex")return new RegExp(m.forme,"i").test(f)&&new RegExp(m.mot,"i").test(w)?{}:null;
+  return null;}
+/* ── les catégories livrées (seed embarqué : des objets, pas du code ; l'ordre = la priorité de détection) ──
+   commentaire : {forme} {mot} {lettre} {accent} {ecrit} {attendu} {regle} ; court : pour nommer plusieurs écarts dans un même commentaire */
+function catL151(id,nom,famille,competence,motifs,court,commentaire,exemples,extra){return Object.assign({id:id,nom:nom,famille:famille,competence:competence,motifs:motifs,court:court,commentaire:commentaire,exemples:exemples||[],actif:true,origine:"livré",version:1},extra||{});}
+var INVARIABLES_L151="beaucoup|loin|encore|toujours|jamais|trop|très|assez|puis|alors|ensuite|souvent|aussi|bientôt|longtemps|ici|là|autrefois|parfois|déjà|vite|bien|mal|moins|plus|peu|tant|tôt|tard|hier|demain|aujourd'hui|dedans|dehors|partout|presque|vraiment|certes|pourtant|cependant|ainsi|donc|enfin|lorsque|quand|comme|avec|sans|sous|sur|dans|vers|chez|pendant|depuis|parmi|selon|malgré|entre|pour|par";
+var CATEGORIES_L151=[
+ catL151("cat-invariable","Mot invariable","mots","D1.1",[{type:"regex",mot:"^("+INVARIABLES_L151+")$",forme:"[sx]$"}],"un mot invariable","Tu as écrit « {forme} » : « {mot} » est un mot invariable, il ne prend jamais de -s.",[{forme:"beaucoups",mot:"beaucoup"}],{tousTypes:true}),
+ catL151("cat-verbe-pour-nom","Verbe à la place du nom (le travail / il travaille)","homophones","D1.5",[{type:"ajout",suffixes:["le","les","lent","ls","ent"],siNom:true}],"le nom et le verbe","Tu as écrit « {forme} » : c'est le verbe ; ici c'est le nom « {mot} » (on peut mettre « un », « le » devant).",[{forme:"travaille",mot:"travail"}]),
+ catL151("cat-verbe-2e-personne","Verbe : -s de la 2e personne en trop / manquant","conjugaison","D1.1",[{type:"suffixe",attendu:"",ecrit:"s",siVerbe:true},{type:"suffixe",attendu:"s",ecrit:"",siVerbe:true,siMot:"(es|is|as|ds|ts)$"}],"la personne du verbe (-s)","Tu as écrit « {forme} » : le -s est la marque de « tu » ; ici le sujet n'est pas « tu » : « {mot} ».",[{forme:"tombes",mot:"tombe"}]),
+ catL151("cat-elision","Élision (qu', l', d'…)","mots","D1.2",[{type:"regex",forme:"e$",mot:"^(qu|l|d|j|m|n|s|t|c|jusqu|lorsqu|puisqu)['\u2019]?$"}],"l'élision","Tu as écrit « {forme} » : devant une voyelle, on élide : « {mot}' ».",[{forme:"que",mot:"qu"}]),
+ catL151("cat-majuscule","Majuscule","mots","D1.2",[{type:"casse"}],"la majuscule","Tu as écrit « {forme} » : attention à la majuscule, on écrit « {mot} ».",[{forme:"paris",mot:"Paris"}]),
+ catL151("cat-homophone","Homophone grammatical","homophones","D1.5",[{type:"homophone"}],"un homophone","« {forme} » et « {mot} » se prononcent de la même façon ; ici, il faut « {mot} ». {regle}",[{forme:"a",mot:"à"}]),
+ catL151("cat-chiffre","Nombre en chiffres","mots","D1.2",[{type:"chiffre"}],"le nombre en lettres","Tu as écrit « {forme} » : dans une dictée, le nombre s'écrit en lettres : « {mot} ».",[{forme:"3",mot:"trois"}]),
+ catL151("cat-tiret","Trait d'union","mots","D1.2",[{type:"tiret"}],"le trait d'union","Tu as écrit « {forme} » : attention au trait d'union, on écrit « {mot} ».",[{forme:"peut être",mot:"peut-être"}]),
+ catL151("cat-apostrophe","Apostrophe","mots","D1.2",[{type:"apostrophe"}],"l'apostrophe","Tu as écrit « {forme} » : il faut l'apostrophe, on écrit « {mot} ».",[{forme:"larbre",mot:"l'arbre"}]),
+ catL151("cat-collage","Mots collés ou coupés","mots","D1.2",[{type:"collage"}],"la séparation des mots","Tu as écrit « {forme} » : attention à la séparation des mots, on écrit « {mot} ».",[{forme:"parcontre",mot:"par contre"}]),
+ catL151("cat-cedille","Cédille","lexique","D1.2",[{type:"cedille"}],"la cédille","Tu as écrit « {forme} » : il faut une cédille sous le c (ç) pour le son [s] : « {mot} ».",[{forme:"facon",mot:"façon"}]),
+ catL151("cat-pluriel-manquant","Pluriel manquant (-s, -x)","accords","D1.1",[{type:"suffixe",attendu:"s",ecrit:""},{type:"suffixe",attendu:"x",ecrit:""}],"la marque du pluriel","Tu as écrit « {forme} » : il manque la marque du pluriel (-{lettre}). Il faut « {mot} ».",[{forme:"maison",mot:"maisons"}],{tousTypes:true}),
+ catL151("cat-pluriel-en-trop","Pluriel en trop (-s, -x)","accords","D1.1",[{type:"suffixe",attendu:"",ecrit:"s"},{type:"suffixe",attendu:"",ecrit:"x"}],"un pluriel en trop","Tu as écrit « {forme} » : le -{lettre} est en trop, ici le mot est au singulier : « {mot} ».",[{forme:"abris",mot:"abri"}],{tousTypes:true}),
+ catL151("cat-verbe-nt-manquant","Verbe : -nt manquant (3e du pluriel)","accords","D1.1",[{type:"suffixe",attendu:"nt",ecrit:""},{type:"suffixe",attendu:"aient",ecrit:"ait"},{type:"suffixe",attendu:"aient",ecrit:"ais",commentaire:"Tu as écrit « {forme} » (2e personne) ; le sujet est « ils / elles », au pluriel : « {mot} »."},{type:"suffixe",attendu:"ent",ecrit:"es",commentaire:"Tu as écrit « {forme} » (2e personne) ; le sujet est « ils / elles », au pluriel : « {mot} »."}],"l'accord du verbe au pluriel (-nt)","Tu as écrit « {forme} » : le sujet est au pluriel, le verbe prend -nt : « {mot} ».",[{forme:"mange",mot:"mangent"}]),
+ catL151("cat-verbe-nt-en-trop","Verbe : -nt en trop","accords","D1.1",[{type:"suffixe",attendu:"",ecrit:"nt"},{type:"suffixe",attendu:"ait",ecrit:"aient"}],"un -nt en trop","Tu as écrit « {forme} » : le sujet est au singulier, le verbe ne prend pas -nt : « {mot} ».",[{forme:"mangent",mot:"mange"}]),
+ catL151("cat-fem-pl-manquant","Féminin pluriel : -es manquant","accords","D1.1",[{type:"suffixe",attendu:"es",ecrit:""}],"le -es du féminin pluriel","Tu as écrit « {forme} » : il manque les marques du féminin et du pluriel (-es) : « {mot} ».",[{forme:"perdu",mot:"perdues"}]),
+ catL151("cat-fem-pl-en-trop","Féminin pluriel : -es en trop","accords","D1.1",[{type:"suffixe",attendu:"",ecrit:"es"}],"un -es en trop","Tu as écrit « {forme} » : les marques du féminin et du pluriel (-es) sont en trop : « {mot} ».",[{forme:"perdues",mot:"perdu"}]),
+ catL151("cat-feminin-manquant","Féminin : -e manquant","accords","D1.1",[{type:"suffixe",attendu:"e",ecrit:"",sauf:"(oi|ai|i|ui|ou|eu|ui|ê|d|t|c|v|p)re$"},{type:"suffixe",attendu:"es",ecrit:"s"}],"le -e du féminin","Tu as écrit « {forme} » : il manque le -e du féminin : « {mot} ».",[{forme:"grand",mot:"grande"}]),
+ catL151("cat-feminin-en-trop","Féminin : -e en trop","accords","D1.1",[{type:"suffixe",attendu:"",ecrit:"e"},{type:"suffixe",attendu:"s",ecrit:"es"}],"un -e en trop","Tu as écrit « {forme} » : le -e est en trop, le mot est au masculin : « {mot} ».",[{forme:"grande",mot:"grand"}]),
+ catL151("cat-eux-euse","-eux / -euse","accords","D1.1",[{type:"terminaisons",liste:["eux","euse","euses"]}],"-eux / -euse","Tu as écrit « {forme} » : -eux au masculin, -euse au féminin : « {mot} ».",[{forme:"heureux",mot:"heureuse"}]),
+ catL151("cat-pluriel-aux","Pluriel en -aux","accords","D1.1",[{type:"terminaisons",liste:["aux","als","aus","al"]}],"le pluriel en -aux","Tu as écrit « {forme} » : ce mot en -al fait son pluriel en -aux : « {mot} ».",[{forme:"chevals",mot:"chevaux"}]),
+ catL151("cat-ons-ont","-ons / -ont","conjugaison","D1.1",[{type:"terminaisons",liste:["ons","ont"]}],"-ons / -ont","Tu as écrit « {forme} » : -ons va avec « nous », -ont avec « ils, elles » : « {mot} ».",[{forme:"allont",mot:"allons"}]),
+ catL151("cat-imparfait-passe-simple","Imparfait / passé simple","conjugaison","D1.1",[{type:"terminaisons",liste:["ait","a"]},{type:"terminaisons",liste:["aient","èrent"]},{type:"terminaisons",liste:["ais","ai"]}],"l'imparfait ou le passé simple","Tu as écrit « {forme} » : tu as confondu l'imparfait et le passé simple : « {mot} ».",[{forme:"marchait",mot:"marcha"}]),
+ catL151("cat-terminaison-e-er","Terminaison -é / -er / -ez / -ai / -ait","conjugaison","D1.1",[{type:"terminaisons",liste:["é","er","ez","ai","ais","ait","aient","és","ée","ées","et","es","e","ent"]}],"la terminaison (-é, -er, -ez, -ai…)","Tu as écrit « {forme} » : la terminaison est -{attendu}, pas -{ecrit} : « {mot} ».",[{forme:"mangé",mot:"manger"}]),
+ catL151("cat-verbe-personne","-s / -x / -t final du verbe (la personne)","conjugaison","D1.1",[{type:"terminaisons",liste:["t","s","x"]}],"la terminaison de la personne (-s, -x, -t)","Tu as écrit « {forme} » : la terminaison dépend de la personne du sujet : « {mot} ».",[{forme:"veux",mot:"veut"}]),
+ catL151("cat-verbe-t-d","-t / -d final du verbe","conjugaison","D1.1",[{type:"terminaisons",liste:["d","t","ds","ts"]}],"le -d ou le -t final","Tu as écrit « {forme} » : ce verbe garde le -{attendu} de son radical : « {mot} ».",[{forme:"prent",mot:"prend"}]),
+ catL151("cat-accent","Accent","lexique","D1.2",[{type:"accent"}],"l'accent","Tu as écrit « {forme} » : attention à l'accent {accent} sur le {lettre} : « {mot} ».",[{forme:"eleve",mot:"élève"}]),
+ catL151("cat-consonne-double","Consonne double","lexique","D1.2",[{type:"double"}],"la consonne double","Tu as écrit « {forme} » : attention au {lettre}, simple ou double : « {mot} ».",[{forme:"apeler",mot:"appeler"}]),
+ catL151("cat-lettre-muette","Lettre muette finale","lexique","D1.2",[{type:"suffixe",attendu:"t",ecrit:""},{type:"suffixe",attendu:"d",ecrit:""},{type:"suffixe",attendu:"p",ecrit:""},{type:"suffixe",attendu:"",ecrit:"t"},{type:"suffixe",attendu:"",ecrit:"d"},{type:"suffixe",attendu:"s",ecrit:""},{type:"suffixe",attendu:"x",ecrit:""}],"la lettre muette finale","Tu as écrit « {forme} » : attention à la lettre muette à la fin du mot ({lettre}) : « {mot} ».",[{forme:"bor",mot:"bord"}]),
+ catL151("cat-y-i","y / i","lexique","D1.2",[{type:"lettre",de:"y",vers:"i"},{type:"lettre",de:"i",vers:"y"}],"le y ou le i","Tu as écrit « {forme} » : dans ce mot, il faut un {attendu} : « {mot} ».",[{forme:"sistème",mot:"système"}]),
+ catL151("cat-son-s","Le son [s] (s, ss, c, ç, t)","lexique","D1.2",[{type:"lettre",de:"ss",vers:"s"},{type:"lettre",de:"s",vers:"ss"},{type:"lettre",de:"c",vers:"s"},{type:"lettre",de:"s",vers:"c"},{type:"lettre",de:"c",vers:"ss"},{type:"lettre",de:"ss",vers:"c"},{type:"lettre",de:"t",vers:"c"},{type:"lettre",de:"sc",vers:"s"}],"le son [s]","Tu as écrit « {forme} » : le son [s] s'écrit ici « {attendu} » : « {mot} ».",[{forme:"pousière",mot:"poussière"}]),
+ catL151("cat-son-k","Le son [k] (c, qu, k)","lexique","D1.2",[{type:"lettre",de:"qu",vers:"c"},{type:"lettre",de:"c",vers:"qu"},{type:"lettre",de:"qu",vers:"k"},{type:"lettre",de:"k",vers:"qu"},{type:"lettre",de:"c",vers:"k"},{type:"lettre",de:"k",vers:"c"}],"le son [k]","Tu as écrit « {forme} » : le son [k] s'écrit ici « {attendu} » : « {mot} ».",[{forme:"cartier",mot:"quartier"}]),
+ catL151("cat-son-g-j","Le son [g] / [ʒ] (g, gu, ge, j)","lexique","D1.2",[{type:"lettre",de:"gu",vers:"g"},{type:"lettre",de:"g",vers:"gu"},{type:"lettre",de:"ge",vers:"g"},{type:"lettre",de:"g",vers:"ge"},{type:"lettre",de:"j",vers:"g"},{type:"lettre",de:"g",vers:"j"}],"le g, le gu, le ge ou le j","Tu as écrit « {forme} » : ici on écrit « {attendu} » : « {mot} ».",[{forme:"mangons",mot:"mangeons"}]),
+ catL151("cat-nasales","Les nasales (an/en, in/ain/ein, on/om)","lexique","D1.2",[{type:"lettre",de:"en",vers:"an"},{type:"lettre",de:"an",vers:"en"},{type:"lettre",de:"em",vers:"am"},{type:"lettre",de:"am",vers:"em"},{type:"lettre",de:"ain",vers:"in"},{type:"lettre",de:"in",vers:"ain"},{type:"lettre",de:"ein",vers:"in"},{type:"lettre",de:"in",vers:"ein"},{type:"lettre",de:"ain",vers:"ein"},{type:"lettre",de:"ein",vers:"ain"}],"le son nasal","Tu as écrit « {forme} » : le son s'écrit ici « {attendu} » : « {mot} ».",[{forme:"tamps",mot:"temps"}]),
+ catL151("cat-m-devant-b-p","m devant b, p","lexique","D1.2",[{type:"lettre",de:"mb",vers:"nb"},{type:"lettre",de:"mp",vers:"np"},{type:"lettre",de:"mm",vers:"nm"}],"le m devant b, m, p","Tu as écrit « {forme} » : devant b, m ou p, on écrit m : « {mot} ».",[{forme:"tenps",mot:"temps"}]),
+ catL151("cat-o-au-eau","o / au / eau","lexique","D1.2",[{type:"lettre",de:"au",vers:"o"},{type:"lettre",de:"o",vers:"au"},{type:"lettre",de:"eau",vers:"au"},{type:"lettre",de:"au",vers:"eau"},{type:"lettre",de:"eau",vers:"o"},{type:"lettre",de:"o",vers:"eau"}],"o, au ou eau","Tu as écrit « {forme} » : le son [o] s'écrit ici « {attendu} » : « {mot} ».",[{forme:"bato",mot:"bateau"}]),
+ catL151("cat-h-muet","h muet","lexique","D1.2",[{type:"lettre",de:"h",vers:""}],"le h","Tu as écrit « {forme} » : il y a un h dans ce mot : « {mot} ».",[{forme:"abit",mot:"habit"}]),
+ catL151("cat-lettres-inversees","Lettres inversées","lexique","D1.2",[{type:"inversion"}],"deux lettres inversées","Tu as écrit « {forme} » : deux lettres sont inversées : « {mot} ».",[{forme:"dagnereux",mot:"dangereux"}]),
+ catL151("cat-lettre-omise","Lettre oubliée","lexique","D1.2",[{type:"omise"}],"une lettre oubliée","Tu as écrit « {forme} » : il manque une lettre ({lettre}) : « {mot} ».",[{forme:"chose",mot:"choses"}]),
+ catL151("cat-lettre-ajoutee","Lettre en trop","lexique","D1.2",[{type:"ajoutee"}],"une lettre en trop","Tu as écrit « {forme} » : le {lettre} est en trop : « {mot} ».",[{forme:"maisoon",mot:"maison"}]),
+ catL151("cat-lettre-changee","Lettre changée","lexique","D1.2",[{type:"changee"}],"une lettre changée","Tu as écrit « {forme} » : une lettre est changée ({ecrit} au lieu de {attendu}) : « {mot} ».",[{forme:"bacon",mot:"balcon"}])
+];
+var CAT_AUTRE_L151={id:"cat-autre",nom:"Autre",famille:"autre",competence:"",motifs:[],court:"",commentaire:"Compare lettre à lettre avec le mot juste : « {mot} ».",origine:"livré",actif:true};
+var FAMILLE_TYPE_L151={G:["accords","conjugaison","homophones"],L:["lexique","mots","homophones"],C:["mots","lexique"]};
+function remplirL151(t,d){return String(t||"").replace(/\{(\w+)\}/g,function(m,k){return d[k]!=null?String(d[k]):""}).replace(/\s+/g," ").trim();}
+/* une seule catégorie qui explique tout l'écart ? (dans l'ordre de priorité) */
+function uneCategorieL151(f,w,ctx,familles){var cats=(ctx.categories||CATEGORIES_L151),prem=null;for(var i=0;i<cats.length;i++){var c=cats[i];if(c.actif===false)continue;for(var j=0;j<(c.motifs||[]).length;j++){var r=motifL151(c.motifs[j],f,w,ctx);if(r){var x={cat:c,d:r,m:c.motifs[j]};if(!prem)prem=x;if(!familles||c.tousTypes||familles.indexOf(c.famille)>=0)return x;break;}}}return familles?(prem?Object.assign({},prem,{horsType:true}):null):prem;}
+/* L'ANALYSE : l'écart entre ce que l'élève a écrit et le mot attendu → la catégorie (la première), tous les écarts nommés, le commentaire */
+function analyserEcartL151(forme,attendu,type,ctx){ctx=ctx||{};var f=String(forme||"").trim(),w=String(attendu||"").trim();
+  var res={categorie:"cat-autre",ecarts:[],reconnu:false,commentaire:"",famille:"autre"};
+  if(!f||f===w){res.commentaire="";return res;}
+  var compat0=FAMILLE_TYPE_L151[type]||null,u=uneCategorieL151(f,w,ctx,compat0),ec=[];if(u&&u.horsType){res.categorie=u.cat.id;res.famille=u.cat.famille;res.ecarts=[u.cat.id];res.horsType=true;res.commentaire=remplirL151(CAT_AUTRE_L151.commentaire,{forme:f,mot:w});return res;}
+  if(u)ec=[u];
+  else{/* deux écarts à la fois : on retire d'abord un écart de lettre (accent, double, casse, tiret), puis on cherche le reste */
+    for(var i=0;i<NORMALISEURS_L151.length&&!ec.length;i++){var N=NORMALISEURS_L151[i],f2=N[1](f),w2=N[1](w);if(f2===f&&w2===w)continue;
+      var cN=(ctx.categories||CATEGORIES_L151).filter(function(c){return c.id==="cat-"+N[0]})[0],dN=cN?motifL151(cN.motifs[0],f,N[0]==="accent"?sansAccL151(f)===sansAccL151(w)?w:(function(){var x="";for(var k=0;k<w.length;k++)x+=w[k];return x})():w,ctx):null;
+      if(f2===w2){if(cN)ec=[{cat:cN,d:dN||{}}];break;}
+      var u2=uneCategorieL151(f2,w2,ctx,compat0);if(u2&&!u2.horsType&&cN)ec=[{cat:cN,d:dN||{lettre:""}},u2];}}
+  if(!ec.length){res.commentaire=remplirL151(CAT_AUTRE_L151.commentaire,{forme:f,mot:w});return res;}
+  var prem=ec[0].cat,compat=FAMILLE_TYPE_L151[type]||null;
+  /* jamais hors sujet : la catégorie doit convenir au type posé (une G sur un écart d'accent : seulement si c'est un homophone grammatical) */
+  var ok=!compat||ec.some(function(x){return x.cat.tousTypes||compat.indexOf(x.cat.famille)>=0});
+  res.categorie=prem.id;res.famille=prem.famille;res.ecarts=ec.map(function(x){return x.cat.id});
+  if(!ok){res.commentaire=remplirL151(CAT_AUTRE_L151.commentaire,{forme:f,mot:w});res.horsType=true;return res;}
+  res.reconnu=true;
+  if(ec.length===1)res.commentaire=remplirL151((ec[0].m&&ec[0].m.commentaire)||prem.commentaire,Object.assign({forme:f,mot:w},ec[0].d));
+  else res.commentaire=remplirL151("Tu as écrit « {forme} » : attention à "+ec.map(function(x){return x.cat.court}).join(", et à ")+" : « {mot} ».",{forme:f,mot:w});
+  return res;}
+/* « Mot long » : trois syllabes ou plus (jamais un nombre de lettres) */
+function cesureL151(w){var s=syllabes(w),t="";s.forEach(function(x,i){t+=(i&&!/[-'\u2019]$/.test(s[i-1])?"·":"")+x;});return t;}
+function motLongL151(w){return syllabes(w).filter(function(x){return /[a-zà-ÿœæ]/i.test(x)}).length>=3?"Mot long — décompose-le en syllabes : "+cesureL151(w)+".":"";}
+
+/* ═══ [L15.1b-1] LES ANALYSES AU HUB : site/analyses/categories/<id> (les objets), site/analyses/homophones/<id> — un seul lieu pour toutes les
+   dictées, écouté en direct ; le seed ci-dessus (CATEGORIES_L151) les écrit à la première ouverture par le professeur, et tient l'app si le hub
+   manque. Paul n'édite que les commentaires (Réglages) et ajoute des paires d'homophones. */
+var ANALYSES_L151={categories:null,homophones:{},ecoute:false,v:0};
+function categoriesL151(){var hub=ANALYSES_L151.categories;if(!hub)return CATEGORIES_L151;var vus={},l=[];
+  CATEGORIES_L151.forEach(function(c){var h=hub[c.id];l.push(h?Object.assign({},c,h,{motifs:(h.motifs&&h.motifs.length)?h.motifs:c.motifs}):c);vus[c.id]=1;});
+  Object.keys(hub).forEach(function(id){if(!vus[id]&&hub[id]&&hub[id].motifs)l.push(hub[id]);});return l;}
+function ecouterAnalysesL151(prof){if(ANALYSES_L151.ecoute||typeof db==="undefined")return;ANALYSES_L151.ecoute=true;
+  db.ref("site/analyses").on("value",function(sn){var v=sn.val()||{};
+    if(!v.categories&&prof){var o={},t=Date.now();CATEGORIES_L151.forEach(function(c){o[c.id]=Object.assign({},c,{creeLe:t,modifieLe:t});});
+      var hp={"hom-ce-ceux":{a:"ce",b:"ceux",regle:"« ce » = déterminant ou pronom singulier ; « ceux » = pronom pluriel (→ celles).",competence:"D1.5",origine:"livré"}};
+      db.ref("site/analyses").update({categories:o,homophones:Object.assign(hp,v.homophones||{})});return;}   /* [L15.1b-1] la première ouverture : les objets livrés */
+    ANALYSES_L151.categories=v.categories||null;ANALYSES_L151.homophones=v.homophones||{};ANALYSES_L151.v++;try{window.dispatchEvent(new Event("analyses-l151"))}catch(e){}});}
+function homophonesL151(){var m={},add=function(forms,regle,groupe){forms.forEach(function(f){var k=String(f).toLowerCase();(m[k]=m[k]||[]).push({forms:forms.map(function(x){return String(x).toLowerCase()}),regle:regle||"",groupe:groupe||forms.join("/")});});};
+  var vus={};if(typeof GRAMM!=="undefined"&&GRAMM.HOMOPHONES)Object.keys(GRAMM.HOMOPHONES).forEach(function(f){var g=GRAMM.HOMOPHONES[f];if(!vus[g.group]){vus[g.group]=1;add(g.forms,g.rule,g.group);}});   /* la table existante du code, toutes familles */
+  Object.keys(ANALYSES_L151.homophones||{}).forEach(function(id){var h=ANALYSES_L151.homophones[id];if(h&&h.a&&h.b&&h.actif!==false)add([h.a,h.b],h.regle,h.a+"/"+h.b);});   /* + les paires de Paul */
+  return m;}
+function motAvantL151(tokens,idx){if(!tokens||idx==null)return "";for(var i=idx-1;i>=0;i--){var t=tokens[i];if(t&&!isPunct(t))return t;}return "";}
+function analyseErreurL151(err,tokens){if(!err||!err.fautif||!/^[GLC]$/.test(err.type))return null;
+  return analyserEcartL151(err.fautif,err.word,err.type,{categories:categoriesL151(),homophones:homophonesL151(),avant:motAvantL151(tokens,err.idx)});}
+
+function gramComment(err,tokens){   /* [L15.1b-1] tokens : pour lire le mot d'avant (un pronom → un verbe ; un déterminant → un nom) */
   var w=err.word||"",t=err.type;
   if(estApostrophe(w)||t==="E") return "\u00c9lision \u2014 devant une voyelle ou un h muet, le e (ou le a) tombe et l\u2019apostrophe le remplace : l\u2019arbre, s\u2019approcher, qu\u2019on, n\u2019a. Relis en v\u00e9rifiant chaque petit mot devant une voyelle.";
   if(t==="M") return "Mot manquant \u2014 relis la phrase \u00e0 voix haute pour retrouver le mot oubli\u00e9. Pense \u00e0 la logique de la phrase : sujet, verbe, compl\u00e9ment.";
   if(t==="P") return "Ponctuation manquante \u2014 un signe ( . , ; : ? ! ) a \u00e9t\u00e9 oubli\u00e9. Relis en marquant les pauses : virgule pour une courte pause, point pour une fin de phrase, deux-points pour annoncer.";
   if(t==="I") return "Mot illisible \u2014 soigne ton \u00e9criture pour que chaque lettre soit identifiable. Forme bien les boucles (l, b, h) et les jambages (g, j, p).";
   if(t==="A") return "Attention \u00e0 ta graphie \u2014 ce mot est \u00e0 la limite de la lisibilit\u00e9. Pas de point retir\u00e9 ici, mais soigne le trac\u00e9 \u00e0 l\u2019avenir : un autre correcteur pourrait le compter illisible.";
+  if(err.sansCout&&err.motifSansCout!=="amenage")return "";   /* [L15.1b-1] une forme acceptée (L11) n'a pas de commentaire d'erreur */
+  var anL151=analyseErreurL151(err,tokens);if(anL151){var mlL151=motLongL151(w);return anL151.commentaire+(mlL151?" "+mlL151:"");}   /* [L15.1b-1] l'écart d'abord */
   var wl=w.toLowerCase();
   var notes=[];
   if(t==="G"){
@@ -2344,7 +2517,7 @@ function gramComment(err){
     if(/(eur|eux|euse)$/.test(wl)) notes.push("Suffixe -eur/-eux/-euse \u2014 famille de mots : chaleur \u2192 chaleureux.");
     if(/(ence|ance)$/.test(wl)) notes.push("Suffixe -ence/-ance \u2014 pas de r\u00e8gle simple, \u00e0 m\u00e9moriser : diff\u00e9rence, puissance.");
     if(/(ph)/.test(wl)) notes.push("Groupe \u00ab ph \u00bb = [f] \u2014 mot d\u2019origine grecque (philosophie, pharmacie).");
-    if(wl.length>7) notes.push("Mot long \u2014 d\u00e9compose en syllabes : "+w.replace(/(.{3})/g,"$1\u00b7").replace(/\u00b7$/,"")+".");
+    var mlL=motLongL151(w);if(mlL)notes.push(mlL);   /* [L15.1b-1 — dette 136] trois syllabes ou plus, la césure de la langue parlée (jamais un nombre de lettres) */
     if(notes.length===0){
       if(err.fautif&&typeof GRAMM!=="undefined"&&GRAMM.classify){
         var classif=GRAMM.classify(err.fautif,w);
@@ -2965,6 +3138,7 @@ function ImportPdfL15e(p){
 }
 
 function AppProf(p){
+  ecouterAnalysesL151(true);var sAnL=useState(0),setAnL=sAnL[1];useEffect(function(){function f(){setAnL(function(x){return x+1})}window.addEventListener("analyses-l151",f);return function(){window.removeEventListener("analyses-l151",f)}},[]);   /* [L15.1b-1] */
   ecouterProfilsL15g();var sPrL=useState(0),setPrL=sPrL[1];useEffect(function(){function f(){setPrL(function(x){return x+1})}window.addEventListener("profils-l15g",f);return function(){window.removeEventListener("profils-l15g",f)}},[]);   /* [L15g] */
   var s1=useState("config"),screen=s1[0],setScreen=s1[1];
   var s2=useState(""),textInput=s2[0],setTextInput=s2[1];
@@ -3403,6 +3577,45 @@ function EditeurTextes(){
 }
 
 // ═══ M6 : RÉGLAGES (principe « doter ») — préférences locales, aucun nœud Firebase ═══
+/* [L15.1b-1] RÉGLAGES — « Les commentaires de l'analyse » : une fenêtre sur le lieu unique (site/analyses), pour toutes les dictées */
+function erreursAnalyseesL151(corrections,texte){var tok=tokenize(texte||""),l=[];Object.keys(corrections||{}).forEach(function(k){var c=corrections[k];if(!c)return;
+  toArr(c.errors||[]).forEach(function(e){if(!e||!e.fautif||!/^[GLC]$/.test(e.type)||(e.sansCout&&e.motifSansCout!=="amenage"))return;var a=analyseErreurL151(e,tok);if(a)l.push({k:k,e:e,a:a});});});return l;}
+function CommentairesAnalyseL151(p){
+  var sE=useState({}),edits=sE[0],setEdits=sE[1],sH=useState({a:"",b:"",regle:""}),hp=sH[0],setHp=sH[1],sM=useState(""),msg=sM[0],setMsg=sM[1];
+  var cats=categoriesL151(),err=erreursAnalyseesL151(p.corrections,p.texte),parCat={};err.forEach(function(x){parCat[x.a.categorie]=(parCat[x.a.categorie]||0)+1;});
+  var presentes=cats.filter(function(c){return parCat[c.id]}).sort(function(a,b){return parCat[b.id]-parCat[a.id]}),autres=cats.filter(function(c){return !parCat[c.id]});
+  function ligne(c){var val=edits[c.id]!==undefined?edits[c.id]:(c.commentaire||"");var ex=(c.exemples||[])[0];
+    return h("div",{key:c.id,className:"categorie-l151","data-id":c.id,style:{borderTop:"1px solid var(--border)",padding:"8px 0"}},
+      h("div",{style:{display:"flex",gap:8,alignItems:"baseline",flexWrap:"wrap"}},h("b",null,c.nom),parCat[c.id]?h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},parCat[c.id]+" erreur"+(parCat[c.id]>1?"s":"")+" dans cette dict\u00e9e"):null,
+        ex?h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"ex. \u00ab "+ex.forme+" \u00bb \u2192 \u00ab "+ex.mot+" \u00bb"):null),
+      h("textarea",{value:val,rows:2,style:{width:"100%",boxSizing:"border-box",fontSize:".9rem",marginTop:4},title:"Le commentaire que lit l\u2019\u00e9l\u00e8ve sous cette erreur. {forme} = ce qu\u2019il a \u00e9crit, {mot} = le mot juste, {lettre}, {accent}, {ecrit}, {attendu}, {regle} : remplis automatiquement. Il vaut pour toutes les dict\u00e9es ; enregistr\u00e9 quand tu quittes le champ.",
+        onChange:function(e){var o=Object.assign({},edits);o[c.id]=e.target.value;setEdits(o);},
+        onBlur:function(){if(edits[c.id]===undefined)return;var v=edits[c.id];db.ref("site/analyses/categories/"+c.id).update({commentaire:v,modifieLe:Date.now()}).then(function(){var o=Object.assign({},edits);delete o[c.id];setEdits(o);setMsg("Commentaire enregistr\u00e9 \u2014 il vaut pour toutes les dict\u00e9es.");});}}));}
+  return h("div",{className:"card",id:"carte-commentaires-l151"},
+    h("h2",{style:{marginTop:0}},"Les commentaires de l\u2019analyse"),
+    h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"0 0 8px"}},"Sous chaque erreur recopi\u00e9e, l\u2019\u00e9l\u00e8ve lit le commentaire de sa cat\u00e9gorie (d\u00e9duite de l\u2019\u00e9cart entre ce qu\u2019il a \u00e9crit et le mot juste). Ces commentaires sont communs \u00e0 toutes les dict\u00e9es : r\u00e9\u00e9cris-les dans tes mots."),
+    msg?h("div",{id:"msg-commentaires-l151",style:{color:"#166534",fontSize:".85rem",marginBottom:6}},msg):null,
+    presentes.length?presentes.map(ligne):h("div",{style:{color:"var(--muted)",fontSize:".88rem"}},"Aucune erreur recopi\u00e9e dans cette dict\u00e9e pour l\u2019instant."),
+    h("details",{style:{marginTop:8}},h("summary",{style:{cursor:"pointer",fontSize:".88rem"},title:"Les cat\u00e9gories qui n\u2019ont pas d\u2019erreur dans cette dict\u00e9e."},"Les autres cat\u00e9gories ("+autres.length+")"),autres.map(ligne)),
+    h("div",{style:{marginTop:12,borderTop:"1px solid var(--border)",paddingTop:10}},
+      h("b",null,"Ajouter une paire d\u2019homophones"),
+      h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}},
+        h("input",{id:"hom-a-l151",placeholder:"un mot",value:hp.a,onChange:function(e){setHp(Object.assign({},hp,{a:e.target.value}))},style:{width:110}}),
+        h("input",{id:"hom-b-l151",placeholder:"l\u2019autre",value:hp.b,onChange:function(e){setHp(Object.assign({},hp,{b:e.target.value}))},style:{width:110}}),
+        h("input",{id:"hom-regle-l151",placeholder:"la r\u00e8gle (ce que l\u2019\u00e9l\u00e8ve lira)",value:hp.regle,onChange:function(e){setHp(Object.assign({},hp,{regle:e.target.value}))},style:{flex:1,minWidth:200}}),
+        h("button",{className:"btn-sm btn-primary",id:"hom-ajouter-l151",title:"Ajoute la paire pour toutes les dict\u00e9es : une erreur entre ces deux mots re\u00e7oit aussit\u00f4t le commentaire d\u2019homophone, avec ta r\u00e8gle.",onClick:function(){var a=hp.a.trim(),b=hp.b.trim();if(!a||!b||a===b)return;var id="hom-"+san(a)+"-"+san(b);
+          db.ref("site/analyses/homophones/"+id).set({a:a,b:b,regle:hp.regle.trim(),competence:"D1.5",origine:"paul",creeLe:Date.now()}).then(function(){setHp({a:"",b:"",regle:""});setMsg("Paire \u00ab "+a+" / "+b+" \u00bb ajout\u00e9e \u2014 elle vaut pour toutes les dict\u00e9es.");});}},"Ajouter la paire"))));
+}
+/* [L15.1b-1] BILAN — les erreurs « sans commentaire reconnu » (cette dictée) : la boucle d'amélioration ; côté élève, ce cas s'appelle « autre » */
+function NonReconnusL151(p){var err=erreursAnalyseesL151(p.corrections,(p.data||{}).text),nr=err.filter(function(x){return !x.a.reconnu}),g={};
+  nr.forEach(function(x){var k=x.e.fautif+" \u2192 "+x.e.word;g[k]=g[k]||{n:0,eleves:{}};g[k].n++;g[k].eleves[x.k]=1;});
+  var l=Object.keys(g).sort(function(a,b){return g[b].n-g[a].n});
+  return h("details",{className:"card",id:"carte-non-reconnus-l151",style:{marginBottom:12}},
+    h("summary",{style:{cursor:"pointer",fontWeight:600},title:"Les erreurs recopi\u00e9es dont l\u2019\u00e9cart n\u2019est pas reconnu : l\u2019\u00e9l\u00e8ve a le commentaire prudent (\u00ab Compare lettre \u00e0 lettre\u2026 \u00bb). Ajoute une paire d\u2019homophones dans R\u00e9glages, ou dis-le pour une nouvelle cat\u00e9gorie."},
+      "\ud83d\udd0e Analyse : "+nr.length+" erreur"+(nr.length>1?"s":"")+" sans commentaire reconnu sur "+err.length+" recopi\u00e9e"+(err.length>1?"s":"")),
+    h("table",{style:{width:"100%",fontSize:".85rem",marginTop:8}},h("tbody",null,h("tr",null,h("th",{style:{textAlign:"left"}},"Forme \u2192 mot"),h("th",null,"Fois"),h("th",null,"\u00c9l\u00e8ves")),
+      l.map(function(k){return h("tr",{key:k},h("td",null,k),h("td",{style:{textAlign:"center"}},g[k].n),h("td",{style:{textAlign:"center"}},Object.keys(g[k].eleves).length));}))));}
+
 function Reglages(pR){
   pR=pR||{};
   var sA=useState(getSpeechEnabled()),audio=sA[0],setAudio=sA[1];
@@ -3422,6 +3635,7 @@ function Reglages(pR){
       h("input",{type:"checkbox",checked:checked,onChange:onChange}),label,aide?ifo(aide):null);
   }
   return h("div",null,
+    pR.dicteeId&&h(CommentairesAnalyseL151,{corrections:pR.corrections,texte:pR.texte}),   /* [L15.1b-1] */
     pR.dicteeId&&tkR&&h("div",{className:"card",id:"carte-formes-acceptees"},   /* [L11] */
       h("h2",null,"Formes accept\u00e9es de ce texte"+(function(){var a=autresDicteesDuTexte(tkR,pR.dicteeId);return a.length?" \u2014 partag\u00e9es avec : "+a.map(function(t){return "\u00ab "+t+" \u00bb"}).join(", "):"";})()),
       msgFA&&h("div",{id:"msg-fa-reglages",style:{margin:"0 0 8px",padding:"6px 10px",borderRadius:8,background:"#f0fdf4",border:"1px solid #16a34a",color:"#14532d",fontSize:".85rem"}},msgFA),
@@ -5191,6 +5405,7 @@ var amenGroupes={};doneA.forEach(function(e){var b=e.base||data.base;(amenGroupe
   function prenomOnly(n){var p=n.split(/\s+/);return p.length>1?p[p.length-1]:n}
   var sPrompt = useState(false), showPrompt = sPrompt[0], setShowPrompt = sPrompt[1];
   return h("div",{className:"fade-up"},
+    h(NonReconnusL151,{corrections:p.corrections,data:data}),   /* [L15.1b-1] */
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}},
       h("h2",{style:{margin:0,fontSize:"1.4rem"}},"Bilan de la dict\u00e9e"),
       h("button",{className:"btn btn-primary",onClick:function(){setShowPrompt(true)},title:"G\u00e9n\u00e8re un prompt + JSON \u00e0 coller dans Claude pour obtenir un HTML d'exercices personnalis\u00e9s par \u00e9l\u00e8ve + classe enti\u00e8re",style:{fontSize:".9rem"}},"\ud83e\udd16 Prompt IA \u2014 Banque d'exercices")
@@ -6783,7 +6998,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     /* Sans fautif : rien — on ne prétend pas savoir ce qui a été écrit.
        (L'ancien « Essai retenu : … » recopiait le dernier essai d'autocorrection,
        c'est-à-dire presque toujours le mot juste : c'était faux et révélateur.) */
-    var comment = gramComment(err);
+    var comment = gramComment(err,(data&&(data.tokens||tokenize(data.text||"")))||null);   /* [L15.1b-1] */
     var ptStr = POINTS[err.type] ? ' <span class="err-points">'+POINTS[err.type]+' pt</span>' : '';
     /* Repetition : on le dit en clair, avec la regle, et on retire le cout. */
     var nFoisMot = errors.filter(function(x){return x && String(x.word||"").toLowerCase()===String(err.word||"").toLowerCase() && x.type===err.type}).length;
@@ -8138,6 +8353,7 @@ function TabletteDeux(p){
 }
 
 function AppEleveCoeurL15f(p){
+  ecouterAnalysesL151(false);   /* [L15.1b-1] les commentaires, en direct */
   var s1=useState("login"),screen=s1[0],setScreen=s1[1];
   var s2=useState([]),dictees=s2[0],setDictees=s2[1];
   var s3=useState(""),nomInput=s3[0],setNomInput=s3[1];
@@ -10852,7 +11068,7 @@ function EleveCorrection(p){
             h("span",{style:{fontSize:".8rem",padding:"2px 8px",borderRadius:6,fontWeight:600,
               background:typeBg,color:typeColor}},typeLabel)
           ),
-          h("p",{style:{fontSize:".88rem",color:"#555",lineHeight:1.6,marginLeft:32}},gramComment(err))
+          h("p",{style:{fontSize:".88rem",color:"#555",lineHeight:1.6,marginLeft:32}},gramComment(err,typeof tokens!=="undefined"?tokens:null))
         )
       }),
       extras.length>0&&extras.map(function(ex,i){
