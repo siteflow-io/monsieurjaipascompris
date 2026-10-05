@@ -383,3 +383,12 @@
 | la reconnaissance | `groupesL15e` (crochets, parenthèses, barres), `analyserPdfL15e` (texte, groupes, « sur n points », consigne / formulaire / notes écartés, titre), `assemblerL15e` (bonnes formes du classique, notes → indices, crochet multi-mots), `normMotL15e` |
 | l'écran | `ImportPdfL15e` (deux zones, états, le texte lu, la fenêtre de L15a, les champs, « Enregistrer la dictée » → la dictée et sa version aménagée, ouverture sur Préparation) ; le pied de l'accueil (`AppProf`) ; l'aide « ? » |
 | les propositions | `reglesCibleesL15a` : + pluriel en -aux, + -e final |
+
+## AJOUT DU 05/10/2026 — correction_dictee 6.7.0-L16a : le mode rapide par type
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| les formes par type | `formesPour(mot, attendu, type)` ; `listeFormesTexte` (le type du menu) ; la liste du mode rapide (`askFautifI`) ; le pavé (`prendreFormeI` / texte) ; `formeEnCoursL11` |
+| la bascule | `confirmFautifI(valeur, sansBascule, typeImpose)` ; l'état de bascule et son encart (« Passer en L » / « Garder G ») sous le champ |
+| « Changer → » et Suppr | l'écran « déjà marqué » (`existingErr.type`) ; le clavier du mode rapide (`e.key==="Delete"` → `fastClear`, hors champ) ; l'infobulle du bouton « ✕ Annuler l'erreur » |
+| la ligne centrée | le calcul `a16 / b16` (budget 52 par côté) et la grille `gridTemplateColumns:"1fr auto 1fr"` au-dessus du gros mot |
