@@ -1082,3 +1082,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15e (04/10/2026, conscience n°12)
 - blob `b151a1b0b893` (commit `8c2cd6463d24`) · 848 699 o · md5 `dfde1522b3e7f7cec144aea892bc10c6` · v6.7.0-L15d-b
 - **Motif** : L15e — l'import PDF. Promu : 872364 o, md5 `1c8de1e3be1b395939c2c192eb757be0` (bit à bit). Une dictée importée est une dictée ordinaire au hub : une version antérieure la lit.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L16a (05/10/2026, conscience n°12)
+- blob `f9a6ec16f9a0` (commit `6b1d539e80b4`) · 872 364 o · md5 `1c8de1e3be1b395939c2c192eb757be0` · v6.7.0-L15e
+- **Motif** : L16a — les formes par type, la bascule, Changer →, Suppr, la ligne centrée. Promu : 876 574 o, md5 `73f4968ea2bacd374effac5e6c372515` (bit à bit).
