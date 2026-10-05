@@ -1181,7 +1181,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15e";
+var APP_VERSION="6.7.0-L16a";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1224,7 +1224,7 @@ function motCleForme(tokens,idx){var w=String(tokens[idx]||"");if(!w)return "";v
 function empreinteTexte(t){var x=String(t||"").toLowerCase().replace(/\s+/g," ").trim(),hh=5381;for(var i=0;i<x.length;i++){hh=((hh<<5)+hh+x.charCodeAt(i))>>>0;}return "t"+hh.toString(36)+"_"+x.length;}
 function idForme(){return "fe_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);}
 /* la liste d'un mot : toutes les dictées confondues, dédoublonnée sans la casse (la première graphie gardée), du plus fréquent au plus rare */
-function formesPour(mot,attendu){var acc={},ordre=[];Object.keys(FORMES.parId).forEach(function(id){var o=FORMES.parId[id];if(!o||o.mot!==mot)return;var f=String(o.forme||"").trim();if(!f||motJuste(f,attendu))return;
+function formesPour(mot,attendu,type){var acc={},ordre=[];Object.keys(FORMES.parId).forEach(function(id){var o=FORMES.parId[id];if(!o||o.mot!==mot)return;if(type&&o.type!==type)return;   /* [L16a] la liste du type choisi seulement (sans type : toutes) */var f=String(o.forme||"").trim();if(!f||motJuste(f,attendu))return;
   var k=f;if(!acc[k]){acc[k]={forme:f,compte:0};ordre.push(k);}acc[k].compte++;});   /* [L15-0] la casse est gardée : « Empereur » et « empereur » sont deux formes */
   return ordre.map(function(k){return acc[k]}).sort(function(x,y){return y.compte-x.compte||x.forme.localeCompare(y.forme)});}
 /* à chaque enregistrement d'une copie : les erreurs G/L recopiées gardent ou reçoivent leur objet ; un objet dont l'erreur est retirée est retiré */
@@ -1357,7 +1357,8 @@ var AIDES={
     ["Ctrl+Z","annuler la derni\u00e8re erreur pos\u00e9e"],
     AIDE_FERMER]},
   "case":{ou:"La case \u00ab ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u00bb",l:[
-    ["pav\u00e9 num\u00e9rique","choisir une forme d\u00e9j\u00e0 vue : les chiffres se composent (1 puis 2 = la 12e) ; prise d\u00e8s que le num\u00e9ro est s\u00fbr"],
+    ["pav\u00e9 num\u00e9rique","choisir une forme d\u00e9j\u00e0 vue du type choisi (G ou L) : les chiffres se composent (1 puis 2 = la 12e) ; prise d\u00e8s que le num\u00e9ro est s\u00fbr"],
+    ["\u00ab Passer en L \u00bb / \u00ab Garder G \u00bb","en mode rapide, quand la forme tap\u00e9e n\u2019a \u00e9t\u00e9 vue que sous l\u2019autre type : changer de type ou garder (au clic seulement)"],
     ["Entr\u00e9e","valider ce qui est tap\u00e9, ou le num\u00e9ro en cours"],
     ["\u00c9chap","effacer le num\u00e9ro en cours ; puis fermer la case"],
     ["rang\u00e9e du haut","\u00e9crire un chiffre dans la case (\u00ab 3 \u00bb pour \u00ab trois \u00bb)"],
@@ -1374,6 +1375,8 @@ var AIDES={
     ["Espace / Entr\u00e9e","correct, mot suivant"],
     ["Retour","mot pr\u00e9c\u00e9dent"],
     ["\u21e7R","passer en mode texte, sur la m\u00eame copie"],
+    ["Suppr","annuler l\u2019erreur pos\u00e9e sur ce mot (hors de la case de saisie)"],
+    ["\u00ab Changer \u2192 \u00bb","sur un mot d\u00e9j\u00e0 marqu\u00e9 : vers l\u2019autre type seulement (G \u2194 L)"],
     ["\u00ab \u25b6 Lancer l\u2019autocorrection \u00bb (Donn\u00e9es \u2192 Suivi)","ouvre l\u2019autocorrection aux \u00e9l\u00e8ves : avant la premi\u00e8re s\u00e9ance, ils attendent apr\u00e8s avoir coch\u00e9 les consignes ; hors classe ensuite, 45 minutes par ouverture"],
     AIDE_FERMER]},
   fin:{ou:"Mode rapide \u2014 fin de copie",l:[
@@ -4353,7 +4356,7 @@ function CorrEleve(p){
     if(type==="G"||type==="L"){setAskFautifTexte({type:type,idx:popupIdx});setFautifTexteVal("");setPopupIdx(null);return}
     var neT=errors.filter(function(x){return x&&x.idx!==popupIdx}).concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]);setErrors(neT);setLastTouched(popupIdx);autoTexte(neT,extras,popupIdx);pileZ.current.push(popupIdx);setPopupIdx(null)   /* [L8] remplace, et Ctrl+Z */
   }
-  function listeFormesTexte(){return askFautifTexte?formesPour(motCleForme(tokens,askFautifTexte.idx),tokens[askFautifTexte.idx]):[];}   /* [L10] */
+  function listeFormesTexte(){return askFautifTexte?formesPour(motCleForme(tokens,askFautifTexte.idx),tokens[askFautifTexte.idx],askFautifTexte.type):[];}   /* [L10] ; [L16a] le type choisi */
   function confirmFautifTexte(overrideVal){
     var ft=askFautifTexte;if(!ft)return;
     var vT=(overrideVal!==undefined)?overrideVal:fautifTexteVal;
@@ -4397,7 +4400,7 @@ function CorrEleve(p){
       deja?"\u2715 ne plus accepter":"\u2713 forme accept\u00e9e (ce texte)");}
   function formeEnCoursL11(mode){   /* la forme en cours : le numéro composé, sinon ce qui est tapé */
     var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx);if(idx==null)return "";
-    var nC=numRef.current||numFormes;if(nC){var o=formesPour(motCleForme(tokens,idx),tokens[idx])[+nC-1];return o?o.forme:"";}
+    var nC=numRef.current||numFormes;if(nC){var o=formesPour(motCleForme(tokens,idx),tokens[idx],mode==="I"?askFautifI:((askFautifTexte||{}).type))[+nC-1];return o?o.forme:"";}   /* [L16a] */
     return String(mode==="I"?fautifValI:fautifTexteVal).trim();}
   function accepterCourantL11(mode,formeImposee){   /* [L11 — Paul, 02/10] un BOUTON, aucun raccourci : la forme en cours devient une forme acceptée pour ce texte ; le même bouton l'annule */
     var idx=mode==="I"?((wordTokens[fastIdx]||{}).idx):((askFautifTexte||{}).idx);if(idx==null)return;
@@ -4458,13 +4461,18 @@ function CorrEleve(p){
     setAskFautifI(null);setGardeMot(false);setNumFormes("");setMsgFormes("");
     setFautifValI("");
   }
-  function confirmFautifI(overrideVal){
+  var sBasc=useState(null),bascL16=sBasc[0],setBascL16=sBasc[1];   /* [L16a] « déjà enregistrée en L — passer en L ? » */
+  function confirmFautifI(overrideVal,sansBascule,typeImpose){
     var wt=wordTokens[fastIdx];if(!wt)return;
     var vv=overrideVal!==undefined?overrideVal:fautifValI;
     if(motJuste(vv,wt.text)){setGardeMot(true);return}   /* [L3] le mot juste est refusé ; le champ reste ouvert */
+    if(String(vv||"").trim()&&!sansBascule){var autre=askFautifI==="G"?"L":"G",mc=motCleForme(tokens,wt.idx),v0=String(vv).trim(),
+        dansAutre=formesPour(mc,wt.text,autre).filter(function(o){return o.forme===v0})[0],dansType=formesPour(mc,wt.text,askFautifI).filter(function(o){return o.forme===v0})[0];
+      if(dansAutre&&!dansType){setBascL16({forme:v0,autre:autre,compte:dansAutre.compte});return;}}   /* [L16a] la bascule : aucun raccourci, deux boutons */
+    setBascL16(null);
     setGardeMot(false);setNumFormes("");setMsgFormes("");
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
-    var obj={idx:wt.idx,type:askFautifI,word:wt.text};
+    var obj={idx:wt.idx,type:typeImpose||askFautifI,word:wt.text};
     if(vv.trim())obj.fautif=vv.trim();
     ne.push(obj);setErrors(ne);
     setAskFautifI(null);setFautifValI("");
@@ -4515,6 +4523,7 @@ function CorrEleve(p){
       /* [L3] les touches P et E sont retirées : M s'adapte, et Entrée valide le bouton mis en avant */
       else if(e.key==="a"||e.key==="A"){e.preventDefault();fastMark("A")}
       else if(e.key===" "){e.preventDefault();fastSkip()}
+      else if(e.key==="Delete"){var wD=wordTokens[fastIdx];if(wD&&errors.some(function(x){return x.idx===wD.idx})){e.preventDefault();fastClear()}}   /* [L16a] Suppr = annuler l'erreur posée sur ce mot (120) */
       else if(e.key==="Enter"){e.preventDefault();fastSkip()}   /* [L6b — dette n°12 · 98] Entrée = correct, mot suivant, comme Espace et comme avant L3 : sur un signe, Entrée AVANCE (le bouton mis en avant se valide par M, qui s'adapte) — L3 faisait marquer « ponctuation manquante » à chaque Entrée sur un signe (Paul, 02/10 : « gros télescopage »). */
       else if(e.key==="Backspace"){e.preventDefault();fastBack()}
     }
@@ -4647,7 +4656,7 @@ function CorrEleve(p){
   useAide(3,fastMode?(askFautifI?{cle:"case"}:(fastIdx>=wordTokens.length?{cle:"fin"}:{cle:"rapide"})):(askFautifTexte?{cle:"case"}:(popupIdx!==null?{cle:"texte-menu"}:{cle:"texte",bandeau:!!p.effacee})));   /* [L12] */
   if(fastMode){
     var fastDone=fastIdx>=wordTokens.length;
-    var wtF=wordTokens[fastIdx],listeFormesI=(askFautifI&&wtF)?formesPour(motCleForme(tokens,wtF.idx),wtF.text):[];   /* [L10] */
+    var wtF=wordTokens[fastIdx],listeFormesI=(askFautifI&&wtF)?formesPour(motCleForme(tokens,wtF.idx),wtF.text,askFautifI):[];   /* [L10] ; [L16a] le type choisi */
     var prendreFormeI=function(n){var f=listeFormesI[n-1];if(f)confirmFautifI(f.forme);};
     var propFin=(p.onOuvrirRapide&&rechFin.trim())?(p.elevesRecherche||[]).filter(function(n){return n!==p.eleve&&matchEleveInitials(n,rechFin)}).slice(0,6):[];   /* [L6] */
     var pct=Math.round(fastIdx/wordTokens.length*100);
@@ -4660,6 +4669,10 @@ function CorrEleve(p){
     var BUDGET=118,ctxA=Math.min(fastIdx,ctxEnd),ctxB=Math.min(fastIdx+1,ctxEnd),lg=function(i){return String(wordTokens[i].text).length+1;},tot=(ctxB>ctxA?lg(ctxA):0);
     while(true){var g2=ctxA>ctxStart&&tot+lg(ctxA-1)<=BUDGET,d2=ctxB<ctxEnd&&tot+lg(ctxB)<=BUDGET;if(!g2&&!d2)break;if(g2){ctxA--;tot+=lg(ctxA);}if(d2&&tot+lg(ctxB)<=BUDGET){tot+=lg(ctxB);ctxB++;}}
     var coupeG=ctxA>ctxStart,coupeD=ctxB<ctxEnd;ctxStart=ctxA;ctxEnd=ctxB;
+    /* [L16a — dette 121, maquette T420] la ligne centrée sur le mot courant : le même budget de caractères avant et après ; « … » dès que le texte continue */
+    var DEMI=52,lgT=function(i){return String(wordTokens[i].text).length+1;},a16=fastIdx,b16=Math.min(fastIdx+1,wordTokens.length),tg=0,td=0;
+    while(a16>0&&tg+lgT(a16-1)<=DEMI){a16--;tg+=lgT(a16);} while(b16<wordTokens.length&&td+lgT(b16)<=DEMI){td+=lgT(b16);b16++;}
+    coupeG=a16>0;coupeD=b16<wordTokens.length;ctxStart=a16;ctxEnd=b16;
 
     return h("div",{className:"container fade-up corr-prof"},   /* [L7] 1100 px (était 480) */
       p.aideIci&&h(AideContextuelle,null),   /* [L12] */
@@ -4682,14 +4695,14 @@ function CorrEleve(p){
         h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Pause : revenir au mode texte (tout est d\u00e9j\u00e0 sauvegard\u00e9) \u2014 \u21e7R"},"\u23f8 Pause"),
         h("button",{className:"btn-sm btn-ghost",onClick:function(){if(p.onExitFast)p.onExitFast();setFastMode(false)},title:"Revenir au mode texte (tout sauvegard\u00e9) \u2014 \u21e7R"},"\u2190 Texte")
       ),
-      h("div",{className:"ctx-phrase",style:{textAlign:"center",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},
-        coupeG&&h("span",{style:{margin:"0 3px"}},"\u2026"),
-        wordTokens.slice(ctxStart,ctxEnd).map(function(wt,ci){
-          var realI=ctxStart+ci;var isCur=realI===fastIdx;
-          var isErr=errors.find(function(e){return e.idx===wt.idx});
-          return h("span",{key:ci,style:{fontWeight:isCur?800:400,color:isCur?"var(--text)":isErr?"#c53030":"var(--muted)",fontSize:isCur?"1.1rem":".85rem",margin:"0 3px",textDecoration:isErr?"underline":"none"}},wt.text)
-        }),
-        coupeD&&h("span",{style:{margin:"0 3px"}},"\u2026")
+      h("div",{className:"ctx-phrase ctx-centree-l16",title:"Le mot courant est toujours au centre, sous le gros mot ; \u2026 = le texte continue ; la ligne glisse quand tu avances.",style:{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"baseline",padding:"8px 0",fontSize:".85rem",color:"var(--muted)",lineHeight:1.8}},   /* [L16a] */
+        h("div",{style:{textAlign:"right",whiteSpace:"nowrap",overflow:"hidden",direction:"rtl"}},h("span",{style:{direction:"ltr",unicodeBidi:"isolate"}},
+          coupeG&&h("span",{style:{margin:"0 3px"}},"\u2026"),
+          wordTokens.slice(ctxStart,fastIdx).map(function(wt,ci){var isErr=errors.find(function(e){return e.idx===wt.idx});return h("span",{key:"g"+ci,style:{color:isErr?"#c53030":"var(--muted)",margin:"0 3px",textDecoration:isErr?"underline":"none"}},wt.text+" ")}))),
+        h("span",{className:"ctx-mot-l16",style:{fontWeight:800,color:"var(--text)",fontSize:"1.1rem",margin:"0 6px"}},wordTokens[fastIdx]?wordTokens[fastIdx].text:""),
+        h("div",{style:{textAlign:"left",whiteSpace:"nowrap",overflow:"hidden"}},
+          wordTokens.slice(Math.min(fastIdx+1,ctxEnd),ctxEnd).map(function(wt,ci){var isErr=errors.find(function(e){return e.idx===wt.idx});return h("span",{key:"d"+ci,style:{color:isErr?"#c53030":"var(--muted)",margin:"0 3px",textDecoration:isErr?"underline":"none"}},wt.text+" ")}),
+          coupeD&&h("span",{style:{margin:"0 3px"}},"\u2026"))
       ),
       fastDone?
         h("div",{className:"card",style:{textAlign:"center",padding:30}},
@@ -4734,6 +4747,10 @@ function CorrEleve(p){
               h("button",{className:"btn-sm btn-ghost",onClick:function(e){e.stopPropagation();cancelFautifI()},title:"Annuler ce marquage et revenir aux choix d\u2019erreur. Raccourcis : Retour (champ vide) ou \u00c9chap",style:{padding:"2px 8px",fontSize:".78rem",color:"var(--coral)"}},"\u2715 Annuler")
             ),
             listeFormesHtml(listeFormesI,prendreFormeI,{mot:wtF?motCleForme(tokens,wtF.idx):"",idx:wtF?wtF.idx:null,accepterIci:function(f){accepterCourantL11("I",f)}}),   /* [L10] la liste, au-dessus de la case ; [L11] ses marques */
+            bascL16?h("div",{id:"bascule-l16",style:{margin:"6px 0",background:"#fff7e6",border:"1px solid #f2d59a",borderRadius:10,padding:"8px 12px",display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",fontSize:".9rem"}},   /* [L16a] la bascule (maquette T420) */
+              h("span",null,"\u00ab "+bascL16.forme+" \u00bb a d\u00e9j\u00e0 \u00e9t\u00e9 enregistr\u00e9e en "+bascL16.autre+" (\u00d7"+bascL16.compte+"). Passer en "+bascL16.autre+" ?"),
+              h("button",{className:"btn-sm",id:"passer-type-l16",onMouseDown:function(e){e.preventDefault()},onClick:function(e){e.stopPropagation();var f=bascL16.forme,t=bascL16.autre;setBascL16(null);confirmFautifI(f,true,t)},title:"L\u2019erreur est pos\u00e9e en "+bascL16.autre+", et la forme compt\u00e9e en "+bascL16.autre+" (pas de double compte). Aucun raccourci : un clic seulement."},"Passer en "+bascL16.autre),
+              h("button",{className:"btn-sm btn-ghost",id:"garder-type-l16",onMouseDown:function(e){e.preventDefault()},onClick:function(e){e.stopPropagation();var f=bascL16.forme;setBascL16(null);confirmFautifI(f,true)},title:"Garder le type choisi ("+askFautifI+") : l\u2019erreur est pos\u00e9e en "+askFautifI+"."},"Garder "+askFautifI)):null,
             h("div",{style:{display:"flex",gap:8}},
               numeroHtml(),
               h("input",{ref:fautifRefI,value:fautifValI,onChange:function(e){setFautifValI(e.target.value);setGardeMot(false)},placeholder:listeFormesI.length?"recopie ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u2014 ou choisis au pav\u00e9":"Mot fautif...",title:"Ce que l\u2019\u00e9l\u00e8ve a \u00e9crit, tel quel. Le mot juste est refus\u00e9. Un chiffre de la rang\u00e9e du haut est du texte ; le pav\u00e9 num\u00e9rique choisit dans la liste.",style:{flex:1,padding:"10px 12px",fontSize:"1rem",borderRadius:10,border:"1.5px solid var(--border)"},onKeyDown:function(e){
@@ -4753,9 +4770,9 @@ function CorrEleve(p){
             existingErr?
               h("button",{className:"fast-btn fast-ok",onClick:fastSkip,title:"Garder cette erreur en l\u2019\u00e9tat. Raccourci : Espace ou Entr\u00e9e"},"\u2713 Garder ("+existingErr.type+")"):
               h("button",{className:"fast-btn fast-ok",onClick:fastSkip,title:"Ce mot est correct, passer au suivant. Raccourci : Espace ou Entr\u00e9e"},"\u2192 Correct"),
-            existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear,title:"Supprimer cette erreur et passer au suivant"},"\u2715 Annuler l\u2019erreur"),
-            existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Changer en Grammaire (accord, conjugaison, homophone)"},"Changer \u2192 G"),
-            existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer en Lexique (orthographe pure)"},"Changer \u2192 L"),
+            existingErr&&h("button",{className:"fast-btn",style:{background:"rgba(197,48,48,.06)",color:"#c53030"},onClick:fastClear,title:"Supprimer cette erreur et passer au suivant. Raccourci : Suppr"},"\u2715 Annuler l\u2019erreur"),   /* [L16a] */
+            existingErr&&existingErr.type!=="G"&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Changer en Grammaire (accord, conjugaison, homophone)"},"Changer \u2192 G"),   /* [L16a] jamais vers le type d\u00e9j\u00e0 pos\u00e9 (119) */
+            existingErr&&existingErr.type!=="L"&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer en Lexique (orthographe pure)"},"Changer \u2192 L"),
             !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire ("+coutType("G")+" pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
             !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Saisie demand\u00e9e. Raccourci : L"},"L Lexique"),
             !existingErr&&(curWord&&estApostrophe(curWord.text)
