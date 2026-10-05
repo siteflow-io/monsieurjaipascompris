@@ -1086,3 +1086,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L16a (05/10/2026, conscience n°12)
 - blob `f9a6ec16f9a0` (commit `6b1d539e80b4`) · 872 364 o · md5 `1c8de1e3be1b395939c2c192eb757be0` · v6.7.0-L15e
 - **Motif** : L16a — les formes par type, la bascule, Changer →, Suppr, la ligne centrée. Promu : 876 574 o, md5 `73f4968ea2bacd374effac5e6c372515` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15f-b (05/10/2026, conscience n°12)
+- blob `709e4cf88d00` (commit `948b18e69e99`) · 876 574 o · md5 `73f4968ea2bacd374effac5e6c372515` · v6.7.0-L16a
+- **Motif** : L15f-b — côté élève et déconnexion. Promu : 888 151 o, md5 `5e6ca2c533dae39615d088c94eba965f` (bit à bit). Les élèves déconnectés par la L15f-b retapent leur code ; une version antérieure ne lit pas `deconnexion/` ni `garderNote` (sans effet).
