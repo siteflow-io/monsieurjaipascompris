@@ -1181,7 +1181,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L16a";
+var APP_VERSION="6.7.0-L15f-b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1531,6 +1531,11 @@ function nomClasseLisibleL15c(cle){var reg=(typeof CLASSES!=="undefined"&&CLASSE
   var src=(nom||String(cle||"")).replace(/_/g," ").trim().toLowerCase();if(!src)return "";
   src=src.replace(/(^|\s)([a-z\u00e0-\u00ff])/g,function(m,a,b){return a+b.toUpperCase()});return src.replace(/^(\d)\s/,"$1e ").replace(/^(\d)E\s/,"$1e ");}
 function dateCourteL15c(t){if(!t)return "";var d=new Date(t);return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();}
+/* [L15f point 5 — dette 129] LA DÉCONNEXION : la tablette oublie l'élève (pas le professeur, jamais la clé du coffre) */
+function oublierSessionEleveL15f(){["sessionStorage","localStorage"].forEach(function(st){try{var S=window[st],v=S.getItem("mjpc_eleve");if(!v)return;var o=null;try{o=JSON.parse(v)}catch(e){}if(o&&o.is_prof)return;S.removeItem("mjpc_eleve");}catch(e){}});}
+function AppEleve(p){var sE=useState(null),etatD=sE[0],setEtatD=sE[1];   /* [L15f-5] */
+  return h("div",{style:{position:"relative"}},etatD&&etatD.visible?h("button",{className:"btn-sm btn-ghost",id:"se-deconnecter-fixe",onClick:etatD.deconnecter,style:{position:"absolute",top:10,right:12,zIndex:900,background:"var(--card)"}},"Se d\u00e9connecter"):null,
+    h(AppEleveCoeurL15f,Object.assign({},p,{onEtatDeconnexionL15f:setEtatD})));}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -2486,7 +2491,7 @@ function engagementPourAstuce(t){
   if(!_engParAstuce){_engParAstuce={};ENGAGEMENTS_ASTUCE.forEach(function(r){_engParAstuce[generateIndice(r[0],r[1])]=r[2]})}
   return _engParAstuce[t]||null;
 }
-function phraseARecopier(errors,extras){
+function phraseARecopier(errors,extras,regain){   /* [L15f] regain : {points, notions} */
   var errs=(errors||[]).filter(function(e){return e&&e.type!=="A"}),nX=(extras||[]).length,n=errs.length+nX;
   if(n===0)return "Pour cette dict\u00e9e, je n\u2019ai fait aucune erreur, et pour la prochaine, je devrai relire avec le m\u00eame soin.";
   var parType={};errs.forEach(function(e){parType[e.type]=(parType[e.type]||0)+1});if(nX)parType.X=nX;
@@ -2496,7 +2501,8 @@ function phraseARecopier(errors,extras){
   var eng=null;ordre.forEach(function(g){if(eng===null||parEng[g]>parEng[eng])eng=g});
   if(!eng)eng=ENGAGEMENTS_TYPE[tMax]||ENGAGEMENTS_TYPE.G;
   var debut=n===1?"j\u2019ai fait une seule erreur":"j\u2019ai fait "+n+" erreurs, surtout "+(ERREURS_SURTOUT[tMax]||"");
-  return "Pour cette dict\u00e9e, "+debut+", et pour la prochaine, je devrai "+eng+".";
+  var rg=(regain&&regain.points>0)?" ; j\u2019ai regagn\u00e9 "+acNoteTexte(regain.points)+" point"+(regain.points>=2?"s":"")+" en r\u00e9pondant sur "+(regain.notions||[]).join(" et ")+",":",";   /* [L15f] */
+  return "Pour cette dict\u00e9e, "+debut+rg+" et pour la prochaine, je devrai "+eng+".";
 }
 function dateHeureFr(t){var d=new Date(t);return d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" \u00e0 "+d.getHours()+" h "+String(d.getMinutes()).padStart(2,"0")}
 
@@ -4986,7 +4992,7 @@ function CorrEleve(p){
 
 var PROMPT_IA_BANQUE_DEFAUT = "Tu es un professeur de fran\u00e7ais expert en didactique. Je te fournis ci-dessous le JSON d'une dict\u00e9e corrig\u00e9e pour ma classe : texte, \u00e9l\u00e8ves, erreurs commises par chacun avec leur type (G=grammaire, L=lexique, M=mot manquant, P=ponctuation manquante, I=illisible, A=attention, E=\u00e9lision/apostrophe).\n\nObjectif : produire un document HTML autonome (1 seul fichier, design soign\u00e9 mais sobre, lisible pour des coll\u00e9giens) contenant DEUX SETS d'exercices :\n\n=== SET 1 \u2014 EXERCICES POUR LA CLASSE ENTI\u00c8RE ===\nAnalyse les erreurs les plus fr\u00e9quentes (au moins 3 \u00e9l\u00e8ves concern\u00e9s). Pour chaque difficult\u00e9 collective d\u00e9tect\u00e9e :\n- Un rappel de r\u00e8gle concis (max 4 lignes)\n- 3 \u00e0 5 exercices cibl\u00e9s (difficult\u00e9 croissante : reconnaissance > application > r\u00e9investissement)\n- Corrig\u00e9s en fin de section (ou en <details>)\n\n=== SET 2 \u2014 EXERCICES PERSONNALIS\u00c9S PAR \u00c9L\u00c8VE ===\nPour chaque \u00e9l\u00e8ve ayant fait au moins 3 erreurs, une mini-page personnelle avec son pr\u00e9nom en titre :\n- R\u00e9cap visuel de ses 3 difficult\u00e9s principales (avec exemples tir\u00e9s de SA dict\u00e9e)\n- 5 \u00e0 8 exercices cibl\u00e9s sur SES erreurs (pas celles des autres)\n- Corrig\u00e9s en fin de section\n\n=== CONTRAINTES TECHNIQUES ===\n- HTML5 valide, autonome (CSS + JS inline, aucune d\u00e9pendance externe)\n- Imprimable : @media print propre, sauts de page entre sections\n- Typographie agr\u00e9able (system font stack, EB Garamond via Google Fonts en option)\n- Sommaire en haut avec ancres vers les sections\n- Pas de tableaux d\u00e9coratifs, pas d'images\n- Niveau de langue adapt\u00e9 au niveau scolaire du JSON\n- Palette : G=rouge, L=bleu, M=ocre, P=bleu, I=violet, A=orange, E=vert canard\n\n=== \u00c9VOLUTION FUTURE ===\n\u00c0 terme, cette m\u00eame requ\u00eate devra pouvoir g\u00e9n\u00e9rer un JSON injectable dans l'app de dict\u00e9e. Pense la structure HTML pour qu'elle puisse \u00eatre convertie facilement en donn\u00e9es structur\u00e9es (un exercice = un objet avec type, \u00e9nonc\u00e9, items, correction).\n\n=== JSON DE LA DICT\u00c9E ===\n{{JSON_DICTEE}}";
 
-function buildDicteeJSON(data, corrections, absents){
+function buildDicteeJSON(data, corrections, absents, autocorr){   /* [L15f] autocorr : les autocorrections, pour la note et le regain à part */
   absents = absents || {};
   var prenomOnly = function(n){var p=n.split(/\s+/);return p.length>1?p[p.length-1]:n};
   var out = {
@@ -5009,7 +5015,8 @@ function buildDicteeJSON(data, corrections, absents){
     var c = corrections[k];
     var elObj = {prenom: prenomOnly(e), nom_complet: e, corrige: !!c};
     if (c) {
-      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.sans_cout = (c.counts && c.counts.sansCout) || 0;   /* [L11] ; [L14] y compris, pour un élève aménagé, tout ce qui est hors des mots à compléter */ elObj.erreurs_comptees = toArr(c.errors || []).filter(function(e){return e && !e.sansCout;}).length; elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
+      elObj.note = c.note; elObj.note_sur = baseDeCopie(c, data.base || 20); elObj.sans_cout = (c.counts && c.counts.sansCout) || 0;
+      if (autocorr && autocorr[k] && (autocorr[k].attempts || autocorr[k].score != null)) { var acx = autocorr[k], ex = toArr(c.errors || []).filter(function(e){return e;}), nx = ex.length; var nAvec = acNoteArrondie(acNote(acx.attempts, acx.results, nx, ex, acx.questions)), nSans = acNoteArrondie(acNote(acx.attempts, acx.results, nx, ex, {})); elObj.autocorrection = { note: nAvec, sans_regain: nSans, regain: Math.max(0, Math.round((nAvec - nSans) * 100) / 100) }; }   /* [L15f] */   /* [L11] ; [L14] y compris, pour un élève aménagé, tout ce qui est hors des mots à compléter */ elObj.erreurs_comptees = toArr(c.errors || []).filter(function(e){return e && !e.sansCout;}).length; elObj.copie = {id: c.id || null, creeLe: c.creeLe || null, modifieLe: c.modifieLe || null};   /* [L9] l'identité, dans le bilan exporté */   /* [ELEVE-1 ④] chaque note avec SA base (Paul, 01/10 : « l'aménagement n'est pas un secret d'État ») */
       elObj.compteurs = c.counts || {};
       elObj.erreurs = toArr(c.errors).map(function(err){
         var o = {position: err.idx, mot_correct: err.word || null, type: err.type};
@@ -5040,6 +5047,8 @@ function buildDicteeJSON(data, corrections, absents){
 }
 
 function PromptIaModal(p){
+  var sAcL15f = useState(null), acL15f = sAcL15f[0], setAcL15f = sAcL15f[1];   /* [L15f] les autocorrections, pour le regain dans le bilan */
+  useEffect(function(){ if(p.dicteeId) db.ref("correction_dictee/"+p.dicteeId+"/autocorrection").once("value").then(function(sn){ setAcL15f(sn.val()||{}); }); },[p.dicteeId]);
   var s1 = useState(""), promptText = s1[0], setPromptText = s1[1];
   var s2 = useState(false), editing = s2[0], setEditing = s2[1];
   var s3 = useState(""), draft = s3[0], setDraft = s3[1];
@@ -5048,7 +5057,7 @@ function PromptIaModal(p){
     /* M-PROMPT-1 : lecture par le canon — la base, sinon le défaut en dur qui fait foi */
     cdChargerPrompt(CD_PIECES.banque.prompt, PROMPT_IA_BANQUE_DEFAUT, function(v){setPromptText(v);});
   }, []);
-  var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents), null, 2);
+  var jsonStr = JSON.stringify(buildDicteeJSON(p.data, p.corrections, p.absents, acL15f), null, 2);
   var fullPrompt = (promptText || "").replace("{{JSON_DICTEE}}", jsonStr);
   function copier(){
     copyToClipboard(fullPrompt).then(function(ok){
@@ -5305,6 +5314,7 @@ function Suivi(p){
     var status;
     // Statut basé sur les données, pas sur le champ status Firebase
     if(finished) status="done";
+    else if(ac&&ac.deconnecte&&(!ac.lastSeen||ac.deconnecte>=ac.lastSeen-1000)) status="offline";   /* [L15f-5] déconnecté : sur-le-champ */
     else if(ac&&ac.solved>0&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
     else if(ac&&ac.solved>0) status="idle";
     else if(ac&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
@@ -5313,6 +5323,7 @@ function Suivi(p){
     else status="waiting";
     return{name:e,key:k,isTest:isTest,noteDictee:c?c.note:null,baseDictee:c?baseDeCopie(c,data.base):data.base,nErrors:nErr,
       solved:solved,total:total,score:ac&&(ac.attempts||ac.score!=null)?acNoteArrondie(acNote(ac.attempts,ac.results,total,errsCopie,ac.questions)):null,
+       regain:ac&&(ac.attempts||ac.score!=null)?Math.max(0,Math.round((acNoteArrondie(acNote(ac.attempts,ac.results,total,errsCopie,ac.questions))-acNoteArrondie(acNote(ac.attempts,ac.results,total,errsCopie,{})))*100)/100):0,   /* [L15f] */
       totalAttempts:totalAtt,wrongAttempts:wrongAtt,
       status:status,timestamp:ac?ac.timestamp:0,lastSeen:lastSeen};
   }).sort(function(a,b){
@@ -5504,7 +5515,8 @@ function Suivi(p){
     ),
     // Detailed table
     h("div",{className:"card"},
-      h("h2",{style:{marginBottom:10}},"D\u00e9tail par \u00e9l\u00e8ve"),
+      h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:10}},h("h2",{style:{margin:0,flex:1}},"D\u00e9tail par \u00e9l\u00e8ve"),
+         h("button",{className:"btn-sm btn-ghost",id:"deconnecter-tous-l15f",onClick:function(){db.ref("correction_dictee/"+p.dicteeId+"/deconnexion/tous").set(Date.now());},title:"D\u00e9connecte tous les \u00e9l\u00e8ves de cette dict\u00e9e : les tablettes les oublient, la classe suivante tape ses codes. Rien d\u2019autre n\u2019est touch\u00e9."},"D\u00e9connecter tous")),   /* [L15f-5] */
       h(EleveSearchBar,{query:suiviQuery,onChange:setSuiviQuery,count:rowsFiltered.length}),
       h("div",{style:{overflowX:"auto"}},
         h("div",{className:"table-scroll"},h("table",{className:"bilan-table"},
@@ -5554,7 +5566,7 @@ function Suivi(p){
               ),
               h("td",{style:{textAlign:"center",fontWeight:500}},r.totalAttempts||"\u2014"),
               h("td",{style:{textAlign:"center",fontWeight:500,color:r.wrongAttempts>0?"var(--coral)":"var(--muted)"}},r.wrongAttempts||"\u2014"),
-              h("td",{style:{textAlign:"center",fontWeight:700,color:r.score!==null?noteColor(r.score,5):"var(--muted)"}},r.score!==null?acNoteTexte(r.score)+"/5":"\u2014"),
+              h("td",{style:{textAlign:"center",fontWeight:700,color:r.score!==null?noteColor(r.score,5):"var(--muted)"}},r.score!==null?acNoteTexte(r.score)+"/5":"\u2014",r.regain>0?h("div",{className:"regain-suivi",style:{fontSize:".75rem",fontWeight:500,color:"#166534"}},"dont +"+acNoteTexte(r.regain)+" regagn\u00e9"):null),   /* [L15f] */
               // Exos (avec séparateur visuel)
               h("td",{style:{borderLeft:"2px solid var(--border)",textAlign:"center"}},
                 ex.hasExos?h("span",{style:{fontWeight:600,color:ex.exosDone===ex.totalExos?"var(--green)":ex.exosDone>0?"#7a5a00":"var(--muted)"}},ex.exosDone+"/"+ex.totalExos):"\u2014"
@@ -5566,7 +5578,7 @@ function Suivi(p){
                 ex.hasExos&&ex.totalLibres>0?h("span",{style:{color:ex.saisiesLibres===ex.totalLibres?"var(--green)":"inherit",fontWeight:500}},ex.saisiesLibres+"/"+ex.totalLibres):"\u2014"
               ),
               h("td",{style:{textAlign:"center",fontWeight:500,color:ex.wrongAttempts>0?"var(--coral)":"var(--muted)"}},ex.wrongAttempts||"\u2014"),
-              h("td",null,(function(){var et=etapeDe(r);
+              h("td",null,h("button",{className:"btn-sm btn-ghost btn-deconnecter-l15f","data-cle":r.key,style:{fontSize:".7rem",padding:"1px 6px",marginRight:6},onClick:function(e){e.stopPropagation();db.ref("correction_dictee/"+p.dicteeId+"/deconnexion/"+r.key).set(Date.now());},title:"D\u00e9connecte cet \u00e9l\u00e8ve : sa tablette l\u2019oublie et revient au code. Sa copie et son autocorrection restent ; il les retrouve en retapant son code."},"D\u00e9connecter"),(function(){var et=r.status==="offline"?null:etapeDe(r);   /* [L15f-5] déconnecté : le Suivi le dit, avant l'étape */
                 if(!et)return h("span",{style:{fontSize:".8rem",color:r.status==="active"?"var(--primary)":r.status==="done"?"var(--green)":"var(--muted)"}},statusLabel(r.status));
                 return h("span",{className:et.ramasser?"etape-clignote":"",onClick:et.ramasser?function(e){ramasser(r.key,e)}:undefined,
                   title:et.ramasser?"Touchez quand vous avez ramass\u00e9 sa copie : la ligne s\u2019arr\u00eate de clignoter.":undefined,
@@ -8073,7 +8085,7 @@ function TabletteDeux(p){
         h("div",{style:{fontSize:".95rem",lineHeight:1.5}},"Tu pourras r\u00e9pondre aux questions pour regagner tes points quand "+prenom(m)+" aura fini sa correction. Aide "+prenom(m)+" : plus vous allez vite, plus il vous restera de temps pour regagner des points.")):null)}));
 }
 
-function AppEleve(p){
+function AppEleveCoeurL15f(p){
   var s1=useState("login"),screen=s1[0],setScreen=s1[1];
   var s2=useState([]),dictees=s2[0],setDictees=s2[1];
   var s3=useState(""),nomInput=s3[0],setNomInput=s3[1];
@@ -8118,6 +8130,27 @@ function AppEleve(p){
     db.ref("classes").once("value",function(snap){setClassesData(snap.val()||{})},function(){setClassesData({})});
   },[]);
 
+  /* [L15f] 114 : la liste écoute, pour chaque dictée, « copies rendues » et « publiée » ; masquer ou dépublier pendant qu'une copie est ouverte → « Mes dictées » */
+  useEffect(function(){if(!dictees||!dictees.length)return;var offs=[];
+    dictees.forEach(function(dd){var r1=db.ref("correction_dictee/"+dd.id+"/copyPublishedAt"),r2=db.ref("correction_dictee/"+dd.id+"/config/published");
+      function f1(sn){var v=sn.val()||null;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.copyPublishedAt!==v?Object.assign({},x,{copyPublishedAt:v}):x})});}
+      function f2(sn){var v=sn.val()!==false;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.published!==v?Object.assign({},x,{published:v}):x})});}
+      r1.on("value",f1);r2.on("value",f2);offs.push(function(){r1.off("value",f1);r2.off("value",f2)});});
+    return function(){offs.forEach(function(f){f()})};},[(dictees||[]).map(function(x){return x.id}).join("|")]);
+  var connecteLeL15f=React.useRef(0);useEffect(function(){if(identite)connecteLeL15f.current=Date.now();},[identite&&identite.cle]);   /* [L15f-5] le moment de la connexion */
+  var sStyloL15f=useState(false),styloActifL15f=sStyloL15f[0],setStyloActifL15f=sStyloL15f[1];
+  var deconnexionRefL15f=React.useRef(null);deconnexionRefL15f.current=function(){deconnexion();};
+  useEffect(function(){if(!identite||!dictees||!dictees.length)return;var offs=[],heures={};   /* [L15f-5] l'ordre du professeur et la clôture de l'heure */
+    function verifier(){var t0=connecteLeL15f.current;if(!t0)return;var now=Date.now();Object.keys(heures).forEach(function(id){var fe=heureFinEffective(heures[id]);if(fe&&fe<=now&&fe>t0)deconnexionRefL15f.current();});}
+    dictees.forEach(function(dd){var r3=db.ref("correction_dictee/"+dd.id+"/deconnexion"),r4=db.ref("correction_dictee/"+dd.id+"/heure");
+      function f3(sn){var v=sn.val()||{},t=Math.max(+(v[identite.cle]||0),+(v.tous||0));if(t&&connecteLeL15f.current&&t>connecteLeL15f.current)deconnexionRefL15f.current();}
+      function f4(sn){heures[dd.id]=sn.val()||null;verifier();}
+      r3.on("value",f3);r4.on("value",f4);offs.push(function(){r3.off("value",f3);r4.off("value",f4)});});
+    var it=setInterval(verifier,15000);
+    return function(){clearInterval(it);offs.forEach(function(f){f()})};},[identite&&identite.cle,(dictees||[]).map(function(x){return x.id}).join("|")]);
+  useEffect(function(){if(!(screen==="copie"||screen==="correction")||!eleveData||!eleveData.dictee)return;var cur=(dictees||[]).filter(function(x){return x.id===eleveData.dictee.id})[0];
+    if(cur&&(!cur.copyPublishedAt||!cur.published)){setScreen("mesdictees");}},[dictees,screen]);
+  useEffect(function(){if(p.onEtatDeconnexionL15f)p.onEtatDeconnexionL15f({visible:!!identite&&screen!=="login"&&screen!=="mesdictees"&&!styloActifL15f,deconnecter:function(){deconnexionRefL15f.current()}});},[identite&&identite.cle,screen,styloActifL15f]);   /* [L15f-5] le bouton fixe sait quand se montrer */
   // ── Dictées disponibles ──
   // La course était le bug : les dictées se construisaient avant l'arrivée du registre,
   // et leur roster restait vide pour toute la session. On attend classesData, et on
@@ -8305,6 +8338,8 @@ function AppEleve(p){
   }
 
   function deconnexion(){
+    try{var idL=identite&&identite.cle,tL=Date.now();if(idL)(dictees||[]).forEach(function(dd){var rL=db.ref("correction_dictee/"+dd.id+"/autocorrection/"+idL);rL.once("value").then(function(sn){if(sn.exists())rL.update({status:"offline",lastSeen:tL,deconnecte:tL});});});}catch(e){}   /* [L15f-5] le Suivi le voit sur-le-champ, pour chacune de ses dictées commencées */
+    oublierSessionEleveL15f();   /* [L15f-5] la tablette oublie l'élève */
     if(p.moitie)moitieEffacer(p.moitie);
     setChoisirAutre(false);
     setIdentite(null);setEleveData(null);setNomInput("");setPrenomInput("");setCodeInput("");
@@ -8365,7 +8400,7 @@ function AppEleve(p){
             p.moitie&&p.monBinome&&!p.voisinConnecte?h("p",{style:{fontSize:".88rem",margin:"6px 0 0",color:"#2563eb",fontWeight:600}},"Ton bin\u00f4me : "+p.monBinome.nom):null,
             errMsg&&h("p",{style:{color:"var(--coral)",fontSize:".88rem",margin:"6px 0 0"}},errMsg)
           ),
-          h("button",{className:"btn-sm btn-ghost",onClick:deconnexion},"Me d\u00e9connecter")
+          h("button",{className:"btn-sm btn-ghost",id:"se-deconnecter",onClick:deconnexion},"Se d\u00e9connecter")
         )
       ),
       h("div",{className:"card"},
@@ -8423,7 +8458,7 @@ function AppEleve(p){
 
   function retourListe(){ if(p.moitie)moitieDictee(p.moitie,null); setEleveData(null);setAttente(null);setScreen("mesdictees"); }
 
-  if(screen==="correction") return h(EleveCorrection,{moitie:p.moitie,onEtat:p.onEtat,voisinAide:p.voisinAide,voisinCorrige:p.voisinCorrige,data:eleveData,onBack:retourListe,onExercices:function(){setScreen("exercices")},onCopie:function(){setScreen("copie")},
+  if(screen==="correction") return h(EleveCorrection,{onStyloActif:setStyloActifL15f,onDeconnecter:function(){deconnexionRefL15f.current()},moitie:p.moitie,onEtat:p.onEtat,voisinAide:p.voisinAide,voisinCorrige:p.voisinCorrige,data:eleveData,onBack:retourListe,onExercices:function(){setScreen("exercices")},onCopie:function(){setScreen("copie")},
     histoQuestions:(function(){var m={};(dictees||[]).forEach(function(dd){if(!identite||!eleveData||dd.id===eleveData.dictee.id)return;var f=dd.autocorrection&&dd.autocorrection[identite.cle];var qs=f&&f.questions;if(!qs)return;Object.keys(qs).forEach(function(k){var q=qs[k];if(!q||!q.id||(q.ok!==true&&q.ok!==false))return;if(!m[q.id]||m[q.id].t<q.t)m[q.id]={t:q.t,ok:q.ok}})});return m})()});
   if(screen==="exercices"&&!(eleveData&&eleveData.dictee&&eleveData.dictee.exercicesOuverts)) return h("div",{className:"container fade-up",style:{paddingTop:30}},
     h("div",{className:"card",style:{textAlign:"center"}},
@@ -10006,6 +10041,8 @@ function EleveCorrection(p){
   // Lot 2b : début de session, fin du stylo vert (0 = pas le temps), horloge
   var sSD=useState(null),sessionDebut=sSD[0],setSessionDebut=sSD[1];
   var sSF=useState(null),styloFin=sSF[0],setStyloFin=sSF[1];
+  var sGN=useState(false),garderNoteL15f=sGN[0],setGarderNoteL15f=sGN[1];   /* [L15f] */
+  useEffect(function(){if(p.onStyloActif)p.onStyloActif(!!(styloFin&&styloFin>Date.now()));},[styloFin,Math.floor(Date.now()/5000)]);   /* [L15f-5] pas de bouton pendant le chrono */
   var sNow=useState(Date.now()),now=sNow[0],setNow=sNow[1];
   var sessionPoseeRef=React.useRef(false),styloDecideRef=React.useRef(false);
   var sHe=useState(null),heure=sHe[0],setHeure=sHe[1];
@@ -10115,7 +10152,7 @@ function EleveCorrection(p){
         if(isFirstFireRef.current){isFirstFireRef.current=false;setLoading(false)}
         return;
       }
-      setSessionDebut(val.sessionDebut||null);setStyloFin(val.styloFin==null?null:val.styloFin);if(val.attestation)setAttestation(val.attestation);
+      setSessionDebut(val.sessionDebut||null);setStyloFin(val.styloFin==null?null:val.styloFin);setGarderNoteL15f(val.garderNote===true);   /* [L15f] */if(val.attestation)setAttestation(val.attestation);
       var loadedAttempts=val.attempts||{};
       var loadedResults=val.results||{};
       var loadedHistory=val.history||{};
@@ -10356,7 +10393,7 @@ function EleveCorrection(p){
   useEffect(function(){   /* [L13] la séance lancée pendant que l'élève attend : sa session commence alors */
     if(!loading&&heure&&!sessionPoseeRef.current&&!finishedRef.current){sessionPoseeRef.current=true;db.ref(acRef+"/sessionDebut").set(Date.now())}
   },[heure,loading]);
-  useEffect(function(){if(horsClasseL13()&&now>=ouvHC+45*60000&&p.onBack)p.onBack();},[now,heure,heureLue]);   /* [L13] à zéro : « Mes dictées », sans phrase */
+  useEffect(function(){if(horsClasseL13()&&now>=ouvHC+45*60000){if(p.onDeconnecter)p.onDeconnecter();else if(p.onBack)p.onBack();}},[now,heure,heureLue]);   /* [L15f-5] la fin des 45 min hors classe : il se déconnecte */   /* [L13] à zéro : « Mes dictées », sans phrase */
   var _fin=finEffL13();
   var rapide=(finished&&styloFin>0&&now<styloFin+(p.voisinCorrige?30000:0))||(!!_fin&&now<_fin&&_fin-now<=5*60000);
   useEffect(function(){var t=setInterval(function(){setNow(Date.now())},rapide?1000:10000);return function(){clearInterval(t)}},[rapide]);
@@ -10398,6 +10435,17 @@ function EleveCorrection(p){
   }
   // ═══ Lot 2 : l'encart « Regagner des points » et la fenêtre de question ═══
   var crans=acRatesChrono(history,attempts,results,errors,totalErrors);
+  function scoreSansRegainL15f(){return acNoteArrondie(acNote(attempts,results,totalErrors,errors,{}));}   /* [L15f] */
+  function regainL15f(){return Math.max(0,Math.round((acNoteArrondie(acNote(attempts,results,totalErrors,errors,questions))-scoreSansRegainL15f())*100)/100);}
+  function questionsTraiteesL15f(){return Object.keys(questions||{}).map(function(k){return questions[k]}).filter(function(q){return q&&(q.ok===true||q.ok===false)});}
+  function detailAutocorrectionL15f(){if(!finished||sansFaute)return null;var x=totalErrors>0?5/totalErrors:0,nRates=Math.max(0,totalAttempts-totalErrors);
+    return h("div",{className:"card",id:"detail-autocorrection",style:{marginBottom:14}},
+      h("div",{style:{fontWeight:700,fontSize:".85rem",textTransform:"uppercase",letterSpacing:".04em",color:"var(--text-sub)",marginBottom:8}},"D\u00e9tail de ton autocorrection"),
+      h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:".9rem"}},h("tbody",null,
+        h("tr",null,h("td",{style:{color:"var(--muted)"}},"\u00c9tape"),h("td",{style:{textAlign:"right",color:"var(--muted)"}},"Points")),
+        h("tr",null,h("td",null,totalErrors+" erreur"+(totalErrors>1?"s":"")+" \u00e0 retrouver, "+totalAttempts+" essai"+(totalAttempts>1?"s":"")+(nRates>0?" ("+nRates+" essai"+(nRates>1?"s":"")+" rat\u00e9"+(nRates>1?"s":"")+", le premier offert)":"")),h("td",{style:{textAlign:"right"}},(scoreSansRegainL15f()<5?"\u2212"+acNoteTexte(5-scoreSansRegainL15f()):"0"))),
+        questionsTraiteesL15f().map(function(q,i){return h("tr",{key:i,className:"ligne-question-l15f"},h("td",null,(q.ok===true?"Question regagn\u00e9e : ":"Question rat\u00e9e : ")+(q.notion||"")),h("td",{style:{textAlign:"right",color:q.ok===true?"#166534":"var(--muted)"}},q.ok===true?"+"+acNoteTexte(x):"0"));}),
+        h("tr",{style:{borderTop:"1px solid var(--border)",fontWeight:700}},h("td",null,"Note d\u2019autocorrection"),h("td",{style:{textAlign:"right"}},acNoteTexte(score)+" / 5")))));}
   function questionsFaites(){var n=0;for(var i=0;i<crans.length;i++)if(acQuestionFinie(questions[i]))n++;return n}
   function prixTexte(){var x=totalErrors>0?5/totalErrors:0;return acNoteTexte(x)+" pt"}
   function prixPoint(){var x=totalErrors>0?5/totalErrors:0;return acNoteTexte(x)+" point"+(x>=2?"s":"")}
@@ -10436,20 +10484,24 @@ function EleveCorrection(p){
     var bouton;
     if(nQ===0) bouton=null;   // la ligne « Tu n’as rien perdu pour l’instant » suffit
     else if(dispo===0) bouton=h("div",{style:{color:"var(--muted)"}},"Tu as utilis\u00e9 toutes tes questions.");
+    else if(garderNoteL15f) bouton=null;   /* [L15f] 112 : il garde sa note, plus de question proposée */
     else if(pasLeTemps) bouton=h("div",{style:{fontWeight:600,color:"#9b2c2c"}},"Plus le temps pour les questions : corrige ta copie au stylo vert, puis rends-la.");
     else if(heureFinie) bouton=h("div",{style:{color:"var(--muted)"}},"L\u2019heure est termin\u00e9e : les questions sont ferm\u00e9es.");
     else if(!questionsOuvertes) bouton=h("div",{style:{textAlign:"center"}},
-        h("span",{title:"Termine ta correction et ton stylo vert pour d\u00e9bloquer tes questions.",style:{position:"relative",display:"inline-block",overflow:"hidden",borderRadius:10,background:"#cbd5e1",boxShadow:"0 3px 0 rgba(0,0,0,.15)",cursor:"not-allowed"}},
+        h("span",{style:{position:"relative",display:"inline-block",overflow:"hidden",borderRadius:10,background:"#cbd5e1",boxShadow:"0 3px 0 rgba(0,0,0,.15)",cursor:"not-allowed"}},
           h("span",{style:{position:"absolute",right:0,top:0,bottom:0,width:pct+"%",background:"#93c5fd"}}),
           h("span",{className:"regain-pulse",style:{position:"absolute",top:0,bottom:0,right:"calc("+pct+"% - 10px)",width:20,background:"linear-gradient(90deg,rgba(147,197,253,0),#dbeafe,rgba(147,197,253,0))"}}),
           h("span",{style:{position:"relative",display:"inline-flex",gap:10,alignItems:"center",padding:"10px 18px",fontWeight:700,color:"#1e293b"}},"\ud83d\udd12 R\u00e9pondre \u00e0 une question",h("span",{style:{background:"rgba(255,255,255,.6)",borderRadius:999,padding:"1px 8px"}},"+"+prixTexte()))),
         h("div",{style:{fontSize:".8rem",color:"var(--muted)",marginTop:6}},"Se d\u00e9bloque apr\u00e8s ta correction et ton stylo vert."));
-    else bouton=h("div",{style:{textAlign:"center"}},
-        h("button",{className:"btn btn-primary",onClick:ouvrirQuestion,title:"Ouvre une question du m\u00eame type qu\u2019une de tes erreurs. Bonne r\u00e9ponse : +"+prixPoint()+". Mauvaise r\u00e9ponse : rien de perdu, mais la question ne revient pas.",
-          style:{display:"inline-flex",width:"auto",gap:10,alignItems:"center",padding:"10px 18px",fontWeight:700,boxShadow:"0 3px 0 rgba(0,0,0,.2)"}},"\u2753 R\u00e9pondre \u00e0 une question",h("span",{style:{background:"rgba(255,255,255,.25)",borderRadius:999,padding:"1px 8px"}},"+"+prixTexte())));
+    else bouton=h("div",null,h("div",{id:"consigne-regain",style:{background:"#eef2ff",borderRadius:10,padding:"10px 14px",fontSize:".9rem",lineHeight:1.5,margin:"6px 0 10px"}},h("b",null,"Comment \u00e7a marche : "),"une question sur une r\u00e8gle que tu as rat\u00e9e ; si tu r\u00e9ponds juste, tu regagnes "+prixPoint()+" sur ta note d\u2019autocorrection. Si tu r\u00e9ponds faux, tu ne perds rien. Tu peux aussi garder ta note telle quelle."),   /* [L15f] 112 : la consigne en clair, mot pour mot, quand on peut répondre */
+      h("div",{style:{textAlign:"center",display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}},
+        h("button",{className:"btn btn-primary",id:"repondre-question",onClick:ouvrirQuestion,
+          style:{display:"inline-flex",width:"auto",gap:10,alignItems:"center",padding:"10px 18px",fontWeight:700,boxShadow:"0 3px 0 rgba(0,0,0,.2)"}},"\u2753 R\u00e9pondre \u00e0 une question",h("span",{style:{background:"rgba(255,255,255,.25)",borderRadius:999,padding:"1px 8px"}},"+"+prixTexte())),
+        h("button",{className:"btn btn-ghost",id:"garder-note",style:{width:"auto"},onClick:function(){db.ref(acRef+"/garderNote").set(true);setGarderNoteL15f(true);setAq(null);}},"Je garde ma note ("+acNoteTexte(score)+"/5)")));   /* [L15f] 112 : à côté, comme G2 */
     return h("div",{className:"card",style:{marginBottom:12}},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}},h("b",null,"Regagner des points"),
         nQ>0?h("span",null,h("b",{style:{color:"#2563eb",fontSize:"1.15rem"}},dispo)," question"+(dispo>1?"s":"")+" \u00b7 "+prixTexte()+" chacune"):null),
+      false?h("div",{id:"consigne-regain-ancien",style:{background:"#eef2ff",borderRadius:10,padding:"10px 14px",fontSize:".9rem",lineHeight:1.5,margin:"6px 0 10px"}},h("b",null,"Comment \u00e7a marche : "),"une question sur une r\u00e8gle que tu as rat\u00e9e ; si tu r\u00e9ponds juste, tu regagnes "+prixPoint()+" sur ta note d\u2019autocorrection. Si tu r\u00e9ponds faux, tu ne perds rien. Tu peux aussi garder ta note telle quelle."):null,   /* [L15f] 112 : la consigne en clair, mot pour mot */
       h("div",{style:{margin:"4px 0 10px"}},perdu>0?h("span",null,"Tu as perdu ",h("b",null,acNoteTexte(perdu)+" point"+(perdu>=2?"s":""))," sur tes essais rat\u00e9s."):finished?"Tu n\u2019as rien perdu.":"Tu n\u2019as rien perdu pour l\u2019instant."),
       bouton,estimation());
   }
@@ -10541,7 +10593,8 @@ function EleveCorrection(p){
       h("div",{style:{fontSize:"2.6rem",fontWeight:800,color:"#1b6a30",margin:"6px 0"}},mmss(styloFin-now)),
       h("div",{style:{textAlign:"left",background:"#f7faf7",borderRadius:10,padding:"10px 14px",fontSize:".95rem",lineHeight:1.6}},
         h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Tes corrections :"),
-        mots.map(function(m,i){return h("span",{key:i},i?" \u00b7 ":"",m.avant?m.avant+" ":"",h("b",{style:{color:typeTexte(m.type)}},m.mot))}))));
+        mots.map(function(m,i){return h("span",{key:i},i?" \u00b7 ":"",m.avant?m.avant+" ":"",h("b",{style:{color:typeTexte(m.type)}},m.mot))})),
+      h("div",{id:"note-apres-chrono",style:{fontSize:".88rem",color:"var(--muted)",marginTop:10}},"Ta note de dict\u00e9e s\u2019affichera \u00e0 la fin du chrono.")));   /* [L15f] */
   }
 
   // ═══ Lot 2c : l'attestation, le titre et la phrase de fin, le tableau des points exact ═══
@@ -10589,9 +10642,9 @@ function EleveCorrection(p){
   function blocARecopier(){
     return h("div",{className:"card",style:{marginBottom:14,borderLeft:"4px solid #276749"}},
       h("div",{style:{fontWeight:700,marginBottom:6}},"\u00c0 recopier chez toi, sur ta copie :"),
-      h("div",{style:{fontStyle:"italic",lineHeight:1.55,marginBottom:12}},"\u00ab "+phraseARecopier(errors,extras)+" \u00bb"),
+      h("div",{style:{fontStyle:"italic",lineHeight:1.55,marginBottom:12}},"\u00ab "+phraseARecopier(errors,extras,{points:regainL15f(),notions:questionsTraiteesL15f().filter(function(q){return q.ok===true}).map(function(q){return q.notion}).filter(Boolean)})+" \u00bb"),
       cacheCorrige?h("div",{style:{fontSize:".85rem",color:"var(--muted)"}},"\ud83d\udcc4 Ta dict\u00e9e autocorrig\u00e9e sera disponible \u00e0 la fin de l\u2019heure."):
-      p.onCopie?h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:p.onCopie,title:"Ouvre ta dict\u00e9e corrig\u00e9e. Tu peux la rouvrir quand tu veux, m\u00eame depuis chez toi."},"\ud83d\udcc4 Ma dict\u00e9e autocorrig\u00e9e"):null);
+      p.onCopie?h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:p.onCopie,"data-titre-retire":"Ouvre ta dict\u00e9e corrig\u00e9e. Tu peux la rouvrir quand tu veux, m\u00eame depuis chez toi."},"\ud83d\udcc4 Ma dict\u00e9e autocorrig\u00e9e"):null);
   }
   /* Tableau des points : même calcul que la note de dictée (computeNote) — barème, répétitions, forfait. */
   function tableauNote(){
@@ -10655,7 +10708,7 @@ function EleveCorrection(p){
     h("div",{className:"card",style:{textAlign:"center",marginBottom:14}},
       txt("fin_parcours_emoji")?h("div",{style:{fontSize:"2rem",marginBottom:4}},txt("fin_parcours_emoji")):null,
       h("h1",{style:{marginBottom:10}},titreFin()),
-      h("div",{style:{display:"flex",justifyContent:"center",gap:30,marginBottom:10}},
+      styloActif?null:h("div",{id:"notes-fin",style:{display:"flex",justifyContent:"center",gap:30,marginBottom:10}},   /* [L15f] 111 : rien derrière le chrono */
         liveConfig.showNote?h("div",null,
           h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Note de dict\u00e9e"),
           h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(noteDictee,d.base)}},noteFr(noteDictee)+"/"+d.base),
@@ -10666,7 +10719,8 @@ function EleveCorrection(p){
         ),
         sansFaute?null:h("div",null,
           h("div",{style:{fontSize:".78rem",color:"var(--muted)",marginBottom:4}},"Autocorrection de la dict\u00e9e"),
-          h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(score,5)}},acNoteTexte(score)+"/5")
+          h("div",{style:{fontSize:"2.5rem",fontWeight:800,color:noteColor(score,5)}},acNoteTexte(score)+"/5"),
+          regainL15f()>0?h("div",{id:"detail-regain",style:{fontSize:".85rem",color:"var(--muted)"}},acNoteTexte(scoreSansRegainL15f())+"/5 + "+acNoteTexte(regainL15f())+" regagn\u00e9"):null   /* [L15f] 113 */
         )
       ),
       sansFaute?null:h("p",{style:{color:"var(--text-sub)",fontSize:".9rem"}},
@@ -10680,14 +10734,15 @@ function EleveCorrection(p){
         h("p",null,"L\u00e8ve-toi sans faire de bruit et va aider ",h("strong",null,peerTarget)," \u00e0 corriger ses erreurs."),
         h("p",{style:{fontSize:".85rem",color:"var(--muted)",marginTop:6}},"Sois discret et respectueux. Si tu ne travailles pas s\u00e9rieusement, tu te verras sanctionn\u00e9.")
       ),
-      h("div",{style:{marginTop:10,padding:"10px 14px",background:"var(--primary-light)",borderRadius:8,fontSize:".85rem",lineHeight:1.6}},
+      styloActif?null:h("div",{style:{marginTop:10,padding:"10px 14px",background:"var(--primary-light)",borderRadius:8,fontSize:".85rem",lineHeight:1.6}},   /* [L15f] */
         h("strong",null,"\u00c0 savoir : "),"Ta note de dict\u00e9e"+(liveConfig.showNote?" ("+noteFr(noteDictee)+"/"+d.base+")":"")+", c\u2019est moi qui la calcule, sur ta copie papier. "+"Ta note d\u2019autocorrection ("+acNoteTexte(score)+"/5) est une note \u00e0 part : "+(totalErrors>0?"tu avais "+totalErrors+" erreur"+(totalErrors>1?"s":"")+" \u00e0 retrouver, chaque essai rat\u00e9 t\u2019a co\u00fbt\u00e9 "+acNoteTexte(5/totalErrors)+" point"+(5/totalErrors>=2?"s":"")+", le premier \u00e9tait offert. ":"tu n\u2019avais aucune erreur \u00e0 retrouver. ")+"Elle ne change pas ta note de dict\u00e9e."
       )
     ),
     (p.voisinCorrige&&styloFin>0&&now>=styloFin&&now<styloFin+30000)?h("div",{style:{borderRadius:12,padding:"10px 14px",fontWeight:700,marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center",background:"#eef2ff",border:"2px solid #6366f1",color:"#3730a3"}},"Tu peux consulter ta copie",h("span",{style:{fontSize:"1.3rem"}},mmss(styloFin+30000-now))):null,
+    styloActif?null:detailAutocorrectionL15f(),   /* [L15f] 113 : le détail juste sous l'en-tête (G3) */
     alerteHeure(),encartRegain(),fenetreQuestion(),fenetreStylo(),blocARecopier(),
     // Détail de la note (si note révélée)
-    liveConfig.showNote&&tableauNote(),
+    liveConfig.showNote&&!styloActif&&tableauNote(),
     cacheCorrige?h("div",{className:"card",style:{marginBottom:14,textAlign:"center",color:"var(--text-sub)"}},"Ta dict\u00e9e corrig\u00e9e et l\u2019analyse de tes erreurs s\u2019afficheront \u00e0 la fin de l\u2019heure."):h(React.Fragment,null,
     // Point 233 : l'ancienne consigne « Maintenant, corrige sur ta copie au stylo vert… (G/L) » est retirée — la fenêtre du stylo vert la remplace.
     // Texte corrigé — copie annotée
