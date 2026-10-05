@@ -1090,3 +1090,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15f-b (05/10/2026, conscience n°12)
 - blob `709e4cf88d00` (commit `948b18e69e99`) · 876 574 o · md5 `73f4968ea2bacd374effac5e6c372515` · v6.7.0-L16a
 - **Motif** : L15f-b — côté élève et déconnexion. Promu : 888 151 o, md5 `5e6ca2c533dae39615d088c94eba965f` (bit à bit). Les élèves déconnectés par la L15f-b retapent leur code ; une version antérieure ne lit pas `deconnexion/` ni `garderNote` (sans effet).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15g (05/10/2026, conscience n°12)
+- blob `5ae8ccce232c` (commit `9d9938ff21d9`) · 888 151 o · md5 `5e6ca2c533dae39615d088c94eba965f` · v6.7.0-L15f-b
+- **Motif** : L15g — profils de barème. Promu : 899 599 o, md5 `b8b82df7e319a351fb8de8f04eb89aad` (bit à bit). Les profils vivent sous `site/baremes/` ; une dictée passée sur un profil de Paul (`config.bareme = <id>`) serait lue par une version antérieure comme « préparée » : si retour, remettre `config.bareme` à `brevet` / `preparee` (les notes recalculées par L15g sont en corbeille `recalcul-preparation_…` / `recalcul-profil_…`).
