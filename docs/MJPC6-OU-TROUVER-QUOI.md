@@ -392,3 +392,12 @@
 | la bascule | `confirmFautifI(valeur, sansBascule, typeImpose)` ; l'état de bascule et son encart (« Passer en L » / « Garder G ») sous le champ |
 | « Changer → » et Suppr | l'écran « déjà marqué » (`existingErr.type`) ; le clavier du mode rapide (`e.key==="Delete"` → `fastClear`, hors champ) ; l'infobulle du bouton « ✕ Annuler l'erreur » |
 | la ligne centrée | le calcul `a16 / b16` (budget 52 par côté) et la grille `gridTemplateColumns:"1fr auto 1fr"` au-dessus du gros mot |
+
+## AJOUT DU 05/10/2026 — correction_dictee 6.7.0-L15f-b : côté élève et déconnexion
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| le chrono sans note | `EleveCorrection` : la fenêtre du stylo vert (« Ta note de dictée s'affichera à la fin du chrono. »), l'écran de fin masqué pendant le chrono |
+| le regain | l'encart « Regagner des points » (la consigne en clair, « Je garde ma note (n/5) » → `autocorrection/<élève>/garderNote`), le détail (« + x regagné », le tableau), la phrase à recopier, le Suivi (« dont +x regagné »), l'export (`autocorrection: {note, sans_regain, regain}`) |
+| l'actualisation | `AppEleveCoeurL15f` : écoute de `copyPublishedAt` et `config.published` par dictée ; `EleveCorrection` revient à « Mes dictées » au masquage |
+| la déconnexion | `oublierSessionEleveL15f` ; `AppEleve` (l'enveloppe : « Se déconnecter » fixe, par moitié) ; `deconnexion` ; l'écoute de `correction_dictee/<id>/deconnexion/{clé,tous}` et de `heure` (clôture, fin + 10, 45 min → déconnexion) ; le Suivi (« Déconnecté », « Déconnecter », « Déconnecter tous ») |
