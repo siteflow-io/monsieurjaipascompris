@@ -418,3 +418,12 @@
 |---|---|
 | le type C | `TYPE_STYLE.C`, `TYPE_ORDRE`, `TYPE_COST`, `TYPE_COST_BREVET` (forfait) ; `reclassableEnC`, `signesCL15h`, `sousTypeCL15h`, `HOMOPHONES_GRAMMATICAUX_L15H` ; la touche C (`fastMark`, `selectType`), le bouton « C Accent / maj. », l'entrée du menu texte ; `copieRecopiee` / `recopiesManquantes` (C recopié) ; la fiche de l'élève (« Accent », « Majuscule », « Trait d'union ») ; l'aide |
 | le reclassement à blanc | `bancs/rapport_L15h1.py` (lecture seule) → `RAPPORT-A-BLANC-L15h1.md` ; L15h-2 à venir : `reclassement-accents_<hhmmss>_<clé>` en corbeille |
+
+## AJOUT DU 05/10/2026 — correction_dictee 6.7.0-L15.1b-1 : l'analyse par l'écart
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| le moteur | `syllabes`, `cesureL151`, `motLongL151`, `motifL151` (l'interpréteur de motifs : casse, tiret, collage, apostrophe, chiffre, cedille, homophone, accent, double, suffixe, terminaisons, lettre, inversion, omise, ajoutee, changee, regex, ajout ; `sauf`, `siVerbe`, `siNom`, `siMot`), `analyserEcartL151`, `motAvantL151`, `analyseErreurL151`, `erreursAnalyseesL151` |
+| les objets | `CATEGORIES_L151` (le seed, 41), `ANALYSES_L151`, `categoriesL151`, `homophonesL151`, `ecouterAnalysesL151` (`site/analyses/categories/`, `site/analyses/homophones/`) ; `categorie` dans chaque erreur et dans l'objet forme (`formesSynchroniser`) |
+| les lecteurs | `gramComment(err, tokens)` (le premier chemin ; le mot long) et ses appels : la copie (`buildCopieHtml`), l'analyse de l'élève (`AppEleveCoeurL15f`) |
+| l'écran | `CommentairesAnalyseL151` (Réglages), `NonReconnusL151` (Bilan), l'aide « ? » |
