@@ -401,3 +401,13 @@
 | le regain | l'encart « Regagner des points » (la consigne en clair, « Je garde ma note (n/5) » → `autocorrection/<élève>/garderNote`), le détail (« + x regagné », le tableau), la phrase à recopier, le Suivi (« dont +x regagné »), l'export (`autocorrection: {note, sans_regain, regain}`) |
 | l'actualisation | `AppEleveCoeurL15f` : écoute de `copyPublishedAt` et `config.published` par dictée ; `EleveCorrection` revient à « Mes dictées » au masquage |
 | la déconnexion | `oublierSessionEleveL15f` ; `AppEleve` (l'enveloppe : « Se déconnecter » fixe, par moitié) ; `deconnexion` ; l'écoute de `correction_dictee/<id>/deconnexion/{clé,tous}` et de `heure` (clôture, fin + 10, 45 min → déconnexion) ; le Suivi (« Déconnecté », « Déconnecter », « Déconnecter tous ») |
+
+## AJOUT DU 05/10/2026 — correction_dictee 6.7.0-L15g : les profils de barème
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| les profils | `PROFILS_BASE` (Brevet, Préparée), `PROFILS`, `profilDe`, `profilsListeL15g`, `ecouterProfilsL15g` (`site/baremes/`), `ProfilEditeurL15g` (Voir / Modifier / Dupliquer / Enregistrer le profil), `familleDe` |
+| la note | `computeNote(errors, extras, base, bareme)` — l'ordre : sans-coût → un type par mot → répétitions (mot / famille) → forfait plafonné → l'unité ; `coutType` |
+| les recalculs | `recalculerDicteeL15g` (profil ou base d'une dictée), `recalculerProfilL15g` (toutes les dictées du profil), la version aménagée (`setBase`), `toastRecalculL15g` ; corbeille `recalcul-preparation_…` / `recalcul-profil_…` |
+| le bilan, l'accueil | le Bilan (deux moyennes nommées), la ligne de l'accueil (« barème … ») |
+| le branchement MJPC | `heureDeLaDictee(heure)` (seul point d'entrée), « Lancer » (`source`, `seanceId`), le marqueur `[BRANCHEMENT MJPC — déroulé]`, l'aide du Suivi |
