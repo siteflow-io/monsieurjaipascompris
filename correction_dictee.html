@@ -261,7 +261,7 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
 firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"});
 var db=firebase.database();
 function san(n){return sanMJPC(n)} /* alias historique → clé canonique MJPC-CORE */
-var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5,P:0.5,A:0,E:0.5};
+var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5,P:0.5,A:0,E:0.5,C:0.5};
 /* ═══ TYPE_STYLE — SOURCE UNIQUE DE VÉRITÉ DES COULEURS ET LIBELLÉS ═══
    Les couleurs étaient déclarées dans une dizaine d'endroits indépendants qui
    avaient divergé (P bleu au bouton mais ROUGE — la couleur de G — au badge de
@@ -275,12 +275,13 @@ var TYPE_STYLE={
   M:{couleur:"#975a16",fond:"#fef3c7",libelle:"Mot manquant",court:"\u2205"},
   I:{couleur:"#7c3aed",fond:"#ede9fe",libelle:"Illisible",court:"?"},
   L:{couleur:"#2b6cb0",fond:"#dbeafe",libelle:"Lexique",court:"L"},
+  C:{couleur:"#c2410c",fond:"#ffedd5",libelle:"Accent, majuscule ou trait d\u2019union",court:"C"},   /* [L15h — dette 126] jamais la cédille (L), jamais un accent grammatical (G) */
   P:{couleur:"#b83280",fond:"#fce7f3",libelle:"Ponctuation",court:"P"},
   E:{couleur:"#0d9488",fond:"#ccfbf1",libelle:"\u00c9lision",court:"E"},
   X:{couleur:"#1f2937",fond:"#e5e7eb",libelle:"Mot en trop",court:"+"},
   A:{couleur:"#eab308",fond:"#fef9c3",texte:"#854d0e",libelle:"Attention graphie",court:"\u26a0"}
 };
-var TYPE_ORDRE=["G","M","I","L","P","E","X","A"];
+var TYPE_ORDRE=["G","M","I","L","C","P","E","X","A"];   /* [L15h] */
 /* ═══ NOTE D'AUTOCORRECTION DE LA DICTÉE — CALCUL UNIQUE (annexe 6, validée par Paul) ═══
    N = nombre d'erreurs de l'élève hors type A. Un essai raté coûte 5/N ; le premier
    raté est offert. Tout part de nombres entiers :
@@ -1181,7 +1182,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15g-c";
+var APP_VERSION="6.7.0-L15h";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1233,7 +1234,7 @@ function formesSynchroniser(dId,dData,ancien,nouveaux){
   var tok=dData.tokens||tokenize(dData.text||""),tk=empreinteTexte(dData.text),anc={},gardes={},maj={};
   toArr((ancien&&ancien.errors)||[]).forEach(function(e){if(e&&e.formeId)anc[e.idx]=e;});
   var res=(nouveaux||[]).map(function(e){if(!e)return e;var f=String(e.fautif||"").trim(),av=anc[e.idx];
-    if((e.type==="G"||e.type==="L")&&f){var id=(av&&av.formeId)||e.formeId||idForme();gardes[id]=1;var ex=FORMES.parId[id];
+    if((e.type==="G"||e.type==="L"||e.type==="C")&&f){var id=(av&&av.formeId)||e.formeId||idForme();   /* [L15h] */gardes[id]=1;var ex=FORMES.parId[id];
       var o={id:id,creeLe:(ex&&ex.creeLe)||Date.now(),mot:motCleForme(tok,e.idx),forme:f,type:e.type,dicteeId:dId,texteKey:tk,niveau:dData.niveau||""};
       if(!ex||ex.forme!==o.forme||ex.type!==o.type||ex.mot!==o.mot){maj[id]=o;FORMES.parId[id]=o;}
       return Object.assign({},e,{formeId:id});}
@@ -1250,7 +1251,7 @@ function formesOuverture(dId,corr){
     return db.ref("correction_dictee").once("value").then(function(s2){var all=s2.val()||{},obj={},liens={},n=0,t0=Date.now(),seq=0,ici={};
       Object.keys(all).forEach(function(did){if(String(did).charAt(0)==="_")return;var d=all[did]||{},cfg=d.config||{},tok=tokenize(cfg.text||""),tk=empreinteTexte(cfg.text),res=d.results||{};
         Object.keys(res).forEach(function(k){var r=res[k];if(!r||typeof r!=="object"||!r.errors)return;var raw=r.errors;
-          Object.keys(raw).forEach(function(i){var e=raw[i];if(!e)return;var f=String(e.fautif||"").trim();if(!((e.type==="G"||e.type==="L")&&f))return;
+          Object.keys(raw).forEach(function(i){var e=raw[i];if(!e)return;var f=String(e.fautif||"").trim();if(!((e.type==="G"||e.type==="L"||e.type==="C")&&f))return;
             var id="fe_"+t0.toString(36)+"_"+(seq++).toString(36);
             obj[id]={id:id,creeLe:r.timestamp||t0,mot:motCleForme(tok,e.idx),forme:f,type:e.type,dicteeId:did,texteKey:tk,niveau:cfg.niveau||""};
             liens["correction_dictee/"+did+"/results/"+k+"/errors/"+i+"/formeId"]=id;n++;if(did===dId){(ici[k]=ici[k]||{})[e.idx]=id;}});});});
@@ -1369,6 +1370,7 @@ var AIDES={
     ["F1","cette aide (ici, la touche ? s\u2019\u00e9crit dans la case) ; \u00c9chap la ferme"]]},
   rapide:{ou:"Mode rapide \u2014 sur un mot",l:[
     ["G / L","erreur de grammaire / de lexique \u2192 la case \u00ab ce qu\u2019a \u00e9crit l\u2019\u00e9l\u00e8ve \u00bb"],
+    ["C","accent, majuscule ou trait d\u2019union (jamais la c\u00e9dille, jamais a/\u00e0, ou/o\u00f9\u2026) \u2192 la case ; au brevet, dans le forfait"],
     ["M (ou /)","manquant ; sur un signe : ponctuation ; sur une apostrophe : \u00e9lision"],
     ["i","illisible"],
     ["A","attention (sans retrait)"],
@@ -1546,6 +1548,17 @@ function AppEleve(p){var sE=useState(null),etatD=sE[0],setEtatD=sE[1];   /* [L15
 function toastRecalculL15g(t){try{var e=document.getElementById("toast-recalcul-l15g");if(!e){e=document.createElement("div");e.id="toast-recalcul-l15g";e.style.cssText="position:fixed;left:16px;bottom:16px;z-index:2000;background:#14532d;color:#fff;padding:10px 14px;border-radius:10px;font:14px Georgia,serif;max-width:460px;box-shadow:0 4px 14px rgba(0,0,0,.25)";document.body.appendChild(e);}e.textContent=t;clearTimeout(e._t);e._t=setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e)},9000);}catch(x){}}
 window.addEventListener("recalcul-l15g",function(ev){var d=ev.detail||{};if(d.n)toastRecalculL15g(d.n+" copie"+(d.n>1?"s":"")+" recalcul\u00e9e"+(d.n>1?"s":"")+" (le bar\u00e8me ou la base a chang\u00e9) ; l\u2019\u00e9tat d\u2019avant est dans la corbeille.");});
 function heureDeLaDictee(h){if(!h||typeof h!=="object")return null;if(h.source==="mjpc"&&h.seanceId){/* [BRANCHEMENT MJPC — déroulé] pas encore relié : on garde l'heure de la dictée */return h;}return h;}
+/* [L15h — dette 126] LE RECLASSEMENT EN C : une erreur L dont la recopie, une fois retirés les seuls accents aigu, grave, circonflexe, tréma,
+   la majuscule et le trait d'union, est le mot attendu. JAMAIS : une lettre en plus, en moins ou changée ; une cédille (lexicale) ;
+   un homophone grammatical (a/à, la/là, ou/où, du/dû, sur/sûr : G) ; une erreur L sans recopie. */
+var HOMOPHONES_GRAMMATICAUX_L15H=["a","\u00e0","la","l\u00e0","ou","o\u00f9","du","d\u00fb","sur","s\u00fbr"];
+function signesCL15h(w){return String(w||"").normalize("NFD").replace(/[\u0300\u0301\u0302\u0308]/g,"").normalize("NFC").replace(/-/g,"").toLowerCase();}
+function reclassableEnC(fautif,attendu){var f=String(fautif||"").trim(),w=String(attendu||"").trim();if(!f||!w||f===w)return false;
+  if(HOMOPHONES_GRAMMATICAUX_L15H.indexOf(w.toLowerCase())>=0||HOMOPHONES_GRAMMATICAUX_L15H.indexOf(f.toLowerCase())>=0)return false;
+  return signesCL15h(f)===signesCL15h(w);}
+/* ce que l'erreur C touche, en mots simples (pour l'élève) */
+function sousTypeCL15h(fautif,attendu){var f=String(fautif||""),w=String(attendu||"");if(f.replace(/-/g,"")!==f||w.replace(/-/g,"")!==w){if(f.replace(/-/g,"").toLowerCase()===w.replace(/-/g,"").toLowerCase())return "trait d\u2019union";}
+  if(f.toLowerCase()===w.toLowerCase())return "majuscule";return "accent";}
 /* [L5] signe de ponctuation (hors apostrophe) ? */
 function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrophe(w);}
 /* [L5] LE RECLASSEMENT (rapport L4, forme B, « ok » de Paul le 01/10) : (1) un « M » posé sur un signe → « P » ; (2) un signe « en trop »
@@ -1599,7 +1612,7 @@ function tokSp(curW,nextW){
    d'affichage : changer de mode ne doit pas recalculer les notes des autres.
    Mesure sur les 145 copies du hub : moyenne 4,17 → 4,47, quatre eleves
    sortent du zero, gain maximal 3,5 pts. */
-var TYPE_COST_BREVET={G:1,L:0.5,M:0.5,I:0.5,X:0.5,P:0,A:0,E:0.5};
+var TYPE_COST_BREVET={G:1,L:0.5,M:0.5,I:0.5,X:0.5,P:0,A:0,E:0.5,C:0};   /* [L15h] au brevet, C entre dans le forfait */
 function bonusRepetitions(errors){
   /* les occurrences supplementaires d'une meme faute sur un meme mot */
   var vus={},repetees=[];
@@ -4081,7 +4094,7 @@ function RapideGlobal(p){
   var sc=computeNote(errors,extras,data.base,data.bareme);
 
   function markError(type){
-    if(type==="G"||type==="L"){setAskFautif(type);setFautifVal("");return}
+    if(type==="G"||type==="L"||type==="C"){setAskFautif(type);setFautifVal("");return}
     // P, A, M, I : pas de transcription demandée, ajouter direct
     var wt=wordTokens[wordIdx];if(!wt)return;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
@@ -4394,7 +4407,7 @@ function CorrEleve(p){
   var fautifTexteRef=React.useRef(null);
   React.useEffect(function(){if(askFautifTexte&&fautifTexteRef.current)fautifTexteRef.current.focus()},[askFautifTexte]);
   function selectType(type){
-    if(type==="G"||type==="L"){setAskFautifTexte({type:type,idx:popupIdx});setFautifTexteVal("");setPopupIdx(null);return}
+    if(type==="G"||type==="L"||type==="C"){setAskFautifTexte({type:type,idx:popupIdx});   /* [L15h] C : la recopie aussi */setFautifTexteVal("");setPopupIdx(null);return}
     var neT=errors.filter(function(x){return x&&x.idx!==popupIdx}).concat([{idx:popupIdx,type:type,word:tokens[popupIdx]}]);setErrors(neT);setLastTouched(popupIdx);autoTexte(neT,extras,popupIdx);pileZ.current.push(popupIdx);setPopupIdx(null)   /* [L8] remplace, et Ctrl+Z */
   }
   function listeFormesTexte(){return askFautifTexte?formesPour(motCleForme(tokens,askFautifTexte.idx),tokens[askFautifTexte.idx],askFautifTexte.type):[];}   /* [L10] ; [L16a] le type choisi */
@@ -4488,7 +4501,7 @@ function CorrEleve(p){
   React.useEffect(function(){if(askFautifI&&fautifRefI.current)fautifRefI.current.focus()},[askFautifI]);
 
   function fastMark(type){
-    if(type==="G"||type==="L"){setAskFautifI(type);setFautifValI("");return}
+    if(type==="G"||type==="L"||type==="C"){setAskFautifI(type);setFautifValI("");return}   /* [L15h] */
     var wt=wordTokens[fastIdx];if(!wt)return;
     var ne=errors.filter(function(e){return e.idx!==wt.idx});
     ne.push({idx:wt.idx,type:type,word:wt.text});
@@ -4507,7 +4520,7 @@ function CorrEleve(p){
     var wt=wordTokens[fastIdx];if(!wt)return;
     var vv=overrideVal!==undefined?overrideVal:fautifValI;
     if(motJuste(vv,wt.text)){setGardeMot(true);return}   /* [L3] le mot juste est refusé ; le champ reste ouvert */
-    if(String(vv||"").trim()&&!sansBascule){var autre=askFautifI==="G"?"L":"G",mc=motCleForme(tokens,wt.idx),v0=String(vv).trim(),
+    if(String(vv||"").trim()&&!sansBascule&&(askFautifI==="G"||askFautifI==="L")){   /* [L15h] la bascule : G et L seulement */var autre=askFautifI==="G"?"L":"G",mc=motCleForme(tokens,wt.idx),v0=String(vv).trim(),
         dansAutre=formesPour(mc,wt.text,autre).filter(function(o){return o.forme===v0})[0],dansType=formesPour(mc,wt.text,askFautifI).filter(function(o){return o.forme===v0})[0];
       if(dansAutre&&!dansType){setBascL16({forme:v0,autre:autre,compte:dansAutre.compte});return;}}   /* [L16a] la bascule : aucun raccourci, deux boutons */
     setBascL16(null);
@@ -4561,6 +4574,7 @@ function CorrEleve(p){
       else if(e.key==="l"||e.key==="L"){e.preventDefault();fastMark("L")}
       else if(e.key==="m"||e.key==="M"||e.key==="/"){e.preventDefault();fastMark(typeAdapteM(wordTokens[fastIdx]))}   /* [L3] M s'adapte */
       else if(e.key==="i"||e.key==="I"){e.preventDefault();fastMark("I")}   /* [L12] « ? » sert à l'aide, plus à Illisible */
+      else if(e.key==="c"||e.key==="C"){e.preventDefault();fastMark("C")}   /* [L15h] accent, majuscule, trait d'union */
       /* [L3] les touches P et E sont retirées : M s'adapte, et Entrée valide le bouton mis en avant */
       else if(e.key==="a"||e.key==="A"){e.preventDefault();fastMark("A")}
       else if(e.key===" "){e.preventDefault();fastSkip()}
@@ -4670,6 +4684,7 @@ function CorrEleve(p){
         else if(k==="l"){e.preventDefault();selectType("L")}
         else if(k==="m"){e.preventDefault();selectType(typeAdapteM({text:tokens[popupIdx]}))}
         else if(k==="i"){e.preventDefault();selectType("I")}
+        else if(k==="c"){e.preventDefault();selectType("C")}   /* [L15h] */
         else if(k==="a"){e.preventDefault();selectType("A")}
         else if(e.key==="Escape"){e.preventDefault();setPopupIdx(null)}
         return;
@@ -4816,6 +4831,7 @@ function CorrEleve(p){
             existingErr&&existingErr.type!=="L"&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Changer en Lexique (orthographe pure)"},"Changer \u2192 L"),
             !existingErr&&h("button",{className:"fast-btn fast-g",onClick:function(){fastMark("G")},title:"Erreur de Grammaire ("+coutType("G")+" pt). Saisie du mot fautif demand\u00e9e. Raccourci : G"},"G Grammaire"),
             !existingErr&&h("button",{className:"fast-btn fast-l",onClick:function(){fastMark("L")},title:"Erreur de Lexique \u2014 orthographe (\u22120,5 pt). Saisie demand\u00e9e. Raccourci : L"},"L Lexique"),
+            !existingErr&&h("button",{className:"fast-btn fast-c",id:"fast-c-l15h",style:{color:TYPE_STYLE.C.couleur,background:TYPE_STYLE.C.fond},onClick:function(){fastMark("C")},title:"Accent, majuscule ou trait d\u2019union oubli\u00e9 ou fautif (jamais la c\u00e9dille : L ; jamais a/\u00e0, ou/o\u00f9\u2026 : G). Co\u00fbt : \u00ab "+coutType("C")+" \u00bb (au brevet, dans le forfait avec la ponctuation). Saisie demand\u00e9e. Raccourci : C"},"C Accent / maj."),   /* [L15h] */
             !existingErr&&(curWord&&estApostrophe(curWord.text)
               ?h("button",{className:"fast-btn fast-e fast-preselect",id:"fast-preselect",onClick:function(){fastMark("E")},title:"\u00c9lision oubli\u00e9e ou fautive \u2014 orthographe, famille \u00ab Apostrophes et \u00e9lisions \u00bb (\u22120,5 pt), sans saisie. Mis en avant sur une apostrophe : Entr\u00e9e le valide (ou M)."},"' \u00c9lision (M)")
               :curWord&&isPunct(curWord.text)
@@ -4997,6 +5013,7 @@ function CorrEleve(p){
         h("div",{className:"popup-grid"},
           h("button",{className:"popup-btn popup-btn-g",onClick:function(){selectType("G")}},h("div",{style:{fontSize:"1.3rem"}},"G"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Grammaire ("+coutType("G")+")")),
           h("button",{className:"popup-btn popup-btn-l",onClick:function(){selectType("L")}},h("div",{style:{fontSize:"1.3rem"}},"L"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Lexique ("+coutType("L")+")")),
+          h("button",{className:"popup-btn popup-btn-c",id:"popup-c-l15h",style:{color:TYPE_STYLE.C.couleur,background:TYPE_STYLE.C.fond},onClick:function(){selectType("C")},title:"Accent, majuscule ou trait d\u2019union (la recopie est demand\u00e9e). Raccourci : C"},h("div",{style:{fontSize:"1.3rem"}},"C"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"Accent / maj. ("+coutType("C")+")")),   /* [L15h] */
           estApostrophe(tokens[popupIdx])
             ?h("button",{className:"popup-btn popup-btn-e",onClick:function(){selectType("E")}},h("div",{style:{fontSize:"1.3rem"}},"'"),h("div",{style:{fontSize:".7rem",fontWeight:400,marginTop:2}},"\u00c9lision ("+coutType("E")+")"))
             :isPunct(tokens[popupIdx])
@@ -6018,7 +6035,7 @@ function Fiches(p){
       })}
 
       html+='</div>';
-      html+='<div class="summary"><span>'+co.G+' grammaire &middot; '+co.L+' lexique &middot; '+(co.E||0)+' \u00e9lision &middot; '+(co.M||0)+' manquant &middot; '+(co.P||0)+' ponct. &middot; '+(co.I||0)+' illisible &middot; '+(co.A||0)+' attention graphie &middot; '+(co.X||0)+' en trop</span>';
+      html+='<div class="summary"><span>'+co.G+' grammaire &middot; '+co.L+' lexique &middot; '+(co.E||0)+' \u00e9lision &middot; '+(co.M||0)+' manquant &middot; '+(co.P||0)+' ponct. &middot; '+(co.I||0)+' illisible &middot; '+(co.A||0)+' attention graphie &middot; '+(co.X||0)+' en trop'+(co.C?' &middot; '+co.C+' accent, majuscule ou trait d’union':'')+'</span>';
       html+='<strong style="color:'+nc+'">'+noteFr(c.note)+'/'+data.base+'</strong></div>';
       html+='</div>';
 
@@ -6029,8 +6046,8 @@ function Fiches(p){
 
       var n=1;
       errors.forEach(function(err){
-        var typeLabel=err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":err.type==="P"?"Ponctuation manquante":err.type==="A"?"Attention \u00e0 ta graphie":"Illisible";
-        var hint=err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":err.type==="P"?"Un signe de ponctuation manquait (. , ; : ? !)":err.type==="A"?"J\u2019ai h\u00e9sit\u00e9 \u00e0 mettre illisible. Aucun point retir\u00e9, mais soigne le trac\u00e9 \u00e0 l\u2019avenir.":"Le mot n\u2019\u00e9tait pas lisible";
+        var typeLabel=err.type==="C"?sousTypeCL15h(err.fautif,err.word).replace(/^./,function(x){return x.toUpperCase()}):err.type==="G"?"Grammaire":err.type==="L"?"Lexique":err.type==="M"?"Mot manquant":err.type==="P"?"Ponctuation manquante":err.type==="A"?"Attention \u00e0 ta graphie":"Illisible";
+        var hint=err.type==="C"?"":err.type==="G"?"Accords, conjugaison, homophones...":err.type==="L"?"Orthographe, accents, majuscules...":err.type==="M"?"Un mot a \u00e9t\u00e9 oubli\u00e9 dans la copie":err.type==="P"?"Un signe de ponctuation manquait (. , ; : ? !)":err.type==="A"?"J\u2019ai h\u00e9sit\u00e9 \u00e0 mettre illisible. Aucun point retir\u00e9, mais soigne le trac\u00e9 \u00e0 l\u2019avenir.":"Le mot n\u2019\u00e9tait pas lisible";
         var numCls="err-num err-num-"+err.type.toLowerCase();
         var typeCls="err-type err-type-"+err.type.toLowerCase();
         html+='<div class="err-row">';
@@ -6562,11 +6579,11 @@ function copieRecopiee(c){
      seulement sont recopiees au hub. */
   if(!c) return false;
   var errs = toArr(c.errors||[]).filter(function(e){return e!=null});
-  var besoin = errs.filter(function(e){return e.type==="G"||e.type==="L"});   /* [L15d] dette 115 : une recopie est attendue pour G et L seulement (P, I, A, E, M n'en ont jamais) */
+  var besoin = errs.filter(function(e){return e.type==="G"||e.type==="L"||e.type==="C"});   /* [L15h] C a sa recopie */   /* [L15d] dette 115 : une recopie est attendue pour G et L seulement (P, I, A, E, M n'en ont jamais) */
   if(!besoin.length) return true;
   return besoin.every(function(e){return e.fautif && String(e.fautif).trim()!==""});
 }
-function recopiesManquantes(c){if(!c)return 0;return toArr(c.errors||[]).filter(function(e){return e&&(e.type==="G"||e.type==="L")&&!(e.fautif&&String(e.fautif).trim()!=="")}).length;}   /* [L15d] le compte dit dans l'infobulle */
+function recopiesManquantes(c){if(!c)return 0;return toArr(c.errors||[]).filter(function(e){return e&&(e.type==="G"||e.type==="L"||e.type==="C")&&!(e.fautif&&String(e.fautif).trim()!=="")}).length;}   /* [L15d] le compte dit dans l'infobulle */
 function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   options = options || {};
   var mode = options.mode || "barre";
@@ -7145,7 +7162,7 @@ function Copies(p){
     var arr=toArr(c.errors);
     var queue=[];
     arr.forEach(function(e,i){
-      if(e&&(e.type==="G"||e.type==="L"||e.type==="I")&&!e.fautif)queue.push({err:e,realIdx:i});
+      if(e&&(e.type==="G"||e.type==="L"||e.type==="C"||e.type==="I")&&!e.fautif)queue.push({err:e,realIdx:i});
     });
     return queue;
   }
