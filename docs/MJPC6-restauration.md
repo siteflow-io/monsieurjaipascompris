@@ -1094,3 +1094,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15g (05/10/2026, conscience n°12)
 - blob `5ae8ccce232c` (commit `9d9938ff21d9`) · 888 151 o · md5 `5e6ca2c533dae39615d088c94eba965f` · v6.7.0-L15f-b
 - **Motif** : L15g — profils de barème. Promu : 899 599 o, md5 `b8b82df7e319a351fb8de8f04eb89aad` (bit à bit). Les profils vivent sous `site/baremes/` ; une dictée passée sur un profil de Paul (`config.bareme = <id>`) serait lue par une version antérieure comme « préparée » : si retour, remettre `config.bareme` à `brevet` / `preparee` (les notes recalculées par L15g sont en corbeille `recalcul-preparation_…` / `recalcul-profil_…`).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15g-b (05/10/2026, conscience n°12)
+- blob `03a910e02848` (commit `be4586dae7d4`) · 899 599 o · md5 `b8b82df7e319a351fb8de8f04eb89aad` · v6.7.0-L15g
+- **Motif** : micro L15g-b — libellés des modes à l'import. Promu : 899 808 o, md5 `e7e7ac6a2b5f9e9dc8d339ce65d5b053` (bit à bit).
