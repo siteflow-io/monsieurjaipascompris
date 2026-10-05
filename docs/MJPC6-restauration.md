@@ -1110,3 +1110,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15h-b (05/10/2026, conscience n°12)
 - blob `8cc3ae640960` (commit `aa159eefba33`) · 903 274 o · md5 `a5d6a057018c61a741a518568998a1c7` · v6.7.0-L15h
 - **Motif** : micro L15h-b — libellés des modes, message. Promu : 903 883 o, md5 `1a154f3810fa5c9a1ba7ca411f3c9a78` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1 (05/10/2026, conscience n°12)
+- blob `b9da3eb1b68a` (commit `2e3998e06baf`) · 903 883 o · md5 `1a154f3810fa5c9a1ba7ca411f3c9a78` · v6.7.0-L15h-b
+- **Motif** : L15.1b-1 — l'analyse par l'écart. Promu : 941 445 o, md5 `178cbb58dea607d72a363638bffd5f12` (bit à bit). La L15.1b-1 écrit `site/analyses/categories/` et `site/analyses/homophones/` à la première ouverture (objets), et `categorie` dans chaque erreur recopiée : une version antérieure les ignore sans dommage ; `site/analyses/` est à préserver à la purge (manifeste à compléter : dit dans le journal).
