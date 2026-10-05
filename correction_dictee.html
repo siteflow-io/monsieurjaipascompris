@@ -1182,7 +1182,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15h";
+var APP_VERSION="6.7.0-L15h-b";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -6166,7 +6166,7 @@ function ConfigAmenagee(p){
   function setDefaultMode(m){   /* [L15a] suivi d'effets : les mots sans mode à eux sont recalculés, la consigne suit (si elle n'a pas été écrite à la main) */
     var n=0,lac=(amen.lacunes||[]).map(function(l){if(!l||l.mode)return l;var nl=completerPourMode(l,m);if(JSON.stringify(nl)!==JSON.stringify(l))n++;return nl;});
     var na=Object.assign({},amen,{defaultMode:m,lacunes:lac});var auto=!amen.consigne||amen.consigne===generateConsigne(amen);if(auto)na.consigne=generateConsigne(na);
-    saveAmen(na);setMsgAmenL15a("Mode "+m+" : "+(lac.filter(Boolean).filter(function(l){return !l.mode}).length)+" mot"+((lac.filter(function(l){return l&&!l.mode}).length>1)?"s":"")+" \u00e0 compl\u00e9ter suivent ce mode ("+n+" recalcul\u00e9"+(n>1?"s":"")+")"+(auto?" ; la consigne suit":"")+".");}
+    saveAmen(na);var nSuit=lac.filter(Boolean).filter(function(l){return !l.mode}).length,nPropre=lac.filter(Boolean).length-nSuit;setMsgAmenL15a("Mode par d\u00e9faut : "+({A:"A (3 propositions \u00e0 cocher)",B:"B (trou simple)",C:"C (trou + indice)"}[m]||m)+". "+nSuit+" mot"+(nSuit>1?"s":"")+" \u00e0 compl\u00e9ter le "+(nSuit>1?"suivent":"suit")+(nPropre?" ; "+nPropre+" garde"+(nPropre>1?"nt":"")+" le mode choisi dans "+(nPropre>1?"leur":"sa")+" fen\u00eatre":"")+(n?" ; "+n+" propositions refaite"+(n>1?"s":"")+" pour le nouveau mode":"")+(auto?" ; la consigne suit":"")+".");   /* [micro L15h-b — 05/10, Paul : le message dans ses mots] */}
   function setBase(b){saveAmen(Object.assign({},amen,{base:parseInt(b)||10}));setTimeout(function(){recalculerDicteeL15g(p.dicteeId,"recalcul-base-amenagee");},400);}   /* [L15g — dette 130] les copies aménagées suivent leur base */
 
   function effectiveLacunes(){return amen&&amen.lacunes?fixLacunesIndices(amen.lacunes,tokens):[]}
@@ -6285,7 +6285,7 @@ function ConfigAmenagee(p){
           ((fen.mode||amen.defaultMode||"A")==="A")&&h("button",{className:"btn-sm btn-ghost",id:"autres-formes",onClick:autresFormesL15a,title:"D\u2019abord les vraies formes fautives des copies sur ce mot (les plus fr\u00e9quentes), puis des formes cibl\u00e9es (accord, terminaison, accent, consonne double) ; jamais une proposition vide ni le mot lui-m\u00eame."},"\u21bb Proposer d\u2019autres formes (depuis les copies)"),
           h("label",{style:{display:"inline-flex",alignItems:"center",gap:6,fontSize:".9rem"}},"Mode pour ce mot :",
             h("select",{id:"mode-mot",value:fen.mode||"",title:"Le mode de ce mot ; \u00ab par d\u00e9faut \u00bb suit le mode de la dict\u00e9e.",onChange:function(e){var m=e.target.value||null,eff=m||amen.defaultMode||"A",nl=completerPourMode({tokenIdx:fen.idx,propositions:fen.propositions,indice:fen.indice,raisonnement:fen.raisonnement},eff);setFen(Object.assign({},fen,{mode:m,propositions:nl.propositions||fen.propositions,indice:nl.indice||fen.indice,raisonnement:nl.raisonnement||fen.raisonnement}))}},
-              h("option",{value:""},"par d\u00e9faut ("+(amen.defaultMode||"A")+")"),h("option",{value:"A"},"A"),h("option",{value:"B"},"B"),h("option",{value:"C"},"C"))),
+              h("option",{value:""},"par d\u00e9faut \u2014 "+({A:"A : 3 propositions \u00e0 cocher",B:"B : trou simple (l\u2019\u00e9l\u00e8ve \u00e9crit)",C:"C : trou + indice grammatical"}[amen.defaultMode||"A"])),h("option",{value:"A"},"A \u2014 3 propositions \u00e0 cocher"),h("option",{value:"B"},"B \u2014 Trou simple (l\u2019\u00e9l\u00e8ve \u00e9crit)"),h("option",{value:"C"},"C \u2014 Trou + indice grammatical"))),
           h("button",{className:"btn-sm btn-ghost",id:"retirer-mot",style:{color:"#b91c1c"},onClick:retirerFenL15a,title:"Rendre ce mot au texte : il n\u2019est plus \u00e0 compl\u00e9ter."},"\ud83d\uddd1 Retirer ce mot")),
         h("div",{style:{display:"flex",justifyContent:"flex-end",gap:8}},
           h("button",{className:"btn-sm btn-ghost",onClick:function(){setFen(null)},title:"Fermer sans rien changer (\u00c9chap)"},"Annuler (\u00c9chap)"),
