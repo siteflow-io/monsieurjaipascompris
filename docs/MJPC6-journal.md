@@ -1016,3 +1016,6 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 - **06/10/2026 09:05 — PROMOTION correction_dictee 6.7.0-L15.1b-1f (micro : le temps de recopie en vert réglable) — conscience n°12, filière micro sur ordre de Paul, pendant ses séances**
   problème : 2 minutes de stylo vert, fixe (145). résolution : Préparation → « Recopie en vert : n s » (`config.recopieSec`, 15-600, défaut 60) ; `liveConfig.recopieSec` côté élève ; `styloFin = t + recopieSec` ; la fenêtre dit la durée ; condition « 2 min de plus pour les questions ». (974 561 o, md5 `8cec85bf473e77bfc67df73853ee0809`). Banc par le geste VERT (le champ à 60, réglé à 45 → config ; l'élève qui finit : « Tu as 45 secondes… », chrono ≈ 45 s). Promu bit à bit. Point de retour (L15.1b-1e `ee2d9580e540`). Dettes 146-148 inscrites (binômes, étanchéité, « corrige » à 0 erreur).
   → mots-clés : recopie en vert · stylo vert réglable · correction_dictee 6.7.0-L15.1b-1f
+
+- **06/10/2026 10:30 — PROMOTION correction_dictee 6.7.0-L15.1b-1g (micro : 3 minutes de recopie par défaut) — conscience n°12, sur ordre de Paul**
+  `recopieSec` par défaut 180 (sept occurrences), le réglage de Préparation inchangé. (974 570 o, md5 `f8d2582166554a0e0117ecb25cc36ace`). Banc VERT (champ à 180 ; réglé à 45 → l'élève 45 s). Promu bit à bit. Point de retour (L15.1b-1f `4c11b406cbef`).
