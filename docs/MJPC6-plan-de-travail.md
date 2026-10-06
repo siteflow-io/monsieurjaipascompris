@@ -345,3 +345,6 @@ Il ne porte **aucun contenu propre** : il dit ce qui existe et **où c'est écri
 - 9sexies. `etude_dugain` / `redaction_dugain` (les futures universelles)
 - 9quater. LES FAUSSES PISTES DE DIAGNOSTIC (erreurs de Claude, à ne pas répéter)
 - 9. LEÇONS TECHNIQUES TRANSVERSALES (à appliquer dans tout correctif)
+
+## DÉCISIONS DU 05/10/2026 — LE DÉROULÉ (conscience n°13)
+- **Un schéma par diapo, parfaitement lisible** — décision écrite dans `DEROULE/CADRAGE-4-LA-PREPARATION.md` §3.2 (sas) ; maquette p8 confiée à un exécutant en session cloud par `MANDATS/MANDAT-DEROULE-MAQUETTE-P8.md` (version 3).
