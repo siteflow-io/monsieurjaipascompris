@@ -1184,7 +1184,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1h";
+var APP_VERSION="6.7.0-L15.1b-1g";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -8410,7 +8410,7 @@ function etatDicteeEleve(d,cle){
    (localStorage) pendant 70 minutes : un rechargement de page ne redemande pas de code. */
 var MOITIE_TTL=70*60000;
 function moitieLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&o.identite&&Date.now()-o.t<MOITIE_TTL)return o.identite}catch(e){}return null}
-function moitieEcrire(n,identite){try{localStorage.setItem("cd_moitie_"+n,JSON.stringify({identite:identite,t:Date.now(),arrivee:Date.now()}))}catch(e){}}   /* [micro L15k-a] arrivee : posée à la connexion seulement (t bouge quand une dictée s'ouvre) */
+function moitieEcrire(n,identite){try{localStorage.setItem("cd_moitie_"+n,JSON.stringify({identite:identite,t:Date.now()}))}catch(e){}}
 function moitieDictee(n,id){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(!o)return;o.dictee=id||null;o.t=Date.now();localStorage.setItem("cd_moitie_"+n,JSON.stringify(o))}catch(e){}}
 function moitieDicteeLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&Date.now()-o.t<MOITIE_TTL)return o.dictee||null}catch(e){}return null}
 function moitieEffacer(n){try{localStorage.removeItem("cd_moitie_"+n)}catch(e){}}
@@ -8472,17 +8472,12 @@ function TabletteDeux(p){
   function corrigeEncore(n){var e=etats[n];return !!(e.identite&&e.dicteeId&&!e.finished)}
   function verrou(n){var e=etats[n],m=n===1?2:1;return !!(e.finished&&!(e.styloFin>0&&now<e.styloFin+30000)&&corrigeEncore(m))}
   // les deux élèves connectés sur la même dictée : leur binôme réel est rangé (votre suivi le lit)
-  /* [micro L15k-a — 06/10, Paul : « les binômes sont constitués par les copies et les erreurs »] la tablette n'écrit plus les binômes (seul « Lancer » les écrit) ; elle retient quelle moitié s'est connectée en premier */
-  var premierRef=React.useRef(null);
-  if(!premierRef.current){if(etats[1].identite&&!etats[2].identite)premierRef.current=1;else if(etats[2].identite&&!etats[1].identite)premierRef.current=2;}
-  if(!etats[1].identite&&!etats[2].identite)premierRef.current=null;
-  function refusee(n){   /* la moitié n est refusée si son élève n'est pas le binôme constitué de l'élève arrivé le premier */
-    var m=n===1?2:1,premier=premierRef.current;
-    try{var t1=(JSON.parse(localStorage.getItem("cd_moitie_1")||"null")||{}).arrivee||0,t2=(JSON.parse(localStorage.getItem("cd_moitie_2")||"null")||{}).arrivee||0;if(t1&&t2)premier=t1<=t2?1:2;}catch(e){}   /* après un rechargement : l'ordre d'arrivée relu sur chaque moitié */
-    if(premier!==m)return false;
-    var a=etats[m],b=etats[n];if(!a.identite||!b.identite||!a.dicteeCourante)return false;
-    return !(a.binome&&a.binome.cle===b.identite.cle);
-  }
+  useEffect(function(){
+    var a=etats[1],b=etats[2];
+    if(!a.identite||!b.identite||!a.dicteeCourante||a.dicteeCourante!==b.dicteeCourante)return;
+    db.ref("correction_dictee/"+a.dicteeCourante+"/binomes/"+a.identite.cle).set(b.identite.cle);
+    db.ref("correction_dictee/"+a.dicteeCourante+"/binomes/"+b.identite.cle).set(a.identite.cle);
+  },[etats[1].identite&&etats[1].identite.cle,etats[2].identite&&etats[2].identite.cle,etats[1].dicteeCourante,etats[2].dicteeCourante]);
   return h("div",{className:"tablette-deux",style:{display:"flex",height:"100vh",overflow:"hidden",background:"var(--bg)"}},
     [1,2].map(function(n){var m=n===1?2:1,v=verrou(n);
       return h("div",{key:n,className:"moitie",
@@ -8494,9 +8489,6 @@ function TabletteDeux(p){
           monBinome:etats[n].binome||null,voisinConnecte:!!etats[m].identite,
           voisinCorrige:corrigeEncore(m),
           voisinAide:verrou(m)?{prenom:prenom(m)}:null})),
-      refusee(n)?h("div",{className:"moitie-refusee",style:{position:"absolute",inset:0,zIndex:950,background:"#fdf4f4",padding:"40px 18px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}},
-        h("div",{style:{fontSize:"2.2rem"}},"\u270b"),
-        h("div",{style:{fontWeight:700,fontSize:"1.2rem",margin:"8px 0"}},"Ce n\u2019est pas ta tablette : l\u00e8ve la main.")):null,   /* [micro L15k-a] seul le binôme constitué entre sur la seconde moitié ; rien de l'autre moitié n'est montré */
       v?h("div",{className:"moitie-verrou",style:{position:"absolute",inset:0,zIndex:900,background:"#eef0f3",padding:"24px 18px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}},
         h("div",{style:{fontSize:"2rem"}},"\ud83d\udd12"),
         h("div",{style:{fontWeight:700,margin:"4px 0 12px"}},prenom(n)),
