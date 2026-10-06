@@ -1184,7 +1184,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1f";
+var APP_VERSION="6.7.0-L15.1b-1g";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -3878,7 +3878,7 @@ function EditionDictee(p){
       var allVal=allSnap.val()||{};var cfg=allVal.config||{};var dic=allVal.dictee||{};var amen=dic.amenagee||null;
       setEditForm({bareme:cfg.bareme||"preparee",title:cfg.title||p.dicteeId,niveau:cfg.niveau||"",published:cfg.published!==false,text:cfg.text||"",
         classe:cfg.classe||"",base:cfg.base||20,competences:cfg.competences||[],showNote:cfg.showNote!==false,
-        peerHelp:!!cfg.peerHelp,recopieSec:(cfg.recopieSec>0?cfg.recopieSec:60),showAmen:!!(amen&&amen.enabled),exercicesOuverts:cfg.exercicesOuverts===true,
+        peerHelp:!!cfg.peerHelp,recopieSec:(cfg.recopieSec>0?cfg.recopieSec:180),showAmen:!!(amen&&amen.enabled),exercicesOuverts:cfg.exercicesOuverts===true,
         _exo:(function(){var ex=allVal.exercices||{};var cl=ex.exercices_classe;cl=Array.isArray(cl)?cl.filter(Boolean).length:(cl?Object.keys(cl).length:0);
           var pe=ex.exercices_personnels?Object.keys(ex.exercices_personnels).length:0;
           if(allVal.exercices_html)return "exercices en page HTML";
@@ -3920,13 +3920,13 @@ function EditionDictee(p){
           h("div",{style:{display:"flex",gap:8,alignItems:"center",marginTop:8}},
             h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.showNote!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{showNote:e.target.checked}))}}),"Afficher la note \u00e0 l\u2019\u00e9l\u00e8ve"),
             h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:!!editForm.peerHelp,onChange:function(e){setEditForm(Object.assign({},editForm,{peerHelp:e.target.checked}))}}),"Aide entre pairs (\u00e9l\u00e8ve termin\u00e9 \u2192 aide un camarade)"),
-            h("label",{style:{display:"flex",alignItems:"center",gap:6,fontSize:".88rem"},title:"Le temps donn\u00e9 \u00e0 l\u2019\u00e9l\u00e8ve, \u00e0 la fin de son autocorrection, pour recopier ses corrections en vert sur sa copie papier (le stylo vert). Plus la dict\u00e9e a d\u2019erreurs, plus tu peux le mettre long. S\u2019applique aux \u00e9l\u00e8ves qui finissent apr\u00e8s l\u2019enregistrement."},"Recopie en vert : ",h("input",{type:"number",min:15,max:600,step:15,value:editForm.recopieSec>0?editForm.recopieSec:60,onChange:function(e){setEditForm(Object.assign({},editForm,{recopieSec:Math.max(15,Math.min(600,parseInt(e.target.value,10)||60))}))},style:{width:64,padding:"3px 6px",fontSize:".88rem"}})," s"),   /* [micro L15.1b-1f] */
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,fontSize:".88rem"},title:"Le temps donn\u00e9 \u00e0 l\u2019\u00e9l\u00e8ve, \u00e0 la fin de son autocorrection, pour recopier ses corrections en vert sur sa copie papier (le stylo vert). Plus la dict\u00e9e a d\u2019erreurs, plus tu peux le mettre long. S\u2019applique aux \u00e9l\u00e8ves qui finissent apr\u00e8s l\u2019enregistrement."},"Recopie en vert : ",h("input",{type:"number",min:15,max:600,step:15,value:editForm.recopieSec>0?editForm.recopieSec:180,onChange:function(e){setEditForm(Object.assign({},editForm,{recopieSec:Math.max(15,Math.min(600,parseInt(e.target.value,10)||180))}))},style:{width:64,padding:"3px 6px",fontSize:".88rem"}})," s"),   /* [micro L15.1b-1f] */
             h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
             h("button",{className:"btn-sm btn-primary",onClick:function(){
               var wantPublish=editForm.published!==false;
               var niv=editForm.niveau||"";
               if(wantPublish&&!niv){alert("\u26a0\ufe0f Choisis d\u2019abord un niveau.");return}
-              var updates={bareme:editForm.bareme||"preparee",title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[],showNote:editForm.showNote!==false,exercicesOuverts:!!editForm.exercicesOuverts,peerHelp:!!editForm.peerHelp,recopieSec:(editForm.recopieSec>0?editForm.recopieSec:60)};   /* [micro L15.1b-1f] */
+              var updates={bareme:editForm.bareme||"preparee",title:editForm.title,niveau:niv,published:wantPublish,classe:editForm.classe,base:editForm.base||20,competences:editForm.competences||[],showNote:editForm.showNote!==false,exercicesOuverts:!!editForm.exercicesOuverts,peerHelp:!!editForm.peerHelp,recopieSec:(editForm.recopieSec>0?editForm.recopieSec:180)};   /* [micro L15.1b-1f] */
               if(editForm.text)updates.text=editForm.text;
               db.ref("correction_dictee/"+p.dicteeId+"/config").update(updates);
               /* [L15g] le profil ou la base ont pu changer : toutes les copies recalculées par la seule fonction (corbeille d'abord, compté) */
@@ -10479,14 +10479,14 @@ function EleveCorrection(p){
   var inputRef=React.useRef(null);
   var lastActionRef=React.useRef(Date.now());
   var acRef="correction_dictee/"+d.dictee.id+"/autocorrection/"+d.key;
-  var s_cfg=useState({showNote:true,peerHelp:false,exercicesOuverts:false,recopieSec:60}),liveConfig=s_cfg[0],setLiveConfig=s_cfg[1];
+  var s_cfg=useState({showNote:true,peerHelp:false,exercicesOuverts:false,recopieSec:180}),liveConfig=s_cfg[0],setLiveConfig=s_cfg[1];
   var s_exo=useState(false),aDesExos=s_exo[0],setADesExos=s_exo[1];
   useEffect(function(){var base="correction_dictee/"+d.dictee.id;db.ref(base+"/exercices").once("value",function(a){db.ref(base+"/exercices_html").once("value",function(b){setADesExos(!!a.val()||!!b.val())})})},[d.dictee.id]);
   // Listener for live config changes (prof can toggle settings mid-session)
   useEffect(function(){
     if(!d||!d.dictee||!d.dictee.id)return;
     var cfgRef=db.ref("correction_dictee/"+d.dictee.id+"/config");
-    function onCfg(snap){var val=snap.val();if(val)setLiveConfig({showNote:val.showNote!==false,peerHelp:!!val.peerHelp,exercicesOuverts:val.exercicesOuverts===true,recopieSec:(val.recopieSec>0?val.recopieSec:60)})}   /* [micro L15.1b-1f — 06/10, Paul] le temps de recopie en vert, réglé par le professeur (défaut 60 s) */
+    function onCfg(snap){var val=snap.val();if(val)setLiveConfig({showNote:val.showNote!==false,peerHelp:!!val.peerHelp,exercicesOuverts:val.exercicesOuverts===true,recopieSec:(val.recopieSec>0?val.recopieSec:180)})}   /* [micro L15.1b-1f — 06/10, Paul] le temps de recopie en vert, réglé par le professeur (défaut 180 s) */
     cfgRef.on("value",onCfg);
     return function(){cfgRef.off("value",onCfg)};
   },[]);
@@ -10813,7 +10813,7 @@ function EleveCorrection(p){
     if(!finished||!sessionDebut||styloFin!=null||styloDecideRef.current)return;
     styloDecideRef.current=true;
     var t=Date.now();
-    var recopieMs=((liveConfig&&liveConfig.recopieSec>0?liveConfig.recopieSec:60)*1000);db.ref(acRef+"/styloFin").set(totalErrors>0&&finEffL13()-t>=recopieMs+2*60000?t+recopieMs:0);   /* [micro L15.1b-1f] la durée réglée par le professeur ; il faut encore 2 minutes après pour les questions */
+    var recopieMs=((liveConfig&&liveConfig.recopieSec>0?liveConfig.recopieSec:180)*1000);db.ref(acRef+"/styloFin").set(totalErrors>0&&finEffL13()-t>=recopieMs+2*60000?t+recopieMs:0);   /* [micro L15.1b-1f] la durée réglée par le professeur ; il faut encore 2 minutes après pour les questions */
   },[finished,sessionDebut,styloFin,heure]);
   // Lot 2c : une copie sans aucune erreur à retrouver arrive directement sur sa page de fin
   // (avant, elle restait sur un texte sans mot à corriger, sans jamais atteindre « Bravo pour tout »).
@@ -11000,7 +11000,7 @@ function EleveCorrection(p){
     var mots=[];errors.forEach(function(e){if(!e||e.type==="A")return;var avant="";for(var j=e.idx-1;j>=0;j--){if(tokens[j]&&!isPunct(tokens[j])){avant=tokens[j];break}}mots.push({avant:avant,mot:e.word,type:e.type})});
     return h("div",{className:"popup-overlay",style:{zIndex:500}},h("div",{style:{background:"var(--card)",borderRadius:18,padding:"22px 22px",maxWidth:520,width:"100%",textAlign:"center",boxShadow:"0 12px 40px rgba(0,0,0,.3)"}},
       h("div",{style:{fontSize:"2rem"}},"\u270d\ufe0f"),
-      h("div",{style:{fontWeight:800,fontSize:"1.1rem",margin:"6px 0"}},"Tu as "+(function(s){s=(liveConfig&&liveConfig.recopieSec>0?liveConfig.recopieSec:60);return s%60===0?(s/60)+" minute"+(s>60?"s":""):(s<60?s+" secondes":Math.floor(s/60)+" min "+(s%60)+" s")})()+" pour \u00e9crire ta correction en vert sous les mots dans ta dict\u00e9e. Apr\u00e8s, je ramasse ta copie."),
+      h("div",{style:{fontWeight:800,fontSize:"1.1rem",margin:"6px 0"}},"Tu as "+(function(s){s=(liveConfig&&liveConfig.recopieSec>0?liveConfig.recopieSec:180);return s%60===0?(s/60)+" minute"+(s>60?"s":""):(s<60?s+" secondes":Math.floor(s/60)+" min "+(s%60)+" s")})()+" pour \u00e9crire ta correction en vert sous les mots dans ta dict\u00e9e. Apr\u00e8s, je ramasse ta copie."),
       h("div",{style:{fontSize:"2.6rem",fontWeight:800,color:"#1b6a30",margin:"6px 0"}},mmss(styloFin-now)),
       h("div",{style:{textAlign:"left",background:"#f7faf7",borderRadius:10,padding:"10px 14px",fontSize:".95rem",lineHeight:1.6}},
         h("div",{style:{fontSize:".8rem",color:"var(--muted)"}},"Tes corrections :"),
