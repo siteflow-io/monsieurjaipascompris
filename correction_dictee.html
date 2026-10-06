@@ -315,6 +315,19 @@ function calculerBinomes(corrections,absents){
   var b={};for(var i=0,j=l.length-1;i<j;i++,j--){b[l[i].k]=l[j].k;b[l[j].k]=l[i].k}
   return b;
 }
+/* [micro L15k-b — 06/10, Paul] LES BINÔMES DU JOUR : constitués d'après les erreurs (calculerBinomes) ; les absents du jour (cochés par le professeur) sortent ;
+   seuls leurs binômes restés seuls — et l'élève seul d'un nombre impair — sont réappariés entre eux (moins d'erreurs avec plus d'erreurs) ; toutes les autres paires restent. */
+function absentsDuJourL15k(aj){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");return (aj&&aj.date===j&&aj.eleves)?aj.eleves:{};}
+function binomesDuJourL15k(results,absents,ajBrut){
+  var base=calculerBinomes(results,absents),aj=absentsDuJourL15k(ajBrut),b=Object.assign({},base),orph=[];
+  var abs=Object.keys(aj).filter(function(k){return aj[k]});if(!abs.length)return base;
+  abs.forEach(function(a){var x=b[a];delete b[a];if(x&&!aj[x]){delete b[x];if(orph.indexOf(x)<0)orph.push(x)}});
+  Object.keys(results||{}).forEach(function(k){if(results[k]&&!(absents&&absents[k])&&!aj[k]&&!b[k]&&orph.indexOf(k)<0)orph.push(k)});
+  function n(k){var c=results[k]||{};return toArr(c.errors).filter(function(x){return x&&x.type!=="A"}).length+toArr(c.extras).length}
+  orph.sort(function(x,y){return n(x)-n(y)||(x<y?-1:1)});
+  for(var i=0,j=orph.length-1;i<j;i++,j--){b[orph[i]]=orph[j];b[orph[j]]=orph[i]}
+  return b;
+}
 var GRACE_HEURE=10*60000;   /* [L13b] l'heure se ferme seule à fin + 10 min (Paul, 03/10 : « ça ne me coupe pas en plein milieu, si on prend un peu de retard ») */
 function heureFinEffective(heure){if(!heure||!heure.fin)return null;return heure.cloture?Math.min(heure.fin+GRACE_HEURE,heure.clotureA||heure.fin):heure.fin+GRACE_HEURE;}   /* le moment où l'heure est close */
 function heureClose(heure){return !!(heure&&heure.fin&&(heure.cloture||Date.now()>=heure.fin+GRACE_HEURE));}
@@ -1145,6 +1158,9 @@ function mjpcOublierCleIci(){
 /* Par défaut, ouvrir = émettre la session professeur STANDARD (celle que le
    shunt §8 de chaque app sait lire) puis recharger — la clé validée par le
    canari est l'autorité ; la session émise est identique à celle du site. */
+(function sessionProfGlissanteL15k(){   /* [micro L15k-b — 06/10, Paul : « je ne dois jamais avoir à me reconnecter si je recharge ma console »] */
+  try{if(/[?&]mode=eleve/.test(location.search))return;["sessionStorage","localStorage"].forEach(function(st){var S=window[st],v=S.getItem("mjpc_eleve");if(!v)return;var o=JSON.parse(v);if(o&&o.is_prof===true&&o.ts&&Date.now()-o.ts<12*3600*1000){o.ts=Date.now();S.setItem("mjpc_eleve",JSON.stringify(o));}});}catch(e){}
+})();
 function mjpcOuvrirSessionProfParDefaut(){
   var s={is_prof:true,display:"Professeur",ts:Date.now()};
   try{sessionStorage.setItem("mjpc_eleve",JSON.stringify(s));}catch(e){}
@@ -1184,7 +1200,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1g";
+var APP_VERSION="6.7.0-L15.1b-1i";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -5621,9 +5637,10 @@ function Suivi(p){
   var sFs=useState(function(){var d=new Date(Date.now()+55*60000);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}),finSaisie=sFs[0],setFinSaisie=sFs[1];
   var sAv=useState(""),avisHeure=sAv[0],setAvisHeure=sAv[1];
   var sFm=useState(null),finMasquee=sFm[0],setFinMasquee=sFm[1];   // fin d'heure dont la fenêtre a été refermée « plus tard »
-  var sBn=useState({}),binomesS=sBn[0],setBinomesS=sBn[1];
+  var sBn=useState({}),binomesHubS=sBn[0],setBinomesS=sBn[1];var sAj=useState(null),absJourS=sAj[0],setAbsJourS=sAj[1];   /* [micro L15k-b] */
   var sDi=useState(null),enDirect=sDi[0],setEnDirect=sDi[1];   // lot 3d : clés des élèves regardés en direct
-  useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/binomes");function f(sn){setBinomesS(sn.val()||{})}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
+  useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/binomes");function f(sn){setBinomesS(sn.val()||{})}r.on("value",f);var r2=db.ref("correction_dictee/"+p.dicteeId+"/absentsJour");function f2(sn){setAbsJourS(sn.val()||null)}r2.on("value",f2);return function(){r.off("value",f);r2.off("value",f2)}},[p.dicteeId]);
+  var binomesS=binomesDuJourL15k(p.corrections,abs,absJourS);   /* [micro L15k-b] les binômes : d'après les erreurs, comme sur les tablettes */
   useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/heure");function f(sn){setHeure(heureDeLaDictee(sn.val()))}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
   // Exercices : pour la colonne "exos" du tableau + la vue détail dans la modale
   var sEx=useState(null), exercices=sEx[0], setExercices=sEx[1];
@@ -5723,7 +5740,7 @@ function Suivi(p){
     var lastSeen=ac&&ac.lastSeen?ac.lastSeen:ac?ac.timestamp:0;
     var status;
     // Statut basé sur les données, pas sur le champ status Firebase
-    if(finished) status="done";
+    if(finished||(c&&nErr===0)) status="done";   /* [micro L15k-b] zéro erreur : terminé d'office */
     else if(ac&&ac.deconnecte&&(!ac.lastSeen||ac.deconnecte>=ac.lastSeen-1000)) status="offline";   /* [L15f-5] déconnecté : sur-le-champ */
     else if(ac&&ac.solved>0&&lastSeen&&(NOW-lastSeen)<RECENT) status="active";
     else if(ac&&ac.solved>0) status="idle";
@@ -5778,7 +5795,7 @@ function Suivi(p){
     var d=new Date();d.setHours(Number(m[1]),Number(m[2]),0,0);var fin=d.getTime();
     if(fin<=Date.now()+60000){setAvisHeure("L\u2019heure de fin doit \u00eatre dans le futur.");return}
     setAvisHeure("");db.ref("correction_dictee/"+p.dicteeId+"/heure").set({debut:Date.now(),fin:fin,classe:data.classe||"",source:"dictee",seanceId:""});   /* [BRANCHEMENT MJPC — déroulé] l'écriture de l'heure : source "dictee" ; "mjpc" + seanceId quand une séance du déroulé sera reliée */
-    db.ref("correction_dictee/"+p.dicteeId+"/binomes").set(calculerBinomes(p.corrections,abs));   // lot 3c
+    db.ref("correction_dictee/"+p.dicteeId+"/binomes").set(binomesDuJourL15k(p.corrections,abs,absJourS));   // lot 3c — [micro L15k-b] une trace, jamais relue par les tablettes
   }
   function prolonger(){if(!heure)return;db.ref("correction_dictee/"+p.dicteeId+"/heure/fin").set(Math.max(heure.fin,Date.now())+10*60000)}
   function cloturer(){db.ref("correction_dictee/"+p.dicteeId+"/heure").update({cloture:true,clotureA:Date.now()})}
@@ -5830,6 +5847,7 @@ function Suivi(p){
           h("button",{className:"btn btn-ghost",style:{width:"auto",marginLeft:"auto"},onClick:function(){setFinMasquee(heure.fin)},title:"Referme cette fen\u00eatre sans rien d\u00e9cider : l\u2019heure reste d\u00e9pass\u00e9e, la carte en haut du suivi garde les deux boutons."},"Plus tard"))));
     }
     return h("div",{className:"card",style:{marginBottom:12}},
+      h(AbsentsEtBinomesL15k,{dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,ouvert:true}),
       heure&&heure.cloture?h("div",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:6}},"Derni\u00e8re heure close \u00e0 "+hhmm(heure.clotureA||heure.fin)+"."):null,
       heureFermeeSeule(heure)?h("div",{id:"heure-fermee-seule",style:{fontSize:".85rem",color:"#9c4221",marginBottom:6},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin. Les \u00e9l\u00e8ves qui rouvrent ensuite ont 45 minutes."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null,   /* [L13b] T4 */
       h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
@@ -8409,8 +8427,8 @@ function etatDicteeEleve(d,cle){
    élève complète et indépendante. Chaque moitié garde son élève sur la tablette
    (localStorage) pendant 70 minutes : un rechargement de page ne redemande pas de code. */
 var MOITIE_TTL=70*60000;
-function moitieLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&o.identite&&Date.now()-o.t<MOITIE_TTL)return o.identite}catch(e){}return null}
-function moitieEcrire(n,identite){try{localStorage.setItem("cd_moitie_"+n,JSON.stringify({identite:identite,t:Date.now()}))}catch(e){}}
+function moitieLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&o.identite&&!o.refusee&&Date.now()-o.t<MOITIE_TTL)return o.identite}catch(e){}return null}   /* [micro L15k-b] un élève refusé n'est jamais repris */
+function moitieEcrire(n,identite){try{localStorage.setItem("cd_moitie_"+n,JSON.stringify({identite:identite,t:Date.now(),arrivee:Date.now()}))}catch(e){}}   /* [micro L15k-b] arrivee : posée à la connexion seulement */
 function moitieDictee(n,id){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(!o)return;o.dictee=id||null;o.t=Date.now();localStorage.setItem("cd_moitie_"+n,JSON.stringify(o))}catch(e){}}
 function moitieDicteeLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&Date.now()-o.t<MOITIE_TTL)return o.dictee||null}catch(e){}return null}
 function moitieEffacer(n){try{localStorage.removeItem("cd_moitie_"+n)}catch(e){}}
@@ -8462,6 +8480,26 @@ function AppEleveTablette(p){
   return h(TabletteDeux,{onRecommencer:recommencer});
 }
 /* Lot 3c — les deux moitiés se parlent : binôme proposé, moitié réduite et verrouillée, aide entre voisins. */
+/* [micro L15k-b — 06/10, Paul] « Absents aujourd'hui » (avant de lancer) et « Binômes (d'après les erreurs) » — au Suivi */
+function AbsentsEtBinomesL15k(p){
+  var sO=useState(!!p.ouvert),ouvert=sO[0],setOuvert=sO[1],sB=useState(false),voirB=sB[0],setVoirB=sB[1];
+  var aj=absentsDuJourL15k(p.absJour);
+  function nE(k){var c=(p.corrections||{})[k];return c?toArr(c.errors).filter(function(x){return x&&x.type!=="A"}).length+toArr(c.extras).length:0}
+  function basculer(k){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    var el=Object.assign({},aj);if(el[k])delete el[k];else el[k]=true;db.ref("correction_dictee/"+p.dicteeId+"/absentsJour").set({date:j,eleves:el});}
+  var cles=p.eleves.map(function(n){return {nom:n,cle:san(n)}});
+  var vus={},paires=[];cles.forEach(function(x){if(vus[x.cle]||!(p.corrections||{})[x.cle]||(p.absents||{})[x.cle]||aj[x.cle])return;vus[x.cle]=1;var b=p.binomes[x.cle];if(b){vus[b]=1;paires.push([x.cle,b])}else paires.push([x.cle,null])});
+  function nom(k){var f=cles.find(function(x){return x.cle===k});return f?f.nom:k}
+  var nAbs=Object.keys(aj).length;
+  return h("div",{id:"absents-binomes-l15k",style:{marginBottom:10}},
+    h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+      h("button",{className:"btn-sm btn-ghost",id:"btn-absents-jour",onClick:function(){setOuvert(!ouvert)},title:"Coche les \u00e9l\u00e8ves absents aujourd\u2019hui : seuls leurs bin\u00f4mes sont r\u00e9appari\u00e9s entre eux, toutes les autres paires restent ; les tablettes le voient aussit\u00f4t. Ce n\u2019est pas l\u2019absence \u00e0 la dict\u00e9e : les notes ne bougent pas."},(ouvert?"\u25be ":"\u25b8 ")+"Absents aujourd\u2019hui"+(nAbs?" ("+nAbs+")":"")),
+      h("button",{className:"btn-sm btn-ghost",id:"btn-binomes-l15k",onClick:function(){setVoirB(!voirB)},title:"Les bin\u00f4mes que l\u2019app forme d\u2019apr\u00e8s les erreurs (le moins d\u2019erreurs avec le plus) : ce sont ceux que les tablettes annoncent."},(voirB?"\u25be ":"\u25b8 ")+"Bin\u00f4mes ("+paires.filter(function(x){return x[1]}).length+")")),
+    ouvert?h("div",{style:{display:"flex",flexWrap:"wrap",gap:"4px 14px",margin:"8px 0",fontSize:".88rem"}},cles.map(function(x){var absD=!!(p.absents||{})[x.cle];
+      return h("label",{key:x.cle,style:{display:"flex",alignItems:"center",gap:5,color:absD?"var(--muted)":"inherit"},title:absD?"Absent \u00e0 la dict\u00e9e : pas de copie, pas d\u2019autocorrection.":"Coch\u00e9 : absent aujourd\u2019hui."},
+        h("input",{type:"checkbox",checked:absD||!!aj[x.cle],disabled:absD,onChange:function(){basculer(x.cle)}}),x.nom+(absD?" (absent \u00e0 la dict\u00e9e)":""))})):null,
+    voirB?h("div",{id:"liste-binomes-l15k",style:{margin:"8px 0",fontSize:".9rem",lineHeight:1.7}},paires.map(function(pr,i){return h("div",{key:i},pr[1]?(nom(pr[0])+" ("+nE(pr[0])+" erreur"+(nE(pr[0])>1?"s":"")+") \u2194 "+nom(pr[1])+" ("+nE(pr[1])+" erreur"+(nE(pr[1])>1?"s":"")+")"):(nom(pr[0])+" \u2014 seul"))})):null);
+}
 function TabletteDeux(p){
   var sE=useState({1:{},2:{}}),etats=sE[0],setEtats=sE[1];
   var sN=useState(Date.now()),now=sN[0],setNow=sN[1];
@@ -8472,23 +8510,36 @@ function TabletteDeux(p){
   function corrigeEncore(n){var e=etats[n];return !!(e.identite&&e.dicteeId&&!e.finished)}
   function verrou(n){var e=etats[n],m=n===1?2:1;return !!(e.finished&&!(e.styloFin>0&&now<e.styloFin+30000)&&corrigeEncore(m))}
   // les deux élèves connectés sur la même dictée : leur binôme réel est rangé (votre suivi le lit)
-  useEffect(function(){
-    var a=etats[1],b=etats[2];
-    if(!a.identite||!b.identite||!a.dicteeCourante||a.dicteeCourante!==b.dicteeCourante)return;
-    db.ref("correction_dictee/"+a.dicteeCourante+"/binomes/"+a.identite.cle).set(b.identite.cle);
-    db.ref("correction_dictee/"+a.dicteeCourante+"/binomes/"+b.identite.cle).set(a.identite.cle);
-  },[etats[1].identite&&etats[1].identite.cle,etats[2].identite&&etats[2].identite.cle,etats[1].dicteeCourante,etats[2].dicteeCourante]);
+  /* [micro L15k-b — 06/10, Paul] la tablette n'écrit plus jamais les binômes ; la seconde moitié n'accepte que le binôme affiché ; le voile ne bloque jamais (« Revenir »), et un élève refusé n'est jamais gardé sur la tablette */
+  var premierRef=React.useRef(null);
+  if(!premierRef.current){if(etats[1].identite&&!etats[2].identite)premierRef.current=1;else if(etats[2].identite&&!etats[1].identite)premierRef.current=2;}
+  if(!etats[1].identite&&!etats[2].identite)premierRef.current=null;
+  var sCl=useState({1:0,2:0}),clesM=sCl[0],setClesM=sCl[1];
+  function refusee(n){
+    var m=n===1?2:1,premier=premierRef.current;
+    try{var t1=(JSON.parse(localStorage.getItem("cd_moitie_1")||"null")||{}).arrivee||0,t2=(JSON.parse(localStorage.getItem("cd_moitie_2")||"null")||{}).arrivee||0;if(t1&&t2)premier=t1<=t2?1:2;}catch(e){}
+    if(premier!==m)return false;
+    var a=etats[m],b=etats[n];if(!a.identite||!b.identite||!a.dicteeCourante)return false;
+    return !(a.binome&&a.binome.cle===b.identite.cle);
+  }
+  function revenir(n){try{localStorage.removeItem("cd_moitie_"+n);localStorage.removeItem("cd_frappe_"+n);}catch(e){}
+    setEtats(function(prev){var o={};o[1]=prev[1];o[2]=prev[2];o[n]={};return o});setClesM(function(prev){var o={};o[1]=prev[1];o[2]=prev[2];o[n]=(prev[n]||0)+1;return o});}
+  useEffect(function(){[1,2].forEach(function(n){if(refusee(n)){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&!o.refusee){o.refusee=true;localStorage.setItem("cd_moitie_"+n,JSON.stringify(o))}}catch(e){}}})});   /* au rechargement, la moitié refusée revient à zéro (son élève n'est pas repris) */
   return h("div",{className:"tablette-deux",style:{display:"flex",height:"100vh",overflow:"hidden",background:"var(--bg)"}},
     [1,2].map(function(n){var m=n===1?2:1,v=verrou(n);
       return h("div",{key:n,className:"moitie",
       // la moitié ne défile pas elle-même : ses fenêtres (clavier, questions, stylo vert) restent calées sur elle
       style:{flex:v?0.42:1,transition:"flex .4s",minWidth:0,height:"100vh",overflow:"hidden",position:"relative",transform:"translateZ(0)",borderRight:n===1?"6px solid #2c313a":"none"}},
       h("div",{className:"moitie-defil",style:{height:"100%",overflowY:"auto"}},
-        h(AppEleve,{moitie:n,onBack:p.onRecommencer,onEtat:onEtat(n),
+        h(AppEleve,{key:"m"+n+"-"+(clesM[n]||0),moitie:n,onBack:p.onRecommencer,onEtat:onEtat(n),
           binomePropose:(!etats[n].identite&&etats[m].identite&&etats[m].binome)?etats[m].binome:null,
           monBinome:etats[n].binome||null,voisinConnecte:!!etats[m].identite,
           voisinCorrige:corrigeEncore(m),
           voisinAide:verrou(m)?{prenom:prenom(m)}:null})),
+      refusee(n)?h("div",{className:"moitie-refusee",style:{position:"absolute",inset:0,zIndex:950,background:"#fdf4f4",padding:"40px 18px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}},
+        h("div",{style:{fontSize:"2.2rem"}},"\u270b"),
+        h("div",{style:{fontWeight:700,fontSize:"1.2rem",margin:"8px 0 18px"}},"Ce n\u2019est pas ta tablette : l\u00e8ve la main."),
+        h("button",{className:"btn btn-primary",id:"revenir-moitie-"+n,style:{width:"auto",fontSize:"1.05rem",padding:"12px 26px"},onClick:function(){revenir(n)}},"\u2190 Revenir")):null,   /* [micro L15k-b] jamais bloquant */
       v?h("div",{className:"moitie-verrou",style:{position:"absolute",inset:0,zIndex:900,background:"#eef0f3",padding:"24px 18px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}},
         h("div",{style:{fontSize:"2rem"}},"\ud83d\udd12"),
         h("div",{style:{fontWeight:700,margin:"4px 0 12px"}},prenom(n)),
@@ -8546,7 +8597,8 @@ function AppEleveCoeurL15f(p){
     dictees.forEach(function(dd){var r1=db.ref("correction_dictee/"+dd.id+"/copyPublishedAt"),r2=db.ref("correction_dictee/"+dd.id+"/config/published");
       function f1(sn){var v=sn.val()||null;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.copyPublishedAt!==v?Object.assign({},x,{copyPublishedAt:v}):x})});}
       function f2(sn){var v=sn.val()!==false;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.published!==v?Object.assign({},x,{published:v}):x})});}
-      r1.on("value",f1);r2.on("value",f2);offs.push(function(){r1.off("value",f1);r2.off("value",f2)});});
+      var r3=db.ref("correction_dictee/"+dd.id+"/absentsJour");function f3(sn){var v=sn.val()||null;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&JSON.stringify(x.absentsJour||null)!==JSON.stringify(v)?Object.assign({},x,{absentsJour:v}):x})});}   /* [micro L15k-b] les absents du jour, en direct */
+      r1.on("value",f1);r2.on("value",f2);r3.on("value",f3);offs.push(function(){r1.off("value",f1);r2.off("value",f2);r3.off("value",f3)});});
     return function(){offs.forEach(function(f){f()})};},[(dictees||[]).map(function(x){return x.id}).join("|")]);
   var connecteLeL15f=React.useRef(0);useEffect(function(){if(identite)connecteLeL15f.current=Date.now();},[identite&&identite.cle]);   /* [L15f-5] le moment de la connexion */
   var sStyloL15f=useState(false),styloActifL15f=sStyloL15f[0],setStyloActifL15f=sStyloL15f[1];
@@ -8580,7 +8632,7 @@ function AppEleveCoeurL15f(p){
         return{id:id,title:cfg.title||id,classe:classeName,niveau:cfg.niveau||"",published:cfg.published!==false,exercicesOuverts:cfg.exercicesOuverts===true,
                showNote:cfg.showNote!==false,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,bareme:cfg.bareme||"preparee",
                results:val[id].results||{},autocorrection:val[id].autocorrection||{},
-               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:heureDeLaDictee(val[id].heure),binomes:val[id].binomes||null,dateCorrection:cfg.dateCorrection||null,amenagee:((val[id].dictee||{}).amenagee)||null};   /* [L14] */   /* [L9] */
+               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:heureDeLaDictee(val[id].heure),binomes:val[id].binomes||null,absentsJour:val[id].absentsJour||null,dateCorrection:cfg.dateCorrection||null,amenagee:((val[id].dictee||{}).amenagee)||null};   /* [L14] */   /* [L9] */
       });
       setDictees(list);
       if(forcedDicteeId){
@@ -8612,7 +8664,7 @@ function AppEleveCoeurL15f(p){
       var a=heureActive(dd.heure)?1:0,b=cour&&heureActive(cour.heure)?1:0;
       if(!cour||a>b||(a===b&&dd.copyPublishedAt>cour.copyPublishedAt))cour=dd});
     var bin=null;
-    if(cour){var map=cour.binomes||calculerBinomes(cour.results,cour.absents);var k=map[identite.cle];
+    if(cour){var map=binomesDuJourL15k(cour.results,cour.absents,cour.absentsJour);var k=map[identite.cle];   /* [micro L15k-b] toujours d'après les erreurs ; le hub n'est plus relu */
       if(k){var nomB=(cour.eleves||[]).find(function(n){return san(n)===k});if(nomB)bin={cle:k,nom:nomB,dictee:cour.id}}}
     p.onEtat({identite:identite,binome:bin,dicteeCourante:cour?cour.id:null});
   },[identite,dictees]);
