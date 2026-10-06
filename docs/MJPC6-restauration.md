@@ -1114,3 +1114,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1 (05/10/2026, conscience n°12)
 - blob `b9da3eb1b68a` (commit `2e3998e06baf`) · 903 883 o · md5 `1a154f3810fa5c9a1ba7ca411f3c9a78` · v6.7.0-L15h-b
 - **Motif** : L15.1b-1 — l'analyse par l'écart. Promu : 941 445 o, md5 `178cbb58dea607d72a363638bffd5f12` (bit à bit). La L15.1b-1 écrit `site/analyses/categories/` et `site/analyses/homophones/` à la première ouverture (objets), et `categorie` dans chaque erreur recopiée : une version antérieure les ignore sans dommage ; `site/analyses/` est à préserver à la purge (manifeste à compléter : dit dans le journal).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1d (06/10/2026, conscience n°12)
+- blob `b62b3b90fdfd` (commit `861f62510d3d`) · 941 445 o · md5 `178cbb58dea607d72a363638bffd5f12` · v6.7.0-L15.1b-1
+- **Motif** : la chaîne L15h-2 → L15.1b-1c → L15.1b-1d. Promu : 971 626 o, md5 `61a96af80cc1c0b36ed1821e70c034c9` (bit à bit). **Données** : à l'ouverture de chaque dictée, L15h-2 reclasse 25 erreurs L → C (l'état d'avant en corbeille `reclassement-accents_<hhmmss>_<clé>` ; marque `migrations/reclassementC_v1`) ; un retour en arrière laisse ces C (une version antérieure les lit comme un type inconnu : restaurer les copies depuis la corbeille si retour). Les événements `/profil/<clé>/events/` et `site/analyses/` sont des nœuds nouveaux, préservés à la purge, ignorés par une version antérieure.
