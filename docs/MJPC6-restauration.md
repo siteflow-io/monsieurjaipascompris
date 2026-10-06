@@ -1122,3 +1122,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1e (06/10/2026, conscience n°12)
 - blob `dd8312e63157` (commit `ef6604393fa5`) · 971 626 o · md5 `61a96af80cc1c0b36ed1821e70c034c9` · v6.7.0-L15.1b-1d
 - **Motif** : micro L15.1b-1e — type C lisible, carte de message. Promu : 973 106 o, md5 `e88a8548182568004563181e9a3a7440` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1f (06/10/2026, conscience n°12)
+- blob `ee2d9580e540` (commit `fae9148d430a`) · 973 106 o · md5 `e88a8548182568004563181e9a3a7440` · v6.7.0-L15.1b-1e
+- **Motif** : micro L15.1b-1f — temps de recopie réglable. Promu : 974 561 o, md5 `8cec85bf473e77bfc67df73853ee0809` (bit à bit).
