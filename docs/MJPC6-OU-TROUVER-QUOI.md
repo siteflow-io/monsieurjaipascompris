@@ -438,3 +438,13 @@
 | Vérifier / Injecter | `verifierIaL151`, `injecterIaL151` (`mjpcInjecterAvecArchive`), les rattachements → `/taxonomie/alias/tables/correction_dictee` (statut `propose`), `notionsDeCategorieL151` |
 | le profil | `emettreEvenementsProfilL151` (dans `save`) → `/profil/<clé>/events/<horodatage>` ; `MJPC_MANIFESTE.noeuds / notions`, `MJPC_PURGE.preserver` |
 | l'écran | `CommentairesAnalyseL151` (la maquette T474 : liste, aperçu, Enregistrer, Texte d'origine, Prompt IA, ↗ Correspondances), `NonReconnusL151` (cumul « toutes dictées ») |
+
+## AJOUTS DU 05/10/2026 — CONSCIENCE n°13 : le déroulé, la maquette p8 (les schémas)
+
+| Quoi | Où |
+|---|---|
+| le mandat de la maquette p8 (un schéma par diapo, parfaitement lisible ; le moteur des schémas de l'existant repris, avec ses télescopages) | `MANDATS/MANDAT-DEROULE-MAQUETTE-P8.md` (sas), version 3, déposé le 05/10 |
+| la décision du 05/10 sur les schémas | `DEROULE/CADRAGE-4-LA-PREPARATION.md` §3.2, sous la ligne « schéma » (sas) |
+| la carte de l'existant du déroulé, de l'éditeur, de l'emploi du temps, du tableau distant et du téléphone | `TRANSCRIPTS/C13/pieces/CARTE-EXISTANT-DEROULE.md` et son index `CARTE-EXISTANT-INDEX-FONCTIONS.md` (sas) |
+| le moteur des schémas de l'existant | `AT_DR_B64` d'`index.html` (base64 du moteur) : `schemaHTML`, `carte`, `frise`, `arbre`, `cycle`, `grille`, `separe`, `surface`, `mesure`, `cle`, `SCH_COUL`, `tirSch`, `jalSch`, `repeintSch`, le panneau `reglages` (« Un à un / Tout ensemble », « ⌖ Réordonner ») |
+| le téléphone (télécommande, par le QR) | `sesBootTel`, `sesTelPeindre` ; le QR : `sesQROuvrir`, `qrScans` |
