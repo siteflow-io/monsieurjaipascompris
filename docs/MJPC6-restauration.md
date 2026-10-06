@@ -1126,3 +1126,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1f (06/10/2026, conscience n°12)
 - blob `ee2d9580e540` (commit `fae9148d430a`) · 973 106 o · md5 `e88a8548182568004563181e9a3a7440` · v6.7.0-L15.1b-1e
 - **Motif** : micro L15.1b-1f — temps de recopie réglable. Promu : 974 561 o, md5 `8cec85bf473e77bfc67df73853ee0809` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1g (06/10/2026, conscience n°12)
+- blob `4c11b406cbef` (commit `83b9a688e53d`) · 974 561 o · md5 `8cec85bf473e77bfc67df73853ee0809` · v6.7.0-L15.1b-1f
+- **Motif** : micro L15.1b-1g — défaut 180 s. Promu : 974 570 o, md5 `f8d2582166554a0e0117ecb25cc36ace` (bit à bit).
