@@ -1146,3 +1146,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1k (06/10/2026, conscience n°12)
 - blob `1b59ac075122` (commit `5da85bef8b9d`) · 986 499 o · md5 `210c7f5cb008d4def856153712e4c48d` · v6.7.0-L15.1b-1j
 - **Motif** : micro — toutes les copies en un fichier. Promu : 988 611 o, md5 `a0653a997fadeea0a206c105816bc58d` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1l (06/10/2026, conscience n°12)
+- blob `fd3b601d0fbd` (commit `32f7fc0dea85`) · 988 611 o · md5 `a0653a997fadeea0a206c105816bc58d` · v6.7.0-L15.1b-1k
+- **Motif** : micro L15k-d — le trait d'union. Promu : 989 974 o, md5 `328fa0a108d97c59954f1120edcc82cf` (bit à bit). **Données** : à l'ouverture de chaque dictée concernée, le reclassement L5 passe les « - » en C (corbeille `reclassement-ponctuation_…` par copie) ; une version antérieure relirait ces C comme des « Acc. » (connus depuis L15h) — sans dommage.
