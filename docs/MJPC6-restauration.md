@@ -1134,3 +1134,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1h (06/10/2026, conscience n°12)
 - blob `cc60417b6af7` (commit `ae61b4fe61e9`) · 974 570 o · md5 `f8d2582166554a0e0117ecb25cc36ace` · v6.7.0-L15.1b-1g
 - **Motif** : micro L15k-a — binômes constitués, moitié refusée. Promu : 975 881 o, md5 `df9100990582d1b1d8452bbb7a294408` (bit à bit). Si retour : la tablette se remet à écrire les binômes d'après les connectés.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1i (06/10/2026, conscience n°12)
+- blob `cc60417b6af7` (commit `5914255248cb`) · 974 570 o · md5 `f8d2582166554a0e0117ecb25cc36ace` · v6.7.0-L15.1b-1g
+- **Motif** : micro L15k-b. Promu : 982 600 o, md5 `666ab5987bb67dd6f95c491630c5a299` (bit à bit). Données : `absentsJour` (nouveau nœud, ignoré par une version antérieure).
