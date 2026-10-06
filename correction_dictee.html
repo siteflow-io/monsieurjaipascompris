@@ -1200,7 +1200,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1k";
+var APP_VERSION="6.7.0-L15.1b-1l";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1588,16 +1588,16 @@ function estSigne(w){w=String(w||"").trim();return !!w&&isPunct(w)&&!estApostrop
 function reclassementPonctuation(c,tokens,baseDictee,bareme){
   if(!c||typeof c!=="object")return null;
   var errs=toArr(c.errors||[]).filter(function(e){return e!=null}),exts=toArr(c.extras||[]).filter(function(e){return e!=null}),n=0,mp=[];
-  var ne=errs.map(function(e){var t=tokens[e.idx];if(e.type==="M"&&t&&estSigne(t)){n++;mp.push(e.idx);return Object.assign({},e,{type:"P"});}return e;});
-  var nx=exts.map(function(x){if(x.type!=="P"&&estSigne(x.word)){n++;return Object.assign({},x,{type:"P"});}return x;});
+  var ne=errs.map(function(e){var t=tokens[e.idx];if(t==="-"&&(e.type==="M"||e.type==="P")){n++;return Object.assign({},e,{type:"C"});}if(e.type==="M"&&t&&estSigne(t)){n++;mp.push(e.idx);return Object.assign({},e,{type:"P"});}return e;});   /* [micro L15k-d — 06/10, Paul] « - » est un trait d'union (« là-bas ») : il compte en « Acc. », pas en ponctuation */
+  var nx=exts.map(function(x){if(String(x.word||"").trim()==="-"){if(x.type!=="C"){n++;return Object.assign({},x,{type:"C"});}return x;}if(x.type!=="P"&&estSigne(x.word)){n++;return Object.assign({},x,{type:"P"});}return x;});
   if(!n)return null;
   var sc=computeNote(ne,nx,baseDeCopie(c,baseDictee),bareme);
   return {champs:{errors:ne,extras:nx,note:sc.note,deduction:sc.deduction,counts:sc.counts},n:n,mVersP:mp};
 }
 /* [L3] la touche M s'adapte au mot courant : un mot → Manquant ; un signe de ponctuation → Ponctuation ; une apostrophe → Élision */
-function typeAdapteM(wt){if(!wt)return "M";if(estApostrophe(wt.text))return "E";if(isPunct(wt.text))return "P";return "M";}
+function typeAdapteM(wt){if(!wt)return "M";if(estApostrophe(wt.text))return "E";if(wt.text==="-")return "C";if(isPunct(wt.text))return "P";return "M";}   /* [micro L15k-d] le trait d'union → Acc. */
 /* [L3] le bouton mis en avant (Entrée le valide) : Ponctuation sur un signe, Élision sur une apostrophe, rien sur un mot */
-function preselectionRapide(wt){if(!wt)return null;if(estApostrophe(wt.text))return "E";if(isPunct(wt.text))return "P";return null;}
+function preselectionRapide(wt){if(!wt)return null;if(estApostrophe(wt.text))return "E";if(wt.text==="-")return "C";if(isPunct(wt.text))return "P";return null;}
 /* [L3] la garde du mot juste : ce qui est tapé est-il le mot attendu (sans la casse) ? */
 function motJuste(saisie,attendu){var a=String(saisie||"").trim(),b=String(attendu||"").trim();return !!a&&!!b&&a===b;}   /* [L15-0] casse comprise : « Empereur » pour « empereur » est une erreur de majuscule, acceptée */
 function estGuillemet(w){return/^["\u00ab\u00bb\u201c\u201d]$/.test(w)}
@@ -1612,6 +1612,7 @@ function isPunct(w){return/^[.,;:!?\u2026\u00ab\u00bb\u201c\u201d\u2018\u2019'"(
 // aucune occurrence dans les textes actuels pour trancher autrement).
 function tokSp(curW,nextW){
   if(!nextW)return "";
+  if(curW==="-")return "";   /* [micro L15k-d — 06/10] le trait d'union colle au mot suivant (« Saint-Laurent », « là-bas ») ; aucun texte n'a de « - » espacé */
   if(estApostrophe(curW)||estApostrophe(nextW))return "";
   if(/^\(/.test(nextW))return " ";
   if(nextW==='"')return /[.!?\u2026]$/.test(curW)?"":" ";
@@ -1652,7 +1653,7 @@ function computeNote(errors,extras,base,bareme){   /* [L15g] l'ordre validé (C1
   var horsCompte=[];if(P.repetition==="mot"||P.repetition==="famille"){var vus={};errors.forEach(function(e,i){var k=(P.repetition==="famille"?familleDe(e.word,P):String(e.word||"").toLowerCase())+"|"+e.type;if(vus[k]!==undefined)horsCompte.push(i);else vus[k]=i;});}   /* (3) les répétitions */
   var ded=0,nF=0;
   errors.forEach(function(e,i){if(horsCompte.indexOf(i)>=0)return;if(forf.indexOf(e.type)>=0){nF++;return;}ded+=(C[e.type]||0);});   /* (5) l'unité ; (4) le forfait compté à part */
-  var nXP=0,nXS=0;extras.forEach(function(x){if(x&&x.sansCout){nXS++;return}if(x&&x.type==="P"){nXP++;if(forf.indexOf("P")>=0)nF++;else ded+=(C.P||0);}else ded+=(C.X||0)});nSC+=nXS;   /* [L5] un signe en trop : la ponctuation ; [L14] sans coût : rien */
+  var nXP=0,nXS=0;extras.forEach(function(x){if(x&&x.sansCout){nXS++;return}if(x&&(x.type==="P"||x.type==="C")){nXP++;if(forf.indexOf(x.type)>=0)nF++;else ded+=(C[x.type]||0);}else ded+=(C.X||0)});   /* [micro L15k-d] un trait d'union en trop (C) : au forfait comme un signe */nSC+=nXS;   /* [L5] un signe en trop : la ponctuation ; [L14] sans coût : rien */
   if(fo&&nF){ded+=Math.min(fo.plafond!=null?fo.plafond:1e9,Math.floor(nF/(fo.par||1))*(fo.valeur||0))*(base/10);}   /* (4) le forfait, avec son plafond (sur 10, à l'échelle de la base) */
   var counts={G:0,L:0,M:0,I:0,P:0,A:0,E:0,X:extras.length-nXP-nXS};   /* (le type C, L15h, s'ajoute seulement s'il y en a : les copies d'avant gardent leurs comptes à l'octet) */
   errors.forEach(function(e){counts[e.type]=(counts[e.type]||0)+1});counts.P+=nXP;if(nSC)counts.sansCout=nSC;
@@ -7059,8 +7060,12 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
   function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]})}
 
   // Barème des points perdus selon le type
-  var POINTS = (data.bareme === "brevet") ? {G:"−1", L:"−0,5", M:"−0,5", P:"", I:"−0,5", A:"", E:"−0,5"}   /* brevet : oubli et illisible à −0,5, ponctuation au forfait (voir le tableau) */
-                                           : {G:"−1", L:"−0,5", M:"−1", P:"−0,5", I:"−1", A:"", E:"−0,5"};
+  /* [micro L15k-d] les points affichés viennent du profil du barème (une seule source) : un type au forfait n'affiche pas de points à l'unité */
+  var PROFIL_COPIE = profilDe(data.bareme), FORF_COPIE = (PROFIL_COPIE.forfait && PROFIL_COPIE.forfait.types) || [];
+  function ptsCopie(t){ if(t==="A") return ""; if(FORF_COPIE.indexOf(t)>=0) return ""; var c=(PROFIL_COPIE.couts||{})[t]; if(!c) return ""; return "\u2212"+String(c).replace(".",","); }
+  var POINTS = {G:ptsCopie("G"), L:ptsCopie("L"), M:ptsCopie("M"), P:ptsCopie("P"), I:ptsCopie("I"), A:"", E:ptsCopie("E"), C:ptsCopie("C")};
+  function libelleTrop(ex){ return ex && ex.type==="C" ? "Trait d\u2019union en trop" : (ex && ex.type==="P" ? "Signe en trop" : "Mot en trop"); }
+  function ptsTrop(ex){ return ptsCopie(ex && (ex.type==="P"||ex.type==="C") ? ex.type : "X"); }
 
   // Construction du texte avec spans en couches
   var textHtml = "";
@@ -7072,7 +7077,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     // ponctuation) — fini le « soufflealors . » collé puis troué.
     if (extraMap[ti-1]) {
       extraMap[ti-1].forEach(function(ex){
-        textHtml += ' <span class="mot extra-w"><span class="layer-base"><span class="extra-orig">'+escapeHtml(ex.word)+'</span></span><span class="layer-after"><span class="badge badge-extra">+</span><span class="points-perdus">−0,5</span></span></span>' + tokSp(ex.word, w);
+        textHtml += ' <span class="mot extra-w"><span class="layer-base"><span class="extra-orig">'+escapeHtml(ex.word)+'</span></span><span class="layer-after"><span class="badge badge-extra">+</span>'+(ptsTrop(ex)?'<span class="points-perdus">'+ptsTrop(ex)+'</span>':'<span class="points-perdus" style="color:#64748b">forfait</span>')+'</span></span>' + tokSp(ex.word, w);
       });
     }
     var nextW = tokens[ti+1] || "";
@@ -7193,7 +7198,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     analyseHtml += '<div class="err-item err-extra">' +
       '<div class="err-head"><span class="err-num">+</span>' +
       '<span class="err-word">« '+escapeHtml(ex.word)+' »</span>' +
-      '<span class="err-type">Mot en trop</span> <span class="err-points">−0,5 pt</span></div>' +
+      '<span class="err-type">'+libelleTrop(ex)+'</span> <span class="err-points">'+(ptsTrop(ex)?ptsTrop(ex)+' pt':'au forfait')+'</span></div>' +
       '</div>';
   });
 
