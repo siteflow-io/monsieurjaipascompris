@@ -1182,7 +1182,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1";
+var APP_VERSION="6.7.0-L15.1b-1d";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1192,12 +1192,12 @@ var MJPC_APP = {
   contenant: "aucun"            // l'\u00e9l\u00e8ve corrige sa copie seul
 };
 var MJPC_MANIFESTE = {
-  noeuds: ["correction_dictee","classes_amenages","correction_dictee_textes","correction_dictee_erreurs"],   /* [L10] les formes fautives */
+  noeuds: ["correction_dictee","classes_amenages","correction_dictee_textes","correction_dictee_erreurs","site/analyses","profil"],   /* [L10] les formes fautives ; [L15.1b-1] les analyses, les événements du profil */
   notions: []                   // taxonomie G/L/M/I/P/A/X \u2192 rattachement Concordance en Phase 3
 };
 var MJPC_PURGE = {
   // Le corpus survit (travail de conception) ; l'\u00e9l\u00e8ve est archiv\u00e9 puis effac\u00e9.
-  preserver: ["correction_dictee/*/config","correction_dictee/*/dictee","correction_dictee_textes","correction_dictee_erreurs"],   /* [L10] survivent à la purge, même si la copie ou la dictée a disparu */
+  preserver: ["correction_dictee/*/config","correction_dictee/*/dictee","correction_dictee_textes","correction_dictee_erreurs","site/analyses","profil"],   /* [L15.1b-1] les analyses et le profil survivent */   /* [L10] survivent à la purge, même si la copie ou la dictée a disparu */
   purger:    ["correction_dictee/*/results","correction_dictee/*/autocorrection","correction_dictee/*/absents",
               "correction_dictee/*/amenages","correction_dictee/*/exercices","correction_dictee/*/exercices_results",
               "correction_dictee/*/copyOptions","correction_dictee/*/copyPublishedAt","classes_amenages"]
@@ -2424,6 +2424,7 @@ function analyserEcartL151(forme,attendu,type,ctx){ctx=ctx||{};var f=String(form
   res.categorie=prem.id;res.famille=prem.famille;res.ecarts=ec.map(function(x){return x.cat.id});
   if(!ok){res.commentaire=remplirL151(CAT_AUTRE_L151.commentaire,{forme:f,mot:w});res.horsType=true;return res;}
   res.reconnu=true;
+  res.details=Object.assign({},ec[0].d||{});
   if(ec.length===1)res.commentaire=remplirL151((ec[0].m&&ec[0].m.commentaire)||prem.commentaire,Object.assign({forme:f,mot:w},ec[0].d));
   else res.commentaire=remplirL151("Tu as écrit « {forme} » : attention à "+ec.map(function(x){return x.cat.court}).join(", et à ")+" : « {mot} ».",{forme:f,mot:w});
   return res;}
@@ -2452,6 +2453,29 @@ function motAvantL151(tokens,idx){if(!tokens||idx==null)return "";for(var i=idx-
 function analyseErreurL151(err,tokens){if(!err||!err.fautif||!/^[GLC]$/.test(err.type))return null;
   return analyserEcartL151(err.fautif,err.word,err.type,{categories:categoriesL151(),homophones:homophonesL151(),avant:motAvantL151(tokens,err.idx)});}
 
+/* [L15h-2 — dette 126] LE RECLASSEMENT RÉEL EN C, tel que validé (relecture du 05/10, MANDATS/RELECTURE-L15.1a-ET-L15h-1.md) :
+   les erreurs L listées ici (dictée, place dans le texte, forme recopiée — aucun nom) passent en C ; deux lignes rayées par Paul restent en L
+   (« ce-là » pour « cela », « mémé » pour « même »). Une fois par dictée, à son ouverture par le professeur : la corbeille d'abord
+   (reclassement-accents_<hhmmss>_<clé>), compté, les notes recalculées par la seule fonction (L15g), les objets de L10 republiés avec leur type. */
+var RECLASSEMENT_C_L15H2={"valides": [{"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 89, "fautif": "eurênt", "mot": "eurent"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 100, "fautif": "demolitions", "mot": "démolitions"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 21, "fautif": "abâttirent", "mot": "abattirent"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 1, "fautif": "commencerent", "mot": "commencèrent"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 7, "fautif": "chantiér", "mot": "chantier"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 17, "fautif": "equipes", "mot": "équipes"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 65, "fautif": "meme", "mot": "même"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo", "idx": 33, "fautif": "egouts", "mot": "égouts"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo_copie_1790951115880", "idx": 17, "fautif": "equipes", "mot": "équipes"}, {"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo_copie_1790951115880", "idx": 33, "fautif": "egouts", "mot": "égouts"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 107, "fautif": "goûtte", "mot": "goutte"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 25, "fautif": "vehicules", "mot": "véhicules"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 72, "fautif": "souville", "mot": "Souville"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 57, "fautif": "bàs", "mot": "bas"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 16, "fautif": "alèrte", "mot": "alerte"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 102, "fautif": "celà", "mot": "cela"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 36, "fautif": "kilomêtres", "mot": "kilomètres"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob_copie_1790916580740", "idx": 16, "fautif": "alèrte", "mot": "alerte"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob_copie_1790916580740", "idx": 25, "fautif": "vehicules", "mot": "véhicules"}], "exclus": [{"dictee": "dictee_n_1_preparee_les_travaux_de_paris-4_hugo_copie_1790951115880", "idx": 65, "fautif": "mémé", "mot": "même"}, {"dictee": "dictee_n_1_type_brevet_avec_revisions_extrait_de_la_lettre_de_fritz-3_dylan_bob", "idx": 102, "fautif": "ce-là", "mot": "cela"}]};
+function reclasserCL15h2(id){var v=RECLASSEMENT_C_L15H2.valides.filter(function(x){return x.dictee===id});if(!v.length)return Promise.resolve(0);
+  return db.ref("correction_dictee/"+id+"/migrations/reclassementC_v1").once("value").then(function(sm){if(sm.exists())return 0;
+    return Promise.all([db.ref("correction_dictee/"+id+"/config").once("value"),db.ref("correction_dictee/"+id+"/results").once("value"),db.ref("correction_dictee/"+id+"/dictee/amenagee").once("value")]).then(function(sn){
+      var cfg=sn[0].val()||{},res=sn[1].val()||{},am=sn[2].val()||null,lac=lacunesDe(am),now=Date.now(),d=new Date(now),jour=d.toISOString().slice(0,10),hh=("0"+d.getHours()).slice(-2)+("0"+d.getMinutes()).slice(-2)+("0"+d.getSeconds()).slice(-2),maj={},corb={},nE=0,nC=0;
+      Object.keys(res).forEach(function(k){var c=res[k];if(!c||typeof c!=="object")return;var errs=toArr(c.errors||[]).filter(function(e){return e!=null}),touche=false;
+        var errs2=errs.map(function(e){var ok=e.type==="L"&&e.fautif&&v.some(function(x){return x.idx===e.idx&&x.fautif===e.fautif&&x.mot===e.word});if(!ok)return e;touche=true;nE++;
+          if(e.formeId)maj["correction_dictee_erreurs/"+e.formeId+"/type"]="C";return Object.assign({},e,{type:"C"});});
+        if(!touche)return;nC++;
+        corb["corbeille/"+jour+"/reclassement-accents_"+hh+"_"+k]={_meta:{motif:"reclassement-accents",chemin:"correction_dictee/"+id+"/results/"+k,source:"correction_dictee",dictee:id,cle:k,le:now},data:c};
+        var ext=toArr(c.extras||[]).filter(function(e){return e!=null}),amg=c.amenagee===true,base=amg?((am&&am.base)||c.base||10):(cfg.base||20),e3=errs2,x3=ext;
+        if(amg){var mA=marquerAmenage(errs2,ext,true,lac);e3=mA.errs;x3=mA.extras;}
+        var sc=computeNote(e3,x3,base,cfg.bareme),b0="correction_dictee/"+id+"/results/"+k+"/";
+        maj[b0+"errors"]=e3;maj[b0+"note"]=sc.note;maj[b0+"deduction"]=sc.deduction;maj[b0+"counts"]=sc.counts;maj[b0+"modifieLe"]=now;});
+      maj["correction_dictee/"+id+"/migrations/reclassementC_v1"]={le:now,erreurs:nE,copies:nC,version:1};
+      return db.ref().update(corb).then(function(){return db.ref().update(maj);}).then(function(){
+        if(nE)toastRecalculL15g(nE+" erreur"+(nE>1?"s":"")+" reclass\u00e9e"+(nE>1?"s":"")+" en C (accent, majuscule, trait d\u2019union) dans "+nC+" copie"+(nC>1?"s":"")+" ; l\u2019\u00e9tat d\u2019avant est dans la corbeille.");
+        Object.keys(maj).forEach(function(p){var m=/^correction_dictee_erreurs\/([^/]+)\/type$/.exec(p);if(m&&FORMES.parId[m[1]])FORMES.parId[m[1]].type="C";});
+        try{window.dispatchEvent(new CustomEvent("cd-recalcul",{detail:{dicteeId:id}}))}catch(e){}return nE;});});});}
 function gramComment(err,tokens){   /* [L15.1b-1] tokens : pour lire le mot d'avant (un pronom → un verbe ; un déterminant → un nom) */
   var w=err.word||"",t=err.type;
   if(estApostrophe(w)||t==="E") return "\u00c9lision \u2014 devant une voyelle ou un h muet, le e (ou le a) tombe et l\u2019apostrophe le remplace : l\u2019arbre, s\u2019approcher, qu\u2019on, n\u2019a. Relis en v\u00e9rifiant chaque petit mot devant une voyelle.";
@@ -2730,13 +2754,33 @@ function engagementPourAstuce(t){
   if(!_engParAstuce){_engParAstuce={};ENGAGEMENTS_ASTUCE.forEach(function(r){_engParAstuce[generateIndice(r[0],r[1])]=r[2]})}
   return _engParAstuce[t]||null;
 }
-function phraseARecopier(errors,extras,regain){   /* [L15f] regain : {points, notions} */
+/* [L15.1b-1 — 477, Paul : oui] la catégorie de l'écart → un engagement DÉJÀ ÉCRIT (ENGAGEMENTS_ASTUCE / ENGAGEMENTS_TYPE) ; jamais une phrase nouvelle */
+function engagementPourCategorieL151(cat,e){var A=function(w,t){return engagementPourAstuce(generateIndice(w,t));},G=ENGAGEMENTS_TYPE.G,L=ENGAGEMENTS_TYPE.L;
+  switch(cat){
+    case "cat-pluriel-manquant":case "cat-pluriel-en-trop":case "cat-fem-pl-manquant":case "cat-fem-pl-en-trop":return A("les","G")||G;
+    case "cat-feminin-manquant":case "cat-feminin-en-trop":case "cat-eux-euse":case "cat-pluriel-aux":case "cat-invariable":
+    case "cat-verbe-nt-manquant":case "cat-verbe-nt-en-trop":case "cat-verbe-personne":case "cat-verbe-2e-personne":case "cat-verbe-t-d":case "cat-ons-ont":case "cat-verbe-pour-nom":return G;
+    case "cat-imparfait-passe-simple":return A("chantaient","G")||G;
+    case "cat-terminaison-e-er":return A("chanter","G")||G;
+    case "cat-homophone":return A(e.word,"G")||G;
+    case "cat-consonne-double":return A("belle","L")||L;
+    case "cat-accent":return (/[\u00e2\u00ea\u00ee\u00f4\u00fb]/.test(e.word)?A("\u00e2ge","L"):A("\u00e9t\u00e9","L"))||L;
+    case "cat-cedille":return A("le\u00e7on","L")||L;
+    case "cat-elision":return ENGAGEMENTS_TYPE.E;
+    default:return cat&&cat!=="cat-autre"?L:null;}}
+function categoriePourEngagementL151(e,tokens){var an=analyseErreurL151(e,tokens);if(!an||!an.reconnu)return null;var compat=FAMILLE_TYPE_L151[e.type]||[];
+  var cs=categoriesL151(),parId={};cs.forEach(function(c){parId[c.id]=c});var ids=an.ecarts||[an.categorie];
+  for(var i=0;i<ids.length;i++){var c=parId[ids[i]];if(c&&(c.tousTypes||compat.indexOf(c.famille)>=0))return ids[i];}return an.categorie;}   /* l'écart qui va avec le type posé (G : l'accord, pas la consonne double) */
+function phraseARecopier(errors,extras,regain,tokens){   /* [L15f] regain : {points, notions} ; [477] tokens : le mot d'avant */
   var errs=(errors||[]).filter(function(e){return e&&e.type!=="A"}),nX=(extras||[]).length,n=errs.length+nX;
   if(n===0)return "Pour cette dict\u00e9e, je n\u2019ai fait aucune erreur, et pour la prochaine, je devrai relire avec le m\u00eame soin.";
   var parType={};errs.forEach(function(e){parType[e.type]=(parType[e.type]||0)+1});if(nX)parType.X=nX;
   var tMax=null;TYPE_ORDRE.forEach(function(t){if(parType[t]&&(tMax===null||parType[t]>parType[tMax]))tMax=t});
   // Point 234 : l'engagement est cherché parmi les erreurs du type le plus fréquent (celui que la phrase annonce)
-  var parEng={},ordre=[];errs.forEach(function(e){if(e.type!==tMax)return;var g=engagementPourAstuce(generateIndice(e.word,e.type));if(!g)return;if(!parEng[g]){parEng[g]=0;ordre.push(g)}parEng[g]++});
+  var parEng={},ordre=[];errs.forEach(function(e){if(e.type!==tMax)return;
+    var cat=(e.fautif&&!(e.sansCout&&e.motifSansCout!=="amenage"))?categoriePourEngagementL151(e,tokens):null,g=cat?engagementPourCategorieL151(cat,e):null;   /* [477] d'abord l'écart (la forme recopiée) */
+    if(!g)g=engagementPourAstuce(generateIndice(e.word,e.type));   /* sinon, comme avant : le mot */
+    if(!g)return;if(!parEng[g]){parEng[g]=0;ordre.push(g)}parEng[g]++});
   var eng=null;ordre.forEach(function(g){if(eng===null||parEng[g]>parEng[eng])eng=g});
   if(!eng)eng=ENGAGEMENTS_TYPE[tMax]||ENGAGEMENTS_TYPE.G;
   var debut=n===1?"j\u2019ai fait une seule erreur":"j\u2019ai fait "+n+" erreurs, surtout "+(ERREURS_SURTOUT[tMax]||"");
@@ -3138,7 +3182,7 @@ function ImportPdfL15e(p){
 }
 
 function AppProf(p){
-  ecouterAnalysesL151(true);var sAnL=useState(0),setAnL=sAnL[1];useEffect(function(){function f(){setAnL(function(x){return x+1})}window.addEventListener("analyses-l151",f);return function(){window.removeEventListener("analyses-l151",f)}},[]);   /* [L15.1b-1] */
+  ecouterAnalysesL151(true);chargerTaxoL151().then(function(){var n={};toArr(TAXO_L151.table||[]).forEach(function(a){if(a&&/^cat-/.test(a.terme||"")&&a.statut==="valide")toArr(a.cibles).forEach(function(c){n[c]=1})});MJPC_MANIFESTE.notions=Object.keys(n);});var sAnL=useState(0),setAnL=sAnL[1];useEffect(function(){function f(){setAnL(function(x){return x+1})}window.addEventListener("analyses-l151",f);return function(){window.removeEventListener("analyses-l151",f)}},[]);   /* [L15.1b-1] */
   ecouterProfilsL15g();var sPrL=useState(0),setPrL=sPrL[1];useEffect(function(){function f(){setPrL(function(x){return x+1})}window.addEventListener("profils-l15g",f);return function(){window.removeEventListener("profils-l15g",f)}},[]);   /* [L15g] */
   var s1=useState("config"),screen=s1[0],setScreen=s1[1];
   var s2=useState(""),textInput=s2[0],setTextInput=s2[1];
@@ -3208,7 +3252,8 @@ function AppProf(p){
   var sRes=useState(null),restaurerL15b=sRes[0],setRestaurerL15b=sRes[1];var restaureFait=React.useRef(false);   /* [L15b] */
   var sNv=useState(false),nouvelleL15c=sNv[0],setNouvelleL15c=sNv[1];var sImp=useState(false),importL15e=sImp[0],setImportL15e=sImp[1];   /* [L15e] */var sMt=useState(false),modeTestL15c=sMt[0],setModeTestL15c=sMt[1];   /* [L15c] */
   useEffect(function(){if(restaureFait.current||!classesLoaded)return;restaureFait.current=true;var r=lireAdresseProfL15b();if(r)load(r.dictee,r);},[classesLoaded]);
-  function load(id,restaurer){db.ref("correction_dictee/"+id).once("value",function(snap){
+  function load(id,restaurer){if(typeof reclasserCL15h2==="function")reclasserCL15h2(id).then(function(n){if(n)load(id,restaurer);});   /* [L15h-2] une fois par dictée ; si des copies ont changé, la dictée est relue */
+    db.ref("correction_dictee/"+id).once("value",function(snap){
     if(!snap.exists()||!(snap.val()||{}).config){adresseProfL15b(null);return;}   /* [L15b] une dictée qui n'existe pas : on reste à l'accueil */
     setRestaurerL15b(restaurer||null);
     var val=snap.val()||{},cfg=val.config||{};
@@ -3222,6 +3267,7 @@ function AppProf(p){
     /* [ELEVE-1 ④] la note s'enregistre sur la base avec laquelle la copie est corrigée (Paul, 01/10) ; la trace dit d'où elle vient */
     var tr=(trace&&typeof trace==="object")?trace:{amenagee:false};
     errors=formesSynchroniser(dicteeId,dicteeData,corrections[ek],errors);   /* [L10] */
+    errors=emettreEvenementsProfilL151(dicteeId,dicteeData,ek,corrections[ek],errors);   /* [L15.1b-1d — BRANCHEMENT PROFIL — M15] */
     errors=marquerSansCout(errors,empreinteTexte(dicteeData.text),dicteeData.tokens||tokenize(dicteeData.text||"")).errs;   /* [L11] une forme acceptée : sans coût */
     var mA14=marquerAmenage(errors,extras,!!(trace&&trace.amenagee),AMEN_LAC[dicteeId]);errors=mA14.errs;extras=mA14.extras;   /* [L14] copie aménagée : seuls les trous comptent */
     var c=Object.assign({},corrections),sc=computeNote(errors,extras,(tr.amenagee&&tr.base)?tr.base:(tr.baseDictee||dicteeData.base),dicteeData.bareme);
@@ -3580,23 +3626,114 @@ function EditeurTextes(){
 /* [L15.1b-1] RÉGLAGES — « Les commentaires de l'analyse » : une fenêtre sur le lieu unique (site/analyses), pour toutes les dictées */
 function erreursAnalyseesL151(corrections,texte){var tok=tokenize(texte||""),l=[];Object.keys(corrections||{}).forEach(function(k){var c=corrections[k];if(!c)return;
   toArr(c.errors||[]).forEach(function(e){if(!e||!e.fautif||!/^[GLC]$/.test(e.type)||(e.sansCout&&e.motifSansCout!=="amenage"))return;var a=analyseErreurL151(e,tok);if(a)l.push({k:k,e:e,a:a});});});return l;}
+/* ═══ [L15.1b-1d] RÉGLAGES — « Les commentaires de l'analyse » (maquette T474 v2) : la liste et l'éditeur ; le bouton « 🤖 Prompt IA — catégories (JSON) »,
+   Vérifier, Injecter (archive avant) ; les alias proposés dans /taxonomie/alias/tables/correction_dictee (statut « propose ») ; le lien vers le Panneau prof. */
+var TAXO_L151={domaines:null,table:null,charge:false};
+function chargerTaxoL151(){if(TAXO_L151.charge)return Promise.resolve(TAXO_L151);return Promise.all([db.ref("taxonomie/domaines").once("value"),db.ref("taxonomie/alias/tables/correction_dictee").once("value")]).then(function(sn){
+  TAXO_L151.domaines=sn[0].val()||[];TAXO_L151.table=sn[1].val()||[];TAXO_L151.charge=true;return TAXO_L151;});}
+function idsTaxoL151(){var dom={},fam={},not={};toArr(TAXO_L151.domaines||[]).forEach(function(d){if(!d)return;if(d.id)dom[d.id]=d;toArr(d.familles||[]).forEach(function(f){if(!f)return;fam[f.id]=f;toArr(f.notions||[]).forEach(function(n){if(n&&n.id)not[n.id]=n;});});});return {dom:dom,fam:fam,not:not};}
+function codesCompetencesL151(){var c={};toArr(TAXO_L151.table||[]).forEach(function(e){var m=e&&/^(D\d\.\d)\b/.exec(e.terme||"");if(m)c[m[1]]=1;});return Object.keys(c).sort();}   /* lus au hub (la table de l'app), jamais en dur */
+function erreursToutesDicteesL151(){return db.ref("correction_dictee").once("value").then(function(sn){var v=sn.val()||{},l=[];Object.keys(v).forEach(function(id){var d=v[id]||{},tok=tokenize((d.config||{}).text||"");
+  Object.keys(d.results||{}).forEach(function(k){var c=d.results[k];if(!c)return;toArr(c.errors||[]).forEach(function(e){if(!e||!e.fautif||!/^[GLC]$/.test(e.type)||(e.sansCout&&e.motifSansCout!=="amenage"))return;var a=analyseErreurL151(e,tok);if(a)l.push({dictee:id,k:k,e:e,a:a});});});});return l;});}
+function promptIaL151(errs){var cats=categoriesL151(),T=idsTaxoL151(),g={};errs.forEach(function(x){var key=x.e.fautif+" \u2192 "+x.e.word+" \u00b7 "+x.e.type+" \u00b7 "+(x.a.reconnu?x.a.categorie:"NON RECONNUE");g[key]=(g[key]||0)+1;});
+  var lignes=Object.keys(g).sort(function(a,b){var na=/NON RECONNUE/.test(a),nb=/NON RECONNUE/.test(b);if(na!==nb)return na?-1:1;return g[b]-g[a];}).map(function(k){return k+(g[k]>1?" \u00b7 \u00d7"+g[k]:"")});
+  var taxo=toArr(TAXO_L151.domaines||[]).map(function(d){return (d.id||"")+" "+(d.libelleProf||d.libelle||"")+" : "+toArr(d.familles||[]).map(function(f){return f.id+" "+(f.libelleProf||"")+" ["+toArr(f.notions||[]).filter(function(n){return n&&n.actif!==false}).map(function(n){return n.id+" "+(n.libelleProf||"")}).join(" ; ")+"]"}).join(" | ")}).join("\n");
+  return mjpcPromptComposer({presentation:{breve:true},
+    directives:"Tu es l\u2019assistant d\u2019un professeur de fran\u00e7ais de coll\u00e8ge (MJPC \u2014 correction de dict\u00e9e). Tu proposes de NOUVELLES cat\u00e9gories d\u2019\u00e9cart pour les erreurs NON RECONNUES ci-dessous (et des paires d\u2019homophones), avec leur rattachement \u00e0 la taxonomie. Le professeur v\u00e9rifie et tranche.",
+    cadrage:false,
+    format:"COMP\u00c9TENCES (codes \u00e0 r\u00e9utiliser tels quels) : "+codesCompetencesL151().join(" \u00b7 ")+"\n\nTAXONOMIE (ids \u00e0 r\u00e9utiliser tels quels, domaine : familles [notions]) :\n"+taxo+
+      "\n\nTYPES DE MOTIF CONNUS : casse, tiret, collage, apostrophe, chiffre, cedille, homophone, accent, double, suffixe {attendu, ecrit}, terminaisons {liste}, lettre {de, vers}, inversion, omise, ajoutee, changee, regex {forme, mot}, ajout {suffixes}."+
+      "\n\nCAT\u00c9GORIES EXISTANTES (id \u00b7 famille \u00b7 comp\u00e9tence \u00b7 motifs \u00b7 commentaire) :\n"+cats.map(function(c){return c.id+" \u00b7 "+c.famille+" \u00b7 "+(c.competence||"")+" \u00b7 "+JSON.stringify(c.motifs||[])+" \u00b7 "+(c.commentaire||"")}).join("\n")+
+      "\n\nERREURS (forme \u2192 mot \u00b7 type \u00b7 cat\u00e9gorie ou NON RECONNUE), les non reconnues d\u2019abord :\n"+lignes.join("\n")+
+      "\n\nR\u00c9PONDS UNIQUEMENT par un JSON : {\"categories\":[{\"id\":\"cat-\u2026\",\"nom\":\"\u2026\",\"famille\":\"accords|conjugaison|homophones|lexique|mots\",\"competence\":\"D1.x\",\"motifs\":[\u2026],\"commentaire\":\"\u2026 avec {forme} {mot} {lettre}\",\"exemples\":[{\"forme\":\"\u2026\",\"mot\":\"\u2026\"}],\"alias\":{\"cibles\":[\"id de notion ou de famille\"],\"relation\":\"egal|inclus\"}}],\"homophones\":[{\"a\":\"\u2026\",\"b\":\"\u2026\",\"regle\":\"\u2026\"}]} \u2014 aucune cat\u00e9gorie existante, aucun texte hors JSON."});}
+var TYPES_MOTIF_L151=["casse","tiret","collage","apostrophe","chiffre","cedille","homophone","accent","double","suffixe","terminaisons","lettre","inversion","omise","ajoutee","changee","regex","ajout"];
+/* Vérifier : rien n'est écrit */
+function verifierIaL151(texte){var r={ok:[],rejets:[],homophones:[],aliasOk:[]},j;try{j=JSON.parse(String(texte||"").replace(/^```(json)?|```$/g,"").trim());}catch(e){r.erreur="Le texte coll\u00e9 n\u2019est pas un JSON lisible.";return r;}
+  var exist={},vus={},T=idsTaxoL151(),codes=codesCompetencesL151(),fines={};categoriesL151().forEach(function(c){exist[c.id]=1});
+  toArr(TAXO_L151.table||[]).forEach(function(e){if(e&&e.statut!=="refuse")toArr(e.cibles||[]).forEach(function(c){if(T.fam[c]||T.not[c])fines[c]=(fines[c]||0)+1;});});   /* la partition : une famille ou une notion n'a qu'un propriétaire fin */
+  toArr(j.categories||[]).forEach(function(c){var raison=null;
+    if(!c||!c.id||!/^[a-z0-9-]+$/.test(c.id))raison="id absent ou invalide";else if(exist[c.id])raison="id d\u00e9j\u00e0 pris";else if(vus[c.id])raison="id en double dans le JSON";
+    else if(["accords","conjugaison","homophones","lexique","mots"].indexOf(c.famille)<0)raison="famille inconnue";
+    else if(codes.length&&codes.indexOf(String(c.competence||"").slice(0,4))<0)raison="comp\u00e9tence absente de la taxonomie ("+(c.competence||"vide")+")";
+    else if(!toArr(c.motifs||[]).length||toArr(c.motifs).some(function(m){return !m||TYPES_MOTIF_L151.indexOf(m.type)<0}))raison="motif inconnu";
+    else if(!toArr(c.exemples||[]).length)raison="aucun exemple";
+    else{var bad=toArr(c.exemples).filter(function(ex){return !ex||!toArr(c.motifs).some(function(m){try{return !!motifL151(m,String(ex.forme||""),String(ex.mot||""),{homophones:homophonesL151()});}catch(e){return false;}})});if(bad.length)raison="le moteur ne reconna\u00eet pas l\u2019exemple \u00ab "+(bad[0].forme||"")+" \u00bb \u2192 \u00ab "+(bad[0].mot||"")+" \u00bb";}
+    if(!raison&&c.alias){var ci=toArr(c.alias.cibles||[]);if(!ci.length)raison="alias sans cible";else if(ci.some(function(x){return !(T.dom[x]||T.fam[x]||T.not[x])}))raison="alias : cible inconnue de la taxonomie";
+      else if(c.alias.relation==="egal"&&ci.length!==1)raison="alias : \u00ab egal \u00bb vise plusieurs cibles";else if(["egal","inclus"].indexOf(c.alias.relation)<0)raison="alias : relation inconnue";
+      else if(ci.some(function(x){return (T.fam[x]||T.not[x])&&fines[x]}))raison="alias : partition cass\u00e9e (une famille ou une notion aurait deux propri\u00e9taires fins)";}
+    if(raison){r.rejets.push({id:c&&c.id,raison:raison});return;}
+    vus[c.id]=1;if(c.alias)toArr(c.alias.cibles).forEach(function(x){if(T.fam[x]||T.not[x])fines[x]=(fines[x]||0)+1;});r.ok.push(c);});
+  toArr(j.homophones||[]).forEach(function(hp){if(hp&&hp.a&&hp.b&&hp.a!==hp.b)r.homophones.push(hp);else r.rejets.push({id:(hp&&hp.a)||"?",raison:"paire d\u2019homophones incompl\u00e8te"});});return r;}
+/* Injecter : archive avant (abandon si l'archive échoue), puis les catégories, les paires, les alias proposés ; puis les erreurs déjà corrigées sont reclassées (compté, corbeille) */
+function injecterIaL151(v){var base="https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app";try{if(firebase.app().options.databaseURL)base=String(firebase.app().options.databaseURL).replace(/\/$/,"");}catch(x){}var t=Date.now();   /* l'adresse du hub (celle de la configuration) */return new Promise(function(ok,ko){
+  db.ref("site/analyses").once("value").then(function(sn){var cur=sn.val()||{},cats=Object.assign({},cur.categories||{}),homs=Object.assign({},cur.homophones||{});
+    v.ok.forEach(function(c){cats[c.id]={id:c.id,nom:c.nom||c.id,famille:c.famille,competence:c.competence||"",motifs:c.motifs,court:c.court||c.nom||c.id,commentaire:c.commentaire||"",exemples:c.exemples||[],actif:true,origine:"ia",version:1,creeLe:t,modifieLe:t};});
+    v.homophones.forEach(function(hp){homs["hom-"+san(hp.a)+"-"+san(hp.b)]={a:hp.a,b:hp.b,regle:hp.regle||"",competence:"D1.5",origine:"ia",creeLe:t};});
+    mjpcInjecterAvecArchive({base:base,chemin:"/site/analyses",ancien:cur,donnees:Object.assign({},cur,{categories:cats,homophones:homs}),app:"correction_dictee",cheminArchive:"/corbeille/"+new Date(t).toISOString().slice(0,10)+"/analyses-avant-ia_"+t},function(bien,issue,info){
+      if(!bien){ko(info&&info.abandon?"L\u2019archive a \u00e9chou\u00e9 : rien n\u2019a \u00e9t\u00e9 remplac\u00e9.":"L\u2019\u00e9criture a \u00e9chou\u00e9.");return;}
+      var avecAlias=v.ok.filter(function(c){return c.alias});
+      var suite=function(){reclasserTout().then(function(n){ok({categories:v.ok.length,homophones:v.homophones.length,alias:avecAlias.length,reclassees:n});},ko);};
+      if(!avecAlias.length)return suite();
+      db.ref("taxonomie/alias/tables/correction_dictee").once("value").then(function(st){var tab=toArr(st.val()||[]),maj={};var i0=tab.length;
+        avecAlias.forEach(function(c,i){maj["taxonomie/alias/tables/correction_dictee/"+(i0+i)]={terme:c.id,cibles:toArr(c.alias.cibles),relation:c.alias.relation,statut:"propose",propose_le:new Date(t).toISOString().slice(0,10),note:"propos\u00e9 par l\u2019IA (correction_dictee, L15.1) \u2014 \u00e0 valider au Panneau prof"};});
+        return db.ref().update(maj);}).then(function(){TAXO_L151.charge=false;suite();},ko);});},ko);
+  function reclasserTout(){return db.ref("correction_dictee").once("value").then(function(sn){var v2=sn.val()||{},maj={},corb={},n=0,jour=new Date(t).toISOString().slice(0,10);
+    Object.keys(v2).forEach(function(id){var d=v2[id]||{},tok=tokenize((d.config||{}).text||"");Object.keys(d.results||{}).forEach(function(k){var c=d.results[k];if(!c)return;var errs=toArr(c.errors||[]),ch=false;
+      var e2=errs.map(function(e){if(!e||!e.fautif||!/^[GLC]$/.test(e.type))return e;var a=analyseErreurL151(e,tok),cat=a?a.categorie:"cat-autre";if(cat===e.categorie)return e;ch=true;n++;return Object.assign({},e,{categorie:cat});});
+      if(!ch)return;corb["corbeille/"+jour+"/reclassement-categories_"+t+"_"+id.slice(-20)+"_"+k]={_meta:{motif:"reclassement-categories",chemin:"correction_dictee/"+id+"/results/"+k,dictee:id,cle:k,le:t},data:c};maj["correction_dictee/"+id+"/results/"+k+"/errors"]=e2;});});
+    if(!n)return 0;return db.ref().update(corb).then(function(){return db.ref().update(maj)}).then(function(){return n;});});}});}
+/* [BRANCHEMENT PROFIL — M15] L'ÉVÉNEMENT DU PROFIL (doctrine §E3 ; branché dès L15.1b-1, tranché par la conscience le 05/10) : chaque erreur corrigée
+   émet vers /profil/<clé élève>/events/<horodatage> ; une erreur = un événement (sa clé est gardée sur l'erreur : la correction suivante le met à jour,
+   jamais un doublon ; une erreur retirée est marquée « retire ») ; notion_ids = les notions des rattachements VALIDÉS, notions_proposees = celles en
+   attente : une absence n'est jamais silencieuse. L'app garde son stockage propre et émet en parallèle. */
+function notionsDeCategorieL151(cat){var v=[],p=[];toArr(TAXO_L151.table||[]).forEach(function(a){if(!a||a.terme!==cat)return;if(a.statut==="valide")v=v.concat(toArr(a.cibles));else if(a.statut==="propose")p=p.concat(toArr(a.cibles));});return {valides:v,proposees:p};}
+function emettreEvenementsProfilL151(dId,dData,cle,ancien,errs){if(!cle||!dId)return errs;var now=Date.now(),maj={},gardes={},parPlace={};
+  toArr((ancien&&ancien.errors)||[]).forEach(function(e){if(e&&e.evenement)parPlace[String(e.idx)]=e.evenement;});   /* une erreur = un événement : sa clé se retrouve par sa place */
+  var out=toArr(errs).map(function(e,i){if(!e||e.type==="A")return e;var key=e.evenement||parPlace[String(e.idx)]||String(now+i),n=notionsDeCategorieL151(e.categorie||"");gardes[key]=1;
+    maj["profil/"+cle+"/events/"+key]={eleve_id:cle,app:"correction_dictee",instance_id:dId,nom_lisible:(dData&&dData.title)||dId,type:"erreur",categorie:e.categorie||null,notion_ids:n.valides,notions_proposees:n.proposees,notions_etat:n.valides.length?"valide":(n.proposees.length?"propose":"aucun_rattachement"),   /* le hub n'enregistre pas une liste vide : l'état le dit en clair */
+      detail:{mot_fautif:e.fautif||"",mot_correct:e.word||"",type_dictee:e.type},contexte:{idx:e.idx==null?null:e.idx},timestamp:+String(key).split("_")[0]||now,modifieLe:now};
+    return e.evenement===key?e:Object.assign({},e,{evenement:key});});
+  toArr((ancien&&ancien.errors)||[]).forEach(function(e){if(e&&e.evenement&&!gardes[e.evenement]){maj["profil/"+cle+"/events/"+e.evenement+"/retire"]=true;maj["profil/"+cle+"/events/"+e.evenement+"/modifieLe"]=now;}});
+  try{db.ref().update(maj);}catch(x){}return out;}
 function CommentairesAnalyseL151(p){
-  var sE=useState({}),edits=sE[0],setEdits=sE[1],sH=useState({a:"",b:"",regle:""}),hp=sH[0],setHp=sH[1],sM=useState(""),msg=sM[0],setMsg=sM[1];
+  var sE=useState({}),edits=sE[0],setEdits=sE[1],sSel=useState(null),sel=sSel[0],setSel=sSel[1],sIa=useState(false),ia=sIa[0],setIa=sIa[1],sPr=useState(""),prompt=sPr[0],setPrompt=sPr[1];
+  var sJ=useState(""),jsonIa=sJ[0],setJsonIa=sJ[1],sV=useState(null),verif=sV[0],setVerif=sV[1],sM=useState(""),msg=sM[0],setMsg=sM[1],sH=useState({a:"",b:"",regle:""}),hp=sH[0],setHp=sH[1];
   var cats=categoriesL151(),err=erreursAnalyseesL151(p.corrections,p.texte),parCat={};err.forEach(function(x){parCat[x.a.categorie]=(parCat[x.a.categorie]||0)+1;});
   var presentes=cats.filter(function(c){return parCat[c.id]}).sort(function(a,b){return parCat[b.id]-parCat[a.id]}),autres=cats.filter(function(c){return !parCat[c.id]});
-  function ligne(c){var val=edits[c.id]!==undefined?edits[c.id]:(c.commentaire||"");var ex=(c.exemples||[])[0];
-    return h("div",{key:c.id,className:"categorie-l151","data-id":c.id,style:{borderTop:"1px solid var(--border)",padding:"8px 0"}},
-      h("div",{style:{display:"flex",gap:8,alignItems:"baseline",flexWrap:"wrap"}},h("b",null,c.nom),parCat[c.id]?h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},parCat[c.id]+" erreur"+(parCat[c.id]>1?"s":"")+" dans cette dict\u00e9e"):null,
-        ex?h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},"ex. \u00ab "+ex.forme+" \u00bb \u2192 \u00ab "+ex.mot+" \u00bb"):null),
-      h("textarea",{value:val,rows:2,style:{width:"100%",boxSizing:"border-box",fontSize:".9rem",marginTop:4},title:"Le commentaire que lit l\u2019\u00e9l\u00e8ve sous cette erreur. {forme} = ce qu\u2019il a \u00e9crit, {mot} = le mot juste, {lettre}, {accent}, {ecrit}, {attendu}, {regle} : remplis automatiquement. Il vaut pour toutes les dict\u00e9es ; enregistr\u00e9 quand tu quittes le champ.",
-        onChange:function(e){var o=Object.assign({},edits);o[c.id]=e.target.value;setEdits(o);},
-        onBlur:function(){if(edits[c.id]===undefined)return;var v=edits[c.id];db.ref("site/analyses/categories/"+c.id).update({commentaire:v,modifieLe:Date.now()}).then(function(){var o=Object.assign({},edits);delete o[c.id];setEdits(o);setMsg("Commentaire enregistr\u00e9 \u2014 il vaut pour toutes les dict\u00e9es.");});}}));}
+  var cur=cats.filter(function(c){return c.id===sel})[0]||presentes[0]||cats[0],val=cur?(edits[cur.id]!==undefined?edits[cur.id]:(cur.commentaire||"")):"";
+  var exV=cur?(err.filter(function(x){return x.a.categorie===cur.id&&x.a.ecarts&&x.a.ecarts.length===1})[0]||err.filter(function(x){return x.a.categorie===cur.id})[0]||null):null,exD=exV?Object.assign({},exV.a.details||{},{forme:exV.e.fautif,mot:exV.e.word}):((cur&&cur.exemples&&cur.exemples[0])||{forme:"",mot:""});
+  function ouvrirIa(){setIa(true);setMsg("");chargerTaxoL151().then(function(){return erreursToutesDicteesL151();}).then(function(l){setPrompt(promptIaL151(l));});}
+  function ligne(c){var n=parCat[c.id]||0;return h("div",{key:c.id,className:"categorie-l151","data-id":c.id,onClick:function(){setSel(c.id)},title:"Voir et modifier le commentaire de cette cat\u00e9gorie",style:{padding:"7px 10px",borderRadius:8,cursor:"pointer",marginBottom:4,background:cur&&cur.id===c.id?"var(--primary-light)":"transparent",border:"1px solid "+(cur&&cur.id===c.id?"var(--primary)":"var(--border)"),fontSize:".88rem"}},
+    h("span",{style:{fontWeight:600}},c.nom),n?h("span",{style:{marginLeft:6,fontSize:".75rem",color:"var(--muted)"}},"\u00b7 "+n):null,c.origine==="ia"?h("span",{style:{marginLeft:6,fontSize:".72rem",color:"#2b6cb0"}},"IA"):null);}
   return h("div",{className:"card",id:"carte-commentaires-l151"},
-    h("h2",{style:{marginTop:0}},"Les commentaires de l\u2019analyse"),
-    h("p",{style:{fontSize:".85rem",color:"var(--text-sub)",margin:"0 0 8px"}},"Sous chaque erreur recopi\u00e9e, l\u2019\u00e9l\u00e8ve lit le commentaire de sa cat\u00e9gorie (d\u00e9duite de l\u2019\u00e9cart entre ce qu\u2019il a \u00e9crit et le mot juste). Ces commentaires sont communs \u00e0 toutes les dict\u00e9es : r\u00e9\u00e9cris-les dans tes mots."),
-    msg?h("div",{id:"msg-commentaires-l151",style:{color:"#166534",fontSize:".85rem",marginBottom:6}},msg):null,
-    presentes.length?presentes.map(ligne):h("div",{style:{color:"var(--muted)",fontSize:".88rem"}},"Aucune erreur recopi\u00e9e dans cette dict\u00e9e pour l\u2019instant."),
-    h("details",{style:{marginTop:8}},h("summary",{style:{cursor:"pointer",fontSize:".88rem"},title:"Les cat\u00e9gories qui n\u2019ont pas d\u2019erreur dans cette dict\u00e9e."},"Les autres cat\u00e9gories ("+autres.length+")"),autres.map(ligne)),
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}},
+      h("h2",{style:{margin:0}},"Les commentaires de l\u2019analyse"),
+      h("div",{style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}},
+        h("span",{style:{fontSize:".82rem",color:"var(--text-sub)"}},cats.length+" cat\u00e9gories \u00b7 objets au hub, chacune avec son id \u00b7 valables pour toutes tes dict\u00e9es"),
+        h("a",{className:"btn btn-ghost",id:"lien-correspondances-l151",href:MJPC_URL+"?panneau=taxonomie&onglet=correspondances&app=correction_dictee",target:"_blank",rel:"noopener",style:{width:"auto",textDecoration:"none"},title:"Ouvre le Panneau prof sur la taxonomie, onglet \u00ab Correspondances \u00b7 correction_dictee \u00bb, dans un nouvel onglet : c\u2019est l\u00e0 que tu valides (ou refuses) les rattachements propos\u00e9s. Le retour ici relit les rattachements en direct."},"\u2197 Correspondances"),
+        h("button",{className:"btn",id:"btn-prompt-ia-l151",style:{width:"auto",background:"#2b6cb0",color:"#fff"},onClick:ouvrirIa,title:"Compose un prompt avec la taxonomie, les cat\u00e9gories existantes et TOUTES les erreurs de tes dict\u00e9es (les non reconnues en t\u00eate) ; l\u2019IA renvoie un JSON que tu colles ici : les nouvelles cat\u00e9gories et paires d\u2019homophones sont v\u00e9rifi\u00e9es, puis inject\u00e9es au hub (archive avant)."},"\ud83e\udd16 Prompt IA \u2014 cat\u00e9gories (JSON)"))),
+    ia?h("div",{id:"fenetre-ia-l151",style:{margin:"10px 0",padding:"12px 14px",border:"1.5px solid #2b6cb0",borderRadius:12,background:"#f4f8ff"}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},h("b",null,"\ud83e\udd16 Prompt IA \u2014 nouvelles cat\u00e9gories d\u2019\u00e9cart"),h("button",{className:"btn-sm btn-ghost",onClick:function(){setIa(false)}},"Fermer")),
+      h("div",{style:{fontSize:".85rem",color:"var(--text-sub)",marginBottom:6}},"1. Copie le prompt et donne-le \u00e0 l\u2019IA. 2. Colle sa r\u00e9ponse (un JSON) ci-dessous. 3. V\u00e9rifier : chaque cat\u00e9gorie est test\u00e9e sur ses exemples. 4. Injecter : archive avant, puis les cat\u00e9gories vivent au hub avec leur id, et les erreurs d\u00e9j\u00e0 corrig\u00e9es sont reclass\u00e9es (compt\u00e9)."),
+      h("textarea",{id:"prompt-ia-l151",readOnly:true,rows:7,style:{width:"100%",font:"ui-monospace, monospace",fontSize:".78rem",padding:8,borderRadius:8,border:"1px solid var(--border)",boxSizing:"border-box"},value:prompt||"Composition du prompt\u2026"}),
+      h("div",{style:{display:"flex",gap:8,margin:"8px 0"}},h("button",{className:"btn btn-ghost",id:"copier-prompt-l151",style:{width:"auto"},onClick:function(){try{navigator.clipboard.writeText(prompt);setMsg("Prompt copi\u00e9.");}catch(e){}},title:"Copie le prompt entier dans le presse-papiers."},"\ud83d\udccb Copier le prompt")),
+      h("textarea",{id:"json-ia-l151",rows:4,value:jsonIa,onChange:function(e){setJsonIa(e.target.value);setVerif(null);},placeholder:"Colle ici le JSON renvoy\u00e9 par l\u2019IA\u2026",style:{width:"100%",font:"ui-monospace, monospace",fontSize:".8rem",padding:8,borderRadius:8,border:"1px solid var(--border)",boxSizing:"border-box"}}),
+      h("div",{style:{display:"flex",gap:8,marginTop:8,alignItems:"center",flexWrap:"wrap"}},
+        h("button",{className:"btn btn-ghost",id:"verifier-ia-l151",style:{width:"auto"},onClick:function(){chargerTaxoL151().then(function(){setVerif(verifierIaL151(jsonIa));});},title:"Lit le JSON, v\u00e9rifie chaque cat\u00e9gorie sur ses exemples (le moteur doit la reconna\u00eetre), signale les ids en double, les motifs inconnus, une comp\u00e9tence ou une cible absente de la taxonomie, une partition cass\u00e9e. Rien n\u2019est \u00e9crit."},"\u2713 V\u00e9rifier"),
+        verif?h("span",{id:"verdict-ia-l151",style:{fontSize:".85rem",color:verif.erreur||(verif.rejets.length&&!verif.ok.length)?"#b91c1c":"#1a7f37"}},verif.erreur||(verif.ok.length+" cat\u00e9gorie"+(verif.ok.length>1?"s":"")+" valide"+(verif.ok.length>1?"s":"")+(verif.ok.length?" ("+verif.ok.map(function(c){return c.id}).join(", ")+")":"")+" \u00b7 "+verif.homophones.length+" paire"+(verif.homophones.length>1?"s":"")+" d\u2019homophones \u00b7 "+verif.rejets.length+" rejet\u00e9e"+(verif.rejets.length>1?"s":"")+(verif.rejets.length?" ("+verif.rejets.map(function(x){return (x.id||"?")+" : "+x.raison}).join(" ; ")+")":""))):null,
+        h("span",{style:{flex:1}}),
+        h("button",{className:"btn",id:"injecter-ia-l151",disabled:!verif||!!verif.erreur||(!verif.ok.length&&!verif.homophones.length),style:{width:"auto",background:"#2b6cb0",color:"#fff"},onClick:function(){injecterIaL151(verif).then(function(r){setMsg(r.categories+" cat\u00e9gorie(s) et "+r.homophones+" paire(s) inject\u00e9es au hub (l\u2019\u00e9tat d\u2019avant est dans la corbeille) ; "+r.alias+" rattachement(s) propos\u00e9(s) \u00e0 valider au Panneau prof ; "+r.reclassees+" erreur(s) d\u00e9j\u00e0 corrig\u00e9e(s) reclass\u00e9e(s).");setVerif(null);setJsonIa("");},function(e){setMsg(String(e));});},title:"Archive les cat\u00e9gories actuelles (corbeille), \u00e9crit les nouvelles au hub avec leur id, propose leurs rattachements (\u00e0 valider au Panneau prof), reclasse les erreurs d\u00e9j\u00e0 corrig\u00e9es (compt\u00e9), et le dit."},"\u2b07 Injecter"))):null,
+    msg?h("div",{id:"msg-commentaires-l151",style:{color:"#166534",fontSize:".85rem",margin:"6px 0"}},msg):null,
+    h("p",{style:{fontSize:".88rem",color:"var(--text-sub)",margin:"4px 0 10px"}},"L\u2019analyse compare lettre \u00e0 lettre ce que l\u2019\u00e9l\u00e8ve a \u00e9crit et le mot juste, range l\u2019\u00e9cart dans une cat\u00e9gorie, et prend le commentaire ci-dessous \u2014 dans tes mots. Les trous {forme}, {mot}, {lettre} sont remplis avec l\u2019erreur de l\u2019\u00e9l\u00e8ve. Si l\u2019\u00e9cart n\u2019est pas reconnu, c\u2019est le commentaire honn\u00eate qui part, jamais une r\u00e8gle invent\u00e9e."),
+    h("div",{style:{display:"grid",gridTemplateColumns:"260px 1fr",gap:14}},
+      h("div",null,presentes.map(ligne),h("details",{style:{marginTop:6}},h("summary",{style:{cursor:"pointer",fontSize:".85rem"},title:"Les cat\u00e9gories qui n\u2019ont pas d\u2019erreur dans cette dict\u00e9e."},"Les autres cat\u00e9gories ("+autres.length+")"),autres.map(ligne))),
+      cur?h("div",null,
+        h("div",{style:{fontWeight:700,marginBottom:6}},cur.nom),
+        h("textarea",{id:"texte-l151",value:val,rows:4,onChange:function(e){var o=Object.assign({},edits);o[cur.id]=e.target.value;setEdits(o);},style:{width:"100%",font:"inherit",fontSize:".95rem",padding:"10px 12px",borderRadius:10,border:"1.5px solid var(--border)",boxSizing:"border-box"},title:"Le commentaire que verra l\u2019\u00e9l\u00e8ve pour cette cat\u00e9gorie d\u2019\u00e9cart. Les trous entre accolades sont remplis automatiquement."}),
+        h("div",{style:{marginTop:8,padding:"10px 12px",background:"#f6f6f3",borderRadius:10,fontSize:".9rem"}},h("div",{style:{fontSize:".78rem",color:"var(--text-sub)",marginBottom:4}},exV?"Aper\u00e7u avec une vraie erreur de cette dict\u00e9e \u2014 \u00ab "+exD.forme+" \u00bb pour \u00ab "+exD.mot+" \u00bb :":"Aper\u00e7u avec l\u2019exemple de la cat\u00e9gorie :"),h("div",{id:"apercu-l151"},remplirL151(val,exD))),
+        h("div",{style:{display:"flex",gap:8,marginTop:10,alignItems:"center",flexWrap:"wrap"}},
+          h("button",{className:"btn",id:"enregistrer-commentaire-l151",style:{width:"auto"},onClick:function(){if(edits[cur.id]===undefined)return;var v=edits[cur.id];db.ref("site/analyses/categories/"+cur.id).update({commentaire:v,modifieLe:Date.now()}).then(function(){var o=Object.assign({},edits);delete o[cur.id];setEdits(o);setMsg("Commentaire enregistr\u00e9 \u2014 il sert d\u00e8s la prochaine copie rendue, pour toutes tes dict\u00e9es.");});},title:"Enregistre ce commentaire au hub : il sert d\u00e8s la prochaine copie rendue, pour toutes tes dict\u00e9es."},"Enregistrer"),
+          h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:function(){var o0=CATEGORIES_L151.filter(function(x){return x.id===cur.id})[0];if(!o0)return;var o=Object.assign({},edits);o[cur.id]=o0.commentaire;setEdits(o);},title:"Revient au texte livr\u00e9 avec l\u2019app pour cette cat\u00e9gorie (il faut ensuite \u00ab Enregistrer \u00bb)."},"Texte d\u2019origine"))):null),
     h("div",{style:{marginTop:12,borderTop:"1px solid var(--border)",paddingTop:10}},
       h("b",null,"Ajouter une paire d\u2019homophones"),
       h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:6}},
@@ -3606,13 +3743,15 @@ function CommentairesAnalyseL151(p){
         h("button",{className:"btn-sm btn-primary",id:"hom-ajouter-l151",title:"Ajoute la paire pour toutes les dict\u00e9es : une erreur entre ces deux mots re\u00e7oit aussit\u00f4t le commentaire d\u2019homophone, avec ta r\u00e8gle.",onClick:function(){var a=hp.a.trim(),b=hp.b.trim();if(!a||!b||a===b)return;var id="hom-"+san(a)+"-"+san(b);
           db.ref("site/analyses/homophones/"+id).set({a:a,b:b,regle:hp.regle.trim(),competence:"D1.5",origine:"paul",creeLe:Date.now()}).then(function(){setHp({a:"",b:"",regle:""});setMsg("Paire \u00ab "+a+" / "+b+" \u00bb ajout\u00e9e \u2014 elle vaut pour toutes les dict\u00e9es.");});}},"Ajouter la paire"))));
 }
+
 /* [L15.1b-1] BILAN — les erreurs « sans commentaire reconnu » (cette dictée) : la boucle d'amélioration ; côté élève, ce cas s'appelle « autre » */
-function NonReconnusL151(p){var err=erreursAnalyseesL151(p.corrections,(p.data||{}).text),nr=err.filter(function(x){return !x.a.reconnu}),g={};
+function NonReconnusL151(p){var sT=useState(null),toutes=sT[0],setToutes=sT[1];useEffect(function(){erreursToutesDicteesL151().then(function(l){setToutes({n:l.filter(function(x){return !x.a.reconnu}).length,m:l.length});});},[]);   /* [L15.1b-1d] le cumul du site */
+  var err=erreursAnalyseesL151(p.corrections,(p.data||{}).text),nr=err.filter(function(x){return !x.a.reconnu}),g={};
   nr.forEach(function(x){var k=x.e.fautif+" \u2192 "+x.e.word;g[k]=g[k]||{n:0,eleves:{}};g[k].n++;g[k].eleves[x.k]=1;});
   var l=Object.keys(g).sort(function(a,b){return g[b].n-g[a].n});
   return h("details",{className:"card",id:"carte-non-reconnus-l151",style:{marginBottom:12}},
     h("summary",{style:{cursor:"pointer",fontWeight:600},title:"Les erreurs recopi\u00e9es dont l\u2019\u00e9cart n\u2019est pas reconnu : l\u2019\u00e9l\u00e8ve a le commentaire prudent (\u00ab Compare lettre \u00e0 lettre\u2026 \u00bb). Ajoute une paire d\u2019homophones dans R\u00e9glages, ou dis-le pour une nouvelle cat\u00e9gorie."},
-      "\ud83d\udd0e Analyse : "+nr.length+" erreur"+(nr.length>1?"s":"")+" sans commentaire reconnu sur "+err.length+" recopi\u00e9e"+(err.length>1?"s":"")),
+      "\ud83d\udd0e Analyse : "+nr.length+" erreur"+(nr.length>1?"s":"")+" sans commentaire reconnu sur "+err.length+" recopi\u00e9e"+(err.length>1?"s":"")+" (cette dict\u00e9e)"+(toutes?" \u00b7 toutes dict\u00e9es : "+toutes.n+" sur "+toutes.m:"")),
     h("table",{style:{width:"100%",fontSize:".85rem",marginTop:8}},h("tbody",null,h("tr",null,h("th",{style:{textAlign:"left"}},"Forme \u2192 mot"),h("th",null,"Fois"),h("th",null,"\u00c9l\u00e8ves")),
       l.map(function(k){return h("tr",{key:k},h("td",null,k),h("td",{style:{textAlign:"center"}},g[k].n),h("td",{style:{textAlign:"center"}},Object.keys(g[k].eleves).length));}))));}
 
@@ -7193,7 +7332,7 @@ function buildCopieHtml(data,eleveName,eleveKey,c,ac,dicteeId,options){
     (data.title ? '<div class="copie-title">' + escapeHtml(data.title) + '</div>' : '') +
     '<div class="texte">' + textHtml + '</div>' +
     (bilan ? '<div class="bilan"><div class="bilan-title">Bilan</div>' + escapeHtml(bilan) + '</div>' : '') +
-    '<div class="bilan"><div class="bilan-title">\u00c0 recopier sur la copie</div><em>\u00ab ' + escapeHtml(phraseARecopier(errors, extras)) + ' \u00bb</em>' +
+    '<div class="bilan"><div class="bilan-title">\u00c0 recopier sur la copie</div><em>\u00ab ' + escapeHtml(phraseARecopier(errors, extras, null, (data&&(data.tokens||tokenize(data.text||"")))||null)) + ' \u00bb</em>' +
       ((ac && ac.attestation && ac.attestation.t) ? '<div style="margin-top:6px;font-size:.9em;opacity:.8">' + escapeHtml(eleveName.split(' ').pop()) + ' a lu et compris les consignes de l\u2019autocorrection le ' + dateHeureFr(ac.attestation.t) + '.</div>' : '') +
     '</div>' +
     (analyseHtml ? '<div class="analyse"><div class="analyse-title">Détail des erreurs (' + errors.length + ')</div>' + analyseHtml + '</div>' : '') +
@@ -10910,7 +11049,7 @@ function EleveCorrection(p){
   function blocARecopier(){
     return h("div",{className:"card",style:{marginBottom:14,borderLeft:"4px solid #276749"}},
       h("div",{style:{fontWeight:700,marginBottom:6}},"\u00c0 recopier chez toi, sur ta copie :"),
-      h("div",{style:{fontStyle:"italic",lineHeight:1.55,marginBottom:12}},"\u00ab "+phraseARecopier(errors,extras,{points:regainL15f(),notions:questionsTraiteesL15f().filter(function(q){return q.ok===true}).map(function(q){return q.notion}).filter(Boolean)})+" \u00bb"),
+      h("div",{style:{fontStyle:"italic",lineHeight:1.55,marginBottom:12}},"\u00ab "+phraseARecopier(errors,extras,{tokens:null,points:regainL15f(),notions:questionsTraiteesL15f().filter(function(q){return q.ok===true}).map(function(q){return q.notion}).filter(Boolean)},typeof tokens!=="undefined"?tokens:null)+" \u00bb"),
       cacheCorrige?h("div",{style:{fontSize:".85rem",color:"var(--muted)"}},"\ud83d\udcc4 Ta dict\u00e9e autocorrig\u00e9e sera disponible \u00e0 la fin de l\u2019heure."):
       p.onCopie?h("button",{className:"btn btn-ghost",style:{width:"auto"},onClick:p.onCopie,"data-titre-retire":"Ouvre ta dict\u00e9e corrig\u00e9e. Tu peux la rouvrir quand tu veux, m\u00eame depuis chez toi."},"\ud83d\udcc4 Ma dict\u00e9e autocorrig\u00e9e"):null);
   }
