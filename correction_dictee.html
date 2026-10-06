@@ -1200,7 +1200,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1j";
+var APP_VERSION="6.7.0-L15.1b-1k";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -7596,6 +7596,21 @@ function Copies(p){
     downloadBlob(filename,r.html);
   }
 
+  /* [micro L16-html — 06/10, Paul] toutes les copies de la classe dans UN SEUL fichier HTML : les mêmes copies que le ZIP (bilans validés, options d'affichage choisies), l'une après l'autre, une par page à l'impression */
+  function exportUnHtml(){
+    if(!done.length)return;
+    var parts=[],head=null,cls="",script="";
+    done.forEach(function(e){var r=buildHtmlFor(san(e),false);if(!r)return;var x=r.html;
+      if(head===null){var mh=x.match(/<head[^>]*>([\s\S]*?)<\/head>/i);head=mh?mh[1]:"";var mc=x.match(/<body[^>]*class="([^"]*)"/i);cls=mc?mc[1]:"";}
+      var mb=x.match(/<body[^>]*>([\s\S]*?)<\/body>/i);var b=mb?mb[1]:x;
+      var ms=b.match(/<script[\s\S]*?<\/script>/gi);if(ms&&!script)script=ms.join("");b=b.replace(/<script[\s\S]*?<\/script>/gi,"");
+      parts.push('<section class="copie-une" data-eleve="'+String(r.eleveName).replace(/"/g,"&quot;")+'">'+b+'</section>');});
+    var titre=(data.title||"Dict\u00e9e")+(data.classe?" \u2014 "+data.classe:"");
+    head=(head||"").replace(/<title>[\s\S]*?<\/title>/i,"")+"<title>"+titre.replace(/</g,"&lt;")+" \u2014 toutes les copies</title>";
+    var out='<!DOCTYPE html><html lang="fr"><head>'+head+'<style>.copie-une{page-break-after:always;break-after:page}.copie-une:last-child{page-break-after:auto;break-after:auto}@media screen{.copie-une+.copie-une{border-top:3px dashed #cbd5e1;margin-top:40px;padding-top:30px}}</style></head><body class="'+cls+'">'+parts.join("")+script+'</body></html>';
+    downloadBlob("copies_"+(data.title?sanFilename(data.title):"dictee")+"_"+(data.classe?sanFilename(data.classe):"")+".html",out);
+  }
+
   function exportZip(){
     if(!done.length)return;
     function build(){
@@ -7758,7 +7773,8 @@ function Copies(p){
           h("div",{style:{fontSize:".74rem",color:"var(--muted)",textTransform:"uppercase",fontWeight:600,letterSpacing:".04em",marginBottom:6}},"Archive locale (optionnel)"),
           h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
             h("button",{className:"btn btn-ghost",onClick:function(){setPreviewIdx(0);setPreviewOpen(true)},disabled:done.length===0,title:"Feuillete les "+done.length+" copies dans une fen\u00eatre plein \u00e9cran (\u2190 / \u2192 / \u00c9chap) pour valider le rendu avant export"},"\ud83d\udc41 Pr\u00e9visualiser toutes ("+done.length+")"),
-            h("button",{className:"btn btn-ghost",onClick:exportZip,disabled:done.length===0,title:"T\u00e9l\u00e9charge un ZIP avec une copie HTML par \u00e9l\u00e8ve (archive pour toi ou les familles qui veulent en local)"},"\ud83d\udce6 Archive ZIP ("+done.length+")")
+            h("button",{className:"btn btn-ghost",onClick:exportZip,disabled:done.length===0,title:"T\u00e9l\u00e9charge un ZIP avec une copie HTML par \u00e9l\u00e8ve (archive pour toi ou les familles qui veulent en local)"},"\ud83d\udce6 Archive ZIP ("+done.length+")"),
+            h("button",{className:"btn btn-ghost",id:"btn-un-html",onClick:exportUnHtml,disabled:done.length===0,title:"T\u00e9l\u00e9charge un seul fichier HTML qui contient toutes les copies de la classe, l\u2019une apr\u00e8s l\u2019autre (une par page \u00e0 l\u2019impression), avec les options d\u2019affichage choisies ci-dessus et les bilans valid\u00e9s \u2014 comme le ZIP, mais en un fichier."},"\ud83d\udcc4 Toutes les copies en un fichier ("+done.length+")")   /* [micro L16-html] */
           )
         )
       )
