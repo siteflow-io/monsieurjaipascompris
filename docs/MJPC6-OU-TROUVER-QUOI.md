@@ -427,3 +427,14 @@
 | les objets | `CATEGORIES_L151` (le seed, 41), `ANALYSES_L151`, `categoriesL151`, `homophonesL151`, `ecouterAnalysesL151` (`site/analyses/categories/`, `site/analyses/homophones/`) ; `categorie` dans chaque erreur et dans l'objet forme (`formesSynchroniser`) |
 | les lecteurs | `gramComment(err, tokens)` (le premier chemin ; le mot long) et ses appels : la copie (`buildCopieHtml`), l'analyse de l'élève (`AppEleveCoeurL15f`) |
 | l'écran | `CommentairesAnalyseL151` (Réglages), `NonReconnusL151` (Bilan), l'aide « ? » |
+
+## AJOUT DU 06/10/2026 — correction_dictee 6.7.0-L15.1b-1d
+
+| Quoi | Où (`correction_dictee.html`) |
+|---|---|
+| le reclassement réel en C | `RECLASSEMENT_C_L15H2` (la liste validée), `reclasserCL15h2` (à l'ouverture, une fois : `migrations/reclassementC_v1`), corbeille `reclassement-accents_…` |
+| la phrase à recopier | `phraseARecopier(…, texte)` (l'écart d'abord), `engagementPourCategorieL151`, `categoriePourEngagementL151` |
+| le Prompt IA | `promptIaL151` (via `mjpcPromptComposer`), `TAXO_L151` / `chargerTaxoL151` / `idsTaxoL151` / `codesCompetencesL151`, `erreursToutesDicteesL151`, `TYPES_MOTIF_L151` |
+| Vérifier / Injecter | `verifierIaL151`, `injecterIaL151` (`mjpcInjecterAvecArchive`), les rattachements → `/taxonomie/alias/tables/correction_dictee` (statut `propose`), `notionsDeCategorieL151` |
+| le profil | `emettreEvenementsProfilL151` (dans `save`) → `/profil/<clé>/events/<horodatage>` ; `MJPC_MANIFESTE.noeuds / notions`, `MJPC_PURGE.preserver` |
+| l'écran | `CommentairesAnalyseL151` (la maquette T474 : liste, aperçu, Enregistrer, Texte d'origine, Prompt IA, ↗ Correspondances), `NonReconnusL151` (cumul « toutes dictées ») |
