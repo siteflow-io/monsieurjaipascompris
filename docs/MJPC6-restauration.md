@@ -1118,3 +1118,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1d (06/10/2026, conscience n°12)
 - blob `b62b3b90fdfd` (commit `861f62510d3d`) · 941 445 o · md5 `178cbb58dea607d72a363638bffd5f12` · v6.7.0-L15.1b-1
 - **Motif** : la chaîne L15h-2 → L15.1b-1c → L15.1b-1d. Promu : 971 626 o, md5 `61a96af80cc1c0b36ed1821e70c034c9` (bit à bit). **Données** : à l'ouverture de chaque dictée, L15h-2 reclasse 25 erreurs L → C (l'état d'avant en corbeille `reclassement-accents_<hhmmss>_<clé>` ; marque `migrations/reclassementC_v1`) ; un retour en arrière laisse ces C (une version antérieure les lit comme un type inconnu : restaurer les copies depuis la corbeille si retour). Les événements `/profil/<clé>/events/` et `site/analyses/` sont des nœuds nouveaux, préservés à la purge, ignorés par une version antérieure.
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1e (06/10/2026, conscience n°12)
+- blob `dd8312e63157` (commit `ef6604393fa5`) · 971 626 o · md5 `61a96af80cc1c0b36ed1821e70c034c9` · v6.7.0-L15.1b-1d
+- **Motif** : micro L15.1b-1e — type C lisible, carte de message. Promu : 973 106 o, md5 `e88a8548182568004563181e9a3a7440` (bit à bit).
