@@ -1200,7 +1200,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1i";
+var APP_VERSION="6.7.0-L15.1b-1j";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -5818,7 +5818,7 @@ function Suivi(p){
     var depasse=heure&&!heure.cloture&&NOW>=heure.fin&&NOW<heure.fin+GRACE_HEURE;   /* [L13b] dépassée pendant les 10 minutes de grâce ; ensuite, fermée seule */
     if(actif){
       var reste=heure.fin-NOW,alerte=reste<=5*60000;
-      return h("div",{className:"card",style:{marginBottom:12,border:alerte?"2px solid #dd6b20":undefined}},
+      return h("div",{className:"card",style:{marginBottom:12,border:alerte?"2px solid #dd6b20":undefined}},h(AbsentsEtBinomesL15k,{key:"aeb-heure",dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,etapeInit:2,onVoir:function(a,b){setEnDirect(b?[a,b]:[a])}}),   /* [micro L15k-c] pendant l'heure aussi */
         h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
           h("b",null,"Autocorrection en cours \u2014 "+nomClasse),h("span",{style:{color:"var(--muted)"}},"fin \u00e0 "+hhmm(heure.fin)),
           h("span",{style:{marginLeft:"auto",display:"flex",gap:8}},
@@ -5847,7 +5847,7 @@ function Suivi(p){
           h("button",{className:"btn btn-ghost",style:{width:"auto",marginLeft:"auto"},onClick:function(){setFinMasquee(heure.fin)},title:"Referme cette fen\u00eatre sans rien d\u00e9cider : l\u2019heure reste d\u00e9pass\u00e9e, la carte en haut du suivi garde les deux boutons."},"Plus tard"))));
     }
     return h("div",{className:"card",style:{marginBottom:12}},
-      h(AbsentsEtBinomesL15k,{dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,ouvert:true}),
+      h(AbsentsEtBinomesL15k,{dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,etapeInit:1,onVoir:function(a,b){setEnDirect(b?[a,b]:[a])}}),
       heure&&heure.cloture?h("div",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:6}},"Derni\u00e8re heure close \u00e0 "+hhmm(heure.clotureA||heure.fin)+"."):null,
       heureFermeeSeule(heure)?h("div",{id:"heure-fermee-seule",style:{fontSize:".85rem",color:"#9c4221",marginBottom:6},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin. Les \u00e9l\u00e8ves qui rouvrent ensuite ont 45 minutes."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null,   /* [L13b] T4 */
       h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
@@ -8480,25 +8480,44 @@ function AppEleveTablette(p){
   return h(TabletteDeux,{onRecommencer:recommencer});
 }
 /* Lot 3c — les deux moitiés se parlent : binôme proposé, moitié réduite et verrouillée, aide entre voisins. */
-/* [micro L15k-b — 06/10, Paul] « Absents aujourd'hui » (avant de lancer) et « Binômes (d'après les erreurs) » — au Suivi */
+/* [micro L15k-c — 06/10, Paul : « B et C »] étape 1 : « Qui est absent aujourd'hui ? » (tuiles) ; étape 2 : les binômes dessinés comme les tablettes ; toucher une tablette = la vue en direct des deux écrans (« 👁 ») — maquette T516 */
 function AbsentsEtBinomesL15k(p){
-  var sO=useState(!!p.ouvert),ouvert=sO[0],setOuvert=sO[1],sB=useState(false),voirB=sB[0],setVoirB=sB[1];
-  var aj=absentsDuJourL15k(p.absJour);
+  var aj=absentsDuJourL15k(p.absJour),sE=useState(p.etapeInit||1),etape=sE[0],setEtape=sE[1];
   function nE(k){var c=(p.corrections||{})[k];return c?toArr(c.errors).filter(function(x){return x&&x.type!=="A"}).length+toArr(c.extras).length:0}
-  function basculer(k){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
-    var el=Object.assign({},aj);if(el[k])delete el[k];else el[k]=true;db.ref("correction_dictee/"+p.dicteeId+"/absentsJour").set({date:j,eleves:el});}
-  var cles=p.eleves.map(function(n){return {nom:n,cle:san(n)}});
-  var vus={},paires=[];cles.forEach(function(x){if(vus[x.cle]||!(p.corrections||{})[x.cle]||(p.absents||{})[x.cle]||aj[x.cle])return;vus[x.cle]=1;var b=p.binomes[x.cle];if(b){vus[b]=1;paires.push([x.cle,b])}else paires.push([x.cle,null])});
+  function basculer(k){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");var el=Object.assign({},aj);if(el[k])delete el[k];else el[k]=true;db.ref("correction_dictee/"+p.dicteeId+"/absentsJour").set({date:j,eleves:el});}
+  var cles=p.eleves.map(function(n){return {nom:n,cle:san(n)}}).sort(function(a,b){return a.nom.localeCompare(b.nom,"fr")});
   function nom(k){var f=cles.find(function(x){return x.cle===k});return f?f.nom:k}
-  var nAbs=Object.keys(aj).length;
-  return h("div",{id:"absents-binomes-l15k",style:{marginBottom:10}},
-    h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
-      h("button",{className:"btn-sm btn-ghost",id:"btn-absents-jour",onClick:function(){setOuvert(!ouvert)},title:"Coche les \u00e9l\u00e8ves absents aujourd\u2019hui : seuls leurs bin\u00f4mes sont r\u00e9appari\u00e9s entre eux, toutes les autres paires restent ; les tablettes le voient aussit\u00f4t. Ce n\u2019est pas l\u2019absence \u00e0 la dict\u00e9e : les notes ne bougent pas."},(ouvert?"\u25be ":"\u25b8 ")+"Absents aujourd\u2019hui"+(nAbs?" ("+nAbs+")":"")),
-      h("button",{className:"btn-sm btn-ghost",id:"btn-binomes-l15k",onClick:function(){setVoirB(!voirB)},title:"Les bin\u00f4mes que l\u2019app forme d\u2019apr\u00e8s les erreurs (le moins d\u2019erreurs avec le plus) : ce sont ceux que les tablettes annoncent."},(voirB?"\u25be ":"\u25b8 ")+"Bin\u00f4mes ("+paires.filter(function(x){return x[1]}).length+")")),
-    ouvert?h("div",{style:{display:"flex",flexWrap:"wrap",gap:"4px 14px",margin:"8px 0",fontSize:".88rem"}},cles.map(function(x){var absD=!!(p.absents||{})[x.cle];
-      return h("label",{key:x.cle,style:{display:"flex",alignItems:"center",gap:5,color:absD?"var(--muted)":"inherit"},title:absD?"Absent \u00e0 la dict\u00e9e : pas de copie, pas d\u2019autocorrection.":"Coch\u00e9 : absent aujourd\u2019hui."},
-        h("input",{type:"checkbox",checked:absD||!!aj[x.cle],disabled:absD,onChange:function(){basculer(x.cle)}}),x.nom+(absD?" (absent \u00e0 la dict\u00e9e)":""))})):null,
-    voirB?h("div",{id:"liste-binomes-l15k",style:{margin:"8px 0",fontSize:".9rem",lineHeight:1.7}},paires.map(function(pr,i){return h("div",{key:i},pr[1]?(nom(pr[0])+" ("+nE(pr[0])+" erreur"+(nE(pr[0])>1?"s":"")+") \u2194 "+nom(pr[1])+" ("+nE(pr[1])+" erreur"+(nE(pr[1])>1?"s":"")+")"):(nom(pr[0])+" \u2014 seul"))})):null);
+  var base=calculerBinomes(p.corrections,p.absents),vus={},paires=[];
+  cles.forEach(function(x){if(vus[x.cle]||!(p.corrections||{})[x.cle]||(p.absents||{})[x.cle]||aj[x.cle])return;vus[x.cle]=1;var b=p.binomes[x.cle];if(b){vus[b]=1;paires.push([x.cle,b])}else paires.push([x.cle,null])});
+  paires.sort(function(a,b){return (a[1]?0:1)-(b[1]?0:1)});
+  function nouveau(pr){return pr[1]&&base[pr[0]]!==pr[1]}
+  var absD=cles.filter(function(x){return (p.absents||{})[x.cle]}),absJ=cles.filter(function(x){return aj[x.cle]});
+  var nPres=cles.filter(function(x){return (p.corrections||{})[x.cle]&&!(p.absents||{})[x.cle]&&!aj[x.cle]}).length;
+  function teinte(n){return n<=3?{f:"#e8f5ec",c:"#1a6b34"}:n<=7?{f:"#fff4e0",c:"#8a5a00"}:{f:"#fde8e8",c:"#9b2c2c"}}
+  function pastille(k){var n=nE(k),t=teinte(n);return h("span",{style:{background:t.f,color:t.c,borderRadius:10,padding:"1px 8px",fontSize:".78rem",fontWeight:700}},n+" err.")}
+  var bandeauAbsD=absD.length?h("div",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},"Absent"+(absD.length>1?"s":"")+" \u00e0 la dict\u00e9e (pas d\u2019autocorrection) : "+absD.map(function(x){return x.nom}).join(", ")):null;
+  if(etape===1) return h("div",{id:"absents-binomes-l15k","data-etape":"1",style:{marginBottom:14}},
+    h("div",{style:{fontSize:".8rem",fontWeight:700,color:"var(--muted)",letterSpacing:".06em"}},"\u00c9TAPE 1 SUR 2"),
+    h("b",{style:{fontSize:"1.1rem",display:"block",margin:"2px 0 8px"}},"Qui est absent aujourd\u2019hui ?"),bandeauAbsD,
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}},cles.filter(function(x){return (p.corrections||{})[x.cle]&&!(p.absents||{})[x.cle]}).map(function(x){var a=!!aj[x.cle];
+      return h("button",{key:x.cle,className:"tuile-absent-l15k","data-cle":x.cle,onClick:function(){basculer(x.cle)},style:{padding:"12px 8px",borderRadius:10,border:"2px solid "+(a?"#dc2626":"var(--border)"),background:a?"#fee2e2":"#fff",color:a?"#991b1b":"inherit",fontWeight:a?700:400,cursor:"pointer",font:"inherit",fontSize:".9rem"},title:a?"Absent aujourd\u2019hui \u2014 toucher pour le remettre pr\u00e9sent":"Toucher pour le marquer absent aujourd\u2019hui : seul son bin\u00f4me sera r\u00e9appari\u00e9, les tablettes le verront aussit\u00f4t"},(a?"\u2715 ":"")+x.nom+(a?" \u2014 absent":""))})),
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}},h("span",{style:{fontSize:".9rem"}},absJ.length+" absent"+(absJ.length>1?"s":"")+" coch\u00e9"+(absJ.length>1?"s":"")),
+      h("button",{className:"btn btn-primary",id:"etape2-binomes",style:{width:"auto"},onClick:function(){setEtape(2)},title:"Voir les bin\u00f4mes dessin\u00e9s comme les tablettes"},"\u00c9tape 2 : voir les bin\u00f4mes \u2192")));
+  return h("div",{id:"absents-binomes-l15k","data-etape":"2",style:{marginBottom:14}},
+    h("div",{style:{fontSize:".8rem",fontWeight:700,color:"var(--muted)",letterSpacing:".06em"}},"\u00c9TAPE 2 SUR 2"),
+    h("div",{style:{display:"flex",gap:14,flexWrap:"wrap",alignItems:"baseline",margin:"2px 0 10px"}},
+      h("b",{style:{fontSize:"1.05rem"}},"Les bin\u00f4mes du jour"),
+      h("span",{style:{fontSize:".88rem",color:"var(--muted)"}},nPres+" pr\u00e9sents \u00b7 "+absJ.length+" absent"+(absJ.length>1?"s":"")+" aujourd\u2019hui \u00b7 "+paires.length+" tablette"+(paires.length>1?"s":"")+" \u00b7 touche une tablette pour voir ses deux \u00e9crans en direct")),bandeauAbsD,
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:14}},paires.map(function(pr,i){var nv=nouveau(pr),seul=!pr[1];
+      function moitie(k,cote){return h("div",{style:{flex:1,padding:"10px 8px",minHeight:52,borderLeft:cote===2?"4px solid #2c313a":"none",display:"flex",flexDirection:"column",justifyContent:"space-between",background:k?"#fff":"repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f1f1f1 6px,#f1f1f1 12px)"}},
+        k?h("div",{style:{fontSize:".88rem",fontWeight:600}},nom(k)):h("div",{style:{fontSize:".82rem",color:"#b45309",fontStyle:"italic"}},"1 \u00e9l\u00e8ve"),
+        k?h("div",{style:{marginTop:4}},pastille(k)):null)}
+      return h("div",{key:i,className:"tablette-l15k",role:"button",tabIndex:0,onClick:function(){p.onVoir&&p.onVoir(pr[0],pr[1])},title:"Voir en direct les deux \u00e9crans de cette tablette, lettre par lettre (ne change rien chez eux)",style:{cursor:"pointer",border:"3px solid "+(seul?"#f59e0b":nv?"#2563eb":"#2c313a"),borderRadius:14,overflow:"hidden",boxShadow:"0 2px 6px rgba(0,0,0,.08)"}},
+        h("div",{style:{background:seul?"#f59e0b":nv?"#2563eb":"#2c313a",color:"#fff",fontSize:".8rem",fontWeight:700,padding:"4px 10px",display:"flex",justifyContent:"space-between"}},h("span",null,"\ud83d\udcf1 Tablette "+(i+1)),seul?h("span",null,"seul"):nv?h("span",null,"nouveau bin\u00f4me"):h("span",null,"\ud83d\udc41")),
+        h("div",{style:{display:"flex"}},moitie(pr[0],1),moitie(pr[1],2)))})),
+    absJ.length?h("div",{style:{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",margin:"10px 0 0",padding:"8px 10px",background:"#f3f4f6",borderRadius:10}},
+      h("span",{style:{fontSize:".85rem",fontWeight:700}},"Absents aujourd\u2019hui :"),absJ.map(function(x){return h("span",{key:x.cle,style:{fontSize:".88rem"}},x.nom)})):null,
+    h("div",{style:{marginTop:10}},h("button",{className:"btn btn-ghost",id:"etape1-absents",style:{width:"auto"},onClick:function(){setEtape(1)},title:"Revenir \u00e0 la liste des absents d\u2019aujourd\u2019hui pour en cocher ou d\u00e9cocher"},"\u2190 Modifier les absents")));
 }
 function TabletteDeux(p){
   var sE=useState({1:{},2:{}}),etats=sE[0],setEtats=sE[1];
