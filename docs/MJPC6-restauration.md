@@ -1170,3 +1170,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L15.1b-1q (07/10/2026, conscience n°12)
 - blob `3f0e4cd2c459` (commit `22b866013d8b`) · 996 223 o · md5 `6d07a8d412e656baf33ea16aa6939a29` · v6.7.0-L15.1b-1p
 - **Motif** : micro 177. Promu : 997 190 o, md5 `8ae0e16977dc1257fb983855476dc067` (bit à bit).
+
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L17-1q3 (07/10/2026, conscience n°12)
+- blob `1d155e368ec7` (commit `0263d2c6a6e3`) · 997 190 o · md5 `8ae0e16977dc1257fb983855476dc067` · v6.7.0-L15.1b-1q
+- **Motif** : la version d'ensemble (L17-1 + micros). Promu : 1 009 469 o, md5 `084deaf433405197a2041b22dc4e7f26` (bit à bit). **Données** : `correction_dictee/<id>/binomes/{paires, origine, seance, partis}` et `places/` (nouveaux) ; une version antérieure les ignorerait (elle relirait `binomes` comme une simple table de paires) — revenir en arrière pendant une séance lancée est à éviter.
