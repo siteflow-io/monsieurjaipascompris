@@ -260,6 +260,14 @@ textarea{resize:vertical;min-height:120px}
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect;
 firebase.initializeApp({apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"});
 var db=firebase.database();
+/* [micro L17-175 — 07/10, Paul : « il ne faut jamais que des bruts soient affichés à l'élève »] les noms des notions, pour l'élève, lus dans la taxonomie (libellé élève de la notion et de sa famille) ; un identifiant inconnu ne s'affiche jamais */
+var LIB_NOTIONS_L17={notion:{},famille:{}};
+try{db.ref("taxonomie/domaines").on("value",function(sn){var d=sn.val()||{},n={},f={};Object.keys(d).forEach(function(k){var dom=d[k]||{};toArrSafeL17(dom.familles).forEach(function(fa){if(!fa)return;toArrSafeL17(fa.notions).forEach(function(no){if(no&&no.id){n[no.id]=no.libelleEleve||no.libelleProf||"";f[no.id]=fa.libelleEleve||fa.libelleProf||"";}});});});LIB_NOTIONS_L17={notion:n,famille:f};});}catch(e){}
+function toArrSafeL17(x){return Array.isArray(x)?x:(x&&typeof x==="object"?Object.keys(x).map(function(k){return x[k]}):[]);}
+function estIdNotionL17(s){return /^[a-z]+(-[a-z]+)*-\d+$/.test(String(s||""));}
+function minusculeL17(s){s=String(s||"");return s?s.charAt(0).toLowerCase()+s.slice(1):s;}
+function nomNotionEleveL17(id){var l=LIB_NOTIONS_L17.notion[id];if(l)return l;return estIdNotionL17(id)?"":String(id||"");}
+function famillesEnMotsL17(ids){var vus={},l=[];(ids||[]).forEach(function(id){var f=LIB_NOTIONS_L17.famille[id]||(estIdNotionL17(id)?"":String(id||""));if(f&&!vus[f]){vus[f]=1;l.push(minusculeL17(f));}});if(!l.length)return "";return l.length===1?l[0]:l.slice(0,-1).join(", ")+" et "+l[l.length-1];}
 function san(n){return sanMJPC(n)} /* alias historique → clé canonique MJPC-CORE */
 var TYPE_COST={G:1,L:0.5,M:1,I:1,X:0.5,P:0.5,A:0,E:0.5,C:0.5};
 /* ═══ TYPE_STYLE — SOURCE UNIQUE DE VÉRITÉ DES COULEURS ET LIBELLÉS ═══
@@ -1200,7 +1208,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1o";
+var APP_VERSION="6.7.0-L15.1b-1p";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -2809,7 +2817,7 @@ function phraseARecopier(errors,extras,regain,tokens){   /* [L15f] regain : {poi
   var eng=null;ordre.forEach(function(g){if(eng===null||parEng[g]>parEng[eng])eng=g});
   if(!eng)eng=ENGAGEMENTS_TYPE[tMax]||ENGAGEMENTS_TYPE.G;
   var debut=n===1?"j\u2019ai fait une seule erreur":"j\u2019ai fait "+n+" erreurs, surtout "+(ERREURS_SURTOUT[tMax]||"");
-  var rg=(regain&&regain.points>0)?" ; j\u2019ai regagn\u00e9 "+acNoteTexte(regain.points)+" point"+(regain.points>=2?"s":"")+" en r\u00e9pondant sur "+(regain.notions||[]).join(" et ")+",":",";   /* [L15f] */
+  var rg=(regain&&regain.points>0)?" ; j\u2019ai regagn\u00e9 "+acNoteTexte(regain.points)+" point"+(regain.points>=2?"s":"")+(famillesEnMotsL17(regain.notions)?" en r\u00e9pondant sur "+famillesEnMotsL17(regain.notions):" en r\u00e9pondant \u00e0 des questions")+",":",";   /* [micro L17-175] jamais d'identifiant : le nom de la famille */   /* [L15f] */
   return "Pour cette dict\u00e9e, "+debut+rg+" et pour la prochaine, je devrai "+eng+".";
 }
 function dateHeureFr(t){var d=new Date(t);return d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})+" \u00e0 "+d.getHours()+" h "+String(d.getMinutes()).padStart(2,"0")}
@@ -10979,7 +10987,7 @@ function EleveCorrection(p){
       h("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:".9rem"}},h("tbody",null,
         h("tr",null,h("td",{style:{color:"var(--muted)"}},"\u00c9tape"),h("td",{style:{textAlign:"right",color:"var(--muted)"}},"Points")),
         h("tr",null,h("td",null,totalErrors+" erreur"+(totalErrors>1?"s":"")+" \u00e0 retrouver, "+totalAttempts+" essai"+(totalAttempts>1?"s":"")+(nRates>0?" ("+nRates+" essai"+(nRates>1?"s":"")+" rat\u00e9"+(nRates>1?"s":"")+", le premier offert)":"")),h("td",{style:{textAlign:"right"}},(scoreSansRegainL15f()<5?"\u2212"+acNoteTexte(5-scoreSansRegainL15f()):"0"))),
-        questionsTraiteesL15f().map(function(q,i){return h("tr",{key:i,className:"ligne-question-l15f"},h("td",null,(q.ok===true?"Question regagn\u00e9e : ":"Question rat\u00e9e : ")+(q.notion||"")),h("td",{style:{textAlign:"right",color:q.ok===true?"#166534":"var(--muted)"}},q.ok===true?"+"+acNoteTexte(x):"0"));}),
+        questionsTraiteesL15f().map(function(q,i){return h("tr",{key:i,className:"ligne-question-l15f"},h("td",null,(q.ok===true?"Question regagn\u00e9e":"Question rat\u00e9e")+(nomNotionEleveL17(q.notion)?" : "+minusculeL17(nomNotionEleveL17(q.notion)):"")),h("td",{style:{textAlign:"right",color:q.ok===true?"#166534":"var(--muted)"}},q.ok===true?"+"+acNoteTexte(x):"0"));}),
         h("tr",{style:{borderTop:"1px solid var(--border)",fontWeight:700}},h("td",null,"Note d\u2019autocorrection"),h("td",{style:{textAlign:"right"}},acNoteTexte(score)+" / 5")))));}
   function questionsFaites(){var n=0;for(var i=0;i<crans.length;i++)if(acQuestionFinie(questions[i]))n++;return n}
   function prixTexte(){var x=totalErrors>0?5/totalErrors:0;return acNoteTexte(x)+" pt"}
