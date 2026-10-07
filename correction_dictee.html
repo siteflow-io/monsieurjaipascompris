@@ -323,6 +323,25 @@ function calculerBinomes(corrections,absents){
   var b={};for(var i=0,j=l.length-1;i<j;i++,j--){b[l[i].k]=l[j].k;b[l[j].k]=l[i].k}
   return b;
 }
+/* ═══ [L17-1 — dettes 154, 157, 160, 168, 169] LES BINÔMES DE LA SÉANCE : constitués à « Lancer » (console), écrits au hub
+   (correction_dictee/<id>/binomes = {seance: <début de l'heure>, paires, origine, partis}), LUS en direct par les tablettes (plus aucun calcul
+   sur la tablette) ; inchangés jusqu'à la fin de la séance (fin d'heure ou clôture), puis libérés. Une copie corrigée pendant la séance change
+   la note, pas les paires. Un aménagé : avec l'élève classique qui s'est trompé sur les mêmes mots (le plus grand recoupement) ; sinon seul. ═══ */
+function nErrL17(c){return c?toArr(c.errors).filter(function(x){return x&&x.type!=="A"}).length+toArr(c.extras).length:0;}
+function motsErreurL17(c){var m={};toArr(c&&c.errors).forEach(function(x){if(x&&x.type!=="A"&&x.idx!=null)m[x.idx]=1;});return m;}
+function binomesSeanceL17(results,absents,ajBrut){
+  var aj=absentsDuJourL15k(ajBrut),pres=Object.keys(results||{}).filter(function(k){return results[k]&&!(absents&&absents[k])&&!aj[k]}).sort();
+  var amen=pres.filter(function(k){return results[k].amenagee===true}),cls=pres.filter(function(k){return results[k].amenagee!==true}),b={};
+  amen.forEach(function(a){var ma=motsErreurL17(results[a]),best=null,bs=0,bn=0;
+    cls.forEach(function(c){if(b[c])return;var mc=motsErreurL17(results[c]),n=0;Object.keys(ma).forEach(function(i){if(mc[i])n++});var ne=nErrL17(results[c]);
+      if(n>bs||(n===bs&&n>0&&ne<bn)){bs=n;best=c;bn=ne}});
+    if(best){b[a]=best;b[best]=a}});
+  var reste=cls.filter(function(k){return !b[k]}).map(function(k){return {k:k,n:nErrL17(results[k])}});
+  reste.sort(function(x,y){return x.n-y.n||(x.k<y.k?-1:1)});
+  for(var i=0,j=reste.length-1;i<j;i++,j--){b[reste[i].k]=reste[j].k;b[reste[j].k]=reste[i].k}
+  return b;}
+/* les binômes en vigueur : ceux de la séance en cours (le même début d'heure, l'heure active) ; sinon aucun (libérés) */
+function binomesActifsL17(hub,heure){if(!hub||!hub.seance||!heure||heure.debut!==hub.seance||!heureActive(heure))return null;return hub.paires||{};}
 /* [micro L15k-b — 06/10, Paul] LES BINÔMES DU JOUR : constitués d'après les erreurs (calculerBinomes) ; les absents du jour (cochés par le professeur) sortent ;
    seuls leurs binômes restés seuls — et l'élève seul d'un nombre impair — sont réappariés entre eux (moins d'erreurs avec plus d'erreurs) ; toutes les autres paires restent. */
 function absentsDuJourL15k(aj){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");return (aj&&aj.date===j&&aj.eleves)?aj.eleves:{};}
@@ -1208,7 +1227,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1q";
+var APP_VERSION="6.7.0-L17-1q3";   /* L17-1 (l'exécutante) fusionné sur la production 6.7.0-L15.1b-1q (les micros du 07/10), par la conscience */
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -3296,7 +3315,13 @@ function AppProf(p){
     setDicteeData({title:cfg.title||id,text:cfg.text||"",tokens:tokenize(cfg.text||""),classe:classeName,eleves:eleves,base:cfg.base||20,bareme:cfg.bareme||"preparee",niveau:cfg.niveau||""});
     setDicteeId(id);setCorrections(val.results||{});setAbsents(val.absents||{});setScreen("correct");
   })}
+  /* [L17-1 — dette 158] la garde : des élèves sont assis sur des tablettes et la séance n'est pas lancée → on ne modifie pas une correction */
+  var gardeHeureL17=React.useRef(null),gardeTabL17=React.useRef({});
+  useEffect(function(){if(!dicteeId)return;var r=db.ref("correction_dictee/"+dicteeId+"/heure"),r2=db.ref("correction_dictee/"+dicteeId+"/places");function f(sn){gardeHeureL17.current=heureDeLaDictee(sn.val())}   /* [fusion L17-1q] le registre unique */function f2(sn){gardeTabL17.current=sn.val()||{}}r.on("value",f);r2.on("value",f2);return function(){r.off("value",f);r2.off("value",f2)}},[dicteeId]);
+  function gardeAvantLancerL17(){var t=gardeTabL17.current||{},now=Date.now(),assis=Object.keys(t).some(function(k){var o=t[k]||{};return now-(o.t||0)<3*60000});
+    if(assis&&!heureActive(gardeHeureL17.current)){try{alert("Lance d\u2019abord la s\u00e9ance, puis modifie ta correction si tu veux.")}catch(e){}return true;}return false;}
   function save(ek,errors,extras,fastIdxVal,trace,posTexte){
+    if(gardeAvantLancerL17())return;   /* [L17-1] */
     /* [ELEVE-1 ④] la note s'enregistre sur la base avec laquelle la copie est corrigée (Paul, 01/10) ; la trace dit d'où elle vient */
     var tr=(trace&&typeof trace==="object")?trace:{amenagee:false};
     errors=formesSynchroniser(dicteeId,dicteeData,corrections[ek],errors);   /* [L10] */
@@ -3380,7 +3405,7 @@ function AppProf(p){
             }
           }
         });
-        var nOk=Object.keys(remappedResults).filter(function(k){return remappedResults[k]}).length;
+        var nOk=acTrouvees(remappedResults,errors);   /* [fusion L17-1q — dette 154] sans les A */
         // total = erreurs corrigibles (exclut type A = signalements graphie)
         var totalNonA=errors.filter(function(e){return e&&e.type!=="A"}).length;
         var newScore=acNote(remappedAttempts,remappedResults,totalNonA,errors,acVal.questions);   // calcul unique
@@ -3949,7 +3974,7 @@ function EditionDictee(p){
             h("span",{style:{fontSize:".8rem",color:"var(--muted)"}},editForm._exo)),
           h("div",{style:{display:"flex",gap:8,alignItems:"center",marginTop:8}},
             h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.showNote!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{showNote:e.target.checked}))}}),"Afficher la note \u00e0 l\u2019\u00e9l\u00e8ve"),
-            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:!!editForm.peerHelp,onChange:function(e){setEditForm(Object.assign({},editForm,{peerHelp:e.target.checked}))}}),"Aide entre pairs (\u00e9l\u00e8ve termin\u00e9 \u2192 aide un camarade)"),
+            h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",id:"binomes-imposes-l17",checked:!!editForm.peerHelp,onChange:function(e){setEditForm(Object.assign({},editForm,{peerHelp:e.target.checked}))},title:"Coch\u00e9 : \u00e0 \u00ab Lancer \u00bb, l\u2019app forme les bin\u00f4mes d\u2019apr\u00e8s les erreurs (celui qui en a le moins avec celui qui en a le plus ; un am\u00e9nag\u00e9 avec l\u2019\u00e9l\u00e8ve qui s\u2019est tromp\u00e9 sur les m\u00eames mots) ; chaque tablette annonce le bin\u00f4me et r\u00e9serve la seconde moiti\u00e9. D\u00e9coch\u00e9 : placement libre, deux \u00e9l\u00e8ves quelconques par tablette."}),"Bin\u00f4mes impos\u00e9s (d\u2019apr\u00e8s les erreurs)"),   /* [L17-1 — dette 157] */
             h("label",{style:{display:"flex",alignItems:"center",gap:6,fontSize:".88rem"},title:"Le temps donn\u00e9 \u00e0 l\u2019\u00e9l\u00e8ve, \u00e0 la fin de son autocorrection, pour recopier ses corrections en vert sur sa copie papier (le stylo vert). Plus la dict\u00e9e a d\u2019erreurs, plus tu peux le mettre long. S\u2019applique aux \u00e9l\u00e8ves qui finissent apr\u00e8s l\u2019enregistrement."},"Recopie en vert : ",h("input",{type:"number",min:15,max:600,step:15,value:editForm.recopieSec>0?editForm.recopieSec:180,onChange:function(e){setEditForm(Object.assign({},editForm,{recopieSec:Math.max(15,Math.min(600,parseInt(e.target.value,10)||180))}))},style:{width:64,padding:"3px 6px",fontSize:".88rem"}})," s"),   /* [micro L15.1b-1f] */
             h("label",{style:{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:".88rem"}},h("input",{type:"checkbox",checked:editForm.published!==false,onChange:function(e){setEditForm(Object.assign({},editForm,{published:e.target.checked}))}}),"Publi\u00e9e"),
             h("button",{className:"btn-sm btn-primary",onClick:function(){
@@ -4340,7 +4365,7 @@ function CorrScreen(p){
                 var wrong=0;
                 Object.keys(newAttempts).forEach(function(k2){var n=newAttempts[k2]||0;if(newResults[String(k2)]||newResults[Number(k2)])wrong+=(n-1);else wrong+=n});
                 var sc=acNote(newAttempts,newResults,acNErreurs(val.results&&val.results[ek])||(ac&&ac.total),val.results&&val.results[ek]?toArr(val.results[ek].errors):null,ac&&ac.questions);   // calcul unique
-                var nOk=Object.keys(newResults).filter(function(k2){return newResults[k2]}).length;
+                var nOk=acTrouvees(newResults,toArr(val.results&&val.results[ek]&&val.results[ek].errors));   /* [fusion L17-1q — dette 154] sans les A */
                 db.ref(dicteeRef+"/autocorrection/"+ek+"/results").set(newResults);
                 db.ref(dicteeRef+"/autocorrection/"+ek+"/attempts").set(newAttempts);
                 db.ref(dicteeRef+"/autocorrection/"+ek+"/score").set(Math.round(sc*100)/100);
@@ -5652,9 +5677,13 @@ function Suivi(p){
   var sAv=useState(""),avisHeure=sAv[0],setAvisHeure=sAv[1];
   var sFm=useState(null),finMasquee=sFm[0],setFinMasquee=sFm[1];   // fin d'heure dont la fenêtre a été refermée « plus tard »
   var sBn=useState({}),binomesHubS=sBn[0],setBinomesS=sBn[1];var sAj=useState(null),absJourS=sAj[0],setAbsJourS=sAj[1];   /* [micro L15k-b] */
+  var sImpL17=useState(false),imposesS=sImpL17[0],setImposesS=sImpL17[1],sTabL17=useState({}),tablettesS=sTabL17[0],setTablettesS=sTabL17[1];   /* [L17-1] le mode, les places des tablettes */
+  useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/config/peerHelp"),r2=db.ref("correction_dictee/"+p.dicteeId+"/places");function f(sn){setImposesS(sn.val()===true)}   /* [fusion L17-1q] le registre unique */function f2(sn){setTablettesS(sn.val()||{})}r.on("value",f);r2.on("value",f2);return function(){r.off("value",f);r2.off("value",f2)}},[p.dicteeId]);
+  useEffect(function(){var pt=(binomesHubS&&binomesHubS.partis)||{};Object.keys(pt).forEach(function(k){var o=(tablettesS||{})[k];var assis=!!(o&&(o.arrivee||0)>pt[k]&&Date.now()-(o.t||0)<120000);   /* [fusion L17-1q] il est revenu : une nouvelle arrivée après son départ (pas une moitié restée ouverte) */
+    if(assis)db.ref("correction_dictee/"+p.dicteeId+"/binomes/partis/"+k).remove();});},[JSON.stringify((binomesHubS&&binomesHubS.partis)||{}),JSON.stringify(tablettesS)]);   /* [L17-1 — dette 169] de retour sur une moitié : « parti » se décoche tout seul */
   var sDi=useState(null),enDirect=sDi[0],setEnDirect=sDi[1];   // lot 3d : clés des élèves regardés en direct
   useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/binomes");function f(sn){setBinomesS(sn.val()||{})}r.on("value",f);var r2=db.ref("correction_dictee/"+p.dicteeId+"/absentsJour");function f2(sn){setAbsJourS(sn.val()||null)}r2.on("value",f2);return function(){r.off("value",f);r2.off("value",f2)}},[p.dicteeId]);
-  var binomesS=binomesDuJourL15k(p.corrections,abs,absJourS);   /* [micro L15k-b] les binômes : d'après les erreurs, comme sur les tablettes */
+  var binomesS=binomesActifsL17(binomesHubS,heure)||binomesSeanceL17(p.corrections,abs,absJourS);   /* [L17-1] pendant la séance : les binômes fixés (hub) ; avant : l'aperçu */
   useEffect(function(){var r=db.ref("correction_dictee/"+p.dicteeId+"/heure");function f(sn){setHeure(heureDeLaDictee(sn.val()))}r.on("value",f);return function(){r.off("value",f)}},[p.dicteeId]);
   // Exercices : pour la colonne "exos" du tableau + la vue détail dans la modale
   var sEx=useState(null), exercices=sEx[0], setExercices=sEx[1];
@@ -5750,7 +5779,8 @@ function Suivi(p){
       if(nonA > 0) totalCorrigible = nonA;
     }
     var total = errsCopie?errsCopie.filter(function(e){return e&&e.type!=="A"}).length:totalCorrigible;
-    var finished=total>0&&solved>=total;
+    if(solved>total)solved=total;   /* [L17-1 — dette 154] « trouvées » ne dépasse jamais le total (« 12 / 11 ») */
+    var finished=(total>0&&solved>=total)||(total===0&&!!ac);   /* [L17-1 — dette 156] 0 erreur : « Terminé » pendant l'heure, « Heure terminée » après, comme les autres */
     var lastSeen=ac&&ac.lastSeen?ac.lastSeen:ac?ac.timestamp:0;
     var status;
     // Statut basé sur les données, pas sur le champ status Firebase
@@ -5808,8 +5838,9 @@ function Suivi(p){
     var m=/^(\d{1,2}):(\d{2})$/.exec(finSaisie||"");if(!m)return;
     var d=new Date();d.setHours(Number(m[1]),Number(m[2]),0,0);var fin=d.getTime();
     if(fin<=Date.now()+60000){setAvisHeure("L\u2019heure de fin doit \u00eatre dans le futur.");return}
-    setAvisHeure("");db.ref("correction_dictee/"+p.dicteeId+"/heure").set({debut:Date.now(),fin:fin,classe:data.classe||"",source:"dictee",seanceId:""});   /* [BRANCHEMENT MJPC — déroulé] l'écriture de l'heure : source "dictee" ; "mjpc" + seanceId quand une séance du déroulé sera reliée */
-    db.ref("correction_dictee/"+p.dicteeId+"/binomes").set(binomesDuJourL15k(p.corrections,abs,absJourS));   // lot 3c — [micro L15k-b] une trace, jamais relue par les tablettes
+    var t0L17=Date.now(),bL17=binomesSeanceL17(p.corrections,abs,absJourS);
+    setAvisHeure("");db.ref("correction_dictee/"+p.dicteeId+"/heure").set({debut:t0L17,fin:fin,classe:data.classe||"",source:"dictee",seanceId:""});   /* [BRANCHEMENT MJPC — déroulé] l'écriture de l'heure : source "dictee" ; "mjpc" + seanceId quand une séance du déroulé sera reliée */
+    db.ref("correction_dictee/"+p.dicteeId+"/binomes").set({seance:t0L17,paires:bL17,origine:bL17,maj:t0L17});   /* [L17-1] les binômes de la séance, lus en direct par les tablettes */
   }
   function prolonger(){if(!heure)return;db.ref("correction_dictee/"+p.dicteeId+"/heure/fin").set(Math.max(heure.fin,Date.now())+10*60000)}
   function cloturer(){db.ref("correction_dictee/"+p.dicteeId+"/heure").update({cloture:true,clotureA:Date.now()})}
@@ -5832,7 +5863,7 @@ function Suivi(p){
     var depasse=heure&&!heure.cloture&&NOW>=heure.fin&&NOW<heure.fin+GRACE_HEURE;   /* [L13b] dépassée pendant les 10 minutes de grâce ; ensuite, fermée seule */
     if(actif){
       var reste=heure.fin-NOW,alerte=reste<=5*60000;
-      return h("div",{className:"card",style:{marginBottom:12,border:alerte?"2px solid #dd6b20":undefined}},h(AbsentsEtBinomesL15k,{key:"aeb-heure",dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,etapeInit:2,onVoir:function(a,b){setEnDirect(b?[a,b]:[a])}}),   /* [micro L15k-c] pendant l'heure aussi */
+      return h("div",{className:"card",style:{marginBottom:12,border:alerte?"2px solid #dd6b20":undefined}},h(AbsentsEtBinomesL15k,{key:"aeb-heure",dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,hubBinomes:binomesHubS,heure:heure,ac:autoCorr,imposes:imposesS,etapeInit:2,onVoir:function(a,b){setEnDirect(b?[a,b]:[a])}}),   /* [micro L15k-c] pendant l'heure aussi */
         h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
           h("b",null,"Autocorrection en cours \u2014 "+nomClasse),h("span",{style:{color:"var(--muted)"}},"fin \u00e0 "+hhmm(heure.fin)),
           h("span",{style:{marginLeft:"auto",display:"flex",gap:8}},
@@ -5861,7 +5892,7 @@ function Suivi(p){
           h("button",{className:"btn btn-ghost",style:{width:"auto",marginLeft:"auto"},onClick:function(){setFinMasquee(heure.fin)},title:"Referme cette fen\u00eatre sans rien d\u00e9cider : l\u2019heure reste d\u00e9pass\u00e9e, la carte en haut du suivi garde les deux boutons."},"Plus tard"))));
     }
     return h("div",{className:"card",style:{marginBottom:12}},
-      h(AbsentsEtBinomesL15k,{dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,etapeInit:1,onVoir:function(a,b){setEnDirect(b?[a,b]:[a])}}),
+      h(AbsentsEtBinomesL15k,{dicteeId:p.dicteeId,eleves:data.eleves||[],corrections:p.corrections,absents:abs,absJour:absJourS,binomes:binomesS,hubBinomes:binomesHubS,heure:heure,ac:autoCorr,imposes:imposesS,etapeInit:1,onVoir:function(a,b){setEnDirect(b?[a,b]:[a])}}),
       heure&&heure.cloture?h("div",{style:{fontSize:".85rem",color:"var(--muted)",marginBottom:6}},"Derni\u00e8re heure close \u00e0 "+hhmm(heure.clotureA||heure.fin)+"."):null,
       heureFermeeSeule(heure)?h("div",{id:"heure-fermee-seule",style:{fontSize:".85rem",color:"#9c4221",marginBottom:6},title:"Tu n\u2019as pas cliqu\u00e9 \u00ab Cl\u00f4turer \u00bb : l\u2019heure s\u2019est ferm\u00e9e seule 10 minutes apr\u00e8s sa fin. Les \u00e9l\u00e8ves qui rouvrent ensuite ont 45 minutes."},"heure ferm\u00e9e seule \u00e0 "+hhMinL13b(heure.fin+GRACE_HEURE)+" (non cl\u00f4tur\u00e9e)"):null,   /* [L13b] T4 */
       h("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
@@ -6141,7 +6172,7 @@ function Suivi(p){
                             var wrong=0;
                             Object.keys(att2).forEach(function(k2){var n=att2[k2]||0;if(res2[String(k2)]||res2[Number(k2)])wrong+=(n-1);else wrong+=n});
                             var sc=acNote(att2,res2,acNErreurs(corr)||v2.total,corr?toArr(corr.errors):null,v2.questions);   // calcul unique
-                            var nOk=Object.keys(res2).filter(function(k2){return res2[k2]}).length;
+                            var nOk=acTrouvees(res2,toArr(corr&&corr.errors));   /* [fusion L17-1q — dette 154] sans les A */
                             db.ref(dRef+"/score").set(Math.round(sc*100)/100);
                             db.ref(dRef+"/solved").set(nOk);
                           });
@@ -6171,7 +6202,7 @@ function Suivi(p){
                                 var v3=snap3.val()||{};var att3=v3.attempts||{};var res3=v3.results||{};
                                 var wr=0;Object.keys(att3).forEach(function(k3){var n=att3[k3]||0;if(res3[String(k3)]||res3[Number(k3)])wr+=(n-1);else wr+=n});
                                 var sc2=acNote(att3,res3,acNErreurs(corr)||v3.total,corr?toArr(corr.errors):null,v3.questions);   // calcul unique
-                                var nOk2=Object.keys(res3).filter(function(k3){return res3[k3]}).length;
+                                var nOk2=acTrouvees(res3,toArr(corr&&corr.errors));   /* [fusion L17-1q — dette 154] sans les A */
                                 db.ref(dRef2+"/score").set(Math.round(sc2*100)/100);
                                 db.ref(dRef2+"/solved").set(nOk2);
                               });
@@ -8442,8 +8473,9 @@ function etatDicteeEleve(d,cle){
   if(!d.copyPublishedAt) return {code:"nonrendue",label:"Disponible apr\u00e8s la s\u00e9ance",
                                  ouvrable:false,montrerNote:false,rattrapage:null,date:dateVueCopie(d,corr)};
   var ac=(d.autocorrection||{})[cle]||null;
-  var total=ac&&typeof ac.total==="number"?ac.total:null;
-  var solved=ac&&typeof ac.solved==="number"?ac.solved:0;
+  var errsCorrL17=corr?toArr(corr.errors):null;   /* [fusion L17-1q — dette 154 élucidée] « trouvées » sans les « Attention graphie » (A), d'après la copie */
+  var total=errsCorrL17?errsCorrL17.filter(function(e){return e&&e.type!=="A"}).length:(ac&&typeof ac.total==="number"?ac.total:null);
+  var solved=ac?(errsCorrL17&&ac.results?acTrouvees(ac.results,errsCorrL17):(typeof ac.solved==="number"?ac.solved:0)):0;
   if(total!==null&&total>0&&solved>=total)
     return {code:"terminee",label:"Termin\u00e9e",ouvrable:true,montrerNote:true,rattrapage:null,date:dateVueCopie(d,corr)};
   return {code:"afaire",label:"\u00c0 faire",ouvrable:true,montrerNote:true,rattrapage:null,date:dateVueCopie(d,corr),
@@ -8465,6 +8497,7 @@ function moitieLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)
 function moitieEcrire(n,identite){try{localStorage.setItem("cd_moitie_"+n,JSON.stringify({identite:identite,t:Date.now(),arrivee:Date.now()}))}catch(e){}}   /* [micro L15k-b] arrivee : posée à la connexion seulement */
 function moitieDictee(n,id){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(!o)return;o.dictee=id||null;o.t=Date.now();localStorage.setItem("cd_moitie_"+n,JSON.stringify(o))}catch(e){}}
 function moitieDicteeLire(n){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&Date.now()-o.t<MOITIE_TTL)return o.dictee||null}catch(e){}return null}
+function tabletteIdL17(){try{var t=localStorage.getItem("cd_tablette_id");if(!t){t="tab-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);localStorage.setItem("cd_tablette_id",t);}return t;}catch(e){return "tab-sans-stockage";}}   /* [L17-1] l'identité de la tablette (jamais vue de l'élève) */
 function moitieEffacer(n){try{localStorage.removeItem("cd_moitie_"+n)}catch(e){}}
 function placesLire(){try{var o=JSON.parse(localStorage.getItem("cd_places")||"null");if(o&&(o.n===1||o.n===2)&&Date.now()-o.t<MOITIE_TTL)return o.n}catch(e){}return null}
 function placesEcrire(n){try{if(n)localStorage.setItem("cd_places",JSON.stringify({n:n,t:Date.now()}));else localStorage.removeItem("cd_places")}catch(e){}}
@@ -8518,7 +8551,23 @@ function AppEleveTablette(p){
 function AbsentsEtBinomesL15k(p){
   var aj=absentsDuJourL15k(p.absJour),sE=useState(p.etapeInit||1),etape=sE[0],setEtape=sE[1];
   function nE(k){var c=(p.corrections||{})[k];return c?toArr(c.errors).filter(function(x){return x&&x.type!=="A"}).length+toArr(c.extras).length:0}
-  function basculer(k){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");var el=Object.assign({},aj);if(el[k])delete el[k];else el[k]=true;db.ref("correction_dictee/"+p.dicteeId+"/absentsJour").set({date:j,eleves:el});}
+  var hubB=p.hubBinomes||null,enSeance=!!binomesActifsL17(hubB,p.heure),partis=(enSeance&&hubB.partis)||{},acL17=p.ac||{};
+  function aCommence(k){var a=acL17[k];return !!(a&&(a.attestation||a.history||a.results))}   /* [L17-1] un élève au travail : il a commencé son autocorrection */
+  function presentLibre(k,paires){return (p.corrections||{})[k]&&!(p.absents||{})[k]&&!aj[k]&&!partis[k]&&!paires[k]}
+  function majPaires(fn){db.ref("correction_dictee/"+p.dicteeId+"/binomes").once("value").then(function(sn){var b=sn.val()||{};if(!b.seance)return;var pa=Object.assign({},b.paires||{});fn(pa,b);db.ref("correction_dictee/"+p.dicteeId+"/binomes").update({paires:pa,maj:Date.now()});});}
+  function apparierSeuls(pa,exclus){var seuls=Object.keys(p.corrections||{}).filter(function(k){return k!==exclus&&presentLibre(k,pa)&&!aj[k]});
+    seuls.sort(function(x,y){return nE(x)-nE(y)||(x<y?-1:1)});for(var i=0,j=seuls.length-1;i<j;i++,j--){pa[seuls[i]]=seuls[j];pa[seuls[j]]=seuls[i]}}
+  function basculer(k){var d=new Date(),j=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");var el=Object.assign({},aj);
+    if(enSeance&&partis[k]){db.ref("correction_dictee/"+p.dicteeId+"/binomes/partis/"+k).remove();return;}   /* le retour d'un élève parti : sa place l'attend */
+    if(enSeance&&!el[k]&&aCommence(k)){db.ref("correction_dictee/"+p.dicteeId+"/binomes/partis/"+k).set(Date.now());return;}   /* [dette 169] il avait commencé : « parti » ; son binôme continue seul ; personne ne lui est réattribué */
+    if(el[k])delete el[k];else el[k]=true;db.ref("correction_dictee/"+p.dicteeId+"/absentsJour").set({date:j,eleves:el});
+    if(!enSeance)return;
+    if(el[k]){majPaires(function(pa){var x=pa[k];delete pa[k];if(x&&pa[x]===k){delete pa[x];if(!aCommence(x)||!aCommence(k)){}}apparierSeuls(pa,k);});}   /* absent : seuls les élèves restés seuls sont réappariés entre eux */
+    else{majPaires(function(pa,b){var o=(b.origine||{})[k];if(o&&presentLibre(o,pa)){pa[k]=o;pa[o]=k;return;}   /* [dette 168] il revient : son binôme s'il est encore seul */
+      if(o&&pa[o]&&!(p.absents||{})[o]&&!aj[o]&&!partis[o]&&!aCommence(o)&&!aCommence(pa[o])){var ex=pa[o];delete pa[ex];pa[k]=o;pa[o]=k;   /* [fusion L17-1q — règle du 06/10, tour 533 : « s'il n'a pas commencé avec quelqu'un »] son binôme avait été réapparié mais n'a pas commencé : ils se retrouvent */
+        var libres=Object.keys(p.corrections||{}).filter(function(x){return x!==ex&&presentLibre(x,pa)});if(libres.length){var l0=libres.sort(function(x,y){return nE(y)-nE(x)||(x<y?-1:1)})[0];pa[ex]=l0;pa[l0]=ex;}return;}   /* l'autre redevient seul, ou rejoint un élève seul */
+      var seuls=Object.keys(p.corrections||{}).filter(function(x){return x!==k&&presentLibre(x,pa)});if(seuls.length){var s0=seuls.sort(function(x,y){return nE(y)-nE(x)||(x<y?-1:1)})[0];pa[k]=s0;pa[s0]=k;}});}   /* sinon un élève seul ; sinon seul */
+  }
   var cles=p.eleves.map(function(n){return {nom:n,cle:san(n)}}).sort(function(a,b){return a.nom.localeCompare(b.nom,"fr")});
   function nom(k){var f=cles.find(function(x){return x.cle===k});return f?f.nom:k}
   var base=calculerBinomes(p.corrections,p.absents),vus={},paires=[];
@@ -8532,9 +8581,12 @@ function AbsentsEtBinomesL15k(p){
   var bandeauAbsD=absD.length?h("div",{style:{fontSize:".82rem",color:"var(--muted)",margin:"0 0 10px"}},"Absent"+(absD.length>1?"s":"")+" \u00e0 la dict\u00e9e (pas d\u2019autocorrection) : "+absD.map(function(x){return x.nom}).join(", ")):null;
   if(etape===1) return h("div",{id:"absents-binomes-l15k","data-etape":"1",style:{marginBottom:14}},
     h("div",{style:{fontSize:".8rem",fontWeight:700,color:"var(--muted)",letterSpacing:".06em"}},"\u00c9TAPE 1 SUR 2"),
-    h("b",{style:{fontSize:"1.1rem",display:"block",margin:"2px 0 8px"}},"Qui est absent aujourd\u2019hui ?"),bandeauAbsD,
-    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}},cles.filter(function(x){return (p.corrections||{})[x.cle]&&!(p.absents||{})[x.cle]}).map(function(x){var a=!!aj[x.cle];
-      return h("button",{key:x.cle,className:"tuile-absent-l15k","data-cle":x.cle,onClick:function(){basculer(x.cle)},style:{padding:"12px 8px",borderRadius:10,border:"2px solid "+(a?"#dc2626":"var(--border)"),background:a?"#fee2e2":"#fff",color:a?"#991b1b":"inherit",fontWeight:a?700:400,cursor:"pointer",font:"inherit",fontSize:".9rem"},title:a?"Absent aujourd\u2019hui \u2014 toucher pour le remettre pr\u00e9sent":"Toucher pour le marquer absent aujourd\u2019hui : seul son bin\u00f4me sera r\u00e9appari\u00e9, les tablettes le verront aussit\u00f4t"},(a?"\u2715 ":"")+x.nom+(a?" \u2014 absent":""))})),
+    h("b",{style:{fontSize:"1.1rem",display:"block",margin:"2px 0 8px"}},"Qui est absent aujourd\u2019hui ?"),
+    h("div",{id:"mode-binomes-l17",style:{fontSize:".85rem",margin:"0 0 8px",color:p.imposes?"#1a6b34":"#8a5a00"},title:"Le r\u00e9glage de la Pr\u00e9paration (case \u00ab Bin\u00f4mes impos\u00e9s \u00bb)"},p.imposes?"Bin\u00f4mes impos\u00e9s (d\u2019apr\u00e8s les erreurs)":"Placement libre : deux \u00e9l\u00e8ves quelconques par tablette"),bandeauAbsD,
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:8}},cles.filter(function(x){return (p.corrections||{})[x.cle]&&!(p.absents||{})[x.cle]}).map(function(x){var a=!!aj[x.cle],pt=!!partis[x.cle];
+      return h("button",{key:x.cle,className:"tuile-absent-l15k","data-cle":x.cle,"data-etat":pt?"parti":a?"absent":"present",onClick:function(){basculer(x.cle)},style:{padding:"12px 8px",borderRadius:10,border:"2px solid "+(pt?"#d97706":a?"#dc2626":"var(--border)"),background:pt?"#fef3c7":a?"#fee2e2":"#fff",color:pt?"#92400e":a?"#991b1b":"inherit",fontWeight:(a||pt)?700:400,cursor:"pointer",font:"inherit",fontSize:".9rem"},
+        title:pt?"Parti \u2014 il reprendra exactement o\u00f9 il en \u00e9tait en retapant son code (la case se d\u00e9coche toute seule) ; toucher pour le d\u00e9cocher":a?"Absent aujourd\u2019hui \u2014 toucher pour le remettre pr\u00e9sent : il retrouve son bin\u00f4me s\u2019il est encore seul, sinon un \u00e9l\u00e8ve seul":(enSeance&&aCommence(x.cle)?"Il a commenc\u00e9 : toucher le marque \u00ab parti \u00bb (son bin\u00f4me continue seul, personne ne lui est r\u00e9attribu\u00e9)":"Toucher pour le marquer absent aujourd\u2019hui : seul son bin\u00f4me sera r\u00e9appari\u00e9, les tablettes le verront aussit\u00f4t")},
+        (pt||a?"\u2715 ":"")+x.nom+(pt?" \u2014 parti":a?" \u2014 absent":""))})),
     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}},h("span",{style:{fontSize:".9rem"}},absJ.length+" absent"+(absJ.length>1?"s":"")+" coch\u00e9"+(absJ.length>1?"s":"")),
       h("button",{className:"btn btn-primary",id:"etape2-binomes",style:{width:"auto"},onClick:function(){setEtape(2)},title:"Voir les bin\u00f4mes dessin\u00e9s comme les tablettes"},"\u00c9tape 2 : voir les bin\u00f4mes \u2192")));
   return h("div",{id:"absents-binomes-l15k","data-etape":"2",style:{marginBottom:14}},
@@ -8544,7 +8596,7 @@ function AbsentsEtBinomesL15k(p){
       h("span",{style:{fontSize:".88rem",color:"var(--muted)"}},nPres+" pr\u00e9sents \u00b7 "+absJ.length+" absent"+(absJ.length>1?"s":"")+" aujourd\u2019hui \u00b7 "+paires.length+" tablette"+(paires.length>1?"s":"")+" \u00b7 touche une tablette pour voir ses deux \u00e9crans en direct")),bandeauAbsD,
     h("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:14}},paires.map(function(pr,i){var nv=nouveau(pr),seul=!pr[1];
       function moitie(k,cote){return h("div",{style:{flex:1,padding:"10px 8px",minHeight:52,borderLeft:cote===2?"4px solid #2c313a":"none",display:"flex",flexDirection:"column",justifyContent:"space-between",background:k?"#fff":"repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f1f1f1 6px,#f1f1f1 12px)"}},
-        k?h("div",{style:{fontSize:".88rem",fontWeight:600}},nom(k)):h("div",{style:{fontSize:".82rem",color:"#b45309",fontStyle:"italic"}},"1 \u00e9l\u00e8ve"),
+        k?h("div",{style:{fontSize:".88rem",fontWeight:600}},nom(k)+(partis[k]?" \u2014 parti":"")):h("div",{style:{fontSize:".82rem",color:"#b45309",fontStyle:"italic"}},"1 \u00e9l\u00e8ve"),
         k?h("div",{style:{marginTop:4}},pastille(k)):null)}
       return h("div",{key:i,className:"tablette-l15k",role:"button",tabIndex:0,onClick:function(){p.onVoir&&p.onVoir(pr[0],pr[1])},title:"Voir en direct les deux \u00e9crans de cette tablette, lettre par lettre (ne change rien chez eux)",style:{cursor:"pointer",border:"3px solid "+(seul?"#f59e0b":nv?"#2563eb":"#2c313a"),borderRadius:14,overflow:"hidden",boxShadow:"0 2px 6px rgba(0,0,0,.08)"}},
         h("div",{style:{background:seul?"#f59e0b":nv?"#2563eb":"#2c313a",color:"#fff",fontSize:".8rem",fontWeight:700,padding:"4px 10px",display:"flex",justifyContent:"space-between"}},h("span",null,"\ud83d\udcf1 Tablette "+(i+1)),seul?h("span",null,"seul"):nv?h("span",null,"nouveau bin\u00f4me"):h("span",null,"\ud83d\udc41")),
@@ -8573,10 +8625,12 @@ function TabletteDeux(p){
     try{var t1=(JSON.parse(localStorage.getItem("cd_moitie_1")||"null")||{}).arrivee||0,t2=(JSON.parse(localStorage.getItem("cd_moitie_2")||"null")||{}).arrivee||0;if(t1&&t2)premier=t1<=t2?1:2;}catch(e){}
     if(premier!==m)return false;
     var a=etats[m],b=etats[n];if(!a.identite||!b.identite||!a.dicteeCourante)return false;
-    return !(a.binome&&a.binome.cle===b.identite.cle);
+    if(!a.binome)return false;   /* [L17-1] placement libre (ou élève seul, ou hors séance) : jamais de refus */
+    return a.binome.cle!==b.identite.cle;
   }
   function revenir(n){try{localStorage.removeItem("cd_moitie_"+n);localStorage.removeItem("cd_frappe_"+n);}catch(e){}
     setEtats(function(prev){var o={};o[1]=prev[1];o[2]=prev[2];o[n]={};return o});setClesM(function(prev){var o={};o[1]=prev[1];o[2]=prev[2];o[n]=(prev[n]||0)+1;return o});}
+  /* [fusion L17-1q] le registre « tablettes/ » de L17-1 est remplacé par « places/ » (écrit par chaque moitié, voir AppEleveCoeur) */
   useEffect(function(){[1,2].forEach(function(n){if(refusee(n)){try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+n)||"null");if(o&&!o.refusee){o.refusee=true;localStorage.setItem("cd_moitie_"+n,JSON.stringify(o))}}catch(e){}}})});   /* au rechargement, la moitié refusée revient à zéro (son élève n'est pas repris) */
   return h("div",{className:"tablette-deux",style:{display:"flex",height:"100vh",overflow:"hidden",background:"var(--bg)"}},
     [1,2].map(function(n){var m=n===1?2:1,v=verrou(n);
@@ -8651,7 +8705,10 @@ function AppEleveCoeurL15f(p){
       function f1(sn){var v=sn.val()||null;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.copyPublishedAt!==v?Object.assign({},x,{copyPublishedAt:v}):x})});}
       function f2(sn){var v=sn.val()!==false;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.published!==v?Object.assign({},x,{published:v}):x})});}
       var r3=db.ref("correction_dictee/"+dd.id+"/absentsJour");function f3(sn){var v=sn.val()||null;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&JSON.stringify(x.absentsJour||null)!==JSON.stringify(v)?Object.assign({},x,{absentsJour:v}):x})});}   /* [micro L15k-b] les absents du jour, en direct */
-      r1.on("value",f1);r2.on("value",f2);r3.on("value",f3);offs.push(function(){r1.off("value",f1);r2.off("value",f2);r3.off("value",f3)});});
+      var r4=db.ref("correction_dictee/"+dd.id+"/binomes");function f4(sn){var v=sn.val()||null;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&JSON.stringify(x.binomes||null)!==JSON.stringify(v)?Object.assign({},x,{binomes:v}):x})});}   /* [L17-1] les binômes de la séance, en direct */
+      var r5=db.ref("correction_dictee/"+dd.id+"/heure");function f5(sn){var v=heureDeLaDictee(sn.val());setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&JSON.stringify(x.heure===undefined?null:x.heure)!==JSON.stringify(v)?Object.assign({},x,{heure:v}):x})});}
+      var r6=db.ref("correction_dictee/"+dd.id+"/config/peerHelp");function f6(sn){var v=sn.val()===true;setDictees(function(prev){return (prev||[]).map(function(x){return x.id===dd.id&&x.binomesImposes!==v?Object.assign({},x,{binomesImposes:v}):x})});}
+      r1.on("value",f1);r2.on("value",f2);r3.on("value",f3);r4.on("value",f4);r5.on("value",f5);r6.on("value",f6);offs.push(function(){r1.off("value",f1);r2.off("value",f2);r3.off("value",f3);r4.off("value",f4);r5.off("value",f5);r6.off("value",f6)});});
     return function(){offs.forEach(function(f){f()})};},[(dictees||[]).map(function(x){return x.id}).join("|")]);
   var connecteLeL15f=React.useRef(0);useEffect(function(){if(identite)connecteLeL15f.current=Date.now();},[identite&&identite.cle]);   /* [L15f-5] le moment de la connexion */
   var sStyloL15f=useState(false),styloActifL15f=sStyloL15f[0],setStyloActifL15f=sStyloL15f[1];
@@ -8685,7 +8742,7 @@ function AppEleveCoeurL15f(p){
         return{id:id,title:cfg.title||id,classe:classeName,niveau:cfg.niveau||"",published:cfg.published!==false,exercicesOuverts:cfg.exercicesOuverts===true,
                showNote:cfg.showNote!==false,eleves:eleves,tokens:tokenize(cfg.text||""),base:cfg.base||20,bareme:cfg.bareme||"preparee",
                results:val[id].results||{},autocorrection:val[id].autocorrection||{},
-               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:heureDeLaDictee(val[id].heure),binomes:val[id].binomes||null,absentsJour:val[id].absentsJour||null,dateCorrection:cfg.dateCorrection||null,amenagee:((val[id].dictee||{}).amenagee)||null};   /* [L14] */   /* [L9] */
+               copyPublishedAt:val[id].copyPublishedAt||null,absents:val[id].absents||{},heure:heureDeLaDictee(val[id].heure),binomes:val[id].binomes||null,binomesImposes:cfg.peerHelp===true,absentsJour:val[id].absentsJour||null,dateCorrection:cfg.dateCorrection||null,amenagee:((val[id].dictee||{}).amenagee)||null};   /* [L14] */   /* [L9] */
       });
       setDictees(list);
       if(forcedDicteeId){
@@ -8707,6 +8764,7 @@ function AppEleveCoeurL15f(p){
   },[classesData,shuntFait,identite]);
 
   var sCBL17=useState(null),courBinL17=sCBL17[0],setCourBinL17=sCBL17[1],courBinRefL17=React.useRef(null),excluRefL17=React.useRef(false);   /* [micro L17-1 bis] */
+  var sCIL17=useState(null),courIdL17=sCIL17[0],setCourIdL17=sCIL17[1],courIdRefL17=React.useRef(null);   /* [fusion L17-1q] la dictée où l'élève est assis (le registre unique « places ») */
   // ── Lot 3c : la moitié dit à la tablette qui est connecté et qui est son binôme (dictée en cours)
   useEffect(function(){
     if(!p.moitie||!p.onEtat)return;
@@ -8719,25 +8777,30 @@ function AppEleveCoeurL15f(p){
       var a=heureActive(dd.heure)?1:0,b=cour&&heureActive(cour.heure)?1:0;
       if(!cour||a>b||(a===b&&dd.copyPublishedAt>cour.copyPublishedAt))cour=dd});
     var bin=null;
-    if(cour){var map=binomesDuJourL15k(cour.results,cour.absents,cour.absentsJour);var k=map[identite.cle];   /* [micro L15k-b] toujours d'après les erreurs ; le hub n'est plus relu */
+    if(cour&&cour.binomesImposes!==false){var map=binomesActifsL17(cour.binomes,cour.heure)||binomesSeanceL17(cour.results,cour.absents,cour.absentsJour)||{};var k=map[identite.cle];   /* [L17-1] pendant la séance : les binômes fixés, lus au hub ; [fusion L17-1q — cadrage du 06/10, tour 521] avant « Lancer » : les paires calculées d'après les erreurs, exactement comme l'aperçu de la console (même fonction, mêmes données) — « Lancer » fige celles-là ; en placement libre : aucun */
       if(k){var nomB=(cour.eleves||[]).find(function(n){return san(n)===k});if(nomB)bin={cle:k,nom:nomB,dictee:cour.id}}}
     p.onEtat({identite:identite,binome:bin,dicteeCourante:cour?cour.id:null});
     var cbL17=(cour&&bin)?cour.id+"|"+bin.cle+"|"+bin.nom:null;if(cbL17!==courBinRefL17.current){courBinRefL17.current=cbL17;setCourBinL17(cbL17);}   /* [micro L17-1 bis] */
+    var ciL17=cour?cour.id:null;if(ciL17!==courIdRefL17.current){courIdRefL17.current=ciL17;setCourIdL17(ciL17);}   /* [fusion L17-1q] */
   },[identite,dictees]);
 
   /* [micro L17-1 bis — 07/10, Paul] DEUX BINÔMES SUR DEUX TABLETTES : chaque élève assis écrit sa place au hub (sa tablette, l'heure de son arrivée) ;
      si son binôme est déjà assis sur une AUTRE tablette, la seconde arrivée lit « Tu es avec … : laisse cette tablette à quelqu'un d'autre et rejoins … »
      (la première arrivée garde sa tablette ; à la même milliseconde, l'ordre alphabétique) ; « J'ai compris » libère la moitié. Jamais bloquant. */
   useEffect(function(){
-    if(!p.moitie||!courBinL17||!identite){if(p.onExclusionL17)p.onExclusionL17(null);return;}
-    var parts=courBinL17.split("|"),did=parts[0],bcle=parts[1],bnom=parts.slice(2).join("|"),moi=identite.cle,tab=tabletteIdL17();
-    var monRef=db.ref("correction_dictee/"+did+"/places/"+moi),sonRef=db.ref("correction_dictee/"+did+"/places/"+bcle);
+    /* [fusion L17-1q] LE REGISTRE UNIQUE « qui est assis où » : correction_dictee/<id>/places/<élève> = {tablette, moitie, arrivee, t} — écrit dès qu'un élève est assis
+       dans une moitié (dictée en cours), battement 30 s, retiré à la déconnexion ; lu par la console (la garde avant « Lancer », « parti » décoché au retour)
+       et par la tablette du binôme (la règle « rejoins … »). Il remplace aussi le registre « tablettes/ » de L17-1. */
+    if(!p.moitie||!courIdL17||!identite){if(p.onExclusionL17)p.onExclusionL17(null);return;}
+    var did=courIdL17,moi=identite.cle,tab=tabletteIdL17();
+    var parts=courBinL17?courBinL17.split("|"):null,bcle=parts?parts[1]:null,bnom=parts?parts.slice(2).join("|"):"";
+    var monRef=db.ref("correction_dictee/"+did+"/places/"+moi),sonRef=bcle?db.ref("correction_dictee/"+did+"/places/"+bcle):null;
     var arrivee=Date.now();try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+p.moitie)||"null");if(o&&o.arrivee)arrivee=o.arrivee;}catch(e){}
     var ecrit=false,fini=false,hb=null;
     function prenom(n){var w=String(n||"").split(/\s+/).filter(function(x){return x&&x!==x.toUpperCase()});return w.length?w.join(" "):n;}
     function retirer(){try{if(ecrit){monRef.remove();ecrit=false;}}catch(e){}if(hb){clearInterval(hb);hb=null;}}
     function sexe(c){try{var cl=(classesData||{})[identite.classe]||{};var pr=(cl.profils||{})[c]||{};return pr.sexe==="f"||pr.sexe==="m"?pr.sexe:null;}catch(e){return null;}}
-    function emoji(){var a=sexe(moi),b=sexe(bcle);if(!a||!b)return "\ud83d\udc65";if(a==="f"&&b==="f")return "\ud83d\udc6d";if(a==="m"&&b==="m")return "\ud83d\udc6c";return "\ud83d\udc6b";}   /* [micro L17-1 bis-c] les sexes : classes/<classe>/profils/<clé>/sexe (MJPC) */
+    function emoji(){var a=sexe(moi),b=sexe(bcle);if(!a||!b)return "\ud83d\udc65";if(a==="f"&&b==="f")return "\ud83d\udc6d";if(a==="m"&&b==="m")return "\ud83d\udc6c";return "\ud83d\udc6b";}   /* [micro L17-1 bis-c] */
     function exclure(){if(fini)return;fini=true;retirer();excluRefL17.current=true;if(p.onEtat)p.onEtat({identite:null,binome:null});if(p.onExclusionL17)p.onExclusionL17({prenom:prenom(bnom),emoji:emoji(),liberer:function(){deconnexion();}});}
     function ecrire(){if(ecrit||fini)return;ecrit=true;monRef.set({tablette:tab,moitie:p.moitie,arrivee:arrivee,t:Date.now()});try{monRef.onDisconnect().remove();}catch(e){}hb=setInterval(function(){if(!fini&&ecrit)monRef.update({t:Date.now()});},30000);}
     function juger(v){if(fini)return;var ailleurs=v&&v.tablette&&v.tablette!==tab&&(Date.now()-(v.t||0)<120000);
@@ -8745,9 +8808,9 @@ function AppEleveCoeurL15f(p){
       var avantMoi=(v.arrivee||0)<arrivee||((v.arrivee||0)===arrivee&&bcle<moi);
       if(avantMoi)exclure();else ecrire();}
     function onV(sn){juger(sn.val());}
-    sonRef.on("value",onV);
-    return function(){fini=true;sonRef.off("value",onV);retirer();excluRefL17.current=false;if(p.onExclusionL17)p.onExclusionL17(null);};
-  },[courBinL17,identite&&identite.cle]);
+    if(sonRef)sonRef.on("value",onV);else ecrire();
+    return function(){fini=true;if(sonRef)sonRef.off("value",onV);retirer();excluRefL17.current=false;if(p.onExclusionL17)p.onExclusionL17(null);};
+  },[courIdL17,courBinL17,identite&&identite.cle]);
 
   // ── Lot 3b : après un rechargement, la moitié rouvre la dictée où l'élève en était
   useEffect(function(){
@@ -10632,7 +10695,7 @@ function EleveCorrection(p){
   }
   var s_peer=useState(null),peerTarget=s_peer[0],setPeerTarget=s_peer[1];
   useEffect(function(){
-    if(!liveConfig.peerHelp||!finished||!d||!d.dictee)return;
+    return;   /* [L17-1 — dette 157] l'ancien « va aider untel » disparaît (la case sert désormais aux binômes imposés) */
     db.ref("correction_dictee/"+d.dictee.id+"/autocorrection").once("value",function(snap){
       var acAll=snap.val()||{};var maxRemaining=0;var target=null;
       Object.keys(acAll).forEach(function(ek){
@@ -10752,7 +10815,7 @@ function EleveCorrection(p){
             if(loadedResults[String(k2)]||loadedResults[Number(k2)])wrong+=(n-1);else wrong+=n;
           });
           var sc=acNote(loadedAttempts,loadedResults,totalErrorsRef.current,errors,val.questions);   // calcul unique
-          var nOk=Object.keys(loadedResults).filter(function(k2){return loadedResults[k2]}).length;
+          var nOk=acTrouvees(loadedResults,errors);   /* [fusion L17-1q — dette 154] sans les A */
           db.ref(acRef+"/score").set(Math.round(sc*100)/100);
           db.ref(acRef+"/solved").set(nOk);
         }
@@ -10870,7 +10933,7 @@ function EleveCorrection(p){
     var wrong=0;
     Object.keys(att).forEach(function(k){var n=att[k]||0;if(res[String(k)]||res[Number(k)])wrong+=(n-1);else wrong+=n});
     var sc=acNote(att,res,totalErrors,errors,questionsRef.current);   // calcul unique
-    var nOk=Object.keys(res).filter(function(k){return res[k]}).length;
+    var nOk=acTrouvees(res,errors);   /* [fusion L17-1q — dette 154] les mots « Attention graphie » (A) ne comptent pas dans « trouvées » */
     var saveData={
       score:Math.round(sc*100)/100,
       attempts:att,
@@ -11277,7 +11340,7 @@ function EleveCorrection(p){
       ),
       phraseFin()?h("p",{style:{fontSize:"1rem",margin:"6px 0 10px",lineHeight:1.5}},phraseFin()):null,
       ligneAttestation(),
-      peerTarget&&h("div",{style:{marginTop:12,padding:"16px 18px",background:"rgba(124,58,237,.06)",border:"2px solid rgba(124,58,237,.2)",borderRadius:12,fontSize:".95rem",lineHeight:1.8,textAlign:"center"}},
+      false&&peerTarget&&h("div",{style:{marginTop:12,padding:"16px 18px",background:"rgba(124,58,237,.06)",border:"2px solid rgba(124,58,237,.2)",borderRadius:12,fontSize:".95rem",lineHeight:1.8,textAlign:"center"}},
         h("div",{style:{fontSize:"1.5rem",marginBottom:6}},"\ud83e\udd1d"),
         h("p",{style:{fontWeight:700,color:"#7c3aed",marginBottom:6}},"Tu as termin\u00e9 avant les autres !"),
         h("p",null,"L\u00e8ve-toi sans faire de bruit et va aider ",h("strong",null,peerTarget)," \u00e0 corriger ses erreurs."),
