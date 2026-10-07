@@ -1200,7 +1200,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1m";
+var APP_VERSION="6.7.0-L15.1b-1n";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1563,7 +1563,7 @@ function oublierSessionEleveL15f(){["sessionStorage","localStorage"].forEach(fun
 function AppEleve(p){var sE=useState(null),etatD=sE[0],setEtatD=sE[1];   /* [L15f-5] */
   var sXL=useState(null),excluL17=sXL[0],setExcluL17=sXL[1];   /* [micro L17-1 bis] */
   return h("div",{style:{position:"relative"}},excluL17?h("div",{className:"exclusion-l17",style:{position:"absolute",inset:0,zIndex:970,minHeight:420,background:"#eff6ff",padding:"48px 20px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}},
-      h("div",{style:{fontSize:"2.4rem"}},"\ud83d\udc6d"),
+      h("div",{style:{fontSize:"2.4rem"}},"\ud83d\udc65"),   /* [micro L17-1 bis-b] un émoji neutre (👥), ni fille ni garçon */
       h("div",{style:{fontWeight:700,fontSize:"1.25rem",margin:"10px 0 22px",lineHeight:1.4}},"Tu es avec "+excluL17.prenom+" : laisse cette tablette \u00e0 quelqu\u2019un d\u2019autre et rejoins "+excluL17.prenom+"."),
       h("button",{className:"btn btn-primary",id:"exclusion-compris-l17",style:{width:"auto",fontSize:"1.05rem",padding:"12px 26px"},onClick:function(){var f=excluL17.liberer;setExcluL17(null);if(f)f();}},"J\u2019ai compris")):null,etatD&&etatD.visible?h("button",{className:"btn-sm btn-ghost",id:"se-deconnecter-fixe",onClick:etatD.deconnecter,style:{position:"absolute",top:10,right:12,zIndex:900,background:"var(--card)"}},"Se d\u00e9connecter"):null,
     h(AppEleveCoeurL15f,Object.assign({},p,{onExclusionL17:setExcluL17,onEtatDeconnexionL15f:setEtatD})));}
@@ -8698,11 +8698,12 @@ function AppEleveCoeurL15f(p){
     if(val) setIdentite({nom:val.nom,cle:val.cle,classe:val.classe,via:"session"});
   },[classesData,shuntFait,identite]);
 
-  var sCBL17=useState(null),courBinL17=sCBL17[0],setCourBinL17=sCBL17[1],courBinRefL17=React.useRef(null);   /* [micro L17-1 bis] */
+  var sCBL17=useState(null),courBinL17=sCBL17[0],setCourBinL17=sCBL17[1],courBinRefL17=React.useRef(null),excluRefL17=React.useRef(false);   /* [micro L17-1 bis] */
   // ── Lot 3c : la moitié dit à la tablette qui est connecté et qui est son binôme (dictée en cours)
   useEffect(function(){
     if(!p.moitie||!p.onEtat)return;
     if(!identite){p.onEtat({identite:null,binome:null});return}
+    if(excluRefL17.current){p.onEtat({identite:null,binome:null});return}   /* [micro L17-1 bis-b] exclue : la moitié compte pour vide (l'autre moitié n'annonce pas son binôme) */
     if(!dictees.length)return;
     // d'abord la dictée dont l'heure est lancée ; sinon la plus récemment rendue (jamais une dictée dépubliée)
     var cour=null;dictees.forEach(function(dd){
@@ -8727,7 +8728,7 @@ function AppEleveCoeurL15f(p){
     var ecrit=false,fini=false,hb=null;
     function prenom(n){var w=String(n||"").split(/\s+/).filter(function(x){return x&&x!==x.toUpperCase()});return w.length?w.join(" "):n;}
     function retirer(){try{if(ecrit){monRef.remove();ecrit=false;}}catch(e){}if(hb){clearInterval(hb);hb=null;}}
-    function exclure(){if(fini)return;fini=true;retirer();if(p.onExclusionL17)p.onExclusionL17({prenom:prenom(bnom),liberer:function(){deconnexion();}});}
+    function exclure(){if(fini)return;fini=true;retirer();excluRefL17.current=true;if(p.onEtat)p.onEtat({identite:null,binome:null});if(p.onExclusionL17)p.onExclusionL17({prenom:prenom(bnom),liberer:function(){deconnexion();}});}
     function ecrire(){if(ecrit||fini)return;ecrit=true;monRef.set({tablette:tab,moitie:p.moitie,arrivee:arrivee,t:Date.now()});try{monRef.onDisconnect().remove();}catch(e){}hb=setInterval(function(){if(!fini&&ecrit)monRef.update({t:Date.now()});},30000);}
     function juger(v){if(fini)return;var ailleurs=v&&v.tablette&&v.tablette!==tab&&(Date.now()-(v.t||0)<120000);
       if(!ailleurs){ecrire();return;}
@@ -8735,7 +8736,7 @@ function AppEleveCoeurL15f(p){
       if(avantMoi)exclure();else ecrire();}
     function onV(sn){juger(sn.val());}
     sonRef.on("value",onV);
-    return function(){fini=true;sonRef.off("value",onV);retirer();if(p.onExclusionL17)p.onExclusionL17(null);};
+    return function(){fini=true;sonRef.off("value",onV);retirer();excluRefL17.current=false;if(p.onExclusionL17)p.onExclusionL17(null);};
   },[courBinL17,identite&&identite.cle]);
 
   // ── Lot 3b : après un rechargement, la moitié rouvre la dictée où l'élève en était
