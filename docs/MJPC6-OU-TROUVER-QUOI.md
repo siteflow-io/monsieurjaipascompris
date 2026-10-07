@@ -445,6 +445,7 @@
 |---|---|
 | le mandat de la maquette p8 (un schéma par diapo, parfaitement lisible ; le moteur des schémas de l'existant repris, avec ses télescopages) | `MANDATS/MANDAT-DEROULE-MAQUETTE-P8.md` (sas), version 3, déposé le 05/10 |
 | le complément p8-3b (l'écartement évite aussi les traits qui passent derrière une autre bulle, T11) et l'audit de p8-1 à p8-3 | `MANDATS/COMPLEMENT-DEROULE-P8-3.md` (sas), déposé le 06/10 ; audit : `TRANSCRIPTS/C13/pieces/T17-AUDIT-p8-1-a-p8-3.md` (sas) ; livraisons sur les branches `deroule/p8-1`, `deroule/p8-2`, `deroule/p8-3` du sas |
+| les compléments p8-3c (le cahier, la diapo 6 de l'heure 2 et un schéma plausible, les infobulles, le bloc question au tableau) et p8-4 (écrire directement dans la diapo, « Changer de type ») | `MANDATS/COMPLEMENT-DEROULE-P8-3c.md` et `MANDATS/COMPLEMENT-DEROULE-P8-4.md` (sas), déposés le 07/10 ; dettes n°13 · 1 à 7 au registre |
 | la décision du 05/10 sur les schémas | `DEROULE/CADRAGE-4-LA-PREPARATION.md` §3.2, sous la ligne « schéma » (sas) |
 | la carte de l'existant du déroulé, de l'éditeur, de l'emploi du temps, du tableau distant et du téléphone | `TRANSCRIPTS/C13/pieces/CARTE-EXISTANT-DEROULE.md` et son index `CARTE-EXISTANT-INDEX-FONCTIONS.md` (sas) |
 | le moteur des schémas de l'existant | `AT_DR_B64` d'`index.html` (base64 du moteur) : `schemaHTML`, `carte`, `frise`, `arbre`, `cycle`, `grille`, `separe`, `surface`, `mesure`, `cle`, `SCH_COUL`, `tirSch`, `jalSch`, `repeintSch`, le panneau `reglages` (« Un à un / Tout ensemble », « ⌖ Réordonner ») |
