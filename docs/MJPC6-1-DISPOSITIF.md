@@ -485,3 +485,10 @@ Le point 25 vise les textes FAUX (qui ne disent pas le flux réel). Il ne suffit
 - l'exécutant qui ne peut pas répondre « à quoi ça sert en classe ? » sans deviner **ne code pas : il demande**.
 - `docs/MJPC6-OU-TROUVER-QUOI.md` reçoit une colonne « pour la classe », remplie **uniquement avec les mots de Paul** — jamais déduits (l'incident `oral` de la n°9 et l'incident du zoom de l'exécutant LOT D sont la même faute : une finalité devinée, puis gravée).
 **Incident fondateur (25/08)** : le LOT D a été livré et audité « tous invariants verts » alors que le zoom ne traversait pas jusqu'au mur ; le mandat disait « le tableau distant est décalé », pas « les élèves voient une autre activité que celle dont je leur parle ». Paul : *« le zoom sert pour la classe, pas pour moi… le zoom doit se transmettre. sinon il ne sert à rien. »*
+
+## ADDENDUM DU 07/10/2026 — conscience n°13 : l'audit de faisabilité avant tout mandat (Paul)
+Paul, 07/10/2026 : « je ne devrais pas avoir à donner des consignes aussi précises. Il faut faire un audit de ce qui est faisable ou non, et cadrer le mandat en ce sens. C'est aussi simple que ça. »
+- Avant d'écrire un mandat ou un complément, la conscience joue ou mesure elle-même chaque consigne sur la maquette (ou le site) du moment. Un mandat ne demande que ce qu'elle a vu possible, avec sa mesure.
+- Quand un résultat dépend d'une mesure impossible à faire avant, le mandat donne le but, la façon de mesurer, et l'issue déjà tranchée si ça ne passe pas. L'exécutant ne s'arrête pas pour demander à Paul.
+- Paul ne tranche que le pédagogique : jamais un exemple, une disposition, un réglage.
+- L'antécédent : C13, tour 24. La conscience a demandé « une carte de trois familles, mesure à zéro » sans la mesurer ; l'exécutant s'est arrêté (p8-3c). La mesure faite ensuite (tour 28) montrait qu'aucune carte de trois familles ne tenait.
