@@ -1200,7 +1200,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (correction_dictee) ──
 /* Pastille de version — en dur (M6). Promotion au socle prévue M15. */
-var APP_VERSION="6.7.0-L15.1b-1l";
+var APP_VERSION="6.7.0-L15.1b-1m";
 var APP_VERSION_DATE="2026-08-01";
 var MJPC_APP = {
   id: "correction_dictee",
@@ -1558,10 +1558,15 @@ function nomClasseLisibleL15c(cle){var reg=(typeof CLASSES!=="undefined"&&CLASSE
   src=src.replace(/(^|\s)([a-z\u00e0-\u00ff])/g,function(m,a,b){return a+b.toUpperCase()});return src.replace(/^(\d)\s/,"$1e ").replace(/^(\d)E\s/,"$1e ");}
 function dateCourteL15c(t){if(!t)return "";var d=new Date(t);return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear();}
 /* [L15f point 5 — dette 129] LA DÉCONNEXION : la tablette oublie l'élève (pas le professeur, jamais la clé du coffre) */
+function tabletteIdL17(){try{var t=localStorage.getItem("cd_tablette_id");if(!t){t="t"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);localStorage.setItem("cd_tablette_id",t);}return t;}catch(e){return "t-inconnue";}}   /* [micro L17-1 bis — 07/10] une tablette = un identifiant, partagé par ses deux moitiés */
 function oublierSessionEleveL15f(){["sessionStorage","localStorage"].forEach(function(st){try{var S=window[st],v=S.getItem("mjpc_eleve");if(!v)return;var o=null;try{o=JSON.parse(v)}catch(e){}if(o&&o.is_prof)return;S.removeItem("mjpc_eleve");}catch(e){}});}
 function AppEleve(p){var sE=useState(null),etatD=sE[0],setEtatD=sE[1];   /* [L15f-5] */
-  return h("div",{style:{position:"relative"}},etatD&&etatD.visible?h("button",{className:"btn-sm btn-ghost",id:"se-deconnecter-fixe",onClick:etatD.deconnecter,style:{position:"absolute",top:10,right:12,zIndex:900,background:"var(--card)"}},"Se d\u00e9connecter"):null,
-    h(AppEleveCoeurL15f,Object.assign({},p,{onEtatDeconnexionL15f:setEtatD})));}
+  var sXL=useState(null),excluL17=sXL[0],setExcluL17=sXL[1];   /* [micro L17-1 bis] */
+  return h("div",{style:{position:"relative"}},excluL17?h("div",{className:"exclusion-l17",style:{position:"absolute",inset:0,zIndex:970,minHeight:420,background:"#eff6ff",padding:"48px 20px",display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center"}},
+      h("div",{style:{fontSize:"2.4rem"}},"\ud83d\udc6d"),
+      h("div",{style:{fontWeight:700,fontSize:"1.25rem",margin:"10px 0 22px",lineHeight:1.4}},"Tu es avec "+excluL17.prenom+" : laisse cette tablette \u00e0 quelqu\u2019un d\u2019autre et rejoins "+excluL17.prenom+"."),
+      h("button",{className:"btn btn-primary",id:"exclusion-compris-l17",style:{width:"auto",fontSize:"1.05rem",padding:"12px 26px"},onClick:function(){var f=excluL17.liberer;setExcluL17(null);if(f)f();}},"J\u2019ai compris")):null,etatD&&etatD.visible?h("button",{className:"btn-sm btn-ghost",id:"se-deconnecter-fixe",onClick:etatD.deconnecter,style:{position:"absolute",top:10,right:12,zIndex:900,background:"var(--card)"}},"Se d\u00e9connecter"):null,
+    h(AppEleveCoeurL15f,Object.assign({},p,{onExclusionL17:setExcluL17,onEtatDeconnexionL15f:setEtatD})));}
 /* [BRANCHEMENT MJPC — déroulé] L'HEURE D'UNE DICTÉE : UN SEUL POINT D'ENTRÉE (L15g, point 9 ; Paul, 05/10). Tout ce qui lit l'heure (l'élève, le Suivi,
    l'accueil, la clôture, la déconnexion) passe par ici. Aujourd'hui : l'heure écrite par « Lancer » (source "dictee").
    RESTE À FAIRE quand le chantier du déroulé MJPC sera fini : si heure.source === "mjpc", lire l'heure de la séance seances/<heure.seanceId>
@@ -8693,6 +8698,7 @@ function AppEleveCoeurL15f(p){
     if(val) setIdentite({nom:val.nom,cle:val.cle,classe:val.classe,via:"session"});
   },[classesData,shuntFait,identite]);
 
+  var sCBL17=useState(null),courBinL17=sCBL17[0],setCourBinL17=sCBL17[1],courBinRefL17=React.useRef(null);   /* [micro L17-1 bis] */
   // ── Lot 3c : la moitié dit à la tablette qui est connecté et qui est son binôme (dictée en cours)
   useEffect(function(){
     if(!p.moitie||!p.onEtat)return;
@@ -8707,7 +8713,30 @@ function AppEleveCoeurL15f(p){
     if(cour){var map=binomesDuJourL15k(cour.results,cour.absents,cour.absentsJour);var k=map[identite.cle];   /* [micro L15k-b] toujours d'après les erreurs ; le hub n'est plus relu */
       if(k){var nomB=(cour.eleves||[]).find(function(n){return san(n)===k});if(nomB)bin={cle:k,nom:nomB,dictee:cour.id}}}
     p.onEtat({identite:identite,binome:bin,dicteeCourante:cour?cour.id:null});
+    var cbL17=(cour&&bin)?cour.id+"|"+bin.cle+"|"+bin.nom:null;if(cbL17!==courBinRefL17.current){courBinRefL17.current=cbL17;setCourBinL17(cbL17);}   /* [micro L17-1 bis] */
   },[identite,dictees]);
+
+  /* [micro L17-1 bis — 07/10, Paul] DEUX BINÔMES SUR DEUX TABLETTES : chaque élève assis écrit sa place au hub (sa tablette, l'heure de son arrivée) ;
+     si son binôme est déjà assis sur une AUTRE tablette, la seconde arrivée lit « Tu es avec … : laisse cette tablette à quelqu'un d'autre et rejoins … »
+     (la première arrivée garde sa tablette ; à la même milliseconde, l'ordre alphabétique) ; « J'ai compris » libère la moitié. Jamais bloquant. */
+  useEffect(function(){
+    if(!p.moitie||!courBinL17||!identite){if(p.onExclusionL17)p.onExclusionL17(null);return;}
+    var parts=courBinL17.split("|"),did=parts[0],bcle=parts[1],bnom=parts.slice(2).join("|"),moi=identite.cle,tab=tabletteIdL17();
+    var monRef=db.ref("correction_dictee/"+did+"/places/"+moi),sonRef=db.ref("correction_dictee/"+did+"/places/"+bcle);
+    var arrivee=Date.now();try{var o=JSON.parse(localStorage.getItem("cd_moitie_"+p.moitie)||"null");if(o&&o.arrivee)arrivee=o.arrivee;}catch(e){}
+    var ecrit=false,fini=false,hb=null;
+    function prenom(n){var w=String(n||"").split(/\s+/).filter(function(x){return x&&x!==x.toUpperCase()});return w.length?w.join(" "):n;}
+    function retirer(){try{if(ecrit){monRef.remove();ecrit=false;}}catch(e){}if(hb){clearInterval(hb);hb=null;}}
+    function exclure(){if(fini)return;fini=true;retirer();if(p.onExclusionL17)p.onExclusionL17({prenom:prenom(bnom),liberer:function(){deconnexion();}});}
+    function ecrire(){if(ecrit||fini)return;ecrit=true;monRef.set({tablette:tab,moitie:p.moitie,arrivee:arrivee,t:Date.now()});try{monRef.onDisconnect().remove();}catch(e){}hb=setInterval(function(){if(!fini&&ecrit)monRef.update({t:Date.now()});},30000);}
+    function juger(v){if(fini)return;var ailleurs=v&&v.tablette&&v.tablette!==tab&&(Date.now()-(v.t||0)<120000);
+      if(!ailleurs){ecrire();return;}
+      var avantMoi=(v.arrivee||0)<arrivee||((v.arrivee||0)===arrivee&&bcle<moi);
+      if(avantMoi)exclure();else ecrire();}
+    function onV(sn){juger(sn.val());}
+    sonRef.on("value",onV);
+    return function(){fini=true;sonRef.off("value",onV);retirer();if(p.onExclusionL17)p.onExclusionL17(null);};
+  },[courBinL17,identite&&identite.cle]);
 
   // ── Lot 3b : après un rechargement, la moitié rouvre la dictée où l'élève en était
   useEffect(function(){
