@@ -451,3 +451,16 @@
 | la carte de l'existant du déroulé, de l'éditeur, de l'emploi du temps, du tableau distant et du téléphone | `TRANSCRIPTS/C13/pieces/CARTE-EXISTANT-DEROULE.md` et son index `CARTE-EXISTANT-INDEX-FONCTIONS.md` (sas) |
 | le moteur des schémas de l'existant | `AT_DR_B64` d'`index.html` (base64 du moteur) : `schemaHTML`, `carte`, `frise`, `arbre`, `cycle`, `grille`, `separe`, `surface`, `mesure`, `cle`, `SCH_COUL`, `tirSch`, `jalSch`, `repeintSch`, le panneau `reglages` (« Un à un / Tout ensemble », « ⌖ Réordonner ») |
 | le téléphone (télécommande, par le QR) | `sesBootTel`, `sesTelPeindre` ; le QR : `sesQROuvrir`, `qrScans` |
+
+## AJOUTS DU 11/10/2026 — LA MAQUETTE COMPLÈTE DU QCM, VALIDÉE (conscience n°12)
+
+| Quoi | Où |
+| --- | --- |
+| la maquette validée du QCM, qui fait foi pour le code | `MANDATS/MAQUETTE-QCM-COMPLETE/maquette-qcm-v7.html` (sas, `main`), md5 `6be84ea1fb636017ce7225bfa3556082` ; la note de validation : `MANDATS/MAQUETTE-QCM-COMPLETE/VALIDEE.md` |
+| son livret (une capture et une phrase par scène) | `MANDATS/MAQUETTE-QCM-COMPLETE/livret-maquette-qcm-v7.pdf` (sas) |
+| ce que la maquette change dans MJPC, écart par écart | `MANDATS/MAQUETTE-QCM-COMPLETE/README.md`, section « Complément 2 », et `banc/existant/ecarts-mjpc.json` (sas) |
+| son banc unique, et les inventaires de l'existant | `MANDATS/MAQUETTE-QCM-COMPLETE/banc/` (sas) : `node banc/banc.js maquette-qcm-v7.html 5 sortie.txt`, avec `PROD=` le clone de la production |
+| le cadrage du QCM | `MANDATS/CADRAGE-QCM.md` (sas) ; le prompt de création d'éval : `MANDATS/PROMPT-QCM-CREATION/README.md` ; les libellés élève : `MANDATS/LIBELLES-ELEVE-COMPETENCES/` |
+| les audits de la maquette | `AUDITS/MAQUETTE-QCM-COMPLETE-10-10/`, `AUDITS/MAQUETTE-QCM-COMPLEMENT-1-10-10/`, `AUDITS/MAQUETTE-QCM-COMPLEMENT-2-11-10/` (sas) |
+| les objets de l'emploi du temps relus au hub le 11/10 | `MANDATS/COMPLEMENT-MAQUETTE-QCM-COMPLETE-2-EDT/` (sas) |
+
