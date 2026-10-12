@@ -464,3 +464,11 @@
 | les audits de la maquette | `AUDITS/MAQUETTE-QCM-COMPLETE-10-10/`, `AUDITS/MAQUETTE-QCM-COMPLEMENT-1-10-10/`, `AUDITS/MAQUETTE-QCM-COMPLEMENT-2-11-10/` (sas) |
 | les objets de l'emploi du temps relus au hub le 11/10 | `MANDATS/COMPLEMENT-MAQUETTE-QCM-COMPLETE-2-EDT/` (sas) |
 
+## AJOUTS DU 12/10/2026 — PROMOTION `evaluation-qcm.html` 7.7.2 (la version de secours)
+
+| Quoi | Où |
+|---|---|
+| la correction sur la tablette de l'élève | `evaluation-qcm.html` 7.7.2, `EleveCorrection` : la bonne réponse marquée d'après `question.bonnes` (l. 4365) |
+| le téléphone qui pilote | `evaluation-qcm.html` 7.7.2, `VuePhone` : `mode` déclaré au niveau du composant (l. 5437), pour la liste des élèves et la bande des questions |
+| le banc de la 7.7.2 | `AUDITS/QCM-REPARATION-7.7.2-12-10/banc.js` (sas) : `APP_FILE=… BANC=AUDITS/QCM-MODE-TEST-09-10/banc node banc.js sortie.txt` |
+| l'évaluation de 4e en ligne, et le prompt de création rempli pour son chapitre | `MANDATS/EVAL-4E-PARIS/` (sas) |

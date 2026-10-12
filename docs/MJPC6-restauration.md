@@ -1174,3 +1174,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L17-1q3 (07/10/2026, conscience n°12)
 - blob `1d155e368ec7` (commit `0263d2c6a6e3`) · 997 190 o · md5 `8ae0e16977dc1257fb983855476dc067` · v6.7.0-L15.1b-1q
 - **Motif** : la version d'ensemble (L17-1 + micros). Promu : 1 009 469 o, md5 `084deaf433405197a2041b22dc4e7f26` (bit à bit). **Données** : `correction_dictee/<id>/binomes/{paires, origine, seance, partis}` et `places/` (nouveaux) ; une version antérieure les ignorerait (elle relirait `binomes` comme une simple table de paires) — revenir en arrière pendant une séance lancée est à éviter.
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 7.7.2 (12/10/2026, conscience n°12)
+- blob `8a7e498db4ca` (commit `2287da6be81f`) · 550 571 o · md5 `ecae65624855a1a877708986a8e984e5` · v7.7.1
+- **Motif** : la version de secours du 13/10, réparée de ses deux pannes : la correction sur les tablettes (dette n°12 · 198) et le téléphone qui pilote (n°12 · 210) ; deux lignes et la pastille, rien d'autre. Promu : 550 800 o, md5 `3aaf749929863d69e30a36f7bc4ad355`. Banc par le geste : https://github.com/siteflow-io/mjpc-chantier/blob/main/AUDITS/QCM-REPARATION-7.7.2-12-10/README.md
+- **Restauration en cas de `BUG`** : le blob `8a7e498db4ca…` → PUT sur `contents/evaluation-qcm.html`, puis bit à bit contre le md5 ci-dessus (la 7.7.1 retrouve ses deux pannes ; aucune donnée ne change de forme).
