@@ -472,3 +472,14 @@
 | le téléphone qui pilote | `evaluation-qcm.html` 7.7.2, `VuePhone` : `mode` déclaré au niveau du composant (l. 5437), pour la liste des élèves et la bande des questions |
 | le banc de la 7.7.2 | `AUDITS/QCM-REPARATION-7.7.2-12-10/banc.js` (sas) : `APP_FILE=… BANC=AUDITS/QCM-MODE-TEST-09-10/banc node banc.js sortie.txt` |
 | l'évaluation de 4e en ligne, et le prompt de création rempli pour son chapitre | `MANDATS/EVAL-4E-PARIS/` (sas) |
+
+## AJOUTS DU 13/10/2026 — PROMOTION `evaluation-qcm.html` 8.0.0 (le code de la maquette v9)
+
+| Quoi | Où |
+|---|---|
+| le code source de la 8.0.0, et son assemblage | branche `code-qcm` du sas, `LIVRAISONS/CODE-QCM/src/` ; `python3 LIVRAISONS/CODE-QCM/build.py` donne `evaluation-qcm.staging.html` (md5 `9a5f581453edbf5f7778d4fffb2f8fdd` à `42e2d974`) |
+| les bancs de la 8.0.0 | `LIVRAISONS/CODE-QCM/banc/` (sas, `code-qcm`) : `bash banc/assembler.sh` (`COURT=1` pour l'assemblage court) |
+| les contrôles de la conscience | `AUDITS/CONTROLES-QCM-APP/controles-app.js` (sas, `main`), md5 dans `EMPREINTES.md5` |
+| les défauts et les reprises du 13/10 | `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md` et `VERDICT.md` (sas, `code-qcm`) |
+| revenir à la 7.7.2 | `docs/MJPC6-restauration.md`, point de retour du 13/10 (blob `07f11ffcc65e`) |
+

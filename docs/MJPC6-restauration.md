@@ -1179,3 +1179,9 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `8a7e498db4ca` (commit `2287da6be81f`) · 550 571 o · md5 `ecae65624855a1a877708986a8e984e5` · v7.7.1
 - **Motif** : la version de secours du 13/10, réparée de ses deux pannes : la correction sur les tablettes (dette n°12 · 198) et le téléphone qui pilote (n°12 · 210) ; deux lignes et la pastille, rien d'autre. Promu : 550 800 o, md5 `3aaf749929863d69e30a36f7bc4ad355`. Banc par le geste : https://github.com/siteflow-io/mjpc-chantier/blob/main/AUDITS/QCM-REPARATION-7.7.2-12-10/README.md
 - **Restauration en cas de `BUG`** : le blob `8a7e498db4ca…` → PUT sur `contents/evaluation-qcm.html`, puis bit à bit contre le md5 ci-dessus (la 7.7.1 retrouve ses deux pannes ; aucune donnée ne change de forme).
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.0 (13/10/2026, conscience n°12)
+- blob `07f11ffcc65e` (commit `40f1810`) · 550 800 o · md5 `3aaf749929863d69e30a36f7bc4ad355` · v7.7.2
+- **Motif** : la 8.0.0, le code de la maquette v9 (branche `code-qcm` du sas à `42e2d974`), sur l'ordre de Paul (13/10, 12:38 : « Je veux que ce soit fait, point. 13h30 dernier délai. »). Promu : 2 021 094 o, md5 `9a5f581453edbf5f7778d4fffb2f8fdd`. Pas de pastille `APP_VERSION` : elle se reconnaît à son md5. Contrôle : https://github.com/siteflow-io/mjpc-chantier/tree/main/AUDITS/CODE-QCM-AUDIT-1321-13-10
+- **Restauration en cas de `BUG`** : le blob `07f11ffcc65e…` → PUT sur `contents/evaluation-qcm.html`, puis bit à bit contre `3aaf749929863d69e30a36f7bc4ad355`. **Données** : la 8.0.0 écrit sous `qcm/sessions/<id>` des champs que la 7.7.2 ne lit pas (le déroulé, les lectures, `trouvee`, `bilanAffiche`, la co-évaluation) ; la 7.7.2 les ignore. Revenir en arrière pendant une séance lancée par la 8.0.0 est à éviter : la terminer d'abord.
+
