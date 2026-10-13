@@ -1,6 +1,17 @@
 # PROTOCOLE MAQUETTE
 *Écrit le 15/09/2026 par la conscience n°12, sur l'ordre de Paul : « le protocole que tu viens d'énoncer doit être noté noir sur blanc sur GitHub, à la racine du repo. Dès qu'une conscience dit travailler sur une maquette, elle a ainsi le protocole à suivre directement. » Né des maquettes v1 à v9b.6 du chantier « déroulé sur base saine » (transcript C12, tours 7 à 110) et des pièges du registre. Il complète le protocole conscience (préférences de Paul) ; il ne le remplace pas.*
 
+## 00 · LA RÈGLE QUI PRIME SUR TOUT LE RESTE (Paul, 13/10/2026, C12 tour 688)
+« En fait la base de tout c'est la maquette. Une maquette doit TOUJOURS reproduire EXACTEMENT l'existant REEL, JAMAIS JAMAIS être une démo bananière. Inscris ça en règle pour l'ensemble des futurs chantiers. »
+
+*Née de l'échec du 13/10 : la maquette complète du QCM, écrite pour elle-même sur un scénario figé (l'objet `SCN` : Julien et Michel, 3 questions, tout le monde répond), a dû être rebranchée sur la vraie séance en une nuit par quatre exécutants ; tous les défauts trouvés le matin étaient dans ce qu'elle ne jouait pas (un élève qui n'entre pas, une console rechargée, rouvrir pour un seul), et l'app n'a pas pu être mise en ligne.*
+
+1. **Une maquette est l'existant réel** : le fichier de production lui-même, avec son code, ses écrans, ses textes et ses gestes, servi sur un faux hub (une copie de la vraie base, anonymisée, jamais le vrai hub). La nouveauté à cadrer s'écrit **dans ce code**, à l'endroit où elle vivra.
+2. **Jamais une démo** : aucun scénario écrit d'avance à la place de la base (pas de tables de réponses figées, pas d'objet qui joue la séance), aucun écran atteint autrement que par les gestes réels sur la base, aucun écran redessiné « à côté » de l'app, aucun sommaire de scènes qui remplace l'état réel.
+3. Ce qui ne peut pas se faire pour de vrai devant Paul (une classe de 25 tablettes, une console rechargée, un réseau qui tombe) se **joue** sur le faux hub, avec autant de pages ouvertes qu'il faut, jamais en écran figé ; ce qui ne se joue pas du tout est déclaré, un par un.
+4. **Validée par Paul, la maquette est le code à promouvoir** : le mandat qui suit ne la rebranche pas et ne la réécrit pas ; il la finit, la prouve par ses bancs (qui jouent une vraie classe, pas une seule histoire) et la promeut.
+5. Les passages de ce protocole qui disent autre chose sont **remplacés** par cette règle : au §0, « il y branche ce qu'elle simule » ; au §2, « un fichier HTML autonome, sans réseau » ; au §6, « il porte le gabarit dans le site, branche ce que la maquette simule » ; dans la règle du 03/10, « une reproduction fidèle de l'écran voisin » et « si la maquette ne peut pas partir de l'app réelle, elle le déclare ». Une maquette qui ne part pas du fichier réel ne se livre pas.
+
 ## 0 · À quoi sert une maquette
 - Une maquette sert à **cadrer** (Paul voit avant de trancher) et à **valider geste par geste** ce que le site devra faire. Elle est **HTML, manipulable, activable geste par geste** — « sinon c'est juste des png ».
 - **Ce qui est codé ensuite est fidèle, geste par geste, à ce que Paul a joué dans la maquette validée** (Paul, 08/09 : « ce n'est pas un piochage au jugé, sinon aucun intérêt »). Les bancs du mandat rejouent les gestes de la maquette.
