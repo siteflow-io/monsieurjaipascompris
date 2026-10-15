@@ -483,3 +483,13 @@
 | les défauts et les reprises du 13/10 | `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md` et `VERDICT.md` (sas, `code-qcm`) |
 | revenir à la 7.7.2 | `docs/MJPC6-restauration.md`, point de retour du 13/10 (blob `07f11ffcc65e`) |
 
+## AJOUTS DU 15/10/2026 — PROMOTION `evaluation-qcm.html` 8.0.1 (la reprise 7)
+
+| Quoi | Où |
+|---|---|
+| le code source de la 8.0.1 | branche `code-qcm` du sas, `LIVRAISONS/CODE-QCM/src/` (md5 `054fcca31c7d1028eb0f7487ec4e9c4e` à `a89453c0`) |
+| la reprise 7 et ses contrôles | `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md` et `VERDICT.md` (sas, `code-qcm`) ; `AUDITS/CODE-QCM-AUDIT-1101-15-10/`, `-1141-`, et `AUDITS/CODE-QCM-AUDIT-1221-15-10` (sas, `main`) |
+| la maquette « 📄 Lire les copies » (v4, et v1 à v3) | `MANDATS/MAQUETTE-QCM-LIRE-COPIES-13-10/` (sas, `main`) |
+| les contrôles de la conscience, refaits pour l'entrée des élèves | `AUDITS/CONTROLES-QCM-APP/controles-app.js` (md5 `b7d6b6ef…`, `EMPREINTES.md5`) |
+| revenir à la 8.0.0 | `docs/MJPC6-restauration.md`, point de retour du 15/10 (blob `1d88a05aa268`) |
+
