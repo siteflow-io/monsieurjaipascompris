@@ -493,3 +493,11 @@
 | les contrôles de la conscience, refaits pour l'entrée des élèves | `AUDITS/CONTROLES-QCM-APP/controles-app.js` (md5 `b7d6b6ef…`, `EMPREINTES.md5`) |
 | revenir à la 8.0.0 | `docs/MJPC6-restauration.md`, point de retour du 15/10 (blob `1d88a05aa268`) |
 
+## AJOUTS DU 16/10/2026 — PROMOTION `evaluation-qcm.html` 8.0.2 (micro, le nom des classes)
+
+| Quoi | Où |
+|---|---|
+| le nom d'une classe à l'écran | `nomClasseV`, en tête de `LIVRAISONS/CODE-QCM/src/c3-base.js` (branche `code-qcm` du sas, `99a7de1d`) ; la règle vient de `nomClasseLisibleL15c` (`correction_dictee.html`) |
+| le contrôle du micro | `AUDITS/CODE-QCM-MICRO-NOM-CLASSES-16-10` (sas, `main`) : la sonde du nom des classes, avant et après |
+| revenir à la 8.0.1 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `552b5a07ba1f`) |
+

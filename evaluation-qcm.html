@@ -8619,7 +8619,7 @@ function LancementH(appel, opts){
   var cle = classe + "|" + (SCN.qcmPrecedent(null, classe) || {}).id;
   if(LANCEMENT_H.cle !== cle || !LANCEMENT_H.paires){ LANCEMENT_H.cle = cle; LANCEMENT_H.paires = classe ? SCN.binomesProposes(classe) : []; }
   var excl = classe ? exclusionsRespectees(classe) : [];
-  CLASSE = classe || CLASSE;
+  CLASSE = classe ? nomClasseV(classe) : CLASSE;   /* (16/10) le nom à l'écran, pas la clé */
   function lancer(){ if(!classe || !ev) return; LIVE.classeSlug = classe;
     var r = ACT.lancerSeance(classe, ev.id, papier ? {paires:LANCEMENT_H.paires, mode:"papier", fin:finLancementH()} : {paires:LANCEMENT_H.paires, fin:finLancementH()}); LANCEMENT_H.fin = null; if(r && r.then) r.then(function(){ if(typeof navRemettre === "function") navRemettre(); }); }
   var carte = h("div", {className:"card"},
@@ -8628,7 +8628,7 @@ function LancementH(appel, opts){
       h("div", null,
         h("div", {className:"field"}, h("label", null, "Classe", InfoI("Les classes de la console MJPC.")), h("select", {value:classe || "", title:"La classe de la séance.",
             onChange:function(e){ LANCEMENT.classe = e.target.value; LANCEMENT_H.paires = null; LIVE.changer(); }},
-          classesL.map(function(c){ return h("option", {key:c, value:c}, (((LIVE.d.classes || {})[c] || {}).libelle || c) + " (" + SCN.roster(c).length + " élèves)"); }))),
+          classesL.map(function(c){ return h("option", {key:c, value:c}, nomClasseV(c) + " (" + SCN.roster(c).length + " élèves)"); }))),
         h("div", {className:"field"}, h("label", null, "Évaluation", InfoI("Seules les évaluations prêtes à lancer sont proposées ; la démo est toujours en tête.")),
           h("select", {value:ev ? ev.id : "", title:"L'évaluation de la séance : la démo, ou une évaluation prête à lancer.", onChange:function(e){ LANCEMENT.evalId = e.target.value; LIVE.changer(); }},
             h("option", {value:"demo"}, "🎓 Démo — apprendre le déroulé (" + (SCN.evalParId("demo") || SCN.DEMO).questions.length + " questions)"),
@@ -10636,6 +10636,21 @@ function paramHash(n){ if(typeof NAV !== "undefined" && NAV.params && NAV.params
 function jjmm(d){ return String(d || "").slice(0, 5); }
 function hhmm(t){ return String(t || "").slice(0, 5); }
 
+/* (16/10, micro de la conscience n°12 ; Paul, 07:15 : « l'affichage du nom des classes (il y avait eu le même problème sur correction dictée, le nom des
+   classes s'affichait en brut) ») LE NOM D'UNE CLASSE, À L'ÉCRAN : la règle de correction_dictee (nomClasseLisibleL15c). Le nom du registre MJPC s'il a
+   des minuscules (« 3E Charles de Gaulle ») ; sinon ce nom, ou la clé, rendu lisible : « 3_dylan_bob » et « 3 DYLAN BOB » → « 3e Dylan Bob ». Une classe
+   interne (« _test_… ») reste telle quelle. Pour l'écran seulement : la clé reste l'identifiant de la classe partout ailleurs (la base, les gestes, les tris). */
+function nomClasseV(x){
+  var s = String(x == null ? "" : x).trim(); if(!s || s.charAt(0) === "_") return s;
+  var C = (typeof LIVE !== "undefined" && LIVE && LIVE.d && LIVE.d.classes) || (typeof v3Classes === "function" ? v3Classes() : null) || {};
+  function san(t){ return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); }
+  var k = C[s] ? s : Object.keys(C).filter(function(c){ return san(c) === san(s) || (C[c] && C[c].nom && san(C[c].nom) === san(s)); })[0];
+  var base = (k && C[k] && C[k].nom ? String(C[k].nom) : "") || k || s;
+  if(/[a-z]/.test(base) && base.indexOf("_") < 0) return base;   // écrit à la main, avec ses minuscules (« 3E Charles de Gaulle »), ou déjà lisible : tel quel
+  var src = base.replace(/_/g, " ").replace(/\s+/g, " ").trim().toLowerCase(); if(!src) return s;
+  src = src.replace(/(^|\s)([a-z\u00e0-\u00ff])/g, function(m, a, b){ return a + b.toUpperCase(); });
+  return src.replace(/^(\d)\s/, "$1e ").replace(/^(\d)E\s/, "$1e ");
+}
 /* ── (QCM-1) Les données de la séance réelle, rebranchées avant chaque rendu (brancherGlobales, appelée par src/socle.js) ── */
 // les tables du scénario ne sont plus : chaque écran lit SCN (src/live/base.js) ; ces globales restent pour les écrans qui les nomment encore
 RT = SCN.RT; ESTIM = SCN.ESTIM; ORD = SCN.ORD; TABL = SCN.TABL; FEUI = SCN.FEUI; LU = SCN.LU_JM; CO = SCN.CO; DIT_B = SCN.DIT_B;
@@ -10644,7 +10659,7 @@ function brancherGlobales(){
   var ev = SCN.ev(), cl = SCN.classe();
   // hors séance (le lancement) : la classe et l'évaluation choisies dans les menus, et les binômes proposés pour cette classe
   if(!SCN.sid() && typeof GESTES !== "undefined"){ var c = GESTES.choixLancement(); if(c.classe) cl = c.classe; if(c.evalId) ev = SCN.evalParId(c.evalId); }
-  if(ev) EV = ev; if(cl) CLASSE = cl;
+  if(ev) EV = ev; if(cl) CLASSE = nomClasseV(cl);   /* (16/10) le nom à l'écran, pas la clé */
   PAIRES = SCN.sid() ? SCN.paires() : (cl ? SCN.binomesProposes(cl).map(function(p){ return [p[0] ? SCN.nomDe(p[0]) : null, p[1] ? SCN.nomDe(p[1]) : null]; }) : []);
   PAIRES_AVANT = PAIRES;
   ORDRE_CORR = SCN.ordreCorr();
@@ -10821,7 +10836,7 @@ function chargerHeure(){
   if(!enDirect()) return;
   var k = MO(), m = MOM() || {}, se = (m.seance && SCN.seance(m.seance)) || null, ev = SCN.evalDu(k);
   if(ev && ev.questions) EV = ev;
-  if(se && se.classe) CLASSE = se.classe;
+  if(se && se.classe) CLASSE = nomClasseV(se.classe);   /* (16/10) le nom à l'écran, pas la clé */
   PAIRES = tablettesH();
   var eleves = [].concat.apply([], PAIRES).filter(Boolean);
   HEURE = {sid:m.seance, eleves:eleves};
@@ -12164,13 +12179,13 @@ function ScRendre(){
 function corbeilleDuMoment(){
   var j = paramHash("jete"), m = MOM(), l = SCN.CORBEILLE.slice();
   if(j){ var p = j.split(":"), quand = m.date + " " + hhmm(m.heure);
-    if(p[0] === "seance"){ var se = SCN.seance(p[1]); if(se) l.unshift({sorte:"Séance", titre:evalDeSeance(se).titre + " — " + se.classe + " — " + se.date + " " + se.heure, quand:quand}); }
+    if(p[0] === "seance"){ var se = SCN.seance(p[1]); if(se) l.unshift({sorte:"Séance", titre:evalDeSeance(se).titre + " — " + nomClasseV(se.classe) + " — " + se.date + " " + se.heure, quand:quand}); }
     else { var e = SCN.evalParId(p[1]); if(e) l.unshift({sorte:"Évaluation", titre:e.titre + " (" + e.questions.length + " questions)", quand:quand}); } }
   return l;
 }
 function Corbeille(){
   var se = SCN.seance(paramHash("seance") || "S08"), ev = evalDeSeance(se);
-  return Fenetre(ListeSeances(null), "🗑️ Mettre cette séance à la corbeille ?", ev.titre + " — " + se.classe + " — " + se.date + " " + se.heure + " · " + presentsTexte(se),
+  return Fenetre(ListeSeances(null), "🗑️ Mettre cette séance à la corbeille ?", ev.titre + " — " + nomClasseV(se.classe) + " — " + se.date + " " + se.heure + " · " + presentsTexte(se),
     h("p", null, "Elle part dans la corbeille du site, gardée un an, avec ses réponses, ses lectures et ses notes, et sort de cette liste. Rien n'est effacé : tu la restaures depuis ", h("strong", null, "💾 Sauvegarde → 🗑️ Corbeille"), "."),
     [h("button", {key:1, className:"btn btn-ghost", "data-va":"c-seances", title:"Ne met rien à la corbeille."}, "Annuler"), h("button", {key:2, className:"btn btn-rouge", "data-va":"c-sauvegarde&jete=seance:" + se.id, title:"Met la séance à la corbeille, restaurable un an."}, "🗑️ Mettre à la corbeille")], "c-seances");
 }
@@ -12523,7 +12538,7 @@ function qcmPrecedentV(c){ try { if(SCN.LIVE && typeof SCN.qcmPrecedent === "fun
 function SessionsPrecedentesV(){
   useV3();
   var c = classeDuLancement(), l = seancesV().filter(function(se){ return memeClasse(se, c) && se.terminee && !se.test; }).sort(function(a, b){ return b.ms - a.ms; });
-  var demo = l.filter(function(se){ return se.demo; })[0], lignes = l.filter(function(se){ return !se.demo && !se.rattrapage; }), prec = qcmPrecedentV(c), nomC = (l[0] && l[0].classe) || c || "";
+  var demo = l.filter(function(se){ return se.demo; })[0], lignes = l.filter(function(se){ return !se.demo && !se.rattrapage; }), prec = qcmPrecedentV(c), nomC = nomClasseV((l[0] && l[0].classe) || c || "");
   return h(F, null, h(CarteRepriseV),
     h("div", {className:"card"},
       h("h2", null, "📚 Séances précédentes — " + nomC, InfoI("Les séances passées de la classe : chacune ouvre ses résultats. Celle qui sert de « QCM précédent » aux binômes est marquée. La démo ne laisse qu'une ligne.")),
@@ -12604,7 +12619,7 @@ function CarteEvaluations(){
           e.cree && h("span", null, "Créée le " + e.cree)),
         pret ? h("div", {className:"eval-etat ok"}, "✅ Prête à lancer")
              : h("div", {className:"eval-etat manque"}, "⚠️ À compléter avant de la lancer : " + listeFr(manques)),
-        h("div", {className:"eval-passee"}, passees.length ? passees.map(function(x){ return "passée par " + x.classe + " le " + x.date; }).join(" · ") : "pas encore passée")),
+        h("div", {className:"eval-passee"}, passees.length ? passees.map(function(x){ return "passée par " + nomClasseV(x.classe) + " le " + x.date; }).join(" · ") : "pas encore passée")),
       h("div", {className:"eval-actions"},
         h("button", {className:"btn btn-sm " + (pret ? "btn-ghost" : "btn-primary"), "data-va":"x627-3-editeur" + obj, title:pret ? "Ouvre l'éditeur sur « " + e.titre + " » : énoncés, choix, temps, compétences, ce que chaque question vérifie. Une évaluation déjà passée garde ses notes." : "Ouvre l'éditeur sur « " + e.titre + " », pour compléter ce qui manque avant de pouvoir la lancer : " + listeFr(manques) + "."}, pret ? "✏️ Modifier" : "✏️ Compléter"),
         h("button", {className:"btn btn-sm btn-ghost", "data-va":"c-feuille" + obj, title:"Montre la feuille des énoncés seuls de « " + e.titre + " », avec les points, à imprimer pour la classe."}, "🖨️ Imprimer"),
@@ -12621,7 +12636,7 @@ function CarteEvaluations(){
       // sous chaque classe qui l'a passée ; les autres, sous « Pas encore passée »
       var cl = {}; l.forEach(function(e){ var p = e.copie ? [] : SCN.passees(e.id, k); (p.length ? p.map(function(x){ return x.classe; }) : ["Pas encore passée"]).forEach(function(c){ (cl[c] = cl[c] || []).push(e); }); });
       corps = Object.keys(cl).sort(function(a, b){ return a === "Pas encore passée" ? 1 : b === "Pas encore passée" ? -1 : a.localeCompare(b); }).map(function(c){
-        return h("div", {key:c, className:"classe-groupe", "data-classe":c}, h("div", {className:"classe-titre", "data-classe":c}, c === "Pas encore passée" ? c : "👥 " + c), cl[c].map(function(e){ return ligne(e, c); })); });
+        return h("div", {key:c, className:"classe-groupe", "data-classe":c}, h("div", {className:"classe-titre", "data-classe":c}, c === "Pas encore passée" ? c : "👥 " + nomClasseV(c)), cl[c].map(function(e){ return ligne(e, c); })); });
     } else corps = l.map(function(e){ return ligne(e); });
     return h("div", {key:n, className:"niv-groupe", "data-niveau-groupe":n},
       h("button", {className:"niv-titre", "data-niveau":n, "data-local":"1", "aria-expanded":!rep, title:rep ? "Déplier ce niveau" : "Replier ce niveau", onClick:function(){ var o = Object.assign({}, replies); o[n] = !rep; setReplies(o); }},
@@ -12864,7 +12879,7 @@ function CarteEvaluationsV(){
         pret ? h("div", {className:"eval-etat ok"}, "✅ Prête à lancer")
              : h("div", {className:"eval-etat manque"}, "⚠️ À compléter avant de la lancer : " + listeFr(manques)),
         sansChapV(e) && h("div", {className:"eval-etat manque", "data-sans-chapitre":"1", title:"Elle se lance sans chapitre ; ouvre l'éditeur pour la rattacher à son chapitre."}, "⚠️ Sans chapitre pour l'instant : pense à la rattacher plus tard."),
-        h("div", {className:"eval-passee"}, passees.length ? passees.map(function(x){ return "passée par " + x.classe + " le " + x.date; }).join(" · ") : "pas encore passée")),
+        h("div", {className:"eval-passee"}, passees.length ? passees.map(function(x){ return "passée par " + nomClasseV(x.classe) + " le " + x.date; }).join(" · ") : "pas encore passée")),
       h("div", {className:"eval-actions"},
         h("button", {className:"btn btn-sm " + (pret ? "btn-ghost" : "btn-primary"), "data-va":"x627-3-editeur" + obj, title:pret ? "Ouvre l'éditeur sur « " + e.titre + " » : énoncés, choix, temps, compétences, ce que chaque question vérifie. Une évaluation déjà passée garde ses notes." : "Ouvre l'éditeur sur « " + e.titre + " », pour compléter ce qui manque avant de pouvoir la lancer : " + listeFr(manques) + "."}, pret ? "✏️ Modifier" : "✏️ Compléter"),
         h("button", {className:"btn btn-sm btn-ghost", "data-va":"c-feuille" + obj, title:"Montre la feuille des énoncés seuls de « " + e.titre + " », avec les points, à imprimer pour la classe."}, "🖨️ Imprimer"),
@@ -12878,7 +12893,7 @@ function CarteEvaluationsV(){
     if(tri === "classe"){
       var cl = {}; l.forEach(function(e){ var p = passeesV(e.id); (p.length ? p.map(function(x){ return x.classe; }) : ["Pas encore passée"]).forEach(function(c){ cl[c] = cl[c] || []; if(cl[c].indexOf(e) < 0) cl[c].push(e); }); });
       corps = Object.keys(cl).sort(function(a, b){ return a === "Pas encore passée" ? 1 : b === "Pas encore passée" ? -1 : a.localeCompare(b); }).map(function(c){
-        return h("div", {key:c, className:"classe-groupe", "data-classe":c}, h("div", {className:"classe-titre", "data-classe":c}, c === "Pas encore passée" ? c : "👥 " + c), cl[c].map(function(e){ return ligne(e, c); })); });
+        return h("div", {key:c, className:"classe-groupe", "data-classe":c}, h("div", {className:"classe-titre", "data-classe":c}, c === "Pas encore passée" ? c : "👥 " + nomClasseV(c)), cl[c].map(function(e){ return ligne(e, c); })); });
     } else corps = l.map(function(e){ return ligne(e); });
     return h("div", {key:n, className:"niv-groupe", "data-niveau-groupe":n},
       h("button", {className:"niv-titre", "data-niveau":n, "data-local":"1", "aria-expanded":!rep, title:rep ? "Déplier ce niveau" : "Replier ce niveau", onClick:function(){ var o = Object.assign({}, replies); o[n] = !rep; setReplies(o); }},
@@ -13345,7 +13360,7 @@ function ScRetour(){
 function ScTerminer(){
   var sid = paramHash("seance") || SCN.sid(), se = SCN.seance(sid), ev = SCN.evalDeSeance(sid) || EV, m = SCN.moment(sid);
   var fond = typeof EcranConsoleHeure === "function" && SCN.sid() ? EcranConsoleHeure() : Pilot(etatPilot());
-  return Fenetre(fond, "🛑 Terminer la séance ?", ((se && se.classe) || CLASSE) + " — " + ev.titre + " · " + ouEnEst(m),
+  return Fenetre(fond, "🛑 Terminer la séance ?", nomClasseV((se && se.classe) || CLASSE) + " — " + ev.titre + " · " + ouEnEst(m),
     h(F, null, h("p", null, "La séance est close, et l'archive s'écrit avec les notes telles qu'elles sont, quelle que soit la phase."),
       h("p", null, "Les tablettes oublient leurs élèves et reviennent à l'entrée des élèves.")),
     [h("button", {key:1, className:"btn btn-ghost", "data-va":"c-q1-tour1"}, "Annuler"), h("button", {key:2, className:"btn btn-rouge", "data-va":"c-lancer", title:"Termine la séance, tout de suite : l'archive s'écrit, les tablettes oublient leurs élèves."}, "🛑 Terminer la séance")], "c-q1-tour1");
@@ -13374,7 +13389,7 @@ function SessionsEnCours(){
       h("p", {className:"sessions-menu-intro"}, "Voici toutes les séances qui sont actuellement actives quelque part. Tu peux aller au pilotage de chacune ou la terminer si elle n'a plus de raison d'être active."),
       h("div", {className:"sessions-menu-liste"}, l.map(function(x){ var m = SCN.moment(x.id), ev = SCN.evalDeSeance(x.id);
         return h("div", {key:x.id, className:"session-menu-row"},
-          h("div", {className:"session-menu-info"}, h("div", {className:"session-menu-nom"}, x.classe + (ev ? " — " + ev.titre : "")),
+          h("div", {className:"session-menu-info"}, h("div", {className:"session-menu-nom"}, nomClasseV(x.classe) + (ev ? " — " + ev.titre : "")),
             h("div", {className:"session-menu-meta"}, "Phase : ", h("strong", null, phaseTexte(m)), (m.qi != null ? " · Q " + (m.qi + 1) + (m.tour ? " · " + (m.tour === 1 ? "1er" : "2e") + " tour" : "") : "") + " · fin de l'heure " + SCN.finHeure(null, x.id))),
           h("div", {className:"session-menu-actions"},
             h("button", {className:"btn btn-sm btn-primary", "data-local":"1", title:"Ouvre le pilotage de cette séance, là où elle en est.", onClick:function(){ ACT.piloter(x.id); navRemettre(); }}, "🎯 Aller au pilotage"),
@@ -15385,7 +15400,7 @@ function v3Eleves(classeNom, classeSlug){
   var C = v3Classes(), cle = classeNom && C[classeNom] ? classeNom : classeSlug && C[classeSlug] ? classeSlug : Object.keys(C).filter(function(k){ return v3Slug(k) === v3Slug(classeSlug) || (C[k] && v3Slug(C[k].nom) === v3Slug(classeSlug)); })[0];
   var c = cle ? C[cle] : null, brut = c ? (Array.isArray(c) ? c : c.eleves || c.liste || []) : [];
   var l = v3Liste(brut).map(function(e){ var n = typeof e === "string" ? e : e && (e.nomComplet || (e.nom && e.prenom ? String(e.nom).toUpperCase() + " " + e.prenom : e.nom)); return n ? {nom:n, slug:v3Slug(n)} : null; }).filter(Boolean);
-  return {cle:cle || classeNom || "", libelle:(c && c.nom) || cle || classeNom || "", niveau:(c && c.niveau) || null, eleves:l, amen:(c && c.amenagements) || {}};
+  return {cle:cle || classeNom || "", libelle:nomClasseV(cle || (c && c.nom) || classeNom || ""), niveau:(c && c.niveau) || null, eleves:l, amen:(c && c.amenagements) || {}};
 }
 function prenomDeNom(n){ var p = String(n || "").split(" "); var i = 0; while(i < p.length - 1 && p[i] === p[i].toUpperCase() && /[A-ZÀ-Ý]/.test(p[i])) i++; return p.slice(i).join(" ") || n; }
 function sexeV(se, slug){ try { if(typeof SCN.sexe === "function" && SCN.LIVE){ var s = SCN.sexe(slug); if(s) return String(s).toUpperCase().charAt(0); } } catch(e){}
