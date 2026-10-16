@@ -511,3 +511,11 @@
 | le contrôle du micro | `AUDITS/CODE-QCM-MICRO-0803-16-10` (sas, `main`) |
 | revenir à la 8.0.2 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `94e7818b6572`) |
 
+## AJOUTS DU 16/10/2026 — PROMOTION `evaluation-qcm.html` 8.0.4 (le contrôle à froid des micros)
+
+| Quoi | Où |
+|---|---|
+| le contrôle à froid : l'ordre, les relectures des quatre, leurs trouvailles | `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md`, section « Contrôle à froid des micros de la conscience — 16/10/2026 » (sas, `code-qcm`) |
+| le verdict de QCM-4 et son banc des micros | `LIVRAISONS/CODE-QCM/VERDICT.md`, `banc/banc-micros-16-10.js` (et `-d`, la mesure du temps tapé pendant un tour), `sorties/2026-10-16_1448/` (sas, `code-qcm`) |
+| revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
+

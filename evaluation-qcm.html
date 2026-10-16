@@ -3991,7 +3991,10 @@ var SCN = (function(){
     var sur20 = total ? Math.min(20, n * 20 / total) : 0, comp = {};
     ev.questions.forEach(function(q, qi){ if(compte.indexOf(qi) < 0) return; (q.competences || []).forEach(function(c){ comp[c] = comp[c] || {n:0, max:0}; if(!q.bonus) comp[c].max++; comp[c].n += (pts[qi] || 0); }); });
     var corrigees = Object.keys((s.aLire) || {}).map(function(id){ return s.aLire[id]; }).filter(function(a){ return a && a.eleveSlug === x && a.corrige; }).map(function(a){ return Number(a.qi); });
-    return {p:x, st:st, pts:pts, n:n, total:total, complet:complet, sur20:sur20, maitrise:S.maitriseDe(Math.round(sur20 * 10) / 10), comp:comp, corrigees:corrigees, annulees:an, ecartees:ec, trouvee:tr};
+    /* (16/10, contrôle à froid du micro 8.0.3) les questions jamais posées (la séance terminée avant elles : ni lancées, ni une réponse ; sur papier, aucune),
+       la règle de sansLectureV (c4-seances.js, relecteur R6) : « n questions pas encore lues » (nonLuesV, c3-base.js) ne les compte pas. La note n'en change pas. */
+    var nonPosees = papier ? [] : ev.questions.map(function(q, i){ return i; }).filter(function(i){ return lanc[i] == null && !((s.reponses || {})[i]); });
+    return {p:x, st:st, pts:pts, n:n, total:total, complet:complet, sur20:sur20, maitrise:S.maitriseDe(Math.round(sur20 * 10) / 10), comp:comp, corrigees:corrigees, annulees:an, ecartees:ec, trouvee:tr, nonPosees:nonPosees};
   };
   S.resultat = function(id, x, k){ var s = S.sess(id); if(!s) return null; if(S.absents(id).indexOf(x) >= 0 || S.eleves(id).indexOf(x) < 0) return null; return S.note(x, k, id); };
   S.estimation = function(x, k, sid){ var e = S.estimationDe(x, sid); if(!e) return null; var nt = S.note(x, k, sid); if(!nt) return null; var iE = IDX.indexOf(e), iR = IDX.indexOf(nt.maitrise);
@@ -4342,7 +4345,11 @@ var ACT = (function(){
     var id = sid(); if(!id) return Promise.resolve(); var x = e(); qi = qi != null ? qi : x.qi; if(qi == null) return Promise.resolve();
     var t = SCN.tempsDe(qi), maj = {}; maj[cheminS(id, "temps/" + qi + "/" + sorte)] = Math.max(1, t[sorte] + s);
     var enCours = x.qi === qi && ((sorte === "reflexion" && x.ph === "reflexion") || (sorte === "reponse" && (x.ph === "reponse" || x.ph === "rouvert" || x.ph === "lecture")));
-    if(enCours) maj[cheminS(id, "deroule/duree")] = Math.max(1, (x.duree || 0) + s);
+    // (16/10, contrôle à froid du micro 8.0.3 ; l'infobulle de « +5 », « +10 », « +30 » : « Une lecture déjà figée à 0 se rouvre pour ces secondes. »)
+    // la lecture déjà à 0 repart de maintenant pour ces secondes, au lieu de les ajouter au temps déjà dépassé
+    var fige = enCours && x.ph === "lecture" && s > 0 && SCN.reste(x) != null && SCN.reste(x) <= 0;
+    if(fige){ maj[cheminS(id, "deroule/depuis")] = LIVE.maintenant(); maj[cheminS(id, "deroule/duree")] = s; }
+    else if(enCours) maj[cheminS(id, "deroule/duree")] = Math.max(1, (x.duree || 0) + s);
     return ecrireQCM(maj, "ajouterTemps");
   };
   A.fixerTemps = function(qi, sorte, v){ var id = sid(); if(!id) return Promise.resolve(); var t = SCN.tempsDe(qi); return A.ajouterTemps(sorte, v - t[sorte], qi); };
@@ -8708,11 +8715,11 @@ function LignesAttest2(e, v){
     "Maintenant, la correction. Donne ta feuille à " + v.prenom + " et prends la sienne : tu la gardes jusqu'à la fin de la correction.",
     // (reprise 7, point 14, Paul 15/10 09:19) la ligne du stylo vert, mot pour mot
     "Range ta trousse et ton stylo bleu ou noir : pour la correction, garde seulement ton stylo vert.",
-    "Pour chaque question, " + v.prenom + " clique ce que dit ta feuille. Toi, tu cliques ce que dit la feuille de " + v.prenom + ".",
-    "Puis tu corriges la feuille de " + v.prenom + " en vert, comme sa moitié de la tablette te le dit.",
+    "Pour chaque question, " + v.prenom + " clique ce que dit ta feuille. Toi, tu cliques ce que dit la feuille " + deNom(v.prenom) + ".",
+    "Puis tu corriges la feuille " + deNom(v.prenom) + " en vert, comme sa moitié de la tablette te le dit.",
     "Lis avec soin, et clique ce que tu lis.",
     "À la fin, " + v.prenom + " dira si tu as bien lu sa feuille.",
-    "Deux compétences sont évaluées : « " + AUTO[0] + " » et « " + AUTO[1] + " ». Tu gardes ton point d'autonomie si tu as dit la vérité pendant les questions, et si tu lis et corriges avec soin la feuille de " + v.prenom + ". Sinon, ces deux compétences ne sont pas atteintes."
+    "Deux compétences sont évaluées : « " + AUTO[0] + " » et « " + AUTO[1] + " ». Tu gardes ton point d'autonomie si tu as dit la vérité pendant les questions, et si tu lis et corriges avec soin la feuille " + deNom(v.prenom) + ". Sinon, ces deux compétences ne sont pas atteintes."
   ];
 }
 function Attest2(e, n){ var v = autreDe(e); return h(AttestCoches, {e:e, lignes:LignesAttest2(e, v), n0:n, titre:"Avant la correction, " + e.prenom, bouton:"Je commence la correction", va:"t-attest-corr-fait", titrePage:"📝 Correction"}); }
@@ -8762,7 +8769,7 @@ function EcrLecture(e, qi, dit, chrono){
     Compteur(pastilles3(e, pos), pos),
     h("div", {className:"eleve-q-zone"}, QHead(qi, true), h("div", {className:"eleve-q-enonce"}, q.enonce),
       // (16/10, Paul, 10:54) chacun a déjà la feuille de son voisin : « montre ta feuille » ne se dit plus
-      h("div", {className:"decl-titre"}, v.prenom + ", lis la feuille de " + e.prenom + " : qu'a-t-" + il(e) + " écrit ?"),
+      h("div", {className:"decl-titre"}, v.prenom + ", lis la feuille " + deNom(e.prenom) + " : qu'a-t-" + il(e) + " écrit ?"),
       h("div", {className:"decl-consigne"}, "Clique sur le ou les choix qui disent la même chose que sa feuille. Les mots ne sont pas forcément les mêmes."),
       h("div", {className:"lecture-l"}, h("div", {className:"soin"}, "Lis avec soin : c'est ton point d'autonomie."), chrono != null && ChronoSaisie(chrono, q.reponse)),
       // (QCM-2) en direct, le voisin clique, et chaque clic s'enregistre (ELV.lire)
@@ -8787,7 +8794,7 @@ function EcrCorrA3(e, dit){
       h("div", {className:"correction-compteur-pastilles"}, EV3.questions.map(function(x, i){ return h("span", {key:i, className:"correction-compteur-pastille vide"}, String(i+1)); }))),
     h("div", {className:"eleve-q-zone"}, QHead3(QI3, true), h("div", {className:"eleve-q-enonce"}, q.enonce),
       h("div", {className:"montre"}, "📄 " + e.prenom + ", montre ta feuille à " + v.prenom + "."),
-      h("div", {className:"decl-titre"}, v.prenom + ", lis la feuille de " + e.prenom + " : qu'a-t-" + il(e) + " écrit ?"),
+      h("div", {className:"decl-titre"}, v.prenom + ", lis la feuille " + deNom(e.prenom) + " : qu'a-t-" + il(e) + " écrit ?"),
       h("div", {className:"decl-consigne"}, "Clique sur le ou les choix qui disent la même chose que sa feuille. Les mots ne sont pas forcément les mêmes."),
       h("div", {className:"lecture-l"}, h("div", {className:"soin"}, "Lis avec soin : c'est ton point d'autonomie."), ChronoSaisie(9, 20)),
       h("div", {className:"eleve-choix long"},
@@ -10664,8 +10671,9 @@ function nomClasseV(x){
 /* (16/10, Paul, 10:54 : « autant les notes ne s'affichent pas côté élève, si je t'ai bien compris, autant moi dans mon pilotage je dois les voir ! » ;
    11:02 : « Voilà. ») LES QUESTIONS PAS ENCORE LUES d'une note : ni écartées, ni annulées, ni pas posées, et sans points. La console montre la note
    telle qu'elle est, et ce nombre tant qu'il n'est pas nul ; la maîtrise et les compétences attendent la note complète. */
-function nonLuesV(r, ecartees){ if(!r || !r.pts) return 0; var an = (r.annulees || []).map(Number), ec = (ecartees || r.ecartees || []).map(Number);
-  return r.pts.filter(function(p, i){ var s = r.st && r.st[i]; return p == null && s !== "e" && s !== "x" && an.indexOf(i) < 0 && ec.indexOf(i) < 0; }).length; }
+function nonLuesV(r, ecartees){ if(!r || !r.pts) return 0; var an = (r.annulees || []).map(Number), ec = (ecartees || r.ecartees || []).map(Number), np = (r.nonPosees || []).map(Number);
+  // (16/10, QCM-1 au contrôle à froid) « ni pas posées » : une question jamais posée (SCN.note, nonPosees) n'est pas « pas encore lue »
+  return r.pts.filter(function(p, i){ var s = r.st && r.st[i]; return p == null && s !== "e" && s !== "x" && an.indexOf(i) < 0 && ec.indexOf(i) < 0 && np.indexOf(i) < 0; }).length; }
 function NonLuesV(p){ var n = nonLuesV(p.r, p.ecartees); return n ? h("div", {className:"non-lues", style:{fontSize:".75rem", fontWeight:600, color:"#92400E", marginTop:".15rem"}, title:"Les questions de cette copie que la lecture n'a pas encore données : la note ne compte encore que celles qui sont lues. La maîtrise et les compétences attendent la note complète."}, n + " question" + (n > 1 ? "s" : "") + " pas encore lue" + (n > 1 ? "s" : "")) : null; }
 /* ── (QCM-1) Les données de la séance réelle, rebranchées avant chaque rendu (brancherGlobales, appelée par src/socle.js) ── */
 // les tables du scénario ne sont plus : chaque écran lit SCN (src/live/base.js) ; ces globales restent pour les écrans qui les nomment encore
@@ -14287,9 +14295,10 @@ function MoitieH(p, cote, autreP){
   if(ph === "b") return (cote === actif && !seul || seul && SCN.ditB(p, qi)) && SCN.reponse(p, qi) ? EcrDeclareH(e, qi, reste) : cote === actif || seul ? EcrAttente(e) : voile();
   if(ph === "rouvert") return m.pour === p ? EcrReponse(e, qi, ORD[qi][p], TABL[p][qi], reste) : m.pour && m.pour === vSlug && !seul ? Voile(v, false, e) : EcrAttente(e);
   if(ph === "estim") return EcrEstim(e, ESTIM[p] || null);
+  // (16/10, contrôle à froid) seul, l'élève lit et corrige sa propre feuille : les lignes de la variante papier, pas « Donne ta feuille à <lui-même> »
   if(ph === "att2"){
     var a2 = attestH(p, 2);
-    return a2.fini ? EcrAttenteCorr(e) : h(AttestCoches, {key:"a2" + p, e:e, lignes:papierH() ? LignesAttest2Papier() : LignesAttest2(e, e.voisin), n0:a2.lignes, attest:2, fini:a2.fini, titre:"Avant la correction, " + e.prenom, bouton:"Je commence la correction", titrePage:"📝 Correction", pret:function(){ return EcrAttenteCorr(e); }});
+    return a2.fini ? EcrAttenteCorr(e) : h(AttestCoches, {key:"a2" + p, e:e, lignes:papierH() || seul ? LignesAttest2Papier() : LignesAttest2(e, e.voisin), n0:a2.lignes, attest:2, fini:a2.fini, titre:"Avant la correction, " + e.prenom, bouton:"Je commence la correction", titrePage:"📝 Correction", pret:function(){ return EcrAttenteCorr(e); }});
   }
   // sur papier (t-papier-correction) : pas de lecture du voisin ; la réponse quand Paul révèle
   if(papierH() && (ph === "lecture" || ph === "revele")) return ph === "revele" ? EcrRevele(e, qi, {papier:true}) : EcrAttente(e);
@@ -15462,7 +15471,7 @@ function seanceV(sid){
   var presents = tous.filter(function(e){ return absents.indexOf(e.slug) < 0 && (!propres || vus[e.slug]); });
   var cop = S.copies || null, ms = msDeSeance(S);
   var rendue = cop ? !!(cop.rendues && !cop.masquees) : (!nouv && seanceTerminee(S));
-  return {id:sid, S:S, ev:ev, classe:cl.libelle || S.classe || S.classeSlug || "", classeCle:cl.cle, classeSlug:S.classeSlug || v3Slug(cl.cle), niveau:cl.niveau, amen:cl.amen,
+  return {id:sid, S:S, ev:ev, classe:cl.libelle || nomClasseV(S.classe || S.classeSlug || ""), classeCle:cl.cle, classeSlug:S.classeSlug || v3Slug(cl.cle), niveau:cl.niveau, amen:cl.amen,
     eleves:tous, presents:presents, absents:tous.filter(function(e){ return absents.indexOf(e.slug) >= 0; }), nouvelle:nouv,
     date:dateFr(ms), heure:heureFr(ms), ms:ms, terminee:seanceTerminee(S), pause:seanceEnPause(S), demo:seanceDemo(S), test:seanceTest(S),
     papier:S.mode === "papier" || !!S.surPapier || !!(S.lancee && S.lancee.mode === "papier"), rattrapage:!!S.rattrapage || !!(S.lancee && S.lancee.rattrapage),
@@ -15680,8 +15689,8 @@ function csvV(se, lignes, comps){
   var t = [["Élève"].concat(se.ev.questions.map(function(q, i){ return "Q" + (i + 1); }), ["Note", "Sur 20", "Maîtrise de la note"], comps, ["Autonomie", "À lire sur la feuille"])];
   var lire = aLireV(se);
   lignes.forEach(function(l){ var r = l.r, mt = maitriseV(r.sur20);
-    t.push([l.nom].concat(r.st.map(function(x){ return (MARQUE_RES[x] || ["", ""])[1]; }), [r.complet ? r.n + "/" + r.total : "—", r.complet ? fr1(r.sur20) : "—", mt.lib],
-      comps.map(function(c){ return niveauComp(r, c).lib; }), [autonomieV(se, l.p).retire ? "retiré" : "Très bonne maîtrise", lire.filter(function(x){ return x.p === l.p; }).map(function(x){ return "Q" + (x.q + 1) + " : " + texteALireV(x); }).join(" · ")])); });
+    t.push([l.nom].concat(r.st.map(function(x){ return (MARQUE_RES[x] || ["", ""])[1]; }), [fr1(r.n) + "/" + r.total + (nonLuesV(r, se.ecartees) ? " (" + nonLuesV(r, se.ecartees) + " pas encore lue" + (nonLuesV(r, se.ecartees) > 1 ? "s" : "") + ")" : ""), fr1(r.sur20), r.complet ? mt.lib : "—"],
+      comps.map(function(c){ return r.complet ? niveauComp(r, c).lib : "—"; }), [autonomieV(se, l.p).retire ? "retiré" : "Très bonne maîtrise", lire.filter(function(x){ return x.p === l.p; }).map(function(x){ return "Q" + (x.q + 1) + " : " + texteALireV(x); }).join(" · ")])); });
   var csv = "﻿" + t.map(function(r){ return r.map(function(c){ c = String(c == null ? "" : c); return /[;"\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(";"); }).join("\n");
   var nom = "resultats-" + String(se.classe).replace(/\s+/g, "-") + "-" + se.date.replace(/\//g, "-") + ".csv";
   try { var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"})); a.download = nom; document.body.appendChild(a); a.click(); a.remove(); } catch(e){}
@@ -15764,7 +15773,8 @@ function FicheV(p){
   if(!se.nouvelle) return FicheAncienneV(se, slug, r, mt, au, comps, e, sq, nom, il, pre);
   return h("div", {className:"student-report", "data-eleve":slug, "data-seance":se.id},
     h("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap"}},
-      h("h3", null, "👤 " + nom + " — " + fr1(r.n) + " / " + r.total + " · " + fr1(r.sur20) + " / 20 · " + mt.em + " " + mt.lib, InfoI("Pour chaque question : ce que " + (vPre || "son voisin") + " a lu sur sa feuille à la correction, ce qu'" + il + " a cliqué sur la tablette, ce qu'" + il + " a dit à la fin de son temps de réponse, « Oui, la même chose » ou « Non, autre chose ». « La feuille dit autre chose » corrige une question d'après sa feuille.")),
+      // (16/10, Paul) la note telle qu'elle est ; la maîtrise attend la note complète, et ce qui reste à lire se dit
+      h("h3", null, "👤 " + nom + " — " + fr1(r.n) + " / " + r.total + " · " + fr1(r.sur20) + " / 20 · " + (r0.complet ? mt.em + " " + mt.lib : "—"), h(NonLuesV, {r:r0, ecartees:se.ecartees}), InfoI("Pour chaque question : ce que " + (vPre || "son voisin") + " a lu sur sa feuille à la correction, ce qu'" + il + " a cliqué sur la tablette, ce qu'" + il + " a dit à la fin de son temps de réponse, « Oui, la même chose » ou « Non, autre chose ». « La feuille dit autre chose » corrige une question d'après sa feuille.")),
       h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Ferme la fiche et revient au tableau de la séance."}, "✕ Fermer")),
     h("div", {className:"fiche-head fiche-head-b"}, h("span", null, ""), h("span", null, "Question"), h("span", null, se.nouvelle ? "Sa feuille, lue par " + (vPre || pre) : "Sa feuille"), h("span", null, "Sa tablette"), h("span", null, "Ce qu'" + il + " a dit"), h("span", null, "Bonne réponse"), h("span", null, "Points"), h("span", null, "")),
     ev.questions.map(function(q, qi){
@@ -15793,7 +15803,7 @@ function FicheV(p){
           h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-que-dit-la-feuille" + e + "&q=" + (qi + 1), title:"Ouvre les choix de la question " + (qi + 1) + " : tu cliques ce que dit sa feuille, et sa note se recalcule (« Corrigé d'après ta feuille » dans son bilan)."}, "La feuille dit autre chose")));
     }),
     h("div", {className:"fiche-comps"}, h("div", {className:"tt"}, "🧩 Ses compétences"),
-      comps.map(function(c){ var n = niveauComp(r, c), x = r.comp[c] || {n:0, max:0};
+      comps.map(function(c){ var n = r0.complet ? niveauComp(r, c) : {cls:"", em:"", lib:"—"}, x = r.comp[c] || {n:0, max:0};
         return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, libOff(c)), h("span", {className:"d"}, compQuestionsEv(c, ev).map(function(i){ return "Q" + (i+1) + " " + marque(r.st[i]); }).join(" · ") + " → " + fr1(x.n) + "/" + x.max), h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib)); }),
       ["tr-personne-03", "tr-methodes-02"].map(function(c){
         return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, libOff(c)), h("span", {className:"d"}, "le point d'autonomie"),
