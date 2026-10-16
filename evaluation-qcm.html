@@ -8704,13 +8704,15 @@ function marque(s){ return s === "j" ? "✓" : s === "t" ? "⛔" : s === "a" ? "
 /* ════════ La seconde attestation (507, 510, 549, 640) : une coche par ligne, les deux compétences par leur libellé élève ════════ */
 function LignesAttest2(e, v){
   return [
-    "Maintenant, la correction. Montre ta feuille à " + v.prenom + ".",
+    // (16/10, Paul, 10:54 : « Le plus logique c'est qu'ils gardent la feuille du voisin pendant toute la correction. Ainsi pas d'allers retours, et ce qu'ils voient à l'écran leur parle évidemment de la copie du voisin et pas de la leur. » ; phrases validées à 11:02) chacun garde la feuille de son voisin toute la correction
+    "Maintenant, la correction. Donne ta feuille à " + v.prenom + " et prends la sienne : tu la gardes jusqu'à la fin de la correction.",
     // (reprise 7, point 14, Paul 15/10 09:19) la ligne du stylo vert, mot pour mot
     "Range ta trousse et ton stylo bleu ou noir : pour la correction, garde seulement ton stylo vert.",
     "Pour chaque question, " + v.prenom + " clique ce que dit ta feuille. Toi, tu cliques ce que dit la feuille de " + v.prenom + ".",
+    "Puis tu corriges la feuille de " + v.prenom + " en vert, comme sa moitié de la tablette te le dit.",
     "Lis avec soin, et clique ce que tu lis.",
     "À la fin, " + v.prenom + " dira si tu as bien lu sa feuille.",
-    "Deux compétences sont évaluées : « " + AUTO[0] + " » et « " + AUTO[1] + " ». Tu gardes ton point d'autonomie si tu as dit la vérité pendant les questions, et si tu lis avec soin la feuille de " + v.prenom + ". Sinon, ces deux compétences ne sont pas atteintes."
+    "Deux compétences sont évaluées : « " + AUTO[0] + " » et « " + AUTO[1] + " ». Tu gardes ton point d'autonomie si tu as dit la vérité pendant les questions, et si tu lis et corriges avec soin la feuille de " + v.prenom + ". Sinon, ces deux compétences ne sont pas atteintes."
   ];
 }
 function Attest2(e, n){ var v = autreDe(e); return h(AttestCoches, {e:e, lignes:LignesAttest2(e, v), n0:n, titre:"Avant la correction, " + e.prenom, bouton:"Je commence la correction", va:"t-attest-corr-fait", titrePage:"📝 Correction"}); }
@@ -8759,7 +8761,7 @@ function EcrLecture(e, qi, dit, chrono){
     h("div", {className:"correction-banner-peda"}, "💡 On corrige d'abord les questions les plus ratées par la classe."),
     Compteur(pastilles3(e, pos), pos),
     h("div", {className:"eleve-q-zone"}, QHead(qi, true), h("div", {className:"eleve-q-enonce"}, q.enonce),
-      h("div", {className:"montre"}, "📄 " + e.prenom + ", montre ta feuille à " + v.prenom + "."),
+      // (16/10, Paul, 10:54) chacun a déjà la feuille de son voisin : « montre ta feuille » ne se dit plus
       h("div", {className:"decl-titre"}, v.prenom + ", lis la feuille de " + e.prenom + " : qu'a-t-" + il(e) + " écrit ?"),
       h("div", {className:"decl-consigne"}, "Clique sur le ou les choix qui disent la même chose que sa feuille. Les mots ne sont pas forcément les mêmes."),
       h("div", {className:"lecture-l"}, h("div", {className:"soin"}, "Lis avec soin : c'est ton point d'autonomie."), chrono != null && ChronoSaisie(chrono, q.reponse)),
@@ -8820,25 +8822,31 @@ function EcrRevele(e, qi, opts){
   var lu = opts.papier ? (FEUI[e.cle] || [])[qi] : (LU[e.cle] || [])[qi], luArr = lu === "aucun" || !lu ? [] : lu;
   var st = opts.papier ? ((FEUI[e.cle] || [])[qi] === "aucun" ? "a" : calc(cleE(e)).st[qi] === "t" ? "f" : calc(cleE(e)).st[qi]) : calc(cleE(e)).st[qi];
   var pos = ORDRE_CORR.indexOf(qi), juste = st === "j", trouvee = st === "t";
+  /* (16/10, Paul, 10:54 et 11:02) sur tablette, avec un voisin : c'est le voisin qui a la feuille et qui est devant cette moitié ; elle lui parle
+     de la feuille de l'élève (« Élise avait juste ! », « Gatien, sur la feuille d'Élise, … »). Seul, ou sur papier : l'élève, de sa propre feuille. */
+  var vo = !opts.papier && opts.voisin && opts.voisin.prenom ? opts.voisin : null, pr = e.prenom;
   var pa = opts.papier ? EV.questions.map(function(x, i){ var p = ORDRE_CORR.indexOf(i); if(p > pos) return {cls:"vide", t:String(i+1)}; var s = i === qi ? st : (calc(cleE(e)).st[i] === "j" ? "j" : "f"); return s === "j" ? {cls:"juste", t:"✅"} : {cls:"faux", t:"❌"}; }) : pastilles3(e, pos + 1);
   return Page(badgeDe(e), "📝 Correction", h(F, null,
     h("div", {className:"correction-banner-peda"}, "💡 On corrige d'abord les questions les plus ratées par la classe."),
     Compteur(pa, pos + 1),
     h("div", {className:"eleve-q-zone"}, QHead(qi, true), h("div", {className:"eleve-q-enonce"}, q.enonce),
       trouvee ? h("div", {className:"trouvee"}, h("span", {className:"plus"}, "✓"),
-          h("span", null, "Trouvée au dernier moment", h("span", {className:"sous"}, "Ta feuille disait autre chose, mais tu as cliqué sur la bonne réponse : la question compte. Cela n'arrive qu'une fois par évaluation.")))
-        : h("div", {className:"correction-resultat " + (juste ? "juste" : "faux")}, juste ? "✅ Tu avais juste !" : "❌ Tu avais faux."),
+          h("span", null, "Trouvée au dernier moment", h("span", {className:"sous"}, vo ? "Sa feuille disait autre chose, mais " + pr + " a cliqué sur la bonne réponse : la question compte. Cela n'arrive qu'une fois par évaluation." : "Ta feuille disait autre chose, mais tu as cliqué sur la bonne réponse : la question compte. Cela n'arrive qu'une fois par évaluation.")))
+        : h("div", {className:"correction-resultat " + (juste ? "juste" : "faux")}, vo ? (juste ? "✅ " + pr + " avait juste !" : "❌ " + pr + " avait faux.") : (juste ? "✅ Tu avais juste !" : "❌ Tu avais faux.")),
       h("div", {className:"correction-choix"}, ordre.map(function(i){
         var bon = q.bonnes.indexOf(i) >= 0, moi = luArr.indexOf(i) >= 0;
         var cls = "correction-choix-item" + (bon ? " bonne" : (moi ? " eleve-faux" : ""));
         if(moi && bon) cls = "correction-choix-item eleve-juste";
         return h("div", {key:i, className:cls}, h("span", null, q.choix[i],
           (bon || moi) && h("span", {className:"tags-ens"}, bon && h("span", {className:"correction-tag tag-bonne"}, "Bonne réponse"),
-          moi && h("span", {className:"correction-tag tag-tienne"}, "Ta réponse"))));
+          moi && h("span", {className:"correction-tag tag-tienne"}, vo ? "Sa réponse" : "Ta réponse"))));
       })),
-      lu === "aucun" && h("div", {className:"tablette-ligne"}, "Ta réponse : ", "aucun de ces choix"),
-      trouvee && h("div", {className:"tablette-ligne"}, "Sur la tablette, tu avais cliqué sur : " + tab.map(function(i){ return q.choix[i]; }).join(", ")),
-      h("div", {className:"correction-consigne " + (juste ? "juste" : "faux")}, juste
+      lu === "aucun" && h("div", {className:"tablette-ligne"}, vo ? "Sa réponse : " : "Ta réponse : ", "aucun de ces choix"),
+      trouvee && h("div", {className:"tablette-ligne"}, (vo ? "Sur la tablette, " + pr + " avait cliqué sur : " : "Sur la tablette, tu avais cliqué sur : ") + tab.map(function(i){ return q.choix[i]; }).join(", ")),
+      h("div", {className:"correction-consigne " + (juste ? "juste" : "faux")}, vo ? (juste
+        ? h(F, null, vo.prenom + ", sur la feuille " + deNom(pr) + ", mets simplement un ", h("span", {className:"stylo-vert"}, "V vert"), " dans la marge à côté de sa réponse.")
+        : h(F, null, vo.prenom + ", sur la feuille " + deNom(pr) + ", barre sa réponse et écris la bonne réponse en entier en ", h("span", {className:"stylo-vert"}, "vert"), " à côté."))
+        : juste
         ? h(F, null, h("strong", null, "✅ Bravo ! "), "Sur ta feuille, mets simplement un ", h("span", {className:"stylo-vert"}, "V vert"), " dans la marge à côté de ta réponse.")
         : h(F, null, "Barre ta réponse et écris la bonne réponse en entier en ", h("span", {className:"stylo-vert"}, "vert"), " à côté.")),
       h("div", {className:"correction-explication"}, h("div", {className:"correction-explication-titre"}, "💡 Explication"), h("div", {className:"correction-explication-texte"}, q.explication)))));
@@ -9109,6 +9117,8 @@ function Coeval(p){
     setEcrit(n); if(p.onCo) p.onCo(k, qc, n);
   }
   var zone = [];
+  // (16/10, Paul, 10:54 et 11:02) chacun avait la feuille de son voisin pendant la correction : elle revient à son élève, qui la juge
+  zone.push(h("div", {key:"rends", className:"montre"}, "📄 " + v.prenom + ", rends sa feuille à " + e.prenom + "."));
   var cp = "CO:" + e.cle + ":";   // (QCM-2) en direct, chaque geste de la moitié par sa clé (clic)
   var btn = function(x){ return h("button", Object.assign({key:x, className:"co-btn " + x + (k === x ? " on" : ""), "aria-pressed":k === x}, clic(cp + x, function(){ choisir(x); })), EM_CO[x] + " ", txtCo(x, v)); };
   if(!k || k === "ok"){
@@ -10651,6 +10661,12 @@ function nomClasseV(x){
   src = src.replace(/(^|\s)([a-z\u00e0-\u00ff])/g, function(m, a, b){ return a + b.toUpperCase(); });
   return src.replace(/^(\d)\s/, "$1e ").replace(/^(\d)E\s/, "$1e ");
 }
+/* (16/10, Paul, 10:54 : « autant les notes ne s'affichent pas côté élève, si je t'ai bien compris, autant moi dans mon pilotage je dois les voir ! » ;
+   11:02 : « Voilà. ») LES QUESTIONS PAS ENCORE LUES d'une note : ni écartées, ni annulées, ni pas posées, et sans points. La console montre la note
+   telle qu'elle est, et ce nombre tant qu'il n'est pas nul ; la maîtrise et les compétences attendent la note complète. */
+function nonLuesV(r, ecartees){ if(!r || !r.pts) return 0; var an = (r.annulees || []).map(Number), ec = (ecartees || r.ecartees || []).map(Number);
+  return r.pts.filter(function(p, i){ var s = r.st && r.st[i]; return p == null && s !== "e" && s !== "x" && an.indexOf(i) < 0 && ec.indexOf(i) < 0; }).length; }
+function NonLuesV(p){ var n = nonLuesV(p.r, p.ecartees); return n ? h("div", {className:"non-lues", style:{fontSize:".75rem", fontWeight:600, color:"#92400E", marginTop:".15rem"}, title:"Les questions de cette copie que la lecture n'a pas encore données : la note ne compte encore que celles qui sont lues. La maîtrise et les compétences attendent la note complète."}, n + " question" + (n > 1 ? "s" : "") + " pas encore lue" + (n > 1 ? "s" : "")) : null; }
 /* ── (QCM-1) Les données de la séance réelle, rebranchées avant chaque rendu (brancherGlobales, appelée par src/socle.js) ── */
 // les tables du scénario ne sont plus : chaque écran lit SCN (src/live/base.js) ; ces globales restent pour les écrans qui les nomment encore
 RT = SCN.RT; ESTIM = SCN.ESTIM; ORD = SCN.ORD; TABL = SCN.TABL; FEUI = SCN.FEUI; LU = SCN.LU_JM; CO = SCN.CO; DIT_B = SCN.DIT_B;
@@ -11571,7 +11587,15 @@ function PilotCorrectionH(){
         !revele && h("div", {className:"pilot-chrono-card actif saisie-carte"},
           h("div", {className:"label actif"}, "📄 Temps pour lire la feuille du voisin"),
           h("div", {className:"v"}, (m.reste || 0) + "s"),
-          h("div", {className:"desc"}, "sur " + tempsDe(qi).reponse + " s")),
+          h("div", {className:"desc"}, "sur " + tempsDe(qi).reponse + " s"),
+          /* (16/10, Paul, 11:02 : « je n'ai pas la main sur le chrono de correction. Il le faut, je dois avoir les options rapides +5 +10 etc. »)
+             le même geste que les chronos des questions (TempsCarteH) : le temps se tape, ou « +5 », « +10 », « +30 », tout de suite au chrono en cours */
+          h("div", {className:"inline-edit t-edit"},
+            h(ChampTemps, {v:tempsDe(qi).reponse, qi:qi, champ:"reponse", actif:true, attrs:{"data-q":qi + 1, "data-temps":"lecture", "aria-label":"Temps pour lire la feuille du voisin",
+              title:"Tape le temps pour lire la feuille du voisin, en secondes : il part tout de suite au chrono de la lecture. C'est aussi le temps de réponse de cette question."}}),
+            h("span", {className:"t-s"}, "s"),
+            [5, 10, 30].map(function(n){ return h("button", {key:n, className:"btn btn-ghost btn-sm t-plus", "data-local":"1",
+              title:"Ajoute " + n + " s au temps pour lire la feuille du voisin, tout de suite au chrono en cours. Une lecture déjà figée à 0 se rouvre pour ces secondes.", onClick:function(){ tempsAjouter(qi, "reponse", n, true); }}, "+" + n); }))),
         h("div", {className:"row", style:{marginTop:".8rem"}},
           prec == null ? fermeEnv("C'est la première question de la correction : il n'y a pas de question précédente.", hBase("button", {className:"btn btn-ghost", disabled:true, title:PREC_771}, "← Question précédente"))
             : h("button", Object.assign({className:"btn btn-ghost", title:PREC_771}, geste(null, "questionPrecedente")), "← Question précédente"),
@@ -11763,7 +11787,7 @@ function BilanClasseH(){
         h("h3", null, "🧩 Par compétence", InfoI("Pour chaque compétence de l'évaluation : combien d'élèves dans chaque niveau, sur ses questions.")),
         COMPS.map(function(cp){
           var d = {vert:0, bleu:0, orange:0, rouge:0};
-          lignes.forEach(function(l){ d[niveauComp(l.r, cp).k]++; });
+          lignes.forEach(function(l){ if(l.r.complet) d[niveauComp(l.r, cp).k]++; });   // (16/10) la note complète seulement, comme la distribution
           return h("div", {key:cp, className:"par-comp"},
             h("div", {className:"pc-t", title:"La compétence " + cp + " du référentiel : " + (LIB_OFF[cp] || cp) + "."}, (LIB_OFF[cp] || cp) + " · " + compQuestions(cp).map(function(i){ return "Q" + (i+1); }).join(", ")),
             h("div", {className:"bilan-classe-distrib pc-d"}, MAITRISE.map(function(mt){ return h("div", {key:mt.k, className:"bilan-classe-distrib-cell fourchette-" + mt.k}, h("strong", null, d[mt.k]), h("span", null, mt.em + " " + mt.lib)); })));
@@ -11787,9 +11811,9 @@ function BilanClasseH(){
     h("div", {className:"bilan-classe-table-wrap"}, h("table", {className:"bilan-classe-table"},
       h("thead", null, h("tr", null, ["Élève", "Note", "Sur 20", "Maîtrise de la note"].map(function(t){ return h("th", {key:t}, t); }), COMPS.map(EnteteComp), h("th", null, "🤝 Autonomie"))),
       h("tbody", null, lignes.map(function(l){ var mt = maitriseDe(l.r.sur20), au = SCN.autonomie(l.p, k);
-        return h("tr", {key:l.p}, h("td", null, l.nom), h("td", null, l.r.n + " / " + l.r.total), h("td", null, fr1(l.r.sur20)),
-          h("td", null, h("span", {className:"maitrise-pill " + mt.cls}, mt.em + " " + mt.lib)),
-          COMPS.map(function(cp){ return h("td", {key:cp}, PillComp(l.r, cp)); }),
+        return h("tr", {key:l.p}, h("td", null, l.nom), h("td", null, l.r.n + " / " + l.r.total, h(NonLuesV, {r:l.r})), h("td", null, fr1(l.r.sur20)),
+          h("td", null, l.r.complet ? h("span", {className:"maitrise-pill " + mt.cls}, mt.em + " " + mt.lib) : "—"),   // (16/10) la maîtrise attend la note complète
+          COMPS.map(function(cp){ return h("td", {key:cp}, l.r.complet ? PillComp(l.r, cp) : "—"); }),
           h("td", null, au.retire ? h("span", {className:"maitrise-pill mt-rouge"}, "⛔ retiré " + (au.quand || "")) : h("span", {className:"maitrise-pill mt-vert"}, "🟢 Très bonne maîtrise"))); }))))), true);
 }
 
@@ -14270,7 +14294,7 @@ function MoitieH(p, cote, autreP){
   // sur papier (t-papier-correction) : pas de lecture du voisin ; la réponse quand Paul révèle
   if(papierH() && (ph === "lecture" || ph === "revele")) return ph === "revele" ? EcrRevele(e, qi, {papier:true}) : EcrAttente(e);
   if(ph === "lecture"){ var rl = m.reste == null ? null : reste; return v && !seul ? EcrLecture(e, qi, !!SCN.lecture(p, qi), rl) : EcrLectureSeulH(e, qi, rl); }
-  if(ph === "revele") return EcrRevele(e, qi);
+  if(ph === "revele") return EcrRevele(e, qi, {voisin:v && !seul ? v : null});   /* (16/10, Paul) la moitié parle au voisin, qui a la feuille */
   if(ph === "coeval") return v && !seul ? CoevalH(e) : Page(badgeDe(e), "📝 Correction", h("div", {className:"co-attente"}, "⏳ Attends ton bilan…"));
   if(ph === "bilan") return EcrBilan(e);
   return EcrAttente(e);
@@ -15697,10 +15721,11 @@ function ResultatsC(){
         return h("tr", {key:l.p, "data-eleve":l.p},
           h("td", {className:"eleve-cell"}, h("button", {className:"nom-fiche", "data-va":"c-fiche&eleve=" + encodeURIComponent(l.p) + sq, title:"Ouvre la fiche " + deNom(prenomDeNom(l.nom)) + " : sa feuille lue, sa tablette, ce qu'" + ilElle(se, l.p) + " a dit, son point d'autonomie, son bilan général."}, l.nom)),
           l.r.st.map(function(x, i){ var c = MARQUE_RES[x] || MARQUE_RES.f; return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
-          h("td", {className:"score-cell"}, l.r.complet ? fr1(l.r.n) + "/" + l.r.total : "—"),
-          h("td", {className:"score-cell"}, l.r.complet ? fr1(l.r.sur20) : "—"),
-          h("td", null, h("span", {className:"maitrise-pill " + mt.cls}, mt.em + " " + mt.lib)),
-          comps.map(function(c){ return h("td", {key:c, className:"comp-cell"}, PillCompEv(l.r, c, ev)); }),
+          // (16/10, Paul) la note telle qu'elle est, et ce qui reste à lire ; la maîtrise et les compétences attendent la note complète
+          h("td", {className:"score-cell"}, fr1(l.r.n) + "/" + l.r.total, h(NonLuesV, {r:l.r, ecartees:se.ecartees})),
+          h("td", {className:"score-cell"}, fr1(l.r.sur20)),
+          h("td", null, l.r.complet ? h("span", {className:"maitrise-pill " + mt.cls}, mt.em + " " + mt.lib) : "—"),
+          comps.map(function(c){ return h("td", {key:c, className:"comp-cell"}, l.r.complet ? PillCompEv(l.r, c, ev) : "—"); }),
           !comps.length && h("td", {key:"sans", className:"comp-cell"}, "—"),
           h("td", {className:"comp-cell"}, au.retire ? h("span", {className:"maitrise-pill mt-rouge"}, "⛔ retiré " + au.quand) : h("span", {className:"maitrise-pill mt-vert"}, maitriseV(20).em + " " + maitriseV(20).lib)),
           h("td", {className:"alire-cell" + (fl.length ? "" : " vide")}, fl.map(function(x, i){ return h("div", {key:i}, ligneALireH(x, "Q" + (x.q+1) + " : ", (x.corrigee ? " · Corrigé d'après sa feuille" : "") + (x.lue ? " · ✔ lue" : ""))); })));
@@ -16328,13 +16353,13 @@ function ptsL(x){ return x == null ? "—" : fr1(x) + (x >= 2 ? " points" : " po
 function NoteDirecteL(p){
   var se = p.se, slug = p.slug, r = resultatV(se, slug), d = departL(se).notes[slug], ev = se.ev;
   if(!r) return null;
-  var bouge = d && (d.n !== r.n);
+  var bouge = d && (d.n !== r.n), ecQ = (se.ecartees || []).map(Number);   // (16/10, dette 218) « écartée » : seulement une question écartée
   return h("div", {"data-note-directe":slug, title:"La note de la copie, recalculée à chaque réponse : les points de chaque question, et ce qui a changé depuis que tu as ouvert « Lire les copies ».", style:{minWidth:250, padding:".6rem .8rem", borderRadius:10, background:"#F8F6FF", border:"1px solid #DDD6FE", fontSize:".92rem"}},
     h("div", {style:{fontWeight:800, marginBottom:".3rem"}}, "🧮 La note, en direct"),
     ev.questions.map(function(q, i){ var a = d ? d.pts[i] : null, b = r.pts ? r.pts[i] : null, ch = a != null && b != null && a !== b;
       return h("div", {key:i, style:{fontWeight:ch ? 800 : 400, color:ch ? (b > a ? "#15803D" : "#B91C1C") : "inherit"}},
-        "Question " + (i + 1) + " : " + (b == null ? "écartée" : ch ? fr1(a) + " → " + ptsL(b) + " (" + (b > a ? "+" : "−") + fr1(Math.abs(b - a)) + ")" : ptsL(b))); }),
-    h("div", {style:{fontWeight:900, marginTop:".35rem", fontSize:"1.02rem"}}, "✍️ Note : " + (bouge ? fr1(d.n) + " / " + d.total + " → " : "") + fr1(r.n) + " / " + r.total + " · " + (bouge ? fr1(d.sur20) + " → " : "") + fr1(r.sur20) + " / 20"));
+        "Question " + (i + 1) + " : " + (b == null ? (ecQ.indexOf(i) >= 0 ? "écartée" : r.st && r.st[i] === "x" ? "pas posée" : "pas encore lue") : ch ? fr1(a) + " → " + ptsL(b) + " (" + (b > a ? "+" : "−") + fr1(Math.abs(b - a)) + ")" : ptsL(b))); }),
+    h("div", {style:{fontWeight:900, marginTop:".35rem", fontSize:"1.02rem"}}, "✍️ Note : " + (bouge ? fr1(d.n) + " / " + d.total + " → " : "") + fr1(r.n) + " / " + r.total + " · " + (bouge ? fr1(d.sur20) + " → " : "") + fr1(r.sur20) + " / 20"), h(NonLuesV, {r:r, ecartees:se.ecartees}));   // (16/10, Paul) ce qui reste à lire
 }
 // le point d'autonomie d'un élève, et le geste qui le change dans les deux sens
 function AutonomieL(p){

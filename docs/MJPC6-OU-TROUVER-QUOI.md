@@ -501,3 +501,13 @@
 | le contrôle du micro | `AUDITS/CODE-QCM-MICRO-NOM-CLASSES-16-10` (sas, `main`) : la sonde du nom des classes, avant et après |
 | revenir à la 8.0.1 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `552b5a07ba1f`) |
 
+## AJOUTS DU 16/10/2026 — PROMOTION `evaluation-qcm.html` 8.0.3 (micro : la feuille du voisin, les notes, le chrono de la lecture)
+
+| Quoi | Où |
+|---|---|
+| les phrases de la correction avec un voisin | `src/etape3.js` : `LignesAttest2`, `EcrLecture`, `EcrRevele` (l'option `voisin`, passée par `MoitieH`, `src/c3-tablettes.js`), `Coeval` (branche `code-qcm` du sas, `9faf1e63`) |
+| les questions pas encore lues d'une note | `nonLuesV`, `NonLuesV`, en tête de `src/c3-base.js` ; le tableau de la séance (`ResultatsV`, `src/c4-seances.js`), le bilan de classe (`BilanClasseH`, `src/c3-corr.js`), « Lire les copies » (`NoteDirecteL`, `src/lire-copies.js`) |
+| le chrono de la lecture, à la main | `PilotCorrectionH`, `src/c3-corr.js` (le geste de `TempsCarteH`, `ACT.ajouterTemps`) |
+| le contrôle du micro | `AUDITS/CODE-QCM-MICRO-0803-16-10` (sas, `main`) |
+| revenir à la 8.0.2 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `94e7818b6572`) |
+
