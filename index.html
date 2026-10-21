@@ -2964,7 +2964,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.74.0-③";
+var APP_VERSION="8.74.0-④";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -17332,9 +17332,16 @@ function sesChemins(c){ /* c = {niveau,chapitre,seance,classeSlug} */
   return { scene:b+'/scene.json', part:b+'/part.json', ecrans:b+'/ecrans.json', cours:FIREBASE_BASE+'/site/cours_actif.json' };
 }
 function sesGet(url,cb){ fetch(url).then(function(r){return r.json();}).then(function(v){cb(v,null);}).catch(function(e){cb(null,e);}); }
-function sesPut(url,val){ /* flux de session : silencieux (l'indicateur d'état parle), jamais le classeur d'échecs */
-  return fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)})
-    .then(function(r){ if(r.ok){SES.okDepuis=Date.now();} return r.ok; }).catch(function(){ return false; });
+function sesPut(url,val){ /* flux de session : silencieux (l'indicateur d'état parle), jamais le classeur d'échecs.
+     [MICRO 13·25 — 21/10, conscience n°13] L'ÉCRITURE PASSE PAR `mjpcEcrireRest`, COMME TOUT LE TRANSPORT.
+     Mesuré le 20/10 sur le faux hub, mode test posé : « Lancer la séance » écrivait `cours_actif` et `scene`
+     AU VRAI HUB — `fetch` direct, sans regarder `m8TestOn()` — pendant que la copie jouée, le paquet et l'EDT
+     restaient dans le magasin. Un essai en mode test écrasait le pointeur du vrai cours et la scène qu'un
+     tableau distant lisait. Même silence, même verdict (vrai/faux), toujours aucun classeur d'issues. */
+  return new Promise(function(res){
+    mjpcEcrireRest(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(val)},function(issue){
+      var ok=!!(issue&&issue.etat===MJPC_ISSUE.ACCEPTEE); if(ok){SES.okDepuis=Date.now();} res(ok); });
+  });
 }
 
 /* ═══ CÔTÉ PILOTE — le cours annoncé, la scène émise, les gestes des autres appliqués ═══ */
