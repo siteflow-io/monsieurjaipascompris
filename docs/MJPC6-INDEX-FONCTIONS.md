@@ -1113,7 +1113,7 @@
 | `sesPartRetirer` | ini,id | 159 o | (sans commentaire) affiche/emploie : « retrait de participation » | sesPartMotifs |
 | `sesPhoto` | — | 3002 o | la PHOTO DE SCÈNE : l'équivalent exact d'envoie() côté données — c'est ELLE qui décide ce que voit le tableau. Gel : | sesEmettre |
 | `sesPollPilote` | — | 1026 o | l'agrégat « qui » suit, si la modale est ouverte | sesBrancherPilote |
-| `sesPut` | url,val | 309 o | (sans commentaire) affiche/emploie : « indicateur d · échecs */   return fetch(url,{method: » — ECRIT au hub | _drCoursActifEffacerSi, sesBootTel, sesCoursEcrire, sesCoursFermer (+2) |
+| `sesPut` | url,val | 925 o | [8.74.0-④, micro 13·25] écrit par `mjpcEcrireRest` : le mode test retient l'écriture au magasin ; silencieux, verdict vrai/faux, aucun classeur — ECRIT au hub | _drCoursActifEffacerSi, sesBootTel, sesCoursEcrire, sesCoursFermer (+2) |
 | `sesQRFermer` | — | 86 o | (sans commentaire) touche #ses-qr | sesQROuvrir |
 | `sesQROuvrir` | — | 1092 o | (sans commentaire) affiche/emploie : « +encodeURIComponent(url);   var d=document.createElement( · ); d.className= » | sesBandeau |
 | `sesReprendre` | — | 1291 o | (sans commentaire) affiche/emploie : « est pas bloqu\u00e9 \u2014 on lui dit ce qui s · une ligne. */   sesGet(FIREBASE_BASE+ » — hub /site/cours_actif | sesReprisePeindre |

@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.74.0-④ (21/10/2026, conscience n°13)
+- blob `9ba3e3105610` (commit `0fee36c1d568`) · 1 838 175 o · md5 `ac792b28f40d3a0510e725fc4a6b6985` · v8.74.0-③
+- **Motif** : micro 13 · 25 — `sesPut` passe par `mjpcEcrireRest` : en mode test, `cours_actif` et `scene` restent dans le magasin au lieu de partir au vrai hub. Promu : 1 838 791 o, md5 `c384d8504c097784e98ffc04d7327887` (bit à bit contre la branche `micro/13-25`, commit `6867874f`).
+- **Restauration en cas de `BUG`** : le blob `9ba3e3105610` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (une seule fonction diffère, aucune donnée du hub n'est touchée par ce micro).
+
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.6.0 (01/10/2026, conscience n°12)
 - blob `197aff17d735` (commit b815d1dc, poussé par Paul le 30/09) · 724 656 o · md5 `75f48e2dbf0b86698c27ca27aacf8e35` · v6.5.0
 - **Motif** : ELEVE-1 livraison ④ — la dictée lit l'aménagement de la fiche, chaque copie garde sa base. Promu : 735 974 o, md5 `f4cdfbef85cf557a4a91e5900ef6c5b4` (bit à bit).
