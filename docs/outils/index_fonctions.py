@@ -110,6 +110,9 @@ def famille(nom, origine):
         return 'MOTEUR — le déroulé (fichier autonome encodé, JAMAIS modifié)'
     p = [
         ('secu',   'SÉCURITÉ — coffre, clé, empreintes (M-SÉCU) — corps à ne jamais modifier'),
+        ('dr_',    'DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)'),
+        ('p8',     'DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas'),
+        ('edt',    'EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)'),
         ('_dr',    'PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace'),
         ('atDr',   'PONT DÉROULÉ — pilotage, lancement, clôture, reprise'),
         ('atVues', 'ÉDITEUR — les quatre onglets (Structure, Déroulé, Relecture, Papier)'),
@@ -130,12 +133,14 @@ def famille(nom, origine):
     return 'DIVERS — socle du site'
 
 def main():
-    site = open('prod.html', encoding='utf-8').read()
-    m = re.search(r'var AT_DR_B64="([^"]+)"', site)
-    moteur = base64.b64decode(m.group(1)).decode('utf-8')
-
+    site = open(sys.argv[1] if len(sys.argv) > 1 else 'prod.html', encoding='utf-8').read()
     F = analyse(site, 'site')
-    F.update(analyse(moteur, 'moteur'))
+    # [8.75.0-①, 23/10] l'ancien moteur encodé (AT_DR_B64) est tombé avec le pont (contrat §12.15) :
+    # le déroulé vit dans le fichier (dr-*.js inlinés : dr_*, p8*, aller, devoiler…). S'il reste un AT_DR_B64, on l'indexe encore.
+    m = re.search(r'var AT_DR_B64="([^"]+)"', site)
+    if m:
+        moteur = base64.b64decode(m.group(1)).decode('utf-8')
+        F.update(analyse(moteur, 'moteur'))
 
     # regroupement par famille
     par_fam = {}

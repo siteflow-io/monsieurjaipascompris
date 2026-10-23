@@ -519,3 +519,19 @@
 | le verdict de QCM-4 et son banc des micros | `LIVRAISONS/CODE-QCM/VERDICT.md`, `banc/banc-micros-16-10.js` (et `-d`, la mesure du temps tapé pendant un tour), `sorties/2026-10-16_1448/` (sas, `code-qcm`) |
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
+
+## AJOUTS DU 23/10/2026 — PROMOTION `index.html` 8.75.0-① : LE DÉROULÉ INTÉGRÉ (E1-E4)
+
+| Quoi | Où |
+|---|---|
+| le déroulé dans le site : socle, Atelier, Pilotage, tableau, récit, recyclage | `index.html`, les huit modules inlinés par `AUDITS/INTEGRATION-DEROULE/assembler.mjs` depuis `LIVRAISONS/INTEGRATION/dr/` (sas, branche `integration`) : `dr-socle.js` (`dr_*`, `aller`, `devoiler`, `ordreHeure`), `dr-atelier.js` (`p8*`, notes présentateur, « À régler »), `dr-classe.js` (`dr_lancer`, `lancerHeure`, `ouvrirFin`, la clôture), `dr-tableau.js` (`?vue=tableau`), `dr-recit.js` (le récit, RC1-RC9), `dr-recyclage.js`, `dr-gabarit.js`, `dr.css` |
+| lancer l'heure depuis l'emploi du temps | la case → « Préparer » / « Lancer » → `edtLancer` → `dr_lancer` (contrat §12.7, E2) ; le Pilotage s'ouvre (12 · 05 réglée) |
+| la fin de l'heure, le cahier de textes, le travail à faire | `ouvrirFin` (`dr-classe.js`), sept étapes ; `deroule.travail["N"]` proposé au T-5 |
+| la Relecture (le récit, ce qui s'est passé, le papier, le chapitre) | `dr-recit.js` ; elle lit la copie de classe `C/ecrans`, jamais la trame (13 · 8) |
+| l'import d'un chapitre au contrat du prompt | `chValiderChapitre`, `atP2ValiderDeroule`, `chCalculerEcritures` (`index.html`, E1) : les refus mot pour mot du prompt, `fil` « langue », le bilan sans réponse attendue, la diapo du bilan à trois blocs et ses `notes` |
+| le prompt d'injection (la pièce que Paul donne à une conversation pour créer un chapitre) | `MANDATS/PROMPT-INJECTION/PROMPT-INJECTION.md` (sas, v0.9) ; la preuve sur pièce : `LIVRAISONS/INTEGRATION/E4/prompt/` (`chapitre-3e-au-contrat.json`, `au-contrat.mjs`, captures) |
+| le contrat de l'intégration, ses décisions §12.1-12.24 | `MANDATS/INTEGRATION-DEROULE/CONTRAT.md` (sas) |
+| le banc unique et les contrôles | `AUDITS/INTEGRATION-DEROULE/banc.sh` (assemblage, collisions, parcours P0-P12, mode test, K1-K13 par `AUDITS/CONTROLES-DEROULE/controles.mjs`) ; les épreuves `epreuves/banc-sur-integration-<commit>.txt` |
+| l'audit final de la conscience | `AUDITS/INTEGRATION-DEROULE/AUDIT-FINAL.md` (sas) ; transcript `TRANSCRIPTS/C13/TRANSCRIPT-C13.md` tours 97-138 |
+| ce qui n'existe pas encore | les feuilles du chapitre (`dr_feuilles()` vide : une fiche se lie par clic droit) ; le contrat de pilotage des pages HTML (`mjpc-page` / `mjpc-etape`, L5) ; la réactivation construite (§12.22, après ce promeus, E2/E4) ; l'animation en accéléré du mode test (144) |
+| revenir à la 8.74.0-④ | `docs/MJPC6-restauration.md`, point de retour du 23/10 (blob `551ee1cc2aec`) |
