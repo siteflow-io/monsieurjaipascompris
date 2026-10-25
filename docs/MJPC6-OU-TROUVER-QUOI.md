@@ -520,6 +520,19 @@
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
 
+## AJOUTS DU 25/10/2026 — PROMOTION `index.html` 8.75.0-② : LA RÉACTIVATION CONSTRUITE (§12.22, §12.25, §12.26 — E1-E4)
+
+| Quoi | Où |
+|---|---|
+| la diapo « Où en sommes-nous ? » : son contenu (quatre blocs « La dernière fois », « À reprendre », « Les notions », « Le travail » — constante `DR_REACT_TITRES`), construite depuis l'heure jouée d'avant | `dr-recit.js` (inliné dans `index.html`) : `dr_reactivationConstruire(h)`, `dr_reactivationPreparer(h, cb, { cle, paquet })` (le paquet local de la clôture prime sur le hub), `dr_reactivationModifiee(e)` / `dr_reactivationRetour(e)` (« ta version » / la version calculée `construite.calculee`) — E4 ; gardes RC10-RC21 (`LIVRAISONS/INTEGRATION/E4/bancs/`) |
+| quand elle naît et où elle vit | à la **clôture** de l'heure h, pour l'heure h+1 : `dr_cloreFin` → `dr_reactApresCloture` → `dr_reactPoser` + `dr_reactEcrireCopie` (`dr-classe.js`, E2) ; **dans la copie de classe seulement** : `C/ecrans` (`deroule_joue/<classe>`), eid `react-h<n>-s<clé>`, `role: 'reactivation'` ; jamais dans le déroulé du chapitre (`dr_normaliserTrame`, `dr_derouleDe`, le versement la sautent — `dr-socle.js` / `dr-atelier.js`, E1, garde A36) ; clôture manquée → construite à l'ouverture (`dr_reactOuvertureAssurer`) |
+| la voir avant de lancer, l'écrire, « ta version », ↩ | l'écran « Où en est la classe » (case de l'EDT de l'heure h+1, sans lancer) : la puce « 1. Où en sommes-nous ? » (`#o-react-voir`) → `dr_reactVoir` / `dr_reactApercuRendre` (rendu par `rendre`, jamais `pousser` : rien au tableau, rien au journal) ; l'écriture = le geste du pilote armé avant le lancement (`p8ReactAvantLancement`, `brancherAtelier`, `ecrireDansDiapo` — `dr-atelier.js`, E1) → `dr_reactModifiee` réécrit `C/ecrans` ; l'entête du pilote `#react-entete` : « ↶ Où en est la classe » (`dr_reactRetour`), « ta version » + ↩ `#react-calculee` (`dr_reactRetourCalculee`) — jamais au tableau |
+| « Ouvrir par la réactivation » oui / non, le réglage par séance | le bouton de l'écran d'ouverture (`dr_reactBoutonHtml`, `dr_reactBrancher`, E2) ; le réglage `B/deroule/reactivation` = `'oui'` / `'non'` (`dr_reglageReactivation`, porté par `dr_derouleDe`, écrit par `dr_ecrire`), défaut oui ; au lancement `dr_reactInserer` lit la copie (« non » : retirée de la copie) ; le récit : « On a ouvert l'heure par la réactivation : on a rappelé … » (E4) |
+| les mesures par le geste | `LIVRAISONS/INTEGRATION/E3/bancs/banc-1226.mjs` (U1-U6 : clôture → copie ; voir sans lancer ; modifier → « ta version » ; ↩ ; l'Atelier sans elle ; l'élève rien avant), `mesure-react-piece.mjs` (hub brut), `mesure-react-charge.mjs` (hub chargé, 13 · 34) ; chez la conscience `TRANSCRIPTS/C13/pieces/T148-react-charge.mjs`, `T157-banc-1226-probe.mjs` |
+| le contrat | `MANDATS/INTEGRATION-DEROULE/CONTRAT.md` §12.22 (le cadrage), §12.25 (les tranchages), §12.26 (vue et modifiée avant le lancement — les mots de Paul du 25/10) |
+| les dettes promues avec | 13 · 32 (`_drProchainCreneau` retirée), 13 · 33 (rien de coupé), 13 · 34 (titre de bloc avec sa première ligne), 13 · 35 (pas de doublon « Apprendre » / « Les notions ») ; reste ouverte : 13 · 12 (E3, décidée par Paul le 25/10) |
+| revenir à la 8.75.0-① | `docs/MJPC6-restauration.md`, point de retour du 25/10 (blob `705c07c06508`) |
+
 ## AJOUTS DU 23/10/2026 — PROMOTION `index.html` 8.75.0-① : LE DÉROULÉ INTÉGRÉ (E1-E4)
 
 | Quoi | Où |
