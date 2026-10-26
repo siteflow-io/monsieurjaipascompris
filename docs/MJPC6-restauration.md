@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-③ (26/10/2026, conscience n°13)
+- blob `ffbdab35fa43` (commit `828978c8ea03`) · 2 347 244 o · md5 `7d121b514decf667d162c65594afd07e` · v8.75.0-②
+- **Motif** : dette 13 · 36 (E2, sas `integration` tête `2da707c9`) : l'aperçu de la réactivation avant le lancement pagine comme le pilote (page i / n, ‹ ›), sans la zone « clique ici et écris ». Promu : 2 348 450 o, md5 `83adc8decc16ee4c51b8a68e3ceaa285` (commit `e7c70d279362`, blob `f0cbc31fe81f` ; = l'assemblé du sas md5 `a8d3c59015ccee73b7d354dbfa9f0e3c` + la ligne `APP_VERSION`), bit à bit contre le site en ligne.
+- **Restauration en cas de `BUG`** : le blob `ffbdab35fa43` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la pagination de l'aperçu (la ② montre la diapo entière, débordante, sous la zone « ✎ ») ; aucune donnée du hub n'est touchée par cette promotion (une fonction d'affichage, `dr-classe.js`).
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-② (25/10/2026, conscience n°13)
 - blob `705c07c06508` (commit `d597b5fcd146`) · 2 299 802 o · md5 `6cf9c1f2a173e333c45ffb4b7d9a9863` · v8.75.0-①
 - **Motif** : la réactivation construite (§12.22, §12.25, §12.26 ; E1-E4, sas `integration` tête `548da82d`) : la diapo « Où en sommes-nous ? » construite à la clôture de l'heure d'avant, dans la copie de classe seulement, vue et modifiée par Paul avant le lancement, « ta version » + ↩ ; 13 · 32-35. Promu : 2 347 244 o, md5 `7d121b514decf667d162c65594afd07e` (commit `828978c8ea03`, blob `ffbdab35fa43` ; = l'assemblé du sas md5 `13b780c6c7ab3ab114c8d99979cb8118` + la ligne `APP_VERSION`), bit à bit contre le site en ligne.

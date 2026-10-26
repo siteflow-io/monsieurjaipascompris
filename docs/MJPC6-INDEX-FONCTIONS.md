@@ -1341,7 +1341,7 @@
 | `dr_rappelOuvrir` | bi | 2080 o | (sans commentaire) affiche/emploie : « btn${b.rappel.motif === m.c ?  ·  data-motif= » — touche #dr-rap-libre, #dr-rap-ok, #dr-rap-x | dr_rappelDetecter |
 | `dr_rappelSuivre` | — | 285 o | (sans commentaire ni indice) | dr_rappelDetecter |
 | `dr_reactAnnoncee` | h | 67 o | (sans commentaire ni indice) | dr_ouvertureLegere, dr_ouvertureSur, dr_reactHorsCopie |
-| `dr_reactApercuRendre` | — | 1169 o | (sans commentaire) affiche/emploie : « Atelier ; l · avant est close : pas l » | dr_reactModifiee, dr_reactRetourCalculee, dr_reactVoir |
+| `dr_reactApercuRendre` | — | 2058 o | (sans commentaire) affiche/emploie : « un rendu à l · heure d » | dr_reactModifiee, dr_reactRetourCalculee, dr_reactVoir |
 | `dr_reactApresCloture` | C, h, local, cb | 976 o | (1) à la clôture de l'heure h : la diapo de l'heure h+1, depuis le paquet qui vient d'être clos, dans la copie | dr_cloreFin |
 | `dr_reactAvantLancement` | — | 61 o | (3) voir sans lancer : l'aperçu dans le pilote | p8ReactAvantLancement |
 | `dr_reactBoutonHtml` | h | 1920 o | (sans commentaire) affiche/emploie : « rien à réactiver ·  (depuis  » | dr_ouvertureLegere, ouvrirOuverture |
@@ -1367,11 +1367,11 @@
 | `dr_reactPreparerAsync` | h, cb | 481 o | (sans commentaire) affiche/emploie : « rien de joué avant : rien à réactiver » | dr_lancerNeuf, dr_reactOuvertureAssurer |
 | `dr_reactPuce` | h, n, act | 384 o | la puce « n. Où en sommes-nous ? » de l'écran d'ouverture : cliquable, elle ouvre la diapo dans le pilote sans lancer (§12.26-3) | dr_ouvertureLegere, dr_reactPuceHtml, ouvrirOuverture |
 | `dr_reactPuceHtml` | h | 74 o | (sans commentaire ni indice) | dr_ouvertureLegere, ouvrirOuverture |
-| `dr_reactRetour` | — | 789 o | retour à l'écran d'ouverture | dr_reactApercuRendre, dr_reactEnteteRendre |
+| `dr_reactRetour` | — | 874 o | retour à l'écran d'ouverture | dr_reactApercuRendre, dr_reactEnteteRendre |
 | `dr_reactRetourCalculee` | — | 625 o | (5) ↩ : la version calculée revient (sans recalcul : `construite.calculee`), la copie est réécrite, la mention tombe | dr_reactEnteteRendre |
 | `dr_reactSignature` | blocs | 157 o | les blocs `texte` comparés sans les `id` (E4, RC20 : `dr_reactivationModifiee` fait de même) | dr_reactEstModifiee |
 | `dr_reactValide` | e | 86 o | (sans commentaire ni indice) | dr_reactApresCloture, dr_reactInserer, dr_reactPoser, dr_reactPreparer (+2) |
-| `dr_reactVoir` | h, retour | 667 o | pour E1 : le geste d'écriture s'arme là-dessus (à l'écran d'ouverture, S est l'état relu de l'heure d'avant : S.lancee et S.close sont vrais) | dr_reactBrancher |
+| `dr_reactVoir` | h, retour | 850 o | pour E1 : le geste d'écriture s'arme là-dessus (à l'écran d'ouverture, S est l'état relu de l'heure d'avant : S.lancee et S.close sont vrais) | dr_reactBrancher |
 | `dr_reactivationCheminAvant` | — | 222 o | le chemin de la classe dans la séance d'avant (l'heure 1 d'une séance réactive la fin de la séance précédente, §12.22 b) | dr_reactivationPreparer, dr_reactivationSource |
 | `dr_reactivationConstruire` | n | 3494 o | l'écran « Où en sommes-nous ? » de l'heure n, ou null (DR_REACT_RAISON dit pourquoi) | dr_reactPreparer, dr_reactivationPreparer |
 | `dr_reactivationCopieBlocs` | blocs | 136 o | (§12.26-5) la version calculée, gardée dans l'écran : `construite.calculee` = les blocs à la construction (copie profonde, sans les `id` que dr_preparer pose). `dr_reactivationModifiee(e)` : | dr_reactivationConstruire, dr_reactivationRetour |

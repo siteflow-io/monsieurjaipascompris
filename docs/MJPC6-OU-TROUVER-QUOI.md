@@ -532,6 +532,7 @@
 | le contrat | `MANDATS/INTEGRATION-DEROULE/CONTRAT.md` §12.22 (le cadrage), §12.25 (les tranchages), §12.26 (vue et modifiée avant le lancement — les mots de Paul du 25/10) |
 | les dettes promues avec | 13 · 32 (`_drProchainCreneau` retirée), 13 · 33 (rien de coupé), 13 · 34 (titre de bloc avec sa première ligne), 13 · 35 (pas de doublon « Apprendre » / « Les notions ») ; reste ouverte : 13 · 12 (E3, décidée par Paul le 25/10) |
 | revenir à la 8.75.0-① | `docs/MJPC6-restauration.md`, point de retour du 25/10 (blob `705c07c06508`) |
+| **8.75.0-③ (26/10)** — l'aperçu de la réactivation avant le lancement paginé comme le pilote (« page i / n », ‹ ›, Maj+←/→, la première page d'abord ; sans la zone « ✎ ») | `dr-classe.js` : `dr_reactApercuRendre` (`et.ecrire = false`, `et.pages` recalculées, `S.page` / `S.pagesCourantes`), `dr_reactVoir`, `dr_reactRetour` — dette 13 · 36 (E2 poussée 37) ; mesure E3 `banc-1226.mjs` U2 ; revenir à la ② : point de retour du 26/10 (blob `ffbdab35fa43`) |
 
 ## AJOUTS DU 23/10/2026 — PROMOTION `index.html` 8.75.0-① : LE DÉROULÉ INTÉGRÉ (E1-E4)
 
