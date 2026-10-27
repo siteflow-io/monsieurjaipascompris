@@ -520,6 +520,26 @@
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
 
+## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-④ : TOUT L'ÉCRAN, LES CINQ DETTES, LA SIMPLIFICATION (§12.27, §12.28, §12.29 — E1-E4)
+
+| Quoi | Où |
+|---|---|
+| l'écran « la classe en cours » : l'heure lancée depuis la case de l'emploi du temps se joue là (ni Structure, ni Atelier, ni Mes chapitres) ; « ↗ Le site dans un nouvel onglet » | `atClasseEnCours`, `atClasseTient`, `atClasseMarquer` (E1, §12.28-3a, 13 · 41) |
+| la garde du navigateur pendant l'heure ; le bandeau « Heure en cours avec les … — Reprendre l'heure » dans un autre onglet ; la reprise à l'endroit exact | E2, `dr-classe.js` (§12.28-3c/d/e, 13 · 41) ; pointeur `/site/cours_actif` ; la case : `dr_edtReprendre` |
+| le « ? » de chaque écran du prof (bord droit, mi-hauteur ; touche « ? », Échap) | `aideCle`, `aideRendre`, `aideSuivre`, `AIDE_ECRANS` / `AIDE_FIL` (produits depuis `MANDATS/CINQ-DETTES/AIDE-PAR-ECRAN.md` par `LIVRAISONS/INTEGRATION/E1/outils/aide-ecrans.mjs` — ne pas éditer à la main), style `.aide-q` (E1, 13 · 43 ; 13 · 47 ouverte : il ne se voit pas) |
+| mode test : ce qu'on publie se voit dans l'emploi du temps | `_siteGet` en mode test : l'arbre lu recompose les feuilles écrites au magasin de test (E1, 13 · 39 ; mesuré pour Dylan seulement) |
+| « Fin de l'heure », l'étape 2 dit ce qu'elle attend | `dr_finCompte` (E2, 13 · 40) |
+| le récit d'une seule activité : « Cette heure, on a fait » | `dr-recit.js` (E4, 13 · 42, garde RC22) |
+| à T-5, une seule chose s'ouvre : la séquence « Fin de l'heure », à droite ; la barre du bas n'existe plus | `palier0` (E2) ; `alerteFermer` tolère une barre absente (§12.29 S1) |
+| préparer le cahier : « ❄ Préparer le cahier », « Plus tard », « Montrer le cahier à la classe », « Retour au cours » ; l'écran garde sa forme | `dr_montrerCahier` (E2), la séquence dans la colonne de droite (E1) — §12.29 S2-S3 |
+| les noms : « ⧉ Ce que voit la classe », « 🖥 Ouvrir le tableau », « Reprendre l'heure » | §12.29 S4 |
+| la répétition dans l'Atelier, sans gestes de classe ; l'Atelier ne lance plus d'heure | §12.29 S5 ; `AUDITS/INTEGRATION-DEROULE/parcours.mjs` P5 |
+| tout l'écran, tout le temps | §12.27 : panneau prof bord à bord (12 · 87), ↻ ✕ dans la carte (12 · 88), la rangée de l'emploi du temps (12 · 212), la page du niveau, `#hclasse` (13 · 38), la fenêtre du tableau sans écran du prof (13 · 44), « Voir dans l'arborescence » (13 · 45) |
+| les mesures par le geste | `LIVRAISONS/INTEGRATION/E3/bancs/banc-1228.mjs` (316/316), `banc-1227.mjs` (801/801), aux quatre tailles |
+| le contrat | `MANDATS/INTEGRATION-DEROULE/CONTRAT.md` §12.27, §12.28, §12.29 ; `MANDATS/SIMPLIFIER/CADRAGE-26-10.md` (S1-S5 et le mot de Paul) |
+| revenir à la 8.75.0-③ | `docs/MJPC6-restauration.md`, point de retour du 27/10 (blob `f0cbc31fe81f`) |
+
+
 ## AJOUTS DU 25/10/2026 — PROMOTION `index.html` 8.75.0-② : LA RÉACTIVATION CONSTRUITE (§12.22, §12.25, §12.26 — E1-E4)
 
 | Quoi | Où |
