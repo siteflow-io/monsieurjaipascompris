@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L18 (27/10/2026, conscience n°13)
+- blob `c46a514e5a16` (commit `898746e`) · 1 011 698 o · md5 `9d5dcfb612a70a8182689566b1fe23c5` · 6.7.0-L17-1q3
+- **Motif** : 13 · 61, toute la largeur ; la ponctuation jamais en début de ligne — sas `l18-largeur` `7c6087d69`. Promu : 1 014 115 o, md5 `a4f2c28329f2020f1afc5d4f09bdd014` (commit `789c8fb7bbb2`, blob `3b9c4e98719d`). **Données** : aucune donnée nouvelle (le rendu seulement).
+- **Restauration en cas de `BUG`** : le blob `c46a514e5a16` → PUT sur `contents/correction_dictee.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : les écrans du professeur reviennent dans une colonne de 1 100 / 1 300 px ; une ponctuation peut de nouveau commencer une ligne ; ↑ en mode texte peut redescendre.
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-⑥ (27/10/2026, conscience n°13)
 - blob `15fbcd436709` (commit `499ae3a25e05`) · 2 425 558 o · md5 `99500dc9d6a0557c6faafdd71cc15f01` · v8.75.0-⑤
 - **Motif** : §12.33 et 33 bis (l'Atelier), §12.32 (les rédactions depuis le site) — sas `integration` `d69cb89d`. Promu : 2 447 131 o, md5 `231ffca589c8033ad62b7ecc213a460f` (commit `928350e98194`, blob `40eedf2fd815` ; = l'assemblé du sas md5 `a2b1bdb97d4c26d46d8f8a178918c4fa` + la ligne `APP_VERSION`).

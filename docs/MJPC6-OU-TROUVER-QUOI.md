@@ -535,6 +535,17 @@
 | la Rédaction 1.1 : l'accueil, la rédaction ouverte, Snapshot / Restaurer | `redaction.html` : « Mes rédactions », Pilotage / Données / Réglages (E4, RU16-RU17) |
 | revenir à la ⑤ ou à la 1.0.0-RU | `docs/MJPC6-restauration.md`, points de retour du 27/10 (blobs `15fbcd436709`, `9387e271e13b`) |
 
+## AJOUTS DU 27/10/2026 — PROMOTION `correction_dictee.html` 6.7.0-L18 : TOUTE LA LARGEUR (13 · 61, E4)
+
+| Quoi | Où |
+|---|---|
+| les écrans du professeur sur toute la largeur | `correction_dictee.html` : `.container-wide`, `.container.corr-prof` (CSS, « [L18 · 13 · 61] ») |
+| une ponctuation ne commence jamais une ligne (grille du prof et de l'élève) | `collesL18`, `collesL18Cache`, `grouperL18`, `.mot-colle-l18` |
+| ↑ / ↓ en mode texte | `deplacerL8` (le sens exigé au second tri) |
+| la livraison, la note, les bancs | sas, branche `l18-largeur` : `LIVRAISONS/DICTEE-CORRECTION/L18-largeur/` (`NOTE.md`, `bancs/cap_l18.py`, `captures/`) |
+| les sept bancs à données réelles (codes seulement) | sas : `TRANSCRIPTS/C13/pieces/T263-l18-sept-bancs-sur-les-donnees-reelles.txt` |
+| revenir à 6.7.0-L17-1q3 | `docs/MJPC6-restauration.md`, point de retour du 27/10 (blob `c46a514e5a16`) |
+
 ## AJOUTS DU 27/10/2026 — MISE EN LIGNE DE LA RÉDACTION UNIVERSELLE 1.0.0-RU (`redaction.html`, E4)
 
 | Quoi | Où |
