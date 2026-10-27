@@ -520,6 +520,21 @@
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
 
+## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-⑥ (L'ATELIER, LES RÉDACTIONS DEPUIS LE SITE) ET `redaction.html` 1.1.0-RU (LE PANNEAU COMMUN)
+
+| Quoi | Où |
+|---|---|
+| l'Atelier sans Pilotage ni Relecture (gardés présents et cachés pour les scripts) | `#ong-pilotage`, `#ong-relecture`, `atVuesAller` ; `atClasseFermer` remet la vue sur l'Atelier (E1, A61) |
+| la poignée dans l'écran ; la taille de diapo de la classe gardée | `dimensionner` (E1, A60, A69) |
+| surligner, couleur, « À écrire » préparés dans l'Atelier | `#at-surl`, `#at-txt`, `#at-ecr` (E1, A62) |
+| les notes du présentateur à l'import, sur toute diapo | l'import du chapitre (E1, A64) ; le prompt 1.0 les fait écrire |
+| « Diapo trop pleine » = plus d'une page au tableau | `dr_paginerReference`, `S._tailleClasse` (E1, A71) |
+| la question du bilan sans ligne vide | `dr_qSansReponse` (E1, A70) |
+| « ✏️ Rédactions » au menu des outils ; le kind `redaction` dans « Lier » ; l'onglet « Rédaction » | `openAdminTool('redaction')`, `loadAppList('redaction')`, `gotoRedaction`, `redactionAdresse`, `redactionClasseDuCours` (E1, A65-A68) |
+| le prompt d'injection 1.0 | `MANDATS/PROMPT-INJECTION/PROMPT-INJECTION.md` (sas ; la 0.9 gardée à côté) |
+| la Rédaction 1.1 : l'accueil, la rédaction ouverte, Snapshot / Restaurer | `redaction.html` : « Mes rédactions », Pilotage / Données / Réglages (E4, RU16-RU17) |
+| revenir à la ⑤ ou à la 1.0.0-RU | `docs/MJPC6-restauration.md`, points de retour du 27/10 (blobs `15fbcd436709`, `9387e271e13b`) |
+
 ## AJOUTS DU 27/10/2026 — MISE EN LIGNE DE LA RÉDACTION UNIVERSELLE 1.0.0-RU (`redaction.html`, E4)
 
 | Quoi | Où |

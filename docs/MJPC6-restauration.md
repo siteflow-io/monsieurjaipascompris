@@ -945,6 +945,16 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-⑥ (27/10/2026, conscience n°13)
+- blob `15fbcd436709` (commit `499ae3a25e05`) · 2 425 558 o · md5 `99500dc9d6a0557c6faafdd71cc15f01` · v8.75.0-⑤
+- **Motif** : §12.33 et 33 bis (l'Atelier), §12.32 (les rédactions depuis le site) — sas `integration` `d69cb89d`. Promu : 2 447 131 o, md5 `231ffca589c8033ad62b7ecc213a460f` (commit `928350e98194`, blob `40eedf2fd815` ; = l'assemblé du sas md5 `a2b1bdb97d4c26d46d8f8a178918c4fa` + la ligne `APP_VERSION`).
+- **Restauration en cas de `BUG`** : le blob `15fbcd436709` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : Pilotage et Relecture reviennent dans l'Atelier ; les marques ne se préparent plus dans l'Atelier ; la poignée peut sortir de l'écran ; les notes de présentateur importées sont refusées hors du bilan ; « ✏️ Rédactions » et l'onglet « Rédaction » disparaissent (les items `redaction` déjà liés restent au hub).
+
+### POINT DE RETOUR — `redaction.html` AVANT 1.1.0-RU (27/10/2026, conscience n°13)
+- blob `9387e271e13b` (commit `026b8fb181bf`) · 316 478 o · md5 `47e8dc65b74ab68d0e2b223109ec3a8f` · 1.0.0-RU
+- **Motif** : 13 · 60, le panneau commun ; une rédaction par classe. Promu : 349 202 o, md5 `f7c2c85e05468c7dd74d785eb9aa707c` (commit `dc045e5a54ef`, blob `3c1ed7de294c`).
+- **Restauration en cas de `BUG`** : le blob `9387e271e13b` → PUT sur `contents/redaction.html`, bit à bit. **Ce que revenir ferait perdre** : l'accueil « Mes rédactions » et les onglets ; une rédaction créée en 1.1 (avec sa classe rangée) s'ouvre encore en 1.0, sa classe à rechoisir.
+
 ### POINT DE RETOUR — `redaction.html` AVANT sa mise en ligne (27/10/2026, conscience n°13)
 - Fichier neuf : avant, il n'existait pas. Promu : 316 478 o, md5 `47e8dc65b74ab68d0e2b223109ec3a8f` (commit `026b8fb181bf`, blob `9387e271e13b`), la Rédaction universelle 1.0.0-RU (sas `redaction-universelle` `5bac4fe75`).
 - **Restauration en cas de `BUG`** : supprimer `redaction.html` (DELETE sur `contents/redaction.html`), puis vérifier que l'adresse rend 404. `redaction_dugain_v3.html` n'a pas bougé : il reste l'app de Dugain. **Ce que revenir ferait perdre** : l'accès aux sujets et aux copies enregistrés au site sous `/redactions` (ils restent au hub, rien ne les efface).
