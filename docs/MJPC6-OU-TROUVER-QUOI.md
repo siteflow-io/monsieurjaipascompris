@@ -520,6 +520,19 @@
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
 
+## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-⑤ : LES CLASSES PAR LEUR CLÉ, « NOUVEAU CHAPITRE », LA PHRASE DE L'ACTIVITÉ EN COURS (§12.30, §12.31 — E1, E2, E3)
+
+| Quoi | Où |
+|---|---|
+| trouver une classe par sa clé, son nom ou son nom simplifié (les classes créées dans le panneau ont une clé simplifiée : `3_franklin_aretha`…) | `edtCleClasse` (E1, 13 · 51) ; toutes les lectures de l'emploi du temps passent par elle, l'heure jouée comprise (`_drCleHeureDe` / `edtCleHeure`, A59) ; côté déroulé `dr_slugDe` (E2) |
+| « (proposition) » seulement pour un double | `chInjecterConfirme` (E1, 13 · 49) |
+| « 📚 Nouveau chapitre » sans la clé | `chOuvrir` (E1, 13 · 50) |
+| la phrase « L'activité en cours : … » sous la tête de la séquence | `dr_phraseActivite` (E2, §12.30) |
+| les mesures par le geste | `LIVRAISONS/INTEGRATION/E3/bancs/banc-1228.mjs` (`MJPC_CAS=30,51,49,50,39`, 168/168) ; paires `TRANSCRIPTS/C13/pieces/T231-01…05` (sas) |
+| le contrat | `MANDATS/INTEGRATION-DEROULE/CONTRAT.md` §12.30, §12.31 (sas) |
+| revenir à la 8.75.0-④ | `docs/MJPC6-restauration.md`, point de retour du 27/10 (blob `a8251813942b`) |
+
+
 ## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-④ : TOUT L'ÉCRAN, LES CINQ DETTES, LA SIMPLIFICATION (§12.27, §12.28, §12.29 — E1-E4)
 
 | Quoi | Où |

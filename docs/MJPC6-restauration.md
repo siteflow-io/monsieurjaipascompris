@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-⑤ (27/10/2026, conscience n°13)
+- blob `a8251813942b` (commit `a017558786d3`) · 2 420 064 o · md5 `0fb126a79e7e580ac9fb9bd7382b61f3` · v8.75.0-④
+- **Motif** : §12.30 (la phrase « L'activité en cours ») et §12.31 (13 · 49, 13 · 50, 13 · 51) — E1, E2, E3, sas `integration` tête `23b4884f`. Promu : 2 425 558 o, md5 `99500dc9d6a0557c6faafdd71cc15f01` (commit `499ae3a25e05`, blob `15fbcd436709` ; = l'assemblé du sas md5 `12accf681c6d69f85266146628c1a422` + la ligne `APP_VERSION`).
+- **Restauration en cas de `BUG`** : le blob `a8251813942b` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : les classes créées dans le panneau (Franklin, Dylan, Hugo, Turing) ne voient plus leur chapitre dans l'emploi du temps ; « (proposition) » revient sur un chapitre neuf ; « Nouveau chapitre » redemande la clé ; la phrase « L'activité en cours » tombe.
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-④ (27/10/2026, conscience n°13)
 - blob `f0cbc31fe81f` (commit `e7c70d279362`) · 2 348 450 o · md5 `83adc8decc16ee4c51b8a68e3ceaa285` · v8.75.0-③
 - **Motif** : §12.27 (tout l'écran, tout le temps : 12 · 87, 12 · 88, 12 · 212, 13 · 37, 13 · 38, 13 · 44, 13 · 45), §12.28 (13 · 39 à 13 · 43, 13 · 46), §12.29 (la simplification S1-S5) — E1-E4, sas `integration` tête `4e3fc230`. Promu : 2 420 064 o, md5 `0fb126a79e7e580ac9fb9bd7382b61f3` (commit `a017558786d3`, blob `a8251813942b` ; = l'assemblé du sas md5 `2db8b6c5ee9fea1a79e0dae2786038c3` + la ligne `APP_VERSION`), bit à bit contre le site en ligne.
