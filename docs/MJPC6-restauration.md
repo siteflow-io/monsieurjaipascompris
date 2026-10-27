@@ -945,6 +945,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `redaction.html` AVANT sa mise en ligne (27/10/2026, conscience n°13)
+- Fichier neuf : avant, il n'existait pas. Promu : 316 478 o, md5 `47e8dc65b74ab68d0e2b223109ec3a8f` (commit `026b8fb181bf`, blob `9387e271e13b`), la Rédaction universelle 1.0.0-RU (sas `redaction-universelle` `5bac4fe75`).
+- **Restauration en cas de `BUG`** : supprimer `redaction.html` (DELETE sur `contents/redaction.html`), puis vérifier que l'adresse rend 404. `redaction_dugain_v3.html` n'a pas bougé : il reste l'app de Dugain. **Ce que revenir ferait perdre** : l'accès aux sujets et aux copies enregistrés au site sous `/redactions` (ils restent au hub, rien ne les efface).
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-⑤ (27/10/2026, conscience n°13)
 - blob `a8251813942b` (commit `a017558786d3`) · 2 420 064 o · md5 `0fb126a79e7e580ac9fb9bd7382b61f3` · v8.75.0-④
 - **Motif** : §12.30 (la phrase « L'activité en cours ») et §12.31 (13 · 49, 13 · 50, 13 · 51) — E1, E2, E3, sas `integration` tête `23b4884f`. Promu : 2 425 558 o, md5 `99500dc9d6a0557c6faafdd71cc15f01` (commit `499ae3a25e05`, blob `15fbcd436709` ; = l'assemblé du sas md5 `12accf681c6d69f85266146628c1a422` + la ligne `APP_VERSION`).

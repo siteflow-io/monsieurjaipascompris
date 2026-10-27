@@ -520,6 +520,21 @@
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
 
+## AJOUTS DU 27/10/2026 — MISE EN LIGNE DE LA RÉDACTION UNIVERSELLE 1.0.0-RU (`redaction.html`, E4)
+
+| Quoi | Où |
+|---|---|
+| l'app (le professeur) | `redaction.html?mode=prof` — sans `id` : la liste des sujets ; `&id=<id interne ou nom court>` ; `&classe=<clé ou nom>` ; `&vue=preparer` ; `&test=1` |
+| un sujet au hub | `/redactions/<id interne « sujet_… »>/config` (format `mjpc-redaction-sujet/1`), `copies/<clé classe>/<clé élève>`, `suivi/<clé classe>`, `validations/<clé>` ; les phrases communes lues : `/redactions_communes/validations` |
+| « ➕ Nouveau sujet » (« Vérifier », « Créer ») | `ruVerifierNouveau`, `ruValiderSujet`, `ruCreerNouveau` |
+| « Préparer le sujet » (aucune fiche avec une phrase non lue) | `ruPreparer`, `ruPrepRendre`, `ruPrepValider`, `ruPrepCase` ; `ruPhrasesNonLues`, `ruFicheBloquee` |
+| l'identité d'une copie (id, clés, dates) et « Rattacher » | `idCopie`, `synchroniser` ; la zone « copie sans élève » du tableau de bord |
+| le JSON de la lettre de la Grande Guerre (à coller dans « Nouveau sujet ») | `LIVRAISONS/REDACTION/sujets/lettre-grande-guerre.json` (sas, main) ; celui de Dugain : `sujets/dugain.json` (sas, branche `redaction-universelle`) |
+| le prompt qui fait écrire un sujet à une IA | `MANDATS/REDACTION-UNIVERSELLE/PROMPT-REDACTION.md` (sas) |
+| le banc | `LIVRAISONS/REDACTION/banc/banc-ru.mjs` (sas, branche `redaction-universelle`), RU0-RU15 |
+| ce qui reste | `LIVRAISONS/REDACTION/NOTE.md` « Ce qui reste » ; 538 et 553 chez Paul ; l'accès depuis le portail (§12.32, E1) |
+| revenir en arrière | `docs/MJPC6-restauration.md`, point de retour du 27/10 : retirer `redaction.html` |
+
 ## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-⑤ : LES CLASSES PAR LEUR CLÉ, « NOUVEAU CHAPITRE », LA PHRASE DE L'ACTIVITÉ EN COURS (§12.30, §12.31 — E1, E2, E3)
 
 | Quoi | Où |
