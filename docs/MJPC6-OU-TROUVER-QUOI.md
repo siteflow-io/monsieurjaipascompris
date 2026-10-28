@@ -535,6 +535,21 @@
 | la Rédaction 1.1 : l'accueil, la rédaction ouverte, Snapshot / Restaurer | `redaction.html` : « Mes rédactions », Pilotage / Données / Réglages (E4, RU16-RU17) |
 | revenir à la ⑤ ou à la 1.0.0-RU | `docs/MJPC6-restauration.md`, points de retour du 27/10 (blobs `15fbcd436709`, `9387e271e13b`) |
 
+## AJOUTS DU 28/10/2026 — PROMOTION `index.html` 8.75.0-⑦ : LA COLONNE, LES FEUILLES, LA RÉPÉTITION, LES SÉANCES RÉSERVÉES, IDENTITÉ ET RANG (§12.34-§12.39 — E1, E3, E4)
+
+| Quoi | Où |
+|---|---|
+| la colonne de gauche de l'Atelier : trois niveaux, l'heure de chaque diapo, la poignée | `atSomInjecterEcrans`, `voletAtelier` (`dr-socle.js`), `#at-arbre-poignee`, clé `mjpc_atelier_colonne_gauche` (E4, A84-A85) |
+| la colonne de droite garde sa largeur | `dr-socle.js` (`S.ld`, clé retenue par le navigateur ; E4, A85) |
+| la mise en forme des feuilles (G, S, ab, A, la légende), gardée à l'impression | l'éditeur de feuille (`ed2PanneauFeuille`), boutons `#atf-surl`, `#atf-legende`… (E4, A86) |
+| la classe, l'heure n/N et la date de l'Atelier et de la répétition : une seule source | `dr_proposer`, `dr_heuresDeLaClasse` (`dr-classe.js`, E1, A87) ; le choix de la classe `#dr-classes-choix` |
+| en répétition, les élèves de « CLASSE TEST » | `dr-socle.js`, `dr-atelier.js` (E4, A88) |
+| le cahier de textes hors de la classe (échéance, travail prévu, contenu prévu de l'heure) | `dr_cahierHorsClasse` (E1, données), le rendu du bloc `cahier` (E4, A91) |
+| une séance réservée à une ou plusieurs classes | le champ `classes` de la séance ; « Pour : … » dans Structure (E1, A79-A82) |
+| le lancement ouvre la séance que la case nomme ; identité = clé, ordre = rang | `edtProjeter` (`cel.chCle`, `cel.snum`), `edtLancer`, `dr_estCetteSeance`, `seRangDe`, `rangVu` (E1, A83, A89, A90) |
+| les captures avant / après de la ⑦ | sas : `TRANSCRIPTS/C13/pieces/T268-01` à `T268-09` |
+| revenir à la ⑥ | `docs/MJPC6-restauration.md`, point de retour du 28/10 (blob `40eedf2fd815`) |
+
 ## AJOUTS DU 27/10/2026 — PROMOTION `correction_dictee.html` 6.7.0-L18 : TOUTE LA LARGEUR (13 · 61, E4)
 
 | Quoi | Où |

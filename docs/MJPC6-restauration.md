@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-⑦ (28/10/2026, conscience n°13)
+- blob `40eedf2fd815` (commit `928350e98194`) · 2 447 131 o · md5 `231ffca589c8033ad62b7ecc213a460f` · v8.75.0-⑥
+- **Motif** : §12.34 à §12.39 — sas `integration` `ab1c39b5d`. Promu : 2 498 908 o, md5 `e3a92022920c0cca559cfa1edb356961` (commit `4ed2380745b5`, blob `c18274d14127` ; = l'assemblé du sas md5 `b01f1a39e2b6d923295c31baf7f9de9b` + la ligne `APP_VERSION`). **Données** : une séance peut porter `classes` (la liste des classes qui la jouent) ; une feuille peut porter sa mise en forme ; la ⑥ ignore ces champs (une séance réservée y redevient pour toutes les classes ; une feuille y perd sa forme à l'affichage, la donnée reste).
+- **Restauration en cas de `BUG`** : le blob `40eedf2fd815` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la colonne de gauche à trois niveaux et la poignée ; la mise en forme des feuilles ; la répétition avec la bonne classe, la classe test et le cahier rempli ; les séances réservées ; le lancement qui ouvre la séance de la case ; la numérotation sans trou ; les sept corrections de l'instance du chapitre 3e.
+
 ### POINT DE RETOUR — `correction_dictee.html` AVANT promotion 6.7.0-L18 (27/10/2026, conscience n°13)
 - blob `c46a514e5a16` (commit `898746e`) · 1 011 698 o · md5 `9d5dcfb612a70a8182689566b1fe23c5` · 6.7.0-L17-1q3
 - **Motif** : 13 · 61, toute la largeur ; la ponctuation jamais en début de ligne — sas `l18-largeur` `7c6087d69`. Promu : 1 014 115 o, md5 `a4f2c28329f2020f1afc5d4f09bdd014` (commit `789c8fb7bbb2`, blob `3b9c4e98719d`). **Données** : aucune donnée nouvelle (le rendu seulement).
