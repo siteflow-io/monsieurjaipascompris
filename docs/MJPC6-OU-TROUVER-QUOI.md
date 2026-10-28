@@ -638,3 +638,19 @@
 | l'audit final de la conscience | `AUDITS/INTEGRATION-DEROULE/AUDIT-FINAL.md` (sas) ; transcript `TRANSCRIPTS/C13/TRANSCRIPT-C13.md` tours 97-138 |
 | ce qui n'existe pas encore | les feuilles du chapitre (`dr_feuilles()` vide : une fiche se lie par clic droit) ; le contrat de pilotage des pages HTML (`mjpc-page` / `mjpc-etape`, L5) ; la réactivation construite (§12.22, après ce promeus, E2/E4) ; l'animation en accéléré du mode test (144) |
 | revenir à la 8.74.0-④ | `docs/MJPC6-restauration.md`, point de retour du 23/10 (blob `551ee1cc2aec`) |
+
+## AJOUTS DU 28/10/2026 — PROMOTION `index.html` 8.75.0-⑧ (§12.41-§12.61, 13 · 89)
+
+| Quoi | Où |
+|---|---|
+| la répétition envoyée au tableau distant | `DR_REP`, `/site/repetition/…` (`dr-atelier.js`) ; `dr_tabLirePointeur` (`dr-tableau.js`) (E1, A92) |
+| la vidéo, les images et les PDF de la clé ; la garde vraie ; plusieurs clés | `DR_CLE`, `showDirectoryPicker` gardé en IndexedDB, `dr_videoBrancher`, `dr_cleEtatFichier`, `/site/cle_vue` (E1, A95) |
+| « Déposer en ligne » (le relais) | `mjpcDeposerEnLigne`, `mjpcRelais`, `MJPC_RELAIS_URL` (à poser) ; le relais `LIVRAISONS/INTEGRATION/E4/relais/depot.gs` au sas ; préfixe `m2:` (`dr_mediasAdresse`) |
+| les trois anciennes lignes Drive, en lecture | `openItem`, `_openAtelierFromList` (`_ligneDriveExiste`), `ed2Papier`, `dr_recitUrlDe` (13 · 88) |
+| ⏱ et 👥 sous la diapo ; la répétition avec 3E Charles de Gaulle | `dr-gabarit.js`, `dr_classeTest` (`dr-socle.js`) (E1, A102) |
+| l'horloge de la case et « aller à 5 minutes de la fin » (De Gaulle) | `dr_horlogeCase`, `now()` (`dr-socle.js`) (E4, A104) |
+| la règle du redessin : poser seulement ce qui change | `dr_poseSi`, `dr_classeSi` (`dr-socle.js`) ; `tick`, `#rep-ou`, `dr_tabVeiller` (1 s), `aideSuivre` au geste (contrat §12.56) |
+| rien d'incorrigeable au tableau ; « retirer du tableau » ; le journal avant / après | contrat §12.59 (E4, A105) |
+| l'Atelier abonné au chapitre, écrit diapo par diapo | contrat §12.60 (E1, A106) |
+| le numéro de chapitre : le rang, pas la clé | `ordDe` dans `ed2Papier` et neuf autres libellés (13 · 89) |
+| revenir à la ⑦ | `docs/MJPC6-restauration.md`, point de retour du 28/10 (blob `c18274d14127`) |
