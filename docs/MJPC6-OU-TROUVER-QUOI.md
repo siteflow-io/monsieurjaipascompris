@@ -669,3 +669,5 @@
 | la clé USB en bas à droite de l'écran d'attente | `dr_tabPoser`, `#ses-tab-cle` (`dr-tableau.js`) |
 | les sondes de la ⑨ | sas `LIVRAISONS/INTEGRATION/EX/bancs/sonde-1262.mjs`, `sonde-1266.mjs` ; banc étapes 6 et 7 |
 | revenir à la ⑧ | `docs/MJPC6-restauration.md`, point de retour du 29/10 (blob `9c7935a03892`) |
+
+| le tableau distant en plein écran au premier geste (8.76.1-⑨) | `dr_tabPleinEcran`, `dr_tabPoser` (`dr-tableau.js`) ; revenir à la 8.76.0 : `docs/MJPC6-restauration.md` (blob `41ecb48a02b2`) |

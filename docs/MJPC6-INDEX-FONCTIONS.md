@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2117 fonctions** — site : 2117 · moteur : 0
+**2118 fonctions** — site : 2118 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,7 +25,7 @@
 - **DIVERS — socle du site** — 510 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 539 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 540 fonctions
 - **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 237 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
@@ -1674,7 +1674,7 @@
 | `dr_syncLire` | — | 729 o | (sans commentaire ni indice) | — |
 | `dr_syncListe` | v | 160 o | (sans commentaire ni indice) | dr_syncBase, dr_syncComparer, dr_syncEcrire, dr_syncH |
 | `dr_syncPoser` | k, eid, distante | 568 o | pose une diapo venue du hub à la place de la nôtre (même eid) | dr_syncComparer, dr_syncDire, dr_syncEcrire |
-| `dr_tabAdresse` | — | 855 o | (sans commentaire) affiche/emploie : « ); d.className =  · ;   d.innerHTML =  » — touche #dr-tab-adr-boite | — |
+| `dr_tabAdresse` | — | 898 o | (sans commentaire) affiche/emploie : « ); d.className =  · ;   d.innerHTML =  » — touche #dr-tab-adr-boite | — |
 | `dr_tabAnnee` | d | 96 o | (sans commentaire ni indice) | dr_tabAttendre |
 | `dr_tabAttendre` | — | 799 o | (sans commentaire) affiche/emploie : «  && (p.classeNom ·· p.classe);     dr_tabDireClasse(c ?  ·  + String(p.creneau ··  » — hub /site/edt/calendrier/ | dr_tabDemarrer, dr_tabRetourAttente |
 | `dr_tabCaseDuMoment` | grille, cal, classes, d, niveau | 1255 o | (sans commentaire ni indice) | dr_tabAttendre |
@@ -1691,8 +1691,9 @@
 | `dr_tabMontrer` | o | 407 o | l'identité fait foi : si le rang reçu ne désigne pas la même diapo dans MA copie, on la retrouve par son eid | dr_tabSonder |
 | `dr_tabMur` | — | 43 o | CÔTÉ TABLEAU (`?vue=tableau`, `&local=1`) | dr_rendreMur |
 | `dr_tabPeutEcrire` | — | 587 o | la scène au hub : `C/scene` = `et` + {eid, origine, ts, trameMaj} (mandat point 3) | dr_sceneAuto, dr_tabVeiller |
+| `dr_tabPleinEcran` | ev | 396 o | §12.72 (Paul, 29/10 10:41 : « tu fais en sorte que le tableau distant s'affiche en plein écran (autorisation google évidemment) ») : Chrome n'ouvre le plein écran que sur un geste de l'utilisateur. | — |
 | `dr_tabPointeur` | — | 179 o | (sans commentaire ni indice) | dr_tabMonter |
-| `dr_tabPoser` | — | 3399 o | la page tableau : on cache le site, on pose l'attente, le mur et le témoin « interrompu » | dr_tabDemarrer |
+| `dr_tabPoser` | — | 3581 o | la page tableau : on cache le site, on pose l'attente, le mur et le témoin « interrompu » | dr_tabDemarrer |
 | `dr_tabPoserBoutons` | — | 510 o | (sans commentaire) affiche/emploie : « ; q.type =  · ; q.textContent =  » — touche #bvideoproj, #dr-tab-adr | dr_tabVeiller |
 | `dr_tabPoserEcran` | et, ecran | 354 o | l'écran reçu (avec l'état, ou relu dans `C/ecrans`) devient celui que le rendu du socle lit (dans la maquette : `DATA.seances[si].ecrans[di]`, que la fenêtre écrivait elle-même, l. 1810) | dr_rendreMur |
 | `dr_tabRecevoir` | ev | 521 o | la fenêtre locale : elle reçoit l'état du pilote par `postMessage` et ne lit jamais le hub | — |

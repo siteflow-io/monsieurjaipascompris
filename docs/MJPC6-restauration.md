@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.76.1-⑨ (29/10/2026, conscience n°13)
+- blob `41ecb48a02b2` (commit `0877347`) · 2 671 556 o · md5 `2ef1eba96d82078089e92cff22659c3f` · v8.76.0-⑨
+- **Motif** : micro §12.72 (le plein écran du tableau distant). Promu : 2 672 694 o, md5 `6586dada1424c999e38d11c826e4a22e` (commit `36d9367`, blob `5a46178a0fa5`). **Données** : aucune nouvelle.
+- **Restauration en cas de `BUG`** : le blob `41ecb48a02b2` → PUT sur `contents/index.html`, puis bit à bit. **Ce que revenir ferait perdre** : le plein écran au premier geste.
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.76.0-⑨ (29/10/2026, conscience n°13)
 - blob `9c7935a03892` (commit `20c3f3d`) · 2 593 520 o · md5 `6cd16508381fdf36d3cf866b3f5cc672` · v8.75.0-⑧
 - **Motif** : §12.62, §12.65, §12.66 — sas `integration` `29f0533b5`. Promu : 2 671 556 o, md5 `2ef1eba96d82078089e92cff22659c3f` (commit `0877347`, blob `41ecb48a02b2`). **Données** : en mode test, l'image du tableau s'écrit à `/site/tableau_test/{pointeur, scene, ecrans}` (rien d'autre) ; une diapo d'ouverture retirée s'écrit dans `deroule/retraits` ; une diapo d'ouverture modifiée devient une diapo du déroulé.
