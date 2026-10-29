@@ -654,3 +654,18 @@
 | l'Atelier abonné au chapitre, écrit diapo par diapo | contrat §12.60 (E1, A106) |
 | le numéro de chapitre : le rang, pas la clé | `ordDe` dans `ed2Papier` et neuf autres libellés (13 · 89) |
 | revenir à la ⑦ | `docs/MJPC6-restauration.md`, point de retour du 28/10 (blob `c18274d14127`) |
+
+
+## AJOUTS DU 29/10/2026 — PROMOTION `index.html` 8.76.0-⑨ (§12.62, §12.65, §12.66)
+
+| Quoi | Où |
+|---|---|
+| « Ce que la diapo déclare » ouverte ; « hors activité » ; la réactivation grisée dans les rôles | `droiteAtelier`, `rendreDroiteAtelier` (`dr-socle.js`, `dr-atelier.js`) |
+| la diapo vierge (insérer avant / après) | `insererDiapoApres` et son pendant « avant », `menuAtelierDiapo` (`dr-atelier.js`) |
+| les quatre diapos d'ouverture, posées par le site, retirables | `DR_INV`, `dr_invPoser`, `dr_estInvariable`, `deroule/retraits` (`dr-socle.js`) |
+| la colonne de l'Atelier : renommer, masquer, glisser, sélection, copier-coller | `voletAtelier`, `brancherMenus`, `menuAtelierDiapo` (`dr-socle.js`, `dr-atelier.js`) |
+| le tableau distant en mode test | `/site/tableau_test` ; `DR_REP`, `dr_repTest` (`dr-atelier.js`) ; `dr_tabPointeur` (`dr-tableau.js`) |
+| la clôture vers l'emploi du temps, « Relire l'heure » | `dr-classe.js` (la bande de confirmation, `DR_CL.closConf`) |
+| la clé USB en bas à droite de l'écran d'attente | `dr_tabPoser`, `#ses-tab-cle` (`dr-tableau.js`) |
+| les sondes de la ⑨ | sas `LIVRAISONS/INTEGRATION/EX/bancs/sonde-1262.mjs`, `sonde-1266.mjs` ; banc étapes 6 et 7 |
+| revenir à la ⑧ | `docs/MJPC6-restauration.md`, point de retour du 29/10 (blob `9c7935a03892`) |

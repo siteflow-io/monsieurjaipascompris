@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.76.0-⑨ (29/10/2026, conscience n°13)
+- blob `9c7935a03892` (commit `20c3f3d`) · 2 593 520 o · md5 `6cd16508381fdf36d3cf866b3f5cc672` · v8.75.0-⑧
+- **Motif** : §12.62, §12.65, §12.66 — sas `integration` `29f0533b5`. Promu : 2 671 556 o, md5 `2ef1eba96d82078089e92cff22659c3f` (commit `0877347`, blob `41ecb48a02b2`). **Données** : en mode test, l'image du tableau s'écrit à `/site/tableau_test/{pointeur, scene, ecrans}` (rien d'autre) ; une diapo d'ouverture retirée s'écrit dans `deroule/retraits` ; une diapo d'ouverture modifiée devient une diapo du déroulé.
+- **Restauration en cas de `BUG`** : le blob `9c7935a03892` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : l'Atelier de la ⑨ (carte ouverte, diapo vierge, diapos d'ouverture, la colonne), la Structure réparée, le tableau distant en mode test, la clôture vers l'emploi du temps, la clé USB discrète. Les `retraits` écrits restent au hub, ignorés par la ⑧.
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.75.0-⑧ (28/10/2026, conscience n°13)
 - blob `c18274d14127` (commit `4ed2380745b5`) · 2 498 908 o · md5 `e3a92022920c0cca559cfa1edb356961` · v8.75.0-⑦
 - **Motif** : §12.41 à §12.61 (sauf §12.62, §12.63, §12.65) et 13 · 89 — sas `integration` `d02bc7673`. Promu : 2 593 520 o, md5 `6cd16508381fdf36d3cf866b3f5cc672` (commit `20c3f3d`, blob `9c7935a03892`). **Données** : la répétition écrit `/site/repetition/{pointeur, ecrans, scene}` ; l'ordi de classe écrit `/site/cle_vue` ; l'Atelier écrit diapo par diapo ; la copie de classe porte les retraits du tableau et le journal le texte d'avant / après.
