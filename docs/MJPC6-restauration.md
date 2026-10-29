@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.77.0-⑩ (29/10/2026, conscience n°13)
+- blob `5a46178a0fa5` (commit `36d9367`) · 2 672 694 o · md5 `6586dada1424c999e38d11c826e4a22e` · v8.76.1-⑨
+- **Motif** : §12.74, §12.70, §12.71, §12.68. Promu : 2 709 746 o, md5 `55694fe15bc27b5fb318eeb1e05910a1` (commit `e0e56fc`, blob `5cf9d24ab593`). **Données** : la participation part sous une forme qui garde zéro ; l'annulation efface ce que l'heure avait écrit.
+- **Restauration en cas de `BUG`** : le blob `5a46178a0fa5` → PUT sur `contents/index.html`, puis bit à bit. **Ce que revenir ferait perdre** : les feuilles projetables, l'étiquette lisible, le minuteur unique, le flux du tableau distant, la participation à 0, l'annulation d'une heure.
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.76.1-⑨ (29/10/2026, conscience n°13)
 - blob `41ecb48a02b2` (commit `0877347`) · 2 671 556 o · md5 `2ef1eba96d82078089e92cff22659c3f` · v8.76.0-⑨
 - **Motif** : micro §12.72 (le plein écran du tableau distant). Promu : 2 672 694 o, md5 `6586dada1424c999e38d11c826e4a22e` (commit `36d9367`, blob `5a46178a0fa5`). **Données** : aucune nouvelle.

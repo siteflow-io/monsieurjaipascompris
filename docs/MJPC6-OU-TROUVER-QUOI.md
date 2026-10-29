@@ -671,3 +671,15 @@
 | revenir à la ⑧ | `docs/MJPC6-restauration.md`, point de retour du 29/10 (blob `9c7935a03892`) |
 
 | le tableau distant en plein écran au premier geste (8.76.1-⑨) | `dr_tabPleinEcran`, `dr_tabPoser` (`dr-tableau.js`) ; revenir à la 8.76.0 : `docs/MJPC6-restauration.md` (blob `41ecb48a02b2`) |
+
+## AJOUTS DU 29/10/2026 — PROMOTION `index.html` 8.77.0-⑩
+
+| Quoi | Où |
+|---|---|
+| projeter une feuille du site au tableau | `dr_docsPanneau`, `dr_recitDocuments`, `dr_docHtmlRef` (`dr-*.js`, ex-dix point 1) |
+| l'étiquette d'activité envoyée entière, lisible, corrigeable en répétition | `actHtml`, `.mur .act` (ex-dix point 2) |
+| le minuteur unique sous la diapo, couleurs, pause, son ; le flux du tableau distant | `#bchrono`, `dr_minuteur…` ; EventSource du hub dans `dr-tableau.js` (ex-dix point 3) |
+| la participation à 0 au tableau distant | `et.qui` (ex-dix point 4) |
+| « Annuler cette heure » | ex-dix point 5 (`dr-classe.js`) |
+| la sonde de la ⑩ | sas `LIVRAISONS/INTEGRATION/EX/bancs/sonde-10.mjs` ; banc étape 8 |
+| revenir à la 8.76.1 | `docs/MJPC6-restauration.md` (blob `5a46178a0fa5`) |
