@@ -1222,3 +1222,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - 30/10/2026 14:31 · C13 tour 422 · objection de Paul à 1554 (une seule occurrence donnerait les points à une lettre bourrée d'anachronismes) : retenue, 1554 retiré. Proposé (1560) : l'unité est le paragraphe — un sticker « tient l'époque » dans la marge de chaque paragraphe sans anachronisme (trois au plus, coût gradué) ; règle générale pour ce qui doit tenir partout hors de la langue. Rien codé.
 
+- 30/10/2026 14:34 · C13 tour 423 · objection de Paul à 1557 (et si l'élève n'a pas fait de paragraphes ?) : retenue — le paragraphe de l'élève comme unité compterait deux fois les paragraphes. Proposé (1564) : l'unité est le tiers de la lettre, jugé à l'œil ; au plus trois stickers « tient l'époque », comptés avec la butée. Rien codé.
+
