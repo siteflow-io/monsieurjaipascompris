@@ -683,3 +683,5 @@
 | « Annuler cette heure » | ex-dix point 5 (`dr-classe.js`) |
 | la sonde de la ⑩ | sas `LIVRAISONS/INTEGRATION/EX/bancs/sonde-10.mjs` ; banc étape 8 |
 | revenir à la 8.76.1 | `docs/MJPC6-restauration.md` (blob `5a46178a0fa5`) |
+| la correction sur les scans (maquette, C13 tour 399) | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/` : `T399-maquette-redaction-scans-v1.html` (md5 adf1e959507d), générateur `gen-maquette.py`, code `scan.js` · `eleve.js` · `scan.css`, grille `grille2.json`, banc `banc/banc.mjs` (21 / 0), paquets inventés `paquet-essai.pdf` · `paquet-reperes.pdf` |
+| le fichier d'essai École Directe | sas `MANDATS/REDACTION-UNIVERSELLE/ecoledirecte/essai-ecoledirecte.html` |
