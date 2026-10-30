@@ -520,6 +520,19 @@
 | revenir à la 8.0.3 | `docs/MJPC6-restauration.md`, point de retour du 16/10 (blob `5f216f5aaf61`) |
 
 
+## AJOUTS DU 30/10/2026 — MISE EN LIGNE DE `redaction.html` 1.2.0-RU : CORRIGER SUR LES SCANS
+
+| ce que tu cherches | où c'est |
+|---|---|
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.2.0-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
+| le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
+| les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
+| le fichier de l'élève | « 📨 Fichiers École Directe » : un fichier par élève, en lecture seule, sans aucun appel au site (`scEleveLecture`) |
+| la correction par l'élève (à coder) | drapeau `SC_CORRECTION_ELEVE_CODEE` ; dettes : `docs/MJPC6-DETTES.md`, sas `MANDATS/REDACTION-UNIVERSELLE/A-CODER-CORRECTION-ELEVE.md` |
+| le générateur | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/gen-maquette.py` : maquette (faux hub fidèle à Firebase) ; `PROD=1` : le fichier à mettre en ligne, même code, sans faux hub |
+| revenir en arrière | `docs/MJPC6-restauration.md`, point de retour du 30/10 (1.1.0-RU, commit `dc045e5`) |
+
 ## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-⑥ (L'ATELIER, LES RÉDACTIONS DEPUIS LE SITE) ET `redaction.html` 1.1.0-RU (LE PANNEAU COMMUN)
 
 | Quoi | Où |
