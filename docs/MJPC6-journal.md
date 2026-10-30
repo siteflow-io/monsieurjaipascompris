@@ -1185,3 +1185,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 - 30/10/2026 07:05 · C13 tour 400 · maquette v2 : la question à l'élève avant la case, chaque case dit si sa tâche se relit, la phrase de « à refaire » donnée une fois par Paul, des cases comptées par les marques. Banc 24 / 0.
 
 - 30/10/2026 07:19 · C13 tour 401 · maquette v3 : le flux élève se teste en mode test de MJPC (« 🧪 Tester comme l'élève » : un onglet relié à la correction, retours et verdicts sans recharger, rien au site). Banc 27 / 0.
+
+- 30/10/2026 07:31 · C13 tour 402 · maquette v4 : un seul code pour l'élève réel et le test (seul le transport change ; l'élève réel reçoit les verdicts sans recharger) ; relue contre les erreurs des maquettes : identité des questions, reprise exacte, pas de reconstruction au clic, champ en cours protégé, aide de l'app. Banc 31 / 0.
