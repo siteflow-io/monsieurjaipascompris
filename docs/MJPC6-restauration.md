@@ -982,7 +982,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `redaction.html` AVANT 1.2.2-RU, le trait visible pendant le tracé (30/10/2026, conscience n°13, tour 425)
 - **État d'avant (à restaurer)** : `redaction.html` 1.2.1-RU, 531 283 o, md5 `b0d4584e512aab05f741b5e833dc7f0c`, commit `fd6fbc4`, blob `2f58817bc58b69556c3681a303f4b4eef6ec8e2f`. Copie intacte au sas : `SAUVEGARDES/redaction-1.2.1-RU-avant-1.2.2-2026-10-30.html` (même md5).
-- **Motif** : sur l'ordre de Paul (14:51 : « fais au moins la correction du trait rouge demandée en urgence précédemment ») — sa dette de 12:59 : le trait rouge n'apparaissait qu'au relâcher. Candidate : sas `LIVRAISONS/REDACTION/redaction-1.2.2-RU-candidat.html`, md5 `d46ecf46557d0f7da853ac5ee96e0dc4` (refaite à l'identique de la base à 14:51), banc 48 / 0.
+- **Motif** : sur l'ordre de Paul (14:51 : « fais au moins la correction du trait rouge demandée en urgence précédemment ») — sa dette de 12:59 : le trait rouge n'apparaissait qu'au relâcher. Candidate : sas `LIVRAISONS/REDACTION/redaction-1.2.2-RU-candidat.html`, md5 `d46ecf46557d0f7da853ac5ee96e0dc4` (refaite à l'identique de la base à 14:51), banc 48 / 0. Promu : commit `413d235`, blob `4cd72738537701cbf2fe2cca214b54ccbcd9ecf4`, même md5, vérifié en ligne bit à bit (14:53).
 - **Restauration en cas de `BUG`** : `git checkout fd6fbc4 -- redaction.html`, commit, push (ou PUT de la copie du sas sur `contents/redaction.html`), puis md5 bit à bit.
 - **Ce que revenir ferait perdre** : le trait visible pendant le tracé. **Ce que revenir ne toucherait pas** : aucune donnée nouvelle ni changée de forme.
 
