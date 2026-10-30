@@ -2348,7 +2348,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 /* ═══ fin M-SÉCU-2 ═══ */
 
 // ── DÉCLARATION DE L'APP (redaction) ──
-var APP_VERSION = "1.2.2-RU";
+var APP_VERSION = "1.2.3-RU";
 var MJPC_APP = { id: "redaction", nom: "Rédaction universelle", contenant: "aucun" };
 var MJPC_MANIFESTE = { notions: [], noeuds: ["redactions", "redactions_communes"] };
 var MJPC_PURGE = { preserver: ["redactions", "redactions_communes"], purger: [] };
@@ -2454,7 +2454,7 @@ function synchroniser() {
     if (!cp.id) { cp.id = idCopie(); if (!cp.creeLe) cp.creeLe = maintenant; }   // une copie sans id (première écriture, ou déjà au hub avant 13 · 58) en reçoit un, une fois
     cp.eleve = k; cp.classe = RU.classe; cp.sujetId = (SUJET && SUJET.idInterne) || RU.id; cp.modifieLe = maintenant;
     const v = Object.assign({}, cp, { nom: nomEleveDe(k) || cp.nom || "" });
-    const sg = JSON.stringify(v); if (RU.sig[k] === sg) return; RU.sig[k] = sg;
+    const sg = JSON.stringify(scCles(v, true)); if (RU.sig[k] === sg) return; RU.sig[k] = sg;
     ruEcrire(ruCheminCopies().concat(k), JSON.parse(sg), "la copie de " + (v.nom || k)).then(i => { if (i.etat !== MJPC_ISSUE.ACCEPTEE) delete RU.sig[k]; });
   });
   const su = {}; RU_SUIVI.forEach(k => { if (state[k] != null) su[k] = state[k]; });
@@ -2491,7 +2491,7 @@ function ruAbonner() {
     let change = false;
     Object.keys(RU.miroir || {}).forEach(k => {
       const sg = JSON.stringify(RU.miroir[k]); if (RU.sig[k] === sg) return;   // l'écho de notre écriture, ou rien de neuf
-      RU.sig[k] = sg; const v = ruCopie(RU.miroir[k]); delete v.nom; state.copies[k] = v; change = true;
+      RU.sig[k] = sg; const v = scCles(ruCopie(RU.miroir[k]), false); delete v.nom; state.copies[k] = v; change = true;
       { const corps = Object.assign({}, v); RU_IDENTITE.forEach(f => delete corps[f]); RU.sigCorps = RU.sigCorps || {}; RU.sigCorps[k] = JSON.stringify(scFb(corps)); }   // reçue d'ailleurs : pas à réécrire d'ici
     });
     if (change) { try { localStorage.setItem(ruCleSecours(), JSON.stringify(state)); } catch (e) {} ruRedessiner(); }
@@ -2546,7 +2546,7 @@ function ruOuvrirClasse(k) {
   state = { classe: extractEleves(RU.classes[k], []), sujet: SUJET.enonce || "", copies: {}, current: null, tri: "ordre", paquetOrdre: [], interroBookmark: {}, modeOuvert: null };
   ruEntete(); ruEcran("ruApp");
   return Promise.all([ruLire(ruCheminCopies()), ruLire(ruCheminSuivi())]).then(([cp, su]) => {
-    Object.keys(cp || {}).forEach(e => { RU.sig[e] = JSON.stringify(cp[e]); const v = ruCopie(cp[e]); delete v.nom; state.copies[e] = v;
+    Object.keys(cp || {}).forEach(e => { RU.sig[e] = JSON.stringify(cp[e]); const v = scCles(ruCopie(cp[e]), false); delete v.nom; state.copies[e] = v;
       const corps = Object.assign({}, v); RU_IDENTITE.forEach(f => delete corps[f]); RU.sigCorps = RU.sigCorps || {}; RU.sigCorps[e] = JSON.stringify(scFb(corps)); });
     // une copie dont la clé d'élève n'est plus celle d'un élève de la classe (un nom corrigé au site) : elle n'est pas perdue — le tableau de bord la montre, et « Rattacher » la remet à un élève, avec son id interne
     RU.orphelines = Object.keys(cp || {}).filter(e => !state.classe.some(n => eleveId(n) === e) && !ruVierge(cp[e]));
@@ -6657,6 +6657,12 @@ function scCopie(k) { if (!k || !state.classe.some(n => eleveId(n) === k)) retur
 function scPlein(v) { if (v == null) return false; if (typeof v !== "object") return true; return Object.keys(v).some(k => scPlein(v[k])); }
 // la forme qu'a une copie au site (le site jette les vides et les nuls, rend en tableau un objet aux clés 0..n, range les clés) : comparer sous cette forme,
 // sinon rouvrir la classe réécrit des copies qui n'ont pas bougé (1.2.0 : 28 écritures à l'ouverture, mesuré au banc)
+/* 1.2.3 (C14, 30/10) — le site refuse un nom qui contient . # $ / [ ] (mesuré : « Key value can't be empty or contain $ # [ ] / or . ») ;
+   l'identité d'une question en porte un (« lexique.les-mots-disent-ils-ce-que ») : une réponse rangée sous elle faisait refuser toute la copie.
+   Au site, ces caractères s'écrivent %2E, %23… ; ils se relisent tels quels. Rien ne change dans l'app, dans la grille, ni dans les copies déjà au site. */
+const SC_CLE_SITE = [["%", "%25"], [".", "%2E"], ["#", "%23"], ["$", "%24"], ["/", "%2F"], ["[", "%5B"], ["]", "%5D"]];
+function scCleSite(k, versSite) { let s = String(k); if (versSite) SC_CLE_SITE.forEach(([a, b]) => { s = s.split(a).join(b); }); else SC_CLE_SITE.slice().reverse().forEach(([a, b]) => { s = s.split(b).join(a); }); return s; }
+function scCles(v, versSite) { if (v == null || typeof v !== "object") return v; if (Array.isArray(v)) return v.map(x => scCles(x, versSite)); const o = {}; Object.keys(v).forEach(k => { o[scCleSite(k, versSite)] = scCles(v[k], versSite); }); return o; }
 function scFb(v) { if (v == null) return null; if (Array.isArray(v)) v = Object.assign({}, v); if (typeof v !== "object") return v;
   const o = {}; Object.keys(v).sort().forEach(k => { const y = scFb(v[k]); if (y !== null) o[k] = y; }); const K = Object.keys(o); if (!K.length) return null;
   if (K.every(k => /^(0|[1-9]\d*)$/.test(k))) { const mx = Math.max.apply(null, K.map(Number)); if (mx < 2 * K.length) { const a = []; for (let i = 0; i <= mx; i++) a.push(i in o ? o[i] : null); return a; } }
