@@ -683,5 +683,5 @@
 | « Annuler cette heure » | ex-dix point 5 (`dr-classe.js`) |
 | la sonde de la ⑩ | sas `LIVRAISONS/INTEGRATION/EX/bancs/sonde-10.mjs` ; banc étape 8 |
 | revenir à la 8.76.1 | `docs/MJPC6-restauration.md` (blob `5a46178a0fa5`) |
-| la correction sur les scans (maquette, C13 tour 399) | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/` : `T399-maquette-redaction-scans-v5.html` (md5 09b730c238bb ; v4 9e8daa11591c, v3 8a25514aac73, v2 04afe6b10dc0, v1 adf1e959507d), générateur `gen-maquette.py`, code `scan.js` · `eleve.js` · `scan.css`, grille `grille2.json`, banc `banc/banc.mjs` (31 / 0), paquets inventés `paquet-essai.pdf` · `paquet-reperes.pdf` |
+| la correction sur les scans (maquette, C13 tour 399) | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/` : `T399-maquette-redaction-scans-v6.html` (md5 886e465b0041 ; v5 09b730c238bb, v4 9e8daa11591c, v3 8a25514aac73, v2 04afe6b10dc0, v1 adf1e959507d), générateur `gen-maquette.py`, code `scan.js` · `eleve.js` · `scan.css`, grille `grille2.json`, banc `banc/banc.mjs` (31 / 0), paquets inventés `paquet-essai.pdf` · `paquet-reperes.pdf` |
 | le fichier d'essai École Directe | sas `MANDATS/REDACTION-UNIVERSELLE/ecoledirecte/essai-ecoledirecte.html` |
