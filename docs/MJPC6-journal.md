@@ -1218,3 +1218,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - 30/10/2026 14:26 · C13 tour 420 · Paul (14:24) : décourager la plainte au maximum (« Je ne peux devenir un bureau des plaintes ») ; question : l'élève n'a-t-il jamais ses erreurs signalées ? Proposé (1550) : fichier sans canal de contestation (déjà) ; règle en tête du fichier (« ce que je n'ai pas vu en lisant, ton lecteur ne l'aurait pas vu non plus ») ; « Pas encore réussi » au lieu de « Il te manque » ; erreurs signalées dans la langue seulement ; l'anachronisme devient une remarque, hors note. Rien codé.
 
+- 30/10/2026 14:29 · C13 tour 421 · « Ok » de Paul sur 1546 à 1548 (fichier sans canal de plainte, règle « ce que je n'ai pas vu en lisant… », « Pas encore réussi », erreurs signalées dans la langue seulement). 1544 expliqué (l'anachronisme ne se marque pas en réussite, n'est pas de la langue, coûte 4 / 6 dans la grille actuelle) ; proposé (1555) : un seul fait « la lettre fait vivre 14-18 » en réussite, fondu avec les mots de 14-18 et le détail des textes lus, l'anachronisme en remarque. Rien codé.
+
