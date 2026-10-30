@@ -1187,3 +1187,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 - 30/10/2026 07:19 · C13 tour 401 · maquette v3 : le flux élève se teste en mode test de MJPC (« 🧪 Tester comme l'élève » : un onglet relié à la correction, retours et verdicts sans recharger, rien au site). Banc 27 / 0.
 
 - 30/10/2026 07:31 · C13 tour 402 · maquette v4 : un seul code pour l'élève réel et le test (seul le transport change ; l'élève réel reçoit les verdicts sans recharger) ; relue contre les erreurs des maquettes : identité des questions, reprise exacte, pas de reconstruction au clic, champ en cours protégé, aide de l'app. Banc 31 / 0.
+
+- 30/10/2026 07:44 · C13 tour 403 · maquette v5, testée sur les copies réelles de Flavie et Gabin (scratchpad, jamais poussées) : page en paysage redressée, ⇄ ordre des pages, ✂ recadrage (une autre copie dépassait au bord), plus de compte de lignes sur photo. Banc 31 / 0.
