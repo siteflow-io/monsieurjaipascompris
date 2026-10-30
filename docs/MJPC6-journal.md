@@ -1220,3 +1220,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - 30/10/2026 14:29 · C13 tour 421 · « Ok » de Paul sur 1546 à 1548 (fichier sans canal de plainte, règle « ce que je n'ai pas vu en lisant… », « Pas encore réussi », erreurs signalées dans la langue seulement). 1544 expliqué (l'anachronisme ne se marque pas en réussite, n'est pas de la langue, coûte 4 / 6 dans la grille actuelle) ; proposé (1555) : un seul fait « la lettre fait vivre 14-18 » en réussite, fondu avec les mots de 14-18 et le détail des textes lus, l'anachronisme en remarque. Rien codé.
 
+- 30/10/2026 14:31 · C13 tour 422 · objection de Paul à 1554 (une seule occurrence donnerait les points à une lettre bourrée d'anachronismes) : retenue, 1554 retiré. Proposé (1560) : l'unité est le paragraphe — un sticker « tient l'époque » dans la marge de chaque paragraphe sans anachronisme (trois au plus, coût gradué) ; règle générale pour ce qui doit tenir partout hors de la langue. Rien codé.
+
