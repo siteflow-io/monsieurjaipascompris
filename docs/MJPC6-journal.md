@@ -1216,3 +1216,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - 30/10/2026 14:21 · C13 tour 419 · Paul cherche (14:19) : la grille actuelle peut être remise en question ; les stickers marquent ce que l'élève a bien fait, sauf la langue où il pointe le mal fait. Avis de la conscience : oui (temps borné par ce que la grille attend, plus de récrimination, « Tu as réussi / Il te manque ») ; les trois familles du tour 418 tombent ; les faits de constance de langue passent à la langue ; la qualité devient le seuil du geste ; l'anachronisme, seule exception à trancher (1544). Rien codé.
 
+- 30/10/2026 14:26 · C13 tour 420 · Paul (14:24) : décourager la plainte au maximum (« Je ne peux devenir un bureau des plaintes ») ; question : l'élève n'a-t-il jamais ses erreurs signalées ? Proposé (1550) : fichier sans canal de contestation (déjà) ; règle en tête du fichier (« ce que je n'ai pas vu en lisant, ton lecteur ne l'aurait pas vu non plus ») ; « Pas encore réussi » au lieu de « Il te manque » ; erreurs signalées dans la langue seulement ; l'anachronisme devient une remarque, hors note. Rien codé.
+
