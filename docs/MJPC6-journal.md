@@ -1214,3 +1214,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - 30/10/2026 14:15 · C13 tour 418 · décision de Paul (14:12) : « Les stickers ne soulignent que des mauvais points » (plus de sticker de réussite). Sa question : comment juger un critère sur une seule marque, quand l'élève dit l'avoir réussi ailleurs. Proposé (à valider, 1537) : trois familles de questions fixées d'avance dans la grille — présence (la meilleure occurrence compte ; « Manque » dans la marge, seulement si réussi nulle part), constance (une rupture est le fait, coût gradué), fréquence (densité sur les lignes, butée) ; tri des 51 questions : 34 / 12 / 5. Rien codé.
 
+- 30/10/2026 14:21 · C13 tour 419 · Paul cherche (14:19) : la grille actuelle peut être remise en question ; les stickers marquent ce que l'élève a bien fait, sauf la langue où il pointe le mal fait. Avis de la conscience : oui (temps borné par ce que la grille attend, plus de récrimination, « Tu as réussi / Il te manque ») ; les trois familles du tour 418 tombent ; les faits de constance de langue passent à la langue ; la qualité devient le seuil du geste ; l'anachronisme, seule exception à trancher (1544). Rien codé.
+
