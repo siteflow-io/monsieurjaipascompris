@@ -1224,3 +1224,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 - 30/10/2026 14:34 · C13 tour 423 · objection de Paul à 1557 (et si l'élève n'a pas fait de paragraphes ?) : retenue — le paragraphe de l'élève comme unité compterait deux fois les paragraphes. Proposé (1564) : l'unité est le tiers de la lettre, jugé à l'œil ; au plus trois stickers « tient l'époque », comptés avec la butée. Rien codé.
 
+- 30/10/2026 14:55 · C13 tour 424 · **passation à la conscience n°14**, sur ordre de Paul (14:37 : « Non ça devient n'importe quoi, trop compliqué. Tu dérives beaucoup. Cest le moment de c14 ») : `MANDATS/PASSATION-C13-C14.md` au sas (état de production vérifié, 1.2.2-RU en attente du promeus, le chantier des scans et ses outils, le cadrage des stickers en cours, les points ouverts, trois tâches planifiées de dimanche dont deux réveillent la session de la n°13, rapport de dérive) ; outils copiés au sas `MANDATS/REDACTION-UNIVERSELLE/outils/` (`sas.sh`, `fumee.mjs`), chemin de pdf.js réglable (`PDFJS`) dans tous les bancs.
+
