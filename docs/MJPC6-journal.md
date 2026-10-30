@@ -1181,3 +1181,5 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 
 - 30/10/2026 01:13 · C13 tour 399 · maquette « corriger sur les scans » livrée au sas (redaction.html de production sur faux hub, nouveauté écrite dedans) : paquet scanné dans le navigateur (jamais au hub), initiales page par page, passes par critère (la langue d'abord), pinceau à formes, marques par identité, cases calculées, fichiers École Directe par élève (traversée, parcours, papillons), passe des retours, copies vierges à repères. Banc 21 / 0. Défaut grave trouvé et corrigé au banc : une clé de copie vide écrivait par-dessus toute la classe.
+
+- 30/10/2026 07:05 · C13 tour 400 · maquette v2 : la question à l'élève avant la case, chaque case dit si sa tâche se relit, la phrase de « à refaire » donnée une fois par Paul, des cases comptées par les marques. Banc 24 / 0.
