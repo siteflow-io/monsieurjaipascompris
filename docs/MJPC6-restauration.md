@@ -1303,3 +1303,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : la 8.0.4, les corrections du contrôle à froid des micros de la conscience, faites par les exécutants (branche `code-qcm` du sas à `381184d`), sur l'ordre de Paul (Paul, 16/10, 12:09 : « Attends tu me dis que ce ne sont pas les exécutants qui ont codé là ? » ; 12:10 : « Fais moi un message pour que les exécutants contrôlent tes micros » ; 14:56 : « Les deux: rouvrir ET ajouter. »). Promu : 2 075 390 o, md5 `54c0af98864fb7cb31fdfb3dddc3a745`. Verdict de QCM-4 : `eae372cc` (https://github.com/siteflow-io/mjpc-chantier/blob/code-qcm/LIVRAISONS/CODE-QCM/VERDICT.md).
 - **Restauration en cas de `BUG`** : le blob `5f216f5aaf61…` → PUT sur `contents/evaluation-qcm.html`, puis bit à bit contre `156a13f0723cab51146e4a1f3339ea6e`. **Données** : aucune nouvelle ; « +n » après le 0 réécrit `deroule/depuis` et `deroule/duree` (QCM-1).
 
+
+
+### POINT DE RETOUR — `redaction.html` AVANT 1.3.0-RU (31/10/2026, conscience n°14)
+- Avant : 1.2.3-RU, 533 112 o, md5 `bde58bd636a12ea3e6af66474b476e38`, blob `753ebaaec117`, copie au sas `SAUVEGARDES/redaction-1.2.3-RU-avant-1.3.0-2026-10-31.html`. Promu : 1.3.0-RU, 562 942 o, md5 `57d26691c787e78cd016919a037cba76`, commit `380d5c9`, blob `4d43bcd4f6d6`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `redaction.html`, vérifier l'adresse en ligne bit à bit. **Ce que revenir ferait perdre** : l'écran de recopie et l'avancement des cartes ; les textes recopiés restent au site (`scan.recopie`, `scanRecopie`), la 1.2.3 ne les lit pas mais ne les efface pas.
