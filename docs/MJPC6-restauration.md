@@ -1308,3 +1308,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `redaction.html` AVANT 1.3.0-RU (31/10/2026, conscience n°14)
 - Avant : 1.2.3-RU, 533 112 o, md5 `bde58bd636a12ea3e6af66474b476e38`, blob `753ebaaec117`, copie au sas `SAUVEGARDES/redaction-1.2.3-RU-avant-1.3.0-2026-10-31.html`. Promu : 1.3.0-RU, 562 942 o, md5 `57d26691c787e78cd016919a037cba76`, commit `380d5c9`, blob `4d43bcd4f6d6`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `redaction.html`, vérifier l'adresse en ligne bit à bit. **Ce que revenir ferait perdre** : l'écran de recopie et l'avancement des cartes ; les textes recopiés restent au site (`scan.recopie`, `scanRecopie`) ; la 1.2.3 ne les lit pas, et si elle les garde en réécrivant une copie : je ne sais pas, à mesurer avant tout retour.
+
+
+### POINT DE RETOUR — `redaction.html` AVANT 1.3.1-RU (31/10/2026, conscience n°14)
+- Avant : 1.3.0-RU, 562 942 o, md5 `57d26691c787e78cd016919a037cba76`, copie au sas `SAUVEGARDES/redaction-1.3.0-RU-avant-1.3.1-2026-10-31.html`. Promu : 1.3.1-RU, 569 822 o, md5 `831962924855372ad20388b12e131bf2`, commit `110a266`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `redaction.html`, vérifier l'adresse en ligne bit à bit. Les recopies gardent le même format (1.3.0 les lit) ; seul l'ordre des lignes remis selon la hauteur reste tel quel.
