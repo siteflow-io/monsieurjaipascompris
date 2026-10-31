@@ -1246,3 +1246,6 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
 
 
 **31/10/2026 08:48 — conscience n°14 — mise en ligne de `redaction.html` 1.3.3-RU** sur le « promeus » de Paul (08:47) : les pages de la copie l'une sous l'autre dans la recopie. Banc complet : 91 vérifications, 0 défaut. Vrai site en lecture seule, 1.3.2 puis 1.3.3 : 30 copies, 0 différente ; recopies : 16 pages, 478 lignes dont 235 écrites, textes et places identiques ; seule écriture interceptée : le suivi. 1.3.2 copiée au sas (`SAUVEGARDES/redaction-1.3.2-RU-avant-1.3.3-2026-10-31.html`). Commit `b9d5c81`, blob `15c681a3f274`, md5 `10bde5d9b733fb8be658bcd8c1ed3232`, 580 262 o ; en ligne bit à bit à la 5e lecture.
+
+
+**31/10/2026 09:03 — conscience n°14 — mise en ligne de `redaction.html` 1.3.4-RU** sur le « promeus » de Paul (09:01) : le menu « Page » suit la page vue au défilement. Banc complet : 92 vérifications, 0 défaut. Vrai site en lecture seule, 1.3.3 puis 1.3.4 : 30 copies, 0 différente ; recopies : 19 pages, places identiques, textes identiques (au 2e passage ; au 1er, une ligne en cours de frappe) ; seule écriture interceptée : le suivi. 1.3.3 copiée au sas (`SAUVEGARDES/redaction-1.3.3-RU-avant-1.3.4-2026-10-31.html`). Commit `3b4c31d`, blob `3343e785da26`, md5 `23f016d759e31656753a21b4efe6a6db`, 580 848 o ; en ligne bit à bit à la 5e lecture.

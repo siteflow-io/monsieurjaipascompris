@@ -1323,3 +1323,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `redaction.html` AVANT 1.3.3-RU (31/10/2026, conscience n°14)
 - Avant : 1.3.2-RU, 577 436 o, md5 `799e6800ecb41a0635a1519cda32406e`, copie au sas `SAUVEGARDES/redaction-1.3.2-RU-avant-1.3.3-2026-10-31.html`. Promu : 1.3.3-RU, 580 262 o, md5 `10bde5d9b733fb8be658bcd8c1ed3232`, commit `b9d5c81`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `redaction.html`, vérifier l'adresse en ligne bit à bit. Aucune donnée nouvelle : seul l'affichage change.
+
+
+### POINT DE RETOUR — `redaction.html` AVANT 1.3.4-RU (31/10/2026, conscience n°14)
+- Avant : 1.3.3-RU, 580 262 o, md5 `10bde5d9b733fb8be658bcd8c1ed3232`, copie au sas `SAUVEGARDES/redaction-1.3.3-RU-avant-1.3.4-2026-10-31.html`. Promu : 1.3.4-RU, 580 848 o, md5 `23f016d759e31656753a21b4efe6a6db`, commit `3b4c31d`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `redaction.html`, vérifier l'adresse en ligne bit à bit. Aucune donnée nouvelle.
