@@ -524,7 +524,7 @@
 
 | ce que tu cherches | où c'est |
 |---|---|
-| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.1-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.2-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
 | la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
 | le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
 | les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
