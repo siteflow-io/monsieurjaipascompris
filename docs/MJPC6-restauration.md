@@ -1333,3 +1333,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.0-RU (31/10/2026, conscience n°14)
 - Avant : 1.3.4-RU, 580 848 o, md5 `23f016d759e31656753a21b4efe6a6db`, copie au sas `SAUVEGARDES/redaction-1.3.4-RU-avant-1.4.0-2026-10-31.html`. Promu : 1.4.0-RU, 591 547 o, md5 `e7089d22921bb73fc3bbe1106e19bf41`, commit `1d90bbb`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les champs `corrige`, `corrigeDe`, `corrigeLe` ajoutés aux lignes restent ; la 1.3.4 les ignore.
+
+
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.1-RU (31/10/2026, conscience n°14)
+- Avant : 1.4.0-RU, 591 547 o, md5 `e7089d22921bb73fc3bbe1106e19bf41`, copie au sas `SAUVEGARDES/redaction-1.4.0-RU-avant-1.4.1-2026-10-31.html`. Promu : 1.4.1-RU, 603 803 o, md5 `c0c7e2df186f9b587a084c00a1fc13be`, commit `9755a93`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. **Attention** : une copie passée à la bande a ses fautes d'avant dans `marquesAnciennes` ; la 1.4.0 ne les lit pas là (elles n'y comptent donc plus non plus) ; les fautes de la bande sont des marques ordinaires, lues par la 1.4.0.
