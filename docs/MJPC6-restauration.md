@@ -1345,6 +1345,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.9-RU (31/10/2026, conscience n°14)
+- Avant : 1.4.8-RU, 672 914 o, md5 `56d7e40a90d7ba6db07296644a520902`, copie au sas `SAUVEGARDES/redaction-1.4.8-RU-avant-1.4.9-2026-10-31.html`. Promu : 1.4.9-RU, 679 353 o, md5 `1490e03e0057ddb7f0b849b43c401c37`, commit `60bc646`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Un effacement fait avec la 1.4.9 se reprend depuis la corbeille MJPC (`corbeille/<jour>/nettoyage-ia-et-bande_<heure>`, tout ce qui a été effacé, copie par copie) ou depuis l'export téléchargé.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.8-RU (31/10/2026, conscience n°14)
 - Avant : 1.4.7-RU, 671 657 o, md5 `388d837460a309f6b5f34a191821eaf0`, copie au sas `SAUVEGARDES/redaction-1.4.7-RU-avant-1.4.8-2026-10-31.html`. Promu : 1.4.8-RU, 672 914 o, md5 `56d7e40a90d7ba6db07296644a520902`, commit `53b834d`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.8 n'écrit rien de neuf dans les copies.
