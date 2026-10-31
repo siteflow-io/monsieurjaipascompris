@@ -2348,7 +2348,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 /* ═══ fin M-SÉCU-2 ═══ */
 
 // ── DÉCLARATION DE L'APP (redaction) ──
-var APP_VERSION = "1.2.3-RU";
+var APP_VERSION = "1.3.0-RU";
 var MJPC_APP = { id: "redaction", nom: "Rédaction universelle", contenant: "aucun" };
 var MJPC_MANIFESTE = { notions: [], noeuds: ["redactions", "redactions_communes"] };
 var MJPC_PURGE = { preserver: ["redactions", "redactions_communes"], purger: [] };
@@ -2424,7 +2424,7 @@ function ruClassesProposees() { const t = RU.classes || {}; return Object.keys(t
 function nomClasseCourante() { return RU.classeNom || ""; }
 function ficheTexte(k) { const v = (SUJET && SUJET.fiche && SUJET.fiche[k]) || ""; return v || (k === "titre" && SUJET ? SUJET.titre || "" : ""); }
 // ── l'état d'une classe au hub : les copies (une par élève) et le suivi (le paquet, l'endroit exact) ──
-const RU_SUIVI = ["tri", "paquetOrdre", "interroBookmark", "current", "modeOuvert", "scanCurseur"];
+const RU_SUIVI = ["tri", "paquetOrdre", "interroBookmark", "current", "modeOuvert", "scanCurseur", "scanRecopie"];
 function ruCheminCopies() { return ["redactions", RU.id, "copies", RU.classe]; }
 function ruCheminSuivi() { return ["redactions", RU.id, "suivi", RU.classe]; }
 function ruCleSecours() { return "mjpc_redaction_" + RU.id + "_" + RU.classe; }
@@ -4197,6 +4197,7 @@ function notificationDeclassementDNB(id) {
 }
 
 function progressionPct(id) {
+  const av = scAvancement(id); if (av) return av.pct;
   const grille = getGrille(id);
   if (!grille) return 0;
   const c = copieFor(id);
@@ -4308,7 +4309,8 @@ function renderDashboard() {
   grid.innerHTML = classeTriee().map(nom => {
     const id = eleveId(nom);
     const c = copieFor(id);
-    const { total, complete } = noteTotale(id);
+    const suiviScan = scAvancement(id);
+    const { total, complete } = suiviScan ? { total: 0, complete: false } : noteTotale(id);
     const pct = progressionPct(id);
     const couleur = pct === 0 ? "#d6cfc1"
                   : pct < 30 ? "#e89a5a"
@@ -4338,8 +4340,8 @@ function renderDashboard() {
           <button onclick="event.stopPropagation(); ruTrancherCompteur('${id}','prendre')" title="Prendre le niveau du compteur : la fiche dira « … ce qui correspond au niveau ${ECHELON_COULEUR[d.compteur].label.toLowerCase()} »">Prendre « ${ECHELON_COULEUR[d.compteur].label} »</button></span></div>`; })()}
         <div class="eleve-nom">${escapeHtml(nom)}</div>
         <div class="eleve-statut">
-          <span>${pct === 0 ? "Non commencé" : pct === 100 ? "Corrigé" : "En cours"}</span>
-          ${complete && pct >= 90 ? `<span class="eleve-note" title="Note totale sur ${totalPour(id)}">${total}/${totalPour(id)}</span>` : `<span style="font-size:0.85em;color:#aaa" title="Pourcentage d'avancement de la correction">${pct}%</span>`}
+          <span>${pct === 0 && !suiviScan ? "Non commencé" : pct === 100 ? "Corrigé" : "En cours"}</span>
+          ${complete && pct >= 90 ? `<span class="eleve-note" title="Note totale sur ${totalPour(id)}">${total}/${totalPour(id)}</span>` : `<span style="font-size:0.85em;color:#aaa" title="${suiviScan ? escapeAttr(suiviScan.fait + ' rubriques corrigées sur ' + suiviScan.total + '. Une faute posée commence la correction ; elle ne termine pas seule une rubrique.') : 'Pourcentage d’avancement de la correction'}">${pct}%</span>`}
         </div>
         <div class="barre-progression" title="Avancement visuel : ${pct}%"><div class="barre-progression-fill" style="width:${pct}%;background:${couleur}"></div></div>
       </div>
@@ -6512,7 +6514,7 @@ ruDemarrer();
 
 <!-- RU-SCAN : corriger sur la copie scannée -->
 <div id="scanEcran" class="sc-ecran hidden">
-  <div class="sc-haut"><b>Corriger sur les scans</b><nav id="scPasses" class="sc-passes"></nav><span class="sc-esp"></span><span id="scCharge"></span><span id="scChrono" class="sc-pill" title="Le temps passé sur cette copie dans cette passe (une minute sans geste ne compte pas)."></span>
+  <div class="sc-haut"><b>Corriger sur les scans</b><button class="sc-btn" id="btnRecopier" onclick="rcOuvrir()" title="Recopier à côté de la photo, ligne par ligne, avec une reprise enregistrée.">✍ Recopier</button><nav id="scPasses" class="sc-passes"></nav><span class="sc-esp"></span><span id="scCharge"></span><span id="scChrono" class="sc-pill" title="Le temps passé sur cette copie dans cette passe (une minute sans geste ne compte pas)."></span>
     <button class="sc-btn" id="scZoom" onclick="scZoomLargeur()" title="Le zoom de la copie : Ctrl + molette pour grossir ou réduire, sous la souris. Clique ici pour revenir à la largeur de l'écran. Maj tenue : la loupe. Alt tenue : la copie sans les marques.">↔ Largeur</button>
     <label class="sc-btn" title="Charger ton paquet scanné (un PDF, ou des photos) depuis ta clé : il reste dans ce navigateur, jamais au site. Une page déjà connue retrouve ses marques.">📄 Charger le paquet<input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="scCharger(event)" hidden></label>
     <button class="sc-btn" onclick="scImprimerVierges()" title="Imprimer des copies vierges de l'appli : quatre repères aux coins, les lignes à leur place. Scannées, elles se remettent droites d'elles-mêmes et leurs lignes sont connues d'avance.">🖨 Copies vierges</button>
@@ -6623,6 +6625,41 @@ body.sc-ouvert #toast{z-index:990}   /* les messages de l'appli se lisent par-de
 .sc-rc-pied{display:flex;justify-content:flex-end;gap:8px;padding:10px 22px;border-top:1px solid #eadfcd}
 .sc-lig-alerte{color:#c54040;font-weight:700;margin:6px 0 0}.sc-alerte-copie{position:fixed;left:50%;top:120px;transform:translateX(-50%);z-index:958;background:#c54040;color:#fff;font:600 17px system-ui;padding:12px 20px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.3);max-width:70vw;text-align:center}.sc-alerte-copie[hidden]{display:none}
 .sc-coche{display:block;margin:6px 0 10px;color:#9a8f80}.sc-coche input{margin-right:6px}
+
+/* La recopie : deux feuilles de mêmes dimensions, un seul défilement. */
+.rc-ecran{position:fixed;inset:0;z-index:950;display:flex;flex-direction:column;box-sizing:border-box;padding-bottom:28px;background:#f5f1ea;color:#2b2520;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+.rc-ecran[hidden],.rc-ecran [hidden]{display:none!important}
+.rc-haut{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 72px 8px 12px;background:linear-gradient(#b7884e,#976a37);color:#fff}
+.rc-haut>b{font:600 20px Georgia,serif;white-space:nowrap}
+.rc-haut label{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.rc-haut select{max-width:245px;border:1px solid #cbb88f;border-radius:6px;padding:5px;font:14px system-ui;color:#2b2520;background:#fffdf8}
+#rcEtat{margin-left:auto;font-size:12px;max-width:260px}
+.rc-outils{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid #d6c9b4;background:#fffaf1}
+#rcCompte{font-weight:650;margin-right:8px;min-width:55px}
+.rc-ecran button:disabled{opacity:.45;cursor:default}
+.rc-apercu{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:6px 14px;background:#fdfbf5;border-bottom:1px solid #d6c9b4;min-height:82px;flex:none}
+.rc-apercu>div{display:flex;flex-direction:column;justify-content:center;gap:4px}
+.rc-apercu b{font:600 18px Georgia,serif;color:#426531}
+.rc-apercu span{font-size:12px;color:#685b4a}
+#rcAgrandie{width:100%;height:76px;background:#fffdf8;border:1px solid #e1d6c5;box-sizing:border-box}
+.rc-defile{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:10px 14px;scroll-behavior:auto}
+.rc-papiers{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;position:relative}
+.rc-photo,.rc-feuille{position:relative;background:#fffdf8;min-width:0;box-shadow:0 2px 7px #3b2e251f;box-sizing:border-box}
+#rcImage{display:block;width:100%;height:100%;pointer-events:none;object-fit:fill}
+#rcLignesSVG{position:absolute;inset:0;width:100%;height:100%;overflow:visible;touch-action:none}
+.rc-trait{stroke:#4b7c38;stroke-width:1.4;vector-effect:non-scaling-stroke;pointer-events:none;opacity:.8}
+.rc-poignee{fill:#fffdf8;stroke:#3d752e;stroke-width:2;vector-effect:non-scaling-stroke;cursor:move;pointer-events:all}
+.rc-poignee:hover{fill:#cce5b7}
+.rc-numero{font:600 14px system-ui;fill:#3d752e;paint-order:stroke;stroke:#fff;stroke-width:4;pointer-events:none}
+.rc-selection{fill:#cce5b733;stroke:#4b7c38;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
+#rcAbsente{position:absolute;inset:15% 10%;padding:20px;background:#fff8e5;text-align:center;color:#72582e}
+#rcAbsente[hidden]{display:none}
+.rc-ligne{position:absolute;height:calc(26px * var(--rc-echelle,1));transform-origin:0 calc(12px * var(--rc-echelle,1));border-bottom:1px solid #b8cfc2;box-sizing:border-box}
+.rc-saisie{box-sizing:border-box;display:block;width:100%;height:100%;margin:0;padding:0 2px;background:transparent;border:1px solid transparent;outline:0;color:#283443;font:calc(18px * var(--rc-echelle,1))/calc(24px * var(--rc-echelle,1)) Georgia,serif;box-shadow:none;border-radius:3px}
+.rc-ligne.on .rc-saisie{border-color:#739a5c;background:#fbfff5}
+.rc-saisie:focus{outline:2px solid #86a96b;outline-offset:1px}
+.rc-message{flex:none;margin:0;padding:5px 14px;background:#fffaf1;color:#6a5a45;font-size:12px}
+@media(max-width:760px){.rc-haut{gap:5px;padding-left:7px}.rc-haut>b{font-size:17px}.rc-haut select{max-width:180px}.rc-outils{gap:5px;padding:5px 7px}.rc-outils .sc-btn{font-size:12px;padding:4px 7px}.rc-apercu{gap:8px;padding:5px 8px;grid-template-columns:minmax(110px,.7fr) 1fr}.rc-apercu span{font-size:10px}.rc-apercu b{font-size:15px}#rcEtat{font-size:11px;max-width:180px}.rc-message{font-size:10px}}
 </style>
 <script>// =====================================================================
 // RU-SCAN — CORRIGER SUR LA COPIE SCANNÉE (cadrage C13, 29-30/10/2026, tours 371 à 399)
@@ -6693,9 +6730,10 @@ function scOuvrir() {
     document.getElementById("scanEcran").classList.remove("hidden"); document.body.classList.add("sc-ouvert");
     SC.attrib = scPagesSans().length > 0; SC.ia = scPremiereSans();
     scRendre();
+    if (state.scanRecopie && state.scanRecopie.ouverte && typeof rcOuvrir === "function") rcOuvrir(true);
   });
 }
-function scFermer() { scChrono(); SC.ouvert = false; scChampFermer(true); state.modeOuvert = null; aidePoser(SC.aideAvant || "correction"); document.getElementById("scanEcran").classList.add("hidden"); document.body.classList.remove("sc-ouvert"); saveState(); if (typeof renderDashboard === "function") renderDashboard(); }
+function scFermer() { if (typeof RC !== "undefined" && RC.ouvert) rcFermer(true); scChrono(); SC.ouvert = false; scChampFermer(true); state.modeOuvert = null; aidePoser(SC.aideAvant || "correction"); document.getElementById("scanEcran").classList.add("hidden"); document.body.classList.remove("sc-ouvert"); saveState(); if (typeof renderDashboard === "function") renderDashboard(); }
 function scPagesOrdre() { return Object.values(SC.pages).filter(p => p && p.id).sort((a, b) => (a.ordre || 0) - (b.ordre || 0)); }
 function scPremiereSans() { const i = scPagesOrdre().findIndex(p => !p.eleve && !p.blanche); return i < 0 ? 0 : i; }
 function scPagesSans() { return scPagesOrdre().filter(p => !p.eleve && !p.blanche); }
@@ -6747,7 +6785,7 @@ function scPage(cvLu) {
 }
 // les lignes écrites (mesuré le 30/10 sur une copie de l'an dernier : 30 sur 30, à 1 pixel près) : l'encre plus sombre que le papier autour,
 // la réglure (longues traînées horizontales) retirée, le profil ligne par ligne ; le début et la fin de l'écriture de chaque ligne
-function scLignes(src) {
+function scLignes(src, options) {
   const W = 540, H = Math.round(src.height * W / src.width); const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const cx = cv.getContext("2d"); cx.drawImage(src, 0, 0, W, H); const d = cx.getImageData(0, 0, W, H).data;
   const lum = new Float32Array(W * H), rouge = new Uint8Array(W * H);
@@ -6760,7 +6798,7 @@ function scLignes(src) {
   const bx = Math.round(W * 0.02), ex = Math.round(W * 0.97);
   const prof = new Float32Array(H); for (let y = 0; y < H; y++) { let s = 0; for (let x = bx; x < ex; x++) s += encre[y * W + x]; prof[y] = s; }
   const lis = new Float32Array(H); const sg = 3; for (let y = 0; y < H; y++) { let s = 0, w = 0; for (let k = -9; k <= 9; k++) { const yy = y + k; if (yy < 0 || yy >= H) continue; const c = Math.exp(-k * k / (2 * sg * sg)); s += prof[yy] * c; w += c; } lis[y] = s / w; }
-  const tri = Array.from(lis).sort((a, b) => a - b); const p95 = tri[Math.floor(H * 0.95)] || 0; const seuil = Math.max(2.5, 0.25 * p95);
+  const tri = Array.from(lis).sort((a, b) => a - b); const p95 = tri[Math.floor(H * 0.95)] || 0; const seuil = options && options.recopie ? Math.max(1.2, 0.10 * p95) : Math.max(2.5, 0.25 * p95);
   const pics = []; for (let y = 8; y < H - 8; y++) { if (lis[y] < seuil) continue; let mx = true; for (let k = -8; k <= 8; k++) if (lis[y + k] > lis[y]) { mx = false; break; } if (mx && (!pics.length || y - pics[pics.length - 1] > 8)) pics.push(y); }
   const L = pics.map(y => { const col = new Float32Array(W); for (let yy = Math.max(0, y - 8); yy < Math.min(H, y + 5); yy++) for (let x = bx; x < ex; x++) col[x] += encre[yy * W + x];
     let a = -1, b = -1; for (let x = bx; x < ex; x++) { let s = 0; for (let k = -3; k <= 3; k++) s += col[Math.min(W - 1, Math.max(0, x + k))]; if (s > 1.5) { if (a < 0) a = x; b = x; } }
@@ -6804,8 +6842,8 @@ function scLignesDemander() {
   scLignesFocus(true); }
 function scLignesFocus(flash) { setTimeout(() => { const e = document.getElementById("scLig"); if (!e) return; e.focus({ preventScroll: false }); e.select(); if (flash) { const b = e.closest(".sc-bloc"); if (b) { b.classList.remove("sc-flash"); void b.offsetWidth; b.classList.add("sc-flash"); } } }, 30); }
 function scLignesAccueil() { if (scLignesBloque()) scLignesFocus(false); }
-function scCase(pt, k) {
-  const s = scCopie(k); const rep = s.rep[pt.id] || {};
+function scCase(pt, k, lecture) {
+  const s = lecture || scCopie(k); const rep = s.rep[pt.id] || {};
   if (pt.calcul) {
     const n = scLignesCopie(k); if (!n) return null; const e = scFautes(k).length;
     const r = pt.calcul === "lignes" ? n / scLong() : e / n;
@@ -6857,7 +6895,7 @@ function scReculer() { const L = scEtapes(scK()); const i = L.findIndex(e => e.i
 function scAllerCopie(i) { if (i !== SC.ic && scLignesBloque()) { scLignesDemander(); return; } scChrono(); SC.ic = Math.max(0, Math.min(SC.copies.length - 1, i)); const L = scEtapes(scK() || ""); SC.ip = L.length ? L[0].ip : 0; SC.iq = L.length ? L[0].iq : null; SC.sel = null; SC.outil = null; scChampFermer(); scRendre(); scLignesAccueil(); }
 function scAllerPasse(i) { if (SC.passes[i] && SC.passes[i].id === "retours" && !scCorrectionEleve()) return; scChrono(); SC.passe = i; SC.ir = 0; scAllerCopie(SC.ic); }
 // le chrono : le temps passé sur chaque copie, passe par passe (une minute sans geste ne compte pas)
-function scToucher() { const t = Date.now(); if (SC.actif && SC.ouvert && scK() && scP()) { const s = scCopie(scK()); s.chrono[scP().id] = (s.chrono[scP().id] || 0) + Math.min(60000, t - SC.actif); } SC.actif = t; }
+function scToucher() { const t = Date.now(); if (typeof RC !== "undefined" && RC.ouvert) { SC.actif = t; return; } if (SC.actif && SC.ouvert && scK() && scP()) { const s = scCopie(scK()); s.chrono[scP().id] = (s.chrono[scP().id] || 0) + Math.min(60000, t - SC.actif); } SC.actif = t; }
 function scChrono() { scToucher(); }
 // ── le pinceau : la forme vient de ce que tu montres ──
 function scOutil() {
@@ -6999,6 +7037,7 @@ function scChampLien() {
 }
 // ── le clavier ──
 function scClavier(e) {
+  if (typeof rcClavier === "function" && rcClavier(e)) return;
   if (!SC.ouvert) return;
   if (SC.recap) { if (e.key === "Enter" || e.key === "Escape") { e.preventDefault(); e.stopPropagation(); scRecapFermer(e.key === "Enter"); } return; }
   if (SC.rt) { const t = { Enter: () => scRtFermer(true), Escape: () => scRtFermer(false), ArrowLeft: () => scRtTourner(-1), ArrowRight: () => scRtTourner(1) }[e.key]; if (t) { e.preventDefault(); e.stopPropagation(); t(); } return; } const a = document.activeElement; const ecrit = a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA");
@@ -7028,6 +7067,7 @@ function scRendre() {
   const ch = k && P ? (scCopie(k).chrono[P.id] || 0) : 0; document.getElementById("scChrono").textContent = "⏱ " + Math.floor(ch / 60000) + ":" + String(Math.floor(ch / 1000) % 60).padStart(2, "0") + " sur cette copie";
   const man = scManquantes(); document.getElementById("scManque").innerHTML = man.length ? `⚠ ${man.length} page${man.length > 1 ? "s" : ""} de ce paquet ne ${man.length > 1 ? "sont" : "est"} pas dans ce navigateur : remets ton paquet (clé USB) avec « Charger le paquet ». Les marques reviendront d'elles-mêmes.` : "";
   scDessinerPages(); scPanneau(); scPaquet(); scBande(); scZoomAffiche(); scTitreCopie();
+  if (typeof rcActualiser === "function") rcActualiser();
   const cur = { passe: P && P.id, copie: k || null, point: scPt() ? scPt().id : null, q: SC.iq };   // l'endroit exact, par identités
   if (JSON.stringify(cur) !== JSON.stringify(state.scanCurseur || null)) { state.scanCurseur = cur; saveState(); }
 }
@@ -7213,6 +7253,7 @@ function scTournerPage(pid) {
 function scTournerPageVieux(pid) {   // une page sans sa photo entière (une copie de l'appli, ou chargée avant) : l'image vue tourne
   const p = SC.pages[pid], im = SC.imgs[pid]; if (!p || !im) return;
   createImageBitmap(im.blob).then(bm => { const c = document.createElement("canvas"); c.width = bm.width; c.height = bm.height; c.getContext("2d").drawImage(bm, 0, 0); const r = scTourner(c, 270);
+    if (typeof rcTransformerPage === "function") rcTransformerPage(pid, (x, y) => [1 - y, x]);
     p.rot = (((p.rot || 0) + 270) % 360); if (p.recadre) { const [a0, b0, c0, d0] = p.recadre; p.recadre = [1 - d0, a0, 1 - b0, c0]; } p.w = r.width; p.h = r.height; p.lignes = scLignes(r); p.blanche = false; p.modifieLe = new Date().toISOString();
     Object.keys(state.copies || {}).forEach(k => { const ms = (state.copies[k].scan || {}).marques || {}; Object.values(ms).forEach(m => { if (m.page !== pid) return; const [a, b, c2, d] = [m.x0, m.y0, m.x1, m.y1]; m.x0 = 1 - d; m.x1 = 1 - b; m.y0 = a; m.y1 = c2; m.l0 = m.l1 = null; m.modifieLe = p.modifieLe; }); });
     r.toBlob(b => { try { URL.revokeObjectURL(im.url); } catch (e) {} SC.imgs[pid] = scImg(b, r.width, r.height); if (SC.encres) delete SC.encres[pid]; scDbMettre({ id: pid, red: RU.id, classe: RU.classe, blob: b, w: r.width, h: r.height, le: p.modifieLe });
@@ -7271,6 +7312,7 @@ function scReglerPage(pid, B, cvO) {
     let cv = scTourner(cv0, B.rot || 0); if (B.angle) cv = scIncliner(cv, B.angle); if (B.recadre) cv = scCouper(cv, B.recadre);
     const le = new Date().toISOString();
     Object.keys(state.copies || {}).forEach(k => { const ms = (state.copies[k].scan || {}).marques || {}; Object.values(ms).forEach(m => { if (m.page !== pid) return; scRemap(m, A, B, W0, H0); m.modifieLe = le; }); });
+    if (typeof rcTransformerPage === "function") rcTransformerPage(pid, (u, v) => { const [X, Y] = scVue2Orig(A, W0, H0, u, v); return scOrig2Vue(B, W0, H0, X, Y); });
     p.rot = B.rot || 0; p.angle = B.angle || 0; p.recadre = B.recadre ? B.recadre.map(v => +v.toFixed(4)) : null; p.w = cv.width; p.h = cv.height; p.lignes = scLignes(cv); p.modifieLe = le;
     return new Promise(res => cv.toBlob(b => { const im = SC.imgs[pid]; if (im) { try { URL.revokeObjectURL(im.url); } catch (e) {} } SC.imgs[pid] = scImg(b, cv.width, cv.height); if (SC.encres) delete SC.encres[pid];
       scDbMettre({ id: pid, red: RU.id, classe: RU.classe, blob: b, w: cv.width, h: cv.height, le });
@@ -7294,6 +7336,7 @@ function scRtMarques() { const R = SC.rt, L = []; Object.keys(state.copies || {}
   L.push({ m, pts }); })); return L; }
 function scRtBoite() { const R = SC.rt; let a = 1, b = 1, c = 0, d = 0, n = 0;
   scRtMarques().forEach(o => o.pts.forEach(([x, y]) => { const [ax, ay] = scRot(x - R.Wb / 2, y - R.Hb / 2, R.angle * Math.PI / 180); const u = (ax + R.Wb / 2) / R.Wb, v = (ay + R.Hb / 2) / R.Hb; a = Math.min(a, u); b = Math.min(b, v); c = Math.max(c, u); d = Math.max(d, v); n++; }));
+  if (typeof rcBornesRetouche === "function") rcBornesRetouche(R).forEach(([u, v]) => { a = Math.min(a, u); b = Math.min(b, v); c = Math.max(c, u); d = Math.max(d, v); n++; });
   return n ? [Math.max(0, a), Math.max(0, b), Math.min(1, c), Math.min(1, d)] : null; }
 function scRtContenir() { const R = SC.rt, B = scRtBoite(), k = R.cadre; if (!B) return; k[0] = Math.max(0, Math.min(k[0], B[0] - 0.004)); k[1] = Math.max(0, Math.min(k[1], B[1] - 0.004)); k[2] = Math.min(1, Math.max(k[2], B[2] + 0.004)); k[3] = Math.min(1, Math.max(k[3], B[3] + 0.004)); }
 function scRtOuvrir() {
@@ -7730,6 +7773,380 @@ addEventListener("message", e => {
     if (RU.test || window.__FAUX_HUB) ruEcrire(scCheminRetours([d.eleve, d.cle]), d.v, "un retour (test)").then(fin, fin); else fin(); }   // hors mode test : gardé dans cette page seulement, jamais au site
 });
 function scPousser(k) { (SC.fenetres || []).forEach(w => { try { if (!w.closed) w.postMessage({ mjpcPousse: { eleve: k, v: (SC.retours || {})[k] || {} } }, "*"); } catch (e) {} }); }
+
+// Recopier dans le vrai écran des scans : données ajoutées, anciennes corrections conservées.
+var RC = { ouvert: false, copie: null, page: null, ligne: null, documents: {}, annule: [], zoom: 1, drag: null, ui: null };
+function rcCopieSource() { return ((state.copies[RC.copie] || {}).scan || {}).recopie || {}; }
+function rcListe(v) { return Array.isArray(v) ? v.slice() : Object.values(v || {}); }
+function rcBorne(v, a, b) { return Math.max(a, Math.min(b, Number(v) || 0)); }
+function rcDocument(pid) {
+  if (RC.documents[pid]) return RC.documents[pid];
+  const ancien = (rcCopieSource().pages || {})[pid];
+  let d;
+  if (ancien && ancien.schema === 1) {
+    d = JSON.parse(JSON.stringify(ancien)); d.lignes = d.lignes || {};
+    d.ordre = rcListe(d.ordre).filter(id => d.lignes[id] && !d.lignes[id].retiree);
+  } else {
+    d = { schema: 1, lignes: {}, ordre: [] };
+    const p = SC.pages[pid], im = SC.imgs[pid]; let L = (p && p.lignes && p.lignes.l) || [];
+    if (im && im.el.complete && im.el.naturalWidth && !(p.lignes && p.lignes.reperes)) {
+      const cv = document.createElement("canvas"); cv.width = im.w; cv.height = im.h; cv.getContext("2d").drawImage(im.el, 0, 0);
+      const trouvees = scLignes(cv, { recopie: true }); if (trouvees.fiable !== false) L = trouvees.l || [];
+    }
+    L.filter(l => l.ecrite !== false).forEach(l => { const id = scId("ligne"); d.ordre.push(id); d.lignes[id] = {
+      id, x0: rcBorne(l.x0, 0, 0.97), x1: rcBorne(l.x1, 0.03, 1),
+      y0: rcBorne(l.y, 0, 1), y1: rcBorne(l.y, 0, 1), texte: ""
+    }; });
+  }
+  RC.documents[pid] = d; return d;
+}
+function rcCourante() { const d = RC.page && rcDocument(RC.page); return d && d.lignes[RC.ligne]; }
+function rcNoeud(tag, attrs, texte) {
+  const e = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(k => e.setAttribute(k, attrs[k]));
+  if (texte != null) e.textContent = texte;
+  return e;
+}
+function rcInterface() {
+  if (RC.ui) return RC.ui;
+  const e = rcNoeud("section", { id: "rcEcran", class: "rc-ecran", hidden: "", "aria-label": "Recopier la copie" });
+  e.innerHTML = [
+    '<header class="rc-haut"><button id="rcFermer" class="sc-btn" title="Revenir aux quatre passes de correction. Ta saisie est gardée. Échap fait pareil.">← Les scans</button>',
+    '<b>✍ Recopier</b><label>Copie <select id="rcCopie" title="Choisir la copie à recopier, sans changer ses corrections."></select></label>',
+    '<button id="rcCopieAvant" class="sc-btn" title="Recopier la copie précédente ; la saisie en cours est gardée.">← Copie</button>',
+    '<button id="rcCopieSuite" class="sc-btn" title="Recopier la copie suivante ; la saisie en cours est gardée.">Copie →</button>',
+    '<label>Page <select id="rcPage" title="Choisir une page de cette copie. Chaque page garde ses lignes et sa saisie."></select></label>',
+    '<output id="rcEtat" role="status"></output></header>',
+    '<div class="rc-outils"><span id="rcCompte"></span>',
+    '<button id="rcAjouter" class="sc-btn" title="Ajouter une ligne après la ligne en cours. Recale ses deux poignées avant de taper.">＋ Une ligne</button>',
+    '<button id="rcRetirer" class="sc-btn" title="Retirer la ligne en cours de la feuille. Annuler permet de la remettre avec son texte.">− Cette ligne</button>',
+    '<button id="rcAnnuler" class="sc-btn" title="Annuler le dernier ajout, retrait ou recalage de cette page. Dans le champ, Ctrl + Z annule la frappe.">↶ Annuler</button>',
+    '<button id="rcMoins" class="sc-btn" title="Réduire ensemble la photo et la feuille.">−</button>',
+    '<button id="rcLargeur" class="sc-btn" title="Remettre la photo et la feuille à la largeur de leurs colonnes. Ctrl + molette règle aussi leur zoom.">↔ Largeur</button>',
+    '<button id="rcPlus" class="sc-btn" title="Agrandir ensemble la photo et la feuille.">＋</button>',
+    '<button id="rcCharger" class="sc-btn" hidden title="Remettre le paquet dans ce navigateur ; les lignes et le texte déjà gardés restent en place.">Charger le paquet</button></div>',
+    '<div class="rc-apercu"><div><b id="rcLigneTitre"></b><span>Recale les poignées vertes, puis recopie sans corriger.<br>Entrée : ligne suivante · ↑ ↓ : changer de ligne.</span></div>',
+    '<canvas id="rcAgrandie" aria-label="La ligne manuscrite en grand"></canvas></div>',
+    '<div id="rcDefile" class="rc-defile"><div id="rcPapiers" class="rc-papiers">',
+    '<div id="rcPhoto" class="rc-photo"><img id="rcImage" alt="La page manuscrite" draggable="false"><svg id="rcLignesSVG" aria-label="Les lignes et leurs poignées"></svg><p id="rcAbsente" hidden>La photo manque dans ce navigateur. Remets ton paquet.</p></div>',
+    '<div id="rcFeuille" class="rc-feuille" aria-label="La feuille de recopie alignée sur la photo"></div></div></div>',
+    '<p id="rcMessage" class="rc-message"></p>'
+  ].join("");
+  document.body.appendChild(e); RC.ui = e;
+  e.querySelector("#rcFermer").onclick = () => rcFermer();
+  e.querySelector("#rcCopie").onchange = ev => rcChoisirCopie(ev.target.value);
+  e.querySelector("#rcPage").onchange = ev => rcChoisirPage(ev.target.value);
+  e.querySelector("#rcCopieAvant").onclick = () => rcCopieVoisine(-1);
+  e.querySelector("#rcCopieSuite").onclick = () => rcCopieVoisine(1);
+  e.querySelector("#rcAjouter").onclick = rcAjouter;
+  e.querySelector("#rcRetirer").onclick = rcRetirer;
+  e.querySelector("#rcAnnuler").onclick = rcAnnuler;
+  e.querySelector("#rcMoins").onclick = () => rcZoom(RC.zoom / 1.15);
+  e.querySelector("#rcPlus").onclick = () => rcZoom(RC.zoom * 1.15);
+  e.querySelector("#rcLargeur").onclick = () => rcZoom(1);
+  e.querySelector("#rcCharger").onclick = () => document.querySelector("#scanEcran input[type=file]").click();
+  e.querySelector("#rcDefile").addEventListener("wheel", ev => {
+    if (!ev.ctrlKey) return; ev.preventDefault(); rcZoom(RC.zoom * (ev.deltaY < 0 ? 1.12 : 1 / 1.12));
+  }, { passive: false });
+  const svg = e.querySelector("#rcLignesSVG");
+  svg.addEventListener("pointerdown", rcPoigneeDebut);
+  svg.addEventListener("pointermove", rcPoigneeBouger);
+  svg.addEventListener("pointerup", rcPoigneeFin);
+  svg.addEventListener("pointercancel", rcPoigneeAnnuler);
+  const im = e.querySelector("#rcImage");
+  im.onload = () => { if (RC.ouvert) { rcMettreEnPage(); rcAgrandir(); } };
+  im.onerror = () => { e.querySelector("#rcAbsente").hidden = false; };
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => { if (RC.ouvert) rcMettreEnPage(); }).observe(e.querySelector("#rcDefile"));
+  const temoin = document.getElementById("ruTemoin");
+  if (temoin) new MutationObserver(() => { if (RC.ouvert) e.querySelector("#rcEtat").textContent = temoin.textContent; }).observe(temoin, { childList: true, subtree: true, characterData: true });
+  return e;
+}
+function rcBookmark() {
+  const v = { ouverte: RC.ouvert, copie: RC.copie, page: RC.page, ligne: RC.ligne };
+  if (JSON.stringify(state.scanRecopie || null) !== JSON.stringify(v)) { state.scanRecopie = v; saveState(); }
+}
+function rcOuvrir(reprendre) {
+  if (!SC.ouvert || SC.attrib || !scK()) { toast("Donne d'abord chaque page à son élève."); return; }
+  if (SC.champ) scChampFermer(true);
+  scChrono(); RC.ouvert = true; RC.documents = {}; RC.annule = []; RC.zoom = 1;
+  const trace = state.scanRecopie;
+  const dernier = trace && (reprendre ? trace.ouverte : trace.copie === scK()) ? trace : null;
+  RC.copie = dernier && SC.copies.includes(dernier.copie) ? dernier.copie : scK();
+  const i = SC.copies.indexOf(RC.copie); if (i >= 0) SC.ic = i;
+  const pages = scPagesDe(RC.copie), r = dernier || rcCopieSource().reprise || {};
+  RC.page = pages.some(p => p.id === r.page) ? r.page : pages[0] && pages[0].id;
+  RC.ligne = r.ligne || null;
+  const e = rcInterface(); e.hidden = false; document.body.classList.add("rc-ouvert");
+  rcActualiser(true); rcBookmark(); SC.actif = Date.now();
+  rcSelectionner(RC.ligne, true, true);
+}
+function rcFermer(sansRendre) {
+  if (!RC.ouvert) return; RC.ouvert = false; RC.drag = null;
+  if (RC.ui) RC.ui.hidden = true;
+  document.body.classList.remove("rc-ouvert"); SC.actif = Date.now(); rcBookmark();
+  if (!sansRendre) { scRendre(); scLignesAccueil(); }
+}
+function rcChoisirCopie(k) {
+  if (!SC.copies.includes(k)) return;
+  RC.copie = k; RC.documents = {}; RC.annule = [];
+  SC.ic = SC.copies.indexOf(k); const pages = scPagesDe(k), r = rcCopieSource().reprise || {};
+  RC.page = pages.some(p => p.id === r.page) ? r.page : pages[0] && pages[0].id; RC.ligne = r.ligne || null;
+  rcActualiser(true); rcSelectionner(RC.ligne, true, true); rcBookmark();
+}
+function rcCopieVoisine(sens) { const i = SC.copies.indexOf(RC.copie) + sens; if (i >= 0 && i < SC.copies.length) rcChoisirCopie(SC.copies[i]); }
+function rcChoisirPage(pid) {
+  if (!scPagesDe(RC.copie).some(p => p.id === pid)) return;
+  RC.page = pid; RC.ligne = null; RC.annule = []; rcActualiser(true); rcSelectionner(null, true, true); rcBookmark();
+}
+function rcOptions(select, values, current) {
+  const sig = JSON.stringify(values);
+  if (select.dataset.options !== sig) {
+    select.replaceChildren(...values.map(v => rcNoeud("option", { value: v[0] }, v[1]))); select.dataset.options = sig;
+  }
+  select.value = current || "";
+}
+function rcActualiser(changer) {
+  const btn = document.getElementById("btnRecopier");
+  if (btn) { btn.disabled = SC.attrib || !scK(); btn.title = btn.disabled ? "Attribue d'abord les pages à leurs élèves." : "Recopier à côté de la photo, ligne par ligne, avec une reprise enregistrée."; }
+  if (!RC.ouvert || !RC.ui) return;
+  const e = RC.ui, p = SC.pages[RC.page];
+  rcOptions(e.querySelector("#rcCopie"), SC.copies.map(k => [k, nomEleveDe(k)]), RC.copie);
+  rcOptions(e.querySelector("#rcPage"), scPagesDe(RC.copie).map((p, i) => [p.id, String(i + 1)]), RC.page);
+  const i = SC.copies.indexOf(RC.copie);
+  e.querySelector("#rcCopieAvant").disabled = i <= 0; e.querySelector("#rcCopieSuite").disabled = i >= SC.copies.length - 1;
+  if (!p) { e.querySelector("#rcMessage").textContent = "Cette copie n'a pas de page."; return; }
+  const d = rcDocument(p.id);
+  if (!d.ordre.includes(RC.ligne)) RC.ligne = d.ordre[0] || null;
+  const image = e.querySelector("#rcImage"), im = SC.imgs[p.id], src = im && im.url || "";
+  if (image.getAttribute("src") !== src) { if (src) image.src = src; else image.removeAttribute("src"); }
+  e.querySelector("#rcAbsente").hidden = !!im; e.querySelector("#rcCharger").hidden = !!im;
+  e.querySelector("#rcPapiers").dataset.page = p.id;
+  rcRapprocherLignes(); rcMettreEnPage(); rcMarques(); rcEtatLigne();
+  if (changer) e.querySelector("#rcDefile").scrollTop = 0;
+}
+function rcRapprocherLignes() {
+  const feuille = RC.ui.querySelector("#rcFeuille"), d = rcDocument(RC.page);
+  const presents = new Map(Array.from(feuille.children).map(n => [n.dataset.ligne, n]));
+  for (const [id, n] of presents) if (!d.ordre.includes(id)) n.remove();
+  d.ordre.forEach((id, rang) => {
+    let row = presents.get(id);
+    if (!row) {
+      row = rcNoeud("div", { class: "rc-ligne", "data-ligne": id });
+      const input = rcNoeud("input", { class: "rc-saisie", type: "text", spellcheck: "false", autocomplete: "off", autocapitalize: "off", autocorrect: "off", "data-ligne": id });
+      input.value = d.lignes[id].texte || "";
+      input.onfocus = () => rcSelectionner(id, false, false);
+      input.onclick = () => { rcSelectionner(id, false, false); rcGarder(); };
+      input.oninput = () => { const ligne = rcDocument(RC.page).lignes[id]; ligne.texte = input.value; rcGarder(); };
+      row.appendChild(input); feuille.appendChild(row);
+    }
+    const place = feuille.children[rang]; if (place !== row) feuille.insertBefore(row, place || null);
+    const input = row.querySelector("input"); input.setAttribute("aria-label", "Recopie de la ligne " + (rang + 1));
+    input.title = "Recopie de la ligne " + (rang + 1) + " : garde les fautes, les mots barrés et la ponctuation. Entrée passe à la suivante.";
+    row.classList.toggle("on", id === RC.ligne);
+  });
+}
+function rcMettreEnPage() {
+  if (!RC.ouvert || !RC.ui || !SC.pages[RC.page]) return;
+  const e = RC.ui, p = SC.pages[RC.page], zone = e.querySelector("#rcDefile"), duo = e.querySelector("#rcPapiers");
+  const largeur = Math.max(580, zone.clientWidth - 28) * RC.zoom, w = (largeur - 18) / 2, h = w * p.h / p.w;
+  const echelle = w / 620;
+  duo.style.width = largeur + "px"; duo.style.setProperty("--rc-echelle", echelle);
+  e.querySelector("#rcPhoto").style.height = h + "px"; e.querySelector("#rcFeuille").style.height = h + "px";
+  const d = rcDocument(p.id);
+  e.querySelectorAll(".rc-ligne").forEach(row => {
+    const l = d.lignes[row.dataset.ligne]; if (!l) return;
+    const a = Math.atan2((l.y1 - l.y0) * h, (l.x1 - l.x0) * w) * 180 / Math.PI;
+    row.style.left = (l.x0 * w) + "px"; row.style.top = (l.y0 * h - 12 * echelle) + "px";
+    row.style.width = Math.max(24, Math.hypot((l.x1 - l.x0) * w, (l.y1 - l.y0) * h)) + "px";
+    row.style.transform = "rotate(" + a + "deg)";
+  });
+  rcMarques(); rcAgrandir();
+}
+function rcMarques() {
+  if (!RC.ouvert || !RC.page || !RC.ui) return;
+  const p = SC.pages[RC.page], d = rcDocument(RC.page), svg = RC.ui.querySelector("#rcLignesSVG");
+  const H = 1000 * p.h / p.w; svg.setAttribute("viewBox", "0 0 1000 " + H);
+  let s = "";
+  d.ordre.forEach((id, i) => {
+    const l = d.lignes[id], actif = id === RC.ligne, x0 = l.x0 * 1000, x1 = l.x1 * 1000, y0 = l.y0 * H, y1 = l.y1 * H;
+    const attributId = escapeAttr(id);
+    if (actif) s += '<polygon class="rc-selection" points="' + x0 + "," + (y0 - 17) + " " + x1 + "," + (y1 - 17) + " " + x1 + "," + (y1 + 15) + " " + x0 + "," + (y0 + 15) + '"/>';
+    s += '<g data-rc-ligne="' + attributId + '"><line class="rc-trait" x1="' + x0 + '" y1="' + y0 + '" x2="' + x1 + '" y2="' + y1 + '"/>';
+    s += '<text class="rc-numero" x="5" y="' + (y0 + 4) + '">' + (i + 1) + "</text>";
+    for (const cote of ["gauche", "droite"]) s += '<circle class="rc-poignee" data-rc-ligne="' + attributId + '" data-rc-cote="' + cote + '" cx="' + (cote === "gauche" ? x0 : x1) + '" cy="' + (cote === "gauche" ? y0 : y1) + '" r="7" role="button" aria-label="' + (cote === "gauche" ? "Début" : "Fin") + " de la ligne " + (i + 1) + '"><title>Glisse cette poignée pour recaler ' + (cote === "gauche" ? "le début" : "la fin") + " de la ligne " + (i + 1) + ".</title></circle>";
+    s += "</g>";
+  });
+  // Les poignées gardent leur capture de pointeur pendant le déplacement.
+  if (!RC.drag) svg.innerHTML = s;
+  else {
+    const l = rcCourante(), g = Array.from(svg.querySelectorAll("g[data-rc-ligne]")).find(n => n.dataset.rcLigne === RC.ligne);
+    if (g && l) {
+      const trait = g.querySelector("line"); [["x1", l.x0 * 1000], ["y1", l.y0 * H], ["x2", l.x1 * 1000], ["y2", l.y1 * H]].forEach(([k, v]) => trait.setAttribute(k, v));
+      g.querySelectorAll("circle").forEach(c => { const gauche = c.dataset.rcCote === "gauche"; c.setAttribute("cx", (gauche ? l.x0 : l.x1) * 1000); c.setAttribute("cy", (gauche ? l.y0 : l.y1) * H); });
+    }
+  }
+}
+function rcEtatLigne() {
+  const d = RC.page && rcDocument(RC.page), n = d ? d.ordre.length : 0, rang = d ? d.ordre.indexOf(RC.ligne) : -1;
+  RC.ui.querySelector("#rcCompte").textContent = n + " ligne" + (n > 1 ? "s" : "");
+  RC.ui.querySelector("#rcLigneTitre").textContent = rang >= 0 ? "Ligne " + (rang + 1) + " sur " + n : "Une ligne à ajouter";
+  RC.ui.querySelector("#rcRetirer").disabled = rang < 0;
+  RC.ui.querySelector("#rcAnnuler").disabled = RC.annule.length === 0;
+  RC.ui.querySelector("#rcMessage").textContent = n ? "La photo et la feuille défilent ensemble. Le total de lignes de ta correction reste celui que tu as saisi." : "Ajoute une ligne, puis place ses poignées sur l'écriture avant de taper.";
+}
+function rcSelectionner(id, focus, aligner) {
+  if (!RC.ouvert || !RC.page) return;
+  const d = rcDocument(RC.page); RC.ligne = d.ordre.includes(id) ? id : d.ordre[0] || null;
+  RC.ui.querySelectorAll(".rc-ligne").forEach(n => n.classList.toggle("on", n.dataset.ligne === RC.ligne));
+  rcMarques(); rcEtatLigne(); rcAgrandir();
+  const input = Array.from(RC.ui.querySelectorAll(".rc-saisie")).find(n => n.dataset.ligne === RC.ligne);
+  if (input && focus) input.focus({ preventScroll: true });
+  if (input && aligner) {
+    const zone = RC.ui.querySelector("#rcDefile"), row = input.parentElement;
+    zone.scrollTop = Math.max(0, row.offsetTop - 30);
+    if (zone.clientWidth < 600) zone.scrollLeft = Math.max(0, RC.ui.querySelector("#rcFeuille").offsetLeft - 10);
+  }
+  rcBookmark();
+}
+function rcAgrandir() {
+  if (!RC.ouvert || !RC.ui) return;
+  const p = SC.pages[RC.page], l = rcCourante(), im = p && SC.imgs[p.id], cv = RC.ui.querySelector("#rcAgrandie");
+  const w = Math.max(200, Math.round(cv.clientWidth || 500)), h = 76;
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const x = cv.getContext("2d"); x.fillStyle = "#fffdf8"; x.fillRect(0, 0, w, h);
+  if (!l || !im || !im.el.complete || !im.el.naturalWidth) return;
+  const marge = Math.max(0.012, Math.min(0.035, (p.lignes && p.lignes.pas || 0.03) * 0.55));
+  const sx = Math.max(0, l.x0 - 0.015) * im.w, sy = Math.max(0, Math.min(l.y0, l.y1) - marge) * im.h;
+  const sw = Math.min(im.w - sx, (l.x1 - l.x0 + 0.03) * im.w), sh = Math.min(im.h - sy, (Math.abs(l.y1 - l.y0) + marge * 2) * im.h);
+  if (sw <= 0 || sh <= 0) return;
+  const k = Math.min(w / sw, h / sh); x.drawImage(im.el, sx, sy, sw, sh, (w - sw * k) / 2, (h - sh * k) / 2, sw * k, sh * k);
+}
+function rcGarder() {
+  if (!RC.copie || !RC.page || !state.classe.some(n => eleveId(n) === RC.copie)) return;
+  const s = scCopie(RC.copie); s.recopie = s.recopie || {}; s.recopie.schema = 1;
+  s.recopie.pages = s.recopie.pages || {};
+  const d = rcDocument(RC.page); d.modifieLe = new Date().toISOString();
+  s.recopie.pages[RC.page] = JSON.parse(JSON.stringify(d)); s.recopie.reprise = { page: RC.page, ligne: RC.ligne };
+  state.scanRecopie = { ouverte: true, copie: RC.copie, page: RC.page, ligne: RC.ligne };
+  RC.ui.querySelector("#rcEtat").textContent = "Enregistrement…"; saveState(); SC.actif = Date.now();
+}
+function rcAjouter() {
+  const d = rcDocument(RC.page), i = d.ordre.indexOf(RC.ligne), a = d.lignes[RC.ligne], b = d.lignes[d.ordre[i + 1]];
+  const pas = SC.pages[RC.page].lignes && SC.pages[RC.page].lignes.pas || 0.03;
+  const y = a ? b ? (a.y0 + b.y0) / 2 : a.y0 + pas : 0.18;
+  const id = scId("ligne"); d.lignes[id] = { id, x0: a ? a.x0 : 0.14, x1: a ? a.x1 : 0.91, y0: rcBorne(y, 0.01, 0.98), y1: rcBorne(y + (a ? a.y1 - a.y0 : 0), 0.01, 0.98), texte: "" };
+  d.ordre.splice(i + 1, 0, id); RC.annule.push({ type: "ajout", id }); RC.ligne = id;
+  rcRapprocherLignes(); rcMettreEnPage(); rcSelectionner(id, true, true); rcGarder();
+}
+function rcRetirer() {
+  const d = rcDocument(RC.page), id = RC.ligne, i = d.ordre.indexOf(id); if (i < 0) return;
+  RC.annule.push({ type: "retrait", id, i }); d.lignes[id].retiree = new Date().toISOString(); d.ordre.splice(i, 1);
+  RC.ligne = d.ordre[Math.min(i, d.ordre.length - 1)] || null;
+  rcRapprocherLignes(); rcMettreEnPage(); rcSelectionner(RC.ligne, true, true); rcGarder();
+}
+function rcAnnuler() {
+  const a = RC.annule.pop(); if (!a) return;
+  const d = rcDocument(RC.page);
+  if (a.type === "ajout") { d.ordre = d.ordre.filter(id => id !== a.id); d.lignes[a.id].retiree = new Date().toISOString(); RC.ligne = d.ordre[0] || null; }
+  if (a.type === "retrait") { delete d.lignes[a.id].retiree; d.ordre.splice(a.i, 0, a.id); RC.ligne = a.id; }
+  if (a.type === "recalage") { Object.assign(d.lignes[a.id], a.avant); RC.ligne = a.id; }
+  rcRapprocherLignes(); rcMettreEnPage(); rcSelectionner(RC.ligne, true, true); rcGarder();
+}
+function rcPoigneeDebut(ev) {
+  const c = ev.target.closest && ev.target.closest("circle[data-rc-cote]"); if (!c) return;
+  ev.preventDefault(); ev.stopPropagation(); RC.ligne = c.dataset.rcLigne;
+  const l = rcCourante(); RC.drag = { id: RC.ligne, cote: c.dataset.rcCote, pointer: ev.pointerId, cible: c,
+    avant: { x0: l.x0, x1: l.x1, y0: l.y0, y1: l.y1 } };
+  c.setPointerCapture(ev.pointerId); rcEtatLigne();
+}
+function rcPoigneeBouger(ev) {
+  const a = RC.drag; if (!a || a.pointer !== ev.pointerId) return;
+  ev.preventDefault(); const r = RC.ui.querySelector("#rcLignesSVG").getBoundingClientRect(), l = rcCourante();
+  const x = rcBorne((ev.clientX - r.left) / r.width, 0.005, 0.995), y = rcBorne((ev.clientY - r.top) / r.height, 0.005, 0.995);
+  if (a.cote === "gauche") { l.x0 = Math.min(x, l.x1 - 0.02); l.y0 = y; } else { l.x1 = Math.max(x, l.x0 + 0.02); l.y1 = y; }
+  rcMettreEnPage();
+}
+function rcPoigneeFin(ev) {
+  const a = RC.drag; if (!a || a.pointer !== ev.pointerId) return;
+  RC.drag = null; RC.annule.push({ type: "recalage", id: a.id, avant: a.avant }); rcMarques(); rcSelectionner(a.id, false, false); rcGarder();
+}
+function rcPoigneeAnnuler(ev) {
+  const a = RC.drag; if (!a || a.pointer !== ev.pointerId) return;
+  Object.assign(rcCourante(), a.avant); RC.drag = null; rcMettreEnPage();
+}
+function rcZoom(v) { RC.zoom = rcBorne(v, 0.6, 2.5); rcMettreEnPage(); rcSelectionner(RC.ligne, true, true); }
+function rcTransformerPage(pid, transformer) {
+  Object.values(state.copies || {}).forEach(c => {
+    const d = c.scan && c.scan.recopie && c.scan.recopie.pages && c.scan.recopie.pages[pid];
+    if (!d) return;
+    Object.values(d.lignes || {}).forEach(l => {
+      const a = transformer(l.x0, l.y0), b = transformer(l.x1, l.y1);
+      l.x0 = a[0]; l.y0 = a[1]; l.x1 = b[0]; l.y1 = b[1];
+    });
+    d.modifieLe = new Date().toISOString();
+  });
+  if (RC.ouvert && RC.page === pid) { delete RC.documents[pid]; rcActualiser(); }
+}
+function rcBornesRetouche(R) {
+  const points = [];
+  Object.values(state.copies || {}).forEach(c => {
+    const d = c.scan && c.scan.recopie && c.scan.recopie.pages && c.scan.recopie.pages[R.pid];
+    if (!d) return;
+    Object.values(d.lignes || {}).filter(l => !l.retiree).forEach(l => {
+      [[l.x0, l.y0], [l.x1, l.y1]].forEach(([u, v]) => {
+        const [X, Y] = scVue2Orig(R.A, R.W0, R.H0, u, v);
+        const [bx, by] = scRot(X - R.W0 / 2, Y - R.H0 / 2, -scTheta(R) * Math.PI / 180);
+        const [ax, ay] = scRot(bx, by, R.angle * Math.PI / 180);
+        const x = (ax + R.Wb / 2) / R.Wb, y = (ay + R.Hb / 2) / R.Hb;
+        points.push([x, y - 0.012], [x, y + 0.012]);
+      });
+    });
+  });
+  return points;
+}
+function rcClavier(ev) {
+  if (!RC.ouvert) return false;
+  if (ev.isComposing) return true;
+  const input = ev.target && ev.target.classList && ev.target.classList.contains("rc-saisie");
+  if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); rcFermer(); return true; }
+  if (input && !ev.ctrlKey && !ev.metaKey && !ev.altKey && ["Enter", "ArrowDown", "ArrowUp"].includes(ev.key)) {
+    ev.preventDefault(); ev.stopPropagation();
+    const d = rcDocument(RC.page), i = d.ordre.indexOf(RC.ligne), sens = ev.key === "ArrowUp" ? -1 : 1;
+    const id = d.ordre[Math.max(0, Math.min(d.ordre.length - 1, i + sens))]; rcSelectionner(id, true, true);
+    rcGarder();
+    return true;
+  }
+  if (!input && (ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); rcAnnuler(); }
+  ev.stopPropagation(); return true;
+}
+
+// Le tableau lit la correction des scans sans initialiser ni réécrire une copie.
+// Une rubrique terminée est une case complète ; une marque seule commence la lecture.
+function scAvancement(k) {
+  const copie = state.copies[k], s = copie && copie.scan;
+  if (!s) return null;
+  const rep = s.rep || {}, marques = s.marques || {}, vu = s.vu || {};
+  const commence = Object.keys(marques).length > 0 || Number(s.lignes) > 0
+    || Object.values(vu).some(Boolean)
+    || Object.values(rep).some(r => r && Object.values(r).some(v => v === "o" || v === "n"));
+  if (!commence) return null; // une ouverture, un chrono ou une recopie ne corrigent pas la copie
+  const g = SUJET && SUJET.grille2;
+  let fait = 0, total = 0;
+  const lecture = { rep, marques };
+  ((g && g.criteres) || []).forEach(c => (c.points || []).forEach(p => {
+    total++;
+    if (p.calcul) {
+      // La passe a été terminée par Paul. Sur une copie à repères, le nombre de
+      // lignes peut venir des pages : aucune image n'est nécessaire au tableau.
+      if (vu[c.id] && (s.lignes == null || Number(s.lignes) > 0)) fait++;
+    } else {
+      const pt = Object.assign({}, p, { questions: p.questions || [], cases: p.cases || [] });
+      const r = scCase(pt, k, lecture);
+      if (r && r.complet) fait++;
+    }
+  }));
+  return { commence: true, fait, total, pct: total ? Math.round(100 * fait / total) : 0 };
+}
 </script>
 </body>
 </html>
