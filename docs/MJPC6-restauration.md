@@ -1345,6 +1345,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.7-RU (31/10/2026, conscience n°14)
+- Avant : 1.4.6-RU, 669 304 o, md5 `f91e3dd04b709bf4bd9d1e08aa5416aa`, copie au sas `SAUVEGARDES/redaction-1.4.6-RU-avant-1.4.7-2026-10-31.html`. Promu : 1.4.7-RU, 671 657 o, md5 `388d837460a309f6b5f34a191821eaf0`, commit `58ba42a`.
+- **Restauration en cas de `BUG`** : ne pas revenir à la 1.4.6 (sa poignée décale l'affichage des lignes) : revenir à la 1.4.5 (`SAUVEGARDES/redaction-1.4.4-RU-avant-1.4.5-2026-10-31.html` est la 1.4.4 ; la 1.4.5 est `LIVRAISONS/REDACTION/redaction-1.4.5-RU-candidat.html`), vérifier en ligne bit à bit. Les champs ajoutés par la 1.4.7 (`bandeArret` dans la recopie d'une copie, `bande` dans le suivi) sont ignorés par les versions d'avant.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.6-RU (31/10/2026, conscience n°14)
 - Avant : 1.4.5-RU, 664 077 o, md5 `3374bc96af2470137b1d024ec7ad215d`, copie au sas `SAUVEGARDES/redaction-1.4.5-RU-avant-1.4.6-2026-10-31.html`. Promu : 1.4.6-RU, 669 304 o, md5 `f91e3dd04b709bf4bd9d1e08aa5416aa`, commit `24510c9`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Rien de neuf n'est écrit dans les copies par la 1.4.6 (la position de la poignée est gardée dans le navigateur, `mjpc_rc_partage`) ; une marge trouvée tard reste dans la page de recopie où elle a été trouvée.
