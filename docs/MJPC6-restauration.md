@@ -1345,6 +1345,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.13-RU (01/11/2026, conscience n°14)
+- Avant : 1.4.12.1-RU, 740 178 o, md5 `8978841959a11829e679c5d3f0dac1f0`, copie au sas `SAUVEGARDES/redaction-1.4.12.1-RU-avant-1.4.13-2026-11-01.html`. Promu : 1.4.13-RU, 766 045 o, md5 `5910786e7d3d96522a39c1330614bd35`, commit `2b04d65`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les champs ajoutés par la 1.4.13 sont ignorés par la 1.4.12.1 : `source`, `anciennes`, `remplaceeLe` (pages) ; `absents` (suivi). Un élève marqué absent redevient présent dans la 1.4.12.1 (sa marque reste au site). Une photo remplacée garde sa nouvelle image dans ce navigateur.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.12.1-RU (01/11/2026, conscience n°14)
 - Avant : 1.4.12-RU, 738 345 o, md5 `633f7e22fb98ed74adc5ecc4239b22a6`, copie au sas `SAUVEGARDES/redaction-1.4.12-RU-avant-1.4.12.1-2026-11-01.html`. Promu : 1.4.12.1-RU, 740 178 o, md5 `8978841959a11829e679c5d3f0dac1f0`, commit `7f6a8a2`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.12.1 n'ajoute aucun champ ; mais la 1.4.12 rouvre la copie d'un autre élève au clic sur la carte d'un élève sans copie : ne pas la remettre sans le dire à Paul.
