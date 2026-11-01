@@ -1350,6 +1350,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.19-RU (01/11/2026, conscience n°14)
+- Avant : 1.4.18-RU, 892 358 o, md5 `a1ef513bc9a4a85a3e5d8e8438b9cded`, copie au sas `SAUVEGARDES/redaction-1.4.18-RU-avant-1.4.19-2026-11-01.html`. Promu : 1.4.19-RU, 897 875 o, md5 `55c27b0af397b48d2af2b8c6c491fa38`, commit `e390cbe`, blob `257fe862a182`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.19 ajoute un champ, `recopie.envoi.retour` (un retour arrivé sans la copie), que la 1.4.18 ignore.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.18-RU (01/11/2026, conscience n°14)
 - Avant : 1.4.17-RU, 887 813 o, md5 `e01b612c14841e31eaf31f25ee9e2357`, copie au sas `SAUVEGARDES/redaction-1.4.17-RU-avant-1.4.18-2026-11-01.html`. Promu : 1.4.18-RU, 892 358 o, md5 `a1ef513bc9a4a85a3e5d8e8438b9cded`, commit `a5d9854`, blob `232681c5afbd`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.18 n'ajoute aucun champ au site ; le fichier de l'élève lit l'écart des lignes de la recopie, déjà au site.
