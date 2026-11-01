@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.77.1-⑩ (01/11/2026, conscience n°16)
+- blob `5cf9d24ab593` (commit `e0e56fc`) · 2 709 746 o · md5 `55694fe15bc27b5fb318eeb1e05910a1` · v8.77.0-⑩
+- **Motif** : la dette ② du 01/11 (Paul, 18:53) — le bloc question se lit question → réponses des élèves → réponse préparée tout en bas ; sur « ok promeus » de Paul (20:07), sur les captures avant / après. Candidate : sas, branche `deroule/question-ordre` (`e076704` + sonde), assemblée : 2 710 427 o, md5 `db481a8725124c7782c031e9e6485e82`. **Données** : aucune nouvelle (seul l'ordre du dessin change ; le fil, la copie de la classe, le journal et le récit sont identiques).
+- **Restauration en cas de `BUG`** : le blob `5cf9d24ab593` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : l'ordre nouveau du bloc question (la réponse préparée revient au-dessus des réponses des élèves) et les libellés « réponse préparée » de l'Atelier.
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.77.0-⑩ (29/10/2026, conscience n°13)
 - blob `5a46178a0fa5` (commit `36d9367`) · 2 672 694 o · md5 `6586dada1424c999e38d11c826e4a22e` · v8.76.1-⑨
 - **Motif** : §12.74, §12.70, §12.71, §12.68. Promu : 2 709 746 o, md5 `55694fe15bc27b5fb318eeb1e05910a1` (commit `e0e56fc`, blob `5cf9d24ab593`). **Données** : la participation part sous une forme qui garde zéro ; l'annulation efface ce que l'heure avait écrit.
