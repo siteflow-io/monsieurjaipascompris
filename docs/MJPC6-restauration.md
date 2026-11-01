@@ -1345,6 +1345,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.12-RU (01/11/2026, conscience n°14)
+- Avant : 1.4.10-RU, 684 342 o, md5 `2c4043460b49e560fac754f3d94ce6e9`, copie au sas `SAUVEGARDES/redaction-1.4.10-RU-avant-1.4.12-2026-11-01.html`. Promu : 1.4.12-RU, 738 345 o, md5 `633f7e22fb98ed74adc5ecc4239b22a6`, commit `ebadd79`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les champs ajoutés par la 1.4.12 sont ignorés par la 1.4.10 : `recopie.phrase`, `recopie.refusIA`, `recopie.temps`, `recopie.gestes` (copie) ; `retoucheeLe`, `placesApp` (lignes) ; `bande.oubliee`, `bande.notion` (marques) ; `segs`, `recopie` (marque « etoile » de la phrase) ; `sujetDe` (copie) ; `scanDernier` (suivi). Une faute oubliée par l'IA (clé « mot-n ») reste une marque des scans, comptée par la 1.4.10 ; la phrase qui m'a marqué reste une marque dorée.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.10-RU (31/10/2026, conscience n°14)
 - Avant : 1.4.9-RU, 679 353 o, md5 `1490e03e0057ddb7f0b849b43c401c37`, copie au sas `SAUVEGARDES/redaction-1.4.9-RU-avant-1.4.10-2026-10-31.html`. Promu : 1.4.10-RU, 684 342 o, md5 `2c4043460b49e560fac754f3d94ce6e9`, commit `a6ab9fe`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les champs ajoutés par la 1.4.10 (`envoiIA`, `corrigeMarque`, `types`, `typesDe` sur les lignes) sont ignorés par la 1.4.9 ; un corrigé chargé en 1.4.10 y reste lisible (texte sans accolades).
