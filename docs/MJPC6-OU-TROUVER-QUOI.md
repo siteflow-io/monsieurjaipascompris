@@ -524,11 +524,13 @@
 
 | ce que tu cherches | où c'est |
 |---|---|
-| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.15-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.17-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
 | la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
 | le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
 | les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
 | le fichier de l'élève | « 📨 Fichiers École Directe » : un fichier par élève, en lecture seule, sans aucun appel au site (`scEleveLecture`) |
+| la grille en stickers (1.4.16-1.4.17) | au site : `redactions/<id>/config/stickers` et `config/stickersLignes` ; posée par Paul dans Réglages → « La grille et ses stickers » ; le fichier de la lettre de la Grande Guerre : sas `MANDATS/REDACTION-UNIVERSELLE/STICKERS/stickers-lettre-grande-guerre.json` (textes proposés, à valider ligne par ligne) ; code : sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille-stickers.js` |
+| les cadres et les étoiles des stickers chez l'élève (1.4.17) | `scCadresStickers` (aucun cadre n'en croise un autre) et `decoller` (aucune étoile sur une autre, ni sur la marge) dans `eleve.js`, embarqués dans le fichier de l'élève |
 | la correction par l'élève (à coder) | drapeau `SC_CORRECTION_ELEVE_CODEE` ; dettes : `docs/MJPC6-DETTES.md`, sas `MANDATS/REDACTION-UNIVERSELLE/A-CODER-CORRECTION-ELEVE.md` |
 | le générateur | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/gen-maquette.py` : maquette (faux hub fidèle à Firebase) ; `PROD=1` : le fichier à mettre en ligne, même code, sans faux hub |
 | revenir en arrière | `docs/MJPC6-restauration.md`, point de retour du 30/10 (1.1.0-RU, commit `dc045e5`) |

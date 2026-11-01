@@ -1345,6 +1345,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.17-RU (01/11/2026, conscience n°14)
+- Avant : 1.4.15-RU, 773 216 o, md5 `32eba2b6df51bef6c354f60766e3c48c`, copie au sas `SAUVEGARDES/redaction-1.4.15-RU-avant-1.4.17-2026-11-01.html`. Promu : 1.4.17-RU (avec la 1.4.16, jamais mise en ligne seule), 887 813 o, md5 `e01b612c14841e31eaf31f25ee9e2357`, commit `c54472a`, blob `f1f46cff3f3c`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.17 ajoute des champs : la grille des stickers (`config/stickers`, `config/stickersLignes`), les décisions de stickers d'une copie, les marques `forme: "sticker"` (`taille`, `segs`), `recopie.stickersIA` et `recopie.remarquesIA`. **Non mesuré** : la façon dont la 1.4.15 affiche une copie qui porte déjà des marques de stickers ; à mesurer avant tout retour en arrière si des copies ont été corrigées en 1.4.17.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.15-RU (01/11/2026, conscience n°14)
 - Avant : 1.4.14-RU, 767 398 o, md5 `33ea71a3588a75e86f979b2536e77a40`, copie au sas `SAUVEGARDES/redaction-1.4.14-RU-avant-1.4.15-2026-11-01.html`. Promu : 1.4.15-RU, 773 216 o, md5 `32eba2b6df51bef6c354f60766e3c48c`, commit `3240b55`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.15 n'ajoute aucun champ ; un cadre raccourci aux poignées garde sa place (`places`, déjà lu par la 1.4.14).
