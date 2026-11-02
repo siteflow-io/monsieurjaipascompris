@@ -736,4 +736,8 @@
 | les sondes par le geste (banc étapes 10, 11, 12) | sas `LIVRAISONS/DEROULE-01-11/DIAPOS-OUVERTURE/`, `FIL-NAVIGATION/sonde-fil.mjs`, `RETOUR-SUR/sonde-retour.mjs` ; la sonde des quatre dettes `QUATRE-DETTES/sonde-dettes.mjs` (hors banc) |
 | la 8.77.1-⑩ corrigée de la reprise (le point de retour pour une vraie classe) | sas branche `reprise/8771`, `LIVRAISONS/REPRISE-8771/index.html` (md5 `f70b6661243038482c9b0280c379ca71`) et sa NOTE |
 | revenir à la 8.77.1-⑩ | `docs/MJPC6-restauration.md` (blob `422011fbb3fd`) |
+| **le journal des micros** (les mises en ligne faites par dérogation, avec ou sans banc ; le marqueur « -micro » dans la version) — Paul, 02/11 08:21 : « afin de savoir plus tard si un bug n'a pas été introduit par la dérogation à la règle » | `docs/MJPC6-MICROS.md` |
+| en jeu (l'heure lancée, la répétition), ni la molette ni les flèches de la colonne ne changent de diapo — la dette ⑱, micro n°1 (8.78.1-⑪-micro) | `dr_filEnJeu`, `dr_filColonneTouche`, `dr_filMolette` (`dr-fil.js`) ; sas `micro/molette` `044331a` |
+| l'ordre des diapos d'ouverture de la première séance (la problématique juste après la présentation du chapitre) et « Notre problématique » — micro n°2 (8.78.2-⑪-micro) | `DR_INV_ORDRE_PREMIERE`, `dr_invPoser` (`dr-socle.js`) ; `dr_ouvContenu`, rôle `problematique` (`dr-ouverture.js`) ; sas `micro/molette` `da11a4c` |
+| revenir à la 8.78.0-⑪ ou à la 8.78.1-⑪-micro | `docs/MJPC6-restauration.md` (blobs `01797d0074f0`, `f6ad6e3c7c30`) |
 
