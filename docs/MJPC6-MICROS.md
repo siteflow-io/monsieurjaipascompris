@@ -36,6 +36,8 @@
 
 **Ce qui le remplace ensuite** : le cinquième exécutant fait la même dette (⑱) dans son mandat (`MANDATS/DEROULE-01-11/MANDAT-DERNIERES-DETTES.md`, point 7), avec ses sondes et le banc complet de la conscience ; sa version remplacera ce micro à la mise en ligne suivante. Ce journal dira alors : « remplacé par … ».
 
+**Remplacé par `8.79.0-⑫`** (02/11/2026 14:29, commit prod `4f9984a`, md5 `126b2a6a0183b025c108d80ef5722d99`) : la même règle (⑱, `dr_filEnJeu`) dans le code du cinquième exécutant (`5770054`), passée au banc complet de la conscience (13:19-13:51 ; l'étape 11, la molette et les flèches, VERT) ; ce qui n'avait pas été mesuré pour ce micro l'est désormais, sauf l'étape 8 (2 / 3, le délai du tableau distant).
+
 ---
 
 ## 2 · 02/11/2026 08:32 — `8.78.2-⑪-micro` (conscience n°16) — SANS BANC
@@ -61,4 +63,6 @@
 **Ce qui n'a PAS été mesuré (la dérogation)** : le banc complet — la sonde de l'Atelier (`sonde-1262`) et la sonde des diapos d'ouverture attendent l'ancien ordre et « Notre question » : elles échoueraient sur ce micro (à adapter, mandat du cinquième exécutant) ; la 8.77.1-⑩ (le point de retour) relisant une séance réécrite dans le nouvel ordre ; le micro n°1 (la molette) rejoué sur ce fichier ; le tableau distant ; les tailles 1366 et 1920 ; le vrai hub.
 
 **Ce qui le remplace ensuite** : le cinquième exécutant reprend ce commit dans sa branche (`deroule/diapos-ouverture`) et adapte les sondes ; sa mise en ligne, avec le banc, remplacera les micros n°1 et n°2.
+
+**Remplacé par `8.79.0-⑫`** (02/11/2026 14:29, commit prod `4f9984a`) : ce commit repris (`a1e291b`), les sondes adaptées (`d8235c1`, `90a7da0`), la coexistence avec la 8.77.1-⑩ corrigée (`ddd8a94`) ; le banc complet de la conscience : l'étape 6 (l'Atelier) 53 / 53, l'étape 10 (les diapos d'ouverture) 126 / 0, l'étape 12 (le retour sûr) 61 / 0.
 

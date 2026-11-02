@@ -741,3 +741,13 @@
 | l'ordre des diapos d'ouverture de la première séance (la problématique juste après la présentation du chapitre) et « Notre problématique » — micro n°2 (8.78.2-⑪-micro) | `DR_INV_ORDRE_PREMIERE`, `dr_invPoser` (`dr-socle.js`) ; `dr_ouvContenu`, rôle `problematique` (`dr-ouverture.js`) ; sas `micro/molette` `da11a4c` |
 | revenir à la 8.78.0-⑪ ou à la 8.78.1-⑪-micro | `docs/MJPC6-restauration.md` (blobs `01797d0074f0`, `f6ad6e3c7c30`) |
 
+| rien de ce que le site écrit au hub ne porte une clé que le vrai hub refuse (`.` `#` `$` `[` `]` `/`) : la scène, l'image du tableau du mode test, la répétition (la correction en direct, ㉘, 8.79.0-⑫) | `dr_clesVersHub`, `dr_clesDuHub` (index.html l. 20274) ; lus dans `dr_tabSceneRecue` ; écrits par `dr_sceneAuto`, `dr_ttEmettre`, `dr_repEcrire` |
+| la photo du prévu de l'emploi du temps et son archive (les cases rangées par libellé, qui peut porter un point) — 8.79.0-⑫ | `edtClesVersHub`, `edtClesDuHub` (l. 23934) |
+| aucun mot de l'interface n'entre dans un texte de Paul ; un texte déjà sali, signalé dans « À régler » (㉙) | `dr_texteEcrit` (l. 19450), `dr_motsInterface` (l. 19038) |
+| en jeu, → montre chaque page d'un tableau en pages avant la diapo suivante, ← revient page par page (㉜) | `dr_pageEnJeu`, `DR_PAGE_DERNIERE` (l. 18382) |
+| « À régler » : un tableau mesuré page par page, le défaut dit avec sa page, sa rangée, sa case et son geste ; « Couper le schéma » pour la tête de chaque forme, jamais un tableau (㉝) | `dr_tabDefauts`, `DR_TETE_FORME` (l. 19051) |
+| une rangée plus haute qu'une page continue sur la suivante, coupée entre deux lignes (⑭) | `dr_tabTranches`, `dr_tabTranchePoser` (l. 18162) ; voyagent avec les pages (`et.tranchesP`) |
+| les colonnes d'un tableau en pages ne bougent plus d'une page à l'autre (⑮) ; la ligne du titre posée avant la mesure | `dr_tabFiger`, `dr_tabAncrer` (l. 18176), `dr_titrePoser` (l. 19615) |
+| la colonne des vignettes redessinée après la fenêtre du tableau (⑯, 80 ms) | `dr_voletApres` (l. 19623) |
+| comparer comme le hub range (sans vide, clés triées) : le témoin « déroulé intègre » (⑰) et le faux conflit de l'Atelier (⑲) | `dr_commeLeHub`, `dr_empreinteHub` (l. 20335) |
+| revenir à la 8.78.2-⑪-micro | `docs/MJPC6-restauration.md` (blob `e497ef8d5a45`) |
