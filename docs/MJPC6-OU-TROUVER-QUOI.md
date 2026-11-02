@@ -721,3 +721,19 @@
 | la passation, les dettes mesurées, le cadrage restant, le mandat du bloc question | sas `MANDATS/PASSATION-C14-C16-DEROULE.md`, `MANDATS/DEROULE-01-11/` |
 | la sonde par le geste du bloc question | sas `LIVRAISONS/DEROULE-01-11/QUESTION-ORDRE/sonde-question.mjs` (branche `integration`, étape 9 de `banc.sh`) |
 | le transcript de la conscience n°16 | sas `TRANSCRIPTS/C16/TRANSCRIPT-C16.md` |
+
+## AJOUTS DU 02/11/2026 — CONSCIENCE n°16 : 8.78.0-⑪ (les diapos d'ouverture, le fil, les flèches et la molette, le retour sûr)
+| quoi | où |
+|---|---|
+| le fil de la séance (le trait et son point, sur toutes les diapos, au pilote, au tableau, dans l'Atelier) — **pour la classe**, Paul (01/11 23:24) : « ce point indique où on en est dans la séance. Il faudrait qu'il y ait ça sur toutes les diapos et que ça descende au fur et à mesure des diapos » | `dr_filPour`, `dr_filDe`, `dr_filHtml`, `dr_filOrdre` (`dr-fil.js` ; `index.html` 8.78.0-⑪) ; la marge du fil (5,2 % / 2 %) dans `dr.css` |
+| les flèches de la colonne (la colonne qui a la main, le trait d'or) et la molette (un cran = une diapo) — « le même comportement que dans diaporama » | `DR_FIL`, `dr_filColonneTouche`, `dr_filPas`, `dr_filMolette`, `dr_filGardeAcceptee`, `dr_filGardeLibre` (`dr-fil.js`) |
+| les diapos d'ouverture au canon (présentation du chapitre, compétences, parcours, début de séance, problématique) | `dr_invPoser`, `dr_invContenu` (`dr-socle.js`) ; `dr-ouverture.js` ; contrat sas `MANDATS/INTEGRATION-DEROULE/CONTRAT.md` §12.67, §12.76 ; canons `MANDATS/CANONS-DIAPOS/` |
+| la copie de la classe lisible par la 8.77.1-⑩ (le retour sûr) | `dr_copiePourHub`, `dr_copieDuHub`, `dr_ouvLisibleCopie` ; `ouvCanon`, `ouvRetraits`, `deroule/ouvAttente/<eid>` (`dr_invEnAttente`) |
+| la reprise après F5 sur le vrai hub (les listes vides que le hub ne range pas) | `dr_etatRempli`, `dr_parDiapoRempli` (`dr-classe.js`) |
+| le tableau plus haut qu'une diapo, en pages | `paginer`, `dr_tabPages`, `DR_PAGE_ELS` (`dr-socle.js`) |
+| l'image pleine entre la marge du fil et le bord droit | `dr.css` (`.ecran.plein-img .img`), `dr_imageAjuster` |
+| les mandats et NOTE de la nuit du 01 au 02/11 | sas `MANDATS/DEROULE-01-11/` ; `LIVRAISONS/DEROULE-01-11/{DIAPOS-OUVERTURE,FIL-NAVIGATION,RETOUR-SUR,QUATRE-DETTES}/NOTE.md` (branche `deroule/diapos-ouverture`) |
+| les sondes par le geste (banc étapes 10, 11, 12) | sas `LIVRAISONS/DEROULE-01-11/DIAPOS-OUVERTURE/`, `FIL-NAVIGATION/sonde-fil.mjs`, `RETOUR-SUR/sonde-retour.mjs` ; la sonde des quatre dettes `QUATRE-DETTES/sonde-dettes.mjs` (hors banc) |
+| la 8.77.1-⑩ corrigée de la reprise (le point de retour pour une vraie classe) | sas branche `reprise/8771`, `LIVRAISONS/REPRISE-8771/index.html` (md5 `f70b6661243038482c9b0280c379ca71`) et sa NOTE |
+| revenir à la 8.77.1-⑩ | `docs/MJPC6-restauration.md` (blob `422011fbb3fd`) |
+
