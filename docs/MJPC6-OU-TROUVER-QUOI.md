@@ -524,7 +524,7 @@
 
 | ce que tu cherches | où c'est |
 |---|---|
-| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.24-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.25-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
 | la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
 | le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
 | les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
@@ -552,6 +552,7 @@
 | un sticker enlevé de la grille (1.4.24, 710) | `stRanger`, `stRangerOui` (`etat: "range"`) ; `stArrets`, `stRqVisibles` et le fichier de l'élève ne lisent que `stActifs` ; `stRqRelecture` la montre grisée (`grille-stickers.js`) |
 | l'accueil (1.4.24, 642) | `avCarteResumer`, `avCartesResumer` (`avancement.js`, appelé par `synchroniser`) : `copies/<classe>/<élève>/scan/carte` = `{pct, fini}` ; `avAccueil` (dans la page, avant `ruCopieFinie`) : « N corrigée(s) sur M · P % » dans `ruListeSujets` |
 | le flux d'en haut (1.4.24) | `rcEtatIA` (`recopie.js`) : « N corrigée(s) » compte `svCopieCorrigee` |
+| les flèches de la bande (1.4.25, Paul 16:30) | `RC_PAS_FLECHE` (0,012 de la largeur de la page) et `RC_PAS_FIN` (0,004, avec Maj) dans `rcBandeClavier`, qui appelle `rcBandeGlisser` (`recopie.js`) ; sur un sticker de toute la lettre : `rcBandeLettre`, ligne par ligne |
 | la limite du contexte (1.4.24, l'essai de Paul) | `ST_CONTEXTE_MAX` (1 000 000 de signes) dans `stContexteGarder` (`grille-stickers.js`) : au-delà, l'app le dit |
 | le code de l'ancien flux des scans retiré (1.4.20, 401) | les 52 fonctions : sas, branche `c14-poignees`, `banc/outil-fonctions-401.mjs` (l'outil qui les a trouvées) et `banc/ancien-flux-retire-1.4.20.mjs.txt` (les vérifications retirées avec elles) ; la version d'avant : `SAUVEGARDES/redaction-1.4.19-RU-avant-1.4.20-2026-11-02.html` |
 | la correction par l'élève (à coder) | drapeau `SC_CORRECTION_ELEVE_CODEE` ; dettes : `docs/MJPC6-DETTES.md`, sas `MANDATS/REDACTION-UNIVERSELLE/A-CODER-CORRECTION-ELEVE.md` |
