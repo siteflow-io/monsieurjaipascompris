@@ -1370,6 +1370,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.26-RU (02/11/2026, conscience n°14)
+- Avant : 1.4.25-RU, 907 485 o, md5 `26db1bf73adaecad2320bb7866fdd003`, copie au sas `SAUVEGARDES/redaction-1.4.25-RU-avant-1.4.26-2026-11-02.html` (commit sas `afd301d4`). Promu : 1.4.26-RU, 908 085 o, md5 `b17dbb81a64ea67c8b670ee30674aac3`, commit `fa9b122`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.26 ne change que la phrase grise « en-tête de la lettre » de la recopie : rien de nouveau au site.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.25-RU (02/11/2026, conscience n°14)
 - Avant : 1.4.24-RU, 907 072 o, md5 `7e2efea4ec829f94c655274ba5ff258d`, copie au sas `SAUVEGARDES/redaction-1.4.24-RU-avant-1.4.25-2026-11-02.html` (commit sas `35f47e22`). Promu : 1.4.25-RU, 907 485 o, md5 `26db1bf73adaecad2320bb7866fdd003`, commit `25715b5`, blob `6f82dd3296d1`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.25 ne change que le pas des flèches dans la bande : rien de nouveau au site.
