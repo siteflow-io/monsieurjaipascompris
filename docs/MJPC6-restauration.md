@@ -1350,6 +1350,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.20-RU (02/11/2026, conscience n°14)
+- Avant : 1.4.19-RU, 897 875 o, md5 `55c27b0af397b48d2af2b8c6c491fa38`, copie au sas `SAUVEGARDES/redaction-1.4.19-RU-avant-1.4.20-2026-11-02.html` (commit sas `a57a2356`). Promu : 1.4.20-RU, 870 879 o, md5 `cca2b54a64a3921bfe5403054e8af17c`, commit `8d00785`, blob `5938bc546ec2`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.20 ajoute au site deux champs aux pages du paquet, `vueTournee` et `lignesDroites` (une copie de l'appli tournée en vue), et un chemin nouveau, `sauvegardes/redactions/<rédaction>/…` (la sauvegarde JSON quand le paquet est entièrement corrigé) ; la 1.4.19 les ignore (ce qu'elle montre d'une page de l'appli tournée en 1.4.20 n'a pas été mesuré).
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.19-RU (01/11/2026, conscience n°14)
 - Avant : 1.4.18-RU, 892 358 o, md5 `a1ef513bc9a4a85a3e5d8e8438b9cded`, copie au sas `SAUVEGARDES/redaction-1.4.18-RU-avant-1.4.19-2026-11-01.html`. Promu : 1.4.19-RU, 897 875 o, md5 `55c27b0af397b48d2af2b8c6c491fa38`, commit `e390cbe`, blob `257fe862a182`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.19 ajoute un champ, `recopie.envoi.retour` (un retour arrivé sans la copie), que la 1.4.18 ignore.

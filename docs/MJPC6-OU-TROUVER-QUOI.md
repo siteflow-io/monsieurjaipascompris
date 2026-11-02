@@ -524,7 +524,7 @@
 
 | ce que tu cherches | où c'est |
 |---|---|
-| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.19-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.20-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
 | la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
 | le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
 | les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
@@ -534,9 +534,19 @@
 | la garde de l'export (1.4.18) | `stGardeExport` (`grille-stickers.js`) : l'énoncé, la grille de stickers chargée et validée ; `rcExportIA` refuse et le dit ; la raison en tête de la ligne du flux (`rcEtatIA`) |
 | la marge au téléphone (1.4.18) | `ranger` dans `eleve.js` (fichier de l'élève) : pastilles et numéros à la hauteur d'une ligne de la copie (`pages[].pas`), un seul rang, la photo décalée d'autant |
 | tout exporter à la suite (1.4.19) | `rcEnAttente` (une copie partie qui attend son retour ; `envoi.retour` quand un retour est arrivé sans elle), `rcNomEnvoi` (le nom du fichier), `RC_CONSIGNE_FICHIER` (« corrige_ » + ce nom), `rcIAChargerPlusieurs` (plusieurs retours d'un coup), le bouton « ↻ Renvoyer les copies en attente » (`#rcRenvoyerIA`) |
+| le paquet en vignettes (1.4.20, 404) | `scVuePaquet` (une carte par élève, ses étapes, ses pages ; un redessin ne touche pas au focus) et `scPqOuvrir` (une vignette ouvre la recopie à cette page) dans `scan.js` ; `scRendre` choisit entre le paquet et « 🔤 Les initiales » (`SC.attrib`) |
+| le chrono de la recopie et de la bande (1.4.20, 403) | `rcChronoRendre` (`#rcChrono`, en haut de la recopie), `rcDureeCourte` ; le total de la classe sous « 📋 Le flux » : `rcFluxTotal` (`recopie.js`) ; au site : `copies/<classe>/<élève>.scan.recopie.temps` (compté par `rcCompter`) |
+| « 📷 La photo » (1.4.20, 402) | `rcPhotoOuvrir` (la fenêtre `#rcPhotoF`, les raisons des boutons grisés dans `#rcPhotoPourquoi`), `rcPhotoFaire` (`recopie.js`) ; une copie de l'appli tournée « en vue » : `vueTournee`, `lignesDroites` sur la page au site (`scTournerPage`, `scTournerPageVieux`, `scan.js`) |
+| « 📦 Tout rendre » (1.4.20, 405) | `scToutTelecharger` (un zip, `scZip` et `scCrc32`, sans bibliothèque), `scNomFichierED` (« NOM Prénom.html »), `scTitreFichier` (`eleve.js`) ; la colonne « Correction » de la liste École Directe : la note, ou « corrigée », « en cours, N % », « pas commencée » |
+| la sauvegarde JSON de toute la rédaction (1.4.20, Paul 13:12) | `svPaquet`, `svFaire`, `svTelecharger`, `svVerifier`, `svProposer`, `svCopieCorrigee` (`avancement.js`) ; au site : `sauvegardes/redactions/<rédaction>/<clé>` ; « 💾 Télécharger la sauvegarde » : la fenêtre de la fin du paquet et « 📋 Le flux » (`#rcSauvegarde`) ; « 📤 Restaurer » la relit (même format que « 📸 Snapshot ») |
+| le Bilan avec les stickers (1.4.20, 406) | les colonnes « Lignes » et « Ton temps » : `avLignesTemps`, `avLignesTempsClasse`, `avDureeB` ; « ▸ sa grille » : `avGrilleBouton`, `avGrilleBasculer`, `avGrilleDetail`, `AV_GRILLES` (`avancement.js`) |
+| le tableau des élèves au flux unique (1.4.20) | `scAvancement` (la phrase 25, le corrigé 25, la bande 50 au prorata de ses arrêts ; 100 % quand `svCopieCorrigee`) et `avCarteEtat` (« Corrigé » seulement à 100 %) |
+| l'aide « ? » (1.4.20, 407) | `RU_AIDES.scan`, `.recopie`, `.bande`, `.bilan`, `.fiches`, `.reglages` ; `aidePoser` choisit l'aide de l'écran ouvert |
+| les cadres sur le blanc correcteur (1.4.20) | `rcCalerMots` (`recopie.js`), étape 1 : les mots d'encre choisis par la largeur que leurs lettres demandent et des blancs larges, la place attendue ne fait que départager |
+| le code de l'ancien flux des scans retiré (1.4.20, 401) | les 52 fonctions : sas, branche `c14-poignees`, `banc/outil-fonctions-401.mjs` (l'outil qui les a trouvées) et `banc/ancien-flux-retire-1.4.20.mjs.txt` (les vérifications retirées avec elles) ; la version d'avant : `SAUVEGARDES/redaction-1.4.19-RU-avant-1.4.20-2026-11-02.html` |
 | la correction par l'élève (à coder) | drapeau `SC_CORRECTION_ELEVE_CODEE` ; dettes : `docs/MJPC6-DETTES.md`, sas `MANDATS/REDACTION-UNIVERSELLE/A-CODER-CORRECTION-ELEVE.md` |
 | le générateur | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/gen-maquette.py` : maquette (faux hub fidèle à Firebase) ; `PROD=1` : le fichier à mettre en ligne, même code, sans faux hub |
-| revenir en arrière | `docs/MJPC6-restauration.md`, point de retour du 30/10 (1.1.0-RU, commit `dc045e5`) |
+| revenir en arrière | `docs/MJPC6-restauration.md`, point de retour du 30/10 (1.1.0-RU, commit `dc045e5`) ; le dernier : avant 1.4.20-RU, 02/11 (1.4.19-RU, `55c27b0a…`) |
 
 ## AJOUTS DU 27/10/2026 — PROMOTION `index.html` 8.75.0-⑥ (L'ATELIER, LES RÉDACTIONS DEPUIS LE SITE) ET `redaction.html` 1.1.0-RU (LE PANNEAU COMMUN)
 
