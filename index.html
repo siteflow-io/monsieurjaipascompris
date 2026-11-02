@@ -3135,7 +3135,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.78.1-⑪-micro";
+var APP_VERSION="8.78.2-⑪-micro";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -9615,7 +9615,7 @@ function chSommaireSeance(som){
   if(som.entree)h+='<div class="ch-som-l"><b>Entr\u00e9e du programme :</b> '+e(som.entree)+'</div>';
   if(som.majeures.length)h+='<div class="ch-som-l"><b>Comp\u00e9tence(s) principale(s) :</b> '+som.majeures.map(e).join(' \u00b7 ')+'</div>';
   if(som.mineures.length)h+='<div class="ch-som-l"><b>Aussi travaill\u00e9es :</b> '+som.mineures.map(e).join(' \u00b7 ')+'</div>';
-  if(som.problematique)h+='<div class="ch-som-l"><b>Notre question :</b> '+e(som.problematique)+'</div>';
+  if(som.problematique)h+='<div class="ch-som-l"><b>Notre problématique :</b> '+e(som.problematique)+'</div>';
   if(som.plan.length){
     h+='<div class="ch-som-l"><b>Le plan du chapitre</b><ol class="ch-som-plan">';
     som.plan.forEach(function(p){h+='<li>'+e(p.titre)+(p.type?(' <span class="ch-som-type">'+e(p.type)+'</span>'):'')+(p.evaluee?' <span class="ch-som-type ch-som-ev">\u00e9valu\u00e9e</span>':'')+(p.objectif?('<div class="ch-som-obj">'+e(p.objectif)+'</div>'):'')+'</li>';});   /* C16 */
@@ -16810,6 +16810,10 @@ const DR_INV_TETE_PREMIERE = ['presentation-chapitre', 'competences-chapitre'];
 const DR_INV_TETE_SEANCE = ['plan', 'presentation-seance', 'problematique'];
 const DR_INV_TETE = DR_INV_TETE_PREMIERE.concat(DR_INV_TETE_SEANCE);
 const DR_INV = DR_INV_TETE.concat(['competences-bilan']);
+/* C16 (micro 2 de la conscience, Paul 02/11 08:25 : « La problématique doit toujours suivre la diapo de présentation de chapitre ») : l'ordre de la première séance —
+   la présentation du chapitre, la problématique, les compétences du chapitre, le parcours, le début de séance (lisait : la problématique en dernier). Les autres
+   séances (sans présentation du chapitre) gardent le parcours, le début de séance, la problématique. */
+const DR_INV_ORDRE_PREMIERE = ['presentation-chapitre', 'problematique', 'competences-chapitre', 'plan', 'presentation-seance'];
 const DR_INV_NOM = { 'presentation-chapitre': 'la présentation du chapitre', 'competences-chapitre': 'les compétences du chapitre', plan: 'le parcours du chapitre', 'presentation-seance': 'le début de séance', problematique: 'la problématique', 'competences-bilan': 'les compétences du chapitre en bilan' };
 /* §12.74 (3) : le rôle d'une diapo dit en clair dans l'en-tête du pilote (« problématique », pas « problematique ») */
 const DR_ROLE_CLAIR = { 'presentation-chapitre': 'présentation du chapitre', 'competences-chapitre': 'compétences du chapitre', plan: 'parcours du chapitre', 'presentation-seance': 'début de séance', problematique: 'problématique', 'competences-bilan': 'compétences du chapitre (bilan)', reactivation: 'réactivation', bilan: 'bilan', fin: 'Cahier de textes' };
@@ -16990,8 +16994,15 @@ function dr_invPoser(E, sk){ try { if (sk == null || !Array.isArray(E) || dr_pag
   const ret = dr_invRetraits(sce, sk);
   for (let i = E.length - 1; i >= 0; i--) if (dr_estInvariable(E[i]) && ret.indexOf(E[i].role) >= 0 && dr_invIntacte(E[i])) E.splice(i, 1);   /* retirée ici ou sur un autre appareil */
   const vraies = E.filter(e => e && !e.dr_pose && e.role !== 'fin' && !dr_estInvariable(e)); if (!vraies.length) return;   /* une séance sans trame n'a pas encore de début */
-  const h0 = Math.min(...vraies.map(e => +e.heure || 1)); const voulus = (dr_invPremiere(sk) ? DR_INV_TETE : DR_INV_TETE_SEANCE).filter(r => ret.indexOf(r) < 0);
+  const h0 = Math.min(...vraies.map(e => +e.heure || 1)); const prem = dr_invPremiere(sk); const voulus = (prem ? DR_INV_ORDRE_PREMIERE : DR_INV_TETE_SEANCE).filter(r => ret.indexOf(r) < 0);
   let pos = 0; voulus.forEach(r => { const k = E.findIndex(e => e && e.role === r); if (k >= 0) { pos = k + 1; return; } E.splice(pos, 0, dr_invNeuve(r, sk, h0)); pos++; });
+  /* C16 (micro 2) : à la première séance, les diapos d'ouverture déjà écrites au hub (dans l'ancien ordre) reprennent l'ordre voulu, à leurs places (les autres diapos
+     ne bougent pas) — sauf dans une heure de classe dont la classe a déjà vu une diapo (ce qui a été joué ne change plus) ; le nom d'avant « Notre question »,
+     jamais écrit par Paul, devient « Notre problématique » */
+  const joueDeja = (typeof AT_DR_REGIME !== 'undefined' && AT_DR_REGIME === 'classe') && (typeof J !== 'undefined' && Array.isArray(J) && J.some(x => x && x.type === 'diapo'));
+  if (!joueDeja) { E.forEach(e => { if (e && e.role === 'problematique' && e.act === 'Notre question') e.act = 'Notre problématique'; });
+    if (prem) { const places = []; E.forEach((e, i) => { if (e && DR_INV_ORDRE_PREMIERE.indexOf(e.role) >= 0) places.push(i); });
+      const tri = places.map(i => E[i]).sort((a, b) => DR_INV_ORDRE_PREMIERE.indexOf(a.role) - DR_INV_ORDRE_PREMIERE.indexOf(b.role)); places.forEach((i, n) => { E[i] = tri[n]; }); } }
   /* §12.67 (8), C13 1020 : à la dernière séance, « Les compétences du chapitre » revient, juste avant la diapo du bilan de la séance (sans bilan : juste avant le cahier de textes de sa dernière heure) */
   if (dr_invDerniere(sk) && ret.indexOf('competences-bilan') < 0 && !E.some(e => e && e.role === 'competences-bilan')) {
     let ib = -1; E.forEach((e, i) => { if (dr_invEstBilan(e)) ib = i; });
@@ -18622,7 +18633,7 @@ function dr_ouvContenu(role, sk){
   }
   if (role === 'problematique') {
     const q = String(c.problematique || '').trim();   /* son manque est dit une fois, sur la présentation du chapitre */
-    return fin('Notre question', 'problematique', q ? [q] : [], { kicker: 'NOTRE QUESTION' });
+    return fin('Notre problématique', 'problematique', q ? [q] : [], { kicker: 'NOTRE PROBLÉMATIQUE' });   /* C16 (micro 2, Paul 02/11 08:25 : « Il doit s'appeler notre problématique ») — lisait « Notre question » / « NOTRE QUESTION » */
   }
   return fin('', 'probleme', [], {});
 }
@@ -18703,7 +18714,7 @@ function dr_ouvCarteHtml(e, durChamp, masq){
       + ` <button class="btn" data-ouv-image-retirer="${cible}"${x ? '' : ' disabled'} title="${x ? (cible === 'chapitre' ? 'Plus d’image sur la présentation du chapitre (ni sur les débuts de séance qui la reprenaient) : la colonne de texte prend toute la largeur ; « À régler » ne la réclame plus' : 'Plus d’image sur ce début de séance : la colonne de texte prend toute la largeur') : 'Il n’y a pas d’image à retirer'}">Retirer</button></div>`; };
   if (dr_ouvChampsChapitre(e)) {
     if (e.role === 'presentation-chapitre') h += lab('TITRE DU CHAPITRE') + `<div class="l">${champ('dc-ouv-titre', 'titre', c.title, 'Le titre du chapitre — sur la présentation du chapitre, dans la liste de tes chapitres, sur la feuille sommaire ; il change pour toutes tes classes. Entrée le garde.')}</div>`;
-    h += lab('LA QUESTION DU CHAPITRE') + `<div class="l">${champ('dc-ouv-question', 'question', c.problematique, 'La problématique du chapitre — sur la présentation du chapitre, sur la diapo « Notre question » de chaque séance et sur la feuille sommaire, pour toutes tes classes. Entrée la garde.', true)}</div>`;
+    h += lab('LA PROBLÉMATIQUE DU CHAPITRE') + `<div class="l">${champ('dc-ouv-question', 'question', c.problematique, 'La problématique du chapitre — sur la présentation du chapitre, sur la diapo « Notre question » de chaque séance et sur la feuille sommaire, pour toutes tes classes. Entrée la garde.', true)}</div>`;
     if (e.role === 'presentation-chapitre') h += image('chapitre', c.image === false ? null : dr_ouvImage(c.image));
   } else {
     const L = dr_ouvSeances(c, null); const rang = Math.max(0, L.findIndex(p => String(p.j) === String(sk))) + 1;
@@ -21939,7 +21950,7 @@ function recitHtml0(fin, h, bornes){ h = h || S.heure; const finHeure = (S.close
           if (b.forme === 'competences') { phrases.push((b.d || {}).bilan ? 'on a fait le point sur les compétences du chapitre, séance par séance' : 'on a regardé les compétences que le chapitre va travailler'); return; }
           if (b.forme === 'parcours') { phrases.push('on a regardé le parcours du chapitre' + ((b.d || {}).sn ? ' (' + dr_esc(String(b.d.sn).toLowerCase()) + ')' : '')); return; }
           if (b.forme === 'debut') { const io = g.indexOf('objectif'); const ob = io >= 0 && vu2(io) ? String(el[io] || '').trim().replace(/\.$/, '') : ''; phrases.push(ob ? 'on a lu l’objectif de la séance : « ' + dr_esc(ob) + ' »' : 'on a commencé la séance'); return; }
-          if (b.forme === 'problematique') { if (L.length) phrases.push('on a lu notre question : « ' + dr_esc(L[0]) + ' »'); return; }
+          if (b.forme === 'problematique') { if (L.length) phrases.push('on a lu notre problématique : « ' + dr_esc(L[0]) + ' »'); return; }
           return; }
         if (b.t === 'texte' && elsB.length && e.role === 'reactivation' && e.construite) { const l = elsB.map(o => String(o.x.txt || '').trim().replace(/\.$/, '')).filter(Boolean); if (l.length) phrases.push((phrases.length ? '' : 'on a ouvert l\'heure par la réactivation : ') + 'on a rappelé ' + (b.txt ? '« ' + dr_esc(String(b.txt).toLowerCase()) + ' » : ' : '') + '« ' + l.map(dr_esc).join(' » ; « ') + ' »'); return; }   /* §12.22 d : la réactivation construite (`construite`, posée par dr_reactivationConstruire) se dit, ce qui a été dévoilé seulement, sans plafond de lignes ; une « Où en sommes-nous ? » de trame (rôle posé par le titre) reste racontée comme avant */
         if (b.t === 'texte' && elsB.length) { const l = elsB.map(o => String(o.x.txt || '').trim().replace(/\.$/, '')).filter(Boolean); if (l.length) phrases.push('on a écrit au tableau : « ' + l.slice(0, 4).map(dr_esc).join(' » ; « ') + ' »' + (l.length > 4 ? ' (et ' + (l.length - 4) + ' ligne' + (l.length > 5 ? 's' : '') + ' de plus)' : '')); return; } /* (E4 · relecteur continu B3) un bloc « clique ici et écris » se raconte : ses lignes vues, citées (cadrage 2 §1.2, §1.4) */
