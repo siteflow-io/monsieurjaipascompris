@@ -2348,7 +2348,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 /* ═══ fin M-SÉCU-2 ═══ */
 
 // ── DÉCLARATION DE L'APP (redaction) ──
-var APP_VERSION = "1.4.26-RU";
+var APP_VERSION = "1.4.27-RU";
 var MJPC_APP = { id: "redaction", nom: "Rédaction universelle", contenant: "aucun" };
 var MJPC_MANIFESTE = { notions: [], noeuds: ["redactions", "redactions_communes"] };
 var MJPC_PURGE = { preserver: ["redactions", "redactions_communes"], purger: [] };
@@ -2455,7 +2455,7 @@ function synchroniser() {
     if (!cp.id) { cp.id = idCopie(); if (!cp.creeLe) cp.creeLe = maintenant; }   // une copie sans id (première écriture, ou déjà au hub avant 13 · 58) en reçoit un, une fois
     cp.eleve = k; cp.classe = RU.classe; cp.sujetId = (SUJET && SUJET.idInterne) || RU.id; cp.modifieLe = maintenant;
     const v = Object.assign({}, cp, { nom: nomEleveDe(k) || cp.nom || "" });
-    const sg = JSON.stringify(scCles(v, true)); if (RU.sig[k] === sg) return; RU.sig[k] = sg;
+    const sg = JSON.stringify(scFb(scCles(v, true))); if (RU.sig[k] === sg) return; RU.sig[k] = sg; if (typeof ruMien === "function") ruMien(k, sg);   /* [C14 1.4.27] la forme du site : ses champs rangés comme il les renvoie */
     ruEcrire(ruCheminCopies().concat(k), JSON.parse(sg), "la copie de " + (v.nom || k)).then(i => { if (i.etat !== MJPC_ISSUE.ACCEPTEE) delete RU.sig[k]; });
   });
   const su = {}; RU_SUIVI.forEach(k => { if (state[k] != null) su[k] = state[k]; });
@@ -2490,8 +2490,10 @@ function ruAbonner() {
     if (patch) Object.keys(m.data || {}).forEach(k => { RU.miroir = ruPoser(RU.miroir, seg.concat(ruSeg(k)), m.data[k]); });
     else RU.miroir = ruPoser(RU.miroir, seg, m.data);
     let change = false;
-    Object.keys(RU.miroir || {}).forEach(k => {
-      const sg = JSON.stringify(RU.miroir[k]); if (RU.sig[k] === sg) return;   // l'écho de notre écriture, ou rien de neuf
+    const touchees = seg.length ? [seg[0]] : Object.keys(RU.miroir || {});   /* [C14 1.4.27] seulement les copies que ce message touche : l'écho d'une copie ne remet jamais une autre comme le site l'avait avant son écho à elle */
+    touchees.filter(k => (RU.miroir || {})[k] != null).forEach(k => {
+      const sg = JSON.stringify(scFb(RU.miroir[k])); if (RU.sig[k] === sg || (typeof ruEchoAncien === "function" && ruEchoAncien(k, sg))) return;   // l'écho de notre écriture, ou rien de neuf
+      if (typeof ruGarderLocal === "function" && ruGarderLocal(k)) { planifierSync(); return; }   /* [C14 1.4.27] la copie que tu corriges : ta décision pas encore enregistrée passe d'abord */
       RU.sig[k] = sg; const v = scCles(ruCopie(RU.miroir[k]), false); delete v.nom; state.copies[k] = v; change = true;
       { const corps = Object.assign({}, v); RU_IDENTITE.forEach(f => delete corps[f]); RU.sigCorps = RU.sigCorps || {}; RU.sigCorps[k] = JSON.stringify(scFb(corps)); }   // reçue d'ailleurs : pas à réécrire d'ici
     });
@@ -2549,7 +2551,7 @@ function ruOuvrirClasse(k) {
   state = { classe: extractEleves(RU.classes[k], []), sujet: SUJET.enonce || "", copies: {}, current: null, tri: "ordre", paquetOrdre: [], interroBookmark: {}, modeOuvert: null };
   ruEntete(); ruEcran("ruApp");
   return Promise.all([ruLire(ruCheminCopies()), ruLire(ruCheminSuivi())]).then(([cp, su]) => {
-    Object.keys(cp || {}).forEach(e => { RU.sig[e] = JSON.stringify(cp[e]); const v = scCles(ruCopie(cp[e]), false); delete v.nom; state.copies[e] = v;
+    Object.keys(cp || {}).forEach(e => { RU.sig[e] = JSON.stringify(scFb(cp[e])); const v = scCles(ruCopie(cp[e]), false); delete v.nom; state.copies[e] = v;
       const corps = Object.assign({}, v); RU_IDENTITE.forEach(f => delete corps[f]); RU.sigCorps = RU.sigCorps || {}; RU.sigCorps[e] = JSON.stringify(scFb(corps)); });
     // une copie dont la clé d'élève n'est plus celle d'un élève de la classe (un nom corrigé au site) : elle n'est pas perdue — le tableau de bord la montre, et « Rattacher » la remet à un élève, avec son id interne
     RU.orphelines = Object.keys(cp || {}).filter(e => !state.classe.some(n => eleveId(n) === e) && !ruVierge(cp[e]));
@@ -10325,6 +10327,19 @@ function avCartesResumer() {
     if (typeof RC !== "undefined") { if (RC.ouvert && RC.copie) K.add(RC.copie); if (RC.bd && RC.bd.k) K.add(RC.bd.k); }
     if (AV.resumeLe !== RU.id + "|" + RU.classe + "|" + Math.floor(t / 60000)) { AV.resumeLe = RU.id + "|" + RU.classe + "|" + Math.floor(t / 60000); (state.classe || []).forEach(n => K.add(eleveId(n))); }
     K.forEach(k => { try { avCarteResumer(k); } catch (e) {} }); } catch (e) {}
+}
+/* [C14 1.4.27] (Paul 02/11 16:53 : « pourquoi systématiquement après une relecture de bande j'ai encore des choses non validées? […] le principe devrait être presqu'en
+   gardant le doigt appuyé sur entrée je puisse valider l'intégralité de la correction » ; « 43 ok », 17:10). Mesuré : le site renvoie chaque copie enregistrée, ses champs
+   rangés par ordre alphabétique ; l'app ne reconnaissait jamais sa propre écriture (24 copies sur 24) et remettait la copie comme au moment de l'envoi : une décision
+   prise pendant l'aller-retour disparaissait de la copie enregistrée. Maintenant : la signature est celle du site (scFb, champs triés) ; l'écho d'une écriture d'ici plus ancienne
+   que la dernière est ignoré, même arrivé en retard ; la copie ouverte n'est jamais remplacée tant qu'elle porte une décision pas encore enregistrée. */
+function ruMien(k, sg) { RU.mien = RU.mien || {}; const L = RU.mien[k] = RU.mien[k] || []; if (L[L.length - 1] !== sg) L.push(sg); if (L.length > 20) L.shift(); }
+function ruEstMien(k, sg) { return !!(RU.mien && RU.mien[k] && RU.mien[k].indexOf(sg) >= 0); }
+/* l'écho d'une écriture d'ici plus ancienne que la dernière : périmé, ignoré ; l'écho de la dernière, lui, s'applique si la copie a bougé entre-temps (il la remet comme au site) */
+function ruEchoAncien(k, sg) { const L = RU.mien && RU.mien[k]; return !!(L && L.indexOf(sg) >= 0 && L[L.length - 1] !== sg); }
+function ruGarderLocal(k) {
+  try { if (typeof RC === "undefined" || !RC.ouvert || RC.copie !== k) return false; const cp = state.copies[k]; if (!cp) return false;
+    const v = Object.assign({}, cp, { nom: nomEleveDe(k) || cp.nom || "" }); return JSON.stringify(scFb(scCles(v, true))) !== RU.sig[k]; } catch (e) { return false; }
 }
 
 /* ═══ [C14 1.4.16] LES STICKERS, OBJETS DU SUJET (Paul 01/11 07:59 : « La grille de stickers doit être évidemment modifiable et attachée à un sujet. À placer dans
