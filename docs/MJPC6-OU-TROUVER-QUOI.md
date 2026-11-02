@@ -524,7 +524,7 @@
 
 | ce que tu cherches | où c'est |
 |---|---|
-| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.20-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.24-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
 | la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
 | le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
 | les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
@@ -543,6 +543,16 @@
 | le tableau des élèves au flux unique (1.4.20) | `scAvancement` (la phrase 25, le corrigé 25, la bande 50 au prorata de ses arrêts ; 100 % quand `svCopieCorrigee`) et `avCarteEtat` (« Corrigé » seulement à 100 %) |
 | l'aide « ? » (1.4.20, 407) | `RU_AIDES.scan`, `.recopie`, `.bande`, `.bilan`, `.fiches`, `.reglages` ; `aidePoser` choisit l'aide de l'écran ouvert |
 | les cadres sur le blanc correcteur (1.4.20) | `rcCalerMots` (`recopie.js`), étape 1 : les mots d'encre choisis par la largeur que leurs lettres demandent et des blancs larges, la place attendue ne fait que départager |
+| la bande sur une lettre entière (1.4.24, 626) | `rcBandeLettre` (`recopie.js`) : toutes les lignes bout à bout, chacune ajustée ; ← → dans `rcBandeClavier` sur un sticker de toute la lettre |
+| les paragraphes (1.4.24, 632) | `rcParagraphes` (une ligne sautée, un retrait, une ligne d'avant courte sur une fin de phrase ; `l.par` vrai ou faux à la main), `rcParBasculer`, `rcParEtat` (« ¶ Paragraphe », `#rcPar`) ; l'export porte `par: true` ; `RC_CONSIGNE_PARAGRAPHES` (`recopie.js`) |
+| la fin de la bande (1.4.24, 633, 638) | `rcBandeNonDecides`, `rcBandeNom` (« Il reste N arrêts : … », Entrée va au premier) ; `rcBandeGarderRq` (Entrée garde les remarques, avec sa confirmation), `rcBandeManque` ; « ✓ Copie corrigée » (`.rc-bande-ok`) (`recopie.js`) |
+| la consigne qui demande d'abord (1.4.24, 669) | `RC_CONSIGNE_AVANT`, `RC_CONSIGNE_DOUTE` (« manque », pour le professeur seul), `RC_CONSIGNE_CONTEXTE` (`recopie.js`) ; le contexte gardé : `stContexte`, `stContexteGarder`, `stContexteVoir` (« 📎 Le contexte de l'IA ») (`grille-stickers.js`) ; au site : `redactions/<rédaction>/config/contexteIA` ; l'en-tête au-dessus de la lettre : `rcRapprocherLignes` |
+| le commentaire général (1.4.24, 704) | `RC_CONSIGNE_COMMENTAIRE` ; `rcCg`, `rcCgPropose`, `rcCgARelire`, `rcCgCharger` (la proposition de l'IA : `recopie.commentaireIA`), `rcCgRendre` (`#rcCg`, `#rcCgTexte`), `rcCgGarder` (`recopie.js`) ; au site : `copies/<classe>/<élève>/scan/commentaire` ; dans le fichier de l'élève : `.cg` (`eleve.js`) ; `svCopieCorrigee` l'attend (`avancement.js`) |
+| la grille faite avec l'IA (1.4.24, 702) | `ST_CONSIGNE_GRILLE`, `stGrilleIA` (« ⇪ Faire la grille avec l'IA », `#stGrilleIA`) ; `stImporter` garde son contexte (`grille-stickers.js`) |
+| un sticker enlevé de la grille (1.4.24, 710) | `stRanger`, `stRangerOui` (`etat: "range"`) ; `stArrets`, `stRqVisibles` et le fichier de l'élève ne lisent que `stActifs` ; `stRqRelecture` la montre grisée (`grille-stickers.js`) |
+| l'accueil (1.4.24, 642) | `avCarteResumer`, `avCartesResumer` (`avancement.js`, appelé par `synchroniser`) : `copies/<classe>/<élève>/scan/carte` = `{pct, fini}` ; `avAccueil` (dans la page, avant `ruCopieFinie`) : « N corrigée(s) sur M · P % » dans `ruListeSujets` |
+| le flux d'en haut (1.4.24) | `rcEtatIA` (`recopie.js`) : « N corrigée(s) » compte `svCopieCorrigee` |
+| la limite du contexte (1.4.24, l'essai de Paul) | `ST_CONTEXTE_MAX` (1 000 000 de signes) dans `stContexteGarder` (`grille-stickers.js`) : au-delà, l'app le dit |
 | le code de l'ancien flux des scans retiré (1.4.20, 401) | les 52 fonctions : sas, branche `c14-poignees`, `banc/outil-fonctions-401.mjs` (l'outil qui les a trouvées) et `banc/ancien-flux-retire-1.4.20.mjs.txt` (les vérifications retirées avec elles) ; la version d'avant : `SAUVEGARDES/redaction-1.4.19-RU-avant-1.4.20-2026-11-02.html` |
 | la correction par l'élève (à coder) | drapeau `SC_CORRECTION_ELEVE_CODEE` ; dettes : `docs/MJPC6-DETTES.md`, sas `MANDATS/REDACTION-UNIVERSELLE/A-CODER-CORRECTION-ELEVE.md` |
 | le générateur | sas `MANDATS/REDACTION-UNIVERSELLE/maquette/gen-maquette.py` : maquette (faux hub fidèle à Firebase) ; `PROD=1` : le fichier à mettre en ligne, même code, sans faux hub |

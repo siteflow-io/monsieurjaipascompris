@@ -1370,6 +1370,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.24-RU (02/11/2026, conscience n°14)
+- Avant : 1.4.20-RU, 870 879 o, md5 `cca2b54a64a3921bfe5403054e8af17c`, copie au sas `SAUVEGARDES/redaction-1.4.20-RU-avant-1.4.24-2026-11-02.html` (commit sas `77173c3b`). Promu : 1.4.24-RU, 907 072 o, md5 `7e2efea4ec829f94c655274ba5ff258d`, commit `0051571`, blob `37fc6a7d0a40`. Les candidates 1.4.21 à 1.4.23 n'ont jamais été en ligne.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.24 ajoute au site : `config/contexteIA` (le contexte donné à l'IA), aux copies `scan/commentaire` (le commentaire général gardé), `scan/recopie/commentaireIA` (sa proposition), `scan/carte` (le pourcentage de la carte, pour l'accueil), aux lignes `par` (le paragraphe posé à la main), aux réussites et remarques `manque` ; la 1.4.20 les ignore. Fait par moi au site avec la mise en ligne (Paul, 14:09 : « Tu l'enlèves de la grille, c'est tout ») : S30 enlevé des deux grilles (`etat: "range"`, `stk_mvy80ps3fiz25u` et `stk_mvyv2x9c9vcueu`) ; pour le remettre : `etat: "valide"`.
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.20-RU (02/11/2026, conscience n°14)
 - Avant : 1.4.19-RU, 897 875 o, md5 `55c27b0af397b48d2af2b8c6c491fa38`, copie au sas `SAUVEGARDES/redaction-1.4.19-RU-avant-1.4.20-2026-11-02.html` (commit sas `a57a2356`). Promu : 1.4.20-RU, 870 879 o, md5 `cca2b54a64a3921bfe5403054e8af17c`, commit `8d00785`, blob `5938bc546ec2`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.20 ajoute au site deux champs aux pages du paquet, `vueTournee` et `lignesDroites` (une copie de l'appli tournée en vue), et un chemin nouveau, `sauvegardes/redactions/<rédaction>/…` (la sauvegarde JSON quand le paquet est entièrement corrigé) ; la 1.4.19 les ignore (ce qu'elle montre d'une page de l'appli tournée en 1.4.20 n'a pas été mesuré).
