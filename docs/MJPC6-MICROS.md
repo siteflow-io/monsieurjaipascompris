@@ -1,0 +1,37 @@
+# JOURNAL DES MICROS — les mises en ligne faites par dérogation à la règle
+
+> **À quoi il sert.** Paul, 02/11/2026 08:21 : « il faut mettre un marqueur sur cette version afin qu'on sache plus tard que tu avais fait cette modif en micro (ou ouvrir un journal des micros, sur github, afin de savoir plus tard si un bug n'a pas été introduit par la dérogation à la règle). »
+>
+> **La règle à laquelle on déroge.** Le flux principal est le mandat d'un exécutant, son audit, puis le banc complet de la conscience, puis le « promeus » de Paul. La filière micro n'est jamais le défaut. Un micro est donc une exception : la conscience écrit elle-même le changement et le met en ligne, sur la décision explicite de Paul, avec ou sans banc.
+>
+> **Comment s'en servir.** Si un bug paraît, regarde d'abord ici : une version marquée « -micro » (dans `APP_VERSION`, visible sur le badge de l'accueil) est passée hors du flux. Chaque entrée dit ce qui a changé (le diff entier), ce qui a été mesuré, ce qui ne l'a pas été, et comment revenir.
+>
+> **Le marqueur.** La version porte « -micro » dans son nom (ex. `8.78.1-⑪-micro`). Le message du commit de production commence par « MICRO ». Une étiquette git (`micro-<date>-<version>`) était prévue, mais le dépôt refuse les étiquettes poussées depuis la session (02/11/2026 : « the remote end hung up ») : le nom de la version et ce journal font foi.
+
+---
+
+## 1 · 02/11/2026 08:21 — `8.78.1-⑪-micro` (conscience n°16) — SANS BANC
+
+| | |
+|---|---|
+| **Décidé par** | Paul, 08:13 : « Non 9h en fait. on se passe du banc pour cette fois, tant pis. Tu peux le faire en micro maintenant ? Ou c'est trop complexe? » ; « promeus » à 08:21 |
+| **Pourquoi** | sa classe à 9:00 ; la dette ⑱ ne pouvait pas attendre le mandat en cours et son banc (fin vers 09:30) |
+| **La dette** | ⑱ — Paul, 07:48 : « en répétition, si je scrolle dans les diapos du milieu, elles passent ET AUSSI au tableau! ça va totalement contre le gel. […] Dès qu'un diapo est lancé, la façon d'avancer c'est soit dévoiler, soit gel. pas de scroll ou autre, qui sert en préparation, jamais en jeu en classe, ni en répétition. » |
+| **Avant** | `8.78.0-⑪`, commit prod `e493d05`, blob `01797d0074f0`, md5 `2e8ec58d59000c2d08b01bb1bbb8e78a` |
+| **Après** | `8.78.1-⑪-micro`, commit prod `a9f6208`, blob `f6ad6e3c7c30`, md5 `37479546381c1a97ff7e05f72a1d2a6c` (2 837 158 o) |
+| **Source au sas** | `siteflow-io/mjpc-chantier`, branche `micro/molette`, commit `044331a` (parti de `1cc67a1`, la 8.78.0-⑪) ; l'assemblé md5 `ecc075a85d01995a84b5424a28f082c6` + la ligne `APP_VERSION` |
+| **Revenir** | `docs/MJPC6-restauration.md`, « AVANT promotion 8.78.1-⑪-micro » : le blob `01797d0074f0` |
+
+**Ce qui change (le diff entier, 4 fichiers du sas, 8 lignes de l'assemblé hors `APP_VERSION`)** :
+1. `LIVRAISONS/INTEGRATION/dr/dr-fil.js` — une fonction neuve `dr_filEnJeu()` : vrai quand l'heure est lancée ou la répétition jouée, hors de l'Atelier (`!S.atelier && (S.lancee || S.repetition)`).
+2. `dr-fil.js`, `dr_filColonneTouche` — en jeu, la flèche n'est plus pour la colonne : elle retourne à l'écoute ordinaire (→ dévoile, ← revoile ; ↑ ↓ ne font rien).
+3. `dr-fil.js`, `dr_filMolette` — en jeu, la molette sur la vue centrale ne fait rien (ni diapo, ni page). Ctrl + molette (le zoom), le cahier de textes, la loupe : inchangés (ils passent avant, dans l'écoute de `#murcadre`).
+4. `dr-fil.js`, `DR_FIL_BULLE` (l'infobulle de la colonne) — dit la règle : flèches et molette dans l'Atelier et avant le lancement ; en jeu, ▶ avance, un clic sur une vignette va ailleurs (la garde en classe).
+5. `dr-socle.js` l. 1433 — l'infobulle des flèches de page « ‹ › » : « Maj+← ; la molette, dans l'Atelier seulement ».
+6. `MANDATS/CINQ-DETTES/AIDE-PAR-ECRAN.md` (rejoué dans `index.html` par `LIVRAISONS/INTEGRATION/E1/outils/aide-ecrans.mjs`) — l'aide « ? » de la répétition et de la classe : « ni la molette ni les flèches de la colonne ne changent de diapo » ; pour aller ailleurs, un clic sur la vignette (en classe, la garde, « ❄ Geler, puis y aller »). L'aide de l'Atelier est inchangée.
+
+**Ce qui a été mesuré (par le geste)** — partie N de la sonde de la conscience (`mesure-c16-reprise.mjs`, session, non poussée ; captures non poussées) : en classe (l'heure lancée par la case de l'emploi du temps, la fenêtre du tableau ouverte), trois crans de molette puis ↓ ↓ après un clic dans la colonne : la même diapo, le même compteur, au pilote et au tableau, aucune garde ; → dévoile ; en répétition, trois crans : la même diapo ; dans l'Atelier, un cran passe une diapo (inchangé) ; aucune erreur JS — **6 vérifications, 0 échec**. Témoin, la 8.78.0-⑪, mêmes gestes : **3 échecs** (la garde s'ouvre en classe ; en répétition, de la diapo 2 à la 5).
+
+**Ce qui n'a PAS été mesuré (la dérogation)** : le banc complet (les 12 étapes : parcours, contrôles K1-K13, sondes de l'Atelier, du tableau distant, de la ⑩, du bloc question, des diapos d'ouverture, du fil, du retour sûr) ; le contrôle K7, cas « page 2 », attend encore la molette dans le banc du sas (adapté sur la branche du déroulé, `8776a13`, pas sur `micro/molette`) — il échouerait sur ce micro ; le tableau distant (seule la fenêtre du tableau a été lue) ; les tailles 1366 et 1920 (seulement 1536 × 864) ; la vraie classe sur le vrai hub.
+
+**Ce qui le remplace ensuite** : le cinquième exécutant fait la même dette (⑱) dans son mandat (`MANDATS/DEROULE-01-11/MANDAT-DERNIERES-DETTES.md`, point 7), avec ses sondes et le banc complet de la conscience ; sa version remplacera ce micro à la mise en ligne suivante. Ce journal dira alors : « remplacé par … ».

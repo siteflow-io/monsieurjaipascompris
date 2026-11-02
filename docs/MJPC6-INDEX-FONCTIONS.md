@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2241 fonctions** — site : 2241 · moteur : 0
+**2242 fonctions** — site : 2242 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,7 +25,7 @@
 - **DIVERS — socle du site** — 510 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 658 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 659 fonctions
 - **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 237 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
@@ -351,7 +351,7 @@
 | `apercuAnnoncesPourApp` | o, appId | 276 o | Aperçu : reproduit EXACTEMENT le filtre et le tri du lecteur de M6, pour montrer ce que lira une app donnée. | _blocAnnonces |
 | `apercuFermer` | — | 60 o | (sans commentaire ni indice) | — |
 | `apercuOuvrir` | diapos, k | 1099 o | (sans commentaire) affiche/emploie : « )} — ${e.act} (${k + 1}/${diapos.length}${numDe(e) ?  ·  + numDe(e) :  » | — |
-| `appliquerPages` | mur, et | 861 o | (sans commentaire) affiche/emploie : « ); if (!corps ·· !et.pages) { if (page) page.textContent =  · , !et.pages[pi].includes(i)));   corps.querySelectorAll( » | dr_paginerReference, dr_tabPages, paginer, rendre |
+| `appliquerPages` | mur, et | 921 o | (sans commentaire) affiche/emploie : « ); if (!corps ·· !et.pages) { if (page) page.textContent =  · , !et.pages[pi].includes(i)));   corps.querySelectorAll( » | dr_paginerReference, dr_tabPages, paginer, rendre |
 | `applyLevelTheme` | code | 838 o | (sans commentaire) affiche/emploie : « ;var bgLv=document.getElementById( · );var sunLv=document.getElementById( » — touche #bg-accueil, #bg-level, #horizon-accueil | openLevel |
 | `applyLinkChanges` | newSource,newRef,newKind | 1268 o | (sans commentaire) affiche/emploie : « UNE RESSOURCE, ET IL LE DIT : si l · Remplacer la ressource » | linkModalApplyApp, linkModalApplyAtelier, linkModalApplyUrl, linkModalUnlink |
 | `applyPublished` | level | 2504 o | (sans commentaire) affiche/emploie : « ;   });   var zA=document.querySelector( · );   var cA=document.getElementById( » — touche #admin-tabs-publish, #count-analyse-logique, #tab-btn- | basculerVue, loadPublished, togglePublishExtra, togglePublishTab |
@@ -1385,13 +1385,14 @@
 | `dr_ficheEnLigne` | b | 132 o | une fiche du site porte son propre texte (titre, définition, corps) : la trame réelle n'a aucune fiche liée à une feuille (le lien de la maquette était simulé) | rendre |
 | `dr_ficheOuverte` | — | 135 o | E1 (R14, la couche commune) la fiche ouverte se pilote comme une diapo — l'ancien moteur (elems d'une fiche ouverte, marqueFiche) : | dr_ficheDevoiler, dr_ficheEcrire |
 | `dr_filBloque` | — | 380 o | les flèches ne vont pas à la colonne quand un menu, une palette ou une fenêtre du déroulé les prend, ni après la clôture de l'heure (dr-classe.js bloque alors ← → : la classe n'est plus là) | dr_filColonneTouche, dr_filMolette |
-| `dr_filColonneTouche` | ev | 326 o | l'écoute du clavier du déroulé (dr-socle.js) la consulte avant →, ← : rend vrai si la flèche est pour la colonne | — |
+| `dr_filColonneTouche` | ev | 434 o | (sans commentaire) touche #volet | — |
 | `dr_filDe` | si, di | 508 o | { r, n, y } : le rang (0 = la première), le nombre de diapos, la hauteur du point (0 en haut, 1 en bas) ; | dr_filPour |
+| `dr_filEnJeu` | — | 90 o | C16 (micro de la conscience, 02/11, ⑱ — Paul, 07:48 : « Dès qu'un diapo est lancé, la façon d'avancer c'est soit dévoiler, soit gel. | dr_filColonneTouche, dr_filMolette |
 | `dr_filGardeAcceptee` | — | 58 o | 4 · la garde (dr-socle.js, dr_garde) : | — |
 | `dr_filGardeLibre` | — | 98 o | (sans commentaire ni indice) | dr_garde |
 | `dr_filHtml` | fil, sombre | 460 o | le dessin : sur le bleu nuit, les couleurs du canon 4 ; sur une diapo claire, le bleu nuit — les deux dans la charte (DR_CHARTES, dr-ouverture.js) | dr_filPour |
 | `dr_filMarquer` | — | 108 o | 2 · la colonne a la main : un clic dedans la lui donne, un clic ailleurs la lui reprend (la garde « La classe te suivrait » n'est pas « ailleurs » : c'est elle qui laisse passer la flèche) ; | — |
-| `dr_filMolette` | ev | 645 o | 3 · la molette sur la vue centrale (l'écoute de #murcadre, dr-socle.js, la lui passe hors du cahier de textes, de la loupe et de Ctrl) : | — |
+| `dr_filMolette` | ev | 729 o | 3 · la molette sur la vue centrale (l'écoute de #murcadre, dr-socle.js, la lui passe hors du cahier de textes, de la loupe et de Ctrl) : | — |
 | `dr_filMontrer` | — | 409 o | la vignette ou la ligne courante reste visible dans la colonne (au plus près : rien ne bouge si elle se voit déjà) | dr_filPas |
 | `dr_filOrdre` | — | 473 o | 1 · le rang : les diapos que la classe voit dans la séance, heure après heure (l'ordre de chaque heure, `ordreHeure`, figé à son lancement) ; | dr_filDe |
 | `dr_filPas` | sens, source | 1934 o | un pas dans la colonne (`sens` : +1 la suivante, -1 la précédente) ; `source` : 'fleche' ou 'molette' (la molette passe d'abord les pages de la diapo) | dr_filColonneTouche, dr_filMolette |
