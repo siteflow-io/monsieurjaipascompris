@@ -35,3 +35,30 @@
 **Ce qui n'a PAS été mesuré (la dérogation)** : le banc complet (les 12 étapes : parcours, contrôles K1-K13, sondes de l'Atelier, du tableau distant, de la ⑩, du bloc question, des diapos d'ouverture, du fil, du retour sûr) ; le contrôle K7, cas « page 2 », attend encore la molette dans le banc du sas (adapté sur la branche du déroulé, `8776a13`, pas sur `micro/molette`) — il échouerait sur ce micro ; le tableau distant (seule la fenêtre du tableau a été lue) ; les tailles 1366 et 1920 (seulement 1536 × 864) ; la vraie classe sur le vrai hub.
 
 **Ce qui le remplace ensuite** : le cinquième exécutant fait la même dette (⑱) dans son mandat (`MANDATS/DEROULE-01-11/MANDAT-DERNIERES-DETTES.md`, point 7), avec ses sondes et le banc complet de la conscience ; sa version remplacera ce micro à la mise en ligne suivante. Ce journal dira alors : « remplacé par … ».
+
+---
+
+## 2 · 02/11/2026 08:32 — `8.78.2-⑪-micro` (conscience n°16) — SANS BANC
+
+| | |
+|---|---|
+| **Décidé par** | Paul, 08:25 : « deux dettes à ajouter: les diapos de présentation. La problématique doit toujours suivre la diapo de présentation de chapitre. De plus, notre question est en dur dans la diapo (ou en tout cas non modifiable). Il doit s'appeler notre problématique. fais ça en micro maintenant. » ; « Promeus » à 08:32 |
+| **Pourquoi** | sa classe à 9:00 |
+| **Avant** | `8.78.1-⑪-micro`, commit prod `a9f6208`, blob `f6ad6e3c7c30`, md5 `37479546381c1a97ff7e05f72a1d2a6c` |
+| **Après** | `8.78.2-⑪-micro`, commit prod `b0bdd73`, blob `e497ef8d5a45`, md5 `50bb9e7534d820cac9387a8eab99790b` (2 838 983 o) |
+| **Source au sas** | branche `micro/molette`, commit `da11a4c` (par-dessus `044331a`, le micro n°1) ; l'assemblé md5 `4f08e6a16442b19ac60110ac25f4840b` + la ligne `APP_VERSION` |
+| **Revenir** | `docs/MJPC6-restauration.md`, « AVANT promotion 8.78.2-⑪-micro » : le blob `f6ad6e3c7c30` |
+
+**Ce qui change (le diff entier, 4 fichiers du sas)** :
+1. `dr-socle.js` — `DR_INV_ORDRE_PREMIERE` : l'ordre des diapos d'ouverture de la première séance devient la présentation du chapitre, la problématique, les compétences du chapitre, le parcours, le début de séance (lisait : la problématique en dernier). Les autres séances (sans présentation du chapitre) ne changent pas.
+2. `dr-socle.js`, `dr_invPoser` — à la première séance, les diapos d'ouverture déjà écrites au hub dans l'ancien ordre reprennent l'ordre voulu, à leurs places (les autres diapos ne bougent pas), sauf dans une heure de classe dont la classe a déjà vu une diapo ; le nom d'avant « Notre question » (le nom par défaut, jamais écrit par Paul) devient « Notre problématique ».
+3. `dr-ouverture.js` — la diapo s'appelle « Notre problématique », son titre au mur « NOTRE PROBLÉMATIQUE » ; la carte de l'Atelier « LA PROBLÉMATIQUE DU CHAPITRE ».
+4. `dr-recit.js` — le récit : « on a lu notre problématique ».
+5. `index.html` (sas) — la feuille sommaire : « Notre problématique : ».
+
+**Ce qui a été mesuré (par le geste)** — parties O et O2 de la sonde de la conscience : l'Atelier, séance 1 : l'ordre voulu, « Notre problématique », « NOTRE PROBLÉMATIQUE » ; en classe (l'heure lancée, la fenêtre du tableau) : diapo 1 la présentation du chapitre, ▶ → diapo 2 la problématique, au tableau « NOTRE PROBLÉMATIQUE » ; des diapos renommées et écrites au hub par la version d'avant (« S1 : le Romantisme en question », « Notre problématique ») reprennent l'ordre voulu avec les noms de Paul ; aucune erreur JS — **7 vérifications, 0 échec**.
+
+**Ce qui n'a PAS été mesuré (la dérogation)** : le banc complet — la sonde de l'Atelier (`sonde-1262`) et la sonde des diapos d'ouverture attendent l'ancien ordre et « Notre question » : elles échoueraient sur ce micro (à adapter, mandat du cinquième exécutant) ; la 8.77.1-⑩ (le point de retour) relisant une séance réécrite dans le nouvel ordre ; le micro n°1 (la molette) rejoué sur ce fichier ; le tableau distant ; les tailles 1366 et 1920 ; le vrai hub.
+
+**Ce qui le remplace ensuite** : le cinquième exécutant reprend ce commit dans sa branche (`deroule/diapos-ouverture`) et adapte les sondes ; sa mise en ligne, avec le banc, remplacera les micros n°1 et n°2.
+

@@ -300,7 +300,7 @@
 | `chRendre` | — | 1519 o | (sans commentaire) affiche/emploie : « ].map(function(n){     return  · );   z.innerHTML= » — touche #at-zone | chOuvrir |
 | `chSommaire` | chapitre,niv,taxo,ecrit | 1838 o | LE SOMMAIRE — CALCULÉ. Séance de rang 0, avec ses items, publiable à part. Il doit SE SUFFIRE À LUI-MÊME : | atRegenererSommaire, chAfficherInventaire, chInjecterConfirme |
 | `chSommaireObjet` | som | 126 o | (sans commentaire) affiche/emploie : « Sommaire du chapitre » | atRegenererSommaire, chInjecterConfirme |
-| `chSommaireSeance` | som | 1280 o | La séance de rang 0 : une séance ORDINAIRE (elle porte des items comme les autres), publiable séparément. `published` n'est JAMAIS écrit ici. | chAfficherInventaire, chSommaireObjet |
+| `chSommaireSeance` | som | 1285 o | La séance de rang 0 : une séance ORDINAIRE (elle porte des items comme les autres), publiable séparément. `published` n'est JAMAIS écrit ici. | chAfficherInventaire, chSommaireObjet |
 | `chSommaireSuffisant` | som | 314 o | Le sommaire se suffit-il à lui-même pour l'IA du chapitre suivant ? Critère : pouvoir dire ce que le chapitre a travaillé SANS relire les séances. | chAfficherInventaire |
 | `chTitreDouble` | t,chaps | 357 o | E1 (§12.34-4, 13 · 70) : le titre d'un double — le titre suffixé « (proposition) », ou « (proposition n) » s'il existe déjà (le patron de _chSouche) | chInjecterConfirme |
 | `chValiderChapitre` | o,taxo | 3496 o | LA VALIDATION — motifs ACCUMULÉS, élément CITÉ, message qui dit quoi corriger. | chVerifier |
@@ -689,7 +689,7 @@
 | `recit` | t | 1853 o | (sans commentaire) affiche/emploie : « ); d.innerHTML=String(t·· · );   var s=d.textContent.trim(); if(!s)return  » | dr_corrigerReponse, recitEtape, recitHtml0 |
 | `recitEtape` | t | 745 o | (sans commentaire) affiche/emploie : « ).replace(/\s+\./g,  » | recitHtml0 |
 | `recitHtml` | fin, h, bornes | 1128 o | (sans commentaire) affiche/emploie : « .recit >  · entête, le cadre de l » | ouvrirFin, papierHtml, recitHtml0, recitPourED (+2) |
-| `recitHtml0` | fin, h, bornes | 27055 o | (sans commentaire) affiche/emploie : « on a fait aujourd · >${[dr_recitClasseNom(), dr_recitChapitre() +  » | papierHtml, recitHtml, recitPourED0, suiteDepuis |
+| `recitHtml0` | fin, h, bornes | 27060 o | (sans commentaire) affiche/emploie : « on a fait aujourd · >${[dr_recitClasseNom(), dr_recitChapitre() +  » | papierHtml, recitHtml, recitPourED0, suiteDepuis |
 | `recitPourED` | h | 449 o | (sans commentaire) affiche/emploie : « :scope > p · ) && !x.classList.contains( » | ouvrirFin |
 | `recitPourED0` | h | 471 o | (sans commentaire) affiche/emploie : « :scope > p · ) && !x.classList.contains( » | basculerRecit, dr_contenuPrevuHeure |
 | `recitSeanceHtml` | — | 4596 o | (sans commentaire) affiche/emploie : « ); d.innerHTML = brut; const rec = d.querySelector( · ); const moi = rec && rec.classList.contains( » | relecture |
@@ -1463,7 +1463,7 @@
 | `dr_invMontree` | e | 199 o | le chapitre, la classe ou la taxonomie changent : les diapos intactes se remplissent de nouveau ; celles que Paul a modifiées ne bougent plus ; | dr_invRafraichir |
 | `dr_invNeuve` | role, sk, h | 178 o | (sans commentaire ni indice) | dr_invPoser |
 | `dr_invNotionLib` | id | 180 o | (sans commentaire ni indice) | — |
-| `dr_invPoser` | E, sk | 1943 o | (sans commentaire ni indice) | dr_normaliserTrame, dr_syncComparer |
+| `dr_invPoser` | E, sk | 2993 o | (sans commentaire) affiche/emploie : « ouverture déjà écrites au hub (dans l · ));   if (!joueDeja) { E.forEach(e => { if (e && e.role ===  » | dr_normaliserTrame, dr_syncComparer |
 | `dr_invPourHub` | e, sk | 1384 o | (sans commentaire ni indice) | dr_derouleDe |
 | `dr_invPremiere` | sk | 243 o | (sans commentaire ni indice) | dr_invPoser, dr_invRetraits |
 | `dr_invRafraichir` | E, sk | 3017 o | (sans commentaire) affiche/emploie : « elle n · ancienne) */       if (classe) { const jPret = typeof J !==  » | dr_trameDe |
@@ -1540,12 +1540,12 @@
 | `dr_ouvAlertes` | E, sk | 700 o | « À régler » : ce qui manque n'est jamais inventé (C16 31) — une ligne par champ, dite par la diapo qui le porte (le chapitre : sa présentation ; une séance : | alertesForme |
 | `dr_ouvBloc` | e | 85 o | (sans commentaire ni indice) | brancherAtelier, choixObjet, dr_copieEtatDuHub, dr_copieEtatPourHub (+10) |
 | `dr_ouvBrancherCarte` | da, e | 2746 o | (sans commentaire) affiche/emploie : «  ? (dr_ouvChampsChapitre(e) ? c.title : se.title) : q ===  · ).trim(); if (v === String(valeur() ··  » | brancherDeclare |
-| `dr_ouvCarteHtml` | e, durChamp, masq | 6526 o | (sans commentaire) affiche/emploie : «  dr-ouv-vise · ;   let h = `<div class= » | droiteAtelier0 |
+| `dr_ouvCarteHtml` | e, durChamp, masq | 6531 o | (sans commentaire) affiche/emploie : «  dr-ouv-vise · ;   let h = `<div class= » | droiteAtelier0 |
 | `dr_ouvChampsChapitre` | e | 76 o | (sans commentaire ni indice) | dr_ouvBrancherCarte, dr_ouvCarteHtml |
 | `dr_ouvCharte` | niveau | 64 o | (sans commentaire) affiche/emploie : « )] ·· DR_CHARTES[ » | dr_filHtml, dr_ouvElements, dr_ouvHtml, dr_ouvLisible (+1) |
 | `dr_ouvClasse` | — | 352 o | la classe de la copie : seulement en heure de classe (régime « classe ») ; dans l'Atelier et en répétition, « selon la classe » | dr_invSignature, dr_ouvContenu |
 | `dr_ouvComp` | id | 689 o | la taxonomie : une compétence, sa phrase d'élève (13 · 91 : jamais l'intitulé officiel, sauf repli dit dans « À régler »), son domaine | dr_ouvCarteHtml, dr_ouvContenu, dr_ouvGrille |
-| `dr_ouvContenu` | role, sk | 5828 o | LE CONTENU d'une diapo d'ouverture : { act, blocs: [le bloc], manque: [phrases], manques: [{ l, champ, sk }] } — lu depuis le chapitre (et la classe) | dr_invContenu |
+| `dr_ouvContenu` | role, sk | 5971 o | LE CONTENU d'une diapo d'ouverture : { act, blocs: [le bloc], manque: [phrases], manques: [{ l, champ, sk }] } — lu depuis le chapitre (et la classe) | dr_invContenu |
 | `dr_ouvDates` | c, classe | 1442 o | (sans commentaire ni indice) | dr_ouvContenu |
 | `dr_ouvDecorClasse` | e, k | 738 o | la décoration de la classe suit aussi « ta version » (les dates, la séance du jour, les séances faites) : ce que Paul a écrit ne bouge pas | dr_invRafraichir |
 | `dr_ouvEcrire` | quoi, champ, val | 604 o | les écritures : celles de l'Atelier (atChampChapitre, atChampSeance : le hub, ou le magasin du mode test ; l'annulation de la Structure) ; | dr_ouvBrancherCarte, dr_ouvImageChoisir |
