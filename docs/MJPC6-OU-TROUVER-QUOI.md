@@ -798,3 +798,9 @@
 | les mandats, NOTE et sondes de l'appel et de la fin d'heure | sas `MANDATS/DEROULE-01-11/MANDAT-APPEL.md`, `MANDAT-FIN-HEURE.md` ; `LIVRAISONS/DEROULE-01-11/APPEL/` (`deroule/appel`, `4163180c9`), `LIVRAISONS/DEROULE-01-11/FIN-HEURE/` (`deroule/fin-heure`, `fcb5004fd`) |
 | revenir à la 8.80.0-⑬ | `docs/MJPC6-restauration.md` (blob `9a96d9508a05`) |
 | ouvrir le site en 8.81.0-⑭ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.81.0` |
+| A+ / A− de la télécommande actionnent le curseur « texte au tableau » du pilote (un cran) ; le téléphone montre le cran du pilote ; les bornes écrites (8.81.1-⑭-micro, Paul 07:19) | `dr_tcGeste` (l. 23606), `dr_tcMaj` (l. 23547) |
+| le QR de la télécommande : valable sans montre, une lecture ratée réessayée, « le réseau ne répond pas » dit en clair, le code gardé quand la fenêtre se ferme (8.81.1-⑭-micro, Paul 07:37) | `dr_tcQrOuvrir` (l. 23439), `dr_tcDemarrer` (l. 23514) |
+| ㉟ la frappe : une touche dans une réponse n'envoie que la diapo au tableau, sans redessiner le pilote ; les vignettes gardées par leur empreinte (8.81.1-⑭-micro) | `dr_frappeReponse` (l. 19681), `morph` (l. 17926) |
+| le micro n°3 (ce qu'il contient, ce qui est prouvé, ce qui n'est pas joué) | `docs/MJPC6-MICROS.md` n°3 |
+| revenir à la 8.81.0-⑭ | `docs/MJPC6-restauration.md` (blob `25383d503ecb`) |
+| ouvrir le site en 8.81.1-⑭-micro (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.81.1` |

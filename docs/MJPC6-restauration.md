@@ -945,6 +945,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Motif** : ELEVE-1 livraison ③ — la fiche élève (quinze cases PAP chiffrées) et le rappel des équipes éducatives. Promu : 1 838 175 o, md5 `ac792b28f40d3a0510e725fc4a6b6985` (bit à bit).
 - **Restauration en cas de `BUG`** : le blob du commit `7c58bef49aba` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus (les fiches déjà écrites restent au hub, chiffrées ; la ② les ignore).
 
+### POINT DE RETOUR — `index.html` AVANT promotion 8.81.1-⑭-micro (03/11/2026, conscience n°16) — **UN MICRO, SANS BANC COMPLET**
+- blob `25383d503ecb` (commit `88957c5`) · 3 008 841 o · md5 `fb2ba5bb6771a6a22d8a9c8c0433f544` · v8.81.0-⑭
+- **Motif** : le zoom de la télécommande (Paul, 07:19), le QR qui ne tient pas (07:37), ㉟ la frappe ; Paul, 08:49 : « il faut que ça soit bon pour 9h45 dernier délai » ; « promeus » à 09:45. Le détail : `docs/MJPC6-MICROS.md` n°3.
+- **Restauration en cas de `BUG`** : le blob `25383d503ecb` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : A+ / A− qui bougent le curseur du pilote, le QR qui tient, la frappe sans retard. Les codes de télécommande au hub restent, lus par la 8.81.0 comme avant (sa règle des 15 minutes).
+
 ### POINT DE RETOUR — `index.html` AVANT promotion 8.81.0-⑭ (03/11/2026, conscience n°16)
 - blob `9a96d9508a05` (commit `72e1934`) · 2 959 837 o · md5 `8b2310e708683a979e1fde390844eb29` · v8.80.0-⑬
 - **Motif** : ㊱ l'appel n'importe quand, sur n'importe quel appareil (la case de l'heure s'ouvre sur l'appel ; une seule liste d'absents par heure, écrite par élève et par appareil, le dernier geste à l'heure du hub ; la télécommande « Appel », sa diapo avec les grisés, A− / A+ ; l'appel après coup dans la Relecture ; l'heure annulée rend son appel ; `absentA` : un absent vaut depuis le début de l'heure) ; ㊲ ㊳ la fin d'heure en diapos non faites (« Reporter les n diapos non faites au début de la prochaine heure de cette classe ») et la séance reportée qui continue dans l'emploi du temps (« heure n · suite »). Paul, 14:14, 16:59, 23:05, 23:11 (« il faut tout prouver »), 23:27 (« 5H30 dernier délai ») ; « Promeus » à 06:44 (le banc pas vert d'une traite, C16 298-304).

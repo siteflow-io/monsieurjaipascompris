@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2364 fonctions** — site : 2364 · moteur : 0
+**2367 fonctions** — site : 2367 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,7 +25,7 @@
 - **DIVERS — socle du site** — 510 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 758 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 761 fonctions
 - **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 260 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
@@ -365,7 +365,7 @@
 | `basculerRecit` | h, vers | 478 o | (sans commentaire) affiche/emploie : « ) && document.getElementById( · )) relecture(); }; if (vers ===  » — touche #ecran-relecture | brancherFin, recitHtml0 |
 | `basculerVue` | — | 416 o | [LOT7-①] l'ancien circuit de dépôt (initAdminDragDrop_) et le registre getdocs (loadDocsList_) sont retirés — le dépôt vit dans initChapterDragDrop et la modale Lier. | handleBadgeTap |
 | `blocDe` | el | 180 o | (sans commentaire) affiche/emploie : « ); return { bi: +bi, ei: ei ===  » | brancherAtelier, dr_tout, ecrireDansDiapo, p85fSuivreFrappe (+1) |
-| `brancherAjout` | — | 2594 o | (sans commentaire) affiche/emploie : « ), dit = rep.querySelector( · , !r.i); S.blocActif = bi; S._garderFocus = { bi, ri, quoi:  » | dr_tout |
+| `brancherAjout` | — | 2676 o | (sans commentaire) affiche/emploie : « ), dit = rep.querySelector( · , !r.i); S.blocActif = bi; S._garderFocus = { bi, ri, quoi:  » | dr_tout |
 | `brancherAtelier` | — | 5830 o | (sans commentaire) affiche/emploie : « ); x.title = p8ReactAvantLancement(e) ?  · est elle qui s\ » | focaliser |
 | `brancherChapitre` | — | 639 o | (sans commentaire) affiche/emploie : « ); { const tt = txt ··  ·  + dr_esc(tt).replace(/\n/g,  » | relecture |
 | `brancherDeclare` | da | 4935 o | (sans commentaire) affiche/emploie : « )); da.querySelectorAll( · ) return; if (v ===  » | rendreDroiteAtelier |
@@ -433,7 +433,7 @@
 | `ecrireBrevetDate` | niveau, valeurISO | 590 o | (sans commentaire) affiche/emploie : « Date incompréhensible :  · La date n » — hub /site/config/brevetDates | _blocBrevet |
 | `ecrireClasse` | db, nomClasse, eleves, meta, cb | 1213 o | 5. Écriture NON destructive d'une classe : ecrireClasse Remplace UNIQUEMENT la liste d'élèves ; préserve toute métadonnée existante (archivee, niveau, couleur, …) ; | — |
 | `ecrireDansDiapo` | el | 2313 o | (sans commentaire) affiche/emploie : «  && bloc.t !==  · )) return; const txt = dr_texteEcrit(el); if (b.ei ===  » | brancherAtelier |
-| `elements` | e | 1286 o | (sans commentaire) affiche/emploie : « une diapo d ·  && typeof dr_marquesElements ===  » | apercuOuvrir, devoiler, dr_avanceActivites, dr_contenuPrevuHeure (+23) |
+| `elements` | e | 1286 o | (sans commentaire) affiche/emploie : « une diapo d ·  && typeof dr_marquesElements ===  » | apercuOuvrir, devoiler, dr_avanceActivites, dr_contenuPrevuHeure (+24) |
 | `elementsDeLaDiapo` | — | 66 o | (sans commentaire) affiche/emploie : « #mur [data-p] » | brancherAtelier |
 | `elementsEditables` | — | 83 o | (p8-4) le tableau suit la frappe ; le texte qui a le focus n'est jamais touché par le redessin | brancherAtelier |
 | `eleveDitJe` | t | 641 o | (sans commentaire) affiche/emploie : «  : (AVEC_ETRE.has(pp) ?  · ).replace(dr_rx(/\bmon\b/g),  » | recitEtape |
@@ -500,7 +500,7 @@
 | `eliSurCollage` | ev | 473 o | Le collé : n'importe où sur la page « Élèves & codes », sauf dans un champ (le cadre de secours garde son collage). | — |
 | `eliSurvol` | ev,oui | 104 o | (sans commentaire) touche #eli-zone | eliDepot, eliSectionHtml |
 | `eliValider` | — | 341 o | (sans commentaire ni indice) | eliApercuHtml |
-| `empreinte` | s | 79 o | (sans commentaire ni indice) | adverbeEtape, connecteur, dr_temoinIntegre |
+| `empreinte` | s | 79 o | (sans commentaire ni indice) | adverbeEtape, connecteur, dr_temoinIntegre, morph |
 | `ensureEleveUuid` | eleve | 1661 o | [EDT] porte n°1 — l'arrivée du professeur, par-dessus l'accueil | _loginEleveFound |
 | `envoyerVersSeance` | i, lot | 3520 o | (sans commentaire) affiche/emploie : « Une seule séance dans le chapitre : rien où envoyer. · ); z.className =  » | dr_colMenuLot, menuAtelierDiapo |
 | `esc` | s | 21 o | les huit noms de la maquette sont préfixés dr_ (contrat §7). Ils n'étaient pas en collision avec le site (audit E1, F2) ; des modules écrits sur la maquette les appellent encore (E4 : | atP2NotesParagraphes, elfFicheHtml, elfRappelClasseHtml, eliApercuHtml |
@@ -595,10 +595,10 @@
 | `menuAtelierDiapo` | i, x, y | 6827 o | (sans commentaire) affiche/emploie : « Cahier de textes (fin d\ · } · H${h}`;   let noteDesc =  » | brancherMenus |
 | `menuAtelierMur` | ev | 7936 o | (sans commentaire) affiche/emploie : « #mur .p8-dessin g.p8-n, #mur .p8-dessin .p8-grille tr ·  ? +li.dataset.p.split( » | brancherMenus |
 | `menuDiapo` | i, x, y | 2239 o | (sans commentaire) affiche/emploie : «  diapos · 1 diapo » | brancherMenus |
-| `miniatures` | v | 1733 o | (sans commentaire) affiche/emploie : « ;     const pgI = m.dataset.pg != null && m.dataset.pg !==  · :scope > .mur » | volet |
+| `miniatures` | v | 1749 o | (sans commentaire) affiche/emploie : « ;     const pgI = m.dataset.pg != null && m.dataset.pg !==  · :scope > .mur » | volet |
 | `miseEnFormeLegere` | t | 430 o | (sans commentaire) affiche/emploie : «  + p : p)).replace(/([«])\s*/g,  · ).replace(/\s{2,}/g,  » | validerOral |
 | `montrerSuite` | — | 802 o | (sans commentaire) affiche/emploie : «  ·· su.genre ===  · ) return; const E = seance().ecrans; if (su.genre ===  » | — |
-| `morph` | a, b | 1964 o | (sans commentaire) affiche/emploie : « écrit toujours — mesuré : la diapo d · ) && typeof dr_murEcrit ===  » — ECRIT au hub | poserHtml |
+| `morph` | a, b | 2861 o | (sans commentaire) affiche/emploie : « écrit toujours — mesuré : la diapo d · ) && typeof dr_murEcrit ===  » — ECRIT au hub | poserHtml |
 | `moveChapter` | level,chnum,dir | 598 o | (sans commentaire ni indice) | renderChapterCard |
 | `moveImageInGallery` | level,chnum,snum,itemId,imgId,dir | 744 o | (sans commentaire ni indice) | — |
 | `moveItem` | level,chnum,snum,itemId,dir | 719 o | (sans commentaire ni indice) | renderItem |
@@ -677,7 +677,7 @@
 | `poserColonnes` | — | 253 o | (sans commentaire) affiche/emploie : « ); c.style.setProperty( · , (S.sansGauche ? 0 : S.lg) +  » | dr_tirer, ouvrirFin, revenirAuCours |
 | `poserHtml` | el, h | 380 o | (sans commentaire ni indice) | dr_ouvertureLegere, dr_tout, ouOnEnEst, ouvrirFin (+9) |
 | `poserVersion` | h, html | 240 o | (sans commentaire ni indice) | basculerRecit, brancherFin, recitHtml0, reprendreSuite |
-| `pousser` | et | 3623 o | (sans commentaire) affiche/emploie : « atelier ne pousse rien au tableau, n · écran en clair pour l » | atP2NotesParagraphes, brancherFin, dr_heuresDeLaClasse, dr_tout (+3) |
+| `pousser` | et | 3623 o | (sans commentaire) affiche/emploie : « atelier ne pousse rien au tableau, n · écran en clair pour l » | atP2NotesParagraphes, brancherFin, dr_frappeReponse, dr_heuresDeLaClasse (+4) |
 | `prenom` | ...a | 27 o | (sans commentaire ni indice) | — |
 | `preparerCahier` | — | 860 o | (sans commentaire) affiche/emploie : « ); if (i == null) return; /* E1 (§12.29-3, S3) : l · ); S.gel = etatComplet(); document.body.classList.add( » | — |
 | `presents` | ...a | 29 o | (sans commentaire ni indice) | — |
@@ -798,7 +798,7 @@
 | `togglePublishSeanceCls` | level,chnum,snum,slug | 160 o | (sans commentaire ni indice) | _pubCtrl |
 | `togglePublishTab` | level,tabId | 512 o | (sans commentaire) affiche/emploie : « Publication des onglets  » — ECRIT au hub | applyPublished |
 | `toggleSeanceOpen` | h,key | 166 o | (sans commentaire ni indice) | renderSeance |
-| `tout` | — | 21 o | (sans commentaire ni indice) | _profSectionEleves, deleteSeance, dr_invRetirerDiapos, dr_reprendre (+3) |
+| `tout` | — | 21 o | (sans commentaire ni indice) | _profSectionEleves, brancherAjout, deleteSeance, dr_invRetirerDiapos (+4) |
 | `trackClose` | — | 368 o | (sans commentaire ni indice) | closeViewer, goHome, trackOpen |
 | `trackLogin` | nom,prenom,niveau | 471 o | (sans commentaire) affiche/emploie : « Erreur réseau. Réessaie. » | — |
 | `trackOpen` | chapitre,doc,type_doc | 440 o | (sans commentaire ni indice) | openDoc |
@@ -827,7 +827,7 @@
 | `videoSuivant` | — | 562 o | (sans commentaire ni indice) | devoiler |
 | `vifDernier` | ini, id | 554 o | (sans commentaire) affiche/emploie : « posé : <b> · </b> <span id= » | partAjoute |
 | `voir` | v | 1550 o | relecture : le récit, et ce qui s'est passé | arreterRepetition, dr_apresCloture, dr_imageAdresse, dr_lancerNeuf (+8) |
-| `volet` | — | 3247 o | (sans commentaire) affiche/emploie : « est nulle part en classe */ let h = `<h5 title= · ).replace(/^./, c => c.toUpperCase())) :  » | dr_voletApres |
+| `volet` | — | 3560 o | (sans commentaire) affiche/emploie : « après) */ const v0 = $( · est nulle part en classe */ let h = `<h5 title= » | dr_voletApres |
 | `voletAtelier` | — | 2938 o | (sans commentaire) affiche/emploie : « ; }; let h = `<div class= · , { weekday:  » | dr_tout |
 | `vuJ` | h, di | 216 o | (sans commentaire ni indice) | dejaVuAvant, ouvrirOral, passeHtml, recitHtml0 (+2) |
 | `vueDroite` | et | 2324 o | (sans commentaire) affiche/emploie : « ; let inner = boite.querySelector( · ); if (!inner) { inner = document.createElement( » | brancherFin, dr_tout |
@@ -1189,7 +1189,7 @@
 | `p8Redessiner` | bi | 294 o | (sans commentaire) affiche/emploie : « #mur .p8-dessin[data-p8= » | — |
 | `p8RendreNotes` | — | 2810 o | (sans commentaire) affiche/emploie : « #notesd .p8-mt · ).replace(/<[^>]*>/g,  » | dr_tout, p8EcrireNote, p8NouvelleNote, p8Reaccrocher |
 | `p8Retirer` | x, retirer | 443 o | (sans commentaire ni indice) | brancherMenus |
-| `p8RetiresCopie` | e | 103 o | E4 (§12.59 (3)) : les éléments retirés du tableau (clés « act », « B:<bid> », « P:<bid>:<champ> », « Pc:<data-p> ») | dr_tout |
+| `p8RetiresCopie` | e | 103 o | E4 (§12.59 (3)) : les éléments retirés du tableau (clés « act », « B:<bid> », « P:<bid>:<champ> », « Pc:<data-p> ») | dr_frappeReponse, dr_tout |
 | `p8RetiresPoser` | mur, e, et | 953 o | sur le mur (pilote et tableau) : la classe d'un élément retiré — au pilote il reste visible, barré d'un liseré ; au tableau, il disparaît | rendre |
 | `p8SchemaHTML` | b,c | 250 o | T3 : la source n'est jamais coupée au dévoilé (b.vues n'est pas repris) ; le dévoilement passe par le compteur de la maquette (c.vu) | p8Dessin |
 | `p8SepCoupe` | p,q,n | 345 o | T11 : le segment p → q passe-t-il derrière la boîte de la bulle n ? (découpage du segment par la boîte, Liang-Barsky) | p8Separe |
@@ -1197,7 +1197,7 @@
 | `p8Suite` | t | 56 o | « même titre suivi de (suite) » : un titre qui finit déjà par « (suite) » le garde tel quel (pas de « (suite) (suite) ») | p8CouperSchema, p8DiapoApres |
 | `p8Svg` | c,s | 136 o | (sans commentaire) affiche/emploie : « <svg class= ·  data-w= » | p8Arbre, p8Carte, p8Cycle, p8Frise |
 | `p8TeteDe` | b, g | 1533 o | « Couper le schéma ici » : la bulle de tête de chaque forme (famille, repère, nœud de premier niveau, étape, rangée) | p8MenuBulle |
-| `p8TextesCopie` | e, textes | 459 o | au rendu (pilote et tableau) : la copie de la classe, posée par identité sur les textes de la diapo | dr_tout, p85hPages |
+| `p8TextesCopie` | e, textes | 459 o | au rendu (pilote et tableau) : la copie de la classe, posée par identité sur les textes de la diapo | dr_frappeReponse, dr_tout, p85hPages |
 | `p8Trait` | x1,y1,x2,y2,coul,larg,opac,k,a,b,c | 274 o | (sans commentaire) affiche/emploie : « <line class= ·  data-a= » | p8Carte, p8Frise |
 | `p8TraitCouleur` | — | 265 o | (sans commentaire ni indice) | — |
 | `p8TrierNotes` | e, L | 113 o | (sans commentaire ni indice) | p8NotesMap, p8NouvelleNote, p8Reaccrocher |
@@ -1428,6 +1428,7 @@
 | `dr_finSansDecision` | d, derniere | 94 o | (sans commentaire ni indice) | dr_resteHeure, ouvrirFin |
 | `dr_finiPhrase` | x | 182 o | (sans commentaire) affiche/emploie : « ).replace(/[\s\u00a0]+$/,  » | recitHtml0 |
 | `dr_formeCible` | — | 153 o | E1 (R6, R13, R18, R20 — le recyclage de l'ancien déroulé, table B) : gras et souligné (G, S dans la palette « A », Ctrl/Cmd+B et +U), Ctrl+H qui bascule ; | dr_basculerSurl, dr_grasSoul, p8CouleurTexte, surligner |
+| `dr_frappeReponse` | neuve, bi | 1410 o | (sans commentaire) affiche/emploie : « à      Entrée (le rendu n » | brancherAjout |
 | `dr_frontiereHorsClasse` | — | 941 o | (sans commentaire ni indice) | dr_suivreSeance |
 | `dr_fusionCopie` | trame, copie, journalJ | 1181 o | la fusion de la copie et de la trame (contrat §12.8, relance C6), pour une nouvelle heure de la même séance avec la même classe : par `eid` — un écran nouveau dans la trame s'ajoute ; | dr_jouerCopie, dr_lancerNeuf |
 | `dr_garde` | faire, quoi | 620 o | E1 (§12.29-2, S2) : la garde « Aller au cahier » (gardeCahier, #garde-cahier) est tombée — un seul chemin vers le cahier, la séquence « Fin de l'heure » ; | aller, p85hAllerPage, revoiler |
@@ -1786,7 +1787,7 @@
 | `dr_selPeindre` | — | 296 o | (sans commentaire ni indice) | — |
 | `dr_selSup` | — | 810 o | (sans commentaire ni indice) | dr_selMenu |
 | `dr_selVide` | — | 171 o | [{bi, ei}] — ei null : le bloc entier | dr_selEcrire, dr_selMenu, dr_selSup |
-| `dr_sesAppliquer` | v | 5182 o | (sans commentaire) affiche/emploie : « état reçu vient d · ici repart, fusionnée */   if (DR_SES.socle) {   /* ce qu » — touche #bgel | dr_sesEnvoyerMaintenant, dr_sesRecu |
+| `dr_sesAppliquer` | v | 5856 o | (sans commentaire) affiche/emploie : « état reçu vient d · ici repart, fusionnée */   if (DR_SES.socle) {   /* ce qu » — touche #bgel, #taille | dr_sesEnvoyerMaintenant, dr_sesRecu |
 | `dr_sesAttend` | — | 288 o | un appareil qui REJOINT une session (la reprise d'une heure ou d'un essai, une répétition adoptée) n'envoie rien avant d'avoir posé le premier état reçu — sinon son état de départ (relu au hub un peu | dr_sesEnvoyer, dr_sesEnvoyerMaintenant, dr_sesRecu |
 | `dr_sesBandeau` | — | 1975 o | (sans commentaire) affiche/emploie : «  });     else if (dr_sesFrais(t) && t.quoi ===  · ) c = Object.assign({}, t, { __sorte:  » | dr_sesVeilleDemarrer |
 | `dr_sesBase` | v | 250 o | la base d'un état reçu : l'état sur lequel il s'appuie, gardé ici ; inconnue ici (jamais reçu) : | dr_sesAppliquer, dr_sesPoserAutour |
@@ -1796,10 +1797,10 @@
 | `dr_sesConnu` | cle | 263 o | CE QU'ICI CONNAÎT : les états qu'ici a envoyés ou posés, et tous ceux sur lesquels ils s'appuient. La base d'une fusion doit être connue des DEUX côtés : | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPoserAutour, dr_sesPremierVerifier |
 | `dr_sesCopie` | — | 74 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPoserAutour, dr_sesVeiller |
 | `dr_sesDemander` | msg, rejoindre, lancer | 497 o | (sans commentaire) affiche/emploie : « <br>Que veux-tu faire ? · Rejoindre la séance en cours » | — |
-| `dr_sesEcouter` | chemin, cb, repli | 1001 o | (sans commentaire) affiche/emploie : « , ev => recu(ev, false)); es.addEventListener( » | dr_apVeiller, dr_sesVeilleDemarrer, dr_sesVeiller, dr_tcQrOuvrir (+1) |
+| `dr_sesEcouter` | chemin, cb, repli | 1001 o | (sans commentaire) affiche/emploie : « , ev => recu(ev, false)); es.addEventListener( » | dr_apVeiller, dr_sesVeilleDemarrer, dr_sesVeiller, dr_tcQrFermer (+2) |
 | `dr_sesEcrire` | ici, sous, v | 733 o | écrire l'état vivant : l'heure par le transport du site (ses reprises, son témoin) ; l'essai à son adresse d'essai (jamais le magasin) | dr_sesEnvoyerMaintenant |
 | `dr_sesEmettreScene` | — | 253 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPoserAutour |
-| `dr_sesEnvoyer` | — | 128 o | envoyer : après chaque geste (le rendu, la sauvegarde, le minuteur), seulement si quelque chose a changé | dr_sceneAuto, dr_sesAppliquer, dr_sesPoserAutour, dr_sesVeiller |
+| `dr_sesEnvoyer` | — | 128 o | envoyer : après chaque geste (le rendu, la sauvegarde, le minuteur), seulement si quelque chose a changé | dr_frappeReponse, dr_sceneAuto, dr_sesAppliquer, dr_sesPoserAutour (+1) |
 | `dr_sesEnvoyerMaintenant` | close, cede | 3134 o | (sans commentaire) affiche/emploie : « a pas suit, et n · est reçu, la base est ce qu » | dr_sesPremierVerifier, dr_sesRecu, dr_tcGeste, dr_tcPrendreMain |
 | `dr_sesFrais` | x | 67 o | (sans commentaire ni indice) | dr_sesBandeau, dr_tcRejoindre |
 | `dr_sesFus` | b, m, t | 1557 o | la fusion à trois voies : ce que seul l'un a changé est gardé ; les deux ont changé : le plus récent (le sien, puisqu'il arrive après) | dr_sesFus3 |
@@ -1807,7 +1808,7 @@
 | `dr_sesIci` | — | 1095 o | quelle session cette page pilote-t-elle ? | dr_sesEmettreScene, dr_sesEnvoyerMaintenant, dr_sesVeiller |
 | `dr_sesJeTiens` | — | 53 o | (sans commentaire ni indice) | dr_apVerser, dr_sceneAuto, dr_sesAppliquer, dr_sesEnvoyerMaintenant (+4) |
 | `dr_sesJournal` | m, t | 268 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesPoserAutour |
-| `dr_sesLireHub` | chemin, cb | 182 o | lire et écouter le hub lui-même (jamais le magasin du mode test) : le flux REST (`EventSource`), la lecture à intervalle en repli | dr_sesEcouter, dr_sesReprendreEssai, dr_tcDemarrer, dr_tcRejoindre |
+| `dr_sesLireHub` | chemin, cb | 182 o | lire et écouter le hub lui-même (jamais le magasin du mode test) : le flux REST (`EventSource`), la lecture à intervalle en repli | dr_sesEcouter, dr_sesReprendreEssai, dr_tcDemarrer, dr_tcLire |
 | `dr_sesMainAfficher` | — | 977 o | à l'ordinateur : « La télécommande a la main » (ou un autre ordinateur), posé une fois, seul son texte change | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPremierVerifier, dr_sesRecu (+1) |
 | `dr_sesMemo` | cle, p, base | 288 o | L'HISTOIRE DES ÉTATS : chaque état envoyé ou posé ici, gardé par sa clé (appareil·heure logique) ; chaque état envoyé dit sur lequel il s'appuie (`base`). | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPoserAutour, dr_sesRecu |
 | `dr_sesOccupe` | — | 494 o | recevoir | dr_apVerser, dr_sesEnvoyerMaintenant, dr_sesRecu |
@@ -1911,22 +1912,24 @@
 | `dr_tableauLie` | lire, ecrire, longueur, couper | 1120 o | dr_blocLu : le bloc du site lu TEL QUEL par le rendu de la maquette (qui lisait {t, bid, txt, el}). Un seul sens, à la lecture : des accesseurs non énumérables posés sur l'objet du site lui-même ; | dr_blocLu |
 | `dr_tailleRef` | — | 95 o | (sans commentaire ni indice) | dr_pagesImport, dr_paginerReference, p85hPages |
 | `dr_taxo` | — | 781 o | la taxonomie du site (CH.taxo, chargée par chChargerTaxo), lue sous la forme de la maquette {id, prof, eleve, familles[{…, notions[]}]} | choixNotion, dr_demarrer, dr_donneesVues, dr_invNotionLib (+5) |
-| `dr_tcAccueil` | h | 164 o | (sans commentaire) affiche/emploie : « ; DR_TC.bas.style.display =  · ; DR_TC.tab.style.display =  » | dr_tcDemarrer, dr_tcMaj |
+| `dr_tcAccueil` | h | 164 o | (sans commentaire) affiche/emploie : « ; DR_TC.bas.style.display =  · ; DR_TC.tab.style.display =  » | dr_tcDemarrer, dr_tcMaj, dr_tcReseau |
 | `dr_tcAppelHtml` | L | 926 o | C16 (㊱, Paul 258) : la liste de l'appel à la télécommande — les noms en entier (c'est Paul qui lit, jamais la classe), l'allure de « QUI A PARLÉ » | dr_tcMaj |
 | `dr_tcBouton` | — | 553 o | côté ordinateur : le bouton, dans la barre des actions rapides, tant que cette page pilote une session | — |
 | `dr_tcChemin` | nonce, test | 70 o | (sans commentaire ni indice) | dr_tcDemarrer, dr_tcQrOuvrir |
 | `dr_tcClos` | v | 55 o | (sans commentaire) affiche/emploie : « ; DR_TC.murCle =  » | dr_sesClosAilleurs |
-| `dr_tcDemarrer` | — | 1384 o | le démarrage : le nonce vérifié au hub, le scan écrit, la séance reprise — sans rien choisir | — |
+| `dr_tcDemarrer` | — | 2022 o | le démarrage : le nonce vérifié au hub, le scan écrit, la séance reprise — sans rien choisir | — |
 | `dr_tcEcrire` | ch, v, test | 449 o | (sans commentaire) affiche/emploie : « ) === 0 && typeof dr_ttEcrire ===  · adresse d » — ECRIT au hub | dr_tcDemarrer, dr_tcQrFermer, dr_tcQrOuvrir |
 | `dr_tcGeste` | a, ini | 2353 o | chaque bouton : le geste du pilote | dr_tcPoser |
-| `dr_tcMaj` | — | 9581 o | le dessin : seulement ce qui a changé (§12.56 (1)) ; pendant un appui, rien ne bouge | dr_tcClos, dr_tcRejoindre |
+| `dr_tcLire` | ch, cb, n | 271 o | (sans commentaire ni indice) | dr_tcRejoindre |
+| `dr_tcMaj` | — | 10096 o | le dessin : seulement ce qui a changé (§12.56 (1)) ; pendant un appui, rien ne bouge | dr_tcClos, dr_tcRejoindre |
 | `dr_tcMinut` | a | 986 o | (sans commentaire) affiche/emploie : « ) { const t = document.getElementById( · ); if (t) t.checked = true; if (m && m.etat ===  » — touche #dr-minut-in, #dr-minut-tab | dr_tcGeste |
 | `dr_tcPoser` | — | 1241 o | (sans commentaire) affiche/emploie : « ); DR_TC.mur.className =  · ; DR_TC.tab.appendChild(DR_TC.mur);   DR_TC.bas = mk( » — touche #tc-haut | dr_tcDemarrer |
 | `dr_tcPoserSi` | z, h | 52 o | (sans commentaire ni indice) | dr_tcAccueil, dr_tcMaj |
 | `dr_tcPrendreMain` | — | 238 o | « Reprendre avec la télécommande » (et le QR scanné) : la télécommande prend la main ; l'ordinateur ferme son champ tel qu'il est et lui envoie son dernier état | dr_sesRecu, dr_tcGeste |
-| `dr_tcQrFermer` | scanne | 420 o | (sans commentaire) affiche/emploie : « autre ne s » — touche #dr-tc-qr | dr_tcQrOuvrir |
+| `dr_tcQrFermer` | scanne | 754 o | (sans commentaire) affiche/emploie : « autre ne s » — touche #dr-tc-qr | dr_tcQrOuvrir |
 | `dr_tcQrOuvrir` | — | 1862 o | (sans commentaire) affiche/emploie : « ;   const url = location.href.split(/[?#]/)[0] +  ·  + encodeURIComponent(niv) +  » — touche #dr-tc-qr | dr_tcBouton |
-| `dr_tcRejoindre` | — | 791 o | (sans commentaire) affiche/emploie : « ; dr_tcMaj(); };   if (s ===  · ) { dr_sesLireHub(DR_TT.chemin +  » — hub /site/cours_actif | dr_tcDemarrer, dr_tcPoser |
+| `dr_tcRejoindre` | — | 779 o | (sans commentaire) affiche/emploie : « ; dr_tcMaj(); };   if (s ===  · ) { dr_tcLire(DR_TT.chemin +  » — hub /site/cours_actif | dr_tcDemarrer, dr_tcPoser |
+| `dr_tcReseau` | n | 222 o | C16 (le QR) : une lecture du téléphone qui échoue (le réseau) se réessaie et le dit ; elle ne passe jamais pour « aucune séance » ni « plus valable » | dr_tcDemarrer, dr_tcLire |
 | `dr_temoinEnregistre` | — | 224 o | E1 (relecteur neuf 1) : le témoin dit ce que le hub a reçu — « ✔ enregistré » quand dr_sauve a été accepté (son rappel), jamais à une minuterie | dr_copieDepuisAtelier, dr_etatAtelierMaintenant, dr_sauveMaintenant, dr_syncEcrire |
 | `dr_temoinHub` | — | 489 o | E1 (réveil n°3, 3) : le déroulé écrit souvent (la classe toutes les 900 ms) — le bandeau « Enregistré à … » du site, posé à chaque écriture acceptée, couvrait les pastilles et ne disparaissait plus. | dr_ecrire, dr_etatAtelierMaintenant, dr_paquetPatch |
 | `dr_temoinIntegre` | em | 636 o | (sans commentaire) affiche/emploie : « ; const t = document.getElementById( · ● déroulé intègre » — touche #dr-integre | dr_copieAuto, dr_temoinPoser |
@@ -1936,7 +1939,7 @@
 | `dr_texteEcrit` | el | 271 o | C16 (㉙) : ce que Paul a écrit dans un texte de la diapo, sans aucun élément de l'interface qui s'y trouverait (la barre du bloc ; un élément marqué non écrivable) | ecrireDansDiapo, p8EcrireCopie |
 | `dr_tirer` | poignee, cote | 1217 o | (sans commentaire) affiche/emploie : « ); document.body.style.cursor =  · ; });   dr_ecouteDoc( » | — |
 | `dr_titrePoser` | e | 1437 o | C16 (les dernières dettes, ⑮) : la ligne du titre du pilote (le numéro de la diapo, son activité, sa durée) — sortie du rendu pour être posée aussi avant dimensionner | dr_tout |
-| `dr_tout` | — | 6894 o | (sans commentaire) affiche/emploie : « état de l · heure dans l » | ajouterBloc, alerteVideo, aller, allerAuCahier (+114) |
+| `dr_tout` | — | 7209 o | (sans commentaire) affiche/emploie : « état de l · heure dans l » | ajouterBloc, alerteVideo, aller, allerAuCahier (+115) |
 | `dr_toutLire` | — | 242 o | (sans commentaire ni indice) | dr_activites, dr_demarrer, dr_notes, dr_trameDe (+1) |
 | `dr_traceAuto` | vite | 617 o | (sans commentaire) affiche/emploie : « Heure de cours —  ·  + p.classe +  » — ECRIT au hub | _drTraceAuto, dr_copieAuto |
 | `dr_traceReprendre` | cb | 749 o | la relance dans le même créneau reprend la trace (`_drTraceReprendre`) : le début réel revient ; une trace d'une autre classe ou d'un autre créneau n'est pas reprise (elle se dit, l'heure part à neuf) | _drTraceReprendre, dr_lancerNeuf |
@@ -1964,7 +1967,7 @@
 | `dr_vifChoisir` | m | 239 o | (sans commentaire) affiche/emploie : « ); pop.querySelectorAll( · ).forEach(b => b.classList.toggle( » | — |
 | `dr_vifDire` | — | 429 o | (sans commentaire) affiche/emploie : « ;   d.innerHTML = m ?  · 1, 2, 3… choisit le motif · Entrée pose <b>«  » | dr_vifChoisir, ouvrirPart |
 | `dr_vifMontrer` | — | 702 o | (sans commentaire) touche #droite, #part, #vif | — |
-| `dr_voletApres` | — | 250 o | (sans commentaire ni indice) | dr_tout |
+| `dr_voletApres` | — | 36 o | (sans commentaire ni indice) | dr_tout |
 | `dr_voletHeure` | hh | 234 o | E4 (§12.36 (3)(5)(6), A84) : sous la séance ouverte, son réglage, ses heures et ses diapos — plus de doublons (ni « Chapitre · … » ni « Séance n — … ») ; | voletAtelier |
 | `dr_vueSeance` | k | 499 o | (sans commentaire) affiche/emploie : « , { get: () => sce.title ·· sce.titre ··  · , enumerable: true }); Object.defineProperty(v,  » | dr_seances |
 | `dr_zone` | — | 61 o | la zone : #dr-zone, créée une fois (dr-gabarit.js), garée dans <body> tant que le déroulé n'est pas montré. Le site peut effacer sa zone (`at-zone`) quand il veut : | dr_actif, dr_dimensionnerZone, dr_monter, dr_pagesImport (+7) |

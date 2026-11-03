@@ -66,3 +66,15 @@
 
 **Remplacé par `8.79.0-⑫`** (02/11/2026 14:29, commit prod `4f9984a`) : ce commit repris (`a1e291b`), les sondes adaptées (`d8235c1`, `90a7da0`), la coexistence avec la 8.77.1-⑩ corrigée (`ddd8a94`) ; le banc complet de la conscience : l'étape 6 (l'Atelier) 53 / 53, l'étape 10 (les diapos d'ouverture) 126 / 0, l'étape 12 (le retour sûr) 61 / 0.
 
+## 3 · 03/11/2026 09:46 — `8.81.1-⑭-micro` (conscience n°16) — SANS BANC COMPLET
+
+**Pourquoi un micro** : Paul, 07:57 : « ça prend trop de temps, beaucoup trop de temps!! » ; 08:49 : « J'ai cours à 10 heures pour 35 et 16 il faut que ça soit bon pour 9h45 dernier délai » ; « promeus » à 09:45 sur la demande C16 323-325 (le banc complet d'une heure non joué, dit).
+
+**Ce qu'il contient** (sas `deroule/frappe-zoom` `9c13d037c`, sur `fcb5004fd` = la 8.81.0-⑭) : le zoom de la télécommande (A+ / A− actionnent le curseur « texte au tableau » du pilote, d'un cran ; le téléphone montre le cran du pilote ; les bornes écrites à l'écran) ; le QR qui tient (sa validité ne dépend plus d'aucune montre ; une lecture ratée réessayée ; un réseau muet dit en clair ; le code gardé quand la fenêtre se ferme) ; ㉟ la frappe (les correctifs 7 et 9 de `deroule/correctifs`, jamais mis en ligne, repris à la main : le `morph` et l'empreinte des vignettes, la colonne sans retard, `dr_frappeReponse` ; l'état vivant envoyé à chaque touche).
+
+**Prouvé** : chez l'exécutant, le zoom 108 / 110 (les 2 : ⑯), le QR 200 scans sur 200, la frappe K 18 / 18 (3 passages ; la base 13 / 18) ; chez la conscience (09:08-09:23, sur l'assemblé `bc7cc9cd`) : le parcours P0-P12 vert en vraie heure et en mode test (K15, K15-test), l'appel Q QT P2H P2T 42 / 0, la session T H QH QT A 89 / 0, la fin d'heure 56 / 0. **Pas joué** : le banc complet (les étapes 1-12 et 13 en entier, la répétition R). **Pas dedans** : ⑯ (le retard du tableau, cause pas trouvée).
+
+**md5** `fb2ba5bb…` → `c21ddbb656b9028cf11b0d70f7b18318` (3 016 971 o), commit prod `cf122ac`, blob `3b69aab74938`, servi bit à bit à 09:47:28. **Retour** : `docs/MJPC6-restauration.md` (blob `25383d503ecb`).
+
+**Ce qui le remplacera** : la prochaine version avec le banc complet (⑯ et la numérotation par séance).
+
