@@ -2349,7 +2349,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 /* ═══ fin M-SÉCU-2 ═══ */
 
 // ── DÉCLARATION DE L'APP (redaction) ──
-var APP_VERSION = "1.4.29-RU";
+var APP_VERSION = "1.4.30-RU";
 var MJPC_APP = { id: "redaction", nom: "Rédaction universelle", contenant: "aucun" };
 var MJPC_MANIFESTE = { notions: [], noeuds: ["redactions", "redactions_communes"] };
 var MJPC_PURGE = { preserver: ["redactions", "redactions_communes"], purger: [] };
@@ -7536,7 +7536,7 @@ function scEleveDonnees(k, test) {
   const place = m => ({ page: ordre.indexOf(m.page), y: m.y0 });
   const M = Object.values(s.marques).filter(m => ordre.indexOf(m.page) >= 0);
   const fautes = M.filter(m => m.forme === "faute").sort((a, b) => (ordre.indexOf(a.page) - ordre.indexOf(b.page)) || (a.y0 - b.y0) || (a.x0 - b.x0))
-    .map(m => { const p = SC.pages[m.page]; const l = m.l0 != null && m.l0 >= 0 ? m.l0 + 1 : null; return { id: m.id, page: ordre.indexOf(m.page), x0: m.x0, y0: m.y0, x1: m.x1, y1: m.y1, num: m.num, rang: m.rang || 0, ligne: l, bonne: m.bonne || null, t: (m.bande && m.bande.code) || null }; });
+    .map(m => { const p = SC.pages[m.page]; const l = m.l0 != null && m.l0 >= 0 ? m.l0 + 1 : null; return { id: m.id, page: ordre.indexOf(m.page), x0: m.x0, y0: m.y0, x1: m.x1, y1: m.y1, num: m.num, rang: m.rang || 0, ligne: l, bonne: m.bonne || null, t: (typeof rcCodeMarque === "function" ? rcCodeMarque(m) : m.bande && m.bande.code) || null }; });
   const pts = []; SC.grille.criteres.forEach(c => c.points.forEach(pt => { const r = scCase(pt, k); if (!r || !r.complet) return;   // seuls les points que tu as passés partent chez l'élève
     const ms = M.filter(m => m.point === pt.id && m.forme !== "faute" && m.forme !== "etoile").sort((a, b) => (ordre.indexOf(a.page) - ordre.indexOf(b.page)) || (a.y0 - b.y0));
     const pl = ms.length ? place(ms[0]) : { page: 0, y: 0 };
@@ -8767,7 +8767,7 @@ function rcLettres(brut, eleve) {
   rcEcarts(eleve, net).segs.forEach(g => { let t = null;
     if (g.a2 > g.de2) { const f = L.find(x => x.t !== "X" && (() => { const j = avant(x.pos); return j >= g.de2 && j < g.a2; })()); if (f) t = f.t; }
     else if (L.some(x => x.t === "X" && trou(x.pos) === g.de2)) t = "X";
-    if (t && RC_TYPES[t]) types[rcCle(g)] = t; });
+    if (t && RC_TYPES[t]) types[rcCle(g)] = rcCodeValide(t, g); });   // [C14 1.4.30] un type qui ne dit pas vrai de ses mots se relit dans les mots
   return { texte: net, types: Object.keys(types).length ? types : null };
 }
 /* [C14 1.4.12] la ressemblance en lettres entre la ligne envoyée et la ligne rendue : 2 × la plus longue suite commune / la somme des longueurs.
@@ -8895,7 +8895,7 @@ function rcSeparerAnciens(k) {
       if (place) { avecMot.forEach(u => { const w = (place.x1 - place.x0) * u.eleve.length / tot, c = rcCle(u); rcLigneMaj(k, x.pid, x.id, L => { L.places = Object.assign({}, L.places, { [c]: { x0: cur, x1: cur + w } }); }); cur += w; }); }
       if (ancienne) { delete s.marques[mk];
         subs.forEach(u => { const c = rcCle(u), a = { k, pid: x.pid, id: x.id, l, g: u, cle: c }, q = rcPlaceSeg(a);
-          const m = { page: x.pid, forme: "faute", sens: "lieu", passe: "langue", point: "orthographe", q: null, x0: q.x0, x1: q.x1, y0: q.y0, y1: q.y1, bonne: u.corrige || null, bande: { ligne: x.id, cle: c, eleve: u.eleve, corrige: u.corrige, type: q.type.nom, code: (l.types && l.typesDe === l.corrige && l.types[c]) || rcCodeFaute(u) } };
+          const m = { page: x.pid, forme: "faute", sens: "lieu", passe: "langue", point: "orthographe", q: null, x0: q.x0, x1: q.x1, y0: q.y0, y1: q.y1, bonne: u.corrige || null, bande: { ligne: x.id, cle: c, eleve: u.eleve, corrige: u.corrige, type: q.type.nom, code: rcCodeArret({ l, g: u, cle: c }) } };   // [C14 1.4.30] le type contrôlé
           m.id = scId("marque"); m.eleve = k; m.creeLe = m.modifieLe = new Date().toISOString(); s.marques[m.id] = m;
           rcLigneMaj(k, x.pid, x.id, L => { L.marquesBande = Object.assign({}, L.marquesBande, { [c]: m.id }); }); }); }
       n++; });
@@ -9192,7 +9192,22 @@ function rcNotion(g) {
   return null;
 }
 /* [C14 1.4.10] le type donné par l'IA pour cet arrêt, s'il est là et à jour ; sinon le moteur de la dictée */
-function rcCodeArret(a) { const l = a && a.l, t = l && l.types && l.typesDe === l.corrige && l.types[a.cle]; return RC_TYPES[t] ? t : rcCodeFaute(a.g); }
+/* [C14 1.4.30] (Paul 03/11 00:39 : « tu ne trouves pas quelque chose de bizarre, notamment sur les mots manquants? » ; 00:48 « ok » ; 00:53 « tu me fais juste 99 pour que
+   demain les élèves aient des fichiers qui ne racontent pas n'importe quoi ») : le type d'une faute doit dire vrai de ses mots. L'IA écrit parfois {M} après un mot qu'elle a
+   corrigé (« augmentent{M} ») : mesuré au site, 59 « mots manquants » sur des mots que l'élève a écrits. « Mot manquant » : le corrigé a plus de mots que l'élève ;
+   « mot en trop » : l'élève en a plus ; « ponctuation » : aucun mot, ni d'un côté ni de l'autre. Sinon, le type se relit dans les mots : un mot de plus d'un côté
+   (« auquel → , à quoi » : un mot manquant), ou, à mots égaux, comme en dictée (« rencontré → rencontrer » : grammaire). Lu partout où un type se lit (la bande, le bilan,
+   les fichiers des élèves) : aucune copie n'est réécrite, aucune décision ne bouge, rien ne se rouvre. */
+function rcMotsDe(s) { return rcTokenize(s || "").filter(w => /[\p{L}\d]/u.test(w)); }
+function rcSansSignes(s) { return String(s || "").toLowerCase().replace(/[^\p{L}\d]/gu, ""); }
+function rcTypeTient(t, g) { const ne = rcMotsDe(g.eleve).length, nc = rcMotsDe(g.corrige).length, autres = rcSansSignes(g.eleve) !== rcSansSignes(g.corrige);
+  if (t === "M") return nc > ne && autres; if (t === "X") return ne > nc && autres; if (t === "P") return !ne && !nc; return true; }
+function rcCodeValide(t, g) { if (!RC_TYPES[t]) return rcCodeFaute(g); if (rcTypeTient(t, g)) return t;
+  const ne = rcMotsDe(g.eleve).length, nc = rcMotsDe(g.corrige).length, autres = rcSansSignes(g.eleve) !== rcSansSignes(g.corrige);
+  return nc > ne && autres ? "M" : ne > nc && autres ? "X" : rcCodeFaute(g); }
+function rcCodeArret(a) { const l = a && a.l, t = l && l.types && l.typesDe === l.corrige && l.types[a.cle]; return RC_TYPES[t] ? rcCodeValide(t, a.g) : rcCodeFaute(a.g); }
+/* le type d'une faute posée, tel qu'il se lit : celui qu'elle porte, s'il dit vrai de ses mots ; une faute oubliée par l'IA garde le sien (aucun) */
+function rcCodeMarque(m) { const b = m && m.bande; if (!b) return null; return RC_TYPES[b.code] ? rcCodeValide(b.code, { eleve: b.eleve || "", corrige: b.corrige || "" }) : (b.code || null); }
 function rcStyleArret(a) { return a && a.st ? stStyle(a) : RC_TYPES[rcCodeArret(a)]; }
 function rcPosMots(t) { const T = rcTokenize(t || ""), P = []; let i = 0; T.forEach(w => { const j = t.indexOf(w, i); P.push([j, j + w.length]); i = j + w.length; }); return P; }
 function rcArretsBande(k) { return rcArrets(k).concat(typeof stArrets === "function" ? stArrets(k) : []); }   // [C14 1.4.16] après les fautes, les stickers proposés
@@ -10310,7 +10325,7 @@ function avOuvrirCopie(k) {   // la copie s'ouvre là où tu travaillais quand t
 }
 /* l'onglet « Bilan » : pour la remédiation, la note, les critères et les fautes par type d'erreur de chaque élève, puis la classe */
 const AV_ORDRE = ["G", "L", "C", "P", "E", "M", "X", "I", "A"];
-function avFautes(k) { const ids = new Set(scPagesDe(k).map(p => p.id)), o = {}; Object.values(((state.copies[k] || {}).scan || {}).marques || {}).filter(m => m && m.forme === "faute" && (!ids.size || ids.has(m.page))).forEach(m => { const c = (m.bande && RC_TYPES[m.bande.code]) ? m.bande.code : "_"; o[c] = (o[c] || 0) + 1; }); return o; }
+function avFautes(k) { const ids = new Set(scPagesDe(k).map(p => p.id)), o = {}; Object.values(((state.copies[k] || {}).scan || {}).marques || {}).filter(m => m && m.forme === "faute" && (!ids.size || ids.has(m.page))).forEach(m => { const cm = typeof rcCodeMarque === "function" ? rcCodeMarque(m) : m.bande && m.bande.code, c = RC_TYPES[cm] ? cm : "_"; o[c] = (o[c] || 0) + 1; }); return o; }   // [C14 1.4.30] le type contrôlé
 function avCritere(k, c) { let n = 0, tot = 0, ok = true; c.points.forEach(pt => { tot += pt.poids; const r = scCase(pt, k); if (!r || !r.complet) ok = false; else n += pt.bareme[String(r.c.niveau)]; }); return { n, tot, ok }; }
 function avBilanClasse() {
   const v = document.getElementById("ruVue_bilan"); if (!v) return; avPagesCharger();
