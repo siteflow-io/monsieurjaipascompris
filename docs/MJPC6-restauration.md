@@ -1385,6 +1385,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les marques de la bande replacées par la 1.4.2 gardent leur nouvelle place.
 
 
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.32-RU (03/11/2026, conscience n°14)
+- Avant : 1.4.31-RU, 964 277 o, md5 `5453881b42bd58381e5adfef761d8c72`, copie au sas `SAUVEGARDES/redaction-1.4.31-RU-avant-1.4.32-2026-11-03.html` (commit sas `bdd94988`). Promu : 1.4.32-RU, 968 881 o, md5 `ca7893f8f938cee69c21ae652f646ff4`, commit `e05f72c`, blob `645c333d3e55`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.32 retire du site les pages en double qu'elle a réunies (Franklin : deux, mesuré) et donne une origine à leur feuille : la 1.4.31 relit cela tel quel (la feuille retrouve sa photo par son origine au prochain chargement du paquet).
+
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.31-RU (03/11/2026, conscience n°14)
 - Avant : 1.4.30-RU, 956 958 o, md5 `8d209be7b46b7425626f9f5c062acbb5`, copie au sas `SAUVEGARDES/redaction-1.4.30-RU-avant-1.4.31-2026-11-03.html` (commit sas `8ed8af04`). Promu : 1.4.31-RU, 964 277 o, md5 `5453881b42bd58381e5adfef761d8c72`, commit `b739246`, blob `a07911154ae2`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. La 1.4.31 n'ajoute qu'un champ, `config/correctionDetaillee`, que la 1.4.30 ignore : ses fichiers repartent sans « 📝 Ma copie corrigée », et les stickers sur les mêmes mots s'y empilent de nouveau. Des fichiers déjà rendus avec la 1.4.31 gardent tout ce qu'ils contiennent.

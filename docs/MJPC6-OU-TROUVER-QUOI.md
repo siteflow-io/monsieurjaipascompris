@@ -524,7 +524,7 @@
 
 | ce que tu cherches | où c'est |
 |---|---|
-| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.31-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
+| l'app | `https://siteflow-io.github.io/monsieurjaipascompris/redaction.html?mode=prof&v=1.4.32-RU` → la rédaction → la classe → « 📄 Corriger sur les scans » |
 | la grille à cases | au site : `redactions/<id>/config/grille2` (posée le 30/10 sur `sujet_mvqx0bld_6pj89w` et `sujet_mvtd85g7_ycxjq3`) ; source au sas `MANDATS/REDACTION-UNIVERSELLE/maquette/grille2.json` (`grille2.py`) |
 | le paquet (photos, PDF) | jamais au site : le navigateur du professeur (IndexedDB `mjpc_scans`, avec la photo entière de chaque page pour la retouche) |
 | les pages, les marques, les réponses | au site : `redactions/<id>/scan/<classe>/pages/<page>` ; `redactions/<id>/copies/<classe>/<élève>.scan` ; l'endroit exact : `suivi/<classe>.scanCurseur` |
@@ -564,6 +564,7 @@
 | le type d'une faute dit vrai de ses mots (1.4.30, C14 94) | `rcMotsDe`, `rcSansSignes`, `rcTypeTient`, `rcCodeValide`, `rcCodeArret`, `rcCodeMarque`, et le type contrôlé dans `rcLettres` et `rcSeparerAnciens` (`recopie.js`) ; lu dans `scEleveDonnees` (`eleve.js`, les fichiers des élèves) et `avFautes` (`avancement.js`, le bilan) ; banc `banc/types.mjs` |
 | la correction détaillée dans les fichiers des élèves (1.4.31, C14 109) | `scDetailVisible`, `scCorrigeDetaille` (dans `scEleveDonnees` : `detail`), la case `#scDetail` dans `scFichiersED`, `scDetailChanger` (`config/correctionDetaillee`), et dans le fichier de l'élève `copieCorrigee` (« 📝 Ma copie corrigée », `#cd`, `.cdv`) (`eleve.js`) ; banc `banc/detail.mjs` |
 | plus d'empilement de stickers dans les fichiers des élèves (1.4.31, C14 110) | dans `scEleveLecture` (`eleve.js`) : `memeSig`, un seul cadre pour les mêmes mots, `etoiles` (`.stx`, cliquables, `data-s`) ; le fichier sans script, un seul cadre aussi (`scEleveFichier`) ; banc : trois stickers sur les mêmes mots dans `banc/types.mjs`, vérifiés dans `banc/detail.mjs` |
+| une feuille relue sur un autre ordinateur retrouve sa photo (1.4.32, C14 117) | `SC_PROCHE` (20), `SC_ECART` (16), `scDistHex`, `scPageProche` ; à l'ouverture des scans (`scOuvrir`) `scReunirPages`, `scDbOter` (`scan.js`) ; banc `banc/retrouver.mjs` |
 | la limite du contexte (1.4.24, l'essai de Paul) | `ST_CONTEXTE_MAX` (1 000 000 de signes) dans `stContexteGarder` (`grille-stickers.js`) : au-delà, l'app le dit |
 | le code de l'ancien flux des scans retiré (1.4.20, 401) | les 52 fonctions : sas, branche `c14-poignees`, `banc/outil-fonctions-401.mjs` (l'outil qui les a trouvées) et `banc/ancien-flux-retire-1.4.20.mjs.txt` (les vérifications retirées avec elles) ; la version d'avant : `SAUVEGARDES/redaction-1.4.19-RU-avant-1.4.20-2026-11-02.html` |
 | la correction par l'élève (à coder) | drapeau `SC_CORRECTION_ELEVE_CODEE` ; dettes : `docs/MJPC6-DETTES.md`, sas `MANDATS/REDACTION-UNIVERSELLE/A-CODER-CORRECTION-ELEVE.md` |
