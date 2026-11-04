@@ -1488,3 +1488,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.3-RU (31/10/2026, conscience n°14)
 - Avant : 1.4.2-RU, 609 792 o, md5 `966a11eaef3439de03c395863fe0d222`, copie au sas `SAUVEGARDES/redaction-1.4.2-RU-avant-1.4.3-2026-10-31.html`. Promu : 1.4.3-RU, 619 216 o, md5 `ef85d8900be86cdc7257d4f019e300e1`, commit `9693f28`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit. Les champs ajoutés aux lignes (`places`, `recopieCorrigee`) restent ; les textes corrigés par clic droit restent corrigés.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.82.0-⑮ (04/11/2026, conscience n°16)
+- blob `3b69aab74938` (commit `cf122ac`) · 3 016 971 o · md5 `c21ddbb656b9028cf11b0d70f7b18318` · v8.81.1-⑭-micro
+- **Motif** : le lot 1 (359 les 3 DYLAN ; 360 la fenêtre « … joue déjà » ; 361 la participation), sa réparation (« Reprendre » sur un second ordinateur prend la main, rien de perdu ; le tableau ne recule plus ; les états ne se renvoient plus sans fin ; l'espace insécable) et 391 (l'autre ordinateur prévenu après « Lancer celle-ci quand même »).
+- **Restauration en cas de `BUG`** : le blob `3b69aab74938` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : les 3 DYLAN reviendraient à la séance 2 ; la fenêtre aux boutons « undefined » ; la participation qui va au premier élève ressemblant ; « Reprendre » qui ne prend pas la main et peut effacer le geste fait juste avant. Rien au hub n'est écrit autrement : la 8.81.1 relit tout.

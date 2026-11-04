@@ -805,3 +805,13 @@
 | le micro n°3 (ce qu'il contient, ce qui est prouvé, ce qui n'est pas joué) | `docs/MJPC6-MICROS.md` n°3 |
 | revenir à la 8.81.0-⑭ | `docs/MJPC6-restauration.md` (blob `25383d503ecb`) |
 | ouvrir le site en 8.81.1-⑭-micro (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.81.1` |
+| un paquet de séance sans `classe` ne compte que pour la classe de sa clé ; avec `classe`, pour cette classe (359, 8.82.0-⑮) | `edtPaquetPour` (l. 26372) |
+| le mode test ne se quitte pas pendant un essai (la pastille refuse) ; le miroir d'un essai n'est jamais repris comme une heure (359) | `m8EssaiEnCours` (l. 1882), `m8BasculerModeTest` (l. 1885), `dr_coursMiroir` (l. 21398) |
+| la fenêtre « … joue déjà sur un autre appareil » : « Rejoindre la séance en cours », « Lancer celle-ci quand même », « Annuler », chacun avec son infobulle (360) | `dr_sesDemander` (l. 23396), `atModaleChoix` (l. 14665) |
+| la participation : seules des initiales exactes désignent un élève ; en répétition, la classe répétée puis la classe d'essai, l'en-tête suit le menu (361, ㊸) | `dr_iniExact` (l. 19721), `dr_iniSeul` (l. 19724), `brancherAjout` (l. 19681), `dr_classe` (l. 17326), `dr_hclasseNom` (l. 17457) |
+| « Reprendre » (le bandeau, « Rejoindre ») sur un ordinateur est un geste : il prend la main une fois le premier état posé ; la télécommande se désactive et le dit ; rien ne part au tableau pendant qu'il rejoint (la réparation du lot 1) | `dr_sesPrendreRejoint` (l. 23138), `dr_sesAttend` (l. 23093), `dr_sesVeiller` (l. 23298), `sesReprendre` (l. 24400) |
+| `vifTs` toujours écrit (une version d'aujourd'hui n'est jamais prise pour une version d'avant) ; la session comparée par sa signature ; les clés triées ; l'espace insécable comptée comme une espace (la réparation) | `dr_sesPremierVerifier` (l. 23144), `dr_sesRange` (l. 23204), `dr_sesFus` (l. 23216) |
+| « Lancer celle-ci quand même » sur une vraie heure : l'autre heure close, et l'autre ordinateur prévenu (son écran se ferme et le dit) (391) | `dr_cloreHeureRestee` (l. 20511), `dr_sesClosAilleurs` (l. 23273) |
+| les mandats, NOTE et sondes du lot 1 et de sa réparation | sas `MANDATS/DEROULE-01-11/MANDAT-LOT1.md`, `MANDAT-LOT1-COMPLEMENT.md` ; `LIVRAISONS/DEROULE-01-11/LOT1/` (`deroule/lot1`, `dbca73a51`), `LIVRAISONS/DEROULE-01-11/LOT1-COMPLEMENT/` (`deroule/lot1-complement`, `1d6a0166d`) ; le banc à la vraie horloge `banc/vraie-horloge` (`0ff3d8ffd`) |
+| revenir à la 8.81.1-⑭-micro | `docs/MJPC6-restauration.md` (blob `3b69aab74938`) |
+| ouvrir le site en 8.82.0-⑮ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.82.0` |
