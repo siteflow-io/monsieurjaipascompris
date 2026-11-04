@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2376 fonctions** — site : 2376 · moteur : 0
+**2395 fonctions** — site : 2395 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,7 +25,7 @@
 - **DIVERS — socle du site** — 511 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 768 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 787 fonctions
 - **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 261 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
@@ -609,7 +609,7 @@
 | `notifyConnection` | eleve | 337 o | (sans commentaire) affiche/emploie : « Connexion prof (M. Meney) · Connexion :  » | _loginEleveFound, loginAsProf |
 | `notionsTravaillees` | — | 751 o | les diapos d'une activité, par identifiant (a0) | chapitreHtml, ouvrirOral, remobNonTravaillees |
 | `nouvelleActivite` | titre | 550 o | (p5) la carte « Ce que la diapo déclare » qui s'écrit | brancherDeclare |
-| `now` | — | 87 o | (sans commentaire ni indice) | _applyLinkEcrire, _b2DoSave, _blocBrevet, _corbeillePut (+208) |
+| `now` | — | 87 o | (sans commentaire ni indice) | _applyLinkEcrire, _b2DoSave, _blocBrevet, _corbeillePut (+210) |
 | `objetDec` | cle | 627 o | (sans commentaire) affiche/emploie : « Activité  ·  + contenuEntier(E[i])).join( » | dr_travailHeure, ouvrirFin, ouvrirReserve, recitHtml0 (+2) |
 | `onInteraction_` | e | 282 o | (sans commentaire) ECRIT au hub | — |
 | `onScroll_` | — | 316 o | (sans commentaire ni indice) | startTracking_ |
@@ -831,7 +831,7 @@
 | `volet` | — | 3560 o | (sans commentaire) affiche/emploie : « après) */ const v0 = $( · est nulle part en classe */ let h = `<h5 title= » | dr_voletApres |
 | `voletAtelier` | — | 2938 o | (sans commentaire) affiche/emploie : « ; }; let h = `<div class= · , { weekday:  » | dr_tout |
 | `vuJ` | h, di | 216 o | (sans commentaire ni indice) | dejaVuAvant, ouvrirOral, passeHtml, recitHtml0 (+2) |
-| `vueDroite` | et | 2324 o | (sans commentaire) affiche/emploie : « ; let inner = boite.querySelector( · ); if (!inner) { inner = document.createElement( » | brancherFin, dr_tout |
+| `vueDroite` | et | 2583 o | (sans commentaire) affiche/emploie : « ; let inner = boite.querySelector( · ); if (!inner) { inner = document.createElement( » | brancherFin, dr_tout |
 
 
 ## DIVERS — utilitaires internes
@@ -1368,7 +1368,7 @@
 | `dr_docEtat` | id | 653 o | l'état d'un document montré (S.doc → et.doc) : | brancherDocs, dr_docsPanneau |
 | `dr_docHtmlRef` | doc | 1506 o | le cadre du document dans l'écran (au pilote et au tableau, le même) : | docHtml |
 | `dr_docsPanneau` | l | 1574 o | (sans commentaire) affiche/emploie : «  style= · ><b>${dr_esc(d.titre)}</b> <span style= » | ouvrirDocs |
-| `dr_documents` | — | 253 o | (sans commentaire ni indice) | alertesForme, arreterRepetition, brancherDocs, devoiler (+5) |
+| `dr_documents` | — | 253 o | (sans commentaire ni indice) | alertesForme, arreterRepetition, brancherDocs, devoiler (+6) |
 | `dr_donneesVues` | — | 296 o | (sans commentaire ni indice) | — |
 | `dr_duHub` | x | 564 o | (sans commentaire) affiche/emploie : «  in o) { const i = (o.eid != null && typeof indexDe ===  » | dr_jouerCopie, dr_lireJoue, dr_reprendre, dr_sesAppliquer (+1) |
 | `dr_echeanceHorsClasse` | h | 649 o | E1 (§12.38-3, registre 13 · 83 ; Paul 23:16 « les diapos de cahier de texte sont vides ») : la diapo « Cahier de textes » HORS DE LA CLASSE (l'Atelier, la répétition). | dr_cahierHorsClasse |
@@ -1377,7 +1377,7 @@
 | `dr_ecouteWin` | type, fn, opt | 129 o | (sans commentaire ni indice) | — |
 | `dr_ecrDeLaTrame` | e | 475 o | pour etatDiapo() (crochet du socle) : « à écrire » préparé dans la trame, en éléments de la diapo ('b'+bi pour un bloc, k pour une étape) | dr_aEcrireAtelier, dr_annuler, dr_ecrResynchro, dr_selEcrire |
 | `dr_ecrResynchro` | avant | 253 o | (E4 · relecteur continu B2) ↶ après « Marquer à écrire » : l'écran suit la trame — les ✍ venus de la trame sont recalculés (lisait : la donnée annulée, les ✍ restés) | dr_annuler |
-| `dr_ecranVu` | e | 158 o | (sans commentaire ni indice) | arreterRepetition, dr_versMur, pousser |
+| `dr_ecranVu` | e | 158 o | (sans commentaire ni indice) | arreterRepetition, dr_tabVignetteNourrir, dr_versMur, pousser |
 | `dr_ecrire` | chemin, valeur, libelle, cb | 222 o | (sans commentaire) affiche/emploie : « , valeur, libelle ··  » — ECRIT au hub | dr_absentsDeLaCase, dr_annulRemettre, dr_annulerHeure, dr_apGeste (+18) |
 | `dr_ecritsSeulement` | E | 453 o | E1 (relecteur neuf n°2) : un champ posé par défaut à la lecture (etapes, el, marques, txt) reste caché tant qu'il est vide — une frappe dans la diapo 1 écrivait « etapes: | dr_derouleDe |
 | `dr_editeMarque` | mk, posee | 984 o | l'ancien gardait l'outil armé : le panneau le réarme d'un clic | dr_poseMk |
@@ -1532,20 +1532,34 @@
 | `dr_masqueeCachee` | e | 111 o | EX (§12.62 (4)) : « Masquer » — la diapo reste dans la trame (l'Atelier la montre, grisée), jamais montrée en classe ni jouée (le pilotage, la répétition, le tableau) | dr_resteHeure, dr_suiteContinue, ordreHeureCalc0, volet |
 | `dr_mediasAdresse` | rel | 140 o | E4 (§12.49 (4), (6)) : le deuxième dépôt, dit par le préfixe « m2: » du chemin relatif | atP2NormaliserBloc, chOuvImageNormale, dr_imageAdresse, dr_ouvImageChoisir (+2) |
 | `dr_memeFeuille` | a, b | 376 o | (sans commentaire ni indice) | dr_dejaPosee |
-| `dr_minutDuree` | — | 228 o | (sans commentaire) touche #dr-minut-in | dr_minuteurDepart, dr_minuteurPoser, dr_tcMaj, dr_tcMinut |
-| `dr_minutPhase` | reste, duree, etat | 199 o | la phase de couleur, selon la part écoulée du temps donné (§12.70 (7)) | dr_minuteurAfficher, dr_tabMinutTic |
-| `dr_minutReste` | m | 132 o | (sans commentaire ni indice) | dr_minuteurAfficher, dr_minuteurArret |
-| `dr_minuteurAfficher` | — | 1743 o | au pilote : le chiffre, sa couleur, l'état des boutons — seulement ce qui change | dr_minuteurDepart, dr_minuteurFin, dr_minuteurPause, dr_minuteurPoser (+4) |
+| `dr_minutAnneau` | an, reste, duree, etat | 459 o | l'anneau : la part qui reste de la durée donnée, la couleur du cran | dr_minutPastilleMaj, dr_minutReglAfficher |
+| `dr_minutBorner` | — | 315 o | (sans commentaire) touche #mur | dr_minutGlisser, dr_minutPosPoser |
+| `dr_minutChoisir` | k | 168 o | (sans commentaire) affiche/emploie : «  ·· m.etat ===  » | dr_minuteurPoser |
+| `dr_minutCoin` | — | 921 o | le coin libre : le premier des quatre coins de la diapo où la pastille ne touche aucun texte (en bas à droite d'abord) | dr_minutPosPoser |
+| `dr_minutDuree` | — | 228 o | (sans commentaire) touche #dr-minut-in | dr_minutReglAfficher, dr_minutRegler, dr_minutTaper, dr_minuteurAfficher (+4) |
+| `dr_minutGlisser` | el | 1639 o | glisser à la souris : la place suit la main ici, part à la fenêtre du tableau toutes les 120 ms, et au tableau distant au lâcher | dr_minutPP |
+| `dr_minutPP` | — | 1489 o | la pastille du pilote : sur la diapo, à la place qu'elle a au tableau ; montrée seulement quand la classe la voit (« au tableau ») | dr_minutGlisser, dr_minuteurAfficher |
+| `dr_minutPastilleHTML` | — | 351 o | (sans commentaire) affiche/emploie : « <svg viewBox= ·  aria-hidden= » | dr_minutPP, dr_tabMinutPastille |
+| `dr_minutPastilleMaj` | el, txt, reste, duree, etat | 441 o | le chiffre, l'anneau, la couleur — seulement ce qui change ; servi aussi au tableau (dr-tableau.js) | dr_minutPP, dr_tabMinutPastille |
+| `dr_minutPhase` | reste, duree, etat | 221 o | la phase de couleur, selon la part écoulée du temps donné (§12.70 (7)) | dr_minutAnneau, dr_minutPastilleMaj, dr_minuteurAfficher, dr_tabMinutTic |
+| `dr_minutPos` | — | 84 o | (sans commentaire ni indice) | dr_minutBorner, dr_minutGlisser, dr_minutPP, dr_minutPosPoser (+1) |
+| `dr_minutPosPoser` | — | 239 o | (sans commentaire ni indice) | dr_minuteurEnvoyer |
+| `dr_minutReglAfficher` | m, reste | 1701 o | le réglage sous la diapo (P6) : les quatre chiffres (la durée, ou ce qui reste quand il court), leurs + et − (grisés avec leur raison), l'anneau | dr_minuteurAfficher |
+| `dr_minutRegler` | d | 374 o | (sans commentaire) affiche/emploie : «  ·· m.etat ===  · )) return; const i = document.getElementById( » — touche #dr-minut-in | dr_minuteurPoser |
+| `dr_minutReste` | m | 132 o | C16 671 (acceptée) : les crans comptés sur la durée donnée, au chiffre affiché — vert plus de la moitié, jaune jusqu'au quart, orange jusqu'au dixième, rouge le dernier dixième | dr_minutPP, dr_minuteurAfficher, dr_minuteurArret |
+| `dr_minutTaille` | — | 38 o | C16 677 : la largeur du rectangle en part de la diapo (420 px sur 1920, P6) ; sa hauteur est le tiers de sa largeur | dr_minutBorner, dr_minutCoin, dr_minutGlisser, dr_minutPP (+1) |
+| `dr_minutTaper` | ch | 526 o | (sans commentaire) affiche/emploie : « ) return; const t = dr_mmss(dr_minutDuree()).replace( ·  + t[2] + t[3]; const m = DR_CL.minut; if (m && m.etat ===  » — touche #dr-minut-in | — |
+| `dr_minuteurAfficher` | — | 1706 o | au pilote : le chiffre, sa couleur, l'état des boutons — seulement ce qui change | dr_minutChoisir, dr_minutRegler, dr_minutTaper, dr_minuteurDepart (+7) |
 | `dr_minuteurArret` | — | 210 o | (sans commentaire) affiche/emploie : « ) { try { journal( · , { action:  » | dr_minuteurPoser, dr_tcMinut |
-| `dr_minuteurBasculer` | — | 25 o | (sans commentaire ni indice) | basculerChrono |
+| `dr_minuteurBasculer` | — | 25 o | §12.70 bis : en rangée sous la barre, à sa place dans la page (plus de position calculée) | basculerChrono |
 | `dr_minuteurBoucle` | — | 235 o | la boucle du pilote : seulement quand le minuteur court ; elle ne pose que le chiffre et joue le son | dr_minuteurDepart, dr_minuteurFin, dr_minuteurPause, dr_minuteurTic (+3) |
-| `dr_minuteurDepart` | — | 518 o | (sans commentaire) touche #dr-minut-tab | dr_minuteurPoser, dr_tcMinut |
-| `dr_minuteurEnvoyer` | — | 530 o | l'envoi aux tableaux, aux gestes seulement : la fenêtre locale tout de suite, le tableau distant par la scène (sans attendre le débounce) ; | dr_minuteurDepart, dr_minuteurFin, dr_minuteurPause, dr_minuteurPoser (+2) |
-| `dr_minuteurEtat` | — | 183 o | ce qui part au tableau (rien si « au tableau » n'est pas coché) : d durée, e état, f fin (horloge du pilote), r reste | dr_minuteurEnvoyer, dr_scene, dr_versMur |
+| `dr_minuteurDepart` | — | 667 o | (sans commentaire) touche #dr-minut-in, #dr-minut-tab | dr_minuteurPoser, dr_tcMinut |
+| `dr_minuteurEnvoyer` | — | 535 o | l'envoi aux tableaux, aux gestes seulement : la fenêtre locale tout de suite, le tableau distant par la scène (sans attendre le débounce) ; | dr_minutGlisser, dr_minutRegler, dr_minutTaper, dr_minuteurDepart (+5) |
+| `dr_minuteurEtat` | — | 271 o | ce qui part au tableau (rien si « au tableau » n'est pas coché) : d durée, e état, f fin (horloge du pilote), r reste | dr_minutGlisser, dr_minuteurEnvoyer, dr_scene, dr_tabVignetteNourrir (+1) |
 | `dr_minuteurFin` | — | 197 o | (sans commentaire) touche #dr-minut-tab | dr_annulerHeure, dr_minuteurArret, dr_minuteurTic, dr_sesClosAilleurs |
-| `dr_minuteurPanneau` | ouvrir | 618 o | le panneau s'ouvre sous la main, au-dessus du ⏱ (position fixe, calculée à l'ouverture seulement) | dr_minuteurArret, dr_minuteurBasculer, dr_minuteurPoser |
-| `dr_minuteurPause` | — | 510 o | (sans commentaire) affiche/emploie : « ) { m.reste = Math.max(0, m.fin - Date.now()); m.etat =  · ; delete m.fin; try { journal( » | dr_minuteurPoser, dr_tcMinut |
-| `dr_minuteurPoser` | — | 2792 o | (sans commentaire) affiche/emploie : « ; b.className =  · ;   b.innerHTML =  » — touche #bchrono, #dr-minut | dr_minuteurPanneau, dr_tcMinut |
+| `dr_minuteurPanneau` | ouvrir | 380 o | le panneau s'ouvre sous la main, au-dessus du ⏱ (position fixe, calculée à l'ouverture seulement) | dr_minuteurArret, dr_minuteurBasculer, dr_minuteurDepart |
+| `dr_minuteurPause` | — | 510 o | §12.70 bis : lancé, le réglage se cache derrière le ⏱ | dr_minuteurPoser, dr_tcMinut |
+| `dr_minuteurPoser` | — | 4377 o | §12.70 bis : la place et la taille de la pastille, en parts de la diapo | dr_minuteurPanneau, dr_tcMinut |
 | `dr_minuteurTic` | — | 747 o | (sans commentaire) affiche/emploie : « un bip manqué de plus d · ; m.reste = 0; delete m.fin; dr_son( » | — |
 | `dr_mkBloc` | bi | 230 o | le bloc image de la diapo de l'atelier, rangé : `marques` devient une propriété enregistrée (le socle la pose cachée tant qu'elle est vide) | dr_mkChanger, dr_mkPanneau, dr_poseMk |
 | `dr_mkChanger` | f, bi, suite | 485 o | (sans commentaire ni indice) | dr_editeMarque, dr_poseMk, dr_setDev, dr_setSupport (+1) |
@@ -1788,7 +1802,7 @@
 | `dr_sceneAuto` | vite | 1866 o | (sans commentaire) affiche/emploie : « écrire, cet appareil n · appareil qui l » | dr_coursEcrire, dr_minuteurEnvoyer, dr_tabVeiller, dr_versMur |
 | `dr_seCite` | suite | 352 o | (sans commentaire ni indice) | narrativiser, recit |
 | `dr_seance` | sk | 78 o | (sans commentaire ni indice) | dr_derouleDe, dr_invContenuV1, dr_invPoser, dr_invRetirerDiapos (+17) |
-| `dr_seances` | — | 252 o | la vue d'une séance telle que la maquette la lisait (DATA.seances[si] = {titre, ecrans}) : un regard, pas une copie | alertesChapitre, arreterRepetition, dejaVue, dr_annulerHeure (+14) |
+| `dr_seances` | — | 252 o | la vue d'une séance telle que la maquette la lisait (DATA.seances[si] = {titre, ecrans}) : un regard, pas une copie | alertesChapitre, arreterRepetition, dejaVue, dr_annulerHeure (+15) |
 | `dr_selEcrire` | — | 571 o | (sans commentaire ni indice) | dr_selMenu |
 | `dr_selMenu` | — | 1311 o | (sans commentaire) affiche/emploie : « btn rouge ·  title= » — touche #dr-sel-menu | — |
 | `dr_selPeindre` | — | 296 o | (sans commentaire ni indice) | — |
@@ -1869,16 +1883,17 @@
 | `dr_tabAncrer` | mur, et | 480 o | (sans commentaire) affiche/emploie : « :scope > table.p8-grille · :scope > table.p8-grille » | rendre |
 | `dr_tabAnnee` | d | 96 o | (sans commentaire ni indice) | dr_tabAttendre |
 | `dr_tabAttendre` | — | 916 o | (sans commentaire) affiche/emploie : «  && (p.classeNom ·· p.classe);     dr_tabDireClasse(c ?  ·  + String(p.creneau ··  » — hub /site/edt/calendrier/ | dr_tabDemarrer, dr_tabRetourAttente |
-| `dr_tabAvecEtiquette` | et | 158 o | §12.74 (2) : l'étiquette entière part avec l'état (le tableau n'a pas les activités du chapitre) | dr_versMur |
+| `dr_tabAvecEtiquette` | et | 158 o | §12.74 (2) : l'étiquette entière part avec l'état (le tableau n'a pas les activités du chapitre) | dr_tabVignetteNourrir, dr_versMur |
 | `dr_tabCaseDuMoment` | grille, cal, classes, d, niveau | 1255 o | (sans commentaire ni indice) | dr_tabAttendre |
 | `dr_tabCheminC` | c | 313 o | le distant : le cours trouvé, on lit la copie jouée, puis la scène toutes les 900 ms et le pointeur toutes les 3 s | dr_tabFluxOuvrir, dr_tabFluxTombe, dr_tabMonter, dr_tabSceneRecue (+1) |
+| `dr_tabCibles` | — | 267 o | C16 677 (Paul, 04/11 18:57) : | dr_tabPoste, dr_versMur |
 | `dr_tabCle` | classes, nom | 818 o | §12.31 (13 · 51) : une classe se trouve par son nom comme par sa clé. Une seule règle, celle d'`edtCleClasse` (E1) : le nom s'il est une clé ; sinon la clé dont `nom` est égal ; | dr_tabCaseDuMoment |
 | `dr_tabCleMaj` | — | 800 o | E1 (§12.44, 4 bis) : sur l'ordi de classe (la vue du tableau, sur l'écran d'attente seulement — jamais devant la classe pendant l'heure), la clé USB des vidéos : | dr_tabPoser |
 | `dr_tabDefauts` | i, bi | 4853 o | (sans commentaire) affiche/emploie : « ; z.setAttribute( · ); dr_zone().appendChild(z); } z.className =  » | alertesForme |
-| `dr_tabDemarrer` | — | 475 o | l'entrée de la page tableau — appelée par `sesBootTableau` | sesBootTableau |
+| `dr_tabDemarrer` | — | 693 o | l'entrée de la page tableau — appelée par `sesBootTableau` | sesBootTableau |
 | `dr_tabDireClasse` | t | 126 o | la ligne du bas de l'attente : la classe attendue, ou celle du cours trouvé ; vide, elle disparaît (appelée par `sesTabChercherCours`, `sesTabVeillePointeur`) | dr_tabAttendre, dr_tabRetourAttente, sesTabChercherCours, sesTabVeillePointeur |
 | `dr_tabEnPages` | mur, et, t | 385 o | (sans commentaire) affiche/emploie : «  && l.closest( » | dr_tabAncrer |
-| `dr_tabFeuillesDe` | et | 189 o | (sans commentaire ni indice) | dr_versMur |
+| `dr_tabFeuillesDe` | et | 189 o | (sans commentaire ni indice) | dr_tabVignetteNourrir, dr_versMur |
 | `dr_tabFiger` | t | 709 o | C16 (les dernières dettes, ⑮ ; MANDAT-DERNIERES-DETTES §3.1) — D'UNE PAGE À L'AUTRE D'UN MÊME TABLEAU, L'EN-TÊTE EST AU MÊME ENDROIT, À LA MÊME HAUTEUR, AVEC LES MÊMES COLONNES ; | dr_tabAncrer, dr_tabPages |
 | `dr_tabFluxFermer` | — | 198 o | (sans commentaire ni indice) | dr_tabFluxOuvrir, dr_tabFluxTombe, dr_tabRetourAttente |
 | `dr_tabFluxOuvrir` | chemin | 1121 o | (sans commentaire) affiche/emploie : « , ev => recu(ev, false)); es.addEventListener( · , ev => recu(ev, true));   [ » | dr_tabFluxTombe, dr_tabMonter |
@@ -1889,9 +1904,10 @@
 | `dr_tabLire` | chemin, cb | 145 o | la lecture : `dr_lire` du socle (secuLire, mode test) — `sesGet` tombe (relance C5) | dr_tabAttendre, dr_tabLirePointeur, dr_tabLireSeance, dr_tabMonter (+4) |
 | `dr_tabLirePointeur` | cb | 550 o | §12.66 (1) : puis le mode test (`/site/tableau_test/pointeur`) — il se suit comme une répétition (rien n'y est d'une classe ; retiré → l'horloge) | dr_tabPointeur |
 | `dr_tabLireSeance` | c | 529 o | la séance du chapitre (relance M2), lue par `dr_lire(B)` : ses `items` (les documents par référence d'E4) ; | dr_tabMonter |
+| `dr_tabMinutPastille` | el, m, reste, txt | 826 o | §12.70 bis : la pastille, à la place et à la taille que Paul lui donne sur sa diapo (parts de la diapo, mesurées sur #mur2) | dr_tabMinutTic |
 | `dr_tabMinutRecevoir` | m, tsPilote, local | 455 o | §12.70 (1)-(4)(7) — LE MINUTEUR AU TABLEAU Reçu avec la scène (ou par message, pour la fenêtre locale) : { d durée, e état, f fin à l'horloge du pilote, r reste }. | dr_tabRecevoir, dr_tabRetourAttente, dr_tabSceneRecue |
 | `dr_tabMinutReste` | — | 179 o | (sans commentaire ni indice) | dr_tabMinutTic |
-| `dr_tabMinutTic` | — | 810 o | (sans commentaire) affiche/emploie : « ) el.style.display =  · ; return; }   const reste = m.e ===  » — touche #dr-tab-minut | dr_tabMinutRecevoir |
+| `dr_tabMinutTic` | — | 1080 o | (sans commentaire) affiche/emploie : « ) el.style.display =  · ; return; }   const reste = m.e ===  » — touche #dr-tab-minut | dr_tabMinutRecevoir |
 | `dr_tabMonter` | — | 902 o | (sans commentaire ni indice) | sesTabChercherCours, sesTabVeillePointeur |
 | `dr_tabMontrer` | o | 407 o | l'identité fait foi : si le rang reçu ne désigne pas la même diapo dans MA copie, on la retrouve par son eid | dr_tabSceneRecue |
 | `dr_tabMur` | — | 43 o | CÔTÉ TABLEAU (`?vue=tableau`, `&local=1`) | dr_rendreMur |
@@ -1900,13 +1916,14 @@
 | `dr_tabPeutEcrire` | — | 587 o | la scène au hub : `C/scene` = `et` + {eid, origine, ts, trameMaj} (mandat point 3) | dr_sceneAuto, dr_sesScene, dr_tabVeiller |
 | `dr_tabPleinEcran` | ev | 396 o | §12.72 (Paul, 29/10 10:41 : « tu fais en sorte que le tableau distant s'affiche en plein écran (autorisation google évidemment) ») : Chrome n'ouvre le plein écran que sur un geste de l'utilisateur. | — |
 | `dr_tabPointeur` | — | 179 o | (sans commentaire ni indice) | dr_tabMonter |
-| `dr_tabPoser` | — | 4811 o | la page tableau : on cache le site, on pose l'attente, le mur et le témoin « interrompu » | dr_tabDemarrer |
+| `dr_tabPoser` | — | 5208 o | la page tableau : on cache le site, on pose l'attente, le mur et le témoin « interrompu » | dr_tabDemarrer |
 | `dr_tabPoserBoutons` | — | 510 o | (sans commentaire) affiche/emploie : « ; q.type =  · ; q.textContent =  » — touche #bvideoproj, #dr-tab-adr | dr_tabVeiller |
 | `dr_tabPoserEcran` | et, ecran | 354 o | l'écran reçu (avec l'état, ou relu dans `C/ecrans`) devient celui que le rendu du socle lit (dans la maquette : `DATA.seances[si].ecrans[di]`, que la fenêtre écrivait elle-même, l. 1810) | dr_rendreMur |
+| `dr_tabPoste` | msg | 83 o | (sans commentaire ni indice) | dr_minutGlisser, dr_minuteurEnvoyer, dr_versMur |
 | `dr_tabRecevoir` | ev | 844 o | la fenêtre locale : elle reçoit l'état du pilote par `postMessage` et ne lit jamais le hub | — |
 | `dr_tabRetourAttente` | — | 613 o | E1 (§12.41) : le pointeur d'une répétition retiré (« ■ Arrêter ») → l'horloge d'attente ; une heure lancée retirée garde son image (relance C3, inchangé) | dr_tabSceneOubliee, dr_tabSceneRecue, sesTabVeillePointeur |
 | `dr_tabSansEcranDuProf` | — | 296 o | (sans commentaire ni indice) | — |
-| `dr_tabSansEntree` | et | 94 o | EX ⑧ (K7) : ce renvoi remontre ce que la classe voit DÉJÀ — sans les marques d'entrée du dernier geste. | — |
+| `dr_tabSansEntree` | et | 94 o | (sans commentaire ni indice) | dr_tabVignetteNourrir |
 | `dr_tabSceneOubliee` | o, c | 215 o | §12.68 : une scène de CE cours déjà montrée, puis retirée (ou remise à celle d'avant le cours) : l'heure a été annulée — le tableau revient à l'horloge | dr_tabSceneRecue |
 | `dr_tabSceneRecue` | o, c | 2604 o | une scène arrivée (par le flux ou par la lecture) | dr_tabFluxOuvrir, dr_tabSonder |
 | `dr_tabSonder` | — | 136 o | (sans commentaire ni indice) | dr_tabMonter, sesTabPoll |
@@ -1917,6 +1934,8 @@
 | `dr_tabTranches` | t, tr, place | 638 o | (sans commentaire) affiche/emploie : « ); if (cache) tr.classList.remove( » | dr_tabPages |
 | `dr_tabTrop` | corps | 242 o | (sans commentaire) affiche/emploie : « :scope > table.p8-grille » | paginer |
 | `dr_tabVeiller` | — | 1288 o | (sans commentaire) affiche/emploie : « appelle pas `pousser` — « qui a participé », s · ; try { const t = (typeof dr_trame ===  » — touche #vue-temoin | — |
+| `dr_tabVignette` | boite, inner, on | 1085 o | posée par `vueDroite` (dr-socle.js) : la vignette, créée une fois, gardée vivante ; on = la montrer à la place du dessin de la diapo suivante | vueDroite |
+| `dr_tabVignetteNourrir` | — | 638 o | la vignette dit `pret` : on lui envoie ce que voit la classe (ou rien), et le chrono | — |
 | `dr_tableauLie` | lire, ecrire, longueur, couper | 1120 o | dr_blocLu : le bloc du site lu TEL QUEL par le rendu de la maquette (qui lisait {t, bid, txt, el}). Un seul sens, à la lecture : des accesseurs non énumérables posés sur l'objet du site lui-même ; | dr_blocLu |
 | `dr_tailleRef` | — | 95 o | (sans commentaire ni indice) | dr_pagesImport, dr_paginerReference, p85hPages |
 | `dr_taxo` | — | 781 o | la taxonomie du site (CH.taxo, chargée par chChargerTaxo), lue sous la forme de la maquette {id, prof, eleve, familles[{…, notions[]}]} | choixNotion, dr_demarrer, dr_donneesVues, dr_invNotionLib (+5) |
@@ -1967,7 +1986,7 @@
 | `dr_ttTrame` | force | 275 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_ttDebut, dr_ttEmettre |
 | `dr_typo` | html | 269 o | (sans commentaire) affiche/emploie : «  + t.replace(/[ \u00a0]+([?!:;»])/g,  · ).replace(/«[ \u00a0]+/g,  » | papierHtml, relecture |
 | `dr_versHub` | x | 1187 o | (sans commentaire) affiche/emploie : «  && (x.type != null ·· x.eid != null) && typeof S ===  ·  && typeof v ===  » | dr_etatHeure, dr_paquetHeure |
-| `dr_versMur` | et, x | 1506 o | le crochet du socle (relance F7 / C1) : `pousser` (après le journal), `fermerFiche`, la sortie de l'atelier et la répétition appellent `dr_versMur(et)` — ou `dr_versMur(null, {sortie:true})`. | dr_annulerHeure, dr_auMur, dr_sesClosAilleurs, pousser |
+| `dr_versMur` | et, x | 1534 o | le crochet du socle (relance F7 / C1) : `pousser` (après le journal), `fermerFiche`, la sortie de l'atelier et la répétition appellent `dr_versMur(et)` — ou `dr_versMur(null, {sortie:true})`. | dr_annulerHeure, dr_auMur, dr_sesClosAilleurs, pousser |
 | `dr_versReponse` | bi | 684 o | (sans commentaire ni indice) | — |
 | `dr_versementDansLOrdre` | — | 439 o | réveil n°13 (E4 ligne 165) : l'étape 5 liste les diapos modifiées dans l'ordre de l'heure (la liste d'E1 suit l'ordre du tableau des écrans : la diapo 5 avant la diapo 1) | — |
 | `dr_videoBrancher` | mur, et | 1838 o | la vidéo dans la diapo, avec le lecteur du navigateur (4b.2) : ▶ lit de `videoDe` jusqu'au repère `videoPos` et s'arrête ; ◀ revient au précédent. | rendre |

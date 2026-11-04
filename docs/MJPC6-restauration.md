@@ -1503,3 +1503,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `423b423ac41d` (commit `bc3c277`) · 3 039 096 o · md5 `a196385663d15975df8176ed5c8c0fba` · v8.83.0-⑯
 - **Motif** : le récit dit ce qui s'est passé en classe (C16 512 à 515) : début / milieu / fin d'une heure rattrapée au temps prévu du plan ; « Ce qu'on n'a pas fait cette heure-ci » dans l'ordre du plan ; « En fin d'heure, » retiré ; une heure rattrapée ou reprise un autre jour à l'heure réelle.
 - **Restauration en cas de `BUG`** : le blob `423b423ac41d` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : les quatre réglages du récit ; les heures réelles d'une heure rattrapée ou reprise. Au hub : rien de nouveau n'est écrit par la 8.84.0 (les gestes d'une heure rattrapée sont seulement datés à l'heure réelle) ; la 8.83.0 les lit.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.85.0-⑱ (04/11/2026, conscience n°16)
+- blob `7f546851fe8e` (commit `64e0855`) · 3 041 537 o · md5 `c6b75c7a8a4fd99de7b2d156f6af4944` · v8.84.0-⑰
+- **Motif** : le nouveau chrono (rectangle, crans, poignées, réglage sous la diapo, frappe, clignotement) ; « Ce que voit la classe » = la page du tableau dans un cadre.
+- **Restauration en cas de `BUG`** : le blob `7f546851fe8e` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : le nouveau chrono et « Ce que voit la classe » en direct. Au hub : rien de nouveau n'est écrit par la 8.85.0 (l'état du minuteur passe d'onglet à onglet et par le canal du tableau déjà là) ; la 8.84.0 relit tout.

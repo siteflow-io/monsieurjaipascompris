@@ -829,3 +829,9 @@
 | les mandats et sondes du récit et de l'heure réelle | sas `MANDATS/DEROULE-01-11/MANDAT-RECIT-RATTRAPE.md`, `MANDAT-HEURE-REELLE.md` ; branches `deroule/recit-rattrape` (`c65974076`), `deroule/heure-reelle` (`46d140ab6`) |
 | revenir à la 8.83.0-⑯ | `docs/MJPC6-restauration.md` (blob `423b423ac41d`) |
 | ouvrir le site en 8.84.0-⑰ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.84.0` |
+| le chrono : un rectangle allongé (l'anneau, le décompte), coloré par crans depuis la durée donnée (vert plus de la moitié, jaune jusqu'au quart, orange jusqu'au dixième, rouge le dernier dixième, qui clignote), posé dans un coin libre, glissé et redimensionné au pilote, le tableau suit (8.85.0-⑱) | `dr_minutPhase` (l. 20796), `dr_minuteurAfficher` (l. 20857), `dr_minuteurEnvoyer` (l. 20852) ; le clignotement `drMinutClig` (l. 16602, l. 21974) |
+| le réglage du chrono sous la diapo, au-dessus des notes : chaque chiffre avec + et −, la frappe au clavier, ▶/⏸, ■, « au tableau » en interrupteur ; caché une fois lancé, rouvert par ⏱ | `dr_minuteurPoser` (l. 20803), `dr_minuteurPanneau` (l. 20832), `dr_minutDuree` (l. 20799), `dr_minuteurDepart` (l. 20838) |
+| « Ce que voit la classe » : la page du tableau elle-même, dans un cadre de la colonne de droite (`?vue=tableau`, nourrie comme la fenêtre du tableau) | `dr_tabVignette` (l. 21723), `vueDroite` (l. 18377), `#vue-mini iframe.dr-vig` (l. 16610) |
+| les maquettes et sondes du chrono | sas `MANDATS/DEROULE-01-11/MAQUETTE-MINUTEUR/` (v1 à v3, générateur, bancs) ; `LIVRAISONS/DEROULE-01-11/CAPTURES-MINUTEUR/` ; la sonde de la ⑩ au v3 `banc/chrono-v3` (`bc38d53fb`) ; K11 dans `AUDITS/CONTROLES-DEROULE/controles.mjs` |
+| revenir à la 8.84.0-⑰ | `docs/MJPC6-restauration.md` (blob `7f546851fe8e`) |
+| ouvrir le site en 8.85.0-⑱ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.85.0` |
