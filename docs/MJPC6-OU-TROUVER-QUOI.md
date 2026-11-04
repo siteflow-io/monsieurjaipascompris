@@ -823,3 +823,9 @@
 | les mandats et sondes du lot 2 (premiers morceaux) | sas `MANDATS/DEROULE-01-11/MANDAT-LOT2A.md`, `MANDAT-LOT2B.md`, `MANDAT-LOT2C.md` ; `LIVRAISONS/DEROULE-01-11/LOT2A/`, `LOT2B/`, `LOT2C/` ; la version réunie `deroule/lot2-promo` (`82255e7a2`) |
 | revenir à la 8.82.0-⑮ | `docs/MJPC6-restauration.md` (blob `69a091117e9c`) |
 | ouvrir le site en 8.83.0-⑯ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.83.0` |
+| une heure rattrapée : « au début / au milieu / à la fin de l'heure » selon le temps prévu du plan (durée de chaque diapo jouée, rapportée aux 50 minutes) (512, 8.84.0-⑰) | `recitHtml0` (l. 22324), `dr_recitRattrapee` (l. 22323) |
+| « Ce qu'on n'a pas fait cette heure-ci : … », dans l'ordre du plan (513) ; l'ouverture du bilan sans « En fin d'heure, » (514) | `recitHtml0` (l. 22391, `nonFaites`) ; les connecteurs `bilan` (l. 22134, l. 22145) |
+| une heure rattrapée ou reprise un autre jour : l'heure réelle partout (« Enregistré à », « close · », la Relecture, « Ce qui s'est passé ») ; l'horloge de la case pour les seules alertes et le chrono ; la classe d'essai garde ses créneaux fictifs (515) | `now()` (l. 17391), `dr_nowCase` (l. 17390), `dr_horlogeCase` (l. 17376), `dr_ecouleS` (l. 17386) ; le tableau distant `sc.hdec` (l. 21645) |
+| les mandats et sondes du récit et de l'heure réelle | sas `MANDATS/DEROULE-01-11/MANDAT-RECIT-RATTRAPE.md`, `MANDAT-HEURE-REELLE.md` ; branches `deroule/recit-rattrape` (`c65974076`), `deroule/heure-reelle` (`46d140ab6`) |
+| revenir à la 8.83.0-⑯ | `docs/MJPC6-restauration.md` (blob `423b423ac41d`) |
+| ouvrir le site en 8.84.0-⑰ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.84.0` |
