@@ -815,3 +815,11 @@
 | les mandats, NOTE et sondes du lot 1 et de sa réparation | sas `MANDATS/DEROULE-01-11/MANDAT-LOT1.md`, `MANDAT-LOT1-COMPLEMENT.md` ; `LIVRAISONS/DEROULE-01-11/LOT1/` (`deroule/lot1`, `dbca73a51`), `LIVRAISONS/DEROULE-01-11/LOT1-COMPLEMENT/` (`deroule/lot1-complement`, `1d6a0166d`) ; le banc à la vraie horloge `banc/vraie-horloge` (`0ff3d8ffd`) |
 | revenir à la 8.81.1-⑭-micro | `docs/MJPC6-restauration.md` (blob `3b69aab74938`) |
 | ouvrir le site en 8.82.0-⑮ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.82.0` |
+| « ▶ Rattraper cette heure » dans une case passée · pas jouée : l'heure lancée comme une vraie heure, rangée à la date et au créneau de sa case (㊷, 8.83.0-⑯) | le bouton `data-rattraper` dans la fenêtre de la case (l. 27418) ; `DR_CL.rat` posé au lancement (l. 20540) ; la clé par `AT_DR_COURS.iso` (`_drCleHeureDe`) |
+| une heure rattrapée : aucun horaire dans le récit, le texte pour École Directe, le mot aux absents, le Papier (« au début / au milieu / à la fin », la date de la case) ; la Relecture inchangée (㊷) | `dr_recitRattrapee` (l. 22319) et ses lecteurs (dr-recit) |
+| l'horloge d'une heure rattrapée ou reprise un autre jour : à l'horloge de sa case, le temps déjà joué gardé, rien ne part à la reprise ; le chrono repris (㊷) | `dr_horlogeCase` (l. 17376), `dr_ecouleS` (l. 17386), `dr_reprendre` (l. 20639), `dr_reprendreCours` (l. 20920), `dr_edtReprendre` (l. 20944), `dr_coursActif` (l. 20507) |
+| « À relire — » du Papier : la première case de la classe après le début de l'heure (le créneau compté) ; une heure rattrapée : la première case à venir (476) | `dr_papierRelire` (l. 22545), `edtProchainesDe` (l. 21037) |
+| en répétition, la participation : les élèves de la classe répétée seuls (461) | `dr_classe` (l. 17327) |
+| les mandats et sondes du lot 2 (premiers morceaux) | sas `MANDATS/DEROULE-01-11/MANDAT-LOT2A.md`, `MANDAT-LOT2B.md`, `MANDAT-LOT2C.md` ; `LIVRAISONS/DEROULE-01-11/LOT2A/`, `LOT2B/`, `LOT2C/` ; la version réunie `deroule/lot2-promo` (`82255e7a2`) |
+| revenir à la 8.82.0-⑮ | `docs/MJPC6-restauration.md` (blob `69a091117e9c`) |
+| ouvrir le site en 8.83.0-⑯ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.83.0` |
