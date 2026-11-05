@@ -860,3 +860,13 @@
 | les mandats, sondes et captures de la mise en commun | sas `MANDATS/DEROULE-01-11/APRES-8860/` (S à S6) ; branches `deroule/bilan` (`048be4d1f`), `banc/bilan` (`a57d67268`) ; la sonde `LIVRAISONS/DEROULE-01-11/BILAN/sonde-bilan.mjs` |
 | revenir à la 8.86.0-⑲ | `docs/MJPC6-restauration.md` (blob `fd0281793b9e`) |
 | ouvrir le site en 8.87.0-⑳ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.87.0` |
+
+## AJOUTS DU 05/11/2026 — CONSCIENCE n°16 : 8.88.0-㉑ (le tableau en attendant une heure)
+
+| je cherche… | c'est là |
+| --- | --- |
+| l'écran d'attente du tableau : « MJPC », « Cours de français - M. Meney », l'heure, la date, la classe attendue, « monsieurjaipascompris » en bas | `dr_tabPoser` (l. 22195), `#ses-tab-att`, le style l. 16803-16830 environ (`#mjpc-bas`, `#anim-calme`) |
+| les anneaux qui suivent l'heure (aussi fenêtre redimensionnée), la ligne de la minute | `dr_tabAttenteSuit` (l. 22241) |
+| la maquette v3 validée, le mandat, la sonde | sas `MANDATS/DEROULE-01-11/APRES-8860/T-maquette/`, `T-L-ECRAN-D-ATTENTE-DU-TABLEAU.md` ; `LIVRAISONS/DEROULE-01-11/ATTENTE/sonde-attente.mjs` (branche `deroule/attente` `46ce703a1`) |
+| revenir à la 8.87.0-⑳ | `docs/MJPC6-restauration.md` (blob `dc244ac63073`) |
+| ouvrir le site en 8.88.0-㉑ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.88.0` |

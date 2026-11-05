@@ -1518,3 +1518,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `fd0281793b9e` (commit `4d30679`) · 3 112 270 o · md5 `f5da6abe6ce87298fb669ad7876628fa` · v8.86.0-⑲
 - **Motif** : la mise en commun du bilan (Paul, 05/11 09:30-10:39).
 - **Restauration en cas de `BUG`** : le blob `fd0281793b9e` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la diapo « Mise en commun du bilan », Alt + B, les marques, 🅱️, l'attestation automatique. Au hub, ce que la 8.87.0 écrit de nouveau : la diapo `bilan-commun` insérée dans la copie de classe (après « Le bilan », si le bilan n'avait pas encore été montré), ses marques et les coches des points, et au journal `bilan-consignes-montre` / `bilan-consignes-retour`. Comment la 8.86.0 afficherait une copie de classe où la mise en commun est déjà insérée : je ne sais pas (pas mesuré).
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.88.0-㉑ (05/11/2026, conscience n°16)
+- blob `dc244ac63073` (commit `637ef5a`) · 3 136 807 o · md5 `16569d87666acb7fb623a1b2b0e55631` · v8.87.0-⑳
+- **Motif** : le tableau en attendant une heure (793, la maquette v3).
+- **Restauration en cas de `BUG`** : le blob `dc244ac63073` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : le nouvel écran d'attente du tableau seulement. Au hub : rien de nouveau (l'écran d'attente n'écrit rien ; `/site/cle_vue` comme avant).
