@@ -846,3 +846,17 @@
 | les mandats, sondes, bancs et captures de la nuit du 04 au 05/11 | sas `MANDATS/DEROULE-01-11/NUIT-04-11/` ; branches `nuit/*`, `mesure/nuit-m`, `banc/nuit` (`da55ba0c2`), `captures/nuit` (`a27a96cfd`) |
 | revenir à la 8.85.0-⑱ | `docs/MJPC6-restauration.md` (blob `e8eedf658e6e`) |
 | ouvrir le site en 8.86.0-⑲ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.86.0` |
+
+## AJOUTS DU 05/11/2026 — CONSCIENCE n°16 : 8.87.0-⑳ (la mise en commun du bilan)
+
+| je cherche… | c'est là |
+| --- | --- |
+| la diapo « Mise en commun du bilan » insérée après « Le bilan » (seulement si le bilan n'a pas encore été montré ; part avec le bilan reporté) | `dr_bmcPoser` (l. 16893), `dr_bilanDejaVu` (l. 20513) |
+| Alt + B : la liste numérotée des points, le chiffre ou le clic, Échap, 0, « Annuler » | `dr_bOuvrir` (l. 21789), `dr_bMarquer` (l. 21803), `dr_bFait` (l. 21811), `dr_bAnnuler` (l. 21814), `dr_bFermer` (l. 21788) |
+| les points du bilan (la liste « À mettre dans le bilan »), leurs coches, le compteur « n / N » | `dr_bIdx` (l. 21779), `dr_bPoints` (l. 21781), `dr_bEtat` (l. 21782), `dr_bCoches` (l. 21783), `dr_bEt` (l. 21785), `dr_bAtteinte` (l. 21787) |
+| les marques or et leurs pastilles dans le texte | `dr_bMarques` (l. 18231) |
+| 🅱️ (dans « … ») : la diapo des consignes au tableau et au pilotage, et le retour à la ligne | `dr_bBouton` (l. 21819), `dr_bVoir` (l. 21823), `dr_bCurseurLire` / `dr_bCurseur` (l. 21815-21816) |
+| la mise en commun dans la Relecture et le récit | `dr_bRelEt` (l. 22675), `dr_bRelue` (l. 22676) |
+| les mandats, sondes et captures de la mise en commun | sas `MANDATS/DEROULE-01-11/APRES-8860/` (S à S6) ; branches `deroule/bilan` (`048be4d1f`), `banc/bilan` (`a57d67268`) ; la sonde `LIVRAISONS/DEROULE-01-11/BILAN/sonde-bilan.mjs` |
+| revenir à la 8.86.0-⑲ | `docs/MJPC6-restauration.md` (blob `fd0281793b9e`) |
+| ouvrir le site en 8.87.0-⑳ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.87.0` |
