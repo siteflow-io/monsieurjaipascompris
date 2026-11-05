@@ -835,3 +835,14 @@
 | les maquettes et sondes du chrono | sas `MANDATS/DEROULE-01-11/MAQUETTE-MINUTEUR/` (v1 à v3, générateur, bancs) ; `LIVRAISONS/DEROULE-01-11/CAPTURES-MINUTEUR/` ; la sonde de la ⑩ au v3 `banc/chrono-v3` (`bc38d53fb`) ; K11 dans `AUDITS/CONTROLES-DEROULE/controles.mjs` |
 | revenir à la 8.84.0-⑰ | `docs/MJPC6-restauration.md` (blob `7f546851fe8e`) |
 | ouvrir le site en 8.85.0-⑱ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.85.0` |
+| relire une autre classe par la case du calendrier : ses élèves, ce qu'elle a vu, ses oraux ; plus de menu des classes dans la Relecture (8.86.0-⑲) | `dr_recitEleves` (l. 22862), `dr_corrigerReponse` (l. 22532) |
+| la case des initiales : lettres seules en majuscules, la liste numérotée dès la première lettre, le chiffre, le saut à la réponse quand toutes les initiales sont tapées ; « Prénom N. » au tableau ; Entrée sans élève : « Qui a répondu ? » | `dr_iniListe` (l. 17922), `dr_iniExact` (l. 19828) ; la validation : `dit._drKey` (dr-classe) |
+| corriger après l'heure : « à corriger » sur chaque réponse, avec la même case ; le résumé de l'heure suit | `dr_corrigerReponse` (l. 22532), `dr_recitPartsCorriger` (l. 22526), `dr_partsHeure` (l. 20566) |
+| le récit va chercher dans les diapos les réponses qui manquent au journal (571) | `dr_repsDiapos` (l. 22568) |
+| « Le chapitre » : les heures closes, « N activités sur M », la règle des notions dite et ce qui manque à chaque notion | `chapitreHtml` (l. 22476) |
+| la Relecture : une diapo de la colonne de gauche en grand ; le bouton « copier la relecture pour analyse IA » | `dr_relGrand` (l. 22994), `dr_relGrandFermer` (l. 22998) ; le bouton : l. 22992 |
+| « L'heure se lance… » pendant un lancement lent ; les ▶ pressés pendant l'attente gardés | l. 16768 (la bande), l. 21690 (l'entête du pilote) |
+| le chrono à l'heure du hub (㊵) : l'écart de chaque appareil, `/site/horloge` écrit, relu, effacé | `dr_hhEssai` (l. 20861), `dr_hhMaintenant` (l. 20867), `dr_hhVoir` (l. 20859) |
+| les mandats, sondes, bancs et captures de la nuit du 04 au 05/11 | sas `MANDATS/DEROULE-01-11/NUIT-04-11/` ; branches `nuit/*`, `mesure/nuit-m`, `banc/nuit` (`da55ba0c2`), `captures/nuit` (`a27a96cfd`) |
+| revenir à la 8.85.0-⑱ | `docs/MJPC6-restauration.md` (blob `e8eedf658e6e`) |
+| ouvrir le site en 8.86.0-⑲ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.86.0` |
