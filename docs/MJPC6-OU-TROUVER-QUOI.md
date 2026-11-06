@@ -890,3 +890,15 @@
 | quand le bouton « ▶ Séance suivante dans cette heure » paraît (aussi la fin de l'heure ouverte) | `dr_enchVisible` (l. 21158) |
 | revenir à la 8.89.0-㉒ | `docs/MJPC6-restauration.md` (blob `3a2b8eba6042`) |
 | ouvrir le site en 8.89.1-㉓ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.89.1` |
+
+## AJOUTS DU 06/11/2026 — CONSCIENCE n°16 : 8.89.2-㉓-micro
+
+| je cherche… | c'est là |
+| --- | --- |
+| un segment de l'appel compte-t-il pour cette heure | `dr_segDeLHeure` (l. 18008) |
+| qui est absent (barré), à cette heure seulement | `absentA` (l. 18009) |
+| le mot aux absents : les absents de l'heure | `clotureHtml`, l. 20304 |
+| l'étape 5 de la fin d'heure : les absents de l'heure | `controleCahier` (l. 20126) |
+| le mandat, la sonde | sas `MANDATS/DEROULE-01-11/APRES-8860/W-*.md` ; `LIVRAISONS/DEROULE-01-11/ABSENTS-HEURE/sonde-absents-heure.mjs` ; branche `deroule/absents-heure` `093e4c5f3` |
+| revenir à la 8.89.1-㉓ | `docs/MJPC6-restauration.md` (blob `eae83db7e941`) |
+| ouvrir le site en 8.89.2-㉓-micro (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.89.2` |

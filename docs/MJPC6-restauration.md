@@ -1533,3 +1533,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `3a2b8eba6042` (commit `844a215`) · 3 164 982 o · md5 `5af41f3dd114e294ed9dca37f9c6df36` · v8.89.0-㉒
 - **Motif** : le bouton « ▶ Séance suivante dans cette heure » aussi quand la fin de l'heure est ouverte.
 - **Restauration en cas de `BUG`** : le blob `3a2b8eba6042` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : le bouton sur le cahier de textes quand la fin de l'heure est ouverte. Au hub : rien de nouveau par rapport à la 8.89.0.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.89.2-㉓-micro (06/11/2026, conscience n°16)
+- blob `eae83db7e941` (commit `76728d2`) · 3 165 118 o · md5 `ab3edae2ee14383c3f429100e9465ad0` · v8.89.1-㉓
+- **Motif** : les absents de l'heure (le micro des absents).
+- **Restauration en cas de `BUG`** : le blob `eae83db7e941` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : un absent d'une heure d'avant redeviendrait barré aux heures suivantes de la séance, et le mot aux absents compterait les absents de toute la séance. Au hub : rien de nouveau (la 8.89.2 lit les mêmes segments de l'appel, elle n'écrit rien d'autre).

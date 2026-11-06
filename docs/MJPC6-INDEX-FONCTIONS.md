@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2463 fonctions** — site : 2463 · moteur : 0
+**2464 fonctions** — site : 2464 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,7 +25,7 @@
 - **DIVERS — socle du site** — 510 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 855 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 856 fonctions
 - **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 262 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
@@ -384,14 +384,14 @@
 | `closeLinkModal` | — | 99 o | (sans commentaire) touche #link-modal | _applyLinkEcrire |
 | `closeProfPanel` | — | 110 o | M-MANIFESTE-2 : l'alerte bloquante | _activerProfilTest, _profSectionArchi, atelierFermer, atelierOuvrir (+1) |
 | `closeViewer` | — | 294 o | (sans commentaire) touche #doc-viewer, #doc-viewer-frame, #doc-viewer-newtab | — |
-| `clotureHtml` | — | 2446 o | (sans commentaire) affiche/emploie : « > A${a.num} · ${dr_esc(a.titre ··  · )} : ${S.durees[id]} min</label>` :  » | ouvrirFin |
+| `clotureHtml` | — | 2541 o | (sans commentaire) affiche/emploie : « > A${a.num} · ${dr_esc(a.titre ··  · )} : ${S.durees[id]} min</label>` :  » | ouvrirFin |
 | `collectAutonomieItems` | level | 1135 o | (sans commentaire ni indice) | renderZoneAutonomie |
 | `collectChapterItems` | level,kind,avecInvisibles | 2384 o | (sans commentaire ni indice) | _apercuOngletVide, collectRayons, gotoAnalyse, gotoDictee (+4) |
 | `collectRayons` | level | 3031 o | [C5-AR] — LES RAYONS : ce qui vit éclaté dans les chapitres se retrouve PAR TYPE. Aucun second moteur : | renderRayons |
 | `computeDiff` | target | 498 o | (sans commentaire ni indice) | _renderIntentTimer, updateTimers |
 | `connecteur` | type,graine | 143 o | (sans commentaire ni indice) | recitHtml0 |
 | `contenuEntier` | e | 463 o | (sans commentaire) affiche/emploie : «  + x).join( · ) return b.txt; if (b.t ===  » | objetDec |
-| `controleCahier` | restantes | 2460 o | (sans commentaire) affiche/emploie : « une heure d ·  (proposée :  » | manquesAvantDeClore, sequenceHtml |
+| `controleCahier` | restantes | 2555 o | (sans commentaire) affiche/emploie : « une heure d ·  (proposée :  » | manquesAvantDeClore, sequenceHtml |
 | `copierTexte` | txt, ok | 294 o | (sans commentaire) affiche/emploie : « copie impossible ici · copie impossible ici » | brancherChapitre, ouvrirFin |
 | `corrigePart` | ini, id | 872 o | (sans commentaire) affiche/emploie : « ); let h = `<h4>${ini} — corriger</h4><div class= · )}</div>`;   MOTIFS_PART.forEach(m => { h += `<button class= » | ouvrirPart |
 | `couperDiapoIci` | i, bi | 669 o | E1 : la modale du site, plus confirm() | menuAtelierMur |
@@ -1868,6 +1868,7 @@
 | `dr_seCite` | suite | 352 o | (sans commentaire ni indice) | narrativiser, recit |
 | `dr_seance` | sk | 78 o | (sans commentaire ni indice) | dr_derouleDe, dr_invContenuV1, dr_invPoser, dr_invRetirerDiapos (+17) |
 | `dr_seances` | — | 252 o | la vue d'une séance telle que la maquette la lisait (DATA.seances[si] = {titre, ecrans}) : un regard, pas une copie | alertesChapitre, arreterRepetition, dejaVue, dr_annulerHeure (+15) |
+| `dr_segDeLHeure` | x, h | 157 o | W (Paul, 06/11 07:04) : à chaque heure, un élève est présent par défaut ; il n'est absent que s'il est marqué absent à CETTE heure (l'appel de la case de l'heure, ou « Absent » dans la participation). | clotureHtml, controleCahier |
 | `dr_selEcrire` | — | 571 o | (sans commentaire ni indice) | dr_selMenu |
 | `dr_selMenu` | — | 1311 o | (sans commentaire) affiche/emploie : « btn rouge ·  title= » — touche #dr-sel-menu | — |
 | `dr_selPeindre` | — | 296 o | (sans commentaire ni indice) | — |

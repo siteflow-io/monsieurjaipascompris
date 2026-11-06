@@ -78,3 +78,27 @@
 
 **Ce qui le remplacera** : la prochaine version avec le banc complet (⑯ et la numérotation par séance).
 
+
+## 4 · 06/11/2026 12:21 — `8.89.2-㉓-micro` (conscience n°16) — AVEC BANC COURT
+
+| | |
+|---|---|
+| **Décidé par** | Paul, 06:58 : « Pour les absents, il faudrait voir si c'est possible de faire ça en micro pour ce matin: ça m'embêterait que les élèves soient marqués absents alors qu'ils sont bien là. » ; 07:04 : « il faut faire uniquement la modif des absents » ; 07:18 : « ne repasse le banc que pour ce qui touche aux absents et aux élèves de manière générale ( participation etc) » ; 07:35 : « promeus si banc vert » |
+| **Pourquoi** | les heures des 3e du vendredi ; le banc complet n'avait pas le temps |
+| **La dette** | 914 — Paul, 06:43 : « le mot aux absents: il devrait être indexé sur les absents de l'heure, pas de la séance » |
+| **Avant** | `8.89.1-㉓`, commit prod `76728d2`, blob `eae83db7e941`, md5 `ab3edae2ee14383c3f429100e9465ad0` |
+| **Après** | `8.89.2-㉓-micro`, commit prod `cea34c5`, blob `587543f54181`, md5 `7ad449baaad0807eade4061288c03a86` (3 165 933 o), bit à bit à 12:31:35 |
+| **Source au sas** | `siteflow-io/mjpc-chantier`, branche `deroule/absents-heure`, commit `093e4c5f3` (mandat W, un exécutant) ; l'assemblé md5 `be78a5a79d4150f6445636b9139386fa` + la ligne `APP_VERSION` |
+| **Revenir** | `docs/MJPC6-restauration.md`, « AVANT promotion 8.89.2-㉓-micro » : le blob `eae83db7e941` |
+
+**Ce qui change (le diff entier dans `index.html`, hors `APP_VERSION`)** :
+1. l. 18008 — une fonction neuve `dr_segDeLHeure(x, h)` : un segment de l'appel compte pour l'heure `h` (par défaut `S.heure`) s'il porte cette heure ; un segment sans `heure` compte comme celle-ci.
+2. l. 18009 — `absentA` ne lit que les segments de l'heure : un élève marqué absent à l'heure 1 n'est plus barré à l'heure 2.
+3. l. 20126 — `controleCahier`, l'étape 5 de la fin d'heure : les absents de l'heure.
+4. l. 20304 — `clotureHtml`, le mot aux absents : les absents de l'heure (avant : ceux de toute la séance).
+
+**Ce qui a été mesuré** — le banc court de la conscience (09:55 → 10:23, sur l'assemblé `be78a5a7`) : l'étape 14 (les pilotes, la participation) 105 / 0, l'étape 15 155 / 0, le parcours 30 / 0, le parcours en mode test 30 / 0, l'enchaînement en vraie heure 29 / 29, la sonde des absents 41 / 0 (à l'heure 2, l'absent de l'heure 1 n'est plus barré, sa parole est posée, l'étape 5 compte 1, en vraie heure et en mode test).
+
+**Ce qui n'a PAS été mesuré (la dérogation)** : le banc complet (les autres étapes) ; la vraie heure des 3e sur le vrai hub.
+
+**Ce qui le remplacera** : la prochaine version passée au banc complet, avec la branche `deroule/absents-heure` reprise.
