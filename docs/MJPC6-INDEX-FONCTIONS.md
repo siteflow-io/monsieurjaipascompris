@@ -1424,7 +1424,7 @@
 | `dr_enchRepetition` | v | 557 o | C16 mandat V3 : le passage se fait sur CET appareil, la répétition de la suivante remplace la sienne — `DR_ENCH.rep` le temps du passage : | dr_enchainer |
 | `dr_enchSeanceFaite` | — | 422 o | (sans commentaire) affiche/emploie : «  ·· e.role ===  » | dr_enchVisible |
 | `dr_enchSuivante` | — | 1986 o | (sans commentaire) affiche/emploie : « ) : (AT_DR_COURS.classeNom ··  · est écrit — la séance répétée n » | dr_enchPoser, dr_enchainer |
-| `dr_enchVisible` | — | 447 o | (sans commentaire ni indice) | dr_enchPoser, dr_enchainer |
+| `dr_enchVisible` | — | 580 o | (sans commentaire) affiche/emploie : « heure de classe) ; V7 (C16, Paul 06/11 04:37) : la fin de l » | dr_enchPoser, dr_enchainer |
 | `dr_enchainer` | — | 1110 o | le clic : la clôture de « ■ Clore l'heure » (sa garde comprise), puis `dr_apresCloture` lance la suivante au lieu d'ouvrir l'emploi du temps | dr_enchPoser |
 | `dr_entete` | h | 290 o | l'entête de l'heure : la classe, le créneau, l'heure n/N, la séance | dr_cloreFin, dr_lanceFin, dr_reprendre, lancerHeure |
 | `dr_enteteLong` | h | 229 o | relecteur neuf n°1 : l'entête longue était coupée à 119 px | dr_entete |

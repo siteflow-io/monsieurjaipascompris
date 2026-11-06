@@ -882,3 +882,11 @@
 | les mandats, la sonde, les notes | sas `MANDATS/DEROULE-01-11/APRES-8860/V-*.md` à `V6-*.md` ; `LIVRAISONS/DEROULE-01-11/ENCHAINER/` (`sonde-enchainer.mjs` : `MJPC_MODE=vh|test|rep`, `MJPC_DEUX`, `MJPC_T5`, `MJPC_ROUV` ; NOTE à NOTE-V6), branche `deroule/enchainer` `0d7211bba` |
 | revenir à la 8.88.0-㉑ | `docs/MJPC6-restauration.md` (blob `1ac9e85ce718`) |
 | ouvrir le site en 8.89.0-㉒ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.89.0` |
+
+## AJOUTS DU 06/11/2026 — CONSCIENCE n°16 : 8.89.1-㉓
+
+| je cherche… | c'est là |
+| --- | --- |
+| quand le bouton « ▶ Séance suivante dans cette heure » paraît (aussi la fin de l'heure ouverte) | `dr_enchVisible` (l. 21158) |
+| revenir à la 8.89.0-㉒ | `docs/MJPC6-restauration.md` (blob `3a2b8eba6042`) |
+| ouvrir le site en 8.89.1-㉓ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.89.1` |

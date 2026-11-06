@@ -1528,3 +1528,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `1ac9e85ce718` (commit `ff450c6`) · 3 144 079 o · md5 `0491ac06d716f03f24e2b30f314eed71` · v8.88.0-㉑
 - **Motif** : « ▶ Séance suivante dans cette heure » (Paul, 05/11 20:14-22:38).
 - **Restauration en cas de `BUG`** : le blob `1ac9e85ce718` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : le bouton et l'enchaînement. Au hub, ce que la 8.89.0 écrit de nouveau : une deuxième trace d'heure sur le même créneau (dans la séance suivante, sous sa séance), la marque « séance faite » sur la trace close par le bouton. Comment la 8.88.0 afficherait une case avec deux traces : la première séance seulement (`edtSeanceDeTrace`, lu dans le code) ; sa reprise prendrait la première trace (la séance close) — pas mesuré.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.89.1-㉓ (06/11/2026, conscience n°16)
+- blob `3a2b8eba6042` (commit `844a215`) · 3 164 982 o · md5 `5af41f3dd114e294ed9dca37f9c6df36` · v8.89.0-㉒
+- **Motif** : le bouton « ▶ Séance suivante dans cette heure » aussi quand la fin de l'heure est ouverte.
+- **Restauration en cas de `BUG`** : le blob `3a2b8eba6042` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : le bouton sur le cahier de textes quand la fin de l'heure est ouverte. Au hub : rien de nouveau par rapport à la 8.89.0.
