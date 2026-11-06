@@ -870,3 +870,15 @@
 | la maquette v3 validée, le mandat, la sonde | sas `MANDATS/DEROULE-01-11/APRES-8860/T-maquette/`, `T-L-ECRAN-D-ATTENTE-DU-TABLEAU.md` ; `LIVRAISONS/DEROULE-01-11/ATTENTE/sonde-attente.mjs` (branche `deroule/attente` `46ce703a1`) |
 | revenir à la 8.87.0-⑳ | `docs/MJPC6-restauration.md` (blob `dc244ac63073`) |
 | ouvrir le site en 8.88.0-㉑ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.88.0` |
+
+## AJOUTS DU 06/11/2026 — CONSCIENCE n°16 : 8.89.0-㉒ (« ▶ Séance suivante dans cette heure »)
+
+| je cherche… | c'est là |
+| --- | --- |
+| le bouton : quand il paraît (la séance entièrement faite), la séance suivante de la file | `dr_enchSuivante` (l. 21164) |
+| le clic : clore l'heure, marquer la séance faite, lancer la suivante sur le même créneau (absents, tableau, horloge de la case) | `dr_enchainer` (l. 21190) |
+| « ▶ Reprendre l'heure » : la dernière trace non close du créneau | `dr_edtReprendre` (l. 21318) |
+| la case : les séances d'un créneau, leurs nombres | `edtSeancesDeTrace` (l. 27105), `edtSeanceDeTrace` (l. 27114) |
+| les mandats, la sonde, les notes | sas `MANDATS/DEROULE-01-11/APRES-8860/V-*.md` à `V6-*.md` ; `LIVRAISONS/DEROULE-01-11/ENCHAINER/` (`sonde-enchainer.mjs` : `MJPC_MODE=vh|test|rep`, `MJPC_DEUX`, `MJPC_T5`, `MJPC_ROUV` ; NOTE à NOTE-V6), branche `deroule/enchainer` `0d7211bba` |
+| revenir à la 8.88.0-㉑ | `docs/MJPC6-restauration.md` (blob `1ac9e85ce718`) |
+| ouvrir le site en 8.89.0-㉒ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.89.0` |
