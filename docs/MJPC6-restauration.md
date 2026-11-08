@@ -1548,3 +1548,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `2cf441d3c1c5` (commit `637c42e`) · 3 199 779 o · md5 `3664da2b06f70e5db7469b60487ca16a` · v8.90.0-㉔
 - **Motif** : les boutons de mise en forme (G et S sur la barre du pilotage ; les mêmes boutons, le même ordre, les mêmes infobulles, la même allure au pilotage et dans l'Atelier).
 - **Restauration en cas de `BUG`** : le blob `2cf441d3c1c5` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : G et S de nouveau dans la palette « A » au pilotage ; des infobulles différentes aux deux endroits ; les boutons plats sans couleur dans l'Atelier. Au hub : rien de nouveau (les boutons font ce qu'ils faisaient).
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.91.1-㉖ (08/11/2026, conscience n°16)
+- blob `1584159a86ef` (commit `c229efb`) · 3 200 135 o · md5 `38d619d3d034b716bdbe5bfd0781e5ea` · v8.91.0-㉕
+- **Motif** : le compte des heures (la case et le pilotage, un seul découpage).
+- **Restauration en cas de `BUG`** : le blob `1584159a86ef` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la case qui dit le même nombre d'heures que le pilotage ; la troisième heure d'une séance (la séance redite finie après 2 heures) ; la séance 9 sans heure vide. Au hub : rien de nouveau.

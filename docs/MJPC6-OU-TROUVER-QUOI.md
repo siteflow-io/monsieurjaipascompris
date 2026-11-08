@@ -927,3 +927,13 @@
 | les mandats, les sondes | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AI-*.md`, `AI2-*.md` ; `LIVRAISONS/DEROULE-01-11/MISE-EN-FORME/` (`sonde-mise-en-forme.mjs`, `sonde-allure.mjs`) ; branche `samedi/integration` `ef8a592fd` |
 | revenir à la 8.90.0-㉔ | `docs/MJPC6-restauration.md` (blob `2cf441d3c1c5`) |
 | ouvrir le site en 8.91.0-㉕ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.0` |
+
+## AJOUTS DU 08/11/2026 — CONSCIENCE n°16 : 8.91.1-㉖ (le compte des heures)
+
+| je cherche… | c'est là |
+| --- | --- |
+| le découpage d'une séance en heures, partagé par la case et le pilotage | `edtPartagerHeures` (l. 27291), `edtTrameRangee` (l. 27263), `edtLignesVues` (l. 27279) |
+| le nombre d'heures d'une classe pour la case ; l'état d'une séance | `edtHeuresClasse` (l. 27309) ; `edtSeanceEtat` (l. 27218) |
+| les mandats, la sonde | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AJ*.md` ; `LIVRAISONS/DEROULE-01-11/SAMEDI/sonde-samedi.mjs` (H, H3, HA, HB, HC) ; branche `samedi/integration` `86a1c8354` |
+| revenir à la 8.91.0-㉕ | `docs/MJPC6-restauration.md` (blob `1584159a86ef`) |
+| ouvrir le site en 8.91.1-㉖ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.1` |
