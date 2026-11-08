@@ -1336,8 +1336,8 @@ if(typeof window!=="undefined"&&window.addEventListener){
 
 // ── DÉCLARATION DE L'APP (remplit le contrat du socle ci-dessus) ──
 /* Pastille de version — en dur (Q7 M9). APP_VERSION identifie le fichier (doctrine §VIII). */
-var APP_VERSION="2.6.0";
-var APP_VERSION_DATE="2026-07-31";
+var APP_VERSION="2.6.1";
+var APP_VERSION_DATE="2026-11-08";
 var MJPC_APP = {
   id: "dictee_universelle",
   usage: "Le professeur dicte, chaque élève écrit sa dictée sur papier au stylo bleu. Ensuite seulement, les élèves se corrigent deux à deux sur l’appareil : chacun retape ce qu’il voit sur la copie de son camarade, et l’auteur peut contester une correction.",   // M-PROMPT-4 : ce que l'app fait POUR UN ÉLÈVE (mesuré dans ses écrans)
@@ -3852,7 +3852,7 @@ useEffect(function(){
   if(screen==="results-pick") return h(ResultsPick,{onDone:function(n){setCorrName(n);setScreen("results")},onBack:function(){setScreen("home")},results:results,identite:p.identite,setIdentite:p.setIdentite});
   if(screen==="results") return h(DictResults,{corrName:corrName,results:results,onBack:function(){setScreen("home")}});
   if(screen==="dictTranscription")return h(DictTranscription,{onBack:function(){setScreen("home")},onDone:function(text,graphie,adapted){setDictTranscription(text);var tw=cleanTokens(text);if(adapted){var refWords=ADAPTED_WORDS;if(tw.length===refWords.length){var posAlign=[];for(var pi=0;pi<tw.length;pi++){posAlign.push({typedIdx:pi,refIdx:pi,typedWord:tw[pi],refWord:refWords[pi],match:wordOnly(tw[pi])===wordOnly(refWords[pi])})}setDictAlignment(posAlign)}else{setDictAlignment(levenshteinAlign(tw,refWords))}}else{setDictAlignment(levenshteinAlign(tw,DICTEE_WORDS))}window._graphieCorr=graphie||"";window._isAdapted=!!adapted;setScreen("dictDetection")},eleveName:eleveName,corrName:corrName});
-  if(screen==="distributionWait")return h(DistributionWait,{corrName:corrName,onReady:function(eName){if(eName)setEleveName(eName);setScreen("dictCompare")}});
+  if(screen==="distributionWait")return h(DistributionWait,{corrName:corrName,onReady:function(){/* 1000 : le nom vient de eleveName (PAIRS, par corrName), le même que celui de DistributionWait */setScreen("dictCompare")}});
   if(screen==="dictCompare")return h(DictCompare,{onBack:function(){setScreen("home")},onDone:function(text,graphie,adapted){setDictTranscription(text);var tw=cleanTokens(text);if(adapted){var refWords=ADAPTED_WORDS;if(tw.length===refWords.length){var posAlign=[];for(var pi=0;pi<tw.length;pi++){posAlign.push({typedIdx:pi,refIdx:pi,typedWord:tw[pi],refWord:refWords[pi],match:wordOnly(tw[pi])===wordOnly(refWords[pi])})}setDictAlignment(posAlign)}else{setDictAlignment(levenshteinAlign(tw,refWords))}}else{setDictAlignment(levenshteinAlign(tw,DICTEE_WORDS))}window._graphieCorr=graphie||"";window._isAdapted=!!adapted;setScreen("dictDetection")},eleveName:eleveName,corrName:corrName});
   if(screen==="dictDetection")return h(DictDetection,{onBack:function(){setScreen("home")},onDone:function(cl){setDictClicks(cl);setScreen("dictRevelation")},alignment:dictAlignment,transcription:dictTranscription,eleveName:eleveName,corrName:corrName,timerDuration:dictMode==="compare"?120:(window._DETECTION_TIMER||300)});
   if(screen==="dictRevelation")return h(DictRevelation,{onBack:function(){setScreen("home")},onDone:function(){setScreen("dictSubmit")},alignment:dictAlignment,clicks:dictClicks,transcription:dictTranscription,eleveName:eleveName,corrName:corrName});

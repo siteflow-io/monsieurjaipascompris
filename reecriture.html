@@ -2930,6 +2930,8 @@ function CorrEleveReecriture(p){
   },[tokens]);
   // Verrou pour éviter qu'un double appui clavier (Enter rapide) saute un mot
   var sweepLockRef=React.useRef(false);
+  // 1004 : le mot sur lequel « ✕ Raté » a marqué chaque modification (par modifIdx), en mémoire seulement.
+  var failedAtRef=React.useRef({});
 
   // === Helpers mode rapide ===
   function isModifFailed(modifIdx){return modifErrMap[modifIdx]!=null}
@@ -2946,8 +2948,18 @@ function CorrEleveReecriture(p){
     pushHistory();
     var ne;
     if(info){
-      // Mot dans une modif → déclasser toute la modif (la rendre OK)
-      ne=errors.filter(function(e){return !(e.type==="modif"&&e.modifIdx===info.modifIdx)});
+      // 1004 : modif déjà ratée → la marque reste sur ses autres mots ;
+      // seul « ✓ Réussi » sur le mot même marqué « ✕ Raté » la retire
+      // (copie rouverte, mot inconnu : le premier mot de la modification).
+      var markedTi=failedAtRef.current[info.modifIdx];
+      if(markedTi==null){var first=wordSweep.find(function(w){var x=modifMap[w.ti];return x&&x.modifIdx===info.modifIdx});markedTi=first?first.ti:null}
+      if(isModifFailed(info.modifIdx)&&markedTi!==ti){
+        ne=errors;
+      } else {
+        delete failedAtRef.current[info.modifIdx];
+        // Mot dans une modif → déclasser toute la modif (la rendre OK)
+        ne=errors.filter(function(e){return !(e.type==="modif"&&e.modifIdx===info.modifIdx)});
+      }
     } else {
       // Mot hors modif → retirer une éventuelle erreur de copie ou manquant sur ce token
       ne=errors.filter(function(e){return !((e.type==="copie"||e.type==="manquant")&&e.idx===ti)});
@@ -2973,6 +2985,7 @@ function CorrEleveReecriture(p){
       var m=modifs[info.modifIdx];
       ne=errors.filter(function(e){return !(e.type==="modif"&&e.modifIdx===info.modifIdx)});
       ne.push({type:"modif",modifIdx:info.modifIdx,bareme:m.bareme||1});
+      failedAtRef.current[info.modifIdx]=ti;
     } else {
       // Mot hors modif → erreur de copie (-0,25)
       ne=errors.filter(function(e){return !((e.type==="copie"||e.type==="manquant")&&e.idx===ti)});
@@ -3238,7 +3251,7 @@ function CorrEleveReecriture(p){
             // Actions principales
             h("div",{style:{display:"flex",gap:8,marginBottom:10}},
               h("button",{onClick:fastMarkOk,
-                title:"L'\u00e9l\u00e8ve a recopi\u00e9 correctement ce mot. Espace ou Entr\u00e9e fait pareil. Passe au mot suivant.",
+                title:"L'\u00e9l\u00e8ve a recopi\u00e9 correctement ce mot. Espace ou Entr\u00e9e fait pareil. Passe au mot suivant. Une modification d\u00e9j\u00e0 marqu\u00e9e rat\u00e9e le reste ; pour retirer la marque : reviens sur le mot marqu\u00e9 (\u2190 Pr\u00e9c\u00e9dent ; sur une copie rouverte, le premier mot de la modification) et clique ici, ou \u21ba Annuler.",
                 style:{flex:1,padding:"14px",fontSize:"1rem",fontWeight:700,borderRadius:10,background:"#276749",color:"#fff",border:"none",cursor:"pointer",fontFamily:"inherit"}},
                 "\u2713 R\u00e9ussi"),
               h("button",{onClick:fastMarkFailed,
@@ -4140,7 +4153,7 @@ function EleveAutocorrReecriture(p){
 
 
 
-var APP_VERSION="2.4.1";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
+var APP_VERSION="2.4.2";   /* M10 : PREMIÈRE pastille de cette app (aucun historique à chercher avant elle) */
 /* M10 (pts 5, 6, 10, pastille) — infos globales : version, Réglages, annonces du site (LECTURE seule, filtre du contrat M6). */
 function InfosMJPC(){
   var s1=useState(false),open_=s1[0],setOpen=s1[1];

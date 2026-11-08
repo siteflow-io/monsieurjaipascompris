@@ -3146,7 +3146,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.91.1-㉖";
+var APP_VERSION="8.91.2-㉗";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -16766,6 +16766,11 @@ body.vue-atelier :is(#dr-zone,#ses-tab,.at-som-volet) .mur .ouv-sombre [contente
 /* mandat F (nuit du 04/11) : « L'heure se lance… » — par-dessus tout, sans rien bloquer (les clics passent dessous) */
 #dr-lance{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:2147483000;pointer-events:none;background:#241e17;color:#e4b45c;border:1px solid #4a3d2f;border-radius:999px;padding:8px 18px;font:600 1rem/1.3 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.45);max-width:calc(100vw - 32px);text-align:center;animation:drLancePouls 1.6s ease-in-out infinite}
 @keyframes drLancePouls{50%{opacity:.7}}
+/* mandat AK (C16, 08/11) : « Je vérifie que le tableau est libre… » — à la place de « L'heure se lance… » le temps de la vérification ; au bout de 15 s, deux boutons */
+#dr-ses-verif{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:2147483001;background:#241e17;color:#e4b45c;border:1px solid #4a3d2f;border-radius:16px;padding:8px 18px;font:600 1rem/1.3 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.45);max-width:calc(100vw - 32px);text-align:center}
+#dr-ses-verif button{margin:8px 5px 0;padding:6px 14px;border-radius:8px;border:1px solid #6b5a44;background:#3a3026;color:#f3e3c0;font:600 .95rem/1.2 system-ui,sans-serif;cursor:pointer}
+#dr-ses-verif button.prim{background:#e4b45c;border-color:#e4b45c;color:#241e17}
+body.dr-ses-verif #dr-lance{display:none!important}
 /* C16 mandat S (Paul 05/11 10:24-10:31) : la marque « B » de la mise en commun du bilan, les coches des points du bilan, le compteur, la liste d'Alt + B, 🅱️ */
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur mark.dr-bm{background:#ffc93c;color:#2a1a00;box-shadow:inset 0 -.18em 0 #e0a000;border-radius:.22em;padding:0 .08em}
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur mark.dr-bm::after{content:attr(data-pt);display:inline-block;margin-left:.18em;min-width:1.15em;padding:0 .2em;border-radius:1em;background:#1f6f4a;color:#fff;font-size:.62em;font-weight:700;line-height:1.5;text-align:center;vertical-align:.25em;user-select:none}
@@ -23808,6 +23813,11 @@ function dr_sesEnvoyerMaintenant(close, cede){
   const v = Object.assign({ par: DR_SES.id, ts, sig: ici.sig, sorte: ici.sorte, close: !!close, sts: DR_TAB.dernierTs || 0,
     cours: (typeof dr_coursIci === 'function' ? dr_coursIci() : null), H: dr_cheminH(), debutReel: S.debutReel || null,
     main: DR_SES.main, mainTs: DR_SES.mainTs || 0, mainTc: DR_SES.main === DR_SES.id ? !!window.DR_TC : !!DR_SES.mainTc, cede: !!cede, base }, ph);   /* `cede` : le dernier état de celui qui vient de perdre la main (sa réponse en cours comprise) */
+  /* MANDAT AK (dette 16) : ce que dit la fenêtre « Le tableau est déjà pris » sur un autre appareil — où en est cette session (« diapo n sur N » de
+     l'heure, comme la télécommande : `rangDe`, `ordreHeure`) et l'heure de son PREMIER lancement (une reprise ne la change pas : la vraie heure et
+     l'essai gardent `S.debutReel`, repris avec l'état ; la répétition, l'heure de son annonce, adoptée telle quelle à la reprise). */
+  try { const vu = S.gel || S.mur; const n = vu ? rangDe(vu.di, S.heure) : null; v.ou = { n: n || null, N: ordreHeure(S.heure).length, h: S.heure || null }; } catch (e) {}
+  try { v.lance0 = ici.sorte === 'repetition' ? (+String(ici.sig || '').split('|')[1] || null) : (+S.debutReel || null); } catch (e) {}
   const cop = dr_sesCopie(); v.cop = cop;
   if (cop !== DR_SES.copieEnv || close) { try { v.ecrans = dr_copiePourHub(JSON.parse(JSON.stringify(seance().ecrans))); DR_SES.copieEnv = cop; } catch (e) {} }
   dr_sesEcrire(ici, '/vif', v);
@@ -24222,7 +24232,7 @@ function dr_sesReprendreRepetition(p){
    tient : le lancement est refusé, et le site dit laquelle (sa sorte, sa classe, sa séance et son heure, le jour et l'heure de son lancement, depuis
    combien de temps, sa diapo), avec « Reprendre cette session » et, pour une répétition ou un essai seulement, « L'arrêter et prendre le tableau ».
    Une vraie heure ne s'arrête pas d'ici : « Reprendre » puis « Clore l'heure » (aucune étape de la fin d'heure n'est sautée). La même session
-   relancée ailleurs la rejoint, comme avant. Le hub ne répond pas (2,5 s) : le lancement part (jamais bloqué). */
+   relancée ailleurs la rejoint, comme avant. Le hub répond lentement : le lancement attend sa réponse, et le dit (mandat AK, `dr_sesGarder`). */
 function dr_sesPoserHub(chemin, v){ try { return fetch(FIREBASE_BASE + chemin + '.json', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) }).then(r => !!(r && r.ok), () => false); } catch (e) { return Promise.resolve(false); } }
 function dr_sesTenant(cb){
   const L = ch => new Promise(res => dr_sesLireHub(ch, res));
@@ -24232,7 +24242,8 @@ function dr_sesTenant(cb){
     if (dr_sesFrais(r) && DR_REP.sig !== r.ts + '|' + r.seance) H.push({ sorte: 'repetition', test: false, p: Object.assign({}, r, { chemin: DR_REP.chemin, test: false }), base: DR_REP.chemin });
     if (dr_sesFrais(t) && DR_TT.sig !== t.ts + '|' + t.seance) H.push(t.quoi === 'repetition' ? { sorte: 'repetition', test: true, p: Object.assign({}, t, { chemin: DR_TT.chemin, test: true }), base: DR_TT.chemin } : { sorte: 'essai', test: true, p: t, base: DR_TT.chemin });
     const suivant = i => { const h = H[i]; if (!h) { cb(null); return; } if (h.sorte !== 'heure' || typeof _drHeureCloseAu !== 'function') { cb(h); return; } _drHeureCloseAu(h.p, close => close ? suivant(i + 1) : cb(h)); };
-    suivant(0); }, () => cb(null));
+    if ([c, r, t].some(x => x === undefined)) { cb(null, true); return; }   /* mandat AK : une lecture a échoué (le hub n'a pas répondu) — ce n'est pas « personne ne tient le tableau » */
+    suivant(0); }, () => cb(null, true));
 }
 function dr_sesMemeSession(h, d){ const p = h.p || {};
   if (h.sorte !== d.sorte || !!h.test !== !!d.test) return false;
@@ -24243,23 +24254,29 @@ function dr_sesQuand(ts){ const d = new Date(ts), z = n => String(n).padStart(2,
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' à ' + z(d.getHours()) + ':' + z(d.getMinutes()) + ' (' + (m < 1 ? 'à l’instant' : m < 60 ? 'il y a ' + m + ' min' : 'il y a ' + Math.floor(m / 60) + ' h ' + z(m % 60)) + ')'; }
 function dr_sesRefuser(h, d, lancer){
   const p = h.p || {};
-  dr_sesLireHub(h.base + '/scene', sc => dr_sesLireHub(h.base + '/vif', v => {
+  const L = ch => new Promise(res => dr_sesLireHub(ch, res));   /* mandat AK : la scène et l'état vivant lus ensemble (sur un réseau lent, une attente au lieu de deux) */
+  Promise.all([L(h.base + '/scene'), L(h.base + '/vif')]).then(([sc, v]) => {
     const S2 = v && typeof v === 'object' && !v.close && v.S ? v.S : null; const nb = x => x != null && isFinite(+x) ? (+x + 1) : null;   /* la diapo : ce que montre son tableau (sa scène), sinon son état vivant */
     const nDi = (sc && typeof sc === 'object' && !sc.clos ? nb(sc.di) : null) || (S2 ? nb(S2.di) : null);
+    /* mandat AK : « diapo n sur N » de l'heure et l'heure du premier lancement, tels que l'appareil qui tient le tableau les a dits (`v.ou`, `v.lance0`) */
+    const vv = v && typeof v === 'object' && !v.close ? v : null; const ou = vv && vv.ou && +vv.ou.N > 0 ? vv.ou : null; const l0 = vv && +vv.lance0 > 0 ? +vv.lance0 : null;
+    const hm = ts => { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+    const lancee = l0 ? 'le ' + dr_sesQuand(l0) + (p.ts && p.ts - l0 > 60000 ? ' ; reprise à ' + hm(p.ts) : '') : (p.ts ? 'le ' + dr_sesQuand(p.ts) : '—');
+    const ouEst = ou ? (ou.n ? 'diapo ' + ou.n + ' sur ' + ou.N + ' de l’heure' + (ou.h ? ' ' + ou.h : '') : 'hors de l’heure' + (ou.h ? ' ' + ou.h : '') + ' (' + ou.N + ' diapos)') : (nDi ? 'diapo ' + nDi + ' de la séance' : 'je ne sais pas (l’appareil n’a rien dit)');
     const ligne = (k, x) => '<div style="margin:2px 0"><span style="color:var(--texte2,#777)">' + k + ' :</span> ' + x + '</div>';
     const msg = '<b>Le tableau est déjà pris.</b> Tu ne peux pas lancer ' + dr_sesSorteLib(d.sorte, d.test).replace(/^une? /, m => m === 'une ' ? 'cette ' : 'cet ') + ' : une autre session le tient.'
       + '<div style="margin:10px 0;padding:8px 10px;border-left:3px solid var(--accent,#c60);text-align:left">'
       + ligne('Qui le tient', '<b>' + dr_sesSorteLib(h.sorte, h.test) + '</b>')
       + ligne('Classe', escapeHtml(p.classeNom || p.classeSlug || '—'))
       + ligne('Séance', 'séance ' + (p.seance != null && isFinite(+p.seance) ? (+p.seance + 1) : '?') + ' du chapitre ' + escapeHtml(String(p.chapitre != null ? p.chapitre : '?')) + ' (' + escapeHtml(String(p.niveau || '')) + ')' + (p.debut ? ', prévue ' + escapeHtml(p.debut) + (p.fin ? '-' + escapeHtml(p.fin) : '') : (h.sorte === 'repetition' ? ', sans heure de classe' : '')))
-      + ligne('Lancée (ou reprise)', p.ts ? 'le ' + dr_sesQuand(p.ts) : '—')
-      + ligne('Où elle en est', nDi ? 'diapo ' + nDi + ' de la séance' : 'je ne sais pas (l’appareil n’a rien dit)')
+      + ligne(l0 ? 'Lancée' : 'Lancée (ou reprise)', lancee)
+      + ligne('Où elle en est', ouEst)
       + '</div>' + (h.sorte === 'heure' ? 'Une vraie heure ne s’arrête pas d’ici : reprends-la, puis « Clore l’heure » pour faire la fin d’heure.' : '');
     const B = [{ lib: 'Reprendre cette session', prim: true, title: 'Cet appareil reprend la session qui tient le tableau, là où elle en est (la diapo, ce qui est dévoilé, le chrono) : rien n’est créé, rien n’est arrêté. Ce que tu voulais lancer ne part pas.', fn: () => dr_sesReprendreTenant(h) }];
     if (h.sorte !== 'heure') B.push({ lib: 'L’arrêter et prendre le tableau', title: 'Arrête ' + dr_sesSorteLib(h.sorte, h.test) + ' qui tient le tableau (rien n’y était enregistré pour la classe), même si son appareil est éteint, puis lance ici ce que tu as demandé : le tableau distant le suit.', fn: () => dr_sesArreterTenant(h, lancer) });
     B.push({ lib: 'Annuler', title: 'Ne lance rien : la session qui tient le tableau continue, cet appareil reste où il était.', fn: () => {} });
     if (typeof atModaleChoix === 'function') atModaleChoix(msg, B); else { try { atInfo('Le tableau est déjà pris par ' + dr_sesSorteLib(h.sorte, h.test) + '.'); } catch (e) {} }
-  }));
+  });
 }
 function dr_sesReprendreTenant(h){ try { if (SES._reprise) sesRepriseRetirer(); } catch (e) {}
   if (h.sorte === 'heure' && dr_sesTest()) { try { M8_TEST = false; sessionStorage.removeItem('mjpc_m8_test'); } catch (e) {} try { atInfo('Cet appareil quitte le mode test pour reprendre la vraie heure.'); } catch (e) {} }   /* la vraie heure se reprend hors du mode test (sinon : un essai qui la copie) */
@@ -24272,9 +24289,43 @@ function dr_sesArreterTenant(h, lancer){
     if (!(c && c.ts === p.ts && String(c.seance) === String(p.seance))) { fini(); return; }
     Promise.all([dr_sesPoserHub(h.base + '/vif', { close: true, par: DR_SES.id, ts: Date.now() + 1, sig, sorte: h.sorte }), dr_sesPoserHub(h.base + '/pointeur', null), dr_sesPoserHub(h.base + '/scene', null)]).then(fini, fini); });   /* l'appareil qui la jouait, s'il est là, s'arrête (dr_sesClosAilleurs) */
 }
+/* MANDAT AK (dette 16 ; C16, 08/11) : SUR UN RÉSEAU LENT, LE LANCEMENT ATTEND LA RÉPONSE DU HUB, ET LE DIT. Avant (Q) : le hub ne répondait pas en
+   2,5 s, le lancement partait sans vérifier — deux sessions pouvaient tenir le tableau. Ici : rien ne part avant la réponse. Au bout de 1,5 s (comme
+   « L'heure se lance… » : sur un réseau normal, rien ne clignote), « Je vérifie que le tableau est libre… » à l'écran, à la place de « L'heure se lance… ».
+   Au bout de 15 s sans réponse (ou si la lecture échoue), Paul n'est jamais bloqué : « Lancer quand même » (il lance sans savoir, et le site le dit) ou
+   « Annuler » ; tant qu'il n'a rien choisi, le site attend encore, et la réponse, si elle arrive, décide comme d'habitude (le départ, ou le refus). */
+const DR_SES_VERIF_VUE = 1500, DR_SES_VERIF_OFFRE = 15000;
+function dr_sesLanceRefus(){ try { if (typeof DR_LANCE !== 'undefined' && DR_LANCE && DR_LANCE.attente && typeof dr_lanceFin === 'function') dr_lanceFin('refus'); } catch (e) {} }   /* « L'heure se lance… » ne reste pas à l'écran quand rien ne part */
+function dr_sesVerifPeindre(V, offre){
+  let b = document.getElementById('dr-ses-verif');
+  if (!V) { if (b) b.remove(); document.body.classList.remove('dr-ses-verif'); return; }
+  if (!b) { b = document.createElement('div'); b.id = 'dr-ses-verif'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
+  document.body.classList.add('dr-ses-verif');
+  if (!offre) { if (b.dataset.etat === 'verif') return; b.dataset.etat = 'verif';
+    b.title = 'Avant de lancer, le site demande au hub si une autre session tient déjà le tableau. Le réseau répond lentement : dès qu’il a répondu, ça part tout seul (ou le site te dit qui tient le tableau). Tu n’as rien à refaire.';
+    b.textContent = 'Je vérifie que le tableau est libre… le réseau répond lentement.'; return; }
+  if (b.dataset.etat === 'offre') return; b.dataset.etat = 'offre';
+  b.title = 'Le hub n’a pas encore répondu : le site ne sait pas si une autre session tient le tableau. Il attend encore sa réponse ; tu peux aussi choisir.';
+  b.innerHTML = '<div>' + (V.ko ? 'Le hub ne répond pas' : 'Le hub ne répond toujours pas') + ' : je ne sais pas si une autre session tient le tableau. J’attends encore sa réponse.</div>';
+  const bt = (lib, title, fn, prim) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = lib; x.title = title; if (prim) x.className = 'prim'; x.addEventListener('click', fn); b.appendChild(x); };
+  bt('Lancer quand même', 'Lance tout de suite, sans savoir si une autre session tient le tableau. Si c’est le cas, le tableau distant suivra celle-ci et l’autre le perdra, sans que personne le lui dise.', V.quandMeme);
+  bt('Annuler', 'Ne lance rien. Tu pourras relancer quand le réseau répondra.', V.annuler, true);
+}
 function dr_sesGarder(d, lancer){
-  let fait = false; const go = () => { if (fait) return; fait = true; lancer(); }; const T = setTimeout(go, 2500);   /* le hub ne répond pas : jamais bloqué */
-  dr_sesTenant(h => { if (fait) return; clearTimeout(T); if (!h || dr_sesMemeSession(h, d)) { go(); return; } fait = true; dr_sesRefuser(h, d, lancer); });
+  const V = { fini: false, ko: false };
+  const clore = () => { V.fini = true; clearTimeout(V.T1); clearTimeout(V.T2); dr_sesVerifPeindre(null); };
+  V.quandMeme = () => { if (V.fini) return; clore(); try { atInfo('Lancé sans vérifier : le hub n’a pas répondu. Si une autre session tenait le tableau, le tableau distant suit maintenant celle-ci.'); } catch (e) {} lancer(); };
+  V.annuler = () => { if (V.fini) return; clore(); dr_sesLanceRefus(); };
+  V.T1 = setTimeout(() => { if (!V.fini) dr_sesVerifPeindre(V, false); }, DR_SES_VERIF_VUE);
+  V.T2 = setTimeout(() => { if (!V.fini) dr_sesVerifPeindre(V, true); }, DR_SES_VERIF_OFFRE);
+  dr_sesTenant((h, ko) => { if (V.fini) return;
+    if (ko) { V.ko = true; clearTimeout(V.T1); clearTimeout(V.T2); dr_sesVerifPeindre(V, true); return; }   /* la lecture a échoué : la question tout de suite */
+    clore();
+    if (!h) { lancer(); return; }
+    if (dr_sesMemeSession(h, d)) {   /* la même session : on la rejoint. La répétition est adoptée ici même (la vérification d'en dessous, à 1,5 s, en lancerait une seconde sur un réseau lent) */
+      if (h.sorte === 'repetition') { const p = h.p || {}; DR_SES.rejoindre = { sig: p.ts + '|' + p.seance, p: Object.assign({}, p, { quoi: 'repetition' }) }; DR_SES.rejoint = Date.now(); }
+      lancer(); return; }
+    dr_sesLanceRefus(); dr_sesRefuser(h, d, lancer); });
 }
 (function(){
   const f = window.dr_lancer; if (typeof f === 'function' && !f.__q) { const g = function (classeSlug) { const self = this, args = arguments; const ec = (typeof AT !== 'undefined' && AT && AT.edChap) || {}; const test = dr_sesTest();
