@@ -3852,9 +3852,12 @@ var SCN = (function(){
     {enonce:"Quelle est la capitale de l'Italie ?", choix:["Milan","Naples","Rome","Venise"], bonnes:[2], niveau:"facile", reflexion:20, reponse:15, competences:[]},
     {enonce:"Lesquelles sont des capitales européennes ?", choix:["Madrid","Genève","Berlin","Sydney"], bonnes:[0,2], niveau:"standard", reflexion:30, reponse:20, competences:[]},
     {enonce:"Pourquoi l'araignée n'est-elle pas un insecte ?", choix:["Parce qu'elle a six pattes","Parce qu'elle a huit pattes","Parce qu'elle tisse une toile","Parce qu'elle est trop grande"], bonnes:[1], niveau:"standard", reflexion:30, reponse:20, competences:[]}]};
-  // le chapitre : « <niveau>-ch<n> » ; son libellé, s'il a une fiche au hub (sinon « 4e · Ch. 1 »)
-  S.chapitreLib = function(id){ if(!id) return null; var m = /^(\d)e-ch(\d+)$/.exec(id); return m ? m[1] + "e · Ch. " + m[2] : String(id); };
-  S.niveauDuChapitre = function(id){ var m = /^(\d)e-ch\d+$/.exec(id || ""); return m ? m[1] + "e" : null; };
+  // le chapitre (8.0.6) : « <niveau>/<uid> » (ou l'ancien « <niveau>-ch<n> ») ; son libellé vient de MJPC (chapitreVue, c3-soir.js) quand le niveau est déjà lu,
+  // sans abonner ici les tablettes aux chapitres de MJPC : ce libellé ne sert qu'aux écrans du professeur
+  S.niveauDuChapitre = function(id){ var m = /^(\d)e(?:-ch\d+$|\/.)/.exec(id || ""); return m ? m[1] + "e" : null; };
+  S.chapitreLib = function(id){ if(!id) return null; var n = S.niveauDuChapitre(id); if(!n) return String(id);
+    if(typeof chapitreVue === "function" && typeof V3S !== "undefined" && V3S.charge["site/" + n + "/chapitres"]){ var c = chapitreVue(id); if(c) return c.court; }
+    return n; };
   function versMaquette(id, e){
     if(!e) return null;
     var qs = (Array.isArray(e.questions) ? e.questions : Object.values(e.questions || {})).map(function(q){ q = q || {};
@@ -4009,7 +4012,8 @@ var SCN = (function(){
     ev.questions.forEach(function(q, qi){
       if(ec.indexOf(qi) >= 0){ st.push("e"); pts.push(null); return; }   // (13/10) une question écartée n'est nulle part : ni juste, ni fausse
       var rep = S.reponse(x, qi, sid);
-      if(!rep && lanc[qi] && S.partiA(x, lanc[qi], sid)){ st.push("x"); pts.push(null); return; }
+      // (8.0.6, 177) dans une séance rouverte, une question posée pendant un cours où l'élève n'était pas là (absent à l'appel, ou parti) ne compte pas pour lui
+      if(!rep && lanc[qi] && (s.coursN ? absentAuCoursQCM(s, x, qi) : S.partiA(x, lanc[qi], sid))){ st.push("x"); pts.push(null); return; }
       if(papier){ var g = ((s.papier || {})[x] || {})[qi]; if(g == null){ st.push("n"); pts.push(null); } else { st.push(g === "j" || g === true || g === 1 ? "j" : "f"); pts.push(st[st.length - 1] === "j" ? 1 : 0); } return; }
       // (19/10, Paul, point 29 seconde moitié) dans une séance terminée, une question posée mais jamais révélée en classe compte dès que sa feuille
       // est lue (le soir, « Lire les copies ») : la règle de resultatLocalV (c4-seances.js), pour que les deux copies disent la même note
@@ -4045,7 +4049,10 @@ var SCN = (function(){
     var nonPosees = papier ? [] : ev.questions.map(function(q, i){ return i; }).filter(function(i){ return lanc[i] == null && !((s.reponses || {})[i]); });
     return {p:x, st:st, pts:pts, n:n, total:total, complet:complet, sur20:sur20, maitrise:S.maitriseDe(Math.round(sur20 * 10) / 10), comp:comp, corrigees:corrigees, annulees:an, ecartees:ec, trouvee:tr, nonPosees:nonPosees};
   };
-  S.resultat = function(id, x, k){ var s = S.sess(id); if(!s) return null; if(S.absents(id).indexOf(x) >= 0 || S.eleves(id).indexOf(x) < 0) return null; return S.note(x, k, id); };
+  // (8.0.6) pas de note pour l'élève qui n'a été là à aucun cours (une séance d'un seul cours : l'absent de l'appel, comme avant)
+  S.resultat = function(id, x, k){ var s = S.sess(id); if(!s) return null; if(absentPartoutQCM(s, x) || S.eleves(id).indexOf(x) < 0) return null; return S.note(x, k, id); };
+  S.coursN = function(sid){ var s = S.sess(sid); return (s && +s.coursN) || 1; };
+  S.cours = function(sid){ return coursSeanceQCM(S.sess(sid)); };
   S.estimation = function(x, k, sid){ var e = S.estimationDe(x, sid); if(!e) return null; var nt = S.note(x, k, sid); if(!nt) return null; var iE = IDX.indexOf(e), iR = IDX.indexOf(nt.maitrise);
     return {k:e, type:iE === iR ? "ok" : iE > iR ? "sur" : "sous", ecart:Math.abs(iE - iR)}; };
   S.autonomie = function(x, k, sid){ var s = S.sess(sid), a = ((s && s.autonomie) || {})[x]; if(!a || !a.retire) return {retire:false};
@@ -4128,7 +4135,9 @@ var SCN = (function(){
       o.attestEnCours = {}; pres.forEach(function(x){ var a = S.attestDe(1, x, sid); if(entres.indexOf(x) >= 0 && !(a && a.fini)) o.attestEnCours[x] = a ? a.lignes || 0 : 0; });
     }
     // la lecture, la co-évaluation, l'estimation, la seconde attestation : ceux qui sont entrés (S.actifs) ; une feuille se lit si l'élève a un voisin entré, ou seul (il la lit lui-même)
-    if(e.ph === "lecture" && qi != null){ var pas = S.papier(sid) ? [] : act.filter(function(x){ return !S.lecture(x, qi, sid); }); o.lus = [act.length - pas.length, act.length]; o.manquent = pas.map(S.nomDe); o.pasLu = pas; }
+    // (8.0.6, 177) une feuille qui n'a pas cette question (l'élève n'était pas là quand elle a été posée) ne se lit pas : elle n'est pas attendue
+    if(e.ph === "lecture" && qi != null){ var sL = S.sess(sid), actL = act.filter(function(x){ return !(sL && sL.coursN && !S.reponse(x, qi, sid) && absentAuCoursQCM(sL, x, qi)); });
+      var pas = S.papier(sid) ? [] : actL.filter(function(x){ return !S.lecture(x, qi, sid); }); o.lus = [actL.length - pas.length, actL.length]; o.manquent = pas.map(S.nomDe); o.pasLu = pas; }
     if(e.ph === "coeval"){ var att = act.filter(function(x){ var v = S.voisinDe(x, sid); return !S.coevalDe(x, sid) && v && act.indexOf(v) >= 0; }); var avecV = act.filter(function(x){ var v = S.voisinDe(x, sid); return v && act.indexOf(v) >= 0; });
       o.coeval = [avecV.length - att.length, avecV.length]; o.manquent = att.map(S.nomDe); o.pasCoeval = att; }
     if(e.ph === "estim"){ var pe = act.filter(function(x){ return !S.estimationDe(x, sid); }); o.estime = [act.length - pe.length, act.length]; o.manquent = pe.map(S.nomDe); o.pasEstime = pe; }
@@ -4220,7 +4229,7 @@ var SCN = (function(){
   S.passees = function(evalId, k){ return S.seances().filter(function(x){ return x.fin && x.eval === evalId && !x.demo; }).map(function(x){ return {classe:x.classe, date:x.date.slice(0, 5)}; }); };
   S.mesEvaluations = function(x, k, classe){
     return S.seances(classe || S.classe()).filter(function(se){ return !se.demo && (S.eleves(se.id).indexOf(x) >= 0) && (se.fin || se.id === S.sid()); }).map(function(se){
-      var abs = S.absents(se.id).indexOf(x) >= 0, rendue = S.rendueAu(se.id);
+      var abs = absentPartoutQCM(S.sess(se.id), x), rendue = S.rendueAu(se.id);
       return {titre:se.titre, date:se.date, etat:abs ? "absente" : rendue ? "bilan" : "relecture", note:abs || !rendue ? null : S.note(x, k, se.id), seance:se.id};
     });
   };
@@ -4279,6 +4288,38 @@ var SCN = (function(){
   return S;
 })();
 
+/* ── (8.0.6, Paul 08/11, C14 176 à 178 : le QCM au long cours) une séance rouverte garde chacun de ses cours terminés (cours/<n> : son début, son
+   arrêt, ses absents, ses partis, ses places, ses entrés, sa fin de l'heure) ; le cours en cours est coursN (2 à la première réouverture), commencé à
+   coursDebut. Une séance jamais rouverte n'a ni l'un ni l'autre : tout s'y lit comme en 8.0.5. Ces trois fonctions lisent la séance brute (la base),
+   pour SCN (S.note, S.resultat) et pour les écrans du soir (c4-seances.js : resultatLocalV, seanceV, « Lire les copies », le PDF). ── */
+function listeQCM806(v){ return !v ? [] : Array.isArray(v) ? v.filter(function(x){ return x != null; }) : Object.keys(v).map(function(k){ return v[k]; }).filter(function(x){ return x != null; }); }
+// les cours de la séance, dans l'ordre : {n, debut, arret, absents, partis} ; le dernier est le cours en cours (ou le dernier terminé)
+function coursSeanceQCM(s){
+  if(!s) return []; var C = s.cours || {}, l = [];
+  Object.keys(C).map(Number).filter(function(k){ return !isNaN(k) && C[k]; }).sort(function(a, b){ return a - b; }).forEach(function(k){ var c = C[k];
+    l.push({n:k, debut:+c.debut || 0, arret:c.arret || null, absents:listeQCM806(c.absents), partis:c.partis || {}}); });
+  l.push({n:+s.coursN || 1, debut:+(s.coursDebut || (s.lancee && s.lancee.date) || s.date || 0), arret:s.etat === "terminee" ? s.finLe || null : null, absents:listeQCM806(s.absents), partis:s.partis || {}, courant:true});
+  return l;
+}
+// le cours où la question qi a été posée (questionsLancees/<qi>), ou null
+function coursDeQuestionQCM(s, qi){ var t = +((s && s.questionsLancees) || {})[qi]; if(!t) return null; var C = coursSeanceQCM(s), c = C[0]; C.forEach(function(k){ if(k.debut <= t) c = k; }); return c; }
+// (177) l'élève x n'était pas là quand la question qi a été posée : marqué absent à l'appel de ce cours (et pas marqué présent depuis), ou parti avant
+// elle ; seulement dans une séance rouverte (une séance d'un seul cours garde la règle de S.partiA)
+function absentAuCoursQCM(s, x, qi){
+  if(!s || !s.coursN) return false; var t = +((s.questionsLancees || {})[qi]), c = coursDeQuestionQCM(s, qi); if(!t || !c) return false;
+  var hs = (s.presence_history || {})[x], ev = hs ? Object.keys(hs).map(function(k){ return hs[k]; }).filter(function(e){ return e && +e.ts >= c.debut && +e.ts <= t; }).sort(function(a, b){ return a.ts - b.ts; }) : [];
+  if(ev.length) return ev[ev.length - 1].etat === "absent";
+  return c.absents.indexOf(x) >= 0 || !!(c.partis[x] && +c.partis[x] <= t);
+}
+// l'élève x n'a été là à aucun des cours où une question a été posée (sans question posée : le cours en cours) : il n'a pas de note, « Absent »
+function absentPartoutQCM(s, x){
+  var C = coursSeanceQCM(s); if(C.length < 2) return listeQCM806(s && s.absents).indexOf(x) >= 0;
+  var lq = s.questionsLancees || {}, ts = Object.keys(lq).map(function(k){ return +lq[k]; }).filter(Boolean);
+  var poses = C.filter(function(c, i){ var fin = i + 1 < C.length ? C[i + 1].debut : Infinity; return ts.some(function(t){ return t >= c.debut && t < fin; }); });
+  if(!poses.length) poses = [C[C.length - 1]];
+  return poses.every(function(c){ return c.absents.indexOf(x) >= 0; });
+}
+
 /* ══════════════════════ ACT : les gestes de Paul ══════════════════════ */
 function _ph717(ph){ return {appel:"idle", entree:"idle", pret:"idle", reflexion:"reflexion", passage:"reponse", reponse:"reponse", b:"attente", close:"attente", rouvert:"reponse",
   estim:"autoeval", att2:"autoeval", lecture:"correction", revele:"correction", coeval:"correction", bilan:"finie", fin:"finie", pause:"attente", avant:"idle"}[ph] || "idle"; }
@@ -4303,10 +4344,7 @@ var ACT = (function(){
       var maj0 = {}; maj0["/sessionActive/" + s0.classeSlug] = o.reprise; LIVE.sid = o.reprise; LIVE.classeSlug = s0.classeSlug;
       return ecrireQCM(maj0, "reprise").then(function(){ return poserDeroule(o.reprise, {ph:"appel", reprise:(s0.deroule || {}).reprise || null}); }).then(function(){ return o.reprise; }); }
     var id = "sess_" + now, eleves = o.eleves ? o.eleves.slice() : SCN.roster(classe).map(sanMJPC);
-    var paires = o.paires || SCN.binomesProposes(classe, eleves), places = {};
-    // une paire nomme ses élèves par leur slug ou par « NOM Prénom » : la base garde le slug
-    paires.forEach(function(p, i){ var a = p[0] ? sanMJPC(p[0]) : null, b = p[1] ? sanMJPC(p[1]) : null;
-      places[i + 1] = {g:a || b || null, d:a ? b : null}; if(!a || !b) places[i + 1].seul = true; });
+    var paires = o.paires || SCN.binomesProposes(classe, eleves), places = placesDe(paires);
     // (15/10, Paul) « 🕙 Fin de l'heure » se règle avant l'appel, sur la carte de lancement (LANCEMENT_H.fin, « HH:MM ») : il part avec la séance
     var finCarte = typeof LANCEMENT_H !== "undefined" && LANCEMENT_H && /^\d{1,2}:\d{2}$/.test(String(LANCEMENT_H.fin || "")) ? String(LANCEMENT_H.fin) : null;
     var ev = SCN.evalParId(evalId), fin = o.fin || finCarte || SCN.hm(SCN.sec(SCN.heureFr(now)) + 55 * 60);
@@ -4319,11 +4357,14 @@ var ACT = (function(){
     LIVE.sid = id; LIVE.classeSlug = classe;
     return ecrireQCM(maj, "lancerSeance").then(function(){ return id; });
   };
+  // une paire nomme ses élèves par leur slug ou par « NOM Prénom » : la base garde le slug
+  function placesDe(paires){ var places = {}; paires.forEach(function(p, i){ var a = p[0] ? sanMJPC(p[0]) : null, b = p[1] ? sanMJPC(p[1]) : null;
+      places[i + 1] = {g:a || b || null, d:a ? b : null}; if(!a || !b) places[i + 1].seul = true; }); return places; }
   function construireSnapshot(ev){ return {titre:ev.titre || "", mode:ev.mode === "partiel" ? "partiel" : "strict", version:typeof ev.version === "number" ? ev.version : 1, questions:JSON.parse(JSON.stringify(ev.questions || [])), figeLe:LIVE.maintenant()}; }
   // la fin de l'appel : les absents sortent ; les élèves restés seuls sont mis ensemble, sur la tablette du premier
   A.appelFini = function(absents, fin){
     var id = sid(); if(!id) return Promise.resolve(); absents = (absents || []).map(function(x){ return SCN.nomDe(x) !== x ? x : sanMJPC(x); });
-    var pl = SCN.places(id), seuls = [], places = {};
+    var pl = SCN.places(id), seuls = [], places = {}, s = SCN.sess(id);
     pl.forEach(function(t){ var g = t.g && absents.indexOf(t.g) < 0 ? t.g : null, d = t.d && absents.indexOf(t.d) < 0 ? t.d : null;
       if(g && d) places[t.n] = {g:g, d:d}; else if(g || d) seuls.push({n:t.n, x:g || d, avait:!!(t.g && t.d)}); });
     /* (8.0.5, dette 181) les élèves restés seuls sont mis ensemble, deux par deux dans l'ordre des tablettes, jamais avec un « 🚫 Jamais avec » de MJPC
@@ -4332,9 +4373,11 @@ var ACT = (function(){
     var restes = seuls.slice();
     while(restes.length){ var a = restes.shift(), j = -1; for(var k = 0; k < restes.length; k++){ if(!SCN.binomesRefus(a.x, restes[k].x)){ j = k; break; } }
       if(j >= 0) places[a.n] = {g:a.x, d:restes.splice(j, 1)[0].x}; else places[a.n] = {g:a.x, d:null, seul:true}; }
-    var s = SCN.sess(id), maj = {}; maj[cheminS(id, "absents")] = absents.length ? absents : null; maj[cheminS(id, "places")] = places;
+    var maj = {}; maj[cheminS(id, "absents")] = absents.length ? absents : null; maj[cheminS(id, "places")] = places;
     if(fin) maj[cheminS(id, "lancee/fin")] = fin;
-    var hist = {}; absents.forEach(function(x){ hist[x] = {}; hist[x]["h_" + LIVE.maintenant()] = {ts:LIVE.maintenant(), etat:"absent"}; }); if(absents.length) maj[cheminS(id, "presence_history")] = hist;
+    // (8.0.6) dans une séance rouverte, l'absence de ce cours s'ajoute à l'historique des cours d'avant (une séance d'un seul cours : comme en 8.0.5)
+    if(s && s.coursN){ var tA = LIVE.maintenant(); absents.forEach(function(x){ maj[cheminS(id, "presence_history/" + x + "/h_" + tA)] = {ts:tA, etat:"absent"}; }); }
+    else { var hist = {}; absents.forEach(function(x){ hist[x] = {}; hist[x]["h_" + LIVE.maintenant()] = {ts:LIVE.maintenant(), etat:"absent"}; }); if(absents.length) maj[cheminS(id, "presence_history")] = hist; }
     var rep = s && s.deroule && s.deroule.reprise, papier = s && s.lancee && s.lancee.mode === "papier";
     // sur papier (467) : après l'appel, la séance sur papier (les énoncés, puis « ⏸️ Feuilles ramassées ») ; à la reprise, l'estimation sur les tablettes
     if(papier && rep && rep.ph === "papier") return ecrireQCM(maj, "appelFini").then(function(){ return poserDeroule(id, {ph:"estim"}); });
@@ -4521,7 +4564,20 @@ var ACT = (function(){
     maj["/sessionActive/" + s.classeSlug] = null;
     // la fin d'abord (etat, sessionActive), puis la phase : une console perdue entre les deux laisse une séance terminée, jamais une séance active
     return ecrireQCM(maj, "terminer").then(function(){ return poserDeroule(id, {ph:"fin"}); }); };
-  A.rouvrirSeance = function(id){ var s = SCN.sess(id); if(!s) return Promise.resolve(); var maj = {}; maj[cheminS(id, "etat")] = "en_cours"; if(s.copies && s.copies.rendues) maj[cheminS(id, "copies/masquees")] = true;
+  /* (8.0.6, Paul 178) « 🔓 Rouvrir la séance » : un nouveau cours. Le cours qui s'achève est gardé tel quel (cours/<n>) ; le nouveau commence comme un
+     lancement : personne d'absent ni de parti d'avance, personne d'entré, des binômes refaits par la règle du lancement (SCN.binomesProposes : les
+     exclusions, puis le QCM précédent, cette séance mise à part), sa fin de l'heure (55 min, comme au lancement), puis l'appel. Les tablettes oublient
+     les binômes d'avant (ELV.cours, src/live/pages.js) ; la reprise est voulue (repriseConfirmee : pas de « ⚠️ Séance interrompue »). Rien d'autre ne
+     bouge : réponses, lectures, questions lancées, écartées, révélées, l'ordre de la correction. */
+  A.rouvrirSeance = function(id){ var s = SCN.sess(id); if(!s) return Promise.resolve(); var maj = {}, now = LIVE.maintenant(), n = +s.coursN || 1;
+    maj[cheminS(id, "etat")] = "en_cours"; if(s.copies && s.copies.rendues) maj[cheminS(id, "copies/masquees")] = true;
+    maj[cheminS(id, "cours/" + n)] = {debut:+(s.coursDebut || (s.lancee && s.lancee.date) || s.date || 0), arret:s.finLe || null, absents:SCN.absents(id).length ? SCN.absents(id) : null,
+      partis:s.partis || null, places:s.places || null, entres:s.entres || null, fin:(s.lancee && s.lancee.fin) || null, masquees:!!(s.copies && s.copies.masquees)};
+    maj[cheminS(id, "coursN")] = n + 1; maj[cheminS(id, "coursDebut")] = now; maj[cheminS(id, "repriseConfirmee")] = now;
+    ["absents", "partis", "entres", "deplaces"].forEach(function(k){ maj[cheminS(id, k)] = null; });
+    maj[cheminS(id, "lancee/fin")] = SCN.hm(SCN.sec(SCN.heureFr(now)) + 55 * 60);
+    LIVE.sid = id; LIVE.classeSlug = s.classeSlug;
+    maj[cheminS(id, "places")] = placesDe(SCN.binomesProposes(s.classeSlug, SCN.eleves(id)));
     return ecrireQCM(maj, "rouvrirSeance").then(function(){ return A.lancerSeance(s.classeSlug, s.evalId, {reprise:id}); }); };
   // le soir : une feuille lue (« Que dit la feuille ? ») ; rendre, masquer les copies
   A.lireFeuille = function(aLireId, choix, sidX){ var id = sidX || sid(); if(!id) return Promise.resolve(); var l = SCN.aLireSeance(id).filter(function(x){ return x.id === aLireId; })[0];
@@ -4536,7 +4592,17 @@ var ACT = (function(){
   A.grillePapier = function(x, qi, v, sidX){ var id = sidX || sid(); var maj = {}; maj[cheminS(id, "papier/" + x + "/" + qi)] = v; return ecrireQCM(maj, "grillePapier"); };
   // l'appel annulé : la séance qui venait de s'ouvrir n'a jamais commencé ; elle s'efface
   A.abandonner = function(){ var id = sid(); if(!id) return Promise.resolve(); var s = SCN.sess(id), e0 = SCN.etat(id) || {}; if(e0.ph !== "appel" || (s.deroule && s.deroule.reprise)) return Promise.resolve();
+    // (8.0.6) l'appel d'une séance rouverte, annulé : rien ne s'efface ; la séance redevient ce qu'elle était, terminée, avec son dernier cours
+    if(s.coursN > 1 && s.cours && s.cours[s.coursN - 1]) return annulerReouverture(id, s);
     var maj = {}; maj["/sessions/" + id] = null; maj["/sessionActive/" + s.classeSlug] = null; LIVE.sid = null; return ecrireQCM(maj, "abandonner"); };
+  function annulerReouverture(id, s){ var n = s.coursN - 1, c = s.cours[n] || {}, maj = {};
+    maj[cheminS(id, "etat")] = "terminee"; maj["/sessionActive/" + s.classeSlug] = null;
+    ["absents", "partis", "places", "entres"].forEach(function(k){ maj[cheminS(id, k)] = c[k] || null; }); maj[cheminS(id, "deplaces")] = null;
+    if(c.fin) maj[cheminS(id, "lancee/fin")] = c.fin;
+    if(s.copies && s.copies.rendues) maj[cheminS(id, "copies/masquees")] = c.masquees ? true : null;
+    maj[cheminS(id, "coursN")] = n > 1 ? n : null; maj[cheminS(id, "coursDebut")] = n > 1 ? c.debut : null; maj[cheminS(id, "cours/" + n)] = null;
+    LIVE.sid = null;
+    return ecrireQCM(maj, "annulerReouverture").then(function(){ return poserDeroule(id, {ph:"fin"}); }); }
   // la séance interrompue (la console perdue : lastDisconnect, la 7.7.1) : « 🔄 Reprendre la séance » — la reprise confirmée, et le tour en cours
   // recommence au début, voile compris (B ou le passage : le tour lui-même) ; une autre phase continue telle quelle
   A.recommencer = function(){ var x = e(), id = sid(); if(!id) return Promise.resolve(); var maj = {}; maj[cheminS(id, "repriseConfirmee")] = LIVE.maintenant();
@@ -4553,8 +4619,9 @@ var ACT = (function(){
 var ELV = (function(){
   var E = {tab:null, cotes:{}};
   // la tablette : son numéro (celui du premier élève entré), ses moitiés ; gardés sur l'appareil pour tenir un rechargement
-  try { var t = JSON.parse(localStorage.getItem("qcm_tablette") || "null"); if(t){ E.tab = t.tab; E.cotes = t.cotes || {}; E.n = t.n || null; E.sid = t.sid || null; if(t.classe) LIVE.classeSlug = t.classe; } } catch(e){}
-  function garder(){ if(SCN.sid()) E.sid = SCN.sid(); if(typeof presence === "function") setTimeout(presence, 0); try { localStorage.setItem("qcm_tablette", JSON.stringify({tab:E.tab, cotes:E.cotes, n:E.n, sid:E.sid, classe:LIVE.classeSlug})); } catch(e){} LIVE.changer(); }
+  try { var t = JSON.parse(localStorage.getItem("qcm_tablette") || "null"); if(t){ E.tab = t.tab; E.cotes = t.cotes || {}; E.n = t.n || null; E.sid = t.sid || null; E.cours = t.cours || 1; if(t.classe) LIVE.classeSlug = t.classe; } } catch(e){}
+  // (8.0.6) la tablette garde aussi le cours de la séance où ses élèves sont entrés (SCN.coursN) : à la réouverture, elle les oublie
+  function garder(){ if(SCN.sid()){ E.sid = SCN.sid(); E.cours = SCN.coursN(); } if(typeof presence === "function") setTimeout(presence, 0); try { localStorage.setItem("qcm_tablette", JSON.stringify({tab:E.tab, cotes:E.cotes, n:E.n, sid:E.sid, cours:E.cours || 1, classe:LIVE.classeSlug})); } catch(e){} LIVE.changer(); }
   E.oublier = function(){ E.tab = null; E.cotes = {}; E.n = null; try { localStorage.removeItem("qcm_tablette"); } catch(e){} presence(); LIVE.changer(); };
   /* La présence (la 7.7.1, EleveSession, l. 2781 à 2787) : qcm/presence/<classe>/<élève> = {nomComplet, last}, mise à jour toutes les 8 s,
      effacée quand la tablette se déconnecte ou oublie l'élève */
@@ -6866,7 +6933,7 @@ function preparerModeTest(){
 /* (16/10, Paul 16:56, 17:02 ; cadrage 559) le mode test joue la démo par défaut, ou n'importe quelle évaluation prête de la liste ;
    il joue toujours une copie (evaluations/_test_evaluation-qcm, que la purge efface) : la vraie évaluation n'est jamais écrite */
 function copieTestV(id){
-  if(id === "demo" || !id){ var d = demoBrute(); d.demo = null; d.test = true; d.chapitre = "3e-ch1";
+  if(id === "demo" || !id){ var d = demoBrute(); d.demo = null; d.test = true; d.chapitre = null; d.sansChapitre = true;   // (8.0.6) plus de chapitre écrit en dur : la démo n'en a pas
     d.questions = d.questions.map(function(q){ return Object.assign({}, q, {competences:["c4-lire-01"], verifie:"retrouver la réponse du cours"}); });
     return v3Sans(d); }
   var b = v3Evals()[id]; if(!b) return null; var c = JSON.parse(JSON.stringify(b));
@@ -6946,7 +7013,8 @@ function tousRepondent(){
 }
 // à l'entrée (après l'appel), chaque élève présent est entré sur sa tablette simulée, comme s'il avait tapé son code
 function entrerTous(se){
-  var u = {}, n = 0; se.presents.forEach(function(e){ if(!(se.S.entres || {})[e.slug] && !MODE_TEST.entres[se.id + e.slug]){ MODE_TEST.entres[se.id + e.slug] = 1; u["entres/" + e.slug] = Date.now(); n++; } });
+  // (8.0.6) une séance de test rouverte est un nouveau cours : ses élèves entrent de nouveau sur les tablettes simulées
+  var u = {}, n = 0, k0 = se.id + (se.S.coursN > 1 ? "#" + se.S.coursN : ""); se.presents.forEach(function(e){ if(!(se.S.entres || {})[e.slug] && !MODE_TEST.entres[k0 + e.slug]){ MODE_TEST.entres[k0 + e.slug] = 1; u["entres/" + e.slug] = Date.now(); n++; } });
   if(n) v3Update(v3Q("sessions/" + se.id), u);
 }
 var CAS_TEST = {
@@ -7105,7 +7173,8 @@ setTimeout(function(){
   PAGES.ecran = function(){
     var c = avant.apply(this, arguments);
     if(MODE_TEST.actif && typeof LIVE !== "undefined" && LIVE.appareil() === "console" && typeof NAV !== "undefined"){
-      if(NAV.ecran && !/^x620-/.test(NAV.ecran) && !NAV.pile.length) quitterModeTest();
+      // (8.0.6) les écrans d'une séance de test (« 📊 Résultats », « 📄 Lire les copies », sa fiche, « 🔓 Rouvrir ») restent dans le mode test
+      if(NAV.ecran && !/^x620-/.test(NAV.ecran) && !NAV.pile.length && !ecranDeTest()) quitterModeTest();
       // la scène du mode test selon son état (ses textes et ses infobulles) : à l'ouverture, pendant la séance, une tablette en grand
       else if(!NAV.ecran || /^x620-/.test(NAV.ecran)) return {id:MODE_TEST.grand ? "x620-3-mode-test-en-grand" : testSid() ? "x620-2-mode-test-reflexion" : "x620-1-mode-test-ouverture", vue:"console", render:function(){ return h(GardeV, {key:"mode-test"}, ModeTestV()); }, cle:"mode-test"};
     }
@@ -7113,6 +7182,22 @@ setTimeout(function(){
   };
   if(typeof rendre === "function") rendre();
 }, 0);
+function ecranDeTest(){ var id = NAV.params && NAV.params.seance, S = id ? v3Sessions()[id] : null; return !!(S && S.classeSlug === CLASSE_TEST); }
+/* (8.0.6, mandat du 08/11 point 4) la séance de test terminée : Paul y répète le soir et la reprise, comme dans le vrai — « 📄 Lire les copies »,
+   « 🔓 Rouvrir » (l'appel, des binômes refaits, la suite), « 📊 Résultats » ; tout reste sur la classe de test, que « 🗑️ Sortir et purger » efface */
+function SeancesTestV(){
+  var l = seancesV().filter(function(x){ return (x.classeSlug === CLASSE_TEST || x.classeCle === CLASSE_TEST) && x.terminee; }).sort(function(a, c){ return c.ms - a.ms; }).slice(0, 3);
+  if(!l.length) return null;
+  return h("div", {className:"card", "data-seances-test":"1"},
+    h("h2", null, "📚 Séance de test terminée", InfoI("La séance de test que tu viens de terminer : lis ses copies, rouvre-la pour répéter la reprise (l'appel, des binômes refaits, la suite), ou ouvre ses résultats. Tout reste sur la classe de test.")),
+    h("div", {className:"results-eval-list"}, l.map(function(se){ var sq = "&seance=" + encodeURIComponent(se.id), lire = restentV(se);
+      return h("div", {key:se.id, className:"results-eval-row", "data-seance":se.id},
+        h("div", null, h("div", {className:"titre"}, se.ev.titre), h("div", {className:"meta"}, se.date + " " + se.heure + " · ✅ terminée · " + presentsTexteV(se) + (lire ? " · " + lire + " feuille" + (lire > 1 ? "s" : "") + " à lire" : ""))),
+        h("div", {className:"row"},
+          h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-lire-copies" + sq, title:"Ouvre les copies de la séance de test, comme le soir : tu tapes les initiales d'une copie et tu lis ce que dit sa feuille. Rien ne touche tes vraies classes."}, "📄 Lire les copies"),
+          h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-rouvrir-seance" + sq, title:"Rouvre la séance de test, après une confirmation, comme au cours suivant : l'appel, des binômes refaits, puis elle reprend là où elle s'était terminée."}, "🔓 Rouvrir"),
+          h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Ouvre les résultats de la séance de test : les notes d'après la feuille, les feuilles à lire. « 🧪 Mode test » te ramène ici."}, "📊 Résultats"))); })));
+}
 function ModeTestVC(){
   useV3();
   var zone = React.useRef(null);
@@ -7128,7 +7213,7 @@ function ModeTestVC(){
   if(typeof LANCEMENT !== "undefined" && LANCEMENT.classe !== CLASSE_TEST){ LANCEMENT.classe = CLASSE_TEST; LANCEMENT.evalId = TEST_EVAL; }
   var panneau;
   if(se && typeof EcranConsoleHeure === "function") panneau = h("div", {className:"test-console"}, EcranConsoleHeure());
-  else panneau = h("div", {className:"test-console"}, h(LancementTestV));
+  else panneau = h("div", {className:"test-console"}, h(SeancesTestV), h(LancementTestV));
   return h("div", {className:"prof-wrap cons mode-test"},
     DECO.map(function(e, i){ return h("span", {key:i, className:"deco"}, e); }),
     h("div", {className:"prof full"},
@@ -8755,7 +8840,7 @@ function AppelH(p){
     h("div", {className:"checkin-modal", style:{maxWidth:"640px"}},
       h("div", {className:"checkin-header"}, h("h3", null, "📋 Check-in : qui est absent aujourd'hui ?", InfoI("Clique un nom pour le marquer absent. Son binôme est mis avec un élève resté seul, sans jamais créer de paire exclue.")), h("div", {className:"checkin-sub"}, CLASSE + " — " + classe.length + " élève" + (classe.length > 1 ? "s" : ""))),
       h(ListeAppel, {classe:classe, absents:absents, paires:SCN.paires()}),
-      h("div", {className:"checkin-actions"}, h("button", {className:"btn btn-ghost"}, "Annuler"),
+      h("div", {className:"checkin-actions"}, h("button", {className:"btn btn-ghost", title:typeof SCN.coursN === "function" && SCN.coursN() > 1 ? "Ferme l'appel sans rien lancer : la séance rouverte redevient terminée, telle qu'elle était ; rien de ce qui a été fait ne se perd." : "Ferme l'appel sans rien lancer : la séance qui venait de s'ouvrir s'efface."}, "Annuler"),
         h("button", Object.assign({className:"btn btn-primary"}, marqueH("APPEL:fini", function(){ var r = ACT.appelFini((typeof APPEL !== "undefined" && APPEL.absents) || SCN.absents(), null); if(r && r.then) r.then(function(){ if(typeof navRemettre === "function") navRemettre(); }); })), "🚀 Lancer la séance"))));
 }
 // la séance de la classe finie à une autre heure : « ▶️ Reprendre la séance du … » (la même carte que la maquette)
@@ -12589,35 +12674,74 @@ function libEleve(c){ var x = v3Competences()[c]; return (x && x.libelleEleve) |
 function competenceValide(c){ var t = v3Competences(); if(!Object.keys(t).length) return typeof LIB_OFF !== "undefined" && !!LIB_OFF[c]; return !!(t[c] && t[c].actif); }
 function toutesCompetences(){ var t = v3Competences(), l = Object.keys(t).filter(function(c){ return t[c].actif; }); return l.length ? l : Object.keys(typeof LIB_OFF !== "undefined" ? LIB_OFF : {}); }
 
-/* ── Les chapitres : <niveau>-ch<n> ; ceux qui ont une fiche au hub (site/<niveau>/chapitres) proposent leurs compétences ;
-      un chapitre sans fiche est valide, et l'éditeur prend alors les 28 compétences (COMMUN §3.1) ── */
-function niveauDuChapitre(id){ var m = /^(\d)e-ch(\d+)$/.exec(id || ""); return m ? m[1] + "e" : null; }
-function numeroDuChapitre(id){ var m = /^(\d)e-ch(\d+)$/.exec(id || ""); return m ? +m[2] : null; }
-function ficheChapitre(id){
-  var niv = niveauDuChapitre(id), n = numeroDuChapitre(id); if(!niv) return null;
-  var l = v3Liste(v3("site/" + niv + "/chapitres")), f = l[n - 1];
-  if(f && (f.competencesMajeures || f.competencesMineures)) return {titre:f.title || f.titre || "", majeures:v3Liste(f.competencesMajeures), mineures:v3Liste(f.competencesMineures)};
-  if(id === "3e-ch1" && typeof CHAPITRE_3E !== "undefined") return {titre:CHAPITRE_3E.titre, majeures:CHAPITRE_3E.majeures, mineures:CHAPITRE_3E.mineures};
-  return null;
+/* ── Les chapitres (8.0.6) : ceux de MJPC, et eux seuls. Paul, 08/11 17:53 : « les chapitres qui apparaissent dans QCM sont ceux de mjpc.
+      C'est mjpc qui déclare, jamais l'inverse. » MJPC les range sous site/<niveau>/chapitres/<clé> (objet, ou liste à trous) : title, ordre
+      (le numéro qu'il affiche), uid (son identité ; le rang n'est qu'un repli), competencesMajeures / Mineures, seances. Le QCM n'y écrit jamais rien.
+      Le QCM retient le chapitre lui-même : « <niveau>/<uid> », ou « <niveau>/cle-<clé> » tant que MJPC ne lui a pas donné d'uid (le niveau devant :
+      il se lit sans attendre MJPC). Les anciennes valeurs « <niveau>-ch<n> » (8.0.5 : le n-ième chapitre du niveau, rangé par clé) se lisent
+      toujours ; l'éditeur écrit la forme nouvelle à la prochaine écriture de l'évaluation. Un chapitre dont la fiche n'a pas de compétences
+      prend les 28. Un chapitre enregistré que MJPC n'a pas (ou plus) n'est jamais remplacé par un autre (pas de repli sur le rang, comme MJPC,
+      [C5-UID]) : l'évaluation le garde, se lance avec les 28 compétences, et sa carte le dit. ── */
+var NIVEAUX_CHAP = ["6e", "5e", "4e", "3e"];
+function chapitresBrutsV(niv){ return v3("site/" + niv + "/chapitres"); }
+function ordreChapV(o){ var v = o && o.ordre !== undefined && o.ordre !== null && o.ordre !== "" ? parseInt(o.ordre, 10) : NaN; return isNaN(v) ? null : v; }
+// les chapitres d'un niveau, rangés comme MJPC les range (ordPaires : par ordre, la clé départage) ; le numéro : l'ordre, sinon le rang (dr_ouvNumChapitre)
+function chapitresDuNiveau(niv){
+  var c = chapitresBrutsV(niv); if(!c || typeof c !== "object") return [];
+  var cle = function(a, b){ return (+a.k) - (+b.k) || (a.k < b.k ? -1 : a.k > b.k ? 1 : 0); };
+  return Object.keys(c).filter(function(k){ return c[k] && typeof c[k] === "object"; }).map(function(k){ return {k:k, o:c[k]}; })
+    .sort(function(a, b){ var x = ordreChapV(a.o), y = ordreChapV(b.o); return (x == null ? 999999 : x) - (y == null ? 999999 : y) || cle(a, b); })
+    .map(function(p, i){ var o = ordreChapV(p.o); return {k:p.k, o:p.o, numero:o > 0 ? o : i + 1, id:niv + "/" + (p.o.uid ? p.o.uid : "cle-" + p.k)}; });
 }
-// un chapitre sans fiche au hub prend son titre de ses évaluations (« 4e- Chapitre 1 - Paris à la barre et analyse logique · » : MANDATS/EVAL-4E-PARIS)
-function titreDesEvals(id){ var E = v3Evals(), t = "";
-  Object.keys(E).some(function(k){ var e = E[k]; if(!e || e.chapitre !== id) return false; var m = /Chapitre\s*\d+\s*[-–—:]\s*(.+?)[\s·.]*$/i.exec(e.titre || ""); if(m){ t = m[1].split(" · ")[0].trim(); return true; } return false; });
-  return t; }
+function niveauDuChapitre(id){ var m = /^(\d)e(?:-ch\d+$|\/.)/.exec(id || ""); return m ? m[1] + "e" : null; }
+// le chapitre de MJPC que désigne une valeur enregistrée : {niv, p} (p : null s'il n'y est pas) ; null si la valeur n'est pas un chapitre
+function trouverChapitreV(id){
+  var niv = niveauDuChapitre(id); if(!niv) return null;
+  var l = chapitresDuNiveau(niv), m = /^\de-ch(\d+)$/.exec(id), r = id.slice(niv.length + 1), k = null;
+  if(m){ var c = chapitresBrutsV(niv) || {}; k = Object.keys(c).filter(function(x){ return c[x] != null; }).sort(function(a, b){ return +a - +b; })[+m[1] - 1]; }
+  return {niv:niv, p:l.filter(function(x){ return m ? x.k === k : r.indexOf("cle-") === 0 ? x.k === r.slice(4) : x.o.uid === r; })[0] || null};
+}
 function chapitreVue(id){
-  if(!niveauDuChapitre(id)) return null;
-  var f = ficheChapitre(id), niv = niveauDuChapitre(id), n = numeroDuChapitre(id), titre = f ? f.titre : titreDesEvals(id);
-  return {id:id, niveau:niv, numero:n, titre:titre, fiche:!!f, majeures:f ? f.majeures : [], mineures:f ? f.mineures : [],
-    comps:f ? f.majeures.concat(f.mineures) : toutesCompetences(),
-    libelle:niv + " · Chapitre " + n + (titre ? " — " + titre : ""), court:niv + " · Ch. " + n + (titre ? " — " + titre : "")};
+  var t = trouverChapitreV(id); if(!t) return null;
+  var niv = t.niv, p = t.p;
+  if(!p){ var attente = !v3Pret("site/" + niv + "/chapitres"), lib = niv + (attente ? " · …" : " · chapitre absent de MJPC");
+    return {id:id, niveau:niv, numero:null, titre:"", fiche:false, absent:!attente, attente:attente, majeures:[], mineures:[], comps:toutesCompetences(), libelle:lib, court:lib}; }
+  var o = p.o, titre = String(o.title || o.titre || ""), maj = v3Liste(o.competencesMajeures), min = v3Liste(o.competencesMineures), fiche = maj.length + min.length > 0;
+  return {id:p.id, cle:p.k, uid:o.uid || null, niveau:niv, numero:p.numero, titre:titre, fiche:fiche, majeures:maj, mineures:min,
+    comps:fiche ? maj.concat(min) : toutesCompetences(),
+    libelle:niv + " · Chapitre " + p.numero + (titre ? " — " + titre : ""), court:niv + " · Ch. " + p.numero + (titre ? " — " + titre : "")};
 }
+function numeroDuChapitre(id){ var c = chapitreVue(id); return c ? c.numero : null; }
+// la liste du QCM : tous les chapitres de MJPC, par niveau puis dans l'ordre de MJPC ; plus, s'il n'y est pas, le chapitre enregistré (absent : il se montre, sans se choisir)
 function chapitresConnus(plus){
-  var ids = ["3e-ch1"];
-  ["6e", "5e", "4e", "3e"].forEach(function(niv){ v3Liste(v3("site/" + niv + "/chapitres")).forEach(function(f, i){ if(f && (f.competencesMajeures || f.competencesMineures)) ids.push(niv + "-ch" + (i + 1)); }); });
-  var E = v3Evals(); Object.keys(E).forEach(function(k){ if(E[k] && niveauDuChapitre(E[k].chapitre)) ids.push(E[k].chapitre); });
-  [].concat(plus || []).forEach(function(c){ if(niveauDuChapitre(c)) ids.push(c); });
-  var vus = {}; return ids.filter(function(c){ if(vus[c]) return false; vus[c] = 1; return true; })
-    .sort(function(a, b){ return niveauDuChapitre(b).localeCompare(niveauDuChapitre(a)) || numeroDuChapitre(a) - numeroDuChapitre(b); }).map(chapitreVue);
+  var l = []; NIVEAUX_CHAP.forEach(function(niv){ chapitresDuNiveau(niv).forEach(function(p){ l.push(chapitreVue(p.id)); }); });
+  [].concat(plus || []).forEach(function(c){ var v = c && chapitreVue(c); if(v && !l.some(function(x){ return x.id === v.id; })) l.push(v); });
+  return l;
+}
+// (règle permanente) la liste d'un <select> ne bouge pas sous la main de Paul : tant qu'il a le focus, elle attend qu'on l'ait quitté
+function useListeGelee(liste){
+  var ref = React.useRef(null), gel = React.useRef(null), s = useState(0), set = s[1];
+  var vue = ref.current && document.activeElement === ref.current && gel.current ? gel.current : liste; gel.current = vue;
+  return {liste:vue, ref:ref, quitter:function(){ set(function(x){ return x + 1; }); }};
+}
+// le lien de séance reste l'affaire de MJPC : les chapitres dont une séance porte l'évaluation (élément kind:'qcm', source:'firebase_app', ref:<id>)
+function chapitresLiesV(evalId){
+  var vals = function(x){ return x && typeof x === "object" ? Object.keys(x).map(function(k){ return x[k]; }).filter(function(y){ return y && typeof y === "object"; }) : []; };
+  var l = []; if(!evalId) return l;
+  NIVEAUX_CHAP.forEach(function(niv){ chapitresDuNiveau(niv).forEach(function(p){
+    if(vals(p.o.seances).some(function(s){ return vals(s.items).some(function(it){ return it.kind === "qcm" && it.source === "firebase_app" && it.ref === evalId; }); })) l.push(chapitreVue(p.id)); }); });
+  return l;
+}
+// la ligne pour Paul quand MJPC lie l'évaluation à une séance d'un autre chapitre que celui choisi ici (« Sans chapitre » compris) ; null si tout s'accorde
+var TITRE_LIEN_MJPC = "Le lien d'une séance vers cette évaluation se fait dans MJPC (« Lier » sur l'élément de la séance) ; son chapitre, ici, se choisit dans l'éditeur. Le QCM ne change ni l'un ni l'autre de lui-même : à toi de les accorder, si tu le veux.";
+function texteLienMjpc(evalId, ch, sans){
+  if(ch && ch.attente) return null;
+  var l = chapitresLiesV(evalId); if(!l.length) return null;
+  var bon = ch && ch.numero; if(bon && l.every(function(c){ return c.id === ch.id; })) return null;
+  var noms = l.map(function(c){ return "« " + c.libelle + " »"; });
+  var ou = noms.length > 1 ? "à des séances de " + noms.slice(0, -1).join(", de ") + " et de " + noms[noms.length - 1] : "à une séance de " + noms[0];
+  var ici = bon ? "elle est rattachée à « " + ch.libelle + " »" : ch && ch.absent ? "son chapitre n'est pas dans MJPC" : sans ? "elle est sans chapitre pour l'instant" : "aucun chapitre n'est encore choisi";
+  return "Dans MJPC, cette évaluation est liée " + ou + " ; ici, " + ici + ". Rien n'est changé.";
 }
 
 /* ── Une évaluation de la base, telle que les écrans la lisent (la forme de la maquette) ── */
@@ -13002,7 +13126,7 @@ function CarteEvaluationsV(){
   useEffect(function(){ remettreDemo(); });
   var s1 = useState("date"), tri = s1[0], setTri = s1[1], s2 = useState({}), replies = s2[0], setReplies = s2[1];
   var liste = evalsV();
-  function cleTri(e){ return tri === "titre" ? e.titre : tri === "chapitre" ? (e.chapitre ? niveauDuChapitre(e.chapitre) + ("0" + numeroDuChapitre(e.chapitre)).slice(-2) : "~") : ("000000000000000" + (e.createdAt || 0)).slice(-15); }
+  function cleTri(e){ return tri === "titre" ? e.titre : tri === "chapitre" ? (e.chapitre ? niveauDuChapitre(e.chapitre) + ("0" + (numeroDuChapitre(e.chapitre) || 99)).slice(-2) : "~") : ("000000000000000" + (e.createdAt || 0)).slice(-15); }
   function trie(l){ return l.slice().sort(function(a, b){ var x = cleTri(a), y = cleTri(b); return tri === "date" ? y.localeCompare(x) : x.localeCompare(y); }); }
   function ligne(e, cl){
     var manques = manquesV(e), pret = !manques.length, passees = passeesV(e.id), comps = competencesDe(e), obj = "&eval=" + encodeURIComponent(e.id);
@@ -13018,6 +13142,8 @@ function CarteEvaluationsV(){
         pret ? h("div", {className:"eval-etat ok"}, "✅ Prête à lancer")
              : h("div", {className:"eval-etat manque"}, "⚠️ À compléter avant de la lancer : " + listeFr(manques)),
         sansChapV(e) && h("div", {className:"eval-etat manque", "data-sans-chapitre":"1", title:"Elle se lance sans chapitre ; ouvre l'éditeur pour la rattacher à son chapitre."}, "⚠️ Sans chapitre pour l'instant : pense à la rattacher plus tard."),
+        chapEv(e) && chapEv(e).absent && h("div", {className:"eval-etat manque", "data-chapitre-absent":"1", title:"Le chapitre enregistré avec cette évaluation n'est pas (ou plus) dans MJPC. Elle se lance quand même, avec les 28 compétences ; rien n'est changé tant que tu ne choisis pas son chapitre dans l'éditeur."}, "⚠️ Son chapitre n'est pas dans MJPC : elle se lance avec les 28 compétences ; ouvre l'éditeur pour la rattacher."),
+        (function(){ var t = texteLienMjpc(e.id, chapEv(e), sansChapV(e)); return t && h("div", {className:"eval-etat manque", "data-lien-mjpc":"1", title:TITRE_LIEN_MJPC}, "🔗 " + t); })(),
         h("div", {className:"eval-passee"}, passees.length ? passees.map(function(x){ return "passée par " + nomClasseV(x.classe) + " le " + x.date; }).join(" · ") : "pas encore passée")),
       h("div", {className:"eval-actions"},
         h("button", {className:"btn btn-sm " + (pret ? "btn-ghost" : "btn-primary"), "data-va":"x627-3-editeur" + obj, title:pret ? "Ouvre l'éditeur sur « " + e.titre + " » : énoncés, choix, temps, compétences, ce que chaque question vérifie. Une évaluation déjà passée garde ses notes." : "Ouvre l'éditeur sur « " + e.titre + " », pour compléter ce qui manque avant de pouvoir la lancer : " + listeFr(manques) + "."}, pret ? "✏️ Modifier" : "✏️ Compléter"),
@@ -13094,7 +13220,7 @@ function verifierEval(raw){
   if(!qs.length) err.push("Il manque les questions (une liste non vide).");
   var ch = chapitreVue(raw.chapitre);
   if(!raw.chapitre) err.push("Il manque le chapitre (« chapitre »), l'identifiant donné dans le prompt.");
-  else if(!ch) err.push("Le chapitre « " + raw.chapitre + " » n'est pas un identifiant de chapitre : il s'écrit comme dans le prompt (« 4e-ch1 », par exemple).");
+  else if(!ch || ch.absent) err.push("Le chapitre « " + raw.chapitre + " » n'est pas un chapitre de MJPC : recopie l'identifiant que donne le prompt, entre parenthèses après le chapitre.");
   var permises = ch ? ch.comps : toutesCompetences(), parComp = {}, assumees = [];
   qs.forEach(function(q, i){
     var ref = "Question " + (i + 1) + " : ";
@@ -13235,7 +13361,7 @@ function EditeurVC(p){
   function changer(f){ var e = copieEval(ev); f(e); setEv(e); setModifs(modifs + 1); setJson(null); }
   function maj(i, f){ changer(function(e){ f(e.questions[i]); }); }
   var ch = chapEv(ev) || (sansChapV(ev) ? chapSansV() : null), manques = manquesV(ev), bonus = ev.questions.filter(function(q){ return q.bonus; }).length, total = ev.questions.length - bonus;
-  var comps = competencesDe(ev), chapitres = chapitresConnus(ev.chapitre);
+  var comps = competencesDe(ev), gel = useListeGelee(chapitresConnus(ev.chapitre)), lienMjpc = texteLienMjpc(ev.id, chapEv(ev), sansChapV(ev));
   useEffect(function(){
     function echap(e){ if(e.key === "Escape" && !window.SOMMAIRE_OUVERT){ e.stopImmediatePropagation(); if(modifs > 0) setGarde(true); else fermer3("c-evals"); } }
     document.addEventListener("keydown", echap, true); return function(){ document.removeEventListener("keydown", echap, true); };
@@ -13260,9 +13386,11 @@ function EditeurVC(p){
         h("textarea", {className:"preview-titre-input", rows:2, value:ev.titre, placeholder:"Titre de l'évaluation", title:"Le titre de l'évaluation.", onChange:function(e){ var v = e.target.value; changer(function(x){ x.titre = v; }); }}),
         h("span", {className:"preview-titre-meta"}, ev.questions.length + " question" + (ev.questions.length > 1 ? "s" : "") + " · " + total + " point" + (total > 1 ? "s" : "") + (bonus ? " + " + bonus + " bonus" : ""))),
       h("div", {className:"ed-chap"}, h("span", {className:"ed-lbl"}, "📚 Chapitre", InfoI("Le chapitre donne le niveau et les compétences permises : une compétence hors du chapitre est refusée.")),
-        h("select", {value:ch ? (ch.id || SANS_CHAP) : "", title:"Le chapitre de l'évaluation : il donne son niveau et les compétences permises. « Sans chapitre pour l'instant » la laisse lancer, avec les 28 compétences ; un message te rappelle de la rattacher plus tard.", onChange:function(e){ var v = e.target.value, c = chapitreVue(v);
+        h("select", {ref:gel.ref, onBlur:gel.quitter, value:ch ? (ch.id || SANS_CHAP) : "", title:"Le chapitre de l'évaluation : il donne son niveau et les compétences permises. « Sans chapitre pour l'instant » la laisse lancer, avec les 28 compétences ; un message te rappelle de la rattacher plus tard.", onChange:function(e){ var v = e.target.value, c = chapitreVue(v);
           changer(function(x){ x.chapitre = c ? c.id : null; x.chap = c ? c.court : null; x.niveau = c ? c.niveau : null; x.sansChapitre = v === SANS_CHAP; if(c) x.questions.forEach(function(q){ q.competences = (q.competences || []).filter(function(cc){ return c.comps.indexOf(cc) >= 0; }); }); }); }},
-          h("option", {value:""}, "— à choisir —"), h("option", {value:SANS_CHAP}, "Sans chapitre pour l'instant"), chapitres.map(function(c){ return h("option", {key:c.id, value:c.id}, c.libelle); }))),
+          h("option", {value:""}, "— à choisir —"), h("option", {value:SANS_CHAP}, "Sans chapitre pour l'instant"), gel.liste.map(function(c){ return h("option", {key:c.id, value:c.id, disabled:!c.numero}, c.libelle); }))),
+      ch && ch.numero && !ch.fiche && h("div", {className:"fen-note", "data-sans-competences":"1", title:"Les compétences d'un chapitre viennent de sa fiche dans MJPC (majeures et mineures). Tant qu'elle n'en a pas, l'éditeur permet les 28 ; quand tu les auras posées dans MJPC, il ne proposera plus qu'elles."}, "La fiche de ce chapitre, dans MJPC, n'a pas encore de compétences : l'éditeur propose les 28."),
+      lienMjpc && h("div", {className:"fen-note", "data-lien-mjpc":"1", title:TITRE_LIEN_MJPC}, "🔗 " + lienMjpc),
       h("div", {className:"preview-mode-row", style:{marginBottom:".8rem", padding:".7rem .9rem", background:"#FFF9E6", border:"2px solid #FFD23F", borderRadius:"10px"}},
         h("div", {style:{fontWeight:900, fontSize:".9rem", color:"#8B6914", marginBottom:".4rem"}}, "📊 Mode de scoring", InfoI("Tout ou rien : 1 point si la réponse est exacte. Partiel : une part du point par bonne case, autant de retiré par mauvaise, plancher 0.")),
         h("div", {style:{display:"flex", gap:".5rem", flexWrap:"wrap"}},
@@ -13272,7 +13400,7 @@ function EditeurVC(p){
       h("div", {className:"ed-comp-box"},
         h("div", {className:"tt"}, "🧩 Les compétences de cette évaluation — chacune porte sur au moins 3 questions", InfoI("Chaque compétence doit porter sur au moins 3 questions, pour que les quatre niveaux de maîtrise soient possibles.")),
         comps.length ? comps.map(function(c){ var qs = ev.questions.map(function(q, i){ return (q.competences || []).indexOf(c) >= 0 ? "Q" + (i + 1) : null; }).filter(Boolean);
-          return h("div", {key:c, className:"ed-comp-l"}, h("span", {className:"c"}, c), h("span", {className:"t"}, ch && ch.majeures.indexOf(c) >= 0 ? "majeure" : "mineure"), h("span", null, libOff(c)), h("span", {className:"q"}, qs.join(", ")), h("span", {className:qs.length >= 3 ? "ok" : "manque"}, (qs.length >= 3 ? "✅ " : "⚠️ ") + qs.length + " question" + (qs.length > 1 ? "s" : ""))); })
+          return h("div", {key:c, className:"ed-comp-l"}, h("span", {className:"c"}, c), h("span", {className:"t"}, !ch || !ch.fiche ? "" : ch.majeures.indexOf(c) >= 0 ? "majeure" : "mineure"), h("span", null, libOff(c)), h("span", {className:"q"}, qs.join(", ")), h("span", {className:qs.length >= 3 ? "ok" : "manque"}, (qs.length >= 3 ? "✅ " : "⚠️ ") + qs.length + " question" + (qs.length > 1 ? "s" : ""))); })
           : h("div", {className:"ed-comp-autres"}, ch ? "Aucune compétence encore : « + ajouter ▾ » sur chaque question." : "Choisis d'abord le chapitre : il donne les compétences permises."),
         ch && h("div", {className:"ed-comp-autres"}, "Les autres compétences du chapitre, pas évaluées ici : " + ch.comps.filter(function(c){ return comps.indexOf(c) < 0; }).join(" · "))),
       modifs > 0 && h("div", {className:"ed-modif", "data-compteur-modifs":"1"}, "⚠ Modifications non enregistrées (" + modifs + ")"),
@@ -13384,12 +13512,14 @@ var PROMPT3 = {chapitre:null};
 function gabaritPrompt(){ var g = v3Reglages().promptCreation; return typeof g === "string" && g.length ? g : PROMPT_TEXTE; }
 function jetonDureesV(){ var D = dureesV();
   return "Pour chaque question : la réflexion, puis deux tours, chacun fait de " + D.decompte + " secondes de décompte, du temps de réponse et de " + D.b + " secondes où l'élève dit si sa feuille dit la même chose que son clic ; puis " + D.entre + " secondes avant la question suivante.\nPour la séance : " + D.installation / 60 + " minutes d'installation et de consignes, " + D.estimAttest / 60 + " minutes pour l'estimation et la seconde attestation, " + D.correctionParQ / 60 + " minute de correction par question, " + D.coevalBilan / 60 + " minutes pour la co-évaluation et le bilan."; }
-function chapitrePrompt(){ var l = chapitresConnus(); var c = PROMPT3.chapitre && chapitreVue(PROMPT3.chapitre); return c || l[0] || chapitreVue("3e-ch1"); }
+function chapitrePrompt(){ var l = chapitresConnus(); var c = PROMPT3.chapitre && chapitreVue(PROMPT3.chapitre); return c && c.numero ? c : l[0] || chapPromptVide(); }
+// MJPC n'a encore aucun chapitre : le prompt donne les 28 compétences, sans chapitre
+function chapPromptVide(){ return {id:"", niveau:null, numero:null, titre:"", fiche:false, majeures:[], mineures:[], comps:toutesCompetences(), libelle:"aucun chapitre dans MJPC pour l'instant", court:"aucun chapitre dans MJPC pour l'instant"}; }
 function promptRempliV(ch){
   ch = ch || chapitrePrompt();
   var comps = ch.fiche ? ch.majeures.map(function(c){ return [c, "majeure"]; }).concat(ch.mineures.map(function(c){ return [c, "mineure"]; })) : ch.comps.map(function(c){ return [c, null]; });
   var jetons = {
-    CHAPITRE:ch.libelle + " (identifiant : " + ch.id + ")",
+    CHAPITRE:ch.libelle + (ch.id ? " (identifiant : " + ch.id + ")" : ""),
     COMPETENCES_CHAPITRE:comps.map(function(x){ return "- " + x[0] + (x[1] ? " (" + x[1] + ")" : "") + " : " + libOff(x[0]) + " — pour l'élève : " + libEleve(x[0]); }).join("\n"),
     NIVEAUX:["facile", "standard", "approfondi", "expert"].map(function(k){ return "- \"" + k + "\" (" + NIV[k].label + ")"; }).join("\n"),
     DUREES:jetonDureesV(), LIMITES:LIMITES_TEXTE};
@@ -13407,11 +13537,11 @@ function PromptFenetreV(enfants){
 function ReglagesPromptV(){ return h(ReglagesPromptVC); }
 function ReglagesPromptVC(){
   useV3();
-  var s = useState(""), msg = s[0], setMsg = s[1], s2 = useState(0), set = s2[1], ch = chapitrePrompt(), texte = promptRempliV(ch);
+  var s = useState(""), msg = s[0], setMsg = s[1], s2 = useState(0), set = s2[1], ch = chapitrePrompt(), texte = promptRempliV(ch), gel = useListeGelee(chapitresConnus().length ? chapitresConnus() : [ch]);
   return PromptFenetreV(h(F, null,
     h("p", {style:{fontSize:".85rem", color:"#475569", margin:"0 0 .7rem"}}, "Chapitre choisi : ",
-      h("select", {value:ch.id, title:"Le chapitre dont le prompt donne les compétences : celles de sa fiche au hub, sinon les 28 compétences.", onChange:function(e){ PROMPT3.chapitre = e.target.value; setMsg(""); set(function(x){ return x + 1; }); }},
-        chapitresConnus(PROMPT3.chapitre).map(function(c){ return h("option", {key:c.id, value:c.id}, c.libelle); })), "."),
+      h("select", {ref:gel.ref, onBlur:gel.quitter, value:ch.id, title:"Le chapitre dont le prompt donne les compétences : celles de sa fiche dans MJPC, sinon les 28 compétences.", onChange:function(e){ PROMPT3.chapitre = e.target.value; setMsg(""); set(function(x){ return x + 1; }); }},
+        gel.liste.map(function(c){ return h("option", {key:c.id || "vide", value:c.id}, c.libelle); })), "."),
     h("div", {className:"row", style:{gap:".5rem", flexWrap:"wrap"}},
       h("button", {className:"btn btn-primary", "data-local":"1", onClick:function(){ try { navigator.clipboard.writeText(texte); } catch(e){} setMsg("✅ Prompt copié dans le presse-papiers"); }}, "📋 Copier le prompt"),
       h("button", {className:"btn btn-ghost", "data-va":"c-reglages-prompt-modifier"}, "✏️ Modifier le prompt")),
@@ -13548,7 +13678,7 @@ function ScRouvrirSeance(){
   var k = MO(), se = paramHash("seance") ? SCN.seance(paramHash("seance")) : SCN.qcmPrecedent(k), ev = evalDeSeance(se), rendue = SCN.rendueAu(se.id, k);
   return Fenetre(Lancement(false), "🔓 Rouvrir la séance du " + jjmm(se.date) + " ?", ev.titre + " · " + presentsTexte(se),
     rendue ? h("p", null, "Ses copies, rendues le " + jjmm(se.rendues) + ", seront masquées aux élèves jusqu'au prochain « Rendre les copies ».") : null,
-    [h("button", {key:1, className:"btn btn-ghost", "data-va":"c-lancer", title:"Ne rouvre rien."}, "Annuler"), h("button", {key:2, className:"btn btn-primary", "data-va":"c-appel&seance=" + se.id, title:"Rouvre la séance : l'appel, les mêmes binômes, puis elle reprend là où elle s'était terminée."}, "🔓 Rouvrir la séance")], "c-lancer");
+    [h("button", {key:1, className:"btn btn-ghost", "data-va":"c-lancer", title:"Ne rouvre rien."}, "Annuler"), h("button", {key:2, className:"btn btn-primary", "data-va":"c-appel&seance=" + se.id, title:"Rouvre la séance comme un nouveau cours : l'appel, des binômes refaits comme au lancement (les exclusions, puis le QCM précédent), puis elle reprend là où elle s'était terminée. Ce qui a été fait reste."}, "🔓 Rouvrir la séance")], "c-lancer");
 }
 function Interrompue(){
   // (QCM-1) la séance réelle : sa date, sa dernière déconnexion (lastDisconnect, la 7.7.1), la question et le tour où elle en était, ses réponses
@@ -14409,6 +14539,8 @@ function MoitieH(p, cote, autreP){
   }
   // sur papier (t-papier-correction) : pas de lecture du voisin ; la réponse quand Paul révèle
   if(papierH() && (ph === "lecture" || ph === "revele")) return ph === "revele" ? EcrRevele(e, qi, {papier:true}) : EcrAttente(e);
+  // (8.0.6, 177) une question posée quand l'élève n'était pas là n'est pas sur sa feuille : rien à lire sur sa moitié, il attend (le texte d'attente existant)
+  if(ph === "lecture" && absentQH(p, qi)) return EcrAttente(e);
   if(ph === "lecture"){ var rl = m.reste == null ? null : reste; if(luParPaulH(p, qi)) return EcrLuParPaulH(e, qi, !(v && !seul)); return v && !seul ? EcrLecture(e, qi, !!SCN.lecture(p, qi), rl) : EcrLectureSeulH(e, qi, rl); }
   if(ph === "revele") return EcrRevele(e, qi, {voisin:v && !seul ? v : null});   /* (16/10, Paul) la moitié parle au voisin, qui a la feuille */
   if(ph === "coeval") return v && !seul ? CoevalH(e) : Page(badgeDe(e), "📝 Correction", h("div", {className:"co-attente"}, "⏳ Attends ton bilan…"));
@@ -14462,6 +14594,7 @@ function ChoixLuH(p){   // p : eleve (le propriétaire de la feuille), qi, ordre
    dans la séance rouverte : la question est grisée, avec les coches de Paul, sans clic possible (ELV.lire ne la réécrit pas non plus), et un court
    message, les mots de Paul : « On s'est arrêtés ici le <jour> <date> à <heure>, on reprend aujourd'hui. » (l'heure où la séance s'était arrêtée,
    finLe, écrite par « 🛑 Terminer »), avec « OK », qui le fait passer ; « OK » est gardé sur la tablette (la même feuille ne le redemande pas). */
+function absentQH(p, qi){ if(!enDirect() || typeof absentAuCoursQCM !== "function" || typeof SCN.sess !== "function") return false; var s = SCN.sess(); return !!(s && s.coursN && !SCN.reponse(p, qi) && absentAuCoursQCM(s, p, qi)); }
 function luParPaulH(p, qi){ if(!enDirect() || typeof SCN.lecture !== "function") return false; var l = SCN.lecture(p, qi); return !!(l && l.par === "prof"); }
 var REPRISE_OK = {};
 function repriseCleH(p, qi){ return (SCN.sid() || "") + "|" + qi + "|" + p; }
@@ -15594,6 +15727,9 @@ function seanceV(sid){
   var cl = v3Eleves(S.classe, S.classeSlug), ev = evalDeSeanceV(S);
   if(!ev || !ev.questions) return null;   // son évaluation n'est pas (encore) lue
   var absents = listeSlugs(S.absents, cl.eleves), nouv = seanceNouvelle(S);
+  // (8.0.6, Paul 177) une séance rouverte, terminée : ses absents sont ceux qui n'ont été là à aucun cours (src/live/base.js, absentPartoutQCM) ;
+  // pendant un cours, ceux de son appel
+  if(S.coursN && seanceTerminee(S) && typeof absentPartoutQCM === "function") absents = absents.filter(function(x){ return absentPartoutQCM(S, x); });
   var dans = {}, propresL = S.lancee && S.lancee.eleves ? v3Liste(S.lancee.eleves) : null;
   cl.eleves.forEach(function(e){ if(!propresL || propresL.indexOf(e.slug) >= 0) dans[e.slug] = e.nom; });
   // ceux qui ont une place, une réponse ou une lecture, même hors de la liste de la classe (le rattrapage)
@@ -15644,9 +15780,10 @@ function aLireV(se){
     if(Array.isArray(L) && (L.length || se.nouvelle)) return L.map(function(x){ return {id:x.id, p:x.p || x.eleveSlug, q:+(x.q != null ? x.q : x.qi), sorte:x.sorte, txt:x.txt || "", lignes:v3Liste(x.lignes).map(String), lue:!!x.lue, corrigee:!!(x.corrigee || x.corrige), nom:x.nom || nomEleveV(se, x.p || x.eleveSlug), brut:x}; }); } catch(e){} }
   var A = se.S.aLire || {}; return Object.keys(A).map(function(id){ var x = A[id] || {}; return {id:id, p:x.eleveSlug, q:+x.qi, sorte:x.sorte || "b", txt:x.txt || "", lignes:v3Liste(x.lignes).map(String), lue:!!x.lue, corrigee:!!x.corrige, nom:nomEleveV(se, x.eleveSlug), brut:x}; })
   .filter(function(x){ return x.p != null && !isNaN(x.q); }).sort(function(a, b){ return a.q - b.q || a.nom.localeCompare(b.nom, "fr"); }); }
+function absentQV(se, qi, slug){ return !!(se.nouvelle && se.S && se.S.coursN && typeof absentAuCoursQCM === "function" && !tabletteV(se, qi, slug) && absentAuCoursQCM(se.S, slug, qi)); }
 function resultatLocalV(se, slug){
   var ev = se.ev, S = se.S, mode = ev.mode, revelees = v3Liste(S.revelees).map(Number), partiAt = (S.partis || {})[slug];
-  if(se.absents.some(function(e){ return e.slug === slug; })) return null;
+  if(S.coursN && typeof absentPartoutQCM === "function" ? absentPartoutQCM(S, slug) : se.absents.some(function(e){ return e.slug === slug; })) return null;
   var trouvee = S.trouvee && S.trouvee[slug] != null ? +S.trouvee[slug] : null, st = [], pts = [], nonPosees = nonPoseesV(se);
   // « Trouvée au dernier moment », une fois : la première question, dans l'ordre de la correction, dont la feuille est fausse et la tablette juste
   if(trouvee == null && se.nouvelle){ var ordre = v3Liste(S.revelees).map(Number); (ordre.length ? ordre : v3Liste(S.ordreCorr).map(Number)).some(function(qi){
@@ -15654,6 +15791,8 @@ function resultatLocalV(se, slug){
     if(l && l.choix !== "aucun" && l.choix.length && ptsQuestionV(l.choix, q, "strict") !== 1 && tb && memesChoixV(tb.choix, q.bonnes)){ trouvee = qi; return true; } return false; }); }
   ev.questions.forEach(function(q, qi){
     if(se.ecartees.indexOf(qi) >= 0){ st.push("x"); pts.push(null); return; }
+    // (8.0.6, 177) une question posée pendant un cours où l'élève n'était pas là ne compte pas pour lui (la règle de S.note)
+    if(absentQV(se, qi, slug)){ st.push("x"); pts.push(null); return; }
     if(se.nouvelle){
       if(se.papier){ var fp = feuillePapierV(se, qi, slug) || lectureV(se, qi, slug) && lectureV(se, qi, slug).choix; if(!fp){ st.push("n"); pts.push(null); return; } var pp = ptsQuestionV(fp, q, mode); st.push(fp === "aucun" ? "a" : pp === 1 ? "j" : "f"); pts.push(pp); return; }
       // (21/10, Paul 09:45, point 12) une feuille lue par Paul (« Lire les copies », par:"prof") compte toujours, aussi pendant une séance rouverte
@@ -15756,7 +15895,7 @@ function aLireCopiesV(se){
   L.forEach(function(x){ deja[x.p + "|" + x.q] = 1; });
   var hors = se.ecartees.concat(se.annulees), Lc = S.lectures || {}, rev = v3Liste(S.revelees).map(Number), posee = function(i){ return (S.questionsLancees || {})[i] != null || (S.reponses || {})[i] != null; };
   var cite = function(q, c){ return v3Liste(c).map(Number).map(function(i){ return "« " + q.choix[i] + " »"; }).join(" et "); };
-  se.presents.forEach(function(e){ se.ev.questions.forEach(function(q, i){ if(hors.indexOf(i) >= 0 || !posee(i) || deja[e.slug + "|" + i]) return;
+  se.presents.forEach(function(e){ se.ev.questions.forEach(function(q, i){ if(hors.indexOf(i) >= 0 || !posee(i) || deja[e.slug + "|" + i] || absentQV(se, i, e.slug)) return;
     var l = (Lc[i] || {})[e.slug], revelee = rev.indexOf(i) >= 0;
     if(revelee && l && (l.par !== "prof" || l.avant)) return;   // révélée et lue en classe par le voisin : la règle de la séance
     var t = tabletteV(se, i, e.slug), pr = prenomEleveV(se, e.slug), tl = t && t.choix.length ? cite(q, t.choix) : null;
@@ -16029,6 +16168,15 @@ function ScQueDitC(){
 }
 
 /* ════════ Le PDF « notes et compétences » d'une séance de la base : la mise en page du PDF figé (gen632.js), construite pour elle ════════ */
+// (8.0.6) les cours où l'élève n'était pas là et les questions posées ce jour-là : [{jour:"jeudi 12/11", qs:[3, 4, 5, 6]}]
+var JOURS_V = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+function absencesV(se, slug){ var S = se.S, l = [], par = {}; if(!S || !S.coursN || typeof coursDeQuestionQCM !== "function") return l;
+  se.ev.questions.forEach(function(q, i){ if(se.ecartees.indexOf(i) >= 0 || !absentQV(se, i, slug)) return; var c = coursDeQuestionQCM(S, i); if(!c) return;
+    if(!par[c.n]){ var d = new Date(c.debut); par[c.n] = {jour:JOURS_V[d.getDay()] + " " + dateFr(c.debut).slice(0, 5), qs:[]}; l.push(par[c.n]); } par[c.n].qs.push(i); });
+  return l; }
+function qListeV(l){ var suite = l.every(function(q, k){ return !k || q === l[k - 1] + 1; });
+  if(l.length === 1) return "Q" + (l[0] + 1); if(suite) return "Q" + (l[0] + 1) + " à Q" + (l[l.length - 1] + 1);
+  var n = l.map(function(q){ return "Q" + (q + 1); }); return n.slice(0, -1).join(", ") + " et " + n[n.length - 1]; }
 function pdfSeanceV(se){
   var ev = se.ev, comps = compsDeV(ev), auto = [["tr-personne-03", libOff("tr-personne-03")], ["tr-methodes-02", libOff("tr-methodes-02")]];
   var eleves = se.eleves.slice(), nc = comps.length + 4, nNotes = 0, nAbs = 0, nCom = 0, asavoir = [];
@@ -16043,8 +16191,10 @@ function pdfSeanceV(se){
       return '<td class="niv ' + v.cls + '">' + v.lib + '<span class="pts">' + fr1(n) + "/" + d + "</span></td>"; });
     var a0 = maitriseV(autonomieV(se, e.slug).retire ? 0 : 20), a = {lib:a0.lib, cls:a0.k};
     auto.forEach(function(){ cells.push('<td class="niv ' + a.cls + '">' + a.lib + "</td>"); });
-    var poses = ev.questions.filter(function(q, i){ return se.ecartees.indexOf(i) < 0; }).length;
-    if(la.length < poses - se.annulees.length) asavoir.push("<b>" + escPdf(nom) + "</b> : parti après la question " + la.length + " ; sa note et ses compétences portent sur les " + la.length + " questions où il était là, et il n'a pas fait son estimation.");
+    // (8.0.6) les questions posées : ni écartées, ni jamais lancées (« pas posées ») ; l'absent d'un cours (177) : le jour, et ses questions
+    var np = nonPoseesV(se), poses = ev.questions.filter(function(q, i){ return se.ecartees.indexOf(i) < 0 && np.indexOf(i) < 0; }).length, ab = absencesV(se, e.slug);
+    if(ab.length) asavoir.push("<b>" + escPdf(nom) + "</b> : absent " + ab.map(function(a){ return "le " + a.jour + " (" + qListeV(a.qs) + ")"; }).join(", ") + " ; sa note et ses compétences portent sur les " + la.length + " questions où il était là.");
+    else if(la.length < poses - se.annulees.length) asavoir.push("<b>" + escPdf(nom) + "</b> : parti après la question " + la.length + " ; sa note et ses compétences portent sur les " + la.length + " questions où il était là, et il n'a pas fait son estimation.");
     var com = texteBilanV(se, e.slug);
     if(com){ nCom++; com = escPdf(com); } else com = "—";
     return '<tr><td class="el">' + escPdf(nom) + '</td><td class="note">' + fr1(r.sur20) + "</td>" + cells.join("") + '</tr><tr class="comrow"><td colspan="' + nc + '"><span class="lab">Commentaire :</span> ' + com + "</td></tr></tbody>";
@@ -16055,7 +16205,7 @@ function pdfSeanceV(se){
     '<div class="haut"><h1>Notes et compétences</h1><div class="classe">Classe : ' + escPdf(se.classe) + "</div></div>\n" +
     '<div class="infos">\n' +
     "<div><b>Évaluation :</b> " + escPdf(ev.titre) + "</div>\n" +
-    "<div><b>Chapitre :</b> " + escPdf(ch ? ch.niveau + ", chapitre " + ch.numero + (ch.titre ? " — " + ch.titre : "") : "—") + "</div>\n" +
+    "<div><b>Chapitre :</b> " + escPdf(ch && ch.numero ? ch.niveau + ", chapitre " + ch.numero + (ch.titre ? " — " + ch.titre : "") : ch && ch.absent ? ch.libelle : "—") + "</div>\n" +
     "<div><b>Séance :</b> " + se.date + " · " + ev.questions.length + " questions · " + (ev.mode === "partiel" ? "partiel" : "tout ou rien") + "</div>\n" +
     "<div><b>Copies :</b> rendues le " + dateFr(se.rendueMs) + " — les notes sont définitives</div>\n" +
     "<div><b>Note :</b> sur 20, arrondie au dixième</div>\n" +
@@ -17223,7 +17373,7 @@ var PAGES = (function(){
     if(app === "tablette"){
       if(NAV.ecran === "e-mes-evals" && fn("EcranMesEvaluations")) return {id:"e-mes-evals", vue:"tablette", render:function(){ return fn("EcranMesEvaluations")(); }, cle:JSON.stringify(NAV.params)};
       // la tablette de QCM-2 dès que la classe est connue et a sa séance (l'entrée, les moitiés) ; avant, TabletteLive (l'entrée, l'attente)
-      if(fn("EcranTablette") && LIVE.pret && classeTablette() && SCN.sid()){ if((ELV.cotes.g || ELV.cotes.d) && SCN.sid() !== ELV.sid){ ELV.oublier(); ELV.sid = SCN.sid(); }
+      if(fn("EcranTablette") && LIVE.pret && classeTablette() && SCN.sid()){ if((ELV.cotes.g || ELV.cotes.d) && (SCN.sid() !== ELV.sid || autreCoursT())){ ELV.oublier(); ELV.sid = SCN.sid(); ELV.cours = SCN.coursN(); }
         return {id:"t-live", vue:"tablette", render:function(){ return fn("EcranTablette")(); }, cle:"tablette-heure"}; }
       return {id:"t-live", vue:"tablette", render:function(){ return h(TabletteLive); }, cle:"tablette"};
     }
@@ -17278,11 +17428,13 @@ function classeTablette(){
   if(cl.length === 1){ LIVE.classeSlug = cl[0]; return cl[0]; }
   return null;
 }
+// (8.0.6, Paul 178) la séance rouverte est un nouveau cours (SCN.coursN) : une tablette entrée à un cours d'avant (même éteinte à « 🛑 Terminer ») oublie ses élèves
+function autreCoursT(){ return !!SCN.sid() && SCN.sid() === ELV.sid && (ELV.cours || 1) !== SCN.coursN(); }
 function TabletteLive(){
   if(!LIVE.pret) return Page(null, "Chargement...", null);
   var classe = classeTablette();
   // la séance de la classe s'est terminée : la tablette oublie ses élèves et revient à l'entrée des élèves
-  if(ELV.tab && ELV.sid && SCN.sid() !== ELV.sid){ ELV.oublier(); ELV.fin = !SCN.sid(); ELV.sid = SCN.sid(); }
+  if(ELV.tab && ELV.sid && (SCN.sid() !== ELV.sid || autreCoursT())){ ELV.oublier(); ELV.fin = !SCN.sid(); ELV.sid = SCN.sid(); ELV.cours = SCN.coursN(); }
   /* (15/10, reprise 7 point 13, complété à 09:25) ni « 🎓 Choisis ta classe », ni « Combien êtes-vous sur cette tablette ? » : l'entrée est
      l'identité. Avec une session MJPC d'élève valide, « Tu es bien … ? » (« Non » : « 👋 Identifie-toi ») ; sinon « 👋 Identifie-toi », l'élève
      cherché dans toutes les classes (ELV.entrer). La tablette prend sa classe, puis la séance de sa classe ; sans séance, « ⏳ En attente du démarrage… » */
@@ -17295,7 +17447,7 @@ function TabletteLive(){
     var e0 = eleveDe(ici);
     return h("div", {className:"tablette seule"}, h("div", {className:"moitie g"}, Page(badgeDe(e0), null, h("div", {className:"etat-attente"}, "⏳ En attente du démarrage…"))));
   }
-  if((ELV.cotes.g || ELV.cotes.d) && ELV.sid !== SCN.sid()){ ELV.oublier(); ELV.sid = SCN.sid(); }
+  if((ELV.cotes.g || ELV.cotes.d) && (ELV.sid !== SCN.sid() || autreCoursT())){ ELV.oublier(); ELV.sid = SCN.sid(); ELV.cours = SCN.coursN(); }
   if(ELV.nombre() === 1){ var x1 = ELV.cotes.g || ELV.cotes.d; if(!x1) return EntreeLive("lg"); return h("div", {className:"tablette seule"}, h("div", {className:"moitie g"}, MOITIES.ecran(eleveDe(x1), "g"))); }
   var g = ELV.cotes.g, d = ELV.cotes.d;
   return Tablette(g ? MOITIES.ecran(eleveDe(g), "g") : h(LoginLive, {cote:"g", key:"lg"}), d ? MOITIES.ecran(eleveDe(d), "d") : h(LoginLive, {cote:"d", key:"ld"}));
@@ -17402,15 +17554,16 @@ LIVE.abonner(function(){
    une seule fois par séance : ceux qui rentrent ensuite leur code (la classe déborde) restent. « Terminer » : la séance n'est plus active, la tablette
    les oublie déjà (TabletteLive, plus haut). */
 var FIN_HEURE = {fait:{}};
-function limiteFinHeure(s){ var f = s && s.lancee && /^(\d{1,2}):(\d{2})$/.exec(String(s.lancee.fin || "")), t0 = s && ((s.lancee && s.lancee.date) || s.date); if(!f || !t0) return null;
+// (8.0.6) une séance rouverte : la fin de l'heure de son cours en cours (lancee.fin, réécrite à « 🔓 Rouvrir »), le jour où ce cours a commencé (coursDebut)
+function limiteFinHeure(s){ var f = s && s.lancee && /^(\d{1,2}):(\d{2})$/.exec(String(s.lancee.fin || "")), t0 = s && (s.coursDebut || (s.lancee && s.lancee.date) || s.date); if(!f || !t0) return null;
   var d = new Date(Number(t0)); d.setHours(Number(f[1]), Number(f[2]), 0, 0); var lim = d.getTime(); if(lim < Number(t0) - 3600000) lim += 86400000; return lim + 10 * 60000; }
 function oubliFinHeure(){
   try {
     if(LIVE.appareil() !== "tablette" || !LIVE.pret || typeof ELV === "undefined" || !(ELV.cotes.g || ELV.cotes.d)) return;
     var id = ELV.sid || SCN.sid(), s = id ? SCN.sess(id) : null, lim = limiteFinHeure(s); if(!lim || LIVE.maintenant() < lim) return;
-    var cle = "qcm_oubli_fin|" + id, deja = !!FIN_HEURE.fait[id]; try { deja = deja || !!localStorage.getItem(cle); } catch(e){}
-    if(deja) return; FIN_HEURE.fait[id] = true; try { localStorage.setItem(cle, String(LIVE.maintenant())); } catch(e){}
-    ELV.oublier(); ELV.sid = id;
+    var cid = id + (s.coursN > 1 ? "#" + s.coursN : ""), cle = "qcm_oubli_fin|" + cid, deja = !!FIN_HEURE.fait[cid]; try { deja = deja || !!localStorage.getItem(cle); } catch(e){}
+    if(deja) return; FIN_HEURE.fait[cid] = true; try { localStorage.setItem(cle, String(LIVE.maintenant())); } catch(e){}
+    ELV.oublier(); ELV.sid = id; ELV.cours = SCN.coursN(id);
   } catch(e){ console.error("QCM : l'oubli de la fin de l'heure", e); }
 }
 setInterval(oubliFinHeure, 15000);
