@@ -1434,3 +1434,8 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   résolution : mandat AK (trois ordres), sas `samedi/integration` `0655995c2`, banc court vert 12:44 → 13:13 ; mandat AL (et sa reprise : la copie rouverte), sas `apps/petits` `63e15351f`, joué sous les règles de la marche 1 (émulateur), 0 refus.
   md5 : index `48ae8db7…` → `71603d630a864edba4090dbbd84116f9` (3 216 541 o), blob `99d27acde120` ; dictée `a9020d67…` → `f0c296e620583984fc7827703f69b363`, blob `49493a624dbb` ; réécriture `1d9ce172…` → `6f7759b9c6eb3dc2ef1eef99c1448c68`, blob `1c2931e74885` ; commit prod `b8f9795`. Retour : `docs/MJPC6-restauration.md`.
   → mots-clés : une session à la fois · réseau lent · n sur N · dictée co-évaluée · comparaison rapide · réécriture · correction rapide · 8.91.2-㉗ · conscience n°16
+- **08/11/2026 15:31 — PROMOTION 8.91.3-㉘ (« Où en est la classe ») — conscience n°16, sur « promeus » de Paul (15:31).**
+  problème : Paul, 06/11 06:36 : « 0 élèves ayant pris la parole? […] aucun moyen de revenir à cet écran là. […] la diapo de réactivation devrait s'afficher […] et que je puisse aussi le modifier » ; mesuré en plus : les diapos montrées comptées sur `vuMax` (7 pour 11).
+  résolution : mandat AM (et son ordre), sas `samedi/integration` `b33a3a4ef` ; banc court vert 14:02 → 14:44 (AM 15/0 et toutes les sondes du morceau).
+  md5 index `71603d63…` → `b990ec612b2dda9499ea415c7d27a417` (3 221 546 o), commit prod `4b9537f`, blob `4494235c4976`. Retour : blob `99d27acde120`. Dimanche, aucun cours.
+  → mots-clés : Où en est la classe · élèves qui ont parlé · diapos montrées · réactivation · Relecture · 8.91.3-㉘ · conscience n°16

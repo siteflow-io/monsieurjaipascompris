@@ -1564,3 +1564,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - `dictee_universelle.html` : blob `ea4f8a36af53` · 1 997 272 o · md5 `a9020d67543394c5780347aedb484980` · v2.6.0
 - `reecriture.html` : blob `e63068398f82` · 275 929 o · md5 `1d9ce172495d8b2a2070c4876866ebd6` · v2.4.1
 - **Restauration en cas de `BUG`** : le blob du fichier en cause → PUT sur `contents/<fichier>`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la vérification sur réseau lent (deux sessions pourraient de nouveau tenir le tableau) ; « Comparaison rapide » qui bloque l'élève ; la marque « raté » qui se perd en correction rapide. Au hub : rien de nouveau.
+
+### POINT DE RETOUR — `index.html` AVANT promotion 8.91.3-㉘ (08/11/2026, conscience n°16)
+- blob `99d27acde120` (commit `b8f9795`) · 3 216 541 o · md5 `71603d630a864edba4090dbbd84116f9` · v8.91.2-㉗
+- **Restauration en cas de `BUG`** : le blob → PUT sur `contents/index.html`, puis bit à bit contre le md5. **Ce que revenir ferait perdre** : sur « Où en est la classe », le vrai nombre d'élèves et de diapos, le retour depuis la Relecture, la réactivation visible. Au hub : rien de nouveau.

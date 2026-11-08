@@ -961,3 +961,12 @@
 | la réécriture, la marque « raté » en correction rapide | `reecriture.html`, `fastMarkOk`, `failedAtRef` ; sas `LIVRAISONS/APPS-PETITS/NOTE-AL.md` |
 | revenir en arrière | `docs/MJPC6-restauration.md` (index `0a7ea605f4f9`, dictée `ea4f8a36af53`, réécriture `e63068398f82`) |
 | ouvrir le site en 8.91.2-㉗ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.2` |
+
+## AJOUTS DU 08/11/2026 — CONSCIENCE n°16 : 8.91.3-㉘ (« Où en est la classe »)
+
+| je cherche… | c'est là |
+| --- | --- |
+| le nombre d'élèves qui ont parlé ; les diapos montrées | `dr_elevesParole` (l. 20394), `dr_diaposJouees` (l. 20393) |
+| le mandat, la sonde | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AM-OU-EN-EST-LA-CLASSE.md` ; `LIVRAISONS/DEROULE-01-11/SAMEDI/AM/sonde-am.mjs` |
+| revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
+| ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
