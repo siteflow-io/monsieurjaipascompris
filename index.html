@@ -3146,7 +3146,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.91.0-㉕";
+var APP_VERSION="8.91.1-㉖";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -20450,7 +20450,7 @@ function dr_heuresDeLaClasse(slug){ try { slug = slug || dr_classeProposee(); co
     const vues = {}; const pousser = (k, clos) => { const m = /^(\d{4}-\d\d-\d\d)_(\d\d)h(\d\d)-(\d\d)h(\d\d)/.exec(k); if (!m) return; const x = vues[m[1] + m[2] + m[3]]; if (x) { x.clos = x.clos || clos; return; } out.push(vues[m[1] + m[2] + m[3]] = { iso: m[1], creneau: m[2] + ':' + m[3] + '-' + m[4] + ':' + m[5], jouee: true, clos }); };
     Object.keys(sce.deroule_joue || {}).forEach(sl => { const b = sce.deroule_joue[sl]; if (!b || !(sl === slug || b.classe === nom)) return; Object.keys(b.heures || {}).forEach(k => pousser(k, !!(b.heures[k] || {}).clos)); });
     try { const pre = dr_cheminB() + '/deroule_joue/' + slug + '/heures/'; Object.keys(DR_CL.joueesIci || {}).forEach(H => { if (H.startsWith(pre)) pousser(H.slice(pre.length), DR_CL.joueesIci[H]); }); } catch (e) {}   /* réveil n°16 (E4 ligne 178) : l'heure lancée ou close dans cette page est jouée tout de suite — la copie de la séance en page ne l'a qu'après un rechargement */
-    out.sort((a, b) => (a.iso + a.creneau).localeCompare(b.iso + b.creneau)); let N = 1; try { N = edtHeuresPour(sce, null) || 1; } catch (e) {}
+    out.sort((a, b) => (a.iso + a.creneau).localeCompare(b.iso + b.creneau)); let N = 1; try { N = edtHeuresPour(sce, null, nom) || 1; } catch (e) {}
     const auj = new Date(); const iso0 = auj.getFullYear() + '-' + String(auj.getMonth() + 1).padStart(2, '0') + '-' + String(auj.getDate()).padStart(2, '0'); const titre = sce.title || sce.titre || '';
     let cs = []; try { cs = Object.values(edtProjeter(iso0, 21) || {}).filter(c => c && c.classeMjpc === nom && c.nature === 'prevu' && (c.snum != null ? dr_estCetteSeance(c.chCle, c.snum) : c.titre === titre)).sort((a, b) => (a.iso + a.creneau).localeCompare(b.iso + b.creneau)); } catch (e) {}   /* les cases de CETTE séance pour cette classe, avec leur heure n/N : la même projection que l'EDT */
     cs.forEach(c => { if (vues[c.iso + String(c.creneau).slice(0, 2) + String(c.creneau).slice(3, 5)]) return;   /* réveil n°16 (B17) : une heure jouée dans cette page que la projection croit encore à venir n'est pas deux fois */ out.push({ iso: c.iso, creneau: c.creneau, l: (typeof edtJourEnClair === 'function' ? edtJourEnClair(c.iso) : c.iso) + ', ' + c.creneau, jouee: false, nEdt: c.heure, surEdt: c.sur }); });
@@ -20833,10 +20833,12 @@ function dr_lancerNeuf(classeSlug, nom, creneau, debut, heure, c, suite){
    plus ancien (sans `eid`, comme celui du 07/09 au faux hub) compte ses lignes : ce sont les premières diapos de la séance. Lu, jamais
    réécrit (contrat §12.13 : l'ancienne clé de la classe est de l'histoire ; l'EDT la compte déjà pour « heure n/N »). Rend le nombre marqué. */
 function dr_marquerJoues(dj, slug, nom, cheminCourant){
-  const E = seance().ecrans; const ix = {}; E.forEach((e, i) => { if (e.eid != null) ix[e.eid] = i; }); const marque = new Set(); let anciens = 0;
+  const E = seance().ecrans; const marque = new Set(); const paquets = [];
   Object.keys(dj || {}).forEach(sl => { const b = dj[sl]; if (!b || typeof b !== 'object' || !(sl === slug || b.classe === nom)) return;
-    Object.keys(b.heures || {}).forEach(k => { if (cheminCourant && String(cheminCourant).endsWith('/deroule_joue/' + sl + '/heures/' + k)) return; const H = b.heures[k] || {}; let acts = H.activites; if (typeof acts === 'string') { try { acts = JSON.parse(acts); } catch (e) { acts = []; } }
-      (Array.isArray(acts) ? acts : Object.values(acts || {})).forEach(a => { if (a && a.eid != null && ix[a.eid] != null) { if (!DR_CL.etatRestaure) marque.add(ix[a.eid]); } else if (a) anciens++; }); }); });   /* réveil n°8 (E4 ligne 138) : l'état de la classe relu (`C/etat`, ses `vuMax`) dit mieux que le paquet ce qui a été dévoilé — une diapo montrée à 0/2 n'est pas « jouée » */
+    Object.keys(b.heures || {}).forEach(k => { if (cheminCourant && String(cheminCourant).endsWith('/deroule_joue/' + sl + '/heures/' + k)) return; paquets.push(b.heures[k] || {}); }); });
+  /* C16 mandat AJ2 (c) : la lecture des lignes partagée avec la case de l'EDT (`edtLignesVues`, index.html) — avant, un `eid` hors de la trame (la réactivation) comptait comme
+     une ligne ancienne : la première diapo pas vue était marquée vue (mesuré : sonde-samedi.mjs HC, « Les hypothèses de la classe », 22 min, pas vue, restait à l’heure 1) */
+  const lv = edtLignesVues(E, paquets); let anciens = lv.anciens; if (!DR_CL.etatRestaure) Object.keys(lv.vu).forEach(i => marque.add(+i));   /* réveil n°8 (E4 ligne 138) : l'état de la classe relu (`C/etat`, ses `vuMax`) dit mieux que le paquet ce qui a été dévoilé — une diapo montrée à 0/2 n'est pas « jouée » */
   if (anciens) E.forEach((e, i) => { if (anciens > 0 && !e.role && !marque.has(i)) { marque.add(i); anciens--; } });
   let n = 0; marque.forEach(i => { const k = K(i); if (!vuMax[k] && !decisionDe(E[i])) {   /* une diapo décidée garde son état : « à l'heure suivante » reprend là où la classe en était (C1 6.6, §12.17) */ vuMax[k] = Math.max(1, elements(E[i]).length); n++; } }); return n; }
 /* « Lancer l'heure n » de l'écran d'ouverture : la classe, le créneau et le début posés par `dr_lancer` */
@@ -21223,7 +21225,7 @@ function dr_enchSuivante(){
       else if (S.repetition && f && f.seances && f.seances[0] === se && f.seances[1]) { chS = f.chapitre; s2 = f.seances[1]; } }   /* C16 mandat V3 : en répétition, rien n'est écrit — la séance répétée n'a aucune heure jouée, la file la garde en tête (`edtSeanceJouee` rend 0 sans heure) : la suivante est celle d'après dans la file */
     else if (S.repetition) { const L = edtListe(ch.seances).filter(Boolean).sort((a, b) => (Number(a.ordre) || 0) - (Number(b.ordre) || 0)); const k = L.indexOf(se); if (k >= 0 && L[k + 1]) { chS = ch; s2 = L[k + 1]; } }   /* une répétition sans classe du niveau : la séance d'après dans l'ordre */
     if (!s2 || s2.__i == null) return null;
-    return { niv, chCle: String(chS.__cle), snum: String(s2.__i), titre: s2.titre || s2.title || ('Séance ' + s2.__i), titre1: se.titre || se.title || '', heure: (nom && edtNiveauDe(nom) ? edtHeuresJouees(s2, nom) : 0) + 1, sur: edtHeuresPour(s2, creneau) || 1 };
+    return { niv, chCle: String(chS.__cle), snum: String(s2.__i), titre: s2.titre || s2.title || ('Séance ' + s2.__i), titre1: se.titre || se.title || '', heure: (nom && edtNiveauDe(nom) ? edtHeuresJouees(s2, nom) : 0) + 1, sur: edtHeuresPour(s2, creneau, nom && edtNiveauDe(nom) ? nom : undefined) || 1 };
   } catch (e) { return null; }
 }
 function dr_enchPoser(){
@@ -21393,7 +21395,7 @@ function dr_proposer(){
       .sort((a, b) => String(a.creneau).localeCompare(String(b.creneau)))[0];
     const titre = (seance() || {}).titre || '';
     if (cel && (cel.snum != null ? dr_estCetteSeance(cel.chCle, cel.snum) : (cel.nature === 'jouee' || !cel.titre || cel.titre === titre))) {   /* E1 (§12.39-1, 13 · 80) : la case est-elle À CETTE SÉANCE ? par sa clé (la projection la porte), jamais par son titre */ const sl = dr_slugDe(cel.classeMjpc);
-      let N = cel.sur; if (!N) { try { N = edtHeuresPour(chapitresData[AT.edChap.level][AT.edChap.chnum].seances[ATVUES.snum], cel.creneau); } catch (e) {} }   /* relecteur neuf n°3 (7) : une case jouée ne porte pas `sur` — « heure 2/1 » */
+      let N = cel.sur; if (!N) { try { N = edtHeuresPour(chapitresData[AT.edChap.level][AT.edChap.chnum].seances[ATVUES.snum], cel.creneau, cel.classeMjpc); } catch (e) {} }   /* relecteur neuf n°3 (7) : une case jouée ne porte pas `sur` — « heure 2/1 » */
       const hx = (dr_heuresDeLaClasse(sl) || []).find(x => x.iso === iso && x.creneau === cel.creneau);   /* réveil n°14 : la source unique de l'heure n/N (§12.18) — la même que l'Atelier */
       return { classeSlug: sl, classeNom: dr_nomClasse(sl), creneau: cel.creneau, debut: dr_debutPropose(cel.creneau), heure: (hx && hx.n) || cel.heure || dr_heureProposee(sl, cel.creneau), sur: (hx && hx.sur) || Math.max(1, N || 1, cel.heure || 1), depuis: 'edt', clos: !!(cel.nature === 'jouee' && cel.clos) }; }
     if (cel && cel.nature === 'prevu' && cel.titre && dr_mn(String(cel.creneau).split('-')[0]) <= m) celAutre = cel;   /* réveil n°16 (E4 ligne 180) : la case de maintenant est à une autre séance — « Lancer » le dit, jamais « aucune case maintenant » */
@@ -21403,7 +21405,7 @@ function dr_proposer(){
   if (dr_edtPret()) { const hs = (dr_heuresDeLaClasse(sl) || []).find(x => !x.jouee && x.iso && x.creneau); const nx = hs ? { iso: hs.iso, creneau: hs.creneau, l: dr_jourCreneauEnClair(hs.iso, hs.creneau), n: hs.n, sur: hs.sur } : null;   /* réveil n°16 (E4 lignes 177, 180 ; §12.18) : la prochaine heure de CETTE séance, la case que l'EDT lui donne (son fil) — avant, la prochaine case de la classe, quel qu'en soit le fil (« mercredi 16, 10 h 07 », la case du fil « langue ») */
     return { classeSlug: sl, classeNom: dr_nomClasse(sl), creneau: nx ? nx.creneau : cr, debut: nx ? String(nx.creneau).split('-')[0] : dr_debutPropose(cr), heure: 0, sur: 0, depuis: 'aucune', prochaine: nx, maintenant: celAutre && celAutre.classeMjpc === dr_nomClasse(sl) ? celAutre : null }; }
   try { const z = document.getElementById('dr-zone'); if (z && z.offsetParent !== null && AT.edChap && AT.edChap.level) dr_edtAssurer(); } catch (e) {}   /* l'EDT pas encore lu : on le lit — seulement le Pilotage à l'écran, une séance ouverte (la lecture de l'EDT peut mettre la grille à niveau : jamais au chargement de la page, avant que le mode de la session soit posé — K15-test, 01:19) ; d'ici là, le repli d'avant */
-  const hp = dr_heureProposee(sl, cr); let N = hp; try { N = edtHeuresPour(chapitresData[AT.edChap.level][AT.edChap.chnum].seances[ATVUES.snum], cr); } catch (e) {}   /* N par la même fonction que la case */
+  const hp = dr_heureProposee(sl, cr); let N = hp; try { N = edtHeuresPour(chapitresData[AT.edChap.level][AT.edChap.chnum].seances[ATVUES.snum], cr, dr_nomClasse(sl)); } catch (e) {}   /* N par la même fonction que la case */
   return { classeSlug: sl, classeNom: dr_nomClasse(sl), creneau: cr, debut: dr_debutPropose(cr), heure: hp, sur: Math.max(1, N, hp), depuis: 'jour' };
 }
 /* E1 (§12.61 (2), Paul 28/10 14:36 : « toujours edt ») : le bouton « ▶ Lancer » du Pilotage et sa boucle d'une seconde sont retirés — une heure se lance par la case de l'emploi du temps (« ▶ Ouvrir le pilotage et lancer », §12.33) */
@@ -21452,7 +21454,7 @@ function dr_heureContinue(h){
        (b) ce que les décisions de la fin de l'heure d'avant reportent revient par le glissement du socle (`ordreHeureCalc0`) : une diapo décidée ne se déplace pas ici
        (« non fait », « pas le temps » sortent du programme — E4 ligne 130) ; (c) le reste dans l'ordre de la trame, depuis là où la classe s'est arrêtée ; (d) le cahier de textes en dernier (socle) */
     /* §12.25 (6) : la lecture du rituel par le titre est tombée — la réactivation est construite par le site au lancement (`dr_reactInserer`), seule `role === 'reactivation'` compte */
-    E.forEach((e, i) => { if (!e.role && !vu(e, i) && (+e.heure || 1) < h && !decisionDe(e)) { e.heure = h; n++; } });
+    n += edtContinuer(E, h, vu, e => !!decisionDe(e));   /* C16 mandat AJ : la boucle partagée avec la case de l'EDT (`edtHeuresClasse`) */
     if (utile) n += dr_refaireHeures(E, h, utile);   /* banc.sh 13:56 (K6-K11) : la frontière par les durées laissait à l'heure 1 ce que la classe n'avait pas vu — l'heure 2 sautait les premières diapos */
     if (n && typeof dr_normaliserTrame === 'function') dr_reactNormaliserCopie(E, (dr_ctx() || {}).snum);   /* la clé de la séance : l'eid « fin-hN-s<clé> » du socle, stable */ try { reindexer(); } catch (e) {} return n; } catch (e) { return 0; }
 }
@@ -21460,7 +21462,7 @@ function dr_heureContinue(h){
    utiles ; chaque « Cahier de textes » (rôle fin, eid stable du socle) est déplacé derrière la dernière diapo de son heure, jamais doublé. */
 /* `dr_estRituel` (le rituel reconnu à son titre) est tombée le 23/10 (§12.22 a, §12.25-6) : la réactivation n'est jamais dans la trame, le site la construit */
 function dr_refaireHeures(E, h, utile){
-  let cum = E.filter(e => (e.role === 'reactivation' && e.heure === h) || (!e.role && (+e.heure || 1) < h && glisseeDe(e, h))).reduce((s, e) => s + (+e.dur || 0), 0), n = 0;   /* réveil n°9 (E4 ligne 145) : le rituel et les reports ouvrent l'heure — leurs minutes comptent avant le programme ; avant : l'heure débordait, des diapos après le cahier de textes */ E.forEach(e => { if (e.role || (+e.heure || 1) < h) return; const nh = h + Math.floor(cum / utile); if (nh !== e.heure) { e.heure = nh; n++; } cum += +e.dur || 0; });
+  const n = edtRefaireHeures(E, h, utile, e => !!glisseeDe(e, h));   /* réveil n°9 (E4 ligne 145) : le rituel et les reports ouvrent l'heure — leurs minutes comptent avant le programme ; avant : l'heure débordait, des diapos après le cahier de textes */    /* C16 mandat AJ : le calcul partagé avec la case de l'EDT (`edtHeuresClasse`) */
   dr_placerFins(E, 1); return n; }   /* tous les « Cahier de textes », pour que la reprise retrouve le même ordre */
 function dr_placerFins(E, h){ const fins = {}; for (let i = E.length - 1; i >= 0; i--) if (E[i].role === 'fin' && (+E[i].heure || 1) >= h) fins[E[i].heure] = E.splice(i, 1)[0];
   Object.keys(fins).map(Number).sort((a, b) => a - b).forEach(k => { let der = -1; E.forEach((e, i) => { if (e.heure === k) der = i; }); E.splice(der >= 0 ? der + 1 : E.length, 0, fins[k]); }); }
@@ -21660,7 +21662,7 @@ function dr_activitesOuDiapos(){ const E = seance().ecrans; const vraies = dr_ac
 DR_CL.partages = new WeakMap();   /* trame en mémoire → minutes utiles de la frontière que j'y ai posée */
 function dr_partagerHeures(utile){
   try { const E = seance().ecrans; const pleines = E.filter(e => e.role !== 'fin'); if (new Set(pleines.map(e => +e.heure || 1)).size > 1) return 0;   /* une frontière existe déjà */
-    utile = utile || 50; let cum = 0, n = 0; E.forEach(e => { if (e.role === 'fin') return; const h = 1 + Math.floor(cum / utile); if (h !== (+e.heure || 1)) { e.heure = h; n++; } cum += +e.dur || 0; });
+    utile = utile || 50; const n = edtPartagerHeures(E, utile);   /* C16 mandat AJ : la boucle partagée avec la case de l'EDT (`edtHeuresClasse`) */
     if (n) DR_CL.partages.set(E, utile);   /* la frontière est la mienne (par les durées) : `dr_heureContinue` peut la refaire ; une frontière posée par Paul, jamais */
     if (n && typeof dr_normaliserTrame === 'function') dr_reactNormaliserCopie(E, (dr_ctx() || {}).snum);   /* la clé de la séance : l'eid « fin-hN-s<clé> » du socle, stable */ try { reindexer(); } catch (x) {} return n; } catch (e) { return 0; }
 }
@@ -27217,7 +27219,7 @@ function edtSeanceEtat(seance,nomClasse){
   var d=(seance&&seance.deroule_joue)||{}, hs=[];
   Object.keys(d).forEach(function(sl){ var b=d[sl]; if(!edtPaquetPour(sl,b,nomClasse))return; Object.keys(b.heures||{}).forEach(function(k){ hs.push({cle:k,H:b.heures[k]||{}}); }); });   /* lot 1 (359) */
   hs.sort(function(a,b){ return String(a.cle).localeCompare(String(b.cle)); });
-  var sur=edtHeuresPour(seance,null), n=hs.length, der=hs[n-1]||null, rep=der?edtReportees(der.H,['reporter']):[];
+  var sur=edtHeuresPour(seance,null,nomClasse), n=hs.length, der=hs[n-1]||null, rep=der?edtReportees(der.H,['reporter']):[];
   /* C16 mandat V (« ▶ Séance suivante dans cette heure ») : une séance entièrement faite avant ses heures prévues est finie — sa dernière heure porte `seanceFaite`
      (écrit au clic) ; `EDT_FAITE_ICI` : la séance qui tourne, comptée faite le temps de lire la file (le bouton cherche la séance suivante avant la clôture) */
   var faite=(typeof window!=='undefined'&&window.EDT_FAITE_ICI===seance)||!!(der&&der.H&&der.H.seanceFaite);
@@ -27235,7 +27237,9 @@ function edtHeuresJouees(seance,nomClasse){   /* [E2] les heures déjà jouées 
   Object.keys(d).forEach(function(sl){ var b=d[sl]; if(!edtPaquetPour(sl,b,nomClasse))return; n+=Object.keys(b.heures||{}).length; });   /* lot 1 (359) */
   return n;
 }
-function edtHeuresPour(seance,creneau){
+function edtHeuresPour(seance,creneau,nomClasse){
+  /* C16 mandat AJ (dette 4, 882) : avec `nomClasse`, une classe qui a déjà clos des heures de cette séance compte comme le pilotage (`edtHeuresClasse`) ;
+     sans elle, ou rien de clos, le compte ci-dessous, inchangé. */
   /* [E2] N (la case dit « heure n/N », contrat §12.5) : LA FRONTIÈRE POSÉE DANS LA TRAME fait foi quand elle existe — `heure` sur les
      diapos (le prompt d'injection §1.2, ou le geste de Paul dans l'Atelier), plus d'une heure distincte hors « fin » (le critère de
      `dr_partagerHeures` : la trame d'aujourd'hui met tout à 1) ; sinon le quotient (dette 12 · 07), sur les diapos qui ne sont pas la
@@ -27244,9 +27248,87 @@ function edtHeuresPour(seance,creneau){
   var ec=((seance&&seance.deroule)||{}).ecrans||[],somme=0,heures={},max=0;
   ec.forEach(function(e){ if(!e)return; var fin=(e.role==='fin'); if(fin)return; var h=Number(e.heure); if(h>0&&h===Math.floor(h)){ heures[h]=1; if(h>max)max=h; } somme+=(Number(e.dur)||0); });
   if(Object.keys(heures).length>1)return max;
-  var utile=edtTempsUtile(creneau)||50;
   if(!somme)return 1;
-  return Math.max(1,Math.ceil(somme/utile));
+  /* C16 mandat AJ2 (a) : rien de joué, N est le découpage du pilotage (`edtPartagerHeures`, sur la trame rangée comme le site la range), jamais plus l'arrondi
+     au-dessus des minutes ÷ temps utile — mesuré : la séance 6 du faux hub (5 + 5 + 45 min), la case disait « heure 1/2 », le pilotage la jouait en une heure
+     (la dernière diapo commence avant la frontière : elle reste dans l'heure). */
+  var u=Math.max(10,edtTempsUtile(creneau)||50), E=edtTrameRangee(seance); edtPartagerHeures(E,u);
+  var N0=1; E.forEach(function(e){ if(e.role!=='fin'&&(+e.heure||1)>N0)N0=+e.heure||1; });
+  return nomClasse?edtHeuresClasse(seance,creneau,nomClasse,N0):N0;
+}
+/* C16 mandat AJ2 : la trame comme le site la range pour la découper (`dr_normaliserTrame`) — pas de réactivation ; la mise en commun du bilan, 5 min, une seule,
+   juste après le bilan (`dr_bmcPoser` retire celle que la trame porterait et la repose) ; à la dernière séance du chapitre, « Les compétences du chapitre »
+   (0 min, `dr_invPoser`) juste avant le bilan, sans bilan à la fin (mesuré : la séance 9 du faux hub, 55 min, le pilotage la met seule à l'heure 2).
+   Les autres diapos d'ouverture, en tête, à 0 min, ne changent aucune heure. La case et `edtHeuresClasse` la lisent de même. */
+function edtTrameRangee(seance){ var E=[]; (((seance&&seance.deroule)||{}).ecrans||[]).forEach(function(e){ if(!e||e.role==='reactivation'||e.role==='bilan-commun')return; E.push({eid:e.eid,role:e.role||'',act:e.act||'',dur:+e.dur||0,heure:e.heure});
+  if(e.role==='bilan')E.push({eid:null,role:'bilan-commun',dur:5,heure:e.heure}); });
+  try{ if(E.some(function(e){ return !e.role; })&&!E.some(function(e){ return e.role==='competences-bilan'; })&&edtSeanceDerniere(seance)&&!(typeof dr_invRetraitsDe==='function'&&dr_invRetraitsDe(seance.deroule).indexOf('competences-bilan')>=0)){
+    var ib=-1; E.forEach(function(e,i){ if(e.role==='bilan'||(!e.role&&/bilan/i.test(e.act)))ib=i; });
+    if(ib>=0)E.splice(ib,0,{eid:null,role:'competences-bilan',dur:0,heure:E[ib].heure});
+    else { var hm=1, der=-1; E.forEach(function(e){ if(e.role!=='fin'&&(+e.heure||1)>hm)hm=+e.heure||1; }); E.forEach(function(e,i){ if(e.role!=='fin'&&(+e.heure||1)===hm)der=i; }); E.splice(der+1,0,{eid:null,role:'competences-bilan',dur:0,heure:hm}); } } }catch(x){}
+  return E; }
+/* la séance est-elle la dernière de son chapitre (hors sommaire, dans l'ordre de l'Atelier, `atSeances`) — la règle de `dr_invDerniere`, pour toute séance */
+function edtSeanceDerniere(seance){ try{ if(!seance||typeof atSeances!=='function')return false; var r=false;
+  [typeof chapitresData!=='undefined'?chapitresData:null, typeof EDT_CHAP!=='undefined'?EDT_CHAP:null].forEach(function(src){   /* les chapitres de l'Atelier, et ceux que l'EDT a lus (`EDT_CHAP`, ses propres objets) */
+    Object.keys(src||{}).forEach(function(nv){ var d=src[nv]; if(!d||typeof d!=='object')return; Object.keys(d).forEach(function(c){ var ch=d[c]; if(r||!ch||!ch.seances)return;
+      var l=atSeances(ch).filter(function(p){ return p.se&&p.se.type!=='sommaire'; }); if(l.length&&l[l.length-1].se===seance)r=true; }); }); }); return r; }catch(x){ return false; } }
+/* C16 mandat AJ2 (c) : LES DIAPOS VUES D'APRÈS LES PAQUETS DES HEURES, une seule lecture — la case (`edtHeuresClasse`) et le pilotage (`dr_marquerJoues`).
+   Une ligne qui porte l'`eid` d'une diapo de E la nomme ; une ligne sans `eid` (un paquet ancien) compte pour une des premières diapos (rendues dans `anciens`) ;
+   un `eid` hors de E (une diapo que le site pose : la réactivation, l'ouverture, le cahier) ne nomme rien. Avant, au pilotage, la réactivation comptait comme
+   une ligne ancienne : la première diapo pas vue était marquée vue, et ne revenait pas à l'heure suivante. */
+function edtLignesVues(E,paquets){ var ix={}, vu={}, anciens=0; E.forEach(function(e,i){ if(e&&e.eid!=null)ix[e.eid]=i; });
+  paquets.forEach(function(H){ var a=H&&H.activites; if(typeof a==='string'){ try{ a=JSON.parse(a); }catch(z){ a=[]; } }
+    (Array.isArray(a)?a:Object.values(a||{})).forEach(function(l){ if(!l)return; if(l.eid==null){ anciens++; return; } if(ix[l.eid]!=null)vu[ix[l.eid]]=1; }); });
+  return {vu:vu, anciens:anciens}; }
+/* ─── C16 mandat AJ (dette 4 de NOTE-Z, C16 882) : LE DÉCOUPAGE DES HEURES, UN SEUL CALCUL — le pilotage (`dr_partagerHeures`, `dr_heureContinue`,
+   `dr_refaireHeures`) et la case de l'emploi du temps (`edtHeuresClasse`) appellent les mêmes trois fonctions. Avant : la case comptait sur la trame seule
+   (« heure 2/2 »), le pilotage redécoupait à l'heure 2 ce que la classe n'avait pas vu (une 3e heure) — la séance 1 aux durées × 0,7, son heure 1 jouée. ─── */
+/* la frontière par les durées : l'heure de chaque diapo = 1 + (minutes avant elle ÷ temps utile), la fin d'heure sautée.
+   C16 mandat AJ3 (pas d'heure vide) : une diapo de 0 min posée juste sur la frontière reste dans l'heure d'avant ; une heure qui ne contiendrait que des
+   diapos de 0 min ne s'ouvre pas — elles restent dans la dernière heure qui a des minutes. Mesuré avant : la séance 9 du faux hub (5 + 5 + 45 min,
+   temps utile 50 : la dernière diapo commence avant la frontière et la dépasse) ouvrait une heure 2 qui ne portait que « Les compétences du chapitre »,
+   0 min, posée à 55 min — la case et le pilotage disaient deux heures. */
+function edtPartagerHeures(E,utile){ var cum=0,n=0,H={},pleine={};
+  E.forEach(function(e,i){ if(e.role==='fin')return; var d=+e.dur||0, q=Math.floor(cum/utile), h=1+q; if(!(d>0)&&q>0&&q*utile===cum)h=q; H[i]=h; if(d>0)pleine[h]=1; cum+=d; });
+  E.forEach(function(e,i){ if(H[i]==null)return; var h=H[i]; while(h>1&&!pleine[h])h--; if(h!==(+e.heure||1)){ e.heure=h; n++; } });
+  return n; }
+/* l'heure h : ce que la classe n'a pas vu (`vu`), sans décision (`decidee`), revient dans l'heure h */
+function edtContinuer(E,h,vu,decidee){ var n=0; E.forEach(function(e,i){ if(!e.role&&!vu(e,i)&&(+e.heure||1)<h&&!decidee(e)){ e.heure=h; n++; } }); return n; }
+/* puis le reste, redécoupé depuis l'heure h : la réactivation de l'heure h et ce qui glisse (`glissee`) ouvrent l'heure, leurs minutes d'abord */
+function edtRefaireHeures(E,h,utile,glissee){ var cum=0,n=0;
+  E.forEach(function(e){ if((e.role==='reactivation'&&e.heure===h)||(!e.role&&(+e.heure||1)<h&&glissee(e)))cum+=+e.dur||0; });
+  E.forEach(function(e){ if(e.role||(+e.heure||1)<h)return; var nh=h+Math.floor(cum/utile); if(nh!==e.heure){ e.heure=nh; n++; } cum+=+e.dur||0; });
+  return n; }
+/* N pour une classe qui a clos des heures de la séance : ses heures closes, plus ce qui reste découpé comme le pilotage le découpe au lancement de
+   l'heure suivante, sur une copie de la trame rangée comme le site la range (`dr_normaliserTrame` : pas de réactivation ; la mise en commun du bilan,
+   5 min, une seule, juste après le bilan — `dr_bmcPoser` retire celle que la trame porterait et la repose).
+   Les diapos jouées : celles que nomment les paquets clos (`activites[].eid`) ; un paquet ancien, sans `eid`, compte ses lignes — les premières diapos
+   (la règle de `dr_marquerJoues`). Les décisions : celles du dernier paquet clos (`decisionsParEcran`, ce que la classe a décidé et pas encore fait).
+   Le compte d'avant, tel quel : rien de clos ; une frontière posée dans la trame (le pilotage la garde ; `edtHeuresPour` l'a déjà rendue) ; la dernière
+   heure du pilotage jouée (le `sur` du dernier paquet : la séance est finie, ou sa suite ㊲) ; un paquet d'avant `sur` qui a joué ses N0 heures. */
+function edtHeuresClasse(seance,creneau,nomClasse,N0){
+  try{
+    var d=(seance&&seance.deroule_joue)||{}, hs=[];
+    Object.keys(d).forEach(function(sl){ var b=d[sl]; if(!edtPaquetPour(sl,b,nomClasse))return; Object.keys(b.heures||{}).forEach(function(k){ var H=b.heures[k]||{}; if(H.clos)hs.push({cle:k,H:H}); }); });
+    if(!hs.length)return N0;
+    hs.sort(function(a,b){ return String(a.cle).localeCompare(String(b.cle)); });
+    var n=hs.length, der=hs[n-1].H;
+    if(+der.sur>0){ if(n>=+der.sur)return +der.sur; } else if(n>=N0)return N0;
+    var E=edtTrameRangee(seance);   /* C16 mandat AJ2 : la même trame rangée que la case sans rien de joué */
+    var u=Math.max(10,edtTempsUtile(creneau||der.creneau)||50);
+    edtPartagerHeures(E,u);
+    var lv=edtLignesVues(E,hs.map(function(x){ return x.H; })), vu=lv.vu, anciens=lv.anciens;   /* C16 mandat AJ2 (c) : la lecture partagée avec `dr_marquerJoues` */
+    if(anciens)E.forEach(function(e,i){ if(anciens>0&&!e.role&&!vu[i]){ vu[i]=1; anciens--; } });
+    var dpe=der.decisionsParEcran||{}, dec={}; Object.keys(dpe).forEach(function(k){ dec[String(k).replace(/%(2e|23|24|5b|5d|2f)/g,function(m,c){return String.fromCharCode(parseInt(c,16));})]=dpe[k]; });
+    var decDe=function(e){ return e.eid!=null?dec[e.eid]:null; };
+    var G=(typeof DR_GLISSE!=='undefined'&&DR_GLISSE)||['suivante','terminer','preparer','reporter'];
+    var glisse=function(e){ var x=decDe(e); return !!(x&&G.indexOf(x.choix)>=0); };
+    var h=n+1;
+    edtContinuer(E,h,function(e,i){ return !!vu[i]; },function(e){ return !!decDe(e); });
+    edtRefaireHeures(E,h,u,glisse);
+    var N=n; E.forEach(function(e){ if(e.role==='fin')return; var k=+e.heure||1; if(!e.role&&k<h&&glisse(e))k=h; if(k>N)N=k; });   /* ce qui glisse se joue à l'heure h */
+    return Math.max(1,N);
+  }catch(x){ return N0; }
 }
 /* le chapitre en cours d'une classe, pour un fil donné */
 /* E1 (§12.35-1, dette 13 · 67) : UNE SÉANCE RÉSERVÉE À UNE OU PLUSIEURS CLASSES — `classes` : la liste des clés qui la jouent ; absente ou vide = toutes les classes du niveau.
@@ -27441,12 +27523,12 @@ function edtProjeter(isoDebut,nbJours){
                    cellules[cle]=cel; continue; }
       var edtFinC=String(c.creneau).split('-')[1]||'', edtAuj=edtAujourdhui();
       if(iso<edtAuj||(iso===edtAuj&&edtFinC&&edtFinC<=edtHeureCourante())){ cel.nature='passee';
-        try{ var edtSr=f&&f.seances[f.i]; if(edtSr&&edtSr.__i!=null&&f.chapitre&&f.chapitre.__cle!=null){ var edtTr=edtHeuresPour(edtSr,c.creneau); cel.rat={ titre:edtSr.title||('Séance '+(f.i+1)), snum:String(edtSr.__i), chCle:String(f.chapitre.__cle), heure:f.faites+1, sur:edtTr }; } }catch(e){}   /* C16 (lot 2a, ㊷) : la séance que la file donnerait à cette case — lue, la file n'est pas consommée */
+        try{ var edtSr=f&&f.seances[f.i]; if(edtSr&&edtSr.__i!=null&&f.chapitre&&f.chapitre.__cle!=null){ var edtTr=edtHeuresPour(edtSr,c.creneau,nom); cel.rat={ titre:edtSr.title||('Séance '+(f.i+1)), snum:String(edtSr.__i), chCle:String(f.chapitre.__cle), heure:f.faites+1, sur:edtTr }; } }catch(e){}   /* C16 (lot 2a, ㊷) : la séance que la file donnerait à cette case — lue, la file n'est pas consommée */
         cellules[cle]=cel; continue; }   /* [E2] réveil n°16 (§12.18) : passée sans être jouée — elle ne prend aucune heure de la file */
       if(!f||!f.seances.length){ cel.nature='rienDePret'; cellules[cle]=cel; continue; }
       var s=f.seances[f.i];
       if(!s){ cel.nature='rienDePret'; cellules[cle]=cel; continue; }
-      var total=edtHeuresPour(s,c.creneau);
+      var total=edtHeuresPour(s,c.creneau,nom);   /* C16 mandat AJ : N de cette classe, compté comme le pilotage */
       cel.titre=s.title||('Séance '+(f.i+1));
       cel.snum=s.__i!=null?String(s.__i):null; cel.chCle=f.chapitre&&f.chapitre.__cle!=null?String(f.chapitre.__cle):null;   /* E1 (§12.35-7, 13 · 80) : la case retient QUELLE séance elle nomme — le lancement ouvre celle-là */
       cel.heure=f.faites+1; cel.sur=total;
