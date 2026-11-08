@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2502 fonctions** — site : 2502 · moteur : 0
+**2520 fonctions** — site : 2520 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,8 +25,8 @@
 - **DIVERS — socle du site** — 510 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 887 fonctions
-- **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 269 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 902 fonctions
+- **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 272 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
 - **SESSION — les trois appareils (pilote, tableau, téléphone)** — 17 fonctions
@@ -503,7 +503,7 @@
 | `ensureEleveUuid` | eleve | 1661 o | [EDT] porte n°1 — l'arrivée du professeur, par-dessus l'accueil | _loginEleveFound |
 | `envoyerVersSeance` | i, lot | 3520 o | (sans commentaire) affiche/emploie : « Une seule séance dans le chapitre : rien où envoyer. · ); z.className =  » | dr_colMenuLot, menuAtelierDiapo |
 | `esc` | s | 21 o | les huit noms de la maquette sont préfixés dr_ (contrat §7). Ils n'étaient pas en collision avec le site (audit E1, F2) ; des modules écrits sur la maquette les appellent encore (E4 : | atP2NotesParagraphes, elfFicheHtml, elfRappelClasseHtml, eliApercuHtml |
-| `escapeHtml` | s | 122 o | (sans commentaire) affiche/emploie : « ;return String(s).replace(/&/g, » | _b2Check, _b2Confirm, _b2ExecReel, _b2RenderPick (+100) |
+| `escapeHtml` | s | 122 o | (sans commentaire) affiche/emploie : « ;return String(s).replace(/&/g, » | _b2Check, _b2Confirm, _b2ExecReel, _b2RenderPick (+101) |
 | `estClasseInterne` | nom | 48 o | (sans commentaire ni indice) | estClasseTest |
 | `estClasseTest` | nom | 88 o | (sans commentaire) affiche/emploie : « CLASSE TEST » | — |
 | `etatActivite` | — | 396 o | (sans commentaire) affiche/emploie : « dans les temps » | dr_phraseActivite |
@@ -608,7 +608,7 @@
 | `notifyConnection` | eleve | 337 o | (sans commentaire) affiche/emploie : « Connexion prof (M. Meney) · Connexion :  » | _loginEleveFound, loginAsProf |
 | `notionsTravaillees` | — | 751 o | les diapos d'une activité, par identifiant (a0) | chapitreHtml, ouvrirOral, remobNonTravaillees |
 | `nouvelleActivite` | titre | 550 o | (p5) la carte « Ce que la diapo déclare » qui s'écrit | brancherDeclare |
-| `now` | — | 87 o | (sans commentaire ni indice) | _applyLinkEcrire, _b2DoSave, _blocBrevet, _corbeillePut (+221) |
+| `now` | — | 87 o | (sans commentaire ni indice) | _applyLinkEcrire, _b2DoSave, _blocBrevet, _corbeillePut (+222) |
 | `objetDec` | cle | 627 o | (sans commentaire) affiche/emploie : « Activité  ·  + contenuEntier(E[i])).join( » | dr_travailHeure, ouvrirFin, ouvrirReserve, recitHtml0 (+2) |
 | `onInteraction_` | e | 282 o | (sans commentaire) ECRIT au hub | — |
 | `onScroll_` | — | 316 o | (sans commentaire ni indice) | startTracking_ |
@@ -643,7 +643,7 @@
 | `ouvrirComm` | eid | 270 o | commentaires (par classe, sur la diapo) | menuDiapo |
 | `ouvrirConsoleM8` | — | 197 o | (sans commentaire) affiche/emploie : « ;   if(el.style.display ===  » — touche #m8-console | — |
 | `ouvrirDocs` | — | 917 o | maquette p8-5g, lignes 1435-1448 | dr_docsPanneau |
-| `ouvrirFiche` | bi | 323 o | (sans commentaire ni indice) | — |
+| `ouvrirFiche` | bi | 491 o | (sans commentaire) affiche/emploie : « un coup */ journal( · , { si: S.si, di: S.di, bi, titre: String(b.txt ··  » | — |
 | `ouvrirFin` | cloture | 25371 o | (sans commentaire) affiche/emploie : « ).parentElement === document.getElementById( · ) && document.getElementById( » — touche #ecran-fin, #fin | brancherFin, dr_clorePoser, dr_enchainer, dr_montrerCahier (+7) |
 | `ouvrirNotion` | eid | 311 o | (sans commentaire) affiche/emploie : « ); f.style.left =  · ; f.style.top =  » | menuDiapo |
 | `ouvrirOral` | prerempli | 6791 o | (sans commentaire) affiche/emploie : « Cet oral : ·  name= » | ouOnEnEst |
@@ -656,7 +656,7 @@
 | `pageDeSuivi` | et, els, pages | 2332 o | (sans commentaire ni indice) | dr_paginerReference, paginer |
 | `pageMain` | d | 179 o | (p8-5h, 2) la vignette d'une page va à cette page — un « click » sans appui (clavier, script) passe ici | dr_filPas |
 | `pagePrecedente` | — | 315 o | E1 (§12.44, 4b.4) : la clé vérifiée pour de vrai, fichier par fichier, sur l'appareil qui projette — avant : S.cle fixé à « portable » | revoiler |
-| `paginer` | mur, et | 3625 o | (sans commentaire) affiche/emploie : « ); if (!corps) { if (page) page.textContent =  · ).forEach(l => l.classList.remove( » | rendre |
+| `paginer` | mur, et | 4802 o | (sans commentaire) affiche/emploie : « ); if (!corps) { if (page) page.textContent =  · ).forEach(l => l.classList.remove( » | rendre |
 | `palier0` | k | 653 o | (sans commentaire) affiche/emploie : « ouvre par l · écrit en tête de la séquence ; la barre du bas ne s » — touche #f-clore | dr_palier |
 | `papierHtml` | h | 2232 o | (sans commentaire) affiche/emploie : « h2, p.sous, .ed-suite-t, button, .rv, .dr-pour-paul · .dr-recit-tete p.cadre » | dr_papierPreparer, relecture |
 | `parseEleves` | txt | 112 o | clé-élève canonique : fournie par le socle MJPC-CORE | _importEleves |
@@ -664,7 +664,7 @@
 | `partRetire` | ini, id | 209 o | (sans commentaire ni indice) | corrigePart, dr_tcGeste, ouvrirPalette, ouvrirPart (+1) |
 | `participation` | — | 1877 o | (sans commentaire) affiche/emploie : «  + (o.genre ===  ·  + o.texte.slice(0, 50) +  » | annulerDerniere, brancherMenus, corrigePart, dr_absentsDeLaCase (+8) |
 | `participeDe` | v | 192 o | (sans commentaire ni indice) | eleveDitJe, recit, recitEtape |
-| `passeHtml` | fin, h | 9115 o | (sans commentaire) affiche/emploie : «  && !(x.type ===  ·  && /^rep/.test(String(x.m)) && JH.some(y => y.type ===  » | relecture |
+| `passeHtml` | fin, h | 9608 o | (sans commentaire) affiche/emploie : «  && !(x.type ===  ·  && /^rep/.test(String(x.m)) && JH.some(y => y.type ===  » | relecture |
 | `passerEnHeure` | h | 918 o | (sans commentaire) affiche/emploie : «  ne change pas d\ · Diapo passée en H » | brancherDeclare |
 | `pasteIntoItem` | level,chnum,snum,itemId | 88 o | Paste depuis presse-papier (image capturée) | renderItem |
 | `pasteIntoSeance` | level,chnum,snum | 77 o | (sans commentaire ni indice) | renderSeance |
@@ -689,7 +689,7 @@
 | `recit` | t | 1853 o | (sans commentaire) affiche/emploie : « ); d.innerHTML=String(t·· · );   var s=d.textContent.trim(); if(!s)return  » | dr_corrigerReponse, recitEtape, recitHtml0 |
 | `recitEtape` | t | 745 o | (sans commentaire) affiche/emploie : « ).replace(/\s+\./g,  » | recitHtml0 |
 | `recitHtml` | fin, h, bornes | 1128 o | (sans commentaire) affiche/emploie : « .recit >  · entête, le cadre de l » | ouvrirFin, papierHtml, recitHtml0, recitPourED (+2) |
-| `recitHtml0` | fin, h, bornes | 30588 o | (sans commentaire) affiche/emploie : « on a fait aujourd · >${[dr_recitClasseNom(), dr_recitChapitre() +  » | papierHtml, recitHtml, recitPourED0, suiteDepuis |
+| `recitHtml0` | fin, h, bornes | 30821 o | (sans commentaire) affiche/emploie : « on a fait aujourd · >${[dr_recitClasseNom(), dr_recitChapitre() +  » | papierHtml, recitHtml, recitPourED0, suiteDepuis |
 | `recitPourED` | h | 449 o | (sans commentaire) affiche/emploie : « :scope > p · ) && !x.classList.contains( » | ouvrirFin |
 | `recitPourED0` | h | 471 o | (sans commentaire) affiche/emploie : « :scope > p · ) && !x.classList.contains( » | basculerRecit, dr_contenuPrevuHeure |
 | `recitSeanceHtml` | — | 4766 o | (sans commentaire) affiche/emploie : « ); d.innerHTML = brut; const rec = d.querySelector( · ); const moi = rec && rec.classList.contains( » | relecture |
@@ -710,13 +710,13 @@
 | `renderRayons` | level | 1587 o | (sans commentaire) affiche/emploie : « );   _rayonPoser( · );   _rayonPoser( » | atFeuilleProduitPoser, gotoFiches, itemProduitPoser |
 | `renderSeance` | level,chnum,snum,sce,dispNum,isAdmin | 4001 o | (sans commentaire) affiche/emploie : « ;   var acts= · ;   if(isAdmin){     acts+= » | renderChapterCard |
 | `renderZoneAutonomie` | — | 2153 o | (sans commentaire) affiche/emploie : « <div class= ·  style= » — touche #autonomie-dyn | switchTab |
-| `rendre` | mur, et | 25097 o | (sans commentaire) affiche/emploie : « ) + `<div class= · ><div class= » | apercuOuvrir, atDrJouer, dr_pagesImport, dr_paginerReference (+12) |
+| `rendre` | mur, et | 25936 o | (sans commentaire) affiche/emploie : « ) + `<div class= · ><div class= » | apercuOuvrir, atDrJouer, dr_pagesImport, dr_paginerReference (+12) |
 | `rendreDroiteAtelier` | — | 944 o | (sans commentaire) affiche/emploie : « :scope > .at-d · #at-aide .x » | dr_tout, ecrireDansDiapo |
 | `renumeroter` | — | 352 o | (sans commentaire ni indice) | — |
 | `renvoyerVersMJPC` | motif | 270 o | (sans commentaire) affiche/emploie : «          +(motif? · );   if(typeof window!== » | — |
 | `reprendreSuite` | h | 291 o | (sans commentaire) touche #ecran-relecture | brancherFin, recitHtml0 |
 | `reprisesPrevuesHtml` | — | 464 o | (sans commentaire) affiche/emploie : « Reprise à l · ouverture de l » | ouOnEnEst |
-| `repsJ` | h, di, bi | 175 o | sans réponse manquante : le journal tel quel (une heure ordinaire est inchangée) | recitHtml0, recitSeanceHtml |
+| `repsJ` | h, di, bi | 269 o | sans réponse manquante : le journal tel quel (une heure ordinaire est inchangée) | recitHtml0, recitSeanceHtml |
 | `resetChapitres` | level | 487 o | (sans commentaire) affiche/emploie : « Effacer TOUS les chapitres  · ,     function(){   mjpcDeleteJson(FIREBASE_BASE+ » | renderChapitres |
 | `resolveEleves` | roster, saisies | 1138 o | 7. Identification nominative : le portail commun (logique) Toute identification produit des élèves SINGULIERS (clé canonique), que le travail soit individuel ou en groupe. | — |
 | `restoreSession` | — | 589 o | (sans commentaire) touche #proto-badge | — |
@@ -827,7 +827,7 @@
 | `videoSuivant` | — | 562 o | (sans commentaire ni indice) | devoiler |
 | `vifDernier` | ini, id | 554 o | (sans commentaire) affiche/emploie : « posé : <b> · </b> <span id= » | partAjoute |
 | `voir` | v | 1550 o | relecture : le récit, et ce qui s'est passé | arreterRepetition, dr_apresCloture, dr_imageAdresse, dr_lancerNeuf (+9) |
-| `volet` | — | 3698 o | (sans commentaire) affiche/emploie : « après) */ const v0 = $( · est nulle part en classe */ let h = `<h5 title= » | dr_voletApres |
+| `volet` | — | 3945 o | (sans commentaire) affiche/emploie : « après) */ const v0 = $( · est nulle part en classe */ let h = `<h5 title= » | dr_voletApres |
 | `voletAtelier` | — | 2938 o | (sans commentaire) affiche/emploie : « ; }; let h = `<div class= · , { weekday:  » | dr_tout |
 | `vuJ` | h, di | 216 o | (sans commentaire ni indice) | dejaVuAvant, ouvrirOral, passeHtml, recitHtml0 (+2) |
 | `vueDroite` | et | 2583 o | (sans commentaire) affiche/emploie : « ; let inner = boite.querySelector( · ); if (!inner) { inner = document.createElement( » | brancherFin, dr_tout |
@@ -1210,14 +1210,14 @@
 
 | fonction | args | taille | ce qu'elle fait | appelée par |
 |---|---|---|---|---|
-| `dr_JH` | h | 163 o | (sans commentaire ni indice) | dr_relIaTexte, passeHtml, recitSeanceHtml, repsJ |
+| `dr_JH` | h | 175 o | (sans commentaire ni indice) | dr_relIaTexte, passeHtml, recitSeanceHtml, repsJ |
 | `dr_aEcrireAtelier` | — | 1449 o | E1 (§12.33-3) « ✍ À écrire » préparé dans l'Atelier : l'élément où est le curseur (une étape, ou le bloc par son titre) entre dans e.aEcrire (la trame, par identité — le format de dr_selEcrire) ; | — |
 | `dr_absentsDeLaCase` | lancement | 2058 o | au lancement (`lancement`) : | dr_lancerNeuf, dr_reprendre |
 | `dr_acces` | b, nom, get, set | 87 o | (sans commentaire ni indice) | dr_blocLu |
 | `dr_actif` | — | 93 o | (sans commentaire ni indice) | atSomSuivreCourant, atVuesAller, dr_ecouteDoc, dr_ecouteWin (+8) |
 | `dr_activites` | — | 43 o | E1 (§12.60) : la séance telle qu'elle est ici après la lecture — ce qui change ici se compare à elle ; ce qui change ailleurs se compare au hub tel qu'on l'a lu (DR_MEM.hubLu) | clotureHtml, dr_activitesOuDiapos, dr_chapManque, dr_colColler (+10) |
 | `dr_activitesOuDiapos` | — | 156 o | (sans commentaire ni indice) | ouvrirFin |
-| `dr_adopterIdentites` | copie | 322 o | (sans commentaire ni indice) | dr_lancerNeuf, dr_reprendre, dr_sesAppliquer |
+| `dr_adopterIdentites` | copie | 1366 o | (sans commentaire) affiche/emploie : « ouverture, les fins d · heure 2, ses six diapos de        l » | dr_lancerNeuf, dr_reprendre, dr_sesAppliquer |
 | `dr_alerteScene` | on | 137 o | E2 (réveil n°4, point 5 ; C1 6.3) : la boîte au-dessus des notes, entière dans l'écran à 1280 × 768 — la colonne du centre (#scene) est de hauteur fixe ; | alerteFermer |
 | `dr_aller` | i | 124 o | (sans commentaire ni indice) | atSomAllerEcran |
 | `dr_allerT5` | — | 209 o | E1 : l'horloge réelle (la maquette : HEURES_SIM[S.heure].base + DECALAGE) ; E4 (§12.55) : + le décalage de la case des De Gaulle | — |
@@ -1297,10 +1297,10 @@
 | `dr_caseListe` | ini, t, choisir, src, qui | 2345 o | (sans commentaire) affiche/emploie : « ; L.title =  · ; L.style.cssText =  » — touche #dr-case-liste | brancherAjout, dr_corrigerReponse |
 | `dr_caseSeul` | t, entree, src | 278 o | (sans commentaire ni indice) | brancherAjout, dr_corrigerReponse |
 | `dr_chapManque` | id | 875 o | C16 nuit D (MANDAT D, C16 582, 588, 591, 609, 707) : la Relecture — la diapo en grand ; « copier la relecture pour analyse IA » ; ce qui manque à une notion | chapitreHtml |
-| `dr_chapitre` | — | 190 o | (sans commentaire ni indice) | dr_chapitreTitre, dr_cles, dr_invContenuV1, dr_invDerniere (+12) |
+| `dr_chapitre` | — | 190 o | (sans commentaire ni indice) | dr_chapitreTitre, dr_cles, dr_invContenuV1, dr_invDerniere (+14) |
 | `dr_chapitreTitre` | — | 70 o | (sans commentaire ni indice) | dr_colCopier, dr_donneesVues, dr_ouvAlertes, rendre (+1) |
 | `dr_cheminB` | — | 39 o | (sans commentaire ni indice) | dr_cheminC, dr_heuresDeLaClasse, dr_lancerNeuf, dr_recitChargerClasse (+2) |
-| `dr_cheminBDe` | sk | 95 o | (sans commentaire ni indice) | dr_cheminB, dr_reactivationCheminAvant, dr_syncEcrire, dr_syncLire |
+| `dr_cheminBDe` | sk | 95 o | (sans commentaire ni indice) | dr_cheminB, dr_reactivationCheminAvant, dr_reactivationCheminsAutres, dr_syncEcrire (+1) |
 | `dr_cheminC` | — | 78 o | (sans commentaire ni indice) | dr_apresCloture, dr_cheminH, dr_clPeutEcrire, dr_cloreFin (+18) |
 | `dr_cheminH` | — | 187 o | (sans commentaire ni indice) | dr_absentsDeLaCase, dr_apGeste, dr_apVeiller, dr_cloreFin (+9) |
 | `dr_choisirClasse` | slug | 354 o | (sans commentaire) affiche/emploie : «  + ec.chnum +  » | dr_hclasseMenu |
@@ -1331,7 +1331,7 @@
 | `dr_cleVersHub` | k | 86 o | C16 (les correctifs, ㉘) — LE VRAI HUB REFUSE (HTTP 400) TOUTE CLÉ QUI PORTE . # $ [ ] / : | dr_clesVersHub |
 | `dr_cleVoit` | nom | 46 o | (sans commentaire ni indice) | alerteVideo, videoAtteignable |
 | `dr_cleVoitIci` | nom | 78 o | (sans commentaire ni indice) | alerteVideo, dr_videoBrancher |
-| `dr_cles` | — | 146 o | (sans commentaire ni indice) | dr_cleSeance, dr_dejaPosee, dr_rangSeance, dr_reactivationCheminAvant (+4) |
+| `dr_cles` | — | 146 o | (sans commentaire ni indice) | dr_cleSeance, dr_dejaPosee, dr_rangSeance, dr_reactivationCheminAvant (+5) |
 | `dr_clesDuHub` | x | 194 o | (sans commentaire ni indice) | dr_sesReprendreEssai, dr_tabAttendre, dr_tabMonter, dr_tabSceneRecue (+1) |
 | `dr_clesVersHub` | x | 200 o | (sans commentaire ni indice) | dr_repEmettre, dr_repTrame, dr_sceneAuto, dr_sesScene (+3) |
 | `dr_cloreFin` | — | 1834 o | clore : l'étape 7 fait les écritures d'`atDrCloreFin` (H clos, finReel, cours_actif nul), plus le journal et l'état | ouvrirFin |
@@ -1379,7 +1379,7 @@
 | `dr_coursMiroir` | — | 129 o | C16 (lot 1, 359) : | — |
 | `dr_creneauPropose` | — | 273 o | le créneau proposé quand on n'est pas passé par l'EDT : celui où l'on est, sinon le prochain du jour, sinon le 3e (la tête d'aujourd'hui) | dr_lancer, dr_lancerSuite, dr_proposer |
 | `dr_cssTableau` | — | 315 o | le CSS du déroulé, en texte, pour l'autre document (la fenêtre du tableau) | — |
-| `dr_ctx` | — | 1099 o | le contexte : le chapitre ouvert, la séance de la colonne, l'heure de cours | dr_annulerCle, dr_appliquerHeures, dr_brancherDepotImage, dr_cheminB (+12) |
+| `dr_ctx` | — | 1099 o | le contexte : le chapitre ouvert, la séance de la colonne, l'heure de cours | dr_annulerCle, dr_appliquerHeures, dr_brancherDepotImage, dr_cheminB (+13) |
 | `dr_cuireCopie` | ecrans, copie, avant | 625 o | (sans commentaire ni indice) | dr_copieReporter, dr_jouerCopie |
 | `dr_dansHeureJouee` | i, h | 331 o | (sans commentaire) affiche/emploie : « heure h telle qu » | chapitreHtml |
 | `dr_dansLH` | x, h | 317 o | (sans commentaire) affiche/emploie : « heure h si elle porte h et vient après son lancement : ce qu · atelier ou avant de lancer n » | chapitreHtml, dr_JH, dr_papierFiches, dr_recitCitations (+9) |
@@ -1395,7 +1395,8 @@
 | `dr_dimensionnerZone` | — | 289 o | (sans commentaire) affiche/emploie : « ; document.documentElement.style.setProperty( » | dr_monter |
 | `dr_dire` | msg | 158 o | (sans commentaire ni indice) | brancherDeclare, brancherDocs, choixObjet, couperDiapoIci (+17) |
 | `dr_docEtat` | id | 653 o | l'état d'un document montré (S.doc → et.doc) : | brancherDocs, dr_docsPanneau |
-| `dr_docHtmlRef` | doc | 1506 o | le cadre du document dans l'écran (au pilote et au tableau, le même) : | docHtml |
+| `dr_docFeuilleBrancher` | mur, et | 1934 o | C16 (mandat AQ, Paul 08/11) — une feuille du site projetée par « ⋯ » → « Documents de la séance… » suit la règle de la fiche de la diapo : | rendre |
+| `dr_docHtmlRef` | doc | 1506 o | (sans commentaire) affiche/emploie : « affiche */     corps = fh != null ? `<iframe class= ·  data-feuille= » | docHtml |
 | `dr_docsPanneau` | l | 1574 o | (sans commentaire) affiche/emploie : «  style= · ><b>${dr_esc(d.titre)}</b> <span style= » | ouvrirDocs |
 | `dr_documents` | — | 253 o | (sans commentaire ni indice) | alertesForme, arreterRepetition, brancherDocs, devoiler (+6) |
 | `dr_donneesVues` | — | 296 o | (sans commentaire ni indice) | — |
@@ -1427,7 +1428,7 @@
 | `dr_enchRepVue` | e, i | 269 o | C16 mandat V3 : en répétition, rien n'est marqué vu (vuMax, p6) : la diapo est faite si la répétition l'a montrée en entier (S.repVu, posé par `pousser`) — la même règle que `finie` | dr_enchSeanceFaite |
 | `dr_enchRepetition` | v | 557 o | C16 mandat V3 : le passage se fait sur CET appareil, la répétition de la suivante remplace la sienne — `DR_ENCH.rep` le temps du passage : | dr_enchainer |
 | `dr_enchSeanceFaite` | — | 422 o | (sans commentaire) affiche/emploie : «  ·· e.role ===  » | dr_enchVisible |
-| `dr_enchSuivante` | — | 2029 o | (sans commentaire) affiche/emploie : « ) : (AT_DR_COURS.classeNom ··  · est écrit — la séance répétée n » | dr_enchPoser, dr_enchainer |
+| `dr_enchSuivante` | — | 2155 o | (sans commentaire) affiche/emploie : « ) : (AT_DR_COURS.classeNom ··  · ordre (pas la séance commencée d » | dr_enchPoser, dr_enchainer |
 | `dr_enchVisible` | — | 580 o | (sans commentaire) affiche/emploie : « heure de classe) ; V7 (C16, Paul 06/11 04:37) : la fin de l » | dr_enchPoser, dr_enchainer |
 | `dr_enchainer` | — | 1208 o | le clic : la clôture de « ■ Clore l'heure » (sa garde comprise), puis `dr_apresCloture` lance la suivante au lieu d'ouvrir l'emploi du temps | dr_enchPoser |
 | `dr_entete` | h | 290 o | l'entête de l'heure : la classe, le créneau, l'heure n/N, la séance | dr_cloreFin, dr_lanceFin, dr_reprendre, lancerHeure |
@@ -1449,9 +1450,11 @@
 | `dr_feuillePoser` | ref, d | 284 o | (sans commentaire ni indice) | dr_feuilleCharger, dr_tabRecevoir |
 | `dr_feuilleRedessiner` | — | 223 o | (sans commentaire ni indice) | dr_feuilleCharger |
 | `dr_feuilles` | — | 14 o | E4 : les items de type doc de la séance (sce.items) — remplacée dans dr-recit.js | dr_donneesVues, formulaireObjet |
-| `dr_ficheDevoiler` | sens | 351 o | (sans commentaire ni indice) | devoiler, revoiler |
-| `dr_ficheEcrire` | k | 224 o | (sans commentaire ni indice) | — |
+| `dr_ficheDefile` | mur, et | 610 o | C16 (mandat AQ, Paul 08/11 19:34 et 20:29 : « Les fiches ne doivent pas être en page mais en Scroll long. | paginer |
+| `dr_ficheDevoiler` | sens | 160 o | (sans commentaire ni indice) | devoiler, revoiler |
+| `dr_ficheEcrire` | k | 224 o | C16 (mandat AQ) : la fiche ouverte est entière — ▶ et ◀ n'y dévoilent ni n'y retirent rien (✕ ou Échap la referme) | — |
 | `dr_ficheEnLigne` | b | 132 o | une fiche du site porte son propre texte (titre, définition, corps) : la trame réelle n'a aucune fiche liée à une feuille (le lien de la maquette était simulé) | rendre |
+| `dr_ficheMolette` | ev | 512 o | (sans commentaire) affiche/emploie : « ); const c = m && m.querySelector( » | — |
 | `dr_ficheOuverte` | — | 135 o | E1 (R14, la couche commune) la fiche ouverte se pilote comme une diapo — l'ancien moteur (elems d'une fiche ouverte, marqueFiche) : | dr_ficheDevoiler, dr_ficheEcrire |
 | `dr_filBloque` | — | 380 o | les flèches ne vont pas à la colonne quand un menu, une palette ou une fenêtre du déroulé les prend, ni après la clôture de l'heure (dr-classe.js bloque alors ← → : la classe n'est plus là) | dr_filColonneTouche, dr_filMolette |
 | `dr_filColonneTouche` | ev | 569 o | l'écoute du clavier du déroulé (dr-socle.js) la consulte avant →, ← : rend vrai si la flèche est pour la colonne | — |
@@ -1686,7 +1689,7 @@
 | `dr_ouvTerminee` | se, classe | 129 o | (sans commentaire ni indice) | dr_ouvContenu |
 | `dr_ouvTxtCopie` | b | 134 o | (sans commentaire ni indice) | dr_copieDuHub, dr_ouvLisibleCopie |
 | `dr_ouvVars` | ch | 351 o | §5.4 du mandat : le bleu nuit pour les 3e et les 4e | dr_ouvHtml |
-| `dr_ouvertureLegere` | h | 2209 o | l'écran d'ouverture léger (§12.25-2) : l'heure 1 d'une séance, ou une heure n dont l'état n'est pas au hub — la classe, le créneau, la réactivation proposée, le même bouton, la puce qui montre | dr_lancerNeuf, dr_reactRetour |
+| `dr_ouvertureLegere` | h | 2217 o | l'écran d'ouverture léger (§12.25-2) : l'heure 1 d'une séance, ou une heure n dont l'état n'est pas au hub — la classe, le créneau, la réactivation proposée, le même bouton, la puce qui montre | dr_lancerNeuf, dr_reactRetour |
 | `dr_ouvertureSur` | o, h | 330 o | ce sur quoi l'heure s'ouvre, dit tel quel (réveil n°8, E4 ligne 137 : « sur la réactivation » était un texte fixe) | ouvrirOuverture |
 | `dr_ouvrirClasse` | niveau,chcle,snum,apres | 1602 o | (sans commentaire) affiche/emploie : « onglet Pilotage de l · ); }catch(e){}   /* une entrée d » — touche #atelier-ecran | dr_ouvrirLaClasse |
 | `dr_ouvrirLaClasse` | niv, chcle, snum, apres | 717 o | §12.28-3 (a)(e) : l'heure d'une classe s'ouvre dans « la classe en cours » (E1, `dr_ouvrirClasse(niveau, chcle, snum, apres)`) ; | dr_enchLancer, dr_reprendreCours, edtLancer |
@@ -1736,12 +1739,13 @@
 | `dr_reactApercuRendre` | — | 2058 o | (sans commentaire) affiche/emploie : « un rendu à l · heure d » | dr_reactModifiee, dr_reactRetourCalculee, dr_reactVoir |
 | `dr_reactApresCloture` | C, h, local, cb | 1200 o | (1) à la clôture de l'heure h : la diapo de l'heure h+1, depuis le paquet qui vient d'être clos, dans la copie | dr_cloreFin |
 | `dr_reactAvantLancement` | — | 61 o | (3) voir sans lancer : l'aperçu dans le pilote | p8ReactAvantLancement |
-| `dr_reactBoutonHtml` | h | 2529 o | (sans commentaire) affiche/emploie : « rien à réactiver ·  (depuis  » | dr_ouvertureLegere, ouvrirOuverture |
+| `dr_reactBoutonHtml` | h | 2537 o | (sans commentaire) affiche/emploie : « rien à réactiver ·  (depuis  » | dr_ouvertureLegere, ouvrirOuverture |
 | `dr_reactBrancher` | h, redessiner, retour | 829 o | (sans commentaire) touche #o-react-modifier, #o-react-reg, #o-react-voir | dr_ouvertureLegere, ouvrirOuverture |
 | `dr_reactCheminC` | — | 243 o | (sans commentaire ni indice) | dr_reactEcrireCopie, dr_reactVoir |
 | `dr_reactChoix` | h | 103 o | (sans commentaire ni indice) | dr_ordreOuverture, dr_reactAnnoncee, dr_reactBoutonHtml, dr_reactInserer |
 | `dr_reactDecal` | h | 40 o | annoncée mais pas encore dans la copie (l'heure 1) : la puce est à part | ouvrirOuverture |
 | `dr_reactDejaLa` | h | 124 o | (sans commentaire ni indice) | dr_lancerNeuf, dr_ouvertureLegere, dr_reactApresCloture, dr_reactBoutonHtml (+4) |
+| `dr_reactDepuisLisible` | c | 487 o | C16 mandat AN : l'heure d'où vient la réactivation, dite à Paul en clair (« lundi 14 septembre, 08 h 57 », et la séance quand c'est une autre) — avant : la clé brute de l'heure | dr_ouvertureLegere, dr_reactBoutonHtml |
 | `dr_reactEcran` | h | 131 o | le chemin `C` de la classe connu avant le lancement (l'ouverture depuis la case) | dr_reactEcranOuPrete, dr_reactMiniRendre, dr_reactOuvertureAssurer, dr_reactPoser (+1) |
 | `dr_reactEcranDe` | eid | 100 o | (sans commentaire ni indice) | dr_reactModifiee, dr_reactRetourCalculee |
 | `dr_reactEcranOuPrete` | h | 113 o | l'écran de l'heure h : celui de la copie, sinon celui tenu en mémoire (l'heure 1 : la copie n'existe pas avant le lancement) | dr_ouvertureLegere, dr_reactAnnoncee, dr_reactBoutonHtml |
@@ -1766,14 +1770,15 @@
 | `dr_reactSignature` | blocs | 157 o | les blocs `texte` comparés sans les `id` (E4, RC20 : `dr_reactivationModifiee` fait de même) | dr_reactEstModifiee |
 | `dr_reactValide` | e | 86 o | (sans commentaire ni indice) | dr_reactApresCloture, dr_reactInserer, dr_reactMiniRendre, dr_reactPoser (+3) |
 | `dr_reactVoir` | h, retour | 850 o | pour E1 : le geste d'écriture s'arme là-dessus (à l'écran d'ouverture, S est l'état relu de l'heure d'avant : S.lancee et S.close sont vrais) | dr_reactBrancher |
-| `dr_reactivationCheminAvant` | — | 804 o | (E1, §12.35 (3), registre 13 · 67) la séance d'avant est la dernière séance POUR la classe : | dr_reactivationPreparer, dr_reactivationSource |
-| `dr_reactivationConstruire` | n | 4669 o | l'écran « Où en sommes-nous ? » de l'heure n, ou null (DR_REACT_RAISON dit pourquoi) | dr_reactPreparer, dr_reactivationPreparer |
+| `dr_reactivationCheminAvant` | — | 804 o | (E1, §12.35 (3), registre 13 · 67) la séance d'avant est la dernière séance POUR la classe : | — |
+| `dr_reactivationCheminsAutres` | — | 514 o | C16 mandat AN (NOTE-Z dette 17, C16 764) : | dr_reactivationPreparer, dr_reactivationSource |
+| `dr_reactivationConstruire` | n | 4723 o | l'écran « Où en sommes-nous ? » de l'heure n, ou null (DR_REACT_RAISON dit pourquoi) | dr_reactPreparer, dr_reactivationPreparer |
 | `dr_reactivationCopieBlocs` | blocs | 136 o | (§12.26-5) la version calculée, gardée dans l'écran : `construite.calculee` = les blocs à la construction (copie profonde, sans les `id` que dr_preparer pose). `dr_reactivationModifiee(e)` : | dr_reactivationConstruire, dr_reactivationRetour |
 | `dr_reactivationEmpreinte` | blocs | 210 o | (sans commentaire) affiche/emploie : «  : b.txt), (b.el ·· []).map(x => (x && typeof x ===  » | dr_reactivationModifiee |
 | `dr_reactivationModifiee` | e | 177 o | (sans commentaire ni indice) | dr_reactEstModifiee |
-| `dr_reactivationPreparer` | h, cb, local | 1112 o | lit les paquets d'heures de la classe (cette séance, la séance d'avant), puis rend l'écran de l'heure h à cb (E2, `dr_reactPreparerAsync(h, cb)`) : | dr_reactApresCloture, dr_reactPreparerAsync |
+| `dr_reactivationPreparer` | h, cb, local | 1232 o | lit les paquets d'heures de la classe (cette séance, la séance d'avant), puis rend l'écran de l'heure h à cb (E2, `dr_reactPreparerAsync(h, cb)`) : | dr_reactApresCloture, dr_reactPreparerAsync |
 | `dr_reactivationRetour` | e | 321 o | (sans commentaire ni indice) | dr_reactRetourCalculee |
-| `dr_reactivationSource` | n | 782 o | l'heure d'avant jouée : l'heure n − 1 de cette séance, ou (n = 1) la dernière heure jouée de la séance d'avant | dr_reactivationConstruire |
+| `dr_reactivationSource` | n | 853 o | l'heure d'avant jouée — C16 mandat AN : LA DERNIÈRE HEURE VRAIMENT JOUÉE par la classe, par sa fin réelle (`finReel`, sinon `maj`) : | dr_reactivationConstruire |
 | `dr_reactivationTravail` | t, dejaDites | 1349 o | le travail donné : le texte du cahier de textes de l'heure d'avant (`travailTexte` du paquet = `texteTravailED()` d'E2 : | dr_reactivationConstruire |
 | `dr_reactivationsDesEcrans` | — | 157 o | (sans commentaire ni indice) | dr_etatHeure |
 | `dr_recitA` | nom | 101 o | les accès (E4) : une lecture, jamais une seconde copie | dr_recitActivites, dr_recitChapitre, dr_recitClasseNom, dr_recitHeure (+2) |
@@ -1862,6 +1867,7 @@
 | `dr_relireTrace` | chemin, h | 827 o | §12.66 (3) : la même Relecture, pour la bande de clôture — `chemin` : celui de la copie de la classe (…/deroule_joue/<classe>/…), `h` : l'heure | dr_closConfPoser, dr_edtRelire, dr_enchRelireSuite |
 | `dr_remplacerNieme` | h, e2, n, f | 157 o | (sans commentaire ni indice) | dr_bMarques, surligne |
 | `dr_rendreMur` | et, ecran, cible | 567 o | le rendu, unique pour la fenêtre locale, l'appareil distant et la vue « ⧉ Tableau » : `rendre` du socle | dr_feuilleRedessiner, dr_tabMontrer, dr_tabPoser, dr_tabRecevoir (+1) |
+| `dr_repCle` | x | 261 o | C16 mandat AP (Paul 08/11 18:46 : « le récit de l'heure 2 des dylan affiche toutes les participations en doublons ») : | dr_repsDiapos, dr_repsUne |
 | `dr_repEcrire` | chemin, valeur | 339 o | (sans commentaire) affiche/emploie : « , valeur,  · , () => { try { const bd = document.querySelector( » — ECRIT au hub | dr_repEmettre, dr_repTableauDebut, dr_repTableauFin, dr_repTrame (+1) |
 | `dr_repEleveSuit` | bi, ri, r | 472 o | C16 571 (MANDAT-RECIT-GEL §2.2) — QUAND PAUL CHANGE L'ÉLÈVE D'UNE RÉPONSE VALIDÉE, LE JOURNAL SUIT (la réponse et sa parole « réponse ») : | brancherAjout |
 | `dr_repEmettre` | — | 418 o | (sans commentaire ni indice) | dr_minuteurEnvoyer, dr_sesEmettreScene |
@@ -1875,7 +1881,8 @@
 | `dr_reprendre` | cb | 5710 o | (sans commentaire) affiche/emploie : « une après l · onglet fermé n » | dr_lancer, dr_reprendreQuandPret |
 | `dr_reprendreCours` | c | 703 o | (sans commentaire ni indice) | dr_edtReprendre, dr_sesReprendreEssai, dr_sesReprendreTenant, dr_tcRejoindre (+1) |
 | `dr_reprendreQuandPret` | cb, essai | 362 o | contrôle n°68 (E3 retour 60 : « Reprendre » sans l'heure à 1536 / 1920) : | dr_reprendreCours |
-| `dr_repsDiapos` | h | 743 o | C16 571 (MANDAT-RECIT-GEL §2.3) — LES RÉPONSES RANGÉES DANS LES DIAPOS AVEC LEUR HEURE ET ABSENTES DU JOURNAL (tapées pendant un gel, 8.83.0-8.84.0 : | dr_JH |
+| `dr_repsDiapos` | h | 882 o | C16 571 (MANDAT-RECIT-GEL §2.3) — LES RÉPONSES RANGÉES DANS LES DIAPOS AVEC LEUR HEURE ET ABSENTES DU JOURNAL (tapées pendant un gel, 8.83.0-8.84.0 : | dr_JH |
+| `dr_repsUne` | l | 239 o | (sans commentaire ni indice) | dr_JH |
 | `dr_restaurer` | j | 612 o | remettre dans la page l'état d'une heure jouée, décodé (`dr_lireJoue`) : S, les dévoilements, le journal ; les rangs refaits | dr_lancerNeuf, dr_reprendre, dr_sesAppliquer |
 | `dr_resteHeure` | acts, derniere | 1558 o | (sans commentaire) affiche/emploie : «  ·· e.role ===  ·  ·· (typeof dr_masqueeCachee ===  » | ouvrirFin |
 | `dr_roleEnClair` | r | 66 o | (sans commentaire) affiche/emploie : « ).replace(/-/g,  » | dr_titrePoser, volet |
@@ -1884,8 +1891,8 @@
 | `dr_sauve` | — | 143 o | l'écriture : dr_sauve (débounce 900 ms, comme atDrEnrAuto), témoin « Enregistré à … » (atDrEnrConfirme) | dr_annuler, dr_mkChanger, dr_rappelOuvrir, dr_sauveMaintenant (+4) |
 | `dr_sauveAvantDepart` | — | 107 o | E1 (relecteur neuf n°2) : | — |
 | `dr_sauveMaintenant` | depart | 2339 o | (sans commentaire) affiche/emploie : « atelier ouvert pendant l · écrit lui-même (dr_copieAuto se tait tant que l » | dr_sauveAvantDepart, voir |
-| `dr_scene` | et | 1780 o | (sans commentaire) affiche/emploie : « heure du tableau, à l · essai garde l » | dr_repEmettre, dr_sceneAuto, dr_sesAppliquer, dr_sesScene (+1) |
-| `dr_sceneAuto` | vite | 1866 o | (sans commentaire) affiche/emploie : « écrire, cet appareil n · appareil qui l » | dr_coursEcrire, dr_minuteurEnvoyer, dr_tabVeiller, dr_versMur |
+| `dr_scene` | et | 1951 o | (sans commentaire) affiche/emploie : « heure du tableau, à l · essai garde l » | dr_repEmettre, dr_sceneAuto, dr_sesAppliquer, dr_sesScene (+1) |
+| `dr_sceneAuto` | vite | 1866 o | (sans commentaire) affiche/emploie : « écrire, cet appareil n · appareil qui l » | dr_coursEcrire, dr_minuteurEnvoyer, dr_tabReducPas, dr_tabVeiller (+1) |
 | `dr_seCite` | suite | 352 o | (sans commentaire ni indice) | narrativiser, recit |
 | `dr_seance` | sk | 78 o | (sans commentaire ni indice) | dr_derouleDe, dr_invContenuV1, dr_invPoser, dr_invRetirerDiapos (+17) |
 | `dr_seances` | — | 252 o | la vue d'une séance telle que la maquette la lisait (DATA.seances[si] = {titre, ecrans}) : un regard, pas une copie | alertesChapitre, arreterRepetition, dejaVue, dr_annulerHeure (+15) |
@@ -1976,11 +1983,11 @@
 | `dr_syncLire` | — | 729 o | (sans commentaire ni indice) | — |
 | `dr_syncListe` | v | 160 o | (sans commentaire ni indice) | dr_syncBase, dr_syncComparer, dr_syncEcrire, dr_syncH |
 | `dr_syncPoser` | k, eid, distante | 568 o | pose une diapo venue du hub à la place de la nôtre (même eid) | dr_syncComparer, dr_syncDire, dr_syncEcrire |
-| `dr_tabAdresse` | — | 898 o | (sans commentaire) affiche/emploie : « ); d.className =  · ;   d.innerHTML =  » — touche #dr-tab-adr-boite | — |
+| `dr_tabAdresse` | — | 1184 o | (sans commentaire) affiche/emploie : « ); d.className =  · ;   d.innerHTML =  » — touche #dr-tab-adr-boite | — |
 | `dr_tabAncrer` | mur, et | 480 o | (sans commentaire) affiche/emploie : « :scope > table.p8-grille · :scope > table.p8-grille » | rendre |
 | `dr_tabAnnee` | d | 96 o | (sans commentaire ni indice) | dr_tabAttendre |
 | `dr_tabAttendre` | — | 916 o | (sans commentaire) affiche/emploie : «  && (p.classeNom ·· p.classe);     dr_tabDireClasse(c ?  ·  + String(p.creneau ··  » — hub /site/edt/calendrier/ | dr_tabDemarrer, dr_tabRetourAttente |
-| `dr_tabAttenteSuit` | d | 1414 o | C16 mandat T : les anneaux suivent le centre de l'heure (comme la maquette : | dr_tabPoser |
+| `dr_tabAttenteSuit` | d | 1615 o | C16 mandat T : les anneaux suivent le centre de l'heure (comme la maquette : | dr_tabPoser, dr_tabReducAppliquer |
 | `dr_tabAvecEtiquette` | et | 158 o | §12.74 (2) : l'étiquette entière part avec l'état (le tableau n'a pas les activités du chapitre) | dr_tabVignetteNourrir, dr_versMur |
 | `dr_tabCaseDuMoment` | grille, cal, classes, d, niveau | 1255 o | (sans commentaire ni indice) | dr_tabAttendre |
 | `dr_tabCheminC` | c | 313 o | le distant : le cours trouvé, on lit la copie jouée, puis la scène toutes les 900 ms et le pointeur toutes les 3 s | dr_tabFluxOuvrir, dr_tabFluxTombe, dr_tabMonter, dr_tabSceneRecue (+1) |
@@ -2003,35 +2010,43 @@
 | `dr_tabLirePointeur` | cb | 550 o | §12.66 (1) : puis le mode test (`/site/tableau_test/pointeur`) — il se suit comme une répétition (rien n'y est d'une classe ; retiré → l'horloge) | dr_tabPointeur |
 | `dr_tabLireSeance` | c | 529 o | la séance du chapitre (relance M2), lue par `dr_lire(B)` : ses `items` (les documents par référence d'E4) ; | dr_tabMonter |
 | `dr_tabMaintenant` | m | 263 o | ㊵ : l'heure à laquelle compter la fin reçue — avec h (la fin à l'heure du hub) : la fenêtre locale prend l'écart du pilote (même montre), le tableau distant le sien, mesuré au hub (pas encore mesuré : | dr_tabMinutReste |
-| `dr_tabMinutPastille` | el, m, reste, txt | 826 o | §12.70 bis : la pastille, à la place et à la taille que Paul lui donne sur sa diapo (parts de la diapo, mesurées sur #mur2) | dr_tabMinutTic |
+| `dr_tabMinutPastille` | el, m, reste, txt | 1236 o | §12.70 bis : la pastille, à la place et à la taille que Paul lui donne sur sa diapo (parts de la diapo, mesurées sur #mur2) | dr_tabMinutTic |
 | `dr_tabMinutRecevoir` | m, tsPilote, local | 688 o | §12.70 (1)-(4)(7) — LE MINUTEUR AU TABLEAU Reçu avec la scène (ou par message, pour la fenêtre locale) : { d durée, e état, f fin à l'horloge du pilote, r reste }. | dr_tabRecevoir, dr_tabRetourAttente, dr_tabSceneRecue |
 | `dr_tabMinutReste` | — | 164 o | (sans commentaire ni indice) | dr_tabMinutTic |
-| `dr_tabMinutTic` | — | 1080 o | (sans commentaire) affiche/emploie : « ) el.style.display =  · ; return; }   const reste = m.e ===  » — touche #dr-tab-minut | dr_tabMinutRecevoir |
+| `dr_tabMinutTic` | — | 1080 o | (sans commentaire) affiche/emploie : « ) el.style.display =  · ; return; }   const reste = m.e ===  » — touche #dr-tab-minut | dr_tabMinutRecevoir, dr_tabReducAppliquer |
 | `dr_tabMonter` | — | 902 o | (sans commentaire ni indice) | sesTabChercherCours, sesTabVeillePointeur |
 | `dr_tabMontrer` | o | 407 o | l'identité fait foi : si le rang reçu ne désigne pas la même diapo dans MA copie, on la retrouve par son eid | dr_tabSceneRecue |
 | `dr_tabMur` | — | 43 o | CÔTÉ TABLEAU (`?vue=tableau`, `&local=1`) | dr_rendreMur |
 | `dr_tabNormaliser` | o | 346 o | §12.71 : ce que le hub a retiré d'une scène (une liste vide) et que le rendu attend | dr_tabSceneRecue |
 | `dr_tabPages` | mur, et, corps, els, pages, trop | 2310 o | (sans commentaire) affiche/emploie : «  && l.closest( » | paginer |
 | `dr_tabPeutEcrire` | — | 587 o | la scène au hub : `C/scene` = `et` + {eid, origine, ts, trameMaj} (mandat point 3) | dr_sceneAuto, dr_sesScene, dr_tabVeiller |
-| `dr_tabPleinEcran` | ev | 396 o | §12.72 (Paul, 29/10 10:41 : « tu fais en sorte que le tableau distant s'affiche en plein écran (autorisation google évidemment) ») : Chrome n'ouvre le plein écran que sur un geste de l'utilisateur. | — |
+| `dr_tabPleinEcran` | ev | 600 o | §12.72 (Paul, 29/10 10:41 : « tu fais en sorte que le tableau distant s'affiche en plein écran (autorisation google évidemment) ») : Chrome n'ouvre le plein écran que sur un geste de l'utilisateur. | — |
+| `dr_tabPleinEcranFini` | — | 117 o | (sans commentaire ni indice) | dr_tabPleinEcran |
 | `dr_tabPointeur` | — | 179 o | (sans commentaire ni indice) | dr_tabMonter |
-| `dr_tabPoser` | — | 6050 o | la page tableau : on cache le site, on pose l'attente, le mur et le témoin « interrompu » | dr_tabDemarrer |
+| `dr_tabPoser` | — | 6273 o | la page tableau : on cache le site, on pose l'attente, le mur et le témoin « interrompu » | dr_tabDemarrer |
 | `dr_tabPoserBoutons` | — | 510 o | (sans commentaire) affiche/emploie : « ; q.type =  · ; q.textContent =  » — touche #bvideoproj, #dr-tab-adr | dr_tabVeiller |
 | `dr_tabPoserEcran` | et, ecran | 354 o | l'écran reçu (avec l'état, ou relu dans `C/ecrans`) devient celui que le rendu du socle lit (dans la maquette : `DATA.seances[si].ecrans[di]`, que la fenêtre écrivait elle-même, l. 1810) | dr_rendreMur |
 | `dr_tabPoste` | msg | 83 o | (sans commentaire ni indice) | dr_minutGlisser, dr_minuteurEnvoyer, dr_versMur |
 | `dr_tabRecevoir` | ev | 844 o | la fenêtre locale : elle reçoit l'état du pilote par `postMessage` et ne lit jamais le hub | — |
+| `dr_tabReducAppliquer` | — | 328 o | (sans commentaire) touche #ses-tab | dr_tabPoser, dr_tabReducRecevoir |
+| `dr_tabReducGarder` | cle, v | 70 o | (sans commentaire ni indice) | dr_tabReducPas, dr_tabReducRecevoir |
+| `dr_tabReducItems` | — | 897 o | C16 mandat AO (dette 18) : « Le tableau déborde : réduire » — deux lignes du menu « ⋯ », un réglage occasionnel ; le pourcentage dit où il en est | — |
+| `dr_tabReducLire` | cle | 210 o | (sans commentaire ni indice) | dr_tabPoser, dr_tabReducPilote |
+| `dr_tabReducPas` | sens | 536 o | (sans commentaire) affiche/emploie : « heure lancée ; le mode test et la répétition repartent d » | — |
+| `dr_tabReducPilote` | — | 67 o | au pilote : le réglage envoyé (celui de cet appareil de pilotage), et le pas − / + | dr_scene, dr_tabReducItems, dr_tabReducPas |
+| `dr_tabReducRecevoir` | v | 308 o | (sans commentaire ni indice) | dr_tabSceneRecue |
 | `dr_tabRetourAttente` | — | 613 o | E1 (§12.41) : le pointeur d'une répétition retiré (« ■ Arrêter ») → l'horloge d'attente ; une heure lancée retirée garde son image (relance C3, inchangé) | dr_tabSceneOubliee, dr_tabSceneRecue, sesTabVeillePointeur |
 | `dr_tabSansEcranDuProf` | — | 296 o | (sans commentaire ni indice) | — |
 | `dr_tabSansEntree` | et | 94 o | (sans commentaire ni indice) | dr_tabVignetteNourrir |
 | `dr_tabSceneOubliee` | o, c | 215 o | §12.68 : une scène de CE cours déjà montrée, puis retirée (ou remise à celle d'avant le cours) : l'heure a été annulée — le tableau revient à l'horloge | dr_tabSceneRecue |
-| `dr_tabSceneRecue` | o, c | 2604 o | une scène arrivée (par le flux ou par la lecture) | dr_tabFluxOuvrir, dr_tabSonder |
+| `dr_tabSceneRecue` | o, c | 2718 o | une scène arrivée (par le flux ou par la lecture) | dr_tabFluxOuvrir, dr_tabSonder |
 | `dr_tabSonder` | — | 136 o | (sans commentaire ni indice) | dr_tabMonter, sesTabPoll |
 | `dr_tabTemoin` | — | 248 o | le témoin de la vue « ⧉ Tableau » (réveil n°3 (b) ; cadrage 1 §1.8 : le libellé seulement si un support est connecté) : « tableau en Win K » n'existe que si la fenêtre du tableau est ouverte ; | dr_tabVeiller |
 | `dr_tabTrame` | — | 96 o | (sans commentaire ni indice) | dr_seances, dr_trame |
 | `dr_tabTrancheOter` | tr | 235 o | (sans commentaire) affiche/emploie : « :scope > .p8-tr-out · :scope > .p8-tr-in » | appliquerPages, dr_tabTranchePoser, dr_tabTranches |
 | `dr_tabTranchePoser` | tr, de, a | 703 o | (sans commentaire) affiche/emploie : « ); o.className =  · ; const i = document.createElement( » | appliquerPages |
 | `dr_tabTranches` | t, tr, place | 638 o | (sans commentaire) affiche/emploie : « ); if (cache) tr.classList.remove( » | dr_tabPages |
-| `dr_tabTrop` | corps | 242 o | (sans commentaire) affiche/emploie : « :scope > table.p8-grille » | paginer |
+| `dr_tabTrop` | corps | 242 o | C16 (mandat AQ, Paul 08/11 20:29) : une fiche ne se met pas en pages — c'est une longue feuille qui défile (dr_ficheDefile) ; ses puces ne sont plus des lignes de page (avant : | paginer |
 | `dr_tabVeiller` | — | 1288 o | (sans commentaire) affiche/emploie : « appelle pas `pousser` — « qui a participé », s · ; try { const t = (typeof dr_trame ===  » — touche #vue-temoin | — |
 | `dr_tabVignette` | boite, inner, on | 1085 o | posée par `vueDroite` (dr-socle.js) : la vignette, créée une fois, gardée vivante ; on = la montrer à la place du dessin de la diapo suivante | vueDroite |
 | `dr_tabVignetteNourrir` | — | 638 o | la vignette dit `pret` : on lui envoie ce que voit la classe (ou rien), et le chrono | — |
@@ -2065,7 +2080,7 @@
 | `dr_texteEcrit` | el | 271 o | C16 (㉙) : ce que Paul a écrit dans un texte de la diapo, sans aucun élément de l'interface qui s'y trouverait (la barre du bloc ; un élément marqué non écrivable) | ecrireDansDiapo, p8EcrireCopie |
 | `dr_tirer` | poignee, cote | 1217 o | (sans commentaire) affiche/emploie : « ); document.body.style.cursor =  · ; });   dr_ecouteDoc( » | — |
 | `dr_titrePoser` | e | 1431 o | (sans commentaire) affiche/emploie : «  · activité  · } · ${dr_esc(e.role ===  » | dr_tout |
-| `dr_tout` | — | 7608 o | (sans commentaire) affiche/emploie : « état de l · heure dans l » | ajouterBloc, alerteVideo, aller, allerAuCahier (+119) |
+| `dr_tout` | — | 7608 o | (sans commentaire) affiche/emploie : « état de l · heure dans l » | ajouterBloc, alerteVideo, aller, allerAuCahier (+121) |
 | `dr_toutLire` | — | 242 o | (sans commentaire ni indice) | dr_activites, dr_demarrer, dr_notes, dr_trameDe (+1) |
 | `dr_traceAuto` | vite | 617 o | (sans commentaire) affiche/emploie : « Heure de cours —  ·  + p.classe +  » — ECRIT au hub | _drTraceAuto, dr_copieAuto |
 | `dr_traceReprendre` | cb | 749 o | la relance dans le même créneau reprend la trace (`_drTraceReprendre`) : le début réel revient ; une trace d'une autre classe ou d'un autre créneau n'est pas reprise (elle se dit, l'heure part à neuf) | _drTraceReprendre, dr_lancerNeuf |
@@ -2143,6 +2158,9 @@
 | `edtArriveeProf` | — | 408 o | LA PORTE ① : L'ARRIVÉE DU PROFESSEUR « j'arrive en classe, je me connecte sur le site, et là, je dois aller vite. » L'EDT s'ouvre PAR-DESSUS l'accueil, jamais à la place : | loginAsProf |
 | `edtAujourdhui` | — | 95 o | (sans commentaire ni indice) | dr_ouvDates, edtAlerteInjection, edtAller, edtCasesCourantes (+17) |
 | `edtAujourdhuiAller` | — | 37 o | (sans commentaire ni indice) | edtTeteHtml |
+| `edtAutreBasculer` | cle | 220 o | (sans commentaire) touche #edt-modale | edtAutreSeanceHtml |
+| `edtAutreSeanceHtml` | cle,c | 1954 o | une séance commencée en tête (C16 764), puis l'ordre | edtPeindreModale |
+| `edtAutresSeances` | c | 932 o | C16 mandat AN (NOTE-Z dette 17 ; C16 342, 348, 764) : | edtAutreSeanceHtml, edtLancer |
 | `edtAvancement` | nomClasse | 303 o | (sans commentaire ni indice) | edtDivergence |
 | `edtBandeauHtml` | lundi,lettre | 1365 o | (sans commentaire) affiche/emploie : « <span class= · >calendrier non injecté</span> » | edtPeindreSemaine |
 | `edtBasculable` | v | 66 o | (sans commentaire ni indice) | edtBasculerClassement, edtBasculerStatut |
@@ -2152,7 +2170,7 @@
 | `edtBlocDatesAnnee` | — | 1827 o | (sans commentaire) affiche/emploie : « ;   return  ·  class= » — touche #edt-date-debut | edtSectionPanneau |
 | `edtCarteClic` | nom | 107 o | (sans commentaire) affiche/emploie : « Profil de la classe  ·  \u2014 il arrive au lot suivant. » | edtCartesHtml |
 | `edtCartesHtml` | lundi | 1442 o | (sans commentaire) affiche/emploie : « <div class= ·  onclick= » | edtPeindreMois, edtPeindreSemaine |
-| `edtCaseClic` | cle | 40 o | (sans commentaire ni indice) | edtPeindreMois, edtPeindreSemaine |
+| `edtCaseClic` | cle | 60 o | (sans commentaire ni indice) | edtPeindreMois, edtPeindreSemaine |
 | `edtCasesA` | iso | 569 o | (sans commentaire) affiche/emploie : « ESSAI n » | edtCasesCourantes, edtCasesDuJour, edtDecisionsOrphelines |
 | `edtCasesCourantes` | — | 38 o | (sans commentaire ni indice) | edtCartesHtml, edtDivergence, edtNiveauxConnus, edtPeindreAnnee |
 | `edtCasesDuJour` | iso | 1139 o | (sans commentaire) affiche/emploie : « );     if(lettre&&s!== » | edtCreneauxLibresLe, edtCreneauxOu, edtHeuresDeLEvenement, edtOccupantDe (+6) |
@@ -2174,7 +2192,7 @@
 | `edtCibleSous` | x,y | 237 o | (sans commentaire ni indice) | edtGlisserDebut |
 | `edtClassementDe` | categorie | 264 o | (sans commentaire ni indice) | edtSansSeance |
 | `edtClassesDuHub` | — | 202 o | L'APPARIEMENT — la grille nomme « 3 FRANKLIN Aretha », le hub ne la connaît pas encore (les classes n'arrivent qu'en tout dernier). Tant que le champ est vide, la case s'affiche mais ne projette rien : | edtPeindrePanneau |
-| `edtCleClasse` | nom | 559 o | E1 (§12.31-1, dette 13 · 51) : | atP2NormaliserSeances, atSeancePourHtml, chValiderChapitre, dr_classe (+12) |
+| `edtCleClasse` | nom | 559 o | E1 (§12.31-1, dette 13 · 51) : | atP2NormaliserSeances, atSeancePourHtml, chValiderChapitre, dr_classe (+13) |
 | `edtCleHeure` | iso,creneau,nomClasse | 96 o | (sans commentaire ni indice) | edtAjouterHeure, edtAnnulerDecision, edtAppelCheminDe, edtBasculerClassement (+11) |
 | `edtClesDuHub` | x | 64 o | (sans commentaire ni indice) | edtCharger |
 | `edtClesHeureTrace` | iso,creneau,nomClasse | 226 o | E1 (§12.31-1 ter) : LA CLÉ D'UNE HEURE JOUÉE — le déroulé l'écrit sous la CLÉ de la classe (`_drCleHeureDe` : `classeSlug`, [.#$[]/ et blancs] → « _ ») ; | edtCheminTrace, edtProjeter, edtSeanceDeTrace, edtSeancesDeTrace (+1) |
@@ -2224,7 +2242,7 @@
 | `edtEvenementJustifie` | ev | 239 o | [②a] L'ÉVÉNEMENT EST-IL MARQUÉ ? La réponse ne vient plus de l'objet injecté — où elle disparaissait à chaque réinjection — mais du magasin des décisions. | edtPeindreAnnee |
 | `edtFermer` | — | 200 o | (sans commentaire) affiche/emploie : « ;   document.documentElement.classList.remove( · ); document.body.classList.remove( » — touche #edt-ecran | dr_edtReprendre, dr_ouvrirClasse, dr_relireTrace, dr_sesReprendreEssai (+6) |
 | `edtFermerQuestion` | — | 67 o | (sans commentaire) touche #edt-question | edtPoserQuestionDepot, edtToucheEchap, edtValiderDepot |
-| `edtFileDAttente` | nomClasse,fil | 422 o | la file des séances qui attendent, pour une classe et un fil | dr_enchSuivante, edtAvancement, edtCartesHtml, edtLancer (+1) |
+| `edtFileDAttente` | nomClasse,fil,ordreSeul | 1072 o | la file des séances qui attendent, pour une classe et un fil | dr_enchSuivante, edtAvancement, edtCartesHtml, edtLancer (+1) |
 | `edtFiltrerOu` | txt | 837 o | (sans commentaire) affiche/emploie : « )        o.hidden=(o.getAttribute( · )!==edtQ.v);     else if(edtQ.quoi=== » — touche #edt-ou | edtPeindreModale |
 | `edtFinAnnee` | — | 76 o | (sans commentaire ni indice) | edtCreneauxOu, edtDestinationsPour, edtHeuresJamaisReplacees |
 | `edtFusionnerPeriodes` | neuves | 916 o | Réinjecter la grille ne perd JAMAIS les dates déjà saisies : une période dont le nom existe déjà garde les siennes. | edtInjecterAvecLaGrille |
@@ -2239,12 +2257,12 @@
 | `edtHeuresAReplacer` | nomClasse | 575 o | [⑥b] LES HEURES À REPLACER — celles qu'une autre classe a prises. Tant que Paul ne les a pas reposées, ou déclarées perdues, le site les lui rappelle : dans la vue de la classe, et au bandeau. | edtRappelAReplacerHtml, edtTeteHtml |
 | `edtHeuresAjoutees` | iso | 434 o | Une HEURE AJOUTÉE n'est pas un déplacement : c'est une heure de plus, posée sur un trou de l'emploi du temps. | edtProjeter |
 | `edtHeuresApres` | fin | 458 o | [⑥] LES HEURES POSÉES AU-DELÀ DE LA NOUVELLE FIN : elles ne disparaissent pas, elles redeviennent des heures à replacer, et elles sont NOMMÉES. | edtPoserDateAnnee |
-| `edtHeuresClasse` | seance,creneau,nomClasse,N0 | 1780 o | N pour une classe qui a clos des heures de la séance : | edtHeuresPour |
+| `edtHeuresClasse` | seance,creneau,nomClasse,N0 | 2524 o | N pour une classe qui a clos des heures de la séance : | edtHeuresPour |
 | `edtHeuresDeLEvenement` | ev | 952 o | [②a] LES HEURES QU'UN ÉVÉNEMENT RECOUVRE. Une décision est une décision D'HEURE, pas d'événement : l'événement dit seulement QUI l'a causée. | edtCochesDeplacees, edtCoutParNiveau, edtEvenementJustifie, edtJustifier (+1) |
 | `edtHeuresJamaisReplacees` | — | 444 o | [⑨] LA BASCULE DE FIN D'ANNÉE. Passé la fin de l'année déclarée, une heure restée « à replacer » ne le sera plus jamais : | — |
-| `edtHeuresJouees` | seance,nomClasse | 304 o | (sans commentaire ni indice) | dr_enchSuivante, dr_heureProposee, dr_ouvHeuresJouees, edtFileDAttente (+1) |
+| `edtHeuresJouees` | seance,nomClasse | 304 o | (sans commentaire ni indice) | dr_enchSuivante, dr_heureProposee, dr_ouvHeuresJouees, edtAutresSeances (+2) |
 | `edtHeuresJustifiees` | nomClasse | 604 o | LA DIVERGENCE — alerte progressive, jamais un blocage | edtDivergence |
-| `edtHeuresPour` | seance,creneau,nomClasse | 1900 o | (sans commentaire) affiche/emploie : « injection §1.2, ou le geste de Paul dans l » | dr_enchSuivante, dr_heuresDeLaClasse, dr_proposer, edtProjeter (+1) |
+| `edtHeuresPour` | seance,creneau,nomClasse | 1900 o | (sans commentaire) affiche/emploie : « injection §1.2, ou le geste de Paul dans l » | dr_enchSuivante, dr_heuresDeLaClasse, dr_proposer, edtAutresSeances (+2) |
 | `edtHorodatage` | el | 193 o | photo : horodatage complet à la seconde, jamais la seule date | edtAmorce |
 | `edtHorsAnnee` | iso | 331 o | [2ter 14a] LA BORNE DE L'ANNEE - UN SEUL ENDROIT DECIDE. « je dois pouvoir déclarer mon début d’année tel jour et puis le reste se cale ». | edtHeuresDeLEvenement, edtPeindreAnnee, edtProjeter, edtRefusDepot |
 | `edtIdMenteur` | el,famille | 128 o | [③bis-b] UN IDENTIFIANT DIT SA FAMILLE. La règle de ① ne change pas : un identifiant en service n'est JAMAIS recalculé. | edtReconduire |
@@ -2259,9 +2277,9 @@
 | `edtJournalHtml` | nomClasse | 699 o | (sans commentaire) affiche/emploie : « <div class= · >Aucune modification horaire pour cette classe.</div> » | edtPeindreModale |
 | `edtJoursDepuis` | iso | 198 o | [⑤] L'ALERTE MENSUELLE — AVEUGLE, SANS RÉSEAU. Le site ne va rien lire dehors : il compte les jours depuis la dernière injection. Un mois, et il le dit une fois, sans bloquer. | edtAlerteInjection |
 | `edtJustifier` | id,valeur | 2281 o | (sans commentaire) affiche/emploie : « Aucune heure de cours sur ces dates : rien à marquer. · écart justifié retiré —  » | — |
-| `edtLancer` | cle,preparer,rattraper | 3214 o | [E2] les ids du bloc du déroulé (contrat §7) — avant : at-dr-classe, at-dr-creneau, at-dr-debut, at-dr-tete, at-zone | edtPeindreModale |
+| `edtLancer` | cle,preparer,rattraper,autre | 3676 o | la liste ouverte se voit : la case défile jusqu'au lien (le geste de Paul) | edtAutreSeanceHtml, edtPeindreModale |
 | `edtLignesVues` | E,paquets | 411 o | C16 mandat AJ2 (c) : LES DIAPOS VUES D'APRÈS LES PAQUETS DES HEURES, une seule lecture — la case (`edtHeuresClasse`) et le pilotage (`dr_marquerJoues`). | dr_marquerJoues, edtHeuresClasse |
-| `edtListe` | x | 176 o | (sans commentaire ni indice) | dr_enchSuivante, dr_joueeIci, dr_joueeOublier, edtAvancement (+8) |
+| `edtListe` | x | 176 o | (sans commentaire ni indice) | dr_enchSuivante, dr_joueeIci, dr_joueeOublier, edtAutresSeances (+10) |
 | `edtListesFamilles` | nom,o | 691 o | [③a] LES LISTES D'UNE FAMILLE DANS UN OBJET. L'entrant vient toujours en forme simple ; | edtReconduire |
 | `edtLundiCourant` | — | 54 o | (sans commentaire ni indice) | edtPeindreSemaine, edtPhotoPrendre |
 | `edtLundiDe` | iso | 153 o | LE CALENDRIER, EN LECTURE — la lettre de semaine, les jours sans cours ─ | edtCreneauxOu, edtLundiCourant, edtPeindreMois, edtPoserQuestionDepot (+3) |
@@ -2271,7 +2289,7 @@
 | `edtModaleSaisir` | ev | 767 o | déplaçable : poignée, pointer events, contenue dans la zone | edtPeindreModale |
 | `edtMotifDe` | v | 218 o | (sans commentaire ni indice) | edtBasculable, edtHeurePerdue, edtMotifEnClair, edtPeindreCalendrier (+1) |
 | `edtMotifEnClair` | v | 597 o | (sans commentaire) affiche/emploie : « ;   var t=EDT_MOTIFS[m].libelle;   if(m=== · +v.libelle;   if(m=== » | edtAnnulerDecision, edtHeurePerdue, edtPeindreCalendrier, edtSansSeance |
-| `edtNiveauDe` | nomClasse | 167 o | (sans commentaire ni indice) | dr_enchSuivante, dr_proposer, edtChapitreEnCours, edtCheminTrace (+9) |
+| `edtNiveauDe` | nomClasse | 167 o | (sans commentaire ni indice) | dr_enchSuivante, dr_proposer, edtAutresSeances, edtChapitreEnCours (+10) |
 | `edtNiveauxConnus` | — | 197 o | le coût d'un événement, NIVEAU par NIVEAU. Les événements portent un niveau et `classes: []` : nommer une classe ici serait inventer une donnée. | edtCoutParNiveau |
 | `edtNomCritere` | c | 53 o | (sans commentaire ni indice) | edtChangementsDe |
 | `edtNomDuJour` | iso | 86 o | (sans commentaire ni indice) | edtCasesDuJour, edtChangerEmploiDuTemps, edtCreneauxOu, edtJourEnClair (+2) |
@@ -2286,7 +2304,7 @@
 | `edtPeindre` | — | 203 o | (sans commentaire) affiche/emploie : « )return edtPeindreMois();   if(EDT_VUE.mode=== · )return edtPeindreAnnee();   if(EDT_VUE.mode=== » | edtAller, edtAujourdhuiAller, edtChangerEmploiDuTemps, edtEcrireDecision (+4) |
 | `edtPeindreAnnee` | — | 4748 o | (sans commentaire) affiche/emploie : « mon année  · <div class= » — touche #edt-ecran | edtPeindre |
 | `edtPeindreCalendrier` | — | 3326 o | (sans commentaire) affiche/emploie : « heures perdues · <div class= » — touche #edt-ecran | edtEcrireDecisionsGroupe, edtHeurePerdue, edtJustifier, edtPeindre |
-| `edtPeindreModale` | — | 9935 o | (sans commentaire) affiche/emploie : « ; m.className= · ;     (document.getElementById( » — touche #edt-ecran, #edt-modale | edtAppelRedessiner, edtCaseClic, edtEcrireDecision, edtEcrireDecisionsGroupe |
+| `edtPeindreModale` | — | 10111 o | (sans commentaire) affiche/emploie : « ; m.className= · ;     (document.getElementById( » — touche #edt-ecran, #edt-modale | edtAppelRedessiner, edtAutreBasculer, edtCaseClic, edtEcrireDecision (+1) |
 | `edtPeindreMois` | — | 2321 o | LE MOIS | edtPeindre |
 | `edtPeindrePanneau` | — | 13487 o | (sans commentaire) affiche/emploie : « <p class= · >Année <b> » — touche #edt-panneau | edtApparierNom, edtCopierPrompt, edtCreneauPoser, edtEcrireGrille (+9) |
 | `edtPeindreSemaine` | — | 2282 o | (sans commentaire) affiche/emploie : « en-tête : où je suis, et ce qui m · année */   h+= » — touche #edt-ecran | edtPeindre, elfPremieresCases |
@@ -2309,7 +2327,7 @@
 | `edtPhraseDiffPeriodes` | neuves | 851 o | (sans commentaire) affiche/emploie : «  Périodes :  ·  déclarée » | edtApercu |
 | `edtPhraseFaible` | q | 240 o | (sans commentaire) affiche/emploie : «  semble être devenu «  » | edtQuestionsFaibles |
 | `edtPlusJour` | iso,n | 102 o | (sans commentaire ni indice) | edtAller, edtBandeauHtml, edtCreneauxOu, edtHeuresDeLEvenement (+6) |
-| `edtPoserCss` | — | 15772 o | (sans commentaire) affiche/emploie : « ;   s.textContent= · .edt-refus ul{margin:6px 0 0 16px;padding:0} » — touche #edt-css | edtOuvrir, edtPeindrePanneau |
+| `edtPoserCss` | — | 16316 o | (sans commentaire) affiche/emploie : « ;   s.textContent= ·    /* C16 mandat AN : « une autre séance… » */    + » — touche #edt-css | edtOuvrir, edtPeindrePanneau |
 | `edtPoserDateAnnee` | champ,valeur | 1340 o | (sans commentaire) affiche/emploie : « Date refusée —  · );     return edtRefus;   }   var edtAu=(champ=== » — hub /site/config/brevetDates/ — ECRIT au hub | edtSaisirDateAnnee |
 | `edtPoserIds` | liste,famille,classe,dejaPris | 434 o | POSE — un élément sans id en reçoit un à sa PREMIÈRE RENCONTRE. Un id existant n'est JAMAIS recalculé. Collision → #2, à la pose seulement. Rend {poses:n, collisions:[…]} ; ne touche à rien d'autre. | edtPoserIdsObjet |
 | `edtPoserIdsObjet` | nom,o | 2769 o | POSE SUR UN OBJET ENTIER — le chemin réel de la rentrée est la PREMIÈRE INJECTION (le hub est vide) : les id naissent là, avant la première écriture. | edtChangerEmploiDuTemps, edtInjInjecter, edtInjecterAvecLaGrille, edtPeriodesEcrire (+1) |
@@ -2338,9 +2356,9 @@
 | `edtSansSeance` | cle | 1210 o | (sans commentaire) affiche/emploie : « ,pose:Date.now()},        · il soit — symétrique de l » — touche #edt-cat, #edt-prec | edtBlocBanaliser |
 | `edtSeanceDeTrace` | nomClasse,iso,creneau | 620 o | (sans commentaire ni indice) | edtProjeter |
 | `edtSeanceDerniere` | seance | 656 o | la séance est-elle la dernière de son chapitre (hors sommaire, dans l'ordre de l'Atelier, `atSeances`) — la règle de `dr_invDerniere`, pour toute séance | edtTrameRangee |
-| `edtSeanceEtat` | seance,nomClasse | 1056 o | ㊲ (C16) : | edtProjeter, edtSeanceJouee |
+| `edtSeanceEtat` | seance,nomClasse | 1056 o | ㊲ (C16) : | edtAutresSeances, edtProjeter, edtSeanceJouee |
 | `edtSeanceJouee` | seance,nomClasse | 497 o | (sans commentaire) affiche/emploie : « heure 2/3 n » | dr_ouvTerminee, edtChapitreEnCours, edtFileDAttente |
-| `edtSeancePour` | se,nomClasse | 186 o | E1 (§12.35-1, dette 13 · 67) : UNE SÉANCE RÉSERVÉE À UNE OU PLUSIEURS CLASSES — `classes` : la liste des clés qui la jouent ; absente ou vide = toutes les classes du niveau. | _pubCtrl, _visiblePourSession, dr_ouvSeances, dr_sourceSeance (+2) |
+| `edtSeancePour` | se,nomClasse | 186 o | E1 (§12.35-1, dette 13 · 67) : UNE SÉANCE RÉSERVÉE À UNE OU PLUSIEURS CLASSES — `classes` : la liste des clés qui la jouent ; absente ou vide = toutes les classes du niveau. | _pubCtrl, _visiblePourSession, dr_ouvSeances, dr_sourceSeance (+3) |
 | `edtSeancesDeTrace` | nomClasse,iso,creneau | 998 o | C16 mandat V : TOUTES les séances jouées sur une même case (la séance 1, puis la suivante dans cette heure), dans l'ordre du jeu (le début réel de chaque trace) | dr_edtReprendre, edtProjeter |
 | `edtSectionPanneau` | edtQuoi | 596 o | LA PORTE ② : LE PANNEAU PROF | _blocBrevet, _renderProfSection |
 | `edtSemaineDe` | iso | 181 o | [⑨b] CE QUE CHAQUE DESTINATION PORTE POUR ÊTRE CHERCHÉE : son mois, son numéro de semaine et sa lettre A/B. | edtOptionsOu |
@@ -2354,7 +2372,7 @@
 | `edtToutesLesCases` | — | 102 o | (sans commentaire ni indice) | edtApparierNom, edtEtiquettesOrphelines, edtNomsDeGrille, edtOuvrir |
 | `edtTraceDe` | seance,nomClasse,iso,creneau | 327 o | (sans commentaire ni indice) | edtChercherTrace |
 | `edtTraceExiste` | nomClasse,iso,creneau | 55 o | [⑨b] LA TRACE D'UNE HEURE — le seul critère qui interdit de la déplacer. Relue à chaque appel : une trace supprimée rend l'heure déplaçable aussitôt. | edtGlisserDebut |
-| `edtTrameRangee` | seance | 1026 o | C16 mandat AJ2 : la trame comme le site la range pour la découper (`dr_normaliserTrame`) — pas de réactivation ; | edtHeuresClasse, edtHeuresPour |
+| `edtTrameRangee` | seance,ecrans | 1116 o | C16 mandat AJ2 : la trame comme le site la range pour la découper (`dr_normaliserTrame`) — pas de réactivation ; | edtHeuresClasse, edtHeuresPour |
 | `edtTroisIssues` | cleSource,dst | 862 o | [⑥a] LES TROIS ISSUES. Paul ne reçoit plus un refus : il reçoit le prix, puis il choisit. Échanger ne coûte rien à personne ; | edtChoisirOu, edtDepot |
 | `edtValeurCritere` | el,champ | 188 o | (sans commentaire ni indice) | edtAmorce, edtApparier, edtChangementsDe |
 | `edtValiderCalendrier` | o | 1103 o | (sans commentaire) affiche/emploie : « Le texte collé n\u2019est pas un objet. · );     else if(s.lettre!== » | — |

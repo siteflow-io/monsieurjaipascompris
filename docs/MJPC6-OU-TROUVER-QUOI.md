@@ -975,3 +975,14 @@
 - **Le QCM au long cours** (rouvrir, appel et binômes de la reprise, absent d'un cours) : `LIVRAISONS/CODE-QCM/src/live/base.js`, `live/pages.js`, `c4-seances.js` (PDF : « absent le … (Qx à Qy) »), `c3-tablettes.js`, `etape2.js` (mode test : `ecranDeTest`, `SeancesTestV`) ; fonctions `coursSeanceQCM`, `coursDeQuestionQCM`, `absentAuCoursQCM`, `absencesV`, `annulerReouverture`, `limiteFinHeure`. Banc : `banc/banc-806-long-cours.js`. Mandat : `MANDATS/MANDAT-QCM-806-LONG-COURS.md` (sas).
 - **Les chapitres de MJPC dans le QCM** : `src/c3-soir.js` (`chapitresBrutsV`, `ordreChapV`, `chapitresDuNiveau`, `trouverChapitreV`, `chapitresConnus`, `chapitreVue`, `chapitresLiesV`, `texteLienMjpc`), `c3-evals.js` (éditeur, ligne du lien de séance, `useListeGelee`), `c4-seances.js` (PDF), `live/base.js`, `maquette620.js`. Lu : `site/<niveau>/chapitres` (`title`, `ordre`, `uid`, compétences, `seances/*/items/*` de `kind:'qcm'`) ; jamais écrit. Banc : `banc/banc-806-chapitres.js`. Mandat : `MANDATS/MANDAT-QCM-806-CHAPITRES-MJPC.md` (sas).
 - **Sauvegarde de la 8.0.5** : `SAUVEGARDES/evaluation-qcm-8.0.5-avant-8.0.6-2026-11-08.html` (sas).
+
+## AJOUTS DU 08/11/2026 — CONSCIENCE n°16 : 8.92.0-㉙ (le lot 1)
+
+| je cherche… | c'est là |
+| --- | --- |
+| « une autre séance… » dans la case ; la file des séances | l. 12556 ; `edtFileDAttente` (l. 27549) ; `dr_adopterIdentites` (l. 21369) |
+| « le tableau déborde : réduire » | l. 16850 (menu « … » du pilotage) |
+| la fiche : défilement, ouverte en grand | `ficheDefil` (l. 18277), `dr_ficheDevoiler` (l. 18437) ; « Documents de la séance… » : `dr_docFeuilleBrancher` (l. 23325) |
+| les mandats, les sondes | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AN-…`, `AO-…`, `AP-…`, `AQ-…` ; `LIVRAISONS/DEROULE-01-11/SAMEDI/{AN,AO,AQ}/`, `RECIT-SAMEDI/` |
+| revenir à la 8.91.3-㉘ | `docs/MJPC6-restauration.md` (blob `4494235c4976`) |
+| ouvrir le site en 8.92.0-㉙ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.92.0` |
