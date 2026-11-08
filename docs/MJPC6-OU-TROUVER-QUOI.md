@@ -970,3 +970,8 @@
 | le mandat, la sonde | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AM-OU-EN-EST-LA-CLASSE.md` ; `LIVRAISONS/DEROULE-01-11/SAMEDI/AM/sonde-am.mjs` |
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
+
+## AJOUTS DU 08/11/2026 — QCM 8.0.6 (conscience n°14)
+- **Le QCM au long cours** (rouvrir, appel et binômes de la reprise, absent d'un cours) : `LIVRAISONS/CODE-QCM/src/live/base.js`, `live/pages.js`, `c4-seances.js` (PDF : « absent le … (Qx à Qy) »), `c3-tablettes.js`, `etape2.js` (mode test : `ecranDeTest`, `SeancesTestV`) ; fonctions `coursSeanceQCM`, `coursDeQuestionQCM`, `absentAuCoursQCM`, `absencesV`, `annulerReouverture`, `limiteFinHeure`. Banc : `banc/banc-806-long-cours.js`. Mandat : `MANDATS/MANDAT-QCM-806-LONG-COURS.md` (sas).
+- **Les chapitres de MJPC dans le QCM** : `src/c3-soir.js` (`chapitresBrutsV`, `ordreChapV`, `chapitresDuNiveau`, `trouverChapitreV`, `chapitresConnus`, `chapitreVue`, `chapitresLiesV`, `texteLienMjpc`), `c3-evals.js` (éditeur, ligne du lien de séance, `useListeGelee`), `c4-seances.js` (PDF), `live/base.js`, `maquette620.js`. Lu : `site/<niveau>/chapitres` (`title`, `ordre`, `uid`, compétences, `seances/*/items/*` de `kind:'qcm'`) ; jamais écrit. Banc : `banc/banc-806-chapitres.js`. Mandat : `MANDATS/MANDAT-QCM-806-CHAPITRES-MJPC.md` (sas).
+- **Sauvegarde de la 8.0.5** : `SAUVEGARDES/evaluation-qcm-8.0.5-avant-8.0.6-2026-11-08.html` (sas).
