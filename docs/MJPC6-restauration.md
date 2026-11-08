@@ -1558,3 +1558,9 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - Avant : 8.0.4, 2 075 390 o, md5 `54c0af98864fb7cb31fdfb3dddc3a745`, blob `91d3a552a35a` (commit `13d677e`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.4-avant-8.0.5-2026-11-08.html`. Promu : 8.0.5, 2104265 o, md5 `12fd1beebd65729ef3fa480f7281b717`, commit `9371574`, blob `0e0e1baa915a`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `evaluation-qcm.html`, vérifier l'adresse en ligne bit à bit contre `54c0af98…`. **Ce que revenir ferait perdre** : la reprise d'une séance rouverte (une lecture du soir de Paul redeviendrait effaçable), la carte du QCM au portail, le mélange, les « jamais avec » à l'arrivée, l'oubli après l'heure, la corbeille avant import et restauration, l'émoji. **Données** : rien de nouveau au site, sinon la corbeille (`corbeille/qcm-…`) aux gestes d'import et de restauration ; une 8.0.4 relit tout ce qu'écrit la 8.0.5 (`finLe` est ignoré).
 
+
+### POINT DE RETOUR — `index.html`, `dictee_universelle.html`, `reecriture.html` AVANT promotion 8.91.2-㉗ + dictée 2.6.1 + réécriture 2.4.2 (08/11/2026, conscience n°16)
+- `index.html` : blob `0a7ea605f4f9` (commit `5e002ed`) · 3 209 801 o · md5 `48ae8db7902834819b0154264346a88b` · v8.91.1-㉖
+- `dictee_universelle.html` : blob `ea4f8a36af53` · 1 997 272 o · md5 `a9020d67543394c5780347aedb484980` · v2.6.0
+- `reecriture.html` : blob `e63068398f82` · 275 929 o · md5 `1d9ce172495d8b2a2070c4876866ebd6` · v2.4.1
+- **Restauration en cas de `BUG`** : le blob du fichier en cause → PUT sur `contents/<fichier>`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la vérification sur réseau lent (deux sessions pourraient de nouveau tenir le tableau) ; « Comparaison rapide » qui bloque l'élève ; la marque « raté » qui se perd en correction rapide. Au hub : rien de nouveau.

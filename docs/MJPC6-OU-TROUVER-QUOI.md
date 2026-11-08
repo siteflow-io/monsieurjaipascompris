@@ -951,3 +951,13 @@
 | « l'émoji des binômes » | l'écran « Tu es avec … » | `SCN.sexe` (`classes/<c>/amenagements/<élève>/sexe`) |
 | bancs | sas, `code-qcm`, `LIVRAISONS/CODE-QCM/banc/` | `banc-805-mardi.js`, `banc-rouverte-21-10.js`, `banc-arret` ; contrôles fixes `AUDITS/CONTROLES-QCM-APP/` |
 
+
+## AJOUTS DU 08/11/2026 — CONSCIENCE n°16 : 8.91.2-㉗, dictée 2.6.1, réécriture 2.4.2
+
+| je cherche… | c'est là |
+| --- | --- |
+| une session à la fois : l'attente du hub, « Lancer quand même », le refus, « n sur N », le premier lancement | `dr_sesTenant` (l. 24237), `dr_sesRefuser` (l. 24255) ; sas `LIVRAISONS/DEROULE-01-11/AK-UNE-SESSION/NOTE.md` |
+| la dictée co-évaluée, « Comparaison rapide » après « Continuer » | `dictee_universelle.html`, l'écran `distributionWait` (vers l. 3855) |
+| la réécriture, la marque « raté » en correction rapide | `reecriture.html`, `fastMarkOk`, `failedAtRef` ; sas `LIVRAISONS/APPS-PETITS/NOTE-AL.md` |
+| revenir en arrière | `docs/MJPC6-restauration.md` (index `0a7ea605f4f9`, dictée `ea4f8a36af53`, réécriture `e63068398f82`) |
+| ouvrir le site en 8.91.2-㉗ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.2` |

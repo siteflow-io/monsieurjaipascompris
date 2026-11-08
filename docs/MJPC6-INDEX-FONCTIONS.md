@@ -14,7 +14,7 @@
 > **Régénérable** : `python3 index_fonctions.py` sur la production courante.
 
 
-**2494 fonctions** — site : 2494 · moteur : 0
+**2496 fonctions** — site : 2496 · moteur : 0
 
 
 ## SOMMAIRE DES FAMILLES
@@ -25,7 +25,7 @@
 - **DIVERS — socle du site** — 510 fonctions
 - **DIVERS — utilitaires internes** — 258 fonctions
 - **DÉROULÉ INTÉGRÉ (8.75.0) — p8 : notes, mesure lisible, pages, schémas** — 103 fonctions
-- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 879 fonctions
+- **DÉROULÉ INTÉGRÉ (8.75.0) — socle, classe, atelier, tableau, récit, recyclage (dr-*.js inlinés, sas LIVRAISONS/INTEGRATION/dr/)** — 881 fonctions
 - **EMPLOI DU TEMPS — grille, calendrier, créneaux, cases, lancement (8.73.0 → 8.75.0)** — 269 fonctions
 - **PONT DÉROULÉ — cadre, adaptateur, trame, identités, trace** — 22 fonctions
 - **PONT DÉROULÉ — pilotage, lancement, clôture, reprise** — 3 fonctions
@@ -151,7 +151,7 @@
 | `atImprimer` | — | 868 o | Impression : le LOT ENTIER si la feuille est pour toute la classe ; sinon la feuille courante. Même document que l'aperçu (aucune divergence possible). | atRendreEditeur |
 | `atImprimerSelection` | — | 782 o | (sans commentaire) affiche/emploie : « ÉTAT DU HUB, PAS CELUI D · ;       else alert( » — touche #at-imp-note | atRendreListe |
 | `atImprimerSelection2` | — | 1828 o | (sans commentaire) affiche/emploie : « Fiches MJPC \u2014  · ));   var corps= » — touche #at-imp-note | atImprimerSelection |
-| `atInfo` | msg | 69 o | petites modales de l'atelier (pas de prompt/confirm natifs) | _edLierEcrire, addChapter, atChExporter, atChampChapitre (+102) |
+| `atInfo` | msg | 69 o | petites modales de l'atelier (pas de prompt/confirm natifs) | _edLierEcrire, addChapter, atChExporter, atChampChapitre (+103) |
 | `atInfoComposante` | id | 67 o | bulles d'info : le texte vient du schéma, jamais d'un attribut onclick | atHtmlCase |
 | `atInfoGroupe` | i | 49 o | (sans commentaire ni indice) | atRendreEditeur |
 | `atInfoInjection` | voie | 942 o | ⓘ des voies d'injection — la substance que les modales de chInjecter disent déjà, mais AVANT le clic. | chAfficherInventaire |
@@ -608,7 +608,7 @@
 | `notifyConnection` | eleve | 337 o | (sans commentaire) affiche/emploie : « Connexion prof (M. Meney) · Connexion :  » | _loginEleveFound, loginAsProf |
 | `notionsTravaillees` | — | 751 o | les diapos d'une activité, par identifiant (a0) | chapitreHtml, ouvrirOral, remobNonTravaillees |
 | `nouvelleActivite` | titre | 550 o | (p5) la carte « Ce que la diapo déclare » qui s'écrit | brancherDeclare |
-| `now` | — | 87 o | (sans commentaire ni indice) | _applyLinkEcrire, _b2DoSave, _blocBrevet, _corbeillePut (+220) |
+| `now` | — | 87 o | (sans commentaire ni indice) | _applyLinkEcrire, _b2DoSave, _blocBrevet, _corbeillePut (+221) |
 | `objetDec` | cle | 627 o | (sans commentaire) affiche/emploie : « Activité  ·  + contenuEntier(E[i])).join( » | dr_travailHeure, ouvrirFin, ouvrirReserve, recitHtml0 (+2) |
 | `onInteraction_` | e | 282 o | (sans commentaire) ECRIT au hub | — |
 | `onScroll_` | — | 316 o | (sans commentaire ni indice) | startTracking_ |
@@ -634,7 +634,7 @@
 | `ordPaires` | coll | 400 o | les paires {k:clé RÉELLE, o:objet} triées par ORDRE ; à égalité (données abîmées), la clé départage — l'affichage reste stable, jamais aléatoire. | atSeances, atSeancesDe, ctxEntreesSeance, dr_ouvNumChapitre (+12) |
 | `ordResserrer` | coll,basePath,cb | 373 o | ③ le resserrement : 1, 2, 3… sans trou, dans l'ordre OÙ LES CHOSES SONT DÉJÀ. Écritures FINES (un chemin par `ordre`), jamais de nœud entier ; idempotent : | deleteItem, deleteSeance, edDeplacerVersSeanceFaire, edInsererSeanceAvant (+1) |
 | `ordSuivant` | coll | 100 o | (sans commentaire ni indice) | addChapter, addSeance, chCalculerEcritures, chInjecterConfirme (+2) |
-| `ordreHeure` | h | 195 o | (sans commentaire) affiche/emploie : « ordre d » | activitesDeLHeure, aller, allerAuCahier, allerSuivante (+35) |
+| `ordreHeure` | h | 195 o | (sans commentaire) affiche/emploie : « ordre d » | activitesDeLHeure, aller, allerAuCahier, allerSuivante (+36) |
 | `ordreHeureCalc` | h | 168 o | (sans commentaire) affiche/emploie : « ); return o0.filter(i => E[i].role !==  » | dr_atRang, dr_ordreOuverture, ordreHeure |
 | `ordreHeureCalc0` | h | 1463 o | (sans commentaire) affiche/emploie : «  ·· e.role ===  · ) return false; if (e.role ===  » | dr_filDe, ordreHeureCalc |
 | `ouOnEnEst` | — | 3041 o | (sans commentaire) affiche/emploie : « heure dépasse de ${debord} min` :  ·  faite » | dr_tout, tick |
@@ -1561,7 +1561,7 @@
 | `dr_journalAuto` | vite | 235 o | (sans commentaire) affiche/emploie : « Le journal de l’heure ( » | dr_copieAuto |
 | `dr_lanceAnnuler` | — | 1617 o | (sans commentaire) affiche/emploie : « ); if (L.hou && ho && ho.textContent ===  · ) ho.textContent =  » — touche #hou | — |
 | `dr_lanceBande` | — | 1184 o | (sans commentaire) affiche/emploie : « heure part en moins d · écran */   if (!vue) { if (b) b.style.display =  » — touche #dr-lance, #hou | dr_lanceAnnuler, dr_lanceFin, dr_lanceGarder, dr_lanceTic |
-| `dr_lanceFin` | raison | 523 o | (sans commentaire) affiche/emploie : « ); if (L.hou && ho && ho.textContent ===  · ) ho.textContent = raison ===  » — touche #hou | dr_lanceTic |
+| `dr_lanceFin` | raison | 523 o | (sans commentaire) affiche/emploie : « ); if (L.hou && ho && ho.textContent ===  · ) ho.textContent = raison ===  » — touche #hou | dr_lanceTic, dr_sesLanceRefus |
 | `dr_lanceGarde` | cb | 116 o | (sans commentaire ni indice) | dr_lancer, dr_lancerNeuf |
 | `dr_lanceGarder` | — | 102 o | (sans commentaire ni indice) | — |
 | `dr_lanceJouer` | — | 295 o | (sans commentaire) touche #bdev | dr_lanceFin |
@@ -1904,14 +1904,15 @@
 | `dr_sesEcrire` | ici, sous, v | 733 o | écrire l'état vivant : l'heure par le transport du site (ses reprises, son témoin) ; l'essai à son adresse d'essai (jamais le magasin) | dr_sesEnvoyerMaintenant |
 | `dr_sesEmettreScene` | — | 253 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPoserAutour |
 | `dr_sesEnvoyer` | — | 128 o | envoyer : après chaque geste (le rendu, la sauvegarde, le minuteur), seulement si quelque chose a changé | dr_frappeReponse, dr_sceneAuto, dr_sesAppliquer, dr_sesPoserAutour (+1) |
-| `dr_sesEnvoyerMaintenant` | close, cede | 3134 o | (sans commentaire) affiche/emploie : « a pas suit, et n · est reçu, la base est ce qu » | dr_sesPremierVerifier, dr_sesPrendreRejoint, dr_sesRecu, dr_tcGeste (+1) |
+| `dr_sesEnvoyerMaintenant` | close, cede | 3874 o | (sans commentaire) affiche/emploie : « a pas suit, et n · est reçu, la base est ce qu » | dr_sesPremierVerifier, dr_sesPrendreRejoint, dr_sesRecu, dr_tcGeste (+1) |
 | `dr_sesFrais` | x | 67 o | (sans commentaire ni indice) | dr_sesBandeau, dr_sesTenant, dr_tcRejoindre |
 | `dr_sesFus` | b, m, t | 1952 o | la fusion à trois voies : ce que seul l'un a changé est gardé ; les deux ont changé : le plus récent (le sien, puisqu'il arrive après) | dr_sesFus3 |
 | `dr_sesFus3` | b, m, t | 69 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesPoserAutour |
-| `dr_sesGarder` | d, lancer | 319 o | l'appareil qui la jouait, s'il est là, s'arrête (dr_sesClosAilleurs) | — |
+| `dr_sesGarder` | d, lancer | 1367 o | (sans commentaire) affiche/emploie : «  + p.seance, p: Object.assign({}, p, { quoi:  » | — |
 | `dr_sesIci` | — | 1095 o | quelle session cette page pilote-t-elle ? | dr_sesEmettreScene, dr_sesEnvoyerMaintenant, dr_sesVeiller |
 | `dr_sesJeTiens` | — | 53 o | (sans commentaire ni indice) | dr_apVerser, dr_sceneAuto, dr_sesAppliquer, dr_sesEnvoyerMaintenant (+4) |
 | `dr_sesJournal` | m, t | 268 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesPoserAutour |
+| `dr_sesLanceRefus` | — | 152 o | (sans commentaire ni indice) | dr_sesGarder |
 | `dr_sesLireHub` | chemin, cb | 182 o | lire et écouter le hub lui-même (jamais le magasin du mode test) : le flux REST (`EventSource`), la lecture à intervalle en repli | dr_sesArreterTenant, dr_sesEcouter, dr_sesRefuser, dr_sesReprendreEssai (+3) |
 | `dr_sesMainAfficher` | — | 977 o | à l'ordinateur : « La télécommande a la main » (ou un autre ordinateur), posé une fois, seul son texte change | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesPremierVerifier, dr_sesRecu (+1) |
 | `dr_sesMemeSession` | h, d | 320 o | (sans commentaire ni indice) | dr_sesGarder |
@@ -1925,7 +1926,7 @@
 | `dr_sesQuand` | ts | 396 o | (sans commentaire) affiche/emploie : « , { weekday:  · , month:  » | dr_sesRefuser |
 | `dr_sesRange` | v | 1518 o | les trois états rangés COMME LE HUB LES RANGE avant d'être comparés (le hub ne garde ni valeur nulle, ni liste ou objet vides) : l'état reçu est passé par lui, l'état d'ici non — sans cela, `reps: | dr_sesAppliquer, dr_sesFus3, dr_sesPoserAutour |
 | `dr_sesRecu` | v | 3939 o | un champ où l'on a commencé à écrire (la palette, que le pilote garde sous le curseur, vide : non) | dr_sesPremierVerifier, dr_sesVeiller |
-| `dr_sesRefuser` | h, d, lancer | 2726 o | (sans commentaire) affiche/emploie : « , v => {     const S2 = v && typeof v ===  · <div style= » | dr_sesGarder |
+| `dr_sesRefuser` | h, d, lancer | 3703 o | (sans commentaire) affiche/emploie : « )]).then(([sc, v]) => {     const S2 = v && typeof v ===  · heure et l » | dr_sesGarder |
 | `dr_sesReprendreEssai` | p, fini | 1694 o | (sans commentaire) affiche/emploie : « ); } catch (e) {} try { atInfo( · ); } catch (e) {} }   dr_sesLireHub(DR_TT.chemin +  » — hub /site/cours_actif | dr_sesReprendreTenant, dr_tcRejoindre, sesReprendre |
 | `dr_sesReprendreRepetition` | p | 1022 o | LA RÉPÉTITION (§3.5) : déclarée et repilotable comme l'heure L'annonce existait (`/site/repetition/pointeur` ; en mode test `/site/tableau_test/pointeur`, `quoi: 'repetition'`) ; | dr_sesReprendreTenant, dr_tcRejoindre, sesReprendre |
 | `dr_sesReprendreTenant` | h | 615 o | (sans commentaire) affiche/emploie : « ) dr_reprendreCours(h.p); else if (h.sorte ===  » | dr_sesRefuser |
@@ -1933,11 +1934,12 @@
 | `dr_sesSig` | p | 83 o | (sans commentaire ni indice) | dr_sesAppliquer, dr_sesEnvoyerMaintenant, dr_sesVeiller |
 | `dr_sesSuivreFin` | — | 539 o | suivre : dès que cette page pilote une session, elle écoute son état vivant ; elle se tait quand la session s'arrête ici | dr_sesClosAilleurs, dr_sesVeiller |
 | `dr_sesTaire` | h | 112 o | (sans commentaire ni indice) | dr_apVeiller, dr_sesSuivreFin, dr_tcQrFermer, edtAppelVeiller |
-| `dr_sesTenant` | cb | 1184 o | (sans commentaire) affiche/emploie : «  + r.seance) H.push({ sorte:  ·  + t.seance) H.push(t.quoi ===  » — hub /site/cours_actif | dr_sesGarder |
+| `dr_sesTenant` | cb | 1378 o | (sans commentaire) affiche/emploie : «  + r.seance) H.push({ sorte:  ·  + t.seance) H.push(t.quoi ===  » — hub /site/cours_actif | dr_sesGarder |
 | `dr_sesTest` | — | 94 o | (sans commentaire ni indice) | dr_hhVoir, dr_sesBandeau, dr_sesIci, dr_sesReprendreEssai (+4) |
 | `dr_sesTexte` | c | 341 o | le texte du bandeau, selon ce qui joue | sesReprisePeindre |
 | `dr_sesVeilleDemarrer` | — | 455 o | LE BANDEAU, PARTOUT : abonné aux annonces du hub (l'heure, l'essai), sur tout appareil où le professeur est connecté | sesReprisePoser |
 | `dr_sesVeiller` | — | 833 o | (sans commentaire ni indice) | — |
+| `dr_sesVerifPeindre` | V, offre | 1703 o | « L'heure se lance… » ne reste pas à l'écran quand rien ne part | dr_sesGarder |
 | `dr_sessionEtat` | ok | 768 o | le témoin « ● session » (relance F8 : `sesBandeau`/`sesBandeauEtat` tombent ; E1 pose `#dr-session` dans `.haut`, je le remplis) | dr_sceneAuto, dr_sesEcrire, dr_sesScene, dr_ttEmettre |
 | `dr_setDev` | v | 47 o | (sans commentaire ni indice) | dr_mkPanneau |
 | `dr_setSupport` | v | 66 o | (sans commentaire ni indice) | dr_mkPanneau |
