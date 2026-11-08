@@ -937,3 +937,17 @@
 | les mandats, la sonde | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AJ*.md` ; `LIVRAISONS/DEROULE-01-11/SAMEDI/sonde-samedi.mjs` (H, H3, HA, HB, HC) ; branche `samedi/integration` `86a1c8354` |
 | revenir à la 8.91.0-㉕ | `docs/MJPC6-restauration.md` (blob `1584159a86ef`) |
 | ouvrir le site en 8.91.1-㉖ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.1` |
+
+## AJOUTS DU 08/11/2026 — QCM 8.0.5 (conscience n°14)
+| Paul dit | Où c'est | Fonctions |
+| --- | --- | --- |
+| « la question grisée avec ses coches », « on s'est arrêtés ici » | la correction d'une séance rouverte, sur la tablette du lecteur | `E.lire` (ne réécrit jamais une lecture `par:"prof"`), `finLe` posé par « 🛑 Terminer » — sources `code-qcm`, `src/live/base.js` |
+| « non répondue » (le lecteur décoche tout) | la note | `S.note`, `S.trouveeCalculee`, `A.reveler`, `S.LU` ; `resultatLocalV` (`src/c4-seances.js`) |
+| « la carte du QCM », « Mettre les fiches à jour » | la déclaration lue par le portail | `MJPC_APP`, `MJPC_MANIFESTE`, `MJPC_PURGE` (`src/live/mjpc-core.js`) ; portail : `fichesExtraireObjet`, `fichesMajUne` (`index.html`) |
+| « le mélange des réponses » | l'ordre vu par le second de la tablette | `S.ordreChoix` (aucun choix à sa place, graine séance\|élève\|question) |
+| « jamais avec » à l'appel et à l'arrivée | les binômes | `A.appelFini`, `A.marquerPresent`, `placer` ; « Lève la main. » |
+| « les tablettes oublient leurs élèves » | 10 min après « 🕙 Fin de l'heure », ou à « 🛑 Terminer » | `ELV.oublier` |
+| « la corbeille » à l'import et à « Restaurer » | Données > 💾 Sauvegarde | `mettreACorbeille`, `restaurerDeCorbeille` |
+| « l'émoji des binômes » | l'écran « Tu es avec … » | `SCN.sexe` (`classes/<c>/amenagements/<élève>/sexe`) |
+| bancs | sas, `code-qcm`, `LIVRAISONS/CODE-QCM/banc/` | `banc-805-mardi.js`, `banc-rouverte-21-10.js`, `banc-arret` ; contrôles fixes `AUDITS/CONTROLES-QCM-APP/` |
+

@@ -1553,3 +1553,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `1584159a86ef` (commit `c229efb`) · 3 200 135 o · md5 `38d619d3d034b716bdbe5bfd0781e5ea` · v8.91.0-㉕
 - **Motif** : le compte des heures (la case et le pilotage, un seul découpage).
 - **Restauration en cas de `BUG`** : le blob `1584159a86ef` → PUT sur `contents/index.html`, puis bit à bit contre le md5 ci-dessus. **Ce que revenir ferait perdre** : la case qui dit le même nombre d'heures que le pilotage ; la troisième heure d'une séance (la séance redite finie après 2 heures) ; la séance 9 sans heure vide. Au hub : rien de nouveau.
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.5 (08/11/2026, conscience n°14)
+- Avant : 8.0.4, 2 075 390 o, md5 `54c0af98864fb7cb31fdfb3dddc3a745`, blob `91d3a552a35a` (commit `13d677e`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.4-avant-8.0.5-2026-11-08.html`. Promu : 8.0.5, 2104265 o, md5 `12fd1beebd65729ef3fa480f7281b717`, commit `9371574`, blob `0e0e1baa915a`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `evaluation-qcm.html`, vérifier l'adresse en ligne bit à bit contre `54c0af98…`. **Ce que revenir ferait perdre** : la reprise d'une séance rouverte (une lecture du soir de Paul redeviendrait effaçable), la carte du QCM au portail, le mélange, les « jamais avec » à l'arrivée, l'oubli après l'heure, la corbeille avant import et restauration, l'émoji. **Données** : rien de nouveau au site, sinon la corbeille (`corbeille/qcm-…`) aux gestes d'import et de restauration ; une 8.0.4 relit tout ce qu'écrit la 8.0.5 (`finLe` est ignoré).
+
