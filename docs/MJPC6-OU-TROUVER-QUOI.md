@@ -902,3 +902,18 @@
 | le mandat, la sonde | sas `MANDATS/DEROULE-01-11/APRES-8860/W-*.md` ; `LIVRAISONS/DEROULE-01-11/ABSENTS-HEURE/sonde-absents-heure.mjs` ; branche `deroule/absents-heure` `093e4c5f3` |
 | revenir à la 8.89.1-㉓ | `docs/MJPC6-restauration.md` (blob `eae83db7e941`) |
 | ouvrir le site en 8.89.2-㉓-micro (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.89.2` |
+
+## AJOUTS DU 08/11/2026 — CONSCIENCE n°16 : 8.90.0-㉔ (le morceau de samedi)
+
+| je cherche… | c'est là |
+| --- | --- |
+| une seule session à la fois sur le tableau : qui le tient, le refus | `dr_sesTenant` (l. 24229), `dr_sesRefuser` (l. 24246) |
+| le récit : les tranches de l'heure (la fin = les dix dernières minutes avant la clôture) | `dr_recitFinMs` (l. 22932), `dr_recitTranches` (l. 22933) |
+| le récit : « terminée » lu dans le journal de cette heure-là | `dr_recitFinieA` (l. 22938) |
+| la séance enchaînée : l'horloge de la case transmise (sans les jours entiers) | `dr_enchDecalage` (l. 21261) |
+| la séance enchaînée après une heure reprise : la date de sa case | `dr_lancer` (l. 20760, 7e argument `dateSeule`) |
+| nommer une notion ou une compétence, jamais un code | `dr_estNotion`, `dr_nommer`, `libNotion`, `libNotionEleve` (l. 18620-18623) |
+| la fenêtre « Quelle notion ? » (coches, tout déplier, la recherche) | `choixNotion` (l. 19295) |
+| les mandats, les sondes | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/` (Z à AH2) ; `LIVRAISONS/DEROULE-01-11/` : `SAMEDI/`, `RECIT-SAMEDI/`, `HORLOGE-RATTRAPEE/`, `QUELLE-NOTION/`, `NOMS-NOTIONS/` ; branche `samedi/integration` `577fb4082` |
+| revenir à la 8.89.2-㉓-micro | `docs/MJPC6-restauration.md` (blob `587543f54181`) |
+| ouvrir le site en 8.90.0-㉔ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.90.0` |
