@@ -1473,7 +1473,7 @@
 | `dr_finResume` | restantes | 737 o | le résumé de l'étape 2 dans la liste des sept, compté en diapos (« 9 reportées », « 8 reportées, 1 non faite ») | sequenceHtml |
 | `dr_finSansDecision` | d, derniere | 94 o | (sans commentaire ni indice) | dr_resteHeure, ouvrirFin |
 | `dr_finiPhrase` | x | 182 o | (sans commentaire) affiche/emploie : « ).replace(/[\s\u00a0]+$/,  » | recitHtml0 |
-| `dr_formeCible` | — | 153 o | E1 (R6, R13, R18, R20 — le recyclage de l'ancien déroulé, table B) : gras et souligné (G, S dans la palette « A », Ctrl/Cmd+B et +U), Ctrl+H qui bascule ; | dr_basculerSurl, dr_grasSoul, p8CouleurTexte, surligner |
+| `dr_formeCible` | — | 153 o | E1 (R6, R13, R18, R20 — le recyclage de l'ancien déroulé, table B) : gras et souligné (G, S sur la barre, au pilotage comme dans l'Atelier — C16 AI ; Ctrl/Cmd+B et +U), Ctrl+H qui bascule ; | dr_basculerSurl, dr_grasSoul, p8CouleurTexte, surligner |
 | `dr_frappeReponse` | neuve, bi | 1410 o | (sans commentaire) affiche/emploie : « à      Entrée (le rendu n » | brancherAjout |
 | `dr_frontiereHorsClasse` | — | 941 o | (sans commentaire ni indice) | dr_suivreSeance |
 | `dr_fusionCopie` | trame, copie, journalJ | 1646 o | la fusion de la copie et de la trame (contrat §12.8, relance C6), pour une nouvelle heure de la même séance avec la même classe : par `eid` — un écran nouveau dans la trame s'ajoute ; | dr_jouerCopie, dr_lancerNeuf |
