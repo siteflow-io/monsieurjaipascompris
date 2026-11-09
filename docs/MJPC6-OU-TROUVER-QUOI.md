@@ -971,6 +971,11 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 09/11/2026 — QCM 8.0.8 (conscience n°17)
+- **Les vraies durées** : `LIVRAISONS/CODE-QCM/src/c3-evals.js` (Réglages), mesures rangées dans la séance par `src/live/base.js` ; détail dans `LIVRAISONS/CODE-QCM/VERDICT.md`.
+- **Le profil de l'élève** : `archiverDansProfilsMJPC` (`src/`), nœud `mjpcProfils/`, effacé par `SCN.ecritParSeance` à l'annulation.
+- **La vraie heure** : `estVraieHeure` (`src/live/base.js`). **Banc** : `banc/banc-808.js`. **Sauvegarde de la 8.0.7** : `SAUVEGARDES/evaluation-qcm-8.0.7-avant-8.0.8-2026-11-09.html` (sas).
+
 ## AJOUTS DU 09/11/2026 — QCM 8.0.7 (conscience n°17)
 - **« Annuler cette séance »** : `LIVRAISONS/CODE-QCM/src/live/base.js` (`estVraieHeure`, `SCN.ecritParSeance`, `annulable`, `reprise`, `aujourdhuiPossible`, `ecritAujourdhui`, `ACT.annulerSeance`, `annulerCoursDuJour`, copie `avantCours` à « 🔓 Rouvrir »), `c3-objets.js` (bouton, écran « ⚠️ Attention », `demanderAnnulerSeance`), `c3-pilot.js` et `c3-corr.js` (console), `c3-soir.js` et `c4-seances.js` (cartes).
 - **Les chronos visibles de la tablette** : `src/c3-tablettes.js`, `src/c4.css`. **L'en-tête de « Lire les copies »** : `src/lire-copies.js`.
