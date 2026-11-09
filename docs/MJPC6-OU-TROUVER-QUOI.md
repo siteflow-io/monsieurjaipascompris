@@ -971,6 +971,12 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 09/11/2026 — QCM 8.0.7 (conscience n°17)
+- **« Annuler cette séance »** : `LIVRAISONS/CODE-QCM/src/live/base.js` (`estVraieHeure`, `SCN.ecritParSeance`, `annulable`, `reprise`, `aujourdhuiPossible`, `ecritAujourdhui`, `ACT.annulerSeance`, `annulerCoursDuJour`, copie `avantCours` à « 🔓 Rouvrir »), `c3-objets.js` (bouton, écran « ⚠️ Attention », `demanderAnnulerSeance`), `c3-pilot.js` et `c3-corr.js` (console), `c3-soir.js` et `c4-seances.js` (cartes).
+- **Les chronos visibles de la tablette** : `src/c3-tablettes.js`, `src/c4.css`. **L'en-tête de « Lire les copies »** : `src/lire-copies.js`.
+- **La vraie heure (à coder plus tard)** : mesure dans `LIVRAISONS/CODE-QCM/VERDICT.md` (séance de chapitre → `deroule_joue/<classe>/heures/<clé>` ; emploi du temps `/site/edt/…`).
+- **Bancs** : `banc/banc-807-annuler.js`, `banc/banc-807-chronos.js`. **Sauvegarde de la 8.0.6** : `SAUVEGARDES/evaluation-qcm-8.0.6-avant-8.0.7-2026-11-09.html` (sas).
+
 ## AJOUTS DU 08/11/2026 — QCM 8.0.6 (conscience n°14)
 - **Le QCM au long cours** (rouvrir, appel et binômes de la reprise, absent d'un cours) : `LIVRAISONS/CODE-QCM/src/live/base.js`, `live/pages.js`, `c4-seances.js` (PDF : « absent le … (Qx à Qy) »), `c3-tablettes.js`, `etape2.js` (mode test : `ecranDeTest`, `SeancesTestV`) ; fonctions `coursSeanceQCM`, `coursDeQuestionQCM`, `absentAuCoursQCM`, `absencesV`, `annulerReouverture`, `limiteFinHeure`. Banc : `banc/banc-806-long-cours.js`. Mandat : `MANDATS/MANDAT-QCM-806-LONG-COURS.md` (sas).
 - **Les chapitres de MJPC dans le QCM** : `src/c3-soir.js` (`chapitresBrutsV`, `ordreChapV`, `chapitresDuNiveau`, `trouverChapitreV`, `chapitresConnus`, `chapitreVue`, `chapitresLiesV`, `texteLienMjpc`), `c3-evals.js` (éditeur, ligne du lien de séance, `useListeGelee`), `c4-seances.js` (PDF), `live/base.js`, `maquette620.js`. Lu : `site/<niveau>/chapitres` (`title`, `ordre`, `uid`, compétences, `seances/*/items/*` de `kind:'qcm'`) ; jamais écrit. Banc : `banc/banc-806-chapitres.js`. Mandat : `MANDATS/MANDAT-QCM-806-CHAPITRES-MJPC.md` (sas).
