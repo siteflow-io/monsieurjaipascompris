@@ -2763,6 +2763,13 @@ div[style*="justify-content: space-between"][style*="flex-wrap: wrap"] > :last-c
 .co-liste.serree .co-l{padding:.14rem .55rem;line-height:1.15}
 .moitie .co-regle{margin:.15rem 0 .4rem;padding:.4rem .7rem;line-height:1.3}
 
+/* (8.0.7, Paul 217) « Trouvée au dernier moment » : le ✓ orange chez Paul comme chez l'élève (.v-orange) ; « ⛔ » ne dit que le point d'autonomie retiré */
+.scoresheet td.cell-trouvee{background:#FFF7ED;color:#C2410C;font-weight:900}
+
+/* (8.0.7, Paul 236) le chrono de l'autre, sur la moitié noire */
+.voile .voile-chrono{margin-top:1rem;font-size:1.25rem;font-weight:800;color:#fff;background:rgba(255,255,255,.14);border-radius:12px;padding:.5rem .9rem;display:inline-block}
+.decl-b-chrono.note{color:#15803D;font-weight:800}
+
 </style>
 <style>
 /* ═════ qcm2.css ═════ */
@@ -3731,6 +3738,10 @@ function ecrireQCM(maj, quoi){
   return db.ref(DB_ROOT).update(maj).catch(function(e){ console.error("QCM : écriture refusée (" + (quoi || "") + ")", e); throw e; });
 }
 function cheminS(sid, sous){ return "/sessions/" + sid + (sous ? "/" + sous : ""); }
+/* (8.0.7, Paul 241 et 244) la séance sid tourne-t-elle dans une vraie heure de l'emploi du temps ? true, false, ou null : « je ne sais pas ».
+   Plus tard, MJPC le dira (la séance du chapitre liée à l'évaluation, reliée à ses heures : LIVRAISONS/CODE-QCM/VERDICT.md) ; ce lien n'est
+   pas codé : aujourd'hui, toujours null, et la garde « ⚠️ Attention » s'ouvre toujours. false (hors vraie heure) : l'oubli en un clic, sans question. */
+function estVraieHeure(sid){ return null; }
 
 /* ══════════════════════ SCN : les fonctions de la maquette, sur la séance réelle ══════════════════════ */
 var SCN = (function(){
@@ -4227,6 +4238,32 @@ var SCN = (function(){
   S.rendueAu = function(id){ var s = S.sess(id); return !!(s && s.copies && s.copies.rendues && !s.copies.masquees); };
   S.qcmPrecedent = function(k, classe){ return S.seancesAvant(k, classe).filter(function(x){ return !x.demo && !x.rattrapage; })[0] || null; };
   S.passees = function(evalId, k){ return S.seances().filter(function(x){ return x.fin && x.eval === evalId && !x.demo; }).map(function(x){ return {classe:x.classe, date:x.date.slice(0, 5)}; }); };
+  /* (8.0.7, Paul 230) « Annuler cette séance » : ce que la séance a écrit, compté pour la garde (« Les réponses de 26 élèves, la note de chacun… »).
+     Une séance n'écrit que sous qcm/sessions/<id> (réponses, lectures, binômes, appel, presence_history, alertes, soir…) et qcm/sessionActive/<classe> ;
+     les tablettes écrivent qcm/presence/<classe>/<élève>. Rien d'autre : ni qcm/evaluations, ni le profil de l'élève (mjpcProfils), ni qcm/qrScans
+     (le jeton du QR n'est lié à aucune séance, la fenêtre du QR l'efface elle-même). */
+  S.ecritParSeance = function(id){ var s = S.sess(id) || {}, rep = {}, nl = 0;
+    Object.keys(s.reponses || {}).forEach(function(q){ Object.keys((s.reponses || {})[q] || {}).forEach(function(x){ rep[x] = 1; }); });
+    Object.keys(s.lectures || {}).forEach(function(q){ nl += Object.keys((s.lectures || {})[q] || {}).length; });
+    var tabs = Object.keys(s.places || {}).filter(function(k){ var t = (s.places || {})[k]; return t && (t.g || t.d); }).length;
+    var autres = S.seances().filter(function(x){ return x.id !== id && x.fin && x.eval === s.evalId && !x.demo; });
+    var qs = {}; Object.keys(s.questionsLancees || {}).forEach(function(q){ qs[q] = 1; }); Object.keys(s.reponses || {}).forEach(function(q){ if(Object.keys((s.reponses || {})[q] || {}).length) qs[q] = 1; });
+    return {repondu:Object.keys(rep).length, lectures:nl, posees:Object.keys(qs).length, tablettes:tabs, absents:S.absents(id).length, questions:Object.keys(s.questionsLancees || {}).length,
+      enCours:s.etat !== "terminee", autresPassees:autres.map(function(x){ return x.classe; })}; };
+  /* (8.0.7) peut-on annuler cette séance ? {ok, raison} — la raison se lit à l'écran, à côté du bouton grisé.
+     (231, en attente du mot de Paul) une séance rouverte (coursN > 1, le QCM au long cours) : l'annulation n'oublierait que le cours du jour ;
+     ce n'est pas codé. Sa place : ici (la raison), et annulerCoursDuJour dans ACT. */
+  S.annulable = function(id){ var s = S.sess(id); if(!s) return {ok:false, raison:"Cette séance n'existe plus."}; return {ok:true, raison:null}; };
+  /* (8.0.7, Paul 243) une séance reprise : « Oublier seulement aujourd'hui » se peut-il ? (la photo d'avant le « 🔓 Rouvrir » de ce jour) */
+  S.reprise = function(id){ var s = S.sess(id); return !!s && +s.coursN > 1; };
+  S.aujourdhuiPossible = function(id){ var s = S.sess(id), n = s && +s.coursN; if(!s || !(n > 1)) return {ok:false, raison:null};
+    return (s.avantCours || {})[n] ? {ok:true, raison:null} : {ok:false, raison:"Cette séance a été rouverte par l'ancienne version de l'app, qui ne gardait pas la séance d'avant : seul « Oublier toute la séance » est possible."}; };
+  // ce que le cours du jour a ajouté (la photo d'avant le « 🔓 Rouvrir » comparée à la séance) : élèves qui ont répondu, questions posées
+  S.ecritAujourdhui = function(id){ var s = S.sess(id) || {}, ph = (s.avantCours || {})[+s.coursN] || {}, rep = {}, q = {};
+    Object.keys(s.reponses || {}).forEach(function(qi){ Object.keys((s.reponses || {})[qi] || {}).forEach(function(x){ if(!(((ph.reponses || {})[qi] || {})[x])){ rep[x] = 1; q[qi] = 1; } }); });
+    Object.keys(s.questionsLancees || {}).forEach(function(qi){ if(!(ph.questionsLancees || {})[qi]) q[qi] = 1; });
+    return {repondu:Object.keys(rep).length, questions:Object.keys(q).length}; };
+
   S.mesEvaluations = function(x, k, classe){
     return S.seances(classe || S.classe()).filter(function(se){ return !se.demo && (S.eleves(se.id).indexOf(x) >= 0) && (se.fin || se.id === S.sid()); }).map(function(se){
       var abs = absentPartoutQCM(S.sess(se.id), x), rendue = S.rendueAu(se.id);
@@ -4564,12 +4601,40 @@ var ACT = (function(){
     maj["/sessionActive/" + s.classeSlug] = null;
     // la fin d'abord (etat, sessionActive), puis la phase : une console perdue entre les deux laisse une séance terminée, jamais une séance active
     return ecrireQCM(maj, "terminer").then(function(){ return poserDeroule(id, {ph:"fin"}); }); };
+  /* (8.0.7, Paul 230) « Annuler cette séance » : l'oubli voulu, sans corbeille, en une seule écriture. La séance entière (réponses, lectures, notes,
+     binômes, appel, presence_history, alertes, le soir), son qcm/sessionActive (seulement s'il la montre encore : une autre séance de la classe
+     n'est jamais touchée) et les présences de ses élèves (qcm/presence/<classe>/<élève>, sauf si une autre séance de la classe tourne).
+     Les tablettes, comme à « 🛑 Terminer » : sessionActive disparu, elles oublient leurs élèves (TabletteLive, src/live/pages.js).
+     L'évaluation redevient « pas encore passée » d'elle-même (S.passees, passeesV : elles lisent qcm/sessions). */
+  A.annulerSeance = function(sidX, quoi){ var id = sidX || sid(); var s = SCN.sess(id); if(!id || !s) return Promise.resolve();
+    // (8.0.7, Paul 243) une séance reprise : « Oublier seulement aujourd'hui » (quoi = "aujourdhui") ; sinon toute la séance
+    if(quoi === "aujourdhui") return annulerCoursDuJour(id, s);
+    var maj = {}, act = LIVE.d.sessionActive || {}, cl = s.classeSlug, autre = false;
+    maj["/sessions/" + id] = null;
+    Object.keys(act).forEach(function(c){ if(act[c] === id) maj["/sessionActive/" + c] = null; else if(c === cl && act[c]) autre = true; });
+    if(cl && !autre) SCN.eleves(id).forEach(function(x){ maj["/presence/" + cl + "/" + x] = null; });
+    if(LIVE.sid === id) LIVE.sid = null;
+    return ecrireQCM(maj, "annulerSeance"); };
+  /* (8.0.7, Paul 243) « Oublier seulement aujourd'hui » : la séance redevient telle qu'avant le « 🔓 Rouvrir » de ce jour (la photo avantCours/<coursN>,
+     prise par A.rouvrirSeance ; les photos des cours d'avant restent), en une seule écriture ; son qcm/sessionActive s'efface (les tablettes oublient
+     leurs élèves), et les présences de la classe si aucune autre séance n'y tourne. Sans photo (une séance rouverte par la 8.0.6) : rien ne bouge. */
+  function annulerCoursDuJour(id, s){ var n = +s.coursN || 1, ph = (s.avantCours || {})[n]; if(n < 2 || !ph) return Promise.resolve();
+    var remis = JSON.parse(JSON.stringify(ph)), garde = {}; Object.keys(s.avantCours || {}).forEach(function(k){ if(+k < n) garde[k] = s.avantCours[k]; });
+    if(Object.keys(garde).length) remis.avantCours = garde;
+    var maj = {}, act = LIVE.d.sessionActive || {}, cl = s.classeSlug, autre = false;
+    maj["/sessions/" + id] = remis;
+    Object.keys(act).forEach(function(c){ if(act[c] === id) maj["/sessionActive/" + c] = null; else if(c === cl && act[c]) autre = true; });
+    if(cl && !autre) SCN.eleves(id).forEach(function(x){ maj["/presence/" + cl + "/" + x] = null; });
+    if(LIVE.sid === id) LIVE.sid = null;
+    return ecrireQCM(maj, "annulerCoursDuJour"); }
   /* (8.0.6, Paul 178) « 🔓 Rouvrir la séance » : un nouveau cours. Le cours qui s'achève est gardé tel quel (cours/<n>) ; le nouveau commence comme un
      lancement : personne d'absent ni de parti d'avance, personne d'entré, des binômes refaits par la règle du lancement (SCN.binomesProposes : les
      exclusions, puis le QCM précédent, cette séance mise à part), sa fin de l'heure (55 min, comme au lancement), puis l'appel. Les tablettes oublient
      les binômes d'avant (ELV.cours, src/live/pages.js) ; la reprise est voulue (repriseConfirmee : pas de « ⚠️ Séance interrompue »). Rien d'autre ne
      bouge : réponses, lectures, questions lancées, écartées, révélées, l'ordre de la correction. */
   A.rouvrirSeance = function(id){ var s = SCN.sess(id); if(!s) return Promise.resolve(); var maj = {}, now = LIVE.maintenant(), n = +s.coursN || 1;
+    /* (8.0.7, Paul 243) la séance telle qu'avant ce « 🔓 Rouvrir » : « Oublier seulement aujourd'hui » la remet telle quelle (avantCours/<n+1>) */
+    var photo = JSON.parse(JSON.stringify(s)); delete photo.id; delete photo.avantCours; maj[cheminS(id, "avantCours/" + (n + 1))] = photo;
     maj[cheminS(id, "etat")] = "en_cours"; if(s.copies && s.copies.rendues) maj[cheminS(id, "copies/masquees")] = true;
     maj[cheminS(id, "cours/" + n)] = {debut:+(s.coursDebut || (s.lancee && s.lancee.date) || s.date || 0), arret:s.finLe || null, absents:SCN.absents(id).length ? SCN.absents(id) : null,
       partis:s.partis || null, places:s.places || null, entres:s.entres || null, fin:(s.lancee && s.lancee.fin) || null, masquees:!!(s.copies && s.copies.masquees)};
@@ -4600,7 +4665,7 @@ var ACT = (function(){
     ["absents", "partis", "places", "entres"].forEach(function(k){ maj[cheminS(id, k)] = c[k] || null; }); maj[cheminS(id, "deplaces")] = null;
     if(c.fin) maj[cheminS(id, "lancee/fin")] = c.fin;
     if(s.copies && s.copies.rendues) maj[cheminS(id, "copies/masquees")] = c.masquees ? true : null;
-    maj[cheminS(id, "coursN")] = n > 1 ? n : null; maj[cheminS(id, "coursDebut")] = n > 1 ? c.debut : null; maj[cheminS(id, "cours/" + n)] = null;
+    maj[cheminS(id, "coursN")] = n > 1 ? n : null; maj[cheminS(id, "coursDebut")] = n > 1 ? c.debut : null; maj[cheminS(id, "cours/" + n)] = null; maj[cheminS(id, "avantCours/" + (n + 1))] = null;
     LIVE.sid = null;
     return ecrireQCM(maj, "annulerReouverture").then(function(){ return poserDeroule(id, {ph:"fin"}); }); }
   // la séance interrompue (la console perdue : lastDisconnect, la 7.7.1) : « 🔄 Reprendre la séance » — la reprise confirmée, et le tour en cours
@@ -11386,7 +11451,7 @@ function Pilot(s){
       s.phase === "attente" && nonRepondus() > 0 ? h("button", Object.assign({key:4, className:"btn btn-ghost btn-sm"}, fen("c-rouvrir-un", "rouvrirUn", s.qi)), "🔓 Rouvrir pour un élève")
         : h("button", {key:4, className:"btn btn-ghost btn-sm", disabled:true, title:enCours ? "La question en cours n'est pas close : « 🔓 Rouvrir pour un élève » s'ouvre une fois close, pour ceux qui n'ont pas répondu." : s.phase === "attente" ? "Tous les présents ont répondu à cette question : il n'y a personne à rouvrir." : "Aucune question n'est encore close : il n'y a rien à rouvrir."}, "🔓 Rouvrir pour un élève"),
       h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen("c-finir-autre-heure", "finir")), "⏸️ Finir à une autre heure"),
-      h("button", Object.assign({key:3, className:"btn btn-rouge btn-sm"}, fen("c-terminer", "terminer")), "🛑 Terminer la séance")]),
+      annulerSeanceH("as"), h("button", Object.assign({key:3, className:"btn btn-rouge btn-sm"}, fen("c-terminer", "terminer")), "🛑 Terminer la séance")]),
     h("div", {className:"pilot-stats"}, s.stats.map(function(x, i){ return h("div", {key:i, className:"pilot-stat", title:TITRES_STATS[x[1]]}, h("div", {className:"v"}, x[0]), h("div", {className:"l"}, x[1])); })),
     h("div", {className:"pilot-grid v2"}, colG, colM, Overview(s.qi, s.passees || [], s))), true);
 }
@@ -11412,7 +11477,7 @@ function PilotAttest2(){
   c = Object.assign({}, c, {presents:prets[1]});
   return Console("pilotage", "pilot", h("div", {className:"card"},
     TitreCarte(h(F, null, "📝 Correction — " + EV.titre + " — " + CLASSE, InfoI("Avant la correction, chaque moitié montre la seconde attestation, une coche par ligne. La correction commence quand tous les présents l'ont cochée en entier, comme au début.")),
-      [h("button", Object.assign({key:0, className:"btn btn-ghost btn-sm"}, fen("c-depart", "depart")), "🚫 Départ d'un élève"), h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen("c-finir-autre-heure", "finir")), "⏸️ Finir à une autre heure"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen("c-terminer", "terminer")), "🛑 Terminer la séance")]),
+      [h("button", Object.assign({key:0, className:"btn btn-ghost btn-sm"}, fen("c-depart", "depart")), "🚫 Départ d'un élève"), h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen("c-finir-autre-heure", "finir")), "⏸️ Finir à une autre heure"), annulerSeanceH("as"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen("c-terminer", "terminer")), "🛑 Terminer la séance")]),
     h("div", {className:"pilot-status correction"}, "✍️ Seconde attestation — " + prets[0] + " / " + prets[1] + " prêts"),
     h("div", {className:"corr-grid"},
       h("div", null,
@@ -11438,7 +11503,7 @@ function PilotEstimation(){
   var estime = c.estime || [c.presents - pas.length, c.presents];
   return Console("pilotage", "pilot", h("div", {className:"card"},
     TitreCarte(h(F, null, "📊 Autoévaluation — " + EV.titre + " — " + CLASSE, InfoI("Chaque élève dit combien de bonnes réponses il pense avoir. Cette estimation sert à savoir s'il se surévalue, se sous-évalue ou s'évalue correctement ; son bilan la compare à sa note.")),
-      [h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen("c-finir-autre-heure", "finir")), "⏸️ Finir à une autre heure"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen("c-terminer", "terminer")), "🛑 Terminer la séance")]),
+      [h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen("c-finir-autre-heure", "finir")), "⏸️ Finir à une autre heure"), annulerSeanceH("as"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen("c-terminer", "terminer")), "🛑 Terminer la séance")]),
     h("div", {className:"pilot-status autoeval"}, "Phase autoévaluation — " + estime[0] + " / " + estime[1] + " élèves", InfoIB("Phase autoévaluation", "Les élèves choisissent dans quelle fourchette ils estiment avoir réussi.")),
     h("div", {className:"autoeval-prof-distrib"}, MAITRISE.map(function(mt){
       return h("div", {key:mt.k, className:"autoeval-prof-cell fourchette-" + mt.k}, h("span", null, mt.em + " " + mt.lib), h("strong", null, dist[mt.k])); })),
@@ -11736,7 +11801,7 @@ function BilanImprime(){ var p = paramHash("eleve"), e = p ? (p === "Julien" ? J
    Les mêmes écrans que la maquette (PilotCorrection, PilotCoevalE, BilanClasse), pour n'importe quelle classe et n'importe quel
    nombre de questions : l'ordre de la correction, les lectures, les alertes et leurs décisions viennent de la séance ; chaque bouton agit (ACT). */
 function boutonsTete(){
-  return [h("button", Object.assign({key:0, className:"btn btn-ghost btn-sm"}, fen(null, "depart")), "🚫 Départ d'un élève"), h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen(null, "finir")), "⏸️ Finir à une autre heure"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen(null, "terminer")), "🛑 Terminer la séance")];
+  return [h("button", Object.assign({key:0, className:"btn btn-ghost btn-sm"}, fen(null, "depart")), "🚫 Départ d'un élève"), h("button", Object.assign({key:5, className:"btn btn-ghost btn-sm"}, fen(null, "finir")), "⏸️ Finir à une autre heure"), annulerSeanceH("as"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen(null, "terminer")), "🛑 Terminer la séance")];
 }
 function PilotCorrectionH(){
   var k = MO(), m = momH(), qi = m.qi, q = EV.questions[qi], ordre = ORDRE_CORR, pos = ordre.indexOf(qi), derniere = pos === ordre.length - 1;
@@ -11975,7 +12040,7 @@ function BilanClasseH(){
   var rate = comptees.slice().sort(function(a, b){ return taux[a] - taux[b] || a - b; })[0], reussie = comptees.slice().sort(function(a, b){ return taux[b] - taux[a] || a - b; })[0];
   var lire = lireSoir(k);
   return Console("pilotage", "pilot", h("div", {className:"card"},
-    TitreCarte(h(F, null, "🏁 Bilan classe — " + EV.titre + " — " + CLASSE, InfoI("Les notes provisoires de la classe, d'après la lecture des feuilles à la correction. Elles deviennent définitives quand tu rends les copies, après ta lecture du soir.")), [h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen(null, "terminer")), "🛑 Terminer la séance")]),
+    TitreCarte(h(F, null, "🏁 Bilan classe — " + EV.titre + " — " + CLASSE, InfoI("Les notes provisoires de la classe, d'après la lecture des feuilles à la correction. Elles deviennent définitives quand tu rends les copies, après ta lecture du soir.")), [annulerSeanceH("as"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen(null, "terminer")), "🛑 Terminer la séance")]),
     h("div", {className:"bilan-classe-synthese"},
       h("div", {className:"bilan-classe-stat"}, h("div", {className:"bilan-classe-stat-label"}, "Moyenne"), h("div", {className:"bilan-classe-stat-num"}, fr1(moy) + " / " + total), h("div", {style:{opacity:.9}}, fr1(total ? moy * 20 / total : 0) + " / 20")),
       h("div", {className:"bilan-classe-stat"}, h("div", {className:"bilan-classe-stat-label"}, "Médiane"), h("div", {className:"bilan-classe-stat-num"}, med + " / " + total)),
@@ -12800,9 +12865,10 @@ function qcmPrecedentV(c){ try { if(SCN.LIVE && typeof SCN.qcmPrecedent === "fun
   var l = seancesV().filter(function(se){ return memeClasse(se, c) && se.terminee && !se.demo && !se.rattrapage && !se.test; }).sort(function(a, b){ return b.ms - a.ms; }); return l[0] ? l[0].id : null; }
 function SessionsPrecedentesV(){
   useV3();
+  var sA = useState(null), annul = sA[0], setAnnul = sA[1];   // (8.0.7) la garde de « Annuler cette séance », ouverte sur cette séance
   var c = classeDuLancement(), l = seancesV().filter(function(se){ return memeClasse(se, c) && se.terminee && !se.test; }).sort(function(a, b){ return b.ms - a.ms; });
   var demo = l.filter(function(se){ return se.demo; })[0], lignes = l.filter(function(se){ return !se.demo && !se.rattrapage; }), prec = qcmPrecedentV(c), nomC = nomClasseV((l[0] && l[0].classe) || c || "");
-  return h(F, null, h(CarteRepriseV),
+  var vue = h(F, null, h(CarteRepriseV),
     h("div", {className:"card"},
       h("h2", null, "📚 Séances précédentes — " + nomC, InfoI("Les séances passées de la classe : chacune ouvre ses résultats. Celle qui sert de « QCM précédent » aux binômes est marquée. La démo ne laisse qu'une ligne.")),
       h("div", {className:"results-eval-list"},
@@ -12812,10 +12878,12 @@ function SessionsPrecedentesV(){
           return h("div", {key:se.id, className:"results-eval-row", "data-seance":se.id},
             h("div", null, h("div", {className:"titre"}, se.ev.titre),
               h("div", {className:"meta"}, se.date + " " + se.heure + " · ✅ terminée · " + presentsTexteV(se) + (lire ? " · " + lire + " feuille" + (lire > 1 ? "s" : "") + " à lire" : "") + (se.rendue && se.rendueMs ? " · copies rendues le " + dateFr(se.rendueMs).slice(0, 5) : "")),
-              prec === se.id && h("div", {className:"meta", style:{color:"var(--violet)", fontWeight:700}}, "↳ c'est le QCM précédent : il sert aux binômes")),
+              prec === se.id && h("div", {className:"meta", style:{color:"var(--violet)", fontWeight:700}}, "↳ c'est le QCM précédent : il sert aux binômes"), raisonAnnulerV(se.id)),
             h("div", {className:"row"}, h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-rouvrir-seance" + sq, title:"Rouvre la séance du " + se.date.slice(0, 5) + ", là où elle s'était terminée, après une confirmation." + (se.rendue ? " Ses copies rendues sont masquées jusqu'au prochain « Rendre les copies »." : "")}, "🔓 Rouvrir"),
-              h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Ouvre les résultats de la séance du " + se.date.slice(0, 5) + " : les notes d'après la feuille, les compétences, les feuilles à lire."}, "📊 Résultats")));
+              h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Ouvre les résultats de la séance du " + se.date.slice(0, 5) + " : les notes d'après la feuille, les compétences, les feuilles à lire."}, "📊 Résultats"),
+              boutonAnnulerSeance(se.id, "as", surClic(function(){ return demanderAnnulerSeance(se.id, function(){ setAnnul(se.id); }); }))));
         }))));
+  return annul && SCN.sess(annul) ? gardeAnnulerV(vue, annul, function(){ setAnnul(null); }) : vue;
 }
 function CarteRepriseV(){
   useV3();
@@ -14084,7 +14152,48 @@ function fondHeure(){
 function fait(nom, args){ return function(){ agir(nom, args); fermerFen(); }; }
 function boutonH(cle, cls, lib, onClick, titre){ return h("button", Object.assign({key:cle, className:cls, title:titre}, marqueH("B:" + (FEN_H.f || "") + ":" + JSON.stringify(FEN_H.arg) + ":" + cle + ":" + lib, onClick)), lib); }
 function annulerH(titre){ return boutonH("annuler", "btn btn-ghost", "Annuler", fermerFen, titre || "Ferme sans rien changer."); }
+/* ═══ (8.0.7, Paul 230) « Annuler cette séance » : le bouton (console, à côté de « 🛑 Terminer la séance » ; carte d'une séance terminée), et sa garde,
+   qui dit en clair ce qui sera oublié. Le geste : ACT.annulerSeance (src/live/base.js). Jamais confondu avec « ⚠️ Annuler la question » (ACT.annuler). ═══ */
+var BULLE_ANNULER_SEANCE = "Pour une séance lancée pour essayer, ou par erreur : après l'écran « ⚠️ Attention », l'app l'oublie, comme si elle n'avait pas existé (réponses, notes, lectures, binômes, appel) ; une séance reprise peut n'oublier que le cours du jour. Rien ne va à la corbeille : c'est sans retour.";
+function annulerSeancePret(){ return typeof SCN !== "undefined" && SCN.LIVE && typeof SCN.annulable === "function" && typeof ACT !== "undefined" && typeof ACT.annulerSeance === "function"; }
+// le bouton, ouvert ou grisé (sa raison en bulle) ; ouvrir : la fonction qui ouvre la garde
+function boutonAnnulerSeance(id, cle, ouvrir){ if(!annulerSeancePret() || !id) return null; var a = SCN.annulable(id);
+  return a.ok ? h("button", Object.assign({key:cle || "annuler-seance", className:"btn btn-ghost btn-sm", "data-annuler-seance":id, title:BULLE_ANNULER_SEANCE}, ouvrir), "Annuler cette séance")
+    : h("button", {key:cle || "annuler-seance", className:"btn btn-ghost btn-sm", "data-annuler-seance":id, disabled:true, title:a.raison}, "Annuler cette séance"); }
+// dans la console : à côté de « 🛑 Terminer la séance »
+function annulerSeanceH(cle){ if(!enDirect() || !annulerSeancePret()) return null; var id = SCN.sid();
+  return boutonAnnulerSeance(id, cle, marqueH("FEN:annulerSeance:" + JSON.stringify(id), function(){ demanderAnnulerSeance(id, function(){ ouvrirFen("annulerSeance", id); }); })); }
+// (8.0.7, Paul 243) la garde « ⚠️ Attention » : ce qui sera oublié, compté ; ses boutons. mk(cle, fn) : les attributs d'un bouton qui agit
+// (marqueH dans la console, surClic sur les cartes) ; fermer : ferme la garde ; ouvert : true si elle s'ouvre (sinon, l'oubli est fait tout de suite)
+function gardeAnnulerSeance(id, mk, fermer){ var se = SCN.seance(id) || {}, s = SCN.sess(id) || {}, ev = SCN.evalParId(s.evalId) || {}, c = SCN.ecritParSeance(id), pl = function(n, a, b){ return n + " " + (n > 1 ? b : a); };
+  var reprise = SCN.reprise(id), auj = SCN.aujourdhuiPossible(id), a = reprise ? SCN.ecritAujourdhui(id) : null;
+  var oubli = [];
+  oubli.push(c.repondu ? "les réponses de " + pl(c.repondu, "élève", "élèves") + " à " + pl(c.posees, "question", "questions") + ", leurs notes" : "l'appel (personne n'a encore répondu)");
+  if(c.lectures) oubli.push(pl(c.lectures, "lecture de feuille", "lectures de feuilles"));
+  if(c.tablettes) oubli.push("les binômes des " + pl(c.tablettes, "tablette", "tablettes"));
+  if(c.repondu) oubli.push("l'appel" + (c.absents ? " (" + pl(c.absents, "absent", "absents") + ")" : ""));
+  var nomC = typeof nomClasseV === "function" ? nomClasseV(se.classe || s.classeSlug) : (se.classe || s.classeSlug);
+  var passe = c.autresPassees.length ? "« " + (ev.titre || "L'évaluation") + " » reste passée par " + c.autresPassees.map(function(x){ return typeof nomClasseV === "function" ? nomClasseV(x) : x; }).join(", ") + " ; la " + nomC + " ne l'a plus passée."
+    : "« " + (ev.titre || "L'évaluation") + " » redevient « pas encore passée ».";
+  var agir = function(quoi){ return function(){ fermer(); return Promise.resolve(ACT.annulerSeance(id, quoi)).then(function(){ if(typeof navRemettre === "function" && LIVE.appareil && LIVE.appareil() === "console" && !SCN.sid()) navRemettre(); }); }; };
+  var corps = h(F, null,
+    h("p", {"data-oubli":"tout"}, (reprise ? "« Oublier toute la séance » : " : "L'app oublie tout ce que cette séance a écrit : ") + oubli.join(", ") + ". Comme si elle n'avait pas existé. " + passe),
+    reprise ? h("p", {"data-oubli":"aujourdhui"}, auj.ok ? "« Oublier seulement aujourd'hui » : " + (a.repondu ? "les réponses de " + pl(a.repondu, "élève", "élèves") + " à " + pl(a.questions, "question", "questions") + " de ce cours" : "ce cours (personne n'y a encore répondu)") + " ; la séance redevient telle qu'avant le « 🔓 Rouvrir » de ce jour, et les cours d'avant restent."
+      : h("span", {"data-raison-aujourdhui":"1"}, "« Oublier seulement aujourd'hui » : " + auj.raison.charAt(0).toLowerCase() + auj.raison.slice(1))) : null,
+    h("p", null, h("strong", null, "Rien ne va à la corbeille : c'est sans retour.")),
+    c.enCours ? h("p", null, "Les tablettes oublient leurs élèves et reviennent à l'entrée des élèves.") : null);
+  var annuler = h("button", Object.assign({key:1, className:"btn btn-ghost", title:"Ne change rien : la séance reste telle qu'elle est."}, mk("annuler", fermer)), "Annuler");
+  var boutons = reprise ? [annuler,
+      auj.ok ? h("button", Object.assign({key:2, className:"btn btn-or", title:"Oublie seulement le cours de ce jour, sans retour : la séance redevient telle qu'avant le « 🔓 Rouvrir » de ce jour."}, mk("aujourdhui", agir("aujourdhui"))), "Oublier seulement aujourd'hui")
+        : h("button", {key:2, className:"btn btn-or", disabled:true, title:auj.raison}, "Oublier seulement aujourd'hui"),
+      h("button", Object.assign({key:3, className:"btn btn-rouge", title:"Oublie toute la séance, tous ses cours, sans retour : elle n'a jamais existé."}, mk("tout", agir("tout"))), "Oublier toute la séance")]
+    : [annuler, h("button", Object.assign({key:2, className:"btn btn-rouge", title:"Oublie la séance tout de suite, sans retour : elle n'a jamais existé."}, mk("tout", agir("tout"))), "Continuer")];
+  return {titre:"⚠️ Attention", sous:"Annuler la séance du " + String(se.date || "").slice(0, 5) + " · " + nomC + " — " + (ev.titre || "") + (reprise ? " · reprise, cours " + (+s.coursN) : ""), corps:corps, boutons:boutons}; }
+// le clic sur « Annuler cette séance » : hors vraie heure (estVraieHeure : false), l'oubli tout de suite ; sinon (true, ou « je ne sais pas »), la garde
+function demanderAnnulerSeance(id, ouvrir){ if(estVraieHeure(id) === false) return Promise.resolve(ACT.annulerSeance(id, "tout")); ouvrir(); }
 var FENETRES_H = {
+  annulerSeance:function(id, fond){ id = id || SCN.sid(); var g = gardeAnnulerSeance(id, function(cle, fn){ return marqueH("B:annulerSeance:" + id + ":" + cle, fn); }, fermerFen);
+    return Fenetre(fond, g.titre, g.sous, g.corps, g.boutons, null); },
   coevalFeuille:function(a, fond){ return FenCoevalFeuille(a, fond); },
   terminer:function(arg, fond){ var m = momH();
     return Fenetre(fond, "🛑 Terminer la séance ?", CLASSE + " — " + EV.titre + " · " + ouH(m),
@@ -14406,9 +14515,9 @@ function ChoixReponse(p){
     h("div", {className:"eleve-choix" + (p.long ? " long" : "")}, p.ordre.map(function(i){
       return h("button", Object.assign({key:i, className:"eleve-choix-btn" + (sel.indexOf(i) >= 0 ? " selected" : "")}, clic("REP:" + (p.cle || "") + ":" + i, function(){ basculer(i); })), h("span", null, p.q.choix[i]));
     })),
-    h("div", {className:"eleve-feedback" + (sel.length ? " valide" : "")}, sel.length ? "✅ Réponse enregistrée — tu peux encore la changer" : "💡 Clique sur le ou les choix qui correspondent à ta réponse."));
+    h("div", {className:"eleve-feedback" + (sel.length ? " valide" : ""), "data-encore":sel.length && p.encore != null ? p.encore : null}, sel.length ? (p.encore != null ? "✅ Tu peux encore changer ta réponse : " + p.encore + " s" : "✅ Réponse enregistrée — tu peux encore la changer") : "💡 Clique sur le ou les choix qui correspondent à ta réponse."));
 }
-function EcrReponse(e, qi, ordre, sel, chrono, ev){
+function EcrReponse(e, qi, ordre, sel, chrono, ev, opts){
   var q = (ev || EV).questions[qi];
   var long = q.choix.some(function(c){ return c.length > 40; });
   return Page(badgeDe(e), (ev || EV).titre, h("div", {className:"eleve-q-zone"},
@@ -14419,7 +14528,7 @@ function EcrReponse(e, qi, ordre, sel, chrono, ev){
     h("div", {className:"eleve-q-enonce"}, q.enonce),
     h("div", {className:"eleve-pose-stylo"}, h("span", {className:"ic"}, "🖊️"), h("span", null, e.prenom + ", pose ton stylo. Sélectionne maintenant ta réponse.")),
     h("div", {className:"eleve-chrono" + (chrono <= 2 ? " urgent" : "")}, h("div", {className:"label"}, "Temps de réponse"), h("div", {className:"v"}, chrono)),
-    h(ChoixReponse, {key:e.cle + qi, cle:e.cle + ":" + qi, q:q, ordre:ordre, sel:sel, long:long, onChange:enDirect() && !ev ? function(n){ agirE("repondre", qi, n, cleE(e)); } : null})));
+    h(ChoixReponse, {key:e.cle + qi, cle:e.cle + ":" + qi, q:q, ordre:ordre, sel:sel, long:long, encore:opts && opts.encore ? chrono : null, onChange:enDirect() && !ev ? function(n){ agirE("repondre", qi, n, cleE(e)); } : null})));
 }
 
 /* ═══════════════ QCM-2 · HEURE — la tablette partagée, en direct ═══════════════
@@ -14513,7 +14622,7 @@ function MoitieH(p, cote, autreP){
   var actif = qi != null ? (m.cote || coteDuTour(qi, m.tour || 1)) : null;   // la moitié qui répond à ce tour
   // seul sur sa tablette (pas de voisin présent) : il a la main aux deux tours, rien à voiler (SCN.seul, SCN.aLaMain)
   var seul = typeof SCN.seul === "function" ? SCN.seul(p) : !v, main = typeof SCN.aLaMain === "function" ? SCN.aLaMain(p) : cote === actif;
-  var voile = function(){ return v && !seul ? Voile(v, false, e) : EcrAttente(e); };
+  var voile = function(){ return v && !seul ? voileChronoH(v, e, ph, reste, m.tour || 1) : EcrAttente(e); };
   if(!ph || ph === "avant" || ph === "appel" || ph === "entree" || ph === "pret"){
     var a1 = attestH(p, 1);
     return a1.fini ? EcrPret(e) : h(AttestCoches, {key:"a1" + p, e:e, lignes:LignesAttest(e, e.voisin), n0:a1.lignes, attest:1, fini:a1.fini, titre:"Avant de commencer, " + e.prenom, bouton:"Je commence", titrePage:EV.titre, pret:function(){ return EcrPret(e); }});
@@ -14527,9 +14636,9 @@ function MoitieH(p, cote, autreP){
   // (contrat C6) le geste de Paul a coupé l'attente : la moitié qui vient de répondre dit B pendant que la suite commence
   if(typeof SCN.doitDireB === "function" && SCN.doitDireB(p)){ var bp = m.bPour || {}; return EcrDeclareH(e, bp.qi != null ? bp.qi : qi, bp.reste != null ? bp.reste : reste); }
   if(ph === "passage") return cote === actif ? EcrPassage(e, qi, reste) : (v && !seul ? Voile(v, true, e) : EcrAttente(e));
-  if(ph === "reponse") return main ? EcrReponse(e, qi, ORD[qi][p], TABL[p][qi], reste) : voile();
+  if(ph === "reponse") return main ? EcrReponse(e, qi, ORD[qi][p], TABL[p][qi], reste, null, {encore:!!v && !seul}) : voile();
   // B seulement à qui a cliqué (t-q1-b-michel) ; sans clic, l'attente
-  if(ph === "b") return (cote === actif && !seul || seul && SCN.ditB(p, qi)) && SCN.reponse(p, qi) ? EcrDeclareH(e, qi, reste) : cote === actif || seul ? EcrAttente(e) : voile();
+  if(ph === "b") return (cote === actif && !seul || seul && SCN.ditB(p, qi)) && SCN.reponse(p, qi) ? EcrDeclareH(e, qi, reste, v && !seul ? {suivant:(m.tour || 1) === 1 ? v : null} : null) : cote === actif || seul ? EcrAttente(e) : voile();
   if(ph === "rouvert") return m.pour === p ? EcrReponse(e, qi, ORD[qi][p], TABL[p][qi], reste) : m.pour && m.pour === vSlug && !seul ? Voile(v, false, e) : EcrAttente(e);
   if(ph === "estim") return EcrEstim(e, ESTIM[p] || null);
   // (16/10, contrôle à froid) seul, l'élève lit et corrige sa propre feuille : les lignes de la variante papier, pas « Donne ta feuille à <lui-même> »
@@ -14557,7 +14666,12 @@ function attestH(p, n){
   return {lignes:0, fini:n === 1 ? (m.pasEntres || []).indexOf(p) < 0 : true};
 }
 // B (495) : à la fin de son temps, son clic figé ; « Oui, la même chose » ou « Non, autre chose », enregistré pour lui
-function EcrDeclareH(e, qi, chrono){
+/* (8.0.7, Paul 236) les chronos visibles, sans rien changer aux temps : la moitié noire dit ce que fait l'autre et pour combien de temps
+   (« Élise répond : encore 9 s » ; « Élise vérifie sa feuille : encore 12 s, puis c'est à toi ») ; un élève seul n'a pas de moitié noire */
+function voileChronoH(autre, moi, ph, reste, tour){ var vo = Voile(autre, false, moi);
+  var l = ph === "reponse" ? autre.prenom + " répond : encore " + reste + " s" : ph === "b" ? autre.prenom + " vérifie sa feuille : encore " + reste + " s" + (tour === 1 ? ", puis c'est à toi" : "") : null;
+  return l ? h("div", {className:"voile"}, vo.props.children, h("div", {key:"chrono", className:"voile-chrono", "data-voile-chrono":"1"}, "⏱️ " + l)) : vo; }
+function EcrDeclareH(e, qi, chrono, opts){
   var q = EV.questions[qi], p = cleE(e), ordre = ORD[qi][p], sel = TABL[p][qi] || [], dit = (DIT_B[p] || [])[qi];
   var b = function(v, lib){ return h("button", Object.assign({className:"decl-b-btn" + (dit === v ? " on" : ""), "aria-pressed":dit === v}, clic("B:" + p + ":" + qi + ":" + v, function(){ agirE("direB", qi, v, p); })), lib); };
   return Page(badgeDe(e), EV.titre, h("div", {className:"eleve-q-zone"},
@@ -14569,7 +14683,9 @@ function EcrDeclareH(e, qi, chrono){
     })),
     h("div", {className:"decl-b-titre"}, questionBH(e.prenom, q, sel)),
     h("div", {className:"decl-b-btns"}, b("oui", "Oui, la même chose"), b("non", "Non, autre chose")),
-    h("div", {className:"decl-b-chrono"}, "⏱️ " + chrono + " s")));
+    // (8.0.7, 236) après « Oui » ou « Non » : « C'est noté. À Gatien dans 12 s » (au 1er tour, avec un voisin) ; sinon le chrono de B
+    dit && opts ? h("div", {className:"decl-b-chrono note", "data-b-note":"1"}, "✅ C'est noté." + (opts.suivant ? " À " + opts.suivant.prenom + " dans " + chrono + " s" : ""))
+      : h("div", {className:"decl-b-chrono"}, "⏱️ " + chrono + " s")));
 }
 // la lecture d'une feuille : le voisin clique, dans la moitié du propriétaire, ce que dit sa feuille ; chaque clic s'enregistre
 function ChoixLuH(p){   // p : eleve (le propriétaire de la feuille), qi, ordre, q, long, aucunTxt, fige
@@ -15930,6 +16046,7 @@ function niveauDeSeanceV(se){ return (se.ev && se.ev.niveau) || (/^(\d)/.exec(se
 function ListeSeancesV(){
   useV3();
   var s = useState("classe"), tri = s[0], setTri = s[1], s2 = useState({}), replies = s2[0], setReplies = s2[1];
+  var sA = useState(null), annul = sA[0], setAnnul = sA[1];   // (8.0.7) la garde de « Annuler cette séance », ouverte sur cette séance
   var l = seancesV().filter(function(se){ return se.terminee && !se.demo && !se.test; }).map(function(se){ return {se:se, ev:se.ev, tri:se.ms}; });
   function trie(x){ return x.slice().sort(function(a, b){ return tri === "evaluation" ? a.ev.titre.localeCompare(b.ev.titre) || b.tri - a.tri : b.tri - a.tri; }); }
   function ligne(x){
@@ -15940,9 +16057,10 @@ function ListeSeancesV(){
           restent ? h("span", {className:"meta-lire"}, " · 📌 " + restent + " feuille" + (restent > 1 ? "s" : "") + " à lire") : lire.length ? h("span", {className:"meta-lus"}, " · ✔ " + lire.length + " feuille" + (lire.length > 1 ? "s" : "") + " lue" + (lire.length > 1 ? "s" : "")) : null),
         h("div", {className:"seance-statuts"}, h(StatutCopiesV, {se:se}), h(CochePublieeV, {se:se}),
           e === "rendues" && h("button", surClic(function(){ return masquerCopiesV(se.id); }, {className:"btn btn-ghost btn-sm", title:"Masque les copies de la séance du " + se.date.slice(0, 5) + " : les élèves ne voient plus leur note ni leur bilan, jusqu'au prochain « Rendre les copies »."}), "🙈 Masquer les copies"),
-          e === "masquees" && h("button", surClic(function(){ return rendreCopiesV(se.id); }, {className:"btn btn-ghost btn-sm", title:"Rend de nouveau les copies de la séance du " + se.date.slice(0, 5) + " : chaque élève revoit sa note et son bilan."}), "📤 Rendre les copies"))),
+          e === "masquees" && h("button", surClic(function(){ return rendreCopiesV(se.id); }, {className:"btn btn-ghost btn-sm", title:"Rend de nouveau les copies de la séance du " + se.date.slice(0, 5) + " : chaque élève revoit sa note et son bilan."}), "📤 Rendre les copies")), raisonAnnulerV(se.id)),
       h("div", {className:"row"},
         h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Ouvre le tableau de la séance du " + se.date.slice(0, 5) + " : les notes, les compétences, les feuilles à lire."}, "📊 Ouvrir"),
+        boutonAnnulerSeance(se.id, "as", surClic(function(){ return demanderAnnulerSeance(se.id, function(){ setAnnul(se.id); }); })),
         h("button", {className:"btn btn-rouge btn-sm", "data-va":"c-corbeille" + sq, title:"Met la séance du " + se.date.slice(0, 5) + " à la corbeille, après une confirmation : gardée un an, restaurable."}, "🗑️")));
   }
   function groupe(n){
@@ -15957,13 +16075,19 @@ function ListeSeancesV(){
         (rep ? "▸ " : "▾ ") + n + " · " + (x.length ? x.length + " séance" + (x.length > 1 ? "s" : "") : "vide pour l'instant")),
       !rep && (x.length ? corps : h("div", {className:"niv-vide"}, "vide pour l'instant")));
   }
-  return h("div", {className:"card"},
+  var vue = h("div", {className:"card"},
     h("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:".5rem"}},
       h("h2", {style:{margin:0}}, "📊 Résultats", InfoI("Toutes les séances, rangées par niveau puis par classe, comme « Mes dictées », puis triées. Chacune a sa coche « publiée » et l'état de ses copies, comme dans la correction de dictée. La démo n'y paraît jamais.")),
       h("label", {className:"tri-l"}, "Trier par ", h("select", {value:tri, "data-tri":"seances", title:"Range les séances de chaque niveau par classe, ou les trie par date ou par évaluation.", onChange:function(ev){ setTri(ev.target.value); }},
         h("option", {value:"classe"}, "classe"), h("option", {value:"date"}, "date"), h("option", {value:"evaluation"}, "évaluation")))),
     h("div", {className:"results-eval-list"}, NIVEAUX_EV.map(groupe)));
+  return annul && SCN.sess(annul) ? gardeAnnulerV(vue, annul, function(){ setAnnul(null); }) : vue;
 }
+/* (8.0.7, Paul 230) la garde de « Annuler cette séance », depuis la carte d'une séance terminée (📊 Résultats, 📚 Séances précédentes) ;
+   la raison d'un bouton grisé, dite à l'écran sous la séance */
+function gardeAnnulerV(fond, id, fermer){ var g = gardeAnnulerSeance(id, function(cle, fn){ return surClic(fn); }, fermer);
+  return Fenetre(fond, g.titre, g.sous, g.corps, g.boutons, null); }
+function raisonAnnulerV(id){ if(!annulerSeancePret()) return null; var a = SCN.annulable(id); return a.ok ? null : h("div", {className:"meta raison-annuler", "data-raison-annuler":id}, "Annuler cette séance : " + a.raison.charAt(0).toLowerCase() + a.raison.slice(1)); }
 function ListeSeancesVue(modale){ return Console("donnees", "results", h(F, null, h(ListeSeancesV), modale || null), false); }
 
 /* ── « Rendre les copies » : la garde ── */
@@ -16725,6 +16849,11 @@ function AutonomieL(p){
       ? h("button", {className:"btn btn-vert btn-sm", "data-local":"1", title:"Rend son point d'autonomie à " + pre + " : ses deux compétences d'autonomie repassent en Très bonne maîtrise.", onClick:function(){ rendreAutonomieV(se, slug); }}, "↩️ Rendre")
       : h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", title:"Retire son point d'autonomie à " + pre + " : ses deux compétences d'autonomie passent en Maîtrise insuffisante. « ↩️ Rendre » le défait.", onClick:function(){ retirerAutonomieSoirV(se, slug); }}, "⛔ Retirer"));
 }
+// (8.0.7, Paul 219) par question posée : les élèves qui ont répondu sans rien dire au moment B (ni « Oui » ni « Non »), si au moins un quart des présents
+function rienDitBL(se){ var S = se.S || {}, R = S.reponses || {}, B = S.b || {}, n = se.presents.length, ec = se.ecartees || [], l = [];
+  Object.keys(R).map(Number).filter(function(qi){ return !isNaN(qi) && ec.indexOf(qi) < 0; }).sort(function(a, b){ return a - b; }).forEach(function(qi){
+    var k = Object.keys(R[qi] || {}).filter(function(x){ return R[qi][x] && !(B[qi] || {})[x]; }).length; if(k && k * 4 >= n) l.push({q:qi, n:k}); });
+  return l; }
 function LireCopiesC(){
   useV3();
   var s1 = useState(null), cur = s1[0], setCur = s1[1], s2 = useState(null), ouvert = s2[0], setOuvert = s2[1], s3 = useState([]), sel = s3[0], setSel = s3[1];
@@ -16746,7 +16875,14 @@ function LireCopiesC(){
   se.presents.forEach(function(e){ var d = dep.notes[e.slug], r = resultatV(se, e.slug); if(d && r && d.n !== r.n) chg.push(e.nom + " " + fr1(d.n) + " / " + d.total + " → " + fr1(r.n) + " / " + r.total + " (" + (r.n > d.n ? "+" : "−") + fr1(Math.abs(r.n - d.n)) + ")");
     var a = autonomieV(se, e.slug).retire; if(a !== dep.auto[e.slug]) chg.push((a ? "⛔ " : "↩️ ") + e.nom + " : point d'autonomie " + (a ? "retiré" : "rendu")); });
   var soir = chg.length ? h("div", {"data-ce-soir":"1", title:"Tout ce que ta relecture a changé depuis que tu as ouvert « Lire les copies » : les notes, et les points d'autonomie retirés ou rendus.", style:{margin:"-.5rem 0 1rem", padding:".6rem .8rem", borderRadius:10, background:"#F1F5F9", fontWeight:700, lineHeight:1.5}}, "🧮 Ce soir : " + chg.join(" · ")) : null;
-  var compte = h("div", {style:{fontWeight:800, margin:".2rem 0 1rem"}}, aLireN ? "📌 Encore " + aLireN + " copie" + (aLireN > 1 ? "s" : "") + " à lire, " + nQ + " question" + (nQ > 1 ? "s" : "") + " en tout · les autres copies n'ont rien à lire" : "✅ Toutes les copies sont lues.");
+  /* (8.0.7, Paul 219) en tête : le compte réel des copies à regarder ; et, par question, les élèves qui n'ont dit ni « Oui » ni « Non » au moment B,
+     quand ils sont au moins un quart des présents (leurs secondes de B sont sans doute trop courtes) */
+  var rienDit = rienDitBL(se), nP = se.presents.length;
+  var compte = h("div", {style:{fontWeight:800, margin:".2rem 0 1rem"}},
+    h("div", {"data-compte-copies":aLireN, title:"Les copies où il reste au moins une question à lire, d'après la séance ; les autres copies n'ont rien à lire."},
+      aLireN ? "📌 " + aLireN + " copie" + (aLireN > 1 ? "s" : "") + " à regarder · " + nQ + " question" + (nQ > 1 ? "s" : "") + " à lire en tout" : "✅ Toutes les copies sont lues."),
+    rienDit.map(function(r){ return h("div", {key:r.q, "data-rien-dit":r.q + 1, title:"À la question " + (r.q + 1) + ", " + r.n + " élève" + (r.n > 1 ? "s" : "") + " sur " + nP + " présent" + (nP > 1 ? "s" : "") + " n'" + (r.n > 1 ? "ont" : "a") + " dit ni « Oui » ni « Non » quand l'app demandait si la feuille disait la même chose que le clic. La ligne paraît dès qu'ils sont au moins un quart des présents : signe que les secondes de ce moment sont trop courtes pour cette question.",
+      style:{fontWeight:700, color:"#9A3412", marginTop:".2rem"}}, "Q" + (r.q + 1) + " : " + r.n + " élève" + (r.n > 1 ? "s n'ont" : " n'a") + " rien dit"); }));
   // le champ des initiales : au début, et à la fin de chaque copie
   var champ = h("div", {style:{maxWidth:420, marginTop:c ? "1rem" : 0}},
     h("div", {style:{fontSize:".9rem", color:"var(--gris)", marginBottom:4}}, c ? "Copie suivante de ton tas — tape ses initiales (DM pour Dupont Marie), puis Entrée :" : "Prends la première copie de ton tas et tape ses initiales (DM pour Dupont Marie), puis Entrée :"),
