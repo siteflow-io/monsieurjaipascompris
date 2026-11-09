@@ -2769,6 +2769,12 @@ div[style*="justify-content: space-between"][style*="flex-wrap: wrap"] > :last-c
 /* (8.0.7, Paul 236) le chrono de l'autre, sur la moitié noire */
 .voile .voile-chrono{margin-top:1rem;font-size:1.25rem;font-weight:800;color:#fff;background:rgba(255,255,255,.14);border-radius:12px;padding:.5rem .9rem;display:inline-block}
 .decl-b-chrono.note{color:#15803D;font-weight:800}
+/* (8.0.8) Réglages : la vraie durée de chaque réglage, et « Prendre ta vraie durée » */
+.reg-durees .reg-duree{flex-wrap:wrap}
+.reg-durees .reg-vraie{min-width:0!important;font-size:.82rem;opacity:.85;font-style:italic}
+.reg-durees .reg-raison{min-width:0!important;font-size:.78rem;opacity:.7}
+.reg-durees .reg-duree>span:first-child .info-i{min-width:0}
+.reg-durees .reg-vraie{min-width:300px!important}
 
 </style>
 <style>
@@ -3737,11 +3743,85 @@ function ecrireQCM(maj, quoi){
   if(!db) return Promise.resolve();
   return db.ref(DB_ROOT).update(maj).catch(function(e){ console.error("QCM : écriture refusée (" + (quoi || "") + ")", e); throw e; });
 }
+// (8.0.8) une écriture à la racine (qcm/… et mjpcProfils/… ensemble, en une fois) : l'annulation d'une séance oublie aussi son profil
+function ecrireRacineQCM(maj, quoi){
+  LIVE.log("écrit (racine)", quoi || "", Object.keys(maj));
+  var propre = {}; Object.keys(maj).forEach(function(k){ propre[k] = nettoyerQCM(maj[k]); });
+  if(!db) return Promise.resolve();
+  return db.ref().update(propre).catch(function(e){ console.error("QCM : écriture refusée (" + (quoi || "") + ")", e); throw e; });
+}
 function cheminS(sid, sous){ return "/sessions/" + sid + (sous ? "/" + sous : ""); }
-/* (8.0.7, Paul 241 et 244) la séance sid tourne-t-elle dans une vraie heure de l'emploi du temps ? true, false, ou null : « je ne sais pas ».
-   Plus tard, MJPC le dira (la séance du chapitre liée à l'évaluation, reliée à ses heures : LIVRAISONS/CODE-QCM/VERDICT.md) ; ce lien n'est
-   pas codé : aujourd'hui, toujours null, et la garde « ⚠️ Attention » s'ouvre toujours. false (hors vraie heure) : l'oubli en un clic, sans question. */
-function estVraieHeure(sid){ return null; }
+/* (8.0.8, Paul C17 241, 245, 251, 256) la séance sid tourne-t-elle dans une vraie heure de cours de sa classe ? true, false, ou null : « je ne sais pas ».
+   « C'est mjpc qui déclare, jamais l'inverse » : le QCM lit MJPC (site/…), il n'y écrit jamais. Mesure : LIVRAISONS/CODE-QCM/VERDICT.md de la 8.0.7.
+   1. La séance de chapitre liée : site/<niveau>/chapitres/<ch>/seances/<se>/items/<item> avec kind "qcm" et ref = l'évaluation de la séance.
+      Ses heures jouées pour la classe (deroule_joue/<classe>/heures/<clé> : debutReel ou lanceA, finReel, clos, creneau ; la clé commence par la date) :
+      une heure en cours au lancement → true. Une séance de chapitre en plusieurs heures compte à chacune de ses heures.
+   2. L'emploi du temps du jour (site/edt/{grille,calendrier,periodes,decisions}/<année scolaire>, comme edtCasesDuJour d'index.html) : une case de la classe
+      dont le créneau contient le lancement → true (l'app ne sait pas quelle séance la file de MJPC y place : une heure de la classe suffit).
+   3. Sinon : false si l'emploi du temps se lit (une grille pour l'année, le jour calculable) ; null s'il n'y a rien de lisible, ou pas encore lu.
+   « Au lancement » : chacun des cours de la séance (le QCM au long cours : son premier lancement, puis chaque « 🔓 Rouvrir ») ; un seul en vraie heure
+   suffit (true) ; false seulement si aucun ne l'est et que tous se lisent. Une séance de la classe de test (« _… ») : false. */
+var VRAIE_HEURE_NIVEAUX = ["6e", "5e", "4e", "3e"];
+function vhListe(v){ return !v ? [] : Array.isArray(v) ? v.filter(function(x){ return x != null; }) : typeof v === "object" ? Object.keys(v).map(function(k){ return v[k]; }).filter(function(x){ return x != null; }) : []; }
+function vhAnnee(ms){ var d = new Date(ms), a = d.getFullYear(); return d.getMonth() >= 7 ? a + "-" + (a + 1) : (a - 1) + "-" + a; }
+function vhIso(ms){ var d = new Date(ms), p = function(n){ return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+function vhMinutes(hm){ var m = /^(\d{1,2})[:h](\d{2})$/.exec(String(hm || "").trim()); return m ? +m[1] * 60 + +m[2] : null; }
+function vhCreneau(c){ var p = String(c || "").split("-"); var a = vhMinutes(p[0]), b = vhMinutes(p[1]); return a != null && b != null ? {a:a, b:b} : null; }
+function vhLire(chemin){ if(typeof v3 !== "function") return {pret:false, v:undefined}; var v = v3(chemin); return {pret:!!(typeof V3S !== "undefined" && V3S.charge[chemin]), v:v}; }
+// les chemins lus, abonnés d'avance (le bouton « Annuler cette séance » les ouvre : au clic, ils sont déjà là)
+function vraieHeurePreparer(ms){ if(typeof v3 !== "function") return; var an = vhAnnee(ms || LIVE.maintenant());
+  VRAIE_HEURE_NIVEAUX.forEach(function(n){ v3("site/" + n + "/chapitres"); }); ["grille", "calendrier", "periodes", "decisions"].forEach(function(o){ v3("site/edt/" + o + "/" + an); }); }
+function vhClasseEgale(a, b){ if(a == null || b == null) return false; if(String(a) === String(b)) return true; var C = LIVE.d.classes || {};
+  var na = (C[a] && C[a].nom) || a, nb = (C[b] && C[b].nom) || b; return String(na) === String(nb) || (typeof sanMJPC === "function" && sanMJPC(na) === sanMJPC(nb)); }
+// 1. les heures jouées des séances de chapitre liées à l'évaluation : {pret, vrai}
+function vhHeuresJouees(evalId, classe, t){ var pret = true, vrai = false, liees = 0;
+  VRAIE_HEURE_NIVEAUX.forEach(function(n){ var r = vhLire("site/" + n + "/chapitres"); if(!r.pret){ pret = false; return; } var C = r.v || {};
+    Object.keys(C).forEach(function(k){ var ch = C[k]; if(!ch || typeof ch !== "object") return; var S = ch.seances || {};
+      Object.keys(S).forEach(function(sk){ var se = S[sk]; if(!se || typeof se !== "object") return;
+        if(!vhListe(se.items).some(function(it){ return it && it.kind === "qcm" && String(it.ref || "") === String(evalId); })) return; liees++;
+        var dj = se.deroule_joue || {};
+        Object.keys(dj).forEach(function(cl){ if(!vhClasseEgale(cl, classe)) return; var H = (dj[cl] || {}).heures || {};
+          Object.keys(H).forEach(function(cle){ var h = H[cle] || {}, deb = +(h.debutReel || h.lanceA || 0), fin = +(h.finReel || 0), jour = String(cle).slice(0, 10), cr = vhCreneau(h.creneau || (String(cle).split("_")[1] || "").replace(/h/g, ":"));
+            var dansCreneau = cr && jour === vhIso(t) && (function(){ var d = new Date(t), m = d.getHours() * 60 + d.getMinutes(); return m >= cr.a && m < cr.b; })();
+            var dansReel = deb && deb <= t && (fin ? t <= fin : (!h.clos && (cr && jour === vhIso(t) ? (new Date(t).getHours() * 60 + new Date(t).getMinutes()) < cr.b : t - deb < 2 * 3600000)));
+            if(dansCreneau || dansReel) vrai = true; }); }); }); }); });
+  return {pret:pret, vrai:vrai, liees:liees}; }
+// 2. l'emploi du temps du jour : {lisible, vrai} ; lisible : la grille de l'année est lue et a des créneaux
+function vhEmploiDuTemps(classe, t){ var an = vhAnnee(t), G = vhLire("site/edt/grille/" + an), K = vhLire("site/edt/calendrier/" + an), P = vhLire("site/edt/periodes/" + an), D = vhLire("site/edt/decisions/" + an);
+  if(!G.pret || !K.pret || !P.pret || !D.pret) return {pret:false};
+  var g = G.v || {}, versions = vhListe(g.versions).filter(function(v){ return v && vhListe(v.creneaux).length; }).sort(function(a, b){ return String(a.debut || "").localeCompare(String(b.debut || "")); });
+  if(!versions.length && vhListe(g.creneaux).length) versions = [{debut:"", creneaux:g.creneaux}];
+  if(!versions.length) return {pret:true, lisible:false};
+  var iso = vhIso(t), cal = K.v || {};
+  // un jour sans cours (vacances, pont, férié) : aucune heure
+  if(vhListe(cal.vacances).some(function(v){ return v && iso >= v.debut && iso <= v.fin; }) || vhListe(cal.feries).some(function(f){ return f && f.date === iso; })) return {pret:true, lisible:true, vrai:false};
+  var ver = versions[0]; versions.forEach(function(v){ if(String(v.debut || "") <= iso) ver = v; });
+  var jours = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"], d = new Date(t), jour = jours[(d.getDay() + 6) % 7], mn = d.getHours() * 60 + d.getMinutes();
+  var lundi = (function(){ var x = new Date(iso + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x.toISOString().slice(0, 10); })();
+  var lettre = (vhListe(cal.semaines).filter(function(s){ return s && s.lundi === lundi; })[0] || {}).lettre || null;
+  var pers = vhListe((P.v || {}).periodes).filter(function(p){ return p && p.debut; }).sort(function(a, b){ return String(a.debut).localeCompare(String(b.debut)); }), per = null;
+  pers.forEach(function(p){ if(iso >= p.debut && (!p.fin || iso <= p.fin)) per = p.nom || null; });
+  var dec = D.v || {};
+  function decisionDe(nom, creneau){ var hs = ((dec[nom] || {}).heures) || {}; return hs[iso + "_" + String(creneau).replace(/:/g, "h") + "_" + String(nom).replace(/\s/g, "_")] || null; }
+  var cases = vhListe(ver.creneaux).filter(function(c){ if(!c || c.jour !== jour || c.mjpc === false) return false; var s = String(c.semaine || "AB"); if(lettre && s !== "AB" && s !== lettre) return false;
+    var p = vhListe(c.periodes); if(per && p.length && p.indexOf(per) < 0) return false; return vhClasseEgale(c.classeMjpc || c.classe, classe); });
+  // les heures ajoutées ce jour pour la classe (decisions/<nom>/heures/<iso>_<hh>h<mm>-<hh>h<mm>_<nom> : ajoutee)
+  Object.keys(dec).forEach(function(nom){ if(!vhClasseEgale(nom, classe)) return; var hs = (dec[nom] || {}).heures || {};
+    Object.keys(hs).forEach(function(k){ if(!hs[k] || !hs[k].ajoutee || String(k).slice(0, 10) !== iso) return; var m = /^\d{4}-\d{2}-\d{2}_(\d{2})h(\d{2})-(\d{2})h(\d{2})_/.exec(k); if(m) cases.push({creneau:m[1] + ":" + m[2] + "-" + m[3] + ":" + m[4], classeMjpc:nom}); }); });
+  var vrai = cases.some(function(c){ var cr = vhCreneau(c.creneau), x = decisionDe(c.classeMjpc || c.classe, c.creneau); if(x && x.sansSeance) return false; return cr && mn >= cr.a && mn < cr.b; });
+  return {pret:true, lisible:true, vrai:vrai}; }
+function estVraieHeure(sid){
+  var s = typeof SCN !== "undefined" ? SCN.sess(sid) : null; if(!s) return null;
+  if(String(s.classeSlug || "").charAt(0) === "_") return false;
+  var lancements = []; Object.keys(s.cours || {}).forEach(function(n){ var c = (s.cours || {})[n]; if(c && +c.debut) lancements.push(+c.debut); });
+  var t0 = +(s.coursDebut || (s.lancee && s.lancee.date) || s.date || 0); if(t0) lancements.push(t0); if(!lancements.length) return null;
+  vraieHeurePreparer(t0);
+  var inconnu = false;
+  for(var i = 0; i < lancements.length; i++){ var t = lancements[i]; vraieHeurePreparer(t);
+    var hj = vhHeuresJouees(s.evalId, s.classeSlug, t); if(hj.pret && hj.vrai) return true;
+    var et = vhEmploiDuTemps(s.classeSlug, t); if(et.pret && et.lisible && et.vrai) return true;
+    if(!hj.pret || !et.pret || !et.lisible) inconnu = true; }
+  return inconnu ? null : false; }
 
 /* ══════════════════════ SCN : les fonctions de la maquette, sur la séance réelle ══════════════════════ */
 var SCN = (function(){
@@ -4240,7 +4320,7 @@ var SCN = (function(){
   S.passees = function(evalId, k){ return S.seances().filter(function(x){ return x.fin && x.eval === evalId && !x.demo; }).map(function(x){ return {classe:x.classe, date:x.date.slice(0, 5)}; }); };
   /* (8.0.7, Paul 230) « Annuler cette séance » : ce que la séance a écrit, compté pour la garde (« Les réponses de 26 élèves, la note de chacun… »).
      Une séance n'écrit que sous qcm/sessions/<id> (réponses, lectures, binômes, appel, presence_history, alertes, soir…) et qcm/sessionActive/<classe> ;
-     les tablettes écrivent qcm/presence/<classe>/<élève>. Rien d'autre : ni qcm/evaluations, ni le profil de l'élève (mjpcProfils), ni qcm/qrScans
+     les tablettes écrivent qcm/presence/<classe>/<élève> ; (8.0.8) la correction écrit le profil de l'élève (mjpcProfils/<classe>/<élève>/sessions/<id>). Rien d'autre : ni qcm/evaluations, ni qcm/qrScans
      (le jeton du QR n'est lié à aucune séance, la fenêtre du QR l'efface elle-même). */
   S.ecritParSeance = function(id){ var s = S.sess(id) || {}, rep = {}, nl = 0;
     Object.keys(s.reponses || {}).forEach(function(q){ Object.keys((s.reponses || {})[q] || {}).forEach(function(x){ rep[x] = 1; }); });
@@ -4263,6 +4343,74 @@ var SCN = (function(){
     Object.keys(s.reponses || {}).forEach(function(qi){ Object.keys((s.reponses || {})[qi] || {}).forEach(function(x){ if(!(((ph.reponses || {})[qi] || {})[x])){ rep[x] = 1; q[qi] = 1; } }); });
     Object.keys(s.questionsLancees || {}).forEach(function(qi){ if(!(ph.questionsLancees || {})[qi]) q[qi] = 1; });
     return {repondu:Object.keys(rep).length, questions:Object.keys(q).length}; };
+
+  /* ── (8.0.8, Paul C14 151, C17 212, 223, 233 : les vraies durées) ──
+     Chaque durée de Réglages, mesurée dans le journal de la séance (journal/t<ms> = {ph, qi}, écrit par poserDeroule et le moteur).
+     Un moment commence quand la séance entre dans une de ses phases et finit quand elle entre dans une phase d'un autre moment ;
+     le temps passé en pause n'y compte pas (une pause, « ⏸️ Finir à une autre heure » compris, ne finit pas le moment : il reprend après).
+       installation  : appel, entrée, prêts — du « 🚀 Lancer la séance » (ou du « 🔓 Rouvrir ») jusqu'au lancement de la première question ;
+       decompte      : passage — « POSE TON STYLO », avant chaque tour ;
+       b             : b — « Ta feuille dit-elle la même chose que ton clic ? » quand la séance l'attend (pas quand ton geste a déjà lancé la suite) ;
+       entre         : close — de la question close jusqu'au lancement de la suivante (seulement si une question suit) ;
+       estimAttest   : estim, att2 — de « 📊 Lancer l'autoévaluation » jusqu'à la première question corrigée ;
+       correctionParQ: lecture, revele — une question corrigée, de son ouverture jusqu'à la suivante (ou la co-évaluation, le bilan, la fin) ;
+       coevalBilan   : coeval, bilan — de la co-évaluation jusqu'à « 🛑 Terminer la séance ».
+     Un moment qui n'a pas fini (la séance encore dedans, ou rompue) ne compte pas. */
+  var MOMENT_DE = {appel:"installation", entree:"installation", pret:"installation", passage:"decompte", b:"b", close:"entre",
+    estim:"estimAttest", att2:"estimAttest", lecture:"correctionParQ", revele:"correctionParQ", coeval:"coevalBilan", bilan:"coevalBilan"};
+  S.MOMENTS_DUREES = ["installation", "estimAttest", "correctionParQ", "coevalBilan", "decompte", "b", "entre"];
+  // une séance de test (la classe de test « _… », la démo, une copie du mode test) ne compte jamais
+  S.seanceDeTest = function(s){ s = typeof s === "string" ? S.sess(s) : s; if(!s) return true; var cl = String(s.classeSlug || ""), ev = String(s.evalId || "");
+    return cl.charAt(0) === "_" || cl === "CLASSE TEST" || ev === "demo" || ev.charAt(0) === "_" || !!(s.lancee && s.lancee.demo); };
+  // les moments mesurés d'une séance : {installation:[{debut, fin, s}], …} (s : la durée en secondes, pauses retirées)
+  S.vraiesDurees = function(id){ var s = S.sess(id), J = s && s.journal, out = {}; S.MOMENTS_DUREES.forEach(function(m){ out[m] = []; }); if(!J) return out;
+    var l = Object.keys(J).map(function(k){ return {t:+k.slice(1), ph:(J[k] || {}).ph, qi:(J[k] || {}).qi}; }).filter(function(x){ return x.t > 0 && x.ph; }).sort(function(a, b){ return a.t - b.t; });
+    var cur = null;
+    function clore(x){ if(!cur) return; var ok = cur.m !== "entre" || (x && x.ph === "reflexion"); if(ok && x) out[cur.m].push({debut:cur.debut, fin:x.t, s:Math.round((x.t - cur.debut - cur.pause) / 1000), qi:cur.qi}); cur = null; }
+    for(var i = 0; i < l.length; i++){ var x = l[i];
+      if(x.ph === "pause"){ if(cur) cur.enPause = x.t; continue; }
+      var repris = !!(cur && cur.enPause); if(repris){ cur.pause += x.t - cur.enPause; cur.enPause = null; }
+      var m = MOMENT_DE[x.ph] || null;
+      // le même moment continue : appel → entrée → prêts, lecture → révélée de la même question, ou le même moment repris après une pause
+      if(cur && m === cur.m && (m !== "correctionParQ" || x.qi === cur.qi) && (repris || (m !== "decompte" && m !== "b"))) continue;   // le même moment continue (appel → entrée → prêts ; lecture → révélée de la même question)
+      clore(x);
+      if(m) cur = {m:m, debut:x.t, pause:0, qi:x.qi};
+    }
+    return out; };
+  /* la vraie durée de chaque réglage : la moyenne de tous les moments mesurés des séances réelles (jamais de test), et le nombre de séances
+     qui en ont : {installation:{s, n, seances}, …} (s en secondes ; null sans aucune mesure) */
+  S.vraiesDureesMoyennes = function(){ var all = LIVE.d.sessions || {}, acc = {}; S.MOMENTS_DUREES.forEach(function(m){ acc[m] = {tot:0, n:0, seances:0}; });
+    Object.keys(all).forEach(function(id){ var s = all[id]; if(!s || !s.journal || S.seanceDeTest(s)) return; var v = S.vraiesDurees(id);
+      S.MOMENTS_DUREES.forEach(function(m){ if(!v[m].length) return; acc[m].seances++; v[m].forEach(function(x){ acc[m].tot += x.s; acc[m].n++; }); }); });
+    var r = {}; S.MOMENTS_DUREES.forEach(function(m){ var a = acc[m]; r[m] = a.n ? {s:a.tot / a.n, n:a.n, seances:a.seances} : null; }); return r; };
+
+  /* ── (8.0.8, Paul C14 154, registre n°12 · 186, C17 213 : « les données sont là même si le profil n'est pas encore là ») le profil de l'élève ──
+     mjpcProfils/<classe>/<élève>/sessions/<séance>, la forme de la 7.7.1 (archiverDansProfilsMJPC : date, sessId, evalId, evalVersion, titre, mode,
+     scoreBrut, scoreMax, totalQ, details) et ce que MJPC lira : la note sur l'échelle des Réglages, la maîtrise, la maîtrise par compétence, le chapitre
+     de MJPC (niveau, uid, ordre). <classe> : la clé de /classes ; <élève> : son eleveSlug. Jamais pour une séance de test ; seulement une fois
+     au moins une question corrigée. sess : la séance à lire à la place de celle de la base (l'annulation du cours du jour). */
+  S.profilsDe = function(id, sess){ var sauve = LIVE.d.sessions, out = {};
+    if(sess){ var o = {}; Object.keys(sauve || {}).forEach(function(k){ o[k] = sauve[k]; }); o[id] = Object.assign({}, sess, {id:id}); LIVE.d.sessions = o; }
+    try {
+      var s = S.sess(id); if(!s || S.seanceDeTest(s)) return out;
+      var ev = S.evalDeSeance(id), brut = (LIVE.d.evaluations || {})[s.evalId] || {}, R = (LIVE.d.settings || {}).maitrise, sur = +(R && R.sur) || 20;
+      var ch = brut.chapitre && typeof chapitreVue === "function" ? chapitreVue(brut.chapitre) : null;
+      var chap = brut.chapitre ? {id:brut.chapitre, niveau:(ch && ch.niveau) || S.niveauDuChapitre(brut.chapitre), uid:(ch && ch.uid) || null, ordre:(ch && ch.numero) || null, cle:(ch && ch.cle) || null, titre:(ch && ch.titre) || null} : null;
+      var cl = cleDeClasse(s.classeSlug), snap = s.evalSnapshot || {};
+      var revelees = S.corrigeesAu(null, id).length;   // les questions corrigées en classe (« 💡 Révéler »)
+      S.eleves(id).forEach(function(x){ var r = S.resultat(id, x); if(!r || !(r.complet || revelees || (r.corrigees || []).length)) return;
+        var comps = Object.keys(r.comp || {}).map(function(c){ var y = r.comp[c] || {n:0, max:0}, s20 = y.max ? y.n * 20 / y.max : 0;
+          return {id:c, n:Math.round(y.n * 100) / 100, max:y.max, note:Math.round(s20 * sur / 20 * 10) / 10, maitrise:S.maitriseDe(Math.round(s20 * 10) / 10)}; });
+        out["mjpcProfils/" + cl + "/" + x + "/sessions/" + id] = {date:s.date || (s.lancee && s.lancee.date) || null, sessId:id, evalId:s.evalId || null,
+          evalVersion:typeof snap.version === "number" ? snap.version : (typeof brut.version === "number" ? brut.version : 1), titre:(ev && ev.titre) || brut.titre || "Évaluation",
+          mode:snap.mode || brut.mode || "strict", app:"evaluation-qcm",
+          scoreBrut:Math.round(r.n * 100) / 100, scoreMax:r.total, totalQ:ev ? ev.questions.length : null,
+          note:Math.round(r.sur20 * sur / 20 * 10) / 10, noteSur:sur, maitrise:r.maitrise, complet:!!r.complet,
+          competences:comps, chapitre:chap,
+          details:(ev ? ev.questions : []).map(function(q, qi){ return {idx:qi, niveau:q.niveau || null, points:r.pts ? (r.pts[qi] == null ? null : r.pts[qi]) : null, etat:r.st ? r.st[qi] || null : null}; }),
+          ecritLe:LIVE.maintenant()}; });
+    } finally { if(sess) LIVE.d.sessions = sauve; }
+    return out; };
 
   S.mesEvaluations = function(x, k, classe){
     return S.seances(classe || S.classe()).filter(function(se){ return !se.demo && (S.eleves(se.id).indexOf(x) >= 0) && (se.fin || se.id === S.sid()); }).map(function(se){
@@ -4361,9 +4509,16 @@ function absentPartoutQCM(s, x){
 function _ph717(ph){ return {appel:"idle", entree:"idle", pret:"idle", reflexion:"reflexion", passage:"reponse", reponse:"reponse", b:"attente", close:"attente", rouvert:"reponse",
   estim:"autoeval", att2:"autoeval", lecture:"correction", revele:"correction", coeval:"correction", bilan:"finie", fin:"finie", pause:"attente", avant:"idle"}[ph] || "idle"; }
 // le passage d'une phase à une autre : deroule, et le miroir de la 7.7.1
+/* (8.0.8, Paul C14 151, C17 212 et 223 : « les vraies durées ») chaque changement de moment de la séance s'écrit aussi dans son journal,
+   qcm/sessions/<id>/journal/t<ms> = {ph, qi} : l'heure où chaque moment commence, donc celle où le précédent finit. Les deux passages l'écrivent :
+   poserDeroule (les gestes de Paul) et le moteur (les temps comptés, MOTEUR.tic). SCN.vraiesDurees en tire le début et la fin de chaque moment
+   qu'une durée de Réglages estime. Une séance d'avant la 8.0.8 n'a pas de journal : elle ne compte pas, rien ne lui est écrit. */
+function cleJournalQCM(d){ return "journal/t" + Math.round(+d.depuis || LIVE.maintenant()); }
+function ligneJournalQCM(d){ return {ph:d.ph, qi:d.qi == null ? null : d.qi}; }
 function poserDeroule(sid, d, plus){
   d = Object.assign({qi:null, tour:null, cote:null, duree:null, pour:null, bPour:null}, d); d.depuis = d.depuis || LIVE.maintenant();
   var maj = {}; maj[cheminS(sid, "deroule")] = d; maj[cheminS(sid, "phase")] = _ph717(d.ph); maj[cheminS(sid, "phaseStart")] = d.depuis;
+  maj[cheminS(sid, cleJournalQCM(d))] = ligneJournalQCM(d);   // (8.0.8) le journal des moments : SCN.vraiesDurees
   if(d.qi != null) maj[cheminS(sid, "qIdx")] = d.qi;
   maj[cheminS(sid, "paused")] = d.ph === "pause" && d.reprise ? {remaining:d.reprise.reste || 0} : null;
   Object.keys(plus || {}).forEach(function(k){ maj[cheminS(sid, k)] = plus[k]; });
@@ -4388,6 +4543,7 @@ var ACT = (function(){
     var sess = {classeSlug:classe, evalId:evalId, date:now, phase:"idle", qIdx:null, etat:"en_cours",
       lancee:{date:now, heure:SCN.heureFr(now), fin:fin, mode:o.mode || "tablettes", demo:evalId === "demo", rattrapage:!!o.rattrapage, eleves:o.eleves || null},
       places:places, deroule:{ph:"appel", depuis:now}};
+    sess.journal = {}; sess.journal["t" + now] = {ph:"appel"};   // (8.0.8) le premier moment : l'installation commence au lancement
     if(o.absents && o.absents.length) sess.absents = o.absents.slice();
     if(ev && !ev.demo) sess.evalSnapshot = construireSnapshot(ev);
     var maj = {}; maj["/sessions/" + id] = sess; maj["/sessionActive/" + classe] = id;
@@ -4613,8 +4769,15 @@ var ACT = (function(){
     maj["/sessions/" + id] = null;
     Object.keys(act).forEach(function(c){ if(act[c] === id) maj["/sessionActive/" + c] = null; else if(c === cl && act[c]) autre = true; });
     if(cl && !autre) SCN.eleves(id).forEach(function(x){ maj["/presence/" + cl + "/" + x] = null; });
+    // (8.0.8) et ce qu'elle a écrit au profil de chaque élève (mjpcProfils/<classe>/<élève>/sessions/<id>), dans la même écriture
+    var prof = {}, clP = SCN.cleDeClasse(cl); if(clP) SCN.eleves(id).forEach(function(x){ prof["mjpcProfils/" + clP + "/" + x + "/sessions/" + id] = null; });
     if(LIVE.sid === id) LIVE.sid = null;
-    return ecrireQCM(maj, "annulerSeance"); };
+    return ecrireAvecProfils(maj, prof, "annulerSeance"); };
+  function racineDe(maj){ var r = {}; Object.keys(maj).forEach(function(k){ r[DB_ROOT + (k.charAt(0) === "/" ? "" : "/") + k] = maj[k]; }); return r; }
+  /* (8.0.8) l'oubli et le profil en une seule écriture ; si la base refuse le profil (ses règles), l'oubli se fait quand même, puis le profil à part :
+     l'annulation ne dépend jamais du profil */
+  function ecrireAvecProfils(maj, prof, quoi){ var rac = racineDe(maj); Object.keys(prof).forEach(function(k){ rac[k] = prof[k]; });
+    return ecrireRacineQCM(rac, quoi).catch(function(){ return ecrireQCM(maj, quoi + " (sans le profil)").then(function(){ return ecrireRacineQCM(prof, quoi + " (le profil)").catch(function(){}); }); }); }
   /* (8.0.7, Paul 243) « Oublier seulement aujourd'hui » : la séance redevient telle qu'avant le « 🔓 Rouvrir » de ce jour (la photo avantCours/<coursN>,
      prise par A.rouvrirSeance ; les photos des cours d'avant restent), en une seule écriture ; son qcm/sessionActive s'efface (les tablettes oublient
      leurs élèves), et les présences de la classe si aucune autre séance n'y tourne. Sans photo (une séance rouverte par la 8.0.6) : rien ne bouge. */
@@ -4625,8 +4788,11 @@ var ACT = (function(){
     maj["/sessions/" + id] = remis;
     Object.keys(act).forEach(function(c){ if(act[c] === id) maj["/sessionActive/" + c] = null; else if(c === cl && act[c]) autre = true; });
     if(cl && !autre) SCN.eleves(id).forEach(function(x){ maj["/presence/" + cl + "/" + x] = null; });
+    // (8.0.8) le profil de chaque élève redevient celui de la séance d'avant ce cours (effacé s'il n'y en avait pas), dans la même écriture
+    var prof = {}, clP = SCN.cleDeClasse(cl), avant = SCN.profilsDe(id, remis);
+    if(clP) SCN.eleves(id).forEach(function(x){ var k = "mjpcProfils/" + clP + "/" + x + "/sessions/" + id; prof[k] = avant[k] || null; });
     if(LIVE.sid === id) LIVE.sid = null;
-    return ecrireQCM(maj, "annulerCoursDuJour"); }
+    return ecrireAvecProfils(maj, prof, "annulerCoursDuJour"); }
   /* (8.0.6, Paul 178) « 🔓 Rouvrir la séance » : un nouveau cours. Le cours qui s'achève est gardé tel quel (cours/<n>) ; le nouveau commence comme un
      lancement : personne d'absent ni de parti d'avance, personne d'entré, des binômes refaits par la règle du lancement (SCN.binomesProposes : les
      exclusions, puis le QCM précédent, cette séance mise à part), sa fin de l'heure (55 min, comme au lancement), puis l'appel. Les tablettes oublient
@@ -4677,6 +4843,16 @@ var ACT = (function(){
       return poserDeroule(id, {ph:ph, qi:x.qi, tour:x.tour, cote:x.cote, pour:x.pour, duree:ph === "reflexion" ? t.reflexion : t.reponse}); }); };
   A.confirmerReprise = function(){ var id = sid(); if(!id) return Promise.resolve(); var maj = {}; maj[cheminS(id, "repriseConfirmee")] = LIVE.maintenant(); return ecrireQCM(maj, "repriseConfirmee"); };
   A.piloter = function(id){ var s = SCN.sess(id); if(s){ LIVE.sid = id; LIVE.classeSlug = s.classeSlug; LIVE.changer(); } };
+  /* (8.0.8) le profil de l'élève suit chaque correction : la lecture d'une question en classe (« 💡 Révéler »), une feuille lue le soir, une alerte
+     tranchée, la grille du papier, le bilan, « 🛑 Terminer », les copies rendues. Il s'écrit juste après le geste, puis encore 1,5 s plus tard (la séance
+     relue telle que la base l'a gardée) ; une séance annulée entre-temps n'est jamais réécrite. */
+  function ecrireProfils(id){ if(!id || !SCN.sess(id)) return Promise.resolve(); var maj = SCN.profilsDe(id); if(!Object.keys(maj).length) return Promise.resolve();
+    return ecrireRacineQCM(maj, "profils").catch(function(){}); }
+  A.ecrireProfils = ecrireProfils;
+  var POS_SID = {reveler:-1, trancher:-1, afficherBilan:-1, lireFeuille:2, grillePapier:3, terminer:0, rendreCopies:0};
+  Object.keys(POS_SID).forEach(function(nom){ var f = A[nom];
+    A[nom] = function(){ var p = POS_SID[nom], id = (p >= 0 && arguments[p]) || SCN.sid();
+      return Promise.resolve(f.apply(A, arguments)).then(function(r){ ecrireProfils(id); setTimeout(function(){ ecrireProfils(id); }, 1500); return r; }); }; });
   return A;
 })();
 
@@ -4859,7 +5035,7 @@ var MOTEUR = (function(){
     db.ref(DB_ROOT + "/sessions/" + sid + "/deroule").transaction(function(cur){
       if(!cur || cur.ph !== ph || cur.depuis !== attendu) return;   // déjà passé ailleurs
       return nettoyerQCM(Object.assign({qi:null, tour:null, cote:null, duree:null, pour:null}, n, {depuis:LIVE.maintenant()}));
-    }, function(err, ok, snap){ if(ok && snap){ var d = snap.val(), maj = {}; maj[cheminS(sid, "phase")] = _ph717(d.ph); maj[cheminS(sid, "phaseStart")] = d.depuis; ecrireQCM(maj, "miroir"); } });
+    }, function(err, ok, snap){ if(ok && snap){ var d = snap.val(), maj = {}; maj[cheminS(sid, "phase")] = _ph717(d.ph); maj[cheminS(sid, "phaseStart")] = d.depuis; maj[cheminS(sid, cleJournalQCM(d))] = ligneJournalQCM(d); ecrireQCM(maj, "miroir"); } });
   };
   // l'entrée finie : quand tous les présents ont fini l'attestation, la console passe à « prêts »
   M.entree = function(){ var sid = SCN.sid(), e = SCN.etat(sid); if(!sid || !e || e.ph !== "entree") return; var c = SCN.compteurs(null, sid);
@@ -8681,7 +8857,7 @@ function Reglages(){
       h(F, null, h("button", {className:"btn", "data-va":"m-classe-exclusions"}, "Ouvrir la console MJPC →"))),
     carte("🤖 Le prompt de création d'éval", "Le texte à coller dans l'instance de création d'éval. À la copie, l'app y met ton chapitre, ses compétences avec leur libellé élève, les quatre difficultés et les limites de longueur mesurées sur une demi-tablette.",
       h(F, null, h("div", {className:"row"}, h("button", {className:"btn btn-or", "data-va":"c-reglages-prompt", title:"Ouvre le prompt de création d'éval, à copier dans l'instance qui écrit le JSON."}, "🤖 Prompt IA"), h("button", {className:"btn btn-ghost", "data-va":"c-reglages-prompt-modifier"}, "✏️ Modifier le prompt")))),
-    carte("⏱️ Les durées de la séance", "Les mêmes pour le prompt et pour la garde de l'app : elles comptent la durée d'une évaluation au collage, au lancement et pendant la séance (la fin prévue). Pas encore : l'app ne note pas encore tes vraies durées.",
+    carte("⏱️ Les durées de la séance", "Les mêmes pour le prompt et pour la garde de l'app : elles comptent la durée d'une évaluation au collage, au lancement et pendant la séance (la fin prévue). L'app mesure aussi, en classe, tes vraies durées : « Prendre ta vraie durée » la met à la place de la tienne ; rien ne change sans ce clic.",
       h(DureesSeance)),
     carte("🎚️ Les niveaux de maîtrise et la note", "Les bornes portent sur la note, quelle que soit son échelle ; une compétence se met sur la même échelle, puis passe dans les mêmes tranches. L'app refuse un réglage qui laisse un trou ou fait se chevaucher deux paliers.",
       h(NiveauxMaitrise)),
@@ -13514,13 +13690,36 @@ var ECRANS_EVALS_V = {"c-evals":function(){ return EvaluationsV(null); }, "c-eva
 /* ═══════════════ [QCM-3 · SOIR] Réglages : les durées, les niveaux, les textes des élèves, le prompt ; tout s'enregistre dans qcm/settings ═══════════════ */
 var DUREES_LIGNES = [["installation", "Installation et consignes", 60, "min"], ["estimAttest", "Estimation et seconde attestation", 60, "min"], ["correctionParQ", "Correction, par question", 60, "min"],
   ["coevalBilan", "Co-évaluation et bilan", 60, "min"], ["decompte", "Passage de la tablette, avant chaque tour", 1, "s"], ["b", "« Ta feuille dit-elle la même chose que ton clic ? »", 1, "s"], ["entre", "Entre deux questions", 1, "s"]];
+/* (8.0.8, Paul C17 212 et 233 : « ça doit être clair à quoi correspond chaque durée, afin que je ne me trompe pas. l'infobulle doit être précise ») :
+   ce que compte chaque durée, du premier geste au dernier ; c'est aussi ce que mesure l'app (SCN.vraiesDurees, src/live/base.js) */
+var DUREES_BULLES = {
+  installation:"De ton clic sur « 🚀 Lancer la séance » (ou sur « 🔓 Rouvrir », pour un cours repris) jusqu'à ton clic sur « ▶️ Lancer Q… » de la première question du cours : l'appel, l'entrée des élèves sur les tablettes, tes consignes. Une pause n'y compte pas.",
+  estimAttest:"De ton clic sur « 📊 Lancer l'autoévaluation » jusqu'à ton clic sur « ▶️ Commencer la correction » : l'estimation de chaque élève, puis la seconde attestation. Une pause n'y compte pas.",
+  correctionParQ:"Pour chaque question corrigée en classe : de son ouverture (« ▶️ Commencer la correction », puis « Question suivante → ») jusqu'à l'ouverture de la suivante ; la dernière, jusqu'à « 🤝 Ouvrir la co-évaluation » (ou « 🛑 Terminer la séance »). La lecture des feuilles et « 💡 Révéler » comprises. Ta vraie durée : la moyenne par question. Une pause n'y compte pas.",
+  coevalBilan:"De ton clic sur « 🤝 Ouvrir la co-évaluation, puis leur bilan » jusqu'à ton clic sur « 🛑 Terminer la séance » : la co-évaluation, puis le bilan affiché aux élèves. Une pause n'y compte pas.",
+  decompte:"Le « POSE TON STYLO », avant chaque tour : de la fin de la réflexion (ou de la fin du 1er tour) jusqu'à l'ouverture des choix sur la moitié qui répond.",
+  b:"Après chaque réponse : de la fin du temps de réponse jusqu'à la suite (le 2e tour, ou la question close), pendant que l'élève dit si sa feuille dit la même chose que son clic. Quand ton geste (« ⏭️ Tour suivant », « 🔒 Clore la question ») a déjà lancé la suite, ce temps-là n'est pas mesuré.",
+  entre:"De la question close jusqu'à ton clic sur « ▶️ Lancer Q… » de la question suivante. Après la dernière question, rien ne compte. Une pause n'y compte pas."};
+// une durée lisible : « 1 min 20 », « 45 s », « 5 min »
+function dureeLisible(s){ s = Math.round(s); if(s < 60) return s + " s"; var m = Math.floor(s / 60), r = s % 60; return m + " min" + (r ? " " + (r < 10 ? "0" : "") + r : ""); }
 function DureesSeanceV(){ return h(DureesSeanceVC); }
 function DureesSeanceVC(){
   useV3();
   var D = dureesV(), s = useState(null), brouillon = s[0], set = s[1], s2 = useState(false), fait = s2[0], setFait = s2[1];
-  var v = brouillon || DUREES_LIGNES.reduce(function(o, l){ o[l[0]] = D[l[0]] / l[2]; return o; }, {});
-  return h("div", {className:"reg-grille"}, DUREES_LIGNES.map(function(l){ return h("label", {key:l[0], className:"reg-l"}, h("span", null, l[1]),
-      h("input", {type:"number", value:v[l[0]], min:0, title:"Tape la durée ; elle vaut pour toutes les séances à venir.", onChange:function(e){ var o = Object.assign({}, v); o[l[0]] = e.target.value; set(o); setFait(false); }}), h("span", null, l[3])); }),
+  var VR = SCN.vraiesDureesMoyennes ? SCN.vraiesDureesMoyennes() : {};
+  var v = brouillon || DUREES_LIGNES.reduce(function(o, l){ o[l[0]] = Math.round(D[l[0]] / l[2] * 100) / 100; return o; }, {});
+  // « Prendre ta vraie durée » : la durée devient la vraie, tout de suite, pour toutes les séances à venir ; rien d'autre ne bouge
+  function prendre(cle, sec){ var o = Object.assign({}, D); o[cle] = sec; DUREES_LIGNES.forEach(function(l){ o[l[0]] = Math.max(0, Math.round(+o[l[0]] || 0)); });
+    if(brouillon){ var b = Object.assign({}, brouillon); b[cle] = Math.round(sec / DUREES_LIGNES.filter(function(l){ return l[0] === cle; })[0][2] * 100) / 100; set(b); }
+    return v3Set(v3Q("settings/durees"), o); }
+  return h("div", {className:"reg-grille reg-durees"}, DUREES_LIGNES.map(function(l){ var vr = VR[l[0]], sec = vr ? Math.round(vr.s) : null, par = l[0] === "correctionParQ" ? " par question" : "",
+      deja = sec != null && sec === Math.round(D[l[0]]);
+      return h("div", {key:l[0], className:"reg-l reg-duree", "data-duree":l[0]},
+        h("span", null, l[1], InfoIB(l[1], DUREES_BULLES[l[0]])),
+        h("input", {type:"number", value:v[l[0]], min:0, title:"Tape la durée ; elle vaut pour toutes les séances à venir, après « 💾 Enregistrer ».", onChange:function(e){ var o = Object.assign({}, v); o[l[0]] = e.target.value; set(o); setFait(false); }}), h("span", null, l[3]),
+        h("span", {className:"reg-vraie", "data-vraie":l[0]}, vr ? "ta vraie durée : " + dureeLisible(vr.s) + par + ", sur " + vr.seances + " séance" + (vr.seances > 1 ? "s" : "") : "ta vraie durée : pas encore mesurée"),
+        vr && !deja ? h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", "data-prendre":l[0], title:"Remplace ta durée (" + dureeLisible(D[l[0]]) + ") par ta vraie durée (" + dureeLisible(sec) + "), mesurée en classe : elle vaut tout de suite pour toutes les séances à venir. Rien ne change sans ce clic.", onClick:function(){ prendre(l[0], sec); }}, "Prendre ta vraie durée")
+          : h("span", {className:"reg-raison", "data-raison-prendre":l[0]}, vr ? "c'est déjà ta durée" : "aucune séance en classe ne l'a encore mesurée")); }),
     h("button", {className:"btn btn-primary btn-sm", "data-local":"1", disabled:fait && !brouillon, title:fait ? "✅ Enregistré" : "Enregistre les durées : elles valent pour le prompt, la garde au collage et au lancement, et la fin prévue.",
       onClick:function(){ var o = {}; DUREES_LIGNES.forEach(function(l){ var x = parseFloat(String(v[l[0]]).replace(",", ".")); o[l[0]] = Math.max(0, Math.round((isNaN(x) ? D[l[0]] / l[2] : x) * l[2])); });
         v3Set(v3Q("settings/durees"), o).then(function(){ set(null); setFait(true); }); }}, fait && !brouillon ? "✅ Enregistré" : "💾 Enregistrer"));
@@ -13568,7 +13767,7 @@ function ReglagesV(){
       h(F, null, h("button", {className:"btn", "data-local":"1", onClick:function(){ window.open("index.html", "mjpc"); }, title:"Ouvre la console MJPC : les classes, les élèves, leurs codes, les aménagements et les exclusions."}, "Ouvrir la console MJPC →"))),
     carte("🤖 Le prompt de création d'éval", "Le texte à coller dans l'instance de création d'éval. À la copie, l'app y met ton chapitre, ses compétences avec leur libellé élève, les quatre difficultés et les limites de longueur mesurées sur une demi-tablette.",
       h(F, null, h("div", {className:"row"}, h("button", {className:"btn btn-or", "data-va":"c-reglages-prompt", title:"Ouvre le prompt de création d'éval, à copier dans l'instance qui écrit le JSON."}, "🤖 Prompt IA"), h("button", {className:"btn btn-ghost", "data-va":"c-reglages-prompt-modifier", title:"Ouvre le prompt enregistré, jetons compris, pour le modifier."}, "✏️ Modifier le prompt")))),
-    carte("⏱️ Les durées de la séance", "Les mêmes pour le prompt et pour la garde de l'app : elles comptent la durée d'une évaluation au collage, au lancement et pendant la séance (la fin prévue). Pas encore : l'app ne note pas encore tes vraies durées.", DureesSeanceV()),
+    carte("⏱️ Les durées de la séance", "Les mêmes pour le prompt et pour la garde de l'app : elles comptent la durée d'une évaluation au collage, au lancement et pendant la séance (la fin prévue). L'app mesure aussi, en classe, tes vraies durées (la moyenne de tes séances réelles, jamais des séances de test) : « Prendre ta vraie durée » la met à la place de la tienne ; rien ne change sans ce clic. Le « i » de chaque durée dit ce qu'elle compte.", DureesSeanceV()),
     carte("🎚️ Les niveaux de maîtrise et la note", "Les bornes portent sur la note, quelle que soit son échelle ; une compétence se met sur la même échelle, puis passe dans les mêmes tranches. L'app refuse un réglage qui laisse un trou ou fait se chevaucher deux paliers.", NiveauxMaitriseV()),
     EditeurTextesV(),
     carte("ℹ️ Version", "La version de l'app, et le socle qu'elle embarque.",
@@ -14154,10 +14353,12 @@ function boutonH(cle, cls, lib, onClick, titre){ return h("button", Object.assig
 function annulerH(titre){ return boutonH("annuler", "btn btn-ghost", "Annuler", fermerFen, titre || "Ferme sans rien changer."); }
 /* ═══ (8.0.7, Paul 230) « Annuler cette séance » : le bouton (console, à côté de « 🛑 Terminer la séance » ; carte d'une séance terminée), et sa garde,
    qui dit en clair ce qui sera oublié. Le geste : ACT.annulerSeance (src/live/base.js). Jamais confondu avec « ⚠️ Annuler la question » (ACT.annuler). ═══ */
-var BULLE_ANNULER_SEANCE = "Pour une séance lancée pour essayer, ou par erreur : après l'écran « ⚠️ Attention », l'app l'oublie, comme si elle n'avait pas existé (réponses, notes, lectures, binômes, appel) ; une séance reprise peut n'oublier que le cours du jour. Rien ne va à la corbeille : c'est sans retour.";
+var BULLE_ANNULER_SEANCE = "Pour une séance lancée pour essayer, ou par erreur. Hors d'une heure de cours de la classe (l'emploi du temps et les heures jouées de MJPC), un clic suffit ; dans une heure de cours, ou si l'app ne peut pas le savoir, l'écran « ⚠️ Attention » d'abord. L'app l'oublie, comme si elle n'avait pas existé (réponses, notes, lectures, binômes, appel) ; une séance reprise peut n'oublier que le cours du jour. Rien ne va à la corbeille : c'est sans retour.";
 function annulerSeancePret(){ return typeof SCN !== "undefined" && SCN.LIVE && typeof SCN.annulable === "function" && typeof ACT !== "undefined" && typeof ACT.annulerSeance === "function"; }
 // le bouton, ouvert ou grisé (sa raison en bulle) ; ouvrir : la fonction qui ouvre la garde
 function boutonAnnulerSeance(id, cle, ouvrir){ if(!annulerSeancePret() || !id) return null; var a = SCN.annulable(id);
+  // (8.0.8) ce que lit estVraieHeure (les chapitres et l'emploi du temps de MJPC), abonné dès que le bouton se montre : au clic, c'est là
+  if(typeof vraieHeurePreparer === "function"){ var s0 = SCN.sess(id) || {}; vraieHeurePreparer(+(s0.coursDebut || (s0.lancee && s0.lancee.date) || s0.date || 0) || null); }
   return a.ok ? h("button", Object.assign({key:cle || "annuler-seance", className:"btn btn-ghost btn-sm", "data-annuler-seance":id, title:BULLE_ANNULER_SEANCE}, ouvrir), "Annuler cette séance")
     : h("button", {key:cle || "annuler-seance", className:"btn btn-ghost btn-sm", "data-annuler-seance":id, disabled:true, title:a.raison}, "Annuler cette séance"); }
 // dans la console : à côté de « 🛑 Terminer la séance »
@@ -14168,7 +14369,7 @@ function annulerSeanceH(cle){ if(!enDirect() || !annulerSeancePret()) return nul
 function gardeAnnulerSeance(id, mk, fermer){ var se = SCN.seance(id) || {}, s = SCN.sess(id) || {}, ev = SCN.evalParId(s.evalId) || {}, c = SCN.ecritParSeance(id), pl = function(n, a, b){ return n + " " + (n > 1 ? b : a); };
   var reprise = SCN.reprise(id), auj = SCN.aujourdhuiPossible(id), a = reprise ? SCN.ecritAujourdhui(id) : null;
   var oubli = [];
-  oubli.push(c.repondu ? "les réponses de " + pl(c.repondu, "élève", "élèves") + " à " + pl(c.posees, "question", "questions") + ", leurs notes" : "l'appel (personne n'a encore répondu)");
+  oubli.push(c.repondu ? "les réponses de " + pl(c.repondu, "élève", "élèves") + " à " + pl(c.posees, "question", "questions") + ", leurs notes, jusque dans leur profil" : "l'appel (personne n'a encore répondu)");
   if(c.lectures) oubli.push(pl(c.lectures, "lecture de feuille", "lectures de feuilles"));
   if(c.tablettes) oubli.push("les binômes des " + pl(c.tablettes, "tablette", "tablettes"));
   if(c.repondu) oubli.push("l'appel" + (c.absents ? " (" + pl(c.absents, "absent", "absents") + ")" : ""));
