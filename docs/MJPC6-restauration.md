@@ -1584,3 +1584,4 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **09/11/2026 06:19 — 8.93.0-㉚** (prod `b4a7817`, md5 `8682f23c0f144abf6005877299399e89`) · point de retour : **8.92.0-㉙** (prod `47df129`, `index.html` md5 `06d3cbc52f6090d03db29c05aa228acd`) — `git checkout 47df129 -- index.html`.
 
 - **09/11/2026 06:56 — retour à la 8.92.0-㉙** (prod `777d19c`, md5 `06d3cbc52f6090d03db29c05aa228acd`) : la 8.93.0-㉚ cassait lenchaînement
+- **09/11/2026 — 8.94.0-㉛** (prod `eba0016`, md5 `001767f27cc58b038eea76c18bcd9177`) · point de retour : **8.93.0-㉚** (prod `65842d3`, md5 `fa171c2d2ca9b6df0809374d4b7b9d37`).
