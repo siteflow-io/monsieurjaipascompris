@@ -1840,7 +1840,15 @@ var M8T = (function(){
     var d = s[s.length - 1]; if(v === null || v === undefined) delete n[d]; else n[d] = v; return base;
   }
   function marquer(s){ var k = cle(s), p = k === '/' ? '/' : k + '/'; Object.keys(connus).forEach(function(c){ if(c !== k && (k === '/' || c.indexOf(p) === 0)) delete connus[c]; }); connus[k] = true; }
-  function ecrire(c, v){ var s = seg(c); racine.v = poserDans(racine.v, s, (v === null || v === undefined) ? null : copie(v)); marquer(s); }
+  /* C17 mandat AS (08/11) : LE MAGASIN SE GARDE SUR CET APPAREIL — chaque écriture du mode test est aussi notée dans `localStorage['mjpc_m8t']`
+     (le chemin et sa valeur ; une écriture recouvre celles qu'elle remplace, à son chemin et dessous), et rejouée au chargement : une page
+     rouverte retrouve l'essai tel qu'il était (règle de Paul : reprise exacte à la réouverture). Avant : en mémoire seulement, perdu à la
+     fermeture. `vider` (la sortie du mode test) l'efface aussi. Les lectures du hub ne s'y notent pas : elles se relisent. Rien n'est écrit au hub. */
+  var notes = [], K_NOTES = 'mjpc_m8t', rejeu = false;
+  function noter(c, v){ if(rejeu) return; var k = cle(seg(c)), p = k === '/' ? '/' : k + '/';
+    notes = notes.filter(function(n){ return n[0] !== k && n[0].indexOf(p) !== 0; }); notes.push([k, v === undefined ? null : v]);
+    try{ localStorage.setItem(K_NOTES, JSON.stringify(notes)); }catch(e){} }
+  function ecrire(c, v){ var s = seg(c); racine.v = poserDans(racine.v, s, (v === null || v === undefined) ? null : copie(v)); marquer(s); noter(c, v); }
   function suppr(c){ ecrire(c, null); }
   function patch(c, o){ var s = seg(c); Object.keys(o || {}).forEach(function(k){ ecrire(cle(s.concat(seg(k))), o[k]); }); }
   function greffer(c, valHub){   /* la valeur lue au hub pour un chemin pas encore connu, recouverte de tout ce qui a été écrit sous lui */
@@ -1856,7 +1864,8 @@ var M8T = (function(){
       .then(function(r){ if(!r.ok) throw 0; return r.json(); })
       .then(function(v){ cb(greffer(c, v)); }, function(){ cb(null, true); });
   }
-  function vider(){ racine = { v: null }; connus = {}; }
+  function vider(){ racine = { v: null }; connus = {}; notes = []; try{ localStorage.removeItem(K_NOTES); }catch(e){} }
+  try{ var n0 = JSON.parse(localStorage.getItem(K_NOTES) || '[]'); if(Array.isArray(n0) && n0.length){ rejeu = true; n0.forEach(function(n){ ecrire(n[0], n[1]); }); rejeu = false; notes = n0; } }catch(e){ rejeu = false; }
   var mandataire = new Proxy({}, {
     get: function(t, k){ if(typeof k !== 'string') return undefined; return connu(k) ? lireA(seg(k)) : undefined; },
     set: function(t, k, v){ ecrire(k, v); return true; },
@@ -1882,6 +1891,37 @@ function m8LireOuHub(chemin){
 function m8EssaiEnCours(){
   try{ return M8_TEST===true && typeof AT_DR_REGIME!=='undefined' && AT_DR_REGIME==='classe' && typeof AT_DR_COURS!=='undefined' && !!AT_DR_COURS && !(typeof S==='object'&&S&&S.repetition); }catch(e){ return false; }
 }
+/* C17 mandat AS (08/11 ; Paul, 22:31 : « juste une garde qui dit qu'une séance est ouverte en mode test avec un bouton "désactiver mode test" et un
+   "continuer en mode test" ») : tant qu'une heure d'essai joue ici, `localStorage['mjpc_m8_essai']` la nomme (son cours) ; close ou annulée, la marque part.
+   La page rouverte (professeur, pas le tableau) qui la trouve le dit. « Continuer » : le mode test revient, l'essai reprend par sa voie existante
+   (`dr_sesReprendreEssai`, l'annonce d'essai du tableau), sinon par `dr_reprendreCours` sur le magasin gardé. « Désactiver » : la sortie du mode
+   test existante (`m8BasculerModeTest`), qui vide le magasin ; la marque part. */
+var M8_ESSAI = { k: 'mjpc_m8_essai', vu: false, dit: false };
+function m8EssaiGarde(){
+  try{
+    if(!M8_ESSAI.dit && M8_TEST !== true && document.body.classList.contains('admin-mode') && !/[?&]vue=tableau(&|$)/.test(location.search)){
+      var m = JSON.parse(localStorage.getItem(M8_ESSAI.k) || 'null'); M8_ESSAI.dit = true;
+      if(m && m.cours && typeof atModaleChoix === 'function') atModaleChoix('<b>Une séance est ouverte en mode test.</b>', [
+        { lib: 'Désactiver le mode test', title: 'Sort du mode test : cet appareil revient à la vraie classe. L’heure d’essai et tout ce qu’elle avait noté sur cet appareil sont effacés (rien n’avait été écrit pour la classe).',
+          fn: function(){ try{ localStorage.removeItem(M8_ESSAI.k); }catch(e){} M8_TEST = true; m8BasculerModeTest();
+            /* C17 AS (conscience, 00:1x) : plus aucune trace d'essai ne propose rien — l'annonce d'essai de CETTE heure (même séance, même classe) se retire du tableau
+               par le geste de clôture existant (`dr_ttFin` : pointeur, scène, état, copie de `/site/tableau_test`), qu'elle adopte ; le bandeau « Reprendre » part avec elle */
+            try{ if(typeof dr_ttLireHub === 'function' && typeof dr_ttFin === 'function') dr_ttLireHub(DR_TT.chemin + '/pointeur', function(p){
+              if(p && p.ts && p.quoi === 'heure' && String(p.seance) === String(m.cours.seance) && String(p.classeSlug || '') === String(m.cours.classeSlug || '')){ DR_TT.sig = p.ts + '|' + p.seance; DR_TT.quoi = 'heure'; dr_ttFin(); }
+              if(typeof sesRepriseRetirer === 'function') sesRepriseRetirer(); }); }catch(e){} } },
+        { lib: 'Continuer en mode test', prim: true, title: 'Remet cet appareil en mode test et reprend l’heure d’essai là où elle en était : la diapo, les réponses, le chrono. Rien n’est écrit pour la classe.',
+          fn: function(){ M8_TEST = true; try{ sessionStorage.setItem('mjpc_m8_test', '1'); }catch(e){}
+            try{ chargerBrevetDates(function(){ if(typeof renderConsoleM8==='function') renderConsoleM8(); }); }catch(e){}
+            var t = (typeof DR_SES === 'object' && DR_SES && DR_SES.ann) ? DR_SES.ann.essai : null;
+            try{ if(t && t.quoi === 'heure' && typeof dr_sesFrais === 'function' && dr_sesFrais(t) && typeof dr_sesReprendreEssai === 'function'){ if(typeof sesRepriseRetirer === 'function') sesRepriseRetirer(); dr_sesReprendreEssai(t); }
+                 else if(typeof dr_reprendreCours === 'function'){ if(typeof sesRepriseRetirer === 'function') sesRepriseRetirer(); dr_reprendreCours(m.cours); } }catch(e){} } }
+      ]);
+    }
+    if(m8EssaiEnCours()){ var c = (typeof dr_coursIci === 'function') ? dr_coursIci() : null; if(c){ localStorage.setItem(M8_ESSAI.k, JSON.stringify({ cours: c, ts: Date.now() })); M8_ESSAI.vu = true; } }
+    else if(M8_ESSAI.vu){ localStorage.removeItem(M8_ESSAI.k); M8_ESSAI.vu = false; }
+  }catch(e){}
+}
+setInterval(m8EssaiGarde, 1000);
 function m8BasculerModeTest(){
   if(m8EssaiEnCours()){
     try{ atInfo('Un essai joue en mode test : clos-le d’abord.<br>Quitter le mode test pendant l’essai ferait écrire la suite de l’essai dans les vraies données de la classe.'); }catch(e){}
@@ -3146,7 +3186,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.92.0-㉙";
+var APP_VERSION="8.93.0-㉚";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -22909,7 +22949,7 @@ function chapitreHtml(){ /* (f) 2 · 1 bis — une lecture, jamais une écriture
   dr_recitTaxo().forEach(d => d.familles.forEach(f => f.notions.forEach(n => { h3 += ligneN(n, f); }))); h3 += '</div>';
   return `<div class="chapitre">${h1}${h2}${h3}</div>`; }
 function brancherChapitre(){ $('rel').querySelectorAll('[data-copie-travail]').forEach(b => b.onclick = () => { const h = +b.dataset.copieTravail; const txt = (S.travailHeure || {})[h] || (h === S.heure ? texteTravailED() : ''); { const tt = txt || '(rien à faire)'; /* (E4 · R22) lisait copierTexte(texte) */ dr_recitCopierED('<p>' + dr_esc(tt).replace(/\n/g, '<br>') + '</p>', tt, 'copié : le travail à faire de l\'heure ' + h); } S.copieED = S.copieED || {}; S.copieED[h] = Object.assign(S.copieED[h] || {}, { t: now(), travail: true }); /* (E4) la garde après copie le sait */ dr_recitJournal('copie-ed', { quoi: 'travail', h }); b.textContent = '✔ copié'; }); }
-function relecture(){ dr_recitCorrections(); dr_recitOrdres(); { const B = typeof dr_cheminB === 'function' ? dr_cheminB() : ''; if (B && !dr_recitEnCours() && (!heuresJouees().length || heuresJouees().some(h => !(S.ordresEid || {})[h] && !((S.ordres || {})[h] || []).length)) && !DR_RECIT_TENTE[B]) { /* (E4 · relecteur continu B4) rechargé sans « Reprendre le cours », le journal est là mais pas l'état (ordres, participation) : on relit la classe au hub */ DR_RECIT_TENTE[B] = true; const c = DR_RECIT_CLASSE || dr_recitClasseParDefaut(); if (c) { dr_recitChargerClasse(c, () => relecture()); return; } } } /* (E4) rechargé ou après la clôture : rien en mémoire — on relit au hub l'heure jouée de la classe (C/journal, C/etat) */ { const C = dr_recitChemin(); if (C && !DR_RECIT_CHARGE[C] && typeof dr_lire === 'function') { dr_recitCharger(() => relecture()); return; } } /* (E4) le récit relu, ma version, la copie ED : lus au hub avant de composer (C/recit) */ S.face = S.face || 'recit'; S.faceH = S.faceH || S.heure; const hs = heuresJouees(); if (!hs.includes(S.faceH)) S.faceH = hs[hs.length - 1] || S.heure; const fin = (S.closes && S.closes[S.faceH]) || (S.faceH === S.heure ? now() : now());
+function relecture(){ dr_recitCorrections(); dr_recitFinsPoser(); dr_recitOrdres(); { const B = typeof dr_cheminB === 'function' ? dr_cheminB() : ''; if (B && !dr_recitEnCours() && (!heuresJouees().length || heuresJouees().some(h => !(S.ordresEid || {})[h] && !((S.ordres || {})[h] || []).length)) && !DR_RECIT_TENTE[B]) { /* (E4 · relecteur continu B4) rechargé sans « Reprendre le cours », le journal est là mais pas l'état (ordres, participation) : on relit la classe au hub */ DR_RECIT_TENTE[B] = true; const c = DR_RECIT_CLASSE || dr_recitClasseParDefaut(); if (c) { dr_recitChargerClasse(c, () => relecture()); return; } } } /* (E4) rechargé ou après la clôture : rien en mémoire — on relit au hub l'heure jouée de la classe (C/journal, C/etat) */ { const C = dr_recitChemin(); if (C && !DR_RECIT_CHARGE[C] && typeof dr_lire === 'function') { dr_recitCharger(() => relecture()); return; } } /* (E4) le récit relu, ma version, la copie ED : lus au hub avant de composer (C/recit) */ S.face = S.face || 'recit'; S.faceH = S.faceH || S.heure; const hs = heuresJouees(); if (!hs.includes(S.faceH)) S.faceH = hs[hs.length - 1] || S.heure; const fin = (S.closes && S.closes[S.faceH]) || (S.faceH === S.heure ? now() : now());
   let f = ''; hs.forEach(h => { f += `<button class="ong ${S.face === 'recit' && S.faceH === h ? 'on' : ''}" data-f="recit" data-h="${h}" title="Le récit de l'heure ${h}, pour l'élève et École Directe">Le récit · heure ${h}</button><button class="ong ${S.face === 'passe' && S.faceH === h ? 'on' : ''}" data-f="passe" data-h="${h}" title="Ce qui s'est passé pendant l'heure ${h}, pour toi">Ce qui s'est passé · heure ${h}</button><button class="ong ${S.face === 'papier' && S.faceH === h ? 'on' : ''}" data-f="papier" data-h="${h}" title="Le papier du cahier de l'heure ${h} : le récit relu (ma version s'il y en a une), l'entête, le travail à faire, puis les fiches à coller — prêt à imprimer">Papier · heure ${h}</button>`; }); /* (E4) + la face Papier (proposition 96, cadrage 2 §1.9) */
   if (hs.length > 1) f += `<button class="ong ${S.face === 'seance' ? 'on' : ''}" data-f="seance" data-h="${S.faceH}" title="La relecture de la séance : les heures bout à bout, un seul bilan">La séance</button>`; f += `<button class="ong ${S.face === 'chapitre' ? 'on' : ''}" data-f="chapitre" data-h="0" title="Le chapitre : le tracé des travaux à faire, ce qui a tenu et ce qui manquait, les notions — calculé des heures closes de cette classe, les heures à venir lues dans la trame ; rien ne se verse d'ici">Le chapitre</button>`;
   /* C16 610 (nuit A) : le menu des classes est retiré — une séance se relit en y entrant par la case du calendrier */ poserHtml($('faces'), f); $('faces').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.face = b.dataset.f; if (+b.dataset.h) S.faceH = +b.dataset.h; relecture(); });
@@ -22945,6 +22985,10 @@ function dr_suiteDevoiles(h, t){ /* (E4 · relecteur continu B3, cadrage 2 §1.1
     JH.filter(x => x.type === 'devoile' && x.t > t && vuAvant(x.di)).forEach(x => { const e = dr_recitEcranVu(h, E[x.di]); const el = (elements(e) || [])[x.k]; if (!el || !String(el.txt || '').trim()) return; const b = e.blocs[el.b] || {}; const txt = String(el.txt).trim().replace(/\.$/, ''); (par[x.di] = par[x.di] || { act: e.act, l: [] }).l.push(b.t === 'question' && !el.q ? 'la réponse attendue vue en classe était : « ' + dr_esc(txt) + ' »' : 'on a dévoilé « ' + dr_esc(txt) + ' »'); });
     return Object.keys(par).map(di => '<p class="rt dr-suite-dev">Ensuite, sur <b>' + dr_esc(par[di].act) + '</b>, ' + par[di].l.join(' ; ') + '.</p>').join(''); } catch (e) { return ''; } }
 /* (E4 · relecteur continu B3, cadrage 2 §2.3, cadrage 1 §4.7) « ⚠ à corriger » : dire qui a répondu ; l'entrée du journal reçoit l'élève, une entrée « reponse-corrigee » garde la trace */
+function dr_recitFinsPoser(){ /* C17 mandat AR (08/11) : une heure passée par sa diapo de fin d'heure (ou ouverte sur sa réactivation) (la vignette, la flèche) a au journal une entrée « diapo » `fin-h<n>-s<clé>` ; la fin d'heure est posée par le site dans la copie de la classe (`dr_suiteContinue`), jamais écrite dans la trame : relue dans une page rouverte, elle manquait à `seance().ecrans`, l'entrée restait sans rang (`dr_duHub`) et « Ce qui s'est passé » levait sur `seance().ecrans[undefined].act` — l'écran gardait la face d'avant. Ici, comme `dr_suiteContinue`, la fin d'heure est reposée dans la copie en mémoire, sous le nom que le site lui donne (« Fin d'heure ») ; le journal reprend son rang (`reindexer`) ; rien ne s'écrit au hub. */
+  try { const E = seance().ecrans; if (!Array.isArray(E)) return 0; let n = 0; const vus = new Set();
+    J.forEach(x => { const m = x && x.eid != null && /^(fin|react)-h(\d+)-s/.exec(String(x.eid)); if (!m || vus.has(x.eid) || E.some(e => e && e.eid === x.eid)) return; vus.add(x.eid); const h = +m[2]; const fin = m[1] === 'fin' ? { eid: x.eid, act: 'Fin d\'heure', dur: 5, role: 'fin', comp: [], blocs: [], heure: h } : { eid: x.eid, act: 'Où en sommes-nous ?', dur: DR_REACT_DUR, role: 'reactivation', comp: [], blocs: [], heure: h };   /* la réactivation de l'heure (`react-h<n>-s<clé>`, construite pour la classe, hors trame) : de même, sous son nom, sans ses lignes */ Object.defineProperty(fin, 'dr_pose', { value: true }); E.push(fin); n++;   /* à la fin, comme `dr_suiteContinue` : aucun rang des autres diapos ne bouge */ });
+    if (n) { J.forEach(x => { if (x && x.di == null && x.eid != null) { const i = E.findIndex(e => e && e.eid === x.eid); if (i >= 0) x.di = i; } }); try { reindexer(); } catch (e) {} } return n; } catch (e) { return 0; } }
 function dr_recitOrdres(){ /* (E4 · reprise de la passe, L88) le hub garde l'ordre des heures par identité (S.ordresEid) : sans « Reprendre le cours », les rangs (S.ordres) se refont ici, sinon « la diapo — X » sans numéro et « Diapo par diapo » faux */ try { const oe = S.ordresEid || {}; const E = seance().ecrans; Object.keys(oe).forEach(h => { if (Array.isArray((S.ordres || {})[h]) && S.ordres[h].length) return; const l = (oe[h] || []).map(eid => E.findIndex(e => e.eid === eid)).filter(i => i >= 0); if (l.length) { S.ordres = S.ordres || {}; S.ordres[h] = l; } }); } catch (e) {} }
 function dr_recitCorrList(){ /* C16 nuit B : toutes les corrections « qui a répondu » (journal de l'heure et C/recit), dans l'ordre : la dernière l'emporte */ try { return J.filter(c => c && c.type === 'reponse-corrigee').concat(...Object.values(S.recitCorr || {}).map(l => (l || []).map(c => Object.assign({ type: 'reponse-corrigee' }, c)))).filter(c => c.quoi === 'eleve' && c.eleve).sort((a, b) => (a.t || 0) - (b.t || 0)); } catch (e) { return []; } }
 function dr_recitCorrApplique(x, cs){ /* C16 nuit B (MANDAT B §1.2, §1.3) : une réponse — du journal ou retrouvée dans une diapo, avec ou sans élève — prend l'élève de sa dernière correction ; `corrDe` garde l'élève saisi en classe ; rien n'est réécrit dans les diapos */ (cs || dr_recitCorrList()).forEach(c => { if (x.di === c.di && x.bi === c.bi && x.ri === c.ri && (c.si == null || x.si === c.si)) { if (x.corrDe === undefined) x.corrDe = x.eleve || null; x.eleve = c.eleve; } }); return x; }
