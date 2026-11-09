@@ -1578,3 +1578,5 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Restauration en cas de `BUG`** : le blob → PUT sur `contents/index.html`, puis bit à bit contre le md5. **Ce que revenir ferait perdre** : « une autre séance… », « réduire » le tableau, la phrase vraie, la page 1 des diapos grisées, le récit sans doublons, la fiche en longue feuille avec défilement et zoom, le zoom des blocs de texte. Au hub : `ficheDefil` et `doc.defil` dans l'état de la scène (ignorés par l'ancienne version) ; le réglage « réduire » gardé sur l'ordinateur de la classe (sans effet pour l'ancienne).
 
 - **09/11/2026 06:19 — 8.93.0-㉚** (prod `b4a7817`, md5 `8682f23c0f144abf6005877299399e89`) · point de retour : **8.92.0-㉙** (prod `47df129`, `index.html` md5 `06d3cbc52f6090d03db29c05aa228acd`) — `git checkout 47df129 -- index.html`.
+
+- **09/11/2026 06:56 — retour à la 8.92.0-㉙** (prod `777d19c`, md5 `06d3cbc52f6090d03db29c05aa228acd`) : la 8.93.0-㉚ cassait lenchaînement
