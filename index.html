@@ -3186,7 +3186,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="8.94.0-㉛";
+var APP_VERSION="8.95.0-㉜";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -8469,11 +8469,15 @@ function atIAAppliquer(doc,o){
     Object.keys(o.reformulations[id2]||{}).forEach(function(k){doc.reformulations[id2][k]=String(o.reformulations[id2][k]);});
   });   /* [PONT-B2] */
   doc.contenu=doc.contenu||[];
+  /* AZ : les fiches de la feuille (export / import JSON) : {uid: {titre, ordre}} ; une case garde `fiche` si sa fiche est déclarée */
+  var _fiO=(o.fiches&&typeof o.fiches==='object'&&!Array.isArray(o.fiches))?o.fiches:{};
+  Object.keys(_fiO).forEach(function(u){ if(!/^[^.#$\[\]\/]+$/.test(u)||!_fiO[u])return; doc.fiches=doc.fiches||{}; doc.fiches[u]={titre:String(_fiO[u].titre||''),ordre:+_fiO[u].ordre||0}; });
   (o.blocs||[]).forEach(function(b){
     doc.cases[b.id]=true;
     var bloc={id:b.id,valeurs:{},reformulations:{}};
     Object.keys(b.reformulations||{}).forEach(function(k){bloc.reformulations[k]=String(b.reformulations[k]);});   /* [PONT-B2] */
     Object.keys(b.valeurs||{}).forEach(function(k){bloc.valeurs[k]=atValeurTypee(b.id,k,Array.isArray(b.valeurs[k])?b.valeurs[k].join('\n'):b.valeurs[k]);});
+    if(b.fiche&&doc.fiches&&doc.fiches[b.fiche])bloc.fiche=String(b.fiche);   /* AZ */
     doc.contenu.push(bloc);
   });
   /* SITE-COURS-2b : l'adresse VALIDÉE s'écrit — libellés du HUB, jamais ceux de l'IA. */
@@ -9441,6 +9445,7 @@ function chHtmlEnTexte(h){
   try{var t=document.createElement('textarea');t.innerHTML=s;s=t.value;}catch(e){}
   return s.split('\n').map(function(l){return l.trim();}).filter(Boolean).join('\n');
 }
+function chNormTitre(x){ return String(x||'').replace(/<[^>]*>/g,'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim(); }   /* AZ : le titre d'une fiche, comparé */
 function chFeuilleId(niveau,chUid,item){
   var p=function(x){return String(x||'').replace(/[^A-Za-z0-9_-]/g,'_');};
   return 'feuille_ch_'+p(niveau)+'_'+p(chUid)+'_'+p(item);
@@ -9492,21 +9497,42 @@ function chFeuillesEtLiaisons(o,niveau,chKey,fin){
       Object.keys(parItem).forEach(function(k){ parItem[k].sort(function(a,b){return rang(a)-rang(b);}); });   /* la feuille prend le titre et la séance de sa première apparition dans le chapitre */
       var items=Object.keys(parItem);
       if(!items.length){finir();return;}
-      var feuilleDe={};
+      var feuilleDe={},ficheUidDe={},fichesAjoutees=0,fichesReprises=0;   /* AZ : item → {titre normé → uid de la fiche} */
       Promise.all(items.map(function(item){
         var x0=parItem[item][0];
         var id=chFeuilleId(niveau,chap.uid,item);feuilleDe[item]=id;
+        /* AZ (C17, mandat 09/11) : une feuille porte des FICHES — `doc.fiches` = { uid: {titre, ordre} } et chaque case de contenu
+           d'une fiche porte `fiche: uid` (interne, invisible). Chaque bloc qui nomme la feuille y verse SA fiche : une de plus, jamais
+           d'écrasement ; une fiche de même titre déjà là est reprise (réimport : 0 doublon) ; la définition de même terme qu'un import
+           d'avant (AY) a versée sans fiche est adoptée avec ses cases qui la suivent (rien de perdu). */
+        var remplir=function(doc){ doc.cases=doc.cases||{}; doc.contenu=doc.contenu||[]; doc.fiches=doc.fiches||{};
+          var map=ficheUidDe[item]=ficheUidDe[item]||{}; var change=0;
+          Object.keys(doc.fiches).forEach(function(u){ map[chNormTitre((doc.fiches[u]||{}).titre)]=u; });
+          (fiches[item]||[]).forEach(function(b){
+            var t=String(b.titre||'').trim(); if(!t&&!b.def)return; var k=chNormTitre(t);
+            if(map[k]){fichesReprises++;return;}
+            var u=uidNeuf('fi'),i0=-1;
+            doc.contenu.forEach(function(c,i){ if(i0<0&&c&&!c.fiche&&c.id==='definition'&&chNormTitre((c.valeurs||{}).terme)===k)i0=i; });
+            if(i0>=0){ for(var i=i0;i<doc.contenu.length;i++){ var c=doc.contenu[i]; if(!c||c.fiche||(i>i0&&c.id==='definition'))break; c.fiche=u; } fichesReprises++; }
+            else{ doc.cases.definition=true;doc.contenu.push({id:'definition',valeurs:{terme:t,texte:String(b.def||'')},reformulations:{},fiche:u});
+              var corps=chHtmlEnTexte(b.corps);
+              if(corps){doc.cases.texte_libre=true;doc.contenu.push({id:'texte_libre',valeurs:{texte:corps},reformulations:{},fiche:u});}
+              fichesAjoutees++; }
+            doc.fiches[u]={titre:t,ordre:Object.keys(doc.fiches).length}; map[k]=u; change++;
+          });
+          return change; };
         return secuLire(AT_NOEUD+'/'+id).then(function(deja){
-          if(deja){x0.etat='deja';CH_FEUILLES_LUES[id]=deja;return;}
+          if(deja){ var d2=JSON.parse(JSON.stringify(deja)); var avant=(d2.contenu||[]).length;
+            if(!remplir(d2)){x0.etat='deja';CH_FEUILLES_LUES[id]=deja;return;}
+            return secuEcrire(AT_NOEUD+'/'+id,d2).then(function(r){ x0.etat=r.ok?(avant?'completee':'remplie'):'deja'; var v=r.ok?d2:deja; CH_FEUILLES_LUES[id]=v;
+              if(!r.ok)ficheUidDe[item]={};
+              [typeof LINK_ATELIER_DOCS!=='undefined'?LINK_ATELIER_DOCS:null,typeof AT_DOCS!=='undefined'?AT_DOCS:null,(typeof AT!=='undefined'&&AT&&AT.liste)?AT.liste:null]
+                .forEach(function(c){ if(c)c[id]=JSON.parse(JSON.stringify(v)); }); }); }
           var doc=atDocNeuf();
           var titre=String(x0.it.title||item);
           doc.titre=titre;
           doc.cases.titre=true;doc.valeurs.titre={texte:titre};
-          (fiches[item]||[]).forEach(function(b){
-            if(b.titre||b.def){doc.cases.definition=true;doc.contenu.push({id:'definition',valeurs:{terme:String(b.titre||''),texte:String(b.def||'')},reformulations:{}});}
-            var corps=chHtmlEnTexte(b.corps);
-            if(corps){doc.cases.texte_libre=true;doc.contenu.push({id:'texte_libre',valeurs:{texte:corps},reformulations:{}});}
-          });
+          remplir(doc);
           var p=x0.p;
           doc.rattachement={niveau:niveau,classe:'',classeNom:'',eleve:'',chapitre:chKey,seance:String(p.j),
                             chapitreTitre:chap.title||'',seanceTitre:p.se.title||'',chapitreUid:chap.uid||'',seanceUid:p.se.uid||''};
@@ -9526,7 +9552,7 @@ function chFeuillesEtLiaisons(o,niveau,chKey,fin){
           var x0=parItem[item][0];var id=feuilleDe[item];
           var lib='• '+x0.nom+' : ';
           if(x0.etat==='ko'){dit(lib+'⚠ la feuille ne s’est pas écrite — non liée. Réinjecte : seuls les manques seront repris.');return;}
-          dit(lib+(x0.etat==='deja'?'feuille déjà là (rien réécrit)':(x0.etat==='vide'?'feuille créée <b>sans contenu : à écrire</b>':'feuille créée avec le contenu du chapitre')));
+          dit(lib+(x0.etat==='completee'?'feuille déjà là : ses fiches qui manquaient y sont ajoutées (rien d’écrasé)':x0.etat==='remplie'?'feuille déjà là, vide : le texte du chapitre y est écrit':x0.etat==='deja'?'feuille déjà là (rien réécrit)':(x0.etat==='vide'?'feuille créée <b>sans contenu : à écrire</b>':'feuille créée avec le contenu du chapitre')));
           parItem[item].forEach(function(x){
             var sTit='« '+atEsc(x.p.se.title||x.d.scle)+' »';
             if(String(x.it.source||'')==='atelier'&&x.it.ref===id){dit('   déjà liée dans '+sTit+'.');return;}
@@ -9536,11 +9562,27 @@ function chFeuillesEtLiaisons(o,niveau,chKey,fin){
           });
         });
         items.forEach(function(item){ CH_DEPOT_GARDER[feuilleDe[item]]=parItem[item].map(function(x){return String(x.p.j);}); });   /* E4 (§12.42, 10:09) */
-        if(!aLierIci.length){finir();return;}
-        _edLierEcrire(niveau,chKey,aLierIci,function(faits){
-          if(faits<aLierIci.length)dit('⚠ '+(aLierIci.length-faits)+' liaison'+(aLierIci.length-faits>1?'s':'')+' n’'+(aLierIci.length-faits>1?'ont':'a')+' pas abouti — réinjecte : seuls les manques seront repris.');
-          finir();
-        },true);
+        /* AY (C17, Paul 09/11 08:07 : « l'écriture d'une fiche à la main doit être impossible ») : chaque bloc fiche qui nomme sa feuille
+           la POINTE (`fiche` = l'id de la feuille) et ne porte plus de texte (titre, def, corps : déjà dans la feuille). Une feuille
+           pas écrite : le bloc reste tel quel, non lié — « À régler » le dit (rien de perdu). */
+        var blocsLies=[];
+        items.forEach(function(item){ var x0=parItem[item][0]; if(x0.etat==='ko')return; var id=feuilleDe[item]; var vuSe={};
+          parItem[item].forEach(function(x){ var j=String(x.p.j); if(vuSe[j])return; vuSe[j]=1; var E=((x.p.se.deroule||{}).ecrans)||{};
+            Object.keys(E).forEach(function(ei){ var B=(E[ei]&&E[ei].blocs)||{}; Object.keys(B).forEach(function(bi){ var b=B[bi];
+              if(!b||b.t!=='fiche'||String(b.feuille||'').trim()!==item||(b.fiche===id&&b.ficheUid&&b.titre==null&&b.def==null&&b.corps==null))return;
+              var fu=b.titre!=null?(ficheUidDe[item]||{})[chNormTitre(b.titre)]:null;   /* AZ : chaque bloc pointe SA fiche (par son titre) */
+              if(b.fiche===id&&!fu&&b.titre==null&&b.def==null&&b.corps==null)return;   /* AZ : lié avant à la feuille entière, sans titre : « À régler » le dit */
+              var nb={};Object.keys(b).forEach(function(k){ if(k!=='titre'&&k!=='def'&&k!=='corps')nb[k]=b[k]; }); nb.fiche=id; if(fu)nb.ficheUid=fu;
+              blocsLies.push({chemin:base+'/seances/'+j+'/deroule/ecrans/'+ei+'/blocs/'+bi,B:B,bi:bi,nb:nb}); }); }); }); });
+        Promise.all(blocsLies.map(function(l){ return secuEcrire(l.chemin,l.nb).then(function(r){ if(r.ok)l.B[l.bi]=l.nb; return r.ok; }); })).then(function(oks){
+          var nOk=oks.filter(Boolean).length;
+          if(blocsLies.length)dit((nOk<blocsLies.length?'⚠ ':'• ')+nOk+' bloc'+(nOk>1?'s':'')+' fiche lié'+(nOk>1?'s':'')+' chacun à sa fiche'+((fichesAjoutees||fichesReprises)?' ('+fichesAjoutees+' fiche'+(fichesAjoutees>1?'s':'')+' ajoutée'+(fichesAjoutees>1?'s':'')+', '+fichesReprises+' reprise'+(fichesReprises>1?'s':'')+')':'')+(nOk<blocsLies.length?(' — '+(blocsLies.length-nOk)+' non écrit'+(blocsLies.length-nOk>1?'s':'')+' : « À régler » le dit ; réinjecte, seuls les manques seront repris.'):'.'));
+          if(!aLierIci.length){finir();return;}
+          _edLierEcrire(niveau,chKey,aLierIci,function(faits){
+            if(faits<aLierIci.length)dit('⚠ '+(aLierIci.length-faits)+' liaison'+(aLierIci.length-faits>1?'s':'')+' n’'+(aLierIci.length-faits>1?'ont':'a')+' pas abouti — réinjecte : seuls les manques seront repris.');
+            finir();
+          },true);
+        });
       });
     });
   });
@@ -10927,8 +10969,10 @@ function atExporterDoc(id){
     if(!c||c.reserve||c.adresse)return;
     var _bl={id:b.id,valeurs:JSON.parse(JSON.stringify(b.valeurs||{}))};
     if(b.reformulations&&Object.keys(b.reformulations).length)_bl.reformulations=JSON.parse(JSON.stringify(b.reformulations));   /* [PONT-B2] */
+    if(b.fiche&&d.fiches&&d.fiches[b.fiche])_bl.fiche=b.fiche;   /* AZ : la case garde sa fiche */
     out.blocs.push(_bl);
   });
+  if(d.fiches&&Object.keys(d.fiches).length)out.fiches=JSON.parse(JSON.stringify(d.fiches));   /* AZ : les fiches de la feuille voyagent avec elle */
   var nom=atChSlug(d.titre)+'.json';
   _saveJSON(out,nom).then(function(fait){
     if(fait)atInfo('Feuille export\u00e9e : '+nom);
@@ -11316,6 +11360,7 @@ function atRendreEditeur(){
   h+='<span class="at-ifo" onclick="atInfoProduits()">\u24d8</span></div>';
   /* rattachement — SITE-COURS-2d : en accordéon, replié par défaut */
   h+=atHtmlSection('ratt','Cette feuille est pour\u2026',atHtmlRattachement(),'');
+  h+=atHtmlFiches();   /* AZ : les fiches de la feuille, chacune sous son titre */
   /* les trois groupes */
   AT_GROUPES.forEach(function(g){
     var corps='';
@@ -14546,7 +14591,7 @@ function atHtmlBlocs(id,c){
   var h='<div class="at-blocs">';
   blocs.forEach(function(x,ordinal){
     var b=x.b;var i=x.i;
-    h+='<div class="at-bloc"><div class="at-bloc-t"><span>'+atEsc(c.libelle.replace(/^Ajouter (un |une |du |des |deux |la |le )?/,''))+' '+(blocs.length>1?('n\u00b0'+(ordinal+1)):'')+'</span>'
+    h+='<div class="at-bloc"><div class="at-bloc-t"><span>'+atEsc(c.libelle.replace(/^Ajouter (un |une |du |des |deux |la |le )?/,''))+' '+(blocs.length>1?('n\u00b0'+(ordinal+1)):'')+(b.fiche&&AT.doc.fiches&&AT.doc.fiches[b.fiche]?' \u00b7 fiche \u00ab\u00a0'+atEsc(AT.doc.fiches[b.fiche].titre||'')+'\u00a0\u00bb':'')+'</span>'
       +'<span class="at-bloc-btns">'
       +'<button class="at-btn at-btn-min" title="Monter" onclick="atBougerBloc('+i+',-1)">\u2191</button>'
       +'<button class="at-btn at-btn-min" title="Descendre" onclick="atBougerBloc('+i+',1)">\u2193</button>'
@@ -14564,6 +14609,45 @@ function atHtmlBlocs(id,c){
   });
   h+='<button class="at-btn at-btn-plus" onclick="atAjouterBloc(\''+id+'\')">\uff0b Ajouter</button></div>';
   return h;
+}
+/* AZ (C17, conscience 17) : LES FICHES D'UNE FEUILLE DANS STRUCTURE. Une feuille qui porte des fiches (`doc.fiches`, chaque case `fiche: uid`)
+   les montre ici, chacune sous son titre, ses cases dans l'ordre de la feuille, avec les mêmes champs et les mêmes ↑ ↓ ✕ que les cases ;
+   « ＋ Ajouter une case à cette fiche » la pose DANS la fiche (juste après sa dernière case). Une case hors de toute fiche reste lisible
+   et modifiable, sous « Hors fiche » : la diapo ne la montre pas. */
+function atFicheUids(d){ var F=(d&&d.fiches)||{}; return Object.keys(F).sort(function(a,b){return ((F[a]||{}).ordre||0)-((F[b]||{}).ordre||0);}); }
+function atHtmlCaseFiche(b,i){
+  var c=ATELIER_COMPOSANTES[b.id]; if(!c)return '<div class="at-bloc"><div class="at-bloc-t"><span>'+atEsc(b.id)+'</span></div></div>';
+  var h='<div class="at-bloc" data-fiche-case="'+i+'"><div class="at-bloc-t"><span>'+atEsc(c.libelle.replace(/^(Ajouter|Afficher) (un |une |du |des |deux |la |le |l’)?/,''))+'</span>'
+    +'<span class="at-bloc-btns">'
+    +'<button class="at-btn at-btn-min" title="Monter cette case d’un cran dans la feuille (elle reste dans sa fiche)" onclick="atBougerBloc('+i+',-1)">↑</button>'
+    +'<button class="at-btn at-btn-min" title="Descendre cette case d’un cran dans la feuille (elle reste dans sa fiche)" onclick="atBougerBloc('+i+',1)">↓</button>'
+    +'<button class="at-btn at-btn-min at-btn-danger" title="Retirer cette case de la feuille (la diapo qui montre cette fiche ne l’aura plus)" onclick="atRetirerBloc('+i+')">✕</button></span></div>';
+  (c.champs||[]).forEach(function(ch){h+=atHtmlChamp(null,ch,b.valeurs||{},'atSetBlocValeur',i);});
+  return h+'</div>';
+}
+function atHtmlFiches(){
+  var d=AT.doc; var us=atFicheUids(d); if(!us.length)return '';
+  if(!AT.sectionsOuvertes)AT.sectionsOuvertes={}; if(!('fiches' in AT.sectionsOuvertes))AT.sectionsOuvertes.fiches=true;
+  var C=d.contenu||[]; var corps='';
+  var ajout=Object.keys(ATELIER_COMPOSANTES).filter(function(id){var c=ATELIER_COMPOSANTES[id];return c&&c.multiple&&c.nature==='structure'&&(c.zone==='contenu'||c.zone==='travail');});
+  us.forEach(function(u){
+    corps+='<div class="at-fiche" data-fiche="'+atEsc(u)+'" style="border:1px solid #c99a4e;border-radius:8px;padding:6px 8px;margin:6px 0">'
+      +'<div class="at-fiche-t" style="font-weight:700;margin-bottom:4px" title="Le titre de la fiche : c’est lui que la diapo montre en tête">Fiche « '+atEsc((d.fiches[u]||{}).titre||'')+' »</div>';
+    C.forEach(function(b,i){ if(b&&b.fiche===u)corps+=atHtmlCaseFiche(b,i); });
+    corps+='<select class="at-in" title="Ajoute une case DANS cette fiche, juste après sa dernière case : la diapo qui montre cette fiche l’aura aussitôt" onchange="if(this.value)atAjouterCaseFiche(\''+atEsc(u)+'\',this.value)">'
+      +'<option value="">＋ Ajouter une case à cette fiche…</option>'+ajout.map(function(id){return '<option value="'+id+'">'+atEsc(ATELIER_COMPOSANTES[id].libelle.replace(/^Ajouter /,''))+'</option>';}).join('')+'</select></div>';
+  });
+  var hors=[]; C.forEach(function(b,i){ if(b&&!b.fiche&&ATELIER_COMPOSANTES[b.id])hors.push(atHtmlCaseFiche(b,i)); });
+  if(hors.length)corps+='<div class="at-fiche at-fiche-hors" style="border:1px dashed #999;border-radius:8px;padding:6px 8px;margin:6px 0"><div class="at-fiche-t" style="font-weight:700">Hors fiche</div>'
+    +'<div class="at-ch-note">Ces cases sont sur la feuille (et à l’impression), mais dans aucune fiche : aucune diapo ne les montre.</div>'+hors.join('')+'</div>';
+  return atHtmlSection('fiches','Les fiches de cette feuille ('+us.length+')',corps,'');
+}
+function atAjouterCaseFiche(u,id){
+  if(!AT.doc||!ATELIER_COMPOSANTES[id])return; var C=AT.doc.contenu=AT.doc.contenu||[]; var k=-1;
+  C.forEach(function(b,i){ if(b&&b.fiche===u)k=i; });
+  C.splice(k<0?C.length:k+1,0,{id:id,valeurs:{},reformulations:{},fiche:u});
+  AT.doc.cases=AT.doc.cases||{}; AT.doc.cases[id]=true;
+  atMarquerModifie();atRendreEditeur();
 }
 function atAjouterBloc(id,silencieux){
   if(!AT.doc)return;
@@ -17347,23 +17431,27 @@ function dr_documents(){ return {}; }   /* E4 : les items de type doc de la séa
    celles que les séances du chapitre lient (item `source: 'atelier'`, `ref`) et celles rattachées au chapitre (l'import : `feuille_ch_<niveau>_<uid>_<item>`,
    `rattachement.chapitreUid` ou niveau + chapitre). Le bloc fiche la POINTE (`fiche` = l'id de la feuille) : son texte se lit dans la feuille à chaque dessin, jamais copié. Un bloc sans `fiche` qui porte son
    texte (l'import pose `feuille` = la clé d'item, et le texte) n'est pas une fiche de l'atelier : « À régler » le dit, avec le geste qui la lie à la place. */
-function dr_ficheDeDoc(id, d){ d = d || {}; const P = typeof ATELIER_PRODUITS !== 'undefined' ? ATELIER_PRODUITS : {}; const tt = (P[d.produit] || {}).libelle || 'Fiche';
-  const titre = String(d.titre || (d.valeurs && d.valeurs.titre && d.valeurs.titre.texte) || id);
+/* AZ (C17, mandat 09/11) : une feuille porte des fiches (`d.fiches` = {uid: {titre, ordre}}, chaque case de contenu d'une fiche porte `fiche: uid`) —
+   uid donné : la fiche seule (ses cases) ; sans uid : la feuille entière, comme avant. */
+function dr_ficheDeDoc(id, d, uid){ d = d || {}; const P = typeof ATELIER_PRODUITS !== 'undefined' ? ATELIER_PRODUITS : {}; const tt = (P[d.produit] || {}).libelle || 'Fiche';
+  const FU = uid && d.fiches && d.fiches[uid]; if (uid) d = Object.assign({}, d, { contenu: (d.contenu || []).filter(c => c && c.fiche === uid) });
+  const titre = String((FU && FU.titre) || d.titre || (d.valeurs && d.valeurs.titre && d.valeurs.titre.texte) || id);
   const plat = v => v == null ? [] : (typeof v === 'string' || typeof v === 'number') ? [String(v)] : Array.isArray(v) ? v.flatMap(plat) : typeof v === 'object' ? Object.keys(v).flatMap(k => plat(v[k])) : [];
   let def = ''; const corps = [];
   (d.contenu || []).forEach(c => { if (!c || !c.valeurs) return; if (!def && c.id === 'definition') { const t = String(c.valeurs.terme || '').trim(), x = String(c.valeurs.texte || '').trim(); if (t || x) { def = (t ? '<b>' + dr_esc(t) + '</b>' + (x ? ' : ' : '') : '') + dr_esc(x); return; } }
     plat(c.valeurs).forEach(x => String(x).split('\n').map(l => l.trim()).filter(Boolean).forEach(l => corps.push('<p>' + dr_esc(l) + '</p>'))); });
   if (!def && corps.length) def = corps.shift().replace(/^<p>|<\/p>$/g, '');
-  return { id, titre, tt, el: [def].concat(corps.length ? [corps.join('')] : []) }; }
+  return { id: uid || id, uid: uid || null, feuille: id, titre, tt, el: [def].concat(corps.length ? [corps.join('')] : []) }; }
+function dr_fichesDeDoc(id, d){ const F = (d && d.fiches) || {}; const us = Object.keys(F).sort((a, b) => ((F[a] || {}).ordre || 0) - ((F[b] || {}).ordre || 0)); return us.length ? us.map(u => dr_ficheDeDoc(id, d, u)) : [dr_ficheDeDoc(id, d)]; }   /* AZ : les fiches d'une feuille ; une feuille sans fiche se montre entière */
 var DR_FEUILLES_ATTENTE = 0;   /* les feuilles du chapitre encore en lecture au hub */
 function dr_feuilleDoc(r){ try { if (typeof dr_feuilleCharger === 'function') dr_feuilleCharger(r); } catch (e) {} try { if (typeof DR_FEUILLES !== 'undefined' && DR_FEUILLES.doc[r]) return DR_FEUILLES.doc[r]; } catch (e) {} try { if (typeof LINK_ATELIER_DOCS !== 'undefined' && LINK_ATELIER_DOCS && LINK_ATELIER_DOCS[r]) return LINK_ATELIER_DOCS[r]; } catch (e) {} return null; }   /* AW : la feuille abonnée d'abord (la vérité du hub), puis la liste du site */
 function dr_feuilles(){ const ch = dr_chapitre(); if (!ch) return []; const ec = AT.edChap; const refs = [], vu = {}; const ajout = r => { if (r && !vu[r]) { vu[r] = 1; refs.push(r); } };
   try { (typeof atSeances === 'function' ? atSeances(ch) : []).forEach(p => { const its = (p.se && p.se.items) || {}; Object.keys(its).map(k => its[k]).filter(o => o && o.source === 'atelier' && o.ref).sort((a, b) => (a.ordre || 0) - (b.ordre || 0)).forEach(o => ajout(String(o.ref))); }); } catch (e) {}
   try { const D = (typeof LINK_ATELIER_DOCS !== 'undefined' && LINK_ATELIER_DOCS) || {}; Object.keys(D).forEach(id => { const r = (D[id] || {}).rattachement || {}; if ((ch.uid && r.chapitreUid === ch.uid) || (r.niveau === ec.level && r.chapitre != null && String(r.chapitre) === String(ec.chnum) && !r.eleve)) ajout(id); }); } catch (e) {}
-  DR_FEUILLES_ATTENTE = 0; return refs.map(r => { const d = dr_feuilleDoc(r); if (!d) { if (typeof DR_FEUILLES !== 'undefined' && DR_FEUILLES.enCours[r]) DR_FEUILLES_ATTENTE++; return null; } const fi = dr_ficheDeDoc(r, d); return { id: r, titre: fi.titre, type: fi.tt, fiches: [fi] }; }).filter(Boolean); }
+  DR_FEUILLES_ATTENTE = 0; return refs.map(r => { const d = dr_feuilleDoc(r); if (!d) { if (typeof DR_FEUILLES !== 'undefined' && DR_FEUILLES.enCours[r]) DR_FEUILLES_ATTENTE++; return null; } const fis = dr_fichesDeDoc(r, d); return { id: r, titre: String(d.titre || r), type: fis[0].tt, fiches: fis }; }).filter(Boolean); }
 /* le bloc tel qu'il se montre : la fiche pointée, lue dans sa feuille (sans toucher au bloc : ce qu'il portait avant reste gardé) */
 function dr_ficheVive(b){ if (!b || b.t !== 'fiche' || !b.fiche) return b; const r = String(b.fiche); const d = dr_feuilleDoc(r); if (!d) return b;
-  const fi = dr_ficheDeDoc(r, d); const v = Object.create(b); Object.defineProperty(v, 'txt', { value: fi.titre, enumerable: true }); Object.defineProperty(v, 'el', { value: fi.el, enumerable: true }); Object.defineProperty(v, 'tt', { value: fi.tt, enumerable: true }); return v; }
+  const fi = dr_ficheDeDoc(r, d, b.ficheUid || null); const v = Object.create(b); Object.defineProperty(v, 'txt', { value: fi.titre, enumerable: true }); Object.defineProperty(v, 'el', { value: fi.el, enumerable: true }); Object.defineProperty(v, 'tt', { value: fi.tt, enumerable: true }); return v; }
 /* ce qui s'écrit au hub pour une séance : {ecrans, activites (eid), notes (eid), travail (heure)} */
 /* E1 (relecteur neuf n°2) : un champ posé par défaut à la lecture (etapes, el, marques, txt) reste caché tant qu'il est vide — une frappe dans la diapo 1 écrivait « etapes: [] » dans un bloc de la diapo 18 ; dès qu'il reçoit un contenu, il s'écrit */
 function dr_ecritsSeulement(E){ (E || []).forEach(e => (e && e.blocs || []).forEach(b => { if (!b || typeof b !== 'object') return; ['etapes', 'el', 'marques', 'txt'].forEach(n => { const d = Object.getOwnPropertyDescriptor(b, n); if (d && !d.enumerable && 'value' in d && ((Array.isArray(d.value) && d.value.length) || (typeof d.value === 'string' && d.value !== ''))) Object.defineProperty(b, n, { value: d.value, writable: true, enumerable: true, configurable: true }); }); })); }
@@ -19299,7 +19387,7 @@ function formulaireObjet(t){ const f = $('obj-form'); if (!f) return; const e = 
   if (t === 'fiche' && !dr_feuilles().length && DR_FEUILLES_ATTENTE && (f._awEssais = (f._awEssais || 0) + 1) < 25) { f.innerHTML = `<div class="dr-c" id="of-charge">Les fiches du chapitre se chargent…</div>`; setTimeout(() => { if ($('obj-form') === f) formulaireObjet('fiche'); }, 200); return; }   /* AW : les feuilles arrivent du hub */
   if (t === 'fiche' && !dr_feuilles().length) { /* AW (Paul 09/11 08:07) : « l'écriture d'une fiche à la main doit être impossible » — une fiche s'écrit dans l'atelier (Structure), la diapo la pointe */
     f.innerHTML = `<div class="dr-err" id="of-aucune">Aucune fiche dans les feuilles de ce chapitre. Écris-la dans Structure (l'atelier : une feuille du chapitre), puis reviens ici la choisir — la diapo la montrera telle que tu l'as écrite.</div>`; return; }
-  if (t === 'fiche') { const vieux = S.lierFiche != null ? e.blocs[S.lierFiche] : null; const norm = x => String(x || '').replace(/<[^>]*>/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); const sienne = (() => { try { const ch = dr_chapitre(); return vieux && vieux.feuille && ch && ch.uid && typeof chFeuilleId === 'function' ? chFeuilleId(AT.edChap.level, ch.uid, vieux.feuille) : null; } catch (x) { return null; } })(); const meme = fi => !!(vieux && ((sienne && fi.id === sienne) || (norm(vieux.txt) && norm(vieux.txt) === norm(fi.titre))));   /* la feuille que l'import a faite pour cet item, ou le même titre */ const FE = dr_feuilles().slice().sort((a, b) => (meme(b.fiches[0]) ? 1 : 0) - (meme(a.fiches[0]) ? 1 : 0)); /* AW : les fiches des feuilles du chapitre ; pour une fiche qui porte son texte, celle du même titre vient en tête, proposée */ f.innerHTML = `<label>${vieux ? `Quelle fiche de l'atelier montrer à la place de « ${dr_esc(vieux.txt || '')} » ? Son texte d'avant reste gardé dans le bloc` : 'Quelle fiche ? — les fiches des feuilles de ce chapitre ; la diapo la montre telle que la feuille l\'écrit (jamais une copie)'}</label>${FE.map(fe => `<div class="fe"><b>${dr_esc(fe.type || 'Fiche')}</b> · ${fe.fiches.map(fi => `<span class="fi${meme(fi) ? ' propose' : ''}" data-fe="${fe.id}" data-fi="${fi.id}" title="${meme(fi) ? 'La fiche de l\'atelier faite pour ce bloc (ou du même titre) : proposée. ' : ''}Clic : la diapo montre cette fiche de l'atelier ; ce que tu y changes dans Structure s'y voit aussitôt">${dr_esc(fi.titre)}${meme(fi) ? ' — proposée' : ''}</span>`).join('')}</div>`).join('')}<div class="dr-err">Pas de fiche qui convienne ? Écris-la dans Structure (une feuille du chapitre), puis reviens la choisir ici.</div>`; f.querySelectorAll('.fi').forEach(x => x.onclick = () => { const fe = dr_feuilles()/* E1 : lisait DATA.feuilles */.find(z => z.id === x.dataset.fe); const fi = fe.fiches.find(z => z.id === x.dataset.fi); if (S.lierFiche != null) { const b = e.blocs[S.lierFiche]; b.feuille = b.feuille || fe.id; b.fiche = fi.id; S.lierFiche = null; /* AW : le bloc pointe la feuille ; son titre et son texte d'avant restent (jamais de perte) */ marquerModif({ di: S.di, bi: e.blocs.indexOf(b), lie: fi.id }); fermerChoix(); dr_tout(); } else ajouterBloc({ t: 'fiche', txt: fi.titre, feuille: fe.id, fiche: fi.id }, false); }); return; }
+  if (t === 'fiche') { const vieux = S.lierFiche != null ? e.blocs[S.lierFiche] : null; const norm = x => String(x || '').replace(/<[^>]*>/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); const sienne = (() => { try { const ch = dr_chapitre(); return vieux && vieux.feuille && ch && ch.uid && typeof chFeuilleId === 'function' ? chFeuilleId(AT.edChap.level, ch.uid, vieux.feuille) : null; } catch (x) { return null; } })(); const titreV = vieux ? (vieux.titre != null ? vieux.titre : vieux.txt) : ''; const FE0 = dr_feuilles(); const meme = fi => !!(vieux && ((norm(titreV) && norm(titreV) === norm(fi.titre)) || (sienne && fi.feuille === sienne && ((FE0.find(z => z.id === sienne) || {}).fiches || []).length === 1)));   /* AZ : la fiche de même titre ; à défaut, la seule fiche de la feuille faite pour ce bloc */   /* la feuille que l'import a faite pour cet item, ou le même titre */ const FE = FE0.slice().sort((a, b) => (b.fiches.some(meme) ? 1 : 0) - (a.fiches.some(meme) ? 1 : 0)); /* AW : les fiches des feuilles du chapitre ; pour une fiche qui porte son texte, celle du même titre vient en tête, proposée */ f.innerHTML = `<label>${vieux ? `Quelle fiche de l'atelier montrer à la place de « ${dr_esc(vieux.txt || '')} » ? Son texte d'avant reste gardé dans le bloc` : 'Quelle fiche ? — les fiches des feuilles de ce chapitre ; la diapo la montre telle que la feuille l\'écrit (jamais une copie)'}</label>${FE.map(fe => `<div class="fe"><b>${dr_esc(fe.type || 'Fiche')}</b> · ${fe.fiches.map(fi => `<span class="fi${meme(fi) ? ' propose' : ''}" data-fe="${fe.id}" data-fi="${fi.id}" title="${meme(fi) ? 'La fiche de l\'atelier faite pour ce bloc (ou du même titre) : proposée. ' : ''}Clic : la diapo montre cette fiche de l'atelier ; ce que tu y changes dans Structure s'y voit aussitôt">${dr_esc(fi.titre)}${meme(fi) ? ' — proposée' : ''}</span>`).join('')}</div>`).join('')}<div class="dr-err">Pas de fiche qui convienne ? Écris-la dans Structure (une feuille du chapitre), puis reviens la choisir ici.</div>`; f.querySelectorAll('.fi').forEach(x => x.onclick = () => { const fe = dr_feuilles()/* E1 : lisait DATA.feuilles */.find(z => z.id === x.dataset.fe); const fi = fe.fiches.find(z => z.id === x.dataset.fi); if (S.lierFiche != null) { const b = e.blocs[S.lierFiche]; b.feuille = b.feuille || fe.id; b.fiche = fe.id; if (fi.uid) b.ficheUid = fi.uid; else delete b.ficheUid; S.lierFiche = null;   /* AZ : la feuille + la fiche */ /* AW : le bloc pointe la feuille ; son titre et son texte d'avant restent (jamais de perte) */ marquerModif({ di: S.di, bi: e.blocs.indexOf(b), lie: fi.id }); fermerChoix(); dr_tout(); } else ajouterBloc(Object.assign({ t: 'fiche', txt: fi.titre, feuille: fe.id, fiche: fe.id }, fi.uid ? { ficheUid: fi.uid } : {}), false); }); return; }
   if (t === 'schema') { const CONV = { carte: 'une ligne par branche : « Branche : a, b » — le titre au centre', frise: 'une ligne par repère : « date = événement »', arbre: 'une ligne par nœud ; deux espaces devant pour descendre d\'un niveau', cycle: 'une étape par ligne, dans le sens des aiguilles', tableau: 'une ligne par rangée, les colonnes séparées par « | » ; la première ligne = les en-têtes' }; f.innerHTML = `<label>La forme du schéma — le format existant : une source texte, une ligne par élément ; échelle « plein » par défaut ; se dévoile ligne par ligne</label><select id="of-forme"><option value="carte">carte</option><option value="frise">frise</option><option value="arbre">arbre</option><option value="cycle">cycle</option><option value="tableau">tableau</option></select> <span class="at-note" id="of-conv">${CONV.carte}</span><label>Le titre</label><input id="of-t" placeholder="Les figures de style"><label>La source — une ligne par élément</label><textarea id="of-src" rows="4" style="width:100%;font:inherit;border:1px solid #c99a4e;border-radius:6px;padding:5px 8px;box-sizing:border-box" placeholder="Figures d'analogie : comparaison, métaphore"></textarea><div class="dr-err" id="of-err"></div><div class="dr-ok"><button class="btn or" id="of-ok">Ajouter le schéma</button></div>`; $('of-forme').onchange = () => { $('of-conv').textContent = CONV[$('of-forme').value]; }; $('of-ok').onclick = () => { const tt = $('of-t').value.trim(); const src = $('of-src').value.replace(/\r/g, ''); const lignes = src.split('\n').map(x => x.replace(/\s+$/, '')).filter(x => x.trim()); if (!tt) { $('of-err').textContent = 'Refus : un schéma a un titre.'; return; } if (!lignes.length) { $('of-err').textContent = 'Refus : un schéma a au moins un élément (une ligne).'; return; } p8PoserSchema({ t: 'schema', txt: tt, forme: $('of-forme').value, echelle: 'plein', src: lignes.join('\n'), el: lignes.map(x => x.trim()), devoilerTout: false /* (p8-2) décision 6 ter : créé par « Schéma… », il part « Un à un » */ }); /* (p8-3) décision 1 : sur une diapo qui a déjà du contenu, il part dans une diapo nouvelle, juste après */ }; return; }
   if (t === 'image') { f.innerHTML = `<label>L'adresse dans mjpc-medias — relative (jamais complète)</label><input id="of-src" placeholder="poesie-peinture-xixe/tableau-6.jpg"><div class="dr-ok" style="justify-content:flex-start"><button class="btn" id="of-depot" title="Choisis une image sur ton ordinateur ou sur la clé : elle part en ligne dans mjpc-medias (réduite à 1920 px de large), et son adresse s'écrit ici. La première fois, une petite fenêtre Google s'ouvre : choisis le compte de Paul.">⇪ Déposer en ligne…</button><input type="file" id="of-fichier" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none"><button class="btn" id="of-clef" title="Prends l’image ou le PDF dans le dossier de ta clé USB : il reste sur la clé (rien n’est déposé), l’ordi qui projette le lit comme une vidéo — même dossier, même garde">🔑 Prendre sur la clé…</button></div><div id="of-cle-l"></div><label>La légende</label><input id="of-lg" placeholder="Le Radeau de la Méduse, Géricault, 1819"><div class="dr-err" id="of-err"></div><div class="dr-ok"><button class="btn or" id="of-ok">Ajouter l'image</button></div>`; S._ofCle = null; const cleListe = () => { const l = DR_CLE.etat === 'vu' ? DR_CLE.fichiers.filter(n => DR_CLE_IMAGE.test(n) || DR_CLE_PDF.test(n)) : []; $('of-cle-l').innerHTML = DR_CLE.etat !== 'vu' ? '<div class="dr-err">' + dr_esc(DR_CLE.etat === 'a-autoriser' ? 'La clé « ' + DR_CLE.nom + ' » est connue : un clic sur « Prendre sur la clé… » pour l’autoriser.' : 'Aucun dossier de clé lisible sur cet ordi.') + '</div>' : `<div class="fe" style="margin-top:6px">${l.length ? l.map(n => `<span class="fi" data-cf="${dr_esc(n)}" style="${S._ofCle === n ? 'background:#fff2c7' : ''}">${DR_CLE_PDF.test(n) ? '📄' : '🖼'} ${dr_esc(n)}</span>`).join('') : 'aucune image ni PDF dans le dossier « ' + dr_esc(DR_CLE.nom) + ' »'}</div>${S._ofCle ? '<div class="dr-ok" style="color:#1a7a3e">✔ « ' + dr_esc(S._ofCle) + ' » — reste sur la clé « ' + dr_esc(DR_CLE.nom) + ' » (rien n’est déposé)</div>' : ''}`; $('of-cle-l').querySelectorAll('[data-cf]').forEach(x => x.onclick = () => { S._ofCle = x.dataset.cf; cleListe(); }); };
     $('of-clef').onclick = async () => { if (DR_CLE.etat === 'a-autoriser') await dr_cleAutoriser(); else if (DR_CLE.etat !== 'vu') { const r = await dr_cleDesigner(); if (r === null) { $('of-err').textContent = 'Ce navigateur ne retient pas le dossier de la clé : désigne-le d’abord dans « + vidéo », ou passe par Chrome ou Edge.'; return; } } cleListe(); };
@@ -19324,7 +19412,7 @@ function dr_brancherDepotImage(){ const b = $('of-depot'), f = $('of-fichier'), 
     mjpcDeposerEnLigne([x], (dr_ctx() || {}).level || 'divers').then(l => { const d = l[0]; $('of-src').value = d.chemin; e.textContent = '✔ Déposé : ' + d.chemin + ' — en ligne dans une minute environ (« Ajouter l\'image » peut se faire tout de suite).'; b.disabled = false;
       if (typeof mjpcAttendreEnLigne === 'function') mjpcAttendreEnLigne(d.url, ok => { const e2 = $('of-err'); if (e2 && $('of-src') && $('of-src').value === d.chemin) e2.textContent = ok ? '✔ En ligne : ' + d.chemin : 'Le fichier ne répond pas encore — il apparaîtra dans quelques minutes.'; }); })
     .catch(er => { e.textContent = '⚠ ' + er.message; b.disabled = false; }); }; }
-function alertesForme(autre){ /* tout ce qui peut casser en classe dans la séance S.si : sa part de la liste de « À régler » (6.1), avec le texte prêt à copier ; autre = une séance qui n'est pas celle ouverte (la mesure de la diapo affichée ne la concerne pas) — le chapitre entier : alertesChapitre */ const E = seance().ecrans; const out = []; E.forEach((e, i) => (e.blocs || []).forEach((b, bi) => { const ou = `diapo ${i + 1} · « ${e.act} » · bloc ${bi + 1}`; const TYPES = ['consigne', 'texte', 'question', 'fiche', 'schema', 'image', 'video', 'page', 'doc', 'cahier', 'ouverture']; /* (p8-3c) le cahier de textes a son rendu */ if (!TYPES.includes(b.t)) out.push({ di: i, bi, k: 'nonlisible', l: `Objet non lisible « ${b.t} »`, ou, faire: 'déclare un objet manquant, ou remplace-le par un objet connu (3.1)', copier: `Dans le chapitre « ${seance().titre} », ${ou} : l'objet « ${b.t} » n'est pas dans le contrat de l'éditeur MJPC. Remplace-le par un objet du contrat (texte, consigne, question, fiche, schéma, image, vidéo, page avec contrat) ou déclare-le comme objet manquant.` }); if (b.t === 'fiche' && !b.fiche) out.push({ di: i, bi, k: 'fiche', l: dr_ficheEnLigne(b) ? `Fiche « ${b.txt || ''} » qui porte son texte (pas la fiche de l'atelier)` : `Fiche « ${b.txt || ''} » non liée à une feuille`, ou, faire: 'elle porte son texte au lieu de montrer la fiche de l\'atelier : « Lier la fiche de l\'atelier à la place » (son texte d\'avant reste gardé dans le bloc)', copier: `Dans le chapitre « ${seance().titre} », ${ou} : la fiche « ${b.txt || ''} » doit être écrite dans une feuille du chapitre et liée par son identifiant (feuille + fiche).` }); if (b.t === 'page' && !b.contrat) out.push({ di: i, bi, k: 'page', l: `Page HTML « ${b.txt || ''} » sans contrat de pilotage`, ou, faire: 'ajoute le contrat (la page annonce ses étapes, reçoit suivante / précédente, répond où elle en est — 4.2) ; jouée comme une image en attendant', copier: `Page « ${b.src || ''}» (${ou}) : ajoute le contrat de pilotage MJPC — au chargement, envoie postMessage({type:'mjpc-page', etapes:n}) ; réponds à {type:'mjpc-etape', aller:k} en affichant l'étape k et en renvoyant {type:'mjpc-ou', etape:k}.` }); if (b.t === 'video' && !(b.reperes || []).length) out.push({ di: i, bi, k: 'video', l: `Vidéo « ${b.txt || ''} » sans repère`, ou, faire: 'acceptée ; ▶ lance / met en pause, rien ne se dévoile par étapes — pose des repères (clic droit → Repères…) (4b.5)', copier: `Vidéo « ${b.fichier || ''} » (${ou}) : ajoute des repères (temps + libellé) dans la trame.` }); if (b.t === 'doc') { const d = (dr_documents()/* E1 : lisait DATA.documents */[String(S.si)] || []).find(x => x.id === b.doc); if (!d) out.push({ di: i, bi, k: 'doc', l: `Document introuvable dans la séance`, ou, faire: 'rejoins le document ou retire le bloc', copier: `Bloc document (${ou}) : l'identifiant « ${b.doc} » ne correspond à aucun document de la séance.` }); else if (d.type === 'autre') out.push({ di: i, bi, k: 'doc', l: `Document « ${d.titre} » (.${(d.fichier || '').split('.').pop()}) non projetable tel quel`, ou, faire: 'convertis-le en PDF (4 ter)', copier: `Document « ${d.fichier || d.titre} » (${ou}) : à convertir en PDF pour être projeté.` }); else if (d.type === 'docx') out.push({ di: i, bi, k: 'doc', l: `Document Word « ${d.titre} » — lu par le site`, ou, faire: 'si la lecture échoue en classe, convertis-le en PDF (4 ter)', copier: `Document Word « ${d.fichier || d.titre} » (${ou}) : lu par une bibliothèque libre ; en cas d'échec, PDF.` }); } if (b.t === 'image' && b.ref && !/mjpc-medias/.test(b.ref)) out.push({ di: i, bi, k: 'image', l: `Image « ${b.txt || ''} » hors de mjpc-medias`, ou, faire: 'range-la dans mjpc-medias et donne son adresse relative (3.2)', copier: `Image « ${b.ref} » (${ou}) : à ranger dans mjpc-medias, adresse relative.` }); })); E.forEach((e, i) => (e.blocs || []).forEach((b, bi) => { if ((b.t === 'video' || (b.t === 'image' && !b.ref)) && b.fichier) { const ce = (typeof dr_cleEtatFichier === 'function') ? dr_cleEtatFichier(b.fichier) : { ok: false, texte: '✘' }; const ok = ce.ok; if (!ok) out.push({ di: i, bi, k: 'video-fichier', l: `Vidéo « ${b.txt || b.fichier} » : ${ce.texte}`, ou: `diapo ${i + 1} · « ${e.act} » · bloc ${bi + 1}`, faire: 'remets le fichier sur la clé, ou redésigne le dossier (« + vidéo… » → Désigner le dossier de la clé…) ; en classe, la diapo passerait toute seule et le récit dirait « qu\'on regardera à la prochaine séance » (4b.4)', copier: `Vidéo « ${b.fichier} » (${e.act}) : fichier absent du dossier de la clé.` }); } })); E.forEach((e2, i2) => { if (!p8AvecTexte(e2) || e2.role === 'fin') return; const bi2 = e2.blocs.findIndex(b => b.t === 'schema'); out.push({ di: i2, bi: bi2, k: 'texte', l: 'Schéma avec du texte : donne-lui sa diapo — clic droit sur le bloc → Couper la diapo ici', ou: `diapo ${i2 + 1} · « ${e2.act} » · bloc ${bi2 + 1}`, faire: 'un schéma par diapo : ' + P8_UNE + ' (cadrage 4, 3.2)', copier: `Diapo « ${e2.act} » : le schéma « ${e2.blocs[bi2].txt || ''} » doit avoir sa diapo (son titre, le schéma, au plus une consigne d'une ligne).` }); }); /* (p8-3) la trame d'avant la règle */ if (S.atelier && !S.repetition) { E.forEach((e2, i2) => (e2.blocs || []).forEach((b2, bi2) => { if (b2.t !== 'schema' || e2.role === 'fin') return; if (b2.forme === 'tableau') { dr_tabDefauts(i2, bi2).slice(0, 1).forEach(d => out.push(d)); return; }   /* C16 (les correctifs, ㉝) : un tableau a sa propre mesure, page par page */ const r = (p8MesureDiapo(i2).blocs || {})[bi2]; if (!r || !r.total) return; out.push({ di: i2, bi: bi2, k: 'dense', l: `Schéma « ${b2.txt || ''} » : il ne tient pas lisible — coupe-le : clic droit sur ${DR_TETE_FORME[b2.forme] || 'une famille'} → Couper le schéma ici`, ou: `diapo ${i2 + 1} · « ${e2.act} » · bloc ${bi2 + 1}`, faire: `mesuré au tableau : ${r.chevauchements} chevauchement${r.chevauchements > 1 ? 's' : ''}, ${r.horsCadre} hors du cadre visible, ${r.traits} trait${r.traits > 1 ? 's' : ''} à travers un mot, ${r.deuxLignes} libellé${r.deuxLignes > 1 ? 's' : ''} sur deux lignes, ${r.sousPlancher} police${r.sousPlancher > 1 ? 's' : ''} sous 26 pt — la police ne descend jamais sous 26 pt : c'est le schéma qu'on coupe`, copier: `Schéma « ${b2.txt || ''} » (${e2.act}) : il ne tient pas lisible au tableau (${r.total} défaut${r.total > 1 ? 's' : ''} de lecture) ; à couper en deux schémas, chacun sur sa diapo.` }); })); const c = autre ? null : document.querySelector('#mur .corpsd'); const pages = S.pagesCourantes ? S.pagesCourantes.length : 1; const vue85h = (!autre && S.atelier && typeof p85hPages === 'function') ? p85hPages(S.di) : {}; const parTableau = (() => { const pp = ((vue85h.pagesP || []).length > 1) ? vue85h.pagesP : (S.pagesPCourantes || []); return pp.length > 1 && pp.slice(1).every(p => (p || []).every(k => /^g/.test(String(k)))); })();   /* C16 (㉝) : des pages qui ne portent que des rangées de tableau — le tableau passe en pages, → les tourne (㉜) : ce n'est pas un défaut */
+function alertesForme(autre){ /* tout ce qui peut casser en classe dans la séance S.si : sa part de la liste de « À régler » (6.1), avec le texte prêt à copier ; autre = une séance qui n'est pas celle ouverte (la mesure de la diapo affichée ne la concerne pas) — le chapitre entier : alertesChapitre */ const E = seance().ecrans; const out = []; E.forEach((e, i) => (e.blocs || []).forEach((b, bi) => { const ou = `diapo ${i + 1} · « ${e.act} » · bloc ${bi + 1}`; const TYPES = ['consigne', 'texte', 'question', 'fiche', 'schema', 'image', 'video', 'page', 'doc', 'cahier', 'ouverture']; /* (p8-3c) le cahier de textes a son rendu */ if (!TYPES.includes(b.t)) out.push({ di: i, bi, k: 'nonlisible', l: `Objet non lisible « ${b.t} »`, ou, faire: 'déclare un objet manquant, ou remplace-le par un objet connu (3.1)', copier: `Dans le chapitre « ${seance().titre} », ${ou} : l'objet « ${b.t} » n'est pas dans le contrat de l'éditeur MJPC. Remplace-le par un objet du contrat (texte, consigne, question, fiche, schéma, image, vidéo, page avec contrat) ou déclare-le comme objet manquant.` }); if (b.t === 'fiche' && !b.fiche) out.push({ di: i, bi, k: 'fiche', l: dr_ficheEnLigne(b) ? `Fiche « ${b.txt || ''} » qui porte son texte (pas la fiche de l'atelier)` : `Fiche « ${b.txt || ''} » non liée à une feuille`, ou, faire: 'elle porte son texte au lieu de montrer la fiche de l\'atelier : « Lier la fiche de l\'atelier à la place » (son texte d\'avant reste gardé dans le bloc)', copier: `Dans le chapitre « ${seance().titre} », ${ou} : la fiche « ${b.txt || ''} » doit être écrite dans une feuille du chapitre et liée par son identifiant (feuille + fiche).` }); if (b.t === 'fiche' && b.fiche && !b.ficheUid) { const d = dr_feuilleDoc(String(b.fiche)); const nF = Object.keys((d && d.fiches) || {}).length; if (nF) { const tF = String(b.titre || b.txt || (d && d.titre) || ''); out.push({ di: i, bi, k: 'fiche', l: `Fiche « ${tF} » qui montre toute la feuille (${nF} fiche${nF > 1 ? 's' : ''})`, ou, faire: 'le bloc pointe la feuille entière : « Lier la fiche de l\'atelier à la place » et choisis sa fiche (rien n\'est perdu)', copier: `Dans le chapitre « ${seance().titre} », ${ou} : le bloc fiche « ${tF} » doit pointer une fiche de la feuille (feuille + fiche), pas la feuille entière.` }); } }   /* AZ : une liaison AW vers une feuille entière, dans une feuille qui a ses fiches */ if (b.t === 'page' && !b.contrat) out.push({ di: i, bi, k: 'page', l: `Page HTML « ${b.txt || ''} » sans contrat de pilotage`, ou, faire: 'ajoute le contrat (la page annonce ses étapes, reçoit suivante / précédente, répond où elle en est — 4.2) ; jouée comme une image en attendant', copier: `Page « ${b.src || ''}» (${ou}) : ajoute le contrat de pilotage MJPC — au chargement, envoie postMessage({type:'mjpc-page', etapes:n}) ; réponds à {type:'mjpc-etape', aller:k} en affichant l'étape k et en renvoyant {type:'mjpc-ou', etape:k}.` }); if (b.t === 'video' && !(b.reperes || []).length) out.push({ di: i, bi, k: 'video', l: `Vidéo « ${b.txt || ''} » sans repère`, ou, faire: 'acceptée ; ▶ lance / met en pause, rien ne se dévoile par étapes — pose des repères (clic droit → Repères…) (4b.5)', copier: `Vidéo « ${b.fichier || ''} » (${ou}) : ajoute des repères (temps + libellé) dans la trame.` }); if (b.t === 'doc') { const d = (dr_documents()/* E1 : lisait DATA.documents */[String(S.si)] || []).find(x => x.id === b.doc); if (!d) out.push({ di: i, bi, k: 'doc', l: `Document introuvable dans la séance`, ou, faire: 'rejoins le document ou retire le bloc', copier: `Bloc document (${ou}) : l'identifiant « ${b.doc} » ne correspond à aucun document de la séance.` }); else if (d.type === 'autre') out.push({ di: i, bi, k: 'doc', l: `Document « ${d.titre} » (.${(d.fichier || '').split('.').pop()}) non projetable tel quel`, ou, faire: 'convertis-le en PDF (4 ter)', copier: `Document « ${d.fichier || d.titre} » (${ou}) : à convertir en PDF pour être projeté.` }); else if (d.type === 'docx') out.push({ di: i, bi, k: 'doc', l: `Document Word « ${d.titre} » — lu par le site`, ou, faire: 'si la lecture échoue en classe, convertis-le en PDF (4 ter)', copier: `Document Word « ${d.fichier || d.titre} » (${ou}) : lu par une bibliothèque libre ; en cas d'échec, PDF.` }); } if (b.t === 'image' && b.ref && !/mjpc-medias/.test(b.ref)) out.push({ di: i, bi, k: 'image', l: `Image « ${b.txt || ''} » hors de mjpc-medias`, ou, faire: 'range-la dans mjpc-medias et donne son adresse relative (3.2)', copier: `Image « ${b.ref} » (${ou}) : à ranger dans mjpc-medias, adresse relative.` }); })); E.forEach((e, i) => (e.blocs || []).forEach((b, bi) => { if ((b.t === 'video' || (b.t === 'image' && !b.ref)) && b.fichier) { const ce = (typeof dr_cleEtatFichier === 'function') ? dr_cleEtatFichier(b.fichier) : { ok: false, texte: '✘' }; const ok = ce.ok; if (!ok) out.push({ di: i, bi, k: 'video-fichier', l: `Vidéo « ${b.txt || b.fichier} » : ${ce.texte}`, ou: `diapo ${i + 1} · « ${e.act} » · bloc ${bi + 1}`, faire: 'remets le fichier sur la clé, ou redésigne le dossier (« + vidéo… » → Désigner le dossier de la clé…) ; en classe, la diapo passerait toute seule et le récit dirait « qu\'on regardera à la prochaine séance » (4b.4)', copier: `Vidéo « ${b.fichier} » (${e.act}) : fichier absent du dossier de la clé.` }); } })); E.forEach((e2, i2) => { if (!p8AvecTexte(e2) || e2.role === 'fin') return; const bi2 = e2.blocs.findIndex(b => b.t === 'schema'); out.push({ di: i2, bi: bi2, k: 'texte', l: 'Schéma avec du texte : donne-lui sa diapo — clic droit sur le bloc → Couper la diapo ici', ou: `diapo ${i2 + 1} · « ${e2.act} » · bloc ${bi2 + 1}`, faire: 'un schéma par diapo : ' + P8_UNE + ' (cadrage 4, 3.2)', copier: `Diapo « ${e2.act} » : le schéma « ${e2.blocs[bi2].txt || ''} » doit avoir sa diapo (son titre, le schéma, au plus une consigne d'une ligne).` }); }); /* (p8-3) la trame d'avant la règle */ if (S.atelier && !S.repetition) { E.forEach((e2, i2) => (e2.blocs || []).forEach((b2, bi2) => { if (b2.t !== 'schema' || e2.role === 'fin') return; if (b2.forme === 'tableau') { dr_tabDefauts(i2, bi2).slice(0, 1).forEach(d => out.push(d)); return; }   /* C16 (les correctifs, ㉝) : un tableau a sa propre mesure, page par page */ const r = (p8MesureDiapo(i2).blocs || {})[bi2]; if (!r || !r.total) return; out.push({ di: i2, bi: bi2, k: 'dense', l: `Schéma « ${b2.txt || ''} » : il ne tient pas lisible — coupe-le : clic droit sur ${DR_TETE_FORME[b2.forme] || 'une famille'} → Couper le schéma ici`, ou: `diapo ${i2 + 1} · « ${e2.act} » · bloc ${bi2 + 1}`, faire: `mesuré au tableau : ${r.chevauchements} chevauchement${r.chevauchements > 1 ? 's' : ''}, ${r.horsCadre} hors du cadre visible, ${r.traits} trait${r.traits > 1 ? 's' : ''} à travers un mot, ${r.deuxLignes} libellé${r.deuxLignes > 1 ? 's' : ''} sur deux lignes, ${r.sousPlancher} police${r.sousPlancher > 1 ? 's' : ''} sous 26 pt — la police ne descend jamais sous 26 pt : c'est le schéma qu'on coupe`, copier: `Schéma « ${b2.txt || ''} » (${e2.act}) : il ne tient pas lisible au tableau (${r.total} défaut${r.total > 1 ? 's' : ''} de lecture) ; à couper en deux schémas, chacun sur sa diapo.` }); })); const c = autre ? null : document.querySelector('#mur .corpsd'); const pages = S.pagesCourantes ? S.pagesCourantes.length : 1; const vue85h = (!autre && S.atelier && typeof p85hPages === 'function') ? p85hPages(S.di) : {}; const parTableau = (() => { const pp = ((vue85h.pagesP || []).length > 1) ? vue85h.pagesP : (S.pagesPCourantes || []); return pp.length > 1 && pp.slice(1).every(p => (p || []).every(k => /^g/.test(String(k)))); })();   /* C16 (㉝) : des pages qui ne portent que des rangées de tableau — le tableau passe en pages, → les tourne (㉜) : ce n'est pas un défaut */
   if (!autre && !(parTableau && !(c && c.querySelector('.p85h-defile'))) && (pages > 1 || (vue85h.pages || []).length > 1 || (c && c.querySelector('.p85h-defile')))) {   /* E1 (§12.33 bis, dette 13 · 75) : « trop pleine » ⇔ la diapo fera plus d'une page au tableau — la même mesure que la pagination (à la taille de l'écran de la classe), plus le débordement de la diapo de l'Atelier ni celui du rendu ; reste le cas d'une ligne seule qui défile en elle-même */   /* (p8-5h, 13) la ligne qui défile en elle-même, ou la diapo telle que la classe la verra : trop pleine (règle 0.4 : rien ne se coupe seul) */ const e = E[S.di]; const px = policePx ? Math.round(policePx()) : 0; out.push({ di: S.di, k: 'pleine', l: `Diapo trop pleine : le texte passe sous le plancher lisible du fond${px ? ' (' + px + ' px de police)' : ''}`, ou: `diapo ${S.di + 1} · « ${e.act} »`, faire: 'coupe la diapo : clic droit sur le bloc ou l\'étape où couper → « Couper la diapo ici » (une seconde diapo « (suite) », même heure, mêmes notions) ; ou retire un bloc ; ou mets-en un en « petit ». Le site ne coupe jamais seul (0.4)', copier: `Diapo « ${e.act} » : trop pleine pour le tableau, à couper en deux.` }); } } E.forEach((e, i) => { if (!e.role && !actDe(e) && !e.horsActivite && !e.masquee) out.push({ di: i, k: 'activite', l: `Diapo « ${e.act} » sans numéro d'activité`, ou: `diapo ${i + 1}`, faire: 'rattache-la à une activité (la carte « Ce que la diapo déclare ») — un chapitre dont les activités ne sont pas toutes numérotées est refusé à l\'import (3.2 bis)', copier: `Diapo « ${e.act} » (chapitre « ${seance().titre} ») : à rattacher à une activité numérotée (numéro continu sur le chapitre).` }); }); if (typeof dr_ouvAlertes === 'function') dr_ouvAlertes(E, dr_cleSeance(S.si)).forEach(a => out.push(a));   /* C16 : ce qui manque aux diapos d'ouverture, une ligne par champ */ dr_manques().forEach(m => out.push({ di: m.di, k: 'manque', l: `Objet à ajouter à l'éditeur : « ${m.texte} »`, ou: `diapo ${m.di + 1} · « ${E[m.di] ? E[m.di].act : ''} »`, faire: 'un mandat court sur l\'éditeur, ou une page HTML pour cette fois, sur ton mot (4.1)', copier: `Mandat : ajouter à l'éditeur MJPC l'objet « ${m.texte} » (attendu par le chapitre « ${seance().titre} », ${E[m.di] ? E[m.di].act : ''}) avec son contrat aux trois endroits : prompt d'injection, validation à l'import, formulaire de l'éditeur.` })); dr_motsInterface(E).forEach(a => out.push(a));   /* C16 (㉙) : les mots de la barre du bloc entrés dans un texte avant le correctif — dits, jamais retirés en silence */ return out; }
 /* C16 (les correctifs, ㉙) — UN TEXTE DÉJÀ SALI PAR LES MOTS DE LA BARRE DU BLOC (« BLOC 1 · QUESTION · 1 ÉLÉMENT ▲ ▼ + étape ✕ », écrits avec le texte avant le
    correctif) : le site ne le répare pas en silence ; « À régler » dit ce qui est en trop et où (la trame ; et, l'Atelier ouvert pendant l'heure, la copie de la classe) ;
@@ -23717,7 +23805,7 @@ window.addEventListener('keydown', ev => { try { if (typeof S === 'undefined' ||
    T — <motif> » (dr-recit.js). memeFeuille : on compare la feuille référencée, jamais le titre — sauf quand aucun des deux blocs n'a
    de référence (les fiches du site n'en ont pas encore : audit E1, F17) : alors le titre (et le genre, s'ils l'ont tous deux). */
 const MOTIFS_RAPPEL = [{ c: 'reviser', l: 'pour réviser avant l\'évaluation' }, { c: 'acquis', l: 'parce que la notion n\'était pas encore acquise' }, { c: 'prerequis', l: 'parce qu\'on en a besoin pour la suite' }, { c: 'absents', l: 'pour ceux qui étaient absents' }];
-function dr_memeFeuille(a, b){ if (a.feuille && a.fiche && b.feuille && b.fiche) return a.feuille === b.feuille && a.fiche === b.fiche; if (a.ref && b.ref) return a.ref === b.ref; if (a.ref || b.ref || (a.feuille && b.feuille)) return false;
+function dr_memeFeuille(a, b){ if (a.feuille && a.fiche && b.feuille && b.fiche) return a.feuille === b.feuille && a.fiche === b.fiche && String(a.ficheUid || '') === String(b.ficheUid || ''); if (a.ref && b.ref) return a.ref === b.ref; if (a.ref || b.ref || (a.feuille && b.feuille)) return false;
   const ti = x => String(x.titre != null ? x.titre : (x.txt || '')).trim().toLowerCase(); return !!ti(a) && ti(a) === ti(b) && (!a.tt || !b.tt || a.tt === b.tt); }
 function dr_dejaPosee(b){ let n = 0; try { (typeof dr_cles === 'function' ? dr_cles() : []).forEach(k => (dr_trameDe(k) || []).forEach(e => (e.blocs || []).forEach(x => { if (x !== b && x.t === 'fiche' && dr_memeFeuille(x, b)) n++; }))); } catch (e) {} return n; }
 var DR_RAP = { cle: null, connus: new Set() };
@@ -27225,6 +27313,15 @@ function edtPoserCss(){
    +'.edt-eleves{display:flex;flex-wrap:wrap;gap:4px;max-height:170px;overflow:auto}'
    +'.edt-el{font:inherit;font-size:.72rem;background:rgba(255,255,255,.05);color:#c9bfa4;border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:2px 9px;cursor:pointer}'
    +'.edt-el-abs{background:#3f3f46;color:#fff;border-color:#3f3f46;text-decoration:line-through;opacity:.85}'
+   /* AV (C17 ; Paul, 09/11 06:25-06:39) : la case de l'appel prend presque tout l'écran, de grosses pastilles (30 élèves sans défiler), la recherche par initiales */
+   +'.edt-modale.edt-modale-appel{left:1.5vw!important;top:2vh!important;width:97vw;max-height:96vh}'
+   +'.edt-modale-appel .edt-mo-tete{font-size:1rem}'
+   +'.edt-modale-appel .edt-eleves{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:7px;max-height:none;overflow:visible}'
+   +'.edt-modale-appel .edt-el{font-size:1.08rem;padding:9px 12px;border-radius:11px;text-align:left;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+   +'.edt-modale-appel .edt-lab{font-size:.95rem}'
+   +'.edt-appel-cherche{display:flex;align-items:center;gap:10px;margin:2px 0 8px}'
+   +'.edt-appel-cherche input{font:inherit;font-size:1.15rem;letter-spacing:.12em;text-transform:uppercase;width:150px;background:rgba(0,0,0,.35);color:#f4ead2;border:1px solid rgba(224,185,120,.55);border-radius:8px;padding:6px 10px}'
+   +'.edt-appel-cherche span{font-size:.9rem;color:#c9bfa4}'
    +'.edt-exp{font-style:normal;font-size:.6rem;color:#a08ce0;border:1px solid rgba(160,140,224,.5);border-radius:20px;padding:0 6px;margin-left:5px}'
    +'.edt-pal{font-style:normal;font-size:.63rem}'
    +'.edt-pal-dans{color:#34d399}.edt-pal-léger{color:#c9bfa4}.edt-pal-marqué{color:#e0b978}.edt-pal-critique{color:#f08a8a}'
@@ -28163,9 +28260,9 @@ var EDT_CATEGORIES=['Événement d\u2019établissement','Évaluation hors séanc
   'Reprise ou rattrapage','Temps libre choisi','Autre'];
 var EDT_MOD={cle:null,x:null,y:null,drag:null};
 
-function edtCaseClic(cle){ EDT_MOD.cle=cle; EDT_MOD.autre=null; edtPeindreModale(); }
+function edtCaseClic(cle){ if(EDT_MOD.cle!==cle&&typeof EDT_APPEL==='object'&&EDT_APPEL)EDT_APPEL.dit=''; EDT_MOD.cle=cle; EDT_MOD.autre=null; edtPeindreModale(); }
 function edtModaleFermer(){
-  EDT_MOD.cle=null;
+  EDT_MOD.cle=null; if(typeof EDT_APPEL==='object'&&EDT_APPEL){ EDT_APPEL.focusPour=null; EDT_APPEL.dit=''; } try{ if(typeof dr_caseListe==='function')dr_caseListe(null); }catch(e){}   /* AV : la liste des initiales part avec la case */
   var m=document.getElementById('edt-modale'); if(m)m.remove();
 }
 function edtCellule(cle){ return (EDT_VUE.cellules||{})[cle]||null; }
@@ -28627,7 +28724,12 @@ function edtPeindreModale(){
     h+=edtJournalHtml(c.classeMjpc);
   }
   h+='</div>';
+  var avIni=document.activeElement&&document.activeElement.id==='edt-appel-ini'?document.activeElement.value:null;   /* AV : une saisie d'initiales en cours survit au redessin */
   m.innerHTML=h;
+  var avAppel=!!m.querySelector('#edt-appel-ini'); m.classList.toggle('edt-modale-appel',avAppel);
+  if(avAppel){ var ai=m.querySelector('#edt-appel-ini');
+    if(avIni!==null||EDT_APPEL.focusPour!==cle){ EDT_APPEL.focusPour=cle; try{ ai.value=avIni||''; ai.focus({preventScroll:true}); ai.setSelectionRange(ai.value.length,ai.value.length); }catch(e){} if(avIni)edtAppelIniSaisie(ai); }
+  } else { EDT_APPEL.focusPour=null; try{ if(typeof dr_caseListe==='function')dr_caseListe(null); }catch(e){} }
   try{ edtAppelVeiller(); }catch(e){}   /* C16 (㊱) : la liste de l'appel de cette case, abonnée à sa source */
 }
 function edtChoisirOu(cle,valeur){
@@ -28889,7 +28991,7 @@ function edtAppelAvecMes(ch,v){
 function edtAppelRedessiner(){
   var m=document.getElementById('edt-modale'); if(!m)return;
   var a=document.activeElement;
-  if(a&&m.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)){ clearTimeout(EDT_APPEL.redessin); EDT_APPEL.redessin=setTimeout(edtAppelRedessiner,500); return; }
+  if(a&&m.contains(a)&&a.id!=='edt-appel-ini'&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)){ clearTimeout(EDT_APPEL.redessin); EDT_APPEL.redessin=setTimeout(edtAppelRedessiner,500); return; }
   edtPeindreModale();
 }
 /* la base de l'appel de la case ouverte : l'appel d'avant l'heure, ou l'heure jouée (et sa trace, pour ce que disaient les versions d'avant) */
@@ -28928,7 +29030,8 @@ function edtAppelGeste(cle,nomEleve){
 }
 /* les boutons de l'appel (la case à venir et la case jouée : le même geste) */
 function edtAppelBoutonsHtml(el,abs,fn,cle,lu){
-  return '<div class="edt-eleves">'+el.map(function(n){
+  return (lu?'<div class="edt-appel-cherche"><input id="edt-appel-ini" autocomplete="off" spellcheck="false" placeholder="initiales" title="Tape les initiales d’un élève (la 1re lettre du prénom, puis celle de chaque mot du nom) : dès toutes ses initiales, il est marqué absent ; retapées, c’est défait. Plusieurs élèves possibles : la liste numérotée, tape son numéro (1 à 9). Comme la case des initiales du pilotage ; enregistré tout de suite, jamais montré à la classe."><span id="edt-appel-dit">'+escapeHtml(EDT_APPEL.dit||'')+'</span></div>':'')
+    +'<div class="edt-eleves">'+el.map(function(n){
     var a=abs.indexOf(edtSlugEleve(n))>=0;
     return '<button class="edt-el'+(a?' edt-el-abs':'')+'"'+(lu?'':' disabled')
       +' title="'+(lu?escapeHtml(n)+(a?' est marqué absent : un clic le défait':' : un clic le marque absent pour cette heure')+'. Enregistré tout de suite, vu aussitôt sur tes autres appareils ; jamais montré à la classe.':'La liste de l’appel se lit au hub : un instant.')+'"'
@@ -28947,6 +29050,28 @@ function edtAppelAvantHtml(cle,c){
 function edtAppelFaitHtml(cle,c){
   var l=edtAppelListeDe(edtAppelBaseDe(cle)); if(!Array.isArray(l))return '';
   return ' <span class="edt-mini-t">— appel fait : '+(l.length?l.length+' absent'+(l.length>1?'s':''):'tous présents')+'</span>';
+}
+/* AV (C17) : la recherche par initiales — la case des initiales du pilotage réutilisée telle quelle (dr_iniListe, dr_caseSeul, dr_caseListe, avec `src` = la classe de la case) ;
+   le choix fait le même geste que le clic (marque, ou défait) */
+function edtAppelSrc(){ var c=EDT_MOD.cle?edtCellule(EDT_MOD.cle):null, el=c?edtElevesDe(c.classeMjpc):[]; return {eleves:el,ini:dr_iniListe(el).ini}; }
+function edtAppelIniChoisir(n){
+  var cle=EDT_MOD.cle; if(!cle||!n)return; var b=edtAppelBaseDe(cle),l=b?edtAppelListeDe(b):null; if(!Array.isArray(l))return;
+  var etait=l.indexOf(edtSlugEleve(n))>=0; EDT_APPEL.dit=dr_prenomTableau(n)+(etait?' : présent(e) de nouveau':' : absent(e)');
+  var ai=document.getElementById('edt-appel-ini'); if(ai)ai.value=''; try{ dr_caseListe(null); }catch(e){}
+  edtAppelGeste(cle,n);
+}
+function edtAppelIniSaisie(ai){
+  var net=String(ai.value||'').replace(/[^\p{L}]/gu,'').toUpperCase(); if(net!==ai.value)ai.value=net;
+  var src=edtAppelSrc(),seul=dr_caseSeul(net,false,src); if(seul){ edtAppelIniChoisir(seul); return; }
+  dr_caseListe(ai,net,edtAppelIniChoisir,src);
+}
+if(!window.__edtAppelIniCle){ window.__edtAppelIniCle=true;
+  document.addEventListener('input',function(ev){ if(ev.target&&ev.target.id==='edt-appel-ini')edtAppelIniSaisie(ev.target); },true);
+  window.addEventListener('keydown',function(ev){ var t=ev.target; if(!t||t.id!=='edt-appel-ini')return; var k=ev.key; ev.stopPropagation(); if(ev.ctrlKey||ev.metaKey||ev.altKey)return;
+    if(/^[1-9]$/.test(k)){ ev.preventDefault(); var Lc=document.getElementById('dr-case-liste'); if(Lc&&Lc._choisir&&Lc.style.display!=='none')Lc._choisir(+k-1); return; }
+    if(k==='Enter'){ ev.preventDefault(); var t0=String(t.value||'').trim(); var n=t0&&dr_caseSeul(t0,true,edtAppelSrc()); if(n)edtAppelIniChoisir(n); return; }
+    if(k==='Escape'){ if(t.value){ ev.preventDefault(); t.value=''; dr_caseListe(null); } else { dr_caseListe(null); edtModaleFermer(); } return; }
+    if(k.length===1&&!/\p{L}/u.test(k))ev.preventDefault(); },true);
 }
 function edtAppelAvantBasculer(cle,nomEleve){ edtAppelGeste(cle,nomEleve); }
 /* la case d'une heure jouée (en cours ou close) : le même geste */
