@@ -971,6 +971,9 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 10/11/2026 — QCM 8.0.9 (conscience n°17)
+- **Les moitiés interverties à la correction** : `LIVRAISONS/CODE-QCM/src/c3-tablettes.js` (classes `croisee`, `croise-anim-in/out`, l. ~343), `src/c4.css` (l. 53-57), `src/etape3.js` (message et bouton), confirmations sous la séance (`croisee/<cours>/<élève>`). **Banc** : `banc/banc-809-croisee.js`. **Vidéos** : sas `AUDITS/QCM-809-VIDEOS/`. **Contrôles** (K12, K14 : moitié reconnue à son élève) : `AUDITS/CONTROLES-QCM-APP/controles-app.js` (sas, `main`).
+
 ## AJOUTS DU 09/11/2026 — QCM 8.0.8 (conscience n°17)
 - **Les vraies durées** : `LIVRAISONS/CODE-QCM/src/c3-evals.js` (Réglages), mesures rangées dans la séance par `src/live/base.js` ; détail dans `LIVRAISONS/CODE-QCM/VERDICT.md`.
 - **Le profil de l'élève** : `archiverDansProfilsMJPC` (`src/`), nœud `mjpcProfils/`, effacé par `SCN.ecritParSeance` à l'annulation.

@@ -1569,6 +1569,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `99d27acde120` (commit `b8f9795`) · 3 216 541 o · md5 `71603d630a864edba4090dbbd84116f9` · v8.91.2-㉗
 - **Restauration en cas de `BUG`** : le blob → PUT sur `contents/index.html`, puis bit à bit contre le md5. **Ce que revenir ferait perdre** : sur « Où en est la classe », le vrai nombre d'élèves et de diapos, le retour depuis la Relecture, la réactivation visible. Au hub : rien de nouveau.
 
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.9 (10/11/2026, conscience n°17)
+- Avant : 8.0.8, 2 169 049 o, md5 `de6143e385a3914a97b2e1d6c4275b46`, blob `c7ff364f57b5` (commit `df55100`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.8-avant-8.0.9-2026-11-10.html`. Promu : 8.0.9, 2 176 882 o, md5 `ef6aad98f1479402eadeb94ecf0f0317`, commit `71c3db6`, blob `7354419713bd`.
+- **Restauration en cas de `BUG`** : remettre la copie du sas, vérifier en ligne bit à bit contre `de6143e3…`. **Ce que revenir ferait perdre** : les moitiés interverties à la correction, l'animation, le message et le bouton de confirmation, les ✓ sur la console (les confirmations rangées sous la séance sont ignorées par la 8.0.8).
+
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.8 (09/11/2026, conscience n°17)
 - Avant : 8.0.7, 2 143 380 o, md5 `b69455ca098571add7ba2afbc7ffba34`, blob `fa2ead41c36f` (commit `ce7d610`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.7-avant-8.0.8-2026-11-09.html`. Promu : 8.0.8, 2 169 049 o, md5 `de6143e385a3914a97b2e1d6c4275b46`, commit `df55100`, blob `c7ff364f57b5`.
 - **Restauration en cas de `BUG`** : remettre la copie du sas à la place de `evaluation-qcm.html`, vérifier l'adresse en ligne bit à bit contre `b69455ca…`. **Ce que revenir ferait perdre** : les vraies durées de Réglages (les mesures restent rangées dans les séances, la 8.0.7 les ignore) ; l'écriture au profil de l'élève à chaque correction ; la vraie heure (la 8.0.7 montre toujours « ⚠️ Attention »).
