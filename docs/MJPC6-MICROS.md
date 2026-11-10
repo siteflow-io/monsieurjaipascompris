@@ -102,3 +102,5 @@
 **Ce qui n'a PAS été mesuré (la dérogation)** : le banc complet (les autres étapes) ; la vraie heure des 3e sur le vrai hub.
 
 **Ce qui le remplacera** : la prochaine version passée au banc complet, avec la branche `deroule/absents-heure` reprise.
+
+- 10/11/2026 07:58 — `redaction.html` 1.4.32.1-micro (C14 212) : page chargée pour un élève jamais refusée comme « blanche » ; « ➕ Une page à cette copie ». Commit `da578ed`.

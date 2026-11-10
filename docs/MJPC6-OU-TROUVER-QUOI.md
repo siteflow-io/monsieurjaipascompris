@@ -997,3 +997,6 @@
 | les mandats, les sondes | sas `MANDATS/DEROULE-01-11/SAMEDI-07-11/AN-…`, `AO-…`, `AP-…`, `AQ-…` ; `LIVRAISONS/DEROULE-01-11/SAMEDI/{AN,AO,AQ}/`, `RECIT-SAMEDI/` |
 | revenir à la 8.91.3-㉘ | `docs/MJPC6-restauration.md` (blob `4494235c4976`) |
 | ouvrir le site en 8.92.0-㉙ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.92.0` |
+
+## AJOUTS DU 10/11/2026 — RÉDACTION 1.4.32.1-micro
+- Ajouter une page à une copie : `scAjouterPageCopie` (bouton « ➕ Une page à cette copie », écran des scans) → `avChargerSaCopie` → `scChargerFichiers(fs, { pour })` (une page « blanche » chargée pour un élève lui est donnée : `SC.chargement.blanches`).
