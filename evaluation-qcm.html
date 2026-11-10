@@ -2775,6 +2775,26 @@ div[style*="justify-content: space-between"][style*="flex-wrap: wrap"] > :last-c
 .reg-durees .reg-raison{min-width:0!important;font-size:.78rem;opacity:.7}
 .reg-durees .reg-duree>span:first-child .info-i{min-width:0}
 .reg-durees .reg-vraie{min-width:300px!important}
+/* (8.0.9, Paul C17 271-272) à la correction, les deux moitiés s'intervertissent : le même document, l'ordre à l'écran inversé ;
+   l'animation, environ une seconde : les deux moitiés glissent l'une vers l'autre et se croisent (celle de gauche passe devant) */
+.tablette.croisee{flex-direction:row-reverse}
+.tablette.croisee>.moitie.g{border-right:none}
+.tablette.croisee>.moitie.d{border-right:6px solid #2c313a}
+/* l'app coupe toute animation (maquette.css l. 2, « animation:none!important ») : celle-ci est la seule, voulue par Paul, d'où le !important */
+.tablette.croise-anim-in>.moitie,.tablette.croise-anim-out>.moitie{box-shadow:0 0 0 4px #7C3AED,0 18px 48px rgba(30,27,75,.45)}
+.tablette.croise-anim-in>.moitie.g,.tablette.croise-anim-out>.moitie.g{z-index:2}
+.tablette.croise-anim-in>.moitie.d,.tablette.croise-anim-out>.moitie.d{z-index:1}
+.tablette.croise-anim-in>.moitie.g,.tablette.croise-anim-out>.moitie.d{animation:croise-de-gauche 1.1s ease-in-out both!important}
+.tablette.croise-anim-in>.moitie.d,.tablette.croise-anim-out>.moitie.g{animation:croise-de-droite 1.1s ease-in-out both!important}
+@keyframes croise-de-gauche{0%{transform:translateX(-100%)}50%{transform:translateX(-50%) scale(.86) rotate(-2deg)}100%{transform:none}}
+@keyframes croise-de-droite{0%{transform:translateX(100%)}50%{transform:translateX(50%) scale(.86) rotate(2deg)}100%{transform:none}}
+.croisee-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;min-height:60vh;padding:1.5rem 2rem;text-align:center}
+.croisee-titre{font-size:1.6rem;font-weight:800;color:#5B21B6}
+.croisee-texte{font-size:1.3rem;line-height:1.5;font-weight:600;color:#1E1B4B;max-width:34rem;margin:0}
+.croisee-oui{font-size:1.2rem;padding:.9rem 1.6rem}
+.croisee-merci{font-size:1.4rem;font-weight:700;color:#15803D}
+.croisee-leg{font-size:.8rem;color:#475569;margin-top:.4rem}
+.tab-mini-m .croisee-ok{font-weight:700;color:#15803D;white-space:nowrap}
 
 </style>
 <style>
@@ -4143,6 +4163,10 @@ var SCN = (function(){
   // (8.0.6) pas de note pour l'élève qui n'a été là à aucun cours (une séance d'un seul cours : l'absent de l'appel, comme avant)
   S.resultat = function(id, x, k){ var s = S.sess(id); if(!s) return null; if(absentPartoutQCM(s, x) || S.eleves(id).indexOf(x) < 0) return null; return S.note(x, k, id); };
   S.coursN = function(sid){ var s = S.sess(sid); return (s && +s.coursN) || 1; };
+  /* (8.0.9, Paul C17 271-273) à la correction, les deux moitiés s'intervertissent ; chacun confirme qu'il a devant lui la moitié de la feuille qu'il tient.
+     La confirmation, rangée par cours (une séance rouverte refait les binômes) : sessions/<id>/croisee/<coursN>/<élève> = {feuille:<voisin>, ms}.
+     Sous la séance : « Annuler cette séance » l'efface avec elle ; « Oublier seulement aujourd'hui » remet la photo d'avant ce cours, sans elle. */
+  S.croiseeDe = function(x, sid){ var s = S.sess(sid); return (((s && s.croisee) || {})[S.coursN(sid)] || {})[x] || null; };
   S.cours = function(sid){ return coursSeanceQCM(S.sess(sid)); };
   S.estimation = function(x, k, sid){ var e = S.estimationDe(x, sid); if(!e) return null; var nt = S.note(x, k, sid); if(!nt) return null; var iE = IDX.indexOf(e), iR = IDX.indexOf(nt.maitrise);
     return {k:e, type:iE === iR ? "ok" : iE > iR ? "sur" : "sous", ecart:Math.abs(iE - iR)}; };
@@ -4973,6 +4997,8 @@ var ELV = (function(){
     return Promise.resolve({ok:true, eleve:x, tablette:E.tab, cote:c2, voisin:SCN.voisinDe(x)});
   }
   E.cocher = function(attest, ligne, x){ x = qui(x); if(!x) return Promise.resolve(); var a = SCN.attestDe(attest, x) || {}; return w("attest/" + attest + "/" + x, {lignes:Math.max(ligne, a.lignes || 0), fini:!!a.fini, ms:LIVE.maintenant()}, "cocher"); };
+  // (8.0.9) « Oui, j'ai la feuille de … » : x confirme qu'il tient la feuille de son voisin et a sa moitié devant lui ; rien n'attend cette confirmation
+  E.confirmerCroisee = function(x, feuille){ if(!x) return Promise.resolve(); return w("croisee/" + SCN.coursN() + "/" + x, {feuille:feuille || null, ms:LIVE.maintenant()}, "confirmerCroisee"); };
   E.commencer = function(x, attest){ x = qui(x); if(!x) return Promise.resolve(); var n = attest || ((SCN.etat() || {}).ph === "att2" ? 2 : 1); var a = SCN.attestDe(n, x) || {};
     return w("attest/" + n + "/" + x, {lignes:a.lignes || 0, fini:true, ms:LIVE.maintenant()}, "commencer"); };
   // répondre : la forme de la 7.7.1 ({choix, ts}), plus le tour et l'heure ; une réponse donnée à une question rouverte est définitive
@@ -11648,7 +11674,8 @@ function PilotPret(){
 function PilotAttest2(){
   var k = MO(), m = momH(), c = SCN.compteurs(k), enCours = m.enCours || {};
   var manquent = Object.keys(enCours).map(nomDe);
-  var etat = function(p){ var hA = heureAttestH(p, 2); return deplaceH(p) ? deplaceH(p) : enCours[p] != null ? {cls:"m-attest", st:"attestation " + enCours[p] + "/5"} : {cls:"m-pret", st:"✓ prêt" + (hA ? " · " + hA : "")}; };
+  var etat = function(p){ var hA = heureAttestH(p, 2); var x = deplaceH(p) ? deplaceH(p) : enCours[p] != null ? {cls:"m-attest", st:"attestation " + enCours[p] + "/5"} : {cls:"m-pret", st:"✓ prêt" + (hA ? " · " + hA : "")};
+    return croiseeFlagH(p) ? Object.assign({}, x, {flag:croiseeFlagH(p)}) : x; };
   var q2 = ORDRE_CORR[0], b = bilanQ(q2, k), prets = c.prets || [c.presents - manquent.length, c.presents];
   c = Object.assign({}, c, {presents:prets[1]});
   return Console("pilotage", "pilot", h("div", {className:"card"},
@@ -11668,8 +11695,14 @@ function PilotAttest2(){
         h("h3", null, "✍️ La seconde attestation", InfoI("Où en est chacun : les lignes cochées sur 5, et l'heure de la dernière coche, gardée comme au début.")),
         h("div", {className:"ss"}, prets[0] + " / " + prets[1] + " prêts"),
         GrilleTablettes(PAIRES, etat),
-        Legende([["#E8F5E9","✓ prêt : les 5 lignes cochées"],["#FEF3C7","attestation en cours : lignes cochées sur 5"]])))), true);
+        Legende([["#E8F5E9","✓ prêt : les 5 lignes cochées"],["#FEF3C7","attestation en cours : lignes cochées sur 5"]]),
+        h("div", {className:"croisee-leg"}, "🔄 ✓ prénom : a confirmé avoir devant soi la moitié de son voisin, et sa feuille. ", InfoI(CROISEE_BULLE))))), true);
 }
+/* (8.0.9, Paul C17 273) qui a confirmé, tablette par tablette : « 🔄 ✓ Eden » sur la moitié d'Eden ; rien n'attend cette confirmation */
+var CROISEE_BULLE = "Quand les deux élèves d'une tablette ont fini la seconde attestation, les deux moitiés de la tablette changent de place : chacun a devant lui la moitié de la feuille qu'il tient, et confirme « Oui, j'ai la feuille de … ». Ce ✓ le montre. Rien ne l'attend : « ▶️ Commencer la correction » ne dépend que de la seconde attestation, une confirmation manquante ne grise rien.";
+function croiseeFlagH(p){ var c = enDirect() && typeof SCN.croiseeDe === "function" ? SCN.croiseeDe(p) : null; if(!c) return null;
+  var v = c.feuille || SCN.voisinDe(p);
+  return h("span", {className:"croisee-ok", "data-croisee-ok":p, title:prenomH(p) + " a confirmé avoir devant soi la moitié de " + (v ? prenomH(v) : "son voisin") + ", et tenir sa feuille. Rien n'attend cette confirmation."}, "🔄 ✓ " + prenomH(p)); }
 
 /* ── L'estimation, côté console (444) : la répartition des estimations déjà faites ── */
 function PilotEstimation(){
@@ -14446,7 +14479,7 @@ var FENETRES_H = {
         h("p", null, "À l'heure suivante, « 🎯 Pilotage classe » propose « ▶️ Reprendre la séance du " + jjmm(se.date || m.date) + " — " + ouH(m) + " ».")),
       [boutonH("a", "btn btn-ghost", "Annuler", fermerFen, "Ne change rien : la séance continue."), boutonH("ok", "btn btn-or", "⏸️ Finir à une autre heure", fait("finirAutreHeure"), "Met la séance en pause, telle qu'elle est, jusqu'à une heure suivante.")], null); },
   voirTablette:function(n, fond){ var pa = PAIRES[n - 1] || [null, null], m = momH();
-    return Fenetre(fond, "📱 Tablette " + n + " · " + [pa[0], pa[1]].filter(Boolean).map(affH).join(" · ") + " — en direct", "Ce que montrent ses deux moitiés, maintenant : " + ((!pa[0] || !entreH(pa[0])) && (!pa[1] || !entreH(pa[1])) ? "personne n'y est encore entré" : ouH(m)) + ".",
+    return Fenetre(fond, "📱 Tablette " + n + " · " + [pa[0], pa[1]].filter(Boolean).map(affH).join(" · ") + " — en direct", "Ce que montrent ses deux moitiés, maintenant : " + ((!pa[0] || !entreH(pa[0])) && (!pa[1] || !entreH(pa[1])) ? "personne n'y est encore entré" : croiseeTabH(pa[0], pa[1], false) ? "correction : moitiés interverties" : ouH(m)) + ".",
       h("div", {className:"voir-tab fige-choix"}, h("div", {className:"voir-tab-in", style:{pointerEvents:"none"}, "aria-hidden":true}, TabletteTelleQuelleH(pa[0], pa[1]))),
       [boutonH("f", "btn btn-ghost", "✕ Fermer", fermerFen)], null, 900); },
   // la fiche d'un élève (un clic sur son nom) : son point d'autonomie, son départ
@@ -14764,13 +14797,22 @@ function TabletteC(){
   oublierSiFini(m);
   window.APPAREIL_H = "tablette";
   var ici = iciH();
+  /* (8.0.9, Paul C17 271-272) les moitiés se croisent sous les yeux des élèves, environ une seconde, quand la correction les intervertit, et
+     quand elles reviennent ; au chargement (la tablette rechargée en pleine correction), elles sont déjà à leur place, sans animation */
+  var cr = ici.combien && ici.combien !== 1 ? croiseeTabH(ici.g, ici.d, true) : false;
+  var ra = React.useRef(null), sa = useState(null), anim = sa[0], setAnim = sa[1];
+  React.useLayoutEffect(function(){
+    if(ra.current === null || ra.current === cr){ ra.current = cr; return; }
+    ra.current = cr; setAnim(cr ? "in" : "out");
+    var tm = setTimeout(function(){ setAnim(null); }, 1150); return function(){ clearTimeout(tm); };
+  }, [cr]);
   if(!ici.combien) return EcrCombien();
   if(ici.combien === 1){
     var p = ici.g || ici.d;
     if(!p) return h("div", {className:"tablette seule seule-login"}, h("div", {className:"moitie g"}, h(UnEleveH, {key:"lg"})));
     return h("div", {className:"tablette seule"}, h("div", {className:"moitie g"}, pasIciH(p) ? MoitieQuitteeH(p, "g", null) : MoitieH(p, "g", null)));
   }
-  return TabletteVue(ici.g, ici.d, true);
+  return TabletteVue(ici.g, ici.d, true, anim);
 }
 // « 👤 1 élève » : le raccourci MJPC de la 7.7.1 (t-un-eleve) : « Tu es bien … ? » ; « Oui » l'entre sans code, « Non » (ou personne de connecté) : le code
 function UnEleveH(){
@@ -14785,7 +14827,33 @@ function UnEleveH(){
         h("button", Object.assign({className:"btn btn-ghost"}, marqueH("UN:non:" + m.slug, function(){ setNon(true); })), "Non"))));
 }
 // une tablette, ses deux moitiés : l'élève de chacune à l'écran de la phase (interactif : la tablette elle-même ; sinon « 👁 » de la console)
-function TabletteVue(g, d, interactif){
+/* (8.0.9, Paul C17 271) à la correction, sur une tablette à deux, chacun tient la feuille de l'autre : les deux moitiés s'intervertissent, pour que
+   chacun ait devant lui la moitié de la feuille qu'il tient. Dès que les deux ont fini la seconde attestation (elle est à soi : elle reste à sa place),
+   ou dès que la correction est lancée ; jusqu'à la co-évaluation (« rends sa feuille »). Un élève seul, ou sur papier : rien ne change.
+   La position est un affichage, tirée de la séance : un rechargement la retrouve telle quelle. */
+function phCroiseeH(m){ return m.ph === "pause" ? ((m.pause && m.pause.ph) || null) : m.ph; }
+function croiseeTabH(g, d, interactif){
+  if(!g || !d || !enDirect() || papierH()) return false;
+  if(SCN.voisinDe(g) !== d || SCN.voisinDe(d) !== g) return false;
+  if(typeof SCN.seul === "function" && (SCN.seul(g) || SCN.seul(d))) return false;
+  if(interactif && (pasIciH(g) || pasIciH(d))) return false;
+  var ph = phCroiseeH(momH());
+  if(ph === "lecture" || ph === "revele") return true;
+  return ph === "att2" && attestH(g, 2).fini && attestH(d, 2).fini;
+}
+// (8.0.9, Paul C17 272) devant chacun, la moitié de son voisin : « Tu confirmes que tu as la partie de … devant toi, et que tu as bien sa feuille ? »
+// e : l'élève de la moitié (sa feuille) ; v : son voisin, assis devant elle, qui tient sa feuille et confirme
+function CroiseeMsgH(p){
+  var e = p.e, v = p.v, s = useState(false), local = s[0], setLocal = s[1];
+  var fait = local || !!(typeof SCN.croiseeDe === "function" && SCN.croiseeDe(cleE(v)));
+  function oui(){ setLocal(true); agirE("confirmerCroisee", cleE(v), cleE(e)); }
+  return Page(badgeDe(e), "📝 Correction", h("div", {className:"croisee-msg", "data-croisee-msg":cleE(v)},
+    h("div", {className:"croisee-titre"}, "🔄 " + v.prenom),
+    fait ? h("div", {className:"croisee-merci"}, "Merci. Attends, stylo vert en main.")
+      : h(F, null, h("p", {className:"croisee-texte"}, "L'écran a changé de place pour la correction. Tu confirmes que tu as la partie " + deNom(e.prenom) + " devant toi, et que tu as bien sa feuille ? Prends ton stylo vert et attends."),
+        h("button", Object.assign({className:"btn btn-primary croisee-oui"}, marqueH("CROISEE:" + cleE(v), oui)), "Oui, j'ai la feuille " + deNom(e.prenom)))));
+}
+function TabletteVue(g, d, interactif, anim){
   function moitie(p, cote, autre){
     if(autre && interactif && pasIciH(autre)) autre = null;   // son voisin d'avant est parti sur une autre tablette
     if(p && interactif && pasIciH(p)) return MoitieQuitteeH(p, cote, autre);
@@ -14793,7 +14861,11 @@ function TabletteVue(g, d, interactif){
     if(!interactif) return Page(null, null, h("div", {className:"etat-attente"}, "moitié libre"));
     return h(EntreeMoitie, {key:"e" + cote, cote:cote, autre:autre});
   }
-  return Tablette(moitie(g, "g", d), moitie(d, "d", g));
+  var cr = croiseeTabH(g, d, interactif);
+  if(!cr && !anim) return Tablette(moitie(g, "g", d), moitie(d, "d", g));
+  // les mêmes moitiés, dans le même ordre du document (rien de ce qui est en cours n'est redessiné) : seul l'ordre à l'écran change
+  return h("div", {className:"tablette" + (cr ? " croisee" : "") + (anim ? " croise-anim-" + anim : ""), "data-croisee":cr ? "1" : "0"},
+    h("div", {className:"moitie g"}, moitie(g, "g", d)), h("div", {className:"moitie d"}, moitie(d, "d", g)));
 }
 // (déplacer, 72) l'élève de cette moitié a été échangé ou déplacé : sa place est sur une autre tablette
 function pasIciH(p){ var ici = iciH(); if(!enDirect() || !ici.n) return false;
@@ -14845,6 +14917,7 @@ function MoitieH(p, cote, autreP){
   // (16/10, contrôle à froid) seul, l'élève lit et corrige sa propre feuille : les lignes de la variante papier, pas « Donne ta feuille à <lui-même> »
   if(ph === "att2"){
     var a2 = attestH(p, 2);
+    if(a2.fini && v && !seul && croiseeTabH(p, vSlug, false)) return h(CroiseeMsgH, {key:"cr" + p, e:e, v:v});
     return a2.fini ? EcrAttenteCorr(e) : h(AttestCoches, {key:"a2" + p, e:e, lignes:papierH() || seul ? LignesAttest2Papier() : LignesAttest2(e, e.voisin), n0:a2.lignes, attest:2, fini:a2.fini, titre:"Avant la correction, " + e.prenom, bouton:"Je commence la correction", titrePage:"📝 Correction", pret:function(){ return EcrAttenteCorr(e); }});
   }
   // sur papier (t-papier-correction) : pas de lecture du voisin ; la réponse quand Paul révèle
