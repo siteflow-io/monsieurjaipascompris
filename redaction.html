@@ -2349,7 +2349,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 /* ═══ fin M-SÉCU-2 ═══ */
 
 // ── DÉCLARATION DE L'APP (redaction) ──
-var APP_VERSION = "1.4.32.1-micro-RU";
+var APP_VERSION = "1.4.32.2-micro-RU";
 var MJPC_APP = { id: "redaction", nom: "Rédaction universelle", contenant: "aucun" };
 var MJPC_MANIFESTE = { notions: [], noeuds: ["redactions", "redactions_communes"] };
 var MJPC_PURGE = { preserver: ["redactions", "redactions_communes"], purger: [] };
@@ -6534,7 +6534,6 @@ ruDemarrer();
   <div class="sc-haut"><b>Corriger sur les scans</b><button class="sc-btn" id="btnRecopier" onclick="rcOuvrir()" title="Recopier à côté de la photo, ligne par ligne, avec une reprise enregistrée.">✍ Recopier</button><button class="sc-btn" id="btnBande" onclick="rcBandeGlobale()" title="La bande, copie après copie : elle s’ouvre sur la première copie revenue de l’IA qui a encore quelque chose à revoir ; au bout d’une copie, Entrée passe à la suivante, sans repasser par les scans ni par la recopie.">▶ La bande</button><span class="sc-esp"></span><span id="scCharge"></span>
     <button class="sc-btn" id="scZoom" onclick="scZoomLargeur()" title="Le zoom de la copie : Ctrl + molette pour grossir ou réduire, sous la souris. Clique ici pour revenir à la largeur de l'écran. Maj tenue : la loupe. Alt tenue : la copie sans les marques.">↔ Largeur</button>
     <label class="sc-btn" title="Charger depuis ta clé ton paquet scanné, ou la copie d'un seul élève (un PDF, ou des photos), à tout moment : les pages neuves passent par « Les initiales ». Elles restent dans ce navigateur, jamais au site. Une page déjà connue retrouve ses marques. Pour un élève précis : clic sur sa carte, « 📄 Charger sa copie ».">📄 Charger des copies<input type="file" accept="application/pdf,.pdf,image/*" multiple onchange="scCharger(event)" hidden></label>
-    <button class="sc-btn" onclick="scAjouterPageCopie()" title="Ajouter une ou plusieurs pages (photos ou PDF, sur ta clé) à la copie ouverte : elles sont données d'office à cet élève, à la suite de ses pages. Une page déjà à un autre élève lui reste, et le message le dit.">➕ Une page à cette copie</button>
     <button class="sc-btn" onclick="scDossier()" title="Le dossier des copies de cette classe, sur ta clé : choisis-le une fois sur chaque ordinateur ; ensuite un clic relit le dossier et ne recharge que les pages de cette rédaction. Les photos ne quittent jamais ta clé et ce navigateur.">📂 Mon dossier</button>
     <button class="sc-btn" onclick="scImprimerVierges()" title="Imprimer des copies vierges de l'appli : quatre repères aux coins, les lignes à leur place. Scannées, elles se remettent droites d'elles-mêmes et leurs lignes sont connues d'avance.">🖨 Copies vierges</button>
     <button class="sc-btn" onclick="SC.attrib=true;SC.ia=0;scRendre()" title="Revoir, page par page, l'élève de chaque page (ses initiales).">🔤 Les initiales</button>
@@ -6668,6 +6667,7 @@ body.sc-ouvert #toast{z-index:990}   /* les messages de l'appli se lisent par-de
 .sc-pq-vig{position:relative;width:96px;height:132px;padding:0;border:1px solid #cbb88f;border-radius:6px;background:#fff;cursor:pointer;overflow:hidden}
 .sc-pq-vig:hover,.sc-pq-vig:focus-visible{outline:3px solid #b7884e;outline-offset:1px}
 .sc-pq-vig img{width:100%;height:100%;object-fit:cover;object-position:top}
+.sc-pq-plus{font:300 54px system-ui;color:#b7884e;background:#fbf6ec;border-style:dashed}
 .sc-pq-vig i{position:absolute;left:0;right:0;bottom:0;font:600 11px system-ui;font-style:normal;background:rgba(43,37,32,.7);color:#fff;padding:2px 0}
 .sc-pq-manque{display:flex;align-items:center;justify-content:center;height:100%;font:12px system-ui;color:#9a8b78;padding:6px}
 @media(max-width:760px){.sc-pq-el{grid-template-columns:1fr}.sc-pq-vig{width:72px;height:100px}}
@@ -6955,7 +6955,7 @@ function scChargerFichiers(fs, opts) {
     SC.imgs[o.id] = scImg(o.blob, o.w, o.h); if (SC.encres) delete SC.encres[o.id]; if (o.orig) SC.origs[o.id] = { blob: o.orig, w: o.ow, h: o.oh };
     const meta = ex || Object.assign({ id: o.id, eleve: null, ordre: ++ordre, blanche: o.blanche, lignes: o.lignes, rot: o.rot, w: o.w, h: o.h, creeLe: new Date().toISOString() }, src ? { source: src } : {});
     if (pour) { if (meta.blanche) { meta.blanche = false; meta.eleve = null; SC.chargement.blanches = (SC.chargement.blanches || 0) + 1; }   /* [1.4.32.1-micro] (Paul 09/11 15:02 : « je n'arrive qu'à charger la première ») : une page chargée pour un élève est à lui, même si elle avait été prise pour une page blanche */
-      if (!meta.eleve) { meta.eleve = pour; meta.modifieLe = new Date().toISOString(); SC.chargement.donnees++; if (ex) ruEcrire(scChemin(["pages", o.id]), meta, "la page de " + nomEleveDe(pour)); } else if (meta.eleve === pour) SC.chargement.donnees++; else SC.chargement.autres.push(meta.eleve); }   // une page déjà à un autre élève lui reste
+      if (!meta.eleve) { meta.eleve = pour; meta.modifieLe = new Date().toISOString(); SC.chargement.donnees++; if (ex) ruEcrire(scChemin(["pages", o.id]), meta, "la page de " + nomEleveDe(pour)); } else if (meta.eleve === pour) SC.chargement.donnees++; else { SC.chargement.autres.push(meta.eleve); (SC.chargement.autresIds = SC.chargement.autresIds || []).push(meta.id); } }   // une page déjà à un autre élève lui reste
     if (!ex) { SC.pages[o.id] = meta; nouvelles.push(meta); ruEcrire(scChemin(["pages", o.id]), meta, "une page du paquet"); }
     return scDbMettre({ id: o.id, red: RU.id, classe: RU.classe, blob: o.blob, w: o.w, h: o.h, le: new Date().toISOString() }); });   // [C14 1.4.12, mesuré] une page déjà connue reprend ici sa retouche (scPage) : le même paquet, rechargé sur un autre ordinateur, rend tout
   let ch = Promise.resolve();
@@ -7538,7 +7538,7 @@ function scVuePaquet() {
   if (sans.length) h += `<section class="sc-pq-el sc-pq-sans"><div class="sc-pq-nom"><b>⚠ ${sans.length} page${sans.length > 1 ? "s" : ""} sans élève</b><span class="sc-m">donne chacune à son élève</span><button class="sc-btn" onclick="SC.attrib=true;SC.ia=${sans[0].i};scRendre()" title="Revoir, page par page, l'élève de chaque page (ses initiales), en commençant par la première page sans élève.">🔤 Les initiales</button></div><div class="sc-pq-vigs">${sans.map(x => vig(x.p, "Page " + (x.i + 1) + " du paquet, sans élève : clic pour lui donner son élève (ses initiales).", "SC.attrib=true;SC.ia=" + x.i + ";scRendre()", "page " + (x.i + 1))).join("")}</div></section>`;
   SC.copies.forEach(k => { const P = scPagesDe(k), nom = nomEleveDe(k) || k, abs = typeof avAbsent === "function" && avAbsent(k);
     h += `<section class="sc-pq-el${abs ? " abs" : ""}${k === scK() ? " cour" : ""}" data-k="${escapeAttr(k)}"><div class="sc-pq-nom"><b>${escapeHtml(nom)}</b>${abs ? '<b class="av-abs" title="Marqué absent : pas de fichier École Directe, il ne compte pas dans le Bilan.">ABS</b>' : ""}${typeof avCarteFlux === "function" ? avCarteFlux(k) : ""}</div>`
-      + `<div class="sc-pq-vigs">${P.map((p, j) => vig(p, "Ouvrir la recopie de " + nom + " à sa page " + (j + 1) + (P.length > 1 ? " sur " + P.length : "") + ".", "scPqOuvrir('" + escapeAttr(k) + "','" + p.id + "')", "page " + (j + 1))).join("")}</div></section>`; });
+      + `<div class="sc-pq-vigs">${P.map((p, j) => vig(p, "Ouvrir la recopie de " + nom + " à sa page " + (j + 1) + (P.length > 1 ? " sur " + P.length : "") + ".", "scPqOuvrir('" + escapeAttr(k) + "','" + p.id + "')", "page " + (j + 1))).join("")}${abs ? "" : `<button class="sc-pq-vig sc-pq-plus" onclick="avChargerSaCopie('${escapeAttr(k)}')" title="${escapeAttr("Ajouter une page à la copie de " + nom + " : choisis sur ta clé la photo ou le PDF ; la page lui est donnée d'office, à la suite de ses pages. Si cette page est déjà à un autre élève, l'app te demande si tu la lui donnes.")}">+<i>ajouter une page</i></button>`}</div></section>`; });
   if (blanches) h += `<p class="sc-m">${blanches} page${blanches > 1 ? "s" : ""} blanche${blanches > 1 ? "s" : ""} dans le paquet : sans élève, elle${blanches > 1 ? "s" : ""} ne compte${blanches > 1 ? "nt" : ""} pas.</p>`;
   h += "</div>"; if (Z.dataset.pq === h) return;   // rien de neuf : rien ne se redessine
   /* un redessin ne touche jamais au focus : la vignette qui l'avait le garde */
@@ -10373,8 +10373,6 @@ function avSansCopie(k) {
   scModale(`<h3>${escapeHtml(nom)} n'a pas de copie dans le paquet</h3><p>Aucune page n'est à son nom : rien ne s'ouvre, pour ne jamais te montrer la copie d'un autre élève.</p><p>Si sa copie est sur ta clé : ouvre « 📄 Corriger sur les scans », charge-la, puis donne-lui ses pages avec « 🔤 Les initiales ». S'il n'a pas fait la rédaction : clic droit sur sa carte, « ❌ Marquer absent ».</p>
     <button class="sc-btn" id="avChargerSa" onclick="avChargerSaCopie('${escapeAttr(k)}')" title="Choisir sur ta clé la photo ou le PDF de la copie de ${escapeAttr(nom)} : ses pages lui sont données d'office, sans passer par les initiales, puis sa copie s'ouvre. Une page déjà à un autre élève lui reste.">📄 Charger sa copie</button>`);
 }
-/* [1.4.32.1-micro] (Paul 09/11 15:02) : ajouter une page à la copie ouverte, à tout moment */
-function scAjouterPageCopie() { const k = SC.copies && SC.copies[SC.ic]; if (!k) { toast("Ouvre d'abord la copie de l'élève : clic sur sa carte."); return; } avChargerSaCopie(k); }
 /* [C14 1.4.13] (Paul 01/11 09:17 : « Comment charger une copie d'élève seule, après avoir chargé un paquet? ») : la copie d'un seul élève, depuis sa carte */
 function avChargerSaCopie(k) {
   const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = "application/pdf,.pdf,image/*";
@@ -10384,12 +10382,21 @@ function avChargerSaCopie(k) {
       if (!scPagesDe(k).length) { scModale(`<h3>Aucune page n'a été donnée à ${escapeHtml(nom)}</h3><p>${C.autres.length ? "Les pages de ce fichier sont déjà à un autre élève : elles lui restent." : "Ce fichier n'a pas de page lisible, ou ses pages sont blanches."}</p>`); scRendre(); return; }
       SC.attrib = false; SC.ic = SC.copies.indexOf(k); state.scanCurseur = Object.assign({}, state.scanCurseur || {}, { copie: k }); saveState();
       if (state.scanDernier === "recopie" && typeof rcOuvrir === "function") rcOuvrir(); else scRendre();
+      if (C.autresIds && C.autresIds.length) avDonnerPages(k, C.autresIds);
       toast("Copie de " + nom + " chargée : " + C.donnees + " page" + (C.donnees > 1 ? "s" : "") + ", à " + nom + " d'office" + autres + "."); });
     if (SC.ouvert) { if (typeof RC !== "undefined" && RC.ouvert) rcFermer(true); charger(); return; }
     state.scanRecopie = Object.assign({}, state.scanRecopie || {}, { ouverte: false }); scOuvrir(); const t0 = Date.now();
     (function attendre() { if (SC.ouvert) charger(); else if (Date.now() - t0 < 10000) setTimeout(attendre, 120); else toast("L’écran des scans ne s’ouvre pas : ouvre-le avec « 📄 Corriger sur les scans », puis « 📄 Charger des copies »."); })();
   };
   inp.click();
+}
+/* [1.4.32.2-micro] (Paul 10/11 16:07 : « réellement ajouter la page à la copie ») : une page du fichier déjà à un autre élève, Paul choisit de la donner à celui-ci */
+function avDonnerPages(k, ids) {
+  const nom = nomEleveDe(k) || k, P = ids.map(id => SC.pages[id]).filter(Boolean), qui = Array.from(new Set(P.map(p => nomEleveDe(p.eleve) || p.eleve))).join(", ");
+  if (!P.length) return;
+  window.avDonnerOui = () => { scModaleFermer(); P.forEach(p => { p.eleve = k; p.blanche = false; p.modifieLe = new Date().toISOString(); ruEcrire(scChemin(["pages", p.id]), p, "la page de " + nom); }); scCopiesOrdre(); scRendre(); toast(P.length + " page" + (P.length > 1 ? "s" : "") + " donnée" + (P.length > 1 ? "s" : "") + " à " + nom + "."); };
+  scModale(`<h3>${P.length > 1 ? P.length + " pages de ce fichier sont" : "Cette page est"} déjà à ${escapeHtml(qui)}</h3><p>L'app l'a reconnue : elle est déjà dans la copie de ${escapeHtml(qui)}. La donner à ${escapeHtml(nom)} ? Elle quittera la copie de ${escapeHtml(qui)} ; tes marques posées sur cette page dans la copie de ${escapeHtml(qui)} n'iront pas avec elle.</p>
+    <button class="sc-btn" onclick="avDonnerOui()" title="La page passe dans la copie de ${escapeAttr(nom)}, à la suite de ses pages.">La donner à ${escapeHtml(nom)}</button> <button class="sc-btn" onclick="scModaleFermer()" title="Ne rien changer : elle reste à ${escapeAttr(qui)}.">Laisser</button>`);
 }
 function avOuvrirCopie(k) {   // la copie s'ouvre là où tu travaillais quand tu as quitté l'écran des scans
   const rec = state.scanDernier === "recopie", r = ((((state.copies[k] || {}).scan || {}).recopie) || {}).reprise || {};
