@@ -1604,3 +1604,6 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **10/11/2026 — 8.96.0-㉝** (prod `e50d0db`, md5 `a2cffb6d0bdcfb6d0545fb141daf6888`) · point de retour : **8.93.0-㉚** (prod `24726c8`, md5 `fa171c2d2ca9b6df0809374d4b7b9d37`).
 
 - **10/11/2026 — 8.97.0-㉞** (prod `ea389fc`, md5 `9ca59b74b3b542df01ca6c9e952bcd61`) · point de retour : **8.96.0-㉝** (prod `dff1c0d`, md5 `a2cffb6d0bdcfb6d0545fb141daf6888`).
+
+### POINT DE RETOUR — `redaction.html` AVANT 1.4.32.2-micro (10/11/2026, conscience n°14)
+- Avant : 1.4.32.1-micro, md5 `93750c737fd20e59ccb66c67fa137eee`, blob `c4341e158b86`, copie au sas `SAUVEGARDES/redaction-1.4.32.1-avant-1.4.32.2-micro-2026-11-10.html`. Revenir ferait perdre la case « + ajouter une page » et « La donner à … ».

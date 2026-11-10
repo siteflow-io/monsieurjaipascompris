@@ -104,3 +104,5 @@
 **Ce qui le remplacera** : la prochaine version passée au banc complet, avec la branche `deroule/absents-heure` reprise.
 
 - 10/11/2026 07:58 — `redaction.html` 1.4.32.1-micro (C14 212) : page chargée pour un élève jamais refusée comme « blanche » ; « ➕ Une page à cette copie ». Commit `da578ed`.
+
+- 10/11/2026 16:29 — `redaction.html` 1.4.32.2-micro (C14 216) : « + ajouter une page » à droite des pages de chaque copie ; « La donner à … » pour une page déjà à un autre élève. Commit `dff1c0d`.

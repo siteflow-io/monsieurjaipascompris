@@ -1003,3 +1003,6 @@
 
 ## AJOUTS DU 10/11/2026 — RÉDACTION 1.4.32.1-micro
 - Ajouter une page à une copie : `scAjouterPageCopie` (bouton « ➕ Une page à cette copie », écran des scans) → `avChargerSaCopie` → `scChargerFichiers(fs, { pour })` (une page « blanche » chargée pour un élève lui est donnée : `SC.chargement.blanches`).
+
+## AJOUTS DU 10/11/2026 (bis) — RÉDACTION 1.4.32.2-micro
+- La case « + ajouter une page » : `scVuePaquet` (classe `.sc-pq-plus`) → `avChargerSaCopie(k)` ; une page déjà à un autre élève : `avDonnerPages(k, ids)` (`SC.chargement.autresIds`).
