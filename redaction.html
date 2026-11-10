@@ -2349,7 +2349,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
 /* ═══ fin M-SÉCU-2 ═══ */
 
 // ── DÉCLARATION DE L'APP (redaction) ──
-var APP_VERSION = "1.4.32.2-micro-RU";
+var APP_VERSION = "1.4.32.3-micro-RU";
 var MJPC_APP = { id: "redaction", nom: "Rédaction universelle", contenant: "aucun" };
 var MJPC_MANIFESTE = { notions: [], noeuds: ["redactions", "redactions_communes"] };
 var MJPC_PURGE = { preserver: ["redactions", "redactions_communes"], purger: [] };
@@ -6949,7 +6949,7 @@ function scChargerFichiers(fs, opts) {
   let ordre = scPagesOrdre().reduce((m, p) => Math.max(m, p.ordre || 0), 0);
   const nouvelles = []; let n = 0, anciennes = 0;
   const parImage = opts && opts.parImage;   // [C14 1.4.28] ces fichiers-là ont été reconnus par leur image : leur feuille peut avoir sa photo ici
-  const traiter = (cv, src, img) => scPage(cv, src, img).then(o => { if (o.ancienne) { anciennes++; return; } n++; scTemoinCharge("Page " + n + " lue…");
+  const traiter = (cv, src, img) => scPage(cv, src, img, pour).then(o => { if (o.ancienne) { anciennes++; return; } n++; scTemoinCharge("Page " + n + " lue…");
     const ex = SC.pages[o.id];
     if (ex && src && !(ex.source && ex.source.f === src.f && ex.source.p === src.p)) { ex.source = src; ruEcrire(scChemin(["pages", o.id]), ex, "l'origine d'une page"); }   // une page déjà connue reçoit son origine, une fois
     SC.imgs[o.id] = scImg(o.blob, o.w, o.h); if (SC.encres) delete SC.encres[o.id]; if (o.orig) SC.origs[o.id] = { blob: o.orig, w: o.ow, h: o.oh };
@@ -7028,13 +7028,16 @@ function scEmpreinteImage(cvLu) {   // l'empreinte de l'image (16 × 16 points) 
   const moy = g.reduce((a, b) => a + b, 0) / 256; let hex = ""; for (let i = 0; i < 256; i += 4) { let v = 0; for (let j = 0; j < 4; j++) v = v * 2 + (g[i + j] > moy ? 1 : 0); hex += v.toString(16); }
   return hex;
 }
-function scPage(cvLu, src, avecPhoto) {
+function scPage(cvLu, src, avecPhoto, pour) {
   const hex = scEmpreinteImage(cvLu);
   const id0 = "page_" + hex + "_" + cvLu.width.toString(36) + cvLu.height.toString(36), parSource = src && Object.values(SC.pages).find(p => p && p.source && p.source.f === src.f && p.source.p === src.p);
-  const id = parSource ? parSource.id : SC.pages[id0] ? id0 : ((scPageProche(hex, avecPhoto) || {}).id || id0);
+  let id = parSource ? parSource.id : SC.pages[id0] ? id0 : ((scPageProche(hex, avecPhoto) || {}).id || id0);
   /* [C14 1.4.13] une photo remplacée : son ancien fichier (ou la même image venue d'ailleurs) est laissé de côté, la nouvelle photo reste */
   const ancienne = !parSource && (src && Object.values(SC.pages).some(p => p && (p.anciennes || []).some(a => a.f === src.f && a.p === src.p)) || (SC.pages[id] && SC.pages[id].remplaceeLe && SC.pages[id].source && !(src && SC.pages[id].source.f === src.f && SC.pages[id].source.p === src.p)));
-  if (ancienne) return Promise.resolve({ id, ancienne: true });
+  /* [1.4.32.3-micro] (Paul 10/11 16:41 : « la copie n'affiche pas la page 2 ») : mesuré au site, la photo de la page 2 était l'ancienne photo de la page 1, remplacée le 09/11 ;
+     elle était laissée de côté sans rien ajouter. Chargée pour un élève (« + ajouter une page »), elle devient une page neuve de sa copie. */
+  if (ancienne && pour) id = id0 + "_p" + Date.now().toString(36);
+  else if (ancienne) return Promise.resolve({ id, ancienne: true });
   const ex = SC.pages[id]; const rot = ex && ex.rot != null ? ex.rot : (cvLu.width > cvLu.height * 1.08 ? 90 : 0);   // une page en paysage : photographiée de côté
   let cv0 = scTourner(cvLu, rot); if (ex && ex.angle) cv0 = scIncliner(cv0, ex.angle); if (ex && ex.recadre) cv0 = scCouper(cv0, ex.recadre); const H = scReperes(cv0); const cv = H ? scRedresser(cv0, H) : cv0;   // une copie de l'appli : remise droite, lignes connues
   const lig = H ? scLignesConnues(cv) : scLignes(cv);
