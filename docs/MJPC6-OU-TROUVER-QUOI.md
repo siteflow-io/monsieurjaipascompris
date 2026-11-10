@@ -1006,3 +1006,6 @@
 
 ## AJOUTS DU 10/11/2026 (bis) — RÉDACTION 1.4.32.2-micro
 - La case « + ajouter une page » : `scVuePaquet` (classe `.sc-pq-plus`) → `avChargerSaCopie(k)` ; une page déjà à un autre élève : `avDonnerPages(k, ids)` (`SC.chargement.autresIds`).
+
+## AJOUTS DU 10/11/2026 (ter) — RÉDACTION 1.4.32.3-micro
+- Une ancienne photo (remplacée) ajoutée pour un élève : `scPage(cvLu, src, avecPhoto, pour)` lui donne un identifiant neuf (`id0 + "_p…"`) au lieu de la laisser de côté.
