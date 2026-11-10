@@ -1594,3 +1594,5 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.32.1-micro (10/11/2026, conscience n°14)
 - Avant : 1.4.32-RU, md5 `ca7893f8f938cee69c21ae652f646ff4`, blob `645c333d3e55`, copie au sas `SAUVEGARDES/redaction-1.4.32-avant-1.4.32.1-micro-2026-11-10.html`. Revenir ferait perdre : le bouton « ➕ Une page à cette copie » et le don d'une page « blanche » à l'élève choisi.
+
+- **10/11/2026 — retour à la 8.93.0-㉚** (prod `bb17b18`, md5 `fa171c2d2ca9b6df0809374d4b7b9d37`), mot de Paul 08:51 : enregistrements lents ou bloqués en 8.95.0-㉜ (cause non mesurée).
