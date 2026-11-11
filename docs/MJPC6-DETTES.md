@@ -3447,3 +3447,9 @@ Cadrage 4 · 3.2, 1.4 — sur l'existant mesuré dans `index.html` (Paul, 29/09 
 - (3) Masquer les 5 diapos des fiches injectées redécoupe la séance : Questions D, E, F passent de H1 à H2 (H1 59 → 45 min) — en attente du choix de Paul (« écris » / « fiches seules »).
 - (4) En répétition, la séance 2 ne s'enchaîne pas : sonde d'enchaînement en répétition 12/14, mêmes 2 échecs avant et après BH (antérieure).
 Les 8 fiches injectées (4e ch. 0 séances 2, 6, 7 ; 3e ch. 1 séances 2, 3) ne sont pas reliées à leur feuille de l'Atelier : réparation prête (`/tmp/fiches/ops.json`, sauvegarde au sas `SAUVEGARDES/FICHES-INJECTEES-*`), vérifiée par BI, non écrite.
+
+**DÉROULÉ (C17, Paul 11/11 05:42) — QUATRE DEMANDES** — *ouvertes* —
+- (1) 4e : la première séance de vendredi matin (4 Turing 08:00, 4 Hugo 08:57) et les séances de la semaine suivante sont à regarder sur le site (capture de l'emploi du temps du 11/11 05:29) ; à mesurer en session, Paul connecté.
+- (2) Le témoin « tableau en Win K » (`dr-tableau.js` ~l. 276-282) apparaît dès que Paul écrit au pilotage et fait bouger toute la colonne de droite : à retirer.
+- (3) Les diapos de présentation du chapitre et de la séance : ordre de dévoilement à revoir (au moins une diapo montre des éléments déjà dévoilés), et Paul doit pouvoir tout modifier.
+- (4) Les notions de la séance partent au cahier de textes et à la diapo de réactivation alors que l'élève ne les écrit jamais formulées dans son cahier.
