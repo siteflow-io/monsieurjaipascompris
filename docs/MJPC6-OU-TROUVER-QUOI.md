@@ -971,6 +971,14 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 11/11/2026 (soir) — QCM 8.0.11 (conscience n°17)
+- **La séance en pause** (« 👁️ Voir la séance », « 📄 Lire les copies », `lecturesPause/`) : `LIVRAISONS/CODE-QCM/src/voir-pause.js`, `src/lire-copies.js`.
+- **La tablette qui calculait trop** (calculs gardés en mémoire) : `src/live/base.js` (`sanMJPC`, `S.places`, `S.eleves`) ; mesure dans `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md` points 12 à 18.
+- **Réponse hors temps, essais, « Compter cette réponse »** : `src/live/base.js` (`E.repondre` : réponse seule, essai à part ; `horsTempsDe` ; `A.admettre`), bandeau de la console `HorsTempsH`.
+- **Tablette décrochée** : `src/live/base.js` (`L.decroche`, connexion suivie, resynchronisation), message élève `src/c3-tablettes.js` (~396), console `decrocheH`.
+- **Bancs** : `LIVRAISONS/CODE-QCM/banc/banc-8011c-decroche.js`, `banc-8011c-regles.js`, `banc-8011-oubli.js`, `banc-807-annuler-ancien-instru.js` + `instru-oubli.js` (l'outil d'observation des tablettes).
+- **Chemins nouveaux sous `qcm/sessions/<sid>`** (pour les règles) : `essais/`, `lecturesPause/` ; `reponses` inchangé. Liste dans `LIVRAISONS/CODE-QCM/VERDICT.md`.
+
 ## AJOUTS DU 11/11/2026 — QCM 8.0.10 (conscience n°17)
 - **Le placement** (plan après l'appel, « 🔓 Ouvrir aux élèves », mauvaise moitié, « appelle ») : `LIVRAISONS/CODE-QCM/src/live/base.js` (`E.entrer`, `placer`), `src/live/pages.js` (écrans d'entrée), `src/etape2.js` (~757, le panneau des binômes) ; détail dans `LIVRAISONS/CODE-QCM/VERDICT.md`. **Bancs** : `banc/banc-8010-turing.js` (la séance des Turing, forme exacte, fictive), `banc/banc-8010-placement.js`. **Vidéo** : `sorties/videos-8010/`. **Sauvegarde de la 8.0.9** : `SAUVEGARDES/evaluation-qcm-8.0.9-avant-8.0.10-2026-11-11.html` (sas).
 
