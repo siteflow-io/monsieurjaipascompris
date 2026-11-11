@@ -2932,9 +2932,14 @@ var MJPC_PURGE = {
 
 // ── 1. Identité élève : clé canonique ──
 // "CLÉMENT Noé" → "clement_noe". Déterministe, recalculable, lisible.
+/* (8.0.11c) gardé en mémoire : sanMJPC est appelée des milliers de fois à chaque redessin d'une tablette (27 % de son temps de calcul pendant une
+   question, mesuré par banc-807-annuler-ancien-instru.js, PROFIL=1) ; le résultat ne dépend que du texte */
+var SAN_MJPC_MEMO = new Map();
 function sanMJPC(s){
-  return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+  var k = String(s||""), v = SAN_MJPC_MEMO.get(k); if(v !== undefined) return v;
+  v = k.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+  if(SAN_MJPC_MEMO.size > 20000) SAN_MJPC_MEMO.clear(); SAN_MJPC_MEMO.set(k, v); return v;
 }
 
 // ── 2. Identité classe : la clé du hub EST l'identifiant ──
@@ -3743,6 +3748,11 @@ var LIVE = (function(){
     (typeof requestAnimationFrame === "function" ? requestAnimationFrame : setTimeout)(function(){ prevu = false; L.version = (L.version || 0) + 1; abonnes.slice().forEach(function(f){ try { f(); } catch(e){ console.error(e); } }); });
   };
   L.maintenant = function(){ return Date.now() + (L.offset || 0); };
+  /* (8.0.11c) la tablette décrochée : coupée de la base depuis plus de 3 s, ou figée (un temps compté fini depuis plus de 6 s sans que la séance
+     bouge : la console l'aurait passé en 0,25 s, une tablette en 1,5 s). Elle se resynchronise seule (MOTEUR, resync) ; sinon l'élève lève la main. */
+  L.decroche = function(){ if(L.connecte === false && Date.now() - (L.connecteDepuis || 0) > 3000) return "coupee";
+    var e = typeof SCN !== "undefined" && SCN.sid() ? SCN.etat() : null; if(!e || !e.duree || ["reflexion", "passage", "reponse", "b", "rouvert"].indexOf(e.ph) < 0) return null;
+    return L.maintenant() - ((+e.depuis || 0) + e.duree * 1000) > 6000 ? "figee" : null; };
   function ecouter(chemin, cle, transformer){
     if(!db) return;
     db.ref(chemin).on("value", function(s){ var v = s.val(); L.d[cle] = transformer ? transformer(v) : (v || {}); L.pret = L.d.classes !== null; L.changer(); },
@@ -3751,9 +3761,12 @@ var LIVE = (function(){
   L.demarrer = function(){
     if(L.demarre || !db) return; L.demarre = true;
     db.ref(".info/serverTimeOffset").on("value", function(s){ L.offset = s.val() || 0; });
+    /* (8.0.11c) la connexion à la base, suivie : une tablette coupée (réseau, veille) ne reçoit plus la séance ; L.decroche() le dit (MoitieH : « lève la main ») */
+    L.connecte = true; L.connecteDepuis = Date.now();
+    db.ref(".info/connected").on("value", function(s){ var c = s.val() !== false; if(c !== L.connecte){ L.connecte = c; L.connecteDepuis = Date.now(); L.changer(); } });
     ecouter("classes", "classes", function(v){ return v || {}; });
     ecouter(DB_ROOT + "/evaluations", "evaluations");
-    ecouter(DB_ROOT + "/sessions", "sessions");
+    ecouter(DB_ROOT + "/sessions", "sessions", function(v){ v = v || {}; Object.keys(v).forEach(function(id){ if(v[id] && typeof v[id] === "object") horsTempsDe(v[id]); }); return v; });
     ecouter(DB_ROOT + "/sessionActive", "sessionActive");
     ecouter(DB_ROOT + "/settings", "settings");
     ecouter("taxonomie/competences", "competences", function(v){ return v || null; });
@@ -3766,11 +3779,51 @@ var LIVE = (function(){
   return L;
 })();
 
+/* (8.0.11c, complément 8011c) « une réponse n'est jamais enregistrée hors de sa fenêtre ». Chaque réponse porte l'heure où la BASE l'a reçue
+   (recu : ServerValue.TIMESTAMP, jamais l'horloge de la tablette) et chaque essai est gardé (essais/<q>/<élève>/<clé>). Une réponse vaut si, à
+   l'heure où la base l'a reçue (ou 3 s avant : le trajet), le journal des moments de la séance (journal/t<heure>, écrit à chaque phase) dit
+   que cette question était ouverte à la réponse (« reponse », « rouvert »). Sinon elle est « hors temps » : retirée de reponses, gardée à part
+   (s.horsTemps, en mémoire) et montrée à Paul (HorsTempsH, la console) ; « Compter cette réponse » (ACT.admettre) la fait compter. Paul décide.
+   Une réponse sans recu (écrite avant la 8.0.11c) compte comme avant. */
+var HT_MARGE = 3000;
+function journalTri(s){ var j = s.journal || {}; if(s.__jt && s.__jt.src === j) return s.__jt.l;
+  var l = Object.keys(j).map(function(k){ return {t:+k.slice(1), ph:(j[k] || {}).ph, qi:(j[k] || {}).qi}; }).filter(function(x){ return isFinite(x.t); }).sort(function(a, b){ return a.t - b.t; });
+  try { Object.defineProperty(s, "__jt", {value:{src:j, l:l}, enumerable:false, configurable:true}); } catch(e){} return l; }
+function phaseA(l, t){ var r = null; for(var i = 0; i < l.length && l[i].t <= t; i++) r = l[i]; return r; }
+function ouverteA(s, qi, t){ var l = journalTri(s); if(!l.length) return true; var ok = function(x){ return x && +x.qi === +qi && (x.ph === "reponse" || x.ph === "rouvert"); };
+  return ok(phaseA(l, t)) || ok(phaseA(l, t - HT_MARGE)); }
+// l'heure où la question a cessé d'être ouverte, avant t (pour dire « 22 s après la fermeture »)
+function fermeeA(s, qi, t){ var l = journalTri(s), f = null; for(var i = 1; i < l.length && l[i].t <= t; i++) if(+l[i - 1].qi === +qi && (l[i - 1].ph === "reponse" || l[i - 1].ph === "rouvert") && !(+l[i].qi === +qi && (l[i].ph === "reponse" || l[i].ph === "rouvert"))) f = l[i].t; return f; }
+function horsTempsDe(s){
+  // (audit C17) les réponses telles que la base les garde, à part et cachées (non énumérables) : une photo de la séance (« 🔓 Rouvrir ») les reprend telles quelles
+  try { Object.defineProperty(s, "reponsesBrutes", {value:s.reponses ? JSON.parse(JSON.stringify(s.reponses)) : null, enumerable:false, configurable:true, writable:true}); } catch(e){}
+  var ht = [], rep = s.reponses || {}, es = s.essais || {};
+  Object.keys(es).forEach(function(qi){ Object.keys(es[qi] || {}).forEach(function(x){
+    var l = Object.keys(es[qi][x] || {}).map(function(k){ return Object.assign({cle:k}, es[qi][x][k]); }).filter(function(e){ return e && e.recu != null; }).sort(function(a, b){ return a.recu - b.recu; });
+    if(!l.length) return;
+    var bons = l.filter(function(e){ return e.admis || (!e.refuse && ouverteA(s, qi, +e.recu)); }), dernier = bons[bons.length - 1] || null;
+    l.forEach(function(e){ if(!e.admis && (e.refuse || !ouverteA(s, qi, +e.recu)) && e.choix && (!dernier || +e.recu > +dernier.recu)) ht.push({qi:+qi, x:x, cle:e.cle, choix:e.choix, recu:+e.recu, ferme:fermeeA(s, qi, +e.recu), refuse:e.refuse || null}); });
+    if(!rep[qi]) rep[qi] = {};
+    // la réponse de la base reste telle quelle si elle dit la même chose que le dernier essai à temps ; sinon, ce dernier essai, avec les seuls champs de la 8.0.10
+    var brut = rep[qi][x], memes = function(a, b){ return JSON.stringify([].concat(a || []).map(Number).sort()) === JSON.stringify([].concat(b || []).map(Number).sort()); };
+    if(dernier && dernier.choix && (!Array.isArray(dernier.choix) || dernier.choix.length)){ if(!(brut && memes(brut.choix, dernier.choix))) rep[qi][x] = {choix:dernier.choix, ts:dernier.ts || null, ms:dernier.ms || null, tour:dernier.tour || 1, rouverte:dernier.rouverte || null, admis:dernier.admis || null}; }
+    else delete rep[qi][x];
+    if(!Object.keys(rep[qi]).length) delete rep[qi];
+  }); });
+  if(Object.keys(es).length) s.reponses = rep;
+  // une réponse écrite avec son heure de la base, sans essai gardé (une version d'avant) : jugée seule
+  Object.keys(s.reponses || {}).forEach(function(qi){ Object.keys(s.reponses[qi] || {}).forEach(function(x){ var r = s.reponses[qi][x];
+    if(r && r.recu != null && !r.admis && !(es[qi] && es[qi][x]) && !ouverteA(s, qi, +r.recu)){ ht.push({qi:+qi, x:x, cle:null, choix:r.choix, recu:+r.recu, ferme:fermeeA(s, qi, +r.recu)}); delete s.reponses[qi][x]; } }); });
+  try { Object.defineProperty(s, "horsTemps", {value:ht, enumerable:false, configurable:true, writable:true}); } catch(e){ s.horsTemps = ht; }
+  return s;
+}
+
 /* ── Écrire : un seul passage, qui journalise ── */
 // le vrai Firebase refuse une écriture qui porte undefined, NaN ou une fonction (le faux hub les efface sans rien dire) : on les retire avant
 function nettoyerQCM(v){
   if(v === undefined || (typeof v === "number" && !isFinite(v)) || typeof v === "function") return null;
   if(v === null || typeof v !== "object") return v;
+  if(v[".sv"] !== undefined) return v;   // (8.0.11c) l'heure de la base (ServerValue.TIMESTAMP)
   if(Array.isArray(v)) return v.map(nettoyerQCM);
   var o = {}; Object.keys(v).forEach(function(k){ var x = nettoyerQCM(v[k]); if(x !== null) o[k] = x; }); return o;
 }
@@ -3915,8 +3968,13 @@ var SCN = (function(){
   S.CLASSE = null;
   S.niveauClasse = function(classe){ var c = (LIVE.d.classes || {})[classe || S.classe()] || {}; return c.niveau || (String(classe || S.classe() || "").match(/^\s*(\d)/) ? RegExp.$1 + "e" : null); };
   // les élèves de la séance : sa liste propre (rattrapage), sinon la classe ; triés
+  var MEMO_EL = {src:null, cl:null, v:null};
   S.eleves = function(sid){
-    var s = S.sess(sid), le = s && s.lancee && s.lancee.eleves; var l = le ? (Array.isArray(le) ? le : Object.values(le)).filter(Boolean).slice() : rosterDe((s && s.classeSlug) || S.classe()).map(sanMJPC);
+    var s = S.sess(sid), le = s && s.lancee && s.lancee.eleves;
+    // (8.0.11c) la liste triée gardée tant que la séance (ses élèves) et les classes ne changent pas
+    if(le && MEMO_EL.src === le && MEMO_EL.cl === LIVE.d.classes) return MEMO_EL.v.slice();
+    var r = elevesBrut(s, le); if(le){ MEMO_EL.src = le; MEMO_EL.cl = LIVE.d.classes; MEMO_EL.v = r; } return r.slice(); };
+  function elevesBrut(s, le){ var l = le ? (Array.isArray(le) ? le : Object.values(le)).filter(Boolean).slice() : rosterDe((s && s.classeSlug) || S.classe()).map(sanMJPC);
     indexer(); return l.sort(function(a, b){ return S.nomDe(a).localeCompare(S.nomDe(b), "fr"); });
   };
   // « NOM Prénom » ; le prénom : les mots après le dernier mot en capitales
@@ -3944,7 +4002,12 @@ var SCN = (function(){
   S.ev = function(sid){ var s = S.sess(sid); if(!s) return null; var m = MEMO_EV[s.id];
     if(m && m.s === s && m.e === LIVE.d.evaluations) return m.v;
     var v = S.evalDeSeance(s.id); MEMO_EV[s.id] = {s:s, e:LIVE.d.evaluations, v:v}; return v; };
-  S.places = function(sid){ var s = S.sess(sid), p = (s && s.places) || {};
+  // (8.0.11c) gardées tant que la séance ne change pas (S.places est appelée des centaines de fois par redessin) ; une copie du tableau à chaque appel
+  var MEMO_PL = {src:null, v:null};
+  S.places = function(sid){ var s = S.sess(sid), p = (s && s.places) || null;
+    if(p && MEMO_PL.src === p) return MEMO_PL.v.map(function(t){ return Object.assign({}, t); });
+    var v = S.placesBrut(p || {}); if(p){ MEMO_PL.src = p; MEMO_PL.v = v; } return v.map(function(t){ return Object.assign({}, t); }); };
+  S.placesBrut = function(p){
     return Object.keys(p).map(Number).filter(function(n){ return !isNaN(n); }).sort(function(a, b){ return a - b; }).map(function(n){ var x = p[n] || {}; return {n:n, g:x.g || null, d:x.d || null, seul:!!x.seul}; }); };
   // les binômes au format de la maquette : [[« NOM Prénom », « NOM Prénom » ou null], …], tablette par tablette
   S.paires = function(sid){ return S.places(sid).map(function(t){ return [t.g ? S.nomDe(t.g) : null, t.d ? S.nomDe(t.d) : null]; }); };
@@ -4076,6 +4139,15 @@ var SCN = (function(){
   S.ditB = function(x, qi, sid){ var s = S.sess(sid); return ((((s && s.b) || {})[qi]) || {})[x] || null; };
   S.lecture = function(x, qi, sid){ var s = S.sess(sid), l = ((((s && s.lectures) || {})[qi]) || {})[x]; if(!l) return null;
     return Object.assign({}, l, {choix:l.choix === "aucun" ? "aucun" : (Array.isArray(l.choix) ? l.choix : Object.values(l.choix || {})).map(Number)}); };
+  /* (8.0.11, Paul C17 319-322) une feuille lue par Paul pendant la pause (« 📄 Lire les copies » sur la carte « Séance à reprendre ») :
+     lecturesPause/<qi>/<élève>, à part de lectures/ ; la classe n'en voit rien (la feuille repasse chez le voisin, E.lire l'écrit comme toujours,
+     la règle R3 ne la grise pas) ; la note la suit : S.lectureNote rend la lecture de Paul (une lecture du soir, par:"prof", l'emporte), avec
+     ce que le voisin a lu en classe (voisin) et s'ils diffèrent (desaccord) */
+  S.lecturePause = function(x, qi, sid){ var s = S.sess(sid), l = ((((s && s.lecturesPause) || {})[qi]) || {})[x]; if(!l) return null;
+    return {choix:l.choix === "aucun" ? "aucun" : (Array.isArray(l.choix) ? l.choix : Object.values(l.choix || {})).map(Number), ms:l.ms || null}; };
+  S.lectureNote = function(x, qi, sid){ var l = S.lecture(x, qi, sid); if(l && l.par === "prof") return l; var p = S.lecturePause(x, qi, sid); if(!p) return l;
+    var d = !!l && (l.choix === "aucun" || p.choix === "aucun" ? l.choix !== p.choix : !juste(l.choix, {bonnes:p.choix}));
+    return {choix:p.choix, par:"prof", ms:p.ms, pause:true, voisin:l || null, desaccord:d}; };
   S.doitDireB = function(x, sid){ var e = S.etat(sid); if(!e || !x || e.qi == null) return false; var c = S.cote(x, sid);
     if(e.ph === "b"){ var r = S.reponse(x, e.qi, sid); if(e.pour) return x === e.pour && !!r && !S.ditB(x, e.qi, sid); if(e.rouvert === "tous" && !(r && r.rouverte === "tous")) return false;
       return (c === (e.cote || S.coteDuTour(e.qi, e.tour || 1, sid)) || S.seul(x, sid)) && !S.ditB(x, e.qi, sid) && !!r; }
@@ -4141,7 +4213,7 @@ var SCN = (function(){
   // « Trouvée au dernier moment » : la question fixée à la révélation (trouvee/<slug>) ; sinon la première, dans l'ordre de la correction,
   // dont la feuille, lue, est fausse et la tablette entièrement juste ; une fois par évaluation
   S.trouveeCalculee = function(x, sid){ var tr = S.trouveeDe(x, sid); if(tr != null) return tr; var ev = S.evalDeSeance(sid || S.sid()); if(!ev) return null; var r = null;
-    S.corrigeesAu(null, sid).some(function(qi){ var q = ev.questions[qi], lu = S.lecture(x, qi, sid), rep = S.reponse(x, qi, sid);
+    S.corrigeesAu(null, sid).some(function(qi){ var q = ev.questions[qi], lu = S.lectureNote(x, qi, sid), rep = S.reponse(x, qi, sid);
       if(lu && lu.choix !== "aucun" && lu.choix.length && !juste(lu.choix, q) && rep && juste(rep.choix, q)){ r = qi; return true; } return false; });
     return r; };
   function partiel(choix, q){ if(!choix || choix === "aucun" || !(q.bonnes || []).length) return 0; var b = q.bonnes.map(Number), bon = 0, mauvais = 0;
@@ -4174,12 +4246,12 @@ var SCN = (function(){
       // (19/10, Paul, point 29 seconde moitié) dans une séance terminée, une question posée mais jamais révélée en classe compte dès que sa feuille
       // est lue (le soir, « Lire les copies ») : la règle de resultatLocalV (c4-seances.js), pour que les deux copies disent la même note
       // (21/10, Paul 09:45, point 12) une lecture de Paul (« Lire les copies », par:"prof") compte toujours, aussi pendant qu'une séance rouverte tourne
-      var luP = S.lecture(x, qi, sid), dePaul = !!(luP && luP.par === "prof");
+      var luP = S.lectureNote(x, qi, sid), dePaul = !!(luP && luP.par === "prof");
       if(corr.indexOf(qi) < 0 && !terminee && !dePaul){ st.push("n"); pts.push(null); return; }
       // (20/10, Paul 08:49, point 7 : 29 première moitié) dans une séance terminée, une question jamais lancée (ni questionsLancees, ni une réponse)
       // sort du total pour tous, comme la question manquée d'un élève parti : « x » ; une séance en pause garde ses questions à venir (pas terminée)
       if(terminee && lanc[qi] == null && !((s.reponses || {})[qi])){ st.push("x"); pts.push(null); return; }
-      var lu = S.lecture(x, qi, sid);
+      var lu = S.lectureNote(x, qi, sid);
       // (20/10, Paul 08:49, point 9 : le point 6 tranché) lancée mais pas révélée, lue en classe par le voisin : « pas encore lue » tant que Paul
       // ne l'a pas lue le soir (« Lire les copies », par:"prof") ; une question révélée ne change pas. La règle de resultatLocalV (c4-seances.js)
       if(lu && corr.indexOf(qi) < 0 && lu.par !== "prof"){ st.push("n"); pts.push(null); return; }
@@ -4881,7 +4953,8 @@ var ACT = (function(){
      bouge : réponses, lectures, questions lancées, écartées, révélées, l'ordre de la correction. */
   A.rouvrirSeance = function(id){ var s = SCN.sess(id); if(!s) return Promise.resolve(); var maj = {}, now = LIVE.maintenant(), n = +s.coursN || 1;
     /* (8.0.7, Paul 243) la séance telle qu'avant ce « 🔓 Rouvrir » : « Oublier seulement aujourd'hui » la remet telle quelle (avantCours/<n+1>) */
-    var photo = JSON.parse(JSON.stringify(s)); delete photo.id; delete photo.avantCours; maj[cheminS(id, "avantCours/" + (n + 1))] = photo;
+    var photo = JSON.parse(JSON.stringify(s)); delete photo.id; delete photo.avantCours; if(s.reponsesBrutes !== undefined) photo.reponses = s.reponsesBrutes ? JSON.parse(JSON.stringify(s.reponsesBrutes)) : null;
+    maj[cheminS(id, "avantCours/" + (n + 1))] = photo;
     maj[cheminS(id, "etat")] = "en_cours"; if(s.copies && s.copies.rendues) maj[cheminS(id, "copies/masquees")] = true;
     maj[cheminS(id, "cours/" + n)] = {debut:+(s.coursDebut || (s.lancee && s.lancee.date) || s.date || 0), arret:s.finLe || null, absents:SCN.absents(id).length ? SCN.absents(id) : null,
       partis:s.partis || null, places:s.places || null, entres:s.entres || null, fin:(s.lancee && s.lancee.fin) || null, masquees:!!(s.copies && s.copies.masquees)};
@@ -4923,6 +4996,12 @@ var ACT = (function(){
       var ph = x.ph === "b" || x.ph === "passage" ? "reponse" : x.ph, t = SCN.tempsDe(x.qi);
       return poserDeroule(id, {ph:ph, qi:x.qi, tour:x.tour, cote:x.cote, pour:x.pour, duree:ph === "reflexion" ? t.reflexion : t.reponse}); }); };
   A.confirmerReprise = function(){ var id = sid(); if(!id) return Promise.resolve(); var maj = {}; maj[cheminS(id, "repriseConfirmee")] = LIVE.maintenant(); return ecrireQCM(maj, "repriseConfirmee"); };
+  // (8.0.11c) « Compter cette réponse » : Paul fait compter une réponse arrivée hors temps (horsTempsDe) ; l'essai garde sa trace (admis)
+  A.admettre = function(qi, x, cle){ var id = sid(), s = SCN.sess(id); if(!id || !s || !cle) return Promise.resolve(); var e0 = (((s.essais || {})[qi] || {})[x] || {})[cle]; if(!e0) return Promise.resolve();
+    // (audit C17) la réponse avec les seuls champs de la 8.0.10, dans son écriture ; la marque « admis » de l'essai à part
+    var r = {choix:e0.choix, ts:e0.ts || LIVE.maintenant(), ms:e0.ms || LIVE.maintenant(), tour:e0.tour || 1, rouverte:e0.rouverte || null}, m1 = {}, m2 = {};
+    m1[cheminS(id, "essais/" + qi + "/" + x + "/" + cle + "/admis")] = LIVE.maintenant(); m2[cheminS(id, "reponses/" + qi + "/" + x)] = r;
+    return ecrireQCM(m1, "admettre (essai)").catch(function(){}).then(function(){ return ecrireQCM(m2, "admettre"); }); };
   A.piloter = function(id){ var s = SCN.sess(id); if(s){ LIVE.sid = id; LIVE.classeSlug = s.classeSlug; LIVE.changer(); } };
   /* (8.0.8) le profil de l'élève suit chaque correction : la lecture d'une question en classe (« 💡 Révéler »), une feuille lue le soir, une alerte
      tranchée, la grille du papier, le bilan, « 🛑 Terminer », les copies rendues. Il s'écrit juste après le geste, puis encore 1,5 s plus tard (la séance
@@ -4959,7 +5038,8 @@ var ELV = (function(){
     Object.keys(voulus).forEach(function(x){ var k = cl + "|" + x; if(PRES[k]) return; var ref = db.ref(DB_ROOT + "/presence/" + cl + "/" + x);
       ref.set({nomComplet:SCN.nomDe(x), last:Date.now()}); try { ref.onDisconnect().remove(); } catch(e){} PRES[k] = ref; });
   }
-  setInterval(function(){ Object.keys(PRES).forEach(function(k){ try { PRES[k].update({last:Date.now()}); } catch(e){} }); }, 8000);
+  // (8.0.11c) l'heure de la base, pas celle de la tablette : la console reconnaît une tablette décrochée à une présence qui ne bouge plus (decrocheH)
+  setInterval(function(){ Object.keys(PRES).forEach(function(k){ try { PRES[k].update({last:firebase.database.ServerValue.TIMESTAMP}); } catch(e){} }); }, 8000);
   E.presence = presence;
   E.courant = null;
   // qui est sur cet appareil : {combien, n (la tablette), g, d (les slugs des deux moitiés), classe}
@@ -5096,10 +5176,28 @@ var ELV = (function(){
   // répondre : la forme de la 7.7.1 ({choix, ts}), plus le tour et l'heure ; une réponse donnée à une question rouverte est définitive
   E.repondre = function(qi, choix, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve(); var e = SCN.etat() || {};
     var ouvert = e.qi === qi && SCN.aLaMain(x) && (SCN.reste(e) == null || SCN.reste(e) > 0);
+    /* (8.0.11c) jamais de perte silencieuse : un clic arrivé juste après la fin du temps (les choix se ferment à la seconde près) n'est pas compté,
+       mais il est gardé (essai « refuse ») et montré à Paul avec les réponses hors temps (HorsTempsH) */
+    if(!ouvert && e.qi === qi && SCN.aLaMain(x) && choix && choix.length){ var m0 = {}, TS0 = typeof firebase !== "undefined" && firebase.database && firebase.database.ServerValue ? firebase.database.ServerValue.TIMESTAMP : LIVE.maintenant();
+      m0[cheminS(id, "essais/" + qi + "/" + x + "/e" + LIVE.maintenant() + "_" + Math.floor(Math.random() * 1000))] = {choix:choix.slice().map(Number).sort(function(a, b){ return a - b; }), ts:LIVE.maintenant(), ms:LIVE.maintenant(), tour:e.tour || 1, recu:TS0, refuse:"temps"};
+      return ecrireQCM(m0, "repondre (temps écoulé)").then(function(){ return {ok:false, temps:true}; }); }
     if(!ouvert) return Promise.resolve({ok:false});
     if(e.rouvert === "tous" && SCN.reponse(x, qi) && SCN.reponse(x, qi).rouverte !== "tous") return Promise.resolve({ok:false});
-    if(!choix || !choix.length) return w("reponses/" + qi + "/" + x, null, "repondre (vide)");
-    return w("reponses/" + qi + "/" + x, {choix:choix.slice().map(Number).sort(function(a, b){ return a - b; }), ts:LIVE.maintenant(), ms:LIVE.maintenant(), tour:e.tour || 1, rouverte:e.ph === "rouvert" ? "un" : e.rouvert ? String(e.rouvert) : null}, "repondre"); };
+    // (8.0.11c) la tablette décrochée ne répond pas : elle ne voit plus la séance (MoitieH lui dit de lever la main)
+    if(LIVE.decroche && LIVE.decroche()) return Promise.resolve({ok:false, decroche:true});
+    /* (8.0.11c) chaque réponse porte l'heure où la base la reçoit (recu) et chaque essai est gardé (essais/<q>/<élève>) : une réponse arrivée hors de
+       sa fenêtre (une écriture restée en file pendant une coupure) ne compte pas et ne remplace jamais la réponse d'avant (horsTempsDe) */
+    /* (8.0.11c, audit C17) la réponse s'écrit exactement comme en 8.0.10 (mêmes champs, même chemin, une écriture seule) : les règles de la base qui
+       l'acceptaient l'acceptent toujours. L'essai (essais/<q>/<élève>/<clé>, avec recu) part dans une écriture À PART : si la base le refuse, la réponse
+       est gardée et compte comme en 8.0.10 (sans contrôle hors temps) ; il ne la retient ni ne la bloque jamais. */
+    var TS = typeof firebase !== "undefined" && firebase.database && firebase.database.ServerValue ? firebase.database.ServerValue.TIMESTAMP : LIVE.maintenant();
+    var v = !choix || !choix.length ? null
+      : {choix:choix.slice().map(Number).sort(function(a, b){ return a - b; }), ts:LIVE.maintenant(), ms:LIVE.maintenant(), tour:e.tour || 1, rouverte:e.ph === "rouvert" ? "un" : e.rouvert ? String(e.rouvert) : null};
+    var cle = "e" + LIVE.maintenant() + "_" + Math.floor(Math.random() * 1000), es = {}, rp = {};
+    es[cheminS(id, "essais/" + qi + "/" + x + "/" + cle)] = Object.assign({choix:[], ts:LIVE.maintenant(), ms:LIVE.maintenant(), tour:e.tour || 1}, v || {}, {recu:TS});
+    ecrireQCM(es, "repondre (essai)").catch(function(){});
+    rp[cheminS(id, "reponses/" + qi + "/" + x)] = v;
+    return ecrireQCM(rp, v ? "repondre" : "repondre (vide)"); };
   E.direB = function(qi, ouiNon, x){ x = qui(x); return x ? w("b/" + qi + "/" + x, ouiNon, "direB") : Promise.resolve(); };
   // la moitié de cet élève doit-elle dire B maintenant ? (la phase b de son tour, ou la suite déjà commencée par un geste de Paul : bPour)
   E.doitDireB = function(x){ return SCN.doitDireB(qui(x)); };
@@ -5149,18 +5247,27 @@ var MOTEUR = (function(){
     // une tablette ne passe la phase que si la console ne l'a pas fait 1,5 s après la fin du temps (console fermée, réseau perdu)
     if(M.relais && LIVE.maintenant() - ((e.depuis || 0) + e.duree * 1000) < 1500) return;
     var n = suivant(e, sid); if(!n || !db) return;
+    // (8.0.11c) une tablette décrochée ne relaie pas : coupée de la base, elle ferait avancer la séance chez elle seule (des phases fantômes)
+    if(M.relais && LIVE.connecte === false) return;
     var attendu = e.depuis, ph = e.ph;
     db.ref(DB_ROOT + "/sessions/" + sid + "/deroule").transaction(function(cur){
       if(!cur || cur.ph !== ph || cur.depuis !== attendu) return;   // déjà passé ailleurs
       return nettoyerQCM(Object.assign({qi:null, tour:null, cote:null, duree:null, pour:null}, n, {depuis:LIVE.maintenant()}));
-    }, function(err, ok, snap){ if(ok && snap){ var d = snap.val(), maj = {}; maj[cheminS(sid, "phase")] = _ph717(d.ph); maj[cheminS(sid, "phaseStart")] = d.depuis; maj[cheminS(sid, cleJournalQCM(d))] = ligneJournalQCM(d); ecrireQCM(maj, "miroir"); } });
+    }, function(err, ok, snap){ if(ok && snap){ var d = snap.val(), maj = {}; maj[cheminS(sid, "phase")] = _ph717(d.ph); maj[cheminS(sid, "phaseStart")] = d.depuis; maj[cheminS(sid, cleJournalQCM(d))] = ligneJournalQCM(d); ecrireQCM(maj, "miroir"); } },
+    false);   // (8.0.11c) applyLocally : false — la phase suivante n'existe sur la tablette que quand la base l'a acceptée
   };
+  /* (8.0.11c) la resynchronisation, sans rechargement : une tablette décrochée coupe et rouvre sa connexion à la base toutes les 8 s
+     (goOffline/goOnline : Firebase renvoie alors l'état de la base, et les écrans suivent) */
+  M.resync = function(){ if(!M.relais || !db || !LIVE.decroche || !LIVE.decroche()) return; var t = Date.now(); if(t - (M.dernierResync || 0) < 8000) return; M.dernierResync = t;
+    try { var d = firebase.database(); d.goOffline(); setTimeout(function(){ try { d.goOnline(); } catch(e){} }, 300); } catch(e){} LIVE.changer(); };
   // l'entrée finie : quand tous les présents ont fini l'attestation, la console passe à « prêts »
   M.entree = function(){ var sid = SCN.sid(), e = SCN.etat(sid); if(!sid || !e || e.ph !== "entree") return; var c = SCN.compteurs(null, sid);
     if(c.attestEntres && c.attestEntres[1] > 0 && c.attestEntres[0] === c.attestEntres[1]) poserDeroule(sid, {ph:"pret", reprise:e.reprise || null}); };
   // la console, le téléphone et le tableau mènent ; une tablette relaie seulement les temps comptés (M.relais), jamais l'entrée ; la correction, comme tout moment de la classe, commence au geste de Paul (13/10)
   M.demarrer = function(relais){ if(M.actif) return; M.actif = true; M.relais = !!relais;
-    setInterval(function(){ try { M.tic(); if(!M.relais) M.entree(); } catch(e){ console.error(e); } }, relais ? 500 : 250); };
+    setInterval(function(){ try { M.tic(); if(!M.relais) M.entree(); else M.resync(); } catch(e){ console.error(e); } }, relais ? 500 : 250);
+    // (8.0.11c) la tablette redessine chaque seconde pendant un temps compté même décrochée (le « lève la main » paraît sans attendre la base)
+    if(relais) setInterval(function(){ if(LIVE.decroche && LIVE.decroche()) LIVE.changer(); }, 1000); };
   return M;
 })();
 
@@ -9191,7 +9298,7 @@ function LancementH(appel, opts){
   var modale = appel && h(AppelH, {classe:classe});
   var pause = classe ? SCN.seances(classe).filter(function(s){ return s.enPause && !s.fin; })[0] : null;
   var reprPapier = pause && (((SCN.sess(pause.id) || {}).lancee || {}).mode === "papier" || pause.papier) && typeof CarteRepriseV === "function";
-  return Console("pilotage", "pilot", h(F, null, pause && (reprPapier ? h(CarteRepriseV, {key:"rp"}) : CarteRepriseH(pause)), carte, SessionsPrecedentes(), modale), false);
+  return Console("pilotage", "pilot", h(F, null, pause && (reprPapier ? h(CarteRepriseV, {key:"rp"}) : CarteRepriseH(pause)), carte, SessionsPrecedentes({sansReprise:true}), modale), false);
 }
 // l'appel (« 📋 Check-in : qui est absent aujourd'hui ? ») : ses absents, l'heure de fin ; « 🚀 Lancer la séance » ferme l'appel
 function AppelH(p){
@@ -9215,7 +9322,9 @@ function CarteRepriseH(se){
         h("div", {className:"meta", style:{color:"var(--violet)", fontWeight:700}}, "↳ pas encore « QCM précédent »", InfoIB("↳ pas encore « QCM précédent »", "Elle ne sert pas aux binômes tant qu'elle n'est pas terminée."))),
       h("button", Object.assign({className:"btn btn-primary", title:"Reprend la séance là où elle s'était arrêtée : l'appel, les mêmes binômes, puis le tour en cours recommence au début, voile compris."},
         marqueH("REPRENDRE:" + se.id, function(){ var x = ACT.lancerSeance(null, null, {reprise:se.id}); if(x && x.then) x.then(function(){ if(typeof navRemettre === "function") navRemettre(); }); })),
-        "▶️ Reprendre la séance du " + jjmm(se.date) + " — " + ou)));
+        "▶️ Reprendre la séance du " + jjmm(se.date) + " — " + ou),
+      // (8.0.11, Paul C17 315, 319) voir la séance en lecture seule, lire les copies des questions déjà posées : la séance reste en pause
+      typeof BoutonsPauseH === "function" && h("div", {className:"row reprise-voir-lire", style:{display:"flex", gap:".5rem", flexWrap:"wrap"}}, BoutonsPauseH(se.id))));
 }
 
 /* ═════ etape3.js ═════ */
@@ -11421,13 +11530,17 @@ function ordreCorrCalcule(){
   return toutesQ().filter(function(qi){ return ec.indexOf(qi) < 0; }).map(function(qi){ var b = bilanQ(qi, k); return {qi:qi, t:b.repondu ? b.justes / b.repondu : 1}; })
     .sort(function(a, b){ return a.t - b.t || a.qi - b.qi; }).map(function(x){ return x.qi; });
 }
+var CHRONO_MIN = {cle:null, v:null};
 // le moment, complété en direct de ce que la séance permet de calculer (les champs que QCM-1 ne donnerait pas)
 function momH(){
   var m = MOM() || {};
   if(!enDirect()) return m;
   m = Object.assign({}, m);
   var k = MO(), pres = SCN.presents(k), qi = m.qi;
-  if(m.depuis && m.duree) m.reste = Math.max(0, Math.ceil(m.duree - (Date.now() - m.depuis) / 1000));
+  /* (8.0.11c) le temps qui reste, à l'heure de la base (LIVE.maintenant : l'horloge de l'appareil corrigée de son décalage), et qui ne remonte jamais
+     pendant un même temps compté (même question, tour, phase, départ) : une horloge qui recule ne fait pas remonter le chrono */
+  if(m.depuis && m.duree){ var r0 = Math.max(0, Math.ceil(m.duree - (LIVE.maintenant() - m.depuis) / 1000)), cleC = [m.qi, m.tour, m.ph, m.depuis, m.duree].join("|");
+    if(CHRONO_MIN.cle === cleC && r0 > CHRONO_MIN.v) r0 = CHRONO_MIN.v; CHRONO_MIN.cle = cleC; CHRONO_MIN.v = r0; m.reste = r0; }
   if(qi != null && (m.ph === "reponse" || m.ph === "b" || m.ph === "passage") && m.nonRep == null){
     var cote = m.cote || coteDuTour(qi, m.tour || 1), rep = SCN.repondu(qi, k);
     m.nonRep = pres.filter(function(p){ return SCN.cote(p) === cote && rep.indexOf(p) < 0; });
@@ -11744,7 +11857,7 @@ function Pilot(s){
     h("h3", {style:{margin:"0 0 .2rem"}}, "📱 Tablettes", InfoI("Chaque tablette, ses deux moitiés : qui est assis où, et où en est chacun. « 👁 » montre les deux moitiés en direct. Glisse un nom sur un autre pour échanger deux élèves : pendant la séance, ils changent de tablette et retapent leur code ; leurs réponses les suivent."), h("span", {style:{fontWeight:400, display:"block", fontSize:".8rem", color:"#475569", margin:".1rem 0 0"}}, s.sousTitre || "")),
     // (8.0.10) en direct, chaque tablette sous son vrai numéro (tablettesH : une tablette vidée par l'appel reste à sa place, vide) ; la 8.0.9 serrait
     // la liste : après un trou (la 10 des Turing), la console montrait la tablette 11 sous le numéro 10
-    GrilleTablettes(s.paires || (enDirect() ? tablettesH() : pairesDuMoment()), s.etat, enDirect() ? {deplacer:true} : null),
+    GrilleTablettes(s.paires || (enDirect() ? tablettesH() : pairesDuMoment()), enDirect() && s.etat ? function(p){ var d = decrocheH(p); return d ? {cls:"m-decroche", st:d} : s.etat(p); } : s.etat, enDirect() ? {deplacer:true} : null),
     Legende(s.legende || LEG_Q));
   return Console("pilotage", "pilot", h("div", {className:"card"},
     TitreCarte("🎯 " + EV.titre + " — " + CLASSE, [
@@ -11822,6 +11935,31 @@ function PilotEstimation(){
     pas.length > 0 && h("div", {style:{fontSize:".85rem", color:"var(--gris)"}}, "Pas encore : " + pas.map(nomDe).join(", ") + "."),
     h("div", {className:"row", style:{marginTop:"1rem"}}, h("button", Object.assign({className:"btn btn-or", title:"Ferme l'estimation et ouvre, sur chaque moitié, la seconde attestation, avant la première question à corriger."}, geste("c-attest2", "lancerCorrection")), "📝 Lancer la correction"))), true);
 }
+
+/* (8.0.11c, complément 8011c) la tablette décrochée, vue de la console : pendant une question, l'élève entré dont la tablette ne donne plus de
+   nouvelles depuis 20 s (sa présence, qcm/presence/<classe>/<élève> : l'heure de la base, rafraîchie toutes les 8 s ; effacée quand la base perd
+   la tablette). Seulement un élève dont la console a déjà vu la présence pendant cette séance. */
+var PRES_VUE = {sid:null, vus:{}, d:{}, abo:null};
+function presencesH(){ var sid = SCN.sid(), cl = SCN.classe ? SCN.classe() : null; if(!sid || !cl || typeof db === "undefined" || !db) return {};
+  if(PRES_VUE.abo !== cl){ if(PRES_VUE.ref) try { PRES_VUE.ref.off("value", PRES_VUE.f); } catch(e){}
+    PRES_VUE.abo = cl; PRES_VUE.ref = db.ref(DB_ROOT + "/presence/" + cl); PRES_VUE.f = function(sn){ PRES_VUE.d = sn.val() || {}; Object.keys(PRES_VUE.d).forEach(function(x){ PRES_VUE.vus[x] = 1; }); LIVE.changer(); };
+    PRES_VUE.ref.on("value", PRES_VUE.f); }
+  if(PRES_VUE.sid !== sid){ PRES_VUE.sid = sid; PRES_VUE.vus = {}; Object.keys(PRES_VUE.d).forEach(function(x){ PRES_VUE.vus[x] = 1; }); }
+  return PRES_VUE.d; }
+function decrocheH(p){ if(!enDirect() || !p) return null; var m = momH() || {}; if(["reflexion", "passage", "reponse", "b", "rouvert", "close"].indexOf(m.ph) < 0) return null;
+  var pr = presencesH(); if(!PRES_VUE.vus[p] || !entreH(p)) return null; var x = pr[p], t = x && +x.last;
+  if(x && t && LIVE.maintenant() - t < 20000) return null;
+  return "📶 décrochée : sa tablette ne suit plus la séance — fais-lui recharger la page"; }
+setInterval(function(){ if(typeof LIVE !== "undefined" && LIVE.appareil && LIVE.appareil() === "console" && PRES_VUE.abo) LIVE.changer(); }, 5000);
+/* (8.0.11c) les réponses arrivées hors temps (horsTempsDe, src/live/base.js) : gardées à part, montrées à Paul, qui décide */
+function HorsTempsH(){ if(!enDirect()) return null; var s = SCN.sess(); var l = (s && s.horsTemps) || []; if(!l.length) return null; var ev = SCN.ev ? SCN.ev() : EV;
+  return h("div", {className:"hors-temps", "data-hors-temps":l.length, style:{border:"2px solid #C2410C", background:"#FFF7ED", borderRadius:"10px", padding:".5rem .8rem", margin:".5rem 0"}},
+    h("div", {style:{fontWeight:800, color:"#C2410C"}}, "⏰ " + l.length + " réponse" + (l.length > 1 ? "s arrivées" : " arrivée") + " après la fermeture de la question : elle" + (l.length > 1 ? "s ne comptent" : " ne compte") + " pas",
+      InfoI("Une tablette coupée de la base (réseau, veille) a envoyé ces réponses quand la question était déjà fermée. L'app ne les compte pas et ne les efface pas : c'est toi qui décides. « Compter cette réponse » la fait compter, à la place de ce que l'élève avait répondu à temps.")),
+    l.map(function(r){ var q = ev && ev.questions && ev.questions[r.qi], txt = q ? (r.choix === "aucun" ? "aucun de ces choix" : [].concat(r.choix || []).map(function(i){ return q.choix[i]; }).join(", ")) : "";
+      return h("div", {key:r.qi + r.x + r.cle, "data-hors-temps-ligne":r.qi + 1, style:{display:"flex", gap:".6rem", alignItems:"center", marginTop:".3rem"}},
+        h("span", null, "Q" + (r.qi + 1) + " · " + SCN.nomDe(r.x) + " : « " + txt + " », " + (r.refuse ? "cliquée juste après la fin du temps, à " : "arrivée à ") + SCN.heureFr(r.recu, true) + (!r.refuse && r.ferme ? ", " + Math.round((r.recu - r.ferme) / 1000) + " s après la fermeture" : "")),
+        r.cle ? h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", title:"Compter cette réponse de " + SCN.nomDe(r.x) + " à la question " + (r.qi + 1) + ", à la place de ce qu'il avait répondu à temps. Se change en relançant la question pour lui.", onClick:function(){ ACT.admettre(r.qi, r.x, r.cle); }}, "Compter cette réponse") : null); })); }
 
 /* ═════ c3-corr.js ═════ */
 /* ═══════════════ Complément 3 — la correction, la co-évaluation, le bilan, au moment de la scène ═══════════════
@@ -12056,7 +12194,7 @@ function EcrBilan(e, opts){
   }
   var corrigees = (r.corrigees || []).slice();
   // (QCM-2) en direct, une alerte tranchée pendant l'heure (la lecture devient celle de Paul, par:"prof") : « Corrigé d'après ta feuille. »
-  if(enDirect()) EV.questions.forEach(function(q, i){ var l = SCN.lecture(cleE(e), i); if(l && l.par === "prof" && corrigees.indexOf(i) < 0) corrigees.push(i); });
+  if(enDirect()) EV.questions.forEach(function(q, i){ var l = typeof SCN.lectureNote === "function" ? SCN.lectureNote(cleE(e), i) : SCN.lecture(cleE(e), i); if(l && l.par === "prof" && (!l.pause || l.desaccord) && corrigees.indexOf(i) < 0) corrigees.push(i); });
   var compQ = function(cp){ return compQuestions(cp).filter(function(i){ return i !== an && !horsQH(i); }).map(function(i, j){ return h(F, {key:i}, j ? " · " : "", "Q" + (i+1) + " ", st[i] === "t" ? h("span", {className:"v-orange"}, "✓") : st[i] === "j" ? "✓" : "✗"); }); };
   var autoOk = !SCN.autonomie(cleE(e), k).retire;
   return Page(badgeDe(e), "🎯 Bilan personnel", h("div", {className:"bilan-c"},
@@ -12658,7 +12796,8 @@ function rendueAu(se, k){ return SCN.rendueAu(se.id, k) ? se.rendues : null; }
 
 /* ════════ Avant l'heure : les séances précédentes de la classe ════════ */
 // (QCM-3) avec la base : celles de la classe choisie au lancement, et la séance à reprendre en tête ; sans base, celles du scénario
-function SessionsPrecedentes(){ return v3db() ? h(SessionsPrecedentesV) : SessionsPrecedentesM(); }
+// (8.0.11) le lancement (LancementH, etape2.js) montre déjà la carte « Séance à reprendre » en tête : la liste ne la répète pas (la 8.0.10 la montrait deux fois)
+function SessionsPrecedentes(o){ return v3db() ? h(SessionsPrecedentesV, o && o.sansReprise ? {sansReprise:true} : null) : SessionsPrecedentesM(); }
 function SessionsPrecedentesM(){
   var k = MO(), av = SCN.seancesAvant(k), prec = SCN.qcmPrecedent(k);
   var demo = av.filter(function(s){ return s.demo; })[0];
@@ -13175,12 +13314,12 @@ function memeClasse(se, c){ return !!c && (se.classeCle === c || se.classeSlug =
 function presentsCourt(se){ var n = se.presents.length; return n + " présent" + (n > 1 ? "s" : ""); }
 function qcmPrecedentV(c){ try { if(SCN.LIVE && typeof SCN.qcmPrecedent === "function"){ var q = SCN.qcmPrecedent(null, c); if(q) return q.id; } } catch(e){} 
   var l = seancesV().filter(function(se){ return memeClasse(se, c) && se.terminee && !se.demo && !se.rattrapage && !se.test; }).sort(function(a, b){ return b.ms - a.ms; }); return l[0] ? l[0].id : null; }
-function SessionsPrecedentesV(){
+function SessionsPrecedentesV(p){
   useV3();
   var sA = useState(null), annul = sA[0], setAnnul = sA[1];   // (8.0.7) la garde de « Annuler cette séance », ouverte sur cette séance
   var c = classeDuLancement(), l = seancesV().filter(function(se){ return memeClasse(se, c) && se.terminee && !se.test; }).sort(function(a, b){ return b.ms - a.ms; });
   var demo = l.filter(function(se){ return se.demo; })[0], lignes = l.filter(function(se){ return !se.demo && !se.rattrapage; }), prec = qcmPrecedentV(c), nomC = nomClasseV((l[0] && l[0].classe) || c || "");
-  var vue = h(F, null, h(CarteRepriseV),
+  var vue = h(F, null, !(p && p.sansReprise) && h(CarteRepriseV),
     h("div", {className:"card"},
       h("h2", null, "📚 Séances précédentes — " + nomC, InfoI("Les séances passées de la classe : chacune ouvre ses résultats. Celle qui sert de « QCM précédent » aux binômes est marquée. La démo ne laisse qu'une ligne.")),
       h("div", {className:"results-eval-list"},
@@ -13211,7 +13350,11 @@ function CarteRepriseV(){
         h("div", {className:"meta"}, se.date + " " + se.heure + " · " + etat),
         h("div", {className:"meta", style:{color:"var(--violet)", fontWeight:700}}, "↳ pas encore « QCM précédent »", InfoIB("↳ pas encore « QCM précédent »", "Elle ne sert pas aux binômes tant qu'elle n'est pas terminée."))),
       h("button", {className:"btn btn-primary", "data-va":"c-appel&seance=" + encodeURIComponent(se.id), title:papier ? "Reprend la séance pour la correction : l'appel, les binômes reprennent les tablettes, l'estimation, la seconde attestation, puis toutes les questions à la suite." : "Reprend la séance là où elle s'était arrêtée : l'appel, les mêmes binômes, puis le tour en cours recommence au début, voile compris."},
-        "▶️ Reprendre la séance du " + se.date.slice(0, 5) + " — " + ou)));
+        "▶️ Reprendre la séance du " + se.date.slice(0, 5) + " — " + ou),
+      // (8.0.11) une séance sur tablettes : « 👁️ Voir la séance » et « 📄 Lire les copies » (la séance sur papier a sa grille du soir)
+      !papier && typeof BoutonsPauseH === "function" && h("div", {className:"row reprise-voir-lire", style:{display:"flex", gap:".5rem", flexWrap:"wrap"}}, BoutonsPauseH(se.id)),
+      // (8.0.11, Paul 11/11 08:28) sur papier, ni « Voir » ni « Lire » : la carte le dit, ses mots
+      papier && h("div", {className:"meta", "data-papier-sans-suivi":"1", title:"La séance sur papier se suit sur les feuilles : ni « 👁️ Voir la séance », ni « 📄 Lire les copies ». Ta grille du soir garde ce que disent les feuilles.", style:{fontWeight:700, color:"#9A3412"}}, "Séance sur papier : il n'y a pas de suivi sur l'appli.")));
 }
 
 /* ═════ c3-evals.js ═════ */
@@ -14867,11 +15010,13 @@ function ModeTestGrand(){
 function ChoixReponse(p){
   var s = useState(p.sel || []), sel = s[0], set = s[1];
   // (QCM-2) en direct, chaque clic enregistre la réponse de l'élève de la moitié (p.onChange : ELV.repondre)
-  function basculer(i){ var n = sel.indexOf(i) >= 0 ? sel.filter(function(x){ return x !== i; }) : sel.concat([i]); set(n); if(p.onChange) p.onChange(n); }
+  // (8.0.11c) le temps de la réponse est écoulé (à l'heure de la base) : les choix se ferment tout de suite, sans attendre que la séance passe à la suite
+  function basculer(i){ if(p.fini) return; var n = sel.indexOf(i) >= 0 ? sel.filter(function(x){ return x !== i; }) : sel.concat([i]); set(n); if(p.onChange) p.onChange(n); }
   return h(F, null,
     h("div", {className:"eleve-choix" + (p.long ? " long" : "")}, p.ordre.map(function(i){
-      return h("button", Object.assign({key:i, className:"eleve-choix-btn" + (sel.indexOf(i) >= 0 ? " selected" : "")}, clic("REP:" + (p.cle || "") + ":" + i, function(){ basculer(i); })), h("span", null, p.q.choix[i]));
+      return h("button", Object.assign({key:i, disabled:!!p.fini, className:"eleve-choix-btn" + (sel.indexOf(i) >= 0 ? " selected" : "")}, clic("REP:" + (p.cle || "") + ":" + i, function(){ basculer(i); })), h("span", null, p.q.choix[i]));
     })),
+    p.fini ? h("div", {className:"eleve-feedback" + (sel.length ? " valide" : ""), "data-fini":"1"}, "⏱️ " + p.prenom + ", le temps est écoulé" + (sel.length ? " : ta réponse est enregistrée." : " : attends la suite.")) :
     h("div", {className:"eleve-feedback" + (sel.length ? " valide" : ""), "data-encore":sel.length && p.encore != null ? p.encore : null}, sel.length ? (p.encore != null ? "✅ Tu peux encore changer ta réponse : " + p.encore + " s" : "✅ Réponse enregistrée — tu peux encore la changer") : "💡 " + (p.prenom ? p.prenom + ", clique" : "Clique") + " sur le ou les choix qui correspondent à ta réponse."));   // (8.0.10) l'élève nommé
 }
 function EcrReponse(e, qi, ordre, sel, chrono, ev, opts){
@@ -14885,7 +15030,7 @@ function EcrReponse(e, qi, ordre, sel, chrono, ev, opts){
     h("div", {className:"eleve-q-enonce"}, q.enonce),
     h("div", {className:"eleve-pose-stylo"}, h("span", {className:"ic"}, "🖊️"), h("span", null, e.prenom + ", pose ton stylo et sélectionne maintenant ta réponse.")),
     h("div", {className:"eleve-chrono" + (chrono <= 2 ? " urgent" : "")}, h("div", {className:"label"}, "Temps de réponse"), h("div", {className:"v"}, chrono)),
-    h(ChoixReponse, {key:e.cle + qi, cle:e.cle + ":" + qi, prenom:e.prenom, q:q, ordre:ordre, sel:sel, long:long, encore:opts && opts.encore ? chrono : null, onChange:enDirect() && !ev ? function(n){ agirE("repondre", qi, n, cleE(e)); } : null})));
+    h(ChoixReponse, {key:e.cle + qi, cle:e.cle + ":" + qi, prenom:e.prenom, q:q, ordre:ordre, sel:sel, long:long, encore:opts && opts.encore ? chrono : null, fini:enDirect() && !ev && chrono === 0, onChange:enDirect() && !ev ? function(n){ agirE("repondre", qi, n, cleE(e)); } : null})));
 }
 
 /* ═══════════════ QCM-2 · HEURE — la tablette partagée, en direct ═══════════════
@@ -15031,6 +15176,11 @@ function MoitieH(p, cote, autreP){
   // seul sur sa tablette (pas de voisin présent) : il a la main aux deux tours, rien à voiler (SCN.seul, SCN.aLaMain)
   var seul = typeof SCN.seul === "function" ? SCN.seul(p) : !v, main = typeof SCN.aLaMain === "function" ? SCN.aLaMain(p) : cote === actif;
   var voile = function(){ return v && !seul ? voileChronoH(v, e, ph, reste, m.tour || 1) : EcrAttente(e); };
+  /* (8.0.11c, complément 8011c) la tablette décrochée (coupée de la base, ou figée) pendant une question : ni choix ni chrono, l'élève lève la main ;
+     elle se resynchronise seule (MOTEUR.resync) et l'écran revient de lui-même */
+  if(enDirect() && LIVE.decroche && LIVE.decroche() && qi != null && ["reflexion", "passage", "reponse", "b", "rouvert"].indexOf(ph) >= 0)
+    return Page(badgeDe(e), EV.titre, h("div", {className:"eleve-q-zone", "data-decroche":LIVE.decroche()}, h("div", {className:"etat-attente", style:{fontSize:"1.3rem", fontWeight:800}}, "📶 " + e.prenom + ", ta tablette a un problème de connexion : lève la main."),
+      h("div", {style:{color:"var(--gris)", marginTop:".5rem"}}, "Elle essaie de se reconnecter toute seule.")));
   if(!ph || ph === "avant" || ph === "appel" || ph === "entree" || ph === "pret"){
     var a1 = attestH(p, 1);
     return a1.fini ? EcrPret(e) : h(AttestCoches, {key:"a1" + p, e:e, lignes:LignesAttest(e, e.voisin), n0:a1.lignes, attest:1, fini:a1.fini, titre:"Avant de commencer, " + e.prenom, bouton:"Je commence", titrePage:EV.titre, pret:function(){ return EcrPret(e); }});
@@ -15807,6 +15957,8 @@ function Console(groupe, tab, contenu, séance){
         h("div", {className:"nav2-groupes"}, groupes.map(function(g){ return h("button", {key:g[0], className:"nav2-groupe" + (g[0] === groupe ? " actif" : ""), "data-va":g[2]}, g[1]); }), h("button", {className:"nav2-aide", "data-va":"c-mode-emploi"}, "?")),
         // (relecteur n°297) un groupe sans sous-onglets n'a pas de rangée vide
         sous[groupe].length > 0 && h("div", {className:"nav2-sous"}, sous[groupe].map(function(t){ return h("button", {key:t[0], className:"tab " + (t[0] === tab ? "actif" : ""), "data-va":t[2]}, t[1]); })))),
+      // (8.0.11c) les réponses arrivées hors temps, au-dessus de chaque écran de la séance (la question, la correction) : Paul décide
+      groupe === "pilotage" && tab === "pilot" && typeof HorsTempsH === "function" ? HorsTempsH() : null,
       contenu));
 }
 // les gestes qui menaient par libellé seul ont désormais leur destination dans leur écran ; ALLER["*"] ne garde que les onglets
@@ -16285,7 +16437,15 @@ function ptsQuestionV(choix, q, mode){
   if(mode === "partiel"){ var b = q.bonnes, bon = 0, mau = 0; choix.forEach(function(c){ if(b.indexOf(+c) >= 0) bon++; else mau++; }); return b.length ? Math.max(0, (bon - mau) / b.length) : 0; }
   return memesChoixV(choix, q.bonnes) ? 1 : 0;
 }
-function lectureV(se, qi, slug){ var l = ((se.S.lectures || {})[qi] || {})[slug]; if(!l) return null; return {choix:l.choix === "aucun" ? "aucun" : v3Liste(l.choix).map(Number), par:l.par || null, ms:l.ms || null}; }
+function lectureBruteV(se, qi, slug){ var l = ((se.S.lectures || {})[qi] || {})[slug]; if(!l) return null; return {choix:l.choix === "aucun" ? "aucun" : v3Liste(l.choix).map(Number), par:l.par || null, ms:l.ms || null}; }
+/* (8.0.11, Paul C17 319-322) la lecture de Paul pendant la pause (lecturesPause/<qi>/<élève>, « 📄 Lire les copies » sur la carte « Séance à reprendre ») ;
+   la feuille repasse quand même chez le voisin en classe (lectures/), et c'est la lecture de Paul qui compte (la règle de SCN.lectureNote) */
+function lecturePauseV(se, qi, slug){ var l = ((se.S.lecturesPause || {})[qi] || {})[slug]; if(!l) return null; return {choix:l.choix === "aucun" ? "aucun" : v3Liste(l.choix).map(Number), ms:l.ms || null}; }
+function memeLectureV(a, b){ if(a === "aucun" || b === "aucun") return a === b; return memesChoixV(a || [], b || []); }
+function lectureV(se, qi, slug){ var l = lectureBruteV(se, qi, slug); if(l && l.par === "prof") return l; var p = lecturePauseV(se, qi, slug); if(!p) return l;
+  return {choix:p.choix, par:"prof", ms:p.ms, pause:true, voisin:l, desaccord:!!l && !memeLectureV(l.choix, p.choix)}; }
+function lirePauseV(se, slug, qi, sel){ var u = {}; u["lecturesPause/" + qi + "/" + slug] = {choix:sel === "aucun" ? "aucun" : sel.slice().map(Number).sort(function(a, b){ return a - b; }), ms:Date.now()};
+  return v3Update(v3Q("sessions/" + se.id), u); }
 function tabletteV(se, qi, slug){ var r = ((se.S.reponses || {})[qi] || {})[slug]; return r ? {choix:v3Liste(r.choix).map(Number), tour:r.tour || null, ms:r.ms || r.ts || null} : null; }
 // la feuille saisie : celle de la 7.7.1 (papier/<slug>/choix/<qi> : les choix), ou la grille du soir de l'app (papier/<slug>/<qi> : « j » ou « f »)
 function feuillePapierV(se, qi, slug){ var p = (se.S.papier || {})[slug]; if(!p) return null;
@@ -16302,9 +16462,20 @@ function aLireV(se){
     // une feuille que Paul a lue lui-même (« Que dit la feuille ? », par:"prof") est tranchée : les lignes d'avant sa lecture restent
     // (lues, « Corrigé d'après sa feuille ») ; celles que sa lecture ferait naître (« … ; <voisin> y a lu <ce que Paul a lu> ») n'existent pas
     if(Array.isArray(L)){ var St = se.S.aLire || {}, Lc = se.S.lectures || {}; L = L.filter(function(x){ var p = x.p || x.eleveSlug, q = x.q != null ? x.q : x.qi, l = (Lc[q] || {})[p]; return !(l && l.par === "prof" && !St[x.id]); }); }
-    if(Array.isArray(L) && (L.length || se.nouvelle)) return L.map(function(x){ return {id:x.id, p:x.p || x.eleveSlug, q:+(x.q != null ? x.q : x.qi), sorte:x.sorte, txt:x.txt || "", lignes:v3Liste(x.lignes).map(String), lue:!!x.lue, corrigee:!!(x.corrigee || x.corrige), nom:x.nom || nomEleveV(se, x.p || x.eleveSlug), brut:x}; }); } catch(e){} }
-  var A = se.S.aLire || {}; return Object.keys(A).map(function(id){ var x = A[id] || {}; return {id:id, p:x.eleveSlug, q:+x.qi, sorte:x.sorte || "b", txt:x.txt || "", lignes:v3Liste(x.lignes).map(String), lue:!!x.lue, corrigee:!!x.corrige, nom:nomEleveV(se, x.eleveSlug), brut:x}; })
-  .filter(function(x){ return x.p != null && !isNaN(x.q); }).sort(function(a, b){ return a.q - b.q || a.nom.localeCompare(b.nom, "fr"); }); }
+    if(Array.isArray(L) && (L.length || se.nouvelle)) return avecPauseV(se, L.map(function(x){ return {id:x.id, p:x.p || x.eleveSlug, q:+(x.q != null ? x.q : x.qi), sorte:x.sorte, txt:x.txt || "", lignes:v3Liste(x.lignes).map(String), lue:!!x.lue, corrigee:!!(x.corrigee || x.corrige), nom:x.nom || nomEleveV(se, x.p || x.eleveSlug), brut:x}; })); } catch(e){} }
+  var A = se.S.aLire || {}; return avecPauseV(se, Object.keys(A).filter(function(id){ return (A[id] || {}).sorte !== "pzd"; }).map(function(id){ var x = A[id] || {}; return {id:id, p:x.eleveSlug, q:+x.qi, sorte:x.sorte || "b", txt:x.txt || "", lignes:v3Liste(x.lignes).map(String), lue:!!x.lue, corrigee:!!x.corrige, nom:nomEleveV(se, x.eleveSlug), brut:x}; })
+  .filter(function(x){ return x.p != null && !isNaN(x.q); }).sort(function(a, b){ return a.q - b.q || a.nom.localeCompare(b.nom, "fr"); })); }
+/* (8.0.11, Paul C17 321-322) une feuille que Paul a lue pendant la pause est tranchée : les lignes que la lecture du voisin ferait naître n'existent pas
+   (celles qui ont déjà un état restent) ; si le voisin y a lu autre chose en classe, la feuille remonte (« le voisin a lu : … ») ; sa lecture compte */
+function avecPauseV(se, L){ var P = se.S.lecturesPause || {}, St = se.S.aLire || {}; if(!Object.keys(P).length) return L;
+  // (les lignes de la classe naissent à la révélation, après la lecture de Paul : seule une ligne déjà lue par lui reste)
+  L = L.filter(function(x){ return x.sorte === "pzd" || !lecturePauseV(se, x.q, x.p) || !!(St[x.id] && St[x.id].lue); });
+  Object.keys(P).forEach(function(qi){ Object.keys(P[qi] || {}).forEach(function(slug){ var l = lectureV(se, +qi, slug); if(!l || !l.pause || !l.desaccord) return;
+    var q = se.ev.questions[+qi], v = l.voisin, vp = v.par && v.par !== slug ? prenomEleveV(se, v.par) : "le voisin", id = "pzd_" + slug + "_" + qi, st = St[id] || {};
+    var cite = function(c){ return c === "aucun" ? "aucun de ces choix" : "« " + c.map(function(i){ return q.choix[i]; }).join(" » et « ") + " »"; };
+    L.push({id:id, p:slug, q:+qi, sorte:"pzd", txt:"Tu as lu sa feuille pendant la pause ; en classe, " + vp + " y a lu autre chose. Ta lecture compte.",
+      lignes:["Ta lecture : " + cite(l.choix), "le voisin a lu : " + cite(v.choix)], lue:!!st.lue, corrigee:!!st.corrige, nom:nomEleveV(se, slug), brut:{}}); }); });
+  return L; }
 function absentQV(se, qi, slug){ return !!(se.nouvelle && se.S && se.S.coursN && typeof absentAuCoursQCM === "function" && !tabletteV(se, qi, slug) && absentAuCoursQCM(se.S, slug, qi)); }
 function resultatLocalV(se, slug){
   var ev = se.ev, S = se.S, mode = ev.mode, revelees = v3Liste(S.revelees).map(Number), partiAt = (S.partis || {})[slug];
@@ -16362,6 +16533,7 @@ function resultatV0(se, slug){
 function avecCorrigeesV(se, slug, r){
   var c = (r.corrigees || []).map(Number);
   Object.keys(se.S.lectures || {}).forEach(function(qi){ var l = (se.S.lectures[qi] || {})[slug]; if(l && l.par === "prof" && c.indexOf(+qi) < 0) c.push(+qi); });
+  Object.keys(se.S.lecturesPause || {}).forEach(function(qi){ var l = lectureV(se, +qi, slug); if(l && l.pause && l.desaccord && c.indexOf(+qi) < 0) c.push(+qi); });
   // une question écartée n'a pas été posée : sa case est « · », pas « ? » (pas encore corrigée)
   var ec = (se.ecartees || []).map(Number), st = r.st.map(function(s, i){ return ec.indexOf(i) >= 0 && (s === "n" || s == null) ? "x" : s; });
   return c.length === (r.corrigees || []).length && st.join() === r.st.join() ? r : Object.assign({}, r, {corrigees:c, st:st});
@@ -16417,10 +16589,11 @@ function sansLectureV(se){ var l = [], hors = se.ecartees.concat(se.annulees), S
    « Lire les copies » la lui propose (« Que dit la copie ? »), à côté des lignes « à lire » ; sa lecture (par:"prof") la tranche */
 function aLireCopiesV(se){
   var L = aLireV(se), S = se.S, deja = {}; if(!S || !se.nouvelle || (S.lancee || {}).mode === "papier") return L;
+  if(se.pause) return aLirePauseV(se, L);
   L.forEach(function(x){ deja[x.p + "|" + x.q] = 1; });
   var hors = se.ecartees.concat(se.annulees), Lc = S.lectures || {}, rev = v3Liste(S.revelees).map(Number), posee = function(i){ return (S.questionsLancees || {})[i] != null || (S.reponses || {})[i] != null; };
   var cite = function(q, c){ return v3Liste(c).map(Number).map(function(i){ return "« " + q.choix[i] + " »"; }).join(" et "); };
-  se.presents.forEach(function(e){ se.ev.questions.forEach(function(q, i){ if(hors.indexOf(i) >= 0 || !posee(i) || deja[e.slug + "|" + i] || absentQV(se, i, e.slug)) return;
+  se.presents.forEach(function(e){ se.ev.questions.forEach(function(q, i){ if(hors.indexOf(i) >= 0 || !posee(i) || deja[e.slug + "|" + i] || absentQV(se, i, e.slug) || lecturePauseV(se, i, e.slug)) return;
     var l = (Lc[i] || {})[e.slug], revelee = rev.indexOf(i) >= 0;
     if(revelee && l && (l.par !== "prof" || l.avant)) return;   // révélée et lue en classe par le voisin : la règle de la séance
     var t = tabletteV(se, i, e.slug), pr = prenomEleveV(se, e.slug), tl = t && t.choix.length ? cite(q, t.choix) : null;
@@ -16433,6 +16606,20 @@ function aLireCopiesV(se){
     L.push({id:"nl_" + e.slug + "_" + i, p:e.slug, q:i, sorte:"nl",
       txt:vc == null ? pr + " : la correction s'est arrêtée avant cette question ; personne n'a lu sa feuille en classe." : vp + " a lu la feuille " + deNom(pr) + " en classe, mais la question n'a pas été révélée : " + pr + " n'a pas pu contester.",
       lignes:lignes, lue:!!(l && l.par === "prof"), corrigee:!!(l && l.par === "prof"), nom:nomEleveV(se, e.slug)}); }); });
+  return L; }
+/* (8.0.11, Paul C17 319) « 📄 Lire les copies » sur la carte « Séance à reprendre » : la lecture du soir habituelle, sur les questions déjà posées.
+   Les lignes de la séance (les questions déjà corrigées en classe) ; puis chaque question posée, pas encore révélée, de chaque présent : Paul lit la
+   copie (lecturesPause/) ; la question en cours à la pause (son tour recommence à la reprise) n'est pas proposée ; un absent à cette question non plus */
+function aLirePauseV(se, L){
+  var S = se.S, deja = {}, hors = se.ecartees.concat(se.annulees), rev = v3Liste(S.revelees).map(Number), r = ((S.deroule || {}).reprise) || {};
+  var enCours = r.qi != null && ["reflexion", "passage", "reponse", "b", "rouvert"].indexOf(r.ph) >= 0 ? +r.qi : null;
+  var posee = function(i){ return (S.questionsLancees || {})[i] != null || (S.reponses || {})[i] != null; };
+  var cite = function(q, c){ return v3Liste(c).map(Number).map(function(i){ return "« " + q.choix[i] + " »"; }).join(" et "); };
+  L.forEach(function(x){ deja[x.p + "|" + x.q] = 1; });
+  se.presents.forEach(function(e){ se.ev.questions.forEach(function(q, i){ if(hors.indexOf(i) >= 0 || !posee(i) || i === enCours || rev.indexOf(i) >= 0 || deja[e.slug + "|" + i] || absentQV(se, i, e.slug)) return;
+    var t = tabletteV(se, i, e.slug), pr = prenomEleveV(se, e.slug), lp = lecturePauseV(se, i, e.slug);
+    L.push({id:"pz_" + e.slug + "_" + i, p:e.slug, q:i, sorte:"pz", txt:pr + " : la séance est en pause. Ta lecture compte ; sa feuille passera quand même chez son voisin à la correction.",
+      lignes:[t && t.choix.length ? "Tablette : " + cite(q, t.choix) : "Pas de clic sur la tablette"], lue:!!lp, corrigee:false, nom:nomEleveV(se, e.slug)}); }); });
   return L; }
 function restentV(se){ var nl = aLireV(se).filter(function(x){ return !x.lue; }), deja = {}; nl.forEach(function(x){ deja[x.p + "|" + x.q] = 1; });
   return nl.length + sansLectureV(se).filter(function(x){ return !deja[x.p + "|" + x.q]; }).length; }
@@ -17183,7 +17370,8 @@ function FicheAncienneV(se, slug, r, mt, au, comps, e, sq, nom, il, pre){
    [QCM-3 · SOIR, reprise 7, point 10] posée telle quelle dans le code ; ce qu'elle ne faisait pas : la ligne grise sous chaque question
    est la phrase du point 8 et ses lignes (ligneALireH) ; le « Non » de la faute s'enregistre (ACT.autonomieLecture : aLire/<id>/autonomie/<élève>)
    et la question ne revient pas ; le point de départ de « 🧮 Ce soir » s'enregistre à la première ouverture (ACT.departSoir : soir/depart). */
-function LireCopiesVue(){ return Console("donnees", "results", h(LireCopiesV), false); }
+// (8.0.11) ouverte depuis la carte « Séance à reprendre », la lecture d'une séance en pause reste sous « 🎯 Pilotage classe »
+function LireCopiesVue(){ var se = seanceParam() ? seanceV(seanceParam()) : null, p = !!(se && se.pause); return Console(p ? "pilotage" : "donnees", p ? "pilot" : "results", h(LireCopiesV), false); }
 function LireCopiesV(){ return h(LireCopiesC, {key:seanceParam() || "-"}); }
 function sansAccentL(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase(); }
 // les initiales, comme correction_dictee (matchEleveInitials) : NP ou PN, puis le début ou un morceau du nom ou du prénom ; « ze » trouve Zélia
@@ -17227,12 +17415,14 @@ var LC_DEPART = {};
 function departL(se){
   var b = SCN.LIVE && typeof SCN.departSoir === "function" ? SCN.departSoir(se.id) : null;
   if(b) return {notes:b.notes || {}, auto:b.auto || {}};
-  if(LC_DEPART[se.id]) return LC_DEPART[se.id];
+  var cleD = se.id + (se.pause ? "|pause" : "");   // (8.0.11) le départ d'une lecture pendant la pause ne sert pas au soir d'après le cours
+  if(LC_DEPART[cleD]) return LC_DEPART[cleD];
   var d = {notes:{}, auto:{}};
   se.presents.forEach(function(e){ var r = resultatV(se, e.slug); d.notes[e.slug] = r ? {n:r.n, total:r.total, sur20:r.sur20, pts:(r.pts || []).slice()} : null; d.auto[e.slug] = !!autonomieV(se, e.slug).retire; });
   // gardé dans la base à la première ouverture : il tient après un rechargement
-  if(SCN.LIVE && typeof ACT !== "undefined" && typeof ACT.departSoir === "function") ACT.departSoir(se.id, v3Sans(d));
-  return (LC_DEPART[se.id] = d);
+  // (8.0.11) pendant la pause, rien ne s'écrit ici : le point de départ du soir sera celui d'après le cours
+  if(!se.pause && SCN.LIVE && typeof ACT !== "undefined" && typeof ACT.departSoir === "function") ACT.departSoir(se.id, v3Sans(d));
+  return (LC_DEPART[cleD] = d);
 }
 function ptsL(x){ return x == null ? "—" : fr1(x) + (x >= 2 ? " points" : " point"); }
 // la note de la copie, en direct : chaque question, ce qui a bougé depuis l'ouverture, et le total (sur l'échelle et sur 20)
@@ -17277,9 +17467,15 @@ function LireCopiesC(){
   var props = rech.trim() ? eleves.filter(function(e){ return e.p !== cur && initialesL(e.nom, rech); }).slice(0, 6) : [];
   function ouvrir(e){ setCur(e.p); setRech(""); setOuvert(null); setSel([]); }
   function noteDe(p){ var r = resultatV(se, p); return r ? fr1(r.n) + " / " + r.total : "—"; }
-  function repondu(x, avantJ, apresJ, avantNote, fautes){ var o = Object.assign({}, faits); o[x.id] = {ecrire:aEcrireL(ev.questions[x.q], avantJ, apresJ), avantNote:avantNote, fautes:fautes || [], dec:{}}; setFaits(o); setOuvert(null); setSel([]); }
+  // (8.0.11) pendant la pause, la copie part encore chez le voisin à la correction : Paul n'y écrit rien
+  function repondu(x, avantJ, apresJ, avantNote, fautes){ var o = Object.assign({}, faits); o[x.id] = {ecrire:se.pause ? "✍️ N'écris rien sur la copie : elle passe chez le voisin à la correction." : aEcrireL(ev.questions[x.q], avantJ, apresJ), avantNote:avantNote, fautes:fautes || [], dec:{}}; setFaits(o); setOuvert(null); setSel([]); }
   function decide(x, f, retirer){ var go = Promise.all([retirer ? retirerAutonomieSoirV(se, f.qui) : null, typeof ACT !== "undefined" && ACT.autonomieLecture ? ACT.autonomieLecture(se.id, x.id, f.qui, retirer ? "retire" : "garde") : null]); go.then(function(){ var o = Object.assign({}, faits), g = Object.assign({}, o[x.id]); g.dec = Object.assign({}, g.dec); g.dec[f.qui] = retirer ? "retire" : "garde"; o[x.id] = g; setFaits(o); }); }
-  var titre = TitreCarte("📄 Lire les copies — " + ev.titre + " — " + se.classe, [h("button", {key:1, className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Revient au tableau de la séance. Ce que tu as déjà répondu reste enregistré."}, "← Tableau de la séance")]);
+  var titre = TitreCarte("📄 Lire les copies — " + ev.titre + " — " + se.classe, [se.pause
+    ? h("button", {key:1, className:"btn btn-ghost btn-sm", "data-local":"1", "data-fermer-pause":"1", title:"Revient à la carte « Séance à reprendre ». Ce que tu as déjà lu reste enregistré ; la séance reste en pause.", onClick:function(){ navRemettre(); }}, "✕ Fermer")
+    : h("button", {key:1, className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:"Revient au tableau de la séance. Ce que tu as déjà répondu reste enregistré."}, "← Tableau de la séance")]);
+  // (8.0.11, Paul C17 319-321) pendant la pause : ce que Paul lit compte, et la classe corrige quand même toutes les feuilles
+  var bandeau = se.pause ? h("div", {"data-bandeau-pause":"1", title:"Ce que tu lis maintenant compte pour la note. À la reprise, rien ne change pour la classe : chaque feuille passe chez le voisin ; si le voisin y lit autre chose, ta lecture compte et la feuille te revient après le cours, avec ce qu'il a lu.", style:{margin:"-.4rem 0 1rem", padding:".6rem .8rem", borderRadius:10, background:"#FFF7ED", border:"2px solid #FDBA74", fontWeight:800}},
+    "⏸️ La séance est en pause : tu lis les questions déjà posées. Ta lecture compte ; à la reprise, toutes les feuilles passent quand même chez le voisin.") : null;
   var dep = departL(se), chg = [];
   se.presents.forEach(function(e){ var d = dep.notes[e.slug], r = resultatV(se, e.slug); if(d && r && d.n !== r.n) chg.push(e.nom + " " + fr1(d.n) + " / " + d.total + " → " + fr1(r.n) + " / " + r.total + " (" + (r.n > d.n ? "+" : "−") + fr1(Math.abs(r.n - d.n)) + ")");
     var a = autonomieV(se, e.slug).retire; if(a !== dep.auto[e.slug]) chg.push((a ? "⛔ " : "↩️ ") + e.nom + " : point d'autonomie " + (a ? "retiré" : "rendu")); });
@@ -17303,9 +17499,9 @@ function LireCopiesC(){
         style:{padding:"5px 10px", marginTop:3, borderRadius:6, cursor:"pointer", background:ii === 0 ? "#EEE8FF" : "transparent", fontWeight:ii === 0 ? 800 : 500, display:"flex", justifyContent:"space-between", gap:8}},
         h("span", null, e.nom), h("span", {style:{fontSize:".8rem", color:n ? "#9A3412" : "var(--gris)"}}, n ? n + " question" + (n > 1 ? "s" : "") + " à lire" : e.lignes.length ? "✔ lue" : "rien à lire")); }),
     rech.trim() && !props.length && h("div", {style:{fontSize:".85rem", color:"var(--gris)", marginTop:4}}, "Aucun élève ne correspond."));
-  if(!c) return h("div", {className:"card", "data-lire-copies":se.id}, titre, compte, soir, champ);
+  if(!c) return h("div", {className:"card", "data-lire-copies":se.id}, titre, bandeau, compte, soir, champ);
   var restent = c.lignes.filter(function(x){ return !x.lue; }).length;
-  return h("div", {className:"card", "data-lire-copies":se.id}, titre, compte, soir,
+  return h("div", {className:"card", "data-lire-copies":se.id}, titre, bandeau, compte, soir,
     h("div", {style:{border:"3px solid var(--violet)", borderRadius:"14px", padding:"1rem 1.2rem", background:"#FBFAFF"}},
       h("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"baseline", gap:".8rem", flexWrap:"wrap"}},
         h("div", null, h("div", {style:{fontSize:"1.6rem", fontWeight:900}}, "📄 " + c.nom), h(AutonomieL, {se:se, slug:c.p, marge:".3rem"})),
@@ -17338,13 +17534,98 @@ function LireCopiesC(){
                 return h("button", {key:k, className:"eleve-choix-btn" + (on ? " selected" : ""), "data-local":"1", title:"Ce choix est sur la copie.", onClick:function(){ var a = sel === "aucun" ? [] : sel; setSel(on ? a.filter(function(y){ return y !== k; }) : a.concat([k])); }}, h("span", null, t)); }),
                 h("button", {className:"eleve-choix-btn aucun" + (sel === "aucun" ? " selected" : ""), "data-local":"1", title:"La copie ne dit aucun des choix.", onClick:function(){ setSel(sel === "aucun" ? [] : "aucun"); }}, "Aucun de ces choix")),
               h("div", {style:{display:"flex", gap:".6rem", marginTop:".6rem"}},
-                h("button", {className:"btn btn-primary", "data-local":"1", disabled:sel !== "aucun" && !sel.length, title:"Enregistre ce que dit la copie : la note se recalcule.", onClick:function(){ var n0 = noteDe(c.p), apJ = sel !== "aucun" && memesChoixV(sel, qq.bonnes), fa = fautesL(se, x, sel); feuilleDitV(se, x.p, x.q, sel).then(function(){ repondu(x, qs.luJ, apJ, n0, fa); }); }}, "✔ Valider"),
+                h("button", {className:"btn btn-primary", "data-local":"1", disabled:sel !== "aucun" && !sel.length, title:"Enregistre ce que dit la copie : la note se recalcule.", onClick:function(){ var n0 = noteDe(c.p), apJ = sel !== "aucun" && memesChoixV(sel, qq.bonnes), fa = fautesL(se, x, sel); (x.sorte === "pz" ? lirePauseV : feuilleDitV)(se, x.p, x.q, sel).then(function(){ repondu(x, qs.luJ, apJ, n0, fa); }); }}, "✔ Valider"),
                 h("button", {className:"btn btn-ghost", "data-local":"1", title:"Revient à la question, sans rien changer.", onClick:function(){ setOuvert(null); setSel([]); }}, "Annuler"))),
             x.txt ? h("div", {style:{fontSize:".88rem", color:"var(--gris)", marginTop:".4rem"}}, ligneALireH(x)) : h("div", {style:{fontSize:".8rem", color:"var(--gris)", marginTop:".4rem"}}, qs.aide)));
       }),
       (!restent || !c.lignes.length) && champ));
 }
 ECRANS_SOIR_V["c-lire-copies"] = LireCopiesVue; if(ECRANS_SOIR.indexOf("c-lire-copies") < 0) ECRANS_SOIR.push("c-lire-copies");
+
+/* ═════ voir-pause.js ═════ */
+/* ════════ QCM 8.0.11 (conscience n°17, Paul C17 315, 319) : voir et lire une séance en pause ════════
+   Sur la carte « ⏸️ Séance à reprendre », à côté de « ▶️ Reprendre » : « 👁️ Voir la séance » et « 📄 Lire les copies ».
+   « 👁️ Voir la séance » (c-voir-pause) : l'écran de pilotage tel qu'il était à la pause, en lecture seule. Il ne lit que la base (seanceV) :
+   aucun geste, aucun chrono, aucune écriture ; la séance reste en pause, les tablettes n'en savent rien. Tous ses boutons sont « data-local »
+   (le routeur des gestes, src/live/gestes.js, ne les prend jamais pour un geste de la séance). « ✕ Fermer » ramène à la carte.
+   « 📄 Lire les copies » : la lecture du soir habituelle (lire-copies.js), sur les questions déjà posées (aLirePauseV, c4-seances.js). */
+function qPoseeVP(S, i){ return (S.questionsLancees || {})[i] != null || (S.reponses || {})[i] != null; }
+function nbPoseesVP(se){ return se.ev.questions.filter(function(q, i){ return qPoseeVP(se.S, i); }).length; }
+// les deux boutons de la carte ; sid : la séance en pause
+function BoutonsPauseH(sid){
+  var se = typeof seanceV === "function" && v3db() ? seanceV(sid) : null, n = se ? nbPoseesVP(se) : 0;
+  var voir = h("button", {key:"voir", className:"btn btn-ghost", "data-local":"1", "data-voir-pause":sid,
+    title:"Ouvre l'écran de pilotage tel qu'il était à la pause, en lecture seule : les questions à droite, chaque question avec les réponses des élèves, les présents et les absents. Rien ne part vers les tablettes, aucun chrono ; la séance reste en pause.",
+    onClick:function(){ navOuvrir("c-voir-pause", {seance:sid}); }}, "👁️ Voir la séance");
+  var lire = !se ? h("button", {key:"lire", className:"btn btn-ghost", disabled:true, title:"La séance n'est pas encore lue de la base : le bouton s'ouvre dans un instant."}, "📄 Lire les copies")
+    : !n ? h("button", {key:"lire", className:"btn btn-ghost", disabled:true, title:"Aucune question n'a encore été posée : il n'y a pas de copie à lire."}, "📄 Lire les copies")
+    : h("button", {key:"lire", className:"btn btn-ghost", "data-local":"1", "data-lire-pause":sid,
+      title:"Ouvre la lecture du soir sur les " + n + " question" + (n > 1 ? "s" : "") + " déjà posée" + (n > 1 ? "s" : "") + " : tu lis les copies de ton tas, une par une. Ta lecture compte. À la reprise, rien ne change pour la classe : toutes les feuilles passent quand même chez le voisin.",
+      onClick:function(){ navOuvrir("c-lire-copies", {seance:sid}); }}, "📄 Lire les copies");
+  return [voir, lire];
+}
+function VoirPauseVue(){ return Console("pilotage", "pilot", h(VoirPauseC, {key:seanceParam() || "-"}), false); }
+function VoirPauseC(){
+  useV3();
+  var se = seanceV(seanceParam()), s0 = useState(null), choix = s0[0], setChoix = s0[1];
+  if(!se) return h("div", {className:"card"}, h("p", null, "Chargement…"));
+  var S = se.S, ev = se.ev, r = ((S.deroule || {}).reprise) || {}, qp = r.qi != null ? +r.qi : null;
+  var posees = ev.questions.map(function(q, i){ return i; }).filter(function(i){ return qPoseeVP(S, i); });
+  var qi = choix != null ? choix : qp != null ? qp : posees.length ? posees[posees.length - 1] : 0, q = ev.questions[qi];
+  var rev = v3Liste(S.revelees).map(Number), hors = se.ecartees.concat(se.annulees), B = S.b || {};
+  var nRep = posees.reduce(function(a, i){ return a + Object.keys((S.reponses || {})[i] || {}).length; }, 0);
+  var cite = function(c){ return c === "aucun" ? "aucun de ces choix" : c.map(function(i){ return q.choix[i]; }).join(" + "); };
+  var tour = r.tour || 1, ou = qp != null ? "question " + (qp + 1) + ", " + (tour === 1 ? "1er" : "2e") + " tour" : "avant la question 1";
+  // la question choisie : chaque présent, sa réponse sur la tablette, ce qu'il a dit, la lecture de sa feuille
+  var justes = 0, rep = 0;
+  var lignes = se.presents.map(function(e){
+    var t = tabletteV(se, qi, e.slug), abs = absentQV(se, qi, e.slug), dit = (B[qi] || {})[e.slug], l = lectureV(se, qi, e.slug), j = t && memesChoixV(t.choix, q.bonnes);
+    if(t){ rep++; if(j) justes++; }
+    return h("div", {key:e.slug, className:"voir-l", "data-voir-eleve":e.slug, style:{display:"grid", gridTemplateColumns:"minmax(150px,1.1fr) minmax(160px,1.6fr) 90px minmax(120px,1fr)", gap:".5rem", padding:".3rem .4rem", borderBottom:"1px solid #EEE", alignItems:"baseline"}},
+      h("span", {style:{fontWeight:700}}, e.nom),
+      abs ? h("span", {style:{color:"var(--gris)"}}, "absent à cette question")
+        : t ? h("span", {style:{fontWeight:700, color:j ? "#15803D" : "#B91C1C"}}, (j ? "✓ " : "✗ ") + cite(t.choix))
+        : h("span", {style:{color:"#9A3412"}}, qPoseeVP(S, qi) ? "⏳ pas de réponse" : "—"),
+      h("span", {style:{fontSize:".85rem", color:"var(--gris)"}}, dit === "oui" ? "a dit : oui" : dit === "non" ? "a dit : non" : t ? "n'a rien dit" : ""),
+      h("span", {style:{fontSize:".85rem"}}, l ? (l.pause ? "lue par toi (pause) : " : "lue : ") + cite(l.choix) : rev.indexOf(qi) >= 0 ? "pas de lecture" : ""));
+  });
+  var titre = TitreCarte("👁️ " + ev.titre + " — " + se.classe, [
+    h("span", {key:0, style:{fontSize:".8rem", color:"var(--gris)", fontWeight:700}}, "⏸️ en pause à la " + ou),
+    h("button", {key:1, className:"btn btn-ghost btn-sm", "data-local":"1", "data-fermer-voir":"1", title:"Revient à la carte « Séance à reprendre ». La séance reste en pause ; rien n'a été écrit.", onClick:function(){ navRemettre(); }}, "✕ Fermer")]);
+  var bandeau = h("div", {className:"voir-bandeau", "data-lecture-seule":"1", title:"Cet écran montre la séance telle qu'elle était à la pause. Aucun bouton n'agit sur la séance : rien ne part vers les tablettes, aucun chrono. « ▶️ Reprendre », sur la carte, la reprend.",
+    style:{margin:"0 0 .8rem", padding:".6rem .9rem", borderRadius:10, background:"#FFF7ED", border:"2px solid #FDBA74", fontWeight:900, fontSize:"1.05rem"}}, "👁️ Lecture seule : la séance est en pause");
+  var stats = [[se.presents.length, "présents"], [se.absents.length, "absents"], [posees.length + " / " + ev.questions.length, "questions posées"], [nRep, "réponses"]];
+  var colG = h("div", null,
+    h("div", {className:"pilot-q-current", "data-voir-q":qi + 1},
+      h("div", {className:"num"}, "Question " + (qi + 1) + " / " + ev.questions.length + (qi === qp ? " — ⏸️ la pause est ici" : "") + (hors.indexOf(qi) >= 0 ? " — retirée" : "")),
+      h("div", {className:"enonce"}, q.enonce),
+      h("div", {className:"pilot-q-bonne"}, h("span", {style:{fontWeight:900}}, "✓ Bonne" + (q.bonnes.length > 1 ? "s" : "") + " réponse" + (q.bonnes.length > 1 ? "s" : "") + " : "), q.bonnes.map(function(i){ return q.choix[i]; }).join("  /  ")),
+      h("div", {style:{marginTop:".4rem", fontWeight:800}}, qPoseeVP(S, qi) ? justes + " / " + rep + " justes · " + rep + " réponse" + (rep > 1 ? "s" : "") + " sur " + se.presents.length + " présents" : "Pas encore posée")),
+    h("h3", {style:{margin:".8rem 0 .3rem"}}, "Les réponses des élèves", InfoI("Pour chaque présent : ce qu'il a cliqué sur la tablette (✓ juste, ✗ faux), ce qu'il a dit à la fin de son temps de réponse, et la lecture de sa feuille si elle existe.")),
+    h("div", {"data-voir-reponses":qi + 1, style:{maxHeight:"62vh", overflowY:"auto", border:"1px solid #E5E0F5", borderRadius:8}}, lignes));
+  var P = S.places || {}, tabs = Object.keys(P).filter(function(n){ return P[n] && (P[n].g || P[n].d); }).sort(function(a, b){ return a - b; });
+  var colM = h("div", null,
+    h("h3", {style:{margin:"0 0 .3rem"}}, "📱 Tablettes", InfoI("Le plan des tablettes à la pause : chaque tablette et ses deux élèves. À la reprise, chacun revient sur sa place.")),
+    h("div", {"data-voir-tablettes":tabs.length, style:{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))", gap:".4rem"}},
+      tabs.map(function(n){ var t = P[n]; return h("div", {key:n, style:{padding:".35rem .5rem", border:"1px solid #DDD6FE", borderRadius:8, background:"#FBFAFF", fontSize:".88rem"}},
+        h("div", {style:{fontWeight:900}}, "Tablette " + n), h("div", null, t.g ? nomEleveV(se, t.g) : "—"), h("div", null, t.d ? nomEleveV(se, t.d) : "—")); })),
+    h("h3", {style:{margin:".8rem 0 .3rem"}}, "🚫 Absents (" + se.absents.length + ")"),
+    h("div", {"data-voir-absents":se.absents.length}, se.absents.length ? se.absents.map(function(e){ return h("div", {key:e.slug}, e.nom); }) : "Aucun absent."));
+  var colD = h("div", {className:"pilot-overview"},
+    h("h3", null, h("span", null, "📋 Toutes les questions", InfoI("Clique une question pour voir les réponses des élèves. Rien ne se lance d'ici."))),
+    ev.questions.map(function(qq, i){
+      var po = qPoseeVP(S, i), nr = Object.keys((S.reponses || {})[i] || {}).length, nj = Object.keys((S.reponses || {})[i] || {}).filter(function(x){ var t = tabletteV(se, i, x); return t && memesChoixV(t.choix, qq.bonnes); }).length;
+      return h("div", {key:i, className:"pilot-q-mini" + (i === qi ? " current" : "") + (po && i !== qi ? " passee" : "") + (hors.indexOf(i) >= 0 ? " retiree" : ""), "data-voir-col":i + 1, "data-local":"1", style:{cursor:"pointer"},
+        title:"Montre les réponses des élèves à la question " + (i + 1) + ".", onClick:function(){ setChoix(i); }},
+        h("div", {className:"pilot-q-mini-head"}, h("span", {className:"pilot-q-mini-num"}, "Q" + (i + 1)), h("span", {className:"pilot-q-mini-niv niv-" + qq.niveau}, (NIV[qq.niveau] || {}).label || "")),
+        h("div", {className:"pilot-q-mini-enonce"}, qq.enonce),
+        h("div", {className:"pilot-q-mini-status"}, se.ecartees.indexOf(i) >= 0 ? "❌ Écartée" : se.annulees.indexOf(i) >= 0 ? "⚠️ Annulée" : po ? (i === qp ? "⏸️ pause ici — " : rev.indexOf(i) >= 0 ? "corrigée — " : "posée — ") + nj + "/" + nr + " justes" : "pas encore posée"));
+    }));
+  return h("div", {className:"card", "data-voir-pause":se.id}, titre, bandeau,
+    h("div", {className:"pilot-stats"}, stats.map(function(x, i){ return h("div", {key:i, className:"pilot-stat"}, h("div", {className:"v"}, x[0]), h("div", {className:"l"}, x[1])); })),
+    h("div", {className:"pilot-grid v2"}, colG, colM, colD));
+}
+ECRANS_SOIR_V["c-voir-pause"] = VoirPauseVue; if(ECRANS_SOIR.indexOf("c-voir-pause") < 0) ECRANS_SOIR.push("c-voir-pause");
 
 /* ═════ c3-bulles.js ═════ */
 /* ═══════════════ Complément 3 — changement 2 : une infobulle sur chaque élément des écrans de Paul ═══════════════
