@@ -3462,3 +3462,6 @@ Les 8 fiches injectées (4e ch. 0 séances 2, 6, 7 ; 3e ch. 1 séances 2, 3) ne 
 - Bug : le dossier de la clé USB des images ne peut pas être changé au pilotage.
 - Bug : une image locale (clé) intégrée au chapitre 4e : la colonne de droite donne son titre, la diapo ne la montre pas.
 - Bug : clic sur G (gras) pour mettre la problématique en gras → l'image a disparu.
+
+**FICHES INJECTÉES — ✔ RÉGLÉ AU HUB (C17, 11/11 06:11, sur le « tu peux supprimer » de Paul 05:09)** : les 8 blocs « fiche » pointent leur feuille de l'Atelier (copies retirées) ; 3E ch. index 1 séance 2 : 5 diapos recopiées supprimées (26 → 21), minutes reportées sur les fiches (7 min), listes d'activités corrigées ; relu au hub, identique au prévu. Sauvegarde : sas `SAUVEGARDES/FICHES-INJECTEES-*`. Preuve BJ (faux hub, vraies données) : copies des classes suivent seules, récit des heures jouées identique mot pour mot.
+**DETTE (mesurée par BJ)** — *ouverte* — « Supprimer » une diapo dans l'Atelier décale les listes d'activités (`deroule/activites` rangées par position) : les diapos changent d'activité et le récit des heures déjà jouées change.
