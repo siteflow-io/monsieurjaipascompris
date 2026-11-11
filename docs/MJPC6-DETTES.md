@@ -3453,3 +3453,12 @@ Les 8 fiches injectées (4e ch. 0 séances 2, 6, 7 ; 3e ch. 1 séances 2, 3) ne 
 - (2) Le témoin « tableau en Win K » (`dr-tableau.js` ~l. 276-282) apparaît dès que Paul écrit au pilotage et fait bouger toute la colonne de droite : à retirer.
 - (3) Les diapos de présentation du chapitre et de la séance : ordre de dévoilement à revoir (au moins une diapo montre des éléments déjà dévoilés), et Paul doit pouvoir tout modifier.
 - (4) Les notions de la séance partent au cahier de textes et à la diapo de réactivation alors que l'élève ne les écrit jamais formulées dans son cahier.
+
+**DÉROULÉ (C17, Paul 11/11 05:59) — PRÉCISIONS ET TROIS BUGS** — *ouverts* —
+- (179) Mesuré au hub : 4e = « Le Horla » (7 séances) puis « Paris à la barre » dont la SEULE séance est « Evaluation des connaissances » (type autre, déroulé vide, QCM). Aucun 3e chapitre au hub. Paul : « un chapitre en suit un autre ».
+- (180) Le témoin « tableau en Win K » : plus discret, dans un coin, sans « Win K » ; gardé s'il dit vraiment le retour du tableau (à mesurer), sinon retiré.
+- (181) Diapos de présentation chapitre/séance : on ne mélange pas les genres, on ne tord pas une diapo selon son genre — mesurer ce que « avoir la main » veut dire dans le genre.
+- (182) Notions : Paul doit avoir le choix (cahier de textes, réactivation), savoir d'où elles sont puisées (visuel dans ses diapos), et changer les formulations de l'IA avant de les montrer (ou non).
+- Bug : le dossier de la clé USB des images ne peut pas être changé au pilotage.
+- Bug : une image locale (clé) intégrée au chapitre 4e : la colonne de droite donne son titre, la diapo ne la montre pas.
+- Bug : clic sur G (gras) pour mettre la problématique en gras → l'image a disparu.
