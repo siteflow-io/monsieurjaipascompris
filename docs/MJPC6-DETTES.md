@@ -3465,3 +3465,9 @@ Les 8 fiches injectées (4e ch. 0 séances 2, 6, 7 ; 3e ch. 1 séances 2, 3) ne 
 
 **FICHES INJECTÉES — ✔ RÉGLÉ AU HUB (C17, 11/11 06:11, sur le « tu peux supprimer » de Paul 05:09)** : les 8 blocs « fiche » pointent leur feuille de l'Atelier (copies retirées) ; 3E ch. index 1 séance 2 : 5 diapos recopiées supprimées (26 → 21), minutes reportées sur les fiches (7 min), listes d'activités corrigées ; relu au hub, identique au prévu. Sauvegarde : sas `SAUVEGARDES/FICHES-INJECTEES-*`. Preuve BJ (faux hub, vraies données) : copies des classes suivent seules, récit des heures jouées identique mot pour mot.
 **DETTE (mesurée par BJ)** — *ouverte* — « Supprimer » une diapo dans l'Atelier décale les listes d'activités (`deroule/activites` rangées par position) : les diapos changent d'activité et le récit des heures déjà jouées change.
+
+**DÉROULÉ (C17, 11/11 07:30) — MESURÉ PAR BK ET BL** — *ouvert* —
+- (1) Au hub, les listes d'activités de la 3e séance 2 sont déjà décalées d'un cran (7 sur 8 contiennent la 1re diapo de l'activité suivante) ; le rattachement de chaque diapo est juste. BK empêche tout nouveau décalage ; réparer les listes changerait le récit des heures jouées : à Paul.
+- (2) Sur l'intégration (sans BK), la Relecture de l'heure de la 3 D.B. plante (copie réelle) ; elle ne plantait pas sur la 8.97 (BJ). Avant toute mise en ligne.
+- (3) L'emploi du temps : une heure banalisée « Évaluation hors séance — <nom de séance> » ne compte pas comme la séance jouée (4 Hugo : QCM reproposé lundi 16). Question posée à Paul.
+- (4) Le mercredi, cases du fil « langue » : « aucune séance prête » (aucun chapitre sur ce fil).
