@@ -971,6 +971,10 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 12/11/2026 — QCM 8.0.12 (conscience n°17)
+- **Lire toutes les copies pendant la pause** (la classe à gauche, la copie à droite, initiales) : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (`LireCopiesC`, branche `se.pause`) ; écrans validés `MANDATS/pieces/8012/` ; inventaire 8.0.11 → 8.0.12 dans `LIVRAISONS/CODE-QCM/VERDICT.md` (branche `code-qcm-8012b`).
+- **Bancs** : `LIVRAISONS/CODE-QCM/banc/banc-8012-pause.js` (pause, et séance finie comparée à la 8.0.11 avec `AVANT=1`), `banc-8011-pause.js` (T3 porté sur le nouvel écran).
+
 ## AJOUTS DU 11/11/2026 (soir) — QCM 8.0.11 (conscience n°17)
 - **La séance en pause** (« 👁️ Voir la séance », « 📄 Lire les copies », `lecturesPause/`) : `LIVRAISONS/CODE-QCM/src/voir-pause.js`, `src/lire-copies.js`.
 - **La tablette qui calculait trop** (calculs gardés en mémoire) : `src/live/base.js` (`sanMJPC`, `S.places`, `S.eleves`) ; mesure dans `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md` points 12 à 18.

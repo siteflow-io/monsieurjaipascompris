@@ -1569,6 +1569,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `99d27acde120` (commit `b8f9795`) · 3 216 541 o · md5 `71603d630a864edba4090dbbd84116f9` · v8.91.2-㉗
 - **Restauration en cas de `BUG`** : le blob → PUT sur `contents/index.html`, puis bit à bit contre le md5. **Ce que revenir ferait perdre** : sur « Où en est la classe », le vrai nombre d'élèves et de diapos, le retour depuis la Relecture, la réactivation visible. Au hub : rien de nouveau.
 
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.12 (12/11/2026, conscience n°17)
+- Avant : 8.0.11, 2 234 592 o, md5 `6e20856be28bcf588481e07ccd772c43`, blob `cb8c67b24d2c` (commit `a6fac12`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.11-6e20856b.html`. Promu : 8.0.12, 2 265 130 o, md5 `cd9a02c76b319adbb0af41a734d180b2`, commit `a90c636`, blob `afc4af3bdc79`.
+- Revenir est sans risque pour les données : la 8.0.12 n'écrit aucun chemin nouveau (mêmes lectures en pause que la 8.0.11, `lecturesPause/`).
+
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.11 (11/11/2026, conscience n°17)
 - Avant : 8.0.10, 2 196 914 o, md5 `368295a8343ec6192d08d44fdde62a74`, blob `1b7edb66b59e` (commit `723d16b`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.10-368295a8.html`. Promu : 8.0.11, 2 234 592 o, md5 `6e20856be28bcf588481e07ccd772c43`, commit `a6fac12`, blob `cb8c67b24d2c`.
 - **Attention avant de revenir** : la 8.0.10 perd des clics sur une tablette lente (refusés sans rien dire) et compte une réponse arrivée après la fermeture. Les séances écrites par la 8.0.11 restent lisibles par la 8.0.10 (`reponses` inchangé ; `essais/` et `lecturesPause/` sont ignorés).
