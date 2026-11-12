@@ -3474,3 +3474,6 @@ Les 8 fiches injectées (4e ch. 0 séances 2, 6, 7 ; 3e ch. 1 séances 2, 3) ne 
 - (2) Sur l'intégration (sans BK), la Relecture de l'heure de la 3 D.B. plante (copie réelle) ; elle ne plantait pas sur la 8.97 (BJ). Avant toute mise en ligne.
 - (3) L'emploi du temps : une heure banalisée « Évaluation hors séance — <nom de séance> » ne compte pas comme la séance jouée (4 Hugo : QCM reproposé lundi 16). Question posée à Paul.
 - (4) Le mercredi, cases du fil « langue » : « aucune séance prête » (aucun chapitre sur ce fil).
+
+**DÉROULÉ (C17, Paul 12/11 07:35) — QUAND ÇA SONNE** — *à cadrer pour la livraison suivante, pas celle-ci* — Quand ça sonne et que Paul n'est pas sur le cahier de textes : une modale s'ouvre, « tu en es là, tout est enregistré jusque-là » (et ce doit être VRAI, mesuré), avec « Ouvrir le cahier de textes » qui shunte tout et saute directement à la diapo du cahier.
+**DETTES RESTANTES À LA 8.98 (C17, 12/11)** — *ouvertes* — répétition sur ordinateur ×6 : 3,7 à 14,8 s selon le passage ; le pointeur du tableau part 2,7-2,9 s après le clic à ×6 (trois lectures au hub en série). Mandat BU au sas, arrêté pour livrer.
