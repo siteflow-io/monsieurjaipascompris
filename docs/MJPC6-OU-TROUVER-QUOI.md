@@ -1024,3 +1024,9 @@
 
 ## AJOUTS DU 10/11/2026 (ter) — RÉDACTION 1.4.32.3-micro
 - Une ancienne photo (remplacée) ajoutée pour un élève : `scPage(cvLu, src, avecPhoto, pour)` lui donne un identifiant neuf (`id0 + "_p…"`) au lieu de la laisser de côté.
+
+## AJOUTS DU 12/11/2026 — DÉROULÉ 8.99.0-㊱
+- La fenêtre quand ça sonne : `DR_SON`, `dr_sonneOuvrir` / `dr_sonneFermer` / `dr_sonneCahier` (« Ouvrir le cahier de textes »), « tout est enregistré » lu au registre `dr_enrDebut` / `dr_enrFin` / `dr_sonneEnrTexte` (dr-classe.js, dr-socle.js).
+- Le décompte de 10 s : `dr_decompteLancer` / `dr_decompteFin`, le bandeau `dr_dcHtml`, le compte `dr_dcTic` / `dr_dcReste` (champ `decompte` de l'état et de la scène).
+- La phrase sous « Aller au cahier de textes ▸ » : `dr_cdtAttend` ; la séance faite qui dit son échec : `dr_enchLancer`.
+- L'emploi du temps qui suit ses heures : `edtVif*` (`edtVifSuivre`, `edtVifRecu`, `edtVifRepeindre`) ; les lectures du lancement en un tour : `dr_prelire`, `dr_lancerPrelire`.
