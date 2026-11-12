@@ -1030,3 +1030,6 @@
 - Le décompte de 10 s : `dr_decompteLancer` / `dr_decompteFin`, le bandeau `dr_dcHtml`, le compte `dr_dcTic` / `dr_dcReste` (champ `decompte` de l'état et de la scène).
 - La phrase sous « Aller au cahier de textes ▸ » : `dr_cdtAttend` ; la séance faite qui dit son échec : `dr_enchLancer`.
 - L'emploi du temps qui suit ses heures : `edtVif*` (`edtVifSuivre`, `edtVifRecu`, `edtVifRepeindre`) ; les lectures du lancement en un tour : `dr_prelire`, `dr_lancerPrelire`.
+
+## AJOUTS DU 12/11/2026 (bis) — DÉROULÉ 9.0.0-㊲
+- La fiche au pilote : rendue entière comme au tableau (`rendre`, `dr-socle.js`, bloc `b.t === 'fiche'`) ; défilement `dr_ficheDefile` / `dr_ficheMolette` (le tableau suit par `et.ficheDefil`) ; « + fiche… » remplace la fiche de la diapo (et la diapo de la copie de classe ouverte, comme « Changer la fiche liée… »).

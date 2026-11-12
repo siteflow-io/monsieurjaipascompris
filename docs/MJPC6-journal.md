@@ -1489,3 +1489,8 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   résolution : sas BV (fenêtre, registre des écritures `dr_enrDebut/Fin`), BX (`dr_decompteLancer/Fin`, `dr_dc*`, `dr_cdtAttend` « Ça a sonné », `dr_enchLancer` dit son issue), BU (récit fictif composé seulement quand on le lit, une seule peinture en répétition, `dr_prelire`), BW (`edtVif*` : abonnement aux heures, grande fenêtre dès la première image).
   contrôle : banc 23/24 (bw-edt « autre onglet » 11/15, non bloquant), bv 26/26, bx 18/18 (×6 15/18), répétition ×6 8/8 sous 4 s, clic EDT ×6 0,86 s.
   → mots-clés : sonnerie · décompte · cahier de textes · répétition lente · emploi du temps · 8.99 · conscience n°17
+- **12/11/2026 17:10 — PROMOTION 9.0.0-㊲ (les fiches en classe) — conscience n°17, sur « promeus » de Paul (17:09).**
+  problème : Paul, 14:30-14:57 : au pilote la fiche ne montrait que son titre + « ⤢ Ouvrir la fiche » (branche posée par BB le 10/11) ; ni molette, ni réglette, ni surlignage ; « + fiche… » ajoutait une seconde fiche hors de vue ; une fiche seule ne s'enlevait pas ; ▶ comptait des dévoilements sans effet.
+  résolution : sas BY (`59776aa`, `2325001`) : la fiche entière au pilote (`dr-socle.js`), ✍ par paragraphe, « + fiche… » remplace, une fiche seule s'enlève, ▶ marque la fiche dévoilée puis passe.
+  contrôle : AQ 74/74, BY 14/14 (8.99 : 2/7), banc complet 24/25, récit inchangé (F9).
+  → mots-clés : fiche · molette · réglette · surlignage · ✍ · 9.0 · conscience n°17
