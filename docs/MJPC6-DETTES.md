@@ -3480,3 +3480,7 @@ Les 8 fiches injectées (4e ch. 0 séances 2, 6, 7 ; 3e ch. 1 séances 2, 3) ne 
 
 **8.98.0-㉟ EN LIGNE (C17, 12/11 07:45)** — ✔ réglées par cette version : récit d'une heure en deux séances (BF) ; copie École Directe mise en forme (BG) ; refonte cahier de textes lot 1 + complément (BH, BH2, BQ ; « Ça sonne dans N minutes ») ; Supprimer ne décale plus les activités (BK) ; emploi du temps au chapitre suivant (BL) ; dossier de la clé + image jetée (BM) ; image sur présentation/début de séance (BN) ; Relecture qui plantait (BO) ; témoin « Win K » (BP) ; enchaînement en répétition (BR) ; ordinateur lent — enchaînement en classe et Relecture (BS, BT).
 Restent ouvertes (non bloquantes pour cette livraison, chantier suivant avec la modale « quand ça sonne ») : répétition ×6 3,7-14,8 s ; pointeur ×6 2,7-2,9 s.
+
+**8.98 — EMPLOI DU TEMPS (C17, Paul 12/11 07:52-08:03)** — *ouvertes, mandat BW, prochaine livraison* —
+- L'EDT lit les chapitres une seule fois : une heure lancée puis annulée restait « 5 diapos jouées » (3 D.B., jeu. 12/11 15:07) alors que le hub n'avait plus rien ; disparu après F5. Non bloquant (F5 répare), à régler.
+- Clic sur une case de classe : ~10 s avant la petite fenêtre de l'appel, puis ~5 s avant la grande, sur ordinateur lent. Bloquant pour l'usage quotidien : prochaine livraison.
