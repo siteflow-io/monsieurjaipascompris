@@ -17505,6 +17505,20 @@ function tableauPauseL(se){
 var LP_CASE = {a:{background:"#fff", border:"2px solid #EA580C", color:"#EA580C"}, v:{background:"#DCFCE7", border:"2px solid #86EFAC", color:"#15803D"},
   c:{background:"#DBEAFE", border:"2px solid #93C5FD", color:"#1D4ED8"}, g:{background:"#F3F4F6", border:"2px solid #E5E7EB", color:"#9CA3AF"}};
 var LP_MARQUE = {a:"", v:"✔", c:"✎", g:"–"};
+/* ════════ QCM 8.0.13 (conscience n°17, MANDAT-QCM-8013-DEFAIRE-UNE-LECTURE ; écrans T1 et T2 validés par Paul le 12/11, points 418 à 423) ════════
+   Pendant la pause, sur une question lue de la copie ouverte (une lecture de la pause, lecturesPause/) : « ✅ Oui » et « ✏️ Autre chose » restent
+   au bout de la ligne, le choix fait enfoncé. Re-clic sur le bouton enfoncé : la lecture est effacée de la base (rien n'en reste), la question
+   redevient à lire. Clic sur l'autre : la lecture est remplacée (« ✅ Oui » : comme la tablette ; « ✏️ Autre chose » : les choix, puis « ✔ Valider »).
+   Une décision déjà prise sur le point d'autonomie n'est jamais touchée ; la question « … Retirer son point d'autonomie ? » pas tranchée s'en va
+   avec la lecture défaite. Les lignes des questions déjà corrigées en classe (marquerLueV, feuilleDitV) restent celles de la 8.0.12. */
+function defaireLecturePauseV(se, slug, qi){ var u = {}; u["lecturesPause/" + qi + "/" + slug] = null; return v3Update(v3Q("sessions/" + se.id), u); }
+// la séance sans la lecture de Paul de cette feuille : ce que l'app sait d'elle avant qu'il la lise (pour « … Retirer son point d'autonomie ? » quand
+// il remplace sa lecture : la faute se mesure à ce que l'élève et le voisin ont fait, jamais à la lecture qu'il remplace)
+function sansMaLectureL(se, qi, slug){ var P = se.S.lecturesPause || {}; if(!(P[qi] || {})[slug]) return se;
+  var P2 = Object.assign({}, P), Q = Object.assign({}, P[qi]); delete Q[slug]; P2[qi] = Q; return Object.assign({}, se, {S:Object.assign({}, se.S, {lecturesPause:P2})}); }
+// (les boutons d'une ligne lue ne la font pas plus haute : la copie tient toujours sur l'écran, comme en 8.0.12)
+var LU_BTN = {padding:".2rem .7rem", margin:"-.2rem 0", whiteSpace:"nowrap"};
+function enfonceL(bleu){ var c = bleu ? "#1D4ED8" : "#15803D"; return Object.assign({}, LU_BTN, {background:c, border:"2px solid " + c, color:"#fff", boxShadow:"inset 0 2px 4px rgba(0,0,0,.35)"}); }
 // la note en direct de la 8.0.11 (NoteDirecteL), en texte : pour l'infobulle de la note en une ligne (complément 8012, point 6)
 function noteDetailL(se, slug){ var r = resultatV(se, slug), d = departL(se).notes[slug], ecQ = (se.ecartees || []).map(Number), np = nonPoseesV(se); if(!r) return "";
   var bouge = d && (d.n !== r.n), nl = typeof nonLuesV === "function" ? nonLuesV(r, se.ecartees) : 0;
@@ -17591,6 +17605,19 @@ function LirePauseC(p){
   else {
     var premiere = c.lignes.filter(function(qi){ return c.cases[qi].e === "a"; })[0], enAvant = avant != null && c.cases[avant] && c.cases[avant].e !== "g" ? avant : premiere;
     var BTN = {onMouseDown:function(ev0){ ev0.preventDefault(); }}, rN = resultatV(se, c.p);
+    // (8.0.13) l'interrupteur d'une lecture de la pause : re-clic sur le bouton enfoncé = la lecture effacée ; l'autre = la lecture remplacée
+    var DEFAIRE = "Re-clique pour défaire ta lecture : la question redevient à lire.";
+    var defaire = function(x){ setAvant(enAvant);   // la question en avant reste en avant (T2) ; des choix ouverts sur une autre question restent ouverts
+      defaireLecturePauseV(se, x.p, x.q).then(function(){ setFaits(function(o){ var n = Object.assign({}, o); delete n[x.id]; if(n.dernier === x.id) delete n.dernier; return n; }); focus(); }); };
+    var interrupteurL = function(x, qi, k){ var oui = k.e === "v";
+      return h(F, null,
+        h("button", Object.assign({className:"btn btn-sm" + (oui ? "" : " btn-ghost"), "data-local":"1", "data-lu-oui":"1", "data-enfonce":oui ? "1" : "0", "aria-pressed":oui ? "true" : "false", style:oui ? enfonceL(false) : LU_BTN,
+          title:oui ? DEFAIRE : "Remplace ta lecture : la feuille dit « " + k.X + " », comme la tablette. La note se recalcule ; rien à écrire sur la feuille.",
+          onClick:function(){ if(oui){ defaire(x); return; } var t = tabletteV(se, x.q, x.p), selO = t && t.choix.length ? t.choix : "aucun", fa = fautesL(sansMaLectureL(se, x.q, x.p), x, selO);
+            lirePauseV(se, x.p, x.q, selO).then(function(){ repondu(x, fa); }); }}, BTN), "✅ Oui"),
+        h("button", Object.assign({className:"btn btn-sm" + (oui ? " btn-ghost" : ""), "data-local":"1", "data-lu-autre":"1", "data-enfonce":oui ? "0" : "1", "aria-pressed":oui ? "false" : "true", style:oui ? LU_BTN : enfonceL(true),
+          title:oui ? "Remplace ta lecture : tu cliques ce que dit la feuille, puis « ✔ Valider ». La note se recalcule." : DEFAIRE,
+          onClick:function(){ if(!oui){ defaire(x); return; } setOuvert(x.id); setSel([]); setManque(false); setAvant(qi); focus(); }}, BTN), oui ? "✏️ Autre chose" : "✏️ Autre chose : " + k.Y)); };
     var enonceL = function(qi){ return h("div", {"data-enonce":qi, style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, h("strong", null, "Question " + (qi + 1)), " · " + ev.questions[qi].enonce); };
     droite = h("div", {"data-copie-ouverte":c.p, style:{flex:1, border:"3px solid var(--violet)", borderRadius:14, padding:".6rem 1.1rem", background:"#FBFAFF", overflow:"hidden"}},
       h("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}, h("div", {style:{fontSize:"1.5rem", fontWeight:900}}, "📄 " + c.nom),
@@ -17607,14 +17634,9 @@ function LirePauseC(p){
         // dans l'infobulle pour les autres (la copie tient sur l'écran)
         if(aideG.current.m !== m) aideG.current = {m:m}; var ka = x.id + "|" + qi, qs8 = aideG.current[ka] || (aideG.current[ka] = questionDuSoirV(se, x));
         var aide = "Question " + (qi + 1) + " · " + q.enonce + " — " + (x.txt ? texteALireV(x) : qs8.aide);
-        if(k.e === "v") return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:"Lue : la feuille dit ce que la tablette a cliqué ; ta lecture compte." + (aide ? " " + aide : ""),
-          style:Object.assign({padding:".25rem 0", borderTop:"1px solid #E5E0F5", color:"#15803D", fontWeight:800}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null)}, mis ? enonceL(qi) : null, h("span", {"data-ligne-texte":"1"}, "✔ Q" + (qi + 1) + " · la feuille dit « " + k.X + " », comme la tablette"), ecrireL(x), questionsAutonomie(x));
-        if(k.e === "c") return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:"Corrigée d'après la feuille : ta lecture compte, la note suit la feuille." + (aide ? " " + aide : ""),
-          style:Object.assign({padding:".25rem 0", borderTop:"1px solid #E5E0F5", color:"#1D4ED8", fontWeight:800}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null)}, mis ? enonceL(qi) : null, h("span", {"data-ligne-texte":"1"}, "✎ Q" + (qi + 1) + " · corrigée : la feuille dit « " + k.Y + " » (tablette : « " + k.X + " »)"), ecrireL(x), questionsAutonomie(x));
-        // à lire : sur une ligne de la pause, ce que la tablette a cliqué ; sur une ligne d'une question déjà corrigée en classe, la question du soir (ce que le voisin a lu)
-        var qs = pz ? {texte:"La copie dit-elle « " + k.X + " » ?", oui:"✅ Oui", non:"✏️ Autre chose"} : questionDuSoirV(se, x);
         // l'aide de la 8.0.11 sous la question : la ligne « à lire » (ligneALireH : ce que l'élève a fait, « Tablette : … », « Lu par … »), sinon la ligne grise (questionDuSoirV)
-        var aideH = x.txt ? h("div", {"data-aide":"1", style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, ligneALireH(x)) : h("div", {"data-aide":"1", style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, qs8.aide);
+        var aideH = function(){ return x.txt ? h("div", {"data-aide":"1", style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, ligneALireH(x)) : h("div", {"data-aide":"1", style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, qs8.aide); };
+        // (8.0.13) « ✏️ Autre chose » ouvert : aussi sur une question lue de la pause (la lecture se remplace)
         if(ici) return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-autre-chose":"1", style:{padding:".5rem 0", borderTop:"1px solid #E5E0F5"}},
           enonceL(qi), h("div", {style:{fontWeight:900, fontSize:"1.05rem"}}, "Q" + (qi + 1) + " · Que dit la copie ?"),
           h("div", {style:{display:"flex", gap:".5rem", flexWrap:"wrap", margin:".4rem 0"}},
@@ -17623,9 +17645,18 @@ function LirePauseC(p){
             h("button", Object.assign({className:"eleve-choix-btn aucun" + (sel === "aucun" ? " selected" : ""), "data-local":"1", title:"La copie ne dit aucun des choix.", style:{padding:".4rem .8rem", minWidth:0}, onClick:function(){ choisir(sel === "aucun" ? [] : "aucun"); }}, BTN), "Aucun de ces choix")),
           // (comme en 8.0.11, rien ne s'enregistre sans un choix : la raison s'écrit alors à côté, en clair)
           h("button", Object.assign({className:"btn btn-primary btn-sm", "data-local":"1", "data-valider":"1", title:"Enregistre ce que dit la copie : ta lecture compte et la note se recalcule. Rien à écrire sur la feuille. Il faut d'abord cliquer ce qu'elle dit, ou « Aucun de ces choix ».",
-            onClick:function(){ if(sel !== "aucun" && !sel.length){ setManque(true); focus(); return; } var fa = fautesL(se, x, sel); (pz ? lirePauseV : feuilleDitV)(se, x.p, x.q, sel).then(function(){ repondu(x, fa); }); }}, BTN), "✔ Valider"), " ",
+            onClick:function(){ if(sel !== "aucun" && !sel.length){ setManque(true); focus(); return; } var fa = fautesL(pz ? sansMaLectureL(se, x.q, x.p) : se, x, sel); (pz ? lirePauseV : feuilleDitV)(se, x.p, x.q, sel).then(function(){ repondu(x, fa); }); }}, BTN), "✔ Valider"), " ",
           h("button", Object.assign({className:"btn btn-ghost btn-sm", "data-local":"1", title:"Revient à la question, sans rien changer.", onClick:function(){ setOuvert(null); setSel([]); setManque(false); focus(); }}, BTN), "Annuler"),
-          manque && h("span", {"data-manque":"1", style:{marginLeft:".6rem", fontWeight:800, color:"#9A3412"}}, "Clique d'abord ce que dit la copie, ou « Aucun de ces choix »."), aideH);
+          manque && h("span", {"data-manque":"1", style:{marginLeft:".6rem", fontWeight:800, color:"#9A3412"}}, "Clique d'abord ce que dit la copie, ou « Aucun de ces choix »."), aideH());
+        var styleLue = function(coul){ return Object.assign({padding:".25rem 0", borderTop:"1px solid #E5E0F5", color:coul, fontWeight:800}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null); };
+        // (8.0.13) une lecture de la pause : « ✅ Oui » et « ✏️ Autre chose » restent au bout de la ligne, le choix fait enfoncé (T1)
+        var texteLu = function(t){ return pz ? h("div", {"data-ligne-lue":k.e, style:{display:"flex", alignItems:"center", gap:".8rem"}}, h("span", {"data-ligne-texte":"1", style:{flex:1}}, t), interrupteurL(x, qi, k)) : h("span", {"data-ligne-texte":"1"}, t); };
+        if(k.e === "v") return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:"Lue : la feuille dit ce que la tablette a cliqué ; ta lecture compte." + (aide ? " " + aide : ""),
+          style:styleLue("#15803D")}, mis ? enonceL(qi) : null, texteLu("✔ Q" + (qi + 1) + " · la feuille dit « " + k.X + " », comme la tablette"), ecrireL(x), questionsAutonomie(x));
+        if(k.e === "c") return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:"Corrigée d'après la feuille : ta lecture compte, la note suit la feuille." + (aide ? " " + aide : ""),
+          style:styleLue("#1D4ED8")}, mis ? enonceL(qi) : null, texteLu("✎ Q" + (qi + 1) + " · corrigée : la feuille dit « " + k.Y + " » (tablette : « " + k.X + " »)"), ecrireL(x), questionsAutonomie(x));
+        // à lire : sur une ligne de la pause, ce que la tablette a cliqué ; sur une ligne d'une question déjà corrigée en classe, la question du soir (ce que le voisin a lu)
+        var qs = pz ? {texte:"La copie dit-elle « " + k.X + " » ?", oui:"✅ Oui", non:"✏️ Autre chose"} : questionDuSoirV(se, x);
         return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:aide || null,
           style:Object.assign({padding:".2rem 0", borderTop:"1px solid #E5E0F5"}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null)},
           mis ? enonceL(qi) : null,
@@ -17635,7 +17666,7 @@ function LirePauseC(p){
             onClick:function(){ var t = tabletteV(se, x.q, x.p), selO = t && t.choix.length ? t.choix : "aucun", l0 = lectureV(se, x.q, x.p), fa = fautesL(se, x, pz ? selO : (l0 ? l0.choix : []));
               (pz ? lirePauseV(se, x.p, x.q, selO) : x.sorte === "nl" ? Promise.resolve() : marquerLueV(se, x.id)).then(function(){ repondu(x, fa); }); }}, BTN), qs.oui),
           h("button", Object.assign({className:"btn btn-ghost btn-sm", "data-local":"1", "data-autre":"1", style:{padding:".25rem .75rem"}, title:"La copie dit autre chose : tu cliques ce qu'elle dit ; ta lecture compte et la note se recalcule.", onClick:function(){ setOuvert(x.id); setSel([]); setManque(false); setAvant(qi); focus(); }}, BTN), qs.non)),
-          mis ? aideH : null); }),
+          mis ? aideH() : null); }),
       !c.lignes.length && h("div", {style:{fontSize:"1.15rem", fontWeight:800, color:"#15803D", marginTop:".6rem"}}, "Rien à lire sur cette copie : mets-la de côté."));
   }
   return h("div", {className:"card", "data-lire-copies":se.id, "data-lire-pause-grille":"1"}, titre, bandeau, haut,
