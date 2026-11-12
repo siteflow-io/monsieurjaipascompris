@@ -1618,3 +1618,5 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `redaction.html` AVANT 1.4.32.3-micro (10/11/2026, conscience n°14)
 - Avant : 1.4.32.2-micro, md5 `50f49cd9898e05c4ab52b87b227bb765`, blob `0876c7183618`, copie au sas `SAUVEGARDES/redaction-1.4.32.2-avant-1.4.32.3-micro-2026-11-10.html`. Revenir ferait perdre l'ajout d'une ancienne photo comme page neuve.
+
+- **8.98.0-㉟** (12/11/2026 07:45, C17, « promeus » de Paul 07:43) — md5 `a06f5e997e08a088f1feda0de63a86c5`, commit prod 5bf4720, sas `samedi/integration` 734686d (assemblé 32cf4922, banc complet `BS-BANC/banc.sh` 22/22). Contenu : BF, BG, BH/BH2/BQ (cahier de textes), BK, BL, BM, BN, BO, BP, BR, BS, BT. Vérifié en ligne bit à bit. **Point de retour : 8.97.0-㉞** (md5 9ca59b74…, commit précédent de `index.html`).
