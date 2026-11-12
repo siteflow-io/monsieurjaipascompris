@@ -1036,3 +1036,7 @@
 
 ## AJOUTS DU 12/11/2026 (bis) — DÉROULÉ 9.0.0-㊲
 - La fiche au pilote : rendue entière comme au tableau (`rendre`, `dr-socle.js`, bloc `b.t === 'fiche'`) ; défilement `dr_ficheDefile` / `dr_ficheMolette` (le tableau suit par `et.ficheDefil`) ; « + fiche… » remplace la fiche de la diapo (et la diapo de la copie de classe ouverte, comme « Changer la fiche liée… »).
+
+## AJOUTS DU 12/11/2026 (ter) — DÉROULÉ 9.1.0-㊳
+- Le récit (`dr-recit.js`) : titre de diapo (« pour « … », ») et titre de bloc (« sous le titre « … » : ») ; tous les éléments dévoilés (plus de coupe à 4) ; « on a écrit dans le cahier » ; ouvertures et consignes mot pour mot ; liaisons « De plus », « Ensuite », « Puis », « Pour finir ».
+- L'Atelier : « ↶ Annuler » (`dr-recyclage.js`) ne réécrit que la diapo et `maj` ; les diapos générées sans bloc (fin-*, bmc-*) ne s'écrivent plus dans la trame ; le témoin « Enregistré » / « ⚠ Pas encore enregistré » (`dr_syncEcrire`, `dr-socle.js`).

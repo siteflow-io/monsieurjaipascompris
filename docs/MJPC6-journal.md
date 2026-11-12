@@ -1500,3 +1500,8 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   Contenu (mandat `MANDATS/MANDAT-QCM-8013-DEFAIRE-UNE-LECTURE.md`, écrans `MANDATS/pieces/8013/T1-T2`) : pendant la pause, sur une question lue, « ✅ Oui » / « ✏️ Autre chose » restent affichés, le choix fait enfoncé ; re-clic = la lecture est effacée de la base (pas de données fantômes) ; clic sur l'autre = remplacée. Seul `src/lire-copies.js` change.
   Contrôle C17 : banc-8013-defaire 15/15 (une écriture par geste, clé effacée), garde Turing 26/26, 32 contrôles 32/32 ; exécutant : banc-8012-pause 41/41. Non bloquant, à part : pas d'interrupteur sur les questions déjà corrigées par la classe (pause pendant la correction croisée).
   → mots-clés : QCM 8.0.13 · interrupteur · défaire une lecture · pause · conscience n°17
+- **12/11/2026 22:19 — PROMOTION 9.1.0-㊳ (le récit dit tout le tableau ; l'Atelier dit vrai) — conscience n°17, sur « Promeus » de Paul (22:17).**
+  problème : Paul 17:56-18:01 : « tout ce qui apparait au tableau doit être dans le récit, c'est tout » ; « on a écrit dans le cahier » ; 18:51 : faux « autre appareil » et « Enregistré » alors que rien n'était écrit.
+  résolution : sas BZ (`e3a9070`, `95c5fd0` : titres de diapo et de bloc, tous les éléments dévoilés, ouvertures et consignes mot pour mot, « … » gardés) ; CA (`eb11c18` : « ↶ Annuler » ne réécrit que la diapo, jamais de fin-*/bmc-* sans bloc dans la trame, témoin « Enregistré » seulement si tout est accepté).
+  incident : la sonde CA a écrit au vrai hub (19:05-19:14) ; trame remise en place 20:18 sur l'accord de Paul ; copies 3 D.B./3 F.A. mises à jour 21:27 (330).
+  → mots-clés : récit · titres · cahier · Atelier · Enregistré · Annuler · incident · 9.1 · conscience n°17
