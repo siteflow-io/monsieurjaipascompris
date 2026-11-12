@@ -1494,3 +1494,9 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   résolution : sas BY (`59776aa`, `2325001`) : la fiche entière au pilote (`dr-socle.js`), ✍ par paragraphe, « + fiche… » remplace, une fiche seule s'enlève, ▶ marque la fiche dévoilée puis passe.
   contrôle : AQ 74/74, BY 14/14 (8.99 : 2/7), banc complet 24/25, récit inchangé (F9).
   → mots-clés : fiche · molette · réglette · surlignage · ✍ · 9.0 · conscience n°17
+
+- **12/11/2026 18:12 — PROMOTION `evaluation-qcm.html` 8.0.13 — conscience n°17, sur le « promeus » de Paul (12/11, 18:09).**
+  md5 `cd9a02c7…` (8.0.12) → `bfa16c9bcc212f583b088502deb3f9d7` (2 269 542 o), commit `c322da2`, blob `8f82f12f6238`, `code-qcm` tête `f40d533` (branche `code-qcm-8013`). En ligne vérifié (3 lectures sur 5 à bfa16c9b, les 2 premières encore 8.0.12).
+  Contenu (mandat `MANDATS/MANDAT-QCM-8013-DEFAIRE-UNE-LECTURE.md`, écrans `MANDATS/pieces/8013/T1-T2`) : pendant la pause, sur une question lue, « ✅ Oui » / « ✏️ Autre chose » restent affichés, le choix fait enfoncé ; re-clic = la lecture est effacée de la base (pas de données fantômes) ; clic sur l'autre = remplacée. Seul `src/lire-copies.js` change.
+  Contrôle C17 : banc-8013-defaire 15/15 (une écriture par geste, clé effacée), garde Turing 26/26, 32 contrôles 32/32 ; exécutant : banc-8012-pause 41/41. Non bloquant, à part : pas d'interrupteur sur les questions déjà corrigées par la classe (pause pendant la correction croisée).
+  → mots-clés : QCM 8.0.13 · interrupteur · défaire une lecture · pause · conscience n°17
