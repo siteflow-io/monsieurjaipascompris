@@ -17453,12 +17453,201 @@ function rienDitBL(se){ var S = se.S || {}, R = S.reponses || {}, B = S.b || {},
   Object.keys(R).map(Number).filter(function(qi){ return !isNaN(qi) && ec.indexOf(qi) < 0; }).sort(function(a, b){ return a - b; }).forEach(function(qi){
     var k = Object.keys(R[qi] || {}).filter(function(x){ return R[qi][x] && !(B[qi] || {})[x]; }).length; if(k && k * 4 >= n) l.push({q:qi, n:k}); });
   return l; }
+/* ════════ QCM 8.0.12 (conscience n°17, MANDAT-QCM-8012-LIRE-PENDANT-LA-PAUSE ; écrans P1 à P5 validés par Paul le 12/11 09:46) ════════
+   Pendant la pause seulement : en haut le champ des initiales et le compte ; à gauche toute la classe, dans l'ordre alphabétique fixe, une case
+   par question déjà posée ; à droite la copie ouverte. Les gestes et les écritures sont ceux de la 8.0.11 pendant la pause (lirePauseV :
+   lecturesPause/ ; marquerLueV et feuilleDitV pour une ligne d'une question déjà corrigée en classe) : seule la mise en page change.
+   La séance finie garde son « Lire les copies » (LireCopiesC, plus bas, inchangé). */
+// l'état d'une feuille lue : la lecture qui compte dit-elle ce que la tablette a cliqué ? (rien coché = « aucun de ces choix » ou rien)
+function commeTabletteL(l, t){ var tc = t && t.choix ? t.choix : [], lc = l ? l.choix : null; if(!l) return true; if(lc === "aucun" || !lc || !lc.length) return !tc.length; return memesChoixV(lc, tc); }
+function cliqueL(q, t){ return t && t.choix && t.choix.length ? choixTexteV(q, t.choix) : "rien coché"; }
+function feuilleL(q, l){ return !l || l.choix === "aucun" || !l.choix || !l.choix.length ? "aucun de ces choix" : choixTexteV(q, l.choix); }
+/* le tableau de la classe, un calcul par élève, gardé tant que la séance et ses élèves ne changent pas (taper des initiales, ouvrir une copie
+   ne le refont pas) ; chaque case : a à lire, v lue comme la tablette, c corrigée d'après la feuille, g rien à lire */
+// (la séance a deux lectures : celle de l'écran, v3, et celle de la séance réelle, LIVE.d, qu'emploie SCN.aLireSeance : la garde suit les deux)
+var LP_GARDE = {sources:[], cle:"", m:null};
+function tableauPauseL(se){
+  var S = se.S, d = typeof LIVE !== "undefined" && LIVE && LIVE.d ? LIVE.d : {}, sources = [S, v3Evals(), v3Classes(), d.sessions, d.evaluations, d.classes, d.settings];
+  var cle = se.presents.map(function(e){ return e.slug + ":" + e.nom; }).join("|");
+  if(LP_GARDE.cle === cle && LP_GARDE.sources.length === sources.length && LP_GARDE.sources.every(function(x, i){ return x === sources[i]; })) return LP_GARDE.m;
+  var ev = se.ev, lire = aLireCopiesV(se), parCopie = {}, hors = se.ecartees.concat(se.annulees), rev = v3Liste(S.revelees).map(Number), rp = ((S.deroule || {}).reprise) || {};
+  // la question en cours à la pause (aLirePauseV) : son tour recommence à la reprise
+  var enCours = rp.qi != null && ["reflexion", "passage", "reponse", "b", "rouvert"].indexOf(rp.ph) >= 0 ? +rp.qi : null;
+  var cols = ev.questions.map(function(q, i){ return i; }).filter(function(i){ return (S.questionsLancees || {})[i] != null || (S.reponses || {})[i] != null; });
+  lire.forEach(function(x){ var p = parCopie[x.p] = parCopie[x.p] || {}; (p[x.q] = p[x.q] || []).push(x); });
+  var eleves = se.presents.map(function(e){
+    var pc = parCopie[e.slug] || {}, pre = prenomEleveV(se, e.slug), cases = {}, lignes = [], nA = 0, nL = 0;
+    cols.forEach(function(qi){ var q = ev.questions[qi], L = pc[qi] || [], t = tabletteV(se, qi, e.slug), X = cliqueL(q, t), c;
+      if(!L.length){
+        var pourquoi = hors.indexOf(qi) >= 0 ? (se.ecartees.indexOf(qi) >= 0 ? "écartée : hors de la note, rien à lire." : "annulée : hors de la note, rien à lire.")
+          : qi === enCours ? "pas encore posée à " + pre + " : la séance s'est arrêtée pendant cette question, son tour recommence à la reprise. Rien à lire."
+          : absentQV(se, qi, e.slug) ? pre + " n'était pas là à cette question : rien à lire."
+          : rev.indexOf(qi) >= 0 ? "déjà corrigée en classe : rien à lire sur la feuille." : "rien à lire.";
+        cases[qi] = {e:"g", t:"Q" + (qi + 1) + " de " + pre + " : " + pourquoi}; return; }
+      nL++;
+      var x = L.filter(function(y){ return !y.lue; })[0] || L[0], l = lectureV(se, qi, e.slug);
+      if(L.some(function(y){ return !y.lue; })){ nA++;
+        c = {e:"a", x:x, X:X, t:"Q" + (qi + 1) + " de " + pre + " : à lire sur sa feuille (la tablette : « " + X + " »). Clic : sa copie s'ouvre, cette question en avant."}; }
+      else if(commeTabletteL(l, t)) c = {e:"v", x:x, X:X, t:"Q" + (qi + 1) + " de " + pre + " : lue, la feuille dit « " + X + " », comme la tablette. Clic : sa copie s'ouvre, cette question en avant."};
+      else { var Y = feuilleL(q, l); c = {e:"c", x:x, X:X, Y:Y, t:"Q" + (qi + 1) + " de " + pre + " : corrigée d'après sa feuille, « " + Y + " » (la tablette : « " + X + " »). Ta lecture compte. Clic : sa copie s'ouvre, cette question en avant."}; }
+      cases[qi] = c; lignes.push(qi); });
+    return {p:e.slug, nom:e.nom, pre:pre, cases:cases, lignes:lignes, nA:nA, nL:nL}; });
+  // (règle de Paul, 12/11 12:08 : rien de la 8.0.11 ne se perd) « 🧮 Ce soir » : ce que la lecture a changé depuis l'ouverture (departL, chg de LireCopiesC) ;
+  // « Qn : k élèves n'ont rien dit » (rienDitBL) ; gardés avec le tableau
+  var dep = departL(se), chg = [];
+  se.presents.forEach(function(e){ var d = dep.notes[e.slug], r = resultatV(se, e.slug); if(d && r && d.n !== r.n) chg.push(e.nom + " " + fr1(d.n) + " / " + d.total + " → " + fr1(r.n) + " / " + r.total + " (" + (r.n > d.n ? "+" : "−") + fr1(Math.abs(r.n - d.n)) + ")");
+    var a = autonomieV(se, e.slug).retire; if(a !== dep.auto[e.slug]) chg.push((a ? "⛔ " : "↩️ ") + e.nom + " : point d'autonomie " + (a ? "retiré" : "rendu")); });
+  var m = {cols:cols, eleves:eleves, aLire:eleves.filter(function(x){ return x.nL; }).length, lues:eleves.filter(function(x){ return x.nL && !x.nA; }).length,
+    reste:eleves.reduce(function(a, x){ return a + x.nA; }, 0), chg:chg, rienDit:rienDitBL(se)};
+  LP_GARDE = {sources:sources, cle:cle, m:m};
+  return m;
+}
+var LP_CASE = {a:{background:"#fff", border:"2px solid #EA580C", color:"#EA580C"}, v:{background:"#DCFCE7", border:"2px solid #86EFAC", color:"#15803D"},
+  c:{background:"#DBEAFE", border:"2px solid #93C5FD", color:"#1D4ED8"}, g:{background:"#F3F4F6", border:"2px solid #E5E7EB", color:"#9CA3AF"}};
+var LP_MARQUE = {a:"", v:"✔", c:"✎", g:"–"};
+// la note en direct de la 8.0.11 (NoteDirecteL), en texte : pour l'infobulle de la note en une ligne (complément 8012, point 6)
+function noteDetailL(se, slug){ var r = resultatV(se, slug), d = departL(se).notes[slug], ecQ = (se.ecartees || []).map(Number), np = nonPoseesV(se); if(!r) return "";
+  var bouge = d && (d.n !== r.n), nl = typeof nonLuesV === "function" ? nonLuesV(r, se.ecartees) : 0;
+  return ["🧮 La note, en direct : recalculée à chaque réponse, les points de chaque question et ce qui a changé depuis que tu as ouvert « Lire les copies »."].concat(se.ev.questions.map(function(q, i){ if(np.indexOf(i) >= 0) return null;
+      var dp = d && d.pts ? d.pts : null, a = dp && dp[i] != null ? +dp[i] : null, b = r.pts ? r.pts[i] : null, ch = a != null && b != null && a !== b;
+      return "Question " + (i + 1) + " : " + (b == null ? (ecQ.indexOf(i) >= 0 ? "écartée" : r.st && r.st[i] === "x" ? "pas posée" : "pas encore lue") : ch ? fr1(a) + " → " + ptsL(b) + " (" + (b > a ? "+" : "−") + fr1(Math.abs(b - a)) + ")" : ptsL(b)); }).filter(Boolean),
+    ["✍️ Note : " + (bouge ? fr1(d.n) + " / " + d.total + " → " : "") + fr1(r.n) + " / " + r.total + " · " + (bouge ? fr1(d.sur20) + " → " : "") + fr1(r.sur20) + " / 20"], nl ? [nl + " question" + (nl > 1 ? "s" : "") + " pas encore lue" + (nl > 1 ? "s" : "")] : []).join("\n"); }
+function LirePauseC(p){
+  var se = p.se, ev = se.ev;
+  var s1 = useState(null), cur = s1[0], setCur = s1[1], s2 = useState(null), ouvert = s2[0], setOuvert = s2[1], s3 = useState([]), sel = s3[0], setSel = s3[1];
+  var s4 = useState(""), rech = s4[0], setRech = s4[1], s5 = useState(null), avant = s5[0], setAvant = s5[1], s6 = useState(false), manque = s6[0], setManque = s6[1], s7 = useState({}), faits = s7[0], setFaits = s7[1], champ = React.useRef(null), grilleG = React.useRef(null), aideG = React.useRef({});
+  var m = tableauPauseL(se), c = cur ? m.eleves.filter(function(e){ return e.p === cur; })[0] : null;
+  // le champ des initiales garde le focus : chaque geste le lui rend, sans bouger l'écran
+  function focus(){ setTimeout(function(){ var i = champ.current; if(i && document.activeElement !== i) i.focus({preventScroll:true}); }, 0); }
+  function ouvrir(p, qi){ setCur(p); setRech(""); setOuvert(null); setSel([]); setManque(false); setAvant(qi == null ? null : qi); focus(); }
+  function fait(){ setOuvert(null); setSel([]); setManque(false); setAvant(null); focus(); }
+  // (complément 8012, point 7) après une lecture, la question de la 8.0.11 : « … Retirer son point d'autonomie ? » (fautesL, calculé AVANT l'écriture ; decide)
+  function repondu(x, fautes){ setFaits(function(o){ var n = Object.assign({}, o); n[x.id] = {fautes:fautes || [], dec:{}, ms:Date.now()}; n.dernier = x.id; return n; }); fait(); }
+  // après la lecture qu'on vient de faire : la phrase de la 8.0.11 (« ✍️ N'écris rien sur la copie : elle passe chez le voisin à la correction. »)
+  function ecrireL(x){ return faits.dernier === x.id ? h("div", {"data-ecrire":"1", title:"Pendant la pause, la feuille passe encore chez le voisin à la correction : tu n'y écris rien.", style:{fontSize:".9rem", fontWeight:900, color:"var(--noir, #1F2937)", marginTop:".1rem"}}, "✍️ N'écris rien sur la copie : elle passe chez le voisin à la correction.") : null; }
+  function decide(x, f, retirer){ var go = Promise.all([retirer ? retirerAutonomieSoirV(se, f.qui) : null, typeof ACT !== "undefined" && ACT.autonomieLecture ? ACT.autonomieLecture(se.id, x.id, f.qui, retirer ? "retire" : "garde") : null]);
+    go.then(function(){ setFaits(function(o){ var n = Object.assign({}, o), g = Object.assign({}, n[x.id]); g.dec = Object.assign({}, g.dec); g.dec[f.qui] = retirer ? "retire" : "garde"; n[x.id] = g; return n; }); focus(); }); }
+  function questionsAutonomie(x){ var f = faits[x.id]; if(!f || !(f.fautes || []).length) return null;
+    return f.fautes.map(function(fa){ var d = (f.dec || {})[fa.qui] || (typeof SCN.autonomieLecture === "function" ? SCN.autonomieLecture(se.id, x.id, fa.qui) : null);
+      // tranchée pour l'élève de la copie : son point se lit déjà sous son nom, en tête de la copie (la copie tient sur l'écran)
+      if(d && fa.qui === x.p) return null;
+      // (les mots, les boutons, leurs infobulles et leurs écritures de la 8.0.11 ; sur une ligne, pour que la copie tienne sur l'écran)
+      return h("div", {key:fa.qui, "data-faute":fa.qui, onMouseDown:function(ev0){ ev0.preventDefault(); }, style:{marginTop:".25rem", padding:".25rem .6rem", borderRadius:8, color:"var(--noir, #1F2937)", fontWeight:400, background:d ? "#F8FAFC" : "#FFF4E5", border:"2px solid " + (d ? "#CBD5E1" : "#F59E0B")}},
+        d ? h(AutonomieL, {se:se, slug:fa.qui})
+        : h("div", {style:{display:"flex", alignItems:"center", gap:".6rem", flexWrap:"wrap"}}, h("span", {style:{fontWeight:800}}, fa.texte + " Retirer son point d'autonomie ?"),
+          h(F, null,
+            h("button", {className:"btn btn-rouge btn-sm", "data-local":"1", title:"Retire le point d'autonomie de " + prenomEleveV(se, fa.qui) + " : ses deux compétences d'autonomie passent en Maîtrise insuffisante. « ↩️ Rendre » le défait.", onClick:function(){ decide(x, fa, true); }}, "⛔ Oui"),
+            h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", title:prenomEleveV(se, fa.qui) + " garde son point d'autonomie : rien n'est changé.", onClick:function(){ decide(x, fa, false); }}, "Non")))); }); }
+  function choisir(v){ setSel(v); setManque(false); }
+  var props = rech.trim() ? m.eleves.filter(function(e){ return e.p !== cur && initialesL(e.nom, rech); }).slice(0, 6) : [];
+  var etatTexte = function(e){ return e.nA ? e.nA + " à lire" : e.nL ? "✔ lue" : "rien à lire"; };
+  var titre = TitreCarte("📄 Lire les copies — " + ev.titre + " — " + se.classe, [
+    h("button", {key:1, className:"btn btn-ghost btn-sm", "data-local":"1", "data-fermer-pause":"1", title:"Revient à la carte « Séance à reprendre ». Ce que tu as déjà lu reste enregistré ; la séance reste en pause.", onClick:function(){ navRemettre(); }}, "✕ Fermer")]);
+  var bandeau = h("div", {"data-bandeau-pause":"1", title:"Ce que tu lis maintenant compte pour la note. À la reprise, rien ne change pour la classe : chaque feuille passe chez le voisin ; si le voisin y lit autre chose, ta lecture compte et la feuille te revient après le cours, avec ce qu'il a lu.", style:{margin:"-.4rem 0 1rem", padding:".6rem .8rem", borderRadius:10, background:"#FFF7ED", border:"2px solid #FDBA74", fontWeight:800}},
+    "⏸️ La séance est en pause : tu lis les questions déjà posées. Ta lecture compte ; à la reprise, toutes les feuilles passent quand même chez le voisin.");
+  // en haut : le champ des initiales (ses propositions dessous), le compte à droite
+  var haut = h("div", {style:{display:"flex", gap:"1.2rem", alignItems:"flex-start", margin:".2rem 0 .8rem"}},
+    h("div", {style:{flex:"0 0 640px", position:"relative"}},
+      h("div", {style:{fontSize:".85rem", color:"var(--gris)", marginBottom:3}}, c ? "Copie suivante de ton tas — tape ses initiales (DM pour Dupont Marie), puis Entrée :" : "Prends la première copie de ton tas et tape ses initiales (DM pour Dupont Marie), puis Entrée :"),
+      h("input", {type:"text", value:rech, autoFocus:true, ref:champ, "data-initiales":"1", placeholder:"DM…", title:"Les initiales de l'élève dont tu tiens la copie (nom puis prénom, ou prénom puis nom). Entrée ouvre le premier proposé.",
+        onChange:function(e){ setRech(e.target.value); }, onKeyDown:function(e){ if(e.key === "Enter"){ e.preventDefault(); if(props.length) ouvrir(props[0].p); } else if(e.key === "Escape") setRech(""); },
+        style:{width:"100%", padding:"8px 10px", border:"2px solid var(--violet)", borderRadius:8, fontSize:"1.05rem", boxSizing:"border-box", background:"#fff", minHeight:42, outline:"none"}}),
+      (props.length || rech.trim()) ? h("div", {"data-propositions":props.length, style:{position:"absolute", left:0, right:0, top:"100%", zIndex:5, background:"#fff", border:"1px solid #DDD6FE", borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,.15)", padding:4}},
+        props.map(function(e, ii){ return h("div", {key:e.p, className:"lire-prop", "data-local":"1", "data-prop":e.p, title:"Ouvre la copie de " + e.nom + (ii === 0 ? " (Entrée)." : "."), onMouseDown:function(ev0){ ev0.preventDefault(); }, onClick:function(){ ouvrir(e.p); },
+            style:{padding:"5px 10px", borderRadius:6, cursor:"pointer", display:"flex", justifyContent:"space-between", background:ii === 0 ? "#EEE8FF" : "transparent", fontWeight:ii === 0 ? 800 : 400}},
+          h("span", null, e.nom), h("span", {style:{fontSize:".8rem", color:e.nA ? "#9A3412" : "var(--gris)"}}, e.nA ? e.nA + " question" + (e.nA > 1 ? "s" : "") + " à lire" : e.nL ? "✔ lue" : "rien à lire")); }),
+        !props.length && h("div", {style:{padding:"5px 10px", fontSize:".85rem", color:"var(--gris)"}}, "Aucun élève ne correspond.")) : null),
+    h("div", {style:{flex:1, minWidth:0, paddingTop:m.chg.length || m.rienDit.length ? ".1rem" : "1.4rem"}},
+      h("div", {"data-compte-pause":m.lues + "/" + m.aLire + "/" + m.reste, title:"Les copies dont toutes les questions déjà posées sont lues, sur les copies qui ont quelque chose à lire ; et les questions qui restent à lire dans toute la classe.", style:{fontWeight:800, fontSize:"1.05rem"}},
+        "📌 " + m.lues + " copie" + (m.lues > 1 ? "s" : "") + " lue" + (m.lues > 1 ? "s" : "") + " sur " + m.aLire + " · " + m.reste + " question" + (m.reste > 1 ? "s" : "") + " encore à lire"),
+      m.rienDit.map(function(r){ var nP = se.presents.length; return h("div", {key:r.q, "data-rien-dit":r.q + 1, title:"À la question " + (r.q + 1) + ", " + r.n + " élève" + (r.n > 1 ? "s" : "") + " sur " + nP + " présent" + (nP > 1 ? "s" : "") + " n'" + (r.n > 1 ? "ont" : "a") + " dit ni « Oui » ni « Non » quand l'app demandait si la feuille disait la même chose que le clic. La ligne paraît dès qu'ils sont au moins un quart des présents : signe que les secondes de ce moment sont trop courtes pour cette question.",
+        style:{fontWeight:700, color:"#9A3412", fontSize:".85rem"}}, "Q" + (r.q + 1) + " : " + r.n + " élève" + (r.n > 1 ? "s n'ont" : " n'a") + " rien dit"); }),
+      // (deux lignes à l'écran au plus, pour que la classe et la copie restent sur l'écran ; le texte entier dans l'infobulle)
+      m.chg.length ? h("div", {"data-ce-soir":"1", title:"Tout ce que ta relecture a changé depuis que tu as ouvert « Lire les copies » : les notes, et les points d'autonomie retirés ou rendus.\n\n🧮 Ce soir : " + m.chg.join(" · "),
+        style:{marginTop:".1rem", padding:".05rem .5rem", borderRadius:8, background:"#F1F5F9", fontWeight:700, fontSize:".8rem", lineHeight:1.25, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}, "🧮 Ce soir : " + m.chg.join(" · ")) : null));
+  // à gauche : la classe, dans l'ordre alphabétique fixe ; une ligne ne bouge jamais
+  var gG = grilleG.current, gauche = gG && gG.m === m && gG.cur === cur ? gG.el : h("div", {"data-pause-grille":m.eleves.length, style:{flex:"0 0 640px"}},
+    // (peu de questions posées : le tableau garde des cases serrées, au lieu de s'étirer sur la largeur de la colonne)
+    h("table", {style:{borderCollapse:"separate", borderSpacing:"0 1px", width:m.cols.length >= 8 ? "100%" : "auto"}},
+      h("thead", null, h("tr", null, h("th", {style:{textAlign:"left", padding:"2px 8px", fontSize:".8rem", color:"var(--gris)"}}, "Élève"),
+        m.cols.map(function(qi){ return h("th", {key:qi, title:"Question " + (qi + 1) + " : " + ev.questions[qi].enonce, style:{fontSize:".75rem", color:"var(--gris)", padding:"2px 0"}}, "Q" + (qi + 1)); }), h("th", null))),
+      h("tbody", null, m.eleves.map(function(e){ var on = e.p === cur;
+        return h("tr", {key:e.p, "data-pause-eleve":e.p, style:on ? {background:"#EDE9FE", outline:"3px solid var(--violet)"} : null},
+          h("td", {"data-pause-nom":"1", "data-local":"1", title:"Ouvre la copie de " + e.nom + (e.nA ? " : " + e.nA + " question" + (e.nA > 1 ? "s" : "") + " à lire." : e.nL ? " : tout est lu." : " : rien à lire."), onMouseDown:function(ev0){ ev0.preventDefault(); }, onClick:function(){ ouvrir(e.p); },
+            style:{padding:"0 8px", fontWeight:on ? 900 : 700, color:"var(--violet)", whiteSpace:"nowrap", fontSize:".86rem", cursor:"pointer"}}, (on ? "▶ " : "") + e.nom),
+          m.cols.map(function(qi){ var k = e.cases[qi];
+            return h("td", {key:qi, "data-pause-q":qi, "data-etat":k.e, "data-local":"1", title:k.t, onMouseDown:function(ev0){ ev0.preventDefault(); }, onClick:function(){ ouvrir(e.p, k.e === "g" ? null : qi); }, style:{padding:1, cursor:"pointer"}},
+              h("div", {style:Object.assign({borderRadius:5, height:16, width:30, margin:"auto", fontSize:".78rem", fontWeight:900, display:"flex", alignItems:"center", justifyContent:"center"}, LP_CASE[k.e])}, LP_MARQUE[k.e])); }),
+          h("td", {"data-pause-reste":e.nA, title:e.nA ? "Il reste " + e.nA + " question" + (e.nA > 1 ? "s" : "") + " à lire sur la feuille de " + e.pre + "." : e.nL ? "Toutes les questions déjà posées de " + e.pre + " sont lues." : "Rien à lire sur la feuille de " + e.pre + " pour l'instant.",
+            style:{padding:"1px 6px", fontSize:".8rem", fontWeight:800, whiteSpace:"nowrap", color:e.nA ? "#9A3412" : e.nL ? "#15803D" : "var(--gris)"}}, etatTexte(e))); }))),
+    h("div", {style:{display:"flex", gap:14, flexWrap:"wrap", marginTop:8, fontSize:".8rem", color:"var(--gris)"}, title:"Les couleurs des cases. Une case grise « – » : rien à lire sur la feuille pour cette question (son infobulle dit pourquoi)."},
+      h("span", null, h("b", {style:{color:"#EA580C"}}, "▢"), " à lire sur la feuille"), h("span", null, h("b", {style:{color:"#15803D"}}, "✔"), " la feuille dit comme la tablette"), h("span", null, h("b", {style:{color:"#1D4ED8"}}, "✎"), " corrigée d'après la feuille")));
+  grilleG.current = {m:m, cur:cur, el:gauche};
+  // à droite : l'invitation, ou la copie ouverte
+  var droite;
+  if(!c) droite = h("div", {"data-copie-invite":"1", style:{flex:1, border:"3px dashed #C4B5FD", borderRadius:14, padding:"2rem", display:"flex", flexDirection:"column", justifyContent:"center", alignItems:"center", textAlign:"center", color:"var(--gris)"}},
+    h("div", {style:{fontSize:"3rem"}}, "📄"), h("div", {style:{fontSize:"1.3rem", fontWeight:800, color:"#1E1B4B", margin:".5rem 0"}}, "Prends la première copie de ton tas", h("br"), "et tape ses initiales en haut."),
+    h("div", {style:{fontSize:"1rem"}}, "Sa copie s'ouvre ici, question par question.", h("br"), "Tu peux aussi cliquer un nom, ou une case, à gauche."));
+  else {
+    var premiere = c.lignes.filter(function(qi){ return c.cases[qi].e === "a"; })[0], enAvant = avant != null && c.cases[avant] && c.cases[avant].e !== "g" ? avant : premiere;
+    var BTN = {onMouseDown:function(ev0){ ev0.preventDefault(); }}, rN = resultatV(se, c.p);
+    var enonceL = function(qi){ return h("div", {"data-enonce":qi, style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, h("strong", null, "Question " + (qi + 1)), " · " + ev.questions[qi].enonce); };
+    droite = h("div", {"data-copie-ouverte":c.p, style:{flex:1, border:"3px solid var(--violet)", borderRadius:14, padding:".6rem 1.1rem", background:"#FBFAFF", overflow:"hidden"}},
+      h("div", {style:{display:"flex", justifyContent:"space-between", alignItems:"baseline"}}, h("div", {style:{fontSize:"1.5rem", fontWeight:900}}, "📄 " + c.nom),
+        h("div", {"data-copie-reste":c.nA, title:c.nA ? "Les questions déjà posées dont la feuille reste à lire, sur celles de cette copie." : "Toutes les questions déjà posées de cette copie sont lues : prends la suivante.", style:{fontWeight:800, color:c.nA ? "#9A3412" : "#15803D"}},
+          c.nA ? c.nA + " question" + (c.nA > 1 ? "s" : "") + " à lire sur " + c.nL : c.nL ? "✔ Copie lue" : "Rien à lire")),
+      // (complément 8012, points 1 et 6) sous le nom, sur une ligne : le point d'autonomie de la 8.0.11 (« ⛔ Retirer » / « ↩️ Rendre », AutonomieL)
+      // et la note en direct, en une ligne (le détail est dans la liste des questions) ; un clic sur leurs boutons laisse le focus au champ des initiales
+      h("div", {"data-copie-note":c.p, onMouseDown:function(ev0){ ev0.preventDefault(); }, style:{display:"flex", alignItems:"center", gap:".6rem", flexWrap:"wrap", margin:".15rem 0 .2rem"}},
+        h(AutonomieL, {se:se, slug:c.p}), rN && h("span", {"data-note-directe":c.p, title:noteDetailL(se, c.p), style:{fontWeight:800}},
+          "· ✍️ Note : " + fr1(rN.n) + " / " + rN.total + " · " + fr1(rN.sur20) + " / 20")),
+      h("div", {"data-copie-phrase":"1", style:{fontSize:".85rem", color:"var(--gris)", margin:".1rem 0 .25rem"}}, "Les questions déjà posées. Ce que tu lis compte ; n'écris rien sur la feuille : elle passe chez le voisin à la correction."),
+      c.lignes.map(function(qi){ var k = c.cases[qi], q = ev.questions[qi], x = k.x, pz = x.sorte === "pz", ici = ouvert === x.id, mis = qi === enAvant;
+        // (8.0.11) l'énoncé de chaque question et l'aide sous la question (ce que l'élève a fait, la tablette, ce qu'il a dit, qui a lu) : à l'écran pour la question en avant,
+        // dans l'infobulle pour les autres (la copie tient sur l'écran)
+        if(aideG.current.m !== m) aideG.current = {m:m}; var ka = x.id + "|" + qi, qs8 = aideG.current[ka] || (aideG.current[ka] = questionDuSoirV(se, x));
+        var aide = "Question " + (qi + 1) + " · " + q.enonce + " — " + (x.txt ? texteALireV(x) : qs8.aide);
+        if(k.e === "v") return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:"Lue : la feuille dit ce que la tablette a cliqué ; ta lecture compte." + (aide ? " " + aide : ""),
+          style:Object.assign({padding:".25rem 0", borderTop:"1px solid #E5E0F5", color:"#15803D", fontWeight:800}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null)}, mis ? enonceL(qi) : null, h("span", {"data-ligne-texte":"1"}, "✔ Q" + (qi + 1) + " · la feuille dit « " + k.X + " », comme la tablette"), ecrireL(x), questionsAutonomie(x));
+        if(k.e === "c") return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:"Corrigée d'après la feuille : ta lecture compte, la note suit la feuille." + (aide ? " " + aide : ""),
+          style:Object.assign({padding:".25rem 0", borderTop:"1px solid #E5E0F5", color:"#1D4ED8", fontWeight:800}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null)}, mis ? enonceL(qi) : null, h("span", {"data-ligne-texte":"1"}, "✎ Q" + (qi + 1) + " · corrigée : la feuille dit « " + k.Y + " » (tablette : « " + k.X + " »)"), ecrireL(x), questionsAutonomie(x));
+        // à lire : sur une ligne de la pause, ce que la tablette a cliqué ; sur une ligne d'une question déjà corrigée en classe, la question du soir (ce que le voisin a lu)
+        var qs = pz ? {texte:"La copie dit-elle « " + k.X + " » ?", oui:"✅ Oui", non:"✏️ Autre chose"} : questionDuSoirV(se, x);
+        // l'aide de la 8.0.11 sous la question : la ligne « à lire » (ligneALireH : ce que l'élève a fait, « Tablette : … », « Lu par … »), sinon la ligne grise (questionDuSoirV)
+        var aideH = x.txt ? h("div", {"data-aide":"1", style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, ligneALireH(x)) : h("div", {"data-aide":"1", style:{fontSize:".8rem", lineHeight:1.3, color:"var(--gris)", fontWeight:400}}, qs8.aide);
+        if(ici) return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-autre-chose":"1", style:{padding:".5rem 0", borderTop:"1px solid #E5E0F5"}},
+          enonceL(qi), h("div", {style:{fontWeight:900, fontSize:"1.05rem"}}, "Q" + (qi + 1) + " · Que dit la copie ?"),
+          h("div", {style:{display:"flex", gap:".5rem", flexWrap:"wrap", margin:".4rem 0"}},
+            q.choix.map(function(t, kk){ var on = sel !== "aucun" && sel.indexOf(kk) >= 0;
+              return h("button", Object.assign({key:kk, className:"eleve-choix-btn" + (on ? " selected" : ""), "data-local":"1", title:"Ce choix est sur la copie (un second clic l'enlève).", style:{padding:".4rem .8rem", minWidth:0}, onClick:function(){ var a = sel === "aucun" ? [] : sel; choisir(on ? a.filter(function(y){ return y !== kk; }) : a.concat([kk])); }}, BTN), h("span", null, t)); }),
+            h("button", Object.assign({className:"eleve-choix-btn aucun" + (sel === "aucun" ? " selected" : ""), "data-local":"1", title:"La copie ne dit aucun des choix.", style:{padding:".4rem .8rem", minWidth:0}, onClick:function(){ choisir(sel === "aucun" ? [] : "aucun"); }}, BTN), "Aucun de ces choix")),
+          // (comme en 8.0.11, rien ne s'enregistre sans un choix : la raison s'écrit alors à côté, en clair)
+          h("button", Object.assign({className:"btn btn-primary btn-sm", "data-local":"1", "data-valider":"1", title:"Enregistre ce que dit la copie : ta lecture compte et la note se recalcule. Rien à écrire sur la feuille. Il faut d'abord cliquer ce qu'elle dit, ou « Aucun de ces choix ».",
+            onClick:function(){ if(sel !== "aucun" && !sel.length){ setManque(true); focus(); return; } var fa = fautesL(se, x, sel); (pz ? lirePauseV : feuilleDitV)(se, x.p, x.q, sel).then(function(){ repondu(x, fa); }); }}, BTN), "✔ Valider"), " ",
+          h("button", Object.assign({className:"btn btn-ghost btn-sm", "data-local":"1", title:"Revient à la question, sans rien changer.", onClick:function(){ setOuvert(null); setSel([]); setManque(false); focus(); }}, BTN), "Annuler"),
+          manque && h("span", {"data-manque":"1", style:{marginLeft:".6rem", fontWeight:800, color:"#9A3412"}}, "Clique d'abord ce que dit la copie, ou « Aucun de ces choix »."), aideH);
+        return h("div", {key:qi, "data-ligne-q":qi, "data-ligne":x.id, "data-en-avant":mis ? "1" : null, title:aide || null,
+          style:Object.assign({padding:".2rem 0", borderTop:"1px solid #E5E0F5"}, mis ? {background:"#FFF7ED", margin:"0 -.6rem", paddingLeft:".6rem", paddingRight:".6rem", borderRadius:8} : null)},
+          mis ? enonceL(qi) : null,
+          h("div", {"data-ligne-rang":"1", style:{display:"flex", alignItems:"center", gap:".8rem"}},
+          h("div", {style:{flex:1, fontWeight:mis ? 900 : 700, fontSize:mis ? "1.1rem" : "1rem"}}, "Q" + (qi + 1) + " · " + qs.texte),
+          qs.oui && h("button", Object.assign({className:"btn btn-primary btn-sm", "data-local":"1", "data-oui":"1", style:{padding:".25rem .75rem"}, title:pz ? "La copie dit bien « " + k.X + " », comme la tablette : la question est lue, ta lecture compte. Rien à écrire sur la feuille." : "La copie dit bien cela : la ligne est lue, la note ne change pas.",
+            onClick:function(){ var t = tabletteV(se, x.q, x.p), selO = t && t.choix.length ? t.choix : "aucun", l0 = lectureV(se, x.q, x.p), fa = fautesL(se, x, pz ? selO : (l0 ? l0.choix : []));
+              (pz ? lirePauseV(se, x.p, x.q, selO) : x.sorte === "nl" ? Promise.resolve() : marquerLueV(se, x.id)).then(function(){ repondu(x, fa); }); }}, BTN), qs.oui),
+          h("button", Object.assign({className:"btn btn-ghost btn-sm", "data-local":"1", "data-autre":"1", style:{padding:".25rem .75rem"}, title:"La copie dit autre chose : tu cliques ce qu'elle dit ; ta lecture compte et la note se recalcule.", onClick:function(){ setOuvert(x.id); setSel([]); setManque(false); setAvant(qi); focus(); }}, BTN), qs.non)),
+          mis ? aideH : null); }),
+      !c.lignes.length && h("div", {style:{fontSize:"1.15rem", fontWeight:800, color:"#15803D", marginTop:".6rem"}}, "Rien à lire sur cette copie : mets-la de côté."));
+  }
+  return h("div", {className:"card", "data-lire-copies":se.id, "data-lire-pause-grille":"1"}, titre, bandeau, haut,
+    h("div", {style:{display:"flex", gap:"1.2rem", alignItems:"stretch"}}, gauche, droite));
+}
 function LireCopiesC(){
   useV3();
   var s1 = useState(null), cur = s1[0], setCur = s1[1], s2 = useState(null), ouvert = s2[0], setOuvert = s2[1], s3 = useState([]), sel = s3[0], setSel = s3[1];
   var s4 = useState(""), rech = s4[0], setRech = s4[1], s5 = useState({}), faits = s5[0], setFaits = s5[1];
   var se = seanceV(seanceParam());
   if(!se) return h("div", {className:"card"}, h("p", null, "Chargement…"));
+  if(se.pause) return h(LirePauseC, {se:se});   // (8.0.12) pendant la pause : toute la classe et la copie côte à côte
   var sq = "&seance=" + encodeURIComponent(se.id), lire = aLireCopiesV(se), ev = se.ev;
   var parCopie = {}; lire.forEach(function(x){ (parCopie[x.p] = parCopie[x.p] || []).push(x); });
   var eleves = se.presents.map(function(e){ return {p:e.slug, nom:e.nom, lignes:(parCopie[e.slug] || []).slice().sort(function(a, b){ return a.q - b.q; })}; });
