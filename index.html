@@ -3186,7 +3186,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="9.1.0-㊳";
+var APP_VERSION="9.2.0-㊴";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -16323,7 +16323,7 @@ html:not(.dr-en-classe) #dr-zone #bnotes{display:none}
 .p8-verse-liste{margin:6px 0 0}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse{border-left:3px solid var(--or);padding:4px 10px;margin:6px 0;background:rgba(201,154,78,.06)}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse-t{font-weight:600}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse-d{color:var(--texte2);margin:2px 0}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse-q{margin-top:4px}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse-q .btn{margin-right:4px}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse-dit{color:var(--joue);font-weight:600}:is(#dr-zone,#ses-tab,.at-som-volet) .p8-verse-sans{color:var(--sourd);font-size:.85em}
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur.pilote .q.pas,:is(#dr-zone,#ses-tab,.at-som-volet) .mur.pilote .rep.pas,:is(#dr-zone,#ses-tab,.at-som-volet) .mur.pilote .cons.pas{opacity:.45}
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur.tableau .q.pas,:is(#dr-zone,#ses-tab,.at-som-volet) .mur.tableau .rep.pas,:is(#dr-zone,#ses-tab,.at-som-volet) .mur.tableau .cons.pas{display:none}  /* E1 (13 · 34) : le titre de bloc de l'écran construit, pas encore dévoilé */
-:is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche{border:1px solid #e6ddd0;background:#fff;padding:1cqh 1.4cqh;cursor:zoom-in}:is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche .tt{font-size:.52em;letter-spacing:.07em;text-transform:uppercase;color:#5c7186}
+:is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche{border:1px solid #e6ddd0;background:#fff;padding:1cqh 1.4cqh}:is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche .tt{font-size:.52em;letter-spacing:.07em;text-transform:uppercase;color:#5c7186}
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche h3{margin:.1em 0 .12em;font-size:.9em}:is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche .def{border-left:.4cqh solid #c99a4e;padding:.2em .4em;background:#fdf8ef;font-size:.8em;margin-top:.5cqh}
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur .rap{align-self:flex-start;background:#eef4fa;color:#2f5b84;border:1px solid #b9d0e6;border-radius:999px;padding:.12em .55em;font-size:.42em;letter-spacing:.04em}
 :is(#dr-zone,#ses-tab,.at-som-volet) .mur .fiche .loupe{display:none}:is(#dr-zone,#ses-tab,.at-som-volet) .mur .q{font-weight:600;margin:0}
@@ -17599,7 +17599,7 @@ function dr_syncCleHub(rv, eid){ const q = dr_syncCles(rv)[eid]; return q == nul
 /* l'écriture : relire, reprendre ce qui a changé ailleurs, puis n'écrire que nos changements */
 function dr_syncEcrire(k, o, depart){ const B = DR_MEM.base && DR_MEM.base[k]; const chemin = dr_cheminBDe(k) + '/deroule'; const fini = () => { if (typeof atDrEnrConfirme === 'function') atDrEnrConfirme(true); if (typeof dr_temoinEnregistre === 'function') dr_temoinEnregistre(); };
   const tout = () => { const sce = dr_seance(k); const o2 = dr_derouleDe(k, true); const val = Object.assign({}, sce.deroule, o2, { maj: Date.now() }); if (!o2.activites) delete val.activites; if (!o2.notes) delete val.notes; if (!o2.travail) delete val.travail; if (!o2.retraits) delete val.retraits; if (!o2.ouvRetraits) delete val.ouvRetraits; if (!o2.ouvAttente) delete val.ouvAttente; else sce.deroule.ouvAttente = JSON.parse(JSON.stringify(o2.ouvAttente)); sce.deroule.maj = val.maj;
-    const ecrit = JSON.parse(JSON.stringify(val)); dr_ecrire(chemin, ecrit, 'Trame du déroulé — séance ' + k, fini); DR_MEM.base[k] = dr_syncBase(o2); DR_MEM.hubLu = DR_MEM.hubLu || {}; DR_MEM.hubLu[k] = dr_syncBase(ecrit); DR_MEM.hubLu[k].cles = dr_syncCles(ecrit); DR_MEM.empreintes[k] = JSON.stringify(o2); };
+    const ecrit = JSON.parse(JSON.stringify(val)); dr_ecrire(chemin, ecrit, 'Trame du déroulé — séance ' + k, fini); if (!depart && typeof dr_copiesSuivrePlanifier === 'function') dr_copiesSuivrePlanifier(k);   /* CC (Paul 13/11 07:14) : la trame de CETTE séance écrite → ses copies de classe suivent pour ce qui n'est pas joué (dr-classe.js) */ DR_MEM.base[k] = dr_syncBase(o2); DR_MEM.hubLu = DR_MEM.hubLu || {}; DR_MEM.hubLu[k] = dr_syncBase(ecrit); DR_MEM.hubLu[k].cles = dr_syncCles(ecrit); DR_MEM.empreintes[k] = JSON.stringify(o2); };
   if (!B || !DR_MEM.hubLu || !DR_MEM.hubLu[k]) { DR_MEM.base = DR_MEM.base || {}; tout(); return; }
   const ecrire = rv => { const Hl = DR_MEM.hubLu[k]; const o2 = dr_derouleDe(k, true); if (o2.ouvAttente) { tout(); return; }   /* C16 (§3.3 des quatre dettes) : une diapo en attente de la taxonomie — la séance entière */ dr_syncBaseVue(B, dr_syncH(o2)); const R = rv ? dr_syncBase(rv) : Hl; const cles = rv ? dr_syncCles(rv) : (Hl.cles || {}); if (rv) Hl.cles = cles;
     if (rv) dr_syncComparer(k, rv, false);   /* les conflits se disent ; rien n'est posé pendant l'écriture */
@@ -17611,7 +17611,7 @@ function dr_syncEcrire(k, o, depart){ const B = DR_MEM.base && DR_MEM.base[k]; c
       const q = cles[eid]; if (q == null) { manque = true; return; } const ecrit = JSON.parse(JSON.stringify(e)); dr_ecrire(chemin + '/ecrans/' + q, ecrit, 'Trame du déroulé — séance ' + k + ', une diapo', () => {}); B.el[eid] = L.el[eid]; delete (B.sansH || {})[eid]; Hl.el[eid] = dr_canon(ecrit); n++; });
     if (manque) { tout(); return; }   /* une diapo d'ici que le hub n'a pas (la fin d'heure où Paul a écrit) : la séance entière */
     ['activites', 'notes', 'travail', 'retraits', 'ouvRetraits'].forEach(nm => { if (L[nm] !== B[nm] && R[nm] === Hl[nm]) { const v = o2[nm] ? JSON.parse(JSON.stringify(o2[nm])) : null; dr_ecrire(chemin + '/' + nm, v, 'Trame du déroulé — séance ' + k + ', ' + nm, () => {}); B[nm] = L[nm]; Hl[nm] = dr_canon(v); n++; } });
-    if (n) { const m = Date.now(); const sce = dr_seance(k); if (sce && sce.deroule) sce.deroule.maj = m; dr_ecrire(chemin + '/maj', m, 'Trame du déroulé — séance ' + k, saute ? dr_pasEnregistre : fini); } else if (saute) dr_pasEnregistre(); else fini();   /* CA (Paul 12/11 18:51 : « Enregistré à 18:46 » au-dessus de « ta version n'est pas encore enregistrée ») : « Enregistré » seulement quand tout ce que Paul a changé est accepté par le hub */
+    if (n) { const m = Date.now(); const sce = dr_seance(k); if (sce && sce.deroule) sce.deroule.maj = m; dr_ecrire(chemin + '/maj', m, 'Trame du déroulé — séance ' + k, saute ? dr_pasEnregistre : fini); if (!depart && typeof dr_copiesSuivrePlanifier === 'function') dr_copiesSuivrePlanifier(k);   /* CC : de même, diapo par diapo */ } else if (saute) dr_pasEnregistre(); else fini();   /* CA (Paul 12/11 18:51 : « Enregistré à 18:46 » au-dessus de « ta version n'est pas encore enregistrée ») : « Enregistré » seulement quand tout ce que Paul a changé est accepté par le hub */
     DR_MEM.empreintes[k] = JSON.stringify(o2); };
   if (depart) ecrire(undefined); else dr_lire(chemin, v => ecrire(v || undefined)); }   /* la page part : pas le temps de relire — le hub tel qu'on l'a lu en dernier */
 function dr_pasEnregistre(){ const t = document.getElementById('at-dr-etat'); if (t) { t.className = 'at-dr-etat at-dr-enr-ko'; t.textContent = '⚠ Pas encore enregistré — une diapo attend ton choix (le message au-dessus)'; t.title = 'Une diapo que tu as modifiée n’est pas encore au hub : choisis « Garder la mienne » ou « Prendre celle de l’autre appareil » dans le message'; } const sv = document.getElementById('at-save'); if (sv) { sv.className = 'at-save dirty'; sv.textContent = '● pas encore au hub — une diapo attend ton choix'; } try { S.atelierDirty = Date.now(); } catch (e) {} }
@@ -21274,7 +21274,10 @@ function dr_paquetHeure(clos){
   const activites = Object.keys(parEid).map(eid => { const i = indexDe(eid), e = E[i] || {}; return { n: i, eid, act: e.act || ('écran ' + (i + 1)), prevu: +(e.dur || 0), reel: Math.max(1, Math.round(parEid[eid].ms / 60000)), passages: parEid[eid].passages,   /* un écran vu compte au moins une minute : `reel === 0` veut dire « pas joué » pour la case de l'EDT (« reportée ») */ comp: Array.isArray(e.comp) ? e.comp : [] }; })
     .sort((a, b) => a.n - b.n);
   const acts = (typeof actDe === 'function') ? [...new Set(E.map(actDe).filter(Boolean))] : [];
-  const parActivite = acts.map(a => { const ds = (a.diapos || []).map(i => eidDe(i)).filter(x => x != null); const ms = ds.reduce((t, d) => t + ((parEid[d] || {}).ms || 0), 0); const ps = ds.reduce((t, d) => t + ((parEid[d] || {}).passages || 0), 0);
+  /* CB (C17, mesuré par la conscience le 13/11 06:46 : la « Fin d'heure » fin-h1-s1 comptée dans « Rappel sur la versification ») : une diapo posée par le site
+     (fin-*, inv-*, react-*, bmc-*, ou un rôle de fin, d'ouverture, de réactivation, de mise en commun) ne compte JAMAIS dans une activité, quelle que soit la liste qui la porte */
+  const genere = d => /^(fin-|inv-|react-|bmc-)/.test(String(d)) || (function(){ const e = E[indexDe(d)]; return !!(e && (e.role === 'fin' || e.role === 'reactivation' || e.role === 'bilan-commun' || (typeof DR_INV !== 'undefined' && DR_INV.indexOf(e.role) >= 0))); })();
+  const parActivite = acts.map(a => { const ds = (a.diapos || []).map(i => eidDe(i)).filter(x => x != null && !genere(x)); const ms = ds.reduce((t, d) => t + ((parEid[d] || {}).ms || 0), 0); const ps = ds.reduce((t, d) => t + ((parEid[d] || {}).passages || 0), 0);
     return { actId: a.id, num: a.num, titre: a.titre || '', prevu: (a.diapos || []).reduce((t, i) => t + (+((E[i] || {}).dur) || 0), 0), reel: Math.round(ms / 60000), passages: ps }; }).filter(a => a.passages);
   const decisionsParEcran = {}, decisionsParActivite = {};
   Object.keys(S.decisions || {}).forEach(k => { if (acts.find(x => x.id === k)) decisionsParActivite[k] = S.decisions[k]; });   /* lu par la réactivation (« À reprendre ») des heures écrites avant ㊳ */
@@ -21367,6 +21370,10 @@ function dr_lancer(classeSlug, creneau, debut, heure, sur, isoCase, dateSeule){
   }));
 }
 function dr_lancerNeuf(classeSlug, nom, creneau, debut, heure, c, suite){
+  /* CB (C17, Paul 13/11 06:37 : « lancé une heure d'aujourd'hui, puis annulé […] dans l'atelier sans recharger ») : la page telle qu'avant CE lancement, photographiée
+     à sa toute première étape — avant que l'heure n > 1 n'y verse la copie de la classe (fusion, état relu, « heure 1 close »). Avant : la photo était prise juste avant
+     `lancerHeure`, après la fusion ; « Annuler cette heure » remettait donc la copie de l'heure 1 (« Diapo 16 sur 17 · heure 1 · jouée ») au lieu de la trame. */
+  if (!suite && DR_CL.avantGen !== DR_LANCE_GEN) { DR_CL.avantGen = DR_LANCE_GEN; try { DR_CL.avantMem0 = dr_annulInstantane(); } catch (e) { DR_CL.avantMem0 = null; } }
   /* une heure close ne se reprend plus, par aucun chemin (C1 12 ; `_drHeureCloseAu`) : la même clé (jour + créneau + classe) n'est jamais réécrite */
   if (!DR_CL.cleVerifiee) { const fin0 = String(creneau).split('-')[1]; const ch0 = (typeof dr_cheminB === 'function' ? dr_cheminB() : '') + '/deroule_joue/' + classeSlug + '/heures/' + _drCleHeureDe(Object.assign({ classeSlug, debut, fin: fin0 }, DR_CL.rat || {}));
     /* C17 BS : les deux lectures partent ensemble (avant : l'une après l'autre — mesuré CPU ×4, chacune attendait derrière les redessins) */
@@ -21402,7 +21409,8 @@ function dr_lancerNeuf(classeSlug, nom, creneau, debut, heure, c, suite){
   if (!DR_CL.react.decide[heure] && !dr_reactDejaLa(heure) && !DR_CL.react.enCours && !(typeof DR_ENCH === 'object' && DR_ENCH.sansReact === heure)) {   /* C16 mandat V : la séance suivante dans cette heure part sans la question de la réactivation (la classe sort de la séance d'avant) */
    DR_CL.react.enCours = true; dr_reactPreparerAsync(heure, dr_lanceGarde(e => { DR_CL.react.enCours = false; if (e) { DR_CL.suite = (suite && DR_CL.suite) ? DR_CL.suite : { classeSlug, nom, creneau, debut, heure, garder: false }; dr_ouvertureLegere(heure); } else { DR_CL.react.decide[heure] = true; dr_lancerNeuf(classeSlug, nom, creneau, debut, heure, c, suite); } })); return; }
   const garder = suite && DR_CL.suite && DR_CL.suite.garder; DR_CL.suite = null;
-  try { DR_CL.avantMem = dr_annulInstantane(); } catch (e) { DR_CL.avantMem = null; }   /* §12.68 : la page telle qu'avant le lancement */
+  try { DR_CL.avantMem = (DR_CL.avantGen === DR_LANCE_GEN && DR_CL.avantMem0) ? DR_CL.avantMem0 : dr_annulInstantane(); } catch (e) { DR_CL.avantMem = null; }   /* §12.68 : la page telle qu'avant le lancement (CB : la photo de la première étape) */
+  DR_CL.avantMem0 = null; DR_CL.avantGen = null;   /* CB : la séance enchaînée dans la même heure prendra sa propre photo */
   const copie = garder ? null : ((typeof atDrJouer === 'function') ? atDrJouer(classeSlug, nom) : null);
   AT_DR_COURS = Object.assign({ debut, fin, classeSlug, classeNom: nom }, DR_CL.rat || {}); AT_DR_REGIME = 'classe';
   try { chChargerTaxo(() => {}); } catch (e) {}   /* [8.67.1] le T-5 nomme les notions, jamais leurs codes */
@@ -22183,7 +22191,7 @@ function dr_fusionCopie(trame, copie, journalJ){
   const sansBmc = dr_copieSansBmc(copie, JJ);   /* C16 mandat S3 (1) : la copie d'avant S dont le bilan a été montré ne reçoit pas la mise en commun de la trame */
   (trame || []).forEach(e => { const c = e && parEid[e.eid]; vus.add(e && e.eid);
     if (!c) { if (!(sansBmc && e && e.role === 'bilan-commun')) res.push(e); return; }                                   /* nouveau dans la trame */
-    res.push(sig(e) !== sig(c) && modifie(e.eid) ? c : e); });         /* modifié dans la trame : la trame, sauf ce que la classe a modifié */
+    res.push(joue(e.eid) || (sig(e) !== sig(c) && modifie(e.eid)) ? c : e); });         /* modifié dans la trame : la trame, sauf ce que la classe a modifié — CC (13/11) : et sauf ce qu'elle a joué (une diapo jouée ne change jamais) */
   (copie || []).forEach((c, i) => { if (!c || vus.has(c.eid) || !(joue(c.eid) || c.role === 'reactivation')) return;   /* retiré de la trame mais joué : il reste, à sa place ; §12.26-2 : la réactivation construite ne vit que dans la copie — gardée même pas encore montrée (construite à la clôture) */
     const prec = (copie[i - 1] || {}).eid; const k = res.findIndex(x => x && x.eid === prec); res.splice(k >= 0 ? k + 1 : res.length, 0, (c.role === 'reactivation' && !joue(c.eid) && typeof dr_reactNumsActuels === 'function') ? dr_reactNumsActuels(c) : c); });   /* (mandat G, C16 366) « Où en sommes-nous ? » pas encore montrée : les numéros de la trame d'aujourd'hui ; montrée, ceux d'alors */
   return res;
@@ -22664,6 +22672,17 @@ function dr_annulRemettre(x){ if (!x || !x.C) return;
 function dr_joueeOublier(H){ if (!H) return; try { if (typeof edtVifIci === 'function') edtVifIci(H, 'annulee'); } catch (e) {}   /* BW (C17 ; Paul 12/11 : « POURQUOI ELLE APPARAÎT COMME JOUÉE ??? ») : l'emploi du temps rouvert juste après ne la reprend pas d'une lecture faite avant l'effacement */
   try { if (DR_CL.joueesIci) delete DR_CL.joueesIci[H]; const m = /^\/site\/([^/]+)\/chapitres\/([^/]+)\/seances\/([^/]+)\/deroule_joue\/([^/]+)\/heures\/([^/]+)$/.exec(H); if (!m || typeof EDT_CHAP === 'undefined' || !EDT_CHAP[m[1]]) return;
   const ch = EDT_CHAP[m[1]].find(c => c && c.__cle === m[2]); const se = ch && edtListe(ch.seances).find(s => s && s.__i === m[3]); const b = se && se.deroule_joue && se.deroule_joue[m[4]]; if (b && b.heures) delete b.heures[m[5]]; } catch (e) {} }
+/* la page revient à la photo d'avant le lancement (S, ce que la classe a vu, la séance, le cours, le régime) ; sans photo : l'heure s'arrête seulement.
+   CB : la même remise sert à « ✕ Fermer » sur « Où en est la classe » (le lancement n'est pas parti : la copie de la classe versée dans la page s'en va)
+   et à « ✕ Fermer » après « Clore » (l'heure est au hub ; la page revient à la trame, comme une page rechargée). */
+function dr_annulPageRemettre(mem){ AT_DR_REGIME = 'prep';
+  /* CB : les témoins de l'heure (« ● déroulé intègre / à vérifier », « ● session ») ne restent pas à l'écran — une page rechargée ne les a pas */
+  try { const t = document.getElementById('dr-integre'); if (t) t.remove(); const s = document.getElementById('dr-session'); if (s) { s.textContent = ''; s.className = 'dr-session'; s.title = ''; } DR_CL.empreinte = null; DR_CL.relue = null; } catch (e) {}
+  try { if (mem) { Object.keys(S).forEach(k => { if (!k.startsWith('_')) delete S[k]; }); Object.assign(S, JSON.parse(JSON.stringify(mem.S))); Object.keys(vuMax).forEach(k => delete vuMax[k]); Object.assign(vuMax, mem.vuMax); Object.keys(parDiapo).forEach(k => delete parDiapo[k]); Object.assign(parDiapo, mem.parDiapo); J.length = Math.min(J.length, mem.Jlen);
+      const E0 = dr_seances()[S.si].ecrans; E0.splice(0, E0.length, ...mem.ecrans); (mem.props || []).forEach((l, k) => { const e = E0[k]; if (e) l.forEach(([n, d]) => { try { Object.defineProperty(e, n, d); } catch (x) {} }); });
+      AT_DR_COURS = mem.cours; AT_DR_REGIME = mem.regime === 'classe' ? 'prep' : (mem.regime || 'prep'); }
+    else { S.lancee = false; S.close = false; AT_DR_COURS = null; } } catch (e) { S.lancee = false; S.close = false; }
+  try { DR_CL.suite = null; DR_CL.reactC = null; DR_CL.etatRestaure = false; } catch (e) {} }
 function dr_annulerHeure(){
   if (!dr_annulPeut()) return;
   const o = DR_CL.ouverte || {}; const C = o.C, H = o.H; const cle = H ? String(H).split('/').pop() : null;
@@ -22673,11 +22692,7 @@ function dr_annulerHeure(){
   ["jT", "eT", "tT", "cT"].forEach(k => dr_minuterieArret(DR_CL, k)); try { dr_minuteurFin(); } catch (e) {}
   try { dr_ongletClos(); } catch (e) {}
   /* 2. la page revient à avant le lancement */
-  const mem = DR_CL.avantMem; AT_DR_REGIME = 'prep';
-  try { if (mem) { Object.keys(S).forEach(k => { if (!k.startsWith('_')) delete S[k]; }); Object.assign(S, mem.S); Object.keys(vuMax).forEach(k => delete vuMax[k]); Object.assign(vuMax, mem.vuMax); Object.keys(parDiapo).forEach(k => delete parDiapo[k]); Object.assign(parDiapo, mem.parDiapo); J.length = Math.min(J.length, mem.Jlen);
-      const E0 = dr_seances()[S.si].ecrans; E0.splice(0, E0.length, ...mem.ecrans); (mem.props || []).forEach((l, k) => { const e = E0[k]; if (e) l.forEach(([n, d]) => { try { Object.defineProperty(e, n, d); } catch (x) {} }); });
-      AT_DR_COURS = mem.cours; AT_DR_REGIME = mem.regime === 'classe' ? 'prep' : (mem.regime || 'prep'); }
-    else { S.lancee = false; S.close = false; AT_DR_COURS = null; } } catch (e) { S.lancee = false; S.close = false; }
+  dr_annulPageRemettre(DR_CL.avantMem);
   S.mur = null; S.gel = null; DR_CL.ouverte = null; DR_CL.avantMem = null; DR_CL.empreinteEcrite = null; dr_joueeOublier(H);
   /* 3. le hub : la copie d'avant, la trace oubliée, le pointeur s'il est encore le nôtre, l'image du mode test */
   const x = av ? { C, avant: av, cle } : null;
@@ -22754,6 +22769,15 @@ window.addEventListener('DOMContentLoaded', () => { try {
       try { return e0.apply(this, arguments); } finally { if (typeof f0 === 'function') window.edtFermer = f0;
         if (passe) { if (DR_LANCE) clearInterval(DR_LANCE.tic); let av = false; try { av = !!(S.lancee && !S.close); } catch (e) {} DR_LANCE = { t0: Date.now(), attente: true, gardes: 0, avant: av, hou: false }; try { DR_LANCE.ouverte0 = DR_CL.ouverte; DR_LANCE.cours0 = AT_DR_COURS; DR_LANCE.regime0 = AT_DR_REGIME; } catch (e) {} dr_lanceBande(); DR_LANCE.tic = setInterval(dr_lanceTic, 250); } } };
     edtLancer._drLance = true; }
+  /* CB (C17) : « ✕ Fermer » sans heure qui tourne — la page quitte la copie de la classe et revient à la photo d'avant le lancement, AVANT l'enregistrement de « Fermer » :
+     (1) sur « Où en est la classe » (l'heure n > 1 n'est pas partie) ; (2) après « Clore » (l'heure est au hub : close, sa copie, son paquet ; en régime « prep », plus rien n'écrit
+     pour la classe). L'Atelier ouvert ensuite montre la séance telle qu'elle est préparée, comme une page rechargée — plus l'heure 1 de la classe (« jouée », ses horaires). */
+  if (typeof atClasseFermer === 'function' && !atClasseFermer._drCb) { const f0 = atClasseFermer; atClasseFermer = function(){
+      try { const vers = m => { dr_annulPageRemettre(m); S.mur = null; S.gel = null; try { const f = document.getElementById('ecran-fin'); if (f) f.classList.remove('on', 'ouverture'); } catch (e) {} try { dr_tout(); } catch (e) {} };
+        if (DR_CL.avantGen === DR_LANCE_GEN && DR_CL.avantMem0 && !(S.lancee && !S.close && AT_DR_REGIME === 'classe')) { const m = DR_CL.avantMem0; DR_CL.avantMem0 = null; DR_CL.avantGen = null; vers(m); }
+        else if (S.lancee && S.close && !S.repetition && AT_DR_REGIME !== 'classe' && DR_CL.avantMem) { try { if (typeof dr_recitAuto === 'function') dr_recitAuto(); } catch (e) {}   /* le récit tapé dans la dernière seconde part au hub AVANT que la page quitte l'heure (sa boucle de 0,9 s ne le verrait plus) */
+          const m = DR_CL.avantMem; DR_CL.avantMem = null; DR_CL.ouverte = null; vers(m); } } catch (e) {}
+      return f0.apply(this, arguments); }; atClasseFermer._drCb = true; }
   if (typeof lancerHeure === 'function' && !lancerHeure._drLance) { const l0 = lancerHeure; lancerHeure = function(){ const r = l0.apply(this, arguments); if (DR_LANCE) { DR_LANCE.avant = false; if (DR_LANCE.attente) dr_lanceFin('partie'); else if (Date.now() - (DR_LANCE.tDec || 0) < 600000) dr_lanceJouer(); else DR_LANCE = null; }   /* après « Où en est la classe » : les ▶ gardés se font au départ, s'il suit (10 min au plus) */ return r; }; lancerHeure._drLance = true; }
   if (typeof devoiler === 'function' && !devoiler._drLance) { const d0 = devoiler; devoiler = function(){ if (dr_lanceGarder()) return; return d0.apply(this, arguments); }; devoiler._drLance = true; }
   if (typeof atInfo === 'function' && !atInfo._drLance) { const a0 = atInfo; atInfo = function(m){ try { if (DR_LANCE && DR_LANCE.attente && /échoué|ne s’ouvre pas|ne s'ouvre pas|déjà close|Aucune classe pour ce niveau/.test(String(m))) dr_lanceFin('refus'); } catch (e) {} return a0.apply(this, arguments); }; atInfo._drLance = true; }
@@ -22819,6 +22843,77 @@ document.addEventListener('keydown', ev => { try { if (typeof S === 'undefined')
   if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && String(ev.key).toLowerCase() === 'z' && S.derniere && S.derniere.type === 'bilanB') { ev.preventDefault(); ev.stopPropagation(); annulerDerniere(); } } catch (x) {} }, true);
 document.addEventListener('click', ev => { try { const li = ev.target.closest && ev.target.closest('#mur li[data-bco]'); if (!li || !dr_bActif()) return; const rc = li.getBoundingClientRect(); const em = parseFloat(getComputedStyle(li).fontSize) || 16; if (ev.clientX - rc.left > 1.45 * em) return;
   ev.preventDefault(); ev.stopPropagation(); const i = +li.dataset.bco; const C = dr_bCoches(); const st = dr_bEtat(true); if (!st) return; st.bForce = st.bForce || {}; st.bForce[i] = !C[i]; journal(st.bForce[i] ? 'bilan-point-coche' : 'bilan-point-decoche', { pt: i }); if (document.activeElement === li) li.blur(); /* C16 mandat S6 : la ligne prenait le focus au clic sur sa case, et le redessin ne touche pas la ligne qui a le focus — la marque B y restait (mesuré, B37) */ dr_tout(); } catch (x) {} }, true);
+
+/* ─── CC (C17, Paul 13/11 07:14 : « la copie de classe se construit au fur et à mesure ») : LA COPIE DE LA CLASSE SUIT L'ATELIER POUR TOUT CE QUI N'EST PAS JOUÉ.
+   Une diapo « jouée » par une classe : son eid est au journal de la classe (entrée `diapo`), ou dévoilée (`vuMax` > 0, `parDiapo.nDev` > 0, dans `etat` ou `vif`).
+   La règle (`dr_copieRegle`, sur les formes du hub) : une diapo jouée ne change jamais (contenu et place : elle reste derrière sa voisine d'avant dans la copie) ;
+   une diapo non jouée prend la version de l'Atelier (contenu, blocs, masquage, durée, ordre), en gardant son `heure` propre à la classe ; une diapo ajoutée
+   à l'Atelier entre à sa place ; une diapo supprimée à l'Atelier et jamais jouée sort ; les diapos posées par le site (inv-, fin-, react-, bmc-) restent à leur place.
+   Où : (1) au geste de l'Atelier (`dr_copiesSuivrePlanifier`, après l'écriture de la trame) pour chaque copie existante de la séance dont aucune heure ne
+   tourne ; (2) pendant une heure qui tourne, c'est la page du pilote qui suit la trame (`dr_classeSuitAtelier`, toutes les 3 s) — seule à écrire sa copie ;
+   (3) au lancement, la fusion (`dr_fusionCopie`) garde désormais la version jouée. Une page laissée ouverte n'écrit rien : (1) ne part que d'un geste. */
+const DR_CC_GEN = /^(inv-|react-|fin-|bmc-)/;
+function dr_ccListe(x){ return Array.isArray(x) ? x.filter(Boolean) : (x && typeof x === 'object') ? Object.keys(x).sort((a, b) => (+a) - (+b)).map(k => x[k]).filter(Boolean) : []; }
+function dr_ccGeneree(e){ return !!(e && (DR_CC_GEN.test(String(e.eid || '')) || e.role === 'fin' || e.role === 'reactivation')); }
+/* les eids joués d'une copie : journal (`diapo`), `vuMax` et `parDiapo` (clés « séance|eid ») de l'état et du vif */
+function dr_ccJouees(journalJ, sources){ const s = new Set(); dr_ccListe(journalJ).forEach(x => { if (x && x.type === 'diapo' && x.eid) s.add(x.eid); });
+  (sources || []).forEach(src => { if (!src) return; const vm = src.vuMax || {}, pd = src.parDiapo || {}; Object.keys(vm).forEach(k => { if (+vm[k] > 0) s.add(k.slice(k.indexOf('|') + 1)); }); Object.keys(pd).forEach(k => { if (pd[k] && +pd[k].nDev > 0) s.add(k.slice(k.indexOf('|') + 1)); }); });
+  return s; }
+function dr_copieRegle(trame, copie, jouees){
+  const C = dr_ccListe(copie), T = dr_ccListe(trame).filter(e => e && e.eid && !dr_ccGeneree(e));
+  const fixe = c => dr_ccGeneree(c) || jouees.has(c.eid); const premier = {}; C.forEach(c => { if (c.eid && !premier[c.eid]) premier[c.eid] = c; });
+  const res = [], place = new Map(), dansTrame = new Set(T.map(e => e.eid));
+  /* 1. ce qui n'est pas joué, dans l'ordre de l'Atelier (la version de l'Atelier, l'heure de la classe) */
+  T.forEach(e => { const c = premier[e.eid]; if (c && fixe(c)) return; const n = JSON.parse(JSON.stringify(e)); delete n.heure;
+    if (c) { if (c.heure != null) n.heure = c.heure; place.set(c, n); } else { const av = res[res.length - 1]; if (av && av.heure != null) n.heure = av.heure; }   /* ajoutée : l'heure de sa voisine d'avant dans la copie */
+    res.push(n); });
+  /* 2. ce qui est joué ou posé par le site : tel quel, derrière sa voisine d'avant dans la copie (au début s'il n'y en a pas) */
+  let debut = 0; C.forEach((c, i) => { if (!c.eid || place.has(c)) return; if (!fixe(c)) return;   /* non jouée, absente de l'Atelier (supprimée) ou en double : elle sort */
+    if (!dansTrame.has(c.eid) || premier[c.eid] === c || dr_ccGeneree(c)) { let k = -1; for (let j = i - 1; j >= 0 && k < 0; j--) { const r = place.get(C[j]); if (r) k = res.indexOf(r); }
+      if (k < 0) { res.splice(debut, 0, c); debut++; } else res.splice(k + 1, 0, c); place.set(c, c); } });
+  return res; }
+/* (1) au geste de l'Atelier : après l'écriture de la trame, chaque copie de la séance (sauf celle d'une heure qui tourne ailleurs : son pilote suit lui-même) */
+const DR_CC = { T: {}, vol: {}, maj: null, lecture: false, vu: {} };
+function dr_copiesSuivrePlanifier(k){ try { if (typeof S !== 'undefined' && (S.repetition || S.lancee && !S.close)) return; clearTimeout(DR_CC.T[k]); DR_CC.T[k] = setTimeout(() => dr_copiesSuivre(k, 0), 1200); } catch (e) {} }
+function dr_copiesSuivre(k, essai){ try {
+  if (DR_CC.vol[k]) { DR_CC.T[k] = setTimeout(() => dr_copiesSuivre(k, essai), 1500); return; }
+  const ec = AT.edChap || {}; const sce = dr_seance(k); if (!sce || !sce.deroule) return; const B = dr_cheminBDe(k); const majIci = +sce.deroule.maj || 0;
+  const classes = Object.keys(sce.deroule_joue || {}); if (!classes.length) return;   /* aucune copie : rien à suivre */
+  const L = ch => new Promise(r => dr_lire(ch, v => r(v)));
+  DR_CC.vol[k] = true; const fin = () => { DR_CC.vol[k] = false; };
+  Promise.all([L(B + '/deroule'), L('/site/cours_actif')]).then(([d, cours]) => {
+    if (!d || !d.ecrans) { fin(); return; }
+    if (+d.maj < majIci && essai < 3) { fin(); DR_CC.T[k] = setTimeout(() => dr_copiesSuivre(k, essai + 1), 2000); return; }   /* l'écriture de la trame n'est pas encore au hub : un peu plus tard */
+    const tourne = sl => !!(cours && (typeof dr_sesFrais !== 'function' || dr_sesFrais(cours)) && String(cours.niveau) === String(ec.level) && String(cours.chapitre) === String(ec.chnum) && String(cours.seance) === String(k) && cours.classeSlug === sl);
+    /* une lecture à la fois (bk, 13/11 : six lectures par classe en même temps retardaient l'écriture de la trame du geste suivant — le navigateur n'ouvre que six liaisons) ;
+       un enregistrement de la trame en attente : on cède, le geste suivant replanifie */
+    const suite = (chs, acc) => chs.length ? (DR_MEM.minuteur ? Promise.reject('cède') : L(chs[0]).then(v => suite(chs.slice(1), acc.concat([v])))) : Promise.resolve(acc);
+    return classes.reduce((pr, sl) => pr.then(fait => { if (tourne(sl)) return fait; const C = B + '/deroule_joue/' + sl;   /* une heure tourne pour cette classe : son pilote suit l'Atelier lui-même (`dr_classeSuitAtelier`) */
+      return suite([C + '/ecrans', C + '/journal', C + '/etat/vuMax', C + '/etat/parDiapo', C + '/vif/vuMax', C + '/vif/parDiapo'], []).then(([ecr, jr, evm, epd, vvm, vpd]) => {
+        const avant = dr_ccListe(ecr); if (!avant.length) return fait;
+        const jouees = dr_ccJouees(jr, [{ vuMax: evm, parDiapo: epd }, { vuMax: vvm, parDiapo: vpd }]);
+        const apres = dr_copieRegle(d.ecrans, avant, jouees); if (dr_canon0(apres) === dr_canon0(avant)) return fait;
+        const nom = (typeof dr_nomClasse === 'function' ? dr_nomClasse(sl) : sl) || sl;
+        dr_ecrire(C + '/ecrans', apres, 'La copie de la classe suit l’Atelier (' + nom + ') — ce qui n’est pas joué', () => {});
+        try { const s0 = sce.deroule_joue[sl]; if (s0 && typeof s0 === 'object') s0.ecrans = JSON.parse(JSON.stringify(apres)); } catch (e) {}
+        return fait.concat([sl]); }).then(x => x || fait); }), Promise.resolve([])).then(r => { fin(); DR_CC.dernier = { k, classes: r, t: Date.now() }; });
+  }).catch(() => fin()); } catch (e) { DR_CC.vol[k] = false; } }
+/* (2) une heure qui tourne : la page du pilote suit la trame pour ce qui n'est pas joué, sans toucher la diapo à l'écran ni une saisie (rien sous un geste en cours) ;
+   le contenu, le masquage, la durée d'une diapo non jouée se mettent à jour à leur place ; la page écrit sa copie elle-même (`dr_copieAuto`, seule à écrire) */
+function dr_classeSuitAtelier(){ try {
+  if (typeof AT_DR_REGIME === 'undefined' || AT_DR_REGIME !== 'classe' || typeof S !== 'object' || !S.lancee || S.close || S.repetition || S.atelier || !AT_DR_COURS) return;
+  if (/[?&]vue=tableau(&|$)/.test(location.search) || DR_CC.lecture || (typeof dr_syncGeste === 'function' && dr_syncGeste())) return;
+  const k = String(ATVUES.snum); const B = dr_cheminBDe(k); DR_CC.lecture = true;
+  dr_lire(B + '/deroule/maj', m => { if (!m || m === DR_CC.maj) { DR_CC.lecture = false; return; }
+    dr_lire(B + '/deroule/ecrans', T => { DR_CC.lecture = false; if (!T || (typeof dr_syncGeste === 'function' && dr_syncGeste())) return;   /* sous un geste : au tour suivant */
+      if (!S.lancee || S.close || S.atelier || String(ATVUES.snum) !== k) return; DR_CC.maj = m; const n = dr_classeSuitTrame(T); if (n) { try { dr_tout(); } catch (e) {} try { dr_copieAuto(); } catch (e) {} } }); }); } catch (e) { DR_CC.lecture = false; } }
+function dr_classeSuitTrame(T){ const E = seance().ecrans; const jouees = dr_ccJouees(J, [{ vuMax, parDiapo }]); const ici = E[S.di]; const a = document.activeElement; let n = 0;
+  const sansH = x => { const o = Object.assign({}, x); delete o.heure; return dr_canon(o); };
+  dr_ccListe(T).forEach(t => { if (!t.eid || dr_ccGeneree(t)) return; const i = E.findIndex(e => e && e.eid === t.eid); if (i < 0 || i === S.di || E[i] === ici || jouees.has(t.eid)) return;
+    const sig = sansH(t); if (DR_CC.vu[t.eid] === sig) return; if (sansH(E[i]) === sig) { DR_CC.vu[t.eid] = sig; return; }
+    const nv = JSON.parse(JSON.stringify(t)); delete nv.heure; if (E[i].heure != null) nv.heure = E[i].heure; dr_preparer([nv]); E[i] = nv; DR_CC.vu[t.eid] = sig; n++; });
+  if (n) { try { reindexer(); } catch (e) {} } return n; }
+setInterval(dr_classeSuitAtelier, 3000);
 
 </script>
 <script>
@@ -23947,12 +24042,19 @@ function dr_recitHDeCle(cle){ try { const hc = S.heuresCours || {}; const h = Ob
 function dr_recitHeuresTouchees(){ const hs = new Set(); dr_recitChamps().forEach(k => Object.keys(S[k] || {}).forEach(h => hs.add(+h))); return [...hs].filter(h => h > 0); }
 function dr_recitCharger(cb){ const C = dr_recitChemin(); if (!C || typeof dr_lire !== 'function') { if (cb) cb(); return; } if (DR_RECIT_EN_LECTURE[C]) { if (cb) setTimeout(cb, 300); return; } DR_RECIT_EN_LECTURE[C] = true;
   dr_lire(C + '/heures', hs => { if (hs && typeof hs === 'object') Object.keys(hs).forEach(k => { const x = hs[k] || {}; DR_RECIT_FIN_HUB[k] = { clos: x.clos === true, finReel: x.finReel || null, nums: dr_recitNumsDuPaquet(x) }; }); });   /* §12.20 : la fin réelle et la clôture d'une heure relue après rechargement (H/clos, H/finReel écrits par E2) */
-  dr_lire(C + '/recit', v => { DR_RECIT_EN_LECTURE[C] = false; if (v && typeof v === 'object') Object.keys(v).forEach(c => { const h = dr_recitHDeCle(c); if (v[c] && h > 0) dr_recitPoser(h, v[c]); });
+  dr_lire(C + '/recit', v => { DR_RECIT_EN_LECTURE[C] = false; if (v && typeof v === 'object') Object.keys(v).forEach(c => { DR_RECIT_LU[C + '|' + c] = dr_recitEmpreinteSansMaj(v[c]); const h = dr_recitHDeCle(c); if (v[c] && h > 0) dr_recitPoser(h, v[c]); });
     dr_recitHeuresTouchees().forEach(h => { DR_RECIT_ECRIT[C + '|' + h] = JSON.stringify(dr_recitEtatDe(h)); }); DR_RECIT_CHARGE[C] = true; if (cb) cb(); }); }
+/* CB : l'empreinte d'un récit tel que le hub le rend (clés triées, vides retirés), sans son `maj` — ce qui est relu, puis ce qui serait écrit */
+var DR_RECIT_LU = {};
+function dr_recitEmpreinteSansMaj(x){ try { if (!x || typeof x !== 'object' || typeof dr_empreinteHub !== 'function') return ''; const y = Object.assign({}, x); delete y.maj; return dr_empreinteHub(y); } catch (e) { return ''; } }
 function dr_recitAuto(){ try {
   if (typeof S === 'undefined' || S.repetition || S.atelier) return; const C = dr_recitChemin(); if (!C || typeof dr_ecrire !== 'function') return;
   if (!DR_RECIT_CHARGE[C]) { dr_recitCharger(); return; }   /* jamais une écriture avant d'avoir lu ce qui est au hub : on n'écrase pas un récit relu */
-  dr_recitHeuresTouchees().forEach(h => { const cle = dr_recitCle(h); if (!cle) return; /* sans clé d'heure, rien ne s'écrit */ const o = dr_recitEtatDe(h); const sig = JSON.stringify(o); if (DR_RECIT_ECRIT[C + '|' + h] === sig) return; DR_RECIT_ECRIT[C + '|' + h] = sig; o.maj = Date.now(); dr_ecrire(C + '/recit/' + cle, o, 'Le récit de l’heure ' + h, () => {}); });
+  dr_recitHeuresTouchees().forEach(h => { const cle = dr_recitCle(h); if (!cle) return; /* sans clé d'heure, rien ne s'écrit */ const o = dr_recitEtatDe(h); const sig = JSON.stringify(o); if (DR_RECIT_ECRIT[C + '|' + h] === sig) return; DR_RECIT_ECRIT[C + '|' + h] = sig;
+    /* CB (C17) : le récit relu tel quel au hub ne se réécrit pas — avant, le lancement de l'heure 2 réécrivait le récit de l'heure 1 à l'identique, seul `maj` changeait
+       (et « Annuler cette heure » ne le remettait pas : l'écriture précédait la lecture de la copie d'avant) */
+    const em = dr_recitEmpreinteSansMaj(o); if (em && DR_RECIT_LU[C + '|' + cle] === em) return; DR_RECIT_LU[C + '|' + cle] = em;
+    o.maj = Date.now(); dr_ecrire(C + '/recit/' + cle, o, 'Le récit de l’heure ' + h, () => {}); });
 } catch (e) {} }
 setInterval(dr_recitAuto, 900);
 
