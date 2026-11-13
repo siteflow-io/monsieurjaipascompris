@@ -1044,3 +1044,9 @@
 ## AJOUTS DU 13/11/2026 — DÉROULÉ 9.2.0-㊴
 - Les écrans à jour sans recharger (CB) : après « Annuler » une heure, la page revient à l'état propre (`dr_annulPageRemettre`, l. 22678) ; un lancement repart à neuf (`dr_lancerNeuf`, l. 21372) ; le récit est fait avant le retour à la trame après Clore (`dr_recitAuto`, l. 24050).
 - La copie de la classe suit l'Atelier pour le non-joué (CC) : la règle diapo par diapo (`dr_copieRegle`, l. 22862), la fusion copie / trame (`dr_fusionCopie`, l. 22186), le suivi au geste dans l'Atelier (`dr_copiesSuivrePlanifier`, l. 22877 ; `dr_copiesSuivre`, l. 22878 ; `dr_classeSuitAtelier`, l. 22903), la copie au lancement (`dr_copieAuto`, l. 21206).
+
+## AJOUTS DU 13/11/2026 (bis) — DÉROULÉ 9.3.0-㊵
+- La copie suit pendant l'heure : l'ordre du lancement gardé, seules les diapos pas jouées bougent (`dr_classeSuitOrdre`, l. 22961).
+- L'échéance : les 6 prochaines heures et « Autre date… » (`dr_prochainesEch`, l. 22259 ; `dr_echeanceChoisir`, l. 22263 ; `dr_echeanceCalendrier`, l. 22265 ; `dr_echeanceEnClair`, l. 22255 ; `dr_isoDuJour`, l. 22254).
+- Un seul compte des diapos à reprendre (case close, case suivante, pilote) et de « séance finie » (`edtReprend`, l. 28683 ; `edtAReprendre`, l. 28688 ; `edtAReprendreSeance`, l. 28695 ; `edtSurClos`, l. 28699).
+- Le récit jamais effacé par une écriture automatique (`dr_recitPerd`, l. 24135 ; `versionsDe` répare une liste absente).

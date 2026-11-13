@@ -1512,3 +1512,9 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   données : 13/11, sur l'accord de Paul — 06:46 A4 retirée de l'heure 1 de la 3 F.A. ; 07:15 Questions D, E, F masquées dans les deux copies ; 13:14 « Le bilan » du 12/11 de la 3 D.B. → « reporter ». Sauvegardes : sas `SAUVEGARDES/COPIES-3E-2026-11-12/`.
   reste : CE (une seule façon de compter les heures, la copie suit pendant l'heure, l'échéance à 6 heures + « Autre date… ») sur le sas `3c85a12`, preuves CC/CB à refaire sur une donnée de départ gardée.
   → mots-clés : écrans · recharger · deux ordinateurs · copie de classe · Atelier · loupe · 9.2 · conscience n°17
+- **13/11/2026 21:56 — PROMOTION 9.3.0-㊵ (la copie jamais figée ; un seul compte ; le récit jamais effacé) — conscience n°17, sur « Promeus » de Paul (21:55).**
+  problème : Paul 11:06-14:26 (séance « finie » à tort, échéance à 3 dates, « la copie de classe ne soit jamais figée d'avance ») ; 16:11 « régler 400 » ; test de la conscience 16:08 : le récit « moi » de la 3 F.A. effacé à l'ouverture du pilotage (déjà en 9.1, mesuré CF).
+  résolution : sas CE (`b4824ca` J1, J4, 400, `ec37642` E2) ; CF (`8e1940e` A+B, `648829d` versionsDe). Sondes de la case du jour mises à « à reprendre » (`d739b5d`).
+  preuves : banc 25/26 (bw-edt), BX 18/18, BY 14/14, CE 20/20 + J5 3/3, CC 15/15, CB 10/10 + E2 3 h, CF 10/10 ouvertures sans effacement ; vrai hub inchangé. md5 `a8bf7a06…` → `bef44b5858eec4e7e9d2efb7ccd203a7`, commit prod `e57b84e`, bit à bit à 21:56:40.
+  données : 16:11 récit 3 F.A. du 13/11 remis sur l'accord de Paul (relu identique).
+  → mots-clés : copie jamais figée · échéance · à reprendre · Clore · récit effacé · versionsDe · 9.3 · conscience n°17
