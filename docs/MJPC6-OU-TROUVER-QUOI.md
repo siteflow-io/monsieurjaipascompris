@@ -1040,3 +1040,7 @@
 ## AJOUTS DU 12/11/2026 (ter) — DÉROULÉ 9.1.0-㊳
 - Le récit (`dr-recit.js`) : titre de diapo (« pour « … », ») et titre de bloc (« sous le titre « … » : ») ; tous les éléments dévoilés (plus de coupe à 4) ; « on a écrit dans le cahier » ; ouvertures et consignes mot pour mot ; liaisons « De plus », « Ensuite », « Puis », « Pour finir ».
 - L'Atelier : « ↶ Annuler » (`dr-recyclage.js`) ne réécrit que la diapo et `maj` ; les diapos générées sans bloc (fin-*, bmc-*) ne s'écrivent plus dans la trame ; le témoin « Enregistré » / « ⚠ Pas encore enregistré » (`dr_syncEcrire`, `dr-socle.js`).
+
+## AJOUTS DU 13/11/2026 — DÉROULÉ 9.2.0-㊴
+- Les écrans à jour sans recharger (CB) : après « Annuler » une heure, la page revient à l'état propre (`dr_annulPageRemettre`, l. 22678) ; un lancement repart à neuf (`dr_lancerNeuf`, l. 21372) ; le récit est fait avant le retour à la trame après Clore (`dr_recitAuto`, l. 24050).
+- La copie de la classe suit l'Atelier pour le non-joué (CC) : la règle diapo par diapo (`dr_copieRegle`, l. 22862), la fusion copie / trame (`dr_fusionCopie`, l. 22186), le suivi au geste dans l'Atelier (`dr_copiesSuivrePlanifier`, l. 22877 ; `dr_copiesSuivre`, l. 22878 ; `dr_classeSuitAtelier`, l. 22903), la copie au lancement (`dr_copieAuto`, l. 21206).
