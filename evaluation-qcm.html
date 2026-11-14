@@ -7406,7 +7406,8 @@ function copieTestV(id){
   var o = {titre:c.titre, chapitre:c.chapitre || null, sansChapitre:c.sansChapitre || null, mode:c.mode || "strict", questions:c.questions, test:true, demo:null, createdAt:Date.now(), version:1};
   return v3Sans(o);
 }
-function evalsTestV(){ var p = typeof evalsPretes === "function" ? evalsPretes() : []; return p.filter(function(e){ return e && e.id && e.id !== "demo" && String(e.id).charAt(0) !== "_" && !e.demo && !e.test; }); }
+// (8.0.14) le mode test garde toutes les évaluations prêtes, publiées ou non
+function evalsTestV(){ var p = typeof evalsPretesToutes === "function" ? evalsPretesToutes() : typeof evalsPretes === "function" ? evalsPretes() : []; return p.filter(function(e){ return e && e.id && e.id !== "demo" && String(e.id).charAt(0) !== "_" && !e.demo && !e.test; }); }
 function choixTestV(){ var c = MODE_TEST.choix || "demo"; if(c !== "demo" && !evalsTestV().some(function(e){ return e.id === c; })) c = "demo"; return c; }
 function ecrireCopieTest(id){ var c = copieTestV(id); return c ? v3Set(v3Q("evaluations/" + TEST_EVAL), c) : Promise.resolve(); }
 function purgerModeTest(){
@@ -9235,7 +9236,9 @@ function finParDefautH(){ return SCN.hm(SCN.sec(SCN.heureFr(LIVE.maintenant())) 
 function finLancementH(){ var f = String(LANCEMENT_H.fin == null ? "" : LANCEMENT_H.fin).trim(); return /^\d{1,2}:\d{2}$/.test(f) ? f : finParDefautH(); }
 function classeLancement(){ var cl = LIVE.d.classes || {}, l = SCN.classes(); var c = (typeof LANCEMENT !== "undefined" && LANCEMENT.classe && cl[LANCEMENT.classe]) ? LANCEMENT.classe : (LIVE.classeSlug && cl[LIVE.classeSlug] ? LIVE.classeSlug : l[0]); if(typeof LANCEMENT !== "undefined") LANCEMENT.classe = c; return c; }
 // les évaluations prêtes : celles que l'éditeur (QCM-3, manquesV) dit complètes, sinon la règle du socle (SCN.manques)
-function evalsPretes(){ return SCN.evals().filter(function(e){ return !(typeof manquesV === "function" ? manquesV(e) : SCN.manques(e)).length; }); }
+// (8.0.14) le lancement ne propose que les publiées (evalsPretes) ; le mode test garde toutes les prêtes, publiées ou non (evalsPretesToutes)
+function evalsPretesToutes(){ return SCN.evals().filter(function(e){ return !(typeof manquesV === "function" ? manquesV(e) : SCN.manques(e)).length; }); }
+function evalsPretes(){ return evalsPretesToutes().filter(function(e){ return typeof publieeV !== "function" || publieeV(e); }); }
 function evalLancement(){ var id = typeof LANCEMENT !== "undefined" ? LANCEMENT.evalId : null; if(id === "demo") return SCN.evalParId("demo"); var p = evalsPretes(); var e = id && p.filter(function(x){ return x.id === id; })[0]; e = e || p[0] || null; if(e && typeof LANCEMENT !== "undefined") LANCEMENT.evalId = e.id; return e; }
 // les binômes que le classement donnait avant les exclusions : ceux qu'une exclusion a fait échanger (la phrase « 🚫 … respectées »)
 function exclusionsRespectees(classe){
@@ -9271,7 +9274,7 @@ function LancementH(appel, opts){
         h("div", {className:"field"}, h("label", null, "Classe", InfoI("Les classes de la console MJPC.")), h("select", {value:classe || "", title:"La classe de la séance.",
             onChange:function(e){ LANCEMENT.classe = e.target.value; LANCEMENT_H.paires = null; LIVE.changer(); }},
           classesL.map(function(c){ return h("option", {key:c, value:c}, nomClasseV(c) + " (" + SCN.roster(c).length + " élèves)"); }))),
-        h("div", {className:"field"}, h("label", null, "Évaluation", InfoI("Seules les évaluations prêtes à lancer sont proposées ; la démo est toujours en tête.")),
+        h("div", {className:"field"}, h("label", null, "Évaluation", InfoI("Seules les évaluations prêtes à lancer et publiées sont proposées (la case « publiée » de « 📝 Évaluations ») ; la démo est toujours en tête.")),
           h("select", {value:ev ? ev.id : "", title:"L'évaluation de la séance : la démo, ou une évaluation prête à lancer.", onChange:function(e){ LANCEMENT.evalId = e.target.value; LIVE.changer(); }},
             h("option", {value:"demo"}, "🎓 Démo — apprendre le déroulé (" + (SCN.evalParId("demo") || SCN.DEMO).questions.length + " questions)"),
             evalsL.map(function(e){ return h("option", {key:e.id, value:e.id}, e.titre); }))),
@@ -9283,7 +9286,7 @@ function LancementH(appel, opts){
           h("input", {value:LANCEMENT_H.fin == null ? finParDefautH() : LANCEMENT_H.fin, title:"L'heure de la fin de l'heure, avant de lancer : la durée de la séance se compare au temps qui reste jusque-là.",
             onChange:function(e){ LANCEMENT_H.fin = e.target.value; LIVE.changer(); }, style:{width:"80px", padding:".3rem .4rem", border:"2px solid var(--bordure)", borderRadius:"6px", fontWeight:900, textAlign:"center", fontFamily:"inherit"}})),
         !papier && ev && h("div", {className:"duree-box"}, texteDuree(ev)),
-        !ev ? h("button", {className:"btn btn-primary", disabled:true, title:"Aucune évaluation n'est prête à lancer : complète-la dans « 📝 Évaluations » (son chapitre, et pour chaque question ses deux temps et ses compétences)."}, "🚀 Lancer la séance")
+        !ev ? h("button", {className:"btn btn-primary", disabled:true, title:"Aucune évaluation n'est prête à lancer et publiée : complète-la dans « 📝 Évaluations » (son chapitre, et pour chaque question ses deux temps et ses compétences), puis coche sa case « non publiée »."}, "🚀 Lancer la séance")
           : demo ? (appel ? h("button", {className:"btn btn-primary", disabled:true, title:"La séance est lancée : l'appel est ouvert."}, "🎓 Lancer la démo")
             : h("button", Object.assign({className:"btn btn-primary"}, marqueH("LANCER-DEMO:" + classe, function(){ if(!classe) return; LIVE.classeSlug = classe; var r = ACT.lancerSeance(classe, "demo", {fin:finLancementH()}); LANCEMENT_H.fin = null; if(r && r.then) r.then(function(){ if(typeof navRemettre === "function") navRemettre(); }); })), "🎓 Lancer la démo"))
           // pendant l'appel, la séance est lancée : le bouton de la carte, sous la fenêtre de l'appel, est fermé
@@ -13196,7 +13199,7 @@ function toutesCompetences(){ var t = v3Competences(), l = Object.keys(t).filter
       Le QCM retient le chapitre lui-même : « <niveau>/<uid> », ou « <niveau>/cle-<clé> » tant que MJPC ne lui a pas donné d'uid (le niveau devant :
       il se lit sans attendre MJPC). Les anciennes valeurs « <niveau>-ch<n> » (8.0.5 : le n-ième chapitre du niveau, rangé par clé) se lisent
       toujours ; l'éditeur écrit la forme nouvelle à la prochaine écriture de l'évaluation. Un chapitre dont la fiche n'a pas de compétences
-      prend les 28. Un chapitre enregistré que MJPC n'a pas (ou plus) n'est jamais remplacé par un autre (pas de repli sur le rang, comme MJPC,
+      prend celles de ses séances (8.0.14), sinon les 28. Un chapitre enregistré que MJPC n'a pas (ou plus) n'est jamais remplacé par un autre (pas de repli sur le rang, comme MJPC,
       [C5-UID]) : l'évaluation le garde, se lance avec les 28 compétences, et sa carte le dit. ── */
 var NIVEAUX_CHAP = ["6e", "5e", "4e", "3e"];
 function chapitresBrutsV(niv){ return v3("site/" + niv + "/chapitres"); }
@@ -13223,9 +13226,27 @@ function chapitreVue(id){
   if(!p){ var attente = !v3Pret("site/" + niv + "/chapitres"), lib = niv + (attente ? " · …" : " · chapitre absent de MJPC");
     return {id:id, niveau:niv, numero:null, titre:"", fiche:false, absent:!attente, attente:attente, majeures:[], mineures:[], comps:toutesCompetences(), libelle:lib, court:lib}; }
   var o = p.o, titre = String(o.title || o.titre || ""), maj = v3Liste(o.competencesMajeures), min = v3Liste(o.competencesMineures), fiche = maj.length + min.length > 0;
+  // (8.0.14) sans fiche : les compétences que travaillent ses séances ; sans elles, les 28
+  var cs = fiche ? [] : competencesDesSeancesV(o), aSeance = v3Liste(o.seances).some(function(s){ return s && typeof s === "object"; });
   return {id:p.id, cle:p.k, uid:o.uid || null, niveau:niv, numero:p.numero, titre:titre, fiche:fiche, majeures:maj, mineures:min,
-    comps:fiche ? maj.concat(min) : toutesCompetences(),
+    source:fiche ? "fiche" : cs.length ? "seances" : "28", aSeance:aSeance,
+    comps:fiche ? maj.concat(min) : cs.length ? cs : toutesCompetences(),
     libelle:niv + " · Chapitre " + p.numero + (titre ? " — " + titre : ""), court:niv + " · Ch. " + p.numero + (titre ? " — " + titre : "")};
+}
+/* (8.0.14, Paul 13/11, points 9 et 10) un chapitre dont la fiche n'a ni majeure ni mineure prend les compétences que travaillent ses séances dans MJPC :
+   seances/<s>/competences et les diapos de leur préparation (seances/<s>/deroule/ecrans/<i>/comp ; comp y porte surtout des notions), sans doublon,
+   gardées seulement si la taxonomie les a, actives. Aucune majeure ni mineure n'est inventée. Mémorisé par objet de la base (il change à chaque écriture). */
+var CS_SEANCES = typeof WeakMap === "function" ? new WeakMap() : null;
+function competencesDesSeancesV(o){
+  var tx = v3("taxonomie/competences"), m = CS_SEANCES && o && typeof o === "object" ? CS_SEANCES.get(o) : null;
+  if(m && m.tx === tx) return m.l;
+  var t = v3Competences(), vide = !Object.keys(t).length, l = [];
+  function ajout(c){ if(typeof c === "string" && l.indexOf(c) < 0 && (vide ? typeof LIB_OFF !== "undefined" && !!LIB_OFF[c] : !!(t[c] && t[c].actif))) l.push(c); }
+  v3Liste(o && o.seances).forEach(function(s){ if(!s || typeof s !== "object") return;
+    v3Liste(s.competences).forEach(ajout);
+    [s.deroule && s.deroule.ecrans, s.ecrans].forEach(function(E){ v3Liste(E).forEach(function(e){ if(e && typeof e === "object") v3Liste(e.comp).forEach(ajout); }); }); });
+  if(CS_SEANCES && o && typeof o === "object") CS_SEANCES.set(o, {tx:tx, l:l});
+  return l;
 }
 function numeroDuChapitre(id){ var c = chapitreVue(id); return c ? c.numero : null; }
 // la liste du QCM : tous les chapitres de MJPC, par niveau puis dans l'ordre de MJPC ; plus, s'il n'y est pas, le chapitre enregistré (absent : il se montre, sans se choisir)
@@ -13288,9 +13309,13 @@ function evalBrute(e, ancienne){
     if(q.reflexion != null) x.reflexion = q.reflexion; if(q.reponse != null) x.reponse = q.reponse;
     if((q.competences || []).length) x.competences = q.competences; if(q.verifie) x.verifie = q.verifie; if(q.explication) x.explication = q.explication;
     x.bonus = !!q.bonus; x.longueurAssumee = !!q.assumee; return x; }),
-    createdAt:ancienne && ancienne.createdAt ? ancienne.createdAt : Date.now(), updatedAt:Date.now(), version:ancienne && ancienne.version ? ancienne.version : 1};
+    createdAt:ancienne && ancienne.createdAt ? ancienne.createdAt : Date.now(), updatedAt:Date.now(), version:ancienne && ancienne.version ? ancienne.version : 1,
+    // (8.0.14) la publication : gardée telle quelle (absente = publiée, les évaluations d'avant) ; une évaluation neuve naît non publiée
+    publiee:ancienne ? (ancienne.publiee === undefined ? undefined : ancienne.publiee) : false};
   return v3Sans(o);
 }
+// (8.0.14) publiée : le champ publiee n'est pas false (une évaluation d'avant, sans le champ, est publiée) ; la démo l'est toujours
+function publieeV(e){ if(!e || e.demo) return true; var b = e.brut || e; return b.publiee !== false; }
 
 /* ── La corbeille du site (comme mjpcInjecterAvecArchive de la 7.7.1) : gardé un an, restaurable ── */
 function mettreACorbeille(sorte, chemin, data, titre){
@@ -13634,16 +13659,31 @@ function dureeEstimeeV(ev, seul){
   return {questions:q, correction:c, total:total, min:Math.round(total / 60)};
 }
 // écrire une évaluation : une évaluation déjà passée garde, dans chacune de ses séances, l'énoncé qui a servi (ses notes ne bougent pas)
-function enregistrerEval(id, e){
+// (8.0.14) ouv : l'ouverture de l'éditeur qui enregistre au fil ; sa version n'augmente qu'une fois (ouv.monte), ouv.ecrit retient l'heure de sa dernière écriture
+function enregistrerEval(id, e, ouv){
   var E = v3Evals(), ancienne = id ? E[id] : null, nid = id && id !== "vide" ? id : "eval_" + Date.now(), X = v3Sessions();
   var servi = ancienne ? seancesDeLEval(nid) : [], u = [];
   servi.forEach(function(s){ if(!X[s].evalSnapshot) u.push(v3Set(v3Q("sessions/" + s + "/evalSnapshot"), v3Sans(ancienne))); });
-  var b = evalBrute(e, ancienne); if(ancienne && servi.length) b.version = (ancienne.version || 1) + 1;
+  var b = evalBrute(e, ancienne); if(ancienne && servi.length && !(ouv && ouv.monte)){ b.version = (ancienne.version || 1) + 1; if(ouv) ouv.monte = true; }
+  if(ouv) ouv.ecrit = b.updatedAt;
   return Promise.all(u).then(function(){ return v3Set(v3Q("evaluations/" + nid), b); }).then(function(){ return nid; });
 }
+// (8.0.14) publier / dépublier : une écriture, sur-le-champ (qcm/evaluations/<id>/publiee) ; une séance existante n'est jamais touchée
+function publierEval(id, v){ return v3Set(v3Q("evaluations/" + id + "/publiee"), !!v); }
+var DERNIER_ENREG = {id:null, ms:0};   // la confirmation de « 💾 Enregistrer l'évaluation », sur la ligne de la liste
 function dupliquerEval(e){ var b = evalBrute(Object.assign({}, e, {titre:e.titre + " (copie)"}), null); b.demo = null; return v3Set(v3Q("evaluations/eval_" + Date.now()), v3Sans(b)); }
 
 /* ════════ 📝 Évaluations ════════ */
+// (8.0.14) la case « publiée / non publiée » d'une évaluation, à l'allure de celle de correction dictée (correction_dictee.html, coche-publiee-l15c)
+function CasePublieeV(e, pret, manques){
+  var pub = publieeV(e), ferme = !pub && !pret;
+  var bulle = pub ? "Publiée : tu peux la lancer en classe. Décocher la retire tout de suite des évaluations à lancer."
+    : ferme ? "Non publiée : c'est ton brouillon, que toi seul vois ici. Elle se publie quand elle est prête à lancer : complète d'abord " + listeFr(manques) + "."
+    : "Non publiée : c'est ton brouillon, que toi seul vois ici. Cocher la publie tout de suite.";
+  return h("label", {className:"coche-publiee-l15c", "data-publiee":pub ? "1" : "0", "data-ferme":ferme ? "1" : null, title:bulle,
+      style:{display:"inline-flex", alignItems:"center", gap:5, fontSize:".8rem", fontWeight:600, padding:"3px 9px", borderRadius:8, background:pub ? "rgba(39,103,73,0.08)" : "#f1f1f1", color:pub ? "#276749" : "#666", cursor:ferme ? "not-allowed" : "pointer", opacity:ferme ? .55 : 1}},
+    h("input", {type:"checkbox", checked:pub, disabled:ferme, "data-local":"1", title:bulle, onChange:function(x){ publierEval(e.id, x.target.checked); }}), pub ? "publiée" : "non publiée");
+}
 function CarteEvaluationsV(){
   useV3();
   useEffect(function(){ remettreDemo(); });
@@ -13662,8 +13702,12 @@ function CarteEvaluationsV(){
           h("span", null, e.questions.length + " questions"),
           comps.length > 0 && h("span", null, "🧩 " + comps.length + " compétence" + (comps.length > 1 ? "s" : "")),
           e.cree && h("span", null, "Créée le " + e.cree)),
-        pret ? h("div", {className:"eval-etat ok"}, "✅ Prête à lancer")
-             : h("div", {className:"eval-etat manque"}, "⚠️ À compléter avant de la lancer : " + listeFr(manques)),
+        // (8.0.14) la case de correction dictée (coche-publiee-l15c) : publiée / non publiée, sur-le-champ ; publier attend « ✅ Prête à lancer »,
+        // la case grisée a sa raison à côté (ce qui manque)
+        h("div", {className:"eval-pub-row", style:{display:"flex", alignItems:"center", gap:".5rem", flexWrap:"wrap"}}, CasePublieeV(e, pret, manques),
+          pret ? h("div", {className:"eval-etat ok"}, "✅ Prête à lancer")
+               : h("div", {className:"eval-etat manque", "data-publier-raison":publieeV(e) ? null : "1"}, "⚠️ À compléter avant de la lancer : " + listeFr(manques))),
+        DERNIER_ENREG.id === e.id && DERNIER_ENREG.ms > 0 && h("div", {className:"eval-meta", "data-enregistree":"1", style:{color:"#276749", fontWeight:600}, title:"« 💾 Enregistrer l'évaluation » : tout ce que tu as écrit dans l'éditeur est dans la base."}, "✔ Enregistrée à " + heureFr(DERNIER_ENREG.ms)),
         sansChapV(e) && h("div", {className:"eval-etat manque", "data-sans-chapitre":"1", title:"Elle se lance sans chapitre ; ouvre l'éditeur pour la rattacher à son chapitre."}, "⚠️ Sans chapitre pour l'instant : pense à la rattacher plus tard."),
         chapEv(e) && chapEv(e).absent && h("div", {className:"eval-etat manque", "data-chapitre-absent":"1", title:"Le chapitre enregistré avec cette évaluation n'est pas (ou plus) dans MJPC. Elle se lance quand même, avec les 28 compétences ; rien n'est changé tant que tu ne choisis pas son chapitre dans l'éditeur."}, "⚠️ Son chapitre n'est pas dans MJPC : elle se lance avec les 28 compétences ; ouvre l'éditeur pour la rattacher."),
         (function(){ var t = texteLienMjpc(e.id, chapEv(e), sansChapV(e)); return t && h("div", {className:"eval-etat manque", "data-lien-mjpc":"1", title:TITRE_LIEN_MJPC}, "🔗 " + t); })(),
@@ -13812,7 +13856,7 @@ function CollageVC(){
     lu && lu.erreurs.length > 0 && h(CopierErreursV, {erreurs:lu.erreurs}),
     v && h("div", {className:"preview-ok"}, (lu.erreurs.length ? "✅ Le reste est bon : " : "✅ Tout est bon : ") + (v.chap ? "chapitre « " + v.chap.court + " », " : "") + (v.mode === "partiel" ? "mode partiel" : "mode tout ou rien") + ", " + v.n + " question" + (v.n > 1 ? "s" : "") + ", " + v.comps.length + " compétence" + (v.comps.length > 1 ? "s" : "") + " du chapitre" +
       (v.assumees.length ? " ; " + (v.assumees.length > 1 ? "les questions " + listeFr(v.assumees.map(String)) + " portent" : "la question " + v.assumees[0] + " porte") + " « longueur assumée » : " + (v.assumees.length > 1 ? "elles passent, et leur moitié défilera seule." : "elle passe, et sa moitié défilera seule.") : ".")),
-    h("div", {className:"row", style:{marginTop:"1rem"}}, h("button", {className:"btn btn-primary" + (ok ? "" : " ferme"), disabled:!ok || envoi, "data-local":"1", title:ok ? "Enregistre l'évaluation : elle rejoint la liste, prête à lancer." : "S'ouvre quand le JSON n'a plus rien à corriger.",
+    h("div", {className:"row", style:{marginTop:"1rem"}}, h("button", {className:"btn btn-primary" + (ok ? "" : " ferme"), disabled:!ok || envoi, "data-local":"1", title:ok ? "Enregistre l'évaluation : elle rejoint la liste, prête à lancer et non publiée ; tu la publies (sa case « non publiée ») quand tu veux la lancer en classe." : "S'ouvre quand le JSON n'a plus rien à corriger.",
       onClick:function(){ setEnvoi(true); enregistrerEval(null, evalDuJson(lu.raw)).then(function(){ setTexte(""); fermer3("c-evals"); }, function(){ setEnvoi(false); }); }}, "💾 Enregistrer l'évaluation")));
 }
 
@@ -13867,6 +13911,16 @@ function jsonDeV(e){ return JSON.stringify(v3Sans({titre:e.titre, chapitre:e.cha
   var o = {enonce:q.enonce, choix:q.choix, bonnes:q.bonnes, niveau:q.niveau};
   if(q.reflexion != null) o.reflexion = q.reflexion; if(q.reponse != null) o.reponse = q.reponse; if((q.competences || []).length) o.competences = q.competences;
   if(q.verifie) o.verifie = q.verifie; if(q.explication) o.explication = q.explication; if(q.bonus) o.bonus = true; if(q.assumee) o.longueurAssumee = true; return o; })}), null, 2); }
+// (8.0.14) la fusion de deux écritures : b la base commune, l ici, r ailleurs ; un champ resté comme b prend la valeur de r
+function fusionEval(b, l, r){
+  var meme = function(x, y){ return JSON.stringify(x === undefined ? null : x) === JSON.stringify(y === undefined ? null : y); }, o = copieEval(l);
+  ["titre", "chapitre", "chap", "niveau", "sansChapitre", "mode"].forEach(function(k){ if(meme(l[k], b[k])) o[k] = r[k]; });
+  var bq = b.questions || [], lq = l.questions || [], rq = r.questions || [];
+  if(lq.length === bq.length && rq.length === bq.length) o.questions = lq.map(function(q, i){ var x = copieEval(q);
+    Object.keys(Object.assign({}, bq[i], rq[i], q)).forEach(function(k){ if(meme(q[k], bq[i][k])) x[k] = rq[i][k]; }); return x; });
+  else if(meme(lq, bq)) o.questions = copieEval(rq);
+  return o;
+}
 function EditeurV(){ return EvaluationsV(h("div", {className:"modal-back"}, h(EditeurVA, {key:paramHash("eval") || "vide"}))); }
 function EditeurVA(){
   useV3();
@@ -13881,23 +13935,62 @@ function EditeurVC(p){
   var s3 = useState(function(){ var o = {}; base.questions.forEach(function(q, i){ o[i] = i >= 2; }); return o; }), replis = s3[0], setReplis = s3[1];
   var s4 = useState(false), garde = s4[0], setGarde = s4[1], s5 = useState(null), verif = s5[0], setVerif = s5[1];
   var s6 = useState(null), json = s6[0], setJson = s6[1], s7 = useState(false), envoi = s7[0], setEnvoi = s7[1];
-  function changer(f){ var e = copieEval(ev); f(e); setEv(e); setModifs(modifs + 1); setJson(null); }
+  /* (8.0.14, point 7) enregistrer au fil : chaque modification s'écrit dans la base au plus ~1 s après la frappe, et à la sortie du champ ;
+     une évaluation neuve reçoit son identité au premier geste (et naît non publiée, evalBrute) ; la version ne monte qu'une fois par ouverture (A.ouv) */
+  var s8 = useState(0), enreg = s8[0], setEnreg = s8[1], s9 = useState(false), echec = s9[0], setEchec = s9[1];
+  var R = React.useRef(null); if(!R.current) R.current = {id:base.id && base.id !== "vide" ? base.id : null, ouv:{monte:false, ecrit:null}, minuteur:null, attente:0, ev:ev, distante:false, monte:false, boite:null};
+  var A = R.current;
+  function sauver(){
+    clearTimeout(A.minuteur); A.minuteur = null;
+    if(!A.attente) return Promise.resolve(A.id);
+    if(A.distante) appliquerDistante(true);   // une modification d'ailleurs, mise en attente sous le focus : fusionnée avant d'écrire, jamais écrasée
+    var n = A.attente, e = A.ev; A.attente = 0;
+    if(!A.id) A.id = "eval_" + Date.now();
+    var id = A.id;
+    A.base = copieEval(e);
+    return enregistrerEval(id, e, A.ouv).then(function(){ if(A.monte){ setEnreg(Date.now()); setEchec(false); setModifs(function(m){ return Math.max(0, m - n); }); } return id; },
+      function(x){ A.attente += n; if(A.monte) setEchec(true); throw x; });
+  }
+  // au plus 0,8 s après la PREMIÈRE frappe non écrite (une frappe continue écrit donc toutes les 0,8 s : aucune ne reste plus d'une seconde hors de la base)
+  function planifier(){ A.attente++; if(!A.minuteur) A.minuteur = setTimeout(function(){ sauver().catch(function(){}); }, 800); }
+  function changer(f){ var e = copieEval(A.ev); f(e); setEv(e); A.ev = e; setModifs(function(m){ return m + 1; }); setJson(null); planifier(); }
   function maj(i, f){ changer(function(e){ f(e.questions[i]); }); }
+  // (point 10) une modification faite ailleurs (un autre onglet) se répercute sans rechargement ; jamais sous une saisie en cours : elle attend la sortie du champ
+  //  Fusion champ par champ (A.base : l'évaluation telle qu'elle était à la dernière synchronisation) : ce qui a changé ici reste, ce qui a changé ailleurs arrive ;
+  //  ainsi l'écriture d'un onglet n'écrase jamais en silence celle de l'autre. Pendant une frappe (écriture en attente), la fusion se fait tout de suite ;
+  //  sinon, tant que le focus est dans un champ de l'éditeur, elle attend sa sortie.
+  if(!A.base) A.base = copieEval(base);
+  var dist = A.id ? v3Evals()[A.id] : null, dm = dist ? dist.updatedAt || 0 : 0;
+  function appliquerDistante(force){
+    if(!A.distante || !A.id) return;
+    var act = document.activeElement; if(!force && !A.attente && act && A.boite && A.boite.contains(act) && /^(INPUT|TEXTAREA|SELECT)$/.test(act.tagName)) return;
+    var b = v3Evals()[A.id]; A.distante = false; if(!b) return;
+    var r = copieEval(evalVue(A.id, b)), e = fusionEval(A.base, A.ev, r); A.base = r;
+    if(JSON.stringify(e) !== JSON.stringify(A.ev)){ A.ev = e; setEv(e); setJson(null); }
+  }
+  useEffect(function(){ if(dm && dm !== A.ouv.ecrit){ A.distante = true; appliquerDistante(); } }, [dm]);
+  // l'onglet fermé ou caché : ce qui attend part tout de suite (sans rien bloquer)
+  useEffect(function(){ A.monte = true; function f(){ if(A.attente) sauver().catch(function(){}); } function g(){ if(document.visibilityState === "hidden") f(); }
+    window.addEventListener("pagehide", f); document.addEventListener("visibilitychange", g);
+    return function(){ A.monte = false; window.removeEventListener("pagehide", f); document.removeEventListener("visibilitychange", g); f(); }; }, []);
+  function quitterChamp(){ if(A.minuteur) sauver().catch(function(){}); setTimeout(appliquerDistante, 0); }
+  // fermer : ce qui attend s'écrit d'abord ; la garde ne vient que si l'écriture a échoué (alors seulement des modifications seraient perdues)
+  function fermer(){ if(A.attente) sauver().then(function(){ fermer3("c-evals"); }, function(){ setGarde(true); }); else if(echec && modifs > 0) setGarde(true); else fermer3("c-evals"); }
   var ch = chapEv(ev) || (sansChapV(ev) ? chapSansV() : null), manques = manquesV(ev), bonus = ev.questions.filter(function(q){ return q.bonus; }).length, total = ev.questions.length - bonus;
   var comps = competencesDe(ev), gel = useListeGelee(chapitresConnus(ev.chapitre)), lienMjpc = texteLienMjpc(ev.id, chapEv(ev), sansChapV(ev));
   useEffect(function(){
-    function echap(e){ if(e.key === "Escape" && !window.SOMMAIRE_OUVERT){ e.stopImmediatePropagation(); if(modifs > 0) setGarde(true); else fermer3("c-evals"); } }
+    function echap(e){ if(e.key === "Escape" && !window.SOMMAIRE_OUVERT){ e.stopImmediatePropagation(); fermer(); } }
     document.addEventListener("keydown", echap, true); return function(){ document.removeEventListener("keydown", echap, true); };
   });
   // « 🔍 Vérifier le format » : un JSON retouché dans le champ se recharge dans l'éditeur ; sinon, ce qu'il reste à compléter
   function verifier(){
     if(json != null){ var l = lireJsonEval(json); if(!l.raw){ setVerif("❌ " + l.erreurs.join(" ")); return; }
-      var v = verifierEval(l.raw), e = evalDuJson(l.raw, ev.id); e.createdAt = ev.createdAt; setEv(e); setModifs(modifs + 1); setJson(null);
+      var v = verifierEval(l.raw), e = evalDuJson(l.raw, ev.id); e.createdAt = ev.createdAt; setEv(e); A.ev = e; setModifs(function(m){ return m + 1; }); setJson(null); planifier();
       setVerif(v.erreurs.length ? "🔍 Le JSON est rechargé ; il reste à corriger : " + v.erreurs.join(" ") : "🔍 Le JSON est rechargé : rien ne manque."); return; }
     setVerif(manques.length ? "🔍 Le format est bon ; il reste à compléter : " + listeFr(manques) + "." : "🔍 Le format est bon : rien ne manque.");
   }
-  return h("div", {className:"modal", style:{maxWidth:"980px"}},
-    h("button", {className:"modal-close", "data-local":"1", title:modifs ? "Ferme l'éditeur : une garde te demande d'abord si tu perds tes " + modifs + " modifications." : "Ferme l'éditeur et revient à la liste des évaluations.", onClick:function(){ if(modifs > 0) setGarde(true); else fermer3("c-evals"); }}, "✕"),
+  return h("div", {className:"modal", style:{maxWidth:"980px"}, ref:function(n){ A.boite = n; }, onBlur:quitterChamp},
+    h("button", {className:"modal-close", "data-local":"1", title:echec && modifs ? "Ferme l'éditeur : une garde te demande d'abord si tu perds tes " + modifs + " modifications." : "Ferme l'éditeur et revient à la liste des évaluations : ce que tu as écrit est déjà enregistré.", onClick:fermer}, "✕"),
     h("h2", null, manques.length ? "✏️ Compléter l'évaluation" : "✏️ Modifier l'évaluation"),
     ev.titre && h("div", {className:"ed-titre-ouvert"}, "📝 " + ev.titre),
     h("div", {className:"field"}, h("label", null, "JSON de l'évaluation"),
@@ -13912,7 +14005,11 @@ function EditeurVC(p){
         h("select", {ref:gel.ref, onBlur:gel.quitter, value:ch ? (ch.id || SANS_CHAP) : "", title:"Le chapitre de l'évaluation : il donne son niveau et les compétences permises. « Sans chapitre pour l'instant » la laisse lancer, avec les 28 compétences ; un message te rappelle de la rattacher plus tard.", onChange:function(e){ var v = e.target.value, c = chapitreVue(v);
           changer(function(x){ x.chapitre = c ? c.id : null; x.chap = c ? c.court : null; x.niveau = c ? c.niveau : null; x.sansChapitre = v === SANS_CHAP; if(c) x.questions.forEach(function(q){ q.competences = (q.competences || []).filter(function(cc){ return c.comps.indexOf(cc) >= 0; }); }); }); }},
           h("option", {value:""}, "— à choisir —"), h("option", {value:SANS_CHAP}, "Sans chapitre pour l'instant"), gel.liste.map(function(c){ return h("option", {key:c.id, value:c.id, disabled:!c.numero}, c.libelle); }))),
-      ch && ch.numero && !ch.fiche && h("div", {className:"fen-note", "data-sans-competences":"1", title:"Les compétences d'un chapitre viennent de sa fiche dans MJPC (majeures et mineures). Tant qu'elle n'en a pas, l'éditeur permet les 28 ; quand tu les auras posées dans MJPC, il ne proposera plus qu'elles."}, "La fiche de ce chapitre, dans MJPC, n'a pas encore de compétences : l'éditeur propose les 28."),
+      // (8.0.14) sans fiche : les compétences de ses séances ; ni fiche ni séance : les 28 (le message le dit) ; des séances sans compétences : le message d'avant
+      ch && ch.numero && !ch.fiche && h("div", {className:"fen-note", "data-sans-competences":ch.source === "seances" ? "seances" : ch.aSeance ? "1" : "vide", title:"Les compétences d'un chapitre viennent de sa fiche dans MJPC (majeures et mineures). Tant qu'elle n'en a pas, l'éditeur propose celles que travaillent ses séances dans MJPC, sinon les 28 ; quand tu les auras posées dans sa fiche, il ne proposera plus qu'elles."},
+        ch.source === "seances" ? "La fiche de ce chapitre, dans MJPC, n'a pas de compétences : l'éditeur propose celles que travaillent ses séances."
+        : ch.aSeance ? "La fiche de ce chapitre, dans MJPC, n'a pas encore de compétences : l'éditeur propose les 28."
+        : "Ce chapitre n'a encore ni compétences dans sa fiche, ni séance dans MJPC : l'éditeur propose les 28."),
       lienMjpc && h("div", {className:"fen-note", "data-lien-mjpc":"1", title:TITRE_LIEN_MJPC}, "🔗 " + lienMjpc),
       h("div", {className:"preview-mode-row", style:{marginBottom:".8rem", padding:".7rem .9rem", background:"#FFF9E6", border:"2px solid #FFD23F", borderRadius:"10px"}},
         h("div", {style:{fontWeight:900, fontSize:".9rem", color:"#8B6914", marginBottom:".4rem"}}, "📊 Mode de scoring", InfoI("Tout ou rien : 1 point si la réponse est exacte. Partiel : une part du point par bonne case, autant de retiré par mauvaise, plancher 0.")),
@@ -13926,21 +14023,28 @@ function EditeurVC(p){
           return h("div", {key:c, className:"ed-comp-l"}, h("span", {className:"c"}, c), h("span", {className:"t"}, !ch || !ch.fiche ? "" : ch.majeures.indexOf(c) >= 0 ? "majeure" : "mineure"), h("span", null, libOff(c)), h("span", {className:"q"}, qs.join(", ")), h("span", {className:qs.length >= 3 ? "ok" : "manque"}, (qs.length >= 3 ? "✅ " : "⚠️ ") + qs.length + " question" + (qs.length > 1 ? "s" : ""))); })
           : h("div", {className:"ed-comp-autres"}, ch ? "Aucune compétence encore : « + ajouter ▾ » sur chaque question." : "Choisis d'abord le chapitre : il donne les compétences permises."),
         ch && h("div", {className:"ed-comp-autres"}, "Les autres compétences du chapitre, pas évaluées ici : " + ch.comps.filter(function(c){ return comps.indexOf(c) < 0; }).join(" · "))),
-      modifs > 0 && h("div", {className:"ed-modif", "data-compteur-modifs":"1"}, "⚠ Modifications non enregistrées (" + modifs + ")"),
+      // (8.0.14) le compteur ne paraît plus que si une écriture a échoué ; sinon la ligne discrète « ✔ Enregistré à … »
+      echec && modifs > 0 ? h("div", {className:"ed-modif", "data-compteur-modifs":"1"}, "⚠ Modifications non enregistrées (" + modifs + ")")
+        : enreg > 0 && h("div", {className:"ed-enregistre", "data-enregistre":"1", style:{fontSize:".8rem", color:"#276749", opacity:.85, margin:".2rem 0 .5rem"}, title:"Chaque modification s'écrit dans la base au fil de ta frappe (au plus une seconde après) et quand tu quittes le champ : fermer la page ne perd rien."}, "✔ Enregistré à " + heureFr(enreg)),
       ev.questions.map(function(q, i){ return h(QuestionEditee, {key:i + ":" + ev.questions.length, q:q, i:i, n:ev.questions.length, chap:ch, maj:maj, replie:!!replis[i],
         plier:function(){ var o = Object.assign({}, replis); o[i] = !replis[i]; setReplis(o); },
         deplacer:function(a, d){ changer(function(x){ var t = x.questions[a]; x.questions[a] = x.questions[a + d]; x.questions[a + d] = t; }); var o = Object.assign({}, replis), t2 = o[a]; o[a] = o[a + d]; o[a + d] = t2; setReplis(o); },
         retirer:function(a){ changer(function(x){ x.questions.splice(a, 1); }); var o = {}; Object.keys(replis).forEach(function(kk){ kk = +kk; if(kk < a) o[kk] = replis[kk]; else if(kk > a) o[kk - 1] = replis[kk]; }); setReplis(o); }}); }),
       h("button", {className:"btn btn-ghost", "data-local":"1", style:{marginTop:".6rem"}, title:"Ajoute une question vide à la fin de l'évaluation.", onClick:function(){ changer(function(x){ x.questions.push({enonce:"", choix:["", ""], bonnes:[], niveau:"standard", reflexion:null, reponse:null, competences:[]}); }); }}, "➕ Ajouter une question")),
     h("div", {className:"row", style:{marginTop:"1rem", alignItems:"center"}},
-      h("button", {className:"btn btn-primary" + (manques.length ? " ferme" : ""), disabled:manques.length > 0 || envoi, "data-local":"1", title:manques.length ? "S'ouvre quand il ne reste rien à compléter : " + listeFr(manques) + "." : "Enregistre l'évaluation, telle qu'elle est.",
-        onClick:function(){ setEnvoi(true); enregistrerEval(ev.id, ev).then(function(){ setModifs(0); fermer3("c-evals"); }, function(){ setEnvoi(false); }); }}, "💾 Enregistrer l'évaluation"),
+      // (8.0.14, point 8) le bouton reste : il écrit tout de suite ce qui ne l'est pas encore, puis la ligne de la liste le confirme (« ✔ Enregistrée à … ») ;
+      // une évaluation à compléter s'enregistre aussi (son brouillon) : c'est sa publication qui attend qu'elle soit prête
+      h("button", {className:"btn btn-primary", disabled:envoi, "data-local":"1", "data-enregistrer-eval":"1", title:"Enregistre tout de suite ce qui ne l'est pas encore (tout s'enregistre déjà au fil de ta frappe), puis revient à la liste, où la ligne de l'évaluation le confirme." + (manques.length ? " Elle reste à compléter avant de pouvoir la publier : " + listeFr(manques) + "." : ""),
+        onClick:function(){ setEnvoi(true);
+          // l'ancienne forme du chapitre (« <niveau>-ch<n> ») passe à la nouvelle à la première écriture, comme avant
+          if(!A.attente && A.id && base.brut && (base.brut.chapitre || null) !== (A.ev.chapitre || null)) A.attente = 1;
+          sauver().then(function(id){ if(id){ DERNIER_ENREG.id = id; DERNIER_ENREG.ms = Date.now(); } fermer3("c-evals"); }, function(){ setEnvoi(false); }); }}, "💾 Enregistrer l'évaluation"),
       manques.length > 0 && h("span", {className:"ed-reste"}, "⚠️ Il reste à compléter : " + listeFr(manques) + ".")),
     garde && h("div", {className:"fen-fond alerte-native"},
       h("div", {className:"alerte-boite"}, h("div", {className:"alerte-texte"}, "Fermer l'éditeur sans enregistrer ? Tes " + modifs + " modifications seront perdues."),
         h("div", {className:"alerte-pied"},
           h("button", {className:"alerte-non", "data-local":"1", title:"Revient à l'éditeur, avec tes modifications.", onClick:function(){ setGarde(false); }}, "Continuer à modifier"),
-          h("button", {className:"alerte-ok", "data-local":"1", title:"Ferme l'éditeur : les modifications sont perdues.", onClick:function(){ fermer3("c-evals"); }}, "Fermer sans enregistrer")))));
+          h("button", {className:"alerte-ok", "data-local":"1", title:"Ferme l'éditeur : les modifications sont perdues.", onClick:function(){ A.attente = 0; clearTimeout(A.minuteur); fermer3("c-evals"); }}, "Fermer sans enregistrer")))));
 }
 /* ════════ La feuille imprimée de l'évaluation cliquée ════════ */
 function FeuilleV(){ return h(FeuilleVC); }
@@ -14070,7 +14174,11 @@ function promptRempliV(ch){
     NIVEAUX:["facile", "standard", "approfondi", "expert"].map(function(k){ return "- \"" + k + "\" (" + NIV[k].label + ")"; }).join("\n"),
     DUREES:jetonDureesV(), LIMITES:LIMITES_TEXTE};
   // un chapitre sans fiche n'a pas encore de compétences : le prompt donne les 28 et demande d'abord celles à retenir (MANDATS/EVAL-4E-PARIS/PROMPT-4E-CH1.txt)
-  var g = ch.fiche ? gabaritPrompt() : gabaritPrompt().replace(/ :\n\{\{COMPETENCES_CHAPITRE\}\}/, " : ce chapitre n'en a pas encore dans mon application. Avant de proposer la moindre question, propose-moi celles à retenir dans cette liste (une majeure, quelques mineures), et attends mon accord :\n{{COMPETENCES_CHAPITRE}}");
+  // (8.0.14) sans fiche mais avec des séances qui en travaillent : celles-là seules ; ni fiche ni séance : la phrase le dit
+  var phrase = ch.source === "seances" ? " : celles que travaillent ses séances dans MJPC (sa fiche n'en désigne pas de principale). Propose-moi celles à retenir parmi elles (une majeure, quelques mineures), et attends mon accord :"
+    : ch.numero && !ch.aSeance ? " : ce chapitre n'a encore ni compétences dans sa fiche, ni séance dans MJPC. Avant de proposer la moindre question, propose-moi celles à retenir dans cette liste (une majeure, quelques mineures), et attends mon accord :"
+    : " : ce chapitre n'en a pas encore dans mon application. Avant de proposer la moindre question, propose-moi celles à retenir dans cette liste (une majeure, quelques mineures), et attends mon accord :";
+  var g = ch.fiche ? gabaritPrompt() : gabaritPrompt().replace(/ :\n\{\{COMPETENCES_CHAPITRE\}\}/, phrase + "\n{{COMPETENCES_CHAPITRE}}");
   return g.replace(/\{\{([A-Z_]+)\}\}/g, function(t, k){ return jetons[k] != null ? jetons[k] : t; });
 }
 function PromptFenetreV(enfants){
@@ -14086,7 +14194,7 @@ function ReglagesPromptVC(){
   var s = useState(""), msg = s[0], setMsg = s[1], s2 = useState(0), set = s2[1], ch = chapitrePrompt(), texte = promptRempliV(ch), gel = useListeGelee(chapitresConnus().length ? chapitresConnus() : [ch]);
   return PromptFenetreV(h(F, null,
     h("p", {style:{fontSize:".85rem", color:"#475569", margin:"0 0 .7rem"}}, "Chapitre choisi : ",
-      h("select", {ref:gel.ref, onBlur:gel.quitter, value:ch.id, title:"Le chapitre dont le prompt donne les compétences : celles de sa fiche dans MJPC, sinon les 28 compétences.", onChange:function(e){ PROMPT3.chapitre = e.target.value; setMsg(""); set(function(x){ return x + 1; }); }},
+      h("select", {ref:gel.ref, onBlur:gel.quitter, value:ch.id, title:"Le chapitre dont le prompt donne les compétences : celles de sa fiche dans MJPC, sinon celles que travaillent ses séances, sinon les 28 compétences.", onChange:function(e){ PROMPT3.chapitre = e.target.value; setMsg(""); set(function(x){ return x + 1; }); }},
         gel.liste.map(function(c){ return h("option", {key:c.id || "vide", value:c.id}, c.libelle); })), "."),
     h("div", {className:"row", style:{gap:".5rem", flexWrap:"wrap"}},
       h("button", {className:"btn btn-primary", "data-local":"1", onClick:function(){ try { navigator.clipboard.writeText(texte); } catch(e){} setMsg("✅ Prompt copié dans le presse-papiers"); }}, "📋 Copier le prompt"),
@@ -15975,7 +16083,7 @@ refaire("c-appel", function(){ return Lancement(true, {demo:MOM().seance === "DE
 /* ── « Évaluation » du lancement : la démo en tête, puis les évaluations prêtes ; le choix s'applique (changement 7.5, relecteur n°34) ── */
 function ChoixEvaluation(p){
   var se = p.seance ? SCN.seance(p.seance) : null;
-  var pretes = SCN.evals().filter(function(e){ return !manquesDe(e).length; });
+  var pretes = SCN.evals().filter(function(e){ return !manquesDe(e).length && (typeof publieeV !== "function" || publieeV(e)); });   // (8.0.14) les publiées
   if(se && pretes.every(function(e){ return e.id !== se.eval; })) pretes = [evalDeSeance(se)].concat(pretes);
   var v = p.demo ? "demo" : se ? se.eval : (pretes[0] || {}).id;
   return h("select", {value:v, title:"L'évaluation de la séance : la démo, ou une évaluation prête à lancer.", onChange:function(e){ versScene(e.target.value === "demo" ? "c-demo-lancer" : "c-lancer"); }},
@@ -18656,7 +18764,7 @@ var GESTES = (function(){
   function choixLancement(){
     var cl = LIVE.d.classes || {}, classe = LANCEMENT.classe && cl[LANCEMENT.classe] ? LANCEMENT.classe : null, ev = LANCEMENT.evalId;
     if(!classe){ var l = SCN.classes(); classe = LIVE.classeSlug && cl[LIVE.classeSlug] ? LIVE.classeSlug : l[0]; }
-    if(!ev || !SCN.evalParId(ev)){ var pretes = SCN.evals().filter(function(e){ return !SCN.manques(e).length; }); ev = pretes[0] ? pretes[0].id : null; }
+    if(!ev || !SCN.evalParId(ev)){ var pretes = SCN.evals().filter(function(e){ return !SCN.manques(e).length && (typeof publieeV !== "function" || publieeV(e)); }); ev = pretes[0] ? pretes[0].id : null; }
     return {classe:classe, evalId:ev};
   }
   G.choixLancement = choixLancement;
