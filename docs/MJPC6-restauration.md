@@ -1569,6 +1569,10 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `99d27acde120` (commit `b8f9795`) · 3 216 541 o · md5 `71603d630a864edba4090dbbd84116f9` · v8.91.2-㉗
 - **Restauration en cas de `BUG`** : le blob → PUT sur `contents/index.html`, puis bit à bit contre le md5. **Ce que revenir ferait perdre** : sur « Où en est la classe », le vrai nombre d'élèves et de diapos, le retour depuis la Relecture, la réactivation visible. Au hub : rien de nouveau.
 
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.14 (14/11/2026, conscience n°17)
+- Avant : 8.0.13, 2 269 542 o, md5 `bfa16c9bcc212f583b088502deb3f9d7`, blob `8f82f12f6238` (commit `c322da2`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.13-bfa16c9b.html`. Promu : 8.0.14, 2 282 378 o, md5 `52d4984bc3eefe19939d9ad39a983ef0`, commit `345a66b`, blob `02d90a442d2e`.
+- **Attention avant de revenir** : la 8.0.14 écrit un chemin nouveau, `qcm/evaluations/<id>/publiee`. La 8.0.13 l'ignore : toutes les évaluations, brouillons compris, réapparaissent au lancement. Côté MJPC (9.4.0-㊶), « Lier » continue de cacher celles marquées non publiées. **Ce que revenir ferait perdre** : la case publiée / non publiée, l'enregistrement au fil dans l'éditeur (on retombe sur « rien n'est écrit avant 💾 »), les compétences lues dans les séances quand la fiche du chapitre n'en a pas.
+
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.13 (12/11/2026, conscience n°17)
 - Avant : 8.0.12, 2 265 130 o, md5 `cd9a02c76b319adbb0af41a734d180b2`, blob `afc4af3bdc79` (commit `a90c636`), copie au sas `SAUVEGARDES/evaluation-qcm-8.0.12-cd9a02c7.html`. Promu : 8.0.13, 2 269 542 o, md5 `bfa16c9bcc212f583b088502deb3f9d7`, commit `c322da2`, blob `8f82f12f6238`.
 - Revenir est sans risque : mêmes données (`lecturesPause/`) ; la 8.0.12 n'offre simplement plus l'interrupteur.

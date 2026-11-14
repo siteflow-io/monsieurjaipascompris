@@ -971,6 +971,12 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 14/11/2026 — QCM 8.0.14 (conscience n°17)
+- **La case publiée / non publiée** (comme le panneau de correction dictée ; grisée tant que l'évaluation n'est pas « Prête à lancer ») : `LIVRAISONS/CODE-QCM/src/c3-evals.js` (la liste) ; le lancement ne propose que les publiées : `src/etape2.js` ; le mode test lance aussi un brouillon : `src/maquette620.js`. Chemin nouveau : `qcm/evaluations/<id>/publiee` (absent = publiée). Côté MJPC, « Lier » lit le même champ : `index.html` ~4515 (9.4.0-㊶).
+- **L'éditeur qui enregistre au fil** (0,8 s après la frappe, et à la fermeture de la page ; fusion champ par champ entre deux onglets, `fusionEval` ; la version ne monte qu'une fois par ouverture) : `src/c3-evals.js` (`enregistrerEval`).
+- **Les compétences des séances** quand la fiche du chapitre n'en a pas (`seances/*/competences`, `seances/<s>/deroule/ecrans/<i>/comp`, filtrées par la liste des 28) et les deux messages de l'éditeur : `src/c3-soir.js` (`chapitreVue`, `evalBrute`), `src/c3-evals.js` (le prompt).
+- **Mandat et pièces** : `MANDATS/QCM/MANDAT-QCM-8014-PUBLIER-ENREGISTRER-COMPETENCES.md`, `MANDATS/QCM/POUR-LE-DEROULE-QCM-SEULES-LES-PUBLIEES.md` (sas, branche `samedi/integration`) ; verdict et inventaire `LIVRAISONS/CODE-QCM/VERDICT.md` (branche `code-qcm-8014`) ; banc `banc/banc-8014.js`.
+
 ## AJOUTS DU 12/11/2026 (soir) — QCM 8.0.13 (conscience n°17)
 - **L'interrupteur « ✅ Oui » / « ✏️ Autre chose » sur une lecture de pause** (défaire = effacer la clé, changer = remplacer) : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (lignes lues de la copie ouverte) ; banc `banc/banc-8013-defaire.js` ; écrans `MANDATS/pieces/8013/`.
 
