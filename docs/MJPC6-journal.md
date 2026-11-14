@@ -1518,3 +1518,8 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   preuves : banc 25/26 (bw-edt), BX 18/18, BY 14/14, CE 20/20 + J5 3/3, CC 15/15, CB 10/10 + E2 3 h, CF 10/10 ouvertures sans effacement ; vrai hub inchangé. md5 `a8bf7a06…` → `bef44b5858eec4e7e9d2efb7ccd203a7`, commit prod `e57b84e`, bit à bit à 21:56:40.
   données : 16:11 récit 3 F.A. du 13/11 remis sur l'accord de Paul (relu identique).
   → mots-clés : copie jamais figée · échéance · à reprendre · Clore · récit effacé · versionsDe · 9.3 · conscience n°17
+- **14/11/2026 06:55 — PROMOTION 9.4.0-㊶ (les dettes restantes du déroulé, CG) — conscience n°17, sur « Promeus » de Paul (06:53).**
+  problème : points ouverts après la 9.3 (395, 408, 422, bw-edt, fins d'heure en double).
+  résolution : sas CG (`0ed5a657`, `43e13789`) ; bw-edt : la sonde avait tort (le `vif` « close » laissé par I), corrigée. Lecture des vraies trames (GET, 14/11 00:22) : deux `fin-h1-s0` sans heure (3e ch1 s0, 4e ch0 s0), sans contenu de Paul.
+  preuves : banc 26/26 VERT, CG 41/41, CB 10/10, CC 15/15, CE 23/23, CF vert ; vrai hub inchangé. md5 `bef44b58…` → `23d9b5313345f9cdd736dd05544ea336`, commit prod `1396545`, bit à bit à 06:55:08.
+  → mots-clés : École Directe · date · Relecture · glissée de l'heure · Lier · QCM publiés · fin d'heure · 9.4 · conscience n°17

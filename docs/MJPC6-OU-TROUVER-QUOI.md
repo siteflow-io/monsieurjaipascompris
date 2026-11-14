@@ -1050,3 +1050,8 @@
 - L'échéance : les 6 prochaines heures et « Autre date… » (`dr_prochainesEch`, l. 22259 ; `dr_echeanceChoisir`, l. 22263 ; `dr_echeanceCalendrier`, l. 22265 ; `dr_echeanceEnClair`, l. 22255 ; `dr_isoDuJour`, l. 22254).
 - Un seul compte des diapos à reprendre (case close, case suivante, pilote) et de « séance finie » (`edtReprend`, l. 28683 ; `edtAReprendre`, l. 28688 ; `edtAReprendreSeance`, l. 28695 ; `edtSurClos`, l. 28699).
 - Le récit jamais effacé par une écriture automatique (`dr_recitPerd`, l. 24135 ; `versionsDe` répare une liste absente).
+
+## AJOUTS DU 14/11/2026 — DÉROULÉ 9.4.0-㊶
+- Les fins d'heure écrites sans heure dans la trame : retirées à la lecture (`dr_normaliserTrame`, `dr-socle.js`) ; une par heure posée par le site (`dr_placerFins`).
+- La date dans « Copier le travail » (panneau, Relecture, chapitre) et dans le récit (`dr-recit.js`).
+- « Lier » : seules les évaluations QCM publiées (`loadAppList('qcm')`, `publiee !== false`).
