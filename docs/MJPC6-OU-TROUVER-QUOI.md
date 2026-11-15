@@ -1061,3 +1061,7 @@
 - Les fins d'heure écrites sans heure dans la trame : retirées à la lecture (`dr_normaliserTrame`, `dr-socle.js`) ; une par heure posée par le site (`dr_placerFins`).
 - La date dans « Copier le travail » (panneau, Relecture, chapitre) et dans le récit (`dr-recit.js`).
 - « Lier » : seules les évaluations QCM publiées (`loadAppList('qcm')`, `publiee !== false`).
+
+## AJOUTS DU 15/11/2026 — DÉROULÉ 9.5.0-㊷
+- « À régler » : `ouvrirARegler` et `alertesChapitre` (`dr-atelier.js`) ; le texte pour l'instance, le cadre « Coller la réponse de l'instance », l'aperçu, « Remplir », « ↩ Défaire ce remplissage » (note `LIVRAISONS/DEROULE-01-11/CI/NOTE-CI.md` au sas).
+- Le ✍ du pilote : `#becr`, `dr-socle.js` l. 1967-1971 (mesure CH).
