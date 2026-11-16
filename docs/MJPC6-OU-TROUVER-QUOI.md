@@ -1071,3 +1071,6 @@
 ## AJOUTS DU 15/11/2026 — DÉROULÉ 9.5.0-㊷
 - « À régler » : `ouvrirARegler` et `alertesChapitre` (`dr-atelier.js`) ; le texte pour l'instance, le cadre « Coller la réponse de l'instance », l'aperçu, « Remplir », « ↩ Défaire ce remplissage » (note `LIVRAISONS/DEROULE-01-11/CI/NOTE-CI.md` au sas).
 - Le ✍ du pilote : `#becr`, `dr-socle.js` l. 1967-1971 (mesure CH).
+
+## AJOUTS DU 16/11/2026 — 9.6.0-㊸
+- Les notes du chantier, avec chaque fonction touchée : sas `LIVRAISONS/DEROULE-01-11/CK/NOTE-CK-A.md` (déroulé : ✍, ↩ H, coupure, retomber, frise, numérotation), `CK/NOTE-CK-B.md` (« ⇄ Tout lier », corbeille et fiches, texte justifié), `CL/NOTE-CL.md` (séance à la corbeille, témoin, copie relue avant la corbeille).
