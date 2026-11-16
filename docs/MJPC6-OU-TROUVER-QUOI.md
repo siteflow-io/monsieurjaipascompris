@@ -971,6 +971,12 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 16/11/2026 — QCM 8.0.15 (conscience n°17)
+- **La lecture rapide pendant la pause** (plein écran, colonne des noms avec ⚠, carte de la question, ronds Q1–Q11, clavier, turbo, point d'autonomie en étape, fin de copie, aide « ? ») : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (branche de la séance en pause). L'écouteur global d'Échap (`src/live/gestes.js` ~169) est neutralisé sur cet écran.
+- **Les choix multiples** écrits chacun entre guillemets, reliés par « et » : `choixTexteV` (`src/c4-seances.js` ~633) ; la feuille du mode test garde son ancien format.
+- **L'évaluation en deux séances** (deux parties de 45 min) : `dureeEstimeeV` (`src/c3-evals.js`), `SCN.dureeEstimee`, le contrôle de l'import (`c3-evals.js` ~428), la carte de lancement (`etape2.js`, `texteDuree` de `c3-soir.js`), le prompt `MANDATS/PROMPT-QCM-CREATION/README.md`.
+- **Mandat, pièces, verdict** : `MANDATS/MANDAT-QCM-8015-LECTURE-RAPIDE-ET-DEUX-SEANCES.md`, `MANDATS/pieces/8015/` (captures construites R1 à R6 épurées, inventaire 8.0.14) ; `LIVRAISONS/CODE-QCM/VERDICT.md` et `banc/banc-8015.js` (branche `code-qcm-8015`) ; captures avant/après dans `LIVRAISONS/CODE-QCM/sorties/8015/`. Le cadrage est dans le doc « Cadrage QCM 8.0.15 ».
+
 ## AJOUTS DU 14/11/2026 — QCM 8.0.14 (conscience n°17)
 - **La case publiée / non publiée** (comme le panneau de correction dictée ; grisée tant que l'évaluation n'est pas « Prête à lancer ») : `LIVRAISONS/CODE-QCM/src/c3-evals.js` (la liste) ; le lancement ne propose que les publiées : `src/etape2.js` ; le mode test lance aussi un brouillon : `src/maquette620.js`. Chemin nouveau : `qcm/evaluations/<id>/publiee` (absent = publiée). Côté MJPC, « Lier » lit le même champ : `index.html` ~4515 (9.4.0-㊶).
 - **L'éditeur qui enregistre au fil** (0,8 s après la frappe, et à la fermeture de la page ; fusion champ par champ entre deux onglets, `fusionEval` ; la version ne monte qu'une fois par ouverture) : `src/c3-evals.js` (`enregistrerEval`).
