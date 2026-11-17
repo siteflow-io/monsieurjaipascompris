@@ -1569,6 +1569,11 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - blob `99d27acde120` (commit `b8f9795`) · 3 216 541 o · md5 `71603d630a864edba4090dbbd84116f9` · v8.91.2-㉗
 - **Restauration en cas de `BUG`** : le blob → PUT sur `contents/index.html`, puis bit à bit contre le md5. **Ce que revenir ferait perdre** : sur « Où en est la classe », le vrai nombre d'élèves et de diapos, le retour depuis la Relecture, la réactivation visible. Au hub : rien de nouveau.
 
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.16 (17/11/2026, conscience n°17)
+- Avant : 8.0.15, 2 312 731 o, md5 `d083b3b06718c6197611cb6addbb9c86`, blob `b999e3a1dacc`, copie au sas `SAUVEGARDES/evaluation-qcm-8.0.15-d083b3b0.html`. Promu : 8.0.16, 2 328 175 o, md5 `afa643a9dcbf194060f713fca3279d97`, commit `20ec191`, blob `1053c3a628da` (sas `code-qcm` = `1be844012`).
+- **Ce que revenir ferait perdre** : la reconnexion sur sa propre tablette, la tablette rechargée qui garde ses élèves, l'écoute allégée (les clics perdus reviendraient sous la charge d'une vraie classe), la console en direct au 1er tour, la vue 👁 qui reste ouverte. Aucune donnée nouvelle : une séance jouée en 8.0.16 se lit en 8.0.15 (la présence porte deux champs de plus, `eveil` et l'heure de la base, ignorés par la 8.0.15).
+- **Revenir** : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne.
+
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.15 (16/11/2026, conscience n°17)
 - Avant : 8.0.14, 2 282 378 o, md5 `52d4984bc3eefe19939d9ad39a983ef0`, blob `02d90a442d2e`, copie au sas `SAUVEGARDES/evaluation-qcm-8.0.14-52d4984b.html`. Promu : 8.0.15, 2 312 731 o, md5 `d083b3b06718c6197611cb6addbb9c86`, commit `f22634f`, blob `b999e3a1dacc` (sas `code-qcm` = `feba9daf`).
 - **Ce que revenir ferait perdre** : la lecture rapide pendant la pause (plein écran, la classe repliée aux noms avec ⚠, une touche par question, le turbo, le point d'autonomie en étape), les choix multiples écrits chacun entre guillemets, et l'évaluation en deux séances. Une évaluation enregistrée « en deux séances » reste lisible en 8.0.14 (aucun champ nouveau) ; seul son contrôle à l'import la refuserait. Les lectures de pause faites en 8.0.15 sont de la même forme qu'en 8.0.14.

@@ -971,6 +971,13 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
+## AJOUTS DU 17/11/2026 — QCM 8.0.16 (conscience n°17)
+- **La reconnexion et la tablette rechargée** (C1, C2 : `placer()` qui attend la séance et la présence, la tablette prête seulement quand ses séances sont arrivées, l'écoute des seules séances actives, « 📊 Mes évaluations » écouté séance par séance) : `LIVRAISONS/CODE-QCM/src/live/base.js`, `src/c3-tablettes.js` (branche `code-qcm-8016`).
+- **La tablette qui perd la base** (C4 : présence réécrite en entier à chaque reconnexion, heure de la base, écran gardé allumé, texte « 📶 décrochée » de la console) : `src/live/base.js`, `src/c3-pilot.js`.
+- **La console en direct** (C3 le 1er tour, C5 la couche du soir écoutée séance par séance, les séances nouvelles par `orderByKey().startAt(…)` + `child_added`) : `src/c3-pilot.js`, `src/c3-soir.js`, `src/c4-seances.js`.
+- **La vue 👁** (C6 : fermée seulement au changement de séance) : `src/c3-objets.js`. **La version** : `QCM_VERSION`, carte « ℹ️ Version » des Réglages (`src/c3-evals.js`).
+- **Complément, mesures, verdict, bancs** : `MANDATS/COMPLEMENT-QCM-8016-RECONNEXION-ET-TOUR-1.md`, `AUDITS/QCM-8016-RECONNEXION/`, `MANDATS/pieces/8016/` (captures avant/après), `MANDATS/NUIT-16-17-11-PLAN.md` ; `LIVRAISONS/CODE-QCM/VERDICT.md`, `banc/banc-8016.js`, `banc/banc-unique.sh` (compte aussi les échecs écrits d'un banc qui sort à 0).
+
 ## AJOUTS DU 16/11/2026 — QCM 8.0.15 (conscience n°17)
 - **La lecture rapide pendant la pause** (plein écran, colonne des noms avec ⚠, carte de la question, ronds Q1–Q11, clavier, turbo, point d'autonomie en étape, fin de copie, aide « ? ») : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (branche de la séance en pause). L'écouteur global d'Échap (`src/live/gestes.js` ~169) est neutralisé sur cet écran.
 - **Les choix multiples** écrits chacun entre guillemets, reliés par « et » : `choixTexteV` (`src/c4-seances.js` ~633) ; la feuille du mode test garde son ancien format.
