@@ -1074,3 +1074,7 @@
 
 ## AJOUTS DU 16/11/2026 — 9.6.0-㊸
 - Les notes du chantier, avec chaque fonction touchée : sas `LIVRAISONS/DEROULE-01-11/CK/NOTE-CK-A.md` (déroulé : ✍, ↩ H, coupure, retomber, frise, numérotation), `CK/NOTE-CK-B.md` (« ⇄ Tout lier », corbeille et fiches, texte justifié), `CL/NOTE-CL.md` (séance à la corbeille, témoin, copie relue avant la corbeille).
+
+## AJOUTS DU 17/11/2026 — 9.7.0-㊹
+- Les chapitres qui suivent seuls : le bloc « CM » d'`index.html` (`chsTemoinLever`, l'abonnement à `/site/structure_maj` par `dr_sesEcouter`) ; note sas `LIVRAISONS/DEROULE-01-11/CM/NOTE-CM.md` (points 1 à 58).
+- La file des écritures du déroulé : `dr_ecrire` (`dr-socle.js`).

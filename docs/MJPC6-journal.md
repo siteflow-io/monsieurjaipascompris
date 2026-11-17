@@ -1534,6 +1534,12 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   preuves : banc 26/26 VERT ; CL 62/62, CK-A 70/70, CK-B 108/108, CI 49/49, CG 41/41 ; vrai hub inchangé. md5 `50b62c66…` → `198a45a624dc3527dd75ecae46b9713f`, commit prod `7f57cef`, bit à bit à 14:43:03.
   reste : les chapitres qui ne se relisent pas d'eux-mêmes (Paul « 510 à régler »).
   → mots-clés : ✍ · coupure · F5 · Tout lier · corbeille · fiches · frise · 9.6 · conscience n°17
+- **17/11/2026 06:18 — PROMOTION 9.7.0-㊹ (les chapitres suivent seuls ; « ↩ » juste ; la file des écritures) — conscience n°17, sur « Promeus » de Paul (06:17).**
+  problème : Paul 16/11 14:41 « 510 à régler » (chapitresData chargé une fois) ; test de la conscience 14:50 : 12 « ↩ » dans l'Atelier pour 6 à reprendre ; trouvé par CM : deux écritures de la même trame pouvaient arriver dans le désordre (bk 42/45 ; 7/20 sur réseau lent avec témoin).
+  résolution : sas CK-A `169e8380` ; CM `a6ec30cc`, `b352f7dc`, `9eed4d7a`.
+  preuves : chaîne par morceaux (22:58 → 00:30), banc 26/26, bk 3 × 45/45 ; avant/après la file : 7/20 → 20/20 (réseau lent, témoin), coupure 2/10 → 10/10. md5 `198a45a6…` → `cb4a8521e204bae477ee641ab1341c3a`, commit prod `4f89011`, bit à bit à 06:18:28.
+  reste : le témoin au vrai hub (règles M-SÉCU, à vérifier) ; l'atelier et la vue papier qui suivent (520) ; « Remplacer » (517).
+  → mots-clés : chapitres · témoin · structure_maj · ↩ · file des écritures · 9.7 · conscience n°17
 - **14/11/2026 07:41 — PROMOTION `evaluation-qcm.html` 8.0.14 — conscience n°17, sur le « promeus » de Paul (14/11, 07:35).**
   md5 `bfa16c9b…` (8.0.13) → `52d4984bc3eefe19939d9ad39a983ef0` (2 282 378 o), commit `345a66b`, blob `02d90a442d2e`, `code-qcm` tête `2b5d231d` (branche `code-qcm-8014`). Sauvegarde au sas `SAUVEGARDES/evaluation-qcm-8.0.13-bfa16c9b.html`. En ligne vérifié (5 lectures sur 6 à 52d4984b, la première encore 8.0.13).
   Contenu (mandat `MANDATS/QCM/MANDAT-QCM-8014-PUBLIER-ENREGISTRER-COMPETENCES.md`) : case publiée / non publiée par évaluation (nouvelle = non publiée ; grisée si pas « Prête à lancer » ; non publiée = absente du lancement, mais lançable en mode test ; dépublier ne bloque pas une séance en pause) ; l'éditeur enregistre au fil (0,8 s, et à la fermeture de la page) ; compétences des séances quand la fiche n'en a pas, messages validés par Paul. Chemin nouveau : `qcm/evaluations/<id>/publiee` (absent = publiée, donc les évaluations existantes restent publiées).
