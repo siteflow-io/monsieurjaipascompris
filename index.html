@@ -3220,7 +3220,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="9.7.0-㊹";
+var APP_VERSION="9.8.0-㊺";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -11233,8 +11233,8 @@ function atelierFermer(sansPanneau,puis){
    chemins enfants puis lire le parent donnerait null. En mode test, la liste
    reconstitue donc le parent par préfixe — la sémantique même de RTDB. */
 function atSiteGetDocs(cb){
-  if(m8TestOn()){ M8T.lire(AT_NOEUD,function(v){ cb(v||{}); }); return; }   /* E1 (13 · 39) : l'arbre recomposé (les feuilles du hub et celles écrites en mode test) */
-  _siteGet(AT_NOEUD,cb);
+  if(m8TestOn()){ M8T.lire(AT_NOEUD,function(v){ cnListeLue(v); cb(v||{}); }); return; }   /* E1 (13 · 39) : l'arbre recomposé (les feuilles du hub et celles écrites en mode test) */
+  _siteGet(AT_NOEUD,function(v,err){ if(!err)cnListeLue(v); cb(v,err); });   /* CN : la version connue du hub, feuille par feuille (l'ancêtre de chaque copie) */
 }
 
 /* ── LA LISTE DES FEUILLES — créer · ouvrir · dupliquer · supprimer ── */
@@ -11462,7 +11462,7 @@ function atOuvrirDoc(id){
   AT.sectionsOuvertes={};   /* SITE-COURS-2d : les sections repartent repliées à chaque ouverture */
   if(base.envoi||base.depot){_siteGet(AT_ENVOIS_NOEUD+'/'+id+'/doc',function(v){AT.envoiDoc=v||null;});}   /* [PONT-C] l'envoi se lit d'après la feuille, la note depot n'est qu'un repli de cache */
   var brouillon=atBrouillonLire(id);
-  var reprendre=function(doc){AT.docId=id;AT.doc=doc;AT.previewIdx=0;atRendreEditeur();};
+  var reprendre=function(doc){AT.docId=id;AT.doc=doc;cnDocOuvert(id,base);AT.previewIdx=0;atRendreEditeur();};   /* CN : la version du hub dont la copie vient (l'ancêtre) */
   if(brouillon&&brouillon.dates&&base.dates&&brouillon.dates.modifieLe>base.dates.modifieLe){
     /* SITE-COURS-2d · l'horodatage ne décide plus seul : on compare les CONTENUS.
        Identiques → aucune question, le faux orphelin d'horloge disparaît en silence.
@@ -11568,11 +11568,32 @@ function atMarquerModifie(){
 function atEnregistrerMaintenant(suite){
   if(!AT.doc||!AT.docId){if(suite)suite();return;}
   clearTimeout(AT.timerPut);
+  /* CN (③) : LA GARDE — rien n'est écrit si rien n'a changé ici (revenir à « Mes feuilles » n'écrit plus) ; sinon la feuille est relue, réunie avec ce qui a
+     changé ailleurs, ou la fenêtre (C1, C2a, C2b) laisse choisir. Une écriture de cette feuille à la fois : la suivante attend son tour. */
+  var id=AT.docId;
+  if(CNF.vol[id]){ (CNF.file[id]=CNF.file[id]||[]).push(suite||null); return; }
+  CNF.vol[id]=true;
+  var libere=function(){ CNF.vol[id]=false; var F=CNF.file[id]; delete CNF.file[id]; if(F&&F.length)atEnregistrerMaintenant(function(){ F.forEach(function(f){ if(f)f(); }); }); };
+  cnGarde({id:id,partir:!!suite,lire:function(){ return AT.docId===id?AT.doc:null; },anc:cnAncDoc(),qui:'editeur',t:+((AT.doc.dates||{}).modifieLe)||Date.now()},function(r){
+    if(AT.docId!==id||!AT.doc){ libere(); if(suite)suite(); return; }
+    if(r.quoi==='rien'){
+      if(r.hub&&!cnPareil(AT.doc,r.hub)){ var ouv=(CNF.docAnc&&CNF.docAnc.id===id&&CNF.docAnc.ouvert)||null; AT.doc=chsClone(r.hub); CNF.docAnc={id:id,obj:AT.doc,anc:chsClone(r.hub),ouvert:ouv}; CNF.base[id]=chsClone(r.hub); if(AT.liste)AT.liste[id]=chsClone(r.hub); cnRedessinerAuCalme({editeur:1,etat:'ok'}); }
+      atBrouillonEffacer(id); if(AT.etat==='modif'||AT.etat==='encours'||AT.etat==='choix')atEtat(AT.derniereSauve?'ok':''); libere(); if(suite)suite(); return; }
+    if(r.quoi==='annule'||r.quoi==='plustard'){ atEtat('choix'); libere(); return; }   /* « Plus tard » : rien n'est écrit, la feuille reste ici telle quelle ; ce qui suivait (quitter l'écran) n'a pas lieu */
+    if(r.quoi==='attente'){ libere(); return; }
+    if(r.quoi==='laisse'){ libere(); cnFermerFeuille(id); return; }
+    if(r.doc&&r.doc!==AT.doc){ AT.doc=r.doc; cnRedessinerAuCalme({editeur:1,etat:'ok'}); }
+    atEcrireDocGarde(suite,libere);
+  });
+}
+function atEcrireDocGarde(suite,libere){
   AT.doc.dates=AT.doc.dates||{};
   AT.doc.dates.versionDoc=(AT.doc.dates.versionDoc||0)+1;
   atEtat('encours');
+  var _cnId=AT.docId, _cnEcrit=chsClone(AT.doc);   /* CN : ce qui part, figé (la frappe pendant l'envoi reste un changement d'ici) */
   atSitePut(AT_NOEUD+'/'+AT.docId,AT.doc,function(ok){
     if(ok){
+      if(AT.docId===_cnId){ CNF.docAnc={id:_cnId,obj:AT.doc,anc:chsClone(_cnEcrit),ouvert:(CNF.docAnc&&CNF.docAnc.id===_cnId&&CNF.docAnc.ouvert)||null}; } CNF.base[_cnId]=chsClone(_cnEcrit); CNF.n.ecrit++;
       AT.derniereSauve=Date.now();
       atBrouillonEffacer(AT.docId);
       atBrouillonEcrire(); /* le brouillon reflète l'état sauvé (repère de fraîcheur) */
@@ -11620,15 +11641,19 @@ function atEnregistrerMaintenant(suite){
       AT.doc.dates.versionDoc=Math.max(0,(AT.doc.dates.versionDoc||1)-1);
       atEtat('echec');
     }
+    if(libere)libere();
     if(suite)suite();
   });
 }
 function atEtat(mode){
   AT.etat=mode;
   var e=document.getElementById('at-etat');if(!e)return;
+  e.onclick=null;e.style.cursor='';e.style.textDecoration='';e.removeAttribute('title');   /* CN : seule la ligne « un choix t'attend » se clique */
   if(mode==='modif'){e.className='at-etat';e.textContent='Modifications en attente\u2026';}
   else if(mode==='encours'){e.className='at-etat';e.textContent='Enregistrement\u2026';}
   else if(mode==='ok'){e.className='at-etat at-etat-ok';e.textContent='Enregistr\u00e9 \u00e0 '+new Date(AT.derniereSauve).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
+  else if(mode==='suivie'){e.className='at-etat at-etat-ok';e.textContent='Chang\u00e9e ailleurs \u00e0 '+cnHeure(CNF.suivieLe)+' \u2014 \u00e0 jour';e.title='Cette feuille a \u00e9t\u00e9 chang\u00e9e dans un autre onglet ou sur un autre ordinateur : l\u2019\u00e9cran la montre telle qu\u2019elle est maintenant, sans recharger.';}   /* CN (C3, validé par Paul) */
+  else if(mode==='choix'){e.className='at-etat at-etat-echec';e.textContent='\u26a0 Pas encore enregistr\u00e9 \u2014 un choix t\u2019attend';e.title='Un clic rouvre la fen\u00eatre : la m\u00eame partie de cette feuille a chang\u00e9 ici et ailleurs ; rien n\u2019est \u00e9crit tant que tu n\u2019as pas choisi.';e.style.cursor='pointer';e.style.textDecoration='underline';e.onclick=function(){ cnRouvrirChoix(AT.docId); };}   /* CN (Paul, 17/11 : « Plus tard ») */
   else if(mode==='echec'){e.className='at-etat at-etat-echec';e.innerHTML='\u26a0 L\u2019enregistrement a \u00e9chou\u00e9 \u2014 tes modifications sont gard\u00e9es sur cet appareil. <button class="at-btn at-btn-min" onclick="atEnregistrerMaintenant()">R\u00e9essayer</button>';}
   else {e.className='at-etat';e.textContent='';}
 }
@@ -11804,32 +11829,235 @@ function chsNiveauxTouches(c,m,corps){
 }
 /* la structure ? (le chemin seul — le corps n'est lu que si c'est elle, ou un ancêtre, ou un PATCH) */
 function chsPeutEtreStructure(c){ return c==='/'||c==='/site'||/^\/site\/(3e|4e|5e|6e)(\/chapitres(\/.*)?)?$/.test(c)&&!/^\/site\/[^/]+\/chapitres\/[^/]+\/seances\/[^/]+\/(deroule|deroule_joue)(\/|$)/.test(c); }
+/* ═══ CQ (C17 — mandat CQ-ENVOIS-BLOQUES ; Paul, 17/11 09:09 : « Mon tableau distant ne fonctionne plus!!! », 15:12 : « ça m'a refait la même chose pour la
+   séance des hugo ») — UN ENVOI QUI NE REVIENT PAS NE BLOQUE PLUS LE PILOTAGE ; LA BOÎTE NOIRE DE L'HEURE.
+   Mesuré au faux hub (HTTP/1.1, six connexions par hôte), sur la 9.7.0-㊹ : `fetch` n'a aucune limite de temps ; une écriture qui ne reçoit jamais de réponse
+   n'est jamais comptée comme un échec. Celle du journal (ou de la scène) bloque la file de son chemin (`dr_filePomper`) sans fin : plus rien de ce chemin
+   n'arrive, et le témoin ne dit rien (journal). Deux tenues ensemble (le journal et l'état vivant) prennent, avec les quatre flux du pilotage, les six
+   connexions de l'hôte : PLUS RIEN n'arrive, d'aucun chemin (la panne de 09:05 → 09:13), et tout repart au rechargement.
+   ① LA LIMITE DE TEMPS, à la porte de `fetch` (celle de CM, ci-dessous) : sur la page du professeur, chaque écriture au hub a 15 s (plus 1 s par 25 Ko
+      au-delà de 25 Ko : un gros envoi lent n'est pas coupé) ; pendant une heure, chaque lecture du hub a 20 s. Passé ce délai, l'envoi est abandonné :
+      sa connexion se libère, l'écriture est une coupure (MJPC_ISSUE.PANNE) et repart seule par le chemin qui existe (DR_HL, CK : le témoin « ● hors ligne
+      depuis … · N envois en attente », le renvoi toutes les 4 s et au retour du réseau ; hors d'une heure, la file, son renvoi et le bandeau). Une file
+      n'attend donc jamais plus que cette limite. Les alertes de fin d'heure ne dépendent d'aucun envoi (lu : `tick`, chaque seconde, dans la page).
+   ② LA BOÎTE NOIRE. Pendant une heure lancée en classe, la page garde le relevé de ses échanges avec le hub : chaque envoi (chemin, départ, arrivée ou
+      délai dépassé, durée, réponse), compté par chemin et minute par minute ; les flux ouverts et leur nombre ; la page cachée ou visible, gelée ou reprise ;
+      le réseau perdu ou revenu ; une page qui n'a pas tourné (veille, onglet gelé). Gardée sur cet ordinateur (localStorage, toutes les 5 s et quand la page
+      se cache : un rechargement ne la perd pas) et au hub avec l'heure (`…/deroule_joue/<classe>/boite/<heure>`, une fois par minute et à la fin de
+      l'heure ; jamais en mode test). Elle part avec la relecture de l'heure (« Copier la relecture pour analyse », section « POUR CHERCHER UNE PANNE »).
+      Aucun écran nouveau. ═══ */
+var CQ_LIM={ ecrire:15000, seuil:25000, parOctet:1/25, lire:20000 };
+var CQ_BN={ cur:null, flux:[], fluxN:0, enVol:[], t0:Date.now(), vu:Date.now(), sale:false, sauveT:0, hubT:0, attente:[], id:Math.random().toString(36).slice(2,8) };
+function cqProf(){ try{ return !!(typeof TRACK!=='undefined'&&TRACK&&TRACK.eleve&&TRACK.eleve.is_prof); }catch(e){ return false; } }
+/* la limite d'un envoi (0 : aucune) — côté professeur seulement ; les lectures, seulement pendant une heure (le chargement du site n'est jamais coupé) */
+function cqLimite(m,o){ if(!cqProf())return 0; if(m==='GET'||m==='HEAD')return chsEnHeure()?CQ_LIM.lire:0; var n=(o&&typeof o.body==='string')?o.body.length:0; return Math.round(CQ_LIM.ecrire+Math.max(0,n-CQ_LIM.seuil)*CQ_LIM.parOctet); }
+function cqEnvoyer(f0,self,args,u,o,m){
+  var c=chsChemin(typeof u==='string'?u:(u&&u.url));
+  if(c===null)return f0.apply(self,args);   /* pas le hub : rien ne change */
+  var lim=cqLimite(m,o), b=null; try{ b=cqBnDebut(c,m,o); }catch(x){}
+  if(!lim&&!b)return f0.apply(self,args);
+  var T=null, o2=o;
+  if(lim&&typeof AbortController==='function'&&!(o&&o.signal)){ var ac=new AbortController(); o2={}; if(o)for(var k in o)o2[k]=o[k]; o2.signal=ac.signal; T=setTimeout(function(){ if(b)b.delai=1; ac.abort(); },lim); }
+  var p=f0.call(self,u,o2);
+  p.then(function(r){ clearTimeout(T); try{ cqBnFin(b,r?r.status:0,!!(r&&r.ok)); }catch(x){} },function(){ clearTimeout(T); try{ cqBnFin(b,0,false); }catch(x){} });
+  return p;
+}
+/* ── la boîte noire ── */
+function cqHMS(t){ var d=new Date(t); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2); }
+function cqS(ms){ return (Math.round(ms/100)/10).toString().replace('.',','); }
+/* le nom d'un chemin, relatif à la classe : journal, scene, vif, etat, ecrans, heures, heures-absentsPar, presence, cours_actif… (une clé permise au hub) */
+function cqBnNom(c,C){ var r; if(C&&c.indexOf(C+'/')===0){ var q=c.slice(C.length+1).split('/'); r=q[0]; if(q[0]==='heures'&&q.length>2)r='heures-'+q[2]; }
+  else if(C&&c===C)r='classe'; else if(c.indexOf('/presence/')===0)r='presence'; else r=c.split('/').filter(Boolean).slice(0,2).join('-')||'racine';
+  return r.replace(/[.#$\[\]\/]/g,'-'); }
+function cqBnTenu(){ try{ return typeof dr_hlTenu==='function'&&!!dr_hlTenu(); }catch(e){ return false; } }
+function cqBnMinute(cur,t){ var d=new Date(t), k=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); return cur.mn[k]=cur.mn[k]||{}; }
+function cqBnPlus(o,k,n){ o[k]=(o[k]||0)+(n||1); }
+function cqBnEv(cur,txt){ if(!cur)return; cur.ev.push(cqHMS(Date.now())+' · '+txt); if(cur.ev.length>150)cur.ev.splice(30,1); CQ_BN.sale=true; }
+function cqBnEvTous(txt){ var cur=cqBnCourant(); if(cur)cqBnEv(cur,txt); else { CQ_BN.attente.push([Date.now(),txt]); if(CQ_BN.attente.length>20)CQ_BN.attente.shift(); } }
+function cqBnCharger(H){ try{ var v=JSON.parse(localStorage.getItem('mjpc_bn|'+H)||'null'); return (v&&v.v===1&&v.H===H)?v:null; }catch(e){ return null; } }
+/* l'heure que tient cette page (null : aucune) ; à la fin de l'heure, le relevé est gardé une dernière fois */
+function cqBnCourant(){
+  var cur=CQ_BN.cur;
+  if(!cqBnTenu()){ if(cur){ cqBnEv(cur,'l’heure n’est plus tenue par cette page (close, quittée ou annulée)'); cqBnSauver(true); CQ_BN.cur=null; } return null; }
+  var H=null,C=null; try{ H=dr_cheminH(); C=dr_cheminC(); }catch(e){} if(!H||!C)return null;
+  CQ_BN.tenuDepuis=CQ_BN.tenuDepuis||{}; if(!CQ_BN.tenuDepuis[H])CQ_BN.tenuDepuis[H]=Date.now();   /* depuis quand cette page tient cette heure (la phrase de cqClosAilleurs) */
+  if(cur&&cur.H===H)return cur;
+  if(cur){ cqBnEv(cur,'la page passe à une autre heure'); cqBnSauver(true); }
+  var n=cqBnCharger(H), neuf=!n;
+  cur=CQ_BN.cur=n||{ v:1, H:H, C:C, k:H.split('/').pop(), h:(typeof S==='object'&&S)?S.heure:null, lance:(typeof S==='object'&&S&&S.debutReel)||Date.now(), classe:(typeof AT_DR_COURS!=='undefined'&&AT_DR_COURS&&AT_DR_COURS.classeNom)||'', pages:[], ch:{}, mn:{}, ev:[], fluxMax:0, maj:0 };
+  cur.pages.push(CQ_BN.id+' '+cqHMS(CQ_BN.t0)); if(cur.pages.length>12)cur.pages.splice(1,1);
+  cqBnEv(cur,(neuf?'l’heure est tenue par cette page':'l’heure est reprise par une page')+' (page ouverte à '+cqHMS(CQ_BN.t0)+') · '+CQ_BN.fluxN+' flux ouvert'+(CQ_BN.fluxN>1?'s':''));
+  var av=Date.now()-120000; CQ_BN.attente.forEach(function(x){ if(x[0]>=av)cur.ev.push(cqHMS(x[0])+' · '+x[1]+' (juste avant)'); }); CQ_BN.attente=[];
+  try{ var K=[]; for(var i=0;i<localStorage.length;i++){ var kk=localStorage.key(i); if(kk&&kk.indexOf('mjpc_bn|')===0)K.push(kk); } if(K.length>30){ K.map(function(x){ var v=null; try{ v=JSON.parse(localStorage.getItem(x)); }catch(e){} return [x,(v&&v.maj)||0]; }).sort(function(a,b){return a[1]-b[1];}).slice(0,K.length-30).forEach(function(x){ localStorage.removeItem(x[0]); }); } }catch(e){}   /* les 30 dernières heures, pas plus */
+  return cur;
+}
+function cqBnDebut(c,m,o){ var cur=cqBnCourant(); if(!cur)return null; var nom=cqBnNom(c,cur.C); if(nom==='boite')return null; var lu=(m==='GET'||m==='HEAD'); if(lu)nom='lecture '+nom;   /* les lectures, à part : « lecture site-structure_maj » */
+  var b={ cur:cur, c:nom, m:m, lu:lu, t0:Date.now(), n:(o&&typeof o.body==='string')?o.body.length:0 }; CQ_BN.enVol.push(b);
+  var s=cur.ch[nom]=cur.ch[nom]||{}; cqBnPlus(s,'p'); var mn=cqBnMinute(cur,b.t0); cqBnPlus(mn,lu?'lu':'p'); mn.vol=Math.max(mn.vol||0,CQ_BN.enVol.length); CQ_BN.sale=true; return b; }
+function cqBnFin(b,status,ok){ if(!b)return; var i=CQ_BN.enVol.indexOf(b); if(i>=0)CQ_BN.enVol.splice(i,1); var cur=b.cur, d=Date.now()-b.t0, s=cur.ch[b.c]=cur.ch[b.c]||{}, mn=cqBnMinute(cur,Date.now());
+  var q=ok?'a':b.delai?'d':status?'r':'x'; cqBnPlus(s,q); if(!b.lu||!ok)cqBnPlus(mn,q); s.max=Math.max(s.max||0,d); cqBnPlus(s,'som',d);   /* à la minute : les envois ; une lecture, seulement si elle échoue */
+  var quoi=(b.lu?'la lecture':'l’envoi')+' « '+b.c.replace(/^lecture /,'')+' » ('+b.m+(b.n?', '+b.n+' o':'')+', '+(b.lu?'partie':'parti')+' à '+cqHMS(b.t0)+')';
+  if(b.delai)cqBnEv(cur,'délai dépassé : '+quoi+' n’a pas eu de réponse en '+cqS(d)+' s — abandonné, il repart seul');
+  else if(!ok&&status)cqBnEv(cur,'refus '+status+' : '+quoi+' — refusé par le hub');
+  else if(!ok)cqBnEv(cur,'coupure : '+quoi+' — pas de réponse, la liaison a lâché après '+cqS(d)+' s');
+  else if(d>3000)cqBnEv(cur,'lent : '+quoi+' — arrivé en '+cqS(d)+' s');
+  CQ_BN.sale=true; }
+/* les flux du hub (EventSource) : leur nombre, à chaque changement */
+function cqFluxEnvelopper(){ var ES=window.EventSource; if(typeof ES!=='function'||ES.__cq)return;
+  var W=function(u,o){ var es=(o===undefined)?new ES(u):new ES(u,o); try{ cqFluxSuivre(es,u); }catch(e){} return es; };
+  W.prototype=ES.prototype; W.CONNECTING=0; W.OPEN=1; W.CLOSED=2; W.__cq=true; window.EventSource=W; }
+function cqFluxSuivre(es,u){ var c=chsChemin(String(u)); if(c===null)return; var f={es:es,c:c}; CQ_BN.flux.push(f);
+  var ote=function(){ var i=CQ_BN.flux.indexOf(f); if(i>=0)CQ_BN.flux.splice(i,1); };
+  var cl=es.close; es.close=function(){ ote(); cqFluxDire(c,'fermé'); return cl.apply(es,arguments); };
+  es.addEventListener('error',function(){ if(es.readyState===2){ ote(); cqFluxDire(c,'perdu'); } else cqFluxDire(c,'coupé (il se rouvre)'); });
+  cqFluxDire(c,'ouvert'); }
+function cqFluxDire(c,quoi){ var n=CQ_BN.flux.length; if(n===CQ_BN.fluxN&&!/coupé|perdu/.test(quoi))return; CQ_BN.fluxN=n; var cur=CQ_BN.cur; if(!cur||!cqBnTenu())return;
+  cur.fluxMax=Math.max(cur.fluxMax||0,n); cqBnEv(cur,'flux '+quoi+' : « '+cqBnNom(c,cur.C)+' » · '+n+' flux ouvert'+(n>1?'s':'')); }
+/* garder : sur cet ordinateur (localStorage) ; au hub (`hub` : maintenant ; sinon une fois par minute), jamais en mode test, jamais pendant une coupure */
+function cqBnSauver(hub){ var cur=CQ_BN.cur; if(!cur)return; cur.maj=Date.now(); CQ_BN.sale=false; CQ_BN.sauveT=Date.now();
+  try{ localStorage.setItem('mjpc_bn|'+cur.H,JSON.stringify(cur)); }catch(e){}
+  var test=false; try{ test=typeof m8TestOn==='function'&&m8TestOn(); }catch(e){}
+  var coupe=false; try{ coupe=typeof DR_HL==='object'&&DR_HL&&DR_HL.att&&DR_HL.att.size>0; }catch(e){}
+  if(test||cur.hubRefus||!CHS.fetch0||typeof FIREBASE_BASE==='undefined'||(!hub&&(coupe||Date.now()-CQ_BN.hubT<60000)))return;
+  CQ_BN.hubT=Date.now(); var corps=JSON.stringify(cur), ac=(typeof AbortController==='function')?new AbortController():null, T=ac?setTimeout(function(){ ac.abort(); },CQ_LIM.ecrire):null;
+  CHS.fetch0.call(window,FIREBASE_BASE+cur.C+'/boite/'+encodeURIComponent(cur.k)+'.json?print=silent',{method:'PUT',headers:{'Content-Type':'application/json'},body:corps,signal:ac?ac.signal:undefined})
+    .then(function(r){ clearTimeout(T); if(r&&r.ok){ cur.hubMaj=Date.now(); } else if(r&&(r.status===401||r.status===403)){ cur.hubRefus=r.status; cqBnEv(cur,'le hub refuse la boîte noire ('+r.status+') : elle reste sur cet ordinateur'); } },function(){ clearTimeout(T); });
+}
+function cqBnTic(){ var t=Date.now(), trou=t-CQ_BN.vu; CQ_BN.vu=t;
+  if(trou>90000)cqBnEvTous('la page n’a pas tourné pendant '+Math.round(trou/60000)+' min ('+cqHMS(t-trou)+' → '+cqHMS(t)+') : ordinateur en veille, ou onglet gelé par le navigateur');
+  var cur=cqBnCourant(); if(!cur)return;
+  var mn=cqBnMinute(cur,t); mn.fl=CQ_BN.fluxN; if(document.visibilityState==='hidden')mn.cache=1; if(CQ_BN.enVol.length)mn.vol=Math.max(mn.vol||0,CQ_BN.enVol.length);
+  var vieux=CQ_BN.enVol.filter(function(b){ return t-b.t0>5000&&!b.dit; }); vieux.forEach(function(b){ b.dit=1; cqBnEv(cur,'en attente : '+(b.lu?'la lecture':'l’envoi')+' « '+b.c.replace(/^lecture /,'')+' » '+(b.lu?'partie':'parti')+' à '+cqHMS(b.t0)+' n’a toujours pas de réponse ('+CQ_BN.enVol.length+' en vol, '+CQ_BN.fluxN+' flux ouverts)'); });
+  if(CQ_BN.sale&&t-CQ_BN.sauveT>=5000)cqBnSauver(false); else if(t-CQ_BN.hubT>=60000&&CQ_BN.sale)cqBnSauver(false);
+}
+document.addEventListener('visibilitychange',function(){ var h=document.visibilityState==='hidden'; cqBnEvTous(h?'page cachée (un autre onglet ou une autre fenêtre devant)':'page de nouveau visible'); if(h)cqBnSauver(false); });
+document.addEventListener('freeze',function(){ cqBnEvTous('page gelée par le navigateur'); cqBnSauver(false); });
+document.addEventListener('resume',function(){ cqBnEvTous('page dégelée par le navigateur'); });
+window.addEventListener('online',function(){ cqBnEvTous('le navigateur dit : réseau revenu'); });
+window.addEventListener('offline',function(){ cqBnEvTous('le navigateur dit : réseau perdu'); });
+window.addEventListener('pagehide',function(){ cqBnEvTous('la page se ferme ou se recharge'); cqBnSauver(false); });
+/* pour la relecture : les lignes de la boîte noire de l'heure h de la classe C (cet ordinateur, ou le hub chargé avec le site), en mots simples */
+function cqBoiteLignes(C,h,lance){
+  var L=[], cand=[];
+  try{ if(CQ_BN.cur&&CQ_BN.cur.C===C){ CQ_BN.cur.maj=Date.now(); cand.push([CQ_BN.cur,'cet ordinateur']); } }catch(e){}
+  try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('mjpc_bn|'+C+'/')===0){ var v=JSON.parse(localStorage.getItem(k)); if(v&&v.v===1)cand.push([v,'cet ordinateur']); } } }catch(e){}
+  try{ var q=C.split('/'); var bo=((((((chapitresData[q[2]]||{})[q[4]]||{}).seances||{})[q[6]]||{}).deroule_joue||{})[q[8]]||{}).boite||{}; Object.keys(bo).forEach(function(k){ var v=bo[k]; if(v&&v.v===1)cand.push([v,'le hub']); }); }catch(e){}
+  cand=cand.filter(function(x){ return x[0].h===h; });
+  /* l'heure : celle dont le lancement est le plus proche de celui de la relecture ; de ses copies (cet ordinateur, le hub), la plus récente */
+  if(lance)cand.sort(function(a,b){ return Math.abs((a[0].lance||0)-lance)-Math.abs((b[0].lance||0)-lance); });
+  if(cand.length){ var H0=cand[0][0].H; cand=cand.filter(function(x){ return x[0].H===H0; }).sort(function(a,b){ return (b[0].maj||0)-(a[0].maj||0); }); }
+  L.push('— LA BOÎTE NOIRE DE L’HEURE '+h+' (ce que la page du pilotage a envoyé au hub, et quand) —');
+  if(!cand.length){ L.push('Aucun relevé : l’heure a été jouée avant la boîte noire, ou son relevé n’est pas arrivé au hub.'); return L; }
+  var b=cand[0][0];
+  L.push('Relevé lu sur '+cand[0][1]+' · mis à jour à '+(b.maj?cqHMS(b.maj):'—')+' · heure tenue par '+(b.pages||[]).length+' page'+((b.pages||[]).length>1?'s':'')+' (ouvertes à '+(b.pages||[]).map(function(p){ return String(p).split(' ').pop(); }).join(', ')+') · au plus '+(b.fluxMax||0)+' flux ouverts'+(b.hubRefus?' · le hub a refusé ce relevé ('+b.hubRefus+')':''));
+  L.push('Par chemin (partis · arrivés · délais dépassés · coupures · refus · le plus long · en moyenne ; « lecture … » : ce que la page a lu) :');
+  Object.keys(b.ch||{}).sort().forEach(function(k){ var s=b.ch[k]; var fin=(s.a||0)+(s.d||0)+(s.x||0)+(s.r||0); L.push('  '+k+' : '+(s.p||0)+' partis · '+(s.a||0)+' arrivés · '+(s.d||0)+' délais dépassés · '+(s.x||0)+' coupures · '+(s.r||0)+' refus · '+cqS(s.max||0)+' s · '+cqS(fin?(s.som||0)/fin:0)+' s'+((s.p||0)>fin?' · '+((s.p||0)-fin)+' sans réponse quand le relevé a été gardé':'')); });
+  L.push('Minute par minute (envois partis / arrivés · délais dépassés · coupures · refus · lectures · en vol au plus · flux ouverts · page cachée) :');
+  Object.keys(b.mn||{}).sort().forEach(function(k){ var m=b.mn[k]; L.push('  '+k+' · '+(m.p||0)+' / '+(m.a||0)+(m.lu?' · '+m.lu+' lectures':'')+(m.d?' · '+m.d+' délais dépassés':'')+(m.x?' · '+m.x+' coupures':'')+(m.r?' · '+m.r+' refus':'')+(m.vol?' · '+m.vol+' en vol':'')+' · '+(m.fl||0)+' flux'+(m.cache?' · page cachée':'')); });
+  L.push('Ce qui s’est passé :'); (b.ev||[]).forEach(function(x){ L.push('  '+x); });
+  return L;
+}
+cqFluxEnvelopper();
+setInterval(cqBnTic,1000);
+/* ═══ CQ (C17 — la conscience, 17/11 16:15 : la 4 HUGO close à 13:57:23 ; l'état vivant `vif` dit « close », mais `heures/…/clos` est resté false, `cours_actif`
+   est resté sur la 4 HUGO, aucune « cloture » au journal ; à 16:12, « Reprendre » boucle : « close sur un autre appareil », puis le bandeau revient) —
+   UNE CLÔTURE NE RESTE JAMAIS À MOITIÉ.
+   ① GARDÉE SUR L'APPAREIL. À la clôture (`dr_cloreFin`), ce qu'elle écrit — le paquet de l'heure (`clos`, `finReel`…), le journal, l'état, l'effacement de
+      `cours_actif` — est gardé sur cet ordinateur (localStorage `mjpc_clos|<heure>`) tant que le hub ne l'a pas pris. 20 s et 90 s après, toutes les
+      2 min tant qu'il manque quelque chose, à chaque ouverture d'une page du professeur et au retour du réseau, la page relit le hub et renvoie ce qui
+      manque : `clos` pas vrai → le paquet gardé ; le journal sans la clôture → le journal gardé, réuni à ce que le hub a de plus (rien n'est perdu) ;
+      l'état de cette heure pas clos → l'état gardé ; `cours_actif` qui désigne encore l'heure → effacé. Tout pris : le relevé est marqué fait (gardé
+      2 jours : il dit que cet ordinateur l'a close). À la réouverture, s'il a fallu renvoyer, la page le dit en une phrase.
+   ② TERMINÉE À LA REPRISE. Une page reçoit l'état vivant « close » d'une heure (`dr_sesClosAilleurs`) : si le hub ne la dit pas close, elle termine la
+      clôture comme « Heure close à l'ouverture de la suivante » (`clos`, `finReel` = l'heure de la clôture dite par l'état vivant, `closPar`, et
+      `minutesJouees` recompté) et efface `cours_actif` s'il la désigne encore : plus de bandeau « Reprendre », plus de boucle. Une phrase vraie :
+      « close à 13:57 sur cet ordinateur » si c'est lui (son relevé, ou cette page), « close sur un autre appareil » si elle l'a été pendant que cette
+      page la tenait, sinon « avait déjà été close à 13:57 ». Jamais en mode test. ═══ */
+var CQ_CLOS={ enCours:{}, ouvert:0, tour:0 };
+function cqClosTest(){ try{ return typeof m8TestOn==='function'&&!!m8TestOn(); }catch(e){ return false; } }
+function cqHM(t){ var d=new Date(t); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+/* une lecture ou une écriture directe au hub, avec sa limite de temps (hors de la porte : rien au relevé, rien au bandeau) */
+function cqHub(ch,m,v){ var f=CHS.fetch0||window.fetch; var ac=(typeof AbortController==='function')?new AbortController():null, T=ac?setTimeout(function(){ ac.abort(); },CQ_LIM.lire):null;
+  var o={method:m||'GET'}; if(m&&m!=='GET'&&m!=='DELETE'){ o.headers={'Content-Type':'application/json'}; o.body=JSON.stringify(v); } if(ac)o.signal=ac.signal;
+  return f.call(window,FIREBASE_BASE+ch+'.json'+(m&&m!=='GET'?'?print=silent':''),o).then(function(r){ clearTimeout(T); if(!r.ok)throw new Error('HTTP '+r.status); return (m&&m!=='GET')?true:r.json(); },function(e){ clearTimeout(T); throw e; }); }
+function cqClosLire(H){ try{ var v=JSON.parse(localStorage.getItem('mjpc_clos|'+H)||'null'); return (v&&v.v===1&&v.H===H)?v:null; }catch(e){ return null; } }
+function cqClosPoser(H,r){ try{ localStorage.setItem('mjpc_clos|'+H,JSON.stringify(r)); }catch(e){} }
+function cqClosTous(){ var L=[]; try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('mjpc_clos|')===0)L.push(k.slice(10)); } }catch(e){} return L; }
+/* ① à la clôture (dr_cloreFin) : garder ce qu'elle écrit */
+function cqClosGarder(H,C,p,jr,et,cours){ if(!H||!C||!p||cqClosTest())return;
+  cqClosPoser(H,{ v:1, H:H, C:C, p:p, jr:jr||[], et:et||null, cours:cours?{ niveau:cours.niveau, chapitre:cours.chapitre, seance:cours.seance, classeSlug:cours.classeSlug }:null,
+    classe:(cours&&cours.classeNom)||'', t:Date.now(), par:(typeof DR_SES==='object'&&DR_SES&&DR_SES.id)||'' });
+  setTimeout(function(){ cqClosVerifier(H); },20000); setTimeout(function(){ cqClosVerifier(H); },90000); }
+/* relire le hub, renvoyer ce qui manque ; rend la liste de ce qui a été renvoyé (vide : tout y était) */
+function cqClosVerifier(H){ var r=cqClosLire(H); if(!r||r.fait||cqClosTest()||!cqProf())return Promise.resolve(null); if(CQ_CLOS.enCours[H])return CQ_CLOS.enCours[H];
+  var cle=function(e){ return e?(e.t+'|'+e.type):''; }, fixe=[];
+  var pr=Promise.all([cqHub(H+'/clos'),cqHub(r.C+'/journal'),cqHub(r.C+'/etat'),cqHub('/site/cours_actif')]).then(function(x){
+    var clos=x[0], jh=x[1], eh=x[2], ca=x[3], w=[];
+    var memeCours=function(c){ return !!(c&&r.cours&&c.classeSlug===r.cours.classeSlug&&String(c.chapitre)===String(r.cours.chapitre)&&String(c.seance)===String(r.cours.seance)&&String(c.niveau)===String(r.cours.niveau)); };
+    var autreHeure=false; try{ autreHeure=cqBnTenu()&&dr_cheminC()===r.C; }catch(e){}   /* une heure de la même classe se joue ici : son journal partirait par-dessus — on attend sa fin */
+    if(clos!==true){ w.push(cqHub(H,'PATCH',r.p)); fixe.push('la clôture'); }
+    var jhA=Array.isArray(jh)?jh:(jh&&typeof jh==='object'?Object.keys(jh).map(function(k){ return jh[k]; }):[]);
+    var clot=(r.jr||[]).filter(function(e){ return e&&e.type==='cloture'; }).pop(), jManque=!!(clot&&!jhA.some(function(e){ return cle(e)===cle(clot); }));
+    if(jManque&&!autreHeure){ var vu={}; (r.jr||[]).forEach(function(e){ vu[cle(e)]=1; }); var plus=jhA.filter(function(e){ return e&&!vu[cle(e)]; });
+      w.push(cqHub(r.C+'/journal','PUT',(r.jr||[]).concat(plus).sort(function(a,b){ return (a.t||0)-(b.t||0); }))); fixe.push('le journal'); }
+    var dr0=r.et&&r.et.S&&r.et.S.debutReel; if(dr0&&!autreHeure&&eh&&eh.S&&eh.S.debutReel===dr0&&!eh.S.close){ w.push(cqHub(r.C+'/etat','PUT',r.et)); fixe.push('l’état de l’heure'); }
+    if(memeCours(ca)){ w.push(cqHub('/site/cours_actif','DELETE')); fixe.push('le cours encore annoncé'); }
+    return Promise.all(w).then(function(){ if(!(jManque&&autreHeure)){ r.fait=Date.now(); r.renvoye=fixe; cqClosPoser(H,r); } return fixe; });   /* le journal resté à faire : le relevé attend la fin de l'heure qui se joue */
+  });
+  CQ_CLOS.enCours[H]=pr; var fin=function(){ delete CQ_CLOS.enCours[H]; }; pr.then(fin,fin); return pr; }
+/* à l'ouverture d'une page du professeur (une fois), au retour du réseau, toutes les 2 min : chaque clôture gardée qui n'est pas faite ; les faites de plus de 2 jours s'effacent */
+function cqClosVerifierTous(dire){ cqClosTous().forEach(function(H){ var r=cqClosLire(H); if(!r)return; if(r.fait){ if(Date.now()-r.fait>2*86400000)try{ localStorage.removeItem('mjpc_clos|'+H); }catch(e){} return; }
+  cqClosVerifier(H).then(function(fixe){ if(dire&&fixe&&fixe.length)try{ atInfo('L’heure '+(r.classe?'des '+escapeHtml(r.classe)+' ':'')+'close à '+cqHM(r.t)+' sur cet ordinateur n’était pas toute enregistrée au hub ('+fixe.join(', ')+') : c’est fait maintenant.'); }catch(e){} },function(){}); }); }
+setInterval(function(){ if(!cqProf()||typeof FIREBASE_BASE==='undefined')return; if(!CQ_CLOS.ouvert){ CQ_CLOS.ouvert=Date.now(); CQ_CLOS.tour=Date.now(); setTimeout(function(){ cqClosVerifierTous(true); },2500); return; } if(Date.now()-CQ_CLOS.tour>=120000){ CQ_CLOS.tour=Date.now(); cqClosVerifierTous(false); } },5000);
+window.addEventListener('online',function(){ setTimeout(function(){ if(cqProf())cqClosVerifierTous(false); },1500); });
+/* ② l'état vivant dit « close » (dr_sesClosAilleurs) : la phrase vraie, et la clôture terminée au hub si elle ne l'est pas */
+function cqClosAilleurs(v,nom){
+  var H=v.H||String(v.sig||'').replace(/^heure\|/,''), q=v.ts?cqHM(v.ts):'', r=cqClosLire(H), depuis=(CQ_BN.tenuDepuis||{})[H]||0;
+  var qui=(r||(typeof DR_SES==='object'&&DR_SES&&v.par&&v.par===DR_SES.id))?'a été close'+(q?' à '+q:'')+' sur cet ordinateur.'
+    :(depuis&&v.ts&&depuis<v.ts)?'a été close sur un autre appareil'+(q?' à '+q:'')+' : elle est close ici aussi.':'avait déjà été close'+(q?' à '+q:'')+' : elle le reste.';
+  var phrase='L’heure'+(nom?' des '+escapeHtml(nom):'')+' '+qui, dit=false, dire=function(plus){ if(dit)return; dit=true; try{ atInfo(phrase+(plus||'')); }catch(e){} };
+  if(!/\/heures\//.test(H)||cqClosTest()||!cqProf()){ dire(); return; }
+  var essai=function(n){ cqHub(H).then(function(h){ var w=[], fait=false;
+      if(h&&h.clos!==true){ var p={ clos:true, finReel:v.ts||Date.now(), closPar:'clôture terminée à la reprise (close à '+q+')' }; if(h.debutReel&&v.ts)p.minutesJouees=Math.max(0,Math.round((v.ts-h.debutReel)/60000)); w.push(cqHub(H,'PATCH',p)); fait=true; }
+      return cqHub('/site/cours_actif').then(function(ca){ var c=v.cours||{}; if(ca&&ca.classeSlug===c.classeSlug&&String(ca.chapitre)===String(c.chapitre)&&String(ca.seance)===String(c.seance)&&String(ca.niveau)===String(c.niveau))w.push(cqHub('/site/cours_actif','DELETE'));
+        return Promise.all(w).then(function(){ dire(fait?' Le hub ne l’avait pas enregistrée comme close : c’est fait.':''); }); }); })
+    .catch(function(){ if(n<3)setTimeout(function(){ essai(n+1); },5000); else dire(); }); };
+  setTimeout(function(){ essai(1); },2500);   /* les écritures encore en vol de cette page arrivent d'abord (la reprise vient d'écrire l'heure) */
+  setTimeout(function(){ dire(); },12000); }
 function chsEnvelopper(){
   if(CHS.fetch0||typeof window.fetch!=='function'||/[?&]vue=tableau(&|$)/.test(location.search))return;   /* la fenêtre du tableau n'écrit rien */
   var f0=window.fetch; CHS.fetch0=f0;
   window.fetch=function(u,o){
     var m=(o&&o.method)?String(o.method).toUpperCase():'GET';
-    if(m==='GET'||m==='HEAD'||m==='OPTIONS')return f0.apply(this,arguments);
-    var c=chsChemin(typeof u==='string'?u:(u&&u.url)), e=null;
+    if(m==='GET'||m==='HEAD'||m==='OPTIONS')return cqEnvoyer(f0,this,arguments,u,o,m);   /* CQ : la limite de temps (pendant une heure) et la boîte noire */
+    var c=chsChemin(typeof u==='string'?u:(u&&u.url)), e=null, fe=null;
+    if(c!==null&&cnPeutEtreFeuille(c)){ var corpsF; try{ corpsF=(o&&typeof o.body==='string')?JSON.parse(o.body):null; }catch(x){ corpsF=undefined; } fe={c:c,m:m,v:(m==='DELETE'?null:corpsF),ids:cnFeuillesTouchees(c,m,corpsF)}; if(!fe.ids.length)fe=null; }   /* CN : une écriture de feuille lève son témoin */
+    if(c!==null&&m==='PUT'&&c.indexOf('/corbeille/')===0){ try{ var bc=JSON.parse(o.body); if(bc&&bc._meta&&bc._meta.motif==='atelier-feuille'&&/^\/?site\/atelier\/documents\/[^/]+$/.test(bc._meta.chemin||''))CNF.ou[String(bc._meta.chemin).split('/').pop()]='« Mes feuilles »'; }catch(x){} }   /* CN : d'où la feuille part à la corbeille */
     if(c!==null&&chsPeutEtreStructure(c)){
       var corps; try{ corps=(o&&typeof o.body==='string')?JSON.parse(o.body):null; }catch(x){ corps=undefined; }
       var niv=chsNiveauxTouches(c,m,corps);
       if(niv.length){ e={c:c,m:m,v:(m==='DELETE'?null:corps),t0:Date.now(),fin:0,ok:false,niv:niv}; CHS.journal.push(e); if(CHS.journal.length>400)CHS.journal.splice(0,CHS.journal.length-400); }
     }
-    var p=f0.apply(this,arguments);
+    var p=cqEnvoyer(f0,this,arguments,u,o,m);   /* CQ : la limite de temps et la boîte noire */
     if(e)p.then(function(r){ e.fin=Date.now(); e.ok=!!(r&&r.ok); if(e.ok)e.niv.forEach(chsTemoinLever); else e.niv.forEach(function(n){CHS.perime[n]=true;}); },
                 function(){ e.fin=Date.now(); e.ok=false; e.niv.forEach(function(n){CHS.perime[n]=true;}); });   /* refusée ou partie dans le vide : la page se relit (ce qu'elle a posé d'avance n'est pas au hub) */
+    if(fe)p.then(function(r){ if(r&&r.ok)cnEcritureAcceptee(fe); },function(){});
     return p;
   };
 }
 /* lever le témoin d'un niveau : APRÈS l'écriture acceptée ; une levée en vol à la fois, la suivante repart après elle (la dernière écriture est toujours suivie d'une levée) */
-function chsTemoinLever(niv){
+function chsTemoinLever(niv,extra){
   var t=CHS.tem[niv]=CHS.tem[niv]||{vol:false,encore:false,T:null};
+  if(extra)t.extra=extra;
   if(t.vol){t.encore=true;return;}
-  t.vol=true; t.encore=false; clearTimeout(t.T);
-  (CHS.fetch0||fetch)(FIREBASE_BASE+'/site/structure_maj/'+niv+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({t:{'.sv':'timestamp'},par:CHS.id})})
-    .then(function(r){return !!(r&&r.ok);},function(){return false;})
-    .then(function(ok){ t.vol=false; if(ok)CHS.n.leve++; if(!ok){ t.T=setTimeout(function(){chsTemoinLever(niv);},5000); return; } if(t.encore){ t.encore=false; chsTemoinLever(niv); } });
+  t.vol=true; t.encore=false; clearTimeout(t.T); var corps={t:{'.sv':'timestamp'},par:CHS.id}; if(t.extra){ Object.keys(t.extra).forEach(function(k){corps[k]=t.extra[k];}); t.extra=null; }
+  (CHS.fetch0||fetch)(FIREBASE_BASE+'/site/structure_maj/'+niv+'.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(corps)})
+    .then(function(r){return (r&&r.ok)?'ok':'refus '+(r?r.status:'');},function(){return 'reseau';})
+    .then(function(res){ t.vol=false;
+      if(res==='ok'){ CHS.n.leve++; t.refus=0; }
+      else if(res==='reseau'){ t.T=setTimeout(function(){chsTemoinLever(niv);},5000); return; }   /* le réseau n'a pas répondu : dans 5 s */
+      else { t.refus=(t.refus||0)+1; CHS.n.refus=(CHS.n.refus||0)+1; chsTracer('témoin refusé '+niv+' ('+res+')'); }   /* CN (mandat, point 3) : le hub refuse (401, 403…) — plus de réessai toutes les 5 s ; la prochaine écriture le relève */
+      if(t.encore){ t.encore=false; chsTemoinLever(niv); } });
 }
 /* ── ② l'abonnement ── */
 function chsActif(){
@@ -11842,12 +12070,14 @@ function chsAbonner(on){
 }
 function chsTemoinRecu(v){
   v=chsObj(v)?v:{};
+  try{ cnTemoinRecu(chsObj(v.atelier)?v.atelier:{}); }catch(e){}   /* CN : les feuilles */
   var premier=!CHS.temRecu; CHS.temRecu=true;
   CHS_NIV.forEach(function(n){
     var x=v[n], s=chsCanon(x===undefined?null:x);
     if(s===CHS.temVu[n])return; CHS.temVu[n]=s;
     if(premier){ if(chsObj(x)&&x.par!==CHS.id&&+x.t>(CHS.lu[n]||0)-5000&&chapitresData[n])CHS.perime[n]=true; return; }   /* la première valeur : relire seulement si le témoin a bougé autour du chargement de la page ou après */
     if(chsObj(x)&&x.par===CHS.id)return;   /* levé par cette page : elle a déjà sa propre écriture */
+    cnEdtTemoin(n);   /* CN : l'emploi du temps ouvert relit ce niveau */
     if(chapitresData[n]){ CHS.perime[n]=true; chsTracer('témoin '+n); }
   });
 }
@@ -11911,11 +12141,11 @@ document.addEventListener('drop',function(){CHS.glisse=0;},true);
 /* ── la relecture de la structure d'un niveau ── */
 function chsLire(chemin,q){ return (CHS.fetch0||fetch)(FIREBASE_BASE+chemin+'.json'+(q||'')).then(function(r){ if(!r.ok)throw new Error('HTTP '+r.status); return r.json(); }); }
 function chsCles(v){ return chsObj(v)?Object.keys(v).filter(function(k){return v[k]!=null;}):(Array.isArray(v)?v.map(function(x,i){return x!=null?String(i):null;}).filter(function(k){return k!==null;}):[]); }
-function chsRelire(n){
-  if(CHS.enCours[n])return; CHS.enCours[n]=true; CHS.n.relu++; chsTracer('relire '+n);
-  var t0=Date.now(), B='/site/'+n+'/chapitres', loc=chapitresData[n]||{}, ent={ch:{},se:{}};
+/* CN : la relecture de CM, séparée de sa pose — `loc` dit ce que la page a déjà (les chapitres et séances connus, leur identité) ; l'emploi du temps s'en sert aussi */
+function chsRelireArbre(n,loc){
+  var B='/site/'+n+'/chapitres', ent={ch:{},se:{}};
   var entier=function(ch){ ent.ch[ch]=1; return chsLire(B+'/'+ch); };
-  chsLire(B,CHS_Q.cles).then(function(cles){
+  return chsLire(B,CHS_Q.cles).then(function(cles){
     return Promise.all(chsCles(cles).map(function(ch){
       var Lc=loc[ch]; if(!chsObj(Lc))return entier(ch).then(function(v){return [ch,v];});   /* un chapitre qui arrive : entier */
       return Promise.all([chsLire(B+'/'+ch,CHS_Q.chAvant),chsLire(B+'/'+ch,CHS_Q.chApres),chsLire(B+'/'+ch+'/seances',CHS_Q.cles)]).then(function(r){
@@ -11935,7 +12165,14 @@ function chsRelire(n){
     }));
   }).then(function(L){
     var arbre={}; L.forEach(function(x){ if(x[1]&&typeof x[1]==='object')arbre[x[0]]=x[1]; });
-    CHS.enCours[n]=false; CHS.lu[n]=Date.now(); CHS.pause[n]=0; CHS.attente[n]={arbre:arbre,t0:t0,ent:ent};
+    return {arbre:arbre,ent:ent};
+  });
+}
+function chsRelire(n){
+  if(CHS.enCours[n])return; CHS.enCours[n]=true; CHS.n.relu++; chsTracer('relire '+n);
+  var t0=Date.now();
+  chsRelireArbre(n,chapitresData[n]||{}).then(function(R){
+    CHS.enCours[n]=false; CHS.lu[n]=Date.now(); CHS.pause[n]=0; CHS.attente[n]={arbre:R.arbre,t0:t0,ent:R.ent};
     if(chsCalme())chsPoser(n);
   }).catch(function(){ CHS.enCours[n]=false; CHS.perime[n]=true; CHS.pause[n]=Date.now()+5000; chsTracer('relecture manquée '+n); });   /* le réseau ne répond pas : on réessaie dans 5 s */
 }
@@ -12022,6 +12259,396 @@ window.addEventListener('online',function(){ CHS_NIV.forEach(function(n){ if(cha
 document.addEventListener('focusout',function(){ setTimeout(function(){ if(!chsActif())return; CHS_NIV.forEach(function(n){ if(CHS.attente[n]&&chsCalme())chsPoser(n); }); },0); },true);   /* on pose en quittant le champ */
 chsEnvelopper();
 setInterval(chsTic,400);
+/* ═══ CN (C18 — mandat CN-ATELIER-SUIT, Paul 16/11 19:03 ; captures validées le 17/11 : T1 à T4, « le détail précis », « cocher dans les cartes ») —
+   L'ATELIER ET LA VUE PAPIER SUIVENT UNE FEUILLE CHANGÉE AILLEURS ; AUCUNE PAGE RESTÉE EN ARRIÈRE N'ÉCRASE UNE VERSION PLUS RÉCENTE.
+     ① LE TÉMOIN. Le nœud de CM (`/site/structure_maj`, un seul flux) porte aussi `atelier/<id>` : chaque écriture acceptée d'une feuille le lève (la
+       porte `fetch` de CM, élargie). Il dit QUELLE feuille a changé ; chaque page relit cette seule feuille (quelques Ko), jamais les 133 Ko de l'atelier.
+     ② LES QUATRE COPIES d'une feuille dans une page : `AT.liste` (« Mes feuilles »), `AT.doc` (l'éditeur), `LINK_ATELIER_DOCS` (Structure : le sommaire,
+       le papier, le panneau), `DR_FEUILLES.doc` (le déroulé). La feuille relue s'y pose, au calme (aucun champ, aucune fenêtre de choix), le défilement
+       gardé ; une copie qui porte un changement pas encore enregistré n'est pas remplacée : son enregistrement réunira (③).
+     ③ LA GARDE DES ÉCRIVAINS (`atEnregistrerMaintenant`, `ed2SauverFeuille` ; l'envoi n'écrit plus que son envoi). Rien n'est écrit si rien n'a changé
+       ici. Sinon la feuille est relue : personne ne l'a changée → on écrit ; changée ailleurs sur d'autres parties → réunie sans rien demander (T1) ; une
+       même partie changée des deux côtés → la fenêtre (C1) : chaque carte se coche, « Valider » / « Annuler » ; ce qui n'est pas gardé va à la corbeille
+       (T2). Mise à la corbeille ailleurs → C2a (changée ici : la remettre ou la laisser) ou C2b (rien changé ici : elle se ferme).
+     ④ L'HEURE DE CHAQUE PARTIE : `dates.parties[<partie>]`, posée à chaque écriture pour les parties qu'elle change (une feuille d'avant, sans ce relevé,
+       se lit toujours : l'heure de la feuille sert alors pour toutes ses parties).
+     ⑤ L'EMPLOI DU TEMPS ouvert suit une publication faite ailleurs : le témoin d'un niveau levé par une autre page relit la structure de ce niveau (le
+       filtre par clé de CM : ni la trame ni les heures jouées) et la fond dans ses chapitres ; la semaine se repeint, la fenêtre ouverte reste.
+   ① et ⑤ jamais en mode test (le magasin de l'appareil), jamais côté élève ni sur la fenêtre du tableau ; ③ marche aussi en mode test. ═══ */
+var CNF={ choix:{}, rouvrir:{}, base:{}, docAnc:null, linkAnc:{}, temVu:{}, temT:{}, temOu:{}, temRecu:false, perime:{}, enCours:{}, pause:{}, lu:{}, attente:{}, ecrit:{}, ou:{},
+  vol:{}, file:{}, fen:null, docVu:null, cache:0, n:{relu:0,pose:0,redessin:0,rien:0,ecrit:0,reunie:0,conflit:0,partie:0}, trace:[] };
+var CNE={ perime:{}, enCours:{}, pause:{}, n:{relu:0,repeint:0} };
+function cnTracer(q){ CNF.trace.push([Date.now(),q]); if(CNF.trace.length>200)CNF.trace.shift(); }
+function cnEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function cnHeure(t){ try{ return new Date(t||Date.now()).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+/* la forme de comparaison : celle du hub (ni valeur nulle, ni objet ou liste vides ; une liste = un objet à clés de rang) ; `dates` n'est jamais un changement */
+function cnNet(v){
+  if(v===null||v===undefined)return undefined; if(typeof v==='number'&&!isFinite(v))return undefined; if(typeof v!=='object')return v;
+  var o={}, E=Array.isArray(v)?v.map(function(x,i){return [String(i),x];}):Object.keys(v).map(function(k){return [k,v[k]];});
+  E.forEach(function(e){ var r=cnNet(e[1]); if(r!==undefined)o[e[0]]=r; }); return Object.keys(o).length?o:undefined;
+}
+function cnC1(v){ var x=cnNet(v); return chsCanon(x===undefined?null:x); }
+function cnSans(d){ if(!chsObj(d))return d; var o={}; Object.keys(d).forEach(function(k){ if(k!=='dates')o[k]=d[k]; }); return o; }
+function cnPareil(a,b){ return cnC1(cnSans(a))===cnC1(cnSans(b)); }
+function cnListe(x){ return Array.isArray(x)?x:(chsObj(x)?Object.keys(x).sort(function(a,b){return (+a)-(+b);}).map(function(k){return x[k];}):[]); }
+/* ── les parties d'une feuille : le titre, le type, chaque case cochée, chaque valeur, chaque reformulation, chaque fiche, le rattachement, l'envoi, le dépôt ;
+      le contenu case par case quand la suite de ses cases est la même des trois côtés, sinon d'un bloc ── */
+var CN_GROUPES={cases:1,valeurs:1,reformulations:1,fiches:1};
+function cnSuite(d){ return cnListe(d&&d.contenu).map(function(b){return (b&&b.id)||'';}).join(','); }
+function cnParties(d,parCase){ var P={}; d=chsObj(d)?d:{};
+  Object.keys(d).forEach(function(k){
+    if(k==='dates')return;
+    if(CN_GROUPES[k]&&chsObj(d[k])){ Object.keys(d[k]).forEach(function(s){ P[k+':'+s]=d[k][s]; }); return; }
+    if(k==='contenu'){ if(parCase)cnListe(d.contenu).forEach(function(b,i){ P['contenu:'+i]=b; }); else P.contenu=d.contenu; return; }
+    P[k]=d[k]; });
+  return P; }
+function cnPoserPartie(doc,k,v){ var q=k.split(':');
+  if(q.length===2&&q[0]==='contenu'){ var L=cnListe(doc.contenu).slice(); L[+q[1]]=chsClone(v); doc.contenu=L; return; }
+  if(q.length===2){ if(!chsObj(doc[q[0]]))doc[q[0]]={}; if(v===null||v===undefined)delete doc[q[0]][q[1]]; else doc[q[0]][q[1]]=chsClone(v); return; }
+  if(v===null||v===undefined)delete doc[k]; else doc[k]=chsClone(v); }
+/* les trois côtés : l'ancêtre (la version du hub dont la copie d'ici vient), ici, le hub ; chaque partie changée ici seulement, ailleurs seulement, des deux côtés */
+function cnTrois(anc,ici,hub){
+  var pc=cnSuite(anc)===cnSuite(ici)&&cnSuite(anc)===cnSuite(hub), A=cnParties(anc,pc), I=cnParties(ici,pc), H=cnParties(hub,pc), cles={}, T={ici:[],ailleurs:[],deux:[],A:A,I:I,H:H,parCase:pc};
+  [A,I,H].forEach(function(P){ Object.keys(P).forEach(function(k){cles[k]=1;}); });
+  Object.keys(cles).sort().forEach(function(k){ var a=cnC1(A[k]), i=cnC1(I[k]), h=cnC1(H[k]), ci=i!==a, ch=h!==a;
+    if(ci&&ch&&i!==h)T.deux.push(k); else if(ci&&!ch)T.ici.push(k); else if(ch&&!ci)T.ailleurs.push(k); });
+  return T; }
+/* la feuille réunie : le hub, puis pour chaque partie le côté gardé (« ici », « ailleurs », « avant ») ; par défaut ici pour ce qui n'a changé qu'ici, le plus récent des deux côtés */
+function cnReunir(T,hub,garde){ var d=chsClone(hub)||{};
+  T.ici.concat(T.deux,T.ailleurs).forEach(function(k){ var g=garde[k]||(T.ici.indexOf(k)>=0?'ici':'ailleurs'); cnPoserPartie(d,k,g==='ici'?T.I[k]:(g==='avant'?T.A[k]:T.H[k])); });
+  return d; }
+function cnHeurePartie(d,k){ var D=(d&&d.dates)||{}; return +((D.parties&&D.parties[k])||D.modifieLe||0); }
+/* ④ l'heure de chaque partie gardée d'ici ; les autres heures sont celles du hub */
+function cnDater(d,ici,cles,t){ var Di=(ici&&ici.dates)||{}; d.dates=chsObj(d.dates)?d.dates:{};
+  d.dates.modifieLe=Math.max(+d.dates.modifieLe||0,+Di.modifieLe||0,cles.length?t:0)||Date.now(); d.dates.versionDoc=Math.max(+d.dates.versionDoc||0,+Di.versionDoc||0);
+  if(Di.creeLe&&!d.dates.creeLe)d.dates.creeLe=Di.creeLe; if(Di.dateEdition&&!d.dates.dateEdition)d.dates.dateEdition=Di.dateEdition;
+  if(cles.length){ if(!chsObj(d.dates.parties))d.dates.parties={}; cles.forEach(function(k){ d.dates.parties[k]=t; }); }
+  return d; }
+/* ── les ancêtres : la copie de l'éditeur, celle de Structure (valables tant que la copie est le même objet), sinon la version connue du hub ── */
+function cnAncDoc(){ if(!AT.doc||!AT.docId)return null; var a=CNF.docAnc; if(a&&a.obj===AT.doc&&a.id===AT.docId)return a.anc; if(CNF.base[AT.docId]!==undefined)return CNF.base[AT.docId]; return (AT.liste&&AT.liste[AT.docId])||null; }
+function cnAncLink(id){ var L=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[id]:null, a=CNF.linkAnc[id]; if(a&&L&&a.obj===L)return a.anc; return CNF.base[id]!==undefined?CNF.base[id]:null; }
+function cnDocOuvert(id,base){ CNF.docAnc={id:id,obj:AT.doc,anc:chsClone(base||null),ouvert:chsClone(base||null)}; if(base&&CNF.base[id]===undefined)CNF.base[id]=chsClone(base); }
+/* la liste lue au hub (atSiteGetDocs) : la version connue de chaque feuille ; une copie de Structure restée sur l'ancienne garde son ancêtre */
+function cnListeLue(v){ v=chsObj(v)?v:{}; var t=Date.now(); CNF.luListe=t;
+  Object.keys(v).forEach(function(id){ var L=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS[id]:null;
+    if(L&&CNF.base[id]!==undefined&&!(CNF.linkAnc[id]&&CNF.linkAnc[id].obj===L))CNF.linkAnc[id]={obj:L,anc:chsClone(CNF.base[id])};
+    CNF.base[id]=chsClone(v[id]); CNF.lu[id]=t; }); }
+
+/* ═══ ① le témoin : la levée (par la porte de CM) et la réception ═══ */
+function cnPeutEtreFeuille(c){ return c==='/'||c==='/site'||c==='/site/atelier'||c.indexOf('/site/atelier/documents')===0; }
+function cnFeuillesTouchees(c,m,corps){
+  var q=c.split('/').filter(Boolean);
+  if(q.length>=4&&q[0]==='site'&&q[1]==='atelier'&&q[2]==='documents')return [q[3]];
+  if(m==='PATCH'){ var ids={}; if(chsObj(corps))Object.keys(corps).forEach(function(k){ var p=(c==='/'?'':c)+'/'+k, r=p.split('/').filter(Boolean);
+      if(r.length>=4&&r[0]==='site'&&r[1]==='atelier'&&r[2]==='documents')ids[r[3]]=1; else if(cnPeutEtreFeuille('/'+r.join('/'))&&r.length<=3)ids._tout=1; }); return Object.keys(ids); }
+  return ['_tout']; }
+/* une écriture acceptée : la version connue du hub suit, puis le témoin de la feuille se lève (`ou` : d'où elle a été mise à la corbeille) */
+function cnEcritureAcceptee(fe){
+  fe.ids.forEach(function(id){
+    if(id==='_tout'){ chsTemoinLever('atelier/_tout'); return; }
+    CNF.ecrit[id]=Date.now();
+    var q=fe.c.split('/').filter(Boolean), sous=q.length>4?q.slice(4):null;
+    try{
+      if(fe.c==='/site/atelier/documents'||q.length<3){ if(chsObj(fe.v)){ var k0=(fe.c==='/site/atelier/documents')?id:null; if(k0&&fe.v[k0]!==undefined)CNF.base[id]=chsClone(fe.v[k0]); } }
+      else if(!sous){ CNF.base[id]=(fe.m==='DELETE'||fe.v===null||fe.v===undefined)?null:chsClone(fe.v); }
+      else if(chsObj(CNF.base[id])){ var poser=function(ch,val){ var nd=CNF.base[id]; for(var i=0;i<ch.length-1;i++){ if(!chsObj(nd[ch[i]])){ if(val===null)return; nd[ch[i]]={}; } nd=nd[ch[i]]; } if(val===null||val===undefined)delete nd[ch[ch.length-1]]; else nd[ch[ch.length-1]]=chsClone(val); };
+        if(fe.m==='PATCH'&&chsObj(fe.v))Object.keys(fe.v).forEach(function(k){ poser(sous.concat(k.split('/').filter(Boolean)),fe.v[k]); }); else poser(sous,fe.m==='DELETE'?null:fe.v); }
+    }catch(e){}
+    chsTemoinLever('atelier/'+id,(!sous&&fe.m==='DELETE'&&CNF.ou[id])?{ou:CNF.ou[id]}:null);
+  }); }
+function cnListeVue(){ return !!(AT&&AT.liste&&Object.keys(AT.liste).length); }
+function cnConnue(id){ return !!((AT.liste&&AT.liste[id])||(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[id])||(typeof DR_FEUILLES==='object'&&DR_FEUILLES&&DR_FEUILLES.doc&&DR_FEUILLES.doc[id])||AT.docId===id); }
+function cnTemoinRecu(A){
+  A=chsObj(A)?A:{}; var premier=!CNF.temRecu; CNF.temRecu=true;
+  Object.keys(A).forEach(function(id){ var x=A[id], s=chsCanon(x===undefined?null:x); if(s===CNF.temVu[id])return; CNF.temVu[id]=s; if(!chsObj(x))return;
+    CNF.temT[id]=+x.t||Date.now(); if(x.ou)CNF.temOu[id]=x.ou;
+    if(id==='_tout'){ if(!premier&&x.par!==CHS.id){ Object.keys(CNF.base).forEach(function(k){ if(cnConnue(k))CNF.perime[k]=true; }); cnTracer('témoin : tout l’atelier'); } return; }
+    if(x.par===CHS.id)return;   /* levé par cette page : elle a déjà sa propre écriture */
+    if(premier){ if(cnConnue(id)&&+x.t>(CNF.lu[id]||CNF.luListe||0)-5000)CNF.perime[id]=true; return; }   /* la première valeur : relire ce qui a bougé autour du chargement, ou après */
+    if(cnConnue(id)||cnListeVue()){ CNF.perime[id]=true; cnTracer('témoin '+id); } }); }
+/* une feuille venue par un autre chemin (le suivi de la diapo affichée, AW) : elle se pose comme une relecture */
+function cnFeuilleVenue(id,v){ if(v===undefined)return; if(!chsActif()){ try{ if(v&&typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[id])LINK_ATELIER_DOCS[id]=v; }catch(e){} return; }   /* hors suivi (mode test, fenêtre du tableau) : comme avant */ if(v!==null&&CNF.base[id]&&cnPareil(v,CNF.base[id]))return; CNF.attente[id]={v:v===null?null:chsClone(v),t0:Date.now(),dr:1}; }
+
+/* ═══ ② la relecture d'une feuille, la pose dans les quatre copies, le redessin ═══ */
+function cnRelire(id){
+  CNF.enCours[id]=true; CNF.n.relu++; cnTracer('relire '+id); var t0=Date.now();
+  chsLire(AT_NOEUD+'/'+id).then(function(v){ CNF.enCours[id]=false; CNF.lu[id]=Date.now(); CNF.pause[id]=0; CNF.attente[id]={v:(v===undefined?null:v),t0:t0}; if(chsCalme()&&!CNF.fen)cnPoser(id); })
+    .catch(function(){ CNF.enCours[id]=false; CNF.perime[id]=true; CNF.pause[id]=Date.now()+5000; cnTracer('relecture manquée '+id); });   /* le réseau ne répond pas : dans 5 s */
+}
+function cnPoser(id){
+  var A=CNF.attente[id]; if(!A)return; delete CNF.attente[id];
+  if((CNF.ecrit[id]||0)>=A.t0){ cnTracer('relu avant notre écriture '+id); return; }   /* cette page a écrit depuis : son écriture, gardée (③), est plus récente */
+  var v=A.v, anc=CNF.base[id];
+  if(v!==null&&anc!==undefined&&anc!==null&&cnPareil(v,anc)){ CNF.base[id]=chsClone(v); return; }   /* rien de neuf */
+  if(v===null&&(anc===null||anc===undefined)&&!cnConnue(id))return;
+  var Ldoc=(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS)?LINK_ATELIER_DOCS:null;
+  var da=(AT.docId===id&&AT.doc)?cnAncDoc():null, la=(Ldoc&&Ldoc[id])?cnAncLink(id):null, red={};   /* les ancêtres, AVANT que la version connue change */
+  CNF.n.pose++; cnTracer('posé '+id+(v===null?' (partie)':''));
+  if(v===null){ CNF.base[id]=null;
+    if(AT.liste&&AT.liste[id]){ delete AT.liste[id]; red.feuilles=1; }
+    if(Ldoc&&Ldoc[id]&&cnPareil(Ldoc[id],la)){ delete Ldoc[id]; delete CNF.linkAnc[id]; red.structure=1; }
+    if(AT.docId===id&&AT.doc)cnPartieOuverte(id,da||anc||null);
+    cnRedessiner(red); return; }
+  CNF.base[id]=chsClone(v);
+  if(AT.liste&&(AT.liste[id]||cnListeVue())){ AT.liste[id]=chsClone(v); red.feuilles=1; }
+  if(Ldoc&&Ldoc[id]){ if(cnPareil(Ldoc[id],la)){ Ldoc[id]=chsClone(v); CNF.linkAnc[id]={obj:Ldoc[id],anc:chsClone(v)}; red.structure=1; }
+    else if(!(CNF.linkAnc[id]&&CNF.linkAnc[id].obj===Ldoc[id]))CNF.linkAnc[id]={obj:Ldoc[id],anc:chsClone(la)}; }   /* changée ici, pas encore enregistrée : son enregistrement réunira */
+  if(!A.dr&&typeof DR_FEUILLES==='object'&&DR_FEUILLES&&DR_FEUILLES.doc&&DR_FEUILLES.doc[id]){ try{ if(dr_feuillePoser(id,chsClone(v))&&dr_feuillesAffichees().indexOf(String(id))>=0)red.dr=1; }catch(e){} }
+  if(AT.docId===id&&AT.doc){ var ouv=(CNF.docAnc&&CNF.docAnc.id===id&&CNF.docAnc.ouvert)||chsClone(da);
+    if(cnPareil(AT.doc,da)){ AT.doc=chsClone(v); CNF.docAnc={id:id,obj:AT.doc,anc:chsClone(v),ouvert:ouv}; CNF.suivieLe=Date.now(); red.editeur=1; atBrouillonEffacer(id); }
+    else if(!(CNF.docAnc&&CNF.docAnc.obj===AT.doc&&CNF.docAnc.id===id))CNF.docAnc={id:id,obj:AT.doc,anc:chsClone(da),ouvert:ouv}; }
+  cnRedessiner(red);
+}
+/* l'écran visible qui montre des feuilles */
+function cnEcran(){
+  var at=document.getElementById('atelier-ecran'); if(!at||!at.classList.contains('at-actif'))return null;
+  if(typeof atClasseEnCours==='function'&&atClasseEnCours())return null;
+  if(AT.edChap)return (ATVUES.vue==='structure'&&document.querySelector('#at-zone .ed2-grille'))?'structure':'colonne';
+  if(AT.doc)return document.querySelector('#at-zone .at-compo')?'editeur':null;
+  return AT.onglet==='chapitres'?'chapitres':'feuilles'; }
+function cnRedessinerAuCalme(red){ var r=CNF.redAttente||{}; Object.keys(red).forEach(function(k){r[k]=1;}); CNF.redAttente=r; }
+function cnRedessiner(red){
+  if(red.dr){ try{ dr_feuilleRedessiner(); }catch(e){} }
+  var E=cnEcran(), faire=null;
+  if(E==='editeur'&&red.editeur)faire=function(){ atRendreEditeur(); atEtat(red.etat||'suivie'); };
+  else if(E==='feuilles'&&red.feuilles)faire=function(){ atRendreListe(); };
+  else if(E==='structure'&&red.structure)faire=function(){ atEditerChapitreRendre(); };
+  if(!faire)return;
+  CNF.n.redessin++; cnTracer('redessin '+E);
+  var sels=['#atelier-ecran','#at-zone','.at-gauche','.at-vues-zone','.ed2-pan','#at-arbre .ed2-som','.ed2-som','.ed2-papier','.at-cartes'], pos=[], wy=window.scrollY, wx=window.scrollX;
+  sels.forEach(function(s){ var x=document.querySelector(s); if(x)pos.push([s,x.scrollTop,x.scrollLeft]); });
+  var remettre=function(){ if(typeof ED2==='object'&&ED2)ED2.gel=Date.now()+400; pos.forEach(function(q){ var x=document.querySelector(q[0]); if(x){ if(x.scrollTop!==q[1])x.scrollTop=q[1]; if(x.scrollLeft!==q[2])x.scrollLeft=q[2]; } }); if(window.scrollY!==wy||window.scrollX!==wx)window.scrollTo(wx,wy); };
+  try{ faire(); }catch(e){ try{ console.warn('[CN] redessin',e); }catch(x){} }
+  remettre(); requestAnimationFrame(function(){ remettre(); requestAnimationFrame(remettre); });
+}
+
+/* ═══ ③ la garde des écrivains ═══
+   o : {id, lire() → la copie d'ici, anc : son ancêtre, qui : 'editeur' | 'structure', t : l'heure du changement d'ici}
+   fini(r) — r.quoi : 'rien' (rien n'a changé ici), 'ecrire' (r.doc : à écrire), 'annule' (« Annuler » : rien n'est écrit), 'laisse' (laissée à la corbeille),
+   'attente' (la fenêtre de cette feuille est déjà ouverte). */
+function cnGarde(o,fini){
+  var id=o.id;
+  if(CNF.fen&&CNF.fen.id===id){ fini({quoi:'attente'}); return; }
+  var rouvrir=!!CNF.rouvrir[id]; delete CNF.rouvrir[id];
+  if(CNF.choix[id]&&!rouvrir&&!o.partir){ fini({quoi:'plustard'}); return; }   /* Paul (17/11) : « Plus tard » — rien n'est écrit tant qu'il n'a pas choisi ; la fenêtre ne revient pas à chaque frappe */
+  var coches=CNF.choix[id]?CNF.choix[id].coches:null; delete CNF.choix[id];
+  var ici=o.lire(); if(!ici){ fini({quoi:'rien'}); return; }
+  var anc=o.anc;
+  if(anc&&cnPareil(ici,anc)){ CNF.n.rien++; cnTracer('rien à écrire '+id); fini({quoi:'rien'}); return; }
+  _siteGet(AT_NOEUD+'/'+id,function(h,err){
+    ici=o.lire(); if(!ici){ fini({quoi:'rien'}); return; }
+    if(err){ fini({quoi:'ecrire',doc:ici}); return; }   /* le réseau ne répond pas : l'écriture part comme avant ; son échec est dit, la copie reste ici */
+    CNF.lu[id]=Date.now();
+    if(h===null||h===undefined){
+      if(!anc){ cnDater(ici,ici,[],Date.now()); fini({quoi:'ecrire',doc:ici}); return; }   /* une feuille neuve */
+      CNF.n.partie++; cnTracer('partie ailleurs '+id); cnFenetrePartie({id:id,anc:anc,ici:ici,qui:o.qui,t:CNF.temT[id]||Date.now(),ou:CNF.temOu[id]||''},fini); return; }
+    var T=cnTrois(anc||h,ici,h);
+    if(!T.ici.length&&!T.deux.length){ fini({quoi:'rien',hub:h}); return; }   /* ce qui a changé ici l'est déjà au hub */
+    if(!T.ailleurs.length&&!T.deux.length){ cnDater(ici,ici,T.ici,o.t||Date.now()); fini({quoi:'ecrire',doc:ici}); return; }   /* personne ne l'a changée ailleurs : la copie d'ici part telle quelle */
+    if(!T.deux.length){ var d=cnDater(cnReunir(T,h,{}),ici,T.ici,o.t||Date.now()); CNF.n.reunie++; cnTracer('réunie '+id+' ('+T.ailleurs.length+' partie(s) d’ailleurs)'); fini({quoi:'ecrire',doc:d,reunie:true}); return; }   /* T1 : réunie sans rien demander */
+    CNF.n.conflit++; cnTracer('conflit '+id+' : '+T.deux.join(', '));
+    cnFenetreConflit({id:id,T:T,anc:anc,ici:ici,hub:h,qui:o.qui,t:o.t||Date.now(),coches:coches},fini);
+  });
+}
+/* ce qui n'est pas gardé va à la corbeille (T2) — la forme d'« atelier-remplacement » (la feuille entière à son chemin : « Restaurer » la remet) */
+function cnCorbeille(L,id,apres){
+  L=L.filter(function(x){return x&&x.v;}); var i=0;
+  var un=function(){ if(i>=L.length){ apres(true); return; } var x=L[i++];
+    var payload={_meta:{motif:'atelier-remplacement',chemin:'site/atelier/documents/'+id,app:'site',ts:Date.now(),quoi:x.quoi,date:(typeof _nowStr==='function'?_nowStr():new Date().toISOString()),annee:(typeof _anneeScolaire==='function'?_anneeScolaire():'')},data:chsClone(x.v)};
+    atSitePut(atCorbeilleCle('atelier-remplacement-'+x.cote),payload,function(ok){ if(!ok){ apres(false); return; } un(); }); };
+  un(); }
+
+/* ═══ ③ les fenêtres : C1 (le conflit), C2a / C2b (mise à la corbeille ailleurs) — le détail précis, chaque carte se coche ═══ */
+function cnLib(id){ var c=(typeof ATELIER_COMPOSANTES==='object'&&ATELIER_COMPOSANTES[id])||null; var s=(typeof AT_NOMS_COURTS==='object'&&AT_NOMS_COURTS[id])||(c&&c.libelle)||id;
+  s=String(s).replace(/^(Ajouter|Afficher) (le |la |les |l’|l'|un |une |du |de la |des )?/i,''); return s.charAt(0).toUpperCase()+s.slice(1); }
+function cnDebut(s,n){ var m=String(s||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().split(' '); n=n||9; return m.slice(0,n).join(' ')+(m.length>n?'…':''); }
+function cnTexteCase(b){ var v=(b&&b.valeurs)||{}; if(Array.isArray(v.items))return v.items[0]||''; if(typeof v.texte==='string')return v.texte; var s=''; Object.keys(v).some(function(k){ if(typeof v[k]==='string'&&v[k]){ s=v[k]; return true; } return false; }); return s; }
+/* l'endroit, dans les mots de Paul : le titre de la partie où l'on est (la ligne courte au-dessus), puis le début de la phrase */
+function cnLieuCase(d,i){ var C=cnListe(d&&d.contenu), b=C[i]||{}, v=b.valeurs||{}, titre=null;
+  for(var k=i-1;k>=0;k--){ var t=((C[k]||{}).valeurs||{}).texte; if((C[k]||{}).id==='texte_libre'&&t&&String(t).length<=80){ titre=t; break; } }
+  var quoi=Array.isArray(v.items)?'la liste « '+cnEsc(cnDebut(v.items[0],7))+' »':(b.id==='attention_piege'?'l’encadré « '+cnEsc(cnDebut(v.texte,7))+' »':(b.id==='texte_libre'?'le paragraphe « '+cnEsc(cnDebut(v.texte,9))+' »':'la case « '+cnEsc(cnLib(b.id))+' »'+(cnTexteCase(b)?' (« '+cnEsc(cnDebut(cnTexteCase(b),7))+' »)':'')));
+  return titre?'Sous « '+cnEsc(titre)+' », '+quoi:'En haut de la feuille, sous le titre : '+quoi; }
+function cnNomPartie(k,d){ var q=k.split(':');
+  if(k==='titre')return 'Le titre de la feuille (pour toi, dans « Mes feuilles »)';
+  if(k==='valeurs:titre')return 'Le titre imprimé en haut de la feuille';
+  if(q[0]==='contenu'&&q.length===2)return cnLieuCase(d,+q[1]);
+  if(k==='contenu')return 'Les cases du contenu (ajoutées, retirées ou déplacées)';
+  if(q[0]==='valeurs')return 'La ligne « '+cnEsc(cnLib(q[1]))+' »';
+  if(q[0]==='cases')return 'La case à cocher « '+cnEsc((typeof ATELIER_COMPOSANTES==='object'&&ATELIER_COMPOSANTES[q[1]]&&ATELIER_COMPOSANTES[q[1]].libelle)||q[1])+' »';
+  if(q[0]==='reformulations')return 'La consigne reformulée « '+cnEsc(cnLib(q[1]))+' »';
+  if(q[0]==='fiches')return 'La fiche « '+cnEsc((((d&&d.fiches)||{})[q[1]]||{}).titre||'')+' »';
+  if(k==='rattachement')return '« Cette feuille est pour… »';
+  if(k==='produit')return 'Le type de feuille';
+  if(k==='envoi')return 'L’envoi aux élèves';
+  if(k==='depot')return 'Sa place dans le chapitre';
+  return 'La partie « '+cnEsc(k)+' »'; }
+/* une valeur, pour l'œil : un texte, ou une liste */
+function cnVue(k,v){
+  if(v===null||v===undefined)return {texte:'(rien)'};
+  if(typeof v==='boolean')return {texte:v?'cochée':'pas cochée'};
+  if(typeof v!=='object')return {texte:String(v)};
+  if(k==='contenu')return {liste:cnListe(v).map(function(b){ return cnLib((b&&b.id)||'')+(cnTexteCase(b)?' — '+cnDebut(cnTexteCase(b),8):''); })};
+  if(k==='envoi')return {texte:v.envoyeLe?('envoyée le '+new Date(v.envoyeLe).toLocaleString('fr-FR')):'—'};
+  if(k==='rattachement')return {texte:[v.niveau,v.classeNom||v.classe,v.chapitreTitre?('« '+v.chapitreTitre+' »'):'',v.seanceTitre?('« '+v.seanceTitre+' »'):''].filter(Boolean).join(' › ')||'—'};
+  if(Array.isArray(v)&&v.every(function(x){return typeof x==='string';}))return {liste:v};
+  var val=chsObj(v.valeurs)?v.valeurs:v;
+  if(Array.isArray(val.items))return {liste:val.items.map(String)};
+  var S=Object.keys(val).filter(function(f){return typeof val[f]==='string'||typeof val[f]==='number';});
+  if(S.length===1)return {texte:String(val[S[0]])};
+  var L=[]; Object.keys(val).forEach(function(f){ var x=val[f]; if(typeof x==='string'||typeof x==='number')L.push(f+' : '+x); else if(Array.isArray(x))L.push(f+' : '+x.join(' / ')); });
+  return L.length?{liste:L}:{texte:cnDebut(JSON.stringify(val),20)}; }
+var CN_AJ='background:rgba(110,190,110,.30);text-decoration:underline;text-decoration-color:#8fd18f;border-radius:3px;padding:0 1px', CN_RE='text-decoration:line-through;color:#e59b8f';
+function cnEcart(a,b){ a=String(a||''); b=String(b||''); var i=0; while(i<a.length&&i<b.length&&a[i]===b[i])i++; var j=0; while(j<a.length-i&&j<b.length-i&&a[a.length-1-j]===b[b.length-1-j])j++;
+  if(a.slice(i,a.length-j)&&b.slice(i,b.length-j)){ while(i>0&&!/\s/.test(a[i-1]))i--; while(j>0&&!/\s/.test(a[a.length-j]))j--; }   /* un mot remplacé : le mot entier ; un ajout ou un retrait seul : tel quel */
+  return {avant:a.slice(0,i),retire:a.slice(i,a.length-j),ajout:b.slice(i,b.length-j),apres:a.slice(a.length-j)}; }
+function cnTexteMarque(base,v){ var e=cnEcart(base,v); return cnEsc(e.avant)+(e.retire?'<span style="'+CN_RE+'">'+cnEsc(e.retire)+'</span>'+(e.ajout?' ':''):'')+(e.ajout?'<span style="'+CN_AJ+'">'+cnEsc(e.ajout)+'</span>':'')+cnEsc(e.apres); }
+/* une liste : les éléments changés et leur voisin ; les autres comptés en une ligne. cote 'avant' : la liste d'avant (retirés barrés) ; 'apres' : ajoutés en vert */
+function cnListeMarque(base,v,cote){ base=base||[]; v=v||[]; var aj=function(x){return base.indexOf(x)<0;}, re=function(x){return v.indexOf(x)<0;};
+  var vois=function(T,f){ var S={}; T.forEach(function(x,k){ if(f(x)){ S[x]=1; if(k>0)S[T[k-1]]=1; if(k+1<T.length)S[T[k+1]]=1; } }); return S; };
+  var g=vois(v,aj), g2=vois(base,re); Object.keys(g2).forEach(function(x){g[x]=1;}); var T=cote==='avant'?base:v, tout=!T.some(function(x){return g[x];});
+  var h='<ul style="margin:2px 0 0 18px;padding:0">', saut=0, vider=function(){ if(saut)h+='<li style="list-style:none;margin-left:-18px;color:#a89f8e;font-style:italic">… '+saut+' élément'+(saut>1?'s':'')+' sans changement …</li>'; saut=0; };
+  T.forEach(function(x){ if(!tout&&!g[x]){ saut++; return; } vider(); var st=cote==='avant'?(re(x)?CN_RE:''):(aj(x)?CN_AJ:''); h+='<li'+(st?' style="'+st+'"':'')+'>'+cnEsc(x)+'</li>'; }); vider(); return h+'</ul>'; }
+function cnMontrer(k,base,v,cote){ var B=cnVue(k,base), V=cnVue(k,v);
+  if(B.liste||V.liste)return cnListeMarque(B.liste||(B.texte&&B.texte!=='(rien)'?[B.texte]:[]),V.liste||(V.texte&&V.texte!=='(rien)'?[V.texte]:[]),cote||'apres');
+  return cote==='avant'?cnEsc(B.texte):cnTexteMarque(B.texte,V.texte); }
+var CN_BOITE='background:#26221b;border:1px solid #3a3129;border-radius:6px;padding:6px 9px;line-height:1.45';
+function cnCol(tete,corps){ return '<div><div style="font-size:.8rem;color:#c9a04a;margin-bottom:3px">'+tete+'</div><div style="'+CN_BOITE+'">'+corps+'</div></div>'; }
+function cnCarte(titre,corps){ return '<div style="border:1px solid #4a4438;border-radius:9px;padding:8px 10px;margin:8px 0"><div style="font-weight:700;margin-bottom:6px">'+titre+'</div>'+corps+'</div>'; }
+function cnDeux(g,d){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+g+d+'</div>'; }
+function cnSection(t){ return '<div style="margin:14px 0 2px;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#c9a04a">'+t+'</div>'; }
+function cnAide(t){ return '<div style="font-weight:400;font-size:.82rem;color:#a89f8e;margin:-2px 0 6px">'+t+'</div>'; }
+function cnCase(i,cote,coche,lib,bulle){ return '<label title="'+cnEsc(bulle)+'" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" data-cn-i="'+i+'" data-cn-cote="'+cote+'"'+(coche?' checked':'')+' style="width:17px;height:17px;accent-color:#c9a04a;cursor:pointer"><span>'+lib+'</span></label>'; }
+/* la fenêtre des feuilles (atModaleChoix), dans sa forme large existante ; un champ quitté d'abord (la frappe ne continue pas derrière la fenêtre) */
+function cnOuvrirFenetre(id,msg,boutons){
+  try{ var a=document.activeElement; if(a&&a!==document.body&&a.blur)a.blur(); }catch(e){}
+  CNF.fen={id:id}; atModaleChoix(msg,boutons); var m=document.getElementById('at-modale'); if(m)m.classList.add('at-modale-large');
+  /* « À choisir » : une seule case cochée par carte ; on ne décoche pas la seule cochée (on coche l'autre) */
+  if(m)m.querySelectorAll('input[data-cn-cote]').forEach(function(x){ x.addEventListener('change',function(){ if(x.dataset.cnDeux!=='1')return; var autres=m.querySelectorAll('input[data-cn-i="'+x.dataset.cnI+'"]');
+    autres.forEach(function(y){ if(y!==x)y.checked=!x.checked; }); }); });
+  return m; }
+function cnCoche(m,i,cote){ var x=m&&m.querySelector('input[data-cn-i="'+i+'"][data-cn-cote="'+cote+'"]'); return !!(x&&x.checked); }
+function cnFenetreConflit(o,fini){
+  var T=o.T, tI=o.t, cartes=[], m='<b>Cette feuille a été changée ailleurs</b> (dans un autre onglet ou sur un autre ordinateur) pendant que tu la changeais ici. Voici ce qui a changé, et où.';
+  m+=cnSection('À choisir — changé des deux côtés');
+  T.deux.forEach(function(k){ var i=cartes.length; cartes.push(k); var tA=cnHeurePartie(o.hub,k), iciRecent=tI>=tA, ou=cnNomPartie(k,o.anc||o.hub);
+    m+=cnCarte(ou+cnAide('Coche le côté que tu gardes (un seul). Par défaut, la plus récente est cochée : '+(iciRecent?'ici, à '+cnHeure(tI):'ailleurs, à '+cnHeure(tA))+'.'),
+      cnDeux(cnCol(cnCase(i,'ici',iciRecent,'Ici, à '+cnHeure(tI)+' — pas encore enregistré','Garder le texte d’ici. Celui d’ailleurs ira à la corbeille quand tu valides : tu pourras le restaurer.'),cnMontrer(k,T.A[k],T.I[k])),
+             cnCol(cnCase(i,'ailleurs',!iciRecent,'Ailleurs, à '+cnHeure(tA),'Garder le texte d’ailleurs. Celui d’ici ira à la corbeille quand tu valides : tu pourras le restaurer.'),cnMontrer(k,T.A[k],T.H[k])))); });
+  if(T.ailleurs.length||T.ici.length)m+=cnSection('Déjà réuni — changé d’un seul côté');
+  T.ailleurs.forEach(function(k){ var i=cartes.length; cartes.push(k); m+=cnCarte(cnNomPartie(k,o.anc||o.hub)+cnAide('Coché : ce changement est gardé. Décoche-le pour le refuser.'),
+      cnDeux(cnCol('Avant',cnMontrer(k,T.A[k],T.H[k],'avant')),cnCol(cnCase(i,'ailleurs',true,'Ailleurs, à '+cnHeure(cnHeurePartie(o.hub,k))+' — repris ici','Décoché : ce changement fait ailleurs est refusé, la partie revient à « Avant » quand tu valides ; le changement va à la corbeille.'),cnMontrer(k,T.A[k],T.H[k])))); });
+  T.ici.forEach(function(k){ var i=cartes.length; cartes.push(k); m+=cnCarte(cnNomPartie(k,o.anc||o.hub)+cnAide('Coché : ce changement est gardé. Décoche-le pour le refuser.'),
+      cnDeux(cnCol('Avant',cnMontrer(k,T.A[k],T.I[k],'avant')),cnCol(cnCase(i,'ici',true,'Ici, à '+cnHeure(tI)+' — gardé','Décoché : ce que tu as changé ici est refusé, la partie revient à « Avant » quand tu valides ; ton changement va à la corbeille.'),cnMontrer(k,T.A[k],T.I[k])))); });
+  m+='<div style="margin-top:12px">« Valider » enregistre ce qui est coché. Rien n’est perdu : ce qui n’est pas coché va à la corbeille, d’où tu peux le restaurer.</div>';
+  var M=cnOuvrirFenetre(o.id,m,[
+    {lib:'Valider',prim:true,title:'Enregistre ce qui est coché, et l’affiche partout. Ce qui n’est pas coché va à la corbeille : tu peux le restaurer.',fn:function(){
+      var M2=document.getElementById('at-modale'), garde={}, perduIci=false, perduAilleurs=false;
+      cartes.forEach(function(k,i){ if(T.deux.indexOf(k)>=0){ garde[k]=cnCoche(M2,i,'ici')?'ici':'ailleurs'; if(garde[k]==='ici')perduAilleurs=true; else perduIci=true; }
+        else if(T.ailleurs.indexOf(k)>=0){ garde[k]=cnCoche(M2,i,'ailleurs')?'ailleurs':'avant'; if(garde[k]!=='ailleurs')perduAilleurs=true; }
+        else { garde[k]=cnCoche(M2,i,'ici')?'ici':'avant'; if(garde[k]!=='ici')perduIci=true; } });
+      var gardeesIci=cartes.filter(function(k){return garde[k]==='ici';}), d=cnDater(cnReunir(T,o.hub,garde),o.ici,gardeesIci,tI);
+      CNF.fen=null; cnTracer('validé '+o.id+' : '+JSON.stringify(garde));
+      cnCorbeille([perduAilleurs?{v:o.hub,cote:'ailleurs',quoi:'la version d’ailleurs, non gardée'}:null,perduIci?{v:o.ici,cote:'ici',quoi:'la version d’ici, non gardée'}:null],o.id,function(ok){
+        if(!ok){ atInfo('⚠ La corbeille n’a pas pu être écrite : rien n’est enregistré, la feuille reste ici telle quelle. Réessaie.'); fini({quoi:'annule'}); return; }
+        fini({quoi:'ecrire',doc:d,valide:true}); }); }},
+    {lib:'Plus tard',title:'N’écrit rien pour l’instant : la feuille reste ici telle qu’elle est à l’écran, pas encore enregistrée. La ligne « ⚠ Pas encore enregistré — un choix t’attend » rouvre cette fenêtre, avec les cases comme tu les as laissées ; quitter la feuille la rouvre aussi.',fn:function(){
+      var M2=document.getElementById('at-modale'), c={}; cartes.forEach(function(k,i){ c[k]={ici:cnCoche(M2,i,'ici'),ailleurs:cnCoche(M2,i,'ailleurs')}; });
+      CNF.choix[o.id]={qui:o.qui,coches:c,t:Date.now()}; CNF.fen=null; cnTracer('plus tard '+o.id); fini({quoi:'plustard'}); }}]);   /* Paul (17/11, point 53) : « Plus tard » à la place d'« Annuler » */
+  if(M)M.querySelectorAll('input[data-cn-cote]').forEach(function(x){ var k=cartes[+x.dataset.cnI]; if(T.deux.indexOf(k)>=0)x.dataset.cnDeux='1';
+    if(o.coches&&o.coches[k]&&(x.dataset.cnCote in o.coches[k]))x.checked=!!o.coches[k][x.dataset.cnCote]; });   /* rouverte : les cases comme Paul les a laissées */
+}
+/* la ligne d'état (l'éditeur) ou la ligne de Structure : rouvrir la fenêtre laissée « Plus tard » */
+function cnRouvrirChoix(id){ var c=CNF.choix[id]; if(!c||CNF.fen)return; CNF.rouvrir[id]=true;
+  if(c.qui==='structure'){ if(typeof ed2SauverFeuille==='function'){ ed2SauverFeuille(id); } return; }
+  if(AT.docId===id)atEnregistrerMaintenant(); }
+/* où la feuille était déposée : les chapitres chargés dans cette page */
+function cnLieuxDepot(id){ var L=[]; ['3e','4e','5e','6e'].forEach(function(n){ var d=chapitresData[n]; if(!chsObj(d))return; Object.keys(d).forEach(function(c){ var ch=d[c]; if(!ch)return;
+  try{ atSeances(ch).forEach(function(p,r){ var its=(p.se&&p.se.items)||{}; Object.keys(its).forEach(function(k){ var it=its[k]; if(it&&String(it.ref)===String(id)&&(it.source==='atelier'||it.kind==='atelier'))L.push(n+' · « '+(ch.title||'')+' » › séance '+(r+1)+' « '+((p.se&&p.se.title)||'')+' »'); }); }); }catch(e){} }); }); return L; }
+function cnFenetrePartie(o,fini){
+  var T=cnTrois(o.anc,o.ici,o.anc), change=T.ici.length>0, cartes=[], quand=cnHeure(o.t), lieux=cnLieuxDepot(o.id);
+  var m='<b>Cette feuille a été mise à la corbeille ailleurs</b> (dans un autre onglet ou sur un autre ordinateur), à '+quand+(o.ou?', depuis '+cnEsc(o.ou):'')+(change?', pendant que tu l’avais ouverte ici.':'.');
+  m+='<div style="margin-top:8px">'+(change?'':'La feuille : « '+cnEsc((o.anc&&o.anc.titre)||'')+' ». ')+(lieux.length?'Elle était dans : '+cnEsc(lieux.join(' · '))+'. Tant qu’elle reste à la corbeille, les élèves y voient « document plus disponible ».':'')+'</div>';
+  if(change){
+    m+=cnSection('Ce que tu as changé ici — pas encore enregistré (décoche ce que tu ne veux pas remettre)');
+    T.ici.forEach(function(k){ var i=cartes.length; cartes.push(k); m+=cnCarte(cnNomPartie(k,o.anc),cnDeux(cnCol('Dans la version mise à la corbeille',cnMontrer(k,T.A[k],T.I[k],'avant')),
+      cnCol(cnCase(i,'ici',true,'Ici, à '+cnHeure(+((o.ici.dates||{}).modifieLe)||Date.now()),'Décoché : ce changement n’est pas remis avec la feuille ; il va à la corbeille avec elle.'),cnMontrer(k,T.A[k],T.I[k])))); });
+    m+='<div style="margin-top:12px">Rien n’est perdu.</div>';
+    cnOuvrirFenetre(o.id,m,[
+      {lib:'La remettre dans l’atelier, avec ce qui est coché',prim:true,title:'La feuille revient dans « Mes feuilles », et à sa place dans le chapitre, avec ce qui est coché. La copie mise à la corbeille y reste, ce qui n’est pas coché aussi.',fn:function(){
+        var M2=document.getElementById('at-modale'), garde={}, perdu=false; cartes.forEach(function(k,i){ garde[k]=cnCoche(M2,i,'ici')?'ici':'avant'; if(garde[k]!=='ici')perdu=true; });
+        var d=cnDater(cnReunir(T,o.anc,garde),o.ici,cartes.filter(function(k){return garde[k]==='ici';}),+((o.ici.dates||{}).modifieLe)||Date.now()); CNF.fen=null; cnTracer('remise '+o.id);
+        cnCorbeille([perdu?{v:o.ici,cote:'ici',quoi:'la version d’ici, pas remise'}:null],o.id,function(){ fini({quoi:'ecrire',doc:d,remise:true}); }); }},
+      {lib:'La laisser à la corbeille',title:'La feuille se ferme. Ce que tu as changé ici va aussi à la corbeille, à côté de l’autre copie : tu peux la restaurer.',fn:function(){
+        CNF.fen=null; cnTracer('laissée '+o.id); cnCorbeille([{v:o.ici,cote:'ici',quoi:'la version d’ici, laissée à la corbeille'}],o.id,function(){ fini({quoi:'laisse'}); }); }}]);
+    return; }
+  /* C2b : rien changé ici — ses derniers changements, faits ailleurs depuis que cette page l'a ouverte */
+  var ouv=(CNF.docAnc&&CNF.docAnc.id===o.id&&CNF.docAnc.ouvert)||null, T2=ouv?cnTrois(ouv,ouv,o.anc):null;
+  if(T2&&T2.ailleurs.length){ m+=cnSection('Ses derniers changements, faits ailleurs avant la corbeille');
+    T2.ailleurs.forEach(function(k){ m+=cnCarte(cnNomPartie(k,ouv),cnDeux(cnCol('Avant',cnMontrer(k,T2.A[k],T2.H[k],'avant')),cnCol('Ailleurs, à '+cnHeure(cnHeurePartie(o.anc,k)),cnMontrer(k,T2.A[k],T2.H[k])))); }); }
+  var jour=''; try{ jour=new Date(o.t).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'}); }catch(e){}
+  m+='<div style="margin-top:12px">Tu ne l’avais pas changée ici : elle se ferme. Tu la retrouves dans la Corbeille du panneau, à la date du '+jour+', '+quand+' : « Restaurer ».</div>';
+  cnOuvrirFenetre(o.id,m,[{lib:'Compris',prim:true,title:'Retour à « Mes feuilles ». Rien n’est écrit.',fn:function(){ CNF.fen=null; fini({quoi:'laisse'}); }}]);
+}
+/* la feuille ouverte ici a été mise à la corbeille ailleurs (le témoin) : C2a / C2b ; « la remettre » passe par l'enregistrement de l'éditeur (une feuille neuve) */
+function cnPartieOuverte(id,anc){
+  if(CNF.fen)return;
+  cnFenetrePartie({id:id,anc:anc||AT.doc,ici:AT.doc,qui:'editeur',t:CNF.temT[id]||Date.now(),ou:CNF.temOu[id]||''},function(r){
+    if(AT.docId!==id)return;
+    if(r.quoi==='ecrire'){ AT.doc=r.doc; CNF.docAnc={id:id,obj:AT.doc,anc:null,ouvert:null}; atRendreEditeur(); atEnregistrerMaintenant(); return; }
+    if(r.quoi==='laisse')cnFermerFeuille(id); }); }
+function cnFermerFeuille(id){ atBrouillonEffacer(id); AT.doc=null; AT.docId=null; CNF.docAnc=null; if(AT.liste)delete AT.liste[id];
+  if(typeof AT_FIL!=='undefined'&&AT_FIL&&AT_FIL.chnum){ edRetourChapitre(); return; } atRendreListe(); }
+
+/* ═══ ⑤ l'emploi du temps suit une publication faite ailleurs ═══ */
+function cnEdtTemoin(n){ try{ if(typeof EDT_CHAP==='object'&&EDT_CHAP&&EDT_CHAP[n]&&edtVifVisible()&&!edtVifTest()){ CNE.perime[n]=true; cnTracer('edt : témoin '+n); } }catch(e){} }
+function cnEdtRelire(n){
+  CNE.enCours[n]=true; CNE.n.relu++; cnTracer('edt : relire '+n);
+  var loc={}; (EDT_CHAP[n]||[]).forEach(function(c){ if(!c||c.__cle==null)return; var s={}, sb=c.seances||{};
+    (Array.isArray(sb)?sb.map(function(x,i){return [String(i),x];}):Object.keys(sb).map(function(k){return [k,sb[k]];})).forEach(function(e){ if(e[1]&&typeof e[1]==='object')s[e[0]]={uid:e[1].uid||''}; });
+    loc[String(c.__cle)]={uid:c.uid||'',seances:s}; });
+  chsRelireArbre(n,loc).then(function(R){ CNE.enCours[n]=false; CNE.pause[n]=0; cnEdtFondre(n,R); })
+    .catch(function(){ CNE.enCours[n]=false; CNE.perime[n]=true; CNE.pause[n]=Date.now()+5000; cnTracer('edt : relecture manquée '+n); });
+}
+function cnEdtFondre(n,R){
+  var L=EDT_CHAP[n]; if(!L)return; var par={}, out=[]; L.forEach(function(c){ if(c&&c.__cle!=null)par[String(c.__cle)]=c; });
+  Object.keys(R.arbre).forEach(function(k){ var Rc=R.arbre[k], Lc=par[k];
+    if(!Lc||R.ent.ch[k]){ Rc.__cle=k; var sb=Rc.seances||{}; Object.keys(sb).forEach(function(z){ if(sb[z]&&typeof sb[z]==='object')sb[z].__i=String(z); }); out.push(Rc); return; }
+    var sans={}; Object.keys(Rc).forEach(function(x){ if(x!=='seances')sans[x]=Rc[x]; }); chsFondre(Lc,sans,{seances:1,__cle:1});
+    var Ls=Lc.seances; if(Array.isArray(Ls)){ var o={}; Ls.forEach(function(x,i){ if(x)o[String(i)]=x; }); Ls=Lc.seances=o; } if(!chsObj(Ls))Ls=Lc.seances={};
+    var Rs=chsObj(Rc.seances)?Rc.seances:{};
+    Object.keys(Ls).forEach(function(s){ if(!(s in Rs))delete Ls[s]; });
+    Object.keys(Rs).forEach(function(s){ if(!chsObj(Ls[s])||R.ent.se[k+'|'+s]){ Ls[s]=Rs[s]; Ls[s].__i=String(s); return; } chsFondre(Ls[s],Rs[s],{deroule:1,deroule_joue:1,__i:1}); });
+    out.push(Lc); });
+  EDT_CHAP[n]=out.sort(function(a,b){return (Number(a.ordre)||0)-(Number(b.ordre)||0);});
+  try{ edtVifReappliquer(n); }catch(e){}
+  CNE.n.repeint++; cnTracer('edt : repeint '+n); try{ edtVifRepeindre(); }catch(e){}
+}
+
+/* ═══ le tic : les relectures, la pose au calme, l'ouverture d'une feuille, le retour au premier plan ═══ */
+function cnLignesChoix(){
+  try{ var E=cnEcran();
+    if(E==='editeur'&&AT.docId&&CNF.choix[AT.docId]&&AT.etat!=='choix'&&!CNF.fen)atEtat('choix');
+    else if(E==='editeur'&&AT.docId&&CNF.choix[AT.docId]){ var e=document.getElementById('at-etat'); if(e&&!e.onclick)atEtat('choix'); }
+    var L=document.getElementById('cn-choix-ligne'), ids=Object.keys(CNF.choix).filter(function(id){ return CNF.choix[id].qui==='structure'&&typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[id]; });
+    if(E!=='structure'||!ids.length){ if(L)L.remove(); return; }
+    var sous=document.querySelector('#at-zone .at-ia-sous'); if(!sous)return; var id=ids[0], t='\u26a0 La feuille \u00ab '+((LINK_ATELIER_DOCS[id]||{}).titre||'')+' \u00bb : pas encore enregistr\u00e9e \u2014 un choix t\u2019attend';
+    if(L&&L.parentNode===sous&&L.dataset.id===id&&L.textContent===t)return; if(L)L.remove();
+    L=document.createElement('span'); L.id='cn-choix-ligne'; L.dataset.id=id; L.textContent=t; L.title='Un clic rouvre la fen\u00eatre : la m\u00eame partie de cette feuille a chang\u00e9 ici et ailleurs ; rien n\u2019est \u00e9crit tant que tu n\u2019as pas choisi.';
+    L.style.cssText='display:block;color:#e59b8f;cursor:pointer;text-decoration:underline;margin-bottom:4px'; L.onclick=function(ev){ ev.stopPropagation(); cnRouvrirChoix(id); }; sous.insertBefore(L,sous.firstChild);
+  }catch(e){} }
+function cnTic(){
+  if(!chsActif())return; var now=Date.now(); cnLignesChoix();
+  if(AT.docId!==CNF.docVu){ CNF.docVu=AT.docId; if(AT.docId&&now-(CNF.lu[AT.docId]||0)>5000)CNF.perime[AT.docId]=true; }   /* une feuille qui s'ouvre se relit (sauf lue à l'instant) */
+  if(document.visibilityState==='hidden'){ if(!CNF.cache)CNF.cache=now; return; }
+  if(CNF.cache){ var d=now-CNF.cache; CNF.cache=0; if(d>30000&&AT.docId)CNF.perime[AT.docId]=true; }
+  if(!chsEnHeure())Object.keys(CNF.perime).forEach(function(id){ if(CNF.perime[id]&&!CNF.enCours[id]&&now>=(CNF.pause[id]||0)){ CNF.perime[id]=false; cnRelire(id); } });
+  if(!CNF.fen&&Object.keys(CNF.attente).length&&chsCalme())Object.keys(CNF.attente).forEach(cnPoser);
+  if(CNF.redAttente&&!CNF.fen&&chsCalme()){ var r=CNF.redAttente; CNF.redAttente=null; cnRedessiner(r); }
+  Object.keys(CNE.perime).forEach(function(n){ if(CNE.perime[n]&&!CNE.enCours[n]&&now>=(CNE.pause[n]||0)){ CNE.perime[n]=false; cnEdtRelire(n); } });
+}
+window.addEventListener('online',function(){ if(AT&&AT.docId)CNF.perime[AT.docId]=true; });
+document.addEventListener('focusout',function(){ setTimeout(function(){ if(!chsActif()||CNF.fen)return; if(Object.keys(CNF.attente).length&&chsCalme())Object.keys(CNF.attente).forEach(cnPoser); },0); },true);
+setInterval(cnTic,400);
 /* Les chapitres d'un niveau, triés par ordre — [{num,titre,ordre}] */
 function atChapitresDe(niveau){
   var d=(niveau&&typeof chapitresData!=='undefined'&&chapitresData[niveau])||{};
@@ -12482,8 +13109,8 @@ function atEnvoyerVersion(docId,doc,msg,premier,cb){
     if(!ok){if(cb)cb(false);return;}
     doc.envoi={envoyeLe:envoi.meta.envoyeLe,versionDoc:envoi.meta.versionDoc};
     if(AT.docId===docId){AT.envoiDoc=envoi.doc;if(AT.doc&&AT.doc!==doc)AT.doc.envoi=doc.envoi;}
-    atSitePut(AT_NOEUD+'/'+docId,doc,function(){
-      if(AT.liste&&AT.liste[docId])AT.liste[docId]=JSON.parse(JSON.stringify(doc));
+    atSitePut(AT_NOEUD+'/'+docId+'/envoi',doc.envoi,function(){   /* CN (③) : l'envoi n'écrit que son envoi — la feuille entière, depuis la copie de la page, aurait écrasé une version plus récente ; le contenu s'enregistre par son écrivain (gardé) */
+      if(AT.liste&&AT.liste[docId])AT.liste[docId].envoi=JSON.parse(JSON.stringify(doc.envoi));
       if(typeof LINK_ATELIER_DOCS!=='undefined'&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[docId])LINK_ATELIER_DOCS[docId].envoi=doc.envoi;
       if(typeof AT_DOCS!=='undefined'&&AT_DOCS&&AT_DOCS[docId])AT_DOCS[docId].envoi=doc.envoi;
       if(cb)cb(true);
@@ -14257,13 +14884,22 @@ function ed2MajZone(ref,comp){
 function ed2SauverFeuille(ref){
   clearTimeout(ED2_TIMERS[ref]);
   ED2_TIMERS[ref]=setTimeout(function(){
-    var doc=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc)return;
+    var doc0=LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref];if(!doc0)return;
+    /* CN (③) : LA GARDE — la copie de Structure n'écrase plus une version plus récente : rien si rien n'a changé ici ; sinon relue, réunie, ou la fenêtre */
+    cnGarde({id:ref,lire:function(){ return LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref]; },anc:cnAncLink(ref),qui:'structure',t:+((doc0.dates||{}).modifieLe)||Date.now()},function(g){
+    if(g.quoi==='laisse'){ if(LINK_ATELIER_DOCS)delete LINK_ATELIER_DOCS[ref]; delete CNF.linkAnc[ref]; cnRedessinerAuCalme({structure:1}); return; }
+    if(g.quoi==='rien'){ if(g.hub&&LINK_ATELIER_DOCS&&LINK_ATELIER_DOCS[ref]&&!cnPareil(LINK_ATELIER_DOCS[ref],g.hub)){ LINK_ATELIER_DOCS[ref]=chsClone(g.hub); CNF.linkAnc[ref]={obj:LINK_ATELIER_DOCS[ref],anc:chsClone(g.hub)}; cnRedessinerAuCalme({structure:1}); } return; }
+    if(g.quoi!=='ecrire')return;   /* « Plus tard » : rien n'est écrit ; la ligne de Structure rouvre la fenêtre (cnTic) */
+    var doc=g.doc; if(doc!==LINK_ATELIER_DOCS[ref]){ LINK_ATELIER_DOCS[ref]=doc; cnRedessinerAuCalme({structure:1}); }
     doc.dates=doc.dates||{};doc.dates.versionDoc=(doc.dates.versionDoc||0)+1;
+    var _cnEcrit=chsClone(doc);
     secuEcrire(AT_NOEUD+'/'+ref,doc).then(function(r){
       if(!r.ok){atInfo('\u26a0 La feuille n\u2019a pas pu s\u2019enregistrer \u2014 tes derniers changements ne sont pas en base.');return;}
+      CNF.linkAnc[ref]={obj:doc,anc:_cnEcrit}; CNF.base[ref]=chsClone(_cnEcrit); CNF.n.ecrit++;
       if(typeof AT_DOCS!=='undefined'&&AT_DOCS)AT_DOCS[ref]=doc;
       if(AT&&AT.liste)AT.liste[ref]=JSON.parse(JSON.stringify(doc));   /* même copie qu'atEnregistrerMaintenant */
       ed2Repaginer();   /* le coût d'impression suit la vraie hauteur — UN rendu si la découpe change */
+    });
     });
   },1200);
 }
@@ -18036,6 +18672,15 @@ body.dr-ses-verif #dr-lance{display:none!important}
 /* CK (point 3, captures CJ 3-apres) : au retour de la liaison, « ● session · N envois repartis à hh:mm », en vert, quelques secondes */
 #dr-session.dr-session-repartis{color:#8fd19e}
 
+/* ═══ CO (point 3, Paul 17/11 14:41 ; captures validées 14:54) : UNE IMAGE ET UNE QUESTION SUR LA MÊME DIAPO — l'image analysée à droite (40 % de la largeur), et
+   elle y reste sur la diapo et sur chaque diapo fille ; la question et les réponses dans la colonne de gauche, comme sur une diapo « question et réponses »
+   ordinaire : quand la place manque, les réponses passent aux diapos filles (paginer, inchangé). La classe est posée au rendu (`img-droite`, dr-socle.js) :
+   le pilote, le tableau, les vignettes et l'Atelier la reçoivent pareil. Avant : l'image, une boîte souple, s'écrasait sous les réponses (0 px à la 2e). ═══ */
+:is(#dr-zone,#ses-tab,.at-som-volet) .mur .ecran.img-droite{display:grid;grid-template-columns:minmax(0,1fr) 40%;grid-auto-rows:min-content;align-content:start}   /* l’écart entre les colonnes : celui de la diapo (gap 1,2 %), comme sur les captures validées */
+:is(#dr-zone,#ses-tab,.at-som-volet) .mur .ecran.img-droite > :not(.bloc.img){grid-column:1;min-width:0}
+:is(#dr-zone,#ses-tab,.at-som-volet) .mur .ecran.img-droite > .bloc.img{grid-column:2;grid-row:1 / span 40;align-self:start;max-height:none;min-height:0}
+:is(#dr-zone,#ses-tab,.at-som-volet) .mur .ecran.img-droite > .bloc.img .img-sup{width:100%;aspect-ratio:auto;max-height:none}
+
 </style>
 <script>
 /* ═══ dr/dr-gabarit.js ═══ */
@@ -18088,6 +18733,13 @@ function dr_ecouteWin(type, fn, opt){ window.addEventListener(type, function(ev)
   const veille = () => { const z = dr_zone(); if (z && !z.isConnected) dr_parquer(); const v = DR_MEM.volet; if (v && !v.isConnected) dr_placerVolet(); };   /* la colonne redessinée par le site : le volet y revient (ou rentre dans la zone) */
   try { new MutationObserver(veille).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
   window.addEventListener('resize', () => { if (dr_actif()) dr_dimensionnerZone(); });
+  /* CO (562, Paul 17/11 : une bande vide d'environ 65 px sous le pilotage, après un rechargement et « Reprendre ») — mesuré par le geste, faux hub lent (600 ms) :
+     après « Reprendre », le bandeau « Heure en cours… » revient le temps que la reprise se fasse (≈ 20 s) ; il fait descendre l'écran de l'atelier de sa hauteur
+     (66 px) et le pilotage se mesure à ce moment-là ; quand il part, le pilotage remonte mais garde sa hauteur : 70 px vides en bas (4 attendus). Maintenant, dès que
+     le haut de la zone bouge (le bandeau qui vient ou qui part, une classe sur la racine), elle se remesure, au prochain dessin, une fois. Règle (26/10) : toute la
+     hauteur, tout le temps. */
+  let haut0 = null, rq = 0; const suivre = () => { if (rq) return; rq = requestAnimationFrame(() => { rq = 0; if (!dr_actif()) { haut0 = null; return; } const z = dr_zone(); const h = Math.round(z.getBoundingClientRect().top); if (h !== haut0) { haut0 = h; dr_dimensionnerZone(); } }); };
+  try { new MutationObserver(suivre).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style'], childList: true }); new MutationObserver(suivre).observe(document.body || document.documentElement, { childList: true }); } catch (e) {}
 })();
 
 /* ── le contexte : le chapitre ouvert, la séance de la colonne, l'heure de cours ── */
@@ -19545,9 +20197,15 @@ function dejaVuAvant(di){ /* ce que la classe a vu de cette diapo dans une heure
 
 /* E1 (§12.34-1, dette 13 · 65) : L'ŒUVRE ENTIÈRE, JAMAIS RECADRÉE — l'image est « contain » (dr.css), et sa boîte (.img-sup) prend la taille du rectangle de l'image affichée,
    centrée dans la place qu'elle avait : les marques (pt, et, fl, cd, lg), posées en % de la boîte, se rapportent ainsi à l'œuvre, à toutes les tailles, au pilote, au tableau, dans l'Atelier. */
-function dr_imageAjuster(sup){ const img = sup.querySelector(':scope > img'); if (!img || !img.naturalWidth || !img.naturalHeight) return; sup.style.width = ''; sup.style.height = ''; sup.style.left = ''; sup.style.top = ''; sup.style.aspectRatio = '';
+function dr_imageAjuster(sup){ const img = sup.querySelector(':scope > img'); if (!img || !img.naturalWidth || !img.naturalHeight) return; if (sup.closest && sup.closest('.ecran.img-droite') && dr_imageAjusterDroite(sup, img)) return; sup.style.width = ''; sup.style.height = ''; sup.style.left = ''; sup.style.top = ''; sup.style.aspectRatio = '';
   const W0 = sup.clientWidth, H0 = sup.clientHeight; if (!W0 || !H0) return; const r = img.naturalWidth / img.naturalHeight; let w = W0, h = w / r; if (h > H0) { h = H0; w = h * r; }
   sup.style.aspectRatio = 'auto'; sup.style.width = w.toFixed(1) + 'px'; sup.style.height = h.toFixed(1) + 'px'; if (getComputedStyle(sup).position === 'absolute') { sup.style.left = ((W0 - w) / 2).toFixed(1) + 'px'; sup.style.top = ((H0 - h) / 2).toFixed(1) + 'px'; } }
+/* CO (point 3) : dans la colonne de droite, l'image prend toute la largeur de la colonne, et au plus la hauteur de la diapo sous le haut du bloc (la légende comprise) ;
+   la boîte prend la forme de l'œuvre (les marques restent sur l'œuvre). Mesuré dans les unités de la diapo (offset, client), justes au pilote comme au tableau. */
+function dr_imageAjusterDroite(sup, img){ try { const b = sup.closest('.bloc.img'), c = sup.closest('.corpsd'); if (!b || !c) return false; sup.style.width = ''; sup.style.height = ''; sup.style.left = ''; sup.style.top = ''; sup.style.aspectRatio = 'auto';
+  const lg = b.querySelector('.img-lg'); const hLg = lg && lg.offsetParent !== null ? lg.offsetHeight + 8 : 0; let y = 0, n = b; while (n && n !== c) { y += n.offsetTop; n = n.offsetParent; } if (n !== c) y = b.offsetTop;
+  const W0 = b.clientWidth, H0 = c.clientHeight - (parseFloat(getComputedStyle(c).paddingBottom) || 0) - y - hLg; if (!W0 || H0 < 40) return false; const r = img.naturalWidth / img.naturalHeight; let w = W0, h = w / r; if (h > H0) { h = H0; w = h * r; }
+  sup.style.width = w.toFixed(1) + 'px'; sup.style.height = h.toFixed(1) + 'px'; return true; } catch (x) { return false; } }
 function dr_imagesEntieres(mur){ mur.querySelectorAll('.img-sup').forEach(sup => { const img = sup.querySelector(':scope > img'); if (!img) return; if (img.complete && img.naturalWidth) dr_imageAjuster(sup); else if (!img._drAj) { img._drAj = true; img.addEventListener('load', () => { dr_imageAjuster(sup); }, { once: true }); } }); }
 /* ═══ E1 (§12.44, registres 13 · 56, 13 · 84 ; cadrage 4 bis, 4b.1-4b.5 ; Paul 28/10 07:04, 07:29, 07:55) : LA CLÉ USB, POUR DE VRAI ═══
    Chaque appareil désigne UNE FOIS le dossier de sa clé (`showDirectoryPicker`, Chrome et Edge : le dossier est retenu pour ce navigateur, dans IndexedDB ;
@@ -19670,7 +20328,7 @@ function rendre(mur, et){ const et0 = et; /* (p8-5f) */ if (et && et.atelier && 
   else if (et.doc) { h += actHtml + docHtml(et.doc) + (et.pilote ? `<button class="doc-x" data-docx="1" title="Ferme le document : retour à la diapo (le journal note le départ)">✕ retour à la diapo</button>` : ''); }
   else if (b0 && b0.t === 'video') { h += actHtml + videoHtml(b0, et); }
   else {
-    const pleinImg = e.blocs.length === 1 && b0.t === 'image' && b0.support !== false; /* l'intention de l'ancien (.e.plein-img), que son CSS cassé n'appliquait pas : corrigé sur l'ordre de Paul (16/09) */ h += `<div class="corpsd ecran${pleinImg ? ' plein-img' : ''}" style="font-size:${fs.toFixed(2)}px">${actHtml}`; let k = 0;
+    const pleinImg = e.blocs.length === 1 && b0.t === 'image' && b0.support !== false; const imgDroite = !pleinImg && e.blocs.filter(x => x && x.t === 'image').length === 1 && e.blocs.some(x => x && x.t === 'question');   /* CO (point 3, Paul 17/11 14:41, captures validées 14:54) : une image et une question sur la même diapo — l'image analysée à droite, et elle y reste ; la question et les réponses à gauche, comme sur une diapo « question et réponses » ordinaire ; les diapos filles se font comme d'habitude (dr.css, bloc CO) */ /* l'intention de l'ancien (.e.plein-img), que son CSS cassé n'appliquait pas : corrigé sur l'ordre de Paul (16/09) */ h += `<div class="corpsd ecran${pleinImg ? ' plein-img' : ''}${imgDroite ? ' img-droite' : ''}" style="font-size:${fs.toFixed(2)}px">${actHtml}`; let k = 0;
     e.blocs.forEach((b, bi) => { b = dr_ficheVive(b); /* AW */ const cls = 'bloc' + (tailles[bi] ? ' t-' + tailles[bi] : '') + (b.t === 'image' ? ' img' + (e.blocs.length === 1 ? ' img-plein' : '') + (et.arrivee ? ' neuf-vu' : '') : ''); const st = fsB[bi] ? ` style="font-size:${fsB[bi]}em"` : ''; h += `<div class="${cls}" data-bi="${bi}"${st}>`;
       const titre = tx[bi + '.t'] != null ? tx[bi + '.t'] : b.txt; const marqBloc = ((et.ecr || []).includes('b' + bi) ? ' aecrire' : '') + (et.arrivee ? ' neuf-vu' : ''); const lumBloc = et.flash === 'b' + bi ? ' spot-on' : '';
       const TYPES = ['consigne', 'texte', 'question', 'fiche', 'schema', 'image', 'video', 'page', 'doc', 'cahier']; /* (p8-3c) le cahier de textes a son rendu */ if (!TYPES.includes(b.t)) { if (et.pilote || et.atelier) alertesDiapo.push(`<div class="obj-nonlisible" data-bloc="${bi}"><b>⚠ Objet non lisible — « ${dr_esc(b.t || '?')} » (bloc ${bi + 1})</b>Rien ne s'affiche à sa place en classe, jamais une page blanche. Déclare un objet manquant, ou remplace-le (3.1) ; le texte pour l'instance est dans « À régler ».</div>`); h += '</div>'; return; }
@@ -19892,7 +20550,7 @@ function pousser(et){ if (S.atelier) return; /* (p1) l'atelier ne pousse rien au
     Object.keys(et.reps || {}).forEach(bi => (et.reps[bi] || []).forEach((r, ri) => { const avR = ((av.reps || {})[bi] || [])[ri]; if (!avR && r.r) dr_repJournaliser(et.si, et.di, bi, ri, r); else if (avR && (avR.r !== r.r || avR.refo !== r.refo || avR.eleve !== r.eleve || avR.i !== r.i)) { const ev2 = dr_repJ(et.si, et.di, bi, ri); if (ev2) { ev2.txt = r.r; ev2.refo = r.refo; ev2.eleve = r.eleve; ev2.ini = r.i; } } /* C16 571 : déjà au journal (validée pendant un gel), jamais deux fois ; l'élève changé suit (avant : le texte et refo seuls) */ }));
     if (av.page !== et.page && et.pages && et.pages.length > 1) journal('page', { si: et.si, di: et.di, p: (et.page || 0) + 1 });
     if ((av.encart || null) !== (et.encart || null)) journal(et.encart ? 'reserve-affichee' : 'reserve-retiree', { txt: et.encart || av.encart });
-    if (JSON.stringify(av.doc || null) !== JSON.stringify(et.doc || null)) { if (et.doc && (!av.doc || av.doc.id !== et.doc.id)) journal('document', { id: et.doc.id, pos: et.doc.pos }); else if (et.doc) journal('document-page', { id: et.doc.id, pos: et.doc.pos }); else journal('document-ferme', { id: av.doc.id }); }
+    if (JSON.stringify(av.doc || null) !== JSON.stringify(et.doc || null)) { if (et.doc && (!av.doc || av.doc.id !== et.doc.id)) journal('document', Object.assign({ id: et.doc.id, pos: et.doc.pos }, et.doc.deFeuille != null ? { titre: et.doc.titre, feuille: et.doc.feuille } : {}));   /* CO (point 8) : une fiche projetée hors des documents de la séance porte son titre au journal (le récit la nomme) */ else if (et.doc) journal('document-page', { id: et.doc.id, pos: et.doc.pos }); else journal('document-ferme', { id: av.doc.id }); }
     if (av.videoLecture !== et.videoLecture || av.videoPos !== et.videoPos) journal(et.videoLecture ? 'video-lecture' : 'video-pause', { si: et.si, di: et.di, pos: et.videoPos });
   }
   S.mur = et; dr_auMur(et, { et, ecran: dr_ecranVu(dr_seances()/* E1 : lisait DATA.seances */[et.si].ecrans[et.di])/* E1 : l'écran en clair pour l'autre document */, documents: dr_documents()/* E1 : lisait DATA.documents */[String(et.si)] || [] }); /* E1 : le crochet d'E3, if (typeof dr_versMur === 'function') dr_versMur(et) */ if (et.neuf != null) S.neuf = null; if (et.arrivee) S.arrivee = null; if (S.fichePage && S.fichePage.entre) S.fichePage.entre = false; }
@@ -20574,6 +21232,7 @@ function dr_ouvImageChoisir(cible){ if (typeof fermerChoix === 'function') ferme
 /* la décoration de la classe suit aussi « ta version » (les dates, la séance du jour, les séances faites) : ce que Paul a écrit ne bouge pas */
 function dr_ouvDecorClasse(e, k){ const b = dr_ouvBloc(e), n = k && k.blocs && k.blocs[0]; if (!b || !n || b.forme !== n.forme) return false; const d = b.d = b.d || {}, m = n.d || {}; const av = JSON.stringify(d);
   if (b.forme === 'presentation') { d.quand = m.quand; d.classe = m.classe; if (d.quand === undefined) delete d.quand; }
+  if (b.forme === 'presentation' || b.forme === 'debut') { if (m.image) d.image = m.image; else delete d.image; }   /* CO (546, réglage acquis le 17/11) : même en « ta version », l'image suit le chapitre (la séance, pour le début de séance) — une diapo écrite avant que le chapitre ait son image la reçoit, une image retirée du chapitre s'en va ; une image posée sur la diapo elle-même l'emporte toujours (dr_ouvImagePosee, au rendu) */
   if (b.forme === 'parcours' && (d.seances || []).length === (m.seances || []).length) { d.classe = m.classe; d.seances.forEach((s, i) => { s.date = m.seances[i].date; s.faite = m.seances[i].faite; if (s.date === undefined) delete s.date; if (s.faite === undefined) delete s.faite; }); }
   if (b.forme === 'competences' && +d.N === +m.N) { if (m.faites) d.faites = m.faites; else delete d.faites; }
   return JSON.stringify(d) !== av; }
@@ -21007,7 +21666,7 @@ function passerEnHeure(h){ const E = seance().ecrans; const e = ecran(); const r
 
 function brancherDeclare(da){ const e = ecran(); if (!e) return; da.querySelectorAll('[data-declare]').forEach(b => b.onclick = () => { if (b.dataset.declare === 'ouvrir') { S.declareRepliee = false; S.declareEid = e.eid; } else { S.declareRepliee = true; S.declareLigne = null; } dr_tout(); });   /* EX (§12.62 (1)) : ouverte par défaut ; « replier » / « ouvrir » */ da.querySelectorAll('[data-masquer]').forEach(b => b.onclick = () => dr_colMasquer([e.eid], b.dataset.masquer === '1')); da.querySelectorAll('[data-pli]').forEach(h => h.onclick = () => { S.plis = S.plis || {}; const k = h.dataset.pli; S.plis[k] = S.plis[k] === false ? true : false; dr_tout(); }); const E = seance().ecrans; const sel = da.querySelector('#dc-act'); if (sel) sel.onchange = () => { const v = sel.value; if (v === '?') return; if (v === '+') { dr_saisir('Le titre de la nouvelle activité :', '', t => { const a = nouvelleActivite(t); e.actId = a.id; delete e.horsActivite; delete e.__num; reindexer(); marquerModif({ di: S.di, activite: e.actId }); dr_tout(); }, 'Créer l\'activité'); dr_tout(); return; } /* E1 : la modale du site, plus prompt() */ e.actId = v || null; if (v) delete e.horsActivite; else e.horsActivite = true;   /* EX (§12.62 (1)) : « — hors activité » est un choix (pas une faute) */ delete e.__num; reindexer(); marquerModif({ di: S.di, activite: e.actId, horsActivite: !v }); dr_tout(); };
   const lie = (id, quoi) => { const el = da.querySelector('#' + id); if (!el) return; el.onblur = () => quoi(el.textContent.trim()); el.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); } ev.stopPropagation(); }; };
-  lie('dc-atitre', t => { const a = actDe(e); if (a && t && a.titre !== t) { a.titre = t; marquerModif({ di: S.di, titreActivite: t }); dr_tout(); } }); lie('dc-titre', t => { if (e.act !== t) { e.act = t;   /* EX (§12.62 (2)) : un titre vide est permis (rien au tableau) */ marquerModif({ di: S.di, titre: t }); dr_tout(); } }); lie('dc-leg', t => { const leg = {}; t.split('·').map(x => x.trim()).filter(Boolean).forEach(x => { const m = /^(\S+)\s*=\s*(.+)$/.exec(x); if (m) leg[m[1]] = m[2]; }); if (Object.keys(leg).length) e.legende = leg; else delete e.legende; marquerModif({ di: S.di, legende: leg }); dr_tout(); }); lie('dc-tp', t => { dr_travail()/* E1 : lisait DATA.travailPrevu = DATA.travailPrevu || {} — le socle tient l'objet */; const k = S.si + '|' + e.heure; if ((dr_travail()/* E1 : lisait DATA.travailPrevu */[k] || '') !== t) { if (t) dr_travail()/* E1 : lisait DATA.travailPrevu */[k] = t; else delete dr_travail()/* E1 : lisait DATA.travailPrevu */[k]; marquerModif({ heure: e.heure, travailPrevu: t }); dr_tout(); } });
+  lie('dc-atitre', t => { const a = actDe(e); if (a && t && a.titre !== t) { a.titre = t; marquerModif({ di: S.di, titreActivite: t }); dr_tout(); } }); lie('dc-titre', t => { if (e.act !== t) { e.act = t;   /* EX (§12.62 (2)) : un titre vide est permis (rien au tableau) */ marquerModif({ di: S.di, titre: t }); dr_tout(); } }); lie('dc-leg', t => { const leg = {}; t.split('·').map(x => x.trim()).filter(Boolean).forEach(x => { const m = /^(\S+)\s*=\s*(.+)$/.exec(x); if (m) leg[m[1]] = m[2]; }); if (Object.keys(leg).length) e.legende = leg; else delete e.legende; marquerModif({ di: S.di, legende: leg }); dr_tout(); }); { const tp = da.querySelector('#dc-tp'); if (tp) { tp.oninput = () => { tp._tape = true; dr_travailPrevuTape(tp.textContent, 'carte'); }; tp.onblur = () => { if (tp._tape) { tp._tape = false; dr_travailPrevuTape(tp.textContent, 'carte', true); } }; tp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); tp.blur(); } ev.stopPropagation(); }; } }   /* CO (556) : la carte écrit à la frappe, comme la diapo du cahier ; quitter la carte sans y avoir tapé n'écrit rien (avant : `lie`, au blur, écrivait le texte de la carte s'il différait — une carte restée sur l'ancien texte pouvait l'écrire par-dessus) */
   const dur = da.querySelector('#dc-dur'); if (dur) dur.onchange = () => { const v = Math.max(0, Math.round(+dur.value) || 0);   /* EX (§12.62 (2)) : 0 minute permis — la diapo ne compte pas dans l'heure */ if (v !== e.dur) { e.dur = v; if (S.durees && actDe(e)) delete S.durees[actDe(e).id]; marquerModif({ di: S.di, dur: v }); dr_tout(); } };
   const role = da.querySelector('#dc-role'); if (role) role.onchange = () => { const v = role.value || null; if (v === 'bilan' && E.some((z, i) => z.role === 'bilan' && i !== S.di)) { dr_dire('Le bilan est unique : une seule diapo « bilan » par séance.'); dr_tout(); return; } if (v === 'reactivation') { const o = ordreHeure(e.heure).filter(i => !retiree(E[i])); const deja = E.some((z, i) => z.role === 'reactivation' && z.heure === e.heure && i !== S.di); if (deja) { dr_dire('Il y a déjà une réactivation dans cette heure : elle est unique.'); dr_tout(); return; } if (o[0] !== S.di) { dr_dire('La réactivation est la première de son heure : monte d\'abord la diapo en tête de l\'heure.'); dr_tout(); return; } } e.role = v; marquerModif({ di: S.di, role: v }); dr_tout(); };
   da.querySelectorAll('[data-heure]').forEach(b => b.onclick = () => passerEnHeure(+b.dataset.heure)); da.querySelectorAll('[data-retire]').forEach(b => b.onclick = () => { const q = b.dataset.retire; e[q] = (e[q] || []).filter(id => id !== b.dataset.id); marquerModif({ di: S.di, [q]: e[q] }); dr_tout(); }); da.querySelectorAll('[data-plus]').forEach(b => b.onclick = () => choixNotion(ids => { const q = b.dataset.plus; e[q] = e[q] || []; ids.forEach(id => { if (!e[q].includes(id)) e[q].push(id); }); marquerModif({ di: S.di, [q]: e[q] }); dr_tout(); }, e[b.dataset.plus] || []));   /* C16 mandat AH : la fenêtre rend toutes les notions cochées en une fois ; celles déjà sur la diapo y sont cochées, grisées */ const pr = da.querySelector('[data-proposer]'); if (pr) pr.onclick = proposerRemob; const na = da.querySelector('[data-nouvelle-act]'); if (na) na.onclick = () => { dr_saisir('Le titre de la nouvelle activité :', '', t => { const a = nouvelleActivite(t); if (!actDe(e) && !e.role) { e.actId = a.id; delete e.horsActivite; } reindexer(); marquerModif({ activite: a.id }); dr_tout(); }, 'Créer l\'activité'); }; /* E1 : la modale du site, plus prompt() */ const rn = da.querySelector('[data-renum]'); if (rn) rn.onclick = renumeroter; if (typeof dr_ouvBrancherCarte === 'function') dr_ouvBrancherCarte(da, e); /* C16 */ }
@@ -21024,10 +21683,21 @@ function dr_palier(...a){ if (S.repetition) return; /* (p6) pas de T-5 en répé
    tant qu'il dure ; elle se redessine à sa fin (change ou blur). Avant : le blur de « Titre » enregistrait, redessinait la carte, et le
    menu « Activité » qu'on venait d'ouvrir était remplacé sous la souris (la liste se refermait). Mesuré par la sonde 56s (b bis). */
 let DR_GESTE_CARTE = null;
-function dr_carteEnGeste(da){ const g = DR_GESTE_CARTE; if (g && g.isConnected && da.contains(g)) return true; const a = document.activeElement; return !!(a && da.contains(a) && a.tagName === 'SELECT'); }
+function dr_carteEnGeste(da){ const g = DR_GESTE_CARTE; if (g && g.isConnected && da.contains(g)) return true; const a = document.activeElement; return !!(a && da.contains(a) && (a.tagName === 'SELECT' || a.isContentEditable)); }   /* CO (556) : un champ de la carte où l'on tape (atteint au clavier aussi) est un geste en cours : la carte attend */
 document.addEventListener('pointerdown', ev => { const c = ev.target && ev.target.closest && ev.target.closest('#droite-atelier select, #droite-atelier input, #droite-atelier [contenteditable]:not([contenteditable="false"])'); if (!c) return; DR_GESTE_CARTE = c;
   const fin = () => { if (DR_GESTE_CARTE !== c) return; DR_GESTE_CARTE = null; c.removeEventListener('change', fin); c.removeEventListener('blur', fin); const da = $('droite-atelier'); if (da && da._attend) { da._attend = false; dr_tout(); } };
   c.addEventListener('change', fin); c.addEventListener('blur', fin); }, true);
+/* CO (556, Paul 17/11 08:25 : « j'ai rechargé la page et j'ai perdu mon cahier de texte ») — LE TRAVAIL À FAIRE PRÉVU, UN SEUL TEXTE, DEUX ENDROITS.
+   Mesuré par le geste (Atelier de la 4 TURING, la diapo du cahier) : le texte tapé dans la diapo restait dans la page (S.travailEdite, la mémoire de la classe), rien
+   n'était écrit au hub (0 écriture), la carte « L'HEURE n — le travail à faire prévu » gardait l'ancien texte, et le rechargement le perdait. Maintenant, la diapo du
+   cahier (#ed-edit) et la carte (#dc-tp) écrivent le même texte, `dr_travail()[séance|heure]`, au hub à chaque frappe (marquerModif → dr_sauve) ; l'autre endroit le
+   montre aussitôt, sans toucher celui où l'on tape ; le redessin d'ensemble vient quand on s'arrête (800 ms). */
+let DR_TP_T = null;
+function dr_travailPrevuTape(texte, ou, fin){ try { const e = ecran(); if (!e) return; const h = +e.heure || S.heure || 1; const k = S.si + '|' + h; const t = String(texte == null ? '' : texte).replace(/\r/g, '').replace(/\u00a0/g, ' ').trim(); const T = dr_travail();
+  const autre = ou === 'diapo' ? document.getElementById('dc-tp') : document.querySelector('#mur #ed-edit');
+  if (autre && document.activeElement !== autre) { if (ou === 'diapo') { if (autre.textContent !== t) autre.textContent = t; } else { const html = dr_esc(t).replace(/\n/g, '<br>'); if (autre.innerHTML !== html) autre.innerHTML = html; } }
+  if ((T[k] || '') !== t) { if (t) T[k] = t; else delete T[k]; marquerModif({ heure: h, travailPrevu: t }); }
+  clearTimeout(DR_TP_T); DR_TP_T = setTimeout(() => { DR_TP_T = null; dr_tout(); }, fin ? 0 : 800); } catch (x) {} }
 function rendreDroiteAtelier(){ const da = $('droite-atelier'); if (!da || !S.atelier) return; arSuivre();   /* CI : « À régler », ouvert, suit les données */ const hd = droiteAtelier(); const ecrit8 = document.activeElement && document.activeElement.id === 'p8-src' && da.contains(document.activeElement); /* (p8-3) on n'efface pas le champ où Paul écrit */ const change = da._hd !== hd || !da.querySelector(':scope > .at-d');   /* EX (§12.56 (1)(a)) : on compare à ce qu'on a posé (le texte source), pas au DOM relu — la carte ouverte (ses « selected », le panneau des marques posé dans la colonne) ne se reposait plus à chaque dessin pour rien */ if (change && !ecrit8 && dr_carteEnGeste(da)) { da._attend = true; return; } if (change && !ecrit8) { da._attend = false; da.innerHTML = hd; da._hd = hd; p8BrancherPanneau(da); const ax = da.querySelector('#at-aide .x'); if (ax) ax.onclick = () => { S.aideFermee = true; dr_tout(); }; const ar = da.querySelector('#at-regler'); if (ar) ar.onclick = ouvrirARegler; brancherDeclare(da); } }
 
 /* ── (p8-2) la préhension de l'ancien déroulé (tirSch, jalSch, PRIS, le mousedown sur g.n / g.jal), reprise dans l'atelier seulement (T6) : pendant qu'on tire, seul le dessin du schéma est mis à jour ; au pilotage et au tableau, rien ne se déplace ── */
@@ -21444,7 +22114,7 @@ function dr_devoilerQuestionsRepondues(){ if (S.atelier || S.preparation || !S.l
 function dr_toutVide(){ try { const n = $('numero'); if (n) n.innerHTML = '<b>Atelier</b> · cette séance n’a encore aucune diapo'; const c = $('compte'); if (c) { c.textContent = ''; c.title = ''; }
   const m = $('mur'); if (m && !m.querySelector('.dr-vide')) m.innerHTML = '<div class="dr-vide" style="padding:24px;opacity:.75">Cette séance n’a encore aucune diapo.</div>';
   const da = $('droite-atelier'); if (da && S.atelier) { const h = droiteAtelier(); if (da._hd !== h) { da.innerHTML = h; da._hd = h; } } } catch (e) {} }
-function dr_tout(){ if (typeof DR_ENCH === 'object' && DR_ENCH && DR_ENCH.toutPlusTard) return; if (typeof dr_toutSuspendu === 'function') { if (dr_toutSuspendu()) { DR_TOUT_SUSP.du = true; return; } DR_TOUT_SUSP.du = false; }
+function dr_tout(){ if (typeof DR_ENCH === 'object' && DR_ENCH && DR_ENCH.toutPlusTard) return; if (typeof dr_repLaisseesValider === 'function') dr_repLaisseesValider(false);   /* CO (569) : une réponse laissée sans Entrée sur une diapo qu'on a quittée est validée (dr-classe.js) */ if (typeof dr_toutSuspendu === 'function') { if (dr_toutSuspendu()) { DR_TOUT_SUSP.du = true; return; } DR_TOUT_SUSP.du = false; }
   { let E0 = null; try { E0 = seance().ecrans; } catch (e) {} if (S.atelier && Array.isArray(E0) && !E0.length) { dr_toutVide(); return; } }   /* CM : la séance sans diapo */   /* C17 BT : pendant un passage, noté, fait une fois à la reprise (dr-socle.js) */   /* C17 BS : « ▶ Séance suivante » en répétition — l'arrêt, le chapitre et la vue ne se redessinent pas un à un ; la répétition suivante se dessine une fois lancée (mesuré CPU ×4 : 3 redessins, 4 à 6 s) */
   dr_devoilerQuestionsRepondues(); if (typeof dr_bBouton === 'function') dr_bBouton(); /* C16 mandat S : 🅱️ sort sur la mise en commun du bilan */ if (typeof atClasseMarquer === 'function') atClasseMarquer(); /* E1 (§12.28-3) l'état de l'écran de la classe */ dr_hclasseMaj(true); /* E1 (§12.27-8) : la classe de l'heure dans l'entête, à chaque rendu (la classe proposée, plus coûteuse, à la seconde) */ setTimeout(atSomSuivreCourant, 0); setTimeout(dr_imagesAbsentes, 0); /* E1 : la colonne du site suit la diapo (lisait DR.dr_ecranCourant par le pont) */ setTimeout(brancherDocs, 0); if (S.repetition || p8EnClasse() || p8ReactAvantLancement()) setTimeout(brancherAtelier, 0); /* (p8-4) en répétition aussi, tout texte s'écrit d'un clic ; (p8-5) et en classe, dans la copie ; E1 (§12.26) : la réactivation construite avant le lancement */ if (S.atelier) { observerMur(); setTimeout(brancherAtelier, 0); p8GardesBarre(); /* (p8-3) les gestes grisés d'une diapo à schéma */ const ab = $('at-bloc'); if (ab && !ab._ok) { ab._ok = true; ab.onclick = () => choixObjet(); } const ai = $('at-image'); if (ai && !ai._ok) { ai._ok = true; ai.onclick = () => choixObjet('image'); } const af = $('at-fiche'); if (af && !af._ok) { af._ok = true; af.onclick = () => choixObjet('fiche'); } const av = $('at-video'); if (av && !av._ok) { av._ok = true; av.onclick = () => { S.editerVideo = null; choixObjet('video'); }; } const ad = $('at-doc'); if (ad && !ad._ok) { ad._ok = true; ad.onclick = () => choixObjet('doc'); } const ae = $('at-etape'); if (ae && !ae._ok) { ae._ok = true; ae.onclick = () => { const e = ecran(); if (!e || e.role === 'fin') return; const b = document.activeElement && blocDe(document.activeElement); const bi = b ? b.bi : e.blocs.length - 1; const bloc = e.blocs[bi]; if (!bloc) return; bloc.el = bloc.el || []; bloc.el.push(''); marquerModif({ di: S.di, bi, ajout: bloc.el.length - 1 }); dr_tout(); setTimeout(() => { const nv = $('mur').querySelector('[data-p="' + bi + '.' + (bloc.el.length - 1) + '"]'); if (nv) { nv.setAttribute('data-vide', '1'); focaliser(nv); } }, 0); }; }  const v = $('volet'); if (v) { dr_colEcouter(v); /* EX (§12.62 (4)) : les clics de la colonne, un seul écouteur posé une fois (§12.56 (1)(e)) */ const hv = voletAtelier(); if (v.dataset.atelier !== hv) { if (dr_colAttend(v)) DR_COL.attente = true; /* §12.56 (1)(c) : pendant un renommage ou un glisser, la colonne attend */ else { DR_COL.attente = false; if (v.dataset.atelier) poserHtml(v, hv); else v.innerHTML = hv; /* §12.56 (1)(b) : posée une fois (en entrant dans l'Atelier), puis retouchée — mêmes nœuds, seuls le texte, les attributs et les classes qui diffèrent */ v.dataset.atelier = hv; if (typeof dr_reglageReactBrancher === 'function') dr_reglageReactBrancher(v); } } } rendreDroiteAtelier(); const aj = $('at-jouer'); if (aj && !aj._ok) { aj._ok = true; aj.onclick = () => { journal('atelier-jouer-en-avance', { di: S.di }); lancerRepetition(); }; } } try { ligneSuite(); } catch (e) {} if (S.enFin && !S.preparation && ecran().role === 'fin' && S._finRenduPour !== 'fin') { S._finRenduPour = 'fin'; setTimeout(() => ouvrirFin(true), 0); } else if (S.enFin && ecran().role !== 'fin') S._finRenduPour = null; if (S.enFin && typeof dr_finCocheMaj === 'function') dr_finCocheMaj(); /* C16 mandat AB (850) : le panneau de fin d'heure suit la coche du bilan (la dernière marque Alt + B la pose), sans retour ni aller */ if (S.preparation) { try { dimensionner(); } catch (e) {} } $('droite').classList.toggle('cahier', ecran().role === 'fin'); if (S.t5 && !S.close && ecran().role === 'fin') alerteFermer(); /* §12.29 (E1, contrôle n°67) : la barre du bas est retirée du gabarit — plus d'alerteOuvrir ici */
   try { dr_titrePoser(ecran()); } catch (x) {} dimensionner(); /* C16 (les dernières dettes, ⑮) : la ligne du titre de CETTE diapo est posée avant que dimensionner la mesure — avant, elle gardait celle de la diapo d'avant : un titre d'avant sur deux lignes rapetissait la diapo du pilote jusqu'au rendu suivant (1366 × 768 : 416 px de haut à l'arrivée, 437 px au geste suivant ; la diapo « sautait » d'une page à l'autre) */ if (!S.mur || S.mur.di !== S.di || S.mur.si !== S.si) S.arrivee = { di: S.di }; const e = ecran(); const et = etatComplet(); et.pilote = true; et.ecrire = p8EcritureOuverte(); /* (p8-4) */ if (!S.repetition && (!S.atelier || dr_atelierEnClasse())) { et.textes = p8TextesCopie(e, et.textes); et.retires = p8RetiresCopie(e); } /* E4 (§12.59 (3)) : les retirés du tableau voyagent avec l'état (le tableau les cache) */ /* E1 (réveil n°11) : l'atelier ouvert pendant l'heure montre la copie de la classe */ /* (p8-5) la copie de la classe, au pilote et au tableau */ rendre(mur, et); mur.className = 'mur pilote' + (S.mode === 'lum' ? ' mode-lum' : S.mode === 'ecr' ? ' mode-ecr' : '') + (et.bandeau ? ' avec-bandeau' : ''); et.pilote = false;
@@ -21584,11 +22254,21 @@ function dr_candidats(v){ v = plat((v || '').trim()); if (!v) return []; return 
 
 function brancherFin(){ const h = S.heure; const cd = mur.querySelector('.corpsd.cahier'); if (cd) cd.classList.toggle('grand', (S.cahierGrand || {})[h] !== false); const ag = mur.querySelector('[data-agrandir]'); if (ag) ag.onclick = () => { S.cahierGrand = S.cahierGrand || {}; S.cahierGrand[h] = (S.cahierGrand[h] === false); journal(S.cahierGrand[h] ? 'cahier-agrandi' : 'cahier-reduit', { h }); dr_tout(); }; mur.querySelectorAll('[data-rv]').forEach(b => b.onclick = () => { if (((S.recitVersion || {})[h] || 'site') !== b.dataset.rv) basculerRecit(h, b.dataset.rv); }); const re = mur.querySelector('#ed-recit-edit'); if (re) { re.oninput = () => { S.recitMoi = S.recitMoi || {}; S.recitMoi[h] = re.innerHTML; if (!S._rvT) S._rvT = setTimeout(() => { S._rvT = null; poserVersion(h, re.innerHTML); journal('recit-modifie', { h }); dr_tout(); }, 800); }; re.onkeydown = ev => { ev.stopPropagation(); }; } const rp = mur.querySelector('#rv-reprendre'); if (rp) rp.onclick = () => reprendreSuite(h); const u = mur.querySelector('#rv-undo'), r = mur.querySelector('#rv-redo'); if (u && r) { const v = versionsDe(h); u.disabled = v.k <= 0; r.disabled = v.k >= v.l.length - 1; u.onclick = () => { const v = versionsDe(h); if (v.k > 0) { v.k--; S.recitMoi[h] = v.l[v.k].html; journal('recit-version-precedente', { h }); dr_tout(); } }; r.onclick = () => { const v = versionsDe(h); if (v.k < v.l.length - 1) { v.k++; S.recitMoi[h] = v.l[v.k].html; journal('recit-version-suivante', { h }); dr_tout(); } }; }
   const carte = mur.querySelector('.ed-carte'); if (carte) { const max = () => Math.max(1, carte.scrollHeight - carte.clientHeight); const r = (S.cahierScroll || {})[h] || 0; if (Math.abs(carte.scrollTop - r * max()) > 2) carte.scrollTop = r * max(); carte.onscroll = () => { S.cahierScroll = S.cahierScroll || {}; const ratio = carte.scrollTop / max(); if (Math.abs((S.cahierScroll[h] || 0) - ratio) < 0.002) return; S.cahierScroll[h] = ratio; if (ratio >= 0.97 && !(S.recitRelu || {})[h] && S.finVue === 'contenu' && !S.preparation && ecran().role === 'fin') { S.recitRelu = S.recitRelu || {}; S.recitRelu[h] = true; journal('recit-relu', { h, par: 'défilement' }); if (S.enFin) setTimeout(() => ouvrirFin(true), 100); } if (!S._scT) S._scT = setTimeout(() => { S._scT = null; const etc = etatComplet(); pousser(etc); try { vueDroite(etc); } catch (e) {} }, 60); }; }
-  const ed = mur.querySelector('#ed-edit'); if (ed) { ed.oninput = () => { S.travailEdite = S.travailEdite || {}; S.travailEdite[S.heure] = ed.innerText; if (!S._edT) S._edT = setTimeout(() => { S._edT = null; journal('travail-edite', { texte: S.travailEdite[S.heure] }); dr_tout(); }, 800); }; } mur.querySelectorAll('[data-onglet]').forEach(o => o.onclick = () => { S.finVue = o.dataset.onglet; journal('cahier-onglet', { onglet: S.finVue, di: S.di }); dr_tout(); }); }
+  const ed = mur.querySelector('#ed-edit'); if (ed) { ed.oninput = () => { if (S.atelier && !S.repetition && typeof dr_travailPrevuTape === 'function') { dr_travailPrevuTape(ed.innerText, 'diapo'); return; }   /* CO (556) : dans l'Atelier, la diapo du cahier écrit le travail à faire PRÉVU (celui de la carte « L'HEURE n »), au hub */ S.travailEdite = S.travailEdite || {}; S.travailEdite[S.heure] = ed.innerText; if (!S._edT) S._edT = setTimeout(() => { S._edT = null; journal('travail-edite', { texte: S.travailEdite[S.heure] }); dr_tout(); }, 800); }; } mur.querySelectorAll('[data-onglet]').forEach(o => o.onclick = () => { S.finVue = o.dataset.onglet; journal('cahier-onglet', { onglet: S.finVue, di: S.di }); dr_tout(); }); }
 
 /* C16 571 (MANDAT-RECIT-GEL §2.2) — QUAND PAUL CHANGE L'ÉLÈVE D'UNE RÉPONSE VALIDÉE, LE JOURNAL SUIT (la réponse et sa parole « réponse ») : avant, seul le texte
    de la ligne suivait — le journal, le récit et « Ce qui s'est passé » gardaient le premier élève, et rien ne suivait pendant un gel. */
 function dr_repEleveSuit(bi, ri, r){ if (!r || !r.validee || typeof dr_repJ !== 'function') return; const si = S.si, di = S.di; const x = dr_repJ(si, di, bi, ri); if (x) { x.eleve = r.eleve; x.ini = r.i; } if (!r.eleve) return; const cle = si + '|' + di + '|' + bi + '|' + ri; let p = null; for (let k = J.length - 1; k >= 0; k--) { const y = J[k]; if (y && y.type === 'parole' && y.rep === cle) { p = y; break; } } if (p) p.nom = r.eleve; else journal('parole', { nom: r.eleve, m: 'reponse', rep: cle }); }
+/* CO (569, Paul 17/11, 4 TURING diapo 7 : 6 réponses rangées, 5 participations) — UNE RÉPONSE TAPÉE AVEC SON ÉLÈVE EST UNE PARTICIPATION, MÊME SANS ENTRÉE.
+   Mesuré par le geste : les initiales choisies, la réponse tapée, puis la diapo suivante sans Entrée — la ligne reste rangée dans la diapo (le récit la dit),
+   mais elle n'est jamais validée : ni « reponse » ni « parole » au journal, l'élève n'est pas compté (exactement la 6e réponse de 09:42:18). Maintenant, dès qu'on
+   quitte la diapo (▶, ◀, un saut, en gel aussi) et à la clôture, chaque ligne de cette heure qui a un élève et un texte, pas encore validée, l'est comme par
+   Entrée : la réponse et sa parole au journal, une fois. Une ligne sans élève ne se valide jamais seule (règle 04/11 : « Qui a répondu ? »). */
+function dr_repLaisseesValider(tout){ try { if (S.atelier || S.repetition || !S.lancee || S.close || typeof parDiapo === 'undefined') return 0; const E = seance().ecrans; const ici = K(S.di); let n = 0;
+  Object.keys(parDiapo).forEach(k => { if (!tout && k === ici) return; const m = /^([^|]+)\|(.+)$/.exec(k); if (!m || m[1] !== String(S.si)) return; const di = E.findIndex(e => e && String(e.eid) === m[2]); if (di < 0) return; const st = parDiapo[k] || {};
+    Object.keys(st.reps || {}).forEach(bi => (st.reps[bi] || []).forEach((r, ri) => { if (!r || r.validee || !r.eleve || !String(r.r || '').trim()) return; if (r.heure != null && +r.heure !== +S.heure) return;
+      r.validee = true; if (typeof dr_repJournaliser === 'function') dr_repJournaliser(S.si, di, +bi, ri, r); journal('parole', { nom: r.eleve, m: 'reponse', rep: S.si + '|' + di + '|' + bi + '|' + ri }); n++; })); });
+  return n; } catch (x) { return 0; } }
 /* C16 nuit C (MANDAT C ; Paul, 04/11 07:36, 13:07, 13:50) — LA CASE DES INITIALES : la liste numérotée des élèves possibles (9 au plus), le chiffre qui choisit, le saut à
    la réponse quand toutes les initiales d'un seul élève possible sont tapées. Les touches de la case passent avant l'atelier (écoute à la descente) : Entrée et Tab n'y remontent plus. */
 /* C16 nuit B (MANDAT B §1.1) : la même case sert dans la Relecture (« Qui a répondu ») — `src` = { eleves, ini } de la classe relue ; sans `src`, la classe du pilotage, comme en classe */
@@ -21618,7 +22298,7 @@ function brancherAjout(){ /* repris de l'ancien (moteur L648-656, ligne() L1441)
     ini.ondblclick = ev => { ev.preventDefault(); const r = ligne(); if (!r.r) return; r.refo = !r.refo; journal('reponse-reformulee', { eleve: r.eleve, refo: r.refo }); S._garderFocus = { bi, ri, quoi: 'ini' }; dr_tout(); };
     dit.oninput = () => { const r = ligne(); const av = r.r; r.r = dit.textContent; S.blocActif = bi; S._garderFocus = { bi, ri, quoi: 'dit' }; dr_frappeReponse(!av, bi); };   /* C16 (㉟) : avant, chaque touche redessinait tout (dr_tout) */
     dit._drKey = ev => { if (ev.key === 'Tab' && !ev.shiftKey && !dit.textContent.trim()) { ev.preventDefault(); ev.stopPropagation(); return; }   /* nuit C (§1.5) : les initiales ont déjà mené à la réponse — Tab, réponse vide, y reste (avant : le curseur partait ailleurs) */
-      if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); /* nuit C (§1.5) : valider ne renvoie plus le curseur au titre de l'activité */ const r = ligne(); if (!r.r.trim()) return; if (!r.eleve) { S.blocActif = bi; S._garderFocus = { bi, ri, quoi: 'ini' }; ini.focus({ preventScroll: true }); dr_caretFin(ini); dr_caseListe(ini, ini.textContent.trim(), choisir, null, true); return; }   /* C16 nuit C2 (717 ; Paul, 04/11 07:36 : « la participation doit être enregistrée absolument ») : une réponse ne se valide qu'avec son élève — sans lui (case vide, initiales de personne ou de deux élèves), Entrée ne valide pas, la case demande « Qui a répondu ? », le curseur y retourne, la réponse reste telle quelle ; avant : validée « à personne », le récit écrivait « un élève » */ r.validee = true; if (typeof dr_repJournaliser === 'function') dr_repJournaliser(S.si, S.di, bi, ri, r); /* C16 571 : au journal à la validation, gel ou pas, sur la diapo où elle est tapée ; jamais deux fois */ if (r.eleve) journal('parole', { nom: r.eleve, m: 'reponse', rep: S.si + '|' + S.di + '|' + bi + '|' + ri }); S.derniere = { type: 'reponse' }; S.blocActif = bi; S._garderFocus = { bi, ri: ri + 1, quoi: 'ini' }; dr_tout(); } if (ev.key === 'Escape') { ev.stopPropagation(); dit.blur(); } };
+      if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); /* nuit C (§1.5) : valider ne renvoie plus le curseur au titre de l'activité */ const r = ligne(); if (!r.r.trim()) return; if (!r.eleve) { S.blocActif = bi; S._garderFocus = { bi, ri, quoi: 'ini' }; ini.focus({ preventScroll: true }); dr_caretFin(ini); dr_caseListe(ini, ini.textContent.trim(), choisir, null, true); return; }   /* C16 nuit C2 (717 ; Paul, 04/11 07:36 : « la participation doit être enregistrée absolument ») : une réponse ne se valide qu'avec son élève — sans lui (case vide, initiales de personne ou de deux élèves), Entrée ne valide pas, la case demande « Qui a répondu ? », le curseur y retourne, la réponse reste telle quelle ; avant : validée « à personne », le récit écrivait « un élève » */ const dejaValidee = !!r.validee; /* CO (569) : Entrée sur une ligne déjà validée (en partant de la diapo, ou une seconde fois) ne compte pas une seconde participation */ r.validee = true; if (typeof dr_repJournaliser === 'function') dr_repJournaliser(S.si, S.di, bi, ri, r); /* C16 571 : au journal à la validation, gel ou pas, sur la diapo où elle est tapée ; jamais deux fois */ if (r.eleve && !dejaValidee) journal('parole', { nom: r.eleve, m: 'reponse', rep: S.si + '|' + S.di + '|' + bi + '|' + ri }); S.derniere = { type: 'reponse' }; S.blocActif = bi; S._garderFocus = { bi, ri: ri + 1, quoi: 'ini' }; dr_tout(); } if (ev.key === 'Escape') { ev.stopPropagation(); dit.blur(); } };
     dit.onfocus = () => { S.blocActif = bi; }; });
   if (S._garderFocus) { const g = S._garderFocus; const rep = mur.querySelector(`.rep[data-bi="${g.bi}"][data-r="${g.ri}"]`); if (rep) { const c = rep.querySelector(g.quoi === 'ini' ? '.ini' : '.dit'); if (c && document.activeElement !== c) { c.focus({ preventScroll: true }); const sel = window.getSelection(); const rg = document.createRange(); rg.selectNodeContents(c); rg.collapse(false); sel.removeAllRanges(); sel.addRange(rg); } } S._garderFocus = null; } }
 
@@ -22198,7 +22878,7 @@ function ouvrirFin(cloture){ if ((document.getElementById('fin').parentElement =
   const fn = $('f-nouvelles'); if (fn) fn.onclick = () => { S.travail.apprendre = S.travail.apprendre.filter(id => !dejaVue(id)); ouvrirFin(cloture); };
   const fp = $('f-prevu'); if (fp) fp.onchange = () => { S.travail.prevu = fp.checked; edTexte(); };
   const fb = $('f-bilan'); if (fb) fb.onclick = () => { $('ecran-fin').classList.remove('on'); $('droite').classList.remove('fin'); S.enFin = false; const bi = E.indexOf(bilan); S.di = bi; S.page = null; dr_tout(); journal('aller-bilan', { di: bi }); };
-  const fc = $('f-clore'); if (fc) fc.onclick = () => { if (S.preparation) { $('gclore-corps').innerHTML = `<div class="gc-l"><span class="gc-n">❄</span><span>Tu prépares le cahier : la classe est encore sur la diapo ${rangDe(S.preparation.di)} — <b>reviens au cours</b> (« Revenir au cours »), puis clos.</span></div>`; $('garde-clore').classList.add('on'); $('gclore-oui').style.display = 'none'; $('gclore-non').textContent = 'Compris'; $('gclore-non').onclick = () => { $('garde-clore').classList.remove('on'); $('gclore-oui').style.display = ''; $('gclore-non').textContent = 'Y retourner'; }; return; } const manques = manquesAvantDeClore(dr_resteHeure(acts, derniere)); if (manques.length && !S._cloreQuandMeme) { const gt = document.querySelector('#garde-clore h3'); if (gt) gt.textContent = 'Des diapos pas faites n’ont pas de décision'; $('gclore-corps').innerHTML = manques.map(m => `<div class="gc-l"><span class="gc-n">○</span><span><b>${dr_esc(m.lib)}</b> — ${dr_esc(m.risque)}</span></div>`).join(''); $('garde-clore').classList.add('on'); $('gclore-non').textContent = 'Y retourner'; $('gclore-non').title = 'Rouvre la liste de ce qui n’a pas été fait, pour décider ligne par ligne ou d’un coup'; $('gclore-oui').title = 'Clore le créneau sans décider : ' + manques[0].risque; $('gclore-non').onclick = () => { $('garde-clore').classList.remove('on'); dr_cahierGarde(); }; $('gclore-oui').onclick = () => { $('garde-clore').classList.remove('on'); journal('clore-quand-meme', { manques: manques.map(m => m.lib) }); S._cloreQuandMeme = true; fc.click(); S._cloreQuandMeme = false; }; $('gclore-non').focus(); return; } S.motAbsents = ($('f-mot') || {}).value || S.motAbsents || ''; /* E2 : le mot tapé à l'étape 5 est gardé (relecteur neuf n°2) */ S.mots = S.mots || {}; S.mots[S.heure] = S.motAbsents; S.travailHeure = S.travailHeure || {}; S.travailHeure[S.heure] = texteTravailED(); S.echeanceHeure = S.echeanceHeure || {}; S.echeanceHeure[S.heure] = S.echeance; S.apprendreHeure = S.apprendreHeure || {}; S.apprendreHeure[S.heure] = (S.travail && S.travail.apprendre) ? S.travail.apprendre.slice() : []; if (S.travailEdite && S.travailEdite[S.heure] != null) journal('travail-edite-final', { texte: S.travailEdite[S.heure] }); journal('cloture', { bilanAtteste: !!S.bilanCoche }); S.close = true; S.closes = S.closes || {}; S.closes[S.heure] = now(); try { dr_cloreFin(); } catch (e) {} /* E2 : H clos, finReel, cours_actif nul, le journal et l'état (atDrCloreFin) */ S.enFin = false; if (S.gel) degeler(); dr_tout(); /* le tableau passe en attente */ $('ecran-fin').classList.remove('on'); $('droite').classList.remove('fin'); dr_apresCloture(); }; /* §12.66 (3) : la clôture emmène à l'emploi du temps, avec la confirmation et « Relire l'heure » — avant : la Relecture (C1 11.2) */
+  const fc = $('f-clore'); if (fc) fc.onclick = () => { if (S.preparation) { $('gclore-corps').innerHTML = `<div class="gc-l"><span class="gc-n">❄</span><span>Tu prépares le cahier : la classe est encore sur la diapo ${rangDe(S.preparation.di)} — <b>reviens au cours</b> (« Revenir au cours »), puis clos.</span></div>`; $('garde-clore').classList.add('on'); $('gclore-oui').style.display = 'none'; $('gclore-non').textContent = 'Compris'; $('gclore-non').onclick = () => { $('garde-clore').classList.remove('on'); $('gclore-oui').style.display = ''; $('gclore-non').textContent = 'Y retourner'; }; return; } const manques = manquesAvantDeClore(dr_resteHeure(acts, derniere)); if (manques.length && !S._cloreQuandMeme) { const gt = document.querySelector('#garde-clore h3'); if (gt) gt.textContent = 'Des diapos pas faites n’ont pas de décision'; $('gclore-corps').innerHTML = manques.map(m => `<div class="gc-l"><span class="gc-n">○</span><span><b>${dr_esc(m.lib)}</b> — ${dr_esc(m.risque)}</span></div>`).join(''); $('garde-clore').classList.add('on'); $('gclore-non').textContent = 'Y retourner'; $('gclore-non').title = 'Rouvre la liste de ce qui n’a pas été fait, pour décider ligne par ligne ou d’un coup'; $('gclore-oui').title = 'Clore le créneau sans décider : ' + manques[0].risque; $('gclore-non').onclick = () => { $('garde-clore').classList.remove('on'); dr_cahierGarde(); }; $('gclore-oui').onclick = () => { $('garde-clore').classList.remove('on'); journal('clore-quand-meme', { manques: manques.map(m => m.lib) }); S._cloreQuandMeme = true; fc.click(); S._cloreQuandMeme = false; }; $('gclore-non').focus(); return; } S.motAbsents = ($('f-mot') || {}).value || S.motAbsents || ''; /* E2 : le mot tapé à l'étape 5 est gardé (relecteur neuf n°2) */ S.mots = S.mots || {}; S.mots[S.heure] = S.motAbsents; S.travailHeure = S.travailHeure || {}; S.travailHeure[S.heure] = texteTravailED(); S.echeanceHeure = S.echeanceHeure || {}; S.echeanceHeure[S.heure] = S.echeance; S.apprendreHeure = S.apprendreHeure || {}; S.apprendreHeure[S.heure] = (S.travail && S.travail.apprendre) ? S.travail.apprendre.slice() : []; if (S.travailEdite && S.travailEdite[S.heure] != null) journal('travail-edite-final', { texte: S.travailEdite[S.heure] }); if (typeof dr_repLaisseesValider === 'function') dr_repLaisseesValider(true); /* CO (569) : à la clôture, la ligne laissée sur la diapo à l'écran aussi */ journal('cloture', { bilanAtteste: !!S.bilanCoche }); S.close = true; S.closes = S.closes || {}; S.closes[S.heure] = now(); try { dr_cloreFin(); } catch (e) {} /* E2 : H clos, finReel, cours_actif nul, le journal et l'état (atDrCloreFin) */ S.enFin = false; if (S.gel) degeler(); dr_tout(); /* le tableau passe en attente */ $('ecran-fin').classList.remove('on'); $('droite').classList.remove('fin'); dr_apresCloture(); }; /* §12.66 (3) : la clôture emmène à l'emploi du temps, avec la confirmation et « Relire l'heure » — avant : la Relecture (C1 11.2) */
   edTexte(); dr_cahierBrancher(Z, cloture);
 }
 
@@ -22606,7 +23286,7 @@ function dr_paquetHeure(clos){
   let prec = null;
   ev.forEach((x, k) => { const eid = x.eid != null ? x.eid : eidDe(x.di); if (eid == null) return; const l = parEid[eid] || (parEid[eid] = { ms: 0, passages: 0 }); l.ms += Math.max(0, fin(x, k) - x.t); if (eid !== prec) l.passages++; prec = eid; });   /* deux « diapo » de suite sur la même diapo (le début et le lancement) = un passage — relecteur neuf n°1 */
   (S.coupures || []).forEach(c => { if (!c.compte && c.eid != null && parEid[c.eid]) parEid[c.eid].ms = Math.max(0, parEid[c.eid].ms - ((c.fin || t1) - c.debut)); });
-  const activites = Object.keys(parEid).map(eid => { const i = indexDe(eid), e = E[i] || {}; return { n: i, eid, act: e.act || ('écran ' + (i + 1)), prevu: +(e.dur || 0), reel: Math.max(1, Math.round(parEid[eid].ms / 60000)), passages: parEid[eid].passages,   /* un écran vu compte au moins une minute : `reel === 0` veut dire « pas joué » pour la case de l'EDT (« reportée ») */ comp: Array.isArray(e.comp) ? e.comp : [] }; })
+  const activites = Object.keys(parEid).filter(eid => { try { const i0 = indexDe(eid); return !(i0 >= 0 && typeof dr_recitTraversee === 'function' && dr_recitTraversee(h, i0)); } catch (x) { return true; } })   /* CO (point 9) : une diapo traversée (rien dévoilé, rien fait) n'entre pas dans les diapos jouées de l'heure — mesuré : la mise en commun du bilan, reportée, repassée une seconde, comptée jouée */ .map(eid => { const i = indexDe(eid), e = E[i] || {}; return { n: i, eid, act: e.act || ('écran ' + (i + 1)), prevu: +(e.dur || 0), reel: Math.max(1, Math.round(parEid[eid].ms / 60000)), passages: parEid[eid].passages,   /* un écran vu compte au moins une minute : `reel === 0` veut dire « pas joué » pour la case de l'EDT (« reportée ») */ comp: Array.isArray(e.comp) ? e.comp : [] }; })
     .sort((a, b) => a.n - b.n);
   const acts = (typeof actDe === 'function') ? [...new Set(E.map(actDe).filter(Boolean))] : [];
   /* CB (C17, mesuré par la conscience le 13/11 06:46 : la « Fin d'heure » fin-h1-s1 comptée dans « Rappel sur la versification ») : une diapo posée par le site
@@ -22855,6 +23535,7 @@ function dr_cloreFin(){
   const C = dr_cheminC(), ch = dr_cheminH(); S.finReel = Date.now(); S.closPar = null;
   const p = dr_paquetHeure(true), jr = dr_journalHub(), et = dr_etatHeure();
   const hClose = S.heure; const cleH = ch ? String(ch).split('/').pop() : null;
+  try { if (typeof cqClosGarder === 'function') cqClosGarder(ch, C, p, jr, et, dr_coursActif()); } catch (e) {}   /* CQ (17/11, la 4 HUGO) : la clôture gardée sur cet ordinateur tant que le hub ne l'a pas prise ; elle repart d'elle-même (index.html) */
   if (ch && p) dr_paquetPatch(ch, p, 'Heure close — ' + p.creneau + ' (' + p.classe + ')');   /* C16 (㊱) : en PATCH, `H/absents` n'est pas touché */
   if (C && p) try { dr_reactApresCloture(C, hClose + 1, { cle: cleH, paquet: p }); } catch (e) {}   /* §12.26-1 : la diapo de l'heure h+1, construite depuis le paquet qui vient d'être clos — le paquet local prime sur le hub chez E4 (poussée 102 : aussi en mode test, où le hub ne le portera jamais) —, écrite dans la copie */
   if (C) { dr_ecrire(C + '/journal', jr, 'Le journal de l’heure, à la clôture', () => {}); dr_ecrire(C + '/etat', et, 'L’état de l’heure, à la clôture', () => {}); }
@@ -25117,7 +25798,7 @@ function videoHtml(b, et){ const pos = et.videoPos || 0; const pct = Math.min(10
 function loupeSur(mur, et){ const z = mur.querySelector('.corpsd, .doc, .video'); if (!z) return; z.style.transform = ''; z.style.transformOrigin = '';
   if (!et.loupe) return; const L = et.loupe; const f = Math.min(1 / L.w, 1 / L.h); /* la zone cadrée remplit le tableau, sans déformer */ z.style.transformOrigin = '0 0'; z.style.transform = `scale(${f}) translate(${-L.x0 * 100}%, ${-L.y0 * 100}%)`; }
 /* ── maquette p8-5g, lignes 1435-1448 ── */
-function ouvrirDocs(){ const f = $('fdocs'); f.classList.add('on'); f.style.left = '380px'; f.style.top = '120px'; const l = dr_recitDocuments(); if (l.length && l[0].reference) { dr_docsPanneau(l); return; } /* (E4) les items de Structure ; ci-dessous, la simulation de la maquette */
+function ouvrirDocs(){ const f = $('fdocs'); f.classList.add('on'); f.style.left = '380px'; f.style.top = '120px'; const l = dr_recitDocuments(); if (!l.length || l[0].reference) { dr_docsPanneau(l); return; }   /* CO (point 8) : la fenêtre s'ouvre aussi sur une séance sans document — les fiches du chapitre y sont */ /* (E4) les items de Structure ; ci-dessous, la simulation de la maquette */
   $('fdocs-l').innerHTML = l.map(d => `<div class="dr-c" style="padding:6px 0;border-top:1px solid var(--bord)"><b>${dr_esc(d.titre)}</b> <span style="color:var(--sourd)">${d.type === 'pdf' ? d.pages + ' pages' : d.etapes + ' étapes'}</span><div><button class="btn" data-doc="${d.id}" style="margin-top:4px;padding:2px 8px">${S.doc && S.doc.id === d.id ? '✕ Fermer (retour à la diapo)' : 'Projeter au tableau'}</button></div></div>`).join('');
   $('fdocs-l').querySelectorAll('[data-doc]').forEach(b => b.onclick = () => { if (S.doc && S.doc.id === b.dataset.doc) S.doc = null; else S.doc = { id: b.dataset.doc, pos: 1 }; dr_tout(); ouvrirDocs(); }); }
 document.addEventListener('DOMContentLoaded', () => { $('fdocs-x').onclick = () => $('fdocs').classList.remove('on'); }); /* (E4) branché quand le socle est là : le module se charge avant ou après le socle */
@@ -25241,6 +25922,8 @@ function dr_recitNumAct(di){ /* une diapo sans activité compte comme une : son 
 function dr_typo(html){ /* (E4 · B2) l'espace insécable avant « ? ! : ; » » et après « « » — le papier ne coupe plus « l'homme ? » / « ». » */ return String(html).replace(/>([^<]*)</g, (m, t) => '>' + t.replace(/[ \u00a0]+([?!:;»])/g, '\u00a0$1').replace(/«[ \u00a0]+/g, '«\u00a0') + '<'); }
 function nettoyer(t){ return String(t).replace(/\.{3}/g, '…') /* C17 BZ : les points de suspension de Paul gardés (« Moyen Âge...) » devenait « Moyen Âge.) ») */.replace(/\.\s*»\s*\./g, ' »').replace(/([.!?])\s*\./g, '$1').replace(/\s+([,.])/g, '$1').replace(/\s{2,}/g, ' ').replace(/([»)])\.\s*\./g, '$1.').replace(/\.\s*\./g, '.'); }
 
+/* CO (point 9, Paul 17/11 10:29) : UNE DIAPO TRAVERSÉE — montrée dans l'heure h, mais rien n'y a été dévoilé (ni dans l'heure, ni déjà vu avant), personne n'y a répondu ni pris la parole, rien n'y a été écrit, mis en lumière ou projeté. Elle a des éléments à dévoiler : une diapo sans élément (une image seule, une vidéo) montrée est jouée. Le récit, la Relecture et le paquet de l'heure (les « diapos jouées ») ne la comptent pas comme faite. */
+function dr_recitTraversee(h, di, el){ try { const els = el || elements(seance().ecrans[di]); if (!els.length) return false; const JH0 = J.filter(x => dr_dansLH(x, h)); if (JH0.some(x => x.di === di && /^(devoile|reponse|ecrire|lumiere|fiche-ouverte|document|document-page|video-lecture)$/.test(x.type))) return false; if (JH0.some(x => x.type === 'diapo' && x.di === di && (x.deja || 0) > 0)) return false; const eid = (seance().ecrans[di] || {}).eid; if (JH0.some(x => x.type === 'parole' && ((x.mur && (x.mur.eid === eid || (x.mur.eid == null && x.mur.di === di))) || (x.rep && String(x.rep).split('|')[1] === String(di))))) return false; if (Object.values((parDiapo[K(di)] || {}).reps || {}).some(l => (l || []).some(r => r && r.heure === h && String(r.r || '').trim()))) return false; return true; } catch (x) { return false; } }
 function vuJ(h, di){ let n = 0, m = 0; J.filter(x => dr_dansLH(x, h) && x.di === di && (x.type === 'devoile' || x.type === 'retire')).forEach(x => { n += x.type === 'devoile' ? 1 : -1; if (n > m) m = n; }); return { fin: n, max: m }; }
 /* C16 571 (MANDAT-RECIT-GEL §2.3) — LES RÉPONSES RANGÉES DANS LES DIAPOS AVEC LEUR HEURE ET ABSENTES DU JOURNAL (tapées pendant un gel, 8.83.0-8.84.0 :
    l'heure des Franklin du 04/11 en a 24 dans ses diapos, 2 au journal). Le récit, « Ce qui s'est passé », le Papier et la participation les lisent à leur heure
@@ -25287,7 +25970,7 @@ function dr_recitFinieA(h, e, i){ try { if (!e) return false; if (S.faiteOral &&
   if (n) { let m = 0; J.forEach(x => { if (!avant(x)) return; if (x.type === 'devoile' && x.k != null) m = Math.max(m, +x.k + 1); else if (x.type === 'diapo') m = Math.max(m, +x.deja || 0); }); return m >= n; }
   if (e.blocs && e.blocs[0] && e.blocs[0].t === 'video') return finie(e, i); return J.some(x => avant(x) && x.type === 'diapo'); } catch (er) { return finie(e, i); } }
 function troisTemps(html, h, fin, depuis){ /* (d) 2 · 1.2 ter et quater — les activités vues, rangées par le temps où elles ont commencé (l'heure réelle), les repères, « on a continué », le verdict ; les paragraphes du moteur s'y rattachent */
-  const d = document.createElement('div'); d.innerHTML = html; const rec = d.querySelector('.recit') || d; const ps = Array.from(rec.querySelectorAll('p[data-cle]')); const E = seance().ecrans; const JH = dr_recitSansRepetes(J.filter(x => dr_dansLH(x, h) && x.type === 'diapo')).filter(x => /* (E4 · relecteur continu B2) une diapo reloguée au rechargement (même diapo, rien entre) n'est pas une arrivée : plus de « on a continué X avec X », ni de « Ensuite, on a fait X » à chaque rechargement */ E[x.di] && E[x.di].role !== 'fin' && /* (E4 · relecteur 1) lisait !role : une diapo de réactivation, montrée et répondue, disparaissait du récit ; seule la diapo de fin d'heure ne se raconte pas (cadrage 2 · 1.10) */ (!depuis || x.t > depuis)).sort((x, y) => x.t - y.t); /* (E4) strict : ce qui a été vu à l'instant où Paul prend la plume est dans sa version, pas dans la suite */ if (!JH.length) return depuis ? '' : html;
+  const d = document.createElement('div'); d.innerHTML = html; const rec = d.querySelector('.recit') || d; const ps = Array.from(rec.querySelectorAll('p[data-cle]')); const E = seance().ecrans; const JH = dr_recitSansRepetes(J.filter(x => dr_dansLH(x, h) && x.type === 'diapo')).filter(x => /* (E4 · relecteur continu B2) une diapo reloguée au rechargement (même diapo, rien entre) n'est pas une arrivée : plus de « on a continué X avec X », ni de « Ensuite, on a fait X » à chaque rechargement */ E[x.di] && E[x.di].role !== 'fin' && !(typeof dr_recitTraversee === 'function' && dr_recitTraversee(h, x.di) && !ps.some(p0 => p0.dataset.cle === (E[x.di].actId || ('r-' + E[x.di].eid)))) && /* CO (point 9) : une diapo traversée qui n'a rien à raconter (aucun paragraphe) n'est pas une activité « faite » de l'heure — avant : « Enfin, à la fin de l'heure, on a fait Mise en commun du bilan. » pour un passage d'une seconde, rien dévoilé */ /* (E4 · relecteur 1) lisait !role : une diapo de réactivation, montrée et répondue, disparaissait du récit ; seule la diapo de fin d'heure ne se raconte pas (cadrage 2 · 1.10) */ (!depuis || x.t > depuis)).sort((x, y) => x.t - y.t); /* (E4) strict : ce qui a été vu à l'instant où Paul prend la plume est dans sa version, pas dans la suite */ if (!JH.length) return depuis ? '' : html;
   const finH = (S.closes && S.closes[h]) || fin; const cleDe = e => e.actId || ('r-' + e.eid); const acts = []; (S.oraux && S.oraux[h] || []).filter(o => !depuis || o.t0 > depuis).forEach(o => { const ad = o.act ? (dr_recitActivites() || []).find(z => z.id === o.act) : null; acts.push({ cle: o.act ? o.act : 'reprise-' + o.t0, titre: ad ? 'l\'activité ' + ad.num + ' — ' + ad.titre + ' (à l\'oral)' : 'une reprise à l\'oral', t0: o.t0, t1: o.t1, vues: [], oral: true }); }); JH.forEach((x, k) => { const e = E[x.di]; const cle = cleDe(e); let a = acts.find(z => z.cle === cle); if (a && a.oral) return; if (!a) { const ad = dr_recitAct(e, x.di, h); a = { cle, titre: ad ? 'l\'activité ' + ad.num + ' — ' + ad.titre : e.act, t0: x.t, t1: x.t, vues: [] }; acts.push(a); } a.vues.push({ t: x.t, act: e.act }); const suivant = JH.slice(k + 1).find(y => cleDe(E[y.di]) !== cle); a.t1 = Math.max(a.t1, suivant ? suivant.t : finH); });
   acts.sort((x, y) => x.t0 - y.t0); /* les oraux prennent leur place dans le temps */ const sansH = dr_recitRattrapee(h); const REP = sansH ? { debut: 'On a commencé par', entre1: 'Ensuite, on a fait', milieu: 'Puis, on a fait', entre2: 'Après cela, on a fait', fin: 'Enfin, on a fait' } : { debut: 'Au début de l\'heure, on a commencé par', entre1: 'Ensuite, on a fait', milieu: 'Puis, au milieu de l\'heure, on a fait', entre2: 'Après cela, on a fait', fin: 'Enfin, à la fin de l\'heure, on a fait' }; const CONT = sansH ? { milieu: 'Puis, on a continué', fin: 'Enfin, on a continué' } : { milieu: 'Puis, au milieu de l\'heure, on a continué', fin: 'Enfin, à la fin de l\'heure, on a continué' };   /* C16 534 : une heure rattrapée n'a pas d'horaire — ses têtes ne disent aucun repère de temps ; les trois repères viennent du plan, une fois chacun (recitHtml0, DR_RECIT_PARTS) */
   const out = []; const tetes = []; /* 13 · 42 : les phrases de tête, posées après, par leur place */ const TR = dr_recitTranches(h); const bornesDe = t => { const b = TR.find(x => x[0] === t); return [dr_recitHeure(h).base + b[1] * 60000, dr_recitHeure(h).base + b[2] * 60000]; };   /* C16 534 : les bornes des tranches de cette heure (la fin = ses dix dernières minutes) */
@@ -25350,7 +26033,7 @@ function recitHtml0(fin, h, bornes){ h = h || S.heure; const finHeure = (S.close
         if (b.t === 'consigne') { const brut = (b.txt || '') + ' ' + elsB.map(o => o.x.txt).join(' '); if (/pour (la prochaine|demain|lundi|mardi|mercredi|jeudi|vendredi|le \d)/i.test(brut) || /à (faire|rendre|apprendre|réviser) pour/i.test(brut) || /devoirs?\b/i.test(brut)) return; const tC = String(b.txt || '').trim().replace(/\.$/, ''); const lC = elsB.map(o => String(o.x.txt || '').trim().replace(/\.$/, '')).filter(Boolean); const tCvu = tC && (!e.construite || lC.length) && (lC.length || !dj0); if (!tCvu && !lC.length) return;
           phrases.push('on a lu la consigne : « ' + (tCvu ? [tC] : []).concat(lC).map(dr_esc).join(' » ; « ') + ' »'); }   /* C17 BZ (Paul 12/11 18:01) : la consigne mot pour mot (son titre, puis ses lignes dévoilées), le verbe d'introduction gardé ; elle se racontait reformulée (« on a rédigé… », recit/recitEtape) */
         if (b.t === 'fiche') { if (!b.rappel) nbFiches++; /* une fiche reprise compte une fois : « repris une fiche déjà vue » (relecteur neuf du site) */ /* (E4 · R2, R15) lisait seulement « on a travaillé la fiche X : <première ligne> » — l'ancien moteur (L1289-1312) disait le rappel et les citations */ const rap = dr_recitRappel(b); const cit = dr_recitCitations(h, di, bi, e); let s2 = rap != null ? 'on a repris la fiche <b>' + dr_esc(b.txt || b.titre || '') + '</b>' + (rap ? ' — ' + dr_esc(rap) : '') : 'on a travaillé la fiche <b>' + dr_esc(b.txt || b.titre || '') + '</b>'; if (rap != null) nbRappels++; const sur = cit.sur.filter(c => !dejaCite[c] && (dejaCite[c] = 1)), cop = cit.cop.filter(c => !dejaCite[c] && (dejaCite[c] = 1)); if (sur.length) s2 += ', où on a surligné ' + sur.slice(0, 3).map(c => '« ' + dr_esc(c) + ' »').join(' ; '); if (cop.length) s2 += '. On a recopié dans le cahier : ' + cop.slice(0, 3).map(c => '« ' + dr_esc(c) + ' »').join(' ; '); if (!sur.length && !cop.length && rap == null && b.el && b.el[0]) s2 += ' : ' + dr_esc(personne(typeof b.el[0] === 'string' ? b.el[0] : (b.el[0].txt || ''))); phrases.push(s2); }
-        if (b.t === 'question') { const r = repsJ(h, di, bi).filter(y => y.r); if (!r.length && !S.parts.some(pp => pp.eid === e.eid && pp.heure === h && pp.m !== 'reponse')) { /* (d, Paul 23/09 — 2 · 1.10) une question posée sans réponse d'élève se raconte quand même : la question, et la réponse attendue vue en classe si elle l'a été */ if (vu > 0 || vus[di]) { const q0 = String(b.txt || '').replace(/^Question \d+\s*[—-]\s*/, '').replace(/\s*La réponse validée est recopiée[^.]*\.?/, '').trim(); const att = elsB.filter(o => !o.x.q).map(o => dr_esc(String(o.x.txt).replace(/\.$/, ''))); /* (p8-3c) la question est un élément : ses lignes vues seulement */ /* C16 854 (mandat AE) : une question posée sans réponse écrite ne compte plus dans « répondu à N questions » */ phrases.push('on a posé la question : « ' + dr_esc(q0.replace(/\.$/, '')) + ' »' + (att.length ? ' ; la réponse attendue vue en classe était : « ' + att.join(' » ; « ') + ' »' : '') + ((e.role === 'bilan' || (!e.role && /bilan/i.test(String(e.act || '')))) ? ', sans réponse écrite' : '')); } return; }   /* §12.23 (Paul, 17:33) : la question du bilan n'a pas de réponse attendue ; sans réponse écrite en classe, le récit le dit — rien ne bloque */ if (r.length) nbQuestions++; r.forEach(y => { if (y.eleve) eleves[y.eleve] = 1; });
+        if (b.t === 'question') { const r = repsJ(h, di, bi).filter(y => y.r); if (!r.length && !S.parts.some(pp => pp.eid === e.eid && pp.heure === h && pp.m !== 'reponse')) { /* (d, Paul 23/09 — 2 · 1.10) une question posée sans réponse d'élève se raconte quand même : la question, et la réponse attendue vue en classe si elle l'a été */ const qVue = els.some((x, idx) => x.b === bi && x.q && idx < Math.max(vu, dj0)); /* CO (point 9, Paul 17/11 10:29 : « il me met qu'on a fait le bilan alors que c'est faux ») : une question se raconte quand elle a été dévoilée à la classe (dans cette heure, ou déjà vue avant) ; une diapo traversée sans rien y dévoiler n'a pas posé sa question — avant : `vu > 0 || vus[di]`, la diapo seulement montrée (une seconde, au retour depuis la fin d'heure) */ if (qVue) { const q0 = String(b.txt || '').replace(/^Question \d+\s*[—-]\s*/, '').replace(/\s*La réponse validée est recopiée[^.]*\.?/, '').trim(); const att = elsB.filter(o => !o.x.q).map(o => dr_esc(String(o.x.txt).replace(/\.$/, ''))); /* (p8-3c) la question est un élément : ses lignes vues seulement */ /* C16 854 (mandat AE) : une question posée sans réponse écrite ne compte plus dans « répondu à N questions » */ phrases.push('on a posé la question : « ' + dr_esc(q0.replace(/\.$/, '')) + ' »' + (att.length ? ' ; la réponse attendue vue en classe était : « ' + att.join(' » ; « ') + ' »' : '') + ((e.role === 'bilan' || (!e.role && /bilan/i.test(String(e.act || '')))) ? ', sans réponse écrite' : '')); } return; }   /* §12.23 (Paul, 17:33) : la question du bilan n'a pas de réponse attendue ; sans réponse écrite en classe, le récit le dit — rien ne bloque */ if (r.length) nbQuestions++; r.forEach(y => { if (y.eleve) eleves[y.eleve] = 1; });
           const autres = [...new Set(S.parts.filter(pp => pp.eid === e.eid && pp.heure === h && pp.m !== 'reponse').map(pp => pp.nom))]; autres.forEach(n => eleves[n] = 1);
           const q = String(b.txt || '').replace(/^Question \d+\s*[—-]\s*/, '');
           const att2 = elsB.filter(o => !o.x.q).map(o => dr_esc(String(o.x.txt).replace(/\.$/, ''))).filter(Boolean);   /* C17 BZ : la réponse attendue dévoilée au tableau se dit aussi quand des élèves ont répondu */
@@ -25358,7 +26041,7 @@ function recitHtml0(fin, h, bornes){ h = h || S.heure; const finHeure = (S.close
       if (titreD) { if (phrases.length > nAvantD) { const x0 = phrases[nAvantD]; phrases[nAvantD] = 'pour « ' + dr_esc(titreD) + ' », ' + x0.charAt(0).toLowerCase() + x0.slice(1); } else phrases.push('on a abordé « ' + dr_esc(titreD) + ' »'); }   /* C17 BZ : le titre de la diapo accolé à sa première phrase — pas de phrase de plus, les liaisons d'avant restent (« De plus », « Ensuite », « Pour finir ») */
       const lum = [...new Set(lumJ)].map(kk => els[kk]).filter(Boolean).map(x => x.txt); if (lum.length) phrases.push('on a mis en lumière « ' + lum.map(esc).join(' », « ') + ' »');
       if (!e.blocs.some(b => b.t === 'question')) { const pa = [...new Set(S.parts.filter(pp => pp.eid === e.eid && pp.heure === h && pp.m !== 'reponse').map(pp => pp.nom))]; pa.forEach(n => eleves[n] = 1); if (pa.length) phrases.push(pa.map(n => '<b>' + dr_esc(prenomUnique(n)) + '</b>').join(', ').replace(/, ([^,]+)$/, ' et $1') + (pa.length > 1 ? ' ont pris la parole' : ' a pris la parole')); } /* (E4 · relecteur neuf du site, cadrage 2 · 1.5) les prises de parole hors d'une question se racontent aussi */
-      JH.filter(x => x.type === 'document' && x.mur && x.mur.di === di).forEach(x => { const d = dr_recitDocuments().find(y => y.id === x.id); const pages = JH.filter(y => (y.type === 'document' || y.type === 'document-page') && y.id === x.id).map(y => y.pos); nbImages++; if (d) phrases.push('on a regardé <b>' /* (E4 · relecteur 2, cadrage 2 · 1.10) lisait « on a projeté » : un outil */ + dr_esc(d.titre) + '</b>' + (pages.length > 1 ? ' (' + (d.type === 'pdf' ? 'pages' : 'étapes') + ' ' + Math.min(...pages) + ' à ' + Math.max(...pages) + ')' : '')); }); });
+      JH.filter(x => x.type === 'document' && x.mur && x.mur.di === di).forEach(x => { const d = dr_recitDocuments().find(y => y.id === x.id) || (x.titre ? { titre: x.titre, type: 'feuille' } : null);   /* CO (point 8) : une fiche du chapitre projetée */ const pages = JH.filter(y => (y.type === 'document' || y.type === 'document-page') && y.id === x.id).map(y => y.pos); nbImages++; if (d) phrases.push('on a regardé <b>' /* (E4 · relecteur 2, cadrage 2 · 1.10) lisait « on a projeté » : un outil */ + dr_esc(d.titre) + '</b>' + (pages.length > 1 ? ' (' + (d.type === 'pdf' ? 'pages' : 'étapes') + ' ' + Math.min(...pages) + ' à ' + Math.max(...pages) + ')' : '')); }); });
     const notes = S.notesFil.filter(n => n.versee && g.dis.some(di => n.eid === seance().ecrans[di].eid) && n.heure === h);
     /* les images qui se suivent font une seule phrase */ for (let i = 0; i < phrases.length; i++) { if (/^on a observé <b>/.test(phrases[i])) { const l = [phrases[i].replace(/^on a observé /, '')]; while (i + 1 < phrases.length && /^on a observé <b>/.test(phrases[i + 1])) { l.push(phrases[i + 1].replace(/^on a observé /, '')); phrases.splice(i + 1, 1); } if (l.length > 1) phrases[i] = 'on a observé ' + (l.length > 2 ? l.slice(0, -1).join(', ') + ' et ' + l[l.length - 1] : l.join(' et ')); } }
     if (!phrases.length && !notes.length) return;
@@ -25426,8 +26109,8 @@ function passeHtml(fin, h){ h = h || S.heure; const JH = dr_JH(h); /* C16 571 : 
     const nat = dr_recitNature(e, h); const verbe = nat === 'début' ? 'La classe est sur' : nat === 'suivante' ? 'La classe passe à' : nat === 'retour' ? 'Retour de la ' + dr_recitLibDiapo(e.de.di, h) + ' à' : 'Saut de la ' + dr_recitLibDiapo(e.de.di, h) + ' à' /* (E4 · relecteur 20:50) lisait l'index de la trame (« de la diapo 9 à la diapo 2 ») : le rang dans l'heure des deux côtés */;
     fil += `<div class="pasfil ${e.nature}"><span class="dr-h">${fmt(e.t)}</span>${verbe} <b>la ${dr_recitLibDiapo(e.di, h)} — ${dr_esc(seance().ecrans[e.di].act)}</b><span class="dr-d">${duree(fin2 - e.t)}</span>${lignes.join('')}</div>`; });
   let bilan = '<table><tr><th>Diapo</th><th>Heure</th><th>Au tableau</th><th>Prévu</th><th>Dévoilé</th><th>Ce qui s\'est passé</th></tr>'; const temps = {}; diapos.forEach((e, i) => { temps[e.di] = (temps[e.di] || 0) + ((diapos[i + 1] ? diapos[i + 1].t : fin) - e.t); });
-  [...ordreHeure(h), ...[...new Set(diapos.map(x => x.di))].filter(di => !ordreHeure(h).includes(di))].forEach(di => { /* (E4 · B4) + les diapos jouées hors de l'heure (⊞), après celles de l'heure */ const e = seance().ecrans[di]; const k = K(di); const el = elements(e); const vu = vuJ(h, di).max; const t = temps[di] || 0; const jouee = t > 0; const d0 = decisionDe(e); const d = d0 && (d0.heure == null || +d0.heure === +h) && !(el.length ? vu >= el.length : jouee) ? d0 : null;   /* ㊳ (C16) : la décision ne se dit que sur la diapo qui la porte — décidée à cette heure, pas finie à cette heure ; jamais sur une diapo jouée */ const recit = d ? libDecision(d) + (d.motif ? ' (' + d.motif + ')' : '') + (d.moment === 'classe' ? ' — retirée en classe à ' + d.h : '') : !jouee ? 'pas jouée' : el.length ? (vu >= el.length ? 'tout a été vu' : vu ? `on s'est arrêté après « ${dr_esc(el[vu - 1].txt).slice(0, 70)}… »` : 'affichée, rien dévoilé') : 'affichée';
-    bilan += `<tr class="${jouee ? '' : 'non'}"><td><b>${rangDe(di, h) || '—'}</b> ${dr_esc(e.act)}${e.role ? ' <i>(' + e.role + ')</i>' : ''}</td><td>H${e.heure}</td><td>${jouee ? duree(t) : '—'}</td><td>${e.dur} min</td><td>${el.length ? vu + ' / ' + el.length : '—'}</td><td>${recit}</td></tr>`; }); bilan += '</table>';
+  [...ordreHeure(h), ...[...new Set(diapos.map(x => x.di))].filter(di => !ordreHeure(h).includes(di))].forEach(di => { /* (E4 · B4) + les diapos jouées hors de l'heure (⊞), après celles de l'heure */ const e = seance().ecrans[di]; const k = K(di); const el = elements(e); const vu = vuJ(h, di).max; const t = temps[di] || 0; const jouee = t > 0 && !dr_recitTraversee(h, di, el); const d0 = decisionDe(e);   /* CO (point 9) : une diapo traversée (montrée, rien dévoilé, rien fait) n'est pas jouée — sa ligne est grisée, son temps au tableau reste dit */ const d = d0 && (d0.heure == null || +d0.heure === +h) && !(el.length ? vu >= el.length : jouee) ? d0 : null;   /* ㊳ (C16) : la décision ne se dit que sur la diapo qui la porte — décidée à cette heure, pas finie à cette heure ; jamais sur une diapo jouée */ const recit = d ? libDecision(d) + (d.motif ? ' (' + d.motif + ')' : '') + (d.moment === 'classe' ? ' — retirée en classe à ' + d.h : '') : !jouee ? 'pas jouée' : el.length ? (vu >= el.length ? 'tout a été vu' : vu ? `on s'est arrêté après « ${dr_esc(el[vu - 1].txt).slice(0, 70)}… »` : 'affichée, rien dévoilé') : 'affichée';
+    bilan += `<tr class="${jouee ? '' : 'non'}"><td><b>${rangDe(di, h) || '—'}</b> ${dr_esc(e.act)}${e.role ? ' <i>(' + e.role + ')</i>' : ''}</td><td>H${e.heure}</td><td>${t > 0 ? duree(t) : '—'}</td><td>${e.dur} min</td><td>${el.length ? vu + ' / ' + el.length : '—'}</td><td>${recit}</td></tr>`; }); bilan += '</table>';
   const parE = {}; S.parts.filter(p => p.heure === h).forEach(p => { (parE[p.nom] = parE[p.nom] || []).push(p); }); dr_JH(h).filter(x => x.type === 'reponse' && x.eleve && !x.supprimee && !S.parts.some(pp => pp.heure === h && pp.nom === x.eleve && pp.m === 'reponse' && pp.eid === x.eid)).forEach(x => { (parE[x.eleve] = parE[x.eleve] || []).push({ di: x.di != null ? x.di + 1 : '?', eid: x.eid, m: 'reponse' }); }); /* (E4 · relecteur neuf du site, cadrage 2 · 2.3) les réponses écrites comptent dans la participation */
   const partH = Object.keys(parE).length ? Object.keys(parE).sort().map(n => `<span class="puce">${dr_esc(prenomUnique(n))} <b style="color:var(--or)">${parE[n].length}</b> <small style="color:var(--sourd)">${parE[n].map(p => dr_recitDiapoDe(p, h) + ' · ' + ((typeof MOTIFS !== 'undefined' && MOTIFS[p.m]) || (p.m === 'reponse' ? 'réponse écrite' : p.m))).join(', ')}</small></span>`).join('') : '<span class="vide">personne encore</span>';
   const notesH = S.notesFil.some(n => n.heure === h) ? S.notesFil.map((n, i) => n.heure !== h ? '' : `<div><b style="color:var(--or)">${n.h}</b> · ${dr_recitDiapoDe(n, h)} — ${dr_esc(n.t)} <button class="btn" data-vv="${i}" title="${n.versee ? 'Retire cette note du récit : elle reste ici, pour toi' : 'Verse cette note dans le récit, à sa place dans l\u2019heure : elle part avec le récit (École Directe, le papier)'}" style="padding:1px 7px;font-size:.8rem">${n.versee ? 'Retirer du récit' : 'Verser au récit'}</button></div>`).join('') : '<span class="vide">aucune</span>';
@@ -25469,6 +26152,7 @@ function dr_recitPoserEcrans(l){ DR_RECIT_ECRANS = null; if (!Array.isArray(l)) 
 /* C17 BZ : les lignes d'une diapo d'ouverture telles que le tableau les montre — son rendu même (dr_ouvHtml, pilote: false), les lignes non dévoilées retirées ; lu, rien n'est écrit */
 function dr_recitOuvLignes(e, b, di, nDev){ try { if (typeof dr_ouvHtml !== 'function') return []; const st = (typeof parDiapo !== 'undefined' && parDiapo[K(di)]) || {}; const d = document.createElement('div'); d.innerHTML = dr_ouvHtml(e, b, { si: S.si, di, nDev: Math.max(0, nDev || 0), pilote: false, textes: st.textes || {}, ecr: [], lum: [] });
   d.querySelectorAll('.pas,img,button,style,script,svg,.dr-fil,.fil').forEach(x => x.remove()); d.querySelectorAll('div,p,h1,h2,h3,h4,h5,li,tr,br,section').forEach(x => { x.before('\n'); x.after('\n'); });
+  d.querySelectorAll('[class*="ouv-"], .ouv-cases > *, .ouv-leg > *').forEach(x => { if (!/^(DIV|P|H\d|LI|UL|TR|SECTION)$/.test(x.tagName)) { x.before(' '); x.after(' '); } });   /* CO (568, Paul 17/11 : « CompétenceS1S2… », « majeuremineure », « 1Le journal…terreurRetracer ») : les cases d'une ligne (le numéro, le titre, l'objectif, S1…S8, majeure / mineure) sont des éléments en ligne, collés au rendu — un espace entre elles, comme au tableau ; le texte que Paul écrit dans une ligne n'est pas touché */
   const vu = {}; return d.textContent.split('\n').map(x => x.replace(/\s+/g, ' ').trim().replace(/\.$/, '')).filter(x => x.length > 1 && !vu[x] && (vu[x] = 1)); } catch (er) { return []; } }
 function dr_recitEcranVu(h, e){ if (!e) return e; if (DR_RECIT_ECRANS && DR_RECIT_ECRANS[e.eid]) e = DR_RECIT_ECRANS[e.eid]; const c = ((S.copie || {})[h] || {})[e.eid]; if (!c) return e; return Object.assign({}, e, { blocs: (e.blocs || []).map(b => { const cb = c[b.bid || b.id]; if (!cb) return b; const b2 = dr_recitBloc(b); if (cb.t != null) b2.txt = cb.t; if (cb.el) { b2.el = (b2.el || []).slice(); Object.keys(cb.el).forEach(ei => { b2.el[+ei] = cb.el[ei]; }); } Object.keys(cb.f || {}).forEach(k => { b2[k] = cb.f[k]; }); /* E4 (§12.59 (1)) */ return b2; }) }, c.__act != null ? { act: c.__act } : {}); }
 
@@ -25574,7 +26258,8 @@ function dr_docEtat(id){ const d = dr_recitDocuments().find(x => x.id === id); i
    des feuilles déjà chargée (`LINK_ATELIER_DOCS`) ou la lit (`dr_lire`) ; la fenêtre locale la reçoit du pilote avec l'état ; le tableau distant
    la LIT au hub (`/site/atelier/documents/<ref>`), jamais il n'écrit. Le rendu est gardé par référence : un redessin compare, ne recharge pas. */
 var DR_FEUILLES = { doc: {}, html: {}, enCours: {}, ec: {} };
-function dr_feuilleHtml(ref, ctxVue){ const k = ref + '|' + JSON.stringify(ctxVue || null); if (DR_FEUILLES.html[k] != null) return DR_FEUILLES.html[k]; const d = DR_FEUILLES.doc[ref]; if (!d || typeof atelierPageHTML !== 'function') return null;
+function dr_feuilleHtml(ref, ctxVue, uid){ const k = ref + '|' + JSON.stringify(ctxVue || null) + (uid ? '|' + uid : ''); if (DR_FEUILLES.html[k] != null) return DR_FEUILLES.html[k]; let d = DR_FEUILLES.doc[ref]; if (!d || typeof atelierPageHTML !== 'function') return null;
+  if (uid && d.fiches && d.fiches[uid]) d = Object.assign({}, d, { titre: String((d.fiches[uid] || {}).titre || d.titre || ''), contenu: (d.contenu || []).filter(c => c && c.fiche === uid) });   /* CO (point 8) : une fiche d'une feuille à plusieurs fiches se projette seule (ses cases), sous son titre */
   let h = null; try { h = atelierPageHTML(d, null, { ctxVue: ctxVue ? Object.assign({ classeNom: '' }, ctxVue) : null }); } catch (e) { h = null; } if (h != null) DR_FEUILLES.html[k] = h; return h; }
 /* AW (C17, règle permanente de Paul : une page ne dépend jamais d'un rechargement) — chaque feuille montrée (fiche pointée, feuille projetée) est ABONNÉE à
    sa source au hub (`dr_sesEcouter` : le flux, la lecture à intervalle en repli, qui resynchronise après une coupure) ; un changement dans Structure redessine
@@ -25589,7 +26274,7 @@ function dr_feuillePoser(ref, d){ if (!ref || !d || typeof d !== 'object') retur
    courante du pilote ou de l'atelier, ce que montre le tableau, la feuille projetée — sont SUIVIES, et toutes par UN SEUL flux (le gardien des flux,
    dr-session.js) : une feuille affichée, son flux ; plusieurs à la fois (rare), la première par le flux, les autres par la lecture espacée (3 s). Mesuré
    avant (sonde BB) : un flux par feuille demandée, jamais refermé ; avec l'heure lancée, six flux, et les écritures de Paul bloquées. */
-function dr_feuilleRecue(ref, v){ DR_FEUILLES.enCours[ref] = false; if (v && typeof v === 'object' && dr_feuillePoser(ref, v)) { try { if (typeof LINK_ATELIER_DOCS !== 'undefined' && LINK_ATELIER_DOCS && LINK_ATELIER_DOCS[ref]) LINK_ATELIER_DOCS[ref] = v; } catch (e) {} dr_feuilleRedessiner(); } }
+function dr_feuilleRecue(ref, v){ DR_FEUILLES.enCours[ref] = false; if (v && typeof v === 'object' && dr_feuillePoser(ref, v)) { try { if (typeof cnFeuilleVenue === 'function') cnFeuilleVenue(ref, v); else if (typeof LINK_ATELIER_DOCS !== 'undefined' && LINK_ATELIER_DOCS && LINK_ATELIER_DOCS[ref]) LINK_ATELIER_DOCS[ref] = v; } catch (e) {} dr_feuilleRedessiner(); } }   /* CN : la feuille venue se pose dans les autres copies par la page (au calme ; une copie changée ici n'est pas remplacée) */
 function dr_feuilleCharger(ref){ if (!ref) return;
   try { if (!DR_FEUILLES.doc[ref] && typeof LINK_ATELIER_DOCS !== 'undefined' && LINK_ATELIER_DOCS && LINK_ATELIER_DOCS[ref]) dr_feuillePoser(ref, LINK_ATELIER_DOCS[ref]); } catch (e) {}
   if (/[?&]local=1(&|$)/.test(location.search)) return;   /* la fenêtre locale ne lit pas le hub : la feuille lui vient du pilote */
@@ -25661,19 +26346,55 @@ function dr_docFeuilleBrancher(mur, et){ const f = mur && mur.querySelector('ifr
     const dv = pilote && S.doc && S.doc.id === et.doc.id && S.doc.defil != null ? S.doc.defil : (+et.doc.defil || 0); w.scrollTo(0, Math.round(dv * (w.innerWidth || f.clientWidth)));
     if (pilote && !d._drMolette) { d._drMolette = true; d.addEventListener('wheel', ev => { if (ev.ctrlKey) return; ev.preventDefault(); const W = w.innerWidth || 1; w.scrollBy(0, ev.deltaMode === 1 ? ev.deltaY * 16 : ev.deltaY); if (S.doc) S.doc.defil = +(w.scrollY / W).toFixed(4); clearTimeout(d._drT); d._drT = setTimeout(() => dr_tout(), 60); }, { passive: false }); } };
   if (f.contentDocument && f.contentDocument.readyState === 'complete' && f.contentDocument.body && f.contentDocument.body.childNodes.length) poser(); if (!f._drCharge) { f._drCharge = true; f.addEventListener('load', poser); } }
-function dr_docHtmlRef(doc){ const prov = `<span class="dr-doc-prov">— cette fiche vient de Structure · Séance ${dr_esc(String(doc.seanceN))}</span>`;
+function dr_docHtmlRef(doc){ const prov = doc.deFeuille != null ? `<span class="dr-doc-prov">— cette fiche vient de la feuille « ${dr_esc(doc.deFeuille)} »</span>` : `<span class="dr-doc-prov">— cette fiche vient de Structure · Séance ${dr_esc(String(doc.seanceN))}</span>`;   /* CO (point 8) : une fiche du chapitre, ou d'un autre chapitre, dit sa feuille */
   const grand = '';   /* (relance E4, F5 tranché) la modale #doc-viewer du site n'est pas utilisée dans le déroulé */
   let corps;
   if (doc.url) corps = `<iframe class="dr-doc-cadre" src="${dr_esc(doc.url)}" title="${dr_esc(doc.titre)}" allow="autoplay" referrerpolicy="no-referrer-when-downgrade"></iframe>`;
-  else if (doc.feuille) { DR_FEUILLES.projetee = doc.feuille; dr_feuilleCharger(doc.feuille); const fh = dr_feuilleHtml(doc.feuille, doc.ctxVue);   /* AW : abonnée à sa source */   /* §12.74 (1) : la feuille du site, rendue ici comme Structure l'affiche */
+  else if (doc.feuille) { DR_FEUILLES.projetee = doc.feuille; dr_feuilleCharger(doc.feuille); const fh = dr_feuilleHtml(doc.feuille, doc.ctxVue, doc.ficheUid || null);   /* AW : abonnée à sa source */   /* §12.74 (1) : la feuille du site, rendue ici comme Structure l'affiche */
     corps = fh != null ? `<iframe class="dr-doc-cadre dr-doc-feuille" data-feuille="${dr_esc(doc.feuille)}" title="${dr_esc(doc.titre)}" srcdoc="${dr_esc(fh)}"></iframe>`
       : `<div class="pg dr-doc-vide" data-feuille-attente="${dr_esc(doc.feuille)}">${dr_recitAuTableau() ? '' : 'La feuille se charge…'}</div>`; }   /* au tableau, aucune phrase de plus devant la classe */
   else corps = `<div class="pg dr-doc-vide">Ce document n’a pas d’adresse${doc.lie ? '' : ' : lie-le dans Structure (🔗), il apparaîtra ici'}.</div>`;
   setTimeout(() => document.querySelectorAll('[data-doc-grand]').forEach(b => { if (b._ok) return; b._ok = true; b.onclick = ev => { ev.stopPropagation(); dr_recitOuvrirItem(b.dataset.docGrand); }; }), 0);
   return `<div class="doc dr-doc-ref" data-doc-id="${dr_esc(doc.id)}"><h3>${dr_esc(doc.titre)} ${prov} ${grand}</h3>${corps}</div>`; }
-function dr_docsPanneau(l){ const x = $('fdocs-x'); if (x && !x.title) x.title = 'Ferme la liste des documents (ce qui est au tableau ne change pas)'; $('fdocs-l').innerHTML = l.map(d => `<div class="dr-c" style="padding:6px 0;border-top:1px solid var(--bord)"><b>${dr_esc(d.titre)}</b> <span style="color:var(--sourd)">Structure · Séance ${dr_esc(String(d.seanceN))}${d.url ? '' : d.feuille ? ' · feuille du site' : ' · n’a pas d’adresse'}</span><div>${(d.url || d.feuille) ? `<button class="btn" data-doc="${dr_esc(d.id)}" style="margin-top:4px;padding:2px 8px" title="${S.doc && S.doc.id === d.id ? 'Ferme le document : la classe revient à la diapo' : 'Montre ce document au tableau, dans l’écran — la classe le voit tel que Structure le garde'}">${S.doc && S.doc.id === d.id ? '✕ Fermer (retour à la diapo)' : 'Projeter au tableau'}</button>` : `<button class="btn" disabled style="margin-top:4px;padding:2px 8px" title="Ce document n’a pas d’adresse (pas encore lié dans Structure, ou une application du site comme une dictée ou un QCM) : rien à projeter dans l’écran">Projeter au tableau</button>`}</div></div>`).join('') || '<div style="color:var(--sourd)">aucun document dans cette séance (Structure)</div>';
-  $('fdocs-l').querySelectorAll('[data-doc]').forEach(b => b.onclick = () => { if (S.doc && S.doc.id === b.dataset.doc) { S.doc = null; /* le socle journalise la fermeture (pousser) */ } else { S.doc = dr_docEtat(b.dataset.doc); } dr_tout(); ouvrirDocs(); });
-  $('fdocs-l').querySelectorAll('[data-doc-site]').forEach(b => b.onclick = () => dr_recitOuvrirItem(b.dataset.docSite)); }
+/* CO (point 8, Paul 17/11 07:58 ; captures validées 14:54) — « ⋯ » → « DOCUMENTS DE LA SÉANCE… » MONTRE TOUTES LES FICHES. D'abord les documents posés dans la
+   séance (Structure), comme avant ; puis les fiches des feuilles liées au chapitre (`dr_feuilles`, celles que « + fiche… » liste), rangées par feuille, chacune avec
+   « Projeter au tableau » ; en bas, « Toutes mes fiches… » ouvre les fiches des autres chapitres (rangées par chapitre : celui où la feuille est déposée, ou son
+   rattachement ; « Sans chapitre » en dernier), avec une case de recherche (titre de la feuille, de la fiche, ou un mot de la fiche). Le même code en classe, en
+   répétition et en mode test. Une fiche projetée voyage dans et.doc (sa feuille, sa fiche) : chaque tableau la rend lui-même, comme une feuille de Structure. */
+var DR_DOCS = { vue: 'seance', q: '' };
+function dr_docEtatFiche(ref, uid, fi, fe){ const o = { id: 'fiche|' + ref + '|' + (uid || ''), pos: 1, titre: fi.titre, feuille: ref, ficheUid: uid || null, deFeuille: String(fe.titre || ''), type: 'feuille', lie: true, reference: true };
+  try { const cv = typeof atCtxDeChapitre === 'function' ? atCtxDeChapitre(ref) : null; if (cv) o.ctxVue = { niveau: cv.niveau || '', chapitre: cv.chapitre || '', seance: cv.seance == null ? '' : String(cv.seance) }; } catch (e) {} DR_FEUILLES.projetee = ref; dr_feuilleCharger(ref); return o; }
+function dr_docsAutresFeuilles(){ const D = (typeof LINK_ATELIER_DOCS !== 'undefined' && LINK_ATELIER_DOCS) || {}; let ici = new Set(); try { ici = new Set(dr_feuilles().map(x => x.id)); } catch (e) {} const parRef = {}, parUid = {};
+  try { const CD = typeof chapitresData !== 'undefined' ? chapitresData : {}; Object.keys(CD || {}).forEach(n => (CD[n] || []).forEach((c, i) => { if (!c) return; const nom = n + ' · ' + (c.title || ('chapitre ' + (i + 1))); if (c.uid) parUid[c.uid] = nom; parUid[n + '|' + i] = nom; const ss = c.seances || {}; Object.keys(ss).forEach(k => { const its = (ss[k] && ss[k].items) || {}; Object.keys(its).forEach(j => { const o = its[j]; if (o && o.source === 'atelier' && o.ref && !parRef[o.ref]) parRef[o.ref] = nom; }); }); })); } catch (e) {}
+  const out = {}; Object.keys(D).forEach(id => { if (ici.has(id)) return; const d = D[id] || {}; const r = d.rattachement || {}; if (r.eleve) return;
+    const ch = parRef[id] || (r.chapitreUid && parUid[r.chapitreUid]) || (r.niveau && r.chapitre != null && parUid[r.niveau + '|' + r.chapitre]) || (r.niveau ? r.niveau + ' · chapitre ' + (r.chapitre != null ? +r.chapitre + 1 : '?') : 'Sans chapitre');
+    let fis = []; try { fis = dr_fichesDeDoc(id, d); } catch (e) {} (out[ch] = out[ch] || []).push({ id, titre: String(d.titre || id), fiches: fis }); });
+  return out; }
+function dr_docsFeuilleHtml(fe){ const btn = (fi, k) => { const id = 'fiche|' + fe.id + '|' + (fi.uid || ''); const on = S.doc && S.doc.id === id; return `<button class="btn" data-fiche="${dr_esc(fe.id)}" data-fiche-k="${k}" style="padding:2px 8px;flex:none" title="${on ? 'Ferme la fiche : la classe revient à la diapo' : 'Montre cette fiche au tableau, en grand, telle que Structure la garde ; ✕ la referme et la classe revient à la diapo'}">${on ? '✕ Fermer (retour à la diapo)' : 'Projeter au tableau'}</button>`; };
+  return `<div style="margin:8px 0 0;padding-top:4px;border-top:1px solid var(--bord)"><b>📄 ${dr_esc(fe.titre)}</b> <span style="color:var(--sourd);font-size:.85rem">${fe.fiches.length} fiche${fe.fiches.length > 1 ? 's' : ''}</span></div>`
+    + fe.fiches.map((fi, k) => `<div class="dr-c" style="padding:3px 0 3px 18px;display:flex;align-items:center;gap:8px"><span style="flex:1">${dr_esc(fi.titre)}</span>${btn(fi, k)}</div>`).join(''); }
+function dr_docsTete(t, s){ return `<div style="margin:12px 0 2px;font-weight:bold;letter-spacing:.06em;font-size:.8rem;color:var(--or)">${dr_esc(t)}</div>${s ? `<div style="color:var(--sourd);font-size:.85rem;margin-bottom:4px">${dr_esc(s)}</div>` : ''}`; }
+function dr_docsPanneau(l){ const x = $('fdocs-x'); if (x && !x.title) x.title = 'Ferme la liste des documents (ce qui est au tableau ne change pas)'; const f = $('fdocs'), L = $('fdocs-l'); f.style.width = '600px'; f.style.top = '96px'; L.style.maxHeight = '78vh'; L.style.overflowY = 'auto';
+  const titre = f.querySelector('h4'); const feuilles = {};
+  if (DR_DOCS.vue === 'toutes') { if (titre && titre.firstChild) titre.firstChild.nodeValue = 'Toutes mes fiches ';
+    const A = dr_docsAutresFeuilles(); const q = String(DR_DOCS.q || '').trim().toLowerCase(); const garde = fe => !q || (fe.titre + ' ' + fe.fiches.map(fi => fi.titre + ' ' + String((fi.el || []).join(' ')).replace(/<[^>]+>/g, ' ')).join(' ')).toLowerCase().includes(q);
+    const chs = Object.keys(A).filter(c => c !== 'Sans chapitre').sort().concat(A['Sans chapitre'] ? ['Sans chapitre'] : []); let n = 0, nf = 0, tot = 0, h = '';
+    chs.forEach(ch => { tot += A[ch].length; const fs = A[ch].filter(garde); if (!fs.length) return; h += dr_docsTete(ch.toUpperCase()); fs.forEach(fe => { n++; nf += fe.fiches.length; feuilles[fe.id] = fe; h += dr_docsFeuilleHtml(fe); }); });
+    L.innerHTML = `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><button class="btn" data-docs-vue="seance" style="padding:2px 8px" title="Revient aux documents de la séance et aux fiches du chapitre">← Les fiches du chapitre</button><input type="search" id="fdocs-q" value="${dr_esc(DR_DOCS.q || '')}" placeholder="chercher une fiche (titre, mot de la fiche)…" style="flex:1;padding:4px 8px;font:inherit" title="Le titre d'une feuille ou d'une fiche, ou un mot de la fiche ; la liste se resserre à chaque lettre"></div>`
+      + (h || '<div style="color:var(--sourd)">aucune fiche ne correspond</div>') + `<div style="color:var(--sourd);font-size:.85rem;margin-top:8px">${q ? '« ' + dr_esc(DR_DOCS.q.trim()) + ' » : ' : ''}${n} feuille${n > 1 ? 's' : ''}, ${nf} fiche${nf > 1 ? 's' : ''}${q ? ' — sur ' + tot + ' feuilles des autres chapitres' : ' — toutes les feuilles des autres chapitres'}</div>`; }
+  else { if (titre && titre.firstChild) titre.firstChild.nodeValue = 'Documents de la séance ';
+    let h = dr_docsTete('LES DOCUMENTS DE LA SÉANCE', 'posés dans la séance, dans Structure') + (l.map(d => `<div class="dr-c" style="padding:6px 0;border-top:1px solid var(--bord)"><b>${dr_esc(d.titre)}</b> <span style="color:var(--sourd)">Structure · Séance ${dr_esc(String(d.seanceN))}${d.url ? '' : d.feuille ? ' · feuille du site' : ' · n’a pas d’adresse'}</span><div>${(d.url || d.feuille) ? `<button class="btn" data-doc="${dr_esc(d.id)}" style="margin-top:4px;padding:2px 8px" title="${S.doc && S.doc.id === d.id ? 'Ferme le document : la classe revient à la diapo' : 'Montre ce document au tableau, dans l’écran — la classe le voit tel que Structure le garde'}">${S.doc && S.doc.id === d.id ? '✕ Fermer (retour à la diapo)' : 'Projeter au tableau'}</button>` : `<button class="btn" disabled style="margin-top:4px;padding:2px 8px" title="Ce document n’a pas d’adresse (pas encore lié dans Structure, ou une application du site comme une dictée ou un QCM) : rien à projeter dans l’écran">Projeter au tableau</button>`}</div></div>`).join('') || '<div style="color:var(--sourd)">aucun document dans cette séance (Structure)</div>');
+    let FE = []; try { FE = dr_feuilles(); } catch (e) {} const ct = typeof dr_chapitreTitre === 'function' ? dr_chapitreTitre() : '';
+    h += dr_docsTete('LES FICHES DU CHAPITRE', FE.length ? FE.length + ' feuille' + (FE.length > 1 ? 's liées' : ' liée') + ' au chapitre « ' + ct + ' », rangées par feuille' : 'aucune feuille liée au chapitre « ' + ct + ' »');
+    FE.forEach(fe => { feuilles[fe.id] = fe; h += dr_docsFeuilleHtml(fe); });
+    h += `<div style="margin-top:12px;padding-top:8px;border-top:2px solid var(--bord)"><button class="btn" data-docs-vue="toutes" title="Ouvre les fiches de tes autres chapitres, avec une case de recherche ; rien n'est projeté tant que tu ne cliques pas « Projeter au tableau »">Toutes mes fiches…</button> <span style="color:var(--sourd);font-size:.85rem">les fiches des autres chapitres</span></div>`;
+    L.innerHTML = h; }
+  L.querySelectorAll('[data-doc]').forEach(b => b.onclick = () => { if (S.doc && S.doc.id === b.dataset.doc) { S.doc = null; /* le socle journalise la fermeture (pousser) */ } else { S.doc = dr_docEtat(b.dataset.doc); } dr_tout(); ouvrirDocs(); });
+  L.querySelectorAll('[data-fiche]').forEach(b => b.onclick = () => { const fe = feuilles[b.dataset.fiche]; const fi = fe && fe.fiches[+b.dataset.ficheK]; if (!fi) return; const id = 'fiche|' + fe.id + '|' + (fi.uid || ''); if (S.doc && S.doc.id === id) S.doc = null; else S.doc = dr_docEtatFiche(fe.id, fi.uid, fi, fe); const sc = L.scrollTop; dr_tout(); ouvrirDocs(); $('fdocs-l').scrollTop = sc; });
+  L.querySelectorAll('[data-docs-vue]').forEach(b => b.onclick = () => { DR_DOCS.vue = b.dataset.docsVue; ouvrirDocs(); $('fdocs-l').scrollTop = 0; if (DR_DOCS.vue === 'toutes') { const qi = $('fdocs-q'); if (qi) qi.focus(); } });
+  const qi = $('fdocs-q'); if (qi) { qi.onkeydown = ev => ev.stopPropagation(); qi.onkeyup = ev => ev.stopPropagation(); qi.oninput = () => { DR_DOCS.q = qi.value; const pos = qi.selectionStart; dr_docsPanneau(l); const q2 = $('fdocs-q'); if (q2) { q2.focus(); try { q2.setSelectionRange(pos, pos); } catch (e) {} } }; }
+  L.querySelectorAll('[data-doc-site]').forEach(b => b.onclick = () => dr_recitOuvrirItem(b.dataset.docSite)); }
+
 
 /* ── (E4 · audit C4) LE CHOIX DE LA CLASSE DANS LA RELECTURE — le geste du site d'aujourd'hui (« relecture par classe », prod l. 16953) ──
    Par défaut : la classe du cours actif, sinon la dernière qui a joué la séance (demarreLe) — mandat §3. Paul peut en choisir une autre
@@ -25836,7 +26557,8 @@ function dr_relIaTexte(){ /* (2) C16 588 et 591 : le texte des diapos jouées (p
   hs.forEach(h => { const sim = dr_recitHeure(h) || {}; const lt = typeof dr_lanceT === 'function' ? dr_lanceT(h) : null; const ct = (S.closes || {})[h]; L.push(''); L.push('Heure ' + h + ' — ' + (sim.jour || '') + (sim.debut ? ', prévue à ' + sim.debut : '') + ' · lancée à ' + hm(lt) + ' · ' + (ct ? 'close à ' + hm(ct) : 'pas close'));
     L.push('— JOURNAL DE L’HEURE ' + h + ' (geste par geste) —'); J.filter(x => x && dr_dansLH(x, h)).forEach(x => { const d = []; Object.keys(x).forEach(c => { if (['t', 'type', 'h', 'si'].includes(c)) return; const v = x[c]; if (v == null || v === '' || typeof v === 'object') return; if (c === 'eleve' || c === 'nom') return; d.push(c === 'di' ? 'diapo n° ' + (v + 1) : c + ' ' + propre(v).slice(0, 160)); }); const qui = x.type === 'reponse' ? ' · initiales « ' + (x.ini || '') + ' » → ' + court(x.eleve) : (x.eleve || x.nom ? ' · élève ' + court(x.eleve || x.nom) : ''); L.push(hm(x.t) + ' · ' + x.type + qui + (d.length ? ' · ' + d.join(' · ') : '')); });
     L.push('— RÉPONSES RANGÉES DANS LES DIAPOS (heure ' + h + ') —'); E.forEach((e, di) => { const st = parDiapo[K(di)]; if (!st || !st.reps) return; Object.keys(st.reps).forEach(bi => (st.reps[bi] || []).forEach((r, ri) => { if (!r || r.heure !== h || !String(r.r || '').trim()) return; L.push(hm(r.t) + ' · diapo n° ' + (di + 1) + ' · bloc ' + bi + ' · ligne ' + (ri + 1) + ' · « ' + propre(r.r) + ' » · initiales « ' + (r.i || '') + ' » → ' + court(r.eleve)); })); });
-    L.push('— PARTICIPATIONS (heure ' + h + ') —'); J.filter(x => x && dr_dansLH(x, h) && x.type === 'parole').forEach(x => L.push(hm(x.t) + ' · ' + court(x.nom) + ' · ' + (x.m || '') + (x.note != null ? ' · note ' + x.note : ''))); });
+    L.push('— PARTICIPATIONS (heure ' + h + ') —'); J.filter(x => x && dr_dansLH(x, h) && x.type === 'parole').forEach(x => L.push(hm(x.t) + ' · ' + court(x.nom) + ' · ' + (x.m || '') + (x.note != null ? ' · note ' + x.note : '')));
+    try { if (typeof cqBoiteLignes === 'function') cqBoiteLignes(dr_recitChemin(), h, typeof dr_lanceT === 'function' ? dr_lanceT(h) : null).forEach(x => L.push(x)); } catch (e) {} });   /* CQ (17/11) : la boîte noire de l'heure (index.html, `cqBoiteLignes`) — les envois au hub, minute par minute */
   L.push(''); L.push('— INITIALES DE LA LISTE —'); let ini = {}; try { ini = dr_iniListe(liste).ini || {}; } catch (e) {} liste.forEach(n => L.push((ini[n] || '?') + ' · ' + court(n)));
   let t = L.join('\n'); tous.slice().sort((a, b) => String(b).length - String(a).length).forEach(n => { t = t.split(n).join(court(n)); }); tous.forEach(n => { const np = dr_nomPrenom(n); String(np.nom || '').split(/\s+/).filter(w => w.length > 2).forEach(w => { t = t.split(w).join(w.charAt(0) + '.'); }); }); return t; }
 
@@ -26554,7 +27276,8 @@ function dr_sesClosAilleurs(v){
   try { const f = document.getElementById('ecran-fin'); if (f) f.classList.remove('on', 'ouverture'); } catch (e) {}
   try { if (typeof atClasseFermer === 'function') atClasseFermer(); else if (typeof edtOuvrir === 'function') edtOuvrir(); } catch (e) {}
   const nom = (v.cours && (v.cours.classeNom || v.cours.classeSlug)) || '';
-  try { atInfo((v.sorte === 'essai' ? 'L’essai (mode test)' : 'L’heure' + (nom ? ' des ' + escapeHtml(nom) : '')) + ' a été close sur un autre appareil : elle est close ici aussi.'); } catch (e) {}
+  if (v.sorte !== 'essai' && typeof cqClosAilleurs === 'function') { try { cqClosAilleurs(v, nom); } catch (e) {} }   /* CQ (17/11, la 4 HUGO) : la phrase vraie (cet ordinateur, un autre appareil, déjà close), et la clôture terminée au hub si elle ne l'est pas (index.html) */
+  else try { atInfo((v.sorte === 'essai' ? 'L’essai (mode test)' : 'L’heure' + (nom ? ' des ' + escapeHtml(nom) : '')) + ' a été close sur un autre appareil : elle est close ici aussi.'); } catch (e) {}
   if (window.DR_TC && typeof dr_tcClos === 'function') dr_tcClos(v);
 }
 
