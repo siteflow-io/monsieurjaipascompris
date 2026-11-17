@@ -1534,6 +1534,12 @@ AAAA-MM-JJ HH:MM [ÉMETTEUR→DESTINATAIRE] TYPE — titre court
   preuves : banc 26/26 VERT ; CL 62/62, CK-A 70/70, CK-B 108/108, CI 49/49, CG 41/41 ; vrai hub inchangé. md5 `50b62c66…` → `198a45a624dc3527dd75ecae46b9713f`, commit prod `7f57cef`, bit à bit à 14:43:03.
   reste : les chapitres qui ne se relisent pas d'eux-mêmes (Paul « 510 à régler »).
   → mots-clés : ✍ · coupure · F5 · Tout lier · corbeille · fiches · frise · 9.6 · conscience n°17
+- **17/11/2026 20:50 — PROMOTION 9.9.0-㊻ (une page en retard n'écrase plus l'heure ; l'Atelier redevient la trame) — conscience n°17, sur « promeus » de Paul (20:49).**
+  problème : 617 (une page restée ouverte écrasait l'heure jouée, la suite de la 4 HUGO perdue) ; la reprise qui perdait la fin ; « Heure reprise » ; 613 (la Relecture prenait la classe de l'Atelier) ; 633, 634, 643 (l'Atelier montrait les « ↩ H1 », dates, « jouée » d'une classe) ; 588 ; la ligne sous « ma version » ; la fenêtre « Tout est enregistré » fausse hub coupé (bv D2).
+  résolution : sas CR `a1454a6f`, `1fdb7c30`, `7cdea59c` ; assemblé `ba4e6b94`.
+  preuves : banc 26/26, sonde-co 20/20, sonde-co-l2 24/24 (20:48, maj du vrai hub inchangé). md5 `d0890c97…` → `e9b960ae32749b4c3ab72935fd0e8d97`, commit prod `df41ead`, bit à bit à 20:50:36.
+  reste : C18 (passation : hiérarchie des fonctions 650-652, trame et copies avec identité, règle confirmée 660) ; 577 ; 578 ; la boîte noire et M-SÉCU ; 517 « Remplacer » ; la page élève ne suit pas les chapitres.
+  → mots-clés : page en retard · 617 · Atelier = trame · Relecture · Tout est enregistré · 9.9 · conscience n°17
 - **17/11/2026 17:46 — PROMOTION 9.8.0-㊺ (l'atelier et les feuilles suivent ; les dettes du 17/11 ; les envois bloqués en classe) — conscience n°17, sur « 618 ok » de Paul (17:24 : la 9.8 en ligne dès que les vérifications sont vertes).**
   problème : Paul 16/11 « l'atelier et la vue papier ne suivent pas une feuille changée ailleurs » (520) ; 17/11 : le tableau distant figé en 4 TURING (09:05) et en 4 HUGO (13:12), la clôture de la 4 HUGO arrivée à moitié (boucle « Reprendre »), le récit qui colle les mots, la réponse non comptée, l'image qui s'écrase, la bande noire, le travail à faire perdu, l'image du chapitre en « ta version », le bilan dit fait, « Documents de la séance » sans les fiches.
   résolution : sas CN (livraison 2, 8d46dbd2), CO (380685de, 744febc9), CQ (5cd8c9d6, 16dda439) ; assemblé 7169da94.
