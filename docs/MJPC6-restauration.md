@@ -1571,7 +1571,7 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.16 (17/11/2026, conscience n°17)
 - Avant : 8.0.15, 2 312 731 o, md5 `d083b3b06718c6197611cb6addbb9c86`, blob `b999e3a1dacc`, copie au sas `SAUVEGARDES/evaluation-qcm-8.0.15-d083b3b0.html`. Promu : 8.0.16, 2 328 175 o, md5 `afa643a9dcbf194060f713fca3279d97`, commit `20ec191`, blob `1053c3a628da` (sas `code-qcm` = `1be844012`).
-- **Ce que revenir ferait perdre** : la reconnexion sur sa propre tablette, la tablette rechargée qui garde ses élèves, l'écoute allégée (les clics perdus reviendraient sous la charge d'une vraie classe), la console en direct au 1er tour, la vue 👁 qui reste ouverte. Aucune donnée nouvelle : une séance jouée en 8.0.16 se lit en 8.0.15 (la présence porte deux champs de plus, `eveil` et l'heure de la base, ignorés par la 8.0.15).
+- **Ce que revenir ferait perdre** : la reconnexion sur sa propre tablette, la tablette rechargée qui garde ses élèves, l'écoute allégée (les clics perdus reviendraient sous la charge d'une vraie classe), la console en direct au 1er tour, la vue 👁 qui reste ouverte. La 8.0.16 écrit en plus, dans la présence de chaque élève, `eveil` (l'écran gardé allumé) ; qu'une séance jouée en 8.0.16 se relise telle quelle en 8.0.15 n'est pas mesuré.
 - **Revenir** : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne.
 
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.0.15 (16/11/2026, conscience n°17)
