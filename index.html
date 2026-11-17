@@ -3220,7 +3220,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="9.8.0-㊺";
+var APP_VERSION="9.9.0-㊻";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -19642,11 +19642,19 @@ function dr_jouerCopie(copie){ try {
 } catch (e) { DR_COPIE_AVANT = null; return null; } }
 /* E1 (§12.27-8, dette 13 · 38) : #hclasse dit la classe de l'heure — celle d'AT_DR_COURS (posée par E2 au lancement, à la reprise, à l'ouverture
    « Où en est la classe ») —, et avant tout lancement la classe proposée (celle que dit « ▶ Lancer avec … », dr_proposer d'E2) ; suivie au rendu et à la seconde */
-function dr_hclasseNom(leger){ try { if (typeof AT_DR_COURS !== 'undefined' && AT_DR_COURS && (AT_DR_COURS.classeNom || AT_DR_COURS.classeSlug)) return AT_DR_COURS.classeNom || AT_DR_COURS.classeSlug; } catch (e) {} if (leger) return null;
+/* CR (613, Paul 17/11 18:28) : LA RELECTURE D'UNE CLASSE MONTRE CETTE CLASSE ET ELLE SEULE — en haut, sa classe et son heure (avant : la classe que l'emploi du temps
+   propose pour la séance, « 4 TURING · heure 2 · suite · jeu. 19/11 11:04 », sur la Relecture de la 4 HUGO) ; hors d'une heure tenue seulement */
+function dr_relueEnHaut(){ try { if (!document.body.classList.contains('vue-relecture') || (S.lancee && !S.close) || typeof DR_RECIT_CLASSE === 'undefined' || !DR_RECIT_CLASSE || typeof dr_recitClasseNom !== 'function') return null;
+  const h = S.faceH || S.heure || 1; let quoi; if (S.face === 'chapitre') quoi = ' · le chapitre'; else if (S.face === 'seance') quoi = ' · la séance'; else { let jour = ''; try { jour = (dr_recitHeure(h) || {}).jour || ''; } catch (e) {} quoi = ' · heure ' + h + (jour ? ' · ' + jour : '') + ((S.closes && S.closes[h]) ? ' · close' : ''); }
+  return { nom: dr_recitClasseNom(), hou: quoi }; } catch (e) { return null; } }
+function dr_hclasseNom(leger){ { const rl = dr_relueEnHaut(); if (rl) return rl.nom; if (dr_atelierCommun()) return ''; } try { if (typeof AT_DR_COURS !== 'undefined' && AT_DR_COURS && (AT_DR_COURS.classeNom || AT_DR_COURS.classeSlug)) return AT_DR_COURS.classeNom || AT_DR_COURS.classeSlug; } catch (e) {} if (leger) return null;
   /* C16 (lot 1, 361 ; la conscience, 03/11, accord de la première voie) : en répétition, la classe choisie au menu du nom est celle de l'en-tête — la même que les
      pastilles (`dr_classe`, la source) ; avant, l'en-tête gardait la case du jour (`dr_proposer`) et le choix ne s'y voyait pas. Sans choix, rien ne change. */
   try { const ec = (typeof AT !== 'undefined' && AT && AT.edChap) || null; const ch = DR_MEM.classeChoisie; if (typeof S === 'object' && S && S.repetition && ec && ch && ch.cle === ec.level + '|' + ec.chnum + '|' + String(ATVUES.snum)) return dr_classe().nom; } catch (e) {} try { if (typeof dr_proposer === 'function') { const p = dr_proposer(); if (p && p.classeNom) return p.classeNom; } } catch (e) {} return dr_classe().nom; }
-function dr_hclasseMaj(leger){ const hc = document.getElementById('hclasse'); if (!hc) return; const n = dr_hclasseNom(leger); if (n == null) return; if (hc.textContent !== n) hc.textContent = n;
+function dr_hclasseMaj(leger){ const hc = document.getElementById('hclasse'); if (!hc) return;
+  { const rl = dr_relueEnHaut(), at = !rl && dr_atelierCommun(); if (rl || at) { const ho = document.getElementById('hou'); const t = rl ? rl.nom : '', u = rl ? rl.hou : '', ti = rl ? 'La classe relue : la Relecture ne montre qu’elle (son heure, ses diapos, ses marques)' : '';   /* CR (613, 634) */
+      if (hc.textContent !== t) hc.textContent = t; if (hc.title !== ti) hc.title = ti; if (hc._drMenu) { hc._drMenu = false; hc.onclick = null; } hc.style.cursor = ''; if (ho && ho.textContent !== u) ho.textContent = u; return; } }
+  const n = dr_hclasseNom(leger); if (n == null) return; if (hc.textContent !== n) hc.textContent = n;
   /* E1 (§12.38-1) : hors d'une heure lancée, le nom se clique (les autres classes de la séance) et l'en-tête dit l'heure n/N et la date de la source */
   const enCours = typeof AT_DR_COURS !== 'undefined' && AT_DR_COURS && AT_DR_COURS.classeSlug; const src = enCours ? null : dr_sourceSeance();
   if (!enCours && src) { if (!hc._drMenu) { hc._drMenu = true; hc.onclick = dr_hclasseMenu; } const t = src.classes.length > 1 ? 'Les classes de cette séance : clique pour en prendre une autre — l’Atelier et la répétition prennent sa prochaine heure à l’emploi du temps' : 'La classe de cette séance : sa prochaine heure à l’emploi du temps'; if (hc.title !== t) hc.title = t; hc.style.cursor = src.classes.length > 1 ? 'pointer' : '';
@@ -20625,8 +20633,14 @@ function dr_reglageReactBrancher(z){ const b = z && z.querySelector('[data-dr-re
    chaque diapo dit son heure prévue (`creneauDe`) à la place de son numéro. La date et la case : la source de l'heure (E1, `dr_heureAVenir`) — affichée, jamais recalculée ici. */
 function dr_voletHeure(hh){ let v = null; try { v = typeof dr_heureAVenir === 'function' ? dr_heureAVenir(hh) : null; } catch (e) {} if (!v && S.lancee && !S.close && hh === S.heure) { try { v = dr_heureDe(hh); } catch (e) {} } return v && v.base ? v : null; }
 function dr_hhmm(ms){ const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-function voletAtelier(){ const E = seance().ecrans; const heures = [...new Set(E.map(e => e.heure))].sort(); const RET = dr_atRetours(); const acts = dr_activites()/* E1 : lisait DATA.activites */[String(S.si)] || []; const numA = i => { const a = actDe(E[i]); return a ? 'A' + a.num : ''; }; let h = `<div class="at-chap">${dr_reglageReactHtml()}`; heures.forEach(hh => { const o = ordreHeure(hh); const prevu = o.filter(i => E[i].role !== 'fin' && !E[i].masquee).reduce((t, i) => t + (E[i].dur || 0), 0); const sim = dr_voletHeure(hh); const utiles = sim && sim.utiles ? sim.utiles : 50; const dep = prevu + 5 - utiles; const jour = sim ? new Date(sim.base).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '';
-    h += `<div class="fr dr-fr"${o.length ? ' data-at-hdi="' + o[0] + '"' : ''} title="Ouvre la première diapo de cette heure"><div class="dr-fr-l1">H${hh} · ${sim ? dr_esc(jour) + ' · ' + dr_esc(sim.debut) + ' → ' + dr_esc(sim.fin) : 'pas encore à l’emploi du temps'}${dr_heureEstJouee(hh) ? ' · jouée' : ''}</div><div class="dr-fr-l2">${prevu + 5} min prévues pour ${utiles} utiles ${dep > 0 ? '<span class="plus" title="Ce que l\'heure dépasse : réduis une durée ou déplace une diapo">+' + dep + '</span>' : '<span style="color:var(--joue)">✔</span>'}</div></div>`;
+/* CR (634, Paul 17/11 18:19 : « L'atelier c'est le diapo commun des classes. LA COPIE DE CLASSE c'est le diapo mais jouée par chacune des classes ») — L'ATELIER
+   SANS AUCUNE MARQUE DE CLASSE : hors d'une heure tenue (et hors répétition), la colonne garde le découpage en heures et leurs durées prévues (« H1 · 47 min prévues
+   pour 50 utiles »), sans date, sans horaire, sans « jouée », sans « ↩ » ; chaque diapo dit sa minute dans l'heure (« +12′ »). Les marques de classe restent au pilotage. */
+/* CR (643, Paul 17/11, relayé à 19:06) : LA MÊME RÈGLE PARTOUT — l'Atelier ne montre jamais de marque de classe, ni pendant une répétition, ni pendant une heure en
+   cours (l'onglet Atelier ouvert en classe) ; avant (634) : ces deux cas gardaient la classe. La Relecture a sa règle à elle (613) ; le pilotage garde ses marques. */
+function dr_atelierCommun(){ try { return typeof S === 'object' && !!S && !!S.atelier && !document.body.classList.contains('vue-relecture'); } catch (e) { return false; } }
+function voletAtelier(){ const commun = dr_atelierCommun(); const E = seance().ecrans; const heures = [...new Set(E.map(e => e.heure))].sort(); const RET = commun ? {} : dr_atRetours(); const acts = dr_activites()/* E1 : lisait DATA.activites */[String(S.si)] || []; const numA = i => { const a = actDe(E[i]); return a ? 'A' + a.num : ''; }; let h = `<div class="at-chap">${dr_reglageReactHtml()}`; heures.forEach(hh => { const o = ordreHeure(hh); const prevu = o.filter(i => E[i].role !== 'fin' && !E[i].masquee).reduce((t, i) => t + (E[i].dur || 0), 0); const sim = commun ? null : dr_voletHeure(hh); const utiles = sim && sim.utiles ? sim.utiles : 50; const dep = prevu + 5 - utiles; const jour = sim ? new Date(sim.base).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '';
+    h += `<div class="fr dr-fr"${o.length ? ' data-at-hdi="' + o[0] + '"' : ''} title="Ouvre la première diapo de cette heure">${commun ? `<div class="dr-fr-l1">H${hh} · ${prevu + 5} min prévues pour ${utiles} utiles ` : `<div class="dr-fr-l1">H${hh} · ${sim ? dr_esc(jour) + ' · ' + dr_esc(sim.debut) + ' → ' + dr_esc(sim.fin) : 'pas encore à l’emploi du temps'}${dr_heureEstJouee(hh) ? ' · jouée' : ''}</div><div class="dr-fr-l2">${prevu + 5} min prévues pour ${utiles} utiles `}${dep > 0 ? '<span class="plus" title="Ce que l\'heure dépasse : réduis une durée ou déplace une diapo">+' + dep + '</span>' : '<span style="color:var(--joue)">✔</span>'}</div></div>`;
     let cumul = 0; const sel = typeof dr_colSel === 'function' ? dr_colSel() : []; o.forEach(i => { const e = E[i]; const quand = sim ? dr_hhmm(creneauDe(i).debut) : '+' + cumul + '′'; if (!e.masquee) cumul += e.role === 'fin' ? 5 : (e.dur || 0); const fixe = e.role === 'fin' || (typeof roleFixe === 'function' && !!roleFixe(e));   /* EX (§12.62 (4)) : l'identité sur la ligne (data-eid), le glisser, la sélection, « masquée » ; une diapo sans titre le dit ici (jamais au mur) */
       const nPg = (p85hPages(i).pages || [0]).length;   /* CK (13 · 104, captures CJ 5f-apres) : une diapo qui se lit en pages montre ses pages sous sa ligne, une ligne cliquable chacune ; la page ouverte est la ligne courante */
       h += `<div class="dr-d${i === S.di && nPg < 2 ? ' on' : ''}${nPg > 1 ? ' dr-avec-pages' : ''}${e.masquee ? ' dr-masq' : ''}${sel.indexOf(e.eid) >= 0 ? ' dr-sel-d' : ''}${dr_estInvariable(e) ? ' dr-inv' : ''}" data-at-di="${i}" data-eid="${dr_esc(String(e.eid || ''))}"${fixe ? '' : ' draggable="true"'} title="${dr_esc(dr_colBulle(e, fixe))}"><span class="dr-n dr-quand">${quand}</span><span class="t">${e.role === 'fin' ? 'Cahier de textes' : (String(e.act || '').trim() ? dr_esc(e.act) : '<i class="dr-sans-titre">sans titre</i>')}</span>${e.masquee ? '<span class="dr-tag" title="Masquée : elle reste dans la trame, mais la classe ne la voit jamais et elle ne se joue pas ; ses minutes ne comptent pas — clic droit → « Ne plus masquer »">masquée</span>' : ''}${RET[e.eid] ? '<span class="dr-ret" title="' + dr_esc(RET[e.eid].bulle) + '">↩ H' + RET[e.eid].h + '</span>' : ''}${e.role === 'fin' ? '' : '<span class="a">' + numA(i) + '</span>'}<span class="dr-h">${e.role === 'fin' ? 5 : (e.dur || 0)} min</span></div>`;
@@ -22116,7 +22130,7 @@ function dr_toutVide(){ try { const n = $('numero'); if (n) n.innerHTML = '<b>At
   const da = $('droite-atelier'); if (da && S.atelier) { const h = droiteAtelier(); if (da._hd !== h) { da.innerHTML = h; da._hd = h; } } } catch (e) {} }
 function dr_tout(){ if (typeof DR_ENCH === 'object' && DR_ENCH && DR_ENCH.toutPlusTard) return; if (typeof dr_repLaisseesValider === 'function') dr_repLaisseesValider(false);   /* CO (569) : une réponse laissée sans Entrée sur une diapo qu'on a quittée est validée (dr-classe.js) */ if (typeof dr_toutSuspendu === 'function') { if (dr_toutSuspendu()) { DR_TOUT_SUSP.du = true; return; } DR_TOUT_SUSP.du = false; }
   { let E0 = null; try { E0 = seance().ecrans; } catch (e) {} if (S.atelier && Array.isArray(E0) && !E0.length) { dr_toutVide(); return; } }   /* CM : la séance sans diapo */   /* C17 BT : pendant un passage, noté, fait une fois à la reprise (dr-socle.js) */   /* C17 BS : « ▶ Séance suivante » en répétition — l'arrêt, le chapitre et la vue ne se redessinent pas un à un ; la répétition suivante se dessine une fois lancée (mesuré CPU ×4 : 3 redessins, 4 à 6 s) */
-  dr_devoilerQuestionsRepondues(); if (typeof dr_bBouton === 'function') dr_bBouton(); /* C16 mandat S : 🅱️ sort sur la mise en commun du bilan */ if (typeof atClasseMarquer === 'function') atClasseMarquer(); /* E1 (§12.28-3) l'état de l'écran de la classe */ dr_hclasseMaj(true); /* E1 (§12.27-8) : la classe de l'heure dans l'entête, à chaque rendu (la classe proposée, plus coûteuse, à la seconde) */ setTimeout(atSomSuivreCourant, 0); setTimeout(dr_imagesAbsentes, 0); /* E1 : la colonne du site suit la diapo (lisait DR.dr_ecranCourant par le pont) */ setTimeout(brancherDocs, 0); if (S.repetition || p8EnClasse() || p8ReactAvantLancement()) setTimeout(brancherAtelier, 0); /* (p8-4) en répétition aussi, tout texte s'écrit d'un clic ; (p8-5) et en classe, dans la copie ; E1 (§12.26) : la réactivation construite avant le lancement */ if (S.atelier) { observerMur(); setTimeout(brancherAtelier, 0); p8GardesBarre(); /* (p8-3) les gestes grisés d'une diapo à schéma */ const ab = $('at-bloc'); if (ab && !ab._ok) { ab._ok = true; ab.onclick = () => choixObjet(); } const ai = $('at-image'); if (ai && !ai._ok) { ai._ok = true; ai.onclick = () => choixObjet('image'); } const af = $('at-fiche'); if (af && !af._ok) { af._ok = true; af.onclick = () => choixObjet('fiche'); } const av = $('at-video'); if (av && !av._ok) { av._ok = true; av.onclick = () => { S.editerVideo = null; choixObjet('video'); }; } const ad = $('at-doc'); if (ad && !ad._ok) { ad._ok = true; ad.onclick = () => choixObjet('doc'); } const ae = $('at-etape'); if (ae && !ae._ok) { ae._ok = true; ae.onclick = () => { const e = ecran(); if (!e || e.role === 'fin') return; const b = document.activeElement && blocDe(document.activeElement); const bi = b ? b.bi : e.blocs.length - 1; const bloc = e.blocs[bi]; if (!bloc) return; bloc.el = bloc.el || []; bloc.el.push(''); marquerModif({ di: S.di, bi, ajout: bloc.el.length - 1 }); dr_tout(); setTimeout(() => { const nv = $('mur').querySelector('[data-p="' + bi + '.' + (bloc.el.length - 1) + '"]'); if (nv) { nv.setAttribute('data-vide', '1'); focaliser(nv); } }, 0); }; }  const v = $('volet'); if (v) { dr_colEcouter(v); /* EX (§12.62 (4)) : les clics de la colonne, un seul écouteur posé une fois (§12.56 (1)(e)) */ const hv = voletAtelier(); if (v.dataset.atelier !== hv) { if (dr_colAttend(v)) DR_COL.attente = true; /* §12.56 (1)(c) : pendant un renommage ou un glisser, la colonne attend */ else { DR_COL.attente = false; if (v.dataset.atelier) poserHtml(v, hv); else v.innerHTML = hv; /* §12.56 (1)(b) : posée une fois (en entrant dans l'Atelier), puis retouchée — mêmes nœuds, seuls le texte, les attributs et les classes qui diffèrent */ v.dataset.atelier = hv; if (typeof dr_reglageReactBrancher === 'function') dr_reglageReactBrancher(v); } } } rendreDroiteAtelier(); const aj = $('at-jouer'); if (aj && !aj._ok) { aj._ok = true; aj.onclick = () => { journal('atelier-jouer-en-avance', { di: S.di }); lancerRepetition(); }; } } try { ligneSuite(); } catch (e) {} if (S.enFin && !S.preparation && ecran().role === 'fin' && S._finRenduPour !== 'fin') { S._finRenduPour = 'fin'; setTimeout(() => ouvrirFin(true), 0); } else if (S.enFin && ecran().role !== 'fin') S._finRenduPour = null; if (S.enFin && typeof dr_finCocheMaj === 'function') dr_finCocheMaj(); /* C16 mandat AB (850) : le panneau de fin d'heure suit la coche du bilan (la dernière marque Alt + B la pose), sans retour ni aller */ if (S.preparation) { try { dimensionner(); } catch (e) {} } $('droite').classList.toggle('cahier', ecran().role === 'fin'); if (S.t5 && !S.close && ecran().role === 'fin') alerteFermer(); /* §12.29 (E1, contrôle n°67) : la barre du bas est retirée du gabarit — plus d'alerteOuvrir ici */
+  dr_devoilerQuestionsRepondues(); if (typeof dr_bBouton === 'function') dr_bBouton(); /* C16 mandat S : 🅱️ sort sur la mise en commun du bilan */ if (typeof atClasseMarquer === 'function') atClasseMarquer(); /* E1 (§12.28-3) l'état de l'écran de la classe */ dr_hclasseMaj(true); /* E1 (§12.27-8) : la classe de l'heure dans l'entête, à chaque rendu (la classe proposée, plus coûteuse, à la seconde) */ setTimeout(atSomSuivreCourant, 0); setTimeout(dr_imagesAbsentes, 0); /* E1 : la colonne du site suit la diapo (lisait DR.dr_ecranCourant par le pont) */ setTimeout(brancherDocs, 0); if (S.repetition || p8EnClasse() || p8ReactAvantLancement()) setTimeout(brancherAtelier, 0); /* (p8-4) en répétition aussi, tout texte s'écrit d'un clic ; (p8-5) et en classe, dans la copie ; E1 (§12.26) : la réactivation construite avant le lancement */ if (S.atelier) { observerMur(); setTimeout(brancherAtelier, 0); p8GardesBarre(); /* (p8-3) les gestes grisés d'une diapo à schéma */ const ab = $('at-bloc'); if (ab && !ab._ok) { ab._ok = true; ab.onclick = () => choixObjet(); } const ai = $('at-image'); if (ai && !ai._ok) { ai._ok = true; ai.onclick = () => choixObjet('image'); } const af = $('at-fiche'); if (af && !af._ok) { af._ok = true; af.onclick = () => choixObjet('fiche'); } const av = $('at-video'); if (av && !av._ok) { av._ok = true; av.onclick = () => { S.editerVideo = null; choixObjet('video'); }; } const ad = $('at-doc'); if (ad && !ad._ok) { ad._ok = true; ad.onclick = () => choixObjet('doc'); } const ae = $('at-etape'); if (ae && !ae._ok) { ae._ok = true; ae.onclick = () => { const e = ecran(); if (!e || e.role === 'fin') return; const b = document.activeElement && blocDe(document.activeElement); const bi = b ? b.bi : e.blocs.length - 1; const bloc = e.blocs[bi]; if (!bloc) return; bloc.el = bloc.el || []; bloc.el.push(''); marquerModif({ di: S.di, bi, ajout: bloc.el.length - 1 }); dr_tout(); setTimeout(() => { const nv = $('mur').querySelector('[data-p="' + bi + '.' + (bloc.el.length - 1) + '"]'); if (nv) { nv.setAttribute('data-vide', '1'); focaliser(nv); } }, 0); }; }  const v = $('volet'); if (v && !(v.dataset.relu && document.body.classList.contains('vue-relecture'))) { if (v.dataset.relu) { delete v.dataset.relu; v.dataset.atelier = ''; } /* CR (613) : la colonne de la Relecture reste la sienne ; en revenant à l'Atelier, la sienne se repose entière */ dr_colEcouter(v); /* EX (§12.62 (4)) : les clics de la colonne, un seul écouteur posé une fois (§12.56 (1)(e)) */ const hv = voletAtelier(); if (v.dataset.atelier !== hv) { if (dr_colAttend(v)) DR_COL.attente = true; /* §12.56 (1)(c) : pendant un renommage ou un glisser, la colonne attend */ else { DR_COL.attente = false; if (v.dataset.atelier) poserHtml(v, hv); else v.innerHTML = hv; /* §12.56 (1)(b) : posée une fois (en entrant dans l'Atelier), puis retouchée — mêmes nœuds, seuls le texte, les attributs et les classes qui diffèrent */ v.dataset.atelier = hv; if (typeof dr_reglageReactBrancher === 'function') dr_reglageReactBrancher(v); } } } rendreDroiteAtelier(); const aj = $('at-jouer'); if (aj && !aj._ok) { aj._ok = true; aj.onclick = () => { journal('atelier-jouer-en-avance', { di: S.di }); lancerRepetition(); }; } } try { ligneSuite(); } catch (e) {} if (S.enFin && !S.preparation && ecran().role === 'fin' && S._finRenduPour !== 'fin') { S._finRenduPour = 'fin'; setTimeout(() => ouvrirFin(true), 0); } else if (S.enFin && ecran().role !== 'fin') S._finRenduPour = null; if (S.enFin && typeof dr_finCocheMaj === 'function') dr_finCocheMaj(); /* C16 mandat AB (850) : le panneau de fin d'heure suit la coche du bilan (la dernière marque Alt + B la pose), sans retour ni aller */ if (S.preparation) { try { dimensionner(); } catch (e) {} } $('droite').classList.toggle('cahier', ecran().role === 'fin'); if (S.t5 && !S.close && ecran().role === 'fin') alerteFermer(); /* §12.29 (E1, contrôle n°67) : la barre du bas est retirée du gabarit — plus d'alerteOuvrir ici */
   try { dr_titrePoser(ecran()); } catch (x) {} dimensionner(); /* C16 (les dernières dettes, ⑮) : la ligne du titre de CETTE diapo est posée avant que dimensionner la mesure — avant, elle gardait celle de la diapo d'avant : un titre d'avant sur deux lignes rapetissait la diapo du pilote jusqu'au rendu suivant (1366 × 768 : 416 px de haut à l'arrivée, 437 px au geste suivant ; la diapo « sautait » d'une page à l'autre) */ if (!S.mur || S.mur.di !== S.di || S.mur.si !== S.si) S.arrivee = { di: S.di }; const e = ecran(); const et = etatComplet(); et.pilote = true; et.ecrire = p8EcritureOuverte(); /* (p8-4) */ if (!S.repetition && (!S.atelier || dr_atelierEnClasse())) { et.textes = p8TextesCopie(e, et.textes); et.retires = p8RetiresCopie(e); } /* E4 (§12.59 (3)) : les retirés du tableau voyagent avec l'état (le tableau les cache) */ /* E1 (réveil n°11) : l'atelier ouvert pendant l'heure montre la copie de la classe */ /* (p8-5) la copie de la classe, au pilote et au tableau */ rendre(mur, et); mur.className = 'mur pilote' + (S.mode === 'lum' ? ' mode-lum' : S.mode === 'ecr' ? ' mode-ecr' : '') + (et.bandeau ? ' avec-bandeau' : ''); et.pilote = false;
   if (et.page === DR_PAGE_DERNIERE) et.page = 0;   /* C16 (㉜) : une diapo d'une seule page */ S.page = et.page; S.pagesCourantes = et.pages; S.pagesPCourantes = et.pagesP; S.policeRatioCourante = et.policeRatio; /* (p8-5h) les vignettes de page de la diapo courante */ etatDiapo().fsBloc = Object.assign({}, et.fsBloc || {});
   if (!S.gel) pousser(et); else S.attente = et;
@@ -22218,7 +22232,7 @@ function dr_repTableauFin(){ clearInterval(DR_REP.T); try { if (typeof DR_TT !==
 /* C16 (les dernières dettes, ⑮) : la ligne du titre du pilote (le numéro de la diapo, son activité, sa durée) — sortie du rendu pour être posée aussi avant dimensionner */
 /* C16 mandat AB (dette 11, « Diapo null sur 0 ») : dans l'Atelier, le rang se lit sur l'ordre figé de l'heure jouée s'il contient la diapo, sinon sur l'ordre de la trame */
 function dr_atRang(h){ const oF = ordreHeure(h); const o = oF.includes(S.di) ? oF : ordreHeureCalc(h); return { rg: o.indexOf(S.di) + 1 || null, n: o.length }; }
-function dr_titrePoser(e){ $('numero').innerHTML = S.atelier ? (function(){ const e = ecran(); const a = actDe(e); const cr = creneauDe(S.di); return `<b>Atelier · Diapo ${dr_atRang(e.heure).rg} sur ${dr_atRang(e.heure).n} · heure ${e.heure}${a ? ' · activité ' + a.num : ''} · ${dr_esc(e.role === 'fin' ? 'Cahier de textes' : e.act)}</b> <span style="color:var(--texte2)">· prévue ${e.role === 'fin' ? 5 : (e.dur || 0)} min · H${e.heure} ${(() => { const x = dr_heureDe(e.heure); return x && x.jour ? dr_esc(x.jour.replace(/ \d{4}$/, '')) + ' · ' : ''; })()}${hhmm(cr.debut).replace(':', ' h ')} → ${hhmm(cr.fin).replace(':', ' h ')}${dr_heureEstJouee(e.heure) ? ' · <b>jouée</b>' : ''}</span>`; })() /* E1 (§12.18) : la date de l'heure, et « jouée » pour une heure déjà jouée */ : `${rangDe(S.di) ? 'Diapo ' + rangDe(S.di) + ' sur ' + ordreHeure(S.heure).length + ' · heure ' + S.heure : 'Hors de l\'heure ' + S.heure}${numDe(e) ? ' · activité ' + numDe(e) + (actDe(e).diapos.length > 1 ? ' (' + (actDe(e).diapos.indexOf(S.di) + 1) + '/' + actDe(e).diapos.length + ')' : '') : (e.role === 'fin' ? ' · Cahier de textes' : (e.role ? ' · ' + dr_roleEnClair(e.role) : ''))}`; $('dtitre').textContent = `· ${e.act} · prévue ${e.dur} min · H${e.heure}${e.role ? ' · ' + (e.role === 'bilan' ? 'bilan de la séance' : e.role === 'fin' ? 'les cinq minutes réservées' : dr_roleEnClair(e.role)) : ''}`;   /* §12.74 (3) : le rôle en clair, jamais son nom interne */ }
+function dr_titrePoser(e){ $('numero').innerHTML = S.atelier ? (function(){ const e = ecran(); const a = actDe(e); const cr = creneauDe(S.di); return `<b>Atelier · Diapo ${dr_atRang(e.heure).rg} sur ${dr_atRang(e.heure).n} · heure ${e.heure}${a ? ' · activité ' + a.num : ''} · ${dr_esc(e.role === 'fin' ? 'Cahier de textes' : e.act)}</b> <span style="color:var(--texte2)">· prévue ${e.role === 'fin' ? 5 : (e.dur || 0)} min · H${e.heure}${typeof dr_atelierCommun === 'function' && dr_atelierCommun() ? '' : ' ' + (() => { const x = dr_heureDe(e.heure); return x && x.jour ? dr_esc(x.jour.replace(/ \d{4}$/, '')) + ' · ' : ''; })() + hhmm(cr.debut).replace(':', ' h ') + ' → ' + hhmm(cr.fin).replace(':', ' h ') + (dr_heureEstJouee(e.heure) ? ' · <b>jouée</b>' : '')}</span>`;   /* CR (634) : dans l'Atelier, ni date, ni horaire, ni « jouée » (une marque de classe) */ })() /* E1 (§12.18) : la date de l'heure, et « jouée » pour une heure déjà jouée */ : `${rangDe(S.di) ? 'Diapo ' + rangDe(S.di) + ' sur ' + ordreHeure(S.heure).length + ' · heure ' + S.heure : 'Hors de l\'heure ' + S.heure}${numDe(e) ? ' · activité ' + numDe(e) + (actDe(e).diapos.length > 1 ? ' (' + (actDe(e).diapos.indexOf(S.di) + 1) + '/' + actDe(e).diapos.length + ')' : '') : (e.role === 'fin' ? ' · Cahier de textes' : (e.role ? ' · ' + dr_roleEnClair(e.role) : ''))}`; $('dtitre').textContent = `· ${e.act} · prévue ${e.dur} min · H${e.heure}${e.role ? ' · ' + (e.role === 'bilan' ? 'bilan de la séance' : e.role === 'fin' ? 'les cinq minutes réservées' : dr_roleEnClair(e.role)) : ''}`;   /* §12.74 (3) : le rôle en clair, jamais son nom interne */ }
 /* C16 (les dernières dettes, ⑯ ; MANDAT-DERNIERES-DETTES §3.2) : LE POINT PART SANS ATTENDRE LA COLONNE. La fenêtre du tableau est une fenêtre du même site,
    ouverte d'ici : elle partage le fil d'exécution du pilote. Après `pousser` (le tableau reçoit la diapo), le pilote redessinait encore la colonne des vignettes
    (`volet` : chaque diapo de l'heure rendue et réduite, et ses pages mesurées — 81 à 210 ms par flèche, mesuré) ; la fenêtre du tableau ne dessinait la diapo
@@ -22557,7 +22571,7 @@ function alerteFermer(){ const b = $('al-boite'), l = $('al-ligne'); if (b) b.st
 
 
 
-(function poigneeMur(){ const pg = $('poignee-mur'); let dep = null; pg.addEventListener('mousedown', ev => { ev.preventDefault(); const sc = document.querySelector('.scene'); dep = { y: ev.clientY, part: S.murPart || 1, h: sc.clientHeight }; document.body.style.cursor = 'row-resize'; const move = e => { if (!dep) return; const d = (e.clientY - dep.y) / dep.h; S.murPart = Math.max(0.3, Math.min(1, dep.part + d * 1.6)); try { dimensionner(); } catch (x) {} }; const up = () => { dep = null; document.body.style.cursor = ''; document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); journal('poignee-diapo', { part: Math.round((S.murPart || 1) * 100) }); dr_tout(); }; dr_ecouteDoc('mousemove', move); dr_ecouteDoc('mouseup', up); }); pg.addEventListener('dblclick', ev => { ev.preventDefault(); S.murPart = 1; journal('poignee-diapo', { part: 100 }); dr_tout(); }); /* (p8-5e) double-clic : la diapo reprend toute sa place */ })();
+(function poigneeMur(){ const pg = $('poignee-mur'); let dep = null; pg.addEventListener('mousedown', ev => { ev.preventDefault(); const sc = document.querySelector('.scene'); dep = { y: ev.clientY, part: S.murPart || 1, h: sc.clientHeight }; document.body.style.cursor = 'row-resize'; const move = e => { if (!dep) return; const d = (e.clientY - dep.y) / dep.h; S.murPart = Math.max(0.3, Math.min(1, dep.part + d * 1.6)); try { dimensionner(); } catch (x) {} }; const up = () => { const d0 = dep; dep = null; document.body.style.cursor = ''; document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); const v = Math.round((S.murPart || 1) * 100); if (d0 && v !== Math.round((d0.part || 1) * 100)) { journal('poignee-diapo', { part: v }); dr_tout(); } }; document.addEventListener('mousemove', move); document.addEventListener('mouseup', up); }); pg.addEventListener('dblclick', ev => { ev.preventDefault(); if (Math.round((S.murPart || 1) * 100) === 100) return; S.murPart = 1; journal('poignee-diapo', { part: 100 }); dr_tout(); });   /* CR (588 ; mesuré : 50 lignes « poignee-diapo » dans l'heure de la 4 TURING) : les écoutes du glisser se retirent vraiment au relâché (avant, enveloppées par `dr_ecouteDoc`, `removeEventListener` ne retirait rien : chaque clic ailleurs dans le pilotage écrivait une ligne et redessinait tout, et chaque prise de la poignée en ajoutait deux de plus) ; une seule ligne au journal, quand la place de la diapo change */ /* (p8-5e) double-clic : la diapo reprend toute sa place */ })();
 
 /* §12.29 S1 : `glisserAlerte` (déplacer la barre du bas) tombe avec la barre */
 
@@ -23229,18 +23243,128 @@ function dr_copieAuto(vite){
   dr_journalAuto(vite); dr_etatAuto(vite); dr_traceAuto(vite);
 }
 function dr_journalAuto(vite){
-  dr_minuterieBornee(DR_CL, 'jT', 900, () => { if (!dr_clPeutEcrire()) return; dr_ecrire(dr_cheminC() + '/journal', dr_journalHub(), 'Le journal de l’heure (' + AT_DR_COURS.classeNom + ')', () => {}); }, vite);
+  dr_minuterieBornee(DR_CL, 'jT', 900, () => { if (!dr_clPeutEcrire()) return;
+    dr_crAJour('j', () => { if (!dr_clPeutEcrire()) return; dr_ecrire(dr_cheminC() + '/journal', dr_journalHub(), 'Le journal de l’heure (' + AT_DR_COURS.classeNom + ')', () => {}); }); }, vite);   /* CR (617) : relu d'abord */
 }
 function dr_etatAuto(vite){
-  dr_minuterieBornee(DR_CL, 'eT', 900, () => { if (!dr_clPeutEcrire()) return; try { dr_heureLocaleEcrire(); } catch (e) {} dr_ecrire(dr_cheminC() + '/etat', dr_etatHeure(), 'L’état de l’heure, pour la reprendre (' + AT_DR_COURS.classeNom + ')', () => {}); }, vite);
+  dr_minuterieBornee(DR_CL, 'eT', 900, () => { if (!dr_clPeutEcrire()) return; try { dr_heureLocaleEcrire(); } catch (e) {}
+    dr_crAJour('e', () => { if (!dr_clPeutEcrire()) return; dr_ecrire(dr_cheminC() + '/etat', dr_etatHeure(), 'L’état de l’heure, pour la reprendre (' + AT_DR_COURS.classeNom + ')', () => {}); }); }, vite);   /* CR (617) : relu d'abord */
 }
 function dr_traceAuto(vite){
   dr_minuterieBornee(DR_CL, 'tT', 900, () => {
-    if (!dr_clPeutEcrire()) return; const ch = dr_cheminH(); if (!ch) return;
+    if (!dr_clPeutEcrire()) return; if (!dr_cheminH()) return;
     /* C16 (㊱, défaut 6 ; décision de la conscience) : le paquet s'écrit en PATCH de ses propres clés — il ne réécrit plus jamais `H/absents`, que seul un
        geste d'appel écrit (la case, le pilote). Avant : relu puis réécrit en PUT entier ; un absent coché dans la case entre la lecture et l'écriture était effacé. */
-    const p = dr_paquetHeure(false); if (!p) return; dr_paquetPatch(ch, p, 'Heure de cours — ' + p.creneau + ' (' + p.classe + ')');
+    dr_crAJour('t', () => { if (!dr_clPeutEcrire()) return; const ch = dr_cheminH(); if (!ch) return; const p = dr_paquetHeure(false); if (!p) return; dr_paquetPatch(ch, p, 'Heure de cours — ' + p.creneau + ' (' + p.classe + ')'); });   /* CR (617) : relu d'abord */
   }, vite);
+}
+/* ═══ CR (C17, 617 — la 4 HUGO, 17/11 : à 14:00:36, un ordinateur sorti de veille — ses flux morts depuis 13:12:25 — a réécrit au hub le journal de l'heure
+   (32 entrées, alors qu'elle en comptait 120), son état (S.close faux) et sa trace (clos faux), alors qu'elle avait été close à 13:57:23 sur un autre appareil ;
+   rejoué au faux hub : 14 entrées perdues sur 24, l'état et la trace rouverts) — UNE PAGE EN RETARD N'ÉCRIT JAMAIS PAR-DESSUS L'HEURE.
+   Avant d'écrire le journal, l'état ou la trace de l'heure, la page relit au hub ce qui dit où en est l'heure : l'heure de l'état vivant (`vif/ts`), le dernier
+   écrit du journal (combien d'entrées, sa date), l'état (`vifTs`) et la trace (`clos`) — quatre petites lectures ensemble, une fois pour les trois écritures.
+   Le hub n'est pas plus récent que ce qu'elle connaît : elle écrit. Il l'est : elle n'écrit pas, elle prend le hub — l'heure close ailleurs se clôt ici et le dit
+   (`dr_sesClosAilleurs`) ; sinon l'état vivant (reçu par son flux, ou relu s'il ne vient pas) se fusionne, le journal du hub est réuni au sien — puis ses
+   écritures repartent d'elles-mêmes, sur ce qui est réuni. Le hub ne se lit pas (une coupure) : rien n'est écrit, l'écriture attend au témoin et repart seule.
+   Rien à l'écran de nouveau. Jamais en mode test (le magasin de l'appareil). ═══ */
+const DR_CR = { vol: false, att: new Map(), suite: 0, T: null, enr: {} };
+/* CR (bv D2, banc de la 9.9, 17/11 19:31 — mesuré : hub coupé, la fenêtre de la sonnerie disait « ✔ Tout est enregistré jusque-là » alors que le journal, l'état et
+   la trace n'étaient pas au hub) : une écriture que la relecture retient n'était pas encore au registre des écritures (`DR_ENR`, que lit la fenêtre) — le registre
+   gardait la dernière acceptée. Maintenant, dès qu'elle attend la relecture, elle y est « en vol » ; le hub ne se lit pas : « en panne » (la fenêtre dit « Pas
+   enregistré », et elle repart) ; elle part : l'envoi la remplace ; rien n'avait à partir (l'heure close, rien de changé) : le registre redevient ce qu'il était. */
+const DR_CR_LIB = { j: 'Le journal de l’heure', e: 'L’état de l’heure, pour la reprendre', t: 'La trace de l’heure' };
+function dr_crChemin(k){ try { return k === 'j' ? dr_cheminC() + '/journal' : k === 'e' ? dr_cheminC() + '/etat' : dr_cheminH(); } catch (e) { return null; } }
+function dr_crEnrNoter(k){ try { if (typeof dr_enrDebut !== 'function') return; const c = dr_crChemin(k); if (!c) return; const x = DR_CR.enr[k];
+  const prev = x && x.c === c ? x.prev : (DR_ENR.ch[c] ? Object.assign({}, DR_ENR.ch[c]) : null); DR_CR.enr[k] = { c, prev, n: dr_enrDebut(c, DR_CR_LIB[k], DR_CR_ECR[k]) }; } catch (e) {} }
+function dr_crEnrPanne(k){ try { const x = DR_CR.enr[k]; if (x && typeof dr_enrFin === 'function') dr_enrFin(x.c, x.n, { etat: (typeof MJPC_ISSUE === 'object' ? MJPC_ISSUE.PANNE : 'panne'), status: 0, quand: Date.now() }); } catch (e) {} }
+function dr_crEnrRendre(k){ try { const x = DR_CR.enr[k]; delete DR_CR.enr[k]; if (!x) return; const cur = DR_ENR.ch[x.c]; if (!cur || cur.n !== x.n) return; if (x.prev) DR_ENR.ch[x.c] = x.prev; else delete DR_ENR.ch[x.c]; } catch (e) {} }
+const DR_CR_ECR = { j: () => dr_journalAuto(true), e: () => dr_etatAuto(true), t: () => dr_traceAuto(true) };
+const DR_CR_DERNIER = '?orderBy=' + encodeURIComponent('"$key"') + '&limitToLast=1';   /* le dernier écrit du journal : sa clé (le nombre d'entrées − 1) et sa date — lu au vrai hub, en GET, le 17/11 */
+function dr_crLire(ch, q){ return fetch(FIREBASE_BASE + ch + '.json' + (q || '')).then(r => { if (!r || !r.ok) throw new Error('HTTP ' + (r ? r.status : 0)); return r.json(); }); }
+function dr_crCle(x){ return JSON.stringify([x && x.t, x && x.type, x && x.di, x && x.dio, x && x.eid, x && x.k, x && x.nom]); }
+function dr_crDire(t){ try { if (typeof cqBnEvTous === 'function') cqBnEvTous(t); } catch (e) {} }   /* la boîte noire de l'heure (CQ) le garde */
+/* ce que la page connaît : l'heure logique la plus récente qu'elle a vue ou envoyée, son journal (entrées, date la plus récente) */
+function dr_crPage(){ let ts = 0; try { ts = Math.max(+DR_SES.vu || 0, +DR_SES.recu || 0, +DR_SES.envoiTs || 0); } catch (e) {}
+  const jr = dr_journalHub(); let t = 0; jr.forEach(x => { if (x && +x.t > t) t = +x.t; }); return { ts, n: jr.length, t }; }
+function dr_crAJour(k, ecrire){
+  if (dr_sesTest() || typeof fetch !== 'function' || typeof FIREBASE_BASE === 'undefined') { ecrire(); return; }
+  DR_CR.att.set(k, ecrire); dr_crEnrNoter(k); if (DR_CR.vol) return;
+  const C = dr_cheminC(), H = dr_cheminH(); if (!C) { DR_CR.att.clear(); return; } DR_CR.vol = true;
+  const fin = () => { DR_CR.vol = false; };
+  Promise.all([dr_crLire(C + '/vif/ts'), dr_crLire(C + '/journal', DR_CR_DERNIER), dr_crLire(C + '/etat/vifTs'), H ? dr_crLire(H + '/clos') : Promise.resolve(null)]).then(([vts, jd, evt, clos]) => {
+    fin(); const att = new Map(DR_CR.att); DR_CR.att.clear();
+    if (!dr_clPeutEcrire() || dr_cheminC() !== C || dr_cheminH() !== H) { att.forEach((f, k2) => dr_crEnrRendre(k2)); return; }   /* l'heure n'est plus la même ici (close, quittée) : rien */
+    const pg = dr_crPage(); const kd = jd && typeof jd === 'object' ? Object.keys(jd).filter(x => /^\d+$/.test(x)).sort((a, b) => a - b).pop() : null;
+    const hub = { ts: +vts || 0, n: kd != null ? +kd + 1 : 0, t: kd != null && jd[kd] ? +jd[kd].t || 0 : 0, etat: +evt || 0, clos: clos === true };
+    const plus = [];
+    if (hub.clos) plus.push('l’heure close');
+    if (hub.ts > pg.ts) plus.push('l’état vivant de ' + new Date(hub.ts).toLocaleTimeString('fr-FR'));
+    if (hub.etat > pg.ts && hub.etat > 1) plus.push('l’état de l’heure');
+    /* le journal du hub ne compte que s'il a été écrit pendant cette heure (sa dernière entrée après son lancement) : celui d'une séance d'avant, que l'heure 1
+       remplace, se remplace comme avant */
+    const recent = !(+S.debutReel) || hub.t >= +S.debutReel - 60000;
+    if (recent && hub.n > pg.n) plus.push('le journal (' + hub.n + ' entrées, ici ' + pg.n + ')');
+    else if (recent && hub.t > pg.t) plus.push('le journal (une entrée plus récente)');
+    if (!plus.length) { DR_CR.suite = 0; att.forEach((f, k2) => { try { f(); } catch (e) {} dr_crEnrRendre(k2); }); return; }   /* l'envoi parti a remplacé la note « en vol » ; rien n'est parti : le registre redevient ce qu'il était */
+    DR_CR.suite++; dr_crDire('relecture avant d’écrire : le hub est plus récent (' + plus.join(', ') + ') — rien n’est écrit, la page prend le hub');
+    dr_crPrendre(C, H, hub, pg, att);
+  }, () => { fin(); const att = new Map(DR_CR.att); DR_CR.att.clear(); if (!dr_clPeutEcrire()) { att.forEach((f, k2) => dr_crEnrRendre(k2)); return; } att.forEach((f, k2) => dr_crEnrPanne(k2));
+    /* le hub ne se lit pas : une coupure. Rien n'est écrit ; chaque écriture attend au témoin (« ● hors ligne · N envois en attente ») et repart seule, relue d'abord */
+    const lib = { j: 'Le journal de l’heure', e: 'L’état de l’heure', t: 'La trace de l’heure' }, ch = { j: C + '/journal', e: C + '/etat', t: H };
+    let tenu = false; att.forEach((f, k2) => { try { if (ch[k2] && dr_hlPrendre({ etat: (typeof MJPC_ISSUE === 'object' ? MJPC_ISSUE.PANNE : 'panne'), quand: Date.now() }, ch[k2], lib[k2], DR_CR_ECR[k2], null)) tenu = true; } catch (e) {} });
+    if (!tenu) dr_crRearmer(Array.from(att.keys()), 4000); });
+}
+function dr_crRearmer(ks, ms){ if (DR_CR.suite > 20) { dr_crDire('relecture : le hub reste plus récent après 20 essais — la page n’écrit plus rien de l’heure tant qu’un geste ne relance pas'); DR_CR.suite = 0; return; }
+  clearTimeout(DR_CR.T); DR_CR.T = setTimeout(() => { ks.forEach(k => { try { DR_CR_ECR[k](); } catch (e) {} }); }, ms); }
+/* prendre le hub : la clôture faite ailleurs ; l'état vivant ; le journal */
+function dr_crPrendre(C, H, hub, pg, att){
+  const ks = Array.from(att.keys());
+  if (hub.clos) { ks.forEach(dr_crEnrRendre); dr_crLire(C + '/vif').then(v => { if (!dr_clPeutEcrire()) return;
+      const ici = DR_SES.ici || dr_sesIci(); const sig = ici ? ici.sig : 'heure|' + H;
+      if (!(v && v.close && v.sig === sig)) return dr_crLire(H + '/finReel').then(f => { if (!dr_clPeutEcrire()) return; dr_sesClosAilleurs({ close: true, sig, sorte: 'heure', H, cours: dr_coursIci(), ts: +f || (v && v.ts) || Date.now(), par: '' }); });
+      dr_sesClosAilleurs(v); }).catch(() => dr_crRearmer(ks, 4000)); return; }
+  if (hub.ts > pg.ts) {
+    /* l'état vivant plus récent : le flux le porte d'habitude dans l'instant (la page le fusionne) ; la première fois, on le lui laisse ; s'il ne vient pas, on le relit */
+    if (DR_CR.suite < 2) { dr_crRearmer(ks, 1200); return; }
+    dr_crLire(C + '/vif').then(v => { if (!dr_clPeutEcrire()) return; const ici = DR_SES.ici;
+      if (v && ici && v.sig === ici.sig) { if (v.close) { dr_sesClosAilleurs(v); return; } try { dr_sesRecu(v); } catch (e) {} }
+      dr_crRearmer(ks, 1200); }).catch(() => dr_crRearmer(ks, 4000)); return; }
+  /* le journal du hub a ce que la page n'a pas : il est réuni au sien (rien n'est perdu), puis la page écrit le journal réuni */
+  dr_crLire(C + '/journal').then(jh => { if (!dr_clPeutEcrire()) return; const L = Array.isArray(jh) ? jh : (jh && typeof jh === 'object' ? Object.keys(jh).map(x => jh[x]) : []);
+      const vus = new Set(dr_journalHub().map(dr_crCle)); const plus = L.filter(x => x && !vus.has(dr_crCle(x))).map(dr_duHub);
+      if (plus.length) { plus.forEach(x => J.push(x)); J.sort((a, b) => ((a && a.t) || 0) - ((b && b.t) || 0)); dr_crDire('relecture : ' + plus.length + ' entrée(s) du journal du hub réunie(s) à celui de la page'); try { dr_tout(); } catch (e) {} }
+      dr_crRearmer(ks, 300); }).catch(() => dr_crRearmer(ks, 4000));
+}
+/* L'HEURE CLOSE AILLEURS, PRISE PAR CETTE PAGE (`dr_sesClosAilleurs`) : l'état vivant reçu est le plus récent de l'heure. Si le journal du hub n'a pas toutes
+   ses entrées, ou si l'état de l'heure au hub n'est pas clos (une page en retard les a réécrits avant ce réglage — la 4 HUGO à 14:00:36), la page les remet :
+   le journal réuni (celui du hub et celui de l'état vivant ; les entrées de cette heure datées de plus d'une minute après sa clôture n'en sont pas — les
+   alertes qu'une page en retard a sonnées à son réveil), et l'état clos (celui de l'état vivant). Rien d'autre. Ni en mode test, ni pour un essai. */
+function dr_crCompleterClos(v){
+  try { if (!v || v.sorte !== 'heure' || !Array.isArray(v.J) || !v.S || dr_sesTest() || typeof fetch !== 'function' || typeof FIREBASE_BASE === 'undefined') return;
+    if (typeof cqProf === 'function' && !cqProf()) return;
+    const H = v.H || String(v.sig || '').replace(/^heure\|/, ''); const i = H.lastIndexOf('/heures/'); if (i < 0) return; const C = H.slice(0, i);
+    const liste = x => Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.keys(x).map(k => x[k]) : []);
+    Promise.all([dr_crLire(C + '/journal'), dr_crLire(C + '/etat')]).then(([jh, eh]) => {
+      const L = liste(jh).filter(Boolean); const h0 = +v.S.heure || null, lim = (+v.ts || 0) + 60000;
+      const garde = L.filter(x => !(h0 != null && +x.h === h0 && +x.t > lim)); const vus = new Set(garde.map(dr_crCle)); const manque = v.J.filter(x => x && !vus.has(dr_crCle(x)));
+      if (manque.length || garde.length !== L.length) { dr_crDire('heure close ailleurs : le journal du hub repris de l’état vivant (' + manque.length + ' entrée(s) remise(s), ' + (L.length - garde.length) + ' écrite(s) après la clôture retirée(s))');
+        dr_ecrire(C + '/journal', garde.concat(manque).sort((a, b) => ((a && a.t) || 0) - ((b && b.t) || 0)), 'Le journal de l’heure close, repris de l’état vivant', () => {}); }
+      const eS = eh && eh.S; if (!(eS && eS.close) || (+(eh && eh.vifTs) || 0) < (+v.ts || 0)) { const S1 = Object.assign({}, eS || {}, v.S, { close: true }); if (!S1.finReel) S1.finReel = +v.ts || Date.now();
+        const et = { S: S1, parDiapo: v.parDiapo || {}, vuMax: v.vuMax || {}, maj: +v.ts || Date.now(), vifTs: +v.ts || 1 }; ['heures', 'reactivations', 'heuresParDurees'].forEach(k => { if (v[k] != null) et[k] = v[k]; });
+        dr_crDire('heure close ailleurs : l’état de l’heure au hub repris de l’état vivant (clos)'); dr_ecrire(C + '/etat', et, 'L’état de l’heure close, repris de l’état vivant', () => {}); }
+    }, () => {});
+  } catch (e) {}
+}
+/* LA CLÔTURE ET L'HEURE CLOSE À L'OUVERTURE DE LA SUIVANTE : leur journal part réuni à celui du hub (ce qu'un autre appareil y a mis et que cette page n'a pas
+   reçu n'est jamais effacé). Le hub ne se lit pas : à la clôture, rien ne part maintenant (la clôture gardée sur l'ordinateur, CQ, le réunit et le renvoie) ;
+   à l'ouverture de la suivante, le journal de la page part, comme avant. */
+function dr_crJournalReuni(C, jr, libelle, garde){
+  if (dr_sesTest() || typeof fetch !== 'function') { dr_ecrire(C + '/journal', jr, libelle, () => {}); return; }
+  dr_crLire(C + '/journal').then(jh => { const L = Array.isArray(jh) ? jh : (jh && typeof jh === 'object' ? Object.keys(jh).map(x => jh[x]) : []);
+      const vus = new Set((jr || []).map(dr_crCle)); const plus = L.filter(x => x && !vus.has(dr_crCle(x)));
+      if (plus.length) dr_crDire('clôture : ' + plus.length + ' entrée(s) du journal du hub réunie(s) à celui de la page');
+      dr_ecrire(C + '/journal', plus.length ? (jr || []).concat(plus).sort((a, b) => ((a && a.t) || 0) - ((b && b.t) || 0)) : jr, libelle, () => {}); },
+    () => { if (!garde) dr_ecrire(C + '/journal', jr, libelle, () => {}); });
 }
 /* le témoin « déroulé intègre » (R9) : l'empreinte de ce qui a été écrit, comparée à ce que le hub rend */
 function dr_empreinte(x){ const s = JSON.stringify(x); let h = 0; for (let j = 0; j < s.length; j++) h = ((h << 5) - h + s.charCodeAt(j)) | 0; return s.length + '-' + (h >>> 0).toString(36); }
@@ -23406,7 +23530,7 @@ function dr_lancerNeuf(classeSlug, nom, creneau, debut, heure, c, suite){
   if (S.lancee && !S.close && AT_DR_REGIME === 'classe' && AT_DR_COURS && DR_CL.ouverte) { const o = DR_CL.ouverte; const p = { creneau: o.creneau };
     /* écritures CIBLÉES sous la clé de l'heure qui tournait (comme la clôture certaine) : son paquet complet est déjà au hub, poussé au fil */
     dr_ecrire(o.H + '/clos', true, 'Heure close à l’ouverture de la suivante', () => {}); dr_ecrire(o.H + '/finReel', Date.now(), 'Fin réelle', () => {}); dr_ecrire(o.H + '/closPar', 'lancement suivant', 'Motif de clôture', () => {});
-    dr_ecrire(o.C + '/journal', dr_journalHub(), 'Le journal de l’heure close', () => {}); ["jT", "eT", "tT", "cT"].forEach(k => dr_minuterieArret(DR_CL, k)); S.close = true;
+    dr_crJournalReuni(o.C, dr_journalHub(), 'Le journal de l’heure close', false); ["jT", "eT", "tT", "cT"].forEach(k => dr_minuterieArret(DR_CL, k)); S.close = true;
     try { atInfo('L’heure précédente (' + escapeHtml(AT_DR_COURS.classeNom) + ' · ' + escapeHtml(p ? p.creneau : '') + ') n’était pas close : elle vient de l’être, sa trace est enregistrée.'); } catch (e) {} }
   /* l'heure n > 1 : la séance a déjà joué pour cette classe ; on relit son état (C/etat, C/journal), puis l'écran d'ouverture de la
      maquette (« Où en est la classe », 6.5-6.7) — il dit l'heure d'avant, ce qui glisse, le faisceau ; « Lancer l'heure n » passe par
@@ -23479,8 +23603,16 @@ function dr_traceReprendre(cb){
 function dr_lireTous(chemins, cb){ const r = new Array(chemins.length); let n = chemins.length; chemins.forEach((c, k) => dr_lire(c, v => { r[k] = v; if (--n === 0) cb(...r); })); }
 function dr_reprendre(cb){
   const C = dr_cheminC(), ch = dr_cheminH(); if (!C || !ch) { if (cb) cb(false); return; }
-  dr_lireTous([C + '/ecrans', C + '/etat', C + '/journal', ch], (copie, etat, jr, t) => {   /* les quatre lectures ensemble (contrôle n°68) — avant : l'une après l'autre */
-    { const loc = dr_heureLocaleLire(C); if (loc && loc.etat && loc.etat.S && (+loc.etat.maj || 0) > (+(etat || {}).maj || 0)) { etat = loc.etat; if (Array.isArray(loc.journal)) jr = loc.journal; } }   /* §12.28-3 (e) : ce que l'onglet fermé n'avait pas encore envoyé au hub (≤ 2 s), gardé dans ce navigateur au départ */
+  dr_lireTous([C + '/ecrans', C + '/etat', C + '/journal', ch, C + '/vif/close', C + '/vif/sig'], (copie, etat, jr, t, vClose, vSig) => {   /* les quatre lectures ensemble (contrôle n°68) — avant : l'une après l'autre */
+    /* CR (point 3, dette 4 de CQ — mesuré : « Heure reprise : la diapo, le chrono… sont revenus », puis « L'heure des 4 HUGO avait déjà été close à 13:57 ») : une
+       heure close ailleurs (son état vivant le dit, ou sa trace) ne se reprend pas — rien n'est reposé ni annoncé ; la page dit seulement la phrase vraie et termine au
+       hub ce qui manque à la clôture (`dr_sesClosAilleurs` : CQ, et le journal et l'état repris de l'état vivant) */
+    if ((vClose === true && vSig === 'heure|' + ch) || (t && t.clos === true)) {
+      dr_lire(C + '/vif', v => { const vv = (v && v.sig === 'heure|' + ch) ? Object.assign({}, v, { close: true }) : { close: true, sig: 'heure|' + ch, sorte: 'heure', H: ch, cours: dr_coursIci(), ts: (t && +t.finReel) || Date.now(), par: '' };
+        if (!vv.H) vv.H = ch; try { dr_sesClosAilleurs(vv); } catch (e) {} if (cb) cb(true); }); return; }
+    DR_CL.repriseLoc = null;
+    { const loc = dr_heureLocaleLire(C); if (loc && loc.etat && loc.etat.S && (+loc.etat.maj || 0) > (+(etat || {}).maj || 0)) { const jh = Array.isArray(jr) ? jr : []; etat = loc.etat; if (Array.isArray(loc.journal)) jr = dr_sesJournal(jh, loc.journal); DR_CL.repriseLoc = { maj: +loc.etat.maj || 0, t: Date.now() }; }
+      else if (loc && Array.isArray(loc.journal) && Array.isArray(jr)) jr = dr_sesJournal(loc.journal, jr); }   /* CR (point 2, dette 3 de CQ) : le journal relu est celui du hub ET celui gardé dans ce navigateur, réunis — avant : l'un OU l'autre, selon l'état le plus récent ; l'état écrit au hub pendant que le journal ne passait pas faisait prendre le journal du hub, sans les entrées de la panne */   /* §12.28-3 (e) : ce que l'onglet fermé n'avait pas encore envoyé au hub (≤ 2 s), gardé dans ce navigateur au départ */
     if (!etat || !etat.S) { if (cb) cb(false); return; }
     dr_copieDuHub(copie);   /* C16 (retour sûr) : les diapos d'ouverture reprennent leur canon (écrites lisibles pour la 8.77.1-⑩) */
     dr_adopterIdentites(copie); if (Array.isArray(copie) && copie.length && copie.every(x => x && typeof x === 'object')) { const E0 = seance().ecrans; E0.splice(0, E0.length, ...copie); try { reindexer(); } catch (e) {} }   /* réveil n°6 (E4 ligne 110, ma part) : la reprise relit la copie de la classe (C/ecrans) telle qu'elle est au hub, sans recalcul — ce qui a été écrit en classe revient */
@@ -23538,7 +23670,7 @@ function dr_cloreFin(){
   try { if (typeof cqClosGarder === 'function') cqClosGarder(ch, C, p, jr, et, dr_coursActif()); } catch (e) {}   /* CQ (17/11, la 4 HUGO) : la clôture gardée sur cet ordinateur tant que le hub ne l'a pas prise ; elle repart d'elle-même (index.html) */
   if (ch && p) dr_paquetPatch(ch, p, 'Heure close — ' + p.creneau + ' (' + p.classe + ')');   /* C16 (㊱) : en PATCH, `H/absents` n'est pas touché */
   if (C && p) try { dr_reactApresCloture(C, hClose + 1, { cle: cleH, paquet: p }); } catch (e) {}   /* §12.26-1 : la diapo de l'heure h+1, construite depuis le paquet qui vient d'être clos — le paquet local prime sur le hub chez E4 (poussée 102 : aussi en mode test, où le hub ne le portera jamais) —, écrite dans la copie */
-  if (C) { dr_ecrire(C + '/journal', jr, 'Le journal de l’heure, à la clôture', () => {}); dr_ecrire(C + '/etat', et, 'L’état de l’heure, à la clôture', () => {}); }
+  if (C) { dr_crJournalReuni(C, jr, 'Le journal de l’heure, à la clôture', typeof cqClosGarder === 'function'); dr_ecrire(C + '/etat', et, 'L’état de l’heure, à la clôture', () => {}); }   /* CR (617) : le journal réuni à celui du hub */
   ["jT", "eT", "tT", "cT"].forEach(k => dr_minuterieArret(DR_CL, k));
   try { window.AT_DR_DERNIER = { level: (AT.edChap || {}).level, chnum: (AT.edChap || {}).chnum, snum: ATVUES.snum, classe: AT_DR_COURS.classeSlug, ts: Date.now() }; } catch (e) {}
   DR_CL.cleClose = ch; dr_joueeIci(ch, true); DR_CL.creneauClos = dr_creneauDuCours(AT_DR_COURS); DR_CL.closVu = DR_CL.closVu || {}; DR_CL.closVu[ch] = true; try { const hu = document.getElementById('hou'); if (hu) hu.textContent = dr_entete(S.heure) + ' · close'; } catch (e) {}   /* réveil n°6 (E4 ligne 119) : l'entête dit que l'heure est close */   /* la clé de l'heure close dans cette page : « ▶ Lancer » ne la repropose pas */
@@ -24128,11 +24260,12 @@ function dr_reprendreQuandPret(cb, essai){ essai = essai || 0;
   dr_reprendre(ok => { if (cb) cb(ok); if (!ok) return; const sig = _drSignatureCours(Object.assign(dr_coursActif(), {}));
     setTimeout(() => { try { if (!S.lancee && !S.close && AT_DR_REGIME === 'classe' && _drSignatureCours(dr_coursActif()) === sig) { journal('reprise-refaite'); dr_reprendre(() => {}); } } catch (e) {} }, 1500); }); }
 function dr_reprendreCours(c){
+  try { DR_SES.repriseEnCours = { cle: [c.niveau, c.chapitre, c.seance, c.classeSlug].join('|'), t: Date.now() }; } catch (e) {}   /* CR (588) : une reprise est en cours ici — le bandeau « Reprendre » ne revient pas pendant qu'elle se fait (dr_sesBandeau) */
   const cours = Object.assign({ debut: c.debut, fin: c.fin, classeSlug: c.classeSlug, classeNom: c.classeNom }, c.iso ? { iso: c.iso } : {}, c.rattrapee && c.iso ? { rattrapee: true } : {});   /* C16 (lot 2a) : une heure rattrapée reprend sous la clé de sa case ; (lot 2c) une heure ordinaire reprise le lendemain aussi — jamais une seconde clé */
   atChargerChapitres(c.niveau, () => {
     AT_DR_COURS = cours; AT_DR_REGIME = 'classe';
     dr_ouvrirLaClasse(c.niveau, c.chapitre, c.seance, () => { AT_DR_COURS = cours; AT_DR_REGIME = 'classe';
-      dr_reprendreQuandPret(ok => { if (!ok) atInfo('L’état de cette heure n’est pas au hub : elle ne peut pas être reprise telle quelle.'); }); });
+      dr_reprendreQuandPret(ok => { if (!ok) { try { DR_SES.repriseEnCours = null; } catch (e) {} atInfo('L’état de cette heure n’est pas au hub : elle ne peut pas être reprise telle quelle.'); } }); });
   });
 }
 /* réveil n°5, A4-4 (C1 6.5, 8.6) : la case close ouvre la Relecture de CETTE heure — la séance, la classe et l'heure de sa trace ; l'atelier
@@ -25835,7 +25968,44 @@ function relecture(){ dr_recitCorrections(); dr_recitFinsPoser(); dr_recitOrdres
   /* C16 610 (nuit A) : le menu des classes est retiré — une séance se relit en y entrant par la case du calendrier */ poserHtml($('faces'), f); $('faces').querySelectorAll('[data-f]').forEach(b => b.onclick = () => { S.face = b.dataset.f; if (+b.dataset.h) S.faceH = +b.dataset.h; relecture(); });
   const sim = dr_recitHeure(S.faceH); $('rel-titre').textContent = S.face === 'chapitre' ? `Le chapitre — ${dr_recitClasseNom()} · ${dr_recitSeanceTitre()}` : S.face === 'seance' ? `Relecture de la séance — ${dr_recitClasseNom()} · ${dr_recitSeanceTitre()}` : S.face === 'papier' ? `Papier — ${dr_recitClasseNom()} · heure ${S.faceH} (${sim.jour}) · ${dr_recitSeanceTitre()}` : `Relecture — ${dr_recitClasseNom()} · heure ${S.faceH} (${sim.jour}) · ${dr_recitSeanceTitre()}`;
   const J1 = J.filter(x => dr_dansLH(x, S.faceH)); $('rel-sous').textContent = S.face === 'chapitre' ? `${dr_recitHeuresCloses().length} heure(s) close(s) · ${S.lancee && !S.close ? 'une heure en cours' : 'aucune heure en cours'} · les heures à venir lues dans la trame` : S.face === 'seance' ? hs.map(h => 'heure ' + h + ' : ' + dr_recitHeure(h).jour + ', ' + dr_recitHeure(h).debut).join(' · ') : `${J1.length ? fmt(J1[0].t) : '—'} → ${fmt(fin)} · ${S.closes && S.closes[S.faceH] ? 'heure close' : 'heure en cours'}`;
-  if (!hs.length && S.face !== 'chapitre') { $('rel-sous').textContent = 'aucune heure lancée'; $('rel').innerHTML = '<div class="recit"><p class="cadre">Aucune heure n\u2019a encore été lancée avec cette classe dans cette séance : le récit s\u2019écrira à partir de ce que la classe verra, dès le lancement de l\u2019heure.</p></div>'; dr_papierRetirer(); return; } /* (E4 · relecteur neuf du site, cadrage 2 · 1.4) rien n'a été montré : rien à raconter */ $('rel').innerHTML = S.face === 'chapitre' ? chapitreHtml() : S.face === 'recit' ? dr_typo(recitHtml(fin, S.faceH)) : S.face === 'passe' ? passeHtml(fin, S.faceH) : S.face === 'papier' ? papierHtml(S.faceH) : recitSeanceHtml(); if (S.face === 'chapitre') brancherChapitre(); if (S.face === 'papier') brancherPapier(); else dr_papierPreparer(S.faceH); dr_relIaBouton(); }
+  if (!hs.length && S.face !== 'chapitre') { $('rel-sous').textContent = 'aucune heure lancée'; $('rel').innerHTML = '<div class="recit"><p class="cadre">Aucune heure n\u2019a encore été lancée avec cette classe dans cette séance : le récit s\u2019écrira à partir de ce que la classe verra, dès le lancement de l\u2019heure.</p></div>'; dr_papierRetirer(); return; } /* (E4 · relecteur neuf du site, cadrage 2 · 1.4) rien n'a été montré : rien à raconter */ $('rel').innerHTML = S.face === 'chapitre' ? chapitreHtml() : S.face === 'recit' ? dr_typo(recitHtml(fin, S.faceH)) : S.face === 'passe' ? passeHtml(fin, S.faceH) : S.face === 'papier' ? papierHtml(S.faceH) : recitSeanceHtml(); if (S.face === 'chapitre') brancherChapitre(); if (S.face === 'papier') brancherPapier(); else dr_papierPreparer(S.faceH); dr_relIaBouton(); dr_voletRelu(); setTimeout(dr_rvPlus, 0); }
+/* CR (613, Paul 17/11 18:28) : à gauche, les diapos de l'heure relue, de la classe relue, avec ses propres marques (jouée, reportée, « ↩ ») — la colonne du pilotage
+   elle-même (`volet`), dessinée pour cette heure ; un clic sur une vignette montre la diapo en grand (`dr_relGrand`). Avant : la colonne de l'Atelier (une autre
+   classe, ses dates, ses « jouée » et ses « ↩ »), ou rien. Hors d'une heure tenue seulement. */
+/* CR (point 6, Paul 17/11 ; la forme acquise à 19:06, captures c6-1) : SOUS « MA VERSION », CE QUE LE RÉCIT COMPOSÉ PAR LE SITE A ET QUE SA VERSION N'A PAS. Sous la barre
+   « Copier pour École Directe… · composé par le site · ma version », une ligne nomme chaque paragraphe du récit composé absent de sa version, avec son heure : « Le site
+   a ajouté à ce récit après ta version » pour ceux d'après sa prise de plume (`recitMoiT`), « Absent de ta version » pour les autres (la page ne sait pas pourquoi il
+   manque : retiré, ou écrit autrement). Le texte de Paul n'est jamais touché. « ✕ vu » la ferme sur cet appareil jusqu'au prochain changement de ce qui manque. */
+function dr_rvParas(html){ const d = document.createElement('div'); d.innerHTML = html || ''; const vus = new Set();
+  return Array.from(d.querySelectorAll('p')).map(p => { const t = String(p.textContent || '').replace(/\s+/g, ' ').trim(); const m = t.match(/^(.*?)\s*À (\d{1,2}) h (\d\d)\b/); return m && m[1].trim() ? { titre: m[1].trim(), hh: +m[2], mm: +m[3], quand: m[2].padStart(2, '0') + ' h ' + m[3] } : null; })
+    .filter(x => x && !vus.has(x.titre) && vus.add(x.titre)); }
+function dr_rvPlus(){ try {
+  const old = document.getElementById('dr-rv-plus'); const fin = () => { if (old) old.remove(); };
+  if (!document.body.classList.contains('vue-relecture') && !document.getElementById('rel')) return fin();
+  const h = S.faceH || S.heure; const moi = S.face === 'recit' && (S.recitVersion || {})[h] === 'moi' && S.recitMoi && S.recitMoi[h] != null;
+  const btn = document.querySelector('#rel [data-rv="moi"]'); const barre = btn && btn.closest('#rel > div, #rel div[style]'); if (!moi || !barre) return fin();
+  const site = dr_rvParas(recitHtml0((S.closes && S.closes[h]) || now(), h, { brut: true })); const mien = new Set(dr_rvParas(S.recitMoi[h]).map(x => x.titre));
+  const plus = site.filter(x => !mien.has(x.titre)); if (!plus.length) return fin();
+  const cle = 'mjpc_rv_vu|' + (typeof dr_recitChemin === 'function' ? dr_recitChemin() : '') + '|' + h, sig = plus.map(x => x.titre + '@' + x.quand).join('¦');
+  let vu = null; try { vu = localStorage.getItem(cle); } catch (e) {} if (vu === sig) return fin();
+  const t0 = +((S.recitMoiT || {})[h]) || 0; let base = 0; try { base = +dr_recitHeure(h).base || 0; } catch (e) {}
+  const quand = x => { if (!base) return 0; const d = new Date(base); d.setHours(x.hh, x.mm, 0, 0); return d.getTime(); }; const m0 = t0 ? t0 - (t0 % 60000) : 0;
+  const apres = plus.filter(x => t0 && base && quand(x) >= m0), avant = plus.filter(x => apres.indexOf(x) < 0);
+  const nom = x => 'le paragraphe « ' + dr_esc(x.titre) + ' » (à ' + x.quand + ')';
+  const html = (apres.length ? '<b>Le site a ajouté à ce récit après ta version</b> : ' + apres.map(nom).join(', ') + '. ' : '') + (avant.length ? '<b>Absent de ta version</b> : ' + avant.map(nom).join(', ') + '. ' : '')
+    + 'Ton texte n’a pas changé ; « composé par le site » ' + (plus.length > 1 ? 'les' : 'le') + ' montre. <button class="btn" data-rv-vu title="Ferme cette ligne sur cet appareil. Elle revient si ce que le site a de plus que ta version change (un nouvel ajout, ou un autre paragraphe absent).">✕ vu</button>';
+  let l = old; if (!l) { l = document.createElement('div'); l.id = 'dr-rv-plus'; l.style.cssText = 'margin:6px 0 10px;padding:6px 10px;border-left:3px solid var(--or,#d4a64a);background:rgba(212,166,74,.08);color:var(--texte,#e8dcc8);font-size:.95rem;line-height:1.4';
+    l.title = 'Le site compose le récit à chaque geste de l’heure ; ta version ne bouge pas. Ce qu’il a de plus que ta version est dit ici ; clique « composé par le site » pour le lire. Rien n’est ajouté à ton texte.'; }
+  if (l.dataset.sig !== sig || l.innerHTML.indexOf('data-rv-vu') < 0) { l.innerHTML = html; l.dataset.sig = sig; }
+  if (l.previousElementSibling !== barre) barre.insertAdjacentElement('afterend', l);
+  const b = l.querySelector('[data-rv-vu]'); if (b) b.onclick = () => { try { localStorage.setItem(cle, sig); } catch (e) {} l.remove(); };
+} catch (e) {} }
+/* la ligne suit ce que Paul écrit dans sa version : à chaque frappe (une demi-seconde après la dernière), elle se refait — jamais dans son texte */
+var DR_RV = { T: null };
+document.addEventListener('input', ev => { const t = ev.target; if (!(t && t.closest && t.closest('#rel .recit.ma-version'))) return; clearTimeout(DR_RV.T); DR_RV.T = setTimeout(dr_rvPlus, 500); }, true);
+function dr_voletRelu(){ try { if (!document.body.classList.contains('vue-relecture') || (S.lancee && !S.close) || typeof volet !== 'function') return; const v = document.getElementById('volet'); if (!v) return;
+  const h = S.faceH || S.heure || 1, sa = S.atelier, h0 = S.heure, di0 = S.di; S.atelier = false; S.heure = h; S.di = -1;
+  try { volet(); } finally { S.atelier = sa; S.heure = h0; S.di = di0; } v.dataset.relu = '1'; } catch (e) {} }
 // ───────── complément du moteur, sur les mots de Paul (15/09) : « un je est toujours un élève » → « on a … » ; les phrases nominales se racontent (« on a vu que ») ; adverbes variés ; nettoyage ─────────
 const IRREGULIERS = { 'fais': 'fait', 'vais': 'allé', 'écris': 'écrit', 'lis': 'lu', 'prends': 'pris', 'mets': 'mis', 'dis': 'dit', 'vois': 'vu', 'sais': 'su', 'peux': 'pu', 'dois': 'dû', 'veux': 'voulu', 'apprends': 'appris', 'comprends': 'compris', 'réponds': 'répondu', 'relis': 'relu', 'reviens': 'revenu', 'viens': 'venu', 'ouvre': 'ouvert', 'découvre': 'découvert', 'suis': 'été', 'ai': 'eu', 'connais': 'connu', 'reconnais': 'reconnu', 'construis': 'construit', 'décris': 'décrit', 'choisis': 'choisi', 'finis': 'fini', 'réfléchis': 'réfléchi', 'remplis': 'rempli', 'saisis': 'saisi', 'tiens': 'tenu', 'obtiens': 'obtenu', 'reçois': 'reçu', 'mens': 'menti', 'sens': 'senti', 'sors': 'sorti', 'pars': 'parti', 'dors': 'dormi', 'sers': 'servi', 'bats': 'battu', 'perds': 'perdu', 'attends': 'attendu', 'entends': 'entendu', 'rends': 'rendu', 'descends': 'descendu', 'vends': 'vendu', 'crois': 'cru', 'bois': 'bu', 'plais': 'plu', 'ris': 'ri', 'souris': 'souri', 'conclus': 'conclu', 'résous': 'résolu', 'traduis': 'traduit', 'produis': 'produit', 'conduis': 'conduit', 'introduis': 'introduit' };
 const AVEC_ETRE = new Set(['allé', 'venu', 'revenu', 'parti', 'sorti', 'entré', 'resté', 'arrivé', 'monté', 'descendu', 'tombé', 'né', 'mort', 'passé', 'retourné']);
@@ -27136,8 +27306,15 @@ function dr_sesPremierVerifier(v){
        l'appareil prenait la main sans base (mesuré : P2H, 2 fois sur 5) */
     if (!DR_SES.ici || DR_SES.ici.sig !== ici.sig || DR_SES.premierCle !== cle) return;   /* un état plus récent est arrivé entre-temps : c'est lui qui se vérifie */
     const maj = +(e && e.maj) || 0;
-    if (e && typeof e === 'object' && !(+e.vifTs) && maj > (+v.ts || 0)) {
-      DR_SES.etatAncien = Math.max(DR_SES.etatAncien || 0, maj); DR_SES.attendrePremier = 0;
+    /* CR (point 2, dette 3 de CQ — mesuré : rechargé pendant une panne, la page reprenait les 15 entrées gardées dans ce navigateur, puis le premier état vivant
+       reçu, celui d'avant la panne, la ramenait à 7) : la reprise a posé l'état gardé dans CE navigateur, plus récent que l'état vivant du hub, avec des entrées
+       que celui-ci n'a pas — l'état vivant ne l'efface pas ; l'appareil prend la main et envoie l'état repris, bâti sur lui (rien ne se perd). Jamais pour une
+       heure close ailleurs (elle se clôt ici). */
+    const rl = (typeof DR_CL === 'object' && DR_CL) ? DR_CL.repriseLoc : null;
+    const plusIci = !v.close && rl && Date.now() - rl.t < 120000 && rl.maj > (+v.ts || 0) && (function(){ const k = x => JSON.stringify([x && x.t, x && x.type, x && x.di, x && x.k, x && x.nom]); const vus = new Set((v.J || []).map(k)); return dr_journalHub().some(x => !vus.has(k(x))); })();
+    if (plusIci) DR_CL.repriseLoc = null;
+    if (plusIci || (e && typeof e === 'object' && !(+e.vifTs) && maj > (+v.ts || 0))) {
+      DR_SES.etatAncien = Math.max(DR_SES.etatAncien || 0, plusIci ? (+v.ts || 0) + 1 : maj); DR_SES.attendrePremier = 0;
       DR_SES.dernier = cle; dr_sesConnu(cle); DR_SES.socle = { S: v.S, parDiapo: v.parDiapo, vuMax: v.vuMax, J: v.J, minut: v.minut }; DR_SES.recuBase = true;
       DR_SES.main = DR_SES.id; DR_SES.mainTc = !!window.DR_TC; DR_SES.prise = true; DR_SES.forcer = true; DR_SES.envoye = ''; DR_SES.priseRejoint = false; if (window.DR_TC) DR_TC.mainPrise = true;
       try { dr_sesMainAfficher(); } catch (x) {} clearTimeout(DR_SES.envT); try { dr_sesEnvoyerMaintenant(); } catch (x) {} return; }
@@ -27276,6 +27453,7 @@ function dr_sesClosAilleurs(v){
   try { const f = document.getElementById('ecran-fin'); if (f) f.classList.remove('on', 'ouverture'); } catch (e) {}
   try { if (typeof atClasseFermer === 'function') atClasseFermer(); else if (typeof edtOuvrir === 'function') edtOuvrir(); } catch (e) {}
   const nom = (v.cours && (v.cours.classeNom || v.cours.classeSlug)) || '';
+  if (v.sorte === 'heure' && typeof dr_crCompleterClos === 'function') setTimeout(() => dr_crCompleterClos(v), 2600);   /* CR (617) : le journal et l'état de l'heure au hub repris de l'état vivant, s'il le faut (dr-classe.js) */
   if (v.sorte !== 'essai' && typeof cqClosAilleurs === 'function') { try { cqClosAilleurs(v, nom); } catch (e) {} }   /* CQ (17/11, la 4 HUGO) : la phrase vraie (cet ordinateur, un autre appareil, déjà close), et la clôture terminée au hub si elle ne l'est pas (index.html) */
   else try { atInfo((v.sorte === 'essai' ? 'L’essai (mode test)' : 'L’heure' + (nom ? ' des ' + escapeHtml(nom) : '')) + ' a été close sur un autre appareil : elle est close ici aussi.'); } catch (e) {}
   if (window.DR_TC && typeof dr_tcClos === 'function') dr_tcClos(v);
@@ -27417,6 +27595,9 @@ function dr_sesBandeau(){
     if (!c) { const loc = (typeof dr_heurePartie === 'function') ? dr_heurePartie() : null; if (dr_sesFrais(loc) && !loc.test && !dr_sesTest()) c = Object.assign({}, loc, { __sorte: 'heure' }); }   /* lot 1 (359) : jamais le miroir d'un essai (`test`) comme une heure */
     if (!c) { if (SES._reprise) sesRepriseRetirer(); return; }
     if (c.__sorte === 'heure' && typeof dr_heureTenueAilleurs === 'function' && dr_heureTenueAilleurs(_drSignatureCours(c))) { if (SES._reprise) sesRepriseRetirer(); return; }   /* un autre onglet de ce navigateur la tient (§12.28-3 d) */
+    /* CR (588 ; mesuré au faux hub à 600 ms : après « Reprendre », le bandeau revenait 24 s au-dessus de l'écran de la classe déjà ouvert, le temps que la reprise lise
+       l'heure) : cette page reprend déjà cette heure — le bandeau ne revient pas (90 s au plus ; une reprise qui échoue le rend aussitôt) */
+    { const rc = DR_SES.repriseEnCours; if (rc && Date.now() - rc.t < 90000 && c.__sorte === 'heure' && rc.cle === [c.niveau, c.chapitre, c.seance, c.classeSlug].join('|')) { if (SES._reprise) sesRepriseRetirer(); return; } }
     const cle = c.__sorte + '|' + (c.__sorte !== 'heure' ? c.ts + '|' + c.seance : _drSignatureCours(c));
     if (DR_SES.closVu[cle]) return;
     if (SES._reprise && SES._reprise.__cle === cle) return;   /* déjà là : rien ne se redessine (§12.56 (1) a) */
