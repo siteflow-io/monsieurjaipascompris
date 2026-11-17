@@ -3714,6 +3714,9 @@ if(typeof window!=="undefined"&&window.addEventListener){
    La séance de la 7.7.1 reste lisible : ses champs (phase, qIdx, phaseStart, paused, absents, reponses, autoevals, papier, notifs,
    etat « en_cours » / « terminee », evalSnapshot) sont lus tels quels, et tenus à jour à chaque passage. */
 
+/* La version de l'app (8.0.16) : la carte « ℹ️ Version » des Réglages l'affiche (c3-evals.js, etape2.js) ; la console du navigateur la lit aussi (QCM_VERSION). */
+var QCM_VERSION = "8.0.16";
+
 /* ── La base : la configuration de la 7.7.1, telle quelle ── */
 var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
 var DB_ROOT = "qcm";
@@ -3753,11 +3756,45 @@ var LIVE = (function(){
   L.decroche = function(){ if(L.connecte === false && Date.now() - (L.connecteDepuis || 0) > 3000) return "coupee";
     var e = typeof SCN !== "undefined" && SCN.sid() ? SCN.etat() : null; if(!e || !e.duree || ["reflexion", "passage", "reponse", "b", "rouvert"].indexOf(e.ph) < 0) return null;
     return L.maintenant() - ((+e.depuis || 0) + e.duree * 1000) > 6000 ? "figee" : null; };
-  function ecouter(chemin, cle, transformer){
+  /* (8.0.16, C2) la tablette n'est prête qu'une fois arrivées la liste des classes, la séance active et ses séances. La 8.0.15 la disait prête
+     dès la liste des classes : sur le vrai hub, les séances (360 Ko) arrivent 0,7 s après ; une tablette rechargée en pleine séance voyait une
+     séance vide et oubliait ses élèves (TabletteLive, pages.js), qui ne rentraient plus (C1).
+     (C2, C5) personne n'écoute plus tout qcm/sessions : chaque écriture dans une séance faisait relire toutes les séances (16 séances, 403 Ko :
+     87 ms par écriture sur une tablette ralentie 4 fois ; des clics perdus sans trace à ÷8 et ÷12 ; une console ÷4 montrait un clic en 0,6 s).
+     La tablette écoute la séance active de chaque classe (l'élève qui entre trouve sa classe par son code : ELV.entrer, puis placer, qui lit
+     aussitôt les places de sa séance) et celle de sa mémoire (qcm_tablette) ; « 📊 Mes évaluations » lit les autres à son ouverture (v3Ecouter,
+     c3-soir.js). La console et le téléphone lisent la liste une fois, puis écoutent chaque séance à part, et chaque séance active dès qu'elle
+     l'est ; une séance créée ailleurs sans devenir active paraît quand la console ouvre un écran qui liste les séances (L.relireSeances, pages.js). */
+  L.recus = {};
+  var SUIVIES = {};   // id de séance → true quand sa première valeur est arrivée
+  function tablette(){ return L.appareil() === "tablette"; }
+  function marquer(){ if(!L.pret && L.d.classes !== null && L.recus.sessionActive && L.recus.sessions && (!tablette() || Object.keys(SUIVIES).every(function(id){ return SUIVIES[id]; }))) L.pret = true; }
+  function ecouter(chemin, cle, transformer, apres){
     if(!db) return;
-    db.ref(chemin).on("value", function(s){ var v = s.val(); L.d[cle] = transformer ? transformer(v) : (v || {}); L.pret = L.d.classes !== null; L.changer(); },
+    db.ref(chemin).on("value", function(s){ var v = s.val(); L.d[cle] = transformer ? transformer(v) : (v || {}); L.recus[cle] = true; if(apres) apres(L.d[cle]); marquer(); L.changer(); },
       function(e){ console.error("QCM : lecture refusée " + chemin, e); });
   }
+  function suivre(id){ if(!db || !id || typeof id !== "string" || id in SUIVIES) return; SUIVIES[id] = false;
+    db.ref(DB_ROOT + "/sessions/" + id).on("value", function(s){ var v = s.val(), d = Object.assign({}, L.d.sessions || {});
+      if(v && typeof v === "object"){ horsTempsDe(v); d[id] = v; } else delete d[id];
+      L.d.sessions = d; SUIVIES[id] = true; marquer(); L.changer(); }, function(e){ SUIVIES[id] = true; marquer(); console.error("QCM : lecture refusée de la séance " + id, e); }); }
+  // une séance est là (ou absente de la base) : placer() l'attend avant de lire ses places (ELV, plus bas)
+  L.seanceArrivee = function(id){ return !id || SUIVIES[id] === true || !!(L.d.sessions || {})[id]; };
+  L.relireSeances = function(){ if(!db || tablette()) return Promise.resolve();
+    return db.ref(DB_ROOT + "/sessions").once("value").then(function(s){ var v = s.val() || {}, d = Object.assign({}, L.d.sessions || {});
+      Object.keys(v).forEach(function(id){ if(!(id in SUIVIES) && v[id] && typeof v[id] === "object"){ horsTempsDe(v[id]); d[id] = v[id]; } });
+      L.d.sessions = d; Object.keys(v).forEach(suivre); L.recus.sessions = true; marquer(); L.changer();
+      if(!NOUVELLES) NOUVELLES = L.nouvellesSeances(Object.keys(v), function(id){ if(!(id in SUIVIES)) suivre(id); }); }, function(e){ console.error("QCM : lecture refusée des séances", e); }); };
+  /* (8.0.16, C5, conscience 04:02) une séance créée ailleurs (une autre console, une autre app) paraît sans rechargement ni réouverture : après la lecture
+     unique de la liste, on n'écoute que les séances NOUVELLES. Les clés sont « sess_<heure en ms> » (ACT, plus bas) : dans l'ordre du temps ; la requête
+     part de la plus grande clé lue (orderByKey().startAt), elle ne télécharge rien d'ancien, et ne rappelle que pour un enfant ajouté (child_added) ;
+     une clé déjà connue est ignorée. Une séance effacée passe par son écoute à elle (suivre : sa valeur devient null). Rendu : la requête, pour l'arrêter. */
+  var NOUVELLES = null;
+  L.cleDepart = function(cles){ var m = (cles || []).filter(function(k){ return /^sess_\d+$/.test(k); }).sort(); return m.length ? m[m.length - 1] : "sess_"; };
+  L.nouvellesSeances = function(cles, f){ if(!db) return null; var q = db.ref(DB_ROOT + "/sessions").orderByKey().startAt(L.cleDepart(cles));
+    // (un faux Firebase de banc qui ignore les requêtes rend tout qcm/sessions sous la clé « sessions » : jamais une séance)
+    q.on("child_added", function(s){ var id = s && s.key; if(id && id !== "sessions" && typeof id === "string") f(id); }, function(e){ console.error("QCM : séances nouvelles refusées", e); });
+    return q; };
   L.demarrer = function(){
     if(L.demarre || !db) return; L.demarre = true;
     db.ref(".info/serverTimeOffset").on("value", function(s){ L.offset = s.val() || 0; });
@@ -3766,8 +3803,9 @@ var LIVE = (function(){
     db.ref(".info/connected").on("value", function(s){ var c = s.val() !== false; if(c !== L.connecte){ L.connecte = c; L.connecteDepuis = Date.now(); L.changer(); } });
     ecouter("classes", "classes", function(v){ return v || {}; });
     ecouter(DB_ROOT + "/evaluations", "evaluations");
-    ecouter(DB_ROOT + "/sessions", "sessions", function(v){ v = v || {}; Object.keys(v).forEach(function(id){ if(v[id] && typeof v[id] === "object") horsTempsDe(v[id]); }); return v; });
-    ecouter(DB_ROOT + "/sessionActive", "sessionActive");
+    if(tablette()){ try { var m = JSON.parse(localStorage.getItem("qcm_tablette") || "null"); if(m && m.sid) suivre(m.sid); } catch(e){} }
+    else L.relireSeances();
+    ecouter(DB_ROOT + "/sessionActive", "sessionActive", null, function(a){ Object.keys(a).forEach(function(c){ suivre(a[c]); }); if(tablette()) L.recus.sessions = true; });
     ecouter(DB_ROOT + "/settings", "settings");
     ecouter("taxonomie/competences", "competences", function(v){ return v || null; });
     // le tic des chronos : une fois par seconde, seulement pendant un temps compté
@@ -5031,17 +5069,52 @@ var ELV = (function(){
     if(Object.keys(m).length) ecrireQCM(m, "oubli de la fin de l'heure"); E.oublier(); };
   E.oublier = function(){ E.tab = null; E.cotes = {}; E.n = null; try { localStorage.removeItem("qcm_tablette"); } catch(e){} presence(); LIVE.changer(); };
   /* La présence (la 7.7.1, EleveSession, l. 2781 à 2787) : qcm/presence/<classe>/<élève> = {nomComplet, last}, mise à jour toutes les 8 s,
-     effacée quand la tablette se déconnecte ou oublie l'élève */
+     effacée quand la tablette se déconnecte ou oublie l'élève. (8.0.16) last est l'heure de la base dès la première écriture (la 8.0.15 y
+     mettait d'abord l'heure de la tablette) ; eveil dit si le navigateur de la tablette garde l'écran allumé (C4 : « accordé », « refusé… »,
+     « absent ») : on le lira tablette par tablette après la prochaine séance. */
   var PRES = {};
   function presence(){
     if(!db) return; var cl = LIVE.classeSlug || SCN.classe(), voulus = {};
     if(cl) [E.cotes.g, E.cotes.d].forEach(function(x){ if(x) voulus[x] = 1; });
     Object.keys(PRES).forEach(function(k){ if(!voulus[k.split("|")[1]] || k.split("|")[0] !== cl){ try { db.ref(DB_ROOT + "/presence/" + k.split("|")[0] + "/" + k.split("|")[1]).remove(); } catch(e){} delete PRES[k]; } });
     Object.keys(voulus).forEach(function(x){ var k = cl + "|" + x; if(PRES[k]) return; var ref = db.ref(DB_ROOT + "/presence/" + cl + "/" + x);
-      ref.set({nomComplet:SCN.nomDe(x), last:Date.now()}); try { ref.onDisconnect().remove(); } catch(e){} PRES[k] = ref; });
+      ref.set({nomComplet:SCN.nomDe(x), last:firebase.database.ServerValue.TIMESTAMP, eveil:E.eveil || null}); try { ref.onDisconnect().remove(); } catch(e){} PRES[k] = ref; });
   }
-  // (8.0.11c) l'heure de la base, pas celle de la tablette : la console reconnaît une tablette décrochée à une présence qui ne bouge plus (decrocheH)
-  setInterval(function(){ Object.keys(PRES).forEach(function(k){ try { PRES[k].update({last:firebase.database.ServerValue.TIMESTAMP}); } catch(e){} }); }, 8000);
+  /* (8.0.16, C4) la tablette qui perd la base dans un temps mort. Dans les vraies séances du 16/11, chaque tablette perdue l'a été après 2 à 7 min
+     sans que personne la touche ; une connexion morte qui se croit vivante n'était jamais réparée (la réparation de la 8.0.11 n'agit que sur une
+     question chronométrée dépassée sur la tablette ; une tablette restée sur « attends » ne le voit jamais).
+     - La présence attend l'accusé de réception de la base (E.ackBase) ; sans accusé depuis 20 s, la tablette rouvre sa connexion (E.reouvertures).
+     - Au réveil de l'écran, elle rouvre sa connexion, et redemande l'écran allumé.
+     - Elle demande à garder l'écran allumé (Screen Wake Lock) ; la réponse du navigateur va dans sa présence (eveil).
+     (8.0.11c) l'heure de la base, pas celle de la tablette : la console reconnaît une tablette décrochée à une présence qui ne bouge plus (decrocheH) */
+  E.ackBase = null; E.reouvertures = 0; E.eveil = null;
+  function rouvrirBase(){ try { var d = firebase.database(); d.goOffline(); setTimeout(function(){ try { d.goOnline(); } catch(e){} }, 300); } catch(e){ console.error("QCM : rouvrir la base", e); } }
+  function direEveil(v){ if(E.eveil === v) return; E.eveil = v; Object.keys(PRES).forEach(function(k){ try { PRES[k].update({eveil:v}); } catch(e){} }); }
+  function garderEveillee(){
+    try { if(!navigator.wakeLock){ direEveil("absent"); return; } if(document.visibilityState !== "visible") return;
+      navigator.wakeLock.request("screen").then(function(){ direEveil("accordé"); }, function(e){ direEveil("refusé : " + ((e && e.name) || "?")); }); }
+    catch(e){ direEveil("refusé : " + ((e && e.name) || "erreur")); } }
+  if(LIVE.appareil() === "tablette"){
+    garderEveillee();
+    document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "visible"){ E.ackBase = Date.now(); rouvrirBase(); garderEveillee(); } });
+  }
+  /* (8.0.16, C4) à chaque reconnexion à la base, la présence est réécrite en entier et son effacement à la déconnexion redemandé. À la coupure, la base
+     l'avait effacée (onDisconnect, qui ne sert qu'une fois) ; la mise à jour des 8 s n'y remettait que last : ni le nom, ni eveil, ni l'effacement suivant */
+  if(db) db.ref(".info/connected").on("value", function(s){ if(s.val() !== true) return;
+    Object.keys(PRES).forEach(function(k){ var x = k.split("|")[1]; try { PRES[k].set({nomComplet:SCN.nomDe(x), last:firebase.database.ServerValue.TIMESTAMP, eveil:E.eveil || null}); PRES[k].onDisconnect().remove(); } catch(e){} }); });
+  setInterval(function(){ var ks = Object.keys(PRES); if(!ks.length){ E.ackBase = null; return; } if(E.ackBase == null) E.ackBase = Date.now();
+    ks.forEach(function(k){ try { PRES[k].update({last:firebase.database.ServerValue.TIMESTAMP}, function(err){ if(!err) E.ackBase = Date.now(); }); } catch(e){} });
+    if(Date.now() - E.ackBase > 20000 && document.visibilityState !== "hidden"){ E.ackBase = Date.now(); E.reouvertures++; rouvrirBase(); } }, 8000);
+  /* (8.0.16, C1) la présence des élèves de la classe de la tablette (qcm/presence/<classe>), écoutée par la tablette seule, dès que sa classe est
+     connue : placer() y lit si le voisin est en ce moment sur une autre tablette vivante */
+  var PRES_CL = {cl:null, ref:null, f:null, d:{}, arrivee:false};
+  function presencesClasse(){
+    var cl = LIVE.classeSlug || SCN.classe(); if(!db || !cl) return PRES_CL;
+    if(PRES_CL.cl !== cl){ if(PRES_CL.ref) try { PRES_CL.ref.off("value", PRES_CL.f); } catch(e){}
+      PRES_CL.cl = cl; PRES_CL.d = {}; PRES_CL.arrivee = false; PRES_CL.ref = db.ref(DB_ROOT + "/presence/" + cl);
+      PRES_CL.f = function(s){ PRES_CL.d = s.val() || {}; PRES_CL.arrivee = true; }; PRES_CL.ref.on("value", PRES_CL.f, function(){ PRES_CL.arrivee = true; }); }
+    return PRES_CL; }
+  if(LIVE.appareil() === "tablette") LIVE.abonner(function(){ if(LIVE.pret) presencesClasse(); });
   E.presence = presence;
   E.courant = null;
   // qui est sur cet appareil : {combien, n (la tablette), g, d (les slugs des deux moitiés), classe}
@@ -5125,12 +5198,19 @@ var ELV = (function(){
      (LoginLive, pages.js) ; la séance note l'envoi (appels/<élève>) : sur la tablette 6, Julien voit « APPELLE … ! » jusqu'à l'entrée de son voisin.
      Une tablette n'est pas la sienne : son autre moitié a un autre élève ; ou, la tablette vide, son voisin est déjà entré pendant ce cours sur une
      autre tablette (le 10/11 : deux élèves regroupés par l'appel, assis chacun à une tablette différente, entraient chacun le premier). */
+  /* (8.0.16, C1) le voisin est en ce moment sur une autre tablette vivante : sa présence a moins de 25 s (elle bouge toutes les 8 s). Une tablette
+     remise à zéro ne porte plus la présence de ses élèves (effacée à l'oubli, ou à la déconnexion) : ses deux élèves y rentrent. */
+  function enLigneAilleurs(v){ var p = presencesClasse().d[v]; return !!p && (LIVE.maintenant() - (+p.last || 0)) < 25000; }
+  // placer() attend la séance de la tablette et la présence de sa classe (8 s au plus) : sans elles, les places seraient lues vides
+  function attendre(ok, ms){ return new Promise(function(r){ var t0 = Date.now(); (function voir(){ if(ok() || Date.now() - t0 > ms) return r(); setTimeout(voir, 100); })(); }); }
   function envoyer(x, n, avec){
     var id = sid(); if(id && n){ var m = {}; m[cheminS(id, "appels/" + x)] = {tab:n, avec:avec || null, ms:LIVE.maintenant()}; ecrireQCM(m, "envoyer"); }
     return Promise.resolve({ok:false, va:{tablette:n, avec:avec || null, eleve:x}, eleve:x});
   }
   // placer l'élève entré : sa tablette est celle des binômes ; l'autre moitié doit être son binôme (sinon « Va sur la tablette … »)
-  function placer(cote, x){
+  function placer(cote, x, attendu){
+    var pretIci = function(){ return LIVE.seanceArrivee(sid()) && (!sid() || presencesClasse().arrivee); };
+    if(!attendu && !pretIci()) return attendre(pretIci, 8000).then(function(){ return placer(cote, x, true); });
     // (8.0.10, Paul C17 293) pendant l'appel, personne n'entre : la place d'avant l'appel n'est pas celle de la séance
     if(sid() && !SCN.ouvert()) return Promise.resolve({ok:false, ferme:true, err:TEXTE_AVANT_OUVERTURE});
     var t = SCN.tabletteDe(x), id = sid();
@@ -5140,9 +5220,11 @@ var ELV = (function(){
     if(t && E.tab && t.n !== E.tab && !E.cotes.g && !E.cotes.d) E.tab = null;
     var autre = E.cotes[cote === "g" ? "d" : "g"];
     if(autre && SCN.voisinDe(autre) !== x && t) return envoyer(x, t.n, SCN.voisinDe(x));
-    // (8.0.10) la tablette vide, et son voisin déjà entré ailleurs pendant ce cours : c'est la tablette de son voisin qui est la sienne
+    /* (8.0.10) la tablette vide, et son voisin déjà entré ailleurs pendant ce cours : c'est la tablette de son voisin qui est la sienne.
+       (8.0.16, C1) seulement si le voisin est en ce moment sur une autre tablette vivante (enLigneAilleurs) : il est aussi « entré pendant ce cours »
+       quand il était sur CETTE tablette, avant qu'elle ne soit remise à zéro ; la 8.0.15 envoyait alors chacun des deux vers sa propre tablette */
     var v0 = t ? SCN.voisinDe(x) : null;
-    if(t && !autre && v0 && v0 !== E.cotes.g && v0 !== E.cotes.d && SCN.entreCeCours(v0)) return envoyer(x, t.n, v0);
+    if(t && !autre && v0 && v0 !== E.cotes.g && v0 !== E.cotes.d && SCN.entreCeCours(v0) && enLigneAilleurs(v0)) return envoyer(x, t.n, v0);
     if(!t && id){ // pas dans la grille (arrivé après l'appel) : une moitié vide l'accueille
       // (8.0.5, dette 181) jamais à côté d'un « 🚫 Jamais avec » de MJPC : la moitié libre d'une tablette dont l'autre élève l'exclut ne l'accueille pas
       var possible = function(p){ var o = p.g || p.d; return !o || !SCN.binomesRefus(x, o); };
@@ -9092,7 +9174,7 @@ function Reglages(){
       h(NiveauxMaitrise)),
     h(EditeurTextesQCM),
     carte("ℹ️ Version", "La version de l'app, et le socle qu'elle embarque.",
-      h("p", {style:{opacity:.85}}, "Évaluations QCM — version de la livraison · socle MJPC-CORE"))), false);
+      h("p", {style:{opacity:.85}}, "Évaluations QCM — version " + (typeof QCM_VERSION !== "undefined" ? QCM_VERSION : "de la livraison") + " · socle MJPC-CORE"))), false);
 }
 function DureesSeance(){
   var lignes = [["Installation et consignes", 5, "min"], ["Correction, par question", 1, "min"], ["Co-évaluation et bilan", 2, "min"], ["Passage de la tablette, avant chaque tour", 3, "s"], ["« Ta feuille dit-elle la même chose que ton clic ? »", 5, "s"], ["Entre deux questions", 15, "s"]];
@@ -11862,7 +11944,7 @@ function Pilot(s){
     h("h3", {style:{margin:"0 0 .2rem"}}, "📱 Tablettes", InfoI("Chaque tablette, ses deux moitiés : qui est assis où, et où en est chacun. « 👁 » montre les deux moitiés en direct. Glisse un nom sur un autre pour échanger deux élèves : pendant la séance, ils changent de tablette et retapent leur code ; leurs réponses les suivent."), h("span", {style:{fontWeight:400, display:"block", fontSize:".8rem", color:"#475569", margin:".1rem 0 0"}}, s.sousTitre || "")),
     // (8.0.10) en direct, chaque tablette sous son vrai numéro (tablettesH : une tablette vidée par l'appel reste à sa place, vide) ; la 8.0.9 serrait
     // la liste : après un trou (la 10 des Turing), la console montrait la tablette 11 sous le numéro 10
-    GrilleTablettes(s.paires || (enDirect() ? tablettesH() : pairesDuMoment()), enDirect() && s.etat ? function(p){ var d = decrocheH(p); return d ? {cls:"m-decroche", st:d} : s.etat(p); } : s.etat, enDirect() ? {deplacer:true} : null),
+    GrilleTablettes(s.paires || (enDirect() ? tablettesH() : pairesDuMoment()), enDirect() && s.etat ? function(p, cote){ var d = decrocheH(p); return d ? {cls:"m-decroche", st:d} : s.etat(p, cote); } : s.etat, enDirect() ? {deplacer:true} : null),
     Legende(s.legende || LEG_Q));
   return Console("pilotage", "pilot", h("div", {className:"card"},
     TitreCarte("🎯 " + EV.titre + " — " + CLASSE, [
@@ -11954,7 +12036,7 @@ function presencesH(){ var sid = SCN.sid(), cl = SCN.classe ? SCN.classe() : nul
 function decrocheH(p){ if(!enDirect() || !p) return null; var m = momH() || {}; if(["reflexion", "passage", "reponse", "b", "rouvert", "close"].indexOf(m.ph) < 0) return null;
   var pr = presencesH(); if(!PRES_VUE.vus[p] || !entreH(p)) return null; var x = pr[p], t = x && +x.last;
   if(x && t && LIVE.maintenant() - t < 20000) return null;
-  return "📶 décrochée : sa tablette ne suit plus la séance — fais-lui recharger la page"; }
+  return "📶 décrochée : sa tablette se reconnecte seule — si rien dans 20 s, qu'il clique n'importe où sur son écran"; }
 setInterval(function(){ if(typeof LIVE !== "undefined" && LIVE.appareil && LIVE.appareil() === "console" && PRES_VUE.abo) LIVE.changer(); }, 5000);
 /* (8.0.11c) les réponses arrivées hors temps (horsTempsDe, src/live/base.js) : gardées à part, montrées à Paul, qui décide */
 function HorsTempsH(){ if(!enDirect()) return null; var s = SCN.sess(); var l = (s && s.horsTemps) || []; if(!l.length) return null; var ev = SCN.ev ? SCN.ev() : EV;
@@ -13168,14 +13250,41 @@ function v3Ecouter(chemin){
   var ref = db.ref(chemin);
   // la corbeille du site est commune aux apps : le QCM n'en lit que ses éléments
   if(chemin === "corbeille") ref = ref.orderByKey().startAt("qcm-").endAt("qcm-");
+  /* (8.0.16, C2, C5) personne n'écoute plus tout qcm/sessions d'un bloc : chaque écriture dans une séance faisait relire toutes les séances.
+     - La tablette (C2) : 16 séances, 403 Ko, 87 ms par écriture, ralentie 4 fois ; des clics perdus à ÷8 et ÷12. « 📊 Mes évaluations » la lisait ainsi.
+     - La console et le téléphone (C5) : cette écoute, ouverte dès « 🎯 Lancer » (la séance précédente, le QCM précédent des binômes, la séance en
+       pause), annulait l'écoute séance par séance de LIVE (base.js) : une console ralentie 4 fois montrait un clic en 0,6 s.
+     Ici aussi, la liste est lue une fois, puis chaque séance est écoutée à part (v3SuivreSeance) : une écriture ne relit que sa séance, et ce qui est
+     à l'écran suit la base sans rechargement (une copie rendue paraît dans « 📊 Mes évaluations » ouvert). S'y ajoutent chaque séance active, chaque
+     séance que l'appareil connaît (LIVE.d.sessions) ou écrit (v3Set, v3Update), et chaque séance nouvelle, créée ailleurs (LIVE.nouvellesSeances :
+     elle paraît sans réouverture). v3RelireSeances relit aussi la liste quand la console ouvre un écran qui liste les séances (pages.js, avec
+     LIVE.relireSeances), et quand l'élève ouvre « 📊 Mes évaluations » (v3Relire). */
+  if(chemin === v3Q("sessions")){ V3S.ecoutes[chemin] = "seance par seance"; v3RelireSeances();
+    db.ref(v3Q("sessionActive")).on("value", function(s){ var a = s.val() || {}; Object.keys(a).forEach(function(c){ v3SuivreSeance(a[c]); }); });
+    if(typeof LIVE !== "undefined" && LIVE.abonner) LIVE.abonner(function(){ Object.keys(LIVE.d.sessions || {}).forEach(v3SuivreSeance); });
+    return; }
   ref.on("value", function(s){ V3S.val[chemin] = s.val(); V3S.charge[chemin] = true; v3Avertir(); }, function(){ V3S.charge[chemin] = true; v3Avertir(); });
 }
+var V3_SEANCES = {};   // (8.0.16, C2, C5) les séances écoutées une à une par la couche du soir
+function v3SuivreSeance(id){ var chemin = v3Q("sessions"), db = v3db(); if(!db || !id || typeof id !== "string" || V3_SEANCES[id] || V3S.ecoutes[chemin] !== "seance par seance") return; V3_SEANCES[id] = 1;
+  db.ref(chemin + "/" + id).on("value", function(s){ var v = s.val(), d = Object.assign({}, V3S.val[chemin] || {}); if(v != null) d[id] = v; else delete d[id]; V3S.val[chemin] = d; v3Avertir(); },
+    function(e){ console.error("QCM : lecture refusée de la séance " + id, e); }); }
+var V3_NOUVELLES = null;   // (8.0.16, conscience 04:02) les séances nouvelles, écoutées par une requête qui ne relit rien d'ancien (LIVE.nouvellesSeances, base.js)
+function v3RelireSeances(){ var chemin = v3Q("sessions"), db = v3db(); if(!db || V3S.ecoutes[chemin] !== "seance par seance") return Promise.resolve();
+  return db.ref(chemin).once("value").then(function(s){ var v = s.val() || {}, d = Object.assign({}, V3S.val[chemin] || {});
+    Object.keys(v).forEach(function(id){ if(!V3_SEANCES[id]) d[id] = v[id]; }); V3S.val[chemin] = d; V3S.charge[chemin] = true; Object.keys(v).forEach(v3SuivreSeance); v3Avertir();
+    if(!V3_NOUVELLES && typeof LIVE !== "undefined" && LIVE.nouvellesSeances) V3_NOUVELLES = LIVE.nouvellesSeances(Object.keys(v), v3SuivreSeance); },
+    function(e){ V3S.charge[chemin] = true; v3Avertir(); console.error("QCM : lecture refusée des séances", e); }); }
+// une écriture dans une séance (sessions/<id>/…) : la couche du soir écoute cette séance (une séance qu'elle crée, le mode test, une reprise)
+function v3SeanceDe(chemin){ var p = v3Q("sessions") + "/"; if(String(chemin).indexOf(p) === 0) v3SuivreSeance(String(chemin).slice(p.length).split("/")[0]); }
+// (8.0.16) « 📊 Mes évaluations » s'ouvre : la liste des séances est relue (une séance créée depuis) ; ses séances restent écoutées une à une
+function v3Relire(chemin){ if(chemin === v3Q("sessions")) v3RelireSeances(); }
 function v3(chemin){ v3Ecouter(chemin); return V3S.val[chemin]; }
 function v3Pret(chemins){ return !v3db() || [].concat(chemins).every(function(c){ v3Ecouter(c); return !!V3S.charge[c]; }); }
 function useV3(){ var s = useState(0), set = s[1];
   useEffect(function(){ var f = function(){ set(function(x){ return x + 1; }); }; V3S.abonnes.push(f); return function(){ V3S.abonnes = V3S.abonnes.filter(function(g){ return g !== f; }); }; }, []); }
-function v3Set(chemin, v){ var db = v3db(); if(!db) return Promise.resolve(); return db.ref(chemin).set(v === undefined ? null : v); }
-function v3Update(chemin, o){ var db = v3db(); if(!db) return Promise.resolve(); return db.ref(chemin).update(o); }
+function v3Set(chemin, v){ var db = v3db(); if(!db) return Promise.resolve(); v3SeanceDe(chemin); return db.ref(chemin).set(v === undefined ? null : v); }
+function v3Update(chemin, o){ var db = v3db(); if(!db) return Promise.resolve(); v3SeanceDe(chemin); return db.ref(chemin).update(o); }
 function v3Sans(o){ return JSON.parse(JSON.stringify(o === undefined ? null : o)); }   // sans undefined : la base les refuse
 function v3Liste(x){ if(!x) return []; if(Array.isArray(x)) return x.filter(function(y){ return y != null; }); return Object.keys(x).sort(function(a, b){ return +a - +b; }).map(function(k){ return x[k]; }).filter(function(y){ return y != null; }); }
 
@@ -14182,7 +14291,7 @@ function ReglagesV(){
     carte("🎚️ Les niveaux de maîtrise et la note", "Les bornes portent sur la note, quelle que soit son échelle ; une compétence se met sur la même échelle, puis passe dans les mêmes tranches. L'app refuse un réglage qui laisse un trou ou fait se chevaucher deux paliers.", NiveauxMaitriseV()),
     EditeurTextesV(),
     carte("ℹ️ Version", "La version de l'app, et le socle qu'elle embarque.",
-      h("p", {style:{opacity:.85}}, "Évaluations QCM — version de la livraison · socle MJPC-CORE"))), false);
+      h("p", {style:{opacity:.85}}, "Évaluations QCM — version " + (typeof QCM_VERSION !== "undefined" ? QCM_VERSION : "de la livraison") + " · socle MJPC-CORE"))), false);
 }
 
 /* ── Le prompt de création d'éval : le gabarit enregistré (qcm/settings/promptCreation, sinon celui du sas), rempli pour le chapitre choisi ── */
@@ -14755,7 +14864,7 @@ function ouH(m){ var ph = m.ph === "pause" && m.pause ? m.pause.ph : m.ph;
 function EcranConsoleHeure(){ return h(ConsoleHeureC); }
 function ConsoleHeureC(){
   var fe = useFen();
-  if(fe.f && fe.cle !== cleFen()){ fe.f = null; fe.arg = null; }
+  if(fe.f && (fe.f === "voirTablette" ? String(fe.cle || "").split("|")[0] !== String((MOM() || {}).seance) : fe.cle !== cleFen())){ fe.f = null; fe.arg = null; }
   chargerHeure();
   var m = momH();
   useSeconde(!!PHASES_CHRONO[m.ph]);
@@ -15057,7 +15166,7 @@ function PageMoitie(p){
     DECO.map(function(e, i){ return h("span", {key:i, className:"deco"}, e); }),
     h("div", {className:"eleve-card"},
       h("div", {className:"eleve-tete"}, h("div", {className:"eleve-classe-badge"}, p.badge),
-        prenom && h("button", {className:"btn btn-ghost btn-sm mes-evals", "data-local":"1", onClick:function(){ set(!ouvert); }}, ouvert ? "← Retour" : "📊 Mes évaluations")),
+        prenom && h("button", {className:"btn btn-ghost btn-sm mes-evals", "data-local":"1", onClick:function(){ if(!ouvert && typeof v3Relire === "function") v3Relire(v3Q("sessions")); set(!ouvert); }}, ouvert ? "← Retour" : "📊 Mes évaluations")),
       ouvert ? h(F, null, h("h1", null, "📊 Mes évaluations"), ListeMesEvals(prenom)) : h(F, null, p.titre && h("h1", null, p.titre), enfants)));
 }
 function Page(badge, titre, enfants){
@@ -17147,7 +17256,7 @@ function ListeMesEvalsV(slug, classeSlug, onOuvrir){
 }
 function MesEvaluationsV(){ return h(MesEvaluationsVC); }
 function MesEvaluationsVC(){
-  useV3();
+  useV3(); useEffect(function(){ v3Relire(v3Q("sessions")); }, []);   // (8.0.16, C2) la tablette relit les séances à l'ouverture
   var ici = eleveIciV(), s = useState(false), retour = s[0], setRetour = s[1];
   if(retour && typeof AccueilC === "function") return h(AccueilC);
   var nom = ici ? ((v3("codes/" + ici.slug) || {}).name || (seancesV().map(function(se){ return se.eleves.filter(function(e){ return e.slug === ici.slug; })[0]; }).filter(Boolean)[0] || {}).nom || ici.slug) : "";
@@ -18922,6 +19031,20 @@ function TelephoneSansSeance(){
 }
 /* Le téléphone scanné : il écrit qcm/qrScans/<nonce>, et la fenêtre du QR se ferme sur la console (la 7.7.1, VuePhone, l. 5374 à 5380) */
 (function(){ try { var qr = LIVE.params().get("qr"); if(qr && LIVE.appareil() === "telephone" && db) db.ref(DB_ROOT + "/qrScans/" + qr).set(firebase.database.ServerValue.TIMESTAMP); } catch(e){ console.error(e); } })();
+
+/* (8.0.16, C5) la console et le téléphone n'écoutent plus tout qcm/sessions (LIVE.demarrer, base.js) : une séance créée ailleurs sans devenir
+   active n'y est pas écoutée. Ils relisent la liste des séances quand ils ouvrent un écran qui les liste : les écrans du soir et des évaluations
+   (séances, résultats, fiches, relecture, bilans, « 📚 Évaluations », Réglages) et le lancement (c-lancer : les séances précédentes, le QCM précédent
+   des binômes, la séance en pause). Pas au chargement : LIVE.demarrer vient de lire la liste. La couche du soir (V3S, c3-soir.js) relit la sienne
+   au même moment (v3RelireSeances). */
+var RELIRE_S = {debut:false, vu:null};
+LIVE.abonner(function(){
+  var app = LIVE.appareil(); if((app !== "console" && app !== "telephone") || !LIVE.pret) return;
+  var id = NAV.ecran || (app === "console" ? PAGES.console() : null);
+  if(!RELIRE_S.debut){ RELIRE_S.debut = true; RELIRE_S.vu = id; return; }
+  if(id === RELIRE_S.vu) return; RELIRE_S.vu = id;
+  if(id === "c-lancer" || (NAV.ecran && PAGES.estSoir(NAV.ecran))){ LIVE.relireSeances(); if(typeof v3RelireSeances === "function") v3RelireSeances(); }
+});
 
 /* La séance interrompue (la 7.7.1 : AppProf, l. 6851 à 6887) : la console pose lastDisconnect quand elle se déconnecte ; à son ouverture,
    une séance active dont la dernière déconnexion n'a pas été reprise (lastDisconnect > repriseConfirmee) ouvre « ⚠️ Séance interrompue
