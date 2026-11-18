@@ -1,101 +1,72 @@
-# Pourquoi l'IA se trompe en codant MJPC, et comment une erreur devient une cascade de dettes
+# Pourquoi l'IA se trompe en codant MJPC : le relevé vérifié dans le code
 
-Établi le 18/11/2026 par la conscience n°17, à la demande de Paul (07:19) : « je voulais savoir comment c'était possible que l'ia se trompe sur du coding et que ça crée une cascade de dettes que je mets ensuite un temps infini à débogger. Et je veux l'historique, afin de pouvoir créer un skill anti-erreurs de codage ».
+Demande de Paul, le 18/11/2026 : « je voulais savoir comment c'était possible que l'ia se trompe sur du coding et que ça crée une cascade de dettes […] Et je veux l'historique, afin de pouvoir créer un skill anti-erreurs de codage ». Il a ajouté une condition : « ce relevé […] doit être vérifié dans le code aussi pour être sûr que le debug fait correspondait bien à un bug réel causé par une mauvaise pratique de l'IA ».
 
-Sources : le registre `docs/MJPC6-DETTES.md` (1 392 entrées, dont 72 passages qui disent une cause ou un retour de dette) et le chantier du 17/11 (C17).
+**Périmètre actuel : octobre et novembre 2026.** Cela représente les 175 versions du code mises en ligne entre le 01/10 et le 17/11 : le site, la correction de dictée, la rédaction, le QCM et les autres applis. Paul décidera ensuite s'il faut étendre le relevé à mars-septembre (environ 540 versions de plus).
 
-## 1. Comment une erreur devient une cascade
+Méthode, d'après le mandat `MANDATS/HISTORIQUE-ERREURS/MANDAT-RELEVE-OCT-NOV.md` du sas : cinq exécutants ont lu chaque version. Pour chaque correction, ils ont :
+- cherché le défaut dans le code d'avant et sa correction dans le code d'après ;
+- retrouvé la version qui avait écrit les lignes fautives ;
+- nommé la pratique de l'IA en cause.
 
-1. L'IA part d'une idée fausse : elle croit savoir comment marche le code, sans l'avoir lu.
-2. Elle code sur cette idée.
-3. Elle écrit le test elle-même, avec la même idée. Le test passe donc.
-4. Le site est mis en ligne, et Paul tombe sur le défaut en classe.
-5. La correction se fait dans l'urgence, sur ce qui se voit. La cause reste, et la correction ajoute un nouveau chemin dans le code.
-6. Ce nouveau chemin fait naître la dette suivante.
+Sans preuve dans le code, la correction est notée « non vérifié » et ne compte pas. Les relevés ligne par ligne sont au sas, dans `MANDATS/HISTORIQUE-ERREURS/out/`. Le relevé d'octobre-novembre a coûté environ 1,56 million de jetons.
 
-**La chaîne du 17/11, en entier :**
-- Les envois de la page n'ont pas de limite de temps, et Chrome n'ouvre que 6 connexions par site : le tableau se fige en classe (558).
-- La clôture de l'heure des 4 HUGO n'arrive qu'à moitié, d'où la boucle « Reprendre ».
-- La réparation à la main est incomplète : l'état de l'heure n'est pas remis.
-- Le paquet de clôture n'est pas réécrit : jeudi affiche la séance 2.
-- La page restée en retard écrase l'heure (617).
-- La correction de 617 rend fausse la fenêtre « Tout est enregistré ». Cette fois, le banc l'attrape avant la mise en ligne.
+## 1. Les chiffres
 
-## 2. Pourquoi l'IA fait ces erreurs
+- **175 versions** : 318 défauts corrigés, 62 nouveautés et 14 changements de règle décidés par Paul. Un changement de règle n'est pas un défaut.
+- **267 défauts réels, prouvés dans le code.** 50 sont « non vérifiés » : ils se trouvent surtout dans les grosses versions de novembre (8.79, 8.90, 9.4, 9.8, 9.9) et dans la maquette du déroulé. 1 défaut s'est révélé faux.
+- **266 de ces 267 défauts viennent d'une pratique de l'IA.** Un seul ne vient pas de l'IA.
+- **Paul en a trouvé 173 sur 267, soit 65 %** : 132 en préparant ses cours, 27 en classe, 14 autrement. L'audit de la conscience en a trouvé 47, les bancs 19, les exécutants 19, et 9 restent sans source connue. **C'est Paul qui sert de banc.**
+- **Une grosse version écrite d'un coup en produit un tiers.** Le déroulé intégré (8.75.0, 23/10) a introduit 48 défauts. La réécriture du QCM (8.0.0, écrite en une après-midi le 12/10) en a introduit 34, dont 14 par une seule version du sas. La correction de dictée 6.5.0 (29/09) en a introduit 10. Ces trois versions totalisent 92 défauts sur 267.
+- **Les cascades les plus longues :**
+  - l'enchaînement de deux séances dans une heure : 7 versions ;
+  - les binômes de la correction de dictée : 6 versions, avec un retour en arrière en pleine séance des Turing ;
+  - les envois bloqués qui ont figé le tableau le 17/11 : 6 versions ;
+  - la photo et sa feuille dans la rédaction : 5 versions, dont deux micros qui corrigeaient une supposition sans lire le cas réel ;
+  - la copie de la classe contre la trame : 5 versions.
 
-- **Elle ne voit jamais tout le code.** `index.html` fait environ 32 000 lignes, plus 9 300 lignes de modules du déroulé. Elle en lit des morceaux trouvés par recherche de mots et raisonne sur ce morceau. Elle ne voit pas les autres endroits qui touchent la même donnée.
-- **Chaque conscience et chaque exécutant repart sans mémoire du code.** Les règles écrites dans les documents ne servent que si on les relit au moment d'agir.
-- **Elle dit « réglé » quand le défaut disparaît de son propre test.** Ses tests confirment son idée au lieu de chercher à la faire tomber.
-- **Le site est une seule page en JavaScript.** Les objets en mémoire sont partagés, le réseau est lent ou coupé, et rien ne signale une erreur. Les fautes ne font pas planter la page : elles mélangent les données en silence.
-- **Quand il faut aller vite, elle saute les mesures.** C'est sa faute, pas celle de la demande.
+## 2. Comment une erreur devient une cascade
 
-## 3. Les huit familles d'erreurs, avec leur historique
+1. L'IA part d'une idée fausse, ou écrit beaucoup de code d'un coup.
+2. Elle teste avec ses propres idées, sur peu de données, en rechargeant la page entre deux gestes : le test passe.
+3. C'est Paul qui tombe sur le défaut, en préparation ou en classe.
+4. La correction se fait vite, sur ce qui se voit, parfois en plusieurs suppositions de suite. Douze défauts de novembre ont été corrigés moins de 24 h après avoir été écrits.
+5. La correction ouvre un nouveau chemin dans le code, sans reprendre les protections de l'ancien. C'est ce chemin qui fait naître la dette suivante.
 
-### F1. Conclure sans lire
-L'IA cherche un nom de fonction. Si elle ne le trouve pas, elle en conclut que la chose n'existe pas.
-- **02/09 (n°11 · 51)** : 7 des 11 corrections d'un mandat venaient d'une recherche au lieu d'une lecture. Exemple : `filtreMois` était déclaré « inexistant », alors qu'il existait sous le nom `edtFiltrerOu`. Une liste « s'arrêtait à 120 », sans voir qu'il y avait deux listes.
-- **07/09 (n°11)** : six conclusions tirées trop vite, dont une dans la passation : trois choses différentes portaient des noms voisins.
-- **17/11 (C17)** : les exécutants ont signalé plusieurs erreurs dans mes mandats. J'avais placé la file d'écriture dans `index.html` au lieu de `dr-socle.js`. J'avais cru que les envois en direct et la présence passaient par cette file. J'avais compté 52 feuilles au lieu de 34.
+## 3. Les familles d'erreurs, comptées (sur 267 défauts réels)
 
-**Le geste :** une recherche sert à trouver où lire, jamais à conclure. Lire le corps de chaque fonction qui touche la donnée, et regarder qui l'appelle.
+| Famille | Défauts | Exemples vérifiés |
+|---|---|---|
+| **F6. Une fonction codée à moitié de la chaîne** : une règle de Paul jamais codée, un point d'entrée oublié | 61 | le fil langue sans consigne pour l'instance ; les binômes figés, une règle validée mais pas codée |
+| **F3. Une même chose rangée à deux endroits** : deux listes, deux rendus, un objet partagé en mémoire, une empreinte qui ne correspond pas au hub | 47 | la trame et la copie de classe ; trois listes pour les « ↩ » ; le travail à faire écrit deux fois |
+| **F8. Du nouveau code posé sur l'ancien** : une vieille règle qui agit sur la nouveauté, du code mort | 31 | QCM : `placer()` de la 8.0.10 ; toutes les fenêtres fermées à chaque phase |
+| **F5. Des tests qui ne ressemblent pas à la classe** | 27 | l'image et ses réponses testées avec peu de réponses ; aucun test « heure, puis Relecture, puis Atelier, sans recharger » |
+| **F4. Le réseau ou l'ordre cru parfait** | 23 | 558 ; une page en retard qui écrase l'heure (617) ; « Tout est enregistré » affiché avant le hub, revenu trois fois |
+| **F1. Conclure sans lire** | 19 | une fonction déclarée « inexistante » qui existait sous un autre nom |
+| **F2. Corriger ce qui se voit, pas la cause** | 11 | les marques de classe retirées de l'Atelier, mais pas les réponses |
+| **F7. Une réparation des données à la main incomplète** | 0 dans le relevé (le cas de la 4 HUGO du 17/11 a été réparé au hub, pas dans le code) | |
+| **Nouvelles familles** (47 défauts au total, détaillées ci-dessous) | 47 | |
 
-### F2. Corriger ce qui se voit, pas la cause
-- **17/11 (CR)** : les « ↩ », les dates et « jouée » sont retirés de l'Atelier. Le 18/11, les réponses des HUGO y apparaissent encore : la cause était restée.
-- **04/11** : les diapos de la colonne de la Relecture sont illisibles. La dette est notée réglée en 8.x, puis revient le 17/11 quand on tire la barre.
-- **02/09 (cause B du n°11 · 51)** : un passage est corrigé, mais la correction n'est pas reportée dans les autres passages qui en dépendaient.
-
-**Le geste :** écrire la cause en une phrase avant de coder. Chercher tous les autres endroits où elle agit. Le test doit reproduire la cause, pas seulement le défaut visible.
-
-### F3. Une même chose rangée à deux endroits
-- **La trame et la copie de classe mélangées** : 613, 633, 634 et 556 (17/11), puis la fuite dans l'Atelier (18/11). La page garde une seule diapo en mémoire pour deux usages.
-- **16/11** : trois listes différentes calculaient les « ↩ » (Atelier, pilote, cases). D'où la règle : une seule liste.
-- **556** : le travail à faire était écrit à deux endroits.
-- **02/11 (rédaction)** : l'empreinte que l'app gardait de son écriture ne correspondait jamais à ce que le site renvoyait (24 copies sur 24).
-- **8.78** : une diapo neuve portait des listes vides, que le hub ne garde pas. La diapo relue différait donc de la diapo écrite, d'où « modifiée sur un autre appareil ».
-- **17/11** : la miniature et la grande vue de la Relecture ne dessinent pas la diapo de la même façon. C'est une supposition, à mesurer.
-
-**Le geste :** une donnée a un seul propriétaire et une seule fonction qui la dessine. Quand on en tire une autre donnée, on la copie au lieu de la partager. On compare ce qu'on écrit à ce que le hub rend réellement.
-
-### F4. Croire le réseau parfait et l'ordre d'arrivée garanti
-- **558 (17/11)** : envoi sans limite de temps, avec 6 connexions maximum par site.
-- **17/11** : la clôture de l'heure arrive à moitié, et une page en retard écrase l'heure (617).
-- **La liste des envois ratés** ne vivait qu'en mémoire, et rien ne la renvoyait au retour du réseau.
-- **`sesPut`** écrivait directement au hub sans regarder si on était en mode test.
-- **13/11** : le récit se disait « chargé » avant que l'heure existe.
-- **18/11** : le bandeau « Reprendre » s'affiche avant la réponse du hub.
-
-**Le geste :** toute écriture a une limite de temps, une relecture et un ordre. On n'affiche jamais un état provisoire comme s'il était vrai. On teste avec un réseau lent, un réseau coupé, deux onglets et un rechargement.
-
-### F5. Des tests qui ne ressemblent pas à la classe
-- **17/11 (CO point 3)** : le test est fait avec peu de réponses. Avec 15 réponses, on obtient 17 pages (Paul : « refais le test avec beaucoup de réponses »).
-- **16/11** : la sonde a suivi une capture construite qui était fausse.
-- **21/09** : des bancs désignaient les diapos par leur rang. Ils ont été réécrits pour les désigner par leur titre et passer par le geste.
-- **18/11** : aucun banc ne joue « une heure, puis la Relecture, puis l'Atelier, dans la même page, sans recharger ». C'est pourtant le parcours de Paul.
-- **Le contre-exemple, le 17/11** : le banc bv a attrapé la fenêtre « Tout est enregistré » fausse avant la mise en ligne.
-
-**Le geste :** le test rejoue le parcours réel de Paul : la même page ouverte des heures, les vraies quantités, un réseau réel. Il cherche à faire échouer, pas à confirmer.
-
-### F6. Une fonction codée à moitié de la chaîne
-- **Le fil langue (17/11)** : l'emploi du temps et l'injection connaissent la marque « langue », mais la consigne donnée à l'instance n'en dit rien. Aucun chapitre de langue n'a donc jamais existé.
-- **n°11 · 74** : « pas une panne, un manque ». `debutAnnee` ne bornait pas les séances prévues.
-- **n°12 · 154** : une règle validée par Paul (les binômes ne bougent plus une fois formés) n'avait jamais été codée.
-
-**Le geste :** suivre la donnée de bout en bout : qui la crée, qui l'écrit, qui la lit, qui l'affiche. L'essayer une fois avec une vraie donnée.
-
-### F7. Réparer les données à la main
-- **17/11, la 4 HUGO** : réparée à 16:15 sans remettre l'état. La relecture affichait donc « heure en cours » et le récit était tronqué. Ensuite, le paquet de clôture n'a pas été réécrit, et jeudi affichait la séance 2. Il a fallu corriger encore à 17:12 et à 18:24.
-
-**Le geste :** avant de réparer, lister tout ce que le code lit de cette donnée. Sauvegarder, réparer, relire au hub, puis rouvrir chaque écran qui lit cette donnée.
-
-### F8. Empiler du nouveau code sur l'ancien
-- **QCM, 16/11** : une règle de la 8.0.10 dans `placer()` renvoyait les élèves sur leur ancienne tablette.
-- **QCM, 8.0.6** : `c3-objets.js` fermait toutes les fenêtres à chaque phase, y compris la nouvelle vue.
-- **Paul, 01/11** : « nettoyage du code mort exigé, sinon c'est la porte ouverte à l'empilement de code et aux bugs futurs ».
-
-**Le geste :** avant d'ajouter du code, chercher les règles anciennes qui agissent sur la même chose. Retirer le code mort.
+**Les nouvelles familles trouvées par le relevé :**
+- **F9. Réécrire ou écrire une première version d'un coup, sans inventaire** de ce que faisait l'ancien code, puis la mettre en ligne sous une heure limite. La 8.0.0 du QCM a perdu la carte de l'app, le profil de l'élève et la correction du nom des classes.
+- **F10. Inventer** des mots, des suffixes, un ordre ou des choix visuels que Paul n'a pas donnés : « appoint », « (proposition) », « Notre question », une œuvre recadrée, un ordre de blocs sans geste de classe.
+- **F11. Oublier les cas limites réels** : 0 erreur, le même mot deux fois, une majuscule seule, un titre long, des homonymes, une date comparée à minuit au lieu de l'heure du créneau.
+- **F12. Recalculer ce qui devrait rester figé** : l'élève choisi et les binômes recalculés à chaque dessin ; tout l'écran redessiné à chaque touche ou par une minuterie.
+- **F13. Laisser une erreur silencieuse** : un `catch(e){}` vide qui a caché un défaut pendant deux mois ; un bouchon `return []` resté 17 jours en ligne ; du code écrit après un `//` qui ne s'exécutait jamais.
+- **F14. Ne pas écrire dans la forme du hub** : des clés avec `. # $ [ ] /` ; des clés numériques qui reviennent sous forme de tableau ; des listes vides et des null que le hub efface ; un nœud entier réécrit au lieu d'ajouter une entrée.
+- **F15. Prendre une ouverture automatique pour un geste de Paul** : elle compte du temps ou écrit des données sans qu'il ait rien fait.
+- **F16. Fabriquer sans contrôle** : une proposition, une syllabe ou une phrase montrée à l'élève, ou un texte rendu par l'IA, affichés sans être vérifiés contre l'erreur réelle.
+- **F17. Aller trop vite** : 43 versions de la rédaction en 14 jours, dont 30 correctives, avec la règle « pas de mise en ligne sur une dette » levée ; un micro mis en ligne juste avant une séance (la classe des Turing bloquée) ; un fichier périmé mis en ligne au lieu du fichier assemblé.
+- **F18. Des consignes de la conscience fausses** : un mandat qui donne une mauvaise origine au défaut (le complément 8.0.16), ou qui perd une demande de Paul en route.
 
 ## 4. Ce qu'on en tire
 
-- F3, F4 et une partie de F2 ont la même racine : **deux vérités pour une même chose**. C'est le cas de la trame et de la copie, de la mémoire et du hub, de la page et du hub, de la miniature et de la grande vue.
-- Le point 6 de C18 (une identité pour la trame et pour chaque copie, et une règle de code qui dit si une fonction touche la trame ou une copie) s'attaque à F3 à la racine.
-- Le skill anti-erreurs reprend les huit gestes et les rend obligatoires avant chaque mandat, chaque correction et chaque réparation.
+1. **Paul ne doit plus servir de banc.** 65 % des défauts sont trouvés par lui. Chaque correction doit d'abord passer par un test qui rejoue son parcours réel.
+2. **Plus de grosse version écrite d'un coup.** Un tiers des défauts vient de trois versions. On avance par petits morceaux, chacun avec l'inventaire de ce qu'il remplace.
+3. **Une donnée a un seul propriétaire et une seule forme**, celle du hub. Cette règle s'attaque à F3, F4 et F14, et donc au point 6 de C18 (la trame et les copies, chacune avec son identité).
+4. **Pas de supposition corrigée par une autre supposition.** Quand un défaut revient, on mesure le cas réel de Paul avant de toucher au code.
+5. Le skill `mjpc-anti-erreurs-code` reprend ces gestes.
+
+## 5. Le relevé précédent (fait à partir du registre, 18/11 07:30)
+
+La première version de ce document reposait sur le seul registre des dettes, sur parole. Elle est remplacée par ce relevé vérifié dans le code. Ses huit familles sont conservées : ce sont F1 à F8.
