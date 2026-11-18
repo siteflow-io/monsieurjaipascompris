@@ -22,4 +22,4 @@ Décidé par Paul le 18/11/2026 (19:31 et 19:45) : « je veux que tu joues toute
 | N° | Date | Lancée / arrêtée par Paul | Fichier | Constats | Dettes liées | Hub remis |
 |---|---|---|---|---|---|---|
 | 0 (avant les règles) | 18/11/2026 | 19:11 « oui fais » / — | [session-00-2026-11-18.md](session-00-2026-11-18.md) | 6 | 5 | oui (0 différence) |
-| 1 | 18/11/2026 | 19:48 « Lance une session sur les dettes que j'ai levées moi même » / ouverte | [session-01-2026-11-18.md](session-01-2026-11-18.md) | 6 | 4 + 2 nouvelles | à faire à l'arrêt |
+| 1 | 18/11/2026 | 19:48 « Lance une session sur les dettes que j'ai levées moi même » / ouverte | [session-01-2026-11-18.md](session-01-2026-11-18.md) | 8 | 4 + 2 nouvelles | à faire à l'arrêt |
