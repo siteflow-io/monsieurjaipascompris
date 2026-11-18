@@ -2,28 +2,30 @@
 
 Demande de Paul, le 18/11/2026 : « je voulais savoir comment c'était possible que l'ia se trompe sur du coding et que ça crée une cascade de dettes […] Et je veux l'historique, afin de pouvoir créer un skill anti-erreurs de codage ». Il a ajouté une condition : « ce relevé […] doit être vérifié dans le code aussi pour être sûr que le debug fait correspondait bien à un bug réel causé par une mauvaise pratique de l'IA ».
 
-**Périmètre actuel : octobre et novembre 2026.** Cela représente les 175 versions du code mises en ligne entre le 01/10 et le 17/11 : le site, la correction de dictée, la rédaction, le QCM et les autres applis. Paul décidera ensuite s'il faut étendre le relevé à mars-septembre (environ 540 versions de plus).
+**Périmètre : tout l'historique, du 19/03/2026 au 17/11/2026.** Cela représente les 709 versions du code mises en ligne : le site, la correction de dictée, la rédaction, le QCM, le worktrack, le débat, l'applaudimètre et les petites applis.
 
-Méthode, d'après le mandat `MANDATS/HISTORIQUE-ERREURS/MANDAT-RELEVE-OCT-NOV.md` du sas : cinq exécutants ont lu chaque version. Pour chaque correction, ils ont :
+Méthode, d'après les deux mandats du sas (`MANDATS/HISTORIQUE-ERREURS/`) : 19 lots, un exécutant par lot. Pour chaque correction, l'exécutant a :
 - cherché le défaut dans le code d'avant et sa correction dans le code d'après ;
 - retrouvé la version qui avait écrit les lignes fautives ;
 - nommé la pratique de l'IA en cause.
 
-Sans preuve dans le code, la correction est notée « non vérifié » et ne compte pas. Les relevés ligne par ligne sont au sas, dans `MANDATS/HISTORIQUE-ERREURS/out/`. Le relevé d'octobre-novembre a coûté environ 1,56 million de jetons.
+Sans preuve dans le code, la correction est notée « non vérifié » et ne compte pas. Avant juillet, les versions s'appellent seulement « Update X.html » : un défaut n'y est compté que s'il se lit dans le code d'avant. Les relevés ligne par ligne sont au sas, dans `MANDATS/HISTORIQUE-ERREURS/out/`. Le relevé complet a coûté environ 5 millions de jetons.
 
 ## 1. Les chiffres
 
-- **175 versions** : 318 défauts corrigés, 62 nouveautés et 14 changements de règle décidés par Paul. Un changement de règle n'est pas un défaut.
-- **267 défauts réels, prouvés dans le code.** 50 sont « non vérifiés » : ils se trouvent surtout dans les grosses versions de novembre (8.79, 8.90, 9.4, 9.8, 9.9) et dans la maquette du déroulé. 1 défaut s'est révélé faux.
-- **266 de ces 267 défauts viennent d'une pratique de l'IA.** Un seul ne vient pas de l'IA.
-- **Paul en a trouvé 173 sur 267, soit 65 %** : 132 en préparant ses cours, 27 en classe, 14 autrement. L'audit de la conscience en a trouvé 47, les bancs 19, les exécutants 19, et 9 restent sans source connue. **C'est Paul qui sert de banc.**
-- **Une grosse version écrite d'un coup en produit un tiers.** Le déroulé intégré (8.75.0, 23/10) a introduit 48 défauts. La réécriture du QCM (8.0.0, écrite en une après-midi le 12/10) en a introduit 34, dont 14 par une seule version du sas. La correction de dictée 6.5.0 (29/09) en a introduit 10. Ces trois versions totalisent 92 défauts sur 267.
+- **709 versions** : 683 défauts corrigés, 365 nouveautés, 32 changements de règle décidés par Paul et 69 « autre » (dépôts de documents, rangements). Un changement de règle n'est pas un défaut.
+- **645 défauts réels, prouvés dans le code** : 309 en octobre-novembre et 336 de mars à septembre. 31 restent « non vérifiés » et 7 se sont révélés faux.
+- **640 de ces 645 défauts viennent d'une pratique de l'IA.** Les 5 autres sont des fichiers déposés ou modifiés à la main dans GitHub.
+- **Qui les a trouvés.** La source est connue pour 476 défauts. Paul en a trouvé 284, soit 60 %, dont 44 en classe. L'audit de la conscience en a trouvé 114, les exécutants 48, les bancs 30. En octobre-novembre, où presque tout est documenté, Paul en a trouvé 196 sur 309. **C'est Paul qui sert de banc.**
+- **Les grosses versions écrites d'un coup.** En octobre-novembre, trois versions donnent un tiers des défauts : le déroulé intégré (8.75.0, 23/10), la réécriture du QCM (8.0.0, 12/10) et la dictée 6.5.0 (29/09). On retrouve la même chose avant : dans le QCM de mai à août, trois versions donnent 20 défauts sur 26 ; dans le débat, trois versions de plus de 900 lignes en donnent 10 sur 17.
+- **Les mises en ligne qui cassent tout.** De mars à septembre, plusieurs versions ont mis en ligne une page qui ne marchait plus du tout : une accolade en trop, une variable ou une fonction qui n'existait pas (6 fois dans la correction de dictée, de 9 minutes à 13 heures de panne), un fichier coupé (3 016 lignes en moins pendant deux heures le 06/06), le fichier d'une autre appli déposé à la mauvaise adresse.
 - **Les cascades les plus longues :**
+  - la progression de l'élève quand Paul retouche une copie : 8 versions en deux jours (mai) ;
   - l'enchaînement de deux séances dans une heure : 7 versions ;
+  - la lecture des classes dans les petites applis : 7 versions ;
   - les binômes de la correction de dictée : 6 versions, avec un retour en arrière en pleine séance des Turing ;
   - les envois bloqués qui ont figé le tableau le 17/11 : 6 versions ;
-  - la photo et sa feuille dans la rédaction : 5 versions, dont deux micros qui corrigeaient une supposition sans lire le cas réel ;
-  - la copie de la classe contre la trame : 5 versions.
+  - le zoom qui coupait les écrans : 5 versions en 17 heures, chaque correctif créant le défaut suivant.
 
 ## 2. Comment une erreur devient une cascade
 
@@ -33,19 +35,30 @@ Sans preuve dans le code, la correction est notée « non vérifié » et ne com
 4. La correction se fait vite, sur ce qui se voit, parfois en plusieurs suppositions de suite. Douze défauts de novembre ont été corrigés moins de 24 h après avoir été écrits.
 5. La correction ouvre un nouveau chemin dans le code, sans reprendre les protections de l'ancien. C'est ce chemin qui fait naître la dette suivante.
 
-## 3. Les familles d'erreurs, comptées (sur 267 défauts réels)
+## 3. Les familles d'erreurs, comptées (sur 645 défauts réels)
 
-| Famille | Défauts | Exemples vérifiés |
-|---|---|---|
-| **F6. Une fonction codée à moitié de la chaîne** : une règle de Paul jamais codée, un point d'entrée oublié | 61 | le fil langue sans consigne pour l'instance ; les binômes figés, une règle validée mais pas codée |
-| **F3. Une même chose rangée à deux endroits** : deux listes, deux rendus, un objet partagé en mémoire, une empreinte qui ne correspond pas au hub | 47 | la trame et la copie de classe ; trois listes pour les « ↩ » ; le travail à faire écrit deux fois |
-| **F8. Du nouveau code posé sur l'ancien** : une vieille règle qui agit sur la nouveauté, du code mort | 31 | QCM : `placer()` de la 8.0.10 ; toutes les fenêtres fermées à chaque phase |
-| **F5. Des tests qui ne ressemblent pas à la classe** | 27 | l'image et ses réponses testées avec peu de réponses ; aucun test « heure, puis Relecture, puis Atelier, sans recharger » |
-| **F4. Le réseau ou l'ordre cru parfait** | 23 | 558 ; une page en retard qui écrase l'heure (617) ; « Tout est enregistré » affiché avant le hub, revenu trois fois |
-| **F1. Conclure sans lire** | 19 | une fonction déclarée « inexistante » qui existait sous un autre nom |
-| **F2. Corriger ce qui se voit, pas la cause** | 11 | les marques de classe retirées de l'Atelier, mais pas les réponses |
-| **F7. Une réparation des données à la main incomplète** | 0 dans le relevé (le cas de la 4 HUGO du 17/11 a été réparé au hub, pas dans le code) | |
-| **Nouvelles familles** (47 défauts au total, détaillées ci-dessous) | 47 | |
+| Famille | Défauts |
+|---|---|
+| **F6. Une fonction codée à moitié de la chaîne** : une règle de Paul jamais codée, un point d'entrée oublié | 124 |
+| **F3. Une même chose rangée à deux endroits** : deux listes, deux rendus, un objet partagé en mémoire | 112 |
+| **F1. Conclure sans lire** | 49 |
+| **F8. Du nouveau code posé sur l'ancien** | 48 |
+| **F4. Le réseau ou l'ordre cru parfait** | 46 |
+| **F11. Les cas limites réels oubliés** | 46 |
+| **F2. Corriger ce qui se voit, pas la cause** | 44 |
+| **F5. Des tests qui ne ressemblent pas à la classe** | 42 |
+| **F12. Recalculer ce qui devrait rester figé** | 12 |
+| **F13. Une erreur laissée silencieuse** | 12 |
+| **F14. Ne pas écrire dans la forme du hub** | 11 |
+| **F17. Aller trop vite** | 8 |
+| **F16. Fabriquer sans contrôle** | 7 |
+| **F9. Réécrire d'un coup sans inventaire** (comme pratique nommée ; son poids réel est dans « les grosses versions », au point 1) | 6 |
+| **F10. Inventer ce que Paul n'a pas donné** | 5 |
+| **F18. Une consigne fausse de la conscience** | 4 |
+| **F7. Une réparation à la main incomplète** | 2 |
+| **F15. Une ouverture prise pour un geste** | 1 |
+| Autres, hors familles (mauvais fichier déposé, rang pris pour une identité, sortie anticipée…) | 61 |
+| Pas l'IA | 5 |
 
 **Les nouvelles familles trouvées par le relevé :**
 - **F9. Réécrire ou écrire une première version d'un coup, sans inventaire** de ce que faisait l'ancien code, puis la mettre en ligne sous une heure limite. La 8.0.0 du QCM a perdu la carte de l'app, le profil de l'élève et la correction du nom des classes.
@@ -67,6 +80,14 @@ Sans preuve dans le code, la correction est notée « non vérifié » et ne com
 4. **Pas de supposition corrigée par une autre supposition.** Quand un défaut revient, on mesure le cas réel de Paul avant de toucher au code.
 5. Le skill `mjpc-anti-erreurs-code` reprend ces gestes.
 
-## 5. Le relevé précédent (fait à partir du registre, 18/11 07:30)
+## 5. Les défauts encore en ligne trouvés en route (à vérifier, pour C18)
+
+- Débat : le bouton de test « jeu de documents » colle un texte que la vérification refuse toujours (depuis le 19/07).
+- Dictée universelle : « Accès professeur » ouvre la configuration sans code (revenu le 08/05).
+- Réécriture du brevet blanc 4e : le suivi du professeur plante dans un cas rare (`verifyingRef`).
+- Réécriture : l'outil de sauvegarde n'a plus de bouton.
+- L'appli Plickers a été écrasée le 06/05 puis supprimée le 13/07 ; la vraie version est dans l'historique (`a6348e0`).
+
+## 6. Le relevé précédent (fait à partir du registre, 18/11 07:30)
 
 La première version de ce document reposait sur le seul registre des dettes, sur parole. Elle est remplacée par ce relevé vérifié dans le code. Ses huit familles sont conservées : ce sont F1 à F8.
