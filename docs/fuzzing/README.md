@@ -23,4 +23,4 @@ Décidé par Paul le 18/11/2026 (19:31 et 19:45) : « je veux que tu joues toute
 |---|---|---|---|---|---|---|
 | 0 (avant les règles) | 18/11/2026 | 19:11 « oui fais » / — | [session-00-2026-11-18.md](session-00-2026-11-18.md) | 6 | 5 | oui (0 différence) |
 | 1 | 18/11/2026 | 19:48 « Lance une session sur les dettes que j'ai levées moi même » / 21:36 (arrêtée par erreur de lecture de C17 : « termine » voulait dire « finis ») | [session-01-2026-11-18.md](session-01-2026-11-18.md) | 10 | 4 + 2 nouvelles ; 2 réglées (9.10) | oui (0 différence, hors présence) |
-| 2 | 18/11/2026 | 22:48 « Non termine ça voulait dire finis ! » / ouverte | [session-02-2026-11-18.md](session-02-2026-11-18.md) | 8 | 5 (1 réglée vérifiée, 3 reproduites, 1 à cadrer) | à jour à 22:55 (0 différence) |
+| 2 | 18/11/2026 | 22:48 « Non termine ça voulait dire finis ! » / ouverte | [session-02-2026-11-18.md](session-02-2026-11-18.md) | 10 | 5 (1 réglée vérifiée, 3 reproduites, 1 cadrée) + 1 nouvelle | à jour à 23:00 (0 différence) |
