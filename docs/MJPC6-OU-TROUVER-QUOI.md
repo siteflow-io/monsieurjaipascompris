@@ -971,33 +971,33 @@
 | revenir à la 8.91.2-㉗ | `docs/MJPC6-restauration.md` (blob `99d27acde120`) |
 | ouvrir le site en 8.91.3-㉘ (sans le cache) | `https://siteflow-io.github.io/monsieurjaipascompris/index.html?n=3e&v=8.91.3` |
 
-## AJOUTS DU 17/11/2026 — QCM 8.0.16 (conscience n°17)
+## AJOUTS DU 17/11/2026 — QCM 8.0.16 (conscience n°17-QCM)
 - **La reconnexion et la tablette rechargée** (C1, C2 : `placer()` qui attend la séance et la présence, la tablette prête seulement quand ses séances sont arrivées, l'écoute des seules séances actives, « 📊 Mes évaluations » écouté séance par séance) : `LIVRAISONS/CODE-QCM/src/live/base.js`, `src/c3-tablettes.js` (branche `code-qcm-8016`).
 - **La tablette qui perd la base** (C4 : présence réécrite en entier à chaque reconnexion, heure de la base, écran gardé allumé, texte « 📶 décrochée » de la console) : `src/live/base.js`, `src/c3-pilot.js`.
 - **La console en direct** (C3 le 1er tour, C5 la couche du soir écoutée séance par séance, les séances nouvelles par `orderByKey().startAt(…)` + `child_added`) : `src/c3-pilot.js`, `src/c3-soir.js`, `src/c4-seances.js`.
 - **La vue 👁** (C6 : fermée seulement au changement de séance) : `src/c3-objets.js`. **La version** : `QCM_VERSION`, carte « ℹ️ Version » des Réglages (`src/c3-evals.js`).
 - **Complément, mesures, verdict, bancs** : `MANDATS/COMPLEMENT-QCM-8016-RECONNEXION-ET-TOUR-1.md`, `AUDITS/QCM-8016-RECONNEXION/`, `MANDATS/pieces/8016/` (captures avant/après), `MANDATS/NUIT-16-17-11-PLAN.md` ; `LIVRAISONS/CODE-QCM/VERDICT.md`, `banc/banc-8016.js`, `banc/banc-unique.sh` (compte aussi les échecs écrits d'un banc qui sort à 0).
 
-## AJOUTS DU 16/11/2026 — QCM 8.0.15 (conscience n°17)
+## AJOUTS DU 16/11/2026 — QCM 8.0.15 (conscience n°17-QCM)
 - **La lecture rapide pendant la pause** (plein écran, colonne des noms avec ⚠, carte de la question, ronds Q1–Q11, clavier, turbo, point d'autonomie en étape, fin de copie, aide « ? ») : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (branche de la séance en pause). L'écouteur global d'Échap (`src/live/gestes.js` ~169) est neutralisé sur cet écran.
 - **Les choix multiples** écrits chacun entre guillemets, reliés par « et » : `choixTexteV` (`src/c4-seances.js` ~633) ; la feuille du mode test garde son ancien format.
 - **L'évaluation en deux séances** (deux parties de 45 min) : `dureeEstimeeV` (`src/c3-evals.js`), `SCN.dureeEstimee`, le contrôle de l'import (`c3-evals.js` ~428), la carte de lancement (`etape2.js`, `texteDuree` de `c3-soir.js`), le prompt `MANDATS/PROMPT-QCM-CREATION/README.md`.
 - **Mandat, pièces, verdict** : `MANDATS/MANDAT-QCM-8015-LECTURE-RAPIDE-ET-DEUX-SEANCES.md`, `MANDATS/pieces/8015/` (captures construites R1 à R6 épurées, inventaire 8.0.14) ; `LIVRAISONS/CODE-QCM/VERDICT.md` et `banc/banc-8015.js` (branche `code-qcm-8015`) ; captures avant/après dans `LIVRAISONS/CODE-QCM/sorties/8015/`. Le cadrage est dans le doc « Cadrage QCM 8.0.15 ».
 
-## AJOUTS DU 14/11/2026 — QCM 8.0.14 (conscience n°17)
+## AJOUTS DU 14/11/2026 — QCM 8.0.14 (conscience n°17-QCM)
 - **La case publiée / non publiée** (comme le panneau de correction dictée ; grisée tant que l'évaluation n'est pas « Prête à lancer ») : `LIVRAISONS/CODE-QCM/src/c3-evals.js` (la liste) ; le lancement ne propose que les publiées : `src/etape2.js` ; le mode test lance aussi un brouillon : `src/maquette620.js`. Chemin nouveau : `qcm/evaluations/<id>/publiee` (absent = publiée). Côté MJPC, « Lier » lit le même champ : `index.html` ~4515 (9.4.0-㊶).
 - **L'éditeur qui enregistre au fil** (0,8 s après la frappe, et à la fermeture de la page ; fusion champ par champ entre deux onglets, `fusionEval` ; la version ne monte qu'une fois par ouverture) : `src/c3-evals.js` (`enregistrerEval`).
 - **Les compétences des séances** quand la fiche du chapitre n'en a pas (`seances/*/competences`, `seances/<s>/deroule/ecrans/<i>/comp`, filtrées par la liste des 28) et les deux messages de l'éditeur : `src/c3-soir.js` (`chapitreVue`, `evalBrute`), `src/c3-evals.js` (le prompt).
 - **Mandat et pièces** : `MANDATS/QCM/MANDAT-QCM-8014-PUBLIER-ENREGISTRER-COMPETENCES.md`, `MANDATS/QCM/POUR-LE-DEROULE-QCM-SEULES-LES-PUBLIEES.md` (sas, branche `samedi/integration`) ; verdict et inventaire `LIVRAISONS/CODE-QCM/VERDICT.md` (branche `code-qcm-8014`) ; banc `banc/banc-8014.js`.
 
-## AJOUTS DU 12/11/2026 (soir) — QCM 8.0.13 (conscience n°17)
+## AJOUTS DU 12/11/2026 (soir) — QCM 8.0.13 (conscience n°17-QCM)
 - **L'interrupteur « ✅ Oui » / « ✏️ Autre chose » sur une lecture de pause** (défaire = effacer la clé, changer = remplacer) : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (lignes lues de la copie ouverte) ; banc `banc/banc-8013-defaire.js` ; écrans `MANDATS/pieces/8013/`.
 
-## AJOUTS DU 12/11/2026 — QCM 8.0.12 (conscience n°17)
+## AJOUTS DU 12/11/2026 — QCM 8.0.12 (conscience n°17-QCM)
 - **Lire toutes les copies pendant la pause** (la classe à gauche, la copie à droite, initiales) : `LIVRAISONS/CODE-QCM/src/lire-copies.js` (`LireCopiesC`, branche `se.pause`) ; écrans validés `MANDATS/pieces/8012/` ; inventaire 8.0.11 → 8.0.12 dans `LIVRAISONS/CODE-QCM/VERDICT.md` (branche `code-qcm-8012b`).
 - **Bancs** : `LIVRAISONS/CODE-QCM/banc/banc-8012-pause.js` (pause, et séance finie comparée à la 8.0.11 avec `AVANT=1`), `banc-8011-pause.js` (T3 porté sur le nouvel écran).
 
-## AJOUTS DU 11/11/2026 (soir) — QCM 8.0.11 (conscience n°17)
+## AJOUTS DU 11/11/2026 (soir) — QCM 8.0.11 (conscience n°17-QCM)
 - **La séance en pause** (« 👁️ Voir la séance », « 📄 Lire les copies », `lecturesPause/`) : `LIVRAISONS/CODE-QCM/src/voir-pause.js`, `src/lire-copies.js`.
 - **La tablette qui calculait trop** (calculs gardés en mémoire) : `src/live/base.js` (`sanMJPC`, `S.places`, `S.eleves`) ; mesure dans `LIVRAISONS/CODE-QCM/DEFAUTS-OUVERTS.md` points 12 à 18.
 - **Réponse hors temps, essais, « Compter cette réponse »** : `src/live/base.js` (`E.repondre` : réponse seule, essai à part ; `horsTempsDe` ; `A.admettre`), bandeau de la console `HorsTempsH`.
@@ -1005,18 +1005,18 @@
 - **Bancs** : `LIVRAISONS/CODE-QCM/banc/banc-8011c-decroche.js`, `banc-8011c-regles.js`, `banc-8011-oubli.js`, `banc-807-annuler-ancien-instru.js` + `instru-oubli.js` (l'outil d'observation des tablettes).
 - **Chemins nouveaux sous `qcm/sessions/<sid>`** (pour les règles) : `essais/`, `lecturesPause/` ; `reponses` inchangé. Liste dans `LIVRAISONS/CODE-QCM/VERDICT.md`.
 
-## AJOUTS DU 11/11/2026 — QCM 8.0.10 (conscience n°17)
+## AJOUTS DU 11/11/2026 — QCM 8.0.10 (conscience n°17-QCM)
 - **Le placement** (plan après l'appel, « 🔓 Ouvrir aux élèves », mauvaise moitié, « appelle ») : `LIVRAISONS/CODE-QCM/src/live/base.js` (`E.entrer`, `placer`), `src/live/pages.js` (écrans d'entrée), `src/etape2.js` (~757, le panneau des binômes) ; détail dans `LIVRAISONS/CODE-QCM/VERDICT.md`. **Bancs** : `banc/banc-8010-turing.js` (la séance des Turing, forme exacte, fictive), `banc/banc-8010-placement.js`. **Vidéo** : `sorties/videos-8010/`. **Sauvegarde de la 8.0.9** : `SAUVEGARDES/evaluation-qcm-8.0.9-avant-8.0.10-2026-11-11.html` (sas).
 
-## AJOUTS DU 10/11/2026 — QCM 8.0.9 (conscience n°17)
+## AJOUTS DU 10/11/2026 — QCM 8.0.9 (conscience n°17-QCM)
 - **Les moitiés interverties à la correction** : `LIVRAISONS/CODE-QCM/src/c3-tablettes.js` (classes `croisee`, `croise-anim-in/out`, l. ~343), `src/c4.css` (l. 53-57), `src/etape3.js` (message et bouton), confirmations sous la séance (`croisee/<cours>/<élève>`). **Banc** : `banc/banc-809-croisee.js`. **Vidéos** : sas `AUDITS/QCM-809-VIDEOS/`. **Contrôles** (K12, K14 : moitié reconnue à son élève) : `AUDITS/CONTROLES-QCM-APP/controles-app.js` (sas, `main`).
 
-## AJOUTS DU 09/11/2026 — QCM 8.0.8 (conscience n°17)
+## AJOUTS DU 09/11/2026 — QCM 8.0.8 (conscience n°17-QCM)
 - **Les vraies durées** : `LIVRAISONS/CODE-QCM/src/c3-evals.js` (Réglages), mesures rangées dans la séance par `src/live/base.js` ; détail dans `LIVRAISONS/CODE-QCM/VERDICT.md`.
 - **Le profil de l'élève** : `archiverDansProfilsMJPC` (`src/`), nœud `mjpcProfils/`, effacé par `SCN.ecritParSeance` à l'annulation.
 - **La vraie heure** : `estVraieHeure` (`src/live/base.js`). **Banc** : `banc/banc-808.js`. **Sauvegarde de la 8.0.7** : `SAUVEGARDES/evaluation-qcm-8.0.7-avant-8.0.8-2026-11-09.html` (sas).
 
-## AJOUTS DU 09/11/2026 — QCM 8.0.7 (conscience n°17)
+## AJOUTS DU 09/11/2026 — QCM 8.0.7 (conscience n°17-QCM)
 - **« Annuler cette séance »** : `LIVRAISONS/CODE-QCM/src/live/base.js` (`estVraieHeure`, `SCN.ecritParSeance`, `annulable`, `reprise`, `aujourdhuiPossible`, `ecritAujourdhui`, `ACT.annulerSeance`, `annulerCoursDuJour`, copie `avantCours` à « 🔓 Rouvrir »), `c3-objets.js` (bouton, écran « ⚠️ Attention », `demanderAnnulerSeance`), `c3-pilot.js` et `c3-corr.js` (console), `c3-soir.js` et `c4-seances.js` (cartes).
 - **Les chronos visibles de la tablette** : `src/c3-tablettes.js`, `src/c4.css`. **L'en-tête de « Lire les copies »** : `src/lire-copies.js`.
 - **La vraie heure (à coder plus tard)** : mesure dans `LIVRAISONS/CODE-QCM/VERDICT.md` (séance de chapitre → `deroule_joue/<classe>/heures/<clé>` ; emploi du temps `/site/edt/…`).
@@ -1098,7 +1098,7 @@
 - La boîte noire retirée à l'annulation : fin de `dr_annulerHeure` (`mjpc_bn|<chemin de l'heure>`).
 - La Relecture : taille des miniatures `dr_voletReluTaille` ; seules diapos jouées `dr_relJouees` + `DR_RELU_SEULES` lu par `volet` ; pages de la diapo ouverte `p85hPages`.
 
-## AJOUTS DU 19/11/2026 — QCM 8.1.0 (conscience n°17)
+## AJOUTS DU 19/11/2026 — QCM 8.1.0 (conscience n°17-QCM)
 - Sources : sas, branche `code-qcm` (`LIVRAISONS/CODE-QCM/src/`). Le nouveau format : `c5-format.js` (étapes, points, note), `c5-tablette.js` et `.css` (la tablette seule, le menu long, la certitude, le jugement du voisin), `c6-correction.js` et `c6.css` (la correction, la note qui se construit, « ⏱ hors temps », « ✓ compter »), `c7-pap.js` (aides par élève), `c3-evals.js` (types d'évaluation, prompt), `live/base.js` et `live/mjpc-core.js` (la séance au hub : `lancee/nf`, `essais/`, `aides/`, `dispenses/`).
 - Cadrage : sas `MANDATS/CADRAGE-QCM-NOUVEAU-FORMAT.md` ; mandat `MANDAT-QCM-810-NOUVEAU-FORMAT.md` ; compléments `COMPLEMENT-QCM-810-E-FEUILLE-ET-CLE.md`, `COMPLEMENT-QCM-810-G-DETTES.md`, `COMPLEMENT-QCM-811-H-DETTES-ET-INCONNUES.md`.
 - Bancs : `banc/banc-810a.js` à `banc-810e.js`, `banc-810g.js`, `banc/k-vitesse.sh`, `banc/banc-unique.sh` ; preuves et erreurs de la conscience : `VERDICT.md` ; captures `captures-810/`.
