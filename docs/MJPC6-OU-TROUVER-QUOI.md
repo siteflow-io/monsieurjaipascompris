@@ -1088,3 +1088,12 @@
 - (9.8, 17/11) Une feuille qui suit les changements faits ailleurs, la fenêtre « changée ici et ailleurs » (cases à cocher, « Valider », « Plus tard ») : le bloc « CN » d'`index.html` (le témoin `/site/structure_maj/atelier`, les gardes des trois écrivains). L'image à droite avec les réponses, les diapos filles : `dr-socle.js` / `dr-classe.js` / `dr.css` (CO, point 3). « Documents de la séance… » avec les fiches du chapitre et « Toutes mes fiches… » : `dr-recit.js` (CO, point 8). La limite de 15 s par envoi, la clôture gardée sur l'ordinateur, la boîte noire (`…/boite/<heure>`, « POUR CHERCHER UNE PANNE ») : le bloc « CQ » d'`index.html` (`mjpcEcrireRest`). Notes : sas `LIVRAISONS/DEROULE-01-11/{CN,CO,CQ}/`.
 - (9.9, 17/11) Une page en retard qui relit le hub avant d'écrire journal, état ou heure (617), l'Atelier sans marques de classe (613/634/643), la fenêtre « Tout est enregistré » (les écritures « en vol » dans `DR_ENR`) : `dr-socle.js` / `dr-atelier.js` / `dr-recit.js` (CR). Mandat : sas `MANDATS/DEROULE-01-11/DIMANCHE-08-11/CR-RESTE-DU-17-11.md`. Passation C17 → C18 : sas `MANDATS/PASSATION-C17-C18.md`.
 - (9.10, 18/11) Les listes que le hub rend « à trou » (`[null, …]`) : `dr_repsSures`, `dr_parRangSur` (`dr-socle.js`), `dr_parDiapoRempli` (`dr-classe.js`) — tout `parDiapo` relu du hub y passe. Mandat : sas `MANDATS/DEROULE-01-11/DIMANCHE-08-11/CS-REPONSES-A-TROU.md` ; note et sonde : `LIVRAISONS/DEROULE-01-11/CS/`. Les sessions fuzzing : `docs/fuzzing/`.
+
+## Ajouts de la 9.11.0-㊽ (19/11/2026)
+- Une heure déplacée par le glisser sur un créneau hors grille : la case d'arrivée vient de `edtHeuresAjoutees` (décision `epingle` + `venantDe`), posée par `edtProjeter` ; l'écriture reste `edtDeplacerVers`.
+- La liste « Déplacer cette heure, ou en ajouter une… » : `edtCreneauxOu` (part du jour de la case) ; un créneau libre choisi dans la liste AJOUTE une heure (`edtChoisirOu` → `edtAjouterHeure`).
+- La sélection coupée pendant le glisser : `edtGlisserMarquer` / `edtGlisserNettoyer`.
+- Ce que la Relecture verse dans la mémoire de la page (`parDiapo`, `vuMax`) et qui est mis de côté en entrant dans l'Atelier : `dr_recitMemVue` (dr-recit), appelée par `voir`.
+- Le jour de la case cliquée pour le titre « Où en est la… » : `DR_CL.caseIso`, `dr_jourDeLaCase`.
+- La boîte noire retirée à l'annulation : fin de `dr_annulerHeure` (`mjpc_bn|<chemin de l'heure>`).
+- La Relecture : taille des miniatures `dr_voletReluTaille` ; seules diapos jouées `dr_relJouees` + `DR_RELU_SEULES` lu par `volet` ; pages de la diapo ouverte `p85hPages`.
