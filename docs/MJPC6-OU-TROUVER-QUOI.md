@@ -1097,3 +1097,9 @@
 - Le jour de la case cliquée pour le titre « Où en est la… » : `DR_CL.caseIso`, `dr_jourDeLaCase`.
 - La boîte noire retirée à l'annulation : fin de `dr_annulerHeure` (`mjpc_bn|<chemin de l'heure>`).
 - La Relecture : taille des miniatures `dr_voletReluTaille` ; seules diapos jouées `dr_relJouees` + `DR_RELU_SEULES` lu par `volet` ; pages de la diapo ouverte `p85hPages`.
+
+## AJOUTS DU 19/11/2026 — QCM 8.1.0 (conscience n°17)
+- Sources : sas, branche `code-qcm` (`LIVRAISONS/CODE-QCM/src/`). Le nouveau format : `c5-format.js` (étapes, points, note), `c5-tablette.js` et `.css` (la tablette seule, le menu long, la certitude, le jugement du voisin), `c6-correction.js` et `c6.css` (la correction, la note qui se construit, « ⏱ hors temps », « ✓ compter »), `c7-pap.js` (aides par élève), `c3-evals.js` (types d'évaluation, prompt), `live/base.js` et `live/mjpc-core.js` (la séance au hub : `lancee/nf`, `essais/`, `aides/`, `dispenses/`).
+- Cadrage : sas `MANDATS/CADRAGE-QCM-NOUVEAU-FORMAT.md` ; mandat `MANDAT-QCM-810-NOUVEAU-FORMAT.md` ; compléments `COMPLEMENT-QCM-810-E-FEUILLE-ET-CLE.md`, `COMPLEMENT-QCM-810-G-DETTES.md`, `COMPLEMENT-QCM-811-H-DETTES-ET-INCONNUES.md`.
+- Bancs : `banc/banc-810a.js` à `banc-810e.js`, `banc-810g.js`, `banc/k-vitesse.sh`, `banc/banc-unique.sh` ; preuves et erreurs de la conscience : `VERDICT.md` ; captures `captures-810/`.
+- Version en service : carte « ℹ️ Version » des Réglages (« 8.1.0 »).
