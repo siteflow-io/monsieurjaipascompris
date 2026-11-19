@@ -1109,3 +1109,5 @@
 - Cadrage : sas `MANDATS/CADRAGE-QCM-NOUVEAU-FORMAT.md` ; mandat `MANDAT-QCM-810-NOUVEAU-FORMAT.md` ; compléments `COMPLEMENT-QCM-810-E-FEUILLE-ET-CLE.md`, `COMPLEMENT-QCM-810-G-DETTES.md`, `COMPLEMENT-QCM-811-H-DETTES-ET-INCONNUES.md`.
 - Bancs : `banc/banc-810a.js` à `banc-810e.js`, `banc-810g.js`, `banc/k-vitesse.sh`, `banc/banc-unique.sh` ; preuves et erreurs de la conscience : `VERDICT.md` ; captures `captures-810/`.
 - Version en service : carte « ℹ️ Version » des Réglages (« 8.1.0 »).
+- **QCM 8.1.1 (19/11/2026, C17-QCM)** : le relecteur des textes (tous les écrans d'une séance au nouveau déroulé, Mode test compris) : `banc/banc-811h.js` partie D ; la séance sur papier par le geste : `banc/banc-811i-papier.js` (K-I) ; la reconnexion d'une tablette après une connexion morte : `banc/b8016/veille.js` (parties C et D) ; mes contrôles fixes réécrits pour la tablette seule : sas `AUDITS/CONTROLES-QCM-APP/controles-app.js`. Le papier n'est jamais au nouveau déroulé : `SCN.nf` (`src/live/base.js`). Preuves : `VERDICT.md` (en tête) et `sorties/811h/`, `sorties/811i/`.
+

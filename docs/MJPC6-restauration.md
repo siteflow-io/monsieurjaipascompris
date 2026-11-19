@@ -1671,3 +1671,9 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - Avant : 8.0.16, 2 328 175 o, md5 `afa643a9dcbf194060f713fca3279d97`, blob `1053c3a628da`, copie au sas `SAUVEGARDES/evaluation-qcm-8.0.16-afa643a9.html`. Promu : 8.1.0, 2 592 370 o, md5 `8ae8bc9004eb30db874d978be9b623f7`, commit `8d3125d`, blob `c8a9ccef7bd7` (sas `code-qcm` = `d954756a8`).
 - **Ce que revenir ferait perdre** : tout le nouveau format (étapes, certitude, tablette seule, note construite à la correction, aides par élève, hors temps à compter). Une séance lancée en 8.1.0 est marquée `lancee/nf` et écrit `essais/`, `aides/`, `dispenses/` : la 8.0.16 ne les lit pas. Ne revenir qu'entre deux séances, jamais pendant une séance du nouveau format.
 - Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `afa643a9`.
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.1.1 (19/11/2026, C17-QCM)
+- Avant : 8.1.0, 2 592 370 o, md5 `8ae8bc9004eb30db874d978be9b623f7`, blob `c8a9ccef7bd7`, copie au sas `SAUVEGARDES/evaluation-qcm-8.1.0-8ae8bc90.html`. Promu : 8.1.1, 2 599 120 o, md5 `8022145351191b743afa0a25865cd285`, commit `35b0ab9`, blob `d0f02ac51ed2` (sas `code-qcm` = `a6d1d2f35`).
+- **Ce que revenir ferait perdre** : les textes de l'ancien flux reviendraient devant l'élève et devant Paul (feuille, stylo, « tu n'as plus rien à écrire ») ; la séance sur papier retrouverait ses quatre défauts. Les données écrites sont les mêmes qu'en 8.1.0 : revenir ne casse aucune séance.
+- Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `8ae8bc90`.
+
