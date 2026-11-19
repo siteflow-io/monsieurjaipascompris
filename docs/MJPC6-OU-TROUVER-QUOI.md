@@ -1089,6 +1089,12 @@
 - (9.9, 17/11) Une page en retard qui relit le hub avant d'écrire journal, état ou heure (617), l'Atelier sans marques de classe (613/634/643), la fenêtre « Tout est enregistré » (les écritures « en vol » dans `DR_ENR`) : `dr-socle.js` / `dr-atelier.js` / `dr-recit.js` (CR). Mandat : sas `MANDATS/DEROULE-01-11/DIMANCHE-08-11/CR-RESTE-DU-17-11.md`. Passation C17 → C18 : sas `MANDATS/PASSATION-C17-C18.md`.
 - (9.10, 18/11) Les listes que le hub rend « à trou » (`[null, …]`) : `dr_repsSures`, `dr_parRangSur` (`dr-socle.js`), `dr_parDiapoRempli` (`dr-classe.js`) — tout `parDiapo` relu du hub y passe. Mandat : sas `MANDATS/DEROULE-01-11/DIMANCHE-08-11/CS-REPONSES-A-TROU.md` ; note et sonde : `LIVRAISONS/DEROULE-01-11/CS/`. Les sessions fuzzing : `docs/fuzzing/`.
 
+## Ajouts de la 9.12.0-㊾ (19/11/2026)
+- « On change de classe », la seule porte : `dr_changerDeClasse(vers)` (dr-recit) — `vers` = 'lancer' (`dr_lancer`), 'relire' (`dr_recitChargerClasse`), 'repetition' (`lancerRepetition`), 'quitter' (`dr_annulPageRemettre` : « Annuler cette heure », « ✕ Fermer »), 'atelier' et 'relecture' (`voir`). Elle ne touche pas à une heure lancée, à un écran d'ouverture ouvert, ni à une répétition.
+- La trame de la page sans rien d'une classe (écrans posés par la Relecture, réactivations `react-h<n>-s<clé>`) : `dr_trameSansClasse`.
+- Les deux tests pour toujours : sas `LIVRAISONS/DEROULE-01-11/CX/sonde-cx.mjs` (deux classes dans la même page, K1 à K8, K11) et `sonde-cx2.mjs` (rechargement en pleine heure, K9, K10) ; dans `BS-BANC/banc.sh`.
+- Les données d'essai du banc (11/11, sans nom réel) : sas `LIVRAISONS/DEROULE-01-11/BS-BANC/donnees/` (`installer.sh`).
+
 ## Ajouts de la 9.11.0-㊽ (19/11/2026)
 - Une heure déplacée par le glisser sur un créneau hors grille : la case d'arrivée vient de `edtHeuresAjoutees` (décision `epingle` + `venantDe`), posée par `edtProjeter` ; l'écriture reste `edtDeplacerVers`.
 - La liste « Déplacer cette heure, ou en ajouter une… » : `edtCreneauxOu` (part du jour de la case) ; un créneau libre choisi dans la liste AJOUTE une heure (`edtChoisirOu` → `edtAjouterHeure`).
