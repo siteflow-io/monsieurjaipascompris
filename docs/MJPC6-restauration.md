@@ -1678,3 +1678,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Ce que revenir ferait perdre** : les textes de l'ancien flux reviendraient devant l'élève et devant Paul (feuille, stylo, « tu n'as plus rien à écrire ») ; la séance sur papier retrouverait ses quatre défauts. Les données écrites sont les mêmes qu'en 8.1.0 : revenir ne casse aucune séance.
 - Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `8ae8bc90`.
 
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.2.0 (20/11/2026, C17-QCM)
+- Avant : 8.1.1, md5 `8022145351191b743afa0a25865cd285`, blob `d0f02ac51ed2`, copie au sas `SAUVEGARDES/evaluation-qcm-8.1.1-80221453.html`. Promu : 8.2.0, 2 595 187 o, md5 `7ea38fc2a3c737eaddd12204238a15a0`, commit `2b111c8`, blob `f0097bd69f68` (sas `code-qcm` = `00692bbb9`).
+- **Ce que revenir ferait** : les séances d'avant réapparaîtraient (la 8.1.1 réécrit la séance active d'avant) ; les évaluations sans type redeviendraient lançables. La 8.2.0 n'écrit rien de nouveau dans la base : revenir ne casse aucune séance.
+- Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `80221453`.
+
