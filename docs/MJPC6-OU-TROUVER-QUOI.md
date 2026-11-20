@@ -1089,6 +1089,12 @@
 - (9.9, 17/11) Une page en retard qui relit le hub avant d'écrire journal, état ou heure (617), l'Atelier sans marques de classe (613/634/643), la fenêtre « Tout est enregistré » (les écritures « en vol » dans `DR_ENR`) : `dr-socle.js` / `dr-atelier.js` / `dr-recit.js` (CR). Mandat : sas `MANDATS/DEROULE-01-11/DIMANCHE-08-11/CR-RESTE-DU-17-11.md`. Passation C17 → C18 : sas `MANDATS/PASSATION-C17-C18.md`.
 - (9.10, 18/11) Les listes que le hub rend « à trou » (`[null, …]`) : `dr_repsSures`, `dr_parRangSur` (`dr-socle.js`), `dr_parDiapoRempli` (`dr-classe.js`) — tout `parDiapo` relu du hub y passe. Mandat : sas `MANDATS/DEROULE-01-11/DIMANCHE-08-11/CS-REPONSES-A-TROU.md` ; note et sonde : `LIVRAISONS/DEROULE-01-11/CS/`. Les sessions fuzzing : `docs/fuzzing/`.
 
+## Ajouts de la 9.13.0-㊿ (20/11/2026)
+- La photo de la copie d'avant le lancement, pour « Annuler » : `DR_CL.avant`, gardée aussi dans le navigateur (`dr_annulAvantGarder`, clé `mjpc-heure-avant`), oubliée à la clôture ; le message d'annulation n'est écrit qu'après relecture du hub (`dr_annulerHeure`, dr-classe).
+- Le gel posé par Paul et le cahier de textes : « Y aller ▸ », « Retour au cours », la carte du cahier, « Expliqué à l'oral » ne le lèvent plus (dr-classe, dr-socle) ; la liste des 12 gestes qui touchent au gel : sas `LIVRAISONS/DEROULE-01-11/DA/NOTE-DA.md`, morceau 2.
+- La réactivation à l'ouverture de « Où en est » : en mémoire seulement (`dr_reactOuvertureAssurer`), écrite au lancement.
+- Les tests pour toujours : sas `LIVRAISONS/DEROULE-01-11/DA/sonde-da1.mjs` à `sonde-da6.mjs` (+ `lib-da.mjs`), dans `BS-BANC/banc.sh`.
+
 ## Ajouts de la 9.12.0-㊾ (19/11/2026)
 - « On change de classe », la seule porte : `dr_changerDeClasse(vers)` (dr-recit) — `vers` = 'lancer' (`dr_lancer`), 'relire' (`dr_recitChargerClasse`), 'repetition' (`lancerRepetition`), 'quitter' (`dr_annulPageRemettre` : « Annuler cette heure », « ✕ Fermer »), 'atelier' et 'relecture' (`voir`). Elle ne touche pas à une heure lancée, à un écran d'ouverture ouvert, ni à une répétition.
 - La trame de la page sans rien d'une classe (écrans posés par la Relecture, réactivations `react-h<n>-s<clé>`) : `dr_trameSansClasse`.
