@@ -3762,3 +3762,13 @@ Au passage : 23 anciennes captures de CO et de CR, où un morceau de prénom ré
   - **SFQ1-20** — Résultats : les cases d'une question écartée montrent « ✗ », comme une réponse fausse. Cause : la note du nouveau format marque l'écartée « e » (`live/base.js` l. 669), une marque que `MARQUE_RES` ne connaît pas, et le tableau retombe sur « ✗ » (`c4-seances.js` l. 629).
   - **SFQ1-21** — la liste des questions d'une compétence (case du tableau, fiche, bilan de l'élève) écrit « ✗ » pour une question écartée ou pas posée. Cause : `marque()` (`c3-base.js` l. 73) rend « ✗ » pour toute marque autre que juste, trouvée ou sans réponse.
   - **SFQ1-22** — le bilan pré-rempli d'un élève donne à revoir en priorité ce que vérifie une question écartée. Cause : `entreeV` (`c4-seances.js` l. 417) écarte les questions pas posées (« x ») et annulées, pas les écartées (« e »).
+- 20/11 21:45 — **DB, morceau 2 : corrigé au sas, pas en ligne** (branche `samedi/db-cahier`, commit `0a09f39a`, assemblé 9.14.0-db2 md5 `41221c697aba438b0848d858aaf3b912` ; audit de la conscience : sonde `db2` rejouée sur l'assemblé, 10/10, et aucun mot des rosters réels ajouté). Ce qui est réglé :
+  - la Relecture montre la diapo de présentation avec les dates de la copie (L15) ;
+  - SF3-11 : une fiche n'est racontée que si elle a été dévoilée, avec son vrai titre ;
+  - SF3-12 : « undefined » ne paraît plus ;
+  - SF3-13 : une activité n'est plus racontée deux fois ;
+  - ② : la diapo montre exactement le texte copié, 1 449 caractères sur 1 449 dans l'essai ;
+  - le travail copié n'a plus « Pour la prochaine séance (date) — ».
+  Le banc unique est vert : 30 sondes sur 30. À savoir :
+  - les récits des heures déjà jouées changeront à leur prochaine composition (SF3-11 et SF3-13) ; « ma version » ne change pas ;
+  - une règle plus ancienne (CG 395a, « la date toujours vers École Directe ») est remplacée par la parole de Paul du 20/11 : « c'est quelque chose que je ne copie pas sur ecole directe donc il faudrait retirer cette mention ».
