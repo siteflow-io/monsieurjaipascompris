@@ -3772,7 +3772,7 @@ Au passage : 23 anciennes captures de CO et de CR, où un morceau de prénom ré
   Le banc unique est vert : 30 sondes sur 30. À savoir :
   - les récits des heures déjà jouées changeront à leur prochaine composition (SF3-11 et SF3-13) ; « ma version » ne change pas ;
   - une règle plus ancienne (CG 395a, « la date toujours vers École Directe ») est remplacée par la parole de Paul du 20/11 : « c'est quelque chose que je ne copie pas sur ecole directe donc il faudrait retirer cette mention ».
-- 20/11 20:50 — **DD : corrigé au sas, pas en ligne** (branche `samedi/dd-court`, code au commit `2904aac2`, assemblé 9.14.0-dd md5 `8d5462726d06f5c3e207fe2a4fb4ca7b`, recalculé par la conscience ; aucun mot des rosters réels dans les ajouts).
+- 20/11 21:08 — **DD : corrigé au sas, pas en ligne** (branche `samedi/dd-court`, code au commit `2904aac2`, assemblé 9.14.0-dd md5 `8d5462726d06f5c3e207fe2a4fb4ca7b`, recalculé par la conscience ; aucun mot des rosters réels dans les ajouts).
   - **SF2-16** : la fenêtre du glisser dit le créneau d'arrivée (« 4 HUGO → jeu 19/11 · 10:07-11:02 »), en vue Semaine comme en vue Mois. Sonde dd1 : 13/18 → 18/18.
   - **SF3-05** : passer de la Relecture à l'Atelier garde l'onglet « Relecture », qui ramène à la même Relecture. Sonde dd2 : 12/22 → 22/22.
   Banc unique : 30 sondes au compte sur 42 ; 12 tombent faute de données, comme chez DA. **À faire valider par Paul (DD, § 0)** : le 27/10 (E1 § 12.33), l'onglet Relecture était sorti de l'Atelier par décision de la conscience, on relit par la case. DD le fait revenir seulement pour retourner à la Relecture qu'on vient de quitter.
