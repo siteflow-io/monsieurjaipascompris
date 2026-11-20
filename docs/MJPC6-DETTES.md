@@ -3754,3 +3754,7 @@ Au passage : 23 anciennes captures de CO et de CR, où un morceau de prénom ré
   - l'onglet « Structure » (`atVuesAller`) ;
   - le rechargement (F5), sans aucune garde (dette B 32).
   Ces trois dettes sont ouvertes. Lu dans le code, pas rejoué : pendant une heure, les gestes du panneau prof qui touchent la classe (supprimer, archiver, renommer, appariement, versions de la grille, import, purge, restauration) ne regardent jamais si une heure joue. Vu sur le faux hub, à mesurer sur le vrai site : l'ouverture de l'emploi du temps a écrit au hub 3 fois sur 4 (mises à niveau de la grille et des photos).
+- 20/11 19:35 — **Réponses de Paul aux dix sujets du point 44** (19:12). Elles sont citées mot pour mot dans les mandats DG et DH, au sas. Les deux réponses qui changent la conduite :
+  - 238 : « Normalement rien n'arrive a l'écran sans dévoilement de ma part » : chaque bloc attend son ▶ (DH, morceau 1) ;
+  - 244 : « les activités ne sont pas par rang mais par identité » (DH, morceau 6).
+  **Nouvelle dette (Paul, 242)** : « Actuellement je suis toujours sur f11, le clic sur la page ne la met pas en grand écran. Pour le redimensionnement ça marche bien actuellement mais j'ai perdu le clic grand écran. » Cause à mesurer : `dr_tabPleinEcran` demande le grand écran une seule fois (mandat AO de C16) → DG, morceau 2. Ouverte. Le 243 (les pastilles hors récit) attend la réponse de Paul.
