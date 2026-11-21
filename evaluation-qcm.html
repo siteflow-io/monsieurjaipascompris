@@ -3947,7 +3947,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
    etat « en_cours » / « terminee », evalSnapshot) sont lus tels quels, et tenus à jour à chaque passage. */
 
 /* La version de l'app (8.1.0-b) : la carte « ℹ️ Version » des Réglages l'affiche (c3-evals.js, etape2.js) ; la console du navigateur la lit aussi (QCM_VERSION). */
-var QCM_VERSION = "8.2.0";
+var QCM_VERSION = "8.2.1";
 
 /* ── La base : la configuration de la 7.7.1, telle quelle ── */
 var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
@@ -4155,9 +4155,55 @@ function ecrireRacineQCM(maj, quoi){
   if(!db) return Promise.resolve();
   return db.ref().update(propre).catch(function(e){ console.error("QCM : écriture refusée (" + (quoi || "") + ")", e); throw e; });
 }
+/* ══ (8.2.1, L1, SFQ1-16 ; skill 7) les envois d'un élève : sa réponse validée (une étape), son estimation, son avis sur la réponse de son voisin, sa co-évaluation.
+   Firebase applique une écriture sur la tablette tout de suite (l'écran la montre), puis la garde en file, en mémoire, jusqu'au hub : coupée du réseau, la tablette
+   disait « ta réponse est enregistrée » alors que rien n'était parti, et un rechargement (ou la tablette éteinte) avant le retour du réseau perdait la réponse
+   sans le dire. Chaque envoi est maintenant gardé sur la tablette (localStorage) jusqu'à la réponse du hub ; tant qu'il attend, l'écran dit qu'il part
+   (ENVOIS.enAttente) : « enregistrée » et « C'est noté » ne viennent qu'après. À la réouverture, chaque envoi resté sur la tablette repart tel quel, comme la file
+   l'aurait envoyé au retour du réseau (son heure d'arrivée, recu, dit à la correction s'il est venu dans le temps) ; il ne repart pas si la séance n'existe plus
+   (jamais un nœud recréé), ni si le hub a déjà, à sa place, une écriture aussi récente (temoin) : jamais une réponse plus récente écrasée. ══ */
+var ENVOIS = (function(){
+  var P = "qcm-envoi|", mem = {};
+  function lire(cle){ try { var t = localStorage.getItem(P + cle); if(t) return JSON.parse(t); } catch(e){ console.error("QCM : un envoi gardé ne se lit pas (" + cle + ")", e); } return mem[cle] || null; }
+  function poser(cle, o){ mem[cle] = o; try { localStorage.setItem(P + cle, JSON.stringify(o)); } catch(e){ console.error("QCM : l'envoi ne se garde pas sur la tablette (" + cle + ")", e); } }
+  function oter(cle){ delete mem[cle]; try { localStorage.removeItem(P + cle); } catch(e){ console.error("QCM : un envoi gardé ne s'efface pas (" + cle + ")", e); } }
+  function cles(){ var l = Object.keys(mem); try { for(var i = 0; i < localStorage.length; i++){ var k = localStorage.key(i); if(k && k.indexOf(P) === 0 && l.indexOf(k.slice(P.length)) < 0) l.push(k.slice(P.length)); } } catch(e){ console.error("QCM : les envois gardés ne se lisent pas", e); } return l; }
+  // l'envoi part ; il n'est oublié qu'à la réponse du hub, et seulement s'il est encore le dernier gardé à sa place (un plus récent attend la sienne)
+  function partir(cle, o){
+    return ecrireQCM(o.maj, o.quoi).then(function(r){
+      if(o.suite) ecrireQCM(o.suite, o.quoi + " (recu)").catch(function(){});
+      var c = lire(cle); if(!c || c.n === o.n) oter(cle);
+      LIVE.changer(); return r; }); }
+  /* cle : sa place (« etape|<séance>|<élève>|<q>|<k>| »… : chaque morceau suivi de « | », un préfixe ne déborde jamais sur un autre élève) ; maj : l'écriture ; suite : l'heure d'arrivée, à part (une écriture que les règles du hub peuvent
+     refuser sans emporter la réponse) ; temoin : {chemin, ms} ce qui, au hub, dit que l'envoi y est ou qu'un plus récent l'a remplacé */
+  function envoyer(cle, sid, maj, quoi, temoin, suite){
+    var o = {sid:sid, maj:maj, quoi:quoi, temoin:temoin || null, suite:suite || null, n:Date.now() + "_" + Math.floor(Math.random() * 1e6)};
+    poser(cle, o); LIVE.changer(); return partir(cle, o); }
+  function enAttente(prefixe){ return cles().some(function(k){ return k.indexOf(prefixe) === 0; }); }
+  // à l'ouverture : chaque envoi resté sur la tablette (la page fermée ou rechargée avant la réponse du hub) repart, s'il manque encore au hub
+  function reprendre(){ if(!db) return;
+    cles().forEach(function(cle){ var o = lire(cle); if(!o || !o.sid || !o.maj){ oter(cle); return; }
+      db.ref(DB_ROOT + cheminS(o.sid, "lancee")).once("value").then(function(s){
+        if(s.val() == null){ console.warn("QCM : un envoi gardé n'est pas reparti : sa séance n'existe plus (" + cle + ")"); oter(cle); LIVE.changer(); return; }
+        if(!o.temoin) return partir(cle, o);
+        return db.ref(DB_ROOT + o.temoin.chemin).once("value").then(function(t){ var v = t.val(), ms = v && typeof v === "object" ? +v.ms : +v;
+          if(v != null && (o.temoin.ms == null || ms >= o.temoin.ms)){ oter(cle); LIVE.changer(); return; }
+          console.warn("QCM : un envoi resté sur la tablette repart (" + cle + ")"); return partir(cle, o); }); })
+      .catch(function(e){ console.error("QCM : un envoi gardé n'a pas pu repartir (" + cle + ")", e); }); }); }
+  if(db) setTimeout(reprendre, 0);
+  return {envoyer:envoyer, enAttente:enAttente, reprendre:reprendre};
+})();
+
 /* (8.0.10, Paul 10/11 21:14, mot pour mot) la tablette avant « 🔓 Ouvrir aux élèves » : une seule constante, pour qu'elle se change d'un mot */
 var TEXTE_AVANT_OUVERTURE = "Maintenant que tu es sur cette page, attends en silence. Je donne les binômes, puis vous vous connecterez.";
 function cheminS(sid, sous){ return "/sessions/" + sid + (sous ? "/" + sous : ""); }
+/* (8.2.1, L5, SFQ1-17) la console prépare, pour la séance qu'elle pilote, l'heure de sa coupure (lastDisconnect, onDisconnect : la séance interrompue de la
+   7.7.1, src/live/pages.js) ; le hub l'écrit quand elle se ferme ou se recharge. Une séance retirée (« Annuler cette séance », « 🗑️ Sortir et purger ») renaissait
+   alors en un nœud seul (sessions/<id>/lastDisconnect), une séance terminée recevait une coupure. Retirer ou terminer une séance annule cette écriture, sur le
+   chemin même où elle est préparée, avant le retrait (le hub reçoit l'annulation d'abord). */
+function annulerCoupureSeance(id){ if(!id || !db) return;
+  try { db.ref(DB_ROOT + cheminS(id, "lastDisconnect")).onDisconnect().cancel(); } catch(e){ console.error("QCM : l'écriture à la coupure ne s'annule pas (" + id + ")", e); }
+  if(typeof INTERROMPUE !== "undefined" && INTERROMPUE.posee === id) INTERROMPUE.posee = null; }
 /* (8.0.8, Paul C17 241, 245, 251, 256) la séance sid tourne-t-elle dans une vraie heure de cours de sa classe ? true, false, ou null : « je ne sais pas ».
    « C'est mjpc qui déclare, jamais l'inverse » : le QCM lit MJPC (site/…), il n'y écrit jamais. Mesure : LIVRAISONS/CODE-QCM/VERDICT.md de la 8.0.7.
    1. La séance de chapitre liée : site/<niveau>/chapitres/<ch>/seances/<se>/items/<item> avec kind "qcm" et ref = l'évaluation de la séance.
@@ -4405,6 +4451,7 @@ var SCN = (function(){
   S.manques = function(ev){ var m = []; if(!ev) return ["l'évaluation"]; if(!ev.chapitre && !ev.demo && !ev.sansChapitre) m.push("le chapitre");
     (ev.questions || []).forEach(function(q, i){ if(!ev.demo && (!q.reflexion || !q.reponse)) m.push("les temps de la question " + (i + 1)); if(!ev.demo && !(q.competences || []).length) m.push("les compétences de la question " + (i + 1)); });
     if(typeof questionsSansType === "function" && questionsSansType(ev).length) m.push("le type de chaque question");   // (8.2.0, J3)
+    if(!ev.demo && typeof manquesEtapesNF === "function") m = m.concat(manquesEtapesNF(ev));   // (8.2.1, L6) le contenu des étapes (c5-format.js)
     return m; };
 
   /* ── Les compétences : taxonomie/competences, trouvées par leur id, jamais par leur place ── */
@@ -4605,12 +4652,9 @@ var SCN = (function(){
     var terminee = s.etat === "terminee" || s.etat === "finie" || s.phase === "finie" || !!(s.deroule && s.deroule.ph === "fin");
     function hors(c){ st.push(c); pts.push(null); maxQ.push(0); det.push(null); }
     ev.questions.forEach(function(q, qi){
-      if(ec.indexOf(qi) >= 0) return hors("e");
-      var rq = (s.reponses || {})[qi], rep = rq && rq[x];
-      if(!rep && lanc[qi] && (s.coursN ? absentAuCoursQCM(s, x, qi) : S.partiA(x, lanc[qi], sid))) return hors("x");
-      // (217, pour le morceau D) une question qui n'a pas été posée à cet élève (sessions/<id>/dispenses/<élève>/<q>) sort de son total
-      if(((s.dispenses || {})[x] || {})[qi]) return hors("x");
-      if(terminee && lanc[qi] == null && !rq) return hors("x");
+      /* (8.2.1, N1 ; geste 4) écartée (« e »), ou pas posée pour lui (« x » : parti avant, absent au cours où elle a été posée, dispensée, jamais lancée d'une
+         séance terminée) : la seule règle, horsQuestionQCM (plus bas, à côté d'absentPartoutQCM), que lit aussi « l'élève sans note » (sansQuestionQCM) */
+      var hq = horsQuestionQCM(s, x, qi); if(hq) return hors(hq);
       if(corr.indexOf(qi) < 0 && !terminee){ if(an.indexOf(qi) < 0) complet = false; return hors("n"); }
       var E = etapesX(ev, qi, x, sid), d = E.map(function(X, kk){ return S.etapeNote(x, qi, kk, sid); }), p = 0, m = 0;
       d.forEach(function(e){ p += e.pts; m += e.max; });
@@ -4715,9 +4759,7 @@ var SCN = (function(){
   /* ── La note : la règle (288 à 293, 303, 332) ── */
   // st par question : j juste, t « Trouvée au dernier moment », f faux, a « aucun de ces choix », n pas encore corrigée, x pas posée (parti avant)
   // un élève était-il parti à l'instant t ? (partis, puis presence_history : un retour retire la clé de partis, l'historique garde le départ)
-  S.partiA = function(x, t, sid){ var s = S.sess(sid); if(!s || !t) return false; var pt = (s.partis || {})[x]; if(pt && pt <= t) return true;
-    var hs = (s.presence_history || {})[x]; if(!hs) return false; var ev = Object.keys(hs).map(function(k){ return hs[k]; }).filter(function(e){ return e && e.ts <= t; }).sort(function(a, b){ return a.ts - b.ts; });
-    if(!ev.length) return false; var dernier = ev[ev.length - 1]; return dernier.etat === "absent" && liste(s.absents).indexOf(x) < 0; };
+  S.partiA = function(x, t, sid){ return partiAQCM(S.sess(sid), x, t); };   // (8.2.1, N1) sa règle, sur la séance brute : partiAQCM (plus bas)
   S.note = function(x, k, sid){
     var s = S.sess(sid), ev = S.evalDeSeance(sid || S.sid()); if(!s || !ev) return null;
     if(S.nf(sid)) return noteNF(x, k, sid, s, ev);   // (8.1.0-c) au nouveau format, la note est celle des clics
@@ -4726,10 +4768,9 @@ var SCN = (function(){
        partiel) est retirée. */
     var an = S.annulees(sid), ec = S.ecartees(sid), lanc = S.lancees(sid), st = [], pts = [];
     ev.questions.forEach(function(q, qi){
-      if(ec.indexOf(qi) >= 0){ st.push("e"); pts.push(null); return; }   // (13/10) une question écartée n'est nulle part : ni juste, ni fausse
-      var rep = S.reponse(x, qi, sid);
-      // (8.0.6, 177) dans une séance rouverte, une question posée pendant un cours où l'élève n'était pas là (absent à l'appel, ou parti) ne compte pas pour lui
-      if(!rep && lanc[qi] && (s.coursN ? absentAuCoursQCM(s, x, qi) : S.partiA(x, lanc[qi], sid))){ st.push("x"); pts.push(null); return; }
+      /* (13/10) une question écartée n'est nulle part : ni juste, ni fausse ; (8.0.6, 177) dans une séance rouverte, une question posée pendant un cours où
+         l'élève n'était pas là (absent à l'appel, ou parti) ne compte pas pour lui. (8.2.1, N1) la seule règle : horsQuestionQCM */
+      var hq = horsQuestionQCM(s, x, qi); if(hq){ st.push(hq); pts.push(null); return; }
       var g = ((s.papier || {})[x] || {})[qi]; if(g == null){ st.push("n"); pts.push(null); } else { st.push(g === "j" || g === true || g === 1 ? "j" : "f"); pts.push(st[st.length - 1] === "j" ? 1 : 0); }
     });
     // la question bonus (prompt de création : "bonus": true) compte dans les points gagnés, pas dans le total ; la note ne dépasse pas 20
@@ -4741,8 +4782,9 @@ var SCN = (function(){
     var corrigees = Object.keys((s.aLire) || {}).map(function(id){ return s.aLire[id]; }).filter(function(a){ return a && a.eleveSlug === x && a.corrige; }).map(function(a){ return Number(a.qi); });
     return {p:x, st:st, pts:pts, n:n, total:total, complet:complet, sur20:sur20, maitrise:S.maitriseDe(Math.round(sur20 * 10) / 10), comp:comp, corrigees:corrigees, annulees:an, ecartees:ec, trouvee:null, nonPosees:[]};
   };
-  // (8.0.6) pas de note pour l'élève qui n'a été là à aucun cours (une séance d'un seul cours : l'absent de l'appel, comme avant)
-  S.resultat = function(id, x, k){ var s = S.sess(id); if(!s) return null; if(absentPartoutQCM(s, x) || S.eleves(id).indexOf(x) < 0) return null; return S.note(x, k, id); };
+  // (8.0.6) pas de note pour l'élève qui n'a été là à aucun cours (une séance d'un seul cours : l'absent de l'appel, comme avant) ;
+  // (8.2.1, N1) ni pour celui qui n'a eu aucune question qui compte (sansNoteQCM : « Un élève sans note est traité comme un absent », cadrage 323)
+  S.resultat = function(id, x, k){ var s = S.sess(id); if(!s) return null; if(sansNoteQCM(s, x, S.evalDeSeance(id)) || S.eleves(id).indexOf(x) < 0) return null; return S.note(x, k, id); };
   S.coursN = function(sid){ var s = S.sess(sid); return (s && +s.coursN) || 1; };
   /* (8.0.9, Paul C17 271-273) à la correction, les deux moitiés s'intervertissent ; chacun confirme qu'il a devant lui la moitié de la feuille qu'il tient.
      La confirmation, rangée par cours (une séance rouverte refait les binômes) : sessions/<id>/croisee/<coursN>/<élève> = {feuille:<voisin>, ms}.
@@ -5016,8 +5058,13 @@ var SCN = (function(){
       var chap = brut.chapitre ? {id:brut.chapitre, niveau:(ch && ch.niveau) || S.niveauDuChapitre(brut.chapitre), uid:(ch && ch.uid) || null, ordre:(ch && ch.numero) || null, cle:(ch && ch.cle) || null, titre:(ch && ch.titre) || null} : null;
       var cl = cleDeClasse(s.classeSlug), snap = s.evalSnapshot || {};
       var revelees = S.corrigeesAu(null, id).length;   // les questions corrigées en classe (« 💡 Révéler »)
-      S.eleves(id).forEach(function(x){ var r = S.resultat(id, x); if(!r || !(r.complet || revelees || (r.corrigees || []).length)) return;
-        var comps = Object.keys(r.comp || {}).map(function(c){ var y = r.comp[c] || {n:0, max:0}, s20 = y.max ? y.n * 20 / y.max : 0;
+      S.eleves(id).forEach(function(x){ var r = S.resultat(id, x);
+        /* (8.2.1, N1) l'élève présent qui n'a plus aucune question qui compte (sa seule question annulée après sa correction) n'a pas de note : le profil écrit
+           avant (« 3 / 3 ») ne reste pas au hub. L'absent de l'appel n'en a jamais eu : rien ne s'écrit pour lui. */
+        if(!r && !absentPartoutQCM(s, x) && sansQuestionQCM(s, x, ev)){ out["mjpcProfils/" + cl + "/" + x + "/sessions/" + id] = null; return; }
+        if(!r || !(r.complet || revelees || (r.corrigees || []).length)) return;
+        // (8.2.1, O3) une compétence sans question qui compte (ses seules questions bonus) n'a pas de maîtrise : elle n'est pas écrite (sur20CompQCM, c3-base.js)
+        var comps = Object.keys(r.comp || {}).filter(function(c){ return sur20CompQCM(r, c) != null; }).map(function(c){ var y = r.comp[c], s20 = sur20CompQCM(r, c);
           return {id:c, n:Math.round(y.n * 100) / 100, max:y.max, note:Math.round(s20 * sur / 20 * 10) / 10, maitrise:S.maitriseDe(Math.round(s20 * 10) / 10)}; });
         out["mjpcProfils/" + cl + "/" + x + "/sessions/" + id] = {date:s.date || (s.lancee && s.lancee.date) || null, sessId:id, evalId:s.evalId || null,
           evalVersion:typeof snap.version === "number" ? snap.version : (typeof brut.version === "number" ? brut.version : 1), titre:(ev && ev.titre) || brut.titre || "Évaluation",
@@ -5040,7 +5087,7 @@ var SCN = (function(){
     try { return f(); } finally { LIVE.d.sessions = sauve; } };
   S.mesEvaluations = function(x, k, classe){
     return S.seances(classe || S.classe()).filter(function(se){ return !se.demo && (S.eleves(se.id).indexOf(x) >= 0) && (se.fin || se.id === S.sid()); }).map(function(se){
-      var abs = absentPartoutQCM(S.sess(se.id), x), rendue = S.rendueAu(se.id);
+      var abs = sansNoteQCM(S.sess(se.id), x, S.evalDeSeance(se.id)), rendue = S.rendueAu(se.id);   // (8.2.1, N1) l'élève sans note : « absente »
       return {titre:se.titre, date:se.date, etat:abs ? "absente" : rendue ? "bilan" : "relecture", note:abs || !rendue ? null : S.note(x, k, se.id), seance:se.id, nf:S.nf(se.id)};
     });
   };
@@ -5135,6 +5182,41 @@ function absentPartoutQCM(s, x){
   if(!poses.length) poses = [C[C.length - 1]];
   return poses.every(function(c){ return c.absents.indexOf(x) >= 0; });
 }
+/* ── (8.2.1, N1 ; Paul, cadrage 323 : « Un élève sans note est traité comme un absent ») L'élève qui n'a eu aucune question qui compte (parti avant la première,
+   toutes écartées, ou pas posées pour lui) recevait « 0 / 0 · 0 / 20 · Maîtrise insuffisante » : S.resultat et les écrans du soir ne regardaient que l'appel
+   (absentPartoutQCM, l'absent de la séance), jamais les questions qu'il avait eues. Ces fonctions lisent la séance brute : SCN (S.note, S.resultat,
+   « Mes évaluations ») et les écrans du soir (c4-seances.js : seanceV, resultatLocalV). ── */
+// l'élève x était-il parti à l'instant t ? (partis, puis presence_history : un retour retire la clé de partis, l'historique garde le départ) — S.partiA
+function partiAQCM(s, x, t){ if(!s || !t) return false; var pt = (s.partis || {})[x]; if(pt && pt <= t) return true;
+  var hs = (s.presence_history || {})[x]; if(!hs) return false; var ev = Object.keys(hs).map(function(k){ return hs[k]; }).filter(function(e){ return e && e.ts <= t; }).sort(function(a, b){ return a.ts - b.ts; });
+  if(!ev.length) return false; var dernier = ev[ev.length - 1]; return dernier.etat === "absent" && listeQCM806(s.absents).indexOf(x) < 0; }
+function nfQCM(s){ return !!(s && s.lancee && s.lancee.nf && s.lancee.mode !== "papier"); }
+function termineeQCM(s){ return !!s && (s.etat === "terminee" || s.etat === "finie" || s.phase === "finie" || !!(s.deroule && s.deroule.ph === "fin")); }
+/* la question qi pour l'élève x : « e » écartée ; « x » pas posée pour lui (posée sans réponse de sa part pendant son absence ou après son départ ; au nouveau
+   format, aussi dispensée, ou jamais lancée d'une séance terminée) ; null : il l'a eue, ou elle peut encore lui être posée. La seule règle : noteNF, S.note
+   (sur papier) et sansQuestionQCM. */
+function horsQuestionQCM(s, x, qi){
+  if(!s) return null; if(listeQCM806(s.ecartees).map(Number).indexOf(qi) >= 0) return "e";
+  var rq = (s.reponses || {})[qi], t = (s.questionsLancees || {})[qi];
+  if(!(rq && rq[x]) && t && (s.coursN ? absentAuCoursQCM(s, x, qi) : partiAQCM(s, x, t))) return "x";
+  if(!nfQCM(s)) return null;
+  // (217, pour le morceau D) une question qui n'a pas été posée à cet élève (sessions/<id>/dispenses/<élève>/<q>) sort de son total
+  if(((s.dispenses || {})[x] || {})[qi]) return "x";
+  if(termineeQCM(s) && t == null && !rq) return "x";
+  return null;
+}
+/* x n'a eu aucune question qui compte : aucune qui entre dans son total (ni écartée, ni pas posée pour lui, ni annulée, ni bonus) parmi celles qui ont été posées
+   (au nouveau format, lancées ou avec une réponse ; sur papier, toutes). Tant qu'aucune question n'est posée dans une séance qui tourne, rien ne change :
+   l'appel décide (la règle d'absentPartoutQCM, « sans question posée : le cours en cours »). */
+function sansQuestionQCM(s, x, ev){
+  if(!s || !ev || !ev.questions || seanceDAvant(s)) return false;
+  var qs = Array.isArray(ev.questions) ? ev.questions : listeQCM806(ev.questions), nf = nfQCM(s), lanc = s.questionsLancees || {}, rep = s.reponses || {}, an = listeQCM806(s.annulees).map(Number);
+  var posee = function(qi){ return !nf || lanc[qi] != null || !!rep[qi]; };
+  if(!termineeQCM(s) && !qs.some(function(q, qi){ return nf ? posee(qi) : false; })) return false;
+  return !qs.some(function(q, qi){ return q && !q.bonus && an.indexOf(qi) < 0 && posee(qi) && !horsQuestionQCM(s, x, qi); });
+}
+// l'élève sans note : absent à tous les cours où une question a été posée, ou aucune question qui compte. « Absent », partout.
+function sansNoteQCM(s, x, ev){ return absentPartoutQCM(s, x) || sansQuestionQCM(s, x, ev); }
 
 /* ══════════════════════ ACT : les gestes de Paul ══════════════════════ */
 function _ph717(ph){ return {appel:"idle", entree:"idle", pret:"idle", reflexion:"reflexion", passage:"reponse", reponse:"reponse", b:"attente", close:"attente", rouvert:"reponse",
@@ -5174,6 +5256,10 @@ var ACT = (function(){
     var evT = evalId === "demo" ? SCN.evalParId("demo") : SCN.evalParId(evalId);
     if(evT && typeof questionsSansType === "function" && questionsSansType(evT).length){ console.error("QCM : lancement refusé (" + (typeof SANS_TYPE !== "undefined" ? SANS_TYPE : "sans type") + ") : " + (evT.titre || evalId));
       return Promise.reject(new Error(typeof SANS_TYPE !== "undefined" ? SANS_TYPE : "sans type")); }
+    /* (8.2.1, L6, SFQ1-19) une étape sans bonne réponse (ou sans liste cachée, sans deux choix, une bonne réponse hors des choix) ne se lance par aucun chemin :
+       les écrans ne la proposent pas (manquesV, « ⚠️ À compléter avant de la lancer ») ; ici, la garde de la seule fonction qui crée une séance */
+    var mqE = evT && !evT.demo && typeof manquesEtapesNF === "function" ? manquesEtapesNF(evT) : [];
+    if(mqE.length){ console.error("QCM : lancement refusé (il manque " + mqE.join(", ") + ") : " + (evT.titre || evalId)); return Promise.reject(new Error("il manque " + mqE.join(", "))); }
     var id = "sess_" + now, eleves = o.eleves ? o.eleves.slice() : SCN.roster(classe).map(sanMJPC);
     var paires = o.paires || SCN.binomesProposes(classe, eleves), places = placesDe(paires);
     // (15/10, Paul) « 🕙 Fin de l'heure » se règle avant l'appel, sur la carte de lancement (LANCEMENT_H.fin, « HH:MM ») : il part avec la séance
@@ -5411,7 +5497,7 @@ var ACT = (function(){
     return poserDeroule(id, {ph:"pause", qi:x.qi, tour:x.tour, reprise:rep, autreHeure:LIVE.maintenant()}).then(function(){ return ecrireQCM(maj, "finirAutreHeure"); }); };
   // terminer : l'archive s'écrit avec les notes telles qu'elles sont ; les tablettes oublient leurs élèves ; la démo s'efface
   A.terminer = function(sidX){ var id = sidX || sid(); if(!id) return Promise.resolve(); var s = SCN.sess(id), maj = {}, now = LIVE.maintenant();
-    A.syncALire(id);
+    A.syncALire(id); annulerCoupureSeance(id);   // (8.2.1, L5) la séance terminée ne reçoit plus l'heure de la coupure de cette console
     maj[cheminS(id, "etat")] = "terminee"; maj[cheminS(id, "finLe")] = now;
     if(!s.evalSnapshot && s.evalId !== "demo"){ var ev = SCN.evalParId(s.evalId); if(ev) maj[cheminS(id, "evalSnapshot")] = construireSnapshot(ev); }
     maj["/sessionActive/" + s.classeSlug] = null;
@@ -5432,6 +5518,7 @@ var ACT = (function(){
     // (8.0.8) et ce qu'elle a écrit au profil de chaque élève (mjpcProfils/<classe>/<élève>/sessions/<id>), dans la même écriture
     var prof = {}, clP = SCN.cleDeClasse(cl); if(clP) SCN.eleves(id).forEach(function(x){ prof["mjpcProfils/" + clP + "/" + x + "/sessions/" + id] = null; });
     if(LIVE.sid === id) LIVE.sid = null;
+    annulerCoupureSeance(id);   // (8.2.1, L5) avant l'oubli : la console qui se ferme ou se recharge ne fait plus renaître la séance (lastDisconnect)
     return ecrireAvecProfils(maj, prof, "annulerSeance"); };
   function racineDe(maj){ var r = {}; Object.keys(maj).forEach(function(k){ r[DB_ROOT + (k.charAt(0) === "/" ? "" : "/") + k] = maj[k]; }); return r; }
   /* (8.0.8) l'oubli et le profil en une seule écriture ; si la base refuse le profil (ses règles), l'oubli se fait quand même, puis le profil à part :
@@ -5782,20 +5869,27 @@ var ELV = (function(){
     if(LIVE.decroche && LIVE.decroche()) return Promise.resolve({ok:false, decroche:true});
     var r = (((SCN.sess(id) || {}).reponses || {})[qi] || {})[x], base = "reponses/" + qi + "/" + x, m = {};
     Object.keys(v).forEach(function(c){ m[cheminS(id, base + "/etapes/" + k + "/" + c)] = v[c]; });
-    m[cheminS(id, base + "/etapes/" + k + "/ms")] = LIVE.maintenant();
+    var msE = LIVE.maintenant(); m[cheminS(id, base + "/etapes/" + k + "/ms")] = msE;
     /* (8.1.0, E ; la règle de la 8.0.11c, audit C17, que banc-8011c-regles rejoue) l'heure d'arrivée à la base (recu) part dans une écriture À PART : si les
        règles de la base refusent ce champ, le clic de l'élève est gardé quand même (sans contrôle hors temps), il n'est jamais perdu avec lui */
     var mr = {}; mr[cheminS(id, base + "/etapes/" + k + "/recu")] = TS;
     if(!r || r.tour == null){ m[cheminS(id, base + "/tour")] = e.tour || 1; m[cheminS(id, base + "/ts")] = LIVE.maintenant();
       var ro = e.ph === "rouvert" ? "un" : e.rouvert ? String(e.rouvert) : null; if(ro) m[cheminS(id, base + "/rouverte")] = ro; }
+    // (8.2.1, L1) la validation de l'étape (sa réponse entière, sa certitude) est gardée sur la tablette jusqu'à la réponse du hub, et repart à la réouverture (ENVOIS)
+    if(v.valide) return ENVOIS.envoyer("etape|" + id + "|" + x + "|" + qi + "|" + k + "|", id, m, "étape " + (k + 1) + " (" + Object.keys(v).join(", ") + ")", {chemin:cheminS(id, base + "/etapes/" + k + "/ms"), ms:msE}, mr);
     return ecrireQCM(m, "étape " + (k + 1) + " (" + Object.keys(v).join(", ") + ")").then(function(r){ ecrireQCM(mr, "étape " + (k + 1) + " (recu)").catch(function(){}); return r; }); };   // (recu : sans attendre)
   E.direB = function(qi, ouiNon, x){ x = qui(x); return x ? w("b/" + qi + "/" + x, ouiNon, "direB") : Promise.resolve(); };
   // la moitié de cet élève doit-elle dire B maintenant ? (la phase b de son tour, ou la suite déjà commencée par un geste de Paul : bPour)
   E.doitDireB = function(x){ return SCN.doitDireB(qui(x)); };
   // (8.1.0-c, C2) « je crois sa réponse juste » ou « fausse » : x est celui qui juge, le clic se range sous son voisin (lectures/<q>/<voisin>)
   E.juger = function(qi, avis, x){ x = qui(x); if(!x || ["juste", "fausse"].indexOf(avis) < 0) return Promise.resolve({ok:false}); var e = SCN.etat() || {}, v = SCN.voisinDe(x);
-    if(e.ph !== "lecture" || e.qi !== qi || !v) return Promise.resolve({ok:false}); return w("lectures/" + qi + "/" + v, {avis:avis, par:x, ms:LIVE.maintenant()}, "juger"); };
-  E.estimer = function(niveau, x){ x = qui(x); return x ? w("autoevals/" + x, niveau, "estimer") : Promise.resolve(); };
+    if(e.ph !== "lecture" || e.qi !== qi || !v) return Promise.resolve({ok:false});
+    // (8.2.1, L1) gardé sur la tablette jusqu'à la réponse du hub (ENVOIS) : « C'est noté » ne vient qu'après
+    var id = sid(), ms = LIVE.maintenant(), maj = {}; maj[cheminS(id, "lectures/" + qi + "/" + v)] = {avis:avis, par:x, ms:ms};
+    return ENVOIS.envoyer("juger|" + id + "|" + qi + "|" + x + "|", id, maj, "juger", {chemin:cheminS(id, "lectures/" + qi + "/" + v), ms:ms}); };
+  // (8.2.1, L1) l'estimation : gardée sur la tablette jusqu'à la réponse du hub (ENVOIS) ; elle ne repart pas si le hub en a déjà une
+  E.estimer = function(niveau, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve(); var maj = {}; maj[cheminS(id, "autoevals/" + x)] = niveau;
+    return ENVOIS.envoyer("estim|" + id + "|" + x + "|", id, maj, "estimer", {chemin:cheminS(id, "autoevals/" + x), ms:null}); };
   // lire la feuille du voisin : x est le propriétaire de la feuille (sa moitié) ; le lecteur est son voisin
   // (8.0.5, Paul 156, R3) une feuille que Paul a lue (le soir, « Lire les copies », ou une alerte tranchée : par:"prof") ne se relit plus en classe :
   // aucun clic de la tablette ne la réécrit (la moitié la montre grisée, avec ses coches : EcrLuParPaulH, c3-tablettes.js)
@@ -5809,7 +5903,8 @@ var ELV = (function(){
     // l'élève a changé d'avis (d'accord, ou une autre question) : ses alertes d'avant, pas encore tranchées, s'en vont
     var al = SCN.sess(id).alertes || {}, re = new RegExp("^a_" + x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "_\\d+$");
     Object.keys(al).forEach(function(k){ if(k !== aid && re.test(k) && !(al[k] || {}).tranche){ maj[cheminS(id, "alertes/" + k)] = null; retirees++; } });
-    return ecrireQCM(maj, "coeval").then(function(){ if((statut === "peut" || retirees) && typeof ACT !== "undefined") return ACT.syncALire(id); }); };
+    // (8.2.1, L1) gardée sur la tablette jusqu'à la réponse du hub (ENVOIS) : « C'est noté » ne vient qu'après
+    return ENVOIS.envoyer("coeval|" + id + "|" + x + "|", id, maj, "coeval", {chemin:cheminS(id, "coeval/" + x), ms:now}).then(function(){ if((statut === "peut" || retirees) && typeof ACT !== "undefined") return ACT.syncALire(id); }); };
   E.sortir = function(cote){ delete E.cotes[cote]; if(!E.cotes.g && !E.cotes.d){ E.tab = null; E.n = null; } garder(); };
   return E;
 })();
@@ -6124,7 +6219,9 @@ function EcrEstim(e, choix){
         h("div", {className:"autoeval-fourchette-bornes-big"}, libF(f)),
         h("div", {style:{fontSize:".8rem", opacity:.95}}, P(mt(f.k).lib)));
     })) : h("div", {className:"autoeval-confirme"},
-      h("div", {className:"autoeval-confirme-titre"}, "Ton estimation est enregistrée"),
+      // (8.2.1, L1) « enregistrée » seulement quand le hub l'a : tant que son estimation attend, elle part (ENVOIS)
+      enDirect() && typeof ENVOIS !== "undefined" && ENVOIS.enAttente("estim|" + SCN.sid() + "|" + cleE(e) + "|") ? h("div", {className:"autoeval-confirme-titre", "data-envoi":"1"}, "⏳ Ton estimation part")
+        : h("div", {className:"autoeval-confirme-titre"}, "Ton estimation est enregistrée"),
       h("div", {className:"autoeval-confirme-choix fourchette-" + sel.k}, h("span", {style:{fontSize:"2rem"}}, mt(sel.k).em), h("span", null, libF(sel))),
       h("div", {style:{marginTop:".5rem", fontWeight:700}}, P(mt(sel.k).lib)),
       h("div", {className:"autoeval-confirme-attente"}, texteH("attente_correction", "La correction s'ouvrira dans un instant.")))));
@@ -8022,7 +8119,8 @@ function purgerModeTest(){
   MODE_TEST.sortie = true;
   return db.ref(v3Q("sessions")).once("value").then(function(s){
     var X = s.val() || {}, l = [];
-    Object.keys(X).forEach(function(sid){ if(X[sid] && (X[sid].classeSlug === CLASSE_TEST || X[sid].evalId === TEST_EVAL)) l.push(v3Set(v3Q("sessions/" + sid), null)); });
+    // (8.2.1, L5) chaque séance de test retirée : l'heure de la coupure de cette console est annulée d'abord (annulerCoupureSeance, src/live/base.js)
+    Object.keys(X).forEach(function(sid){ if(X[sid] && (X[sid].classeSlug === CLASSE_TEST || X[sid].evalId === TEST_EVAL)){ if(typeof annulerCoupureSeance === "function") annulerCoupureSeance(sid); l.push(v3Set(v3Q("sessions/" + sid), null)); } });
     l.push(v3Set(v3Q("sessionActive/" + CLASSE_TEST), null), v3Set("classes/" + CLASSE_TEST, null), v3Set(v3Q("evaluations/" + TEST_EVAL), null), v3Set(v3Q("presence/" + CLASSE_TEST), null));
     testSlugs().forEach(function(k){ l.push(v3Set("codes/" + k, null)); });
     return Promise.all(l);
@@ -8156,16 +8254,21 @@ function eprouver(b, i){
     var lib = {appel:"l'appel", entree:"l'entrée", pret:"prêts", reflexion:"réflexion", passage:"passage", reponse:"réponse", b:"« Oui / Non »", close:"question close", rouvert:"question rouverte", estim:"l'estimation", att2:"la seconde attestation", lecture:"lecture du voisin", revele:"révélée", coeval:"co-évaluation", bilan:"le bilan", fin:"terminée", pause:"pause"}[d.ph] || d.ph;
     return "🔄 État relu : " + (d.qi != null ? "question " + (d.qi + 1) + ", " : "") + lib + "."; }); }
 }
+/* (8.2.1, K6, SFQ1-07) le titre du Mode test et « 🗑️ Sortir et purger » : ceux de son écran, et ceux de chaque écran de la console tant que le Mode test
+   est actif (Données → « 📊 Résultats » d'une séance de test, sa fiche : Console, c3-gestes.js) ; « Mode prof » n'y paraît plus. */
+function modeTestActifV(){ return typeof MODE_TEST !== "undefined" && !!MODE_TEST.actif && !MODE_TEST.sortie && typeof enDirect === "function" && enDirect(); }
+function TitreModeTestV(){ return h("h1", null, "🧪 Évaluation QCM", h("span", {className:"badge", style:{background:"var(--rose)", color:"#fff"}}, "MODE TEST")); }
+function SortirTestV(){ return h("button", surClic(function(){ return purgerModeTest().then(function(){ versScene("c-evals"); setTimeout(function(){ MODE_TEST.sortie = false; }, 1500); }); }, {className:"btn btn-rouge btn-sm", title:"Sort du mode test : la classe de test, ses séances et ses codes sont effacés ; la démo reste."}), "🗑️ Sortir et purger"); }
 function HautModeTestV(){
   var se = testSession(), sid = testSid();
   return h(F, null,
     h("div", {className:"prof-header"},
-      h("h1", null, "🧪 Évaluation QCM", h("span", {className:"badge", style:{background:"var(--rose)", color:"#fff"}}, "MODE TEST")),
+      TitreModeTestV(),
       h("div", {className:"row"},
         h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", title:"Télécharge l'état du mode test dans un fichier.", onClick:function(){ var S = v3Sessions(), o = {}; Object.keys(S).forEach(function(k){ if(S[k] && S[k].classeSlug === CLASSE_TEST) o[k] = S[k]; });
           telecharger("qcm-test-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify({classe:v3Classes()[CLASSE_TEST] || null, evaluation:v3Evals()[TEST_EVAL] || null, sessions:o}, null, 2)); }}, "📥 Exporter snapshot test"),
         h("button", {className:"btn btn-primary btn-sm", "data-va":"c-qr", title:"Montre le QR de ton téléphone : il pilote le mode test comme une vraie séance."}, "📱 QR pilotage"),
-        h("button", surClic(function(){ return purgerModeTest().then(function(){ versScene("c-evals"); setTimeout(function(){ MODE_TEST.sortie = false; }, 1500); }); }, {className:"btn btn-rouge btn-sm", title:"Sort du mode test : la classe de test, ses séances et ses codes sont effacés ; la démo reste."}), "🗑️ Sortir et purger"))),
+        SortirTestV())),
     h("div", {className:"test-info", style:{marginTop:".8rem"}},
       h("strong", null, "🔬 Éprouver les mécanismes livrés"),
       h("p", {style:{margin:".4rem 0", fontSize:".88rem"}}, "Ces boutons appellent les fonctions réelles de l'application, pas des copies."),
@@ -11999,9 +12102,45 @@ function calc(p){
 }
 function stDe(e){ return calc(e.prenom).st; }
 // « Trouvée au dernier moment » : le ✓ orange chez Paul comme chez l'élève (point 777) ; « ⛔ » ne dit que le point d'autonomie
-function marque(s){ return s === "j" ? "✓" : s === "t" ? "✓" : s === "a" ? "∅" : s === "pasdit" ? "·" : "✗"; }
-function detailComp(r, c){ return compQuestions(c).map(function(i){ return "Q" + (i+1) + " " + marque(r.st[i]); }).join(" · "); }
-function niveauComp(r, c){ var x = r.comp[c]; return x ? maitriseDe(x.n * 20 / x.max) : maitriseDe(0); }
+/* (8.2.1, L8, SFQ1-20 à 22 ; geste 4) la marque d'une question pour un élève, la seule table : la case du tableau des résultats, la liste des questions d'une
+   compétence (le tableau, la fiche, le bilan de la classe), l'export. j juste, t trouvée au dernier moment, a « aucun de ces choix », f faux ; n (pasdit) pas encore
+   corrigée : « ? » ; e écartée et x pas posée (parti, dispensé, jamais lancée) : « · » (Paul, cadrage 442 : « ses cases « · » »). Une écartée (« e », la note du
+   nouveau format) n'était dans aucune table : le tableau la dessinait « ✗ », marque() aussi, et la liste d'une compétence disait « Q1 ✗ ». */
+var MARQUES_Q = {j:["cell-juste", "✓"], t:["cell-trouvee", "✓"], a:["cell-faux", "∅"], f:["cell-faux", "✗"], pasdit:["cell-vide", "?"], n:["cell-vide", "?"], x:["cell-vide", "·"], e:["cell-vide", "·"]};
+function marqueQ(s){ return MARQUES_Q[s] || MARQUES_Q.n; }
+function marque(s){ return marqueQ(s)[1]; }
+/* (8.2.1, M1 ; geste 4) les questions qu'un élève a eues, parmi celles qu'on lui donne (les questions d'une compétence, ou toutes), la seule liste : ni écartée
+   (« e », ou dans les écartées de la séance), ni pas posée (« x » : jamais lancée, posée pendant son absence ou après son départ, ou dispensée). Une annulée y
+   reste : elle a été posée. Lue par chaque liste des questions d'une compétence (listeCompQ), par le bilan pré-rempli (entreeV) et par le PDF. Chacune faisait
+   son propre filtre, ou aucun : la case et la fiche écrivaient toutes les questions, « Q1 · · Q2 ✓ · Q3 · », le point de la marque pris pour le séparateur. */
+function questionsEues(r, qs, ecartees){ var st = (r && r.st) || [], ec = [].concat(ecartees || [], (r && r.ecartees) || []).map(Number);
+  return (qs || []).filter(function(i){ var s = st[i]; return s != null && s !== "e" && s !== "x" && ec.indexOf(Number(i)) < 0; }); }
+/* (8.2.1, M1) la liste des questions d'une compétence qu'un élève a eues, dessinée par une seule fonction : la case du tableau, la fiche, le bilan de la classe
+   (côté professeur), le bilan de l'élève (o.eleve). Chez Paul, chaque question a sa marque (marque) et une annulée garde la sienne, « ⚠️ » (442 : « Les deux
+   marques restent dans ta console et dans tes résultats ») : « Q2 ✓ · Q4 ⚠️ ». Chez l'élève, ✓ ou ✗, et l'annulée n'y est pas : sa ligne « Question 4 · annulée :
+   elle ne compte pas. » est dans « Question par question » (la maquette validée, la 8.2.0). o.compte : « 3/3 », écrit après « → ». Aucune question eue : la
+   liste le dit en clair, sans compte. */
+function listeCompQ(r, qs, o){ o = o || {}; var an = [].concat(o.annulees || [], (r && r.annulees) || []).map(Number), l = questionsEues(r, qs, o.ecartees);
+  if(o.eleve) l = l.filter(function(i){ return an.indexOf(Number(i)) < 0; });
+  if(!l.length) return o.eleve ? "aucune question de cette compétence ne t'a été posée" : "aucune question de cette compétence ne lui a été posée";
+  return l.map(function(i){ var s = r.st[i]; return "Q" + (i+1) + " " + (an.indexOf(Number(i)) >= 0 ? "⚠️" : o.eleve ? (s === "j" || s === "t" ? "✓" : "✗") : marque(s)); }).join(" · ") + (o.compte != null ? " → " + o.compte : ""); }
+function detailComp(r, c){ return listeCompQ(r, compQuestions(c)); }
+/* (8.2.1, N2 ; Paul, cadrage 442 : « deux gestes, deux marques ») une question écartée ou annulée, côté professeur, la seule marque : la console (« 📋 Toutes les
+   questions »), l'en-tête des résultats, la fiche d'un élève (à la place de ses points : une annulée ne compte pas). Et la seule phrase du bilan de l'élève pour une
+   annulée. La fiche du nouveau format écrivait une annulée comme les autres, « Q2 … +3 points » ; celle d'une séance sur papier, « 1 pt ». */
+var MARQUE_ECARTEE = "❌ Écartée — pas posée", MARQUE_ANNULEE = "⚠️ Annulée — posée, puis annulée";
+function annuleeEleveQ(i){ return "Question " + (i + 1) + " · annulée : elle ne compte pas."; }
+/* (8.2.1, O3 ; geste 4) le score d'une compétence pour un élève, sur 20, la seule règle : ses points sur les questions de cette compétence qui entrent dans son
+   total (r.comp, fait par la note : ni écartée, ni pas posée pour lui, ni annulée ; une bonus n'entre pas dans le total). Aucune : null, la compétence n'a pas de
+   maîtrise. Chaque écran faisait son calcul, et une compétence sans question valait 0 sur 0 : « 🔴 Maîtrise insuffisante » dans la case, la fiche, l'export CSV,
+   le PDF pour École Directe. Lue par maitriseComp et par le profil MJPC (S.profilsDe, live/base.js).
+   maitriseComp : sa maîtrise, aux tranches des Réglages (maitriseV, arrondi au dixième comme la note), ou null ; lue par la case du tableau, la fiche, l'export CSV,
+   le PDF, le bilan de la classe et les bilans de l'élève. niveauComp : la même, avec « — » à la place (comme une note pas encore complète) ; une liste qui compte
+   les élèves par niveau ne compte pas celui-là. */
+function sur20CompQCM(r, c){ var x = r && r.comp ? r.comp[c] : null; return x && +x.max > 0 ? (+x.n || 0) * 20 / x.max : null; }
+var SANS_MAITRISE = {k:null, cls:"", em:"", lib:"—"};
+function maitriseComp(r, c){ var s = sur20CompQCM(r, c); return s == null ? null : maitriseV(s); }
+function niveauComp(r, c){ return maitriseComp(r, c) || SANS_MAITRISE; }
 
 /* ── Les compteurs de la console (« connectés », « ont répondu », « justes », « question ») ── */
 function fr2(a){ return a ? a[0] + "/" + a[1] : "—"; }
@@ -12100,6 +12239,9 @@ function TempsMini(p){
 function enDirect(){ return typeof SCN !== "undefined" && typeof SCN.eleves === "function"; }
 function nomH(p){ return enDirect() ? SCN.nomDe(p) : nomDe(p); }
 function prenomH(p){ return enDirect() ? SCN.pre(p) : p; }
+/* (8.2.1, L3, SFQ1-18) le nom d'un élève dans une liste de la console (une fenêtre, une alerte) : son prénom, ou son nom en entier (nomH, comme « 🚫 Départ d'un
+   élève ») quand un autre élève de la même liste a le même prénom : deux « Lucas » ne se confondent plus (« 🔓 Rouvrir pour Lucas » deux fois). */
+function nomDansH(p, liste){ var pr = prenomH(p); return (liste || []).some(function(q){ return q && q !== p && prenomH(q) === pr; }) ? nomH(p) : pr; }
 function sexeH(p){ return enDirect() ? (SCN.sexe(p) === "F" ? "F" : "M") : (SCN.SEXE[p] === "F" ? "F" : "M"); }
 // une case de tablette (un nom complet dans la maquette, un eleveSlug en direct) : la clé de l'élève, et le nom affiché
 function cleH(n){ return !n ? null : enDirect() ? slugH(n) : pre(n); }
@@ -12344,7 +12486,7 @@ function Overview(qCur, passees, opts){
       // la 7.7.1 (l. 8114) : la question du moment reste « en cours », même close, jusqu'au lancement de la suivante
       var current = qi === qCur, passee = !current && passees.indexOf(qi) >= 0, avenir = !current && !passee;
       var b = bilanQ(qi, k);
-      var marque = ec[qi] ? h("div", {className:"q-marque ecartee"}, "❌ Écartée — pas posée") : an[qi] ? h("div", {className:"q-marque annulee"}, "⚠️ Annulée — posée, puis annulée") : null;
+      var marque = ec[qi] ? h("div", {className:"q-marque ecartee"}, MARQUE_ECARTEE) : an[qi] ? h("div", {className:"q-marque annulee"}, MARQUE_ANNULEE) : null;   // (8.2.1, N2) la seule marque
       // (relecteur n°105) la question du moment, close, ne dit plus « en cours »
       var close = current && (opts.phase === "attente" || m.ph === "close");
       var titre = close ? "Question close — " + b.justes + "/" + b.repondu + " justes."
@@ -12821,7 +12963,7 @@ function BilanClasse(){
         h("h3", null, "🧩 Par compétence", InfoI("Pour chaque compétence de l'évaluation : combien d'élèves dans chaque niveau, sur ses questions.")),
         COMPS.map(function(cp){
           var d = {vert:0, bleu:0, orange:0, rouge:0};
-          lignes.forEach(function(l){ d[niveauComp(l.r, cp).k]++; });
+          lignes.forEach(function(l){ var m = maitriseComp(l.r, cp); if(m) d[m.k]++; });   // (8.2.1, O3) sans question de cette compétence : dans aucun niveau
           return h("div", {key:cp, className:"par-comp"},
             // (relecteur n°216) le libellé entier, sans le code, qui reste au survol
             h("div", {className:"pc-t", title:"La compétence " + cp + " du référentiel : " + LIB_OFF[cp] + "."}, LIB_OFF[cp] + " · " + compQuestions(cp).map(function(i){ return "Q" + (i+1); }).join(", ")),
@@ -12873,7 +13015,9 @@ function EcrBilan(e, opts){
   var corrigees = (r.corrigees || []).slice();
   // (QCM-2) en direct, une alerte tranchée pendant l'heure (la lecture devient celle de Paul, par:"prof") : « Corrigé d'après ta feuille. »
   if(enDirect()) EV.questions.forEach(function(q, i){ var l = typeof SCN.lectureNote === "function" ? SCN.lectureNote(cleE(e), i) : SCN.lecture(cleE(e), i); if(l && l.par === "prof" && (!l.pause || l.desaccord) && corrigees.indexOf(i) < 0) corrigees.push(i); });
-  var compQ = function(cp){ return compQuestions(cp).filter(function(i){ return i !== an && !horsQH(i); }).map(function(i, j){ return h(F, {key:i}, j ? " · " : "", "Q" + (i+1) + " ", st[i] === "t" ? h("span", {className:"v-orange"}, "✓") : st[i] === "j" ? "✓" : "✗"); }); };
+  /* (8.2.1, M1) « Tes compétences » : les questions qu'il a eues, par la seule liste (listeCompQ, vue de l'élève : ni écartée, ni pas posée, ni annulée) ;
+     la question écartée de la séance en direct (horsQH) y est passée avec celles de sa note */
+  var ecH = EV.questions.map(function(q, i){ return i; }).filter(horsQH);
   var autoOk = !SCN.autonomie(cleE(e), k).retire;
   return Page(badgeDe(e), "🎯 Bilan personnel", h("div", {className:"bilan-c"},
     // la version imprimable de son bilan s'ouvre à part, pour l'élève de cette moitié (l'infobulle de la 7.7.1 : « Ouvre une version imprimable… »)
@@ -12890,7 +13034,7 @@ function EcrBilan(e, opts){
       h("div", {className:"recap"}, EV.questions.map(function(q, i){
         var s = st[i];
         if(horsQH(i)) return null;
-        if(i === an) return h("div", {key:i, className:"recap-l annulee"}, h("span", null, "Question " + (i+1) + " · annulée : elle ne compte pas."));
+        if(i === an) return h("div", {key:i, className:"recap-l annulee"}, h("span", null, annuleeEleveQ(i)));
         return h("div", {key:i, className:"recap-l " + (s === "j" || s === "t" ? "j" : "f")},
           h("span", null, "Question " + (i+1) + " · ",
             s === "t" ? h(F, null, h("span", {className:"v-orange"}, "✓"), " Trouvée au dernier moment") : s === "a" ? "ta feuille ne dit aucun de ces choix" : s === "j" ? "juste" : "faux",
@@ -12900,9 +13044,9 @@ function EcrBilan(e, opts){
       }))),
     h("div", {className:"bilan-bloc"}, h("h3", null, "Tes compétences"),
       COMPS.map(function(cp){
-        var x = r.comp[cp] || {n:0, max:0}, mm = maitriseDe(x.max ? x.n * 20 / x.max : 0);
+        var x = r.comp[cp] || {n:0, max:0}, mm = maitriseComp(r, cp); if(!mm) return null;   // (8.2.1, O3) sans question qui compte : pas nommée, comme au nouveau format
         return h("div", {key:cp, className:"comp-l"},
-          h("span", null, LIB_ELEVE[cp], h("span", {className:"comp-q"}, compQ(cp), " → " + x.n + "/" + x.max)),
+          h("span", null, LIB_ELEVE[cp], h("span", {className:"comp-q"}, listeCompQ(r, compQuestions(cp), {eleve:true, ecartees:ecH, compte:x.n + "/" + x.max}))),
           h("span", {className:"mt"}, mm.em + " ", mm.lib));
       }),
       AUTO.map(function(l){ return h("div", {key:l, className:"comp-l"}, h("span", null, l), h("span", {className:"mt"}, autoOk ? "✅ " : "❌ ", autoOk ? "atteinte" : "non atteinte")); })),
@@ -13019,7 +13163,7 @@ function decisionDe(a){ var t = a.tranche; return !t ? null : typeof t === "stri
 function txtChoix(q, c){ return c === "aucun" ? "aucun de ces choix" : (c || []).map(function(i){ return q.choix[i]; }).join(", "); }
 function ptsDe(q, c){ return c && c !== "aucun" && memesChoixH(c, q.bonnes) ? 1 : 0; }
 function AlerteCoH(a){
-  var q = EV.questions[a.qi], A = a.auteur, L = a.lecteur, nA = nomDe(A), nL = nomDe(L), pA = prenomH(A), pL = prenomH(L);
+  var q = EV.questions[a.qi], A = a.auteur, L = a.lecteur, nA = nomDe(A), nL = nomDe(L), pA = nomDansH(A, [A, L]), pL = nomDansH(L, [A, L]);   // (8.2.1, L3) deux du même prénom : leur nom
   var lu = (LU[A] || [])[a.qi], ecrit = a.ecrit != null ? a.ecrit : ((SCN.coevalDe(A) || {}).ecrit), clic = (TABL[A] || [])[a.qi] || [], dit = (DIT_B[A] || [])[a.qi];
   // (R2, Conscience n°12 10:47) la note réelle : « Trouvée au dernier moment » vaut déjà 1 point, et le garde si la feuille reste fausse
   var stA = calc(A).st[a.qi], trouvee = stA === "t", avant = stA === "j" || trouvee ? 1 : ptsDe(q, lu), apres = ptsDe(q, ecrit) || (trouvee ? 1 : 0), ret = [A, L].filter(function(p){ return SCN.autonomie(p, MO()).retire; });
@@ -13049,7 +13193,7 @@ function AlerteCoH(a){
     h("div", {className:"al-auto"}, [[[A], "⛔ à " + pA, "btn-ghost"], [[L], "⛔ à " + pL, "btn-ghost"], [[A, L], "⛔ aux deux", "btn-aux-deux"]].map(function(x){
       var deja = x[0].every(function(p){ return ret.indexOf(p) >= 0; });
       return deja ? h("button", {key:x[1], className:"btn btn-sm " + x[2], disabled:true, title:"Ce point d'autonomie est déjà retiré : « ↩️ Rendre » le défait."}, x[1])
-        : h("button", Object.assign({key:x[1], className:"btn btn-sm " + x[2], title:"Retire le point d'autonomie " + (x[0].length > 1 ? "aux deux" : "à " + prenomH(x[0][0])) + ", après une confirmation. « ↩️ Rendre » le défait."}, marqueH("ALG:" + a.id + ":" + x[0].join(","), function(){ ouvrirFen("garde", x[0]); })), x[1]); }),
+        : h("button", Object.assign({key:x[1], className:"btn btn-sm " + x[2], title:"Retire le point d'autonomie " + (x[0].length > 1 ? "aux deux" : "à " + nomDansH(x[0][0], [A, L])) + ", après une confirmation. « ↩️ Rendre » le défait."}, marqueH("ALG:" + a.id + ":" + x[0].join(","), function(){ ouvrirFen("garde", x[0]); })), x[1]); }),
       ret.length > 0 && h("button", Object.assign({className:"btn btn-vert btn-sm", title:"Rend le point d'autonomie retiré : les compétences d'autonomie repassent en Très bonne maîtrise."}, marqueH("ALR:" + a.id, function(){ ret.forEach(function(p){ agir("rendreAutonomie", [p]); }); })), "↩️ Rendre")));
   return h("div", {key:a.id, className:"alerte-co"}, h("div", {className:"al-corps"}, corps),
     h("div", {className:"al-actions"}, boutons, auto,
@@ -13058,7 +13202,7 @@ function AlerteCoH(a){
 // ce que dit la phrase d'état d'une alerte tranchée : la décision prise, et la note qui en sort
 function AlerteTrancheeH(a){
   // la lecture d'avant la décision : celle que l'alerte garde (alertes/<id>/lu) ; LU porte déjà la décision
-  var d = decisionDe(a), q = EV.questions[a.qi], A = a.auteur, L = a.lecteur, nA = nomDe(A), pA = prenomH(A), pL = prenomH(L), n = (enDirect() && typeof SCN.note === "function" && SCN.note(A)) || calc(A), lu = a.lu != null ? a.lu : (LU[A] || [])[a.qi];
+  var d = decisionDe(a), q = EV.questions[a.qi], A = a.auteur, L = a.lecteur, nA = nomDe(A), pA = nomDansH(A, [A, L]), pL = nomDansH(L, [A, L]), n = (enDirect() && typeof SCN.note === "function" && SCN.note(A)) || calc(A), lu = a.lu != null ? a.lu : (LU[A] || [])[a.qi];
   var noteTxt = function(passe){ return "sa note provisoire " + (passe ? "passe" : "reste") + " à " + n.n + " / " + n.total + "."; };
   var t;
   if(d.decision === "lecteur") t = ["✅ Alerte tranchée : raison donnée à " + pL, "La lecture " + deNom(pL) + ", " + txtChoix(q, lu) + ", est gardée : la question " + (a.qi + 1) + (/^[AEIOUYÉÈÊÂÎÔ]/i.test(nA) ? " d'" : " de ") + nA + " reste à " + (n.pts[a.qi] != null ? n.pts[a.qi] : ptsDe(q, lu)) + " ; " + noteTxt(false)];
@@ -13121,7 +13265,7 @@ function FenCoevalFeuille(a, fond){
 function FenCoevalFeuilleC(p){
   // la fenêtre « Que dit la feuille ? » de la maquette (QdfFenetreC, c3-feuille.js), pour l'alerte réelle : rien de coché d'avance, chaque choix
   // porte ce qu'on en sait ; « Valider » tranche l'alerte d'après la feuille (ACT.trancher)
-  var a = p.a, q = EV.questions[a.qi], A = a.auteur, pA = prenomH(A), pL = prenomH(a.lecteur), lu = (LU[A] || [])[a.qi], ecrit = a.ecrit != null ? a.ecrit : (SCN.coevalDe(A) || {}).ecrit;
+  var a = p.a, q = EV.questions[a.qi], A = a.auteur, pA = nomDansH(A, [A, a.lecteur]), pL = nomDansH(a.lecteur, [A, a.lecteur]), lu = (LU[A] || [])[a.qi], ecrit = a.ecrit != null ? a.ecrit : (SCN.coevalDe(A) || {}).ecrit;
   var s = useState([]), sel = s[0], set = s[1], plusieurs = q.bonnes.length > 1;
   function basculer(i){
     if(i === "aucun"){ set(sel === "aucun" ? [] : "aucun"); return; }
@@ -13156,6 +13300,9 @@ function FenCoevalFeuilleC(p){
 /* ── Le bilan de la classe, en direct : les questions comptées, quel que soit leur nombre ── */
 function BilanClasseH(){
   var k = MO(), m = momH(), pres = actifsH(k);
+  /* (8.2.1, N1 ; cadrage 323) l'élève sans note est traité comme un absent : celui qui n'a eu aucune question qui compte (revenu après la seule question posée,
+     dispensé de toutes) n'a pas de ligne, ni dans les comptes ; il avait « 0 / 0 ». La seule règle : sansQuestionQCM (src/live/base.js) */
+  if(enDirect() && typeof sansQuestionQCM === "function"){ var s0 = SCN.sess(), ev0 = SCN.evalDeSeance(SCN.sid()); pres = pres.filter(function(p){ return !sansQuestionQCM(s0, p, ev0); }); }
   var lignes = pres.map(function(p){ return {p:p, nom:nomDe(p), r:calc(p)}; });
   var total = lignes.length ? lignes[0].r.total : nbComptees();
   var notes = lignes.filter(function(l){ return l.r.complet; }).map(function(l){ return l.r.n; }).sort(function(a, b){ return a - b; });
@@ -13182,9 +13329,9 @@ function BilanClasseH(){
         h("h3", null, "🧩 Par compétence", InfoI("Pour chaque compétence de l'évaluation : combien d'élèves dans chaque niveau, sur ses questions.")),
         COMPS.map(function(cp){
           var d = {vert:0, bleu:0, orange:0, rouge:0};
-          lignes.forEach(function(l){ if(l.r.complet) d[niveauComp(l.r, cp).k]++; });   // (16/10) la note complète seulement, comme la distribution
+          lignes.forEach(function(l){ var m = l.r.complet ? maitriseComp(l.r, cp) : null; if(m) d[m.k]++; });   // (16/10) la note complète seulement, comme la distribution ; (8.2.1, O3) sans question de cette compétence : dans aucun niveau
           return h("div", {key:cp, className:"par-comp"},
-            h("div", {className:"pc-t", title:"La compétence " + cp + " du référentiel : " + (LIB_OFF[cp] || cp) + "."}, (LIB_OFF[cp] || cp) + " · " + compQuestions(cp).map(function(i){ return "Q" + (i+1); }).join(", ")),
+            h("div", {className:"pc-t", title:"La compétence " + cp + " du référentiel : " + (LIB_OFF[cp] || cp) + "."}, (LIB_OFF[cp] || cp) + " · " + compQuestions(cp).filter(function(i){ return (m.ecartees || []).map(Number).indexOf(i) < 0; }).map(function(i){ return "Q" + (i+1); }).join(", ")),   // (8.2.1, L8) une écartée n'apparaît plus du tout
             h("div", {className:"bilan-classe-distrib pc-d"}, MAITRISE.map(function(mt){ return h("div", {key:mt.k, className:"bilan-classe-distrib-cell fourchette-" + mt.k}, h("strong", null, d[mt.k]), h("span", null, mt.em + " " + mt.lib)); })));
         }),
         h("div", {className:"par-comp"}, h("div", {className:"pc-t"}, "🤝 Le point d'autonomie · Être autonome et responsable · S'impliquer dans les activités en classe et dans son travail personnel"),
@@ -13629,7 +13776,7 @@ function Corbeille(){
 }
 
 /* ════════ Le tableau d'une séance (442, 609) ════════ */
-var MARQUE_RES = {j:["cell-juste", "✓"], t:["cell-trouvee", "✓"], a:["cell-faux", "∅"], f:["cell-faux", "✗"], pasdit:["cell-vide", "?"]};
+var MARQUE_RES = MARQUES_Q;   // (8.2.1, L8) la seule table des marques (c3-base.js)
 function ResultatsQCM(){
   var k = MO(), m = MOM(), se = SCN.seance("S08");
   var rendues = SCN.apres(k, "SOIR:rendu"), lues = SCN.apres(k, "SOIR:lu");
@@ -13659,7 +13806,7 @@ function ResultatsQCM(){
         var mt = maitriseDe(l.r.sur20), fl = lire.filter(function(x){ return x.p === l.p; }), au = SCN.autonomie(l.p, k);
         return h("tr", {key:l.p, "data-eleve":l.p},
           h("td", {className:"eleve-cell"}, h("button", {className:"nom-fiche", "data-va":"c-fiche&eleve=" + encodeURIComponent(l.p), title:"Ouvre la fiche " + deNom(l.p) + " : sa feuille lue, sa tablette, ce qu'" + (SCN.SEXE[l.p] === "F" ? "elle" : "il") + " a dit, son point d'autonomie, son bilan général."}, l.nom)),
-          l.r.st.map(function(x, i){ var c = MARQUE_RES[x]; return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
+          l.r.st.map(function(x, i){ var c = marqueQ(x); return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
           h("td", {className:"score-cell"}, l.r.complet ? l.r.n + "/" + l.r.total : "—"),
           h("td", {className:"score-cell"}, l.r.complet ? fr1(l.r.sur20) : "—"),
           h("td", null, h("span", {className:"maitrise-pill " + mt.cls}, mt.em + " " + mt.lib)),
@@ -13709,7 +13856,7 @@ function FicheSeance(p){
     }),
     h("div", {className:"fiche-comps"}, h("div", {className:"tt"}, "🧩 Ses compétences"),
       COMPS.map(function(c){ var n = niveauComp(r, c), x = r.comp[c] || {n:0, max:0};
-        return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, LIB_OFF[c]), h("span", {className:"d"}, detailComp(r, c) + " → " + x.n + "/" + x.max), h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib)); }),
+        return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, LIB_OFF[c]), h("span", {className:"d"}, listeCompQ(r, compQuestions(c), {compte:x.n + "/" + x.max})), h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib)); }),
       ["tr-personne-03", "tr-methodes-02"].map(function(c){
         return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, LIB_OFF[c]), h("span", {className:"d"}, "le point d'autonomie"),
           h("span", {className:"maitrise-pill " + (au.retire ? "mt-rouge" : "mt-vert")}, au.retire ? "🔴 Maîtrise insuffisante" : "🟢 Très bonne maîtrise"));
@@ -13777,9 +13924,9 @@ function BilanRendu(p){
             h("span", {className:"pt"}, "→ " + (r.pts[i] || 0) + " point"));
         }))),
       h("div", {className:"bilan-bloc"}, h("h3", null, "Tes compétences"),
-        COMPS.map(function(c){ var x = r.comp[c] || {n:0, max:0}, mm = maitriseDe(x.max ? x.n * 20 / x.max : 0);
+        COMPS.map(function(c){ var x = r.comp[c] || {n:0, max:0}, mm = maitriseComp(r, c); if(!mm) return null;   // (8.2.1, O3) la seule maîtrise d'une compétence
           return h("div", {key:c, className:"comp-l"},
-            h("span", null, LIB_ELEVE[c], h("span", {className:"comp-q"}, compQuestions(c).map(function(i){ return "Q" + (i+1) + " " + (r.st[i] === "j" || r.st[i] === "t" ? "✓" : "✗"); }).join(" · ") + " → " + x.n + "/" + x.max)),
+            h("span", null, LIB_ELEVE[c], h("span", {className:"comp-q"}, listeCompQ(r, compQuestions(c), {eleve:true, compte:x.n + "/" + x.max}))),   /* (8.2.1, M1) la seule liste */
             h("span", {className:"mt"}, mm.em + " " + mm.lib)); }),
         AUTO.map(function(l){ return h("div", {key:l, className:"comp-l"}, h("span", null, l), h("span", {className:"mt"}, au.retire ? "❌ " : "✅ ", au.retire ? "non atteinte" : "atteinte")); })),
       es && h("div", {className:"bilan-calibration bilan-calib-" + es.type},
@@ -13836,7 +13983,8 @@ function LueBoutonC(p){ useLues(); var lue = !!LUES.lues[p.cle];
   return h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", disabled:lue, title:lue ? "Feuille lue : le signalement est passé à « lu »." : "Tu as lu sa feuille et elle dit bien ce qui est compté : le signalement passe à « lu ».", onClick:function(){ marquerLue(p.cle); }}, lue ? "✔ lue" : "✔ Marquer lue"); }
 
 // (changement 6.4, relecteur n°275) l'en-tête d'une compétence du tableau : son libellé entier se lit au survol
-function EnteteComp(c){ return h("th", {key:c, className:"comp-col", title:"La compétence " + c + " : " + LIB_OFF[c] + ". Ses questions : " + compQuestions(c).map(function(i){ return "Q" + (i+1); }).join(", ") + "."}, "🧩 " + c, h("div", {className:"thq"}, COMP_COURT[c] + " · " + compQuestions(c).map(function(i){ return "Q" + (i+1); }).join(", "))); }
+// (8.2.1, K5) le même en-tête que Données → Résultats (EnteteCompCol, c4-seances.js) : le nom court, pas le code
+function EnteteComp(c){ return EnteteCompCol(c, compQuestions(c)); }
 
 /* ═══════════════ [QCM-3 · SOIR] La base, sous les écrans hors de l'heure (COMMUN §3.1) ═══════════════
    Chaque donnée affichée est abonnée à sa source : un écran qui lit v3(chemin) est redessiné quand la base change (useV3),
@@ -15321,7 +15469,9 @@ refaire("c-qr", function(){ return h(QRPilotage); });
    la fenêtre se ferme toute seule quand le téléphone l'a scanné (il écrit qcm/qrScans/<nonce>) ; ses mots sont ceux de la maquette */
 function QRPilotage(){
   var s = useState(function(){ return "qr_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6); }), nonce = s[0];
-  var url = location.origin + location.pathname + "#mode=prof&view=phone&qr=" + nonce;
+  // (8.2.1, L4, SFQ1-15) ouvert depuis le Mode test, le téléphone pilote la séance de test (la carte le promet) : sa classe part dans l'adresse
+  var cl = typeof modeTestActifV === "function" && modeTestActifV() && typeof CLASSE_TEST !== "undefined" ? "&classe=" + encodeURIComponent(CLASSE_TEST) : "";
+  var url = location.origin + location.pathname + "#mode=prof&view=phone" + cl + "&qr=" + nonce;
   useEffect(function(){ if(!db) return; var ref = db.ref(DB_ROOT + "/qrScans/" + nonce);
     ref.on("value", function(sn){ if(sn.val()){ ref.off(); ref.remove(); fermer(); } });
     return function(){ ref.off(); ref.remove(); }; }, []);
@@ -15334,7 +15484,7 @@ function QRPilotage(){
       h("p", {style:{marginBottom:"1rem", fontSize:".9rem", color:"var(--gris)"}}, "Scanne avec ton téléphone. La fenêtre se ferme automatiquement."),
       h("img", {src:"https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=" + encodeURIComponent(url), alt:"QR code", style:{display:"block", margin:"0 auto", borderRadius:"8px", width:"280px", height:"280px", background:"#fff"}}),
       // « 📱 Voir le téléphone » de la maquette : le téléphone, dans sa fenêtre, à l'adresse de la 7.7.1 (sans scan, la fenêtre du QR reste)
-      h("button", {className:"btn btn-ghost btn-sm", style:{marginTop:".8rem"}, "data-local":"1", onClick:function(){ window.open(location.pathname + "#mode=prof&view=phone", "telephone-qcm"); }, title:"Montre ce que ton téléphone affiche une fois le QR scanné : ta télécommande."}, "📱 Voir le téléphone"))));
+      h("button", {className:"btn btn-ghost btn-sm", style:{marginTop:".8rem"}, "data-local":"1", onClick:function(){ window.open(location.pathname + "#mode=prof&view=phone" + cl, "telephone-qcm"); }, title:"Montre ce que ton téléphone affiche une fois le QR scanné : ta télécommande."}, "📱 Voir le téléphone"))));
 }
 /* le mode test au « Oui / Non » de la question 3 (TEST:Q3:B1) : les 15 tablettes à ce moment, comme derrière « 🔍 Jouer en grand » */
 function ModeTestB(){ var n = +paramHash("tab") || 1, pa = TEST_PAIRES30[n - 1] || TEST_PAIRES30[0], a = eleveT(pa[0], "J");
@@ -15540,9 +15690,19 @@ function ScPurger(){
 function ouH(m){ var ph = m.ph === "pause" && m.pause ? m.pause.ph : m.ph;
   return ph === "lecture" || ph === "revele" ? "correction" : ph === "estim" || ph === "att2" ? "estimation" : ph === "coeval" ? "co-évaluation" : ph === "bilan" ? "bilan" : ouEnEst(m.ph === "pause" && m.pause ? Object.assign({}, m, m.pause) : m); }
 function EcranConsoleHeure(){ return h(ConsoleHeureC); }
+/* (8.2.1, K2, SFQ1-10) une fenêtre qui ne tient pas à la question du moment (un élève, la séance) reste ouverte quand la phase, la question ou le tour
+   changent : elle ne se ferme qu'au changement de séance, comme « 👁 », ou quand la séance quitte l'heure (terminée, finie à une autre heure : l'écran
+   du lancement), la garde qu'elles avaient déjà. Celles qui tiennent à une question (rouvrir, écarter, annuler, la feuille d'une alerte) se ferment
+   toujours quand la question, la phase ou le tour changent. */
+var FEN_SEANCE_H = {voirTablette:1, depart:1, retour:1, eleve:1, garde:1, terminer:1, finir:1, annulerSeance:1};
+function heureEnCoursH(){ var m = MOM() || {}, e = (typeof SCN !== "undefined" && SCN.etat && SCN.etat()) || {}; return !!m.seance && !!m.ph && ["avant", "fin", "hors"].indexOf(m.ph) < 0 && !e.autreHeure; }
+function fenFermeeH(fe){ if(!fe.f) return false;
+  if(fe.f === "voirTablette") return String(fe.cle || "").split("|")[0] !== String((MOM() || {}).seance);
+  if(FEN_SEANCE_H[fe.f]) return String(fe.cle || "").split("|")[0] !== String((MOM() || {}).seance) || !heureEnCoursH();
+  return fe.cle !== cleFen(); }
 function ConsoleHeureC(){
   var fe = useFen();
-  if(fe.f && (fe.f === "voirTablette" ? String(fe.cle || "").split("|")[0] !== String((MOM() || {}).seance) : fe.cle !== cleFen())){ fe.f = null; fe.arg = null; }
+  if(fenFermeeH(fe)){ fe.f = null; fe.arg = null; }
   chargerHeure();
   var m = momH();
   useSeconde(!!PHASES_CHRONO[m.ph]);
@@ -15623,7 +15783,8 @@ var FENETRES_H = {
     var noms = SCN.presents(MO()).map(function(p){ return {p:p, n:nomDe(p)}; }).sort(function(a, b){ return a.n.localeCompare(b.n, "fr"); });
     return Fenetre(fond, "🚫 Départ d'un élève", "Qui part en cours de séance ? (infirmerie, tablette en panne…)",
       h(F, null, h("div", {className:"depart-grille"}, noms.map(function(x){ var f = sexeH(x.p) === "F";
-        return h("div", {key:x.p, className:"depart-l"}, h("span", null, x.n), boutonH("p", "btn btn-ghost btn-sm", "🚫 Parti", fait("depart", [x.p]), "Marque " + x.n + " comme parti" + (f ? "e" : "") + " en cours de séance : " + (f ? "elle" : "il") + " ne bloque plus la classe, ses questions manquées sortent de son total.")); }))),
+        // (8.2.1, K1, SFQ1-11) la clé du clic porte l'élève de la ligne (son slug) : avec une clé commune, le dernier bouton posé gagnait, et « 🚫 Parti » marquait le dernier de la liste
+        return h("div", {key:x.p, className:"depart-l"}, h("span", null, x.n), boutonH("p:" + x.p, "btn btn-ghost btn-sm", "🚫 Parti", fait("depart", [x.p]), "Marque " + x.n + " comme parti" + (f ? "e" : "") + " en cours de séance : " + (f ? "elle" : "il") + " ne bloque plus la classe, ses questions manquées sortent de son total.")); }))),
       [annulerH()], null, 760); },
   retour:function(arg, fond){ var partis = momH().partis || {}, absents = absentsRevenusH();
     return Fenetre(fond, "↩️ Retour d'un élève", "Les élèves partis pendant cette séance" + (absents.length ? ", et les absents de l'appel" : ""),
@@ -15636,14 +15797,14 @@ var FENETRES_H = {
   rouvrirTous:function(qi, fond){ var sans = momH().sansRep || [];
     return Fenetre(fond, "🔓 Rouvrir la question " + (qi + 1) + " pour tous ?", "Seuls ceux qui n'ont pas répondu la retrouvent, une seule fois.",
       h(F, null, h("p", null, "Ici : ", sans.map(function(p, i){ var t = SCN.tabletteDe(p); return h(F, {key:p}, i ? ", " : "", h("strong", null, nomDe(p)), t ? " (tablette " + t.n + ")" : ""); }), ".")),
-      [annulerH(), boutonH("ok", "btn btn-primary", "🔓 Rouvrir pour ceux qui n'ont pas répondu", fait("rouvrirTous", [qi]), "Rouvre la question " + (qi + 1) + " pour ceux qui n'ont pas répondu" + (sans.length ? " : ici, " + listeFr(sans.map(prenomH)) : "") + ". Une seule fois.")], null); },
+      [annulerH(), boutonH("ok", "btn btn-primary", "🔓 Rouvrir pour ceux qui n'ont pas répondu", fait("rouvrirTous", [qi]), "Rouvre la question " + (qi + 1) + " pour ceux qui n'ont pas répondu" + (sans.length ? " : ici, " + listeFr(sans.map(function(p){ return nomDansH(p, sans); })) : "") + ". Une seule fois.")], null); },
   rouvrirUn:function(qi, fond){ var act = actifsH(MO()), sans = (momH().sansRep || []).filter(function(p){ return act.indexOf(p) >= 0; });
     return h(F, null, fond, h("div", {className:"checkin-overlay"},
       h("div", {className:"checkin-modal", style:{maxWidth:"560px"}},
         h("div", {className:"checkin-header"}, h("h3", null, "🔓 Rouvrir pour un élève — Q" + (qi + 1), InfoI("Rouvre la question close pour un seul élève, une seule fois : il répond pendant que la classe attend.")), h("div", {className:"checkin-sub"}, "Seuls les élèves sans réponse à la question " + (qi + 1) + " sont listés.")),
         sans.map(function(p){ return h("div", {key:p, className:"rouvrir-l"},
           h("div", null, h("div", {style:{fontWeight:900}}, nomDe(p)), h("div", {style:{fontSize:".8rem", color:"var(--gris)"}}, placeDe(p).replace(/^Tablette/, "tablette"))),
-          boutonH("ok", "btn btn-primary btn-sm", "🔓 Rouvrir pour " + prenomH(p), fait("rouvrirPour", [qi, p]))); }),
+          boutonH("ok:" + p, "btn btn-primary btn-sm", "🔓 Rouvrir pour " + nomDansH(p, sans), fait("rouvrirPour", [qi, p]))); }),   // (8.2.1, L3) deux élèves du même prénom : leur nom en entier   // (8.2.1, K1) la clé porte l'élève : deux élèves du même prénom ne se confondent plus
         h("div", {className:"checkin-actions"}, annulerH("Ferme la fenêtre sans rien rouvrir."))))); },
   ecarter:function(qi, fond){ var q = EV.questions[qi], comps = q.competences || [];
     var restent = comps.map(function(c){ return EV.questions.filter(function(x, i){ return i !== qi && (x.competences || []).indexOf(c) >= 0; }).length; });
@@ -15665,7 +15826,7 @@ var FENETRES_H = {
       [boutonH("a", "btn btn-ghost", "Annuler", fermerFen, "Ne change rien : la séance continue."), boutonH("ok", "btn btn-or", "⏸️ Finir à une autre heure", fait("finirAutreHeure"), "Met la séance en pause, telle qu'elle est, jusqu'à une heure suivante.")], null); },
   voirTablette:function(n, fond){ var pa = PAIRES[n - 1] || [null, null], m = momH();
     return Fenetre(fond, "📱 Tablette " + n + " · " + [pa[0], pa[1]].filter(Boolean).map(affH).join(" · ") + " — en direct", "Ce que montrent ses deux moitiés, maintenant : " + ((!pa[0] || !entreH(pa[0])) && (!pa[1] || !entreH(pa[1])) ? "personne n'y est encore entré" : croiseeTabH(pa[0], pa[1], false) ? "correction : moitiés interverties" : ouH(m)) + ".",
-      h("div", {className:"voir-tab fige-choix"}, h("div", {className:"voir-tab-in", style:{pointerEvents:"none"}, "aria-hidden":true}, TabletteTelleQuelleH(pa[0], pa[1]))),
+      h("div", {className:"voir-tab fige-choix"}, h("div", {className:"voir-tab-in", style:{pointerEvents:"none"}, "aria-hidden":true}, h(DEDANS_NF.Provider, {value:true}, TabletteTelleQuelleH(pa[0], pa[1])))),   // (8.2.1, K3) son clavier reste dans la tablette
       [boutonH("f", "btn btn-ghost", "✕ Fermer", fermerFen)], null, 900); },
   // la fiche d'un élève (un clic sur son nom) : son point d'autonomie, son départ
   eleve:function(p, fond){ var k = MO(), au = SCN.autonomie(p, k), il = sexeH(p) === "F" ? "Elle" : "Il";
@@ -15904,7 +16065,8 @@ refaire("t-demo-q", function(){ var m = MOM(); return Tablette(EcrDemoReflexion(
 function FigerZone(p){
   var ref = React.useRef(null);
   useEffect(function(){ if(!ref.current) return; Array.prototype.forEach.call(ref.current.querySelectorAll("button,input,textarea"), function(b){ b.disabled = true; b.setAttribute("tabindex", "-1"); if(b.tagName === "BUTTON") b.setAttribute("title", "En petit, la tablette se regarde : « 🔍 Jouer en grand » pour y jouer."); }); });
-  return h("div", {ref:ref, className:"sim-fige"}, p.children);
+  // (8.2.1, K3) une tablette figée garde son clavier dans sa moitié (DEDANS_NF, c5-tablette.js), jamais en bas de la console
+  return h("div", {ref:ref, className:"sim-fige"}, typeof DEDANS_NF !== "undefined" ? h(DEDANS_NF.Provider, {value:true}, p.children) : p.children);
 }
 function TabSimT(num, a, b, contenu, feuilles){
   return h("div", {key:num, className:"sim-cadre simt"},
@@ -16884,13 +17046,14 @@ function ouvrirTableau(){ window.open(location.pathname + "#mode=prof&view=board
 function Console(groupe, tab, contenu, séance){
   var groupes = [["pilotage","Pilotage","c-lancer"],["donnees","Données","c-seances"],["reglages","Réglages","c-reglages"]];
   var sous = {pilotage:[["evals","📝 Évaluations","c-evals"],["pilot","🎯 Pilotage classe","c-lancer"]], donnees:[["results","📊 Résultats","c-seances"],["snapshot","💾 Sauvegarde","c-sauvegarde"]], reglages:[]};
-  var enCours = seanceEnCours();
+  var enCours = seanceEnCours(), test = typeof modeTestActifV === "function" && modeTestActifV();   // (8.2.1, K6) le Mode test actif : son titre et « 🗑️ Sortir et purger »
   return h("div", {className:"prof-wrap cons"},
     DECO.map(function(e, i){ return h("span", {key:i, className:"deco"}, e); }),
     h("div", {className:"prof full"},
       h("div", {className:"prof-header"},
-        h("h1", null, "📝 Évaluation QCM", h("span", {className:"badge"}, "Mode prof")),
+        test ? TitreModeTestV() : h("h1", null, "📝 Évaluation QCM", h("span", {className:"badge"}, "Mode prof")),
         h("div", {className:"row"},
+          test ? SortirTestV() : null,
           // (QCM-1) là où la maquette le met (l'écran passe « séance ») : le nombre des séances actives de la base, toutes classes
           séance && (function(){ var n = Math.max(1, typeof SCN.seancesActives === "function" ? SCN.seancesActives().length : 1); return h("button", {className:"badge-session-actives", "data-va":"c-sessions"}, h("span", {className:"badge-session-dot"}, "🔴"), n + (n > 1 ? " séances en cours" : " séance en cours")); })(),
           h("button", {className:"btn-help", "data-va":"c-mode-emploi"}, "📖 Mode d'emploi"),
@@ -17098,15 +17261,22 @@ h = function(type, props){
 
 function seanceDeLaPage(){ return paramHash("seance") || (SCN.seance(MOM().seance) ? MOM().seance : "S08"); }
 function sqDe(id){ return id && id !== "S08" ? "&seance=" + id : ""; }
-MARQUE_RES.x = ["cell-vide", "·"];   // une question qui n'a pas été posée à l'élève (parti avant) : ni juste ni fausse
 // les libellés courts des compétences de l'évaluation de 3e, comme ceux de l'évaluation d'essai : le début du libellé officiel
 COMP_COURT["c4-langue-04"] = "Construire les notions…"; COMP_COURT["c4-ecrire-02"] = "Adopter des stratégies…";
 function compsDe(ev){ var o = []; ev.questions.forEach(function(q){ (typeof compsDeQ === "function" ? compsDeQ(q) : (q.competences || [])).forEach(function(c){ if(o.indexOf(c) < 0) o.push(c); }); }); return o; }
 function compQuestionsEv(c, ev){ var l = []; ev.questions.forEach(function(q, i){ if((typeof compsDeQ === "function" ? compsDeQ(q) : (q.competences || [])).indexOf(c) >= 0) l.push(i); }); return l; }
-function EnteteCompEv(c, ev){ return h("th", {key:c, className:"comp-col", title:"La compétence " + c + " : " + LIB_OFF[c] + ". Ses questions : " + compQuestionsEv(c, ev).map(function(i){ return "Q" + (i+1); }).join(", ") + "."}, "🧩 " + c, h("div", {className:"thq"}, COMP_COURT[c] + " · " + compQuestionsEv(c, ev).map(function(i){ return "Q" + (i+1); }).join(", "))); }
-function PillCompEv(r, c, ev){ var x = r.comp && r.comp[c], m = maitriseV(x && x.max ? x.n * 20 / x.max : 0); return h("span", null, h("span", {className:"maitrise-pill " + m.cls}, m.em + " " + m.lib),
+/* (8.2.1, K5, SFQ1-06) l'en-tête de la colonne d'une compétence, le seul (la fiche, le bilan de la classe, le soir, Données → Résultats) : son nom court
+   (compCourt), ses questions dessous ; son code et son libellé entier dans l'infobulle. Il écrivait le code (« 🧩 c4-lire-01 »). */
+function EnteteCompCol(c, qs){ var q = qs.map(function(i){ return "Q" + (i+1); }).join(", ");
+  return h("th", {key:c, className:"comp-col", "data-comp":c, title:"La compétence " + c + " : " + libOff(c) + ". Ses questions : " + q + "."}, "🧩 " + compCourt(c), h("div", {className:"thq"}, q)); }
+function EnteteCompEv(c, ev){ return EnteteCompCol(c, compQuestionsEv(c, ev)); }
+/* (8.2.1, L0) les compétences d'une question, sous son énoncé, dans la fiche d'un élève d'une séance sur papier (FicheV) : leurs noms courts, comme l'en-tête (K5) ;
+   leurs codes dans l'infobulle. La fiche écrivait les codes (« 🧩 c4-lire-01 · c4-ecrire-02 »), oubliés par K5. */
+function CompsQuestionV(cs){ return h("div", {className:"fiche-comp", "data-comps":cs.join(" "), title:"Les compétences que travaille cette question : " + cs.map(function(c){ return compCourt(c) + " (" + c + ")"; }).join(", ") + "."}, "🧩 " + cs.map(compCourt).join(" · ")); }
+/* (8.2.1, O3) sans question de cette compétence qui compte pour lui, la case dit « — » (maitriseComp : pas de maîtrise), puis la liste, qui le dit en clair */
+function PillCompEv(r, c, ev){ var x = r.comp && r.comp[c], m = maitriseComp(r, c); return h("span", null, m ? h("span", {className:"maitrise-pill " + m.cls}, m.em + " " + m.lib) : h("span", {"data-sans-maitrise":"1"}, "—"),
   x && x.aide ? h("span", {className:"nf-aide-tag", "data-avec-aide":x.aide, title:x.aide + " étape" + (x.aide > 1 ? "s" : "") + " de cette compétence réussie" + (x.aide > 1 ? "s" : "") + " avec un indice : ses points comptent dans la note, pas dans la compétence."}, "💡 réussi avec aide") : null,
-  h("div", {className:"comp-det"}, compQuestionsEv(c, ev).map(function(i){ return "Q" + (i+1) + " " + marque(r.st[i]); }).join(" · "))); }
+  h("div", {className:"comp-det"}, listeCompQ(r, compQuestionsEv(c, ev)))); }   /* (8.2.1, M1) les seules questions qu'il a eues */
 // le résultat d'un élève, comme le tableau le lit : à la séance du 08/10, celui de la console (calc) ; ailleurs, celui du scénario
 function resultatDe(id, p, k){ if(id === "S08") return calc(p); var r = SCN.resultat(id, p, k); if(!r) return null; return Object.assign({}, r, {st:r.st.map(function(s){ return s === "n" ? "pasdit" : s; })}); }
 function autonomieSeance(id, p, k){
@@ -17149,7 +17319,7 @@ function ResultatsSeance(){
         var mt = maitriseDe(l.r.sur20), fl = lire.filter(function(x){ return x.p === l.p; }), au = autonomieSeance(se.id, l.p, k);
         return h("tr", {key:l.p, "data-eleve":l.p},
           h("td", {className:"eleve-cell"}, h("button", {className:"nom-fiche", "data-va":"c-fiche&eleve=" + encodeURIComponent(l.p) + sqDe(se.id), title:"Ouvre la fiche " + deNom(l.p) + " : sa feuille lue, sa tablette, ce qu'" + (SCN.SEXE[l.p] === "F" ? "elle" : "il") + " a dit, son point d'autonomie, son bilan général."}, l.nom)),
-          l.r.st.map(function(x, i){ var c = MARQUE_RES[x]; return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
+          l.r.st.map(function(x, i){ var c = marqueQ(x); return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
           h("td", {className:"score-cell"}, l.r.complet ? l.r.n + "/" + l.r.total : "—"),
           h("td", {className:"score-cell"}, l.r.complet ? fr1(l.r.sur20) : "—"),
           h("td", null, h("span", {className:"maitrise-pill " + mt.cls}, mt.em + " " + mt.lib)),
@@ -17185,7 +17355,7 @@ function FicheAutre(p, id){
     }),
     h("div", {className:"fiche-comps"}, h("div", {className:"tt"}, "🧩 Ses compétences"),
       comps.map(function(c){ var n = niveauComp(r, c), x = r.comp[c] || {n:0, max:0};
-        return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, LIB_OFF[c]), h("span", {className:"d"}, compQuestionsEv(c, ev).map(function(i){ return "Q" + (i+1) + " " + marque(r.st[i]); }).join(" · ") + " → " + x.n + "/" + x.max), h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib)); }),
+        return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, LIB_OFF[c]), h("span", {className:"d"}, listeCompQ(r, compQuestionsEv(c, ev), {compte:x.n + "/" + x.max})), h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib)); }),
       ["tr-personne-03", "tr-methodes-02"].map(function(c){
         return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, LIB_OFF[c]), h("span", {className:"d"}, "le point d'autonomie"),
           h("span", {className:"maitrise-pill " + (au.retire ? "mt-rouge" : "mt-vert")}, au.retire ? "🔴 Maîtrise insuffisante" : "🟢 Très bonne maîtrise"));
@@ -17217,7 +17387,7 @@ function entreeSeance(id, p, k){
   if(id === "S08") return entreeBilanAvantC4(p);
   var nomsS = (SCN.seance(id).eleves || SCN.NOMS).filter(function(n){ return SCN.resultat(id, pre(n), k); });
   var taux = ev.questions.map(function(q, qi){ var l = nomsS.map(function(n){ return SCN.resultat(id, pre(n), k); }).filter(function(x){ return x.st[qi] !== "x"; }); return l.filter(function(x){ return x.pts[qi] === 1; }).length / l.length * 100; });
-  var la = r.st.map(function(s, i){ return s === "x" ? -1 : i; }).filter(function(i){ return i >= 0; });
+  var la = questionsEues(r, r.st.map(function(s, i){ return i; }));   /* (8.2.1, M1) les questions qu'il a eues */
   var te = id === "S3E" && la.length === ev.questions.length ? typeEstim7(SCN.ESTIM_3E[nomDe(p)], r.n, ev.questions.length) : null;
   return {niveau:SCN.maitriseDe(Math.round(r.sur20 * 10) / 10), autonomieRetiree:autonomieSeance(id, p, k).retire, autonomieLibs:[LIB_ELEVE["tr-personne-03"], LIB_ELEVE["tr-methodes-02"]],
     questions:la.map(function(i){ return {n:i + 1, verifie:ev.questions[i].verifie || VERIF_M[i], pts:r.pts[i], niveau:ev.questions[i].niveau, taux:taux[i]}; }),
@@ -17242,6 +17412,10 @@ var PDF_TETE = (window.PDF632_HTML || "").slice(0, (window.PDF632_HTML || "").in
 function escPdf(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 function chapPdf(c){ var m = /^(\d)e · Ch\. (\d+) — (.*)$/.exec(c || ""); return m ? m[1] + "e, chapitre " + m[2] + " — " + m[3] : c ? c : "—"; }
 var NIV_PDF = [{min:15, lib:"Très bonne maîtrise", cls:"vert"}, {min:10, lib:"Maîtrise satisfaisante", cls:"bleu"}, {min:5, lib:"Maîtrise fragile", cls:"orange"}, {min:0, lib:"Maîtrise insuffisante", cls:"rouge"}];
+/* (8.2.1, O4) la ligne de contrôle du PDF, la seule (le PDF de la maquette, celui de chaque séance) : chaque compte s'accorde comme « absent » l'était déjà
+   (au pluriel au-delà de 1). Elle écrivait « 1 notes », « 1 commentaires ». */
+function plurielPdf(n, mot){ return n + " " + mot + (n > 1 ? "s" : ""); }
+function controlePdf(nEleves, nNotes, nAbs, nCom){ return "Contrôle : " + plurielPdf(nEleves, "élève") + " · " + plurielPdf(nNotes, "note") + " · " + plurielPdf(nAbs, "absent") + " · " + plurielPdf(nCom, "commentaire") + "."; }
 function nivPdf(sur20){ var r = Math.round(sur20 * 10) / 10; return NIV_PDF.filter(function(n){ return r >= n.min; })[0]; }
 function pdfSeance(id, k){
   var se = SCN.seance(id), ev = SCN.evalDeSeance(id, k), comps = compsDe(ev), auto = [["tr-personne-03", LIB_OFF["tr-personne-03"]], ["tr-methodes-02", LIB_OFF["tr-methodes-02"]]];
@@ -17252,8 +17426,8 @@ function pdfSeance(id, k){
     if(!r){ nAbs++; asavoir.push("<b>" + escPdf(nom) + "</b> : absent, pas encore de rattrapage.");
       return '<tbody class="un"><tr class="abs"><td class="el">' + escPdf(nom) + '</td><td class="note">Absent</td>' + new Array(nc - 1).join("<td>—</td>") + '</tr><tr class="comrow"><td colspan="' + nc + '"><span class="lab">Commentaire :</span> —</td></tr></tbody>'; }
     nNotes++;
-    var la = r.st.map(function(s, i){ return s === "x" ? -1 : i; }).filter(function(i){ return i >= 0; });
-    var cells = comps.map(function(c){ var qs = compQuestionsEv(c, ev).filter(function(i){ return la.indexOf(i) >= 0; }), n = qs.reduce(function(a, i){ return a + r.pts[i]; }, 0), v = nivPdf(n * 20 / qs.length);
+    var la = questionsEues(r, r.st.map(function(s, i){ return i; }));   /* (8.2.1, M1) les questions qu'il a eues */
+    var cells = comps.map(function(c){ var qs = questionsEues(r, compQuestionsEv(c, ev)), n = qs.reduce(function(a, i){ return a + r.pts[i]; }, 0), v = nivPdf(n * 20 / qs.length);
       return '<td class="niv ' + v.cls + '">' + v.lib + '<span class="pts">' + n + "/" + qs.length + "</span></td>"; });
     var a = autonomieSeance(id, p, k).retire ? NIV_PDF[3] : NIV_PDF[0];
     auto.forEach(function(){ cells.push('<td class="niv ' + a.cls + '">' + a.lib + "</td>"); });
@@ -17285,7 +17459,7 @@ function pdfSeance(id, k){
     "</thead>\n" +
     lignes.join("\n") + "\n" +
     "</table>\n" +
-    '<div class="ctrl">Contrôle : ' + eleves.length + " élèves · " + nNotes + " notes · " + nAbs + " absent" + (nAbs > 1 ? "s" : "") + " · " + nCom + " commentaires.</div>\n" +
+    '<div class="ctrl">' + controlePdf(eleves.length, nNotes, nAbs, nCom) + "</div>\n" +
     '<div class="asavoir"><b>À savoir — ne s\'entre pas dans École Directe.</b><br>' + asavoir.join("<br>") + "</div>\n" +
     '<div class="bas">\n' +
     "<div><b>Les compétences</b><br>\n" +
@@ -17363,6 +17537,10 @@ function seanceV(sid){
   ["reponses", "lectures"].forEach(function(cle){ Object.keys(S[cle] || {}).forEach(function(qi){ Object.keys(S[cle][qi] || {}).forEach(function(s){ vus[s] = 1; }); }); });
   Object.keys(vus).forEach(function(s){ if(!dans[s]) dans[s] = (v3("codes/" + s) || {}).name || s; });
   var tous = Object.keys(dans).map(function(s){ return {slug:s, nom:dans[s]}; }).sort(function(a, b){ return a.nom.localeCompare(b.nom, "fr"); });
+  /* (8.2.1, N1 ; cadrage 323 : « Un élève sans note est traité comme un absent ») l'élève qui n'a eu aucune question qui compte (parti avant la première, toutes
+     écartées, ou pas posées pour lui) est un absent : ni ligne au tableau, ni note, ni compétence, ni bilan, « Absent » au PDF, « Tu étais absent » dans
+     « Mes évaluations » (src/live/base.js, sansQuestionQCM : la seule règle). Il recevait « 0 / 0 · 0 / 20 · Maîtrise insuffisante ». */
+  if(typeof sansQuestionQCM === "function") tous.forEach(function(e){ if(absents.indexOf(e.slug) < 0 && sansQuestionQCM(S, e.slug, ev)) absents.push(e.slug); });
   // une séance qui a ses propres élèves (le rattrapage) : ses présents sont ceux qui y ont une place
   var propres = nouv && S.places && Object.keys(vus).length && (S.rattrapage || (S.lancee && S.lancee.rattrapage));
   var presents = tous.filter(function(e){ return absents.indexOf(e.slug) < 0 && (!propres || vus[e.slug]); });
@@ -17428,7 +17606,7 @@ function avecPauseV(se, L){ var P = se.S.lecturesPause || {}, St = se.S.aLire ||
 function absentQV(se, qi, slug){ return !!(se.nouvelle && se.S && se.S.coursN && typeof absentAuCoursQCM === "function" && !tabletteV(se, qi, slug) && absentAuCoursQCM(se.S, slug, qi)); }
 function resultatLocalV(se, slug){
   var ev = se.ev, S = se.S, mode = ev.mode, revelees = v3Liste(S.revelees).map(Number), partiAt = (S.partis || {})[slug];
-  if(S.coursN && typeof absentPartoutQCM === "function" ? absentPartoutQCM(S, slug) : se.absents.some(function(e){ return e.slug === slug; })) return null;
+  if(S.coursN && typeof sansNoteQCM === "function" ? sansNoteQCM(S, slug, ev) : se.absents.some(function(e){ return e.slug === slug; })) return null;   // (8.2.1, N1) l'élève sans note
   var trouvee = S.trouvee && S.trouvee[slug] != null ? +S.trouvee[slug] : null, st = [], pts = [], nonPosees = nonPoseesV(se);
   // « Trouvée au dernier moment », une fois : la première question, dans l'ordre de la correction, dont la feuille est fausse et la tablette juste
   if(trouvee == null && se.nouvelle){ var ordre = v3Liste(S.revelees).map(Number); (ordre.length ? ordre : v3Liste(S.ordreCorr).map(Number)).some(function(qi){
@@ -17502,9 +17680,14 @@ function bilanValideV(se, slug){ var b = (se.S.bilans || {})[slug]; return b && 
 // l'entrée du bilan général (com632.js) pour un élève à une séance ; null tant que sa note n'est pas complète ou qu'une question n'a pas ce qu'elle vérifie
 function entreeV(se, slug){
   var r = resultatV(se, slug), ev = se.ev; if(!r || !r.complet) return null;
-  var la = r.st.map(function(s, i){ return s === "x" || se.annulees.indexOf(i) >= 0 ? -1 : i; }).filter(function(i){ return i >= 0; });
+  // (8.2.1, L8, SFQ1-22) le bilan ne parle que des questions que l'élève a eues : ni écartée (« e »), ni pas posée (« x »), ni annulée. Une écartée y entrait
+  // (« À revoir en priorité : » ce que vérifie Q1). L'estimation se compare comme avant : toutes les questions eues, une écartée n'en retire aucune.
+  var ec = (se.ecartees || []).map(Number), hors = function(s, i){ return s === "e" || ec.indexOf(i) >= 0; };
+  /* (8.2.1, M1) les questions qu'il a eues (questionsEues, la seule liste), sans les annulées */
+  var la = questionsEues(r, r.st.map(function(s, i){ return i; }), ec).filter(function(i){ return se.annulees.indexOf(i) < 0; });
   if(la.some(function(i){ return !ev.questions[i].verifie; })) return null;
-  var es = estimationV(se, slug), te = es && la.length === ev.questions.length ? typeEstim7(es, r.n, r.total || 1) : null;
+  var nEc = r.st.filter(function(s, i){ return hors(s, i); }).length;
+  var es = estimationV(se, slug), te = es && la.length + nEc === ev.questions.length ? typeEstim7(es, r.n, r.total || 1) : null;
   return {niveau:maitriseV(r.sur20).k, mode:ev.mode === "partiel" ? "partiel" : "strict", nf:!!r.nf, autonomieRetiree:autonomieV(se, slug).retire, autonomieLibs:[libEleve("tr-personne-03"), libEleve("tr-methodes-02")],
     // (8.1.0, E6) au nouveau format : une question est réussie quand toutes ses étapes sont justes (ses points vont de −6 à +3 par étape)
     questions:la.map(function(i){ return {n:i + 1, verifie:ev.questions[i].verifie, pts:r.nf ? (r.st[i] === "j" ? 1 : 0) : r.pts[i], niveau:ev.questions[i].niveau, taux:tauxV(se, i)}; }),
@@ -17666,12 +17849,11 @@ function CorbeilleSeanceC(){
 }
 
 /* ════════ Le tableau d'une séance (442, 609) : toutes les séances, d'après la base ════════ */
-MARQUE_RES.x = ["cell-vide", "·"];
 function csvV(se, lignes, comps){
   var t = [["Élève"].concat(se.ev.questions.map(function(q, i){ return "Q" + (i + 1); }), ["Note", "Sur 20", "Maîtrise de la note"], comps, seanceNFV(se) ? ["Autonomie"] : ["Autonomie", "À lire sur la feuille"])];
   var lire = aLireV(se);
   lignes.forEach(function(l){ var r = l.r, mt = maitriseV(r.sur20);
-    t.push([l.nom].concat(r.st.map(function(x){ return (MARQUE_RES[x] || ["", ""])[1]; }), [fr1(r.n) + "/" + r.total + (nonLuesV(r, se.ecartees) ? " (" + nonLuesV(r, se.ecartees) + " pas encore lue" + (nonLuesV(r, se.ecartees) > 1 ? "s" : "") + ")" : ""), fr1(r.sur20), r.complet ? mt.lib : "—"],
+    t.push([l.nom].concat(r.st.map(function(x){ return marqueQ(x)[1]; }), [fr1(r.n) + "/" + r.total + (nonLuesV(r, se.ecartees) ? " (" + nonLuesV(r, se.ecartees) + " pas encore lue" + (nonLuesV(r, se.ecartees) > 1 ? "s" : "") + ")" : ""), fr1(r.sur20), r.complet ? mt.lib : "—"],
       comps.map(function(c){ return r.complet ? niveauComp(r, c).lib : "—"; }), seanceNFV(se) ? [autonomieV(se, l.p).retire ? "retiré" : "Très bonne maîtrise"] : [autonomieV(se, l.p).retire ? "retiré" : "Très bonne maîtrise", lire.filter(function(x){ return x.p === l.p; }).map(function(x){ return "Q" + (x.q + 1) + " : " + texteALireV(x); }).join(" · ")])); });
   var csv = "﻿" + t.map(function(r){ return r.map(function(c){ c = String(c == null ? "" : c); return /[;"\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(";"); }).join("\n");
   var nom = "resultats-" + String(se.classe).replace(/\s+/g, "-") + "-" + se.date.replace(/\//g, "-") + ".csv";
@@ -17704,9 +17886,9 @@ function ResultatsC0(){
         h("th", {className:"eleve-col trie", title:"Cliquer pour trier par nom (asc/desc). Cliquer sur un nom d'élève dans le tableau ouvre son Student Report (drill-down).", onClick:function(){ setSens(-sens); }}, "Élève" + (sens > 0 ? " ▴" : " ▾")),
         ev.questions.map(function(q, i){ var ec = se.ecartees.indexOf(i) >= 0, an = se.annulees.indexOf(i) >= 0;
           var np = nonPoseesV(se).indexOf(i) >= 0;   // (29) jamais lancée : « pas posée », jamais « écartée »
-          return h("th", {key:i, title:q.enonce + (ec ? " — ❌ Écartée — pas posée" : an ? " — ⚠️ Annulée — posée, puis annulée" : np ? " — pas posée : la séance s'est terminée avant elle" : "")}, (ec ? "❌ " : an ? "⚠️ " : "") + "Q" + (i+1)); }),
+          return h("th", {key:i, title:q.enonce + (ec ? " — " + MARQUE_ECARTEE : an ? " — " + MARQUE_ANNULEE : np ? " — pas posée : la séance s'est terminée avant elle" : "")}, (ec ? "❌ " : an ? "⚠️ " : "") + "Q" + (i+1)); }),
         h("th", null, "Note"), h("th", null, "Sur 20"), h("th", {className:"res-col-l"}, "Maîtrise de la note"),
-        comps.map(function(c){ var qs = compQuestionsEv(c, ev); return h("th", {key:c, className:"comp-col", title:"La compétence " + c + " : " + libOff(c) + ". Ses questions : " + qs.map(function(i){ return "Q" + (i+1); }).join(", ") + "."}, "🧩 " + c, h("div", {className:"thq"}, compCourt(c) + " · " + qs.map(function(i){ return "Q" + (i+1); }).join(", "))); }),
+        comps.map(function(c){ return EnteteCompEv(c, ev); }),   // (8.2.1, K5) l'en-tête unique : le nom court, pas le code
         !comps.length && h("th", {key:"sans", className:"comp-col", title:"Cette évaluation n'a pas de compétences : elle n'en a pas au hub."}, "🧩 —"),
         h("th", {className:"res-col-l"}, "🤝 Autonomie"),
         !seanceNFV(se) && h("th", {className:"res-col-alire"}, "À lire sur la feuille"))),
@@ -17714,7 +17896,7 @@ function ResultatsC0(){
         var mt = maitriseV(l.r.sur20), fl = lire.filter(function(x){ return x.p === l.p; }), au = autonomieV(se, l.p);
         return h("tr", {key:l.p, "data-eleve":l.p},
           h("td", {className:"eleve-cell"}, h("button", {className:"nom-fiche", "data-va":"c-fiche&eleve=" + encodeURIComponent(l.p) + sq, title:"Ouvre la fiche " + deNom(prenomDeNom(l.nom)) + (seanceNFV(se) ? " : sa tablette, son point d'autonomie, son bilan général." : " : sa feuille lue, sa tablette, ce qu'" + ilElle(se, l.p) + " a dit, son point d'autonomie, son bilan général.")}, l.nom)),
-          l.r.st.map(function(x, i){ var c = MARQUE_RES[x] || MARQUE_RES.f; return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
+          l.r.st.map(function(x, i){ var c = marqueQ(x); return h("td", {key:i, className:c[0] + ((l.r.corrigees || []).indexOf(i) >= 0 ? " cell-corrigee" : "")}, c[1]); }),
           // (16/10, Paul) la note telle qu'elle est, et ce qui reste à lire ; la maîtrise et les compétences attendent la note complète
           h("td", {className:"score-cell"}, fr1(l.r.n) + "/" + l.r.total, h(NonLuesV, {r:l.r, ecartees:se.ecartees})),
           h("td", {className:"score-cell"}, fr1(l.r.sur20)),
@@ -17777,7 +17959,7 @@ function FicheV(p){
       var corr = (r.corrigees || []).indexOf(qi) >= 0;
       return h("div", {key:qi, className:"fiche-q fiche-q-b"},
         h("span", {className:"num"}, "Q" + (qi+1)),
-        h("span", null, q.enonce, (q.competences || []).length > 0 && h("div", {className:"fiche-comp"}, "🧩 " + q.competences.join(" · ")),
+        h("span", null, q.enonce, (q.competences || []).length > 0 && CompsQuestionV(q.competences),   // (8.2.1, L0) les noms courts, pas les codes
           tr && tr.decision === "auteur" ? h("div", null, h("span", {className:"flag ok"}, "corrigée en classe : raison donnée à " + pre + " (" + choixTexteV(q, l ? l.choix : tr.choix) + ")"))
             : corr && h("div", null, h("span", {className:"flag ok"}, l && l.par === "prof" ? "Corrigé d'après sa feuille : " + choixTexteV(q, l.choix) : "Corrigé d'après sa feuille")),
           // toutes les lignes « à lire » de la question, chacune avec ses réponses dessous (une question en a parfois deux)
@@ -17786,7 +17968,7 @@ function FicheV(p){
         h("span", {className:"val " + (tJ ? "j" : "f")}, tc ? choixTexteV(q, tc) : "—"),
         h("span", {className:"val"}, dit === "oui" ? "Oui, la même chose" : dit === "non" ? "Non, autre chose" : "rien dit"),
         h("span", {className:"val"}, choixTexteV(q, q.bonnes)),
-        h("span", {className:"pts"}, r.st[qi] === "x" ? "—" : fr1(r.pts[qi] || 0) + " pt"),
+        h("span", {className:"pts"}, se.annulees.indexOf(qi) >= 0 ? MARQUE_ANNULEE : r.st[qi] === "e" ? MARQUE_ECARTEE : r.st[qi] === "x" ? "—" : fr1(r.pts[qi] || 0) + " pt"),   // (8.2.1, N2) une annulée ne compte pas
         h("span", {className:"fiche-acts"},
           fl && !fl.lue && h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", title:"Tu as lu sa feuille et elle dit bien ce qui est compté : le signalement passe à « lu ».", onClick:function(){ marquerLueV(se, fl.id); }}, "✔ Marquer lue"),
           fl && fl.lue && h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", disabled:true, title:"Feuille lue : le signalement est passé à « lu »."}, "✔ lue"),
@@ -17794,7 +17976,7 @@ function FicheV(p){
     })),
     h("div", {className:"fiche-comps"}, h("div", {className:"tt"}, "🧩 Ses compétences"),
       comps.map(function(c){ var n = r0.complet ? niveauComp(r, c) : {cls:"", em:"", lib:"—"}, x = r.comp[c] || {n:0, max:0};
-        return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, libOff(c)), h("span", {className:"d"}, compQuestionsEv(c, ev).map(function(i){ return "Q" + (i+1) + " " + marque(r.st[i]); }).join(" · ") + " → " + fr1(x.n) + "/" + x.max), h("span", null, h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib), x.aide ? h("span", {className:"nf-aide-tag", "data-avec-aide":x.aide}, "💡 réussi avec aide") : null)); }),
+        return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, libOff(c)), h("span", {className:"d"}, listeCompQ(r, compQuestionsEv(c, ev), {ecartees:se.ecartees, annulees:se.annulees, compte:fr1(x.n) + "/" + x.max})), h("span", null, h("span", {className:"maitrise-pill " + n.cls}, n.em + " " + n.lib), x.aide ? h("span", {className:"nf-aide-tag", "data-avec-aide":x.aide}, "💡 réussi avec aide") : null)); }),
       ["tr-personne-03", "tr-methodes-02"].map(function(c){
         return h("div", {key:c, className:"fiche-comp-l"}, h("span", {className:"c"}, c), h("span", null, libOff(c)), h("span", {className:"d"}, "le point d'autonomie"),
           h("span", {className:"maitrise-pill " + (au.retire ? "mt-rouge" : "mt-vert")}, au.retire ? maitriseV(0).em + " " + maitriseV(0).lib : maitriseV(20).em + " " + maitriseV(20).lib));
@@ -17865,13 +18047,14 @@ function pdfSeanceV(se){
     if(!r){ nAbs++; asavoir.push("<b>" + escPdf(nom) + "</b> : absent, pas encore de rattrapage.");
       return '<tbody class="un"><tr class="abs"><td class="el">' + escPdf(nom) + '</td><td class="note">Absent</td>' + new Array(nc - 1).join("<td>—</td>") + '</tr><tr class="comrow"><td colspan="' + nc + '"><span class="lab">Commentaire :</span> —</td></tr></tbody>'; }
     nNotes++;
-    var la = r.st.map(function(s, i){ return s === "x" || se.annulees.indexOf(i) >= 0 ? -1 : i; }).filter(function(i){ return i >= 0; });
+    /* (8.2.1, L8, M1) les questions qu'il a eues (questionsEues : ni écartée, ni pas posée), sans les annulées */
+    var la = questionsEues(r, r.st.map(function(s, i){ return i; }), se.ecartees).filter(function(i){ return se.annulees.indexOf(i) < 0; });
     // une question bonus compte dans les points gagnés, pas dans le total (comme la note, et le bilan de l'élève)
-    var cells = comps.map(function(c){ var tout = compQuestionsEv(c, ev).filter(function(i){ return la.indexOf(i) >= 0; }), qs = tout.filter(function(i){ return !ev.questions[i].bonus; }), n = tout.reduce(function(a, i){ return a + (r.pts[i] || 0); }, 0), d = qs.length || tout.length, m = maitriseV(d ? Math.min(20, n * 20 / d) : 0), v = {lib:m.lib, cls:m.k};
+    /* (8.2.1, O3) la maîtrise de chaque compétence : maitriseComp, la seule (r.comp, fait par la note : les questions qu'il a eues, sans les annulées, une bonus
+       hors du total) ; sans question de cette compétence qui compte pour lui : « — », comme la ligne d'un absent. Elle recevait « Maîtrise insuffisante » (0 sur 0). */
+    var cells = comps.map(function(c){ var mm = maitriseComp(r, c), xc = r.comp ? r.comp[c] : null; if(!mm) return "<td>—</td>";
       // (8.1.0, reste du morceau C) au nouveau format : la compétence compte les points de ses étapes (261), et dit « réussi avec aide » (231)
-      var xc = r.nf && r.comp ? r.comp[c] : null;
-      if(r.nf){ var mm = maitriseV(xc && xc.max ? Math.min(20, xc.n * 20 / xc.max) : 0); return '<td class="niv ' + mm.k + '">' + mm.lib + '<span class="pts">' + (xc ? fr1(xc.n) + "/" + xc.max : "—") + "</span>" + (xc && xc.aide ? '<span class="pts">💡 réussi avec aide</span>' : "") + "</td>"; }
-      return '<td class="niv ' + v.cls + '">' + v.lib + '<span class="pts">' + fr1(n) + "/" + d + "</span></td>"; });
+      return '<td class="niv ' + mm.k + '">' + mm.lib + '<span class="pts">' + fr1(xc.n) + "/" + xc.max + "</span>" + (r.nf && xc.aide ? '<span class="pts">💡 réussi avec aide</span>' : "") + "</td>"; });
     var a0 = maitriseV(autonomieV(se, e.slug).retire ? 0 : 20), a = {lib:a0.lib, cls:a0.k};
     auto.forEach(function(){ cells.push('<td class="niv ' + a.cls + '">' + a.lib + "</td>"); });
     // (8.0.6) les questions posées : ni écartées, ni jamais lancées (« pas posées ») ; l'absent d'un cours (177) : le jour, et ses questions
@@ -17907,7 +18090,7 @@ function pdfSeanceV(se){
     "</thead>\n" +
     lignes.join("\n") + "\n" +
     "</table>\n" +
-    '<div class="ctrl">Contrôle : ' + eleves.length + " élèves · " + nNotes + " notes · " + nAbs + " absent" + (nAbs > 1 ? "s" : "") + " · " + nCom + " commentaires.</div>\n" +
+    '<div class="ctrl">' + controlePdf(eleves.length, nNotes, nAbs, nCom) + "</div>\n" +
     (asavoir.length ? '<div class="asavoir"><b>À savoir — ne s\'entre pas dans École Directe.</b><br>' + asavoir.join("<br>") + "</div>\n" : "") +
     '<div class="bas">\n' +
     "<div><b>Les compétences</b><br>\n" +
@@ -18022,7 +18205,7 @@ function BilanContenuV(se, slug, boutonRetour){
         h("div", {className:"recap"}, ev.questions.map(function(q, i){
           var s = r.st[i];
           if(se.ecartees.indexOf(i) >= 0) return null;
-          if(se.annulees.indexOf(i) >= 0) return h("div", {key:i, className:"recap-l"}, h("span", null, "Question " + (i+1) + " · annulée : elle ne compte pas."), h("span", {className:"pt"}, ""));
+          if(se.annulees.indexOf(i) >= 0) return h("div", {key:i, className:"recap-l"}, h("span", null, annuleeEleveQ(i)), h("span", {className:"pt"}, ""));
           if(s === "x") return null;
           return h("div", {key:i, className:"recap-l " + (s === "j" || s === "t" ? "j" : "f")},
             h("span", null, s === "t" ? h(F, null, "Question " + (i+1) + " · ", h("span", {className:"v-orange"}, "✓"), " Trouvée au dernier moment") : "Question " + (i+1) + " · " + (s === "a" ? "ta feuille ne dit aucun de ces choix" : s === "j" ? "juste" : "faux"),
@@ -18031,9 +18214,9 @@ function BilanContenuV(se, slug, boutonRetour){
             h("span", {className:"pt"}, "→ " + fr1(r.pts[i] || 0) + " point"));
         }))),
       h("div", {className:"bilan-bloc"}, h("h3", null, "Tes compétences"),
-        comps.map(function(c){ var x = r.comp[c] || {n:0, max:0}, mm = maitriseV(x.max ? x.n * 20 / x.max : 0);
+        comps.map(function(c){ var x = r.comp[c] || {n:0, max:0}, mm = maitriseComp(r, c); if(!mm) return null;   // (8.2.1, O3) sans question qui compte : pas nommée, comme au nouveau format
           return h("div", {key:c, className:"comp-l"},
-            h("span", null, libEleve(c), h("span", {className:"comp-q"}, compQuestionsEv(c, ev).filter(function(i){ return r.st[i] !== "x" && se.annulees.indexOf(i) < 0; }).map(function(i){ return "Q" + (i+1) + " " + (r.st[i] === "j" || r.st[i] === "t" ? "✓" : "✗"); }).join(" · ") + " → " + fr1(x.n) + "/" + x.max)),
+            h("span", null, libEleve(c), h("span", {className:"comp-q"}, listeCompQ(r, compQuestionsEv(c, ev), {eleve:true, ecartees:se.ecartees, annulees:se.annulees, compte:fr1(x.n) + "/" + x.max}))),
             h("span", {className:"mt"}, mm.em + " " + mm.lib)); }),
         [libEleve("tr-personne-03"), libEleve("tr-methodes-02")].map(function(l){ return h("div", {key:l, className:"comp-l"}, h("span", null, l), h("span", {className:"mt"}, au.retire ? "❌ " : "✅ ", au.retire ? "non atteinte" : "atteinte")); })),
       es && h("div", {className:"bilan-calibration bilan-calib-" + es.type},
@@ -18375,7 +18558,7 @@ function nouveauFormat(q){ return !!q && (q.type != null || q.etapes != null); }
 function bonnesEnMotsQ(q, T){
   if(!q) return [];
   if(!nouveauFormat(q)) return listeV(q.bonnes).map(function(i){ return listeV(q.choix)[i]; }).filter(function(x){ return x != null; }).map(String);
-  return etapesDe(q, T).map(function(X){ return X.forme === "menu long" ? String(listeV(X.bonnes)[0] || "") : listeV(X.bonnes).map(function(i){ return X.choix[+i]; }).filter(function(x){ return x != null; }).join(", "); }).filter(Boolean);
+  return etapesDe(q, T).map(bonneEnMotsNF).filter(Boolean);   // (8.2.1, K4) celle de chaque étape, dite comme partout (bonneEnMotsNF, c6-correction.js) : toutes les bonnes d'un menu long
 }
 // les étapes d'une question, chacune avec sa forme, sa question et son chrono (ceux du type quand la question ne les donne pas)
 function etapesDe(q, T){
@@ -18429,6 +18612,28 @@ function champsInconnus(raw){
 }
 function autresDe(o, connus){ var a = null; Object.keys(o || {}).forEach(function(k){ if(connus.indexOf(k) < 0){ a = a || {}; a[k] = o[k]; } }); return a; }
 
+/* ── (8.2.1, L6, SFQ1-19 ; geste 4) les contrôles du contenu d'une étape, une seule liste : le collage (verifierQuestionNF), l'éditeur (sous l'étape,
+   EtapeEditeeV), ce qui manque avant le lancement (manquesNF, « ✅ Prête à lancer ») et le lancement lui-même (S.manques, ACT.lancerSeance) la lisent.
+   Une étape sans bonne réponse s'enregistrait dans l'éditeur, restait « Prête à lancer » et se lançait : une question que personne ne peut réussir.
+   Chaque contrôle : long, la raison telle que le collage la dit ; court, ce qui manque, tel que la ligne de l'évaluation le dit. e : une étape d'etapesDe. ── */
+function controlesEtapeNF(e){ var l = [];
+  if(e.forme === "menu long"){
+    if(!e.bonnes.map(String).filter(function(x){ return x.trim(); }).length) l.push({court:"la bonne réponse", long:"il manque sa bonne réponse (« bonnes » : le terme exact, tel qu'il est dans la liste)."});
+    if(!e.liste.length) l.push({court:"la liste cachée", long:"il manque sa liste cachée (« liste » : les vrais termes, la bonne réponse comprise)."});
+  } else if(FORMES_ID.indexOf(e.forme) >= 0){
+    if(e.choix.length < 2) l.push({court:"deux choix au moins", long:"il lui faut au moins deux choix (« choix »)."});
+    var bi = e.bonnes.map(Number);
+    if(!bi.length) l.push({court:"la bonne réponse", long:"il manque sa bonne réponse (« bonnes » : sa place dans « choix », en comptant à partir de 0)."});
+    else if(e.forme === "choix" && bi.length > 1) l.push({court:"une seule bonne réponse", long:"une étape « choix » a une seule bonne réponse ; pour plusieurs, la forme est « choix multiple »."});
+    bi.forEach(function(x){ if(!(x >= 0 && x < e.choix.length)) l.push({court:"une bonne réponse parmi les choix", long:"elle désigne une bonne réponse qui n'existe pas (" + x + ") : numérote à partir de 0, sans dépasser " + (e.choix.length - 1) + "."}); });
+  }
+  return l; }
+// ce qui manque au contenu des étapes d'une évaluation : « la bonne réponse (question 3, étape 1) » (la découpe pour les élèves à PAP comprise)
+function manquesEtapesNF(ev){ var l = [];
+  listeV(ev && ev.questions).forEach(function(q, i){ if(!nouveauFormat(q)) return;
+    etapesDe(q, ev.types).forEach(function(e, k){ controlesEtapeNF(e).forEach(function(c){ l.push(c.court + " (question " + (i + 1) + ", étape " + (k + 1) + ")"); }); });
+    decoupeDe(q, ev.types).forEach(function(e, k){ controlesEtapeNF(e).forEach(function(c){ l.push(c.court + " (question " + (i + 1) + ", découpe, étape " + (k + 1) + ")"); }); }); });
+  return l.filter(function(x, n){ return l.indexOf(x) === n; }); }
 /* ── A3 · les contrôles d'une question au nouveau format : chaque refus dit sa raison ── */
 function nomsTypes(T){ return idsTypes(T).map(function(id){ return "« " + id + " » (" + T[id].nom + ")"; }).join(", "); }
 function verifierQuestionNF(q, i, Tev, permises, compValide){
@@ -18445,19 +18650,11 @@ function verifierQuestionNF(q, i, Tev, permises, compValide){
     var r = ref + nom + (k + 1) + " : ", src = es[k] || {};
     if(FORMES_ID.indexOf(e.forme) < 0){ err.push(r + "sa forme (« " + (src.forme || "") + " ») doit être « menu long », « choix » ou « choix multiple »."); return; }
     if(t && t.etapes[k] && src.forme && src.forme !== t.etapes[k].forme) err.push(r + "elle est « " + src.forme + " » ; le type « " + t.nom + " » attend « " + t.etapes[k].forme + " » à cette étape.");
+    controlesEtapeNF(e).forEach(function(c){ err.push(r + c.long); });   // (8.2.1, L6) la liste unique : bonne réponse, liste cachée, choix
     if(e.forme === "menu long"){
-      var bonnes = e.bonnes.map(String).filter(function(x){ return x.trim(); });
-      if(!bonnes.length) err.push(r + "il manque sa bonne réponse (« bonnes » : le terme exact, tel qu'il est dans la liste).");
-      if(!e.liste.length) err.push(r + "il manque sa liste cachée (« liste » : les vrais termes, la bonne réponse comprise).");
       vraisDe(e).concat(e.faux).forEach(function(x){ var n = lettres(x); if(n < LETTRES_MIN) err.push(r + "« " + x + " » a " + n + " lettre" + (n > 1 ? "s" : "") + " : une réponse en a 3 au moins, sinon la liste s'ouvrirait presque sans rien écrire. Reformule la question, ou ce terme, pour une réponse de 3 lettres au moins."); });
       var vn = vraisDe(e).map(normT);
       e.faux.forEach(function(x){ if(vn.indexOf(normT(x)) >= 0) err.push(r + "« " + x + " » est à la fois un vrai terme et un faux terme."); });
-    } else {
-      if(e.choix.length < 2) err.push(r + "il lui faut au moins deux choix (« choix »).");
-      var bi = e.bonnes.map(Number);
-      if(!bi.length) err.push(r + "il manque sa bonne réponse (« bonnes » : sa place dans « choix », en comptant à partir de 0).");
-      else if(e.forme === "choix" && bi.length > 1) err.push(r + "une étape « choix » a une seule bonne réponse ; pour plusieurs, la forme est « choix multiple ».");
-      bi.forEach(function(x){ if(!(x >= 0 && x < e.choix.length)) err.push(r + "elle désigne une bonne réponse qui n'existe pas (" + x + ") : numérote à partir de 0, sans dépasser " + (e.choix.length - 1) + "."); });
     }
     e.competences.forEach(function(c){ if(permises.indexOf(c) < 0 || !compValide(c)) err.push(r + "la compétence « " + c + " » n'est pas une compétence du chapitre."); });
     if(e.competences.length > 2) err.push(r + e.competences.length + " compétences ; une étape en a une ou deux.");
@@ -18491,7 +18688,7 @@ function manquesNF(e){
   if(nf.some(function(q){ return etapesToutes(q, e.types).some(function(x){ return x.forme === "menu long" && vraisDe(x).concat(x.faux).some(function(t){ return lettres(t) < LETTRES_MIN; }); }); })) l.push("des réponses de 3 lettres au moins");
   if(questionsDeLecture(qs, e.types).length && !String(e.texte || "").trim()) l.push("le texte de l'évaluation de lecture");
   if(nbFauxAValider(e)) l.push("la validation des faux termes");
-  return l;
+  return l.concat(manquesEtapesNF(e));   // (8.2.1, L6) le contenu des étapes : bonne réponse, liste cachée, choix
 }
 
 /* ── L'éditeur : une question au nouveau format montre son type, son étayage, socle ou pour aller plus loin, et ses étapes (leur contenu vient du JSON) ── */
@@ -18537,8 +18734,10 @@ function EtapeEditeeV(p){
       h("div", {className:"ed-etape-bonnes"}, h("span", {className:"ed-lbl"}, "✅ " + (e.forme === "choix" ? "La bonne :" : "Les bonnes :")), e.choix.map(function(c, n){ var on = e.bonnes.map(Number).indexOf(n) >= 0;
         return h("button", {key:n, className:"ck-b" + (on ? " on" : ""), "data-local":"1", "aria-pressed":on, "data-bonne-ed":(i + 1) + "-" + (k + 1) + "-" + n, title:(on ? "Ce choix est une bonne réponse de " + ref + " : clique pour l'enlever." : "Fait de ce choix " + (e.forme === "choix" ? "la" : "une") + " bonne réponse de " + ref + (e.forme === "choix" ? " (une étape « choix » n'en a qu'une)." : ".")),
           onClick:function(){ p.majEtape(k, function(x){ var b = listeV(x.bonnes).map(Number); x.bonnes = e.forme === "choix" ? [n] : b.indexOf(n) >= 0 ? b.filter(function(y){ return y !== n; }) : b.concat([n]).sort(function(u, v){ return u - v; }); }); }}, (on ? "✓ " : "") + (n + 1) + ". " + (c.length > 40 ? c.slice(0, 40) + "…" : c)); })));
+  var refus = controlesEtapeNF(e);   // (8.2.1, L6) ce qui manque à l'étape, dit sur elle, comme le collage le dit
   return h("li", {"data-etape-ed":k + 1, style:{fontSize:".85rem", marginBottom:".45rem"}},
     h("div", null, h("strong", null, e.forme), " · ⏱ " + e.chrono + " s · " + det),
+    refus.length > 0 && h("div", {className:"ed-etape-manque", "data-manque-etape":(i + 1) + "-" + (k + 1), style:{color:"#B91C1C", fontWeight:800, margin:".2rem 0"}}, refus.map(function(c){ return "⚠️ " + c.long.charAt(0).toUpperCase() + c.long.slice(1); }).join(" ")),
     h("label", {className:"ed-etape-l"}, h("span", {className:"ed-lbl"}, "❓ La question de l'étape :"), h("input", {value:e.question || "", placeholder:(p.defaut && p.defaut.question) || "", "data-question-etape":(i + 1) + "-" + (k + 1),
       title:"La question de " + ref + ", telle que l'élève la lit à côté de « Étape " + (k + 1) + " » ; vide, celle du type.", onChange:function(ev){ var v = ev.target.value; p.majEtape(k, function(x){ x.question = v; }); }})),
     corps);
@@ -18925,14 +19124,19 @@ function reponseEnMotsNF(x, r){ if(x.forme === "menu long") return r.terme || ""
 /* ── Le clavier de l'app (capture 1a) : lettres, accents, apostrophe, guillemets « », ⌫ et espace ── */
 var TOUCHES_NF = ["a z e r t y u i o p", "q s d f g h j k l m", "w x c v b n ' é è à", "ç ê î ô û « » ⌫"];
 var ClavierNF = React.memo(ClavierNFbrut);   // (K-vitesse) le clavier ne se redessine pas à chaque touche : ses 45 touches ne changent jamais
+/* (8.2.1, K3, SFQ1-09) une tablette dessinée en petit dans la console (les tablettes du Mode test, figées ; la vue « 👁 ») garde son clavier dans sa moitié :
+   la console dessine ces tablettes en se disant « tablette » (VueTabletteH), et chacune posait son clavier en bas de l'écran de la console, par-dessus elle.
+   Seule une tablette à sa vraie taille (la tablette elle-même, la tablette du Mode test « 🔍 Jouer en grand ») a son clavier en bas de l'écran. */
+var DEDANS_NF = React.createContext(false);
 function ClavierNFbrut(p){
-  // sur la tablette, il occupe le bas de l'écran, sur toute sa largeur (capture 1a) ; ailleurs (la vue « 👁 » de la console, la mesure), il reste dans la moitié
-  var fixe = !p.dedans && window.APPAREIL_H === "tablette", ref = React.useRef(null), rs = React.useRef(p.surTouche); rs.current = p.surTouche;
+  // sur la tablette, il occupe le bas de l'écran, sur toute sa largeur (capture 1a) ; ailleurs (la vue « 👁 » de la console, la mesure, le Mode test en petit), il reste dans la moitié
+  var dedansC = React.useContext(DEDANS_NF);
+  var fixe = !p.dedans && !dedansC && window.APPAREIL_H === "tablette", ref = React.useRef(null), rs = React.useRef(p.surTouche); rs.current = p.surTouche;
   // (le socle réécrit la classe du body à chaque rendu : un attribut, qu'il ne touche pas)
   useEffect(function(){ if(!fixe) return; document.body.setAttribute("data-clavier-nf", "1"); return function(){ document.body.removeAttribute("data-clavier-nf"); }; }, [fixe]);
   /* (K-vitesse) la touche écrit dès que le doigt la touche (pointerdown), sans passer par le clic ni par les écouteurs de la page : la lettre est à l'écran à l'image suivante */
   useEffect(function(){ var el = ref.current; if(!el) return;
-    var f = function(ev){ var b = ev.target && ev.target.closest ? ev.target.closest("[data-touche]") : null; if(!b) return; ev.preventDefault(); if(rs.current) rs.current(b.getAttribute("data-touche")); };
+    var f = function(ev){ var b = ev.target && ev.target.closest ? ev.target.closest("[data-touche]") : null; if(!b || b.disabled || b.closest(".sim-fige, .voir-tab")) return; ev.preventDefault(); if(rs.current) rs.current(b.getAttribute("data-touche")); };   // (8.2.1, K3) une tablette figée (en petit dans le Mode test, « 👁 ») ne s'écrit pas
     el.addEventListener("pointerdown", f); return function(){ el.removeEventListener("pointerdown", f); }; }, []);
   function t(c){ return h("button", {key:c, type:"button", className:"tc nf-tc" + (c === "⌫" ? " nf-efface" : ""), "data-local":"1", "data-touche":c, title:c === "⌫" ? "Efface la dernière lettre." : null}, c); }
   var boite = h("div", {ref:ref, className:"clavier-nf-boite" + (fixe ? " fixe" : ""), "data-clavier-nf":"1"},
@@ -18950,13 +19154,15 @@ function EtapesNFH(e, qi, m, opt){
   // (8.1.0, morceau D) les aides de l'élève pour cette question : sa découpe, la liste d'emblée, les indices, la question agrandie ; la question qu'il finit (D4)
   var A = typeof SCN.aideQ === "function" ? {decoupe:SCN.aideQ(x, qi, "decoupe"), liste:SCN.aideQ(x, qi, "liste"), indices:SCN.aideQ(x, qi, "indices"), agrandi:SCN.aideQ(x, qi, "agrandi")} : {};
   var pap = typeof papMentionsH === "function" ? papMentionsH(A) : [], suite = opt && opt.suite != null ? opt.suite : null;
-  return Page(badgeDe(e), ev.titre, h(EtapesNF, {key:"nf|" + x + "|" + qi + "|" + depuis, e:e, x:x, qi:qi, q:q, etapes:etapes, rec:rec, depuis:depuis, duree:duree, sid:SCN.sid(), types:ev.types,
+  // (8.2.1, L1) sa réponse validée attend-elle encore la réponse du hub (ENVOIS) ? « enregistrée » ne se dit qu'après
+  var envoi = typeof ENVOIS !== "undefined" && ENVOIS.enAttente("etape|" + SCN.sid() + "|" + x + "|" + qi + "|");
+  return Page(badgeDe(e), ev.titre, h(EtapesNF, {key:"nf|" + x + "|" + qi + "|" + depuis, e:e, x:x, qi:qi, q:q, etapes:etapes, rec:rec, depuis:depuis, duree:duree, sid:SCN.sid(), types:ev.types, envoi:envoi,
     pap:pap, suite:suite, emblee:!!A.liste, aideIndices:!!A.indices, agrandi:!!A.agrandi, clePap:pap.join("|") + "|" + suite + (A.decoupe ? "|dc" : ""),
     sec:Math.floor(LIVE.maintenant() / 1000), cle:JSON.stringify(rec) + "|" + q.enonce + "|" + q.niveau + "|" + e.prenom + "|" + numQH(qi).n + "/" + numQH(qi).N + "|" + (A.decoupe ? JSON.stringify(etapes) : etapesCleNF(qi))}));
 }
 /* (K-vitesse) l'élève qui tape ne doit jamais attendre un redessin de toute la tablette : chaque écriture de la classe dans la séance redessine la tablette,
    mais l'étape en cours ne se redessine que si ce qui la concerne a changé (ses clics, l'heure à la seconde, la question) ; sa frappe ne redessine qu'elle */
-var EtapesNF = React.memo(EtapesNFbrut, function(a, b){ return a.cle === b.cle && a.clePap === b.clePap && a.sec === b.sec && a.depuis === b.depuis && a.duree === b.duree && a.x === b.x && a.qi === b.qi && a.sid === b.sid; });
+var EtapesNF = React.memo(EtapesNFbrut, function(a, b){ return a.cle === b.cle && a.clePap === b.clePap && a.sec === b.sec && a.depuis === b.depuis && a.duree === b.duree && a.x === b.x && a.qi === b.qi && a.sid === b.sid && a.envoi === b.envoi; });
 var ETAPES_CLE = {ev:null, v:{}};
 function etapesCleNF(qi){ var ev = SCN.ev(); if(ETAPES_CLE.ev !== ev){ ETAPES_CLE.ev = ev; ETAPES_CLE.v = {}; } if(ETAPES_CLE.v[qi] == null) ETAPES_CLE.v[qi] = JSON.stringify(SCN.etapes(qi)); return ETAPES_CLE.v[qi]; }
 function cleLocaleNF(p, k){ return "qcm-nf|" + p.sid + "|" + p.x + "|" + p.qi + "|" + k; }
@@ -18983,7 +19189,7 @@ function EtapesNFbrut(p){
   // (K-vitesse) des rappels stables : la frappe (SaisieNF) et le clavier ne se redessinent pas quand l'étape se redessine
   var R = React.useRef({}); R.current.terme = choisirTerme; R.current.ecrire = ecrire; R.current.rouvrir = function(){ var o = {}; o["k" + k] = true; setLoc(function(L){ return Object.assign({}, L, o); }); };
   var stables = React.useMemo(function(){ return {terme:function(a, b){ R.current.terme(a, b); }, ecrire:function(a, b){ return R.current.ecrire(a, b); }, rouvrir:function(){ R.current.rouvrir(); }}; }, []);
-  return vueEtapesNF({pap:p.pap, suite:p.suite, emblee:p.emblee, aideIndices:p.aideIndices, agrandi:p.agrandi, prendreIndice:prendreIndice, e:p.e, qi:p.qi, q:p.q, etapes:p.etapes, rec:p.rec, chrono:chrono, k:k, r:r, choixK:choixK, repondu:repondu, clavierOuvert:clavierOuvert, cert:cert, maintenant:maintenant,
+  return vueEtapesNF({envoi:p.envoi, pap:p.pap, suite:p.suite, emblee:p.emblee, aideIndices:p.aideIndices, agrandi:p.agrandi, prendreIndice:prendreIndice, e:p.e, qi:p.qi, q:p.q, etapes:p.etapes, rec:p.rec, chrono:chrono, k:k, r:r, choixK:choixK, repondu:repondu, clavierOuvert:clavierOuvert, cert:cert, maintenant:maintenant,
     saisie0:k != null ? saisieDe(k) : "", cleLocale:k != null ? cleLocaleNF(p, k) : null, ordre:k != null && xk.forme !== "menu long" ? SCN.ordreEtape(p.x, p.qi, k, xk.choix.length) : null,
     choisirTerme:stables.terme, ecrire:stables.ecrire, rouvrirClavier:stables.rouvrir, basculerChoix:basculerChoix, valider:valider});
 }
@@ -19080,7 +19286,9 @@ function vueEtapesNF(o){
     }
   } else {
     var aucune = o.chrono.every(function(c){ return c.etat === "sans"; });
-    corps = h("div", {className:"eleve-feedback" + (aucune ? "" : " valide"), "data-nf-fini":"1"}, aucune ? "⏱️ " + e.prenom + ", le temps est fini : attends la suite." : "✅ " + e.prenom + ", ta réponse est enregistrée : attends la suite.");
+    // (8.2.1, L1, SFQ1-16) « enregistrée » seulement quand le hub l'a : tant que sa réponse attend, elle part (ENVOIS)
+    corps = h("div", {className:"eleve-feedback" + (aucune || o.envoi ? "" : " valide"), "data-nf-fini":"1", "data-envoi":o.envoi ? "1" : null}, aucune ? "⏱️ " + e.prenom + ", le temps est fini : attends la suite."
+      : o.envoi ? "⏳ " + e.prenom + ", ta réponse part : attends la suite." : "✅ " + e.prenom + ", ta réponse est enregistrée : attends la suite.");
   }
   // (D4, capture 4b) la question qu'il finit pendant son tour d'une question qu'il n'a pas : le message commence par « avec ton PAP »
   var msgSuite = o.suite != null ? h("div", {className:"pap-msg", "data-pap-suite":numQH(o.qi).n}, "⏳ " + e.prenom + ", avec ton PAP, la question " + numQH(o.suite).n + " n'est pas pour toi : prends ce temps pour finir ta question " + numQH(o.qi).n + ".") : null;
@@ -19128,7 +19336,12 @@ function pxDeTropNF(q, titre, T){
    Tout ce qui suit ne joue que dans une séance au nouveau format (SCN.nf) : une séance d'avant garde ses écrans (la feuille, la lecture des copies).
    La note et les compétences se calculent dans src/live/base.js (noteNF, SCN.etapeNote) ; ici, les écrans. */
 function nfH(){ return enDirect() && typeof SCN.nf === "function" && SCN.nf(); }
-function bonneEnMotsNF(X){ return X.forme === "menu long" ? String(listeV(X.bonnes)[0] || "") : reponseEnMotsNF(X, {choix:X.bonnes}); }
+/* (8.2.1, K4, SFQ1-12) la seule façon de dire les bonnes réponses d'une étape, partout (la tablette révélée, la console, le tableau, la fiche, « 📋 Toutes les
+   questions », la séance sur papier : bonnesEnMotsQ) : un menu long accepte chacune de ses bonnes réponses (etapeJuste, src/live/base.js), elles sont toutes
+   dites, dans l'ordre du JSON, reliées par « ou » ; une étape à choix n'a qu'une réponse juste (ses cases, toutes). */
+function bonnesEtapeNF(X){ return X.forme === "menu long" ? listeV(X.bonnes).map(String).filter(function(t){ return t.trim(); }) : [reponseEnMotsNF(X, {choix:X.bonnes})].filter(Boolean); }
+function plusieursBonnesNF(X){ return bonnesEtapeNF(X).length > 1; }
+function bonneEnMotsNF(X){ return bonnesEtapeNF(X).join(" ou "); }
 function reponseDeNF(X, n){ return !n || n.etat === "sans" ? "pas de réponse" : (reponseEnMotsNF(X, n.r || {}) || "pas de réponse"); }
 function pointsMotNF(n){ return ptsNF(n) + " point" + (Math.abs(n) > 1 ? "s" : ""); }
 function certMotNF(c){ return c && CERT_NF[c] ? CERT_NF[c][0] + " " + CERT_NF[c][1] : ""; }
@@ -19198,7 +19411,7 @@ function LignesReponseNF(p, qi, o){   // les étapes d'un élève : sa réponse 
     return h("div", {key:k, className:"nf-rep-l" + (o.revele ? " " + n.etat : ""), "data-etape-corr":k + 1, "data-etat":o.revele ? n.etat : null},
       h("div", {className:"nf-rep-q"}, h("span", {className:"nf-etape-pill"}, "Étape " + (k + 1)), " ", X.question || (X.forme === "menu long" ? Q_ECRIRE : Q_RAISON)),
       h("div", {className:"nf-rep-r"}, h("span", {className:"nf-rep-lib"}, o.de ? "Sa réponse : " : "Ta réponse : "), h("b", null, reponseDeNF(X, n)), n.cert ? h("span", {className:"nf-rep-c"}, " · " + certMotNF(n.cert)) : null),
-      o.revele && h("div", {className:"nf-rep-b"}, (n.juste ? "✅ " : "➡️ ") + "La bonne réponse : ", h("b", null, bonneEnMotsNF(X)),
+      o.revele && h("div", {className:"nf-rep-b"}, (n.juste ? "✅ " : "➡️ ") + (plusieursBonnesNF(X) ? "Les bonnes réponses : " : "La bonne réponse : "), h("b", null, bonneEnMotsNF(X)),
         h("span", {className:"nf-rep-p", "data-pts":n.pts}, pointsMotNF(n.pts)), n.aide && n.juste ? h("span", {className:"nf-aide-tag", "data-avec-aide":"1"}, "💡 réussi avec aide") : null)); }));
 }
 function EcrJugerNF(e, qi, v, seul){
@@ -19213,7 +19426,9 @@ function EcrJugerNF(e, qi, v, seul){
   return Page(badgeDe(e), "📝 Correction", h(F, null, tete, h("div", {className:"eleve-q-zone nf-zone", "data-nf":"juger"}, QHeadNF(qi), h("div", {className:"eleve-q-enonce"}, q.enonce),
     h("div", {className:"nf-corr-titre"}, e.prenom + ", voici la réponse " + deNom(v.prenom) + ". Clique si tu la crois juste ou fausse."), LignesReponseNF(vp, qi, {de:v}),
     h("div", {className:"nf-juger"}, b("juste", "👍 Je la crois juste"), b("fausse", "👎 Je la crois fausse")),
-    a ? h("div", {className:"eleve-feedback valide", "data-avis-note":a}, "✅ C'est noté, " + e.prenom + ". Tu peux encore changer d'avis avant la bonne réponse.") : null)));
+    // (8.2.1, L1) « C'est noté » seulement quand le hub l'a : tant que son avis attend, il part (ENVOIS)
+    a ? (typeof ENVOIS !== "undefined" && ENVOIS.enAttente("juger|" + SCN.sid() + "|" + qi + "|" + p + "|") ? h("div", {className:"eleve-feedback", "data-avis-note":a, "data-envoi":"1"}, "⏳ " + e.prenom + ", ton avis part.")
+      : h("div", {className:"eleve-feedback valide", "data-avis-note":a}, "✅ C'est noté, " + e.prenom + ". Tu peux encore changer d'avis avant la bonne réponse.")) : null)));
 }
 /* ── C2 et C3 · à la révélation : sa réponse, sa certitude, puis la bonne réponse ; la note qui se construit ── */
 function NoteConstruiteNF(p){ var r = SCN.note(p) || {n:0, total:0}, nb = (r.pts || []).filter(function(x){ return x != null; }).length;
@@ -19243,7 +19458,9 @@ function CoevalNFH(e, v){
         h("button", Object.assign({className:"btn btn-ghost btn-sm nf-co-non" + (on ? " on" : ""), "data-desaccord":qi + 1, "aria-pressed":on}, clic("NFCO:" + p + ":mal:" + qi, function(){ agirE("coeval", "mal", qi, null, p); })), "⚠️ Je ne suis pas d'accord")); })),
     !qs.length ? h("div", {className:"etat-attente"}, v.prenom + " n'a jugé aucune de tes réponses.") : null,
     h("button", Object.assign({className:"co-btn ok" + (st === "ok" ? " on" : ""), "data-daccord":"1", "aria-pressed":st === "ok"}, clic("NFCO:" + p + ":ok", function(){ agirE("coeval", "ok", null, null, p); })), "✅ Oui, " + v.prenom + " a bien jugé"),
-    st === "ok" ? h("div", {className:"eleve-feedback valide"}, "✅ C'est noté, " + e.prenom + ". Attends ton bilan.") : st === "mal" ? h("div", {className:"eleve-feedback", "data-desaccord-note":"1"}, "⚠️ C'est noté, " + e.prenom + " : ton désaccord sur la question " + numQH(qd).n + " est signalé. Attends ton bilan.") : null));
+    // (8.2.1, L1) « C'est noté » seulement quand le hub l'a : tant que sa réponse attend, elle part (ENVOIS)
+    st && typeof ENVOIS !== "undefined" && ENVOIS.enAttente("coeval|" + SCN.sid() + "|" + p + "|") ? h("div", {className:"eleve-feedback", "data-envoi":"1"}, "⏳ " + e.prenom + ", ta réponse part.")
+    : st === "ok" ? h("div", {className:"eleve-feedback valide"}, "✅ C'est noté, " + e.prenom + ". Attends ton bilan.") : st === "mal" ? h("div", {className:"eleve-feedback", "data-desaccord-note":"1"}, "⚠️ C'est noté, " + e.prenom + " : ton désaccord sur la question " + numQH(qd).n + " est signalé. Attends ton bilan.") : null));
 }
 /* ── C3, C4 · le bilan : « 21 points sur 30, soit 14 sur 20 », question par question, les compétences, « 💡 réussi avec aide » ── */
 function compsNF(){ var l = []; EV.questions.forEach(function(q){ compsDeQ(q).forEach(function(c){ if(l.indexOf(c) < 0) l.push(c); }); }); return l; }
@@ -19267,14 +19484,14 @@ function EcrBilanNF(e, opts){
     h("div", {className:"bilan-bloc"}, h("h3", null, "Question par question"),
       h("div", {className:"recap"}, EV.questions.map(function(q, i){ var s = r.st[i], d = r.etapes[i];
         if(s === "e" || s === "x") return null;
-        if((r.annulees || []).map(Number).indexOf(i) >= 0) return h("div", {key:i, className:"recap-l annulee"}, h("span", null, "Question " + (i + 1) + " · annulée : elle ne compte pas."));
+        if((r.annulees || []).map(Number).indexOf(i) >= 0) return h("div", {key:i, className:"recap-l annulee"}, h("span", null, annuleeEleveQ(i)));
         if(!d) return null;
         return h("div", {key:i, className:"recap-l " + (s === "j" ? "j" : "f"), "data-bilan-q":i + 1},
           h("span", null, "Question " + (i + 1) + " · ", d.map(function(n, kk){ return h("span", {key:kk, className:"nf-bil-e " + n.etat}, (kk ? " · " : "") + "étape " + (kk + 1) + " " + (n.etat === "sans" ? "∅ pas de réponse" : (n.juste ? "✓" : "✗") + (n.cert ? " " + CERT_NF[n.cert][0] : "")) + " " + ptsNF(n.pts), n.aide && n.juste ? " 💡" : ""); })),
           h("span", {className:"pt"}, "→ " + pointsMotNF(r.pts[i])));
       }))),
     h("div", {className:"bilan-bloc"}, h("h3", null, "Tes compétences"),
-      compsNF().map(function(cp){ var x = r.comp[cp]; if(!x || !x.max) return null; var mm = maitriseDe(x.n * 20 / x.max);
+      compsNF().map(function(cp){ var x = r.comp[cp], mm = maitriseComp(r, cp); if(!mm) return null;   // (8.2.1, O3) la seule maîtrise d'une compétence
         return h("div", {key:cp, className:"comp-l", "data-comp":cp, "data-niveau":mm.k},
           h("span", null, LIB_ELEVE[cp] || (typeof SCN.libelleEleve === "function" && SCN.libelleEleve(cp)) || cp, h("span", {className:"comp-q"}, " → " + x.n + " point" + (x.n > 1 ? "s" : "") + " sur " + x.max),
             x.aide ? h("span", {className:"nf-aide-tag", "data-avec-aide":x.aide}, "💡 réussi avec aide") : null),
@@ -19335,7 +19552,8 @@ function PilotCorrectionNFH(){
 
 /* ════════ La coévaluation à la console, et le point d'autonomie (C5, 253) ════════ */
 function AlerteNFH(a){
-  var A = a.auteur, L = a.lecteur, pA = prenomH(A), pL = prenomH(L), av = SCN.avisSur(A, a.qi), E = SCN.etapes(a.qi, null, A);
+  // (8.2.1, L3) deux élèves du même prénom : leur nom en entier (nomDansH)
+  var A = a.auteur, L = a.lecteur, pA = nomDansH(A, [A, L]), pL = nomDansH(L, [A, L]), av = SCN.avisSur(A, a.qi), E = SCN.etapes(a.qi, null, A);
   var rep = E.map(function(X, k){ var n = SCN.etapeNote(A, a.qi, k); return "étape " + (k + 1) + " « " + reponseDeNF(X, n) + " » " + (n.etat === "sans" ? "∅" : n.juste ? "✓" : "✗"); }).join(" · ");
   var retirer = function(x, pr){ return h("button", Object.assign({key:x, className:"btn btn-rouge btn-sm", "data-retirer":x, title:"Retire le point d'autonomie de " + pr + " : ses deux compétences d'autonomie passent en Maîtrise insuffisante. L'alerte se ferme. « ↩️ Défaire » le rend."}, marqueH("ALN:r:" + a.id + ":" + x, function(){ agir("trancherAutonomie", [a.id, x]); })), "⛔ Retirer le point " + deNom(pr)); };
   return h("div", {key:a.id, className:"alerte-co", "data-alerte-nf":a.id},
@@ -19347,9 +19565,9 @@ function AlerteNFH(a){
 function AlerteNFTrancheeH(a){
   var d = decisionDe(a), ret = d.decision === "retire" && d.eleve;
   return h("div", {key:a.id, className:"alerte-co tranchee", "data-alerte-nf-tranchee":a.id}, h("div", {className:"al-corps"},
-      h("div", {className:"al-t"}, ret ? "⛔ Désaccord tranché — Q" + (a.qi + 1) + " : point d'autonomie retiré à " + prenomH(d.eleve) : "✅ Désaccord tranché — Q" + (a.qi + 1) + " : les points d'autonomie sont gardés"),
-      h("div", {className:"al-l"}, ret ? "Les deux compétences d'autonomie " + deNom(prenomH(d.eleve)) + " passent en Maîtrise insuffisante." : "Rien n'est changé pour " + prenomH(a.auteur) + (a.lecteur ? " ni pour " + prenomH(a.lecteur) : "") + ".")),
-    h("div", {className:"al-actions"}, h("button", Object.assign({className:"btn btn-ghost btn-sm", title:"Rouvre l'alerte, telle qu'elle était" + (ret ? ", et rend son point d'autonomie à " + prenomH(d.eleve) : "") + "."}, marqueH("ALN:d:" + a.id, function(){ agir("defaireAutonomie", [a.id]); })), "↩️ Défaire")));
+      h("div", {className:"al-t"}, ret ? "⛔ Désaccord tranché — Q" + (a.qi + 1) + " : point d'autonomie retiré à " + nomDansH(d.eleve, [a.auteur, a.lecteur]) : "✅ Désaccord tranché — Q" + (a.qi + 1) + " : les points d'autonomie sont gardés"),
+      h("div", {className:"al-l"}, ret ? "Les deux compétences d'autonomie " + deNom(nomDansH(d.eleve, [a.auteur, a.lecteur])) + " passent en Maîtrise insuffisante." : "Rien n'est changé pour " + nomDansH(a.auteur, [a.auteur, a.lecteur]) + (a.lecteur ? " ni pour " + nomDansH(a.lecteur, [a.auteur, a.lecteur]) : "") + ".")),
+    h("div", {className:"al-actions"}, h("button", Object.assign({className:"btn btn-ghost btn-sm", title:"Rouvre l'alerte, telle qu'elle était" + (ret ? ", et rend son point d'autonomie à " + nomDansH(d.eleve, [a.auteur, a.lecteur]) : "") + "."}, marqueH("ALN:d:" + a.id, function(){ agir("defaireAutonomie", [a.id]); })), "↩️ Défaire")));
 }
 function PilotCoevalNFH(){
   var k = MO(), presents = actifsH(k);
@@ -19414,9 +19632,11 @@ function horsTempsFicheNF(se, slug, qi){ return typeof SCN.horsTempsNF === "func
 function FicheQuestionsNFV(se, slug, r){
   var ev = se.ev;
   return h("div", {className:"fiche-nf", "data-fiche-nf":"1"}, ev.questions.map(function(q, qi){ var d = (r.etapes || [])[qi], E = d && d.length !== etapesDe(q, ev.types).length && typeof decoupeDe === "function" && decoupeDe(q, ev.types).length === d.length ? decoupeDe(q, ev.types) : etapesDe(q, ev.types); if(r.st[qi] === "e" || r.st[qi] === "x") return null;
-    return h("div", {key:qi, className:"fiche-nf-q"}, h("div", {className:"fiche-nf-t"}, h("span", {className:"num"}, "Q" + (qi + 1)), " ", q.enonce, h("span", {className:"pts"}, d ? pointsMotNF(r.pts[qi]) : "pas encore corrigée")),
+    /* (8.2.1, N2 ; 442) une annulée : sa marque à la place de ses points, ni dans la question ni dans ses étapes (elle ne compte pas) ; ses réponses restent lisibles */
+    var an = se.annulees.indexOf(qi) >= 0;
+    return h("div", {key:qi, className:"fiche-nf-q" + (an ? " annulee" : ""), "data-annulee":an ? "1" : null}, h("div", {className:"fiche-nf-t"}, h("span", {className:"num"}, "Q" + (qi + 1)), " ", q.enonce, h("span", {className:"pts"}, an ? MARQUE_ANNULEE : d ? pointsMotNF(r.pts[qi]) : "pas encore corrigée")),
       HorsTempsNF(slug, E, horsTempsFicheNF(se, slug, qi), true, prenomEleveV(se, slug), ilElle(se, slug)),
-      d && E.map(function(X, k){ var n = d[k]; return h("div", {key:k, className:"fiche-nf-e " + n.etat}, "Étape " + (k + 1) + " · sa réponse : ", h("b", null, reponseDeNF(X, n)), n.cert ? " · " + certMotNF(n.cert) : "", " · la bonne réponse : ", h("b", null, bonneEnMotsNF(X)), " · " + pointsMotNF(n.pts),
+      d && E.map(function(X, k){ var n = d[k]; return h("div", {key:k, className:"fiche-nf-e " + n.etat}, "Étape " + (k + 1) + " · sa réponse : ", h("b", null, reponseDeNF(X, n)), n.cert ? " · " + certMotNF(n.cert) : "", plusieursBonnesNF(X) ? " · les bonnes réponses : " : " · la bonne réponse : ", h("b", null, bonneEnMotsNF(X)), an ? "" : " · " + pointsMotNF(n.pts),
         n.aide ? h("span", {className:"nf-aide-tag"}, n.juste ? "💡 réussi avec aide" : "💡 un indice pris") : null); })); }));
 }
 
@@ -19434,14 +19654,14 @@ function BilanContenuNFV(se, slug, boutonRetour, r){
     h("div", {className:"bilan-bloc"}, h("h3", null, "Question par question"),
       h("div", {className:"recap"}, ev.questions.map(function(q, i){ var s = r.st[i], d = (r.etapes || [])[i];
         if(s === "e" || s === "x") return null;
-        if((r.annulees || []).map(Number).indexOf(i) >= 0) return h("div", {key:i, className:"recap-l annulee"}, h("span", null, "Question " + (i + 1) + " · annulée : elle ne compte pas."));
+        if((r.annulees || []).map(Number).indexOf(i) >= 0) return h("div", {key:i, className:"recap-l annulee"}, h("span", null, annuleeEleveQ(i)));
         if(!d) return null;
         return h("div", {key:i, className:"recap-l " + (s === "j" ? "j" : "f")},
           h("span", null, "Question " + (i + 1) + " · ", d.map(function(n, kk){ return h("span", {key:kk, className:"nf-bil-e " + n.etat}, (kk ? " · " : "") + (d.length > 1 ? "étape " + (kk + 1) + " " : "") + (n.etat === "sans" ? "∅ pas de réponse" : (n.juste ? "✓" : "✗") + (n.cert ? " " + CERT_NF[n.cert][0] : "")) + " " + ptsNF(n.pts), n.aide && n.juste ? " 💡" : ""); })),
           h("span", {className:"pt"}, "→ " + pointsMotNF(r.pts[i])));
       }))),
     h("div", {className:"bilan-bloc"}, h("h3", null, "Tes compétences"),
-      comps.map(function(c){ var x = (r.comp || {})[c]; if(!x || !x.max) return null; var mm = maitriseV(x.n * 20 / x.max);
+      comps.map(function(c){ var x = (r.comp || {})[c], mm = maitriseComp(r, c); if(!mm) return null;   // (8.2.1, O3) la seule maîtrise d'une compétence
         return h("div", {key:c, className:"comp-l"}, h("span", null, libEleve(c), h("span", {className:"comp-q"}, " → " + fr1(x.n) + " point" + (x.n > 1 ? "s" : "") + " sur " + x.max), x.aide ? h("span", {className:"nf-aide-tag"}, "💡 réussi avec aide") : null),
           h("span", {className:"mt"}, mm.em + " " + mm.lib)); }),
       [libEleve("tr-personne-03"), libEleve("tr-methodes-02")].map(function(l){ return h("div", {key:l, className:"comp-l"}, h("span", null, l), h("span", {className:"mt"}, au.retire ? "❌ " : "✅ ", au.retire ? "non atteinte" : "atteinte")); })),
@@ -20263,6 +20483,11 @@ function bSeanceEnCours(){ return typeof seanceEnCours === "function" && seanceE
 function bF(n){ return typeof SCN !== "undefined" && SCN.SEXE && SCN.SEXE[bPrenom(n)] === "F"; }
 function bIl(n){ return bF(n) ? "elle" : "il"; }
 function bSec(t){ var v = parseInt(t, 10); return isNaN(v) ? t : v + (v > 1 ? " secondes" : " seconde"); }
+/* (8.2.1, N3, geste 16) la légende de la liste des questions d'une compétence ne dit que les marques que la liste montre : « à droite, le compte » (la case n'en a
+   pas) et « ∅ aucun de ces choix » (au nouveau format, ∅ dit « pas de réponse » ; sur papier, il n'y en a pas) promettaient ce qui n'y est pas */
+function bLegendeComp(t){ var l = [];
+  if(/✓/.test(t)) l.push("✓ juste"); if(/✗/.test(t)) l.push("✗ faux"); if(/∅/.test(t)) l.push("∅ pas de réponse"); if(/⚠️/.test(t)) l.push("⚠️ annulée (elle ne compte pas)");
+  return l.length ? " : " + l.join(", ") : ""; }
 function bPrenom(nom){ var t = String(nom || "").split(" "); return t.length > 1 ? t.slice(1).join(" ") : nom; }
 
 /* ── Les pastilles d'état des tuiles (« .st ») : l'état de cet élève, à ce moment ── */
@@ -20333,6 +20558,7 @@ function bulleFlag(e){
 function bulleMaitrise(e){
   var t = bTexte(e), td = e.closest("td"), qui = td ? bLigne(td) : "", col = td ? bColonne(td) : "";
   var niv = t.replace(/^[^\p{L}⛔]+/u, "");
+  if(!niv) return bSansNiveau(e);   // (8.2.1, O3) « — » : pas de niveau ; elle disait « Le niveau de cette compétence : , d'après ses questions. »
   if(/retiré/.test(t)) return (qui ? qui + " : p" : "P") + "oint d'autonomie retiré " + t.replace(/^⛔ retiré /, "") + " ; ses deux compétences d'autonomie sont en Maîtrise insuffisante.";
   if(col && /Autonomie/.test(col)) return (qui ? qui + " a gardé" : "L'élève a gardé") + " son point d'autonomie : ses deux compétences d'autonomie sont en " + niv + ".";
   if(col && /Maîtrise de la note/.test(col)) return "Le niveau de maîtrise de la note " + deNom(qui) + " : " + niv + ", d'après les tranches des Réglages.";
@@ -20341,6 +20567,9 @@ function bulleMaitrise(e){
   if(l) return "Le niveau de cette compétence : " + niv + ", d'après ses questions.";
   return "Le niveau de maîtrise : " + niv + ".";
 }
+/* (8.2.1, O3) « — » à la place du niveau d'une compétence (maitriseComp) : sans question de cette compétence pour lui (sa liste le dit), ou la note pas encore complète */
+function bSansNiveau(e){ var l = e.closest("td, .fiche-comp-l"), t = l ? bTexte(l) : "";
+  return /aucune question de cette compétence/.test(t) ? "« — » : pas de niveau pour cette compétence, aucune question de cette compétence ne lui a été posée." : "« — » : pas encore de niveau, la note n'est pas encore complète."; }
 /* ── Les cases d'un tableau de notes ── */
 function bulleCase(e){
   var col = bColonne(e), qui = bLigne(e), t = bTexte(e);
@@ -20409,8 +20638,9 @@ var B_REGISTRE = [
   // les tableaux
   ["td.cell-juste,td.cell-faux,td.cell-trouvee,td.score-cell,td.alire-cell,td.comp-cell,td", bulleCase],
   ["th", bulleEntete],
-  [".comp-det", function(e, t){ return "Le détail de cette compétence, question par question : ✓ juste, ✗ faux, ∅ aucun de ces choix ; à droite, le compte."; }],
+  [".comp-det", function(e, t){ return "Le détail de cette compétence, question par question, pour les seules questions que l'élève a eues" + bLegendeComp(t) + "."; }],   /* (8.2.1, M1 ; N3) */
   [".maitrise-pill", bulleMaitrise],
+  ["[data-sans-maitrise]", bSansNiveau],   /* (8.2.1, O3) */
   // MJPC
   [".tprof-sidebar-label", function(e, t){ return "Les entrées du panneau prof qui touchent à : " + t.toLowerCase() + "."; }],
   [".tprof-header-sub", function(){ return "Le panneau prof configure le site : les classes, les élèves, la taxonomie, l'emploi du temps."; }],
@@ -20472,10 +20702,11 @@ var B_REGISTRE = [
   // la fiche du soir
   [".fiche-q .num,.num", function(e, t){ if(/^Q\d+$/.test(t)) return "La question " + t.slice(1) + " de l'évaluation."; if(/^Question \d+/.test(t)) return "La question en cours, et son nombre de bonnes réponses."; return null; }],
   [".val", function(e, t){ var q = e.closest(".fiche-q"); var i = q ? Array.prototype.indexOf.call(q.children, e) : -1; var cols = ["", "", "Ce que le voisin a lu sur sa feuille, à la correction", "Ce que l'élève a cliqué sur la tablette", "Ce que l'élève a dit à la fin de son temps de réponse", "La bonne réponse"]; return (cols[i] || "Une valeur de la question") + " : " + t + "."; }],
-  [".pts", function(e, t){ return "Ce que vaut la question pour cet élève : " + t.replace("pt", "point") + "."; }],
+  [".pts", function(e, t){ if(t === MARQUE_ANNULEE) return "Cette question a été posée, puis annulée : elle ne compte pas."; if(t === MARQUE_ECARTEE) return "Cette question a été écartée : elle n'a pas été posée, elle ne compte pas.";   /* (8.2.1, N2) */
+    return "Ce que vaut la question pour cet élève : " + t.replace("pt", "point") + "."; }],
   [".fiche-comp", function(e, t){ return "Les compétences que travaille cette question : " + t.replace(/^🧩\s*/, "") + "."; }],
   [".fiche-comp-l .c,span.c", function(e, t){ return "Le code de la compétence : " + t + "."; }],
-  [".fiche-comp-l .d,span.d", function(e, t){ return /autonomie/.test(t) ? "Cette compétence se tient par le point d'autonomie." : "Le détail de la compétence, question par question, et son compte."; }],
+  [".fiche-comp-l .d,span.d", function(e, t){ return /autonomie/.test(t) ? "Cette compétence se tient par le point d'autonomie." : "Le détail de la compétence, question par question, pour les seules questions que l'élève a eues" + bLegendeComp(t) + (/→/.test(t) ? ", et son compte" : "") + "."; }],   /* (8.2.1, M1 ; N3) */   /* (8.2.1, M1) */
   [".st628", function(){ return "Ce bilan général est celui que l'app a rempli d'après la note ; tu peux le modifier."; }],
   [".fiche-head span", function(e, t){ return {"Question":"L'énoncé de la question, et les compétences qu'elle travaille.", "Bonne réponse":"La bonne réponse de la question.", "Points":"Ce que vaut la question pour l'élève.", "Sa tablette":"Ce que l'élève a cliqué sur la tablette."}[t] || (/^Sa feuille, lue par/.test(t) ? "Ce que le voisin a lu sur la feuille, à la correction." : /^Ce qu'(il|elle) a dit/.test(t) ? "Ce que l'élève a dit à la fin de son temps de réponse." : null); }],
   [".fiche-q > span", function(e, t){ return "L'énoncé de la question, et les compétences qu'elle travaille."; }],
@@ -20826,6 +21057,10 @@ var PAGES = (function(){
   P.ecran = function(){
     var app = LIVE.appareil();
     if(app === "accueil") return {id:"c-accueil", vue:"console"};
+    /* (8.2.1, L2, SFQ1-14) jusqu'à la première réponse de la base (LIVE.pret), la console et le téléphone attendent, sans aucun bouton : ils dessinaient l'état de
+       la maquette (le téléphone : « 3 ESSAI », la démo, « 🕙 Fin null », « 🚀 Lancer Q1 », « 🛑 Terminer la séance » ; la console : son lancement, listes vides,
+       « 🚀 Lancer la séance »), environ 2 s sur le vrai hub. Le tableau n'avait rien de faux ; la tablette attend déjà (TabletteLive, « Chargement... »). */
+    if(!LIVE.pret && (app === "console" || app === "telephone")) return {id:"x-chargement", vue:app, render:EcranChargementV, cle:"chargement-" + app};
     if(app === "tablette"){
       if(NAV.ecran === "e-mes-evals" && fn("EcranMesEvaluations")) return {id:"e-mes-evals", vue:"tablette", render:function(){ return fn("EcranMesEvaluations")(); }, cle:JSON.stringify(NAV.params)};
       // la tablette de QCM-2 dès que la classe est connue et a sa séance (l'entrée, les moitiés) ; avant, TabletteLive (l'entrée, l'attente)
@@ -20858,6 +21093,10 @@ var PAGES = (function(){
     return {id:"c-accueil"};
   };
   function choisirSeance(){
+    /* (8.2.1, L4, SFQ1-15) le téléphone ouvert par le Mode test (« 📱 QR pilotage », « 📱 Voir le téléphone » : &classe=<la classe de test>) pilote la séance
+       de cette classe, et seulement elle ; ouvert autrement, il ne voit jamais une classe de test (« _… », plus bas) */
+    var pc = LIVE.appareil() === "telephone" ? LIVE.params().get("classe") : null;
+    if(pc){ LIVE.classeSlug = pc; LIVE.sid = (LIVE.d.sessionActive || {})[pc] || null; return; }
     if(LIVE.sid && SCN.sess(LIVE.sid) && SCN.sess(LIVE.sid).etat !== "terminee") return;
     var actives = LIVE.d.sessionActive || {}, cl = Object.keys(actives).filter(function(c){ return c.charAt(0) !== "_" && (LIVE.d.sessions || {})[actives[c]]; });
     if(LIVE.classeSlug && actives[LIVE.classeSlug]){ LIVE.sid = actives[LIVE.classeSlug]; return; }
@@ -20995,6 +21234,10 @@ var MOITIES = (function(){
   return M;
 })();
 
+// (8.2.1, L2) l'écran d'attente de la console et du téléphone, avant la première réponse de la base : aucun bouton, aucune donnée
+function EcranChargementV(){ var tel = LIVE.appareil() === "telephone";
+  return h("div", {"data-chargement":"1", style:{padding:"2rem", textAlign:"center", minHeight:"100vh", color:tel ? "#fff" : "var(--violet)"}},
+    h("div", {style:{fontSize:"3rem", marginBottom:"1rem"}}, tel ? "📱" : "📝"), h("h2", null, "Chargement…")); }
 function TelephoneSansSeance(){
   return h("div", {style:{padding:"2rem", color:"#fff", textAlign:"center", minHeight:"100vh"}},
     h("div", {style:{fontSize:"3rem", marginBottom:"1rem"}}, "📱"),
@@ -21025,7 +21268,10 @@ var INTERROMPUE = {vues:{}, arretee:{}, posee:null, coupure:{}, pouls:null, dela
 LIVE.abonner(function(){
   if(LIVE.appareil() !== "console" || !LIVE.pret || !db) return;
   PAGES.choisirSeance();
-  var sid = SCN.sid(), s = SCN.sess(sid); if(!sid || !s || s.etat === "terminee") return;
+  var sid = SCN.sid(), s = SCN.sess(sid);
+  // (8.2.1, L5) la séance posée n'est plus celle que pilote cette console, ou elle est terminée ou retirée : son heure de coupure n'est plus préparée
+  if(INTERROMPUE.posee && (INTERROMPUE.posee !== sid || !s || s.etat === "terminee")) annulerCoupureSeance(INTERROMPUE.posee);
+  if(!sid || !s || s.etat === "terminee") return;
   if(INTERROMPUE.posee !== sid){ INTERROMPUE.posee = sid; try { db.ref(DB_ROOT + "/sessions/" + sid + "/lastDisconnect").onDisconnect().set(firebase.database.ServerValue.TIMESTAMP); } catch(e){ console.error(e); } }
   /* (8.1.0, G3) la décision n'est plus prise sur la seule première lecture de la séance : le hub peut apprendre la coupure de la console perdue un peu
      APRÈS l'ouverture de celle-ci (la première lecture n'a pas encore lastDisconnect), et l'alerte ne s'ouvrait alors jamais. Pendant les 8 premières
