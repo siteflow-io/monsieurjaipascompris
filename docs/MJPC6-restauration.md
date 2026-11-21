@@ -1683,3 +1683,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 - **Ce que revenir ferait** : les séances d'avant réapparaîtraient (la 8.1.1 réécrit la séance active d'avant) ; les évaluations sans type redeviendraient lançables. La 8.2.0 n'écrit rien de nouveau dans la base : revenir ne casse aucune séance.
 - Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `80221453`.
 
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT promotion 8.2.1 (21/11/2026, C17-QCM)
+- Avant : 8.2.0, md5 `7ea38fc2a3c737eaddd12204238a15a0`, blob `f0097bd69f68`, copie au sas `SAUVEGARDES/evaluation-qcm-8.2.0-7ea38fc2.html`. Promu : 8.2.1, 2 627 979 o, md5 `03d5acdd52b5bb59452c7825d50bca66`, commit `b669d5f`, blob `567aae87c5f8` (sas `code-qcm-821` = `99db54331`).
+- **Ce que revenir ferait** : tous les défauts de la session fuzzing Q1 reviendraient (« Parti » sur le mauvais élève, « enregistrée » avant le hub, élève sans question noté 0, compétence sans question « 🔴 Maîtrise insuffisante »…) ; une console 8.2.0 qui se ferme pourrait de nouveau recréer des nœuds `lastDisconnect`. La 8.2.1 écrit les réponses dans la même forme : revenir ne casse aucune séance.
+- Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `7ea38fc2`.
