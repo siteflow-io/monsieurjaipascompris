@@ -3947,7 +3947,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
    etat « en_cours » / « terminee », evalSnapshot) sont lus tels quels, et tenus à jour à chaque passage. */
 
 /* La version de l'app (8.1.0-b) : la carte « ℹ️ Version » des Réglages l'affiche (c3-evals.js, etape2.js) ; la console du navigateur la lit aussi (QCM_VERSION). */
-var QCM_VERSION = "8.2.1";
+var QCM_VERSION = "8.2.1.1-micro";
 
 /* ── La base : la configuration de la 7.7.1, telle quelle ── */
 var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
@@ -12935,6 +12935,9 @@ function ScAutonomieGarde(qui, retour){
 }
 
 /* ════════ Le bilan de la classe, à la fin de l'heure ════════ */
+/* (8.2.1.1-micro, QCM-P1) un élève s'est trompé à la question q : au nouveau format, une de ses étapes a une réponse fausse (une étape sans réponse
+   n'est pas une erreur, ni une réponse juste « pas sûr ») ; à l'ancien format, la question est fausse (« f »). */
+function erreurQ(r, q){ if(r.nf && r.etapes) return (r.etapes[q] || []).some(function(e){ return !!e && e.etat === "faux"; }); return r.st[q] === "f"; }
 function tauxQ(qi){ var k = MO(), ok = 0, n = 0; SCN.presents(k).forEach(function(p){ var c = calc(p), x = c.pts[qi]; if(x != null){ if(c.nf){ n += c.maxQ[qi] || 0; ok += Math.max(0, x); } else { n++; ok += x; } } }); return n ? Math.round(ok * 100 / n) : 0; }
 function BilanClasse(){
   if(enDirect()) return BilanClasseH();
@@ -12949,6 +12952,9 @@ function BilanClasse(){
   var cal = {ok:0, sous:0, sur:0, none:0}; pres.forEach(function(p){ var e = SCN.estimation(p, k); cal[e ? e.type : "none"]++; });
   var ret = retiresAu(k), gard = pres.length - ret.length;
   var taux = [0, 1, 2].map(tauxQ), rate = taux.indexOf(Math.min.apply(null, taux)), reussie = taux.indexOf(Math.max.apply(null, taux));
+  /* (8.2.1.1-micro, QCM-P1, Paul 21/11 20:11) « La plus ratée » : la question au plus bas taux parmi celles où un élève s'est trompé (erreurQ) ;
+     aucune erreur : ni « plus ratée » ni titre (une réponse juste « pas sûr » baisse le taux sans être une erreur). */
+  var avecErr = [0, 1, 2].filter(function(q){ return lignes.some(function(l){ return erreurQ(l.r, q); }); }); rate = avecErr.length ? avecErr.sort(function(a, b){ return taux[a] - taux[b] || a - b; })[0] : null; var inat = nfH() ? InatteignablesH() : null;
   var lire = lireSoir(k);
   return Console("pilotage", "pilot", h("div", {className:"card"},
     TitreCarte(h(F, null, "🏁 Bilan classe — " + EV.titre + " — " + CLASSE, InfoI(nfH() ? "Les notes de la classe : les points de chacun, sur 3 par étape posée, jamais sous 0. Tu les rends aux élèves depuis la liste des séances (« rendre les notes »)." : "Les notes provisoires de la classe, d'après la lecture des feuilles à la correction. Elles deviennent définitives quand tu rends les copies, après ta lecture du soir.")), [h("button", {key:1, className:"btn btn-rouge btn-sm", "data-va":"c-terminer"}, "🛑 Terminer la séance")]),
@@ -12977,9 +12983,9 @@ function BilanClasse(){
           h("div", {className:"bilan-classe-calib-cell calib-sous"}, h("strong", null, cal.sous), h("span", null, "🌟 Sous-évalués")),
           h("div", {className:"bilan-classe-calib-cell calib-sur"}, h("strong", null, cal.sur), h("span", null, "⚠️ Sur-évalués")),
           h("div", {className:"bilan-classe-calib-cell calib-none"}, h("strong", null, cal.none), h("span", null, "— Pas d'autoeval"))),
-        h("h3", null, "💡 Questions remarquables", InfoI(nfH() ? "La question la plus ratée et la mieux réussie, d'après les points : à reprendre en classe. Une question réussie par moins d'élèves que le seuil de son type est signalée « peut-être inatteignable »." : "La question la plus ratée et la mieux réussie, d'après la feuille : à reprendre en classe.")),
-        nfH() && InatteignablesH(),
-        h("div", {className:"bilan-classe-insights"},
+        (rate != null || inat) && h("h3", null, "💡 Questions remarquables", InfoI(nfH() ? "La question la plus ratée et la mieux réussie, d'après les points : à reprendre en classe. Une question réussie par moins d'élèves que le seuil de son type est signalée « peut-être inatteignable »." : "La question la plus ratée et la mieux réussie, d'après la feuille : à reprendre en classe.")),
+        inat,
+        rate != null && h("div", {className:"bilan-classe-insights"},
           h("div", {className:"bilan-classe-insight insight-attention"}, h("div", {className:"bilan-classe-insight-titre"}, "🔴 La plus ratée — Q" + (rate + 1) + " (" + taux[rate] + " % de réussite)"), h("div", {className:"bilan-classe-insight-enonce"}, EV.questions[rate].enonce)),
           reussie !== rate && taux[reussie] !== taux[rate] && h("div", {className:"bilan-classe-insight insight-felicitations"}, h("div", {className:"bilan-classe-insight-titre"}, "🟢 La mieux réussie — Q" + (reussie + 1) + " (" + taux[reussie] + " % de réussite)"), h("div", {className:"bilan-classe-insight-enonce"}, EV.questions[reussie].enonce)))),
       h("div", null,
@@ -13315,6 +13321,8 @@ function BilanClasseH(){
   var hors = (m.ecartees || []).concat(m.annulees || []), comptees = toutesQ().filter(function(q){ return hors.indexOf(q) < 0; });
   var taux = {}; comptees.forEach(function(q){ taux[q] = tauxQ(q); });
   var rate = comptees.slice().sort(function(a, b){ return taux[a] - taux[b] || a - b; })[0], reussie = comptees.slice().sort(function(a, b){ return taux[b] - taux[a] || a - b; })[0];
+  /* (8.2.1.1-micro, QCM-P1) « La plus ratée » : parmi les questions où un élève s'est trompé (erreurQ) ; aucune erreur : ni « plus ratée » ni titre. */
+  var avecErr = comptees.filter(function(q){ return lignes.some(function(l){ return erreurQ(l.r, q); }); }); rate = avecErr.length ? avecErr.sort(function(a, b){ return taux[a] - taux[b] || a - b; })[0] : null; var inat = nfH() ? InatteignablesH() : null;
   var lire = lireSoir(k);
   return Console("pilotage", "pilot", h("div", {className:"card"},
     TitreCarte(h(F, null, "🏁 Bilan classe — " + EV.titre + " — " + CLASSE, InfoI(nfH() ? "Les notes de la classe : les points de chacun, sur 3 par étape posée, jamais sous 0. Tu les rends aux élèves depuis la liste des séances (« rendre les notes »)." : "Les notes provisoires de la classe, d'après la lecture des feuilles à la correction. Elles deviennent définitives quand tu rends les copies, après ta lecture du soir.")), [annulerSeanceH("as"), h("button", Object.assign({key:1, className:"btn btn-rouge btn-sm"}, fen(null, "terminer")), "🛑 Terminer la séance")]),
@@ -13342,8 +13350,8 @@ function BilanClasseH(){
           h("div", {className:"bilan-classe-calib-cell calib-sous"}, h("strong", null, cal.sous), h("span", null, "🌟 Sous-évalués")),
           h("div", {className:"bilan-classe-calib-cell calib-sur"}, h("strong", null, cal.sur), h("span", null, "⚠️ Sur-évalués")),
           h("div", {className:"bilan-classe-calib-cell calib-none"}, h("strong", null, cal.none), h("span", null, "— Pas d'autoeval"))),
-        h("h3", null, "💡 Questions remarquables", InfoI(nfH() ? "La question la plus ratée et la mieux réussie, d'après les points : à reprendre en classe. Une question réussie par moins d'élèves que le seuil de son type est signalée « peut-être inatteignable »." : "La question la plus ratée et la mieux réussie, d'après la feuille : à reprendre en classe.")),
-        nfH() && InatteignablesH(),
+        (rate != null || inat) && h("h3", null, "💡 Questions remarquables", InfoI(nfH() ? "La question la plus ratée et la mieux réussie, d'après les points : à reprendre en classe. Une question réussie par moins d'élèves que le seuil de son type est signalée « peut-être inatteignable »." : "La question la plus ratée et la mieux réussie, d'après la feuille : à reprendre en classe.")),
+        inat,
         rate != null && h("div", {className:"bilan-classe-insights"},
           h("div", {className:"bilan-classe-insight insight-attention"}, h("div", {className:"bilan-classe-insight-titre"}, "🔴 La plus ratée — Q" + (rate + 1) + " (" + taux[rate] + " % de réussite)"), h("div", {className:"bilan-classe-insight-enonce"}, EV.questions[rate].enonce)),
           reussie !== rate && taux[reussie] !== taux[rate] && h("div", {className:"bilan-classe-insight insight-felicitations"}, h("div", {className:"bilan-classe-insight-titre"}, "🟢 La mieux réussie — Q" + (reussie + 1) + " (" + taux[reussie] + " % de réussite)"), h("div", {className:"bilan-classe-insight-enonce"}, EV.questions[reussie].enonce)))),
