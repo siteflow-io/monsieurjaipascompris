@@ -108,3 +108,23 @@
 - 10/11/2026 16:29 — `redaction.html` 1.4.32.2-micro (C14 216) : « + ajouter une page » à droite des pages de chaque copie ; « La donner à … » pour une page déjà à un autre élève. Commit `dff1c0d`.
 
 - 10/11/2026 16:43 — `redaction.html` 1.4.32.3-micro (C14 220) : une ancienne photo ajoutée avec « + ajouter une page » devient une page neuve. Commit `76a0e85`.
+
+## 5 · 21/11/2026 21:30 — `evaluation-qcm.html` `8.2.1.1-micro` (C17-QCM) — AVEC BANC COURT ET CONTRÔLE À FROID
+
+| | |
+|---|---|
+| **Décidé par** | Paul, 21/11 20:11 : « Pourquoi sur le bilan de la console de tes dernières captures il y a question remarquables la plus ratée 100 pourcent de réussite? » ; 20:13 : « Promeus mais fais en micro la modif, pas besoin d'une heure, si? » |
+| **Pourquoi** | un défaut d'affichage, sans note touchée ; Paul ne voulait pas d'un complément entier |
+| **La dette** | QCM-P1 — « 🔴 La plus ratée — Q1 (100 % de réussite) » quand personne ne s'est trompé |
+| **Avant** | `8.2.1`, commit prod `b669d5f`, blob `567aae87c5f8`, md5 `03d5acdd52b5bb59452c7825d50bca66`, copie au sas `SAUVEGARDES/evaluation-qcm-8.2.1-03d5acdd.html` |
+| **Après** | `8.2.1.1-micro`, commit prod `3e78055`, blob `02624f52f48d`, md5 `624adaec8f2ba5ced97f762c3028aa7f` (2 629 400 o) ; en ligne vérifié 5 lectures sur 5 |
+| **Source au sas** | branche `code-qcm-8211-micro`, commit `2b6ed7ce5` (sur `99db54331`) |
+| **Revenir** | `docs/MJPC6-restauration.md`, « AVANT le micro 8.2.1.1 » |
+
+**Ce qui change** (`src/c3-corr.js`, les deux bilans de la classe) : une fonction neuve `erreurQ` (un élève s'est trompé à une question : au nouveau format, une de ses étapes a une réponse fausse ; à l'ancien, la question est fausse) ; « La plus ratée » est la question au plus bas taux **parmi celles qui ont une erreur** ; sans erreur, ni « plus ratée » ni titre « 💡 Questions remarquables », sauf si un avertissement « peut-être inatteignable » s'affiche (il garde alors son titre). Une réponse juste « pas sûr » et une étape sans réponse ne sont pas des erreurs. Aucun texte nouveau.
+
+**Ce qui a été mesuré** : banc O P1 (tout juste « sûr » : ni « plus ratée » ni titre) rouge sur 03d5acdd, vert après ; banc M P1 (Q1 juste « pas sûr » à 33 %, Q2 à 50 % avec une erreur : la plus ratée est Q2) rouge sur 03d5acdd (« Q1 (33 %) »), vert après ; P1b (Q2 annulée, inatteignable : le titre au-dessus de l'avertissement) rouge sur 03d5acdd et sur le premier état du micro, vert après ; M 29/29, O 15/15, `banc` 207/207, contrôles fixes 34/34. Contrôle à froid par un exécutant neuf, trois relectures : la 1re a trouvé deux défauts du micro (le taux au lieu de l'erreur ; l'avertissement sans titre), la 2e un troisième (une étape sans réponse comptée comme erreur) ; la 3e : « ça va ».
+
+**Ce qui n'a PAS été mesuré (la dérogation)** : le reste de la passe finale (K, L, N, K-A à K-J, K-vitesse, banc-8016) ; le cas « étape 1 juste, étape 2 sans réponse » (lu dans le code, aucune évaluation à deux étapes dans les bancs) ; rien rejoué sur le vrai site (Chrome de Paul non joignable).
+
+**Ce qui le remplacera** : la prochaine version passée au banc complet (le mandat des points 31 à 35, 40 à 42 et 50), branche `code-qcm-8211-micro` reprise.
