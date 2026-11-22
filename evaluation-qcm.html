@@ -3947,7 +3947,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
    etat « en_cours » / « terminee », evalSnapshot) sont lus tels quels, et tenus à jour à chaque passage. */
 
 /* La version de l'app (8.1.0-b) : la carte « ℹ️ Version » des Réglages l'affiche (c3-evals.js, etape2.js) ; la console du navigateur la lit aussi (QCM_VERSION). */
-var QCM_VERSION = "8.2.2";
+var QCM_VERSION = "8.2.2.1-micro";
 
 /* ── La base : la configuration de la 7.7.1, telle quelle ── */
 var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
@@ -21390,6 +21390,25 @@ function oubliFinHeure(){
   } catch(e){ console.error("QCM : l'oubli de la fin de l'heure", e); }
 }
 setInterval(oubliFinHeure, 15000);
+
+/* ── (8.2.2.1-micro ; Paul, 22/11/2026 14:14 : « passer automatiquement en grand écran quand l'élève charge le lien (worktrack a cette fonctionnalité) »)
+   Le plein écran sur la tablette de l'élève. La cause du « au premier clic » : un navigateur refuse le plein écran sans un geste de l'utilisateur ; worktrack
+   le demande donc au clic sur « Entrer » (worktrack.html, requestFullscreen sur documentElement). Ici : sur la page de l'élève seulement (?mode=eleve), chaque
+   clic demande le plein écran s'il n'y est pas : le premier clic (« Combien êtes-vous sur cette tablette ? ») l'ouvre, et un élève qui en sort y revient
+   au clic suivant. Jamais sur la console, le téléphone, le tableau ni l'accueil. Rien n'est écrit dans la base ; un refus du navigateur (page dans un cadre
+   sans droit de plein écran, vieux navigateur) ne change rien à la séance : il est seulement noté une fois dans la console du navigateur. ── */
+(function(){
+  if(typeof document === "undefined" || typeof LIVE === "undefined") return;
+  var dit = false;
+  function pleinEcranEleve(){
+    if(LIVE.appareil() !== "tablette") return;
+    var el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;
+    if(!f || document.fullscreenElement || document.webkitFullscreenElement || document.fullscreenEnabled === false) return;
+    var refus = function(e){ if(!dit){ dit = true; console.info("QCM : le plein écran n'a pas été accordé par le navigateur ; la séance continue sans lui.", e && e.name); } };
+    try { var r = f.call(el); if(r && typeof r.then === "function") r.then(null, refus); } catch(e){ refus(e); }
+  }
+  document.addEventListener("click", pleinEcranEleve, true);
+})();
 
 /* ═════ live/gestes.js ═════ */
 /* ═══════════════ QCM-1 · SOCLE — le routeur des gestes ═══════════════

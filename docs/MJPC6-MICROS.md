@@ -128,3 +128,21 @@
 **Ce qui n'a PAS été mesuré (la dérogation)** : le reste de la passe finale (K, L, N, K-A à K-J, K-vitesse, banc-8016) ; le cas « étape 1 juste, étape 2 sans réponse » (lu dans le code, aucune évaluation à deux étapes dans les bancs) ; rien rejoué sur le vrai site (Chrome de Paul non joignable).
 
 **Ce qui le remplacera** : la prochaine version passée au banc complet (le mandat des points 31 à 35, 40 à 42 et 50), branche `code-qcm-8211-micro` reprise.
+
+## 6 · 22/11/2026 15:08 — `evaluation-qcm.html` `8.2.2.1-micro` (C17-QCM) — AVEC BANC COURT ET CONTRÔLE À FROID
+
+| | |
+| --- | --- |
+| **Ordre de Paul** | 22/11 14:14 : « ajoute la fonctionnalité qui permet de passer automatiquement en grand écran quand l'élève charge le lien (worktrack a cette fonctionnalité). fais le maintenant en micor » ; 15:06 : « Promeus » |
+| **Avant** | `8.2.2`, commit prod `3bf4925`, blob `d83b3e006941`, md5 `9e4e93fd2847c430d34d524d8971c319`, copie au sas `SAUVEGARDES/evaluation-qcm-8.2.2-9e4e93fd.html` |
+| **Après** | `8.2.2.1-micro`, blob `6ad48be1a3be`, md5 `e121f2711886cab0331ca000bb5bee7a` (2 640 201 o) |
+| **Source au sas** | branche `code-qcm-8221-micro`, commit `6ea4fe040` (sur `4a7a97ed0`) |
+| **Revenir** | `docs/MJPC6-restauration.md`, « AVANT le micro 8.2.2.1 » |
+
+**Ce qui change** (`src/live/pages.js`, à la fin ; 21 lignes d'écart) : `pleinEcranEleve`. Un navigateur refuse le plein écran sans geste de l'utilisateur (worktrack le demande au clic sur « Entrer ») : sur la page de l'élève seulement (`?mode=eleve`), chaque clic demande le plein écran s'il n'y est pas. Le premier clic l'ouvre ; un élève qui en sort y revient au clic suivant. Jamais sur la console, le téléphone, le tableau ni l'accueil. Rien n'est écrit dans la base. Un refus du navigateur est noté une fois dans sa console et ne change rien à la séance.
+
+**Ce qui a été mesuré** : contrôle à froid par un exécutant neuf, aucun défaut ; assemblage refait (même md5) ; `banc-8221-micro.js` par le geste, rouge sur 9e4e93fd (13/17), vert sur le micro (17/17) : pas de plein écran avant le premier clic, plein écran au premier clic et le clic est pris (la touche du clavier de l'app est écrite), sortie en pleine saisie → la saisie reste et le clic suivant le remet, console/tableau/téléphone/accueil jamais, aucune erreur de page ; `banc` 207/207 ; contrôles fixes 34/34 ; entrées 15/15 ; en plein écran la page des bancs garde sa taille.
+
+**Ce qui n'a PAS été mesuré (la dérogation)** : le reste de la passe finale ; une vraie tablette (le changement de taille réel, le bandeau du navigateur, un double clic pendant la bascule, les deux moitiés) ; le Mode test (« 👋 Ouvrir le portail élève » : lu, pas joué). **Limite connue** : ouverte depuis le portail MJPC, la page est dans un cadre (`openViewer`, `index.html`) qui n'a pas le droit de plein écran : le micro n'y fait rien (question posée à Paul, point 116).
+
+**Ce qui le remplacera** : la 8.2.4, qui reprend la branche `code-qcm-8221-micro` et fait entrer `banc-8221-micro.js` dans le banc unique.

@@ -1694,5 +1694,8 @@ Les codes SITE-COURS-2a/2b/2c/2e ont servi une PREMIÈRE fois sous la conscience
 
 ### POINT DE RETOUR — `evaluation-qcm.html` AVANT la 8.2.2 (22/11/2026, C17-QCM)
 - Avant : 8.2.1.1-micro, md5 `624adaec8f2ba5ced97f762c3028aa7f`, blob `02624f52f48d`, commit `3e78055`, copie au sas `SAUVEGARDES/evaluation-qcm-8.2.1.1-micro-624adaec.html`. Promu : 8.2.2, md5 `9e4e93fd2847c430d34d524d8971c319`, blob `d83b3e006941`. Une question typée par la 8.2.2 porte un champ « avant » (ses cases d'origine) : la 8.2.1.1 l'ignore et lit la question comme une question au nouveau format.
+
+### POINT DE RETOUR — `evaluation-qcm.html` AVANT le micro 8.2.2.1 (22/11/2026, C17-QCM)
+- Avant : 8.2.2, md5 `9e4e93fd2847c430d34d524d8971c319`, blob `d83b3e006941`, commit `3bf4925`, copie au sas `SAUVEGARDES/evaluation-qcm-8.2.2-9e4e93fd.html`. Promu : 8.2.2.1-micro, md5 `e121f2711886cab0331ca000bb5bee7a`, blob `6ad48be1a3be`. Aucune donnée de la base n'est touchée par ce micro.
 - **Ce que revenir ferait** : « La plus ratée » reviendrait même à 100 % de réussite ; rien d'autre. Le micro n'écrit rien dans la base.
 - Revenir : recopier la sauvegarde sur `evaluation-qcm.html`, pousser, vérifier le md5 en ligne `03d5acdd`.
