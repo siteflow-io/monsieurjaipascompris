@@ -3947,7 +3947,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
    etat « en_cours » / « terminee », evalSnapshot) sont lus tels quels, et tenus à jour à chaque passage. */
 
 /* La version de l'app (8.1.0-b) : la carte « ℹ️ Version » des Réglages l'affiche (c3-evals.js, etape2.js) ; la console du navigateur la lit aussi (QCM_VERSION). */
-var QCM_VERSION = "8.2.1.1-micro";
+var QCM_VERSION = "8.2.2";
 
 /* ── La base : la configuration de la 7.7.1, telle quelle ── */
 var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
@@ -14179,6 +14179,7 @@ function evalVue(id, b){
       // le tour de l'élève dure la somme des chronos de ses étapes (240) : calculé, jamais écrit comme un temps de Paul
       if(x.reponse == null){ var r = reponseDesEtapes(x, Tev); if(r > 0){ x.reponse = r; x.reponseDesEtapes = true; } }
     }
+    var av = typeof casesDAvant === "function" ? casesDAvant(q) : null; if(av) x.avant = av;   // (8.2.2, Q1) les cases et le temps de réponse d'une question d'avant les types, gardés sous son type
     var a = typeof autresDe === "function" ? autresDe(q, CHAMPS_Q) : null; if(a) x.autres = copie(a);
     return x; });
   var comps = []; qs.forEach(function(q){ (typeof compsDeQ === "function" ? compsDeQ(q) : q.competences).forEach(function(c){ if(comps.indexOf(c) < 0) comps.push(c); }); });
@@ -14208,7 +14209,7 @@ function evalBrute(e, ancienne){
     if((q.competences || []).length) x.competences = q.competences; if(q.verifie) x.verifie = q.verifie; if(q.explication) x.explication = q.explication;
     x.bonus = !!q.bonus; x.longueurAssumee = !!q.assumee;
     // (8.1.0-a, A1) le nouveau format, puis les champs inconnus, tels quels
-    if(q.type != null) x.type = q.type; if(q.socle != null) x.socle = q.socle; if(q.etayage != null) x.etayage = q.etayage; if(q.etapes != null) x.etapes = q.etapes; if(q.decoupe != null) x.decoupe = q.decoupe;
+    if(q.type != null) x.type = q.type; if(q.socle != null) x.socle = q.socle; if(q.etayage != null) x.etayage = q.etayage; if(q.etapes != null) x.etapes = q.etapes; if(q.decoupe != null) x.decoupe = q.decoupe; if(q.avant) x.avant = q.avant;
     if(q.autres) Object.keys(q.autres).forEach(function(k){ if(x[k] === undefined) x[k] = q.autres[k]; });
     return x; }),
     createdAt:ancienne && ancienne.createdAt ? ancienne.createdAt : Date.now(), updatedAt:Date.now(), version:ancienne && ancienne.version ? ancienne.version : 1,
@@ -14424,7 +14425,7 @@ function QuestionEditee(p){
       h("div", {className:"ed-verif" + (q.verifie ? "" : " manque")},
         h("span", {className:"ed-lbl"}, "🎯 Ce qu'elle vérifie, pour le bilan de l'élève :", InfoI("Une courte phrase à l'infinitif, dans les mots de l'élève. Le bilan général s'en sert : « À revoir en priorité : … » quand l'élève rate la question, « Bravo, tu sais … » quand il réussit une question difficile. L'instance la remplit avec le prompt ; tu la corriges ici.")),
         h("input", {value:q.verifie || "", placeholder:"par exemple : trouver l'antécédent d'un pronom relatif", title:"Ce que vérifie la question " + (i + 1) + ", à l'infinitif.", onChange:function(e){ var v = e.target.value; maj(i, function(qq){ qq.verifie = v; }); }})),
-      nf && h(EtapesEditeesV, {q:q, i:i, maj:maj, types:p.types}),
+      nf ? h(EtapesEditeesV, {q:q, i:i, maj:maj, types:p.types}) : h(TypeAChoisirV, {q:q, i:i, maj:maj, types:p.types}),   // (8.2.2, Q1) une question d'avant les types reçoit son type ici
       h("div", {className:"ed-ligne"},
         temps("🧠 Réflexion", "reflexion", "s"),
         nf ? h("span", {className:"ed-temps", "data-reponse-etapes":"1", title:"Le tour de l'élève dure la somme des chronos de ses étapes ; ils se règlent dans les Réglages, type par type (« ⏱️ Les durées de la séance »)."}, "✋ Réponse : " + (q.reponse || 0) + " s, la somme des chronos de ses étapes")
@@ -14871,7 +14872,7 @@ function jsonDeV(e){ var x = {titre:e.titre, chapitre:e.chapitre || undefined, m
   var o = nouveauFormat(q) ? {type:q.type, socle:q.socle, etayage:q.etayage, enonce:q.enonce, niveau:q.niveau} : {enonce:q.enonce, choix:q.choix, bonnes:q.bonnes, niveau:q.niveau};
   if(q.reflexion != null) o.reflexion = q.reflexion; if(q.reponse != null && !q.reponseDesEtapes) o.reponse = q.reponse; if((q.competences || []).length) o.competences = q.competences;
   if(q.verifie) o.verifie = q.verifie; if(q.explication) o.explication = q.explication; if(q.bonus) o.bonus = true; if(q.assumee) o.longueurAssumee = true;
-  if(q.etapes != null) o.etapes = q.etapes; if(q.decoupe != null) o.decoupe = q.decoupe; if(q.autres) Object.keys(q.autres).forEach(function(k){ if(o[k] === undefined) o[k] = q.autres[k]; }); return o; })};
+  if(q.etapes != null) o.etapes = q.etapes; if(q.decoupe != null) o.decoupe = q.decoupe; if(q.avant) o.avant = q.avant; if(q.autres) Object.keys(q.autres).forEach(function(k){ if(o[k] === undefined) o[k] = q.autres[k]; }); return o; })};
   if(e.types) x.types = e.types; if(e.autres) Object.keys(e.autres).forEach(function(k){ if(x[k] === undefined) x[k] = e.autres[k]; });
   return JSON.stringify(v3Sans(x), null, 2); }
 // (8.0.14) la fusion de deux écritures : b la base commune, l ici, r ailleurs ; un champ resté comme b prend la valeur de r
@@ -14968,6 +14969,12 @@ function EditeurVC(p){
         h("select", {ref:gel.ref, onBlur:gel.quitter, value:ch ? (ch.id || SANS_CHAP) : "", title:"Le chapitre de l'évaluation : il donne son niveau et les compétences permises. « Sans chapitre pour l'instant » la laisse lancer, avec les 28 compétences ; un message te rappelle de la rattacher plus tard.", onChange:function(e){ var v = e.target.value, c = chapitreVue(v);
           changer(function(x){ x.chapitre = c ? c.id : null; x.chap = c ? c.court : null; x.niveau = c ? c.niveau : null; x.sansChapitre = v === SANS_CHAP; if(c) x.questions.forEach(function(q){ q.competences = (q.competences || []).filter(function(cc){ return c.comps.indexOf(cc) >= 0; }); }); }); }},
           h("option", {value:""}, "— à choisir —"), h("option", {value:SANS_CHAP}, "Sans chapitre pour l'instant"), gel.liste.map(function(c){ return h("option", {key:c.id, value:c.id, disabled:!c.numero}, c.libelle); }))),
+      /* (8.2.2, Q1) une évaluation de lecture (un type qui demande le texte, choisi ici pour une question d'avant les types) : l'éditeur réclamait « le texte de
+         l'évaluation de lecture » sans offrir où l'écrire (seul le collage avait le champ). Le même champ, avec ses mots du collage ; il s'enregistre au fil. */
+      (questionsDeLecture(ev.questions, ev.types).length > 0 || String(ev.texte || "").trim() !== "") && h("div", {className:"field", "data-texte-lecture":"1", style:{marginTop:".6rem"}},
+        h("label", null, "📖 Le texte étudié", InfoI("C'est une évaluation de lecture : sans le texte, pas de liste cachée. Colle ici le texte étudié, en entier ; il entre dans l'évaluation. Tu peux aussi demander à l'instance de création d'éval de l'ajouter au JSON (« texte »).")),
+        h("textarea", {value:ev.texte || "", placeholder:"Colle ici le texte étudié, en entier.", style:{minHeight:"120px"}, title:"Le texte étudié de l'évaluation de lecture : il entre dans l'évaluation à l'enregistrement.",
+          onChange:function(e){ var v = e.target.value; changer(function(x){ x.texte = v; }); }})),
       // (8.0.14) sans fiche : les compétences de ses séances ; ni fiche ni séance : les 28 (le message le dit) ; des séances sans compétences : le message d'avant
       ch && ch.numero && !ch.fiche && h("div", {className:"fen-note", "data-sans-competences":ch.source === "seances" ? "seances" : ch.aSeance ? "1" : "vide", title:"Les compétences d'un chapitre viennent de sa fiche dans MJPC (majeures et mineures). Tant qu'elle n'en a pas, l'éditeur propose celles que travaillent ses séances dans MJPC, sinon les 28 ; quand tu les auras posées dans sa fiche, il ne proposera plus qu'elles."},
         ch.source === "seances" ? "La fiche de ce chapitre, dans MJPC, n'a pas de compétences : l'éditeur propose celles que travaillent ses séances."
@@ -18607,7 +18614,7 @@ function commencePar(t, p){ return normT(t).indexOf(normT(p)) === 0; }
 
 /* ── A1 · ce que le collage connaît ; le reste est gardé tel quel, et dit ── */
 var CHAMPS_EVAL = ["titre", "chapitre", "mode", "questions", "texte", "types", "sansChapitre", "createdAt", "updatedAt", "version", "publiee", "demo", "test"];
-var CHAMPS_Q = ["enonce", "choix", "bonnes", "niveau", "reflexion", "reponse", "competences", "verifie", "explication", "bonus", "longueurAssumee", "type", "etapes", "socle", "etayage", "decoupe"];
+var CHAMPS_Q = ["enonce", "choix", "bonnes", "niveau", "reflexion", "reponse", "competences", "verifie", "explication", "bonus", "longueurAssumee", "type", "etapes", "socle", "etayage", "decoupe", "avant"];
 var CHAMPS_ETAPE = ["forme", "question", "choix", "bonnes", "liste", "faux", "fauxGardes", "competences", "chrono", "indices"];
 function champsInconnus(raw){
   var l = [];
@@ -18636,6 +18643,11 @@ function controlesEtapeNF(e){ var l = [];
     bi.forEach(function(x){ if(!(x >= 0 && x < e.choix.length)) l.push({court:"une bonne réponse parmi les choix", long:"elle désigne une bonne réponse qui n'existe pas (" + x + ") : numérote à partir de 0, sans dépasser " + (e.choix.length - 1) + "."}); });
   }
   return l; }
+/* (8.2.2, complément A2) un terme de moins de 3 lettres dans un menu long : la phrase du collage, une seule fois écrite ; le collage (verifierQuestionNF) et
+   l'éditeur, sous l'étape (EtapeEditeeV), la lisent. L'éditeur disait seulement « des réponses de 3 lettres au moins », sans dire quel terme ni quelle question. */
+function troisLettresNF(e){ if(e.forme !== "menu long") return [];
+  return vraisDe(e).concat(e.faux).filter(function(x){ return lettres(x) < LETTRES_MIN; }).map(function(x){ var n = lettres(x);
+    return "« " + x + " » a " + n + " lettre" + (n > 1 ? "s" : "") + " : une réponse en a 3 au moins, sinon la liste s'ouvrirait presque sans rien écrire. Reformule la question, ou ce terme, pour une réponse de 3 lettres au moins."; }); }
 // ce qui manque au contenu des étapes d'une évaluation : « la bonne réponse (question 3, étape 1) » (la découpe pour les élèves à PAP comprise)
 function manquesEtapesNF(ev){ var l = [];
   listeV(ev && ev.questions).forEach(function(q, i){ if(!nouveauFormat(q)) return;
@@ -18660,7 +18672,7 @@ function verifierQuestionNF(q, i, Tev, permises, compValide){
     if(t && t.etapes[k] && src.forme && src.forme !== t.etapes[k].forme) err.push(r + "elle est « " + src.forme + " » ; le type « " + t.nom + " » attend « " + t.etapes[k].forme + " » à cette étape.");
     controlesEtapeNF(e).forEach(function(c){ err.push(r + c.long); });   // (8.2.1, L6) la liste unique : bonne réponse, liste cachée, choix
     if(e.forme === "menu long"){
-      vraisDe(e).concat(e.faux).forEach(function(x){ var n = lettres(x); if(n < LETTRES_MIN) err.push(r + "« " + x + " » a " + n + " lettre" + (n > 1 ? "s" : "") + " : une réponse en a 3 au moins, sinon la liste s'ouvrirait presque sans rien écrire. Reformule la question, ou ce terme, pour une réponse de 3 lettres au moins."); });
+      troisLettresNF(e).forEach(function(m){ err.push(r + m); });   // (8.2.2, complément A2) la même phrase que sous l'étape, dans l'éditeur
       var vn = vraisDe(e).map(normT);
       e.faux.forEach(function(x){ if(vn.indexOf(normT(x)) >= 0) err.push(r + "« " + x + " » est à la fois un vrai terme et un faux terme."); });
     }
@@ -18683,7 +18695,8 @@ function texteManqueMsg(l){ return "C'est une évaluation de lecture (question" 
    format canonique : elle se voit dans la liste, marquée SANS_TYPE ; elle ne se lance nulle part (manquesNF, S.manques, ACT.lancerSeance) ; elle s'ouvre et
    s'enregistre dans l'éditeur comme les autres ; dès que chaque question a son type (et le reste de A3), elle se lance. La question d'avant n'est plus jouée en une
    étape « choix » (262) ; etapesDe la lit encore ainsi, pour une séance déjà jouée au nouveau déroulé sur une évaluation sans type (la 8.1.0 et la 8.1.1 le permettaient). */
-var SANS_TYPE = "⚠️ sans type : à refaire avec le prompt";
+// (8.2.2, complément A4 ; Paul, 22/11 10:04, « ok ta proposition 94 ») le type se donne maintenant dans l'éditeur : le texte le dit, mot pour mot
+var SANS_TYPE = "⚠️ sans type : choisis-le dans l'éditeur";
 function questionsSansType(e){ var l = []; listeV(e && e.questions).forEach(function(q, i){ if(!typeDeQ(q, e && e.types)) l.push(i + 1); }); return l; }
 function sansTypeV(e){ return questionsSansType(e).length > 0; }
 // A3 au lancement : ce qui manque à une évaluation au nouveau format (manquesV)
@@ -18699,14 +18712,71 @@ function manquesNF(e){
   return l.concat(manquesEtapesNF(e));   // (8.2.1, L6) le contenu des étapes : bonne réponse, liste cachée, choix
 }
 
+/* ── (8.2.2, Q1 ; dette QCM-P2 ; Paul, 21/11 23:15 « comment j'ajoute le type des questions à la main sur une éval à compléter ? », 23:19 « 66 oui »)
+   Donner un type, dans l'éditeur, à une question d'avant les types (des cases, « choix » et « bonnes », sans type ni étapes).
+   La cause : « 🧩 Type » n'était dessiné que pour une question déjà au nouveau format (c3-evals.js, « nf && EtapesEditeesV ») ; une question d'avant n'avait donc
+   aucun geste pour recevoir le type que l'éditeur lui réclame.
+   Le propriétaire de la donnée : l'évaluation (qcm/evaluations/<id>/questions/<n>), écrite par l'éditeur seul (evalBrute, enregistrée au fil). Une séance déjà
+   jouée n'est pas touchée : enregistrerEval lui garde l'évaluation telle qu'elle a servi (evalSnapshot), qu'etapesDe lit encore par l'ancien chemin.
+   1. Le type choisi, la question prend les étapes du type. La première étape « menu long » reçoit les textes des bonnes cases de Paul (ses bonnes réponses) et les
+      textes de toutes ses cases (sa liste cachée : les vrais termes, la bonne réponse comprise, comme le collage l'écrit) ; les faux termes restent vides ; une
+      étape « choix » reste vide. L'éditeur dit ce qui manque (controlesEtapeNF, manquesNF). L'étayage prend celui du type.
+   2. Rien de Paul ne se perd : ses cases et son temps de réponse sont gardés avec la question (« avant » : choix, bonnes, reponse), dans la base ; le tour de
+      l'élève dure alors la somme des chronos des étapes, comme pour toute question au nouveau format. L'énoncé, le niveau, la réflexion, les compétences,
+      l'explication, « ce qu'elle vérifie », le bonus et la longueur assumée ne sont pas touchés.
+   3. Revenir à « — à choisir — » rend la question telle qu'elle était (ses cases, son temps de réponse ; ni type, ni étapes, ni étayage, ni socle).
+   4. D'un type à l'autre : une étape de même forme au même rang garde ce que Paul y a écrit ; une étape que le nouveau type n'a pas disparaît de l'écran. Tant
+      que l'éditeur reste ouvert, la dernière étape que Paul a eue à chaque rang revient quand un type la redemande (memoTypes : la mémoire de l'éditeur,
+      jamais écrite dans la base), si ses cases n'ont pas changé entre-temps ; l'étayage, lui, prend toujours celui du type choisi.
+   5. (complément A1) Un type sans aucun menu long : sa première étape « choix » ou « choix multiple » reçoit les cases de Paul et ses bonnes cases, telles quelles.
+   Une question née au nouveau format (sans « avant ») : comme avant, le choix ne change que son type. ── */
+function casesDAvant(q){ var a = q && q.avant; return a && typeof a === "object" ? {choix:listeV(a.choix).map(String), bonnes:listeV(a.bonnes).map(Number), reponse:a.reponse == null ? null : +a.reponse} : null; }
+function etapesDuTypeQ(q, t, memo){
+  var a = casesDAvant(q) || {choix:[], bonnes:[]}, av = listeV(q.etapes), servi = false, copie = function(x){ return JSON.parse(JSON.stringify(x)); };
+  var bonnes = a.choix.filter(function(c, j){ return a.bonnes.indexOf(j) >= 0 && c.trim(); }).map(function(c){ return c.trim(); }), liste = a.choix.map(function(c){ return c.trim(); }).filter(Boolean);
+  // (8.2.2, complément A1) un type sans aucun menu long (« Choix multiple », Réglages de Paul, 22/11) : sa première étape « choix » ou « choix multiple » reçoit
+  // les cases de Paul telles quelles, dans son ordre, et ses bonnes cases à leurs places ; avec un menu long, rien ne change (le « Pourquoi ? » reste vide).
+  var sansMenu = !t.etapes.some(function(d){ return d.forme === "menu long"; });
+  return t.etapes.map(function(d, k){ var menu = d.forme === "menu long", x = [av[k], memo && memo[k]].filter(function(y){ return y && typeof y === "object" && (y.forme || "") === d.forme; })[0];
+    if(x){ if(menu || sansMenu) servi = true; return copie(x); }
+    if(menu && !servi){ servi = true; return {forme:"menu long", bonnes:bonnes, liste:liste}; }
+    if(sansMenu && !servi && (d.forme === "choix" || d.forme === "choix multiple")){ servi = true; return {forme:d.forme, choix:a.choix.slice(), bonnes:a.bonnes.slice()}; }
+    return {forme:d.forme}; });
+}
+function changerTypeQ(q, id, Tev){
+  id = id == null || id === "" ? null : String(id);
+  if(nouveauFormat(q) && !casesDAvant(q)){ q.type = id; return; }
+  var copie = function(x){ return JSON.parse(JSON.stringify(x === undefined ? null : x)); }, m = q.memoTypes;
+  // la mémoire de l'éditeur : à chaque rang, la dernière étape que Paul a eue sous les yeux ; elle ne vaut que pour les mêmes cases
+  if(nouveauFormat(q)){ var cle = JSON.stringify(casesDAvant(q)); if(!m || m.cases !== cle) m = {cases:cle, etapes:[], socle:null};
+    listeV(q.etapes).forEach(function(e, k){ m.etapes[k] = copie(e); }); m.socle = q.socle == null ? null : q.socle; q.memoTypes = m; }
+  if(id == null){ var a = casesDAvant(q); q.choix = a.choix; q.bonnes = a.bonnes; q.reponse = a.reponse; delete q.reponseDesEtapes;
+    delete q.type; delete q.etapes; delete q.etayage; delete q.socle; delete q.avant; return; }
+  if(!nouveauFormat(q)){ q.avant = {choix:listeV(q.choix).map(String), bonnes:listeV(q.bonnes).map(Number), reponse:q.reponse == null || q.reponseDesEtapes ? null : +q.reponse}; q.choix = []; q.bonnes = [];
+    if(m && m.cases === JSON.stringify(casesDAvant(q))){ if(m.socle != null) q.socle = m.socle; } else m = null; }
+  var t = typeDeQ({type:id}, Tev);
+  q.type = id;
+  if(t){ q.etapes = etapesDuTypeQ(q, t, m && m.etapes); q.etayage = t.etayage; }
+  var r = reponseDesEtapes(q, Tev); q.reponse = r > 0 ? r : null; q.reponseDesEtapes = r > 0;
+}
+// « 🧩 Type : » et son choix : le même pour une question au nouveau format et pour une question d'avant les types (mêmes types, même infobulle)
+function ChoixTypeV(p){
+  var q = p.q, i = p.i, T = typesV(), ids = idsTypes(T); if(q.type != null && ids.indexOf(String(q.type)) < 0) ids = [String(q.type)].concat(ids);
+  return h("label", {className:"reg-l"}, h("span", {className:"ed-lbl"}, "🧩 Type :"), h("select", {value:q.type == null ? "" : String(q.type), "data-type-q":i + 1, title:"Le type de la question " + (i + 1) + " : il donne ses étapes, leur forme et leurs chronos (Réglages, « 🧩 Les types d'évaluation »).",
+    onChange:function(e){ var v = e.target.value; p.maj(i, function(qq){ changerTypeQ(qq, v, p.types); }); }}, h("option", {value:""}, "— à choisir —"), ids.map(function(id){ return h("option", {key:id, value:id}, T[id] ? T[id].nom : id + " (absent des Réglages)"); })));
+}
+// une question d'avant les types : le seul choix de son type, au-dessus de ses cases
+function TypeAChoisirV(p){
+  return h("div", {className:"ed-nf", "data-type-a-choisir":p.i + 1, style:{margin:".4rem 0 .6rem", padding:".55rem .8rem", border:"2px solid #DDD6FE", borderRadius:"10px", background:"#F5F3FF"}},
+    h("div", {className:"row", style:{gap:".5rem 1rem", flexWrap:"wrap", alignItems:"center"}}, h(ChoixTypeV, {q:p.q, i:p.i, maj:p.maj, types:p.types})));
+}
+
 /* ── L'éditeur : une question au nouveau format montre son type, son étayage, socle ou pour aller plus loin, et ses étapes (leur contenu vient du JSON) ── */
 function EtapesEditeesV(p){
   var q = p.q, i = p.i, maj = p.maj, majEtape = function(k, f){ maj(i, function(qq){ var l = listeV(qq.etapes).map(function(x){ return JSON.parse(JSON.stringify(x || {})); }); l[k] = l[k] || {}; f(l[k]); qq.etapes = l; }); }, T = typesV(), t = typeDeQ(q, p.types), es = etapesDe(q, p.types), et = q.etayage == null || q.etayage === "" ? "" : +q.etayage;
-  var ids = idsTypes(T); if(q.type != null && ids.indexOf(String(q.type)) < 0) ids = [String(q.type)].concat(ids);
   return h("div", {className:"ed-nf", "data-nouveau-format":i + 1, style:{margin:".4rem 0 .6rem", padding:".55rem .8rem", border:"2px solid #DDD6FE", borderRadius:"10px", background:"#F5F3FF"}},
     h("div", {className:"row", style:{gap:".5rem 1rem", flexWrap:"wrap", alignItems:"center"}},
-      h("label", {className:"reg-l"}, h("span", {className:"ed-lbl"}, "🧩 Type :"), h("select", {value:q.type == null ? "" : String(q.type), "data-type-q":i + 1, title:"Le type de la question " + (i + 1) + " : il donne ses étapes, leur forme et leurs chronos (Réglages, « 🧩 Les types d'évaluation »).",
-        onChange:function(e){ var v = e.target.value; maj(i, function(qq){ qq.type = v || null; }); }}, h("option", {value:""}, "— à choisir —"), ids.map(function(id){ return h("option", {key:id, value:id}, T[id] ? T[id].nom : id + " (absent des Réglages)"); }))),
+      h(ChoixTypeV, {q:q, i:i, maj:maj, types:p.types}),
       h("label", {className:"reg-l"}, h("span", {className:"ed-lbl"}, "Étayage :"), h("select", {value:et, "data-etayage-q":i + 1, title:"L'étayage de la question " + (i + 1) + ", de 0 à 3 (198/205) : obligatoire avant le lancement." + (t ? " Celui du type : " + t.etayage + "." : ""),
         onChange:function(e){ var v = e.target.value; maj(i, function(qq){ qq.etayage = v === "" ? null : +v; }); }}, h("option", {value:""}, "— à choisir —"), ETAYAGES.map(function(x, k){ return h("option", {key:k, value:k}, k + " · " + x); }))),
       h("label", {className:"ed-bonus", style:{margin:0}}, h("button", {className:"ck" + (q.socle !== false ? " on" : ""), "data-local":"1", "aria-pressed":q.socle !== false, title:q.socle !== false ? "Décoche : la question devient « pour aller plus loin » (un élève qui a moins de questions par son PAP ne l'a pas)." : "Coche : la question est du socle (tous les élèves l'ont).", onClick:function(){ maj(i, function(qq){ qq.socle = qq.socle === false; }); }}, q.socle !== false ? "✓" : ""), "Socle (décoché : pour aller plus loin)")),
@@ -18743,9 +18813,11 @@ function EtapeEditeeV(p){
         return h("button", {key:n, className:"ck-b" + (on ? " on" : ""), "data-local":"1", "aria-pressed":on, "data-bonne-ed":(i + 1) + "-" + (k + 1) + "-" + n, title:(on ? "Ce choix est une bonne réponse de " + ref + " : clique pour l'enlever." : "Fait de ce choix " + (e.forme === "choix" ? "la" : "une") + " bonne réponse de " + ref + (e.forme === "choix" ? " (une étape « choix » n'en a qu'une)." : ".")),
           onClick:function(){ p.majEtape(k, function(x){ var b = listeV(x.bonnes).map(Number); x.bonnes = e.forme === "choix" ? [n] : b.indexOf(n) >= 0 ? b.filter(function(y){ return y !== n; }) : b.concat([n]).sort(function(u, v){ return u - v; }); }); }}, (on ? "✓ " : "") + (n + 1) + ". " + (c.length > 40 ? c.slice(0, 40) + "…" : c)); })));
   var refus = controlesEtapeNF(e);   // (8.2.1, L6) ce qui manque à l'étape, dit sur elle, comme le collage le dit
+  var courts = troisLettresNF(e);    // (8.2.2, complément A2) les termes de moins de 3 lettres, nommés sur l'étape
   return h("li", {"data-etape-ed":k + 1, style:{fontSize:".85rem", marginBottom:".45rem"}},
     h("div", null, h("strong", null, e.forme), " · ⏱ " + e.chrono + " s · " + det),
     refus.length > 0 && h("div", {className:"ed-etape-manque", "data-manque-etape":(i + 1) + "-" + (k + 1), style:{color:"#B91C1C", fontWeight:800, margin:".2rem 0"}}, refus.map(function(c){ return "⚠️ " + c.long.charAt(0).toUpperCase() + c.long.slice(1); }).join(" ")),
+    courts.length > 0 && h("div", {className:"ed-etape-manque", "data-trois-lettres":(i + 1) + "-" + (k + 1), style:{color:"#B91C1C", fontWeight:800, margin:".2rem 0"}}, courts.map(function(m){ return "⚠️ " + m; }).join(" ")),
     h("label", {className:"ed-etape-l"}, h("span", {className:"ed-lbl"}, "❓ La question de l'étape :"), h("input", {value:e.question || "", placeholder:(p.defaut && p.defaut.question) || "", "data-question-etape":(i + 1) + "-" + (k + 1),
       title:"La question de " + ref + ", telle que l'élève la lit à côté de « Étape " + (k + 1) + " » ; vide, celle du type.", onChange:function(ev){ var v = ev.target.value; p.majEtape(k, function(x){ x.question = v; }); }})),
     corps);
