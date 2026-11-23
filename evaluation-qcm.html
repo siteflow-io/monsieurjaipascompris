@@ -3947,7 +3947,7 @@ if(typeof window!=="undefined"&&window.addEventListener){
    etat « en_cours » / « terminee », evalSnapshot) sont lus tels quels, et tenus à jour à chaque passage. */
 
 /* La version de l'app (8.1.0-b) : la carte « ℹ️ Version » des Réglages l'affiche (c3-evals.js, etape2.js) ; la console du navigateur la lit aussi (QCM_VERSION). */
-var QCM_VERSION = "8.2.2.1-micro";
+var QCM_VERSION = "8.2.4";
 
 /* ── La base : la configuration de la 7.7.1, telle quelle ── */
 var FIREBASE_CONFIG = {apiKey:"AIzaSyD2ZcVITz80UTUZWiWmTg13PGLyPNMV6MY",authDomain:"mjpc-hub.firebaseapp.com",databaseURL:"https://mjpc-hub-default-rtdb.europe-west1.firebasedatabase.app",projectId:"mjpc-hub",storageBucket:"mjpc-hub.firebasestorage.app",messagingSenderId:"1037162673483",appId:"1:1037162673483:web:19b61a10dd7a1c21d9a4ce"};
@@ -4116,11 +4116,18 @@ function horsTempsDe(s){
   if(jl.length && s.lancee && s.lancee.nf) Object.keys(s.reponses || {}).forEach(function(qi){ Object.keys(s.reponses[qi] || {}).forEach(function(x){ var r = s.reponses[qi][x], et = r && r.etapes; if(!et || typeof et !== "object") return;
     Object.keys(et).forEach(function(k){ var y = et[k], t = y && +y.recu; if(!y || !isFinite(t) || !t || !phaseA(jl, t)) return;
       var suite = function(p){ return !!p && (p.ph === "reponse" || p.ph === "rouvert") && +p.qi !== +qi && !!((disp[x] || {})[p.qi]); };
-      if(ouverteA(s, qi, t) || suite(phaseA(jl, t)) || suite(phaseA(jl, t - HT_MARGE))) return;
+      /* (8.2.4, R1 ; Paul, points 31 et 42) une étape arrivée à la base après le départ de l'élève (« 🚫 Parti », pas encore « ↩️ Revenu » : departEnCoursQCM)
+         ne compte pas, même dans le temps de la question : elle est gardée à part comme les autres (« parti »), Paul la voit et peut la compter. */
+      var apresDepart = departEnCoursQCM(s, x, t - HT_MARGE);
+      if(!apresDepart && (ouverteA(s, qi, t) || suite(phaseA(jl, t)) || suite(phaseA(jl, t - HT_MARGE)))) return;
+      var pourquoi = apresDepart ? "parti" : "arrivee";
       var adm = ((((s.essais || {})[qi] || {})[x] || {})["a" + k] || {}).admis;   /* (G9) Paul a cliqué « ✓ compter » : l'étape reste, la mention aussi */
-      if(adm){ hte.push(Object.assign({}, y, {qi:+qi, x:x, etape:+k, refuse:"arrivee", ferme:fermeeA(s, qi, t), admis:adm})); return; }
-      if(y.terme != null || (y.choix != null && [].concat(typeof y.choix === "object" && !Array.isArray(y.choix) ? Object.keys(y.choix) : y.choix).length)) hte.push(Object.assign({}, y, {qi:+qi, x:x, etape:+k, refuse:"arrivee", ferme:fermeeA(s, qi, t)}));
-      delete et[k]; }); }); });
+      if(adm){ hte.push(Object.assign({}, y, {qi:+qi, x:x, etape:+k, refuse:pourquoi, ferme:fermeeA(s, qi, t), admis:adm})); return; }
+      if(y.terme != null || (y.choix != null && [].concat(typeof y.choix === "object" && !Array.isArray(y.choix) ? Object.keys(y.choix) : y.choix).length)) hte.push(Object.assign({}, y, {qi:+qi, x:x, etape:+k, refuse:pourquoi, ferme:fermeeA(s, qi, t)}));
+      delete et[k]; if(apresDepart) r.__parti = true; });
+    /* (8.2.4, R1) plus aucune étape après ce retrait : l'élève parti n'a rien répondu à cette question. Sa réponse vide sort des réponses lues, pour qu'une
+       question posée après son départ reste « pas posée pour lui » (horsQuestionQCM), et ne devienne pas un 0. */
+    if(r.__parti){ delete r.__parti; if(!Object.keys(et).length) delete s.reponses[qi][x]; } }); });
   try { Object.defineProperty(s, "horsTempsEtapes", {value:hte, enumerable:false, configurable:true, writable:true}); } catch(e){ s.horsTempsEtapes = hte; }
   /* (8.1.0, G9 ; Paul, 19/11 : « compter une réponse hors temps, comme avant ») un clic fait après la fin du chrono, que Paul a compté (« ✓ compter » :
      essais/<q>/<élève>/<clé>/admis) : il devient l'étape de l'élève, ici, à la lecture, pour tout ce qui lit la séance (la note, les compétences, le bilan,
@@ -4374,6 +4381,7 @@ var SCN = (function(){
   S.seul = function(x, sid){ var v = S.voisinDe(x, sid); return !v || S.presents(null, sid).indexOf(v) < 0; };
   // la moitié de cet élève peut-elle répondre maintenant ? (le tour de sa moitié ; seul : le premier tour où il n'a pas encore répondu ; une question rouverte pour lui)
   S.aLaMain = function(x, sid){ var e = S.etat(sid); if(!e || e.qi == null) return false;
+    if(S.partis(sid)[x]) return false;   // (8.2.4, R1 ; Paul, règle 17) l'élève parti ne répond plus : sa moitié n'a la main à aucun tour, jusqu'à « ↩️ Revenu »
     if(e.ph === "rouvert") return e.pour === x;
     if(e.ph !== "reponse") return false;
     if(e.rouvert === "tous" && S.reponse(x, e.qi, sid) && S.reponse(x, e.qi, sid).rouverte !== "tous") return false;
@@ -5088,7 +5096,8 @@ var SCN = (function(){
   S.mesEvaluations = function(x, k, classe){
     return S.seances(classe || S.classe()).filter(function(se){ return !se.demo && (S.eleves(se.id).indexOf(x) >= 0) && (se.fin || se.id === S.sid()); }).map(function(se){
       var abs = sansNoteQCM(S.sess(se.id), x, S.evalDeSeance(se.id)), rendue = S.rendueAu(se.id);   // (8.2.1, N1) l'élève sans note : « absente »
-      return {titre:se.titre, date:se.date, etat:abs ? "absente" : rendue ? "bilan" : "relecture", note:abs || !rendue ? null : S.note(x, k, se.id), seance:se.id, nf:S.nf(se.id)};
+      return {titre:se.titre, date:se.date, etat:abs ? "absente" : rendue ? "bilan" : "relecture", note:abs || !rendue ? null : S.note(x, k, se.id), seance:se.id, nf:S.nf(se.id),
+        sansQuestion:abs && presentSansQuestionQCM(S.sess(se.id), x, S.evalDeSeance(se.id))};   // (8.2.4, R5) présent, sans question qui compte : sa phrase à lui
     });
   };
 
@@ -5190,6 +5199,16 @@ function absentPartoutQCM(s, x){
 function partiAQCM(s, x, t){ if(!s || !t) return false; var pt = (s.partis || {})[x]; if(pt && pt <= t) return true;
   var hs = (s.presence_history || {})[x]; if(!hs) return false; var ev = Object.keys(hs).map(function(k){ return hs[k]; }).filter(function(e){ return e && e.ts <= t; }).sort(function(a, b){ return a.ts - b.ts; });
   if(!ev.length) return false; var dernier = ev[ev.length - 1]; return dernier.etat === "absent" && listeQCM806(s.absents).indexOf(x) < 0; }
+/* (8.2.4, R1) l'élève x était-il parti à l'instant t, par « 🚫 Parti », sans « ↩️ Revenu » depuis ? Lu dans l'historique de présence, dans le cours de
+   l'instant t (une séance rouverte ne garde pas le départ du cours d'avant) : le dernier évènement avant t est un départ (etat « absent », marqué parti par
+   ACT.depart depuis la 8.2.4). Un absent de l'appel, ou un départ d'une séance d'avant la 8.2.4 (sans la marque), n'est pas un départ ici : rien ne change
+   pour les séances déjà jouées. */
+function departEnCoursQCM(s, x, t){
+  if(!s || !t) return false; var hs = (s.presence_history || {})[x]; if(!hs || typeof hs !== "object") return false;
+  var C = coursSeanceQCM(s), c = C[0]; C.forEach(function(k){ if(k.debut <= t) c = k; });
+  var ev = Object.keys(hs).map(function(k){ return hs[k]; }).filter(function(e){ return e && +e.ts >= ((c && c.debut) || 0) && +e.ts <= t; }).sort(function(a, b){ return a.ts - b.ts; });
+  var d = ev[ev.length - 1]; return !!d && d.etat === "absent" && d.parti === true;
+}
 function nfQCM(s){ return !!(s && s.lancee && s.lancee.nf && s.lancee.mode !== "papier"); }
 function termineeQCM(s){ return !!s && (s.etat === "terminee" || s.etat === "finie" || s.phase === "finie" || !!(s.deroule && s.deroule.ph === "fin")); }
 /* la question qi pour l'élève x : « e » écartée ; « x » pas posée pour lui (posée sans réponse de sa part pendant son absence ou après son départ ; au nouveau
@@ -5217,6 +5236,12 @@ function sansQuestionQCM(s, x, ev){
 }
 // l'élève sans note : absent à tous les cours où une question a été posée, ou aucune question qui compte. « Absent », partout.
 function sansNoteQCM(s, x, ev){ return absentPartoutQCM(s, x) || sansQuestionQCM(s, x, ev); }
+/* (8.2.4, R5 ; Paul, points 40 et 41) l'élève PRÉSENT qui n'a eu aucune question qui compte (parti avant la première, toutes annulées ou écartées, le bonus seul…)
+   n'a pas de note, comme en 8.2.1 (sansQuestionQCM, la seule règle de « a-t-il eu une question qui compte ») ; mais il était là : sa tablette et « 📊 Mes
+   évaluations » ne lui disent plus « Tu étais absent(e) » ni « 0 point sur 0 », elles lui disent cette phrase, mot pour mot celle de Paul. L'absent de l'appel
+   garde « Tu étais absent(e) ». */
+var TEXTE_SANS_QUESTION = "Aucune question ne t'a été posée : tu n'as pas de note pour cette évaluation.";
+function presentSansQuestionQCM(s, x, ev){ return !absentPartoutQCM(s, x) && sansQuestionQCM(s, x, ev); }
 
 /* ══════════════════════ ACT : les gestes de Paul ══════════════════════ */
 function _ph717(ph){ return {appel:"idle", entree:"idle", pret:"idle", reflexion:"reflexion", passage:"reponse", reponse:"reponse", b:"attente", close:"attente", rouvert:"reponse",
@@ -5411,7 +5436,12 @@ var ACT = (function(){
     var plus = {}; plus["rouverts/" + qi] = x; plus["reouverts/" + x] = true;
     return poserDeroule(id, {ph:"rouvert", qi:qi, tour:SCN.cote(x) === SCN.premierCote(qi) ? 1 : 2, cote:SCN.cote(x), duree:SCN.tempsDe(qi).reponse, pour:x}, plus); };
   A.depart = function(x){ var id = sid(); if(!id) return Promise.resolve(); var maj = {}, now = LIVE.maintenant(); maj[cheminS(id, "partis/" + x)] = now;
-    maj[cheminS(id, "presence_history/" + x + "/h_" + now)] = {ts:now, etat:"absent"}; return ecrireQCM(maj, "depart"); };
+    maj[cheminS(id, "presence_history/" + x + "/h_" + now)] = {ts:now, etat:"absent"};
+    /* (8.2.4, R1) la marque du départ (« parti »), dans la même ligne de l'historique : c'est elle que lit departEnCoursQCM pour qu'une réponse arrivée au hub
+       après le départ ne compte pas. Elle part dans une écriture À PART, après la première (la règle de la 8.0.11c) : si la base refuse ce champ nouveau, le
+       départ est gardé quand même, comme avant. */
+    var marque = {}; marque[cheminS(id, "presence_history/" + x + "/h_" + now + "/parti")] = true;
+    return ecrireQCM(maj, "depart").then(function(r){ ecrireQCM(marque, "depart (marque)").catch(function(e){ console.warn("QCM : la marque du départ n'a pas été écrite", e); }); return r; }); };
   /* (15/10, reprise 7 point 13) un élève absent à l'appel, marqué présent plus tard par Paul : il quitte `absents` et prend la moitié libre d'une
      tablette où un élève est seul (`seul`), sinon une moitié libre, sinon une tablette nouvelle (les règles de l'arrivé après l'appel) ;
      sur la tablette de celui qui était seul, l'autre moitié s'ouvre pour lui (ELV.ici().combien passe à 2) */
@@ -5687,6 +5717,9 @@ var ELV = (function(){
   function qui(x){ return x || (E.courant && E.cotes[E.courant]) || null; }
   function sid(){ return SCN.sid(); }
   function w(chemin, v, quoi){ var id = sid(); if(!id) return Promise.resolve(); var maj = {}; maj[cheminS(id, chemin)] = v; return ecrireQCM(maj, quoi); }
+  // (8.2.4, R1 ; Paul, règle 17) l'élève marqué « 🚫 Parti » : sa moitié est voilée (EcrPartiH), et aucun geste de sa moitié n'écrit plus rien, jusqu'à « ↩️ Revenu »
+  function parti(x){ return !!(x && SCN.partis()[x]); }
+  var REFUS_PARTI = {ok:false, parti:true};
   E.choisirClasse = function(classe){ LIVE.classeSlug = classe; garder(); };
   // (point 13) « Combien êtes-vous ? » n'est plus : gardé pour les appels d'avant, sans effet sur le nombre de moitiés (E.nombre)
   E.combien = function(n){ E.n = n; E.fin = false; garder(); };
@@ -5785,6 +5818,12 @@ var ELV = (function(){
        quand il était sur CETTE tablette, avant qu'elle ne soit remise à zéro ; la 8.0.15 envoyait alors chacun des deux vers sa propre tablette */
     var v0 = t ? SCN.voisinDe(x) : null;
     if(t && !autre && v0 && v0 !== E.cotes.g && v0 !== E.cotes.d && SCN.entreCeCours(v0) && enLigneAilleurs(v0)) return envoyer(x, t.n, v0);
+    /* (8.2.4, complément B, B1) l'arrivée d'un élève absent à l'appel, entré par son code : la même ligne « présent » de l'historique de présence que
+       « ↩️ Revenu » (ACT.marquerPresent), dans la même écriture que sa sortie de la liste des absents. Sans elle, sa dernière ligne restait « absent » alors
+       qu'il n'était plus dans les absents : partiAQCM le lisait « parti », et une question laissée sans réponse après son arrivée sortait de son total au
+       lieu de valoir 0. Qui écrit l'arrivée : cette entrée et ACT.marquerPresent ; qui la lit : partiAQCM et absentAuCoursQCM. Une séance jouée avant
+       n'a pas cette ligne : elle se lit comme avant. */
+    var arrivee = function(maj){ var now = LIVE.maintenant(); maj[cheminS(id, "presence_history/" + x + "/h_" + now)] = {ts:now, etat:"present"}; };
     if(!t && id){ // pas dans la grille (arrivé après l'appel) : une moitié vide l'accueille
       // (8.0.5, dette 181) jamais à côté d'un « 🚫 Jamais avec » de MJPC : la moitié libre d'une tablette dont l'autre élève l'exclut ne l'accueille pas
       var possible = function(p){ var o = p.g || p.d; return !o || !SCN.binomesRefus(x, o); };
@@ -5797,11 +5836,11 @@ var ELV = (function(){
           // nouvelle). Aucun écran d'élève ne montre l'exclusion (l'infobulle de « 🚫 Jamais avec… »)
           var occ = libre ? (libre.g || libre.d) : null; if(!occ) return Promise.resolve({ok:false, eleve:x, err:SCN.pre(x) + ", lève la main."});
           var c0 = libre.g ? "d" : "g"; maj[cheminS(id, "places/" + libre.n + "/" + c0)] = x; maj[cheminS(id, "places/" + libre.n + "/seul")] = null;
-          maj[cheminS(id, "absents")] = SCN.absents().filter(function(y){ return y !== x; }); ecrireQCM(maj, "placer arrivé");
+          maj[cheminS(id, "absents")] = SCN.absents().filter(function(y){ return y !== x; }); arrivee(maj); ecrireQCM(maj, "placer arrivé");
           return envoyer(x, libre.n, occ); } }
       if(libre){ var c = libre.g ? "d" : "g"; maj[cheminS(id, "places/" + libre.n + "/" + c)] = x; maj[cheminS(id, "places/" + libre.n + "/seul")] = null; t = {n:libre.n, cote:c}; }
       else { var nn = SCN.places().length + 1; maj[cheminS(id, "places/" + nn)] = {g:x, d:null, seul:true}; t = {n:nn, cote:"g"}; }
-      maj[cheminS(id, "absents")] = SCN.absents().filter(function(y){ return y !== x; }); ecrireQCM(maj, "placer arrivé");
+      maj[cheminS(id, "absents")] = SCN.absents().filter(function(y){ return y !== x; }); arrivee(maj); ecrireQCM(maj, "placer arrivé");
     }
     if(t && E.tab && E.tab !== t.n && autre) return envoyer(x, t.n, SCN.voisinDe(x));
     if(t) E.tab = t.n;
@@ -5812,13 +5851,14 @@ var ELV = (function(){
     if(typeof mjpcRetirerBoutonProf === "function") mjpcRetirerBoutonProf();
     return Promise.resolve({ok:true, eleve:x, tablette:E.tab, cote:c2, voisin:SCN.voisinDe(x)});
   }
-  E.cocher = function(attest, ligne, x){ x = qui(x); if(!x) return Promise.resolve(); var a = SCN.attestDe(attest, x) || {}; return w("attest/" + attest + "/" + x, {lignes:Math.max(ligne, a.lignes || 0), fini:!!a.fini, ms:LIVE.maintenant()}, "cocher"); };
+  E.cocher = function(attest, ligne, x){ x = qui(x); if(!x) return Promise.resolve(); if(parti(x)) return Promise.resolve(REFUS_PARTI); var a = SCN.attestDe(attest, x) || {}; return w("attest/" + attest + "/" + x, {lignes:Math.max(ligne, a.lignes || 0), fini:!!a.fini, ms:LIVE.maintenant()}, "cocher"); };
   // (8.0.9) « Oui, j'ai la feuille de … » : x confirme qu'il tient la feuille de son voisin et a sa moitié devant lui ; rien n'attend cette confirmation
   E.confirmerCroisee = function(x, feuille){ if(!x) return Promise.resolve(); return w("croisee/" + SCN.coursN() + "/" + x, {feuille:feuille || null, ms:LIVE.maintenant()}, "confirmerCroisee"); };
-  E.commencer = function(x, attest){ x = qui(x); if(!x) return Promise.resolve(); var n = attest || ((SCN.etat() || {}).ph === "att2" ? 2 : 1); var a = SCN.attestDe(n, x) || {};
+  E.commencer = function(x, attest){ x = qui(x); if(!x) return Promise.resolve(); if(parti(x)) return Promise.resolve(REFUS_PARTI); var n = attest || ((SCN.etat() || {}).ph === "att2" ? 2 : 1); var a = SCN.attestDe(n, x) || {};
     return w("attest/" + n + "/" + x, {lignes:a.lignes || 0, fini:true, ms:LIVE.maintenant()}, "commencer"); };
   // répondre : la forme de la 7.7.1 ({choix, ts}), plus le tour et l'heure ; une réponse donnée à une question rouverte est définitive
   E.repondre = function(qi, choix, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve(); var e = SCN.etat() || {};
+    if(parti(x)) return Promise.resolve(REFUS_PARTI);
     var ouvert = e.qi === qi && SCN.aLaMain(x) && (SCN.reste(e) == null || SCN.reste(e) > 0);
     /* (8.0.11c) jamais de perte silencieuse : un clic arrivé juste après la fin du temps (les choix se ferment à la seconde près) n'est pas compté,
        mais il est gardé (essai « refuse ») et montré à Paul avec les réponses hors temps (HorsTempsH) */
@@ -5852,6 +5892,7 @@ var ELV = (function(){
        à la fin du tour. La tablette replie l'étape dès que son chrono est fini (chronologieNF, la même règle, une seule écriture) ; un clic parti dans la
        seconde où l'écran n'est pas encore redessiné comptait (une validation jusqu'à 2 s après). Il est maintenant gardé « ⏱ hors temps », comme à la fin du tour. */
     var etapeFinie = false;
+    if(parti(x)) return Promise.resolve(REFUS_PARTI);   // (8.2.4, R1) sa moitié est voilée : rien ne s'y clique ; un appel venu d'ailleurs n'écrit rien
     if(!suite && e.qi === qi && e.depuis && e.duree && typeof chronologieNF === "function"){ try {
       var chr = chronologieNF(SCN.etapes(qi, null, x), SCN.etapesDe(x, qi), +e.depuis, +e.duree, LIVE.maintenant())[k]; etapeFinie = !!chr && chr.etat === "sans"; } catch(ex){ console.error("QCM : le chrono de l'étape", ex); } }
     if(etapeFinie || !suite && (e.qi !== qi || SCN.dispense(x, qi) || !SCN.aLaMain(x)) || !(SCN.reste(e) == null || SCN.reste(e) > 0)){
@@ -5878,17 +5919,18 @@ var ELV = (function(){
     // (8.2.1, L1) la validation de l'étape (sa réponse entière, sa certitude) est gardée sur la tablette jusqu'à la réponse du hub, et repart à la réouverture (ENVOIS)
     if(v.valide) return ENVOIS.envoyer("etape|" + id + "|" + x + "|" + qi + "|" + k + "|", id, m, "étape " + (k + 1) + " (" + Object.keys(v).join(", ") + ")", {chemin:cheminS(id, base + "/etapes/" + k + "/ms"), ms:msE}, mr);
     return ecrireQCM(m, "étape " + (k + 1) + " (" + Object.keys(v).join(", ") + ")").then(function(r){ ecrireQCM(mr, "étape " + (k + 1) + " (recu)").catch(function(){}); return r; }); };   // (recu : sans attendre)
-  E.direB = function(qi, ouiNon, x){ x = qui(x); return x ? w("b/" + qi + "/" + x, ouiNon, "direB") : Promise.resolve(); };
+  E.direB = function(qi, ouiNon, x){ x = qui(x); if(parti(x)) return Promise.resolve(REFUS_PARTI); return x ? w("b/" + qi + "/" + x, ouiNon, "direB") : Promise.resolve(); };
   // la moitié de cet élève doit-elle dire B maintenant ? (la phase b de son tour, ou la suite déjà commencée par un geste de Paul : bPour)
   E.doitDireB = function(x){ return SCN.doitDireB(qui(x)); };
   // (8.1.0-c, C2) « je crois sa réponse juste » ou « fausse » : x est celui qui juge, le clic se range sous son voisin (lectures/<q>/<voisin>)
   E.juger = function(qi, avis, x){ x = qui(x); if(!x || ["juste", "fausse"].indexOf(avis) < 0) return Promise.resolve({ok:false}); var e = SCN.etat() || {}, v = SCN.voisinDe(x);
+    if(parti(x)) return Promise.resolve(REFUS_PARTI);
     if(e.ph !== "lecture" || e.qi !== qi || !v) return Promise.resolve({ok:false});
     // (8.2.1, L1) gardé sur la tablette jusqu'à la réponse du hub (ENVOIS) : « C'est noté » ne vient qu'après
     var id = sid(), ms = LIVE.maintenant(), maj = {}; maj[cheminS(id, "lectures/" + qi + "/" + v)] = {avis:avis, par:x, ms:ms};
     return ENVOIS.envoyer("juger|" + id + "|" + qi + "|" + x + "|", id, maj, "juger", {chemin:cheminS(id, "lectures/" + qi + "/" + v), ms:ms}); };
   // (8.2.1, L1) l'estimation : gardée sur la tablette jusqu'à la réponse du hub (ENVOIS) ; elle ne repart pas si le hub en a déjà une
-  E.estimer = function(niveau, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve(); var maj = {}; maj[cheminS(id, "autoevals/" + x)] = niveau;
+  E.estimer = function(niveau, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve(); if(parti(x)) return Promise.resolve(REFUS_PARTI); var maj = {}; maj[cheminS(id, "autoevals/" + x)] = niveau;
     return ENVOIS.envoyer("estim|" + id + "|" + x + "|", id, maj, "estimer", {chemin:cheminS(id, "autoevals/" + x), ms:null}); };
   // lire la feuille du voisin : x est le propriétaire de la feuille (sa moitié) ; le lecteur est son voisin
   // (8.0.5, Paul 156, R3) une feuille que Paul a lue (le soir, « Lire les copies », ou une alerte tranchée : par:"prof") ne se relit plus en classe :
@@ -5896,7 +5938,7 @@ var ELV = (function(){
   E.lire = function(qi, choix, x){ x = qui(x); if(!x) return Promise.resolve(); var v = SCN.voisinDe(x), l0 = SCN.lecture(x, qi); if(l0 && l0.par === "prof") return Promise.resolve({ok:false, dePaul:true});
     return w("lectures/" + qi + "/" + x, {choix:choix === "aucun" ? "aucun" : (choix || []).slice().map(Number).sort(function(a, b){ return a - b; }), par:v || x, ms:LIVE.maintenant()}, "lire"); };
   // la co-évaluation : « ok », « mal » ou « peut » ; « mal » ouvre une alerte que Paul tranche
-  E.coeval = function(statut, qi, ecrit, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve();
+  E.coeval = function(statut, qi, ecrit, x){ x = qui(x); var id = sid(); if(!x || !id) return Promise.resolve(); if(parti(x)) return Promise.resolve(REFUS_PARTI);
     var maj = {}, now = LIVE.maintenant(); maj[cheminS(id, "coeval/" + x)] = {statut:statut, qi:qi == null ? null : qi, ecrit:ecrit == null ? null : ecrit, ms:now};
     var aid = statut === "mal" && qi != null ? "a_" + x + "_" + qi : null, retirees = 0;
     if(aid) maj[cheminS(id, "alertes/" + aid)] = {qi:qi, eleves:[x, SCN.voisinDe(x)].filter(Boolean), ms:now, ecrit:ecrit == null ? null : ecrit, lu:(SCN.lecture(x, qi) || {}).choix || null};
@@ -6974,7 +7016,7 @@ function Feuille(){
 
 /* ── Rouvrir pour un élève (331, 411) : Théo n'a pas répondu à la question 2 ── */
 var THEO = {cle:"T", nom:"CHEVALLIER Théo", prenom:"Théo"};
-function etatQ2SansTheo(p){ if(p === "Théo") return {cls:"m-pasrep", st:"⏳ pas de réponse"}; return couleur(p, 1, false); }
+function etatQ2SansTheo(p){ if(p === "Théo") return typeof pasDeReponseH === "function" ? pasDeReponseH(false) : {cls:"m-pasrep", st:"∅ pas de réponse"};   /* (8.2.4, R2) la question est close */ return couleur(p, 1, false); }
 function RouvrirUn(){
   var fond = Pilot({phase:"attente", qi:1, stats:statsQ(), passees:[0, 1], etat:etatQ2SansTheo,
     legende:LEG_Q.slice(0, 4).concat([["#fff","pas de réponse","2px dashed #EF4444"]])});
@@ -8267,6 +8309,9 @@ function HautModeTestV(){
       h("div", {className:"row"},
         h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", title:"Télécharge l'état du mode test dans un fichier.", onClick:function(){ var S = v3Sessions(), o = {}; Object.keys(S).forEach(function(k){ if(S[k] && S[k].classeSlug === CLASSE_TEST) o[k] = S[k]; });
           telecharger("qcm-test-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify({classe:v3Classes()[CLASSE_TEST] || null, evaluation:v3Evals()[TEST_EVAL] || null, sessions:o}, null, 2)); }}, "📥 Exporter snapshot test"),
+        /* (8.2.4, R3 ; Paul, point 33) l'écran du Mode test n'avait pas « 📺 Ouvrir vue tableau » (seuls ses autres écrans l'avaient, par l'en-tête de la console) :
+           le même bouton, ici, ouvre le tableau de la séance de test (ouvrirTableau, c3-gestes.js) */
+        h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", "data-tableau-test":"1", title:BULLE_TABLEAU_TEST, onClick:function(){ ouvrirTableau(); }}, "📺 Ouvrir vue tableau"),
         h("button", {className:"btn btn-primary btn-sm", "data-va":"c-qr", title:"Montre le QR de ton téléphone : il pilote le mode test comme une vraie séance."}, "📱 QR pilotage"),
         SortirTestV())),
     h("div", {className:"test-info", style:{marginTop:".8rem"}},
@@ -8403,12 +8448,18 @@ function SeancesTestV(){
           h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-rouvrir-seance" + sq, title:"Rouvre la séance de test, après une confirmation, comme au cours suivant : l'appel, des binômes refaits, puis elle reprend là où elle s'était terminée."}, "🔓 Rouvrir"),
           h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-resultats" + sq, title:nf ? "Ouvre les résultats de la séance de test : les notes en points, la fiche de chacun. « 🧪 Mode test » te ramène ici." : "Ouvre les résultats de la séance de test : les notes d'après la feuille, les feuilles à lire. « 🧪 Mode test » te ramène ici."}, "📊 Résultats"))); })));
 }
+/* (8.2.4, R3) l'infobulle de « 📺 Ouvrir vue tableau » en Mode test (l'en-tête du Mode test, et celui de la console tant que le Mode test est actif) */
+var BULLE_TABLEAU_TEST = "Ouvre la vue tableau de la séance de test, à glisser sur le vidéoprojecteur : l'énoncé et le chrono de ta répétition, jamais les choix. Ne change rien à la séance. Hors du Mode test, ce bouton rouvre le tableau de ta vraie classe.";
+var BULLE_FINIR_TEST = "Met la séance de test en pause, avec son état exact, pour répéter une évaluation en deux séances : « ▶️ Reprendre » paraît ensuite ici, dans le Mode test. Demande une confirmation. « 🗑️ Sortir et purger » efface aussi la séance en pause.";
 function ModeTestVC(){
   useV3();
   var zone = React.useRef(null);
   useEffect(function(){ if(!zone.current) return;
-    function fermer(){ Array.prototype.forEach.call(zone.current ? zone.current.querySelectorAll("button") : [], function(b){ if(/Finir à une autre heure/.test(b.textContent || "") && !b.disabled){
-      b.disabled = true; b.removeAttribute("data-va"); b.title = "Fermé en mode test : la séance d'essai ne se reprend pas à une autre heure ; « 🗑️ Sortir et purger » la termine."; } }); }
+    /* (8.2.4, R4 ; Paul, point 35 : l'évaluation des 4e demande deux séances) « ⏸️ Finir à une autre heure » n'est plus fermé en Mode test : il se joue, pour
+       répéter une évaluation en deux séances. La séance de test mise en pause paraît ici, dans le Mode test (« ⏸️ Séance à reprendre », plus bas), et
+       « 🗑️ Sortir et purger » l'efface avec le reste. Son infobulle le dit (celle de la console promettait la reprise dans « 🎯 Pilotage classe »). */
+    function fermer(){ Array.prototype.forEach.call(zone.current ? zone.current.querySelectorAll("button") : [], function(b){ if(/^⏸️ Finir à une autre heure$/.test((b.textContent || "").trim()) && !b.closest(".checkin-overlay,.fen-fond,.modal-back") && b.title !== BULLE_FINIR_TEST){
+      b.title = BULLE_FINIR_TEST; b.setAttribute("data-finir-test", "1"); } }); }
     fermer(); var mo = new MutationObserver(fermer); mo.observe(zone.current, {childList:true, subtree:true}); return function(){ mo.disconnect(); }; }, []);
   useEffect(function(){ preparerModeTest(); remettreDemo(); });
   var se = testSession(), d = se ? deroule(se.S) || {} : {};
@@ -8418,7 +8469,9 @@ function ModeTestVC(){
   if(typeof LANCEMENT !== "undefined" && LANCEMENT.classe !== CLASSE_TEST){ LANCEMENT.classe = CLASSE_TEST; LANCEMENT.evalId = TEST_EVAL; }
   var panneau;
   if(se && typeof EcranConsoleHeure === "function") panneau = h("div", {className:"test-console"}, EcranConsoleHeure());
-  else panneau = h("div", {className:"test-console"}, h(SeancesTestV), h(LancementTestV));
+  /* (8.2.4, R4) la séance de test finie à une autre heure : sa carte « ⏸️ Séance à reprendre », la même qu'en classe (CarteRepriseV lit la classe du lancement,
+     ici la classe de test), en tête du panneau */
+  else panneau = h("div", {className:"test-console"}, typeof CarteRepriseV === "function" ? h("div", {"data-reprise-test":"1"}, h(CarteRepriseV)) : null, h(SeancesTestV), h(LancementTestV));
   return h("div", {className:"prof-wrap cons mode-test"},
     DECO.map(function(e, i){ return h("span", {key:i, className:"deco"}, e); }),
     h("div", {className:"prof full"},
@@ -9153,7 +9206,7 @@ var BULLES = {
   "📊 Résultats ": "Ouvre les résultats de cette séance passée.",
   "🎓 Lancer la démo": "Lance la démo avec la classe, comme une vraie séance : appel, binômes, attestations, questions, correction. Rien ne compte : ni note, ni compétence, ni point d'autonomie.",
   // Le pilotage
-  "🚫 Départ d'un élève": "Marque un élève parti : il ne bloque plus la classe, son binôme continue seul, ses questions manquées sortent de son total. Il revient par « ↩️ Retour d'un élève ».",
+  "🚫 Départ d'un élève": "Marque un élève parti : il ne bloque plus la classe, sa moitié de tablette se voile et ne prend plus de réponse, son binôme continue seul, ses questions manquées sortent de son total. Il revient par « ↩️ Retour d'un élève ».",
   "↩️ Retour d'un élève": "Un élève parti revient : il reprend sa moitié ; les questions qu'il a manquées restent hors de son total.",
   "🔓 Rouvrir pour un élève": "Rouvre la question close pour un élève qui n'a pas répondu, une seule fois par question, avec le temps de réponse de la question. Son voisin porte le voile ordinaire.",
   "🛑 Terminer la séance": "Termine la séance : l'archive s'écrit avec les notes telles qu'elles sont, quelle que soit la phase ; les tablettes oublient leurs élèves. Une confirmation d'abord.",
@@ -9179,8 +9232,8 @@ var BULLES = {
   "❌ Écarter la question 3": "Écarte la question 3 : elle ne sera ni posée ni corrigée ; la note et ses compétences comptent sans elle. Se défait par « ↩️ Remettre ».",
   "⚠️ Annuler la question 2": "Annule la question 2 : ses réponses restent gardées, mais elle sort du total de la note et des compétences ; les élèves liront qu'elle ne compte pas. Se défait par « ↩️ Remettre ».",
   "🛑 Terminer la séance": "Termine maintenant : l'archive s'écrit avec les notes telles qu'elles sont ; les tablettes oublient leurs élèves et reviennent à l'entrée des élèves.",
-  "🚫 Parti": "Marque cet élève parti : son binôme continue seul ; ses questions manquées sortent de son total.",
-  "↩️ Revenu": "Cet élève revient : il reprend sa moitié.",
+  "🚫 Parti": "Marque cet élève parti : sa moitié de tablette se voile et ne prend plus de réponse, son binôme continue seul ; ses questions manquées sortent de son total.",
+  "↩️ Revenu": "Cet élève revient : sa moitié de tablette se rouvre sur la question en cours, avec ce qu'il avait répondu avant de partir.",
   "🔓 Rouvrir pour Théo": "Rouvre la question 2 pour Théo seul, avec son temps de réponse ; Lou porte le voile pendant son tour. Une seule fois.",
   "🎯 Aller au pilotage": "Ouvre le pilotage de cette séance.",
   "🛑 Terminer": "Termine cette séance : l'archive s'écrit avec les notes telles qu'elles sont. Une confirmation d'abord.",
@@ -11849,6 +11902,8 @@ var TITRES_771 = [
     "✏️ Modifier le prompt": "Ouvre l'éditeur pour modifier le prompt. Les modifications sont enregistrées dans Firebase et réutilisées la prochaine fois.",
     "🔄 Restaurer le prompt par défaut": "Remplace le brouillon par le prompt fourni par défaut avec l'app. Tu pourras ensuite cliquer sur « Enregistrer » pour le rendre actif."
   }],
+  /* (8.2.4, R3) sur l'écran du Mode test, « 📺 Ouvrir vue tableau » ouvre le tableau de la séance de test : son infobulle le dit (BULLE_TABLEAU_TEST, maquette620.js) */
+  [/^x620/, {"📺 Ouvrir vue tableau": typeof BULLE_TABLEAU_TEST !== "undefined" ? BULLE_TABLEAU_TEST : undefined}],
   [/^x620/, {"📱 QR pilotage": "Affiche un QR code à scanner avec ton téléphone pour piloter la séance de test à distance. Pour vérifier que la VuePhone fonctionne en mode test."}],
   [/^c-reglages-prompt-modifier$/, {
     "💾 Enregistrer": "Enregistre ce prompt dans Firebase. Il sera réutilisé à chaque ouverture du modal, sur tous les appareils.",
@@ -12149,13 +12204,17 @@ function statsQ(){
   return [[c.connectes ? fr2(c.connectes) : c.presents + "/" + c.presents, "connectés"], [c.repondu ? fr2(c.repondu) : "0/" + c.presents, "ont répondu"],
     [c.justes && c.justes[1] ? fr2(c.justes) : "—", "justes"], [c.question ? fr2(c.question) : "—", "question"]];
 }
+/* (8.2.4, R2 ; Paul, point 32) « pas de réponse » sur la console : « ⏳ » tant que l'élève peut encore répondre, « ∅ » dès qu'il ne le peut plus (son tour fini, la
+   question close), le signe de la légende et des résultats. La seule fonction qui l'écrit (la tuile d'une moitié au nouveau déroulé, la tuile de l'ancien, « voir la
+   séance en pause ») ; son infobulle suit (c3-bulles.js : « n'a encore rien coché » pour ⏳, « n'a pas répondu » pour ∅). */
+function pasDeReponseH(peutEncore){ return {cls:"m-pasrep", st:(peutEncore ? "⏳" : "∅") + " pas de réponse"}; }
 // la moitié d'un élève pendant une question, au moment de la scène
 function etatQuestion(s){
   var m = MOM(), nonRep = s.nonRep || m.nonRep || [], sansRep = m.sansRep || [], partis = m.partis || {};
   return function(p, cote){
     if(partis[p]) return {cls:"m-parti", st:"🚪 parti à " + partis[p]};
     if(s.reflexion) return {cls:"m-ecrit", st:"✍️ écrit"};
-    if(s.fini) return sansRep.indexOf(p) >= 0 ? {cls:"m-pasrep", st:"⏳ pas de réponse"} : couleur(p, s.qi, false);
+    if(s.fini) return sansRep.indexOf(p) >= 0 ? pasDeReponseH(false) : couleur(p, s.qi, false);
     var estPremier = cote === coteDuTour(s.qi, 1);
     if(s.tour === 1 && !estPremier) return {cls:"m-voile", st:"🙈 attend son tour"};
     if(s.tour === 2 && estPremier) return couleur(p, s.qi, true);
@@ -12442,13 +12501,17 @@ function etatQuestionH(s){
   var m = momH(), nonRep = s.nonRep || m.nonRep || [], sansRep = m.sansRep || [], partis = m.partis || {};
   var act = enDirect() ? actifsH() : null;   // les présents entrés sur une tablette
   return function(p, cote){
-    if(partis[p]) return {cls:"m-parti", st:"🚪 parti à " + partis[p]};
+    if(partis[p]){ var op = {cls:"m-parti", st:"🚪 parti à " + partis[p]};
+      /* (8.2.4, R1) une réponse de cet élève arrivée à la base après son départ est gardée, pas comptée : Paul la voit ici aussi (« ⏱ hors temps », ses deux gestes) */
+      var lp = s.qi != null && typeof nfH === "function" && nfH() && typeof SCN.horsTempsNF === "function" ? SCN.horsTempsNF(p, s.qi) : [];
+      if(lp.length) op.st = h(F, null, op.st, " ", HorsTempsNF(p, SCN.etapes(s.qi, null, p), lp));
+      return op; }
     // un présent jamais entré sur sa moitié : ni « répond », ni « attend son tour » (c-pret : « pas encore entré »)
     if(act && act.indexOf(p) < 0) return {cls:"m-connexion", st:"pas encore " + (sexeH(p) === "F" ? "entrée" : "entré")};
     var dp = deplaceH(p); if(dp) return dp;
     if(s.qi != null && typeof nfH === "function" && nfH()) return etatMoitieNF(p, cote, s);   // (8.1.0-c, C1 ; 245) l'étape en cours, puis la couleur de chaque étape
     if(s.reflexion) return {cls:"m-ecrit", st:"✍️ écrit"};
-    if(s.fini) return sansRep.indexOf(p) >= 0 ? {cls:"m-pasrep", st:"⏳ pas de réponse"} : couleur(p, s.qi, false);
+    if(s.fini) return sansRep.indexOf(p) >= 0 ? pasDeReponseH(false) : couleur(p, s.qi, false);
     var estPremier = cote === coteDuTour(s.qi, 1);
     if(s.tour === 1 && !estPremier) return {cls:"m-voile", st:"🙈 attend son tour"};
     if(s.tour === 2 && estPremier) return couleur(p, s.qi, true);
@@ -13004,6 +13067,10 @@ function BilanClasse(){
 /* ════════ Le bilan de l'élève, sur sa moitié (442, 456, 474, 484, 639) ════════ */
 function EcrBilan(e, opts){
   opts = opts || {};
+  /* (8.2.4, R5 ; Paul, point 40) l'élève présent à qui aucune question qui compte n'a été posée lisait « Ta note : 0 point sur 0, soit 0 sur 20 » : il n'a pas de
+     note, sa moitié le lui dit (la règle : sansQuestionQCM, celle de la console, des résultats et du PDF) */
+  if(enDirect() && typeof sansQuestionQCM === "function" && sansQuestionQCM(SCN.sess(), cleE(e), SCN.evalDeSeance(SCN.sid())))
+    return Page(badgeDe(e), "🎯 Bilan personnel", h("div", {className:"etat-attente", "data-sans-question":cleE(e)}, TEXTE_SANS_QUESTION));
   if(nfH()) return EcrBilanNF(e, opts);   // (8.1.0-c) au nouveau format : les points, « soit 14 sur 20 », « 💡 réussi avec aide »
   var k = MO(), r = calc(cleE(e)), st = r.st, pts = r.pts.map(function(x){ return x || 0; });
   var an = (r.annulees || [])[0] == null ? -1 : r.annulees[0], tot = r.total, n = r.n, sur20 = r.sur20, mt = maitriseDe(sur20);
@@ -15799,7 +15866,7 @@ var FENETRES_H = {
     return Fenetre(fond, "🚫 Départ d'un élève", "Qui part en cours de séance ? (infirmerie, tablette en panne…)",
       h(F, null, h("div", {className:"depart-grille"}, noms.map(function(x){ var f = sexeH(x.p) === "F";
         // (8.2.1, K1, SFQ1-11) la clé du clic porte l'élève de la ligne (son slug) : avec une clé commune, le dernier bouton posé gagnait, et « 🚫 Parti » marquait le dernier de la liste
-        return h("div", {key:x.p, className:"depart-l"}, h("span", null, x.n), boutonH("p:" + x.p, "btn btn-ghost btn-sm", "🚫 Parti", fait("depart", [x.p]), "Marque " + x.n + " comme parti" + (f ? "e" : "") + " en cours de séance : " + (f ? "elle" : "il") + " ne bloque plus la classe, ses questions manquées sortent de son total.")); }))),
+        return h("div", {key:x.p, className:"depart-l"}, h("span", null, x.n), boutonH("p:" + x.p, "btn btn-ghost btn-sm", "🚫 Parti", fait("depart", [x.p]), "Marque " + x.n + " comme parti" + (f ? "e" : "") + " en cours de séance : " + (f ? "elle" : "il") + " ne bloque plus la classe, sa moitié de tablette se voile et ne prend plus de réponse, ses questions manquées sortent de son total. « ↩️ Retour d'un élève » rouvre sa moitié.")); }))),
       [annulerH()], null, 760); },
   retour:function(arg, fond){ var partis = momH().partis || {}, absents = absentsRevenusH();
     return Fenetre(fond, "↩️ Retour d'un élève", "Les élèves partis pendant cette séance" + (absents.length ? ", et les absents de l'appel" : ""),
@@ -15850,7 +15917,7 @@ var FENETRES_H = {
         : il + " a son point d'autonomie : ses deux compétences d'autonomie sont en Très bonne maîtrise.")),
       au.retire ? [boutonH("f", "btn btn-ghost", "✕ Fermer", fermerFen), boutonH("r", "btn btn-vert", "↩️ Rendre", fait("rendreAutonomie", [p]), "Rend son point d'autonomie à " + prenomH(p) + " : ses deux compétences d'autonomie repassent en Très bonne maîtrise.")]
         : [boutonH("f", "btn btn-ghost", "✕ Fermer", fermerFen),
-           boutonH("p", "btn btn-ghost", "🚫 Marquer comme parti", fait("depart", [p]), "Marque " + prenomH(p) + " comme parti" + (il === "Elle" ? "e" : "") + " : " + il.toLowerCase() + " ne bloque plus la classe, ses questions manquées sortent de son total."),
+           boutonH("p", "btn btn-ghost", "🚫 Marquer comme parti", fait("depart", [p]), "Marque " + prenomH(p) + " comme parti" + (il === "Elle" ? "e" : "") + " : " + il.toLowerCase() + " ne bloque plus la classe, sa moitié de tablette se voile et ne prend plus de réponse, ses questions manquées sortent de son total. « ↩️ Retour d'un élève » rouvre sa moitié."),
            boutonH("g", "btn btn-rouge", "⛔ Retirer le point d'autonomie", function(){ ouvrirFen("garde", [p]); }, "Demande une confirmation, puis retire son point d'autonomie : ses deux compétences d'autonomie passent en Maîtrise insuffisante.")], null); },
   // la garde du point d'autonomie : un élève, ou les deux de l'alerte (« ⛔ aux deux »)
   garde:function(ps, fond){ var noms = ps.map(nomDe);   // ouverte depuis la fiche (FEN_H.depuis) : « ⛔ Retirer » y revient, retiré (c-autonomie-retiree)
@@ -15990,7 +16057,7 @@ function ListeMesEvals(p){
     return h(actif ? "button" : "div", {key:i, className:"eleve-btn mes-ev " + x.etat, "data-va":actif ? "e-bilan-lou&eleve=" + encodeURIComponent(p) : null},
       h("div", {style:{fontWeight:700}}, x.titre),
       h("div", {style:{fontSize:".86rem", opacity:.9, marginTop:".2rem"}},
-        x.etat === "relecture" ? (x.nf ? "Ta note sera visible quand ton professeur te l'aura rendue" : "En relecture : ta note sera visible quand ta copie te sera rendue") : x.etat === "absente" ? (SCN.SEXE[p] === "F" ? "Tu étais absente" : "Tu étais absent") : ligne));
+        x.etat === "relecture" ? (x.nf ? "Ta note sera visible quand ton professeur te l'aura rendue" : "En relecture : ta note sera visible quand ta copie te sera rendue") : x.etat === "absente" ? (x.sansQuestion ? TEXTE_SANS_QUESTION : SCN.SEXE[p] === "F" ? "Tu étais absente" : "Tu étais absent") : ligne));   // (8.2.4, R5)
   }));
 }
 function MesEvaluations(){ return h(MesEvaluationsC); }
@@ -16275,6 +16342,10 @@ function MoitieH(p, cote, autreP){
   var e = eleveH(p, cote, v || eleveH(p, cote));
   if(v) v.voisin = e;
   var ph = m.ph === "pause" ? ((m.pause && m.pause.ph) || (m.tour ? "reponse" : "reflexion")) : m.ph;
+  /* (8.2.4, R1 ; Paul, règle 17 : « Celui qui part n'est remplacé par personne, et son binôme continue seul. ») dès « 🚫 Parti », la moitié de l'élève se voile,
+     à toute phase, sans rechargement (la séance est abonnée) : plus rien ne s'y clique. « ↩️ Revenu » retire le départ : la moitié revient d'elle-même à
+     l'écran de la phase en cours, avec ce que la séance a gardé de lui. La moitié de son binôme n'est pas touchée (elle garde sa place et son composant). */
+  if(enDirect() && typeof SCN.partis === "function" && SCN.partis()[p]) return EcrPartiH(e);
   var actif = qi != null ? (m.cote || coteDuTour(qi, m.tour || 1)) : null;   // la moitié qui répond à ce tour
   // seul sur sa tablette (pas de voisin présent) : il a la main aux deux tours, rien à voiler (SCN.seul, SCN.aLaMain)
   var seul = typeof SCN.seul === "function" ? SCN.seul(p) : !v, main = typeof SCN.aLaMain === "function" ? SCN.aLaMain(p) : cote === actif;
@@ -16330,6 +16401,8 @@ function MoitieH(p, cote, autreP){
   if(ph === "bilan") return EcrBilan(e);
   return EcrAttente(e);
 }
+// (8.2.4, R1) la moitié de l'élève parti : un voile, sans bouton ni « 📊 Mes évaluations » ; « Julien est parti », « Léa est partie » (les mots de Paul, point 31)
+function EcrPartiH(e){ return h("div", {className:"voile voile-parti", "data-parti":cleE(e)}, h("div", {className:"vic"}, "🚪"), h("div", {className:"phr"}, e.prenom + " est parti" + (e.sexe === "F" ? "e" : ""))); }
 // l'attestation d'un élève (1 ou 2) : les lignes cochées, et si elle est finie (« Je commence »)
 function attestH(p, n){
   var a = typeof SCN.attestDe === "function" ? SCN.attestDe(n, p) : null, m = momH();
@@ -16577,12 +16650,12 @@ function TelFicheEleve(p){
     : correction ? [
       h("button", Object.assign({key:"a", className:"tel-btn tb-rouge", disabled:au.retire || !!fait, title:au.retire || fait ? "Son point d'autonomie est déjà retiré." : "Demande une confirmation, puis retire son point d'autonomie : ses deux compétences d'autonomie passent en Maîtrise insuffisante."}, clic("TFE:garde:" + el, function(){ setGarde(true); })), "⛔ Retirer le point d'autonomie"),
       au.retire && enDirect() ? h("button", Object.assign({key:"r", className:"tel-btn tb-vert", title:"Rend son point d'autonomie à " + pr + " : ses deux compétences d'autonomie repassent en Très bonne maîtrise."}, clic("TFE:rendre:" + el, function(){ faire("", "rendreAutonomie", [el]); })), "↩️ Rendre") : null,
-      h("button", Object.assign({key:"p", className:"tel-btn tb-ghost", disabled:!!fait, title:"Marque " + pr + " comme parti" + (il === "elle" ? "e" : "") + " : " + il + " ne bloque plus la classe."}, clic("TFE:parti:" + el, function(){ faire("🚪 " + nomDe(el) + " est parti" + (il === "elle" ? "e" : "") + " à " + hhmm(m.heure) + " : " + il + " ne bloque plus la classe.", "depart", [el]); })), "🚫 Marquer comme parti en cours de séance")]
+      h("button", Object.assign({key:"p", className:"tel-btn tb-ghost", disabled:!!fait, title:"Marque " + pr + " comme parti" + (il === "elle" ? "e" : "") + " : " + il + " ne bloque plus la classe, sa moitié de tablette se voile et ne prend plus de réponse."}, clic("TFE:parti:" + el, function(){ faire("🚪 " + nomDe(el) + " est parti" + (il === "elle" ? "e" : "") + " à " + hhmm(m.heure) + " : " + il + " ne bloque plus la classe.", "depart", [el]); })), "🚫 Marquer comme parti en cours de séance")]
     : [
       // (QCM-2) avant la première question, rien à rouvrir : la fiche garde « Marquer comme parti »
       qi != null && h("button", Object.assign({key:"r", className:"tel-btn tb-turq", disabled:sans.indexOf(el) < 0 || !!fait || m.ph !== "close" || !!((SCN.sess() || {}).rouverts || {})[qi], title:sans.indexOf(el) < 0 ? pr + " a répondu à cette question : il n'y a rien à rouvrir." : "Rouvre la question pour " + pr + " seul" + (il === "elle" ? "e" : "") + ", une seule fois."},
         clic("TFE:rouvrir:" + el, function(){ faire("🔁 Question " + (qi + 1) + " rouverte pour " + nomDe(el) + ", une seule fois.", "rouvrirPour", [qi, el]); })), "🔁 Rouvrir Q" + (qi + 1) + " pour cet élève uniquement (une seule fois)"),
-      h("button", Object.assign({key:"p", className:"tel-btn tb-rouge", disabled:!!fait, title:"Marque " + pr + " comme parti" + (il === "elle" ? "e" : "") + " : " + il + " ne bloque plus la classe."}, clic("TFE:parti:" + el, function(){ faire("🚪 " + nomDe(el) + " est parti" + (il === "elle" ? "e" : "") + " à " + hhmm(m.heure) + " : " + il + " ne bloque plus la classe.", "depart", [el]); })), "🚫 Marquer comme parti en cours de séance")];
+      h("button", Object.assign({key:"p", className:"tel-btn tb-rouge", disabled:!!fait, title:"Marque " + pr + " comme parti" + (il === "elle" ? "e" : "") + " : " + il + " ne bloque plus la classe, sa moitié de tablette se voile et ne prend plus de réponse."}, clic("TFE:parti:" + el, function(){ faire("🚪 " + nomDe(el) + " est parti" + (il === "elle" ? "e" : "") + " à " + hhmm(m.heure) + " : " + il + " ne bloque plus la classe.", "depart", [el]); })), "🚫 Marquer comme parti en cours de séance")];
   return h(TelFeuille, {titre:nomDe(el), sous:placeDe(el), fermer:fermer, enfants:h(F, null, boutons, (qi != null || fait) && h("div", {className:"tel-etat"}, etat))});
 }
 function TelEleve(){ if(enDirect()) chargerHeure(); var m = momH(), el = paramEleve((m.sansRep || [])[0] || "Théo"); if(enDirect()) el = slugH(el); return h(F, null, telDuMoment(), paramHash("fiche") === "0" ? null : h(TelFicheEleve, {key:el, eleve:el, ouvert:true})); }
@@ -17057,7 +17130,11 @@ window.addEventListener("keydown", function(ev){
 /* ── L'en-tête de la console : chaque geste nomme sa destination, au moment de la scène (12.4 : plus de table par libellé seul) ── */
 function seanceEnCours(){ var m = MOM(); return !!m.seance && ["avant", "hors", "soir", "fin", "grille"].indexOf(m.ph) < 0 && m.seance !== "TEST"; }
 // (QCM-1) la vue tableau de la 7.7.1 (l. 6022) : la même adresse, dans sa fenêtre
-function ouvrirTableau(){ window.open(location.pathname + "#mode=prof&view=board", "BoardWindow", "width=1280,height=800"); }
+/* (8.2.4, R3 ; Paul, point 33) ouvert depuis le Mode test, le tableau montre la séance de test : sa classe part dans l'adresse, comme pour le téléphone depuis
+   la 8.2.1 (L4, « 📱 QR pilotage ») ; PAGES.choisirSeance (src/live/pages.js) la lit. Hors du Mode test, l'adresse est celle d'avant : la même fenêtre, rouverte
+   de la console, revient à la séance de la vraie classe. */
+function classeTableauTest(){ return typeof modeTestActifV === "function" && modeTestActifV() && typeof CLASSE_TEST !== "undefined" ? CLASSE_TEST : null; }
+function ouvrirTableau(){ var cl = classeTableauTest(); window.open(location.pathname + "#mode=prof&view=board" + (cl ? "&classe=" + encodeURIComponent(cl) : ""), "BoardWindow", "width=1280,height=800"); }
 function Console(groupe, tab, contenu, séance){
   var groupes = [["pilotage","Pilotage","c-lancer"],["donnees","Données","c-seances"],["reglages","Réglages","c-reglages"]];
   var sous = {pilotage:[["evals","📝 Évaluations","c-evals"],["pilot","🎯 Pilotage classe","c-lancer"]], donnees:[["results","📊 Résultats","c-seances"],["snapshot","💾 Sauvegarde","c-sauvegarde"]], reglages:[]};
@@ -17073,7 +17150,8 @@ function Console(groupe, tab, contenu, séance){
           séance && (function(){ var n = Math.max(1, typeof SCN.seancesActives === "function" ? SCN.seancesActives().length : 1); return h("button", {className:"badge-session-actives", "data-va":"c-sessions"}, h("span", {className:"badge-session-dot"}, "🔴"), n + (n > 1 ? " séances en cours" : " séance en cours")); })(),
           h("button", {className:"btn-help", "data-va":"c-mode-emploi"}, "📖 Mode d'emploi"),
           // le tableau tel qu'il est maintenant ; hors séance, son écran d'attente
-          h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", onClick:ouvrirTableau}, "📺 Ouvrir vue tableau"),
+          h("button", {className:"btn btn-ghost btn-sm", "data-local":"1", "data-tableau-test":test ? "1" : null, onClick:ouvrirTableau,
+            title:test ? BULLE_TABLEAU_TEST : null}, "📺 Ouvrir vue tableau"),
           h("button", {className:"btn btn-ghost btn-sm", "data-va":"c-qr"}, "📱 QR pilotage"),
           h("button", {className:"btn-test", "data-va":"x620-1-mode-test-ouverture", "data-moment":"TEST:avant"}, "🧪 Mode test", InfoI("Le mode test : une classe de test de 30 élèves et ses 15 tablettes simulées, pour éprouver le déroulé sans toucher tes vraies classes, avec la démo ou une évaluation de ta liste jouée sur une copie. À la sortie, tout est effacé, sauf la démo et tes évaluations.")),
           // « ← Retour » revient à l'écran précédent de la console, comme son infobulle le dit ; ouvert tout seul, à l'accueil de l'app
@@ -17192,7 +17270,8 @@ function repriseVa(){ return repriseMoment() ? "c-q1-tour1" : null; }
 // elle se termine par « 🗑️ Sortir et purger » ; « ⏸️ Finir à une autre heure » y est fermé, avec sa raison
 var hAvantTest = h;
 h = function(type, props){
-  if(type === "button" && props && props["data-va"] === "c-finir-autre-heure" && /^TEST(:|$)/.test(MO())){
+  /* (8.2.4, R4 ; Paul, point 35) dans l'app, le geste se joue en Mode test (maquette620.js) ; seule la scène de la maquette le garde fermé */
+  if(type === "button" && props && props["data-va"] === "c-finir-autre-heure" && /^TEST(:|$)/.test(MO()) && !(typeof enDirect === "function" && enDirect())){
     var args = Array.prototype.slice.call(arguments), p = Object.assign({}, props);
     delete p["data-va"]; p.disabled = true; p.title = "Fermé en mode test : la séance d'essai ne se reprend pas à une autre heure ; « 🗑️ Sortir et purger » la termine.";
     args[1] = p; return hAvantTest.apply(null, args);
@@ -17425,6 +17504,9 @@ refaire("c-fiche-garde", function(){ return ScFicheGarde(); });
    le reste se construit depuis le scénario, au moment du geste. */
 var PDF_TETE = (window.PDF632_HTML || "").slice(0, (window.PDF632_HTML || "").indexOf('<div class="haut">'));
 function escPdf(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+/* (8.2.4, R6 ; Paul, point 50) la seconde ligne de la légende du PDF : « — » sert aussi pour une compétence sans question qui compte pour l'élève (ses seules
+   questions en bonus, écartées, annulées ou pas posées pour lui : maitriseComp, c3-base.js). Une seule phrase, pour les deux PDF (la séance jouée, l'exemple). */
+var PDF_LEGENDE_SANS_QUESTION = "« — » dans une compétence : aucune question qui compte ne la vérifiait pour cet élève.\n";
 function chapPdf(c){ var m = /^(\d)e · Ch\. (\d+) — (.*)$/.exec(c || ""); return m ? m[1] + "e, chapitre " + m[2] + " — " + m[3] : c ? c : "—"; }
 var NIV_PDF = [{min:15, lib:"Très bonne maîtrise", cls:"vert"}, {min:10, lib:"Maîtrise satisfaisante", cls:"bleu"}, {min:5, lib:"Maîtrise fragile", cls:"orange"}, {min:0, lib:"Maîtrise insuffisante", cls:"rouge"}];
 /* (8.2.1, O4) la ligne de contrôle du PDF, la seule (le PDF de la maquette, celui de chaque séance) : chaque compte s'accorde comme « absent » l'était déjà
@@ -17465,6 +17547,7 @@ function pdfSeance(id, k){
     '<div class="mode"><b>Pour École Directe.</b> Une ligne par élève, dans l\'ordre alphabétique. « Note » : la note sur 20 du devoir.\n' +
     "Chaque colonne de compétence : le niveau de maîtrise de l'élève, en toutes lettres, parmi quatre : Très bonne maîtrise, Maîtrise satisfaisante, Maîtrise fragile, Maîtrise insuffisante.\n" +
     "« Commentaire », sur la ligne sous l'élève : son commentaire pour ce devoir, à entrer tel quel dans la zone commentaire ; « — » : pas de commentaire. « Absent » : ni note, ni niveau, ni commentaire.\n" +
+    PDF_LEGENDE_SANS_QUESTION +
     "Le cadre « À savoir », sous le tableau, ne s'entre pas.</div>\n" +
     "<table>\n" +
     '<colgroup><col style="width:50mm"><col style="width:17mm">' + comps.map(function(){ return '<col style="width:58mm">'; }).join("") + '<col style="width:48mm"><col style="width:48mm"></colgroup>\n' +
@@ -17555,7 +17638,8 @@ function seanceV(sid){
   /* (8.2.1, N1 ; cadrage 323 : « Un élève sans note est traité comme un absent ») l'élève qui n'a eu aucune question qui compte (parti avant la première, toutes
      écartées, ou pas posées pour lui) est un absent : ni ligne au tableau, ni note, ni compétence, ni bilan, « Absent » au PDF, « Tu étais absent » dans
      « Mes évaluations » (src/live/base.js, sansQuestionQCM : la seule règle). Il recevait « 0 / 0 · 0 / 20 · Maîtrise insuffisante ». */
-  if(typeof sansQuestionQCM === "function") tous.forEach(function(e){ if(absents.indexOf(e.slug) < 0 && sansQuestionQCM(S, e.slug, ev)) absents.push(e.slug); });
+  var sansQ = [];   // (8.2.4, R5) ceux qui étaient là, sans question qui compte : absents pour la note, mais « Mes évaluations » leur dit leur phrase, pas « Tu étais absent »
+  if(typeof sansQuestionQCM === "function") tous.forEach(function(e){ if(absents.indexOf(e.slug) < 0 && sansQuestionQCM(S, e.slug, ev)){ absents.push(e.slug); if(presentSansQuestionQCM(S, e.slug, ev)) sansQ.push(e.slug); } });
   // une séance qui a ses propres élèves (le rattrapage) : ses présents sont ceux qui y ont une place
   var propres = nouv && S.places && Object.keys(vus).length && (S.rattrapage || (S.lancee && S.lancee.rattrapage));
   var presents = tous.filter(function(e){ return absents.indexOf(e.slug) < 0 && (!propres || vus[e.slug]); });
@@ -17566,7 +17650,7 @@ function seanceV(sid){
     date:dateFr(ms), heure:heureFr(ms), ms:ms, terminee:seanceTerminee(S), pause:seanceEnPause(S), demo:seanceDemo(S), test:seanceTest(S),
     papier:S.mode === "papier" || !!S.surPapier || !!(S.lancee && S.lancee.mode === "papier"), rattrapage:!!S.rattrapage || !!(S.lancee && S.lancee.rattrapage),
     rendue:rendue, rendueMs:cop && cop.rendues ? cop.rendues : (!cop && rendue ? msFinSeance(S) : null), masquee:!!(cop && cop.masquees), publiee:S.publiee !== false,
-    ecartees:v3Liste(S.ecartees).map(Number), annulees:v3Liste(S.annulees).map(Number)};
+    ecartees:v3Liste(S.ecartees).map(Number), annulees:v3Liste(S.annulees).map(Number), sansQuestion:sansQ};
 }
 function seancesV(){ return memo3("seances", function(){ var X = v3Sessions(); return Object.keys(X).map(seanceV).filter(function(se){ return se && se.ev; }); }); }
 function nomEleveV(se, slug){ var e = se.eleves.filter(function(x){ return x.slug === slug; })[0]; return e ? e.nom : (v3("codes/" + slug) || {}).name || slug; }
@@ -18096,6 +18180,7 @@ function pdfSeanceV(se){
     '<div class="mode"><b>Pour École Directe.</b> Une ligne par élève, dans l\'ordre alphabétique. « Note » : la note sur 20 du devoir.\n' +
     "Chaque colonne de compétence : le niveau de maîtrise de l'élève, en toutes lettres, parmi quatre : Très bonne maîtrise, Maîtrise satisfaisante, Maîtrise fragile, Maîtrise insuffisante.\n" +
     "« Commentaire », sur la ligne sous l'élève : son commentaire pour ce devoir, à entrer tel quel dans la zone commentaire ; « — » : pas de commentaire. « Absent » : ni note, ni niveau, ni commentaire.\n" +
+    PDF_LEGENDE_SANS_QUESTION +
     "Le cadre « À savoir », sous le tableau, ne s'entre pas.</div>\n" +
     "<table>\n" +
     '<colgroup><col style="width:50mm"><col style="width:17mm">' + comps.map(function(){ return '<col style="width:58mm">'; }).join("") + '<col style="width:48mm"><col style="width:48mm"></colgroup>\n' +
@@ -18151,7 +18236,8 @@ function mesEvaluationsV(slug, classeSlug){
     .sort(function(a, b){ return b.ms - a.ms; })
     .map(function(se){ var abs = se.absents.some(function(e){ return e.slug === slug; }) || !se.presents.some(function(e){ return e.slug === slug; });
       var r = abs ? null : resultatV(se, slug);
-      return {se:se, titre:se.ev.titre, date:se.date, etat:abs ? "absente" : se.rendue && r && r.complet ? "bilan" : "relecture", note:se.rendue && r && r.complet ? r : null}; });
+      return {se:se, titre:se.ev.titre, date:se.date, etat:abs ? "absente" : se.rendue && r && r.complet ? "bilan" : "relecture", note:se.rendue && r && r.complet ? r : null,
+        sansQuestion:abs && (se.sansQuestion || []).indexOf(slug) >= 0}; });   // (8.2.4, R5)
 }
 function ListeMesEvalsV(slug, classeSlug, onOuvrir){
   var items = mesEvaluationsV(slug, classeSlug), se0 = items[0] && items[0].se;
@@ -18164,7 +18250,7 @@ function ListeMesEvalsV(slug, classeSlug, onOuvrir){
       "data-va":actif && !onOuvrir ? "e-bilan-lou&eleve=" + encodeURIComponent(slug) + "&seance=" + encodeURIComponent(x.se.id) + (classeSlug ? "&classe=" + encodeURIComponent(classeSlug) : "") : null},
       h("div", {style:{fontWeight:700}}, x.titre),
       h("div", {style:{fontSize:".86rem", opacity:.9, marginTop:".2rem"}},
-        x.etat === "relecture" ? (typeof seanceNFV === "function" && seanceNFV(x.se) ? "Ta note sera visible quand ton professeur te l'aura rendue" : "En relecture : ta note sera visible quand ta copie te sera rendue") : x.etat === "absente" ? (sexeV(x.se, slug) === "F" ? "Tu étais absente" : "Tu étais absent") : ligne));
+        x.etat === "relecture" ? (typeof seanceNFV === "function" && seanceNFV(x.se) ? "Ta note sera visible quand ton professeur te l'aura rendue" : "En relecture : ta note sera visible quand ta copie te sera rendue") : x.etat === "absente" ? (x.sansQuestion ? TEXTE_SANS_QUESTION : sexeV(x.se, slug) === "F" ? "Tu étais absente" : "Tu étais absent") : ligne));   // (8.2.4, R5)
   }));
 }
 function MesEvaluationsV(){ return h(MesEvaluationsVC); }
@@ -19441,9 +19527,11 @@ var LEG_NF = [["#22C55E", "étape juste"], ["#EF4444", "étape fausse"], ["#fff"
    « pas de réponse », 0 point), montrée à Paul seul : sur la moitié de l'élève pendant l'évaluation, et dans sa fiche. liste : SCN.horsTempsNF, ou les essais de la fiche. */
 function horsTempsMotsNF(E, l){ var d = l[l.length - 1], X = E[d.etape] || E[0]; return {d:d, mots:(X && reponseEnMotsNF(X, d)) || "", cert:d.valide && d.cert ? certMotNF(d.cert) : ""}; }
 function HorsTempsNF(p, E, l, fiche, pr, il){ if(!l || !l.length) return null; var m = horsTempsMotsNF(E, l); pr = pr || prenomH(p); il = il || (sexeH(p) === "F" ? "elle" : "il");
-  var arr = m.d.refuse === "arrivee", quand = arr ? "sa tablette était coupée de la séance : la réponse est arrivée après la fin du temps" + (m.d.recu ? ", à " + SCN.heureFr(m.d.recu, true) : "") : "après la fin du chrono" + (m.d.ms ? ", à " + SCN.heureFr(m.d.ms, true) : "");
+  /* (8.2.4, R1) « parti » : la réponse est arrivée à la base après « 🚫 Parti » (une tablette en retard sur la séance) ; même mention, mêmes gestes */
+  var pa = m.d.refuse === "parti";
+  var arr = m.d.refuse === "arrivee", quand = pa ? "la réponse est arrivée après son départ" + (m.d.recu ? ", à " + SCN.heureFr(m.d.recu, true) : "") : arr ? "sa tablette était coupée de la séance : la réponse est arrivée après la fin du temps" + (m.d.recu ? ", à " + SCN.heureFr(m.d.recu, true) : "") : "après la fin du chrono" + (m.d.ms ? ", à " + SCN.heureFr(m.d.ms, true) : "");
   var compte = !!m.d.admis;
-  var info = "Hors temps : " + pr + " a cliqué « " + m.mots + " »" + (m.cert ? " (" + m.cert + ")" : "") + (arr ? " ; " : " ") + quand + ". " + (compte ? "Tu as compté cette réponse : l'étape " + (m.d.etape + 1) + " prend les points de sa réponse et de sa certitude." : "Sa réponse est gardée dans la séance, mais elle ne compte pas : l'étape " + (m.d.etape + 1) + " vaut « pas de réponse », 0 point.") + " Sur sa tablette, " + il + " a vu « le temps est fini ».";
+  var info = "Hors temps : " + pr + " a cliqué « " + m.mots + " »" + (m.cert ? " (" + m.cert + ")" : "") + (arr || pa ? " ; " : " ") + quand + ". " + (compte ? "Tu as compté cette réponse : l'étape " + (m.d.etape + 1) + " prend les points de sa réponse et de sa certitude." : "Sa réponse est gardée dans la séance, mais elle ne compte pas : l'étape " + (m.d.etape + 1) + " vaut « pas de réponse », 0 point.") + (pa ? " Sa moitié de tablette est voilée depuis son départ." : " Sur sa tablette, " + il + " a vu « le temps est fini ».");
   /* (8.1.0, G9) Paul tranche, comme avant (« Compter cette réponse », 8.0.11c) : pas comptée par défaut ; « ✓ compter » la fait compter, « ✕ ne pas compter » défait */
   var b = function(oui, lib, titre){ var on = compte === oui; return h("button", {type:"button", className:"nf-ht-b" + (on ? " on" : ""), "data-local":"1", "data-ht-compter":oui ? "oui" : "non", "aria-pressed":on, disabled:on, title:titre,
     onClick:function(ev){ ev.stopPropagation(); if(typeof ACT !== "undefined" && ACT.compterHorsTemps) ACT.compterHorsTemps(m.d, oui); }}, lib); };
@@ -19451,7 +19539,7 @@ function HorsTempsNF(p, E, l, fiche, pr, il){ if(!l || !l.length) return null; v
     b(true, "✓ compter", compte ? "Cette réponse hors temps est comptée." : "Compte la réponse hors temps de " + pr + " : l'étape " + (m.d.etape + 1) + " prend les points de « " + m.mots + " »" + (m.cert ? " et de sa certitude (" + m.cert + ")" : "") + ". Sa note, ses compétences et son bilan suivent aussitôt. Se défait par « ✕ ne pas compter »."),
     b(false, "✕ ne pas compter", compte ? "Défait : la réponse hors temps de " + pr + " ne compte plus, l'étape " + (m.d.etape + 1) + " revient à « pas de réponse », 0 point. Sa note, ses compétences et son bilan suivent aussitôt." : "Cette réponse hors temps n'est pas comptée (c'est le cas tant que tu ne cliques pas « ✓ compter »).")) : null;
   return h(fiche ? "div" : "span", {className:"nf-ht" + (fiche ? " nf-ht-fiche" : "") + (compte ? " compte" : ""), "data-hors-temps-nf":p, "data-hors-temps-etape":m.d.etape + 1, "data-hors-temps-compte":compte ? "oui" : "non"},
-    h("span", {className:"nf-ht-t", title:info}, fiche ? "⏱ hors temps · étape " + (m.d.etape + 1) + " : " + il + " a cliqué « " + m.mots + " »" + (m.cert ? " · " + m.cert : "") + (arr ? " ; " : " ") + quand + ". " + (compte ? "Comptée par toi." : "Gardé, pas compté : 0 point.")
+    h("span", {className:"nf-ht-t", title:info}, fiche ? "⏱ hors temps · étape " + (m.d.etape + 1) + " : " + il + " a cliqué « " + m.mots + " »" + (m.cert ? " · " + m.cert : "") + (arr || pa ? " ; " : " ") + quand + ". " + (compte ? "Comptée par toi." : "Gardé, pas compté : 0 point.")
       : "⏱ hors temps « " + m.mots + " »" + (compte ? " · comptée" : "")), fiche ? InfoI(info) : null, gestes); }
 function etatMoitieNF(p, cote, s){ var o = etatMoitieNF0(p, cote, s), l = typeof SCN.horsTempsNF === "function" && s.qi != null ? SCN.horsTempsNF(p, s.qi) : [];
   if(!l.length || !o) return o; var E = SCN.etapes(s.qi, null, p);
@@ -19468,8 +19556,19 @@ function etatMoitieNF0(p, cote, s){
     if(cur) return {cls:"m-repond m-nf", st:h(F, null, "✋ étape " + (cur.k + 1) + "… ", PastillesNF(p, qi, cur.k))}; }
   if(!s.fini && !fait){ var premier = cote === coteDuTour(qi, 1); if(s.tour === 1 && !premier && !(typeof SCN.seul === "function" && SCN.seul(p))) return {cls:"m-voile", st:"🙈 attend son tour"};
     if(m.ph === "passage" && SCN.cote(p) === (m.cote || coteDuTour(qi, m.tour || 1))) return {cls:"m-repond m-nf", st:"✋ à " + (sexeH(p) === "F" ? "elle" : "lui")}; }
-  if(!fait) return {cls:"m-pasrep", st:"⏳ pas de réponse"};
+  if(!fait) return pasDeReponseH(peutEncoreRepondreNF(p, cote, s));   // (8.2.4, R2) « ⏳ » tant qu'il peut encore répondre, puis « ∅ »
   return {cls:"m-nf", st:PastillesNF(p, qi)};
+}
+/* (8.2.4, R2) cet élève, qui n'a rien répondu à la question en cours, peut-il encore y répondre ? Rouverte pour un seul : lui seul. La question close : non. Seul sur
+   sa tablette : oui jusqu'à la clôture (il a la main aux deux tours tant qu'il n'a pas répondu, SCN.aLaMain). À deux : oui si le tour de sa moitié est à venir, ou
+   pas encore ouvert à la réponse ; non dès que son tour est passé, ou que le chrono de ses étapes est fini pendant son tour. L'élève parti a sa propre tuile. */
+function peutEncoreRepondreNF(p, cote, s){
+  var e = (typeof SCN.etat === "function" && SCN.etat()) || {};
+  if(e.pour && e.pour !== "tous" && ["rouvert", "passage", "reponse"].indexOf(e.ph) >= 0) return e.pour === p;
+  if(s.fini) return false;
+  if(typeof SCN.seul === "function" && SCN.seul(p)) return true;
+  var sien = cote === coteDuTour(s.qi, 1) ? 1 : 2, tour = s.tour || 1;
+  return sien > tour || (sien === tour && e.ph !== "reponse");
 }
 
 /* ── La seconde liste à cocher, sans feuille ni stylo (244 : elle reste ; ses lignes ne parlent plus de la feuille) ── */
@@ -19798,7 +19897,7 @@ function pap01CoteH(g, d){
   if(!enDirect() || typeof nfH !== "function" || !nfH() || typeof SCN.aideQ !== "function") return null;
   var m = momH(), qi = m.qi; if(qi == null || ["passage", "reponse", "rouvert"].indexOf(m.ph) < 0) return null;
   var out = null;
-  [["g", g, d], ["d", d, g]].forEach(function(t){ var p = t[1]; if(!p || !t[2] || SCN.seul(p)) return;
+  [["g", g, d], ["d", d, g]].forEach(function(t){ var p = t[1]; if(!p || !t[2] || SCN.seul(p) || SCN.partis()[p]) return;   // (8.2.4, R1) la moitié voilée d'un élève parti ne s'agrandit pas
     var actif = m.ph === "rouvert" ? m.pour === p : m.ph === "passage" ? t[0] === (m.cote || coteDuTour(qi, m.tour || 1)) && !(m.pour && m.pour !== "tous" && m.pour !== p) : SCN.aLaMain(p);
     if(!actif) return;
     var q = SCN.dispense(p, qi) ? (m.ph === "reponse" ? SCN.suite(p) : null) : qi;
@@ -20498,7 +20597,7 @@ function VoirPauseC(){
       h("span", {style:{fontWeight:700}}, e.nom),
       abs ? h("span", {style:{color:"var(--gris)"}}, "absent à cette question")
         : t ? h("span", {style:{fontWeight:700, color:j ? "#15803D" : "#B91C1C"}}, (j ? "✓ " : "✗ ") + cite(t.choix))
-        : h("span", {style:{color:"#9A3412"}}, qPoseeVP(S, qi) ? "⏳ pas de réponse" : "—"),
+        : h("span", {style:{color:"#9A3412"}}, qPoseeVP(S, qi) ? pasDeReponseH(qi === qp && ["reflexion", "passage", "reponse", "rouvert"].indexOf(r.ph) >= 0).st : "—"),   /* (8.2.4, R2) « ⏳ » seulement pour la question arrêtée en plein tour */
       h("span", {style:{fontSize:".85rem", color:"var(--gris)"}}, nfVP ? "" : dit === "oui" ? "a dit : oui" : dit === "non" ? "a dit : non" : t ? "n'a rien dit" : ""),
       h("span", {style:{fontSize:".85rem"}}, nfVP ? "" : l ? (l.pause ? "lue par toi (pause) : " : "lue : ") + cite(l.choix) : rev.indexOf(qi) >= 0 ? "pas de lecture" : ""));
   });
@@ -20614,6 +20713,7 @@ var B_ETATS = [
   [/^(juste|faux|une en trop|une sur deux) · 🙈/, function(n, m){ return n + (m[1] === "juste" ? " a la bonne réponse" : m[1] === "faux" ? " n'a pas la bonne réponse" : m[1] === "une en trop" ? " a coché toutes les bonnes réponses et une de trop" : " a coché une des deux bonnes réponses") + " pour le moment ; sa moitié est voilée pendant que son voisin répond."; }],
   [/^une en trop/, function(n){ return n + " a coché toutes les bonnes réponses, et une de trop."; }],
   [/^⏳ pas de réponse|^pas de réponse/, function(n){ return n + " n'a encore rien coché à cette question."; }],
+  [/^∅ pas de réponse/, function(n){ return n + " n'a pas répondu à cette question."; }],   /* (8.2.4, R2) le tour fini : le signe de la légende et des résultats */
   [/^∅|aucun de ces choix/, function(n){ return "La feuille " + deNom(n) + " ne dit aucun des choix de la question."; }]
 ];
 function bulleEtat(e){
@@ -21175,8 +21275,14 @@ var PAGES = (function(){
   function choisirSeance(){
     /* (8.2.1, L4, SFQ1-15) le téléphone ouvert par le Mode test (« 📱 QR pilotage », « 📱 Voir le téléphone » : &classe=<la classe de test>) pilote la séance
        de cette classe, et seulement elle ; ouvert autrement, il ne voit jamais une classe de test (« _… », plus bas) */
-    var pc = LIVE.appareil() === "telephone" ? LIVE.params().get("classe") : null;
-    if(pc){ LIVE.classeSlug = pc; LIVE.sid = (LIVE.d.sessionActive || {})[pc] || null; return; }
+    var app = LIVE.appareil(), pc = app === "telephone" || app === "tableau" ? LIVE.params().get("classe") : null;
+    if(pc && app === "telephone"){ LIVE.classeSlug = pc; LIVE.sid = (LIVE.d.sessionActive || {})[pc] || null; return; }
+    /* (8.2.4, R3 ; Paul, point 33) le tableau ouvert par le Mode test (« 📺 Ouvrir vue tableau » : &classe=<la classe de test>) montre la séance de test tant
+       qu'elle tourne. Sans séance de test (pas encore lancée, finie, purgée à la sortie du Mode test), il suit la règle de toujours, qui ne prend jamais une
+       classe de test : un tableau resté ouvert après une répétition ne cache jamais la séance de la vraie classe. */
+    if(pc && app === "tableau"){ var st = (LIVE.d.sessionActive || {})[pc] || null;
+      if(st && (LIVE.d.sessions || {})[st]){ LIVE.classeSlug = pc; LIVE.sid = st; return; }
+      if(LIVE.classeSlug === pc){ LIVE.classeSlug = null; LIVE.sid = null; } }
     if(LIVE.sid && SCN.sess(LIVE.sid) && SCN.sess(LIVE.sid).etat !== "terminee") return;
     var actives = LIVE.d.sessionActive || {}, cl = Object.keys(actives).filter(function(c){ return c.charAt(0) !== "_" && (LIVE.d.sessions || {})[actives[c]]; });
     if(LIVE.classeSlug && actives[LIVE.classeSlug]){ LIVE.sid = actives[LIVE.classeSlug]; return; }
