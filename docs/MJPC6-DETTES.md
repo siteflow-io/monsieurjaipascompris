@@ -3821,3 +3821,5 @@ Au passage : 23 anciennes captures de CO et de CR, où un morceau de prénom ré
 - 23/11 09:04 (C17-QCM) — **Idée en attente, pas une dette (Paul, 23/11 09:03 : « On attend sur ce mandat »)** : en séance réelle, la mosaïque « 👥 Tablettes de la classe · en direct » sous le panneau (le dessin des tablettes simulées du Mode test) et la frappe en direct (comme `correction_dictee`, chemin `direct`, au plus toutes les 0,3 s). Mise en attente parce que le programme Android des tablettes montrera le vrai écran. Capture construite gardée hors dépôt. Rien d'écrit, rien de lancé.
 
 - 23/11 12:13 (C17-QCM) — **QCM-S4 (plein écran : la bande de Chrome sur la tablette pilotée)** : réglée côté portail d'après Paul (12:12 : « c'est bon c'est réglé côté portail ») ; pas vue par C17-QCM (aucune capture depuis). Reste de S4 : par le portail MJPC (cadre de `index.html`), pas de plein écran (question 116 ouverte).
+
+- 23/11 12:14 (C17-QCM) — ✔ **QCM-S4, la bande de Chrome en plein écran** : close, mesurée par Paul sur sa tablette (12:13 : « J'ai mesuré et c'est bon »). Reste ouvert à part : par le portail MJPC (cadre de `index.html`), pas de plein écran (question 116).
