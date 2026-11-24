@@ -3224,7 +3224,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="9.14.0-53";
+var APP_VERSION="9.14.0-54";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -32103,6 +32103,11 @@ function edtHeuresAjoutees(iso){
   });
   return out;
 }
+/* C20 FIL-1 (Paul, 24/11 : « code le bouton dans ce cas, ça me fera une assurance quand même ») : LE FIL EFFECTIF D'UNE CASE — le fil de la grille, sauf la décision
+   `sansFil` de cette heure (« Jouer le chapitre principal sur cette heure ») : null, la case suit alors le chapitre principal comme une heure sans fil.
+   La seule fonction qui le rend (edtProjeter : `cel.fil`, la file ; tous les autres lecteurs lisent `cel.fil`). La grille et le chapitre ne sont jamais écrits. */
+function edtFilEffectif(c,dec){ return (dec&&dec.sansFil)?null:((c&&c.fil)||null); }
+function edtMentionSansFil(fil){ return 'chapitre principal (fil \u00ab\u00a0'+fil+'\u00a0\u00bb mis de c\u00f4t\u00e9)'; }   /* FIL-1 : la mention de la case, de sa fenêtre et du journal — les mots de Paul (mandat FIL-1) */
 function edtDecisionPour(nomClasse,iso,creneau){
   var d=((EDT.decisions&&EDT.decisions[nomClasse])||{}).heures||{};
   return d[edtCleHeure(iso,creneau,nomClasse)]||null;
@@ -32124,7 +32129,7 @@ function edtProjeter(isoDebut,nbJours){
     for(var k=0;k<cases.length;k++){
       var c=cases[k], cle=iso+'|'+c.creneau+'|'+(c.classe||'');
       var cel={iso:iso,creneau:c.creneau,classe:c.classe,classeMjpc:c.classeMjpc||'',
-               salle:c.salle||'',fil:c.fil||null,dispute:!!c.__dispute,ajoutee:!!c.ajoutee,nature:'prevu',
+               salle:c.salle||'',fil:edtFilEffectif(c,null),dispute:!!c.__dispute,ajoutee:!!c.ajoutee,nature:'prevu',
                /* [2ter ⑪b] la case retient qu'elle vient d'un créneau d'essai : c'est
                   ce qui lui donnera sa couleur, dans la semaine comme dans le mois.
                   Hors mode test, `edtCasesA` ne rend aucun créneau fictif : la marque
@@ -32145,9 +32150,10 @@ function edtProjeter(isoDebut,nbJours){
         if(dec.deplaceeVers)cel.deplaceeVers=dec.deplaceeVers;
         cellules[cle]=cel; continue; }
       if(dec&&dec.venantDe)cel.venantDe=dec.venantDe;
+      cel.fil=edtFilEffectif(c,dec); if(c.fil&&!cel.fil)cel.filMisDeCote=c.fil;   /* C20 FIL-1 : la décision `sansFil` de cette heure — la case prend la file du chapitre principal */
       /* le réel : une heure déjà jouée colore la case */
-      var fileCle=nom+'|'+(c.fil||'');
-      if(files[fileCle]===undefined)files[fileCle]=edtFileDAttente(nom,c.fil||null);
+      var fileCle=nom+'|'+(cel.fil||'');
+      if(files[fileCle]===undefined)files[fileCle]=edtFileDAttente(nom,cel.fil);   /* C20 FIL-1 : le fil effectif (avant : celui de la grille) */
       var f=files[fileCle];
       /* le réel ne dépend JAMAIS de ce qui attend : une heure jouée colore sa case
          même quand le chapitre est fini, dépublié ou supprimé de la file. */
@@ -32352,7 +32358,7 @@ function edtCelluleCorps(c){
   return '<div class="edt-b edt-b-prevu'+(c.fil?' edt-b-fil':'')+(c.ajoutee?' edt-b-ajout':'')+'">'
     +(c.epingle||c.ajoutee?'\ud83d\udccc ':'')+'<b>'+escapeHtml(c.classeMjpc)+'</b>'
     +'<u>'+escapeHtml(c.titre||'')+'</u>'
-    +'<i>'+(c.ajoutee?'heure ajoutée · ':'')+(c.fil?('fil '+escapeHtml(c.fil)+' · '):'')+(c.suite?'heure '+c.heure+' · suite':'heure '+c.heure+'/'+c.sur)
+    +'<i>'+(c.ajoutee?'heure ajoutée · ':'')+(c.fil?('fil '+escapeHtml(c.fil)+' · '):'')+(c.filMisDeCote?(escapeHtml(edtMentionSansFil(c.filMisDeCote))+' · '):'')+(c.suite?'heure '+c.heure+' · suite':'heure '+c.heure+'/'+c.sur)
     +(c.dispute?' \u00b7 périodes non saisies':'')+'</i></div>';
 }
 function edtDateLisible(iso){
@@ -32717,6 +32723,13 @@ function edtEcrireDecision(nomClasse,cleHeure,valeur,quoi){
     EDT.decisions=d; edtPeindre(); edtPeindreModale();
   });
 }
+/* C20 FIL-1 : « Jouer le chapitre principal sur cette heure » — `sansFil: true` posé sur la décision de CETTE heure (à côté d'une décision déjà là : épinglée, ajoutée…),
+   par edtEcrireDecision (verrou, archive, journal). Défait par « ↶ Annuler cette décision » (edtAnnulerDecision : l'état d'avant, relu au journal). */
+function edtSansFil(cle){
+  var c=edtCellule(cle); if(!c||!c.classeMjpc||!c.fil||(c.nature!=='prevu'&&c.nature!=='rienDePret'))return;
+  var av=edtDecisionPour(c.classeMjpc,c.iso,c.creneau);
+  edtEcrireDecision(c.classeMjpc,edtCleHeure(c.iso,c.creneau,c.classeMjpc),Object.assign({pose:Date.now()},av||{},{sansFil:true}),edtMentionSansFil(c.fil));
+}
 function edtSansSeance(cle){
   var c=edtCellule(cle); if(!c||!c.classeMjpc)return;
   var s=document.getElementById('edt-cat'), p=document.getElementById('edt-prec');
@@ -32757,8 +32770,8 @@ function edtAnnulerDecision(cle){
   /* [⑤b] LE MOTIF PRÉCÉDENT REVIENT. Le journal garde l'état d'avant chaque geste :
      si le dernier geste sur cette heure a REMPLACÉ un motif, annuler rend celui-là,
      pas le vide. Une heure déplacée se défait toujours des deux côtés. */
-  var edtRendu=null;
-  if(!(av&&(av.deplaceeVers||av.venantDe))&&d&&Array.isArray(d.journal)){
+  var edtRendu=null, edtSf=!!(av&&av.sansFil);   /* C20 FIL-1 : défaire « Jouer le chapitre principal » rend l'état d'avant de CETTE heure, sans toucher l'autre bout d'un déplacement */
+  if(!(av&&(av.deplaceeVers||av.venantDe)&&!edtSf)&&d&&Array.isArray(d.journal)){
     for(var edtI=d.journal.length-1;edtI>=0;edtI--){
       var edtL=d.journal[edtI];
       if(edtL&&edtL.heure===k){ edtRendu=edtL.avant||null; break; }
@@ -32767,9 +32780,9 @@ function edtAnnulerDecision(cle){
   edtEcrireDecision(c.classeMjpc,k,edtRendu,
     edtRendu?('retour arrière — '+edtMotifEnClair(edtRendu)+' revient'):'retour arrière');
   /* une heure déplacée se défait des deux côtés */
-  if(av&&av.deplaceeVers){ var p=String(av.deplaceeVers).split('|');
+  if(!edtSf&&av&&av.deplaceeVers){ var p=String(av.deplaceeVers).split('|');
     edtEcrireDecision(c.classeMjpc,edtCleHeure(p[0],p[1],c.classeMjpc),null,'retour arrière (arrivée)'); }
-  if(av&&av.venantDe){ var q=String(av.venantDe).split('|');
+  if(!edtSf&&av&&av.venantDe){ var q=String(av.venantDe).split('|');
     edtEcrireDecision(c.classeMjpc,edtCleHeure(q[0],q[1],c.classeMjpc),null,'retour arrière (départ)'); }
 }
 
@@ -33041,13 +33054,14 @@ function edtPeindreModale(){
         +'<button class="edt-btn" onclick="edtRienDePret(edtCellule('+JSON.stringify(cle).replace(/"/g,'&quot;')+'))">Ouvrir Mes chapitres\u2026</button>';
     } else {
       h+='<p class="edt-p"><u>'+escapeHtml(c.titre||'')+'</u><br>'+(c.suite?'heure '+c.heure+' \u00b7 suite de la séance'+(c.reste?' : elle commence par '+(c.reste>1?'les '+c.reste+' diapos à reprendre':'la diapo à reprendre'):''):'heure '+c.heure+' sur '+c.sur+(c.reste?' : elle commence par '+(c.reste>1?'les '+c.reste+' diapos à reprendre':'la diapo à reprendre'):''))
-        +(c.fil?(' \u00b7 fil '+escapeHtml(c.fil)):'')+(c.epingle?' \u00b7 \ud83d\udccc épinglée':'')+'</p>';
+        +(c.fil?(' \u00b7 fil '+escapeHtml(c.fil)):'')+(c.filMisDeCote?(' \u00b7 '+escapeHtml(edtMentionSansFil(c.filMisDeCote))):'')+(c.epingle?' \u00b7 \ud83d\udccc épinglée':'')+'</p>';
     }
     if(c.nature==='prevu'||c.nature==='rienDePret'){
       if(c.nature==='prevu')h+=edtAppelAvantHtml(cle,c);   /* C16 (㊱, Paul 14:14) : la case d'une heure à venir s'ouvre sur l'appel */
       h+='<button class="edt-btn edt-btn-prim edt-large" title="Lance l\u2019heure de cette case : le Pilotage s\u2019ouvre avec cette classe, ce créneau et cette heure de la séance ; le chrono démarre, tout s\u2019enregistre'+(c.nature==='prevu'?' ; les absents de l\u2019appel y sont dès la première diapo':'')+'" onclick="edtLancer('+JSON.stringify(cle).replace(/"/g,'&quot;')+')">\u25b6 Ouvrir le pilotage et lancer'+(c.nature==='prevu'?edtAppelFaitHtml(cle,c):'')+'</button>';
       if(c.nature==='prevu')h+=edtAutreSeanceHtml(cle,c);   /* C16 mandat AN (NOTE-Z dette 17, C16 342 et 764) : « une autre séance… », les séances du chapitre et leur état */
       h+='<button class="edt-btn edt-large" data-preparer="1" title="Ouvre l\u2019Atelier sur cette séance pour la préparer : rien n\u2019est lancé, rien n\u2019est projeté, la classe ne voit rien." onclick="edtLancer('+JSON.stringify(cle).replace(/"/g,'&quot;')+',true)">\u270e Préparer</button>';   /* [E2] cadrage 4 §0.3 */
+      if(c.fil)h+='<button class="edt-btn edt-large" data-sans-fil="1" title="'+escapeHtml('Cette heure ne suit pas le fil \u00ab '+c.fil+' \u00bb : la case propose la séance du chapitre principal, comme une heure sans fil. \u00ab \u21b6 Annuler cette décision \u00bb rend le fil.')+'" onclick="edtSansFil('+JSON.stringify(cle).replace(/"/g,'&quot;')+')">Jouer le chapitre principal sur cette heure</button>';   /* C20 FIL-1 : une case à fil (à venir ou aujourd'hui) ; les mots de Paul (mandat FIL-1) */
     }
     /* une heure JOUÉE ne se décide plus : elle a eu lieu. On y gère les absents,
        rien d'autre — mesuré à la matrice actions × état, où « Annuler » y
