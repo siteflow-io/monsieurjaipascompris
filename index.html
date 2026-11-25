@@ -3224,7 +3224,7 @@ function mjpcEcrireRest(url,options,cb){
    (les 3 gestes, le geste conservatoire par app, ce qui ne peut pas arriver).
    RESTAURER LA VERSION PRÉCÉDENTE : docs/MJPC6-restauration.md (convention BUG).
    ═══════════════════════════════════════════════════════════════════════════ */
-var APP_VERSION="9.14.0-55";
+var APP_VERSION="9.14.0-56";
 var APP_VERSION_DATE="2026-10-01";
 // ── 11. Coffre : dérivation, chiffrement, empreinte (v1.3.0) ──
 // (Le canon porte deux sections « 8 » — dette de numérotation connue, non corrigée
@@ -31754,26 +31754,25 @@ function edtDecisionsOrphelines(){
 }
 function edtRattacherDecisions(ancien,nouveau){
   if(profHeureRefus(nouveau,null))return;   /* PAN (confirmée après le début de l'heure) */
-  var edtPhoto=edtPhotoDecisions();   /* [⑤c-bis] l'état d'avant, avant toute mutation */
-  var d=edtDecisions(),src=d[ancien];
-  if(!src||!src.heures)return;
-  if(!d[nouveau])d[nouveau]={heures:{},journal:[]};
-  if(!d[nouveau].heures)d[nouveau].heures={};
-  if(!Array.isArray(d[nouveau].journal))d[nouveau].journal=[];
-  var quand=Date.now(),n=0,restees=0;
-  Object.keys(src.heures).forEach(function(k){
-    var m=k.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}h\d{2}-\d{2}h\d{2})_(.+)$/);
-    if(!m){ restees++; return; }
-    var cle=edtCleHeure(m[1],m[2].replace(/h/g,':'),nouveau);
-    if(d[nouveau].heures[cle]){ restees++; return; }   /* on n'écrase jamais une décision déjà là */
-    d[nouveau].heures[cle]=src.heures[k];
-    d[nouveau].journal.push({quand:quand,heure:cle,
-      quoi:'rattachée depuis « '+ancien+' »',avant:null,apres:src.heures[k]});
-    delete src.heures[k]; n++;
-  });
-  if(!Object.keys(src.heures).length)delete d[ancien];
-  edtEcrireArchive('decisions',edtChemin('decisions'),edtPhoto,d,'Décisions rattachées à « '+nouveau+' »',function(){
-    EDT.decisions=d;
+  /* C20 DEC-1 : le rattachement se calcule sur les décisions RELUES au hub, et s'écrit heure par heure (edtDecisionsEcrireHeures) :
+     l'heure posée sous le nouveau nom (et sa ligne de journal), retirée de l'ancien ; l'ancien nom part entier quand il n'a plus d'heure. */
+  var n=0,restees=0;
+  edtDecisionsEcrireHeures(function(d){
+    var src=d[ancien], l=[], dst=((d[nouveau]||{}).heures)||{}, reste=0;
+    n=0; restees=0;
+    if(!src||!src.heures)return l;
+    Object.keys(src.heures).forEach(function(k){
+      var m=k.match(/^(\d{4}-\d{2}-\d{2})_(\d{2}h\d{2}-\d{2}h\d{2})_(.+)$/);
+      if(!m){ restees++; reste++; return; }
+      var cle=edtCleHeure(m[1],m[2].replace(/h/g,':'),nouveau);
+      if(dst[cle]){ restees++; reste++; return; }   /* on n'écrase jamais une décision déjà là */
+      l.push({classe:nouveau,cle:cle,valeur:src.heures[k],quoi:'rattachée depuis « '+ancien+' »'});
+      l.push({classe:ancien,cle:k,valeur:null,sansJournal:true});
+      n++;
+    });
+    if(n&&!reste)l.push({classe:ancien,supprimerClasse:true});
+    return l;
+  },'Décisions rattachées à « '+nouveau+' »',function(){
     if(typeof atInfo==='function')
       atInfo(n+' heure'+(n>1?'s':'')+' rattachée'+(n>1?'s':'')+' à « '+nouveau+' »'
         +(restees?(' — '+restees+' est restée sous « '+ancien+' », je ne l’ai pas déplacée'):'')+'.');
@@ -32629,7 +32628,6 @@ function edtPhotoDe(nom){
   if(!edtO||typeof edtO!=='object')return null;
   try{ return JSON.parse(JSON.stringify(edtO)); }catch(e){ return edtO; }
 }
-function edtPhotoDecisions(){ return edtPhotoDe('decisions'); }
 /* [⑤c] CE QU'UNE HEURE BANALISÉE COÛTE, selon sa catégorie. Tout ce qui touche
    au cours — évaluer, reprendre, tenir la classe — reste du TEMPS DE CLASSE :
    ces heures-là ne sont pas perdues. Le reste est une heure perdue, justifiée ou
@@ -32727,22 +32725,114 @@ function edtEcrireDecision(nomClasse,cleHeure,valeur,quoi){
   EDT.decisionsEnCours[edtVerrou]=true;
   /* filet : si le hub ne répond jamais, le verrou ne reste pas posé pour la vie */
   var edtDelais=setTimeout(function(){ delete EDT.decisionsEnCours[edtVerrou]; },8000);
-  /* [⑤c-bis] L'ARCHIVE PORTE L'ÉTAT D'AVANT. `edtDecisions()` rend la référence
-     vivante : muter d'abord et archiver ensuite, c'est archiver l'état d'après.
-     Même faute que celle fermée en ①bis-a pour la mise à niveau, jamais portée
-     ici. La photo se prend AVANT toute écriture. */
-  var edtPhoto=edtPhotoDecisions();
-  var d=edtDecisions();
-  if(!d[nomClasse])d[nomClasse]={heures:{},journal:[]};
-  if(!d[nomClasse].heures)d[nomClasse].heures={};
-  if(!Array.isArray(d[nomClasse].journal))d[nomClasse].journal=[];
-  var avant=d[nomClasse].heures[cleHeure]||null;
-  if(valeur===null)delete d[nomClasse].heures[cleHeure];
-  else d[nomClasse].heures[cleHeure]=valeur;
-  d[nomClasse].journal.push({quand:Date.now(),heure:cleHeure,quoi:quoi,avant:avant,apres:valeur});
-  edtEcrireArchive('decisions',edtChemin('decisions'),edtPhoto,d,'Décisions horaires — '+nomClasse,function(){
+  /* C20 DEC-1 : l'heure seule, sur son chemin, après relecture du hub (edtDecisionsEcrireHeures) — jamais l'objet entier depuis la mémoire de la page. */
+  edtDecisionsEcrireHeures([{classe:nomClasse,cle:cleHeure,valeur:valeur,quoi:quoi}],'Décisions horaires — '+nomClasse,function(){
     clearTimeout(edtDelais); delete EDT.decisionsEnCours[edtVerrou];
-    EDT.decisions=d; edtPeindre(); edtPeindreModale();
+    edtPeindre(); edtPeindreModale();
+  });
+}
+/* C20 DEC-1 (25/11) — UNE DÉCISION D'HEURE N'ÉCRASE PLUS LES AUTRES. Mesuré la nuit du 24 au 25/11 : chaque geste réécrivait tout
+   `/site/edt/decisions/<année>` depuis `EDT.decisions`, lue au chargement seulement ; une page ouverte avant une décision posée ailleurs
+   (un autre onglet) l'effaçait en posant la sienne (les deux décisions des 3e de 23:02, effacées par les gestes des 4e de 23:17).
+   Maintenant, pour chaque geste, dans l'ordre (un geste à la fois par page : l'index du journal se relit après le geste précédent) :
+     1 · la page RELIT les décisions au hub et sa mémoire prend ce qu'elle lit (elle voit ce qu'un autre onglet a posé) ;
+     2 · `entrees` ([{classe, cle, valeur, quoi, sansJournal}] ou {classe, supprimerClasse:true}) — un tableau, ou une fonction qui le calcule
+         depuis les décisions relues ;
+     3 · l'archive (corbeille, motif `edt-decisions`) garde l'état d'avant DES HEURES TOUCHÉES, sous leur forme d'objet
+         ({classe: {heures: {clé: avant}}}), et une classe retirée entière ; si l'archivage échoue, rien n'est écrit (le modèle d'edtEcrireArchive) ;
+     4 · chaque heure s'écrit sur SON chemin (`…/<classe>/heures/<clé>` : PUT de la valeur, DELETE quand elle part), chaque ligne de journal
+         par AJOUT (`…/<classe>/journal/<n>`, n relu à l'étape 1), en un lot à verdicts (mjpcLot) ;
+     5 · la mémoire ne reçoit le geste qu'après le verdict, et `apres` suit.
+   « ↶ Annuler cette décision » relit toujours le journal de la classe (l'état d'avant de l'heure) : il passe par ici comme les autres gestes. */
+var EDT_DEC_FILE=[];
+function edtDecisionsEcrireHeures(entrees,libelle,apres){
+  EDT_DEC_FILE.push({entrees:entrees,libelle:libelle,apres:apres});
+  if(EDT_DEC_FILE.length===1)edtDecisionsSuivante();
+}
+function edtSegHub(k){ return encodeURIComponent((typeof dr_cleVersHub==='function')?dr_cleVersHub(k):String(k)); }
+function edtJournalSuite(j){   /* l'index de la prochaine ligne : le hub rend le journal en tableau (avec ses trous) ou en objet à clés entières */
+  if(Array.isArray(j))return j.length;
+  if(!j||typeof j!=='object')return 0;
+  var n=0; Object.keys(j).forEach(function(k){ if(/^\d+$/.test(k)&&+k+1>n)n=+k+1; }); return n;
+}
+function edtDecisionsRelire(cb){   /* cb(valeur, issue) — issue non nulle : la lecture n'a pas abouti */
+  var ch=edtChemin('decisions'), url=FIREBASE_BASE+ch+'.json', quand=Date.now();
+  if(typeof m8TestOn==='function'&&m8TestOn()){
+    M8T.lire(ch,function(v,panne){ cb(v,panne?{etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:quand}:null); }); return; }
+  fetch(url,{cache:'no-store'}).then(function(r){
+    if(!r.ok)return {issue:{etat:MJPC_ISSUE.REFUSEE,status:r.status,url:url,quand:quand}};
+    return r.json().then(function(v){ return {v:v}; },function(){ return {issue:{etat:MJPC_ISSUE.PANNE,status:r.status,url:url,quand:quand}}; });
+  },function(){
+    return {issue:{etat:MJPC_ISSUE.PANNE,status:0,url:url,quand:quand}};
+  }).then(function(o){ cb(o.v===undefined?null:o.v,o.issue||null); });
+}
+function edtDecisionsSuivante(){
+  var g=EDT_DEC_FILE[0]; if(!g)return;
+  var fini=false, base=FIREBASE_BASE+edtChemin('decisions')+'/';
+  var finir=function(){ if(fini)return; fini=true; clearTimeout(edtLimite); EDT_DEC_FILE.shift(); edtDecisionsSuivante(); };
+  var refaire=function(){ edtDecisionsEcrireHeures(g.entrees,g.libelle,g.apres); };
+  /* le réseau n'est jamais parfait : une relecture sans réponse en 8 s est une panne, dite ; le geste suivant n'attend pas pour la vie */
+  var edtLimite=setTimeout(function(){
+    if(fini)return;
+    mjpcSignalerIssue({etat:MJPC_ISSUE.PANNE,status:0,url:base,quand:Date.now()},{ou:g.libelle,retenter:refaire});
+    finir();
+  },8000);
+  edtDecisionsRelire(function(v,issue){
+    if(fini)return;   /* arrivée après la limite : le geste a déjà été dit perdu */
+    clearTimeout(edtLimite);
+    if(issue){ mjpcSignalerIssue(issue,{ou:g.libelle,retenter:refaire}); finir(); return; }
+    EDT.decisions=(v&&typeof v==='object')?edtClesDuHub(v):{};
+    var d=EDT.decisions;
+    var l=(typeof g.entrees==='function')?g.entrees(d):g.entrees;
+    l=Array.isArray(l)?l:[];
+    if(!l.length){ finir(); return; }
+    var quand=Date.now(), arch={}, archN=0, ecr=[], lignes=[], suite={};
+    l.forEach(function(e){
+      var c=d[e.classe]||{}, segC=base+edtSegHub(e.classe);
+      if(e.supprimerClasse){
+        if(!d[e.classe])return;
+        arch[e.classe]=JSON.parse(JSON.stringify(d[e.classe])); archN++;
+        ecr.push({url:segC+'.json',options:{method:'DELETE'},quoi:e.classe}); lignes.push(e); return;
+      }
+      var avant=(c.heures&&c.heures[e.cle])||null;
+      if(avant){ if(!arch[e.classe])arch[e.classe]={heures:{}}; if(!arch[e.classe].heures)arch[e.classe].heures={};
+        arch[e.classe].heures[e.cle]=JSON.parse(JSON.stringify(avant)); archN++; }
+      var apres=(e.valeur===null||e.valeur===undefined)?null:e.valeur;
+      ecr.push(apres===null
+        ?{url:segC+'/heures/'+edtSegHub(e.cle)+'.json',options:{method:'DELETE'},quoi:e.cle}
+        :{url:segC+'/heures/'+edtSegHub(e.cle)+'.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(edtClesVersHub(apres))},quoi:e.cle});
+      var ligne=null;
+      if(!e.sansJournal){
+        if(suite[e.classe]===undefined)suite[e.classe]=edtJournalSuite(c.journal);
+        ligne={quand:quand,heure:e.cle,quoi:e.quoi,avant:avant,apres:apres};
+        ecr.push({url:segC+'/journal/'+(suite[e.classe]++)+'.json',options:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(edtClesVersHub(ligne))},quoi:e.cle});
+      }
+      lignes.push({classe:e.classe,cle:e.cle,apres:apres,ligne:ligne});
+    });
+    var ecrire=function(){
+      mjpcLot(ecr,g.libelle,function(){
+        var m=edtDecisions(); if(m!==EDT.decisions)EDT.decisions=m;   /* la mémoire reçoit le geste après le verdict */
+        lignes.forEach(function(x){
+          if(x.supprimerClasse){ delete m[x.classe]; return; }
+          if(!m[x.classe])m[x.classe]={heures:{},journal:[]};
+          if(!m[x.classe].heures)m[x.classe].heures={};
+          if(!Array.isArray(m[x.classe].journal))m[x.classe].journal=edtListe(m[x.classe].journal);
+          if(x.apres===null)delete m[x.classe].heures[x.cle]; else m[x.classe].heures[x.cle]=x.apres;
+          if(x.ligne)m[x.classe].journal.push(x.ligne);
+        });
+        finir(); if(g.apres)g.apres();
+      },function(){ finir(); });
+    };
+    if(!archN){ ecrire(); return; }   /* rien à remplacer : rien à archiver (le modèle d'edtEcrireArchive) */
+    var perdu=function(){
+      finir();
+      if(typeof atInfo==='function')
+        atInfo('Impossible de mettre l’état d’avant à l’abri — rien n’a été écrit. Le site continue en lecture.');
+    };
+    edtArchiver('decisions',edtChemin('decisions'),arch).then(function(a){
+      if(!a||!a.ok){ perdu(); return; }   /* ABANDON : rien n'est écrit */
+      ecrire();
+    },perdu);
   });
 }
 /* C20 FIL-1 : « Jouer le chapitre principal sur cette heure » — `sansFil: true` posé sur la décision de CETTE heure (à côté d'une décision déjà là : épinglée, ajoutée…),
@@ -33920,20 +34010,9 @@ function edtCochesDeplacees(ev){
    nœud. Le journal reçoit une ligne par heure, avec l'avant et l'après. */
 function edtEcrireDecisionsGroupe(entrees,quoi,libelle){
   if(!entrees||!entrees.length)return;
-  var edtPhoto=edtPhotoDecisions();   /* [⑤c-bis] l'état d'avant, avant toute mutation */
-  var d=edtDecisions();
-  entrees.forEach(function(e){
-    if(!d[e.classe])d[e.classe]={heures:{},journal:[]};
-    if(!d[e.classe].heures)d[e.classe].heures={};
-    if(!Array.isArray(d[e.classe].journal))d[e.classe].journal=[];
-    var avant=d[e.classe].heures[e.cle]||null;
-    if(e.valeur===null)delete d[e.classe].heures[e.cle];
-    else d[e.classe].heures[e.cle]=e.valeur;
-    d[e.classe].journal.push({quand:Date.now(),heure:e.cle,quoi:quoi,avant:avant,apres:(e.valeur===null?null:e.valeur)});
-  });
-  edtEcrireArchive('decisions',edtChemin('decisions'),edtPhoto,d,libelle||'Décisions horaires',function(){
-    EDT.decisions=d; edtPeindre(); edtPeindreModale(); edtPeindreCalendrier();
-  });
+  /* C20 DEC-1 : chaque heure sur son chemin, après relecture (edtDecisionsEcrireHeures) ; une ligne de journal par heure, comme avant */
+  edtDecisionsEcrireHeures(entrees.map(function(e){ return {classe:e.classe,cle:e.cle,valeur:(e.valeur===null?null:e.valeur),quoi:quoi}; }),
+    libelle||'Décisions horaires',function(){ edtPeindre(); edtPeindreModale(); edtPeindreCalendrier(); });
 }
 function edtJustifier(id,valeur){
   var cal=EDT.calendrier; if(!cal||!Array.isArray(cal.evenementsClasse))return;
